@@ -82,3 +82,31 @@ the old runner's control failures. It will execute a fresh complete 74-stage gat
 on a newly committed frozen candidate, rather than relabel the failed execution.
 Both earlier exact-SHA packaging dry runs passed with publish jobs skipped; new
 SHA-specific dry runs remain required. No tag, release, Pages or Docker cutover.
+
+## Gate 3 tooling setup refusals
+
+Candidate `ffc95e0a` passed58 stages, including native naming, Functions and the
+naming recipe; the private comparator then tried a legacy TypeScript-directory
+CommonJS entry. The locked7.0.2 package exposes the observed AST scanner through
+its declared export instead. A corrected private helper compares all28 paths
+and literal-preserving tokens, with seven positive/rejection controls. No new
+dependency or production edit was required. The original refused receipt remains.
+
+A separately identified same-source continuation admitted the58 successful
+prefix stages after full path/mode/content/HEAD/log proof (eleven admission and
+five final-order controls), passed the corrected bindings comparison, then
+failed one of163 tooling tests: the new release-media config lacked its explicit
+central browserTmp import. It inherited an already guarded base, but the repository
+contract deliberately requires the explicit entry import too. Add that one line;
+never weaken the gate. Targeted guard5/tooling163 (one skip)/media TypeScript and
+config-list checks pass. First list probes omitted required environment values;
+those setup refusals remain distinct from the successful configured list.
+Actual guarded-config capture then passes one real-server test and produces all
+ten PNGs in loopback-only isolation; this is targeted proof with the predecessor
+binary, not complete new-source acceptance.
+
+A fresh full candidate is required because the config changes source. Its private
+runner preflights comparator/tooling early, retains the later generated comparison,
+and executes actual ten-frame capture after building the server (77 stages total).
+Original failures, earlier packaging evidence and accepted media stay historical;
+no source receipt is relabelled, and no tag/Pages/registry publication occurred.

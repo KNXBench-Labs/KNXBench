@@ -1,4 +1,5 @@
 /** Runs release-only real-server media capture inside a loopback-only namespace. */
+import "./browserTmp";
 import {defineConfig} from "@playwright/test";
 import manual from "./playwright.manual.config";
 

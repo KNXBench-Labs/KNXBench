@@ -576,6 +576,7 @@ pub fn load_legacy_program_code(
             .map(|_| PRODUCT_PROCEDURE.to_string()),
         mask_version,
         segments: code.segments,
+        relative_segments: Vec::new(),
         address_table: code.address_table,
         association_table: code.association_table,
         com_object_table: code.com_object_table,

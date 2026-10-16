@@ -14,9 +14,9 @@ on:
 
 permissions:
   contents: write
-  # Shared issue/PR conversation comments use the Issues write permission.
+  # Explicit write permissions for both issue and PR credit comments.
   issues: write
-  pull-requests: read
+  pull-requests: write
 
 # GitHub keeps only one pending run. Every run reconciles *all* pending
 # completion awards, so a superseded close event is recovered on the next run.

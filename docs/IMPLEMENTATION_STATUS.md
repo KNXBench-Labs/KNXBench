@@ -14,7 +14,7 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
-- 2026-10-16 — P4b relative source view implemented locally: distinct relative
+- 2026-10-16 — P4b relative source view integrated and published as `4bfc3780`: distinct relative
   metadata/Data/Mask, shared source blob decoder, duplicate-ID refusal and an
   explicit absolute-image guard. Missing-field compile RED and mixed-source
   omission runtime RED observed before their fixes; ten reader tests and the
@@ -24,8 +24,10 @@ fragment aliases and update this index. Do not rewrite previous results.
   three-source corpus regression, all-target Clippy and repository checks.
   All 18 frozen branch stages pass: Rust4660/0/208ignored, Vitest3626/263files,
   both explicit source regressions and workspace checks. Complete2914path,
-  external oracle/package and Git commitments match. Actual merged acceptance
-  and publication remain pending; no relative image, wire plan or new admission.
+  external oracle/package and Git commitments match. All19actual merged stages
+  also pass, including isolated corpus152/152 in33targets. Published merge
+  local/tracking/live remote equality verified; no relative image, wire plan
+  or new admission.
   [Contract](contracts/offline-relative-source-segments.md) ·
   [Evidence](evidence/offline-relative-source-segments-2026-10-16.json).
 

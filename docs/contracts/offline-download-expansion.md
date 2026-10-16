@@ -84,11 +84,13 @@ material. Do not mark a path implemented merely because its metadata is parsed.
   remain partial/non-executable; relative images, scope/substitution mapping and
   complete recovery are not implemented by the codec.
 - P4b: [relative source view and absolute-image refusal](offline-relative-source-segments.md)
-  implemented locally and calibrated against three original XML/base64 oracles.
+  integrated and published as `4bfc3780`, calibrated against three original
+  XML/base64 oracles.
   This retains source metadata/bytes; generated tables, relative-image assembly,
   source scopes/substitution and recovery remain unfinished. All twelve corrected
-  preflights pass, including the explicit three-source corpus target; full
-  branch/merged acceptance and publication remain pending, no new family admission.
+  preflights,18branch and19actual merged stages pass, including the explicit
+  three-source regression and isolated corpus152/152 in33targets. Remote
+  equality verified; no new family admission.
 - P3 onward: source-to-property mapping and whole-mutation recovery remain
   unimplemented; their dependencies above still need their own proof.
 

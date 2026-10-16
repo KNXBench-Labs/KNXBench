@@ -24,10 +24,12 @@ all 17 branch and 18 actual merged stages pass, including isolated corpus152/152
 Published as `adb52990` with verified remote equality; the selected dirty root
 checkout remains deliberately unsynchronized.
 
-P4b locally adds a [relative source view](contracts/offline-relative-source-segments.md)
+P4b publishes a [relative source view](contracts/offline-relative-source-segments.md)
 and prevents absolute images from silently omitting relative input. The three
 source-oracle matches are extraction evidence, not completed relative images;
-full candidate acceptance/publication and the integration work above remain open.
+18branch and19actual merged stages pass, including isolated corpus152/152.
+Published as `4bfc3780` with verified remote equality. The relative-image and
+recovery integration work above remains open.
 
 ## Alpha 12 release boundary (15 October 2026)
 

@@ -57,8 +57,12 @@ Full frozen branch acceptance now passes all18stages: Rust4660/0/208ignored
 in341targets, Vitest3626/263files and both explicit source regressions. All2914
 source identities, external oracle/package commitments and Git fingerprints
 match. Subsequent updates are documentation-only and runtime equality must be
-checked before commit. Commit, actual merged acceptance, publication readback
-and owned retirement remain pending.
+checked before commit. Feature4bdb34ca and actual merge4bfc3780 are committed.
+All19merged stages pass with the same Rust/Web counts plus isolated
+corpus152/152 in33targets;2914source identities/external commitments/Git
+fingerprints match and owned corpus links were removed. Merge published with
+local/tracking/live main equality at05:12CEST. Documentation-only closure and
+private archive/owned retirement follow; this does not retag old runtime output.
 
 ## Boundaries
 

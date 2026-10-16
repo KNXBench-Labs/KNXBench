@@ -92,10 +92,11 @@ material. Do not mark a path implemented merely because its metadata is parsed.
   three-source regression and isolated corpus152/152 in33targets. Remote
   equality verified; no new family admission.
 - P4c: [explicit System-B address/association codec](offline-systemb-link-tables.md)
-  implemented locally with12tests and a discriminating sender-order mutant;
-  All10frozen preflights pass (Core844/0, owning Clippy/format, repository checks).
-  Full candidate acceptance/publication
-  pending. Original merge-contract scope is57B0, not automatic07B0translation;
+  integrated and published as `c74038cd`, with12tests and a discriminating
+  sender-order mutant. All10preflights,18branch and19actual merged stages pass
+  (Rust4672/0, Vitest3626/263files, isolated corpus152/152 in33targets); exact
+  remote equality and frozen source/external inputs verified. Original
+  merge-contract scope is57B0, not automatic07B0translation;
   table-image integration, encoding/substitution and recovery remain open.
 - P3 onward: source-to-property mapping and whole-mutation recovery remain
   unimplemented; their dependencies above still need their own proof.

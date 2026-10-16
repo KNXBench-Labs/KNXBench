@@ -3,7 +3,7 @@
   "date": "2026-10-16",
   "scope": "P4c explicit System-B address and association byte tables, not product images",
   "baseRevision": "eef0dade44ae02cbec74df0521ba8344442828a4",
-  "status": "all eighteen frozen branch stages accepted; actual merged acceptance and publication pending",
+  "status": "integrated and published; all eighteen branch and nineteen actual merged stages accepted",
   "originalBodyInspection": {
     "resources": {
       "version": "01.10.01",
@@ -122,10 +122,36 @@
       "explicitSourceRegressionTests": 2,
       "scope": "ordinary workspace and two explicit source regressions; selected maintained corpus remains for integration, not all ignored or hardware tests"
     },
-    "actualMerged": "pending"
+    "actualMerged": {
+      "state": "accepted",
+      "revision": "c74038cd135ca157ffb6117c7303a7725eb4a5cc",
+      "stagesPassed": 19,
+      "rust": {
+        "passed": 4672,
+        "failed": 0,
+        "ignored": 208,
+        "targets": 342
+      },
+      "vitest": {
+        "passed": 3626,
+        "failed": 0,
+        "files": 263
+      },
+      "isolatedCorpus": {
+        "passed": 152,
+        "targets": 33
+      },
+      "inputPaths": 2919,
+      "completeInputManifestsMatched": true,
+      "externalOracleAndPackageCommitmentsMatched": true,
+      "gitFingerprintsMatched": true,
+      "ownedCorpusLinksRemoved": true,
+      "explicitSourceRegressionTests": 2
+    }
   },
   "publication": {
-    "state": "not published",
+    "state": "published on main; local/tracking/live equality verified",
+    "runtimeRevision": "c74038cd135ca157ffb6117c7303a7725eb4a5cc",
     "selectedDirtyRootSynchronized": false
   }
 }

@@ -31,10 +31,10 @@ source-oracle matches are extraction evidence, not completed relative images;
 Published as `4bfc3780` with verified remote equality. The relative-image and
 recovery integration work above remains open.
 
-P4c locally supplies [explicit System-B link tables](contracts/offline-systemb-link-tables.md)
+P4c, published as `c74038cd`, supplies [explicit System-B link tables](contracts/offline-systemb-link-tables.md)
 with a distinct wide-index grammar and first-match sender checks. These bytes
 are not a generated real-product image or source-to-sequencer integration;
-full candidate acceptance/publication and the above semantic contracts remain open.
+branch/actual merged acceptance passed; the above semantic contracts remain open.
 
 ## Alpha 12 release boundary (15 October 2026)
 

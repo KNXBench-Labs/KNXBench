@@ -14,7 +14,7 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
-- 2026-10-16 — P4c explicit System-B address/association codec implemented locally:
+- 2026-10-16 — P4c explicit System-B address/association codec integrated and published as `c74038cd`:
   word counts, no individual slot, one-based wide indices, explicit formats0/1
   and preserved first-match sender. Twelve literal/boundary tests pass after
   missing-module RED; a realistic sender-order mutant fails the intended test,
@@ -23,8 +23,9 @@ fragment aliases and update this index. Do not rewrite previous results.
   no generated product image, new mask admission or recovery claim. All18frozen
   branch stages pass: Rust4672/0/208ignored in342targets, Vitest3626/263files,
   both explicit source regressions and workspace checks. All2919source identities,
-  external oracle/package commitments and Git fingerprints match. Actual merged
-  acceptance/publication remain pending. All10preflights and separate self-review
+  external oracle/package commitments and Git fingerprints match. All19actual
+  merged stages pass, including isolated corpus152/152 in33targets; exact
+  local/tracking/live main equality verified. All10preflights and separate self-review
   pass with no critical/important/security finding. [Contract](contracts/offline-systemb-link-tables.md) ·
   [Evidence](evidence/offline-systemb-link-tables-2026-10-16.json).
 

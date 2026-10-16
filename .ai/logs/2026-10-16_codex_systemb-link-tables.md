@@ -49,6 +49,18 @@ Subsequent changes are documentation-only; complete runtime equality must be
 verified before commit. Focused commit, actual merged acceptance/publication,
 private archive and owned retirement remain pending.
 
+## Published acceptance closure
+
+Runtime feature8e255275 and actual non-FF mergec74038cd published on main; exact
+local/tracking/live equality verified. All19merged stages pass: Rust4672/0
+(208ignored) in342targets, Vitest3626/263files, selected isolated corpus152/152
+in33targets and both explicit source regressions. Complete2919path manifests,
+external inputs and Git fingerprints match; original inputs/root HEAD/index and
+non-handover files preserved, temporary corpus links removed. The first closure
+reader rejected quiet format/diff logs; its corrected reader accepts those
+legitimate empty outputs while checking actual exits and nonempty test reports.
+This is not a new runtime execution. Archive/owned retirement follow separately.
+
 ## Boundaries
 
 No real product image, source translator, executable plan/recovery, format or

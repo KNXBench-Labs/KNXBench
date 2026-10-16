@@ -1,5 +1,14 @@
 # Open work after the 0.1 alpha
 
+## System-300 offline prerequisites (16 October 2026)
+
+[Pure S-mode property-table images](contracts/offline-system300-property-tables.md)
+have an explicit-format adapter with twelve focused tests and reconciled branch
+runtime acceptance; actual merged acceptance/publication are pending. Still open: source/application mapping, discovered
+object indices/instances and format/capacity, property framing, full load sequence,
+parameter handling/rescan, verification and durable whole-mutation recovery.
+Shared Type6 bytes do not make System300 an admitted SystemB device.
+
 ## Offline System-1 completion (16 October 2026)
 
 [The bounded source-image candidate](contracts/offline-download-system1-image.md)

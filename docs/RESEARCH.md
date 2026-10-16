@@ -24,6 +24,7 @@ outside preserved historical blocks, or use the next free section number
 
 | Section | Where |
 | --- | --- |
+| [2026-10-16 — System-300 property-table framing](contracts/offline-system300-property-tables.md#original-source-evidence) | Original Type6 address/association property arrays, independent literal bytes, distinct empty/default semantics and open discovery/source/load/recovery contracts |
 | [2026-10-16 — Public UP 258D12 evidence (PR #24)](research/2026-10-16-up258-public-package-evidence.md) | Digest-pinned public regression, exact metadata/order and explicit image/planner refusals; representative template observations are not a wire-encoding witness |
 | [2026-10-16 — Shared source-fixup boundary](contracts/source-fixup-integrity.md) | Original function/site correlation is not transform proof; all image consumers must refuse unhandled direct fixups |
 | [2026-10-16 — System-1 bounded source-image evidence](contracts/offline-download-system1-image.md) | Original Type-1 resources, protected source pointers and explicit FixupList/default-bit/Union boundaries; zero accepted complete real-source images |

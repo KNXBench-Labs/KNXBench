@@ -14,6 +14,21 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-16 — P4b relative source view implemented locally: distinct relative
+  metadata/Data/Mask, shared source blob decoder, duplicate-ID refusal and an
+  explicit absolute-image guard. Missing-field compile RED and mixed-source
+  omission runtime RED observed before their fixes; ten reader tests and the
+  image guard pass. Three real sources match an independent XML/base64 oracle;
+  original packages and product DB remain unchanged. All twelve corrected
+  preflights pass: ten reader tests, 444 ProductDB unit tests, the opt-in
+  three-source corpus regression, all-target Clippy and repository checks.
+  All 18 frozen branch stages pass: Rust4660/0/208ignored, Vitest3626/263files,
+  both explicit source regressions and workspace checks. Complete2914path,
+  external oracle/package and Git commitments match. Actual merged acceptance
+  and publication remain pending; no relative image, wire plan or new admission.
+  [Contract](contracts/offline-relative-source-segments.md) ·
+  [Evidence](evidence/offline-relative-source-segments-2026-10-16.json).
+
 - 2026-10-16 — P4a System-B prerequisite integrated and published as `adb52990`:
   pure Type-7 /
   Format-1 group-object rewriting, one-based u16 indices, explicit initial read,

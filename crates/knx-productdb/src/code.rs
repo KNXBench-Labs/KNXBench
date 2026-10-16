@@ -7,6 +7,9 @@
 //! segments with their base images, the placement of the three group
 //! tables, the load procedures and the program's `Options`. This module
 //! reads exactly those, for one program, from `ApplicationProgram/Static`.
+//! Relative source segments are retained separately in `ProgramCode::relative_segments`;
+//! their offsets are never treated as absolute image addresses. The original
+//! source blob remains authoritative for unsupported structures.
 //!
 //! Load-procedure steps this module does not model are not dropped. A step
 //! with an unknown name, an unknown attribute, or any child element becomes
@@ -21,7 +24,11 @@
 //! ([`crate::legacy::legacy_program_code`]) and its parameter placements
 //! from the database, in the same types.
 
-use std::collections::BTreeMap;
+mod relative;
+
+pub use relative::RelativeSegment;
+
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
 use base64::engine::general_purpose::STANDARD as BASE64;
@@ -221,6 +228,8 @@ pub struct ProgramCode {
     pub mask_version: Option<String>,
     /// The absolute segments, in document order.
     pub segments: Vec<AbsoluteSegment>,
+    /// Relative source segments in their own document order, never absolute addresses.
+    pub relative_segments: Vec<RelativeSegment>,
     /// `Static/AddressTable`.
     pub address_table: Option<TablePlacement>,
     /// `Static/AssociationTable`.
@@ -500,10 +509,27 @@ impl<'a> Parser<'a> {
     }
 
     fn read_code(&mut self, code: &mut ProgramCode) -> Result<(), CodeError> {
+        let mut ids: BTreeSet<String> = code
+            .segments
+            .iter()
+            .map(|s| s.id.clone())
+            .chain(code.relative_segments.iter().map(|s| s.id.clone()))
+            .collect();
         while let Some(child) = self.next_inside("Code")? {
+            if matches!(child.name.as_str(), "AbsoluteSegment" | "RelativeSegment")
+                && child
+                    .attributes
+                    .get("Id")
+                    .is_some_and(|id| !ids.insert(id.into()))
+            {
+                return Err(self.malformed("Code has duplicate segment Id"));
+            }
             if child.name == "AbsoluteSegment" {
                 let segment = self.read_segment(&child)?;
                 code.segments.push(segment);
+            } else if child.name == "RelativeSegment" {
+                let segment = self.read_relative_segment(&child)?;
+                code.relative_segments.push(segment);
             } else {
                 self.skip(&child)?;
             }
@@ -550,30 +576,40 @@ impl<'a> Parser<'a> {
                     continue;
                 }
             };
-            let text = if child.empty {
-                String::new()
-            } else {
-                self.text_of(&child.name)?
-            };
-            let compact: String = text.chars().filter(|c| !c.is_ascii_whitespace()).collect();
-            let decoded = BASE64.decode(compact.as_bytes()).map_err(|e| {
-                self.malformed(format!(
-                    "AbsoluteSegment {}: {} is not base64: {e}",
-                    segment.id, child.name
-                ))
-            })?;
-            if decoded.len() as u64 != u64::from(segment.size) {
-                return Err(self.malformed(format!(
-                    "AbsoluteSegment {}: {} decodes to {} octets, Size is {}",
-                    segment.id,
-                    child.name,
-                    decoded.len(),
-                    segment.size
-                )));
-            }
-            *slot = Some(decoded);
+            *slot = Some(self.read_segment_blob(
+                "AbsoluteSegment",
+                &segment.id,
+                segment.size,
+                &child,
+            )?);
         }
         Ok(segment)
+    }
+
+    fn read_segment_blob(
+        &mut self,
+        kind: &str,
+        id: &str,
+        size: u32,
+        child: &Element,
+    ) -> Result<Vec<u8>, CodeError> {
+        let text = if child.empty {
+            String::new()
+        } else {
+            self.text_of(&child.name)?
+        };
+        let compact: String = text.chars().filter(|c| !c.is_ascii_whitespace()).collect();
+        let decoded = BASE64.decode(compact.as_bytes()).map_err(|e| {
+            self.malformed(format!("{kind} {id}: {} is not base64: {e}", child.name))
+        })?;
+        if decoded.len() as u64 != u64::from(size) {
+            return Err(self.malformed(format!(
+                "{kind} {id}: {} decodes to {} octets, Size is {size}",
+                child.name,
+                decoded.len()
+            )));
+        }
+        Ok(decoded)
     }
 
     /// The text content of a leaf element, up to its end tag. A child

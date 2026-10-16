@@ -14,6 +14,22 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-16 — P6 shared FixupList guard published as `39c88aba` after two named
+  runtime REDs: Easy3/System-2 now refuse unhandled direct declarations alongside
+  System-1, before image assembly. Positive sources, empty/populated declarations,
+  exact ancestry and unchanged DB tests pass; owning ProductDB928/0/28ignored in56
+  targets and Clippy pass. All nineteen branch stages pass: Rust4689/0/209ignored
+  in345targets, Vitest3626/263files;2934source paths and six selected external/Git
+  commitments match. All twenty final merged stages also pass, including isolated
+  corpus152/152 in33targets. Exact local/tracking/live main equality verified.
+  Earlier incomplete merge attempt retained as interrupted, not accepted. This
+  session closes with no further implementation dispatched.
+  Seven original sources/36sites/eight function references correlate with the
+  retained master but do not define a general transform/no-op rule. No fixup,
+  complete real-image, executable or hardware support is claimed.
+  [Contract](contracts/source-fixup-integrity.md) ·
+  [Evidence](evidence/source-fixup-integrity-2026-10-16.json).
+
 - 2026-10-16 — P5 bounded System-1 image entry published as `ccfe5b74`:0012/DefaultProcedure
   library entry reuses actual evaluation and Core Type-1/indexed association
   codecs, protects original source pointers and refuses unmodeled FixupList.

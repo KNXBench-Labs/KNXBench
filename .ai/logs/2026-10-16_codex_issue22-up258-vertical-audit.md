@@ -114,6 +114,23 @@ The subsequent `closure2` actually passed all eight stages on the corrected
 staged candidate with unchanged source/package commitments. Its receipts remain
 separate from the failed first tail.
 
+## Local commit and durable evidence closure
+
+Runtime/test/documentation source is committed locally as `3e5ba4d2792758f2bbc5ad796722eca1be020ebd`,
+KNXBench <github@knxbench.com>, no co-author. The owned worktree was clean after
+commit; selected-root HEAD/status/journal and remote main were read back unchanged.
+Issue #22 was read back OPEN. No push or merge occurred.
+
+Private evidence is now at profile `evidence/up258-issue22-20261016-final`:
+`private-evidence.tar.gz`, `manifest-private.json`, `archive-verification.json`,
+`delivery.json`, `accepted-summary.json`, `cleanup.json`. Every one of the 148
+original archived evidence members was read back and hash-compared before retiring
+only this task's scratch/build caches. Earlier scratch paths above are historical
+execution locations, not current files. Original product/specification/acquisition
+files remain untouched. The local branch/worktree are retained as the deliverable.
+This final pointer update changes only this log and the owned handover; it does
+not change the accepted runtime/test inputs or unblock any missing contract.
+
 ## Stop and handover
 
 The first actual unresolved transition is the existing pre-evaluation

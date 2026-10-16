@@ -1,0 +1,88 @@
+{
+  "formatVersion": 1,
+  "date": "2026-10-16",
+  "scope": "P4a pure System-B Type-7 Format-1 object codec and bounded existing-resolver baseline",
+  "baseRevision": "7f9f3672707f616e1415a1ad3b3b21de9af3ace0",
+  "status": "all 17 frozen branch stages accepted; actual merge acceptance and publication pending",
+  "realSourceBaseline": {
+    "discovery": {
+      "inventoriedPackages": 105,
+      "visitedPackages": 13,
+      "prefixesExamined": 47,
+      "prefixBytesRead": 385024,
+      "fullSourceBytesRead": 4969370,
+      "selectedSources": 3,
+      "selectedSourcePackages": 1,
+      "scope": "first three direct-member witnesses, not a whole-corpus census"
+    },
+    "actualProductionResolver": {
+      "exit": 0,
+      "profile": "offline Release, network-isolated, opt-in temporary test",
+      "sourceBoundResults": 3,
+      "statuses": { "partial": 3 },
+      "issues": { "uninterpreted-step": 21 },
+      "executableResults": 0,
+      "resolverReadOnly": true,
+      "originalInputsUnchanged": true,
+      "runtimeInputsFrozen": true,
+      "temporaryTestRemovedFromWorktree": true,
+      "interpretation": "existing source reconstruction measured successfully; not a real image or download"
+    }
+  },
+  "focusedEvidence": {
+    "missingModuleRed": { "exit": 101, "diagnostic": "E0432: absent systemb_object_table module", "inputsFrozen": true },
+    "codecGreen": { "exit": 0, "passed": 10, "failed": 0, "inputsFrozen": true },
+    "initialReadOmissionMutant": {
+      "exit": 101,
+      "test": "every_flag_and_priority_has_the_original_table_87_bit_position",
+      "expectedFailureVerified": true,
+      "sourceRestored": true,
+      "restoredCodecGreen": { "exit": 0, "passed": 10, "failed": 0 }
+    },
+    "initialOwningCrateClippy": {
+      "exit": 101,
+      "reason": "constant-sized chunks_exact_mut lint",
+      "disposition": "syntax corrected to as_chunks_mut; corrected-candidate owning-crate Clippy passed in preflight1"
+    }
+  },
+  "correctedCandidatePreflight": {
+    "attempt": "preflight1",
+    "stagesPassed": 10,
+    "coreTestsPassed": 832,
+    "coreTargets": 15,
+    "failed": 0,
+    "owningCrateAllTargetClippy": "passed",
+    "formatDocumentationAndFiveRepositoryChecks": "passed",
+    "completeInputManifestsMatched": true
+  },
+  "boundaries": {
+    "newProductImageBuilder": false,
+    "newSourceTranslator": false,
+    "newExecutablePlan": false,
+    "durableRecovery": false,
+    "newPublicMaskAdmission": false,
+    "hardwareOrVendorCodeExecuted": false,
+    "schemaChanged": false,
+    "privateSpecOrProductBodiesPublished": false
+  },
+  "review": { "method": "separate in-session self-review; no subagents", "status": "no critical, important or security finding; corrected chunk syntax verified by Clippy" },
+  "acceptance": {
+    "fullBranch": {
+      "state": "accepted",
+      "attempt": "branch-gate1",
+      "baseRevision": "7f9f3672707f616e1415a1ad3b3b21de9af3ace0",
+      "sourceState": "reviewed uncommitted candidate; subsequent documentation-only update checked separately",
+      "stagesPassed": 17,
+      "runtimeInputPaths": 2908,
+      "completeInputManifestsMatched": true,
+      "gitFingerprintsMatched": true,
+      "rust": { "passed": 4649, "failed": 0, "ignored": 207, "targets": 339 },
+      "vitest": { "passed": 3626, "failed": 0 },
+      "tooling": { "tests": 163, "skipped": 1 },
+      "explicitReleaseSourceRegression": { "passed": 1, "failed": 0 },
+      "ignoredTestScope": "207 ordinary ignored tests are not counted as executed; isolated selected corpus gate remains for integration"
+    },
+    "actualMerged": "pending"
+  },
+  "publication": { "state": "not yet published", "selectedDirtyRootSynchronized": false }
+}

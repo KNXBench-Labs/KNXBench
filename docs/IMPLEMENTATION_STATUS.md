@@ -14,6 +14,21 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-16 — P4 System-B prerequisite implemented locally: pure Type-7 /
+  Format-1 group-object rewriting, one-based u16 indices, explicit initial read,
+  extended value types and preserved source/tail. Ten focused tests pass after
+  an observed missing-module RED; an omitted initial-read mutant fails the named
+  bit assertion and source restoration is verified. Initial owning-crate Clippy
+  rejected constant-sized chunk syntax; corrected Clippy and all 17 frozen
+  branch stages pass: Rust 4649/0 (207 ignored), Vitest 3626/0, explicit Release
+  source regression, workspace build and checks. Merge acceptance and publication
+  remain pending. The actual existing resolver baseline on three
+  selected real sources returned three partial/non-executable sequences, not
+  product support. No image/plan/recovery/public-route promotion.
+  [Contract](contracts/offline-systemb-object-table.md) ·
+  [Research](research/2026-10-16-systemb-offline-prerequisites.md) ·
+  [Evidence](evidence/offline-systemb-object-table-2026-10-16.json).
+
 - 2026-10-16 — P3b **research checkpoint, no production-code change**:
   original Resources§4.2.7 p31 specifies a four-octet table-reference pointer;
   retained master resource Length2 is not treated as a proven wire-width rule.

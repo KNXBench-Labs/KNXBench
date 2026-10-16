@@ -1,5 +1,16 @@
 # Compatibility
 
+## Relative source-view boundary (16 October 2026 source)
+
+[Relative source segments](contracts/offline-relative-source-segments.md) are now
+retained separately by the product-code reader. This is not an executable image.
+Both absolute-image entry points explicitly refuse any relative source segment,
+including mixed input previously liable to omission. Duplicate known segment IDs
+now refuse instead of choosing a winner. Unknown relative attributes are retained;
+unsupported children or fields outside this reader's explicit bounds refuse the
+view while the verbatim original blob remains stored. Schemas, transport and
+mask admission are unchanged; valid absolute-only sources keep their path.
+
 ## Normalized property simulation (16 October 2026 source)
 
 [The P3a offline executor](contracts/offline-property-plan-simulation.md) accepts

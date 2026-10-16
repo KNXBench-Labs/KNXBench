@@ -20,6 +20,10 @@
 //!
 //! What is not documented is refused, never guessed:
 //!
+//! - **Relative source segments.** Retained in `ProgramCode`, but neither
+//!   absolute image entry point omits or relocates them. They require a separate
+//!   relative image builder, which this module does not implement.
+//!
 //! - **Evaluation.** A `Diagnostic` from the `Dynamic` evaluation refuses
 //!   the build, with one exception. A `choose` whose controlling value is
 //!   one its parameter's type allows, but which no `when` covers,
@@ -449,6 +453,11 @@ fn build_image(
     let program_id = request.program_id.as_str();
     let code = load_program_code(conn, program_id)?
         .ok_or_else(|| ImageError::UnknownProgram(program_id.to_string()))?;
+    if !code.relative_segments.is_empty() {
+        return Err(ImageError::Unsupported {
+            what: "relative source segments require a relative image builder".into(),
+        });
+    }
     if let Some(order) = code
         .options
         .get("ParameterByteOrder")
@@ -1736,6 +1745,26 @@ mod tests {
 
     fn octets<'a>(image: &'a DownloadImage, id: &str) -> &'a [u8] {
         &image.segment(id).expect("segment").octets
+    }
+
+    #[test]
+    fn relative_sources_are_never_silently_omitted_from_absolute_images() {
+        let relative = r#"<RelativeSegment Id="R" Offset="0" Size="1" LoadStateMachine="4"><Data>AQ==</Data></RelativeSegment>"#;
+        let xml = PROGRAM.replace("<Code>", &format!("<Code>{relative}"));
+        assert_ne!(
+            xml, PROGRAM,
+            "the mixed-source fixture must contain a relative segment"
+        );
+        let (_dir, conn) = db(&xml);
+        let before = conn.total_changes();
+        for build in [build_download_image, build_system2_image] {
+            let error = build(&conn, &request(&[], vec![])).unwrap_err();
+            assert!(
+                matches!(&error, ImageError::Unsupported { what } if what == "relative source segments require a relative image builder"),
+                "{error}"
+            );
+        }
+        assert_eq!(conn.total_changes(), before);
     }
 
     #[test]

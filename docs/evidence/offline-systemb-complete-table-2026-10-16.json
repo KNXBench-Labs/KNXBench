@@ -3,7 +3,7 @@
   "date": "2026-10-16",
   "scope": "P4d complete explicit System-B Format1 table encoding, not product image or download support",
   "baseRevision": "28f8ccb1cd0ac93354c96594327a62e4efb60911",
-  "status": "all eighteen branch stages accepted on unchanged retry candidate; merged acceptance and publication pending",
+  "status": "integrated and published as 894f14e0; eighteen branch and nineteen actual merged stages accepted",
   "originalBodyInspection": {
     "document": "Resources 03_05_01",
     "version": "01.10.01",
@@ -81,8 +81,17 @@
       "state": "accepted",
       "attempt": "branch-gate2",
       "stagesPassed": 18,
-      "rust": { "passed": 4678, "failed": 0, "ignored": 208, "targets": 343 },
-      "vitest": { "passed": 3626, "failed": 0, "files": 263 },
+      "rust": {
+        "passed": 4678,
+        "failed": 0,
+        "ignored": 208,
+        "targets": 343
+      },
+      "vitest": {
+        "passed": 3626,
+        "failed": 0,
+        "files": 263
+      },
       "inputPaths": 2922,
       "sourceExternalGitCommitmentsVerified": true,
       "firstAttempt": {
@@ -94,8 +103,38 @@
       },
       "followUp": "documentation-only result update; runtime equality checked separately"
     },
-    "merged": "pending",
-    "publication": "pending"
+    "merged": {
+      "state": "accepted",
+      "attempt": "merged-gate1",
+      "runtimeRevision": "894f14e0efa18899585d52c3979e80942e7adc57",
+      "stagesPassed": 19,
+      "rust": {
+        "passed": 4678,
+        "failed": 0,
+        "ignored": 208,
+        "targets": 343
+      },
+      "vitest": {
+        "passed": 3626,
+        "failed": 0,
+        "files": 263
+      },
+      "corpus": {
+        "passed": 152,
+        "selected": 152,
+        "targets": 33,
+        "networkIsolated": true
+      },
+      "sourcePaths": 2922,
+      "completeSourceExternalGitCommitmentsVerified": true,
+      "ownedCorpusLinksRemoved": true
+    },
+    "publication": {
+      "state": "published",
+      "runtimeRevision": "894f14e0efa18899585d52c3979e80942e7adc57",
+      "exactLocalTrackingLiveMainEqualityVerified": true,
+      "selectedRootSynchronized": false
+    }
   },
   "review": {
     "method": "separate in-session self-review; no subagents",

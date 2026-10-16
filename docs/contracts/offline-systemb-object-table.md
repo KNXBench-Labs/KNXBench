@@ -91,7 +91,9 @@ the emitted length and zero-padding missing entries failed the named capacity
 test; exact production bytes were restored and all six tests passed again.
 The ten existing rewrite tests and owning all-target Clippy also pass.
 All eighteen branch stages pass on the unchanged candidate (Rust4678/0,
-Vitest3626/263files); merged acceptance and publication remain pending. The
+Vitest3626/263files). All nineteen actual merged stages also pass, including
+isolated corpus152/152 in33targets; published as `894f14e0` with exact
+local/tracking/live main equality verified. The
 first branch attempt remains a recorded procfs-snapshot test failure, not an
 accepted run. See
 [P4d evidence](../evidence/offline-systemb-complete-table-2026-10-16.json).

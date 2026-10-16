@@ -14,6 +14,20 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-16 — P4c explicit System-B address/association codec implemented locally:
+  word counts, no individual slot, one-based wide indices, explicit formats0/1
+  and preserved first-match sender. Twelve literal/boundary tests pass after
+  missing-module RED; a realistic sender-order mutant fails the intended test,
+  source restored. Core844/0 in16targets, owning all-target Clippy and format
+  pass. Original-body inspection also corrects57B0-versus07B0merge attribution;
+  no generated product image, new mask admission or recovery claim. All18frozen
+  branch stages pass: Rust4672/0/208ignored in342targets, Vitest3626/263files,
+  both explicit source regressions and workspace checks. All2919source identities,
+  external oracle/package commitments and Git fingerprints match. Actual merged
+  acceptance/publication remain pending. All10preflights and separate self-review
+  pass with no critical/important/security finding. [Contract](contracts/offline-systemb-link-tables.md) ·
+  [Evidence](evidence/offline-systemb-link-tables-2026-10-16.json).
+
 - 2026-10-16 — P4b relative source view integrated and published as `4bfc3780`: distinct relative
   metadata/Data/Mask, shared source blob decoder, duplicate-ID refusal and an
   explicit absolute-image guard. Missing-field compile RED and mixed-source

@@ -1,5 +1,18 @@
 # Architecture
 
+## Explicit single-octet legacy parameter fields (16 October 2026 source)
+
+The existing ProductDB source validator retains default-width/bounds probing and
+waives only template equality for explicit direct-Memory numeric fields contained
+within one octet. System1/System2 reuse the existing Core MSB writer; there is no
+new encoder, evaluator, schema or public route. Inferred Union/cross-octet/
+multibyte fields keep their safeguards. A separate nonpersisted source-presence
+bit makes the two strict offline source-image entries refuse uninterpreted
+LegacyPatchAlways before activation. Easy3 keeps its existing inference policy;
+no new handling of that directive is claimed there. XML source/unknown reports
+are unchanged.
+[Contract](contracts/offline-explicit-parameter-bits.md).
+
 ## System-300 property-table image boundary (16 October 2026 source)
 
 Core reuses the existing Type6 link validator/encoder, then exposes immutable

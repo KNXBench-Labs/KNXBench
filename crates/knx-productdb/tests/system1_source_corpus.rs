@@ -20,6 +20,7 @@ struct Case {
 #[serde(rename_all = "kebab-case")]
 enum Refusal {
     FixupList,
+    LegacyPatch,
     DefaultBits,
     MidOctetUnion,
 }
@@ -32,6 +33,9 @@ impl Refusal {
         match self {
             Self::FixupList => {
                 what == "System1 FixupList requires a separate source interpretation"
+            }
+            Self::LegacyPatch => {
+                what == "System1 LegacyPatchAlways requires a separate source interpretation"
             }
             Self::DefaultBits => what.ends_with(": System1 default disagrees with source bits"),
             Self::MidOctetUnion => {
@@ -99,8 +103,10 @@ fn configured_system1_sources_keep_named_refusals_and_public_download_boundaries
             links: Vec::new(),
             flag_overrides: Default::default(),
         };
-        let error = build_system1_image(&conn, &request)
-            .expect_err("configured source remains unsupported, not a complete real image");
+        let result = build_system1_image(&conn, &request);
+        let Err(error) = result else {
+            panic!("configured unsupported source unexpectedly returned an image");
+        };
         assert!(
             case.expected_refusal.matches(&error),
             "unexpected configured refusal: {error}"

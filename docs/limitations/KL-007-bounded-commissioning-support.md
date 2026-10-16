@@ -6,6 +6,20 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Explicit parameter-bit follow-up (16 October 2026)
+
+[Direct single-octet fields](../contracts/offline-explicit-parameter-bits.md) now
+replace differing template defaults without guessing byte order. Latest private
+initial candidates/four independent comparisons are historical, not complete
+source acceptance. LegacyPatchAlways refusal closes the strict System1/System2
+source entries, including inactive declarations. The broader trial Easy3 guard
+was withdrawn rather than weakening existing positive corpus tests. Easy3 keeps
+its existing inference policy; this neither defines the directive there nor
+adds any source/firmware completeness claim. Configured13-source refusals are
+7FixupList/2legacy-patch/3inferred-default/1Union. No executable plan,
+whole-mutation recovery, public admission or firmware verification is added.
+The P5/P6 counts below remain historical, not current outcome totals.
+
 ## System-300 offline property images (16 October 2026 source)
 
 [Pure S-mode property-table images](../contracts/offline-system300-property-tables.md)

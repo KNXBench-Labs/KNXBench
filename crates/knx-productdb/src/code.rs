@@ -243,6 +243,9 @@ pub struct ProgramCode {
     /// Presence of source `Static/FixupList`, even an empty declaration.
     /// Contents remain in the original XML; no fixup semantics are inferred.
     pub has_fixup_list: bool,
+    /// Presence of unqualified `LegacyPatchAlways` on a Static parameter or
+    /// Union member, regardless of activation/value. Original XML is retained.
+    pub has_legacy_patch_always: bool,
     /// `Static/Parameters` placements by parameter id. A parameter with
     /// no placement (it lives nowhere in memory) has no entry.
     pub parameters: BTreeMap<String, ParameterPlacement>,
@@ -665,6 +668,10 @@ impl<'a> Parser<'a> {
         while let Some(child) = self.next_inside("Parameters")? {
             match child.name.as_str() {
                 "Parameter" => {
+                    code.has_legacy_patch_always |= child
+                        .attributes
+                        .evidence_value("LegacyPatchAlways")
+                        .is_some();
                     let id = self.parameter_id(&child)?;
                     if let Some(placement) = self.parameter_placement(&child)? {
                         code.parameters.insert(id, placement);
@@ -718,6 +725,10 @@ impl<'a> Parser<'a> {
                     union = Some(child);
                 }
                 "Parameter" => {
+                    code.has_legacy_patch_always |= child
+                        .attributes
+                        .evidence_value("LegacyPatchAlways")
+                        .is_some();
                     // A member's own children are not placements: its
                     // position is the union's plus its own attributes.
                     self.skip(&child)?;

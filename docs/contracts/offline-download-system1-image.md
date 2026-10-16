@@ -1,5 +1,12 @@
 # System-1 source-image assembly: offline contract
 
+Current follow-up: [explicit single-octet parameter substitution](offline-explicit-parameter-bits.md)
+initially advanced two original sources to byte-checked candidates; those
+artifact returns are withdrawn by the new shared LegacyPatchAlways guard.
+Current configured13-source refusals are7fixup/2legacy-patch/3default/1Union.
+No complete semantics or executable support is claimed. The original P5/P6
+acceptance and refusal counts below describe those historical packages.
+
 Status: integrated and published as `ccfe5b74`; all nineteen branch and twenty
 actual merged stages accepted, including isolated corpus152/152 in33targets.
 Exact local/tracking/live main equality verified. This result-only closure
@@ -53,7 +60,8 @@ remain separate byte prerequisites, not hardware evidence.
   encoding or non-low priority mapping refuses rather than borrowing another
   family's flags.
 - Reuse source-default corroboration for inferred Union/bit/multibyte fields;
-  direct numeric octets may replace template defaults as already documented.
+  [explicit direct-Memory numeric fields contained in one octet](offline-explicit-parameter-bits.md)
+  may replace template defaults without equality, while default-width validation remains.
   Uncorroborated source bits, ambiguous byte order, unsupported types and
   overlapping active placements stay refusals, not endian/union guesses.
 - `ProgramCode.has_fixup_list` is a nonpersisted view of direct `Static/FixupList`

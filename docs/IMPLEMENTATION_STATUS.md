@@ -14,6 +14,31 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-16 — Explicit direct-Memory numeric fields entirely inside one octet
+  now replace template bits without requiring default equality, reusing the
+  existing importer/evaluator/writer for offline System1/System2 images. Named
+  equality and default-width REDs preceded their corrections; bounds, masks,
+  pointer/table protection, overlap and other source guards remain. Independent
+  whole-segment oracles checked two related source candidates in four
+  configurations, but those artifact successes are withdrawn: strict System1/
+  System2 entries refuse unhandled LegacyPatchAlways, even on inactive parameters.
+  The trial all-family guard is not accepted; it changed established Easy3
+  source policy and broke original positive golden tests. That expansion is
+  withdrawn, those goldens stay unchanged and Easy3 semantics remain unresolved.
+  Current configured13-source refusals are7/2/3/1
+  (fixup/legacy-patch/inferred-default/Union);zero complete real images. No new
+  public admission, executable plan, recovery or firmware evidence.
+  [Contract and acceptance boundary](contracts/offline-explicit-parameter-bits.md).
+  Scoped branch12/12passes: ProductDB935/0/29ignored in56reports, exact
+  public System2 source1/0, Easy3 scope regression and owning all-targetClippy/
+  build. Earlier all-family/whitespace/compatibility attempts remain historical
+  or superseded, never final acceptance. The actual scoped corpus initially
+  returned151/152solely at the historical private-System2 first-refusal assertion;
+  its strict exact-diagnostic/presence/DB-invariance correction passes ten focused
+  stages without production changes. Final actual integration/private corpus and
+  publication remain pending;
+  [evidence](evidence/explicit-source-bits-2026-10-16.json).
+
 - 2026-10-16 — Community PR credit comments extend the existing notification
   workflow: one maintained comment per eligible PR with current 5/15/25 XP,
   board total/title, counters, XP sources, earned medals and board link.

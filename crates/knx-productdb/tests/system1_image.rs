@@ -76,6 +76,189 @@ fn actual_evaluator_builds_literal_type1_bytes_and_preserves_pointers_without_do
 }
 
 #[test]
+fn explicit_single_octet_bitfields_replace_template_bits_without_default_equality() {
+    // Schema23 BitOffset_t fixes the MSB position; no byte order or Union
+    // arithmetic is involved. Expected octets are independently specified.
+    for (width, bit_offset, default, requested, base, expected_default, expected) in [
+        (1, 0, 1, 0, 0x25, 0xA5, 0x25),
+        (1, 7, 0, 1, 0xA5, 0xA4, 0xA5),
+        (3, 2, 5, 3, 0x12, 0x2A, 0x1A),
+        (4, 4, 2, 9, 0xB7, 0xB2, 0xB9),
+        (7, 1, 3, 85, 0x80, 0x83, 0xD5),
+    ] {
+        let xml = program();
+        let begin = xml.find("<Data>").unwrap() + 6;
+        let end = xml.find("</Data>").unwrap();
+        let mut source = STANDARD.decode(&xml[begin..end]).unwrap();
+        source[223..226].copy_from_slice(&[0xD6, base, 0x6B]);
+        let xml = format!(
+            "{}{}{}",
+            &xml[..begin],
+            STANDARD.encode(&source),
+            &xml[end..]
+        )
+        .replace("SizeInBit=\"8\"", &format!("SizeInBit=\"{width}\""))
+        .replace("Value=\"18\"", &format!("Value=\"{default}\""))
+        .replace(
+            "maxInclusive=\"255\"",
+            &format!("maxInclusive=\"{}\"", (1 << width) - 1),
+        )
+        .replace(
+            "Offset=\"224\" BitOffset=\"0\"",
+            &format!("Offset=\"224\" BitOffset=\"{bit_offset}\""),
+        )
+        .replace("ParameterByteOrder=\"BigEndian\"", "");
+        let (_dir, conn, mut request) = fixture(&xml);
+        let before = conn.total_changes();
+        request.values.clear();
+        let image =
+            build_system1_image(&conn, &request).expect("explicit default replaces template bits");
+        assert_eq!(
+            &image.segment("S").unwrap().octets[223..226],
+            &[0xD6, expected_default, 0x6B]
+        );
+        request.values.insert("P_R".into(), requested.to_string());
+        let image =
+            build_system1_image(&conn, &request).expect("explicit edited bits replace template");
+        assert_eq!(
+            &image.segment("S").unwrap().octets[223..226],
+            &[0xD6, expected, 0x6B]
+        );
+        assert_eq!(image.parameter_fields.len(), 1);
+        assert_eq!(image.parameter_fields[0].field.bit_offset, bit_offset);
+        let retained = knx_productdb::code::load_program_code(&conn, &request.program_id)
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            retained.segment("S").unwrap().data.as_ref().unwrap(),
+            &source
+        );
+        assert_eq!(conn.total_changes(), before);
+        assert!(knx_productdb::download_plan::plan_memory_download(&image).is_err());
+    }
+}
+
+#[test]
+fn explicit_bits_keep_masks_bounds_references_and_overlap_checks() {
+    let base = program()
+        .replace("SizeInBit=\"8\"", "SizeInBit=\"3\"")
+        .replace("Value=\"18\"", "Value=\"5\"")
+        .replace("maxInclusive=\"255\"", "maxInclusive=\"7\"")
+        .replace(
+            "Offset=\"224\" BitOffset=\"0\"",
+            "Offset=\"224\" BitOffset=\"2\"",
+        );
+    let mut bad_inputs = vec![
+        base.replace("CodeSegment=\"S\" Offset=\"224\"", "CodeSegment=\"MISSING\" Offset=\"224\""),
+        base.replace("Offset=\"224\"", "Offset=\"256\""),
+        base.replace("Offset=\"224\"", "Offset=\"17\""),
+        base.replace("Offset=\"224\"", "Offset=\"128\""),
+        base.replace("BitOffset=\"2\"", "BitOffset=\"8\""),
+        base.replace("BitOffset=\"2\"", "BitOffset=\"6\""), // Crosses an octet, not admitted here.
+        base.replace(
+            "</Parameters>",
+            "<Parameter Id=\"Q\" ParameterType=\"PT\" Value=\"5\"><Memory CodeSegment=\"S\" Offset=\"224\" BitOffset=\"3\" /></Parameter></Parameters>",
+        ).replace("</ParameterRefs>", "<ParameterRef Id=\"Q_R\" RefId=\"Q\" /></ParameterRefs>")
+         .replace("<ParameterRefRef RefId=\"P_R\" />", "<ParameterRefRef RefId=\"P_R\" /><ParameterRefRef RefId=\"Q_R\" />"),
+    ];
+    // Protect just one changed field bit; the surrounding bits remain writable.
+    let begin = base.find("<Mask>").unwrap() + 6;
+    let end = base.find("</Mask>").unwrap();
+    let mut mask = STANDARD.decode(&base[begin..end]).unwrap();
+    mask[224] = 0xF7;
+    bad_inputs.push(format!(
+        "{}{}{}",
+        &base[..begin],
+        STANDARD.encode(mask),
+        &base[end..]
+    ));
+    for xml in bad_inputs {
+        let (_dir, conn, mut request) = fixture(&xml);
+        request.values.insert("P_R".into(), "3".into());
+        let before = conn.total_changes();
+        assert!(build_system1_image(&conn, &request).is_err());
+        assert_eq!(conn.total_changes(), before);
+    }
+    let (_dir, conn, mut request) = fixture(&base);
+    request.values.insert("P_R".into(), "8".into());
+    assert!(build_system1_image(&conn, &request).is_err());
+}
+
+#[test]
+fn explicit_bitfield_substitution_still_validates_the_default_width() {
+    // Declared min/max alone do not establish that a default fits its field.
+    let xml = program()
+        .replace("SizeInBit=\"8\"", "SizeInBit=\"3\"")
+        .replace("Value=\"18\"", "Value=\"8\"")
+        .replace(
+            "Offset=\"224\" BitOffset=\"0\"",
+            "Offset=\"224\" BitOffset=\"2\"",
+        );
+    let (_dir, conn, mut request) = fixture(&xml);
+    request.values.insert("P_R".into(), "3".into());
+    let before = conn.total_changes();
+    let result = build_system1_image(&conn, &request);
+    assert!(
+        matches!(
+            result,
+            Err(knx_productdb::image::ImageError::Parameter {
+                error:
+                    knx_core::commissioning::parameter_image::ParameterImageError::ValueTooWide {
+                        value: 8,
+                        ..
+                    },
+                ..
+            })
+        ),
+        "a valid request cannot conceal a malformed source default"
+    );
+    assert_eq!(conn.total_changes(), before);
+}
+
+#[test]
+fn inactive_legacy_patch_declarations_do_not_return_partial_system1_images() {
+    let (_dir, baseline, request) = fixture(&program());
+    assert!(build_system1_image(&baseline, &request).is_ok());
+    for value in ["", "0", "1", "false", "true"] {
+        let inactive = format!("<Parameter Id=\"INACTIVE\" ParameterType=\"PT\" Value=\"2\" LegacyPatchAlways=\"{value}\"><Memory CodeSegment=\"S\" Offset=\"225\" BitOffset=\"0\" /></Parameter>");
+        let xml = program().replace("</Parameters>", &format!("{inactive}</Parameters>"));
+        let (_dir, conn, request) = fixture(&xml);
+        let before = conn.total_changes();
+        let result = build_system1_image(&conn, &request);
+        assert!(
+            matches!(result, Err(knx_productdb::image::ImageError::Unsupported { ref what })
+            if what == "System1 LegacyPatchAlways requires a separate source interpretation"),
+            "an inactive uninterpreted patch declaration must not yield an image"
+        );
+        assert_eq!(conn.total_changes(), before);
+    }
+}
+
+#[test]
+fn legacy_patch_presence_tracks_direct_parameters_and_union_members_not_extensions() {
+    for (declaration, expected) in [
+        ("<Parameter Id=\"INACTIVE\" LegacyPatchAlways=\"1\" />", true),
+        ("<Union SizeInBit=\"8\"><Memory CodeSegment=\"S\" Offset=\"225\" BitOffset=\"0\" /><Parameter Id=\"INACTIVE\" LegacyPatchAlways=\"0\" Offset=\"0\" BitOffset=\"0\" /></Union>", true),
+        ("<Extension><Parameter Id=\"INACTIVE\" LegacyPatchAlways=\"1\" /></Extension>", false),
+        ("<Parameter xmlns:x=\"urn:extension\" Id=\"INACTIVE\" x:LegacyPatchAlways=\"1\" />", false),
+    ] {
+        let xml = program().replace("</Parameters>", &format!("{declaration}</Parameters>"));
+        let (_dir, conn, request) = fixture(&xml);
+        let before = conn.total_changes();
+        let code = knx_productdb::code::load_program_code(&conn, &request.program_id).unwrap().unwrap();
+        assert_eq!(code.has_legacy_patch_always, expected);
+        let result = build_system1_image(&conn, &request);
+        if expected {
+            assert!(matches!(result, Err(knx_productdb::image::ImageError::Unsupported { ref what })
+                if what == "System1 LegacyPatchAlways requires a separate source interpretation"));
+        } else {
+            assert!(result.is_ok());
+        }
+        assert_eq!(conn.total_changes(), before);
+    }
+}
+
+#[test]
 fn every_other_family_and_nondefault_style_is_refused_by_this_explicit_entry() {
     for xml in [
         program().replace("MV-0012", "MV-0701"),

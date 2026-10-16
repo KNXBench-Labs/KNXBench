@@ -1,4 +1,20 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-16 16:33
+- **Completed:** Owner resumed offline continuation. Guarded attempt1 retained as FAILED at original-relative existing diagnostic after six successful stages, with complete source/Git/external freeze. Minimum correction preserves original FixupList/relative refusal precedence before the new LegacyPatchAlways guard; all remain before activation/assembly. Prior candidate returns remain withdrawn, zero complete real images.
+- **Pending/Next Steps:** Final guarded branch13stages, exact reviewed commit, fresh actual scoped integration with regular isolated corpus, publication/readback/result closure/owned retirement. Declarative product-data analysis publication now owner-authorised separately; no ETS program-component or excluded private REA basis.
+- **Notes for Codex oder Claude:** Own feat/source-image-20261016 on published claimc3744595. Root stale/dirty protected; foreign UI work untouched. Raw attempts and provenance in profile scratch source-image-continuation-20261016; no unsafe admission/schema/transport change. No bus/vendor/subagents/codingCLI/release/deployment.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-16 16:08
+- **Completed:** Owned explicit single-octet source-bit package implemented and separately self-reviewed on claimc3744595. Named equalityRED then minimum correction; review width3/default8/request3RED then probe-before-waiver correction. Final frozen13stage branch passes ProductDB931/0/29ignored in56reports, owningClippy/build, explicit originalSystem1/relative tests and docs/five repository/format/whitespace. Union-waiver mutant fails intended assertion; exact source restored/test1passes. Old13source chain:11refusals plus2bounded candidates/4independent whole-segment comparisons;zero complete semantic images due uninterpreted legacy directive. No public admission/transport/schema change.
+- **Pending/Next Steps:** Commit exact reviewed source/docs, actual fresh-main non-FF integration with complete matching scoped gates and isolated regular private corpus, publication/readback, result-only closure and exact owned retirement. Separate owner-requested private review stays private/local and does not authorise implementation or hardware. No technical findings from it belong in Git.
+- **Notes for Codex oder Claude:** Own feat/source-image-20261016; contract offline-explicit-parameter-bits, public aggregate explicit-source-bits-2026-10-16, log2026-10-16_codex_explicit-source-bits. Root1817fb2a/index/foreignpaths protected/unsynchronised; preserve full concurrent journal. No bus/vendor/subagents/codingCLI/release/deployment. Original refused/setup/summary-reader attempts retained separately; silentfmt/whitespace alone may have empty logs, test reports remain required. Branch acceptance is not actual integration or publication.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-16 15:35
 - **Completed:** New explicit offline-download continuation reconciled fresh origin/main 6eb9178e; P6 runtime39c88aba and closure7448450c are published ancestors. Owned feat/source-image-20261016 worktree isolates the stale dirty root. Original Cookbook Load Controls p7, Manufacturer Tool pp18–19 and Project Schema23 pp29–30 rendered/visually inspected. No production edit or test acceptance yet.
 - **Pending/Next Steps:** Own the bounded direct-Memory numeric single-octet bitfield/template-default slice in ProductDB legacy_source and image regressions. Require named RED before narrowing only this guard; independently expected bytes and real original-source importer/evaluator checks. FixupList, Union placement and multibyte semantics remain closed unless separately proven.

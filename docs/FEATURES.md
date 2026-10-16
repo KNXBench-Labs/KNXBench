@@ -1,11 +1,11 @@
-Last updated: 2026-10-15 14:29 CEST
+Last updated: 2026-10-16 21:18 CEST
 
 # KNXBench Features
 
 | Reference | Value |
 | --- | --- |
-| Source snapshot | `v0.1.0-alpha.12` |
-| Released baseline | `v0.1.0-alpha.12` |
+| Source snapshot | `v0.1.0-alpha.13` |
+| Released baseline | `v0.1.0-alpha.13` |
 | Main-only | Newer than released baseline |
 | Local-only | Unpublished; not accepted on main |
 | Scope | Listed boundaries; not universal compatibility |
@@ -25,6 +25,23 @@ Last updated: 2026-10-15 14:29 CEST
 | HTTP API | Server integration | alpha.6 |
 | MCP server | Read-only saved-file tools; opt-in rename writer from alpha.10 | alpha.6 |
 | Remote browser | Authenticated server; networking-dependent | alpha.6 |
+
+## New in Alpha 13
+
+[Release scope](releases/alpha13.md) separates offline editing and image-integrity
+work from unfinished programming support. Native/model16 and product23 are
+unchanged from Alpha 12; previous-reader compatibility is not verified.
+
+| Feature | Scope | Availability |
+| --- | --- | --- |
+| Foldable navigation | Independent sections and explorer-owned scrolling | alpha.13 |
+| Grouped File actions | Project/files, imports, exports and support groups | alpha.13 |
+| Manufacturer operating modes | Source-declared enum controls beside objects; shared catalogue path | alpha.13 |
+| Parameter groups | Declared block ancestry and optional verified captions | alpha.13 |
+| Parameter-driven object refresh | Atomic durable undoable creation of missing active unscoped objects; ambiguous/module synthesis refuses | alpha.13 |
+| Offline image integrity | Relative-source and unhandled fixup/strict legacy-patch refusal; no new download admission | alpha.13 |
+| Offline family codecs/simulation | Explicit table/property bytes and normalized simulator only, not complete product loading | alpha.13 |
+| PR contributor recognition | Public counters, explicit XP, earned medals and maintained comments | alpha.13 |
 
 ## New in Alpha 12
 

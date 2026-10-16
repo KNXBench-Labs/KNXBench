@@ -2,7 +2,7 @@
 
 # Implementation status
 
-## Workbench configuration (16 October 2026 source, after Alpha 12)
+## Workbench configuration (Alpha 13 candidate)
 
 Navigation blocks fold independently; File actions have four labelled groups.
 Device functions exposes supported manufacturer mode enums beside communication
@@ -10,18 +10,17 @@ objects; Parameters uses declared blocks and retains folded drafts. Supported
 parameter edits create missing positively active unscoped objects in one durable,
 undoable batch without replacing existing links/overrides. Missing module mappings
 refuse, and ambiguous DPTs are not selected automatically. No new hardware or ETS
-compatibility is implied. These changes are source-only, not a retroactive update
-to an Alpha 12 AppImage. [Operating instructions](user-guide/05-devices-and-products.md#device-functions-source-builds-after-alpha-12)
+compatibility is implied. These changes are in the Alpha 13 candidate, not a
+retroactive update to an Alpha 12 AppImage. [Operating instructions](user-guide/05-devices-and-products.md#device-functions-source-builds-after-alpha-12)
 and [contract](../contracts/parameter-object-refresh.md).
 
 This chapter is the honest inventory: what exists, what half exists, and what
 does not exist at all, area by area across the whole application.
 
 The detailed inventory retains its **8 October 2026** source audit and dated
-follow-ups. The current public snapshot is
-[Alpha 12](../releases/alpha12.md), tagged on 15 October 2026;
-[source acceptance](../releases/alpha12-acceptance.md) and artifact verification
-are separate recorded gates, not implied by a version bump.
+follow-ups. The next packaged snapshot is the [Alpha 13 candidate](../releases/alpha13.md).
+Alpha 12 was published on 15 October 2026. Exact-candidate source acceptance and
+public artifact verification remain separate, not implied by a version bump.
 The version number is where the project starts counting, not a claim that
 anything has reached a finish line.
 

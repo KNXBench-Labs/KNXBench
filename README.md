@@ -96,10 +96,11 @@ Retained bytes are not a promise of complete ETS semantics.
   command line for the scriptable bits.
 
 > [!NOTE]
-> **Alpha 12:** portable project/product data, per-part programming marks, deliberate
-> read-only device comparison and offline support reports — plus the UI fixes reported
-> by actual users. [Release notes](docs/releases/alpha12.md) explain the scope and the
-> native-schema **16** / product-schema **23** upgrade. Backups before bravery.
+> **Alpha 13:** foldable navigation, grouped File actions, real device-mode choices
+> and durable parameter-driven object refresh — plus stricter offline image integrity.
+> [Release notes](docs/releases/alpha13.md) separate shipped editing from unfinished
+> device support. Native schema **16** / product schema **23** stay unchanged from
+> Alpha 12. Backups before bravery.
 
 ## See it in action
 
@@ -167,7 +168,7 @@ import a `.knxproj`. Your projects live in `data/` and survive restarts.
 
 Images are available for **x86-64 (`amd64`) and 64-bit Arm (`arm64`)**. `latest`
 follows published releases, including alphas, not the newest source. To stay on a
-specific release, use `knxbench/knxbench-server:0.1.0-alpha.12` in both commands
+specific release, use `knxbench/knxbench-server:0.1.0-alpha.13` in both commands
 ([tags and details](docs/manual/user-guide/11-web-and-docker.md#ready-made-image-from-docker-hub)).
 
 Want changes newer than the release? [Build the container from source](docs/manual/getting-started/04-installation.md#build-the-container-from-source).
@@ -190,15 +191,15 @@ and may enter shell history.
 ### Linux desktop, via AppImage
 
 ```bash
-REL=https://github.com/KNXBench-Labs/KNXBench/releases/download/v0.1.0-alpha.12
-curl -LO "$REL/KNXBench_0.1.0-alpha.12_amd64.AppImage"
+REL=https://github.com/KNXBench-Labs/KNXBench/releases/download/v0.1.0-alpha.13
+curl -LO "$REL/KNXBench_0.1.0-alpha.13_amd64.AppImage"
 curl -LO "$REL/SHA256SUMS"
 sha256sum -c --ignore-missing SHA256SUMS
-chmod +x KNXBench_0.1.0-alpha.12_amd64.AppImage
-./KNXBench_0.1.0-alpha.12_amd64.AppImage
+chmod +x KNXBench_0.1.0-alpha.13_amd64.AppImage
+./KNXBench_0.1.0-alpha.13_amd64.AppImage
 ```
 
-This is the `v0.1.0-alpha.12` pre-release, x86-64 only, built by the release workflow.
+This is the `v0.1.0-alpha.13` pre-release, x86-64 only, built by the release workflow.
 `--ignore-missing` skips the `knx-mcp` binary listed in the same checksum file.
 Source changes after this tag still need a
 [source build](docs/manual/getting-started/04-installation.md#c-from-source). The
@@ -236,7 +237,7 @@ Alpha.10 is the first release with it; Alpha.9 and older packages do not check.
 ## Project status
 
 **Alpha — and we mean it.** The current pre-release is
-[`v0.1.0-alpha.12`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.12).
+[`v0.1.0-alpha.13`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.13).
 The test suite is large, the documentation is honest, and things still move.
 
 - **Solid:** importing real ETS projects with a full report, editing with undo, the
@@ -259,7 +260,7 @@ that converts it all into *Lord of the Rings* re-reads and ant colonies. It is a
 generated snapshot (last run 7 October 2026), so read its numbers as "as of".
 
 The [test catalogue](docs/TEST_CATALOGUE.md) explains what gets exercised; each
-[release note](docs/releases/alpha12.md) names its own scope. Test results belong to
+[release note](docs/releases/alpha13.md) names its own scope. Test results belong to
 an exact source snapshot, not a perpetually growing badge. The
 [architecture decisions](docs/adr/README.md) explain the engineering behind it.
 

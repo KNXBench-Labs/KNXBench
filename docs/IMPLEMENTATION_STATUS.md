@@ -12,6 +12,14 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Alpha 13 preparation (16 October 2026)
+
+Owner requested preparation and publication, not new feature scope or deployment.
+Cutoff `c9924165` includes the workbench configuration and offline integrity/codecs
+since Alpha 12. Native/model16 and product23 stay unchanged. Full exact-candidate
+source acceptance, no-publish AppImage/Docker builds and external publication
+verification are pending; [scope and limits](releases/alpha13.md) remain explicit.
+
 ## Workbench configuration: integrated source acceptance
 
 The five-part workbench change has targeted Core/API roundtrip and undo coverage,

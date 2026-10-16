@@ -1,5 +1,14 @@
 # Roadmap
 
+## Exact UP258 outcome takes priority (16 October 2026)
+
+For issue #22, complete `M-0001_A-9205-04-9270` image → all 21 source
+positions → production execution → whole-mutation recovery before unrelated
+family expansion. Current [No-Go decision](research/2026-10-16-up258-production-decision.md)
+names external source contracts still needed; one [prepared request](support/issue-22-up258-evidence-request.md)
+separates firmware, bounded comparison, each device operation and publication.
+No physical operation, new supported mask or successful programming is claimed.
+
 ## Offline-first download expansion (15 October 2026)
 
 Owner authorised implementation without owning the target devices; later field

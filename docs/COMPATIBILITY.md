@@ -77,9 +77,10 @@ rather than panicking/wrapping; ordinary valid070nh inputs keep their behaviour.
 are hardware-free implementation prerequisites, not a new executable download
 path. No source/release/field verification promotion follows. `MV-0025` remains
 refused, and the current `070nh`/ProductProcedure admission, project/product schemas
-and unknown-source preservation rules are unchanged. Type1 config bit7 and
-property-allocation checksum polarity are intentionally distinct from Type2 and
-BIM-M112 memory records. Full family-specific image/planner/recovery work remains
+and unknown-source preservation rules are unchanged. Type1 descriptor bit7 is distinct from Type2 Update Enable. Property-allocation
+checksum bit7=0 disables control (the earlier inverted interpretation is corrected
+in the [exact UP258 continuation](research/2026-10-16-up258-production-decision.md#2-property-checksum-bit-a-source-reading-correction));
+this does not define modern XML SegFlags or grant admission. Full family-specific image/planner/recovery work remains
 open under [the expansion contract](contracts/offline-download-expansion.md).
 
 ## Alpha 12 candidate compatibility boundary

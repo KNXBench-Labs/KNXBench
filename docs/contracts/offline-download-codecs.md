@@ -40,10 +40,12 @@ extract:
   Update Enable. Thus copying the existing four-byte Easy3 codec would be wrong.
 - `03_05_02 Management Procedures v02.01.02 AS.pdf`, §3.31.3.4 pp139–141.
   Absolute property records have ten bytes and no BIM-M112 machine nibble or
-  segment-ID byte. **Property memory-attribute bit7 disables checksum control**
-  (p140); the memory-record API's similarly named flag enables it. The new
-  `AbsolutePropertySegment.checksum_disabled` is deliberately a separate type
-  and meaning. Raw product `SegFlags` cannot be shared blindly across grammars.
+  segment-ID byte. **Property memory-attribute bit7 = 0 disables checksum
+  control** (p140). The earlier claim that setting this bit disables control was
+  a source-reading error; see the [UP258 correction and decision](../research/2026-10-16-up258-production-decision.md#2-property-checksum-bit-a-source-reading-correction).
+  `AbsolutePropertySegment.checksum_disabled` must therefore clear bit7 when true.
+  The record grammar remains separate, but opposite checksum polarity is not
+  established. Raw product `SegFlags` still needs its own source-to-wire mapping.
 - Historical tool-only metadata and exact bounded source correlations remain
   labelled inference in [the archive dossier](../research/2026-10-14-system2-archive-mirrors.md).
   This source projection is not a normative universal XML execution mapping.

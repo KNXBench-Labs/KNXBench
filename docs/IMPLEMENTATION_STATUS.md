@@ -14,6 +14,15 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-16 — Exact UP258/issue #22 continuation: original MP p140 exposes
+  inverted checksum-disable encoding in the offline absolute-property codec.
+  Regression observed before the focused correction; final acceptance/publication
+  is recorded in the task log. [Production decision](research/2026-10-16-up258-production-decision.md)
+  inventories all 21 positions and concrete missing encoding/XML/resource/recovery
+  rules. One [English reporter request](support/issue-22-up258-evidence-request.md)
+  is prepared, not posted. This is not a complete image, production download or
+  physical validation; issue #22 remains open.
+
 - 2026-10-16 — System-300 S-mode property-table image adapter published as `af9431cb`: reuse existing
   Type6 link validation/encoding, separate immutable length/element payloads,
   explicit format and capacity. Intended missing-module RED, twelve literal/

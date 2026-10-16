@@ -166,7 +166,7 @@ async fn normalized_plan_executes_exact_property_records_and_verified_data_witho
         vec![
             (3, vec![4, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
             (3, vec![1, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
-            (3, vec![3, 0, 0x3C, 0, 0, 4, 0xFF, 3, 0x80, 0]),
+            (3, vec![3, 0, 0x3C, 0, 0, 4, 0xFF, 3, 0, 0]),
             (3, vec![3, 5, 0x12, 0x34, 4, 0, 0, 0, 0, 0]),
             (3, vec![2, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
         ]

@@ -63,8 +63,10 @@ keep hardware refused, even when a synthetic simulator sequence passes.
 Original Management Procedures v02.01.02 §3.31.3.4 pp139–141 defines the property
 records; Resources load states constrain their ordering. Absolute data/stack
 records keep Memory Type at byte7 (codes1–3) separate from Memory Attributes at
-byte8 (bit7 disables checksum control); byte9 is reserved zero. Neither a
-combined byte nor a zero-based0–2 type table is correct for these records.
+byte8 (**bit7 = 0** disables checksum control); byte9 is reserved zero. The
+previous claim of inverted checksum polarity was a source-reading error, not
+an XML mapping rule; [correction](../research/2026-10-16-up258-production-decision.md#2-property-checksum-bit-a-source-reading-correction).
+Neither a combined byte nor a zero-based0–2 type table is correct for these records.
 Profiles v02.01.01
 AnnexA.2.4.1 pp144–145 distinguishes global and resource-specific support.
 Original Cookbook Load Controls v01.00.02 pp4–8 distinguishes tool instructions

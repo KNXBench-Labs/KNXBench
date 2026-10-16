@@ -39,6 +39,13 @@ preserved and no test guard was changed. One full unchanged-input retry passed
 all18stages: Rust4678/0/208ignored in343targets, Vitest3626/263files;2922source
 paths, external commitments and Git fingerprints matched.
 
-Focused commit, actual non-FF merged acceptance including
-selected isolated corpus, publication/readback, private evidence archive and owned
-retirement remain pending. No full family/device-support claim follows.
+Feature `48c96e2b` was integrated in actual non-FF merge `894f14e0`. All nineteen
+merged stages pass: Rust4678/0/208ignored in343targets, Vitest3626/263files and
+isolated corpus152/152 in33targets. Complete2922path/source/external/Git
+commitments match. Owned corpus links were removed. Exact accepted runtime merge
+is published, with local/tracking/live main equality verified.
+
+This documentation-only closure retains runtime acceptance at `894f14e0`;
+complete runtime equality and documentation gates are checked separately. Private
+byte-verified evidence archive and owned retirement follow. No full family/device
+support claim follows.

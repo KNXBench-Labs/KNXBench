@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-16 07:50
+- **Completed:** P4d feature48c96e2b integrated and published as accepted non-FF merge894f14e0efa18899585d52c3979e80942e7adc57. All19merged stages verified: Rust4678/0/208ignored in343targets, Vitest3626/263files, isolated corpus152/152 in33targets and both explicit source regressions. Complete2922source/external/Git commitments match; corpus links removed. Exact local/tracking/live main equality read back after push. First branch procfs-snapshot acquisition failure retained; no weakened safety guard.
+- **Pending/Next Steps:** Docs-only result closure: verify complete runtime equality to tested894f14e0 and documentation/repository gates, commit/push/readback. Then compact private archive with member digest verification and exact owned P4d worktree/branch/target retirement. Continue ACTIVE offline expansion through source-bound image/translation and independent family slices where evidence permits.
+- **Notes for Codex oder Claude:** Constructor requires every descriptor explicit, capacity distinct from emitted count; no new profile/product/source-to-ASAP/image/plan/recovery/mask admission. No hardware/vendor/subagents/schema/dependency/UI/transport. Dirty selected root remains1817fb2a; only additive root handover permitted. Preserve other session static-research entry on shared root. Runtime acceptance stays bound to894f14e0, not this later documentation commit.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-16 07:12
 - **Completed:** P4d branch retry proc_655826ba44db/PID2804063 accepted all18actual stages: Rust4678/0/208ignored in343targets, Vitest3626/263files, both explicit source regressions and workspace checks. All2922source paths, source packages/oracle and Git fingerprints verified unchanged. First branch failure retained (Net diagnostic snapshot refusal); no test weakening or source change. Result-only docs updated after acceptance; original runtime receipt remains authoritative.
 - **Pending/Next Steps:** Verify complete runtime equality after docs-only edits, docs/five checks/whitespace; focused12path commit as KNXBench. Fresh unchanged origin/main28f8ccb1; non-FF integration and actual19stage merged gate with selected isolated corpus follow. No merged/publication acceptance yet.

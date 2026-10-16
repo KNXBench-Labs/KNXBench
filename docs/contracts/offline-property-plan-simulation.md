@@ -1,9 +1,11 @@
 # Offline property-plan simulation: P3 boundary
 
-Status: fifteen-stage frozen branch acceptance complete; actual merged acceptance
-and publication pending. Rust4639/0/207ignored, Vitest3626/263files, workspace
-Clippy/build, frontend build and documentation/tooling/repository checks pass;
-2898source paths remain unchanged. [Receipt](../evidence/offline-property-plan-simulation-2026-10-16.json).
+Status: integrated and published as `7632fb1a` on 16 October 2026; exact local,
+tracking and live remote main equality verified. Fifteen branch and sixteen actual
+merged stages pass: Rust4639/0/207ignored, Vitest3626/263files, workspace
+Clippy/build, frontend build and documentation/tooling/repository checks. Merged
+acceptance includes isolated corpus152/152 in33targets and2899unchanged source
+paths. [Receipt](../evidence/offline-property-plan-simulation-2026-10-16.json).
 This is not a System-2 source translator, public programming route or recovery
 implementation.
 

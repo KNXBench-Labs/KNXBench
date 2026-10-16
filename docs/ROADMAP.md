@@ -10,8 +10,8 @@ permits. [P1 codec contract](contracts/offline-download-codecs.md) records deliv
 foundations; [P2 source-image contract](contracts/offline-download-system2-image.md)
 separates implemented synthetic/source grammar from the real Siemens encoding
 refusal. [P3a normalized property-plan simulation](contracts/offline-property-plan-simulation.md)
-has passed fifteen-stage frozen branch acceptance; actual merged acceptance and
-publication remain pending. It
+has been integrated and published as `7632fb1a`; fifteen-stage branch and
+sixteen-stage merged acceptance pass, including isolated corpus152/152. It
 is not yet a source translator. Source-to-property mapping, restart and durable
 property+memory+setup/allocator recovery remain next where exact contracts permit.
 Hardware admission and broader family completion are not implied by these foundations. Unknown semantics remain explicit research

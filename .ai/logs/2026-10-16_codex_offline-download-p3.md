@@ -55,3 +55,12 @@ build, documentation/tooling/five repository checks and explicit Release
 System2 source-refusal regression. All2898source paths agree at start/end/current
 mode/content. Runtime source unchanged by the observed evidence/docs closure.
 Actual merged/corpus acceptance and publication remain pending.
+
+## Observed merged delivery — 16 October 2026
+
+Featurec6b6545c and identical-tree non-FF merge7632fb1a passed separate15/16stage
+chains. Actual merged results: Rust4639/0/207ignored, Vitest3626/263files and
+network-isolated corpus152/152 in33targets;2899source paths match start/end/current
+mode/content. Local HEAD, fetched main and live remote main equal7632fb1a.
+Selected dirty root intentionally not synchronized. No new source translator,
+durable recovery, hardware or public admission follows from this simulation.

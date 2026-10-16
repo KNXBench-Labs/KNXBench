@@ -79,6 +79,69 @@
   "newHardwareAdmission": false,
   "hardwareOperations": 0,
   "realSourceEncoding": "Siemens16-bit source/default encoding remains refused; existing negative regression passes",
-  "mergedAcceptance": "pending",
-  "publication": "pending"
+  "mergedAcceptance": {
+    "head": "7632fb1a180e15c862bfdd6b0603957d1e9c9300",
+    "stages": [
+      "format",
+      "documentation",
+      "web-install",
+      "web-build",
+      "explicit-system2-corpus",
+      "clippy",
+      "rust",
+      "build",
+      "vitest",
+      "tooling",
+      "corpus",
+      "check-layering",
+      "check-headers",
+      "check-anchors",
+      "check-ledger",
+      "check-corpus-gates"
+    ],
+    "rust": {
+      "passed": 4639,
+      "failed": 0,
+      "ignored": 207,
+      "resultBlocks": 338
+    },
+    "vitest": {
+      "passed": 3626,
+      "failed": 0,
+      "files": 263
+    },
+    "corpus": {
+      "passed": 152,
+      "total": 152,
+      "targets": 33
+    },
+    "sourcePaths": 2899,
+    "inputsFrozen": true,
+    "time": "2026-10-16 02:06",
+    "logs": {
+      "format": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "documentation": "689b958cfda177b76deb7e309954c6459048cf6f628c77a2e8f8fa84147a1f30",
+      "web-install": "9e93b309a59cf5879cc001c341f4f44b84c341083d2648cbd7867dce0103884a",
+      "web-build": "0e33dab6be5e963b25d5cb7b1f6ede5c9d977b5aadf8934d83b880ede56277e3",
+      "explicit-system2-corpus": "729458140761ec88bc7a823553e1a6264b54c0129a02e2f5d64ddc4ba435d933",
+      "clippy": "fc77b42e7fe6210d0e6258856fe25b23bbbd4fabfaf21a81dc1cc7ce178dbb52",
+      "rust": "24ff66566a63381141db3c210ec195296a6b0b2d1a7f6c990050b784c5637b39",
+      "build": "1d280de051b68a4b701d1026f22cd0fa6c4e52f5b47fea035f61cb544fc21aaa",
+      "vitest": "4ab832b30e3aadb2dc0551ea0c6173f16e666da38048065c129c448dac713ba0",
+      "tooling": "f67b7dc0a78dd56d0b2343583305007b75a86cc556672d00d33474516261f741",
+      "corpus": "94c5ad5ed48bda2f0d76da902d9deb25c3c9bac24359c97b6cbb9b6115568bf1",
+      "check-layering": "4ee04fb6127741bc10942c6e28669d28c2493f722d68ef8fd926b43a54d37287",
+      "check-headers": "7614e27d04775d7fe61153441a94433927795c0a88632b4d4ade044db70397a7",
+      "check-anchors": "8732f065a350f12de6a078771c6d206190f8487988544a652c2d78f97323fd64",
+      "check-ledger": "3906f4c92f8742c32ad6ee0c17cd0bad689bbfab24fecc56e0ca13ee5a3ba42d",
+      "check-corpus-gates": "e323dce5926c7267720d3a129000bedbbfb327bfb0c3df39d52e2980f5e0811e"
+    }
+  },
+  "publication": {
+    "commit": "7632fb1a180e15c862bfdd6b0603957d1e9c9300",
+    "tracking": "7632fb1a180e15c862bfdd6b0603957d1e9c9300",
+    "live": "7632fb1a180e15c862bfdd6b0603957d1e9c9300",
+    "time": "2026-10-16 02:08",
+    "selectedRootSynchronized": false
+  }
 }

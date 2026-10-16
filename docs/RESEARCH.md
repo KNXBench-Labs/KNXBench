@@ -24,6 +24,7 @@ outside preserved historical blocks, or use the next free section number
 
 | Section | Where |
 | --- | --- |
+| [2026-10-16 — Shared source-fixup boundary](contracts/source-fixup-integrity.md) | Original function/site correlation is not transform proof; all image consumers must refuse unhandled direct fixups |
 | [2026-10-16 — System-1 bounded source-image evidence](contracts/offline-download-system1-image.md) | Original Type-1 resources, protected source pointers and explicit FixupList/default-bit/Union boundaries; zero accepted complete real-source images |
 | [2026-10-16 — Relative System-B integration gaps](research/2026-10-16-relative-image-integration-gaps.md) | Source-bound table resource declarations, sparse object numbering and unresolved complete-image/substitution contracts; no new executable support |
 | [2026-10-16 — System-B offline prerequisites](research/2026-10-16-systemb-offline-prerequisites.md) | Three real partial resolver results, independent Format-1 object grammar and open relative-image/source/recovery contracts |

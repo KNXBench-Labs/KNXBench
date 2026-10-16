@@ -118,6 +118,14 @@ material. Do not mark a path implemented merely because its metadata is parsed.
 
 Status is deliberately per capability; issue #22 and broader KL-007 remain open.
 
+- New explicit post-P6 task: [System-300 S-mode property-table images](offline-system300-property-tables.md)
+  reuse the existing Type6 validator/encoder with separate length/element framing.
+  Twelve focused tests and owning Core862/0/0ignored in19targets plus Clippy pass
+  locally; branch runtime acceptance is reconciled after generated-whitespace
+  restoration (Rust4701/0,Web3626). Actual merged acceptance/publication are pending. Discovery, source mapping,
+  service framing, full loading and whole-mutation recovery remain unimplemented
+  by this prerequisite. No SystemB or other family admission is inferred.
+
 - P5: integrated and published `ccfe5b74` [System-1 source-image entry](offline-download-system1-image.md)
   with actual evaluation, Type-1/indexed association bytes and protected source
   pointers. Nine targeted/926owning tests and Clippy pass; thirteen real-source

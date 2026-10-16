@@ -6,6 +6,15 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## System-300 offline property images (16 October 2026 source)
+
+[Pure S-mode property-table images](../contracts/offline-system300-property-tables.md)
+separate element0 length from the actual data elements using shared Type6 grammar.
+Local codec tests are not source/format/object discovery, complete application
+loading, property-service addressability, durable recovery or hardware support.
+Empty address/association tables retain their acceptance/default-mapping meaning.
+No public mask is admitted; KL-007 remains open at its existing scope.
+
 ## Shared source-fixup refusal (16 October 2026 source)
 
 The [shared image guard](../contracts/source-fixup-integrity.md) now also covers

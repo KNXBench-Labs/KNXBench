@@ -1,7 +1,13 @@
 # System-300 S-mode property-table images
 
-Status: implementation claimed by session `cf85f96ab058`, 16 October 2026.
-No tests or implementation acceptance are claimed by this initial contract.
+Status: branch acceptance reconciled on16October2026; actual merged acceptance
+and implementation publication are pending. All17runtime/repository stages passed;
+a final whitespace failure came solely from12regenerated binding files. Their
+original bytes and the entire2942path source/Git snapshot were restored; corrected
+whitespace passed in a separate receipt with negative verifier controls. Original
+failed attempts remain unchanged. Rust4701/0/210ignored in347targets and
+Vitest3626/263files pass. Twelve focused tests and the owning Core suite
+(862 passed, zero failed/ignored in19targets) plus all-target Clippy pass.
 This is a pure offline table-image prerequisite, not a device downloader.
 
 ## Original-source evidence
@@ -36,7 +42,8 @@ These inspected passages are not an exhaustive System-300 conformance audit.
 
 ## Bounded implementation contract
 
-Core will provide an explicit, immutable property-array image for the S-mode
+Core provides `commissioning::system300_group_tables::build`, an explicit,
+immutable property-array image for the S-mode
 address and association tables. Count/length value and actual elements are
 separate; a caller must not send a count-prefixed memory image at element1.
 No object index is guessed and no property service is sent by this API.
@@ -54,11 +61,17 @@ format-width overflow and capacity overflow. Missing sender is an API limitation
 without independent transmit-disabled evidence, not a universal KNX prohibition.
 Never silently truncate or turn a receive link into the sender.
 
-Tests must pin complete independent literal element/length bytes for both
+Twelve tests pin complete independent literal element/length bytes for both
 formats, a sender whose address sorts after a receiver, counts beyond255,
 empty/default semantics, deterministic input permutation and negative capacity/
-index/duplicate/intent boundaries. A realistic framing or sender-order mutant
-must be rejected before acceptance, followed by exact source restoration.
+index/duplicate/intent boundaries. Realistic framing and sender-order mutants
+were rejected by the intended literal assertion; both sources were byte-exactly
+restored and the focused tests passed again. Final coverage additionally pins
+the last u16 address/TSAP and65535association rows with65536refused.
+These are codec representation limits, **not** discovered device capacity or
+property-service addressability. Target/description/APDU/index limits still
+require separate validation before any property operation. The reused TableError
+retains its existing System-B diagnostic spelling; it is not family discovery.
 
 ## Explicit non-goals
 

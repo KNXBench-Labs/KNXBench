@@ -1,0 +1,506 @@
+{
+  "schema": "knxbench-release-source-acceptance/1",
+  "candidate": "6105976f1a960dd34205638df501f8c3ede60a6e",
+  "tag": "v0.1.0-alpha.13",
+  "date": "2026-10-16",
+  "review": "Separate in-session self-review; not independent-agent approval",
+  "accepted": true,
+  "ordered_stages": [
+    {
+      "name": "controls",
+      "exit": 0,
+      "provenance": "original successful prefix"
+    },
+    {
+      "name": "versions",
+      "exit": 0,
+      "provenance": "original successful prefix"
+    },
+    {
+      "name": "diff-check",
+      "exit": 0,
+      "provenance": "original successful prefix"
+    },
+    {
+      "name": "fmt",
+      "exit": 0,
+      "provenance": "original successful prefix"
+    },
+    {
+      "name": "isolation",
+      "exit": 0,
+      "provenance": "original successful prefix"
+    },
+    {
+      "name": "tools",
+      "exit": 0,
+      "provenance": "original successful prefix"
+    },
+    {
+      "name": "website-tests",
+      "exit": 0,
+      "provenance": "original successful prefix"
+    },
+    {
+      "name": "story-tests",
+      "exit": 0,
+      "provenance": "original successful prefix"
+    },
+    {
+      "name": "website-build",
+      "exit": 0,
+      "provenance": "original successful prefix"
+    },
+    {
+      "name": "web-build",
+      "exit": 0,
+      "provenance": "original successful prefix"
+    },
+    {
+      "name": "web-types",
+      "exit": 0,
+      "provenance": "original successful prefix"
+    },
+    {
+      "name": "vitest",
+      "exit": 0,
+      "provenance": "original successful prefix"
+    },
+    {
+      "name": "browser-fixtures",
+      "exit": 0,
+      "provenance": "original successful prefix"
+    },
+    {
+      "name": "browser-ux-feedback",
+      "exit": 0,
+      "provenance": "original successful prefix"
+    },
+    {
+      "name": "browser-communication",
+      "exit": 0,
+      "provenance": "original successful prefix"
+    },
+    {
+      "name": "browser-ga-members-download",
+      "exit": 0,
+      "provenance": "original successful prefix"
+    },
+    {
+      "name": "browser-group-addresses",
+      "exit": 0,
+      "provenance": "original successful prefix"
+    },
+    {
+      "name": "browser-dialogs",
+      "exit": 0,
+      "provenance": "original successful prefix"
+    },
+    {
+      "name": "browser-devices",
+      "exit": 0,
+      "provenance": "original successful prefix"
+    },
+    {
+      "name": "browser-notes",
+      "exit": 0,
+      "provenance": "original successful prefix"
+    },
+    {
+      "name": "browser-instructions",
+      "exit": 0,
+      "provenance": "original successful prefix"
+    },
+    {
+      "name": "browser-parameters",
+      "exit": 0,
+      "provenance": "original successful prefix"
+    },
+    {
+      "name": "browser-catalogue",
+      "exit": 0,
+      "provenance": "original successful prefix"
+    },
+    {
+      "name": "browser-issue09",
+      "exit": 0,
+      "provenance": "original successful prefix"
+    },
+    {
+      "name": "browser-structure",
+      "exit": 0,
+      "provenance": "original successful prefix"
+    },
+    {
+      "name": "browser-updates",
+      "exit": 0,
+      "provenance": "original successful prefix"
+    },
+    {
+      "name": "browser-monitor-control",
+      "exit": 0,
+      "provenance": "original successful prefix"
+    },
+    {
+      "name": "browser-address-unavailable",
+      "exit": 0,
+      "provenance": "original successful prefix"
+    },
+    {
+      "name": "browser-device-checks",
+      "exit": 0,
+      "provenance": "original successful prefix"
+    },
+    {
+      "name": "browser-service-control",
+      "exit": 0,
+      "provenance": "original successful prefix"
+    },
+    {
+      "name": "browser-site",
+      "exit": 0,
+      "provenance": "original successful prefix"
+    },
+    {
+      "name": "browser-device-download-support",
+      "exit": 0,
+      "provenance": "original successful prefix"
+    },
+    {
+      "name": "browser-reload-guard",
+      "exit": 0,
+      "provenance": "same-source continuation"
+    },
+    {
+      "name": "browser-support",
+      "exit": 0,
+      "provenance": "same-source continuation"
+    },
+    {
+      "name": "browser-task-status",
+      "exit": 0,
+      "provenance": "same-source continuation"
+    },
+    {
+      "name": "clippy",
+      "exit": 0,
+      "provenance": "same-source continuation"
+    },
+    {
+      "name": "rust",
+      "exit": 0,
+      "provenance": "same-source continuation"
+    },
+    {
+      "name": "server-build",
+      "exit": 0,
+      "provenance": "same-source continuation"
+    },
+    {
+      "name": "native-evidence",
+      "exit": 0,
+      "provenance": "same-source continuation"
+    },
+    {
+      "name": "native-naming",
+      "exit": 0,
+      "provenance": "same-source continuation"
+    },
+    {
+      "name": "native-functions",
+      "exit": 0,
+      "provenance": "same-source continuation"
+    },
+    {
+      "name": "native-recipe",
+      "exit": 0,
+      "provenance": "same-source continuation"
+    },
+    {
+      "name": "bindings",
+      "exit": 0,
+      "provenance": "same-source continuation"
+    },
+    {
+      "name": "bindings-compare",
+      "exit": 0,
+      "provenance": "same-source continuation"
+    },
+    {
+      "name": "docs",
+      "exit": 0,
+      "provenance": "same-source continuation"
+    },
+    {
+      "name": "xtask-check-layering",
+      "exit": 0,
+      "provenance": "same-source continuation"
+    },
+    {
+      "name": "xtask-check-headers",
+      "exit": 0,
+      "provenance": "same-source continuation"
+    },
+    {
+      "name": "xtask-check-anchors",
+      "exit": 0,
+      "provenance": "same-source continuation"
+    },
+    {
+      "name": "xtask-check-ledger",
+      "exit": 0,
+      "provenance": "same-source continuation"
+    },
+    {
+      "name": "xtask-check-corpus-gates",
+      "exit": 0,
+      "provenance": "same-source continuation"
+    },
+    {
+      "name": "corpus-inventory",
+      "exit": 0,
+      "provenance": "same-source continuation"
+    },
+    {
+      "name": "corpus",
+      "exit": 0,
+      "provenance": "same-source continuation"
+    },
+    {
+      "name": "product-dynamic_tree",
+      "exit": 0,
+      "provenance": "same-source continuation"
+    },
+    {
+      "name": "product-corpus_compatibility_matrix",
+      "exit": 0,
+      "provenance": "same-source continuation"
+    },
+    {
+      "name": "product-legacy_member_names_corpus",
+      "exit": 0,
+      "provenance": "same-source continuation"
+    },
+    {
+      "name": "product-parameter_views_corpus",
+      "exit": 0,
+      "provenance": "same-source continuation"
+    },
+    {
+      "name": "product-program_code",
+      "exit": 0,
+      "provenance": "same-source continuation"
+    },
+    {
+      "name": "product-standalone_packages",
+      "exit": 0,
+      "provenance": "same-source continuation"
+    },
+    {
+      "name": "final-whitespace",
+      "exit": 0,
+      "provenance": "same-source continuation"
+    }
+  ],
+  "source_paths": 2965,
+  "source_unchanged": true,
+  "original_inputs_unchanged": true,
+  "original_input_count": 516,
+  "rust": {
+    "passed": 4724,
+    "failed": 0,
+    "ignored": 210
+  },
+  "vitest": {
+    "numPassedTests": 3632,
+    "numFailedTests": 0,
+    "numPendingTests": 0
+  },
+  "browser": {
+    "profiles": 23,
+    "passed": 947,
+    "failed": 0,
+    "flaky": 0,
+    "skipped": 0,
+    "details": [
+      {
+        "profile": "address-unavailable",
+        "passed": 4,
+        "provenance": "gate1"
+      },
+      {
+        "profile": "catalogue",
+        "passed": 10,
+        "provenance": "gate1"
+      },
+      {
+        "profile": "communication",
+        "passed": 59,
+        "provenance": "gate1"
+      },
+      {
+        "profile": "device-checks",
+        "passed": 4,
+        "provenance": "gate1"
+      },
+      {
+        "profile": "device-download-support",
+        "passed": 33,
+        "provenance": "gate1"
+      },
+      {
+        "profile": "devices",
+        "passed": 33,
+        "provenance": "gate1"
+      },
+      {
+        "profile": "dialogs",
+        "passed": 14,
+        "provenance": "gate1"
+      },
+      {
+        "profile": "fixtures",
+        "passed": 578,
+        "provenance": "gate1"
+      },
+      {
+        "profile": "ga-members-download",
+        "passed": 23,
+        "provenance": "gate1"
+      },
+      {
+        "profile": "group-addresses",
+        "passed": 19,
+        "provenance": "gate1"
+      },
+      {
+        "profile": "instructions",
+        "passed": 15,
+        "provenance": "gate1"
+      },
+      {
+        "profile": "issue09",
+        "passed": 10,
+        "provenance": "gate1"
+      },
+      {
+        "profile": "monitor-control",
+        "passed": 6,
+        "provenance": "gate1"
+      },
+      {
+        "profile": "notes",
+        "passed": 13,
+        "provenance": "gate1"
+      },
+      {
+        "profile": "parameters",
+        "passed": 15,
+        "provenance": "gate1"
+      },
+      {
+        "profile": "service-control",
+        "passed": 4,
+        "provenance": "gate1"
+      },
+      {
+        "profile": "site",
+        "passed": 4,
+        "provenance": "gate1"
+      },
+      {
+        "profile": "structure",
+        "passed": 8,
+        "provenance": "gate1"
+      },
+      {
+        "profile": "updates",
+        "passed": 7,
+        "provenance": "gate1"
+      },
+      {
+        "profile": "ux-feedback",
+        "passed": 55,
+        "provenance": "gate1"
+      },
+      {
+        "profile": "reload-guard",
+        "passed": 2,
+        "provenance": "gate2"
+      },
+      {
+        "profile": "support",
+        "passed": 4,
+        "provenance": "gate2"
+      },
+      {
+        "profile": "task-status",
+        "passed": 27,
+        "provenance": "gate2"
+      }
+    ]
+  },
+  "native": {
+    "native-evidence": 12,
+    "native-naming": 4,
+    "native-functions": 4,
+    "native-recipe": 4
+  },
+  "conventional_corpus": {
+    "passed": 152,
+    "expected": 152,
+    "targets": 33
+  },
+  "explicit_product_corpus": {
+    "passed": 16,
+    "targets": 6
+  },
+  "tooling": {
+    "tests_run": 189,
+    "inherited_skips": 1
+  },
+  "packaging_dry_runs": [
+    {
+      "candidate": "6105976f1a960dd34205638df501f8c3ede60a6e",
+      "run_id": 38954005373,
+      "success": true,
+      "publish_job": "Publish tag release",
+      "publish_conclusion": "skipped",
+      "artifacts": [
+        {
+          "name": "KNXBench_0.1.0-alpha.13_amd64.AppImage",
+          "bytes": 89459192,
+          "sha256": "404d073926df7418f05c7e6f057c2afab13f628e409bffb8abc04bde975e4974"
+        },
+        {
+          "name": "knx-mcp-x86_64-linux",
+          "bytes": 12488328,
+          "sha256": "d7f9dba5bccac241034c4333fbd65f91f1e7917fd5f757d58d582317d42e3352"
+        }
+      ]
+    },
+    {
+      "candidate": "6105976f1a960dd34205638df501f8c3ede60a6e",
+      "run_id": 38954008662,
+      "success": true,
+      "publish_job": "Publish multi-arch image",
+      "publish_conclusion": "skipped",
+      "artifacts": []
+    }
+  ],
+  "retained_failed_attempt": {
+    "stage": "browser-reload-guard",
+    "cause": "Isolated XDG cache redirected Firefox to an absent executable; no Firefox assertion executed",
+    "correction": "Explicit path to the verified installed locked browser cache; no product/test/source change",
+    "accepted_original_stages": 32,
+    "executed_continuation_stages": 27,
+    "admission_controls": 10
+  },
+  "limits": [
+    "No new physical device/gateway operation",
+    "No new executable device admission",
+    "No universal manufacturer/ETS compatibility",
+    "No new module-instance construction",
+    "No native WebKitGTK/Orca feature acceptance"
+  ]
+}

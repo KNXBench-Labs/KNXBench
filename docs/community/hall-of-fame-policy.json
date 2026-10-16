@@ -4,5 +4,8 @@
   "issue_xp": 5,
   "reply_xp": 1,
   "resolution_xp": 10,
+  "pull_request_xp": 5,
+  "pull_request_closed_xp": 10,
+  "pull_request_merged_xp": 20,
   "notify_since": "2026-10-13T20:49:00Z"
 }

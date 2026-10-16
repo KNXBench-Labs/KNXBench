@@ -16,6 +16,7 @@ NOW = "2026-10-13T20:00:00Z"
 POLICY = {
     "excluded_logins": ["KNXBench-Labs", "Andre1Becker"],
     "issue_xp": 5, "reply_xp": 1, "resolution_xp": 10,
+    "pull_request_xp": 5, "pull_request_closed_xp": 10, "pull_request_merged_xp": 20,
     "notify_since": NOW,
 }
 
@@ -38,6 +39,162 @@ def reply(cid=1, login="tester", number=1, kind="User", body="A useful detail"):
 
 def build(issues, comments=(), previous=None):
     return hall.build_snapshot(issues, list(comments), POLICY, "example/project", NOW, previous)
+
+
+class PullRequestTests(unittest.TestCase):
+    def test_pr_author_gets_state_specific_xp_without_becoming_an_issue(self):
+        pulls = [
+            {**issue(2, "coder"), "merged_at": None},
+            {**issue(3, "coder", state="closed"), "merged_at": None},
+            {**issue(4, "coder", state="closed"), "merged_at": NOW},
+        ]
+        policy = {**POLICY, "pull_request_xp": 5, "pull_request_closed_xp": 10,
+                  "pull_request_merged_xp": 20}
+        snapshot = hall.build_snapshot([], [], policy, "example/project", NOW,
+                                       pull_requests=pulls)
+        row = snapshot["contributors"][0]
+        self.assertEqual((row["issues"], row["pull_requests"], row["pull_requests_open"],
+                          row["pull_requests_closed"], row["pull_requests_merged"]),
+                         (0, 3, 1, 1, 1))
+        self.assertEqual(row["xp"], 45)
+        self.assertEqual(row["xp_breakdown"],
+                         {"issues": 0, "replies": 0, "resolutions": 0, "pull_requests": 45})
+        self.assertEqual(snapshot["resolution_awards"], {})
+
+    def test_pr_columns_breakdown_and_earned_medals_are_rendered(self):
+        pulls = [{**issue(2, "coder", state="closed"), "merged_at": NOW}]
+        snapshot = hall.build_snapshot([issue()], [reply()], POLICY, "example/project", NOW,
+                                       pull_requests=pulls)
+        row = next(row for row in snapshot["contributors"] if row["login"] == "coder")
+        self.assertEqual(row["medals"], ["Patch Pilot", "Green Merge Ribbon"])
+        table = hall.render_table(snapshot)
+        self.assertIn("| PRs | Open PRs | Merged PRs | Closed unmerged | XP sources |", table)
+        self.assertIn("0 issue + 0 reply + 0 completion + 25 PR", table)
+        self.assertIn("Patch Pilot", table)
+        page = hall.render_page(snapshot)
+        self.assertIn("**25 XP total**", page)
+        self.assertIn("**15 XP total**", page)
+        self.assertNotIn("Pull requests, reviews", page)
+        for minimum, name in hall.PULL_REQUEST_MEDALS + hall.MERGE_MEDALS:
+            self.assertEqual(name in page, name in row["medals"], (minimum, name))
+
+    def test_pr_counts_deduplicate_and_reconcile_close_reopen_and_merge(self):
+        pull = {**issue(2), "merged_at": None}
+        def snapshot(record, previous=None):
+            return hall.build_snapshot([], [], POLICY, "example/project", NOW, previous,
+                                       pull_requests=[record, record])
+        opened = snapshot(pull)
+        closed = snapshot({**pull, "state": "closed", "closed_at": NOW}, opened)
+        reopened = snapshot(pull, closed)
+        merged = snapshot({**pull, "state": "closed", "closed_at": NOW, "merged_at": NOW}, reopened)
+        self.assertEqual([s["contributors"][0]["xp"] for s in [opened, closed, reopened, merged]],
+                         [5, 15, 5, 25])
+        self.assertEqual(merged["contributors"][0]["pull_requests"], 1)
+        self.assertEqual(snapshot({**pull, "state": "closed", "closed_at": NOW,
+                                   "merged_at": NOW}, merged), merged)
+        removed = hall.build_snapshot([], [], POLICY, "example/project", NOW, merged)
+        self.assertEqual(removed["contributors"], [])
+
+    def test_pr_exclusions_and_external_bots_follow_existing_policy(self):
+        pulls = [{**issue(i + 1, who), "merged_at": None}
+                 for i, who in enumerate(["knxbench-labs", "Andre1Becker", hall.BOT, "helper[bot]"])]
+        pulls[-1]["user"]["type"] = "Bot"
+        rows = hall.build_snapshot([], [], POLICY, "example/project", NOW,
+                                   pull_requests=pulls)["contributors"]
+        self.assertEqual([(row["login"], row["xp"]) for row in rows], [("helper[bot]", 5)])
+
+    def test_issue_endpoint_pr_stubs_and_pr_discussion_never_double_count(self):
+        pulls = [{**issue(2), "merged_at": None}]
+        snapshot = hall.build_snapshot([issue(2, pull_request={})], [reply(number=2)],
+                                       POLICY, "example/project", NOW, pull_requests=pulls)
+        row = snapshot["contributors"][0]
+        self.assertEqual((row["issues"], row["replies"], row["pull_requests"], row["xp"]), (0, 0, 1, 5))
+
+    def test_conflicting_or_invalid_pr_records_fail_closed(self):
+        pull = {**issue(2), "merged_at": None}
+        for pulls in [[pull, {**pull, "id": 999}], [pull, {**pull, "user": user("other")}],
+                      [{**pull, "state": "unknown"}], [{**pull, "merged_at": NOW}],
+                      [{**pull, "state": "closed"}], [{**pull, "closed_at": NOW}]]:
+            with self.subTest(pulls=pulls), self.assertRaises(ValueError):
+                hall.build_snapshot([], [], POLICY, "example/project", NOW, pull_requests=pulls)
+        with self.assertRaises(KeyError):
+            hall.build_snapshot([], [], POLICY, "example/project", NOW, pull_requests=[issue(2)])
+        with self.assertRaises(ValueError):
+            hall.build_snapshot([issue(2)], [], POLICY, "example/project", NOW, pull_requests=[pull])
+
+    def test_schema_one_migrates_without_changing_awards_or_notifications(self):
+        previous = build([issue(state="closed", reason="completed")])
+        previous["schema_version"] = 1
+        previous["resolution_awards"]["1"]["notified"] = True
+        old_awards = json.loads(json.dumps(previous["resolution_awards"]))
+        migrated = build([issue(state="closed", reason="completed")], previous=previous)
+        self.assertEqual(migrated["schema_version"], 2)
+        self.assertEqual(migrated["resolution_awards"], old_awards)
+        api = FakeApi(); hall.notify_pending(migrated, api)
+        self.assertEqual(api.posts, [])
+
+    def test_pr_medals_have_exact_thresholds_and_no_unearned_names(self):
+        for count in range(102):
+            with self.subTest(count=count):
+                earned = hall.medals_for(0, 0, count, count)
+                expected = [name for minimum, name in hall.PULL_REQUEST_MEDALS + hall.MERGE_MEDALS
+                            if count >= minimum]
+                self.assertEqual(earned, expected)
+                self.assertEqual(len(earned), len(set(earned)))
+        self.assertEqual(hall.medals_for(0, 0, 1, 0), ["Patch Pilot"])
+
+    def test_policy_refuses_nonpositive_or_inverted_pr_bonuses(self):
+        for key in ["pull_request_xp", "pull_request_closed_xp", "pull_request_merged_xp"]:
+            for invalid in [0, -1, True, 1.5]:
+                with self.subTest(key=key, invalid=invalid), self.assertRaises(ValueError):
+                    hall.validate_policy({**POLICY, key: invalid})
+        with self.assertRaises(ValueError):
+            hall.validate_policy({**POLICY, "pull_request_merged_xp": 10})
+
+    def test_main_fetches_all_prs_before_writing_outputs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); (root / "docs/community").mkdir(parents=True)
+            (root / "README.md").write_text(hall.START + hall.END)
+            (root / "docs/community/hall-of-fame-policy.json").write_text(json.dumps(POLICY))
+            def response(endpoint, *, pages):
+                self.assertTrue(pages)
+                if endpoint == "repos/example/project/pulls?state=all&per_page=100":
+                    return [{**issue(2), "merged_at": None}]
+                return []
+            with patch.object(hall.GitHub, "api", side_effect=response) as api, \
+                 patch("sys.argv", ["hall", "--root", str(root), "--repository", "example/project"]):
+                hall.main()
+            api.assert_any_call("repos/example/project/pulls?state=all&per_page=100", pages=True)
+            saved = json.loads((root / "docs/community/hall-of-fame.json").read_text())
+            self.assertEqual(saved["contributors"][0]["pull_requests"], 1)
+            self.assertIn("Patch Pilot", (root / "README.md").read_text())
+
+    def test_pr_fetch_failure_preserves_previous_output_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); (root / "docs/community").mkdir(parents=True)
+            files = [root / "README.md", root / "docs/community/HALL_OF_FAME.md",
+                     root / "docs/community/hall-of-fame.json"]
+            initial = [hall.START + hall.END, "existing board", json.dumps(build([]))]
+            for path, text in zip(files, initial):
+                path.write_text(text)
+            (root / "docs/community/hall-of-fame-policy.json").write_text(json.dumps(POLICY))
+            def response(endpoint, *, pages):
+                if "/pulls?" in endpoint:
+                    raise RuntimeError("PR fetch failed")
+                return []
+            with patch.object(hall.GitHub, "api", side_effect=response), \
+                 patch("sys.argv", ["hall", "--root", str(root), "--repository", "example/project"]):
+                with self.assertRaisesRegex(RuntimeError, "PR fetch failed"):
+                    hall.main()
+            self.assertEqual([path.read_text() for path in files], initial)
+
+    def test_workflow_uses_trusted_default_branch_for_fork_pr_events(self):
+        workflow = (Path(__file__).resolve().parents[2] / ".github/workflows/community-hall-of-fame.yml").read_text()
+        self.assertIn("pull_request_target:", workflow)
+        self.assertIn("types: [opened, closed, reopened]", workflow)
+        self.assertIn("pull-requests: read", workflow)
+        self.assertNotIn("pull_request.head", workflow)
+        self.assertIn("ref: ${{ github.event.repository.default_branch }}", workflow)
 
 
 class CountingTests(unittest.TestCase):
@@ -216,17 +373,19 @@ class PresentationTests(unittest.TestCase):
         snapshot = build([issue(i + 1, state="closed", reason="completed") for i in range(20)])
         table = hall.render_table(snapshot)
         self.assertEqual(table.splitlines()[0],
-                         "| Place | Bug hunter | Rank & title | Medal | XP | Issues | Replies | Resolved |")
+                         "| Place | Bug hunter | Rank & title | Medal | XP | Issues | Replies | Resolved | PRs | Open PRs | Merged PRs | Closed unmerged | XP sources |")
         for medal in snapshot["contributors"][0]["medals"]:
             self.assertIn(medal, table)
             self.assertIn(medal, hall.closing_note(snapshot, 20))
         cells = table.splitlines()[2].split("|")[1:-1]
-        self.assertEqual([cell.strip() for cell in cells[4:]], ["**300**", "20", "0", "20"])
+        self.assertEqual([cell.strip() for cell in cells[4:]], ["**300**", "20", "0", "20", "0", "0", "0", "0",
+                                                                "100 issue + 0 reply + 200 completion + 0 PR"])
 
     def test_empty_table_uses_the_same_column_order(self):
         cells = hall.render_table(build([])).splitlines()[2].split("|")[1:-1]
         self.assertEqual([cell.strip() for cell in cells],
-                         ["—", "Your first report belongs here.", "Telegram Trainee", "—", "0", "0", "0", "0"])
+                         ["—", "Your first report belongs here.", "Telegram Trainee", "—", "0", "0", "0", "0",
+                          "0", "0", "0", "0", "—"])
 
     def test_public_goals_hint_without_revealing_unearned_medal_names(self):
         snapshot = build([issue(i + 1, state="closed", reason="completed") for i in range(20)])
@@ -234,7 +393,8 @@ class PresentationTests(unittest.TestCase):
                    json.dumps(snapshot), hall.closing_note(snapshot, 20)]
         earned = snapshot["contributors"][0]["medals"]
         for output in outputs:
-            for _, name in hall.REPORT_MEDALS + hall.RESOLUTION_MEDALS:
+            for _, name in (hall.REPORT_MEDALS + hall.RESOLUTION_MEDALS +
+                            hall.PULL_REQUEST_MEDALS + hall.MERGE_MEDALS):
                 self.assertEqual(name in output, name in earned, name)
         page = outputs[0]
         self.assertIn("## The next mystery", page)

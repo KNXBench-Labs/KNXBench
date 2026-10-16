@@ -311,18 +311,21 @@ The whole story, reluctantly narrated, is at
 ## Bug Hunters’ Hall of Fame
 
 **Our field-test crew earns the medals. We just fix what they find.** Every external
-issue author and replier gets a place here, from their very first contribution.
+issue author, issue-thread replier and PR author gets a place here, from their first contribution.
 Five XP per issue, one per reply and a one-time ten-XP bonus for a completed report.
-Sixteen KNX-flavoured titles; ten reports earn the **Golden Bus Probe**. No actual
+PRs earn five XP while open, **25 total when merged** or **15 total when closed
+without merge**. Separate PR counters and XP sources keep the points transparent.
+Sixteen KNX-flavoured titles, report/completion medals and separate PR/merge medals;
+ten reports earn the **Golden Bus Probe**. No actual
 bus probe is shipped — this one is certified for Markdown only.
 
 <!-- HALL-OF-FAME:START -->
-| Place | Bug hunter | Rank & title | Medal | XP | Issues | Replies | Resolved |
-| ---: | --- | --- | --- | ---: | ---: | ---: | ---: |
-| 1 | [@thengsty](https://github.com/thengsty) | Datapoint Dragon Slayer | 🏅 Golden Bus Probe<br>🏅 Double-Decade Fault Finder<br>🏅 Loose End Lasso<br>🏅 Regression Repair Ribbon<br>🏅 Acknowledgement Ace | **304** | 20 | 14 | 19 |
-| 2 | [@hagbardZ](https://github.com/hagbardZ) | Bus Bug Scout | — | **18** | 1 | 3 | 1 |
+| Place | Bug hunter | Rank & title | Medal | XP | Issues | Replies | Resolved | PRs | Open PRs | Merged PRs | Closed unmerged | XP sources |
+| ---: | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| 1 | [@thengsty](https://github.com/thengsty) | Tunnel Trouble Exorcist | 🏅 Golden Bus Probe<br>🏅 Double-Decade Fault Finder<br>🏅 Loose End Lasso<br>🏅 Regression Repair Ribbon<br>🏅 Acknowledgement Ace<br>🏅 Patch Pilot<br>🏅 Green Merge Ribbon | **329** | 20 | 14 | 19 | 1 | 0 | 1 | 0 | 100 issue + 14 reply + 190 completion + 25 PR |
+| 2 | [@hagbardZ](https://github.com/hagbardZ) | Bus Bug Scout | — | **18** | 1 | 3 | 1 | 0 | 0 | 0 | 0 | 5 issue + 3 reply + 10 completion + 0 PR |
 
-*Snapshot: 2026-10-16T08:44:08Z. Maintainers and the scoreboard bot sit this one out.*
+*Snapshot: 2026-10-16T10:05:56Z. Maintainers and the scoreboard bot sit this one out.*
 <!-- HALL-OF-FAME:END -->
 
 [All ranks, scoring rules and the full honour roll](docs/community/HALL_OF_FAME.md).

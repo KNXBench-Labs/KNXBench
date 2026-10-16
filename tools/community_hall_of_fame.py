@@ -59,9 +59,23 @@ RESOLUTION_MEDALS = [
 ]
 
 
-def medals_for(issues, resolutions):
+PULL_REQUEST_MEDALS = [
+    (1, "Patch Pilot"), (5, "Patch Panel Pro"), (10, "Pull Request Pathfinder"),
+    (20, "Two-Decade Code Courier"), (50, "Half-Century Patch Patrol"),
+    (100, "Centurion of Contributions"),
+]
+MERGE_MEDALS = [
+    (1, "Green Merge Ribbon"), (5, "Five-Star Fix Welder"), (10, "Mainline Mechanic"),
+    (20, "Merge Junction Master"), (50, "Half-Century Mainline Medal"),
+    (100, "Centurion of the Green Mainline"),
+]
+
+
+def medals_for(issues, resolutions, pull_requests=0, merges=0):
     return ([name for minimum, name in REPORT_MEDALS if issues >= minimum] +
-            [name for minimum, name in RESOLUTION_MEDALS if resolutions >= minimum])
+            [name for minimum, name in RESOLUTION_MEDALS if resolutions >= minimum] +
+            [name for minimum, name in PULL_REQUEST_MEDALS if pull_requests >= minimum] +
+            [name for minimum, name in MERGE_MEDALS if merges >= minimum])
 
 
 START = "<!-- HALL-OF-FAME:START -->"
@@ -82,6 +96,8 @@ def login(value):
 
 
 def timestamp(value):
+    if not isinstance(value, str):
+        raise ValueError("timestamp must be text")
     parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
     if parsed.tzinfo is None:
         raise ValueError("timestamp must include a timezone")
@@ -93,8 +109,11 @@ def rank_for(xp):
 
 
 def validate_policy(policy):
-    for key in ["issue_xp", "reply_xp", "resolution_xp"]:
+    for key in ["issue_xp", "reply_xp", "resolution_xp",
+                "pull_request_xp", "pull_request_closed_xp", "pull_request_merged_xp"]:
         positive(policy[key])
+    if policy["pull_request_merged_xp"] <= policy["pull_request_closed_xp"]:
+        raise ValueError("merged PR bonus must exceed closed-unmerged bonus")
     timestamp(policy["notify_since"])
     if not isinstance(policy["excluded_logins"], list):
         raise ValueError("excluded_logins must be a list")
@@ -126,7 +145,8 @@ def unique(records, key):
 
 
 def validate_previous(previous, repository):
-    if previous.get("schema_version") != 1 or previous.get("repository") != repository:
+    if (type(previous.get("schema_version")) is not int or
+            previous["schema_version"] not in {1, 2} or previous.get("repository") != repository):
         raise ValueError("unsupported or foreign community snapshot")
     awards = previous["resolution_awards"]
     if not isinstance(awards, dict):
@@ -140,7 +160,7 @@ def validate_previous(previous, repository):
     return json.loads(json.dumps(awards))
 
 
-def build_snapshot(issues, comments, policy, repository, now, previous=None):
+def build_snapshot(issues, comments, policy, repository, now, previous=None, *, pull_requests=()):
     if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repository):
         raise ValueError("invalid repository identifier")
     timestamp(now)
@@ -150,7 +170,9 @@ def build_snapshot(issues, comments, policy, repository, now, previous=None):
 
     def row(who):
         return rows.setdefault(who.casefold(), {"login": who, "issues": 0, "replies": 0,
-                                               "resolutions": 0, "resolution_xp": 0})
+                                               "resolutions": 0, "resolution_xp": 0,
+                                               "pull_requests": 0, "pull_requests_open": 0,
+                                               "pull_requests_closed": 0, "pull_requests_merged": 0})
 
     real_issues = {}
     for item in unique(issues, "id"):
@@ -184,15 +206,48 @@ def build_snapshot(issues, comments, policy, repository, now, previous=None):
         if award["login"].casefold() not in excluded:
             target = row(award["login"])
             target["resolutions"] += 1; target["resolution_xp"] += award["xp"]
+    pull_numbers = set()
+    for item in unique(pull_requests, "id"):
+        number = positive(item["number"])
+        if number in pull_numbers or number in real_issues:
+            raise ValueError("duplicate or conflicting pull request number")
+        pull_numbers.add(number)
+        if item["state"] not in {"open", "closed"}:
+            raise ValueError("unknown pull request state")
+        merged_at = item["merged_at"]  # /issues cannot establish a PR's merge status.
+        if merged_at is not None:
+            timestamp(merged_at)
+            if item["state"] != "closed":
+                raise ValueError("merged pull request must be closed")
+        if item["state"] == "closed":
+            timestamp(item["closed_at"])
+        elif item["closed_at"] is not None:
+            raise ValueError("open pull request cannot have a closure time")
+        who = participant(item.get("user"), excluded)
+        if who is None:
+            continue
+        target = row(who)
+        target["pull_requests"] += 1
+        state = "merged" if merged_at is not None else item["state"]
+        target[f"pull_requests_{state}"] += 1
     contributors = list(rows.values())
     for target in contributors:
-        target["xp"] = target["issues"] * policy["issue_xp"] + target["replies"] * policy["reply_xp"] + target.pop("resolution_xp")
+        target["xp_breakdown"] = {
+            "issues": target["issues"] * policy["issue_xp"],
+            "replies": target["replies"] * policy["reply_xp"],
+            "resolutions": target.pop("resolution_xp"),
+            "pull_requests": (target["pull_requests"] * policy["pull_request_xp"] +
+                              target["pull_requests_closed"] * policy["pull_request_closed_xp"] +
+                              target["pull_requests_merged"] * policy["pull_request_merged_xp"]),
+        }
+        target["xp"] = sum(target["xp_breakdown"].values())
         target["rank"] = rank_for(target["xp"])
-        target["medals"] = medals_for(target["issues"], target["resolutions"])
+        target["medals"] = medals_for(target["issues"], target["resolutions"],
+                                      target["pull_requests"], target["pull_requests_merged"])
     contributors.sort(key=lambda target: (-target["xp"], target["login"].casefold()))
     for index, target in enumerate(contributors):
         target["position"] = index + 1 if index == 0 or target["xp"] != contributors[index - 1]["xp"] else contributors[index - 1]["position"]
-    snapshot = {"schema_version": 1, "repository": repository, "generated_at": now,
+    snapshot = {"schema_version": 2, "repository": repository, "generated_at": now,
                 "policy": policy.copy(), "ranks": RANKS, "resolution_awards": awards,
                 "contributors": contributors}
     if previous and {k: v for k, v in snapshot.items() if k != "generated_at"} == {k: v for k, v in previous.items() if k != "generated_at"}:
@@ -201,14 +256,17 @@ def build_snapshot(issues, comments, policy, repository, now, previous=None):
 
 
 def render_table(snapshot):
-    lines = ["| Place | Bug hunter | Rank & title | Medal | XP | Issues | Replies | Resolved |",
-             "| ---: | --- | --- | --- | ---: | ---: | ---: | ---: |"]
+    lines = ["| Place | Bug hunter | Rank & title | Medal | XP | Issues | Replies | Resolved | PRs | Open PRs | Merged PRs | Closed unmerged | XP sources |",
+             "| ---: | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |"]
     for target in snapshot["contributors"]:
         who = target["login"]
         medal = "<br>".join(f"🏅 {name}" for name in target["medals"]) or "—"
-        lines.append(f"| {target['position']} | [@{who}](https://github.com/{quote(who, safe='')}) | {target['rank']['title']} | {medal} | **{target['xp']}** | {target['issues']} | {target['replies']} | {target['resolutions']} |")
+        xp = target["xp_breakdown"]
+        sources = (f"{xp['issues']} issue + {xp['replies']} reply + "
+                   f"{xp['resolutions']} completion + {xp['pull_requests']} PR")
+        lines.append(f"| {target['position']} | [@{who}](https://github.com/{quote(who, safe='')}) | {target['rank']['title']} | {medal} | **{target['xp']}** | {target['issues']} | {target['replies']} | {target['resolutions']} | {target['pull_requests']} | {target['pull_requests_open']} | {target['pull_requests_merged']} | {target['pull_requests_closed']} | {sources} |")
     if not snapshot["contributors"]:
-        lines.append("| — | Your first report belongs here. | Telegram Trainee | — | 0 | 0 | 0 | 0 |")
+        lines.append("| — | Your first report belongs here. | Telegram Trainee | — | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | — |")
     return "\n".join(lines)
 
 
@@ -231,6 +289,13 @@ def render_page(snapshot):
 - **+{policy['resolution_xp']} XP for the reporter** when an issue is closed as **completed**.
   This bonus is awarded once per issue and retained if it is reopened. Closing
   as **not planned** does not earn a completion bonus.
+- **+{policy['pull_request_xp']} XP per pull request** submitted, including open/draft PRs.
+- **+{policy['pull_request_merged_xp']} XP merge bonus**: **{policy['pull_request_xp'] + policy['pull_request_merged_xp']} XP total** per merged PR.
+- **+{policy['pull_request_closed_xp']} XP participation bonus**: **{policy['pull_request_xp'] + policy['pull_request_closed_xp']} XP total** per PR closed without merge.
+  Closed unmerged does not necessarily mean rejected. Open, merged and closed
+  unmerged are mutually exclusive states; the two bonuses never stack.
+- **XP sources** show issue, reply, completion and PR points separately; their
+  sum is the displayed XP total. PRs are not counted again as issues.
 
 ## The next mystery
 
@@ -238,13 +303,16 @@ def render_page(snapshot):
   Twenty reports? There is more than one bus probe in the trophy cabinet.
 - **Resolution milestones:** every five reports closed as **completed** unlock
   another medal, up to 100. Reopening and closing the same issue is not a shortcut.
+- **PR milestones:** medals at 1, 5, 10, 20, 50 and 100 submitted PRs, plus a
+  separate track at the same milestones for merged PRs. Closing without merge
+  earns participation XP, but does not advance the merge-medal track.
 - **No spoilers:** medal names appear only once earned, in the table and completion
   acknowledgements. Keep reporting and helping us close the loop to discover them.
   These are thank-you medals, not extra XP — and no hardware needs shelf space.
 
-Reporters and issue-thread repliers are listed, not just the top ten. External
+Reporters, issue-thread repliers and PR authors are listed, not just the top ten. External
 AI agents are welcome to earn points too. Maintainer accounts, explicit opt-outs
-and the scoreboard bot itself are excluded. Pull requests, reviews, reactions,
+and the scoreboard bot itself are excluded. PR discussion/review comments, reviews, reactions,
 Discussions and private messages are not counted. Tied scores share a place;
 alphabetical order merely keeps the table stable. Counts measure participation,
 not report quality, correctness, or a promise that every request will be implemented.
@@ -257,7 +325,12 @@ automatic acknowledgement with earned XP, total XP and rank/title (and a
 rank-up announcement if the bonus crosses a threshold). Retry/reopen does not
 post a second award notice for the same issue.
 
-This page and the README refresh on issue/reply events and daily, with manual
+PR counters, XP and medals follow the current API state. Reopening a closed
+unmerged PR returns it to submission XP; merging it replaces, rather than stacks,
+the closed-unmerged bonus. A removed PR stops counting. Historical PRs count
+immediately, without posting PR award comments or changing issue notices.
+
+This page and the README refresh on issue/reply and PR lifecycle events and daily, with manual
 refresh available. GitHub API or permission failures fail the job rather than
 publish invented counts. Schedule delays or outages can leave the displayed
 snapshot behind; the timestamp states what was actually generated.
@@ -379,15 +452,20 @@ def main():
     api = GitHub(args.repository)
     issues = api.api(f"repos/{args.repository}/issues?state=all&per_page=100", pages=True)
     comments = api.api(f"repos/{args.repository}/issues/comments?per_page=100", pages=True)
+    pulls = api.api(f"repos/{args.repository}/pulls?state=all&per_page=100", pages=True)
     now = datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
-    snapshot = build_snapshot(issues, comments, policy, args.repository, now, previous)
+    snapshot = build_snapshot(issues, comments, policy, args.repository, now, previous,
+                              pull_requests=pulls)
     replace_readme((args.root / "README.md").read_text(), snapshot)
     if args.notify:
         notify_pending(snapshot, api)
     write_outputs(args.root, snapshot)
     print(json.dumps({"contributors": len(snapshot["contributors"]), "generated_at": snapshot["generated_at"],
                       "issues": sum(row["issues"] for row in snapshot["contributors"]),
-                      "replies": sum(row["replies"] for row in snapshot["contributors"])}, sort_keys=True))
+                      "replies": sum(row["replies"] for row in snapshot["contributors"]),
+                      "pull_requests": sum(row["pull_requests"] for row in snapshot["contributors"]),
+                      "pull_requests_merged": sum(row["pull_requests_merged"] for row in snapshot["contributors"]),
+                      "pull_requests_closed": sum(row["pull_requests_closed"] for row in snapshot["contributors"])}, sort_keys=True))
 
 
 if __name__ == "__main__":

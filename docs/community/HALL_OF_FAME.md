@@ -6,12 +6,12 @@ with the details. You do not need to write code to earn a place here.
 
 ## The field-test crew
 
-| Place | Bug hunter | Rank & title | Medal | XP | Issues | Replies | Resolved |
-| ---: | --- | --- | --- | ---: | ---: | ---: | ---: |
-| 1 | [@thengsty](https://github.com/thengsty) | Datapoint Dragon Slayer | 🏅 Golden Bus Probe<br>🏅 Double-Decade Fault Finder<br>🏅 Loose End Lasso<br>🏅 Regression Repair Ribbon<br>🏅 Acknowledgement Ace | **304** | 20 | 14 | 19 |
-| 2 | [@hagbardZ](https://github.com/hagbardZ) | Bus Bug Scout | — | **18** | 1 | 3 | 1 |
+| Place | Bug hunter | Rank & title | Medal | XP | Issues | Replies | Resolved | PRs | Open PRs | Merged PRs | Closed unmerged | XP sources |
+| ---: | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| 1 | [@thengsty](https://github.com/thengsty) | Tunnel Trouble Exorcist | 🏅 Golden Bus Probe<br>🏅 Double-Decade Fault Finder<br>🏅 Loose End Lasso<br>🏅 Regression Repair Ribbon<br>🏅 Acknowledgement Ace<br>🏅 Patch Pilot<br>🏅 Green Merge Ribbon | **329** | 20 | 14 | 19 | 1 | 0 | 1 | 0 | 100 issue + 14 reply + 190 completion + 25 PR |
+| 2 | [@hagbardZ](https://github.com/hagbardZ) | Bus Bug Scout | — | **18** | 1 | 3 | 1 | 0 | 0 | 0 | 0 | 5 issue + 3 reply + 10 completion + 0 PR |
 
-*Snapshot: 2026-10-16T08:44:08Z.*
+*Snapshot: 2026-10-16T10:05:56Z.*
 
 ## How the points work
 
@@ -20,6 +20,13 @@ with the details. You do not need to write code to earn a place here.
 - **+10 XP for the reporter** when an issue is closed as **completed**.
   This bonus is awarded once per issue and retained if it is reopened. Closing
   as **not planned** does not earn a completion bonus.
+- **+5 XP per pull request** submitted, including open/draft PRs.
+- **+20 XP merge bonus**: **25 XP total** per merged PR.
+- **+10 XP participation bonus**: **15 XP total** per PR closed without merge.
+  Closed unmerged does not necessarily mean rejected. Open, merged and closed
+  unmerged are mutually exclusive states; the two bonuses never stack.
+- **XP sources** show issue, reply, completion and PR points separately; their
+  sum is the displayed XP total. PRs are not counted again as issues.
 
 ## The next mystery
 
@@ -27,13 +34,16 @@ with the details. You do not need to write code to earn a place here.
   Twenty reports? There is more than one bus probe in the trophy cabinet.
 - **Resolution milestones:** every five reports closed as **completed** unlock
   another medal, up to 100. Reopening and closing the same issue is not a shortcut.
+- **PR milestones:** medals at 1, 5, 10, 20, 50 and 100 submitted PRs, plus a
+  separate track at the same milestones for merged PRs. Closing without merge
+  earns participation XP, but does not advance the merge-medal track.
 - **No spoilers:** medal names appear only once earned, in the table and completion
   acknowledgements. Keep reporting and helping us close the loop to discover them.
   These are thank-you medals, not extra XP — and no hardware needs shelf space.
 
-Reporters and issue-thread repliers are listed, not just the top ten. External
+Reporters, issue-thread repliers and PR authors are listed, not just the top ten. External
 AI agents are welcome to earn points too. Maintainer accounts, explicit opt-outs
-and the scoreboard bot itself are excluded. Pull requests, reviews, reactions,
+and the scoreboard bot itself are excluded. PR discussion/review comments, reviews, reactions,
 Discussions and private messages are not counted. Tied scores share a place;
 alphabetical order merely keeps the table stable. Counts measure participation,
 not report quality, correctness, or a promise that every request will be implemented.
@@ -46,7 +56,12 @@ automatic acknowledgement with earned XP, total XP and rank/title (and a
 rank-up announcement if the bonus crosses a threshold). Retry/reopen does not
 post a second award notice for the same issue.
 
-This page and the README refresh on issue/reply events and daily, with manual
+PR counters, XP and medals follow the current API state. Reopening a closed
+unmerged PR returns it to submission XP; merging it replaces, rather than stacks,
+the closed-unmerged bonus. A removed PR stops counting. Historical PRs count
+immediately, without posting PR award comments or changing issue notices.
+
+This page and the README refresh on issue/reply and PR lifecycle events and daily, with manual
 refresh available. GitHub API or permission failures fail the job rather than
 publish invented counts. Schedule delays or outages can leave the displayed
 snapshot behind; the timestamp states what was actually generated.

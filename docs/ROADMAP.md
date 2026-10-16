@@ -42,11 +42,13 @@ merged stages pass, including isolated corpus152/152; published as `894f14e0`
 with exact remote equality verified. Source-to-ASAP mapping, generated table placement,
 relative parameter images, procedure translation and recovery remain open.
 
-P5 adds a local [bounded System-1 source-image candidate](contracts/offline-download-system1-image.md),
+P5 delivers a [bounded System-1 source-image entry](contracts/offline-download-system1-image.md),
 not complete real-product support: thirteen final real-source refusals remain
 explicit. Next: source-backed FixupList interpretation and discriminating
 parameter/Union evidence; only then complete source images and separate default
-procedure/recovery contracts. All nineteen workspace branch stages pass; actual integration acceptance is pending.
+procedure/recovery contracts. All nineteen workspace branch and twenty actual
+merged stages pass, including isolated corpus152/152; published as `ccfe5b74`
+with exact main equality read back.
 
 ## Alpha 12 release boundary (15 October 2026)
 

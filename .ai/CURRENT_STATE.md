@@ -1,4 +1,14 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-16 21:10
+- **Completed:** Owner requested prepare AND publish Alpha 13. Release cutoff c992416570860b967d0efaa2ae096072a78651b0 inspected against v0.1.0-alpha.12; no native/model16 or product23 schema bump. Dedicated release/alpha13-20261016 worktree owns release work only. Selected root HEAD/index/foreign files and running containers are protected.
+- **Pending/Next Steps:** Freeze exact candidate, version/scope documentation, full source-bound local gate and exact-SHA AppImage/Docker no-publish builds; publish immutable v0.1.0-alpha.13 only after acceptance, then external artifact/registry/lifecycle verification and docs closure. Owner's explicit release request is publication authorization, not permission for deployment or bus writes.
+- **Notes for Codex oder Claude:** No prerequisite packages remain. Other sessions pause publication/merges/new shared gate leases until release freeze is released; already-running gates may finish, but do not deliver during freeze. Resume after fresh origin/main contains released marker AND gh release view v0.1.0-alpha.13 confirms publication, or an explicit abort notice. No root synchronization, production-container restart, bus/device operation, vendor contact or subagents.
+
+Release freeze: taken by codex-release-alpha13 (cutoff c992416570860b967d0efaa2ae096072a78651b0; all other publication paused)
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-16 20:44
 - **Completed:** Five-point workbench source DELIVERED on origin/main at 8e1210740811 with exact local/tracking/live equality. Feature d78f30f4, actual tested merge925d918b, result-only docs8e121074. Actual merged gate:4724workspace passed/0failed/210regularlyignored; private152/152in33targets, original bytes frozen; Clippy/build/format/documentation/fivearchitecture/whitespace and final built browser4allGREEN. Complete frontend/tools identities equal accepted feature:3632components and911browser cases (578generic+333production) from honest reconciled partial runs; all failed/interrupted trials retained, not relabeled. UI: independent folding, grouped File, real manufacturer mode dropdowns, parameter groups, durable undoable missing-object refresh. No universal manufacturer/script/ETS or physical-device claim.
 - **Pending/Next Steps:** No implementation or acceptance remains for this bounded package. Only result-only closure documentation and exact private evidence/bundle archival plus stopped own worktree/cache/ref retirement remain; no new feature work or deployment is implied. Any later module-instance/script support is separate newly scoped work. User-selected root stays intentionally stale/dirty and must not be synchronized or stashed; running container was not rebuilt/restarted.

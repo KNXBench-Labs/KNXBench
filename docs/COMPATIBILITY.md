@@ -1,5 +1,16 @@
 # Compatibility
 
+## System-1 source-image boundary (16 October 2026 source)
+
+[The explicit offline Type-1 entry](contracts/offline-download-system1-image.md)
+is bounded to0012/DefaultProcedure source interpretation. Nine targeted tests and
+a private thirteen-source/two-package refusal regression pass; zero complete
+real-source images are accepted. Seven first refusals concern FixupList, five
+source-default bits and one mid-octet Union. A prior partial image success is
+withdrawn after an omission regression, not counted as compatibility evidence.
+Public download/planner admission, existing routes and storage schemas do not
+change. Procedure translation, full recovery and field validation remain open.
+
 ## Complete descriptor-table boundary (16 October 2026 source)
 
 The [System-B object codec](contracts/offline-systemb-object-table.md#p4d-explicit-complete-construction-16-october-2026)

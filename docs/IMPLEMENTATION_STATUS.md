@@ -14,6 +14,20 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-16 — P5 local System-1 image candidate: explicit0012/DefaultProcedure
+  library entry reuses actual evaluation and Core Type-1/indexed association
+  codecs, protects original source pointers and refuses unmodeled FixupList.
+  Nine targeted tests,926owning ProductDB tests and all-target Clippy pass;
+  a Type-2 substitution mutant fails as intended and exact source is restored.
+  Explicit thirteen-source/two-package regression verifies named refusals, not
+  complete real-product images:7FixupList/5default-bit/1mid-octet-Union. Initial
+  omission-success is withdrawn. All nineteen branch stages pass: Rust4687/0/209ignored
+  in345targets, Vitest3626/263files;2931source paths and six selected external
+  input commitments match. Actual merged acceptance and publication pending; no
+  new executable mask/plan/recovery or device support.
+  [Contract](contracts/offline-download-system1-image.md) ·
+  [Evidence](evidence/offline-system1-image-2026-10-16.json).
+
 - 2026-10-16 — P4e bounded research completed: original profile/procedure pages and
   three retained application sources in one package rechecked. Selected master
   table resource locations are present, but sparse product object numbers are

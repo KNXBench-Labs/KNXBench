@@ -1,5 +1,15 @@
 # Architecture
 
+## Explicit offline System-1 image boundary (16 October 2026 source)
+
+ProductDB adds a bounded0012/DefaultProcedure source-image entry using its
+existing evaluator and Core Type-1/indexed-legacy codecs. Shared private source
+checks now take an explicit family; System-2 behavior is retained. Source pointers
+are validated/protected, not generated; direct FixupList presence refuses and
+its original XML remains stored. No UI/domain coupling, schema or executable
+admission changes. Synthetic assembly is not complete real-product support.
+[Contract](contracts/offline-download-system1-image.md).
+
 ## Complete explicit System-B object tables (16 October 2026 source)
 
 Core's existing Format-1 codec now also constructs a table from a complete

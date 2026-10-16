@@ -1,5 +1,15 @@
 # Open work after the 0.1 alpha
 
+## Offline System-1 completion (16 October 2026)
+
+[The bounded source-image candidate](contracts/offline-download-system1-image.md)
+passes synthetic/owning tests but accepts no complete real-product source image.
+Next are exact FixupList semantics, source-default/Union encoding evidence,
+complete source assembly and then default-procedure translation plus durable
+whole-mutation recovery. Final thirteen-source refusals are7/5/1 respectively;
+they identify first boundaries, not all missing semantics. Public0012 admission
+is unchanged. All nineteen candidate stages pass; actual merged gates and publication remain pending.
+
 ## Siemens System-2 download support, issue #22 (14 October 2026)
 
 Exact product/application identified; [offline prerequisites](contracts/system2-download-prerequisites.md)

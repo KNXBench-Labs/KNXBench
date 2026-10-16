@@ -1,5 +1,14 @@
 # Compatibility
 
+## Complete descriptor-table boundary (16 October 2026 source)
+
+The [System-B object codec](contracts/offline-systemb-object-table.md#p4d-explicit-complete-construction-16-october-2026)
+can construct a count-prefixed table without a template only when every
+descriptor is explicit. It refuses sparse indices rather than inventing inactive
+slots. Capacity is not a device-support claim; product/ASAP mapping, relative
+placement, property framing, complete recovery and hardware validation remain
+separate. No public mask, existing image route or schema is changed.
+
 ## System-B link-table boundary (16 October 2026 source)
 
 [The explicit table builder](contracts/offline-systemb-link-tables.md) is a pure

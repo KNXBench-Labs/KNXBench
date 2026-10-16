@@ -84,6 +84,18 @@ not a normative mapping for arbitrary object-5 operations and not permission to
 silently skip steps. The next offline slice is a preserved, validated metadata
 projection with zero wire operations, while all public admission stays refused.
 
+### Public-package evidence (16 October 2026)
+
+The [UP 258D12 public-package dossier](../research/2026-10-16-up258-public-package-evidence.md)
+pins the exact public source by digest, re-confirms the 21-step procedure and
+its metadata witness, and measures the parameter segment's template against
+every 16-bit placement: the segment is heterogeneous with respect to declared
+defaults (one pair low octet first, one high octet first, most nonzero
+defaults absent), so template analysis cannot supply the missing multi-octet
+encoding witness in either direction. The opt-in test
+`crates/knx-productdb/tests/system2_public_package.rs` keeps these refusals
+regression-pinned.
+
 **Remaining blockers before a System-2 executable plan:**
 
 1. Exact image/table codecs, preserved pointer fields and parameter/table overlap

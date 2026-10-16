@@ -84,6 +84,55 @@
     "attempt": "branch-gate1",
     "status": "accepted"
   },
-  "mergedAcceptance": "pending",
-  "publication": "pending"
+  "mergedAcceptance": {
+    "merge": "39c88abaa316ef4a2af912c662b8ad3c2d122118",
+    "stagesPassed": 20,
+    "rust": {
+      "passed": 4689,
+      "failed": 0,
+      "ignored": 209,
+      "targets": 345
+    },
+    "vitest": {
+      "passed": 3626,
+      "failed": 0,
+      "files": 263
+    },
+    "corpus": {
+      "passed": 152,
+      "selected": 152,
+      "targets": 33,
+      "networkIsolated": true
+    },
+    "sourcePaths": 2934,
+    "externalFiles": 6,
+    "sourceExternalGitVerified": true,
+    "relativeSourcesVerified": 3,
+    "system1SourceRefusals": 13,
+    "realSystem1ImagesAccepted": 0,
+    "corpusLinksRemoved": true,
+    "attempt": "merged-gate2",
+    "earlierAttempt": "merged-gate1 interrupted/unaccepted",
+    "status": "accepted",
+    "firstAttempt": {
+      "state": "interrupted",
+      "accepted": false,
+      "completedStages": 8,
+      "stageInProgress": "rust",
+      "sourceInputsUnchanged": true,
+      "terminationCause": "unavailable"
+    }
+  },
+  "publication": {
+    "runtimeRevision": "39c88abaa316ef4a2af912c662b8ad3c2d122118",
+    "exactLocalTrackingLiveMainEqualityVerified": true,
+    "upstreamCommunityDocsPreserved": true,
+    "selectedRootSynchronized": false
+  },
+  "session": {
+    "state": "closing at owner request",
+    "noNewPackages": true,
+    "fullDownloadSupportClaimed": false,
+    "remainingSemanticWork": "future separate tasks"
+  }
 }

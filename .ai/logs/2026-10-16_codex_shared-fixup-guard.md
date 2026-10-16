@@ -15,7 +15,15 @@ empty/populated declarations,nested-extension separation and unchanged DB.
 Owning928/0/28ignored in56targets and all-targetClippy pass. Separate self-review
 no critical/important/security findings after correction. All nineteen branch
 stages pass: Rust4689/0/209ignored in345targets, Vitest3626/263files;2934source
-paths and six selected external/Git commitments match. Actual merged acceptance
-and publication pending. No vendor/hardware/subagents/new admission,
+paths and six selected external/Git commitments match. First merged attempt was
+interrupted during compilation and is retained unaccepted; complete unchanged
+inputs and absent workers were verified. Published upstream README/community-only
+changes were reconciled before a fresh full20stage final run. That run passes
+with the same Rust/Web counts plus isolated corpus152/152 in33targets. Accepted
+runtime39c88aba published with exact local/tracking/live main equality.
+Owner requested session closure: no new packages. Remaining source fixup/encoding,
+complete images/procedures and recovery remain open future work. Result-only
+closure retains runtime acceptance at39c88aba; private archival/retirement receipts
+record final cleanup separately. No vendor/hardware/subagents/new admission,
 source schema,dependency,UI or transport changes. Next are exact source fixup
 semantics and default-bit/Union evidence, then complete images/procedures/recovery.

@@ -9,7 +9,7 @@ updates supersede them; they are not new work assignments.
 ## Shared source-fixup refusal (16 October 2026 source)
 
 The [shared image guard](../contracts/source-fixup-integrity.md) now also covers
-Easy3/System-2 in the local P6candidate. It prevents partial-artifact success but
+Easy3/System-2 in published P6 (`39c88aba`). It prevents partial-artifact success but
 does not interpret fixups. Even matching source/master target words are only
 correlation, not a general no-op exemption or permission for a hardware write.
 

@@ -1,0 +1,158 @@
+{
+  "kind": "knxbench-offline-system300-property-tables",
+  "version": 1,
+  "date": "2026-10-16",
+  "scope": "pure S-mode property-array table image adapter; no source/discovery/load/recovery or hardware admission",
+  "featureCommit": "215802e86985de27ded9e36b88353a37dca1508e",
+  "runtimeAcceptedMerge": "782dbafd1ee5a87f38adf521b64dd7c1e3775e71",
+  "publishedImplementation": "af9431cb15a9c7939f837cadb85afb3189e26307",
+  "publicationRuntimeEquality": true,
+  "publicationReadbackEquality": true,
+  "focusedTests": 12,
+  "owningCore": {
+    "passed": 862,
+    "failed": 0,
+    "ignored": 0,
+    "targets": 19
+  },
+  "mutants": {
+    "framing": "named assertion rejected; exact source restored",
+    "senderOrder": "named assertion rejected; exact source restored"
+  },
+  "review": "separate in-session self-review, not independent approval; minor findings closed",
+  "branchHistory": [
+    "tooling prerequisite ordering failed, retained",
+    "17actual stages passed; final generated whitespace failed, retained; complete source/Git restored and corrected check separately accepted with negative verifier controls"
+  ],
+  "actualMergedAcceptance": {
+    "expectedStages": [
+      "isolation",
+      "format",
+      "documentation",
+      "web-install",
+      "tool-tests",
+      "web-build",
+      "rust",
+      "clippy",
+      "build",
+      "vitest",
+      "bindings",
+      "bindings-diff",
+      "check-layering",
+      "check-headers",
+      "check-anchors",
+      "check-ledger",
+      "check-corpus-gates",
+      "whitespace",
+      "corpus"
+    ],
+    "stages": [
+      {
+        "name": "isolation",
+        "exit": 0
+      },
+      {
+        "name": "format",
+        "exit": 0
+      },
+      {
+        "name": "documentation",
+        "exit": 0
+      },
+      {
+        "name": "web-install",
+        "exit": 0
+      },
+      {
+        "name": "tool-tests",
+        "exit": 0
+      },
+      {
+        "name": "web-build",
+        "exit": 0
+      },
+      {
+        "name": "rust",
+        "exit": 0
+      },
+      {
+        "name": "clippy",
+        "exit": 0
+      },
+      {
+        "name": "build",
+        "exit": 0
+      },
+      {
+        "name": "vitest",
+        "exit": 0
+      },
+      {
+        "name": "bindings",
+        "exit": 0
+      },
+      {
+        "name": "bindings-diff",
+        "exit": 0
+      },
+      {
+        "name": "check-layering",
+        "exit": 0
+      },
+      {
+        "name": "check-headers",
+        "exit": 0
+      },
+      {
+        "name": "check-anchors",
+        "exit": 0
+      },
+      {
+        "name": "check-ledger",
+        "exit": 0
+      },
+      {
+        "name": "check-corpus-gates",
+        "exit": 0
+      },
+      {
+        "name": "whitespace",
+        "exit": 0
+      },
+      {
+        "name": "corpus",
+        "exit": 0
+      }
+    ],
+    "rust": {
+      "passed": 4701,
+      "failed": 0,
+      "ignored": 210,
+      "targets": 347
+    },
+    "vitest": {
+      "numPassedTests": 3626,
+      "numFailedTests": 0,
+      "files": 263
+    },
+    "corpus": {
+      "passed": 152,
+      "selected": 152,
+      "targets": 33
+    },
+    "sourceFiles": 2943,
+    "externalFiles": 487,
+    "sourceFrozen": true,
+    "gitFrozen": true,
+    "externalFrozen": true,
+    "ownedCorpusLinksRemoved": true
+  },
+  "limitations": [
+    "explicit codec format is not discovered device format",
+    "u16 representation is not device/property-service capacity",
+    "empty tables retain acceptance/default-mapping semantics",
+    "no mask or public programming admission change",
+    "no hardware/vendor/release/deployment/subagents"
+  ],
+  "privateEvidence": "Profile evidence archive; no licensed pages, private fixture identities or raw corpus content published"
+}

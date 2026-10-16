@@ -1,7 +1,15 @@
 # System-300 S-mode property-table images
 
-Status: branch acceptance reconciled on16October2026; actual merged acceptance
-and implementation publication are pending. All17runtime/repository stages passed;
+Status: integrated and published on16October2026 as `af9431cb`, with runtime
+acceptance at the actual merge `782dbafd`. All19actual merged stages pass,
+including Rust4701/0/210ignored in347targets, Vitest3626/263files and isolated
+corpus152/152 in33targets. Complete2943source/Git and487external commitments
+match. The only later publication delta preserves another owner’s handover; full
+runtime equality and seven documentation/repository checks pass, and exact
+local/tracking/live main equality was verified.
+[Aggregate evidence](../evidence/offline-system300-property-tables-2026-10-16.json).
+
+Earlier branch acceptance was separately reconciled. All17runtime/repository stages passed;
 a final whitespace failure came solely from12regenerated binding files. Their
 original bytes and the entire2942path source/Git snapshot were restored; corrected
 whitespace passed in a separate receipt with negative verifier controls. Original
@@ -37,7 +45,7 @@ page footers visually inspected. No external implementation is an oracle.
   not a promise that communication is disabled. Association writes require the
   Loading state; valid content is used only in Loaded state (p250).
 
-Licensed renders and extracted locator text remain in private task scratch.
+Licensed renders and extracted locator text remain in private evidence, not Git.
 These inspected passages are not an exhaustive System-300 conformance audit.
 
 ## Bounded implementation contract

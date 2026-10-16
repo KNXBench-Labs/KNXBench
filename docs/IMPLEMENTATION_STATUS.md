@@ -32,8 +32,11 @@ fragment aliases and update this index. Do not rewrite previous results.
   Scoped branch12/12passes: ProductDB935/0/29ignored in56reports, exact
   public System2 source1/0, Easy3 scope regression and owning all-targetClippy/
   build. Earlier all-family/whitespace/compatibility attempts remain historical
-  or superseded, never final acceptance. Documentation delta, corrected actual
-  integration/private corpus and publication remain pending;
+  or superseded, never final acceptance. The actual scoped corpus initially
+  returned151/152solely at the historical private-System2 first-refusal assertion;
+  its strict exact-diagnostic/presence/DB-invariance correction passes ten focused
+  stages without production changes. Final actual integration/private corpus and
+  publication remain pending;
   [evidence](evidence/explicit-source-bits-2026-10-16.json).
 
 - 2026-10-16 — Community PR credit comments extend the existing notification

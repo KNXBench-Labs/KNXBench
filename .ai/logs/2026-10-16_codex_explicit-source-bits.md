@@ -118,3 +118,19 @@ publicSystem2source1/0, named Easy3 scope regression, owningClippy/build and
 format/docs/five repository/whitespace. All source/Git/external inputs frozen.
 No App/CLI/server golden assertion changed. Documentation-only acceptance notes
 and complete actual integration/private-corpus acceptance remain to finish.
+
+Actual scoped integration3 on ee706977finished with151/152private tests in33
+targets; only the private Siemens full-package test retained the old first-error
+expectation at system2_program_code.rs125. All8earlier stages and original
+positive App/CLI/server corpus cases pass; source/Git/527external inputs match.
+Publisher correctly refused before any Git write. R7 changes only that named
+assertion to exact LegacyPatchAlways, checks retained presence/DB invariance and
+keeps all21steps/metadata/not-executable checks. No production byte changes.
+The original run remains FAILED; focused GREEN and corrected merged gate pending.
+
+R7focusedGREENpasses10/10including actual privateHVACsource1/0and all-target
+Clippy. Original21steps/metadata/not-executable assertions remain unchanged;
+new exact source-presence/refusal/DB assertions pass. Production unchanged.
+Observed release runtime64.58sversus failed debug595.14s, with no test/input
+selection reduction; final full152corpus will use releaseprofile explicitly.
+Separate post-GREEN review7has0open findings. Actual final merged gate pending.

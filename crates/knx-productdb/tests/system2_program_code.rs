@@ -120,12 +120,19 @@ fn siemens_system2_preserves_the_whole_procedure_and_stays_not_executable() {
         links: vec![],
         flag_overrides: Default::default(),
     };
+    assert!(code.has_legacy_patch_always);
+    let before = conn.total_changes();
     let error = knx_productdb::image::build_system2_image(&conn, &image_request)
-        .expect_err("this real source lacks a verified multi-octet encoding witness");
+        .expect_err("this real source declares an uninterpreted patch policy");
+    // As in the digest-pinned public package, the strict declaration guard
+    // precedes the historical multibyte-default refusal. That missing encoding
+    // witness is still unresolved; the directive is neither removed nor run.
     assert!(
         matches!(error, knx_productdb::image::ImageError::Unsupported { ref what }
-        if what.ends_with("System2 default disagrees with source bits"))
+        if what == "System2 LegacyPatchAlways requires a separate source interpretation"),
+        "expected the exact source-integrity refusal, got: {error}"
     );
+    assert_eq!(conn.total_changes(), before);
     assert_eq!(code.mask_version.as_deref(), Some("MV-0025"));
     let LoadStep::TaskCtrl2 {
         callback,

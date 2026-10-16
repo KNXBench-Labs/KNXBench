@@ -17,6 +17,12 @@ property+memory+setup/allocator recovery remain next where exact contracts permi
 Hardware admission and broader family completion are not implied by these foundations. Unknown semantics remain explicit research
 blockers, not guessed simulator behaviour.
 
+P4 now separates the [pure System-B Format-1 object codec](contracts/offline-systemb-object-table.md)
+from relative-image/sequencer integration. Its local synthetic acceptance and the
+three real partial resolver results do not close product mapping or recovery;
+all 17 frozen branch stages pass; actual merge acceptance/publication remain
+tracked in the linked evidence.
+
 ## Alpha 12 release boundary (15 October 2026)
 
 The owner requested a release of delivered source, not new feature work. Both P4

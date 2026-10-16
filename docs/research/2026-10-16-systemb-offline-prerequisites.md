@@ -103,7 +103,8 @@ one-based TSAP/ASAP, explicit narrow/wide association formats and first-match
 sending. The new [pure link-table codec](../contracts/offline-systemb-link-tables.md)
 implements those explicit bytes without inferring a product layout or public
 admission. Twelve literal/boundary tests and a rejected sender-order mutant
-pass locally; whole-candidate acceptance remains separately tracked.
+pass; all18branch and19actual merged stages pass and the codec is published
+as `c74038cd`. This does not establish the product integration contracts below.
 
 The original57B0procedure p75 uses current generated-table image sizes, while
 retained modern07B0controls include source literals whose substitution cannot

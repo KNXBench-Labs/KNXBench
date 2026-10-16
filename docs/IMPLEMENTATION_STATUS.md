@@ -14,15 +14,18 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
-- 2026-10-16 — P4 System-B prerequisite implemented locally: pure Type-7 /
+- 2026-10-16 — P4a System-B prerequisite integrated and published as `adb52990`:
+  pure Type-7 /
   Format-1 group-object rewriting, one-based u16 indices, explicit initial read,
   extended value types and preserved source/tail. Ten focused tests pass after
   an observed missing-module RED; an omitted initial-read mutant fails the named
   bit assertion and source restoration is verified. Initial owning-crate Clippy
   rejected constant-sized chunk syntax; corrected Clippy and all 17 frozen
   branch stages pass: Rust 4649/0 (207 ignored), Vitest 3626/0, explicit Release
-  source regression, workspace build and checks. Merge acceptance and publication
-  remain pending. The actual existing resolver baseline on three
+  source regression, workspace build and checks. All 18 actual merged stages
+  also pass, including isolated corpus152/152 in33targets; all2908source identities
+  remain frozen and local/tracking/live remote main equality was verified.
+  The actual existing resolver baseline on three
   selected real sources returned three partial/non-executable sequences, not
   product support. No image/plan/recovery/public-route promotion.
   [Contract](contracts/offline-systemb-object-table.md) ·

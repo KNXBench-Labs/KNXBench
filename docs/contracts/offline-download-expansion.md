@@ -76,9 +76,10 @@ material. Do not mark a path implemented merely because its metadata is parsed.
   evidence-blocked, not hardware-blocked. Continue independent System-B and
   remaining-family work under the owner scope.
 - P4a: [pure System-B Format-1 object-table codec](offline-systemb-object-table.md)
-  implemented locally with ten passing byte/boundary tests and a discriminating
-  omitted-flag mutant.  All 17 frozen branch stages pass (Rust 4649/0, Vitest 3626/0);
-  actual merge acceptance and publication remain pending.
+  integrated and published as `adb52990`, with ten passing byte/boundary tests
+  and a discriminating omitted-flag mutant. All 17 branch and 18 actual merged
+  stages pass (Rust 4649/0, Vitest 3626/0, isolated corpus152/152 in33targets).
+  Local/tracking/live remote main equality was verified after publication.
   [Three real-source resolver results](../research/2026-10-16-systemb-offline-prerequisites.md)
   remain partial/non-executable; relative images, scope/substitution mapping and
   complete recovery are not implemented by the codec.

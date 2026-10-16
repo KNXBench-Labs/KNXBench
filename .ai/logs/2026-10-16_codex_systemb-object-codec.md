@@ -34,8 +34,12 @@ Rust 4649/0/207 ignored in 339 targets, Vitest 3626/0, 163 tooling tests
 (one explicit skip), explicit Release source regression and workspace checks.
 All 2908 input modes/content hashes and Git fingerprints match. Only documentation
 is updated after that run; runtime source equality is checked before commit.
-Focused commit, actual integrated acceptance, publication readback and private
-evidence/owned-artifact retirement remain open.
+Feature committed as `feb0bd76`; actual non-FF merge `adb52990` passed all18
+stages with the same Rust/Web totals plus isolated corpus152/152 in33targets.
+All2908source identities and Git fingerprints match; temporary corpus links were
+removed. Published merge read back equal to tracking/live remote main at03:49CEST.
+Documentation-only closure and private evidence/owned retirement follow; no
+runtime result is retagged as a new run. Selected dirty root stays untouched.
 No test result from before the syntax correction is relabelled as a new run.
 
 ## Boundaries

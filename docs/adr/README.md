@@ -139,3 +139,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0130](0130-session-device-comparison.md) | Device comparison is bound, decoded, session-only evidence | Accepted; package 1 under acceptance | 2026-10-15 |
 
 | [0131](0131-universal-device-support.md) | Universal support evidence is not download admission | Accepted | 2026-10-15 |
+| [0133](0133-parameter-edits-reconcile-object-inventory.md) | Parameter edits reconcile the configured object inventory | Accepted for offline editing | 2026-10-16 |

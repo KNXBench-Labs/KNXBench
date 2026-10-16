@@ -455,6 +455,37 @@ edit the project; they do not connect to, program or download a KNX device.
 
 ### Communication objects
 
+#### Device functions (source builds after Alpha 12)
+
+Open **Device functions** above the object table to change a manufacturer's
+supported operating-mode choices directly here. For example, a button may first
+need enabling, then a rocker/independent-button mode and a switching function.
+Choose the options the installed product actually declares; selecting one saves
+it immediately and refreshes both the parameter panel and object list. Pending
+controls are disabled. An ordinary refusal restores the last committed choice and
+shows its reason; a stale-write conflict keeps the draft for explicit retry. If the
+object list is empty, the functions section is still available.
+
+These are real project parameters, not an editable **Function** caption or a
+free-text `FunctionText` override. Only active, supported enum controls structurally
+governing communication-object branches are offered here. Other settings remain
+under **Parameters**. No manufacturer/product is hard-coded, but unsupported
+scripts and formats do not become supported just because a dropdown exists.
+
+When a supported edit activates an object reference missing from the imported
+project, KNXBench appends that object. Existing IDs, overrides, group-address
+links and inactive instances stay intact. The parameter and new objects share
+one **Undo** step and survive native save/reopen. Ambiguous or malformed declared
+DPTs remain unset and are reported in Diagnostics, including after a panel
+reload, until a known explicit type is supplied. They are never guessed. Missing module-scoped objects
+currently refuse the whole edit if their instance/number mapping cannot be
+established; no partial parameter change is saved. This edits the offline project,
+not the physical button, and does not initiate a download. Ambiguous object
+references are likewise reported in Diagnostics and refuse the whole edit; a
+short catalogue ID is not blindly expanded into another object. Existing raw
+references remain intact.
+[Detailed scope](../../contracts/parameter-object-refresh.md).
+
 **Alpha 9:** the DPT field is now a
 dropdown, not a free-text input. Each known option shows its number and the name
 in the UI language, for example **9.001 – Temperature / Temperatur** or
@@ -612,8 +643,18 @@ The tab loads the device's parameters when you select the device. What you get:
 - **Sections.** One for the device itself, plus one per module instantiation —
   a device with twelve channels shows twelve sections, never one merged list.
 - **Fields.** A select for a choice parameter, a number field with the program's own
-  minimum and maximum for a numeric one, a text field otherwise. Values commit on blur,
-  and Enter is a shortcut for that. A rejected value snaps back with the reason.
+  minimum and maximum for a numeric one, a text field otherwise. **Source builds
+  after Alpha 12** save a choice immediately; numeric/text fields still save on
+  blur or Enter. An ordinary refusal restores the committed value with its reason;
+  a stale-write conflict keeps the draft as explained below. The refused write
+  does not change the server state. Alpha 12 and earlier apply ordinary choices
+  on blur/Enter too.
+- **Parameter groups (source after Alpha 12).** Fields use their nearest declared
+  parameter block, with a product caption or a numbered fallback. Fold a block
+  to hide all its fields without losing drafts. Missing/ambiguous metadata leaves
+  fields ungrouped rather than hiding or assigning them to an invented channel.
+  Folding adds no command of its own; moving focus away from a dirty numeric/text
+  input can still trigger its ordinary blur-save.
 - **Changed elsewhere** *(since Alpha 12)*. Each write names the
   project state and the value you saw. If another window or client changed the
   value first, nothing is written, your value stays in the field and the current

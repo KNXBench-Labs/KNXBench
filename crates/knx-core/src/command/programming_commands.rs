@@ -48,7 +48,9 @@ pub(super) fn candidates(cmd: &Command, project: &Project, out: &mut BTreeSet<De
         | Command::SetCouplerIndividualAddress { device, .. }
         | Command::RestoreIndividualAddress { device, .. }
         | Command::SetParameterValue { device, .. }
-        | Command::RestoreParameterValue { device, .. } => {
+        | Command::RestoreParameterValue { device, .. }
+        | Command::AddComObjects { device, .. }
+        | Command::RemoveAddedComObjects { device, .. } => {
             out.insert(*device);
         }
         Command::SetComObjectFlag { com_object, .. }

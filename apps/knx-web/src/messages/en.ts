@@ -39,6 +39,17 @@
 // two different ways in two files is a bug waiting to happen, not a
 // feature of the namespacing convention.
 export const messages = {
+  "parameters.functions": "Device functions",
+  "parameters.functionsEmpty": "No supported function choices are currently visible. Other settings are under Parameters.",
+  "parameters.functionsHint": "These manufacturer parameters control the available communication objects. A selection is applied immediately; Undo restores the previous configuration.",
+  "parameters.groupNumber": "Parameter group {number}",
+  "fileMenu.project": "Project",
+  "fileMenu.exchange": "Import & export",
+  "fileMenu.history": "History & comparison",
+  "fileMenu.help": "Help & diagnostics",
+  "workbench.workspaces": "Workspaces",
+  "workbench.projectExplorer": "Project explorer",
+  "workbench.diagnostics": "Diagnostics",
   "compare.parameterNotDecoded": "The field is incomplete, overwritten or its device encoding is not verified. Inspect the raw bytes below.",
   "compare.all": "Compare all shown",
   "compare.one": "Compare",
@@ -1215,6 +1226,8 @@ export const messages = {
   // `.detail` string never appears here and stays English (see
   // `ParameterDiagnostic.detail`'s doc comment in `api.ts`) — it exists
   // for a bug report, not for reading in German.
+  "parameters.diagnostic.objectReferenceAmbiguous": "A communication-object reference has more than one catalogue identity. No mapping was guessed.",
+  "parameters.diagnostic.objectDptUnresolved": "A configured object has no unambiguous, valid datapoint type. No type was guessed; inspect Diagnostics.",
   "parameters.diagnostic.parametersUnreadable":
     "Some declared parameters could not be read from the product database and are not shown.",
   "parameters.diagnostic.duplicateUnscopedValue":

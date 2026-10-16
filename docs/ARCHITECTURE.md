@@ -1,5 +1,19 @@
 # Architecture
 
+## Parameter-driven object inventory (16 October 2026 source, after Alpha 12)
+
+ProductDB supplies optional block ancestry/caption references and structural
+object-control metadata. The server application service prepares a parameter
+edit and positively active missing unscoped objects on a copy, using the existing
+evaluator/enrichment mapper. DPT diagnostics reuse its pure declaration resolver
+and are reconstructed on reads rather than relying on a transient write reply.
+Core owns exact reversible append commands; it has
+no product-source or UI dependency. One command batch reserves IDs and publishes
+only after durable persistence and source/revision recheck. Missing module
+mappings refuse rather than inventing topology. No schema, dependency, bus or
+programming-admission change. [ADR-0133](adr/0133-parameter-edits-reconcile-object-inventory.md)
+and [contract](contracts/parameter-object-refresh.md).
+
 ## System-300 property-table image boundary (16 October 2026 source)
 
 Core reuses the existing Type6 link validator/encoder, then exposes immutable

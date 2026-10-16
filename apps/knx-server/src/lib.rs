@@ -50,6 +50,7 @@ mod debug_report;
 mod device_catalog;
 mod device_compare_routes;
 mod device_download;
+mod parameter_objects;
 mod support_routes;
 pub use device_download::{
     DeviceDownloadSession, DownloadStatus, OnDownloadEnd, ProgressEvent, Restart, Written,

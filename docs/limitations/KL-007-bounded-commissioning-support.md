@@ -21,6 +21,12 @@ is not relative-image assembly. The existing absolute image builders now refuse
 relative/mixed sources explicitly, rather than omitting relative data; source
 scope/substitution, generated table mapping, encoding and recovery remain open.
 
+P4c adds [pure System-B link-table grammar](../contracts/offline-systemb-link-tables.md),
+not format discovery/product placement or download admission. Its narrow/wide
+indices and first-match sender policy must not be replaced by an Easy-3 or
+legacy table. Original57B0merge examples do not resolve all selected07B0modern
+source substitutions. Relative image assembly and complete recovery remain open.
+
 ## Normalized simulation boundary (16 October 2026 source)
 
 [The P3a normalized property-plan simulator](../contracts/offline-property-plan-simulation.md)

@@ -1,0 +1,131 @@
+{
+  "formatVersion": 1,
+  "date": "2026-10-16",
+  "scope": "P4c explicit System-B address and association byte tables, not product images",
+  "baseRevision": "eef0dade44ae02cbec74df0521ba8344442828a4",
+  "status": "all eighteen frozen branch stages accepted; actual merged acceptance and publication pending",
+  "originalBodyInspection": {
+    "resources": {
+      "version": "01.10.01",
+      "printedPages": [
+        238,
+        239,
+        249,
+        250
+      ],
+      "tables": [
+        78,
+        81,
+        82
+      ]
+    },
+    "configuration": {
+      "version": "02.01.01",
+      "printedPages": [
+        40,
+        71,
+        72,
+        73,
+        74,
+        75,
+        79,
+        82
+      ],
+      "mergeProcedureMask": "57B0",
+      "selectedSourceMask": "07B0",
+      "crossProfileTranslationProven": false
+    },
+    "scope": "bounded original rendered-page inspection, not complete conformance audit or modern XML transform proof"
+  },
+  "focusedProof": {
+    "missingModuleRed": {
+      "exit": 101,
+      "expectedDiagnostic": "E0432",
+      "sourceFrozen": true
+    },
+    "firstGreenAttempt": {
+      "exit": 101,
+      "reason": "E0277 GroupAddress has no Display",
+      "disposition": "diagnostic now formats explicit raw address; original failed attempt retained"
+    },
+    "correctedGreen": {
+      "attempt": "link-codec-green2",
+      "passed": 12,
+      "failed": 0,
+      "sourceFrozen": true
+    },
+    "senderOrderingMutant": {
+      "test": "both_explicit_formats_keep_sending_semantics_with_shuffled_input",
+      "exit": 101,
+      "expectedAssertionFailureVerified": true,
+      "exactProductionBytesRestored": true
+    },
+    "restoredCoreReview": {
+      "codecTestsPassed": 12,
+      "coreTestsPassed": 844,
+      "coreTargets": 16,
+      "failed": 0,
+      "owningCrateAllTargetClippy": "passed",
+      "format": "passed"
+    }
+  },
+  "boundaries": {
+    "formatSelection": "explicit caller input, not inferred from mask or table size",
+    "wordRepresentation": "explicit big-endian API; product binding and memory/property framing separate",
+    "noSender": "explicit API refusal without transmit-disabled object evidence; not a claim all receiver-only devices are invalid",
+    "emptyTables": "literal zero counts; server-default mapping/acceptance semantics not disabled",
+    "realProductImage": false,
+    "newSourceTranslator": false,
+    "newExecutablePlan": false,
+    "durableRecovery": false,
+    "newPublicMaskAdmission": false,
+    "hardwareOrVendorCodeExecuted": false,
+    "nativeOrProductSchemaChanged": false,
+    "privateSourceOrLicensedBodiesPublished": false
+  },
+  "review": {
+    "method": "separate in-session self-review, no subagents",
+    "state": "no critical, important or security finding; narrow255positive boundary added and verified"
+  },
+  "acceptance": {
+    "focusedPreflight": {
+      "attempt": "preflight1",
+      "stagesPassed": 10,
+      "coreTests": 844,
+      "coreTargets": 16,
+      "codecTests": 12,
+      "inputPaths": 2919,
+      "completeInputManifestsMatched": true,
+      "allTargetOwningCrateClippy": "passed"
+    },
+    "branch": {
+      "state": "accepted",
+      "attempt": "branch-gate1",
+      "baseRevision": "eef0dade44ae02cbec74df0521ba8344442828a4",
+      "sourceState": "reviewed uncommitted candidate; subsequent documentation-only updates checked separately",
+      "stagesPassed": 18,
+      "inputPaths": 2919,
+      "completeInputManifestsMatched": true,
+      "externalOracleAndPackageCommitmentsMatched": true,
+      "gitFingerprintsMatched": true,
+      "rust": {
+        "passed": 4672,
+        "failed": 0,
+        "ignored": 208,
+        "targets": 342
+      },
+      "vitest": {
+        "passed": 3626,
+        "failed": 0,
+        "files": 263
+      },
+      "explicitSourceRegressionTests": 2,
+      "scope": "ordinary workspace and two explicit source regressions; selected maintained corpus remains for integration, not all ignored or hardware tests"
+    },
+    "actualMerged": "pending"
+  },
+  "publication": {
+    "state": "not published",
+    "selectedDirtyRootSynchronized": false
+  }
+}

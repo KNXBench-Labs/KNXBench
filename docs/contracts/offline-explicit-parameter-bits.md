@@ -137,9 +137,15 @@ presence, the exact earlier LegacyPatchAlways refusal and unchanged DB state;
 all21steps, metadata and public non-executable assertions remain intact. The
 production implementation is unchanged. The focused private-original regression
 then passes1/0, with all ten focused Clippy/docs/repository/format/whitespace
-stages passing and all inputs frozen. Final actual integration/private-corpus
-acceptance and publication remain pending. No full workspace/web acceptance is
-claimed for this scoped package.
+stages passing and all inputs frozen. Final actual merge `a22a6602`
+passes all15stages: ProductDB935/0/29ignored in56reports, all three explicit
+original-source regressions1/0each, and the unchanged regular private corpus
+152/152in33targets (release profile). All2952repository and527external input
+identities remain frozen. Owning Clippy/build and all docs/repository/format/
+whitespace stages pass. The source is published on main with exact local,
+tracking and live readback on16October2026. Earlier failed/interrupted attempts
+remain separate evidence; the29normally ignored tests are not counted as passes.
+No full workspace/web acceptance is claimed for this scoped package.
 [Aggregate evidence](../evidence/explicit-source-bits-2026-10-16.json).
 No bus, vendor executable, manufacturer contact,
 release, tag, deployment or new hardware admission belongs to this package.

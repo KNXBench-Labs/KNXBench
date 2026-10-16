@@ -134,3 +134,13 @@ new exact source-presence/refusal/DB assertions pass. Production unchanged.
 Observed release runtime64.58sversus failed debug595.14s, with no test/input
 selection reduction; final full152corpus will use releaseprofile explicitly.
 Separate post-GREEN review7has0open findings. Actual final merged gate pending.
+
+Final actual integration4ona22a6602passes15/15with ProductDB935/0/
+29ignored in56reports, originalSystem1/relative/publicSystem2one pass each,
+and full regular private152/152in33targets using releaseprofile. Source/Git/
+2952repository and527external-file identities remain frozen. Original positive
+App/CLI/server tests unchanged; no production change since scope correction.
+Normal mainpush and independent parentreadback verify local=tracking=live
+a22a66027d374f9afc1a3924d6263986a7e84f51. All failed/interrupted trials preserved.
+No fullworkspace/web/release/deployment/bus/vendor/device claim. Result-only
+documentation closure and owned archival/retirement follow separately.

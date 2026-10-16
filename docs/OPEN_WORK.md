@@ -15,8 +15,10 @@ Shared Type6 bytes do not make System300 an admitted SystemB device.
 Follow-up: [explicit single-octet parameter bits](contracts/offline-explicit-parameter-bits.md)
 no longer require template/default equality. The latest same-source measurement
 initially had7FixupList/3inferred-default/1Union refusals and2bounded candidates.
-Those candidate returns are withdrawn: shared LegacyPatchAlways refusal now
-closes the unhandled directive in all three image APIs. Current configured
+Those candidate returns are withdrawn: LegacyPatchAlways refusal closes the
+unhandled directive in the strict System1/System2 image APIs. Existing Easy3
+semantics/admission are not changed or newly established by this slice. Its
+legacy-directive interpretation remains a separately documented open limitation. Current configured
 refusals are7FixupList/2legacy-patch/3inferred-default/1Union. No complete semantic
 image is accepted. The original P5 distribution below remains historical.
 

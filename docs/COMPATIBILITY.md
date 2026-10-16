@@ -6,8 +6,10 @@
 may replace differing template defaults in offline System1/System2 image assembly.
 The default still must fit its field. Union/cross-octet/multibyte corroboration,
 FixupList refusal and public admission are unchanged. The initial two related candidate returns/four byte comparisons are withdrawn
-from current artifact acceptance: all three image entries now refuse unhandled
-LegacyPatchAlways declarations, including inactive parameters. The configured
+from current artifact acceptance: the strict System1/System2 image entries refuse
+unhandled LegacyPatchAlways declarations, including inactive parameters. Easy3
+keeps its pre-existing source/inference policy; its directive semantics remain
+unresolved, and existing golden outputs are not proof of that missing rule. The configured
 thirteen-source outcomes are7FixupList/2legacy-patch/3inferred-default/1Union
 refusals. No complete semantic image, executable or hardware support is inferred.
 Earlier counts below remain historical package acceptance, not current outcomes.

@@ -13,8 +13,10 @@ The initial real thirteen-source/two-package importer/evaluator/image chain
 advanced two related sources past the over-strict direct-bit default check.
 Their entire emitted segments matched independent bounded-image oracles in four
 configurations. Those candidate successes are withdrawn from current acceptance:
-an inactive parameter carries unmodelled `LegacyPatchAlways`, and all three
-image entries now refuse that declaration before activation/assembly. Original
+an inactive parameter carries unmodelled `LegacyPatchAlways`, and the strict
+System1/System2 entries refuse that declaration before activation/assembly. The
+trial Easy3 policy expansion was withdrawn after actual positive-corpus failures;
+existing Easy3 behavior is preserved, not newly proven complete. Original
 bytes and importer unknown notices survive. The defining patch/default rule is
 still required; no vendor-specific patch algorithm is inferred.
 
@@ -35,6 +37,7 @@ Do not infer its meaning merely from the attribute's name or search snippet.
 
 | Path | Rechecked implementation/source boundary | Exact prerequisite before further source translation |
 | --- | --- | --- |
+| Existing Easy3 | Direct-bit correction does not alter this source/inference policy; trial global LegacyPatchAlways refusal was withdrawn after original positive-corpus failures without weakening those tests | Defining legacy-directive default/activation/patch semantics remain open for full-source completeness; prior bounded readback/golden evidence is not a universal rule or a new device claim. |
 | System1 FixupList | Shared guard runs before parameter evaluation in all three image entries; original XML retained | Patch width, byte order, instruction/offset interpretation, references/ranges/overlaps/masks and exact mask/master binding. The36 correlated windows do not establish any no-op rule. |
 | System1 inferred fields | `field_of` still refuses nonzero member offsets in a mid-octet Union; `validate_default` still checks inferred/default and edited-multibyte witnesses | Defining Union-relative placement and effective per-type multibyte encoding, plus the legacy patch directive above. |
 | System2 | Source-bound metadata projection, absolute property codecs, image builder and simulator plan already exist; [exact production decision](2026-10-16-up258-production-decision.md) remains current | LegacyPatchAlways/default activation policy; effective converted-legacy multibyte encoding; XML SegFlags/AllocExtraByte; resource representation versus wire property width; resource/LSM/interface-object binding. No guessed +/-1 allocation or pointer truncation. |

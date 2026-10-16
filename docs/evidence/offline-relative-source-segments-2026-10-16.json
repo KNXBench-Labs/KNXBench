@@ -3,7 +3,7 @@
   "date": "2026-10-16",
   "scope": "P4b relative source-segment retention and explicit absolute-image refusal",
   "baseRevision": "e9b8cb2e2c666fb5572cadb1f944b73f22789af3",
-  "status": "all eighteen frozen branch stages accepted; actual merged acceptance and publication pending",
+  "status": "18 branch and 19 actual merged stages accepted; published merge readback verified",
   "baseline": {
     "selectedSources": 3,
     "sourcePackages": 1,
@@ -12,7 +12,9 @@
     "runtimeInputsFrozen": true,
     "activeParameterRefsTotal": 186,
     "activeObjectRefsTotal": 12,
-    "diagnosticClasses": { "NoBranchMatched": 54 },
+    "diagnosticClasses": {
+      "NoBranchMatched": 54
+    },
     "diagnosticsMayHideRefs": 0,
     "codeReadsSucceeded": 3,
     "absoluteSegmentsLoaded": 0,
@@ -21,14 +23,41 @@
     "qualification": "existing implementation measured on three selected applications in one package; not whole-corpus or independent activation validation"
   },
   "focusedProof": {
-    "missingFieldRed": { "exit": 101, "diagnostic": "E0609: relative_segments absent", "sourceFrozen": true },
-    "readerGreen": { "passed": 10, "failed": 0, "sourceFrozen": true },
-    "mixedSourceOmissionRed": { "exit": 101, "namedAssertion": "relative_sources_are_never_silently_omitted_from_absolute_images", "mechanism": "unwrap_err received Ok image before relative-source guard" },
-    "mixedSourceGuardGreen": { "passed": 1, "failed": 0, "bothAbsoluteEntryPointsRefuse": true },
-    "initialProductDbUnitRun": { "passed": 444, "failed": 0 },
+    "missingFieldRed": {
+      "exit": 101,
+      "diagnostic": "E0609: relative_segments absent",
+      "sourceFrozen": true
+    },
+    "readerGreen": {
+      "passed": 10,
+      "failed": 0,
+      "sourceFrozen": true
+    },
+    "mixedSourceOmissionRed": {
+      "exit": 101,
+      "namedAssertion": "relative_sources_are_never_silently_omitted_from_absolute_images",
+      "mechanism": "unwrap_err received Ok image before relative-source guard"
+    },
+    "mixedSourceGuardGreen": {
+      "passed": 1,
+      "failed": 0,
+      "bothAbsoluteEntryPointsRefuse": true
+    },
+    "initialProductDbUnitRun": {
+      "passed": 444,
+      "failed": 0
+    },
     "refusedAttempts": [
-      { "scope": "combined code-filter command", "disposition": "41 library tests passed but integration target selected zero; not reader coverage" },
-      { "scope": "owning-crate all-target Clippy", "exit": 101, "reason": "collapsible_if", "disposition": "conditional collapsed; corrected owning-crate all-target Clippy passed in preflight1" }
+      {
+        "scope": "combined code-filter command",
+        "disposition": "41 library tests passed but integration target selected zero; not reader coverage"
+      },
+      {
+        "scope": "owning-crate all-target Clippy",
+        "exit": 101,
+        "reason": "collapsible_if",
+        "disposition": "conditional collapsed; corrected owning-crate all-target Clippy passed in preflight1"
+      }
     ]
   },
   "realSourceCalibration": {
@@ -41,7 +70,13 @@
     "imageRefusal": "relative source segments require a relative image builder",
     "temporaryProbeSavedAndRemoved": true,
     "durableOptInTest": "relative_source_corpus::configured_relative_sources_match_independent_oracles_and_stay_not_executable",
-    "durableOptInAcceptance": { "testPassed": 1, "sourceCases": 3, "packages": 1, "networkIsolatedRelease": true, "attempt": "preflight1" }
+    "durableOptInAcceptance": {
+      "testPassed": 1,
+      "sourceCases": 3,
+      "packages": 1,
+      "networkIsolatedRelease": true,
+      "attempt": "preflight1"
+    }
   },
   "boundaries": {
     "fullSchemaValidation": false,
@@ -55,9 +90,22 @@
     "hardwareOrVendorCodeExecuted": false,
     "privateProductOrLicensedBodiesPublished": false
   },
-  "review": { "method": "separate in-session self-review, no subagents", "state": "no critical, important or security finding; hashes match corrected preflight" },
+  "review": {
+    "method": "separate in-session self-review, no subagents",
+    "state": "no critical, important or security finding; hashes match corrected preflight"
+  },
   "acceptance": {
-    "focusedPreflight": { "attempt": "preflight1", "stagesPassed": 12, "readerTests": 10, "productDbUnitTests": 444, "optInCorpusTests": 1, "sourceCases": 3, "inputPaths": 2914, "completeInputManifestsMatched": true, "allTargetOwningCrateClippy": "passed" },
+    "focusedPreflight": {
+      "attempt": "preflight1",
+      "stagesPassed": 12,
+      "readerTests": 10,
+      "productDbUnitTests": 444,
+      "optInCorpusTests": 1,
+      "sourceCases": 3,
+      "inputPaths": 2914,
+      "completeInputManifestsMatched": true,
+      "allTargetOwningCrateClippy": "passed"
+    },
     "branch": {
       "state": "accepted",
       "attempt": "branch-gate1",
@@ -68,13 +116,62 @@
       "completeInputManifestsMatched": true,
       "externalOracleAndPackageCommitmentsMatched": true,
       "gitFingerprintsMatched": true,
-      "rust": { "passed": 4660, "failed": 0, "ignored": 208, "targets": 341 },
-      "vitest": { "passed": 3626, "failed": 0, "files": 263 },
+      "rust": {
+        "passed": 4660,
+        "failed": 0,
+        "ignored": 208,
+        "targets": 341
+      },
+      "vitest": {
+        "passed": 3626,
+        "failed": 0,
+        "files": 263
+      },
       "relativeSourceCases": 3,
       "relativeSourcePackages": 1,
       "scope": "ordinary workspace and two explicit source regressions; selected maintained corpus remains for integration, not all ignored or hardware tests"
     },
-    "actualMerged": "pending"
+    "actualMerged": {
+      "state": "accepted",
+      "attempt": "merged-gate1",
+      "revision": "4bfc3780fbaa2f328abc384af00bb2e69adb3699",
+      "featureRevision": "4bdb34caf04a4129a3be1324e03facbb84adf401",
+      "stagesPassed": 19,
+      "inputPaths": 2914,
+      "completeInputManifestsMatched": true,
+      "externalOracleAndPackageCommitmentsMatched": true,
+      "gitFingerprintsMatched": true,
+      "rust": {
+        "passed": 4660,
+        "failed": 0,
+        "ignored": 208,
+        "targets": 341
+      },
+      "vitest": {
+        "passed": 3626,
+        "failed": 0,
+        "files": 263
+      },
+      "selectedCorpus": {
+        "passed": 152,
+        "expected": 152,
+        "targets": 33,
+        "networkNamespaceInterfaces": [
+          "lo"
+        ]
+      },
+      "relativeSourceCases": 3,
+      "relativeSourcePackages": 1,
+      "ownedCorpusLinksRemoved": true,
+      "scope": "selected maintained corpus and two explicit source regressions, not every ignored or hardware test"
+    }
   },
-  "publication": { "state": "not yet published", "selectedDirtyRootSynchronized": false }
+  "publication": {
+    "state": "published merge; documentation-only closure follows",
+    "merged": "4bfc3780fbaa2f328abc384af00bb2e69adb3699",
+    "readbackTime": "2026-10-16 05:12 CEST",
+    "localTrackingLiveMainEqual": true,
+    "selectedDirtyRootSynchronized": false,
+    "runtimeAcceptanceRevisionRemainsUnchanged": true
+  }
 }

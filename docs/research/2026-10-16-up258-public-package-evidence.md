@@ -88,5 +88,8 @@ It does **not** automate the table of selected template observations, infer a
 wire encoding, or execute any bus operation. The ordinal source assertions are
 not a complete source-to-executor translation.
 
+Scoped test/review execution and publication are recorded in the
+[acceptance summary](../evidence/public-up258-review-2026-10-16.json).
+
 No real bus operation, vendor-tool execution or support claim is part of this
 dossier. Issue #22 remains open.

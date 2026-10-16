@@ -1,4 +1,6 @@
-# Workbench configuration task — resumed, uncommitted
+# Workbench configuration task — delivered source, local retirement pending
+
+Verified publication: `8e1210740811d08a7b1b8109084673ba6cf2de44` on origin/main, exact local/tracking/live equality. Tested runtime merge925d918b; no runtime change in result docs. No deployment or container restart. Private archive and owned cleanup follow verified publication.
 
 ## Actual merged-source acceptance
 

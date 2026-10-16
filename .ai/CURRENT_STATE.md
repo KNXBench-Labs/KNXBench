@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-16 16:49
+- **Completed:** Feature08aa0d2e committed; owning935/0, both original regressions and separate8stage documentation delta pass. Actual mergee70052e5 attempt1 preserves7passes then strict public-UP258 diagnostic assertion RED: correct new LegacyPatchAlways refusal precedes historical P-901 error. All527external/source/Git commitments match; no corpus acceptance yet. Minimum test/current-documentation correction is prepared, production safety bytes unchanged. Private ten-application report completed with50axes and exact source locators; originals unchanged, no vendor/REA execution.
+- **Pending/Next Steps:** Focused exact-public-source GREEN and docs/repository checks, reviewed correction commit, corrected actual merge/full15stage scoped gate including isolated regular corpus, publication/readback/result-only closure and owned retirement. No full-source image, plan, hardware or public-admission promotion.
+- **Notes for Codex oder Claude:** Root1817fb2a/index/foreignpaths protected. Both own worktrees/evidence remain owned; source-image-continuation-20261016 holds raw failed attempts, commits and manifests. Private report retained under profile evidence/private-system2-review-20261016. Publication consent covers declarative analysis/own logic, not ETS program-component analysis or manufacturer originals. Preserve previous history.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-16 16:33
 - **Completed:** Owner resumed offline continuation. Guarded attempt1 retained as FAILED at original-relative existing diagnostic after six successful stages, with complete source/Git/external freeze. Minimum correction preserves original FixupList/relative refusal precedence before the new LegacyPatchAlways guard; all remain before activation/assembly. Prior candidate returns remain withdrawn, zero complete real images.
 - **Pending/Next Steps:** Final guarded branch13stages, exact reviewed commit, fresh actual scoped integration with regular isolated corpus, publication/readback/result closure/owned retirement. Declarative product-data analysis publication now owner-authorised separately; no ETS program-component or excluded private REA basis.

@@ -64,6 +64,19 @@
     "explicit_relative_original_regression": "passed",
     "source_git_external_inputs_frozen": true,
     "retained_attempt1": "relative-source diagnostic-precedence assertion failed; production ordering corrected without weakening test",
-    "retained_attempt2": "sole final refusal is extra blank EOF in owned log; documentation delta pending"
-  }
+    "retained_attempt2": "sole final refusal was extra blank EOF in owned log; eight-stage documentation delta subsequently passed with runtime equivalence"
+  },
+  "actual_integration_attempts": [
+    {
+      "revision": "e70052e55344f90150a364431d854f92dbc9e9f7",
+      "status": "retained failed exact-public-source diagnostic assertion",
+      "passed_stages": 7,
+      "failed_stage": "exact-public-system2",
+      "failed_exit": 101,
+      "source_git_external_inputs_frozen": true,
+      "external_file_inputs": 527,
+      "regular_corpus": "not started",
+      "correction": "strict exact LegacyPatchAlways refusal replaces historical first P-901 refusal; production guard unchanged"
+    }
+  ]
 }

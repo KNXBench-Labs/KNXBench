@@ -24,6 +24,7 @@ outside preserved historical blocks, or use the next free section number
 
 | Section | Where |
 | --- | --- |
+| [2026-10-16 — UP258 vertical-path source recheck](research/2026-10-16-up258-vertical-path-audit.md) | Full remaining-path/test matrix, literal 21-position regression, configured first refusal and complete-mutation recovery stop |
 | [2026-10-16 — Explicit parameter bits and source stop lines](contracts/offline-explicit-parameter-bits.md) | Visually checked MSB placement/default substitution; independent real-source candidate bytes, unmodelled legacy directive and unchanged executable boundaries |
 | [2026-10-16 — Exact UP258 production decision](research/2026-10-16-up258-production-decision.md) | Complete-path No-Go, original checksum-polarity correction, exact external rules and one consent-separated reporter request |
 | [2026-10-16 — System-300 property-table framing](contracts/offline-system300-property-tables.md#original-source-evidence) | Original Type6 address/association property arrays, independent literal bytes, distinct empty/default semantics and open discovery/source/load/recovery contracts |

@@ -1,5 +1,14 @@
 # Compatibility
 
+## Exact UP258 vertical recheck (16 October 2026)
+
+[Fresh source/configured regressions](research/2026-10-16-up258-vertical-path-audit.md)
+account for all 21 positions and four source regions. Both selected P903
+configurations retain the current LegacyPatchAlways refusal, before the
+historical P-901/default-bit check below. No complete source image/plan,
+whole-mutation recovery, public programming admission or device verification
+is added; issue #22 remains open.
+
 ## Manufacturer-independent parameter/object refresh (after Alpha 12 source)
 
 [The offline editing contract](contracts/parameter-object-refresh.md) applies

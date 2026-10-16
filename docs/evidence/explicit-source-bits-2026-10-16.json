@@ -7,7 +7,8 @@
     "important_open": 0,
     "default_width_finding": "named runtime RED, probe preserved before equality waiver, owning regression GREEN",
     "union_guard_mutant": "named runtime failure; exact source restored; named test GREEN",
-    "legacy_patch_omission": "three named runtime REDs before shared guard; three targeted GREENs; exact ancestry/qualified-lookalike System1 target GREEN"
+    "legacy_patch_omission": "historical three-family trial withheld; strict System1/System2 refusals retained; original positive Easy3 goldens stay unchanged; exact scope RED observed",
+    "scope": "explicit-bit correction and strict System1/System2 source refusal; existing Easy3 directive semantics remain open"
   },
   "original_source_boundary": {
     "application_sources": 13,
@@ -17,7 +18,7 @@
     "mid_octet_union_refusals": 1,
     "bounded_image_candidates": 0,
     "complete_semantically_accepted_real_source_images": 0,
-    "remaining_candidate_directive": "LegacyPatchAlways is explicitly refused by every image entry until interpreted; prior candidate returns withdrawn",
+    "remaining_candidate_directive": "LegacyPatchAlways is refused by strict System1/System2 source-image entries; original System1 candidate returns withdrawn; existing Easy3 inference policy is unchanged and its directive semantics remain unresolved",
     "database_and_original_packages_unchanged": true,
     "legacy_patch_refusals": 2,
     "historical_pre_guard_candidates": 2,
@@ -50,8 +51,30 @@
     "explicit_system1_original_regression": "passed",
     "explicit_relative_original_regression": "passed"
   },
-  "final_guarded_acceptance": {
-    "runtime_status": "passed; full attempt retains whitespace-only refusal",
+  "actual_integration_attempts": [
+    {
+      "revision": "e70052e55344f90150a364431d854f92dbc9e9f7",
+      "status": "retained failed exact-public-source diagnostic assertion",
+      "passed_stages": 7,
+      "failed_stage": "exact-public-system2",
+      "failed_exit": 101,
+      "source_git_external_inputs_frozen": true,
+      "external_file_inputs": 527,
+      "regular_corpus": "not started",
+      "correction": "strict exact LegacyPatchAlways refusal replaces historical first P-901 refusal; production guard unchanged"
+    },
+    {
+      "revision": "8e98d93780b70a51886e8f8fd3b52ae37488fdbb",
+      "status": "superseded and intentionally interrupted after actual Easy3 positive-corpus failures",
+      "passed_stages_before_corpus": 8,
+      "corpus_complete": false,
+      "corpus_success": false,
+      "reason": "trial global guard exceeded this source-only change; existing Easy3 semantics unresolved, not silently redefined",
+      "positive_golden_assertions_weakened": false
+    }
+  ],
+  "all_family_trial_acceptance": {
+    "runtime_status": "historical all-family trial; superseded after original Easy3 compatibility failures",
     "productdb_passed": 935,
     "productdb_failed": 0,
     "productdb_ignored": 29,
@@ -66,17 +89,26 @@
     "retained_attempt1": "relative-source diagnostic-precedence assertion failed; production ordering corrected without weakening test",
     "retained_attempt2": "sole final refusal was extra blank EOF in owned log; eight-stage documentation delta subsequently passed with runtime equivalence"
   },
-  "actual_integration_attempts": [
-    {
-      "revision": "e70052e55344f90150a364431d854f92dbc9e9f7",
-      "status": "retained failed exact-public-source diagnostic assertion",
-      "passed_stages": 7,
-      "failed_stage": "exact-public-system2",
-      "failed_exit": 101,
-      "source_git_external_inputs_frozen": true,
-      "external_file_inputs": 527,
-      "regular_corpus": "not started",
-      "correction": "strict exact LegacyPatchAlways refusal replaces historical first P-901 refusal; production guard unchanged"
-    }
-  ]
+  "final_guarded_acceptance": {
+    "status": "scoped branch passed; actual integration pending",
+    "stages": 12,
+    "productdb_passed": 935,
+    "productdb_failed": 0,
+    "productdb_ignored": 29,
+    "productdb_reports": 56,
+    "exact_public_system2_passed": 1,
+    "easy3_scope_regression": "named RED under overbroad trial, then GREEN with existing positive golden assertions unchanged",
+    "owning_all_target_clippy": "passed",
+    "owning_build": "passed",
+    "source_git_external_inputs_frozen": true,
+    "tested_basis_commit": "6c662a0f3280445e5e95ba17df55bf08b30a8120",
+    "tested_source": "reviewed uncommitted scoped working tree; require committed-byte equality",
+    "complete_workspace_or_web_acceptance": false
+  },
+  "legacy_patch_refusal_scope": [
+    "System1",
+    "System2"
+  ],
+  "existing_easy3_policy_changed": false,
+  "legacy_patch_semantics_defined": false
 }

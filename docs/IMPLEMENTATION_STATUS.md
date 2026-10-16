@@ -20,17 +20,20 @@ fragment aliases and update this index. Do not rewrite previous results.
   equality and default-width REDs preceded their corrections; bounds, masks,
   pointer/table protection, overlap and other source guards remain. Independent
   whole-segment oracles checked two related source candidates in four
-  configurations, but those artifact successes are withdrawn after three named
-  omission REDs: all image entries now refuse unhandled LegacyPatchAlways,
-  even on inactive parameters. Current configured13-source refusals are7/2/3/1
+  configurations, but those artifact successes are withdrawn: strict System1/
+  System2 entries refuse unhandled LegacyPatchAlways, even on inactive parameters.
+  The trial all-family guard is not accepted; it changed established Easy3
+  source policy and broke original positive golden tests. That expansion is
+  withdrawn, those goldens stay unchanged and Easy3 semantics remain unresolved.
+  Current configured13-source refusals are7/2/3/1
   (fixup/legacy-patch/inferred-default/Union);zero complete real images. No new
   public admission, executable plan, recovery or firmware evidence.
   [Contract and acceptance boundary](contracts/offline-explicit-parameter-bits.md).
-  Corrected guarded runtime: ProductDB935/0/29ignored in56reports, owning
-  all-targetClippy/build and both original-source regressions pass. First12of13
-  stages pass with frozen inputs; the last whitespace check retains its new-log
-  EOF refusal. Earlier931/0is pre-guard historical output. Documentation delta,
-  actual integration/private corpus and publication remain pending;
+  Scoped branch12/12passes: ProductDB935/0/29ignored in56reports, exact
+  public System2 source1/0, Easy3 scope regression and owning all-targetClippy/
+  build. Earlier all-family/whitespace/compatibility attempts remain historical
+  or superseded, never final acceptance. Documentation delta, corrected actual
+  integration/private corpus and publication remain pending;
   [evidence](evidence/explicit-source-bits-2026-10-16.json).
 
 - 2026-10-16 — Community PR credit comments extend the existing notification

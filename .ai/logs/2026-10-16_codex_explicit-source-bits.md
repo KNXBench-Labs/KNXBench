@@ -97,3 +97,24 @@ only the digest-pinned test and current-versus-historical documentation, keeping
 exact diagnostics, source presence, original21steps and admission assertions.
 Add unchanged-DB assertion. No safety implementation is weakened. Focused GREEN
 and complete corrected actual-integration acceptance remain pending.
+
+Review R6: actual scoped integration2 on8e98d937 exposed a separate compatibility
+change in the trial all-family legacy guard. Two original App golden targets and
+the nine CLI corpus cases failed; the run was intentionally superseded/stopped
+with its real earlier passes/failures retained, not accepted. All owned descendants
+were verified stopped. No original positive golden assertion is weakened.
+The direct-bit change only affects strict System1/System2 assembly, so their
+legacy-declaration refusal remains while Easy3 keeps its original source/inference
+policy. This does not define or newly validate Easy3 directive semantics. Original
+XML/unknown notices and transient presence remain. A new exact public scope RED
+fails under the trial guard before the minimum family predicate correction.
+A bounded local schema search finds only Schema23; public mirror retrieval
+returns202with empty body and archive discovery supplies no defining body. Neither
+search snippets nor source/template correlation create a no-op or patch rule.
+Final scoped branch/integration/corpus acceptance remains pending.
+
+Final scoped branch1passes12/12: ProductDB935/0/29ignored in56reports, exact
+publicSystem2source1/0, named Easy3 scope regression, owningClippy/build and
+format/docs/five repository/whitespace. All source/Git/external inputs frozen.
+No App/CLI/server golden assertion changed. Documentation-only acceptance notes
+and complete actual integration/private-corpus acceptance remain to finish.

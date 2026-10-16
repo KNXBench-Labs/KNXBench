@@ -55,7 +55,8 @@ snapshot of a concurrently changing GitHub repository.
 - PR XP/counters/medals are live: reopening restores submission-only XP; later
   merging replaces the closed bonus. Removed PRs stop counting. Unlike completed
   issue awards, PR credit is not retained in a historical ledger. Historical PRs
-  are included without PR notification comments or replaying issue notices.
+  are included; one maintained PR credit comment is reconciled without replaying
+  issue notices (notification amendment below).
 - Stable alphabetical tiebreak; equal XP has equal position.
 
 The award ledger stores only issue number, public handle, first observed completed
@@ -121,6 +122,45 @@ The persisted flag prevents duplicate notices after reopen or deletion of the
 original notice. If posting succeeded but persistence failed, the trusted marker
 recovers the next run. A deletion in that narrow crash window cannot be recovered
 from a marker that no longer exists; no claim of distributed exactly-once delivery.
+
+## PR credit acknowledgement (16 October 2026 follow-up)
+
+`--notify`, already invoked by the maintained workflow, also reconciles one
+comment per eligible PR, including historical and open/draft PRs. The comment
+shows this PR's total XP and submission/outcome calculation, its current status,
+the author's board total and title, issue/reply/completion/PR counters, XP source
+breakdown, all currently earned medals and the board link. No unearned names are
+revealed and no extra XP is awarded for the comment.
+
+A trusted `<!-- knxbench-pr-credit:<number> -->` marker identifies the existing
+comment. Create if absent; PATCH that exact comment when the generated body
+changes; perform no write when unchanged. Reopen, close without merge and merge
+update the same comment, with live 5/15/25 PR XP rather than accumulating bonuses.
+Other contribution changes can also update the displayed board total/medals.
+All eligible PRs reconcile on every run, recovering superseded event runs.
+
+Only explicitly trusted notice accounts or the correctly typed scoreboard bot
+can own this marker; an external participant/opt-out cannot forge it. Multiple
+trusted marked comments fail rather than guessing a target. Before a write,
+re-read the PR id/number, author identity, state and merge/close timestamps; if
+these differ from the counted observation, skip the stale write until the next
+refresh. Unrelated user metadata such as avatar changes does not block it.
+POST/PATCH must pass an exact id/body readback; PATCH also binds the response to
+the originally requested comment id. API/permission failures fail the job.
+
+There is no new snapshot schema or PR notice ledger. Retries discover an already
+posted/edited trusted comment from GitHub, even if the preceding run failed
+before committing outputs. Deleting the comment permits recreation; concurrent
+GitHub changes are not transactional and exactly-once delivery is not promised.
+Workflow serialization reduces duplicate risk; no unrelated comments are deleted.
+The completed-issue ledger and its notification semantics remain unchanged.
+
+The [official shared issue/PR comment API](https://docs.github.com/en/rest/issues/comments)
+documents POST creation and PATCH updates through the Issues endpoints and accepts
+Issues **write** or Pull requests **write** permission. The workflow already has
+`issues: write`, so `pull-requests: read` need not be elevated. It still executes
+only default-branch code, never PR code, and bot comments remain excluded from
+scoring and self-triggering.
 
 ## About dialog (issue #19, owner amendment, 14 October 2026)
 

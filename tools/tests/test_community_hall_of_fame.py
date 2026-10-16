@@ -443,6 +443,207 @@ class PresentationTests(unittest.TestCase):
             self.assertFalse((root / "docs/community/hall-of-fame.json").exists())
 
 
+class PullRequestNotificationTests(unittest.TestCase):
+    def test_merged_pr_receives_points_title_counters_and_earned_medals(self):
+        pull = {**issue(2, state="closed"), "merged_at": NOW}
+        snapshot = hall.build_snapshot([], [], POLICY, "example/project", NOW, pull_requests=[pull])
+        api = PrApi(pull)
+        hall.notify_pull_requests(snapshot, [pull], api)
+        self.assertEqual(len(api.posts), 1)
+        number, body = api.posts[0]
+        self.assertEqual(number, 2)
+        for text in ["@tester", "25 XP", "5 submission + 20 merge bonus", "Merged",
+                     "Total: 25 XP", "Group Address Gumshoe", "1 PRs", "1 merged",
+                     "Patch Pilot", "Green Merge Ribbon", "knxbench-pr-credit:2"]:
+            self.assertIn(text, body)
+        self.assertEqual(api.readbacks, [42])
+
+
+    def test_open_closed_reopened_and_merged_update_one_comment_without_stacking(self):
+        pull = {**issue(2), "merged_at": None}
+        api = PrApi(pull)
+        states = [(pull, "5 XP total", "Open"),
+                  ({**pull, "state": "closed", "closed_at": NOW}, "15 XP total", "Closed without merge"),
+                  (pull, "5 XP total", "Open"),
+                  ({**pull, "state": "closed", "closed_at": NOW, "merged_at": NOW}, "25 XP total", "Merged")]
+        for record, credit, state in states:
+            snapshot = hall.build_snapshot([], [], POLICY, "example/project", NOW, pull_requests=[record])
+            api.pull = record
+            hall.notify_pull_requests(snapshot, [record, record], api)
+            body = api.comments[0]["body"]
+            self.assertIn(credit, body)
+            self.assertIn(f"Status: {state}", body)
+            self.assertNotIn("35 XP", body)
+            hall.notify_pull_requests(snapshot, [record], api)
+        self.assertEqual((len(api.posts), len(api.edits), len(api.comments)), (1, 3, 1))
+        self.assertEqual(api.readbacks, [42, 42, 42, 42])
+
+    def test_only_earned_medals_appear_in_pr_notice(self):
+        pull = {**issue(2), "merged_at": None}
+        snapshot = hall.build_snapshot([], [], POLICY, "example/project", NOW, pull_requests=[pull])
+        body = hall.pull_request_note(snapshot, pull)
+        earned = snapshot["contributors"][0]["medals"]
+        for _, name in (hall.REPORT_MEDALS + hall.RESOLUTION_MEDALS +
+                        hall.PULL_REQUEST_MEDALS + hall.MERGE_MEDALS):
+            self.assertEqual(name in body, name in earned, name)
+
+    def test_trusted_existing_notice_is_edited_in_place_not_reposted(self):
+        pull = {**issue(2), "merged_at": None}
+        snapshot = hall.build_snapshot([], [], POLICY, "example/project", NOW, pull_requests=[pull])
+        api = PrApi(pull)
+        api.comments = [reply(77, hall.BOT, 2, "Bot", "old\n<!-- knxbench-pr-credit:2 -->")]
+        hall.notify_pull_requests(snapshot, [pull], api)
+        self.assertEqual(api.posts, [])
+        self.assertEqual(api.edits[0][0], 77)
+        self.assertEqual(api.readbacks, [77])
+        hall.notify_pull_requests(snapshot, [pull], api)
+        self.assertEqual(len(api.edits), 1)
+
+    def test_external_optout_or_bot_marker_is_not_trusted(self):
+        pull = {**issue(2), "merged_at": None}
+        for who, kind in [("tester", "User"), ("helper[bot]", "Bot"), (hall.BOT, "User")]:
+            with self.subTest(who=who, kind=kind):
+                policy = {**POLICY, "excluded_logins": POLICY["excluded_logins"] + ["helper[bot]"]}
+                snapshot = hall.build_snapshot([], [], policy, "example/project", NOW, pull_requests=[pull])
+                api = PrApi(pull)
+                api.comments = [reply(10, who, 2, kind, "<!-- knxbench-pr-credit:2 -->")]
+                hall.notify_pull_requests(snapshot, [pull], api)
+                self.assertEqual(len(api.posts), 1)
+                self.assertEqual(api.edits, [])
+
+    def test_duplicate_trusted_markers_fail_without_touching_comments(self):
+        pull = {**issue(2), "merged_at": None}
+        snapshot = hall.build_snapshot([], [], POLICY, "example/project", NOW, pull_requests=[pull])
+        api = PrApi(pull)
+        api.comments = [reply(cid, hall.BOT, 2, "Bot", "<!-- knxbench-pr-credit:2 -->") for cid in [10, 11]]
+        with self.assertRaisesRegex(ValueError, "multiple trusted"):
+            hall.notify_pull_requests(snapshot, [pull], api)
+        self.assertEqual((api.posts, api.edits), ([], []))
+
+    def test_stale_pr_status_author_or_identity_never_posts_or_edits(self):
+        pull = {**issue(2, state="closed"), "merged_at": NOW}
+        snapshot = hall.build_snapshot([], [], POLICY, "example/project", NOW, pull_requests=[pull])
+        for delta in [{"state": "open", "merged_at": None, "closed_at": None},
+                      {"user": user("other")}, {"number": 99}, {"id": 999}]:
+            for existing in [False, True]:
+                with self.subTest(delta=delta, existing=existing):
+                    api = PrApi({**pull, **delta})
+                    if existing:
+                        api.comments = [reply(10, hall.BOT, 2, "Bot", "<!-- knxbench-pr-credit:2 -->")]
+                    hall.notify_pull_requests(snapshot, [pull], api)
+                    self.assertEqual((api.posts, api.edits), ([], []))
+
+    def test_excluded_authors_are_skipped_and_external_bot_authors_are_not(self):
+        for who, kind, expected in [("Andre1Becker", "User", 0), ("knxbench-labs", "User", 0),
+                                    (hall.BOT, "Bot", 0), ("helper[bot]", "Bot", 1)]:
+            with self.subTest(who=who):
+                pull = {**issue(2, who), "merged_at": None, "user": user(who, kind)}
+                snapshot = hall.build_snapshot([], [], POLICY, "example/project", NOW, pull_requests=[pull])
+                api = PrApi(pull)
+                hall.notify_pull_requests(snapshot, [pull], api)
+                self.assertEqual(len(api.posts), expected)
+
+    def test_post_and_edit_require_exact_readback_and_retries_do_not_duplicate(self):
+        pull = {**issue(2), "merged_at": None}
+        snapshot = hall.build_snapshot([], [], POLICY, "example/project", NOW, pull_requests=[pull])
+        api = PrApi(pull); api.mismatch = True
+        with self.assertRaisesRegex(ValueError, "exact readback"):
+            hall.notify_pull_requests(snapshot, [pull], api)
+        api.mismatch = False
+        hall.notify_pull_requests(snapshot, [pull], api)
+        self.assertEqual((len(api.posts), len(api.edits)), (1, 0))
+        api.comments[0]["body"] = "old <!-- knxbench-pr-credit:2 -->"
+        api.mismatch = True
+        with self.assertRaisesRegex(ValueError, "exact readback"):
+            hall.notify_pull_requests(snapshot, [pull], api)
+        api.mismatch = False
+        hall.notify_pull_requests(snapshot, [pull], api)
+        self.assertEqual((len(api.posts), len(api.edits)), (1, 1))
+
+    def test_edit_receipt_must_match_the_requested_comment_id(self):
+        pull = {**issue(2), "merged_at": None}
+        snapshot = hall.build_snapshot([], [], POLICY, "example/project", NOW, pull_requests=[pull])
+        api = PrApi(pull)
+        api.comments = [reply(10, hall.BOT, 2, "Bot", "<!-- knxbench-pr-credit:2 -->")]
+        with patch.object(api, "edit_comment", return_value={"id": 99}), \
+             patch.object(api, "get_comment", return_value={"id": 99, "body": hall.pull_request_note(snapshot, pull)}):
+            with self.assertRaisesRegex(ValueError, "target"):
+                hall.notify_pull_requests(snapshot, [pull], api)
+
+    def test_unrelated_actor_metadata_does_not_block_valid_notification(self):
+        pull = {**issue(2), "merged_at": None}
+        snapshot = hall.build_snapshot([], [], POLICY, "example/project", NOW, pull_requests=[pull])
+        api = PrApi({**pull, "user": {**pull["user"], "avatar_url": "https://example.com/new-avatar"}})
+        hall.notify_pull_requests(snapshot, [pull], api)
+        self.assertEqual(len(api.posts), 1)
+
+    def test_api_uses_pull_endpoint_patch_for_edit_and_post_for_create(self):
+        with patch.object(hall.subprocess, "run") as run:
+            run.return_value.stdout = '{"id":42}'
+            api = hall.GitHub("example/project")
+            api.get_pull_request(2)
+            self.assertEqual(run.call_args.args[0][:3], ["gh", "api", "repos/example/project/pulls/2"])
+            api.edit_comment(42, "body")
+            command = run.call_args.args[0]
+            self.assertEqual(command[2], "repos/example/project/issues/comments/42")
+            self.assertEqual(command[command.index("--method") + 1], "PATCH")
+            self.assertEqual(json.loads(run.call_args.kwargs["input"]), {"body": "body"})
+            api.post_comment(2, "body")
+            command = run.call_args.args[0]
+            self.assertEqual(command[command.index("--method") + 1], "POST")
+
+    def test_main_notify_wires_pr_reconciliation_without_reissuing_issue_awards(self):
+        pull = {**issue(2), "merged_at": None}
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); (root / "docs/community").mkdir(parents=True)
+            (root / "README.md").write_text(hall.START + hall.END)
+            (root / "docs/community/hall-of-fame-policy.json").write_text(json.dumps(POLICY))
+            def response(endpoint, **kwargs):
+                return [pull] if "/pulls?" in endpoint else []
+            with patch.object(hall.GitHub, "api", side_effect=response), \
+                 patch.object(hall, "notify_pull_requests") as notice, \
+                 patch.object(hall, "notify_pending") as issues, \
+                 patch("sys.argv", ["hall", "--root", str(root), "--repository", "example/project", "--notify"]):
+                hall.main()
+            notice.assert_called_once()
+            self.assertEqual(notice.call_args.args[1], [pull])
+            self.assertEqual(issues.call_args.args[0]["resolution_awards"], {})
+
+
+class PrApi:
+    def __init__(self, pull):
+        self.pull = pull
+        self.comments = []
+        self.posts = []
+        self.edits = []
+        self.readbacks = []
+        self.mismatch = False
+
+    def get_pull_request(self, number):
+        return self.pull
+
+    def get_comments(self, number):
+        return self.comments
+
+    def post_comment(self, number, body):
+        self.posts.append((number, body))
+        comment = {"id": 42, "body": body, "user": user(hall.BOT, "Bot"),
+                   "issue_url": f"https://api.github.com/repos/example/project/issues/{number}"}
+        self.comments.append(comment)
+        return comment
+
+    def edit_comment(self, cid, body):
+        self.edits.append((cid, body))
+        comment = next(comment for comment in self.comments if comment["id"] == cid)
+        comment["body"] = body
+        return comment
+
+    def get_comment(self, cid):
+        self.readbacks.append(cid)
+        comment = next(comment for comment in self.comments if comment["id"] == cid)
+        return {**comment, "body": "wrong"} if self.mismatch else comment
+
+
 class NotificationsTests(unittest.TestCase):
     def test_repository_validation_precedes_network(self):
         with patch.object(hall.subprocess, "run") as network:

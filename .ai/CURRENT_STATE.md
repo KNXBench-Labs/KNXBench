@@ -15,6 +15,14 @@
 ---
 
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-16 12:34
+- **Completed:** Issue #22 exact UP 258D12 vertical path taken by session a2e1c7814408 in feat/up258-production-20261016 from fresh origin/main 8d4b7a1e. Root handover/AGENTS and fresh complete issue/PR24 discussion/diff read; public Siemens package downloaded independently and exact dossier SHA-256 verified. No implementation or acceptance claimed yet.
+- **Pending/Next Steps:** Resolve missing multi-octet parameter encoding, XML SegFlags and resource/pointer/recovery contracts from original sources before source-to-executor implementation. If an essential rule remains unavailable, deliver one discriminating English reporter request and exact No-Go evidence, not unrelated family foundations.
+- **Notes for Codex oder Claude:** Exclusive scope is application M-0001_A-9205-04-9270/version4/MV-0025; actual firmware unknown. Separate System300 owner cf85f96ab058 retains its branch/integration/gates and commissioning.rs/shared catalogues until publication. This session will not edit those code surfaces or foreign worktrees. Shared root intentionally dirty/stale1817fb2a; preserve index and all foreign bytes/history. Offline only: no bus/vendor contact/subagents/other agent CLI/release/deployment or blanket Verified promotion. No Restart in this exact21step procedure.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-16 12:17
 - **Completed:** PR recognition implemented/reviewed and published: feature2c5ea8327c51df5d97b2fc384d68b9ba9dd2998b, accepted runtime merge7c67bb8d7febeae208913ca7669432d4671e8422. Local/tracking/live equality verified after push. Both frozen scoped gates9/9stages pass:59community/175tools(one inherited skip),docs/five fresh repository checks/whitespace;2940source identities unchanged each. Actual GitHub workflow38885828890 succeeds on exact accepted merge with59tests/live reconciliation. Exact published JSON/page/README matches;real schema1→2migration preserves completion ledger/notification flags byte-equivalent as JSON. thengsty304→329XP from1mergedPR/25PRXP;hagbardZ18unchanged. Public Chromium checks wide1440/narrow400confirm all13columns/two rows and reachable horizontal scroll;three screenshots inspected. No public PR/issue award comments added by this change.
 - **Pending/Next Steps:** No unfinished implementation for this bounded request. Final result-only documentation closure and exact owned retirement are recorded in shared root/private closure evidence. No application/Rust workspace/private-corpus/hardware/release acceptance claimed. PR comments/reviews and retained historical PR awards deliberately remain outside scope.

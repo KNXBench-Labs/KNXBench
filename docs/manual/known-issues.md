@@ -46,6 +46,14 @@ earlier refuse upgraded native files, and rollback needs pre-upgrade copies.
 
 ---
 
+## Parameter-driven object refresh (source builds after Alpha 12)
+
+Supported manufacturer-mode choices now refresh the object list and append missing
+unscoped objects without replacing existing links or overrides. A new active
+module object still needs verified instance/number mapping: the whole parameter
+edit is refused rather than partially saved. Manufacturer scripts and unsupported
+evaluator constructs remain unsupported. [Use and limits](user-guide/05-devices-and-products.md#device-functions-source-builds-after-alpha-12).
+
 ## Projects and import
 
 ### An empty default line is reported as an import error

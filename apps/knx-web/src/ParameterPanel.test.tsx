@@ -114,7 +114,7 @@ const fixture: ParameterPanelDto = {
   tree: panelTree,
 };
 
-async function renderPanel(deviceId = 1, view: "parameters" | "diagnostics" | "restricted" = "parameters") {
+async function renderPanel(deviceId = 1, view: "parameters" | "diagnostics" | "restricted" | "functions" = "parameters") {
   host = document.createElement("div");
   document.body.appendChild(host);
   const root = createRoot(host);
@@ -137,6 +137,46 @@ function setSelectValue(select: HTMLSelectElement, value: string) {
 }
 
 describe("ParameterPanel", () => {
+  it.each(["en", "de"] as const)("explains absent function choices rather than leaving an empty disclosure (%s)", async language => {
+    setSetting(UI_LANGUAGE_STORAGE_KEY, language);
+    apiMock.deviceParameters.mockResolvedValue(fixture);
+    const root = await renderPanel(1, "functions");
+    expect(host!.textContent).toContain(language === "de"
+      ? "Aktuell sind keine unterstützten Funktionsauswahlen sichtbar. Weitere Einstellungen findest du unter Parameter."
+      : "No supported function choices are currently visible. Other settings are under Parameters.");
+    expect(host!.querySelector("select")).toBeNull();
+    expect(apiMock.setParameterValue).not.toHaveBeenCalled();
+    await act(async () => root.unmount());
+  });
+
+  it("commits a function selection immediately and retains grouped drafts when folded", async () => {
+    const first = { ...fixture.sections[0].fields[0], kind: "Restriction", value: "0",
+      group: { key: "buttons", label: "Buttons" }, controlsComObjects: true,
+      enumOptions: [{ value: "0", text: "Disabled", language: null }, { value: "1", text: "Individual buttons", language: null }] };
+    const second = { ...fixture.sections[0].fields[0], etsId: "P-extra", writeEtsId: "P-extra",
+      group: { key: "buttons", label: "Buttons" } };
+    const panel = { ...fixture, sections: [{ scope: null, fields: [first, second] }] };
+    apiMock.deviceParameters.mockResolvedValue(panel);
+    apiMock.setParameterValue.mockResolvedValue({ ...panel, sections: [{ scope: null, fields: [{ ...first, value: "1" }, second] }], tree: panelTree });
+    const root = await renderPanel();
+    const select = host!.querySelector<HTMLSelectElement>("select")!;
+    const input = host!.querySelector<HTMLInputElement>('input[type="number"]')!;
+    await act(async () => {
+      const setter = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, "value")!.set!;
+      setter.call(select, "1"); select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    expect(apiMock.setParameterValue).toHaveBeenCalledExactlyOnceWith(1, "P1", "1", null, bound("0"));
+    await act(async () => setInputValue(input, "7"));
+    const fold = host!.querySelector<HTMLButtonElement>(".parameter-group-toggle")!;
+    expect(fold.textContent).toContain("Buttons");
+    await act(async () => fold.click());
+    expect(input.closest("[hidden]")).not.toBeNull();
+    await act(async () => fold.click());
+    expect(host!.querySelector('input[type="number"]')).toBe(input);
+    expect(input.value).toBe("7");
+    expect(apiMock.setParameterValue).toHaveBeenCalledTimes(1);
+    await act(async () => root.unmount());
+  });
   it.each(["en", "de"] as const)("shows stored instance values as read-only and not evaluated (%s)", async (language) => {
     setSetting(UI_LANGUAGE_STORAGE_KEY, language);
     const evidence: ParameterPanelDto = {

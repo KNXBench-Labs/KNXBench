@@ -19,6 +19,17 @@
 import type { MessageKey } from "./en";
 
 export const messages: Record<MessageKey, string> = {
+  "parameters.functions": "Gerätefunktionen",
+  "parameters.functionsEmpty": "Aktuell sind keine unterstützten Funktionsauswahlen sichtbar. Weitere Einstellungen findest du unter Parameter.",
+  "parameters.functionsHint": "Diese Herstellerparameter steuern die verfügbaren Kommunikationsobjekte. Eine Auswahl wird sofort übernommen; Rückgängig stellt die vorherige Konfiguration wieder her.",
+  "parameters.groupNumber": "Parametergruppe {number}",
+  "fileMenu.project": "Projekt",
+  "fileMenu.exchange": "Import & Export",
+  "fileMenu.history": "Verlauf & Vergleich",
+  "fileMenu.help": "Hilfe & Diagnose",
+  "workbench.workspaces": "Arbeitsbereiche",
+  "workbench.projectExplorer": "Projektübersicht",
+  "workbench.diagnostics": "Diagnose",
   "compare.parameterNotDecoded": "Das Feld ist unvollständig, überschrieben oder die Gerätecodierung ist nicht verifiziert. Prüfe die Rohbytes darunter.",
   "compare.all": "Alle angezeigten vergleichen",
   "compare.one": "Vergleichen",
@@ -1192,6 +1203,8 @@ export const messages: Record<MessageKey, string> = {
   "parameters.severity.info": "Hinweis",
   "parameters.severity.warning": "Warnung",
 
+  "parameters.diagnostic.objectReferenceAmbiguous": "Eine Kommunikationsobjekt-Referenz passt zu mehreren Katalogidentitäten. Es wurde keine Zuordnung geraten.",
+  "parameters.diagnostic.objectDptUnresolved": "Für ein konfiguriertes Objekt ist kein eindeutiger, gültiger Datenpunkttyp deklariert. Es wurde kein Typ geraten; siehe Diagnose.",
   "parameters.diagnostic.parametersUnreadable":
     "Einige deklarierte Parameter konnten nicht aus der Produktdatenbank gelesen werden und werden nicht angezeigt.",
   "parameters.diagnostic.duplicateUnscopedValue":

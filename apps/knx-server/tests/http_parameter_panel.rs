@@ -523,6 +523,397 @@ async fn post_panel(
     (status, body_json(response).await)
 }
 
+fn configured_object_program() -> String {
+    WRITE_PROGRAM.replacen("</Static>\n<Dynamic>", r#"<ComObjectTable><ComObject Id="A-1_O-1" Number="1" Text="Output" FunctionText="Switch" ObjectSize="1 Bit" /></ComObjectTable>
+<ComObjectRefs><ComObjectRef Id="A-1_O-1_R-1" RefId="A-1_O-1" /></ComObjectRefs>
+</Static><Dynamic>"#, 1).replacen("  <ParameterRefRef RefId=\"P-2_R-1\" />", r#"<ParameterBlock Id="A-1_PB-1" Text="Buttons"><ParameterRefRef RefId="P-2_R-1" />
+<choose ParamRefId="P-2_R-1"><when test="1"><ComObjectRefRef RefId="A-1_O-1_R-1" /></when><when test="0" /></choose></ParameterBlock>"#, 1)
+}
+
+fn state_with_existing_object(
+    products: knx_productdb::Connection,
+    reference: &str,
+) -> knx_server::AppState {
+    let state = state_with_device(products, vec![]);
+    {
+        let mut guard = state.project.lock().unwrap();
+        let p = guard.as_mut().unwrap();
+        let id = knx_core::ComObjectInstanceId(1);
+        p.devices.insert_com_object(knx_core::ComObjectInstance {
+            id,
+            device: DeviceId(1),
+            number: 1,
+            source: SourceRef {
+                path: "retained".into(),
+                ets_id: reference.into(),
+            },
+            text: knx_core::Override::Absent,
+            description: knx_core::Override::Empty,
+            dpt: knx_core::Override::Absent,
+            flags: knx_core::ResolvedFlags::none(),
+            size: None,
+            is_active: false,
+            links: vec![],
+            module_instance: None,
+        });
+        p.devices.get_mut(DeviceId(1)).unwrap().com_objects.push(id);
+        p.ids = knx_core::project::IdAllocators::from_counts(1, 0, 0, 1, 0, 0, 0, 0, 0);
+    }
+    state
+}
+
+#[tokio::test]
+async fn existing_local_catalogue_and_project_alias_references_are_not_duplicated() {
+    for local_declaration in [false, true] {
+        let mut program = configured_object_program().replace(
+            "ObjectSize=\"1 Bit\"",
+            "ObjectSize=\"1 Bit\" DatapointType=\"DPST-1-1 DPST-1-2\"",
+        );
+        if local_declaration {
+            program = program
+                .replace("A-1_O-1_R-1", "O-1_R-1")
+                .replace("A-1_O-1", "O-1");
+        }
+        let (_dir, products) = temp_product_db(&program);
+        let state = Arc::new(state_with_existing_object(products, "O-1_R-1"));
+        let before = state.project.lock().unwrap().clone().unwrap();
+        let app = knx_server::app(Arc::clone(&state), None);
+        let (status, result) = post_panel(app.clone(), 1, "P-2_R-1", "1").await;
+        assert_eq!(status, StatusCode::OK, "{result}");
+        let after = state.project.lock().unwrap().clone().unwrap();
+        assert_eq!(
+            after.devices.get(DeviceId(1)).unwrap().com_objects,
+            vec![knx_core::ComObjectInstanceId(1)],
+            "local declaration={local_declaration}"
+        );
+        assert_eq!(
+            after.devices, before.devices,
+            "existing instance data must not be replaced"
+        );
+        let mut ids = after.ids.clone();
+        assert_eq!(
+            ids.next_com_object_instance_id().unwrap(),
+            knx_core::ComObjectInstanceId(2)
+        );
+        assert_eq!(
+            result["diagnostics"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .filter(|d| d["kind"] == "objectDptUnresolved")
+                .count(),
+            1
+        );
+        let (status, read) = get_panel(app, 1).await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(
+            read["diagnostics"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .filter(|d| d["kind"] == "objectDptUnresolved")
+                .count(),
+            1,
+            "catalogue-local references must retain readable DPT warnings"
+        );
+    }
+}
+
+#[tokio::test]
+async fn ambiguous_local_and_qualified_catalogue_identity_refuses_the_whole_edit() {
+    let program = configured_object_program()
+        .replace(
+            "</ComObjectTable>",
+            "<ComObject Id=\"O-1\" Number=\"2\" ObjectSize=\"1 Bit\"/></ComObjectTable>",
+        )
+        .replace(
+            "</ComObjectRefs>",
+            "<ComObjectRef Id=\"O-1_R-1\" RefId=\"O-1\"/></ComObjectRefs>",
+        );
+    let (_dir, products) = temp_product_db(&program);
+    let state = Arc::new(state_with_existing_object(products, "O-1_R-1"));
+    let before = state.project.lock().unwrap().clone();
+    let app = knx_server::app(Arc::clone(&state), None);
+    let (status, panel) = get_panel(app.clone(), 1).await;
+    assert_eq!(
+        status,
+        StatusCode::OK,
+        "identity uncertainty must not hide readable parameters"
+    );
+    assert_eq!(
+        panel["diagnostics"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|d| d["kind"] == "objectReferenceAmbiguous")
+            .count(),
+        1
+    );
+    assert_eq!(*state.project.lock().unwrap(), before);
+    let (status, result) = post_panel(app, 1, "P-2_R-1", "1").await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{result}");
+    assert!(
+        result["error"]
+            .as_str()
+            .unwrap()
+            .contains("ambiguous communication-object reference"),
+        "{result}"
+    );
+    assert_eq!(*state.project.lock().unwrap(), before);
+}
+
+#[tokio::test]
+async fn missing_object_declaration_refuses_the_whole_parameter_change() {
+    let program = configured_object_program().replace(
+        "<ComObjectRefRef RefId=\"A-1_O-1_R-1\" />",
+        "<ComObjectRefRef RefId=\"missing\" />",
+    );
+    let (_dir, products) = temp_product_db(&program);
+    let state = Arc::new(state_with_device(products, vec![]));
+    let before = state.project.lock().unwrap().clone();
+    let (status, _) =
+        post_panel(knx_server::app(Arc::clone(&state), None), 1, "P-2_R-1", "1").await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(*state.project.lock().unwrap(), before);
+}
+
+#[tokio::test]
+async fn parameter_enable_adds_missing_objects_in_one_persistable_undo_step() {
+    let (_dir, products) = temp_product_db(&configured_object_program());
+    let state = Arc::new(state_with_device(products, vec![]));
+    let app = knx_server::app(Arc::clone(&state), None);
+    let before = state.project.lock().unwrap().clone().unwrap();
+    let (status, panel) = get_panel(app.clone(), 1).await;
+    assert_eq!(status, StatusCode::OK);
+    let mode = field(&panel, "P-2_R-1").unwrap();
+    assert_eq!(mode["group"]["label"], "Buttons");
+    assert_eq!(mode["controlsComObjects"], true);
+    let (status, _) = post_panel(app.clone(), 1, "P-2_R-1", "1").await;
+    assert_eq!(status, StatusCode::OK);
+    let after = state.project.lock().unwrap().clone().unwrap();
+    assert_eq!(after.devices.get(DeviceId(1)).unwrap().com_objects.len(), 1);
+    let id = after.devices.get(DeviceId(1)).unwrap().com_objects[0];
+    assert_eq!(after.devices.com_object(id).unwrap().number, 1);
+    let conn = knx_store::open_and_migrate_in_memory().unwrap();
+    knx_store::save_project(&conn, &after).unwrap();
+    assert_eq!(knx_store::load_project(&conn).unwrap(), after);
+    for uri in ["/api/undo", "/api/redo"] {
+        let response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(uri)
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let current = state.project.lock().unwrap().clone().unwrap();
+        if uri == "/api/undo" {
+            assert_eq!(current.devices, before.devices);
+            assert_eq!(current.installations, before.installations);
+        } else {
+            assert_eq!(
+                current.devices.get(DeviceId(1)).unwrap().com_objects,
+                vec![id]
+            );
+        }
+    }
+    // Repeated editing never duplicates catalog objects or spends another object ID.
+    let (status, _) = post_panel(app.clone(), 1, "P-2_R-1", "0").await;
+    assert_eq!(status, StatusCode::OK);
+    let (status, _) = post_panel(app, 1, "P-2_R-1", "1").await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        state
+            .project
+            .lock()
+            .unwrap()
+            .as_ref()
+            .unwrap()
+            .devices
+            .get(DeviceId(1))
+            .unwrap()
+            .com_objects,
+        vec![id]
+    );
+}
+
+#[tokio::test]
+async fn newly_created_objects_report_unresolved_dpt_without_guessing() {
+    for declaration in ["DPST-1-1 DPST-1-2", "malformed-dpt"] {
+        let program = configured_object_program().replace(
+            "ObjectSize=\"1 Bit\"",
+            &format!("ObjectSize=\"1 Bit\" DatapointType=\"{declaration}\""),
+        );
+        let (_dir, products) = temp_product_db(&program);
+        let state = Arc::new(state_with_device(products, vec![]));
+        let app = knx_server::app(Arc::clone(&state), None);
+        let (status, panel) = post_panel(app.clone(), 1, "P-2_R-1", "1").await;
+        assert_eq!(status, StatusCode::OK, "{panel}");
+        let issues: Vec<_> = panel["diagnostics"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|d| d["kind"] == "objectDptUnresolved")
+            .collect();
+        assert_eq!(issues.len(), 1, "{panel}");
+        assert_eq!(issues[0]["severity"], "warning");
+        for dpt in declaration.split_whitespace() {
+            assert!(issues[0]["detail"].as_str().unwrap().contains(dpt));
+        }
+        let before_reload = state.project.lock().unwrap().clone();
+        let (status, reloaded) = get_panel(app.clone(), 1).await;
+        assert_eq!(status, StatusCode::OK);
+        let reloaded_issues: Vec<_> = reloaded["diagnostics"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|d| d["kind"] == "objectDptUnresolved")
+            .collect();
+        assert_eq!(
+            reloaded_issues, issues,
+            "a read refresh must not erase the DPT warning"
+        );
+        assert_eq!(*state.project.lock().unwrap(), before_reload);
+        {
+            let mut project = state.project.lock().unwrap();
+            let project = project.as_mut().unwrap();
+            let id = project.devices.get(DeviceId(1)).unwrap().com_objects[0];
+            assert_eq!(
+                project.devices.com_object(id).unwrap().dpt,
+                knx_core::Override::Absent
+            );
+            project.devices.com_object_mut(id).unwrap().dpt =
+                knx_core::Override::Value(knx_core::Resolved {
+                    value: knx_core::DptRef::parse("DPST-1-1").unwrap(),
+                    layer: knx_core::Layer::UserEdit,
+                });
+        }
+        let (status, chosen) = get_panel(app, 1).await;
+        assert_eq!(status, StatusCode::OK);
+        assert!(
+            chosen["diagnostics"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .all(|d| d["kind"] != "objectDptUnresolved"),
+            "an explicit DPT choice is not an unresolved type"
+        );
+    }
+}
+
+#[tokio::test]
+async fn missing_active_module_object_refuses_the_entire_parameter_edit() {
+    let program = WRITE_PROGRAM.replace(
+        "</Static>\n<Dynamic>\n  <ParameterRefRef RefId=\"MOD-1_P-1_R-1\" />",
+        "<ComObjectTable><ComObject Id=\"MOD-O-1\" Number=\"1\" ObjectSize=\"1 Bit\" /></ComObjectTable><ComObjectRefs><ComObjectRef Id=\"MOD-O-1_R-1\" RefId=\"MOD-O-1\" /></ComObjectRefs></Static>\n<Dynamic>\n<ComObjectRefRef RefId=\"MOD-O-1_R-1\" />\n  <ParameterRefRef RefId=\"MOD-1_P-1_R-1\" />",
+    );
+    assert_ne!(program, WRITE_PROGRAM);
+    let (_dir, products) = temp_product_db(&program);
+    let state = Arc::new(state_with_device_and_modules(
+        products,
+        vec![],
+        vec![("MOD-1_M-1", "MOD-1_M-1_MI-1")],
+    ));
+    let before = state.project.lock().unwrap().clone().unwrap();
+    let app = knx_server::app(Arc::clone(&state), None);
+    let (status, result) = post_panel(app.clone(), 1, "P-2_R-1", "1").await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{result}");
+    assert!(
+        result["error"]
+            .as_str()
+            .unwrap()
+            .contains("whose instance/number mapping is not supported"),
+        "{result}"
+    );
+    assert_eq!(state.project.lock().unwrap().as_ref(), Some(&before));
+    let undo = app
+        .oneshot(Request::post("/api/undo").body(Body::empty()).unwrap())
+        .await
+        .unwrap();
+    assert_eq!(undo.status(), StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn object_addition_preserves_preexisting_links_and_instance_overrides() {
+    let (_dir, products) = temp_product_db(&configured_object_program());
+    let state = Arc::new(state_with_device(products, vec![]));
+    let retained = {
+        let mut guard = state.project.lock().unwrap();
+        let p = guard.as_mut().unwrap();
+        let object = knx_core::ComObjectInstance {
+            id: knx_core::ComObjectInstanceId(1),
+            device: DeviceId(1),
+            number: 0,
+            source: SourceRef {
+                path: "imported".into(),
+                ets_id: "unknown-retained-reference".into(),
+            },
+            text: knx_core::Override::Value(knx_core::Resolved {
+                value: knx_core::Text::Literal("Owner label".into()),
+                layer: knx_core::Layer::Instance,
+            }),
+            description: knx_core::Override::Empty,
+            dpt: knx_core::Override::Malformed("preserved".into()),
+            flags: knx_core::ResolvedFlags::none(),
+            size: None,
+            is_active: false,
+            links: vec![knx_core::GroupLink {
+                ga: knx_core::GroupAddressId(7),
+                direction: knx_core::Direction::Receive,
+            }],
+            module_instance: None,
+        };
+        p.devices.insert_com_object(object.clone());
+        p.devices
+            .get_mut(DeviceId(1))
+            .unwrap()
+            .com_objects
+            .push(object.id);
+        p.ids = knx_core::project::IdAllocators::from_counts(1, 0, 0, 1, 0, 0, 0, 0, 0);
+        object
+    };
+    let (status, result) =
+        post_panel(knx_server::app(Arc::clone(&state), None), 1, "P-2_R-1", "1").await;
+    assert_eq!(status, StatusCode::OK, "{result}");
+    let project = state.project.lock().unwrap();
+    let p = project.as_ref().unwrap();
+    assert_eq!(p.devices.com_object(retained.id), Some(&retained));
+    assert_eq!(
+        p.devices.get(DeviceId(1)).unwrap().com_objects,
+        vec![retained.id, knx_core::ComObjectInstanceId(2)]
+    );
+}
+
+#[tokio::test]
+async fn failed_durable_object_addition_publishes_no_parameters_ids_or_history() {
+    let (dir, products) = temp_product_db(&configured_object_program());
+    let state = Arc::new(state_with_device(products, vec![]));
+    *state.store_path.lock().unwrap() = Some(dir.path().to_path_buf()); // directory, never a native file
+    let before = state.project.lock().unwrap().clone();
+    let revision = state
+        .project_revision
+        .load(std::sync::atomic::Ordering::Relaxed);
+    let app = knx_server::app(Arc::clone(&state), None);
+    let (status, result) = post_panel(app.clone(), 1, "P-2_R-1", "1").await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{result}");
+    assert_eq!(*state.project.lock().unwrap(), before);
+    assert_eq!(
+        state
+            .project_revision
+            .load(std::sync::atomic::Ordering::Relaxed),
+        revision
+    );
+    let response = app
+        .oneshot(Request::post("/api/undo").body(Body::empty()).unwrap())
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+}
+
 fn field<'a>(dto: &'a Value, ets_id: &str) -> Option<&'a Value> {
     dto["sections"].as_array().unwrap().iter().find_map(|s| {
         s["fields"]

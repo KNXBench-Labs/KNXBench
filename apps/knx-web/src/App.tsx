@@ -7,6 +7,7 @@ import * as api from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { DeviceDetail } from "./bindings/DeviceDetail";
 import type { Selection } from "./selection";
+import NavigationSection from "./NavigationSection";
 import ProjectExplorer from "./ProjectExplorer";
 import ProjectHistoryDialog from "./ProjectHistoryDialog";
 import NativeExportDialog from "./NativeExportDialog";
@@ -1476,12 +1477,15 @@ function App({ manifestVersion = packageVersion, session, editorReturn = false }
         <details ref={fileMenuRef} className="file-menu" onKeyDown={(e) => { if (e.key === "Escape") { e.currentTarget.open = false; e.currentTarget.querySelector("summary")?.focus(); } }}>
           <summary>{t("workbench.file")} <span aria-hidden="true">⌄</span></summary>
           <div className="file-menu-content" onClick={handleFileMenuActivation}>
+      <section className="file-menu-group"><h3>{t("fileMenu.project")}</h3>
       <button onClick={startNewProject}>{t("toolbar.newProject")}</button>
       <button onClick={pickProject} disabled={loading}>{t("toolbar.openProject")}</button>
       <button onClick={openNativeProject} disabled={loading}>{t("toolbar.openNativeProject")}</button>
       <button onClick={saveProjectAs} disabled={!tree}>
         {t("toolbar.saveAs")}
       </button>
+      </section>
+      <section className="file-menu-group"><h3>{t("fileMenu.exchange")}</h3>
       {!isTauri() && (
         <button onClick={exportProject} disabled={!tree}>{t("toolbar.exportProject")}</button>
       )}
@@ -1499,14 +1503,19 @@ function App({ manifestVersion = packageVersion, session, editorReturn = false }
         onError={reportError}
         onClearErrors={clearErrors}
       />
+      </section>
+      <section className="file-menu-group"><h3>{t("fileMenu.history")}</h3>
       <button onClick={openProjectHistory} disabled={!tree || loading}>{t("projectHistory.title")}</button>
       <ProjectDiffPanel tree={tree} onError={reportError} onClearErrors={clearErrors} />
+      </section>
+      <section className="file-menu-group"><h3>{t("fileMenu.help")}</h3>
       <DebugReportButton onSummary={pushFun} onError={reportError} onClearErrors={clearErrors} />
       <ContributionButton />
       <UniversalSupportButton project={tree} />
       <button onClick={guide.show}>{t("command.showIntroduction")}</button>
       {achievementsEnabled && <button onClick={() => setAchievementsOpen(true)}>{t("achievements.command")}</button>}
       <button onClick={() => setAboutOpen(true)}>{t("toolbar.about")}</button>
+      </section>
       {/* ADR-0026: only where a session exists to end. On the desktop shell
           — and on any server started without a password — `required` is
           false and a logout button would be an offer to leave a room with
@@ -1551,6 +1560,7 @@ function App({ manifestVersion = packageVersion, session, editorReturn = false }
       <div className="workspace workbench-body">
         {welcomeVisible && centerWorkspace}
         {navigationOpen && <ResizablePane label={t("workbench.navigation")} side="left" initialWidth={navigationWidth} min={NAVIGATION_PANE.min} max={NAVIGATION_PANE.max} onWidthCommit={(width) => setSetting("navigationPaneWidth", width)}>
+          <NavigationSection title={t("workbench.workspaces")}>
           <nav ref={navBlockRef} className="workbench-navigation" aria-label={t("workbench.navigation")} style={{ height: navHeight ?? undefined }}>
             {(["overview", "buildings", "topology", "devices", "addresses", "notes"] as const).map((item) => <button key={item}
               disabled={(item === "devices" || item === "notes") && !tree}
@@ -1560,19 +1570,24 @@ function App({ manifestVersion = packageVersion, session, editorReturn = false }
             <button aria-current={!logOpen && !monitorOpen && view === "catalog" ? "page" : undefined}
               onClick={() => openCatalog(selection?.kind === "line" ? selection.id : null)}><WorkbenchIcon name="catalog" />{t("workbench.catalog")}</button>
           </nav>
+          </NavigationSection>
           {/* F3: the two horizontal separators exist only alongside the
               block they hand space to. Without a project there is no
               explorer between these three, so there is nothing to
               redistribute and no separator to offer. */}
           {tree && <PaneSplitter label={t("workbench.resizeNavigation")} target={navBlockRef} resizes="above" value={navHeight} onChange={setNavHeight} min={STACK_BLOCK_MIN_PX} max={STACK_BLOCK_MAX_PX} />}
-          {tree && <ProjectExplorer tree={tree} selection={selection} onSelect={selectEntity} onAddDevice={(target) => setDeviceWizard({ target })} onTreeUpdate={handleTreeUpdate} multiSelection={multiSelection} onItemClick={onItemClick} onSummary={pushFun} onError={reportError} revealRequest={revealRequest} onRevealComplete={completeSearchReveal} onOpenImportFindings={openImportFindings} />}
+          {tree && <NavigationSection title={t("workbench.projectExplorer")} grow revealKey={revealRequest?.generation}>
+          <ProjectExplorer tree={tree} selection={selection} onSelect={selectEntity} onAddDevice={(target) => setDeviceWizard({ target })} onTreeUpdate={handleTreeUpdate} multiSelection={multiSelection} onItemClick={onItemClick} onSummary={pushFun} onError={reportError} revealRequest={revealRequest} onRevealComplete={completeSearchReveal} onOpenImportFindings={openImportFindings} />
+          </NavigationSection>}
           {tree && <PaneSplitter label={t("workbench.resizeDiagnostics")} target={diagnosticsBlockRef} resizes="below" value={diagnosticsHeight} onChange={setDiagnosticsHeight} min={STACK_BLOCK_MIN_PX} max={STACK_BLOCK_MAX_PX} />}
+          <NavigationSection title={t("workbench.diagnostics")}>
           <nav ref={diagnosticsBlockRef} className="workbench-navigation diagnostic-navigation" aria-label={t("toolbar.busMonitor")} style={{ height: diagnosticsHeight ?? undefined }}>
             <button aria-current={monitorOpen ? "page" : undefined} onClick={() => { setLogOpen(false); setMonitorOpen(true); }}><WorkbenchIcon name="monitor" />{t("toolbar.busMonitor")}</button>
             <button aria-current={logOpen ? "page" : undefined} onClick={() => { setMonitorOpen(false); setLogOpen(true); }}><WorkbenchIcon name="log" />{t("toolbar.log")}</button>
             <button className="companion-open" onClick={() => void openCompanion()}><WorkbenchIcon name="panel" />{t("companion.open")}</button>
             <button onClick={() => setSettingsOpen(true)}><GearIcon />{t("toolbar.settings")}</button>
           </nav>
+          </NavigationSection>
         </ResizablePane>}
         {!welcomeVisible && centerWorkspace}
         {inspectorOpen && !logOpen && !monitorOpen && <ResizablePane label={t("workbench.properties")} side="right" initialWidth={inspectorWidth} min={INSPECTOR_PANE.min} max={INSPECTOR_PANE.max} onWidthCommit={(width) => setSetting("inspectorPaneWidth", width)}>

@@ -4,6 +4,7 @@
 //! that changes a `Resolved<T>` sets its layer to `Layer::UserEdit`.
 
 mod function_commands;
+mod object_commands;
 mod programming_commands;
 #[cfg(test)]
 mod programming_tests;
@@ -197,6 +198,17 @@ pub enum Command {
         com_object: ComObjectInstanceId,
         flag: ComFlagKind,
         value: Override<bool>,
+    },
+    /// Appends catalog-resolved instances; the inverse removes only these additions.
+    AddComObjects {
+        device: DeviceId,
+        objects: Vec<ComObjectInstance>,
+        program_defaults: Vec<(ComObjectInstanceId, ProgramDefaults)>,
+    },
+    /// Internal inverse; refuses linked objects or a changed append position.
+    RemoveAddedComObjects {
+        device: DeviceId,
+        ids: Vec<ComObjectInstanceId>,
     },
     /// Writes one `ParameterInstance`'s raw value as a user edit —
     /// overwriting `raw` in place if `(device, ets_id)` already names an
@@ -672,6 +684,7 @@ pub enum CommandError {
         evidence_product_ref: String,
     },
     ComObjectNotFound(ComObjectInstanceId),
+    InvalidComObjectBatch(DeviceId),
     GroupAddressNotFound(GroupAddressId),
     /// A group address id occurs more than once in the project.
     GroupAddressPlacementAmbiguous(GroupAddressId),
@@ -879,6 +892,7 @@ impl fmt::Display for CommandError {
                 f,
                 "coupler evidence for product {evidence_product_ref} does not describe device {device}'s product"
             ),
+            CommandError::InvalidComObjectBatch(id) => write!(f, "invalid communication-object additions for device {}", id.0),
             CommandError::ComObjectNotFound(id) => {
                 write!(f, "communication object instance {id} not found")
             }
@@ -2328,6 +2342,14 @@ impl Command {
                     com_object,
                     dpt: previous,
                 })
+            }
+            Command::AddComObjects {
+                device,
+                objects,
+                program_defaults,
+            } => object_commands::add(project, *device, objects, program_defaults),
+            Command::RemoveAddedComObjects { device, ids } => {
+                object_commands::remove(project, *device, ids)
             }
             Command::SetComObjectDescription {
                 com_object,

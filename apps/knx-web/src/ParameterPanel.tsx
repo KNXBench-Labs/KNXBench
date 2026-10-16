@@ -1,5 +1,5 @@
 /** Panel rendering and editing a device's application-program parameters, fetched per selection. */
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import * as api from "./api";
 import type {
   ModuleScope,
@@ -118,6 +118,8 @@ function ParameterFieldRow(props: {
   const t = useTranslate();
   const [value, setValue] = useState(field.value ?? "");
   const [checkedOpen, setCheckedOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   // Goal B1 (revision-bound-writes): a refused stale write keeps the draft
   // across the reload; `at` is the binding it was refused under, so the
@@ -129,7 +131,7 @@ function ParameterFieldRow(props: {
   // the server's contract makes the two conditions exact opposites of
   // each other, but the control checks both rather than trusting either
   // one alone. Without a complete snapshot no unbound write is sent.
-  const disabled = restricted || binding === null;
+  const disabled = restricted || binding === null || saving;
   const bindingKey = binding === null ? null : snapshotKey(binding);
 
   useEffect(() => {
@@ -143,18 +145,20 @@ function ParameterFieldRow(props: {
     setConflict(null);
   }
 
-  async function apply(explicit = false) {
+  async function apply(explicit = false, nextValue = value) {
+    if (savingRef.current) return;
     if (restricted || binding === null || field.writeEtsId === null) return;
     // After a conflict only the explicit button may send again.
     if (conflictRef.current && !explicit) return;
     const current = field.value ?? "";
-    if (value === current) {
+    if (nextValue === current) {
       if (conflictRef.current) { clearConflict(); setError(null); }
       return;
     }
     setError(null);
+    savingRef.current = true; setSaving(true);
     try {
-      const panel = await api.setParameterValue(deviceId, field.writeEtsId, value, language,
+      const panel = await api.setParameterValue(deviceId, field.writeEtsId, nextValue, language,
         { ...binding, expectedValue: field.value });
       clearConflict();
       onUpdated(panel);
@@ -177,6 +181,8 @@ function ParameterFieldRow(props: {
       }
       setError(api.errorMessage(e));
       setValue(current);
+    } finally {
+      savingRef.current = false; setSaving(false);
     }
   }
 
@@ -226,8 +232,7 @@ function ParameterFieldRow(props: {
         <select
           value={value}
           disabled={disabled}
-          onChange={(e) => setValue(e.target.value)}
-          onBlur={() => void apply()}
+          onChange={(e) => { const next = e.target.value; setValue(next); void apply(false, next); }}
         >
           <option value="">{t("parameters.none")}</option>
           {field.enumOptions.map((opt) => (
@@ -328,6 +333,8 @@ function UntranslatedSummary(props: { panel: ParameterPanelDto; language: string
 // untouched by this function on purpose: it is always English, by design
 // (see `ParameterDiagnostic.detail`'s own doc comment in `api.ts`).
 const PARAMETER_DIAGNOSTIC_MESSAGE_KEYS: Record<ParameterDiagnosticKind, TranslatableKey> = {
+  objectReferenceAmbiguous: "parameters.diagnostic.objectReferenceAmbiguous",
+  objectDptUnresolved: "parameters.diagnostic.objectDptUnresolved",
   parametersUnreadable: "parameters.diagnostic.parametersUnreadable",
   duplicateUnscopedValue: "parameters.diagnostic.duplicateUnscopedValue",
   duplicateModuleScopedValue: "parameters.diagnostic.duplicateModuleScopedValue",
@@ -380,13 +387,23 @@ function ParameterSectionView(props: {
   const checked = props.checked === null ? null : { ...props.checked, scope: section.scope };
   const t = useTranslate();
   const fields = section.fields;
+  const [collapsed, setCollapsed] = useState(new Set<string>());
+  const groupOrder = [...new Set(fields.flatMap(field => field.group ? [field.group.key] : []))];
   return (
     <details className="parameter-section" open>
       <summary>{sectionLabel(t, section.scope)}</summary>
       <div className="parameter-fields">
-        {fields.map((field) => (
+        {fields.map((field, index) => <Fragment key={field.etsId}>
+          {field.group && field.group.key !== fields[index - 1]?.group?.key && <button type="button"
+            className="parameter-group-toggle" aria-expanded={!collapsed.has(field.group.key)}
+            onClick={() => setCollapsed(previous => {
+              const next = new Set(previous); const key = field.group!.key;
+              if (next.has(key)) next.delete(key); else next.add(key); return next;
+            })}><span aria-hidden="true">{collapsed.has(field.group.key) ? "▸" : "▾"}</span>
+            {field.group.label || t("parameters.groupNumber", { number: groupOrder.indexOf(field.group.key) + 1 })}
+          </button>}
+          <div className="parameter-field-wrapper" hidden={field.group ? collapsed.has(field.group.key) : false}>
           <ParameterFieldRow
-            key={field.etsId}
             field={field}
             moduleScoped={section.scope !== null}
             deviceId={deviceId}
@@ -398,7 +415,8 @@ function ParameterSectionView(props: {
             onConflict={onConflict}
             checked={checked}
           />
-        ))}
+          </div>
+        </Fragment>)}
       </div>
     </details>
   );
@@ -463,7 +481,7 @@ function DiagnosticsBanner(props: { diagnostics: ParameterDiagnostic[] }) {
   );
 }
 
-export type ParameterView = "parameters" | "diagnostics" | "restricted";
+export type ParameterView = "parameters" | "diagnostics" | "restricted" | "functions";
 
 type ParameterPanelProps = {
   deviceId: number;
@@ -551,7 +569,7 @@ export function ParameterPanelContent(props: ParameterPanelProps & {
   const onConflict = useCallback(async () => { onValueApplied(await api.currentProject()); }, [onValueApplied]);
   const t = useTranslate();
   const title = view === "diagnostics" ? "parameters.diagnosticsTab"
-    : view === "restricted" ? "parameters.restrictedTab" : "parameters.title";
+    : view === "restricted" ? "parameters.restrictedTab" : view === "functions" ? "parameters.functions" : "parameters.title";
 
   if (loadError) {
     return (
@@ -590,12 +608,16 @@ export function ParameterPanelContent(props: ParameterPanelProps & {
 
   const sections = panel.sections.map((section) => ({
     ...section,
-    fields: section.fields.filter((field) => isManufacturerRestricted(field) === (view === "restricted")),
+    fields: section.fields.filter((field) => isManufacturerRestricted(field) === (view === "restricted")
+      && (view !== "functions" || field.controlsComObjects && field.kind === "Restriction")),
   })).filter((section) => section.fields.length > 0);
+
+  if (view === "functions" && sections.length === 0) return <p className="inspector-description">{t("parameters.functionsEmpty")}</p>;
 
   return (
     <div className="parameter-panel">
       <h3>{t(title)}</h3>
+      {view === "functions" && <p className="inspector-description">{t("parameters.functionsHint")}</p>}
       {view === "restricted" && <p className="inspector-description">{t("parameters.restrictedDescription")}</p>}
       {/* Outside the branch below: a restore's summary must survive the
           reload that makes the program resolve (#21, ADR-0128). */}

@@ -1541,6 +1541,25 @@ it("leaves native text undo to the focused input", async () => {
 // delivers as a click on the focused summary, so that is what these tests
 // dispatch.
 describe("App — the File menu by keyboard alone", () => {
+  it("groups file actions and folds navigation blocks independently", async () => {
+    filePickerMock.pickOpenPath.mockResolvedValue("/tmp/project.knxproj");
+    apiMock.importProject.mockResolvedValue(baseTree());
+    const root = await renderApp();
+    await act(async () => findButton("Open project…").click());
+    expect([...host!.querySelectorAll(".file-menu-group > h3")].map(node => node.textContent))
+      .toEqual(["Project", "Import & export", "History & comparison", "Help & diagnostics"]);
+    const sections = [...host!.querySelectorAll<HTMLElement>(".navigation-section")];
+    expect(sections).toHaveLength(3);
+    const explorer = host!.querySelector(".project-explorer")!;
+    expect(explorer).not.toBeNull();
+    await act(async () => sections[1].querySelector<HTMLButtonElement>(".navigation-section-toggle")!.click());
+    expect(explorer.closest("[hidden]")).not.toBeNull();
+    expect(sections[0].querySelector("[hidden]")).toBeNull();
+    expect(sections[2].querySelector("[hidden]")).toBeNull();
+    await act(async () => sections[1].querySelector<HTMLButtonElement>(".navigation-section-toggle")!.click());
+    expect(host!.querySelector(".project-explorer")).toBe(explorer);
+    await act(async () => root.unmount());
+  });
   async function openFileMenu() {
     const summary = host!.querySelector<HTMLElement>(".file-menu summary")!;
     summary.focus();

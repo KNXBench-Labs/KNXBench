@@ -5557,7 +5557,7 @@ fn assemble_parameter_panel(
     let device = knx_core::DeviceId(device_id);
 
     // Step 1: lock only `project`.
-    let (program_ref, stored, module_instances) = {
+    let (program_ref, stored, module_instances, object_metadata) = {
         let project = state.project.lock().expect("state mutex poisoned");
         let project = project.as_ref().ok_or("no project open")?;
         let dev = project
@@ -5569,7 +5569,30 @@ fn assemble_parameter_panel(
         // while `project` is locked, cloned so the lock can drop before
         // `product_db` is taken (same discipline as `stored`).
         let (stored, module_instances) = device_parameter_inputs(project, device);
-        (dev.program_ref.clone(), stored, module_instances)
+        let object_metadata = dev
+            .com_objects
+            .iter()
+            .filter_map(|id| {
+                let object = project.devices.com_object(*id)?;
+                let has_dpt = matches!(&object.dpt, knx_core::Override::Value(_))
+                    || project
+                        .devices
+                        .program_defaults(*id)
+                        .and_then(|defaults| defaults.dpt.as_ref())
+                        .is_some();
+                (object.device == device).then(|| crate::parameter_objects::ObjectMetadataInput {
+                    reference: object.source.ets_id.clone(),
+                    module_based: object.module_instance.is_some(),
+                    dpt_resolved: has_dpt,
+                })
+            })
+            .collect::<Vec<_>>();
+        (
+            dev.program_ref.clone(),
+            stored,
+            module_instances,
+            object_metadata,
+        )
     };
 
     let Some(products_mutex) = state.product_db.as_ref() else {
@@ -5638,7 +5661,11 @@ fn assemble_parameter_panel(
     // the gap instead of letting it vanish unremarked (measured 543/543
     // on the current corpus, so this is not expected to fire on real
     // data; it is here for the day a package does not join cleanly).
-    let mut diagnostics: Vec<crate::routes::ParameterDiagnosticDto> = Vec::new();
+    let mut diagnostics = crate::parameter_objects::object_metadata_diagnostics(
+        &products,
+        &program_id,
+        &object_metadata,
+    )?;
     if views.len() != ref_ids.len() {
         let dropped = ref_ids.len().saturating_sub(views.len());
         diagnostics.push(crate::routes::ParameterDiagnosticDto {
@@ -5708,6 +5735,8 @@ fn assemble_parameter_panel(
             acc
         });
 
+    let layout =
+        knx_productdb::parameter_layout::load(&products, &program_id).map_err(|e| e.to_string())?;
     let mut sections = Vec::with_capacity(section_order.len());
     for key in section_order {
         let section = sections_by_key.remove(&key).expect("just inserted above");
@@ -5850,7 +5879,38 @@ fn assemble_parameter_panel(
                 }
             };
             let editable = write_ets_id.is_some();
+            let presentation = layout.field(
+                section
+                    .scope
+                    .as_ref()
+                    .map_or("", |s| s.module_def_id.as_str()),
+                &view.id,
+            );
+            let group = presentation.group.map(|group| {
+                let label = activation
+                    .labels
+                    .iter()
+                    .find(|label| label.node_id == group.node_id && label.scope == section.scope)
+                    .map(|label| label.text.clone())
+                    .or(group.text)
+                    .filter(|text| !text.trim().is_empty())
+                    .or_else(|| {
+                        group
+                            .caption_ref
+                            .as_ref()
+                            .and_then(|reference| views_by_id.get(reference))
+                            .and_then(|caption| caption.text.clone().or(caption.name.clone()))
+                    });
+                crate::routes::ParameterGroupDto {
+                    key: group
+                        .element_id
+                        .unwrap_or_else(|| format!("node:{}", group.node_id)),
+                    label,
+                }
+            });
             fields.push(crate::routes::ParameterFieldDto {
+                group,
+                controls_com_objects: presentation.controls_com_objects,
                 ets_id: view.id.clone(),
                 name: view.name.clone(),
                 name_language: view.name_language.clone(),
@@ -6321,7 +6381,7 @@ fn validate_kind_and_bounds(
 }
 
 /// Writes one parameter value (design D24): validates, applies exactly
-/// one `Command::SetParameterValue` (undo/redo-able via the same
+/// one parameter/object command batch (undo/redo-able via the same
 /// `command_stack` every other edit uses), then re-assembles and returns
 /// the fresh `ParameterPanelDto` — no second request needed to see the
 /// effect (D24's own rejected alternative names why) — with `apply`'s own
@@ -6345,6 +6405,19 @@ pub(crate) fn set_parameter_value_impl(
             return Err(ParameterWriteError::Conflict(PROJECT_CHANGED.into()));
         }
     }
+    // Bind all preparation to the state before panel validation, including
+    // legacy unbound callers. A revision change (even edit + undo) invalidates it.
+    let (base, source_revision, source_incarnation) = {
+        let project = state.project.lock().expect("state mutex poisoned");
+        (
+            project
+                .as_ref()
+                .ok_or_else(|| ParameterWriteError::Refused("no project open".into()))?
+                .clone(),
+            current_project_revision(state),
+            state.project_incarnation.load(Ordering::Relaxed),
+        )
+    };
     let before = assemble_parameter_panel(state, device_id, language)
         .map_err(ParameterWriteError::Refused)?;
     let program_id = before.program_id.clone().ok_or_else(|| {
@@ -6427,46 +6500,56 @@ pub(crate) fn set_parameter_value_impl(
     validate_kind_and_bounds(view, &raw).map_err(ParameterWriteError::Refused)?;
 
     let device = knx_core::DeviceId(device_id);
-    // `apply`-style commit, but the id of a new row is allocated on the copy
-    // that is persisted, and the existing row is found in whichever
-    // installation holds it (never `installations.first()` by assumption):
-    // a refused, stale or unpersisted write spends no id.
+    // Prepare on a copy, without holding the project and catalogue locks
+    // together. Publishing rechecks the exact source and revision binding.
+
+    let existing = knx_core::stored_parameter_instance(&base, device, &ets_id)
+        .map_err(|error| ParameterWriteError::Refused(error.to_string()))?;
+    let mut ids = base.ids.clone();
+    let planned_id = match existing {
+        Some(id) => id,
+        None => ids
+            .next_parameter_instance_id()
+            .map_err(|error| ParameterWriteError::Refused(error.to_string()))?,
+    };
+    let parameter = knx_core::Command::SetParameterValue {
+        id: planned_id,
+        device,
+        ets_id: ets_id.clone(),
+        raw: raw.clone(),
+    };
+    let cmd_name = command_name(&parameter);
+    let (cmd, object_diagnostics) = {
+        let products = state
+            .product_db
+            .as_ref()
+            .ok_or_else(|| ParameterWriteError::Refused("no product database configured".into()))?
+            .lock()
+            .expect("state mutex poisoned");
+        crate::parameter_objects::include_missing(
+            &products,
+            &base,
+            device,
+            parameter,
+            ids,
+            &program_id,
+        )
+        .map_err(ParameterWriteError::Refused)?
+    };
     let tree = {
         let mut guard = state.project.lock().expect("state mutex poisoned");
         let project = guard
             .as_mut()
             .ok_or_else(|| ParameterWriteError::Refused("no project open".into()))?;
-        if let Some(binding) = &binding {
-            if !binding.is_current(state) {
-                return Err(ParameterWriteError::Conflict(PROJECT_CHANGED.into()));
-            }
+        if *project != base
+            || current_project_revision(state) != source_revision
+            || state.project_incarnation.load(Ordering::Relaxed) != source_incarnation
+            || binding.as_ref().is_some_and(|b| !b.is_current(state))
+        {
+            return Err(ParameterWriteError::Conflict(PROJECT_CHANGED.into()));
         }
-        let existing = knx_core::stored_parameter_instance(project, device, &ets_id)
-            .map_err(|error| ParameterWriteError::Refused(error.to_string()))?;
-        let planned_id = match existing {
-            Some(id) => id,
-            None => project
-                .ids
-                .clone()
-                .next_parameter_instance_id()
-                .map_err(|error| ParameterWriteError::Refused(error.to_string()))?,
-        };
-        let cmd = knx_core::Command::SetParameterValue {
-            id: planned_id,
-            device,
-            ets_id: ets_id.clone(),
-            raw: raw.clone(),
-        };
         let cmd_desc = format!("{cmd:?}");
-        let cmd_name = command_name(&cmd);
         commit_locked(state, project, &cmd_name, &cmd_name, cmd_desc, |p, s| {
-            if existing.is_none() {
-                let allocated = p
-                    .ids
-                    .next_parameter_instance_id()
-                    .map_err(|error| error.to_string())?;
-                debug_assert_eq!(allocated, planned_id);
-            }
             s.do_command(p, cmd).map_err(|e| e.to_string())
         })
         .map_err(ParameterWriteError::Refused)?
@@ -6474,6 +6557,11 @@ pub(crate) fn set_parameter_value_impl(
 
     let mut panel =
         parameter_panel_impl(state, device_id, language).map_err(ParameterWriteError::Refused)?;
+    for diagnostic in object_diagnostics {
+        if !panel.diagnostics.contains(&diagnostic) {
+            panel.diagnostics.push(diagnostic);
+        }
+    }
     panel.tree = Some(tree);
     Ok(panel)
 }

@@ -79,6 +79,20 @@ a fresh offline build passes all five checks, including 205 ledger rows. These
 failed environment attempts remain in private evidence, not counted as acceptance.
 Static added-line security scan finds no secret assignments, shell injection,
 dynamic execution or unsafe deserialization. Self-review has no open blocking
-findings. Actual-merge gate, publication and live Actions execution are PENDING. Local unit success and real API reads do not certify remote write
+findings. Actual merged gate also passes all nine stages with unchanged 2940 source
+identities. Feature `2c5ea8327c51df5d97b2fc384d68b9ba9dd2998b` is integrated as
+`7c67bb8d7febeae208913ca7669432d4671e8422`; feature and merge trees match exactly.
+The accepted merge is published with exact local/tracking/live tip equality.
+Actual maintained GitHub workflow `38885828890` completes successfully on that
+merge, runs 59 tests twice and reconciles real public counters without a new
+snapshot/no-op commit. Exact published JSON/page/README readback matches.
+Real migration preserves the prior complete completion-award/notification ledger:
+thengsty changes from 304 to 329 XP (+25 for one merged PR); hagbardZ stays 18.
+Independent browser observation (not independent code review) via isolated
+Chromium verifies all 13 headers and both real rows at 1440/400px. Table scrolls
+142/820px respectively to expose the rightmost PR/XP-source columns; left/right/
+narrow screenshots inspected. The real-profile browser helper was blocked by the
+user's open Edge profile; it was not closed/reconfigured, and the isolated CLI
+browser succeeds and is closed. No PR head execution or new public comments. Local unit success and real API reads do not certify remote write
 permissions or workflow execution. Full Rust/web/private-corpus/hardware gates
 are not claimed for this repository-tooling-only change.

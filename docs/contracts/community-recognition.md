@@ -177,3 +177,15 @@ backfill without duplicate notices and scoring-opt-out/marker-trust separation.
 The full tools run has 163 tests with one inherited skip. Branch and merged
 scoped gates pass. Real GitHub workflow `38694177327` completes successfully
 on published source `fe1f4101`, including verification and live reconciliation.
+
+16 October 2026 PR amendment: 59 community tests and 175 full tools tests
+(one inherited skip) pass. Frozen branch and actual-merge scoped gates each
+pass all nine stages, with all 2940 source identities unchanged. Freshly built
+repository checks pass (the pre-existing xtask binary was stale). Actual GitHub
+workflow `38885828890` succeeds on published runtime merge `7c67bb8d`, including
+59-test verification and real reconciliation. Public Chromium checks at
+1440/400px verify all 13 table headers, both observed contributors, PR counters,
+earned medals, totals and reachable horizontal table scrolling. Existing
+completion awards/notification flags are exactly preserved during real migration.
+No application build, Rust workspace, private-corpus, hardware or release gate
+is claimed by this repository-tooling-only acceptance.

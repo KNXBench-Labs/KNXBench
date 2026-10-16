@@ -1,7 +1,7 @@
 # Offline source-to-download stop lines — 16 October 2026
 
-This bounded continuation starts at published `6eb9178e`, not the stale selected
-root. P5/P6, System300 property tables and the exact UP258 checksum correction
+This bounded continuation was inspected from published `6eb9178e` and implemented
+on the scoped claim `c3744595`, not the stale selected root. P5/P6, System300 property tables and the exact UP258 checksum correction
 are already published ancestors; they are not reimplemented or reaccepted here.
 The new [explicit-bitfield correction](../contracts/offline-explicit-parameter-bits.md)
 uses existing import/evaluation/encoding code. It does not resolve the following
@@ -55,3 +55,14 @@ private source. It supplies no new device/firmware evidence. A new defining sour
 can reopen only its evidenced slice; no manufacturer contact or vendor execution
 is required. Field compatibility and recovery effectiveness remain later,
 separately authorised real-device work, not the only current blockers.
+
+## Delivery readback
+
+The bounded direct-bit/source-integrity correction is published as actual merge
+`a22a6602`. Its15stage scoped acceptance includes ProductDB935/0,
+three explicit original-source regressions and152/152regular private tests
+in33targets; unchanged originals, existing positive goldens and source/input
+commitments are checked. The earlier151/152private assertion failure remains
+historical evidence, not a pass. No new complete real-source image, complete
+source plan, public execution permission or device/firmware verification follows.
+All dependency stop lines above remain open for the specifically named rules.

@@ -24,7 +24,58 @@
     "historical_pre_guard_candidates": 2,
     "historical_pre_guard_whole_segment_comparisons": 4
   },
-  "integration_acceptance": "pending",
+  "integration_acceptance": {
+    "status": "passed and source published",
+    "revision": "a22a66027d374f9afc1a3924d6263986a7e84f51",
+    "stages": 15,
+    "productdb": {
+      "reports": 56,
+      "passed": 935,
+      "failed": 0,
+      "ignored": 29
+    },
+    "source_regressions": {
+      "original-system1": {
+        "reports": 1,
+        "passed": 1,
+        "failed": 0,
+        "ignored": 0
+      },
+      "original-relative": {
+        "reports": 1,
+        "passed": 1,
+        "failed": 0,
+        "ignored": 0
+      },
+      "exact-public-system2": {
+        "reports": 1,
+        "passed": 1,
+        "failed": 0,
+        "ignored": 0
+      }
+    },
+    "regular_private_corpus": {
+      "passed": 152,
+      "expected": 152,
+      "targets": 33,
+      "profile": "release",
+      "selection": "unchanged regular corpus inventory, not a subset"
+    },
+    "all_source_git_external_inputs_frozen": true,
+    "repository_source_files": 2952,
+    "external_file_inputs": 527,
+    "owning_all_target_clippy": "passed",
+    "owning_build": "passed",
+    "format_documentation_five_repository_checks_and_whitespace": "passed",
+    "public_positive_golden_assertions_unchanged": true,
+    "source_publication": {
+      "local": "a22a66027d374f9afc1a3924d6263986a7e84f51",
+      "tracking": "a22a66027d374f9afc1a3924d6263986a7e84f51",
+      "live": "a22a66027d374f9afc1a3924d6263986a7e84f51",
+      "readback_at": "2026-10-16T18:09:04.091488+02:00"
+    },
+    "full_workspace_or_web_gate": false
+  },
   "public_admission_changed": false,
   "source_translator_or_recovery_added": false,
   "new_simulated_complete_source_plans": 0,
@@ -85,6 +136,16 @@
       "source_git_external_inputs_frozen": true,
       "publisher_refused_before_git_write": true,
       "correction": "exact LegacyPatchAlways refusal, source presence and DB invariance; retain all 21 steps/metadata/not-executable checks; production unchanged"
+    },
+    {
+      "revision": "a22a66027d374f9afc1a3924d6263986a7e84f51",
+      "status": "passed; published with exact local/tracking/live equality",
+      "stages": 15,
+      "corpus_passed": 152,
+      "corpus_expected": 152,
+      "corpus_targets": 33,
+      "corpus_profile": "release",
+      "source_git_external_inputs_frozen": true
     }
   ],
   "all_family_trial_acceptance": {
@@ -104,7 +165,7 @@
     "retained_attempt2": "sole final refusal was extra blank EOF in owned log; eight-stage documentation delta subsequently passed with runtime equivalence"
   },
   "final_guarded_acceptance": {
-    "status": "scoped branch passed; actual integration pending",
+    "status": "scoped branch accepted; final merged acceptance is recorded separately",
     "stages": 12,
     "productdb_passed": 935,
     "productdb_failed": 0,
@@ -138,6 +199,6 @@
     "all_21_source_steps_and_nonexecutable_checks_retained": true,
     "observed_release_test_seconds": 64.58,
     "previous_debug_failure_seconds": 595.14,
-    "final_merged_acceptance": "pending"
+    "final_merged_acceptance": "passed in final full regular corpus"
   }
 }

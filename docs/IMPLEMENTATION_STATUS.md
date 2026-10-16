@@ -35,8 +35,11 @@ fragment aliases and update this index. Do not rewrite previous results.
   or superseded, never final acceptance. The actual scoped corpus initially
   returned151/152solely at the historical private-System2 first-refusal assertion;
   its strict exact-diagnostic/presence/DB-invariance correction passes ten focused
-  stages without production changes. Final actual integration/private corpus and
-  publication remain pending;
+  stages without production changes. Actual merge`a22a6602`passes15/15,
+  ProductDB935/0/29ignored, three explicit source regressions and the full regular
+  private corpus152/152in33targets (release). Source is published with exact
+  local/tracking/live readback; earlier151/152and interrupted attempts remain
+  separate, not relabelled GREEN. No whole-workspace/web acceptance is claimed;
   [evidence](evidence/explicit-source-bits-2026-10-16.json).
 
 - 2026-10-16 — Community PR credit comments extend the existing notification

@@ -1,7 +1,7 @@
 {
   "date": "2026-10-16",
   "scope": "P5explicit offline0012/DefaultProcedure Type1source image;not executable device support",
-  "state": "nineteen-branch-stages-accepted-actual-merged-gates-pending",
+  "state": "integrated-published-twenty-actual-merged-stages-accepted",
   "baseline": {
     "realSources": 3,
     "newImageSupport": false
@@ -57,8 +57,40 @@
     "attempt": "branch-gate1",
     "runtimeSourceManifestVerified": true
   },
-  "mergedAcceptance": "pending",
-  "published": false,
+  "mergedAcceptance": {
+    "merge": "ccfe5b74353d6a04dc822c416f5dc61bba1a2b1f",
+    "stagesPassed": 20,
+    "rust": {
+      "passed": 4687,
+      "failed": 0,
+      "ignored": 209,
+      "targets": 345
+    },
+    "vitest": {
+      "passed": 3626,
+      "failed": 0,
+      "files": 263
+    },
+    "corpus": {
+      "passed": 152,
+      "selected": 152,
+      "targets": 33,
+      "networkIsolated": true
+    },
+    "sourcePaths": 2931,
+    "externalFiles": 6,
+    "sourceExternalGitVerified": true,
+    "relativeSourcesVerified": 3,
+    "system1SourceRefusals": 13,
+    "realSystem1ImagesAccepted": 0,
+    "corpusLinksRemoved": true,
+    "attempt": "merged-gate1"
+  },
+  "published": {
+    "runtimeRevision": "ccfe5b74353d6a04dc822c416f5dc61bba1a2b1f",
+    "exactLocalTrackingLiveEqualityVerified": true,
+    "selectedRootSynchronized": false
+  },
   "limitations": [
     "No complete real-product System1image",
     "No interpreted FixupList or proven ambiguous source encoding",

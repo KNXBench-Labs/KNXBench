@@ -14,7 +14,7 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
-- 2026-10-16 — P5 local System-1 image candidate: explicit0012/DefaultProcedure
+- 2026-10-16 — P5 bounded System-1 image entry published as `ccfe5b74`:0012/DefaultProcedure
   library entry reuses actual evaluation and Core Type-1/indexed association
   codecs, protects original source pointers and refuses unmodeled FixupList.
   Nine targeted tests,926owning ProductDB tests and all-target Clippy pass;
@@ -23,8 +23,10 @@ fragment aliases and update this index. Do not rewrite previous results.
   complete real-product images:7FixupList/5default-bit/1mid-octet-Union. Initial
   omission-success is withdrawn. All nineteen branch stages pass: Rust4687/0/209ignored
   in345targets, Vitest3626/263files;2931source paths and six selected external
-  input commitments match. Actual merged acceptance and publication pending; no
-  new executable mask/plan/recovery or device support.
+  input commitments match. All twenty actual merged stages also pass with the
+  same Rust/Web totals and isolated corpus152/152 in33targets. Published exact
+  accepted merge with local/tracking/live main equality verified; no new
+  executable mask/plan/recovery or device support.
   [Contract](contracts/offline-download-system1-image.md) ·
   [Evidence](evidence/offline-system1-image-2026-10-16.json).
 

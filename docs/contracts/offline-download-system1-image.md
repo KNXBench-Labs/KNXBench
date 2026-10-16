@@ -1,6 +1,9 @@
 # System-1 source-image assembly: offline contract
 
-Status: all nineteen branch stages accepted; actual merged acceptance and publication pending.
+Status: integrated and published as `ccfe5b74`; all nineteen branch and twenty
+actual merged stages accepted, including isolated corpus152/152 in33targets.
+Exact local/tracking/live main equality verified. This result-only closure
+retains runtime acceptance at that merge; it does not admit real-source images.
 Nine targeted image tests, the owning ProductDB suite and Clippy pass. The
 explicit private regression verifies thirteen named refusals in two packages;
 this is **zero accepted complete real-source images**, not thirteen supported

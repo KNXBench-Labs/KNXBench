@@ -127,8 +127,9 @@ Status is deliberately per capability; issue #22 and broader KL-007 remain open.
   corpus152/152 in33targets; exact main equality verified. No executable
   procedure/recovery or mask admission.
 
-- P6: local [shared fixup-declaration guard](source-fixup-integrity.md) prevents
+- P6: integrated and published `39c88aba` [shared fixup-declaration guard](source-fixup-integrity.md) prevents
   Easy3/System-2 partial artifacts as well as System-1. Two named runtime REDs,
   owning928tests and Clippy pass; all nineteen branch stages accepted. Actual
-  merged acceptance/publication pending. Source/master
+  merged twenty-stage acceptance passes, including isolated corpus152/152 in33
+  targets, with exact publication/readback verified. Source/master
   correlations do not supply the missing fixup transformation/no-op contract.

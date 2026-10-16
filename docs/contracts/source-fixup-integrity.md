@@ -1,7 +1,11 @@
 # Fixup declarations: shared image integrity boundary
 
-P6 passes all nineteen branch stages; actual merged acceptance and publication
-remain pending.
+P6 is integrated and published as `39c88aba`. All nineteen branch and twenty
+actual merged stages pass, including isolated corpus152/152 in33targets. The
+first interrupted merge attempt remains unaccepted; a fresh full run covers the
+final integration including current community documentation. Local/tracking/live
+main equality was verified. This session closes here; follow-up semantics remain
+separate work, not implied by passing integrity tests.
 The three public ProductDB image entries (`build_download_image`,
 `build_system1_image`, `build_system2_image`) share one source guard before
 parameter evaluation or image assembly. A retained direct `Static/FixupList`
@@ -26,7 +30,9 @@ Existing System-1 regressions retain their exact diagnostic and source boundary.
 The ordinary owning ProductDB suite passes928/0 with28ignored across56targets;
 all-target Clippy passes. The complete branch gate also passes: Rust4689/0
 (209ignored in345targets), Vitest3626/263files;2934source paths and six selected
-external/Git commitments verified. This is not actual merged acceptance.
+external/Git commitments verified. The actual final merged run verifies those
+same counts and commitments plus isolated corpus152/152. No source transformation
+support is inferred from this acceptance.
 
 Family-specific diagnostics remain `Unsupported`; early refusal intentionally
 precedes unrelated parameter/placement errors. No public mask, protocol, source

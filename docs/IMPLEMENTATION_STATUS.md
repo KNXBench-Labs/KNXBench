@@ -29,10 +29,20 @@ and source snapshots remained unchanged. The integrated built shell also passed
 the four new configuration browser cases. Full tracked frontend and tooling
 inputs match the accepted feature tree exactly, so web results retain their
 original provenance rather than being represented as a new merged execution.
-Publication is tracked separately from this tested-source record.
+The tested source was published with result-only documentation as `8e121074`;
+this is a source delivery, not a new packaged release or deployment.
 See [the editing contract](contracts/parameter-object-refresh.md).
 
 ## Recent deliveries
+
+- 2026-10-16 — Workbench configuration source delivery: independently foldable
+  navigation, consolidated File groups, manufacturer-declared operating-mode
+  dropdowns beside objects, parameter blocks, and atomic parameter-driven
+  missing-object reconciliation. Actual merged workspace 4,724/0, private corpus
+  152/152; component 3,632/0 and reconciled browser 911/0 with original provenance.
+  New module-instance construction and unsupported manufacturer scripts remain
+  explicit limitations. No physical bus, ETS-export or packaged-release claim.
+
 
 - 2026-10-16 — Explicit direct-Memory numeric fields entirely inside one octet
   now replace template bits without requiring default equality, reusing the

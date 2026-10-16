@@ -328,7 +328,12 @@ post a second award notice for the same issue.
 PR counters, XP and medals follow the current API state. Reopening a closed
 unmerged PR returns it to submission XP; merging it replaces, rather than stacks,
 the closed-unmerged bonus. A removed PR stops counting. Historical PRs count
-immediately, without posting PR award comments or changing issue notices.
+immediately. With notifications enabled, each eligible PR receives one automatic
+credit comment: PR XP and its calculation, board total, rank/title, counters,
+XP sources and earned medals. The same comment is updated on later refreshes;
+unchanged content is left alone. Open/reopen, merge and closed-without-merge
+states use their current points, never stacked bonuses. Existing issue notices
+are not replayed. Historical PRs receive this comment too.
 
 This page and the README refresh on issue/reply and PR lifecycle events and daily, with manual
 refresh available. GitHub API or permission failures fail the job rather than
@@ -386,18 +391,84 @@ def notify_pending(snapshot, api):
         award["notified"] = True
 
 
+def pull_request_note(snapshot, pull):
+    who = pull["user"]["login"]
+    target = next(row for row in snapshot["contributors"] if row["login"].casefold() == who.casefold())
+    policy = snapshot["policy"]
+    base = policy["pull_request_xp"]
+    if pull["merged_at"] is not None:
+        state, bonus, label = "Merged", policy["pull_request_merged_xp"], "merge bonus"
+    elif pull["state"] == "closed":
+        state, bonus, label = "Closed without merge", policy["pull_request_closed_xp"], "participation bonus"
+    else:
+        state, bonus, label = "Open", 0, "outcome bonus"
+    medals = " · ".join(f"🏅 {name}" for name in target["medals"]) or "None yet — the trophy cabinet is warming up."
+    xp = target["xp_breakdown"]
+    return (f"🏅 **PR credit for @{who}: {base + bonus} XP total for this PR**\n\n"
+            f"**Status: {state}** · {base} submission + {bonus} {label}.\n"
+            "Outcome bonuses replace one another; they never stack.\n\n"
+            f"**Total: {target['xp']} XP · Title: {target['rank']['title']}**\n"
+            f"{target['issues']} issues · {target['replies']} replies · {target['resolutions']} completed reports.\n"
+            f"{target['pull_requests']} PRs · {target['pull_requests_open']} open · "
+            f"{target['pull_requests_merged']} merged · {target['pull_requests_closed']} closed without merge.\n\n"
+            f"**XP sources:** {xp['issues']} issue + {xp['replies']} reply + "
+            f"{xp['resolutions']} completion + {xp['pull_requests']} PR.\n\n"
+            f"**Medals earned:** {medals}\n\n"
+            "This comment follows the latest board refresh; reopening returns this PR to submission XP.\n"
+            "Thanks for helping KNXBench — every patch deserves a little bus applause.\n\n"
+            f"[Bug Hunters’ Hall of Fame](https://github.com/{snapshot['repository']}/blob/HEAD/docs/community/HALL_OF_FAME.md)\n\n"
+            f"<!-- knxbench-pr-credit:{pull['number']} -->")
+
+
+def notify_pull_requests(snapshot, pulls, api):
+    excluded = validate_policy(snapshot["policy"])
+    trusted_authors = {value.casefold() for value in snapshot["policy"].get("trusted_notice_logins", [])}
+    for pull in sorted(unique(pulls, "id"), key=lambda item: item["number"]):
+        who = participant(pull.get("user"), excluded)
+        if who is None:
+            continue
+        number = positive(pull["number"])
+        marker = f"<!-- knxbench-pr-credit:{number} -->"
+        comments = [comment for comment in unique(api.get_comments(number), "id")
+                    if comment.get("user") and marker in comment.get("body", "") and
+                    (comment["user"].get("login", "").casefold() in trusted_authors or
+                     (comment["user"].get("login") == BOT and comment["user"].get("type") == "Bot"))]
+        if len(comments) > 1:
+            raise ValueError("multiple trusted PR credit comments; refusing ambiguous update")
+        body = pull_request_note(snapshot, pull)
+        # Re-read the exact target after comment discovery and before any write.
+        live = api.get_pull_request(number)
+        if (any(live.get(key) != pull.get(key) for key in
+                ["id", "number", "state", "merged_at", "closed_at"]) or
+                any((live.get("user") or {}).get(key) != pull["user"].get(key)
+                    for key in ["id", "login", "type"])):
+            continue  # Repository changed during this observation; next run reconciles.
+        if comments and comments[0]["body"] == body:
+            continue
+        if comments:
+            cid = positive(comments[0]["id"])
+            posted = api.edit_comment(cid, body)
+            if posted.get("id") != cid:
+                raise ValueError("PR credit update returned a different target")
+        else:
+            posted = api.post_comment(number, body)
+        receipt = api.get_comment(positive(posted["id"]))
+        if receipt.get("id") != posted["id"] or receipt.get("body") != body:
+            raise ValueError("PR credit comment did not pass exact readback")
+
+
 class GitHub:
     def __init__(self, repository):
         if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repository):
             raise ValueError("invalid repository identifier")
         self.repository = repository
 
-    def api(self, endpoint, *, pages=False, body=None):
+    def api(self, endpoint, *, pages=False, body=None, method="POST"):
         command = ["gh", "api", endpoint]
         if pages:
             command += ["--paginate", "--slurp"]
         if body is not None:
-            command += ["--method", "POST", "--input", "-"]
+            command += ["--method", method, "--input", "-"]
         result = subprocess.run(command, input=json.dumps({"body": body}) if body is not None else None,
                                 text=True, capture_output=True, check=True, timeout=180)
         payload = json.loads(result.stdout)
@@ -409,6 +480,13 @@ class GitHub:
 
     def get_issue(self, number):
         return self.api(f"repos/{self.repository}/issues/{positive(number)}")
+
+    def get_pull_request(self, number):
+        return self.api(f"repos/{self.repository}/pulls/{positive(number)}")
+
+    def edit_comment(self, cid, body):
+        return self.api(f"repos/{self.repository}/issues/comments/{positive(cid)}",
+                        body=body, method="PATCH")
 
     def get_comments(self, number):
         return self.api(f"repos/{self.repository}/issues/{positive(number)}/comments?per_page=100", pages=True)
@@ -442,7 +520,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument("--repository", default="KNXBench-Labs/KNXBench")
-    parser.add_argument("--notify", action="store_true", help="publish pending completion-credit comments")
+    parser.add_argument("--notify", action="store_true", help="publish issue completion and reconcile PR credit comments")
     args = parser.parse_args()
     policy = json.loads((args.root / "docs/community/hall-of-fame-policy.json").read_text())
     old_file = args.root / "docs/community/hall-of-fame.json"
@@ -459,6 +537,7 @@ def main():
     replace_readme((args.root / "README.md").read_text(), snapshot)
     if args.notify:
         notify_pending(snapshot, api)
+        notify_pull_requests(snapshot, pulls, api)
     write_outputs(args.root, snapshot)
     print(json.dumps({"contributors": len(snapshot["contributors"]), "generated_at": snapshot["generated_at"],
                       "issues": sum(row["issues"] for row in snapshot["contributors"]),

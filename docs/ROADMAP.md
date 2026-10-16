@@ -4,8 +4,8 @@
 
 A new explicit continuation after the P6 session closure starts a bounded
 [System-300 S-mode property-table prerequisite](contracts/offline-system300-property-tables.md).
-Local codec and branch runtime checks pass with separately reconciled generated
-whitespace; actual merged acceptance/publication are pending. It reuses Type6
+Published as `af9431cb` after19actual merged stages, including isolated corpus152/152;
+earlier branch generated-whitespace reconciliation remains separate. It reuses Type6
 bytes, not a SystemB family admission. Discovery/source mapping, property-service
 framing, complete loading and whole-mutation recovery remain separate next slices.
 

@@ -14,7 +14,7 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
-- 2026-10-16 — Local System-300 S-mode property-table image adapter: reuse existing
+- 2026-10-16 — System-300 S-mode property-table image adapter published as `af9431cb`: reuse existing
   Type6 link validation/encoding, separate immutable length/element payloads,
   explicit format and capacity. Intended missing-module RED, twelve literal/
   boundary/negative tests and owning Core862/0/0ignored in19targets pass;
@@ -23,8 +23,13 @@ fragment aliases and update this index. Do not rewrite previous results.
   Rust4701/0/210ignored in347targets, Vitest3626/263files,17actual stages exit0;
   final whitespace failed solely on12regenerated bindings. Exact initial full
   source/Git restored, corrected whitespace passes; original refusal retained.
-  Actual merged acceptance/publication are pending. No source translator, executable route or hardware
-  admission. [Contract](contracts/offline-system300-property-tables.md).
+  All19actual merged stages pass on `782dbafd`: Rust4701/0/210ignored in347targets,
+  Vitest3626/263files, isolated corpus152/152 in33targets;2943source/Git and487
+  external commitments match. Publication adds only a foreign handover with full
+  runtime equality and seven checks; exact main readback verified. No source
+  translator, executable route or hardware admission.
+  [Contract](contracts/offline-system300-property-tables.md) ·
+  [Evidence](evidence/offline-system300-property-tables-2026-10-16.json).
 
 - 2026-10-16 — Community Hall of Fame includes PR authors, total/open/merged/
   closed-unmerged counts, explicit XP sources and earned-only PR/merge medals.

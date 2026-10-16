@@ -122,7 +122,9 @@ Status is deliberately per capability; issue #22 and broader KL-007 remain open.
   reuse the existing Type6 validator/encoder with separate length/element framing.
   Twelve focused tests and owning Core862/0/0ignored in19targets plus Clippy pass
   locally; branch runtime acceptance is reconciled after generated-whitespace
-  restoration (Rust4701/0,Web3626). Actual merged acceptance/publication are pending. Discovery, source mapping,
+  restoration (Rust4701/0,Web3626). Published as `af9431cb` after19actual merged
+  stages, isolated corpus152/152 and exact main readback; full source/external
+  commitments verified. Discovery, source mapping,
   service framing, full loading and whole-mutation recovery remain unimplemented
   by this prerequisite. No SystemB or other family admission is inferred.
 

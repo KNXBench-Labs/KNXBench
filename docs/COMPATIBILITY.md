@@ -4,9 +4,10 @@
 
 [The offline S-mode table adapter](contracts/offline-system300-property-tables.md)
 separates property-array length from elements and reuses the explicit Type6
-association grammar. Twelve focused tests/862Core tests and Clippy pass locally;
-branch runtime acceptance is reconciled after generated-whitespace restoration;
-actual merged acceptance/publication remain pending. Counts and literal bytes do not prove
+association grammar. Published as `af9431cb` after19actual merged stages pass,
+including Rust4701/0, Web3626 and isolated corpus152/152. Earlier branch runtime
+acceptance is separately reconciled after generated-whitespace restoration.
+Twelve focused tests/862Core tests and Clippy pass. Counts and literal bytes do not prove
 source/target/format discovery, property-service capacity, executable loading,
 recovery or real-device support. Empty tables retain acceptance/default mappings,
 not disabled communication. No mask, schema or public write route changes.

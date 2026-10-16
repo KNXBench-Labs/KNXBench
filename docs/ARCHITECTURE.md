@@ -1,5 +1,14 @@
 # Architecture
 
+## Pure offline System-B table codec (16 October 2026 source)
+
+Core now supplies an explicitly selected Type-7 / Format-1 group-object codec,
+reusing existing flags/priority and the legacy value-type subset. It has no XML,
+storage, networking or UI dependency. Product table selection, relative-image
+assembly, executable planning and whole-mutation recovery are not implemented by
+this codec; the existing public image/planner admission is unchanged.
+[Contract](contracts/offline-systemb-object-table.md).
+
 ## Normalized offline property simulation (16 October 2026 source)
 
 Core's immutable property-plan model validates explicit normalized operations and

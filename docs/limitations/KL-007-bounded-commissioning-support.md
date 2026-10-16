@@ -6,6 +6,15 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Offline System-B table boundary (16 October 2026 source)
+
+[The independent Format-1 object-table codec](../contracts/offline-systemb-object-table.md)
+is a pure byte prerequisite, not a product image, executable plan or recovery
+implementation. Explicit initial-read selection and extended types do not grant
+new mask admission. Three measured real-source AP1 results remain partial and
+non-executable; relative images, source scopes/substitutions and complete durable
+property/memory/setup/allocation recovery remain open. No new hardware support.
+
 ## Normalized simulation boundary (16 October 2026 source)
 
 [The P3a normalized property-plan simulator](../contracts/offline-property-plan-simulation.md)

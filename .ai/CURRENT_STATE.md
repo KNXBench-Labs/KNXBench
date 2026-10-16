@@ -1,4 +1,28 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-16 07:12
+- **Completed:** P4d branch retry proc_655826ba44db/PID2804063 accepted all18actual stages: Rust4678/0/208ignored in343targets, Vitest3626/263files, both explicit source regressions and workspace checks. All2922source paths, source packages/oracle and Git fingerprints verified unchanged. First branch failure retained (Net diagnostic snapshot refusal); no test weakening or source change. Result-only docs updated after acceptance; original runtime receipt remains authoritative.
+- **Pending/Next Steps:** Verify complete runtime equality after docs-only edits, docs/five checks/whitespace; focused12path commit as KNXBench. Fresh unchanged origin/main28f8ccb1; non-FF integration and actual19stage merged gate with selected isolated corpus follow. No merged/publication acceptance yet.
+- **Notes for Codex oder Claude:** P4d explicit complete descriptor codec only; no source/profile/image/plan/recovery/new mask. Private receipts profile scratch offline-download-20261015/p4d. Selected dirty root1817fb2a preserved; no hardware/vendor/subagents. No worker active until actual merge dispatch.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-16 06:41
+- **Completed:** P4d build_complete implemented with six literal/boundary tests after observed missing-API RED; capacity-padding mutant rejected and exact source restored. Ten prior rewrite tests remain green. Separate self-review no critical/important/security findings; minor diagnostic wording corrected/rechecked. Reviewed Core850/0/0ignored in18targets; owning all-target Clippy/format and nine owning/repository preflights pass. Docs/evidence/log updated with explicit no-product/profile/image/plan/recovery boundaries.
+- **Pending/Next Steps:** Dispatch full frozen18stage branch acceptance from this exact prepared candidate; actual worker state is authoritative in profile scratch offline-download-20261015/p4d/branch-gate1/receipt.json. Then reviewed focused commit, fresh non-FF actual merged gate with selected isolated corpus, publication/readback/archive/owned retirement. No branch/full acceptance claimed yet.
+- **Notes for Codex oder Claude:** Clean feature base28f8ccb1; root dirty/stale preserved. P4c published and archived. No hardware/vendor/subagents/new mask/schema/UI/transport/dependency. Current Runtime API is explicit pure table constructor; complete real-product relative images and source substitution still open.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-16 06:35
+- **Completed:** P4c closure28f8ccb1 confirmed published; original Resources03_05_01v01.10.01 pages270–272 rendered and visually inspected for P4d. Format1 contains a two-octet count followed by a complete one-based descriptor array; explicit fields/flags are defined. Existing Core only rewrites a supplied template; selected source declares generated tables without one.
+- **Pending/Next Steps:** P4d bounded implementation: build_complete for an explicitly complete descriptor set and explicit caller capacity, reusing existing SystemB rewrite validation/encoding. Reject holes, duplicate/out-of-range indices and count/capacity overflow; no implicit disabled descriptors. Add observed RED/GREEN, independent literal/width/disabled-flag tests, mutation proof, owning tests/Clippy, self-review and full branch/merged acceptance.
+- **Notes for Codex oder Claude:** This is one generated-table prerequisite, not ProductDB/profile mapping or full image/plan/recovery. Unknown modern source scope/substitution and07B0binding remain blocked. No public route/mask/schema/dependency/UI/transport change; no hardware/vendor/subagents. Licensed renders private. Root dirty checkout preserved.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-16 06:27
 - **Completed:** P4c feature8e255275 integrated and published as actual accepted mergec74038cd135ca157ffb6117c7303a7725eb4a5cc. All19merged stages pass: Rust4672/0/208ignored in342targets, Vitest3626/263files, isolated selected corpus152/152 in33targets, both explicit source regressions. Complete2919path, external oracle/package and Git fingerprints match. Exact local/tracking/live main equality verified; protected root HEAD/index/non-handover bytes unchanged, corpus links removed. No new product image/plan/recovery/mask or hardware support.
 - **Pending/Next Steps:** Documentation-only closure: verify complete runtime equality to tested c74038cd, docs/repository gates, commit/push/readback. Then private byte-verified evidence archive and exact stopped owned P4c worktree/branch/target retirement. Continue ACTIVE offline expansion with smallest source-bound image/translation slice; source semantics and complete recovery remain explicit prerequisites, not hardware-only blockers.

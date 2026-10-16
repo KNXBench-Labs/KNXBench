@@ -1,4 +1,4 @@
-//! Pure System-B Format-1 group-object rewriting without product or download admission.
+//! Pure System-B Format-1 group-object encoding without product or download admission.
 //!
 //! Resources 03_05_01 v01.10.01 §4.18.6.2.4.1, Tables 86–88,
 //! printed/PDF pp. 271–272: a two-octet length followed by two-octet
@@ -65,9 +65,16 @@ pub struct ActiveObject {
     pub value_type: ValueType,
 }
 
-/// Why the entire rewrite was refused; no object is silently discarded.
+/// Why a table operation was refused; no object is silently discarded.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TableError {
+    /// The complete descriptor set exceeds caller capacity or the count width.
+    TooManyObjects {
+        /// Number of supplied descriptors, never narrowed before validation.
+        count: usize,
+        /// Caller-supplied capacity, bounded by the two-octet count.
+        maximum: u16,
+    },
     /// The two-octet length is absent.
     NoHeader {
         /// Available source octets.
@@ -80,14 +87,14 @@ pub enum TableError {
         /// Available source octets.
         octets: usize,
     },
-    /// Zero is not an ASAP, or the number exceeds the source table length.
+    /// Zero is not an ASAP, or the number exceeds the table length.
     ObjectOutOfTable {
         /// Refused active object's number.
         number: u16,
-        /// Number of source descriptors.
+        /// Number of declared descriptors.
         size: u16,
     },
-    /// The active input names one object twice.
+    /// The descriptor input names one object twice.
     DuplicateObject {
         /// Repeated one-based object number.
         number: u16,
@@ -97,6 +104,10 @@ pub enum TableError {
 impl fmt::Display for TableError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::TooManyObjects { count, maximum } => write!(
+                f,
+                "System-B table has {count} descriptors, exceeding capacity {maximum}"
+            ),
             Self::NoHeader { octets } => write!(
                 f,
                 "System-B table has {octets} octets, shorter than its 2-octet length"
@@ -107,7 +118,7 @@ impl fmt::Display for TableError {
             ),
             Self::ObjectOutOfTable { number, size } => write!(
                 f,
-                "System-B object {number} is outside the source table's 1..={size} ASAPs"
+                "System-B object {number} is outside the table's 1..={size} ASAPs"
             ),
             Self::DuplicateObject { number } => {
                 write!(f, "System-B object {number} is listed twice")
@@ -117,6 +128,33 @@ impl fmt::Display for TableError {
 }
 
 impl std::error::Error for TableError {}
+
+/// Builds a complete big-endian Format-1 table without a source template.
+///
+/// Every descriptor must be supplied, including disabled objects. The input's
+/// length is the table length: unique numbers must cover precisely `1..=len`.
+/// Sparse numbers are refused rather than padded with invented descriptors.
+/// Input order does not affect output, and no trailing or reserved rows are added.
+///
+/// `maximum` is explicit caller capacity, not a discovered device capability.
+/// The existing [`ActiveObject`] carrier also represents an explicitly disabled
+/// descriptor via its flags; no activation or product-number mapping is inferred.
+/// An empty input encodes a literal zero count, not a device lifecycle operation.
+/// This function does not select a product/profile, placement or property framing.
+pub fn build_complete(descriptors: &[ActiveObject], maximum: u16) -> Result<Vec<u8>, TableError> {
+    if descriptors.len() > usize::from(maximum) {
+        return Err(TableError::TooManyObjects {
+            count: descriptors.len(),
+            maximum,
+        });
+    }
+    // The caller capacity check proves the count fits; rewrite's duplicate and
+    // range checks then prove that every allocated descriptor will be replaced.
+    let size = descriptors.len() as u16;
+    let mut base = vec![0; 2 + descriptors.len() * 2];
+    base[..2].copy_from_slice(&size.to_be_bytes());
+    rewrite(&base, descriptors)
+}
 
 /// Rewrites explicit active descriptors in a big-endian Format-1 source table.
 ///

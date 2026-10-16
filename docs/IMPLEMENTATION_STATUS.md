@@ -14,6 +14,18 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-16 — P4d complete explicit System-B object-table construction implemented
+  locally: every descriptor supplied, caller capacity distinct from emitted
+  count, no synthetic inactive slots. Six literal/boundary tests pass after
+  missing-API RED; capacity-padding mutant rejected, exact source restored.
+  Existing ten rewrite tests and owning all-target Clippy pass. All eighteen
+  branch stages pass on the unchanged retry candidate: Rust4678/0/208ignored
+  in343targets, Vitest3626/263files;2922source and external/Git commitments
+  match. First procfs-snapshot test failure retained; no test weakening. Actual
+  merged acceptance and publication pending; no product image/plan/recovery
+  or new hardware support. [Contract](contracts/offline-systemb-object-table.md#p4d-explicit-complete-construction-16-october-2026) ·
+  [Evidence](evidence/offline-systemb-complete-table-2026-10-16.json).
+
 - 2026-10-16 — P4c explicit System-B address/association codec integrated and published as `c74038cd`:
   word counts, no individual slot, one-based wide indices, explicit formats0/1
   and preserved first-match sender. Twelve literal/boundary tests pass after

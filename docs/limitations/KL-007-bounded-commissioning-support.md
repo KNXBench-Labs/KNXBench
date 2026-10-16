@@ -27,6 +27,11 @@ indices and first-match sender policy must not be replaced by an Easy-3 or
 legacy table. Original57B0merge examples do not resolve all selected07B0modern
 source substitutions. Relative image assembly and complete recovery remain open.
 
+P4d adds [complete explicit object tables](../contracts/offline-systemb-object-table.md#p4d-explicit-complete-construction-16-october-2026)
+without a retained source template; missing descriptors are refused, not padded.
+This does not resolve product-number/ASAP mapping, generated table location,
+source substitution or durable recovery. No hardware admission is widened.
+
 ## Normalized simulation boundary (16 October 2026 source)
 
 [The P3a normalized property-plan simulator](../contracts/offline-property-plan-simulation.md)

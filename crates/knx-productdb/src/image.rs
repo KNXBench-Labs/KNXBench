@@ -79,7 +79,8 @@
 //!   (`[V]`, docs/RESEARCH.md §19.1). Any other change to a masked octet is
 //!   refused.
 
-mod system2;
+mod legacy_source;
+mod system1;
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
@@ -427,20 +428,43 @@ pub fn build_system2_image(
     build_image(conn, request, ImageLayout::System2)
 }
 
+/// Builds a source-bound 0012/DefaultProcedure Type1 image for offline review.
+///
+/// Does not translate or execute the default procedure or grant device support.
+pub fn build_system1_image(
+    conn: &Connection,
+    request: &ImageRequest,
+) -> Result<DownloadImage, ImageError> {
+    build_image(conn, request, ImageLayout::System1)
+}
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum ImageLayout {
     Easy3,
+    System1,
     System2,
 }
 
 impl ImageLayout {
+    fn legacy(self) -> bool {
+        self != Self::Easy3
+    }
+
+    fn family(self) -> &'static str {
+        match self {
+            Self::Easy3 => "Easy3",
+            Self::System1 => "System1",
+            Self::System2 => "System2",
+        }
+    }
+
     fn object_shape(self) -> (usize, usize) {
         match self {
             Self::Easy3 => (
                 knx_core::commissioning::group_object_table::HEADER_OCTETS,
                 knx_core::commissioning::group_object_table::DESCRIPTOR_OCTETS,
             ),
-            Self::System2 => (2, 3),
+            Self::System1 | Self::System2 => (2, 3),
         }
     }
 }
@@ -471,7 +495,9 @@ fn build_image(
         crate::system2::project_tool_metadata(&code).map_err(|error| ImageError::Unsupported {
             what: error.to_string(),
         })?;
-        system2::table_spans(&code)?
+        legacy_source::table_spans(&code, layout)?
+    } else if layout == ImageLayout::System1 {
+        system1::table_spans(&code)?
     } else {
         Vec::new()
     };
@@ -495,12 +521,12 @@ fn build_image(
 
     // 1. Parameters.
     let group_objects = com_object_span_with_layout(&code, layout)?;
-    let defaults = if layout == ImageLayout::System2 {
+    let defaults = if layout.legacy() {
         Some(resolve_values(conn, program_id, &Default::default())?)
     } else {
         None
     };
-    let (superseded, mut inferences) = if layout == ImageLayout::System2 {
+    let (superseded, mut inferences) = if layout.legacy() {
         // No cross-family last-union-member inference: inferred placements need
         // source corroboration and overlapping alternatives still refuse.
         (BTreeSet::new(), Vec::new())
@@ -512,6 +538,12 @@ fn build_image(
             rule: "system2-source-image",
             detail: "Offline source interpretation: Type2 descriptors, indexed association slots, big-endian fields and retained source masks; not device or executable-plan evidence".into(),
             reference: "docs/contracts/offline-download-system2-image.md",
+        });
+    } else if layout == ImageLayout::System1 {
+        inferences.push(Inference {
+            rule: "system1-source-image",
+            detail: "Offline Type1 source interpretation: indexed associations, source pointers, corroborated fields and retained masks; not executable-plan or device evidence".into(),
+            reference: "docs/contracts/offline-download-system1-image.md",
         });
     }
     let mut written: BTreeMap<String, (String, Encoded)> = BTreeMap::new();
@@ -552,17 +584,20 @@ fn build_image(
                 defaults
                     .get_unscoped(parameter_ref)
                     .ok_or_else(|| ImageError::Unsupported {
-                        what: format!("{parameter_ref}: System2 source default unavailable"),
+                        what: format!(
+                            "{parameter_ref}: {} source default unavailable",
+                            layout.family()
+                        ),
                     })?;
             let default_value = types.value(parameter_ref, raw_default)?;
-            system2::validate_default(
+            legacy_source::validate_default(
                 &code,
+                layout,
                 segment_id,
                 field,
                 parameter_ref,
                 placement,
-                &default_value,
-                &value,
+                (&default_value, &value),
             )?;
         }
         let field_start = field.offset as usize;
@@ -573,7 +608,10 @@ fn build_image(
             .any(|(id, start, end)| id == segment_id && field_start < *end && *start < field_end)
         {
             return Err(ImageError::Unsupported {
-                what: format!("{parameter}: overlaps a reserved System2 table region"),
+                what: format!(
+                    "{parameter}: overlaps a reserved {} table region",
+                    layout.family()
+                ),
             });
         }
         if group_objects.as_ref().is_some_and(|(id, start, end)| {
@@ -648,10 +686,12 @@ fn build_image(
         let view = views.get(*ref_id).ok_or_else(|| ImageError::Unsupported {
             what: format!("{ref_id}: no such ComObjectRef"),
         })?;
-        if layout == ImageLayout::System2 && !matches!(view.priority.as_deref(), None | Some("Low"))
-        {
+        if layout.legacy() && !matches!(view.priority.as_deref(), None | Some("Low")) {
             return Err(ImageError::Unsupported {
-                what: format!("{ref_id}: System2 priority mapping is not established"),
+                what: format!(
+                    "{ref_id}: {} priority mapping is not established",
+                    layout.family()
+                ),
             });
         }
         let (mut object, product_read_on_init) = active_object(ref_id, view, &mut inferences)?;
@@ -663,9 +703,12 @@ fn build_image(
             .and_then(|overrides| overrides.read_on_init)
             .unwrap_or(product_read_on_init)
         {
-            if layout == ImageLayout::System2 {
+            if layout.legacy() {
                 return Err(ImageError::Unsupported {
-                    what: format!("{ref_id}: System2 ReadOnInit encoding is not established"),
+                    what: format!(
+                        "{ref_id}: {} ReadOnInit encoding is not established",
+                        layout.family()
+                    ),
                 });
             }
             inferences.push(Inference {
@@ -686,14 +729,20 @@ fn build_image(
             let table = match layout {
                 ImageLayout::Easy3 => write_group_object_table(&image.octets[*start..], &objects)
                     .map_err(ImageError::GroupObjects)?,
-                ImageLayout::System2 => knx_core::commissioning::legacy_object_table::rewrite(
-                    knx_core::commissioning::legacy_object_table::LegacyObjectFormat::Type2,
-                    &image.octets[*start..],
-                    &objects,
-                )
-                .map_err(|error| ImageError::Unsupported {
-                    what: error.to_string(),
-                })?,
+                ImageLayout::System1 | ImageLayout::System2 => {
+                    knx_core::commissioning::legacy_object_table::rewrite(
+                        if layout == ImageLayout::System1 {
+                            knx_core::commissioning::legacy_object_table::LegacyObjectFormat::Type1
+                        } else {
+                            knx_core::commissioning::legacy_object_table::LegacyObjectFormat::Type2
+                        },
+                        &image.octets[*start..],
+                        &objects,
+                    )
+                    .map_err(|error| ImageError::Unsupported {
+                        what: error.to_string(),
+                    })?
+                }
             };
             image.octets[*start..].copy_from_slice(&table);
         }
@@ -727,12 +776,15 @@ fn build_image(
                     build_group_tables(request.individual_address, &request.links, capacity)
                         .map_err(ImageError::GroupTables)?
                 }
-                ImageLayout::System2 => {
+                ImageLayout::System1 | ImageLayout::System2 => {
                     let (id, start, _) =
                         group_objects
                             .as_ref()
                             .ok_or_else(|| ImageError::Unsupported {
-                                what: "System2 image requires a source object count".into(),
+                                what: format!(
+                                    "{} image requires a source object count",
+                                    layout.family()
+                                ),
                             })?;
                     let count = code
                         .segment(id)
@@ -740,7 +792,7 @@ fn build_image(
                         .and_then(|data| data.get(*start))
                         .copied()
                         .ok_or_else(|| ImageError::Unsupported {
-                            what: "System2 object count missing".into(),
+                            what: format!("{} object count missing", layout.family()),
                         })?;
                     knx_core::commissioning::legacy_group_tables::build(
                         request.individual_address,
@@ -1021,9 +1073,12 @@ fn com_object_span_with_layout(
         })?;
     let (header, descriptor) = layout.object_shape();
     let end = start + header + usize::from(size) * descriptor;
-    if layout == ImageLayout::System2 && end > data.len() {
+    if layout.legacy() && end > data.len() {
         return Err(ImageError::Unsupported {
-            what: "System2 descriptors extend beyond their source segment".into(),
+            what: format!(
+                "{} descriptors extend beyond their source segment",
+                layout.family()
+            ),
         });
     }
     Ok(Some((segment.id.clone(), start, end)))

@@ -469,8 +469,14 @@ class GitHub:
             command += ["--paginate", "--slurp"]
         if body is not None:
             command += ["--method", method, "--input", "-"]
-        result = subprocess.run(command, input=json.dumps({"body": body}) if body is not None else None,
-                                text=True, capture_output=True, check=True, timeout=180)
+        try:
+            result = subprocess.run(command, input=json.dumps({"body": body}) if body is not None else None,
+                                    text=True, capture_output=True, check=True, timeout=180)
+        except subprocess.CalledProcessError as error:
+            # Expose only the HTTP status, never response bodies, tokens or submitted text.
+            status = re.search(r"\bHTTP ([1-5][0-9]{2})\b", error.stderr or "")
+            suffix = f" (HTTP {status[1]})" if status else ""
+            raise RuntimeError("GitHub API request failed" + suffix) from None
         payload = json.loads(result.stdout)
         if pages:
             if not isinstance(payload, list) or not all(isinstance(page, list) for page in payload):

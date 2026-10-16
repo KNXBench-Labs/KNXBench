@@ -80,7 +80,8 @@ issue-comment create/edit/delete, PR open/close/reopen (`pull_request_target`),
 a daily schedule and manual dispatch. It only
 runs for this repository and executes trusted default-branch code. No issue body,
 login or PR checkout is interpolated into shell commands. Only the trusted default
-branch is checked out; no fork/PR head executes. Explicit PR permission is read-only.
+branch is checked out; no fork/PR head executes. Issue and PR comment write
+permissions are explicit and limited to this trusted workflow.
 Contents/issue write
 permissions are restricted to this workflow; token values are never logged.
 
@@ -157,8 +158,12 @@ The completed-issue ledger and its notification semantics remain unchanged.
 
 The [official shared issue/PR comment API](https://docs.github.com/en/rest/issues/comments)
 documents POST creation and PATCH updates through the Issues endpoints and accepts
-Issues **write** or Pull requests **write** permission. The workflow already has
-`issues: write`, so `pull-requests: read` need not be elevated. It still executes
+Issues **write** or Pull requests **write** permission. The initial live Actions
+attempt failed at PR comment creation while only `pull-requests: read` was set;
+its captured subprocess error did not expose an HTTP status, so no exact server
+reason is claimed. The workflow now explicitly grants `pull-requests: write`
+alongside existing `issues: write`. API failures expose only an HTTP status when
+available, never raw response or submitted comment contents. It still executes
 only default-branch code, never PR code, and bot comments remain excluded from
 scoring and self-triggering.
 

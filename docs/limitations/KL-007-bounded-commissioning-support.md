@@ -15,6 +15,12 @@ new mask admission. Three measured real-source AP1 results remain partial and
 non-executable; relative images, source scopes/substitutions and complete durable
 property/memory/setup/allocation recovery remain open. No new hardware support.
 
+P4b adds a [source-only relative segment view](../contracts/offline-relative-source-segments.md),
+verified against three original application sources. Relative source extraction
+is not relative-image assembly. The existing absolute image builders now refuse
+relative/mixed sources explicitly, rather than omitting relative data; source
+scope/substitution, generated table mapping, encoding and recovery remain open.
+
 ## Normalized simulation boundary (16 October 2026 source)
 
 [The P3a normalized property-plan simulator](../contracts/offline-property-plan-simulation.md)

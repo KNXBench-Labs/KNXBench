@@ -4,21 +4,23 @@
 
 Owner-approved repository recognition, 2026-10-13. The README and
 [Hall of Fame](../community/HALL_OF_FAME.md) list reporters and issue-thread
-repliers, including external AI agents and GitHub Bot accounts (owner amendment,
+repliers and PR authors, including external AI agents and GitHub Bot accounts (owner amendment,
 15 October 2026). Maintainer accounts, explicit opt-outs and the scoreboard's own
 `github-actions[bot]` account are **excluded entirely**, not given a second table.
-PR threads are excluded. English titles and humour are part of this
+PR discussion/review comments are excluded; PR authorship and merge outcomes count
+(owner amendment, 16 October 2026). English titles and humour are part of this
 acknowledgement, not a measure of technical competence.
 
 This has no connection to the application's local achievements, customer projects,
 bus operations or analytics. `tools/community_hall_of_fame.py` uses only the public
-GitHub issue/comment APIs via the existing `gh` CLI. No new Python dependency.
+GitHub issue/comment/pull-request APIs via the existing `gh` CLI. No new Python dependency.
 
 ## Evidence and scoring
 
-Versioned data: `docs/community/hall-of-fame.json`, schema 1. Explicit policy:
+Versioned data: `docs/community/hall-of-fame.json`, schema 2 (schema-1 migration
+preserves all completion awards and notification flags). Explicit policy:
 `docs/community/hall-of-fame-policy.json`. Count all open/closed issues and all
-current issue-thread replies, with full pagination. Fetch failures, malformed
+current issue-thread replies and all PRs, with full pagination. Fetch failures, malformed
 identifiers, unknown states/snapshot versions or conflicting duplicate records
 fail rather than publish partial or invented counts. Deduplicate identical API
 records by stable record id. This is a paginated observation, not a transactional
@@ -41,6 +43,19 @@ snapshot of a concurrently changing GitHub repository.
   Generated README/page/JSON and completion notices show only earned names.
   The source and tests are public: this is presentation-level surprise, not a
   secrecy/security promise. No new notification ledger or snapshot schema.
+- +5 XP per submitted PR (open or draft); +20 merge bonus (**25 total**) or
+  +10 closed-unmerged bonus (**15 total**). The two outcome bonuses never stack.
+  A closed-unmerged PR is not necessarily a rejected contribution.
+- `pull_requests`, `pull_requests_open`, `pull_requests_merged` and
+  `pull_requests_closed` (closed **without** merge) are separate counters.
+  The three state counters sum to the submitted total. PRs never count as issues.
+- `xp_breakdown` separates issue/reply/completion/PR XP, summing to total XP.
+- PR and merge medals each unlock at 1/5/10/20/50/100. Only earned names appear;
+  closed-unmerged PRs advance submission participation, not merge medals.
+- PR XP/counters/medals are live: reopening restores submission-only XP; later
+  merging replaces the closed bonus. Removed PRs stop counting. Unlike completed
+  issue awards, PR credit is not retained in a historical ledger. Historical PRs
+  are included without PR notification comments or replaying issue notices.
 - Stable alphabetical tiebreak; equal XP has equal position.
 
 The award ledger stores only issue number, public handle, first observed completed
@@ -60,9 +75,12 @@ consistent completed set. Unchanged observations retain their timestamp to avoid
 a daily no-op commit. Never truncate the scoreboard to a top-N list.
 
 GitHub workflow `Community Hall of Fame` runs on issue open/close/reopen/transfer,
-issue-comment create/edit/delete, a daily schedule and manual dispatch. It only
+issue-comment create/edit/delete, PR open/close/reopen (`pull_request_target`),
+a daily schedule and manual dispatch. It only
 runs for this repository and executes trusted default-branch code. No issue body,
-login or PR checkout is interpolated into shell commands. Contents/issue write
+login or PR checkout is interpolated into shell commands. Only the trusted default
+branch is checked out; no fork/PR head executes. Explicit PR permission is read-only.
+Contents/issue write
 permissions are restricted to this workflow; token values are never logged.
 
 Concurrency has no active-run cancellation; each run reconciles **all** pending
@@ -124,6 +142,21 @@ copy/generation step. The link needs an Internet connection when opened; there
 is deliberately no offline board. No domain, storage or project mutation and
 no release or deployment is part of this change. The original B16 implementation
 and acceptance remain historical in the delivery archive.
+
+## PR evidence and limitations (16 October 2026)
+
+The [REST pull-request list](https://docs.github.com/en/rest/pulls/pulls#list-pull-requests)
+with `state=all`, `per_page=100` and complete pagination supplies `state` plus
+`merged_at`. Issue-list PR stubs cannot establish merge status. Missing or
+contradictory states/times and duplicate/conflicting identities fail before
+outputs or notifications. A failed PR fetch cannot publish an issue-only board.
+The [workflow event reference](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#pull_request_target)
+documents the trusted-context trigger and the risk of executing untrusted PR
+code. The workflow never executes a PR head, downloads PR artifacts or interpolates
+PR fields into shell code. Merge/close notifications are not fabricated from
+reviews or labels. PR review/discussion participation and retained PR awards
+remain unsupported. The board is a paginated live observation, not an immutable
+or transactional history; account-renaming limitations above remain.
 
 ## Acceptance
 

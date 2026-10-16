@@ -35,6 +35,32 @@ Observed results, aggregated from the actual three retained resolver outputs:
 No resolver readiness or public-route admission was promoted. The baseline
 succeeded as a **measurement of existing partial behaviour**, not as a download.
 
+## P4b production evaluation and source-reader follow-up [V]
+
+A second network-isolated Release run on the same three applications in one
+package used the existing production importer, `resolve_values`,
+`load_program_trees`, `evaluate`, `load_program_code` and `build_download_image`.
+It activated 186 parameter references and 12 object references across the three
+applications. All 54 diagnostics were `NoBranchMatched`, classified by the
+existing evaluator as not hiding references. This is a measured existing
+behaviour, not independent proof of every activation decision.
+
+Before the P4b reader change, all three code reads succeeded with zero absolute
+segments, and every image attempt refused at `ComObjectTable: no CodeSegment`.
+That is an observed absolute-builder boundary, not a malformed-source finding
+or proof that relative images cannot be implemented. The declared generated
+tables have no explicit absolute CodeSegment/Offset placement in these witnesses.
+
+The new [relative source view](../contracts/offline-relative-source-segments.md)
+retains each relative segment's metadata and Data/Mask separately from absolute
+addresses. A second calibrated run matched all three source records to an
+independent original-XML/strict-base64 oracle; source packages and the product
+database remained unchanged. Both absolute-image entry points now refuse
+relative source data explicitly rather than silently omitting it from mixed
+input. Generated-table construction, relative-image assembly, parameter encoding,
+source merge/substitution and recovery remain distinct unfinished work.
+No source-view result grants executable readiness or device support.
+
 ## Direct original-PDF inspection [D]
 
 Original **Configuration Procedures 03_05_03 v02.01.01** pages were rendered

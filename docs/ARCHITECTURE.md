@@ -1,5 +1,14 @@
 # Architecture
 
+## Relative source metadata (16 October 2026 source)
+
+ProductDB's code adapter retains relative segments separately from absolute
+regions and reuses the existing base64 source decoder. Neither offsets nor
+load-state-machine indices are promoted to runtime addresses/object indices.
+Both existing absolute-image APIs refuse relative sources, preventing partial
+images that omit source data. Core, UI, transport and persistence schemas are
+unchanged. [Bounded source contract](contracts/offline-relative-source-segments.md).
+
 ## Pure offline System-B table codec (16 October 2026 source)
 
 Core now supplies an explicitly selected Type-7 / Format-1 group-object codec,

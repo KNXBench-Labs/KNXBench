@@ -17,7 +17,7 @@ fn property_allocation_is_ten_octets_without_a_memory_machine_or_segment_id() {
     .unwrap();
     assert_eq!(
         record.octets(),
-        &[3, 0, 0x12, 0x34, 0x56, 0x78, 0x9A, 3, 0x80, 0]
+        &[3, 0, 0x12, 0x34, 0x56, 0x78, 0x9A, 3, 0, 0]
     );
 }
 
@@ -32,7 +32,7 @@ fn stack_and_task_records_have_their_own_subtype_and_exact_fields() {
     };
     assert_eq!(
         absolute_stack(segment).unwrap().octets(),
-        &[3, 1, 0x12, 0x34, 0x56, 0x78, 0x9A, 2, 0, 0]
+        &[3, 1, 0x12, 0x34, 0x56, 0x78, 0x9A, 2, 0x80, 0]
     );
     let task = knx_core::commissioning::load_control_memory::TaskSegment {
         start: 0x1234,
@@ -58,7 +58,7 @@ fn empty_and_wrapping_allocations_are_refused_but_last_address_is_legal() {
     };
     assert_eq!(
         absolute_data(segment).unwrap().octets(),
-        &[3, 0, 255, 255, 0, 1, 255, 1, 0, 0]
+        &[3, 0, 255, 255, 0, 1, 255, 1, 0x80, 0]
     );
     segment.length = 2;
     assert!(absolute_data(segment).is_err());
@@ -72,4 +72,28 @@ fn empty_and_wrapping_allocations_are_refused_but_last_address_is_legal() {
         )
         .is_err()
     );
+}
+
+/// MP v02.01.02 §3.31.3.4 p140 explicitly defines bit7 = 0 as disabled.
+#[test]
+fn disabling_checksum_clears_property_memory_attribute_bit_seven() {
+    for build in [absolute_data, absolute_stack] {
+        let disabled = AbsolutePropertySegment {
+            start: 0x3C00,
+            length: 0x0100,
+            access: 0x33,
+            memory_type: SegmentMemoryType::Eeprom,
+            checksum_disabled: true,
+        };
+        assert_eq!(
+            build(disabled).unwrap().octets()[8],
+            0,
+            "MP p140: zero disables checksum control; no inverted polarity"
+        );
+        let not_disabled = AbsolutePropertySegment {
+            checksum_disabled: false,
+            ..disabled
+        };
+        assert_eq!(build(not_disabled).unwrap().octets()[8], 0x80);
+    }
 }

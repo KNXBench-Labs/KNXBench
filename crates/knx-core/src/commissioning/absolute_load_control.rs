@@ -2,9 +2,9 @@
 //!
 //! Management Procedures v02.01.02 §3.31.3.4, printed pp139–141: ten-octet
 //! property records. Unlike §3.31.2's memory records, these have no machine
-//! nibble or segment-ID octet. Property memory-attribute bit7 DISABLES checksum
-//! control; the similarly named memory-record flag ENABLES it. Keep distinct
-//! types rather than accidentally sharing those opposite meanings.
+//! nibble or segment-ID octet. Memory-attribute bit7 = 0 disables checksum
+//! control (p140). Keep the property grammar separate from memory records;
+//! this codec does not interpret product XML SegFlags.
 
 use std::fmt;
 
@@ -22,7 +22,7 @@ pub struct AbsolutePropertySegment {
     pub access: u8,
     /// Zero-page RAM, RAM or EEPROM; reserved codes are not constructible.
     pub memory_type: SegmentMemoryType,
-    /// Property-record bit7: checksum control DISABLED when set.
+    /// Clear property-record bit7 to disable checksum control (MP p140).
     pub checksum_disabled: bool,
 }
 
@@ -100,7 +100,7 @@ fn absolute(
             length[1],
             segment.access,
             segment.memory_type.octet(),
-            if segment.checksum_disabled { 0x80 } else { 0 },
+            if segment.checksum_disabled { 0 } else { 0x80 },
             0,
         ],
     ))

@@ -73,8 +73,14 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     const dialog = await about(page, language);
     await expect(dialog.locator(".release-update-panel")).toContainText("0.1.0-alpha.10");
     if (process.env.UPDATE_SCREENSHOTS) await page.screenshot({ path: `${process.env.UPDATE_SCREENSHOTS}/about-${language}-${width}.png` });
-    await dialog.getByRole("button", { name: m["updates.check"], exact: true }).click();
-    await expect.poll(() => f.feed.calls).toBe(2); await expect(toast).toHaveCount(0);
+    const manualCheck = dialog.getByRole("button", { name: m["updates.check"], exact: true });
+    await manualCheck.click();
+    await expect.poll(() => f.feed.calls).toBe(2);
+    // The intercepted handler increments before fetch and hook cleanup finish.
+    // Do not jump an hour while that request can still be active/aborted.
+    await expect(manualCheck).toBeEnabled();
+    await expect(dialog.locator(".release-update-panel [role='status']")).toContainText("0.1.0-alpha.10");
+    await expect(toast).toHaveCount(0);
     await dialog.getByRole("button", { name: m["about.close"], exact: true }).click();
     f.feed.rows = [f.release("v0.1.0-alpha.11")];
     await page.clock.fastForward(UPDATE_CHECK_INTERVAL_MS); await expect(toast).toContainText("0.1.0-alpha.11");

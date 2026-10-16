@@ -1,5 +1,18 @@
 # Compatibility
 
+## Manufacturer-independent parameter/object refresh (after Alpha 12 source)
+
+[The offline editing contract](contracts/parameter-object-refresh.md) applies
+through the shared catalogue evaluator, not an MDT-specific mapping. Supported
+parameter choices append missing positively active unscoped objects and preserve
+existing links/overrides; unsupported module synthesis refuses the whole edit.
+Literal catalogue IDs and project-local aliases are checked against actual
+declarations; ambiguous identity is reported and refuses the whole write. Raw
+instance references are preserved. DPT alternatives are not inferred. Group captions are optional presentation,
+not write authority. This neither establishes universal catalogue/script support
+nor changes import schemas, ETS export, executable download or real-device
+compatibility.
+
 ## Explicit parameter bits: source representation, not device support (16 October 2026)
 
 [Direct single-octet Memory fields](contracts/offline-explicit-parameter-bits.md)

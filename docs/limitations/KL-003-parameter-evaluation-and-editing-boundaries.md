@@ -6,6 +6,18 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Offline object-list reconciliation (16 October 2026 source, after Alpha 12)
+
+Supported parameter edits now append positively active missing unscoped object
+references through the catalogue mapper in the same durable/undoable command.
+Existing object identities, links, overrides and inactive rows are retained.
+This does not solve module-instance/repeat/number-offset creation: a required
+missing module object refuses the entire edit. DPT alternatives/malformed
+references are not guessed and are reported. Parameter block labels and supported
+mode dropdowns are read-only product projections, not new write authority.
+No manufacturer-specific branch, script execution, schema or hardware admission
+is added. [Contract](../contracts/parameter-object-refresh.md).
+
 <!-- BEGIN retained catalogue record -->
 
 ## 3. Device parameters are preserved but not interpreted

@@ -51,6 +51,15 @@ ZIP excludes parameter values; the older ended-download verification report is
 separate and can contain them. See the
 [reporting guide](../user-guide/08-reports-and-diff.md#universal-device-support-reporting-source-after-alpha-11).
 
+**Why does enabling a button not produce new communication objects?**
+
+In source builds after Alpha 12, open **Device functions** above Communication
+objects, enable the button and choose its actual operating mode/function. The
+shared evaluator adds supported missing unscoped objects in the same undo step.
+The mechanism is not specific to MDT. Unsupported scripts and new module-instance
+mappings still produce explicit refusals rather than guessed objects. This is
+an offline project edit, not a download. See [Device functions](../user-guide/05-devices-and-products.md#device-functions-source-builds-after-alpha-12).
+
 **Is my project safe with KNXBench?**
 
 KNXBench never silently discards information it doesn't understand — unknown data is

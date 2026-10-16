@@ -432,7 +432,16 @@ pub(crate) struct ModuleScopeDto {
 
 #[derive(serde::Serialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
+pub(crate) struct ParameterGroupDto {
+    pub(crate) key: String,
+    pub(crate) label: Option<String>,
+}
+
+#[derive(serde::Serialize, Debug, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct ParameterFieldDto {
+    pub(crate) group: Option<ParameterGroupDto>,
+    pub(crate) controls_com_objects: bool,
     pub(crate) ets_id: String,
     pub(crate) name: Option<String>,
     /// The stored language identifier whose translation `name` is (e.g.
@@ -497,6 +506,10 @@ pub(crate) struct StaleParameterDto {
 #[derive(serde::Serialize, Debug, Clone, Copy, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub(crate) enum ParameterDiagnosticKindDto {
+    /// Both a literal catalogue reference and its project-local expansion exist.
+    ObjectReferenceAmbiguous,
+    /// A configured object has no unambiguous, valid declared DPT.
+    ObjectDptUnresolved,
     /// `parameter_views`'s inner joins dropped a declared parameter.
     ParametersUnreadable,
     /// Two stored values target the same unscoped parameter.

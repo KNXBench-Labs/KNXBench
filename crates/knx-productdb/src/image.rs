@@ -492,6 +492,17 @@ fn build_image(
             what: "relative source segments require a relative image builder".into(),
         });
     }
+    // The strict source-image entries require this unresolved declaration to
+    // be closed. Easy3 keeps its existing inference policy; changing its
+    // established source/execution contract is a separate compatibility task.
+    if layout != ImageLayout::Easy3 && code.has_legacy_patch_always {
+        return Err(ImageError::Unsupported {
+            what: format!(
+                "{} LegacyPatchAlways requires a separate source interpretation",
+                layout.family()
+            ),
+        });
+    }
     if let Some(order) = code
         .options
         .get("ParameterByteOrder")
@@ -1806,6 +1817,27 @@ mod tests {
                 .has_fixup_list
         );
         assert!(build_download_image(&conn, &request(&[], vec![])).is_ok());
+    }
+
+    #[test]
+    fn easy3_legacy_policy_is_unchanged_by_strict_source_image_work() {
+        let (_dir, baseline) = db(PROGRAM);
+        let original = build_download_image(&baseline, &request(&[], vec![])).unwrap();
+        for value in ["", "0", "1", "false", "true"] {
+            let inactive = format!("<Parameter Id=\"INACTIVE\" ParameterType=\"PT-N\" Value=\"2\" LegacyPatchAlways=\"{value}\"><Memory CodeSegment=\"AS-4400\" Offset=\"25\" BitOffset=\"0\" /></Parameter>");
+            let xml = PROGRAM.replace("</Parameters>", &format!("{inactive}</Parameters>"));
+            let (_dir, conn) = db(&xml);
+            let before = conn.total_changes();
+            let req = request(&[], vec![]);
+            let code = crate::code::load_program_code(&conn, &req.program_id)
+                .unwrap()
+                .unwrap();
+            assert!(code.has_legacy_patch_always);
+            let image = build_download_image(&conn, &req)
+                .expect("strict System1/System2 work must not redefine the existing Easy3 policy");
+            assert_eq!(image.segments, original.segments);
+            assert_eq!(conn.total_changes(), before);
+        }
     }
 
     fn device() -> IndividualAddress {

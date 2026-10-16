@@ -108,16 +108,17 @@ fn public_up258_package_pins_the_documented_refusals() {
         links: Vec::new(),
         flag_overrides: BTreeMap::new(),
     };
+    assert!(code.has_legacy_patch_always);
+    let before = conn.total_changes();
     let image =
         build_system2_image(&conn, &request).expect_err("the real source is not fully witnessed");
-    // The exact first refusal of the digest-pinned source: the 16-bit
-    // parameter P-901 ("Sensor_Short_Signal_T1", default 120, AS-3C00
-    // offset 240) has zero template octets at its placement, and the
-    // source declares no ParameterByteOrder. The missing witness must
-    // remain an explicit unsupported result, never a partial image.
+    // The source declares an uninterpreted patch policy. Its shared integrity
+    // guard now precedes the historical P-901/default-bit refusal. Neither
+    // the directive's meaning nor the remaining multibyte encoding is guessed.
     assert!(
         matches!(image, ImageError::Unsupported { ref what }
-            if what.contains("P-901_R-901: System2 default disagrees with source bits")),
-        "the documented source-bits refusal was expected, got: {image}"
+            if what == "System2 LegacyPatchAlways requires a separate source interpretation"),
+        "the exact source-integrity refusal was expected, got: {image}"
     );
+    assert_eq!(conn.total_changes(), before);
 }

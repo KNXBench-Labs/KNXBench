@@ -1,4 +1,44 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-16 17:53
+- **Completed:** Strict scoped productionc635fdd5 remains unchanged. Actual ee706977integration failed151/152private tests solely at private-System2 historical first-error assertion; all8priorstages and32other corpus targets passed, input manifests frozen. Publisher refused before Git writes. R7 exact assertion/source-presence/DB-invariance correction passes ten focused stages including originalHVACtest1/0, owningClippy and docs/repository/format/whitespace. All21ordered procedure/metadata/non-executable checks retained; separate review7has0open findings. Named private release runtime64.58s, debug failed595.14s; same final152corpus will run releaseprofile.
+- **Pending/Next Steps:** Final documentation-only delta, exact focused test/docs commit; fresh actual15stage merge with same935owning/3explicit-source/152regular-corpus tests, normal push/readback, result-only closure and owned retirement. All original failed/interrupted receipts stay distinct. Nothing published yet; no active runner at this checkpoint.
+- **Notes for Codex oder Claude:** Ownsource-image/source-integration worktrees remain; private-source data remains local/unmodified/unredistributed. Root1817fb2a/index/foreignfiles and inherited journal protected. FixupList all3entries and strictSystem1/System2 legacy guard stay; Easy3 sourcepolicy/unknown semantics unchanged. No complete real sourceimage/plan/new public admission/firmware claim; no bus/vendor/ETS/priorREA execution/subagents/codingCLI/release/deployment.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-16 17:18
+- **Completed:** R6 scopes the direct-bit package to its strict System1/System2 entries. Trial global Easy3 LegacyPatchAlways guard caused genuine App/CLI positive-corpus failures on8e98d937; that run was intentionally stopped and raw partial failures/receipts retained. No own descendants remain and no positive golden assertion was weakened. A new named public scope RED reproduces the overbroad guard; minimum family predicate correction is prepared. Existing Easy3 source/inference policy remains unchanged and its legacy directive semantics remain explicitly unresolved, not newly accepted. Earlier all-family935/0 and source acceptance are historical, not final scoped acceptance.
+- **Pending/Next Steps:** Run final scoped12stage owning branch, commit exact reviewed scope correction, fresh actual15stage integration plus unchanged152original-corpus tests, publication/readback/result-only closure and owned retirement. No implementation publication yet; failed/superseded candidates remain separate. No active final runner is claimed at this checkpoint.
+- **Notes for Codex oder Claude:** Own source-image/source-integration worktrees and profile scratch/source-image-continuation-20261016 remain; interrupted runproc_8528d9032060/PID1328720 is stopped, not live. Root1817fb2a/index/foreignfiles and full inherited journal protected. Private ten-application report completed/retained; originals unchanged. No new actual complete images/source plans/admission/device verification; no vendor/ETS component/REA execution, bus, subagents or release/deployment. FixupList remains rejected in all three entries; LegacyPatchAlways rejection is strictly System1/System2 only.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-16 16:49
+- **Completed:** Feature08aa0d2e committed; owning935/0, both original regressions and separate8stage documentation delta pass. Actual mergee70052e5 attempt1 preserves7passes then strict public-UP258 diagnostic assertion RED: correct new LegacyPatchAlways refusal precedes historical P-901 error. All527external/source/Git commitments match; no corpus acceptance yet. Minimum test/current-documentation correction is prepared, production safety bytes unchanged. Private ten-application report completed with50axes and exact source locators; originals unchanged, no vendor/REA execution.
+- **Pending/Next Steps:** Focused exact-public-source GREEN and docs/repository checks, reviewed correction commit, corrected actual merge/full15stage scoped gate including isolated regular corpus, publication/readback/result-only closure and owned retirement. No full-source image, plan, hardware or public-admission promotion.
+- **Notes for Codex oder Claude:** Root1817fb2a/index/foreignpaths protected. Both own worktrees/evidence remain owned; source-image-continuation-20261016 holds raw failed attempts, commits and manifests. Private report retained under profile evidence/private-system2-review-20261016. Publication consent covers declarative analysis/own logic, not ETS program-component analysis or manufacturer originals. Preserve previous history.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-16 16:33
+- **Completed:** Owner resumed offline continuation. Guarded attempt1 retained as FAILED at original-relative existing diagnostic after six successful stages, with complete source/Git/external freeze. Minimum correction preserves original FixupList/relative refusal precedence before the new LegacyPatchAlways guard; all remain before activation/assembly. Prior candidate returns remain withdrawn, zero complete real images.
+- **Pending/Next Steps:** Final guarded branch13stages, exact reviewed commit, fresh actual scoped integration with regular isolated corpus, publication/readback/result closure/owned retirement. Declarative product-data analysis publication now owner-authorised separately; no ETS program-component or excluded private REA basis.
+- **Notes for Codex oder Claude:** Own feat/source-image-20261016 on published claimc3744595. Root stale/dirty protected; foreign UI work untouched. Raw attempts and provenance in profile scratch source-image-continuation-20261016; no unsafe admission/schema/transport change. No bus/vendor/subagents/codingCLI/release/deployment.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-16 16:08
+- **Completed:** Owned explicit single-octet source-bit package implemented and separately self-reviewed on claimc3744595. Named equalityRED then minimum correction; review width3/default8/request3RED then probe-before-waiver correction. Final frozen13stage branch passes ProductDB931/0/29ignored in56reports, owningClippy/build, explicit originalSystem1/relative tests and docs/five repository/format/whitespace. Union-waiver mutant fails intended assertion; exact source restored/test1passes. Old13source chain:11refusals plus2bounded candidates/4independent whole-segment comparisons;zero complete semantic images due uninterpreted legacy directive. No public admission/transport/schema change.
+- **Pending/Next Steps:** Commit exact reviewed source/docs, actual fresh-main non-FF integration with complete matching scoped gates and isolated regular private corpus, publication/readback, result-only closure and exact owned retirement. Separate owner-requested private review stays private/local and does not authorise implementation or hardware. No technical findings from it belong in Git.
+- **Notes for Codex oder Claude:** Own feat/source-image-20261016; contract offline-explicit-parameter-bits, public aggregate explicit-source-bits-2026-10-16, log2026-10-16_codex_explicit-source-bits. Root1817fb2a/index/foreignpaths protected/unsynchronised; preserve full concurrent journal. No bus/vendor/subagents/codingCLI/release/deployment. Original refused/setup/summary-reader attempts retained separately; silentfmt/whitespace alone may have empty logs, test reports remain required. Branch acceptance is not actual integration or publication.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-16 15:35
 - **Completed:** New explicit offline-download continuation reconciled fresh origin/main 6eb9178e; P6 runtime39c88aba and closure7448450c are published ancestors. Owned feat/source-image-20261016 worktree isolates the stale dirty root. Original Cookbook Load Controls p7, Manufacturer Tool pp18–19 and Project Schema23 pp29–30 rendered/visually inspected. No production edit or test acceptance yet.
 - **Pending/Next Steps:** Own the bounded direct-Memory numeric single-octet bitfield/template-default slice in ProductDB legacy_source and image regressions. Require named RED before narrowing only this guard; independently expected bytes and real original-source importer/evaluator checks. FixupList, Union placement and multibyte semantics remain closed unless separately proven.

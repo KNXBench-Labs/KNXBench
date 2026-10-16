@@ -583,6 +583,7 @@ pub fn load_legacy_program_code(
         load_procedures: code.load_procedure.into_iter().collect(),
         options: BTreeMap::new(),
         has_fixup_list: false, // Legacy projection has no XML FixupList declaration.
+        has_legacy_patch_always: false, // Presence tracks the XML attribute only.
         parameters,
         program_attributes,
     })

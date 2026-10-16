@@ -24,6 +24,7 @@ outside preserved historical blocks, or use the next free section number
 
 | Section | Where |
 | --- | --- |
+| [2026-10-16 — Explicit parameter bits and source stop lines](contracts/offline-explicit-parameter-bits.md) | Visually checked MSB placement/default substitution; independent real-source candidate bytes, unmodelled legacy directive and unchanged executable boundaries |
 | [2026-10-16 — Exact UP258 production decision](research/2026-10-16-up258-production-decision.md) | Complete-path No-Go, original checksum-polarity correction, exact external rules and one consent-separated reporter request |
 | [2026-10-16 — System-300 property-table framing](contracts/offline-system300-property-tables.md#original-source-evidence) | Original Type6 address/association property arrays, independent literal bytes, distinct empty/default semantics and open discovery/source/load/recovery contracts |
 | [2026-10-16 — Public UP 258D12 evidence (PR #24)](research/2026-10-16-up258-public-package-evidence.md) | Digest-pinned public regression, exact metadata/order and explicit image/planner refusals; representative template observations are not a wire-encoding witness |

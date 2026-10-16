@@ -117,3 +117,11 @@ material. Do not mark a path implemented merely because its metadata is parsed.
   unimplemented; their dependencies above still need their own proof.
 
 Status is deliberately per capability; issue #22 and broader KL-007 remain open.
+
+- P5: local [System-1 source-image candidate](offline-download-system1-image.md)
+  with actual evaluation, Type-1/indexed association bytes and protected source
+  pointers. Nine targeted/926owning tests and Clippy pass; thirteen real-source
+  refusals in two packages, zero accepted complete real images. FixupList and
+  source-default/Union evidence remain first boundaries. All nineteen branch
+  stages pass; actual merged acceptance and publication pending. No executable
+  procedure/recovery or mask admission.

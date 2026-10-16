@@ -240,6 +240,9 @@ pub struct ProgramCode {
     pub load_procedures: Vec<LoadProcedure>,
     /// `Static/Options` attributes, verbatim.
     pub options: BTreeMap<String, String>,
+    /// Presence of source `Static/FixupList`, even an empty declaration.
+    /// Contents remain in the original XML; no fixup semantics are inferred.
+    pub has_fixup_list: bool,
     /// `Static/Parameters` placements by parameter id. A parameter with
     /// no placement (it lives nowhere in memory) has no entry.
     pub parameters: BTreeMap<String, ParameterPlacement>,
@@ -498,6 +501,10 @@ impl<'a> Parser<'a> {
                 }
                 "Options" => {
                     code.options = verbatim(&child.attributes);
+                    self.skip(&child)?;
+                }
+                "FixupList" => {
+                    code.has_fixup_list = true;
                     self.skip(&child)?;
                 }
                 "LoadProcedures" if !child.empty => self.read_procedures(code)?,

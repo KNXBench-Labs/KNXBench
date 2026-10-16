@@ -6,6 +6,15 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Offline System-1 source-image boundary (16 October 2026 source)
+
+[Bounded Type-1 assembly](../contracts/offline-download-system1-image.md) is
+software infrastructure, not complete real-product support. All thirteen final
+real-source cases refuse: FixupList7, source-default bits5, mid-octet Union1.
+An apparent intermediate image ignored FixupList and is withdrawn. Source
+FixupList semantics, ambiguous parameter placement/encoding, default-procedure
+translation and complete durable recovery remain open. No new hardware admission.
+
 ## Offline System-B table boundary (16 October 2026 source)
 
 [The independent Format-1 object-table codec](../contracts/offline-systemb-object-table.md)

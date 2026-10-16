@@ -20,8 +20,9 @@ blockers, not guessed simulator behaviour.
 P4 now separates the [pure System-B Format-1 object codec](contracts/offline-systemb-object-table.md)
 from relative-image/sequencer integration. Its local synthetic acceptance and the
 three real partial resolver results do not close product mapping or recovery;
-all 17 frozen branch stages pass; actual merge acceptance/publication remain
-tracked in the linked evidence.
+all 17 branch and 18 actual merged stages pass, including isolated corpus152/152.
+Published as `adb52990` with verified remote equality; the selected dirty root
+checkout remains deliberately unsynchronized.
 
 ## Alpha 12 release boundary (15 October 2026)
 

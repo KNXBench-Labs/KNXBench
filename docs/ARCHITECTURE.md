@@ -1,5 +1,12 @@
 # Architecture
 
+## Shared image transformation guard (16 October 2026 source)
+
+All three ProductDB image entries now reject retained direct FixupList declarations
+before evaluation/assembly. This moves the System-1-only guard to their existing
+shared builder; no new layer, source schema or supported mask. Unknown source
+transformations cannot silently yield partial images. [Contract](contracts/source-fixup-integrity.md).
+
 ## Explicit offline System-1 image boundary (16 October 2026 source)
 
 ProductDB adds a bounded0012/DefaultProcedure source-image entry using its

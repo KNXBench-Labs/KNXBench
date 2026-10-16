@@ -50,6 +50,15 @@ procedure/recovery contracts. All nineteen workspace branch and twenty actual
 merged stages pass, including isolated corpus152/152; published as `ccfe5b74`
 with exact main equality read back.
 
+P6, published as `39c88aba`, [closes sibling FixupList omission](contracts/source-fixup-integrity.md)
+across existing image consumers. Two named REDs, owning928tests and Clippy pass;
+all nineteen branch and twenty final merged stages pass, including isolated
+corpus152/152; publication/readback verified. This session closes without starting
+a further package.
+Authoritative source transformation/no-op semantics
+and complete-image/procedure/recovery integration remain next, not waived by
+matching source/master words.
+
 ## Alpha 12 release boundary (15 October 2026)
 
 The owner requested a release of delivered source, not new feature work. Both P4

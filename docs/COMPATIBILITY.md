@@ -1,5 +1,16 @@
 # Compatibility
 
+## Shared FixupList integrity boundary (16 October 2026 source)
+
+P6, published as `39c88aba`, corrects a sibling image-boundary omission: Easy3 and System-2 now
+join System-1 in refusing direct FixupList declarations, including empty ones.
+Previously returned images with these uninterpreted declarations are no longer
+accepted. Ordinary supported source paths without that declaration retain their
+behavior; nineteen branch and twenty actual merged stages pass, including
+isolated corpus152/152. This is not
+actual product fixup support or a new device admission.
+[Evidence boundary](contracts/source-fixup-integrity.md).
+
 ## System-1 source-image boundary (16 October 2026 source)
 
 [The explicit offline Type-1 entry](contracts/offline-download-system1-image.md)

@@ -477,6 +477,16 @@ fn build_image(
     let program_id = request.program_id.as_str();
     let code = load_program_code(conn, program_id)?
         .ok_or_else(|| ImageError::UnknownProgram(program_id.to_string()))?;
+    // Retaining the original XML does not mean its transformations were applied.
+    // All image families must refuse before returning a plausible partial image.
+    if code.has_fixup_list {
+        return Err(ImageError::Unsupported {
+            what: format!(
+                "{} FixupList requires a separate source interpretation",
+                layout.family()
+            ),
+        });
+    }
     if !code.relative_segments.is_empty() {
         return Err(ImageError::Unsupported {
             what: "relative source segments require a relative image builder".into(),
@@ -1762,6 +1772,40 @@ mod tests {
         let conn = crate::open_and_migrate(&dir.path().join("products.sqlite")).expect("database");
         crate::ingest_file(&conn, "M-0001/A.xml", xml.as_bytes()).expect("ingests");
         (dir, conn)
+    }
+
+    #[test]
+    fn uninterpreted_fixup_declarations_refuse_easy3_images_without_database_changes() {
+        let (_dir, baseline) = db(PROGRAM);
+        assert!(build_download_image(&baseline, &request(&[], vec![])).is_ok());
+        for declaration in [
+            "<FixupList />",
+            r#"<FixupList><Fixup FunctionRef="MV-0701_ME-Unknown" CodeSegment="AS-4400"><Offset>12</Offset></Fixup></FixupList>"#,
+        ] {
+            let xml = PROGRAM.replace("</Static>", &format!("{declaration}</Static>"));
+            let (_dir, conn) = db(&xml);
+            assert!(
+                load_program_code(&conn, ID)
+                    .unwrap()
+                    .unwrap()
+                    .has_fixup_list
+            );
+            let before = conn.total_changes();
+            let error = build_download_image(&conn, &request(&[], vec![]))
+                .expect_err("an uninterpreted transformation must not yield a partial image");
+            assert!(matches!(error, ImageError::Unsupported { ref what }
+                if what == "Easy3 FixupList requires a separate source interpretation"));
+            assert_eq!(conn.total_changes(), before);
+        }
+        let xml = PROGRAM.replace("</Static>", "<Extension><FixupList /></Extension></Static>");
+        let (_dir, conn) = db(&xml);
+        assert!(
+            !load_program_code(&conn, ID)
+                .unwrap()
+                .unwrap()
+                .has_fixup_list
+        );
+        assert!(build_download_image(&conn, &request(&[], vec![])).is_ok());
     }
 
     fn device() -> IndividualAddress {

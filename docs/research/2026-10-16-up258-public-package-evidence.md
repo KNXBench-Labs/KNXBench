@@ -32,23 +32,29 @@ order there. [D] The source declares no `ParameterByteOrder`
 (consistent with the 49-procedure census of the
 [source-semantics investigation](2026-10-16-system2-source-semantics.md)).
 
-[V] Comparing every 16-bit `Memory` placement of `AS-3C00` with its template
-octets shows the segment is **heterogeneous** with respect to declared
-defaults — it holds no uniform convention this analysis could build on:
+[V] The following **selected** 16-bit declarations of `AS-3C00` show
+heterogeneous agreement between declared defaults and source-template octets.
+This is a representative table, **not an exhaustive placement census**. It
+includes direct `Memory` declarations and parameters whose location is supplied
+by their enclosing `Union`; alternatives can share a location and must not be
+counted as independent storage slots or simultaneously active values:
 
 | Observation | Fields (default → template) |
 | --- | --- |
-| Low octet first | P-87 (1200 → `b0 04`), P-89 (2400 → `60 09`) |
-| High octet first | P-903 (1800 → `07 08`) |
+| Matches low-octet-first integer representation | P-87 (1200 → `b0 04`), P-89 (2400 → `60 09`) |
+| Matches high-octet-first integer representation | P-903 (1800 → `07 08`) |
 | No match in either order | P-88 (1200 → `c0 12`), P-386 (10 → `ff ff`), P-652 (500 → `00 c8`), P-653 (900 → `02 bc`), P-633 (600 → `20 03`), P-753 (400 → `20 00`) |
 | Zero template, nonzero default | P-901 (120), UP-385/UP-399/UP-478/UP-500/UP-459/UP-551/UP-573/UP-532 (11802), P-446 (65535) |
 
-[A] The template's occasional agreements with a declared default are
-per-field coincidences of the factory image, not an encoding rule: the same
-segment stores one pair low octet first and another high octet first, and most
-nonzero defaults are absent from the template entirely. This is the same
-self-undermining pattern the [byte-order evidence review](parameter-byte-order.md)
-measured across declared programs, now inside one single application.
+[A] These agreements and disagreements are not a wire-encoding rule. This
+comparison does not establish that the source template is an actual factory
+memory image, nor that all declarations have been activated and written with
+their stated defaults. In particular, overlapping Union alternatives are not
+independent observations of runtime state. A match in either order cannot by
+itself distinguish intentional encoding from coincidental source bytes; a
+mismatch does not establish a second encoding convention. The
+[byte-order evidence review](parameter-byte-order.md) likewise separates
+source-template observations from a verified write witness.
 
 ## Consequence for the missing support
 
@@ -59,9 +65,28 @@ device's memory. The smallest missing evidence stays what the prerequisite
 contract names: a verified witness of what ETS actually writes for an edited
 value of a multi-octet parameter of this application — an ETS-programmed
 device read or an engineering-tool capture — plus the separately open
-procedure-translation and recovery contracts. The [byte-order probe](../adr/0119-read-only-byte-order-probe.md)
-cannot supply it here: it requires a memory-mapped program, and `MV-0025` is
-not one.
+procedure-translation and recovery contracts. The existing
+[byte-order probe](../adr/0119-read-only-byte-order-probe.md) refuses this
+`MV-0025` application under its current memory-planner admission policy. This
+contribution adds no alternate probe or live-write route.
+
+## Reproducing the bounded regression
+
+Download the exact public package above to a local path outside the repository,
+then opt in explicitly from the workspace root:
+
+```sh
+KNXBENCH_PUBLIC_UP258=/path/to/UP258_DB12__920504d_ETS5.knxprod \
+  cargo test -p knx-productdb --test system2_public_package -- --ignored
+```
+
+A missing file or different digest fails, rather than returning an empty pass.
+The test imports into a temporary database, pins the exact `0x0400` metadata
+pointer at source position 16 (zero-based), checks all other projected steps
+retain their original values and order, and asserts both current refusals.
+It does **not** automate the table of selected template observations, infer a
+wire encoding, or execute any bus operation. The ordinal source assertions are
+not a complete source-to-executor translation.
 
 No real bus operation, vendor-tool execution or support claim is part of this
 dossier. Issue #22 remains open.

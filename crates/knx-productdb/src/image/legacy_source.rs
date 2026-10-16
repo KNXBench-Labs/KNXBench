@@ -1,4 +1,4 @@
-//! Source-bound System-2 image checks without cross-family layout assumptions.
+//! Source-bound legacy image checks with explicit family selection.
 
 use std::collections::BTreeSet;
 
@@ -9,13 +9,14 @@ use knx_core::commissioning::parameter_image::{ParameterField, ParameterImage};
 /// Corroborate inferred placements; explicitly placed octets need no endian guess.
 pub(super) fn validate_default(
     code: &ProgramCode,
+    layout: ImageLayout,
     segment: &str,
     field: ParameterField,
     reference: &str,
     placement: &ParameterPlacement,
-    default: &Encoded,
-    requested: &Encoded,
+    values: (&Encoded, &Encoded),
 ) -> Result<(), ImageError> {
+    let (default, requested) = values;
     // An explicitly placed whole octet is unambiguous; Cookbook p7 says
     // parameters replace template bytes, which need not equal defaults.
     if matches!(placement, ParameterPlacement::Memory(_))
@@ -25,8 +26,9 @@ pub(super) fn validate_default(
     {
         return Ok(());
     }
+    let family = layout.family();
     let unsupported = |reason: &str| ImageError::Unsupported {
-        what: format!("{reference}: System2 {reason}"),
+        what: format!("{reference}: {family} {reason}"),
     };
     let base = code
         .segment(segment)
@@ -71,8 +73,14 @@ pub(super) fn validate_default(
 }
 
 /// Strict source regions of all three tables, not a hardware placement claim.
-pub(super) fn table_spans(code: &ProgramCode) -> Result<Vec<(String, usize, usize)>, ImageError> {
-    let unsupported = |what: &str| ImageError::Unsupported { what: what.into() };
+pub(super) fn table_spans(
+    code: &ProgramCode,
+    layout: ImageLayout,
+) -> Result<Vec<(String, usize, usize)>, ImageError> {
+    let family = layout.family();
+    let unsupported = |what: &str| ImageError::Unsupported {
+        what: format!("{family} {what}"),
+    };
     let mut ids = BTreeSet::new();
     let mut ranges = Vec::new();
     for segment in &code.segments {
@@ -80,7 +88,7 @@ pub(super) fn table_spans(code: &ProgramCode) -> Result<Vec<(String, usize, usiz
             .address
             .checked_add(segment.size)
             .filter(|end| *end <= 0x1_0000)
-            .ok_or_else(|| unsupported("System2 segment exceeds address space"))?;
+            .ok_or_else(|| unsupported("segment exceeds address space"))?;
         if segment.size == 0
             || !ids.insert(&segment.id)
             || segment
@@ -93,45 +101,43 @@ pub(super) fn table_spans(code: &ProgramCode) -> Result<Vec<(String, usize, usiz
                 .is_some_and(|mask| mask.len() != segment.size as usize)
         {
             return Err(unsupported(
-                "System2 segment has duplicate identity or inconsistent length",
+                "segment has duplicate identity or inconsistent length",
             ));
         }
         if ranges
             .iter()
             .any(|(start, stop)| segment.address < *stop && *start < end)
         {
-            return Err(unsupported("System2 absolute source segments overlap"));
+            return Err(unsupported("absolute source segments overlap"));
         }
         ranges.push((segment.address, end));
     }
-    let object = com_object_span_with_layout(code, ImageLayout::System2)?
-        .ok_or_else(|| unsupported("System2 source lacks ComObjectTable"))?;
+    let object = com_object_span_with_layout(code, layout)?
+        .ok_or_else(|| unsupported("source lacks ComObjectTable"))?;
     let mut spans = vec![object];
     for (name, placement, address_header) in [
         ("AddressTable", code.address_table.as_ref(), true),
         ("AssociationTable", code.association_table.as_ref(), false),
     ] {
-        let placement =
-            placement.ok_or_else(|| unsupported("System2 source lacks a group table"))?;
+        let placement = placement.ok_or_else(|| unsupported("source lacks a group table"))?;
         let (segment, start) = placed(code, placement, name)?;
         let count = placement
             .max_entries
-            .ok_or_else(|| unsupported("System2 table has no capacity"))?
-            as usize;
+            .ok_or_else(|| unsupported("table has no capacity"))? as usize;
         let length = count
             .checked_add(usize::from(address_header))
             .and_then(|count| count.checked_mul(2))
             .and_then(|n| n.checked_add(1))
-            .ok_or_else(|| unsupported("System2 table capacity overflows"))?;
+            .ok_or_else(|| unsupported("table capacity overflows"))?;
         let end = start
             .checked_add(length)
             .filter(|end| *end <= segment.size as usize)
-            .ok_or_else(|| unsupported("System2 reserved table capacity exceeds source segment"))?;
+            .ok_or_else(|| unsupported("reserved table capacity exceeds source segment"))?;
         if spans
             .iter()
             .any(|(id, first, stop)| *id == segment.id && start < *stop && *first < end)
         {
-            return Err(unsupported("System2 reserved table regions overlap"));
+            return Err(unsupported("reserved table regions overlap"));
         }
         spans.push((segment.id.clone(), start, end));
     }

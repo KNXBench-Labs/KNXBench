@@ -1,0 +1,69 @@
+{
+  "date": "2026-10-16",
+  "scope": "P5explicit offline0012/DefaultProcedure Type1source image;not executable device support",
+  "state": "nineteen-branch-stages-accepted-actual-merged-gates-pending",
+  "baseline": {
+    "realSources": 3,
+    "newImageSupport": false
+  },
+  "redGreen": {
+    "missingApiRed": true,
+    "fixupOmissionRuntimeRed": true,
+    "reservedDescriptorRuntimeRed": true,
+    "targetedTestsPassed": 9,
+    "type2SubstitutionMutantRejected": true,
+    "exactSourceRestored": true
+  },
+  "owning": {
+    "passed": 926,
+    "failed": 0,
+    "ignored": 28,
+    "targets": 56,
+    "explicitSystem1SourceRefusals": 13,
+    "independentPackages": 2
+  },
+  "realSource": {
+    "cases": 13,
+    "packages": 2,
+    "completeImagesAccepted": 0,
+    "namedRefusals": {
+      "fixup-list": 7,
+      "default-bits": 5,
+      "mid-octet-union": 1
+    },
+    "publicDownloadRefusals": 13,
+    "databaseAndInputsUnchanged": true,
+    "interimImageSuccessWithdrawn": true
+  },
+  "branchAcceptance": {
+    "stagesPassed": 19,
+    "rust": {
+      "passed": 4687,
+      "failed": 0,
+      "ignored": 209,
+      "targets": 345
+    },
+    "vitest": {
+      "passed": 3626,
+      "failed": 0,
+      "files": 263
+    },
+    "sourcePaths": 2931,
+    "externalFiles": 6,
+    "sourceExternalGitVerified": true,
+    "relativeSourcesVerified": 3,
+    "system1SourceRefusals": 13,
+    "realSystem1ImagesAccepted": 0,
+    "attempt": "branch-gate1",
+    "runtimeSourceManifestVerified": true
+  },
+  "mergedAcceptance": "pending",
+  "published": false,
+  "limitations": [
+    "No complete real-product System1image",
+    "No interpreted FixupList or proven ambiguous source encoding",
+    "No default-procedure translator or executable source plan",
+    "No whole-mutation durable recovery or new device admission",
+    "No new UI/CLI/HTTP/transport/schema/dependency"
+  ]
+}

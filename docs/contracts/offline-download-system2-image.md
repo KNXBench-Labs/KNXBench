@@ -52,7 +52,8 @@ reserved table regions. Parameters cannot overwrite any reserved table region.
 Unsupported placements/encodings/flags are named refusals, not dropped content.
 
 Existing placement/type validation is reused, but System2-specific source checks
-live in a private `image/system2.rs` module. An explicitly placed, byte-aligned
+live in a private `image/legacy_source.rs` module, shared through an explicit
+family argument with the bounded System-1 entry. An explicitly placed, byte-aligned
 numeric octet has no byte-order ambiguity and replaces the template byte; it need
 not already equal its source default. The original Cookbook Load Controls
 `02_03_01` v01.00.02 p7 explicitly describes modifying the default memory image

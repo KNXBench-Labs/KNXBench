@@ -36,6 +36,11 @@ with a distinct wide-index grammar and first-match sender checks. These bytes
 are not a generated real-product image or source-to-sequencer integration;
 branch/actual merged acceptance passed; the above semantic contracts remain open.
 
+P4d adds [explicit complete object-table construction](contracts/offline-systemb-object-table.md#p4d-explicit-complete-construction-16-october-2026)
+without needing a retained table template. Eighteen branch stages pass; actual
+merged acceptance and publication are pending. Source-to-ASAP mapping, generated table placement,
+relative parameter images, procedure translation and recovery remain open.
+
 ## Alpha 12 release boundary (15 October 2026)
 
 The owner requested a release of delivered source, not new feature work. Both P4

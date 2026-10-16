@@ -60,6 +60,42 @@ unrepresentable sizes rather than rounding; the 255/252-octet exception is expli
 
 ## Verification and limits
 
+### P4d: explicit complete construction (16 October 2026)
+
+`build_complete(descriptors, maximum)` constructs a table without a source
+template. Every descriptor must be explicit, including communication-disabled
+objects. The supplied descriptor count becomes the two-octet table length;
+unique one-based numbers must cover exactly `1..=count`. Sparse, duplicate,
+zero or out-of-range numbers refuse. No zero-filled inactive slots are invented.
+
+The explicit caller capacity is checked before narrowing the count or allocating
+the table. Capacity is an upper bound, not the emitted length or proof of a
+device capability. All flag/type encoding and index validation reuse `rewrite`;
+input order does not affect bytes and input data is unchanged. The existing
+`ActiveObject` carrier can explicitly describe a disabled object through its
+flags; this constructor does not evaluate Dynamic activation. An empty set
+produces only a literal zero-count table, not an unload/disable operation.
+
+Original Resources pp. 270–272 were rendered and visually inspected again:
+the current length is the number of entries, distinct from the maximum length;
+Table 86 defines a complete descriptor array. This does not establish a mapping
+from modern product object numbers to ASAPs, choose a product/profile or locate
+generated tables in a relative image. Count-prefixed memory representation is
+still separate from property-array service framing.
+
+Six additional tests cover literal independent bytes, input order/preservation,
+disabled descriptors, sparse/zero/duplicate indices, explicit capacity versus
+length, empty input, full 65,535 entries and 65,536-entry refusal. A missing-API
+RED was observed before implementation. A realistic mutant using capacity as
+the emitted length and zero-padding missing entries failed the named capacity
+test; exact production bytes were restored and all six tests passed again.
+The ten existing rewrite tests and owning all-target Clippy also pass.
+All eighteen branch stages pass on the unchanged candidate (Rust4678/0,
+Vitest3626/263files); merged acceptance and publication remain pending. The
+first branch attempt remains a recorded procfs-snapshot test failure, not an
+accepted run. See
+[P4d evidence](../evidence/offline-systemb-complete-table-2026-10-16.json).
+
 Ten always-on tests assert literal complete bytes, each independent flag and
 priority, inactive-bit preservation, empty/malformed/duplicate/out-of-range
 inputs, order independence, the last object of a 65,535-object table, trailing

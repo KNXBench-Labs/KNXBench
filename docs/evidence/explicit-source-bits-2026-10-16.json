@@ -71,6 +71,20 @@
       "corpus_success": false,
       "reason": "trial global guard exceeded this source-only change; existing Easy3 semantics unresolved, not silently redefined",
       "positive_golden_assertions_weakened": false
+    },
+    {
+      "revision": "ee706977c0d9718edcde86e3ecbf50b73b04470e",
+      "status": "retained failed private-System2 first-refusal assertion",
+      "passed_stages": 8,
+      "failed_stage": "regular-private-corpus",
+      "corpus_passed": 151,
+      "corpus_expected": 152,
+      "corpus_targets": 33,
+      "failed_target": "knx-productdb:--test system2_program_code",
+      "failed_assertion": "historical default disagrees with source bits; strict source guard is earlier",
+      "source_git_external_inputs_frozen": true,
+      "publisher_refused_before_git_write": true,
+      "correction": "exact LegacyPatchAlways refusal, source presence and DB invariance; retain all 21 steps/metadata/not-executable checks; production unchanged"
     }
   ],
   "all_family_trial_acceptance": {
@@ -110,5 +124,20 @@
     "System2"
   ],
   "existing_easy3_policy_changed": false,
-  "legacy_patch_semantics_defined": false
+  "legacy_patch_semantics_defined": false,
+  "private_system2_correction_acceptance": {
+    "stages": 10,
+    "private_original_test_passed": 1,
+    "failed": 0,
+    "ignored": 0,
+    "source_git_external_inputs_frozen": true,
+    "production_unchanged_since": "c635fdd555dad46ed7075418e3645c118176be86",
+    "exact_guard_diagnostic": true,
+    "source_declaration_presence": true,
+    "database_invariance": true,
+    "all_21_source_steps_and_nonexecutable_checks_retained": true,
+    "observed_release_test_seconds": 64.58,
+    "previous_debug_failure_seconds": 595.14,
+    "final_merged_acceptance": "pending"
+  }
 }

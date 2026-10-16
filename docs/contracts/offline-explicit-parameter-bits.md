@@ -129,8 +129,16 @@ exact public System2 source1/0, the Easy3 scope regression, owning all-target
 Clippy/build and all format/docs/repository/whitespace checks. Source/Git/external
 inputs remain frozen. The earlier all-family935/0trial is historical: its actual
 corpus failures and intentional interruption are not accepted or erased.
-Documentation-delta checks and the corrected actual15stage integration including
-regular private corpus remain pending. No full workspace/web acceptance is
+The actual scoped integration initially completed the full private corpus with
+151/152in33targets: the private Siemens test still expected the historical first
+multibyte-default refusal. Its exact assertion failure and the publisher's
+pre-write refusal are retained. The corrected test requires retained declaration
+presence, the exact earlier LegacyPatchAlways refusal and unchanged DB state;
+all21steps, metadata and public non-executable assertions remain intact. The
+production implementation is unchanged. The focused private-original regression
+then passes1/0, with all ten focused Clippy/docs/repository/format/whitespace
+stages passing and all inputs frozen. Final actual integration/private-corpus
+acceptance and publication remain pending. No full workspace/web acceptance is
 claimed for this scoped package.
 [Aggregate evidence](../evidence/explicit-source-bits-2026-10-16.json).
 No bus, vendor executable, manufacturer contact,

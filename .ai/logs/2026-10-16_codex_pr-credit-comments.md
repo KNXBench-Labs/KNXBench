@@ -55,6 +55,22 @@ Frozen branch gate passes all nine planned stages: 72 community tests, full tool
 188 tests (one inherited skip), docs, five freshly built repository checks and
 whitespace. All 2948 source path/mode/content identities remain unchanged.
 Added-line security scan has zero secret/shell-injection/dynamic-execution/pickle
-candidates. Actual-merge acceptance and remote workflow remain PENDING. Public GitHub comments are
-external writes: only the published maintained workflow will exercise them after
-branch and actual-merge scoped acceptance. Scope includes the existing PR #24.
+candidates. At this branch checkpoint actual-merge acceptance and remote workflow
+were pending; their subsequent outcomes follow below. Public GitHub comments are
+external writes: only the published maintained workflow exercises them after
+branch and actual-merge acceptance. Scope includes existing PR #24.
+
+## Live workflow correction
+
+Published initial runtime `ce8dc746` after nine-stage branch and actual-merge
+acceptance. Real workflow `38906647856` passed tests but failed creating the
+PR #24 comment. No PR credit comment existed after that run. The captured
+CalledProcessError omitted stderr; its HTTP status/server reason is unknown,
+not asserted as a verified 403. Added named failing regressions for explicit PR
+write capability and sanitized API failures, then corrected both. Final workflow
+uses `issues: write` and `pull-requests: write`, while retaining trusted default
+checkout and no PR code execution. API failures show only an extracted HTTP
+status, never stderr/body/token text. Fresh acceptance and real workflow retry
+remain PENDING. The correction branch executes all runtime/documentation stages
+successfully but its final whitespace check refuses one extra log EOF blank line;
+that layout-only defect is removed before commit and actual-merge acceptance.

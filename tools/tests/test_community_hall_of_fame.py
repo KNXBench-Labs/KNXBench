@@ -192,7 +192,7 @@ class PullRequestTests(unittest.TestCase):
         workflow = (Path(__file__).resolve().parents[2] / ".github/workflows/community-hall-of-fame.yml").read_text()
         self.assertIn("pull_request_target:", workflow)
         self.assertIn("types: [opened, closed, reopened]", workflow)
-        self.assertIn("pull-requests: read", workflow)
+        self.assertIn("pull-requests: write", workflow)
         self.assertNotIn("pull_request.head", workflow)
         self.assertIn("ref: ${{ github.event.repository.default_branch }}", workflow)
 
@@ -576,6 +576,17 @@ class PullRequestNotificationTests(unittest.TestCase):
         api = PrApi({**pull, "user": {**pull["user"], "avatar_url": "https://example.com/new-avatar"}})
         hall.notify_pull_requests(snapshot, [pull], api)
         self.assertEqual(len(api.posts), 1)
+
+    def test_api_failure_reports_only_http_status_not_response_or_credentials(self):
+        error = hall.subprocess.CalledProcessError(
+            1, ["gh", "api"], stderr="gh: permission denied (HTTP 403) private-response-and-token")
+        with patch.object(hall.subprocess, "run", side_effect=error):
+            with self.assertRaisesRegex(RuntimeError, r"^GitHub API request failed \(HTTP 403\)$"):
+                hall.GitHub("example/project").post_comment(2, "body")
+        error.stderr = "private-response-without-status"
+        with patch.object(hall.subprocess, "run", side_effect=error):
+            with self.assertRaisesRegex(RuntimeError, "^GitHub API request failed$"):
+                hall.GitHub("example/project").post_comment(2, "body")
 
     def test_api_uses_pull_endpoint_patch_for_edit_and_post_for_create(self):
         with patch.object(hall.subprocess, "run") as run:

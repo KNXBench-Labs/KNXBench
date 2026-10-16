@@ -234,3 +234,11 @@ earned medals, totals and reachable horizontal table scrolling. Existing
 completion awards/notification flags are exactly preserved during real migration.
 No application build, Rust workspace, private-corpus, hardware or release gate
 is claimed by this repository-tooling-only acceptance.
+
+PR-comment follow-up: 73 community tests and 189 tools tests (one inherited skip)
+pass; all nine corrected actual-merge scoped stages pass with 2948 unchanged
+source identities. Live workflow `38907119595` on runtime `45091f56` creates
+bot comment `6216417065` on PR #24 with exact id/body readback. A second live run
+`38907250544` succeeds without another comment or any body/updated-at change.
+The initial live POST failure is retained as failed evidence, not relabelled.
+No new application/domain/schema/scoring/dependency or hardware/release scope.

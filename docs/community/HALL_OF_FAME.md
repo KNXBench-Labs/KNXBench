@@ -8,10 +8,10 @@ with the details. You do not need to write code to earn a place here.
 
 | Place | Bug hunter | Rank & title | Medal | XP | Issues | Replies | Resolved |
 | ---: | --- | --- | --- | ---: | ---: | ---: | ---: |
-| 1 | [@thengsty](https://github.com/thengsty) | Datapoint Dragon Slayer | 🏅 Golden Bus Probe<br>🏅 Double-Decade Fault Finder<br>🏅 Loose End Lasso<br>🏅 Regression Repair Ribbon<br>🏅 Acknowledgement Ace | **303** | 20 | 13 | 19 |
+| 1 | [@thengsty](https://github.com/thengsty) | Datapoint Dragon Slayer | 🏅 Golden Bus Probe<br>🏅 Double-Decade Fault Finder<br>🏅 Loose End Lasso<br>🏅 Regression Repair Ribbon<br>🏅 Acknowledgement Ace | **304** | 20 | 14 | 19 |
 | 2 | [@hagbardZ](https://github.com/hagbardZ) | Bus Bug Scout | — | **18** | 1 | 3 | 1 |
 
-*Snapshot: 2026-10-15T06:40:25Z.*
+*Snapshot: 2026-10-16T08:44:08Z.*
 
 ## How the points work
 

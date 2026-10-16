@@ -1,5 +1,15 @@
 # Compatibility
 
+## System-B link-table boundary (16 October 2026 source)
+
+[The explicit table builder](contracts/offline-systemb-link-tables.md) is a pure
+byte prerequisite, not System-B product/download support. The caller selects
+association format0/1 and supplies one-based object bounds/capacity. Missing
+sender, ambiguous links, broadcast engineering links and unrepresentable indices
+are explicit refusals; no receive link is silently made the sender. Empty tables
+retain their server-default caveat. No mask, source translator or field evidence
+is promoted; existing Easy-3/legacy paths and native/product schemas are unchanged.
+
 ## Relative source-view boundary (16 October 2026 source)
 
 [Relative source segments](contracts/offline-relative-source-segments.md) are now

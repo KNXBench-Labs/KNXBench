@@ -1,5 +1,14 @@
 # Architecture
 
+## Complete explicit System-B object tables (16 October 2026 source)
+
+Core's existing Format-1 codec now also constructs a table from a complete
+explicit descriptor set and caller capacity, reusing its rewrite encoder.
+No missing descriptor is synthesized. Product activation/ASAP mapping, generated
+table placement, relative images and executable admission remain outside this
+pure byte boundary. No new layer, dependency or persistence change.
+[Contract](contracts/offline-systemb-object-table.md#p4d-explicit-complete-construction-16-october-2026).
+
 ## Explicit System-B link grammar (16 October 2026 source)
 
 Core's independent System-B table builder accepts explicit association formats,

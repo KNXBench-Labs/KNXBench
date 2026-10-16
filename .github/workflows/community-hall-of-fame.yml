@@ -3,6 +3,9 @@ name: Community Hall of Fame
 on:
   issues:
     types: [opened, closed, reopened, transferred]
+  # Trusted default-branch code only; never check out or execute the PR head.
+  pull_request_target:
+    types: [opened, closed, reopened]
   issue_comment:
     types: [created, edited, deleted]
   schedule:
@@ -12,6 +15,7 @@ on:
 permissions:
   contents: write
   issues: write
+  pull-requests: read
 
 # GitHub keeps only one pending run. Every run reconciles *all* pending
 # completion awards, so a superseded close event is recovered on the next run.

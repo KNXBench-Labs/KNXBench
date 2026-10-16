@@ -14,6 +14,16 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-16 — Community Hall of Fame includes PR authors, total/open/merged/
+  closed-unmerged counts, explicit XP sources and earned-only PR/merge medals.
+  Open PRs earn 5 XP, merged PRs 25 total, closed-unmerged PRs 15 total; bonuses
+  do not stack. Schema 2 migrates the existing schema-1 completion ledger without
+  replaying notifications. Trusted default-branch Actions handles fork PR
+  lifecycle events without executing their code. 59 community tests and real
+  public API generation pass; scoped delivery acceptance is recorded in the
+  [contract](contracts/community-recognition.md) and agent delivery log.
+  No application/domain/build dependency, hardware or release change.
+
 - 2026-10-16 — PR #24 public UP 258D12 evidence integrated and published as
   `678078b8` (review correction `b9ee5cf7`): digest-pinned opt-in regression
   checks the exact tool-metadata pointer/source order and unchanged planner/image

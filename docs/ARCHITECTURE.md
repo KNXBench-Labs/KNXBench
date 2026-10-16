@@ -1,5 +1,13 @@
 # Architecture
 
+## System-300 property-table image boundary (16 October 2026 source)
+
+Core reuses the existing Type6 link validator/encoder, then exposes immutable
+System-300 S-mode property lengths separately from actual elements. No duplicated
+link encoder, inferred object index, source translator or transport is introduced.
+Explicit format/object bounds/capacities remain caller inputs; schemas and all
+public download admission stay unchanged. [Contract](contracts/offline-system300-property-tables.md).
+
 ## Shared image transformation guard (16 October 2026 source)
 
 All three ProductDB image entries now reject retained direct FixupList declarations

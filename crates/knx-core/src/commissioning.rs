@@ -30,6 +30,7 @@ pub mod properties;
 pub mod property_download;
 pub mod rf_configuration;
 pub mod serial_number;
+pub mod system300_group_tables;
 pub mod systemb_group_tables;
 pub mod systemb_object_table;
 

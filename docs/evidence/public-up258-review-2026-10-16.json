@@ -1,0 +1,53 @@
+{
+  "date": "2026-10-16",
+  "issue": 22,
+  "pull_request": 24,
+  "scope": "Public-package regression and research clarification only; no production behavior change or device-support admission",
+  "original_pr_head": "dd73e2f9dbfd492f3c176e8bc66d07b18e9f4049",
+  "review_correction_commit": "b9ee5cf72fc01d90f92c05ce9d98c2c79d38016c",
+  "integrated_tested_and_published_revision": "678078b8cb9abc3f2a3701fa81bc9dfcdafcf47e",
+  "package_sha256": "520d3fcee5b63d079ac7d0bd5e7ce9467ff84cb5cde06ac341b77aba47e3ee0f",
+  "original_pr_acceptance": {
+    "stages_passed": 11,
+    "ordinary_productdb_tests": {"passed": 926, "failed": 0, "ignored": 29, "targets": 56},
+    "explicit_public_package_tests": {"passed": 1, "failed": 0},
+    "source_frozen": true,
+    "package_frozen": true
+  },
+  "integrated_acceptance": {
+    "stages_passed": 11,
+    "stages": ["format", "documentation", "public-package", "productdb-tests", "productdb-clippy", "check-layering", "check-headers", "check-anchors", "check-ledger", "check-corpus-gates", "whitespace"],
+    "ordinary_productdb_tests": {"passed": 928, "failed": 0, "ignored": 29, "targets": 56},
+    "explicit_public_package_tests": {"passed": 1, "failed": 0},
+    "frozen_source_paths": 2937,
+    "source_frozen": true,
+    "package_frozen": true,
+    "documentation": {"markdown_files": 615, "local_targets": 5213, "images": 59, "chapters": 33, "errors": 0},
+    "heading_anchors": {"links": 1398, "dead": 0}
+  },
+  "assertion_mutations": {
+    "caught": ["wrong projected reference", "wrong summary pointer", "reordered retained steps"],
+    "actual_exits": [101, 101, 101],
+    "compiler_errors_counted_as_caught": false,
+    "green_before_and_after": true,
+    "production_source_restored_exactly": true
+  },
+  "review": {
+    "method": "Separate in-session review and correction; no independent subagent approval",
+    "closed_findings": ["representative observations overstated as exhaustive census", "metadata pointer and source-order assertions too weak", "planner policy described too broadly as device memory capability"],
+    "unresolved_findings_in_this_scope": []
+  },
+  "boundaries": {
+    "full_workspace_suite_rerun": false,
+    "web_suite_rerun": false,
+    "private_corpus_suite_rerun": false,
+    "hardware_contacted": false,
+    "manufacturer_package_embedded": false,
+    "research_table_automated_by_public_regression": false,
+    "system2_programming_enabled": false,
+    "issue_22_may_be_closed_as_supported": false,
+    "release_or_deployment_performed": false
+  },
+  "publication": {"local_tracking_live_equality_verified": true, "pr_state_read_back": "MERGED"},
+  "provenance_note": "Raw runner receipts, stage logs, source commitments and independent public-source measurements are retained in private task evidence. Later result-only documentation changes retain runtime acceptance at the exact integrated revision above."
+}

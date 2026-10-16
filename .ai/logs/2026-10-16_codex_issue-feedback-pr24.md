@@ -73,9 +73,25 @@ runs; the original production source was restored byte-for-byte. No production
 source change remains. Separate in-session re-review finds the three findings
 closed within this test/docs scope; no critical/security finding was identified.
 
-## Pending integrated acceptance and delivery
+## Integrated acceptance and runtime publication
 
-Run the same eleven-stage scoped gate on the corrected actual integration after
-reconciling fresh upstream. Publication/readback, PR/issue status and owned-artifact
-retirement remain pending. Issues #7 and #22 remain open; accepting this evidence
-is not support for programming the detector.
+The independent P6 owner completed its own package; published closure
+`7448450c0d6414ecc5db7ae347106cdadea29193` was reconciled into the owned
+integration without taking over its source or accepting it by inference.
+The corrected actual integration `678078b8cb9abc3f2a3701fa81bc9dfcdafcf47e`
+passed the same eleven-stage scope: ordinary ProductDB 928/0, 29 ignored in
+56 targets, explicit public-package regression 1/0, owning all-target Clippy,
+format, documentation and five xtask checks. All 2,937 source commitments and
+the selected external package remained unchanged. Documentation measured 615
+Markdown files, 5,213 local targets, 59 images and 33 chapters; anchors checked
+1,398 links without a dead target. See the
+[public acceptance summary](../../docs/evidence/public-up258-review-2026-10-16.json).
+
+The exact accepted integration was pushed to `main`; local/tracking/live equality
+was read back. GitHub reports PR #24 **MERGED**, with original PR integration
+`2122e006` and its review corrections included in the published ancestry.
+This result-only closure does not retag runtime tests as a new execution.
+Additional documentation checks, public thread updates and owned retirement
+are recorded in the shared root handover/private final receipt upon completion.
+Issues #7 and #22 remain open; accepting this evidence is not support for
+programming the detector.

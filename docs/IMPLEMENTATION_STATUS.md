@@ -14,6 +14,20 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-16 — PR #24 public UP 258D12 evidence integrated and published as
+  `678078b8` (review correction `b9ee5cf7`): digest-pinned opt-in regression
+  checks the exact tool-metadata pointer/source order and unchanged planner/image
+  refusals. Research distinguishes representative template observations from
+  exhaustive counts, active Union values and actual wire-encoding evidence.
+  All eleven scoped integrated stages pass: ProductDB 928/0, 29 ignored in 56
+  targets; explicit public-package test 1/0, owning all-target Clippy, format,
+  documentation and five repository checks. Three compiled metadata mutations
+  are caught and production bytes restored. No production/UI/schema/admission
+  change, full-workspace/web/private-corpus rerun, hardware test or release.
+  Issue #22 remains open for actual programming support.
+  [Dossier](research/2026-10-16-up258-public-package-evidence.md) ·
+  [Scoped acceptance](evidence/public-up258-review-2026-10-16.json).
+
 - 2026-10-16 — P6 shared FixupList guard published as `39c88aba` after two named
   runtime REDs: Easy3/System-2 now refuse unhandled direct declarations alongside
   System-1, before image assembly. Positive sources, empty/populated declarations,

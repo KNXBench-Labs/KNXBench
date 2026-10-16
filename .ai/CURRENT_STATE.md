@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-16 15:35
+- **Completed:** New explicit offline-download continuation reconciled fresh origin/main 6eb9178e; P6 runtime39c88aba and closure7448450c are published ancestors. Owned feat/source-image-20261016 worktree isolates the stale dirty root. Original Cookbook Load Controls p7, Manufacturer Tool pp18–19 and Project Schema23 pp29–30 rendered/visually inspected. No production edit or test acceptance yet.
+- **Pending/Next Steps:** Own the bounded direct-Memory numeric single-octet bitfield/template-default slice in ProductDB legacy_source and image regressions. Require named RED before narrowing only this guard; independently expected bytes and real original-source importer/evaluator checks. FixupList, Union placement and multibyte semantics remain closed unless separately proven.
+- **Notes for Codex oder Claude:** No subagents/coding CLIs, bus, vendor code, releases or new masks. Root HEAD1817fb2a/index/foreign paths protected. Existing closed P5/P6/System300/UP258 results not rerun or reopened. Source guard remains intact. Private scratch source-image-continuation-20261016; no owned gate active at claim preparation. Preserve every prior journal block.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-16 15:23
 - **Completed:** PR credit-comment follow-up implemented/self-reviewed and published;final accepted corrected runtime45091f56855e601c881a92ffbb0689474c779538 after initialce8dc746. Corrected actual merge9/9scoped stages pass:73community/189tools(one inherited skip),docs/five fresh repository checks/whitespace;2948source identities frozen. Initial live run38906647856failed on POST(no HTTP reason exposed);explicit PRwrite/status-only diagnostics corrected after named REDs. Actual workflow38907119595succeeds and posts PR24comment6216417065asgithub-actions[bot],exact id/body readback verified:25PRXP,329total,title,counters,XP breakdown,earnedmedals. Live repeat38907250544succeeds with exactly1markedcomment,identicalid/body/created_at/updated_at. Existing issue ledger/XP unchanged. No PRhead code/subagents/hardware/release.
 - **Pending/Next Steps:** No unfinished implementation for bounded request. Final result-only documentation closure/publication and exact owned retirement are recorded in shared root/private evidence. No Rustworkspace/web/private-corpus/hardware gate claimed. Deleted PRnotice can recreate;no separate PRnoticeledger or distributed exactly-once promise.

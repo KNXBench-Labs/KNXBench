@@ -99,12 +99,13 @@ material. Do not mark a path implemented merely because its metadata is parsed.
   merge-contract scope is57B0, not automatic07B0translation;
   table-image integration, encoding/substitution and recovery remain open.
 - P4d: [complete explicit object-table construction](offline-systemb-object-table.md#p4d-explicit-complete-construction-16-october-2026)
-  implemented locally with six tests, a rejected capacity-padding mutant and
+  integrated and published as `894f14e0` with six tests, a rejected capacity-padding mutant and
   owning all-target Clippy. Every descriptor is explicit; this supplies the
   no-template codec prerequisite, not source-to-ASAP mapping, relative-image
   placement, complete product construction or recovery. All eighteen branch
   stages pass on the unchanged retry candidate (Rust4678/0, Vitest3626/263files);
-  actual merged acceptance and publication pending.
+  all nineteen actual merged stages also pass, including isolated corpus152/152
+  in33targets. Exact local/tracking/live main equality verified.
 - P3 onward: source-to-property mapping and whole-mutation recovery remain
   unimplemented; their dependencies above still need their own proof.
 

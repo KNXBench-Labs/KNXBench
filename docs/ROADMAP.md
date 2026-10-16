@@ -37,8 +37,9 @@ are not a generated real-product image or source-to-sequencer integration;
 branch/actual merged acceptance passed; the above semantic contracts remain open.
 
 P4d adds [explicit complete object-table construction](contracts/offline-systemb-object-table.md#p4d-explicit-complete-construction-16-october-2026)
-without needing a retained table template. Eighteen branch stages pass; actual
-merged acceptance and publication are pending. Source-to-ASAP mapping, generated table placement,
+without needing a retained table template. Eighteen branch and nineteen actual
+merged stages pass, including isolated corpus152/152; published as `894f14e0`
+with exact remote equality verified. Source-to-ASAP mapping, generated table placement,
 relative parameter images, procedure translation and recovery remain open.
 
 ## Alpha 12 release boundary (15 October 2026)

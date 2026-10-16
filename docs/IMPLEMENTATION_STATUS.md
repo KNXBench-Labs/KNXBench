@@ -14,15 +14,17 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
-- 2026-10-16 — P4d complete explicit System-B object-table construction implemented
-  locally: every descriptor supplied, caller capacity distinct from emitted
+- 2026-10-16 — P4d complete explicit System-B object-table construction published as
+  `894f14e0`: every descriptor supplied, caller capacity distinct from emitted
   count, no synthetic inactive slots. Six literal/boundary tests pass after
   missing-API RED; capacity-padding mutant rejected, exact source restored.
   Existing ten rewrite tests and owning all-target Clippy pass. All eighteen
   branch stages pass on the unchanged retry candidate: Rust4678/0/208ignored
   in343targets, Vitest3626/263files;2922source and external/Git commitments
-  match. First procfs-snapshot test failure retained; no test weakening. Actual
-  merged acceptance and publication pending; no product image/plan/recovery
+  match. First procfs-snapshot test failure retained; no test weakening. All
+  nineteen actual merged stages pass with the same Rust/Web totals and isolated
+  corpus152/152 in33targets; exact local/tracking/live main equality verified.
+  No product image/plan/recovery
   or new hardware support. [Contract](contracts/offline-systemb-object-table.md#p4d-explicit-complete-construction-16-october-2026) ·
   [Evidence](evidence/offline-systemb-complete-table-2026-10-16.json).
 

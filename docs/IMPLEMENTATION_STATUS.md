@@ -16,8 +16,11 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 - 2026-10-16 — Exact UP258/issue #22 continuation: original MP p140 exposes
   inverted checksum-disable encoding in the offline absolute-property codec.
-  Regression observed before the focused correction; final acceptance/publication
-  is recorded in the task log. [Production decision](research/2026-10-16-up258-production-decision.md)
+  Named RED preceded the correction, published as `6d26a1e3`. Actual merged
+  acceptance passes Core863/0, Net property7/0, exact public package1/0,
+  owning all-target Clippy and eight docs/repository/format/whitespace stages.
+  The separate private evaluator experiment passes for both proposed values;
+  no full workspace/web/private-corpus/hardware run is claimed. [Production decision](research/2026-10-16-up258-production-decision.md)
   inventories all 21 positions and concrete missing encoding/XML/resource/recovery
   rules. One [English reporter request](support/issue-22-up258-evidence-request.md)
   is prepared, not posted. This is not a complete image, production download or

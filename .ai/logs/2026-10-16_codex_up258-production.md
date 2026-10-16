@@ -84,10 +84,21 @@ measurement or permission for acquisition.
 - Separate in-session self-review has no unresolved blocking finding; no
   independent reviewer claimed. Eight branch docs/repository/format/whitespace
   stages pass, including freshly compiled runtime-root-selected xtask.
-- Still pending: final actual integrated focused acceptance; reconcile
-  published System300/shared docs and preserve both journal histories.
-- Focused KNXBench-authored commit/integration/main push/readback, then verified
-  private archive, exact owned retirement and additive selected-root handover.
+- Feature4be8a789 is committed as KNXBench/no coauthor. Fresh System300closure
+  2ee995f0 integrated non-FF as6d26a1e35f8e656f5bd0419b40fcffb4ad2bf08b;
+  all14owned paths and both complete journal histories preserved. No foreign
+  source or worktree changed.
+- Actual merged acceptance passes Core863/0 (includes inherited System300tests),
+  Net property7/0, exact public package1/0 and owning all-target Clippy; all4runtime
+  stages/source hashes match. Eight merged docs/repository/format/whitespace
+  stages pass. The first summary-reader refusal required text from intentionally
+  silent format/whitespace commands; corrected reader accepts only those empty
+  logs and checks actual exits. Runtime was not rerun or relabelled.
+- Exact local/tracking/live main6d26a1e3publication equality verified. Remaining
+  result-only closure checks and verified private archive/exact owned retirement
+  are recorded in the selected-root final handover/private closure receipt.
+- No full workspace/web/private-corpus suite, source translator, complete
+  Siemens image, durable whole-mutation recovery or physical validation claimed.
 
 No bus, vendor contact, subagent/coding-agent CLI, release, deployment or blanket
 Verified promotion. Completion is the owner's alternativeB with a precise

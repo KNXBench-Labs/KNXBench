@@ -15,6 +15,17 @@ loading, property-service addressability, durable recovery or hardware support.
 Empty address/association tables retain their acceptance/default-mapping meaning.
 No public mask is admitted; KL-007 remains open at its existing scope.
 
+## Exact UP258 source boundary (16 October 2026)
+
+The [exact-application decision](../research/2026-10-16-up258-production-decision.md)
+keeps issue #22 programming refused: multibyte source encoding, XML SegFlags/
+AllocExtraByte/resource transforms and reconstructible complete prior allocator/
+property/task state are unresolved. Published `6d26a1e3` corrects the pure property
+checksum-disable polarity (bit7=0), not these mappings. The [prepared reporter
+request](../support/issue-22-up258-evidence-request.md) is not a sent request or
+permission for any device operation. No new complete image, recovery or device
+support is claimed.
+
 ## Shared source-fixup refusal (16 October 2026 source)
 
 The [shared image guard](../contracts/source-fixup-integrity.md) now also covers

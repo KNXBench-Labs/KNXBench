@@ -14,7 +14,7 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
-- 2026-10-16 — Offline expansion P3a **branch accepted, integration pending**:
+- 2026-10-16 — Offline expansion P3a **integrated and published** as `7632fb1a`:
   immutable normalized0025 property plans validate source positions, explicit
   object indices, identity ordering, load lifecycle, absolute allocation bounds
   and non-overlapping writes. The concrete-simulator-only executor reuses
@@ -23,10 +23,13 @@ fragment aliases and update this index. Do not rewrite previous results.
   Focused Core8/8, Net7/7, one hardware-transport compile-refusal example and
   owning-crate all-target Clippy pass. Original relative simulator allocation
   baseline and setup/target guards produced named REDs before their fixes.
-  Fifteen-stage frozen branch acceptance passes: Rust4639/0/207ignored,
-  Vitest3626/263files, workspace Clippy/build, actual frontend build,
-  documentation/tooling/five repository checks and the explicit Release
-  real-source refusal regression;2898source paths remain unchanged.
+  Fifteen-stage branch and sixteen-stage actual merged acceptance pass:
+  Rust4639/0/207ignored, Vitest3626/263files, workspace Clippy/build, actual
+  frontend build, documentation/tooling/five repository checks and the explicit
+  Release real-source refusal regression. Merged acceptance adds isolated
+  corpus152/152 in33targets;2899source paths remain unchanged. Local HEAD,
+  fetched main and live remote main read back equal to `7632fb1a`.
+  The selected dirty root checkout was deliberately not synchronized.
   ProductDB translation, restart, real-source16-bit encoding, complete durable
   recovery and any new public/hardware support remain open.
   [Receipt](evidence/offline-property-plan-simulation-2026-10-16.json) ·

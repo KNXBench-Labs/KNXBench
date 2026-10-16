@@ -63,8 +63,9 @@ material. Do not mark a path implemented merely because its metadata is parsed.
   [Source-image contract](offline-download-system2-image.md) separates successful
   synthetic assembly from the actual Siemens multi-octet source refusal.
 - P3a: normalized offline property-plan validation and concrete-simulator
-  execution implemented; fifteen-stage frozen branch acceptance passes.
-  Actual merged acceptance/publication remain pending.
+  execution integrated and published as `7632fb1a`. Fifteen-stage branch and
+  sixteen-stage merged acceptance pass, including isolated corpus152/152 in33
+  targets; exact main publication equality verified.
   This is not yet a ProductDB source translator or durable recovery. See the
   [bounded simulation contract](offline-property-plan-simulation.md).
 - P3 onward: source-to-property mapping and whole-mutation recovery remain

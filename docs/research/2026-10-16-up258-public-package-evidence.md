@@ -24,7 +24,8 @@ Public admission stays refused (`not-memory-mapped`), unchanged.
 
 ## Measured template behaviour of the parameter segment
 
-[V] The real-source image assembly still refuses, first at
+[V] Before the [later shared patch-declaration guard](../contracts/offline-explicit-parameter-bits.md),
+the real-source image assembly refused first at
 `M-0001_A-9205-04-9270_P-901_R-901` ("Sensor_Short_Signal_T1", 16-bit,
 `AS-3C00` offset 240, declared default 120): the template octets at its
 placement are `00 00`, so the declared default cannot corroborate any byte
@@ -69,6 +70,17 @@ procedure-translation and recovery contracts. The existing
 [byte-order probe](../adr/0119-read-only-byte-order-probe.md) refuses this
 `MV-0025` application under its current memory-planner admission policy. This
 contribution adds no alternate probe or live-write route.
+
+## Later source-integrity boundary
+
+The exact application XML also declares unqualified `LegacyPatchAlways` on
+parameters in `Static/Parameters`. The [shared integrity correction](../contracts/offline-explicit-parameter-bits.md)
+now refuses this unhandled directive before parameter evaluation, including for
+inactive parameters. The earlier P-901 observation above remains valid historical
+source evidence, not the current first image diagnostic or a resolved encoding.
+The digest-pinned opt-in test now requires the exact legacy-patch refusal, source
+presence, unchanged database state and the unchanged public admission boundary.
+It does not remove or execute any directive to reach a later error.
 
 ## Reproducing the bounded regression
 

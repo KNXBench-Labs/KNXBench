@@ -77,11 +77,14 @@ unaligned or endian-ambiguous case refuses. Existing text/type validation remain
 in force. Source-default corroboration is a conservative boundary on inferred
 forms, not a universal KNX requirement or proof of firmware behaviour.
 
-The actual Siemens source reaches a16-bit field whose template is zero and
-whose declared default is nonzero, without a ParameterByteOrder declaration.
-The current complete-source assembly refuses at that exact missing witness;
-the opt-in test pins the named refusal as well as unchanged public mask admission.
-This is not a successful whole-Siemens image. Earlier discovery tests expecting
+The actual Siemens source contains unqualified `LegacyPatchAlways` declarations;
+the [later shared integrity guard](offline-explicit-parameter-bits.md) now refuses
+before parameter evaluation. Historically it reached a16-bit field whose template
+is zero and whose declared default is nonzero, without ParameterByteOrder.
+That missing encoding witness remains unresolved, but is no longer the current
+first refusal. The opt-in digest-pinned public-package test asserts the exact
+legacy-patch refusal and unchanged public mask admission. Neither outcome is a
+successful whole-Siemens image. Earlier discovery tests expecting
 full image success remain failed evidence, not relabelled passes. The successful
 synthetic source assembly proves only its explicitly covered grammar.
 

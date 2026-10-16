@@ -88,3 +88,12 @@ whitespace stage exits2on this log's sole extra blank EOF; retained as a distinc
 full-gate refusal, not relabelled GREEN. Correct EOF and contract grammar only,
 then prove complete non-documentation input equality and run eight documentation/
 repository/format/whitespace delta stages. Actual integration/corpus remains open.
+
+Actual integration1 on e70052e5 preserves seven successful stages and exact
+public-UP258 named assertion failure: the new guard correctly refuses retained
+LegacyPatchAlways before the historical P-901 default-bit check. All source/Git/
+527external commitments match; regular corpus never started. Review R5 corrects
+only the digest-pinned test and current-versus-historical documentation, keeping
+exact diagnostics, source presence, original21steps and admission assertions.
+Add unchanged-DB assertion. No safety implementation is weakened. Focused GREEN
+and complete corrected actual-integration acceptance remain pending.

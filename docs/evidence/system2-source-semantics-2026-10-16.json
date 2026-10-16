@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "scope": "P3b bounded source semantics research; no production implementation",
+  "baseline": "303d0b4c0b563f070bbf62e81dff2d238d58ad3d",
+  "originalPdf": {
+    "filename": "03_05_01 Resources v01.10.01 AS.pdf",
+    "section": "4.2.7",
+    "printedPage": 31,
+    "method": "original rendered body visually inspected",
+    "tableReferenceOctets": 4
+  },
+  "observedMasterResourceLength": 2,
+  "resourceToWireTransformEstablished": false,
+  "probe": {
+    "scope": "exact two prior-candidate packages with0020/0021/0025; direct application XML and master only",
+    "packages": 2,
+    "counts": {
+      "selectedXmlMembers": 223,
+      "bytesRead": 263403490,
+      "masterMembersRead": 2,
+      "applicationMembersRead": 191
+    },
+    "rejections": {
+      "member-size": 30
+    },
+    "observedSourceProcedures": 49,
+    "distinctApplicationMaskProcedures": 49,
+    "sourceProceduresByMask": {
+      "MV-0020": 3,
+      "MV-0021": 9,
+      "MV-0025": 37
+    },
+    "segFlagsSourceOccurrences": {
+      "128": 76,
+      "0": 188
+    },
+    "parameterByteOrderSourceOccurrences": {
+      "absent": 49
+    },
+    "restartSourceOccurrences": 33,
+    "conclusion": "Source correlation only; no XML flag polarity, wire width, source encoding or hardware admission established.",
+    "completeSelectedMemberCoverage": false
+  },
+  "syntheticChecks": 7,
+  "reconciliation": {
+    "currentSourceProcedures": 49,
+    "sourceProceduresWithMachine5": 44,
+    "priorMachine5Witnesses": 44,
+    "machine5ApplicationSetsEqual": true,
+    "sourceInputsUnchanged": true
+  },
+  "historicalSourceLimit": "SDK source independently matched original archive; does not parse modern XML SegFlags or admit0025",
+  "historicalSchemaMirrorLimit": "unsigned-byte grammar only; not authenticated current official schema",
+  "productionCodeChanged": false,
+  "newHardwareAdmission": false,
+  "wholeGoalComplete": false
+}

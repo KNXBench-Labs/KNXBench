@@ -14,6 +14,18 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-16 — P3b **research checkpoint, no production-code change**:
+  original Resources§4.2.7 p31 specifies a four-octet table-reference pointer;
+  retained master resource Length2 is not treated as a proven wire-width rule.
+  A bounded network-isolated two-package source probe observed49procedures and
+  264absolute-segment flags;30oversized members remain unexamined. The44machine5
+  application witnesses match the prior study exactly. Neither flag polarity,
+  parameter byte order nor complete recovery was inferred from the census.
+  This System2 translation slice remains evidence-blocked; independent family
+  work continues. P3a publication is unchanged.
+  [Findings](research/2026-10-16-system2-source-semantics.md) ·
+  [Aggregate receipt](evidence/system2-source-semantics-2026-10-16.json).
+
 - 2026-10-16 — Offline expansion P3a **integrated and published** as `7632fb1a`:
   immutable normalized0025 property plans validate source positions, explicit
   object indices, identity ordering, load lifecycle, absolute allocation bounds

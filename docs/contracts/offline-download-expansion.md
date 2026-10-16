@@ -68,6 +68,13 @@ material. Do not mark a path implemented merely because its metadata is parsed.
   targets; exact main publication equality verified.
   This is not yet a ProductDB source translator or durable recovery. See the
   [bounded simulation contract](offline-property-plan-simulation.md).
+- P3b research: [source-semantics investigation](../research/2026-10-16-system2-source-semantics.md)
+  directly checked the original four-octet table-reference definition against
+  two-octet master-resource declarations. The bounded49procedure/264segment
+  census does not establish flag polarity or missing encoding/recovery semantics.
+  No production mapping is guessed; this individual translation slice remains
+  evidence-blocked, not hardware-blocked. Continue independent System-B and
+  remaining-family work under the owner scope.
 - P3 onward: source-to-property mapping and whole-mutation recovery remain
   unimplemented; their dependencies above still need their own proof.
 

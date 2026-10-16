@@ -59,7 +59,8 @@ remain separate byte prerequisites, not hardware evidence.
 - `ProgramCode.has_fixup_list` is a nonpersisted view of direct `Static/FixupList`
   presence, including an empty declaration. Its contents stay in the original
   stored XML; no fixup semantics are inferred. This entry refuses any such
-  declaration. It does not reinterpret similarly named nested extension data.
+  declaration. P6 moves that refusal into the [shared image boundary](source-fixup-integrity.md)
+  so Easy3 and System-2 also refuse; it does not reinterpret similarly named nested extension data.
   The legacy reader initializes the new view false; storage schemas are unchanged.
 - Existing mask validation remains in force. Only the existing individual-address
   slot exemption applies; changed masked parameters/tables refuse. Image assembly

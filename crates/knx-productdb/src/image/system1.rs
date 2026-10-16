@@ -20,11 +20,7 @@ pub(super) fn table_spans(code: &ProgramCode) -> Result<Vec<(String, usize, usiz
     if code.segments.iter().any(|s| s.data.is_none()) {
         return Err(unsupported("source segment ships no Data"));
     }
-    if code.has_fixup_list {
-        return Err(unsupported(
-            "FixupList requires a separate source interpretation",
-        ));
-    }
+
     let mut spans = legacy_source::table_spans(code, ImageLayout::System1)?;
     let objects = code
         .com_object_table

@@ -22,6 +22,9 @@ P1 source-bound metadata witness; the output is always marked with the
 an executable plan or hardware verification. Scope is source interpretation and
 deterministic image generation for engineering/review/testing.
 
+A retained direct FixupList now also [refuses before image assembly](source-fixup-integrity.md);
+source XML preservation is not evidence that its transformations were applied.
+
 ## Separate table grammars
 
 - Core's legacy descriptor codec uses the two-byte header and three-byte Type2

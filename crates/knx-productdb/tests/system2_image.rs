@@ -70,6 +70,42 @@ fn real_product_evaluator_builds_parameter_and_legacy_table_images_without_admit
 }
 
 #[test]
+fn uninterpreted_fixup_declarations_refuse_system2_images_without_database_changes() {
+    let (_dir, baseline, request) = fixture(PROGRAM);
+    assert!(build_system2_image(&baseline, &request).is_ok());
+    for declaration in [
+        "<FixupList />",
+        r#"<FixupList><Fixup FunctionRef="MV-0025_ME-Unknown" CodeSegment="PAR"><Offset>1</Offset></Fixup></FixupList>"#,
+    ] {
+        let xml = PROGRAM.replace("</Static>", &format!("{declaration}</Static>"));
+        let (_dir, conn, request) = fixture(&xml);
+        assert!(
+            knx_productdb::code::load_program_code(&conn, &request.program_id)
+                .unwrap()
+                .unwrap()
+                .has_fixup_list
+        );
+        let before = conn.total_changes();
+        let error = build_system2_image(&conn, &request)
+            .expect_err("an uninterpreted transformation must not yield a partial image");
+        assert!(
+            matches!(error, knx_productdb::image::ImageError::Unsupported { ref what }
+            if what == "System2 FixupList requires a separate source interpretation")
+        );
+        assert_eq!(conn.total_changes(), before);
+    }
+    let xml = PROGRAM.replace("</Static>", "<Extension><FixupList /></Extension></Static>");
+    let (_dir, conn, request) = fixture(&xml);
+    assert!(
+        !knx_productdb::code::load_program_code(&conn, &request.program_id)
+            .unwrap()
+            .unwrap()
+            .has_fixup_list
+    );
+    assert!(build_system2_image(&conn, &request).is_ok());
+}
+
+#[test]
 fn source_default_disagreement_is_not_borrowed_from_070n_evidence() {
     let xml = PROGRAM
         .replace("<Data>ABIAAA==</Data>", "<Data>AAAAAA==</Data>")

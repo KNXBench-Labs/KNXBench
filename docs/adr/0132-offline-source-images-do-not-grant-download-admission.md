@@ -56,3 +56,13 @@ Read and protect retained pointer bytes. Direct FixupList declarations refuse
 until independently interpreted; do not count omitted-fixup images as successful.
 The extra source-view boolean is nonpersisted; no schema or public admission
 change. [System-1 contract](../contracts/offline-download-system1-image.md).
+
+
+## Shared source transformation refusal (16 October 2026)
+
+Retained transformation declarations must gate every consumer of the parsed
+source subset, not just the newest image entry. P6 centralizes direct FixupList
+refusal before the existing shared image assembler; exact System-1 diagnostics
+are retained, Easy3/System-2 omission regressions fail before the correction.
+Do not infer a general no-op exemption from matching source/master words.
+[Integrity contract](../contracts/source-fixup-integrity.md).

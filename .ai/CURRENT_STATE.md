@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-16 21:18
+- **Completed:** Alpha13 version/scope candidate prepared from c9924165 plus published freeze cbb3fa4b. Four applications/web/locks aligned to0.1.0-alpha.13, exactly four Cargo.lock package versions only; no schema16/product23 changes. Reader installation/status/feature/upgrade routes updated; source scopes and older media provenance preserved. Separate in-session self-review, not independent approval. Tooling preflight189tests/one inherited skip and documentation0errors; private comparator/finalizer controls pass.
+- **Pending/Next Steps:** Exact committed candidate full local acceptance and SHA-bound AppImage/Docker dry runs; only then immutable tag/publication and external checksum/registry/lifecycle/site verification. Full gate NOT yet accepted. Owner explicitly requested release; no extra feature, bus or deployment permission.
+- **Notes for Codex oder Claude:** Release freeze remains held by codex-release-alpha13. Owned worktree release/alpha13-20261016; evidence profile scratch alpha13-20261016. Protected selected root/index/foreign files/container remain untouched except additive root notice. No subagents/codingCLI/vendor contact. Resume other publication only after released marker plus external release or explicit abort. Unresolved Siemens/MV0025, module synthesis and whole-mutation recovery remain open.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-16 21:10
 - **Completed:** Owner requested prepare AND publish Alpha 13. Release cutoff c992416570860b967d0efaa2ae096072a78651b0 inspected against v0.1.0-alpha.12; no native/model16 or product23 schema bump. Dedicated release/alpha13-20261016 worktree owns release work only. Selected root HEAD/index/foreign files and running containers are protected.
 - **Pending/Next Steps:** Freeze exact candidate, version/scope documentation, full source-bound local gate and exact-SHA AppImage/Docker no-publish builds; publish immutable v0.1.0-alpha.13 only after acceptance, then external artifact/registry/lifecycle verification and docs closure. Owner's explicit release request is publication authorization, not permission for deployment or bus writes.

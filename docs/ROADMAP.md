@@ -1,5 +1,9 @@
 # Roadmap
 
+## Alpha 13 release boundary (16 October 2026)
+
+Owner requested preparation and publication of delivered source through `c9924165`, without new feature scope, hardware writes or deployment. [Release scope](releases/alpha13.md) documents unchanged schemas and remaining source/procedure/recovery and module-instance blockers. Exact-candidate gates, packaging and external verification are distinct pending steps.
+
 ## Exact UP258 outcome takes priority (16 October 2026)
 
 For issue #22, complete `M-0001_A-9205-04-9270` image → all 21 source

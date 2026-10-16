@@ -1,5 +1,9 @@
 # Data model
 
+## Alpha 13 model and storage boundary
+
+Alpha 13 retains native/model **16** and product **23** from Alpha 12. Parameter-driven object creation uses existing object/command/history types; no migration is introduced. Previous-reader compatibility for newly saved files is not verified. [Upgrade boundary](releases/alpha13.md#upgrade-independent-backups-first).
+
 ## Alpha 12 model and storage boundary
 
 The release candidate uses **model/native schema 16**: ordered room-owned

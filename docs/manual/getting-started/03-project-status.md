@@ -9,24 +9,24 @@ Read this chapter before you trust KNXBench with a project you care about.
 Every part of KNXBench carries its own version
 ([ADR-0018](../../adr/0018-program-versions-and-file-headers.md)). Since the
 `v0.1.0-alpha.6` release (9 October 2026), application versions have been aligned.
-The CLI, desktop, web frontend, server and `knx-mcp` now carry `0.1.0-alpha.12`;
-library crates keep their own numbers. The public pre-release is
-[`v0.1.0-alpha.12`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.12), published on 15 October 2026: AppImage, `knx-mcp` and the Docker Hub
-image `knxbench/knxbench-server`. See [Installation](04-installation.md).
+The CLI, desktop, web frontend, server and `knx-mcp` carry `0.1.0-alpha.13`;
+library crates keep their own numbers. The Alpha 13 release candidate targets
+16 October 2026: AppImage, `knx-mcp` and the Docker Hub image
+`knxbench/knxbench-server`. [Installation](04-installation.md) names the artifacts;
+actual publication is verified separately from this source version.
 
-Alpha 12 brings portable project/product data, per-part pending programming,
-read-only device comparison, offline device-support reports and the UI repairs
-reported in issues #11–#21 and #23. It also includes Functions in rooms,
-revision-bound writes and a workbench that resumes the server's current project.
-[Release notes](../../releases/alpha12.md) keep the exact scope and remaining
-boundaries together. Current website/README stills use the Alpha 12 candidate;
-most manual images retain their explicitly dated earlier capture.
+Alpha 13 adds independent navigation folds, grouped File actions, real
+manufacturer-mode choices, parameter groups and durable missing-object refresh.
+Stricter image integrity and offline family codecs do not unlock new devices.
+[Release notes](../../releases/alpha13.md) keep the exact boundaries together.
+Website/README application stills remain labelled Alpha 12; older manual images
+retain their original capture dates.
 
 **Before upgrading:** close the app and independently back up `.knxdb` files and
-all Docker data, including the product database. Alpha 12 uses native schema
-**16** and product schema **23**. Alpha 11 and earlier refuse upgraded native
-files. Returning means restoring the pre-upgrade copies, not pressing Undo.
-Update `knx-mcp` together with the application.
+all Docker data, including the product database. Native/model **16** and product
+**23** are unchanged from Alpha 12. Alpha 11 and earlier refuse native16;
+opening new Alpha 13 saves in Alpha 12 is not verified. Returning means restoring
+independent copies, not pressing Undo. Update `knx-mcp` with the application.
 
 Colour/picture value codecs and Site grouping are not part of this release;
 Functions are now project-editing tools, not device programming.

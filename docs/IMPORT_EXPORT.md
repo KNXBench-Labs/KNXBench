@@ -1,5 +1,9 @@
 # Import and export
 
+## Alpha 13 persistence boundary
+
+No native/product schema or ETS format-support expansion relative to Alpha 12. Relative source views retain metadata, while image assembly refuses unresolved transformations rather than omitting data. New edits reuse existing durable storage; [release limits](releases/alpha13.md) remain explicit.
+
 ## Alpha 12 persistence boundary
 
 The candidate advances native/model14 → 16 and product22 → 23. Native saves and

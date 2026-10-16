@@ -457,6 +457,10 @@ edit the project; they do not connect to, program or download a KNX device.
 
 #### Device functions (source builds after Alpha 12)
 
+**Included in Alpha 13:** the device-mode controls, parameter groups and supported
+atomic object refresh described here. Unsupported module construction still
+refuses the complete edit; this does not add programming support.
+
 Open **Device functions** above the object table to change a manufacturer's
 supported operating-mode choices directly here. For example, a button may first
 need enabling, then a rocker/independent-button mode and a switching function.

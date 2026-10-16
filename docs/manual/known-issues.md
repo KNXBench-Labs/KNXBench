@@ -31,14 +31,13 @@ only a maintainer would care about, and ones about the reasoning behind a
 design decision rather than about a defect. Where an entry below has a
 counterpart there, the **Details** line links straight to it.
 
-The current pre-release is
-[Alpha 12](../releases/alpha12.md), published on **15 October 2026**. It includes
-the UI/import-log/portable-product fixes since Alpha 11, per-part programming
-marks, read-only comparison and universal offline support reports. Historical
-measurements below retain their original source dates; they are not new hardware
-verification. Native schema is **16**, product schema **23**. Independently back
-up projects and the full Docker data directory before updating: Alpha 11 and
-earlier refuse upgraded native files, and rollback needs pre-upgrade copies.
+The [Alpha 13 candidate](../releases/alpha13.md) adds workbench configuration and
+stricter offline image-integrity boundaries; it does not expand programming
+admission. Historical measurements below retain their original source dates,
+not new hardware verification. Native/model **16** and product **23** stay
+unchanged from Alpha 12. Independently back up projects and the whole Docker
+data directory: Alpha 11 and earlier refuse native16; opening new saves in
+Alpha 12 is not verified. Rollback needs independent copies.
 
 > A long list of known issues is what happens when a project writes its
 > problems down, not proof that it has more of them than software that
@@ -46,7 +45,7 @@ earlier refuse upgraded native files, and rollback needs pre-upgrade copies.
 
 ---
 
-## Parameter-driven object refresh (source builds after Alpha 12)
+## Parameter-driven object refresh (Alpha 13 candidate)
 
 Supported manufacturer-mode choices now refresh the object list and append missing
 unscoped objects without replacing existing links or overrides. A new active

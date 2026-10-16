@@ -31,7 +31,7 @@ only a maintainer would care about, and ones about the reasoning behind a
 design decision rather than about a defect. Where an entry below has a
 counterpart there, the **Details** line links straight to it.
 
-The [Alpha 13 candidate](../releases/alpha13.md) adds workbench configuration and
+[Alpha 13](../releases/alpha13.md), published on 16 October 2026, adds workbench configuration and
 stricter offline image-integrity boundaries; it does not expand programming
 admission. Historical measurements below retain their original source dates,
 not new hardware verification. Native/model **16** and product **23** stay
@@ -45,7 +45,7 @@ Alpha 12 is not verified. Rollback needs independent copies.
 
 ---
 
-## Parameter-driven object refresh (Alpha 13 candidate)
+## Parameter-driven object refresh (Alpha 13)
 
 Supported manufacturer-mode choices now refresh the object list and append missing
 unscoped objects without replacing existing links or overrides. A new active

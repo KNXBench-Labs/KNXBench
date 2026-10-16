@@ -1,4 +1,14 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-16 22:29
+- **Completed:** Alpha13 RELEASED at immutable v0.1.0-alpha.13/6105976f1a960dd34205638df501f8c3ede60a6e. Source59/59ordered stages accepted:4724Rust/0failed/210ignored,3632components,947browser23profiles,native12+4+4+4,corpus152/152in33targets+explicitproduct16/16in6targets;2965source/516original-inputcommitments frozen. OriginalFirefoxsetupfailure retained,32originalsuccessful+27executedcontinuation provenance. Actualpublicworkflows38961306531/38961306482successful. PublicdownloadsSHA256SUMS/providerdigests/MCPversion,AppImageBroadwayembeddedAPI/frontend,DockerOCI/binary/version+latest/nativeamd64+arm64/isolatedHTTPSauthsave/reopen/realnative13→16with3undo+1redocounts,36livesitefiles/media verified. Usercontainer unchanged.
+- **Pending/Next Steps:** No release implementation/publication/acceptance remains. Only reviewed docs-closure publication and verified private archival/owned release+closure worktree/branch/temporary-artifact retirement remain. Do not move immutabletag. Newdevice/MV0025/module synthesis/full source/procedure/recovery limits remain separately open, not an unfinished release.
+- **Notes for Codex oder Claude:** Public docs/releases/alpha13.md and alpha13-acceptance.md; sanitized docs/evidence/alpha13-acceptance-2026-10-16.json and release-alpha13-2026-10-16.json. Selectedroot1817fb2a/index/foreignfiles deliberately unsynchronised; publication does not upgrade ownercontainer. HeadlessBroadway is notFUSE/EGL/nativevisual/picker/Orca;portalwarnings retained. No bus/vendor/subagents/codingCLI/deployment. Releasefreeze released below after acceptance/publication; other sessions resume their own scopes from freshmain, never the old candidate.
+
+Release freeze: released by codex-release-alpha13 (v0.1.0-alpha.13 published and externally verified; tag immutable)
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-16 21:18
 - **Completed:** Alpha13 version/scope candidate prepared from c9924165 plus published freeze cbb3fa4b. Four applications/web/locks aligned to0.1.0-alpha.13, exactly four Cargo.lock package versions only; no schema16/product23 changes. Reader installation/status/feature/upgrade routes updated; source scopes and older media provenance preserved. Separate in-session self-review, not independent approval. Tooling preflight189tests/one inherited skip and documentation0errors; private comparator/finalizer controls pass.
 - **Pending/Next Steps:** Exact committed candidate full local acceptance and SHA-bound AppImage/Docker dry runs; only then immutable tag/publication and external checksum/registry/lifecycle/site verification. Full gate NOT yet accepted. Owner explicitly requested release; no extra feature, bus or deployment permission.

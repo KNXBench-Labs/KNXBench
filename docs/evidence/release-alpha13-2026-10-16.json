@@ -1,0 +1,164 @@
+{
+  "schema": "knxbench-release-publication/1",
+  "tag": "v0.1.0-alpha.13",
+  "candidate": "6105976f1a960dd34205638df501f8c3ede60a6e",
+  "published_date": "2026-10-16",
+  "release_url": "https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.13",
+  "prerelease": true,
+  "draft": false,
+  "source_acceptance": "alpha13-acceptance-2026-10-16.json",
+  "workflows": [
+    {
+      "candidate": "6105976f1a960dd34205638df501f8c3ede60a6e",
+      "run_id": 38961306531,
+      "publication_success": true,
+      "assets": [
+        {
+          "name": "knx-mcp-x86_64-linux",
+          "bytes": 12488328,
+          "sha256": "d7f9dba5bccac241034c4333fbd65f91f1e7917fd5f757d58d582317d42e3352"
+        },
+        {
+          "name": "KNXBench_0.1.0-alpha.13_amd64.AppImage",
+          "bytes": 89459192,
+          "sha256": "d051a5a1b8f8f39f103231dcd4ae65c83211f204ae09a416a9d6130ec4dacecc"
+        },
+        {
+          "name": "SHA256SUMS",
+          "bytes": 194,
+          "sha256": "5f9d24d29c417adddb6bb35b62ba30032c1c6f52b764f2f7bba81ff4aa4f276f"
+        }
+      ],
+      "mcp_version_verified": true
+    },
+    {
+      "candidate": "6105976f1a960dd34205638df501f8c3ede60a6e",
+      "run_id": 38961306482,
+      "publication_success": true,
+      "registry_version_latest_same": true,
+      "registry_index_digest": "sha256:fa0475f2dc12c71ce6d684ef7fa5bbdd7bc9e6a2159cfee5f7c2609542563477",
+      "platforms": [
+        "linux/amd64",
+        "linux/arm64"
+      ]
+    }
+  ],
+  "appimage": {
+    "candidate": "6105976f1a960dd34205638df501f8c3ede60a6e",
+    "host_libraries_verified": true,
+    "scope": "Broadway headless embedded-server startup/API/frontend; not FUSE/EGL/native visual/Orca acceptance",
+    "success": true,
+    "version": {
+      "version": "0.1.0-alpha.13+g6105976"
+    },
+    "embedded_port": 34483,
+    "frontend_status": 200,
+    "owned_process_teardown": [
+      {
+        "pid": 1832811,
+        "exit": -15
+      },
+      {
+        "pid": 1832508,
+        "exit": -15
+      }
+    ]
+  },
+  "docker": {
+    "image": "docker.io/knxbench/knxbench-server:0.1.0-alpha.13",
+    "image_id": "sha256:fa0475f2dc12c71ce6d684ef7fa5bbdd7bc9e6a2159cfee5f7c2609542563477",
+    "oci_labels": {
+      "org.opencontainers.image.revision": "6105976f1a960dd34205638df501f8c3ede60a6e",
+      "org.opencontainers.image.version": "v0.1.0-alpha.13"
+    },
+    "version": "knx-server 0.1.0-alpha.13+g6105976",
+    "network": "none",
+    "probe_exit": 0,
+    "saved_predecessor_schema": 16,
+    "retained_device_name_verified": true,
+    "fixture_original_unchanged": true,
+    "protected_container_unchanged": true,
+    "success": true
+  },
+  "docker_lifecycle": {
+    "checks": [
+      "HTTPS health",
+      "unauthenticated 401 / login / authenticated 200",
+      "create / save / new / reopen synthetic project",
+      "authentic native13 fixture open / explicit save / reopen / device name / 3 undo + 1 redo retained"
+    ],
+    "history": {
+      "before": {
+        "undoSteps": 3,
+        "redoSteps": 1
+      },
+      "after": {
+        "undoSteps": 3,
+        "redoSteps": 1
+      }
+    },
+    "fixture": "crates/knx-store/tests/fixtures/native13-before-notes-working.sqlite",
+    "history_scope": "Three undo and one redo counts retained; not every historical entry replayed"
+  },
+  "website": {
+    "success": true,
+    "host": "knxbench.com",
+    "build_mode": "release",
+    "files_verified": 36,
+    "files": [
+      "404.html",
+      "assets/FONT-LICENSES.txt",
+      "assets/KNXBench-LICENSE.txt",
+      "assets/alpha12-addresses.webp",
+      "assets/alpha12-devices.webp",
+      "assets/alpha12-instructions.webp",
+      "assets/alpha12-support.webp",
+      "assets/brand-symbol.webp",
+      "assets/bus-flow-de.vtt",
+      "assets/bus-flow-en.vtt",
+      "assets/bus-flow.mp4",
+      "assets/bus-flow.webp",
+      "assets/crt.webp",
+      "assets/graphite.webp",
+      "assets/group-details-de.vtt",
+      "assets/group-details-en.vtt",
+      "assets/group-details.mp4",
+      "assets/headlines.js",
+      "assets/inter.woff2",
+      "assets/lcars.webp",
+      "assets/project-work-de.vtt",
+      "assets/project-work-en.vtt",
+      "assets/project-work.mp4",
+      "assets/project-work.webp",
+      "assets/site.css",
+      "assets/site.js",
+      "assets/space-grotesk.woff2",
+      "de/contact/index.html",
+      "de/index.html",
+      "de/privacy/index.html",
+      "en/contact/index.html",
+      "en/index.html",
+      "en/privacy/index.html",
+      "index.html",
+      "robots.txt",
+      "story/index.html"
+    ],
+    "excluded_hosting_control_files": [
+      ".nojekyll",
+      "CNAME"
+    ],
+    "pages_run_id": 38790235057,
+    "pages_source": "3a9fd92f8fff211a3922d095c2888a1216b53170",
+    "candidate_site_inputs_identical": true,
+    "new_deployment": false
+  },
+  "selected_checkout_synchronized": false,
+  "user_container_replaced": false,
+  "new_hardware_evidence": false,
+  "caveats": [
+    "AppImage runtime is headless Broadway embedded API/frontend startup; not FUSE/EGL/native visual/Orca acceptance",
+    "Namespace document-portal/FUSE warnings were observed; no file picker or portal success is claimed",
+    "No new device/download admission or universal manufacturer/ETS compatibility",
+    "Previous-reader compatibility of Alpha 13 saves is unverified"
+  ]
+}

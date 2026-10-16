@@ -2,7 +2,7 @@
 
 ## Alpha 13 release boundary (16 October 2026)
 
-Owner requested preparation and publication of delivered source through `c9924165`, without new feature scope, hardware writes or deployment. [Release scope](releases/alpha13.md) documents unchanged schemas and remaining source/procedure/recovery and module-instance blockers. Exact-candidate gates, packaging and external verification are distinct pending steps.
+Alpha 13 is published at immutable `6105976f`, covering delivered source through `c9924165` without new feature scope, hardware writes or deployment. [Release scope](releases/alpha13.md) documents unchanged schemas and remaining source/procedure/recovery and module-instance blockers. All 59 ordered source stages and public artifact/registry/lifecycle/site checks pass; [publication evidence](evidence/release-alpha13-2026-10-16.json) keeps their boundaries distinct.
 
 ## Exact UP258 outcome takes priority (16 October 2026)
 

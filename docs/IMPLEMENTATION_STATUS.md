@@ -12,13 +12,23 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
-## Alpha 13 preparation (16 October 2026)
+## Alpha 13 published and externally verified (16 October 2026)
 
-Owner requested preparation and publication, not new feature scope or deployment.
-Cutoff `c9924165` includes the workbench configuration and offline integrity/codecs
-since Alpha 12. Native/model16 and product23 stay unchanged. Full exact-candidate
-source acceptance, no-publish AppImage/Docker builds and external publication
-verification are pending; [scope and limits](releases/alpha13.md) remain explicit.
+Immutable `v0.1.0-alpha.13` names `6105976f`; no new feature scope, device admission
+or deployment follows. All 59 ordered source stages pass: Rust4724/0/210ignored,
+components3632, browser947 in23profiles, software-server native24,
+conventional corpus152/152 in33targets and explicit product16/16 in6targets.
+The original Firefox setup refusal remains distinct from accepted32original plus
+27continuation stages, with complete source/original-input equality.
+Actual public downloads pass checksums/provider digests; MCP/AppImage embedded
+versions match. Docker version/latest nativeamd64+arm64 indexes match; isolated
+HTTPS/auth/save/reopen and authentic native13→16/history-count checks pass.
+Headless Broadway API/frontend evidence is not FUSE/EGL/native visual/Orca proof;
+portal warnings are retained. Live website36files/media equal accepted build.
+Native/model16 and product23 stay unchanged. Selected dirty root and running user
+container were not synchronized/replaced. [Scope](releases/alpha13.md),
+[source acceptance](releases/alpha13-acceptance.md),
+[external publication](evidence/release-alpha13-2026-10-16.json).
 
 ## Workbench configuration: integrated source acceptance
 

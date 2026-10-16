@@ -10,10 +10,11 @@ Every part of KNXBench carries its own version
 ([ADR-0018](../../adr/0018-program-versions-and-file-headers.md)). Since the
 `v0.1.0-alpha.6` release (9 October 2026), application versions have been aligned.
 The CLI, desktop, web frontend, server and `knx-mcp` carry `0.1.0-alpha.13`;
-library crates keep their own numbers. The Alpha 13 release candidate targets
-16 October 2026: AppImage, `knx-mcp` and the Docker Hub image
+library crates keep their own numbers. The public [Alpha 13 pre-release](../../releases/alpha13.md)
+was published on **16 October 2026**: AppImage, `knx-mcp` and the Docker Hub image
 `knxbench/knxbench-server`. [Installation](04-installation.md) names the artifacts;
-actual publication is verified separately from this source version.
+[publication verification](../../evidence/release-alpha13-2026-10-16.json) is separate
+from source acceptance.
 
 Alpha 13 adds independent navigation folds, grouped File actions, real
 manufacturer-mode choices, parameter groups and durable missing-object refresh.

@@ -1,5 +1,12 @@
 # Open work after the 0.1 alpha
 
+## Alpha 13 release delivered (16 October 2026)
+
+[Alpha 13](releases/alpha13.md) is published and externally verified. Release
+preparation is closed, not a new feature package. MV-0025 programming, new module
+construction and complete source/procedure/recovery work below remain open; no
+physical operation or user-container update occurred.
+
 ## Parameter-driven module object creation (16 October 2026 source)
 
 [Supported unscoped object creation](contracts/parameter-object-refresh.md)

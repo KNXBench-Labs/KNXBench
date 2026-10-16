@@ -93,9 +93,22 @@ networking. Publishing an image does not replace any existing container.
 
 ## Distribution
 
-Candidate for **16 October 2026**; source acceptance and public artifact
-verification are recorded separately after execution. No publication is claimed
-by this scope note alone.
+Published on **16 October 2026** from frozen commit `6105976f`. All 59 ordered
+source-gate stages pass with unchanged inputs: 4,724 Rust tests, 3,632 component
+tests, 947 browser cases, 24 software-server native-evidence/edit cases,
+152/152 conventional corpus tests and 16 explicit product-corpus tests.
+The original Firefox cache setup failure and same-source continuation provenance
+remain explicit in the [acceptance record](alpha13-acceptance.md).
+
+The actual public AppImage/MCP downloads pass `SHA256SUMS` and provider digest
+checks. The AppImage's headless Broadway embedded API/frontend starts with the
+right version; this is not FUSE/EGL, native visual or Orca acceptance. Namespace
+portal/FUSE warnings remain recorded; no picker/portal success is inferred.
+The published Docker image passes isolated HTTPS/authentication, save/reopen and
+an authentic synthetic native13 → 16 migration with retained device name and
+three undo/one redo counts. Version/latest registry indexes match for amd64 and
+arm64. All 36 served website/media files match the accepted release-mode build;
+no new deployment was needed. [Publication record](../evidence/release-alpha13-2026-10-16.json).
 
 Linux x86-64 AppImage and standalone `knx-mcp` with `SHA256SUMS`; Docker image
 `knxbench/knxbench-server:0.1.0-alpha.13` for `linux/amd64` and `linux/arm64`.

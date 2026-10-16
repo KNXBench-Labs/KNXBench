@@ -319,10 +319,10 @@ bus probe is shipped — this one is certified for Markdown only.
 <!-- HALL-OF-FAME:START -->
 | Place | Bug hunter | Rank & title | Medal | XP | Issues | Replies | Resolved |
 | ---: | --- | --- | --- | ---: | ---: | ---: | ---: |
-| 1 | [@thengsty](https://github.com/thengsty) | Datapoint Dragon Slayer | 🏅 Golden Bus Probe<br>🏅 Double-Decade Fault Finder<br>🏅 Loose End Lasso<br>🏅 Regression Repair Ribbon<br>🏅 Acknowledgement Ace | **303** | 20 | 13 | 19 |
+| 1 | [@thengsty](https://github.com/thengsty) | Datapoint Dragon Slayer | 🏅 Golden Bus Probe<br>🏅 Double-Decade Fault Finder<br>🏅 Loose End Lasso<br>🏅 Regression Repair Ribbon<br>🏅 Acknowledgement Ace | **304** | 20 | 14 | 19 |
 | 2 | [@hagbardZ](https://github.com/hagbardZ) | Bus Bug Scout | — | **18** | 1 | 3 | 1 |
 
-*Snapshot: 2026-10-15T06:40:25Z. Maintainers and the scoreboard bot sit this one out.*
+*Snapshot: 2026-10-16T08:44:08Z. Maintainers and the scoreboard bot sit this one out.*
 <!-- HALL-OF-FAME:END -->
 
 [All ranks, scoring rules and the full honour roll](docs/community/HALL_OF_FAME.md).

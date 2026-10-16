@@ -21,7 +21,7 @@ async function render(com: ComObjectNode) {
   const root = createRoot(host); const onApplied = vi.fn();
   await act(async () => root.render(<DeviceWorkspace detail={detail(com)} tree={tree} onApplied={onApplied} />));
   await act(async () => host.querySelector<HTMLButtonElement>(".com-object-channel-summary")!.click());
-  await act(async () => host.querySelector("summary")!.click());
+  await act(async () => host.querySelector<HTMLElement>(".com-object-detail > summary")!.click());
   return { host, onApplied, cleanup: async () => { await act(async () => root.unmount()); host.remove(); } };
 }
 for (const [language, temperature, scene, source] of [["en", "Temperature", "Scene number", "Source: application program"], ["de", "Temperatur", "Szenennummer", "Quelle: Applikationsprogramm"]] as const) {

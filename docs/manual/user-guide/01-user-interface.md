@@ -42,6 +42,11 @@ The top row, left to right:
 - **The gear** — opens Settings. See
   [Settings, themes and languages](09-settings-and-appearance.md).
 
+**Source builds after Alpha 12:** File groups the same actions under **Project**,
+**Import & export**, **History & comparison** and **Help & diagnostics**, rather
+than one long list. No action is removed and keyboard activation/Escape still
+work. These headings are navigation, not new import or export capabilities.
+
 The web File menu includes **Export project…** for a local `.knxdb` copy of
 the open project. The desktop build instead has native file dialogs and adds
 **Quit**; a browser tab cannot close itself. Neither build exports `.knxproj`.
@@ -77,6 +82,16 @@ screenshots still show the earlier released UI. See
 ## The navigation pane
 
 The left pane has three stacked blocks.
+
+**Source builds after Alpha 12:** click the **Workspaces**, **Project explorer**
+or **Diagnostics** heading to fold that entire block independently. Selection,
+open branches and in-progress inputs stay in place; opening it restores them.
+This is different from folding a branch inside the explorer or hiding the whole
+Navigation pane. A deliberate search reveal reopens the explorer. On narrow
+windows, the stacked sections scroll inside the pane. Fold state belongs to the
+mounted navigation pane, resets if that pane is rebuilt, and is not saved into
+the project. Existing screenshots below
+retain their stated release version.
 
 **The views**, at the top:
 

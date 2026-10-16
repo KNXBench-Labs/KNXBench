@@ -2217,6 +2217,9 @@ export interface EnumOption {
 }
 
 export interface ParameterField {
+  /** Structural presentation metadata; absent on older servers. */
+  group?: { key: string; label: string | null } | null;
+  controlsComObjects?: boolean;
   etsId: string;
   name: string | null;
   // AR10 (`b6a94c24`): the stored language identifier whose translation
@@ -2261,6 +2264,8 @@ export interface StaleParameter {
  * needs the tag itself, never a payload field.
  */
 export type ParameterDiagnosticKind =
+  | "objectReferenceAmbiguous"
+  | "objectDptUnresolved"
   | "parametersUnreadable"
   | "duplicateUnscopedValue"
   | "duplicateModuleScopedValue"

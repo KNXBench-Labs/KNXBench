@@ -243,22 +243,14 @@ fn layer_of(layer: ValueLayer) -> Layer {
     }
 }
 
-/// Fills every `Override::Absent` slot on the communication object
-/// instance named by `com_id` from `view`, exactly as `enrich()`'s own
-/// per-project loop does for each device it resolves. Exposed as `pub` so
-/// a caller seeding a single newly created communication object (device
-/// creation, `apps/knx-server::domain::create_device_impl`) can reuse this
-/// mapping directly instead of duplicating it.
-pub fn apply(
-    project: &mut Project,
-    com_id: ComObjectInstanceId,
+/// Resolve the source declaration without changing a project. Shared by
+/// enrichment and read-only diagnostics; ambiguous/malformed lists never guess.
+pub fn declared_dpt(
     ref_id: &str,
-    view: &ComObjectView,
+    declaration: Option<&str>,
     issues: &mut Vec<EnrichmentIssue>,
-) -> bool {
-    // The datapoint type is decided before the mutable borrow, because
-    // refusing an ambiguous list is a report entry, not a write.
-    let dpt = match view.dpt_list.as_deref() {
+) -> Option<DptRef> {
+    match declaration {
         None => None,
         Some(list) => {
             let alternatives: Vec<&str> = list.split_whitespace().collect();
@@ -286,7 +278,25 @@ pub fn apply(
                 }
             }
         }
-    };
+    }
+}
+
+/// Fills every `Override::Absent` slot on the communication object
+/// instance named by `com_id` from `view`, exactly as `enrich()`'s own
+/// per-project loop does for each device it resolves. Exposed as `pub` so
+/// a caller seeding a single newly created communication object (device
+/// creation, `apps/knx-server::domain::create_device_impl`) can reuse this
+/// mapping directly instead of duplicating it.
+pub fn apply(
+    project: &mut Project,
+    com_id: ComObjectInstanceId,
+    ref_id: &str,
+    view: &ComObjectView,
+    issues: &mut Vec<EnrichmentIssue>,
+) -> bool {
+    // The datapoint type is decided before the mutable borrow, because
+    // refusing an ambiguous list is a report entry, not a write.
+    let dpt = declared_dpt(ref_id, view.dpt_list.as_deref(), issues);
 
     let text = view
         .text

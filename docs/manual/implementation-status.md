@@ -2,6 +2,18 @@
 
 # Implementation status
 
+## Workbench configuration (16 October 2026 source, after Alpha 12)
+
+Navigation blocks fold independently; File actions have four labelled groups.
+Device functions exposes supported manufacturer mode enums beside communication
+objects; Parameters uses declared blocks and retains folded drafts. Supported
+parameter edits create missing positively active unscoped objects in one durable,
+undoable batch without replacing existing links/overrides. Missing module mappings
+refuse, and ambiguous DPTs are not selected automatically. No new hardware or ETS
+compatibility is implied. These changes are source-only, not a retroactive update
+to an Alpha 12 AppImage. [Operating instructions](user-guide/05-devices-and-products.md#device-functions-source-builds-after-alpha-12)
+and [contract](../contracts/parameter-object-refresh.md).
+
 This chapter is the honest inventory: what exists, what half exists, and what
 does not exist at all, area by area across the whole application.
 

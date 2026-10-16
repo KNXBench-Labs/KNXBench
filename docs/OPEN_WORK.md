@@ -1,5 +1,14 @@
 # Open work after the 0.1 alpha
 
+## Parameter-driven module object creation (16 October 2026 source)
+
+[Supported unscoped object creation](contracts/parameter-object-refresh.md)
+reconciles the object list after ordinary parameter edits. Still open: verified
+module-instance/repeat/number-offset construction for a newly activated object
+not already represented by an imported instance. The current route refuses that
+whole parameter write, preserves the project, and never guesses the mapping.
+This is a shared manufacturer-data boundary, not a vendor-specific exception.
+
 ## System-300 offline prerequisites (16 October 2026)
 
 [Pure S-mode property-table images](contracts/offline-system300-property-tables.md)

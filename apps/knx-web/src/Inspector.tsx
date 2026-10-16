@@ -923,6 +923,10 @@ export function DeviceWorkspace(props: {
         is ever in the tab order. */}
     <div role="tabpanel" id={`device-panel-${detail.id}-0`} aria-labelledby={`device-tab-${detail.id}-0`} hidden={tab !== 0} tabIndex={0}>
       <h3>{t("inspector.communicationObjects")}</h3>
+      <details className="device-function-controls">
+        <summary>{t("parameters.functions")}</summary>
+        <ParameterPanelContent deviceId={detail.id} state={parameterState} view="functions" onValueApplied={onApplied} />
+      </details>
       <ComObjectTable key={detail.id} objects={detail.com_objects} editor={com =>
         <ComObjectEditor com={com} groupAddresses={groupAddresses} onApplied={onApplied} />} />
 

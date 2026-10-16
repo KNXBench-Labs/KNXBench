@@ -47,7 +47,10 @@ async function serve(page: Page, linkStatus: number) {
   });
   // Source and target must both be on screen: Chromium drops a pending drag
   // when the page scrolls while the mouse button is held.
-  await page.setViewportSize({ width: 1280, height: 1200 });
+  // This isolated two-column fixture scrolls as one page, unlike the real
+  // workbench panes. Leave room for the function disclosure and full editor;
+  // both real viewport assertions below remain mandatory before dragging.
+  await page.setViewportSize({ width: 1280, height: 1600 });
   await page.goto("/e2e/installations-fixture.html?workspace");
   await page.locator("button.tree-label", { hasText: "Kitchen actuator" }).click();
   // The device detail loads asynchronously; `.all()` would otherwise snapshot

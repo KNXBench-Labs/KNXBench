@@ -2,6 +2,8 @@
 import { expect, test, type Page } from "@playwright/test";
 import { join } from "node:path";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
+import type { ParameterPanel } from "../src/api";
+import type { ComObjectNode } from "../src/bindings/ComObjectNode";
 import type { DeviceNode } from "../src/bindings/DeviceNode";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
@@ -22,9 +24,15 @@ function fixtureTree(nodes: DeviceNode[]): ProjectTree {
           com_object_number: 1, com_object_name: "Switch", direction: "Receive" }] }],
     }] };
 }
-async function intercept(page: Page, language: "en" | "de", count = 3, theme = "porcelain") {
+async function intercept(page: Page, language: "en" | "de", count = 3, theme = "porcelain", parameterEditing = false) {
   const nodes = devices(count); const tree = fixtureTree(nodes);
   const state = { tree, nodes, unexpected: [] as string[], requests: [] as string[], polls: 0, failCatalogue: false };
+  let mode = "0";
+  tree.project_incarnation = 1;
+  const panel = (): ParameterPanel => ({ programId: "A-FIXTURE", sourceLanguage: "en", tree: null, stale: [], diagnostics: [],
+    sections: [{ scope: null, fields: [{ etsId: "Mode", name: "Mode", text: "Mode", nameLanguage: null, textLanguage: null, kind: "Restriction", value: mode, valueSource: "Stored", editable: true, min: null, max: null,
+      enumOptions: [{ value: "0", text: "Disabled", language: null }, { value: "1", text: "Rocker", language: null }, { value: "2", text: "Individual buttons", language: null }], displayOrder: null, access: "ReadWrite", writeEtsId: "Mode", group: { key: "buttons", label: "Buttons" }, controlsComObjects: true }] }] });
+  const configuredObject = (): ComObjectNode => ({ id: 20, number: 1, name: mode === "1" ? "Rocker output" : "Left output", function_text: "Switch", description: null, description_layer: null, dpt: "DPST-1-1", dpt_layer: "Program", program_dpt: null, dpt_text: null, is_active: true, activation: "Active", channel: null, read: false, write: true, transmit: false, communication: true, update: false, read_on_init: false, links: [] });
   // Like the real server: no project until the test creates one (ADR-0127).
   let projectOpen = false;
   await page.route("**/api/**", (route) => {
@@ -50,8 +58,14 @@ async function intercept(page: Page, language: "en" | "de", count = 3, theme = "
     } else if (/^\/api\/device\/\d+$/.test(path) && method === "GET") {
       const device = nodes.find((node) => node.id === Number(path.split("/").at(-1)));
       if (!device) { status = 400; body = { error: "device not found" }; }
-      else body = { ...device, com_objects: [], product: { resolution: "NoReference", product_ref: null, program_ref: null, catalog: null } };
-    } else if (/^\/api\/device\/\d+\/parameters$/.test(path) && method === "GET") body = { programId: null, sections: [], stale: [], diagnostics: [] };
+      else body = { ...device, com_objects: parameterEditing && mode !== "0" ? [configuredObject()] : [], product: { resolution: "NoReference", product_ref: null, program_ref: null, catalog: null } };
+    } else if (/^\/api\/device\/\d+\/parameters$/.test(path) && method === "GET") body = parameterEditing ? panel() : { programId: null, sections: [], stale: [], diagnostics: [] };
+    else if (parameterEditing && /^\/api\/device\/\d+\/parameters$/.test(path) && method === "POST") {
+      const write = route.request().postDataJSON();
+      expect(write.expectedValue).toBe(mode); expect(write.etsId).toBe("Mode");
+      mode = write.raw; state.tree = { ...state.tree, snapshot_revision: state.tree.snapshot_revision! + 1, can_undo: true, is_modified: true };
+      body = { ...panel(), tree: state.tree };
+    }
     else if (path === "/api/bus/monitor/telegrams" && method === "GET") {
       state.polls++;
       body = { sessionId: 1, serverIncarnation: "devices-browser", contextStatus: "current", projectOpen: true,
@@ -90,6 +104,55 @@ async function openList(page: Page, language: "en" | "de") {
   await page.getByRole("combobox").press("Enter");
   await expect(page.locator(".devices-workspace")).toBeVisible();
 }
+for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
+  test(`${language} workbench configuration refreshes objects at ${width}px`, async ({ page }) => {
+    const m = language === "de" ? de : en;
+    await page.setViewportSize({ width, height: 900 });
+    const state = await intercept(page, language, 3, width === 1440 ? "graphite" : "porcelain", true);
+    await openProject(page, language);
+    const explorer = page.locator(".navigation-section").filter({ has: page.locator(".project-explorer") });
+    const navigation = page.getByRole("button", { name: m["workbench.navigation"], exact: true });
+    if (await navigation.getAttribute("aria-expanded") === "false") await navigation.click();
+    const geometry = await explorer.evaluate(node => {
+      const rows = []; let current: Element | null = node;
+      while (current) { const style = getComputedStyle(current), box = current.getBoundingClientRect();
+        rows.push({ cls: current.className, height: box.height, width: box.width, flex: style.flex, display: style.display, overflow: style.overflow }); current = current.parentElement; }
+      return rows;
+    });
+    await expect(explorer, JSON.stringify(geometry)).toBeVisible();
+    const before = (await explorer.boundingBox())!.height;
+    await explorer.locator(".navigation-section-toggle").click();
+    await expect(explorer.locator(".project-explorer")).toBeHidden();
+    expect((await explorer.boundingBox())!.height).toBeLessThan(before);
+    await explorer.locator(".navigation-section-toggle").click();
+    await expect(explorer.locator(".project-explorer")).toBeVisible();
+    await page.locator(".file-menu > summary").click();
+    await expect(page.locator(".file-menu-group > h3")).toHaveText([m["fileMenu.project"], m["fileMenu.exchange"], m["fileMenu.history"], m["fileMenu.help"]]);
+    await page.keyboard.press("Escape");
+    await openList(page, language);
+    await page.locator(".devices-table tbody td:nth-child(3) button").filter({ hasText: /^Actuator 1$/ }).click();
+    await page.locator(".device-function-controls > summary").click();
+    const mode = page.locator(".device-function-controls select");
+    await expect(mode).toHaveValue("0");
+    await mode.selectOption("1");
+    await expect(page.locator(".com-table-count")).toContainText("1");
+    await page.locator(".com-object-channel-summary").click();
+    await expect(page.locator(".com-object-name")).toHaveText("Rocker output");
+    await mode.selectOption("2");
+    await expect(page.locator(".com-object-name")).toHaveText("Left output");
+    if (process.env.KNX_DEVICES_CAPTURE_DIR) await page.screenshot({ path: join(process.env.KNX_DEVICES_CAPTURE_DIR, `workbench-functions-${language}-${width}.png`) });
+    await page.getByRole("tab", { name: m["workbench.parameters"], exact: true }).click();
+    const panel = page.locator('[role="tabpanel"]:visible');
+    await panel.locator(".parameter-group-toggle").click();
+    await expect(panel.locator("select")).toBeHidden();
+    await panel.locator(".parameter-group-toggle").click();
+    await expect(panel.locator("select")).toHaveValue("2");
+    if (process.env.KNX_DEVICES_CAPTURE_DIR) await page.screenshot({ path: join(process.env.KNX_DEVICES_CAPTURE_DIR, `workbench-parameters-${language}-${width}.png`) });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+    expect(state.unexpected).toEqual([]);
+  });
+}
+
 for (const language of ["en", "de"] as const) {
   const m = language === "en" ? en : de;
   for (const width of [1440, 400]) {

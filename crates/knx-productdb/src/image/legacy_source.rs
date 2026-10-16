@@ -6,7 +6,7 @@ use super::{com_object_span_with_layout, placed, Encoded, ImageError, ImageLayou
 use crate::code::{ParameterPlacement, ProgramCode};
 use knx_core::commissioning::parameter_image::{ParameterField, ParameterImage};
 
-/// Corroborate inferred placements; explicitly placed octets need no endian guess.
+/// Corroborate inferred placements; explicit single-octet numbers need no endian guess.
 pub(super) fn validate_default(
     code: &ProgramCode,
     layout: ImageLayout,
@@ -17,15 +17,14 @@ pub(super) fn validate_default(
     values: (&Encoded, &Encoded),
 ) -> Result<(), ImageError> {
     let (default, requested) = values;
-    // An explicitly placed whole octet is unambiguous; Cookbook p7 says
-    // parameters replace template bytes, which need not equal defaults.
-    if matches!(placement, ParameterPlacement::Memory(_))
-        && field.size_in_bit == 8
-        && field.bit_offset == 0
-        && matches!(default, Encoded::Number(_))
-    {
-        return Ok(());
-    }
+    // Cookbook Load Controls p7 permits replacing template defaults. Schema23
+    // BitOffset_t pp29–30 fixes explicit MSB placement within an octet, so
+    // these fields need neither source-default equality nor a byte-order guess.
+    // Union arithmetic and fields crossing octets still require corroboration.
+    let explicit_single_octet = matches!(placement, ParameterPlacement::Memory(_))
+        && field.bit_offset <= 7
+        && (1..=8 - u32::from(field.bit_offset)).contains(&field.size_in_bit)
+        && matches!(default, Encoded::Number(_));
     let family = layout.family();
     let unsupported = |reason: &str| ImageError::Unsupported {
         what: format!("{reference}: {family} {reason}"),
@@ -43,7 +42,7 @@ pub(super) fn validate_default(
         parameter_ref: reference.into(),
         error,
     })?;
-    if probe.into_octets() != *base {
+    if !explicit_single_octet && probe.into_octets() != *base {
         return Err(unsupported("default disagrees with source bits"));
     }
     // Without an explicit byte order, a symmetric default cannot corroborate

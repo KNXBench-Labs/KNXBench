@@ -1,0 +1,69 @@
+{
+  "date": "2026-10-16",
+  "capability": "Explicit direct-Memory numeric parameter fields wholly within one octet",
+  "source_base": "c3744595ff801e51a4adea1adf8e1ee2d1b2c6ab",
+  "self_review": {
+    "critical_open": 0,
+    "important_open": 0,
+    "default_width_finding": "named runtime RED, probe preserved before equality waiver, owning regression GREEN",
+    "union_guard_mutant": "named runtime failure; exact source restored; named test GREEN",
+    "legacy_patch_omission": "three named runtime REDs before shared guard; three targeted GREENs; exact ancestry/qualified-lookalike System1 target GREEN"
+  },
+  "original_source_boundary": {
+    "application_sources": 13,
+    "packages": 2,
+    "fixup_refusals": 7,
+    "inferred_default_refusals": 3,
+    "mid_octet_union_refusals": 1,
+    "bounded_image_candidates": 0,
+    "complete_semantically_accepted_real_source_images": 0,
+    "remaining_candidate_directive": "LegacyPatchAlways is explicitly refused by every image entry until interpreted; prior candidate returns withdrawn",
+    "database_and_original_packages_unchanged": true,
+    "legacy_patch_refusals": 2,
+    "historical_pre_guard_candidates": 2,
+    "historical_pre_guard_whole_segment_comparisons": 4
+  },
+  "integration_acceptance": "pending",
+  "public_admission_changed": false,
+  "source_translator_or_recovery_added": false,
+  "new_simulated_complete_source_plans": 0,
+  "new_verified_devices_or_firmware": 0,
+  "hardware_operations": 0,
+  "scope_exclusions": [
+    "full workspace/web gate",
+    "release",
+    "deployment",
+    "vendor execution",
+    "bus access"
+  ],
+  "private_source_data_published": false,
+  "pre_guard_branch_acceptance": {
+    "status": "historical passed candidate; superseded by later integrity correction",
+    "stages": 13,
+    "productdb_passed": 931,
+    "productdb_failed": 0,
+    "productdb_ignored": 29,
+    "productdb_reports": 56,
+    "owning_all_target_clippy": "passed",
+    "owning_build": "passed",
+    "source_git_external_inputs_frozen": true,
+    "explicit_system1_original_regression": "passed",
+    "explicit_relative_original_regression": "passed"
+  },
+  "final_guarded_acceptance": {
+    "runtime_status": "passed; full attempt retains whitespace-only refusal",
+    "productdb_passed": 935,
+    "productdb_failed": 0,
+    "productdb_ignored": 29,
+    "productdb_reports": 56,
+    "passed_stages_before_whitespace": 12,
+    "attempt_stages": 13,
+    "owning_all_target_clippy": "passed; own crate freshly compiled",
+    "owning_build": "passed",
+    "explicit_system1_original_regression": "passed; 13 expected refusals in 2 packages",
+    "explicit_relative_original_regression": "passed",
+    "source_git_external_inputs_frozen": true,
+    "retained_attempt1": "relative-source diagnostic-precedence assertion failed; production ordering corrected without weakening test",
+    "retained_attempt2": "sole final refusal is extra blank EOF in owned log; documentation delta pending"
+  }
+}

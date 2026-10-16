@@ -106,14 +106,35 @@ fn uninterpreted_fixup_declarations_refuse_system2_images_without_database_chang
 }
 
 #[test]
-fn source_default_disagreement_is_not_borrowed_from_070n_evidence() {
+fn inactive_legacy_patch_declarations_do_not_return_partial_system2_images() {
+    let (_dir, baseline, request) = fixture(PROGRAM);
+    assert!(build_system2_image(&baseline, &request).is_ok());
+    for value in ["", "0", "1", "false", "true"] {
+        let inactive = format!("<Parameter Id=\"INACTIVE\" ParameterType=\"PT\" Value=\"2\" LegacyPatchAlways=\"{value}\"><Memory CodeSegment=\"PAR\" Offset=\"2\" BitOffset=\"0\" /></Parameter>");
+        let xml = PROGRAM.replace("</Parameters>", &format!("{inactive}</Parameters>"));
+        let (_dir, conn, request) = fixture(&xml);
+        let before = conn.total_changes();
+        let result = build_system2_image(&conn, &request);
+        assert!(
+            matches!(result, Err(knx_productdb::image::ImageError::Unsupported { ref what })
+            if what == "System2 LegacyPatchAlways requires a separate source interpretation"),
+            "an inactive uninterpreted patch declaration must not yield an image"
+        );
+        assert_eq!(conn.total_changes(), before);
+    }
+}
+
+#[test]
+fn explicit_suboctet_fields_replace_template_bits_using_source_msb_placement() {
     let xml = PROGRAM
         .replace("<Data>ABIAAA==</Data>", "<Data>AAAAAA==</Data>")
         .replace("SizeInBit=\"8\"", "SizeInBit=\"4\"")
         .replace("Value=\"18\"", "Value=\"2\"");
     let (_dir, conn, mut request) = fixture(&xml);
     request.values.insert("P_R".into(), "6".into());
-    assert!(build_system2_image(&conn, &request).is_err());
+    let image = build_system2_image(&conn, &request).expect("explicit single-octet field");
+    assert_eq!(image.segment("PAR").unwrap().octets, [0, 0x60, 0, 0]);
+    assert!(knx_productdb::download_plan::plan_memory_download(&image).is_err());
 }
 
 #[test]
@@ -135,6 +156,12 @@ fn union_offsets_are_accepted_only_when_the_default_matches_source_bits() {
     let (_dir, conn, request) = fixture(&xml);
     let image = build_system2_image(&conn, &request).expect("independently matched union field");
     assert_eq!(image.segment("PAR").unwrap().octets, [0, 0x56, 0, 0]);
+    let mismatch = xml.replace("<Data>ABIAAA==</Data>", "<Data>AAAAAA==</Data>");
+    let (_dir, conn, request) = fixture(&mismatch);
+    let error = build_system2_image(&conn, &request).unwrap_err();
+    assert!(error
+        .to_string()
+        .contains("default disagrees with source bits"));
 }
 
 #[test]

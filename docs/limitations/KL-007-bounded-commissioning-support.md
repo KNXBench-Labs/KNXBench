@@ -6,6 +6,17 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Explicit parameter-bit follow-up (16 October 2026)
+
+[Direct single-octet fields](../contracts/offline-explicit-parameter-bits.md) now
+replace differing template defaults without guessing byte order. Latest private
+initial candidates/four independent comparisons are historical, not complete
+source acceptance. Shared LegacyPatchAlways refusal now closes all three image
+entries, including inactive declarations; configured13-source refusals are
+7FixupList/2legacy-patch/3inferred-default/1Union. No executable plan,
+whole-mutation recovery, public admission or firmware verification is added.
+The P5/P6 counts below remain historical, not current outcome totals.
+
 ## System-300 offline property images (16 October 2026 source)
 
 [Pure S-mode property-table images](../contracts/offline-system300-property-tables.md)

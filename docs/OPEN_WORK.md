@@ -12,6 +12,14 @@ Shared Type6 bytes do not make System300 an admitted SystemB device.
 
 ## Offline System-1 completion (16 October 2026)
 
+Follow-up: [explicit single-octet parameter bits](contracts/offline-explicit-parameter-bits.md)
+no longer require template/default equality. The latest same-source measurement
+initially had7FixupList/3inferred-default/1Union refusals and2bounded candidates.
+Those candidate returns are withdrawn: shared LegacyPatchAlways refusal now
+closes the unhandled directive in all three image APIs. Current configured
+refusals are7FixupList/2legacy-patch/3inferred-default/1Union. No complete semantic
+image is accepted. The original P5 distribution below remains historical.
+
 [The bounded source-image candidate](contracts/offline-download-system1-image.md)
 passes synthetic/owning tests but accepts no complete real-product source image.
 Next are exact FixupList semantics, source-default/Union encoding evidence,

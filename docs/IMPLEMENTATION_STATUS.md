@@ -14,6 +14,25 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-16 — Explicit direct-Memory numeric fields entirely inside one octet
+  now replace template bits without requiring default equality, reusing the
+  existing importer/evaluator/writer for offline System1/System2 images. Named
+  equality and default-width REDs preceded their corrections; bounds, masks,
+  pointer/table protection, overlap and other source guards remain. Independent
+  whole-segment oracles checked two related source candidates in four
+  configurations, but those artifact successes are withdrawn after three named
+  omission REDs: all image entries now refuse unhandled LegacyPatchAlways,
+  even on inactive parameters. Current configured13-source refusals are7/2/3/1
+  (fixup/legacy-patch/inferred-default/Union);zero complete real images. No new
+  public admission, executable plan, recovery or firmware evidence.
+  [Contract and acceptance boundary](contracts/offline-explicit-parameter-bits.md).
+  Corrected guarded runtime: ProductDB935/0/29ignored in56reports, owning
+  all-targetClippy/build and both original-source regressions pass. First12of13
+  stages pass with frozen inputs; the last whitespace check retains its new-log
+  EOF refusal. Earlier931/0is pre-guard historical output. Documentation delta,
+  actual integration/private corpus and publication remain pending;
+  [evidence](evidence/explicit-source-bits-2026-10-16.json).
+
 - 2026-10-16 — Community PR credit comments extend the existing notification
   workflow: one maintained comment per eligible PR with current 5/15/25 XP,
   board total/title, counters, XP sources, earned medals and board link.

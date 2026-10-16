@@ -56,9 +56,12 @@ Unsupported placements/encodings/flags are named refusals, not dropped content.
 
 Existing placement/type validation is reused, but System2-specific source checks
 live in a private `image/legacy_source.rs` module, shared through an explicit
-family argument with the bounded System-1 entry. An explicitly placed, byte-aligned
-numeric octet has no byte-order ambiguity and replaces the template byte; it need
-not already equal its source default. The original Cookbook Load Controls
+family argument with the bounded System-1 entry. An explicitly placed numeric
+field wholly within one octet has no byte-order ambiguity and may replace its
+template bits; it need not already equal its source default. Default-width and
+bounds validation remain mandatory. [The later bitfield correction](offline-explicit-parameter-bits.md)
+extends the original whole-octet exception without waiving inferred placements.
+The original Cookbook Load Controls
 `02_03_01` v01.00.02 p7 explicitly describes modifying the default memory image
 with project parameters. A real source witness contains a different template
 byte at an explicitly placed8-bit field; requiring equality there was an

@@ -492,6 +492,14 @@ fn build_image(
             what: "relative source segments require a relative image builder".into(),
         });
     }
+    if code.has_legacy_patch_always {
+        return Err(ImageError::Unsupported {
+            what: format!(
+                "{} LegacyPatchAlways requires a separate source interpretation",
+                layout.family()
+            ),
+        });
+    }
     if let Some(order) = code
         .options
         .get("ParameterByteOrder")
@@ -1806,6 +1814,25 @@ mod tests {
                 .has_fixup_list
         );
         assert!(build_download_image(&conn, &request(&[], vec![])).is_ok());
+    }
+
+    #[test]
+    fn inactive_legacy_patch_declarations_do_not_return_partial_easy3_images() {
+        let (_dir, baseline) = db(PROGRAM);
+        assert!(build_download_image(&baseline, &request(&[], vec![])).is_ok());
+        for value in ["", "0", "1", "false", "true"] {
+            let inactive = format!("<Parameter Id=\"INACTIVE\" ParameterType=\"PT-N\" Value=\"2\" LegacyPatchAlways=\"{value}\"><Memory CodeSegment=\"AS-4400\" Offset=\"25\" BitOffset=\"0\" /></Parameter>");
+            let xml = PROGRAM.replace("</Parameters>", &format!("{inactive}</Parameters>"));
+            let (_dir, conn) = db(&xml);
+            let before = conn.total_changes();
+            let result = build_download_image(&conn, &request(&[], vec![]));
+            assert!(
+                matches!(result, Err(ImageError::Unsupported { ref what })
+                if what == "Easy3 LegacyPatchAlways requires a separate source interpretation"),
+                "an inactive uninterpreted patch declaration must not yield an image"
+            );
+            assert_eq!(conn.total_changes(), before);
+        }
     }
 
     fn device() -> IndividualAddress {

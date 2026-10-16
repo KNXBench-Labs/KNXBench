@@ -106,6 +106,13 @@ material. Do not mark a path implemented merely because its metadata is parsed.
   stages pass on the unchanged retry candidate (Rust4678/0, Vitest3626/263files);
   all nineteen actual merged stages also pass, including isolated corpus152/152
   in33targets. Exact local/tracking/live main equality verified.
+- P4e investigation: [source-bound relative-image gaps](../research/2026-10-16-relative-image-integration-gaps.md)
+  distinguish present table-resource declarations from unresolved product-to-ASAP
+  and complete-descriptor policy, scope/substitution, encoding and recovery.
+  No production mapping is guessed. Calibrated bounded discovery retained seven
+  System1/System300/coupler/RF sources with105original package digests unchanged;
+  System1source-image investigation is the next independent candidate, not a
+  completed image/plan/recovery capability.
 - P3 onward: source-to-property mapping and whole-mutation recovery remain
   unimplemented; their dependencies above still need their own proof.
 

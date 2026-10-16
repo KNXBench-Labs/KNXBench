@@ -1,0 +1,75 @@
+{
+  "formatVersion": 1,
+  "date": "2026-10-16",
+  "scope": "P4e bounded source/profile integration research and remaining-family witness discovery; no product implementation",
+  "baseRevision": "1b00ed76d972ad23439768ab9d5e1acc0a50d5f0",
+  "systemB": {
+    "selectedSources": 3,
+    "independentPackages": 1,
+    "sourceNumbersSparseInAllSelected": true,
+    "selectedMasterDeclaresTableResourceLocations": true,
+    "productToAsapTransformProven": false,
+    "completeRelativeImage": false,
+    "scopeSubstitutionProven": false
+  },
+  "remainingFamilyDiscovery": {
+    "scope": "deterministic at-most-two direct source witnesses per selected remaining-family group; bounded discovery, not census",
+    "inventoryPackages": 105,
+    "counts": {
+      "packagesVisited": 105,
+      "prefixBytesRead": 4102807,
+      "prefixesExamined": 503,
+      "fullBytesRead": 4529535
+    },
+    "selectedByFamily": {
+      "system1": 2,
+      "system300": 1,
+      "system7-other": 0,
+      "coupler-router": 2,
+      "rf": 2
+    },
+    "headersObservedByFamily": {
+      "rf": 40,
+      "system1": 20,
+      "coupler-router": 15,
+      "system300": 1
+    },
+    "refusals": {},
+    "prefixBudgetExhausted": false,
+    "fullSourcesRead": 7,
+    "interpretation": "presence/source shape only; no image/plan/recovery/admission claim",
+    "hardwareOrVendorCodeExecuted": false
+  },
+  "verification": {
+    "calibrationChecks": 8,
+    "sourceCandidatesVerified": 7,
+    "originalPackagesHashVerified": 105,
+    "summariesRecomputed": true,
+    "notCompatibilityEvidence": true,
+    "priorAttempt": "discovery1 retained with UTF-8 prefix-reader refusal; byte-stream correction changes no selected witnesses",
+    "selectedWitnessesIdenticalToFirstAttempt": true
+  },
+  "originalProfilePagesInspected": [
+    13,
+    28,
+    41,
+    50,
+    51
+  ],
+  "originalConfigurationPagesInspected": [
+    75,
+    79
+  ],
+  "productionCodeChanged": false,
+  "runtimeAcceptance": "not applicable; documentation-only research package",
+  "publication": "tracked separately by Git delivery and private publication receipt",
+  "initialResearchAttempt": {
+    "refusals": {
+      "prefix-decode-split-utf8": 1
+    },
+    "retainedSeparately": true,
+    "correctedByIncrementalByteHeaderParsing": true,
+    "selectedWitnessesUnchanged": true,
+    "productCodeChanged": false
+  }
+}

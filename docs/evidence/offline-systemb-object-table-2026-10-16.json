@@ -3,7 +3,7 @@
   "date": "2026-10-16",
   "scope": "P4a pure System-B Type-7 Format-1 object codec and bounded existing-resolver baseline",
   "baseRevision": "7f9f3672707f616e1415a1ad3b3b21de9af3ace0",
-  "status": "all 17 frozen branch stages accepted; actual merge acceptance and publication pending",
+  "status": "17 branch and 18 actual merged stages accepted; merge published with verified remote equality",
   "realSourceBaseline": {
     "discovery": {
       "inventoriedPackages": 105,
@@ -82,7 +82,28 @@
       "explicitReleaseSourceRegression": { "passed": 1, "failed": 0 },
       "ignoredTestScope": "207 ordinary ignored tests are not counted as executed; isolated selected corpus gate remains for integration"
     },
-    "actualMerged": "pending"
+    "actualMerged": {
+      "state": "accepted",
+      "attempt": "merged-gate1",
+      "revision": "adb52990b15bbe6cda8a3274b4c7d26f865dcadb",
+      "featureRevision": "feb0bd76f3ee5662974d73350cc296bc68038caf",
+      "stagesPassed": 18,
+      "inputPaths": 2908,
+      "completeInputManifestsMatched": true,
+      "gitFingerprintsMatched": true,
+      "rust": { "passed": 4649, "failed": 0, "ignored": 207, "targets": 339 },
+      "vitest": { "passed": 3626, "failed": 0 },
+      "selectedCorpus": { "passed": 152, "expected": 152, "targets": 33, "networkNamespaceInterfaces": ["lo"] },
+      "ownedCorpusLinksRemoved": true,
+      "scope": "selected maintained corpus and explicit Release source regression; not every ignored test or hardware test"
+    }
   },
-  "publication": { "state": "not yet published", "selectedDirtyRootSynchronized": false }
+  "publication": {
+    "state": "published merge; final documentation-only closure follows",
+    "merged": "adb52990b15bbe6cda8a3274b4c7d26f865dcadb",
+    "readbackTime": "2026-10-16 03:49 CEST",
+    "localTrackingLiveMainEqual": true,
+    "selectedDirtyRootSynchronized": false,
+    "runtimeAcceptanceRevisionRemainsUnchanged": true
+  }
 }

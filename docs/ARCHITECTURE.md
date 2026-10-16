@@ -1,5 +1,14 @@
 # Architecture
 
+## Explicit System-B link grammar (16 October 2026 source)
+
+Core's independent System-B table builder accepts explicit association formats,
+one-based u16 links and the shared TableCapacity. Address/association output
+never includes the Easy-3 individual-address slot or legacy reserved rows.
+First-match sending intent is validated before encoding. Product layout/format
+selection and allocation stay outside Core; public image/planner, networking,
+UI and storage schemas are unchanged. [Contract](contracts/offline-systemb-link-tables.md).
+
 ## Relative source metadata (16 October 2026 source)
 
 ProductDB's code adapter retains relative segments separately from absolute

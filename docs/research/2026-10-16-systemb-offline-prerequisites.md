@@ -71,12 +71,18 @@ and inspected, not inferred from source node names:
 - §3.5.4, p. 44: relative allocation, use of the table reference, memory loading
   and optional memory-control-table handling are separate client responsibilities.
   A relative parameter segment alone is not a complete plan.
-- §3.9.3.1.2, p. 72: application and master control sequences are merged and
-  source image placeholders are substituted from context; raw source expansion
-  is not equivalent to carrying out those substitutions.
-- §3.9.3.2, p. 73: the image-property control obtains a property into the tool's
-  image; it is not simply a property-write synonym. These definitions do not by
-  themselves establish the modern XML `AppliesTo` token-to-scope mapping.
+- **Corrected by P4c original-body reinspection:** §3.9.3 begins on p71 and
+  explicitly concerns mask57B0h, not an unqualified System-B modern XML mapping.
+  Its merge points and example p75 require application-specific data and current
+  generated-table sizes; raw source reconstruction does not perform substitution.
+- §3.9.3.2 p72 defines relative image-memory reads; the continuation p73 lists
+  property read/write/compare controls. It does **not** directly define the
+  modern `LdCtrlLoadImageProp` node as previously attributed here. That name
+  occurs in partial-parameter examples (§3.9.3.6 p79, §3.9.3.7 p82) for
+  PID_TABLE_REFERENCE, not as proof of every modern PID_MCB_TABLE capture or
+  XML `AppliesTo` token-to-scope mapping. Original source nodes remain preserved.
+- §3.9.3.3 p73 gives fixed table/AP object indices1–5 for the specified57B0
+  procedure; this does not by itself admit the selected07B0source applications.
 
 Original **Resources 03_05_01 v01.10.01** §§4.18.6–4.18.6.2.4.1.4,
 printed/PDF pp. 269–272, independently specifies the System-B Type-7 / Format-1
@@ -87,6 +93,23 @@ implemented prerequisite without assigning it to an unverified product layout.
 
 This is a bounded chapter-body inspection, not a complete family/profile audit.
 Raw product XML, exact source identifiers and licensed page renders remain private.
+
+## P4c independently specified link grammar [D / V]
+
+Original Resources §4.16.8.2.4 Table78 pp238–239 and §4.17.5.2.5 Tables81–82
+pp249–250 specify a different address/association grammar from the existing
+Easy-3 and indexed legacy codecs: word counts, no individual-address slot,
+one-based TSAP/ASAP, explicit narrow/wide association formats and first-match
+sending. The new [pure link-table codec](../contracts/offline-systemb-link-tables.md)
+implements those explicit bytes without inferring a product layout or public
+admission. Twelve literal/boundary tests and a rejected sender-order mutant
+pass locally; whole-candidate acceptance remains separately tracked.
+
+The original57B0procedure p75 uses current generated-table image sizes, while
+retained modern07B0controls include source literals whose substitution cannot
+be derived merely from their integer type or similar names. Keep those controls
+uninterpreted until their source/profile transform is proven. This is a specific
+integration gap, not lack of access to a physical device.
 
 ## Remaining integration contracts [V / unresolved]
 

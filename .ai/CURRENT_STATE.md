@@ -1,4 +1,28 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-16 10:18
+- **Completed:** P6frozen branch proc_e1fbb7c1d86e verified19/19 actual stages. Rust4689/0/209ignored in345targets, Vitest3626/263files;all2934source/six selected external/Git commitments match. Explicit13System1refusals and3relative sources verified;no complete realSystem1image admission. Separate self-review/owning928tests/Clippy and original two sibling runtime REDs retained. Result-only prose updates follow unchanged accepted runtime.
+- **Pending/Next Steps:** Verify complete runtime equality and docs/repository checks, commit exact17reviewed paths as KNXBench, integrate fresh unchanged main09a6f329 then actual20stage merged acceptance with selected isolated corpus. No actual merged acceptance or publication yet. Then remote readback/docs-only closure/private archive/exact owned retirement;continue offline semantic evidence work.
+- **Notes for Codex oder Claude:** P6closes shared image-integrity omission,not FixupListpatch/no-op support or a new publicmask. Existing System1diagnostic retained;runtime acceptance bound to original branch-gate1manifest. No hardware/vendor/subagents/schema/dependency/UI/transport. Shared dirty root1817fb2a/index/foreign paths and other session history preserved. No worker active before actual merged dispatch.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-16 10:00
+- **Completed:** P6shared image FixupList guard implemented after two named Easy3/System2runtime REDs. Guard moved before shared evaluation/assembly;existing System1diagnostic retained. Empty/populated direct declarations refuse;nested extension not misclassified;DBunchanged. Owning928/0/28ignored in56targets and Clippy pass;separate self-review no critical/important/security open findings;eight repository preflights pass. Seven original sources/36sites/eight function refs corroborate retained target bytes,not generic patch/no-op semantics. Research/contract/compatibility/architecture/status/ADR/log updated. P5fully published/archived/retiredccfe5b74/09a6f329.
+- **Pending/Next Steps:** PRE-DISPATCH full19stage frozen branch gate at profile scratch offline-download-20261015/p6/branch_gate1.py;actual process/receipt identity authoritative only after dispatch. Includes explicit System1/relative/System2source regression stages,fresh branch-target1,complete source/external/Git commitments. Then focused commit,actual20stage merged gate with selected isolated corpus,publish/readback,docs closure/private archive/exact owned retirement. No full branch/merge/publication acceptance yet.
+- **Notes for Codex oder Claude:** Own base09a6f329,branch feat/offline-download-p6-20261016. This closes sibling partial-image risk;does not implement source FixupList or widen0012orother mask admission. Existing positive image fixtures pass;full real-source compatibility still bounded. No hardware/vendor/subagents/schema/dependency/UI/transport. Selected dirty root1817fb2a/index/foreign files and other session history preserved. Freeze own inputs after dispatch;root-only additive handover allowed.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-16 09:52
+- **Completed:** P5fully delivered runtimeccfe5b74/docs09a6f329;20actual merged stages pass incl4687Rust/3626Web/152isolated corpus. Exact remote equality verified;complete runtime-equal result closure/seven checks. Private archive243members verified;exact owned P5worktrees/branches/scratch retired. P6seven retained FixupLists/36sites/eight exact master function references inspected: all candidate BEword contexts match retained targets, but that correlation is NOT patch/no-op semantics. Primary API original pages inspected;no transformation rule inferred.
+- **Pending/Next Steps:** ACTIVE P6correctness slice: prove shared-image omission with named RED for existingEasy3/System2consumers, then reject uninterpreted FixupList in shared build boundary while preserving System1message. Add explicit empty/populated/direct-versus-extension and DB-unchanged tests. Trace all public image entrypoints;do not invent patch widths or remove source guard. After GREEN/self-review/full branch/actual merge gates,publish/archive/retire. No worker active yet.
+- **Notes for Codex oder Claude:** Own P6base09a6f329;selected root dirty1817fb2a preserved. No hardware/vendor/subagents/new mask/schema/dependency/UI/transport. This fixes sibling partial-artifact risk,not real-product FixupList support. Continue offline goal;source/reference correlation stays separate from proven transformation semantics. Preserve other session history.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-16 09:43
 - **Completed:** P5featuree92a721a integrated and published as accepted runtime mergeccfe5b74353d6a04dc822c416f5dc61bba1a2b1f. Actual20/20 stages verified: Rust4687/0/209ignored in345targets, Vitest3626/263files, isolated corpus152/152 in33targets. Full2931source/six selected external/Git commitments match; corpus links removed. Explicit13System1refusals verified,zero accepted complete real images; prior omission-success withdrawn. Exact runtime local/tracking/live main equality verified after push.
 - **Pending/Next Steps:** Result-only closure must retain runtime acceptance atccfe5b74, prove complete runtime equality and pass docs/repository checks before commit/push/readback. Then private member-digest-verified archive and exact owned P5worktree/branch/target retirement. Continue ACTIVE offline goal: evidence for FixupList/default-bit/Union semantics or independent family slices; no guessed image/procedure support.

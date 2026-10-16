@@ -1,0 +1,89 @@
+{
+  "formatVersion": 1,
+  "date": "2026-10-16",
+  "scope": "P6 shared image-integrity guard, not fixup transformation support",
+  "base": "09a6f329203761e1c68d5102db7eed535720b587",
+  "red": [
+    {
+      "name": "easy3",
+      "exit": 101,
+      "namedRuntimeAssertionFailed": true,
+      "seconds": 14.258149855071679
+    },
+    {
+      "name": "system2",
+      "exit": 101,
+      "namedRuntimeAssertionFailed": true,
+      "seconds": 5.916143589885905
+    }
+  ],
+  "owning": {
+    "stages": [
+      {
+        "name": "format",
+        "exit": 0
+      },
+      {
+        "name": "product-tests",
+        "exit": 0
+      },
+      {
+        "name": "product-clippy",
+        "exit": 0
+      }
+    ],
+    "passed": 928,
+    "failed": 0,
+    "ignored": 28,
+    "targets": 56
+  },
+  "sourceCorrelation": {
+    "applications": 7,
+    "sites": 36,
+    "sourcePackages": 1,
+    "functionIds": 8,
+    "nonoverlappingTwoOctetCandidateWindows": true,
+    "twoOctetBigEndianCandidateMatchesMaster": 36,
+    "candidateByteOrderAmbiguousSites": 0,
+    "productionImageAdmissionChanged": false,
+    "candidateInterpretationIsProvenPatchContract": false
+  },
+  "boundary": {
+    "entries": [
+      "build_download_image",
+      "build_system1_image",
+      "build_system2_image"
+    ],
+    "directDeclarationsRefused": true,
+    "emptyDeclarationRefused": true,
+    "nestedExtensionNotMisclassified": true,
+    "databaseUnchanged": true,
+    "originalXmlPreserved": true,
+    "newExecutableAdmission": false,
+    "productionFixupTransform": false
+  },
+  "branchAcceptance": {
+    "stagesPassed": 19,
+    "rust": {
+      "passed": 4689,
+      "failed": 0,
+      "ignored": 209,
+      "targets": 345
+    },
+    "vitest": {
+      "passed": 3626,
+      "failed": 0,
+      "files": 263
+    },
+    "sourcePaths": 2934,
+    "externalFiles": 6,
+    "sourceExternalGitVerified": true,
+    "relativeSourcesVerified": 3,
+    "system1SourceRefusals": 13,
+    "realSystem1ImagesAccepted": 0,
+    "attempt": "branch-gate1",
+    "status": "accepted"
+  },
+  "mergedAcceptance": "pending",
+  "publication": "pending"
+}

@@ -14,6 +14,15 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-16 — P4e bounded research completed: original profile/procedure pages and
+  three retained application sources in one package rechecked. Selected master
+  table resource locations are present, but sparse product object numbers are
+  not an explicitly complete descriptor array. No padding, compaction or
+  automatic source/profile mapping inferred; no production change or runtime
+  acceptance. Network-isolated bounded discovery selected seven source witnesses
+  across System1/System300/coupler/RF, not a complete compatibility census;105
+  original archive digests verified unchanged. [Integration gaps](research/2026-10-16-relative-image-integration-gaps.md).
+
 - 2026-10-16 — P4d complete explicit System-B object-table construction published as
   `894f14e0`: every descriptor supplied, caller capacity distinct from emitted
   count, no synthetic inactive slots. Six literal/boundary tests pass after

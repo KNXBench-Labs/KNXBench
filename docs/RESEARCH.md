@@ -24,6 +24,7 @@ outside preserved historical blocks, or use the next free section number
 
 | Section | Where |
 | --- | --- |
+| [2026-10-16 — Relative System-B integration gaps](research/2026-10-16-relative-image-integration-gaps.md) | Source-bound table resource declarations, sparse object numbering and unresolved complete-image/substitution contracts; no new executable support |
 | [2026-10-16 — System-B offline prerequisites](research/2026-10-16-systemb-offline-prerequisites.md) | Three real partial resolver results, independent Format-1 object grammar and open relative-image/source/recovery contracts |
 | [2026-10-16 — System-2 source semantics](research/2026-10-16-system2-source-semantics.md) | Original property width versus master resource length, bounded source census and unresolved translation contracts; no new programming support |
 | [2026-10-14 — System-2 archive mirrors and tool-side records](research/2026-10-14-system2-archive-mirrors.md) | Recovered SDK/help, bounded TaskSegment/5 correlation, image/identity/recovery boundaries; no new programming support |

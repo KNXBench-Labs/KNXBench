@@ -59,7 +59,12 @@ post a second award notice for the same issue.
 PR counters, XP and medals follow the current API state. Reopening a closed
 unmerged PR returns it to submission XP; merging it replaces, rather than stacks,
 the closed-unmerged bonus. A removed PR stops counting. Historical PRs count
-immediately, without posting PR award comments or changing issue notices.
+immediately. With notifications enabled, each eligible PR receives one automatic
+credit comment: PR XP and its calculation, board total, rank/title, counters,
+XP sources and earned medals. The same comment is updated on later refreshes;
+unchanged content is left alone. Open/reopen, merge and closed-without-merge
+states use their current points, never stacked bonuses. Existing issue notices
+are not replayed. Historical PRs receive this comment too.
 
 This page and the README refresh on issue/reply and PR lifecycle events and daily, with manual
 refresh available. GitHub API or permission failures fail the job rather than

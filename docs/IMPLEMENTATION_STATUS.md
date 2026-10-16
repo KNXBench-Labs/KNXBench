@@ -14,6 +14,16 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Recent deliveries
 
+- 2026-10-16 — Community PR credit comments extend the existing notification
+  workflow: one maintained comment per eligible PR with current 5/15/25 XP,
+  board total/title, counters, XP sources, earned medals and board link.
+  Historical PRs are included; reopen/close/merge updates replace the same comment
+  without stacking bonuses. Trusted-marker recovery, live target recheck and
+  exact POST/PATCH readback prevent spoofed suppression and stale acknowledgements.
+  Existing issue awards and schema remain unchanged. Scoped acceptance and live
+  workflow verification are recorded in the [contract](contracts/community-recognition.md).
+  No application/domain/dependency, bus, hardware or release change.
+
 - 2026-10-16 — Exact UP258/issue #22 continuation: original MP p140 exposes
   inverted checksum-disable encoding in the offline absolute-property codec.
   Named RED preceded the correction, published as `6d26a1e3`. Actual merged

@@ -12,7 +12,7 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
-## Workbench configuration: source verification pending integration
+## Workbench configuration: integrated source acceptance
 
 The five-part workbench change has targeted Core/API roundtrip and undo coverage,
 2,775 owning Rust tests, 3,632 component tests and 911 browser cases across generic
@@ -22,7 +22,14 @@ request-completion race was synchronized without changing release behavior.
 Previously passing scopes retain their original input identity; the corrected
 scope and unmeasured tail were executed separately. This is not an uninterrupted
 all-green run, a physical-device test, a release or universal product compatibility.
-Merged-main workspace/corpus acceptance and publication remain pending here.
+Actual merge `925d918b` additionally passes 4,724 workspace tests (210 ignored
+in the regular run), all 152 selected private-corpus tests in 33 targets, owning
+Clippy and all format/documentation/architecture gates. Original corpus inputs
+and source snapshots remained unchanged. The integrated built shell also passed
+the four new configuration browser cases. Full tracked frontend and tooling
+inputs match the accepted feature tree exactly, so web results retain their
+original provenance rather than being represented as a new merged execution.
+Publication is tracked separately from this tested-source record.
 See [the editing contract](contracts/parameter-object-refresh.md).
 
 ## Recent deliveries

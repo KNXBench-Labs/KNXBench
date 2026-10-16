@@ -8,7 +8,9 @@ Next are exact FixupList semantics, source-default/Union encoding evidence,
 complete source assembly and then default-procedure translation plus durable
 whole-mutation recovery. Final thirteen-source refusals are7/5/1 respectively;
 they identify first boundaries, not all missing semantics. Public0012 admission
-is unchanged. All nineteen candidate stages pass; actual merged gates and publication remain pending.
+is unchanged. Nineteen candidate and twenty actual merged stages pass; published
+as `ccfe5b74` with isolated corpus152/152. This delivers the bounded assembly
+infrastructure, not any of the unfinished source/procedure/recovery work above.
 
 ## Siemens System-2 download support, issue #22 (14 October 2026)
 

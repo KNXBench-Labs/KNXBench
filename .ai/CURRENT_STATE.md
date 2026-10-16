@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-16 09:43
+- **Completed:** P5featuree92a721a integrated and published as accepted runtime mergeccfe5b74353d6a04dc822c416f5dc61bba1a2b1f. Actual20/20 stages verified: Rust4687/0/209ignored in345targets, Vitest3626/263files, isolated corpus152/152 in33targets. Full2931source/six selected external/Git commitments match; corpus links removed. Explicit13System1refusals verified,zero accepted complete real images; prior omission-success withdrawn. Exact runtime local/tracking/live main equality verified after push.
+- **Pending/Next Steps:** Result-only closure must retain runtime acceptance atccfe5b74, prove complete runtime equality and pass docs/repository checks before commit/push/readback. Then private member-digest-verified archive and exact owned P5worktree/branch/target retirement. Continue ACTIVE offline goal: evidence for FixupList/default-bit/Union semantics or independent family slices; no guessed image/procedure support.
+- **Notes for Codex oder Claude:** No new public0012mask,default-procedure execution,durable recovery or device support. No hardware/vendor/subagents/schema/dependency/UI/transport. Root dirty1817fb2a/index/foreign files preserved;only additive root handover. Historical pending/active entries below are superseded by this verified runtime publication. Closure is metadata-only,not new runtime testing.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-16 09:01
 - **Completed:** P5full frozen branch proc_ba9fbaceef5f verified19/19 stages. Rust4687/0/209ignored in345targets, Vitest3626/263files;2931source and six selected external inputs/Git commitments match. Three relative sources and thirteen named System1refusals verified;zero complete real System1images. Separate self-review and prior mutation/regression evidence retained. Result-only docs update follows unchanged accepted runtime.
 - **Pending/Next Steps:** Verify docs-only runtime equality/checks, commit exact21owned paths as KNXBench, integrate fresh main5ea29fde and run actual20stage non-FF merged acceptance with selected isolated corpus. No merged acceptance or publication yet. Then remote readback/docs closure/private archive/exact owned retirement; continue offline semantic work.

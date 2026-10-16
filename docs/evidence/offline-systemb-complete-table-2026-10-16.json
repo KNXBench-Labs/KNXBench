@@ -1,0 +1,107 @@
+{
+  "formatVersion": 1,
+  "date": "2026-10-16",
+  "scope": "P4d complete explicit System-B Format1 table encoding, not product image or download support",
+  "baseRevision": "28f8ccb1cd0ac93354c96594327a62e4efb60911",
+  "status": "all eighteen branch stages accepted on unchanged retry candidate; merged acceptance and publication pending",
+  "originalBodyInspection": {
+    "document": "Resources 03_05_01",
+    "version": "01.10.01",
+    "section": "4.18.6.2.4.1",
+    "printedPages": [
+      270,
+      271,
+      272
+    ],
+    "tables": [
+      86,
+      87,
+      88
+    ],
+    "method": "original pages rendered and visually inspected; licensed content private"
+  },
+  "proof": {
+    "red": {
+      "exit": 101,
+      "expectedDiagnostic": "E0432 unresolved build_complete import",
+      "observedBeforeImplementation": true
+    },
+    "focused": {
+      "restored-complete-build": {
+        "passed": 6,
+        "failed": 0
+      },
+      "existing-rewrite": {
+        "passed": 10,
+        "failed": 0
+      }
+    },
+    "capacityPaddingMutant": {
+      "exit": 101,
+      "command": [
+        "cargo",
+        "test",
+        "--offline",
+        "-p",
+        "knx-core",
+        "--test",
+        "systemb_object_table_build",
+        "caller_capacity_does_not_pad_or_silently_truncate_descriptors",
+        "--",
+        "--exact"
+      ],
+      "namedFailure": "caller_capacity_does_not_pad_or_silently_truncate_descriptors"
+    },
+    "exactProductionSourceRestored": true,
+    "allTargetOwningClippy": "passed",
+    "reviewedOwningCrate": {
+      "passed": 850,
+      "failed": 0,
+      "ignored": 0,
+      "targets": 18
+    },
+    "repositoryPreflights": {
+      "passed": 9,
+      "allExitZero": true
+    }
+  },
+  "boundaries": {
+    "everyDescriptorExplicit": true,
+    "capacityIsEmittedLength": false,
+    "productToAsapMapping": false,
+    "relativeProductImage": false,
+    "executablePlan": false,
+    "durableRecovery": false,
+    "newPublicAdmission": false,
+    "busOrVendorCodeExecuted": false,
+    "dependencyOrSchemaChange": false
+  },
+  "acceptance": {
+    "branch": {
+      "state": "accepted",
+      "attempt": "branch-gate2",
+      "stagesPassed": 18,
+      "rust": { "passed": 4678, "failed": 0, "ignored": 208, "targets": 343 },
+      "vitest": { "passed": 3626, "failed": 0, "files": 263 },
+      "inputPaths": 2922,
+      "sourceExternalGitCommitmentsVerified": true,
+      "firstAttempt": {
+        "state": "failed",
+        "failedStage": "rust",
+        "reason": "unchanged Net test could not acquire complete procfs membership snapshot",
+        "testGuardChanged": false,
+        "notRelabelled": true
+      },
+      "followUp": "documentation-only result update; runtime equality checked separately"
+    },
+    "merged": "pending",
+    "publication": "pending"
+  },
+  "review": {
+    "method": "separate in-session self-review; no subagents",
+    "critical": 0,
+    "important": 0,
+    "minor": "one diagnostic wording fix applied and rechecked",
+    "securityCandidates": 0
+  }
+}

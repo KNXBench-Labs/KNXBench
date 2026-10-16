@@ -31,6 +31,13 @@ No public mask is admitted; KL-007 remains open at its existing scope.
 
 ## Exact UP258 source boundary (16 October 2026)
 
+[Fresh vertical-path recheck](../research/2026-10-16-up258-vertical-path-audit.md)
+pins the current first LegacyPatchAlways refusal in defaults and two configured
+requests. All 21 source positions are literal regression oracles, not a complete
+source-to-wire plan. The six patch declarations, absent effective byte-order
+rule and whole-mutation reconstruction gap remain unresolved. No new recovery
+receipt or public write route is admitted.
+
 The [exact-application decision](../research/2026-10-16-up258-production-decision.md)
 keeps issue #22 programming refused: multibyte source encoding, XML SegFlags/
 AllocExtraByte/resource transforms and reconstructible complete prior allocator/

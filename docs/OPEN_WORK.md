@@ -51,7 +51,11 @@ infrastructure, not any of the unfinished source/procedure/recovery work above.
 ## Siemens System-2 download support, issue #22 (14 October 2026)
 
 Owner priority, 16 October: finish the exact UP258 application vertically, not
-additional family-wide foundations. The [production decision](research/2026-10-16-up258-production-decision.md)
+additional family-wide foundations. [The fresh vertical audit](research/2026-10-16-up258-vertical-path-audit.md)
+reproduces the current first transition: six LegacyPatchAlways declarations
+with unresolved default/invisible activation semantics. Two configured source
+regressions and a literal 21-position oracle do not close that rule. No complete
+image/plan/recovery was delivered; defining evidence is required before continuation. The [production decision](research/2026-10-16-up258-production-decision.md)
 and [one prepared reporter request](support/issue-22-up258-evidence-request.md)
 identify missing encoding/XML/resource and whole-mutation recovery contracts.
 The direct-field comparison is proposed evidence, not permission for any device

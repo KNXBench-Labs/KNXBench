@@ -74,3 +74,23 @@ status, never stderr/body/token text. Fresh acceptance and real workflow retry
 remain PENDING. The correction branch executes all runtime/documentation stages
 successfully but its final whitespace check refuses one extra log EOF blank line;
 that layout-only defect is removed before commit and actual-merge acceptance.
+
+## Final runtime and live verification
+
+Corrected actual merge `45091f56855e601c881a92ffbb0689474c779538` passes all
+nine planned scoped stages: 73 community tests, 189 full tools tests (one
+inherited skip), documentation, five fresh repository checks and whitespace.
+All 2948 frozen source identities remain unchanged. Published and exact
+local/tracking/live ref equality verified. Initial failed workflow and whitespace
+attempt are retained separately, not promoted into successful acceptance.
+
+Actual workflow `38907119595` succeeds on that exact runtime and posts
+`github-actions[bot]` comment `6216417065` on PR #24. Exact API id/body readback
+matches the generator: 25 PR XP, 329 board XP, title, all counters, XP sources and
+all earned medals. Live repeat `38907250544` also succeeds on the same source;
+exactly one marked comment remains with identical id/body/created_at/updated_at.
+The successful real path uses explicit PR write. The original failed API server
+reason remains unavailable, so no fabricated 403 diagnosis is recorded.
+
+Final result-only docs closure and owned cleanup remain delivery bookkeeping;
+no further feature work or full application/hardware/release gates are implied.

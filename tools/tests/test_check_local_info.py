@@ -130,8 +130,11 @@ class RepositoryTests(unittest.TestCase):
             (root / "blob.bin").write_bytes(b"\0/mnt/disk-9/src/")
             (root / "untracked.md").write_text("/mnt/disk-9/src/\n")  # local-info: allow
             git("add", "clean.md", "leak.md", "blob.bin")
+            (root / ".gitignore").write_text("ignored.md\n")
+            (root / "ignored.md").write_text("/mnt/disk-9/src/\n")  # local-info: allow
             findings = guard.check(root, list(guard.GENERIC_RULES))
-            self.assertEqual([(f.where, f.line, f.kind) for f in findings], [("leak.md", 2, "local mount path")])
+            self.assertEqual(sorted((f.where, f.line, f.kind) for f in findings),
+                             [("leak.md", 2, "local mount path"), ("untracked.md", 1, "local mount path")])
             git("-c", "user.name=t", "-c", "user.email=t@example.invalid", "commit", "-qm",
                 "Move to /mnt/disk-9/src\n\nbody")  # local-info: allow
             messages = guard.commit_messages(root, "HEAD")

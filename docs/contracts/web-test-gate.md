@@ -142,6 +142,16 @@ SIGTERM/keyboard interruption terminates only the owned child process group,
 keeps a failed checkpoint, releases held leases and cleans the owned short temp
 directory. SIGKILL/host failure can leave an incomplete receipt; it is never green.
 
+**Interrupt at the PID checkpoint (17 October 2026).** A stage records its
+child's PID in the receipt before waiting. That checkpoint used to sit *before*
+the guarded block, so a signal arriving right after the receipt was written —
+exactly when a supervisor reading the receipt reacts — left the child's whole
+session running with no owner. `test_sigterm_terminates_the_owned_child_group`
+failed 14 of 15 isolated runs on an idle machine for this reason and passed
+under load. The checkpoint now runs inside the guarded block;
+`test_interrupt_at_the_pid_checkpoint_still_terminates_the_child_group` raises at
+that exact point and fails on the old code. The SIGTERM test then passed 25 of 25.
+
 ## Evidence and admission
 
 The initial launch-path refusal remains failed. A corrected real launch probe is

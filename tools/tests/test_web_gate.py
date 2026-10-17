@@ -220,6 +220,33 @@ class GatePlan(unittest.TestCase):
                 with (root / '.git' / name).open('a') as released:
                     fcntl.flock(released, fcntl.LOCK_EX | fcntl.LOCK_NB)
 
+    def test_interrupt_at_the_pid_checkpoint_still_terminates_the_child_group(self) -> None:
+        """A signal right after the PID is recorded, before the wait, must not orphan."""
+        import os
+        import time
+
+        class Interrupting(support.MeasuredRun):
+            def save(self) -> None:
+                super().save()
+                if self.receipt['stages'] and self.receipt['stages'][-1].get('pid'):
+                    raise KeyboardInterrupt
+
+        with TemporaryDirectory() as tmp:
+            run = Interrupting(Path(tmp) / 'attempt')
+            with self.assertRaises(KeyboardInterrupt):
+                run.step('sleep', [sys.executable, '-c', 'import time;time.sleep(60)'], Path.cwd())
+            child = run.receipt['stages'][0]['pid']
+            deadline = time.monotonic() + 5
+            while time.monotonic() < deadline:
+                try:
+                    os.kill(child, 0)
+                except ProcessLookupError:
+                    break
+                time.sleep(0.01)
+            else:
+                os.killpg(child, 9)
+                self.fail('child group survived an interrupt at the PID checkpoint')
+
     def test_sigterm_terminates_the_owned_child_group(self) -> None:
         import os
         import signal

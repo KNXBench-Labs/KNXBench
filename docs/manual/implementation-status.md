@@ -532,7 +532,7 @@ gives five, with the measured counts behind them.
 | Preserving opaque source data and reporting unsupported constructs | ✅ Implemented | See the import report and [data-integrity contract](../IMPORT_EXPORT.md); retained bytes do not imply editable semantics |
 | ZipCrypto-protected projects (ETS4/ETS5) | 🟡 Partial or experimental | Implemented and tested against synthetic fixtures only |
 | AES-protected projects (ETS6) | ❌ Not implemented | Refused by name — [§13](../KNOWN_LIMITATIONS.md#13-password-protected-projects-zipcrypto-ets4ets5-is-decrypted-aes-ets6-is-still-refused) |
-| Importing part of a project into an existing one | ❌ Not implemented | Import is whole-file — [`docs/GAP_ANALYSIS_ETS.md`](https://github.com/KNXBench-Labs/KNXBench/blob/a584007fc05a/docs/GAP_ANALYSIS_ETS.md), row C3 |
+| Importing part of a project into an existing one | ❌ Not implemented | Import is whole-file — [`docs/GAP_ANALYSIS_ETS.md`](https://github.com/KNXBench-Labs/KNXBench/blob/994ac08c0328/docs/GAP_ANALYSIS_ETS.md), row C3 |
 
 ## ETS project export
 
@@ -570,7 +570,7 @@ Main source delivery is [verified](../status/2026-10-09-offline-ap1-verification
 | Standalone `.knxprod` at exact namespaces 10 and 23 | 🟡 Scope-limited | Strict parser/persistence admission is delivered, not full manufacturer or project-module semantics — [ADR-0083](../adr/0083-admit-exact-product-scheme-10.md), [product namespace admission](../../crates/knx-productdb/src/package.rs) |
 | Standalone `.knxprod` at schemes 15–19 and 22 | ❌ Not implemented | No observed standalone sample or verified namespace support |
 | Encrypted `.knxprod` packages, and legacy `.vd2` files | ❌ Not implemented, deliberately | A permanent scope exclusion, refused as a typed error |
-| Online catalog update from a manufacturer | ❌ Not implemented | Files are installed by hand — [`docs/GAP_ANALYSIS_ETS.md`](https://github.com/KNXBench-Labs/KNXBench/blob/a584007fc05a/docs/GAP_ANALYSIS_ETS.md), row C6 |
+| Online catalog update from a manufacturer | ❌ Not implemented | Files are installed by hand — [`docs/GAP_ANALYSIS_ETS.md`](https://github.com/KNXBench-Labs/KNXBench/blob/994ac08c0328/docs/GAP_ANALYSIS_ETS.md), row C6 |
 | Devices configured by a manufacturer plug-in | ❌ Not implemented | No plug-in host exists and none is planned — [§6](../KNOWN_LIMITATIONS.md#6-devices-behind-vendor-plug-in-dlls) |
 | Package/version identity inspection | 🟡 Bounded implementation | Source/candidate identity is recorded; a version pin/selector is not implemented. First-installed normalized rows remain the winner — [§135](../KNOWN_LIMITATIONS.md) |
 | Manufacturer signature verification | ❌ Not implemented | Signature members are retained and labelled, not cryptographically verified — [§85](../KNOWN_LIMITATIONS.md) |

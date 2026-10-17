@@ -436,12 +436,16 @@
       "heading": "## Partial commissioning bus-activity snapshot (ADR-0055)",
       "source_lines": 61,
       "source_sha256": "aa064c3c340562196638ebdde27ced94e8ceb599e72500bc164f1cc9198aebe7",
-      "retained_sha256": "6c9351ad8de180d33d86080bbd3f521883d4a6a9ca64ff01e706c4208268290a",
+      "retained_sha256": "9a5c3e618e44e73b9bbe6dc0661aa992f83677510f2b60217a95d5fe4979cd72",
       "detail_file": "docs/limitations/bus-activity-snapshot.md",
       "rewritten_link_targets": 1,
       "anchors": [
         "partial-commissioning-bus-activity-snapshot-adr-0055"
-      ]
+      ],
+      "redaction": {
+        "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
+        "previous_retained_sha256": "6c9351ad8de180d33d86080bbd3f521883d4a6a9ca64ff01e706c4208268290a"
+      }
     },
     {
       "key": "structure-editor-scope",
@@ -641,12 +645,16 @@
       "heading": "## 3. Device parameters are preserved but not interpreted",
       "source_lines": 377,
       "source_sha256": "f167e248d99ebe90d4d24f5fa45a958be29b0aefe0f4eaad8d8098bf3535744a",
-      "retained_sha256": "df644e0ea276c3d65d167cc6d5996f5c508f8b7f95d634115a0eff404e98e73b",
+      "retained_sha256": "03bdcff718c86792ea1e493a1fd1f6a7fbc9ba1988b51332f8aa4c38f49c5d24",
       "detail_file": "docs/limitations/KL-003-parameter-evaluation-and-editing-boundaries.md",
       "rewritten_link_targets": 9,
       "anchors": [
         "3-device-parameters-are-preserved-but-not-interpreted"
-      ]
+      ],
+      "redaction": {
+        "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
+        "previous_retained_sha256": "df644e0ea276c3d65d167cc6d5996f5c508f8b7f95d634115a0eff404e98e73b"
+      }
     },
     {
       "key": "KL-006",
@@ -681,12 +689,16 @@
       "heading": "## 8. KNX Secure is not implemented",
       "source_lines": 57,
       "source_sha256": "ebf30bb53798b57648a94211429d3a160fe986d31c70603172013e3b9c59526f",
-      "retained_sha256": "9a69ec86874948cf82c8481e661d16b1eae5bf47d562b2f4eb70b3ee9d53f7b1",
+      "retained_sha256": "125879e08ed6ec9c4e56eb8bf94443bb05c218a04c0e6f9ebcbf1548b48c71f3",
       "detail_file": "docs/limitations/KL-008-knx-secure-runtime.md",
       "rewritten_link_targets": 2,
       "anchors": [
         "8-knx-secure-is-not-implemented"
-      ]
+      ],
+      "redaction": {
+        "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
+        "previous_retained_sha256": "9a69ec86874948cf82c8481e661d16b1eae5bf47d562b2f4eb70b3ee9d53f7b1"
+      }
     },
     {
       "key": "KL-009",
@@ -865,12 +877,16 @@
       "heading": "## 29. `apps/knx-cli bus monitor` has formatting limitations",
       "source_lines": 64,
       "source_sha256": "4f7b2a052b20c4d52b7850e6cfb97c134a1bbc97271a330f57b41d4ea1767f4a",
-      "retained_sha256": "54df0863b5814234340a78a2a49c0715f3e081994170609b3ccdf1da3aed499a",
+      "retained_sha256": "9be7dd75a6e0ca0a1a347d4c7053a79c3b2d41be2bd6cbf173baabe2a01d9bfe",
       "detail_file": "docs/limitations/KL-029-cli-monitor-formatting.md",
       "rewritten_link_targets": 1,
       "anchors": [
         "29-appsknx-cli-bus-monitor-has-formatting-limitations"
-      ]
+      ],
+      "redaction": {
+        "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
+        "previous_retained_sha256": "54df0863b5814234340a78a2a49c0715f3e081994170609b3ccdf1da3aed499a"
+      }
     },
     {
       "key": "KL-031",
@@ -906,13 +922,17 @@
       "heading": "## 37. Translations reach selected surfaces, not every imported text or UI output",
       "source_lines": 215,
       "source_sha256": "9b372cd86ec6bfe5f4ec2922d2e53e5812a9741572c9535592980ff6dd51437e",
-      "retained_sha256": "c43bc96d9d43246be3c13440629f988f77bc91c10b5fde2e785f505ef9b7bfc4",
+      "retained_sha256": "0aec8c16d733cf01fd81fedf99c8f9df3b800e9dceccd4169f89b08c739bcdcd",
       "detail_file": "docs/limitations/KL-037-translation-coverage.md",
       "rewritten_link_targets": 3,
       "anchors": [
         "37-imported-translations-are-stored-but-never-read-and-the-ui-is-english-only--partially-resolved-2026-09-12",
         "37-translations-reach-selected-surfaces-not-every-imported-text-or-ui-output"
-      ]
+      ],
+      "redaction": {
+        "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
+        "previous_retained_sha256": "c43bc96d9d43246be3c13440629f988f77bc91c10b5fde2e785f505ef9b7bfc4"
+      }
     },
     {
       "key": "KL-038",
@@ -1188,12 +1208,16 @@
       "heading": "## 63. `knx-server` has no multi-user/concurrent-edit support — one shared project, one shared undo stack, no conflict detection at all",
       "source_lines": 105,
       "source_sha256": "6f3dc09bdb9bf6e8076e10473c281267129660d49468b378cc2e44c91bb6febc",
-      "retained_sha256": "2baccdd217f1b98cf6b7a5b0a970935bf5913bc64696dfa0a5a6cb5363f839df",
+      "retained_sha256": "13007ddb208fac2005f7e85ca829101b99b5735e0da8c4de66e6c2aabe2539ee",
       "detail_file": "docs/limitations/KL-063-shared-server-project-and-undo-stack.md",
       "rewritten_link_targets": 3,
       "anchors": [
         "63-knx-server-has-no-multi-userconcurrent-edit-support--one-shared-project-one-shared-undo-stack-no-conflict-detection-at-all"
-      ]
+      ],
+      "redaction": {
+        "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
+        "previous_retained_sha256": "2baccdd217f1b98cf6b7a5b0a970935bf5913bc64696dfa0a5a6cb5363f839df"
+      }
     },
     {
       "key": "KL-064",
@@ -1201,12 +1225,16 @@
       "heading": "## 64. `Languages` blocks outside an application program are discarded on import",
       "source_lines": 200,
       "source_sha256": "661ab61c0f5d691e22a4156ec8bb6e109cec8aeb5639374e9d15f3d259d1c862",
-      "retained_sha256": "b0eb27affd34d7c8eb2a87b7b9b076cb7a143a41b8ffc65c0ead75874a9b1c0a",
+      "retained_sha256": "f69b39a8bf953af715d3dc951da2bebb2ae6ece1aaf2cc6ff274ed68929af0ca",
       "detail_file": "docs/limitations/KL-064-non-program-translation-semantics.md",
       "rewritten_link_targets": 1,
       "anchors": [
         "64-languages-blocks-outside-an-application-program-are-discarded-on-import"
-      ]
+      ],
+      "redaction": {
+        "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
+        "previous_retained_sha256": "b0eb27affd34d7c8eb2a87b7b9b076cb7a143a41b8ffc65c0ead75874a9b1c0a"
+      }
     },
     {
       "key": "KL-065",
@@ -1400,12 +1428,16 @@
       "heading": "## 82. The diagnostics companion's stale lock sees one browser profile's own windows, and nothing else",
       "source_lines": 173,
       "source_sha256": "0b0385ad70e6da74268e14dd29198676a4eb6ec7347af97b5ecdbbed5e69c5bf",
-      "retained_sha256": "6155b199096d17caccdff41f065159d21259bc9dc076efaf61b194267a71fcd4",
+      "retained_sha256": "8c739301e3f5f969a47196171bba2fdb52dcc621fed8c84fefcd48575190f989",
       "detail_file": "docs/limitations/KL-082-monitor-context-freshness.md",
       "rewritten_link_targets": 1,
       "anchors": [
         "82-the-diagnostics-companions-stale-lock-sees-one-browser-profiles-own-windows-and-nothing-else"
-      ]
+      ],
+      "redaction": {
+        "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
+        "previous_retained_sha256": "6155b199096d17caccdff41f065159d21259bc9dc076efaf61b194267a71fcd4"
+      }
     },
     {
       "key": "KL-085",
@@ -1420,7 +1452,7 @@
         "85-a-signature-package-member-is-stored-with-role-signature-never-verified"
       ],
       "redaction": {
-        "reason": "local machine details (absolute local paths, host name, kernel release) replaced by placeholders on 2026-10-17",
+        "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
         "previous_retained_sha256": "1a1f24ad6764a43a74ac2c0567df00286096ba4325e4ce87eaedcf786890ea68"
       }
     },
@@ -1476,7 +1508,7 @@
         "90-there-is-no-dpt-main-type-46-46-is-a-count-of-main-types-in-one-ets-master-data-file"
       ],
       "redaction": {
-        "reason": "local machine details (absolute local paths, host name, kernel release) replaced by placeholders on 2026-10-17",
+        "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
         "previous_retained_sha256": "5e9393898811c9f6869beda74919d9dbd4825291353f24cf0c7f081ac6db8ea3"
       }
     },
@@ -1486,12 +1518,16 @@
       "heading": "## 92. Commissioning phase 2 is verified against a simulator this project wrote; one device has been written since",
       "source_lines": 88,
       "source_sha256": "b069d0e4e2437bb3ced7a0ba837b5a6bac40deaf478f1e136f05ca6db00c343a",
-      "retained_sha256": "2b5eb2fd5f7d08b544cdd35aeba21dfb846d4babddd9a7649e8d0721f04dfcb0",
+      "retained_sha256": "f78bc64144508fd1c1766b8acfbc030d596f40a9e609fa2c8ac255d7fd9165de",
       "detail_file": "docs/limitations/KL-092-simulator-versus-hardware-evidence.md",
       "rewritten_link_targets": 0,
       "anchors": [
         "92-commissioning-phase-2-is-verified-against-a-simulator-this-project-wrote-one-device-has-been-written-since"
-      ]
+      ],
+      "redaction": {
+        "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
+        "previous_retained_sha256": "2b5eb2fd5f7d08b544cdd35aeba21dfb846d4babddd9a7649e8d0721f04dfcb0"
+      }
     },
     {
       "key": "KL-093",
@@ -1638,7 +1674,7 @@
         "106-the-debug-report-redacts-five-pattern-classes-and-nothing-else"
       ],
       "redaction": {
-        "reason": "local machine details (absolute local paths, host name, kernel release) replaced by placeholders on 2026-10-17",
+        "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
         "previous_retained_sha256": "f860d0a7ec98c8e452082242a1ae6cf1d1e304e518a1326e24b73bc97ad4e71f"
       }
     },
@@ -1778,12 +1814,16 @@
       "heading": "## 121. Two open windows do not see each other's preference changes until one reloads",
       "source_lines": 46,
       "source_sha256": "ffdc8f12d8d11acffd6a25182ec2ee359f9a10aaa90b14feef1f981b2ddc82d7",
-      "retained_sha256": "ffdd8b04072f26361ac4685f3c54670108a12cbb70a800372ef95970cf94f9f3",
+      "retained_sha256": "48aa171e2d89183e69eb464855b39c1e3412fbfe5ddf24c4767044eed057bc14",
       "detail_file": "docs/limitations/KL-121-cross-window-preference-refresh.md",
       "rewritten_link_targets": 1,
       "anchors": [
         "121-two-open-windows-do-not-see-each-others-preference-changes-until-one-reloads"
-      ]
+      ],
+      "redaction": {
+        "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
+        "previous_retained_sha256": "ffdd8b04072f26361ac4685f3c54670108a12cbb70a800372ef95970cf94f9f3"
+      }
     },
     {
       "key": "KL-124",
@@ -1791,12 +1831,16 @@
       "heading": "## 124. The interface search shows four facts about an interface; the protocol carries more",
       "source_lines": 53,
       "source_sha256": "6d584bc32a9a1ac2d6df1b7403fb67048b3bdd86a12763ec0a8c4e76ce3b23aa",
-      "retained_sha256": "fadf9f716fd1df2c289fd86c30b02be46600074b6fb1f928dfa6902d8944037c",
+      "retained_sha256": "cdc49e596511e40089152207b9f2a2f3d579c4318308b8d657a2f2803d5623e1",
       "detail_file": "docs/limitations/KL-124-discovery-metadata-display.md",
       "rewritten_link_targets": 1,
       "anchors": [
         "124-the-interface-search-shows-four-facts-about-an-interface-the-protocol-carries-more"
-      ]
+      ],
+      "redaction": {
+        "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
+        "previous_retained_sha256": "fadf9f716fd1df2c289fd86c30b02be46600074b6fb1f928dfa6902d8944037c"
+      }
     },
     {
       "key": "KL-125",
@@ -1843,12 +1887,16 @@
       "heading": "## 128. Legacy `.vd3`–`.vd5` and `.pr3`–`.pr5` files are refused, and the refusal misnames the format",
       "source_lines": 150,
       "source_sha256": "551331be3e8197969a5d36b277501920d7fcb49d9531407027704c43e9e58671",
-      "retained_sha256": "ace39817c46a4a66a74b62b858cc612524130c5f7cd11c8c23a373f37cdb5d76",
+      "retained_sha256": "e77458c92c6e918939f23719fc95df77e626c002e7978f661509cb8995485b54",
       "detail_file": "docs/limitations/KL-128-legacy-product-import-boundaries.md",
       "rewritten_link_targets": 4,
       "anchors": [
         "128-legacy-vd3vd5-and-pr3pr5-files-are-refused-and-the-refusal-misnames-the-format"
-      ]
+      ],
+      "redaction": {
+        "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
+        "previous_retained_sha256": "ace39817c46a4a66a74b62b858cc612524130c5f7cd11c8c23a373f37cdb5d76"
+      }
     },
     {
       "key": "KL-129",
@@ -1856,12 +1904,16 @@
       "heading": "## 129. A stale id-allocator snapshot can duplicate ids, and saving then drops one entity",
       "source_lines": 73,
       "source_sha256": "2fc61dfd64027f830be06a07acb9360868dbbcb0646b5bd6633cc56e740fc8ce",
-      "retained_sha256": "c7f3d0c601df74cf8df493cffdd7e12840024dca88fa0a34287629a5f6232b11",
+      "retained_sha256": "c6eb91f1c33301477ef728334cc08d3452e91aca320aa2195a30570ccbb927b5",
       "detail_file": "docs/limitations/KL-129-allocator-safeguards-and-deferred-enforcement.md",
       "rewritten_link_targets": 1,
       "anchors": [
         "129-a-stale-id-allocator-snapshot-can-duplicate-ids-and-saving-then-drops-one-entity"
-      ]
+      ],
+      "redaction": {
+        "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
+        "previous_retained_sha256": "c7f3d0c601df74cf8df493cffdd7e12840024dca88fa0a34287629a5f6232b11"
+      }
     },
     {
       "key": "KL-130-GATE",
@@ -2017,13 +2069,17 @@
       "heading": "## §142 Partial download: one verified device, product and UI boundaries remain",
       "source_lines": 48,
       "source_sha256": "b5ddc9aa9a74503d2f6e97549c4b52c7eeecb8439feecce32c7a0015a4569ddb",
-      "retained_sha256": "65ccb8e8eb367ab80131a23d77fe2e3e61962745ca2abcf24b6e89681899dde2",
+      "retained_sha256": "9db00f9aa410b2a90c48434b656c6c2a8582d0c1fd784724c949c0b539bc395f",
       "detail_file": "docs/limitations/KL-142-partial-download-evidence.md",
       "rewritten_link_targets": 0,
       "anchors": [
         "142-the-mask-070nh-partial-download-is-tested-in-the-simulator-only",
         "142-partial-download-one-verified-device-product-and-ui-boundaries-remain"
-      ]
+      ],
+      "redaction": {
+        "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
+        "previous_retained_sha256": "65ccb8e8eb367ab80131a23d77fe2e3e61962745ca2abcf24b6e89681899dde2"
+      }
     },
     {
       "key": "KL-141",
@@ -2162,14 +2218,18 @@
       "heading": "## 154. The telegram-flow view is checked and measured in Chromium only",
       "source_lines": 91,
       "source_sha256": "8bdb58e273fcef9d3d3193559c8a67bf097476deb2112a6077efcf722b7f6c37",
-      "retained_sha256": "61a725b59df27eb76ab9378f1687fdf4c057221679ff663a3fa0c097ddea59d5",
+      "retained_sha256": "fec18610484261f961d58efb360b3f12bc4448b206595d2447d8b282a5caf723",
       "detail_file": "docs/limitations/KL-154-telegram-flow-evidence-and-capacity.md",
       "rewritten_link_targets": 3,
       "anchors": [
         "154-the-telegram-flow-view-is-checked-and-measured-in-chromium-only",
         "154-the-telegram-flow-view-is-checked-in-chromium-only-load-figures-follow-in-u21-part-c",
         "154-the-telegram-flow-view-is-static-and-checked-in-chromium-only"
-      ]
+      ],
+      "redaction": {
+        "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
+        "previous_retained_sha256": "61a725b59df27eb76ab9378f1687fdf4c057221679ff663a3fa0c097ddea59d5"
+      }
     },
     {
       "key": "KL-155",
@@ -2203,12 +2263,16 @@
       "heading": "## 157. Opening an older project upgrades it in place",
       "source_lines": 56,
       "source_sha256": "854f472dfeeb0b1323efb8c7848850334db524fe16d0750253b1ac53f0c8ca9f",
-      "retained_sha256": "acffe89adece327ca0e44a8b084f1e14799e89d2d0e9af54633ef7b8614717fa",
+      "retained_sha256": "71e8c11ae82b84ac876a1309a8f0bcc4d8924a7b07f7a73b5f87d43c78f60785",
       "detail_file": "docs/limitations/KL-157-in-place-native-project-migration.md",
       "rewritten_link_targets": 0,
       "anchors": [
         "157-opening-an-older-project-upgrades-it-in-place"
-      ]
+      ],
+      "redaction": {
+        "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
+        "previous_retained_sha256": "acffe89adece327ca0e44a8b084f1e14799e89d2d0e9af54633ef7b8614717fa"
+      }
     },
     {
       "key": "KL-158",
@@ -2216,12 +2280,16 @@
       "heading": "## 158. The AppImage starts only with an X server",
       "source_lines": 51,
       "source_sha256": "815659c103e70b098663834c7ee996bba73ce428fc27bf6ffaff95258fea6c2b",
-      "retained_sha256": "b35289b2d60631df390d876822123ff179fc9b4dec0589ab6a362479298dec59",
+      "retained_sha256": "af27eeed6b93a9953a698123258ed80de112129ef73900b99fd2b90fc70fea42",
       "detail_file": "docs/limitations/KL-158-appimage-display-backend-evidence.md",
       "rewritten_link_targets": 2,
       "anchors": [
         "158-the-appimage-starts-only-with-an-x-server"
-      ]
+      ],
+      "redaction": {
+        "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
+        "previous_retained_sha256": "b35289b2d60631df390d876822123ff179fc9b4dec0589ab6a362479298dec59"
+      }
     },
     {
       "key": "KL-159",
@@ -2587,9 +2655,13 @@
       {
         "heading": "## 18. `open_project` does not clear the previous `.knxdb` `store_path`",
         "source_sha256": "7d46594acdfc8b1c561d4749c06e0f15f3bbcdcab1508d411c64d75fdb939430",
-        "retained_sha256": "9a5f415865ff877c4efc06d7524c27fba0a0498428a24c58b2843d3f7a432484",
+        "retained_sha256": "5c4ac18479805bcd621fdc03f6466d74a06184ad279799d910599bd75167fc42",
         "detail_file": "docs/limitations/KL-018-resolved-imported-project-store-path.md",
-        "rewritten_link_targets": 0
+        "rewritten_link_targets": 0,
+        "redaction": {
+          "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
+          "previous_retained_sha256": "9a5f415865ff877c4efc06d7524c27fba0a0498428a24c58b2843d3f7a432484"
+        }
       },
       {
         "heading": "## 23. `/api/project/download` buffers the whole `.knxdb` file in memory",
@@ -2619,7 +2691,7 @@
         "detail_file": "docs/limitations/KL-130-GATE-resolved-gate-root-validation.md",
         "rewritten_link_targets": 1,
         "redaction": {
-          "reason": "local machine details (absolute local paths, host name, kernel release) replaced by placeholders on 2026-10-17",
+          "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
           "previous_retained_sha256": "ad45e4bf888442b0a01ab2a533ae549ecb093822765691e8e443b919dc704bc1"
         }
       }

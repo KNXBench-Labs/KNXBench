@@ -62,6 +62,6 @@ retrofitting secret handling into the model
 hardware/sample key material exist, the user answered "raus erstmal, aber
 als limitation dokumentieren" — deferred for now, but document it as a
 limitation. This entry already does; nothing here is rejected, only deferred
-behind the precondition above. See [GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/a584007fc05a/docs/GAP_ANALYSIS_ETS.md)'s
+behind the precondition above. See [GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/994ac08c0328/docs/GAP_ANALYSIS_ETS.md)'s
 **T19** for the tracked task.
 <!-- END retained catalogue record -->

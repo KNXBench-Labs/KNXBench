@@ -32,7 +32,8 @@ Rules, in order (described, not quoted, so this log carries no pattern):
    `com.knxbench.knxbench-labs`;
 3. the personal account name, any case → `KNXBench-Labs`;
 4. first name + surname, any whitespace including a line break → `KNXBench`;
-5. the home-directory path of the local user → `~`;
+5. the home-directory path of the local user → a neutral KNXBench home path
+   (itself replaced by a placeholder on 2026-10-17, ADR-0135);
 6. the first name as a whole word (three casings) → `KNXBench`/`knxbench`.
 
 Deliberately no rule for the surname alone: a KNX manufacturer shares it.

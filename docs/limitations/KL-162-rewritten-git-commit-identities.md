@@ -72,3 +72,14 @@ is now `bca2d3336b96` and `aa0ff14ff536` is now `a584007fc05a` (242 links in
 
 **Lifted when.** Not applicable; the mapping file is the permanent bridge.
 <!-- END retained catalogue record -->
+
+## Fourth rewrite: local machine details (17 October 2026)
+
+2,963 of 3,216 published commits got a new hash again when local machine
+details were removed from the whole history ([KL-185](KL-185-git-history-local-machine-details.md),
+[ADR-0135](../adr/0135-repository-carries-no-local-machine-details.md)). To follow a
+hash cited before this rewrite, chain the earlier maps with
+[`COMMIT_MAP_2026-10-17.txt`](../history/COMMIT_MAP_2026-10-17.txt). Commit
+messages were rewritten with the history, so short hashes inside them already
+point at the new commits; pinned GitHub links were moved, hashes in prose were
+not.

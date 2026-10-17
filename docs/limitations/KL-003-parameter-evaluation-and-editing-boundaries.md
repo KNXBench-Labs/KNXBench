@@ -101,7 +101,7 @@ of what slice 2 shipped.)
 **T18 slice 3 (2026-09-11)** wires the evaluator into a real editor:
 `GET`/`POST /api/device/{id}/parameters` (`apps/knx-server`, DTOs and
 decisions D20-D26,
-[design](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/superpowers/specs/2026-09-11-parameter-editor-design.md)) plus a
+[design](https://github.com/KNXBench-Labs/KNXBench/blob/6222e17754f3/docs/superpowers/specs/2026-09-11-parameter-editor-design.md)) plus a
 web panel (`apps/knx-web/src/ParameterPanel.tsx`). A write to a top-level
 field goes through `knx_core::Command::SetParameterValue` (undo/redo via
 `RestoreParameterValue`), is validated against the program's declared
@@ -127,7 +127,7 @@ module-scoped value now *reads and displays correctly* — it is not a
 storage gap that happens to be unaddressed; it never was one.
 
 **T18 slice 4, module-scoped editing (2026-09-12,
-[design](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/superpowers/specs/2026-09-12-module-scoped-editing-design.md),
+[design](https://github.com/KNXBench-Labs/KNXBench/blob/6222e17754f3/docs/superpowers/specs/2026-09-12-module-scoped-editing-design.md),
 D35-D43) closes the write side (a) and the `choose`-evaluation side (b)
 below name.** `knx-productdb`'s `ValueMap` gained a scope dimension
 (D35/D36): a value stored for one `Module` instantiation is visible to
@@ -169,7 +169,7 @@ that server-named id instead of the declared one (D43).
   case D38-D39 can authorize.
 - **Nested modules are now expanded, bounded, with cycle detection
   (goal.md T18, task 11, 2026-09-14, design D44-D46,
-  [design addendum](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/superpowers/specs/2026-09-11-module-expansion-design.md#addendum-goalmd-t18-task-11-d15-superseded--bounded-recursive-expansion)).**
+  [design addendum](https://github.com/KNXBench-Labs/KNXBench/blob/6222e17754f3/docs/superpowers/specs/2026-09-11-module-expansion-design.md#addendum-goalmd-t18-task-11-d15-superseded--bounded-recursive-expansion)).**
   `Diagnostic::NestedModuleNotExpanded` (design D15, one-level policy) no
   longer exists. A `Module` found inside an already-expanded `ModuleDef`'s
   own tree is now walked recursively, up to

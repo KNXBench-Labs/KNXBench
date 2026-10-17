@@ -188,7 +188,7 @@ is the remaining copy defect.
   can still be refused. A picker filter is guidance, not format validation.
 - **Workaround:** obtain the product as a `.knxprod` package.
 - **Details:** [`docs/COMPATIBILITY.md`](../COMPATIBILITY.md),
-  [UI follow-up evidence](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/archive/alpha-0.1/UI_ALPHA_READINESS.md)
+  [UI follow-up evidence](https://github.com/KNXBench-Labs/KNXBench/blob/6222e17754f3/docs/archive/alpha-0.1/UI_ALPHA_READINESS.md)
 
 ### Some newer `.knxprod` master-data schemes are not installable directly
 
@@ -346,7 +346,7 @@ is the remaining copy defect.
   handoff as an active unfinished alpha package. Hardware/power-loss evidence,
   complete journal coverage and universal recovery are still not supplied.
 - **Details:** [Commissioning history contract](../contracts/COMMISSIONING_ACTIVITY_HISTORY.md),
-  [commissioning goal](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/archive/alpha-0.1/goal-commission.md).
+  [commissioning goal](https://github.com/KNXBench-Labs/KNXBench/blob/6222e17754f3/docs/archive/alpha-0.1/goal-commission.md).
 
 ### There is no address reset in the app
 

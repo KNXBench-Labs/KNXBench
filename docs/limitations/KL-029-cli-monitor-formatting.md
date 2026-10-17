@@ -70,7 +70,7 @@ The joined text is for display only: a name containing ` | ` itself is not
 escaped. Tests: `apps/knx-cli/tests/cli_bus_address_style.rs`,
 `monitor_line_uses_the_project_style_and_all_names`,
 `names_shared_across_installations_are_all_shown`. See
-[ALPHA_READINESS](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/archive/alpha-0.1/ALPHA_READINESS.md#ar14-offline-buscli-contract-dossier).
+[ALPHA_READINESS](https://github.com/KNXBench-Labs/KNXBench/blob/6222e17754f3/docs/archive/alpha-0.1/ALPHA_READINESS.md#ar14-offline-buscli-contract-dossier).
 <!-- END retained catalogue record -->
 
 ## Update 2026-10-14: the short summary caught up with AR14 (Goal B8)

@@ -115,7 +115,7 @@ that a change came from outside its own actions.
 
 **Lifted when.** **T22** (multi-user/concurrent-edit support for
 `knx-server`) is designed and implemented. Per its own backlog entry
-([GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/a584007fc05a/docs/GAP_ANALYSIS_ETS.md#f-non-functional--operational-gaps)),
+([GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/994ac08c0328/docs/GAP_ANALYSIS_ETS.md#f-non-functional--operational-gaps)),
 it "needs its own design (locking vs. merge vs. last-writer-wins, and
 what 'conflict' even means for a `Command`-based undo model)" — that
 design question is unresolved, and this limitation stands until it is

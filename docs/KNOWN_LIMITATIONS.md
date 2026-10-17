@@ -1498,10 +1498,10 @@ AppImages up to alpha.11 save in-app downloads silently into Downloads, replacin
 [Details and history](limitations/KL-182-desktop-silent-downloads.md)
 
 <a id="catalogue-kl-185"></a>
-### 185. Git history still carries local machine details
+### 185. Git history rewritten; GitHub pull-request refs keep old commits
 
-**Ledger status:** `WAITING_OWNER` ([KL-185](status/LEDGER.md#post-snapshot-ids)).
-The current tree is clean and guarded (ADR-0135), but earlier commits and seven commit messages still name local paths, the host name or the kernel release; removing them needs an owner-approved history rewrite.
+**Ledger status:** `DONE` ([KL-185](status/LEDGER.md#post-snapshot-ids)).
+History, messages and tags were rewritten on 2026-10-17 (map COMMIT_MAP_2026-10-17); GitHub still serves the pre-rewrite commits through two read-only pull-request refs and the fork.
 [Details and history](limitations/KL-185-git-history-local-machine-details.md)
 
 ## Integrations and community

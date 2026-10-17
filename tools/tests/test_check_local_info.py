@@ -35,6 +35,12 @@ class GenericRuleTests(unittest.TestCase):
                      "<sources>/KNXBench-feature", "<profile>/evidence/run", "~/projects"):
             self.assertEqual(kinds(text), [], text)
 
+    def test_dash_joined_mount_keys_and_arch_kernel_releases_are_refused(self):
+        self.assertEqual(kinds("~/.claude/projects/-mnt-disk-7-src-KNXBench/memory"), ["local mount path"])  # local-info: allow
+        self.assertEqual(kinds("measured on `Linux 6.1.2-arch1-1 x86_64`"), ["kernel release"])  # local-info: allow
+        for text in ("pre-mnt-x", "--mnt-a-b", "version 1.2.3-arch", "1.2.3-arch1-1.tar"):
+            self.assertEqual(kinds(text), [], text)
+
     def test_an_explicit_marker_exempts_exactly_its_own_line(self):
         marked = "path /mnt/disk-7/src  # local-info: allow\nnext /mnt/disk-7/src"  # local-info: allow
         self.assertEqual([(f.line, f.kind) for f in guard.scan_text("x", marked, guard.GENERIC_RULES)],
@@ -46,10 +52,16 @@ class GenericRuleTests(unittest.TestCase):
 
 
 class MachineRuleTests(unittest.TestCase):
-    def rules(self, root=Path("/srv/build/KNXBench"), deny=""):
+    FILES = {"/proc/cpuinfo": "processor : 0\nmodel name : AMD Ryzen 9 1234X 12-Core Processor\n",
+             "/etc/os-release": 'NAME="ExampleOS"\nID=exampleos\n'}
+
+    def rules(self, root=Path("/srv/build/KNXBench"), deny="", files=None, deny_file=()):
+        files = self.FILES if files is None else files
         with mock.patch.object(guard.socket, "gethostname", return_value="workbench-07.lan"), \
              mock.patch.object(guard.platform, "release", return_value="6.9.1-2-custom"), \
              mock.patch.object(guard.Path, "home", return_value=Path("/var/lib/dev")), \
+             mock.patch.object(guard, "read_optional", side_effect=lambda path: files.get(path, "")), \
+             mock.patch.object(guard, "deny_file_tokens", return_value=list(deny_file)), \
              mock.patch.dict(os.environ, {"KNXBENCH_LOCAL_INFO_DENY": deny}):
             return guard.machine_rules(root)
 
@@ -60,6 +72,32 @@ class MachineRuleTests(unittest.TestCase):
         self.assertEqual(kinds("cache in /var/lib/dev/.cache", rules), ["home directory"])
         self.assertEqual(kinds("worktree /srv/build/KNXBench-other", rules), ["checkout location"])
         self.assertEqual(kinds("workbench-070 and 6.9.1-2-customer are other words", rules), [])
+        self.assertEqual(kinds("key -srv-build-KNXBench", rules), ["checkout location"])
+        self.assertEqual(kinds("measured on a Ryzen 9 1234X", rules), ["CPU model"])
+        self.assertEqual(kinds("the 1234X\nwas busy", rules), ["CPU model"])
+        self.assertEqual(kinds("one ExampleOS host and exampleos tools", rules), ["distribution"])
+        self.assertEqual(kinds("on EXAMPLEOS", rules), ["distribution"])
+
+    def test_cpu_model_tokens_drop_vendor_suffix_and_never_use_a_bare_number(self):
+        self.assertEqual(guard.cpu_tokens("model name\t: AMD Ryzen 9 1234X 12-Core Processor\n"),
+                         ["AMD Ryzen 9 1234X", "Ryzen 9 1234X", "1234X"])
+        self.assertEqual(guard.cpu_tokens("model name : Intel(R) Core(TM) i9-0000 CPU @ 3.20GHz\n"),
+                         ["Intel(R) Core(TM) i9-0000", "Core(TM) i9-0000", "i9-0000"])
+        self.assertEqual(guard.cpu_tokens("model name : AMD EPYC 9999 64-Core Processor\n"),
+                         ["AMD EPYC 9999", "EPYC 9999"])
+        self.assertEqual(guard.cpu_tokens("no model here"), [])
+
+    def test_common_distributions_are_not_machine_details(self):
+        self.assertEqual(guard.distribution_tokens('NAME="Ubuntu"\nID=ubuntu\n'), [])
+        self.assertEqual(guard.distribution_tokens('NAME="ExampleOS"\nID=exampleos\n'), ["exampleos", "ExampleOS"])
+        rules = self.rules(files={"/etc/os-release": 'NAME="Arch Linux"\nID=arch\n'})
+        self.assertEqual(kinds("runs on Arch Linux", rules), [])
+
+    def test_the_clone_local_deny_file_adds_tokens_without_committing_them(self):
+        rules = self.rules(deny_file=["198.18.0.9", "old-disk-x"])
+        self.assertEqual(kinds("gateway 198.18.0.9 behind old-disk-x", rules), ["denied token"])
+        self.assertEqual(kinds("behind old-disk-x", rules), ["denied token"])
+        self.assertEqual(kinds("gateway 198.18.0.90", rules), [])
 
     def test_extra_tokens_come_from_the_environment_only(self):
         rules = self.rules(deny="/old/disk:x")
@@ -72,6 +110,16 @@ class MachineRuleTests(unittest.TestCase):
 
 
 class RepositoryTests(unittest.TestCase):
+    def test_deny_file_lives_in_the_git_common_dir_and_skips_comments(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+            self.assertEqual(guard.deny_file_tokens(root), [])
+            (root / ".git/info").mkdir(exist_ok=True)
+            (root / ".git/info/local-info-deny").write_text("# comment\n\n198.18.0.9\n  old-disk-x  \n")
+            self.assertEqual(guard.deny_file_tokens(root), ["198.18.0.9", "old-disk-x"])
+        self.assertEqual(guard.deny_file_tokens(Path("/")), [])
+
     def test_tracked_files_and_commit_message_mode(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

@@ -19,7 +19,7 @@ actual unicast-loopback tests, raw-value UI regressions, realistic mutants and
 the complete offline gates pass; six additional intercepted-browser cases
 verify the disclosure itself. This does not accept native/live Search (§79),
 infer device identity/capabilities or grant a write. Publication is pending.
-See [UI_ALPHA_READINESS](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/archive/alpha-0.1/UI_ALPHA_READINESS.md). The historical title/inventory
+See [UI_ALPHA_READINESS](https://github.com/KNXBench-Labs/KNXBench/blob/6222e17754f3/docs/archive/alpha-0.1/UI_ALPHA_READINESS.md). The historical title/inventory
 identity remains stable; the following cause is historical, not current code.
 
 **Historical description before this follow-up:**

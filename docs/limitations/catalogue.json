@@ -2708,9 +2708,9 @@
     {
       "key": "KL-185",
       "number": 185,
-      "title": "Git history still carries local machine details",
+      "title": "Git history rewritten; GitHub pull-request refs keep old commits",
       "topic": "Platform, deployment and security",
-      "summary": "The current tree is clean and guarded (ADR-0135), but earlier commits and seven commit messages still name local paths, the host name or the kernel release; removing them needs an owner-approved history rewrite.",
+      "summary": "History, messages and tags were rewritten on 2026-10-17 (map COMMIT_MAP_2026-10-17); GitHub still serves the pre-rewrite commits through two read-only pull-request refs and the fork.",
       "file": "KL-185-git-history-local-machine-details.md",
       "ledger_ids": [
         "KL-185"

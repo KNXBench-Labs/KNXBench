@@ -13,7 +13,7 @@ Original dates, assumptions, corrections and numbered sections stay in force.
 whether the product-data half needed a vendor DLL and concluded no. This pass
 did something different and narrower: it read the source PDFs clause by clause
 to produce an **implementable** specification —
-[`docs/superpowers/specs/2026-09-13-commissioning-download-design.md`](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/superpowers/specs/2026-09-13-commissioning-download-design.md).
+[`docs/superpowers/specs/2026-09-13-commissioning-download-design.md`](https://github.com/KNXBench-Labs/KNXBench/blob/6222e17754f3/docs/superpowers/specs/2026-09-13-commissioning-download-design.md).
 No code was written and no bus was contacted. What follows is only what this
 pass *established or corrected*; the specification document carries the full
 citations.

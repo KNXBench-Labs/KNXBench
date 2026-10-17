@@ -72,6 +72,19 @@ already found lying in the grass.
   [`docs/status/LEDGER.md`](status/LEDGER.md), checked by
   `cargo run -p xtask -- check-ledger`. Other documents describe; they do not
   open or close work.
+- **The maintainer's checkout moved on 17 October 2026** from
+  `<old-sources>` to `<sources>`; the old path is a
+  symlink to the new one. Dated records keep the old path as history. New
+  code and tests derive sibling locations from the checkout (`../ProjectStats`,
+  `../KNXBench.story-private`, `../knx-spec-kb`) or take an environment
+  override, never a disk path. After moving a checkout, run
+  `git worktree repair <worktree paths>` from the main checkout so every
+  linked worktree points at the new location. Path-keyed tool state outside
+  the repository moves too: Codex trusts projects by path
+  (`~/.codex/config.toml`), Claude Code files memory under a path-derived
+  project key (`~/.claude/projects/-mnt-…-KNXBench/memory`), and a running
+  container keeps its bind-mount source from creation time, so recreate it
+  rather than relying on the symlink.
 
 ## Private corpus
 

@@ -52,7 +52,7 @@ technical inability to prepare a download.
 
 ## Startup and ownership
 
-1. Workspace: <old-sources>/KNXBench. Read .ai/CURRENT_STATE.md first,
+1. Workspace: <sources>/KNXBench. Read .ai/CURRENT_STATE.md first,
    then AGENTS.md, this file and
    docs/research/2026-10-13-unverified-plugin-free-programming.md.
 2. Fetch origin/main and inspect its current implementation, handover, complete

@@ -13,9 +13,11 @@ from storytool.render import build
 
 from helpers import STORY_DIR, TempDirTestCase, load_fixture, mutated, write_json
 
+# Default: the private ledger next to this checkout (story/README.md), so a moved
+# repository or a linked worktree finds it without a hard-coded disk path.
 PRIVATE_PROVENANCE = Path(os.environ.get(
     "KNXBENCH_STORY_PRIVATE_PROVENANCE",
-    "<old-sources>/KNXBench.story-private/provenance.json"))
+    Path(__file__).resolve().parents[2].parent / "KNXBench.story-private" / "provenance.json"))
 
 SYNTHETIC_PROVENANCE = {
     "schema": "knxbench-evolution-provenance/1",

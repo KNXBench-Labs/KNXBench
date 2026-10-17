@@ -18,6 +18,7 @@ import { useTranslate, type Translate, type TranslatableKey } from "./i18n";
 import { snapshotContextFromTree, type SnapshotContext } from "./snapshotIdentity";
 import { isRevisionConflict } from "./revisionConflict";
 import ParameterSourceEditor from "./ParameterSourceEditor";
+import ParameterWorkspace from "./ParameterWorkspace";
 import { isSourceEditorCandidate } from "./parameterSourceHost";
 import UnresolvedProgramNotice from "./UnresolvedProgramNotice";
 
@@ -223,7 +224,7 @@ function ParameterFieldRow(props: {
 
   return <>
     <label className="inspector-field parameter-field" data-ets-id={field.etsId}>
-      {label}
+      <span className="parameter-field-name">{label}</span>
       {field.access && <span className="provenance-badge">{field.access}</span>}
       {untranslated && language !== null && (
         <LanguageFallbackBadge selected={language} source={sourceLanguage} part={untranslated} />
@@ -626,7 +627,15 @@ export function ParameterPanelContent(props: ParameterPanelProps & {
         info={panel.programId === null ? panel.unresolvedProgram ?? null : null} onRestored={onConflict} />
       {panel.programId === null ? null : sections.length === 0 ? (
         <p className="inspector-description">{t(view === "restricted" ? "parameters.noRestrictedFields" : "parameters.noUserFields")}</p>
-      ) : sections.map((section, i) => (
+      ) : view === "parameters" ? <ParameterWorkspace
+        key={JSON.stringify([deviceId, panel.programId, language])}
+        sections={sections}
+        renderField={(field, scope) => <ParameterFieldRow field={field} moduleScoped={scope !== null}
+          deviceId={deviceId} language={language} sourceLanguage={panel.sourceLanguage}
+          onUpdated={onUpdated} onValueApplied={onValueApplied} binding={snapshot} onConflict={onConflict}
+          checked={props.snapshot && snapshot && panel.programId !== null
+            ? { programId: panel.programId, snapshot: props.snapshot, writeBinding: snapshot, scope } : null} />}
+      /> : sections.map((section, i) => (
         <ParameterSectionView
           key={i}
           section={section}
@@ -637,8 +646,7 @@ export function ParameterPanelContent(props: ParameterPanelProps & {
           onValueApplied={onValueApplied}
           binding={snapshot}
           onConflict={onConflict}
-          checked={view === "parameters" && props.snapshot && snapshot && panel.programId !== null
-            ? { programId: panel.programId, snapshot: props.snapshot, writeBinding: snapshot } : null}
+          checked={null}
         />
       ))}
     </div>

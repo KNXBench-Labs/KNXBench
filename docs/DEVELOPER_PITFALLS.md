@@ -47,6 +47,11 @@ already found lying in the grass.
   precondition (root ignores file modes) and fails. Run the Rust suite with
   `--offline` outside that wrapper; keep the wrapper for browser suites.
 
+- **On ext4 a deleted file's inode comes straight back.** Deleting a file and
+  creating another in the same directory reused the inode 200 of 200 times on
+  the project drive (17 October 2026). A file identity that must notice a
+  replacement needs the change time as well as device, inode, size and
+  modification time; tests that pass on tmpfs can fail on ext4 for this reason.
 - **Never share one `CARGO_TARGET_DIR` between worktrees for a gate.** Cargo
   can reuse another worktree's artifacts when sources look unchanged,
   including that worktree's baked `CARGO_MANIFEST_DIR` and build stamp.

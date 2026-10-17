@@ -6,6 +6,18 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Parameter presentation (17 October 2026 source, after Alpha 13)
+
+The [source-group workspace](../contracts/parameter-workspace.md) improves
+navigation, density and contextual inspection without changing evaluation or
+write authority. The current DTO contains nearest-group identity, not complete
+Rows/Columns/Cell/repeat or physical-device geometry. Such declarations exist in
+local product packages; this UI does not reproduce them or infer channels from
+captions. Ambiguous/missing grouping remains accessible, original labels and
+values remain intact, and all existing script/module/value-format refusals stay.
+The [bounded declaration census](../research/2026-10-17-parameter-workspace-layout.md)
+is not broad rendered/evaluator/ETS compatibility evidence.
+
 ## Offline object-list reconciliation (16 October 2026 source, after Alpha 12)
 
 Supported parameter edits now append positively active missing unscoped object

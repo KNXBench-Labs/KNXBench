@@ -1,5 +1,15 @@
 # Architecture
 
+## Source-group parameter workspace (17 October 2026 source)
+
+The Parameters tab projects its existing typed sections into a pure scope/group
+index and a presentation-only workspace. It reuses the existing bound field row
+and application write path. One stable row parent retains drafts through area
+navigation/search; source metadata is read-only context. No Core, HTTP, product DB
+or native-store schema change. The existing DTO does not transmit complete source
+grid/physical geometry; no label-derived channel layout is invented.
+[Contract](contracts/parameter-workspace.md).
+
 ## Parameter-driven object inventory (16 October 2026 source, after Alpha 12)
 
 ProductDB supplies optional block ancestry/caption references and structural

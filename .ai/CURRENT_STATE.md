@@ -31,6 +31,22 @@
 ---
 
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-17 08:04
+- **Completed:** Reconciled actual browser1 failure as configuration-only: Chromium temp socket budget refused before browser assertions; build/fixture types passed and application fingerprint stayed exact. browser2 foreground continuation timed out while queued with zero stages and absent worker, retained separately. Corrected only private launcher using maintained selector and validated parent-owned scratch directory. Existing focused210/0 and source census unchanged; no publication.
+- **Pending/Next Steps:** Sole focused browser3 proc_d0230da79121 / PID2816249 is queued under preserved foreign leases. Private continuation continue_acceptance.py validates the exact eight planned cases and unchanged inputs, then runs the complete 63-stage web profile only on success. All own tracked inputs frozen after this checkpoint. Inspect actual reports/screenshots, then fresh-main semantic integration/review/merged gates, scoped publication/readback and retirement; no additional Go required.
+- **Notes for Codex oder Claude:** Retain browser1 configuration failure and browser2 zero-stage interruption as such, not product regressions or passes. Preserve object-function/collapsed-defaults packages and separate diagnostic-export task. Own evidence profile scratch parameter-workspace-20261017; no bus/liveproject/deployment/subagents/codingCLI. Root remains dirty/stale and protected.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-17 07:43
+- **Completed:** Generic parameter workspace implemented locally in feat/parameter-workspace-20261017: source-scope/group navigation, compact label/value rows, global search, contextual source metadata, retained bound editors and EN/DE responsive presentation. Focused210/0 in5files and device-fixture typecheck pass; production build/docs/whitespace pass in recorded scope. Bounded declarative product census106files/105unique,7manufacturer identities,27oversizeXML omissions, originals unchanged; no copied source in fixtures. No broad/merged acceptance or publication yet.
+- **Pending/Next Steps:** Sole focused browser proc_652212a5f00e / workerPID1893119 confirmed alive and QUEUED waiting-for-leases with zero stages at07:43. Receipt profile scratch parameter-workspace-20261017/browser1/receipt.json; inspect actual8case scope, source freeze and screenshots on completion. Then full web acceptance, semantic integration with fresh main, final review/gates, scoped commit/publication/readback and owned cleanup without anotherGo.
+- **Notes for Codex oder Claude:** apps/knx-web source frozen while focused runner lives. Preserve separate object-function and collapsed-defaults owners, including default-collapse semantics at integration. Source Rows/Columns/Cell exists but current DTO carries only nearest-group metadata; no semantic channel pivot/physical-layout or universal compatibility claim. Own log2026-10-17_codex_parameter-workspace.md and contract parameter-workspace.md. Selected dirtyroot/index/foreign research protected; no bus/liveproject/vendor/subagents/codingCLI/release/deployment.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-17 05:50
 - **Completed:** Renewed owner System2/SystemB usable-download objective investigated on fresh published 07a93451. Existing offline tests actually passed 53/0/0 ignored in seven targets (System2 image10/metadata7/public UP2581; SystemB codecs28; Net simulator7), in isolated network namespaces, owned target and frozen source/package. Original public ETS5.5.3 notes retrieved; official SystemB help remains unrecovered (HTML403/API401/no exact Wayback snapshot/browser pre-navigation profile lock). No product implementation or new admission.
 - **Pending/Next Steps:** Requested usable-download goal remains BLOCKED, NOT completed: defining converted-legacy LegacyPatchAlways/default/activation rule, then exact encoding/XML/resource/procedure and whole-mutation recovery; SystemB complete descriptor/ASAP and relative source/procedure mappings remain separate missing contracts. Reopen an evidenced slice from authorized defining documentation or independent bounded witnesses; no guessed allowlist, generic fixture or additional green refusal test closes the goal. Documentation delivery is not feature delivery.

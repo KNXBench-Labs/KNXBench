@@ -12,6 +12,20 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## No local machine details in the repository (17 October 2026)
+
+Tracked files no longer name local mount points, checkout or worktree
+locations, home or agent-profile directories, the host name or the kernel
+release; 56 files now use placeholders (`<sources>`, `<profile>`, `~`,
+`<host>`), and test fixtures use `/home/alice`. The Story browser check finds
+Playwright through normal module resolution when `PLAYWRIGHT_DIR` is unset.
+`tools/check_local_info.py` guards tracked files through the documentation
+gate and checks commit messages on request. Eight records pinned by the two
+reorganization receipts carry a declared `redaction`. No
+application, KNX, dependency or schema behavior changed. Git history is not
+rewritten ([KL-185](KNOWN_LIMITATIONS.md#catalogue-kl-185)).
+[ADR-0135](adr/0135-repository-carries-no-local-machine-details.md).
+
 ## Chromium temporary paths: one allocator, no extra nesting (17 October 2026)
 
 Developer tooling now distinguishes allocation parents from valid private

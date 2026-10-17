@@ -309,6 +309,28 @@ Always:
 
 ---
 
+## No Local Machine Details
+
+The repository is public. Never write local machine details into tracked
+files, commit messages, tags or release notes:
+
+* absolute local paths (mount points, home directories, checkout and worktree
+  locations, agent profile, scratch or evidence directories)
+* host names, user names, exact kernel releases or other exact system details
+
+Use placeholders instead: `<sources>` for the directory holding checkouts and
+worktrees, `<profile>` / `<profile-scratch>` for agent profile data, `~` for a
+home directory, `<host>` or "the dev machine" for the machine itself. Tests that
+need a home directory use an obvious placeholder such as `/home/alice`.
+
+`tools/check_local_info.py` enforces this for tracked files (part of
+`tools/check_documentation.py`, so CI and the web gate run it) and checks
+commit messages with `--message-file` (usable as a `commit-msg` hook) or
+`--commits RANGE` before a push. A line that must show such a detail as an
+example (the guard's own fixtures) carries the marker `local-info: allow`.
+
+---
+
 ## Git
 
 Make focused commits.

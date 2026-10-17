@@ -479,11 +479,11 @@ replaced by `ModuleDefNotFound`/`NestedModuleNotExpanded`. This section
 is left exactly as the spike produced it — a record of what was known
 before slice 2 was designed, not a live status report; read it as
 history alongside §4.3. Full spike report:
-`/home/alice/.claude/jobs/8098e9e6/tmp/r4-findings.md` (this section is
+`~/.claude/jobs/8098e9e6/tmp/r4-findings.md` (this section is
 the durable summary that survives outside that file).
 
 Corpus: the same `OriginalData/` archives as §4.3, re-extracted to
-`/home/alice/.claude/jobs/8098e9e6/tmp/r4/`. Standard source:
+`~/.claude/jobs/8098e9e6/tmp/r4/`. Standard source:
 `Project Schema23 v01.00.00.{md,json}` — cross-checked both, as §4.3 also
 notes; the `.json` twin's table-grid jumbling around wide tables is a
 rowspan/colspan artifact in the source document, not a conversion loss.

@@ -1,4 +1,12 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-10-17 13:40
+- **Completed:** Owner go: container `knxbench` recreated on the new disk. Stopped cleanly (exit 0), then compared old (<old-sources>/KNXBench/data) and new data as root, read-only: 17 files, identical sha256, mode and owner. Old container renamed `knxbench-old-sdc1-20261017` (stopped, kept as backup); new `knxbench` from the same image id 0b2557aa (v0.1.0-alpha.12), --network host, identical environment, json-file log 5x10m, -v <sources>/KNXBench/data:/data. /data now on /dev/nvme0n1p2; https://127.0.0.1:8484/ 200, TLS cert unchanged (lives in /data). Correction to the 13:35 entry: its "copies identical" check could not read three root-only 600 files; the root comparison above is the valid one.
+- **Pending/Next Steps:** None. Remove `knxbench-old-sdc1-20261017` and <old-sources> only on owner request.
+- **Notes for Codex oder Claude:** Recreate the container from the new path only; never from <old-disk> (that path resolves at creation and pins the old disk if the symlink is ever replaced).
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-10-17 13:35
 - **Completed:** Old-path sweep after the move to <data-disk>. Repo: three goal prompts' Workspace lines and the ADR-0038 spec-source pointer now name <data-disk>; DEVELOPER_PITFALLS lists path-keyed tool state (Codex trust, Claude memory key, container bind mounts). Outside Git: Hermes WebUI workspace, two profile scripts, root USER.md, Codex memory note, .projectstats.json session roots, two Claude memory files rewritten; Codex config.toml gained <data-disk> trust entries (old kept); Claude project keys <sources-key>-{KNXBench,knx-spec-kb} link to the existing memory dirs. Backups: profile backups/path-move-20261017.
 - **Pending/Next Steps:** OWNER DECISION: container `knxbench` still bind-mounts <old-sources>/KNXBench/data, which the kernel resolved at creation to the OLD disk (now <old-sources>/KNXBench/data). Copies identical at 13:25 (14 files, same hashes, last write 16 Oct); every new save lands on the old disk until the container is recreated with -v <sources>/KNXBench/data:/data.

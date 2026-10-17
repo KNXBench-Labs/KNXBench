@@ -1,4 +1,12 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-10-17 12:35
+- **Completed:** Website scroll-flicker investigation CLOSED on owner verdict: local desktop browser problem, not the site. No product change. Retired worktree KNXBench-scroll-20261015, local branch fix/site-scroll-20261015 (fully on main) and profile scratch site-scroll-20261015; the A/B server was no longer running. OPEN_WORK flicker section removed; investigation log keeps a dated closing note.
+- **Pending/Next Steps:** None for this investigation.
+- **Notes for Codex oder Claude:** Do not reopen without a new reproduction in a different browser profile.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-10-17 12:30 CEST
 - **Completed:** CLAIM only: ledger-residue goal started in worktree KNXBench-ledger-residue-20261017 (branch docs/ledger-residue-20261017, base a07848a1). Scripted ledger parse confirms 19 non-terminal rows (IN_PROGRESS=1 MODEL-07; BLOCKED_EXTERNAL=2 MODEL-05, IMPORT-02; LATER=16).
 - **Pending/Next Steps:** Phase 0 Evidence reconciliation (FUTURE-01/02/03/05, PDB-04 and all others), Phase 1 MODEL-07 residue (per-Function comparison table, desktop surface, read-only MCP), Phase 2 research re-check (KL-170/171/172, PDB-04, GAP-T30-04, KL-110), MODEL-05/IMPORT-02 lift-condition re-check. TOOLS-01..05 and FUTURE-08 untouched.
@@ -59,6 +67,14 @@
 - **Completed:** Renewed owner System2/SystemB usable-download objective investigated on fresh published 07a93451. Existing offline tests actually passed 53/0/0 ignored in seven targets (System2 image10/metadata7/public UP2581; SystemB codecs28; Net simulator7), in isolated network namespaces, owned target and frozen source/package. Original public ETS5.5.3 notes retrieved; official SystemB help remains unrecovered (HTML403/API401/no exact Wayback snapshot/browser pre-navigation profile lock). No product implementation or new admission.
 - **Pending/Next Steps:** Requested usable-download goal remains BLOCKED, NOT completed: defining converted-legacy LegacyPatchAlways/default/activation rule, then exact encoding/XML/resource/procedure and whole-mutation recovery; SystemB complete descriptor/ASAP and relative source/procedure mappings remain separate missing contracts. Reopen an evidenced slice from authorized defining documentation or independent bounded witnesses; no guessed allowlist, generic fixture or additional green refusal test closes the goal. Documentation delivery is not feature delivery.
 - **Notes for Codex oder Claude:** Updated existing docs/research/2026-10-16-offline-source-stop-lines.md (17October section), OPEN_WORK and research index. Runtime source/tests unchanged; no workspace/web/private-corpus/hardware acceptance claimed. Parked UP258 branch/source audit was not adopted or changed; selected dirty root/index/foreign files and all prior journal history protected. No vendor contact, proprietary execution, bus/device operation, deployment, release, subagent or coding CLI. Raw checks/retrieval receipts retained privately; no search snippet used as a source-semantics oracle.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-16 23:23
+- **Completed:** Local exact-UP258/issue22 source audit on fresh origin/main 07a93451 after verified Alpha13 freeze release. Existing public-source regression now pins all 21 source positions/four declared regions against independent literal oracles; second real resolver/evaluator test pins P900=0/P903=300/600 activation and unchanged source/database/refusals. Actual 14-stage local acceptance: ProductDB 938/0/30 ignored, explicit source 2/0, existing Net simulator 7/0, Core memory backup 11/0, Clippy/build/format/docs/all five repository gates. Separate in-session self-review; no production change or complete image/plan/recovery claim.
+- **Pending/Next Steps:** BLOCKED at existing pre-evaluation LegacyPatchAlways guard. Need original defining converted-legacy patch/default/reference-value/invisible activation rule first; then independently evidenced multibyte/Union/XML SegFlags/AllocExtraByte/resource-width/LSM/task translation and full durable mutation recovery. No real source-to-plan execution or UP258 recovery fault coverage exists. Do not label issue solved or enable a physical path.
+- **Notes for Codex oder Claude:** Local-only scope in KNXBench-up258-20261016 / feat/issue22-up258-20261016. Canonical audit docs/research/2026-10-16-up258-vertical-path-audit.md; work log .ai/logs/2026-10-16_codex_issue22-up258-vertical-audit.md; ADR0132 continuation. Extra-unwrap compile failure retained separately, not a semantic RED. Reporter request reviewed/unposted; direct P903 bytes cannot resolve patch policy/recovery. No push/merge/release/deployment/device/bus/vendor contact/subagents/codingCLI. Root HEAD1817fb2a/index/foreign files/journal and containers untouched. Runtime/test source committed locally as 3e5ba4d2792758f2bbc5ad796722eca1be020ebd. Private readback-verified evidence archive: profile evidence/up258-issue22-20261016-final (archive-verification.json, delivery.json, cleanup.json); 148 original evidence members retained, task scratch/build caches retired. Own branch/worktree retained clean; main unchanged. Full workspace/web/private-corpus not rerun for this test/docs-only scope.
 
 ---
 
@@ -573,6 +589,22 @@ Release freeze: taken by codex-release-alpha13 (cutoff c992416570860b967d0efaa2a
 - **Completed:** Owner explicitly resumed offline download expansion until the evidence-based goal is reached; prior pause lifted for this scope only. Isolated feat/offline-download-20261015 at KNXBench-offline-download-20261015, fresh3a9fd92f baseline; selected dirty root preserved. Read architecture/current source/prerequisites, original Resources/Management PDF pages rendered directly. Finite contract docs/contracts/offline-download-expansion.md defines codec/planner/simulator/recovery layers and research-vs-field boundaries. P1 System2 source metadata plus independent table codecs is claimed here; no implementation or test result yet.
 - **Pending/Next Steps:** Implement P1 with RED/GREEN, independently specified bytes and negative shape/identity tests, then pursue remaining System2/SystemB and other-profile offline work to actual evidence limits. Deliver reviewed green packages at intermediate boundaries. No bus access, vendor executables or hardware verification promotion.
 - **Notes for Codex oder Claude:** Offline-download expansion: taken by codex-offline-download-20261015 — product/core adapter and later separately evidenced simulation/recovery scope. Other sessions must preserve this worktree; separate site-scroll work unchanged. Issue22 remains open until actual support criteria, not parsing, are fulfilled. Root-local owner resume at22:08 supersedes21:58 pause for this scope. No subagents.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-15 21:29
+- **Completed:** Owner adds real-device observation: smartphone Chrome scrolls normally/no flicker. Recorded in owned site-scroll-flicker log; Linux desktop Chromium152 remains reported affected even with animations paused. This is an environment distinction, not proven GPU/video root cause or universal mobile acceptance. No code change, execution, commit/push or deployment for this observation.
+- **Pending/Next Steps:** Desktop A/B original versus first-video-poster result remains pending (loopback4202/original/en/#watch and /poster/en/#watch). Ask whether original reproduces and poster stops visual flicker. Do not claim fixed or remove motion/video speculatively.
+- **Notes for Codex oder Claude:** Existing fix/site-scroll-20261015 investigation/worktree and diagnostic server PID649466 retained. Smartphone OS/model/Chrome version unknown. Preserve parent completed publication and all prior handover entries; root HEAD/index untouched, no subagents/hardware.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-15 21:14
+- **Completed:** Parent CRT publication COMPLETE: merged d90b3d4b, final docs3a9fd92f pushed/read back exactly on main; Pages38789580428+38790235057 successful, final live38/38hashes equal and124deployed-host browser checks. Both owned publication/review worktrees/branches and task scratch retired after256member verified private archive. NEW owner visual-flicker report investigated separately: LinuxChromium152.0, persists with animations paused, scrolls but flickers between watch heading and second-video heading in both directions. Actual installed Chromium152.0.7977.82. Live headless Chromium/Firefox19diagnostic scroll observations complete without a scroll-position blockage; this does NOT disprove visual compositor flicker. No speculative patch or additional push.
+- **Pending/Next Steps:** Await owner visual A/B: http://127.0.0.1:4202/original/en/#watch versus http://127.0.0.1:4202/poster/en/#watch . Only first video is replaced with its genuine existing poster inB; both carry identical diagnostic label.8actual browser integrity checks pass, exact HTTP200 bytes verified. Ask whether A reproduces and B stops flickering. Then reproduce matching visual condition and add a discriminating regression before fixing. Original live report remains OPEN; no root cause/fix claimed.
+- **Notes for Codex oder Claude:** Active fix/site-scroll-20261015 worktree <old-sources>/KNXBench-scroll-20261015 on3a9fd92f; production source unchanged, local investigation log .ai/logs/2026-10-15_codex_site-scroll-flicker.md. Private traces/diagnostic copies profile scratch/site-scroll-20261015, server proc_e14d40d40b08/PID649466 loopback4202 retained for owner; no cleanup while A/B pending. Prior4198/4200 previews stopped. Parent durable evidence <profile>/evidence/phosphor-crt-publication-20261015/ (256member archive+cleanup-complete.json). Root HEAD/index/foreign hashes and full journal preserved; no subagents/vendor/hardware/container/tag/Story change. No live GPU/window/session reproduction available in headless measurement; paused animation is not proof of visual-flicker absence.
 
 ---
 

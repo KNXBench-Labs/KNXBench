@@ -26,6 +26,23 @@ build, all 20 derived typechecks and documentation checks. This is test-tooling
 acceptance, not a full UI/Rust/corpus/release gate. See the
 [contract](contracts/web-test-gate.md#recurring-chromium-socket-path-protection).
 
+## Exact UP258 source recheck; programming still blocked (16 October 2026)
+
+Fresh post-freeze worktree on `07a93451`: existing digest-pinned public source
+regression strengthened to independent literal assertions for all 21 positions
+and four regions. A second test uses the actual resolver/Dynamic evaluator for
+the two prepared P903 configurations and pins unchanged source/database and
+LegacyPatchAlways/public-planner refusals. No production change, complete real
+image/plan/simulation, new recovery or hardware support. The first missing
+legacy patch/default/activation rule remains a defining-evidence blocker.
+Local 14-stage scoped acceptance passes: ProductDB 938/0 (30 regular ignored),
+explicit public source 2/0, existing simulator 7/0 and memory backup 11/0,
+Clippy/build/format/docs/five repository checks. The reused suites are not
+UP258 whole-recovery or source-to-plan evidence; no full workspace/web/private
+corpus or main merge is claimed.
+[Audit and acceptance matrix](research/2026-10-16-up258-vertical-path-audit.md),
+[local execution/self-review log](../.ai/logs/2026-10-16_codex_issue22-up258-vertical-audit.md).
+
 ## Alpha 13 published and externally verified (16 October 2026)
 
 Immutable `v0.1.0-alpha.13` names `6105976f`; no new feature scope, device admission

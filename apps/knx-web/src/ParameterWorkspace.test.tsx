@@ -3,7 +3,7 @@
 import { act, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it } from "vitest";
-import type { ParameterField, ParameterSection } from "./api";
+import type { ParameterField, ParameterGroupLayout, ParameterSection } from "./api";
 import ParameterWorkspace from "./ParameterWorkspace";
 
 let host: HTMLDivElement;
@@ -111,5 +111,93 @@ describe("ParameterWorkspace", () => {
     expect(host.querySelectorAll('.parameter-workspace-nav [aria-current="page"]')).toHaveLength(0);
     expect(host.querySelector<HTMLDivElement>('[data-parameter-row="Mode"]')!.hidden).toBe(true);
     expect(host.querySelector(".parameter-workspace-closed")).not.toBeNull();
+  });
+});
+
+describe("ParameterWorkspace declared grids", () => {
+  const grid = (patch: Partial<ParameterGroupLayout> = {}): ParameterGroupLayout => ({
+    groupKey: "Pairs", version: 1, declaredLayout: "Table", status: "grid",
+    rows: [{ id: "R-1", text: "First pair", textParameterRefId: null, collapseIfEmpty: null },
+      { id: "R-2", text: "Second pair", textParameterRefId: null, collapseIfEmpty: null }],
+    columns: [{ id: "C-1", text: "Left", textParameterRefId: null, width: "50%" },
+      { id: "C-2", text: "Right", textParameterRefId: null, width: "50%" }],
+    labels: [{ row: 2, column: 1, text: "Fictional caption" }], issues: [], ...patch,
+  });
+  const placed = (etsId: string, row: number, column: number): ParameterField => ({ ...field(etsId, "Pairs"), cell: { row, column } });
+  const gridSections = (layout: ParameterGroupLayout | null = grid()): ParameterSection[] => [{ scope: null,
+    fields: [placed("L1", 1, 1), placed("R1", 1, 2), placed("R2", 2, 2), { ...field("Loose", "Pairs"), cell: null }, field("Delay", "LEDs")],
+    groupLayouts: layout ? [layout] : [] }];
+  const rowsParent = () => host.querySelector<HTMLDivElement>(".parameter-workspace-rows")!;
+  const style = (etsId: string) => host.querySelector<HTMLDivElement>(`[data-parameter-row="${etsId}"]`)!.style;
+
+  it("starts closed and renders a matrix only after an area with a declared grid is chosen", async () => {
+    await mount(gridSections());
+    expect(rowsParent().getAttribute("data-layout")).toBeNull();
+    await act(async () => nav("Pairs").click());
+    expect(rowsParent().getAttribute("data-layout")).toBe("matrix");
+    expect(rowsParent().style.gridTemplateColumns).toContain("50fr");
+    expect(style("L1").gridRow).toBe("2 / span 1");
+    expect(style("L1").gridColumn).toBe("2 / span 1");
+    expect(style("R2").gridRow).toBe("3 / span 1");
+    expect(style("R2").gridColumn).toBe("3 / span 1");
+    expect(style("Loose").gridColumn).toBe("1 / -1");
+    const captions = [...host.querySelectorAll(".parameter-matrix-caption")].map(node => node.textContent);
+    expect(captions).toEqual(["Left", "Right", "First pair", "Second pair", "Fictional caption"]);
+    expect(host.querySelector(".parameter-matrix-unplaced")!.textContent).toContain("Not placed");
+    expect(host.querySelector(".parameter-workspace-layout-note")!.textContent).toContain("Table");
+    expect(host.querySelector(".parameter-workspace-columns")).toBeNull();
+  });
+
+  it("keeps the row view with an explicit hint when no grid is declared", async () => {
+    await mount(gridSections());
+    await act(async () => nav("LEDs").click());
+    expect(rowsParent().getAttribute("data-layout")).toBeNull();
+    expect(style("Delay").gridRow).toBe("");
+    expect(host.querySelector(".parameter-workspace-layout-note")!.textContent).toContain("No grid is declared");
+    expect(host.querySelector(".parameter-matrix-caption")).toBeNull();
+  });
+
+  it("reports an unknown layout variant verbatim and never renders it as a matrix", async () => {
+    await mount(gridSections(grid({ status: "unknownLayout", declaredLayout: "Carousel" })));
+    await act(async () => nav("Pairs").click());
+    expect(rowsParent().getAttribute("data-layout")).toBeNull();
+    expect(host.querySelector(".parameter-workspace-layout-note")!.textContent).toContain("Carousel");
+    expect(style("L1").gridRow).toBe("");
+  });
+
+  it("names declarations that could not be placed in a closed disclosure", async () => {
+    await mount(gridSections(grid({ issues: [{ kind: "ambiguousCell", element: "ParameterRefRef", reference: "Loose", cell: null },
+      { kind: "futureKind", element: "Widget", reference: null, cell: "1,1" }] })));
+    await act(async () => nav("Pairs").click());
+    const details = host.querySelector<HTMLDetailsElement>(".parameter-matrix-issues")!;
+    expect(details.open).toBe(false);
+    expect(details.textContent).toContain("2 declarations could not be placed");
+    expect(details.textContent).toContain("Loose");
+    expect(details.textContent).toContain("futureKind");
+  });
+
+  it("keeps the same draft editors across matrix, row view and search", async () => {
+    await mount(gridSections());
+    await act(async () => nav("Pairs").click());
+    const input = host.querySelector<HTMLInputElement>('[data-parameter-row="R2"] input')!;
+    await act(async () => setInput(input, "9"));
+    await act(async () => nav("LEDs").click());
+    await act(async () => nav("Pairs").click());
+    const search = host.querySelector<HTMLInputElement>('input[type="search"]')!;
+    await act(async () => setInput(search, "R2"));
+    expect(rowsParent().getAttribute("data-layout")).toBeNull();
+    expect(style("R2").gridRow).toBe("");
+    await act(async () => setInput(search, ""));
+    expect(rowsParent().getAttribute("data-layout")).toBe("matrix");
+    expect(host.querySelector('[data-parameter-row="R2"] input')).toBe(input);
+    expect(input.value).toBe("9");
+  });
+
+  it("treats a server without layout reports as unreported, not as a missing grid", async () => {
+    const [section] = gridSections();
+    await mount([{ scope: null, fields: section.fields }]);
+    await act(async () => nav("Pairs").click());
+    expect(rowsParent().getAttribute("data-layout")).toBeNull();
+    expect(host.querySelector(".parameter-workspace-layout-note")!.textContent).toContain("does not report");
   });
 });

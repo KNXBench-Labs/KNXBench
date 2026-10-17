@@ -2243,10 +2243,60 @@ export interface EnumOption {
   language: string | null;
 }
 
+/** A 1-based declared grid position (ADR-0137); never derived from labels. */
+export interface ParameterGridCell {
+  row: number;
+  column: number;
+}
+
+/** One declared `Row`/`Column`; values verbatim from the product data. */
+export interface ParameterGridAxis {
+  id: string;
+  text: string | null;
+  textParameterRefId: string | null;
+  /** Columns only, e.g. `40%`. */
+  width?: string | null;
+  /** Rows only; preserved, not applied. */
+  collapseIfEmpty?: string | null;
+}
+
+/** An activated separator placed in a declared cell, original text. */
+export interface ParameterGridLabel {
+  row: number;
+  column: number;
+  text: string;
+}
+
+/** A declaration that could not be placed; `kind` may be newer than this build. */
+export interface ParameterGridIssue {
+  kind: string;
+  element: string;
+  reference: string | null;
+  cell: string | null;
+}
+
+/**
+ * ADR-0137: one group's declared layout. Only `version === 1` with
+ * `status === "grid"` is rendered as a matrix; any other status or version
+ * keeps the row view and is reported, never guessed.
+ */
+export interface ParameterGroupLayout {
+  groupKey: string;
+  version: number;
+  declaredLayout: string | null;
+  status: string;
+  rows: ParameterGridAxis[];
+  columns: ParameterGridAxis[];
+  labels: ParameterGridLabel[];
+  issues: ParameterGridIssue[];
+}
+
 export interface ParameterField {
   /** Structural presentation metadata; absent on older servers. */
   group?: { key: string; label: string | null } | null;
   controlsComObjects?: boolean;
+  /** Declared grid cell (ADR-0137); absent on older servers. */
+  cell?: ParameterGridCell | null;
   etsId: string;
   name: string | null;
   // AR10 (`b6a94c24`): the stored language identifier whose translation
@@ -2275,6 +2325,8 @@ export interface ParameterField {
 export interface ParameterSection {
   scope: ModuleScope | null;
   fields: ParameterField[];
+  /** ADR-0137: absent on servers that do not report layouts. */
+  groupLayouts?: ParameterGroupLayout[];
 }
 
 export interface StaleParameter {

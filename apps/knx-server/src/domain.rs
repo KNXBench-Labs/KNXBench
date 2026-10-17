@@ -5833,6 +5833,8 @@ fn assemble_parameter_panel(
         };
         let mut fields = Vec::with_capacity(section.ref_ids.len());
         let mut refused: Vec<(WriteRefusal, String)> = Vec::new();
+        // ADR-0137: distinct (group key, block node) pairs in first-field order.
+        let mut grid_groups: Vec<(String, i64)> = Vec::new();
         for ref_id in &section.ref_ids {
             // A ref the join dropped (see the diagnostic above) has no
             // metadata to show; it is not fabricated here.
@@ -5891,6 +5893,7 @@ fn assemble_parameter_panel(
                     .map_or("", |s| s.module_def_id.as_str()),
                 &view.id,
             );
+            let cell = presentation.cell.map(crate::parameter_grid::cell_dto);
             let group = presentation.group.map(|group| {
                 let label = activation
                     .labels
@@ -5906,16 +5909,18 @@ fn assemble_parameter_panel(
                             .and_then(|reference| views_by_id.get(reference))
                             .and_then(|caption| caption.text.clone().or(caption.name.clone()))
                     });
-                crate::routes::ParameterGroupDto {
-                    key: group
-                        .element_id
-                        .unwrap_or_else(|| format!("node:{}", group.node_id)),
-                    label,
+                let key = group
+                    .element_id
+                    .unwrap_or_else(|| format!("node:{}", group.node_id));
+                if !grid_groups.iter().any(|(_, node)| *node == group.node_id) {
+                    grid_groups.push((key.clone(), group.node_id));
                 }
+                crate::routes::ParameterGroupDto { key, label }
             });
             fields.push(crate::routes::ParameterFieldDto {
                 group,
                 controls_com_objects: presentation.controls_com_objects,
+                cell,
                 ets_id: view.id.clone(),
                 name: view.name.clone(),
                 name_language: view.name_language.clone(),
@@ -5947,9 +5952,29 @@ fn assemble_parameter_panel(
             section.scope.as_ref().map(|s| module_scope_dto(s)),
             refused,
         );
+        let definition = section
+            .scope
+            .as_ref()
+            .map_or("", |s| s.module_def_id.as_str());
+        let group_layouts = grid_groups
+            .into_iter()
+            .filter_map(|(key, block_node)| {
+                crate::parameter_grid::group_layout_dto(
+                    &layout,
+                    definition,
+                    key,
+                    block_node,
+                    activation
+                        .labels
+                        .iter()
+                        .filter(|label| label.scope == section.scope),
+                )
+            })
+            .collect();
         sections.push(crate::routes::ParameterSectionDto {
             scope: section.scope.as_ref().map(|s| module_scope_dto(s)),
             fields,
+            group_layouts,
         });
     }
 

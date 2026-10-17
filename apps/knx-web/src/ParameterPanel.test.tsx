@@ -216,6 +216,39 @@ describe("ParameterPanel", () => {
     expect(apiMock.setParameterValue).toHaveBeenCalledTimes(1);
     await act(async () => root.unmount());
   });
+  it("renders declared-grid cells with the same bound rows and the one existing write path", async () => {
+    const choice = { ...fixture.sections[0].fields[0], kind: "Restriction", value: "0", cell: { row: 1, column: 2 },
+      group: { key: "pairs", label: "Pairs" },
+      enumOptions: [{ value: "0", text: "Off", language: null }, { value: "1", text: "On", language: null }] };
+    const number = { ...fixture.sections[0].fields[0], etsId: "P-num", writeEtsId: "P-num", cell: { row: 2, column: 2 },
+      group: { key: "pairs", label: "Pairs" } };
+    const other = { ...number, etsId: "P-other", writeEtsId: "P-other", cell: null, group: { key: "other", label: "Other" } };
+    const groupLayouts = [{ groupKey: "pairs", version: 1, declaredLayout: "Grid", status: "grid",
+      rows: [{ id: "R-1", text: null, textParameterRefId: null, collapseIfEmpty: null }, { id: "R-2", text: null, textParameterRefId: null, collapseIfEmpty: null }],
+      columns: [{ id: "C-1", text: null, textParameterRefId: null, width: "50%" }, { id: "C-2", text: null, textParameterRefId: null, width: "50%" }],
+      labels: [{ row: 1, column: 1, text: "Fictional pair" }], issues: [] }];
+    const panel = { ...fixture, sections: [{ scope: null, fields: [choice, number, other], groupLayouts }] };
+    apiMock.deviceParameters.mockResolvedValue(panel);
+    apiMock.setParameterValue.mockResolvedValue({ ...panel, sections: [{ ...panel.sections[0], fields: [{ ...choice, value: "1" }, number, other] }], tree: panelTree });
+    const root = await renderPanel();
+    const areas = [...host!.querySelectorAll<HTMLButtonElement>(".parameter-workspace-nav button")];
+    expect(host!.querySelector('[data-layout="matrix"]')).toBeNull();
+    await act(async () => areas[0].click());
+    const matrix = host!.querySelector<HTMLDivElement>('[data-layout="matrix"]')!;
+    expect(matrix.textContent).toContain("Fictional pair");
+    const select = matrix.querySelector<HTMLSelectElement>('.parameter-field[data-ets-id="P1"] select')!;
+    const input = matrix.querySelector<HTMLInputElement>('.parameter-field[data-ets-id="P-num"] input')!;
+    await act(async () => setInputValue(input, "7"));
+    await act(async () => setSelectValue(select, "1"));
+    expect(apiMock.setParameterValue).toHaveBeenCalledExactlyOnceWith(1, "P1", "1", null, bound("0"));
+    await act(async () => areas[1].click());
+    expect(host!.querySelector('[data-layout="matrix"]')).toBeNull();
+    await act(async () => areas[0].click());
+    expect(host!.querySelector('.parameter-field[data-ets-id="P-num"] input')).toBe(input);
+    expect(input.value).toBe("7");
+    expect(apiMock.setParameterValue).toHaveBeenCalledTimes(1);
+    await act(async () => root.unmount());
+  });
   it.each(["en", "de"] as const)("shows stored instance values as read-only and not evaluated (%s)", async (language) => {
     setSetting(UI_LANGUAGE_STORAGE_KEY, language);
     const evidence: ParameterPanelDto = {

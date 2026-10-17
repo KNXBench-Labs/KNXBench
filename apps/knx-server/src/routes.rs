@@ -416,6 +416,97 @@ pub(crate) struct UnresolvedProgramDto {
 pub(crate) struct ParameterSectionDto {
     pub(crate) scope: Option<ModuleScopeDto>,
     pub(crate) fields: Vec<ParameterFieldDto>,
+    /// ADR-0137: declared layouts of this section's groups, in first-field
+    /// order. Always present (possibly empty), so a client can tell "no grid
+    /// declared" from a server that does not report layouts.
+    pub(crate) group_layouts: Vec<ParameterGroupLayoutDto>,
+}
+
+/// ADR-0137 wire version of [`ParameterGroupLayoutDto`]. A client renders
+/// only versions it knows; any other version keeps its row view.
+pub(crate) const PARAMETER_GROUP_LAYOUT_VERSION: u32 = 1;
+
+#[derive(serde::Serialize, Debug, Clone, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ParameterGroupLayoutDto {
+    /// Equal to the `group.key` of this group's fields.
+    pub(crate) group_key: String,
+    pub(crate) version: u32,
+    /// The raw `@Layout` token, `null` when the source could not be read.
+    pub(crate) declared_layout: Option<String>,
+    pub(crate) status: ParameterGridStatusDto,
+    pub(crate) rows: Vec<ParameterGridRowDto>,
+    pub(crate) columns: Vec<ParameterGridColumnDto>,
+    /// Activated separators placed in a cell, original untranslated text.
+    pub(crate) labels: Vec<ParameterGridLabelDto>,
+    pub(crate) issues: Vec<ParameterGridIssueDto>,
+}
+
+#[derive(serde::Serialize, Debug, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub(crate) enum ParameterGridStatusDto {
+    Grid,
+    UnknownLayout,
+    InvalidGrid,
+    SourceUnavailable,
+}
+
+/// A declared `Row`, attribute values verbatim.
+#[derive(serde::Serialize, Debug, Clone, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ParameterGridRowDto {
+    pub(crate) id: String,
+    pub(crate) text: Option<String>,
+    pub(crate) text_parameter_ref_id: Option<String>,
+    /// Preserved, not applied by any client in this build.
+    pub(crate) collapse_if_empty: Option<String>,
+}
+
+/// A declared `Column`, attribute values verbatim (`width` e.g. `40%`).
+#[derive(serde::Serialize, Debug, Clone, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ParameterGridColumnDto {
+    pub(crate) id: String,
+    pub(crate) text: Option<String>,
+    pub(crate) text_parameter_ref_id: Option<String>,
+    pub(crate) width: Option<String>,
+}
+
+/// A 1-based declared position (Project Schema 23 `CellRef_t`).
+#[derive(serde::Serialize, Debug, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ParameterGridCellDto {
+    pub(crate) row: u32,
+    pub(crate) column: u32,
+}
+
+#[derive(serde::Serialize, Debug, Clone, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ParameterGridLabelDto {
+    pub(crate) row: u32,
+    pub(crate) column: u32,
+    pub(crate) text: String,
+}
+
+#[derive(serde::Serialize, Debug, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub(crate) enum ParameterGridIssueKindDto {
+    CellMalformed,
+    CellOutOfRange,
+    MissingCell,
+    AmbiguousCell,
+    UnshownContent,
+}
+
+#[derive(serde::Serialize, Debug, Clone, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ParameterGridIssueDto {
+    pub(crate) kind: ParameterGridIssueKindDto,
+    /// Source element local name, verbatim.
+    pub(crate) element: String,
+    pub(crate) reference: Option<String>,
+    /// The raw declared `@Cell`, if any.
+    pub(crate) cell: Option<String>,
 }
 
 #[derive(serde::Serialize, Debug, Clone, PartialEq, Eq)]
@@ -442,6 +533,9 @@ pub(crate) struct ParameterGroupDto {
 pub(crate) struct ParameterFieldDto {
     pub(crate) group: Option<ParameterGroupDto>,
     pub(crate) controls_com_objects: bool,
+    /// ADR-0137: this field's declared cell in its group's grid, only when
+    /// that group's layout status is `grid` and the cell is unambiguous.
+    pub(crate) cell: Option<ParameterGridCellDto>,
     pub(crate) ets_id: String,
     pub(crate) name: Option<String>,
     /// The stored language identifier whose translation `name` is (e.g.

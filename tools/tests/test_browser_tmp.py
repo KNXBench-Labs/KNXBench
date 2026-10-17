@@ -11,6 +11,8 @@ from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
 
+from tools.tests.browser_tmp_fixtures import deep_below_scratch
+
 
 class BrowserTempRoot(unittest.TestCase):
     def selector(self):
@@ -29,12 +31,57 @@ class BrowserTempRoot(unittest.TestCase):
             anchor.mkdir()
             deep = anchor / ('nested-' + 'x' * 100)
             deep.mkdir()
-            chosen = module.select_temp_root(deep)
-            self.assertTrue(module.fits_temp_root(chosen))
-            self.assertIn(chosen, deep.parents)
+            # Budget pinned to this anchor: no outer `scratch` of the runner's TMPDIR decides.
+            with patch('tools.browser_tmp.MAX_SOCKET_BYTES', self.fitting_budget(module, anchor)):
+                self.assertFalse(module.fits_temp_root(deep))
+                chosen = module.select_temp_root(deep)
+                self.assertTrue(module.fits_temp_root(chosen))
+            self.assertIn(chosen, deep.resolve().parents)
             self.assertEqual(chosen.name, 'scratch')
             self.assertEqual(chosen.stat().st_uid, os.getuid())
             self.assertTrue(deep.exists(), 'must not delete the supplied directory')
+
+    def fitting_budget(self, module, root: Path) -> int:
+        """Socket budget at which `root` exactly fits as an allocation parent."""
+        return len(os.fsencode(str(root.resolve()) + module.OWNED_TEMP_SUFFIX
+                               + module.CHROMIUM_SOCKET_SUFFIX))
+
+    def test_symlinked_scratch_component_is_an_approved_anchor(self) -> None:
+        # A configured `.../scratch` may be a symlink (e.g. moved to another disk);
+        # resolving must not erase the approval its name carries.
+        module = self.selector()
+        with TemporaryDirectory() as tmp:
+            work = Path(tmp)
+            target = work / 'moved'
+            target.mkdir(mode=0o700)
+            (work / 'profile').mkdir()
+            link = work / 'profile' / 'scratch'
+            link.symlink_to(target, target_is_directory=True)
+            deep = link / ('nested-' + 'x' * 100)
+            deep.mkdir()
+            with patch('tools.browser_tmp.MAX_SOCKET_BYTES', self.fitting_budget(module, target)):
+                self.assertFalse(module.fits_temp_root(deep))
+                self.assertEqual(module.select_temp_root(deep), target.resolve())
+            self.assertTrue(deep.exists(), 'must not delete the supplied directory')
+
+    def test_symlinked_scratch_to_a_shared_directory_is_refused(self) -> None:
+        module = self.selector()
+        with TemporaryDirectory() as tmp:
+            work = Path(tmp)
+            target = work / 'shared'
+            target.mkdir()
+            target.chmod(0o777)
+            (work / 'profile').mkdir()
+            link = work / 'profile' / 'scratch'
+            link.symlink_to(target, target_is_directory=True)
+            deep = link / ('nested-' + 'x' * 100)
+            deep.mkdir()
+            with patch('tools.browser_tmp.MAX_SOCKET_BYTES', self.fitting_budget(module, target)):
+                # Outer approved ancestors of the test's own TMPDIR may still qualify.
+                self.assertNotIn(target.resolve(), module.scratch_candidates(deep))
+                if module.scratch_candidates(deep) == []:
+                    with self.assertRaisesRegex(ValueError, 'short approved'):
+                        module.select_temp_root(deep)
 
     def test_explicit_root_and_missing_approved_fallback_fail_closed(self) -> None:
         module = self.selector()
@@ -61,11 +108,7 @@ class BrowserTempRoot(unittest.TestCase):
     def test_actual_config_loader_repairs_deep_tmp_and_cleans_only_its_directory(self) -> None:
         root = Path(__file__).resolve().parents[2]
         app = root / 'apps/knx-web'
-        with TemporaryDirectory() as tmp:
-            work = Path(tmp)
-            scratch = work / 'scratch'
-            deep = scratch / ('deep-' + 'x' * 100)
-            deep.mkdir(parents=True)
+        with deep_below_scratch() as (work, deep):
             marker = deep / 'keep.txt'
             marker.write_text('retained')
             metadata = work / 'environment.json'

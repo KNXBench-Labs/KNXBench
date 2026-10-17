@@ -6,10 +6,10 @@ import os
 from pathlib import Path
 import subprocess
 import sys
-from tempfile import TemporaryDirectory
 import unittest
 
 from tools import browser_tmp
+from tools.tests.browser_tmp_fixtures import deep_below_scratch, short_workspace
 
 ROOT = Path(__file__).resolve().parents[2]
 APP = ROOT / 'apps/knx-web'
@@ -21,8 +21,7 @@ class BrowserTempLaunch(unittest.TestCase):
                 if not key.startswith(('KNX', 'PLAYWRIGHT_'))}
 
     def workspace(self):
-        base = browser_tmp.select_temp_root(Path(os.environ.get('TMPDIR', '/tmp')))
-        return TemporaryDirectory(prefix='', dir=base)
+        return short_workspace()
 
     def leaf_root(self, scratch: Path) -> Path:
         # A root that fits Chromium itself, but cannot fit another /wXXXXXXXX.
@@ -71,12 +70,7 @@ class BrowserTempLaunch(unittest.TestCase):
                     self.fail('must not reuse a non-private leaf')
 
     def test_standalone_preload_repairs_deep_tmp_before_loading_playwright(self) -> None:
-        with self.workspace() as tmp:
-            work = Path(tmp)
-            scratch = work / 'scratch'
-            scratch.mkdir(mode=0o700)
-            deep = scratch / ('deep-' + 'x' * 100)
-            deep.mkdir()
+        with deep_below_scratch() as (work, deep):
             marker = deep / 'keep'
             marker.write_text('retained')
             env = {**self.clean_environment(), 'TMPDIR': str(deep)}
@@ -97,12 +91,7 @@ class BrowserTempLaunch(unittest.TestCase):
             self.assertEqual(marker.read_text(), 'retained')
 
     def test_cli_wraps_a_standalone_command_and_cleans_after_failure(self) -> None:
-        with self.workspace() as tmp:
-            work = Path(tmp)
-            scratch = work / 'scratch'
-            scratch.mkdir(mode=0o700)
-            deep = scratch / ('deep-' + 'x' * 100)
-            deep.mkdir()
+        with deep_below_scratch() as (work, deep):
             program = 'import os,sys;print(os.environ["TMPDIR"]);sys.exit(23)'
             result = subprocess.run(
                 [sys.executable, str(ROOT / 'tools/browser_tmp.py'), '--base', str(deep),
@@ -115,8 +104,7 @@ class BrowserTempLaunch(unittest.TestCase):
             self.assertTrue(deep.exists())
 
     def test_real_chromium_launches_at_the_validated_leaf_boundary(self) -> None:
-        with self.workspace() as tmp:
-            work = Path(tmp)
+        with deep_below_scratch() as (work, deep):
             leaf = self.leaf_root(work)
             env = {**self.clean_environment(), 'TMPDIR': str(leaf),
                    'KNXBENCH_BROWSER_TMP_ROOT': str(leaf)}
@@ -140,8 +128,6 @@ class BrowserTempLaunch(unittest.TestCase):
             self.assertEqual(observed['directory'], str(leaf))
             self.assertLessEqual(len(os.fsencode(observed['socket'])), browser_tmp.MAX_SOCKET_BYTES)
             self.assertTrue(leaf.exists(), 'caller-owned leaf must survive browser shutdown')
-            deep = work / ('deep-' + 'x' * 100)
-            deep.mkdir()
             result = subprocess.run(
                 ['unshare', '--user', '--map-root-user', '--net', 'node', '--require',
                  str(ROOT / 'tools/browser_tmp.cjs'), '-e', program],
@@ -154,12 +140,7 @@ class BrowserTempLaunch(unittest.TestCase):
             self.assertTrue(deep.exists(), 'deep caller directory must survive')
 
     def test_nested_node_process_reuses_parent_directory_without_owning_cleanup(self) -> None:
-        with self.workspace() as tmp:
-            work = Path(tmp)
-            scratch = work / 'scratch'
-            scratch.mkdir(mode=0o700)
-            deep = scratch / ('deep-' + 'x' * 100)
-            deep.mkdir()
+        with deep_below_scratch() as (work, deep):
             guard = str(ROOT / 'tools/browser_tmp.cjs')
             child = "console.log(JSON.stringify(process.env.TMPDIR))"
             program = (

@@ -34,6 +34,7 @@ pub mod legacy;
 pub mod manufacturer_files;
 pub mod modeled_metadata;
 pub mod name_recipe;
+pub mod note_disposition;
 pub mod note_edit;
 pub mod note_targets;
 pub mod plugin_data;

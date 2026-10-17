@@ -1,6 +1,7 @@
 //! Exercises selective merge identity, dependency preservation and honest refusal.
 
-use knx_app::selective_import::{self as import, Selection, Source};
+use knx_app::selective_import::{self as import, Selection, Source, UnselectedNotes};
+use knx_core::note::{ProjectNote, ProjectNoteTarget};
 use knx_core::*;
 use knx_store::project_history::NativeSnapshot;
 
@@ -30,6 +31,7 @@ fn fixture() -> (Source, NativeSnapshot, Selection) {
         target_installation: installation,
         devices: vec![device],
         lines: vec![],
+        unselected_notes: None,
     };
     let opaque = vec![knx_store::StoredOpaqueEntry {
         source_path: "seed.txt".into(),
@@ -641,7 +643,6 @@ fn dangling_source_instruction_owner_is_explicitly_refused() {
 
 #[test]
 fn native14_destination_notes_survive_selection_merge_and_undo() {
-    use knx_core::note::{ProjectNote, ProjectNoteTarget};
     let (source, mut target, selection) = fixture();
     let n = ProjectNote::new(
         ProjectNoteId(9),
@@ -662,9 +663,91 @@ fn native14_destination_notes_survive_selection_merge_and_undo() {
     assert!(target.project.same_user_content_as(&before.project));
     assert_eq!(target.project.notes, before.project.notes);
 }
+/// Source notes on the selected device, its first object, its line and the
+/// source installation (all brought along), plus one on the project and one
+/// on a device that is not selected (both outside the selection).
+fn noted_source() -> (Source, NativeSnapshot, Selection, Vec<ProjectNote>) {
+    let (mut source, target, selection) = fixture();
+    let device = DeviceId(selection.devices[0]);
+    let object = source.project.devices.get(device).unwrap().com_objects[0];
+    let line = source.project.installations[0]
+        .topology
+        .lines
+        .iter()
+        .find(|l| l.devices.contains(&device))
+        .unwrap()
+        .id;
+    let mut other = source.project.devices.get(device).unwrap().clone();
+    other.id = DeviceId(900);
+    other.address = None;
+    other.com_objects.clear();
+    source.project.devices.insert(other);
+    source.project.installations[0]
+        .topology
+        .unassigned
+        .push(DeviceId(900));
+    let notes: Vec<_> = [
+        (11, ProjectNoteTarget::Device(device), "device"),
+        (12, ProjectNoteTarget::Project, "project"),
+        (13, ProjectNoteTarget::ComObject(object), "object"),
+        (
+            14,
+            ProjectNoteTarget::Device(DeviceId(900)),
+            "unselected device",
+        ),
+        (15, ProjectNoteTarget::Line(line), "line"),
+        (
+            16,
+            ProjectNoteTarget::Installation(InstallationId(selection.source_installation)),
+            "installation",
+        ),
+    ]
+    .into_iter()
+    .map(|(id, target, title)| {
+        ProjectNote::new(
+            ProjectNoteId(id),
+            target,
+            title.into(),
+            "literal Grüße🙂\r\n".into(),
+        )
+        .unwrap()
+        .with_documentation(id % 2 == 0)
+    })
+    .collect();
+    source.project.notes = notes.clone();
+    source.project.ids = source.project.ids.clone().with_project_note_count(16);
+    (source, target, selection, notes)
+}
+fn mapped(plan: &import::Plan, kind: &str, source: u32) -> u32 {
+    plan.preview
+        .mappings
+        .iter()
+        .find(|m| m.kind == kind && m.source == source)
+        .unwrap_or_else(|| panic!("{kind} {source} not mapped"))
+        .target
+}
+
+#[test]
+fn source_notes_outside_the_selection_need_an_explicit_choice() {
+    let (source, target, selection, _) = noted_source();
+    let before = target.clone();
+    let error = match import::plan(&target, &source, selection) {
+        Ok(_) => panic!("source notes cannot be dropped or attached implicitly"),
+        Err(e) => e,
+    };
+    assert!(
+        error.contains("2 source notes are attached to entities outside the selection"),
+        "{error}"
+    );
+    assert!(
+        error.contains("skip them or attach them to the project"),
+        "{error}"
+    );
+    assert_eq!(target, before);
+}
+
 #[test]
 fn native_source_authored_notes_are_explicitly_refused_not_silently_dropped() {
-    use knx_core::note::{ProjectNote, ProjectNoteTarget};
     let (mut source, target, selection) = fixture();
     source.project.notes.push(
         ProjectNote::new(
@@ -682,10 +765,178 @@ fn native_source_authored_notes_are_explicitly_refused_not_silently_dropped() {
         Err(e) => e,
     };
     assert!(
-        error.contains("source project notes require an explicit selection/disposition mapping"),
+        error.contains("1 source note is attached to entities outside the selection"),
         "{error}"
     );
     assert_eq!(target, before);
+}
+
+#[test]
+fn selected_entity_notes_follow_their_remapped_identities_and_skipped_ones_are_reported() {
+    let (source, mut target, mut selection, notes) = noted_source();
+    let kept = ProjectNote::new(
+        ProjectNoteId(3),
+        ProjectNoteTarget::Project,
+        "destination".into(),
+        String::new(),
+    )
+    .unwrap();
+    target.project.notes.push(kept.clone());
+    target.project.ids = target.project.ids.clone().with_project_note_count(3);
+    selection.unselected_notes = Some(UnselectedNotes::Skip);
+    let before = target.clone();
+    let device = selection.devices[0];
+    let plan = import::plan(&target, &source, selection).unwrap();
+    assert_eq!(plan.preview.counts.mapped_notes, 4);
+    assert_eq!(plan.preview.counts.attached_notes, 0);
+    assert_eq!(plan.preview.counts.skipped_notes, 2);
+    let new_device = DeviceId(mapped(&plan, "device", device));
+    let line = match notes[4].target() {
+        ProjectNoteTarget::Line(id) => id,
+        other => panic!("{other:?}"),
+    };
+    let new_line = LineId(mapped(&plan, "line", line.0));
+    let object = match notes[2].target() {
+        ProjectNoteTarget::ComObject(id) => id,
+        other => panic!("{other:?}"),
+    };
+    let new_object = ComObjectInstanceId(mapped(&plan, "communication_object", object.0));
+    for title in ["project", "unselected device"] {
+        assert!(
+            plan.preview
+                .notes
+                .iter()
+                .any(|line| line.contains(&format!("{title:?}")) && line.contains("skipped")),
+            "{:?}",
+            plan.preview.notes
+        );
+    }
+    let mut stack = CommandStack::new();
+    import::apply(&mut target, &mut stack, plan).unwrap();
+    let imported: Vec<_> = target.project.notes.iter().skip(1).collect();
+    assert_eq!(target.project.notes[0], kept);
+    assert_eq!(
+        imported.iter().map(|n| n.target()).collect::<Vec<_>>(),
+        [
+            ProjectNoteTarget::Device(new_device),
+            ProjectNoteTarget::ComObject(new_object),
+            ProjectNoteTarget::Line(new_line),
+            ProjectNoteTarget::Installation(InstallationId(before.project.installations[0].id.0)),
+        ]
+    );
+    for (imported, original) in imported
+        .iter()
+        .zip([&notes[0], &notes[2], &notes[4], &notes[5]])
+    {
+        assert_eq!(imported.title(), original.title());
+        assert_eq!(imported.body(), original.body());
+        assert_eq!(
+            imported.include_in_documentation(),
+            original.include_in_documentation()
+        );
+    }
+    assert_eq!(
+        imported.iter().map(|n| n.id().0).collect::<Vec<_>>(),
+        [4, 5, 6, 7],
+        "fresh destination identities, never source ids"
+    );
+    assert_eq!(target.project.ids.peek_project_note(), 7);
+    knx_core::note::validate_notes(&target.project, &target.project.notes).unwrap();
+    stack.undo(&mut target.project).unwrap();
+    assert_eq!(target.project.notes, before.project.notes);
+}
+
+#[test]
+fn unselected_source_notes_can_be_attached_to_the_project_instead() {
+    let (source, mut target, mut selection, _) = noted_source();
+    selection.unselected_notes = Some(UnselectedNotes::AttachToProject);
+    let plan = import::plan(&target, &source, selection).unwrap();
+    assert_eq!(plan.preview.counts.mapped_notes, 4);
+    assert_eq!(plan.preview.counts.attached_notes, 2);
+    assert_eq!(plan.preview.counts.skipped_notes, 0);
+    assert!(plan
+        .preview
+        .notes
+        .iter()
+        .any(|line| line.contains("\"unselected device\"")
+            && line.contains("attached to the project")));
+    assert_eq!(
+        plan.preview
+            .mappings
+            .iter()
+            .filter(|m| m.kind == "note")
+            .count(),
+        6
+    );
+    let mut stack = CommandStack::new();
+    import::apply(&mut target, &mut stack, plan).unwrap();
+    let titles: Vec<_> = target
+        .project
+        .notes
+        .iter()
+        .filter(|n| n.target() == ProjectNoteTarget::Project)
+        .map(|n| n.title().to_owned())
+        .collect();
+    assert_eq!(titles, ["project", "unselected device"]);
+    assert_eq!(target.project.notes.len(), 6);
+}
+
+#[test]
+fn imported_notes_beyond_the_destination_budget_are_refused_not_truncated() {
+    let (source, mut target, mut selection, _) = noted_source();
+    selection.unselected_notes = Some(UnselectedNotes::Skip);
+    target.project.notes = (1..=u32::try_from(knx_core::note::MAX_PROJECT_NOTES).unwrap())
+        .map(|id| {
+            ProjectNote::new(
+                ProjectNoteId(id),
+                ProjectNoteTarget::Project,
+                "x".into(),
+                String::new(),
+            )
+            .unwrap()
+        })
+        .collect();
+    target.project.ids = target
+        .project
+        .ids
+        .clone()
+        .with_project_note_count(u32::try_from(knx_core::note::MAX_PROJECT_NOTES).unwrap());
+    let before = target.clone();
+    let error = match import::plan(&target, &source, selection) {
+        Ok(_) => panic!("a full note collection cannot take more"),
+        Err(e) => e,
+    };
+    assert!(error.contains("notes"), "{error}");
+    assert_eq!(target, before);
+}
+
+#[test]
+fn the_unselected_note_choice_is_part_of_the_strict_selection_wire() {
+    let parsed: Selection = serde_json::from_value(serde_json::json!({
+        "sourceInstallation": 0, "targetInstallation": 0, "devices": [1],
+        "unselectedNotes": "attachToProject"
+    }))
+    .unwrap();
+    assert_eq!(
+        parsed.unselected_notes,
+        Some(UnselectedNotes::AttachToProject)
+    );
+    let skip: Selection = serde_json::from_value(serde_json::json!({
+        "sourceInstallation": 0, "targetInstallation": 0, "devices": [1],
+        "unselectedNotes": "skip"
+    }))
+    .unwrap();
+    assert_eq!(skip.unselected_notes, Some(UnselectedNotes::Skip));
+    let absent: Selection = serde_json::from_value(serde_json::json!({
+        "sourceInstallation": 0, "targetInstallation": 0, "devices": [1]
+    }))
+    .unwrap();
+    assert_eq!(absent.unselected_notes, None);
+    assert!(serde_json::from_value::<Selection>(serde_json::json!({
+        "sourceInstallation": 0, "targetInstallation": 0, "devices": [1],
+        "unselectedNotes": "drop"
+    }))
+    .is_err());
 }
 
 /// ADR-0124: a room and a group address of the destination with one

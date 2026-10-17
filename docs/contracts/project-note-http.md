@@ -78,3 +78,29 @@ control was executed. This orchestration refusal is not a failed product test.
 External native conflicts currently use the sanitized `notePersistenceFailed`
 422 response, while live snapshot/revision/token conflicts use `noteStale` 409.
 Neither error publishes memory or consumes the pending plan.
+
+## Note-aware deletes (17 October 2026, ADR-0138)
+
+- The entity delete routes (`DELETE /api/devices/{id}`, `POST
+  /api/devices/batch-delete`, `DELETE /api/group-addresses/{id}`, `POST
+  /api/group-addresses/batch-delete`, `DELETE /api/areas/{id}`,
+  `/api/lines/{id}`, `/api/building-parts/{id}`, `/api/group-ranges/{id}`) ask
+  `knx_app::note_disposition` first, under the project lock. If notes would be
+  stranded they answer `409` with `kind: "noteDispositionRequired"`, the named
+  English reason in `error`, `notes: [{id, title, target}]`, `removedTargets`
+  (same typed target grammar) and `serverIncarnation`/`projectIncarnation`/
+  `snapshotRevision`. Nothing changes. Without stranded notes the routes answer
+  exactly as before.
+- `POST /api/project/delete-with-notes`: `{serverIncarnation,
+  projectIncarnation, snapshotRevision, delete, choices}`; `delete` is
+  `{kind: "devices"|"groupAddresses", ids}` or `{kind: "area"|"line"|
+  "buildingPart"|"groupRange", id}`, each choice `{note, action}` with action
+  `{kind: "project"}`, `{kind: "move", target}` or `{kind: "delete"}`. Unknown
+  fields are refused. It runs through the revision-bound command path: success
+  returns the new project tree (one undo step); stale `409
+  noteDispositionStale`; incomplete, extra or invalid choices `422
+  noteDispositionRefused` with the reason; persistence failure `500`. None of
+  the refusals changes model, history or revision.
+- Pinned by `apps/knx-server/tests/http_note_disposition.rs` (every route,
+  cascade, unchanged plain delete, one undo step with undo/redo per route, move
+  and delete choices, stale, refused, unknown field).

@@ -7,6 +7,7 @@ import type { MultiSelection } from "./selection";
 import { deviceInstallations, flattenBuildingParts } from "./treeUtils";
 import { useTranslate } from "./i18n";
 import NameRecipeDialog from "./features/nameRecipe/NameRecipeDialog";
+import { useNoteAwareDelete } from "./NoteDispositionDialog";
 
 // The bulk-action counterpart of `Inspector.tsx`'s single-entity Delete
 // buttons/`LineMoveField`/`BuildingPartMoveField` — same "act immediately,
@@ -29,24 +30,29 @@ export default function BulkActionToolbar(props: {
   const ids = Array.from(multiSelection.ids);
   const count = ids.length;
 
+  function applied(nextTree: ProjectTree) {
+    onTreeUpdate(nextTree);
+    emitAchievementEvent({ type: "bulkActionApplied", itemCount: count });
+    onDone();
+  }
+
   async function run(action: Promise<ProjectTree>) {
     setError(null);
     try {
-      const nextTree = await action;
-      onTreeUpdate(nextTree);
-      emitAchievementEvent({ type: "bulkActionApplied", itemCount: count });
-      onDone();
+      applied(await action);
     } catch (e) {
       setError(api.errorMessage(e));
     }
   }
 
+  // ADR-0138: a batch delete that would strand project notes opens the
+  // decision dialog; confirming it completes the same bulk action.
+  const noteAware = useNoteAwareDelete(applied);
   function deleteSelected() {
-    void run(
-      multiSelection.kind === "device"
-        ? api.batchDeleteDevices(ids)
-        : api.batchDeleteGroupAddresses(ids),
-    );
+    setError(null);
+    void (multiSelection.kind === "device"
+      ? noteAware.run({ kind: "devices", ids }, () => api.batchDeleteDevices(ids), setError)
+      : noteAware.run({ kind: "groupAddresses", ids }, () => api.batchDeleteGroupAddresses(ids), setError));
   }
 
   function moveToLine(lineId: number | null) {
@@ -74,6 +80,7 @@ export default function BulkActionToolbar(props: {
     <div className="bulk-action-toolbar">
       <span className="bulk-action-label">{label}</span>
       <button onClick={deleteSelected}>{t("bulkAction.delete")}</button>
+      {noteAware.dialog}
       {multiSelection.kind === "group_address" && (
         <button data-role="name-recipe" onClick={() => setRecipeOpen(true)}>{t("bulkAction.nameRecipe")}</button>
       )}

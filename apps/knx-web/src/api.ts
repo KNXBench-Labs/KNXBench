@@ -2,6 +2,7 @@
 //! fetch()-based replacement for @tauri-apps/api/core's invoke() — same
 //! function names and argument shapes the components already called, so
 //! swapping the import at each call site is the only change there.
+import type { Deletion, DispositionContext, WireChoice } from "./noteDisposition";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { AdoptionApplyResponse, AdoptionListing, AdoptionPreviewResponse } from "./pluginData";
 import {admitProjectMetadata,type ProjectMetadataView} from "./projectMetadata";
@@ -1138,6 +1139,19 @@ export function batchDeleteGroupAddresses(ids: number[]): Promise<ProjectTree> {
   return request("/api/group-addresses/batch-delete", {
     method: "POST",
     body: JSON.stringify({ ids }),
+  });
+}
+
+/**
+ * ADR-0138: applies the user's choice for every note a delete would strand
+ * together with the delete, as one undo step, bound to the snapshot named in
+ * the `noteDispositionRequired` refusal. A changed project is a `409`
+ * `noteDispositionStale`; an incomplete or invalid choice a `422`.
+ */
+export function deleteWithNotes(context: DispositionContext, deletion: Deletion, choices: WireChoice[]): Promise<ProjectTree> {
+  return request("/api/project/delete-with-notes", {
+    method: "POST",
+    body: JSON.stringify({ ...context, delete: deletion, choices }),
   });
 }
 

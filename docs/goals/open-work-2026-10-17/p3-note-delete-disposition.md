@@ -1,7 +1,12 @@
 # P3 — Note-aware deletes and selective import of notes (FUTURE-03 residue)
 
-Planning only; part of the [17 October package set](README.md). Follow its
-shared rules.
+Part of the [17 October package set](README.md). Follow its shared rules.
+
+**Delivered 17 October 2026** ([ADR-0138](../../adr/0138-notes-get-an-explicit-decision-before-a-delete.md),
+[status](../../IMPLEMENTATION_STATUS.md#notes-when-deleting-and-in-selective-imports-17-october-2026)).
+`FUTURE-03` is `DONE`. Not built, by decision: a dialog for CLI, CSV-import and
+scan deletes (they refuse naming the notes) and a web/CLI control for unselected
+source notes (no shipped reader produces source notes).
 
 **Starter:** `/goal Run package P3 from docs/goals/open-work-2026-10-17/p3-note-delete-disposition.md on fresh origin/main after P2 is delivered; follow README.md's rules.`
 

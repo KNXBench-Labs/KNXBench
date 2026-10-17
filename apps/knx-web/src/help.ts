@@ -113,6 +113,16 @@ export const HELP_TOPICS = [
     standardNote: false,
   },
   {
+    id: "noteDisposition",
+    titleKey: "help.topic.noteDisposition.title",
+    bodyKeys: [
+      "help.topic.noteDisposition.p1",
+      "help.topic.noteDisposition.p2",
+      "help.topic.noteDisposition.p3",
+    ],
+    standardNote: false,
+  },
+  {
     id: "pluginData",
     titleKey: "help.topic.pluginData.title",
     bodyKeys: [

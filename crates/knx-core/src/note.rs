@@ -1,6 +1,7 @@
 //! Validates bounded plain-text project notes with typed entity targets.
 
 use std::collections::BTreeSet;
+use std::fmt;
 
 use crate::{
     AreaId, BuildingPartId, ComObjectInstanceId, DeviceId, GroupAddressId, GroupRangeId,
@@ -37,6 +38,60 @@ pub enum NoteError {
     MissingTarget(ProjectNoteTarget),
     AmbiguousTarget(ProjectNoteTarget),
 }
+/// A note an edit would leave pointing at an entity the edit removes.
+///
+/// [`crate::CommandError::NotesOrphaned`] lists these so a refusal can name
+/// every affected note instead of only the first dangling target.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OrphanedNote {
+    pub id: ProjectNoteId,
+    pub target: ProjectNoteTarget,
+    pub title: String,
+}
+impl fmt::Display for ProjectNoteTarget {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Project => f.write_str("the project"),
+            Self::Installation(id) => write!(f, "installation {id}"),
+            Self::Area(id) => write!(f, "area {id}"),
+            Self::Line(id) => write!(f, "line {id}"),
+            Self::BuildingPart(id) => write!(f, "building part {id}"),
+            Self::Device(id) => write!(f, "device {id}"),
+            Self::GroupRange(id) => write!(f, "group range {id}"),
+            Self::GroupAddress(id) => write!(f, "group address {id}"),
+            Self::ComObject(id) => write!(f, "communication object {id}"),
+        }
+    }
+}
+impl fmt::Display for NoteError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::InvalidId => f.write_str("note id 0 is not a valid identity"),
+            Self::EmptyTitle => f.write_str("a note needs a title that is not blank"),
+            Self::TitleBudget => write!(f, "the title exceeds {MAX_NOTE_TITLE_BYTES} bytes"),
+            Self::BodyBudget => write!(f, "the note text exceeds {MAX_NOTE_BODY_BYTES} bytes"),
+            Self::ControlCharacter => f.write_str(
+                "the text contains a control character; only tab and line breaks are allowed",
+            ),
+            Self::NoteCountBudget => write!(f, "a project holds at most {MAX_PROJECT_NOTES} notes"),
+            Self::TotalTextBudget => {
+                write!(
+                    f,
+                    "all notes together would exceed {MAX_NOTES_TEXT_BYTES} bytes of text"
+                )
+            }
+            Self::DuplicateId(id) => write!(f, "note id {id} is used twice"),
+            Self::MissingTarget(target) => write!(f, "its target {target} does not exist"),
+            Self::AmbiguousTarget(target) => {
+                write!(
+                    f,
+                    "its target {target} occurs more than once in the project"
+                )
+            }
+        }
+    }
+}
+impl std::error::Error for NoteError {}
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ProjectNote {
     id: ProjectNoteId,
@@ -98,6 +153,36 @@ impl ProjectNote {
         self.include_in_documentation = include;
         self
     }
+    /// The same note (identity, text, inclusion) attached to `target`.
+    /// Target existence is checked where the note is admitted, not here.
+    pub fn with_target(mut self, target: ProjectNoteTarget) -> Self {
+        self.target = target;
+        self
+    }
+}
+/// Notes that resolved in `before`, still carry the same target in `after`
+/// and now point at an entity `after` no longer has, in `after`'s order.
+pub(crate) fn orphaned_notes(before: &Project, after: &Project) -> Vec<OrphanedNote> {
+    after
+        .notes
+        .iter()
+        .filter(|note| {
+            before
+                .notes
+                .iter()
+                .any(|old| old.id == note.id && old.target == note.target)
+                && note.target.validate(before).is_ok()
+                && matches!(
+                    note.target.validate(after),
+                    Err(NoteError::MissingTarget(_))
+                )
+        })
+        .map(|note| OrphanedNote {
+            id: note.id,
+            target: note.target,
+            title: note.title.clone(),
+        })
+        .collect()
 }
 impl ProjectNoteTarget {
     pub fn validate(self, project: &Project) -> Result<(), NoteError> {

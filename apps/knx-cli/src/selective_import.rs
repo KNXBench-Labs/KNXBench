@@ -95,6 +95,8 @@ fn parse(args: &[String]) -> Result<Args, String> {
             target_installation: target_installation.ok_or("--target-installation is required")?,
             devices,
             lines,
+            // `.knxproj` sources carry no project notes (ADR-0138).
+            unselected_notes: None,
         }),
         confirm,
         password_stdin,

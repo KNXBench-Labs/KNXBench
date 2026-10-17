@@ -1,6 +1,7 @@
 //! Reads bounded ETS sources for read-only selection and atomic merge planning.
 
 mod merge;
+mod source_notes;
 mod structure;
 
 use std::io::Read;
@@ -31,6 +32,21 @@ pub struct Selection {
     pub devices: Vec<u32>,
     #[serde(default)]
     pub lines: Vec<u32>,
+    /// What happens to source notes whose target is not imported. Required
+    /// as soon as there is one; absent, it is left out of the wire form, so
+    /// confirmation tokens of note-free selections are unchanged.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unselected_notes: Option<UnselectedNotes>,
+}
+
+/// The explicit choice for source notes outside the selection (ADR-0138).
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum UnselectedNotes {
+    /// Leave them out, with one report line per note.
+    Skip,
+    /// Bring them in as notes on the destination project.
+    AttachToProject,
 }
 
 pub struct Source {
@@ -61,6 +77,12 @@ pub struct Counts {
     pub modules: usize,
     pub group_addresses: usize,
     pub building_parts: usize,
+    /// Source notes that follow their imported target.
+    pub mapped_notes: usize,
+    /// Source notes outside the selection, attached to the project.
+    pub attached_notes: usize,
+    /// Source notes outside the selection, left out as chosen.
+    pub skipped_notes: usize,
 }
 
 #[derive(Clone, Serialize)]

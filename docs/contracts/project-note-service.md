@@ -76,3 +76,10 @@ itself. It reads the domain model directly and keeps only targets that
 withheld). Labels are locale-neutral parts; the UI adds the kind word. Read-only:
 it neither changes the project nor touches note IDs or history. Pinned by
 `crates/knx-app/tests/note_targets.rs`; served by `GET /api/project/notes/targets`.
+
+## Delete disposition (17 October 2026)
+
+Target deletion with notes is not a note-service action: the disposition plan
+lives in `knx_app::note_disposition` and runs through the server's
+revision-bound command path ([HTTP](project-note-http.md#note-aware-deletes-17-october-2026-adr-0138),
+[ADR-0138](../adr/0138-notes-get-an-explicit-decision-before-a-delete.md)).

@@ -88,6 +88,7 @@ mod load_progress;
 mod log_text;
 mod manufacturer_file_routes;
 mod name_recipe_routes;
+mod note_disposition_routes;
 mod note_routes;
 pub use load_progress::*;
 mod catalogue_update_routes;

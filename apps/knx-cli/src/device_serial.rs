@@ -530,6 +530,7 @@ mod tests {
             target_installation: working.project.installations[0].id.0,
             devices: vec![device_id.0],
             lines: vec![],
+            unselected_notes: None,
         };
         let plan = import::plan(&working, &source, selection).unwrap();
         import::apply(&mut working, &mut stack, plan).unwrap();

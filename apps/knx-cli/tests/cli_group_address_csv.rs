@@ -191,6 +191,64 @@ fn ga_import_readdress_requires_the_exact_preview_token() {
     );
 }
 
+/// ADR-0138: a CSV delete row that would strand a project note is refused
+/// with the named reason listing the note, and the store stays untouched.
+#[test]
+fn ga_import_delete_of_a_noted_address_names_the_note_and_writes_nothing() {
+    let dir = tempfile::tempdir().unwrap();
+    let store = dir.path().join("project.knxdb");
+    let csv_path = dir.path().join("delete.csv");
+    let mut before = tiny_project();
+    let address = before.installations[0].group_addresses[0].id;
+    before.notes.push(
+        knx_core::note::ProjectNote::new(
+            knx_core::ProjectNoteId(1),
+            knx_core::note::ProjectNoteTarget::GroupAddress(address),
+            "Wiring".into(),
+            "Check the actuator first".into(),
+        )
+        .unwrap(),
+    );
+    before.ids = before.ids.clone().with_project_note_count(1);
+    let conn = knx_store::open_and_migrate(&store).unwrap();
+    knx_store::save_project(&conn, &before).unwrap();
+    drop(conn);
+    std::fs::write(
+        &csv_path,
+        "Address,Action,Name\n1/1/1,delete,Living Room Light\n",
+    )
+    .unwrap();
+    let preview = run_cli(&[
+        "ga-import",
+        store.to_str().unwrap(),
+        csv_path.to_str().unwrap(),
+    ]);
+    let stdout = String::from_utf8(preview.stdout).unwrap();
+    let token = stdout
+        .lines()
+        .find_map(|line| line.strip_prefix("confirmation token: "))
+        .unwrap_or_else(|| panic!("preview token: {stdout}"));
+    let confirmed = run_cli(&[
+        "ga-import",
+        store.to_str().unwrap(),
+        csv_path.to_str().unwrap(),
+        "--confirm",
+        token,
+    ]);
+    let stderr = String::from_utf8(confirmed.stderr).unwrap();
+    assert_ne!(confirmed.status.code(), Some(0), "{stderr}");
+    assert!(
+        stderr.contains(&format!(
+            "this change would leave 1 project note without its target: note 1 \"Wiring\" on group address {address}"
+        )),
+        "{stderr}"
+    );
+    assert!(stderr.contains("nothing was changed"), "{stderr}");
+    assert!(!stderr.contains("note validation refused"), "{stderr}");
+    let conn = knx_store::open_and_migrate(&store).unwrap();
+    assert_eq!(knx_store::load_project(&conn).unwrap(), before);
+}
+
 #[test]
 fn ga_export_writes_the_header_and_one_data_row() {
     let dir = tempfile::tempdir().unwrap();

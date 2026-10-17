@@ -7,7 +7,20 @@ The open work of 17 October is cut into
 order (P5 → P2 → P3, P4 in parallel, P1 once its entry conditions hold),
 collisions and the routing of every non-terminal ledger row. The files reserve
 nothing: a package belongs to a session only after it pushes its claim entry to
-the handover. P5 (this page's synchronisation) is delivered.
+the handover. P5 (this page's synchronisation), P2 (plug-in data in the web app)
+and P3 (notes when deleting, below) are delivered.
+
+## Project notes: closed, with bounded delete paths (17 October 2026)
+
+[Package P3](goals/open-work-2026-10-17/p3-note-delete-disposition.md) closes
+`FUTURE-03` ([ADR-0138](adr/0138-notes-get-an-explicit-decision-before-a-delete.md)):
+web deletes ask what happens to every affected note (keep on the project, move,
+delete; one undo step), and selective import carries source notes along their
+remapped targets with an explicit choice for the rest. **Not built, by
+decision:** a decision dialog for the CLI, group address CSV delete rows and
+scan reconciliation (they refuse naming the notes), and a control for
+unselected source notes (no shipped reader produces source notes)
+([limitation](limitations/project-notes-workbench.md#update-2026-10-17-deleting-a-notes-target-adr-0138)).
 
 ## Plug-in data adoption: plug-in acceptance open (17 October 2026)
 
@@ -347,9 +360,9 @@ real tester report and its review.
   checked / 7 open, `goal-ui.md` 37 / 0, `goal-commission.md` (no checklist,
   §4 completion condition). The 7 open boxes are all user-deferred or
   optional (section 3).
-- Ledger counts on 17 October 2026, quoted from the ledger's *Counts*
-  section (`check-ledger` green): **Snapshot IDs** (180 rows) — DONE=47,
-  BLOCKED_EXTERNAL=2, ACCEPTED_BOUNDARY=118, LATER=13; **Post-snapshot IDs**
+- Ledger counts on 17 October 2026 after package P3, quoted from the ledger's
+  *Counts* section (`check-ledger` green): **Snapshot IDs** (180 rows) — DONE=48,
+  BLOCKED_EXTERNAL=2, ACCEPTED_BOUNDARY=118, LATER=12; **Post-snapshot IDs**
   (28 rows) — DONE=19, ACCEPTED_BOUNDARY=6, LATER=3. The two counts below are
   historical and superseded by these.
 - Historical ledger counts (its own *Counts* line, `check-ledger` green, after the
@@ -569,9 +582,8 @@ not erase subsequently delivered functionality.
 - **Comparison/report extensions:** applying/merging diffs, three-way
   comparison and native PDF output remain absent; comparison and browser
   print-to-PDF already exist. These are recorded boundaries, not active work.
-- **Features:** project notes (`FUTURE-03`): everything but a user-facing
-  delete disposition and a selective-import note mapping is shipped;
-  repetitive-task automation beyond the literal rename recipe (`FUTURE-02`);
+- **Features:** project notes (`FUTURE-03`) are complete since 17 October
+  (section above); repetitive-task automation beyond the literal rename recipe (`FUTURE-02`);
   agent mutations beyond the opt-in rename writer (`FUTURE-01`; read-only MCP
   ADR-0090, writer ADR-0116); dashboard drill-down, mobile app, native ports and
   an online catalogue source (`FUTURE-05`; file-based updates ship in CLI and

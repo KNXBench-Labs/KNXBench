@@ -288,6 +288,27 @@ This view ships since Alpha 10 and is not in the Alpha 9 screenshots.
 
 **Application help** in the notebook opens the help panel's *The window* topic.
 
+#### Notes when deleting
+
+*Source builds after Alpha 13.* Deleting something a note belongs to (a device,
+group address, area, line, building part or group range, from the properties
+pane or the bulk toolbar) opens **Notes need a decision** instead of deleting
+right away. It lists every affected note with what it is attached to; deleting a
+device also counts the notes on its communication objects. For each note choose:
+
+- **Keep it on the project** (preselected): the note stays, attached to the project.
+- **Move it to** an element from the list; elements the delete removes are not offered.
+- **Delete the note**.
+
+**Delete and apply choices** deletes the element and applies your choices together,
+as one step: one **Undo** brings back the element and its notes exactly as they
+were. **Cancel** or Escape changes nothing. If the project changed in the
+meantime, nothing is deleted and the dialog asks you to delete again.
+
+The command line, a group address CSV import with delete rows and removing
+missing devices after a bus scan have no such dialog: they refuse, name the
+affected notes and change nothing. Move or delete those notes in **Notes** first.
+
 ## The properties pane
 
 The right pane inspects whatever is selected and lets you edit it. It says "Select an

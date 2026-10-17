@@ -613,8 +613,8 @@ Linking follows actual installation ownership. Selection/preparation guide exist
 <a id="native-notes-foundation-candidate-2026-10-11-ap4-not-delivered-yet"></a>
 ### Historical native notes foundation
 
-**Ledger status:** `LATER` ([FUTURE-03](status/LEDGER.md#snapshot-ids)).
-Local-only/no-editor wording is superseded by service/workbench delivery. Literal text, selective note import and downgrade limits remain.
+**Ledger status:** `DONE` ([FUTURE-03](status/LEDGER.md#snapshot-ids)).
+Local-only/no-editor wording is superseded by service/workbench delivery. Literal text and downgrade limits remain; source notes in a selective import follow their mapping or need an explicit choice (ADR-0138).
 [Details and history](limitations/historical-native-notes-foundation.md)
 
 <a id="catalogue-installation-instruction-editing"></a>
@@ -669,8 +669,8 @@ Individual names are guarded edits, not bulk templates or inferred names. Import
 <a id="project-notes-workbench-host-2026-10-12"></a>
 ### Project notes workbench
 
-**Ledger status:** `LATER` ([FUTURE-03](status/LEDGER.md#snapshot-ids)).
-Notes use real project targets; ambiguous identities are withheld. Browser prompts, desktop reloads and translated review text retain disclosed platform/language boundaries.
+**Ledger status:** `DONE` ([FUTURE-03](status/LEDGER.md#snapshot-ids)).
+Notes use real project targets; ambiguous identities are withheld. Web deletes ask what happens to affected notes (ADR-0138); CLI, CSV-import and scan deletes refuse with the named notes. Browser prompts, desktop reloads and translated review text retain disclosed platform/language boundaries.
 [Details and history](limitations/project-notes-workbench.md)
 
 <a id="catalogue-structure-editor-scope"></a>

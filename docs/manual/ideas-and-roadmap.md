@@ -51,7 +51,7 @@ messages and toasts.
 | Device discovery | Gateway search, one-line occupancy scan, explicit reconciliation | No product identity from a scan or coupler traversal |
 | Repetitive-task automation | One named recipe: literal prefix/suffix renames of selected group addresses, previewed and undone in one step (CLI, **Rename…**, MCP opt-in) | No further templates, recorder or scheduler |
 | Humour templates | Thirty error wrappers, thirty late-night entries and holiday pairs | Optional extra copy, not an absent mechanism |
-| Project notes | The **Notes** view: plain-text notes on the project or its parts, saved with it, optionally in the report | Deleting something a note points at is refused instead of offering to move or delete the note |
+| Project notes | The **Notes** view: plain-text notes on the project or its parts, saved with it, optionally in the report; deleting a noted element asks what happens to each note (source after Alpha 13) | No decision dialog on CLI, CSV-import or scan deletes (they refuse naming the notes) |
 | Project status | Dashboard counts and diagnostics | No clickable count-to-detail drill-down |
 | Animated GA/device connections | Flow view, values, readable layout and a separate window | Session-local only; inferred recipients are not receipt/effect proof |
 | Mobile app | Browser workbench is a separate existing option | No dedicated mobile application |
@@ -154,9 +154,10 @@ decision was made, attached to the project or a user-facing entity. The domain
 shape is now decided in
 [ADR-0031](../adr/0031-project-notes-are-a-project-owned-collection.md): a
 project-owned collection with typed targets and explicit report opt-in. It is
-implemented as the **Notes** view (since Alpha 10). Still missing: when you delete
-something a note points at, KNXBench refuses instead of offering to move, retarget
-or delete the note in the same step. *(Updated 17 October 2026.)*
+implemented as the **Notes** view (since Alpha 10). Since the source after Alpha 13,
+deleting something a note points at asks whether to keep each note on the project,
+move it or delete it, in the same undoable step
+([how](user-guide/01-user-interface.md#notes-when-deleting)). *(Updated 17 October 2026.)*
 
 **More humour in the messages.** The existing toast and error copy should be
 expanded only if more variety is wanted. The original thirty-entry error and

@@ -1,8 +1,8 @@
 - **Last Agent:** Claude
-- **Timestamp:** 2026-10-17 16:50
-- **Completed:** CLAIM: package P5 (OPEN_WORK synchronisation, docs only) from `docs/goals/open-work-2026-10-17/p5-open-work-docs-sync.md`, worktree `KNXBench-p5-open-work-20261017`, branch `docs/p5-open-work-20261017`.
-- **Pending/Next Steps:** P5 in progress; edits `docs/OPEN_WORK.md` and the goals index only.
-- **Notes for Codex oder Claude:** P2/P3 should start after this claim's release entry.
+- **Timestamp:** 2026-10-17 16:53
+- **Completed:** Package P5 (OPEN_WORK synchronisation, docs only) delivered; claim `f61465af` released. `docs/OPEN_WORK.md`: new sections "Prepared goal packages" (links the 17 October set) and "Plug-in data adoption: server route and web UI open" (KL-186: CLI/app delivered; open = server route + web UI as P2, plug-in acceptance on the owner's installation); KL-185 text now names `refs/kl185-rewritten/heads/<branch>` and links COMMIT_MAP_2026-10-17 (not `refs/rewritten/`); section 2 records the unpublished object-function commit `99dd6e65` for P1; "How this was checked" quotes the ledger's Counts (180: DONE 47, BLOCKED_EXTERNAL 2, ACCEPTED_BOUNDARY 118, LATER 13; 28: DONE 19, ACCEPTED_BOUNDARY 6, LATER 3) and labels the older censuses historical. P5 file marked delivered. Docs commit `7580601c`. Gate on the final tree: 12/12 green (anchors, ledger 208 rows, headers, layering, check_documentation, five CI tool-test suites 67 tests, local-info tree), inputs frozen.
+- **Pending/Next Steps:** None for P5. Next per the package README: P2 (plug-in data web UI), P4 in parallel; P1 only after parameter grids are on main and a handover. No package started.
+- **Notes for Codex oder Claude:** `docs/goals/` has no index, so the set is linked from OPEN_WORK only. In a fresh worktree `test_browser_tmp` fails until `apps/knx-web` has `npm ci` (missing `@playwright/test/cli.js`): environment, not a finding. Log: .ai/logs/2026-10-17_claude_p5-open-work-sync.md.
 
 ---
 

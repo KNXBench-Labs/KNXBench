@@ -130,10 +130,11 @@ manufacturer application files; those are grouped too, and the Log now keeps
 ## AppImage EGL abort, issue #6 (12 October 2026)
 
 Fixed in source: the AppImage no longer bundles `libwayland-client`
-([contract](APPIMAGE_LAUNCHER.md#host-provided-libraries-issue-6), KL §176). Open:
-publish the next AppImage, have the reporter confirm on Kubuntu 24.04 (details
-requested on the issue), and consider a startup smoke on a newer-Mesa
-distribution (CI's build-distribution smokes cannot catch this mismatch).
+([contract](APPIMAGE_LAUNCHER.md#host-provided-libraries-issue-6), KL §176). The
+fix shipped in Alpha 10 (12 October) and the issue was closed the same day; the
+reporter's Kubuntu 24.04 confirmation never arrived. Still open: a startup smoke
+on a newer-Mesa distribution (CI's build-distribution smokes cannot catch this
+mismatch).
 
 ## Checked parameter editors in the device editor (12 October 2026)
 
@@ -412,7 +413,7 @@ execution limits remain research/follow-up work, not wider runtime support.
 | Website / published Evolution Story | Edition `2026-10-08.4` is approved and deployed with the site; first publication is complete | HTTP→HTTPS (301) and remote IPv6 HTTPS (four probes, 200/TLS valid) verified on 2026-10-09; Pages Node-24 actions and demo links deployed/verified; owner's privacy review and optional WebKit evidence remain separate | [story/](../story/README.md), [WEBSITE](WEBSITE.md), ADR-0068/0095 |
 | Web integration of finished leaves | All four packages delivered on 12 October: project notes, installation instructions, checked parameter editors, catalogue updates with backup/restore | None for this track. Colour/Picture keep the visible fallback; PDB-04 stays LATER | Web-lock lines in `.ai/CURRENT_STATE.md`, [parameter host](contracts/parameter-editor-host.md), [catalogue updates](contracts/catalogue-update.md) |
 | Parked-work adoption | Package 1 (native-evidence port) delivered on 12 October; package 2 (ux-feedback port) delivered on 13 October | Native-evidence residue check done on 13 October (nothing left, no schema bump); both parked worktrees removed on 13 October after an owner go (branches kept); stale-claim corrections re-checked and the ADR index completed on 13 October. Nothing left in this track | Web-lock lines in `.ai/CURRENT_STATE.md` |
-| Group-address views follow-up | Waiting for the reporter's feedback on issue #4 | Derived numeric 2-/3-level tree (GA7, ADR first) only if asked for; virtualization (GA8) only on request or a failing measurement | [goal record](goals/group-address-four-views.md) |
+| Group-address views follow-up | Issue #4 closed as completed on 14 October; the reporter may still send feedback | Derived numeric 2-/3-level tree (GA7, ADR first) only if asked for; virtualization (GA8) only on request or a failing measurement | [goal record](goals/group-address-four-views.md) |
 
 **Commissioning refusal buckets are an evidence backlog, not a running track.**
 The recorded house/corpus snapshot and module-placement, `placed by Property`,

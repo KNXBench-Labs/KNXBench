@@ -24,7 +24,7 @@ function fixtureTree(nodes: DeviceNode[]): ProjectTree {
           com_object_number: 1, com_object_name: "Switch", direction: "Receive" }] }],
     }] };
 }
-async function intercept(page: Page, language: "en" | "de", count = 3, theme = "porcelain", parameterEditing = false) {
+async function intercept(page: Page, language: "en" | "de", count = 3, theme = "porcelain", parameterEditing = false, parameterWorkspace = false) {
   const nodes = devices(count); const tree = fixtureTree(nodes);
   const state = { tree, nodes, unexpected: [] as string[], requests: [] as string[], polls: 0, failCatalogue: false };
   let mode = "0";
@@ -32,6 +32,22 @@ async function intercept(page: Page, language: "en" | "de", count = 3, theme = "
   const panel = (): ParameterPanel => ({ programId: "A-FIXTURE", sourceLanguage: "en", tree: null, stale: [], diagnostics: [],
     sections: [{ scope: null, fields: [{ etsId: "Mode", name: "Mode", text: "Mode", nameLanguage: null, textLanguage: null, kind: "Restriction", value: mode, valueSource: "Stored", editable: true, min: null, max: null,
       enumOptions: [{ value: "0", text: "Disabled", language: null }, { value: "1", text: "Rocker", language: null }, { value: "2", text: "Individual buttons", language: null }], displayOrder: null, access: "ReadWrite", writeEtsId: "Mode", group: { key: "buttons", label: "Buttons" }, controlsComObjects: true }] }] });
+  const shownPanel = (): ParameterPanel => {
+    const data = panel();
+    if (!parameterWorkspace) return data;
+    const modeField = data.sections[0].fields[0];
+    data.sections[0].fields.push(...["3 / 4", "5 / 6", "7 / 8"].map((pair, index) => ({ ...modeField,
+      etsId: `Pair-${index}`, writeEtsId: `Pair-${index}`, text: `Function buttons ${pair} (left / right)` })));
+    data.sections[0].fields.push({ ...modeField, etsId: "Delay", writeEtsId: null, editable: false,
+      kind: "Number", text: "Delay after bus voltage recovery (seconds)", value: "5", min: "0", max: "255",
+      enumOptions: [], group: { key: "timing", label: "Timing and start-up" } });
+    data.sections[0].fields.push({ ...modeField, etsId: "Ungrouped", writeEtsId: null, editable: false,
+      kind: "Text", text: "Engineering note", value: "Fictional ungrouped parameter", enumOptions: [], group: null });
+    data.sections.push({ scope: { moduleNode: 7, moduleId: "Channel A", moduleDefId: "MD-A" },
+      fields: [{ ...modeField, etsId: "Module-mode", writeEtsId: null, editable: false,
+        text: "Operating mode", group: { key: "buttons", label: "Buttons" } }] });
+    return data;
+  };
   const configuredObject = (): ComObjectNode => ({ id: 20, number: 1, name: mode === "1" ? "Rocker output" : "Left output", function_text: "Switch", description: null, description_layer: null, dpt: "DPST-1-1", dpt_layer: "Program", program_dpt: null, dpt_text: null, is_active: true, activation: "Active", channel: null, read: false, write: true, transmit: false, communication: true, update: false, read_on_init: false, links: [] });
   // Like the real server: no project until the test creates one (ADR-0127).
   let projectOpen = false;
@@ -59,12 +75,12 @@ async function intercept(page: Page, language: "en" | "de", count = 3, theme = "
       const device = nodes.find((node) => node.id === Number(path.split("/").at(-1)));
       if (!device) { status = 400; body = { error: "device not found" }; }
       else body = { ...device, com_objects: parameterEditing && mode !== "0" ? [configuredObject()] : [], product: { resolution: "NoReference", product_ref: null, program_ref: null, catalog: null } };
-    } else if (/^\/api\/device\/\d+\/parameters$/.test(path) && method === "GET") body = parameterEditing ? panel() : { programId: null, sections: [], stale: [], diagnostics: [] };
+    } else if (/^\/api\/device\/\d+\/parameters$/.test(path) && method === "GET") body = parameterEditing ? shownPanel() : { programId: null, sections: [], stale: [], diagnostics: [] };
     else if (parameterEditing && /^\/api\/device\/\d+\/parameters$/.test(path) && method === "POST") {
       const write = route.request().postDataJSON();
       expect(write.expectedValue).toBe(mode); expect(write.etsId).toBe("Mode");
       mode = write.raw; state.tree = { ...state.tree, snapshot_revision: state.tree.snapshot_revision! + 1, can_undo: true, is_modified: true };
-      body = { ...panel(), tree: state.tree };
+      body = { ...shownPanel(), tree: state.tree };
     }
     else if (path === "/api/bus/monitor/telegrams" && method === "GET") {
       state.polls++;
@@ -105,6 +121,56 @@ async function openList(page: Page, language: "en" | "de") {
   await expect(page.locator(".devices-workspace")).toBeVisible();
 }
 for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
+  test(`${language} source-group parameter workspace at ${width}px`, async ({ page }) => {
+    const m = language === "de" ? de : en;
+    await page.setViewportSize({ width, height: 1000 });
+    const state = await intercept(page, language, 3, width === 1440 ? "graphite" : "porcelain", true, true);
+    await openProject(page, language); await openList(page, language);
+    await page.locator(".devices-table tbody td:nth-child(3) button").filter({ hasText: /^Actuator 1$/ }).click();
+    await page.getByRole("tab", { name: m["workbench.parameters"], exact: true }).click();
+    const workspace = page.locator(".parameter-workspace");
+    const nav = workspace.locator(".parameter-workspace-nav button");
+    await expect(nav).toHaveCount(4);
+    await expect(nav.first()).toHaveAttribute("aria-current", "page");
+    await expect(workspace.locator(".parameter-workspace-row:visible")).toHaveCount(4);
+    const mode = workspace.locator('[data-parameter-row="Mode"] select');
+    const identity = await mode.evaluate(node => { node.setAttribute("data-retained-editor", "yes"); return (node as HTMLSelectElement).value; });
+    await nav.nth(1).click();
+    await expect(mode).toBeHidden();
+    await expect(workspace.locator('[data-parameter-row="Delay"] input')).toHaveValue("5");
+    await workspace.locator('[data-parameter-row="Delay"] .parameter-workspace-info').click();
+    await expect(workspace.locator(".parameter-workspace-context")).toContainText("255");
+    await nav.first().click();
+    await expect(mode).toHaveAttribute("data-retained-editor", "yes");
+    await expect(mode).toHaveValue(identity);
+    const postsBefore = state.requests.filter(request => request.startsWith("POST ")).length;
+    const search = workspace.getByRole("searchbox");
+    await search.fill("Delay");
+    await expect(workspace.locator(".parameter-workspace-row:visible")).toHaveCount(1);
+    await search.fill("not-present");
+    await expect(workspace.locator(".parameter-workspace-empty")).toBeVisible();
+    await search.fill("");
+    await expect(mode).toHaveAttribute("data-retained-editor", "yes");
+    await expect(mode).toHaveValue(identity);
+    expect(state.requests.filter(request => request.startsWith("POST ")).length).toBe(postsBefore);
+    await mode.selectOption("2");
+    await expect(mode).toHaveValue("2");
+    await workspace.locator('[data-parameter-row="Mode"] .parameter-workspace-info').click();
+    await expect(workspace.locator(".parameter-workspace-context")).toContainText("ReadWrite");
+    const normalBadge = workspace.locator('[data-parameter-row="Mode"] .provenance-badge');
+    await expect(normalBadge).toBeHidden();
+    const dimensions = await workspace.evaluate(node => {
+      const box = node.getBoundingClientRect();
+      const row = node.querySelector('.parameter-workspace-row:not([hidden])')!.getBoundingClientRect();
+      return { width: box.width, rowHeight: row.height, overflow: node.scrollWidth - node.clientWidth };
+    });
+    expect(dimensions.overflow).toBeLessThanOrEqual(1);
+    if (dimensions.width > 580) expect(dimensions.rowHeight).toBeLessThan(100);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+    if (process.env.KNX_DEVICES_CAPTURE_DIR) await page.screenshot({ path: join(process.env.KNX_DEVICES_CAPTURE_DIR, `parameter-workspace-${language}-${width}.png`) });
+    expect(state.unexpected).toEqual([]);
+  });
+
   test(`${language} workbench configuration refreshes objects at ${width}px`, async ({ page }) => {
     const m = language === "de" ? de : en;
     await page.setViewportSize({ width, height: 900 });
@@ -143,10 +209,12 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     if (process.env.KNX_DEVICES_CAPTURE_DIR) await page.screenshot({ path: join(process.env.KNX_DEVICES_CAPTURE_DIR, `workbench-functions-${language}-${width}.png`) });
     await page.getByRole("tab", { name: m["workbench.parameters"], exact: true }).click();
     const panel = page.locator('[role="tabpanel"]:visible');
-    await panel.locator(".parameter-group-toggle").click();
-    await expect(panel.locator("select")).toBeHidden();
-    await panel.locator(".parameter-group-toggle").click();
-    await expect(panel.locator("select")).toHaveValue("2");
+    const parameterMode = panel.locator(".parameter-field select");
+    const search = panel.getByRole("searchbox");
+    await search.fill("no-match");
+    await expect(parameterMode).toBeHidden();
+    await search.fill("");
+    await expect(parameterMode).toHaveValue("2");
     if (process.env.KNX_DEVICES_CAPTURE_DIR) await page.screenshot({ path: join(process.env.KNX_DEVICES_CAPTURE_DIR, `workbench-parameters-${language}-${width}.png`) });
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
     expect(state.unexpected).toEqual([]);

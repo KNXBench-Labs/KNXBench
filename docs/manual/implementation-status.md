@@ -2,6 +2,16 @@
 
 # Implementation status
 
+## Parameter workspace (source after Alpha 13)
+
+The ordinary Parameters tab uses source-group navigation, compact label/value
+rows, cross-area search and contextual source metadata. Device/module identities,
+read-only reasons, checked editors and revision-bound writes are reused; drafts
+stay mounted across navigation and search. This is not a manufacturer-specific
+faceplate or exact source-grid reproduction. Existing Alpha 13 binaries and manual
+screenshots are unchanged. [Operating instructions](user-guide/05-devices-and-products.md#parameters)
+and [contract](../contracts/parameter-workspace.md).
+
 ## Workbench configuration (Alpha 13)
 
 Navigation blocks fold independently; File actions have four labelled groups.

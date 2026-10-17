@@ -24,10 +24,13 @@ Decision: [ADR-0133](../adr/0133-parameter-edits-reconcile-object-inventory.md).
 - Enum selections save immediately, with pending controls disabled and inline
   refusal feedback. A stale write keeps its draft and requires explicit retry
   against refreshed state. Numeric/text fields still commit on blur/Enter.
-- The Parameters tab groups fields by their declared parameter blocks. Missing
-  group metadata does not hide fields. Folding keeps row/editor identity and
-  drafts; it does not reorder or add a write of its own. Existing numeric/text
-  blur-save can still run when focus moves to the fold control. Ambiguous block owners
+- Alpha 13 groups Parameters fields by declared blocks; source builds after Alpha
+  13 use [workspace area navigation](parameter-workspace.md) instead of ordinary
+  block folding, reusing the same bound rows. Missing
+  group metadata does not hide fields. Folding in the released accordion view
+  and area navigation/search in the newer workspace keep row/editor identity and
+  drafts; neither reorders fields or adds a command of its own. Existing numeric/text
+  blur-save can still run when focus moves to a navigation control. Ambiguous block owners
   remain ungrouped. Optional caption source admission is bounded to 8 MiB,
   100,000 XML events and depth 64; unavailable captions use numbered labels.
 

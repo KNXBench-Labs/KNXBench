@@ -14,6 +14,7 @@
 use std::collections::BTreeMap;
 use std::net::Ipv4Addr;
 
+use knx_core::function::Function;
 use knx_core::{
     Area, BuildingPart, BuildingPartId, BuildingPartType, ComObjectInstance, CommissioningState,
     CompletionStatus, DeviceId, DeviceInstance, Direction, DptRef, GroupAddressEntry,
@@ -264,6 +265,146 @@ pub fn building_part_changed_fields(
     right: &BuildingPartFields,
 ) -> Vec<&'static str> {
     changed_fields!(left, right, [name, number, kind, completion, default_line])
+}
+
+// ---------------------------------------------------------------------
+// Function (ADR-0124)
+// ---------------------------------------------------------------------
+
+/// A Function's identity in the diff: its ETS id when it has one, else the
+/// building part it is listed in plus its name.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct FunctionKey {
+    /// `Function/@Id`; `None` for a Function created in KNXBench.
+    pub ets_id: Option<String>,
+    /// Root-first names of the building part that lists the Function.
+    pub location: Vec<String>,
+    pub name: String,
+}
+
+/// One member as the diff shows it. Members compare by raw group address,
+/// name and role, so two projects that only spell addresses differently
+/// (`GroupAddressStyle`) show no Function change; `address` is display only.
+#[derive(Debug, Clone, PartialEq)]
+pub struct FunctionMemberFields {
+    /// Formatted in the side's own group-address style.
+    pub address: String,
+    pub raw_address: u16,
+    pub name: String,
+    pub role: Option<String>,
+}
+
+impl FunctionMemberFields {
+    fn identity(&self) -> (u16, &str, Option<&str>) {
+        (self.raw_address, &self.name, self.role.as_deref())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct FunctionFields {
+    pub name: String,
+    pub function_type: Option<String>,
+    pub number: Option<String>,
+    pub comment: Option<String>,
+    pub description: Option<String>,
+    pub completion: CompletionStatus,
+    pub location: BuildingPartKey,
+    /// In model order; the order is meaningful and compared.
+    pub members: Vec<FunctionMemberFields>,
+}
+
+pub fn function_key(function: &Function, location: &BuildingPartKey) -> FunctionKey {
+    FunctionKey {
+        ets_id: Some(function.source.ets_id.clone()).filter(|s| !s.is_empty()),
+        location: location.path.clone(),
+        name: function.details.name.clone(),
+    }
+}
+
+/// `addresses` resolves a member's group address to its raw value and its
+/// formatted text; a member whose address is missing (impossible in a valid
+/// project) keeps raw `0` and an empty text rather than being dropped.
+pub fn function_fields(
+    function: &Function,
+    location: BuildingPartKey,
+    addresses: &BTreeMap<GroupAddressId, (u16, String)>,
+) -> FunctionFields {
+    let details = &function.details;
+    FunctionFields {
+        name: details.name.clone(),
+        function_type: details.function_type.clone(),
+        number: details.number.clone(),
+        comment: details.comment.clone(),
+        description: details.description.clone(),
+        completion: details.completion,
+        location,
+        members: function
+            .members
+            .iter()
+            .map(|member| {
+                let (raw_address, address) = addresses
+                    .get(&member.group_address)
+                    .cloned()
+                    .unwrap_or_default();
+                FunctionMemberFields {
+                    address,
+                    raw_address,
+                    name: member.name.clone(),
+                    role: member.role.clone(),
+                }
+            })
+            .collect(),
+    }
+}
+
+fn members_identity(members: &[FunctionMemberFields]) -> Vec<(u16, &str, Option<&str>)> {
+    members.iter().map(FunctionMemberFields::identity).collect()
+}
+
+/// `1/0/1 Name [Role], …`, or `-` for no members.
+fn fmt_members(members: &[FunctionMemberFields]) -> String {
+    if members.is_empty() {
+        return "-".to_string();
+    }
+    members
+        .iter()
+        .map(|m| {
+            let mut text = m.address.clone();
+            if !m.name.is_empty() {
+                text.push(' ');
+                text.push_str(&m.name);
+            }
+            if let Some(role) = &m.role {
+                text.push_str(&format!(" [{role}]"));
+            }
+            text
+        })
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+fn fmt_location(location: &BuildingPartKey) -> String {
+    location.path.join(" / ")
+}
+
+pub fn function_changed_fields(left: &FunctionFields, right: &FunctionFields) -> Vec<&'static str> {
+    let mut changed = changed_fields!(
+        left,
+        right,
+        [
+            name,
+            function_type,
+            number,
+            comment,
+            description,
+            completion,
+            location
+        ]
+    );
+    if members_identity(&left.members) != members_identity(&right.members) {
+        changed.push("members");
+    }
+    changed
 }
 
 // ---------------------------------------------------------------------
@@ -664,6 +805,32 @@ impl FieldDiff for BuildingPartFields {
                 default_line => fmt_debug,
             ]
         )
+    }
+}
+
+impl FieldDiff for FunctionFields {
+    fn field_changes(&self, right: &Self) -> Vec<FieldChange> {
+        let mut changes = field_changes!(
+            self,
+            right,
+            [
+                name => fmt_plain,
+                function_type => fmt_plain_string_opt,
+                number => fmt_plain_string_opt,
+                comment => fmt_plain_string_opt,
+                description => fmt_plain_string_opt,
+                completion => fmt_debug,
+                location => fmt_location,
+            ]
+        );
+        if members_identity(&self.members) != members_identity(&right.members) {
+            changes.push(FieldChange {
+                field: "members",
+                left: fmt_members(&self.members),
+                right: fmt_members(&right.members),
+            });
+        }
+        changes
     }
 }
 

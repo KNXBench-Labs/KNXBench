@@ -299,6 +299,7 @@ It walks these entity kinds:
 | Group ranges | Name, start, end, parent |
 | Group addresses | Name, central flag, unfiltered flag, range |
 | Building parts | Name, number, kind, completion, default line |
+| KNX Functions | Name, type, number, comment, description, completion, building part and the ordered members (group address, name, role) |
 | Communication objects | Text, description, DPT, the read/write/transmit/update/communication flags, its group links and its module instance, nested under their device |
 | Parameters | The raw stored value, nested under their device |
 
@@ -321,6 +322,13 @@ which of the two was used, so a match you would not have made yourself is visibl
 rather than assumed. When neither produces a unique pairing, the entity lands in
 **ambiguous** with a count of the candidates on each side, instead of being guessed
 into the wrong bucket.
+
+KNX Functions match by their ETS identifier, otherwise by their building part and
+name. A Function made in KNXBench therefore shows a rename as one removal plus one
+addition, and two same-named Functions in one room as **ambiguous**. Members compare
+by the underlying group address, so a project that only writes addresses in another
+notation shows no Function change. (Before the source builds after Alpha 13, all
+Functions differences appeared as one long *Project info* line.)
 
 Device changes nest: a device whose own fields are identical but whose communication
 objects differ is reported as changed, with the nested detail underneath and an

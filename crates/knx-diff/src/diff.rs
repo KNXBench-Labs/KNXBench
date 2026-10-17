@@ -66,6 +66,8 @@ pub struct InstallationDiff {
     pub group_ranges: EntityTable<GroupRangeKey, GroupRangeFields>,
     pub group_addresses: EntityTable<GroupAddressKey, GroupAddressFields>,
     pub buildings: EntityTable<BuildingPartKey, BuildingPartFields>,
+    /// Functions listed in this installation's building parts (ADR-0124).
+    pub functions: EntityTable<FunctionKey, FunctionFields>,
 }
 
 /// Devices' own `added`/`removed`/`changed`/`ambiguous` table. Shaped like
@@ -109,10 +111,17 @@ impl<K, F: FieldDiff> EntityChange<K, F> {
     }
 }
 
-/// One line per Function in project order: identity, name, type, building
-/// part and members with their roles. Internal ids are deliberately left
-/// out, so two imports of the same file compare equal.
-fn functions_summary(project: &Project) -> String {
+/// One line per Function that no installation's building part lists, in
+/// project order: identity, name, type, location and members with their
+/// roles. A valid project has none (`function::validate_functions`); this
+/// keeps an invalid one from hiding a Function from the comparison.
+/// Internal ids are deliberately left out.
+fn unplaced_functions_summary(project: &Project) -> String {
+    let placed: BTreeSet<BuildingPartId> = project
+        .installations
+        .iter()
+        .flat_map(|i| i.buildings.iter().map(|b| b.id))
+        .collect();
     let part_name = |id| {
         project
             .installations
@@ -134,6 +143,7 @@ fn functions_summary(project: &Project) -> String {
     project
         .functions
         .iter()
+        .filter(|f| !placed.contains(&f.location))
         .map(|f| {
             let members: Vec<String> = f
                 .members
@@ -179,15 +189,18 @@ pub fn diff_projects(left: &Project, right: &Project) -> ProjectDiff {
             right: format!("{:?}", right.notes),
         });
     }
-    // ADR-0124: a coarse but complete comparison, so two projects that
-    // differ only in their Functions never diff as equal. A per-Function
-    // table is later work (see the Functions contract).
-    let (left_functions, right_functions) = (functions_summary(left), functions_summary(right));
-    if left_functions != right_functions {
+    // ADR-0124: placed Functions are compared per installation (the
+    // `functions` table). One that no building part lists cannot exist in a
+    // valid project, but if it does it still makes the diff non-empty.
+    let (left_unplaced, right_unplaced) = (
+        unplaced_functions_summary(left),
+        unplaced_functions_summary(right),
+    );
+    if left_unplaced != right_unplaced {
         info_changes.push(FieldChange {
-            field: "functions",
-            left: left_functions,
-            right: right_functions,
+            field: "unplaced_functions",
+            left: left_unplaced,
+            right: right_unplaced,
         });
     }
     let installations = diff_installations(left, right);
@@ -347,6 +360,7 @@ fn empty_installation_diff(id: u8, status: EntityStatus) -> InstallationDiff {
         group_ranges: empty_table(),
         group_addresses: empty_table(),
         buildings: empty_table(),
+        functions: empty_table(),
     }
 }
 
@@ -403,6 +417,11 @@ fn diff_matched_installation(
         building_part_changed_fields,
     );
     let devices = diff_devices(project_left, left, project_right, right);
+    let functions = diff_prepared(
+        &prepare_functions(project_left, left),
+        &prepare_functions(project_right, right),
+        function_changed_fields,
+    );
 
     InstallationDiff {
         id,
@@ -414,6 +433,7 @@ fn diff_matched_installation(
         group_ranges,
         group_addresses,
         buildings,
+        functions,
     }
 }
 
@@ -625,6 +645,38 @@ fn prepare_building_parts(
         .collect()
 }
 
+/// The Functions whose building part belongs to `inst`, matched by ETS id
+/// and then by (building-part path, name). Members resolve against `inst`'s
+/// own group addresses and the side's own address style.
+fn prepare_functions(
+    project: &Project,
+    inst: &Installation,
+) -> Vec<Prepared<FunctionKey, FunctionFields, (Vec<String>, String)>> {
+    let style = project.info.group_address_style;
+    let by_id: BTreeMap<BuildingPartId, &BuildingPart> =
+        inst.buildings.iter().map(|b| (b.id, b)).collect();
+    let addresses: BTreeMap<GroupAddressId, (u16, String)> = inst
+        .group_addresses
+        .iter()
+        .map(|g| (g.id, (g.address.raw(), g.address.format(style))))
+        .collect();
+    project
+        .functions
+        .iter()
+        .filter_map(|f| {
+            let part = by_id.get(&f.location)?;
+            let location = building_part_key(part, &by_id);
+            let key = function_key(f, &location);
+            Some(Prepared {
+                ets_id: f.source.ets_id.clone(),
+                natural_key: Some((key.location.clone(), key.name.clone())),
+                key,
+                fields: function_fields(f, location, &addresses),
+            })
+        })
+        .collect()
+}
+
 fn prepare_com_objects(
     device: &DeviceInstance,
     devices_store: &Devices,
@@ -753,6 +805,7 @@ fn installation_is_empty(installation: &InstallationDiff) -> bool {
         && table_is_empty(&installation.group_ranges)
         && table_is_empty(&installation.group_addresses)
         && table_is_empty(&installation.buildings)
+        && table_is_empty(&installation.functions)
 }
 
 fn diff_devices(

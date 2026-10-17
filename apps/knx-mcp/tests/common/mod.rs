@@ -236,6 +236,46 @@ pub fn project(name: &str) -> Project {
     project
 }
 
+/// `project` with a kitchen room holding one Function whose members are the
+/// first two group addresses (ADR-0124).
+pub fn with_function(mut project: Project) -> Project {
+    use knx_core::function::{Function, FunctionDetails, FunctionMember};
+    use knx_core::{BuildingPart, BuildingPartId, BuildingPartType, FunctionId, FunctionMemberId};
+    project.installations[0].buildings.push(BuildingPart {
+        id: BuildingPartId(1),
+        source: source("P-0001-0_BP-1"),
+        name: "Kitchen".into(),
+        number: None,
+        kind: BuildingPartType::Room,
+        default_line: None,
+        completion: CompletionStatus::default(),
+        children: Vec::new(),
+        devices: Vec::new(),
+        parent: None,
+    });
+    let member = |id: u32, ga: u32, role: &str| FunctionMember {
+        id: FunctionMemberId(id),
+        source: source(&format!("P-0001-0_GF-{id}")),
+        group_address: GroupAddressId(ga),
+        name: String::new(),
+        role: Some(role.into()),
+    };
+    project.functions.push(Function {
+        id: FunctionId(1),
+        source: source("P-0001-0_F-1"),
+        location: BuildingPartId(1),
+        details: FunctionDetails {
+            name: "Kitchen light".into(),
+            function_type: Some("FT-1".into()),
+            completion: CompletionStatus::Editing,
+            ..FunctionDetails::default()
+        },
+        members: vec![member(1, 1, "SwitchOnOff"), member(2, 2, "InfoOnOff")],
+    });
+    project.ids = project.ids.clone().with_function_counts(1, 2);
+    project
+}
+
 /// Saves `project` into `dir/<file>` the way KNXBench saves a project.
 pub fn save(dir: &Path, file: &str, project: &Project) -> PathBuf {
     let path = dir.join(file);

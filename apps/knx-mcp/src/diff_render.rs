@@ -33,7 +33,8 @@ pub struct ChangeOut {
     /// The installation's id; `None` for project information.
     pub installation: Option<u8>,
     /// `project`, `installation`, `area`, `line`, `groupRange`,
-    /// `groupAddress`, `building`, `device`, `comObject` or `parameter`.
+    /// `groupAddress`, `building`, `device`, `comObject`, `parameter` or
+    /// `function`.
     pub entity: &'static str,
     pub key: String,
     /// `added`, `removed`, `changed` or `ambiguous`.
@@ -49,6 +50,16 @@ fn device_key(key: &knx_diff::DeviceKey) -> String {
     match &key.address {
         Some(address) => address.clone(),
         None => key.ets_id.clone().unwrap_or_else(|| "-".into()),
+    }
+}
+
+/// `Name in Building/Room`, plus the ETS id when there is one, as
+/// `knx diff` prints a Function.
+fn function_key(key: &knx_diff::FunctionKey) -> String {
+    let base = format!("{} in {}", key.name, key.location.join("/"));
+    match &key.ets_id {
+        Some(id) => format!("{base} ({id})"),
+        None => base,
     }
 }
 
@@ -177,6 +188,7 @@ pub fn flatten(diff: &ProjectDiff) -> Vec<ChangeOut> {
                 ..plain(&note.key, "ambiguous")
             });
         }
+        table(&mut out, id, "function", &inst.functions, function_key);
     }
     out
 }

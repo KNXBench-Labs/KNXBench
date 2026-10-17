@@ -9,6 +9,7 @@ import type {
   DeviceTable,
   EntityChange,
   FieldChange,
+  FunctionKey,
   GroupAddressKey,
   GroupRangeKey,
   InstallationDiff,
@@ -140,6 +141,11 @@ function buildingKey(key: BuildingPartKey): string {
   return key.path.join(" › ");
 }
 
+function functionKey(key: FunctionKey): string {
+  const placed = [...key.location, key.name].join(" › ");
+  return key.etsId ? `${placed} (${key.etsId})` : placed;
+}
+
 function comObjectKey(key: ComObjectKey): string {
   return `#${key.number}`;
 }
@@ -188,6 +194,10 @@ export function installationTables(installation: InstallationDiff, format: KeyFo
     }),
     tableView(`${id}.buildings`, "projectDiff.entity.buildings", installation.buildings, {
       key: buildingKey,
+      detail: named,
+    }),
+    tableView(`${id}.functions`, "projectDiff.entity.functions", installation.functions, {
+      key: functionKey,
       detail: named,
     }),
   ];

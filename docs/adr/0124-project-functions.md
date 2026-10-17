@@ -124,3 +124,35 @@ measurement made for this ADR on 2026-10-13, **[C]** for code.
   is the first place to look if editing such a project feels slow.
 - Lifted further when a supported-schema ETS export with Functions (ideally
   with `Implements`/`DefaulGroupRange`) is added to the corpus.
+
+## 2026-10-17 amendment: comparison, desktop and MCP surfaces
+
+The three surfaces this ADR left for later now exist (MODEL-07 residue):
+
+- **Comparison.** `knx_diff::InstallationDiff::functions` is a per-Function
+  table (`added`/`removed`/`changed`/`ambiguous`), not the earlier single
+  `functions` project-info line. A Function matches by its ETS id, else by
+  the root-first path of its building part plus its name; two candidates for
+  one such key are reported as ambiguous, never guessed. Changed fields are
+  `name`, `function_type`, `number`, `comment`, `description`, `completion`,
+  `location` and `members`. Members compare in order by raw group address,
+  name and role, so a project that only spells addresses in another
+  `GroupAddressStyle` shows no Function change. A Function whose building
+  part no installation lists (impossible in a valid project) still makes the
+  diff non-empty through an `unplaced_functions` project-info line. The CLI,
+  the HTTP comparison response, the web comparison panel and MCP
+  `diff_projects` all render the table.
+- **Desktop.** By [ARCHITECTURE](../ARCHITECTURE.md) rule 3 the desktop shell
+  has no domain IPC: its window loads the web UI from the in-process
+  `knx-server`, so the Functions panels and routes are the desktop surface.
+  `knx-desktop`'s `functions_surface_tests` start the shell's own
+  `spawn_server` on a loopback port and drive read, create, member add, a
+  stale `409` and undo over plain HTTP. No Tauri command was added.
+- **MCP.** A ninth read-only tool, `list_functions`, returns
+  `build_functions_view` per project, optionally one installation, paged
+  (ADR-0090 amendment of the same date).
+
+Still not modeled: schemas 20/21 (decision 7), `Implements` and
+`DefaulGroupRange` (kept verbatim), master-data names for `Type`, and a
+Functions overview outside building-part and group-address Properties.
+Lifted as stated above, by a supported-schema export that uses them.

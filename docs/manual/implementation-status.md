@@ -2,6 +2,17 @@
 
 # Implementation status
 
+## KNX Functions in comparisons, the desktop and MCP (source builds after Alpha 13)
+
+A project comparison lists KNX Functions one by one (added, removed, changed,
+ambiguous), in the application, `knx diff` and MCP `diff_projects`. The
+read-only AI-agent server has a ninth tool, `list_functions`. The desktop app
+reaches Functions through the same embedded server as its other views; this is
+now covered by a test of the shell itself. No Function can be edited through
+MCP or the CLI. [Comparison](user-guide/08-reports-and-diff.md#what-it-compares),
+[AI agents](user-guide/12-ai-agents.md#what-it-can-and-cannot-do) and
+[contract](../contracts/project-functions.md#comparison-desktop-and-mcp-17-october-2026).
+
 ## Closed disclosure defaults (source builds after Alpha 13)
 
 Navigation content blocks, explorer branches, parameter sections/source groups,

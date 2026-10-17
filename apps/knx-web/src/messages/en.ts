@@ -2076,6 +2076,7 @@ export const messages = {
   "projectDiff.entity.groupRanges": "Group ranges",
   "projectDiff.entity.groupAddresses": "Group addresses",
   "projectDiff.entity.buildings": "Buildings",
+  "projectDiff.entity.functions": "Functions",
   "projectDiff.detailsHeading": "Details",
   "projectDiff.tableToggle": "{table} ({count})",
   "projectDiff.projectInfo": "Project info",

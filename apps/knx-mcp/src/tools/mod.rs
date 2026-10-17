@@ -1,4 +1,4 @@
-//! The eight read-only tools and the opt-in rename tools over a [`Workspace`].
+//! The nine read-only tools and the opt-in rename tools over a [`Workspace`].
 //!
 //! Every tool returns one JSON envelope ([`envelope`]) or an error message.
 //! Only [`name_recipe`] writes, and only the native working history of an
@@ -7,10 +7,12 @@
 //! (ADR-0090, `cargo xtask check-layering`).
 
 mod device;
+mod functions;
 pub mod name_recipe;
 mod project;
 
 pub use device::{explain_parameter, get_device, get_group_address, DeviceView, VISIBILITY_VALUES};
+pub use functions::list_functions;
 pub use project::{
     diff_projects, find_issues, project_summary, search, validate_ga_csv, MAX_CSV_BYTES,
     MAX_QUERY_CHARS, SEARCH_KINDS,

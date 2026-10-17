@@ -1545,6 +1545,32 @@ export interface DeviceChange {
   parameters: EntityTable<ParameterKey, ParameterFields>;
 }
 
+// `FunctionKeyDto`/`FunctionFieldsDto` — mirror `knx_diff::FunctionKey`/
+// `FunctionFields` (ADR-0124). `etsId` is null for a Function made in
+// KNXBench; `location` is the listing building part's root-first path.
+export interface FunctionKey {
+  etsId: string | null;
+  location: string[];
+  name: string;
+}
+
+export interface FunctionMemberFields {
+  address: string;
+  name: string;
+  role: string | null;
+}
+
+export interface FunctionFields {
+  name: string;
+  functionType: string | null;
+  number: string | null;
+  comment: string | null;
+  description: string | null;
+  completion: string;
+  location: BuildingPartKey;
+  members: FunctionMemberFields[];
+}
+
 // `InstallationDiffDto` — mirrors `knx_diff::InstallationDiff`.
 export interface InstallationDiff {
   id: number;
@@ -1556,6 +1582,7 @@ export interface InstallationDiff {
   groupRanges: EntityTable<GroupRangeKey, GroupRangeFields>;
   groupAddresses: EntityTable<GroupAddressKey, GroupAddressFields>;
   buildings: EntityTable<BuildingPartKey, BuildingPartFields>;
+  functions: EntityTable<FunctionKey, FunctionFields>;
 }
 
 // `InputKindDto` — which format the comparison file was read as.

@@ -266,6 +266,102 @@ async fn a_changed_device_description_is_named_in_the_response() {
     );
 }
 
+/// One room (`Kitchen`) with one group address and one Function whose
+/// name and member role vary (ADR-0124).
+fn project_with_function(name: &str, role: &str) -> Project {
+    use knx_core::function::{Function, FunctionDetails, FunctionMember};
+    use knx_core::{
+        BuildingPart, BuildingPartId, BuildingPartType, FunctionId, FunctionMemberId, GroupAddress,
+        GroupAddressEntry, GroupAddressId,
+    };
+    let mut project = project_with_device_description("same");
+    let installation = &mut project.installations[0];
+    installation.buildings.push(BuildingPart {
+        id: BuildingPartId(1),
+        source: source("P-1_BP-1"),
+        name: "Kitchen".into(),
+        number: None,
+        kind: BuildingPartType::Room,
+        default_line: None,
+        completion: CompletionStatus::Undefined,
+        children: vec![],
+        devices: vec![],
+        parent: None,
+    });
+    installation.group_addresses.push(GroupAddressEntry {
+        id: GroupAddressId(1),
+        source: source("P-1_GA-1"),
+        name: "Light".into(),
+        address: GroupAddress::from_raw(0x0801),
+        central: false,
+        unfiltered: false,
+        range: None,
+        declared_dpt: Default::default(),
+    });
+    project.functions.push(Function {
+        id: FunctionId(1),
+        source: source("P-1_F-1"),
+        location: BuildingPartId(1),
+        details: FunctionDetails {
+            name: name.into(),
+            ..FunctionDetails::default()
+        },
+        members: vec![FunctionMember {
+            id: FunctionMemberId(1),
+            source: source("P-1_GF-1"),
+            group_address: GroupAddressId(1),
+            name: String::new(),
+            role: Some(role.into()),
+        }],
+    });
+    project.ids = project.ids.clone().with_function_counts(1, 1);
+    project
+}
+
+#[tokio::test]
+async fn a_changed_function_is_one_row_of_the_functions_table() {
+    let dir = tempfile::tempdir().unwrap();
+    let db_path = dir.path().join("compare.knxdb");
+    write_knxdb_fixture(&db_path, &project_with_function("Light", "SwitchOnOff"));
+    let state = Arc::new(state_with_project(project_with_function(
+        "Ceiling light",
+        "Dim",
+    )));
+    let app = knx_server::app(state, None);
+
+    let response = diff_project(&app, &db_path).await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = body_json(response).await;
+    assert_eq!(body["infoChanges"], json!([]), "{body}");
+    let table = &body["installations"][0]["functions"];
+    assert_eq!(table["added"], json!([]), "{body}");
+    assert_eq!(table["removed"], json!([]), "{body}");
+    let change = &table["changed"][0];
+    assert_eq!(
+        change["key"],
+        json!({"etsId": "P-1_F-1", "location": ["Kitchen"], "name": "Ceiling light"}),
+        "{body}"
+    );
+    assert_eq!(change["matchedBy"], "etsId", "{body}");
+    assert_eq!(
+        change["changedFields"],
+        json!(["name", "members"]),
+        "{body}"
+    );
+    assert_eq!(
+        change["right"]["members"],
+        json!([{"address": "1/0/1", "name": "", "role": "SwitchOnOff"}]),
+        "{body}"
+    );
+    assert_eq!(
+        change["right"]["location"],
+        json!({"path": ["Kitchen"]}),
+        "{body}"
+    );
+    assert_eq!(change["right"]["completion"], "Undefined", "{body}");
+    assert_eq!(change["fieldChanges"][1]["left"], "1/0/1 [Dim]", "{body}");
+}
+
 #[tokio::test]
 async fn a_comparison_path_that_does_not_exist_is_a_400_and_creates_no_file() {
     let dir = tempfile::tempdir().unwrap();

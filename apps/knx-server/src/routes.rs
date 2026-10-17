@@ -2065,6 +2065,74 @@ impl From<&knx_diff::BuildingPartFields> for BuildingPartFieldsDto {
 
 type BuildingTableDto = EntityTableDto<BuildingPartKeyDto, BuildingPartFieldsDto>;
 
+/// `knx_diff::FunctionKey` (ADR-0124): ETS id when imported, plus the
+/// listing building part's root-first path and the Function's name.
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct FunctionKeyDto {
+    ets_id: Option<String>,
+    location: Vec<String>,
+    name: String,
+}
+
+impl From<&knx_diff::FunctionKey> for FunctionKeyDto {
+    fn from(key: &knx_diff::FunctionKey) -> Self {
+        Self {
+            ets_id: key.ets_id.clone(),
+            location: key.location.clone(),
+            name: key.name.clone(),
+        }
+    }
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct FunctionMemberFieldsDto {
+    /// Formatted in that side's group-address style.
+    address: String,
+    name: String,
+    role: Option<String>,
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct FunctionFieldsDto {
+    name: String,
+    function_type: Option<String>,
+    number: Option<String>,
+    comment: Option<String>,
+    description: Option<String>,
+    /// `CompletionStatus`'s `Debug` form, as for building parts.
+    completion: String,
+    location: BuildingPartKeyDto,
+    members: Vec<FunctionMemberFieldsDto>,
+}
+
+impl From<&knx_diff::FunctionFields> for FunctionFieldsDto {
+    fn from(fields: &knx_diff::FunctionFields) -> Self {
+        Self {
+            name: fields.name.clone(),
+            function_type: fields.function_type.clone(),
+            number: fields.number.clone(),
+            comment: fields.comment.clone(),
+            description: fields.description.clone(),
+            completion: format!("{:?}", fields.completion),
+            location: BuildingPartKeyDto::from(&fields.location),
+            members: fields
+                .members
+                .iter()
+                .map(|m| FunctionMemberFieldsDto {
+                    address: m.address.clone(),
+                    name: m.name.clone(),
+                    role: m.role.clone(),
+                })
+                .collect(),
+        }
+    }
+}
+
+type FunctionTableDto = EntityTableDto<FunctionKeyDto, FunctionFieldsDto>;
+
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 struct DeviceKeyDto {
@@ -2424,6 +2492,7 @@ struct InstallationDiffDto {
     group_ranges: GroupRangeTableDto,
     group_addresses: GroupAddressTableDto,
     buildings: BuildingTableDto,
+    functions: FunctionTableDto,
 }
 
 impl From<&knx_diff::InstallationDiff> for InstallationDiffDto {
@@ -2442,6 +2511,7 @@ impl From<&knx_diff::InstallationDiff> for InstallationDiffDto {
             group_ranges: convert_table(&diff.group_ranges),
             group_addresses: convert_table(&diff.group_addresses),
             buildings: convert_table(&diff.buildings),
+            functions: convert_table(&diff.functions),
         }
     }
 }

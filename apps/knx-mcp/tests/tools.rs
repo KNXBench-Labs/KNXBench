@@ -491,6 +491,80 @@ fn diff_projects_flattens_changes_between_two_aliases() {
 }
 
 #[test]
+fn list_functions_shows_rooms_members_and_verbatim_source_ids() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = save(dir.path(), "home.knxdb", &with_function(project("Home")));
+    let ws = workspace(&[("home", &path)], None);
+    let before = std::fs::read(&path).unwrap();
+
+    let out = tools::list_functions(&ws, "home", None, page()).unwrap();
+    assert_eq!(out["source"]["project"], "home");
+    let functions = &out["result"]["functions"];
+    assert_eq!(functions["total"], 1);
+    let function = &items(functions)[0];
+    assert_eq!(function["name"], "Kitchen light");
+    assert_eq!(function["sourceId"], "P-0001-0_F-1");
+    assert_eq!(function["functionType"], "FT-1");
+    assert_eq!(function["completion"], "Editing");
+    assert_eq!(function["location"]["name"], "Kitchen");
+    let members = function["members"].as_array().unwrap();
+    assert_eq!(members.len(), 2);
+    assert_eq!(members[0]["address"], "1/1/1");
+    assert_eq!(members[0]["groupAddressName"], "Kitchen light switch");
+    assert_eq!(members[0]["role"], "SwitchOnOff");
+    assert_eq!(members[1]["sourceId"], "P-0001-0_GF-2");
+
+    let filtered = tools::list_functions(&ws, "home", Some(0), page()).unwrap();
+    assert_eq!(filtered["result"]["functions"]["total"], 1);
+    assert_eq!(filtered["result"]["installation"], 0);
+    let missing = tools::list_functions(&ws, "home", Some(7), page()).unwrap_err();
+    assert!(missing.contains("no installation 7"), "{missing}");
+    assert!(tools::list_functions(&ws, "nowhere", None, page()).is_err());
+    let paged =
+        tools::list_functions(&ws, "home", None, Page::new(Some(1), Some(1)).unwrap()).unwrap();
+    assert_eq!(paged["result"]["functions"]["total"], 1);
+    assert!(items(&paged["result"]["functions"]).is_empty());
+    assert_eq!(std::fs::read(&path).unwrap(), before, "read-only");
+}
+
+#[test]
+fn list_functions_of_a_project_without_functions_is_empty() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = save(dir.path(), "home.knxdb", &project("Home"));
+    let ws = workspace(&[("home", &path)], None);
+    let out = tools::list_functions(&ws, "home", None, page()).unwrap();
+    assert_eq!(out["result"]["functions"]["total"], 0);
+}
+
+#[test]
+fn diff_projects_lists_a_changed_function_per_function() {
+    let dir = tempfile::tempdir().unwrap();
+    let before = save(dir.path(), "before.knxdb", &with_function(project("Home")));
+    let mut changed = with_function(project("Home"));
+    changed.functions[0].members[1].role = Some("Dim".into());
+    let after = save(dir.path(), "after.knxdb", &changed);
+    let ws = workspace(&[("before", &before), ("after", &after)], None);
+
+    let out = tools::diff_projects(&ws, "before", "after", page()).unwrap();
+    let changes = items(&out["result"]["changes"]);
+    let function = changes
+        .iter()
+        .find(|c| c["entity"] == "function")
+        .expect("a function entry");
+    assert_eq!(function["change"], "changed");
+    assert_eq!(function["key"], "Kitchen light in Kitchen (P-0001-0_F-1)");
+    assert_eq!(function["fields"][0]["field"], "members");
+    assert_eq!(
+        function["fields"][0]["right"],
+        "1/1/1 [SwitchOnOff], 1/1/2 [Dim]"
+    );
+    assert!(
+        changes.iter().all(|c| c["entity"] != "project"),
+        "{changes:?}"
+    );
+}
+
+#[test]
 fn validate_ga_csv_plans_without_applying() {
     let dir = tempfile::tempdir().unwrap();
     let path = save(dir.path(), "home.knxdb", &project("Home"));

@@ -383,6 +383,63 @@ fn diff_of_two_stores_with_only_a_com_object_flag_changed_prints_own_fields_unch
     );
 }
 
+/// [`project_with_ga_name`] plus a `Kitchen` room listing one Function
+/// (`role` on its only member) (ADR-0124).
+fn project_with_function(role: Option<&str>) -> Project {
+    use knx_core::function::{Function, FunctionDetails, FunctionMember};
+    use knx_core::{BuildingPart, BuildingPartId, BuildingPartType, FunctionId, FunctionMemberId};
+    let mut project = project_with_ga_name("Light");
+    let group_address = project.installations[0].group_addresses[0].id;
+    project.installations[0].buildings.push(BuildingPart {
+        id: BuildingPartId(1),
+        source: source("bp1"),
+        name: "Kitchen".into(),
+        number: None,
+        kind: BuildingPartType::Room,
+        default_line: None,
+        completion: CompletionStatus::Undefined,
+        children: vec![],
+        devices: vec![],
+        parent: None,
+    });
+    project.functions.push(Function {
+        id: FunctionId(1),
+        source: source("f1"),
+        location: BuildingPartId(1),
+        details: FunctionDetails {
+            name: "Ceiling".into(),
+            ..FunctionDetails::default()
+        },
+        members: vec![FunctionMember {
+            id: FunctionMemberId(1),
+            source: source("m1"),
+            group_address,
+            name: String::new(),
+            role: role.map(Into::into),
+        }],
+    });
+    project.ids = project.ids.clone().with_function_counts(1, 1);
+    project
+}
+
+#[test]
+fn diff_prints_a_changed_function_as_its_own_line() {
+    let dir = tempfile::tempdir().unwrap();
+    let store_a = dir.path().join("a.knxdb");
+    let store_b = dir.path().join("b.knxdb");
+    write_store(&store_a, &project_with_function(None));
+    write_store(&store_b, &project_with_function(Some("SwitchOnOff")));
+
+    let out = run_cli(&["diff", store_a.to_str().unwrap(), store_b.to_str().unwrap()]);
+    assert_eq!(out.status.code(), Some(0), "{out:?}");
+    let stdout = String::from_utf8(out.stdout).unwrap();
+    assert_eq!(
+        stdout.trim_end(),
+        "~ function Ceiling in Kitchen (f1): members: 1/1/1 -> 1/1/1 [SwitchOnOff]",
+        "{stdout}"
+    );
+}
+
 #[test]
 fn diff_with_wrong_argument_count_prints_usage_and_exits_one() {
     let out = run_cli(&["diff", "only-one-argument"]);

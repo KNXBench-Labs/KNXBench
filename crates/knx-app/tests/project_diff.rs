@@ -110,6 +110,7 @@ fn rendering_diff_projects_between_two_independent_imports_of_the_reference_proj
             &installation.group_addresses,
         );
         assert_table_empty("buildings", installation.id, &installation.buildings);
+        assert_table_empty("functions", installation.id, &installation.functions);
 
         let devices = &installation.devices;
         assert!(

@@ -1,7 +1,9 @@
 # Project Functions contract
 
 Status: backend, projection and HTTP API delivered by Goal A4 (ADR-0124); the
-web workbench consumes them since Goal B1b (13 October 2026, below).
+web workbench consumes them since Goal B1b (13 October 2026, below). The
+per-Function comparison table, the desktop surface and the read-only MCP tool
+followed on 17 October 2026 (MODEL-07 residue, below).
 
 ## What exists
 
@@ -14,10 +16,12 @@ web workbench consumes them since Goal B1b (13 October 2026, below).
 | Storage | native schema 15, `project_function*` tables; allocator repair through `load_project_reporting`; history images 12–14 migrate in memory | `crates/knx-store/tests/functions.rs` |
 | Import | schema 23 only; raw element retained in the opaque store; counts `Function`/`GroupAddressRef` | `crates/knx-etsproj/tests/functions.rs`, `crates/knx-app/tests/functions_import.rs` |
 | Selective import | destination Functions kept; a source with Functions is refused | `crates/knx-app/tests/selective_import.rs` |
-| Diff | one `info_changes` entry `functions` (summary without internal IDs) | `crates/knx-diff/tests/functions.rs` |
+| Diff | per installation `functions: EntityTable<FunctionKey, FunctionFields>`, matched by ETS id, else building-part path + name; ambiguity reported; `unplaced_functions` info line only for a Function no installation lists (17 October 2026, below) | `crates/knx-diff/tests/functions.rs` |
 | Report | Buildings section, per installation, escaped | `crates/knx-report/tests/functions.rs` |
 | Projection | `knx_projection::build_functions_view` → `FunctionsView` (TS bindings `FunctionsView`, `FunctionNode`, `FunctionLocationNode`, `FunctionMemberNode`): resolved room, member addresses in the project style, model order; `sourceId` on Functions and members is the verbatim stored source identity (ETS id, or `KB-Function-<n>`/`KB-FunctionMember-<n>` for KNXBench-made ones), never parsed | `crates/knx-projection/src/functions.rs` |
-| HTTP | `GET /api/project/functions`; `POST /api/project/functions/edit` (below) | `apps/knx-server/tests/http_functions.rs` |
+| HTTP | `GET /api/project/functions`; `POST /api/project/functions/edit` (below); `POST /api/project/diff` carries `installations[].functions` | `apps/knx-server/tests/http_functions.rs`, `http_project_diff.rs` |
+| Desktop | the shell's embedded server (`spawn_server`) serves the same routes to its window; no Tauri command (ARCHITECTURE rule 3) | `apps/knx-desktop/src-tauri/src/functions_surface_tests.rs` |
+| MCP | read-only `list_functions` (paged, optional installation); `diff_projects` entity `function` | `apps/knx-mcp/tests/tools.rs` |
 
 ## HTTP
 
@@ -92,9 +96,43 @@ and edit answers, `model.ts` pure selection, `FunctionsPanel.tsx`):
   reopen with identical `GET` results, no bus/download/address write, nothing
   clipped inside the panel; EN/DE × 1440/400.
 
-## Not done (Goal B or later)
+## Comparison, desktop and MCP (17 October 2026)
 
-- The desktop (Tauri) command surface, MCP tools; a Functions overview outside
-  building-part/group-address Properties.
-- A per-Function diff table and its CLI/web rendering.
-- Schema 20/21 mapping, `Implements`/`DefaulGroupRange` semantics, ETS export.
+- **Comparison.** Each installation's diff has a `functions` table. Key:
+  `etsId` (null for a Function made in KNXBench), the root-first `location`
+  path and `name`. A Function without an ETS id matches by location and name;
+  a rename of such a Function therefore shows as one removal plus one
+  addition, and two same-named Functions in one room are *ambiguous*. Fields:
+  `name`, `functionType`, `number`, `comment`, `description`, `completion`
+  (`Debug` form), `location` and ordered `members` (`address` in that side's
+  style, `name`, `role`). Members compare by raw address, name and role, so
+  a different group-address notation alone is no Function change.
+  `knx diff` prints `~ function <name> in <path> (<ETS id>): <field>: … -> …`;
+  the web panel adds a **Functions** summary line and table; MCP
+  `diff_projects` uses entity `function`.
+- **Desktop.** The desktop window loads the web UI from its in-process server,
+  so the Functions panels and routes above *are* the desktop surface. A
+  `knx-desktop` test starts the shell's own `spawn_server` on a loopback port
+  and drives read, create, member add, a stale `409` and undo over plain
+  HTTP. No native WebKitGTK window was run for this; the panels' browser
+  evidence is Goal B1b's.
+- **MCP.** `list_functions {project, installation?, limit?, offset?}` returns
+  `{installation, functions: {total, offset, limit, truncated, items}}`, the
+  items being `FunctionNode`s; an unknown installation is refused. Nothing in
+  MCP edits Functions.
+- **Evidence:** `crates/knx-diff/tests/functions.rs` (10 tests),
+  `apps/knx-server/tests/http_project_diff.rs`
+  (`a_changed_function_is_one_row_of_the_functions_table`),
+  `apps/knx-cli/tests/cli_project_diff.rs`
+  (`diff_prints_a_changed_function_as_its_own_line`),
+  `apps/knx-mcp/tests/tools.rs` (three Function tests),
+  `apps/knx-web/src/projectDiffView.test.ts` and `ProjectDiffPanel.test.tsx`;
+  8/8 targeted mutants killed.
+
+## Not done (recorded boundaries)
+
+- A Functions overview outside building-part/group-address Properties.
+- Schema 20/21 mapping, `Implements`/`DefaulGroupRange` semantics, ETS export
+  (ADR-0124 decisions 3 and 7; lifted by a supported-schema export that uses
+  them).
+- Any MCP or CLI edit of Functions; edits stay with the web workbench.

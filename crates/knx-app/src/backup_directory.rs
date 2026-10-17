@@ -91,7 +91,9 @@ mod tests {
     fn a_symlink_path_keeps_the_directory_containing_its_alias() {
         let temp = tempfile::tempdir().unwrap();
         let target = tempfile::tempdir().unwrap();
-        let target_path = target.path().join("extra/nested");
+        // The resolved target: `sync_chain` persists the canonical chain, and
+        // the runner's own TMPDIR may itself be reached through a symlink.
+        let target_path = target.path().canonicalize().unwrap().join("extra/nested");
         fs::create_dir_all(&target_path).unwrap();
         let alias = temp.path().join("alias");
         std::os::unix::fs::symlink(&target_path, &alias).unwrap();

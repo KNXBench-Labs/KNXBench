@@ -297,27 +297,31 @@ fn authorized_restore_point_exports_match_private_baselines_and_native_roundtrip
 #[cfg(target_os = "linux")]
 fn authorized_export_paths_cannot_follow_leaf_or_ancestor_symlinks() {
     use std::os::unix::fs::symlink;
-    let directory = tempfile::tempdir().unwrap();
+    let temp = tempfile::tempdir().unwrap();
+    // The manifest directory is opened without following any symlink, so it
+    // needs a resolved path even when the runner's TMPDIR is a symlink; the
+    // symlinks under test are the two planted below.
+    let directory = temp.path().canonicalize().unwrap();
     let outside = tempfile::tempdir().unwrap();
     let data = b"not an ETS fixture; only a confinement witness";
     std::fs::write(outside.path().join("revision.knxproj"), data).unwrap();
     symlink(
         outside.path().join("revision.knxproj"),
-        directory.path().join("leaf.knxproj"),
+        directory.join("leaf.knxproj"),
     )
     .unwrap();
-    symlink(outside.path(), directory.path().join("ancestor")).unwrap();
+    symlink(outside.path(), directory.join("ancestor")).unwrap();
     for relative in ["leaf.knxproj", "ancestor/revision.knxproj"] {
         let mut manifest = synthetic_manifest();
         manifest["exports"][0]["file"] = relative.into();
         manifest["exports"][0]["sha256"] = knx_etsproj::opaque::sha256_hex(data).into();
         std::fs::write(
-            directory.path().join("manifest.json"),
+            directory.join("manifest.json"),
             serde_json::to_vec(&manifest).unwrap(),
         )
         .unwrap();
         assert_eq!(
-            run_manifest(&directory.path().join("manifest.json")),
+            run_manifest(&directory.join("manifest.json")),
             Err("export path refused")
         );
     }

@@ -1,7 +1,9 @@
 # Non-terminal ledger rows — reconciliation and evidence re-check, 17 October 2026
 
 Claude session in worktree `KNXBench-ledger-residue-20261017`, base `01c9e47b`
-(claim `0133044b`). Scope: every non-terminal row of the [ledger](LEDGER.md) on
+(claim `0133044b`). Commit ids are those after main's KL-185 history rewrite;
+older ids in ledger rows map through
+[COMMIT_MAP](../history/COMMIT_MAP_2026-10-17.txt). Scope: every non-terminal row of the [ledger](LEDGER.md) on
 `origin/main` — 1 `IN_PROGRESS`, 2 `BLOCKED_EXTERNAL`, 16 `LATER`, confirmed by a
 script that parses the ledger's ID rows. `TOOLS-01`…`05` (external ProjectStats
 repository) and `FUTURE-08` (optional extra copy) are out of scope and unchanged.
@@ -26,6 +28,40 @@ tests and a revision covering the row's whole contract.
 | `KL-110` | LATER → LATER | Phase 2: no new primary source | PL110 support and `PID_GROUP_RESPONSER_TABLE` | Unchanged: PL110 scoped as its own task ([readiness contract](../contracts/powerline-readiness.md)) |
 | `MODEL-05` | BLOCKED_EXTERNAL → BLOCKED_EXTERNAL | Re-check: the only new private `.knxproj` files (13 Oct) have one installation each | Multi-installation Site | Unchanged (ADR-0125): a multi-installation ETS export or an explicit native-site requirement |
 | `IMPORT-02` | BLOCKED_EXTERNAL → BLOCKED_EXTERNAL | Re-check: no authorized manifest; the 13 Oct pair is not admissible (below) | Historical restore-point regressions | Unchanged: authorized ETS restore-point exports plus independently reviewed baselines ([harness](../AUTHORIZED_RESTORE_EXPORTS.md)) |
+
+## Package gate
+
+Full gate on `52d56d8b` (pre-rewrite id; its rewritten copy is `384c54ea`, code
+byte-identical except one placeholder test string): `cargo fmt --check`,
+workspace Clippy `-D warnings`, workspace tests **4,764 passed / 0 failed / 211
+ignored**, ts-rs bindings + bindings diff, layering, headers, anchors, ledger,
+corpus gates, then `tools/run_web_gate.py --profile web`: **63/63 stages**
+(documentation, tool tests, build, 20 derived `tsconfig`s, Vitest, browser
+start/inventory/exclusive, every production browser spec, repository checks,
+diff check), inputs frozen. The push was withheld because `main` had moved: the
+KL-185 history rewrite.
+
+Delta acceptance on the final merge `867f5b23` (rewritten branch + main
+`a7e44714`): `apps/`, `crates/`, `xtask/`, `Cargo.*` identical to the gated
+tree; `tools/` differs only by main's guard changes plus this branch's race fix.
+Re-run there: documentation check incl. the local-details guard (PASS),
+`check-ledger` (207 rows), `check-anchors` (1,440 links), `check-headers`,
+`check-layering`, `check-corpus-gates`, `git diff --check`, and the tools suite
+in the web runner's own temp shape (217 tests, twice, OK); the two child-group
+tests 20/20 with no orphaned children.
+
+Two defects on `main` surfaced by the gate were fixed in their own commits:
+
+- `270984b5` — the catalogue-update backup identity hashed device, inode, size
+  and mtime; ext4 hands a freed inode straight back, so a replaced backup looked
+  unchanged and `a_backup_that_changed_since_it_was_listed_is_kept` failed on ext4
+  (passes on tmpfs). ctime joins the identity.
+- `384c54ea` — the web gate runner recorded a child's PID before entering the
+  block that kills its process group, so a SIGTERM in that window orphaned the
+  child (`test_sigterm_terminates_the_owned_child_group` failed 14/15 isolated
+  runs on an idle host). New test
+  `test_interrupt_at_the_pid_checkpoint_still_terminates_the_child_group` fails
+  on the old code.
 
 ## Phase 0 — stale Evidence reconciled
 

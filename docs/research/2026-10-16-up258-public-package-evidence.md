@@ -82,6 +82,15 @@ The digest-pinned opt-in test now requires the exact legacy-patch refusal, sourc
 presence, unchanged database state and the unchanged public admission boundary.
 It does not remove or execute any directive to reach a later error.
 
+## Full-position/configured follow-up
+
+The [fresh vertical audit](2026-10-16-up258-vertical-path-audit.md) extends the
+existing test to literal expectations for every source instruction and region.
+A second opt-in test uses the existing resolver/evaluator for P900=0 and
+P903=300/600, preserving the eleven evaluator diagnostics and exact first
+LegacyPatchAlways refusal. This is source/selected-activation characterization,
+not an image encoding or source-to-executor proof.
+
 ## Reproducing the bounded regression
 
 Download the exact public package above to a local path outside the repository,

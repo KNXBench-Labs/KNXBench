@@ -189,6 +189,16 @@ recovery proof, then obtain separate permission for that exact target and plan.
 Success requires readback **and** the reporter's functional presence/brightness
 check, not transmission alone.
 
+## Post-freeze exact-source recheck
+
+The [vertical-path audit](2026-10-16-up258-vertical-path-audit.md) rechecks the
+current original package and code, reproduces the LegacyPatchAlways guard
+before evaluation, and supplies a compact transition/evidence/test matrix plus
+mutation inventory. Literal oracles now cover all 21 source positions; configured
+P903 comparisons retain the source and public-planner refusals. The existing
+checksum correction is not repeated, and no complete image/plan/recovery or
+hardware support is newly claimed.
+
 ## Sources
 
 [1] https://knx-td.sihub.siemens.com/product_data/ets5/UP258_DB12__920504d_ETS5.knxprod — freshly downloaded digest-bound public source; not redistributed.

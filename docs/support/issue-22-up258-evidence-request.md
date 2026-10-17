@@ -5,6 +5,13 @@ hardware operation is requested to start. The associated
 [decision](../research/2026-10-16-up258-production-decision.md) defines the exact
 remaining blockers. Values below are a proposed comparison, not measurements.
 
+Maintainer review after the [fresh source recheck](../research/2026-10-16-up258-vertical-path-audit.md):
+this comparison cannot settle the current first LegacyPatchAlways/default/
+invisible-activation rule. Seek its defining format/help passage first. Keep
+this draft unsent; neither a source refusal nor missing documentation authorises
+a new device acquisition. The direct-field experiment remains useful only for
+its explicitly observed encoding dimensions.
+
 ---
 
 Hi @thengsty — your identifiers and PR #24 let us inspect the exact public

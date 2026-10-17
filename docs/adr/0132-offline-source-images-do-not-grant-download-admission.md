@@ -66,3 +66,13 @@ refusal before the existing shared image assembler; exact System-1 diagnostics
 are retained, Easy3/System-2 omission regressions fail before the correction.
 Do not infer a general no-op exemption from matching source/master words.
 [Integrity contract](../contracts/source-fixup-integrity.md).
+
+## Exact UP258 continuation (16 October 2026)
+
+Retain the same boundary for the [fresh exact-source audit](../research/2026-10-16-up258-vertical-path-audit.md):
+characterization of every source declaration/configured first refusal is not
+a full image or executable plan. Do not waive LegacyPatchAlways based on
+invisibility/default bytes or manufacture a recovery certificate from memory
+plus load-status reads. Keep production admission closed until the defining
+source/translation/reconstruction contracts are independently evidenced.
+This continuation adds no layer, second evaluator, schema or physical transport.

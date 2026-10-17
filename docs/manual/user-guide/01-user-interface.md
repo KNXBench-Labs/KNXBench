@@ -83,7 +83,8 @@ screenshots still show the earlier released UI. See
 
 Collapsible content starts closed: the Workspaces, Project explorer and Diagnostics
 navigation blocks, every new explorer branch, parameter sections and manufacturer
-groups, Function entries, matrix column choices and report/evidence details.
+groups (in the Parameters tab: [parameter areas](05-devices-and-products.md#parameters),
+none open until chosen), Function entries, matrix column choices and report/evidence details.
 Click a heading or chevron, or focus it and press Enter/Space, to open it. The
 Navigation and Properties pane visibility controls remain layout controls; the
 panes themselves have not been removed or hidden by this change.

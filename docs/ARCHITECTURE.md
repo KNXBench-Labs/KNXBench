@@ -10,6 +10,16 @@ the MCP adapter still reaches neither. No schema, download-admission or UI-side
 protocol logic. [ADR-0134](adr/0134-generic-read-only-diagnostic-export.md),
 [contract](contracts/device-diagnostic-export.md).
 
+## Source-group parameter workspace (17 October 2026 source)
+
+The Parameters tab projects its existing typed sections into a pure scope/group
+index and a presentation-only workspace. It reuses the existing bound field row
+and application write path. One stable row parent retains drafts through area
+navigation/search; source metadata is read-only context. No Core, HTTP, product DB
+or native-store schema change. The existing DTO does not transmit complete source
+grid/physical geometry; no label-derived channel layout is invented.
+[Contract](contracts/parameter-workspace.md).
+
 ## Exact UP258 source boundary recheck (16 October 2026)
 
 [The vertical-path audit](research/2026-10-16-up258-vertical-path-audit.md)

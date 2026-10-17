@@ -31,6 +31,7 @@ Last updated: 2026-10-16 21:18 CEST
 | Feature | Scope | Availability |
 | --- | --- | --- |
 | Closed disclosure defaults | Navigation blocks, tree branches, parameter groups and details; manual opening and remembered address views retained | Main-only |
+| [Parameter workspace](contracts/parameter-workspace.md) | Declared areas (closed until chosen), compact label/value rows, cross-area search, retained editors and source metadata; no inferred device/grid geometry | Main-only |
 
 ## New in Alpha 13
 

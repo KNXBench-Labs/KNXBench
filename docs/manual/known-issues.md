@@ -8,6 +8,15 @@ Historical titles do not mean that their old defect is still present. The
 [source/test audit](../status/2026-10-08-known-issues-status-audit.md) records
 the reconciliation; formal task dispositions remain in the engineering ledger.
 
+## Parameter layout (source after Alpha 13)
+
+The new [parameter workspace](user-guide/05-devices-and-products.md#parameters)
+uses declared groups, compact rows and cross-area search. It does not reproduce
+all manufacturer grid coordinates or infer a physical button/channel arrangement.
+Missing grouping stays visible under Other parameters; unsupported value/script
+semantics still have their existing diagnostic/refusal behavior. Older screenshots
+and released Alpha 13 binaries do not contain this source-only layout change.
+
 ## Read these before your first serious project
 
 | Boundary | Practical meaning | Next check |

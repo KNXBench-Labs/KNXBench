@@ -491,29 +491,36 @@ not erase subsequently delivered functionality.
   (`0912h`/`091Ah`), `NM_Router_Scan`/`NM_SubnetworkDevices_Scan`, KNX Data
   Secure (`DM_SecureSync_*`), Easy Modes, USB interface configuration
   (`KL-110`, `GAP-T30-04`). RF stays simulator-only.
-- **Model/import:** KNX `Functions` (`MODEL-07`): backend, storage,
-  schema-23 import, projection and HTTP API delivered
-  ([contract](contracts/project-functions.md)); web workbench delivered
-  (Goal B1b); a per-Function diff table, desktop and MCP surfaces later.
+- **Model/import:** KNX `Functions` (`MODEL-07`) is `DONE` since 17 October
+  (per-Function comparison table, desktop surface via the embedded server,
+  read-only MCP `list_functions`; [contract](contracts/project-functions.md)).
+  Recorded boundaries only: schemas 20/21, `Implements`/`DefaulGroupRange`, a
+  Functions overview outside Properties.
   Several installations under one Site (`MODEL-05`): blocked on evidence
   ([ADR-0125](adr/0125-multi-installation-site-is-blocked.md)); ETS
   restore-point revisions as extra private regressions (`IMPORT-02`, requires
   authorized ETS exports and reviewed baselines). Selective lines/devices and
   bounded `knx_cvexc` content analysis have verified local implementation and
   separately authorized [source integration](status/2026-10-10-import-expansion-integration.md);
-  neither replaces the missing authorized revision exports. Dedicated
-  time/colour/picture/slider parameter editors from Type attributes and UIHints
-  (`PDB-04`); independent `.knxproj` samples for untested schemas
+  neither replaces the missing authorized revision exports. Colour/Picture
+  parameter value codecs and module-scoped parameter mapping (`PDB-04`; checked
+  Time/Slider controls and revision-bound writes already ship); independent `.knxproj` samples for untested schemas
   (12/13/14/22; schema 20 rests on public samples, KL §177) and an
   AES-protected ETS6 sample.
 - **Comparison/report extensions:** applying/merging diffs, three-way
   comparison and native PDF output remain absent; comparison and browser
   print-to-PDF already exist. These are recorded boundaries, not active work.
-- **Features:** project notes (`FUTURE-03`, ADR-0031; Core/native14/diff/report and application service implemented; authenticated HTTP/isolated UI/help and full feature delivery still open),
-  repetitive-task automation (`FUTURE-02`), a mutation-capable LLM/MCP surface
-  (`FUTURE-01`; the read-only MCP server shipped, ADR-0090), dashboard
-  drill-down, mobile app, native ports and manufacturer online-catalog
-  updates (`FUTURE-05`). More humour (`FUTURE-08`) means optional expansion:
+- **Features:** project notes (`FUTURE-03`): everything but a user-facing
+  delete disposition and a selective-import note mapping is shipped;
+  repetitive-task automation beyond the literal rename recipe (`FUTURE-02`);
+  agent mutations beyond the opt-in rename writer (`FUTURE-01`; read-only MCP
+  ADR-0090, writer ADR-0116); dashboard drill-down, mobile app, native ports and
+  an online catalogue source (`FUTURE-05`; file-based updates ship in CLI and
+  web). Reconciled on 17 October in the
+  [ledger residue review](status/2026-10-17-ledger-residue-review.md), which also
+  records the evidence re-check of `KL-170`/`171`/`172`, `PDB-04`, `GAP-T30-04`,
+  `KL-110`, `MODEL-05` and `IMPORT-02` (no new primary source; lift conditions
+  unchanged). More humour (`FUTURE-08`) means optional expansion:
   the original thirty-entry lists already exist. Motion has global controls and,
   since 2026-10-13, per-category ones for Toasts, Achievements and Flow (ADR-0122).
 - **KNX Secure follow-up:** [key provenance research](research/secure-key-provenance.md)

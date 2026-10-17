@@ -47,11 +47,11 @@ messages and toasts.
 | Original idea | Available now | Real remainder |
 | --- | --- | --- |
 | Small animations | Motion level/style settings, reduced-motion handling, and per-category settings for toasts, achievements and Flow | Categories for other surfaces; broader native/accessibility evidence |
-| MCP | Experimental read-only saved-project tools and agent skill | No agent edits, chatbox or bus control |
+| MCP | Experimental read-only saved-project tools (nine since the source builds after Alpha 13, incl. KNX Functions), agent skill, and one opt-in edit: literal prefix/suffix renames of group addresses | No other agent edits, chatbox or bus control |
 | Device discovery | Gateway search, one-line occupancy scan, explicit reconciliation | No product identity from a scan or coupler traversal |
-| Repetitive-task automation | Undoable batch primitive, not a macro feature | No templates/recorder/scheduler UI |
+| Repetitive-task automation | One named recipe: literal prefix/suffix renames of selected group addresses, previewed and undone in one step (CLI, **Rename…**, MCP opt-in) | No further templates, recorder or scheduler |
 | Humour templates | Thirty error wrappers, thirty late-night entries and holiday pairs | Optional extra copy, not an absent mechanism |
-| Project notes | Domain shape decided in ADR-0031 | No collection, persistence or note editor |
+| Project notes | The **Notes** view: plain-text notes on the project or its parts, saved with it, optionally in the report | Deleting something a note points at is refused instead of offering to move or delete the note |
 | Project status | Dashboard counts and diagnostics | No clickable count-to-detail drill-down |
 | Animated GA/device connections | Flow view, values, readable layout and a separate window | Session-local only; inferred recipients are not receipt/effect proof |
 | Mobile app | Browser workbench is a separate existing option | No dedicated mobile application |
@@ -75,11 +75,11 @@ are finished at their recorded scope, not proof that every feature exists.
 | Persistent project undo and native versions | Implemented in the local 2026-10-09 source package: native-backed undo/redo, named/save/pre-restore versions and guarded restore. Not in alpha.6; commissioning metadata remains a different history. | [Project history](../PROJECT_HISTORY.md). Independent disaster-backup copies remain necessary. |
 | Legacy device download and oversized `.vd5` coverage | Web/CLI offline import, password dialog and one remembered password already exist for the evidenced legacy scope. | Resource measurement before raising legacy limits; separate L4 mapping and recovery evidence. |
 | Selective import, diff apply/merge and three-way comparison | Source selected-device/line merge has a shared application planner, File-menu preview/consent and CLI; diff apply/merge and three-way comparison remain separate future work. | [Selective import](../SELECTIVE_IMPORT.md); [source integration acceptance](../status/2026-10-10-import-expansion-integration.md); authorized historical ETS exports and released-artifact acceptance remain separate. |
-| Specialized parameter widgets and online manufacturer updates | Generic supported parameter editing and manual product-file installation exist. | Supported type/UIHint evidence and separate catalog/update design. |
+| Specialized parameter widgets and online manufacturer updates | Checked Time and Slider controls; previewed `.knxprod` updates with backup and restore (application and CLI). | Colour/Picture value codecs, module-scoped parameters, and any online catalogue source. |
 | Commissioning more real devices | A device download (application tables and parameters) has been run and read back on one real device after an explicit go-ahead; the property-based procedures are verified against a simulator this project wrote. Address programming is refused until durable recovery exists. | Test hardware and a per-target go-ahead. The only bus available is a house people live in, so every new device, write scope or experiment needs its own explicit approval. |
 | Import support for ETS schemas 12, 13, 14, 20 and 22 | The parser handles the schema family; these versions have never been tested against a real file. | One real project file per schema. No sample-hunting is scheduled. |
 | Opening AES-protected ETS6 projects | The key derivation already exists in the `knx-secure` crate. | A genuine AES-protected sample. Verifying against a self-made one would only prove the implementation agrees with itself. |
-| The `Functions` element in the KNX project model | No project entity/import/storage/UI implementation; master `FunctionType` is not the same thing. | Dedicated ADR and representative project evidence. Deferred, not rejected. |
+| The `Functions` element in the KNX project model | Implemented (ADR-0124): schema-23 import, storage, editing in Properties, comparison, MCP. Master `FunctionType` is still not resolved. | Schemas 20/21 and the `Implements`/`DefaulGroupRange` attributes need a real project that uses them. |
 | Whether Data Secure runtime keys can be read from a project file | An open question with a named home in the `knx-secure` crate; nothing built. | Its own scheduling. See also *KNX Secure*, below. |
 | Broader platform and accessibility validation | Chromium/offline UI evidence exists; native WebKitGTK, Orca and wider host coverage remain separate. | Real platform runs, not screenshots interpreted as accessibility proof. |
 
@@ -122,13 +122,15 @@ dependency somebody noticed — not a queue position.
 [RESEARCH.md §13](../research/features-and-ui.md#13-natural-language-interaction-and-mcp-prerequisite-audit-2026-09-22-t19).
 The read-only part now exists: [AI agents over MCP](user-guide/12-ai-agents.md)
 lets an agent query saved projects and check proposed group-address CSVs.
-Changing a project through an agent is still not planned. The current
-command, authorization, revision and audit boundaries are not sufficient
-for mutation, and bus work stays excluded.
+Since 12 October one change is possible when you allow it: literal prefix/suffix
+renames of group addresses, each approved in a form and undoable. Any other change
+through an agent still needs its own revision, permission, validation and audit
+contract, and bus work stays excluded. *(Updated 17 October 2026.)*
 
 **Automating repetitive tasks.** Researched in
 [RESEARCH.md §14](../research/features-and-ui.md#14-repetitive-task-automation-and-macro-layer-decision-2026-09-22-t20),
-not scheduled. The supported future direction is a parameterised template over
+with one recipe delivered: literal prefix/suffix renames of chosen group addresses
+(CLI, **Rename…** and opt-in MCP). Further work follows the same direction, a parameterised template over
 an explicit selection, expanded into a previewed, revision-bound and atomic
 `Command::Batch` with one-step undo. Raw command recording, partial mutation,
 a script engine and bus-facing macros are not the plan.
@@ -152,7 +154,9 @@ decision was made, attached to the project or a user-facing entity. The domain
 shape is now decided in
 [ADR-0031](../adr/0031-project-notes-are-a-project-owned-collection.md): a
 project-owned collection with typed targets and explicit report opt-in. It is
-not implemented.
+implemented as the **Notes** view (since Alpha 10). Still missing: when you delete
+something a note points at, KNXBench refuses instead of offering to move, retarget
+or delete the note in the same step. *(Updated 17 October 2026.)*
 
 **More humour in the messages.** The existing toast and error copy should be
 expanded only if more variety is wanted. The original thirty-entry error and

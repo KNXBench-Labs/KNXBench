@@ -38,3 +38,11 @@ parameter. Display and editing are unaffected.
 **Lifted when.** A documented source settles length and truncation, and tests
 cover multi-octet characters at the field boundary. Ledger `KL-171`.
 <!-- END retained catalogue record -->
+
+## Re-check 17 October 2026: no new primary source
+
+Nothing defines octet-versus-character sizing or truncation for UTF-8 text
+parameters. OpenKNX `OFM-DFA` issue 42 (July 2025) only reports that ETS writes
+strings in the project's encoding when the program declares none — a secondary
+observation about the default, not a sizing rule. The lift condition above
+stands ([review](../status/2026-10-17-ledger-residue-review.md#phase-2--evidence-re-check-no-new-primary-source)).

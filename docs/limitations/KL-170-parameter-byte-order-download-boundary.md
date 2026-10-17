@@ -82,3 +82,10 @@ with exact signed/unsigned/multi-octet/boundary tests, keeping fields across
 octet boundaries, floats, texts and negative values refused until observed
 as well. Swapping octets on suspicion is not a fix. Ledger `KL-170`.
 <!-- END retained catalogue record -->
+
+## Re-check 17 October 2026: no new primary source
+
+The local specification collection is unchanged since 7 October; no new private
+file declares `ParameterByteOrder`; the xknx-editor encoder's byte-order path is
+unchanged since the cited commit. The lift condition above stands
+([review](../status/2026-10-17-ledger-residue-review.md#phase-2--evidence-re-check-no-new-primary-source)).

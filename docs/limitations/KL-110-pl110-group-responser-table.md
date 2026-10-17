@@ -48,3 +48,9 @@ becomes a completed cross-reference instead of a limitation, or a plan
 targeting a PL110 device grows an explicit decline in the sequencer and this
 entry's "no decline exists yet" clause is struck.
 <!-- END retained catalogue record -->
+
+## Re-check 17 October 2026: no new primary source
+
+No PL110 scope, device or source arrived; the
+[readiness contract](../contracts/powerline-readiness.md) phases are unchanged
+([review](../status/2026-10-17-ledger-residue-review.md#phase-2--evidence-re-check-no-new-primary-source)).

@@ -1991,6 +1991,7 @@ export const messages: Record<MessageKey, string> = {
   "projectDiff.entity.groupRanges": "Gruppenbereiche",
   "projectDiff.entity.groupAddresses": "Gruppenadressen",
   "projectDiff.entity.buildings": "Gebäude",
+  "projectDiff.entity.functions": "Funktionen",
   "projectDiff.detailsHeading": "Details",
   "projectDiff.tableToggle": "{table} ({count})",
   "projectDiff.projectInfo": "Projektinfo",

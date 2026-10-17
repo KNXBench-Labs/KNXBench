@@ -140,6 +140,24 @@ pub struct ParameterArgs {
 #[derive(Debug, Deserialize, JsonSchema)]
 #[schemars(crate = "rmcp::schemars")]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct FunctionsArgs {
+    /// Project alias.
+    pub project: String,
+    /// Only this installation's Functions (installation id, as
+    /// project_summary lists it). Omit for every installation.
+    #[serde(default)]
+    pub installation: Option<u8>,
+    /// Page size, 1-500 (default 50).
+    #[serde(default)]
+    pub limit: Option<usize>,
+    /// Items to skip (default 0).
+    #[serde(default)]
+    pub offset: Option<usize>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+#[schemars(crate = "rmcp::schemars")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct CsvArgs {
     /// Project alias.
     pub project: String,
@@ -328,6 +346,27 @@ impl KnxMcp {
     }
 
     #[tool(
+        name = "list_functions",
+        description = "The project's KNX Functions (named groups of group addresses placed in a room): name, type and completion as stored, the room, and every member's group address with its role. Source ids are shown verbatim; function types are not resolved. Read-only.",
+        annotations(
+            read_only_hint = true,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn list_functions(
+        &self,
+        Parameters(args): Parameters<FunctionsArgs>,
+    ) -> Result<CallToolResult, ErrorData> {
+        run(self.ws.clone(), move |ws| {
+            let page = Page::new(args.limit, args.offset)?;
+            tools::list_functions(ws, &args.project, args.installation, page)
+        })
+        .await
+    }
+
+    #[tool(
         name = "find_issues",
         description = "Structural problems in the saved project: duplicate individual addresses, devices without address or application program, unplaced devices, group addresses without links or with conflicting datapoint types, addresses outside their range, dangling links, unlinked active objects.",
         annotations(
@@ -350,7 +389,7 @@ impl KnxMcp {
 
     #[tool(
         name = "diff_projects",
-        description = "What changed between two configured projects (left -> right): added, removed, changed and ambiguous areas, lines, devices, communication objects, parameters, group ranges, group addresses and building parts.",
+        description = "What changed between two configured projects (left -> right): added, removed, changed and ambiguous areas, lines, devices, communication objects, parameters, group ranges, group addresses, building parts and Functions.",
         annotations(
             read_only_hint = true,
             destructive_hint = false,

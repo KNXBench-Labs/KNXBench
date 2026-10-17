@@ -74,6 +74,7 @@ const emptyReport: ProjectDiffReport = {
       groupRanges: emptyTable(),
       groupAddresses: emptyTable(),
       buildings: emptyTable(),
+      functions: emptyTable(),
     },
   ],
 };
@@ -144,6 +145,7 @@ const changesReport: ProjectDiffReport = {
         ambiguous: [],
       },
       buildings: emptyTable(),
+      functions: emptyTable(),
     },
   ],
 };
@@ -170,6 +172,7 @@ const ambiguousOnlyReport: ProjectDiffReport = {
         ambiguous: [{ key: { etsId: "ga1", address: "1/1/1" }, leftCandidates: 2, rightCandidates: 1 }],
       },
       buildings: emptyTable(),
+      functions: emptyTable(),
     },
   ],
 };
@@ -192,6 +195,7 @@ const singularFieldChangeReport: ProjectDiffReport = {
       groupRanges: emptyTable(),
       groupAddresses: emptyTable(),
       buildings: emptyTable(),
+      functions: emptyTable(),
     },
   ],
 };
@@ -216,6 +220,7 @@ const pluralFieldChangeReport: ProjectDiffReport = {
       groupRanges: emptyTable(),
       groupAddresses: emptyTable(),
       buildings: emptyTable(),
+      functions: emptyTable(),
     },
   ],
 };
@@ -301,6 +306,44 @@ describe("ProjectDiffPanel", () => {
     const { root } = await renderPanel();
     await click(compareButton());
     expect(host!.textContent).toContain("Group addresses: 1 ambiguous");
+    root.unmount();
+  });
+
+  it("counts a Functions-only difference as its own line, never as no differences", async () => {
+    const functionOnly: ProjectDiffReport = {
+      ...singularFieldChangeReport,
+      infoChanges: [],
+      installations: [
+        {
+          ...singularFieldChangeReport.installations[0],
+          fieldChanges: [],
+          functions: {
+            ...emptyTable(),
+            removed: [
+              [
+                { etsId: "P-1_F-1", location: ["Kitchen"], name: "Light" },
+                {
+                  name: "Light",
+                  functionType: null,
+                  number: null,
+                  comment: null,
+                  description: null,
+                  completion: "Undefined",
+                  location: { path: ["Kitchen"] },
+                  members: [],
+                },
+              ],
+            ],
+          },
+        },
+      ],
+    };
+    filePickerMock.pickOpenPath.mockResolvedValueOnce("/data/compare.knxdb");
+    apiMock.diffProject.mockResolvedValueOnce(functionOnly);
+    const { root } = await renderPanel();
+    await click(compareButton());
+    expect(host!.textContent).toContain("Functions: 1 removed");
+    expect(host!.textContent).not.toContain("No differences found.");
     root.unmount();
   });
 

@@ -27,7 +27,7 @@ const report: ProjectDiffReport = {
   infoChanges: [],
   installations: [{
     id: 0, status: "matched", fieldChanges: [], areas: empty, lines: empty, devices: empty,
-    groupRanges: empty, groupAddresses: { added, removed: [], changed, ambiguous: [] }, buildings: empty,
+    groupRanges: empty, groupAddresses: { added, removed: [], changed, ambiguous: [] }, buildings: empty, functions: empty,
   }],
 };
 

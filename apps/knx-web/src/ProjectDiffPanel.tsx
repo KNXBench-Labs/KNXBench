@@ -34,7 +34,14 @@ const ENTITY_STATUS_KEYS: Record<keyof CountableTable, MessageKey> = {
   ambiguous: "projectDiff.entityStatus.ambiguous",
 };
 
-type EntityTableKey = "areas" | "lines" | "devices" | "groupRanges" | "groupAddresses" | "buildings";
+type EntityTableKey =
+  | "areas"
+  | "lines"
+  | "devices"
+  | "groupRanges"
+  | "groupAddresses"
+  | "buildings"
+  | "functions";
 
 // `"buildings"` renders as "Buildings"/"Gebäude" — the literal word, even
 // though the underlying data is actually building-*part* entities (a
@@ -47,6 +54,7 @@ const ENTITY_LABEL_KEYS: Record<EntityTableKey, MessageKey> = {
   groupRanges: "projectDiff.entity.groupRanges",
   groupAddresses: "projectDiff.entity.groupAddresses",
   buildings: "projectDiff.entity.buildings",
+  functions: "projectDiff.entity.functions",
 };
 
 // `installation.status` is only ever `"added"` or `"removed"` by the time
@@ -108,6 +116,7 @@ function summaryLines(t: Translate, report: ProjectDiffReport): string[] {
       ["groupRanges", installation.groupRanges],
       ["groupAddresses", installation.groupAddresses],
       ["buildings", installation.buildings],
+      ["functions", installation.functions],
     ];
     for (const [key, table] of tables) {
       const line = summarizeTable(t, t(ENTITY_LABEL_KEYS[key]), table);

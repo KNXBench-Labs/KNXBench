@@ -42,6 +42,7 @@ The read-only saved-file/no-bus boundary remains unchanged.
 | Show a device with objects, links, location, parameters | Read or write the bus |
 | Tell which parameters the saved settings show or hide | See changes you have not saved yet |
 | Show who sends to and listens on a group address | Apply a parameter's access rules |
+| List the KNX Functions of a project or one installation, with rooms and members (`list_functions`, source builds after Alpha 13) | Create or edit Functions |
 | List structural problems (duplicates, conflicts, gaps) | Show a parameter's program default |
 | Compare two saved projects | Compare against ETS |
 | Check a proposed group-address CSV | Apply that CSV |
@@ -148,7 +149,7 @@ these tools, pass the server name as the toolset: `-t knxbench` (the toolset
 
 Both clients were tried on 2026-10-08 against copies of real projects:
 Claude Code 2.1.289 (`--mcp-config` with `--strict-mcp-config`) and Hermes
-(`hermes chat -t knxbench`). Each found all eight tools, answered visibility
+(`hermes chat -t knxbench`). Each found all eight tools of that build (`list_functions` came later), answered visibility
 questions from the saved data and refused a request to change a parameter.
 
 Large devices come in pages: `get_device` returns 50 communication objects

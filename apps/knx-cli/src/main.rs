@@ -970,6 +970,15 @@ fn building_part_key_display(key: &knx_diff::BuildingPartKey) -> String {
     key.path.join("/")
 }
 
+/// `Name in Building/Room`, plus the ETS id when the Function has one.
+fn function_key_display(key: &knx_diff::FunctionKey) -> String {
+    let base = format!("{} in {}", key.name, key.location.join("/"));
+    match &key.ets_id {
+        Some(id) => format!("{base} ({id})"),
+        None => base,
+    }
+}
+
 fn device_key_display(key: &knx_diff::DeviceKey) -> String {
     match &key.address {
         Some(address) => address.clone(),
@@ -1110,6 +1119,12 @@ fn print_installation_diff(installation: &knx_diff::InstallationDiff) {
         building_part_key_display,
     );
     print_device_table(&installation.devices);
+    print_entity_table(
+        &installation.functions,
+        "function",
+        "",
+        function_key_display,
+    );
 }
 
 /// Prints a `ProjectDiff` as plain text (design spec §5): `"no differences

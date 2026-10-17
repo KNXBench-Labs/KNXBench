@@ -105,6 +105,7 @@ fn a_client_lists_eight_read_only_tools_and_calls_them() {
             "find_issues",
             "get_device",
             "get_group_address",
+            "list_functions",
             "project_summary",
             "search",
             "validate_ga_csv",

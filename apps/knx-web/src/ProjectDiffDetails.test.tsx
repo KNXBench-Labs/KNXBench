@@ -34,6 +34,7 @@ function report(): ProjectDiffReport {
         devices: empty,
         groupRanges: empty,
         buildings: empty,
+        functions: empty,
         groupAddresses: {
           ...empty,
           added: [[{ etsId: null, address: "1/1/1" }, { name: "Light", central: false, unfiltered: false, range: null }]],

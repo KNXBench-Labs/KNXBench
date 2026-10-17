@@ -366,3 +366,6 @@ mod bus_capture_export_tests {
 
 #[cfg(test)]
 mod app_command_acl_tests;
+
+#[cfg(test)]
+mod functions_surface_tests;

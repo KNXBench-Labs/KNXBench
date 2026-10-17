@@ -185,7 +185,7 @@ fn without_the_launch_flag_the_writer_is_absent_and_refused() {
         .iter()
         .map(|t| t["name"].as_str().unwrap())
         .collect();
-    assert_eq!(names.len(), 8, "{names:?}");
+    assert_eq!(names.len(), 9, "{names:?}");
     assert!(!names.iter().any(|n| n.contains("name_recipe")));
     let refused = session.call(
         3,
@@ -217,7 +217,7 @@ fn the_launch_flag_lists_two_writer_tools_with_honest_annotations() {
     session.send(json!({ "jsonrpc": "2.0", "id": 2, "method": "tools/list" }));
     let list = session.response(2);
     let tools = list["result"]["tools"].as_array().unwrap();
-    assert_eq!(tools.len(), 10);
+    assert_eq!(tools.len(), 11);
     let find = |name: &str| {
         tools
             .iter()

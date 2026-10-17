@@ -21,6 +21,7 @@ function installation(overrides: Partial<InstallationDiff>): InstallationDiff {
     groupRanges: emptyTable(),
     groupAddresses: emptyTable(),
     buildings: emptyTable(),
+    functions: emptyTable(),
     ...overrides,
   };
 }
@@ -105,6 +106,48 @@ describe("installationTables", () => {
       format,
     );
     expect(views.map((v) => v.entries[0].keyLabel)).toEqual(["1.2", "2048–4095", "<1/2/3>", "House › Ground floor"]);
+  });
+
+  it("lists Functions last, keyed by room, name and ETS id when there is one", () => {
+    const fields = (name: string) => ({
+      name,
+      functionType: "FT-1",
+      number: null,
+      comment: null,
+      description: null,
+      completion: "Editing",
+      location: { path: ["House", "Kitchen"] },
+      members: [{ address: "1/0/1", name: "", role: "SwitchOnOff" }],
+    });
+    const views = installationTables(
+      installation({
+        buildings: {
+          ...emptyTable(),
+          added: [[{ path: ["House"] }, { name: "House", number: null, kind: "Building", completion: "Editing", defaultLine: null }]],
+        },
+        functions: {
+          ...emptyTable(),
+          added: [[{ etsId: null, location: ["House", "Kitchen"], name: "Spots" }, fields("Spots")]],
+          changed: [
+            {
+              key: { etsId: "P-1_F-1", location: ["House", "Kitchen"], name: "Light" },
+              matchedBy: "etsId",
+              left: fields("Light"),
+              right: fields("Ceiling light"),
+              changedFields: ["name"],
+              fieldChanges: [{ field: "name", left: "Light", right: "Ceiling light" }],
+            },
+          ],
+        },
+      }),
+      format,
+    );
+    expect(views.map((v) => v.labelKey)).toEqual(["projectDiff.entity.buildings", "projectDiff.entity.functions"]);
+    expect(views[1].entries.map((e) => [e.status, e.keyLabel, e.detail])).toEqual([
+      ["added", "House › Kitchen › Spots", "Spots"],
+      ["changed", "House › Kitchen › Light (P-1_F-1)", "Ceiling light"],
+    ]);
+    expect(views[1].entries[1].fieldChanges).toEqual([{ field: "name", left: "Light", right: "Ceiling light" }]);
   });
 });
 

@@ -185,6 +185,17 @@ adapter still links no server, bus or key code.
   release passed the placeholder `NoDatabase` through even when the product
   database resolved the device; a client test surfaced it.
 
+## 2026-10-17 amendment
+
+A ninth read-only tool, `list_functions`, lists a project's KNX Functions
+(ADR-0124): name, type, number, comment, description and completion as stored,
+the building part, and each member's group address, name and role, with
+verbatim source ids, optionally limited to one installation and paged like the
+other lists. `diff_projects` gains the entity `function`, keyed
+`<name> in <building/part path> (<ETS id>)`; Functions no longer appear as one
+`project`/`info` field. Neither change alters an existing field's meaning, so
+`schemaVersion` stays 2. Still no MCP mutation of Functions.
+
 ## 2026-10-13 amendment
 
 The opener is no longer MCP-specific in practice: every reading CLI command and

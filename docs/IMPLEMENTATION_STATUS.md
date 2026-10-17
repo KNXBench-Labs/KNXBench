@@ -41,6 +41,16 @@ first:
   The [lane review](evidence/browser-lane-review-2026-10-17.md) re-admits the
   same 45 reviewed specs after measured runs.
 
+- **Four `knx-app` fixtures no longer assume a symlink-free `TMPDIR`.** The
+  package gate under a symlinked `TMPDIR` found them: two backup-directory
+  sync tests expected only the supplied path's chain although `sync_chain`
+  also (by contract) persists the resolved chain, the alias test looked for
+  the target's parent by its unresolved name, and the authorized-export
+  confinement test put its manifest where the harness's no-symlink opener
+  refuses it first. Each fixture now anchors on a resolved base; expectations
+  and production code are unchanged, and three mutants (no resolved chain, no
+  ancestors, a symlink-following export opener) are still caught.
+
 Rust tests now pass with a symlinked `TMPDIR`; the package set's "resolved
 `TMPDIR`" rule is removed.
 

@@ -7,8 +7,11 @@ The open work of 17 October is cut into
 order (P5 → P2 → P3, P4 in parallel, P1 once its entry conditions hold),
 collisions and the routing of every non-terminal ledger row. The files reserve
 nothing: a package belongs to a session only after it pushes its claim entry to
-the handover. P5 (this page's synchronisation), P2 (plug-in data in the web app)
-and P3 (notes when deleting, below) are delivered.
+the handover. P5 (this page's synchronisation), P2 (plug-in data in the web app),
+P3 (notes when deleting, below) and P4 (test-gate hygiene: parallel browser lane
+re-admitted, symlink-safe corpus-output guard, counted ZIP work bound,
+`knx-desktop` kept in the Rust workspace gate) are delivered. Still open from the
+set: P1 (needs its hand-over) and the not-goal-ready P6–P8.
 
 ## Project notes: closed, with bounded delete paths (17 October 2026)
 

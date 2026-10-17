@@ -12,6 +12,38 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Test-gate hygiene (17 October 2026)
+
+Package P4 ([goal file](goals/open-work-2026-10-17/p4-gate-hygiene.md)) fixes
+four gate defects, each in its own commit and each with a reproduced failure
+first:
+
+- **Corpus-output refusal through a symlink (safety bug).** The private-corpus
+  output guard compared a resolved output directory with the corpus root as
+  the caller spelled it, so a root named through a symlink waved an output
+  inside it through. Both sides are now resolved; the regression test names the
+  root through a symlink explicitly (independent of the runner's `TMPDIR`). A
+  sweep of the other "output must not land in the source" guards
+  (`tools/run_web_gate.py`, `website/build.py`, `knx-server` path confinement,
+  `tools/documentation_history.py`) found them already comparing resolved paths.
+- **Linear time proven by counting.** The hostile nested-ZIP test timed 71 µs of
+  work against a one-second budget and failed on a loaded host; a 2 s debugger
+  stall inside the window reproduces that. The ZIP validator now meters the
+  bytes it inspects (test builds only) and the test bounds that count by the
+  input size from 16 KiB to 2 MiB, with a 30 s backstop clock at 2 MiB.
+- **`knx-desktop` stays in the workspace gate.** Its Tauri build script needs
+  `apps/knx-web/dist`. The [Rust workspace gate](VERIFICATION.md#rust-workspace-gate)
+  now builds the web bundle first, CI does the same before Clippy and tests, a
+  tools test holds both to that order, and the build script names the missing
+  command. No placeholder bundle, no `--exclude`.
+- **Parallel browser lane re-admitted.** The lane fingerprint had moved with the
+  temp-path tooling of 17 October, so every spec ran in the one-worker lane.
+  The [lane review](evidence/browser-lane-review-2026-10-17.md) re-admits the
+  same 45 reviewed specs after measured runs.
+
+Rust tests now pass with a symlinked `TMPDIR`; the package set's "resolved
+`TMPDIR`" rule is removed.
+
 ## Notes when deleting and in selective imports (17 October 2026)
 
 Package P3 closes [`FUTURE-03`](status/LEDGER.md#snapshot-ids)

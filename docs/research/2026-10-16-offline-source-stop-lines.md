@@ -66,3 +66,72 @@ commitments are checked. The earlier151/152private assertion failure remains
 historical evidence, not a pass. No new complete real-source image, complete
 source plan, public execution permission or device/firmware verification follows.
 All dependency stop lines above remain open for the specifically named rules.
+
+## 17 October: renewed download outcome and fresh checks
+
+The owner renewed the request to continue until System 2 / System B downloads can
+actually be used and admitted. This outcome is **not reached**. It does not
+permit a mask-allowlist change in place of source translation or authorize a
+physical-device operation. The implementation inspected here is published
+`07a934512589a0f4b821e68855daf36781d34ebd`, not the older dirty selected root.
+The separate parked UP258 branch is a source/refusal audit, not an undisclosed
+programming implementation; it was not adopted or changed.
+
+Fresh network-isolated checks on that unchanged runtime passed **53 tests in
+seven targets**, with zero failures or ignored tests in the selected scope:
+
+| Existing scope actually executed | Passed | Meaning, not an admission claim |
+| --- | ---: | --- |
+| ProductDB `system2_image` / `system2_metadata` | 10 + 7 | Synthetic image assembly, source metadata and integrity refusals |
+| ProductDB `system2_public_package`, explicitly opted in | 1 | Fresh digest-matched public UP258 package still refuses the uninterpreted LegacyPatchAlways rule; public planner admission remains refused |
+| Core `systemb_group_tables` / `systemb_object_table` / `systemb_object_table_build` | 12 + 10 + 6 | Explicit table grammars, not a complete product image or procedure |
+| Net `property_download` | 7 | Existing normalized concrete-simulator execution, not a real-source translator or full recovery |
+
+The source manifest, HEAD and public package bytes were unchanged throughout.
+The owning Core/ProductDB/Net crates were rebuilt in an owned target directory.
+No production code, test, schema, compatibility registry or public write route
+changed. Full workspace, frontend, private corpus and physical validation were
+not rerun or claimed by this bounded check.
+
+### New public-source retrieval, with access limits
+
+KNX's public Help Center search API returned zero results for the exact
+`LegacyPatchAlways` query and one for `DownloadInvisibleParameters`. This is a
+bounded discovery result, not proof that a defining document does not exist.
+The publisher's original public [ETS v5.5.3 release notes](https://support.knx.org/hc/en-us/articles/360000453164-ETS-v5-5-3)
+were retrieved through its article API on 17 October. The article identifies its
+release as 16 December 2016 and records fixes involving the SDK's invisible-parameter
+attribute and unused System-B object types. It supplies neither the converted-
+legacy patch/default policy nor the required complete-descriptor construction
+rule. These historical bug notices are not an encoding specification.
+
+Public discovery also identified the official [System B Manufacturer Tool help](https://support.knx.org/hc/en-us/articles/360000196320-System-B).
+Its full body was **not recovered**: normal HTML returned 403, the article API 401,
+and Wayback availability had no snapshot for that exact URL. The browser tool
+failed before navigation because another Edge instance held its profile database;
+no browser was stopped, login attempted or configuration changed. The extraction
+helper separately reported an unavailable extraction backend. A discovery snippet
+is not accepted as the full defining procedure. These are retrieval limitations,
+not a KNXBench runtime test failure or proof of the page's complete contents.
+
+### Exact unblock boundary
+
+For the current System 2 witness, the first needed definition remains the
+converted-legacy LegacyPatchAlways policy: absent-attribute default, visibility/
+activation interaction and the configured/reference value supplying the patch.
+Then the named encoding, XML allocation/resource and full-state restoration
+contracts still require independent evidence. A single P903 byte comparison
+cannot close every one of them.
+
+For System B, the first missing integration evidence remains a source/profile-
+specific product-number-to-ASAP/complete-descriptor rule and the generated
+relative-table/procedure substitutions. The original 57B0 procedure is not an
+automatic 07B0 product contract. The discovered help article is a useful lead,
+not a claim that it contains every missing rule.
+
+Existing authorized help/documentation or independent bounded generated-image/
+procedure witnesses can reopen their evidenced slice. No complete customer
+project, keys, manufacturer contact or new bus attempt is required simply to
+restate these refusals. Full source-to-image-to-executor acceptance and durable
+whole-mutation recovery must precede any new public write route; software-only
+admission must remain distinct from later exact-device verification.

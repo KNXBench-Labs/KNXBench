@@ -18,6 +18,8 @@ Original package bytes were checked before/after and remained unchanged.
 - 27 XML members exceeded the per-member limit and were not parsed. Nested ZIP
   packages, legacy databases and other source subroots are outside this census.
   All counts below apply only to admitted members, not the entire collection.
+  The [product-database gap census](2026-10-17-product-database-gap-census.md)
+  later read nested and large members of a second collection completely.
 
 ## Layout-relevant declaration presence
 

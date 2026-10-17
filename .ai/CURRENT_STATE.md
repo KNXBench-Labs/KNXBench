@@ -577,6 +577,22 @@ Release freeze: taken by codex-release-alpha13 (cutoff c992416570860b967d0efaa2a
 ---
 
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-15 21:29
+- **Completed:** Owner adds real-device observation: smartphone Chrome scrolls normally/no flicker. Recorded in owned site-scroll-flicker log; Linux desktop Chromium152 remains reported affected even with animations paused. This is an environment distinction, not proven GPU/video root cause or universal mobile acceptance. No code change, execution, commit/push or deployment for this observation.
+- **Pending/Next Steps:** Desktop A/B original versus first-video-poster result remains pending (loopback4202/original/en/#watch and /poster/en/#watch). Ask whether original reproduces and poster stops visual flicker. Do not claim fixed or remove motion/video speculatively.
+- **Notes for Codex oder Claude:** Existing fix/site-scroll-20261015 investigation/worktree and diagnostic server PID649466 retained. Smartphone OS/model/Chrome version unknown. Preserve parent completed publication and all prior handover entries; root HEAD/index untouched, no subagents/hardware.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-15 21:14
+- **Completed:** Parent CRT publication COMPLETE: merged d90b3d4b, final docs3a9fd92f pushed/read back exactly on main; Pages38789580428+38790235057 successful, final live38/38hashes equal and124deployed-host browser checks. Both owned publication/review worktrees/branches and task scratch retired after256member verified private archive. NEW owner visual-flicker report investigated separately: LinuxChromium152.0, persists with animations paused, scrolls but flickers between watch heading and second-video heading in both directions. Actual installed Chromium152.0.7977.82. Live headless Chromium/Firefox19diagnostic scroll observations complete without a scroll-position blockage; this does NOT disprove visual compositor flicker. No speculative patch or additional push.
+- **Pending/Next Steps:** Await owner visual A/B: http://127.0.0.1:4202/original/en/#watch versus http://127.0.0.1:4202/poster/en/#watch . Only first video is replaced with its genuine existing poster inB; both carry identical diagnostic label.8actual browser integrity checks pass, exact HTTP200 bytes verified. Ask whether A reproduces and B stops flickering. Then reproduce matching visual condition and add a discriminating regression before fixing. Original live report remains OPEN; no root cause/fix claimed.
+- **Notes for Codex oder Claude:** Active fix/site-scroll-20261015 worktree <old-sources>/KNXBench-scroll-20261015 on3a9fd92f; production source unchanged, local investigation log .ai/logs/2026-10-15_codex_site-scroll-flicker.md. Private traces/diagnostic copies profile scratch/site-scroll-20261015, server proc_e14d40d40b08/PID649466 loopback4202 retained for owner; no cleanup while A/B pending. Prior4198/4200 previews stopped. Parent durable evidence <profile>/evidence/phosphor-crt-publication-20261015/ (256member archive+cleanup-complete.json). Root HEAD/index/foreign hashes and full journal preserved; no subagents/vendor/hardware/container/tag/Story change. No live GPU/window/session reproduction available in headless measurement; paused animation is not proof of visual-flicker absence.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-15 20:58
 - **Completed:** Phosphor CRT website PUBLISHED AND LIVE VERIFIED after owner commit/push Go. Source merged/gated d90b3d4b92a8c45fb63d6c56d64b7b6218993a82:23/23 frozen-source stages; website28/Story76/tooling163(1skip), Chromium394preview+416public, deterministic approved-artifact byte equality. Normal main push exact readback. Website38789580428 build/deploy success on exact SHA. Live root+36content files+manifest all38 hashes equal; canonical EN/DE/root/CSS/headlines match;124deployed-host Chromium checks and actual desktop/mobile rasters pass. Story/app/media/legal content unchanged. Receipt docs/evidence/phosphor-crt-publication-2026-10-15.json.
 - **Pending/Next Steps:** Publish docs-only closure after scoped gates and verify its same-artifact Pages run, archive evidence and retire own publication/review worktrees and previews. No remaining feature/runtime implementation or owner Go. Root selected checkout is not synchronization target; preserve foreign bytes/index/journals.

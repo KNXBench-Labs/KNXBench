@@ -1,4 +1,12 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-10-17 17:05
+- **Completed:** CLAIM: package P2 (plug-in data adoption in the web app, KL-186 first half) from `docs/goals/open-work-2026-10-17/p2-plugin-data-web.md`, worktree `KNXBench-plugin-data-web-20261017`, branch `feat/plugin-data-web-20261017`.
+- **Pending/Next Steps:** P2 in progress: new server route module + `routes.rs` registration, web dialog, message catalogues, KL-186/contract/ADR docs.
+- **Notes for Codex oder Claude:** P3 must not start before this claim's release entry (shared router, web shell, catalogues).
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-10-17 16:53
 - **Completed:** Package P5 (OPEN_WORK synchronisation, docs only) delivered; claim `f61465af` released. `docs/OPEN_WORK.md`: new sections "Prepared goal packages" (links the 17 October set) and "Plug-in data adoption: server route and web UI open" (KL-186: CLI/app delivered; open = server route + web UI as P2, plug-in acceptance on the owner's installation); KL-185 text now names `refs/kl185-rewritten/heads/<branch>` and links COMMIT_MAP_2026-10-17 (not `refs/rewritten/`); section 2 records the unpublished object-function commit `99dd6e65` for P1; "How this was checked" quotes the ledger's Counts (180: DONE 47, BLOCKED_EXTERNAL 2, ACCEPTED_BOUNDARY 118, LATER 13; 28: DONE 19, ACCEPTED_BOUNDARY 6, LATER 3) and labels the older censuses historical. P5 file marked delivered. Docs commit `7580601c`. Gate on the final tree: 12/12 green (anchors, ledger 208 rows, headers, layering, check_documentation, five CI tool-test suites 67 tests, local-info tree), inputs frozen.
 - **Pending/Next Steps:** None for P5. Next per the package README: P2 (plug-in data web UI), P4 in parallel; P1 only after parameter grids are on main and a handover. No package started.

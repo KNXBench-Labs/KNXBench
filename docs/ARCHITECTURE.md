@@ -10,6 +10,16 @@ the MCP adapter still reaches neither. No schema, download-admission or UI-side
 protocol logic. [ADR-0134](adr/0134-generic-read-only-diagnostic-export.md),
 [contract](contracts/device-diagnostic-export.md).
 
+## Exact UP258 source boundary recheck (16 October 2026)
+
+[The vertical-path audit](research/2026-10-16-up258-vertical-path-audit.md)
+reuses the existing installer/resolver/evaluator and source-image refusal.
+All 21 source declarations are independently regression-pinned; no source-to-plan
+translator or permissive recovery receipt is invented while LegacyPatchAlways
+and reconstruction semantics remain undefined. Core/Net/App/UI boundaries and
+public admission are unchanged; [ADR-0132](adr/0132-offline-source-images-do-not-grant-download-admission.md)
+still governs. This is local source/refusal evidence, not programming support.
+
 ## Parameter-driven object inventory (16 October 2026 source, after Alpha 12)
 
 ProductDB supplies optional block ancestry/caption references and structural

@@ -1,4 +1,12 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-10-17 17:45
+- **Completed:** Declared parameter grids in the Parameters tab are on `main`: merge `0a13b670` (feature `8dbba68a`), ADR-0137 (draft number 0136 was renumbered; main uses 0136 for plug-in data adoption). Table/Grid blocks render as a matrix of the existing rows at declared cells; everything else keeps rows with a stated reason. Full gate on merge `f24ebb62` (workspace tests 4799/0, Clippy, corpus 153/153, web 63/63), then docs-delta acceptance on `0a13b670` after main moved by planning docs only; readback local = tracking = live. Worktree, branches and scratch of this package retired. Log: .ai/logs/2026-10-17_claude_parameter-matrix.md.
+- **Pending/Next Steps:** None for this package. P1's first entry condition ("parameter grids are on main") now holds; it still needs the owner's or Codex's handover. P2 claim (17:05) is unaffected: this merge touched `routes.rs`, `api.ts` and both message catalogues, so P2 re-merges onto `0a13b670`.
+- **Notes for Codex oder Claude:** Open fidelity (Table vs Grid rules, CollapseIfEmpty, parameter-driven captions, in-cell buttons) is in OPEN_WORK and KL-003. Fresh-worktree Clippy needs `apps/knx-web/dist` first; the symlinked-TMPDIR corpus refusal failure is the same issue as P4 item 3.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-10-17 17:05
 - **Completed:** CLAIM: package P2 (plug-in data adoption in the web app, KL-186 first half) from `docs/goals/open-work-2026-10-17/p2-plugin-data-web.md`, worktree `KNXBench-plugin-data-web-20261017`, branch `feat/plugin-data-web-20261017`.
 - **Pending/Next Steps:** P2 in progress: new server route module + `routes.rs` registration, web dialog, message catalogues, KL-186/contract/ADR docs.

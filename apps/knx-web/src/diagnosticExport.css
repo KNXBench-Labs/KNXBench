@@ -1,0 +1,8 @@
+.diagnostic-export > div { min-width: 0; }
+.diagnostic-export fieldset { display: grid; gap: .75rem; min-width: 0; }
+.diagnostic-export label:not(.support-check) { display: grid; gap: .35rem; }
+.diagnostic-export input:not([type="checkbox"]), .diagnostic-export select { width: 100%; min-width: 0; box-sizing: border-box; }
+.diagnostic-export section { margin-block: 1rem; overflow-wrap: anywhere; }
+.diagnostic-export pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 20rem; overflow: auto; }
+.diagnostic-export .support-check { margin-block: .75rem; align-items: start; }
+.diagnostic-export button { white-space: normal; }

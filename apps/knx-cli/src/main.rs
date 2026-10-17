@@ -13,6 +13,7 @@ mod contribution;
 mod device_address;
 mod device_byte_order_probe;
 mod device_compare;
+mod device_diagnostics;
 mod device_download;
 mod device_readiness;
 mod device_reset_address;
@@ -128,6 +129,11 @@ const USAGE: &str = "usage: knx import <file.knxproj> [--store <path.knxdb> [--r
      \x20         every octet run where the device and the project differ. It sends no\n\
      \x20         access key and has no write path; a read-protected device says so.\n\
      \x20         Exit 0: the device holds the plan; 2: it differs; 1: not compared.)\n\
+     \x20     knx device diagnostics --project <path.knxdb> --device-id <id> --gateway <host:port>\n\
+     \x20                  [--product-db <path>] --output <new.zip> [--confirm-read]\n\
+     \x20     knx device diagnostics --simulate --output <new.zip> [--confirm-read]\n\
+     \x20         (READ ONLY generic identity export; preview without --confirm-read. No memory\n\
+     \x20         profile, keys or download admission required. --simulate never opens a gateway.)\n\
      \x20     knx device byte-order-probe <area.line.device> --project <path.knxdb>\n\
      \x20                  [--product-db <path>] --gateway <host:port>\n\
      \x20         (READ ONLY, KL-170: for a device ETS programmed with this project, reads\n\
@@ -2174,6 +2180,7 @@ fn run_device(args: &[String]) -> ExitCode {
     match args.first().map(String::as_str) {
         Some("download") => run_device_download(&args[1..]),
         Some("compare") => run_device_compare(&args[1..]),
+        Some("diagnostics") => device_diagnostics::run(&args[1..]),
         Some("byte-order-probe") => run_device_byte_order_probe(&args[1..]),
         Some("readiness") => run_device_readiness(&args[1..]),
         Some("program-address") => run_device_program_address(&args[1..]),

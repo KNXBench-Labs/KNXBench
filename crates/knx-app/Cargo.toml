@@ -9,6 +9,11 @@ publish = false
 
 [dependencies]
 knx-core.workspace = true
+# Shared read-only diagnostic service orchestrates the existing management adapter.
+# No new external packages; UI/CLI do not implement their own protocol path.
+knx-net.workspace = true
+tokio = { workspace = true, features = ["sync"] }
+sha2.workspace = true
 knx-edit.workspace = true
 knx-etsproj.workspace = true
 knx-productdb.workspace = true

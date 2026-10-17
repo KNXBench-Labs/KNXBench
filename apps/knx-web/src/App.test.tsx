@@ -1598,6 +1598,7 @@ describe("App — the File menu by keyboard alone", () => {
       "Debug report…",
       "Analyze support gaps…",
       "Device support report",
+      "Export diagnostic data",
       // ADR-0084: the first-run guide, reopened on request.
       "Show introduction…",
       // ADR-0089: present while achievements are switched on (the default).

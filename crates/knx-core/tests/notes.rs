@@ -1,8 +1,8 @@
 //! Exercises typed note integrity without IO or changing project schema.
 
 use knx_core::note::{
-    validate_notes, NoteError, ProjectNote, ProjectNoteTarget as Target, MAX_NOTES_TEXT_BYTES,
-    MAX_NOTE_BODY_BYTES, MAX_NOTE_TITLE_BYTES, MAX_PROJECT_NOTES,
+    validate_notes, NoteError, OrphanedNote, ProjectNote, ProjectNoteTarget as Target,
+    MAX_NOTES_TEXT_BYTES, MAX_NOTE_BODY_BYTES, MAX_NOTE_TITLE_BYTES, MAX_PROJECT_NOTES,
 };
 use knx_core::{
     AreaId, BuildingPartId, ComObjectInstanceId, DeviceId, GroupAddressId, GroupRangeId,
@@ -472,11 +472,159 @@ fn every_existing_delete_command_refuses_an_implicitly_orphaned_note_atomically(
         let before = project.clone();
         assert_eq!(
             delete.apply(&mut project),
-            Err(CommandError::InvalidNote(NoteError::MissingTarget(target))),
+            Err(CommandError::NotesOrphaned(vec![OrphanedNote {
+                id: ProjectNoteId(1),
+                target,
+                title: "retain".into(),
+            }])),
             "{target:?}"
         );
         assert_eq!(project, before);
     }
+}
+/// A device and its objects carry three notes; a fourth sits on the project.
+fn noted_device_project() -> Project {
+    let mut project = target_project();
+    project.installations[0].buildings[0].devices.clear();
+    for (id, target, title) in [
+        (1, Target::Device(DeviceId(1)), "Device note"),
+        (2, Target::Project, "Project note"),
+        (
+            3,
+            Target::ComObject(ComObjectInstanceId(1)),
+            "Object \"quoted\"\nnote",
+        ),
+    ] {
+        project.notes.push(
+            ProjectNote::new(ProjectNoteId(id), target, title.into(), "body".into()).unwrap(),
+        );
+    }
+    project.ids = project.ids.clone().with_project_note_count(3);
+    project
+}
+#[test]
+fn a_device_delete_names_every_note_it_would_orphan_including_its_objects() {
+    use knx_core::{Command, CommandError};
+    let mut project = noted_device_project();
+    let before = project.clone();
+    let error = Command::DeleteDevice { id: DeviceId(1) }
+        .apply(&mut project)
+        .unwrap_err();
+    assert_eq!(
+        error,
+        CommandError::NotesOrphaned(vec![
+            OrphanedNote {
+                id: ProjectNoteId(1),
+                target: Target::Device(DeviceId(1)),
+                title: "Device note".into(),
+            },
+            OrphanedNote {
+                id: ProjectNoteId(3),
+                target: Target::ComObject(ComObjectInstanceId(1)),
+                title: "Object \"quoted\"\nnote".into(),
+            },
+        ])
+    );
+    assert_eq!(project, before);
+    let text = error.to_string();
+    assert!(
+        text.contains("would leave 2 project notes without their target"),
+        "{text}"
+    );
+    assert!(
+        text.contains("note 1 \"Device note\" on device 1"),
+        "{text}"
+    );
+    assert!(
+        text.contains("note 3 \"Object \\\"quoted\\\"\\nnote\" on communication object 1"),
+        "{text}"
+    );
+    assert!(text.contains("nothing was changed"), "{text}");
+    assert!(!text.contains("Project note"), "{text}");
+    assert!(!text.contains("note validation refused"), "{text}");
+}
+#[test]
+fn a_batch_names_the_orphaning_step_and_its_notes() {
+    use knx_core::{Command, CommandError};
+    let mut project = noted_device_project();
+    let before = project.clone();
+    let error = Command::Batch(vec![
+        Command::RemoveProjectNote {
+            id: ProjectNoteId(2),
+        },
+        Command::DeleteDevice { id: DeviceId(1) },
+    ])
+    .apply(&mut project)
+    .unwrap_err();
+    let CommandError::BatchItem { index: 1, source } = &error else {
+        panic!("{error:?}");
+    };
+    assert!(matches!(**source, CommandError::NotesOrphaned(ref notes) if notes.len() == 2));
+    assert_eq!(project, before);
+}
+#[test]
+fn a_new_note_with_a_missing_target_stays_an_invalid_note_in_plain_words() {
+    use knx_core::{Command, CommandError};
+    let mut project = target_project();
+    let note = ProjectNote::new(
+        ProjectNoteId(1),
+        Target::Device(DeviceId(99)),
+        "x".into(),
+        String::new(),
+    )
+    .unwrap();
+    let error = Command::InsertProjectNote { note, position: 0 }
+        .apply(&mut project)
+        .unwrap_err();
+    assert_eq!(
+        error,
+        CommandError::InvalidNote(NoteError::MissingTarget(Target::Device(DeviceId(99))))
+    );
+    assert_eq!(
+        error.to_string(),
+        "note refused: its target device 99 does not exist"
+    );
+}
+#[test]
+fn every_note_error_reads_as_a_sentence_not_a_debug_dump() {
+    for error in [
+        NoteError::InvalidId,
+        NoteError::EmptyTitle,
+        NoteError::TitleBudget,
+        NoteError::BodyBudget,
+        NoteError::ControlCharacter,
+        NoteError::NoteCountBudget,
+        NoteError::TotalTextBudget,
+        NoteError::DuplicateId(ProjectNoteId(4)),
+        NoteError::MissingTarget(Target::GroupRange(GroupRangeId(2))),
+        NoteError::AmbiguousTarget(Target::BuildingPart(BuildingPartId(3))),
+    ] {
+        let text = error.to_string();
+        assert!(!text.is_empty());
+        assert!(
+            !text.contains('(') && !text.contains("Id"),
+            "{error:?} reads as {text}"
+        );
+    }
+    assert_eq!(Target::Project.to_string(), "the project");
+    assert_eq!(
+        Target::Installation(InstallationId(0)).to_string(),
+        "installation 0"
+    );
+    assert_eq!(
+        Target::GroupAddress(GroupAddressId(7)).to_string(),
+        "group address 7"
+    );
+}
+#[test]
+fn with_target_moves_a_note_and_keeps_identity_text_and_inclusion() {
+    let note = note(4).with_documentation(true);
+    let moved = note.clone().with_target(Target::Device(DeviceId(1)));
+    assert_eq!(moved.id(), note.id());
+    assert_eq!(moved.title(), note.title());
+    assert_eq!(moved.body(), note.body());
+    assert!(moved.include_in_documentation());
+    assert_eq!(moved.target(), Target::Device(DeviceId(1)));
 }
 #[test]
 fn explicit_note_disposition_and_target_delete_share_one_undo_step() {

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { LineStoredBusAccess } from "./StoredBusAccess";
 import { carriesGroupAddress, readDraggedGroupAddress } from "./groupAddressDrag";
 import * as api from "./api";
+import { useNoteAwareDelete } from "./NoteDispositionDialog";
 import DeviceProgrammingField from "./DeviceProgrammingField";
 import RecordedDeviceStatePanel from "./RecordedDeviceStatePanel";
 import { emitAchievementEvent } from "./achievementEvents";
@@ -1078,17 +1079,15 @@ function DeviceInspector(props: {
   const t = useTranslate();
   const [error, setError] = useState<string | null>(null);
 
+  // ADR-0138: a delete that would strand project notes opens the decision
+  // dialog instead of failing; every other refusal still lands in `error`.
+  const noteAware = useNoteAwareDelete(onDeleted);
   async function remove() {
     setError(null);
-    try {
-      const tree = await api.deleteDevice(detail.id);
-      onDeleted(tree);
-    } catch (e) {
-      // Also where `CommandError::DeviceHasLinks` surfaces — the server
-      // refuses to delete a device whose comm objects still have group
-      // links, so the user sees why instead of a silent no-op.
-      setError(api.errorMessage(e));
-    }
+    // Also where `CommandError::DeviceHasLinks` surfaces — the server
+    // refuses to delete a device whose comm objects still have group
+    // links, so the user sees why instead of a silent no-op.
+    await noteAware.run({ kind: "devices", ids: [detail.id] }, () => api.deleteDevice(detail.id), setError);
   }
 
   return (
@@ -1103,6 +1102,7 @@ function DeviceInspector(props: {
         </p>
       )}
       {error && <span className="field-error">{error}</span>}
+      {noteAware.dialog}
       <DevicePlacementRepair detail={detail} tree={tree} onApplied={onApplied} />
       <AddressField detail={detail} tree={tree} onApplied={onApplied} />
       <DeviceProgrammingField deviceId={detail.id} tree={tree} onApplied={onApplied} />
@@ -1134,14 +1134,12 @@ function GroupAddressInspector(props: {
   const formatGa = useGroupAddressFormat();
   const [error, setError] = useState<string | null>(null);
 
+  // ADR-0138: a delete that would strand project notes opens the decision
+  // dialog instead of failing; every other refusal still lands in `error`.
+  const noteAware = useNoteAwareDelete(onDeleted);
   async function remove() {
     setError(null);
-    try {
-      const tree = await api.deleteGroupAddress(ga.id);
-      onDeleted(tree);
-    } catch (e) {
-      setError(api.errorMessage(e));
-    }
+    await noteAware.run({ kind: "groupAddresses", ids: [ga.id] }, () => api.deleteGroupAddress(ga.id), setError);
   }
 
   const counts = linkDirectionCounts(ga);
@@ -1190,6 +1188,7 @@ function GroupAddressInspector(props: {
         </p>
       )}
       {error && <span className="field-error">{error}</span>}
+      {noteAware.dialog}
     </div>
   );
 }
@@ -1310,14 +1309,12 @@ function GroupRangeInspector(props: {
     }
   }
 
+  // ADR-0138: a delete that would strand project notes opens the decision
+  // dialog instead of failing; every other refusal still lands in `error`.
+  const noteAware = useNoteAwareDelete(onDeleted);
   async function remove() {
     setError(null);
-    try {
-      const tree = await api.deleteGroupRange(range.id);
-      onDeleted(tree);
-    } catch (e) {
-      setError(api.errorMessage(e));
-    }
+    await noteAware.run({ kind: "groupRange", id: range.id }, () => api.deleteGroupRange(range.id), setError);
   }
 
   return (
@@ -1356,6 +1353,7 @@ function GroupRangeInspector(props: {
         </p>
       )}
       {error && <span className="field-error">{error}</span>}
+      {noteAware.dialog}
     </div>
   );
 }
@@ -1511,14 +1509,12 @@ function AreaInspector(props: {
   const t = useTranslate();
   const [error, setError] = useState<string | null>(null);
 
+  // ADR-0138: a delete that would strand project notes opens the decision
+  // dialog instead of failing; every other refusal still lands in `error`.
+  const noteAware = useNoteAwareDelete(onDeleted);
   async function remove() {
     setError(null);
-    try {
-      const tree = await api.deleteArea(area.id);
-      onDeleted(tree);
-    } catch (e) {
-      setError(api.errorMessage(e));
-    }
+    await noteAware.run({ kind: "area", id: area.id }, () => api.deleteArea(area.id), setError);
   }
 
   return (
@@ -1538,6 +1534,7 @@ function AreaInspector(props: {
         </p>
       )}
       {error && <span className="field-error">{error}</span>}
+      {noteAware.dialog}
     </div>
   );
 }
@@ -1582,14 +1579,12 @@ function LineInspector(props: {
     }
   }
 
+  // ADR-0138: a delete that would strand project notes opens the decision
+  // dialog instead of failing; every other refusal still lands in `error`.
+  const noteAware = useNoteAwareDelete(onDeleted);
   async function remove() {
     setError(null);
-    try {
-      const tree = await api.deleteLine(line.id);
-      onDeleted(tree);
-    } catch (e) {
-      setError(api.errorMessage(e));
-    }
+    await noteAware.run({ kind: "line", id: line.id }, () => api.deleteLine(line.id), setError);
   }
 
   return (
@@ -1627,6 +1622,7 @@ function LineInspector(props: {
         </p>
       )}
       {error && <span className="field-error">{error}</span>}
+      {noteAware.dialog}
       <LineStoredBusAccess key={line.id} lineId={line.id} />
     </div>
   );
@@ -1717,17 +1713,15 @@ function BuildingPartInspector(props: {
     }
   }
 
+  // ADR-0138: a delete that would strand project notes opens the decision
+  // dialog instead of failing; every other refusal still lands in `error`.
+  const noteAware = useNoteAwareDelete(onDeleted);
   async function remove() {
     setError(null);
-    try {
-      const tree = await api.deleteBuildingPart(node.id);
-      onDeleted(tree);
-    } catch (e) {
-      // Also where `CommandError::BuildingPartNotEmpty` surfaces — the
-      // server refuses to delete a part that still has a child or a
-      // device, so the user sees why instead of a silent no-op.
-      setError(api.errorMessage(e));
-    }
+    // Also where `CommandError::BuildingPartNotEmpty` surfaces — the
+    // server refuses to delete a part that still has a child or a
+    // device, so the user sees why instead of a silent no-op.
+    await noteAware.run({ kind: "buildingPart", id: node.id }, () => api.deleteBuildingPart(node.id), setError);
   }
 
   return (
@@ -1774,6 +1768,7 @@ function BuildingPartInspector(props: {
         </p>
       )}
       {error && <span className="field-error">{error}</span>}
+      {noteAware.dialog}
       {/* Goal B1b: Functions are per building part in every installation. */}
       <BuildingPartFunctions tree={tree} buildingPartId={node.id} onApplied={onApplied} />
     </div>

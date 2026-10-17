@@ -12,6 +12,30 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Notes when deleting and in selective imports (17 October 2026)
+
+Package P3 closes [`FUTURE-03`](status/LEDGER.md#snapshot-ids)
+([ADR-0138](adr/0138-notes-get-an-explicit-decision-before-a-delete.md)). The core
+names every note a command would strand (`CommandError::NotesOrphaned`: id,
+title, target; other note faults read as plain sentences instead of debug
+text). `knx_app::note_disposition` previews a whole delete (cascades included)
+and plans one choice per stranded note (keep on the project, move to a surviving
+element, delete) plus the delete as one `Batch`: one undo step that restores the
+element before its notes. The eight entity delete routes answer `409
+noteDispositionRequired` with the notes, the removed targets and the snapshot;
+`POST /api/project/delete-with-notes` applies the choices bound to that
+snapshot (stale `409`, invalid `422`, nothing written). The web app's Inspector
+and bulk deletes open **Notes need a decision** (EN/DE, help topic *Notes when
+deleting*); the CLI prints the named reason. Selective import carries source
+notes along their remapped targets and needs `unselectedNotes`
+(`skip`/`attachToProject`) for the rest, with counts in the preview
+([admission contract](contracts/project-note-admission.md#delete-disposition-and-selective-import-notes-17-october-2026-adr-0138),
+[HTTP](contracts/project-note-http.md#note-aware-deletes-17-october-2026-adr-0138)).
+Tests: core notes 20 (6 new or changed), app disposition 9, selective import 24
+(6 new or changed), HTTP 7, CLI 1, Vitest 17 new (full suite 3,713), browser 5
+(EN/DE × 1440/400 plus cancel). Boundaries:
+[limitation](limitations/project-notes-workbench.md#update-2026-10-17-deleting-a-notes-target-adr-0138).
+
 ## Plug-in data adoption in the server and the web app (17 October 2026)
 
 Package P2 lifts the first half of [KL-186](KNOWN_LIMITATIONS.md#catalogue-kl-186):

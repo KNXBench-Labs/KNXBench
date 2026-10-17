@@ -165,6 +165,7 @@ records the tested commit separately from artifact publication verification.
 | Optional humour | Error/night/holiday messages | alpha.6 |
 | Project notes | Notebook view; review-first edits | alpha.10 |
 | Notes on objects | Communication objects as targets; tab-close prompt for drafts | alpha.11 |
+| [Notes when deleting](adr/0138-notes-get-an-explicit-decision-before-a-delete.md) | Keep, move or delete each affected note; one undo step with the delete | Main-only |
 | Installation instructions | Device tab; imported hints, review-first | alpha.10 |
 | Checked parameter editor | Time count, integer slider; source-checked | alpha.10 |
 | Catalogue update with preview | Every package uses review; backup before install, restore/delete listed backups (alpha.12) | alpha.10 |

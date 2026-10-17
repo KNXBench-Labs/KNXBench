@@ -42,7 +42,7 @@ type Api = Arc<ApiState>;
     rename_all = "camelCase",
     deny_unknown_fields
 )]
-enum Target {
+pub(crate) enum Target {
     Project,
     Installation(u8),
     Area(u32),
@@ -54,7 +54,7 @@ enum Target {
     ComObject(u32),
 }
 impl Target {
-    fn normalized(&self) -> ProjectNoteTarget {
+    pub(crate) fn normalized(&self) -> ProjectNoteTarget {
         match *self {
             Self::Project => ProjectNoteTarget::Project,
             Self::Installation(id) => ProjectNoteTarget::Installation(InstallationId(id)),

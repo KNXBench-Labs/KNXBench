@@ -12,7 +12,8 @@ pub(super) fn plan(
     source: &Source,
     selection: Selection,
 ) -> Result<Plan, String> {
-    // Model14 preserves destination notes and explicitly refuses source notes without disposition mapping.
+    // Model14 preserves destination notes; source notes follow their remapped targets, and notes
+    // outside the selection need the caller's explicit choice (`source_notes`, ADR-0138).
     // Model15 (ADR-0124) does the same for Functions: destination Functions are kept (the merge only adds,
     // so their rooms and group addresses stay), source Functions are refused rather than dropped.
     // Model16 (ADR-0128) adds no Project field: its carried manufacturer files are file-level rows.
@@ -21,9 +22,6 @@ pub(super) fn plan(
         || source.project.schema_version != super::SELECTIVE_MODEL_VERSION
     {
         return Err("selective import supports normalized model v16 only; a new model requires an audited dependency mapping".into());
-    }
-    if !source.project.notes.is_empty() {
-        return Err("source project notes require an explicit selection/disposition mapping; selective import refused without dropping authored data".into());
     }
     if !source.project.functions.is_empty() {
         return Err("source project Functions require an explicit selection/disposition mapping; selective import refused without dropping them".into());
@@ -440,6 +438,14 @@ pub(super) fn plan(
     counts.lines = line_map.len();
     counts.building_parts = building_map.len();
     counts.group_addresses = group_map.len();
+    super::source_notes::carry(
+        &source.project,
+        &selection,
+        &mut after.project,
+        &mut mappings,
+        &mut counts,
+        &mut notes,
+    )?;
     for entry in &source.opaque {
         if !after.opaque.contains(entry) {
             after.opaque.push(entry.clone());

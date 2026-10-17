@@ -2895,7 +2895,7 @@ pub(crate) fn apply_bound_prepared(
     apply_bound(state, binding, label, message, detail, move |_| Ok(cmd))
 }
 
-fn apply_bound(
+pub(crate) fn apply_bound(
     state: &AppState,
     binding: &SnapshotBinding,
     label: &str,

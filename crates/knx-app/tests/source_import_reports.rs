@@ -148,6 +148,7 @@ fn existing_selective_merge_and_native_history_keep_source_and_primary_reports_s
         target_installation: installation,
         devices: vec![source.project.devices.iter().next().unwrap().id.0],
         lines: vec![],
+        unselected_notes: None,
     };
     let plan = selective_import::plan(&target, &source, selection).unwrap();
     let mut stack = CommandStack::new();

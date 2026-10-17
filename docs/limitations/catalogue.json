@@ -991,7 +991,7 @@
       "number": null,
       "title": "Historical native notes foundation",
       "topic": "Project model and storage",
-      "summary": "Local-only/no-editor wording is superseded by service/workbench delivery. Literal text, selective note import and downgrade limits remain.",
+      "summary": "Local-only/no-editor wording is superseded by service/workbench delivery. Literal text and downgrade limits remain; source notes in a selective import follow their mapping or need an explicit choice (ADR-0138).",
       "file": "historical-native-notes-foundation.md",
       "ledger_ids": [
         "FUTURE-03"
@@ -1082,7 +1082,7 @@
       "number": null,
       "title": "Project notes workbench",
       "topic": "Project model and storage",
-      "summary": "Notes use real project targets; ambiguous identities are withheld. Browser prompts, desktop reloads and translated review text retain disclosed platform/language boundaries.",
+      "summary": "Notes use real project targets; ambiguous identities are withheld. Web deletes ask what happens to affected notes (ADR-0138); CLI, CSV-import and scan deletes refuse with the named notes. Browser prompts, desktop reloads and translated review text retain disclosed platform/language boundaries.",
       "file": "project-notes-workbench.md",
       "ledger_ids": [
         "FUTURE-03"

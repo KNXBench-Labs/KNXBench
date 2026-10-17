@@ -193,3 +193,33 @@ is controlled by each note's explicit flag, independent of the existing5
 optional entity sections; no shared report selector/catalogue changes.
 Opted-out notes must not leak into report text, warnings, IDs or contents.
 Empty/opted-out collections leave existing report output unchanged.
+
+## Delete disposition and selective-import notes (17 October 2026, ADR-0138)
+
+The explicit disposition this contract required is user-reachable now
+([ADR-0138](../adr/0138-notes-get-an-explicit-decision-before-a-delete.md)).
+
+- **Core.** A command that leaves a previously valid note pointing at an entity
+  it removed is refused with `CommandError::NotesOrphaned`, naming every such
+  note (id, title, target); other note faults stay `InvalidNote` with a
+  plain-language `NoteError` text. `ProjectNote::with_target` keeps identity,
+  text and inclusion. Refusal leaves content, IDs and history unchanged.
+- **Application.** `knx_app::note_disposition::preview` evaluates the whole
+  delete on a copy without notes (cascades included: a device removes its
+  communication objects) and lists stranded notes plus removed targets;
+  `plan` turns exactly one choice per stranded note (move to the project or to
+  a surviving entity, or delete) into one `Batch` of note edits followed by the
+  delete. Undo restores the entity before its notes; redo repeats both.
+- **Selective import.** Source notes follow the destination identity of the
+  entity the merge brings in or reuses (`IdMapping` kinds, source installation →
+  target installation). Notes outside the selection need `unselectedNotes`
+  (`skip` with one report line each, or `attachToProject`); without it the merge
+  is refused. Counts `mappedNotes`/`attachedNotes`/`skippedNotes`, fresh note
+  IDs, budget refusal instead of truncation, undo through the snapshot history.
+  `.knxproj` sources carry no notes, so this applies to note-carrying sources.
+
+Tests: `crates/knx-core/tests/notes.rs` (named list, batch index, plain text,
+`with_target`), `crates/knx-app/tests/note_disposition.rs` (every delete kind ×
+every choice with exact undo/redo, cascade, refusals, undo order, save/reopen),
+`crates/knx-app/tests/selective_import.rs` (mapped, attached, skipped, refused,
+budget, wire).

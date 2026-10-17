@@ -2,6 +2,18 @@
 
 # Implementation status
 
+## Notes when deleting (source after Alpha 13)
+
+Deleting a device, group address, area, line, building part or group range that a
+project note belongs to now lists those notes first. For each one you choose:
+keep it on the project, move it to another element, or delete it; confirming
+applies your choices and the delete as one step that Undo reverses. The command
+line, a group address CSV import with delete rows and removing missing devices
+after a bus scan still refuse, but now name the affected notes instead of a
+generic error. Existing Alpha 13 binaries are unchanged.
+[Operating instructions](user-guide/01-user-interface.md#notes-when-deleting),
+[ADR-0138](../adr/0138-notes-get-an-explicit-decision-before-a-delete.md).
+
 ## Declared parameter grids (source after Alpha 13)
 
 Parameter areas whose product data declares a `Table`/`Grid` layout render as a

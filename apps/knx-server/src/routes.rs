@@ -64,6 +64,7 @@ pub fn project_routes() -> Router<SharedState> {
             post(crate::selective_import_routes::apply),
         )
         .merge(crate::plugin_data_routes::router())
+        .merge(crate::note_disposition_routes::router())
         .route("/api/project/load-progress", get(load_progress))
         .route("/api/project/new", post(new_project))
         .route("/api/project/open", post(open_native_project))
@@ -1718,6 +1719,10 @@ async fn delete_group_address(
     State(state): State<SharedState>,
     AxumPath(id): AxumPath<u32>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    note_guard(
+        &state,
+        &knx_app::note_disposition::Deletion::GroupAddresses(vec![knx_core::GroupAddressId(id)]),
+    )?;
     domain::delete_group_address_impl(&state, id)
         .map(Json)
         .map_err(ApiError::bad_request)
@@ -3010,6 +3015,10 @@ async fn delete_area(
     State(state): State<SharedState>,
     AxumPath(id): AxumPath<u32>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    note_guard(
+        &state,
+        &knx_app::note_disposition::Deletion::Area(knx_core::AreaId(id)),
+    )?;
     domain::delete_area_impl(&state, id)
         .map(Json)
         .map_err(ApiError::bad_request)
@@ -3058,6 +3067,10 @@ async fn delete_line(
     State(state): State<SharedState>,
     AxumPath(id): AxumPath<u32>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    note_guard(
+        &state,
+        &knx_app::note_disposition::Deletion::Line(knx_core::LineId(id)),
+    )?;
     domain::delete_line_impl(&state, id)
         .map(Json)
         .map_err(ApiError::bad_request)
@@ -3185,6 +3198,10 @@ async fn delete_group_range(
     State(state): State<SharedState>,
     AxumPath(id): AxumPath<u32>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    note_guard(
+        &state,
+        &knx_app::note_disposition::Deletion::GroupRange(knx_core::GroupRangeId(id)),
+    )?;
     domain::delete_group_range_impl(&state, id)
         .map(Json)
         .map_err(ApiError::bad_request)
@@ -3254,6 +3271,10 @@ async fn delete_building_part(
     State(state): State<SharedState>,
     AxumPath(id): AxumPath<u32>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    note_guard(
+        &state,
+        &knx_app::note_disposition::Deletion::BuildingPart(knx_core::BuildingPartId(id)),
+    )?;
     domain::delete_building_part_impl(&state, id)
         .map(Json)
         .map_err(ApiError::bad_request)
@@ -3735,10 +3756,26 @@ async fn create_device(
         .map_err(catalog_error)
 }
 
+/// ADR-0138: a delete that would strand project notes answers the
+/// structured `noteDispositionRequired` refusal instead of running.
+fn note_guard(
+    state: &crate::AppState,
+    deletion: &knx_app::note_disposition::Deletion,
+) -> Result<(), ApiError> {
+    match crate::note_disposition_routes::refusal(state, deletion) {
+        Some(refusal) => Err(refusal),
+        None => Ok(()),
+    }
+}
+
 async fn delete_device(
     State(state): State<SharedState>,
     AxumPath(id): AxumPath<u32>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    note_guard(
+        &state,
+        &knx_app::note_disposition::Deletion::Devices(vec![knx_core::DeviceId(id)]),
+    )?;
     domain::delete_device_impl(&state, id)
         .map(Json)
         .map_err(ApiError::bad_request)
@@ -3753,6 +3790,12 @@ async fn batch_delete_devices(
     State(state): State<SharedState>,
     Json(body): Json<BatchIdsBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    note_guard(
+        &state,
+        &knx_app::note_disposition::Deletion::Devices(
+            body.ids.iter().copied().map(knx_core::DeviceId).collect(),
+        ),
+    )?;
     domain::batch_delete_devices_impl(&state, body.ids)
         .map(Json)
         .map_err(ApiError::bad_request)
@@ -3762,6 +3805,16 @@ async fn batch_delete_group_addresses(
     State(state): State<SharedState>,
     Json(body): Json<BatchIdsBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    note_guard(
+        &state,
+        &knx_app::note_disposition::Deletion::GroupAddresses(
+            body.ids
+                .iter()
+                .copied()
+                .map(knx_core::GroupAddressId)
+                .collect(),
+        ),
+    )?;
     domain::batch_delete_group_addresses_impl(&state, body.ids)
         .map(Json)
         .map_err(ApiError::bad_request)

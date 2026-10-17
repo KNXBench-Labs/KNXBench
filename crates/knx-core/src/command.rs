@@ -675,6 +675,9 @@ pub enum CommandError {
     Validation(ValidationError),
     InvalidName(crate::names::NameError),
     InvalidNote(crate::note::NoteError),
+    /// The edit removes entities that these notes point at. Nothing changed;
+    /// each note needs an explicit disposition first (ADR-0138).
+    NotesOrphaned(Vec<crate::note::OrphanedNote>),
     NoteNotFound(crate::ProjectNoteId),
     NotePosition(usize),
     DeviceNotFound(DeviceId),
@@ -881,7 +884,23 @@ impl fmt::Display for CommandError {
         match self {
             CommandError::Validation(e) => write!(f, "{e}"),
             CommandError::InvalidName(e) => write!(f, "{e}"),
-            CommandError::InvalidNote(e) => write!(f, "note validation refused: {e:?}"),
+            CommandError::InvalidNote(e) => write!(f, "note refused: {e}"),
+            CommandError::NotesOrphaned(notes) => {
+                let count = notes.len();
+                let noun = if count == 1 {
+                    "note without its"
+                } else {
+                    "notes without their"
+                };
+                write!(f, "this change would leave {count} project {noun} target: ")?;
+                for (index, note) in notes.iter().enumerate() {
+                    if index > 0 {
+                        f.write_str("; ")?;
+                    }
+                    write!(f, "note {} {:?} on {}", note.id, note.title, note.target)?;
+                }
+                f.write_str(". Keep each note on the project, move it to another entity or delete it first; nothing was changed")
+            }
             CommandError::NoteNotFound(id) => write!(f, "note {id} not found"),
             CommandError::NotePosition(position) => write!(f, "note position {position} is invalid"),
             CommandError::DeviceNotFound(id) => write!(f, "device {id} not found"),
@@ -2039,8 +2058,17 @@ impl Command {
         {
             let mut candidate = project.clone();
             let inverse = self.apply_inner(&mut candidate)?;
-            crate::note::validate_notes(&candidate, &candidate.notes)
-                .map_err(CommandError::InvalidNote)?;
+            if let Err(error) = crate::note::validate_notes(&candidate, &candidate.notes) {
+                // A removed target is named with every note it strands; any
+                // other note fault (a new note's own target, budgets) stays
+                // the plain validation refusal.
+                let orphaned = crate::note::orphaned_notes(project, &candidate);
+                return Err(if orphaned.is_empty() {
+                    CommandError::InvalidNote(error)
+                } else {
+                    CommandError::NotesOrphaned(orphaned)
+                });
+            }
             crate::function::validate_functions(&candidate)
                 .map_err(CommandError::FunctionInvariant)?;
             *project = candidate;

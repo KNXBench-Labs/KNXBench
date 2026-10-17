@@ -57,3 +57,27 @@ native WebKitGTK window (no isolated display on the build host; the owner's
 desktop is not used without a go), Playwright's WebKit (host libraries missing)
 and Orca. Same-tab navigations to other pages ask the same way; links that open
 outside the app use `target="_blank"` and do not unload it.
+
+## Update 2026-10-17: deleting a note's target (ADR-0138)
+
+Deleting an element a note belongs to no longer ends in a generic refusal. The
+web app's deletes (properties pane and the bulk toolbar) list the affected
+notes and let the user keep each on the project, move it to another element or
+delete it; confirming applies the choices and the delete as one undo step
+([ADR-0138](../adr/0138-notes-get-an-explicit-decision-before-a-delete.md)).
+`FUTURE-03` is closed. Boundaries that remain:
+
+- Other ways of deleting offer no decision dialog: the CLI, a group address CSV
+  import with delete rows (CLI and web) and removing missing devices after a bus
+  scan refuse with the named list of notes and change nothing. Move or delete
+  those notes first in the Notes workspace.
+- The dialog's own text is translated (EN/DE; Bavarian and Klingon fall back to
+  English); the server's reason inside a refused choice, and the reason the CLI
+  and the CSV/scan paths print, is English.
+- Selective import carries source notes along their remapped targets and
+  requires an explicit choice (skip or attach to the project) for notes outside
+  the selection. `.knxproj` sources contain no KNXBench notes, so no shipped
+  reader produces such notes today; the choice exists in the application and
+  HTTP selection and has no control in the web dialog or the CLI.
+- Evidence: unit and HTTP tests plus an intercepted Chromium spec (EN/DE,
+  1440/400 px). No real-server browser smoke, no native WebKitGTK window.

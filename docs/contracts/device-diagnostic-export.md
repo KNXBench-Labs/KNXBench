@@ -122,6 +122,10 @@ separation); `knx-cli`
 `device_diagnostics` (2, real binary); web component/client tests; built shell in
 Chromium against the real HTTP handlers and the regular simulator (EN/DE,
 1440/400 px, stop-with-partial), every downloaded ZIP independently re-verified.
+The browser proof also asserts that a clean run shows no failure banner: the
+client once refused the in-flight progress snapshot ("attempted, not completed")
+and showed a false "request failed" after a successful read. That snapshot is
+admitted only while the report is incomplete.
 
 ## Required before any hardware claim
 

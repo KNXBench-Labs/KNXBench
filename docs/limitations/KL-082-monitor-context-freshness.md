@@ -23,7 +23,7 @@ records cannot establish a verified state. Backend/UI regressions and bounded
 mocked browser evidence and twelve complete candidate gates pass; integrated
 acceptance repeated and source `8ceacf49` published with exact remote/tree
 readback. Scoped comparison is delivered, not the remaining boundaries. See
-[owner evidence](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/archive/alpha-0.1/UI_ALPHA_READINESS.md).
+[owner evidence](https://github.com/KNXBench-Labs/KNXBench/blob/6222e17754f3/docs/archive/alpha-0.1/UI_ALPHA_READINESS.md).
 
 **Remaining boundary.** This is a point-in-time interpretation comparison, not
 a complete project identity/version, collaboration/push channel or atomic

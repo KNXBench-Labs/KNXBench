@@ -1,7 +1,7 @@
 # Non-terminal ledger rows — reconciliation and evidence re-check, 17 October 2026
 
-Claude session in worktree `KNXBench-ledger-residue-20261017`, base `a07848a1`
-(claim `bcaba477`). Scope: every non-terminal row of the [ledger](LEDGER.md) on
+Claude session in worktree `KNXBench-ledger-residue-20261017`, base `01c9e47b`
+(claim `0133044b`). Scope: every non-terminal row of the [ledger](LEDGER.md) on
 `origin/main` — 1 `IN_PROGRESS`, 2 `BLOCKED_EXTERNAL`, 16 `LATER`, confirmed by a
 script that parses the ledger's ID rows. `TOOLS-01`…`05` (external ProjectStats
 repository) and `FUTURE-08` (optional extra copy) are out of scope and unchanged.
@@ -13,12 +13,12 @@ tests and a revision covering the row's whole contract.
 
 | Row | Old → new | Evidence (tests + revision, or source) | Remaining residue | Lift condition |
 | --- | --- | --- | --- | --- |
-| `MODEL-07` | IN_PROGRESS → **DONE** | `ff9c598d`: `knx-diff` `tests/functions.rs` (10), `http_project_diff` `a_changed_function_is_one_row_of_the_functions_table`, `cli_project_diff` `diff_prints_a_changed_function_as_its_own_line`, `knx-mcp` `tests/tools.rs` (3 Function tests) + stdio/writer tool lists, `knx-desktop` `functions_surface_tests`, web `projectDiffView.test.ts`/`ProjectDiffPanel.test.tsx`; 8/8 mutants killed | Recorded boundaries, not row work: schemas 20/21 unmapped, `Implements`/`DefaulGroupRange` verbatim, no Functions overview outside Properties, no MCP/CLI edit | — (closed). Boundaries lift by a supported-schema export using them (ADR-0124) |
+| `MODEL-07` | IN_PROGRESS → **DONE** | `236c64ae`: `knx-diff` `tests/functions.rs` (10), `http_project_diff` `a_changed_function_is_one_row_of_the_functions_table`, `cli_project_diff` `diff_prints_a_changed_function_as_its_own_line`, `knx-mcp` `tests/tools.rs` (3 Function tests) + stdio/writer tool lists, `knx-desktop` `functions_surface_tests`, web `projectDiffView.test.ts`/`ProjectDiffPanel.test.tsx`; 8/8 mutants killed | Recorded boundaries, not row work: schemas 20/21 unmapped, `Implements`/`DefaulGroupRange` verbatim, no Functions overview outside Properties, no MCP/CLI edit | — (closed). Boundaries lift by a supported-schema export using them (ADR-0124) |
 | `FUTURE-05` | LATER → LATER | Phase 0: `.knxprod` update preview/install/backup/restore shipped in CLI (ADR-0117) **and** web (ADR-0118, Goal B5) | Only an online catalogue source | A public, licence-clear catalogue feed or download interface usable without vendor approval, plus its own ADR (provenance, signature/integrity, offline fallback) |
 | `FUTURE-03` | LATER → LATER | Phase 0: core, native store, diff, report opt-in, service, HTTP, Notes view, help paragraph (`help.topic.workbench.p4`), desktop reload guard all shipped | ADR-0031's explicit delete disposition is reachable only in the core (`Batch` retarget/delete + entity delete in one undo step, `knx-core/tests/notes.rs`); web/CLI deletes of a note target just refuse with a generic error. Selective import refuses source notes | A user-facing disposition flow (move to project / retarget / delete, one undo step) in the web delete path, and a selective-import note mapping |
-| `FUTURE-01` | LATER → LATER | Phase 0: read-only MCP (ADR-0090, `f4adccc2`), opt-in literal rename writer (ADR-0116), `list_functions` (`ff9c598d`) | Any other agent mutation (create/delete/re-address, links, devices, parameters, imports), in-app chat | A new named mutation with its own revision/permission/validation/audit contract, as ADR-0116 did for renames |
-| `FUTURE-02` | LATER → LATER | Phase 0: AP5 literal prefix/suffix recipe in CLI (`f70183f0`), web **Rename…** (Goal B7) and MCP (ADR-0116) | Templates beyond the one literal recipe, recorder, scheduler, selection expansion | A second named operation with deterministic preview and atomic undo-capable apply, or an ADR for a template layer |
-| `PDB-04` | LATER → LATER | Phase 0: readonly source/HTTP + Time/Slider controls (11 Oct), Checked editor in Parameters (12 Oct), revision-bound writes from the web (Goal B1a `3b9f31f9`, 13 Oct). Phase 2: no new primary source (below) | `TypeColor`/`TypePicture` value codecs; module-scoped parameter mapping | A documented codec per lexical form (or an owner-approved controlled comparison), and a module mapping contract (see `KL-68` for `RepeatIndex`) |
+| `FUTURE-01` | LATER → LATER | Phase 0: read-only MCP (ADR-0090, `d9056440`), opt-in literal rename writer (ADR-0116), `list_functions` (`236c64ae`) | Any other agent mutation (create/delete/re-address, links, devices, parameters, imports), in-app chat | A new named mutation with its own revision/permission/validation/audit contract, as ADR-0116 did for renames |
+| `FUTURE-02` | LATER → LATER | Phase 0: AP5 literal prefix/suffix recipe in CLI (`02d80584`), web **Rename…** (Goal B7) and MCP (ADR-0116) | Templates beyond the one literal recipe, recorder, scheduler, selection expansion | A second named operation with deterministic preview and atomic undo-capable apply, or an ADR for a template layer |
+| `PDB-04` | LATER → LATER | Phase 0: readonly source/HTTP + Time/Slider controls (11 Oct), Checked editor in Parameters (12 Oct), revision-bound writes from the web (Goal B1a `d705a2b8`, 13 Oct). Phase 2: no new primary source (below) | `TypeColor`/`TypePicture` value codecs; module-scoped parameter mapping | A documented codec per lexical form (or an owner-approved controlled comparison), and a module mapping contract (see `KL-68` for `RepeatIndex`) |
 | `KL-170` | LATER → LATER | Phase 2: no new primary source (below) | Little-endian placement | Unchanged: probe output from ETS-programmed devices per manufacturer ([dossier](../limitations/KL-170-parameter-byte-order-download-boundary.md)) |
 | `KL-171` | LATER → LATER | Phase 2: no new primary source | UTF-8 length/truncation rule | Unchanged: a documented source for octet-vs-character size and cut rule |
 | `KL-172` | LATER → LATER | Phase 2: no new primary source | `LoadedImage`/`CheckSums` payload format | Unchanged: a public format description or an owner-approved controlled read-back comparison |
@@ -51,7 +51,7 @@ tests and a revision covering the row's whole contract.
   `LATER`: other agent mutations; further automation operations.
 - **PDB-04.** Delivered slices listed in the table. The limitations summary
   "the web host still sends unbound ones" was stale since Goal B1a
-  (`3b9f31f9`, 13 Oct; `ParameterPanel.binding.test.tsx`,
+  (`d705a2b8`, 13 Oct; `ParameterPanel.binding.test.tsx`,
   `e2e/parameter-editors.e2e.ts`) and is corrected in the
   [dossier](../limitations/checked-parameter-editors.md).
 - **Manual.** [Ideas and roadmap](../manual/ideas-and-roadmap.md) still called
@@ -60,7 +60,7 @@ tests and a revision covering the row's whole contract.
 
 ## Phase 2 — evidence re-check (no new primary source)
 
-**Method.** Last check: `4fd23f6a` (10 Oct) and the
+**Method.** Last check: `fb66e292` (10 Oct) and the
 [A6/A7 review](2026-10-13-goal-a6-a7-evidence-review.md) (13 Oct). Checked on
 17 October 2026:
 

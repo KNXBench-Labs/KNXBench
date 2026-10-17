@@ -12,7 +12,7 @@ Original dates, assumptions, corrections and numbered sections stay in force.
 **This spike documents a procedure. Nothing described here is implemented,
 and the measurements in this section were taken by the controller against
 their own installation, not by this repository's code.**
-[GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/a584007fc05a/docs/GAP_ANALYSIS_ETS.md) row **T17** guessed that a line
+[GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/994ac08c0328/docs/GAP_ANALYSIS_ETS.md) row **T17** guessed that a line
 scan would be built on "individual-address serial-number read services".
 That guess was wrong, and this spike exists to correct it and to name the
 service the Standard actually defines for this purpose. It extends §8.4's
@@ -32,7 +32,7 @@ the device-descriptor APCIs (`crates/knx-net/src/cemi.rs`); `ProbePolicy`,
 `ProbeOutcome`, `probe_address`, `scan_line`
 (`crates/knx-net/src/scan.rs`); and `knx bus scan`
 (`apps/knx-cli/src/scan.rs`, `apps/knx-cli/src/main.rs`). See
-[GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/a584007fc05a/docs/GAP_ANALYSIS_ETS.md)'s **T17** entry for what
+[GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/994ac08c0328/docs/GAP_ANALYSIS_ETS.md)'s **T17** entry for what
 shipped measured against what this section specified. Finding 4, appended
 at the end of this subsection, adds what a live run of the shipped binary
 against real hardware confirmed and narrowed; everything else below this
@@ -339,7 +339,7 @@ names, or manufacturer inventory belonging to this installation are
 written into it.
 
 This mismatch is not a scan defect; it is the reason **E2**
-([GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/a584007fc05a/docs/GAP_ANALYSIS_ETS.md)) is a gap worth closing at
+([GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/994ac08c0328/docs/GAP_ANALYSIS_ETS.md)) is a gap worth closing at
 all. An ETS project file is a *plan*; the bus is the *installation*. They
 drift apart in ordinary use — devices get added by hand, replaced,
 re-addressed, or removed without the project file being updated to

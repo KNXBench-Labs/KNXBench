@@ -66,6 +66,6 @@ stale-pointer scenario above could attach one project's opaque/manifest
 data to a different project's export. Closed for that one code path by
 reading `AppState.opaque`/`AppState.manufacturer_refs` (the live,
 in-memory copies) instead of re-opening the file — see
-[GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/a584007fc05a/docs/GAP_ANALYSIS_ETS.md)'s C4 row. The underlying gap
+[GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/994ac08c0328/docs/GAP_ANALYSIS_ETS.md)'s C4 row. The underlying gap
 above (`store_path` itself can point at the wrong file) is unchanged.
 <!-- END earlier resolved record -->

@@ -9,7 +9,7 @@ updates supersede them; they are not new work assignments.
 ## Update 2026-10-17: the web sends revision-bound writes
 
 The note below ("the web editor host still sends the unbound legacy form") was
-overtaken the same day: Goal B1a (`3b9f31f9`, 13 October 2026) binds every
+overtaken the same day: Goal B1a (`d705a2b8`, 13 October 2026) binds every
 parameter write from the Parameters rows and the Checked editor to the snapshot
 and value the panel showed; a `409 parameterWriteConflict` keeps the draft and
 resends only through **Apply my value** (`ParameterPanel.binding.test.tsx`,

@@ -1,0 +1,116 @@
+{
+  "schema": "knxbench-history-rewrite/1",
+  "date": "2026-10-17",
+  "decision": "owner: KL-185 rewrite (ADR-0135)",
+  "tool": "git-filter-repo a40bce548d2c (--replace-text and --replace-message with one ordered rule file, --prune-empty never, --prune-degenerate never)",
+  "rule_categories_described_not_quoted": [
+    "checkout, worktree and old-disk mount paths -> <sources>, <old-sources>, <old-disk>, <data-disk>",
+    "the same paths in dash-joined directory-key form -> <sources-key>, <disk-key>",
+    "agent profile and profile scratch directories -> <profile>, <profile-scratch>",
+    "developer home directories -> /home/alice (sibling-prefix fixtures -> /home/alicea, /home/alice-old; one guard test value -> another fictional, deliberately non-placeholder home)",
+    "host name -> <host>; distribution and desktop name -> desktop",
+    "two exact kernel releases -> removed or kernel-release",
+    "CPU model -> 8-core CPU",
+    "the real KNX gateway address -> 203.0.113.250 (TEST-NET-3; absent from the old history, checked)"
+  ],
+  "published_main": {
+    "old": "c7b729fac3452cb90047f8b03dea4880b51a0ed9",
+    "new": "951553f90412dc8764d08a5febae14385ebefa71"
+  },
+  "tags": {
+    "v0.1.0-alpha.10": {
+      "old_commit": "73420e13557393336ce45ae80bcf6ad0126490e8",
+      "new_commit": "fd25f90b1a58056785d94e3e6a7bce8f8e6aa081",
+      "old_tag_object": "b39ea6a31aa6ddf31fcc6a99f7449dd51c24772d",
+      "new_tag_object": "fd78362e361a98acaff91be1f469d6424c0804df"
+    },
+    "v0.1.0-alpha.11": {
+      "old_commit": "758a112b765d9c10cf7a2ae59cb8cd6eb97657a2",
+      "new_commit": "665093416dc7759085bb74f66f2493ee3d9f22ac",
+      "old_tag_object": "44824586f4851ca3b3bab58e6107962e8655dc24",
+      "new_tag_object": "0d517c1bda3b1a34823eb9728cf6ff3188771ec9"
+    },
+    "v0.1.0-alpha.12": {
+      "old_commit": "16aefbe6a943406deb2876d11bca21c7e652b25a",
+      "new_commit": "eaf52e44527f1c4de7f79aeb732694c032138dcb",
+      "old_tag_object": "cd6bd6a3cf4a8d4cca6cc738bf98661d1d46dae0",
+      "new_tag_object": "7c815530e863c7db13c79ff4040957dd8a9766a1"
+    },
+    "v0.1.0-alpha.13": {
+      "old_commit": "6105976f1a960dd34205638df501f8c3ede60a6e",
+      "new_commit": "bbb573f4227be8ed907648d3a884c61b5efcddd5",
+      "old_tag_object": "0ee650a0623172b1897272de906d961981191dca",
+      "new_tag_object": "c83a5b87cb2637c102eb6629cf0e3011ecdb8db1"
+    },
+    "v0.1.0-alpha.5": {
+      "old_commit": "a0ff1f55347a6c2f50bcfa596e38a030a6cb7e96",
+      "new_commit": "a8d925123bffe63ad1264843c3c4d8b67b7657f7",
+      "old_tag_object": "0f792fc0b65e2cee655a8354ed7642f4a14937b3",
+      "new_tag_object": "4b717f46d2313e5290b1de339175af2a57293a6d"
+    },
+    "v0.1.0-alpha.6": {
+      "old_commit": "042509c68dd646692591a3c58d52b9b152882526",
+      "new_commit": "f2700ce8ef774701280446d56ea8daf4d365ce78",
+      "old_tag_object": "67803f9c6506a82499ed514c44e9e34074506f19",
+      "new_tag_object": "a826ad75aae6ac76de6d359de0cb7e8ed722f115"
+    },
+    "v0.1.0-alpha.7": {
+      "old_commit": "839d5afd90559f1435d77a05ece3bbce2de3f2cf",
+      "new_commit": "e1393c42693e27e39c6e9e55871648a2b6e3bf2e",
+      "old_tag_object": "4811dccf0dae2b3599ee1a03a037358bb536a9e0",
+      "new_tag_object": "cf1bd77b7553eb8ddd966c5660bb1c7008178bf7"
+    },
+    "v0.1.0-alpha.8": {
+      "old_commit": "fdddad8ffe0bd9b4a33f2f992a15eac9b1a3c86d",
+      "new_commit": "4e3f9dd307476eeb55778f90943415a6b53eb5f0",
+      "old_tag_object": "7e796b17857387c0bf90b9c91e685bc73e508071",
+      "new_tag_object": "44b56655a54ac4c7f905bd7f0903bbf21230c0ff"
+    },
+    "v0.1.0-alpha.9": {
+      "old_commit": "5b21323e050f94953de9ff4683cc12462d753001",
+      "new_commit": "c88f13eb287a976cf42468e8e1b3df1a64e257dd",
+      "old_tag_object": "0bf7d8c99e0dc77dc9501a706682c52c946c8da8",
+      "new_tag_object": "0a401d797beaf9baf22d92fa46947116eb785642"
+    }
+  },
+  "commits_rewritten_total": 3231,
+  "commits_published": 3216,
+  "commits_pruned": 0,
+  "identities_dates_parents_unchanged": true,
+  "commit_messages_changed": 118,
+  "commit_messages_changed_note": "7 by the rules; the rest because filter-repo rewrote abbreviated hashes inside messages to the new commits",
+  "verification": {
+    "independent_rule_application": "every changed blob of every branch and tag tip equals the same rule file applied independently in Python",
+    "refs_checked": [
+      "refs/heads/local/detached-KNXBench-ledger-gate-20261017",
+      "refs/heads/local/docs/ledger-residue-20261017",
+      "refs/heads/local/feat/parameter-matrix-20261017",
+      "refs/heads/local/feat/plugin-data-adoption-20261017",
+      "refs/heads/local/fix/object-function-dropdown-20261017",
+      "refs/heads/local/integrate/object-function-dropdown-20261017",
+      "refs/heads/local/main",
+      "refs/heads/local/wip/manufacturer-plugin-research-20261013",
+      "refs/heads/main",
+      "refs/tags/v0.1.0-alpha.10",
+      "refs/tags/v0.1.0-alpha.11",
+      "refs/tags/v0.1.0-alpha.12",
+      "refs/tags/v0.1.0-alpha.13",
+      "refs/tags/v0.1.0-alpha.5",
+      "refs/tags/v0.1.0-alpha.6",
+      "refs/tags/v0.1.0-alpha.7",
+      "refs/tags/v0.1.0-alpha.8",
+      "refs/tags/v0.1.0-alpha.9"
+    ],
+    "binary_objects_changed": 0,
+    "objects_scanned_for_residue": 37503,
+    "residue_hits": 0
+  },
+  "not_changed": [
+    "GitHub pull-request refs refs/pull/3/head and refs/pull/24/head (read-only; GitHub keeps the old commits reachable there)",
+    "the fork, which is owned by its owner",
+    "release assets and Docker images (no hits; built from old hashes)"
+  ],
+  "commits_published_rehashed": 2963,
+  "commits_published_unchanged": 253,
+  "commits_rewritten_total_note": "includes commits that exist only on local branches"
+}

@@ -20,7 +20,7 @@ new edits or reviving a stopped timer. Focused regressions, realistic negative
 controls and the complete offline gates pass. There is still no instantaneous
 push or general shared-project synchronization; native/AT workflows are not
 accepted by these tests. Publication remains pending. See
-[UI_ALPHA_READINESS](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/archive/alpha-0.1/UI_ALPHA_READINESS.md). The historical title and inventory
+[UI_ALPHA_READINESS](https://github.com/KNXBench-Labs/KNXBench/blob/6222e17754f3/docs/archive/alpha-0.1/UI_ALPHA_READINESS.md). The historical title and inventory
 identity remain stable for incoming links and the separate alpha owner.
 
 **Historical description before this follow-up:**

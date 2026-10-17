@@ -43,9 +43,12 @@ class MeasuredRun:
         with (self.output / f'{name}.log').open('wb') as log:
             child = subprocess.Popen(command, cwd=cwd, env=env, stdout=log,
                                      stderr=subprocess.STDOUT, start_new_session=True)
-            stage['pid'] = child.pid
-            self.save()
+            # The PID checkpoint is inside the guarded block: a signal arriving
+            # right after it is written (a caller may act on the receipt at
+            # once) must still take the child's whole group down.
             try:
+                stage['pid'] = child.pid
+                self.save()
                 _, status, usage = os.wait4(child.pid, 0)
                 child.returncode = os.waitstatus_to_exitcode(status)
             except BaseException:

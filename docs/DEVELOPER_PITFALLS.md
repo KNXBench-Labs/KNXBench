@@ -47,6 +47,10 @@ already found lying in the grass.
   precondition (root ignores file modes) and fails. Run the Rust suite with
   `--offline` outside that wrapper; keep the wrapper for browser suites.
 
+- **Record a child's PID only inside the block that cleans it up.** A
+  supervisor may act on the receipt the moment the PID appears; a signal in the
+  gap between writing it and entering `try` orphans the child's whole session
+  (`web_gate_support.MeasuredRun.step`, fixed 17 October 2026).
 - **On ext4 a deleted file's inode comes straight back.** Deleting a file and
   creating another in the same directory reused the inode 200 of 200 times on
   the project drive (17 October 2026). A file identity that must notice a

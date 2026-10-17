@@ -12,6 +12,8 @@ it("hides the entire content without unmounting or changing sibling sections", a
     <NavigationSection title="Diagnostics"><span>Log</span></NavigationSection></>));
   const buttons = host.querySelectorAll<HTMLButtonElement>("button");
   const input = host.querySelector("input")!;
+  expect([...buttons].map(button => button.getAttribute("aria-expanded"))).toEqual(["false", "false"]);
+  await act(async () => { buttons[0].click(); buttons[1].click(); });
   input.value = "retained";
   await act(async () => buttons[0].click());
   expect(buttons[0].getAttribute("aria-expanded")).toBe("false");

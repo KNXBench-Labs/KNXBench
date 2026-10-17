@@ -26,6 +26,12 @@ Last updated: 2026-10-16 21:18 CEST
 | MCP server | Read-only saved-file tools; opt-in rename writer from alpha.10 | alpha.6 |
 | Remote browser | Authenticated server; networking-dependent | alpha.6 |
 
+## Newer source changes
+
+| Feature | Scope | Availability |
+| --- | --- | --- |
+| Closed disclosure defaults | Navigation blocks, tree branches, parameter groups and details; manual opening and remembered address views retained | Main-only |
+
 ## New in Alpha 13
 
 [Release scope](releases/alpha13.md) separates offline editing and image-integrity

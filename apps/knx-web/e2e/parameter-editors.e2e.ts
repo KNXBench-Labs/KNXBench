@@ -1,4 +1,5 @@
 /** Built device editor: checked parameter editors, source evidence, writes and refusals. */
+import { openExplorerBranches, openParameterSections } from "./disclosure-fixture";
 import { expect, test, type Page } from "@playwright/test";
 import { join } from "node:path";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
@@ -116,9 +117,11 @@ async function noHorizontalOverflow(page: Page) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
 }
 async function openParameters(page: Page, m: Catalogue) {
+  await openExplorerBranches(page);
   await page.locator(".project-explorer").getByText(DEVICE.name, { exact: false }).first().click();
   await page.getByRole("tab", { name: m["workbench.parameters"], exact: true }).click();
   const panel = page.locator('[id="device-panel-41-1"]');
+  await openParameterSections(page);
   await expect(panel.locator(".parameter-field").first()).toBeVisible();
   return panel;
 }

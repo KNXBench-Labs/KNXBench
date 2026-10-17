@@ -183,7 +183,7 @@ function FunctionItem(props: {
   }
 
   return <li className="functions-item" data-function-id={node.id}>
-    <details open>
+    <details>
       <summary>
         <span className="functions-name">{node.name}</span>
         <span className="provenance-badge">{completionLabel(t, node.completion)}</span>

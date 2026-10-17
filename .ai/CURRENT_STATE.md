@@ -1,3 +1,35 @@
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-17 09:07
+- **Completed:** Closed-by-default content disclosures delivered (branch fix/collapsed-defaults-20261017, base c94f4208). Navigation blocks, explorer branches, GA main/middle groups, parameter sections/manufacturer groups, Function entries, matrix column picker and report/evidence details start closed; explicit reveal/search/selection, remembered GA tree state, Expand all (incl. lazily mounted descendants) and mounted drafts preserved. Real bug found by the gate and fixed: stacked-pane splitter measured a hidden block as 0 px, so the first drag/key step after unfolding jumped to min; now ResizeObserver + interaction-time measurement. Final complete web gate 63/63 stages, component 3635/0, browser 578/578, 20 typechecks, build, docs, tools green, inputs frozen.
+- **Pending/Next Steps:** None for this package. Manual screenshots keep Alpha 13 provenance (open defaults); refresh them with the next release capture. Root checkout was deliberately not synchronized (dirty, shared).
+- **Notes for Codex oder Claude:** New browser specs that test content (not folding) must open it explicitly via `apps/knx-web/e2e/disclosure-fixture.ts`; enumerate toggles per element, never via live `[aria-expanded="false"]` locator lists. Component tests: `renderExplorer(..., startClosed)` / `expandExplorer()` helpers. `src/collapsibleDefaults.test.ts` rejects new `<details open>` in content. Log: .ai/logs/2026-10-17_codex_collapsed-defaults.md (name kept for reference stability; package finished by Claude).
+
+---
+
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-17 09:03
+- **Completed:** Fixed the recurring Chromium "socket path too long" setup failures. Root causes: (1) `tools/browser_tmp.py` refused a private explicit directory that fits Chromium as a leaf because one more `/wXXXXXXXX` would not fit; (2) standalone launchers (workbench proof, CRT design checks, story check) launched Chromium unguarded. Now one allocator (`browser_directory`/`--allocate`/`--run CMD`) plus one Node guard `tools/browser_tmp.cjs` (reexported by `apps/knx-web/browserTmp.ts`, imported by standalone launchers); nested processes reuse the parent leaf; caller-owned data never deleted. RED observed first; 198 tool tests (1 pre-existing skip) incl. 14 temp regressions with real offline Chromium, 20 typechecks, build, docs, real Playwright 8/8 with 208-byte TMPDIR.
+- **Pending/Next Steps:** None for this fix. Private scratch launchers of other sessions can drop their hand-built short TMPDIR code and use `python3 tools/browser_tmp.py --run ...` or pass their private dir as `KNXBENCH_BROWSER_TMP_ROOT` (now accepted as leaf). Full web gate not run for this tooling-only change.
+- **Notes for Codex oder Claude:** Contract docs/contracts/web-test-gate.md#recurring-chromium-socket-path-protection; log .ai/logs/2026-10-17_claude_chromium-temp-path.md. Receipt `temporaryRoot.selected` is now the actual browser directory, not its parent. Playwright's own `playwright-transform-cache-*` still lands in the original TMPDIR (not a socket; harmless). No app/KNX/Rust/schema change; parallel sessions' worktrees untouched.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-17 08:01
+- **Completed:** First closed-defaults complete web gate TERMINAL FAILED with frozen inputs: docs/tools/build20derivedtypechecks/component3635 pass; browser560pass/18fail/0skip/0flaky. Failures classified: stale parent-opening setup16 plus real first-resize hidden-target bug2. Explicit test setup corrected without weakening assertions; splitter named drag/keyboard REDs then minimum observer/interaction-time measurement fix, all12splitter tests GREEN. Original failure remains retained.
+- **Pending/Next Steps:** Sole correction browser proc_fa407e6a6b0c / wrapperPID2733034, result profile scratch/ui-collapsed-20261017/correction1/receipt.json. Prepared continuation waits exact worker once and requires complete green correction before a new fullweb-final2; no final acceptance/publication yet. Then fresh-main semantic integration, reviewed commit/publication/readback and owned retirement, preserving parallel object-function/parameter-workspace semantics.
+- **Notes for Codex oder Claude:** Owned fix/collapsed-defaults-20261017 only; preserve foreign scopes/gates and selected dirtyroot/index/fulljournal. No private findings/project data used, bus/vendor/subagent/codingCLI/release/deployment. Details .ai/logs/2026-10-17_codex_collapsed-defaults.md. New mandatory gap check: hidden initial height must not make first splitter drag/key jump to min. No further edits to owned candidate while acceptance runs.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-17 07:24
+- **Completed:** Owner-requested closed-by-default content implemented in isolated fix/collapsed-defaults-20261017 (base c94f4208). Navigation blocks/tree branches, parameter/source groups, Function/matrix/report details start closed; explicit reveal, remembered GA views and mounted drafts retained. Named REDs; complete component3635/0/265files, production build,20derived typechecks,docs/tools pass. Focused browser29passed before two corrected stale matrix setup assertions; not broad acceptance.
+- **Pending/Next Steps:** Finish final full web/browser acceptance, integration against fresh main preserving parallel object-function changes, reviewed commit/publication/readback and owned cleanup. No final delivery or deployment yet. Earlier exploratory interruption and zero-stage queued cancellation retained separately.
+- **Notes for Codex oder Claude:** Owned checkout KNXBench-collapsed-20261017 only; selected dirtyroot/index/foreign work remain protected. Separate object-function session3ccc82c2b88f owns its active gate; do not alter its checkout/leases. Shared ParameterPanel and devices browser tests need semantic integration, not either side discarded. No bus/live-project/vendor/subagents/codingCLI/release. Own log2026-10-17_codex_collapsed-defaults.md. Pane visibility is layout, not this content-default scope.
+
+---
+
 - **Last Agent:** codex
 - **Timestamp:** 2026-10-17 05:50
 - **Completed:** Renewed owner System2/SystemB usable-download objective investigated on fresh published 07a93451. Existing offline tests actually passed 53/0/0 ignored in seven targets (System2 image10/metadata7/public UP2581; SystemB codecs28; Net simulator7), in isolated network namespaces, owned target and frozen source/package. Original public ETS5.5.3 notes retrieved; official SystemB help remains unrecovered (HTML403/API401/no exact Wayback snapshot/browser pre-navigation profile lock). No product implementation or new admission.

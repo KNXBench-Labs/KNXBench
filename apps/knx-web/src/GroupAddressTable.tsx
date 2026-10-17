@@ -51,7 +51,7 @@ export default function GroupAddressTable(props: {
   const initialOpen = () => {
     const storage = viewStorage();
     const stored = viewKey === null || storage === null ? null : readOpenGroups(storage, viewKey, installation.id);
-    return stored === null ? defaultOpenGroups(index) : pruneGroups(stored, index);
+    return stored === null ? defaultOpenGroups() : pruneGroups(stored, index);
   };
   // The open set belongs to one project and installation; a reply for the next
   // one must never store the previous view under its key.

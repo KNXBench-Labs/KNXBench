@@ -1,4 +1,5 @@
 /** Complete historical reports are explicit local downloads, with strict fictional APIs. */
+import { openNavigationSections } from "./disclosure-fixture";
 import { expect, test } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -37,6 +38,7 @@ for (const language of ["en","de"] as const) for (const width of [400,1440]) {
       return route.fulfill({status,contentType:"application/json",body:JSON.stringify(body)});
     });
     await page.goto("/?view=editor");
+    await openNavigationSections(page);
     await page.locator(".workbench-navigation").getByRole("button",{name:m["workbench.overview"],exact:true}).click();
     const panel=page.locator(".import-report-panel").filter({has:page.getByRole("button",{name:m["importEvidence.show"],exact:true})});
     await expect(panel).toBeVisible();expect(reportReads).toBe(0);

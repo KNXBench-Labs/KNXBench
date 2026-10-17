@@ -31,7 +31,7 @@ export default function GroupAddressMatrix(props: GroupAddressWorkspaceViewProps
     <p role="status" data-ga-inventory-status>{t("gaWorkspace.inventoryStatus", { ...props.inventory.summary })}</p>
     {props.matrix.ambiguousObjectIds.length > 0 && <p role="status">{t("gaWorkspace.objectOwnerConflict", { ids: props.matrix.ambiguousObjectIds.join(", ") })}</p>}
     {props.matrix.missingFromInventory.length > 0 && <p role="status" data-ga-inventory-mismatch>{t("gaWorkspace.inventoryMismatch", { keys: props.matrix.missingFromInventory.join(", ") })}</p>}
-    <details className="ga-column-picker" open>
+    <details className="ga-column-picker">
       <summary>{t("gaWorkspace.columnScope", { selected: columns.length, total: props.matrix.columns.length, limit: MAX_COLUMNS })}</summary>
       <input type="search" aria-label={t("gaWorkspace.objectFilter")} placeholder={t("gaWorkspace.objectFilter")} value={props.columnQuery} onChange={e => props.onColumnQuery(e.target.value)} />
       <div className="ga-column-choices">{choices.map(column => <label key={column.key}>

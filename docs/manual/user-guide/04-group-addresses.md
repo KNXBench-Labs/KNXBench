@@ -80,6 +80,8 @@ the properties pane and the existing commands; no view edits on its own.
 **Which ranges are open** *(since Alpha 12; Alpha 11 and earlier open
 every range and forget what you closed)*. The tree table opens compact: main and
 middle ranges show with their counts, but no range unfolds its address list.
+**Source builds after Alpha 13** start with every range closed, including main
+ranges, unless this computer already remembers an explicit opening for the project.
 **Expand all** and **Collapse all** sit in the toolbar. Selecting an address — in
 the project explorer, from a link or from the search — opens the ranges above it;
 scoping the view to a range opens that range. While a search or filter is active,

@@ -387,6 +387,7 @@ describe("every editor mount resumes the server project (ADR-0127)", () => {
     apiMock.currentProject.mockResolvedValue({ ...treeWithDevice(), is_modified: false, has_store_path: true });
     const root = await renderApp();
     expect(apiMock.currentProject).toHaveBeenCalledTimes(1);
+    await expandExplorer();
     expect(host!.textContent).toContain("Device D");
     expect(host!.querySelector(".toast--fun")?.textContent).toContain("Welcome back.");
     expect(host!.querySelector(".toast--fun")?.textContent).not.toContain("unsaved");
@@ -416,6 +417,7 @@ describe("every editor mount resumes the server project (ADR-0127)", () => {
   it("resumes the current tree and its saved-file authority on the companion's return, silently", async () => {
     apiMock.currentProject.mockResolvedValue({ ...treeWithDevice(), is_modified: true, has_store_path: true });
     const root = await renderApp(undefined, undefined, true);
+    await expandExplorer();
     expect(host!.textContent).toContain("Device D");
     expect(host!.querySelector(".toast--fun")).toBeNull();
     await act(async () => { host!.querySelector<HTMLButtonElement>('button[data-crt-surface="save"]')!.click(); });
@@ -639,6 +641,15 @@ describe("App — remembered workbench geometry", () => {
   });
 });
 
+async function expandExplorer() {
+  const explorer = host!.querySelector<HTMLElement>(".project-explorer")!;
+  expect(explorer).not.toBeNull();
+  const section = explorer.closest(".navigation-section")!;
+  const toggle = section.querySelector<HTMLButtonElement>(".navigation-section-toggle")!;
+  if (toggle.getAttribute("aria-expanded") === "false") await act(async () => toggle.click());
+  await act(async () => explorer.querySelector<HTMLButtonElement>(".explorer-toolbar button:first-child")!.click());
+}
+
 function treeLabel(text: string): HTMLElement {
   const label = Array.from(host!.querySelectorAll<HTMLElement>(".tree-label"))
     .find((candidate) => candidate.textContent === text);
@@ -647,6 +658,7 @@ function treeLabel(text: string): HTMLElement {
 }
 
 async function dragTreeLabel(sourceText: string, targetText: string): Promise<void> {
+  await expandExplorer();
   const transfer = new TestDataTransfer();
   for (const [text, type] of [
     [sourceText, "dragstart"],
@@ -741,6 +753,7 @@ describe("App — unread errors and Explorer import counts", () => {
     expect(errorCards()[0]).toContain("first refusal");
     await act(async () => findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true })));
     await act(async () => {});
+    await expandExplorer();
     expect(treeLabel("Device D")).toBeTruthy();
     expect(errorCards()).toHaveLength(1);
     await act(async () => treeLabel("Device D").click());
@@ -1029,6 +1042,7 @@ describe("App — search reveal request", () => {
     });
     await act(async () => {});
 
+    await expandExplorer();
     const unassignedToggle = () => host!.querySelector<HTMLButtonElement>(
       '.tree-toggle[aria-label="Unassigned"]',
     )!;
@@ -1062,7 +1076,7 @@ describe("App — search reveal request", () => {
     expect(() => treeLabel("Device D")).toThrow('tree label "Device D" not found');
 
     // The request has completed at the selected row, so remounting the
-    // navigator starts at its ordinary default-open state but cannot replay
+    // navigator starts closed and cannot replay
     // the old scroll. (The row being present alone is not evidence here.)
     const previous = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "scrollIntoView");
     const scrollIntoView = vi.fn();
@@ -1073,7 +1087,7 @@ describe("App — search reveal request", () => {
     await act(async () => findButton("Navigation").click());
     expect(host!.querySelector(".project-explorer")).toBeNull();
     await act(async () => findButton("Navigation").click());
-    expect(treeLabel("Device D")).toBeTruthy();
+    expect(() => treeLabel("Device D")).toThrow('tree label "Device D" not found');
     expect(scrollIntoView).not.toHaveBeenCalled();
 
     await act(async () => root.unmount());
@@ -1099,6 +1113,7 @@ describe("App — U13 device selection identity", () => {
     const root = await renderApp();
     try {
       await act(async () => findButton("Open project…").click());
+      await expandExplorer();
       await act(async () => treeLabel("Device D").click());
       expect(host!.querySelector(".workbench-pane-right .inspector input")).toBeNull();
       expect(host!.querySelector(".device-workspace")).toBeNull();
@@ -1120,6 +1135,7 @@ describe("App — U13 device selection identity", () => {
     const root = await renderApp();
     try {
       await act(async () => findButton("Open project…").click());
+      await expandExplorer();
       await act(async () => treeLabel("Device D").click());
       expect(host!.querySelector(".workbench-pane-right .inspector input")).not.toBeNull();
       expect(host!.querySelector(".device-workspace")).not.toBeNull();
@@ -1168,6 +1184,7 @@ describe("App — U13 parameter snapshot invalidation", () => {
     const root = await renderApp();
     try {
       await act(async () => findButton("Open project…").click());
+      await expandExplorer();
       await act(async () => treeLabel("Device D").click());
       const value = () => host!.querySelector<HTMLInputElement>(".parameter-field input")?.value;
       expect(value()).toBe("6");
@@ -1207,6 +1224,7 @@ describe("App — device-detail fetch carries the product language (T33)", () =>
   it("passes no product language to deviceDetail when none is set", async () => {
     const root = await openProjectWithDevice();
 
+    await expandExplorer();
     await act(async () => {
       deviceLabel().dispatchEvent(new MouseEvent("click", { bubbles: true }));
       await Promise.resolve();
@@ -1224,6 +1242,7 @@ describe("App — device-detail fetch carries the product language (T33)", () =>
     setSetting(PRODUCT_LANGUAGE_STORAGE_KEY, "de-DE");
     const root = await openProjectWithDevice();
 
+    await expandExplorer();
     await act(async () => {
       deviceLabel().dispatchEvent(new MouseEvent("click", { bubbles: true }));
       await Promise.resolve();
@@ -1269,6 +1288,7 @@ describe("App — device-detail fetch carries the product language (T33)", () =>
     });
     await act(async () => {});
 
+    await expandExplorer();
     await act(async () => {
       deviceLabel().dispatchEvent(new MouseEvent("click", { bubbles: true }));
       await Promise.resolve();
@@ -1355,6 +1375,7 @@ describe("App — device-detail fetch carries the product language (T33)", () =>
     });
     await act(async () => {});
 
+    await expandExplorer();
     await act(async () => {
       deviceLabel().dispatchEvent(new MouseEvent("click", { bubbles: true }));
       await Promise.resolve();
@@ -1461,6 +1482,7 @@ describe("App — device-detail fetch carries the product language (T33)", () =>
     });
     await act(async () => {});
 
+    await expandExplorer();
     await act(async () => {
       deviceLabel().dispatchEvent(new MouseEvent("click", { bubbles: true }));
       await Promise.resolve();
@@ -1550,6 +1572,8 @@ describe("App — the File menu by keyboard alone", () => {
       .toEqual(["Project", "Import & export", "History & comparison", "Help & diagnostics"]);
     const sections = [...host!.querySelectorAll<HTMLElement>(".navigation-section")];
     expect(sections).toHaveLength(3);
+    expect(sections.map(section => section.querySelector("button")!.getAttribute("aria-expanded"))).toEqual(["false", "false", "false"]);
+    await act(async () => sections.forEach(section => section.querySelector<HTMLButtonElement>(".navigation-section-toggle")!.click()));
     const explorer = host!.querySelector(".project-explorer")!;
     expect(explorer).not.toBeNull();
     await act(async () => sections[1].querySelector<HTMLButtonElement>(".navigation-section-toggle")!.click());
@@ -2087,6 +2111,7 @@ describe("App — a failed load never renders a running banner", () => {
     });
 
     expect(apiMock.currentProject).toHaveBeenCalledTimes(1);
+    await expandExplorer();
     expect(host!.textContent).toContain("Device D");
     expect(host!.querySelector(".load-progress")).toBeNull();
     expect(host!.querySelector('[role="alert"]')).toBeNull();
@@ -3522,8 +3547,10 @@ describe("App — the File menu's manners, the stacked splitters, Quit and About
       findButton(enMessages["toolbar.undo"])
         .dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
+    await expandExplorer();
     expect(host!.textContent).toContain("Device D");
     apiMock.deviceDetail.mockResolvedValue(deviceDetailFixture());
+    await expandExplorer();
     await act(async () => {
       treeLabel("Device D").dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
@@ -3533,6 +3560,7 @@ describe("App — the File menu's manners, the stacked splitters, Quit and About
     await act(async () => {
       finishLoad(treeAt(baseTree(), 2));
     });
+    await expandExplorer();
     expect(host!.textContent).toContain("Device D");
     expect(host!.querySelector(".tree-label.selected")?.textContent)
       .toContain("Device D");
@@ -3570,11 +3598,13 @@ describe("App — the File menu's manners, the stacked splitters, Quit and About
     });
     // The first project is still modified, so F1's dialog asks first.
     await confirmReplaceDiscard();
+    await expandExplorer();
     expect(host!.textContent).toContain("Device D");
 
     await act(async () => {
       finishRefresh({ ...treeAt(baseTree(), 2), has_store_path: true });
     });
+    await expandExplorer();
     expect(host!.textContent).toContain("Device D");
 
     await act(async () => {
@@ -3622,8 +3652,10 @@ describe("App — the File menu's manners, the stacked splitters, Quit and About
     });
     // The first project is still modified, so F1's dialog asks first.
     await confirmReplaceDiscard();
+    await expandExplorer();
     expect(host!.textContent).toContain("Device D");
     apiMock.deviceDetail.mockResolvedValue(deviceDetailFixture());
+    await expandExplorer();
     await act(async () => {
       treeLabel("Device D").dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
@@ -3634,6 +3666,7 @@ describe("App — the File menu's manners, the stacked splitters, Quit and About
         has_store_path: true,
       });
     });
+    await expandExplorer();
     expect(host!.textContent).toContain("Device D");
     expect(host!.querySelector(".tree-label.selected")?.textContent).toContain("Device D");
 
@@ -4254,6 +4287,7 @@ describe("App project-history restore publication", () => {
     const root = await renderApp();
     try {
       await act(async () => host!.querySelector<HTMLButtonElement>('[aria-labelledby="welcome-native-title"]')!.click());
+      await expandExplorer();
       await act(async () => findButton("Device D").click());
       expect(host!.querySelector(".device-workspace")).not.toBeNull();
       await act(async () => findButton("Save").click());
@@ -4468,6 +4502,7 @@ describe("App — unapplied installation-instructions draft", () => {
     const root = await renderApp();
     try {
       await act(async () => findButton("Open project…").click());
+      await expandExplorer();
       await act(async () => treeLabel("Device D").click());
       await act(async () => findButton(enMessages["deviceInstructions.tab"]).click());
       const field = host!.querySelector<HTMLTextAreaElement>(".device-instructions textarea")!;

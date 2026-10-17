@@ -30,6 +30,12 @@ use it; `Access` on `Channel` and other hosts stays unmodelled and reported;
 separators inside declared grids remain grid captions without hint styling;
 there is no browser-lane case yet.
 
+A later [addendum](../research/2026-10-17-product-database-gap-census.md#addendum-two-more-databases-17-october-2026-later)
+found the first `TypeDate` declarations in the collection (2, `Encoding="DPT 11"`).
+They are reported as unknown and stored as kind `Other`, so the offline editor
+accepts any non-empty text for them; the download refuses them by name. The
+value format is not verified here, so no date editor or validation exists yet.
+
 ## Declared parameter grids (17 October 2026 source, after Alpha 13)
 
 [ADR-0137](../adr/0137-declared-parameter-grids-reach-the-workspace.md) carries

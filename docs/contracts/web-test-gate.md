@@ -188,6 +188,13 @@ proof. A separately source/build/tool-bound followup reproved the exact 278
 exclusive cases under the shared leases, with zero retries/skips. This is a scoped
 followup, not another full gate or scaling benchmark.
 
+**Re-admission (17 October 2026).** The temp-path tooling changes of 17 October
+moved the fixture fingerprint, so every file ran in the exclusive lane. The
+[lane review](../evidence/browser-lane-review-2026-10-17.md) classified every
+shared-input and spec change since the 14 October admission, re-admitted the
+same 45 files with their current hashes (none added) and recorded six measured
+benchmark runs with identical 276-case identities, no skips or retries.
+
 Primary runner references: Playwright [parallel execution](https://playwright.dev/docs/test-parallel)
 and [JSON reporter](https://playwright.dev/docs/test-reporters#json-reporter),
 retrieved 2026-10-14; actual installed 1.63.0 behavior also exercised.

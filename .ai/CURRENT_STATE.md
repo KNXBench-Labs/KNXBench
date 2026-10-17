@@ -1,4 +1,12 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-10-17 16:55
+- **Completed:** Planning only: open work of 17 October saved as goal package files in `docs/goals/open-work-2026-10-17/` (README with order, collisions, shared rules and ledger routing; P1 object-function rescue, P2 plug-in data web UI (KL-186), P3 note-aware deletes + selective-import notes (FUTURE-03 residue), P4 gate hygiene, P5 OPEN_WORK sync; P6–P8 recorded as not goal-ready). Audit base `a340c5a8`; every one of the 18 non-terminal ledger rows routed once. Docs checker, anchors, ledger, headers green.
+- **Pending/Next Steps:** No package is started or reserved by these files; the user starts one with its starter line. Recommended order P5 → P2 → P3, P4 in parallel, P1 once parameter grids are on main and Codex or the user hands it over.
+- **Notes for Codex oder Claude:** Parameter-grids session (`KNXBench-parameter-matrix-20261017`) was active at writing time and is excluded; its branch adds an ADR numbered 0136, which main already uses for plug-in data adoption. P4 item 3 is a real safety bug: the corpus-output refusal misses outputs reached through a symlink.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-10-17 15:34
 - **Completed:** Owner chose "Datenübernahme bauen" for the SmartSensor line. Built plug-in data adoption in worktree branch feat/plugin-data-adoption-20261017: `knx_app::plugin_data` + `knx adopt-plugin-data` copy one device's `BinaryData` blob and numbered `ExtraData` table verbatim from a source .knxproj into an existing native project (preview + bound token, refusal unless product/application refs, blob/table refs and group links match, superseded bytes retained, digest-only record, rollback = saved version). ADR-0136, contract, KL-186, ledger row, status entries. 17 + 4 tests, private-pair ignored test, real-CLI run on the ETS6 pair: only SmartSensor EG adoptable. fmt/clippy/layering/headers/ledger/anchors/docs green.
 - **Pending/Next Steps:** None for this package. PUBLISHED as `a2c9050e` on origin/main (single commit on `a977302b`, fast-forward, no force). Gate on that exact tree: 12 stages, 0 failures (fmt, clippy workspace minus knx-desktop, 4,723 workspace tests, 38 knx-mcp tests, private-pair ignored tests 2/2, docs, local-info, limitations, layering, headers, anchors, ledger); main unchanged at start and end. Later: server route + UI with the same preview/confirm contract (KL-186). Plug-in execution and the offline host remain parked by the owner.

@@ -39,6 +39,7 @@
 // two different ways in two files is a bug waiting to happen, not a
 // feature of the namespacing convention.
 export const messages = {
+  "parameters.objectFunctionsEmpty": "No supported function selection can be mapped to this object. Other settings are under Parameters.",
   "parameters.functions": "Device functions",
   "parameters.functionsEmpty": "No supported function choices are currently visible. Other settings are under Parameters.",
   "parameters.functionsHint": "These manufacturer parameters control the available communication objects. A selection is applied immediately; Undo restores the previous configuration.",

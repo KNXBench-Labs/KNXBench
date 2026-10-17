@@ -461,14 +461,21 @@ edit the project; they do not connect to, program or download a KNX device.
 atomic object refresh described here. Unsupported module construction still
 refuses the complete edit; this does not add programming support.
 
-Open **Device functions** above the object table to change a manufacturer's
-supported operating-mode choices directly here. For example, a button may first
-need enabling, then a rocker/independent-button mode and a switching function.
-Choose the options the installed product actually declares; selecting one saves
-it immediately and refreshes both the parameter panel and object list. Pending
-controls are disabled. An ordinary refusal restores the last committed choice and
-shows its reason; a stale-write conflict keeps the draft for explicit retry. If the
-object list is empty, the functions section is still available.
+**Source builds after Alpha 13:** expand a communication object and use its
+manufacturer function dropdown below the **DPT** field. The separate **Device
+functions** disclosure is removed. Only active supported enum parameters mapped
+to this exact object's declared reference are offered; names and object numbers
+are not used to guess a mapping. Module-local or ambiguous mappings are not
+inferred. If no supported choice is available, the editor says so and points to
+**Parameters**. If the object list is empty, enable the button and select its
+operating mode under **Parameters** first.
+
+Select only options the installed product declares. A selection saves immediately
+and refreshes the parameter panel and object list. Pending object controls are
+disabled. An ordinary refusal restores the last committed choice and shows its
+reason; a stale-write conflict keeps the draft for explicit retry. In the
+published Alpha 13 build these controls remain in **Device functions** above the
+object table; existing screenshots still show released UI.
 
 These are real project parameters, not an editable **Function** caption or a
 free-text `FunctionText` override. Only active, supported enum controls structurally

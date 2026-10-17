@@ -50,6 +50,8 @@ pub struct FieldLayout {
     pub controls_com_objects: bool,
     /// Declared position in the group's grid; only for a `GridStatus::Grid`.
     pub cell: Option<Cell>,
+    /// Declared references reachable through structural choice dependencies.
+    pub controlled_object_refs: Vec<String>,
 }
 /// An activated separator's declared position, for grid captions.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -173,7 +175,7 @@ pub fn load(conn: &Connection, program: &str) -> Result<ParameterLayout, Product
             is_grid.then(|| group.element_id.clone()).flatten()
         };
         let mut separators = Vec::new();
-        let mut controls = BTreeSet::new();
+        let mut targets: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
         let mut dependencies: HashMap<String, BTreeSet<String>> = HashMap::new();
         let mut groups: HashMap<String, Option<Group>> = HashMap::new();
         for (&node_id, node) in &nodes {
@@ -214,7 +216,11 @@ pub fn load(conn: &Connection, program: &str) -> Result<ParameterLayout, Product
                 parent = ancestor.parent;
             }
             if node.kind == "ComObjectRefRef" {
-                controls.extend(parents);
+                if let Some(reference) = &node.reference {
+                    for parent in parents {
+                        targets.entry(parent).or_default().insert(reference.clone());
+                    }
+                }
             } else if node.kind == "ParameterSeparator" {
                 result.declarations.insert(
                     (scope.clone(), node_id),
@@ -243,11 +249,15 @@ pub fn load(conn: &Connection, program: &str) -> Result<ParameterLayout, Product
         }
         // A mode can gate a parameter that gates objects elsewhere. Follow
         // those declaration dependencies, without evaluating a second tree.
-        let mut pending = controls.iter().cloned().collect::<Vec<_>>();
+        let mut pending = targets.keys().cloned().collect::<Vec<_>>();
         while let Some(reference) = pending.pop() {
             if let Some(parents) = dependencies.get(&reference) {
+                let objects = targets.get(&reference).cloned().unwrap_or_default();
                 for parent in parents {
-                    if controls.insert(parent.clone()) {
+                    let inherited = targets.entry(parent.clone()).or_default();
+                    let before = inherited.len();
+                    inherited.extend(objects.iter().cloned());
+                    if inherited.len() != before {
                         pending.push(parent.clone());
                     }
                 }
@@ -272,7 +282,12 @@ pub fn load(conn: &Connection, program: &str) -> Result<ParameterLayout, Product
             }
         }
         for (reference, group) in groups {
-            let controls_com_objects = controls.contains(&reference);
+            let controlled_object_refs: Vec<_> = targets
+                .remove(&reference)
+                .unwrap_or_default()
+                .into_iter()
+                .collect();
+            let controls_com_objects = !controlled_object_refs.is_empty();
             let cell = match (placed_in(&group), &grids) {
                 (Some(block), Some(grids)) => {
                     grids.references.get(&(block, reference.clone())).copied()
@@ -285,6 +300,7 @@ pub fn load(conn: &Connection, program: &str) -> Result<ParameterLayout, Product
                     group,
                     controls_com_objects,
                     cell,
+                    controlled_object_refs,
                 },
             );
         }

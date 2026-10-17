@@ -3,6 +3,7 @@ use knx_core::{ComObjectInstance, Command, DeviceId, Override, Project, Resolved
 use std::collections::HashSet;
 
 pub(crate) struct ObjectMetadataInput {
+    pub id: u32,
     pub reference: String,
     pub module_based: bool,
     pub dpt_resolved: bool,
@@ -34,6 +35,24 @@ fn catalogue_reference(
     } else {
         expanded
     })
+}
+
+/// Match structural declarations to configured IDs, never by captions or object numbers.
+/// Module instances need an exact scope mapping and are not inferred here.
+pub(crate) fn unscoped_object_ids(
+    products: &knx_productdb::Connection,
+    program: &str,
+    objects: &[ObjectMetadataInput],
+) -> Result<std::collections::HashMap<String, Vec<u32>>, String> {
+    let declared = declared_references(products, program)?;
+    let mut result = std::collections::HashMap::<String, Vec<u32>>::new();
+    for object in objects.iter().filter(|object| !object.module_based) {
+        // The existing diagnostics report an ambiguous identity; it offers no control.
+        if let Ok(reference) = catalogue_reference(&declared, program, &object.reference, false) {
+            result.entry(reference).or_default().push(object.id);
+        }
+    }
+    Ok(result)
 }
 
 fn append_dpt_diagnostics(

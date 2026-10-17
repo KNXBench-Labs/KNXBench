@@ -1,5 +1,5 @@
 /** Properties inspector showing and editing details for whatever tree entity is selected. */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { LineStoredBusAccess } from "./StoredBusAccess";
 import { carriesGroupAddress, readDraggedGroupAddress } from "./groupAddressDrag";
 import * as api from "./api";
@@ -28,7 +28,7 @@ import type { LineNode } from "./bindings/LineNode";
 import type { BuildingNode } from "./bindings/BuildingNode";
 import type { Selection } from "./selection";
 import { installationLabel } from "./installationPresentation";
-import { ParameterPanelContent, useDeviceParameters } from "./ParameterPanel";
+import { ComObjectFunctionControls, ParameterPanelContent, useDeviceParameters } from "./ParameterPanel";
 import HelpTip from "./HelpTip";
 import RenameNameField from "./RenameNameField";
 import { BuildingPartFunctions, GroupAddressFunctions } from "./features/functions/FunctionsPanel";
@@ -864,10 +864,13 @@ function DeviceIdentity(props: { product: DeviceProductNode }) {
   </section>;
 }
 
-function ComObjectEditor(props: { com: ComObjectNode; groupAddresses: GroupAddressNode[]; onApplied: (tree: ProjectTree) => void }) {
+function ComObjectEditor(props: { com: ComObjectNode; groupAddresses: GroupAddressNode[]; onApplied: (tree: ProjectTree) => void; functions?: ReactNode }) {
   const { com, groupAddresses, onApplied } = props;
   return <div className="com-object-edit-fields">
-    <DptField com={com} onApplied={onApplied} />
+    <div className="com-object-type-fields">
+      <DptField com={com} onApplied={onApplied} />
+      {props.functions}
+    </div>
     <ComObjectDescriptionField com={com} onApplied={onApplied} />
     <ComObjectFlagsRow com={com} onApplied={onApplied} />
     <ul className="group-link-list">
@@ -928,12 +931,9 @@ export function DeviceWorkspace(props: {
         is ever in the tab order. */}
     <div role="tabpanel" id={`device-panel-${detail.id}-0`} aria-labelledby={`device-tab-${detail.id}-0`} hidden={tab !== 0} tabIndex={0}>
       <h3>{t("inspector.communicationObjects")}</h3>
-      <details className="device-function-controls">
-        <summary>{t("parameters.functions")}</summary>
-        <ParameterPanelContent deviceId={detail.id} state={parameterState} view="functions" onValueApplied={onApplied} />
-      </details>
       <ComObjectTable key={detail.id} objects={detail.com_objects} editor={com =>
-        <ComObjectEditor com={com} groupAddresses={groupAddresses} onApplied={onApplied} />} />
+        <ComObjectEditor com={com} groupAddresses={groupAddresses} onApplied={onApplied}
+          functions={<ComObjectFunctionControls deviceId={detail.id} objectId={com.id} state={parameterState} onValueApplied={onApplied} />} />} />
 
     </div>
     <div role="tabpanel" id={`device-panel-${detail.id}-1`} aria-labelledby={`device-tab-${detail.id}-1`} hidden={tab !== 1} tabIndex={0}>

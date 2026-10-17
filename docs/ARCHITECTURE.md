@@ -1,5 +1,15 @@
 # Architecture
 
+## Object-local manufacturer function controls (17 October 2026 source)
+
+ProductDB extends its existing read-only structural parameter layout with exact
+object-reference sets propagated through choice dependencies. The server reuses
+its declaration/alias resolver to expose configured object IDs on parameter
+fields. UI renders the existing snapshot-bound parameter row below DPT, within
+the object mutation boundary; it does not create function-label overrides or
+write rules. Module-local mappings remain unavailable rather than inferred.
+No persistence schema or dependency changes. [Contract](contracts/parameter-object-refresh.md).
+
 ## Read-only device diagnostic export (17 October 2026 source)
 
 `knx-net::commissioning::diagnostic_export` owns the closed identity recipe on a

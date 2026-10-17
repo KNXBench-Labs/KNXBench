@@ -279,6 +279,14 @@
 ---
 
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-17 08:27
+- **Completed:** Object-local manufacturer-function dropdown source accepted: owning Rust1916/0/82regularignored in158reports, Clippy, web63stages/components3638/browser911 plus focused4 and complete source freeze. Device-wide disclosure removed; exact configured-ID mapping and existing bound rows below DPT. Self-review pending/lifetime/loading findings closed after named REDs. Original outer receipt incorrectly catches successful SystemExit(0); separate refusal-tested reconciliation accepts actual zero-exit stages without rewriting history. No publication/deployment yet.
+- **Pending/Next Steps:** Commit reviewed scope, fresh-main owned integration, actual scoped merged verification and scrolled wide visual capture; then publication/readback and owned archival/retirement. Retain web acceptance only with complete consumed frontend/tool equality; do not relabel it as a new runtime run. No extra owner Go required.
+- **Notes for Codex oder Claude:** Preserve collapsed-default/parameter-workspace/diagnostic-export/temp-path owners, protected dirty selected root/index and historical handover. Module-local/missing/ambiguous mapping remains explicit. No bus/liveproject/private investigation/subagents/codingCLI/release/container restart. Evidence profile scratch comm-function-acceptance1 and comm-function-reconciled.json.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-17 05:50
 - **Completed:** Renewed owner System2/SystemB usable-download objective investigated on fresh published 07a93451. Existing offline tests actually passed 53/0/0 ignored in seven targets (System2 image10/metadata7/public UP2581; SystemB codecs28; Net simulator7), in isolated network namespaces, owned target and frozen source/package. Original public ETS5.5.3 notes retrieved; official SystemB help remains unrecovered (HTML403/API401/no exact Wayback snapshot/browser pre-navigation profile lock). No product implementation or new admission.
 - **Pending/Next Steps:** Requested usable-download goal remains BLOCKED, NOT completed: defining converted-legacy LegacyPatchAlways/default/activation rule, then exact encoding/XML/resource/procedure and whole-mutation recovery; SystemB complete descriptor/ASAP and relative source/procedure mappings remain separate missing contracts. Reopen an evidenced slice from authorized defining documentation or independent bounded witnesses; no guessed allowlist, generic fixture or additional green refusal test closes the goal. Documentation delivery is not feature delivery.

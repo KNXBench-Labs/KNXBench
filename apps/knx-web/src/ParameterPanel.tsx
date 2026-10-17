@@ -21,6 +21,7 @@ import ParameterSourceEditor from "./ParameterSourceEditor";
 import ParameterWorkspace from "./ParameterWorkspace";
 import { isSourceEditorCandidate } from "./parameterSourceHost";
 import UnresolvedProgramNotice from "./UnresolvedProgramNotice";
+import { useComMutation } from "./ComMutationBoundary";
 
 // T18 slice 3, task 4 (design docs/superpowers/specs/2026-09-11-parameter-editor-design.md).
 // Fetches `GET /api/device/{id}/parameters` on every device selection —
@@ -118,6 +119,7 @@ function ParameterFieldRow(props: {
   const { field, moduleScoped, deviceId, language, sourceLanguage, onUpdated, onValueApplied, binding, onConflict, checked } = props;
   const t = useTranslate();
   const [value, setValue] = useState(field.value ?? "");
+  const mutate = useComMutation();
   const [checkedOpen, setCheckedOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
@@ -160,19 +162,21 @@ function ParameterFieldRow(props: {
     setError(null);
     savingRef.current = true; setSaving(true);
     try {
-      const panel = await api.setParameterValue(deviceId, field.writeEtsId, nextValue, language,
-        { ...binding, expectedValue: field.value });
-      clearConflict();
-      onUpdated(panel);
-      // `set_parameter_value_impl` always attaches its own freshly rebuilt
-      // tree to a successful write (T3 fix round 1, item 6) — a `null` here
-      // would mean the server broke that contract, not that there is
-      // nothing to publish, so this fails loudly rather than swallowing a
-      // parameter edit's republish the way the pre-fix code silently did.
-      if (!panel.tree) {
-        throw new Error("setParameterValue response carried no tree");
+      let written: ParameterPanelDto | undefined;
+      const tree = await mutate(async () => {
+        written = await api.setParameterValue(deviceId, field.writeEtsId!, nextValue, language,
+          { ...binding, expectedValue: field.value });
+        // A successful write must carry the server's own authoritative tree.
+        if (!written.tree) throw new Error("setParameterValue response carried no tree");
+        return written.tree;
+      });
+      // Object editors suppress publication after unmount and admit one mutation
+      // at a time; standalone Parameters rows use the context's direct fallback.
+      if (tree && written) {
+        clearConflict();
+        onUpdated(written);
+        onValueApplied(tree);
       }
-      onValueApplied(panel.tree);
     } catch (e) {
       if (isRevisionConflict(e, "parameterWriteConflict")) {
         conflictRef.current = true;
@@ -657,6 +661,31 @@ export function ParameterPanelContent(props: ParameterPanelProps & {
       ))}
     </div>
   );
+}
+
+/** Object-local manufacturer controls using the same bound editor as the Parameters tab. */
+export function ComObjectFunctionControls(props: {
+  deviceId: number; objectId: number; state: ReturnType<typeof useDeviceParameters>;
+  onValueApplied: (tree: ProjectTree) => void;
+}) {
+  const { deviceId, objectId, state, onValueApplied } = props;
+  const { panel, snapshot, language, acceptWrite, loadError } = state;
+  const t = useTranslate();
+  const onUpdated = useCallback((written: ParameterPanelDto) => acceptWrite(deviceId, language, written),
+    [acceptWrite, deviceId, language]);
+  const onConflict = useCallback(async () => { onValueApplied(await api.currentProject()); }, [onValueApplied]);
+  if (loadError) return <div className="com-object-functions"><span className="field-error">{loadError}</span></div>;
+  if (!panel) return <div className="com-object-functions"><span className="task-status-text">{t("parameters.loading")}</span></div>;
+  const fields = panel?.sections.filter(section => section.scope === null).flatMap(section => section.fields)
+    .filter(field => field.kind === "Restriction" && !isManufacturerRestricted(field)
+      && field.controlledComObjectIds?.includes(objectId)) ?? [];
+  return <div className="com-object-functions">
+    {fields.length === 0 ? <p className="inspector-description">{t("parameters.objectFunctionsEmpty")}</p>
+      : fields.map(field => <ParameterFieldRow key={field.etsId} field={field} moduleScoped={false}
+        deviceId={deviceId} language={language} sourceLanguage={panel!.sourceLanguage}
+        onUpdated={onUpdated} onValueApplied={onValueApplied} binding={snapshot}
+        onConflict={onConflict} checked={null} />)}
+  </div>;
 }
 
 export default function ParameterPanel(props: ParameterPanelProps) {

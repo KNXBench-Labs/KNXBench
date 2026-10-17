@@ -26,6 +26,27 @@ import { DeviceWorkspace } from "./Inspector";
 
 const tree: ProjectTree = { schema_version: 11, errors: 0, warnings: 0, can_undo: false, can_redo: false, is_modified: false, group_address_style: "ThreeLevel", installations: [] };
 
+it("places only the owning object's function dropdown below its DPT, without device functions disclosure", async () => {
+  const field = (etsId: string, ids: number[]) => ({ etsId, name: etsId, text: etsId, nameLanguage: null, textLanguage: null,
+    kind: "Restriction", value: "0", valueSource: "Stored", editable: true, writeEtsId: etsId, access: null,
+    min: null, max: null, displayOrder: null, controlsComObjects: true, controlledComObjectIds: ids,
+    enumOptions: [{ value: "0", text: "Switch", language: null }, { value: "1", text: "Dimming", language: null }] });
+  api.deviceParameters.mockResolvedValueOnce({ programId: "EXAMPLE", sourceLanguage: null, tree: null,
+    sections: [{ scope: null, fields: [field("Left function", [1]), field("Right function", [2]), field("Unmapped", [])] }], stale: [], diagnostics: [] });
+  const { host, cleanup } = await render(NO_REFERENCE, false, [object(1), object(2)]);
+  expect(host.querySelector(".device-function-controls")).toBeNull();
+  await act(async () => host.querySelector<HTMLButtonElement>(".com-object-channel-summary")!.click());
+  const details = host.querySelector<HTMLDetailsElement>('[data-object-id="1"] details')!;
+  await act(async () => { details.open = true; details.dispatchEvent(new Event("toggle")); });
+  const editor = host.querySelector<HTMLElement>('[data-editor-id="1"]')!;
+  expect([...editor.querySelectorAll(".com-object-functions select")]).toHaveLength(1);
+  expect(editor.querySelector(".com-object-functions")!.textContent).toContain("Left function");
+  expect(editor.querySelector(".com-object-functions")!.textContent).not.toContain("Right function");
+  expect(editor.querySelector(".com-object-functions")!.textContent).not.toContain("Unmapped");
+  expect(editor.querySelector(".dpt-field")!.nextElementSibling).toBe(editor.querySelector(".com-object-functions"));
+  await cleanup();
+});
+
 const NO_REFERENCE: DeviceProductNode = { product_ref: null, program_ref: null, catalog: null, resolution: "NoReference" };
 
 function detail(product: DeviceProductNode = NO_REFERENCE, comObjects: DeviceDetail["com_objects"] = [], id = 9): DeviceDetail {

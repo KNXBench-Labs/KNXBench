@@ -32,7 +32,7 @@ async function intercept(page: Page, language: "en" | "de", count = 3, theme = "
   tree.project_incarnation = 1;
   const panel = (): ParameterPanel => ({ programId: "A-FIXTURE", sourceLanguage: "en", tree: null, stale: [], diagnostics: [],
     sections: [{ scope: null, fields: [{ etsId: "Mode", name: "Mode", text: "Mode", nameLanguage: null, textLanguage: null, kind: "Restriction", value: mode, valueSource: "Stored", editable: true, min: null, max: null,
-      enumOptions: [{ value: "0", text: "Disabled", language: null }, { value: "1", text: "Rocker", language: null }, { value: "2", text: "Individual buttons", language: null }], displayOrder: null, access: "ReadWrite", writeEtsId: "Mode", group: { key: "buttons", label: "Buttons" }, controlsComObjects: true }] }] });
+      enumOptions: [{ value: "0", text: "Disabled", language: null }, { value: "1", text: "Rocker", language: null }, { value: "2", text: "Individual buttons", language: null }], displayOrder: null, access: "ReadWrite", writeEtsId: "Mode", group: { key: "buttons", label: "Buttons" }, controlsComObjects: true, controlledComObjectIds: mode === "0" ? [] : [20] }] }] });
   const shownPanel = (): ParameterPanel => {
     const data = panel();
     if (!parameterWorkspace) return data;
@@ -210,29 +210,44 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await page.keyboard.press("Escape");
     await openList(page, language);
     await page.locator(".devices-table tbody td:nth-child(3) button").filter({ hasText: /^Actuator 1$/ }).click();
-    await page.locator(".device-function-controls > summary").click();
-    await expect(page.locator(".device-function-controls .parameter-section")).not.toHaveAttribute("open", "");
+    await expect(page.locator(".device-function-controls")).toHaveCount(0);
+    await page.getByRole("tab", { name: m["workbench.parameters"], exact: true }).click();
+    const parameterPanel = page.locator('[role="tabpanel"]:visible');
+    // Closed by default on the first untouched visit: the area register is the folded overview.
+    await expect(parameterPanel.locator('.parameter-workspace-nav [aria-current="page"]')).toHaveCount(0);
+    await expect(parameterPanel.locator(".parameter-workspace-closed")).toBeVisible();
+    await expect(parameterPanel.locator(".parameter-field select")).toBeHidden();
     await openParameterSections(page);
-    const mode = page.locator(".device-function-controls select");
-    await expect(mode).toHaveValue("0");
-    await mode.selectOption("1");
+    await expect(parameterPanel.locator('.parameter-workspace-nav [aria-current="page"]')).toHaveCount(1);
+    await expect(parameterPanel.locator(".parameter-field select")).toHaveValue("0");
+    await parameterPanel.locator(".parameter-field select").selectOption("1");
+    await page.getByRole("tab", { name: m["inspector.communicationObjects"], exact: true }).click();
     await expect(page.locator(".com-table-count")).toContainText("1");
     await page.locator(".com-object-channel-summary").click();
     await expect(page.locator(".com-object-name")).toHaveText("Rocker output");
+    await page.locator('.com-object-detail > summary').click();
+    const mode = page.locator(".com-object-functions select");
+    await expect(mode).toBeVisible();
+    await expect(mode).toHaveValue("1");
+    const positions = await page.locator(".com-object-type-fields").evaluate(node => {
+      const dpt = node.querySelector('.dpt-field')!.getBoundingClientRect();
+      const functions = node.querySelector('.com-object-functions')!.getBoundingClientRect();
+      return { dptBottom: dpt.bottom, functionTop: functions.top, left: functions.left, right: functions.right };
+    });
+    expect(positions.functionTop).toBeGreaterThanOrEqual(positions.dptBottom);
+    expect(positions.left).toBeGreaterThanOrEqual(0);
+    expect(positions.right).toBeLessThanOrEqual(width);
     await mode.selectOption("2");
     await expect(page.locator(".com-object-name")).toHaveText("Left output");
     if (process.env.KNX_DEVICES_CAPTURE_DIR) await page.screenshot({ path: join(process.env.KNX_DEVICES_CAPTURE_DIR, `workbench-functions-${language}-${width}.png`) });
     await page.getByRole("tab", { name: m["workbench.parameters"], exact: true }).click();
-    const panel = page.locator('[role="tabpanel"]:visible');
-    // Closed by default: the area register is the folded overview.
-    await expect(panel.locator('.parameter-workspace-nav [aria-current="page"]')).toHaveCount(0);
-    await expect(panel.locator(".parameter-workspace-closed")).toBeVisible();
-    const parameterMode = panel.locator(".parameter-field select");
-    await expect(parameterMode).toBeHidden();
-    await panel.locator(".parameter-workspace-nav button").filter({ hasText: "Buttons" }).click();
+    // The area chosen on the first visit stays open, and the object-local write shows in the shared row.
+    await expect(parameterPanel.locator('.parameter-workspace-nav [aria-current="page"]')).toHaveCount(1);
+    await expect(parameterPanel.locator(".parameter-workspace-nav button").filter({ hasText: "Buttons" })).toHaveAttribute("aria-current", "page");
+    const parameterMode = parameterPanel.locator(".parameter-field select");
     await expect(parameterMode).toBeVisible();
     await expect(parameterMode).toHaveValue("2");
-    const search = panel.getByRole("searchbox");
+    const search = parameterPanel.getByRole("searchbox");
     await search.fill("no-match");
     await expect(parameterMode).toBeHidden();
     await search.fill("");

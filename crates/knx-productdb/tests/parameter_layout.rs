@@ -93,3 +93,26 @@ fn every_separator_declares_its_group_hint_and_own_access() {
     // A separator is not a field, and a node that is no separator has none.
     assert!(result.separator_declaration("", 0).is_none());
 }
+
+#[test]
+fn object_controls_follow_dependencies_without_crossing_unrelated_branches() {
+    let result = layout(&source(
+        r#"<ParameterRefRef RefId="P-1_R-1"/><choose ParamRefId="P-1_R-1"><when test="1"><ParameterRefRef RefId="P-2_R-1"/></when></choose><choose ParamRefId="P-2_R-1"><when test="1"><ComObjectRefRef RefId="O-left"/><ComObjectRefRef RefId="O-left"/></when></choose><ParameterRefRef RefId="P-L_R-1"/><choose ParamRefId="P-L_R-1"><when test="1"><ComObjectRefRef RefId="O-right"/></when></choose>"#,
+    ));
+    assert_eq!(
+        result.field("", "P-1_R-1").controlled_object_refs,
+        vec!["O-left"]
+    );
+    assert_eq!(
+        result.field("", "P-2_R-1").controlled_object_refs,
+        vec!["O-left"]
+    );
+    assert_eq!(
+        result.field("", "P-L_R-1").controlled_object_refs,
+        vec!["O-right"]
+    );
+    assert!(result
+        .field("missing-module", "P-2_R-1")
+        .controlled_object_refs
+        .is_empty());
+}

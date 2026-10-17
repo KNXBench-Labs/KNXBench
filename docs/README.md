@@ -11,7 +11,7 @@ below are the engineering record behind it, not extra reading before your first 
 | I need… | Read |
 | --- | --- |
 | Installation and a first saved project | [Installation](manual/getting-started/04-installation.md) → [First start](manual/getting-started/06-first-start.md) |
-| Button modes and parameter-driven object refresh (source after Alpha 12) | [Device functions](manual/user-guide/05-devices-and-products.md#device-functions-source-builds-after-alpha-12), [editing contract](contracts/parameter-object-refresh.md) |
+| Button modes, object-local function choices and parameter-driven refresh | [Object function controls](manual/user-guide/05-devices-and-products.md#device-functions-source-builds-after-alpha-12), [editing contract](contracts/parameter-object-refresh.md) |
 | Everyday editing workflows | [User guide](manual/README.md#user-guide), especially the [complete example](manual/user-guide/06-configuration-workflow.md) |
 | English offline projects to explore | [Three community demos](../demos/README.md) — local review candidate; [scope and verification](COMMUNITY_DEMO_PROJECTS.md) |
 | Configuration or a broken setup | [Web and Docker](manual/user-guide/11-web-and-docker.md), [Settings](manual/user-guide/09-settings-and-appearance.md), [Troubleshooting](manual/reference/03-troubleshooting.md) |

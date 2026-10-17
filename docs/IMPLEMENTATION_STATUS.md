@@ -12,6 +12,22 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Object-local function dropdowns (17 October 2026 source)
+
+The separate Device functions disclosure is removed. The expanded communication
+object now offers supported manufacturer enum choices directly below DPT, mapped
+through exact structural references to configured object IDs. Missing, ambiguous
+and module-local mappings are not guessed; Parameters remains the full editor.
+Existing snapshot-bound writes, immediate apply, inline errors and Undo remain.
+Source acceptance: owning Rust1,916/0/82regularignored in158reports; components
+3,638/0; browser911 plus four focused production views; all63web stages, owning
+Clippy, build, docs and source freeze pass. The outer private runner caught its
+own successful SystemExit(0); a separate checked reconciliation retains the
+original contradictory receipt, all zero exits and negative refusal controls.
+Integrated acceptance/publication is pending at this checkpoint. No schema,
+dependency, bus, packaged-release or deployment change.
+[Contract](contracts/parameter-object-refresh.md).
+
 ## Test-gate hygiene (17 October 2026)
 
 Package P4 ([goal file](goals/open-work-2026-10-17/p4-gate-hygiene.md)) fixes

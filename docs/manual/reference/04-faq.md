@@ -60,8 +60,10 @@ separate and can contain them. See the
 
 **Why does enabling a button not produce new communication objects?**
 
-In source builds after Alpha 12, open **Device functions** above Communication
-objects, enable the button and choose its actual operating mode/function. The
+In source builds after Alpha 13, enable the button and choose its initial mode
+under **Parameters**. Then expand its communication object to change mapped
+manufacturer function choices below **DPT**. The separate **Device functions**
+disclosure exists only in the published Alpha 13 layout. The
 shared evaluator adds supported missing unscoped objects in the same undo step.
 The mechanism is not specific to MDT. Unsupported scripts and new module-instance
 mappings still produce explicit refusals rather than guessed objects. This is

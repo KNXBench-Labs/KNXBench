@@ -2,7 +2,7 @@
 import { useId, useState, type ReactNode } from "react";
 import type { ModuleScope, ParameterField, ParameterSection } from "./api";
 import { useTranslate } from "./i18n";
-import { indexParameterWorkspace, matchesParameterSearch } from "./parameterWorkspace";
+import { indexParameterWorkspace, matchesParameterSearch, type ParameterWorkspaceSeparator } from "./parameterWorkspace";
 import { matrixStyle, planParameterMatrix, type GroupLayoutView } from "./parameterMatrix";
 import "./parameterWorkspace.css";
 
@@ -17,7 +17,7 @@ export default function ParameterWorkspace({ sections, renderField }: Props) {
   const [active, setActive] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
-  const { rows, groups } = indexParameterWorkspace(sections);
+  const { rows, groups, items } = indexParameterWorkspace(sections);
   // Closed by default: no area opens until chosen; a vanished choice closes again.
   const activeKey = groups.some(group => group.key === active) ? active : null;
   const searching = query.trim() !== "";
@@ -78,7 +78,12 @@ export default function ParameterWorkspace({ sections, renderField }: Props) {
         {/* One stable source-ordered parent: navigation/search never remounts an editor. */}
         <div className="parameter-workspace-rows" data-layout={matrix ? "matrix" : undefined}
           style={matrix ? { gridTemplateColumns: matrix.templateColumns } : undefined}>
-          {rows.map(row => <div key={row.key} data-parameter-row={row.field.etsId}
+          {items.map(item => item.kind === "separator"
+            // ADR-0139: text belongs to its chosen area; a search lists fields
+            // only, and a declared grid shows separators as its own captions.
+            ? <SeparatorRow key={`separator:${item.separator.key}`} item={item.separator}
+              hidden={searching || matrix !== null || item.separator.groupKey !== activeKey} />
+            : (row => <div key={row.key} data-parameter-row={row.field.etsId}
             className="parameter-workspace-row" hidden={!visible.has(row.key)}
             style={matrix?.fields.has(row.key) ? matrixStyle(matrix.fields.get(row.key)!) : undefined}
             data-selected={selected === row.key} data-access={row.field.access} data-display-only={row.field.kind === "None"}
@@ -92,7 +97,7 @@ export default function ParameterWorkspace({ sections, renderField }: Props) {
             {row.field.kind !== "None" && <button type="button" className="parameter-workspace-info"
               aria-label={t("parameters.workspace.fieldInfo", { name: label(row.field) })}
               aria-controls={`${id}-context`} onClick={() => setSelected(row.key)}><span aria-hidden="true">i</span></button>}
-          </div>)}
+          </div>)(item.row))}
           {/* Captions are siblings after the rows, so they never shift editor identity. */}
           {matrix && [...matrix.columnHeaders, ...matrix.rowHeaders, ...matrix.labels].map(caption =>
             <span key={caption.key} className="parameter-matrix-caption" data-caption={caption.key.split(":")[0]}
@@ -118,10 +123,34 @@ export default function ParameterWorkspace({ sections, renderField }: Props) {
             {selectedField.min !== null && <><dt>{t("parameters.workspace.minimum")}</dt><dd>{selectedField.min}</dd></>}
             {selectedField.max !== null && <><dt>{t("parameters.workspace.maximum")}</dt><dd>{selectedField.max}</dd></>}
             {selectedField.access !== null && <><dt>{t("parameters.workspace.access")}</dt><dd>{selectedField.access}</dd></>}
+            {selectedField.blockAccess != null && <><dt>{t("parameters.workspace.blockAccess")}</dt><dd>{selectedField.blockAccess}</dd></>}
           </dl>
         </section> : <p>{t("parameters.workspace.selectHint")}</p>}
       </aside>
     </div>
+  </div>;
+}
+
+const SEPARATOR_PREFIX_KEYS = {
+  Information: "parameters.separator.information",
+  Error: "parameters.separator.error",
+} as const;
+
+/**
+ * ADR-0139: one manufacturer separator, display only. `UIHint` selects the
+ * style; an unknown hint shows its text plainly and keeps the token as data.
+ * A separator without text can only divide, so it is drawn as a rule.
+ */
+function SeparatorRow({ item, hidden }: { item: ParameterWorkspaceSeparator; hidden: boolean }) {
+  const t = useTranslate();
+  const { text, uiHint, elementId } = item.separator;
+  const prefix = uiHint !== null && Object.hasOwn(SEPARATOR_PREFIX_KEYS, uiHint)
+    ? SEPARATOR_PREFIX_KEYS[uiHint as keyof typeof SEPARATOR_PREFIX_KEYS] : null;
+  return <div className="parameter-workspace-separator" data-ui-hint={uiHint ?? undefined}
+    data-separator={elementId ?? undefined} hidden={hidden}>
+    {text !== null && (uiHint === "Headline" ? <h5>{text}</h5>
+      : <p>{prefix && <span className="sr-only">{t(prefix)} </span>}{text}</p>)}
+    {(text === null || uiHint === "HorizontalRuler") && <hr />}
   </div>;
 }
 

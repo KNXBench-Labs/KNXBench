@@ -24,8 +24,8 @@ fn with_remaining(trees: &ProgramTrees, values: &ValueMap, remaining: usize) -> 
         work_units_used: MAX_EVALUATION_WORK - remaining,
         ..Activation::default()
     };
-    let mut seen_params = HashSet::new();
-    let mut seen_coms = HashSet::new();
+    let mut seen_params = Seen::new();
+    let mut seen_coms = Seen::new();
     let mut expansions = 0;
     for &root in trees.program.roots() {
         if activation.work_budget_exhausted {
@@ -41,7 +41,7 @@ fn with_remaining(trees: &ProgramTrees, values: &ValueMap, remaining: usize) -> 
             &mut seen_coms,
             &mut expansions,
             None,
-            None,
+            PathContext::default(),
         );
     }
     activation

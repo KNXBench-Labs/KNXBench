@@ -54,3 +54,42 @@ fn nested_choice_controls_and_ambiguous_groups_are_structural() {
     );
     assert!(result.field("", "P-2_R-1").group.is_none());
 }
+
+#[test]
+fn every_separator_declares_its_group_hint_and_own_access() {
+    let dynamic = r#"<ParameterSeparator Id="PS-0" Text="Outside"/><ParameterBlock Id="PB-1" Text="General"><ParameterSeparator Id="PS-1" Text="Read this" UIHint="Information"/><ParameterRefRef RefId="P-1_R-1"/><ParameterSeparator Id="PS-2" UIHint="HorizontalRuler" Access="None"/></ParameterBlock>"#;
+    let result = layout(&source(dynamic));
+    let node = |id: &str| {
+        let dir = tempfile::tempdir().unwrap();
+        let conn = open_and_migrate(&dir.path().join("catalogue.sqlite")).unwrap();
+        ingest_file(&conn, "M-1/A-1.xml", source(dynamic).as_bytes()).unwrap();
+        conn.query_row(
+            "SELECT node_id FROM dynamic_node WHERE element_id = ?1",
+            [id],
+            |r| r.get::<_, i64>(0),
+        )
+        .unwrap()
+    };
+    let outside = result.separator_declaration("", node("PS-0")).unwrap();
+    assert_eq!(outside.group, None);
+    assert_eq!(
+        (outside.ui_hint.as_deref(), outside.access.as_deref()),
+        (None, None)
+    );
+    let info = result.separator_declaration("", node("PS-1")).unwrap();
+    assert_eq!(info.element_id.as_deref(), Some("PS-1"));
+    assert_eq!(info.ui_hint.as_deref(), Some("Information"));
+    assert_eq!(
+        info.group.as_ref().unwrap().text.as_deref(),
+        Some("General")
+    );
+    // The same group the block's field gets.
+    assert_eq!(info.group, result.field("", "P-1_R-1").group);
+    let ruler = result.separator_declaration("", node("PS-2")).unwrap();
+    assert_eq!(
+        (ruler.ui_hint.as_deref(), ruler.access.as_deref()),
+        (Some("HorizontalRuler"), Some("None"))
+    );
+    // A separator is not a field, and a node that is no separator has none.
+    assert!(result.separator_declaration("", 0).is_none());
+}

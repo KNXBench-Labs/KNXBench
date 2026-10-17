@@ -166,7 +166,8 @@ original.
 
 ## Suggested order
 
-1. G1/P2 and G2/P1: correctness first, both small and server-led.
+1. G1/P2 and G2/P1: correctness first, both small and server-led. Done
+   (17 October 2026, [ADR-0139](../adr/0139-block-access-and-separators-reach-the-parameter-tab.md)).
 2. G3 wrapper ZIPs: removes the most common install failure on real downloads.
 3. G6: make packed time units fall back.
 4. P3, P4, P5, O1, O3: presentation work on data the server already holds or

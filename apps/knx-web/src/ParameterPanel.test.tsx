@@ -738,6 +738,7 @@ describe("ParameterPanel", () => {
     ["writeAuthorityUnavailable", "Die Produktdatenbank hat für dieses Programm keine Schreibberechtigung erfasst; seine Felder sind schreibgeschützt. Installiere das Produkt neu, um sie zu erfassen."],
     ["unsupportedControlKind", "Der steuernde Parameter einer Auswahl hat einen nicht unterstützten Typ; ihre Zweige wurden nicht ausgewertet."],
     ["evaluationWorkBudgetExhausted", "Dieses Programm hat die Auswertungsgrenze überschritten; seine unvollständige Parameteransicht ist schreibgeschützt."],
+    ["parameterBlockAccessRestricted", "Einige Felder liegen in einer Parametergruppe, die der Hersteller schreibgeschützt oder verborgen hat (Access); sie sind nicht beschreibbar."],
   ])("translates the %s reason instead of showing the server's English", async (kind, german) => {
     setSetting(UI_LANGUAGE_STORAGE_KEY, "de");
     apiMock.deviceParameters.mockResolvedValue(authorityPanel([field("A", "ReadWrite")], [kind]));
@@ -775,6 +776,30 @@ describe("ParameterPanel", () => {
       input.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
     });
     expect(apiMock.setParameterValue).not.toHaveBeenCalled();
+    root.unmount();
+  });
+
+  // ADR-0139: a restricting block moves its fields like their own Access does,
+  // and its separators stay out of the editor.
+  it("moves fields of a restricting block out of the editor and says why", async () => {
+    const panel = authorityPanel([field("A", "ReadWrite"), { ...field("B", "ReadWrite", false), blockAccess: "Read" },
+      { ...field("C", null, false), blockAccess: "None" }], ["parameterBlockAccessRestricted"]);
+    panel.sections[0].separators = [
+      { position: 1, group: null, elementId: "S-OPEN", text: "Open text", uiHint: "Information", access: null, blockAccess: null },
+      { position: 2, group: null, elementId: "S-HIDDEN", text: "Hidden text", uiHint: null, access: null, blockAccess: "None" },
+      { position: 2, group: null, elementId: "S-OWN", text: "Own hidden", uiHint: null, access: "None", blockAccess: null },
+    ];
+    apiMock.deviceParameters.mockResolvedValue(panel);
+    const root = await renderPanel();
+    const ids = () => [...host!.querySelectorAll(".parameter-field")].map((row) => row.getAttribute("data-ets-id"));
+    expect(ids()).toEqual(["A"]);
+    expect([...host!.querySelectorAll("[data-separator]")].map((node) => node.getAttribute("data-separator"))).toEqual(["S-OPEN"]);
+    await act(async () => root.render(<ParameterPanel deviceId={1} view="restricted" refreshKey={shownTree} onValueApplied={() => {}} />));
+    expect(ids()).toEqual(["B", "C"]);
+    expect(host!.querySelectorAll("[data-separator]")).toHaveLength(0);
+    expect([...host!.querySelectorAll<HTMLInputElement>("input")].every((input) => input.disabled)).toBe(true);
+    expect(host!.textContent).toContain("In a parameter group the manufacturer made read-only (Access Read)");
+    expect(host!.textContent).toContain("In a parameter group the manufacturer hides (Access None)");
     root.unmount();
   });
 

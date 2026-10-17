@@ -186,8 +186,8 @@ Adding a migration means appending a function to the chain and raising the const
 editing an existing one: somebody's file has already been through it.
 
 The product database has its own, separate chain in
-`crates/knx-productdb/src/migration.rs`, with its own `CURRENT_PRODUCTDB_VERSION` — **21**
-as of 2026-10-06. A migration there may re-derive anything the stored package bytes
+`crates/knx-productdb/src/migration.rs`, with its own `CURRENT_PRODUCTDB_VERSION` — **24**
+as of 2026-10-17. A migration there may re-derive anything the stored package bytes
 determine, and must not invent what only the original install knew
 ([ADR-0020](../../adr/0020-migrations-may-rederive-from-stored-bytes.md)).
 

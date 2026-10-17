@@ -203,20 +203,36 @@ fn schemes_12_and_14_install_with_explicit_loss_accounting() {
                 .as_deref(),
                 Some("LoadProcedure")
             );
-            for (name, sample) in [("HorizontalRuler", "true"), ("Access", "Read")] {
-                assert_eq!(
-                    unknown(
-                        &facts,
-                        UnknownKind::Attribute,
-                        name,
-                        "/Dynamic/ParameterSeparator"
+            assert_eq!(
+                unknown(
+                    &facts,
+                    UnknownKind::Attribute,
+                    "HorizontalRuler",
+                    "/Dynamic/ParameterSeparator"
+                )
+                .sample
+                .as_deref(),
+                Some("true")
+            );
+            // ADR-0139: the separator's `Access` is preserved in its column
+            // rather than reported.
+            assert!(facts
+                .unknown_constructs
+                .iter()
+                .all(|item| item.name != "Access"));
+            assert_eq!(
+                connection
+                    .query_row(
+                        "SELECT access FROM dynamic_node
+                         WHERE program_id = 'A-12' AND element_id = 'S-12'",
+                        [],
+                        |row| row.get::<_, Option<String>>(0),
                     )
-                    .sample
+                    .unwrap()
                     .as_deref(),
-                    Some(sample)
-                );
-            }
-            for name in ["AppliesTo", "HorizontalRuler", "Access"] {
+                Some("Read")
+            );
+            for name in ["AppliesTo", "HorizontalRuler"] {
                 assert_eq!(
                     facts
                         .unknown_constructs

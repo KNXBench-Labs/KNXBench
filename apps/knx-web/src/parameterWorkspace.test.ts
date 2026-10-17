@@ -1,6 +1,6 @@
 /** Source-bound parameter workspace indexing and search contracts. */
 import { describe, expect, it } from "vitest";
-import type { ParameterField, ParameterSection } from "./api";
+import type { ParameterField, ParameterSection, ParameterSeparator } from "./api";
 import { indexParameterWorkspace, matchesParameterSearch } from "./parameterWorkspace";
 
 const field = (etsId: string, group?: ParameterField["group"]): ParameterField => ({
@@ -39,7 +39,7 @@ describe("parameter workspace index", () => {
     expect(new Set(index.rows.map(row => row.key)).size).toBe(3);
     expect(index.groups).toHaveLength(2);
     expect(index.groups[1].label).toBe("");
-    expect(indexParameterWorkspace([])).toEqual({ rows: [], groups: [] });
+    expect(indexParameterWorkspace([])).toEqual({ rows: [], groups: [], items: [] });
   });
 
   it("preserves row identities across group moves and insertions", () => {
@@ -58,5 +58,23 @@ describe("parameter workspace search", () => {
     expect(matchesParameterSearch(row, "missing")).toBe(false);
     expect(matchesParameterSearch(row, "original missing")).toBe(false);
     expect(matchesParameterSearch(row, "   ")).toBe(true);
+  });
+
+  // ADR-0139: separators are interleaved in source order and may open an area.
+  it("interleaves separators in source order and lets a text-only block form its area", () => {
+    const separator = (position: number, group: ParameterSeparator["group"], text: string | null): ParameterSeparator => ({
+      position, group, elementId: null, text, uiHint: null, access: null, blockAccess: null });
+    const sections: ParameterSection[] = [{ scope: null,
+      fields: [field("A", { key: "g", label: "Page" }), field("B", { key: "g", label: "Page" })],
+      separators: [separator(2, { key: "info", label: "About" }, "Notes"), separator(0, { key: "g", label: "Page" }, "Head"),
+        separator(1, { key: "g", label: "Page" }, null)] }];
+    const index = indexParameterWorkspace(sections);
+    expect(index.items.map(item => item.kind === "field" ? item.row.field.etsId : item.separator.separator.text ?? "rule"))
+      .toEqual(["Head", "A", "rule", "B", "Notes"]);
+    expect(index.rows.map(row => row.field.etsId)).toEqual(["A", "B"]);
+    expect(index.groups.map(group => group.label)).toEqual(["Page", "About"]);
+    const notes = index.items[4];
+    expect(notes.kind === "separator" && notes.separator.groupKey).toBe(index.groups[1].key);
+    expect(new Set(index.items.map(item => item.kind === "field" ? item.row.key : item.separator.key)).size).toBe(5);
   });
 });

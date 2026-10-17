@@ -1,7 +1,8 @@
 # Source-group parameter workspace
 
-Scope: offline Parameters tab; source builds after Alpha 13. No product, project,
-storage or protocol schema change.
+Scope: offline Parameters tab; source builds after Alpha 13. No project, storage
+or protocol schema change; product database v24 adds typed presentation columns
+([ADR-0139](../adr/0139-block-access-and-separators-reach-the-parameter-tab.md)).
 
 ## User contract
 
@@ -87,6 +88,27 @@ storage or protocol schema change.
   placeholders inside row/column captions. They are preserved on the wire or
   reported as issues, never guessed.
 
+## Manufacturer separators and block access (ADR-0139)
+
+- A field below a `ParameterBlock` whose `Access` is `None` or `Read` (or an
+  unknown token) is read-only, whatever its own `Access` says. It carries
+  `blockAccess` and moves to the Restricted view with a caption naming the
+  group as the reason (an unknown token keeps it in place, disabled, like an
+  unknown own `Access`). A field also reached through an open block stays
+  writable.
+- Activated `ParameterSeparator`s appear between the rows of their area in
+  source order: `Headline` as a heading, `Information`/`Error` as marked text
+  (screen readers hear "Information:"/"Manufacturer warning:"), `HorizontalRuler`
+  and textless separators as a rule, any other hint as plain text with the token
+  kept in `data-ui-hint`. Their text is the program's, never translated or
+  parsed.
+- Separators hidden or restricted by their own or their block's `Access` are not
+  shown. Search results list fields only. An area rendered as a declared grid
+  keeps its grid captions and shows no separator rows.
+- A block holding only separators is an area of its own; its entry count is 0.
+- Separator rows are siblings of the field rows under the same parent and are
+  keyed apart from them, so they never remount an editor.
+
 ## Boundaries and evidence
 
 The HTTP projection exposes the nearest declared ParameterBlock plus its declared
@@ -108,7 +130,12 @@ Tests: `parameterWorkspace.test.ts`, `ParameterWorkspace.test.tsx`, existing
 grids: ProductDB `parameter_grid.rs` and reader unit tests, HTTP
 `http_parameter_grid.rs`, `parameterMatrix.test.ts`, grid cases in
 `ParameterWorkspace.test.tsx`/`ParameterPanel.test.tsx`, and
-`parameter-matrix.e2e.ts` (EN/DE, 1440/400 px, fixture and production builds). Browser
+`parameter-matrix.e2e.ts` (EN/DE, 1440/400 px, fixture and production builds).
+Block access and separators: ProductDB `presentation_attributes.rs`,
+`dynamic_block_access.rs`, `parameter_layout.rs`, `v23_rewind`; HTTP
+`http_parameter_block_access.rs`; separator and partition cases in
+`parameterPresentation.test.ts`, `parameterWorkspace.test.ts`,
+`ParameterWorkspace.test.tsx` and `ParameterPanel.test.tsx`. No browser case yet. Browser
 coverage includes EN/DE, 1440/400px, source scopes, search/no results, retained DOM
 identity, bound enum writes, read-only limits, compact row geometry and overflow.
 Actual accepted counts and delivery revision belong in the implementation log.

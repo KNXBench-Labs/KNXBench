@@ -16,7 +16,7 @@ use crate::parse::translation::{ingest_translations, TranslationScope};
 use crate::report::insert_unknown;
 
 /// The product-database schema version this build writes.
-pub const CURRENT_PRODUCTDB_VERSION: i64 = 23;
+pub const CURRENT_PRODUCTDB_VERSION: i64 = 24;
 
 #[derive(Debug)]
 pub enum ProductDbError {
@@ -296,6 +296,7 @@ fn migrations() -> Vec<Migration> {
         migrate_v20_to_v21,
         migrate_v21_to_v22,
         migrate_v22_to_v23,
+        migrate_v23_to_v24,
     ]
 }
 
@@ -308,6 +309,45 @@ const TEXT_PARAMETER_REF_HOSTS: [&str; 4] = [
     "ParameterSeparator",
     "ComObjectRef",
 ];
+
+/// The hosts ADR-0139 models `Access` on. `Channel/@Access` and every other
+/// host stay unmodelled and reported.
+const ACCESS_HOSTS: [&str; 2] = ["ParameterBlock", "ParameterSeparator"];
+
+/// One attribute a schema step stops reporting because it gained a column:
+/// the shared shape of v23 and v24. Names only; what fills the column is the
+/// step's own backfill.
+struct Promotion {
+    /// Prefix of every cause this step records, e.g. `v23`.
+    version: &'static str,
+    /// The unqualified attribute name whose `ingest_unknown` rows retire.
+    attribute: &'static str,
+    /// Element names (last xpath step) whose rows retire.
+    hosts: &'static [&'static str],
+    /// `ingest_unknown.kind` and `.name` of a blob that was not carried forward.
+    blob_error: (&'static str, &'static str),
+    /// `ingest_unknown.name` of a report that could not be rewritten.
+    report_error: &'static str,
+}
+
+const TEXT_PARAMETER_REF_PROMOTION: Promotion = Promotion {
+    version: "v23",
+    attribute: "TextParameterRefId",
+    hosts: &TEXT_PARAMETER_REF_HOSTS,
+    blob_error: (
+        "TextParameterRefBackfillError",
+        "backfill_text_parameter_refs",
+    ),
+    report_error: "text_parameter_ref_report_backfill",
+};
+
+const ACCESS_PROMOTION: Promotion = Promotion {
+    version: "v24",
+    attribute: "Access",
+    hosts: &ACCESS_HOSTS,
+    blob_error: ("PresentationBackfillError", "backfill_presentation"),
+    report_error: "presentation_report_backfill",
+};
 
 /// v22 -> v23 (ADR-0126). `dynamic_node` and `com_object_ref` gain
 /// `text_parameter_ref_id`, and `TextParameterRefId` on the four hosts stops
@@ -328,6 +368,45 @@ fn migrate_v22_to_v23(conn: &Connection) -> Result<(), ProductDbError> {
         "ALTER TABLE dynamic_node ADD COLUMN text_parameter_ref_id TEXT;
          ALTER TABLE com_object_ref ADD COLUMN text_parameter_ref_id TEXT;",
     )?;
+    let retired = promote_from_program_blobs(
+        conn,
+        &TEXT_PARAMETER_REF_PROMOTION,
+        backfill_text_parameter_refs,
+    )?;
+    retire_promoted_from_reports(conn, &retired, &TEXT_PARAMETER_REF_PROMOTION)
+}
+
+/// v23 -> v24 (ADR-0139). `dynamic_node` gains `access` (on
+/// `ParameterBlock`/`ParameterSeparator`) and `ui_hint` (on
+/// `ParameterSeparator`), and `Access` on those two hosts stops being an
+/// unknown attribute. `UIHint` was already recognized there and was never
+/// reported; it only leaves `extra`.
+///
+/// Exactly v23's procedure (`promote_from_program_blobs`) with a re-parse as
+/// the whole backfill: the parser fills both columns once they exist. A blob
+/// that is not carried forward keeps its rows and gets a
+/// `PresentationBackfillError` record, and the measured reports that count it
+/// become `unavailable`.
+fn migrate_v23_to_v24(conn: &Connection) -> Result<(), ProductDbError> {
+    conn.execute_batch(
+        "ALTER TABLE dynamic_node ADD COLUMN access TEXT;
+         ALTER TABLE dynamic_node ADD COLUMN ui_hint TEXT;",
+    )?;
+    let retired = promote_from_program_blobs(conn, &ACCESS_PROMOTION, reparse_owned_trees)?;
+    retire_promoted_from_reports(conn, &retired, &ACCESS_PROMOTION)
+}
+
+/// The blob half of a [`Promotion`]: runs `backfill` on every stored
+/// `ApplicationProgram` blob whose bytes still match their key, each in its
+/// own savepoint, and deletes the blob's retired unknown rows. Returns blob ->
+/// the distinct xpaths whose rows it lost; a blob missing from the map was
+/// not carried forward and got a `promotion.blob_error` record instead.
+fn promote_from_program_blobs(
+    conn: &Connection,
+    promotion: &Promotion,
+    backfill: fn(&Connection, &str, &str, &[u8]) -> Result<(), ProductDbError>,
+) -> Result<std::collections::HashMap<String, Vec<String>>, ProductDbError> {
+    let version = promotion.version;
     let blobs = conn
         .prepare("SELECT sha256, source_path FROM source_file ORDER BY sha256")?
         .query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))?
@@ -339,8 +418,20 @@ fn migrate_v22_to_v23(conn: &Connection) -> Result<(), ProductDbError> {
     for (sha256, source_path) in blobs {
         let failure = |cause: &str| ProductDbError::Xml {
             source_path: source_path.clone(),
-            cause: format!("v23 backfill: {cause}"),
+            cause: format!("{version} backfill: {cause}"),
         };
+        // A legacy EX-IM payload (ADR-0094) is a program's source but never
+        // XML: its trees come from the legacy mapper and carry no attribute a
+        // promotion could fill. Not a failure, nothing to carry forward.
+        let legacy: bool = conn.query_row(
+            "SELECT EXISTS(SELECT 1 FROM legacy_source WHERE payload_sha256 = ?1)",
+            [&sha256],
+            |r| r.get(0),
+        )?;
+        if legacy {
+            retired.insert(sha256, Vec::new());
+            continue;
+        }
         let Some(bytes) = crate::load_source_file(conn, &sha256)? else {
             continue;
         };
@@ -359,19 +450,19 @@ fn migrate_v22_to_v23(conn: &Connection) -> Result<(), ProductDbError> {
         } else if crate::sha256_hex(&bytes) != sha256 {
             failure("stored bytes do not match their SHA-256 key")
         } else {
-            conn.execute_batch("SAVEPOINT v23_text_parameter_refs;")?;
-            match backfill_text_parameter_refs(conn, &sha256, &source_path, &bytes) {
+            conn.execute_batch("SAVEPOINT promoted_attribute;")?;
+            match backfill(conn, &sha256, &source_path, &bytes) {
                 Ok(()) => {
-                    let xpaths = retire_text_parameter_ref_unknowns(conn, &sha256)?;
-                    conn.execute_batch("RELEASE SAVEPOINT v23_text_parameter_refs;")?;
+                    let xpaths = retire_promoted_unknowns(conn, &sha256, promotion)?;
+                    conn.execute_batch("RELEASE SAVEPOINT promoted_attribute;")?;
                     retired.insert(sha256, xpaths);
                     continue;
                 }
                 Err(ProductDbError::Sqlite(error)) => return Err(ProductDbError::Sqlite(error)),
                 Err(error) => {
                     conn.execute_batch(
-                        "ROLLBACK TO SAVEPOINT v23_text_parameter_refs;
-                         RELEASE SAVEPOINT v23_text_parameter_refs;",
+                        "ROLLBACK TO SAVEPOINT promoted_attribute;
+                         RELEASE SAVEPOINT promoted_attribute;",
                     )?;
                     error
                 }
@@ -381,12 +472,12 @@ fn migrate_v22_to_v23(conn: &Connection) -> Result<(), ProductDbError> {
             conn,
             &sha256,
             &source_path,
-            "TextParameterRefBackfillError",
-            "backfill_text_parameter_refs",
+            promotion.blob_error.0,
+            promotion.blob_error.1,
             &refused,
         )?;
     }
-    retire_text_parameter_refs_from_reports(conn, &retired)
+    Ok(retired)
 }
 
 /// Re-parses the dynamic trees of the programs one blob owns and stores each
@@ -449,49 +540,54 @@ fn backfill_text_parameter_refs(
     Ok(())
 }
 
-/// Deletes one blob's unqualified `TextParameterRefId` rows at host xpaths and
-/// returns the distinct xpaths that had any: what one parse of it reported.
-fn retire_text_parameter_ref_unknowns(
+/// Deletes one blob's unqualified `promotion.attribute` rows at host xpaths
+/// and returns the distinct xpaths that had any: what one parse of it reported.
+fn retire_promoted_unknowns(
     conn: &Connection,
     sha256: &str,
+    promotion: &Promotion,
 ) -> Result<Vec<String>, ProductDbError> {
     let xpaths: Vec<String> = conn
         .prepare(
             "SELECT DISTINCT xpath FROM ingest_unknown
-             WHERE source_sha256 = ?1 AND kind = 'Attribute' AND name = 'TextParameterRefId'
+             WHERE source_sha256 = ?1 AND kind = 'Attribute' AND name = ?2
              ORDER BY xpath",
         )?
-        .query_map([sha256], |r| r.get::<_, String>(0))?
+        .query_map(params![sha256, promotion.attribute], |r| {
+            r.get::<_, String>(0)
+        })?
         .collect::<Result<Vec<_>, _>>()?
         .into_iter()
         .filter(|xpath| {
             xpath
                 .rsplit('/')
                 .next()
-                .is_some_and(|host| TEXT_PARAMETER_REF_HOSTS.contains(&host))
+                .is_some_and(|host| promotion.hosts.contains(&host))
         })
         .collect();
     for xpath in &xpaths {
         conn.execute(
             "DELETE FROM ingest_unknown
              WHERE source_sha256 = ?1 AND xpath = ?2 AND kind = 'Attribute'
-               AND name = 'TextParameterRefId'",
-            params![sha256, xpath],
+               AND name = ?3",
+            params![sha256, xpath, promotion.attribute],
         )?;
     }
     Ok(xpaths)
 }
 
-/// The package half of `migrate_v22_to_v23`, the mirror of v18's
+/// The package half of a [`Promotion`], the mirror of v18's
 /// `retire_channel_number_from_reports`: per package, the distinct rows its
 /// `ApplicationProgram` members lost leave `package.unknown_count`, and the
 /// measured report is rewritten without them in its own savepoint. A member
 /// that was not carried forward, or a report that does not validate, downgrades
 /// the report to `unavailable` with an `InstallReportBackfillError`.
-fn retire_text_parameter_refs_from_reports(
+fn retire_promoted_from_reports(
     conn: &Connection,
     retired: &std::collections::HashMap<String, Vec<String>>,
+    promotion: &Promotion,
 ) -> Result<(), ProductDbError> {
+    let version = promotion.version;
     let packages = conn
         .prepare("SELECT sha256 FROM package ORDER BY sha256")?
         .query_map([], |r| r.get::<_, String>(0))?
@@ -507,7 +603,7 @@ fn retire_text_parameter_refs_from_reports(
             .collect::<Result<Vec<_>, _>>()?;
         let overflow = || ProductDbError::Xml {
             source_path: package.clone(),
-            cause: "v23 backfill: unknown counter overflow".into(),
+            cause: format!("{version} backfill: unknown counter overflow"),
         };
         let lost = members.iter().try_fold(0i64, |total, m| {
             let rows = i64::try_from(retired.get(m).map_or(0, Vec::len)).map_err(|_| overflow())?;
@@ -521,7 +617,7 @@ fn retire_text_parameter_refs_from_reports(
         if updated != 1 {
             return Err(ProductDbError::Xml {
                 source_path: package.clone(),
-                cause: "v23 backfill: package unknown counter would underflow".into(),
+                cause: format!("{version} backfill: package unknown counter would underflow"),
             });
         }
         // An `unavailable` report keeps no unknown rows; there is nothing to
@@ -544,17 +640,14 @@ fn retire_text_parameter_refs_from_reports(
         xpaths.sort_unstable();
         xpaths.dedup();
         let stale_member = members.iter().find(|m| !retired.contains_key(*m));
-        conn.execute_batch("SAVEPOINT v23_text_parameter_report;")?;
+        conn.execute_batch("SAVEPOINT promoted_attribute_report;")?;
         let outcome = match stale_member {
             Some(member) => Ok(Err(crate::package::ReportNotUpgradable(format!(
                 "member {member} was not carried forward"
             )))),
-            None => crate::package::retire_report_unknowns(
-                conn,
-                &package,
-                &xpaths,
-                "TextParameterRefId",
-            ),
+            None => {
+                crate::package::retire_report_unknowns(conn, &package, &xpaths, promotion.attribute)
+            }
         };
         let why = match outcome {
             Ok(Ok(())) => None,
@@ -563,11 +656,11 @@ fn retire_text_parameter_refs_from_reports(
             Err(error) => Some(error.to_string()),
         };
         match why {
-            None => conn.execute_batch("RELEASE SAVEPOINT v23_text_parameter_report;")?,
+            None => conn.execute_batch("RELEASE SAVEPOINT promoted_attribute_report;")?,
             Some(why) => {
                 conn.execute_batch(
-                    "ROLLBACK TO SAVEPOINT v23_text_parameter_report;
-                     RELEASE SAVEPOINT v23_text_parameter_report;",
+                    "ROLLBACK TO SAVEPOINT promoted_attribute_report;
+                     RELEASE SAVEPOINT promoted_attribute_report;",
                 )?;
                 crate::package::mark_report_unavailable(conn, &package)?;
                 record_backfill_failure(
@@ -575,10 +668,10 @@ fn retire_text_parameter_refs_from_reports(
                     &package,
                     &package,
                     "InstallReportBackfillError",
-                    "text_parameter_ref_report_backfill",
+                    promotion.report_error,
                     &ProductDbError::Xml {
                         source_path: package.clone(),
-                        cause: format!("v23 backfill: {why}"),
+                        cause: format!("{version} backfill: {why}"),
                     },
                 )?;
             }

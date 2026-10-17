@@ -19,7 +19,16 @@ found two parameter-tab boundaries that no entry named before:
   information and error texts and rulers never reach the row view, and their
   `UIHint` is not projected.
 
-Both stay open until their fix package; the census lists the order.
+**Update (17 October 2026, after Alpha 13):** both are closed by
+[ADR-0139](../adr/0139-block-access-and-separators-reach-the-parameter-tab.md).
+Block `Access` is passed down the evaluation (across modules) and refuses writes
+(`parameterBlockAccessRestricted`); separators reach the workspace rows with
+their `UIHint`. Boundaries that remain: applying a block's `Access` to its
+contents is an inference from Project Schema 23's `Access_t` description, not a
+documented rule; object refs record `blockAccess` but object visibility does not
+use it; `Access` on `Channel` and other hosts stays unmodelled and reported;
+separators inside declared grids remain grid captions without hint styling;
+there is no browser-lane case yet.
 
 ## Declared parameter grids (17 October 2026 source, after Alpha 13)
 

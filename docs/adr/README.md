@@ -145,3 +145,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0136](0136-plugin-data-adoption-is-audited-opaque-replacement.md) | Plug-in data adoption is an audited opaque replacement | Accepted (CLI and application layer) | 2026-10-17 |
 | [0137](0137-declared-parameter-grids-reach-the-workspace.md) | Declared parameter grids reach the workspace as versioned geometry | Accepted | 2026-10-17 |
 | [0138](0138-notes-get-an-explicit-decision-before-a-delete.md) | Notes get an explicit decision before a delete or a selective import | Accepted | 2026-10-17 |
+| [0139](0139-block-access-and-separators-reach-the-parameter-tab.md) | Block access and separators reach the parameter tab | Accepted | 2026-10-17 |

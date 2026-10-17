@@ -2348,6 +2348,10 @@ export interface ParameterField {
   enumOptions: EnumOption[];
   displayOrder: number | null;
   access: string | null;
+  /** ADR-0139: the most restrictive `Access` an enclosing `ParameterBlock`
+   * declares on the path that activated this field, verbatim; `null` when
+   * none restricts it. Absent on older servers. */
+  blockAccess?: string | null;
   // The `etsId` a write must actually name (T18 slice 4, design D43):
   // `null` exactly when `editable` is `false`, otherwise the id `POST`
   // has to send — `etsId` above for an unscoped field, a module-qualified
@@ -2356,9 +2360,30 @@ export interface ParameterField {
   writeEtsId: string | null;
 }
 
+/**
+ * ADR-0139: one activated `ParameterSeparator`, display only. Every string
+ * is the program's own, untranslated like group labels.
+ */
+export interface ParameterSeparator {
+  /** Index in the section's `fields` it stands before; `fields.length` after the last. */
+  position: number;
+  group: { key: string; label: string | null } | null;
+  elementId: string | null;
+  /** `null` for a ruler. */
+  text: string | null;
+  /** `Headline`, `Information`, `Error`, `HorizontalRuler`, or a newer token, verbatim. */
+  uiHint: string | null;
+  /** The separator's own `Access`, verbatim. */
+  access: string | null;
+  /** As `ParameterField.blockAccess`. */
+  blockAccess: string | null;
+}
+
 export interface ParameterSection {
   scope: ModuleScope | null;
   fields: ParameterField[];
+  /** ADR-0139: absent on older servers. */
+  separators?: ParameterSeparator[];
   /** ADR-0137: absent on servers that do not report layouts. */
   groupLayouts?: ParameterGroupLayout[];
 }
@@ -2408,7 +2433,9 @@ export type ParameterDiagnosticKind =
   // ADR-0080: why a field is not writable.
   | "parameterAccessReadOnly"
   | "manufacturerCalculation"
-  | "writeAuthorityUnavailable";
+  | "writeAuthorityUnavailable"
+  // ADR-0139: an enclosing block's `Access` refuses the write.
+  | "parameterBlockAccessRestricted";
 
 export interface ParameterDiagnostic {
   scope: ModuleScope | null;

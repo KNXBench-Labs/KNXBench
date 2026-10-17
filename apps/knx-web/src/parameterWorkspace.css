@@ -82,3 +82,12 @@
   .parameter-workspace .parameter-workspace-row .parameter-field:not(.parameter-field-checked):not(.parameter-label-row):not(.parameter-spacer) { grid-template-columns: minmax(0, 1fr); }
   .parameter-workspace .parameter-field > input, .parameter-workspace .parameter-field > select { grid-column: 1; grid-row: auto; }
 }
+
+/* ADR-0139: manufacturer separators between the rows of a chosen area. */
+.parameter-workspace-separator { padding: 6px 8px 2px; }
+.parameter-workspace-separator[hidden] { display: none; }
+.parameter-workspace-separator h5 { margin: 10px 0 2px; font-size: 13px; font-weight: 600; }
+.parameter-workspace-separator p { margin: 0; font-size: 12px; color: var(--knx-muted); white-space: pre-line; }
+.parameter-workspace-separator hr { margin: 4px 0; border: 0; border-top: 1px solid var(--knx-border); }
+.parameter-workspace-separator[data-ui-hint="Information"] p { border-left: 2px solid var(--knx-accent); padding-left: 8px; }
+.parameter-workspace-separator[data-ui-hint="Error"] p { border-left: 2px solid var(--knx-error-color); padding-left: 8px; color: var(--knx-error-color); }

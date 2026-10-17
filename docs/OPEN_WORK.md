@@ -28,9 +28,9 @@ The [census of the second product-database collection](research/2026-10-17-produ
 (546 new application programs, production installer run on every file) names
 open work in this order:
 
-1. **Correctness:** block/separator `Access` is not applied to visibility or
-   write authority; separators outside declared grids (headlines, information
-   and error texts) are never shown ([KL-003](limitations/KL-003-parameter-evaluation-and-editing-boundaries.md#product-database-gap-census-17-october-2026)).
+1. ~~**Correctness:** block/separator `Access` and separators outside declared
+   grids~~ — done ([ADR-0139](adr/0139-block-access-and-separators-reach-the-parameter-tab.md);
+   remaining boundaries in [KL-003](limitations/KL-003-parameter-evaluation-and-editing-boundaries.md#product-database-gap-census-17-october-2026)).
 2. **Install:** vendor wrapper ZIPs fail as "missing knx_master.xml" although
    their inner packages install; complete manufacturer databases need the large
    profile, which the web app does not offer, and one grew a 4.56 GB product

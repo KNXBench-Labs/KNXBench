@@ -6,6 +6,16 @@
 next is one separately authorised read-only run against a named device, then
 any memory profile only with its own evidence and decision (ADR-0134).
 
+## Website scroll flicker on desktop Chromium (15 October 2026)
+
+The owner sees visual flicker on knxbench.com between “See it.” and “What is
+your building saying?” in Linux desktop Chromium 152 (smartphone Chrome is
+fine). Headless traces show no scroll jumps, so the symptom is **open and not
+reproduced**. The prepared original-versus-poster A/B was never answered and
+its loopback server no longer runs; next is that A/B in a real desktop window,
+then a discriminating regression and a source fix. No product change was made.
+[Investigation log](../.ai/logs/2026-10-15_codex_site-scroll-flicker.md).
+
 ## System 2 / System B download outcome (17 October 2026)
 
 Owner renewed the usable-download/admission objective. It remains **blocked on

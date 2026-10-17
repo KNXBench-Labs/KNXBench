@@ -1,4 +1,12 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-10-17 16:50
+- **Completed:** CLAIM: package P5 (OPEN_WORK synchronisation, docs only) from `docs/goals/open-work-2026-10-17/p5-open-work-docs-sync.md`, worktree `KNXBench-p5-open-work-20261017`, branch `docs/p5-open-work-20261017`.
+- **Pending/Next Steps:** P5 in progress; edits `docs/OPEN_WORK.md` and the goals index only.
+- **Notes for Codex oder Claude:** P2/P3 should start after this claim's release entry.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-10-17 16:55
 - **Completed:** Planning only: open work of 17 October saved as goal package files in `docs/goals/open-work-2026-10-17/` (README with order, collisions, shared rules and ledger routing; P1 object-function rescue, P2 plug-in data web UI (KL-186), P3 note-aware deletes + selective-import notes (FUTURE-03 residue), P4 gate hygiene, P5 OPEN_WORK sync; P6–P8 recorded as not goal-ready). Audit base `a340c5a8`; every one of the 18 non-terminal ledger rows routed once. Docs checker, anchors, ledger, headers green.
 - **Pending/Next Steps:** No package is started or reserved by these files; the user starts one with its starter line. Recommended order P5 → P2 → P3, P4 in parallel, P1 once parameter grids are on main and Codex or the user hands it over.

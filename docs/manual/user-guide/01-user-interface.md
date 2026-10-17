@@ -79,6 +79,22 @@ keep plain text. This needs a since Alpha 12; the published manual
 screenshots still show the earlier released UI. See
 [Motion settings](09-settings-and-appearance.md#motion-style-and-motion-level).
 
+## Closed by default (source builds after Alpha 13)
+
+Collapsible content starts closed: the Workspaces, Project explorer and Diagnostics
+navigation blocks, every new explorer branch, parameter sections and manufacturer
+groups, Function entries, matrix column choices and report/evidence details.
+Click a heading or chevron, or focus it and press Enter/Space, to open it. The
+Navigation and Properties pane visibility controls remain layout controls; the
+panes themselves have not been removed or hidden by this change.
+
+Opening a section is not an edit. Folding retains mounted parameter drafts and
+in-flight results. An explicit search reveal, selected group address or range
+scope can still open the path needed to show its target. Previously remembered
+group-address tree openings remain respected; the new default applies when no
+view state was saved. This is newer than the published Alpha 13 binary; existing
+manual screenshots keep their recorded release provenance.
+
 ## The navigation pane
 
 The left pane has three stacked blocks.

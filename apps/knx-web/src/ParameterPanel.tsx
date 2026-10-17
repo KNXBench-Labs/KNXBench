@@ -387,22 +387,23 @@ function ParameterSectionView(props: {
   const checked = props.checked === null ? null : { ...props.checked, scope: section.scope };
   const t = useTranslate();
   const fields = section.fields;
-  const [collapsed, setCollapsed] = useState(new Set<string>());
+  // Remember only explicit openings: newly appearing source groups stay closed.
+  const [expanded, setExpanded] = useState(new Set<string>());
   const groupOrder = [...new Set(fields.flatMap(field => field.group ? [field.group.key] : []))];
   return (
-    <details className="parameter-section" open>
+    <details className="parameter-section">
       <summary>{sectionLabel(t, section.scope)}</summary>
       <div className="parameter-fields">
         {fields.map((field, index) => <Fragment key={field.etsId}>
           {field.group && field.group.key !== fields[index - 1]?.group?.key && <button type="button"
-            className="parameter-group-toggle" aria-expanded={!collapsed.has(field.group.key)}
-            onClick={() => setCollapsed(previous => {
+            className="parameter-group-toggle" aria-expanded={expanded.has(field.group.key)}
+            onClick={() => setExpanded(previous => {
               const next = new Set(previous); const key = field.group!.key;
               if (next.has(key)) next.delete(key); else next.add(key); return next;
-            })}><span aria-hidden="true">{collapsed.has(field.group.key) ? "▸" : "▾"}</span>
+            })}><span aria-hidden="true">{!expanded.has(field.group.key) ? "▸" : "▾"}</span>
             {field.group.label || t("parameters.groupNumber", { number: groupOrder.indexOf(field.group.key) + 1 })}
           </button>}
-          <div className="parameter-field-wrapper" hidden={field.group ? collapsed.has(field.group.key) : false}>
+          <div className="parameter-field-wrapper" hidden={field.group ? !expanded.has(field.group.key) : false}>
           <ParameterFieldRow
             field={field}
             moduleScoped={section.scope !== null}
@@ -427,7 +428,7 @@ function StaleParametersSection(props: { stale: StaleParameter[] }) {
   const { stale } = props;
   const t = useTranslate();
   return (
-    <details className="parameter-stale-section" open>
+    <details className="parameter-stale-section">
       <summary>{t("parameters.staleValuesHeading", { count: stale.length })}</summary>
       <p className="inspector-description">{t("parameters.staleDescription")}</p>
       <ul>
@@ -459,7 +460,7 @@ function DiagnosticsBanner(props: { diagnostics: ParameterDiagnostic[] }) {
   }
 
   return (
-    <details className="parameter-diagnostics-banner" data-has-warnings={warnings > 0} open>
+    <details className="parameter-diagnostics-banner" data-has-warnings={warnings > 0}>
       <summary>{summary}</summary>
       <ul>
         {groupParameterDiagnostics(diagnostics).map((group, i) => {
@@ -595,7 +596,7 @@ export function ParameterPanelContent(props: ParameterPanelProps & {
       {panel.diagnostics.length > 0 ? <DiagnosticsBanner diagnostics={panel.diagnostics} />
         : <p className="inspector-description">{t("parameters.noDiagnostics")}</p>}
       <UntranslatedSummary panel={panel} language={language} />
-      {(panel.instanceValues?.length ?? 0) > 0 && <details className="parameter-stale-section parameter-instance-values" open>
+      {(panel.instanceValues?.length ?? 0) > 0 && <details className="parameter-stale-section parameter-instance-values">
         <summary>{t("parameters.instanceValuesHeading")}</summary>
         <p className="inspector-description">{t("parameters.instanceValuesDescription")}</p>
         <ul>{panel.instanceValues!.map((s) => <li key={s.etsId} className="parameter-stale-entry">

@@ -1,4 +1,5 @@
 /** Issue #20: a range heading's + creates a group address in that range, next free or typed. */
+import { openNavigationSections } from "./disclosure-fixture";
 import { expect, test, type Page } from "@playwright/test";
 import { join } from "node:path";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
@@ -69,12 +70,14 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await page.getByRole("button", { name: m["toolbar.newProject"], exact: true }).first().click();
     await page.getByRole("dialog", { name: m["newProject.title"], exact: true }).getByRole("button", { name: m["newProject.create"], exact: true }).click();
     await page.getByRole("dialog", { name: m["projectWizard.done.title"], exact: true }).getByRole("button", { name: m["projectWizard.done.close"], exact: true }).click();
+    await openNavigationSections(page);
     const dismiss = page.getByRole("button", { name: m["toast.dismiss"], exact: true });
     for (let i = 0; i < 20 && await dismiss.count() > 0; i++) await dismiss.first().click({ timeout: 2000 }).catch(() => {});
     const nav = page.getByRole("navigation", { name: m["workbench.navigation"], exact: true });
     if (!(await nav.isVisible())) await page.getByRole("button", { name: m["workbench.navigation"], exact: true }).click();
     await nav.getByRole("button", { name: m["workbench.addresses"], exact: true }).click();
 
+    await page.locator('[data-ga-expand="range:10:0"]').click();
     const add = page.locator('[data-ga-range-add="11"]');
     await expect(add).toBeVisible();
     await expect(add).toHaveAccessibleName(m["gaWorkspace.newInRange.add"].replace("{range}", "Fictional ground floor with a rather long name"));

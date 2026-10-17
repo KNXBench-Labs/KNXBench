@@ -1,4 +1,5 @@
 /** UX-01: a group address dragged onto a communication object is linked once, API intercepted. */
+import { openExplorerBranches } from "./disclosure-fixture";
 import { expect, test, type Page } from "@playwright/test";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
 
@@ -52,6 +53,7 @@ async function serve(page: Page, linkStatus: number) {
   // both real viewport assertions below remain mandatory before dragging.
   await page.setViewportSize({ width: 1280, height: 1600 });
   await page.goto("/e2e/installations-fixture.html?workspace");
+  await openExplorerBranches(page);
   await page.locator("button.tree-label", { hasText: "Kitchen actuator" }).click();
   // The device detail loads asynchronously; `.all()` would otherwise snapshot
   // zero summaries and leave the group closed.

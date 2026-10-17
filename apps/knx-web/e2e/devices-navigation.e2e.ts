@@ -1,4 +1,5 @@
 /** Devices navigation browser contracts with strictly intercepted, fictional API data. */
+import { openExplorerBranches, openNavigationSections, openParameterSections } from "./disclosure-fixture";
 import { expect, test, type Page } from "@playwright/test";
 import { join } from "node:path";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
@@ -90,12 +91,13 @@ async function intercept(page: Page, language: "en" | "de", count = 3, theme = "
   });
   return state;
 }
-async function openProject(page: Page, language: "en" | "de") {
+async function openProject(page: Page, language: "en" | "de", expand = true) {
   const m = language === "en" ? en : de;
   await page.goto("/");
   await page.getByRole("button", { name: m["toolbar.newProject"], exact: true }).first().click();
   await page.getByRole("dialog", { name: m["newProject.title"], exact: true }).getByRole("button", { name: m["newProject.create"], exact: true }).click();
   await page.getByRole("dialog", { name: m["projectWizard.done.title"], exact: true }).getByRole("button", { name: m["projectWizard.done.close"], exact: true }).click();
+  if (expand) { await openNavigationSections(page); await openExplorerBranches(page); }
 }
 async function openList(page: Page, language: "en" | "de") {
   const m = language === "en" ? en : de;
@@ -109,7 +111,12 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     const m = language === "de" ? de : en;
     await page.setViewportSize({ width, height: 900 });
     const state = await intercept(page, language, 3, width === 1440 ? "graphite" : "porcelain", true);
-    await openProject(page, language);
+    await openProject(page, language, false);
+    await expect(page.locator('.navigation-section-toggle[aria-expanded="true"]')).toHaveCount(0);
+    await expect(page.locator('.project-explorer .tree-toggle[aria-expanded="true"]')).toHaveCount(0);
+    await expect(page.locator('details[open]')).toHaveCount(0);
+    if (process.env.KNX_DEVICES_CAPTURE_DIR) await page.screenshot({ path: join(process.env.KNX_DEVICES_CAPTURE_DIR, `collapsed-defaults-${language}-${width}.png`) });
+    await openNavigationSections(page);
     const explorer = page.locator(".navigation-section").filter({ has: page.locator(".project-explorer") });
     const navigation = page.getByRole("button", { name: m["workbench.navigation"], exact: true });
     if (await navigation.getAttribute("aria-expanded") === "false") await navigation.click();
@@ -132,6 +139,8 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await openList(page, language);
     await page.locator(".devices-table tbody td:nth-child(3) button").filter({ hasText: /^Actuator 1$/ }).click();
     await page.locator(".device-function-controls > summary").click();
+    await expect(page.locator(".device-function-controls .parameter-section")).not.toHaveAttribute("open", "");
+    await openParameterSections(page);
     const mode = page.locator(".device-function-controls select");
     await expect(mode).toHaveValue("0");
     await mode.selectOption("1");
@@ -143,6 +152,9 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     if (process.env.KNX_DEVICES_CAPTURE_DIR) await page.screenshot({ path: join(process.env.KNX_DEVICES_CAPTURE_DIR, `workbench-functions-${language}-${width}.png`) });
     await page.getByRole("tab", { name: m["workbench.parameters"], exact: true }).click();
     const panel = page.locator('[role="tabpanel"]:visible');
+    await expect(panel.locator(".parameter-section")).not.toHaveAttribute("open", "");
+    await expect(panel.locator(".parameter-group-toggle")).toHaveAttribute("aria-expanded", "false");
+    await openParameterSections(page);
     await panel.locator(".parameter-group-toggle").click();
     await expect(panel.locator("select")).toBeHidden();
     await panel.locator(".parameter-group-toggle").click();

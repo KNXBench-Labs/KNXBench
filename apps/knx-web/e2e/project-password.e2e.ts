@@ -1,5 +1,6 @@
 /** AR08: a protected ETS project asks for its password in the real app; the secret leaves once. */
 
+import { openExplorerBranches } from "./disclosure-fixture";
 import { expect, test, type Page } from "@playwright/test";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
 
@@ -64,6 +65,7 @@ test("asks for the password, retries once with it, and loads the project", async
   await expect(dialog).toContainText("was not accepted");
   await field.fill(SECRET);
   await dialog.getByRole("button", { name: "Import" }).click();
+  await openExplorerBranches(page);
   await expect(page.locator("button.tree-label", { hasText: "Villa" })).toBeVisible();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   expect(imports.map((body) => body.password ?? null)).toEqual([null, "guess", SECRET]);

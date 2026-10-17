@@ -1,12 +1,9 @@
 /** Which group-address tree groups are open (issue #11); pure, plus local storage. */
 import type { GroupAddressPresentation } from "./groupAddressPresentation";
 
-/**
- * First view of a project: the groups that hold further groups are open, so the
- * main and middle groups show with their counts while no address list unfolds.
- */
-export function defaultOpenGroups(index: GroupAddressPresentation): Set<string> {
-  return new Set([...index.groups.values()].filter(group => group.children.length > 0).map(group => group.key));
+/** First view of a project: every group starts closed. */
+export function defaultOpenGroups(): Set<string> {
+  return new Set();
 }
 
 /** The groups holding `groupKey`, itself included; stops on imported cycles. */

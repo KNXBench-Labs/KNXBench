@@ -1,4 +1,5 @@
 /** Production-built four-view group-address workspace with strictly intercepted data. */
+import { openNavigationSections } from "./disclosure-fixture";
 import { expect, test, type Page } from "@playwright/test";
 import { join } from "node:path";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
@@ -96,6 +97,7 @@ async function openAddresses(page: Page, language: Language, expandAll = true) {
   await page.getByRole("button", { name: m["toolbar.newProject"], exact: true }).first().click();
   await page.getByRole("dialog", { name: m["newProject.title"], exact: true }).getByRole("button", { name: m["newProject.create"], exact: true }).click();
   await page.getByRole("dialog", { name: m["projectWizard.done.title"], exact: true }).getByRole("button", { name: m["projectWizard.done.close"], exact: true }).click();
+  await openNavigationSections(page);
   const dismiss = page.getByRole("button", { name: m["toast.dismiss"], exact: true });
   for (let i = 0; i < 20 && await dismiss.count() > 0; i++) await dismiss.first().click({ timeout: 2000 }).catch(() => {});
   const nav = page.getByRole("navigation", { name: m["workbench.navigation"], exact: true });
@@ -169,6 +171,8 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await expect(both).toContainText(m["gaWorkspace.symbol.send"]);
     await expect(workspace.locator('[data-ga-cell="address:32:0|device:3:object:13"]')).toContainText("?");
     await expect(workspace.locator('[data-ga-absence="address:33:0|device:1:object:10"]')).toHaveText("—");
+    await expect(workspace.locator(".ga-column-picker")).not.toHaveAttribute("open", "");
+    await workspace.locator(".ga-column-picker > summary").click();
     // Object inventory: nothing is read until asked; an explicit canonical read adds unlinked
     // objects as offered (not chosen) columns, and an unavailable device stays visibly reported.
     const status = workspace.locator("[data-ga-inventory-status]");
@@ -249,7 +253,10 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     const workspace = page.locator(".ga-workspace");
     const group = (key: string) => workspace.locator(`[data-ga-expand="${key}"]`);
     const addresses = workspace.locator("[data-ga-select]");
-    await expect(group("range:20:0")).toHaveAttribute("aria-expanded", "true");
+    await expect(group("range:20:0")).toHaveAttribute("aria-expanded", "false");
+    await expect(group("range:21:0")).toHaveCount(0);
+    await expect(addresses).toHaveCount(0);
+    await group("range:20:0").click();
     await expect(group("range:21:0")).toHaveAttribute("aria-expanded", "false");
     await expect(group("range:21:0")).toContainText("(2)");
     await expect(group("unassigned")).toHaveAttribute("aria-expanded", "false");

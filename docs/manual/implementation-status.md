@@ -2,6 +2,14 @@
 
 # Implementation status
 
+## Closed disclosure defaults (source builds after Alpha 13)
+
+Navigation content blocks, explorer branches, parameter sections/source groups,
+Function entries, matrix column selection and report/evidence disclosures start
+closed. Manual opening, drafts, explicit search/selection reveal and remembered
+per-project group-address view choices remain supported. No domain, persistence,
+protocol or compatibility change. [Behaviour](user-guide/01-user-interface.md#closed-by-default-source-builds-after-alpha-13).
+
 ## Workbench configuration (Alpha 13)
 
 Navigation blocks fold independently; File actions have four labelled groups.

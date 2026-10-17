@@ -1,4 +1,5 @@
 /** Owner feedback P1: a reload resumes the server project; Save As asks before replacing. */
+import { openNavigationSections } from "./disclosure-fixture";
 import { expect, test, type Page } from "@playwright/test";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
 import { messages as en } from "../src/messages/en";
@@ -100,6 +101,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await page.getByRole("button", { name: m["toolbar.newProject"], exact: true }).click();
     await page.getByRole("dialog").getByRole("button", { name: m["newProject.create"], exact: true }).click();
     await page.getByRole("dialog").getByRole("button", { name: m["projectWizard.done.close"], exact: true }).click();
+    await openNavigationSections(page);
 
     const saveAs = async () => {
       await page.locator(".file-menu summary").click();

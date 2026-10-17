@@ -7,7 +7,7 @@
     "checkout, worktree and old-disk mount paths -> <sources>, <old-sources>, <old-disk>, <data-disk>",
     "the same paths in dash-joined directory-key form -> <sources-key>, <disk-key>",
     "agent profile and profile scratch directories -> <profile>, <profile-scratch>",
-    "developer home directories -> /home/alice (sibling-prefix fixtures -> /home/alicea, /home/alice-old; one guard test value -> /home/jdoe)",
+    "developer home directories -> /home/alice (sibling-prefix fixtures -> /home/alicea, /home/alice-old; one guard test value -> another fictional, deliberately non-placeholder home)",
     "host name -> <host>; distribution and desktop name -> desktop",
     "two exact kernel releases -> removed or kernel-release",
     "CPU model -> 8-core CPU",

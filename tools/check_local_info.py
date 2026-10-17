@@ -28,7 +28,7 @@ patterns and test fixtures) carries the marker `local-info: allow`; the marker
 exempts that line only and is visible in review.
 
 Usage:
-  tools/check_local_info.py                     # all tracked text files
+  tools/check_local_info.py                     # tracked and untracked, not ignored, text files
   tools/check_local_info.py --message-file F    # one commit message (commit-msg hook)
   tools/check_local_info.py --commits A..B      # messages of a commit range
 """
@@ -167,7 +167,10 @@ def scan_text(where: str, text: str, rules) -> list[Finding]:
 
 
 def tracked_files(root: Path) -> list[str]:
-    listing = subprocess.run(["git", "ls-files", "-z"], cwd=root, check=True, capture_output=True).stdout
+    """Tracked files plus untracked ones that are not ignored: a file about to be
+    added must not slip through a check run before `git add`."""
+    listing = subprocess.run(["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
+                             cwd=root, check=True, capture_output=True).stdout
     return [name for name in listing.decode().split("\0") if name]
 
 
@@ -220,7 +223,7 @@ def main() -> int:
         findings = [f for sha, body in messages for f in scan_text(f"commit {sha}", body, rules)]
         scope = f"{len(messages)} commit messages"
     else:
-        findings, scope = check(args.root, rules), "tracked files"
+        findings, scope = check(args.root, rules), "tracked and untracked files"
     for finding in findings:
         print("ERROR:", finding)
     print(f"{'FAIL' if findings else 'PASS'}: {len(findings)} local machine details in {scope}.")

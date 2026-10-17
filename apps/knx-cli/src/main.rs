@@ -23,6 +23,7 @@ mod legacy_import;
 mod legacy_inspect;
 mod legacy_password;
 mod name_recipe;
+mod plugin_data;
 mod scan;
 mod selective_import;
 
@@ -33,6 +34,9 @@ const USAGE: &str = "usage: knx import <file.knxproj> [--store <path.knxdb> [--r
      \x20     knx import-selection <source.knxproj> --project <target.knxdb>\n\
      \x20                   --source-installation <id> --target-installation <id>\n\
      \x20                   [--device <id>]... [--line <id>]... [--confirm <token>] [--password-stdin]\n\
+     \x20     knx adopt-plugin-data <source.knxproj> --project <target.knxdb> [--password-stdin]\n\
+     \x20     knx adopt-plugin-data <source.knxproj> --project <target.knxdb>\n\
+     \x20                   --source-device <id> --target-device <id> [--confirm <token>] [--password-stdin]\n\
      \x20     knx name-recipe <project.knxdb> --group-address <id>...\n\
      \x20                   [--prefix <literal>] [--suffix <literal>] [--confirm <token>]\n\
      \x20     knx ga-export <store.knxdb> <out.csv> [--installation <id>]\n\
@@ -196,6 +200,7 @@ fn main() -> ExitCode {
     match args.first().map(String::as_str) {
         Some("import") => run_import(&args[1..]),
         Some("import-selection") => selective_import::run(&args[1..]),
+        Some("adopt-plugin-data") => plugin_data::run(&args[1..]),
         Some("name-recipe") => name_recipe::run(&args[1..]),
         Some("ga-export") => run_ga_export(&args[1..]),
         Some("ga-import") => run_ga_import(&args[1..]),

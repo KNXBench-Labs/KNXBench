@@ -44,6 +44,23 @@ also knows the CPU model, distribution, dash-joined paths, Arch kernel releases
 and a clone-local deny file. GitHub's pull-request refs and the fork keep the
 old commits ([KL-185](KNOWN_LIMITATIONS.md#catalogue-kl-185)).
 
+## Plug-in data adoption: edited editor bytes reach the working project (17 October 2026)
+
+`knx adopt-plugin-data` and `knx_app::plugin_data` copy one device's plug-in
+`BinaryData` blob and numbered `ExtraData` table from a source `.knxproj` into an
+existing native project, verbatim and never executed. The preview names the exact
+replacements and a confirmation token binds source, request and destination;
+the plan refuses unless product and application references, blob/table
+references and group-address links match. Superseded bytes stay in the project
+and a digest-only record is written; rollback is the saved version, not Undo.
+Verified: 17 synthetic application tests (with four mutation controls), 4 CLI
+tests on the real binary, and on the private ETS6 export pair exactly one device
+(SmartSensor EG) is adoptable with exactly its two entries replaced by the
+edited archive's bytes. Not verified: that the plug-in, ETS or a device accepts
+adopted bytes. No server route or UI yet. [Contract](contracts/plugin-data-adoption.md),
+[ADR-0136](adr/0136-plugin-data-adoption-is-audited-opaque-replacement.md),
+[KL-186](KNOWN_LIMITATIONS.md#catalogue-kl-186).
+
 ## No local machine details in the repository (17 October 2026)
 
 Tracked files no longer name local mount points, checkout or worktree

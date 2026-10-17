@@ -2716,6 +2716,18 @@
         "KL-185"
       ],
       "anchors": []
+    },
+    {
+      "key": "KL-186",
+      "number": 186,
+      "title": "Plug-in data adoption is CLI-only and not undoable",
+      "topic": "Import and export",
+      "summary": "Adopting a plug-in's stored bytes between two projects of one lineage exists in the application layer and the CLI only. The bytes are not decoded, no remapping is attempted, the opaque store is outside command Undo (rollback is the saved version), and no plug-in, ETS or device acceptance of the adopted bytes is verified.",
+      "file": "KL-186-plugin-data-adoption.md",
+      "ledger_ids": [
+        "KL-186"
+      ],
+      "anchors": []
     }
   ]
 }

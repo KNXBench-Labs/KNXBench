@@ -432,6 +432,126 @@ pub fn retained_privacy_knxproj_bytes() -> Vec<u8> {
     ])
 }
 
+/// A synthetic ETS-shaped archive with one device that carries a manufacturer
+/// plug-in's two storage channels: a `BinaryData` blob and an `ExtraData`
+/// table whose number is a parameter value (plus a second device-foreign
+/// table). The "plug-in bytes" are caller-chosen and meaningless to KNXBench.
+/// Every field that adoption compares can be varied independently.
+#[derive(Clone, Debug)]
+pub struct PluginFixture {
+    pub blob: &'static [u8],
+    pub rbg: &'static [u8],
+    pub other_rbg: &'static [u8],
+    pub blob_id: &'static str,
+    pub extra_value: &'static str,
+    pub group_address: u16,
+    pub program: &'static str,
+    pub product: &'static str,
+    pub address: &'static str,
+}
+
+/// Archive path of the default fixture's blob and tables.
+pub const PLUGIN_FIXTURE_BLOB_PATH: &str =
+    "P-0001/BinaryData/b113ce24-349e-45db-8ad5-c2a7003d0edf.dat";
+pub const PLUGIN_FIXTURE_RBG_PATH: &str = "P-0001/ExtraData/393256.rbg";
+pub const PLUGIN_FIXTURE_OTHER_RBG_PATH: &str = "P-0001/ExtraData/393257.rbg";
+
+impl Default for PluginFixture {
+    fn default() -> Self {
+        Self {
+            blob: b"blob v1",
+            rbg: b"table v1",
+            other_rbg: b"another device's table",
+            blob_id: "b113ce24-349e-45db-8ad5-c2a7003d0edf",
+            extra_value: "393256",
+            group_address: 1,
+            program: "M-0001_H-1_HP-1",
+            product: "M-0001_H-1_P-1",
+            address: "1",
+        }
+    }
+}
+
+impl PluginFixture {
+    /// Same device after an edit in the plug-in's own editor: only the two
+    /// plug-in storage channels differ.
+    pub fn edited() -> Self {
+        Self {
+            blob: b"blob v2 - edited in the plug-in editor",
+            rbg: b"table v2 - edited in the plug-in editor",
+            ..Self::default()
+        }
+    }
+
+    pub fn knxproj_bytes(&self) -> Vec<u8> {
+        let v = self;
+        let topology = topology(v);
+        let blob_path = format!("P-0001/BinaryData/{}.dat", v.blob_id);
+        let extra_path = format!("P-0001/ExtraData/{}.rbg", v.extra_value);
+        let mut entries: Vec<(&str, &[u8])> = vec![
+            ("P-0001.signature", b"not a real signature"),
+            ("P-0001/0.xml", topology.as_bytes()),
+            (
+                "P-0001/Project.xml",
+                br#"<?xml version="1.0" encoding="utf-8"?><KNX xmlns="http://knx.org/xml/project/11"><Project Id="P-0001"><ProjectInformation Name="Minimal" GroupAddressStyle="ThreeLevel" CompletionStatus="Undefined" /></Project></KNX>"#,
+            ),
+            (
+                "knx_master.xml",
+                br#"<?xml version="1.0" encoding="utf-8"?><KNX xmlns="http://knx.org/xml/project/11"><MasterData /></KNX>"#,
+            ),
+            (&blob_path, v.blob),
+            (&extra_path, v.rbg),
+            (PLUGIN_FIXTURE_OTHER_RBG_PATH, v.other_rbg),
+        ];
+        // The default blob and table paths are listed once, whatever the variant.
+        entries.dedup_by(|a, b| a.0 == b.0);
+        zip_with_entries(&entries)
+    }
+}
+
+fn topology(v: &PluginFixture) -> String {
+    format!(
+        r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11" CreatedBy="ETS4" ToolVersion="ETS 4.1.8">
+  <Project Id="P-0001"><Installations>
+    <Installation InstallationId="0" Name="" DefaultLine="P-0001-0_L-2" CompletionStatus="Undefined">
+      <Topology><Area Id="P-0001-0_A-1" Name="A" Address="1" CompletionStatus="Undefined">
+        <Line Id="P-0001-0_L-2" Name="L" Address="1" MediumTypeRefId="MT-0" CompletionStatus="Accepted">
+          <DeviceInstance Id="P-0001-0_DI-1" Name="D" ProductRefId="{product}"
+              Hardware2ProgramRefId="{program}" Address="{address}"
+              LastModified="2023-07-14T11:55:33" CompletionStatus="FinishedDesign"
+              IndividualAddressLoaded="1" ApplicationProgramLoaded="1" ParametersLoaded="1"
+              CommunicationPartLoaded="1" MediumConfigLoaded="1"
+              IsCommunicationObjectVisibilityCalculated="1" Broken="0">
+            <ParameterInstanceRefs>
+              <ParameterInstanceRef RefId="M-0001_A-1_P-108_R-108" Value="{extra}" />
+              <ParameterInstanceRef RefId="M-0001_A-1_P-9_R-9" Value="7" />
+            </ParameterInstanceRefs>
+            <ComObjectInstanceRefs>
+              <ComObjectInstanceRef RefId="M-0001_A-1_O-0_R-1" DatapointType="" IsActive="1">
+                <Connectors><Send GroupAddressRefId="P-0001-0_GA-1" /></Connectors>
+              </ComObjectInstanceRef>
+            </ComObjectInstanceRefs>
+            <BinaryData>
+              <BinaryData Id="{blob_id}" Name="244_Info" DoNotCopy="false" />
+            </BinaryData>
+          </DeviceInstance>
+        </Line></Area></Topology>
+      <GroupAddresses><GroupRanges>
+        <GroupRange Id="P-0001-0_GR-1" Name="Licht" RangeStart="1" RangeEnd="255">
+          <GroupAddress Id="P-0001-0_GA-1" Address="{ga}" Name="GA" />
+        </GroupRange></GroupRanges></GroupAddresses>
+    </Installation></Installations></Project>
+</KNX>"#,
+        product = v.product,
+        program = v.program,
+        address = v.address,
+        extra = v.extra_value,
+        blob_id = v.blob_id,
+        ga = v.group_address,
+    )
+}
+
 const MINIMAL_TOPOLOGY: &[u8] = br#"<?xml version="1.0" encoding="utf-8"?>
 <KNX xmlns="http://knx.org/xml/project/11" CreatedBy="ETS4" ToolVersion="ETS 4.1.8">
   <Project Id="P-0001">

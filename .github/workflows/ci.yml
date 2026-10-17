@@ -37,26 +37,28 @@ jobs:
       - name: Check formatting
         run: cargo fmt --all --check
 
+      # knx-desktop's Tauri build script bundles apps/knx-web/dist, so the web
+      # build comes before every workspace-wide Rust step (no --exclude).
+      - name: Frontend install
+        run: |
+          cd apps/knx-web
+          npm ci
+
+      - name: Frontend build
+        run: |
+          cd apps/knx-web
+          npm run build
+
       - name: Clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
 
       - name: Test
         run: cargo test --workspace
 
-      - name: Frontend install
-        run: |
-          cd apps/knx-web
-          npm ci
-
       - name: Frontend tests
         run: |
           cd apps/knx-web
           npm test
-
-      - name: Frontend build
-        run: |
-          cd apps/knx-web
-          npm run build
 
       - name: ts-rs bindings up to date
         run: |
@@ -86,6 +88,7 @@ jobs:
           python3 -m unittest discover -s tools/tests -p test_check_local_info.py
           python3 -m unittest discover -s tools/tests -p test_web_gate.py
           python3 -m unittest discover -s tools/tests -p test_browser_tmp.py
+          python3 -m unittest discover -s tools/tests -p test_rust_gate_order.py
 
       - name: Corpus gate (a missing corpus is never a pass)
         run: cargo run -p xtask -- check-corpus-gates

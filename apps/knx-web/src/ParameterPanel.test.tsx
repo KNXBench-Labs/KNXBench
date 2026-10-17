@@ -137,20 +137,18 @@ function setSelectValue(select: HTMLSelectElement, value: string) {
 }
 
 describe("ParameterPanel", () => {
-  it("starts sections and manufacturer groups closed, including newly refreshed groups", async () => {
+  it("starts parameter areas closed, keeping an explicit choice while refreshed new areas stay closed", async () => {
     const grouped = { ...fixture, sections: [{ ...fixture.sections[0], fields: [
       { ...fixture.sections[0].fields[0], group: { key: "buttons", label: "Buttons" } },
     ] }] };
     apiMock.deviceParameters.mockResolvedValue(grouped);
     const root = await renderPanel();
-    const section = host!.querySelector<HTMLDetailsElement>(".parameter-section")!;
-    expect(section.open).toBe(false);
-    section.open = true;
-    const toggle = host!.querySelector<HTMLButtonElement>(".parameter-group-toggle")!;
-    expect(toggle.getAttribute("aria-expanded")).toBe("false");
-    const input = host!.querySelector<HTMLInputElement>("input")!;
+    const areas = () => [...host!.querySelectorAll<HTMLButtonElement>(".parameter-workspace-nav button")];
+    expect(areas().map(area => area.getAttribute("aria-current"))).toEqual([null]);
+    expect(host!.querySelector(".parameter-workspace-closed")).not.toBeNull();
+    const input = host!.querySelector<HTMLInputElement>(".parameter-field input")!;
     expect(input.closest("[hidden]")).not.toBeNull();
-    await act(async () => toggle.click());
+    await act(async () => areas()[0].click());
     expect(input.closest("[hidden]")).toBeNull();
     const refreshed = { ...grouped, sections: [{ ...grouped.sections[0], fields: [
       ...grouped.sections[0].fields,
@@ -158,10 +156,19 @@ describe("ParameterPanel", () => {
     ] }] };
     apiMock.deviceParameters.mockResolvedValue(refreshed);
     await act(async () => root.render(<ParameterPanel deviceId={1} refreshKey={{ ...shownTree, snapshot_revision: 3 }} onValueApplied={() => {}} />));
-    const toggles = host!.querySelectorAll<HTMLButtonElement>(".parameter-group-toggle");
-    expect(toggles[0].getAttribute("aria-expanded")).toBe("true");
-    expect(toggles[1].getAttribute("aria-expanded")).toBe("false");
-    expect(section.open).toBe(true);
+    expect(areas().map(area => area.getAttribute("aria-current"))).toEqual(["page", null]);
+    expect(host!.querySelector('[data-parameter-row="P-new"]')!.closest("[hidden]")).not.toBeNull();
+    expect(host!.querySelector(".parameter-field input")).toBe(input);
+    expect(apiMock.setParameterValue).not.toHaveBeenCalled();
+    await act(async () => root.unmount());
+  });
+  it("uses the source-group workspace for ordinary parameters without replacing bound write rows", async () => {
+    apiMock.deviceParameters.mockResolvedValue(fixture);
+    const root = await renderPanel();
+    expect(host!.querySelector(".parameter-workspace-nav")).not.toBeNull();
+    const input = host!.querySelector<HTMLInputElement>('.parameter-field[data-ets-id="P1"] input')!;
+    expect(input.value).toBe("5");
+    expect(host!.querySelector('[data-parameter-row="P2_M7_MI-1"]')).not.toBeNull();
     expect(apiMock.setParameterValue).not.toHaveBeenCalled();
     await act(async () => root.unmount());
   });
@@ -177,31 +184,33 @@ describe("ParameterPanel", () => {
     await act(async () => root.unmount());
   });
 
-  it("commits a function selection immediately and retains grouped drafts when folded", async () => {
+  it("commits a function selection immediately and retains grouped drafts across area navigation", async () => {
     const first = { ...fixture.sections[0].fields[0], kind: "Restriction", value: "0",
       group: { key: "buttons", label: "Buttons" }, controlsComObjects: true,
       enumOptions: [{ value: "0", text: "Disabled", language: null }, { value: "1", text: "Individual buttons", language: null }] };
     const second = { ...fixture.sections[0].fields[0], etsId: "P-extra", writeEtsId: "P-extra",
       group: { key: "buttons", label: "Buttons" } };
-    const panel = { ...fixture, sections: [{ scope: null, fields: [first, second] }] };
+    const other = { ...second, etsId: "P-other", writeEtsId: "P-other", group: { key: "other", label: "Other" } };
+    const panel = { ...fixture, sections: [{ scope: null, fields: [first, second, other] }] };
     apiMock.deviceParameters.mockResolvedValue(panel);
-    apiMock.setParameterValue.mockResolvedValue({ ...panel, sections: [{ scope: null, fields: [{ ...first, value: "1" }, second] }], tree: panelTree });
+    apiMock.setParameterValue.mockResolvedValue({ ...panel, sections: [{ scope: null, fields: [{ ...first, value: "1" }, second, other] }], tree: panelTree });
     const root = await renderPanel();
-    host!.querySelector<HTMLDetailsElement>(".parameter-section")!.open = true;
-    await act(async () => host!.querySelector<HTMLButtonElement>(".parameter-group-toggle")!.click());
+    const areas = [...host!.querySelectorAll<HTMLButtonElement>(".parameter-workspace-nav button")];
+    expect(areas[0].textContent).toContain("Buttons");
+    expect(areas[0].getAttribute("aria-current")).toBeNull();
+    await act(async () => areas[0].click());
     const select = host!.querySelector<HTMLSelectElement>("select")!;
     const input = host!.querySelector<HTMLInputElement>('input[type="number"]')!;
+    expect(select.closest("[hidden]")).toBeNull();
     await act(async () => {
       const setter = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, "value")!.set!;
       setter.call(select, "1"); select.dispatchEvent(new Event("change", { bubbles: true }));
     });
     expect(apiMock.setParameterValue).toHaveBeenCalledExactlyOnceWith(1, "P1", "1", null, bound("0"));
     await act(async () => setInputValue(input, "7"));
-    const fold = host!.querySelector<HTMLButtonElement>(".parameter-group-toggle")!;
-    expect(fold.textContent).toContain("Buttons");
-    await act(async () => fold.click());
+    await act(async () => areas[1].click());
     expect(input.closest("[hidden]")).not.toBeNull();
-    await act(async () => fold.click());
+    await act(async () => areas[0].click());
     expect(host!.querySelector('input[type="number"]')).toBe(input);
     expect(input.value).toBe("7");
     expect(apiMock.setParameterValue).toHaveBeenCalledTimes(1);
@@ -610,12 +619,11 @@ describe("ParameterPanel", () => {
     apiMock.deviceParameters.mockResolvedValue(panelWithSectionDiagnostic);
     const root = await renderPanel();
 
-    const sections = host!.querySelectorAll(".parameter-section");
-    expect(sections.length).toBe(2);
-    // The device-scope section (no matching diagnostic) must not show it.
-    expect(sections[0].textContent).not.toContain(reason);
-    // The reason is no longer repeated within module sections.
-    expect(sections[1].textContent).not.toContain(reason);
+    const rows = host!.querySelectorAll(".parameter-workspace-row");
+    expect(rows.length).toBe(2);
+    // Reasons belong in Diagnostics, not repeated inside either editing scope.
+    expect(rows[0].textContent).not.toContain(reason);
+    expect(rows[1].textContent).not.toContain(reason);
     await act(async () => root.render(<ParameterPanel deviceId={1} view="diagnostics" onValueApplied={() => {}} />));
     const item = [...host!.querySelectorAll("li[data-severity]")].find((li) => li.textContent?.includes(reason));
     expect(item?.textContent).toContain("Module #7");
@@ -748,9 +756,9 @@ describe("ParameterPanel", () => {
   it("keeps non-manufacturer read-only module fields in the editor with a Diagnostics pointer", async () => {
     apiMock.deviceParameters.mockResolvedValue(fixture);
     const root = await renderPanel();
-    expect(host!.querySelectorAll(".parameter-section")[1].textContent).toContain(
+    expect(host!.querySelector('[data-parameter-row="P2_M7_MI-1"]')!.textContent).toContain(
       "Shared across every instantiation of this module");
-    expect(host!.querySelectorAll(".parameter-section")[1].textContent).toContain("diagnostics");
+    expect(host!.querySelector('[data-parameter-row="P2_M7_MI-1"]')!.textContent).toContain("diagnostics");
     root.unmount();
   });
 
@@ -870,7 +878,7 @@ describe("ParameterPanel", () => {
       expect(row(id).querySelector("input, select")).toBeNull();
       expect(row(id).textContent).not.toContain("d_space");
     }
-    expect(host!.querySelectorAll("input")).toHaveLength(1);
+    expect(host!.querySelectorAll(".parameter-field input")).toHaveLength(1);
     expect(host!.textContent).not.toContain("Not editable here");
     root.unmount();
   });
@@ -878,7 +886,7 @@ describe("ParameterPanel", () => {
   it("never offers a TypeNone row as an input, even if the response falsely claims it is editable", async () => {
     apiMock.deviceParameters.mockResolvedValue(authorityPanel([displayOnly("H", "Timing", true), displayOnly("S", "", true)], []));
     const root = await renderPanel();
-    expect(host!.querySelectorAll("input, select")).toHaveLength(0);
+    expect(host!.querySelectorAll(".parameter-field input, .parameter-field select")).toHaveLength(0);
     expect(apiMock.setParameterValue).not.toHaveBeenCalled();
     root.unmount();
   });

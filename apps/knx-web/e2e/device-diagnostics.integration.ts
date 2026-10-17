@@ -21,6 +21,8 @@ for(const language of ["en","de"] as const)for(const width of [1440,400]){
   if(evidence)await page.screenshot({path:join(evidence,`${language}-${width}-preview.png`)});
   await dialog.locator("[data-diagnostics-read-consent]").check();await dialog.locator("[data-diagnostics-start]").click();
   await expect(dialog.locator("[data-diagnostics-result]")).toBeVisible();await expect(dialog.locator("[data-diagnostics-review]")).toContainText(m["diagnostics.simulated"]);
+  // A clean run must not show the failure banner (in-flight progress was once refused).
+  await expect(dialog.getByRole("alert")).toHaveCount(0);
   await expect(dialog.locator("[data-diagnostics-save]")).toBeDisabled();await dialog.locator("[data-diagnostics-share-consent]").check();
   const download=page.waitForEvent("download");await dialog.locator("[data-diagnostics-save]").click();const zip=await download;
   expect(zip.suggestedFilename()).toMatch(/^knxbench-device-diagnostics-[a-f0-9]{12}\.zip$/);

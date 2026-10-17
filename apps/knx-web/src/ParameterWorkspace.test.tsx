@@ -34,17 +34,39 @@ function nav(name: string) {
 }
 
 describe("ParameterWorkspace", () => {
-  it("shows source-group navigation and a compact editing area instead of stacked accordions", async () => {
+  it("starts closed: every area is listed with its count, but none opens until chosen", async () => {
     await mount();
+    expect(host.querySelectorAll('.parameter-workspace-nav [aria-current="page"]')).toHaveLength(0);
+    expect(nav("Buttons").textContent).toContain("1");
+    expect(host.querySelectorAll(".parameter-workspace-row:not([hidden])")).toHaveLength(0);
+    expect(host.querySelector(".parameter-workspace-columns")).toBeNull();
+    expect(host.querySelector(".parameter-workspace-closed")!.textContent).toContain("Choose an area");
+    expect(host.querySelector("details.parameter-section")).toBeNull();
+  });
+
+  it("shows a chosen area as compact aligned rows instead of stacked accordions", async () => {
+    await mount();
+    await act(async () => nav("Buttons").click());
     expect(nav("Buttons").getAttribute("aria-current")).toBe("page");
     expect(host.querySelector('[data-parameter-row="Mode"]')!.closest("[hidden]")).toBeNull();
     expect(host.querySelector('[data-parameter-row="Delay"]')!.closest("[hidden]")).not.toBeNull();
     expect(host.querySelector(".parameter-workspace-columns")!.textContent).toContain("Value");
-    expect(host.querySelector("details.parameter-section")).toBeNull();
+    expect(host.querySelector(".parameter-workspace-closed")).toBeNull();
+  });
+
+  it("keeps an explicitly opened area across refreshes while newly appearing areas stay closed", async () => {
+    await mount();
+    await act(async () => nav("LEDs").click());
+    await act(async () => root.render(<ParameterWorkspace sections={[{ scope: null,
+      fields: [...sections[0].fields, field("Fresh", "New group")] }]} renderField={renderField} />));
+    expect(nav("LEDs").getAttribute("aria-current")).toBe("page");
+    expect(nav("New group").getAttribute("aria-current")).toBeNull();
+    expect(host.querySelector<HTMLDivElement>('[data-parameter-row="Fresh"]')!.hidden).toBe(true);
   });
 
   it("retains the same draft editor across navigation and search, including no-result searches", async () => {
     await mount();
+    await act(async () => nav("Buttons").click());
     const input = host.querySelector<HTMLInputElement>('[data-parameter-row="Mode"] input')!;
     await act(async () => setInput(input, "7"));
     await act(async () => nav("LEDs").click());
@@ -54,6 +76,7 @@ describe("ParameterWorkspace", () => {
     expect(host.textContent).toContain("No parameters match");
     expect(host.querySelector<HTMLDivElement>('[data-parameter-row="Mode"]')!.hidden).toBe(true);
     await act(async () => setInput(search, ""));
+    expect(host.querySelector<HTMLDivElement>('[data-parameter-row="Mode"]')!.hidden).toBe(false);
     expect(host.querySelector('[data-parameter-row="Mode"] input')).toBe(input);
     expect(input.value).toBe("7");
   });
@@ -81,11 +104,12 @@ describe("ParameterWorkspace", () => {
     expect(host.querySelector('[data-parameter-row="spacer"]')!.getAttribute("data-display-only")).toBe("true");
   });
 
-  it("falls back visibly when the selected group disappears", async () => {
+  it("returns to the closed overview when the chosen area disappears, opening nothing else", async () => {
     await mount();
     await act(async () => nav("LEDs").click());
     await act(async () => root.render(<ParameterWorkspace sections={[{ scope: null, fields: [field("Mode", "Buttons")] }]} renderField={renderField} />));
-    expect(nav("Buttons").getAttribute("aria-current")).toBe("page");
-    expect(host.querySelector<HTMLDivElement>('[data-parameter-row="Mode"]')!.hidden).toBe(false);
+    expect(host.querySelectorAll('.parameter-workspace-nav [aria-current="page"]')).toHaveLength(0);
+    expect(host.querySelector<HTMLDivElement>('[data-parameter-row="Mode"]')!.hidden).toBe(true);
+    expect(host.querySelector(".parameter-workspace-closed")).not.toBeNull();
   });
 });

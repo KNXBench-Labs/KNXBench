@@ -1255,6 +1255,7 @@ export const messages: Record<MessageKey, string> = {
     "Ein Textplatzhalter hatte kein passendes Modulargument und wurde unverändert belassen.",
 
   "parameters.title": "Parameter",
+  "parameters.workspace.closed": "Wähle einen Bereich, um seine Parameter zu sehen, oder durchsuche alle Bereiche. Bereiche bleiben geschlossen, bis du einen öffnest.",
   "parameters.workspace.ungrouped": "Weitere Parameter",
   "parameters.workspace.search": "Parameter suchen",
   "parameters.workspace.searchHint": "Name, Wert oder Parameter-ID",

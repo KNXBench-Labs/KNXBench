@@ -170,16 +170,19 @@ describe("ParameterPanel", () => {
     apiMock.deviceParameters.mockResolvedValue(panel);
     apiMock.setParameterValue.mockResolvedValue({ ...panel, sections: [{ scope: null, fields: [{ ...first, value: "1" }, second, other] }], tree: panelTree });
     const root = await renderPanel();
+    const areas = [...host!.querySelectorAll<HTMLButtonElement>(".parameter-workspace-nav button")];
+    expect(areas[0].textContent).toContain("Buttons");
+    expect(areas[0].getAttribute("aria-current")).toBeNull();
+    await act(async () => areas[0].click());
     const select = host!.querySelector<HTMLSelectElement>("select")!;
     const input = host!.querySelector<HTMLInputElement>('input[type="number"]')!;
+    expect(select.closest("[hidden]")).toBeNull();
     await act(async () => {
       const setter = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, "value")!.set!;
       setter.call(select, "1"); select.dispatchEvent(new Event("change", { bubbles: true }));
     });
     expect(apiMock.setParameterValue).toHaveBeenCalledExactlyOnceWith(1, "P1", "1", null, bound("0"));
     await act(async () => setInputValue(input, "7"));
-    const areas = [...host!.querySelectorAll<HTMLButtonElement>(".parameter-workspace-nav button")];
-    expect(areas[0].textContent).toContain("Buttons");
     await act(async () => areas[1].click());
     expect(input.closest("[hidden]")).not.toBeNull();
     await act(async () => areas[0].click());

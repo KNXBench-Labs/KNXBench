@@ -68,3 +68,10 @@ The original live symptom remains OPEN/UNREPRODUCED in headless measurements.
 Next: owner checks whether A flickers and whether B still does, then reproduce the
 matching visual condition, write a discriminating regression and fix at source.
 No subagents/vendor/hardware/root synchronization or speculative product patch.
+
+## Closed (17 October 2026)
+
+Owner verdict: the flicker was a problem of the owner's local desktop browser,
+not of the website. No product change, regression test or deployment follows.
+The A/B diagnostic server, the investigation worktree `fix/site-scroll-20261015`
+and its private scratch are retired; this log is the remaining record.

@@ -1,4 +1,12 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-10-17 12:35
+- **Completed:** Website scroll-flicker investigation CLOSED on owner verdict: local desktop browser problem, not the site. No product change. Retired worktree KNXBench-scroll-20261015, local branch fix/site-scroll-20261015 (fully on main) and profile scratch site-scroll-20261015; the A/B server was no longer running. OPEN_WORK flicker section removed; investigation log keeps a dated closing note.
+- **Pending/Next Steps:** None for this investigation.
+- **Notes for Codex oder Claude:** Do not reopen without a new reproduction in a different browser profile.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-10-17 11:43 CEST
 - **Completed:** Diagnostic export guide + client fix PUBLISHED: 20345a6e (false 'request failed' after a successful read: client refused the in-flight 'attempted, not completed' progress snapshot; now admitted only while the report is incomplete; browser proof asserts no alert and failed on the old client), d427cf26 (manual 08-reports-and-diff.md#send-diagnostic-data: 5 steps, 4 byte-reproducible simulator stills via e2e/diagnostic-guide.shots.ts, FAQ + media inventory links). Gate on d427cf26: components 3645/0, build, docs/anchors/headers/ledger, tools tests, web gate browser 578 complete+success, diagnostic proof 5/5, inputs frozen; Rust inputs identical to gated 498ed877. Issue #22 comment asks thengsty for an optional read-only export by email to issue@knxbench.com.
 - **Pending/Next Steps:** Wait for thengsty's ZIP (email). On arrival: verify with knx_app read_bundle, compare PID78 with the application's declared hardware-type check, record findings in #22 without raw private data. No release contains the collector yet (latest Alpha 13); an Alpha 14 would make it one click for reporters.

@@ -2,6 +2,7 @@
  * Run against a local Vite server with PLAYWRIGHT_MODULE pointing to an installed
  * playwright-core index.mjs. Output directory and URL are command arguments.
  */
+import '../../../tools/browser_tmp.cjs';
 import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';

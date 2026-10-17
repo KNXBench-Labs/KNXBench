@@ -274,8 +274,13 @@ KNX_SERVER_BIN=../../target/release/knx-server \
 ```
 
 The network namespace keeps the run offline: the start-up gateway search finds
-nothing, which is what the bus-monitor screenshot shows. If Chromium fails to start
-with "Socket path too long", point `TMPDIR` at a short directory. Read every changed
+nothing, which is what the bus-monitor screenshot shows. The shared browser temp
+allocator protects these configs automatically. For standalone scripts, use
+`python3 tools/browser_tmp.py --run COMMAND ...` from the repository root rather
+than hand-building another temporary path. An explicit private directory that
+fits Chromium is reused if an extra component would overflow; invalid roots
+still fail before browser launch. See the [temp contract](../../contracts/web-test-gate.md#recurring-chromium-socket-path-protection).
+Read every changed
 picture before committing it, and update the alt text and the sentence around it in the
 same change.
 

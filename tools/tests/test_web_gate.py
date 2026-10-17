@@ -171,6 +171,7 @@ class GatePlan(unittest.TestCase):
             app.mkdir(parents=True)
             (Path(tmp) / 'tools').mkdir()
             (Path(tmp) / 'tools/browser_tmp.py').write_text('selector')
+            (Path(tmp) / 'tools/browser_tmp.cjs').write_text('node guard')
             (app / 'e2e').mkdir()
             for name in ('playwright.config.ts', 'browserTmp.ts', 'vite.fixtures.config.ts', 'vite.config.ts', 'package-lock.json'):
                 (app / name).write_text('unchanged')
@@ -178,6 +179,9 @@ class GatePlan(unittest.TestCase):
             before = fixture_fingerprint(app)
             (app / 'e2e/helper.ts').write_text('new mutable behavior')
             self.assertNotEqual(fixture_fingerprint(app), before)
+            guarded = fixture_fingerprint(app)
+            (Path(tmp) / 'tools/browser_tmp.cjs').write_text('changed node guard')
+            self.assertNotEqual(fixture_fingerprint(app), guarded)
     def test_socket_budget_is_checked_before_running_a_suite(self) -> None:
         from tools import run_web_gate as runner
         self.assertTrue(hasattr(runner, 'check_temp_root'), 'Chromium socket-path preflight is missing')

@@ -1,12 +1,18 @@
 #!/usr/bin/env python3
-"""Select a short approved Chromium temp root; never invent a system-temp fallback."""
+"""Manage socket-budgeted browser temp directories without system-temp fallbacks."""
 from __future__ import annotations
 
 import argparse
+from collections.abc import Iterator
+from contextlib import contextmanager
 import json
 import os
 from pathlib import Path
+import shutil
+import signal
 import stat
+import subprocess
+import tempfile
 
 # Linux AF_UNIX sun_path is 108 bytes including its terminating NUL.
 MAX_SOCKET_BYTES = 107
@@ -55,17 +61,88 @@ def validate_owned_directory(directory: Path) -> Path:
     return directory
 
 
+def allocate_browser_directory(base: Path, explicit: Path | None = None,
+                               reuse_owned: bool = False) -> tuple[Path, bool]:
+    """Return (directory, created_here); never delete a caller-owned directory.
+
+    A private explicit root can already be a usable leaf even when another
+    temporary component would exhaust the socket budget. Do not reject that
+    leaf merely because it cannot serve as a parent for one more directory.
+    """
+    if reuse_owned:
+        return validate_owned_directory(base), False
+    if explicit is not None and not fits_temp_root(explicit):
+        return validate_owned_directory(explicit), False
+    parent = select_temp_root(base, explicit)
+    directory = Path(tempfile.mkdtemp(prefix='w', dir=parent))
+    try:
+        return validate_owned_directory(directory), True
+    except (OSError, ValueError):
+        shutil.rmtree(directory)
+        raise
+
+
+@contextmanager
+def browser_directory(base: Path, explicit: Path | None = None,
+                      reuse_owned: bool = False) -> Iterator[Path]:
+    directory, created = allocate_browser_directory(base, explicit, reuse_owned)
+    try:
+        yield directory
+    finally:
+        if created:
+            shutil.rmtree(directory)
+
+
+def run_command(command: list[str], directory: Path) -> int:
+    """Wait for an owned child group before releasing its temporary directory."""
+    env = {**os.environ, 'TMPDIR': str(directory), 'KNXBENCH_BROWSER_TMP_DIR': str(directory)}
+    child = subprocess.Popen(command, env=env, start_new_session=True)
+    previous = {}
+
+    def forward(signum: int, frame: object) -> None:
+        try:
+            os.killpg(child.pid, signum)
+        except ProcessLookupError:
+            pass
+
+    try:
+        for signum in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
+            previous[signum] = signal.signal(signum, forward)
+        status = child.wait()
+        return status if status >= 0 else 128 - status
+    finally:
+        for signum, handler in previous.items():
+            signal.signal(signum, handler)
+        if child.poll() is None:
+            os.killpg(child.pid, signal.SIGKILL)
+            child.wait()
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--base', type=Path, required=True)
+    parser.add_argument('--base', type=Path, default=Path(tempfile.gettempdir()))
     parser.add_argument('--reuse-owned', action='store_true')
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument('--allocate', action='store_true', help='JSON directory/ownership for a managing parent')
+    mode.add_argument('--run', nargs=argparse.REMAINDER, help='run a command with managed browser temp/cleanup')
     args = parser.parse_args()
-    explicit = os.environ.get('KNXBENCH_BROWSER_TMP_ROOT')
+    explicit_value = os.environ.get('KNXBENCH_BROWSER_TMP_ROOT')
+    explicit = Path(explicit_value) if explicit_value else None
     try:
-        if args.reuse_owned:
+        if args.run is not None:
+            if not args.run:
+                parser.error('--run requires a command')
+            parent_owned = os.environ.get('KNXBENCH_BROWSER_TMP_DIR')
+            base = Path(parent_owned) if parent_owned else args.base
+            with browser_directory(base, explicit, args.reuse_owned or bool(parent_owned)) as directory:
+                return run_command(args.run, directory)
+        if args.allocate:
+            directory, created = allocate_browser_directory(args.base, explicit, args.reuse_owned)
+            print(json.dumps({'directory': str(directory), 'created': created}))
+        elif args.reuse_owned:
             print(json.dumps(str(validate_owned_directory(args.base))))
         else:
-            print(json.dumps(str(select_temp_root(args.base, Path(explicit) if explicit else None))))
+            print(json.dumps(str(select_temp_root(args.base, explicit))))
     except (OSError, ValueError) as error:
         parser.error(str(error))
     return 0

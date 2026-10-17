@@ -116,3 +116,113 @@ fn plugin_edit_changes_only_the_plugin_entries_and_all_bytes_survive() {
     let expected: BTreeSet<&str> = EXPECTED_DIFFERENCES.iter().copied().collect();
     assert_eq!(differing, expected);
 }
+
+/// The real pair, end to end: the edited export's plug-in bytes are adopted
+/// into the unchanged project, for the one device that was edited, and the
+/// result is exactly the edited archive's bytes with nothing else changed.
+#[test]
+#[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
+fn the_edited_plugin_bytes_can_be_adopted_into_the_unchanged_project() {
+    use knx_app::plugin_data as adopt;
+
+    assert!(
+        knx_testsupport::ets6_plugin_pair_available(),
+        "ETS6 plug-in export pair missing (see knx_testsupport::ets6_plugin_pair_paths)"
+    );
+    let (unchanged, edited) = knx_testsupport::ets6_plugin_pair_paths();
+
+    let dir = tempfile::tempdir().unwrap();
+    let conn = knx_store::open_and_migrate(&dir.path().join("t.knxdb")).unwrap();
+    let imported = knx_app::import_ets_project(&unchanged, &conn).unwrap();
+    knx_store::save_project(&conn, &imported.project).unwrap();
+    let mut target = knx_store::project_history::NativeSnapshot::read(&conn).unwrap();
+    let before = target.clone();
+    let source = knx_app::selective_import::read_source(&edited, None).unwrap();
+
+    // Which devices could take plug-in bytes, and which would actually change?
+    let found = adopt::candidates(&target, &source);
+    let changing: Vec<_> = found.iter().filter(|c| c.refusal.is_none()).collect();
+    assert_eq!(
+        changing.len(),
+        1,
+        "exactly one device was edited: {found:#?}"
+    );
+    assert_eq!(changing[0].replacements, 2);
+    for other in found.iter().filter(|c| c.refusal.is_some()) {
+        assert_eq!(
+            other.refusal.as_deref(),
+            Some(adopt::Refusal::AlreadyIdentical.to_string().as_str()),
+            "an unedited device is identical, not incompatible"
+        );
+    }
+
+    let plan = adopt::plan(
+        &target,
+        &source,
+        adopt::Request {
+            source_device: changing[0].source_device.id,
+            target_device: changing[0].target_device.id,
+        },
+    )
+    .unwrap();
+    let replaced: BTreeSet<&str> = plan
+        .preview
+        .replacements
+        .iter()
+        .map(|r| r.path.as_str())
+        .collect();
+    let expected: BTreeSet<&str> = EXPECTED_DIFFERENCES
+        .iter()
+        .copied()
+        .filter(|name| name.contains("Data/"))
+        .collect();
+    assert_eq!(replaced, expected);
+    adopt::apply(&mut target, plan).unwrap();
+
+    for name in &expected {
+        let stored = target
+            .opaque
+            .iter()
+            .find(|e| e.xpath.is_empty() && e.source_path == *name)
+            .unwrap();
+        assert!(
+            stored.bytes == archive_entry(&edited, name),
+            "{name} is not the edited bytes"
+        );
+        let old = before
+            .opaque
+            .iter()
+            .find(|e| e.xpath.is_empty() && e.source_path == *name)
+            .unwrap();
+        assert!(
+            target
+                .opaque
+                .iter()
+                .any(|e| e.kind == adopt::SUPERSEDED_KIND && e.bytes == old.bytes),
+            "{name}: the superseded bytes were not retained"
+        );
+    }
+    assert_eq!(target.project, before.project, "the model is untouched");
+    // Every other pre-existing entry is bit-identical.
+    for old in before
+        .opaque
+        .iter()
+        .filter(|e| !expected.contains(e.source_path.as_str()))
+    {
+        assert!(target.opaque.contains(old), "{} changed", old.source_path);
+    }
+
+    // It survives a save/reopen as exactly the same snapshot.
+    let out = knx_store::open_and_migrate(&dir.path().join("adopted.knxdb")).unwrap();
+    knx_store::save_project_with_passthrough(
+        &out,
+        &target.project,
+        &target.opaque,
+        &target.manufacturer_refs,
+    )
+    .unwrap();
+    assert_eq!(
+        knx_store::project_history::NativeSnapshot::read(&out).unwrap(),
+        target
+    );
+}

@@ -140,6 +140,16 @@ selector and `knx import-selection`. Source inspection and preview are read-only
 confirmed merge adds explicit dependencies without silently replacing existing
 project data. Complete retained archives may contain unselected private data,
 which is disclosed before consent; Undo does not erase retained source evidence.
+
+## Plug-in data adoption (2026-10-17)
+
+[Plug-in data adoption](contracts/plugin-data-adoption.md) (`knx adopt-plugin-data`)
+replaces one device's retained plug-in `BinaryData`/`ExtraData` bytes with those
+of a source archive of the same lineage. Bytes stay opaque and are never executed
+([ADR-0136](adr/0136-plugin-data-adoption-is-audited-opaque-replacement.md)); the
+operation refuses unless product, application, blob/table references and
+group-address links match, retains the superseded bytes, and is rolled back
+through the saved version, not Undo ([KL-186](KNOWN_LIMITATIONS.md#catalogue-kl-186)).
 The full-project import/replacement path remains available and unchanged.
 [Authorized revision-export regressions](AUTHORIZED_RESTORE_EXPORTS.md) accept
 only supplied authorized `.knxproj` files, not ETS internal restore points.

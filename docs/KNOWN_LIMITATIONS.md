@@ -222,6 +222,13 @@ Stored load states are project records, not bus measurements. Missing historical
 Selection merges devices or complete lines into an explicit installation. No building-only selector, automatic readdressing, conflict overwrite or automatic catalogue installation.
 [Details and history](limitations/selective-import.md)
 
+<a id="catalogue-kl-186"></a>
+### 186. Plug-in data adoption is CLI-only and not undoable
+
+**Ledger status:** `ACCEPTED_BOUNDARY` ([KL-186](status/LEDGER.md#post-snapshot-ids)).
+Adopting a plug-in's stored bytes between two projects of one lineage exists in the application layer and the CLI only. The bytes are not decoded, no remapping is attempted, the opaque store is outside command Undo (rollback is the saved version), and no plug-in, ETS or device acceptance of the adopted bytes is verified.
+[Details and history](limitations/KL-186-plugin-data-adoption.md)
+
 ## Manufacturer data and parameters
 
 <a id="catalogue-kl-003"></a>

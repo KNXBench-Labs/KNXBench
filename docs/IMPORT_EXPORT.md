@@ -857,7 +857,8 @@ isolated database, then all packages against one shared database in stable hash
 order. `KNXBENCH_PRODUCT_CORPUS` is the mandatory read-only confinement root;
 `KNXBENCH_PRODUCT_CORPUS_SCOPES` is a mandatory OS path list selecting exact
 directories below it. `KNXBENCH_PRODUCT_MATRIX_OUTPUT` must be outside that
-root and receives JSON containing only ordinals, scheme numbers, per-instance
+root (both paths are compared resolved, so neither side can hide inside the
+other behind a symlink) and receives JSON containing only ordinals, scheme numbers, per-instance
 `{status}` outcomes for success/deduplication and `{status, category}` for
 rejection, aggregate report totals, final table counts, and one
 aggregate identity/outcome commitment. Detailed per-instance report counts stay

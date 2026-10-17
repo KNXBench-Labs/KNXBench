@@ -422,7 +422,14 @@ mod tests {
     #[test]
     fn nested_backup_directory_entries_are_all_synced() {
         let temp = tempfile::tempdir().unwrap();
-        let dir = temp.path().join("new/parent/backups");
+        // A resolved base, so the chain is exactly the supplied path even when
+        // the runner's TMPDIR is a symlink (the alias case has its own test in
+        // `backup_directory`).
+        let dir = temp
+            .path()
+            .canonicalize()
+            .unwrap()
+            .join("new/parent/backups");
         let mut synced = Vec::new();
         let path = write_backup_with_sync(&dir, &stored(), |directory| {
             synced.push(directory.to_path_buf());

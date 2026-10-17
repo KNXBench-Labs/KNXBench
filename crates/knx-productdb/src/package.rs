@@ -871,6 +871,31 @@ impl MemberPathTree {
     }
 }
 
+/// Counts the bytes the ZIP metadata validator inspects on this thread, so
+/// tests prove its work is linear in the input by counting instead of by a
+/// clock that a loaded host can stall. Compiled out of non-test builds.
+pub(crate) mod zip_work {
+    #[cfg(test)]
+    thread_local! {
+        static INSPECTED: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
+    }
+
+    /// Records `bytes` inspected bytes (a no-op outside tests).
+    #[inline(always)]
+    pub(crate) fn inspected(bytes: usize) {
+        #[cfg(test)]
+        INSPECTED.with(|count| count.set(count.get() + bytes as u64));
+        #[cfg(not(test))]
+        let _ = bytes;
+    }
+
+    /// Returns the count since the last call and resets it.
+    #[cfg(test)]
+    pub(crate) fn take() -> u64 {
+        INSPECTED.with(|count| count.replace(0))
+    }
+}
+
 // Bound metadata allocation before ZipArchive constructs its entry index.
 // ZIP64 is outside this small, corpus-proven package slice. PDB-10 applies
 // the same gate to ZIP payloads nested in baggage (`crate::baggage`).
@@ -882,10 +907,12 @@ pub(crate) fn preflight_zip(bytes: &[u8]) -> Result<ZipDirectory, PackageError> 
         .checked_sub(21)
         .ok_or_else(|| zip_error("end-of-directory record is truncated"))?;
     for offset in (start..end).rev() {
+        zip_work::inspected(1);
         if bytes.get(offset..offset + 4) != Some(b"PK\x05\x06") {
             continue;
         }
         let record = &bytes[offset..offset + 22];
+        zip_work::inspected(record.len());
         let comment_len = usize::from(u16::from_le_bytes([record[20], record[21]]));
         if offset + 22 + comment_len != bytes.len() {
             continue;
@@ -1032,6 +1059,7 @@ fn validate_central_directory(
     let mut central_comment_ranges = Vec::new();
     let mut local_metadata_size = 0_usize;
     for _ in 0..directory.count {
+        zip_work::inspected(46);
         if archive.get(offset..offset + 4) != Some(b"PK\x01\x02") {
             return Err(zip_error("truncated central directory"));
         }
@@ -1072,6 +1100,7 @@ fn validate_central_directory(
         if extra_end != record_end {
             central_comment_ranges.push(extra_end..record_end);
         }
+        zip_work::inspected(record_end - name_start);
         let name = archive
             .get(name_start..name_end)
             .ok_or_else(|| zip_error("truncated central directory name"))?
@@ -1089,6 +1118,7 @@ fn validate_central_directory(
             .get(local_offset..local_offset + 30)
             .ok_or_else(|| zip_error("truncated local file header"))?
             .to_vec();
+        zip_work::inspected(local.len());
         if local.get(..4) != Some(b"PK\x03\x04") {
             return Err(zip_error("invalid local file header"));
         }
@@ -1115,6 +1145,7 @@ fn validate_central_directory(
             .checked_add(local_extra_len)
             .filter(|end| *end <= directory.start)
             .ok_or_else(|| zip_error("local header length overflow"))?;
+        zip_work::inspected(local_extra_end - local_name_start);
         let local_name = archive
             .get(local_name_start..local_name_end)
             .ok_or_else(|| zip_error("truncated local member name"))?
@@ -1139,6 +1170,8 @@ fn validate_central_directory(
             .checked_add(usize::try_from(compressed_size).map_err(zip_error)?)
             .ok_or_else(|| zip_error("local file record length overflow"))?;
         let local_end = if uses_descriptor {
+            // At most a 16-byte descriptor with its signature.
+            zip_work::inspected(16);
             data_descriptor_end(archive, data_end, crc32, compressed_size, uncompressed_size)?
         } else {
             data_end
@@ -1181,6 +1214,7 @@ fn validate_central_directory(
         return Err(zip_error("central directory size or extent mismatch"));
     }
     local_ranges.sort_unstable_by_key(|range| range.start);
+    zip_work::inspected(local_ranges.len());
     if local_ranges
         .windows(2)
         .any(|pair| pair[0].end > pair[1].start)
@@ -1228,6 +1262,7 @@ pub(crate) fn validated_zip_metadata(bytes: &[u8]) -> Result<Vec<ZipEntryMeta>, 
                 .ok_or_else(|| zip_error("truncated central directory"))?;
             let flags = u16::from_le_bytes([header[8], header[9]]);
             let name_len = usize::from(u16::from_le_bytes([header[28], header[29]]));
+            zip_work::inspected(46 + name_len);
             let name = bytes
                 .get(at + 46..at + 46 + name_len)
                 .ok_or_else(|| zip_error("truncated central directory name"))?

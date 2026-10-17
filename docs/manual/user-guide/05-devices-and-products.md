@@ -637,6 +637,30 @@ If no product database is installed, the import simply says so and skips this st
 
 ### Parameters
 
+**Source builds after Alpha 13** replace the ordinary tab's long accordion form
+with a compact parameter workspace. The screenshot below still shows its stated
+older release; this source change does not update a published AppImage/container.
+
+Choose a declared area in **Areas**. The main pane aligns parameter labels and
+values; device and module scopes remain separate. Missing group information is
+available under **Other parameters**. Search by parameter name, ID, value or
+option caption across all areas. Clearing search returns to your chosen area;
+a no-result search does not delete fields or values.
+
+Focus a parameter or use its **Information** button to inspect its original ID,
+type, accepted-value origin, access and declared numeric limits. An accepted
+value is not an unsaved draft, a device readback or an inferred factory default.
+Ordinary ReadWrite badges are omitted from the rows but remain in the information
+area. Refusals, conflicts and translation fallbacks remain visible with the field.
+Editors retain drafts when navigating/searching; ordinary numeric/text blur-save
+can still run as focus leaves a dirty input. On narrow panes the area register
+scrolls locally and information moves below the editor. No manufacturer-specific
+channel numbers or physical arrangements are inferred.
+See the [workspace contract](../../contracts/parameter-workspace.md).
+
+The following release-era description explains the retained value/editing rules;
+the new workspace replaces ordinary section/block folding with area navigation.
+
 ![The device panel with the Parameters tab selected. A Device section holds "Delay
 after bus voltage recovery (s)" set to 3, followed by "Operating mode" ("Normally
 open") and "Behaviour on bus voltage recovery" ("Keep state") once per channel. The

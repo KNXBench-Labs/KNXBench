@@ -24,6 +24,7 @@ outside preserved historical blocks, or use the next free section number
 
 | Section | Where |
 | --- | --- |
+| [2026-10-17 — Parameter-workspace layout census](research/2026-10-17-parameter-workspace-layout.md) | Bounded declaration shapes across local product packages; compact source groups, mixed field types and explicit-grid projection boundary |
 | [2026-10-17 — System 2 / System B admission recheck](research/2026-10-16-offline-source-stop-lines.md#17-october-renewed-download-outcome-and-fresh-checks) | 53 existing offline tests; exact source refusal and complete recovery still block admission; original public release notes and explicitly unrecovered help lead |
 | [2026-10-16 — Explicit parameter bits and source stop lines](contracts/offline-explicit-parameter-bits.md) | Visually checked MSB placement/default substitution; independent real-source candidate bytes, unmodelled legacy directive and unchanged executable boundaries |
 | [2026-10-16 — Exact UP258 production decision](research/2026-10-16-up258-production-decision.md) | Complete-path No-Go, original checksum-polarity correction, exact external rules and one consent-separated reporter request |

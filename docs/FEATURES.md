@@ -26,6 +26,12 @@ Last updated: 2026-10-16 21:18 CEST
 | MCP server | Read-only saved-file tools; opt-in rename writer from alpha.10 | alpha.6 |
 | Remote browser | Authenticated server; networking-dependent | alpha.6 |
 
+## Source additions after Alpha 13
+
+| Feature | Scope | Availability |
+| --- | --- | --- |
+| [Parameter workspace](contracts/parameter-workspace.md) | Declared areas, compact label/value rows, cross-area search, retained editors and source metadata; no inferred device/grid geometry | Main-only |
+
 ## New in Alpha 13
 
 [Release scope](releases/alpha13.md) separates offline editing and image-integrity

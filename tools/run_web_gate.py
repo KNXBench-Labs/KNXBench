@@ -19,7 +19,7 @@ import time
 
 if __package__ in (None, ''):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from tools.browser_tmp import fits_temp_root, select_temp_root
+from tools.browser_tmp import browser_directory, fits_temp_root
 from tools.web_gate_support import (MeasuredRun, browser_cases, partition_files,
                                     source_fingerprint, validate_vitest)
 
@@ -104,7 +104,7 @@ def fixture_fingerprint(app: Path) -> str:
     paths = [p for p in (app / 'e2e').rglob('*') if p.is_file() and not p.name.endswith('.e2e.ts')]
     paths.extend(app / name for name in ('playwright.config.ts', 'browserTmp.ts',
                                        'vite.fixtures.config.ts', 'vite.config.ts', 'package-lock.json'))
-    paths.append(app.parent.parent / 'tools/browser_tmp.py')
+    paths.extend(app.parent.parent / 'tools' / name for name in ('browser_tmp.py', 'browser_tmp.cjs'))
     digest = hashlib.sha256()
     for file in sorted(paths):
         digest.update(str(file.relative_to(app.parent.parent)).encode() + b'\0' + file.read_bytes())
@@ -259,7 +259,7 @@ def main(argv: list[str] | None = None) -> int:
                         default=default_workers(len(os.sched_getaffinity(0))))
     parser.add_argument('--output', type=Path, help='new, empty attempt path; default is unique under target/web-gates')
     parser.add_argument('--temp-root', type=Path,
-                        help='explicit short approved browser temp root; otherwise use TMPDIR/scratch ancestry')
+                        help='explicit approved browser temp root/private leaf; otherwise use TMPDIR/scratch ancestry')
     parser.add_argument('--lease-timeout', type=float, default=5400)
     args = parser.parse_args(argv)
     root = args.root.resolve()
@@ -296,14 +296,13 @@ def main(argv: list[str] | None = None) -> int:
         requested_temp = Path(os.environ.get('TMPDIR', tempfile.gettempdir()))
         configured = args.temp_root or (Path(os.environ['KNXBENCH_BROWSER_TMP_ROOT'])
                                       if os.environ.get('KNXBENCH_BROWSER_TMP_ROOT') else None)
-        temp_root = select_temp_root(requested_temp, configured)
-        check_temp_root(temp_root)
-        run.receipt['temporaryRoot'] = {'requested': str(requested_temp), 'selected': str(temp_root),
-                                        'explicit': configured is not None}
-        run.save()
-        with tempfile.TemporaryDirectory(prefix='w', dir=temp_root) as tmp:
+        with browser_directory(requested_temp, configured) as directory:
+            tmp = str(directory)
+            run.receipt['temporaryRoot'] = {'requested': str(requested_temp), 'selected': tmp,
+                                            'explicit': configured is not None}
+            run.save()
             env = environment(tmp)
-            env['KNXBENCH_BROWSER_TMP_ROOT'] = str(temp_root)
+            env['KNXBENCH_BROWSER_TMP_ROOT'] = tmp
             env['KNXBENCH_BROWSER_TMP_DIR'] = tmp
             env['KNXBENCH_TEST_ROOT'] = str(root)
             with leases(root, run, args.lease_timeout):

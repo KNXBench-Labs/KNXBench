@@ -12,6 +12,20 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Chromium temporary paths: one allocator, no extra nesting (17 October 2026)
+
+Developer tooling now distinguishes allocation parents from valid private
+explicit leaves. Playwright configs, the measured gate and standalone repository
+launchers share the Python allocator through one CJS guard; subprocesses reuse
+parent-owned leaves and cleanup never deletes caller-owned data. One-off scripts
+can use the managed `tools/browser_tmp.py --run` entry rather than another manual
+TMPDIR workaround. No application, KNX, dependency or schema behavior changed.
+Scoped verification: 198 tool tests (one pre-existing skip), including 14 temp
+regressions and actual offline Chromium boundary/deep-root launches; production
+build, all 20 derived typechecks and documentation checks. This is test-tooling
+acceptance, not a full UI/Rust/corpus/release gate. See the
+[contract](contracts/web-test-gate.md#recurring-chromium-socket-path-protection).
+
 ## Alpha 13 published and externally verified (16 October 2026)
 
 Immutable `v0.1.0-alpha.13` names `6105976f`; no new feature scope, device admission

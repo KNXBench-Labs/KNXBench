@@ -1,3 +1,11 @@
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-17 09:03
+- **Completed:** Fixed the recurring Chromium "socket path too long" setup failures. Root causes: (1) `tools/browser_tmp.py` refused a private explicit directory that fits Chromium as a leaf because one more `/wXXXXXXXX` would not fit; (2) standalone launchers (workbench proof, CRT design checks, story check) launched Chromium unguarded. Now one allocator (`browser_directory`/`--allocate`/`--run CMD`) plus one Node guard `tools/browser_tmp.cjs` (reexported by `apps/knx-web/browserTmp.ts`, imported by standalone launchers); nested processes reuse the parent leaf; caller-owned data never deleted. RED observed first; 198 tool tests (1 pre-existing skip) incl. 14 temp regressions with real offline Chromium, 20 typechecks, build, docs, real Playwright 8/8 with 208-byte TMPDIR.
+- **Pending/Next Steps:** None for this fix. Private scratch launchers of other sessions can drop their hand-built short TMPDIR code and use `python3 tools/browser_tmp.py --run ...` or pass their private dir as `KNXBENCH_BROWSER_TMP_ROOT` (now accepted as leaf). Full web gate not run for this tooling-only change.
+- **Notes for Codex oder Claude:** Contract docs/contracts/web-test-gate.md#recurring-chromium-socket-path-protection; log .ai/logs/2026-10-17_claude_chromium-temp-path.md. Receipt `temporaryRoot.selected` is now the actual browser directory, not its parent. Playwright's own `playwright-transform-cache-*` still lands in the original TMPDIR (not a socket; harmless). No app/KNX/Rust/schema change; parallel sessions' worktrees untouched.
+
+---
+
 - **Last Agent:** codex
 - **Timestamp:** 2026-10-17 05:50
 - **Completed:** Renewed owner System2/SystemB usable-download objective investigated on fresh published 07a93451. Existing offline tests actually passed 53/0/0 ignored in seven targets (System2 image10/metadata7/public UP2581; SystemB codecs28; Net simulator7), in isolated network namespaces, owned target and frozen source/package. Original public ETS5.5.3 notes retrieved; official SystemB help remains unrecovered (HTML403/API401/no exact Wayback snapshot/browser pre-navigation profile lock). No product implementation or new admission.

@@ -47,40 +47,70 @@ An existing receipt path is refused. No silent npm installation occurs in a gate
 
 ## Recurring Chromium socket-path protection
 
-Python 3.10+ is required for these Linux developer test entries. All thirty
-Playwright configs import `browserTmp.ts`, so direct `npx playwright test` gets
-the same protection as the Python gate. The helper delegates root selection to
-`tools/browser_tmp.py`; it works with CJS and ESM config loaders, allocates only
-its own private temporary directory and cleans that directory on normal process
-exit. In the measured gate it reuses the validated parent-managed mode-0700
-directory, so cancellation cleanup remains with the Python context manager and
-no extra socket-path component is added. Direct forcible termination can leave
-its own private directory; it never removes the caller's original directory.
-Application production code
-and the base app type surface do not import this Node-only helper; a separate
-browser-tooling tsconfig checks the config/helper code using already locked types.
+Python 3.10+ is required for these Linux developer test entries. Every maintained
+Playwright config imports `browserTmp.ts`, which reexports the shared Node guard
+`tools/browser_tmp.cjs`. The same guard is loaded before Playwright by the
+standalone workbench, CRT and story verification launchers; no TS loader is
+needed for those scripts. Root resolution follows the loaded helper's checkout,
+not the caller's working directory. All allocation and byte-budget decisions
+remain in `tools/browser_tmp.py`; there is no second JavaScript path policy.
+Application production code and the base app type surface do not import the
+Node-only helper. A separate browser-tooling tsconfig checks the config/helper
+interface using already locked types.
 
-The selector budgets Chromium's actual socket suffix plus a fresh temporary
-component against Linux AF_UNIX's 107-byte pathname limit. A short supplied root
-is kept. For a deep root, **only** a canonical ancestor named `scratch`, owned by
-the current user and not group/world writable, may be selected automatically.
-It never climbs to an arbitrary cache/home/system temp directory. If none fits,
-it refuses before the suite rather than attempting hundreds of failed launches.
-Use `--temp-root PATH` with the Python gate or `KNXBENCH_BROWSER_TMP_ROOT=PATH`
-with direct Playwright for an explicitly approved short root. The value must
-exist and fit; an invalid explicit root is not silently replaced.
+The selector budgets Chromium's socket suffix plus a fresh temporary component
+against Linux AF_UNIX's 107-byte pathname limit. A short supplied root is kept.
+For a deep root, **only** a canonical ancestor named `scratch`, owned by the current
+user and not group/world writable, may be selected automatically. It never climbs
+to an arbitrary cache/home/system temp directory. If none fits, it refuses before
+the suite rather than attempting hundreds of failed launches. Use `--temp-root
+PATH` with the Python gate or `KNXBENCH_BROWSER_TMP_ROOT=PATH` with direct
+Playwright for an explicitly approved root. Missing roots, non-directories and
+paths that cannot fit even as a leaf still fail closed; no silent fallback from
+an invalid explicit root is introduced.
 
-Run direct Playwright from the workspace/app directory, or set
-`KNXBENCH_TEST_ROOT` explicitly when the config is launched from elsewhere.
-The gate binds that workspace itself. Temporary/root variables do not authorize
-network or device operations; existing hardware gates are unchanged.
+**Private leaf versus allocation parent (17 October 2026):** an explicit root can
+fit Chromium's socket but fail the larger budget for an additional `/wXXXXXXXX`
+component. In that case the allocator validates current-user ownership and mode
+0700 (or stricter) and uses the existing leaf without creating another directory.
+It never deletes caller-owned data. Short allocation parents still get a fresh
+private directory. The Python gate uses the same context-managed allocator;
+its receipt's `temporaryRoot.selected` is the actual browser directory. The Node
+guard exports `KNXBENCH_BROWSER_TMP_DIR` to child processes so their loaders reuse
+that validated directory, with cleanup owned by the allocating parent only.
 
-Regression evidence includes all-entry wiring, missing/long-root refusal, an
-actual scratch-located CJS config loader with a deep path (owned mode 0700 and
-cleanup), and a real Chromium launch from a 245-byte requested TMPDIR relocated
-to a 59-byte owned path. The original directory and its sentinel survived.
-No persistent profile/OS settings, unsafe Chromium flags or `/tmp` workaround
-were introduced in this environment.
+For one-off Python/Node/browser-CLI launchers, from the repository root:
+
+```sh
+python3 tools/browser_tmp.py --run COMMAND ARGUMENTS...
+# Or preload just the shared Node guard, including for CJS scripts:
+node --require ./tools/browser_tmp.cjs SCRIPT ARGUMENTS...
+```
+
+The command wrapper waits for its child process, propagates its exit status,
+forwards SIGTERM/SIGINT/SIGHUP to that owned process group, and cleans its own
+directory after child shutdown, including nonzero exits. It is intended for
+foreground test commands, not daemon supervision. It does not itself provide
+network isolation or permission for hardware operations: retain the existing
+namespace, leases and bus safety gates around the wrapped command. For dynamic
+launchers, the Python `browser_directory` context manager exposes the same
+allocation/cleanup policy; `--allocate` is a structured JSON protocol for a parent
+that assumes cleanup ownership, not a shell-substitution shortcut.
+
+Direct Node/Playwright normal exit removes only directories created by that
+process. Python context cleanup covers ordinary failure and managed signal
+shutdown. SIGKILL/host failure can still leave an owned directory; neither helper
+claims cleanup after forcible termination. Never remove a live parent's leaf.
+
+Regression coverage includes all-config/standalone wiring, the exact explicit-leaf
+refusal reproduced before the correction, actual CJS config loading, nested Node
+inheritance, UTF-8 byte versus character limits, newline-safe JSON paths,
+non-private/missing/oversize-root refusal, nonzero-command and SIGTERM cleanup,
+and an offline real Chromium persistent-context launch at the validated pathname
+boundary. Original caller-directory sentinels survive. A launch probe verifies
+browser setup only, not application behavior or the entire UI suite. No persistent
+profile/OS settings, extra unsafe Chromium flags or system-temp fallback are
+introduced.
 
 ## Receipt
 

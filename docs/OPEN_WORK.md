@@ -1,5 +1,26 @@
 # Open work after the 0.1 alpha
 
+## Prepared goal packages (17 October 2026)
+
+The open work of 17 October is cut into
+[goal packages P1–P8](goals/open-work-2026-10-17/README.md) with shared rules,
+order (P5 → P2 → P3, P4 in parallel, P1 once its entry conditions hold),
+collisions and the routing of every non-terminal ledger row. The files reserve
+nothing: a package belongs to a session only after it pushes its claim entry to
+the handover. P5 (this page's synchronisation) is delivered.
+
+## Plug-in data adoption: server route and web UI open (17 October 2026)
+
+Adopting a device's stored plug-in bytes between two projects of one lineage is
+delivered in the application layer and the CLI (`knx adopt-plugin-data`,
+[contract](contracts/plugin-data-adoption.md),
+[ADR-0136](adr/0136-plugin-data-adoption-is-audited-opaque-replacement.md)).
+[KL-186](KNOWN_LIMITATIONS.md#catalogue-kl-186) stays `ACCEPTED_BOUNDARY`.
+**Open:** a server route and web UI with the same preview/confirm contract
+([package P2](goals/open-work-2026-10-17/p2-plugin-data-web.md)), and
+acceptance of adopted bytes by the originating plug-in, which only the owner can
+check on their own installation.
+
 ## Local machine details: history rewritten (17 October 2026)
 
 Tree, history, messages and tags are clean and guarded
@@ -7,7 +28,11 @@ Tree, history, messages and tags are clean and guarded
 [KL-185](KNOWN_LIMITATIONS.md#catalogue-kl-185)). Only GitHub's two read-only
 pull-request refs and the fork still serve pre-rewrite commits. Optional next
 step, owner's call: ask GitHub Support to purge them. Local branches from
-before the rewrite move via `refs/rewritten/*` or `git rebase --onto`.
+before the rewrite have rewritten copies under
+`refs/kl185-rewritten/heads/<branch>` (move a clean worktree with
+`git reset --keep`); newer commits move with `git rebase --onto`, taking both
+bases from [COMMIT_MAP_2026-10-17](history/COMMIT_MAP_2026-10-17.txt). Not
+`refs/rewritten/`: that namespace is per-worktree and belongs to `git rebase -r`.
 
 ## Read-only diagnostic export: hardware check pending (17 October 2026)
 
@@ -314,12 +339,17 @@ real tester report and its review.
   checked / 7 open, `goal-ui.md` 37 / 0, `goal-commission.md` (no checklist,
   §4 completion condition). The 7 open boxes are all user-deferred or
   optional (section 3).
-- Ledger counts (its own *Counts* line, `check-ledger` green, after the
+- Ledger counts on 17 October 2026, quoted from the ledger's *Counts*
+  section (`check-ledger` green): **Snapshot IDs** (180 rows) — DONE=47,
+  BLOCKED_EXTERNAL=2, ACCEPTED_BOUNDARY=118, LATER=13; **Post-snapshot IDs**
+  (28 rows) — DONE=19, ACCEPTED_BOUNDARY=6, LATER=3. The two counts below are
+  historical and superseded by these.
+- Historical ledger counts (its own *Counts* line, `check-ledger` green, after the
   2026-10-09 owner cleanup): snapshot 180 rows — DONE 41, ACCEPTED_BOUNDARY 119,
   LATER 20; post-snapshot 11 rows — DONE 9, ACCEPTED_BOUNDARY 2.
 - Handover `.ai/CURRENT_STATE.md` (newest entries per track), worktree list,
   and a path-by-path check of which root files exist on `origin/main`.
-- Current ledger mechanically recounted after import expansion: 191 distinct IDs,
+- Historical recount, after import expansion: 191 distinct IDs,
   52 delivered, 121 accepted boundaries, 17 later-scope rows and 1 externally
   blocked row (`IMPORT-02`); no active/running source work. The earlier census
   above remains historical. Every later-scope row is owned by `later`; the
@@ -449,6 +479,18 @@ below is on the remote or merged:
 | `audit-findings-20261011`, `native-import-diagnostics-20261011` | Superseded / already on main | Dropped. Worktrees and branches removed |
 | `wip/manufacturer-plugin-research-20261013` (local branch only) | 14 unpublished research notes under `docs/research/` (manufacturer-plugin host/contract results, fast-download wrapper, DLLs on Linux), found in the root checkout; unreviewed, none of them on main | **Kept by owner decision 2026-10-14**; not merged, not pushed |
 | `wip/root-residue-20261013`, `feature/device-support-guidance-20261013`, `feature/device-support-guidance-s2-20261013` | Old root drafts; two pre-integration candidates of the support guidance delivered as `e478a1a0` | Retired 2026-10-14 by owner decision: worktrees removed, branches kept only in the `KNXBench.backups/2026-10-14-hygiene-cleanup/` bundle. The S2-only Codex collision log was copied to the root's ignored `.ai/logs/` |
+
+**Unpublished package (17 October 2026).** Object-local function choices
+(feature commit `99dd6e65` "Put function choices where the object lives", 25
+files, Codex) are not on `main` or the remote. Its rewritten copy is
+`refs/kl185-rewritten/heads/fix/object-function-dropdown-20261017`; the
+worktrees `KNXBench-object-function-20261017` and
+`KNXBench-object-function-integration-20261017` are on the old history and must
+not be pushed or merged. The last gate was interrupted with zero stages, so no
+result is valid for the new base. It is published by
+[package P1](goals/open-work-2026-10-17/p1-object-function-rescue.md), which
+starts once the declared parameter grids are on `main` and Codex or the owner
+hands it over.
 
 The two other leftover worktrees, `offline-naming-20261011` and
 `data-tooling-stats-20261011`, were removed by owner decision after a backup.

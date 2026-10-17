@@ -31,6 +31,11 @@ Decision: [ADR-0133](../adr/0133-parameter-edits-reconcile-object-inventory.md).
   explicit notice; module-local instance mapping is not inferred. Parameters is
   still the full editor and the way to enable a device with no existing objects.
   This is not a FunctionText override, DPT change or new write command.
+  Restricted parameters stay out here as in the Parameters tab: the field's own
+  `Access` or an enclosing block's (ADR-0139) at `Read`/`None` offers no
+  object-local control. The object editor always shows plain rows: declared
+  grids (ADR-0137) and separators (ADR-0139) belong to the Parameters tab and
+  neither duplicate nor hide these controls.
 - Enum selections save immediately, with pending controls disabled and inline
   refusal feedback. Object-local writes share the DPT/flag/link mutation boundary
   and suppress late result publication after unmount. A stale write keeps its draft and requires explicit retry
@@ -104,13 +109,22 @@ rewritten by presentation or parameter editing. No bus connection is made.
   declaration/module/identity refusal, local-ID and project-alias nonduplication,
   preservation of existing links/overrides, failed
   durable-commit rollback, stable DPT warnings across pure GETs and semantic
-  native save/load.
+  native save/load; exact `controlledComObjectIds`, empty for ambiguous identity
+  and for module instances' objects and module-scoped fields even when their
+  references spell a top-level declaration.
+- `crates/knx-productdb/tests/parameter_layout.rs`: object references follow
+  choice dependencies without crossing unrelated branches.
+- `ComObjectFunctionControls.test.tsx`: pending/unmount publication, refusal
+  restore, no control for another object, a restricted field or block, a module
+  section or an older server.
 - `NavigationSection.test.tsx`, `App.test.tsx`, `ParameterPanel.test.tsx`:
   independent folding, retained nodes, grouped menu actions, immediate enum
   commit and grouped editor retention.
 - `devices-navigation.e2e.ts`: real App parent, intercepted fictional API,
-  object refresh after dropdown changes, grouping, navigation/menu, EN/DE,
-  wide/narrow screens and overflow. Interception is UI evidence, not backend
+  the Parameters area register closed on the first untouched visit, object
+  refresh after dropdown changes, the object-local control below DPT and its
+  write shown back in the open area, navigation/menu, EN/DE, wide/narrow
+  screens and overflow. Interception is UI evidence, not backend
   or physical-device acceptance.
 
 Private project/source files and detailed records remain outside Git. Aggregate

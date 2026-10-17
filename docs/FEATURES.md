@@ -11,12 +11,6 @@ Last updated: 2026-10-16 21:18 CEST
 | Scope | Listed boundaries; not universal compatibility |
 | Later scope | No delivery dates promised |
 
-## Main-only source after Alpha 13
-
-| Feature | Scope | Availability |
-| --- | --- | --- |
-| Object-local function dropdowns | Manufacturer enum choices below the expanded object's DPT; exact configured-ID mapping, no guessed module mapping; replaces the device-wide disclosure | Main-only |
-
 ## Runtime options
 
 | Runtime | Platform | Availability |
@@ -39,6 +33,7 @@ Last updated: 2026-10-16 21:18 CEST
 | Closed disclosure defaults | Navigation blocks, tree branches, parameter groups and details; manual opening and remembered address views retained | Main-only |
 | [Parameter workspace](contracts/parameter-workspace.md) | Declared areas (closed until chosen), compact label/value rows, cross-area search, retained editors and source metadata; no inferred device/grid geometry | Main-only |
 | [Declared parameter grids](adr/0137-declared-parameter-grids-reach-the-workspace.md) | Matrix view for areas whose product data declares a `Table`/`Grid`, same editors and write path; row view with a reason otherwise | Main-only |
+| [Object-local function dropdowns](contracts/parameter-object-refresh.md) | Manufacturer enum choices below the expanded object's DPT; exact configured-ID mapping, no guessed module mapping; replaces the device-wide disclosure | Main-only |
 
 ## New in Alpha 13
 

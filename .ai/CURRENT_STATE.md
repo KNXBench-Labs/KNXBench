@@ -1,4 +1,12 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-10-17 12:30 CEST
+- **Completed:** CLAIM only: ledger-residue goal started in worktree KNXBench-ledger-residue-20261017 (branch docs/ledger-residue-20261017, base a07848a1). Scripted ledger parse confirms 19 non-terminal rows (IN_PROGRESS=1 MODEL-07; BLOCKED_EXTERNAL=2 MODEL-05, IMPORT-02; LATER=16).
+- **Pending/Next Steps:** Phase 0 Evidence reconciliation (FUTURE-01/02/03/05, PDB-04 and all others), Phase 1 MODEL-07 residue (per-Function comparison table, desktop surface, read-only MCP), Phase 2 research re-check (KL-170/171/172, PDB-04, GAP-T30-04, KL-110), MODEL-05/IMPORT-02 lift-condition re-check. TOOLS-01..05 and FUTURE-08 untouched.
+- **Notes for Codex oder Claude:** Claimed rows: MODEL-07, MODEL-05, IMPORT-02, PDB-04, FUTURE-01/02/03/05, KL-110, KL-170/171/172, GAP-T30-04. Please do not edit these ledger rows meanwhile. The leftovers session's KL-170 deck note (parameter-byte-order.md, 16 Oct) is respected, not duplicated. No bus/device access, no vendor or KNX Association contact.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-10-17 11:43 CEST
 - **Completed:** Diagnostic export guide + client fix PUBLISHED: 20345a6e (false 'request failed' after a successful read: client refused the in-flight 'attempted, not completed' progress snapshot; now admitted only while the report is incomplete; browser proof asserts no alert and failed on the old client), d427cf26 (manual 08-reports-and-diff.md#send-diagnostic-data: 5 steps, 4 byte-reproducible simulator stills via e2e/diagnostic-guide.shots.ts, FAQ + media inventory links). Gate on d427cf26: components 3645/0, build, docs/anchors/headers/ledger, tools tests, web gate browser 578 complete+success, diagnostic proof 5/5, inputs frozen; Rust inputs identical to gated 498ed877. Issue #22 comment asks thengsty for an optional read-only export by email to issue@knxbench.com.
 - **Pending/Next Steps:** Wait for thengsty's ZIP (email). On arrival: verify with knx_app read_bundle, compare PID78 with the application's declared hardware-type check, record findings in #22 without raw private data. No release contains the collector yet (latest Alpha 13); an Alpha 14 would make it one click for reporters.

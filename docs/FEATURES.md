@@ -11,6 +11,12 @@ Last updated: 2026-10-16 21:18 CEST
 | Scope | Listed boundaries; not universal compatibility |
 | Later scope | No delivery dates promised |
 
+## Main-only source after Alpha 13
+
+| Feature | Scope | Availability |
+| --- | --- | --- |
+| Object-local function dropdowns | Manufacturer enum choices below the expanded object's DPT; exact configured-ID mapping, no guessed module mapping; replaces the device-wide disclosure | Main-only |
+
 ## Runtime options
 
 | Runtime | Platform | Availability |

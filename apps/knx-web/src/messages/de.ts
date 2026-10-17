@@ -19,6 +19,7 @@
 import type { MessageKey } from "./en";
 
 export const messages: Record<MessageKey, string> = {
+  "parameters.objectFunctionsEmpty": "Diesem Objekt ist keine unterstützte Funktionsauswahl zugeordnet. Weitere Einstellungen findest du unter Parameter.",
   "parameters.functions": "Gerätefunktionen",
   "parameters.functionsEmpty": "Aktuell sind keine unterstützten Funktionsauswahlen sichtbar. Weitere Einstellungen findest du unter Parameter.",
   "parameters.functionsHint": "Diese Herstellerparameter steuern die verfügbaren Kommunikationsobjekte. Eine Auswahl wird sofort übernommen; Rückgängig stellt die vorherige Konfiguration wieder her.",

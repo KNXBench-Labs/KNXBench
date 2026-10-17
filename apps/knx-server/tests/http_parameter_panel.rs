@@ -607,6 +607,10 @@ async fn existing_local_catalogue_and_project_alias_references_are_not_duplicate
         let (status, read) = get_panel(app, 1).await;
         assert_eq!(status, StatusCode::OK);
         assert_eq!(
+            field(&read, "P-2_R-1").unwrap()["controlledComObjectIds"],
+            serde_json::json!([1])
+        );
+        assert_eq!(
             read["diagnostics"]
                 .as_array()
                 .unwrap()
@@ -639,6 +643,10 @@ async fn ambiguous_local_and_qualified_catalogue_identity_refuses_the_whole_edit
         status,
         StatusCode::OK,
         "identity uncertainty must not hide readable parameters"
+    );
+    assert_eq!(
+        field(&panel, "P-2_R-1").unwrap()["controlledComObjectIds"],
+        serde_json::json!([])
     );
     assert_eq!(
         panel["diagnostics"]
@@ -688,12 +696,20 @@ async fn parameter_enable_adds_missing_objects_in_one_persistable_undo_step() {
     let mode = field(&panel, "P-2_R-1").unwrap();
     assert_eq!(mode["group"]["label"], "Buttons");
     assert_eq!(mode["controlsComObjects"], true);
+    assert_eq!(mode["controlledComObjectIds"], serde_json::json!([]));
     let (status, _) = post_panel(app.clone(), 1, "P-2_R-1", "1").await;
     assert_eq!(status, StatusCode::OK);
     let after = state.project.lock().unwrap().clone().unwrap();
     assert_eq!(after.devices.get(DeviceId(1)).unwrap().com_objects.len(), 1);
     let id = after.devices.get(DeviceId(1)).unwrap().com_objects[0];
     assert_eq!(after.devices.com_object(id).unwrap().number, 1);
+    let (status, mapped) = get_panel(app.clone(), 1).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        field(&mapped, "P-2_R-1").unwrap()["controlledComObjectIds"],
+        serde_json::json!([id.0])
+    );
+    assert_eq!(state.project.lock().unwrap().as_ref().unwrap(), &after);
     let conn = knx_store::open_and_migrate_in_memory().unwrap();
     knx_store::save_project(&conn, &after).unwrap();
     assert_eq!(knx_store::load_project(&conn).unwrap(), after);

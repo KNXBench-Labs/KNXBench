@@ -21,14 +21,19 @@ Decision: [ADR-0133](../adr/0133-parameter-edits-reconcile-object-inventory.md).
 - File keeps the existing actions, grouped as Project, Import & export,
   History & comparison, and Help & diagnostics. Browser/desktop-specific
   export, logout and Quit rules, keyboard activation and Escape are unchanged.
-- **Device functions** in the Communication objects tab exposes the active
-  supported manufacturer enum parameters structurally controlling object
-  branches, including parameters gating those controls. It is not a free-text
-  FunctionText override, DPT editor or arbitrary device-function generator.
-  Expand it even if the object table is empty, then select the operating mode
-  and, where the manufacturer requires it, the actual button function.
+- Source after Alpha 13 removes the device-wide **Device functions** disclosure.
+  Expand an object to find its manufacturer enum controls below DPT. ProductDB
+  propagates exact declared object-reference sets through the existing structural
+  choice dependencies; the server maps them to this device's configured IDs using
+  the existing literal/project-alias identity policy. No caption, object-number or
+  manufacturer heuristic is used. Only active, unrestricted enum fields mapped to
+  that object are rendered. Missing mappings (including older servers) display an
+  explicit notice; module-local instance mapping is not inferred. Parameters is
+  still the full editor and the way to enable a device with no existing objects.
+  This is not a FunctionText override, DPT change or new write command.
 - Enum selections save immediately, with pending controls disabled and inline
-  refusal feedback. A stale write keeps its draft and requires explicit retry
+  refusal feedback. Object-local writes share the DPT/flag/link mutation boundary
+  and suppress late result publication after unmount. A stale write keeps its draft and requires explicit retry
   against refreshed state. Numeric/text fields still commit on blur/Enter.
 - Alpha 13 groups Parameters fields by declared blocks; source builds after Alpha
   13 use [workspace area navigation](parameter-workspace.md) instead of ordinary
@@ -74,6 +79,12 @@ object declarations, invalid object numbers and allocation failure refuse the
 whole write, without spending IDs or applying the parameter.
 
 ## Compatibility limits
+
+Object-local dropdowns currently require unscoped declarations and configured
+instances. Module-local parameters remain available under Parameters with their
+existing authority checks. This UI correction does not add module-instance
+mapping or promise that every manufacturer exposes its behavior through supported
+structural enum controls.
 
 The algorithm has no MDT or other manufacturer/product special cases. Positive
 object activation remains governed by the existing evaluator, including its

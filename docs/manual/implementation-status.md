@@ -2,6 +2,16 @@
 
 # Implementation status
 
+## Object-local function dropdowns (source after Alpha 13)
+
+The separate Device functions disclosure is removed. Expand an object to find
+its supported manufacturer enum controls below DPT. Exact structural references
+map to configured object IDs; ambiguous and module-local mappings are not guessed.
+Use Parameters to enable a device with no objects. Existing revision-bound
+writes, inline errors, Undo and native persistence remain in force. The published
+Alpha 13 package and historical screenshots are not retroactively changed.
+[Operating instructions](user-guide/05-devices-and-products.md#device-functions-source-builds-after-alpha-12).
+
 ## Notes when deleting (source after Alpha 13)
 
 Deleting a device, group address, area, line, building part or group range that a

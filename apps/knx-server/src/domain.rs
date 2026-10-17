@@ -5591,6 +5591,7 @@ fn assemble_parameter_panel(
                         .and_then(|defaults| defaults.dpt.as_ref())
                         .is_some();
                 (object.device == device).then(|| crate::parameter_objects::ObjectMetadataInput {
+                    id: id.0,
                     reference: object.source.ets_id.clone(),
                     module_based: object.module_instance.is_some(),
                     dpt_resolved: has_dpt,
@@ -5660,6 +5661,8 @@ fn assemble_parameter_panel(
     // whose `textLanguage` is `null` says what it fell back to.
     let source_language = knx_productdb::query::program_default_language(&products, &program_id)
         .map_err(|e| e.to_string())?;
+    let object_control_ids =
+        crate::parameter_objects::unscoped_object_ids(&products, &program_id, &object_metadata)?;
     let views_by_id: HashMap<String, knx_productdb::query::ParameterView> =
         views.iter().cloned().map(|v| (v.id.clone(), v)).collect();
     // ADR-0080: the declared write authority beyond the parameter types.
@@ -5966,6 +5969,19 @@ fn assemble_parameter_panel(
                 group,
                 controls_com_objects: presentation.controls_com_objects,
                 cell,
+                controlled_com_object_ids: if section.scope.is_none() {
+                    presentation
+                        .controlled_object_refs
+                        .iter()
+                        .filter_map(|reference| object_control_ids.get(reference))
+                        .flatten()
+                        .copied()
+                        .collect::<std::collections::BTreeSet<_>>()
+                        .into_iter()
+                        .collect()
+                } else {
+                    Vec::new()
+                },
                 ets_id: view.id.clone(),
                 name: view.name.clone(),
                 name_language: view.name_language.clone(),

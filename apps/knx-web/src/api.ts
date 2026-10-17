@@ -2331,6 +2331,8 @@ export interface ParameterField {
   controlsComObjects?: boolean;
   /** Declared grid cell (ADR-0137); absent on older servers. */
   cell?: ParameterGridCell | null;
+  /** Exact configured object IDs; absent on older servers (no inferred mapping). */
+  controlledComObjectIds?: number[];
   etsId: string;
   name: string | null;
   // AR10 (`b6a94c24`): the stored language identifier whose translation

@@ -1,4 +1,12 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-10-17 13:20
+- **Completed:** Repository moved by the owner to <sources>/KNXBench (ext4, 701 GB free); <old-sources> is now a symlink to it. Ran `git worktree repair` for all five linked worktrees (metadata only, no content touched; all clean). Path-move package: story/tests/test_privacy.py derives the private provenance ledger from the checkout's sibling (as story/README.md already documents) instead of <old-disk>; statistics contract command points at <data-disk>; DEVELOPER_PITFALLS records the move and the repair recipe. Story suite 76/76 (real-ledger test runs, a copied checkout without sibling skips), docs checker, 4 xtask checks, diff-check pass.
+- **Pending/Next Steps:** None for this package. The move interrupted the parameter-workspace gate (web-merged4, 48/63 green, KeyboardInterrupt 12:55) and the object-function rerun gate5 (0 stages, KeyboardInterrupt 12:55); both owners must regate. Parameter-workspace owner already re-merged as bafbf483 on e5e63fc1.
+- **Notes for Codex oder Claude:** Gate scripts in profile scratch still name <old-disk> paths; they work through the symlink, but new scripts should use <data-disk>. Dated docs keep the old path as history.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-10-17 12:47
 - **Completed:** Leftovers PUBLISHED: origin/main bcaba477..e6a5410b (local = tracking = live). Contains Codex's UP258 vertical audit 3e5ba4d2 + e1d19e42 (merge cfe1ff8f), the root-only research notes OpenKNX signing boundaries, Weinzierl kTux IP and the Manufacturer Tool deck section in parameter-byte-order.md (975c5c74), the site-scroll investigation log + its two handover entries (520272ed), OPEN_WORK #4/#6 corrections (cd91f2e3) and the closed flicker case (7ff5d883). Gate on cd91f2e3: fmt, productdb clippy, UP258 regular + public-package ignored tests against digest 520d3fce..., full knx-productdb tests, docs, 4 tools suites, 5 xtask, diff-check; inputs frozen (first run red only in test_browser_tmp because the fresh worktree lacked npm ci; rerun 5/5 green, failed receipt retained). Docs checks repeated on e6a5410b (delta vs gated tree: 3 docs/handover files).
 - **Pending/Next Steps:** None for this package. Parameter-workspace and object-function gates must re-merge onto e6a5410b; delta for them is docs + crates/knx-productdb/tests/system2_public_package.rs only (no web runtime input). Excluded on purpose: SmartSensor dossier and local issue-22 triage (private, root only), wip/manufacturer-plugin-research (owner decision 14 Oct).

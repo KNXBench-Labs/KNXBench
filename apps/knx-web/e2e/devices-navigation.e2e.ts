@@ -239,7 +239,12 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     expect(positions.right).toBeLessThanOrEqual(width);
     await mode.selectOption("2");
     await expect(page.locator(".com-object-name")).toHaveText("Left output");
-    if (process.env.KNX_DEVICES_CAPTURE_DIR) await page.screenshot({ path: join(process.env.KNX_DEVICES_CAPTURE_DIR, `workbench-functions-${language}-${width}.png`) });
+    if (process.env.KNX_DEVICES_CAPTURE_DIR) {
+      // Show the object-local control itself, not the page top above it.
+      await mode.scrollIntoViewIfNeeded();
+      await page.screenshot({ path: join(process.env.KNX_DEVICES_CAPTURE_DIR, `workbench-functions-${language}-${width}.png`) });
+      await page.locator(".com-object-edit-fields").screenshot({ path: join(process.env.KNX_DEVICES_CAPTURE_DIR, `workbench-functions-editor-${language}-${width}.png`) });
+    }
     await page.getByRole("tab", { name: m["workbench.parameters"], exact: true }).click();
     // The area chosen on the first visit stays open, and the object-local write shows in the shared row.
     await expect(parameterPanel.locator('.parameter-workspace-nav [aria-current="page"]')).toHaveCount(1);

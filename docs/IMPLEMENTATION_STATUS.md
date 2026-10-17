@@ -12,20 +12,24 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
-## Object-local function dropdowns (17 October 2026 source)
+## Object-local function dropdowns (17 October 2026)
 
-The separate Device functions disclosure is removed. The expanded communication
-object now offers supported manufacturer enum choices directly below DPT, mapped
-through exact structural references to configured object IDs. Missing, ambiguous
-and module-local mappings are not guessed; Parameters remains the full editor.
-Existing snapshot-bound writes, immediate apply, inline errors and Undo remain.
-Source acceptance: owning Rust1,916/0/82regularignored in158reports; components
-3,638/0; browser911 plus four focused production views; all63web stages, owning
-Clippy, build, docs and source freeze pass. The outer private runner caught its
-own successful SystemExit(0); a separate checked reconciliation retains the
-original contradictory receipt, all zero exits and negative refusal controls.
-Integrated acceptance/publication is pending at this checkpoint. No schema,
-dependency, bus, packaged-release or deployment change.
+Package P1 publishes Codex's unpublished feature `99dd6e65`, cherry-picked onto
+the current parameter workspace. The separate *Device functions* disclosure is
+gone: an expanded communication object offers the supported manufacturer
+choice parameters that control it, directly below DPT, as the same bound row
+the Parameters tab uses (revision-bound write, inline errors, Undo). ProductDB's
+structural layout now keeps the exact object references each choice reaches
+through choice dependencies (`FieldLayout::controlled_object_refs`, next to the
+grid `cell`); the server maps them to configured object IDs
+(`field.controlledComObjectIds`) through the existing declaration/alias
+resolver. Missing, ambiguous and module-local mappings give an empty list and
+no control, never a guess; block- or field-restricted parameters (ADR-0139)
+stay out. Grids and separators are unchanged: they render the Parameters tab,
+the object editor shows only rows. No schema, dependency or Core change.
+Codex's source acceptance on the old base is in its
+[log](../.ai/logs/2026-10-17_codex_object-function-dropdown.md).
+Gate: PENDING.
 [Contract](contracts/parameter-object-refresh.md).
 
 ## Test-gate hygiene (17 October 2026)

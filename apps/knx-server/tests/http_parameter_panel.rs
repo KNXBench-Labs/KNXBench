@@ -623,6 +623,69 @@ async fn existing_local_catalogue_and_project_alias_references_are_not_duplicate
     }
 }
 
+/// Module-local object control is never inferred from reference text (P1):
+/// neither a module instance's object nor a module-scoped field is mapped,
+/// even when their references spell a top-level declaration exactly.
+#[tokio::test]
+async fn module_objects_and_module_fields_get_no_inferred_object_controls() {
+    let program = configured_object_program().replace(
+        "<Dynamic>\n  <ParameterRefRef RefId=\"MOD-1_P-1_R-1\" />",
+        "<Dynamic>\n  <ParameterRefRef RefId=\"MOD-1_P-1_R-1\" /><choose ParamRefId=\"MOD-1_P-1_R-1\"><when test=\"1\"><ComObjectRefRef RefId=\"A-1_O-1_R-1\" /></when></choose>",
+    );
+    assert_ne!(program, configured_object_program());
+    let (_dir, products) = temp_product_db(&program);
+    let state =
+        state_with_device_and_modules(products, vec![], vec![("MOD-1_M-1", "MOD-1_M-1_MI-1")]);
+    {
+        let mut guard = state.project.lock().unwrap();
+        let p = guard.as_mut().unwrap();
+        for (raw, module_instance) in [(1, None), (2, Some(knx_core::ModuleInstanceId(1)))] {
+            let id = knx_core::ComObjectInstanceId(raw);
+            p.devices.insert_com_object(knx_core::ComObjectInstance {
+                id,
+                device: DeviceId(1),
+                number: raw as u16,
+                source: SourceRef {
+                    path: "retained".into(),
+                    ets_id: "A-1_O-1_R-1".into(),
+                },
+                text: knx_core::Override::Absent,
+                description: knx_core::Override::Empty,
+                dpt: knx_core::Override::Absent,
+                flags: knx_core::ResolvedFlags::none(),
+                size: None,
+                is_active: false,
+                links: vec![],
+                module_instance,
+            });
+            p.devices.get_mut(DeviceId(1)).unwrap().com_objects.push(id);
+        }
+        p.ids = knx_core::project::IdAllocators::from_counts(1, 0, 0, 2, 0, 0, 0, 0, 0);
+    }
+    let app = knx_server::app(Arc::new(state), None);
+    let (status, read) = get_panel(app, 1).await;
+    assert_eq!(status, StatusCode::OK, "{read}");
+    // The unscoped choice maps exactly its unscoped object, not the module's.
+    assert_eq!(
+        field(&read, "P-2_R-1").unwrap()["controlledComObjectIds"],
+        serde_json::json!([1])
+    );
+    let module_field = read["sections"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|s| !s["scope"].is_null())
+        .flat_map(|s| s["fields"].as_array().unwrap())
+        .find(|f| f["etsId"] == "MOD-1_P-1_R-1")
+        .expect("module field is shown");
+    assert_eq!(module_field["controlsComObjects"], true, "{module_field}");
+    assert_eq!(
+        module_field["controlledComObjectIds"],
+        serde_json::json!([]),
+        "{module_field}"
+    );
+}
+
 #[tokio::test]
 async fn ambiguous_local_and_qualified_catalogue_identity_refuses_the_whole_edit() {
     let program = configured_object_program()

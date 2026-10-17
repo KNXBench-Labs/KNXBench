@@ -67,10 +67,11 @@ it("keeps an ordinary refusal inline and restores the committed choice", async (
   expect(view.applied).not.toHaveBeenCalled();
   await view.cleanup();
 });
-it("does not guess choices from another object, restricted field, module or older server", async () => {
+it("does not guess choices from another object, restricted field or block, module or older server", async () => {
   const view = await mount({ ...panel, sections: [
     { scope: null, fields: [{ ...field, controlledComObjectIds: [8] }, { ...field, controlledComObjectIds: undefined },
-      { ...field, access: "Read" }] },
+      // ADR-0139: a restricting block hides the choice here as it does in the Parameters tab.
+      { ...field, access: "Read" }, { ...field, blockAccess: "Read" }, { ...field, blockAccess: "None" }] },
     { scope: { moduleNode: 1, moduleId: "Module", moduleDefId: "Definition" }, fields: [field] },
   ] });
   expect(view.host.querySelector("select")).toBeNull();

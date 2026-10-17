@@ -6,6 +6,16 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Update 2026-10-17: the web sends revision-bound writes
+
+The note below ("the web editor host still sends the unbound legacy form") was
+overtaken the same day: Goal B1a (`3b9f31f9`, 13 October 2026) binds every
+parameter write from the Parameters rows and the Checked editor to the snapshot
+and value the panel showed; a `409 parameterWriteConflict` keeps the draft and
+resends only through **Apply my value** (`ParameterPanel.binding.test.tsx`,
+`e2e/parameter-editors.e2e.ts`). Colour/Picture codecs and module mapping remain
+the open part of PDB-04 ([review](../status/2026-10-17-ledger-residue-review.md#phase-0--stale-evidence-reconciled)).
+
 ## Update 2026-10-13 (Goal A2): the server accepts revision-bound writes
 
 `POST /api/device/{id}/parameters` now also takes a binding — server

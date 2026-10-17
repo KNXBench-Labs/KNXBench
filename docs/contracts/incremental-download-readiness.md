@@ -89,3 +89,13 @@ Simulator and native receipt tests establish only their own evidence axes.
 Hardware compatibility, ETS chunking equivalence and end-to-end commissioning
 claims require separately approved real-device evidence. This preparation can
 be complete while GAP-T30-04 remains later, unimplemented and unverified.
+
+## Re-check 17 October 2026
+
+No new primary source. The KNX help article on differential download stays
+unreachable to automated retrieval (HTTP 403, API 401, no archive snapshot).
+xknx-editor's new *preflight* reads device bytes and lists changed ranges before
+a full download; that is a read-only comparison like KNXBench's compare plan, not
+a changed-parts write, and an independent implementation is never a defining
+source. The prerequisites above are unchanged
+([review](../status/2026-10-17-ledger-residue-review.md#phase-2--evidence-re-check-no-new-primary-source)).

@@ -37,3 +37,9 @@ comparison on the owner's own device (read-back against the stored image of the
 owner's own project, under the existing hardware rules) establishes it. Only
 aggregate agreement enters the repository. Ledger `KL-172`.
 <!-- END retained catalogue record -->
+
+## Re-check 17 October 2026: no new primary source
+
+No public format description appeared and no new private project carries
+`LoadedImage` or `CheckSums`. The lift condition above stands
+([review](../status/2026-10-17-ledger-residue-review.md#phase-2--evidence-re-check-no-new-primary-source)).

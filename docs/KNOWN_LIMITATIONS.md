@@ -445,7 +445,7 @@ Updates use user-supplied files, not the KNX Online Catalog. Full database backu
 ### Checked parameter editors
 
 **Ledger status:** `LATER` ([PDB-04](status/LEDGER.md#snapshot-ids)).
-Checked controls are opt-in and bounded; modules fall back, Colour/Picture remain unconverted originals. The server accepts revision-bound writes; the web host still sends unbound ones.
+Checked controls are opt-in and bounded; modules fall back, Colour/Picture remain unconverted originals. Writes are revision-bound end to end since Goal B1a.
 [Details and history](limitations/checked-parameter-editors.md)
 
 <a id="catalogue-manufacturer-report-history"></a>

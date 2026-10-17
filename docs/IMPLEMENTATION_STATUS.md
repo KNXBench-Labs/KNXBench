@@ -12,6 +12,21 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## KNX Functions in comparisons, MCP and the desktop; ledger residue reconciled (17 October 2026)
+
+`MODEL-07` is closed (`ff9c598d`): each installation's comparison has a
+per-Function table (ETS id, else building-part path + name; ambiguity reported;
+members by raw address, so a notation change is no Function change), rendered by
+`knx diff`, the HTTP comparison, the web panel and MCP `diff_projects`. MCP gains a
+ninth read-only tool, `list_functions`. The desktop surface is the shell's own
+embedded server (ARCHITECTURE rule 3); a `knx-desktop` test drives Functions over
+its `spawn_server` on loopback. 8/8 targeted mutants killed; package gate in the
+[review](status/2026-10-17-ledger-residue-review.md). The same review reconciles
+stale ledger Evidence for `FUTURE-01/02/03/05` and `PDB-04` and re-checks
+`KL-170/171/172`, `PDB-04`, `GAP-T30-04`, `KL-110`, `MODEL-05` and `IMPORT-02`:
+no new public primary source, lift conditions unchanged. No schema, bus, device
+or vendor action.
+
 ## Chromium temporary paths: one allocator, no extra nesting (17 October 2026)
 
 Developer tooling now distinguishes allocation parents from valid private

@@ -75,3 +75,14 @@ than dropped:
   install-time snapshot — the same rule as the v12→v13 precedent
   (COMPATIBILITY: "Historical encounter reports remain historical").
 <!-- END retained catalogue record -->
+
+## Re-check 17 October 2026 (PDB-04): no new primary source
+
+Delivered PDB-04 slices: readonly source evidence and HTTP plus decimal Time and
+integer Slider controls (11 October), the opt-in Checked editor in the Parameters
+tab (12 October) and revision-bound writes from the web (Goal B1a, 13 October).
+Still open: `TypeColor`/`TypePicture` value codecs and module-scoped mapping. KNX
+Standard v3.0.5 (15 September 2026) is manufacturer-only and announces HSV colour
+*datapoints*, not product-XML parameter codecs; xknx-editor's colour encoder and
+knx-rs-prod's `TypeColor` hashing are secondary and unchanged. The lift conditions
+are in the [review](../status/2026-10-17-ledger-residue-review.md#phase-2--evidence-re-check-no-new-primary-source).

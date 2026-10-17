@@ -10,7 +10,7 @@ contract, not a claim to have recovered that historical file.
 ## Location, invocation and exact evidence (TOOLS-01)
 
 The actual standalone collector is the local Git repository
-`<old-sources>/ProjectStats`. Entry point `ai-stats.py` dispatches
+`<sources>/ProjectStats`. Entry point `ai-stats.py` dispatches
 the explicit-project CLI in `ai_stats_cli.py`; structural measurement belongs
 to `ai_stats_code.py`, observed collector-response bytes to `ai_stats_traffic.py`.
 It is not a script inside KNXBench or an in-app dashboard component.
@@ -24,7 +24,7 @@ must not be relabeled as successful tests on a different environment.
 Actual local invocation:
 
 ```sh
-python3 <old-sources>/ProjectStats/ai-stats.py --project /path/to/KNXBench --json
+python3 <sources>/ProjectStats/ai-stats.py --project /path/to/KNXBench --json
 ```
 
 This writes `docs/ProjectStats.md` in the **selected** checkout and reads its

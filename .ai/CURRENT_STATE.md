@@ -1,4 +1,28 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-10-17 13:40
+- **Completed:** Owner go: container `knxbench` recreated on the new disk. Stopped cleanly (exit 0), then compared old (<old-sources>/KNXBench/data) and new data as root, read-only: 17 files, identical sha256, mode and owner. Old container renamed `knxbench-old-sdc1-20261017` (stopped, kept as backup); new `knxbench` from the same image id 0b2557aa (v0.1.0-alpha.12), --network host, identical environment, json-file log 5x10m, -v <sources>/KNXBench/data:/data. /data now on /dev/nvme0n1p2; https://127.0.0.1:8484/ 200, TLS cert unchanged (lives in /data). Correction to the 13:35 entry: its "copies identical" check could not read three root-only 600 files; the root comparison above is the valid one.
+- **Pending/Next Steps:** None. Remove `knxbench-old-sdc1-20261017` and <old-sources> only on owner request.
+- **Notes for Codex oder Claude:** Recreate the container from the new path only; never from <old-disk> (that path resolves at creation and pins the old disk if the symlink is ever replaced).
+
+---
+
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-17 13:35
+- **Completed:** Old-path sweep after the move to <data-disk>. Repo: three goal prompts' Workspace lines and the ADR-0038 spec-source pointer now name <data-disk>; DEVELOPER_PITFALLS lists path-keyed tool state (Codex trust, Claude memory key, container bind mounts). Outside Git: Hermes WebUI workspace, two profile scripts, root USER.md, Codex memory note, .projectstats.json session roots, two Claude memory files rewritten; Codex config.toml gained <data-disk> trust entries (old kept); Claude project keys <sources-key>-{KNXBench,knx-spec-kb} link to the existing memory dirs. Backups: profile backups/path-move-20261017.
+- **Pending/Next Steps:** OWNER DECISION: container `knxbench` still bind-mounts <old-sources>/KNXBench/data, which the kernel resolved at creation to the OLD disk (now <old-sources>/KNXBench/data). Copies identical at 13:25 (14 files, same hashes, last write 16 Oct); every new save lands on the old disk until the container is recreated with -v <sources>/KNXBench/data:/data.
+- **Notes for Codex oder Claude:** Left as history on purpose: dated docs, evidence JSON, KL dossiers (byte-exact preservation receipts reject edits: test_limitations_catalogue), LEDGER evidence notes, .ai archive/logs, session logs. Root .venv was already broken before the move (points at the pre-rename <old-sources>/KNX, no interpreter).
+
+---
+
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-17 13:20
+- **Completed:** Repository moved by the owner to <sources>/KNXBench (ext4, 701 GB free); <old-sources> is now a symlink to it. Ran `git worktree repair` for all five linked worktrees (metadata only, no content touched; all clean). Path-move package: story/tests/test_privacy.py derives the private provenance ledger from the checkout's sibling (as story/README.md already documents) instead of <old-disk>; statistics contract command points at <data-disk>; DEVELOPER_PITFALLS records the move and the repair recipe. Story suite 76/76 (real-ledger test runs, a copied checkout without sibling skips), docs checker, 4 xtask checks, diff-check pass.
+- **Pending/Next Steps:** None for this package. The move interrupted the parameter-workspace gate (web-merged4, 48/63 green, KeyboardInterrupt 12:55) and the object-function rerun gate5 (0 stages, KeyboardInterrupt 12:55); both owners must regate. Parameter-workspace owner already re-merged as bafbf483 on e5e63fc1.
+- **Notes for Codex oder Claude:** Gate scripts in profile scratch still name <old-disk> paths; they work through the symlink, but new scripts should use <data-disk>. Dated docs keep the old path as history.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-10-17 12:47
 - **Completed:** Leftovers PUBLISHED: origin/main bcaba477..e6a5410b (local = tracking = live). Contains Codex's UP258 vertical audit 3e5ba4d2 + e1d19e42 (merge cfe1ff8f), the root-only research notes OpenKNX signing boundaries, Weinzierl kTux IP and the Manufacturer Tool deck section in parameter-byte-order.md (975c5c74), the site-scroll investigation log + its two handover entries (520272ed), OPEN_WORK #4/#6 corrections (cd91f2e3) and the closed flicker case (7ff5d883). Gate on cd91f2e3: fmt, productdb clippy, UP258 regular + public-package ignored tests against digest 520d3fce..., full knx-productdb tests, docs, 4 tools suites, 5 xtask, diff-check; inputs frozen (first run red only in test_browser_tmp because the fresh worktree lacked npm ci; rerun 5/5 green, failed receipt retained). Docs checks repeated on e6a5410b (delta vs gated tree: 3 docs/handover files).
 - **Pending/Next Steps:** None for this package. Parameter-workspace and object-function gates must re-merge onto e6a5410b; delta for them is docs + crates/knx-productdb/tests/system2_public_package.rs only (no web runtime input). Excluded on purpose: SmartSensor dossier and local issue-22 triage (private, root only), wip/manufacturer-plugin-research (owner decision 14 Oct).
@@ -67,6 +91,22 @@
 - **Completed:** Owner-requested closed-by-default content implemented in isolated fix/collapsed-defaults-20261017 (base c94f4208). Navigation blocks/tree branches, parameter/source groups, Function/matrix/report details start closed; explicit reveal, remembered GA views and mounted drafts retained. Named REDs; complete component3635/0/265files, production build,20derived typechecks,docs/tools pass. Focused browser29passed before two corrected stale matrix setup assertions; not broad acceptance.
 - **Pending/Next Steps:** Finish final full web/browser acceptance, integration against fresh main preserving parallel object-function changes, reviewed commit/publication/readback and owned cleanup. No final delivery or deployment yet. Earlier exploratory interruption and zero-stage queued cancellation retained separately.
 - **Notes for Codex oder Claude:** Owned checkout KNXBench-collapsed-20261017 only; selected dirtyroot/index/foreign work remain protected. Separate object-function session3ccc82c2b88f owns its active gate; do not alter its checkout/leases. Shared ParameterPanel and devices browser tests need semantic integration, not either side discarded. No bus/live-project/vendor/subagents/codingCLI/release. Own log2026-10-17_codex_collapsed-defaults.md. Pane visibility is layout, not this content-default scope.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-17 08:04
+- **Completed:** Reconciled actual browser1 failure as configuration-only: Chromium temp socket budget refused before browser assertions; build/fixture types passed and application fingerprint stayed exact. browser2 foreground continuation timed out while queued with zero stages and absent worker, retained separately. Corrected only private launcher using maintained selector and validated parent-owned scratch directory. Existing focused210/0 and source census unchanged; no publication.
+- **Pending/Next Steps:** Sole focused browser3 proc_d0230da79121 / PID2816249 is queued under preserved foreign leases. Private continuation continue_acceptance.py validates the exact eight planned cases and unchanged inputs, then runs the complete 63-stage web profile only on success. All own tracked inputs frozen after this checkpoint. Inspect actual reports/screenshots, then fresh-main semantic integration/review/merged gates, scoped publication/readback and retirement; no additional Go required.
+- **Notes for Codex oder Claude:** Retain browser1 configuration failure and browser2 zero-stage interruption as such, not product regressions or passes. Preserve object-function/collapsed-defaults packages and separate diagnostic-export task. Own evidence profile scratch parameter-workspace-20261017; no bus/liveproject/deployment/subagents/codingCLI. Root remains dirty/stale and protected.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-17 07:43
+- **Completed:** Generic parameter workspace implemented locally in feat/parameter-workspace-20261017: source-scope/group navigation, compact label/value rows, global search, contextual source metadata, retained bound editors and EN/DE responsive presentation. Focused210/0 in5files and device-fixture typecheck pass; production build/docs/whitespace pass in recorded scope. Bounded declarative product census106files/105unique,7manufacturer identities,27oversizeXML omissions, originals unchanged; no copied source in fixtures. No broad/merged acceptance or publication yet.
+- **Pending/Next Steps:** Sole focused browser proc_652212a5f00e / workerPID1893119 confirmed alive and QUEUED waiting-for-leases with zero stages at07:43. Receipt profile scratch parameter-workspace-20261017/browser1/receipt.json; inspect actual8case scope, source freeze and screenshots on completion. Then full web acceptance, semantic integration with fresh main, final review/gates, scoped commit/publication/readback and owned cleanup without anotherGo.
+- **Notes for Codex oder Claude:** apps/knx-web source frozen while focused runner lives. Preserve separate object-function and collapsed-defaults owners, including default-collapse semantics at integration. Source Rows/Columns/Cell exists but current DTO carries only nearest-group metadata; no semantic channel pivot/physical-layout or universal compatibility claim. Own log2026-10-17_codex_parameter-workspace.md and contract parameter-workspace.md. Selected dirtyroot/index/foreign research protected; no bus/liveproject/vendor/subagents/codingCLI/release/deployment.
 
 ---
 

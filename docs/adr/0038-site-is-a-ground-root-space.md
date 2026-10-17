@@ -24,7 +24,7 @@ becoming Site. This decision blocks ISSUE-05's site UI (DIN-3 plan §5).
 Evidence below is marked **[D]** for a verbatim statement in a KNX document
 and **[M]** for a measurement on repository data. Interpretation is marked
 **[I]**. Source PDFs are under
-`<old-sources>/knx-spec-kb/sources/The KNX Standard v3.0.0/`,
+`<sources>/knx-spec-kb/sources/The KNX Standard v3.0.0/`,
 read with `pdftotext -layout`. The first 16 hex digits of each SHA-256 are
 given.
 

@@ -38,7 +38,7 @@ Freigabe für Buszugriffe, Hersteller-/ETS-Ausführung, Releases oder Deployment
 Priorität: Korrektheit und Datenerhalt vor Funktionsumfang.
 
 START
-- Workspace: <old-sources>/KNXBench.
+- Workspace: <sources>/KNXBench.
 - Lies zuerst .ai/CURRENT_STATE.md, AGENTS.md und den lokal vorbereiteten Audit
   docs/status/2026-10-13-unassigned-work-goal-audit.md.
 - git fetch origin; prüfe frisches origin/main, neueste Locks/Reservierungen und

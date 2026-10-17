@@ -24,6 +24,7 @@ outside preserved historical blocks, or use the next free section number
 
 | Section | Where |
 | --- | --- |
+| [2026-10-17 — Parameter-workspace layout census](research/2026-10-17-parameter-workspace-layout.md) | Bounded declaration shapes across local product packages; compact source groups, mixed field types and explicit-grid projection boundary |
 | [2026-10-17 — System 2 / System B admission recheck](research/2026-10-16-offline-source-stop-lines.md#17-october-renewed-download-outcome-and-fresh-checks) | 53 existing offline tests; exact source refusal and complete recovery still block admission; original public release notes and explicitly unrecovered help lead |
 | [2026-10-16 — UP258 vertical-path source recheck](research/2026-10-16-up258-vertical-path-audit.md) | Full remaining-path/test matrix, literal 21-position regression, configured first refusal and complete-mutation recovery stop |
 | [2026-10-16 — Weinzierl kTux IP package](research/2026-10-16-weinzierl-ktux-ip.md) | Independent software-device candidate, exact 57B0 relative source and large product fixture; static inspection only, no new compatibility |

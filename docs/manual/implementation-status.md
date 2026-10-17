@@ -13,6 +13,17 @@ MCP or the CLI. [Comparison](user-guide/08-reports-and-diff.md#what-it-compares)
 [AI agents](user-guide/12-ai-agents.md#what-it-can-and-cannot-do) and
 [contract](../contracts/project-functions.md#comparison-desktop-and-mcp-17-october-2026).
 
+## Parameter workspace (source after Alpha 13)
+
+The ordinary Parameters tab uses source-group navigation, compact label/value
+rows, cross-area search and contextual source metadata. Areas follow the
+closed-by-default rule below: none opens until chosen. Device/module identities,
+read-only reasons, checked editors and revision-bound writes are reused; drafts
+stay mounted across navigation and search. This is not a manufacturer-specific
+faceplate or exact source-grid reproduction. Existing Alpha 13 binaries and manual
+screenshots are unchanged. [Operating instructions](user-guide/05-devices-and-products.md#parameters)
+and [contract](../contracts/parameter-workspace.md).
+
 ## Closed disclosure defaults (source builds after Alpha 13)
 
 Navigation content blocks, explorer branches, parameter sections/source groups,

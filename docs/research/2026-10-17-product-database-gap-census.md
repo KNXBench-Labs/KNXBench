@@ -164,6 +164,76 @@ original.
 | O3. Flag and size columns (C R W T U I, object size, priority) | documented attributes | `ObjectSize` and flags on every one of 58,507 new `ComObject`s | Flags are already in the object DTO; size and priority need an additive field. |
 | O4. Module-instance comparison for objects | structural (identity) | the 23 programs from P8; `ComObject/@BaseNumber` 1,722 | Same identity rule as P8. |
 
+## Addendum: two more databases (17 October 2026, later)
+
+The owner then added two more files. The same scanner, shape probe and
+installer probe (same release build) ran over them; both originals were
+byte-identical afterwards.
+
+| Measure | Value |
+|---|---:|
+| New top-level files | 2, both vendor wrapper ZIPs without `knx_master.xml` |
+| Contents | one wrapper with 2 `.knxprod` and 3 PDF manuals; one complete manufacturer database (a single 66.6 MB `.knxprod`) |
+| New distinct application programs | 146 (0 overlap with everything above), all schema 20, no `PeiProgram` |
+| Programs converted from pre-ETS4 data (`PreEts4Style`) | 95 |
+| Programs whose XML member exceeds 8 MiB (G5) | 14 (10 %); median member 0.87 MiB, largest 21.8 MiB |
+
+Installer outcomes:
+
+| Input | Result |
+|---|---|
+| Small wrapper | refused as "product ZIP is missing knx_master.xml" (G3) |
+| Its 2 inner `.knxprod` | both install with the standard profile |
+| Complete-database wrapper under a `.knxprod` name (the web upload path) | refused by the size bounds (one member above 64 MiB) before the master check |
+| The same wrapper under its own `.zip` name with `--allow-large-package` | refused: "--allow-large-package applies to .knxprod product packages only" |
+| The inner `.knxprod`, large profile | installs: 22.2 s, peak RSS at most about 259 MiB, product database **1,038 MiB** (about 16× the package), 142 programs, 164 products, 262,620 parameters, 81,574 objects, 254 distinct unknown constructs (846,689 occurrences), 47 diagnostics |
+
+So for this download as shipped there is **no install route** in either the CLI
+or the web app short of unpacking it by hand: the wrapper gap (G3) and the size
+profile (G4) meet. Both belong to suggested step 2.
+
+What the new data adds to the gaps above:
+
+- **G1/G2** (since fixed by
+  [ADR-0139](../adr/0139-block-access-and-separators-reach-the-parameter-tab.md)):
+  106 of 146 programs set `Access` on 6,011 blocks (`None` 3,250, `Read`
+  2,761), mostly directly below a `when`. Pages are hidden or locked
+  conditionally, the path the evaluator now follows. 6,149 of the complete
+  database's unknown-construct occurrences are block/separator `Access` and
+  `UIHint` that product DB v24 models. Separator hints: `HorizontalRuler`
+  2,560, `Headline` 703, `Information` 281, `Error` 4.
+- **G6:** no packed time units in the new programs.
+- **G8 (new): `TypeDate` is unmodelled.** It appears for the first time in the
+  collection (2 declarations, `Encoding="DPT 11"`). The installer reports the
+  type as an unknown element and stores the parameter as kind `Other`. The
+  offline editor then accepts any non-empty text for it. Downloads are not at
+  risk, because the memory image encodes only `Restriction`, `Number` and
+  `Text` and refuses everything else by name. A date editor needs a documented
+  value format first: `Value_t` lists `TypeDate`, but this census did not
+  verify its encoding.
+- **G9 (prevalence): property-placed parameters.** 68 of 146 new programs place
+  parameters in interface-object properties (`Parameter/Property` with
+  `ObjectIndex`, `PropertyId`, `Offset`, `BitOffset`): 92,276 placements,
+  against 30,841 in 273 programs in everything above. The download refuses
+  them by name ([KL-007](../limitations/KL-007-bounded-commissioning-support.md)).
+  The installer still reports `Parameter/Property` as unknown although
+  `code.rs` reads the placement from the retained source. For this database,
+  property placement is the rule rather than the exception.
+
+Layout indicators (P3–P5, O1, O3), same counting as above:
+
+- Inline sections: 751 blocks in 4 programs. Parents are `when` 643,
+  `Dynamic` 88 (a parent kind the earlier sample did not show) and
+  `ParameterBlock` 20; 663 of them are grids.
+- `IndentLevel`: 4,810 references in 8 programs (values 1, 2, 4).
+- `SuffixText`: 7,623 on `Parameter`, 7,848 on `ParameterRef`.
+- `ShowInComObjectTree`: 72 blocks in 4 programs, holding 2,689 object
+  references.
+- `TypeNumber/@UIHint`: `Slider` 92, `CheckBox` 85; `TypeFloat` `Slider` 11.
+- `ComObjectRef/@ObjectSize`: 20,630; `ComObject/@Priority`: 8,966.
+
+No `Rename`, `Repeat` or `Button` occurs in the new programs.
+
 ## Suggested order
 
 1. G1/P2 and G2/P1: correctness first, both small and server-led. Done

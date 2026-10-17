@@ -34,9 +34,13 @@ open work in this order:
 2. **Install:** vendor wrapper ZIPs fail as "missing knx_master.xml" although
    their inner packages install; complete manufacturer databases need the large
    profile, which the web app does not offer, and one grew a 4.56 GB product
-   database.
+   database. A wrapper whose inner package exceeds 64 MiB has no route at all:
+   the size bounds refuse it, and `--allow-large-package` refuses `.zip` names
+   ([addendum](research/2026-10-17-product-database-gap-census.md#addendum-two-more-databases-17-october-2026-later)).
 3. **Editors:** packed `TypeTime` units are offered as a decimal count; they
-   should fall back until their encoding is evidenced.
+   should fall back until their encoding is evidenced. `TypeDate` (first seen
+   in the addendum) is unmodelled and edited as free text; its value format
+   needs evidence before an editor.
 4. **Layouts:** inline sections, `IndentLevel`, `SuffixText`, object folders
    from `ShowInComObjectTree` (documented in Project Schema 23), flag/size
    columns; later conditional captions (`Rename`), objects by parameter page and

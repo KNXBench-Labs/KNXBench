@@ -19,7 +19,7 @@ The [product-database gap census](../research/2026-10-17-product-database-gap-ce
 
 Evidence:
 
-- **[D]** Project Schema 23 v01.00.00 §1.1.2.1 `Access_t` (printed page 17):
+- **[D]** Project Schema 23 v01.00.00 §1.1.2.1 `Access_t` (printed page 6):
   "the rights for the ETS user to view and modify parameters", values `None`,
   `Read`, `ReadWrite`. The schema documents the type, not how an element's
   `Access` affects what it contains.

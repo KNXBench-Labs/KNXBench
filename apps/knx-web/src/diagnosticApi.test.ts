@@ -15,6 +15,17 @@ describe("diagnostic HTTP contract",()=>{
    (v:DiagnosticView)=>{Object.assign(v.report,{hostPath:"/private/secret"});},
   ]){const invalid=structuredClone(view);change(invalid);expect(()=>admitDiagnostics(invalid)).toThrow("diagnostics-invalid-response");}
  });
+ it("admits an in-flight read while running, but never in a completed report",()=>{
+  // The collector publishes "attempted, not completed" before each read; rejecting
+  // that progress snapshot showed a false "request failed" banner after a good run.
+  const running=structuredClone(view);running.phase="running";running.report.complete=false;
+  running.report.items[0]={...running.report.items[0],status:"not-read",bytes:[],receivedBytes:0,returnedElements:null,completedAt:null};
+  expect(admitDiagnostics(running)).toEqual(running);
+  const finished=structuredClone(running);finished.phase="complete";finished.report.complete=true;
+  expect(()=>admitDiagnostics(finished)).toThrow("diagnostics-invalid-response");
+  const invented=structuredClone(running);invented.report.items[0].bytes=[7];invented.report.items[0].receivedBytes=1;
+  expect(()=>admitDiagnostics(invented)).toThrow("diagnostics-invalid-response");
+ });
  it("uses preview, confirmed start, poll and cooperative cancel without any write authority",async()=>{
   const fetch=vi.fn().mockImplementation(async()=>new Response(JSON.stringify(view),{headers:{"content-type":"application/json"}}));vi.stubGlobal("fetch",fetch);
   await previewDiagnostics(7,"192.0.2.10:3671",{serverIncarnation:"fixture",projectIncarnation:1,revision:2});await startDiagnostics(view.token);await pollDiagnostics(view.token);await cancelDiagnostics(view.token);

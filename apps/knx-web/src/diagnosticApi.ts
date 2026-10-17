@@ -17,7 +17,7 @@ async function request(path:string,body?:unknown):Promise<Response> {
 }
 function onlyFields(value:object,fields:string[]):boolean {return Object.keys(value).every(k=>fields.includes(k));}
 function nullableTime(value:unknown):boolean {return value===null||(typeof value==="string"&&Number.isFinite(Date.parse(value)));}
-function validReading(i:DiagnosticReading,index:number):boolean {
+function validReading(i:DiagnosticReading,index:number,complete:boolean):boolean {
  const queries=["descriptor-type-0","manufacturer-id","hardware-type"];
  const property=index===0?null:index===1?12:78;const expected=index===2?6:2;
  return !!i&&onlyFields(i,["order","query","objectIndex","propertyId","startIndex","requestedElements","expectedBytes","status","receivedBytes","returnedElements","bytes","attemptedAt","completedAt","error"])&&
@@ -27,7 +27,8 @@ function validReading(i:DiagnosticReading,index:number):boolean {
   (i.returnedElements===null||(Number.isInteger(i.returnedElements)&&i.returnedElements>=0&&i.returnedElements<=255))&&nullableTime(i.attemptedAt)&&nullableTime(i.completedAt)&&
   (i.error===null||(typeof i.error==="string"&&/^[a-z-]{1,64}$/.test(i.error)))&&
   (i.status!=="read"||(i.bytes.length===expected&&i.error===null&&i.returnedElements===(index===0?null:1)))&&
-  (i.status!=="not-read"||(i.bytes.length===0&&i.attemptedAt===null&&i.completedAt===null));
+  // While running, the read in flight is "attempted, not completed"; a finished report has none.
+  (i.status!=="not-read"||(i.bytes.length===0&&i.completedAt===null&&(i.attemptedAt===null||!complete)));
 }
 export function admitDiagnostics(value:unknown):DiagnosticView {
  if(typeof value!=="object"||value===null)throw new Error("diagnostics-invalid-response");
@@ -37,7 +38,7 @@ export function admitDiagnostics(value:unknown):DiagnosticView {
   r.written!==false||r.kind!=="knxbench-device-diagnostics"||r.format!==1||r.profile!=="generic-identity-v1"||r.device!=="device-1"||typeof r.projectReference!=="string"||!/^[a-f0-9]{64}$/.test(r.projectReference)||typeof r.build!=="string"||!nullableTime(r.collectedAt)||r.collectedAt===null||
   typeof r.simulated!=="boolean"||typeof r.complete!=="boolean"||typeof r.disconnectAttemptCompleted!=="boolean"||r.memoryStatus!=="not-requested"||typeof r.memoryReason!=="string"||
   !(r.stopReason===null||(typeof r.stopReason==="string"&&/^[a-z-]{1,64}$/.test(r.stopReason)))||
-  ![r.assertedMask,r.assertedManufacturer].every(n=>n===null||(Number.isInteger(n)&&n>=0&&n<=65535))||!Array.isArray(r.items)||r.items.length!==3||!r.items.every(validReading))throw new Error("diagnostics-invalid-response");
+  ![r.assertedMask,r.assertedManufacturer].every(n=>n===null||(Number.isInteger(n)&&n>=0&&n<=65535))||!Array.isArray(r.items)||r.items.length!==3||!r.items.every((item,index)=>validReading(item,index,r.complete as boolean)))throw new Error("diagnostics-invalid-response");
  return v as DiagnosticView;
 }
 async function view(path:string,body?:unknown){return admitDiagnostics(await(await request(path,body)).json());}

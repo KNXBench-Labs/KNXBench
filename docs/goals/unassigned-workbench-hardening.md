@@ -79,7 +79,7 @@ Dies ist keine Freigabe für Hardware, ETS-/Herstellerausführung, Releases oder
 Deployments. Datenintegrität schlägt Komfort, auch wenn Komfort hübscher aussieht.
 
 START UND VORAUSSETZUNG
-- Workspace: <old-sources>/KNXBench.
+- Workspace: <sources>/KNXBench.
 - Lies zuerst .ai/CURRENT_STATE.md, AGENTS.md und den lokal vorbereiteten Audit
   docs/status/2026-10-13-unassigned-work-goal-audit.md.
 - Goal A muss beendet sein. Prüfe seine veröffentlichten Verträge/Commits und

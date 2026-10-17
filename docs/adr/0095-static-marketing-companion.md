@@ -19,7 +19,7 @@ Existing source evidence:
   does not require any of them at runtime.
 - [ADR-0068](0068-project-evolution-story-is-a-static-offline-companion.md)
   already defines a standalone static story and an exact-edition approval gate.
-- [Manual acceptance](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/archive/alpha-0.1/MANUAL_ACCEPTANCE.md) (archived) keeps the full manual on GitHub
+- [Manual acceptance](https://github.com/KNXBench-Labs/KNXBench/blob/6222e17754f3/docs/archive/alpha-0.1/MANUAL_ACCEPTANCE.md) (archived) keeps the full manual on GitHub
   and uses fictional media data. Existing README recordings show actual app UI;
   synthetic traffic is explicitly disclosed.
 - The authenticated repository check during planning found main private and

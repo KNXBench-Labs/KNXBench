@@ -1,12 +1,13 @@
 # Open work after the 0.1 alpha
 
-## Local machine details: Git history decision pending (17 October 2026)
+## Local machine details: history rewritten (17 October 2026)
 
-The tracked tree no longer carries local paths, host name or kernel release and
-is guarded ([ADR-0135](adr/0135-repository-carries-no-local-machine-details.md)).
-Earlier commits and seven commit messages still do
-([KL-185](KNOWN_LIMITATIONS.md#catalogue-kl-185)). Next: the owner decides
-whether to rewrite history (force-push, new hashes, moved tags) or keep it.
+Tree, history, messages and tags are clean and guarded
+([ADR-0135](adr/0135-repository-carries-no-local-machine-details.md),
+[KL-185](KNOWN_LIMITATIONS.md#catalogue-kl-185)). Only GitHub's two read-only
+pull-request refs and the fork still serve pre-rewrite commits. Optional next
+step, owner's call: ask GitHub Support to purge them. Local branches from
+before the rewrite move via `refs/rewritten/*` or `git rebase --onto`.
 
 ## Read-only diagnostic export: hardware check pending (17 October 2026)
 

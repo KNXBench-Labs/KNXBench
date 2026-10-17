@@ -196,7 +196,7 @@ slice 1, branch `d10-master-translations`). `FunctionType`/
 `FunctionPoint`/`SpaceUsage`: lifted 2026-09-14 (T13, branch
 `d10-language-data`). This section's own residue (other `MasterData`
 sections, collision counting, frontend locale tags) stays open; see
-**D10** in [GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/a584007fc05a/docs/GAP_ANALYSIS_ETS.md) and §37's own
+**D10** in [GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/994ac08c0328/docs/GAP_ANALYSIS_ETS.md) and §37's own
 "still open" list. Not scheduled.
 
 **Update 2026-10-05 (AR10 slice 2b): accepted boundary.** Every reader of

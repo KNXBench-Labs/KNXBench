@@ -15,7 +15,7 @@ commit messages. None of it describes KNXBench; all of it describes one
 machine, and it went stale whenever that machine changed (the checkout moved
 disks the same day).
 
-Eight affected passages sat inside records pinned byte for byte by the two
+Affected passages sat inside records pinned byte for byte by the two
 reorganization receipts
 ([documentation](../evidence/documentation-reorganization-2026-10-13.json),
 [limitations](../evidence/limitations-reorganization-2026-10-13.json)), so the
@@ -66,10 +66,18 @@ unredacted record is still verified byte for byte.
 * Agents write placeholders in handover notes and evidence from the start; the
   documentation gate fails otherwise.
 * The guard cannot know every past machine. Old identifiers that no longer
-  match the running machine are caught only by the generic patterns or by
-  `KNXBENCH_LOCAL_INFO_DENY`.
+  match the running machine are caught only by the generic patterns, by
+  `KNXBENCH_LOCAL_INFO_DENY` or by the clone-local `.git/info/local-info-deny`
+  (the place for things no machine reports, such as a real gateway address).
 * Commit messages are checked only when someone runs the hook or `--commits`;
   CI does not block a push on them.
-* Earlier commits (contents and seven messages) still carry the old details in
-  Git history. Removing them requires a history rewrite and force-push, which
-  is an owner decision (see [KNOWN_LIMITATIONS](../KNOWN_LIMITATIONS.md)).
+* The owner chose to rewrite the history the same day (KL-185): every file
+  version, commit and tag message, with an audit that also covered the CPU
+  model, distribution, an older kernel release, dash-joined path keys and the
+  real gateway address. GitHub's read-only pull-request refs and the fork
+  still serve the pre-rewrite commits; see
+  [KL-185](../limitations/KL-185-git-history-local-machine-details.md).
+* Local branches created before the rewrite belong to the old history. Their
+  rewritten copies are kept as `refs/rewritten/*`; an old-history branch is
+  moved with `git rebase --onto` (bases from the commit map) and never merged
+  or pushed as it is.

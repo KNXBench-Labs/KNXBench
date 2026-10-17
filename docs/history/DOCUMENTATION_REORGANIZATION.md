@@ -58,9 +58,10 @@ checker verifies retained blocks, inversely restores every link, and reconstruct
 the complete original source digest and order. A record with a declared
 `redaction` is pinned to its new bytes and keeps its offset and anchor checks;
 its byte reconstruction, and with it the whole-source digest of that source, is
-skipped. Four records here and four in the
+skipped. On 2026-10-17, 32 records here and 22 in the
 [limitations receipt](../evidence/limitations-reorganization-2026-10-13.json)
-carry such a redaction (2026-10-17). A status log with late older dates
+received such a redaction (local machine details, and pinned GitHub links
+moved to the rewritten history). A status log with late older dates
 and fenced heading examples has dedicated regressions.
 
 Commands:

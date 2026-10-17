@@ -364,7 +364,7 @@ not retroactively verify the separate official-converter path.
 **Update 2026-09-26 (DIN-9).** The supplied MDT `.pr5` was measured as the
 same `EX-IM` container family (`ets.pr_`, header `H project`), and it has no
 application program. The design basis for a direct importer is now
-[2026-09-26-legacy-vd-pr-product-import-design.md](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/superpowers/specs/2026-09-26-legacy-vd-pr-product-import-design.md).
+[2026-09-26-legacy-vd-pr-product-import-design.md](https://github.com/KNXBench-Labs/KNXBench/blob/6222e17754f3/docs/superpowers/specs/2026-09-26-legacy-vd-pr-product-import-design.md).
 That design decrypts only with a user-supplied password. It does not rely on
 the password being known locally, and it keeps every constraint of this
 document.

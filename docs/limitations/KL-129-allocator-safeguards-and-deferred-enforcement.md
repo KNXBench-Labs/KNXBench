@@ -15,7 +15,7 @@ landed on 2026-09-27. A colliding id is refused, and no caller rewinds the
 counters any more. AR02 also refuses allocator exhaustion. Structural
 phases 3–5 were explicitly deferred past the alpha by the user on 2026-10-04;
 they are not an unanswered activation request. See the pinned
-[AR03 audit](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/archive/alpha-0.1/ADR0039_ENFORCEMENT_AUDIT.md) at `e691bc13`.
+[AR03 audit](https://github.com/KNXBench-Labs/KNXBench/blob/6222e17754f3/docs/archive/alpha-0.1/ADR0039_ENFORCEMENT_AUDIT.md) at `e691bc13`.
 
 **Historical limitation (before phases 1–2, at `7b64496`).**
 `Command::SetIdAllocators` replaces the id counters

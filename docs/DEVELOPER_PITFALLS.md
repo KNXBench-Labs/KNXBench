@@ -68,6 +68,13 @@ already found lying in the grass.
   (`package::zip_work`, test builds only) and the test bounds that count by
   the input size; a 30 s clock at 2 MiB remains only as a backstop for work
   outside the meter (17 October 2026).
+- **`tempfile::tempdir()` inherits the runner's `TMPDIR`, which may be a
+  symlink.** A fixture that compares paths with resolved ones (`canonicalize`,
+  an `openat2` no-symlink open, a directory sync chain) must anchor on
+  `temp.path().canonicalize()`, or name the symlink explicitly when the
+  symlink is what it tests. Five fixtures assumed a symlink-free temp path
+  until P4 (17 October 2026); Rust gates now run with the configured `TMPDIR`
+  unresolved.
 - **On ext4 a deleted file's inode comes straight back.** Deleting a file and
   creating another in the same directory reused the inode 200 of 200 times on
   the project drive (17 October 2026). A file identity that must notice a

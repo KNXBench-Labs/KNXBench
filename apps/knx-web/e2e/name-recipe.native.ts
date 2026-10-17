@@ -1,4 +1,5 @@
 /** The naming recipe on the real server: preview, stale refusal, confirm, undo, save, reopen. */
+import { openNavigationSections } from "./disclosure-fixture";
 import { expect, test, type Page } from "@playwright/test";
 import { copyFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
@@ -23,6 +24,7 @@ async function openCopy(page: Page, m: typeof en | typeof de) {
   await expect(page.locator(".welcome-card")).toHaveCount(0);
 }
 async function addresses(page: Page, m: typeof en | typeof de) {
+  await openNavigationSections(page);
   const nav = page.getByRole("navigation", { name: m["workbench.navigation"], exact: true });
   if (!await nav.isVisible()) await page.locator(".workbench-panel-controls").getByRole("button", { name: m["workbench.navigation"], exact: true }).click();
   await nav.getByRole("button", { name: m["workbench.addresses"], exact: true }).click();

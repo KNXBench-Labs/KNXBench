@@ -1,4 +1,5 @@
 /** Functions against the real server: create, member, stale refusal, undo, save and reopen. */
+import { openExplorerBranches } from "./disclosure-fixture";
 import { expect, test, type Page } from "@playwright/test";
 import { copyFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
@@ -19,6 +20,7 @@ async function openCopy(page: Page, m: typeof en | typeof de) {
 }
 /** The Kitchen's Functions disclosure in Properties, opened. */
 async function kitchenFunctions(page: Page, m: typeof en | typeof de) {
+  await openExplorerBranches(page);
   const explorer = page.locator(".project-explorer");
   if (!await explorer.isVisible()) {
     await page.locator(".workbench-panel-controls").getByRole("button", { name: m["workbench.navigation"], exact: true }).click();
@@ -60,6 +62,8 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await expect(item).toContainText("KB-Function-");
     await expect(page.getByRole("button", { name: m["toolbar.undo"], exact: true })).toBeEnabled();
 
+    await expect(item.locator(":scope > details")).not.toHaveAttribute("open", "");
+    await item.locator(":scope > details > summary").click();
     const picker = item.getByRole("combobox", { name: m["gaPicker.label"], exact: true });
     await picker.click(); await picker.press("ArrowDown"); await picker.press("Enter");
     await item.getByRole("button", { name: m["functions.addMember"], exact: true }).click();

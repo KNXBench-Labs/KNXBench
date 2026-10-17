@@ -1,5 +1,6 @@
 /** Verifies the new-project wizard in Chromium with every API request locally intercepted. */
 
+import { openNavigationSections } from "./disclosure-fixture";
 import { expect, test, type Page } from "@playwright/test";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
@@ -136,7 +137,8 @@ for (const style of styles) {
     const done = page.getByRole("dialog", { name: "Project created" });
     await expect(done).toContainText(`${projectName} is open. It is not saved yet`);
     await expect(done.getByRole("button", { name: "Done" })).toBeFocused();
-    await expect(page.locator("button.tree-label").filter({ hasText: installationName })).toBeVisible();
+    await expect(page.locator("button.tree-label").filter({ hasText: installationName })).toHaveCount(1);
+    await expect(page.locator("button.tree-label").filter({ hasText: installationName })).toBeHidden();
 
     await done.getByRole("button", { name: "Add devices now" }).click();
     await expect(done).toBeHidden();
@@ -145,6 +147,7 @@ for (const style of styles) {
     await expect(wizard).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(wizard).toBeHidden();
+    await openNavigationSections(page);
 
     await page.getByRole("button", { name: "Project", exact: true }).click();
     await expect(page.getByLabel("Group address style")).toHaveValue(style);
@@ -199,6 +202,7 @@ test("walks every step: building, preset group structure, review and create", as
     [1, "Lighting", 3], [2, "Shading", 3], [3, "Heating", 3], [4, "Ventilation", 3], [5, "Central functions", 3],
   ]);
   await page.getByRole("button", { name: "Done" }).click();
+  await openNavigationSections(page);
   await expect(page.getByRole("dialog")).toHaveCount(0);
   expect(state.unexpected).toEqual([]);
 });

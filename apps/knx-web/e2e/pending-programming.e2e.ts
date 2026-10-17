@@ -1,4 +1,5 @@
 /** P3 browser contract: pending-programming chips, filter, explorer dot and marking by hand. */
+import { openExplorerBranches, openNavigationSections } from "./disclosure-fixture";
 import { expect, test, type Page } from "@playwright/test";
 import { join } from "node:path";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
@@ -71,6 +72,8 @@ async function openProject(page: Page, language: "en" | "de") {
   await page.getByRole("button", { name: m["toolbar.newProject"], exact: true }).first().click();
   await page.getByRole("dialog", { name: m["newProject.title"], exact: true }).getByRole("button", { name: m["newProject.create"], exact: true }).click();
   await page.getByRole("dialog", { name: m["projectWizard.done.title"], exact: true }).getByRole("button", { name: m["projectWizard.done.close"], exact: true }).click();
+  await openNavigationSections(page);
+  await openExplorerBranches(page);
 }
 async function openList(page: Page, language: "en" | "de") {
   const m = language === "en" ? en : de;

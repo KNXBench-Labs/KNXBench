@@ -1,4 +1,5 @@
 /** Owner feedback P2: the explorer shows what opens, counts what is folded, and draws its lines. */
+import { openExplorerBranches, openNavigationSections } from "./disclosure-fixture";
 import { expect, test, type Page } from "@playwright/test";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
 import { messages as en } from "../src/messages/en";
@@ -60,6 +61,8 @@ async function openExplorer(page: Page, m: Catalogue, width: number) {
   await page.getByRole("button", { name: m["toolbar.newProject"], exact: true }).click();
   await page.getByRole("dialog").getByRole("button", { name: m["newProject.create"], exact: true }).click();
   await page.getByRole("dialog").getByRole("button", { name: m["projectWizard.done.close"], exact: true }).click();
+  await openNavigationSections(page);
+  await openExplorerBranches(page);
   // The explorer lives in the navigation pane, which narrow layouts collapse.
   const navigation = page.getByRole("button", { name: m["workbench.navigation"], exact: true });
   if (await navigation.getAttribute("aria-expanded") === "false") await navigation.click();

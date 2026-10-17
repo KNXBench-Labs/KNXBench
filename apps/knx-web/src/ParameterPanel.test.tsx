@@ -137,6 +137,34 @@ function setSelectValue(select: HTMLSelectElement, value: string) {
 }
 
 describe("ParameterPanel", () => {
+  it("starts sections and manufacturer groups closed, including newly refreshed groups", async () => {
+    const grouped = { ...fixture, sections: [{ ...fixture.sections[0], fields: [
+      { ...fixture.sections[0].fields[0], group: { key: "buttons", label: "Buttons" } },
+    ] }] };
+    apiMock.deviceParameters.mockResolvedValue(grouped);
+    const root = await renderPanel();
+    const section = host!.querySelector<HTMLDetailsElement>(".parameter-section")!;
+    expect(section.open).toBe(false);
+    section.open = true;
+    const toggle = host!.querySelector<HTMLButtonElement>(".parameter-group-toggle")!;
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    const input = host!.querySelector<HTMLInputElement>("input")!;
+    expect(input.closest("[hidden]")).not.toBeNull();
+    await act(async () => toggle.click());
+    expect(input.closest("[hidden]")).toBeNull();
+    const refreshed = { ...grouped, sections: [{ ...grouped.sections[0], fields: [
+      ...grouped.sections[0].fields,
+      { ...fixture.sections[0].fields[0], etsId: "P-new", group: { key: "new", label: "New group" } },
+    ] }] };
+    apiMock.deviceParameters.mockResolvedValue(refreshed);
+    await act(async () => root.render(<ParameterPanel deviceId={1} refreshKey={{ ...shownTree, snapshot_revision: 3 }} onValueApplied={() => {}} />));
+    const toggles = host!.querySelectorAll<HTMLButtonElement>(".parameter-group-toggle");
+    expect(toggles[0].getAttribute("aria-expanded")).toBe("true");
+    expect(toggles[1].getAttribute("aria-expanded")).toBe("false");
+    expect(section.open).toBe(true);
+    expect(apiMock.setParameterValue).not.toHaveBeenCalled();
+    await act(async () => root.unmount());
+  });
   it.each(["en", "de"] as const)("explains absent function choices rather than leaving an empty disclosure (%s)", async language => {
     setSetting(UI_LANGUAGE_STORAGE_KEY, language);
     apiMock.deviceParameters.mockResolvedValue(fixture);
@@ -159,6 +187,8 @@ describe("ParameterPanel", () => {
     apiMock.deviceParameters.mockResolvedValue(panel);
     apiMock.setParameterValue.mockResolvedValue({ ...panel, sections: [{ scope: null, fields: [{ ...first, value: "1" }, second] }], tree: panelTree });
     const root = await renderPanel();
+    host!.querySelector<HTMLDetailsElement>(".parameter-section")!.open = true;
+    await act(async () => host!.querySelector<HTMLButtonElement>(".parameter-group-toggle")!.click());
     const select = host!.querySelector<HTMLSelectElement>("select")!;
     const input = host!.querySelector<HTMLInputElement>('input[type="number"]')!;
     await act(async () => {

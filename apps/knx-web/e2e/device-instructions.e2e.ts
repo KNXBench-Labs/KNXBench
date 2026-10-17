@@ -1,4 +1,5 @@
 /** Built device editor: instructions tab, identity, apply refresh, refusals. */
+import { openExplorerBranches } from "./disclosure-fixture";
 import { expect, test, type Page } from "@playwright/test";
 import { join } from "node:path";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
@@ -114,6 +115,7 @@ async function noHorizontalOverflow(page: Page) {
 }
 
 async function openInstructions(page: Page, m: Catalogue) {
+  await openExplorerBranches(page);
   await page.locator(".project-explorer").getByText(DEVICE.name, { exact: false }).first().click();
   const tab = page.getByRole("tab", { name: m["deviceInstructions.tab"], exact: true });
   await tab.click();

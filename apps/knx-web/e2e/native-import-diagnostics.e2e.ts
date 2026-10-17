@@ -1,4 +1,5 @@
 /** Missing native import evidence in the built workbench, fictional APIs only. */
+import { openNavigationSections } from "./disclosure-fixture";
 import { expect, test } from "@playwright/test";
 import { join } from "node:path";
 import { HISTORY_FIXTURE } from "../src/projectHistory.fixture";
@@ -42,6 +43,7 @@ for (const language of ["en", "de"] as const) for (const width of [400,1440]) fo
       expect(await note.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);
       if(process.env.KNX_DIAGNOSTICS_CAPTURE_DIR) await page.screenshot({path:join(process.env.KNX_DIAGNOSTICS_CAPTURE_DIR,`native-diagnostics-${language}-${width}.png`)});
     } else {
+      await openNavigationSections(page);
       await page.locator('.workbench-navigation').getByRole('button',{name:m["workbench.overview"],exact:true}).click();
       await expect(page.locator('.dashboard')).toBeVisible();
       await expect(notice).toHaveCount(0);

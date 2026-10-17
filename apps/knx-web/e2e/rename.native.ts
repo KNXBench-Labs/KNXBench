@@ -1,4 +1,5 @@
 /** Explicit isolated-server browser proof; excluded from intercepted default fixtures. */
+import { openExplorerBranches, openNavigationSections } from "./disclosure-fixture";
 import { expect, test, type Page } from "@playwright/test";
 import { copyFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
@@ -77,10 +78,12 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
       await dialog.locator("input").fill("Device via explorer"); await dialog.locator("input").press("Enter");
       await expect(dialog).toHaveCount(0); await expect(page.locator(".device-workspace h2")).toHaveText("Device via explorer");
     }
+    await openNavigationSections(page);
     const navigation = page.getByRole("navigation", { name: m["workbench.navigation"], exact: true });
     if (!await navigation.isVisible()) await page.locator(".workbench-panel-controls").getByRole("button", { name: m["workbench.navigation"], exact: true }).click();
     // Goal B1a: the installation name is revision-bound against the real server too.
     const installation = (await (await request.get("/api/project")).json()).installations[0] as { id: number; name: string };
+    await openExplorerBranches(page);
     await page.locator(".project-explorer button.tree-label", { hasText: new RegExp(`^${installation.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`) }).click();
     const installationField = page.locator(".workbench-pane-right .inspector input[data-rename-name]");
     await expect(installationField).toHaveValue(installation.name);

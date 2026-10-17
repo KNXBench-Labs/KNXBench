@@ -73,8 +73,9 @@ const RevealCompletionContext = createContext<((generation: number) => void) | u
 
 /**
  * Expand all / Collapse all (owner feedback P2): a numbered command that every
- * mounted node obeys once. Nodes mounted later keep their own default, so a
- * search reveal opening a branch is never overruled by an older command.
+ * mounted node obeys once. Descendants mounted by Expand all inherit that
+ * explicit opening; an ordinary visit starts closed. A search reveal is never
+ * countermanded by replaying an older command on an already mounted node.
  */
 type ExpansionCommand = { generation: number; open: boolean };
 const ExpansionContext = createContext<ExpansionCommand | null>(null);
@@ -118,11 +119,13 @@ function TreeNode(props: {
   marker?: React.ReactNode;
 }) {
   const t = useTranslate();
-  const [open, setOpen] = useState(true);
+  const expansion = useContext(ExpansionContext);
+  // Descendants mounted by an explicit Expand all obey that command too.
+  // Ordinary first visits and manual branch expansion start closed.
+  const [open, setOpen] = useState(expansion?.open ?? false);
   const labelRef = useRef<HTMLButtonElement>(null);
   const onRevealComplete = useContext(RevealCompletionContext);
   const depth = useContext(DepthContext);
-  const expansion = useContext(ExpansionContext);
   const appliedExpansion = useRef(expansion?.generation ?? 0);
   // Lines grow only below a node the user just opened (a click, the keyboard,
   // Expand all), never on load or reveal: that keeps the animation where the

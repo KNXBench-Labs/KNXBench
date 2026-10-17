@@ -72,7 +72,7 @@
       "height": 1080,
       "source": "docs/assets/releases/alpha12/user-modern-retro-green-crt-addresses.png",
       "sourceSha256": "bc2617e4306a369b719736ed49e22d6a5c70dd7bc417550f7fb2ce9ee398d00e",
-      "applicationSource": "6d8bf9bbee10c5d518bdccda4b984015dc9ba88b",
+      "applicationSource": "f8644021474e74e3310891fc08fb0be470b7f566",
       "kind": "Alpha 12 candidate real-app screenshot; actual server; fictional project; no live bus",
       "encoding": "lossless WebP; exact captured pixels, no repainting or synthetic controls"
     },
@@ -83,7 +83,7 @@
       "height": 1080,
       "source": "docs/assets/releases/alpha12/graphite-addresses.png",
       "sourceSha256": "6e5cf799588212516be547f5ed77b71ec7f62efb67ea2de7a590e1d280b96121",
-      "applicationSource": "6d8bf9bbee10c5d518bdccda4b984015dc9ba88b",
+      "applicationSource": "f8644021474e74e3310891fc08fb0be470b7f566",
       "kind": "Alpha 12 candidate real-app screenshot; actual server; fictional project; no live bus",
       "encoding": "lossless WebP; exact captured pixels, no repainting or synthetic controls"
     },
@@ -128,7 +128,7 @@
       "height": 1080,
       "source": "docs/assets/releases/alpha12/lcars-addresses.png",
       "sourceSha256": "e3381b34a5e898dab251d314170652b6d4053f2ed481accfe065a4b4e55b50b5",
-      "applicationSource": "6d8bf9bbee10c5d518bdccda4b984015dc9ba88b",
+      "applicationSource": "f8644021474e74e3310891fc08fb0be470b7f566",
       "kind": "Alpha 12 candidate real-app screenshot; actual server; fictional project; no live bus",
       "encoding": "lossless WebP; exact captured pixels, no repainting or synthetic controls"
     },
@@ -193,7 +193,7 @@
       "height": 1080,
       "source": "docs/assets/releases/alpha12/graphite-devices.png",
       "sourceSha256": "21bf5c83a59e55bbd825171f27a4b63040d9112f9f902e5763ea2cde78834101",
-      "applicationSource": "6d8bf9bbee10c5d518bdccda4b984015dc9ba88b",
+      "applicationSource": "f8644021474e74e3310891fc08fb0be470b7f566",
       "kind": "Alpha 12 candidate real-app screenshot; actual server; fictional project; no live bus",
       "encoding": "lossless WebP; exact captured pixels, no repainting or synthetic controls"
     },
@@ -204,7 +204,7 @@
       "height": 1080,
       "source": "docs/assets/releases/alpha12/graphite-addresses.png",
       "sourceSha256": "6e5cf799588212516be547f5ed77b71ec7f62efb67ea2de7a590e1d280b96121",
-      "applicationSource": "6d8bf9bbee10c5d518bdccda4b984015dc9ba88b",
+      "applicationSource": "f8644021474e74e3310891fc08fb0be470b7f566",
       "kind": "Alpha 12 candidate real-app screenshot; actual server; fictional project; no live bus",
       "encoding": "lossless WebP; exact captured pixels, no repainting or synthetic controls"
     },
@@ -215,7 +215,7 @@
       "height": 1080,
       "source": "docs/assets/releases/alpha12/graphite-instructions.png",
       "sourceSha256": "76846ce1a673a3eeb6576198015ed64bb475957a793343f32d9942eaa140bac5",
-      "applicationSource": "6d8bf9bbee10c5d518bdccda4b984015dc9ba88b",
+      "applicationSource": "f8644021474e74e3310891fc08fb0be470b7f566",
       "kind": "Alpha 12 candidate real-app screenshot; actual server; fictional project; no live bus",
       "encoding": "lossless WebP; exact captured pixels, no repainting or synthetic controls"
     },
@@ -226,7 +226,7 @@
       "height": 1080,
       "source": "docs/assets/releases/alpha12/graphite-support.png",
       "sourceSha256": "5982a1473a2629404ead9858e2545d2f990b7b67666a848f9bc39db67534bc88",
-      "applicationSource": "6d8bf9bbee10c5d518bdccda4b984015dc9ba88b",
+      "applicationSource": "f8644021474e74e3310891fc08fb0be470b7f566",
       "kind": "Alpha 12 candidate real-app screenshot; actual server; fictional project; no live bus",
       "encoding": "lossless WebP; exact captured pixels, no repainting or synthetic controls"
     }
@@ -268,11 +268,11 @@
       "source": "production frontend, fictional API answers; no live KNX server"
     }
   },
-  "applicationSource": "6d8bf9bbee10c5d518bdccda4b984015dc9ba88b",
+  "applicationSource": "f8644021474e74e3310891fc08fb0be470b7f566",
   "alpha9Capture": {
     "captured_on": "2026-10-11",
     "application_release": "v0.1.0-alpha.9",
-    "application_source_commit": "5b21323e050f94953de9ff4683cc12462d753001",
+    "application_source_commit": "c88f13eb287a976cf42468e8e1b3df1a64e257dd",
     "container_digest": "sha256:caa5ab31ee23edc35f5af645672defdf2d5b10dc27cf1d432eea0f345e24fd05",
     "server_binary_sha256": "ff7e93c6818ce71813d9554e97099732a99b7002ab3ca9f220679233851ba31e",
     "network": "isolated loopback-only user/network namespace",
@@ -289,7 +289,7 @@
     "schema": "knxbench-alpha12-media/1",
     "captured_on": "2026-10-15",
     "application_release_candidate": "v0.1.0-alpha.12",
-    "application_source_commit": "6d8bf9bbee10c5d518bdccda4b984015dc9ba88b",
+    "application_source_commit": "f8644021474e74e3310891fc08fb0be470b7f566",
     "network": "isolated loopback-only user/network namespace",
     "data": "fictional schema-11 Sample house plus native device created through the real wizard; no real KNX device",
     "server_binary_sha256": "409da8c976e8a648014cbb33cdf0eb1f6f263cce63705a92737c40c432e703ac",

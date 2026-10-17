@@ -7,13 +7,14 @@ import type {ProjectTree} from "./bindings/ProjectTree";
 import {collectDevices,projectContextKey} from "./treeUtils";
 import {previewSupport,diagnoseSupport,saveSupport,type SupportPreview,type SupportBinding} from "./supportApi";
 import "./universalSupport.css";
+import DiagnosticExportButton from "./DiagnosticExportButton";
 
 export default function UniversalSupportButton({project,deviceId=null,downloadId}:{project:ProjectTree|null;deviceId?:number|null;downloadId?:number}){
  const t=useTranslate();const [open,setOpen]=useState(false);
  // Equal refreshes keep the draft; a changed server/project/revision aborts it.
  const projectBinding=project?`${projectContextKey(project)}/${project.snapshot_revision??"unbound"}`:"no-project";
  useEffect(()=>setOpen(false),[projectBinding,deviceId,downloadId]);
- return <><button type="button" data-support-open onClick={()=>setOpen(true)}>{t("support.title")}</button>{open&&createPortal(<SupportDialog project={project} initialDevice={deviceId} downloadId={downloadId} close={()=>setOpen(false)}/>,document.body)}</>;
+ return <><button type="button" data-support-open onClick={()=>setOpen(true)}>{t("support.title")}</button><DiagnosticExportButton project={project} deviceId={deviceId}/>{open&&createPortal(<SupportDialog project={project} initialDevice={deviceId} downloadId={downloadId} close={()=>setOpen(false)}/>,document.body)}</>;
 }
 function SupportDialog({project,initialDevice,downloadId,close}:{project:ProjectTree|null;initialDevice:number|null;downloadId?:number;close:()=>void}){
  const t=useTranslate();const [device,setDevice]=useState<number|null>(initialDevice);

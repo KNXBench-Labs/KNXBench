@@ -267,6 +267,12 @@ No automatic installation or upgrade-compatibility approval is implied. Offline
 and rate-limited checks leave editing usable. Included in Alpha.10; Alpha.9 does not have it. [Contract and privacy](../contracts/RELEASE_NOTIFICATIONS.md),
 [verified source scope](../evidence/release-notifications-2026-10-11.json).
 
+## Read-only diagnostic export (source after Alpha 13)
+
+One-device identity export in the web UI and CLI, simulator-verified only; no
+memory reads and no hardware compatibility claim yet
+([contract](../contracts/device-diagnostic-export.md)).
+
 <a id="alpha-12-release-candidate-boundary-15-october-2026"></a>
 
 ## Alpha 12 release boundary (15 October 2026)

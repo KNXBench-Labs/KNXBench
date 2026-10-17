@@ -123,6 +123,7 @@ fn fixture() -> (Arc<knx_server::AppState>, tempfile::TempDir) {
         device_download: Default::default(),
         next_device_download_id: Default::default(),
         device_download_timing: Default::default(),
+        diagnostic_lease_dir: None,
         address_programming: Default::default(),
         next_address_programming_id: Default::default(),
         one_shot_activity: Default::default(),

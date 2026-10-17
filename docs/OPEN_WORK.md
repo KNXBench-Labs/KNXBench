@@ -1,5 +1,11 @@
 # Open work after the 0.1 alpha
 
+## Read-only diagnostic export: hardware check pending (17 October 2026)
+
+[Implemented and simulator-verified](contracts/device-diagnostic-export.md);
+next is one separately authorised read-only run against a named device, then
+any memory profile only with its own evidence and decision (ADR-0134).
+
 ## System 2 / System B download outcome (17 October 2026)
 
 Owner renewed the usable-download/admission objective. It remains **blocked on

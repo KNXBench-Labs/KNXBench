@@ -956,6 +956,13 @@ A plannable default image is not hardware verification. Readiness is application
 Only explicit, uniquely associated MV-07B0 Load/ap1 declarations are reconstructed. Unsupported steps stay reported; inspection adds no download/execution capability.
 [Details and history](limitations/offline-ap1-sequence-inspection.md)
 
+<a id="catalogue-kl-184"></a>
+### 184. Diagnostic export reads identity only
+
+**Ledger status:** `ACCEPTED_BOUNDARY` ([KL-184](status/LEDGER.md#post-snapshot-ids)).
+The read-only diagnostic export reads descriptor, PID12 and PID78 only; no memory profile is admitted, a zero-element reply cannot separate refusal from absence, and no physical device has been read with it yet.
+[Details and history](limitations/KL-184-device-diagnostic-export.md)
+
 ## Bus diagnostics and DPT
 
 <a id="catalogue-kl-026"></a>

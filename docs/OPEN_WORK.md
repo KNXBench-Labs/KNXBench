@@ -22,6 +22,26 @@ scan reconciliation (they refuse naming the notes), and a control for
 unselected source notes (no shipped reader produces source notes)
 ([limitation](limitations/project-notes-workbench.md#update-2026-10-17-deleting-a-notes-target-adr-0138)).
 
+## Product-database gap census (17 October 2026)
+
+The [census of the second product-database collection](research/2026-10-17-product-database-gap-census.md)
+(546 new application programs, production installer run on every file) names
+open work in this order:
+
+1. **Correctness:** block/separator `Access` is not applied to visibility or
+   write authority; separators outside declared grids (headlines, information
+   and error texts) are never shown ([KL-003](limitations/KL-003-parameter-evaluation-and-editing-boundaries.md#product-database-gap-census-17-october-2026)).
+2. **Install:** vendor wrapper ZIPs fail as "missing knx_master.xml" although
+   their inner packages install; complete manufacturer databases need the large
+   profile, which the web app does not offer, and one grew a 4.56 GB product
+   database.
+3. **Editors:** packed `TypeTime` units are offered as a decimal count; they
+   should fall back until their encoding is evidenced.
+4. **Layouts:** inline sections, `IndentLevel`, `SuffixText`, object folders
+   from `ShowInComObjectTree` (documented in Project Schema 23), flag/size
+   columns; later conditional captions (`Rename`), objects by parameter page and
+   identity-keyed module comparison. Each needs its own contract first.
+
 ## Plug-in data adoption: plug-in acceptance open (17 October 2026)
 
 Adopting a device's stored plug-in bytes between two projects of one lineage is

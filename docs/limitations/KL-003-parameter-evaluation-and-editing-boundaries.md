@@ -6,6 +6,21 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Product-database gap census (17 October 2026)
+
+A [census of a second local product-database collection](../research/2026-10-17-product-database-gap-census.md)
+found two parameter-tab boundaries that no entry named before:
+
+- `Access` on a `ParameterBlock` or `ParameterSeparator` is not applied. Write
+  authority reads only the parameter's and its reference's own `Access`, so a
+  `ReadWrite` parameter inside a `Read` block is offered as writable and a
+  `None` block shows as an ordinary area (352 programs in that collection).
+- Outside declared grids, `ParameterSeparator`s are not shown: headlines,
+  information and error texts and rulers never reach the row view, and their
+  `UIHint` is not projected.
+
+Both stay open until their fix package; the census lists the order.
+
 ## Declared parameter grids (17 October 2026 source, after Alpha 13)
 
 [ADR-0137](../adr/0137-declared-parameter-grids-reach-the-workspace.md) carries

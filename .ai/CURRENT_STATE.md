@@ -1,4 +1,12 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-10-17 18:34
+- **Completed:** CLAIM: package P3 (note-aware deletes + selective-import notes, FUTURE-03 residue) from `docs/goals/open-work-2026-10-17/p3-note-delete-disposition.md`, worktree `KNXBench-note-disposition-20261017`, branch `feat/note-disposition-20261017`.
+- **Pending/Next Steps:** P3 in progress: named note refusal (core/CLI/web), delete disposition flow (server + web dialog), selective-import note mapping, contracts/FUTURE-03 docs.
+- **Notes for Codex oder Claude:** Do not touch note admission, delete routes, `routes.rs`, the web shell or the message catalogues until this claim's release entry.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-10-17 18:29
 - **Completed:** Package P2 (plug-in data adoption in the web app, KL-186 first half) DELIVERED; claim `6a8b681b` released. Feature `f3d95d34` (rebased onto `8a5ea68f` after the parameter grids landed; only the IMPLEMENTATION_STATUS top entries conflicted, both kept). Server: `apps/knx-server/src/plugin_data_routes.rs`, `/api/project/plugin-data/{candidates,preview,apply,cancel}` behind the session layer; preview bound to serverIncarnation/projectIncarnation/snapshotRevision; the server keeps the one shown plan (`AppState::plugin_data_plan`, opaque `ShownAdoption`); apply takes only the token; stale = 409 `pluginDataStale`, nothing written. Way back: `.knxdb` required; apply records version "Before plug-in data adoption" before persisting the adopted working state; undo stack unchanged (ADR-0136 amendment). App: `Refusal::code()/detail()` (14 stable codes), `Candidate.refusal_detail`. Web: `PluginDataDialog` (device header button + palette `adopt-plugin-data`), EN/DE copy, help topic `pluginData`, focus hand-off per step. Docs: contract §Server and web app, KL-186 dossier + catalogue (status stays ACCEPTED_BOUNDARY; the owner's plug-in acceptance is the open half), ledger row text, OPEN_WORK, FEATURES, manual (status + user guide), IMPLEMENTATION_STATUS, P2 file marked delivered, log `.ai/logs/2026-10-17_claude_p2-plugin-data-web.md`.
 - **Pending/Next Steps:** None for P2. Remaining KL-186 half: owner verifies on their own installation that the originating plug-in accepts adopted bytes. Next per the package README: P3 (note-aware deletes, selective-import notes) may start now; P4 in parallel; P1 needs its hand-over.

@@ -3,6 +3,8 @@
 Planning only; part of the [17 October package set](README.md). Follow its
 shared rules; no code, no web gate (documentation checks only).
 
+**Status:** delivered on 17 October 2026; see the handover entry of that day.
+
 **Starter:** `/goal Run package P5 from docs/goals/open-work-2026-10-17/p5-open-work-docs-sync.md on fresh origin/main; follow README.md's rules.`
 
 ## Entry conditions

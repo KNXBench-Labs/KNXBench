@@ -1,4 +1,12 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-10-17 12:47
+- **Completed:** Leftovers PUBLISHED: origin/main bcaba477..e6a5410b (local = tracking = live). Contains Codex's UP258 vertical audit 3e5ba4d2 + e1d19e42 (merge cfe1ff8f), the root-only research notes OpenKNX signing boundaries, Weinzierl kTux IP and the Manufacturer Tool deck section in parameter-byte-order.md (975c5c74), the site-scroll investigation log + its two handover entries (520272ed), OPEN_WORK #4/#6 corrections (cd91f2e3) and the closed flicker case (7ff5d883). Gate on cd91f2e3: fmt, productdb clippy, UP258 regular + public-package ignored tests against digest 520d3fce..., full knx-productdb tests, docs, 4 tools suites, 5 xtask, diff-check; inputs frozen (first run red only in test_browser_tmp because the fresh worktree lacked npm ci; rerun 5/5 green, failed receipt retained). Docs checks repeated on e6a5410b (delta vs gated tree: 3 docs/handover files).
+- **Pending/Next Steps:** None for this package. Parameter-workspace and object-function gates must re-merge onto e6a5410b; delta for them is docs + crates/knx-productdb/tests/system2_public_package.rs only (no web runtime input). Excluded on purpose: SmartSensor dossier and local issue-22 triage (private, root only), wip/manufacturer-plugin-research (owner decision 14 Oct).
+- **Notes for Codex oder Claude:** Retired worktrees KNXBench-leftovers-20261017 and KNXBench-up258-20261016 with their branches (both ancestors of main). Root checkout not synchronized; its untracked openknx/kTux copies and the parameter-byte-order diff are now duplicates of main. <old-disk> ran full at 12:28; KNXBench-object-function-integration target is 74 GB.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-10-17 12:35
 - **Completed:** Website scroll-flicker investigation CLOSED on owner verdict: local desktop browser problem, not the site. No product change. Retired worktree KNXBench-scroll-20261015, local branch fix/site-scroll-20261015 (fully on main) and profile scratch site-scroll-20261015; the A/B server was no longer running. OPEN_WORK flicker section removed; investigation log keeps a dated closing note.
 - **Pending/Next Steps:** None for this investigation.

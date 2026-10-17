@@ -29,7 +29,15 @@ stay out. Grids and separators are unchanged: they render the Parameters tab,
 the object editor shows only rows. No schema, dependency or Core change.
 Codex's source acceptance on the old base is in its
 [log](../.ai/logs/2026-10-17_codex_object-function-dropdown.md).
-Gate: PENDING.
+Tests: ProductDB `parameter_layout` +1 (dependency propagation), HTTP
+`http_parameter_panel` +1 (no module mapping) and three exact-ID assertions,
+Vitest `ComObjectFunctionControls` 5 (block access case added), Devices browser
+spec reworked (area register closed on the first visit, control below DPT,
+write shown back in the open area; EN/DE × 1440/400). Six mutants killed, two
+of them only after the new HTTP test. Package gate on `4b961475` (16 stages, 0
+failures, inputs frozen): web 64/64 stages (Vitest 3,732, browser 596),
+Clippy `-D warnings`, workspace tests 4,857 passed / 0 failed / 212 ignored,
+xtask checks, documentation, tools 220, private corpus 153/153.
 [Contract](contracts/parameter-object-refresh.md).
 
 ## Test-gate hygiene (17 October 2026)

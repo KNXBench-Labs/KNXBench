@@ -3,6 +3,14 @@
 Planning only; part of the [17 October package set](README.md). Follow its
 shared rules.
 
+**Delivered 17 October 2026** ([status](../../IMPLEMENTATION_STATUS.md#object-local-function-dropdowns-17-october-2026),
+[contract](../../contracts/parameter-object-refresh.md)). `99dd6e65` is on
+`main` as a cherry-pick next to the grid cell and separator declarations; the
+Devices spec walks the area register without losing its "closed on the first
+untouched visit" assertion; module-local mappings and restricted blocks offer no
+object-local control. Both old worktrees, their branches and rewritten refs are
+retired.
+
 **Starter:** `/goal Run package P1 from docs/goals/open-work-2026-10-17/p1-object-function-rescue.md on fresh origin/main; follow README.md's rules.`
 
 ## Entry conditions (both required)

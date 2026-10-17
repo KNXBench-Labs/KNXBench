@@ -236,7 +236,7 @@ Adopting a plug-in's stored bytes between two projects of one lineage exists in 
 ### 3. Parameter evaluation and editing boundaries
 
 **Ledger status:** `ACCEPTED_BOUNDARY` ([KL-3](status/LEDGER.md#snapshot-ids)).
-Supported top-level and single-authoritative module fields are editable. Calculations, repeated expansion, unsupported controls and encodings remain separately limited.
+Supported top-level and single-authoritative module fields are editable. Calculations, repeated expansion, unsupported controls and encodings remain separately limited. Declared Table/Grid parameter blocks render as a matrix; their visual variants, collapse rules, parameter-driven captions and in-cell buttons are not reproduced.
 [Details and history](limitations/KL-003-parameter-evaluation-and-editing-boundaries.md)
 
 <a id="catalogue-kl-006"></a>

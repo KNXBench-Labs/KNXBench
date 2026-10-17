@@ -45,6 +45,22 @@
 .parameter-workspace-context dd { color: var(--knx-foreground); }
 .parameter-workspace-hidden-note { border-left: 2px solid var(--knx-border); padding-left: 8px; }
 .parameter-workspace-empty { padding: 16px 8px; font-size: 13px; }
+/* ADR-0137: declared grids. Placement is inline, from declared cells only;
+   the same rows parent scrolls locally so narrow panes never overflow. */
+.parameter-workspace-layout-note { margin: -4px 0 10px; max-width: 72ch; font-size: 12px; line-height: 1.5; color: var(--knx-muted); overflow-wrap: anywhere; }
+.parameter-matrix-issues { margin: 0 0 12px; font-size: 12px; color: var(--knx-muted); }
+.parameter-matrix-issues summary { cursor: pointer; }
+.parameter-matrix-issues ul { margin: 6px 0 0; padding-left: 18px; overflow-wrap: anywhere; }
+/* `position: relative` makes the scroller contain absolutely positioned
+   descendants (`.sr-only` cell positions); otherwise they widen the page. */
+.parameter-workspace-rows[data-layout="matrix"] { position: relative; display: grid; gap: 0 14px; align-items: start; overflow-x: auto; padding-bottom: 8px; border-top: 1px solid var(--knx-border); }
+.parameter-workspace-rows[data-layout="matrix"] > .parameter-workspace-row { min-width: 0; border-bottom: 0; padding: 8px 4px; }
+.parameter-workspace-rows[data-layout="matrix"] .parameter-workspace-row .parameter-field:not(.parameter-field-checked):not(.parameter-label-row):not(.parameter-spacer) { grid-template-columns: minmax(0, 1fr); row-gap: 4px; }
+.parameter-workspace-rows[data-layout="matrix"] .parameter-field > input, .parameter-workspace-rows[data-layout="matrix"] .parameter-field > select { grid-column: 1; grid-row: auto; }
+.parameter-matrix-caption { min-width: 0; padding: 8px 4px; font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; color: var(--knx-foreground); font-weight: 600; }
+.parameter-matrix-caption[data-caption="column"] { align-self: end; color: var(--knx-muted); border-bottom: 1px solid var(--knx-border); }
+.parameter-matrix-caption[data-caption="row"] { padding-left: 8px; border-left: 2px solid var(--knx-border); }
+.parameter-matrix-unplaced { margin: 14px 0 0; padding: 8px 4px 0; border-top: 1px solid var(--knx-border); font-size: 12px; font-weight: 600; color: var(--knx-muted); }
 @container (min-width: 1040px) {
   .parameter-workspace-layout { grid-template-columns: 11rem minmax(0, 1fr) 14rem; }
   .parameter-workspace-context { grid-column: 3; grid-row: 1; border-left: 1px solid var(--knx-border); padding-left: 16px; margin-top: 16px; }

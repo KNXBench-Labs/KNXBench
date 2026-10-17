@@ -21,6 +21,14 @@ delivered in the application layer and the CLI (`knx adopt-plugin-data`,
 acceptance of adopted bytes by the originating plug-in, which only the owner can
 check on their own installation.
 
+## Declared parameter grids: remaining fidelity (17 October 2026)
+
+[Declared grids render](adr/0137-declared-parameter-grids-reach-the-workspace.md)
+from source cells. Not yet reproduced: `Table` versus `Grid` visual rules (needs
+the referenced schema rules document), `CollapseIfEmpty`, parameter-driven
+captions (`TextParameterRefId`), buttons and nested blocks in cells, and
+translated row/column captions. Each needs its own evidence before it is shown.
+
 ## Local machine details: history rewritten (17 October 2026)
 
 Tree, history, messages and tags are clean and guarded

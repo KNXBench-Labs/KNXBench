@@ -1,8 +1,41 @@
-//! Read-only parameter groups and structural communication-object controls from product data.
+//! Read-only parameter groups, grids and object controls from product data.
 use crate::ProductDbError;
 use quick_xml::{events::Event, name::ResolveResult, NsReader};
 use rusqlite::{Connection, OptionalExtension};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
+
+mod grid;
+pub use grid::{BlockGrid, Cell, GridAxis, GridIssue, GridIssueKind, GridStatus, MAX_GRID_EVENTS};
+
+/// Exact program ownership shared by every presentation reader of the source.
+mod ownership {
+    const PROGRAMS: [&str; 4] = [
+        "KNX",
+        "ManufacturerData",
+        "Manufacturer",
+        "ApplicationPrograms",
+    ];
+
+    pub(super) fn is_program_owner(path: &[&str]) -> bool {
+        path == PROGRAMS
+    }
+
+    /// The program's own `Dynamic` or one of its `ModuleDef`s'.
+    pub(super) fn is_dynamic_root(kind: &str, path: &[&str]) -> bool {
+        kind == "Dynamic"
+            && (path.strip_suffix(&["ApplicationProgram"]) == Some(&PROGRAMS)
+                || path.strip_suffix(&["ApplicationProgram", "ModuleDefs", "ModuleDef"])
+                    == Some(&PROGRAMS))
+    }
+
+    pub(super) fn is_dynamic_container(kind: &str) -> bool {
+        matches!(
+            kind,
+            "Channel" | "ChannelIndependentBlock" | "ParameterBlock" | "choose" | "when" | "Repeat"
+        )
+    }
+}
+use ownership::{is_dynamic_container, is_dynamic_root, is_program_owner};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Group {
@@ -15,10 +48,20 @@ pub struct Group {
 pub struct FieldLayout {
     pub group: Option<Group>,
     pub controls_com_objects: bool,
+    /// Declared position in the group's grid; only for a `GridStatus::Grid`.
+    pub cell: Option<Cell>,
+}
+/// An activated separator's declared position, for grid captions.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SeparatorPlacement {
+    pub block_node: i64,
+    pub cell: Cell,
 }
 #[derive(Debug, Default)]
 pub struct ParameterLayout {
     fields: HashMap<(String, String), FieldLayout>,
+    grids: HashMap<(String, i64), BlockGrid>,
+    separators: HashMap<(String, i64), SeparatorPlacement>,
 }
 impl ParameterLayout {
     pub fn field(&self, definition: &str, reference: &str) -> FieldLayout {
@@ -26,6 +69,13 @@ impl ParameterLayout {
             .get(&(definition.to_owned(), reference.to_owned()))
             .cloned()
             .unwrap_or_default()
+    }
+    /// The grid declaration of `block_node` in `definition`'s tree, if any.
+    pub fn grid(&self, definition: &str, block_node: i64) -> Option<&BlockGrid> {
+        self.grids.get(&(definition.to_owned(), block_node))
+    }
+    pub fn separator(&self, definition: &str, node: i64) -> Option<&SeparatorPlacement> {
+        self.separators.get(&(definition.to_owned(), node))
     }
 }
 #[derive(Debug)]
@@ -40,7 +90,15 @@ struct Node {
 /// Uses normalized parent relationships, never names, numbers or manufacturer-specific IDs.
 /// A reference appearing in several blocks keeps no claimed single group.
 pub fn load(conn: &Connection, program: &str) -> Result<ParameterLayout, ProductDbError> {
-    let captions = source_captions(conn, program)?;
+    let source = retained_source(conn, program)?;
+    let captions = source
+        .as_deref()
+        .and_then(|bytes| read_captions(bytes, program))
+        .unwrap_or_default();
+    // `None`: unreadable, so a structural grid is reported unavailable.
+    let grids = source
+        .as_deref()
+        .and_then(|bytes| grid::read_grids(bytes, program));
     let mut stmt = conn.prepare("SELECT module_def_id,node_id,parent_id,kind,ref_id,element_id,text FROM dynamic_node WHERE program_id=?1 ORDER BY module_def_id,node_id")?;
     let rows = stmt.query_map([program], |r| {
         Ok((
@@ -62,11 +120,44 @@ pub fn load(conn: &Connection, program: &str) -> Result<ParameterLayout, Product
     }
     let mut result = ParameterLayout::default();
     for (scope, nodes) in trees {
+        let mut structural = BTreeSet::new();
+        for node in nodes.values() {
+            if matches!(node.kind.as_str(), "Rows" | "Columns") {
+                structural.extend(node.parent);
+            }
+        }
+        let mut scope_grids: HashMap<i64, BlockGrid> = HashMap::new();
+        for (id, node) in &nodes {
+            if node.kind != "ParameterBlock" {
+                continue;
+            }
+            let declared = match (&grids, &node.id) {
+                (Some(grids), Some(element)) => grids.blocks.get(element).cloned(),
+                _ => None,
+            };
+            if let Some(grid) =
+                declared.or_else(|| structural.contains(id).then(BlockGrid::unavailable))
+            {
+                scope_grids.insert(*id, grid);
+            }
+        }
+        // The group's block `@Id`, only when that block is a renderable grid.
+        let placed_in = |group: &Option<Group>| -> Option<String> {
+            let group = group.as_ref()?;
+            let is_grid = scope_grids
+                .get(&group.node_id)
+                .is_some_and(|grid| grid.status == GridStatus::Grid);
+            is_grid.then(|| group.element_id.clone()).flatten()
+        };
+        let mut separators = Vec::new();
         let mut controls = BTreeSet::new();
         let mut dependencies: HashMap<String, BTreeSet<String>> = HashMap::new();
         let mut groups: HashMap<String, Option<Group>> = HashMap::new();
-        for node in nodes.values() {
-            if !matches!(node.kind.as_str(), "ParameterRefRef" | "ComObjectRefRef") {
+        for (&node_id, node) in &nodes {
+            if !matches!(
+                node.kind.as_str(),
+                "ParameterRefRef" | "ComObjectRefRef" | "ParameterSeparator"
+            ) {
                 continue;
             }
             let mut parents = BTreeSet::new();
@@ -101,6 +192,8 @@ pub fn load(conn: &Connection, program: &str) -> Result<ParameterLayout, Product
             }
             if node.kind == "ComObjectRefRef" {
                 controls.extend(parents);
+            } else if node.kind == "ParameterSeparator" {
+                separators.push((node_id, node.id.clone(), group));
             } else if let Some(reference) = &node.reference {
                 dependencies
                     .entry(reference.clone())
@@ -128,46 +221,69 @@ pub fn load(conn: &Connection, program: &str) -> Result<ParameterLayout, Product
                 }
             }
         }
+        for (node_id, element, group) in separators {
+            let (Some(block), Some(element), Some(grids)) = (placed_in(&group), element, &grids)
+            else {
+                continue;
+            };
+            if let Some((owner, cell)) = grids.separators.get(&element) {
+                if *owner == block {
+                    let block_node = group.as_ref().map_or(0, |group| group.node_id);
+                    let placement = SeparatorPlacement {
+                        block_node,
+                        cell: *cell,
+                    };
+                    result
+                        .separators
+                        .insert((scope.clone(), node_id), placement);
+                }
+            }
+        }
         for (reference, group) in groups {
             let controls_com_objects = controls.contains(&reference);
+            let cell = match (placed_in(&group), &grids) {
+                (Some(block), Some(grids)) => {
+                    grids.references.get(&(block, reference.clone())).copied()
+                }
+                _ => None,
+            };
             result.fields.insert(
                 (scope.clone(), reference),
                 FieldLayout {
                     group,
                     controls_com_objects,
+                    cell,
                 },
             );
+        }
+        for (id, grid) in scope_grids {
+            result.grids.insert((scope.clone(), id), grid);
         }
     }
     Ok(result)
 }
 
-// Older catalogues did not model ParameterBlock/@ParamRefId. Read this
-// presentation-only reference from the retained, hash-checked source rather
-// than reparsing dynamic_node.extra (an audit string, not an interchange format).
-fn source_captions(
-    conn: &Connection,
-    program: &str,
-) -> Result<HashMap<String, String>, ProductDbError> {
+// Older catalogues did not model ParameterBlock/@ParamRefId, and `Layout`,
+// `Cell` and `Width` were never typed. Read this presentation-only metadata
+// from the retained, hash-checked source rather than reparsing
+// dynamic_node.extra (an audit string, not an interchange format).
+fn retained_source(conn: &Connection, program: &str) -> Result<Option<Vec<u8>>, ProductDbError> {
     let row:Option<(String,i64,i64)>=conn.query_row("SELECT s.sha256,s.len,length(s.bytes) FROM application_program a JOIN source_file s ON s.sha256=a.source_sha256 WHERE a.id=?1",[program],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?))).optional()?;
     let Some((sha, declared, actual)) = row else {
-        return Ok(HashMap::new());
+        return Ok(None);
     };
     if actual < 0
         || actual > crate::parameter_editor::MAX_EDITOR_SOURCE_BYTES as i64
         || actual != declared
     {
-        return Ok(HashMap::new());
+        return Ok(None);
     }
     let bytes: Vec<u8> = conn.query_row(
         "SELECT bytes FROM source_file WHERE sha256=?1",
         [&sha],
         |r| r.get(0),
     )?;
-    if crate::sha256_hex(&bytes) != sha {
-        return Ok(HashMap::new());
-    }
-    Ok(read_captions(&bytes, program).unwrap_or_default())
+    Ok((crate::sha256_hex(&bytes) == sha).then_some(bytes))
 }
 fn read_captions(bytes: &[u8], program: &str) -> Option<HashMap<String, String>> {
     let mut reader = NsReader::from_reader(bytes);
@@ -198,49 +314,17 @@ fn read_captions(bytes: &[u8], program: &str) -> Option<HashMap<String, String>>
                 let attr = crate::xml::attrs(&e, "parameter presentation").ok()?;
                 let owner = same
                     && kind == "ApplicationProgram"
-                    && path
-                        == [
-                            "KNX",
-                            "ManufacturerData",
-                            "Manufacturer",
-                            "ApplicationPrograms",
-                        ]
+                    && is_program_owner(&path)
                     && attr.evidence_value("Id") == Some(program);
                 if owner {
                     owners += 1;
                 }
                 let active = same && (owner || stack.last().is_some_and(|(_, active, _)| *active));
-                let dynamic_root = kind == "Dynamic"
-                    && (path
-                        == [
-                            "KNX",
-                            "ManufacturerData",
-                            "Manufacturer",
-                            "ApplicationPrograms",
-                            "ApplicationProgram",
-                        ]
-                        || path
-                            == [
-                                "KNX",
-                                "ManufacturerData",
-                                "Manufacturer",
-                                "ApplicationPrograms",
-                                "ApplicationProgram",
-                                "ModuleDefs",
-                                "ModuleDef",
-                            ]);
+                let kind_text = kind.as_str();
                 let inside_dynamic = active
-                    && (dynamic_root
+                    && (is_dynamic_root(kind_text, &path)
                         || (stack.last().is_some_and(|(_, _, dynamic)| *dynamic)
-                            && matches!(
-                                kind.as_str(),
-                                "Channel"
-                                    | "ChannelIndependentBlock"
-                                    | "ParameterBlock"
-                                    | "choose"
-                                    | "when"
-                                    | "Repeat"
-                            )));
+                            && is_dynamic_container(kind_text)));
                 if inside_dynamic && kind == "ParameterBlock" {
                     // A prefixed extension attribute is not the source declaration.
                     if let (Some(id), Some(reference)) =

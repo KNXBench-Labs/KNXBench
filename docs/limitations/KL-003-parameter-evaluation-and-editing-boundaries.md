@@ -6,14 +6,28 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Declared parameter grids (17 October 2026 source, after Alpha 13)
+
+[ADR-0137](../adr/0137-declared-parameter-grids-reach-the-workspace.md) carries
+declared `Table`/`Grid` geometry (rows, columns, 1-based cells, column widths,
+placed separator captions) from the retained source through HTTP to a matrix
+view of the [workspace](../contracts/parameter-workspace.md). Only a version-1
+`grid` status renders as a matrix; unknown layout tokens/versions, invalid
+declarations and unreadable sources keep the row view and say why. Still not
+reproduced: `Table` versus `Grid` visual rules (their rules document is not
+available locally), `CollapseIfEmpty`, parameter-driven captions
+(`TextParameterRefId`), buttons and nested blocks inside cells, and translated
+row/column captions (shown in the program's own language, like group labels).
+No channel, pair or position is derived from text, and evaluation/write
+authority is unchanged.
+
 ## Parameter presentation (17 October 2026 source, after Alpha 13)
 
 The [source-group workspace](../contracts/parameter-workspace.md) improves
 navigation, density and contextual inspection without changing evaluation or
-write authority. The current DTO contains nearest-group identity, not complete
-Rows/Columns/Cell/repeat or physical-device geometry. Such declarations exist in
-local product packages; this UI does not reproduce them or infer channels from
-captions. Ambiguous/missing grouping remains accessible, original labels and
+write authority. At delivery the DTO contained nearest-group identity only;
+declared grids followed the same day (section above). Repeat/physical-device
+geometry is still absent, and channels are never inferred from captions. Ambiguous/missing grouping remains accessible, original labels and
 values remain intact, and all existing script/module/value-format refusals stay.
 The [bounded declaration census](../research/2026-10-17-parameter-workspace-layout.md)
 is not broad rendered/evaluator/ETS compatibility evidence.

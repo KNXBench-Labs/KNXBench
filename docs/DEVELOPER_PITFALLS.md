@@ -139,7 +139,8 @@ already found lying in the grass.
   encoded bytes, reuses a private explicit leaf when another component would
   overflow, and deletes only directories it created. Nested Node processes
   inherit the validated leaf instead of adding another directory. A deep
-  `TMPDIR` may use an owned, non-writable-by-others `scratch` ancestor; otherwise
+  `TMPDIR` may use an owned, non-writable-by-others `scratch` ancestor (also a
+  user-owned `scratch` symlink to such a directory); otherwise
   provide `KNXBENCH_BROWSER_TMP_ROOT` or the gate's `--temp-root`. For one-off
   scripts use `python3 tools/browser_tmp.py --run COMMAND ...`, or preload the
   Node guard with `node --require ./tools/browser_tmp.cjs SCRIPT`. Do not disable

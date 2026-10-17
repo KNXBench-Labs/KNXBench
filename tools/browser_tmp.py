@@ -25,15 +25,38 @@ def fits_temp_root(root: Path) -> bool:
     return len(os.fsencode(str(root.resolve()) + OWNED_TEMP_SUFFIX + CHROMIUM_SOCKET_SUFFIX)) <= MAX_SOCKET_BYTES
 
 
+def approved_scratch(path: Path) -> Path | None:
+    """Canonical target of a `scratch` component, or None when it is not approved."""
+    if path.is_symlink() and path.lstat().st_uid != os.getuid():
+        return None
+    try:
+        target = path.resolve(strict=True)
+    except OSError:
+        return None
+    if not target.is_dir():
+        return None
+    mode = target.stat()
+    if mode.st_uid != os.getuid() or mode.st_mode & (stat.S_IWGRP | stat.S_IWOTH):
+        return None
+    return target
+
+
 def scratch_candidates(base: Path) -> list[Path]:
-    """Only owned, non-group/world-writable scratch ancestors are eligible."""
-    candidates = []
-    for parent in base.parents:
-        if parent.name != 'scratch' or not parent.is_dir():
+    """Owned, non-group/world-writable `scratch` ancestors, nearest first.
+
+    The configured (lexical) path is walked before the canonical one, so a
+    `scratch` component that is a user-owned symlink, e.g. a scratch moved to
+    another disk, keeps the approval its name carries; its target is checked.
+    """
+    lexical = Path(os.path.abspath(base))
+    canonical = base.resolve(strict=True)
+    candidates: list[Path] = []
+    for parent in [*lexical.parents, *canonical.parents]:
+        if parent.name != 'scratch':
             continue
-        mode = parent.stat()
-        if mode.st_uid == os.getuid() and not mode.st_mode & (stat.S_IWGRP | stat.S_IWOTH):
-            candidates.append(parent)
+        target = approved_scratch(parent)
+        if target is not None and target not in candidates:
+            candidates.append(target)
     return candidates
 
 
@@ -45,7 +68,7 @@ def select_temp_root(base: Path, explicit: Path | None = None) -> Path:
         return candidate
     if explicit is not None:
         raise ValueError('explicit browser temporary root exceeds the Chromium socket budget')
-    for parent in scratch_candidates(candidate):
+    for parent in scratch_candidates(base):
         if fits_temp_root(parent):
             return parent
     raise ValueError('Chromium needs a short approved temp root; set KNXBENCH_BROWSER_TMP_ROOT or --temp-root')

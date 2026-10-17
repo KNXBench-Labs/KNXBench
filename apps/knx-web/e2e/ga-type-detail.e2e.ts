@@ -1,4 +1,5 @@
 /** KL-61 follow-up in Chromium: the type outcome reads as a muted note, a conflict as a warning. */
+import { openExplorerBranches } from "./disclosure-fixture";
 import { expect, test, type Page } from "@playwright/test";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
 
@@ -27,6 +28,7 @@ async function open(page: Page, name: string, theme = "porcelain") {
   // The fixture sets no theme, and the colour tokens exist only per theme.
   await page.evaluate((id) => { document.documentElement.dataset.theme = id; }, theme);
   expect(await tokenColor(page, "--knx-muted")).not.toBe(await tokenColor(page, "--knx-warning-color"));
+  await openExplorerBranches(page);
   await page.locator("button.tree-label", { hasText: name }).click();
   await expect(page.locator(".dpt-outcome")).toBeVisible();
 }

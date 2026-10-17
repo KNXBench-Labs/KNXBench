@@ -1,4 +1,5 @@
 /** Structure headings keep their icons and geometry on real mouse hover (issue #5). */
+import { openNavigationSections } from "./disclosure-fixture";
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
 import { messages as en } from "../src/messages/en";
@@ -101,6 +102,7 @@ for (const language of ["en", "de"] as const) {
         });
         await page.goto("/?view=editor");
         await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+        await openNavigationSections(page);
         const navigation = page.locator(".workbench-navigation");
         await navigation.getByRole("button", { name: m["workbench.buildings"], exact: true }).click();
         const headings = page.locator(".building-diagram .diagram-heading");

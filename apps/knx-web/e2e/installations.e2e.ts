@@ -1,5 +1,6 @@
 /** MODEL-01: a later installation is created into and renamed, every API call intercepted. */
 
+import { openExplorerBranches } from "./disclosure-fixture";
 import { expect, test, type Page } from "@playwright/test";
 import type { InstallationNode } from "../src/bindings/InstallationNode";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
@@ -73,6 +74,7 @@ function installationItem(page: Page, name: string) {
 test("creates a root area in the second installation and renames that installation", async ({ page }) => {
   const { writes, unexpected } = await serve(page);
   await page.goto("/e2e/installations-fixture.html");
+  await openExplorerBranches(page);
   const annex = installationItem(page, "Annex");
   await expect(annex).toHaveCount(1);
 
@@ -103,6 +105,7 @@ test("creates a root area in the second installation and renames that installati
 test("renames a line of the second installation through the Inspector", async ({ page }) => {
   const { writes, unexpected } = await serve(page);
   await page.goto("/e2e/installations-fixture.html");
+  await openExplorerBranches(page);
   await installationItem(page, "Annex").locator("button.tree-label", { hasText: "Line 1: Annex line" }).click();
   const name = page.locator("label.inspector-field", { hasText: "Name" }).locator("input").first();
   await expect(name).toHaveValue("Annex line");

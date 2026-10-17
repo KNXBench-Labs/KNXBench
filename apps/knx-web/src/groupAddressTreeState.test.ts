@@ -33,10 +33,10 @@ class MemoryStorage implements Storage {
   setItem(key: string, value: string) { if (this.failWrites) throw new Error("quota"); this.values.set(key, value); }
 }
 
-it("starts with main and middle groups visible and no address list unfolded", () => {
-  const open = defaultOpenGroups(index);
-  expect([...open].sort()).toEqual(["range:1:0", "range:2:0"]);
-  expect(shown(open)).toEqual(["range:1:0", "range:10:0", "range:11:0", "range:2:0", "range:20:0", "unassigned"]);
+it("starts with every group collapsed, including main groups", () => {
+  const open = defaultOpenGroups();
+  expect([...open]).toEqual([]);
+  expect(shown(open)).toEqual(["range:1:0", "range:2:0", "unassigned"]);
 });
 
 it("reveals a selected address by opening exactly its group and ancestors", () => {

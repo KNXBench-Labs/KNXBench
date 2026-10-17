@@ -1,4 +1,5 @@
 /** Retained source reports stay explicitly selected and distinct from primary findings. */
+import { openNavigationSections } from "./disclosure-fixture";
 import { expect, test } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -39,6 +40,7 @@ for (const language of ["en","de"] as const) for (const width of [400,1440]) {
       return route.fulfill({status,contentType:"application/json",body:JSON.stringify(body)});
     });
     await page.goto("/?view=editor");
+    await openNavigationSections(page);
     await page.locator(".workbench-navigation").getByRole("button",{name:m["workbench.overview"],exact:true}).click();
     const panel=page.locator(".source-report-panel");
     await expect(panel).toBeVisible();expect(catalogueReads).toBe(0);expect(reportReads).toBe(0);

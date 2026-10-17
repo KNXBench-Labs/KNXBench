@@ -10,6 +10,12 @@ Decision: [ADR-0133](../adr/0133-parameter-edits-reconcile-object-inventory.md).
   it, changing selection or editing the project. A deliberate search reveal
   reopens the explorer. Fold state is local to the mounted navigation pane and
   resets when that pane is rebuilt; it is not a persisted project preference.
+  In source builds after Alpha 13 these sections start closed; an explicit
+  reveal still opens its target. Parameter sections and manufacturer groups
+  also start closed, including groups first encountered after a refresh.
+  This is presentation state only; pane visibility and project data are unchanged.
+  Stacked-pane splitters remeasure a previously hidden block when it opens and
+  at first interaction, so the first drag/key step starts from its visible height.
   The explorer remains its own bounded scroller, so visible-row effects keep
   using the actual visible tree rather than the full hidden overflow.
 - File keeps the existing actions, grouped as Project, Import & export,

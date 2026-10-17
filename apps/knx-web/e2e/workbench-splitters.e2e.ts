@@ -1,4 +1,5 @@
 /** The left column's splitters resize their blocks with a project loaded (user bug report). */
+import { openNavigationSections } from "./disclosure-fixture";
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
 
@@ -39,6 +40,7 @@ async function openProject(page: Page) {
   await page.getByRole("button", { name: "New project…" }).click();
   await page.getByRole("dialog", { name: "New project" }).getByRole("button", { name: "Create project" }).click();
   await page.getByRole("dialog", { name: "Project created" }).getByRole("button", { name: "Done" }).click();
+  await openNavigationSections(page);
   await expect(page.getByRole("separator", { name: "Height of the navigation block" })).toBeVisible();
   return unexpected;
 }

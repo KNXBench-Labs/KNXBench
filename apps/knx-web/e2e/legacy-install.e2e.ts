@@ -1,5 +1,6 @@
 /** Legacy .vd4 install in Chromium (en/de, 1440/400 px): password dialog and remember. */
 
+import { openNavigationSections } from "./disclosure-fixture";
 import { expect, test, type Page } from "@playwright/test";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
@@ -93,6 +94,7 @@ async function openWizard(page: Page, language: "en" | "de") {
   await page.getByRole("button", { name: l.newProject }).first().click();
   await page.getByRole("dialog", { name: l.newDialog, exact: true }).getByRole("button", { name: l.createProject }).click();
   await page.getByRole("dialog", { name: l.createdDialog }).getByRole("button", { name: l.done, exact: true }).click();
+  await openNavigationSections(page);
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await page.keyboard.press("Control+Shift+P");
   await page.getByRole("option", { name: new RegExp(`^${l.wizard}…`) }).click();

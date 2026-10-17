@@ -1,4 +1,5 @@
 /** Verifies real-editor Flow links, including external and in-flight project replacement. */
+import { openNavigationSections } from "./disclosure-fixture";
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 import { snapshot, telegram, node } from "./telegram-flow-server";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
@@ -47,6 +48,7 @@ async function editor(page: Page, context: BrowserContext) {
   await page.getByRole("button", { name: "New project…" }).first().click();
   await page.getByRole("dialog", { name: "New project", exact: true }).getByRole("button", { name: "Create project" }).click();
   await page.getByRole("dialog", { name: "Project created" }).getByRole("button", { name: "Done" }).click();
+  await openNavigationSections(page);
   await page.getByRole("navigation", { name: "Bus monitor", exact: true }).getByRole("button", { name: "Bus monitor", exact: true }).first().click();
   await page.getByRole("tab", { name: "Flow", exact: true }).click();
   await expect(node(page, "Dimmer")).toBeVisible();

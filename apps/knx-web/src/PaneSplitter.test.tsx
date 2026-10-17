@@ -24,6 +24,7 @@ afterEach(async () => {
   host?.remove();
   host = undefined;
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 function Harness(props: { resizes: "above" | "below"; initial: number | null }) {
@@ -107,6 +108,49 @@ it("reports the block's measured height before it has been moved", async () => {
   );
   const splitter = await mount("above", null);
   expect(now(splitter)).toBe(183);
+});
+
+it("updates its accessible height when a folded block becomes measurable and disconnects on unmount", async () => {
+  let height = 0;
+  let resize = () => {};
+  const observe = vi.fn(), disconnect = vi.fn();
+  vi.stubGlobal("ResizeObserver", class {
+    constructor(callback: () => void) { resize = callback; }
+    observe = observe;
+    disconnect = disconnect;
+  });
+  vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(() =>
+    ({ height, width: 0, top: 0, left: 0, right: 0, bottom: 0, x: 0, y: 0, toJSON: () => ({}) }));
+  const splitter = await mount("above", null);
+  expect(observe).toHaveBeenCalledWith(host!.querySelector('[data-testid="block"]'));
+  height = 240;
+  await act(async () => resize());
+  expect(now(splitter)).toBe(240);
+  height = 0;
+  await act(async () => resize());
+  expect(now(splitter)).toBe(240);
+  await act(async () => root!.unmount()); root = undefined;
+  expect(disconnect).toHaveBeenCalledOnce();
+});
+
+it("uses the newly visible block height for the first drag after unfolding", async () => {
+  let height = 0;
+  vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(() =>
+    ({ height, width: 0, top: 0, left: 0, right: 0, bottom: 0, x: 0, y: 0, toJSON: () => ({}) }));
+  const splitter = await mount("above", null);
+  height = 240;
+  await drag(splitter, 300, 340);
+  expect(stored()).toBe("280px");
+});
+
+it("uses the newly visible block height for the first keyboard resize after unfolding", async () => {
+  let height = 0;
+  vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(() =>
+    ({ height, width: 0, top: 0, left: 0, right: 0, bottom: 0, x: 0, y: 0, toJSON: () => ({}) }));
+  const splitter = await mount("below", null);
+  height = 160;
+  await press(splitter, "ArrowUp");
+  expect(stored()).toBe("176px");
 });
 
 it("grows the block above it downwards and shrinks it upwards, by keyboard", async () => {

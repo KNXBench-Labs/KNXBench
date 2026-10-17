@@ -70,7 +70,8 @@ const createButton = () => dialog()!.querySelector<HTMLButtonElement>(".ga-new-i
 
 it("puts a + on every range heading and none on the addresses without range", async () => {
   await show();
-  // The tree opens its main ranges, so every range heading is visible.
+  await click(host.querySelector('[data-ga-expand="range:20:0"]'));
+  // Opening the main range exposes its child range headings.
   const ranges = [...host.querySelectorAll<HTMLButtonElement>("[data-ga-range-add]")].map(b => Number(b.dataset.gaRangeAdd));
   expect(ranges.sort((a, b) => a - b)).toEqual([20, 21, 22, 44]);
   expect(host.querySelector('[data-ga-expand="unassigned"]')!.closest("tr")!.querySelector("[data-ga-range-add]")).toBeNull();

@@ -3,6 +3,13 @@
 Planning only; part of the [17 October package set](README.md). Follow its
 shared rules.
 
+**Delivered 17 October 2026** ([status](../../IMPLEMENTATION_STATUS.md#test-gate-hygiene-17-october-2026),
+[lane review](../../evidence/browser-lane-review-2026-10-17.md)). The parallel
+browser lane is re-admitted (same 45 files), the corpus-output guard compares
+resolved paths, the ZIP linear-time test counts instead of timing, and the
+documented Rust workspace gate builds the web bundle first so `knx-desktop`
+stays in. The README's "resolved `TMPDIR`" rule is gone.
+
 **Starter:** `/goal Run package P4 from docs/goals/open-work-2026-10-17/p4-gate-hygiene.md on fresh origin/main; follow README.md's rules.`
 
 ## Entry conditions

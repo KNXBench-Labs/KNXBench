@@ -1,5 +1,18 @@
 # Open work after the 0.1 alpha
 
+## System 2 / System B download outcome (17 October 2026)
+
+Owner renewed the usable-download/admission objective. It remains **blocked on
+source semantics and full-state recovery**, not merely missing hardware. The
+[fresh source-bound recheck](research/2026-10-16-offline-source-stop-lines.md#17-october-renewed-download-outcome-and-fresh-checks)
+passed 53 existing tests in seven targets, including the digest-matched public
+UP258 package; no production implementation or download admission changed.
+Next: defining converted-legacy patch/default/activation evidence for the
+System-2 witness, or source/profile-specific complete descriptor and relative
+procedure mapping for System B, followed by complete execution/recovery proof.
+The discovered official System-B help body could not be recovered; no search
+snippet, guessed mapping, vendor contact or physical write substitutes for it.
+
 ## Alpha 13 release delivered (16 October 2026)
 
 [Alpha 13](releases/alpha13.md) is published and externally verified. Release

@@ -19,6 +19,14 @@ Root entry: python3 tools/run_web_gate.py --profile web --workers 4 --output PAT
 Outputs must be a new directory outside sources or below a Git-ignored directory.
 An existing receipt path is refused. No silent npm installation occurs in a gate.
 
+**Rust stages after the web gate (17 October 2026).** This profile's `build`
+stage leaves `apps/knx-web/dist` in place, and that bundle is what
+`knx-desktop`'s Tauri build script needs. A package gate therefore runs the web
+profile (or `npm ci && npm run build`) before workspace Clippy and tests, which
+then include `knx-desktop`; excluding the crate is not an accepted shortcut.
+The order is the [Rust workspace gate](../VERIFICATION.md#rust-workspace-gate)
+and is held by `tools/tests/test_rust_gate_order.py`.
+
 ## Coverage and execution invariants
 
 - Application tsc stays in npm run build. Every tsconfig.*.json is retained once;

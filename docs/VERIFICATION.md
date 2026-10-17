@@ -31,6 +31,26 @@ misplaced `--root` or extra scan-task argument fails. AppImage verification
 uses the same root selection and retains its task-specific `--artifact-dir`
 and `--tag` options. `freeze-fixture` is a separate storage helper, not a scan.
 
+## Rust workspace gate
+
+The web bundle comes first, also in a fresh worktree:
+
+```sh
+(cd apps/knx-web && npm ci && npm run build)
+cargo fmt --all --check
+cargo clippy --workspace --all-targets -- -D warnings
+cargo test --workspace
+```
+
+`knx-desktop`'s Tauri build script bundles `apps/knx-web/dist` as the
+release frontend, so Clippy and the tests stop at that build script while the
+bundle is missing; it then names this command. Never drop the crate with
+`--exclude knx-desktop`: the gate would no longer show that the desktop shell
+still builds. CI keeps the same order, and `tools/tests/test_rust_gate_order.py`
+holds both to it. The web gate's own `build` stage leaves the bundle in place,
+so a package that runs `tools/run_web_gate.py` first can go straight on to
+Clippy.
+
 ## Measured web tests
 
 After `npm ci` in `apps/knx-web`, use:

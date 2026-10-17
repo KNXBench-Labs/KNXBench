@@ -3,7 +3,7 @@
 import { act, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it } from "vitest";
-import type { ParameterField, ParameterGroupLayout, ParameterSection } from "./api";
+import type { ParameterField, ParameterGroupLayout, ParameterSection, ParameterSeparator } from "./api";
 import ParameterWorkspace from "./ParameterWorkspace";
 
 let host: HTMLDivElement;
@@ -199,5 +199,39 @@ describe("ParameterWorkspace declared grids", () => {
     await act(async () => nav("Pairs").click());
     expect(rowsParent().getAttribute("data-layout")).toBeNull();
     expect(host.querySelector(".parameter-workspace-layout-note")!.textContent).toContain("does not report");
+  });
+
+  // ADR-0139: manufacturer separators between the rows of a chosen area.
+  const separator = (position: number, key: string, text: string | null, uiHint: string | null): ParameterSeparator => ({
+    position, group: { key, label: key }, elementId: `S-${position}-${uiHint}`, text, uiHint, access: null, blockAccess: null });
+  const withSeparators = (): ParameterSection[] => [{ scope: null, fields: [field("Mode", "Buttons"), field("Delay", "Buttons")],
+    separators: [separator(0, "Buttons", "Behaviour", "Headline"), separator(1, "Buttons", null, "HorizontalRuler"),
+      separator(2, "Buttons", "Check the wiring", "Error"), separator(2, "About", "Firmware notes", "Information"),
+      separator(2, "About", "Plain text", "SomethingNew")] }];
+  const shown = () => [...host.querySelectorAll<HTMLElement>(".parameter-workspace-rows > :not([hidden])")]
+    .map(node => node.dataset.parameterRow ?? `${node.dataset.uiHint}:${node.textContent}`);
+
+  it("shows separators by UI hint between the rows of their area only", async () => {
+    await mount(withSeparators());
+    expect(shown()).toEqual([]);
+    await act(async () => nav("Buttons").click());
+    expect(shown()).toEqual(["Headline:Behaviour", "Mode", "HorizontalRuler:", "Delay", "Error:Manufacturer warning: Check the wiring"]);
+    expect(host.querySelector('[data-ui-hint="Headline"] h5')!.textContent).toBe("Behaviour");
+    expect(host.querySelector('[data-ui-hint="HorizontalRuler"] hr')).not.toBeNull();
+    // A block of text alone is an area; an unknown hint stays plain text.
+    expect(nav("About").textContent).toContain("0");
+    await act(async () => nav("About").click());
+    expect(shown()).toEqual(["Information:Information: Firmware notes", "SomethingNew:Plain text"]);
+  });
+
+  it("keeps separators out of search results and leaves editor identity alone", async () => {
+    await mount(withSeparators());
+    await act(async () => nav("Buttons").click());
+    const input = host.querySelector<HTMLInputElement>('[data-parameter-row="Delay"] input')!;
+    await act(async () => setInput(input, "7"));
+    await act(async () => setInput(host.querySelector<HTMLInputElement>('input[type="search"]')!, "Delay"));
+    expect(shown()).toEqual(["Delay"]);
+    expect(host.querySelector<HTMLInputElement>('[data-parameter-row="Delay"] input')).toBe(input);
+    expect(input.value).toBe("7");
   });
 });

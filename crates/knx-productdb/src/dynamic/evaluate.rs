@@ -29,7 +29,7 @@
 //! corpus consistency, not documented rules — see RESEARCH.md §4.3's
 //! `[D]`/`[V]`/`[A]` markers, preserved here in the same spirit.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::rc::Rc;
 
 #[cfg(test)]
@@ -352,6 +352,10 @@ pub struct DynamicTree {
     // order (ascending `node_id`) for that to mean anything; `load_tree`'s
     // `ORDER BY node_id` query guarantees this for database-backed trees.
     children: HashMap<Option<i64>, Vec<i64>>,
+    /// ADR-0139: `dynamic_node.access`, verbatim, for the nodes declaring
+    /// one. Kept beside the nodes rather than in [`DynamicNode`], which
+    /// hand-built trees spell out field by field.
+    access: HashMap<i64, Rc<str>>,
 }
 
 impl DynamicTree {
@@ -361,7 +365,22 @@ impl DynamicTree {
             children.entry(n.parent_id).or_default().push(n.node_id);
         }
         let nodes = nodes.into_iter().map(|n| (n.node_id, n)).collect();
-        DynamicTree { nodes, children }
+        DynamicTree {
+            nodes,
+            children,
+            access: HashMap::new(),
+        }
+    }
+
+    /// Declares `Access` on the given nodes, as `load_tree` reads it from
+    /// `dynamic_node.access` (ADR-0139). For hand-built trees.
+    pub fn with_access<'a>(mut self, declared: impl IntoIterator<Item = (i64, &'a str)>) -> Self {
+        self.access.extend(
+            declared
+                .into_iter()
+                .map(|(id, access)| (id, Rc::from(access))),
+        );
+        self
     }
 
     fn node(&self, id: i64) -> Option<&DynamicNode> {
@@ -390,35 +409,42 @@ pub fn load_tree(
 ) -> Result<DynamicTree, ProductDbError> {
     let mut stmt = conn.prepare(
         "SELECT node_id, parent_id, kind, element_id, ref_id, test, is_default,
-                text, value, name, number
+                text, value, name, number, access
          FROM dynamic_node
          WHERE program_id = ?1 AND module_def_id = ?2
          ORDER BY node_id",
     )?;
     // `control_kind` is resolved below, per `choose` row, once the
     // statement is done.
-    let rows: Vec<DynamicNode> = stmt
+    let mut access: Vec<(i64, String)> = Vec::new();
+    let rows: Vec<(DynamicNode, Option<String>)> = stmt
         .query_map(params![program_id, module_def_id], |r| {
-            Ok(DynamicNode {
-                node_id: r.get(0)?,
-                parent_id: r.get(1)?,
-                kind: r.get(2)?,
-                element_id: r.get(3)?,
-                ref_id: r.get(4)?,
-                test: r.get(5)?,
-                is_default: r.get::<_, Option<i64>>(6)? == Some(1),
-                text: r.get(7)?,
-                value: r.get(8)?,
-                name: r.get(9)?,
-                number: r.get(10)?,
-                control_kind: None,
-            })
+            Ok((
+                DynamicNode {
+                    node_id: r.get(0)?,
+                    parent_id: r.get(1)?,
+                    kind: r.get(2)?,
+                    element_id: r.get(3)?,
+                    ref_id: r.get(4)?,
+                    test: r.get(5)?,
+                    is_default: r.get::<_, Option<i64>>(6)? == Some(1),
+                    text: r.get(7)?,
+                    value: r.get(8)?,
+                    name: r.get(9)?,
+                    number: r.get(10)?,
+                    control_kind: None,
+                },
+                r.get(11)?,
+            ))
         })?
         .collect::<Result<_, _>>()?;
     drop(stmt);
 
     let mut nodes = Vec::with_capacity(rows.len());
-    for mut node in rows {
+    for (mut node, declared) in rows {
+        if let Some(declared) = declared {
+            access.push((node.node_id, declared));
+        }
         if node.kind == "choose" {
             if let Some(rid) = node.ref_id.as_deref() {
                 node.control_kind = resolve_control_kind(conn, program_id, rid)?;
@@ -426,7 +452,8 @@ pub fn load_tree(
         }
         nodes.push(node);
     }
-    Ok(DynamicTree::from_nodes(nodes))
+    Ok(DynamicTree::from_nodes(nodes)
+        .with_access(access.iter().map(|(id, token)| (*id, token.as_str()))))
 }
 
 /// The full set of `Dynamic` trees one program's evaluation can reach:
@@ -1165,6 +1192,29 @@ pub struct ActiveRef {
     /// channel passes that channel on to the refs of its `ModuleDef` tree,
     /// unless that tree opens a channel of its own.
     pub channel: Option<ChannelOwner>,
+    /// ADR-0139: the most restrictive `Access` an enclosing `ParameterBlock`
+    /// declares on the path that activated this ref, `Module` boundaries
+    /// included, verbatim; `None` when no enclosing block restricts it
+    /// (`ReadWrite` restricts nothing). A ref activated along several paths
+    /// of one scope keeps the least restrictive of them: wherever it is
+    /// shown writable, it is writable.
+    pub block_access: Option<String>,
+}
+
+/// One activated `ParameterSeparator` (ADR-0139), in document order. Its
+/// text, when it has one, is the [`ActiveLabel`] with the same `scope` and
+/// `node_id`; a separator without text (a ruler) has none.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ActiveSeparator {
+    pub scope: Option<Rc<ModuleScope>>,
+    /// `dynamic_node.node_id` within the tree named by `scope`.
+    pub node_id: i64,
+    /// As [`ActiveRef::block_access`], for the path that activated it.
+    pub block_access: Option<String>,
+    /// How many entries `Activation::parameter_refs` held when this
+    /// separator was activated: it sits before the ref at that index, in
+    /// document order.
+    pub parameter_refs_before: usize,
 }
 
 /// The channel element that owns an activated ref (ISSUE-08).
@@ -1248,6 +1298,9 @@ pub struct Activation {
     /// document order (design D49), one per activated element carrying a
     /// non-empty `@Text`.
     pub labels: Vec<ActiveLabel>,
+    /// Activated `ParameterSeparator`s in document order (ADR-0139). Bounded
+    /// by the work budget: each costs the visit that found it.
+    pub separators: Vec<ActiveSeparator>,
     pub diagnostics: Vec<ScopedDiagnostic>,
     /// How many [`Diagnostic::RefBelowSkippedNode`]s were emitted. Counted
     /// against [`MAX_MODULE_ACTIVATIONS`] like a ref or a label (ADR-0041):
@@ -1267,6 +1320,55 @@ pub struct Activation {
 /// with the raw `ref_id`. `module_id` plays no part in identity, same as
 /// before.
 type ScopeKey = (Vec<i64>, String);
+
+/// Each activated ref's [`ScopeKey`] and its index in the list it went into,
+/// so a repeated activation can loosen its `block_access` (ADR-0139).
+type Seen = HashMap<ScopeKey, usize>;
+
+/// What the path from the root to a node passes down (ISSUE-08, ADR-0139).
+#[derive(Debug, Clone, Copy, Default)]
+struct PathContext<'a> {
+    /// The innermost channel element ([`ActiveRef::channel`]).
+    channel: Option<&'a ChannelOwner>,
+    /// The most restrictive block `Access` so far ([`ActiveRef::block_access`]).
+    block_access: Option<&'a Rc<str>>,
+}
+
+/// `None` for an `Access` that restricts nothing (`ReadWrite`), otherwise its
+/// rank: `None` hides (0); `Read` and any token this build does not know
+/// forbid writing (1), as ADR-0080 treats an unknown parameter `Access`.
+fn restriction_rank(access: &str) -> Option<u8> {
+    match access {
+        "ReadWrite" => None,
+        "None" => Some(0),
+        _ => Some(1),
+    }
+}
+
+/// The more restrictive of the path's `outer` access and a block's
+/// `declared` one; on a tie the outer one, which was declared first.
+fn tighter(outer: Option<&Rc<str>>, declared: Option<&Rc<str>>) -> Option<Rc<str>> {
+    let declared = declared.filter(|d| restriction_rank(d).is_some());
+    match (outer, declared) {
+        (Some(outer), Some(declared)) if restriction_rank(declared) < restriction_rank(outer) => {
+            Some(declared.clone())
+        }
+        (Some(outer), _) => Some(outer.clone()),
+        (None, declared) => declared.cloned(),
+    }
+}
+
+/// Merges a repeated activation's path into a ref's `block_access`: an
+/// unrestricted path wins, otherwise the less restrictive one; on a tie the
+/// first one.
+fn looser(first: Option<String>, again: Option<&Rc<str>>) -> Option<String> {
+    let (first, again) = (first?, again?);
+    if restriction_rank(again) > restriction_rank(&first) {
+        Some(again.to_string())
+    } else {
+        Some(first)
+    }
+}
 
 fn scope_key_chain(scope: Option<&Rc<ModuleScope>>) -> Vec<i64> {
     scope.map(|s| s.node_chain()).unwrap_or_default()
@@ -1356,9 +1458,9 @@ impl Activation {
 
     fn activate_parameter_ref(
         &mut self,
-        seen: &mut HashSet<ScopeKey>,
+        seen: &mut Seen,
         scope: Option<&Rc<ModuleScope>>,
-        channel: Option<&ChannelOwner>,
+        path: PathContext<'_>,
         node_id: i64,
         id: String,
     ) {
@@ -1366,21 +1468,25 @@ impl Activation {
             return;
         }
         let key = (scope_key_chain(scope), id.clone());
-        if !seen.insert(key) {
+        if let Some(&index) = seen.get(&key) {
+            let first = &mut self.parameter_refs[index];
+            first.block_access = looser(first.block_access.take(), path.block_access);
             return;
         }
+        seen.insert(key, self.parameter_refs.len());
         self.parameter_refs.push(ActiveRef {
             scope: scope.cloned(),
             ref_id: id,
-            channel: channel.cloned(),
+            channel: path.channel.cloned(),
+            block_access: path.block_access.map(|access| access.to_string()),
         });
     }
 
     fn activate_com_object_ref(
         &mut self,
-        seen: &mut HashSet<ScopeKey>,
+        seen: &mut Seen,
         scope: Option<&Rc<ModuleScope>>,
-        channel: Option<&ChannelOwner>,
+        path: PathContext<'_>,
         node_id: i64,
         id: String,
     ) {
@@ -1388,13 +1494,17 @@ impl Activation {
             return;
         }
         let key = (scope_key_chain(scope), id.clone());
-        if !seen.insert(key) {
+        if let Some(&index) = seen.get(&key) {
+            let first = &mut self.com_object_refs[index];
+            first.block_access = looser(first.block_access.take(), path.block_access);
             return;
         }
+        seen.insert(key, self.com_object_refs.len());
         self.com_object_refs.push(ActiveRef {
             scope: scope.cloned(),
             ref_id: id,
-            channel: channel.cloned(),
+            channel: path.channel.cloned(),
+            block_access: path.block_access.map(|access| access.to_string()),
         });
     }
 
@@ -1422,8 +1532,8 @@ impl Activation {
 /// no activations. Refusal preserves an explicitly incomplete result prefix.
 pub fn evaluate(trees: &ProgramTrees, values: &ValueMap) -> Activation {
     let mut activation = Activation::default();
-    let mut seen_params = HashSet::new();
-    let mut seen_coms = HashSet::new();
+    let mut seen_params = Seen::new();
+    let mut seen_coms = Seen::new();
     let mut expansions_used = 0usize;
     for &root in trees.program.roots() {
         if activation.work_budget_exhausted {
@@ -1439,7 +1549,7 @@ pub fn evaluate(trees: &ProgramTrees, values: &ValueMap) -> Activation {
             &mut seen_coms,
             &mut expansions_used,
             None,
-            None,
+            PathContext::default(),
         );
     }
     // Admission state is local to this call, not part of result equality.
@@ -1548,11 +1658,11 @@ fn walk(
     node_id: i64,
     values: &ValueMap,
     activation: &mut Activation,
-    seen_params: &mut HashSet<ScopeKey>,
-    seen_coms: &mut HashSet<ScopeKey>,
+    seen_params: &mut Seen,
+    seen_coms: &mut Seen,
     expansions_used: &mut usize,
     scope: Option<&Rc<ModuleScope>>,
-    channel: Option<&ChannelOwner>,
+    path: PathContext<'_>,
 ) {
     if !activation.admit_work(scope, node_id, 1) {
         return;
@@ -1561,7 +1671,7 @@ fn walk(
         return;
     };
     if is_transparent_container(&node.kind) {
-        record_label(activation, scope, node);
+        let _ = record_label(activation, scope, node);
         if activation.work_budget_exhausted {
             return;
         }
@@ -1575,7 +1685,14 @@ fn walk(
             name: node.name.clone(),
             number: node.number.clone(),
         });
-        let channel = opened.as_ref().or(channel);
+        // ADR-0139: a block's `Access` binds everything below it.
+        let narrowed = (node.kind == "ParameterBlock")
+            .then(|| tighter(path.block_access, tree.access.get(&node_id)))
+            .flatten();
+        let path = PathContext {
+            channel: opened.as_ref().or(path.channel),
+            block_access: narrowed.as_ref().or(path.block_access),
+        };
         for &child in tree.children_of(Some(node_id)) {
             if activation.work_budget_exhausted {
                 break;
@@ -1590,7 +1707,7 @@ fn walk(
                 seen_coms,
                 expansions_used,
                 scope,
-                channel,
+                path,
             );
         }
         return;
@@ -1606,17 +1723,17 @@ fn walk(
             seen_coms,
             expansions_used,
             scope,
-            channel,
+            path,
         ),
         "ParameterRefRef" => {
             if let Some(id) = &node.ref_id {
-                activation.activate_parameter_ref(seen_params, scope, channel, node_id, id.clone());
+                activation.activate_parameter_ref(seen_params, scope, path, node_id, id.clone());
             }
             report_refs_below(tree, node_id, activation, scope);
         }
         "ComObjectRefRef" => {
             if let Some(id) = &node.ref_id {
-                activation.activate_com_object_ref(seen_coms, scope, channel, node_id, id.clone());
+                activation.activate_com_object_ref(seen_coms, scope, path, node_id, id.clone());
             }
             report_refs_below(tree, node_id, activation, scope);
         }
@@ -1631,8 +1748,16 @@ fn walk(
         // ADR-0041: none of these is expected to have children (none does
         // in the corpus), and none is descended; should one ever hold a
         // reference, it is named rather than lost.
+        // ADR-0139: and it is listed where it was activated, ruler or not.
         "ParameterSeparator" => {
-            record_label(activation, scope, node);
+            if record_label(activation, scope, node) {
+                activation.separators.push(ActiveSeparator {
+                    scope: scope.cloned(),
+                    node_id,
+                    block_access: path.block_access.map(|access| access.to_string()),
+                    parameter_refs_before: activation.parameter_refs.len(),
+                });
+            }
             report_refs_below(tree, node_id, activation, scope);
         }
         "Assign" => report_refs_below(tree, node_id, activation, scope),
@@ -1748,7 +1873,7 @@ fn walk(
                             seen_coms,
                             expansions_used,
                             Some(&new_scope),
-                            channel,
+                            path,
                         );
                     }
                 }
@@ -1896,19 +2021,24 @@ fn bind_arguments(
 /// Records one activated element's `@Text` as a label, substituted against
 /// the enclosing scope's argument bindings (design D49). An element with no
 /// `@Text`, or an empty one, produces nothing — an empty label says less
-/// than no label and would cost a budget slot to say it.
-fn record_label(activation: &mut Activation, scope: Option<&Rc<ModuleScope>>, node: &DynamicNode) {
+/// than no label and would cost a budget slot to say it. `false` exactly
+/// when a label was due but a budget refused it.
+fn record_label(
+    activation: &mut Activation,
+    scope: Option<&Rc<ModuleScope>>,
+    node: &DynamicNode,
+) -> bool {
     if activation.work_budget_exhausted {
-        return;
+        return false;
     }
     let Some(raw) = node.text.as_deref().filter(|t| !t.is_empty()) else {
-        return;
+        return true;
     };
     if activation.activation_budget_spent(scope, node.node_id, None) {
-        return;
+        return false;
     }
     let Some(text) = substitute_arguments(raw, scope, node.node_id, activation) else {
-        return;
+        return false;
     };
     activation.labels.push(ActiveLabel {
         scope: scope.cloned(),
@@ -1917,6 +2047,7 @@ fn record_label(activation: &mut Activation, scope: Option<&Rc<ModuleScope>>, no
         raw_text: raw.to_string(),
         text,
     });
+    true
 }
 
 /// The opening and closing delimiters of the placeholder syntax every
@@ -2215,11 +2346,11 @@ fn evaluate_choose(
     node: &DynamicNode,
     values: &ValueMap,
     activation: &mut Activation,
-    seen_params: &mut HashSet<ScopeKey>,
-    seen_coms: &mut HashSet<ScopeKey>,
+    seen_params: &mut Seen,
+    seen_coms: &mut Seen,
     expansions_used: &mut usize,
     scope: Option<&Rc<ModuleScope>>,
-    channel: Option<&ChannelOwner>,
+    path: PathContext<'_>,
 ) {
     let Some(control_kind) = node.control_kind.as_ref() else {
         activation.diagnose(
@@ -2261,7 +2392,7 @@ fn evaluate_choose(
                     seen_coms,
                     expansions_used,
                     scope,
-                    channel,
+                    path,
                 ),
                 None => {
                     activation.diagnose(
@@ -2286,7 +2417,7 @@ fn evaluate_choose(
             seen_coms,
             expansions_used,
             scope,
-            channel,
+            path,
         ),
         ControlKind::Unsupported(kind) => {
             activation.diagnose(
@@ -2309,11 +2440,11 @@ fn evaluate_comparable_choose(
     node: &DynamicNode,
     values: &ValueMap,
     activation: &mut Activation,
-    seen_params: &mut HashSet<ScopeKey>,
-    seen_coms: &mut HashSet<ScopeKey>,
+    seen_params: &mut Seen,
+    seen_coms: &mut Seen,
     expansions_used: &mut usize,
     scope: Option<&Rc<ModuleScope>>,
-    channel: Option<&ChannelOwner>,
+    path: PathContext<'_>,
 ) {
     let param_ref = node.ref_id.clone();
     let Some(raw_value) = node
@@ -2419,7 +2550,7 @@ fn evaluate_comparable_choose(
             seen_coms,
             expansions_used,
             scope,
-            channel,
+            path,
         ),
         None => activation.diagnose(
             scope,

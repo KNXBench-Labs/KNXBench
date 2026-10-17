@@ -418,6 +418,9 @@ pub(crate) struct UnresolvedProgramDto {
 pub(crate) struct ParameterSectionDto {
     pub(crate) scope: Option<ModuleScopeDto>,
     pub(crate) fields: Vec<ParameterFieldDto>,
+    /// ADR-0139: this section's activated `ParameterSeparator`s in document
+    /// order. Always present (possibly empty).
+    pub(crate) separators: Vec<ParameterSeparatorDto>,
     /// ADR-0137: declared layouts of this section's groups, in first-field
     /// order. Always present (possibly empty), so a client can tell "no grid
     /// declared" from a server that does not report layouts.
@@ -530,6 +533,28 @@ pub(crate) struct ParameterGroupDto {
     pub(crate) label: Option<String>,
 }
 
+/// ADR-0139: one activated `ParameterSeparator`, display only. Every
+/// attribute is the program's own text, untranslated like group labels.
+#[derive(serde::Serialize, Debug, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ParameterSeparatorDto {
+    /// The index in the section's `fields` this separator stands before;
+    /// `fields.len()` when it follows the last one.
+    pub(crate) position: usize,
+    /// Its nearest enclosing block, keyed like the fields' `group`.
+    pub(crate) group: Option<ParameterGroupDto>,
+    pub(crate) element_id: Option<String>,
+    /// `@Text` with module arguments substituted; `null` for a ruler.
+    pub(crate) text: Option<String>,
+    /// `@UIHint` verbatim (`Headline`, `Information`, `Error`,
+    /// `HorizontalRuler`, anything else); `null` when absent.
+    pub(crate) ui_hint: Option<String>,
+    /// The separator's own `@Access`, verbatim.
+    pub(crate) access: Option<String>,
+    /// As `ParameterFieldDto.blockAccess`.
+    pub(crate) block_access: Option<String>,
+}
+
 #[derive(serde::Serialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ParameterFieldDto {
@@ -561,6 +586,11 @@ pub(crate) struct ParameterFieldDto {
     /// Verbatim from `ParameterView.access` (fix round 1, item 2). Shown,
     /// never used to gate `editable` -- D24 deliberately does not.
     pub(crate) access: Option<String>,
+    /// ADR-0139: the most restrictive `Access` (`None`, `Read`, or an
+    /// unknown token, verbatim) an enclosing `ParameterBlock` declares on
+    /// the path that activated this field; `null` when none restricts it.
+    /// Not `null` makes the field read-only, like a restricting `access`.
+    pub(crate) block_access: Option<String>,
     /// The `ets_id` a `POST` must send to write this field (design D43):
     /// `Some(ets_id)` for an unscoped field, `Some(module-qualified id)`
     /// for an editable module-scoped one (D39's reconstruction), `None`
@@ -653,6 +683,9 @@ pub(crate) enum ParameterDiagnosticKindDto {
     /// `Parameter`'s) is present and is not `ReadWrite`. Web's unknown-kind
     /// English fallback applies until the UI owner adopts this token.
     ParameterAccessReadOnly,
+    /// ADR-0139: an enclosing `ParameterBlock` declares `None` or `Read`
+    /// (or an unknown token) on the path that activated the field.
+    ParameterBlockAccessRestricted,
     /// ADR-0080: a `ParameterCalculation` names the field; KNXBench does
     /// not run manufacturer calculations, so it does not write either side.
     ManufacturerCalculation,

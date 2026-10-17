@@ -5707,26 +5707,61 @@ fn assemble_parameter_panel(
     // sections would silently merge. `ModuleScope::node_chain()` (made
     // `pub` for this) gives the same full-chain key `evaluate`'s own
     // dedup already uses.
-    struct SectionBuild {
+    struct SectionBuild<'a> {
         scope: Option<std::rc::Rc<knx_productdb::dynamic::ModuleScope>>,
         ref_ids: Vec<String>,
+        /// Per `ref_ids` entry: its index in `activation.parameter_refs` and
+        /// its `block_access` (ADR-0139).
+        activated: Vec<(usize, Option<String>)>,
+        /// ADR-0139: the separators activated in this scope.
+        separators: Vec<&'a knx_productdb::dynamic::ActiveSeparator>,
     }
     let mut section_order: Vec<Option<Vec<i64>>> = Vec::new();
     let mut sections_by_key: HashMap<Option<Vec<i64>>, SectionBuild> = HashMap::new();
-    for active in &activation.parameter_refs {
+    for (index, active) in activation.parameter_refs.iter().enumerate() {
         let key = active.scope.as_ref().map(|s| s.node_chain());
+        let section = sections_by_key.entry(key.clone()).or_insert_with(|| {
+            section_order.push(key.clone());
+            SectionBuild {
+                scope: active.scope.clone(),
+                ref_ids: Vec::new(),
+                activated: Vec::new(),
+                separators: Vec::new(),
+            }
+        });
+        section.ref_ids.push(active.ref_id.clone());
+        section.activated.push((index, active.block_access.clone()));
+    }
+    // A scope that activated separators but no parameter still gets its
+    // section: an information page is all text (ADR-0139).
+    for separator in &activation.separators {
+        let key = separator.scope.as_ref().map(|s| s.node_chain());
         sections_by_key
             .entry(key.clone())
             .or_insert_with(|| {
                 section_order.push(key.clone());
                 SectionBuild {
-                    scope: active.scope.clone(),
+                    scope: separator.scope.clone(),
                     ref_ids: Vec::new(),
+                    activated: Vec::new(),
+                    separators: Vec::new(),
                 }
             })
-            .ref_ids
-            .push(active.ref_id.clone());
+            .separators
+            .push(separator);
     }
+    // ADR-0139: an activated separator's text is its label.
+    let separator_texts: HashMap<(Option<Vec<i64>>, i64), &str> = activation
+        .labels
+        .iter()
+        .filter(|label| label.kind == "ParameterSeparator")
+        .map(|label| {
+            (
+                (label.scope.as_ref().map(|s| s.node_chain()), label.node_id),
+                label.text.as_str(),
+            )
+        })
+        .collect();
 
     // S4 (fix round 2): a program that declares two `Module` elements
     // with the same `@Id` is malformed -- ETS's own id grammar makes
@@ -5760,6 +5795,8 @@ fn assemble_parameter_panel(
         // (`activation.diagnostics`, folded in below) — not repeated here.
         let mi_digits: Option<String> = match &section.scope {
             None => None,
+            // ADR-0139: a section of separators alone has no field to authorize.
+            Some(_) if section.ref_ids.is_empty() => None,
             Some(scope) => match &scope.module_id {
                 None => None,
                 Some(module_id)
@@ -5837,16 +5874,46 @@ fn assemble_parameter_panel(
             },
         };
         let mut fields = Vec::with_capacity(section.ref_ids.len());
+        // ADR-0139: per field, its index in `activation.parameter_refs`.
+        let mut field_positions: Vec<usize> = Vec::with_capacity(section.ref_ids.len());
         let mut refused: Vec<(WriteRefusal, String)> = Vec::new();
         // ADR-0137: distinct (group key, block node) pairs in first-field order.
         let mut grid_groups: Vec<(String, i64)> = Vec::new();
-        for ref_id in &section.ref_ids {
+        let definition = section
+            .scope
+            .as_ref()
+            .map_or("", |s| s.module_def_id.as_str());
+        // The group a field or separator belongs to, as the wire names it.
+        let mut group_dto = |group: knx_productdb::parameter_layout::Group| {
+            let label = activation
+                .labels
+                .iter()
+                .find(|label| label.node_id == group.node_id && label.scope == section.scope)
+                .map(|label| label.text.clone())
+                .or(group.text)
+                .filter(|text| !text.trim().is_empty())
+                .or_else(|| {
+                    group
+                        .caption_ref
+                        .as_ref()
+                        .and_then(|reference| views_by_id.get(reference))
+                        .and_then(|caption| caption.text.clone().or(caption.name.clone()))
+                });
+            let key = group
+                .element_id
+                .unwrap_or_else(|| format!("node:{}", group.node_id));
+            if !grid_groups.iter().any(|(_, node)| *node == group.node_id) {
+                grid_groups.push((key.clone(), group.node_id));
+            }
+            crate::routes::ParameterGroupDto { key, label }
+        };
+        for (ref_id, (position, block_access)) in section.ref_ids.iter().zip(&section.activated) {
             // A ref the join dropped (see the diagnostic above) has no
             // metadata to show; it is not fabricated here.
             let Some(view) = views_by_id.get(ref_id) else {
                 continue;
             };
-            let refusal = write_refusal(view, &authority);
+            let refusal = write_refusal(view, &authority, block_access.as_deref());
             if let Some(refusal) = refusal {
                 refused.push((refusal, view.id.clone()));
             }
@@ -5891,37 +5958,10 @@ fn assemble_parameter_panel(
                 }
             };
             let editable = write_ets_id.is_some();
-            let presentation = layout.field(
-                section
-                    .scope
-                    .as_ref()
-                    .map_or("", |s| s.module_def_id.as_str()),
-                &view.id,
-            );
+            let presentation = layout.field(definition, &view.id);
             let cell = presentation.cell.map(crate::parameter_grid::cell_dto);
-            let group = presentation.group.map(|group| {
-                let label = activation
-                    .labels
-                    .iter()
-                    .find(|label| label.node_id == group.node_id && label.scope == section.scope)
-                    .map(|label| label.text.clone())
-                    .or(group.text)
-                    .filter(|text| !text.trim().is_empty())
-                    .or_else(|| {
-                        group
-                            .caption_ref
-                            .as_ref()
-                            .and_then(|reference| views_by_id.get(reference))
-                            .and_then(|caption| caption.text.clone().or(caption.name.clone()))
-                    });
-                let key = group
-                    .element_id
-                    .unwrap_or_else(|| format!("node:{}", group.node_id));
-                if !grid_groups.iter().any(|(_, node)| *node == group.node_id) {
-                    grid_groups.push((key.clone(), group.node_id));
-                }
-                crate::routes::ParameterGroupDto { key, label }
-            });
+            let group = presentation.group.map(&mut group_dto);
+            field_positions.push(*position);
             fields.push(crate::routes::ParameterFieldDto {
                 group,
                 controls_com_objects: presentation.controls_com_objects,
@@ -5949,18 +5989,40 @@ fn assemble_parameter_panel(
                     .collect(),
                 display_order: view.display_order,
                 access: effective_access(view).map(str::to_string),
+                block_access: block_access.clone(),
                 write_ets_id,
             });
         }
+        // ADR-0139: each separator sits before the first field activated
+        // after it; its own and its blocks' `Access` stay separate facts.
+        let separators = section
+            .separators
+            .iter()
+            .map(|separator| {
+                let declaration = layout
+                    .separator_declaration(definition, separator.node_id)
+                    .cloned()
+                    .unwrap_or_default();
+                let scope_key = separator.scope.as_ref().map(|s| s.node_chain());
+                crate::routes::ParameterSeparatorDto {
+                    position: field_positions
+                        .partition_point(|&field| field < separator.parameter_refs_before),
+                    group: declaration.group.map(&mut group_dto),
+                    element_id: declaration.element_id,
+                    text: separator_texts
+                        .get(&(scope_key, separator.node_id))
+                        .map(|text| text.to_string()),
+                    ui_hint: declaration.ui_hint,
+                    access: declaration.access,
+                    block_access: separator.block_access.clone(),
+                }
+            })
+            .collect();
         push_write_refusals(
             &mut diagnostics,
             section.scope.as_ref().map(|s| module_scope_dto(s)),
             refused,
         );
-        let definition = section
-            .scope
-            .as_ref()
-            .map_or("", |s| s.module_def_id.as_str());
         let group_layouts = grid_groups
             .into_iter()
             .filter_map(|(key, block_node)| {
@@ -5979,6 +6041,7 @@ fn assemble_parameter_panel(
         sections.push(crate::routes::ParameterSectionDto {
             scope: section.scope.as_ref().map(|s| module_scope_dto(s)),
             fields,
+            separators,
             group_layouts,
         });
     }
@@ -6018,6 +6081,8 @@ fn assemble_parameter_panel(
 enum WriteRefusal {
     AuthorityUnavailable,
     AccessReadOnly,
+    /// ADR-0139: an enclosing `ParameterBlock` declares `None` or `Read`.
+    BlockAccessRestricted,
     ManufacturerCalculation,
 }
 
@@ -6039,15 +6104,21 @@ fn carries_value(view: &knx_productdb::query::ParameterView) -> bool {
 
 /// The first ADR-0080 reason that refuses a write to `view`, if any. An
 /// absent access on both levels refuses nothing: no default is invented.
+/// `block_access` is the evaluator's `ActiveRef::block_access`: present only
+/// when an enclosing block restricts (ADR-0139).
 fn write_refusal(
     view: &knx_productdb::query::ParameterView,
     authority: &knx_productdb::query::WriteAuthority,
+    block_access: Option<&str>,
 ) -> Option<WriteRefusal> {
     if !authority.recorded {
         return Some(WriteRefusal::AuthorityUnavailable);
     }
     if effective_access(view).is_some_and(|access| access != "ReadWrite") {
         return Some(WriteRefusal::AccessReadOnly);
+    }
+    if block_access.is_some_and(|access| access != "ReadWrite") {
+        return Some(WriteRefusal::BlockAccessRestricted);
     }
     if authority.calculated.contains_key(&view.id) {
         return Some(WriteRefusal::ManufacturerCalculation);
@@ -6085,6 +6156,11 @@ fn push_write_refusals(
                 crate::routes::ParameterDiagnosticKindDto::ParameterAccessReadOnly,
                 "Some fields are declared read-only or hidden by the manufacturer (Access); they are not writable.",
                 "effective Access is not ReadWrite",
+            ),
+            WriteRefusal::BlockAccessRestricted => (
+                crate::routes::ParameterDiagnosticKindDto::ParameterBlockAccessRestricted,
+                "Some fields sit in a parameter group the manufacturer declared read-only or hidden (Access); they are not writable.",
+                "an enclosing ParameterBlock's Access is not ReadWrite",
             ),
             WriteRefusal::ManufacturerCalculation => (
                 crate::routes::ParameterDiagnosticKindDto::ManufacturerCalculation,

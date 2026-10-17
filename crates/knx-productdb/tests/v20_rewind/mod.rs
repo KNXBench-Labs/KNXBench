@@ -8,11 +8,32 @@
 
 use rusqlite::Connection;
 
+/// Removes the schema-v24 `access` and `ui_hint` columns (ADR-0139), so that
+/// `migrate_v23_to_v24` finds no column already there. Only the columns: a
+/// rewind that needs a genuine v23 report uses `v23_rewind::rewind_to_v23`.
+#[allow(dead_code)]
+pub fn drop_v24_objects(conn: &Connection) {
+    for column in ["access", "ui_hint"] {
+        let present: bool = conn
+            .query_row(
+                "SELECT EXISTS(SELECT 1 FROM pragma_table_info('dynamic_node') WHERE name = ?1)",
+                [column],
+                |r| r.get(0),
+            )
+            .unwrap();
+        if present {
+            conn.execute_batch(&format!("ALTER TABLE dynamic_node DROP COLUMN {column};"))
+                .unwrap();
+        }
+    }
+}
+
 /// Removes the schema-v23 `text_parameter_ref_id` columns (ADR-0126), so that
 /// `migrate_v22_to_v23` finds no column already there. Only the columns: a
 /// rewind that needs a genuine v22 report uses `v22_rewind::rewind_to_v22`.
 #[allow(dead_code)]
 pub fn drop_v23_objects(conn: &Connection) {
+    drop_v24_objects(conn);
     for table in ["dynamic_node", "com_object_ref"] {
         let present: bool = conn
             .query_row(

@@ -13,7 +13,7 @@ import type {
 import type { ProjectTree } from "./bindings/ProjectTree";
 import { useProductLanguage } from "./productLanguage";
 import { LanguageFallbackBadge } from "./languageFallback";
-import { groupParameterDiagnostics, isManufacturerRestricted } from "./parameterPresentation";
+import { filterParameterSection, groupParameterDiagnostics, isManufacturerRestricted, isSeparatorRestricted, restrictingAccess } from "./parameterPresentation";
 import { useTranslate, type Translate, type TranslatableKey } from "./i18n";
 import { snapshotContextFromTree, type SnapshotContext } from "./snapshotIdentity";
 import { isRevisionConflict } from "./revisionConflict";
@@ -127,7 +127,8 @@ function ParameterFieldRow(props: {
   // explicit resend is offered only once a newer panel has arrived.
   const [conflict, setConflict] = useState<{ at: string } | null>(null);
   const conflictRef = useRef(false);
-  const restricted = isManufacturerRestricted(field) || !field.editable || field.writeEtsId === null;
+  const manufacturerAccess = restrictingAccess(field);
+  const restricted = manufacturerAccess !== null || !field.editable || field.writeEtsId === null;
   // Belt-and-braces on purpose (see `api.ts`'s `writeEtsId` doc comment):
   // the server's contract makes the two conditions exact opposites of
   // each other, but the control checks both rather than trusting either
@@ -269,9 +270,11 @@ function ParameterFieldRow(props: {
       )}
       {restricted && (
         <span className="parameter-field-caption">
-          {t(field.access === "None" ? "parameters.accessNoneCaption"
-            : field.access === "Read" ? "parameters.accessReadCaption"
-            : moduleScoped ? "parameters.sharedReadOnlyCaption" : "parameters.readOnlyCaption")}
+          {t(manufacturerAccess === null
+            ? (moduleScoped ? "parameters.sharedReadOnlyCaption" : "parameters.readOnlyCaption")
+            : manufacturerAccess.from === "field"
+              ? (manufacturerAccess.access === "None" ? "parameters.accessNoneCaption" : "parameters.accessReadCaption")
+              : (manufacturerAccess.access === "None" ? "parameters.blockAccessNoneCaption" : "parameters.blockAccessReadCaption"))}
         </span>
       )}
       {!restricted && binding === null && <span className="parameter-field-caption">{t("parameters.noContextCaption")}</span>}
@@ -364,6 +367,7 @@ const PARAMETER_DIAGNOSTIC_MESSAGE_KEYS: Record<ParameterDiagnosticKind, Transla
   parameterAccessReadOnly: "parameters.diagnostic.parameterAccessReadOnly",
   manufacturerCalculation: "parameters.diagnostic.manufacturerCalculation",
   writeAuthorityUnavailable: "parameters.diagnostic.writeAuthorityUnavailable",
+  parameterBlockAccessRestricted: "parameters.diagnostic.parameterBlockAccessRestricted",
 };
 
 function describeParameterDiagnosticMessage(t: Translate, diagnostic: ParameterDiagnostic): string {
@@ -608,11 +612,13 @@ export function ParameterPanelContent(props: ParameterPanelProps & {
     </div>;
   }
 
-  const sections = panel.sections.map((section) => ({
-    ...section,
-    fields: section.fields.filter((field) => isManufacturerRestricted(field) === (view === "restricted")
-      && (view !== "functions" || field.controlsComObjects && field.kind === "Restriction")),
-  })).filter((section) => section.fields.length > 0);
+  // ADR-0139: separators are shown only between the editable fields; an
+  // area holding nothing but manufacturer text still counts as content.
+  const sections = panel.sections.map((section) => filterParameterSection(section,
+    (field) => isManufacturerRestricted(field) === (view === "restricted")
+      && (view !== "functions" || field.controlsComObjects === true && field.kind === "Restriction"),
+    (separator) => view === "parameters" && !isSeparatorRestricted(separator),
+  )).filter((section) => section.fields.length > 0 || (section.separators?.length ?? 0) > 0);
 
   if (view === "functions" && sections.length === 0) return <p className="inspector-description">{t("parameters.functionsEmpty")}</p>;
 

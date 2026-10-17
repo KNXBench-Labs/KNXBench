@@ -682,6 +682,7 @@ fn active(id: &str) -> ActiveRef {
         scope: None,
         ref_id: id.to_string(),
         channel: None,
+        block_access: None,
     }
 }
 
@@ -1776,6 +1777,7 @@ fn a_module_inside_a_module_def_naming_a_different_module_def_is_expanded_two_le
             scope: Some(Rc::new(inner_scope)),
             ref_id: "LEAF".to_string(),
             channel: None,
+            block_access: None,
         }]
     );
 }
@@ -2278,6 +2280,7 @@ fn within_one_module_scope_a_ref_reachable_twice_is_deduplicated_once() {
             })),
             ref_id: "SHARED".to_string(),
             channel: None,
+            block_access: None,
         }]
     );
 }
@@ -2328,6 +2331,7 @@ fn two_modules_instantiating_one_module_def_produce_two_scoped_activations() {
                 })),
                 ref_id: "O-1_R-1".to_string(),
                 channel: None,
+                block_access: None,
             },
             ActiveRef {
                 scope: Some(Rc::new(ModuleScope {
@@ -2339,6 +2343,7 @@ fn two_modules_instantiating_one_module_def_produce_two_scoped_activations() {
                 })),
                 ref_id: "O-1_R-1".to_string(),
                 channel: None,
+                block_access: None,
             },
         ]
     );
@@ -2420,6 +2425,7 @@ fn a_scoped_value_wins_for_its_own_instantiation_and_the_other_sees_the_program_
                 })),
                 ref_id: "HIGH".to_string(),
                 channel: None,
+                block_access: None,
             },
             ActiveRef {
                 scope: Some(Rc::new(ModuleScope {
@@ -2431,6 +2437,7 @@ fn a_scoped_value_wins_for_its_own_instantiation_and_the_other_sees_the_program_
                 })),
                 ref_id: "LOW".to_string(),
                 channel: None,
+                block_access: None,
             },
         ]
     );
@@ -2701,6 +2708,7 @@ fn module_without_id_is_reported_once_and_its_subtree_still_evaluates_from_the_u
             })),
             ref_id: "HIT".to_string(),
             channel: None,
+            block_access: None,
         }]
     );
 }

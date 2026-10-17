@@ -57,11 +57,22 @@ pub struct SeparatorPlacement {
     pub block_node: i64,
     pub cell: Cell,
 }
+/// What a separator declares for the row view (ADR-0139), verbatim.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct SeparatorDeclaration {
+    /// The nearest enclosing `ParameterBlock`, as for fields.
+    pub group: Option<Group>,
+    pub element_id: Option<String>,
+    pub ui_hint: Option<String>,
+    /// The separator's own `Access`; enclosing blocks are the evaluator's.
+    pub access: Option<String>,
+}
 #[derive(Debug, Default)]
 pub struct ParameterLayout {
     fields: HashMap<(String, String), FieldLayout>,
     grids: HashMap<(String, i64), BlockGrid>,
     separators: HashMap<(String, i64), SeparatorPlacement>,
+    declarations: HashMap<(String, i64), SeparatorDeclaration>,
 }
 impl ParameterLayout {
     pub fn field(&self, definition: &str, reference: &str) -> FieldLayout {
@@ -77,6 +88,14 @@ impl ParameterLayout {
     pub fn separator(&self, definition: &str, node: i64) -> Option<&SeparatorPlacement> {
         self.separators.get(&(definition.to_owned(), node))
     }
+    /// Every separator of `definition`'s tree, placed in a grid or not.
+    pub fn separator_declaration(
+        &self,
+        definition: &str,
+        node: i64,
+    ) -> Option<&SeparatorDeclaration> {
+        self.declarations.get(&(definition.to_owned(), node))
+    }
 }
 #[derive(Debug)]
 struct Node {
@@ -85,6 +104,8 @@ struct Node {
     reference: Option<String>,
     id: Option<String>,
     text: Option<String>,
+    access: Option<String>,
+    ui_hint: Option<String>,
 }
 
 /// Uses normalized parent relationships, never names, numbers or manufacturer-specific IDs.
@@ -99,7 +120,7 @@ pub fn load(conn: &Connection, program: &str) -> Result<ParameterLayout, Product
     let grids = source
         .as_deref()
         .and_then(|bytes| grid::read_grids(bytes, program));
-    let mut stmt = conn.prepare("SELECT module_def_id,node_id,parent_id,kind,ref_id,element_id,text FROM dynamic_node WHERE program_id=?1 ORDER BY module_def_id,node_id")?;
+    let mut stmt = conn.prepare("SELECT module_def_id,node_id,parent_id,kind,ref_id,element_id,text,access,ui_hint FROM dynamic_node WHERE program_id=?1 ORDER BY module_def_id,node_id")?;
     let rows = stmt.query_map([program], |r| {
         Ok((
             r.get::<_, String>(0)?,
@@ -110,6 +131,8 @@ pub fn load(conn: &Connection, program: &str) -> Result<ParameterLayout, Product
                 reference: r.get(4)?,
                 id: r.get(5)?,
                 text: r.get(6)?,
+                access: r.get(7)?,
+                ui_hint: r.get(8)?,
             },
         ))
     })?;
@@ -193,6 +216,15 @@ pub fn load(conn: &Connection, program: &str) -> Result<ParameterLayout, Product
             if node.kind == "ComObjectRefRef" {
                 controls.extend(parents);
             } else if node.kind == "ParameterSeparator" {
+                result.declarations.insert(
+                    (scope.clone(), node_id),
+                    SeparatorDeclaration {
+                        group: group.clone(),
+                        element_id: node.id.clone(),
+                        ui_hint: node.ui_hint.clone(),
+                        access: node.access.clone(),
+                    },
+                );
                 separators.push((node_id, node.id.clone(), group));
             } else if let Some(reference) = &node.reference {
                 dependencies

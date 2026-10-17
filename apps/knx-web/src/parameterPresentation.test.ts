@@ -1,7 +1,8 @@
 /** Regression tests for lossless diagnostic grouping and manufacturer access partitioning. */
 import { describe, expect, it } from "vitest";
-import type { ParameterDiagnostic, ParameterField } from "./api";
-import { groupParameterDiagnostics, isManufacturerRestricted } from "./parameterPresentation";
+import type { ParameterDiagnostic, ParameterField, ParameterSection, ParameterSeparator } from "./api";
+import { filterParameterSection, groupParameterDiagnostics, isManufacturerRestricted, isSeparatorRestricted,
+  restrictingAccess } from "./parameterPresentation";
 
 const diagnostic: ParameterDiagnostic = {
   scope: null, kind: "noBranchMatched", severity: "info", message: "No branch",
@@ -52,5 +53,44 @@ describe("parameter presentation", () => {
     ["None", true], ["Read", true], ["ReadWrite", false], [null, false], ["future", false],
   ])("partitions Access %s without guessing unsupported metadata", (access, expected) => {
     expect(isManufacturerRestricted({ access } as ParameterField)).toBe(expected);
+  });
+
+  // ADR-0139: an enclosing block's Access restricts as the field's own does.
+  it.each([
+    ["ReadWrite", "None", { access: "None", from: "block" }],
+    [null, "Read", { access: "Read", from: "block" }],
+    ["Read", "None", { access: "Read", from: "field" }],
+    ["ReadWrite", null, null],
+    ["ReadWrite", undefined, null],
+    ["ReadWrite", "future", null],
+  ])("Access %s in a block with Access %s restricts as %j", (access, blockAccess, expected) => {
+    const field = { access, blockAccess } as ParameterField;
+    expect(restrictingAccess(field)).toEqual(expected);
+    expect(isManufacturerRestricted(field)).toBe(expected !== null);
+  });
+
+  const separator = (position: number, access: string | null = null, blockAccess: string | null = null): ParameterSeparator => ({
+    position, group: null, elementId: `S${position}`, text: null, uiHint: null, access, blockAccess,
+  });
+
+  it("restricts a separator by its own or its block's Access", () => {
+    expect(isSeparatorRestricted(separator(0))).toBe(false);
+    expect(isSeparatorRestricted(separator(0, "None"))).toBe(true);
+    expect(isSeparatorRestricted(separator(0, null, "Read"))).toBe(true);
+    expect(isSeparatorRestricted(separator(0, "future"))).toBe(false);
+  });
+
+  it("renumbers kept separators to stand before the same kept field", () => {
+    const fields = ["A", "B", "C", "D"].map(etsId => ({ etsId }) as ParameterField);
+    const section: ParameterSection = { scope: null, fields,
+      separators: [separator(0), separator(2), separator(3, "None"), separator(4), separator(99)] };
+    const before = JSON.stringify(section);
+    const kept = filterParameterSection(section, field => field.etsId !== "B" && field.etsId !== "C",
+      item => !isSeparatorRestricted(item));
+    expect(kept.fields.map(field => field.etsId)).toEqual(["A", "D"]);
+    // Before A, before C (now before D), after D, out of range clamped to the end.
+    expect(kept.separators!.map(item => [item.elementId, item.position])).toEqual([["S0", 0], ["S2", 1], ["S4", 2], ["S99", 2]]);
+    expect(JSON.stringify(section)).toBe(before);
+    expect(filterParameterSection({ scope: null, fields }, () => true, () => true).separators).toEqual([]);
   });
 });

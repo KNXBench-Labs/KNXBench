@@ -51,6 +51,10 @@ struct ElementSpec {
     number_attr: Option<&'static str>,
     /// ADR-0126: the text parameter a positional `{{0}}` in `@Text` reads.
     text_parameter_ref_attr: Option<&'static str>,
+    /// ADR-0139: a block's or separator's declared user right (`Access_t`).
+    access_attr: Option<&'static str>,
+    /// ADR-0139: a separator's presentation hint, verbatim.
+    ui_hint_attr: Option<&'static str>,
 }
 
 const UNMODELLED: ElementSpec = ElementSpec {
@@ -64,7 +68,20 @@ const UNMODELLED: ElementSpec = ElementSpec {
     name_attr: None,
     number_attr: None,
     text_parameter_ref_attr: None,
+    access_attr: None,
+    ui_hint_attr: None,
 };
+
+/// Which optional `dynamic_node` columns the database being written has. An
+/// older migration re-parsing into an earlier schema writes, and reports,
+/// exactly what that schema's parser did.
+#[derive(Debug, Clone, Copy)]
+struct Modelled {
+    /// v23, ADR-0126.
+    text_parameter_refs: bool,
+    /// v24, ADR-0139: `access` and `ui_hint`.
+    presentation: bool,
+}
 
 /// Design D4's table. `choose`'s `@ParamRefId`, `Channel`/`ParameterBlock`/
 /// `ParameterRefRef`/`ComObjectRefRef`/`Module`'s `@RefId` — the two
@@ -109,11 +126,19 @@ fn spec_for(kind: &str) -> ElementSpec {
         },
         // `@Name` is recognized but read by nothing, so it stays in `extra`.
         "ParameterBlock" => ElementSpec {
-            known: &["Id", "RefId", "Text", "Name", "TextParameterRefId"],
+            known: &[
+                "Id",
+                "RefId",
+                "Text",
+                "Name",
+                "TextParameterRefId",
+                "Access",
+            ],
             id_attr: Some("Id"),
             ref_attrs: &["RefId"],
             text_attr: Some("Text"),
             text_parameter_ref_attr: Some("TextParameterRefId"),
+            access_attr: Some("Access"),
             ..UNMODELLED
         },
         "ParameterRefRef" | "ComObjectRefRef" => ElementSpec {
@@ -122,10 +147,12 @@ fn spec_for(kind: &str) -> ElementSpec {
             ..UNMODELLED
         },
         "ParameterSeparator" => ElementSpec {
-            known: &["Id", "Text", "UIHint", "TextParameterRefId"],
+            known: &["Id", "Text", "UIHint", "TextParameterRefId", "Access"],
             id_attr: Some("Id"),
             text_attr: Some("Text"),
             text_parameter_ref_attr: Some("TextParameterRefId"),
+            access_attr: Some("Access"),
+            ui_hint_attr: Some("UIHint"),
             ..UNMODELLED
         },
         "Module" => ElementSpec {
@@ -222,6 +249,12 @@ pub(crate) fn parse_dynamic_trees_detailed(
     // reports `TextParameterRefId` the way that schema's parser did.
     let text_parameter_refs_modelled =
         crate::migration::column_exists(conn, "dynamic_node", "text_parameter_ref_id")?;
+    // ADR-0139: likewise before v24 for `Access` and `UIHint`.
+    let presentation_modelled = crate::migration::column_exists(conn, "dynamic_node", "access")?;
+    let modelled = Modelled {
+        text_parameter_refs: text_parameter_refs_modelled,
+        presentation: presentation_modelled,
+    };
 
     loop {
         buf.clear();
@@ -250,7 +283,7 @@ pub(crate) fn parse_dynamic_trees_detailed(
                     &mut next_node_id,
                     &mut unknown,
                     &mut entities,
-                    text_parameter_refs_modelled,
+                    modelled,
                 )?;
             }
             Event::Empty(e) => {
@@ -270,7 +303,7 @@ pub(crate) fn parse_dynamic_trees_detailed(
                     &mut next_node_id,
                     &mut unknown,
                     &mut entities,
-                    text_parameter_refs_modelled,
+                    modelled,
                 )?;
             }
             Event::End(e) => {
@@ -312,7 +345,7 @@ fn handle_start_or_empty(
     next_node_id: &mut i64,
     unknown: &mut UnknownCollector,
     entities: &mut EntityCounts,
-    text_parameter_refs_modelled: bool,
+    modelled: Modelled,
 ) -> Result<(), ProductDbError> {
     match name {
         "ApplicationProgram" => {
@@ -369,7 +402,7 @@ fn handle_start_or_empty(
                 unknown,
                 entities,
                 is_start,
-                text_parameter_refs_modelled,
+                modelled,
             )?;
         }
     }
@@ -429,7 +462,7 @@ fn handle_dynamic_element(
     unknown: &mut UnknownCollector,
     entities: &mut EntityCounts,
     is_start: bool,
-    text_parameter_refs_modelled: bool,
+    modelled: Modelled,
 ) -> Result<(), ProductDbError> {
     let (parent_id, position) = if name == "Dynamic" && stack.is_empty() {
         // `node_id` is monotonic per (program_id, module_def_id), design
@@ -467,7 +500,7 @@ fn handle_dynamic_element(
         a,
         unknown,
         !skip_program,
-        text_parameter_refs_modelled,
+        modelled,
     )?;
     if !skip_program {
         entities.stored(EntityKind::DynamicNode)?;
@@ -487,11 +520,15 @@ fn insert_node(
     a: &Attrs,
     unknown: &mut UnknownCollector,
     store: bool,
-    text_parameter_refs_modelled: bool,
+    modelled: Modelled,
 ) -> Result<(), ProductDbError> {
     let mut spec = spec_for(kind);
-    if !text_parameter_refs_modelled {
+    if !modelled.text_parameter_refs {
         spec.text_parameter_ref_attr = None;
+    }
+    if !modelled.presentation {
+        spec.access_attr = None;
+        spec.ui_hint_attr = None;
     }
     let xpath = if module_def_id.is_empty() {
         format!("/KNX/ManufacturerData/Manufacturer/ApplicationPrograms/ApplicationProgram/Dynamic/{kind}")
@@ -516,7 +553,8 @@ fn insert_node(
         .iter()
         .copied()
         .filter(|name| attribute_is_known(kind, name, a.get(name)))
-        .filter(|name| text_parameter_refs_modelled || *name != "TextParameterRefId")
+        .filter(|name| modelled.text_parameter_refs || *name != "TextParameterRefId")
+        .filter(|name| modelled.presentation || *name != "Access")
         .collect();
     crate::parse::report_unknown_attrs(unknown, &xpath, a, &known);
 
@@ -528,6 +566,8 @@ fn insert_node(
     let name = spec.name_attr.and_then(|n| a.get(n));
     let number = spec.number_attr.and_then(|n| a.get(n));
     let text_parameter_ref_id = spec.text_parameter_ref_attr.and_then(|n| a.get(n));
+    let access = spec.access_attr.and_then(|n| a.get(n));
+    let ui_hint = spec.ui_hint_attr.and_then(|n| a.get(n));
 
     let mut captured: Vec<&str> = Vec::new();
     captured.extend(spec.id_attr);
@@ -541,6 +581,8 @@ fn insert_node(
     captured.extend(spec.name_attr);
     captured.extend(spec.number_attr);
     captured.extend(spec.text_parameter_ref_attr);
+    captured.extend(spec.access_attr);
+    captured.extend(spec.ui_hint_attr);
     // `extra` is a human-readable audit trail, not a re-parseable encoding:
     // "name=value" pairs, sorted, newline-joined (design D2), which cannot
     // be split unambiguously back apart when a value itself contains `=` or
@@ -559,17 +601,9 @@ fn insert_node(
     };
 
     if store {
-        // Before v23 the column does not exist yet (ADR-0126).
-        let (columns, placeholders) = if text_parameter_refs_modelled {
-            (", text_parameter_ref_id", ",?16")
-        } else {
-            ("", "")
-        };
-        let sql = format!(
-            "INSERT INTO dynamic_node
-         (program_id, module_def_id, node_id, parent_id, position, kind,
-          element_id, ref_id, test, is_default, text, value, extra, name, number{columns})
-         VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15{placeholders})"
+        let mut columns = String::from(
+            "program_id, module_def_id, node_id, parent_id, position, kind, \
+             element_id, ref_id, test, is_default, text, value, extra, name, number",
         );
         let mut values: Vec<&dyn rusqlite::ToSql> = vec![
             &program_id,
@@ -588,9 +622,21 @@ fn insert_node(
             &name,
             &number,
         ];
-        if text_parameter_refs_modelled {
+        // Before v23 (ADR-0126) and v24 (ADR-0139) these columns do not exist.
+        if modelled.text_parameter_refs {
+            columns.push_str(", text_parameter_ref_id");
             values.push(&text_parameter_ref_id);
         }
+        if modelled.presentation {
+            columns.push_str(", access, ui_hint");
+            values.push(&access);
+            values.push(&ui_hint);
+        }
+        let placeholders = (1..=values.len())
+            .map(|i| format!("?{i}"))
+            .collect::<Vec<_>>()
+            .join(",");
+        let sql = format!("INSERT INTO dynamic_node ({columns}) VALUES ({placeholders})");
         conn.execute(&sql, values.as_slice())?;
     }
     Ok(())

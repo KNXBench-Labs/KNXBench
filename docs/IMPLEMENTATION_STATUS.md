@@ -12,6 +12,27 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Block access and manufacturer separators in the parameter tab (17 October 2026)
+
+Fix package 1 of the [product-database gap census](research/2026-10-17-product-database-gap-census.md)
+([ADR-0139](adr/0139-block-access-and-separators-reach-the-parameter-tab.md)).
+Product DB **v24** stores `Access` (blocks, separators) and `UIHint`
+(separators) in typed `dynamic_node` columns, backfilled from the retained
+bytes like v23; legacy EX-IM programs are skipped. The evaluator passes the
+most restrictive block `Access` down the walk (modules included; a ref reached
+along an open path stays writable) and lists activated separators in source
+order. The server refuses writes below a `None`/`Read` block
+(`parameterBlockAccessRestricted`, `400`, nothing written) and serializes
+`field.blockAccess` and `section.separators[]`. The web workspace moves such
+fields to the Restricted view with a group caption and shows headlines,
+information and error texts and rulers between the rows of their area (EN/DE).
+Tests: ProductDB `presentation_attributes` 4 (incl. v23→v24 rewind),
+`dynamic_block_access` 5, `parameter_layout` +1, `scheme12_14` now pins the
+scheme-12 separator `Access` as preserved instead of reported; HTTP
+`http_parameter_block_access` 3; Vitest +13 (full suite 3,726). No browser
+case yet. Boundaries:
+[KL-003](limitations/KL-003-parameter-evaluation-and-editing-boundaries.md#product-database-gap-census-17-october-2026).
+
 ## Notes when deleting and in selective imports (17 October 2026)
 
 Package P3 closes [`FUTURE-03`](status/LEDGER.md#snapshot-ids)

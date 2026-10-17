@@ -1413,12 +1413,16 @@
       "heading": "## 85. A `.signature` package member is stored with role `Signature`, never verified",
       "source_lines": 122,
       "source_sha256": "f6230caa1a1a49d1a464d5c9fd9f4b6b3b9acd26d8009f7d6e23b9e34dad3276",
-      "retained_sha256": "1a1f24ad6764a43a74ac2c0567df00286096ba4325e4ce87eaedcf786890ea68",
+      "retained_sha256": "9b26d06f8b82c5fdd12456d64388eefcbca5f117113d4de8f62976696b9c5a19",
       "detail_file": "docs/limitations/KL-085-unverified-package-signatures.md",
       "rewritten_link_targets": 0,
       "anchors": [
         "85-a-signature-package-member-is-stored-with-role-signature-never-verified"
-      ]
+      ],
+      "redaction": {
+        "reason": "local machine details (absolute local paths, host name, kernel release) replaced by placeholders on 2026-10-17",
+        "previous_retained_sha256": "1a1f24ad6764a43a74ac2c0567df00286096ba4325e4ce87eaedcf786890ea68"
+      }
     },
     {
       "key": "KL-086",
@@ -1465,12 +1469,16 @@
       "heading": "## 90. There is no DPT main type 46; 46 is a *count* of main types in one ETS master-data file",
       "source_lines": 71,
       "source_sha256": "3953c7d7db06fbbbde0abc80d347f1b064e8c6aa106e21954d96fe9cc39072b5",
-      "retained_sha256": "5e9393898811c9f6869beda74919d9dbd4825291353f24cf0c7f081ac6db8ea3",
+      "retained_sha256": "21fe458784e22e5b8a170bb2f104d2a3d9680675b91c986c367522a3d9d3d31c",
       "detail_file": "docs/limitations/KL-090-historical-dpt-count-correction.md",
       "rewritten_link_targets": 0,
       "anchors": [
         "90-there-is-no-dpt-main-type-46-46-is-a-count-of-main-types-in-one-ets-master-data-file"
-      ]
+      ],
+      "redaction": {
+        "reason": "local machine details (absolute local paths, host name, kernel release) replaced by placeholders on 2026-10-17",
+        "previous_retained_sha256": "5e9393898811c9f6869beda74919d9dbd4825291353f24cf0c7f081ac6db8ea3"
+      }
     },
     {
       "key": "KL-092",
@@ -1623,12 +1631,16 @@
       "heading": "## 106. The debug report redacts five pattern classes, and nothing else",
       "source_lines": 131,
       "source_sha256": "47625c05365c1de5522397630bbdc27a2505ab829afb09383e1b08269cfe9d66",
-      "retained_sha256": "f860d0a7ec98c8e452082242a1ae6cf1d1e304e518a1326e24b73bc97ad4e71f",
+      "retained_sha256": "183793e411074c45f02e21b5b794887dc2ec98a6d0ee0bd8491810ff286e89f7",
       "detail_file": "docs/limitations/KL-106-debug-report-privacy-limits.md",
       "rewritten_link_targets": 0,
       "anchors": [
         "106-the-debug-report-redacts-five-pattern-classes-and-nothing-else"
-      ]
+      ],
+      "redaction": {
+        "reason": "local machine details (absolute local paths, host name, kernel release) replaced by placeholders on 2026-10-17",
+        "previous_retained_sha256": "f860d0a7ec98c8e452082242a1ae6cf1d1e304e518a1326e24b73bc97ad4e71f"
+      }
     },
     {
       "key": "KL-107",
@@ -2603,9 +2615,13 @@
       {
         "heading": "## §130 A gate binary can verify a directory that no longer exists",
         "source_sha256": "865d115199ee2d9ab71112bc8b54cc28dd0a4edd583a2762e2ff42f0cbf8b914",
-        "retained_sha256": "ad45e4bf888442b0a01ab2a533ae549ecb093822765691e8e443b919dc704bc1",
+        "retained_sha256": "4a8e86226bd0a5557da67b48845fac10b7951e167a8a51d18c8e5c126a33c602",
         "detail_file": "docs/limitations/KL-130-GATE-resolved-gate-root-validation.md",
-        "rewritten_link_targets": 1
+        "rewritten_link_targets": 1,
+        "redaction": {
+          "reason": "local machine details (absolute local paths, host name, kernel release) replaced by placeholders on 2026-10-17",
+          "previous_retained_sha256": "ad45e4bf888442b0a01ab2a533ae549ecb093822765691e8e443b919dc704bc1"
+        }
       }
     ]
   }

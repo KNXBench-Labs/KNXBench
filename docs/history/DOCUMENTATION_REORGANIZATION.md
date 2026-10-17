@@ -43,7 +43,10 @@ remain unchanged. Historical live operations are never new write permission.
   dossier with an index link. Keep the small index; do not prepend full trial logs.
 - Do not independently duplicate statuses from [LEDGER](../status/LEDGER.md).
 - Do not edit frozen original records to erase older failures or make a gate pass.
-  Append a correction with its evidence instead. Update both plain file links and
+  Append a correction with its evidence instead. The one exception is removing
+  local machine details ([ADR-0135](../adr/0135-repository-carries-no-local-machine-details.md)):
+  give the record a `redaction` with its reason and `previous_retained_sha256`
+  and pin its new `retained_sha256`. Update both plain file links and
   fragment aliases if a future reviewed migration changes a dossier location.
 
 ## Preservation and verification
@@ -52,7 +55,12 @@ The [source receipt](../evidence/documentation-reorganization-2026-10-13.json)
 records source revision/digests, every contiguous original section, its destination,
 all original aliases, and each reversible local-link rewrite. The automated
 checker verifies retained blocks, inversely restores every link, and reconstructs
-the complete original source digest and order. A status log with late older dates
+the complete original source digest and order. A record with a declared
+`redaction` is pinned to its new bytes and keeps its offset and anchor checks;
+its byte reconstruction, and with it the whole-source digest of that source, is
+skipped. Four records here and four in the
+[limitations receipt](../evidence/limitations-reorganization-2026-10-13.json)
+carry such a redaction (2026-10-17). A status log with late older dates
 and fenced heading examples has dedicated regressions.
 
 Commands:

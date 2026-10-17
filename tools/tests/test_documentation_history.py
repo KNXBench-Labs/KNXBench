@@ -64,6 +64,48 @@ class DocumentationHistoryTests(unittest.TestCase):
             path.write_text(path.read_text().replace('The original evidence stays.\n', ''))
             self.assertTrue(any('example' in error for error in module.check(root)))
 
+    def test_a_declared_redaction_replaces_byte_identity_for_that_record_only(self):
+        module = self.module()
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / 'docs/evidence').mkdir(parents=True)
+            first, second = '## One\nBuilt in /secret/place.\n', '## Two\nUntouched.\n'
+            sha = lambda text: hashlib.sha256(text.encode()).hexdigest()
+            redacted = first.replace('/secret/place', '<sources>')
+            records = [
+                {'key': 'one', 'file': 'docs/archive.md', 'source_offset': 0,
+                 'source_length': len(first), 'source_sha256': sha(first),
+                 'retained_sha256': sha(redacted), 'link_edits': [], 'anchors': [],
+                 'redaction': {'reason': 'local machine details removed',
+                               'previous_retained_sha256': sha(first)}},
+                {'key': 'two', 'file': 'docs/archive.md', 'source_offset': len(first),
+                 'source_length': len(second), 'source_sha256': sha(second),
+                 'retained_sha256': sha(second), 'link_edits': [], 'anchors': []}]
+            receipt = {'version': 1, 'sources': [{'source': 'docs/index.md',
+                       'sha256': sha(first + second), 'records': records}]}
+            receipt_path = root / 'docs/evidence/documentation-reorganization-2026-10-13.json'
+            path = root / 'docs/archive.md'
+            body = lambda one, two: (f'<!-- BEGIN preserved one -->\n{one}\n<!-- END preserved one -->\n'
+                                     f'<!-- BEGIN preserved two -->\n{two}\n<!-- END preserved two -->\n')
+            (root / 'docs/index.md').write_text('[Details](archive.md)\n')
+            path.write_text(body(redacted, second))
+            receipt_path.write_text(json.dumps(receipt))
+            self.assertEqual(module.check(root), [])
+            # The unredacted neighbour keeps its full byte-identity check.
+            path.write_text(body(redacted, '## Two\nEdited.\n'))
+            self.assertTrue(any('two' in error for error in module.check(root)))
+            # The redacted record is pinned to its new bytes, too.
+            path.write_text(body(redacted.replace('Built', 'Made'), second))
+            self.assertTrue(any('one' in error for error in module.check(root)))
+            # A redaction must say why and name the bytes it replaced.
+            path.write_text(body(redacted, second))
+            records[0]['redaction'] = {'reason': ' ', 'previous_retained_sha256': sha(first)}
+            receipt_path.write_text(json.dumps(receipt))
+            self.assertTrue(any('redaction' in error for error in module.check(root)))
+            records[0]['redaction'] = {'reason': 'x', 'previous_retained_sha256': 'nope'}
+            receipt_path.write_text(json.dumps(receipt))
+            self.assertTrue(any('redaction' in error for error in module.check(root)))
+
     def test_real_archive_preservation_and_old_fragment_targets(self):
         module = self.module()
         self.assertTrue(hasattr(module, 'check'), 'Missing history preservation gate')

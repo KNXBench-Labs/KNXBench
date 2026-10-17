@@ -15,7 +15,7 @@ hardware* — no device was touched, no bus was contacted, and nothing here
 moves [KNOWN_LIMITATIONS.md §7](../../KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-required-but-blocked)
 one line closer to working. A documented procedure is a documented
 procedure; ETS parity and hardware behaviour remain unestablished. Full
-spike report: `/home/alice/.claude/jobs/8098e9e6/tmp/r5-report.md`; this
+spike report: `~/.claude/jobs/8098e9e6/tmp/r5-report.md`; this
 section is the durable summary that survives outside that file.
 
 **Reusable pointer — where this evidence lives and how to get more of it.**

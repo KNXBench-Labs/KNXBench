@@ -158,6 +158,7 @@ class CatalogueTests(unittest.TestCase):
                 self.assertEqual(body.count('<!-- BEGIN retained catalogue record -->'), 1)
                 retained = body.split('<!-- BEGIN retained catalogue record -->\n', 1)[1].split('\n<!-- END retained catalogue record -->', 1)[0]
                 self.assertEqual(hashlib.sha256(retained.encode()).hexdigest(), record['retained_sha256'])
+                self.assert_declared_redaction(record)
                 for anchor in record['anchors']:
                     self.assertIn(f'<a id="{anchor}"></a>', overview)
         for record in receipt['resolved_history']['sections']:
@@ -166,6 +167,15 @@ class CatalogueTests(unittest.TestCase):
                 self.assertIn('<!-- BEGIN earlier resolved record -->', body)
                 retained = body.split('<!-- BEGIN earlier resolved record -->\n', 1)[1].split('\n<!-- END earlier resolved record -->', 1)[0]
                 self.assertEqual(hashlib.sha256(retained.encode()).hexdigest(), record['retained_sha256'])
+                self.assert_declared_redaction(record)
+
+    def assert_declared_redaction(self, record):
+        """ADR-0135: a record may change only through a redaction that says why
+        and names the bytes it replaced; its new bytes stay pinned."""
+        if 'redaction' in record:
+            self.assertTrue(record['redaction']['reason'].strip())
+            self.assertRegex(record['redaction']['previous_retained_sha256'], r'^[0-9a-f]{64}$')
+            self.assertNotEqual(record['redaction']['previous_retained_sha256'], record['retained_sha256'])
 
     def test_ci_runs_status_and_history_checks(self):
         workflow = (TOOLS.parent / '.github/workflows/ci.yml').read_text()

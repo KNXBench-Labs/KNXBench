@@ -4850,11 +4850,15 @@
           "source_offset": 402518,
           "source_length": 2193,
           "source_sha256": "fae6b0a989bbe8f0f21b815b8061d28de012cdf2cceae693883ebe0f50b3b7ec",
-          "retained_sha256": "fae6b0a989bbe8f0f21b815b8061d28de012cdf2cceae693883ebe0f50b3b7ec",
+          "retained_sha256": "64c756c23c54f53c57ea53d1f5947eb418b732b931127e930c0e932feab03fac",
           "link_edits": [],
           "anchors": [
             "2026-10-03--productive-crt-interactions-local-feature-worktree"
-          ]
+          ],
+          "redaction": {
+            "reason": "local machine details (absolute local paths, host name, kernel release) replaced by placeholders on 2026-10-17",
+            "previous_retained_sha256": "fae6b0a989bbe8f0f21b815b8061d28de012cdf2cceae693883ebe0f50b3b7ec"
+          }
         },
         {
           "key": "record-0-248",
@@ -5928,7 +5932,7 @@
           "source_offset": 6169,
           "source_length": 35583,
           "source_sha256": "3b599a49119bd95f33850a62dca0ca42f90ad29b5fe9b5055101eec90a2ae257",
-          "retained_sha256": "1d71de3aea195518aee8cd9076ad6fe5d1a0209b4e417dc25d39938e9af74ab3",
+          "retained_sha256": "131a87f4d36bf4ee7798df78625f414a6ebed453ae41cc64f38261340119eb63",
           "link_edits": [
             {
               "offset": 346,
@@ -5939,7 +5943,11 @@
           ],
           "anchors": [
             "84-commissioning--device-download-procedures--r5-spike-session-6-2026-09-11"
-          ]
+          ],
+          "redaction": {
+            "reason": "local machine details (absolute local paths, host name, kernel release) replaced by placeholders on 2026-10-17",
+            "previous_retained_sha256": "1d71de3aea195518aee8cd9076ad6fe5d1a0209b4e417dc25d39938e9af74ab3"
+          }
         },
         {
           "key": "record-1-007",
@@ -5961,7 +5969,7 @@
           "source_offset": 68925,
           "source_length": 28142,
           "source_sha256": "4e4f84858006a4992bec61c0f62b886359404c9bf8251ad3f16f4fb6b1d89e27",
-          "retained_sha256": "2b2ea5511756c18a1ed4d0a7db66ea36fb12a84c81e3ee2115c565a32b8d923e",
+          "retained_sha256": "7df433945178f59b46b255ec0a4d83857ad25ef6a543bf6fd868ea353b8ae111",
           "link_edits": [
             {
               "offset": 18577,
@@ -5997,7 +6005,11 @@
             "865-q2--what-knx-productdb-does-with-all-of-this-today",
             "866-q5--a-safe-first-slice",
             "867-what-this-spike-did-not-settle-and-what-would-settle-it"
-          ]
+          ],
+          "redaction": {
+            "reason": "local machine details (absolute local paths, host name, kernel release) replaced by placeholders on 2026-10-17",
+            "previous_retained_sha256": "2b2ea5511756c18a1ed4d0a7db66ea36fb12a84c81e3ee2115c565a32b8d923e"
+          }
         },
         {
           "key": "record-1-009",
@@ -6894,7 +6906,7 @@
           "source_offset": 0,
           "source_length": 873618,
           "source_sha256": "ec02b75ea473b0fae0ebd6a82c877acb91b1bc148c35945110a69d7466a89bc0",
-          "retained_sha256": "4c5f73b81b210149d5e2caaa6b88de4d05a7756c25ab271a15b7ff9453ccb88a",
+          "retained_sha256": "6e254e4750fca435c96cb6304bba9a8ef93f51506e63f9602751b39fd1cdb7f1",
           "link_edits": [
             {
               "offset": 85167,
@@ -6921,7 +6933,11 @@
             "ledger-updates-for-ar14d-2",
             "ledger-updates-for-ar14d-3",
             "ledger-updates-for-ar14d-4"
-          ]
+          ],
+          "redaction": {
+            "reason": "local machine details (absolute local paths, host name, kernel release) replaced by placeholders on 2026-10-17",
+            "previous_retained_sha256": "4c5f73b81b210149d5e2caaa6b88de4d05a7756c25ab271a15b7ff9453ccb88a"
+          }
         }
       ]
     }

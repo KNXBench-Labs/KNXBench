@@ -6,8 +6,9 @@ import { createRequire } from "module";
 import { writeFileSync } from "fs";
 import { pathToFileURL } from "url";
 
+// Without PLAYWRIGHT_DIR, normal Node module resolution from this file applies.
 const require = createRequire(
-  (process.env.PLAYWRIGHT_DIR || "/home/alice/.local/share/mise/installs/npm-playwright/latest/node_modules") + "/",
+  process.env.PLAYWRIGHT_DIR ? process.env.PLAYWRIGHT_DIR + "/" : import.meta.url,
 );
 const playwright = require("playwright");
 // STORY_BROWSER selects the engine: chromium (default), firefox or webkit.

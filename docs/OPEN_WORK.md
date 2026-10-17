@@ -1,5 +1,13 @@
 # Open work after the 0.1 alpha
 
+## Local machine details: Git history decision pending (17 October 2026)
+
+The tracked tree no longer carries local paths, host name or kernel release and
+is guarded ([ADR-0135](adr/0135-repository-carries-no-local-machine-details.md)).
+Earlier commits and seven commit messages still do
+([KL-185](KNOWN_LIMITATIONS.md#catalogue-kl-185)). Next: the owner decides
+whether to rewrite history (force-push, new hashes, moved tags) or keep it.
+
 ## Read-only diagnostic export: hardware check pending (17 October 2026)
 
 [Implemented and simulator-verified](contracts/device-diagnostic-export.md);

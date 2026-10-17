@@ -14,7 +14,7 @@ git ls-tree -r --name-only bca2d3336b96 docs/superpowers   # list a folder
 git restore --source=bca2d3336b96 -- <path>  # bring a file back
 ```
 
-Web: `https://github.com/KNXBench-Labs/KNXBench/tree/bca2d3336b96/<path>`.
+Web: `https://github.com/KNXBench-Labs/KNXBench/tree/6222e17754f3/<path>`.
 
 | Removed path | Files | What it held |
 | --- | ---: | --- |

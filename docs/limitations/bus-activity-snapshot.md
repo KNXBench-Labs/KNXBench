@@ -52,7 +52,7 @@ first property write. This is metadata only, not a recovery image, complete
 download journal or a shipped global UI. Whole-candidate acceptance and
 publication remain pending. The exact consumer contract and residue are in
 [COMMISSIONING_ACTIVITY_HISTORY](../contracts/COMMISSIONING_ACTIVITY_HISTORY.md) and
-[COMMISSIONING_ALPHA_LEDGER](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/archive/alpha-0.1/COMMISSIONING_ALPHA_LEDGER.md).
+[COMMISSIONING_ALPHA_LEDGER](https://github.com/KNXBench-Labs/KNXBench/blob/6222e17754f3/docs/archive/alpha-0.1/COMMISSIONING_ALPHA_LEDGER.md).
 
 **Admission correction, 2026-10-03.** Late synthetic review reproduced SQLite
 hot-journal rollback before a foreign-format refusal. Corrected openers first

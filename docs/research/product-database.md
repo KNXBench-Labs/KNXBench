@@ -242,7 +242,7 @@ headless evaluator over the stored tree was built afterward (T18 slice 1,
 2026-09-11); no editor exists still. See
 [KNOWN_LIMITATIONS.md §3](../KNOWN_LIMITATIONS.md). What follows is the
 research; the implementation is future work (T18,
-[GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/a584007fc05a/docs/GAP_ANALYSIS_ETS.md)). Full spike report:
+[GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/994ac08c0328/docs/GAP_ANALYSIS_ETS.md)). Full spike report:
 `.ai/logs/2026-09-11_claude_r3_dynamic_grammar.md`; this section is the
 durable summary that survives outside that log.
 
@@ -472,7 +472,7 @@ node: it evaluates to a `ModuleNotExpanded` diagnostic and its subtree is
 not entered. This spike answers how following it — slice 2, which did not
 exist yet at spike time — would actually have to work, before any design
 is written. Read-only research; no production code changed. **Slice 2
-shipped later the same day** ([design](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/superpowers/specs/2026-09-11-module-expansion-design.md)
+shipped later the same day** ([design](https://github.com/KNXBench-Labs/KNXBench/blob/6222e17754f3/docs/superpowers/specs/2026-09-11-module-expansion-design.md)
 D12-D19, [IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md)'s T18 slice
 2 entry): `Diagnostic::ModuleNotExpanded` no longer exists in the crate,
 replaced by `ModuleDefNotFound`/`NestedModuleNotExpanded`. This section
@@ -1053,7 +1053,7 @@ on every test run, so the zero above is an assertion, not a memory.
 ## 18. Legacy VD/PR (`EX-IM`) product files (DIN-9, 2026-09-26)
 
 The full design, with every measurement and its reproduction, is
-[2026-09-26-legacy-vd-pr-product-import-design.md](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/superpowers/specs/2026-09-26-legacy-vd-pr-product-import-design.md).
+[2026-09-26-legacy-vd-pr-product-import-design.md](https://github.com/KNXBench-Labs/KNXBench/blob/6222e17754f3/docs/superpowers/specs/2026-09-26-legacy-vd-pr-product-import-design.md).
 It extends [VD4_PRODUCT_DATABASE_IMPORT.md](../VD4_PRODUCT_DATABASE_IMPORT.md).
 Only the findings that change what KNXBench knows about external formats are
 listed here.

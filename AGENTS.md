@@ -316,7 +316,10 @@ files, commit messages, tags or release notes:
 
 * absolute local paths (mount points, home directories, checkout and worktree
   locations, agent profile, scratch or evidence directories)
-* host names, user names, exact kernel releases or other exact system details
+* host names, user names, exact kernel releases, CPU models, distribution or
+  desktop names and other exact system details
+* network addresses of a real installation (use a documentation address such
+  as `203.0.113.250`)
 
 Use placeholders instead: `<sources>` for the directory holding checkouts and
 worktrees, `<profile>` / `<profile-scratch>` for agent profile data, `~` for a
@@ -328,6 +331,8 @@ need a home directory use an obvious placeholder such as `/home/alice`.
 commit messages with `--message-file` (usable as a `commit-msg` hook) or
 `--commits RANGE` before a push. A line that must show such a detail as an
 example (the guard's own fixtures) carries the marker `local-info: allow`.
+Tokens no machine can report (an old mount name, a real gateway address) go
+into the untracked, clone-local `.git/info/local-info-deny`.
 
 ---
 

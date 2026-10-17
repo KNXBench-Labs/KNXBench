@@ -172,7 +172,7 @@ communication objects, visibility) into the product database. It must pass
 the semantic-equivalence check against ETS's own conversion in the house
 project (ADR-0094 decision 7). *Superseded condition, kept for history:*
 the design
-[2026-09-26-legacy-vd-pr-product-import-design.md](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/superpowers/specs/2026-09-26-legacy-vd-pr-product-import-design.md)
+[2026-09-26-legacy-vd-pr-product-import-design.md](https://github.com/KNXBench-Labs/KNXBench/blob/6222e17754f3/docs/superpowers/specs/2026-09-26-legacy-vd-pr-product-import-design.md)
 has an independent review verdict and Board approval of its decisions B-1 to
 B-6. After that, its slices are implemented one at a time: L1 is named
 detection and refusal without decryption. The user-supplied-password,

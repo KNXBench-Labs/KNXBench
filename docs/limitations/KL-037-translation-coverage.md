@@ -131,7 +131,7 @@ the *stored project* depend on a display setting, the same integrity
 line T26 was careful not to cross for parameter values, and T33 did not
 cross it either. The UI chrome itself, tracked separately as **T25**, is
 no longer hard-coded English — it shipped 2026-09-12, see the T25 entry
-in [GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/a584007fc05a/docs/GAP_ANALYSIS_ETS.md)'s Tier 6 — but this closes
+in [GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/994ac08c0328/docs/GAP_ANALYSIS_ETS.md)'s Tier 6 — but this closes
 only the *chrome* half of D10; the data half's own residue below is
 unaffected. `knx_core::string_table`'s `StringTable`
 still has no resolver anywhere except `build_device_detail`'s own
@@ -155,7 +155,7 @@ default" and stays there until a user picks explicitly.
 **Lifted when.** Partially, 2026-09-12: first the parameter panel (T26's
 first slice), then communication-object text (T33, same day), then the
 UI chrome itself (T25, same day — see its own entry in
-[GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/a584007fc05a/docs/GAP_ANALYSIS_ETS.md)'s Tier 6, closing more of gap
+[GAP_ANALYSIS_ETS.md](https://github.com/KNXBench-Labs/KNXBench/blob/994ac08c0328/docs/GAP_ANALYSIS_ETS.md)'s Tier 6, closing more of gap
 **D10**). What remains is a later T26/T33 follow-up: the project's own
 `Language` field, and `StringTable`/`LocalizedString` resolution against
 a user-selected language — neither touched by any slice so far; every

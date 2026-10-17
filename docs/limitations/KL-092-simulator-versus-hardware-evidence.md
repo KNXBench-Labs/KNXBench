@@ -26,7 +26,7 @@ procedures (complete, one-part and partial download, unload, recovery).
 Those have run only against the simulator.
 
 **Limitation.** The download protocol of
-[docs/superpowers/specs/2026-09-13-commissioning-download-design.md](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/superpowers/specs/2026-09-13-commissioning-download-design.md)
+[docs/superpowers/specs/2026-09-13-commissioning-download-design.md](https://github.com/KNXBench-Labs/KNXBench/blob/6222e17754f3/docs/superpowers/specs/2026-09-13-commissioning-download-design.md)
 is implemented and tested — 247 tests across `knx-core::commissioning` and
 `knx-net::commissioning` (131 in `knx-core`, 116 in `knx-net`; **re-measured
 2026-09-20**, correcting the "153" this section previously stated — count

@@ -12,6 +12,23 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Whole Git history rewritten without local machine details (17 October 2026)
+
+On the owner's decision (KL-185) every file version, commit and tag message of
+`main`, the nine release tags and all local branches were rewritten with
+`git filter-repo`; `main` moved from `c7b729fa` to `951553f9`. The audit added
+categories the first scrub had missed (CPU model, distribution and desktop
+name, an older kernel release, dash-joined path keys, the real gateway
+address), so the tree changed in 15 files as well. 2,963 of 3,216 published commits got
+new hashes (the 253 earliest kept theirs), none dropped; identities, dates and parents unchanged; every changed file on every
+tip equals the rules applied independently; 0 residue in 37,503 objects.
+[Receipt](evidence/history-rewrite-2026-10-17.json),
+[commit map](history/COMMIT_MAP_2026-10-17.txt). 241 pinned GitHub links moved
+to the new commits; 54 frozen records carry a declared redaction. The guard now
+also knows the CPU model, distribution, dash-joined paths, Arch kernel releases
+and a clone-local deny file. GitHub's pull-request refs and the fork keep the
+old commits ([KL-185](KNOWN_LIMITATIONS.md#catalogue-kl-185)).
+
 ## No local machine details in the repository (17 October 2026)
 
 Tracked files no longer name local mount points, checkout or worktree

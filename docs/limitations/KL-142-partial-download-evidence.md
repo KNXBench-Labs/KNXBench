@@ -13,7 +13,7 @@ updates supersede them; they are not new work assignments.
 
 **User decision 2026-10-05.** The Web scope selector is handed to the UI
 owner; the backend contract is in the
-[commissioning handoff](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/archive/alpha-0.1/COMMISSIONING_ALPHA_LEDGER.md#handoff-to-the-ui-owner-2026-10-05).
+[commissioning handoff](https://github.com/KNXBench-Labs/KNXBench/blob/6222e17754f3/docs/archive/alpha-0.1/COMMISSIONING_ALPHA_LEDGER.md#handoff-to-the-ui-owner-2026-10-05).
 
 **Verified scope (2026-09-29/30; RESEARCH §19.15/§19.17).** On the MDT
 `1.1.67`, the `parameters`, `group-addresses` and `both` partial scopes

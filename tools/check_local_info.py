@@ -1,20 +1,27 @@
 #!/usr/bin/env python3
-"""Refuse local machine details (absolute local paths, host name, kernel release) in tracked files and commit messages.
+"""Refuse local machine details (local paths, host, kernel, CPU, distribution) in tracked files and commit messages.
 
 The repository is public. A path such as a developer's mount point or home
-directory, the host name or the exact kernel release tells readers about one
+directory, the host name, the exact kernel release, the CPU model, the
+distribution or a real installation's network address tells readers about one
 machine and nothing about KNXBench. Write a placeholder instead
-(`<sources>`, `<profile>`, `~`, `<host>`, "the dev machine").
+(`<sources>`, `<profile>`, `~`, `<host>`, "8-core CPU", "the dev machine", a
+documentation address such as `203.0.113.250`).
 
 Two kinds of rule apply:
 
 * generic patterns that need no knowledge of any machine (local mount points,
-  home directories other than obvious placeholders, agent profile paths);
+  also in the dash-joined form tools use as directory keys, home directories
+  other than obvious placeholders, agent profile paths, Arch kernel releases);
 * the identifiers of the machine running the check, read at runtime so this
-  file never has to contain them: host name, kernel release, `$HOME` and the
-  directory the checkout lives in. `KNXBENCH_LOCAL_INFO_DENY` adds further
-  colon-separated tokens (for example an old mount point) without committing
-  them anywhere.
+  file never has to contain them: host name, kernel release, CPU model,
+  distribution ID unless it is a common one, `$HOME` and the directory the
+  checkout lives in (both also dash-joined).
+
+Further tokens that no machine can report (an old mount point, the address of
+a real KNX gateway) come from `KNXBENCH_LOCAL_INFO_DENY` (colon-separated) and
+from the clone-local, untracked file `.git/info/local-info-deny` (one token per
+line, `#` comments), so they are checked without being committed anywhere.
 
 A line that deliberately shows such a detail as an example (the guard's own
 patterns and test fixtures) carries the marker `local-info: allow`; the marker
@@ -51,7 +58,14 @@ GENERIC_RULES = (
     ("home directory", re.compile(
         BOUNDARY + r"/home/(?!(?:" + "|".join(PLACEHOLDER_HOMES) + r")" + END + r")[A-Za-z0-9][A-Za-z0-9._-]*")),
     ("agent profile path", re.compile(r"\.hermes/profiles/")),  # local-info: allow
+    ("local mount path", re.compile(r"(?<![\w-])-(?:mnt|media)-[A-Za-z0-9][A-Za-z0-9_]*-[A-Za-z0-9]")),
+    ("kernel release", re.compile(r"(?<![\w.])\d+\.\d+\.\d+-arch\d+-\d+(?![\w.])")),
 )
+# Distribution IDs that describe a large public user base, not one machine.
+COMMON_DISTRIBUTIONS = {"arch", "debian", "ubuntu", "fedora", "alpine", "centos", "rhel", "rocky",
+                        "almalinux", "opensuse", "opensuse-leap", "opensuse-tumbleweed", "sles",
+                        "nixos", "linuxmint", "gentoo", "void", "amzn", "ol", "raspbian"}
+CPU_VENDORS = {"AMD", "Intel(R)", "Intel"}
 # Directories that say nothing about a particular machine.
 GENERIC_DIRS = {"/", "/root", "/home", "/tmp", "/srv", "/opt", "/mnt", "/media", "/workspace", "/build"}
 MIN_TOKEN = 4
@@ -69,6 +83,47 @@ class Finding:
         return f"{self.where}:{self.line}: {self.kind}: {self.text}"
 
 
+def cpu_tokens(cpuinfo: str) -> list[str]:
+    """The CPU model as written in `/proc/cpuinfo`, without vendor and the bare model number."""
+    match = re.search(r"^model name\s*:\s*(.+)$", cpuinfo, re.M)
+    if not match:
+        return []
+    model = re.sub(r"\s+@.*$", "", match.group(1)).strip()
+    model = re.sub(r"\s+(?:\d+-Core\s+)?(?:Processor|CPU)$", "", model).strip()
+    words = model.split()
+    tokens = [model]
+    if len(words) > 1 and words[0] in CPU_VENDORS:
+        tokens.append(" ".join(words[1:]))
+    # A model number such as `1234X` or `i9-0000`; a bare number is too common a word.
+    if words and re.search(r"\d", words[-1]) and re.search(r"[A-Za-z]", words[-1]):
+        tokens.append(words[-1])
+    return tokens
+
+
+def distribution_tokens(os_release: str) -> list[str]:
+    values = dict(re.findall(r'^(ID|NAME)="?([^"\n]*)"?$', os_release, re.M))
+    if values.get("ID", "").lower() in COMMON_DISTRIBUTIONS:
+        return []
+    return [value for value in (values.get("ID", ""), values.get("NAME", "")) if value]
+
+
+def deny_file_tokens(root: Path) -> list[str]:
+    try:
+        common = subprocess.run(["git", "rev-parse", "--git-common-dir"], cwd=root, check=True,
+                                capture_output=True, text=True).stdout.strip()
+        text = (root / common / "info" / "local-info-deny").read_text()
+    except (OSError, subprocess.CalledProcessError):
+        return []
+    return [line.strip() for line in text.splitlines() if line.strip() and not line.lstrip().startswith("#")]
+
+
+def read_optional(path: str) -> str:
+    try:
+        return Path(path).read_text()
+    except OSError:
+        return ""
+
+
 def machine_rules(root: Path) -> list[tuple[str, re.Pattern]]:
     """Identifiers of the machine running the check, as literal patterns."""
     tokens: list[tuple[str, str]] = []
@@ -83,14 +138,17 @@ def machine_rules(root: Path) -> list[tuple[str, re.Pattern]]:
                             ("checkout location", str(root.resolve().parent))):
         if directory not in GENERIC_DIRS and len(directory) >= MIN_TOKEN:
             tokens.append((kind, directory))
-    for extra in os.environ.get("KNXBENCH_LOCAL_INFO_DENY", "").split(":"):
-        if len(extra.strip()) >= MIN_TOKEN:
-            tokens.append(("denied token", extra.strip()))
+            tokens.append((kind, directory.replace("/", "-")))
+    tokens += [("CPU model", token) for token in cpu_tokens(read_optional("/proc/cpuinfo"))]
+    tokens += [("distribution", token) for token in distribution_tokens(read_optional("/etc/os-release"))]
+    extras = os.environ.get("KNXBENCH_LOCAL_INFO_DENY", "").split(":") + deny_file_tokens(root)
+    tokens += [("denied token", extra.strip()) for extra in extras if len(extra.strip()) >= MIN_TOKEN]
     seen, rules = set(), []
     for kind, token in tokens:
         if token not in seen:
             seen.add(token)
-            rules.append((kind, re.compile(r"(?<![\w-])" + re.escape(token) + r"(?![\w])")))
+            flags = re.I if kind == "distribution" else 0
+            rules.append((kind, re.compile(r"(?<![\w-])" + re.escape(token) + r"(?![\w])", flags)))
     return rules
 
 
@@ -99,9 +157,11 @@ def scan_text(where: str, text: str, rules) -> list[Finding]:
     for number, line in enumerate(text.splitlines(), 1):
         if ALLOW_MARKER in line:
             continue
+        kinds = set()  # one finding per line and kind, however many tokens overlap
         for kind, pattern in rules:
             match = pattern.search(line)
-            if match:
+            if match and kind not in kinds:
+                kinds.add(kind)
                 findings.append(Finding(where, number, kind, match.group(0)))
     return findings
 

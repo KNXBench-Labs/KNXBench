@@ -2949,7 +2949,7 @@
           "source_offset": 207237,
           "source_length": 1412,
           "source_sha256": "ae5c0079298768b3114ba498e49fbb172ed0c3afd1dcf5d3b20520578661aa6b",
-          "retained_sha256": "b2a00a5076645f1d07f5f5377920b66f6283b3b2260732945f2b76937baa4992",
+          "retained_sha256": "4cddb6668efe31e9c52c152c0197bb9b7e9bee945aad2d76a07ce1912ef87b15",
           "link_edits": [
             {
               "offset": 457,
@@ -2966,7 +2966,11 @@
           ],
           "anchors": [
             "2026-10-08--goal-audit-and-docsroot-cleanup"
-          ]
+          ],
+          "redaction": {
+            "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
+            "previous_retained_sha256": "b2a00a5076645f1d07f5f5377920b66f6283b3b2260732945f2b76937baa4992"
+          }
         },
         {
           "key": "record-0-126",
@@ -3125,11 +3129,15 @@
           "source_offset": 232241,
           "source_length": 2108,
           "source_sha256": "d2b854f5b5fc6cd9ee8d92baaf8c29cc216a7ca5226bb35ead5b71f86d268f5e",
-          "retained_sha256": "d2b854f5b5fc6cd9ee8d92baaf8c29cc216a7ca5226bb35ead5b71f86d268f5e",
+          "retained_sha256": "5e34d8c2fa7ead220553d743de7419801e33b4d0b7dd2f0e8e5c0040fe9307d5",
           "link_edits": [],
           "anchors": [
             "2026-10-08--lcars-published-and-server-deployed"
-          ]
+          ],
+          "redaction": {
+            "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
+            "previous_retained_sha256": "d2b854f5b5fc6cd9ee8d92baaf8c29cc216a7ca5226bb35ead5b71f86d268f5e"
+          }
         },
         {
           "key": "record-0-137",
@@ -3164,11 +3172,15 @@
           "source_offset": 236629,
           "source_length": 1726,
           "source_sha256": "d654fb92ed435cc8d23f951566655ab8987f0f5d3dfdc8e0dca9dac1093948a8",
-          "retained_sha256": "d654fb92ed435cc8d23f951566655ab8987f0f5d3dfdc8e0dca9dac1093948a8",
+          "retained_sha256": "763ce1bebf2ae6b2370cd982ed9c71d2e1aaf1e875c978229f68bde1f9e6d395",
           "link_edits": [],
           "anchors": [
             "2026-10-07--lcars-interactive-offline-study-visual-approval-pending"
-          ]
+          ],
+          "redaction": {
+            "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
+            "previous_retained_sha256": "d654fb92ed435cc8d23f951566655ab8987f0f5d3dfdc8e0dca9dac1093948a8"
+          }
         },
         {
           "key": "record-0-139",
@@ -3275,7 +3287,7 @@
           "source_offset": 256805,
           "source_length": 3029,
           "source_sha256": "f73da2c9aea3a53fad5c9e2dac63a0b0220113de7d8e58de9a9ae2aa959652bb",
-          "retained_sha256": "e794806b077e2e66824540f1529f01cdbd5b21814e87781a34c8d9092f6888eb",
+          "retained_sha256": "dd98ce4162a0b42db411f9deeee2d66c08f25cba80ec36fe2383de63c9bd4dee",
           "link_edits": [
             {
               "offset": 949,
@@ -3304,7 +3316,11 @@
           ],
           "anchors": [
             "2026-10-07--one-name-everywhere-history-rewritten-app-identifier-changed-alpha5"
-          ]
+          ],
+          "redaction": {
+            "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
+            "previous_retained_sha256": "e794806b077e2e66824540f1529f01cdbd5b21814e87781a34c8d9092f6888eb"
+          }
         },
         {
           "key": "record-0-147",
@@ -3425,11 +3441,15 @@
           "source_offset": 273071,
           "source_length": 691,
           "source_sha256": "ae0e1fc826c604e594a200888abf4dbb8bdb8e28022132e84ae6e9049d6ce34f",
-          "retained_sha256": "ae0e1fc826c604e594a200888abf4dbb8bdb8e28022132e84ae6e9049d6ce34f",
+          "retained_sha256": "2f7b377405d985e1893277b3a492c43ca5e2333c912e4a43e21d3cc7db47e702",
           "link_edits": [],
           "anchors": [
             "2026-10-07--v010-alpha4-the-first-alpha-is-tagged-and-pre-released"
-          ]
+          ],
+          "redaction": {
+            "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
+            "previous_retained_sha256": "ae0e1fc826c604e594a200888abf4dbb8bdb8e28022132e84ae6e9049d6ce34f"
+          }
         },
         {
           "key": "record-0-155",
@@ -3438,11 +3458,15 @@
           "source_offset": 273762,
           "source_length": 1064,
           "source_sha256": "da2a37b12b25fd889ac430b2076e992563f5cb6d603daab830acd77989f59a26",
-          "retained_sha256": "da2a37b12b25fd889ac430b2076e992563f5cb6d603daab830acd77989f59a26",
+          "retained_sha256": "4df194c11c0336e9c1cc684ee73ad83c0fff33917e636e4d2dea800b32ea0194",
           "link_edits": [],
           "anchors": [
             "2026-10-07--ar18-recorded-ready-the-alpha-candidate-is-release-ready-pending-the-users-decision"
-          ]
+          ],
+          "redaction": {
+            "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
+            "previous_retained_sha256": "da2a37b12b25fd889ac430b2076e992563f5cb6d603daab830acd77989f59a26"
+          }
         },
         {
           "key": "record-0-156",
@@ -3451,11 +3475,15 @@
           "source_offset": 274826,
           "source_length": 852,
           "source_sha256": "6cd7f51f01284513948eab32eaa012bbd03f8e6be514f778d9c226e97d8916e8",
-          "retained_sha256": "6cd7f51f01284513948eab32eaa012bbd03f8e6be514f778d9c226e97d8916e8",
+          "retained_sha256": "0b7d977d3bd998ee0538192487ab5d5526328c98662ab94494fbc8b7e28f16d5",
           "link_edits": [],
           "anchors": [
             "2026-10-06--round-3s-condition-every-part-of-a-record-must-agree"
-          ]
+          ],
+          "redaction": {
+            "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
+            "previous_retained_sha256": "6cd7f51f01284513948eab32eaa012bbd03f8e6be514f778d9c226e97d8916e8"
+          }
         },
         {
           "key": "record-0-157",
@@ -3490,11 +3518,15 @@
           "source_offset": 276869,
           "source_length": 752,
           "source_sha256": "49f500a0827045efcef98b14212608fe221ad643fad33f8b7805203e2aa7d28c",
-          "retained_sha256": "49f500a0827045efcef98b14212608fe221ad643fad33f8b7805203e2aa7d28c",
+          "retained_sha256": "0a5db7cc5dda6ea52706fe54d960ad8fde27bfcbfdcd5126b986a5bee525cbec",
           "link_edits": [],
           "anchors": [
             "2026-10-06--round-2s-condition-a-records-parts-must-agree"
-          ]
+          ],
+          "redaction": {
+            "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
+            "previous_retained_sha256": "49f500a0827045efcef98b14212608fe221ad643fad33f8b7805203e2aa7d28c"
+          }
         },
         {
           "key": "record-0-160",
@@ -3503,11 +3535,15 @@
           "source_offset": 277621,
           "source_length": 979,
           "source_sha256": "4cb0f773f664d83b8b9dc05334b7fbdae352c98404a2aa25e07e23cbb9f210af",
-          "retained_sha256": "4cb0f773f664d83b8b9dc05334b7fbdae352c98404a2aa25e07e23cbb9f210af",
+          "retained_sha256": "095288c311c7217bd99537e3d513ea0437062a30a9b3b123ec52950042d4da2b",
           "link_edits": [],
           "anchors": [
             "2026-10-06--the-re-checks-conditions-the-readers-names-and-the-payloads-budget"
-          ]
+          ],
+          "redaction": {
+            "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
+            "previous_retained_sha256": "4cb0f773f664d83b8b9dc05334b7fbdae352c98404a2aa25e07e23cbb9f210af"
+          }
         },
         {
           "key": "record-0-161",
@@ -3516,11 +3552,15 @@
           "source_offset": 278600,
           "source_length": 1178,
           "source_sha256": "15a078d8e3097558de46124c63cfaf6f39b3f5061744380e7ab6fce411a0f0f0",
-          "retained_sha256": "15a078d8e3097558de46124c63cfaf6f39b3f5061744380e7ab6fce411a0f0f0",
+          "retained_sha256": "9e185378bd10b315520cbb6ff9cdc9274c5c472f73cfcb24705fca9cea81416d",
           "link_edits": [],
           "anchors": [
             "2026-10-06--the-minor-findings-m1m9-fixed-as-well"
-          ]
+          ],
+          "redaction": {
+            "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
+            "previous_retained_sha256": "15a078d8e3097558de46124c63cfaf6f39b3f5061744380e7ab6fce411a0f0f0"
+          }
         },
         {
           "key": "record-0-162",
@@ -3542,11 +3582,15 @@
           "source_offset": 280588,
           "source_length": 1412,
           "source_sha256": "ccdfd2e3b347d6f198b6950a5a78c095ee8d7c45ab3861e596c9796882efac62",
-          "retained_sha256": "ccdfd2e3b347d6f198b6950a5a78c095ee8d7c45ab3861e596c9796882efac62",
+          "retained_sha256": "47a2b6b4aca7b04e6f7e493f3b3735df764c68d6aa02be7a1f152c8f716c447e",
           "link_edits": [],
           "anchors": [
             "2026-10-06--the-reviewers-four-conditions-met-in-code-rather-than-waived"
-          ]
+          ],
+          "redaction": {
+            "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
+            "previous_retained_sha256": "ccdfd2e3b347d6f198b6950a5a78c095ee8d7c45ab3861e596c9796882efac62"
+          }
         },
         {
           "key": "record-0-164",
@@ -3568,11 +3612,15 @@
           "source_offset": 282599,
           "source_length": 1061,
           "source_sha256": "9271846a941782284a0cb37a9218343ce5ff59523116c24c2f203aab49c402ee",
-          "retained_sha256": "9271846a941782284a0cb37a9218343ce5ff59523116c24c2f203aab49c402ee",
+          "retained_sha256": "69d336099892cdd3534fa60b26d57b810363339b267aaf9565327aa1d25cd469",
           "link_edits": [],
           "anchors": [
             "2026-10-06--ar18-gates-the-whole-candidate-goes-through-the-scanner"
-          ]
+          ],
+          "redaction": {
+            "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
+            "previous_retained_sha256": "9271846a941782284a0cb37a9218343ce5ff59523116c24c2f203aab49c402ee"
+          }
         },
         {
           "key": "record-0-166",
@@ -3607,11 +3655,15 @@
           "source_offset": 285122,
           "source_length": 1101,
           "source_sha256": "7203aace1c73f4362c914d3e365e4f9750c91b19dbd33e1621d8cc6a579d1e81",
-          "retained_sha256": "7203aace1c73f4362c914d3e365e4f9750c91b19dbd33e1621d8cc6a579d1e81",
+          "retained_sha256": "f6ee192312be16d7038c8b5f782210f1824d3d5aafd0182455f187bc440ff3da",
           "link_edits": [],
           "anchors": [
             "2026-10-06--ar16-done-the-manual-meets-the-app-it-describes-sentence-by-sentence"
-          ]
+          ],
+          "redaction": {
+            "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
+            "previous_retained_sha256": "7203aace1c73f4362c914d3e365e4f9750c91b19dbd33e1621d8cc6a579d1e81"
+          }
         },
         {
           "key": "record-0-169",
@@ -3633,11 +3685,15 @@
           "source_offset": 287677,
           "source_length": 801,
           "source_sha256": "f68348666fcd1c7abb9c4e8360b0b5da59c57feefd7766c343b7a728b9613caa",
-          "retained_sha256": "f68348666fcd1c7abb9c4e8360b0b5da59c57feefd7766c343b7a728b9613caa",
+          "retained_sha256": "5459a4e38515a6b156ed98412952e884c34c6254eab9436c3af6aa5434b21d29",
           "link_edits": [],
           "anchors": [
             "2026-10-06--ar16-slice-1-the-manual-gets-new-photos-of-a-house-that-does-not-exist"
-          ]
+          ],
+          "redaction": {
+            "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
+            "previous_retained_sha256": "f68348666fcd1c7abb9c4e8360b0b5da59c57feefd7766c343b7a728b9613caa"
+          }
         },
         {
           "key": "record-0-171",
@@ -3646,11 +3702,15 @@
           "source_offset": 288478,
           "source_length": 912,
           "source_sha256": "d697474cdc62406893304495ed92ede3e9e3b8bfbadc500383cef88e100ff774",
-          "retained_sha256": "d697474cdc62406893304495ed92ede3e9e3b8bfbadc500383cef88e100ff774",
+          "retained_sha256": "90839269cf9e5b3508dce512968c803ea2c5a46963262f39ac0e3941ddf1a4f9",
           "link_edits": [],
           "anchors": [
             "2026-10-06--ar17-a-real-appimage-weighed-and-sniffed-offline"
-          ]
+          ],
+          "redaction": {
+            "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
+            "previous_retained_sha256": "d697474cdc62406893304495ed92ede3e9e3b8bfbadc500383cef88e100ff774"
+          }
         },
         {
           "key": "record-0-172",
@@ -3659,11 +3719,15 @@
           "source_offset": 289390,
           "source_length": 697,
           "source_sha256": "886d951d5562fa03f619a738d1a85e3dce118c0885b0b5db2c2036ef581741d1",
-          "retained_sha256": "886d951d5562fa03f619a738d1a85e3dce118c0885b0b5db2c2036ef581741d1",
+          "retained_sha256": "483317998a57f060ca623ced41eebb0cdb77b1f9d871494d55f5123c65ef64b3",
           "link_edits": [],
           "anchors": [
             "2026-10-06--ar15-done-one-page-that-says-what-the-alpha-is-and-what-it-is-not-yet"
-          ]
+          ],
+          "redaction": {
+            "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
+            "previous_retained_sha256": "886d951d5562fa03f619a738d1a85e3dce118c0885b0b5db2c2036ef581741d1"
+          }
         },
         {
           "key": "record-0-173",
@@ -4056,7 +4120,7 @@
           "source_offset": 316377,
           "source_length": 1061,
           "source_sha256": "704b5f94ed0af688886ca8c9fcb66c71afa5915eabefc373571fa12d35dac379",
-          "retained_sha256": "8cc4b0223294587df837542bad586fb76c96ed026e0699990ee56160a1f11de4",
+          "retained_sha256": "6415bde6e5188873c96f8fada11a4dbf982e30d6b72ef70a7763b62760917d43",
           "link_edits": [
             {
               "offset": 527,
@@ -4067,7 +4131,11 @@
           ],
           "anchors": [
             "2026-10-05--commissioning-callers-published-web-halves-handed-over"
-          ]
+          ],
+          "redaction": {
+            "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
+            "previous_retained_sha256": "8cc4b0223294587df837542bad586fb76c96ed026e0699990ee56160a1f11de4"
+          }
         },
         {
           "key": "record-0-203",
@@ -4272,7 +4340,7 @@
           "source_offset": 333305,
           "source_length": 1475,
           "source_sha256": "4ea9f0e7ffe02bbf6d584263e5431f01a4c3243280c2abadcfd8644b1123393c",
-          "retained_sha256": "d3aab571c1e98041acf104f4ae716947052058286e1b159963b27eb97dda7a41",
+          "retained_sha256": "ba88128cb1ab042c59b6421e25b6ad78eb857f59aa5ccdbc79d94770dd6e2992",
           "link_edits": [
             {
               "offset": 1308,
@@ -4283,7 +4351,11 @@
           ],
           "anchors": [
             "2026-10-04--u19-telegram-flow-study-measured-ar20-handoff-written"
-          ]
+          ],
+          "redaction": {
+            "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
+            "previous_retained_sha256": "d3aab571c1e98041acf104f4ae716947052058286e1b159963b27eb97dda7a41"
+          }
         },
         {
           "key": "record-0-216",
@@ -4292,11 +4364,15 @@
           "source_offset": 334780,
           "source_length": 1038,
           "source_sha256": "e3b03dde0bed898d075167b0ace9e32f122bd81375473bbbc4a03a39e7218d37",
-          "retained_sha256": "e3b03dde0bed898d075167b0ace9e32f122bd81375473bbbc4a03a39e7218d37",
+          "retained_sha256": "d1998bfff1730a564c2b9d67395ec1f40f8b920105982ab2b45fa22431b7f1c5",
           "link_edits": [],
           "anchors": [
             "2026-10-04--ar08-password-protected-projects-reach-the-importer"
-          ]
+          ],
+          "redaction": {
+            "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
+            "previous_retained_sha256": "e3b03dde0bed898d075167b0ace9e32f122bd81375473bbbc4a03a39e7218d37"
+          }
         },
         {
           "key": "record-0-217",
@@ -4416,7 +4492,7 @@
           "source_offset": 345765,
           "source_length": 1136,
           "source_sha256": "157befb5eda817cf3d97be6b22a2d3356255596d7637dcd1f06ba8be8c1668a5",
-          "retained_sha256": "37fb35fb20aca01c350365a598bba0931237dc71351f8b143c1f403101d754a8",
+          "retained_sha256": "d4a01f057150842ee0e3ea18677c814363d674c87fec3d202eab86ca1fb122a7",
           "link_edits": [
             {
               "offset": 353,
@@ -4427,7 +4503,11 @@
           ],
           "anchors": [
             "2026-10-04--ar14d-d5-resolved-limitation-bodies-to-history-goal-ui-status-to-its-dossier"
-          ]
+          ],
+          "redaction": {
+            "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
+            "previous_retained_sha256": "37fb35fb20aca01c350365a598bba0931237dc71351f8b143c1f403101d754a8"
+          }
         },
         {
           "key": "record-0-225",
@@ -4495,7 +4575,7 @@
           "source_offset": 350366,
           "source_length": 1384,
           "source_sha256": "b852f604ca64732958d55497750fc21ee8482aecb3d02c6df468b5f05c553269",
-          "retained_sha256": "12c64079df274b507f54314af8a2e80dc0fdf69986bb469627a9550088c23c7c",
+          "retained_sha256": "2616f6aebe374cd7c754c61ba9398f3bb971e1f93f217d7ad830858daadfb964",
           "link_edits": [
             {
               "offset": 425,
@@ -4506,7 +4586,11 @@
           ],
           "anchors": [
             "2026-10-04--ar14d-d1-status-documents-slimmed-consolidation-planned-before-ar15"
-          ]
+          ],
+          "redaction": {
+            "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
+            "previous_retained_sha256": "12c64079df274b507f54314af8a2e80dc0fdf69986bb469627a9550088c23c7c"
+          }
         },
         {
           "key": "record-0-229",
@@ -4856,7 +4940,7 @@
             "2026-10-03--productive-crt-interactions-local-feature-worktree"
           ],
           "redaction": {
-            "reason": "local machine details (absolute local paths, host name, kernel release) replaced by placeholders on 2026-10-17",
+            "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
             "previous_retained_sha256": "fae6b0a989bbe8f0f21b815b8061d28de012cdf2cceae693883ebe0f50b3b7ec"
           }
         },
@@ -4945,7 +5029,7 @@
           "source_offset": 425070,
           "source_length": 20838,
           "source_sha256": "66fb3a5afd9ea998d70437dc99e917ba4a90b89f04c349a9690bbeebb6f2bfc1",
-          "retained_sha256": "3ab7da4bf4c8c36f49aec37e3e391998c20bccbaf00a9c68fee38bd5218a6929",
+          "retained_sha256": "e7f66b61768b554ed3215ddda9d32aa25d94aa0e94005cb3700534f125392a67",
           "link_edits": [
             {
               "offset": 13348,
@@ -4980,7 +5064,11 @@
             "ar07-bounded-work-admission-delivered--2026-10-03-0410-cest",
             "ar07-work-admission--actual-merge-accepted-delivery-pending-2026-10-03",
             "ar07-work-admission-candidate--public-green-not-delivered-2026-10-03"
-          ]
+          ],
+          "redaction": {
+            "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
+            "previous_retained_sha256": "3ab7da4bf4c8c36f49aec37e3e391998c20bccbaf00a9c68fee38bd5218a6929"
+          }
         },
         {
           "key": "record-0-253",
@@ -5289,11 +5377,15 @@
           "source_offset": 481287,
           "source_length": 2548,
           "source_sha256": "499f39f1c777f24c61e9ae4d8a5ed977912db49c67552577218e9534642101eb",
-          "retained_sha256": "499f39f1c777f24c61e9ae4d8a5ed977912db49c67552577218e9534642101eb",
+          "retained_sha256": "225044b75512830bf6350cb4fca092d65381b9d32acfc23b6385919fe8f1d885",
           "link_edits": [],
           "anchors": [
             "2026-10-02--ui-owned-alpha-readiness-follow-ups-offline"
-          ]
+          ],
+          "redaction": {
+            "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
+            "previous_retained_sha256": "499f39f1c777f24c61e9ae4d8a5ed977912db49c67552577218e9534642101eb"
+          }
         },
         {
           "key": "record-0-270",
@@ -5362,11 +5454,15 @@
           "source_offset": 489983,
           "source_length": 1126,
           "source_sha256": "4f83535d75a0837b79c429593ac256f041aa1aa0a254b10ae2e21c77d82190f7",
-          "retained_sha256": "4f83535d75a0837b79c429593ac256f041aa1aa0a254b10ae2e21c77d82190f7",
+          "retained_sha256": "3a380165d673a72110fc1f22852393a4d472f895ba131abd9207b36da84f0a3e",
           "link_edits": [],
           "anchors": [
             "2026-10-01--ar03-enforcement-audit-ar02-publication-receipt-utc"
-          ]
+          ],
+          "redaction": {
+            "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
+            "previous_retained_sha256": "4f83535d75a0837b79c429593ac256f041aa1aa0a254b10ae2e21c77d82190f7"
+          }
         },
         {
           "key": "record-0-274",
@@ -5912,7 +6008,7 @@
           "source_offset": 3897,
           "source_length": 2272,
           "source_sha256": "dbd9e40a68b1bd8bdf1161343e2337dae1f76364972c19ff648a7968711c1c91",
-          "retained_sha256": "3475676d877ca2aebf975cd386fb2cb960cf841f9b52f3993e1d83cf3b55d382",
+          "retained_sha256": "f014524f275cfd1c5180b9ea4d1d6fd3db4b18f424973fc9c9864f2d1daf5e78",
           "link_edits": [
             {
               "offset": 1686,
@@ -5923,7 +6019,11 @@
           ],
           "anchors": [
             "83-commissioning--device-download--scope-decision"
-          ]
+          ],
+          "redaction": {
+            "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
+            "previous_retained_sha256": "3475676d877ca2aebf975cd386fb2cb960cf841f9b52f3993e1d83cf3b55d382"
+          }
         },
         {
           "key": "record-1-006",
@@ -5945,7 +6045,7 @@
             "84-commissioning--device-download-procedures--r5-spike-session-6-2026-09-11"
           ],
           "redaction": {
-            "reason": "local machine details (absolute local paths, host name, kernel release) replaced by placeholders on 2026-10-17",
+            "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
             "previous_retained_sha256": "1d71de3aea195518aee8cd9076ad6fe5d1a0209b4e417dc25d39938e9af74ab3"
           }
         },
@@ -5956,11 +6056,15 @@
           "source_offset": 41752,
           "source_length": 27173,
           "source_sha256": "ddfdf9946ba98c703cffe702588f81b7a65d403a21d972980e47d5083cc9d1c5",
-          "retained_sha256": "ddfdf9946ba98c703cffe702588f81b7a65d403a21d972980e47d5083cc9d1c5",
+          "retained_sha256": "d27ae5faeebd02eb22ac4f9c9e8d44bcac56554ece125a19bf4564f36d33f825",
           "link_edits": [],
           "anchors": [
             "85-line-scan--bus-side-device-discovery--t17-spike-2026-09-12-shipped-2026-09-13"
-          ]
+          ],
+          "redaction": {
+            "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
+            "previous_retained_sha256": "ddfdf9946ba98c703cffe702588f81b7a65d403a21d972980e47d5083cc9d1c5"
+          }
         },
         {
           "key": "record-1-008",
@@ -6007,7 +6111,7 @@
             "867-what-this-spike-did-not-settle-and-what-would-settle-it"
           ],
           "redaction": {
-            "reason": "local machine details (absolute local paths, host name, kernel release) replaced by placeholders on 2026-10-17",
+            "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
             "previous_retained_sha256": "2b2ea5511756c18a1ed4d0a7db66ea36fb12a84c81e3ee2115c565a32b8d923e"
           }
         },
@@ -6018,11 +6122,15 @@
           "source_offset": 97067,
           "source_length": 1218,
           "source_sha256": "7c2cbee4d522ce2f068c231c717882f5d86004447aef948dc7c512c03ef9bded",
-          "retained_sha256": "7c2cbee4d522ce2f068c231c717882f5d86004447aef948dc7c512c03ef9bded",
+          "retained_sha256": "09eae14c859fc93954864098d67e7052455699a6b6cf09261b77e85a444e44e2",
           "link_edits": [],
           "anchors": [
             "87-commissioning-and-download--the-specification-pass-t30-phase-1-2026-09-13"
-          ]
+          ],
+          "redaction": {
+            "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
+            "previous_retained_sha256": "7c2cbee4d522ce2f068c231c717882f5d86004447aef948dc7c512c03ef9bded"
+          }
         },
         {
           "key": "record-1-010",
@@ -6769,11 +6877,15 @@
           "source_offset": 102598,
           "source_length": 4728,
           "source_sha256": "ae90d12ee537067d24ef306972f0d38452a3f6d4ddc4ada9cfc55ab983b3bc8c",
-          "retained_sha256": "ae90d12ee537067d24ef306972f0d38452a3f6d4ddc4ada9cfc55ab983b3bc8c",
+          "retained_sha256": "f53a592e11388cb958cb902c9b7f194b827e9a5ac32d572d6db0d5e6f8664774",
           "link_edits": [],
           "anchors": [
             "1915-k12-with-bit-2-set-an-interrupted-partial-download-and-system-priority-2026-09-30"
-          ]
+          ],
+          "redaction": {
+            "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
+            "previous_retained_sha256": "ae90d12ee537067d24ef306972f0d38452a3f6d4ddc4ada9cfc55ab983b3bc8c"
+          }
         },
         {
           "key": "record-2-025",
@@ -6906,7 +7018,7 @@
           "source_offset": 0,
           "source_length": 873618,
           "source_sha256": "ec02b75ea473b0fae0ebd6a82c877acb91b1bc148c35945110a69d7466a89bc0",
-          "retained_sha256": "6e254e4750fca435c96cb6304bba9a8ef93f51506e63f9602751b39fd1cdb7f1",
+          "retained_sha256": "2f1d36468db6c3706708471c8e2cecfffe71ebd5419e7c2db2a4f94d7b62d653",
           "link_edits": [
             {
               "offset": 85167,
@@ -6935,7 +7047,7 @@
             "ledger-updates-for-ar14d-4"
           ],
           "redaction": {
-            "reason": "local machine details (absolute local paths, host name, kernel release) replaced by placeholders on 2026-10-17",
+            "reason": "local machine details replaced by placeholders, and pinned GitHub links moved to the rewritten history so they no longer open pre-rewrite file versions (2026-10-17, ADR-0135)",
             "previous_retained_sha256": "4c5f73b81b210149d5e2caaa6b88de4d05a7756c25ab271a15b7ff9453ccb88a"
           }
         }

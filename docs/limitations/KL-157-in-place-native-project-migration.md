@@ -101,5 +101,5 @@ tests `a_failed_import_creates_no_store_file`,
 `readers_leave_a_foreign_sqlite_file_untouched`, and the route test
 `opening_a_file_that_holds_no_knxbench_project_is_refused_untouched`.
 Each guard is backed by a killed mutant
-([ALPHA_FINAL_GATES §8](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/archive/alpha-0.1/ALPHA_FINAL_GATES.md#8-ar18-minor-findings-m1m9-fixed-and-re-gated)).
+([ALPHA_FINAL_GATES §8](https://github.com/KNXBench-Labs/KNXBench/blob/6222e17754f3/docs/archive/alpha-0.1/ALPHA_FINAL_GATES.md#8-ar18-minor-findings-m1m9-fixed-and-re-gated)).
 <!-- END retained catalogue record -->

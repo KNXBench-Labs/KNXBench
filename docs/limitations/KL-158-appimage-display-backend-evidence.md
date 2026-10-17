@@ -21,7 +21,7 @@ answer — the AppImage stops at once with `Failed to initialize GTK`
 it.
 
 **Found 2026-10-06 (AR17)** on the candidate in
-[ALPHA_CANDIDATE](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/archive/alpha-0.1/ALPHA_CANDIDATE.md): Hyprland's Xwayland was running but its
+[ALPHA_CANDIDATE](https://github.com/KNXBench-Labs/KNXBench/blob/6222e17754f3/docs/archive/alpha-0.1/ALPHA_CANDIDATE.md): Hyprland's Xwayland was running but its
 socket refused every connection (also for `xprop`). The unmodified AppImage
 started fine under a private Xvfb.
 

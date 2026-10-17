@@ -9,7 +9,7 @@ Status: edition `2026-10-15.4` was explicitly approved by the project owner on
 pin now targets it. The earlier edition is retired from the current tree and
 remains immutable in Git; deployment is verified separately from approval.
 Design and boundaries: [ADR-0068](../docs/adr/0068-project-evolution-story-is-a-static-offline-companion.md),
-[brief](../docs/PROJECT_EVOLUTION_STORY_BRIEF.md), [goal](https://github.com/KNXBench-Labs/KNXBench/blob/bca2d3336b96/docs/archive/PROJECT_EVOLUTION_GOAL.md).
+[brief](../docs/PROJECT_EVOLUTION_STORY_BRIEF.md), [goal](https://github.com/KNXBench-Labs/KNXBench/blob/6222e17754f3/docs/archive/PROJECT_EVOLUTION_GOAL.md).
 
 ## Layout
 

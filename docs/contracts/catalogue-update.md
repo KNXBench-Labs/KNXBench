@@ -60,8 +60,11 @@ All behind the existing authentication; JSON is camelCase; errors are the usual
   files (no links) with names of the form
   `<database file name>.backup-<seconds>-<12 hex>[-<n>].sqlite` in the database's
   directory. Never a path. `identity` (since Goal B5) is opaque: 32 hex digits of
-  a SHA-256 over the file's device, inode, size and nanosecond modification time,
-  so it changes when the name is given to another file.
+  a SHA-256 over the file's device, inode, size, nanosecond modification time
+  and nanosecond change time, so it changes when the name is given to another
+  file. The change time was added on 17 October 2026: ext4 hands a deleted file's
+  inode to the next file created, so device, inode, size and a copied
+  modification time alone did not tell a replacement apart.
 - `POST /api/catalog/restore` — JSON `{name}`. The name must be in a fresh
   listing (no separators, no other file): otherwise 400 kind `unknownBackup`.
   An unusable backup is 422 kind `invalidBackup` and the live file stays. 200:

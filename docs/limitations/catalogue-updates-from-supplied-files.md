@@ -37,3 +37,14 @@ directly without preview or backup. The web deletes a listed backup only when
 asked to and only the file it listed (`POST /api/catalog/backups/delete`, bound
 to that file's identity); the CLI has no delete command
 ([ADR-0118](../adr/0118-catalogue-updates-through-the-web-server.md)).
+
+## Update 2026-10-17: a replaced backup is told apart on ext4 too
+
+The backup identity the web deletes against did not change when a backup was
+deleted and rewritten with the same bytes and modification time on ext4: the file
+system reuses the freed inode immediately (200 of 200 tries on the project's own
+ext4 drive). `a_backup_that_changed_since_it_was_listed_is_kept` therefore failed
+on ext4 and passed only on tmpfs. The identity now includes the change time,
+which no user can set and which moves on every rewrite; that test passes on ext4
+and tmpfs. A backup whose metadata changed after it was listed is now refused as
+changed too, which is the conservative direction.

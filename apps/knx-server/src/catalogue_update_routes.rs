@@ -260,14 +260,22 @@ fn digits(text: &str) -> Option<u64> {
 }
 
 /// Which file a listed name is, without exposing device or inode numbers.
+///
+/// Device and inode alone do not tell a replaced file apart: ext4 hands a
+/// deleted file's inode straight to the next file created in the directory,
+/// and size and modification time can be copied. The change time cannot be
+/// set by a user and moves on every rewrite or metadata change, so it is part
+/// of the identity; a backup touched in any way since it was listed is kept.
 fn file_identity(metadata: &std::fs::Metadata) -> String {
     let fingerprint = format!(
-        "{}:{}:{}:{}.{}",
+        "{}:{}:{}:{}.{}:{}.{}",
         metadata.dev(),
         metadata.ino(),
         metadata.len(),
         metadata.mtime(),
-        metadata.mtime_nsec()
+        metadata.mtime_nsec(),
+        metadata.ctime(),
+        metadata.ctime_nsec()
     );
     let digest = Sha256::digest(fingerprint.as_bytes());
     digest[..16]

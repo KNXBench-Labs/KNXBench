@@ -633,6 +633,7 @@ rules (plan first, a device-specific phrase, a backup before any write):
 | --- | --- |
 | `knx device readiness` | Offline: for every project device, whether a download is verified, untested, unsupported, excluded or has no address. Sends nothing |
 | `knx device compare` | Read only: reads what a download would write and lists every difference from the project |
+| `knx device diagnostics` | Read only: exports descriptor, manufacturer ID and hardware type of one project device (`--device-id`) to a new local ZIP; previews unless `--confirm-read`; `--simulate` needs no interface ([contract](../../contracts/device-diagnostic-export.md)) |
 | `knx device byte-order-probe` | Read only: for a device ETS programmed, says whether it holds its multi-octet parameter values high or low octet first (see below) |
 | `knx device restore` | Writes a backup file back through the same load procedure, after backing up the current state |
 | `knx device find-serial` | Read only: which address has a serial number, or which serial number a device has |

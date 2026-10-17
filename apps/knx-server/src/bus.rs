@@ -90,6 +90,11 @@ pub trait GatewayConnector: Send + Sync {
 /// (`assigned_address`, `subscribe`, `send` at `crates/knx-net/src/
 /// client.rs:286,290,306`; the consuming `disconnect(self)` at :364).
 pub trait BusTunnel: Send + Sync {
+    /// Diagnostic provenance only, never write authorisation. Production
+    /// transports default to hardware; only explicit synthetic adapters opt in.
+    fn diagnostics_are_simulated(&self) -> bool {
+        false
+    }
     fn assigned_address(&self) -> IndividualAddress;
     fn subscribe(&self) -> broadcast::Receiver<TunnelEvent>;
     fn send(

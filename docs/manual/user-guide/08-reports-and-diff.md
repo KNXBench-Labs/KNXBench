@@ -12,6 +12,27 @@ Two things you will eventually want from any engineering project: a document tha
 describes it to someone who cannot open it, and an answer to "what changed?". KNXBench
 has one feature for each.
 
+## Exporting diagnostic data from one device (source after Alpha 13)
+
+When a maintainer asks for device data, use **File → Export diagnostic data**.
+No ETS, device reader or developer tool is needed. It is not in the released
+binaries yet.
+
+1. Choose one project device and the interface (`IPv4:port`). **Preview** shows
+   the target, the interface and the exact three reads; nothing is sent yet.
+2. Tick the read confirmation and press **Read diagnostic data**. KNXBench reads
+   only the device descriptor, the manufacturer ID and the hardware type. It
+   never programs, writes, sends keys or restarts. **Stop** keeps what was read.
+3. Check the result. *Refused* means the device denied access or does not offer
+   the value (KNX cannot tell which); *not read* means it was not reached.
+4. Review the ZIP content, confirm and save. Send the file to
+   `issue@knxbench.com` or share a private link. Nothing is uploaded.
+
+No configuration memory is read yet, and the file is not a backup. Raw replies
+can still identify equipment, so share it like any installation document. Ask
+the installation owner before contacting their bus. See the
+[contract](../../contracts/device-diagnostic-export.md).
+
 ## Universal device-support reporting (source after Alpha 11)
 
 This separate workflow needs **no open project**. Open **File → Device support report**, or use the same action in a device's download panel. The released

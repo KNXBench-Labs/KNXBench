@@ -2692,6 +2692,18 @@
       "anchors": [
         "current-reading-guide--8-october-2026"
       ]
+    },
+    {
+      "key": "KL-184",
+      "number": 184,
+      "title": "Diagnostic export reads identity only",
+      "topic": "Commissioning and recovery",
+      "summary": "The read-only diagnostic export reads descriptor, PID12 and PID78 only; no memory profile is admitted, a zero-element reply cannot separate refusal from absence, and no physical device has been read with it yet.",
+      "file": "KL-184-device-diagnostic-export.md",
+      "ledger_ids": [
+        "KL-184"
+      ],
+      "anchors": []
     }
   ]
 }

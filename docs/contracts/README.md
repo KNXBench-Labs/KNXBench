@@ -22,5 +22,6 @@ Moved here from `docs/` on 2026-10-08 (relative links adjusted by script).
 | [RELEASE_NOTIFICATIONS](RELEASE_NOTIFICATIONS.md) | Published GitHub release discovery, semantic version admission, notification-only UX and network/privacy bounds |
 | [project-functions](project-functions.md) | Project Functions (ADR-0124): model, invariant, commands, refusals, storage, import, projection, HTTP API, and what a workbench must keep (Goal A4 → B1) |
 | [revision-bound-writes](revision-bound-writes.md) | Parameter writes and installation renames bound to the caller's server/project/snapshot and expected value; typed conflicts, legacy unbound form (Goal A2) |
+| [device-diagnostic-export](device-diagnostic-export.md) | One-device read-only generic identity export (descriptor, PID12, PID78), loss-aware results, verified create-only ZIP; no memory, no programming unlock (ADR-0134) |
 | [universal-device-support](universal-device-support.md) | Unknown/unresolved/unsupported device evidence, fixed read-only profiles, disclosure/IP consent and local ZIP; no programming unlock |
 | [download-verification-reports](download-verification-reports.md) | Tester download reports (format 1), what they never contain, and the maintainer review that ends in `verified_downloads.json` (ADR-0121) |

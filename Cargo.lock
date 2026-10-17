@@ -1981,6 +1981,7 @@ dependencies = [
  "knx-diff",
  "knx-edit",
  "knx-etsproj",
+ "knx-net",
  "knx-productdb",
  "knx-projection",
  "knx-report",
@@ -1991,7 +1992,9 @@ dependencies = [
  "rustix",
  "serde",
  "serde_json",
+ "sha2",
  "tempfile",
+ "tokio",
  "zip",
 ]
 

@@ -80,7 +80,7 @@ it("rejects the whole page for unsupported versions, unknown fields and contradi
 });
 
 it("admits read and service-control lifecycles without inventing evidence or finish times", async () => {
-  for (const kind of ["deviceCompare", "serviceControlRead", "serialLookup"]) {
+  for (const kind of ["deviceCompare", "serviceControlRead", "serialLookup", "deviceDiagnostics"]) {
     for (const state of ["running", "finished", "failed", "unknown"]) {
       const page = historyFixture(); const entry = page.entries[0];
       Reflect.deleteProperty(entry, "writeEvidence"); Reflect.deleteProperty(entry, "downloadEvidence");

@@ -1,5 +1,15 @@
 # Architecture
 
+## Read-only device diagnostic export (17 October 2026 source)
+
+`knx-net::commissioning::diagnostic_export` owns the closed identity recipe on a
+read-only session; `knx-app::device_diagnostics` is the single application
+service (selection, assertions, loss-aware report, verified ZIP, lease) used by
+the HTTP route and `knx device diagnostics`. New normal edge `knx-app → knx-net`;
+the MCP adapter still reaches neither. No schema, download-admission or UI-side
+protocol logic. [ADR-0134](adr/0134-generic-read-only-diagnostic-export.md),
+[contract](contracts/device-diagnostic-export.md).
+
 ## Source-group parameter workspace (17 October 2026 source)
 
 The Parameters tab projects its existing typed sections into a pure scope/group

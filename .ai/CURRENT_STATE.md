@@ -1,4 +1,12 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-10-17 13:35
+- **Completed:** Old-path sweep after the move to <data-disk>. Repo: three goal prompts' Workspace lines and the ADR-0038 spec-source pointer now name <data-disk>; DEVELOPER_PITFALLS lists path-keyed tool state (Codex trust, Claude memory key, container bind mounts). Outside Git: Hermes WebUI workspace, two profile scripts, root USER.md, Codex memory note, .projectstats.json session roots, two Claude memory files rewritten; Codex config.toml gained <data-disk> trust entries (old kept); Claude project keys <sources-key>-{KNXBench,knx-spec-kb} link to the existing memory dirs. Backups: profile backups/path-move-20261017.
+- **Pending/Next Steps:** OWNER DECISION: container `knxbench` still bind-mounts <old-sources>/KNXBench/data, which the kernel resolved at creation to the OLD disk (now <old-sources>/KNXBench/data). Copies identical at 13:25 (14 files, same hashes, last write 16 Oct); every new save lands on the old disk until the container is recreated with -v <sources>/KNXBench/data:/data.
+- **Notes for Codex oder Claude:** Left as history on purpose: dated docs, evidence JSON, KL dossiers (byte-exact preservation receipts reject edits: test_limitations_catalogue), LEDGER evidence notes, .ai archive/logs, session logs. Root .venv was already broken before the move (points at the pre-rename <old-sources>/KNX, no interpreter).
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-10-17 13:20
 - **Completed:** Repository moved by the owner to <sources>/KNXBench (ext4, 701 GB free); <old-sources> is now a symlink to it. Ran `git worktree repair` for all five linked worktrees (metadata only, no content touched; all clean). Path-move package: story/tests/test_privacy.py derives the private provenance ledger from the checkout's sibling (as story/README.md already documents) instead of <old-disk>; statistics contract command points at <data-disk>; DEVELOPER_PITFALLS records the move and the repair recipe. Story suite 76/76 (real-ledger test runs, a copied checkout without sibling skips), docs checker, 4 xtask checks, diff-check pass.
 - **Pending/Next Steps:** None for this package. The move interrupted the parameter-workspace gate (web-merged4, 48/63 green, KeyboardInterrupt 12:55) and the object-function rerun gate5 (0 stages, KeyboardInterrupt 12:55); both owners must regate. Parameter-workspace owner already re-merged as bafbf483 on e5e63fc1.

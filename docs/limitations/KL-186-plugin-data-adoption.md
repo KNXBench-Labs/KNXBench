@@ -1,4 +1,4 @@
-# Plug-in data adoption is CLI-only and not undoable
+# Plug-in data adoption is not undoable; adopted bytes are unverified
 
 [Current summary and ledger status](../KNOWN_LIMITATIONS.md#catalogue-kl-186)
 
@@ -40,3 +40,27 @@ Lifted when: a server route and UI with the same preview/confirm contract exist,
 and acceptance of adopted bytes by the originating plug-in is verified by the
 owner on their own installation.
 <!-- END retained catalogue record -->
+
+## Server route and web app (17 October 2026, package P2)
+
+The first half of the lift condition holds: `knx-server` offers the operation
+under `/api/project/plugin-data/*`, and the web app has a dialog in the device
+panel and the command palette with the same list → preview → confirm contract
+as the CLI ([contract](../contracts/plugin-data-adoption.md#server-and-web-app),
+[ADR-0136 amendment](../adr/0136-plugin-data-adoption-is-audited-opaque-replacement.md)).
+
+What still holds:
+
+- **Not part of Undo.** Before the change the server records the project
+  version *Before plug-in data adoption*; restoring it in Project history is
+  the way back, and the superseded bytes stay in the project. A project that
+  has no `.knxdb` file yet cannot adopt (no version store, so no way back).
+- **The unsaved-changes indicator follows the model.** Adoption does not touch
+  the model, so it does not mark the project modified; the adopted bytes are
+  already in the working journal and come back on reopening.
+- Same lineage only, one device per operation, the ExtraData association is
+  observed rather than documented, and acceptance of the adopted bytes is
+  unverified, as above.
+
+Lifted when: the owner verifies, on their own installation, that the
+originating plug-in accepts adopted bytes.

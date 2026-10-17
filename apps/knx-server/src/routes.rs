@@ -63,6 +63,7 @@ pub fn project_routes() -> Router<SharedState> {
             "/api/project/import-selection/apply",
             post(crate::selective_import_routes::apply),
         )
+        .merge(crate::plugin_data_routes::router())
         .route("/api/project/load-progress", get(load_progress))
         .route("/api/project/new", post(new_project))
         .route("/api/project/open", post(open_native_project))

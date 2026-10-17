@@ -880,6 +880,39 @@ last successful download. Stored bus access and IP settings from ETS are a separ
 read-only view (see *Stored bus access* below).
 [Contract](../../contracts/recorded-device-state.md).
 
+## Adopting plug-in data (source builds after Alpha 13)
+
+Some devices are configured in ETS through a manufacturer plug-in. KNXBench
+keeps what such a plug-in stored (a `BinaryData` blob and numbered `ExtraData`
+tables) byte for byte, but it never runs the plug-in. If you changed a device in
+the plug-in and exported the project from ETS again, **Adopt plug-in data…**
+copies that one device's stored bytes from the new export into the project you
+have open. It is in the device panel header and in the command palette.
+
+1. Optionally enter the source project's password, then **Choose source
+   project…**. The list shows each device pair (the same ETS device in both
+   projects) with *Can adopt* or *Cannot adopt* and the reason.
+2. Pick a pair and **Preview**. Nothing is written yet. The preview names every
+   entry it would replace with its size and both SHA-256 digests, lists the
+   entries that already match, and warns when the two devices have different
+   individual addresses (the bytes may still contain the source address).
+3. Confirm that Undo does not reverse this, then **Adopt plug-in data**.
+
+It refuses, naming the reason, unless both devices are the same product with
+the same application program, reference the same `BinaryData` and `ExtraData`
+entries and link the same group addresses. It never maps one id or table number
+onto another, because that would be a guess about the plug-in's format.
+
+**The way back is a project version, not Undo.** The project must be saved as
+`.knxdb`. Before anything changes, KNXBench keeps the current state as the
+version *Before plug-in data adoption*; restore it in **Project history** to go
+back (the dialog has a button for it). The replaced bytes also stay in the
+project. Whether the plug-in, ETS or the device accepts the adopted bytes is
+**not verified**; KNXBench writes no `.knxproj`. If the project changes while a
+preview is shown, the adoption is refused with nothing written: reload and
+preview again. [Contract](../../contracts/plugin-data-adoption.md),
+[known limitation §186](../../KNOWN_LIMITATIONS.md#catalogue-kl-186).
+
 ## Stored bus access
 
 An ETS project can remember how ETS reached the bus for a line (*bus access*) and

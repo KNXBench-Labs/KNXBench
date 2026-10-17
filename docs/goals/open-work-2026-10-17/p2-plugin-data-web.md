@@ -3,6 +3,8 @@
 Planning only; part of the [17 October package set](README.md). Follow its
 shared rules.
 
+**Status:** delivered on 17 October 2026; see the handover entry of that day.
+
 **Starter:** `/goal Run package P2 from docs/goals/open-work-2026-10-17/p2-plugin-data-web.md on fresh origin/main; follow README.md's rules.`
 
 ## Entry conditions

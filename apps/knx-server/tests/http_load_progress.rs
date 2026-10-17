@@ -46,6 +46,7 @@ fn state() -> Arc<knx_server::AppState> {
         line_scan_session: Default::default(),
         next_line_scan_session_id: Default::default(),
         device_download_plan: Default::default(),
+        plugin_data_plan: Default::default(),
         device_download: Default::default(),
         next_device_download_id: Default::default(),
         device_download_timing: Default::default(),

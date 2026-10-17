@@ -9,17 +9,17 @@ collisions and the routing of every non-terminal ledger row. The files reserve
 nothing: a package belongs to a session only after it pushes its claim entry to
 the handover. P5 (this page's synchronisation) is delivered.
 
-## Plug-in data adoption: server route and web UI open (17 October 2026)
+## Plug-in data adoption: plug-in acceptance open (17 October 2026)
 
 Adopting a device's stored plug-in bytes between two projects of one lineage is
-delivered in the application layer and the CLI (`knx adopt-plugin-data`,
-[contract](contracts/plugin-data-adoption.md),
-[ADR-0136](adr/0136-plugin-data-adoption-is-audited-opaque-replacement.md)).
-[KL-186](KNOWN_LIMITATIONS.md#catalogue-kl-186) stays `ACCEPTED_BOUNDARY`.
-**Open:** a server route and web UI with the same preview/confirm contract
-([package P2](goals/open-work-2026-10-17/p2-plugin-data-web.md)), and
-acceptance of adopted bytes by the originating plug-in, which only the owner can
-check on their own installation.
+delivered in the application layer, the CLI (`knx adopt-plugin-data`) and, since
+[package P2](goals/open-work-2026-10-17/p2-plugin-data-web.md), the server and
+the web app (device panel and command palette;
+[contract](contracts/plugin-data-adoption.md#server-and-web-app),
+[ADR-0136](adr/0136-plugin-data-adoption-is-audited-opaque-replacement.md) and
+its amendment). [KL-186](KNOWN_LIMITATIONS.md#catalogue-kl-186) stays
+`ACCEPTED_BOUNDARY`. **Open:** acceptance of adopted bytes by the originating
+plug-in, which only the owner can check on their own installation.
 
 ## Declared parameter grids: remaining fidelity (17 October 2026)
 

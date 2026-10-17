@@ -66,6 +66,7 @@ import { countDevices, observeProject } from "./achievementObservation";
 import AchievementsDialog from "./AchievementsDialog";
 import GroupAddressCsvButtons from "./GroupAddressCsvButtons";
 import SelectiveImportButton from "./SelectiveImportButton";
+import PluginDataDialog from "./PluginDataDialog";
 import DocumentationExportButton from "./DocumentationExportButton";
 import DebugReportButton from "./DebugReportButton";
 import ContributionButton from "./ContributionButton";
@@ -333,6 +334,7 @@ function App({ manifestVersion = packageVersion, session, editorReturn = false }
   useEffect(() => { if (monitorOpen) setMonitorMounted(true); }, [monitorOpen]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [pluginDataOpen, setPluginDataOpen] = useState(false);
   const [storedBusAccessOpen, setStoredBusAccessOpen] = useState(false);
   const [nativeExportReviewed, setNativeExportReviewed] = useState<ProjectTree | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -1402,6 +1404,7 @@ function App({ manifestVersion = packageVersion, session, editorReturn = false }
     openHelp: () => requestHelpTopic(DEFAULT_HELP_TOPIC_ID),
     openCatalog: () => openCatalog(null),
     openProjectHistory,
+    openPluginData: () => { if (tree) { setPaletteOpen(false); setPluginDataOpen(true); } },
     openDevices,
     openNotes,
     openStoredBusAccess: () => { if (tree) setStoredBusAccessOpen(true); },
@@ -1425,6 +1428,7 @@ function App({ manifestVersion = packageVersion, session, editorReturn = false }
           </nav>
           {selection?.kind === "device" && deviceDetail?.id === selection.id
             ? <DeviceWorkspace key={`${loadKey}:${deviceDetail.id}`} detail={deviceDetail} tree={tree} onApplied={handleTreeUpdate}
+              onOpenHistory={openProjectHistory}
               onInstructionDraftChange={(dirty) => { draftsRef.current.instructions = dirty; }} />
             : <div><p role="status"><span className={deviceDetailLoading ? "task-status-text" : undefined}>{t(deviceDetailLoading ? "devices.loadingEditor" : "devices.editorUnavailable")}</span></p>
               {!deviceDetailLoading && selection?.kind === "device" && <button type="button" onClick={() => void selectEntity(selection)}>{t("devices.retry")}</button>}</div>}
@@ -1663,6 +1667,8 @@ function App({ manifestVersion = packageVersion, session, editorReturn = false }
       {paletteOpen && <CommandPalette ctx={ctx} onClose={() => setPaletteOpen(false)} />}
       {tree && storedBusAccessOpen && <StoredBusAccessDialog onClose={() => setStoredBusAccessOpen(false)} />}
       {tree && historyOpen && <ProjectHistoryDialog tree={tree} onTreeUpdate={historyChanged} onClose={() => setHistoryOpen(false)} />}
+      {tree && pluginDataOpen && <PluginDataDialog tree={tree} deviceId={null} onTreeUpdate={handleTreeUpdate}
+        onOpenHistory={openProjectHistory} onClose={() => setPluginDataOpen(false)} />}
       {nativeExportReviewed && <NativeExportDialog reviewed={nativeExportReviewed} current={tree} onClose={() => setNativeExportReviewed(null)} />}
       {helpOpen && <HelpPanel key={helpTopicId} initialTopicId={helpTopicId} onClose={() => setHelpOpen(false)} />}
       {aboutOpen && <AboutDialog updates={updates} onClose={() => setAboutOpen(false)} />}

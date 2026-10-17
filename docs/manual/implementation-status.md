@@ -592,6 +592,7 @@ Main source delivery is [verified](../status/2026-10-09-offline-ap1-verification
 | Encrypted `.knxprod` packages, and legacy `.vd2` files | ❌ Not implemented, deliberately | A permanent scope exclusion, refused as a typed error |
 | Online catalog update from a manufacturer | ❌ Not implemented | Files are installed by hand — [`docs/GAP_ANALYSIS_ETS.md`](https://github.com/KNXBench-Labs/KNXBench/blob/994ac08c0328/docs/GAP_ANALYSIS_ETS.md), row C6 |
 | Devices configured by a manufacturer plug-in | ❌ Not implemented | No plug-in host exists and none is planned — [§6](../KNOWN_LIMITATIONS.md#6-devices-behind-vendor-plug-in-dlls) |
+| Adopting one device's stored plug-in data from a newer export (web, CLI; source builds after Alpha 13) | 🟡 Partial or experimental | Bytes copied verbatim after a preview by digest; same-lineage only; not in Undo, the way back is a project version; never verified that a plug-in or ETS accepts the result — [Devices and products](user-guide/05-devices-and-products.md#adopting-plug-in-data-source-builds-after-alpha-13), [§186](../KNOWN_LIMITATIONS.md#catalogue-kl-186) |
 | Package/version identity inspection | 🟡 Bounded implementation | Source/candidate identity is recorded; a version pin/selector is not implemented. First-installed normalized rows remain the winner — [§135](../KNOWN_LIMITATIONS.md) |
 | Manufacturer signature verification | ❌ Not implemented | Signature members are retained and labelled, not cryptographically verified — [§85](../KNOWN_LIMITATIONS.md) |
 

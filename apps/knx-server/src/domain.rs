@@ -159,6 +159,10 @@ pub struct AppState {
     /// so `POST /api/device-download/start` can prove it writes exactly
     /// that plan. Cleared once written.
     pub device_download_plan: Mutex<Option<crate::ShownPlan>>,
+    /// The plug-in data adoption plan last previewed (ADR-0136 amendment),
+    /// kept so apply writes exactly that plan. Taken when applied or found
+    /// stale, replaced by a newer preview, dropped by cancel.
+    pub plugin_data_plan: Mutex<Option<crate::ShownAdoption>>,
     /// At most one download to a device, retained after it ends so its
     /// final state stays readable. `tokio::sync::Mutex`: `start` holds it
     /// across the tunnel connect, so a second start waits and then sees
@@ -279,6 +283,7 @@ impl AppState {
             line_scan_session: tokio::sync::Mutex::new(None),
             next_line_scan_session_id: std::sync::atomic::AtomicU64::new(1),
             device_download_plan: Mutex::new(None),
+            plugin_data_plan: Mutex::new(None),
             device_download: tokio::sync::Mutex::new(None),
             next_device_download_id: std::sync::atomic::AtomicU64::new(1),
             device_download_timing: knx_net::SessionTiming::default(),
@@ -2925,7 +2930,7 @@ fn apply_bound(
 /// Whether a client's binding (server run, opened project, snapshot
 /// revision) still names the live project. Read while `state.project` is
 /// held, so it is ordered with every mutation that bumps the revision.
-fn snapshot_is_current(
+pub(crate) fn snapshot_is_current(
     state: &AppState,
     server_incarnation: &str,
     project_incarnation: u64,

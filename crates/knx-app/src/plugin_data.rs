@@ -38,6 +38,8 @@ const RECORD_VERSION: u32 = 1;
 /// A numeric parameter value that names an `ExtraData` file is short in every
 /// observed project; anything longer is not treated as a file number.
 const MAX_EXTRA_DATA_NUMBER_DIGITS: usize = 20;
+const PRODUCT_REFERENCE: &str = "product reference";
+const APPLICATION_REFERENCE: &str = "application program reference";
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -174,6 +176,89 @@ impl std::fmt::Display for Refusal {
 
 impl std::error::Error for Refusal {}
 
+/// A refusal as data: a stable `code` per class plus the facts its text
+/// names, so an adapter can word it in any language. `message` is the
+/// English text of [`Refusal`]'s `Display`, unchanged.
+#[derive(Clone, Debug, Default, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct RefusalDetail {
+    pub code: &'static str,
+    pub message: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub side: Option<&'static str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub device: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source_value: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub target_value: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
+}
+
+impl Refusal {
+    /// Stable camelCase name of the refusal class; never changes with the text.
+    pub fn code(&self) -> &'static str {
+        match self {
+            Self::UnknownDevice { .. } => "unknownDevice",
+            Self::NoProjectDirectory { .. } => "noProjectDirectory",
+            Self::ProductDiffers { what, .. } if *what == PRODUCT_REFERENCE => {
+                "productReferenceDiffers"
+            }
+            Self::ProductDiffers { .. } => "applicationReferenceDiffers",
+            Self::NoPluginData => "noPluginData",
+            Self::BinaryDataReferencesDiffer => "binaryDataReferencesDiffer",
+            Self::ExtraDataAssociationDiffers => "extraDataAssociationDiffers",
+            Self::GroupLinksDiffer => "groupLinksDiffer",
+            Self::DanglingGroupLink { .. } => "danglingGroupLink",
+            Self::EntryMissing { .. } => "entryMissing",
+            Self::EntryAmbiguous { .. } => "entryAmbiguous",
+            Self::AlreadyIdentical => "alreadyIdentical",
+            Self::Stale => "stale",
+            Self::Unreopenable(_) => "unreopenable",
+        }
+    }
+
+    pub fn detail(&self) -> RefusalDetail {
+        let mut detail = RefusalDetail {
+            code: self.code(),
+            message: self.to_string(),
+            ..RefusalDetail::default()
+        };
+        match self {
+            Self::UnknownDevice { side, id } => {
+                detail.side = Some(side);
+                detail.id = Some(*id);
+            }
+            Self::NoProjectDirectory { side, device } => {
+                detail.side = Some(side);
+                detail.device = Some(device.clone());
+            }
+            Self::ProductDiffers { source, target, .. } => {
+                detail.source_value = Some(source.clone());
+                detail.target_value = Some(target.clone());
+            }
+            Self::DanglingGroupLink { side } => detail.side = Some(side),
+            Self::EntryMissing { side, path } | Self::EntryAmbiguous { side, path } => {
+                detail.side = Some(side);
+                detail.path = Some(path.clone());
+            }
+            Self::Unreopenable(reason) => detail.reason = Some(reason.clone()),
+            Self::NoPluginData
+            | Self::BinaryDataReferencesDiffer
+            | Self::ExtraDataAssociationDiffers
+            | Self::GroupLinksDiffer
+            | Self::AlreadyIdentical
+            | Self::Stale => {}
+        }
+        detail
+    }
+}
+
 /// What `plan` needs of a source: a project and where its archive entries
 /// live. Kept separate from `Source` so the rules are testable without an
 /// archive.
@@ -237,6 +322,8 @@ pub struct Candidate {
     pub target_device: DeviceSummary,
     /// `None` when a plan can be built, otherwise the refusal text.
     pub refusal: Option<String>,
+    /// The same refusal as code and facts, for adapters that word it.
+    pub refusal_detail: Option<RefusalDetail>,
     pub replacements: usize,
 }
 
@@ -260,12 +347,13 @@ pub fn candidates_from(target: &NativeSnapshot, source: &SourceView<'_>) -> Vec<
             let (refusal, replacements) = match plan_from(target, source, request) {
                 Ok(plan) => (None, plan.preview.replacements.len()),
                 Err(Refusal::NoPluginData) => continue,
-                Err(refusal) => (Some(refusal.to_string()), 0),
+                Err(refusal) => (Some(refusal), 0),
             };
             found.push(Candidate {
                 source_device: summary(source_device),
                 target_device: summary(target_device),
-                refusal,
+                refusal: refusal.as_ref().map(Refusal::to_string),
+                refusal_detail: refusal.as_ref().map(Refusal::detail),
                 replacements,
             });
         }
@@ -301,14 +389,14 @@ pub fn plan_from(
 
     if source_device.product_ref != target_device.product_ref {
         return Err(Refusal::ProductDiffers {
-            what: "product reference",
+            what: PRODUCT_REFERENCE,
             source: source_device.product_ref.clone(),
             target: target_device.product_ref.clone(),
         });
     }
     if source_device.program_ref != target_device.program_ref {
         return Err(Refusal::ProductDiffers {
-            what: "application program reference",
+            what: APPLICATION_REFERENCE,
             source: source_device.program_ref.clone(),
             target: target_device.program_ref.clone(),
         });

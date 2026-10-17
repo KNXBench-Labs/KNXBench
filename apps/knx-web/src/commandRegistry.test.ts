@@ -43,6 +43,7 @@ function noopCtx(overrides: Partial<CommandContext> = {}): CommandContext {
     openCompanion: () => {},
     openHelp: () => {},
     openCatalog: () => {},
+    openPluginData: () => {},
     openProjectHistory: () => {},
     openDevices: () => {},
     openNotes: () => {},
@@ -155,11 +156,23 @@ describe("command enablement", () => {
 
   it("lists every command in palette order, with an unconditionally enabled first entry", () => {
     expect(COMMANDS.map((c) => c.id)).toEqual([
-      "new-project", "open-project", "open-native", "save", "save-as", "undo", "redo", "project-history", "search",
+      "new-project", "open-project", "open-native", "save", "save-as", "undo", "redo", "project-history", "adopt-plugin-data", "search",
       "open-log", "open-bus-monitor", "open-settings", "open-diagnostics-window",
       "open-catalog", "open-devices", "open-notes", "stored-bus-access", "add-device", "show-introduction", "open-achievements", "open-help",
     ]);
     expect(COMMANDS[0].isEnabled(noopCtx({ tree: null }))).toBe(true);
+  });
+
+  // ADR-0136: adoption writes into the open project, so it needs one.
+  it("enables Adopt plug-in data only with a project open and opens its dialog", () => {
+    let ran = 0;
+    const cmd = COMMANDS.find((c) => c.id === "adopt-plugin-data")!;
+    expect(cmd.labelKey).toBe("pluginData.palette");
+    expect(cmd.isEnabled(noopCtx({ tree: null }))).toBe(false);
+    const ctx = noopCtx({ tree: {} as never, openPluginData: () => (ran += 1) });
+    expect(cmd.isEnabled(ctx)).toBe(true);
+    cmd.run(ctx);
+    expect(ran).toBe(1);
   });
 
   // ADR-0093: the wizard creates into a project, so it needs one open.

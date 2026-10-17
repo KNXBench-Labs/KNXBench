@@ -61,6 +61,7 @@ import {
   flattenBuildingParts,
 } from "./treeUtils";
 import { snapshotContextFromTree } from "./snapshotIdentity";
+import { PluginDataButton } from "./PluginDataDialog";
 
 // `BuildingNode.kind` is the raw `BuildingPartType` discriminant from the
 // server ("Building", "Floor", … — see `bindings/BuildingNode.ts`'s own
@@ -879,6 +880,8 @@ export function DeviceWorkspace(props: {
   detail: DeviceDetail; tree: ProjectTree; onApplied: (tree: ProjectTree) => void;
   /** An unapplied installation-instructions draft exists (or no longer does). */
   onInstructionDraftChange?: (dirty: boolean) => void;
+  /** Opens Project history, where the way back from a plug-in data adoption lives. */
+  onOpenHistory?: () => void;
 }) {
   const { detail, tree, onApplied } = props;
   const groupAddresses = linkableGroupAddresses(tree, detail.id);
@@ -898,7 +901,8 @@ export function DeviceWorkspace(props: {
   useEffect(() => { if (tab === instructionsTab) setInstructionsOpened(true); }, [tab, instructionsTab]);
   return <section className="device-workspace">
     <header className="workspace-heading"><div><h2>{detail.name}</h2><span className="mono">{detail.address ?? t("workbench.unassigned")}</span></div>
-      <OpenDownloadButton deviceId={detail.id} address={detail.address} /></header>
+      <div className="workspace-heading-actions"><OpenDownloadButton deviceId={detail.id} address={detail.address} />
+        <PluginDataButton tree={tree} deviceId={detail.id} onTreeUpdate={onApplied} onOpenHistory={props.onOpenHistory} /></div></header>
     <RenameNameField tree={tree} target={{ kind: "device", id: detail.id, name: detail.name }} onApplied={onApplied} />
     <div className="device-tabs" role="tablist" aria-label={detail.name} onKeyDown={(e) => {
       if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) return;

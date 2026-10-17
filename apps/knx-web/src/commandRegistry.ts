@@ -19,6 +19,8 @@ export interface CommandContext {
   openHelp: () => void;
   openCatalog: () => void;
   openProjectHistory: () => void;
+  /** ADR-0136: plug-in data adoption from a source archive (needs an open project). */
+  openPluginData: () => void;
   openDevices: () => void;
   /** The project notes workspace (needs an open project). */
   openNotes: () => void;
@@ -118,6 +120,12 @@ export const COMMANDS: PaletteCommand[] = [
     labelKey: "projectHistory.title",
     isEnabled: (ctx) => ctx.tree !== null,
     run: (ctx) => ctx.openProjectHistory(),
+  },
+  {
+    id: "adopt-plugin-data",
+    labelKey: "pluginData.palette",
+    isEnabled: (ctx) => ctx.tree !== null,
+    run: (ctx) => ctx.openPluginData(),
   },
   {
     id: "search",

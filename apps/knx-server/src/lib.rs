@@ -53,6 +53,7 @@ mod device_diagnostics_routes;
 mod device_download;
 mod parameter_grid;
 mod parameter_objects;
+mod plugin_data_routes;
 mod support_routes;
 pub use device_download::{
     DeviceDownloadSession, DownloadStatus, OnDownloadEnd, ProgressEvent, Restart, Written,
@@ -60,6 +61,7 @@ pub use device_download::{
 mod device_download_routes;
 mod device_readiness_routes;
 pub use device_download_routes::ShownPlan;
+pub use plugin_data_routes::ShownAdoption;
 mod address_programming;
 pub use address_programming::{
     AddressProgrammingEvent, AddressProgrammingSession, AddressProgrammingStatus, AddressWritten,

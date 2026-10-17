@@ -1277,6 +1277,7 @@ export const messages = {
     "A text placeholder had no matching module argument and was left as written.",
 
   "parameters.title": "Parameters",
+  "parameters.workspace.closed": "Choose an area to show its parameters, or search across all areas. Areas stay closed until you open one.",
   "parameters.workspace.ungrouped": "Other parameters",
   "parameters.workspace.search": "Find parameters",
   "parameters.workspace.searchHint": "Name, value or parameter ID",

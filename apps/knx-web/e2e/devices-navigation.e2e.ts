@@ -131,6 +131,12 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     const workspace = page.locator(".parameter-workspace");
     const nav = workspace.locator(".parameter-workspace-nav button");
     await expect(nav).toHaveCount(4);
+    // Closed by default: areas are listed, none opens until chosen.
+    await expect(workspace.locator('.parameter-workspace-nav [aria-current="page"]')).toHaveCount(0);
+    await expect(workspace.locator(".parameter-workspace-row:visible")).toHaveCount(0);
+    await expect(workspace.locator(".parameter-workspace-closed")).toBeVisible();
+    if (process.env.KNX_DEVICES_CAPTURE_DIR) await page.screenshot({ path: join(process.env.KNX_DEVICES_CAPTURE_DIR, `parameter-workspace-closed-${language}-${width}.png`) });
+    await nav.first().click();
     await expect(nav.first()).toHaveAttribute("aria-current", "page");
     await expect(workspace.locator(".parameter-workspace-row:visible")).toHaveCount(4);
     const mode = workspace.locator('[data-parameter-row="Mode"] select');

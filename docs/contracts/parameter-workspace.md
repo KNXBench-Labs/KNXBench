@@ -12,10 +12,15 @@ storage or protocol schema change.
 - The editing area uses aligned label/value rows. It is a compact comparison
   surface, **not** a semantic channel pivot, a recreation of ETS grid coordinates
   or a product-specific faceplate. Original labels/options/values stay unchanged.
+- Closed by default, like the other disclosures: the area register lists every
+  area with its entry count, but no area opens until chosen. An explicitly
+  chosen area stays open across project refreshes; newly appearing areas stay
+  closed, and if the chosen area disappears the workspace returns to the closed
+  overview rather than opening a different one.
 - Search covers all available source groups: parameter ID, original name/label,
   accepted value, option text/value, group caption and module ID. All query terms
   must match, without changing canonical order or project state. An empty search
-  returns to the previously selected area. Navigation displays search counts and
+  returns to the previously chosen area, or to the closed overview. Navigation displays search counts and
   clears search when an area is explicitly chosen.
 - All editors stay under a single stable source-ordered parent. Navigation and
   search hide rows rather than unmounting them; keys use full scope and field

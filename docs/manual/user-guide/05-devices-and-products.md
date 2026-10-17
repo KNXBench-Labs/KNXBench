@@ -641,8 +641,10 @@ If no product database is installed, the import simply says so and skips this st
 with a compact parameter workspace. The screenshot below still shows its stated
 older release; this source change does not update a published AppImage/container.
 
-Choose a declared area in **Areas**. The main pane aligns parameter labels and
-values; device and module scopes remain separate. Missing group information is
+**Areas** lists the declared parameter areas with their entry counts. Like other
+folded content, nothing opens until you choose an area; your choice stays open
+when the project refreshes, while new areas stay closed. The main pane aligns
+parameter labels and values; device and module scopes remain separate. Missing group information is
 available under **Other parameters**. Search by parameter name, ID, value or
 option caption across all areas. Clearing search returns to your chosen area;
 a no-result search does not delete fields or values.

@@ -223,10 +223,10 @@ Selection merges devices or complete lines into an explicit installation. No bui
 [Details and history](limitations/selective-import.md)
 
 <a id="catalogue-kl-186"></a>
-### 186. Plug-in data adoption is CLI-only and not undoable
+### 186. Plug-in data adoption is not undoable; adopted bytes are unverified
 
 **Ledger status:** `ACCEPTED_BOUNDARY` ([KL-186](status/LEDGER.md#post-snapshot-ids)).
-Adopting a plug-in's stored bytes between two projects of one lineage exists in the application layer and the CLI only. The bytes are not decoded, no remapping is attempted, the opaque store is outside command Undo (rollback is the saved version), and no plug-in, ETS or device acceptance of the adopted bytes is verified.
+Adopting a plug-in's stored bytes between two projects of one lineage exists in the application layer, the CLI and (since 17 October 2026) the server and web app. The bytes are not decoded, no remapping is attempted, the opaque store is outside command Undo (the way back is a project version recorded before the change), and no plug-in, ETS or device acceptance of the adopted bytes is verified.
 [Details and history](limitations/KL-186-plugin-data-adoption.md)
 
 ## Manufacturer data and parameters

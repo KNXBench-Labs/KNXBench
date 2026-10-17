@@ -113,6 +113,16 @@ export const HELP_TOPICS = [
     standardNote: false,
   },
   {
+    id: "pluginData",
+    titleKey: "help.topic.pluginData.title",
+    bodyKeys: [
+      "help.topic.pluginData.p1",
+      "help.topic.pluginData.p2",
+      "help.topic.pluginData.p3",
+    ],
+    standardNote: false,
+  },
+  {
     id: "keyboard",
     titleKey: "help.topic.keyboard.title",
     bodyKeys: ["help.topic.keyboard.p1", "help.topic.keyboard.p2", "help.topic.keyboard.p3"],

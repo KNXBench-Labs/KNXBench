@@ -12,6 +12,26 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Plug-in data adoption in the server and the web app (17 October 2026)
+
+Package P2 lifts the first half of [KL-186](KNOWN_LIMITATIONS.md#catalogue-kl-186):
+`knx-server` gains `/api/project/plugin-data/{candidates,preview,apply,cancel}`
+and the web app a dialog in the device panel header and the command palette,
+with the CLI's list → preview → confirm contract
+([contract](contracts/plugin-data-adoption.md#server-and-web-app)). Preview is
+bound to `serverIncarnation`/`projectIncarnation`/`snapshotRevision`; the server
+keeps the one shown plan, apply sends only its token, a stale token or project
+is `409` with nothing written. Adoption stays outside Undo: apply first records
+the project version *Before plug-in data adoption* (a `.knxdb` is required),
+then persists the adopted working state with the undo stack unchanged
+([ADR-0136 amendment](adr/0136-plugin-data-adoption-is-audited-opaque-replacement.md)).
+Refusals keep a stable code (`RefusalDetail`) so the dialog words all 14 classes
+in EN and DE. Tests: app 19, HTTP 12 (four mutants each killed by a named case),
+Vitest 17 new (full suite 3,680 before the last two dialog cases), browser 5
+(EN/DE × 1440/400 plus Escape-cancel), screenshots inspected; two layout
+defects found that way (full-width radio, squeezed refused row) were fixed
+test-first. Plug-in, ETS or device acceptance of adopted bytes stays unverified
+(owner only). No schema, bus, device or vendor action.
 ## Declared parameter grids in the Parameters tab (17 October 2026)
 
 Parameter areas whose product data declares a `Table`/`Grid` (`Rows`, `Columns`,

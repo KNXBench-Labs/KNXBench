@@ -70,7 +70,7 @@ fn storage_error(error: HistoryError) -> ApiError {
     }
 }
 
-fn snapshot(state: &AppState, project: &knx_core::Project) -> NativeSnapshot {
+pub(crate) fn snapshot(state: &AppState, project: &knx_core::Project) -> NativeSnapshot {
     NativeSnapshot {
         project: project.clone(),
         opaque: state.opaque.lock().expect("state mutex poisoned").clone(),

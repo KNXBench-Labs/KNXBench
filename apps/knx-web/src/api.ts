@@ -3,6 +3,7 @@
 //! function names and argument shapes the components already called, so
 //! swapping the import at each call site is the only change there.
 import type { ProjectTree } from "./bindings/ProjectTree";
+import type { AdoptionApplyResponse, AdoptionListing, AdoptionPreviewResponse } from "./pluginData";
 import {admitProjectMetadata,type ProjectMetadataView} from "./projectMetadata";
 import {admitRecordedDeviceState,type RecordedDeviceStateView} from "./recordedDeviceState";
 import {admitProjectPayloads,payloadDownloadPath,type ProjectPayloadCatalogue} from "./projectPayloads";
@@ -263,6 +264,25 @@ export function previewImportSelection(body: SelectionRequest): Promise<Selectio
 }
 export function applyImportSelection(body: SelectionRequest): Promise<{ preview: SelectionPreview; project: ProjectTree }> {
   return request("/api/project/import-selection/apply", { method: "POST", body: JSON.stringify(body) });
+}
+
+/** ADR-0136: device pairs of a source archive that could take plug-in bytes. Read-only. */
+export function listPluginDataCandidates(path: string, password?: string): Promise<AdoptionListing> {
+  return request("/api/project/plugin-data/candidates", { method: "POST", body: JSON.stringify({ path, ...(password ? { password } : {}) }) });
+}
+/** Bound to the tree it was shown under; the server keeps this one plan for apply. */
+export function previewPluginData(body: {
+  path: string; password?: string; sourceHash: string; request: { sourceDevice: number; targetDevice: number };
+  serverIncarnation: string; projectIncarnation: number; snapshotRevision: number;
+}): Promise<AdoptionPreviewResponse> {
+  return request("/api/project/plugin-data/preview", { method: "POST", body: JSON.stringify(body) });
+}
+/** Applies exactly the previewed plan; the token is the only input. */
+export function applyPluginData(confirmationToken: string): Promise<AdoptionApplyResponse> {
+  return request("/api/project/plugin-data/apply", { method: "POST", body: JSON.stringify({ confirmationToken }) });
+}
+export function cancelPluginData(confirmationToken: string): Promise<{ cancelled: boolean }> {
+  return request("/api/project/plugin-data/cancel", { method: "POST", body: JSON.stringify({ confirmationToken }) });
 }
 
 export function currentProject(): Promise<ProjectTree & { has_store_path: boolean }> {

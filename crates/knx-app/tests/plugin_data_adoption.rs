@@ -473,3 +473,131 @@ fn a_device_that_arrived_through_selective_import_is_found_under_its_import_pref
         Variant::edited().blob
     );
 }
+
+#[test]
+fn every_refusal_has_a_stable_code_and_keeps_its_named_facts() {
+    // The web words refusals itself (EN/DE); it needs a code that never
+    // changes with the English text, plus the facts the text names.
+    let cases: Vec<(Refusal, &str, serde_json::Value)> = vec![
+        (
+            Refusal::UnknownDevice {
+                side: "source",
+                id: 7,
+            },
+            "unknownDevice",
+            serde_json::json!({"side": "source", "id": 7}),
+        ),
+        (
+            Refusal::NoProjectDirectory {
+                side: "destination",
+                device: "Sensor".into(),
+            },
+            "noProjectDirectory",
+            serde_json::json!({"side": "destination", "device": "Sensor"}),
+        ),
+        (
+            Refusal::ProductDiffers {
+                what: "product reference",
+                source: "M-0001_H-1_P-2".into(),
+                target: "M-0001_H-1_P-1".into(),
+            },
+            "productReferenceDiffers",
+            serde_json::json!({"sourceValue": "M-0001_H-1_P-2", "targetValue": "M-0001_H-1_P-1"}),
+        ),
+        (
+            Refusal::ProductDiffers {
+                what: "application program reference",
+                source: "HP-2".into(),
+                target: "HP-1".into(),
+            },
+            "applicationReferenceDiffers",
+            serde_json::json!({"sourceValue": "HP-2", "targetValue": "HP-1"}),
+        ),
+        (Refusal::NoPluginData, "noPluginData", serde_json::json!({})),
+        (
+            Refusal::BinaryDataReferencesDiffer,
+            "binaryDataReferencesDiffer",
+            serde_json::json!({}),
+        ),
+        (
+            Refusal::ExtraDataAssociationDiffers,
+            "extraDataAssociationDiffers",
+            serde_json::json!({}),
+        ),
+        (
+            Refusal::GroupLinksDiffer,
+            "groupLinksDiffer",
+            serde_json::json!({}),
+        ),
+        (
+            Refusal::DanglingGroupLink { side: "source" },
+            "danglingGroupLink",
+            serde_json::json!({"side": "source"}),
+        ),
+        (
+            Refusal::EntryMissing {
+                side: "destination",
+                path: BLOB_PATH.into(),
+            },
+            "entryMissing",
+            serde_json::json!({"side": "destination", "path": BLOB_PATH}),
+        ),
+        (
+            Refusal::EntryAmbiguous {
+                side: "project",
+                path: RBG_PATH.into(),
+            },
+            "entryAmbiguous",
+            serde_json::json!({"side": "project", "path": RBG_PATH}),
+        ),
+        (
+            Refusal::AlreadyIdentical,
+            "alreadyIdentical",
+            serde_json::json!({}),
+        ),
+        (Refusal::Stale, "stale", serde_json::json!({})),
+        (
+            Refusal::Unreopenable("encode failed".into()),
+            "unreopenable",
+            serde_json::json!({"reason": "encode failed"}),
+        ),
+    ];
+    let mut codes = std::collections::BTreeSet::new();
+    for (refusal, code, facts) in cases {
+        let detail = refusal.detail();
+        assert_eq!(detail.code, code, "{refusal:?}");
+        assert_eq!(refusal.code(), code);
+        assert_eq!(
+            detail.message,
+            refusal.to_string(),
+            "the English text stays the same"
+        );
+        let mut expected = facts.as_object().unwrap().clone();
+        expected.insert("code".into(), code.into());
+        expected.insert("message".into(), refusal.to_string().into());
+        assert_eq!(
+            serde_json::to_value(&detail).unwrap(),
+            serde_json::Value::Object(expected),
+            "{refusal:?}"
+        );
+        codes.insert(code);
+    }
+    assert_eq!(codes.len(), 14, "one code per refusal class, none shared");
+}
+
+#[test]
+fn candidates_carry_the_structured_refusal_next_to_its_text() {
+    let dst = target(&Variant::default());
+    let good = adopt::candidates(&dst, &source(&Variant::edited()));
+    assert_eq!(good[0].refusal_detail, None);
+    let bad = adopt::candidates(
+        &dst,
+        &source(&Variant {
+            group_address: 2,
+            ..Variant::edited()
+        }),
+    );
+    let detail = bad[0].refusal_detail.as_ref().unwrap();
+    assert_eq!(detail.code, "groupLinksDiffer");
+    assert_eq!(Some(detail.message.as_str()), bad[0].refusal.as_deref());
+}

@@ -1,6 +1,8 @@
 # Plug-in data adoption
 
-Status: implemented for the CLI and the application layer (17 October 2026).
+Status: implemented for the application layer and the CLI, and since package P2
+for the server and the web app (device panel and command palette), all on
+17 October 2026.
 Decision: [ADR-0136](../adr/0136-plugin-data-adoption-is-audited-opaque-replacement.md).
 Limits: [KL-186](../KNOWN_LIMITATIONS.md#catalogue-kl-186).
 
@@ -64,6 +66,60 @@ format, so it is never attempted.
   saved state (with its bytes) as a project version; restore that version to
   go back.
 
+## Server and web app
+
+Same contract, live project. Every route sits behind the server's normal
+session check; nothing below decodes, runs or sends anything.
+
+| Route (`POST`) | Body | Answer |
+| --- | --- | --- |
+| `/api/project/plugin-data/candidates` | `path` (server-side, from the file picker), optional `password` | `sourceHash`, `persistence` (`native` / `session`) and the pairs, each with `refusal` (text) and `refusalDetail` (stable `code` plus its facts) |
+| `/api/project/plugin-data/preview` | `path`, `password`, `sourceHash`, `request` (`sourceDevice`, `targetDevice`), `serverIncarnation`, `projectIncarnation`, `snapshotRevision` | the `preview` and a `confirmationToken`; the server keeps this one plan |
+| `/api/project/plugin-data/apply` | `confirmationToken` only | the `preview`, the new `project` tree and `rollbackVersion` (`id`, `label`) |
+| `/api/project/plugin-data/cancel` | `confirmationToken` | `cancelled`: whether it dropped the shown plan |
+
+| Situation | Status, `kind` | Effect |
+| --- | --- | --- |
+| No project open | `422`, `pluginDataTarget` | none |
+| Source unreadable (not a ZIP, wrong password, …) | `422`, `pluginDataSource` | none |
+| Source bytes differ from the listed `sourceHash` | `409`, `pluginDataSourceChanged` | none |
+| Binding fields differ from the live project | `409`, `pluginDataStale` | none |
+| Project has no `.knxdb` file yet | `422`, `pluginDataNativeRequired` | none (listing still works) |
+| A plan refusal (see *When it refuses*) | `422`, `pluginDataRefused`, plus `refusal` (`code`, `message`, facts) | none |
+| Token unknown, replaced by a newer preview, cancelled, or the project changed since the preview | `409`, `pluginDataStale` | none; a matching but stale plan is dropped, never retried |
+| The way-back version cannot be written | `422`, `pluginDataRollbackUnavailable` / `409`, `projectHistoryStale` | none |
+| Misspelled, unknown or missing body field | `422` | none |
+
+**Apply, in order** (all under the project lock): take the shown plan if the
+token matches; check the binding and that the project still equals the plan's
+starting state; record the current working state as the project version
+*Before plug-in data adoption*; persist the adopted working state with the
+undo stack unchanged; publish the opaque store and a new revision. So there is
+**no Undo step**, the way back is that version (Project history → restore), and
+the superseded bytes stay in the project as well. If the second write fails,
+the extra version of the unchanged state remains and nothing else changes.
+Decision: [ADR-0136, amendment of 17 October 2026](../adr/0136-plugin-data-adoption-is-audited-opaque-replacement.md).
+
+**Web app.** *Adopt plug-in data…* in the device panel header (pairs for that
+device first, *Show pairs for every device* for the rest) and in the command
+palette. Steps: optional password → *Choose source project…* (the server's file
+picker) → pairs with *Can adopt: n entries differ* or *Cannot adopt:* and the
+refusal worded in the UI language → *Preview* (each replaced entry by channel,
+archive path, size and both SHA-256 digests; unchanged entries; the notes,
+including a different individual address) → explicit consent → *Adopt plug-in
+data*. No byte content is shown or decoded. The dialog offers no Undo; it names
+the version and opens Project history. A `409` keeps the chosen pair, says that
+nothing was adopted and offers *Reload project*; a lost answer is reported as
+uncertain and the project is re-read, never re-sent. Closing the dialog or any
+project change elsewhere cancels the shown preview on the server. Each finished
+step moves focus to its result (pairs, preview, message), so the keyboard stays
+inside the dialog. EN and DE copy (German addresses the user with *du*).
+
+Not done: the unsaved-changes indicator follows the model, which adoption does
+not touch (the adoption is already in the working journal and survives
+reopening); no session-log line (the adoption record in the project is the
+audit trail).
+
 ## What it does not claim
 
 - That the plug-in, ETS or a device accepts the adopted bytes. Not verified.
@@ -75,9 +131,26 @@ format, so it is never attempted.
 
 ## Tests
 
-- `crates/knx-app/tests/plugin_data_adoption.rs` — 17 synthetic cases: exact
+- `crates/knx-app/tests/plugin_data_adoption.rs` — 19 synthetic cases: exact
   replacement, retention, record, save/reopen, each refusal, stale apply,
-  confirmation token, candidate listing.
+  confirmation token, candidate listing, one stable code per refusal class.
+- `apps/knx-server/tests/http_plugin_data_adoption.rs` — 12 HTTP cases: listing
+  and preview write nothing; confirmed apply (no undo step, durable before
+  published, version restore brings the old bytes back); reopen with and
+  without Save; each plan refusal by code; unknown device; stale binding,
+  changed source, partial or unknown body fields; a project change, another
+  project, a wrong, replaced or cancelled token; session-only project; missing
+  project and unreadable source; authentication. Four mutants (no incarnation
+  check, no way-back version, no durable write, cancel as no-op) each turn a
+  named case red.
+- `apps/knx-web/src/pluginData.test.ts`, `PluginDataDialog.test.tsx` — refusal
+  wording (EN/DE, every code), error classes, pair filtering, the dialog's
+  states (bound preview, token-only apply, session-only, `409` with reload,
+  lost answer, cancel on close or change, focus hand-off, device-panel entry).
+- `apps/knx-web/e2e/plugin-data-adoption.e2e.ts` — strict intercepted fixture,
+  EN/DE at 1440 and 400 px through the command palette and the server file
+  picker: readable pair list, digests, consent, token-only apply, no sideways
+  overflow; plus Escape after a preview cancels it on the server.
 - `apps/knx-cli/tests/plugin_data_cli.rs` — the real binary: listing, preview
   without writes, confirmed apply with a restorable version, wrong token,
   incompatible devices, usage errors.

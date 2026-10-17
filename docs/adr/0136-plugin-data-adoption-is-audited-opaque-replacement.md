@@ -1,7 +1,7 @@
 # ADR 0136: Plug-in data adoption is an audited opaque replacement
 
 Date: 2026-10-17
-Status: Accepted (CLI and application layer)
+Status: Accepted (CLI and application layer; server and web app by the amendment below)
 Session: 7
 
 ## Context
@@ -56,3 +56,44 @@ reviewable preview, an audit record and a way back. Harder: the plug-in bytes
 are not part of Undo/Redo; the server and the web UI do not offer the operation
 yet ([KL-186](../KNOWN_LIMITATIONS.md#catalogue-kl-186)). Not claimed: that any
 plug-in or device accepts the adopted bytes.
+
+## Amendment, 2026-10-17 — the server route and the web app
+
+Package P2 brings the operation to `knx-server` and the web app
+([contract](../contracts/plugin-data-adoption.md#server-and-web-app)). A live
+server differs from the CLI in three ways: several clients share one open
+project, the project may never have been saved, and Undo is one click away.
+Decision 4 above ("rollback is the saved version") is kept and made
+unconditional:
+
+1. **A native project is required.** Preview and apply refuse a project that
+   has no `.knxdb` file yet (`pluginDataNativeRequired`). Without a file there
+   is no version store, so there would be no way back. Listing still works.
+2. **The way back is created before the change.** Apply first records the
+   current working state as the named project version *Before plug-in data
+   adoption*, then persists the adopted working state. Both use the existing
+   native history services (`change_history`, `persist_working`); the command
+   undo stack is carried unchanged, so **no Undo step exists** and the UI does
+   not offer one. It names the version instead. If the version cannot be
+   written (history limit, another writer), nothing is adopted. If the second
+   write fails, the extra version of the unchanged state remains (harmless,
+   nothing lost) and nothing is published.
+3. **What the user saw is what is applied.** The server keeps the one plan it
+   last previewed, the way `device_download_plan` keeps a shown download
+   plan. Apply sends only the confirmation token; the server applies that
+   exact plan if the token matches, the binding (`serverIncarnation`,
+   `projectIncarnation`, `snapshotRevision`) is still current and the
+   project still equals the plan's starting state. Otherwise `409`
+   `pluginDataStale`, nothing written; the plan is dropped and the client
+   previews again. A newer preview replaces the plan; cancel drops it. At most
+   one plan is held per server, so a preview from a second client makes the
+   first client's token stale (safe, one more click).
+4. **Refusals keep their name.** `knx_app::plugin_data::Refusal` gains a
+   stable `code` and its facts (`RefusalDetail`), so the web can word every
+   class in each language; the English text is unchanged for the CLI.
+
+Not done, deliberately: making adoption a `Command` (would need the opaque
+bytes inside the history images, see Alternatives), marking the project as
+modified (the indicator follows the model, which adoption does not touch; the
+adoption is already persisted in the working journal and reopens with it), and
+a session-log line (the adoption record in the project is the audit trail).

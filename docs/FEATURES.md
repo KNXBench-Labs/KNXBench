@@ -118,6 +118,7 @@ records the tested commit separately from artifact publication verification.
 | ETS project import | Schemas 11/21; bounded compatibility | alpha.6 |
 | Import reports | Warnings/errors/unsupported data | alpha.6 |
 | Selective import | Merge chosen lines/devices; preview, one undo step | alpha.8 |
+| [Plug-in data adoption](contracts/plugin-data-adoption.md) | One device's stored plug-in bytes from a same-lineage archive; preview by digest, way back = a project version, no Undo; acceptance unverified | Main-only |
 | Opaque preservation | Retained source; disclosed limitations | alpha.6 |
 | Product installation | `.knxprod`; evidenced schemes | alpha.6 |
 | Embedded products | From imported projects | alpha.6 |

@@ -122,6 +122,7 @@ describe("ONBOARDING_TASKS", () => {
       openCompanion: record("openCompanion"),
       openHelp: record("openHelp"),
       openCatalog: record("openCatalog"),
+      openPluginData: record("openPluginData"),
       openProjectHistory: () => {},
       openDevices: () => {},
       openNotes: () => {},

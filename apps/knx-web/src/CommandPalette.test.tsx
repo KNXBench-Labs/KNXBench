@@ -53,6 +53,7 @@ function noopCtx(overrides: Partial<CommandContext> = {}): CommandContext {
     openCompanion: () => {},
     openHelp: () => {},
     openCatalog: () => {},
+    openPluginData: () => {},
     openProjectHistory: () => {},
     openDevices: () => {},
     openNotes: () => {},

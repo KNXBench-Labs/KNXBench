@@ -124,6 +124,16 @@ def restore_links(moved: str, edits: list[dict]) -> str:
     return moved
 
 
+def check_redaction(key: str, redaction: dict) -> None:
+    """A redaction must give a reason and the digest of the bytes it replaced."""
+    reason = redaction.get('reason')
+    previous = redaction.get('previous_retained_sha256')
+    if not isinstance(reason, str) or not reason.strip():
+        raise ValueError(f'{key}: redaction gives no reason')
+    if not isinstance(previous, str) or not re.fullmatch(r'[0-9a-f]{64}', previous):
+        raise ValueError(f'{key}: redaction does not name the replaced bytes')
+
+
 def check(root: Path) -> list[str]:
     """Verify every frozen block, inverse link rewrite and complete source digest."""
     receipt_path = root / 'docs/evidence/documentation-reorganization-2026-10-13.json'
@@ -134,6 +144,7 @@ def check(root: Path) -> list[str]:
         for source in receipt['sources']:
             restored = []
             offset = 0
+            redacted = False
             index = (root / source['source']).read_text()
             for record in source['records']:
                 key = record['key']
@@ -148,20 +159,31 @@ def check(root: Path) -> list[str]:
                 retained = body.split(begin, 1)[1].split(end, 1)[0]
                 if hashlib.sha256(retained.encode()).hexdigest() != record['retained_sha256']:
                     raise ValueError(f'{key}: retained history changed')
-                original = restore_links(retained, record['link_edits'])
-                if (record['source_offset'] != offset
-                        or len(original) != record['source_length']
-                        or hashlib.sha256(original.encode()).hexdigest() != record['source_sha256']):
+                if record['source_offset'] != offset:
                     raise ValueError(f'{key}: original source reconstruction failed')
-                restored.append(original)
-                offset += len(original)
+                if 'redaction' in record:
+                    # A declared redaction (for example local machine details)
+                    # deliberately gives up byte identity for this record: the
+                    # new bytes stay pinned above, the replaced bytes are named
+                    # by digest and remain in Git history at `source_revision`.
+                    check_redaction(key, record['redaction'])
+                    redacted = True
+                else:
+                    original = restore_links(retained, record['link_edits'])
+                    if (len(original) != record['source_length']
+                            or hashlib.sha256(original.encode()).hexdigest() != record['source_sha256']):
+                        raise ValueError(f'{key}: original source reconstruction failed')
+                    restored.append(original)
+                offset += record['source_length']
                 # Handover is a current per-track summary, not an old heading index.
                 if source['source'] != '.ai/CURRENT_STATE.md':
                     for alias in record['anchors']:
                         if f'<a id="{alias}"></a>' not in index:
                             raise ValueError(f'{key}: missing original fragment {alias}')
+            # With a redacted record the whole-source digest cannot be rebuilt;
+            # every other record was verified byte for byte and contiguity holds.
             digest = hashlib.sha256(''.join(restored).encode()).hexdigest()
-            if digest != source['sha256']:
+            if not redacted and digest != source['sha256']:
                 raise ValueError(f"{source['source']}: incomplete/reordered original source")
     except (OSError, ValueError, KeyError, TypeError) as error:
         return [f'Documentation history: {error}']

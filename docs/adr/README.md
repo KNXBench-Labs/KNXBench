@@ -141,3 +141,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0131](0131-universal-device-support.md) | Universal support evidence is not download admission | Accepted | 2026-10-15 |
 | [0133](0133-parameter-edits-reconcile-object-inventory.md) | Parameter edits reconcile the configured object inventory | Accepted for offline editing | 2026-10-16 |
 | [0134](0134-generic-read-only-diagnostic-export.md) | Read-only diagnostic export uses one generic identity recipe | Accepted (simulator scope) | 2026-10-17 |
+| [0135](0135-repository-carries-no-local-machine-details.md) | The repository carries no local machine details | Accepted | 2026-10-17 |

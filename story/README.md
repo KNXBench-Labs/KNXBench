@@ -58,7 +58,7 @@ node tests/browser/check_story.mjs dist/<id>/index.html <scratch-dir>/dist/index
 ```
 
 The browser check needs Playwright; set `PLAYWRIGHT_DIR` to the `node_modules`
-directory that contains `playwright` if it is not at the default local path. It
+directory that contains `playwright` if Node cannot resolve it from `story/`. It
 is not a repository dependency. `STORY_BROWSER=firefox` or `STORY_BROWSER=webkit`
 selects another engine (default `chromium`). Outside Chromium the phone pass
 drags with the mouse instead of real touch events, and Firefox gets the phone

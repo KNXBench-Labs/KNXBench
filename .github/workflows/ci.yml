@@ -83,6 +83,7 @@ jobs:
           python3 tools/check_documentation.py
           python3 -m unittest discover -s tools/tests -p test_limitations_catalogue.py
           python3 -m unittest discover -s tools/tests -p test_documentation_history.py
+          python3 -m unittest discover -s tools/tests -p test_check_local_info.py
           python3 -m unittest discover -s tools/tests -p test_web_gate.py
           python3 -m unittest discover -s tools/tests -p test_browser_tmp.py
 

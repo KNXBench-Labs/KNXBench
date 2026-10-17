@@ -13,6 +13,15 @@ already found lying in the grass.
   absolute paths under `target/debug/build/tauri-*/out`; after a move, clippy and the
   workspace tests stop at `failed to read plugin permissions` for `knx-desktop`. Keep
   the directory where it was built, or link the old path to it.
+- **Build the web bundle before any workspace-wide Rust step.** `knx-desktop`'s
+  build script needs `apps/knx-web/dist` (the Tauri `frontendDist` and the
+  release `frontend` resource). In a fresh worktree run
+  `(cd apps/knx-web && npm ci && npm run build)` first; the build script
+  otherwise stops with a message naming that command. Never work around it
+  with `--exclude knx-desktop`, which hides whether the desktop shell still
+  builds (chosen over a placeholder bundle on 17 October 2026: a placeholder
+  would have to rewrite two Tauri config keys and could let a build succeed
+  without the real UI). [Rust workspace gate](VERIFICATION.md#rust-workspace-gate).
 - **`knx-net`'s loopback-join test reads the host's `/proc/net/igmp`.** When that
   table does not fit one `read(2)` (many interfaces or groups at that moment),
   `the_loopback_join_lands_on_lo_and_nowhere_else` refuses the truncated snapshot
@@ -51,6 +60,14 @@ already found lying in the grass.
   supervisor may act on the receipt the moment the PID appears; a signal in the
   gap between writing it and entering `try` orphans the child's whole session
   (`web_gate_support.MeasuredRun.step`, fixed 17 October 2026).
+- **Prove a work bound by counting, not by the clock.** A loaded host can stall
+  a thread for seconds inside a window that costs microseconds:
+  `hostile_nested_zips_are_refused_in_linear_time` failed at 3.2 s against a
+  1 s budget for 71 µs of work, and a debugger pause of 2 s inside the window
+  reproduces it. The ZIP validator now counts the bytes it inspects
+  (`package::zip_work`, test builds only) and the test bounds that count by
+  the input size; a 30 s clock at 2 MiB remains only as a backstop for work
+  outside the meter (17 October 2026).
 - **On ext4 a deleted file's inode comes straight back.** Deleting a file and
   creating another in the same directory reused the inode 200 of 200 times on
   the project drive (17 October 2026). A file identity that must notice a

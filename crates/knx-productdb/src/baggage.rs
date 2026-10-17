@@ -724,16 +724,14 @@ mod tests {
         assert_eq!(payload.nested, NestedArchive::Unreadable);
     }
 
-    #[test]
-    fn hostile_nested_zips_are_refused_in_linear_time() {
-        // Two shapes that must be refused without superlinear work. The
-        // first is a run of complete end-of-directory records, each claiming
-        // a one-entry directory spanning everything before it: `zip` 8.6
-        // tries every candidate and re-parses that span each time (measured
-        // 24 ms at 16 KiB, 343 ms at 64 KiB, 8.3 s at 256 KiB). The bounded
-        // validator accepts only the record that ends the buffer. The second
-        // points one valid-looking record at a garbage run. The cap is
-        // generous so only superlinear behaviour trips it.
+    /// The two hostile shapes at a given size. The first is a run of
+    /// complete end-of-directory records, each claiming a one-entry directory
+    /// spanning everything before it: `zip` 8.6 tries every candidate and
+    /// re-parses that span each time (measured 24 ms at 16 KiB, 343 ms at
+    /// 64 KiB, 8.3 s at 256 KiB). The bounded validator accepts only the
+    /// record that ends the buffer. The second points one valid-looking
+    /// record at a garbage run.
+    fn hostile_zip_shapes(size: usize) -> [Vec<u8>; 2] {
         fn eocd(size: u32, start: u32) -> Vec<u8> {
             let mut record = b"PK\x05\x06".to_vec();
             record.extend_from_slice(&[0, 0, 0, 0, 1, 0, 1, 0]);
@@ -742,31 +740,85 @@ mod tests {
             record.extend_from_slice(&[0, 0]);
             record
         }
-        let mut shapes = Vec::new();
         let mut candidates = b"PK\x03\x04".to_vec();
-        while candidates.len() < 256 * 1024 {
+        while candidates.len() < size {
             let at = u32::try_from(candidates.len()).unwrap();
             candidates.extend_from_slice(&eocd(at, 0));
         }
-        shapes.push(candidates);
         let mut garbage = b"PK\x03\x04".to_vec();
-        garbage.resize(256 * 1024, 0xA5);
+        garbage.resize(size, 0xA5);
         let start = u32::try_from(garbage.len() - 46).unwrap();
         garbage.extend_from_slice(&eocd(46, start));
-        shapes.push(garbage);
-        for bytes in shapes {
-            let started = std::time::Instant::now();
-            let payload =
-                BaggagePayload::measure("M-0001/Baggages/h.zip".into(), "00".into(), &bytes);
-            assert_eq!(payload.media_class, MediaClass::Zip);
-            assert_eq!(payload.nested, NestedArchive::Unreadable);
-            assert!(
-                started.elapsed() < std::time::Duration::from_secs(1),
-                "{} bytes took {:?}",
-                bytes.len(),
-                started.elapsed()
-            );
+        [candidates, garbage]
+    }
+
+    #[test]
+    fn hostile_nested_zips_are_refused_in_linear_time() {
+        // Linearity is proven by counting, not timing: the validator's meter
+        // (`package::zip_work`) records every byte it inspects, and that count
+        // must stay within twice the input at every size. A host under load
+        // can stall a thread for seconds inside a microsecond window, so the
+        // clock is only a backstop below.
+        use crate::package::zip_work;
+        for size in [16 * 1024, 64 * 1024, 256 * 1024, 2048 * 1024] {
+            for bytes in hostile_zip_shapes(size) {
+                zip_work::take();
+                let started = std::time::Instant::now();
+                let payload =
+                    BaggagePayload::measure("M-0001/Baggages/h.zip".into(), "00".into(), &bytes);
+                let elapsed = started.elapsed();
+                let inspected = zip_work::take();
+                assert_eq!(payload.media_class, MediaClass::Zip);
+                assert_eq!(payload.nested, NestedArchive::Unreadable);
+                // Nonzero: the refusal came from the metered validator, not
+                // from a parser the meter cannot see.
+                assert!(inspected > 0, "{} bytes: validator not used", bytes.len());
+                assert!(
+                    inspected <= 2 * bytes.len() as u64,
+                    "{} bytes: {inspected} bytes inspected",
+                    bytes.len()
+                );
+                // Backstop for work outside the meter: a quadratic parser
+                // needs minutes at 2 MiB (`zip` 8.6 extrapolates to ~9 min);
+                // the metered validator needs microseconds plus any stall.
+                assert!(
+                    elapsed < std::time::Duration::from_secs(30),
+                    "{} bytes took {elapsed:?}",
+                    bytes.len()
+                );
+            }
         }
+    }
+
+    #[test]
+    fn the_zip_work_meter_counts_a_valid_nested_archive() {
+        // Control for the linear-time test: a well-formed archive with many
+        // entries is read, metered, and still inside the same bound.
+        use crate::package::zip_work;
+        use std::io::Write;
+        let mut writer = zip::ZipWriter::new(Cursor::new(Vec::new()));
+        let options = zip::write::SimpleFileOptions::default();
+        for index in 0..200 {
+            writer
+                .start_file(format!("member-{index}.txt"), options)
+                .unwrap();
+            writer.write_all(b"payload").unwrap();
+        }
+        let bytes = writer.finish().unwrap().into_inner();
+        zip_work::take();
+        let payload = BaggagePayload::measure("M-0001/Baggages/v.zip".into(), "00".into(), &bytes);
+        let inspected = zip_work::take();
+        assert!(matches!(
+            payload.nested,
+            NestedArchive::Read { entries: 200, .. }
+        ));
+        // Every central and local header was read at least once.
+        assert!(inspected >= 200 * (46 + 30), "{inspected} bytes inspected");
+        assert!(
+            inspected <= 2 * bytes.len() as u64,
+            "{inspected} of {}",
+            bytes.len()
+        );
     }
 
     #[test]

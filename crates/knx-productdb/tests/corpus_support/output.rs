@@ -53,8 +53,13 @@ pub(crate) fn validate_output_path(
     let canonical_parent = parent
         .canonicalize()
         .expect("matrix output directory must already exist");
+    // Both sides resolved: a corpus root named through a symlink must not
+    // let an output inside it look like a different place.
+    let canonical_root = corpus_root
+        .canonicalize()
+        .expect("configured corpus root must resolve");
     assert!(
-        !canonical_parent.starts_with(corpus_root),
+        !canonical_parent.starts_with(&canonical_root),
         "matrix output must be outside the configured corpus root"
     );
     let directory = openat2(

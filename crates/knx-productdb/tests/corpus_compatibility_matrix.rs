@@ -1200,6 +1200,56 @@ fn matrix_output_is_refused_inside_the_corpus_root() {
     assert!(result.is_err());
 }
 
+/// Runs the output validator and returns its refusal message, if any. The
+/// device is `u64::MAX` so only the corpus-root containment check can refuse.
+fn output_refusal(corpus_root: &std::path::Path, output: &std::path::Path) -> Option<String> {
+    let result = std::panic::catch_unwind(|| {
+        validate_output_path(corpus_root, u64::MAX, output);
+    });
+    result.err().map(|payload| {
+        payload
+            .downcast_ref::<String>()
+            .cloned()
+            .or_else(|| payload.downcast_ref::<&str>().map(|s| (*s).to_string()))
+            .unwrap_or_default()
+    })
+}
+
+#[test]
+fn matrix_output_is_refused_inside_a_corpus_root_named_through_a_symlink() {
+    // Independent of the runner's TMPDIR: the corpus root is handed over as
+    // a symlink while the output names the real directory, and the other way
+    // round. Both must be recognised as the same place.
+    let base = tempfile::tempdir().expect("base directory");
+    let real = base.path().join("real-corpus");
+    fs::create_dir(&real).unwrap();
+    let link = base.path().join("linked-corpus");
+    std::os::unix::fs::symlink(&real, &link).unwrap();
+    let inside = "matrix output must be outside the configured corpus root";
+
+    let refusal = output_refusal(&link, &real.join("matrix.json"));
+    assert!(
+        refusal.as_deref().is_some_and(|m| m.contains(inside)),
+        "symlinked corpus root, real output: {refusal:?}"
+    );
+    let refusal = output_refusal(&real, &link.join("matrix.json"));
+    assert!(
+        refusal.as_deref().is_some_and(|m| m.contains(inside)),
+        "real corpus root, symlinked output: {refusal:?}"
+    );
+    // A not-yet-existing output file below an existing nested directory.
+    fs::create_dir(real.join("nested")).unwrap();
+    let refusal = output_refusal(&link, &link.join("nested").join("new.json"));
+    assert!(
+        refusal.as_deref().is_some_and(|m| m.contains(inside)),
+        "new file in a nested directory: {refusal:?}"
+    );
+    // The control: a sibling directory outside the corpus is accepted.
+    let outside = base.path().join("reports");
+    fs::create_dir(&outside).unwrap();
+    assert_eq!(output_refusal(&link, &outside.join("matrix.json")), None);
+}
+
 #[test]
 fn zip_entry_budget_is_checked_before_constructing_an_archive() {
     let mut eocd = vec![0_u8; 22];

@@ -19,11 +19,17 @@ export async function openExplorerBranches(page: Page) {
 }
 
 export async function openParameterSections(page: Page) {
-  await expect(page.locator('.parameter-section > summary:visible').first()).toBeVisible();
+  // Legacy accordions (e.g. function controls) or the Parameters-tab area register.
+  const areas = page.locator(".parameter-workspace-nav button:visible");
+  await expect(page.locator('.parameter-section > summary:visible, .parameter-workspace-nav button:visible').first()).toBeVisible();
   for (const summary of await page.locator('.parameter-section > summary:visible').all()) {
     if (!await summary.locator("..").evaluate(node => node.hasAttribute("open"))) await summary.click();
   }
   for (const toggle of await page.locator('.parameter-group-toggle:visible').all()) {
     if (await toggle.getAttribute("aria-expanded") === "false") await toggle.click();
   }
+  // The register shows one area at a time; with several, a case must choose its area explicitly.
+  const count = await areas.count();
+  if (count > 1) throw new Error(`parameter workspace has ${count} areas; open the intended area explicitly`);
+  if (count === 1 && await areas.first().getAttribute("aria-current") !== "page") await areas.first().click();
 }

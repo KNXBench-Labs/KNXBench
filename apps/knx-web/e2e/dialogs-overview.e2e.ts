@@ -1,4 +1,5 @@
 /** Built dialogs and project status: labels, fit, centring, focus, report links. */
+import { openNavigationSections } from "./disclosure-fixture";
 import { expect, test, type Page } from "@playwright/test";
 import { join } from "node:path";
 import { HISTORY_FIXTURE } from "../src/projectHistory.fixture";
@@ -130,6 +131,7 @@ for (const language of ["en", "de"] as const) for (const theme of ["porcelain", 
     const f = await fixture(page, language, theme, width);
 
     // Project status: three labelled sections, exact counts, real links.
+    await openNavigationSections(page);
     await page.locator(".workbench-navigation").getByRole("button", { name: m["workbench.overview"], exact: true }).click();
     const dashboard = page.locator(".dashboard");
     await expect(dashboard.getByRole("heading", { level: 3 })).toHaveText([m["dashboard.section.contents"], m["dashboard.section.import"], m["dashboard.section.file"]]);
@@ -176,6 +178,7 @@ for (const language of ["en", "de"] as const) for (const theme of ["porcelain", 
     await expect(page.locator(".log-entry-message").filter({ hasText: /fictional (warning|error) \d|imported fictional/ })).toHaveCount(10);
     await expect(page.locator(".log-panel-import-scope")).toHaveCount(0);
     expect(f.logRequests).toBeGreaterThan(0);
+    await openNavigationSections(page);
     await page.locator(".workbench-navigation").getByRole("button", { name: m["workbench.overview"], exact: true }).click();
 
     // Unsaved changes: three visibly labelled answers, compact panel.
@@ -248,6 +251,7 @@ test("every shipped palette keeps the unsaved-changes answers legible", async ({
 
 test("zero findings and a missing report are stated, not linked", async ({ page }) => {
   const f = await fixture(page, "en", "porcelain", 1440, { errors: 0, warnings: 0, import_report_available: false });
+  await openNavigationSections(page);
   await page.locator(".workbench-navigation").getByRole("button", { name: en["workbench.overview"], exact: true }).click();
   const dashboard = page.locator(".dashboard");
   await expect(dashboard.locator(".dashboard-import-state")).toHaveText(en["dashboard.importState.unavailable"]);

@@ -5,7 +5,7 @@ export default function NavigationSection({ title, children, grow = false, revea
   title: string; children: ReactNode; grow?: boolean; revealKey?: number;
 }) {
   const id = useId();
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(revealKey === undefined);
   const [lastReveal, setLastReveal] = useState(revealKey);
   // A deliberate search reveal reopens the explorer, not unrelated sections.
   if (lastReveal !== revealKey) { setLastReveal(revealKey); if (revealKey !== undefined) setCollapsed(false); }

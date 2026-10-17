@@ -1,4 +1,5 @@
 /** Built app: GA members, gateway choice, device → download hand-off, step guide. */
+import { openNavigationSections } from "./disclosure-fixture";
 import { expect, test, type Page } from "@playwright/test";
 import { join } from "node:path";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
@@ -150,6 +151,7 @@ async function fixture(page: Page, options: Options): Promise<Fixture> {
   await page.goto("/?view=editor");
   await expect(page.locator("html")).toHaveAttribute("lang", options.language);
   await expect(page.locator("html")).toHaveAttribute("data-theme", options.theme);
+  await openNavigationSections(page);
   await expect(page.getByRole("navigation", { name: (options.language === "de" ? de : en)["workbench.navigation"], exact: true })).toBeVisible();
   return f;
 }

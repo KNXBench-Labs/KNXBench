@@ -1,4 +1,5 @@
 /** Built workbench notes: identity, targets, apply refresh, refusals, draft guard. */
+import { openNavigationSections } from "./disclosure-fixture";
 import { expect, test, type Dialog, type Page } from "@playwright/test";
 import { join } from "node:path";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
@@ -136,7 +137,9 @@ async function noHorizontalOverflow(page: Page) {
 }
 
 async function openNotes(page: Page, m: Catalogue, width: number) {
+  await openNavigationSections(page);
   if (width >= 1000) {
+    await openNavigationSections(page);
     await page.locator(".workbench-navigation").getByRole("button", { name: m["workbench.notes"], exact: true }).click();
   } else {
     await page.keyboard.press("Control+Shift+P");

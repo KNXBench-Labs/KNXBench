@@ -131,8 +131,8 @@ function ContributionDialog({ onClose }: { onClose: () => void }) {
       </>}
       <div className="contribution-actions"><button disabled={busy || (includeOriginal && !originalConsent)} onClick={() => void run("preview")}>{t("contribution.preview")}</button></div>
       {preview && <section aria-label={t("contribution.previewTitle")}><h3>{t("contribution.previewTitle")}</h3>
-        <details open><summary>manifest.json</summary><pre>{JSON.stringify(preview.manifest, null, 2)}</pre></details>
-        {preview.files.map(f => <details key={f.path} open><summary>{f.path}</summary><pre>{f.text ?? t("contribution.originalConsent")}</pre></details>)}
+        <details><summary>manifest.json</summary><pre>{JSON.stringify(preview.manifest, null, 2)}</pre></details>
+        {preview.files.map(f => <details key={f.path}><summary>{f.path}</summary><pre>{f.text ?? t("contribution.originalConsent")}</pre></details>)}
         <label className="contribution-sample"><input type="checkbox" data-consent="export" disabled={busy} checked={consent} onChange={e => setConsent(e.target.checked)} />{t("contribution.consent")}</label>
       </section>}
       <div className="contribution-actions"><button disabled={!preview || !consent || busy} onClick={() => void run("export")}>{t("contribution.export")}</button>

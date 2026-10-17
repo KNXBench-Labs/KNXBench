@@ -1,6 +1,7 @@
 /** Error cards stay and pause; Explorer counts open findings; motion categories apply. */
 // Ported from the Codex ux-feedback branch (AP1, 219e4c3e) and narrowed to what
 // main lacked: main already keeps every notification in the session log.
+import { openNavigationSections } from "./disclosure-fixture";
 import { expect, test } from "@playwright/test";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
 import { messages as en } from "../src/messages/en";
@@ -99,6 +100,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     for (const severity of ["error", "warning"] as const) {
       const navigation = page.getByRole("button", { name: m["workbench.navigation"], exact: true });
       if (await navigation.getAttribute("aria-expanded") === "false") await navigation.click();
+      await openNavigationSections(page);
       const count = page.locator(`.project-explorer footer .import-${severity}s button`);
       await count.focus(); await expect(count).toBeFocused(); await page.keyboard.press("Enter");
       await expect(page.locator(".log-panel-import-scope")).toBeFocused();

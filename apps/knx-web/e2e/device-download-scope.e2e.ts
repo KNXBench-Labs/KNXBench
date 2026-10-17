@@ -1,4 +1,5 @@
 /** KL-142 in a browser: the download scope is chosen, sent, and its omissions shown first. */
+import { openNavigationSections } from "./disclosure-fixture";
 import { expect, test, type Page } from "@playwright/test";
 
 const device = (id: number, address: string, name: string) => ({ id, name, address, description: null, com_object_count: 0 });
@@ -60,6 +61,7 @@ async function open(page: Page) {
   await page.getByRole("button", { name: "New project…" }).click();
   await page.getByRole("dialog", { name: "New project" }).getByRole("button", { name: "Create project" }).click();
   await page.getByRole("dialog", { name: "Project created" }).getByRole("button", { name: "Done" }).click();
+  await openNavigationSections(page);
   await page.getByRole("navigation", { name: "Bus monitor" }).getByRole("button", { name: "Bus monitor" }).first().click();
   await page.getByRole("button", { name: "Download to device", exact: true }).click();
   // Devices are chosen by stable id; the label carries the address.

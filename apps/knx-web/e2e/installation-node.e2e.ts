@@ -1,4 +1,5 @@
 /** Installation labels, explanation and scoped name editing in the full workbench, offline. */
+import { openExplorerBranches, openNavigationSections } from "./disclosure-fixture";
 import { expect, test, type Page } from "@playwright/test";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
 import { messages as en } from "../src/messages/en";
@@ -80,6 +81,8 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400])
     await page.getByRole("button", { name: m["toolbar.newProject"], exact: true }).click();
     await page.getByRole("dialog").getByRole("button", { name: m["newProject.create"], exact: true }).click();
     await page.getByRole("dialog").getByRole("button", { name: m["projectWizard.done.close"], exact: true }).click();
+    await openNavigationSections(page);
+    await openExplorerBranches(page);
     const fallback = m["installation.unnamed"].replace("{id}", "2");
     const explorer = page.locator(".project-explorer");
     if (!await explorer.isVisible()) await page.locator(".workbench-panel-controls").getByRole("button", { name: m["workbench.navigation"], exact: true }).click();

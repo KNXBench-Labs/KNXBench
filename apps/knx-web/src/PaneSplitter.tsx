@@ -50,11 +50,25 @@ export default function PaneSplitter(props: {
   const [measured, setMeasured] = useState<number | null>(null);
   useLayoutEffect(() => {
     if (value !== null) return;
-    const height = target.current?.getBoundingClientRect().height;
-    if (height !== undefined && height > 0) setMeasured(height);
+    const element = target.current;
+    if (!element) return;
+    const measure = () => {
+      const height = element.getBoundingClientRect().height;
+      if (height > 0) setMeasured(height);
+    };
+    measure();
+    // A folded navigation section has no measurable box until it opens.
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
   }, [value, target]);
 
   const current = clamp(value ?? measured ?? min);
+  // Read at interaction time too: a first input can precede ResizeObserver.
+  const interactionHeight = () => {
+    const height = target.current?.getBoundingClientRect().height ?? 0;
+    return value === null && height > 0 ? clamp(height) : current;
+  };
 
   return (
     <div
@@ -74,12 +88,12 @@ export default function PaneSplitter(props: {
             ? min
             : e.key === "End"
               ? max
-              : clamp(current + (e.key === "ArrowDown" ? KEYBOARD_STEP : -KEYBOARD_STEP) * direction),
+              : clamp(interactionHeight() + (e.key === "ArrowDown" ? KEYBOARD_STEP : -KEYBOARD_STEP) * direction),
         );
       }}
       onPointerDown={(e) => {
         if (e.button !== 0) return;
-        drag.current = { y: e.clientY, height: current };
+        drag.current = { y: e.clientY, height: interactionHeight() };
         // Guarded rather than assumed: a pointer event can arrive without
         // a capture API behind it (a synthesised one in a test, an older
         // engine), and a drag that cannot be captured is still a drag

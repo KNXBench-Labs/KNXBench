@@ -1,4 +1,5 @@
 /** Goal B3 in the browser: stored bus access is read-only, hidden until asked, never a gateway. */
+import { openExplorerBranches, openNavigationSections } from "./disclosure-fixture";
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { join } from "node:path";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
@@ -78,6 +79,8 @@ async function openProject(page: Page, m: Catalogue) {
   await page.getByRole("button", { name: m["toolbar.newProject"], exact: true }).first().click();
   await page.getByRole("dialog", { name: m["newProject.title"], exact: true }).getByRole("button", { name: m["newProject.create"], exact: true }).click();
   await page.getByRole("dialog", { name: m["projectWizard.done.title"], exact: true }).getByRole("button", { name: m["projectWizard.done.close"], exact: true }).click();
+  await openNavigationSections(page);
+  await openExplorerBranches(page);
 }
 
 /** Nothing that could connect, write or pick a gateway was requested. */

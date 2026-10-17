@@ -121,11 +121,16 @@ already found lying in the grass.
 ## Web app
 
 - **Keep the central Chromium temp guard in every Playwright config.**
-  `browserTmp.ts` delegates to `tools/browser_tmp.py`, keeps the socket pathname
-  within Linux's byte budget, creates a private owned directory and removes only
-  that directory on exit. A deep `TMPDIR` may use an owned, non-writable-by-others
-  `scratch` ancestor; otherwise provide `KNXBENCH_BROWSER_TMP_ROOT` or the gate's
-  `--temp-root`. Do not disable the guard, add unsafe Chromium switches, reuse
+  `browserTmp.ts` and standalone Node launchers load `tools/browser_tmp.cjs`,
+  which delegates allocation to `tools/browser_tmp.py`. The allocator budgets
+  encoded bytes, reuses a private explicit leaf when another component would
+  overflow, and deletes only directories it created. Nested Node processes
+  inherit the validated leaf instead of adding another directory. A deep
+  `TMPDIR` may use an owned, non-writable-by-others `scratch` ancestor; otherwise
+  provide `KNXBENCH_BROWSER_TMP_ROOT` or the gate's `--temp-root`. For one-off
+  scripts use `python3 tools/browser_tmp.py --run COMMAND ...`, or preload the
+  Node guard with `node --require ./tools/browser_tmp.cjs SCRIPT`. Do not disable
+  the guard, add unsafe Chromium switches, reuse
   another process's profile, or move temporary data into system `/tmp` to conceal
   a setup failure. The [contract](contracts/web-test-gate.md#recurring-chromium-socket-path-protection)
   and CI regressions cover direct/CJS config loads as well as the measured runner.

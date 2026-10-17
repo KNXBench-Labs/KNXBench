@@ -228,6 +228,7 @@ async function renderExplorer(
   onSummary = vi.fn(),
   onError = vi.fn(),
   revealRequest: { selection: Selection; generation: number } | null = null,
+  startClosed = false,
 ) {
   host = document.createElement("div");
   document.body.appendChild(host);
@@ -238,6 +239,10 @@ async function renderExplorer(
         onSummary={onSummary} onError={onError} revealRequest={revealRequest} />,
     );
   });
+  if (!startClosed) {
+    await act(async () => host!.querySelector<HTMLButtonElement>('.explorer-toolbar button:first-child')!.click());
+    if (vi.isFakeTimers()) await act(async () => { vi.advanceTimersByTime(1200); });
+  }
   async function rerender(nextRevealRequest: { selection: Selection; generation: number } | null) {
     await act(async () => {
       root.render(
@@ -277,6 +282,18 @@ function hasTreeLabel(text: string): boolean {
 }
 
 describe("expandable structure at a glance (owner feedback P2)", () => {
+  it("starts with every branch closed and opens only the requested level", async () => {
+    const { root } = await renderExplorer(baseTree(), vi.fn(), vi.fn(), vi.fn(), vi.fn(), null, true);
+    expect(toggleFor("Installation").getAttribute("aria-expanded")).toBe("false");
+    expect(hasTreeLabel("Topology")).toBe(false);
+    await click(toggleFor("Installation"));
+    expect(toggleFor("Topology").getAttribute("aria-expanded")).toBe("false");
+    expect(hasTreeLabel("Area 1: Area 1")).toBe(false);
+    await click(toggleFor("Topology"));
+    expect(toggleFor("Area 1: Area 1").getAttribute("aria-expanded")).toBe("false");
+    expect(hasTreeLabel("Line 1: Line 1")).toBe(false);
+    await act(async () => root.unmount());
+  });
   it("shows how many entries a collapsed node holds, and only while it is collapsed", async () => {
     const { root } = await renderExplorer(baseTree());
     const row = labelFor("Line 1: Line 1").closest(".tree-row")!;

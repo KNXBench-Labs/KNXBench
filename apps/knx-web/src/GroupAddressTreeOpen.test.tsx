@@ -65,9 +65,11 @@ async function search(query: string) {
   });
 }
 
-it("starts compact: main and middle groups with counts, no address list unfolded", async () => {
+it("starts with every main group closed and opens child groups only on request", async () => {
   await show();
-  expect(visibleGroups()).toEqual(["range:20:0+", "range:21:0-", "range:22:0-", "range:40:0+", "range:41:0-", "unassigned-"]);
+  expect(visibleGroups()).toEqual(["range:20:0-", "range:40:0-", "unassigned-"]);
+  await click(groupButton("range:20:0"));
+  expect(visibleGroups()).toEqual(["range:20:0+", "range:21:0-", "range:22:0-", "range:40:0-", "unassigned-"]);
   expect(visibleAddresses()).toEqual([]);
   expect(groupButton("range:21:0")!.textContent).toContain("(2)");
   expect(groupButton("range:21:0")!.textContent).toContain("▸");
@@ -110,7 +112,7 @@ it("opens groups with matches while searching, honours a close during the search
   expect(visibleAddresses(), "a new search opens matches again").toEqual([50]);
   await search("");
   expect(visibleAddresses(), "the search's opening was not stored").toEqual([]);
-  expect(visibleGroups()).toContain("range:41:0-");
+  expect(visibleGroups()).toEqual(["range:20:0-", "range:40:0-", "unassigned-"]);
 });
 
 it("collapses search-opened groups too when you say Collapse all during a search", async () => {
@@ -125,8 +127,9 @@ it("collapses search-opened groups too when you say Collapse all during a search
 
 it("remembers open groups per project on this machine, and nothing for an unsaved project", async () => {
   await show({ viewKey: "house" });
+  await click(groupButton("range:20:0"));
   await click(groupButton("range:21:0"));
-  expect([...readOpenGroups(window.localStorage, "house", 1)!].sort()).toEqual(["range:20:0", "range:21:0", "range:40:0"]);
+  expect([...readOpenGroups(window.localStorage, "house", 1)!].sort()).toEqual(["range:20:0", "range:21:0"]);
   await act(async () => root.unmount());
   root = createRoot(host);
   await show({ viewKey: "house", context: "srv:2" });
@@ -134,15 +137,17 @@ it("remembers open groups per project on this machine, and nothing for an unsave
   await show({ viewKey: "office", context: "srv:3" });
   expect(visibleAddresses(), "another project starts compact").toEqual([]);
   expect([...readOpenGroups(window.localStorage, "office", 1)!].sort(), "the previous view is not stored under the next project")
-    .toEqual(["range:20:0", "range:40:0"]);
+    .toEqual([]);
   window.localStorage.clear();
   await show({ context: "srv:4" });
+  await click(groupButton("range:20:0"));
   await click(groupButton("range:21:0"));
   expect(window.localStorage.getItem(TREE_STATE_STORAGE_KEY)).toBeNull();
 });
 
 it("takes the current view along when Save As gives the project its first key", async () => {
   await show();
+  await click(groupButton("range:20:0"));
   await click(groupButton("range:22:0"));
   await show({ viewKey: "saved-now" });
   expect(visibleAddresses()).toEqual([32]);

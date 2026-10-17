@@ -1,5 +1,6 @@
 /** Verifies the add-device wizard in Chromium (en/de, 1440/400 px) with intercepted API. */
 
+import { openExplorerBranches, openNavigationSections } from "./disclosure-fixture";
 import { expect, test, type Page } from "@playwright/test";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
@@ -137,6 +138,8 @@ async function openProject(page: Page, language: "en" | "de") {
   await page.getByRole("button", { name: l.newProject }).first().click();
   await page.getByRole("dialog", { name: l.newDialog, exact: true }).getByRole("button", { name: l.createProject }).click();
   await page.getByRole("dialog", { name: l.createdDialog }).getByRole("button", { name: l.done, exact: true }).click();
+  await openNavigationSections(page);
+  await openExplorerBranches(page);
   await expect(page.getByRole("dialog")).toHaveCount(0);
 }
 
@@ -180,6 +183,8 @@ for (const language of ["en", "de"] as const) {
       expected: [{ name: "Switch actuator 1", address: "1.1.1" }, { name: "Switch actuator 2", address: "1.1.2" }],
     });
     await dialog.getByRole("button", { name: l.done, exact: true }).click();
+    await openNavigationSections(page);
+    await openExplorerBranches(page);
     await expect(dialog).toBeHidden();
     // Both new devices show under the room in the explorer.
     await expect(page.locator("button.tree-label", { hasText: "Switch actuator 2" })).toHaveCount(2);

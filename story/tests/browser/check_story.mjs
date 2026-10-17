@@ -1,6 +1,7 @@
 // Real-browser acceptance checks for a built project-evolution preview (Playwright, Chromium).
 // Usage: node story/tests/browser/check_story.mjs <story.html> <hostile.html> [receipt.json]
 // PLAYWRIGHT_DIR may point at a node_modules directory that contains "playwright".
+import "../../../tools/browser_tmp.cjs";
 import { createRequire } from "module";
 import { writeFileSync } from "fs";
 import { pathToFileURL } from "url";

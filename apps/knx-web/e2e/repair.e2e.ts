@@ -1,4 +1,5 @@
 /** MODEL-02: ambiguous placements are repaired by an explicit keep choice, API intercepted. */
+import { openExplorerBranches } from "./disclosure-fixture";
 import { expect, test, type Page } from "@playwright/test";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
 
@@ -42,6 +43,7 @@ async function serve(page: Page, initial: ProjectTree, repaired: ProjectTree) {
     return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
   });
   await page.goto("/e2e/installations-fixture.html");
+  await openExplorerBranches(page);
   return { writes, unexpected };
 }
 

@@ -1,5 +1,6 @@
 /** Offline Chromium proof of actual App/ProjectExplorer/GroupAddressTable CRT interactions. */
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import "../tools/browser_tmp.cjs";
 import assert from "node:assert/strict";
 import { readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";

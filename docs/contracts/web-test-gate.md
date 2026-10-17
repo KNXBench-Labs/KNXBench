@@ -60,7 +60,7 @@ interface using already locked types.
 
 The selector budgets Chromium's socket suffix plus a fresh temporary component
 against Linux AF_UNIX's 107-byte pathname limit. A short supplied root is kept.
-For a deep root, **only** a canonical ancestor named `scratch`, owned by the current
+For a deep root, **only** an ancestor named `scratch`, owned by the current
 user and not group/world writable, may be selected automatically. It never climbs
 to an arbitrary cache/home/system temp directory. If none fits, it refuses before
 the suite rather than attempting hundreds of failed launches. Use `--temp-root
@@ -68,6 +68,16 @@ PATH` with the Python gate or `KNXBENCH_BROWSER_TMP_ROOT=PATH` with direct
 Playwright for an explicitly approved root. Missing roots, non-directories and
 paths that cannot fit even as a leaf still fail closed; no silent fallback from
 an invalid explicit root is introduced.
+
+**Symlinked scratch (17 October 2026):** the configured path is searched before
+its canonical form, nearest `scratch` first. A `scratch` component may therefore
+be a symlink (for example a scratch moved to another disk). The link itself must
+belong to the current user, and its canonical target must be an owned directory
+that is not group/world writable; the target, not the link, is used and budgeted.
+Previously the canonical lookup lost the `scratch` name and refused every deep
+`TMPDIR` below such a link. The browser temp tests build their own anchor
+(`tools/tests/browser_tmp_fixtures.py`) instead of depending on one in the
+runner's `TMPDIR`.
 
 **Private leaf versus allocation parent (17 October 2026):** an explicit root can
 fit Chromium's socket but fail the larger budget for an additional `/wXXXXXXXX`

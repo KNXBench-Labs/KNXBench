@@ -3226,7 +3226,7 @@ fn corpus_evaluation_matches_research_no_unparsable_tests_no_unresolved_refs_and
 // T18 Task 2 continued: corpus `Module` expansion. Same
 // `KNXBENCH_PRODUCT_CORPUS` env-override / loud-skip idiom as the two tests
 // above. Expected numbers below are not fitted to what `evaluate` prints:
-// they come from `/home/alice/.claude/jobs/8098e9e6/tmp/derive_module_counts.py`,
+// they come from a private, uncommitted `derive_module_counts.py`,
 // an independent, from-scratch reimplementation of this same evaluator
 // algorithm in Python, driven straight off the raw `ApplicationProgram` XML
 // (no sqlite, no knx_productdb). See the Task 2 report for its full output

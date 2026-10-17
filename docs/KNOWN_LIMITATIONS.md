@@ -1497,6 +1497,13 @@ AppImages up to alpha.11 refuse saving the session log and monitor captures; fix
 AppImages up to alpha.11 save in-app downloads silently into Downloads, replacing same-named files; fixed in source with a save dialog. Web and Docker unaffected.
 [Details and history](limitations/KL-182-desktop-silent-downloads.md)
 
+<a id="catalogue-kl-185"></a>
+### 185. Git history still carries local machine details
+
+**Ledger status:** `WAITING_OWNER` ([KL-185](status/LEDGER.md#post-snapshot-ids)).
+The current tree is clean and guarded (ADR-0135), but earlier commits and seven commit messages still name local paths, the host name or the kernel release; removing them needs an owner-approved history rewrite.
+[Details and history](limitations/KL-185-git-history-local-machine-details.md)
+
 ## Integrations and community
 
 <a id="catalogue-kl-107"></a>

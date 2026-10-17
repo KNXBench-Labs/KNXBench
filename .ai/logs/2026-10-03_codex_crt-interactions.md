@@ -2,7 +2,7 @@
 
 Agent: codex (in-session implementation/review; no independent reviewer).
 Branch: feat/crt-interactions-20261003.
-Worktree: <old-sources>/KNXBench.worktrees/crt-interactions-20261003.
+Worktree: `<old-sources>/KNXBench.worktrees/crt-interactions-20261003`.
 Base: 3337e4ef202d773de067c9a758e0c03fd6804e64.
 User request: “bau die animationen ein”. No feature commit/push/main merge requested.
 

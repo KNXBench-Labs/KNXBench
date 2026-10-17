@@ -8899,8 +8899,8 @@ by `apps/knx-server/tests/http_catalog_to_device.rs`.
 ## 2026-09-17 — First Linux AppImage: local build, inspection, and bounded launch
 
 [ADR 0021](../adr/0021-appimage-is-the-first-linux-package.md) selects AppImage
-as KNXBench's first Linux desktop package. The local build on `<host>`
-(Arch Linux, Linux, x86_64) produced exactly one artifact:
+as KNXBench's first Linux desktop package. The local build on the dev
+machine (Linux, x86_64) produced exactly one artifact:
 `KNXBench_0.1.0-alpha.1_amd64.AppImage`, `105839096` bytes, mode
 `-rwxr-xr-x`, SHA-256
 `b0ec49aebcec984ffdce21639306713862fc6c7baf15f7247f060ac314cdaef7`.
@@ -10890,7 +10890,7 @@ whole suite with `224.0.23.12` never once appearing on `eno1` — and failed
 it on two things. Both are now closed.
 
 **"Two independent locks" was false.** Measured here in an isolated
-namespace on a `dummy0` interface, Linux: ten sends at
+namespace on a `dummy0` interface on Linux: ten sends at
 `IP_MULTICAST_TTL` 0 and ten at TTL 1 put the same ten frames and the same
 660 bytes on the link, captured with an `AF_PACKET` socket
 (`dst_mac=01:00:5e:00:17:0c ip_ttl=0 proto=17 dst=224.0.23.12`). A switch

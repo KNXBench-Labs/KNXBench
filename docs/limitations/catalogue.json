@@ -2704,6 +2704,18 @@
         "KL-184"
       ],
       "anchors": []
+    },
+    {
+      "key": "KL-185",
+      "number": 185,
+      "title": "Git history still carries local machine details",
+      "topic": "Platform, deployment and security",
+      "summary": "The current tree is clean and guarded (ADR-0135), but earlier commits and seven commit messages still name local paths, the host name or the kernel release; removing them needs an owner-approved history rewrite.",
+      "file": "KL-185-git-history-local-machine-details.md",
+      "ledger_ids": [
+        "KL-185"
+      ],
+      "anchors": []
     }
   ]
 }

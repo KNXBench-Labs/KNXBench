@@ -658,6 +658,19 @@ Editors retain drafts when navigating/searching; ordinary numeric/text blur-save
 can still run as focus leaves a dirty input. On narrow panes the area register
 scrolls locally and information moves below the editor. No manufacturer-specific
 channel numbers or physical arrangements are inferred.
+
+**Declared grids.** Some product data lays out a parameter area as a table, for
+example one row per button pair with left and right columns. When you open such
+an area, the same fields appear at the rows and columns the product data
+declares, with its row, column and separator captions. A note above the grid
+says it comes from the product data. Fields the data does not place in a cell
+appear below under **Not placed in the declared grid**; declarations that could
+not be placed are listed in a closed **could not be placed** disclosure. Editing
+works exactly as in the row view, and switching areas keeps your drafts. Areas
+without a declared grid stay in rows with a short note saying so; an unknown or
+unreadable layout description also falls back to rows and names the reason.
+Search results are always rows. Wide grids scroll sideways inside the area on
+narrow windows. Captions appear in the program's own language.
 See the [workspace contract](../../contracts/parameter-workspace.md).
 
 The following release-era description explains the retained value/editing rules;

@@ -2,6 +2,15 @@
 
 # Implementation status
 
+## Declared parameter grids (source after Alpha 13)
+
+Parameter areas whose product data declares a `Table`/`Grid` layout render as a
+matrix of the existing editable rows at their declared cells, with declared
+captions. Other areas keep rows and say why (no grid, unknown variant, invalid or
+unreadable declaration). Drafts, write checks and closed areas are unchanged.
+Existing Alpha 13 binaries are unchanged. [Operating instructions](user-guide/05-devices-and-products.md#parameters),
+[ADR-0137](../adr/0137-declared-parameter-grids-reach-the-workspace.md).
+
 ## KNX Functions in comparisons, the desktop and MCP (source builds after Alpha 13)
 
 A project comparison lists KNX Functions one by one (added, removed, changed,

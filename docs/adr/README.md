@@ -143,3 +143,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0134](0134-generic-read-only-diagnostic-export.md) | Read-only diagnostic export uses one generic identity recipe | Accepted (simulator scope) | 2026-10-17 |
 | [0135](0135-repository-carries-no-local-machine-details.md) | The repository carries no local machine details | Accepted | 2026-10-17 |
 | [0136](0136-plugin-data-adoption-is-audited-opaque-replacement.md) | Plug-in data adoption is an audited opaque replacement | Accepted (CLI and application layer) | 2026-10-17 |
+| [0137](0137-declared-parameter-grids-reach-the-workspace.md) | Declared parameter grids reach the workspace as versioned geometry | Accepted | 2026-10-17 |

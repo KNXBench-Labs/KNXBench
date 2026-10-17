@@ -10,6 +10,15 @@ the MCP adapter still reaches neither. No schema, download-admission or UI-side
 protocol logic. [ADR-0134](adr/0134-generic-read-only-diagnostic-export.md),
 [contract](contracts/device-diagnostic-export.md).
 
+## Declared parameter grids (17 October 2026 source)
+
+`knx-productdb::parameter_layout::grid` reads `Layout`/`Rows`/`Columns`/`Cell`
+from the hash-checked retained source under shared ownership predicates and its
+own budget; `knx-server::parameter_grid` maps it to the additive, versioned
+`groupLayouts`/`cell` DTO fields; the web's pure `parameterMatrix` plans CSS
+placement for the existing rows parent. No new layer edge, Core or schema change.
+[ADR-0137](adr/0137-declared-parameter-grids-reach-the-workspace.md).
+
 ## Source-group parameter workspace (17 October 2026 source)
 
 The Parameters tab projects its existing typed sections into a pure scope/group

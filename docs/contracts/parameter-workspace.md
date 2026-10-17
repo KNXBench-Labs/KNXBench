@@ -46,13 +46,53 @@ storage or protocol schema change.
   label/value. Metadata moves below the editor when a third column will not fit.
   Existing light/dark/theme tokens remain authoritative.
 
+## Declared grids (ADR-0137)
+
+- **What counts.** A `ParameterBlock` whose `Layout` is `Table` or `Grid` with
+  exactly one non-empty `Rows` and one non-empty `Columns`. `Cell` is `row,col`,
+  both 1-based (Project Schema 23 §1.1.2.35), and belongs to the nearest
+  enclosing block. ProductDB re-reads the hash-checked retained source with the
+  caption reader's ownership rules; `Layout`/`Cell`/`Width` are not typed in
+  `dynamic_node`. No product-database schema change.
+- **Wire (additive, versioned).** Every section carries `groupLayouts` (possibly
+  empty). Each entry: `groupKey` (equals the fields' `group.key`), `version: 1`,
+  raw `declaredLayout`, `status` (`grid`, `unknownLayout`, `invalidGrid`,
+  `sourceUnavailable`), verbatim `rows`/`columns` (`text`,
+  `textParameterRefId`, row `collapseIfEmpty`, column `width`), activated
+  separator `labels` with their cells and original text, and `issues`
+  (`cellMalformed`, `cellOutOfRange`, `missingCell`, `ambiguousCell`,
+  `unshownContent` with element, reference and raw cell). Every field carries
+  `cell` (`{row, column}` or `null`); it is set only for a `grid` group and an
+  unambiguous, in-range declaration.
+- **Rendering.** A chosen area renders as a matrix only for `version: 1` and
+  `status: grid`. Anything else keeps the row view with a hint naming the
+  reason: no grid declared, unreported by the server (`groupLayouts` absent),
+  newer version, unknown layout token (shown verbatim), unknown status, invalid
+  declaration or unreadable source. Search always uses the row view.
+- **Same editors, same write path.** Matrix cells are the existing
+  `ParameterFieldRow` elements under the existing stable rows parent; the
+  matrix is CSS placement plus caption siblings rendered after the rows. Drafts,
+  conflicts, refusals and immediate choice writes are unchanged. Areas still
+  start closed.
+- **Placement rules.** Captions are declared row/column texts and activated
+  separators placed in cells. Several active items in one cell stack in order
+  (captions first, then fields in source order) and grow only that declared row.
+  Fields without a valid cell are never auto-placed: they follow the grid at full
+  width under **Not placed in the declared grid**. Issues are listed in a closed
+  disclosure. Column `Width` percentages become relative track weights with a
+  minimum width; on narrow panes the matrix scrolls locally.
+- **Not reproduced.** Visual differences between `Table` and `Grid` (the
+  referenced rules document is not available locally), `CollapseIfEmpty`,
+  `TextParameterRefId` captions, buttons and nested blocks in cells, and module
+  placeholders inside row/column captions. They are preserved on the wire or
+  reported as issues, never guessed.
+
 ## Boundaries and evidence
 
-The current HTTP projection exposes the nearest declared ParameterBlock, not a
-complete Channel/Rows/Columns/Cell/repeat graph. No translated-text parsing,
-manufacturer/product ID switch, inferred rocker arrangement or auto-generated
-multi-channel editing operation is permitted. Explicit source grid preservation
-or a physical-device view needs its own typed mapping and regression contract.
+The HTTP projection exposes the nearest declared ParameterBlock plus its declared
+grid geometry; it is not a complete Channel/repeat graph or a physical-device
+view. No translated-text parsing, manufacturer/product ID switch, inferred rocker
+arrangement or auto-generated multi-channel editing operation is permitted.
 Unsupported source constructs and manufacturer-only fields remain governed by
 existing evaluation/diagnostic tabs. This UI work neither expands evaluator nor
 ETS/device-download compatibility.
@@ -64,7 +104,11 @@ fictional fixtures, not copied manufacturer XML, product texts or project data.
 
 Tests: `parameterWorkspace.test.ts`, `ParameterWorkspace.test.tsx`, existing
 `ParameterPanel` and binding tests, plus source-group workspace cases in
-`devices-navigation.e2e.ts` under both fixture and production builds. Browser
+`devices-navigation.e2e.ts` under both fixture and production builds. Declared
+grids: ProductDB `parameter_grid.rs` and reader unit tests, HTTP
+`http_parameter_grid.rs`, `parameterMatrix.test.ts`, grid cases in
+`ParameterWorkspace.test.tsx`/`ParameterPanel.test.tsx`, and
+`parameter-matrix.e2e.ts` (EN/DE, 1440/400 px, fixture and production builds). Browser
 coverage includes EN/DE, 1440/400px, source scopes, search/no results, retained DOM
 identity, bound enum writes, read-only limits, compact row geometry and overflow.
 Actual accepted counts and delivery revision belong in the implementation log.

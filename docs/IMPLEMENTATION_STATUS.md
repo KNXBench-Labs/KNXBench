@@ -12,6 +12,26 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Declared parameter grids in the Parameters tab (17 October 2026)
+
+Parameter areas whose product data declares a `Table`/`Grid` (`Rows`, `Columns`,
+1-based `Cell`) now render as a matrix of the existing editable rows; every
+other area keeps the row view with a hint naming why (no grid, unknown
+layout/version/status, invalid declaration, unreadable source, server without
+layout reports). ProductDB re-reads the hash-checked retained source with the
+caption reader's ownership rules (now shared predicates) and its own budget; HTTP
+adds versioned `section.groupLayouts` and `field.cell`; the web plans CSS
+placement for the unchanged stable rows parent. No schema, Core, write-path or
+manufacturer-specific change; nothing is derived from captions.
+Focused evidence: ProductDB 949/0 (30 ignored) incl. 7 fictional grid fixtures
+and 4 reader unit tests; HTTP grid 3/0 (separator-filter mutant caught); web
+68/0 in four files; browser 4/4 EN/DE × 1440/400 (400 px overflow red before
+the `position: relative` fix); real-data cross-check on 13 private members equals
+the census exactly; release median 85.5 ms per `load` on the largest member.
+[ADR-0137](adr/0137-declared-parameter-grids-reach-the-workspace.md),
+[contract](contracts/parameter-workspace.md#declared-grids-adr-0137),
+[census](research/2026-10-17-parameter-workspace-layout.md#grid-declarations-17-october-2026).
+
 ## KNX Functions in comparisons, MCP and the desktop; ledger residue reconciled (17 October 2026)
 
 `MODEL-07` is closed (`236c64ae`): each installation's comparison has a

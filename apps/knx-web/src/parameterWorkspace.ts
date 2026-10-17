@@ -1,5 +1,6 @@
 /** Read-only parameter navigation derived exclusively from declared scopes and groups. */
 import type { ModuleScope, ParameterField, ParameterSection } from "./api";
+import { classifyGroupLayout, type GroupLayoutView } from "./parameterMatrix";
 
 export interface ParameterWorkspaceGroup {
   key: string;
@@ -9,6 +10,8 @@ export interface ParameterWorkspaceGroup {
   /** Source-order group number within its scope, not a channel number. */
   number: number;
   ungrouped: boolean;
+  /** Declared grid or the reason the row view stays (ADR-0137). */
+  layout: GroupLayoutView;
 }
 export interface ParameterWorkspaceRow {
   key: string;
@@ -35,7 +38,8 @@ export function indexParameterWorkspace(sections: readonly ParameterSection[]) {
       let group = declared.get(groupIdentity);
       if (!group) {
         group = { key: JSON.stringify([sectionKey, groupIdentity]), sectionKey, scope,
-          label: field.group?.label ?? null, number: declared.size + 1, ungrouped: field.group == null };
+          label: field.group?.label ?? null, number: declared.size + 1, ungrouped: field.group == null,
+          layout: classifyGroupLayout(section.groupLayouts, field.group?.key ?? null) };
         declared.set(groupIdentity, group);
         groups.push(group);
       }

@@ -107,6 +107,7 @@ impl OneShotActivity {
                 | "serviceControlWrite"
                 | "serialLookup"
                 | "deviceDownload"
+                | "deviceDiagnostics"
         );
         let valid_address = match &self.address {
             Some(address) => {

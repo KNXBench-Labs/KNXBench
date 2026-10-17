@@ -1158,6 +1158,13 @@ Names are a display vocabulary, not codec/device support. Unknown/main-only iden
 Flow is implemented; approval-only wording is historical. Configured participants are not measured recipients/device state; Chromium/capacity limits remain in KL-154.
 [Details and history](limitations/telegram-flow-delivery-and-scope.md)
 
+<a id="catalogue-kl-184"></a>
+### 184. Diagnostic export reads identity only
+
+**Ledger status:** `ACCEPTED_BOUNDARY` ([KL-184](status/LEDGER.md#post-snapshot-ids)).
+The read-only export reads descriptor, PID12 and PID78 only; no memory profile is admitted, a zero-element reply cannot separate refusal from absence, and no physical device has been read with it yet.
+[Details and history](limitations/KL-184-device-diagnostic-export.md)
+
 ## UI and accessibility
 
 <a id="catalogue-kl-020"></a>

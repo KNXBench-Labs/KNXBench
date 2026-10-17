@@ -22,6 +22,7 @@
 //! This layer knows how to ask one device one thing and how to disbelieve
 //! the answer.
 
+pub mod diagnostic_export;
 pub mod domain_address;
 pub mod download;
 pub mod individual_address_reset;
@@ -1959,30 +1960,9 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
         nr_of_elem: u8,
         start_index: u16,
     ) -> Result<Vec<u8>, SessionError> {
-        let answer = self
-            .exchange(
-                ApplicationService::PropertyValueRead {
-                    object_index: object_index.octet(),
-                    property_id,
-                    nr_of_elem,
-                    start_index,
-                },
-                "A_PropertyValue_Response",
-                |service| match service {
-                    ApplicationService::PropertyValueResponse {
-                        object_index: oi,
-                        property_id: pid,
-                        nr_of_elem,
-                        data,
-                        ..
-                    } if *oi == object_index.octet() && *pid == property_id => {
-                        Some((*nr_of_elem, data.clone()))
-                    }
-                    _ => None,
-                },
-            )
+        let (elements, data) = self
+            .read_property_matching(object_index, property_id, nr_of_elem, start_index, false)
             .await?;
-        let (elements, data) = answer;
         if elements == 0 {
             return Err(SessionError::PropertyRefused {
                 object_index,
@@ -1990,6 +1970,58 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
             });
         }
         Ok(data)
+    }
+
+    /// Loss-aware read for diagnosis: retain the returned element count and bytes,
+    /// including a zero-element refusal. No length inference or access escalation.
+    /// A response must also echo the requested start index, so a stale answer
+    /// to another read cannot be filed under this one.
+    pub async fn read_property_raw(
+        &mut self,
+        object_index: ObjectIndex,
+        property_id: u8,
+        nr_of_elem: u8,
+        start_index: u16,
+    ) -> Result<(u8, Vec<u8>), SessionError> {
+        self.read_property_matching(object_index, property_id, nr_of_elem, start_index, true)
+            .await
+    }
+
+    /// `match_start` is off for the established `read_property` callers, whose
+    /// hardware-exercised behaviour this diagnostic change must not alter.
+    async fn read_property_matching(
+        &mut self,
+        object_index: ObjectIndex,
+        property_id: u8,
+        nr_of_elem: u8,
+        start_index: u16,
+        match_start: bool,
+    ) -> Result<(u8, Vec<u8>), SessionError> {
+        self.exchange(
+            ApplicationService::PropertyValueRead {
+                object_index: object_index.octet(),
+                property_id,
+                nr_of_elem,
+                start_index,
+            },
+            "A_PropertyValue_Response",
+            |service| match service {
+                ApplicationService::PropertyValueResponse {
+                    object_index: oi,
+                    property_id: pid,
+                    nr_of_elem,
+                    start_index: start,
+                    data,
+                } if *oi == object_index.octet()
+                    && *pid == property_id
+                    && (!match_start || *start == start_index) =>
+                {
+                    Some((*nr_of_elem, data.clone()))
+                }
+                _ => None,
+            },
+        )
+        .await
     }
 
     /// `PID_LOAD_STATE_CONTROL` read as a state (spec §5.1: read and write
@@ -2095,23 +2127,27 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
     /// narrows RES Table 94 (§5.4), so a download that skipped this step
     /// would be guessing at both.
     pub async fn read_mask_version(&mut self) -> Result<MaskVersion, SessionError> {
-        let data = self
-            .exchange(
-                ApplicationService::DeviceDescriptorRead { descriptor_type: 0 },
-                "A_DeviceDescriptor_Response",
-                |service| match service {
-                    ApplicationService::DeviceDescriptorResponse {
-                        descriptor_type: 0,
-                        data,
-                    } => Some(data.clone()),
-                    _ => None,
-                },
-            )
-            .await?;
+        let data = self.read_descriptor_raw().await?;
         match data[..] {
             [high, low] => Ok(MaskVersion(u16::from_be_bytes([high, low]))),
             _ => Err(SessionError::MalformedDescriptor { got: data.len() }),
         }
+    }
+
+    /// Device Descriptor Type 0 without discarding malformed response bytes.
+    pub async fn read_descriptor_raw(&mut self) -> Result<Vec<u8>, SessionError> {
+        self.exchange(
+            ApplicationService::DeviceDescriptorRead { descriptor_type: 0 },
+            "A_DeviceDescriptor_Response",
+            |service| match service {
+                ApplicationService::DeviceDescriptorResponse {
+                    descriptor_type: 0,
+                    data,
+                } => Some(data.clone()),
+                _ => None,
+            },
+        )
+        .await
     }
 
     /// `NM_IndividualAddress_Write` step 1's occupancy probe: Device

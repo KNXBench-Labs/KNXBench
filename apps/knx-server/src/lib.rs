@@ -49,6 +49,7 @@ mod data_file;
 mod debug_report;
 mod device_catalog;
 mod device_compare_routes;
+mod device_diagnostics_routes;
 mod device_download;
 mod parameter_objects;
 mod support_routes;
@@ -216,6 +217,7 @@ pub fn app_with_auth(state: SharedState, static_dir: Option<PathBuf>, auth: Auth
         .merge(device_readiness_routes::device_readiness_routes())
         .merge(device_compare_routes::device_compare_routes())
         .merge(support_routes::support_routes())
+        .merge(device_diagnostics_routes::routes())
         .merge(address_programming_routes::address_programming_routes())
         .merge(serial_address_routes::serial_address_routes())
         .merge(service_control_routes::service_control_routes())

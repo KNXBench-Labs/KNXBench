@@ -38,6 +38,13 @@ source builds show actionable refusal help and deliberate docs/issue/mail links
 before any plan or report exists. See
 [the download workflow](../user-guide/07-bus-and-interfaces.md#when-preparation-or-starting-is-refused).
 
+**A maintainer asked me for diagnostic data from a device. How do I send it?**
+
+Use **File → Export diagnostic data**: pick the device and the interface, preview,
+read, save the ZIP and email it to `issue@knxbench.com`. The export only reads.
+The [step-by-step guide](../user-guide/08-reports-and-diff.md#send-diagnostic-data)
+has screenshots and says which builds contain it.
+
 **How can I report an unknown device before a download plan exists?**
 
 Since Alpha 12, use **File → Device support report**, or the same

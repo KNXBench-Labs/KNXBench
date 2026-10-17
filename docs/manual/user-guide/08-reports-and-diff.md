@@ -12,26 +12,126 @@ Two things you will eventually want from any engineering project: a document tha
 describes it to someone who cannot open it, and an answer to "what changed?". KNXBench
 has one feature for each.
 
-## Exporting diagnostic data from one device (source after Alpha 13)
+<a id="send-diagnostic-data"></a>
+## Sending diagnostic data from one device
 
-When a maintainer asks for device data, use **File → Export diagnostic data**.
-No ETS, device reader or developer tool is needed. It is not in the released
-binaries yet.
+When a maintainer asks for data from one of your devices, for example in a
+device-support issue, KNXBench can read a few identity values from that device
+and pack them into a ZIP for you to email. You need no ETS, device reader or
+developer tool. The export only reads: nothing is programmed, written, restarted
+or reset.
 
-1. Choose one project device and the interface (`IPv4:port`). **Preview** shows
-   the target, the interface and the exact three reads; nothing is sent yet.
-2. Tick the read confirmation and press **Read diagnostic data**. KNXBench reads
-   only the device descriptor, the manufacturer ID and the hardware type. It
-   never programs, writes, sends keys or restarts. **Stop** keeps what was read.
-3. Check the result. *Refused* means the device denied access or does not offer
-   the value (KNX cannot tell which); *not read* means it was not reached.
-4. Review the ZIP content, confirm and save. Send the file to
-   `issue@knxbench.com` or share a private link. Nothing is uploaded.
+> **Which build has it?** The export is in the repository source after Alpha 13.
+> The released AppImage and the Docker Hub image up to Alpha 13 do not have it.
+> Until the next release, [build the container from source](../getting-started/04-installation.md#build-the-container-from-source)
+> or [build KNXBench from source](../getting-started/04-installation.md#c-from-source).
+> **File → About KNXBench** shows which build you are running.
 
-No configuration memory is read yet, and the file is not a backup. Raw replies
-can still identify equipment, so share it like any installation document. Ask
-the installation owner before contacting their bus. See the
-[contract](../../contracts/device-diagnostic-export.md).
+### Before you start
+
+- **Permission.** Ask the installation owner before you contact their bus.
+- **The project.** Open the project that contains the device, either a `.knxdb`
+  or an imported `.knxproj`. The device needs its individual address.
+- **The interface.** You need the IPv4 address and port of a KNXnet/IP interface
+  that the KNXBench machine can reach. The port is usually `3671`. Docker
+  installations need `--network host`, as in the installation guide.
+- **A free tunnel.** Close ETS and any other tool that uses the same interface.
+  Many interfaces offer only one tunnel, and KNXBench refuses rather than queues.
+- **The device.** It must be powered and running normally on the bus. You do not
+  need to press the programming button.
+
+The whole run takes about a minute, most of it spent reading this page.
+
+### Step 1: open the export
+
+Open **File** and choose **Export diagnostic data** in the *Help & diagnostics*
+group. In the German interface this is **Datei → Diagnosedaten exportieren**,
+under *Hilfe & Diagnose*.
+
+![The File menu with the Export diagnostic data entry in the Help & diagnostics group](../../assets/screenshots/porcelain-diagnostic-export-1-file-menu.png)
+
+### Step 2: choose the device and the interface
+
+Pick the device in the list. Each entry shows its individual address and name.
+Enter the interface as `IPv4:port`, for example `192.168.1.20:3671`; a saved
+preferred interface is filled in for you. Then press **Preview diagnostic reads**
+(*Diagnoselesungen prüfen*). Nothing is sent to the bus yet.
+
+![The dialog with one device selected, the interface entered and the preview button](../../assets/screenshots/porcelain-diagnostic-export-2-device-and-interface.png)
+
+### Step 3: check the preview and read
+
+The preview shows the target device, the interface and exactly three reads:
+
+1. the **device descriptor** (the mask version),
+2. the **manufacturer ID** (property 12 of the device object),
+3. the **hardware type** (property 78 of the device object).
+
+If that matches what you expect, tick the confirmation and press
+**Read diagnostic data** (*Diagnosedaten lesen*). Reading takes a few seconds;
+KNXBench gives up after 30 seconds plus connect and disconnect time. **Stop
+reading; keep partial results** ends the run early. The values already read
+are kept and the connection is still closed properly.
+
+![The preview listing the three reads, with the read confirmation ticked and the Read diagnostic data button](../../assets/screenshots/porcelain-diagnostic-export-3-review-and-read.png)
+
+### Step 4: check the result and save the ZIP
+
+Each read shows one of these results:
+
+| Result | Meaning |
+| --- | --- |
+| **Read** | The value arrived complete. |
+| **Partially read** | An answer arrived, but with an unexpected length. It is kept as received. |
+| **Refused** | The device denied access or does not offer this value. KNX does not say which. |
+| **Error** | For example no answer, a timeout or a stop. Values read earlier are kept. |
+| **Not read** | The run ended before this read. |
+
+Every outcome is useful, so send the file even if not everything says *Read*.
+**Preview ZIP contents** shows exactly what goes into the file. Tick the
+confirmation and press **Save diagnostic ZIP** (*Diagnose-ZIP speichern*). The
+file is called `knxbench-device-diagnostics-….zip`; it is saved like any other
+KNXBench download.
+
+![The result with all three reads, the save confirmation ticked and the Save diagnostic ZIP button](../../assets/screenshots/porcelain-diagnostic-export-4-result-and-save.png)
+
+These pictures were taken with KNXBench's built-in simulator and a fictional
+device, which is why they show *SIMULATED — not a physical device capture*.
+A run against a real device does not show that line.
+
+### Step 5: email the ZIP
+
+Send the ZIP to **`issue@knxbench.com`**:
+
+- **Subject:** the issue number and the device, for example
+  `Issue #42: diagnostic data for <device model>`.
+- **Attachment:** the ZIP exactly as saved. Do not unpack or edit it; its
+  checksums would no longer match.
+- **In the message:** the issue number, your KNXBench version from
+  **File → About KNXBench**, and anything else the maintainer asked for in the issue
+  (for example the firmware version printed on the device label).
+- **Leave out:** project files, keys, passwords, backups and serial numbers.
+
+Nothing is uploaded automatically. Email is not confidential; a private download
+link works just as well.
+
+### What the ZIP contains
+
+The ZIP holds four files: `manifest.json` (checksums), `report.json` (results and
+timings), `properties.json` (the raw bytes of each read) and `README.txt`. It
+contains no project or device names, no individual addresses, no interface, no
+paths, no serial number and no keys. The raw replies do identify the device type,
+which is the point, so share the file like any other installation document.
+
+The file is **not a backup** and cannot restore a device. Configuration memory
+is not read. The export has been tested with KNXBench's simulator; reports from
+real devices are what confirm it on hardware. If a device behaves differently
+afterwards (not expected, since the export only reads), please say so in the
+issue.
+
+The same export is available on the command line as `knx device diagnostics`;
+see [the command-line chapter](10-command-line.md). The exact behaviour and
+limits are in the [contract](../../contracts/device-diagnostic-export.md).
 
 ## Universal device-support reporting (source after Alpha 11)
 

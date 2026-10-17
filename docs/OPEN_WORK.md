@@ -10,8 +10,9 @@ nothing: a package belongs to a session only after it pushes its claim entry to
 the handover. P5 (this page's synchronisation), P2 (plug-in data in the web app),
 P3 (notes when deleting, below) and P4 (test-gate hygiene: parallel browser lane
 re-admitted, symlink-safe corpus-output guard, counted ZIP work bound,
-`knx-desktop` kept in the Rust workspace gate) are delivered. Still open from the
-set: P1 (needs its hand-over) and the not-goal-ready P6–P8.
+`knx-desktop` kept in the Rust workspace gate) and P1 (object-local function
+choices, rescued from the rewritten history) are delivered. Still open from the
+set: only the not-goal-ready P6–P8.
 
 ## Project notes: closed, with bounded delete paths (17 October 2026)
 
@@ -528,17 +529,12 @@ below is on the remote or merged:
 | `wip/manufacturer-plugin-research-20261013` (local branch only) | 14 unpublished research notes under `docs/research/` (manufacturer-plugin host/contract results, fast-download wrapper, DLLs on Linux), found in the root checkout; unreviewed, none of them on main | **Kept by owner decision 2026-10-14**; not merged, not pushed |
 | `wip/root-residue-20261013`, `feature/device-support-guidance-20261013`, `feature/device-support-guidance-s2-20261013` | Old root drafts; two pre-integration candidates of the support guidance delivered as `e478a1a0` | Retired 2026-10-14 by owner decision: worktrees removed, branches kept only in the `KNXBench.backups/2026-10-14-hygiene-cleanup/` bundle. The S2-only Codex collision log was copied to the root's ignored `.ai/logs/` |
 
-**Unpublished package (17 October 2026).** Object-local function choices
-(feature commit `99dd6e65` "Put function choices where the object lives", 25
-files, Codex) are not on `main` or the remote. Its rewritten copy is
-`refs/kl185-rewritten/heads/fix/object-function-dropdown-20261017`; the
-worktrees `KNXBench-object-function-20261017` and
-`KNXBench-object-function-integration-20261017` are on the old history and must
-not be pushed or merged. The last gate was interrupted with zero stages, so no
-result is valid for the new base. It is published by
-[package P1](goals/open-work-2026-10-17/p1-object-function-rescue.md), which
-starts once the declared parameter grids are on `main` and Codex or the owner
-hands it over.
+**Object-local function choices (17 October 2026): delivered.** Codex's
+unpublished feature commit `99dd6e65` was cherry-picked onto the parameter
+workspace by [package P1](goals/open-work-2026-10-17/p1-object-function-rescue.md)
+and is on `main` ([status](IMPLEMENTATION_STATUS.md#object-local-function-dropdowns-17-october-2026)).
+Its two old-history worktrees, their branches and rewritten refs are retired;
+the cherry-pick on `main` is the record.
 
 The two other leftover worktrees, `offline-naming-20261011` and
 `data-tooling-stats-20261011`, were removed by owner decision after a backup.

@@ -61,7 +61,7 @@ export default function StructureWorkspace(props: {
   const selected = (kind: Selection["kind"], id: number) => selection?.kind === kind && selection.id === id;
   function devices(nodes: DeviceNode[]) {
     return <div className="diagram-devices">{nodes.map((device) => <button key={device.id} className="diagram-device" aria-pressed={selected("device", device.id)} onClick={() => onSelect({ kind: "device", id: device.id })}>
-      <WorkbenchIcon name="catalog" /><span><strong>{device.name}</strong><small className="mono">{device.address ?? t("workbench.unassigned")}</small></span><span className="device-object-count">{device.com_object_count}</span>
+      <WorkbenchIcon name="catalog" /><span><strong title={device.name}>{device.name}</strong><small className="mono">{device.address ?? t("workbench.unassigned")}</small></span><span className="device-object-count" title={t("workbench.objectCountTitle", { count: device.com_object_count })}>{t("workbench.objectCount", { count: device.com_object_count })}</span>
     </button>)}</div>;
   }
   function building(node: BuildingNode) {

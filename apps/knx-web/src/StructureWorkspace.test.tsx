@@ -4,6 +4,8 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, it, vi } from "vitest";
 import StructureWorkspace from "./StructureWorkspace";
+import { resetUiLanguageForTests, saveUiLanguage } from "./uiLanguage";
+import { resetSettingsForTests, settingsStorage } from "./settingsStore";
 import type { ProjectTree } from "./bindings/ProjectTree";
 
 const apiMock = vi.hoisted(() => ({
@@ -42,6 +44,58 @@ it("selects actual projected devices and lines in graphical topology, including 
   await act(async () => host.querySelector<HTMLButtonElement>('[data-catalog-line="3"]')!.click());
   expect(onCatalog).toHaveBeenCalledWith(3);
   await act(async () => root.unmount()); host.remove();
+});
+
+// The right-hand number on a device row is `DeviceNode.com_object_count`
+// (crates/knx-projection: `device.com_objects.len()`), so it is labelled as
+// communication objects, with a real plural, never left as a bare figure.
+const row = (id: number, name: string, count: number, address: string | null = "1.2.9") =>
+  ({ id, name, address, description: null, com_object_count: count });
+const metricTree: ProjectTree = { ...tree, installations: [{ ...tree.installations[0],
+  topology: [{ id: 2, name: "Area", address: 1, lines: [
+    { id: 3, name: "Empty line", address: 1, devices: [] },
+    { id: 6, name: "Busy line", address: 2, devices: [row(10, "Silent sensor", 0), row(11, "Single channel", 1), row(12, "Big gateway", 12345, null)] },
+  ] }], unassigned: [row(13, "Spare", 2, null)] }] };
+
+async function renderTopology(language: "en" | "de") {
+  saveUiLanguage(settingsStorage, language); resetUiLanguageForTests();
+  const host = document.createElement("div"); document.body.append(host); const root = createRoot(host);
+  await act(async () => root.render(<StructureWorkspace {...inert} tree={metricTree} view="topology" selection={null} onSelect={() => {}} onCatalog={() => {}} />));
+  return { host, done: async () => { await act(async () => root.unmount()); host.remove(); resetSettingsForTests(); resetUiLanguageForTests(); } };
+}
+const metricOf = (host: HTMLElement, name: string) =>
+  [...host.querySelectorAll<HTMLElement>(".diagram-device")].find((b) => b.textContent?.includes(name))!.querySelector<HTMLElement>(".device-object-count")!;
+
+it("labels every topology device figure as communication objects with an English plural", async () => {
+  const { host, done } = await renderTopology("en");
+  expect(metricOf(host, "Silent sensor").textContent).toBe("0 objects");
+  expect(metricOf(host, "Single channel").textContent).toBe("1 object");
+  expect(metricOf(host, "Big gateway").textContent).toBe("12345 objects");
+  expect(metricOf(host, "Spare").textContent).toBe("2 objects");
+  expect(metricOf(host, "Big gateway").getAttribute("title")).toBe("12345 communication objects");
+  expect(metricOf(host, "Single channel").getAttribute("title")).toBe("1 communication object");
+  // The accessible name of the row carries the meaning too, not just the glyphs.
+  const button = [...host.querySelectorAll<HTMLElement>(".diagram-device")].find((b) => b.textContent?.includes("Single channel"))!;
+  expect(button.textContent).toContain("1 object");
+  expect(host.querySelectorAll(".device-object-count")).toHaveLength(4);
+  await done();
+});
+
+it("labels the same figures in German with German plural forms", async () => {
+  const { host, done } = await renderTopology("de");
+  expect(metricOf(host, "Silent sensor").textContent).toBe("0 Objekte");
+  expect(metricOf(host, "Single channel").textContent).toBe("1 Objekt");
+  expect(metricOf(host, "Big gateway").getAttribute("title")).toBe("12345 Kommunikationsobjekte");
+  await done();
+});
+
+it("keeps an empty line free of metric labels and keeps names intact for long values", async () => {
+  const { host, done } = await renderTopology("en");
+  const lines = [...host.querySelectorAll(".topology-line")];
+  const empty = lines.find((l) => l.textContent?.includes("Empty line"))!;
+  expect(empty.querySelectorAll(".device-object-count")).toHaveLength(0);
+  expect(empty.querySelectorAll(".diagram-device")).toHaveLength(0);
+  await done();
 });
 
 it("renders building nesting without hiding devices assigned to rooms, and an empty state", async () => {

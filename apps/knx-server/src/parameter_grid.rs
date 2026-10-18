@@ -23,6 +23,7 @@ pub(crate) fn group_layout_dto<'a>(
     definition: &str,
     group_key: String,
     block_node: i64,
+    caption_fills: &crate::parameter_captions::CaptionFills,
     active_labels: impl Iterator<Item = &'a ActiveLabel>,
 ) -> Option<ParameterGroupLayoutDto> {
     let grid = layout.grid(definition, block_node)?;
@@ -35,6 +36,9 @@ pub(crate) fn group_layout_dto<'a>(
                     row: placement.cell.row,
                     column: placement.cell.column,
                     text: label.text.clone(),
+                    text_fill: caption_fills
+                        .get(&(label.scope.as_ref().map(|s| s.node_chain()), label.node_id))
+                        .cloned(),
                 })
             })
             .collect()

@@ -676,6 +676,13 @@ available under **Other parameters**. Search by parameter name, ID, value or
 option caption across all areas. Clearing search returns to your chosen area;
 a no-result search does not delete fields or values.
 
+**Source-build change after Alpha 14 (issue #26).** Area captions and separator
+text fill supported text placeholders from the exact referenced text parameter: a
+stored device value first, otherwise its product default. An explicitly empty
+value stays empty. Unresolved/empty captions and a lone `#` get a readable group
+label instead; hover the caption to inspect the original text and why it could
+not be shown. This changes display only, not your settings or the product data.
+
 Focus a parameter or use its **Information** button to inspect its original ID,
 type, accepted-value origin, access and declared numeric limits. An accepted
 value is not an unsaved draft, a device readback or an inferred factory default.

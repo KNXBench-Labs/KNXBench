@@ -13,6 +13,7 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
+import { openNavigationSections } from "./disclosure-fixture";
 
 const VIEW = { width: 1440, height: 748 }; // same aspect as the 900 × 467 GIF
 // The screencast delivers CSS pixels whatever the device scale, so the camera
@@ -126,6 +127,8 @@ test("records adding a device and linking it to a group address", async ({ page 
   await page.getByRole("button", { name: "sample-house.knxproj" }).click();
   await expect(page.getByText("Project status")).toBeVisible({ timeout: 15_000 });
   for (const dismiss of await page.getByRole("button", { name: "Dismiss" }).all()) await dismiss.click();
+  // Navigation blocks start folded (Alpha 14); open them before recording.
+  await openNavigationSections(page);
   const topology = page.getByRole("navigation", { name: "Navigation" }).getByRole("button", { name: "Topology", exact: true });
   await topology.click();
   await page.mouse.move(700, 420);
@@ -190,7 +193,7 @@ test("records adding a device and linking it to a group address", async ({ page 
   await click(page, done);
   await look(FULL);
   await click(page, topology);
-  const card = page.locator("main").getByRole("button", { name: "1.1.3 Push button dining" }).last();
+  const card = page.locator("main").getByRole("button", { name: /^Push button dining 1\.1\.3\b/ }).last();
   await card.waitFor();
   await look(frameAround(await boxOf(card)));
   await click(page, card);
@@ -198,10 +201,10 @@ test("records adding a device and linking it to a group address", async ({ page 
 
   // 5. Expand the first button's object and link it to the kitchen light.
   await page.getByRole("tablist", { name: "Push button dining" }).waitFor();
-  const channel = page.getByText("Button 1", { exact: true });
+  const channel = page.getByRole("button", { name: /^Button 1 Name:/ });
   await look(frameAround(await boxOf(channel)));
   await click(page, channel);
-  await click(page, page.getByText("Button 1: Switch", { exact: true }));
+  await click(page, page.locator('summary[aria-label="Edit object 0"]'));
   await hold();
   const linkButton = page.getByRole("button", { name: "Link", exact: true });
   const linkRow = linkButton.locator("xpath=ancestor::li[1]");
@@ -209,7 +212,13 @@ test("records adding a device and linking it to a group address", async ({ page 
   await groupSelect.waitFor();
   await look(frameAround(await boxOf(linkRow)));
   await click(page, groupSelect);
-  await groupSelect.selectOption({ label: "0/0/2 Kitchen light" });
+  // The searchable address picker (Alpha 14): type, then choose the match.
+  await groupSelect.pressSequentially("Kitchen light", { delay: 90 });
+  const match = page.getByRole("option").filter({ hasText: "0/0/2" }).first();
+  await match.waitFor();
+  await page.waitForTimeout(MARK_MS);
+  await match.click();
+  await expect(groupSelect).toHaveValue(/0\/0\/2/);
   await hold();
   await click(page, linkButton);
   const unlink = page.getByRole("button", { name: /Unlink/ }).first();

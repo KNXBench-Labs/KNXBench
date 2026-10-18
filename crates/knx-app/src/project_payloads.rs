@@ -2,7 +2,9 @@
 
 use knx_store::StoredOpaqueEntry;
 use serde::Serialize;
-pub const MAX_DOWNLOAD_BYTES: usize = 64 * 1024 * 1024;
+/// One retained payload served whole: the storage ceiling, so every retained
+/// payload is downloadable (ADR-0142; formerly 64 MiB).
+pub const MAX_DOWNLOAD_BYTES: usize = knx_core::limits::MAX_RETAINED_BYTES_USIZE;
 pub const MAX_PAYLOADS: usize = 10_000;
 /// Cumulative source-path/kind/hash text, before catalogue cloning.
 pub const MAX_METADATA_BYTES: usize = 4 * 1024 * 1024;
@@ -96,9 +98,9 @@ pub fn download(entries: &[StoredOpaqueEntry], id: u32) -> Result<&[u8], String>
         .filter(|entry| role(entry).is_some())
         .ok_or("retained payload unavailable")?;
     if entry.bytes.len() > MAX_DOWNLOAD_BYTES {
-        return Err(
-            "retained payload download exceeds 64 MiB; source bytes remain preserved".into(),
-        );
+        return Err(format!(
+            "retained payload download exceeds {MAX_DOWNLOAD_BYTES} bytes; source bytes remain preserved"
+        ));
     }
     if knx_store::project_history::image_hash(&entry.bytes) != entry.sha256 {
         return Err("retained payload SHA-256 mismatch; download refused".into());

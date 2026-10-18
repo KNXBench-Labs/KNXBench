@@ -87,7 +87,8 @@ fn incompressible_shared_context_uses_its_own_budget_and_is_not_repeated_per_edi
             |row| row.get(0),
         )
         .unwrap();
-    assert!(context_bytes > history::MAX_IMAGE_BYTES as i64);
+    // Above the former 64 MiB image and within the context budget.
+    assert!(context_bytes > 64 * 1024 * 1024);
     assert!(context_bytes <= history::MAX_CONTEXT_BYTES as i64);
     let recovered = history::load_editor(&conn).unwrap().unwrap();
     assert!(

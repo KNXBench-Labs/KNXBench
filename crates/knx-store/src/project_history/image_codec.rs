@@ -43,7 +43,7 @@ fn declared_length(header: &[u8], decoded_limit: usize) -> Result<usize, History
     );
     if length > decoded_limit as u64 {
         return Err(HistoryError::ImageLimit(
-            "decoded native snapshot exceeds 512 MiB",
+            "decoded native snapshot exceeds 4 GiB",
         ));
     }
     if length < 100 {
@@ -80,7 +80,7 @@ fn encode_bounded(
 ) -> Result<Vec<u8>, HistoryError> {
     if bytes.len() > decoded_limit {
         return Err(HistoryError::ImageLimit(
-            "decoded native snapshot exceeds 512 MiB",
+            "decoded native snapshot exceeds 4 GiB",
         ));
     }
     if bytes.len() <= stored_limit.min(MAX_IMAGE_BYTES) {
@@ -120,7 +120,7 @@ fn decode_bounded(
     if bytes.starts_with(b"SQLite format 3\0") {
         if bytes.len() > decoded_limit {
             return Err(HistoryError::ImageLimit(
-                "decoded native snapshot exceeds 512 MiB",
+                "decoded native snapshot exceeds 4 GiB",
             ));
         }
         return Ok(Cow::Borrowed(bytes));

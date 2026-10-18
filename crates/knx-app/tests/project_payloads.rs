@@ -187,7 +187,8 @@ fn larger_payload_remains_listed_but_explicit_download_budget_refuses() {
     let entries = vec![payload(
         "P-FICTION/UserFiles/large.bin",
         "ContainerEntry",
-        &vec![b'x'; project_payloads::MAX_DOWNLOAD_BYTES + 1],
+        // Zero-initialised: pages that are only read stay unbacked.
+        &vec![0_u8; project_payloads::MAX_DOWNLOAD_BYTES + 1],
     )];
     let catalogue = project_payloads::catalogue(&entries).unwrap();
     assert_eq!(catalogue.len(), 1);

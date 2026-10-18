@@ -29,7 +29,8 @@ Self-review only; integration/publication remains separate.
   current server/load/revision plus exact integer row selector. Replacement or
   changed revision returns stale refusal, not another project's bytes.
 - A selected local download verifies actual bytes against the original hash and
-  is limited to 64 MiB; the client has the same independent upper cap. Larger payloads remain retained and listed with explicit
+  is limited to the storage ceiling of 1,000,000,000 bytes (ADR-0142; formerly
+  64 MiB); the client has the same independent upper cap. Larger payloads remain retained and listed with explicit
   download refusal; this limit is not a discarded-data count. No arbitrary path,
   archive extraction or automatic network/bus action.
 - Reuse the existing temporary streamed-download body adapter and cleanup behavior;

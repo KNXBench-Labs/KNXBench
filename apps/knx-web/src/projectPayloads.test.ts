@@ -13,8 +13,9 @@ it.each([null,{}, {...catalogue(),records:[row(),row()]},{...catalogue(),records
  {...catalogue(),records:[{...row(),role:"verified-plugin"}]},{...catalogue(),records:[{...row(),bytes:67108865,downloadable:true}]}])("refuses malformed/contradictory catalogue: %j",value=>{
  expect(()=>admitProjectPayloads(value)).toThrow();
 });
-it("refuses a claimed download limit above the client's independent 64 MiB cap",()=>{
- expect(()=>admitProjectPayloads({...catalogue(),max_download_bytes:67108865})).toThrow();
+it("refuses a claimed download limit above the client's independent storage-ceiling cap",()=>{
+ expect(()=>admitProjectPayloads({...catalogue(),max_download_bytes:1000000000})).not.toThrow();
+ expect(()=>admitProjectPayloads({...catalogue(),max_download_bytes:1000000001})).toThrow();
 });
 it("refuses a selector absent from reviewed catalogue or above download budget",()=>{
  const data=admitProjectPayloads(catalogue());expect(()=>payloadDownloadPath(data,1)).toThrow();

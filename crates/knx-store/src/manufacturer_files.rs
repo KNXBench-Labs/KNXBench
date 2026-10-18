@@ -22,7 +22,7 @@ use sha2::{Digest, Sha256};
 /// The largest file this table admits, decoded. The same bound the
 /// `.knxproj` reader puts on one archive member, so no manifest entry an
 /// import accepted can be refused here.
-pub const MAX_MANUFACTURER_FILE_BYTES: usize = 64 * 1024 * 1024;
+pub const MAX_MANUFACTURER_FILE_BYTES: usize = knx_core::limits::MAX_RETAINED_BYTES_USIZE;
 
 /// Why a carried manufacturer file could not be stored or read back.
 #[derive(Debug)]

@@ -25,6 +25,15 @@ no-clobber publication and importer guards. The 256 MiB acceptance below is the
 earlier issue-fix baseline. The local supplement is not release/deployment
 acceptance; existing published images are unchanged.
 
+## Size-policy supplement (2026-10-18)
+
+[ADR-0142](../adr/0142-file-size-limits-follow-the-storage-ceiling.md) raises
+the importer's limits below: each expanded member up to the storage ceiling of
+1,000,000,000 bytes and the expanded archive up to 4 GiB. Product-package upload
+bodies follow the product database's input bound (the same ceiling). The
+streamed file ceiling of 1024 MiB is unchanged. The dated acceptance below
+stays as recorded.
+
 ## Fix acceptance
 
 - Accept files through 256 MiB, with a separate 16 KiB multipart-envelope

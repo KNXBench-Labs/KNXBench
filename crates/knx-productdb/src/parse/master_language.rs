@@ -14,7 +14,7 @@ use crate::ProductDbError;
 
 // Dedicated master-language scanning and retained-source classification keep
 // their original ceilings independently of package scheme-evidence policy.
-pub(crate) const MAX_MASTER_LANGUAGE_BYTES: usize = 64 * 1024 * 1024;
+pub(crate) const MAX_MASTER_LANGUAGE_BYTES: usize = knx_core::limits::MAX_RETAINED_BYTES_USIZE;
 const MAX_MASTER_LANGUAGE_ITEMS: usize = 262_144;
 
 const LANGUAGE_PATH: &[&str] = &[

@@ -226,8 +226,11 @@ fn members_declaring_more_than_the_total_budget_are_refused_at_open() {
 }
 
 #[test]
-fn the_archive_budget_is_1024_mib() {
-    assert_eq!(knx_etsproj::MAX_ARCHIVE_UNCOMPRESSED, 1024 * 1024 * 1024);
+fn the_archive_budget_is_4_gib() {
+    assert_eq!(
+        knx_etsproj::MAX_ARCHIVE_UNCOMPRESSED,
+        4 * 1024 * 1024 * 1024
+    );
 }
 
 #[test]
@@ -246,19 +249,44 @@ fn an_archive_above_the_previous_512_mib_budget_still_opens() {
 }
 
 #[test]
-fn one_byte_above_1024_mib_is_refused_with_the_exact_totals() {
-    let name = "P-0001/BinaryData/fill.dat";
-    let mut bytes = knxproj_with(&[(name, b"y")]);
+fn an_archive_above_the_previous_1024_mib_budget_still_opens() {
+    let names: Vec<String> = (0..20)
+        .map(|i| format!("P-0001/BinaryData/{i}.dat"))
+        .collect();
+    let extra: Vec<(&str, &[u8])> = names.iter().map(|n| (n.as_str(), &b"y"[..])).collect();
+    let mut bytes = knxproj_with(&extra);
+    // 1200 MiB of declared payload, no giant allocation or member read.
+    for name in &names {
+        declare_size(&mut bytes, name, 60 * 1024 * 1024);
+    }
+    assert!(Container::open(bytes).is_ok());
+}
+
+#[test]
+fn one_byte_above_4_gib_is_refused_with_the_exact_totals() {
+    // A classic ZIP size field holds less than 4 GiB, so two fillers share
+    // the declared remainder.
+    let names = [
+        "P-0001/BinaryData/fill-0.dat",
+        "P-0001/BinaryData/fill-1.dat",
+    ];
+    let mut bytes = knxproj_with(&[(names[0], b"y"), (names[1], b"y")]);
     let real: u64 = Container::open(bytes.clone())
         .unwrap()
         .entries()
         .iter()
-        .filter(|e| e.path != name)
+        .filter(|e| !names.contains(&e.path.as_str()))
         .map(|e| e.size)
         .sum();
-    let limit = 1024 * 1024 * 1024;
+    let limit = 4 * 1024 * 1024 * 1024;
     let total = limit + 1;
-    declare_size(&mut bytes, name, u32::try_from(total - real).unwrap());
+    let first = 1u64 << 31;
+    declare_size(&mut bytes, names[0], u32::try_from(first).unwrap());
+    declare_size(
+        &mut bytes,
+        names[1],
+        u32::try_from(total - real - first).unwrap(),
+    );
     assert!(matches!(
         Container::open(bytes),
         Err(ContainerError::TooLarge { total: actual_total, limit: actual_limit })

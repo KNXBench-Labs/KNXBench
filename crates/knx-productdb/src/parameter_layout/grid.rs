@@ -8,10 +8,11 @@ use super::ownership::{is_dynamic_container, is_dynamic_root, is_program_owner};
 use quick_xml::{events::Event, name::ResolveResult, NsReader};
 use std::collections::{HashMap, HashSet};
 
-/// Work budget of one grid read. The 8 MiB source ceiling already bounds the
-/// input; this bounds the walk, and exceeding it reports the source as
-/// unavailable rather than claiming that no grid exists.
-pub const MAX_GRID_EVENTS: usize = 4_000_000;
+/// Work budget of one grid read. Every XML event consumes at least one input
+/// byte, so the source ceiling (`MAX_EDITOR_SOURCE_BYTES`) bounds the walk;
+/// exceeding it reports the source as unavailable rather than claiming that
+/// no grid exists.
+pub const MAX_GRID_EVENTS: usize = crate::parameter_editor::MAX_EDITOR_SOURCE_BYTES;
 const MAX_DEPTH: usize = 64;
 /// Deepest `ParameterRefRef/@IndentLevel` shown. The collection declares 1 to 5
 /// (census P4); a larger or malformed value indents nothing.

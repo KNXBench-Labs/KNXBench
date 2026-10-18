@@ -114,10 +114,14 @@ mod tests {
 
     #[test]
     fn unrelated_metadata_size_refusal_still_fails_the_census() {
+        // A classic ZIP cannot exceed the member-count bound (the 16-bit field
+        // maximum), so cross the path-component budget instead: 40 members of
+        // 32,001 distinct components each exceed 16 nodes per possible member.
+        let deep = "a/".repeat(32_000);
         let mut writer = zip::ZipWriter::new(Cursor::new(Vec::new()));
-        for i in 0..4097 {
+        for i in 0..40 {
             writer
-                .start_file(format!("entry-{i}"), SimpleFileOptions::default())
+                .start_file(format!("{i}/{deep}f"), SimpleFileOptions::default())
                 .unwrap();
             writer.write_all(b"x").unwrap();
         }
@@ -164,13 +168,21 @@ mod tests {
             }
             bytes
         }
-        let member = u32::try_from(knx_productdb::PackageLimits::STANDARD.max_member_size).unwrap();
-        let mut sizes = vec![member; 4];
+        // Members at the member limit, then the remainder, fill the total
+        // exactly; one more byte crosses it.
+        let limits = knx_productdb::PackageLimits::STANDARD;
+        let member = u32::try_from(limits.max_member_size).unwrap();
+        let full = limits.max_expanded_size / limits.max_member_size;
+        let mut sizes = vec![member; usize::try_from(full).unwrap()];
+        let remainder = limits.max_expanded_size % limits.max_member_size;
+        if remainder > 0 {
+            sizes.push(u32::try_from(remainder).unwrap());
+        }
         assert_eq!(expected_standard_refusal("fixture", &fixture(&sizes)), None);
         sizes.push(1);
         assert_eq!(
             expected_standard_refusal("fixture", &fixture(&sizes)).as_deref(),
-            Some("entry-4")
+            Some(format!("entry-{}", sizes.len() - 1).as_str())
         );
     }
 

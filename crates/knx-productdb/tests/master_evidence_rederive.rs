@@ -188,14 +188,33 @@ fn a_deferred_commit_error_rolls_back_the_rebuild_and_releases_its_transaction()
     );
 }
 
+/// The marker a build with a 64 MiB scanner cap recorded for a larger source,
+/// exactly as `record_issue` writes it. The cap is the storage ceiling now
+/// (ADR-0142), so no current build records it for size; databases written by
+/// older builds still carry it.
+fn older_build_marker(conn: &Connection, sha: &str) {
+    conn.execute(
+        "INSERT INTO ingest_unknown(source_sha256,program_id,xpath,kind,name,occurrences,sample)
+         VALUES(?1,NULL,'/','MasterLanguageEvidenceUnexaminedSource','master_language_unknowns',1,
+                'source exceeds the evidence input budget; master classification was not examined')",
+        [sha],
+    )
+    .unwrap();
+}
+
 #[test]
-fn oversized_unclassified_sources_are_explicitly_unexamined_not_clean() {
+fn a_source_an_older_build_left_unexamined_for_size_is_examined_now() {
     let directory = tempfile::tempdir().unwrap();
     let conn = open_and_migrate(&directory.path().join("products.sqlite")).unwrap();
-    // One byte above the private scanner's 64 MiB input cap; do not expose
-    // production internals solely to construct a boundary fixture.
-    let size: i64 = 64 * 1024 * 1024 + 1;
-    conn.execute("INSERT INTO source_file(sha256,source_path,bytes,len) VALUES('synthetic-oversized-source','unknown.bin',zeroblob(?1),?1)", [size]).unwrap();
+    // One byte above the former 64 MiB cap: retained, valid identity.
+    let size = 64 * 1024 * 1024 + 1;
+    let sha = sha256_hex(&vec![0u8; size]);
+    conn.execute(
+        "INSERT INTO source_file(sha256,source_path,bytes,len) VALUES(?1,'unknown.bin',zeroblob(?2),?2)",
+        rusqlite::params![sha, size as i64],
+    )
+    .unwrap();
+    older_build_marker(&conn, &sha);
     let report = rederive_master_language_evidence(&conn).unwrap();
     assert_eq!(
         (
@@ -203,9 +222,24 @@ fn oversized_unclassified_sources_are_explicitly_unexamined_not_clean() {
             report.failed_sources,
             report.unexamined_sources
         ),
-        (0, 0, 1)
+        (0, 0, 0)
     );
-    assert_eq!(conn.query_row("SELECT COUNT(*) FROM ingest_unknown WHERE kind='MasterLanguageEvidenceUnexaminedSource'", [], |r| r.get::<_, i64>(0)).unwrap(), 1);
+    assert_eq!(conn.query_row("SELECT COUNT(*) FROM ingest_unknown WHERE kind='MasterLanguageEvidenceUnexaminedSource'", [], |r| r.get::<_, i64>(0)).unwrap(), 0);
+}
+
+#[test]
+fn no_source_above_the_scanner_cap_can_be_retained() {
+    // The scanner's cap is the storage ceiling: SQLite itself refuses a
+    // larger value, so the oversized branch only guards builds against an
+    // SQLite with a higher limit.
+    let directory = tempfile::tempdir().unwrap();
+    let conn = open_and_migrate(&directory.path().join("products.sqlite")).unwrap();
+    let ceiling = i64::try_from(knx_core::limits::MAX_RETAINED_BYTES).unwrap();
+    let refused = conn.execute(
+        "INSERT INTO source_file(sha256,source_path,bytes,len) VALUES('x','unknown.bin',zeroblob(?1),?1)",
+        [ceiling + 1],
+    );
+    assert!(refused.is_err(), "SQLite stored a value above its limit");
 }
 
 #[test]
@@ -214,15 +248,8 @@ fn a_repaired_master_replaces_its_unexamined_marker_with_current_evidence() {
     let conn = open_and_migrate(&directory.path().join("products.sqlite")).unwrap();
     store(&conn, "retained.xml", MASTER);
     let sha = sha256_hex(MASTER);
-    let size: i64 = 64 * 1024 * 1024 + 1;
-    // Simulate retained-byte damage, then a repair to the original content.
-    conn.execute(
-        "UPDATE source_file SET bytes=zeroblob(?2),len=?2 WHERE sha256=?1",
-        rusqlite::params![sha, size],
-    )
-    .unwrap();
-    let damaged = rederive_master_language_evidence(&conn).unwrap();
-    assert_eq!(damaged.unexamined_sources, 1);
+    // An older build's marker, then a repair to the original content.
+    older_build_marker(&conn, &sha);
     conn.execute(
         "UPDATE source_file SET bytes=?2,len=?3 WHERE sha256=?1",
         rusqlite::params![sha, MASTER, MASTER.len() as i64],
@@ -268,18 +295,7 @@ fn a_repaired_nonmaster_clears_only_its_owned_classification_marker() {
     let original = b"opaque payload, not XML";
     store(&conn, "payload.bin", original);
     let sha = sha256_hex(original);
-    let size: i64 = 64 * 1024 * 1024 + 1;
-    conn.execute(
-        "UPDATE source_file SET bytes=zeroblob(?2),len=?2 WHERE sha256=?1",
-        rusqlite::params![sha, size],
-    )
-    .unwrap();
-    assert_eq!(
-        rederive_master_language_evidence(&conn)
-            .unwrap()
-            .unexamined_sources,
-        1
-    );
+    older_build_marker(&conn, &sha);
     // Bounded but still identity-invalid bytes must not retire this marker.
     conn.execute(
         "UPDATE source_file SET bytes=?2,len=?3 WHERE sha256=?1",

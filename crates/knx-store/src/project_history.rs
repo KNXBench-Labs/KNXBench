@@ -29,14 +29,23 @@ pub fn open_editor_store(
 }
 
 pub const FORMAT_VERSION: i64 = 1;
-pub const MAX_IMAGE_BYTES: usize = 64 * 1024 * 1024;
-/// One shared source context, not a per-edit model image.
-pub const MAX_CONTEXT_BYTES: usize = 256 * 1024 * 1024;
+/// One encoded model image: the storage ceiling, as each image is one stored
+/// value (ADR-0142; formerly 64 MiB).
+pub const MAX_IMAGE_BYTES: usize = knx_core::limits::MAX_RETAINED_BYTES_USIZE;
+/// One shared source context, not a per-edit model image. It carries the
+/// project's opaque data, embedded product data included, so it gets the
+/// storage ceiling (ADR-0142; formerly 256 MiB, below one measured program).
+pub const MAX_CONTEXT_BYTES: usize = knx_core::limits::MAX_RETAINED_BYTES_USIZE;
 /// Independent decoding budget; model and shared-context storage remain separately bounded.
-pub const MAX_DECODED_IMAGE_BYTES: usize = 512 * 1024 * 1024;
-pub const MAX_HISTORY_BYTES: i64 = 512 * 1024 * 1024;
+pub const MAX_DECODED_IMAGE_BYTES: usize = HISTORY_BUDGET_BYTES;
+/// All stored history images together (ADR-0142; formerly 512 MiB).
+pub const MAX_HISTORY_BYTES: i64 = HISTORY_BUDGET_BYTES as i64;
 /// Cumulative decoded charge for all physical images, counting shared context once.
-pub const MAX_DECODED_HISTORY_BYTES: usize = 512 * 1024 * 1024;
+pub const MAX_DECODED_HISTORY_BYTES: usize = HISTORY_BUDGET_BYTES;
+/// The cumulative history budgets: the 4 GiB expansion budget
+/// (`knx_core::limits::MAX_EXPANDED_ARCHIVE_BYTES`), which holds a maximal
+/// context several times over.
+const HISTORY_BUDGET_BYTES: usize = knx_core::limits::MAX_EXPANDED_ARCHIVE_BYTES as usize;
 pub const MAX_STACK_STATES: usize = 256;
 pub const MAX_VERSIONS: usize = 256;
 
@@ -161,7 +170,7 @@ fn check_limits(conn: &Connection) -> Result<(), HistoryError> {
         return Err(HistoryError::Invalid("unexpected workspace row identity"));
     }
     if stored_history_bytes(conn)? > MAX_HISTORY_BYTES {
-        return Err(HistoryError::Limit("total history exceeds 512 MiB"));
+        return Err(HistoryError::Limit("total history exceeds 4 GiB"));
     }
     let steps: i64 = conn.query_row("SELECT count(*) FROM project_history_stack", [], |r| {
         r.get(0)
@@ -196,7 +205,7 @@ fn check_limits(conn: &Connection) -> Result<(), HistoryError> {
             .checked_add(image_codec::decoded_size(&prefix, stored)?)
             .filter(|total| *total <= MAX_DECODED_HISTORY_BYTES)
             .ok_or(HistoryError::ImageLimit(
-                "total decoded history exceeds 512 MiB",
+                "total decoded history exceeds 4 GiB",
             ))?;
     }
     Ok(())
@@ -331,7 +340,7 @@ fn write_workspace(
     context::collect_unreferenced(conn)?;
     let mut bytes = stored_history_bytes(conn)?;
     if bytes > MAX_HISTORY_BYTES {
-        return Err(HistoryError::Limit("total history exceeds 512 MiB"));
+        return Err(HistoryError::Limit("total history exceeds 4 GiB"));
     }
     let mut stmt = conn.prepare("INSERT INTO project_history_stack (side, position, format_version, image, image_hash, context_hash) VALUES (?1, ?2, ?3, ?4, ?5, ?6)")?;
     let mut refusal = None;
@@ -346,7 +355,7 @@ fn write_workspace(
                     .checked_add(image.len() as i64)
                     .ok_or(HistoryError::Limit("history byte accounting overflow"))?;
                 if bytes > MAX_HISTORY_BYTES {
-                    return Err(HistoryError::Limit("total history exceeds 512 MiB"));
+                    return Err(HistoryError::Limit("total history exceeds 4 GiB"));
                 }
                 let side = match side {
                     knx_core::command::HistorySide::Undo => "undo",

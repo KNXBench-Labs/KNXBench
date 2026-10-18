@@ -180,25 +180,29 @@ fn manufacturer_partition_and_ref_id_must_agree() {
 }
 
 #[test]
-fn excessive_declared_entry_count_is_rejected_before_loading_zip_metadata() {
+fn a_declared_entry_count_beyond_the_directory_is_refused_without_mutation() {
+    // The member bound is the 16-bit field maximum (ADR-0142), so a lying
+    // count is caught by the directory it claims, not by a size limit.
     let (_dir, conn) = db();
     let mut bytes = archive(&[
         ("knx_master.xml", MASTER),
         ("M-0001/Hardware.xml", HARDWARE),
     ]);
     let eocd = bytes.len() - 22;
-    bytes[eocd + 8..eocd + 10].copy_from_slice(&4097_u16.to_le_bytes());
-    bytes[eocd + 10..eocd + 12].copy_from_slice(&4097_u16.to_le_bytes());
+    bytes[eocd + 8..eocd + 10].copy_from_slice(&u16::MAX.to_le_bytes());
+    bytes[eocd + 10..eocd + 12].copy_from_slice(&u16::MAX.to_le_bytes());
     let result = install_package(&conn, "bad.knxprod", &bytes);
     assert!(
-        matches!(result, Err(PackageError::SizeLimit { .. })),
+        matches!(result, Err(PackageError::InvalidZip { .. })),
         "{result:?}"
     );
     assert_eq!(counts(&conn), vec![0; 9]);
 }
 
 #[test]
-fn aggregate_central_comments_stop_at_the_metadata_budget() {
+fn aggregate_central_comments_within_the_input_are_not_a_size_refusal() {
+    // ZIP metadata lives inside the input, so its bound is the input bound
+    // (ADR-0142): 400 maximal comments (about 26 MB) are admitted.
     let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
     for (name, bytes) in [
         ("knx_master.xml", MASTER),
@@ -217,11 +221,11 @@ fn aggregate_central_comments_stop_at_the_metadata_budget() {
     let bytes = inflate_central_comments(zip.finish().unwrap().into_inner(), u16::MAX);
     let (_dir, conn) = db();
 
-    assert!(matches!(
-        install_package(&conn, "comment-heavy.knxprod", &bytes),
-        Err(PackageError::SizeLimit { ref path }) if path == "central directory metadata"
-    ));
-    assert_eq!(counts(&conn), vec![0; 9]);
+    let result = install_package(&conn, "comment-heavy.knxprod", &bytes);
+    assert!(
+        !matches!(result, Err(PackageError::SizeLimit { .. })),
+        "{result:?}"
+    );
 }
 
 #[test]
@@ -299,12 +303,11 @@ fn disjoint_deep_paths_stop_at_the_component_node_budget() {
     zip.start_file("M-0001/Hardware.xml", SimpleFileOptions::default())
         .unwrap();
     zip.write_all(HARDWARE).unwrap();
-    for member in 0..4095 {
-        let suffix = (0..17)
-            .map(|depth| format!("{member:04x}-{depth:02x}"))
-            .collect::<Vec<_>>()
-            .join("/");
-        let name = format!("M-0001/Baggages/{suffix}.bin");
+    // 16 nodes per possible member (ADR-0142) is 1,048,560; 40 members of
+    // 32,000 distinct components each exceed it.
+    let deep = "a/".repeat(32_000);
+    for member in 0..40 {
+        let name = format!("M-0001/Baggages/{member:02}/{deep}f.bin");
         zip.start_file(name, SimpleFileOptions::default()).unwrap();
         zip.write_all(b"x").unwrap();
     }
@@ -1519,14 +1522,15 @@ fn duplicate_encrypted_truncated_and_oversized_members_are_rejected() {
     );
     let mut encrypted = valid.clone();
     let mut oversized = valid.clone();
+    const OVER_MEMBER: u32 = knx_core::limits::MAX_RETAINED_BYTES as u32 + 1;
     for i in 0..valid.len() - 46 {
         if &valid[i..i + 4] == b"PK\x01\x02" {
             encrypted[i + 8] |= 1;
-            oversized[i + 24..i + 28].copy_from_slice(&(64_u32 * 1024 * 1024 + 1).to_le_bytes());
+            oversized[i + 24..i + 28].copy_from_slice(&OVER_MEMBER.to_le_bytes());
         }
         if &valid[i..i + 4] == b"PK\x03\x04" {
             encrypted[i + 6] |= 1;
-            oversized[i + 22..i + 26].copy_from_slice(&(64_u32 * 1024 * 1024 + 1).to_le_bytes());
+            oversized[i + 22..i + 26].copy_from_slice(&OVER_MEMBER.to_le_bytes());
         }
     }
     assert!(matches!(

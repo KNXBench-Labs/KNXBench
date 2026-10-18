@@ -25,8 +25,9 @@ use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 use std::sync::MutexGuard;
 
-/// Same body limit as `/api/catalog/install`.
-const MAX_PACKAGE_BYTES: usize = 256 * 1024 * 1024;
+/// Same body limit as `/api/catalog/install`: the product database's package
+/// input bound.
+const MAX_PACKAGE_BYTES: usize = knx_productdb::MAX_PACKAGE_INPUT_BYTES as usize;
 const BACKUP_MARKER: &str = ".backup-";
 const BACKUP_SUFFIX: &str = ".sqlite";
 const SHORT_HASH_LEN: usize = 12;

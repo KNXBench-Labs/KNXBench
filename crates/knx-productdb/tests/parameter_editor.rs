@@ -113,18 +113,23 @@ fn corrupted_same_length_blob_has_named_identity_fallback() {
     assert_eq!(read(&c), Evidence::Unavailable(Issue::SourceIdentity));
 }
 #[test]
-fn oversized_source_falls_back_before_blob_allocation_or_parsing() {
+fn no_retained_source_is_too_large_to_inspect() {
+    // The editor's source bound is the storage ceiling (ADR-0142): SQLite
+    // refuses a larger value, so `SourceBudget` only guards builds against an
+    // SQLite with a higher limit, and the evidence stays as it was.
     let source = time();
     let (_d, c) = db(&source);
-    c.execute(
+    let before = read(&c);
+    let refused = c.execute(
         "UPDATE source_file SET len=?1,bytes=zeroblob(?1) WHERE sha256=?2",
         rusqlite::params![
             i64::try_from(MAX_EDITOR_SOURCE_BYTES + 1).unwrap(),
             sha256_hex(source.as_bytes())
         ],
-    )
-    .unwrap();
-    assert_eq!(read(&c), Evidence::Unavailable(Issue::SourceBudget));
+    );
+    assert!(refused.is_err(), "SQLite stored a value above its limit");
+    assert_eq!(read(&c), before);
+    assert_ne!(before, Evidence::Unavailable(Issue::SourceBudget));
 }
 #[test]
 fn duplicate_type_definitions_are_ambiguous_not_first_wins() {

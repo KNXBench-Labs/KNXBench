@@ -39,18 +39,20 @@ mod local_record;
 /// declaring gigabytes while containing only a few real bytes) does not
 /// just run slowly, an allocation failure that large calls Rust's global
 /// allocator error handler, which aborts the process outright rather than
-/// returning a recoverable error. The largest entry in either reference
-/// project is 5.7 MB; the whole uncompressed reference container is 22 MB
-/// (RESEARCH). 64 MB leaves ample headroom for a legitimate project.
-const MAX_ENTRY_SIZE: u64 = 64 * 1024 * 1024;
+/// returning a recoverable error. The bound is the storage ceiling
+/// (ADR-0142): a project embeds the application programs it uses, and the
+/// largest measured one is 281.8 MiB, so the former 64 MiB refused real
+/// projects. The allocation stays bounded by it.
+const MAX_ENTRY_SIZE: u64 = knx_core::limits::MAX_RETAINED_BYTES;
 
 /// The most uncompressed bytes one archive may declare across all its
 /// members (AR18 review F3). Every member is read with at most its declared
 /// size, so this bounds what an import holds in memory from the archive.
-/// This budget is 1024 MiB following the owner's 2026-10-10 increase for
-/// larger project archives. It bounds expanded payload bytes, not peak process
-/// memory; per-entry bounds and nested cumulative accounting still apply.
-pub const MAX_ARCHIVE_UNCOMPRESSED: u64 = 1024 * 1024 * 1024;
+/// This budget is 4 GiB (ADR-0142, raised from the 1024 MiB of 2026-10-10),
+/// the same expansion budget as a product package. It bounds expanded payload
+/// bytes, not peak process memory; per-entry bounds and nested cumulative
+/// accounting still apply.
+pub const MAX_ARCHIVE_UNCOMPRESSED: u64 = knx_core::limits::MAX_EXPANDED_ARCHIVE_BYTES;
 
 /// The on-disk compression-method value APPNOTE §4.4.5 reserves to mean
 /// "see the WinZip AES extra field (0x9901) for the entry's real method".

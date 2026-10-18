@@ -1860,10 +1860,14 @@ fn run_products_ingest(args: &[String]) -> ExitCode {
             Err(error) => {
                 eprintln!("failed to install product package {file}: {error}");
                 if !allow_large && is_size_refusal(&error) {
+                    let gib = |bytes: u64| bytes / (1024 * 1024 * 1024);
                     eprintln!(
-                        "hint: if a member exceeds 64 MiB or the package expands beyond 256 MiB, \
-                         --allow-large-package raises these bounds to 256 MiB and 4 GiB \
-                         (more memory, time and database space; the 256 MiB file bound stays)"
+                        "hint: if the package expands beyond {} GiB, --allow-large-package \
+                         raises that total to {} GiB (more memory, time and database space; \
+                         the {}-byte file and member bound is the storage ceiling and stays)",
+                        gib(knx_productdb::PackageLimits::STANDARD.max_expanded_size),
+                        gib(knx_productdb::PackageLimits::LARGE.max_expanded_size),
+                        knx_productdb::MAX_PACKAGE_INPUT_BYTES,
                     );
                 }
                 return ExitCode::FAILURE;

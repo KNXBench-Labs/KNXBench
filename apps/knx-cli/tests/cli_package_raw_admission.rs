@@ -1,14 +1,14 @@
 //! Real CLI product-package raw-size admission before reading or opening the product DB.
 //!
-//! Inputs are sparse synthetic files: their logical length crosses the existing
-//! 256 MiB package bound without consuming that much disk space. No bus,
-//! private corpus or manufacturer data is used.
+//! Inputs are sparse synthetic files: their logical length crosses the package
+//! bound (the storage ceiling, ADR-0142) without consuming that much disk
+//! space. No bus, private corpus or manufacturer data is used.
 
 use std::fs::File;
 use std::path::Path;
 use std::process::{Command, Output};
 
-const PACKAGE_LIMIT: u64 = 256 * 1024 * 1024;
+const PACKAGE_LIMIT: u64 = 1_000_000_000;
 const MASTER: &[u8] = br#"<KNX xmlns="http://knx.org/xml/project/11"><MasterData><Manufacturers><Manufacturer Id="M-0001" Name="Example"/></Manufacturers></MasterData></KNX>"#;
 const HARDWARE: &[u8] = br#"<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-0001"><Hardware><Hardware Id="M-0001_H-1"><Products><Product Id="M-0001_H-1_P-1" Text="Synthetic switch" OrderNumber="SYNTHETIC-1"/></Products></Hardware></Hardware></Manufacturer></ManufacturerData></KNX>"#;
 

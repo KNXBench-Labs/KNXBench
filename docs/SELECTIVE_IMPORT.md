@@ -85,7 +85,8 @@ recomputes the plan. Existing full-project replacement import is unchanged.
 
 ## Deliberate bounds
 
-- 64 MiB source input, plus the existing container/parser resource ceilings.
+- Source input up to the storage ceiling of 1,000,000,000 bytes (ADR-0142;
+  formerly 64 MiB), plus the existing container/parser resource ceilings.
 - Native model v12 only. The v11→v12 change extends completion vocabulary,
   not entity/reference fields; the dependency closure is unchanged. A further
   model bump must audit new entity/reference fields before widening this explicit

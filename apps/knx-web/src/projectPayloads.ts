@@ -10,7 +10,7 @@ function integer(value:unknown):value is number{return typeof value==="number"&&
 const roles=["user-file-candidate","add-in-state-candidate","ets-app-named-candidate","manufacturer-baggage"];
 const media=["empty","png","jpeg","gif","bmp","pdf","zip","pe-executable","ole2-compound","xml","unknown"];
 export function admitProjectPayloads(value:unknown):ProjectPayloadCatalogue {
- if(!object(value)||typeof value.server_incarnation!=="string"||!value.server_incarnation||!integer(value.project_incarnation)||!integer(value.snapshot_revision)||!integer(value.max_download_bytes)||value.max_download_bytes>67108864||!Array.isArray(value.records)||value.records.length>10000)throw new Error("Malformed retained payload catalogue");
+ if(!object(value)||typeof value.server_incarnation!=="string"||!value.server_incarnation||!integer(value.project_incarnation)||!integer(value.snapshot_revision)||!integer(value.max_download_bytes)||value.max_download_bytes>1000000000||!Array.isArray(value.records)||value.records.length>10000)throw new Error("Malformed retained payload catalogue");
  const limit=value.max_download_bytes;const seen=new Set<number>();
  const records=value.records.map((item:unknown):ProjectPayload=>{
   if(!object(item)||!integer(item.id)||item.id>4294967295||seen.has(item.id)||!integer(item.bytes)||typeof item.source_path!=="string"||typeof item.kind!=="string"||typeof item.role!=="string"||!roles.includes(item.role)||typeof item.content_class!=="string"||!media.includes(item.content_class)||typeof item.sha256!=="string"||!/^[0-9a-f]{64}$/.test(item.sha256)||typeof item.downloadable!=="boolean"||item.downloadable!==(item.bytes<=limit))throw new Error("Malformed retained payload record");

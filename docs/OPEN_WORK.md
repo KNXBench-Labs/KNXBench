@@ -241,8 +241,9 @@ as an alpha/release blocker by this plan.
 
 #### WP-12 — Field evidence and owner acceptance
 
-**Separate cases, not one generic “hardware test”:** KL-184 refusing/silent
-identity reads and the reporter's post-run behaviour/firmware response;
+**Separate cases, not one generic “hardware test”:** KL-184 silent identity
+reads (zero-element refusals are observed on two devices since) and post-run
+behaviour/firmware responses;
 KL-186 originating plug-in acceptance after adopted bytes (software route is
 complete); KL-170 tester probe/report review; optional custom multicast,
 bridge Route-Back tunnel and other specifically identified live gaps.
@@ -251,7 +252,8 @@ original evidence are verified, outcomes include refusal/unknown, and only
 the witnessed boundary is narrowed. Keep private projects, identity ZIPs and
 raw device evidence out of Git. Fresh device operations need their own go;
 this audit sends no requests and contacts no vendor/association.
-[Diagnostic evidence](research/2026-10-18-up258-device-diagnostics.md) ·
+[Diagnostic evidence](research/2026-10-18-up258-device-diagnostics.md),
+[eleven more devices](research/2026-10-18-device-diagnostics-eleven-devices.md) ·
 [plug-in contract](contracts/plugin-data-adoption.md) ·
 [tester flow](adr/0121-tester-download-reports.md).
 

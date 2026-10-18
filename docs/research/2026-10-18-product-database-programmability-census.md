@@ -281,7 +281,9 @@ in agent scratch.
   database).
 
 Still open: G10 research (what a tool does with a hidden PID-78 parameter), G14,
-G15 and G16.
+G15 and G16. G10 since has one device-side data point, from a `07B0` program of
+the same shape: the parameter's default equals the device's real PID 78 reply
+([eleven-device note](2026-10-18-device-diagnostics-eleven-devices.md#g10-a-hidden-hardware-type-parameter-meets-its-device)).
 
 Per-file results, program ids, the probes and their logs stay in agent scratch;
 no manufacturer bytes, texts or identifiers are recorded here.

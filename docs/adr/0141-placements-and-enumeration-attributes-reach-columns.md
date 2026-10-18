@@ -47,13 +47,18 @@ member's own `Offset`/`BitOffset` is now stored, so it is no longer reported).
    reported. Numbers that are not integers leave their column empty and stay
    reported, with the original value as the sample. `Enumeration` now reports
    every attribute outside its stored set. A `Property` anywhere other than
-   directly inside a `Parameter` or a `Union` stays an unmodelled element.
+   directly inside a `Parameter` or a `Union` stays an unmodelled element, with
+   its attributes reported. The targeted scheme-evidence rule for
+   `Property/@Occurrence` (PDB-5, schemes 12/14 and package-level 21/23) no
+   longer covers a placing `Property`, whose `Occurrence` is now a column; the
+   same precedent as separator `Access` under ADR-0139.
    `SuffixText`, `DefaultUnionParameter` and `ParameterCalculation` stay
    reported: their meaning is not stored.
 3. **Migration** (ADR-0020, v23's promotion pattern, generalised to several
    `(kind, name, host)` row kinds). Per program blob whose bytes still match
    their key, the columns are filled through the parser's own column rules, and
-   every row of the promoted kinds retires. Then the v21 pass runs over the
+   every row of the promoted kinds retires. Attribute rows retire only on a
+   placing `Property` (xpath suffix `Parameter/Property` or `Union/Property`). Then the v21 pass runs over the
    blobs carried forward and adds back what a current ingest still reports (a
    non-integer value; an unstored `Enumeration` attribute). Retiring everything
    and re-deriving the remainder makes a migrated database equal a fresh

@@ -273,7 +273,12 @@ fn expanded_attribute_name<R: BufRead>(
 
 fn is_targeted_attribute(xpath: &str, name: &str) -> bool {
     (name == "AppliesTo" && xpath.ends_with("/LdCtrlWriteProp"))
-        || (name == "Occurrence" && xpath.ends_with("/Property"))
+        // A placing `Property` stores `Occurrence` in a column since v25
+        // (ADR-0141); a non-integer value is reported by the parser.
+        || (name == "Occurrence"
+            && xpath.ends_with("/Property")
+            && !xpath.ends_with("/Parameter/Property")
+            && !xpath.ends_with("/Union/Property"))
         || (xpath.ends_with("/ParameterSeparator") && name == "UIHint")
         || (xpath.ends_with("/ApplicationProgram") && name == "HardwareType")
         || (xpath.ends_with("/DatapointType") && name == "VariableLength")
@@ -1103,6 +1108,22 @@ mod tests {
         }
         assert!(parser_alias_xpath(&module, "Dynamic")
             .ends_with("/ModuleDefs/ModuleDef/Dynamic/Dynamic"));
+    }
+
+    #[test]
+    fn a_placing_property_occurrence_is_stored_not_targeted() {
+        let xml = br#"<KNX xmlns="http://knx.org/xml/project/12"><ManufacturerData><Manufacturer><ApplicationPrograms><ApplicationProgram><Static><Parameters><Parameter><Property Occurrence="2"/></Parameter><Union><Property Occurrence="3"/></Union></Parameters><Property Occurrence="4"/></Static></ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
+        let mut unknown = Vec::new();
+        reconcile_targeted_unknowns(xml, "fixture.xml", &mut unknown).unwrap();
+        let occurrences: Vec<&str> = unknown
+            .iter()
+            .filter(|item| item.name == "Occurrence")
+            .map(|item| item.xpath.as_str())
+            .collect();
+        assert_eq!(
+            occurrences,
+            ["/KNX/ManufacturerData/Manufacturer/ApplicationPrograms/ApplicationProgram/Static/Property"]
+        );
     }
 
     #[test]

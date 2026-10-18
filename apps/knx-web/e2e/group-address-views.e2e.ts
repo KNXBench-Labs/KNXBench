@@ -12,6 +12,7 @@ import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
 import { statusMetricsFixtureBody } from "./status-metrics-fixture";
+import { wordsIntact, scrollsLocally } from "./table-word-assertions";
 
 type Language = "en" | "de";
 const link = (device: number, object: number, direction: string) => ({
@@ -119,6 +120,18 @@ const capture = async (page: Page, name: string) => {
 };
 const noPageOverflow = async (page: Page) =>
   expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+
+test("400: German address tree preserves the long DPT label and scrolls locally", async ({ page }) => {
+  await page.setViewportSize({ width: 400, height: 1000 });
+  const tree = standardTree(); tree.installations[0].group_addresses[0].dpts = ["DPST-9-4"];
+  const state = await intercept(page, "de", "porcelain", tree);
+  await openAddresses(page, "de");
+  const table = page.locator('[data-table-id="group-addresses"]');
+  const dpt = table.locator('[data-ga-select="30"]').locator("xpath=ancestor::tr").locator("td").nth(4);
+  await expect(dpt).toHaveText("Beleuchtungsstärke (9.004)");
+  await wordsIntact(dpt); await scrollsLocally(page, table);
+  expect(state.unexpected).toEqual([]);
+});
 
 for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
   const theme = width === 1440 ? "graphite" : "porcelain";

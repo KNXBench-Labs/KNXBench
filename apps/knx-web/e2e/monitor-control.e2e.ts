@@ -1,5 +1,27 @@
 /** Checks monitor control evidence at narrow/wide widths against a local mocked API only. */
 import { test, expect } from "@playwright/test";
+import { wordsIntact, scrollsLocally } from "./table-word-assertions";
+
+test("400: German monitor decoded DPT words stay intact with local scrolling", async ({ page }) => {
+  await page.setViewportSize({ width: 400, height: 900 });
+  const unexpected: string[] = [];
+  await page.route("**/api/**", route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === "/api/bus/monitor/telegrams") return route.fulfill({ json: {
+      sessionId: 17, serverIncarnation: "words", contextStatus: "current", projectOpen: false, status: "active", nextSince: 1, droppedBefore: 0,
+      telegrams: [{ seq: 1, timestamp: "2026-09-30T12:00:00Z", source: "1.1.5", destination: "1/2/3", destinationName: null,
+        service: "GroupValueWrite", rawPayload: null, control: null, decoded: { kind: "value", dpt: "DPST-9-4", text: "123 lx" } }],
+    } });
+    if (path === "/api/bus/discover") return route.fulfill({ json: { interfaces: [] } });
+    unexpected.push(path); return route.fulfill({ status: 404, body: "{}" });
+  });
+  await page.goto("/e2e/monitor-control-fixture.html?lang=de");
+  const table = page.locator('[data-table-id="bus-monitor"]');
+  const decoded = table.locator("tbody td:last-child");
+  await expect(decoded).toContainText("Beleuchtungsstärke (9.004): 123 lx");
+  await wordsIntact(decoded); await scrollsLocally(page, table);
+  expect(unexpected).toEqual([]);
+});
 
 const frames = [
   { priority: "urgent", repeated: true, hopCount: 0 },

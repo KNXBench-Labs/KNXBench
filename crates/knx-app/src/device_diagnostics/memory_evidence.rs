@@ -7,6 +7,7 @@ use chrono::{DateTime, Utc};
 use knx_core::commissioning::declared_memory::{
     DeclaredRange, DeclaredRanges, STANDARD_FRAME_CHUNK_OCTETS,
 };
+use knx_core::commissioning::memory_download::property_matches;
 use knx_core::commissioning::properties::PID_HARDWARE_TYPE;
 use knx_core::{DeviceId, Project};
 use knx_net::commissioning::diagnostic_export::{self as net, MemoryItem, MemoryRequest, Status};
@@ -15,7 +16,7 @@ use knx_productdb::declared_segments::{derive_declared_segments, DeclaredSegment
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::AtomicBool;
 
-use super::{hex, is_token, prepare, readings, Export, Prepared, Report, KIND};
+use super::{hex, is_token, prepare, readings, Export, Prepared, Reading, Report, KIND};
 
 pub use knx_productdb::declared_segments::PROFILE as MEMORY_PROFILE;
 
@@ -390,10 +391,18 @@ pub(crate) fn validate(report: &Report, m: &MemoryEvidence) -> Result<(), String
             "read" => bytes.len() == requested && chunk.error.is_none(),
             "partial" => bytes.len() != requested && chunk.error.is_some(),
             "refused-ambiguous" | "error" => bytes.is_empty() && chunk.error.is_some(),
-            "not-read" => bytes.is_empty() && chunk.attempted_at.is_none() && chunk.error.is_none(),
+            "not-read" => {
+                bytes.is_empty()
+                    && chunk.attempted_at.is_none()
+                    && chunk.completed_at.is_none()
+                    && chunk.error.is_none()
+            }
             _ => false,
         };
-        if !shape_ok || !status_ok {
+        if !shape_ok
+            || !status_ok
+            || !(chunk.status == "not-read" || attempted_then_completed(chunk))
+        {
             return invalid();
         }
     }
@@ -405,15 +414,58 @@ pub(crate) fn validate(report: &Report, m: &MemoryEvidence) -> Result<(), String
     {
         return invalid();
     }
-    // Memory is requested only after all three identity reads were exact.
-    let any_attempted = m.chunks.iter().any(|c| c.attempted_at.is_some());
-    if any_attempted
-        && report
-            .items
-            .iter()
-            .any(|item| item.status != Status::Read.name())
-    {
+    // Memory is requested only after the device showed the asserted identity.
+    let memory_entered = m.chunks.iter().any(|c| {
+        c.status != "not-read"
+            || c.attempted_at.is_some()
+            || c.completed_at.is_some()
+            || !c.bytes.is_empty()
+    });
+    let Some(hardware_type) = unhex(&comparison.inline_data) else {
+        return invalid();
+    };
+    if memory_entered && !identity_admits(report, &hardware_type) {
         return invalid();
     }
     Ok(())
+}
+
+/// A chunk with an outcome was attempted, then completed, in that order.
+fn attempted_then_completed(chunk: &ChunkReading) -> bool {
+    let parse = |t: &Option<String>| {
+        t.as_deref()
+            .and_then(|t| DateTime::parse_from_rfc3339(t).ok())
+    };
+    matches!(
+        (parse(&chunk.attempted_at), parse(&chunk.completed_at)),
+        (Some(attempted), Some(completed)) if completed >= attempted
+    )
+}
+
+/// The collector's own admission, re-checked from the archive: all three
+/// identity items exactly read (one element for each property, none for the
+/// descriptor), the descriptor equal to the asserted mask, PID12 equal to the
+/// asserted manufacturer and PID78 `property_matches` the recorded comparison.
+fn identity_admits(report: &Report, hardware_type: &[u8]) -> bool {
+    let [descriptor, manufacturer, hardware] = &report.items[..] else {
+        return false;
+    };
+    let exact = |item: &Reading, elements: Option<u8>| {
+        item.status == Status::Read.name()
+            && item.bytes.len() == item.expected_bytes
+            && item.received_bytes == item.bytes.len()
+            && item.returned_elements == elements
+    };
+    let word = |item: &Reading| match item.bytes[..] {
+        [high, low] => Some(u16::from_be_bytes([high, low])),
+        _ => None,
+    };
+    exact(descriptor, None)
+        && exact(manufacturer, Some(1))
+        && exact(hardware, Some(1))
+        && report.asserted_mask.is_some()
+        && word(descriptor) == report.asserted_mask
+        && report.asserted_manufacturer.is_some()
+        && word(manufacturer) == report.asserted_manufacturer
+        && property_matches(&hardware.bytes, hardware_type)
 }

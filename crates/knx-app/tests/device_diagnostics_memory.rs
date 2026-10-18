@@ -344,3 +344,115 @@ async fn the_largest_admitted_profile_fits_the_archive_limits() {
     let bytes = bundle_export(&export).unwrap();
     assert_eq!(read_export(&bytes).unwrap(), export);
 }
+
+/// Re-encodes `report.json`, `properties.json` (always the report's items)
+/// and `memory.json` after `edit`, and rewrites the manifest's sizes and
+/// hashes to match, so only the reader's semantic checks can refuse it.
+fn rehashed(
+    original: &[u8],
+    edit: impl FnOnce(&mut serde_json::Value, &mut serde_json::Value),
+) -> Vec<u8> {
+    let member = |name: &str| {
+        let mut zip = zip::ZipArchive::new(Cursor::new(original)).unwrap();
+        let mut data = vec![];
+        zip.by_name(name).unwrap().read_to_end(&mut data).unwrap();
+        serde_json::from_slice::<serde_json::Value>(&data).unwrap()
+    };
+    let (mut report, mut memory) = (member("report.json"), member("memory.json"));
+    edit(&mut report, &mut memory);
+    let encoded = [
+        ("report.json", serde_json::to_vec_pretty(&report).unwrap()),
+        (
+            "properties.json",
+            serde_json::to_vec_pretty(&report["items"]).unwrap(),
+        ),
+        ("memory.json", serde_json::to_vec_pretty(&memory).unwrap()),
+    ];
+    let edited = rewrite(original, |name, data| {
+        Some(
+            encoded
+                .iter()
+                .find(|(n, _)| *n == name)
+                .map_or(data, |(_, v)| v.clone()),
+        )
+    });
+    rewrite(&edited, |name, data| {
+        if name != "manifest.json" {
+            return Some(data);
+        }
+        let mut v: serde_json::Value = serde_json::from_slice(&data).unwrap();
+        for (n, bytes) in &encoded {
+            v["files"][n]["bytes"] = bytes.len().into();
+            v["files"][n]["sha256"] = sha256(bytes).into();
+        }
+        Some(serde_json::to_vec_pretty(&v).unwrap())
+    })
+}
+
+type Edit = fn(&mut serde_json::Value, &mut serde_json::Value);
+
+/// Every named edit that the reader accepted; each edit breaks one rule.
+fn accepted(original: &[u8], cases: &[(&'static str, Edit)]) -> Vec<&'static str> {
+    // The unedited re-encoding is accepted, so a refusal below is the rule's.
+    read_export(&rehashed(original, |_, _| {})).expect("re-encoding alone is accepted");
+    cases
+        .iter()
+        .filter(|(_, edit)| read_export(&rehashed(original, edit)).is_ok())
+        .map(|(name, _)| *name)
+        .collect()
+}
+
+#[tokio::test]
+async fn memory_evidence_is_refused_unless_the_recorded_identity_admits_it() {
+    let original = bundle_export(&export().await).unwrap();
+    let cases: &[(&'static str, Edit)] = &[
+        ("descriptor differs from the asserted mask", |r, _| {
+            r["items"][0]["bytes"] = serde_json::json!([7, 5]);
+        }),
+        ("asserted mask contradicts the descriptor", |r, _| {
+            r["assertedMask"] = 0x0705.into();
+        }),
+        ("PID12 differs from the asserted manufacturer", |r, _| {
+            r["items"][1]["bytes"] = serde_json::json!([0, 2]);
+        }),
+        ("asserted manufacturer contradicts PID12", |r, _| {
+            r["assertedManufacturer"] = 2.into();
+        }),
+        ("PID78 does not match the recorded inlineData", |r, _| {
+            r["items"][2]["bytes"] = serde_json::json!([0, 1, 0, 0, 0, 0x5C]);
+        }),
+        ("recorded inlineData does not match PID78", |_, m| {
+            m["hardwareTypeComparison"]["inlineData"] = "00010000005c00000000".into();
+        }),
+        ("PID12 returned two elements", |r, _| {
+            r["items"][1]["returnedElements"] = 2.into();
+        }),
+        ("PID78 returned no element count", |r, _| {
+            r["items"][2]["returnedElements"] = serde_json::Value::Null;
+        }),
+        ("the descriptor carries an element count", |r, _| {
+            r["items"][0]["returnedElements"] = 1.into();
+        }),
+        ("a read chunk lost its attempt time", |_, m| {
+            m["chunks"][0]["attemptedAt"] = serde_json::Value::Null;
+        }),
+        ("a read chunk lost its completion time", |_, m| {
+            m["chunks"][0]["completedAt"] = serde_json::Value::Null;
+        }),
+        ("a chunk completed before it was attempted", |_, m| {
+            m["chunks"][0]["completedAt"] = "2000-01-01T00:00:00+00:00".into();
+        }),
+        ("an unread chunk carries a completion time", |r, m| {
+            // Otherwise a consistent cancellation before the last chunk.
+            let last = &mut m["chunks"][3];
+            last["status"] = "not-read".into();
+            last["bytes"] = "".into();
+            last["receivedOctets"] = 0.into();
+            last["attemptedAt"] = serde_json::Value::Null;
+            m["ranges"][1]["coverage"]["read"] = 0.into();
+            m["ranges"][1]["coverage"]["notRead"] = 12.into();
+            r["stopReason"] = "cancelled".into();
+        }),
+    ];
+    assert_eq!(accepted(&original, cases), Vec::<&str>::new());
+}

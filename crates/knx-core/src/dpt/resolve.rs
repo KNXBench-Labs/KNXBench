@@ -57,7 +57,8 @@ pub enum GroupAddressDpt {
 /// - A `ga` that names no group address in `project` at all resolves to
 ///   `None`, the same as one nothing links to. This function never panics
 ///   on an unknown id; it has no way to tell "unknown" from "known but
-///   unlinked" apart, and no caller listed in the spec needs it to.
+///   unlinked" apart. The bus monitor separately snapshots the project's
+///   raw group-address membership to distinguish those unresolved cases.
 ///
 /// # Before you widen the inputs
 ///

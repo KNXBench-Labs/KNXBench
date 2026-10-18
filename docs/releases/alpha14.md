@@ -147,11 +147,46 @@ networking. Publishing an image does not replace any existing container.
 - No new `.knxproj` export, KNX Secure, individual-address programming, firmware
   replacement or little-endian download support is added.
 
+## By the numbers (a release, in six takes)
+
+Alpha 14 needed **six release candidates**. Not for lack of confidence: every
+retake found something real, and none of it was in the new product-data code.
+
+| Take | What it found | Verdict |
+| --- | --- | --- |
+| 1 | The Docker image **would not have built** on either architecture: since the browser temp helper moved to `tools/` one day earlier, the web build reached for a file the image never copied. Caught by a dry run, not by you. | Fixed, plus a guard test |
+| 2 | Two native browser specs still believed every tree starts unfolded. | Fixed |
+| 3 | Two flaky tests that only misbehaved on a heavily loaded machine, and a product-database matrix still counting in schema v23. | Fixed, re-pinned |
+| 4 | Lived four and a half minutes. | Retired before its gate |
+| 5 | Green through web gate, Rust, native and corpus; superseded by the matrix re-pin. | Retired honourably |
+| 6 | Nothing. That is the one you are downloading. | Tagged |
+
+- **84 commits**, 446 files, +31,970 / −1,452 lines and 7 new ADRs since Alpha 13.
+- **7 release-gate attempts** over about **6.4 hours** of gate time; the final one
+  ran **36 of 36 stages green** in 97 minutes with its inputs frozen.
+- **About 40,500 test executions** across those attempts: 14,968 Vitest, 19,528
+  Rust, 4,064 browser, 1,332 tool and 612 private-corpus tests.
+- **839 deliberate repeats** to corner two flakes: a test that retried a refused
+  import before the first refusal had finished answering (219 runs), and a Linux
+  multicast table that changed between two reads of the same file (620 runs).
+  The first now fails every time its fix is removed; the second failed 2 times in
+  160 under deliberate churn, and 0 times in 200 with the fix.
+- **12 packaging dry runs**, 62 runner minutes, **0 accidental publications**.
+- **33 real manufacturer ZIPs** run through the new installer: 30 install with the
+  default bounds, 2 with the large profile, 1 is refused for backslash paths, which
+  is the right answer.
+- **6 of 102** product-matrix numbers moved for schema v24, each predicted in
+  advance by an independent XML count.
+- The final gate's own figures: Vitest 3,742, fixture Chromium 596, 15 production
+  browser configs 341, 8 further configs 41, Rust 4,882 passed / 0 failed / 212
+  ignored, native checks 24, tools 223, private corpus 153 of 153 in 33 targets,
+  product corpus 16 cases in 6 targets.
+
 ## Distribution
 
-Candidate for **18 October 2026**; source acceptance and public artifact
-verification are recorded separately after execution. No publication is claimed
-by this scope note alone.
+Published on **18 October 2026** from the gated commit `8d104e2f`
+([source acceptance](alpha14-acceptance.md),
+[publication record](../evidence/release-alpha14-2026-10-18.json)).
 
 Linux x86-64 AppImage and standalone `knx-mcp` with `SHA256SUMS`; Docker image
 `knxbench/knxbench-server:0.1.0-alpha.14` for `linux/amd64` and `linux/arm64`.

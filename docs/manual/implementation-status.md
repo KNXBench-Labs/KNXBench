@@ -89,11 +89,10 @@ This chapter is the honest inventory: what exists, what half exists, and what
 does not exist at all, area by area across the whole application.
 
 The detailed inventory retains its **8 October 2026** source audit and dated
-follow-ups. The next packaged snapshot is [Alpha 14](../releases/alpha14.md).
-Alpha 13 was published on 16 October 2026 ([source acceptance](../releases/alpha13-acceptance.md),
-[public artifact verification](../evidence/release-alpha13-2026-10-16.json)).
-Alpha 14's acceptance and publication checks are recorded separately; neither
-expands device admission.
+follow-ups. The current public snapshot is [Alpha 14](../releases/alpha14.md),
+published on 18 October 2026. [Source acceptance](../releases/alpha14-acceptance.md)
+and [public artifact verification](../evidence/release-alpha14-2026-10-18.json)
+pass independently; neither expands device admission.
 The version number is where the project starts counting, not a claim that
 anything has reached a finish line.
 

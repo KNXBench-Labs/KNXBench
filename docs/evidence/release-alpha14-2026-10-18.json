@@ -1,0 +1,120 @@
+{
+  "schema": "knxbench-release-publication/1",
+  "tag": "v0.1.0-alpha.14",
+  "candidate": "8d104e2f91cf7f29fa9bdbf146a9e75e80ba72d1",
+  "published_date": "2026-10-18",
+  "release_url": "https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.14",
+  "prerelease": true,
+  "draft": false,
+  "source_acceptance": "../releases/alpha14-acceptance.md",
+  "dry_runs": [
+    {
+      "workflow": "Linux AppImage",
+      "run_id": 39118142434,
+      "head_sha": "8d104e2f91cf7f29fa9bdbf146a9e75e80ba72d1",
+      "build": "success",
+      "publish_job": "skipped"
+    },
+    {
+      "workflow": "Docker release",
+      "run_id": 39118144327,
+      "head_sha": "8d104e2f91cf7f29fa9bdbf146a9e75e80ba72d1",
+      "build": "success (linux/amd64, linux/arm64)",
+      "publish_job": "skipped"
+    }
+  ],
+  "workflows": [
+    {
+      "workflow": "Linux AppImage",
+      "event": "push",
+      "run_id": 39124698698,
+      "head_sha": "8d104e2f91cf7f29fa9bdbf146a9e75e80ba72d1",
+      "build": "success",
+      "publication_success": true
+    },
+    {
+      "workflow": "Docker release",
+      "event": "push",
+      "run_id": 39124698730,
+      "head_sha": "8d104e2f91cf7f29fa9bdbf146a9e75e80ba72d1",
+      "build": "success (linux/amd64, linux/arm64)",
+      "publication_success": true
+    }
+  ],
+  "assets": [
+    {
+      "name": "knx-mcp-x86_64-linux",
+      "bytes": 12803496,
+      "sha256": "a4a4612d371fabbecaab990c0c15fb69c0b520d5a858249999f79e36e87252ae"
+    },
+    {
+      "name": "KNXBench_0.1.0-alpha.14_amd64.AppImage",
+      "bytes": 89893368,
+      "sha256": "063a27022cbe33ac816db3efe8091b5d7395a646ae721433ef8410dd54eda571"
+    },
+    {
+      "name": "SHA256SUMS",
+      "bytes": 194,
+      "sha256": "beb9aaf246d8154dcad2fa1059b31a8dd703b8f65ca8569b34614f88b92b8218"
+    }
+  ],
+  "sha256sums_check": "sha256sum -c SHA256SUMS exit 0 on the public download",
+  "mcp_version": "knx-mcp 0.1.0-alpha.14+g8d104e2",
+  "mcp_build_suffix_is_tag_prefix": true,
+  "appimage": {
+    "libwayland_client_bundled": 0,
+    "scope": "Broadway headless embedded-server startup/API/frontend in a loopback-only namespace with isolated HOME/XDG; not FUSE launch, Mesa EGL, native visual or screen-reader acceptance",
+    "api_version": "0.1.0-alpha.14+g8d104e2",
+    "frontend_status": 200,
+    "egl_bad_or_abort_lines": 0,
+    "owned_process_teardown": "term"
+  },
+  "docker": {
+    "image": "docker.io/knxbench/knxbench-server:0.1.0-alpha.14",
+    "index_digest": "sha256:6c7c1a3bbba8a74c56d4cb6e42d708080a6885be7ab6997f599df31209fb6826",
+    "latest_index_digest_equal": true,
+    "platforms": [
+      "linux/amd64",
+      "linux/arm64"
+    ],
+    "oci_labels": {
+      "org.opencontainers.image.revision": "8d104e2f91cf7f29fa9bdbf146a9e75e80ba72d1",
+      "org.opencontainers.image.version": "v0.1.0-alpha.14"
+    },
+    "version": "knx-server 0.1.0-alpha.14+g8d104e2",
+    "pulled": "version tag only, anonymous, fresh DOCKER_CONFIG; latest compared in the registry",
+    "smoke": {
+      "network": "none; client shares only the probe's loopback",
+      "checks": [
+        "healthz over HTTPS",
+        "unauthenticated /api/version 401",
+        "login session",
+        "authenticated /api/version 200",
+        "new project 0 errors",
+        "save-as",
+        "reopen keeps the installation"
+      ],
+      "success": true
+    },
+    "migration": {
+      "fixture": "crates/knx-store/tests/fixtures/native13-before-notes-working.sqlite",
+      "fixture_schema": 13,
+      "saved_schema": 16,
+      "checks": [
+        "opens with 0 errors",
+        "explicit save-as",
+        "saved copy reopens with 0 errors",
+        "projected names identical after save and reopen (2/2)",
+        "history endpoint 200 before and after"
+      ],
+      "history_scope": "history endpoint answered; individual undo/redo entries were not compared",
+      "fixture_original_unchanged": true,
+      "success": true
+    },
+    "owner_container": "not touched by verification; the owner's container was itself updated to latest (= this release) at 14:02 local time, between the two verification runs, by a pull/stop/remove/run sequence outside these scripts"
+  },
+  "website": {
+    "verified": false,
+    "note": "no website deployment was part of this release"
+  }
+}

@@ -10,10 +10,11 @@ Every part of KNXBench carries its own version
 ([ADR-0018](../../adr/0018-program-versions-and-file-headers.md)). Since the
 `v0.1.0-alpha.6` release (9 October 2026), application versions have been aligned.
 The CLI, desktop, web frontend, server and `knx-mcp` carry `0.1.0-alpha.14`;
-library crates keep their own numbers. The [Alpha 14 pre-release](../../releases/alpha14.md)
-(October 2026) ships an AppImage, `knx-mcp` and the Docker Hub image
+library crates keep their own numbers. The public [Alpha 14 pre-release](../../releases/alpha14.md)
+was published on **18 October 2026**: AppImage, `knx-mcp` and the Docker Hub image
 `knxbench/knxbench-server`. [Installation](04-installation.md) names the artifacts;
-source acceptance and publication verification are recorded separately.
+[source acceptance](../../releases/alpha14-acceptance.md) and
+[publication verification](../../evidence/release-alpha14-2026-10-18.json) are separate.
 
 Alpha 14 adds the parameter workspace with declared grids, block access and
 separators, function choices below each object, note decisions before deletes,

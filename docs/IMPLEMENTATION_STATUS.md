@@ -12,6 +12,18 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## UI-06: labelled object counts, bounded topology cards (18 October 2026)
+
+Presentation only, no API, schema or stored-data change. Owner request 9. The number
+on the right of a device tile (Topology, and the same tile in Buildings) is
+`DeviceNode.com_object_count`, the length of the device's communication-object list
+regardless of `is_active`; it was shown bare. It now reads "N object(s)" /
+"N Objekt(e)" through the plural catalogue, with the full "communication object(s)"
+as hover text. Line cards are a grid with a 28rem column ceiling and device rows a
+32rem ceiling, so name and count stay a short glance apart on a widescreen; long
+names ellipsise with a title. Still cards, not a data table: no column resizing.
+[Contract](contracts/topology-metrics.md).
+
 ## UI-02: compact button variants, visible navigation separators (18 October 2026)
 
 Presentation only, no API, schema, theme-pack or stored-data change. Owner

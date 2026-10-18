@@ -49,8 +49,8 @@ const USAGE: &str = "usage: knx import <file.knxproj> [--store <path.knxdb> [--r
      \x20     knx contribution export <file> <out.zip> --options <options.json>\n\
      \x20         (offline evidence, no installation or upload; export never overwrites)\n\
      \x20     knx products list [--manufacturer M-xxxx] [--product-db <path>]\n\
-     \x20     knx products ingest <file.knxproj|file.knxprod|file.vd2> [--product-db <path>] [--allow-large-package]\n\
-     \x20     knx products update <file.knxprod> [--product-db <path>] [--allow-large-package] [--confirm <token>]\n\
+     \x20     knx products ingest <file.knxproj|file.knxprod|file.zip|file.vd2> [--product-db <path>] [--allow-large-package]\n\
+     \x20     knx products update <file.knxprod|file.zip> [--product-db <path>] [--allow-large-package] [--confirm <token>]\n\
      \x20     knx products restore <backup.sqlite> [--product-db <path>]\n\
      \x20     knx products inspect-legacy <file.vd3|file.vd4|file.vd5|file.pr5>\n\
      \x20                  [--password-stdin | --password-file <path>]\n\
@@ -1724,6 +1724,72 @@ fn read_bounded_package(
     Ok(Ok(bytes))
 }
 
+/// A size refusal of the package itself or of one inner package of a wrapper.
+fn is_size_refusal(error: &knx_productdb::PackageError) -> bool {
+    match error {
+        knx_productdb::PackageError::SizeLimit { .. } => true,
+        knx_productdb::PackageError::WrapperMember { error, .. } => is_size_refusal(error),
+        _ => false,
+    }
+}
+
+fn print_package_report(prefix: &str, report: &knx_productdb::InstallReport) {
+    println!(
+        "{prefix}package installed: scheme {}, {} member(s), {} unknown construct(s), {} conflict(s), \
+         {} translation(s) captured (program {}, catalog {}, hardware {}, master {}), \
+         {} datapoint type(s) dropped as duplicates{}",
+        report.scheme,
+        report.members.len(),
+        report.unknown,
+        report.conflicts.len(),
+        report.translations.total(),
+        report.translations.program,
+        report.translations.catalog,
+        report.translations.hardware,
+        report.translations.master,
+        report.dropped_datapoint_types,
+        if report.skipped {
+            format!(
+                " (already known; {} source name(s))",
+                report.source_names.len()
+            )
+        } else {
+            String::new()
+        },
+    );
+    print_install_facts(report.facts.as_ref());
+}
+
+/// A plain package prints exactly the line it always did; a vendor ZIP
+/// prints one block per inner package and names every other member.
+fn print_product_file_install(installed: &knx_productdb::ProductFileInstall) {
+    let Some(wrapper) = installed.wrapper.as_ref() else {
+        for package in &installed.packages {
+            print_package_report("", &package.report);
+        }
+        return;
+    };
+    println!(
+        "vendor ZIP: {} product package(s) installed together, {} other member(s) not installed",
+        installed.packages.len(),
+        wrapper.other_members.len()
+    );
+    for package in &installed.packages {
+        let path = package.path.as_deref().unwrap_or_default();
+        print_package_report(&format!("inner package {path}: "), &package.report);
+    }
+    for member in &wrapper.other_members {
+        let note = match member.kind {
+            knx_productdb::WrapperMemberKind::File => "",
+            knx_productdb::WrapperMemberKind::AppleDouble => ", macOS metadata",
+        };
+        println!(
+            "not installed: {} ({} bytes, sha256 {}{note})",
+            member.path, member.size, member.sha256
+        );
+    }
+}
+
 fn run_products_ingest(args: &[String]) -> ExitCode {
     let (product_db, rest) = match split_product_db_flag(args) {
         Ok(v) => v,
@@ -1745,7 +1811,7 @@ fn run_products_ingest(args: &[String]) -> ExitCode {
         knx_productdb::PackageLimits::STANDARD
     };
     let Some(file) = rest.first() else {
-        eprintln!("missing <file.knxproj|file.knxprod|file.vd2>\n{USAGE}");
+        eprintln!("missing <file.knxproj|file.knxprod|file.zip|file.vd2>\n{USAGE}");
         return ExitCode::FAILURE;
     };
 
@@ -1754,13 +1820,16 @@ fn run_products_ingest(args: &[String]) -> ExitCode {
         return ExitCode::FAILURE;
     }
 
-    if Path::new(file)
+    let extension = Path::new(file)
         .extension()
-        .and_then(|extension| extension.to_str())
-        .is_some_and(|extension| {
-            extension.eq_ignore_ascii_case("knxprod") || extension.eq_ignore_ascii_case("vd2")
-        })
-    {
+        .and_then(|extension| extension.to_str());
+    let is_package = extension.is_some_and(|extension| {
+        extension.eq_ignore_ascii_case("knxprod") || extension.eq_ignore_ascii_case("vd2")
+    });
+    // A vendor ZIP of product packages (ADR-0140); a project archive under a
+    // `.zip` name still reaches the project import below.
+    let is_zip = extension.is_some_and(|extension| extension.eq_ignore_ascii_case("zip"));
+    if is_package || is_zip {
         // Size admission precedes reading the file and opening (or creating)
         // the product database, so an oversized input neither lands in memory
         // nor touches the store.
@@ -1782,50 +1851,30 @@ fn run_products_ingest(args: &[String]) -> ExitCode {
                 return ExitCode::FAILURE;
             }
         };
-        return match knx_productdb::install_package_with_limits(&conn, file, &bytes, limits) {
-            Ok(report) => {
-                println!(
-                    "package installed: scheme {}, {} member(s), {} unknown construct(s), {} conflict(s), \
-                     {} translation(s) captured (program {}, catalog {}, hardware {}, master {}), \
-                     {} datapoint type(s) dropped as duplicates{}",
-                    report.scheme,
-                    report.members.len(),
-                    report.unknown,
-                    report.conflicts.len(),
-                    report.translations.total(),
-                    report.translations.program,
-                    report.translations.catalog,
-                    report.translations.hardware,
-                    report.translations.master,
-                    report.dropped_datapoint_types,
-                    if report.skipped {
-                        format!(
-                            " (already known; {} source name(s))",
-                            report.source_names.len()
-                        )
-                    } else {
-                        String::new()
-                    },
-                );
-                print_install_facts(report.facts.as_ref());
-                ExitCode::SUCCESS
+        match knx_productdb::install_product_file(&conn, file, &bytes, limits) {
+            Ok(installed) => {
+                print_product_file_install(&installed);
+                return ExitCode::SUCCESS;
             }
+            Err(knx_productdb::PackageError::ProjectArchive) if is_zip => {}
             Err(error) => {
                 eprintln!("failed to install product package {file}: {error}");
-                if !allow_large && matches!(error, knx_productdb::PackageError::SizeLimit { .. }) {
+                if !allow_large && is_size_refusal(&error) {
                     eprintln!(
                         "hint: if a member exceeds 64 MiB or the package expands beyond 256 MiB, \
                          --allow-large-package raises these bounds to 256 MiB and 4 GiB \
                          (more memory, time and database space; the 256 MiB file bound stays)"
                     );
                 }
-                ExitCode::FAILURE
+                return ExitCode::FAILURE;
             }
-        };
+        }
     }
 
     if allow_large {
-        eprintln!("--allow-large-package applies to .knxprod product packages only");
+        eprintln!(
+            "--allow-large-package applies to .knxprod product packages and vendor ZIPs only"
+        );
         return ExitCode::FAILURE;
     }
 

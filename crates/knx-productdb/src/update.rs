@@ -18,8 +18,8 @@ use serde::Serialize;
 use crate::blob::sha256_hex;
 use crate::migration::{writable_memory_copy, READ_ONLY_BUSY_TIMEOUT};
 use crate::{
-    install_package_with_limits, open_and_migrate, InstallReport, PackageError, PackageLimits,
-    ProductDbError, CURRENT_PRODUCTDB_VERSION,
+    install_product_file, open_and_migrate, PackageError, PackageLimits, ProductDbError,
+    ProductFileInstall, WrapperMember, CURRENT_PRODUCTDB_VERSION,
 };
 
 /// Pause between online-backup steps when the source is busy.
@@ -74,6 +74,27 @@ pub struct UpdatePreview {
     pub catalogue_fingerprint: String,
     /// Binds adoption to this preview and catalogue state.
     pub token: String,
+    /// Present when the file is a vendor wrapper of product packages
+    /// (ADR-0140); `programs` then spans every inner package.
+    pub wrapper: Option<WrapperPreview>,
+}
+
+/// The packages and other members of a previewed vendor wrapper.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WrapperPreview {
+    pub packages: Vec<WrapperPackagePreview>,
+    /// Reported, never stored.
+    pub other_members: Vec<WrapperMember>,
+}
+
+/// One inner package of a previewed wrapper.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WrapperPackagePreview {
+    pub path: String,
+    pub sha256: String,
+    pub already_installed: bool,
 }
 
 /// The outcome of [`apply_package_update`].
@@ -82,7 +103,8 @@ pub struct AppliedUpdate {
     pub preview: UpdatePreview,
     /// A full copy of the product database taken right before the install.
     pub backup: PathBuf,
-    pub report: InstallReport,
+    /// The installed package, or every inner package of a wrapper.
+    pub installed: ProductFileInstall,
 }
 
 /// Why an update or restore was refused.
@@ -213,11 +235,18 @@ pub fn preview_package_update(
     let products_before = count(&conn, "product")?;
     let links_before = count(&conn, "hardware2program")?;
 
-    let report = install_package_with_limits(&conn, source_name, bytes, limits)
-        .map_err(UpdateError::Package)?;
+    let installed =
+        install_product_file(&conn, source_name, bytes, limits).map_err(UpdateError::Package)?;
 
-    let programs = program_rows(&conn, PACKAGE_PROGRAMS, Some(&report.sha256))?
-        .into_iter()
+    // One row per program id across every installed package, ordered by id.
+    let mut rows = std::collections::BTreeMap::new();
+    for package in &installed.packages {
+        for row in program_rows(&conn, PACKAGE_PROGRAMS, Some(&package.report.sha256))? {
+            rows.entry(row.id.clone()).or_insert(row);
+        }
+    }
+    let programs = rows
+        .into_values()
         .map(|row| {
             let installed_versions: Vec<InstalledVersion> = before
                 .iter()
@@ -252,23 +281,45 @@ pub fn preview_package_update(
         .collect::<Vec<_>>();
     let products_added = count(&conn, "product")?.saturating_sub(products_before);
     let hardware2programs_added = count(&conn, "hardware2program")?.saturating_sub(links_before);
+    let wrapper = installed.wrapper.as_ref().map(|contents| WrapperPreview {
+        packages: installed
+            .packages
+            .iter()
+            .map(|package| WrapperPackagePreview {
+                path: package.path.clone().unwrap_or_default(),
+                sha256: package.report.sha256.clone(),
+                already_installed: package.report.skipped,
+            })
+            .collect(),
+        other_members: contents.other_members.clone(),
+    });
+    // A plain package keeps the token text it always had.
+    let wrapper_binding = wrapper
+        .as_ref()
+        .map(|wrapper| format!("\n{wrapper:?}"))
+        .unwrap_or_default();
     let token = sha256_hex(
         format!(
-            "catalogue-update-v1\n{catalogue_fingerprint}\n{}\n{source_name}\n{programs:?}\n{products_added}\n{hardware2programs_added}",
-            report.sha256
+            "catalogue-update-v1\n{catalogue_fingerprint}\n{}\n{source_name}\n{programs:?}\n{products_added}\n{hardware2programs_added}{wrapper_binding}",
+            installed.sha256
         )
         .as_bytes(),
     );
     Ok(UpdatePreview {
         source_name: source_name.to_string(),
-        package_sha256: report.sha256.clone(),
-        package_already_installed: report.skipped,
+        package_sha256: installed.sha256.clone(),
+        package_already_installed: installed.packages.iter().all(|p| p.report.skipped),
         programs,
         products_added,
         hardware2programs_added,
-        id_conflicts: report.conflicts.len(),
+        id_conflicts: installed
+            .packages
+            .iter()
+            .map(|package| package.report.conflicts.len())
+            .sum(),
         catalogue_fingerprint,
         token,
+        wrapper,
     })
 }
 
@@ -334,12 +385,12 @@ pub fn apply_package_update(
     let backup = backup_path(path, &preview.package_sha256)?;
     write_backup(path, &backup)?;
     let conn = open_and_migrate(path)?;
-    let report = install_package_with_limits(&conn, source_name, bytes, limits)
-        .map_err(UpdateError::Package)?;
+    let installed =
+        install_product_file(&conn, source_name, bytes, limits).map_err(UpdateError::Package)?;
     Ok(AppliedUpdate {
         preview,
         backup,
-        report,
+        installed,
     })
 }
 

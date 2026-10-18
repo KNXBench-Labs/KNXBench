@@ -207,7 +207,17 @@ knx products ingest catalogue.knxprod
 ```
 
 Adds product data to the database. It accepts a `.knxproj` project (ingesting the
-manufacturer data embedded in it) or a `.knxprod` product package.
+manufacturer data embedded in it), a `.knxprod` product package, or *(since Alpha 14)*
+a manufacturer's ZIP download that holds one or more `.knxprod` packages:
+
+```bash
+knx products ingest Vendor_Download.zip
+```
+
+A ZIP like that installs every package inside it together, each exactly as it is in
+the ZIP, or none of them if one is refused (the message names the package). Manuals
+and other files in the ZIP are listed as `not installed: <path> (<size> bytes, sha256
+…)` and are not stored; keep the download.
 
 For a `.knxprod` package it prints one line covering the scheme, member count, unknown
 constructs, conflicts, captured translations and dropped duplicate datapoint types.
@@ -220,6 +230,9 @@ raises these two bounds to 256 MiB and 4 GiB:
 ```bash
 knx products ingest Siemens_HVAC_All_PDB.knxprod --allow-large-package
 ```
+
+The option also works for a manufacturer ZIP whose package inside is that large; the
+packages inside one ZIP share the same 4 GiB budget.
 
 Expect it to take minutes, close to a gigabyte of memory and several gigabytes of
 database space for the largest bundles. The file itself must still be at most 256 MiB, and

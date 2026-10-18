@@ -106,8 +106,86 @@ fn the_opt_in_is_refused_for_a_project_file() {
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert_eq!(output.status.code(), Some(1), "{stderr}");
     assert!(
-        stderr.contains("--allow-large-package applies to .knxprod product packages only"),
+        stderr.contains(
+            "--allow-large-package applies to .knxprod product packages and vendor ZIPs only"
+        ),
         "{stderr}"
     );
     assert!(!database.exists(), "nothing is opened for a refused option");
+}
+
+/// The census case (ADR-0140): a vendor ZIP whose inner package needs the
+/// large profile. The wrapper layer is small; the inner package is not.
+fn vendor_zip_around_the_large_package(dir: &Path) -> std::path::PathBuf {
+    let inner = dir.join("inner.knxprod");
+    package_with_a_65_mib_member(&inner);
+    let inner = std::fs::read(&inner).unwrap();
+    let mut writer = zip::ZipWriter::new(Cursor::new(Vec::new()));
+    for (name, bytes) in [
+        ("Database/complete.knxprod", inner.as_slice()),
+        ("Database/Readme.pdf", b"%PDF-1.4 readme".as_slice()),
+    ] {
+        writer
+            .start_file(name, SimpleFileOptions::default())
+            .unwrap();
+        writer.write_all(bytes).unwrap();
+    }
+    let path = dir.join("vendor-database.zip");
+    std::fs::write(&path, writer.finish().unwrap().into_inner()).unwrap();
+    path
+}
+
+#[test]
+fn a_vendor_zip_with_a_large_inner_package_names_the_opt_in_then_installs_with_it() {
+    let dir = tempfile::tempdir().unwrap();
+    let input = vendor_zip_around_the_large_package(dir.path());
+    let database = dir.path().join("products.sqlite");
+    let refused = ingest(
+        &[
+            input.as_os_str(),
+            "--product-db".as_ref(),
+            database.as_os_str(),
+        ],
+        &dir.path().join("data"),
+    );
+    let stderr = String::from_utf8_lossy(&refused.stderr);
+    assert_eq!(refused.status.code(), Some(1), "{stderr}");
+    assert!(
+        stderr.contains("inner product package Database/complete.knxprod: product ZIP size limit exceeded: M-0001/Baggages/large.bin"),
+        "{stderr}"
+    );
+    assert!(stderr.contains("--allow-large-package"), "{stderr}");
+
+    let installed = ingest(
+        &[
+            input.as_os_str(),
+            "--allow-large-package".as_ref(),
+            "--product-db".as_ref(),
+            database.as_os_str(),
+        ],
+        &dir.path().join("data"),
+    );
+    let stdout = String::from_utf8_lossy(&installed.stdout);
+    assert_eq!(
+        installed.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&installed.stderr)
+    );
+    assert!(
+        stdout.contains(
+            "vendor ZIP: 1 product package(s) installed together, 1 other member(s) not installed"
+        ),
+        "{stdout}"
+    );
+    assert!(
+        stdout.contains(
+            "inner package Database/complete.knxprod: package installed: scheme 11, 3 member(s)"
+        ),
+        "{stdout}"
+    );
+    assert!(
+        stdout.contains("not installed: Database/Readme.pdf (15 bytes, sha256 "),
+        "{stdout}"
+    );
 }

@@ -170,6 +170,7 @@ records the tested commit separately from artifact publication verification.
 | Installation instructions | Device tab; imported hints, review-first | alpha.10 |
 | Checked parameter editor | Time count, integer slider; source-checked | alpha.10 |
 | Catalogue update with preview | Every package uses review; backup before install, restore/delete listed backups (alpha.12) | alpha.10 |
+| [Vendor ZIP install](adr/0140-vendor-zips-of-product-packages-install-as-a-whole.md) | A manufacturer ZIP of `.knxprod` packages installs all inner packages together (CLI and web preview); other files listed, not stored; large inner packages via the CLI flag | Main-only |
 | Project information | Modeled facts; read-only | alpha.10 |
 | Stored bus access | Redacted by default; reveal one saved endpoint, no connection | alpha.12 |
 | Recorded device state | Load belief; read-only, no bus | alpha.10 |

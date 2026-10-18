@@ -6,6 +6,16 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Vendor ZIPs (18 October 2026, after Alpha 13)
+
+[ADR-0140](../adr/0140-vendor-zips-of-product-packages-install-as-a-whole.md):
+A vendor ZIP installs its inner `.knxprod` packages byte-exact. Every other file
+in it (manuals, legacy `.vd5` databases, plug-ins, nested ZIPs) is listed in the
+install report and the update preview with path, size and SHA-256, but neither
+stored nor opened; the ZIP's own bytes are not stored either. macOS AppleDouble
+sidecars named like a package (RFC 1740 magic) are listed as macOS metadata. The
+user keeps the download. An inner legacy database still needs its own legacy import.
+
 <!-- BEGIN retained catalogue record -->
 
 ## §134 Baggage is inventoried, not interpreted

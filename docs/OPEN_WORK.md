@@ -35,12 +35,14 @@ open work in this order:
 1. ~~**Correctness:** block/separator `Access` and separators outside declared
    grids~~ — done ([ADR-0139](adr/0139-block-access-and-separators-reach-the-parameter-tab.md);
    remaining boundaries in [KL-003](limitations/KL-003-parameter-evaluation-and-editing-boundaries.md#product-database-gap-census-17-october-2026)).
-2. **Install:** vendor wrapper ZIPs fail as "missing knx_master.xml" although
-   their inner packages install; complete manufacturer databases need the large
-   profile, which the web app does not offer, and one grew a 4.56 GB product
-   database. A wrapper whose inner package exceeds 64 MiB has no route at all:
-   the size bounds refuse it, and `--allow-large-package` refuses `.zip` names
-   ([addendum](research/2026-10-17-product-database-gap-census.md#addendum-two-more-databases-17-october-2026-later)).
+2. ~~**Install:** vendor wrapper ZIPs fail as "missing knx_master.xml"~~ — done
+   ([ADR-0140](adr/0140-vendor-zips-of-product-packages-install-as-a-whole.md)):
+   CLI and web install every inner package together, other files are listed with
+   their digest, and `--allow-large-package` covers vendor ZIPs. **Still open:**
+   the large profile stays CLI-only (the web needs progress and cancellation
+   first, [KL-151](limitations/KL-151-product-package-size-profiles.md)), and
+   database growth (one complete database grew to 4.56 GB) waits for a
+   per-table measurement (census step 5).
 3. **Editors:** packed `TypeTime` units are offered as a decimal count; they
    should fall back until their encoding is evidenced. `TypeDate` (first seen
    in the addendum) is unmodelled and edited as free text; its value format

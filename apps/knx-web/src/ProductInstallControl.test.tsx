@@ -171,8 +171,8 @@ describe("ProductInstallControl", () => {
       productsAdded: 1, hardware2programsAdded: 1, idConflicts: 0, catalogueFingerprint: "f".repeat(64), token: "t-1" };
     apiMock.previewCatalogUpdate.mockResolvedValue({ applied: false, preview });
     apiMock.applyCatalogUpdate.mockResolvedValue({ applied: true, preview, backup: "products.sqlite.backup-1-abcdefabcdef.sqlite",
-      report: { sha256: preview.packageSha256, scheme: 20, skipped: false, members: [], unknown: 0, conflicts: 0,
-        translations: { program: 0, catalog: 0, hardware: 0, master: 0 }, droppedDatapointTypes: 0, facts: null } });
+      packages: [{ path: null, report: { sha256: preview.packageSha256, scheme: 20, skipped: false, members: [], unknown: 0, conflicts: 0,
+        translations: { program: 0, catalog: 0, hardware: 0, master: 0 }, droppedDatapointTypes: 0, facts: null } }] });
     const { root, onInstalled } = await render();
     const file = await pick("dimmer.knxprod");
     expect(apiMock.previewCatalogUpdate).toHaveBeenCalledWith(file);

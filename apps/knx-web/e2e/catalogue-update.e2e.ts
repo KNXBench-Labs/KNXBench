@@ -77,7 +77,7 @@ async function fixture(page: Page, language: Language, theme: string, width: num
       f.applies.push({ token: form.includes("fixture-token") });
       if (f.applyMode === "stale") return refuse(409, "catalogueUpdateStale", "the product database or the package changed since the preview; preview again");
       f.backups.unshift({ name: BACKUP, bytes: 3 * 1024 * 1024, modifiedUnixSeconds: 1760270400, identity: "id-newest" });
-      return ok({ applied: true, preview, backup: BACKUP, report });
+      return ok({ applied: true, preview, backup: BACKUP, packages: [{ path: null, report }] });
     }
     if (path === "/api/catalog/backups" && method === "GET") return ok({ backups: f.backups });
     if (path === "/api/catalog/backups/delete" && method === "POST") {

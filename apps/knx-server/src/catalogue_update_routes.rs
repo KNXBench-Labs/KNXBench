@@ -60,6 +60,16 @@ struct AppliedView {
     preview: UpdatePreview,
     /// File name only; never a path.
     backup: String,
+    /// One entry per installed package: the file itself (`path` null) or
+    /// every inner package of a vendor wrapper (ADR-0140).
+    packages: Vec<AppliedPackageView>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct AppliedPackageView {
+    /// Member path inside the wrapper; null for a plain package.
+    path: Option<String>,
     report: CatalogInstallReportDto,
 }
 
@@ -220,7 +230,15 @@ async fn apply(
         applied: true,
         preview: applied.preview,
         backup,
-        report: applied.report.into(),
+        packages: applied
+            .installed
+            .packages
+            .into_iter()
+            .map(|package| AppliedPackageView {
+                path: package.path,
+                report: package.report.into(),
+            })
+            .collect(),
     }))
 }
 

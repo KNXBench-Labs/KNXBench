@@ -234,6 +234,27 @@ Layout indicators (P3–P5, O1, O3), same counting as above:
 
 No `Rename`, `Repeat` or `Button` occurs in the new programs.
 
+## Result: vendor ZIPs (18 October 2026)
+
+[ADR-0140](../adr/0140-vendor-zips-of-product-packages-install-as-a-whole.md)
+installs vendor ZIPs. The real CLI (`knx products ingest`, debug build of the
+feature branch) ran over every top-level ZIP of the local collection that has no
+master and no project folders but holds at least one `*.knxprod` member: 33
+files, one fresh product database each, read in place inside a network-less
+namespace, originals byte-identical afterwards. Counts only:
+
+| Outcome | Files |
+|---|---:|
+| Installed with the standard profile | 30 |
+| Refused by the standard profile with the `--allow-large-package` hint, then installed with it | 2 (product databases of 1,039 MiB and 919 MiB) |
+| Refused: unsafe member path (backslash separators, the correct refusal) | 1 |
+
+47 inner packages were installed and 10 other members reported (manuals and
+other files, 4 of them macOS AppleDouble sidecars named like a `.knxprod`). The
+first run, before the AppleDouble rule, refused exactly the 4 wrappers that carry
+such a sidecar: atomic refusal let one metadata file block the valid package
+beside it, which is why ADR-0140 decides by content (RFC 1740 magic).
+
 ## Suggested order
 
 1. G1/P2 and G2/P1: correctness first, both small and server-led. Done

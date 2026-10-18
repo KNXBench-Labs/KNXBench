@@ -237,8 +237,15 @@ impl ExImDocument {
         &self.tables
     }
 
+    /// The table named `name`, ignoring ASCII case: two measured EX-IM 6.3
+    /// product databases declare `APPLICATION_PROGRAM` where the others write
+    /// `application_program`, with identical column names in identical order
+    /// (census 3, G11). The parser refuses names that differ only in case, so
+    /// the lookup is unambiguous.
     pub fn table(&self, name: &str) -> Option<&ExImTable> {
-        self.tables.iter().find(|t| t.name == name)
+        self.tables
+            .iter()
+            .find(|t| t.name.eq_ignore_ascii_case(name))
     }
 
     pub fn diagnostics(&self) -> &[ExImDiagnostic] {
@@ -414,7 +421,7 @@ impl<'a> Parser<'a> {
             let (table, next) = self.table()?;
             if tables
                 .iter()
-                .any(|t| t.id == table.id || t.name == table.name)
+                .any(|t| t.id == table.id || t.name.eq_ignore_ascii_case(&table.name))
             {
                 return Err(syntax(
                     self.lines.line,

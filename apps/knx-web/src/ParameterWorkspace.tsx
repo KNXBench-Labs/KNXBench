@@ -29,7 +29,8 @@ export default function ParameterWorkspace({ sections, renderField }: Props) {
     ? { label: t("parameters.workspace.ungrouped"), title: undefined }
     : parameterCaption(group, t("parameters.groupNumber", { number: group.number }), t);
   const groupLabel = (group: typeof groups[number]) => caption(group).label;
-  const visible = new Set(rows.filter(row => searching ? matchesParameterSearch(row, query) : row.groupKey === activeKey).map(row => row.key));
+  const displayedGroupLabels = new Map(groups.map(group => [group.key, groupLabel(group)]));
+  const visible = new Set(rows.filter(row => searching ? matchesParameterSearch(row, query, displayedGroupLabels.get(row.groupKey)) : row.groupKey === activeKey).map(row => row.key));
   const current = groups.find(group => group.key === activeKey);
   const selectedRow = rows.find(row => row.key === selected);
   const selectedField = selectedRow?.field;

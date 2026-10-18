@@ -22,7 +22,8 @@ or protocol schema change; product database v24 adds typed presentation columns
   closed, and if the chosen area disappears the workspace returns to the closed
   overview rather than opening a different one.
 - Search covers all available source groups: parameter ID, original name/label,
-  accepted value, option text/value, group caption and module ID. All query terms
+  accepted value, option text/value, displayed group caption (including the
+  localized numbered fallback), retained source template and module ID. All query terms
   must match, without changing canonical order or project state. An empty search
   returns to the previously chosen area, or to the closed overview. Navigation displays search counts and
   clears search when an area is explicitly chosen.

@@ -87,9 +87,10 @@ export function indexParameterWorkspace(sections: readonly ParameterSection[]) {
 }
 
 /** All terms must match; labels/options are searchable but never parsed for identity. */
-export function matchesParameterSearch(row: ParameterWorkspaceRow, query: string): boolean {
+export function matchesParameterSearch(row: ParameterWorkspaceRow, query: string, displayedGroupLabel?: string): boolean {
   const field = row.field;
-  const text = [field.etsId, field.name, field.text, field.value, row.groupLabel, row.scope?.moduleId,
+  const text = [field.etsId, field.name, field.text, field.value, displayedGroupLabel, row.groupLabel,
+    field.group?.labelFill?.template, row.scope?.moduleId,
     ...field.enumOptions.flatMap(option => [option.value, option.text])].join(" ").toLocaleLowerCase();
   return query.trim().toLocaleLowerCase().split(/\s+/u).every(term => text.includes(term));
 }

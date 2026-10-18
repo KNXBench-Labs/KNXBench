@@ -71,6 +71,49 @@ acceptance remains historical, not acceptance of this replacement. No
 Firefox/WebKit/Orca/native-screen-reader, hardware or electrical-plan certification.
 Self-review is not independent approval. Preview/public-variant builds do not deploy.
 
+## Reversible headline entrances (18 October 2026)
+
+All marketing `main h1/h2/h3` headings now enter with the SessionRadar-inspired
+character treatment: `translateY(.3em) rotateX(-45deg)` and opacity 0 → the normal
+reading position and opacity 1, 650ms per character with an up-to-24ms stagger
+(capped at 600ms total stagger for long headings). The existing 720ms,
+random-direction rolling glyphs and rare glitches remain unchanged and resume
+only after an entrance settles. Outer character boxes own the entrance; inner
+glyphs and their pseudo-element twins keep the ambient roll, avoiding competing
+transforms on the same element.
+
+An inset viewport observer starts the entrance and plays the same timeline
+backwards on exit, including reverse character order. A quick direction change
+reuses the exact in-flight animations/current times instead of restarting.
+Finished exits release all animation objects; only the finite exit may continue
+after a heading leaves view, never ambient rolls. The original heading geometry,
+line breaks and accessible labels are preserved.
+
+Manual pause, live OS reduced motion, hidden-document and pagehide cleanup
+cancel both layers and make **all** text readable. No-JS, missing APIs and
+animation-creation failure retain readable static content. Legal/privacy pages
+and the approved Story stay unchanged; no dependency, storage or network action
+is added. Preview and public builds use the same runtime.
+
+Acceptance recipe: `website/tests/verify-headline-reveal.js`, alongside the
+existing headline, four-direction, phosphor, whole-page, language, legal and
+media recipes. It uses real Chromium scroll/animation timelines; its deliberately
+paused midpoint and synthetic pagehide/pageshow are labelled instrumentation,
+not proof of native browser-cache or screen-reader behaviour. Firefox/WebKit
+and native assistive-technology acceptance remain unverified.
+
+Verified locally: website unittest 29/29; Story unittest 76 (one existing skip);
+preview Chromium 654 checks across nine recipes; release Chromium 116 checks
+across three recipes; zero reported page errors or foreign requests. Repeated
+release builds are byte-identical. Browser evidence is local acceptance, not a
+claim that deployment has completed.
+
+**Accepted limitation (owner decision, 18 October 2026):** print/PDF rendering
+is outside this change's acceptance scope. With motion enabled, offscreen
+headings can remain transparent in print output; the independent review observed
+23 of 24 headings hidden. The owner explicitly authorized publication without
+a print-specific fix. Pause motion before printing for readable static headings.
+
 ## Alpha 14 refresh (18 October 2026)
 
 Owner request: bring knxbench.com to Alpha 14, refresh screenshots and videos,

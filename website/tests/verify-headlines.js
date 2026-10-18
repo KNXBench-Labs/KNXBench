@@ -75,8 +75,8 @@ async (page) => {
   await waitForRoll();
   assert('visible-document lifecycle resumes ambient rolls', await active() > 0);
   await page.locator('#start').scrollIntoViewIfNeeded();
-  await page.waitForFunction(() => !document.querySelector('h1').getAnimations({ subtree: true }).some(a => a.id === 'ambient-char-swap'));
-  assert('offscreen hero stops animating', await page.locator('h1').evaluate(h => h.getAnimations({ subtree: true }).length === 0));
+  await page.waitForFunction(() => document.querySelector('h1').getAnimations({ subtree: true }).length === 0, null, { timeout: 3000 });
+  assert('offscreen hero stops animating after its finite reverse entrance', await page.locator('h1').evaluate(h => h.getAnimations({ subtree: true }).length === 0));
   for (const lang of ['de', 'en']) {
     for (const width of [320, 390, 768, 1440]) {
       await page.emulateMedia({ reducedMotion: 'reduce' });

@@ -46,6 +46,24 @@ reads are explicit. Response admission binds server, project and revision.
 cover save, Save As, failed save, native open, import, project switch, catalogue
 install, empty/unavailable databases, count identity and locale formatting.
 
+## Reversible marketing headline entrances (18 October 2026)
+
+Website-only: every DE/EN marketing h1/h2/h3 gains a SessionRadar-style staggered
+650ms fade/vertical/3D entrance. Viewport exit reverses the same timeline;
+interrupted re-entry reverses in place without a jump. Existing 720ms
+random-direction glyph rolls remain, with separate transform ownership and no
+ambient motion during entrance/exit. Motion-off and lifecycle cleanup restore
+all text; no-JS/API-failure fallbacks, accessible labels and layout are retained.
+No app, core, media, legal/privacy or approved-Story change.
+
+Local acceptance: website unittest 29, Story unittest 76 (one existing skip),
+preview Chromium 654 checks in nine recipes and release Chromium 116 checks in
+three recipes; deterministic release rebuild, syntax/docs/local-info green.
+New recipe `website/tests/verify-headline-reveal.js` covers viewport boundaries,
+interrupted reversal, disposal and readable cancellation/fallbacks. Independent
+review completed; the owner accepted the print/PDF limitation and authorized
+commit/push without a print fix. See [website contract](WEBSITE.md#reversible-headline-entrances-18-october-2026).
+
 ## Manual, README and screenshots after Alpha 14 (18 October 2026)
 
 Docs and media only, no application change. The manual's 46 stills, the four

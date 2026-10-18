@@ -13,14 +13,14 @@ tile is used by the Topology view and the Buildings view, so both carry the labe
 
 ## Label
 
-| Language | Visible text | Hover text |
-| --- | --- | --- |
-| EN | `0 objects`, `1 object`, `12345 objects` | `1 communication object`, `12345 communication objects` |
-| DE | `0 Objekte`, `1 Objekt`, `12345 Objekte` | `1 Kommunikationsobjekt`, `12345 Kommunikationsobjekte` |
+| Language | Visible text |
+| --- | --- |
+| EN | `0 communication objects`, `1 communication object`, `12345 communication objects` |
+| DE | `0 Kommunikationsobjekte`, `1 Kommunikationsobjekt`, `12345 Kommunikationsobjekte` |
 
-Keys `workbench.objectCount` and `workbench.objectCountTitle` are plural pairs
-(`.one`/`.other`) resolved by the existing `Intl.PluralRules` helpers. The hover text
-is an addition; the visible label carries the meaning on its own.
+Key `workbench.objectCount` is a plural pair (`.one`/`.other`) resolved by the existing
+`Intl.PluralRules` helpers. The visible text names the metric on its own; there is no
+hover text to decode it. The count is never truncated or wrapped.
 
 ## Layout
 
@@ -31,15 +31,21 @@ is an addition; the visible label carries the meaning on its own.
 - `.diagram-devices` is one `minmax(0, 1fr)` column capped at 32rem (this also bounds
   the Buildings tile rows). The name column shrinks (`min-width: 0`), the name
   ellipsises and carries the full name as `title`; the icon and the count never shrink
-  or wrap.
+  or wrap. `.diagram-devices` is a size container: at 26rem inner width or less the
+  count drops onto its own line under the name (still left-aligned with the name),
+  above that it sits at the right edge. Only the name may ellipsise.
 - Hierarchy, selection (`aria-pressed`), keyboard arrows and the inspector are
-  unchanged. The view stays a set of cards, not a data table, so UI-05's column
+  unchanged, except that ArrowUp/ArrowDown/Home/End skip the entries of the closed
+  `+ New` menu (they are not rendered, so focusing one dropped focus). The view stays a set of cards, not a data table, so UI-05's column
   widths do not apply and no resize mechanism exists.
 
 ## Tests
 
 `StructureWorkspace.test.tsx` (labels, plurals, empty line, large counts, EN/DE) and
-`e2e/topology-metrics.e2e.ts` (1280, 2560 and 700 px, Porcelain and Graphite, one DE
-run: label text, row and card width ceilings, name-to-count distance, ellipsis,
-overflow, selection). CRT and LCARS were not part of the browser run; the rules use
+`e2e/topology-metrics.e2e.ts` (1280, 2560, 700 and 480 px, Porcelain and Graphite, DE at
+2560, 700 and 480: full label text, count neither clipped nor wrapped nor overlapping
+the name, side by side from 1280 px, row and card width ceilings, ellipsis, overflow,
+selection) and its keyboard cases (arrows, Home/End move focus; Enter and Space select a
+line heading and the inspector follows). The unit test drives the same arrow/Home/End
+handler with real key events. CRT and LCARS were not part of the browser run; the rules use
 no theme token beyond `--knx-muted`.

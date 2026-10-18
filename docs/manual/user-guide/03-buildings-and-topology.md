@@ -33,7 +33,8 @@ address and communication-object count](../../assets/screenshots/porcelain-topol
 
 The Topology view draws each area as a block, each line inside it, and each device as
 a tile with its individual address and, on the right, its number of communication
-objects written out ("3 objects", "1 object"; hover for "3 communication objects").
+objects written out ("3 communication objects", "1 communication object"). On a narrow
+tile the count moves under the name.
 The figure counts every object the device has, active or not. Tiles and line cards
 stop growing at a fixed width, so on a wide screen the name and its count stay next
 to each other and several lines sit side by side; a name too long for the tile is cut

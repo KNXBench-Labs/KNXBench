@@ -3250,13 +3250,20 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .diagram-line-heading { display: flex; border-bottom: 1px solid var(--knx-border); }
 /* UI-06: a device row never stretches across a widescreen, so the name and its
    object count stay a short glance apart (the cards, not a data table). */
-.diagram-devices { display: grid; grid-template-columns: minmax(0, 1fr); padding: 8px; gap: 4px; max-width: 32rem; }
+.diagram-devices { display: grid; grid-template-columns: minmax(0, 1fr); padding: 8px; gap: 4px; max-width: 32rem; container-type: inline-size; }
 .diagram-device { display: flex; align-items: center; gap: 10px; width: 100%; border-radius: 5px; min-height: 52px; }
 .diagram-device > svg { flex: none; }
 .diagram-device > span:first-of-type { flex: 1 1 auto; min-width: 0; text-align: left; }
 .diagram-device strong { display: block; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .diagram-device small { display: block; color: var(--knx-muted); font-size: 11px; }
 .device-object-count { flex: none; margin-left: auto; color: var(--knx-muted); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* The count names its unit in full ("12345 communication objects"), so on a tile too
+   narrow to hold name and count side by side it drops under the name, never clipped. */
+@container (max-width: 26rem) {
+  .diagram-device { flex-wrap: wrap; row-gap: 2px; }
+  .diagram-device > span:first-of-type { flex: 1 1 0; }
+  .device-object-count { flex: 1 0 100%; margin-left: 0; padding-left: 30px; text-align: left; }
+}
 .diagram-device[aria-pressed="true"], .diagram-heading[aria-pressed="true"], .workspace-table tr[aria-selected="true"] { background: color-mix(in srgb, var(--knx-accent) 14%, var(--knx-surface)); }
 .building-diagram { display: grid; gap: 20px; }
 .building-diagram-children { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; padding: 16px; background: var(--knx-bg); }

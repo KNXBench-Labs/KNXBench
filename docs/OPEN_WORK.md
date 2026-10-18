@@ -63,21 +63,28 @@ open work in this order:
 
 [Census 3](research/2026-10-18-product-database-programmability-census.md)
 measured a third collection (177 new programs) for programmability and
-completeness: 3 build a download plan, none is verified. Open, in this order:
+completeness: 3 build a download plan, none is verified. Delivered the same day
+([follow-up](research/2026-10-18-product-database-programmability-census.md#follow-up-delivered-18-october-2026)):
+upper-case legacy tables (G11), the placement-first refusal message (G10),
+placement and enumeration columns with an accurate unknown report (G13,
+ADR-0141), and size bounds at the storage ceiling (G12, ADR-0142). Open:
 
-1. **Data integrity, small:** two legacy `.vd5` with upper-case table names
-   are read as "0 products" and refused as holding no program, although each
-   holds 2 (G11). The refusal of 71 `0705h` programs names a `BinaryValue` type,
-   while the real blocker is a hidden 48-bit parameter placed on Device Object
-   `PID_HARDWARE_TYPE` (G10); the ingest still does not report
-   `Enumeration/@BinaryValue`.
-2. **Reports:** retire modelled constructs (`Union` member offsets,
-   `Parameter/Property`) from unknown-construct reports (G13).
-3. **Research:** what a tool does with a hidden PID-78 parameter (write,
+1. **Research:** what a tool does with a hidden PID-78 parameter (write,
    compare or ignore); KNXBench must not write it without evidence (G10).
-4. **Evidence first:** the fill rule for segment `Data` shorter than `Size`
-   (G14); size bounds stay measurement-first (G12: first member above the
-   large profile, first legacy payload above 256 MiB).
+2. **Evidence first:** the fill rule for segment `Data` shorter than `Size`
+   (G14).
+3. **Smaller:** configuration kept in ETS apps (G15, KL-174) and two message
+   wordings (G16).
+4. **Streaming:** procedure resolution still builds a whole-document tree with
+   its own bounds (ADR-0142, unchanged on purpose); the legacy importer could
+   fill `parameter_type_enum.binary_value` too.
+5. **Duplicate unknown rows (new finding, pre-existing):** a v24 shared
+   install of the 115-instance matrix corpus holds 978 `ingest_unknown` rows
+   that repeat another row of the same source, program, xpath, kind and name
+   (577 key groups in 48 sources, some without a program). The report totals
+   are not affected (the v25 re-pin matched the XML census there exactly); the
+   row table over-counts. Cause not yet traced; a re-ingest of a source shared
+   by several packages is the first suspect.
 
 ## Plug-in data adoption: plug-in acceptance open (17 October 2026)
 

@@ -6,6 +6,18 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Storage-ceiling bounds (18 October 2026, ADR-0142)
+
+[ADR-0142](../adr/0142-file-size-limits-follow-the-storage-ceiling.md): the
+raw input and every decoded member may reach the storage ceiling (1,000,000,000
+bytes, SQLite's largest value) in both profiles. The standard total is 4 GiB;
+the large profile only raises the total, to 16 GiB. Members follow the classic
+ZIP maximum of 65,535. Every measured real package now installs with the
+standard profile: seven exceeded the former default, including the 281.8 MiB
+program and a 1.7 GiB package (about 2 min, peak RSS 0.7 GiB, 4.5 GB database).
+The web catalogue upload follows the same input bound. Above 1 GB a file is
+refused with a typed size error; chunked storage does not exist.
+
 ## Census 3 (18 October 2026): first member above the large profile
 
 [Census 3](../research/2026-10-18-product-database-programmability-census.md#installer-outcomes)

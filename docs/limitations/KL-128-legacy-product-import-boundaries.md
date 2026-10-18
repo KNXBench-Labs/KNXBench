@@ -6,6 +6,17 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+
+## Census-3 fixes (18 October 2026)
+
+EX-IM table names now match case-insensitively (census 3, G11): the two
+upper-case `.vd5` files import their programs instead of reading as empty, and
+a case-only duplicate table is refused. The legacy file and payload bounds are
+the storage ceiling of 1,000,000,000 bytes
+([ADR-0142](../adr/0142-file-size-limits-follow-the-storage-ceiling.md)),
+which admits the ETS3 payload of about 371 MiB. `Enumeration/@BinaryValue`
+from packages now reaches `parameter_type_enum.binary_value` (ADR-0141); the
+legacy importer does not fill that column yet.
 ## Census 3 (18 October 2026): upper-case tables, payload bound
 
 [Census 3](../research/2026-10-18-product-database-programmability-census.md#gaps-and-follow-ups)

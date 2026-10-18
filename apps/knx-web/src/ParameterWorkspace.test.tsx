@@ -56,6 +56,7 @@ describe("ParameterWorkspace", () => {
         expect(row.hidden, `search ${query}`).toBe(false);
         expect(host.querySelectorAll(".parameter-workspace-row:not([hidden])")).toHaveLength(1);
         expect(row.querySelector(".parameter-workspace-result-path")!.textContent).toContain(fallback);
+        expect(host.querySelector('[data-parameter-row="Target"]')).toBe(row);
         expect(row.querySelector("input")).toBe(input);
         expect(input.value).toBe("7");
       }

@@ -12,6 +12,27 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Parameter caption review corrections — issue #26 (18 October 2026)
+
+Independent review found a post-commit projection refusal, unmetered caption-copy
+fan-out, unsearchable localized fallback labels and an overbroad translation
+claim. Parameter writes now preflight the exact reconciled command through the
+existing stack on a project copy and construct the full response before durable
+publication. The request's existing caption budget survives through every DTO
+text/provenance copy, including separators and grids, with no ceiling increase.
+Search includes the displayed localized fallback beside original source context;
+caption translation boundaries are explicit in both contracts.
+
+Named REDs were observed for all four findings. Focused correction checks pass:
+96 tests in 11 HTTP targets, 106 web tests (JSON report), production build,
+fixture TypeScript, owning-server all-target Clippy, formatting and documentation.
+The stronger HTTP refusal case also includes object reconciliation, bound and
+unbound callers, revision/history/generation and persisted-byte invariance.
+Optional browser rerun: cancelled while queued on the foreign lease, zero cases
+executed; not browser acceptance. Independent re-review and integrated full
+package/browser acceptance remain pending with the integration owner. No
+publication or hardware action is claimed.
+
 ## House devices read with the diagnostic export (18 October 2026)
 
 Owner go: the shipped `knx device diagnostics` ran once against all 34

@@ -295,6 +295,21 @@ pub fn prepare_byte_order_probe(
     plan_probe(conn, &request).map_err(ProbePrepareError::Probe)
 }
 
+/// Prepares explicitly selected System-2 fields for offline source review only.
+/// The distinct result type has no live-probe or download conversion.
+pub fn prepare_system2_probe_preview(
+    conn: &Connection,
+    project: &Project,
+    target: IndividualAddress,
+    parameter_refs: &[String],
+) -> Result<knx_productdb::byte_order_probe::SourceProbePreview, ProbePrepareError> {
+    let device = device_at(project, target).map_err(ProbePrepareError::Device)?;
+    let request = image_request_for_device(conn, project, device.id)
+        .map_err(|error| ProbePrepareError::Device(PrepareError::Request(error)))?;
+    knx_productdb::byte_order_probe::preview_system2_probe(conn, &request, parameter_refs)
+        .map_err(ProbePrepareError::Probe)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

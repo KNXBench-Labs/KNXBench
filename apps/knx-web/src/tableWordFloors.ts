@@ -1,4 +1,6 @@
 /** Measures cached word widths from native table cells for pane-fitting floors. */
+import { appUiScale } from "./appUiScale";
+
 const CAP = 320;
 const pixels = (value: string) => parseFloat(value) || 0;
 const insets = (style: CSSStyleDeclaration) => pixels(style.paddingLeft) + pixels(style.paddingRight)
@@ -40,6 +42,7 @@ export class TableWordFloors {
   }
 
   measure(table: HTMLTableElement, count: number): number[] {
+    const scale = appUiScale();
     const floors = Array<number>(count).fill(0);
     const used = new Set<string>();
     const pending = new Map<string, HTMLSpanElement>();
@@ -91,7 +94,7 @@ export class TableWordFloors {
               const branch = element === parent ? null : Array.from(element.children).find(child => child.contains(parent));
               for (const sibling of Array.from(element.children)) {
                 if (sibling === branch || !sibling.matches('[aria-hidden="true"]')) continue;
-                extra += sibling.getBoundingClientRect().width + pixels(style.columnGap);
+                extra += sibling.getBoundingClientRect().width / scale + pixels(style.columnGap);
               }
             }
             if (element === cell) break;
@@ -118,7 +121,7 @@ export class TableWordFloors {
     const fragment = document.createDocumentFragment();
     for (const span of pending.values()) fragment.append(span);
     document.body.append(fragment);
-    for (const [key, span] of pending) this.cache.set(key, span.getBoundingClientRect().width);
+    for (const [key, span] of pending) this.cache.set(key, span.getBoundingClientRect().width / scale);
     for (const span of pending.values()) span.remove();
     for (const { cell, key, extra, minimum } of requirements) {
       const record = changed.get(cell)!;

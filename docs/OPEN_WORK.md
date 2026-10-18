@@ -59,6 +59,26 @@ open work in this order:
    parameter page and identity-keyed module comparison. Each needs its own
    contract first.
 
+## Product-database census 3 (18 October 2026)
+
+[Census 3](research/2026-10-18-product-database-programmability-census.md)
+measured a third collection (177 new programs) for programmability and
+completeness: 3 build a download plan, none is verified. Open, in this order:
+
+1. **Data integrity, small:** two legacy `.vd5` with upper-case table names
+   are read as "0 products" and refused as holding no program, although each
+   holds 2 (G11). The refusal of 71 `0705h` programs names a `BinaryValue` type,
+   while the real blocker is a hidden 48-bit parameter placed on Device Object
+   `PID_HARDWARE_TYPE` (G10); the ingest still does not report
+   `Enumeration/@BinaryValue`.
+2. **Reports:** retire modelled constructs (`Union` member offsets,
+   `Parameter/Property`) from unknown-construct reports (G13).
+3. **Research:** what a tool does with a hidden PID-78 parameter (write,
+   compare or ignore); KNXBench must not write it without evidence (G10).
+4. **Evidence first:** the fill rule for segment `Data` shorter than `Size`
+   (G14); size bounds stay measurement-first (G12: first member above the
+   large profile, first legacy payload above 256 MiB).
+
 ## Plug-in data adoption: plug-in acceptance open (17 October 2026)
 
 Adopting a device's stored plug-in bytes between two projects of one lineage is

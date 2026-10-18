@@ -6,6 +6,20 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Census 3 (18 October 2026): upper-case tables, payload bound
+
+[Census 3](../research/2026-10-18-product-database-programmability-census.md#gaps-and-follow-ups)
+(G11, G12) found two distinct EX-IM 6.3 `.vd5` whose table names are upper
+case. `ExImDocument::table` matches names exactly, so inspection reports
+"0 products" without a diagnostic and import refuses as "the file holds no
+application program"; each file holds 2 programs. Their table set and column
+counts equal a lower-case EX-IM 6.3 file, except that `parameter_atomic_type`,
+`parametercalculation` and `channel_list` are missing and five master tables are
+added. Not changed: a case-insensitive lookup needs a fixture proving the same
+column semantics. A complete ETS3 `.vd5` (371.5 MiB declared payload) is refused
+by the 256 MiB legacy payload bound. A `.vd1` (EX-IM 3.19) inspects although the
+usage text names only `.vd3`–`.vd5`; it holds no program.
+
 ## Update 2026-10-13 (Goal A5): `string` and `long enum` are mapped
 
 Atomic types 3 (`string`) and 5 (`long enum`) now import the way ETS4

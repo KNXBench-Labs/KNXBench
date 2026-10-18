@@ -1,5 +1,6 @@
 /** Device table gestures, preserved view state and asynchronous metadata guards. */
 // @vitest-environment happy-dom
+import { tableColumnSmoke } from "./tableColumnSmoke.fixture";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
@@ -40,6 +41,30 @@ async function query(value: string) {
   await act(async () => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, value);
     input.dispatchEvent(new Event("input", { bubbles: true })); });
 }
+it.each(["en", "de"] as const)("%s compact headings retain full sort names and tooltips", async language => {
+  await act(async () => setSetting("uiLanguage", language));
+  await render();
+  const full = language === "de" ? "Hersteller" : "Manufacturer";
+  const header = host.querySelectorAll("thead th")[4];
+  const button = header.querySelector("button")!;
+  expect(button.getAttribute("aria-label")).toBe(full);
+  expect(button.title).toBe(full);
+  expect(button.querySelector(".table-column-label")!.textContent).toBe(language === "de" ? "Herst." : "Mfr.");
+  expect(header.querySelector("span")!.title).toBe(full);
+});
+it.each(["en", "de"] as const)("%s compact location, topology and programming labels keep their meaning", async language => {
+  await act(async () => setSetting("uiLanguage", language));
+  await render();
+  const headings = host.querySelectorAll("thead th");
+  for (const [index, label, full] of language === "de"
+    ? [[3, "Prog.", "Programmierung"], [7, "Topologie", "Installation / KNX-Linie"], [8, "Ort", "Installation / Gebäude / Raum"]] as const
+    : [[3, "Prog.", "Programming"], [7, "Topology", "Installation / KNX line"], [8, "Location", "Installation / building / room"]] as const) {
+    const button = headings[index].querySelector("button")!;
+    expect(button.querySelector(".table-column-label")!.textContent).toBe(label);
+    expect(button.getAttribute("aria-label")).toBe(full);
+    expect(button.title).toBe(full);
+  }
+});
 it("compares only filtered rows after one gateway confirmation and makes relevant edits Outdated", async () => {
   const project = { ...tree, project_incarnation: 4, comparison_revisions: { 2: 1, 10: 0 } };
   apiMock.compareDevice.mockResolvedValue({ serverIncarnation: "table-test", projectIncarnation: 4, deviceId: 2, comparisonRevision: 1,
@@ -162,7 +187,7 @@ it("shows pending parts as chips and narrows to pending devices on request (ADR-
     { id: 11, name: "Device 11", address: "1.1.11", description: null, com_object_count: 0 },
   ] }] };
   await render(true, pendingTree);
-  const headers = [...host.querySelectorAll("th")].map((th) => th.textContent);
+  const headers = [...host.querySelectorAll("th")].map(th => th.querySelector("button")?.getAttribute("aria-label") ?? th.textContent);
   expect(headers.indexOf("Programming")).toBe(headers.indexOf("Name") + 1);
   const cells = [...host.querySelectorAll("tbody tr")].map((row) => row.querySelector(".programming-chips"));
   expect(cells.map((cell) => cell?.getAttribute("data-state"))).toEqual(["pending", "clean", "unknown"]);
@@ -178,3 +203,5 @@ it("shows pending parts as chips and narrows to pending devices on request (ADR-
   await act(async () => pendingOnly.click());
   expect(host.querySelectorAll("tbody tr")).toHaveLength(3);
 });
+
+tableColumnSmoke([["devices", 12]], async () => { await render(); return { host }; });

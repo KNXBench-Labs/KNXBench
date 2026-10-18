@@ -13,6 +13,10 @@ test("draws senders and configured members, opens the Inspector from the keyboar
   await page.keyboard.press("Enter");
   const inspector = page.locator(".flow-inspector");
   await expect(inspector.locator("h3")).toHaveText("Dimmer");
+  for (const viewport of await inspector.locator(".resizable-table-scroll").all()) {
+    const size = await viewport.evaluate(e => ({ table: e.parentElement!.getAttribute("data-table-id"), scroll: e.scrollWidth, client: e.clientWidth }));
+    expect(size.scroll, JSON.stringify(size)).toBeLessThanOrEqual(size.client);
+  }
   await expect(inspector).toContainText("configured member (inferred from the project)");
   await expect(inspector).toContainText("From Switch · configured in the project");
   await page.keyboard.press("ArrowRight");

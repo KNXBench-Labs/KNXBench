@@ -1,6 +1,7 @@
 /** Verifies the device-download panel: plan first, consent before sending, every block shown. */
 // @vitest-environment happy-dom
 
+import { tableColumnSmoke } from "./tableColumnSmoke.fixture";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
@@ -372,6 +373,7 @@ it("starts with the plan's own id and phrase after consent, then shows every blo
   expect(progress.textContent).toContain("Running: step 3 of 3 · write 4003h");
   expect(progress.textContent).toContain("Octets written and read back 2/1416");
   expect(progress.textContent).toContain("mask 0701h");
+  expect(progress.querySelector(".device-download-blocks")!.parentElement!.classList.contains("device-download-blocks-scroll")).toBe(true);
   expect(progress.querySelector(".device-download-blocks")!.textContent).toContain("01 AB");
 
   await act(async () => vi.advanceTimersByTime(600));
@@ -810,4 +812,15 @@ it("reloads the project once after a download that wrote, and not after one that
   await render(project(), changed);
   expect(apiMock.currentProject).not.toHaveBeenCalled();
   expect(changed).not.toHaveBeenCalled();
+});
+
+tableColumnSmoke([["download-unwritten", 2], ["download-segments", 3], ["download-blocks", 4]], async id => {
+  apiMock.planDeviceDownload.mockResolvedValue({ ...PLAN, partial: true, notWritten: [[0x4008, 2]] });
+  await render(); await showPlan();
+  if (id === "download-blocks") {
+    apiMock.pollDeviceDownload.mockResolvedValue(response({ state: "running" }, [{ kind: "dataWritten", number: 3, address: 0x4003, octets: [1], written: 1, of: 1416 }], 1));
+    await act(async () => button("Download to 1.1.67").click()); await flush();
+    await act(async () => button(en["programmingConsent.confirm"], consentDialog()!).click()); await flush();
+  }
+  return { host: host! };
 });

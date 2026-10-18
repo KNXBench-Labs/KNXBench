@@ -110,8 +110,18 @@ close button. No entry opts out: only the submenu rows carry `data-menu-stays-op
 
 ## Pointer
 
-- Hover opens a submenu after 120 ms and a hovered sibling replaces it; the old one
-  closes. Only a mouse hovers; touch and pen open by tap.
+- Hover is for flyouts only. A flyout opens after 120 ms of hover and a hovered sibling
+  flyout replaces it; the old one closes. Only a mouse hovers; touch and pen open by tap.
+- An inline submenu (the narrow and short-window layouts, and the per-instance
+  `data-layout="inline"` below) is a disclosure: hover never opens it, never swaps it for a
+  sibling and never closes it. It opens and folds by click, Enter/Space and
+  ArrowRight/ArrowLeft; opening a second one by click folds the first. Reason: an inline
+  panel moves the rows below it, so a resting mouse suddenly sits on another row, and the
+  hover that follows used to replace the submenu the user had just clicked. Whether a
+  submenu is inline is read from the rendered layout when the 120 ms elapse (the open panel's
+  computed `position`; for a folded panel the same measurement `placePanel` makes, taken by
+  unfolding it for one synchronous step), not from a copy of the breakpoint. Hover is
+  ignored when the open submenu or the one it would open is inline.
 - A hover-opened submenu closes 320 ms after the pointer rests on another first-level
   row or leaves the menu. Moving diagonally from the row into the panel crosses the
   menu's padding or a sibling row; entering the panel cancels both the pending close
@@ -119,6 +129,10 @@ close button. No entry opts out: only the submenu rows carry `data-menu-stays-op
   grace delay, not a safe triangle.
 - A click opens a submenu and pins it (hover no longer closes it); clicking the row
   again closes it. Clicking a hover-opened row pins it instead of closing it.
+- A mouse press moves focus to the pressed row before the click. While a press is in flight
+  (`pointerdown` to `pointerup`) that focus move does not fold an open submenu, which would
+  shift the rows so that the button is released over another row and the click is lost. A
+  keyboard focus move out of an open submenu still folds it.
 - An item click runs the original handler once and closes the whole menu. The row
   itself carries `data-menu-stays-open`, the existing opt-out of the activation
   handler, so opening a submenu never closes the menu.
@@ -129,12 +143,23 @@ close button. No entry opts out: only the submenu rows carry `data-menu-stays-op
 - Default: the panel opens to the right of its row, top-aligned with it.
 - No room on the right and the whole panel fits on the left: it flips
   (`data-side="left"`) and slides in from the other side.
-- Room on neither side (mid widths just above the 650 px breakpoint; verified at 700 px): it stays on the right and gives up
-  width (down to 160 px) instead of leaving the screen. A panel running past the
-  bottom edge moves up, and scrolls inside itself when taller than the screen.
+- One minimum width for a flyout, `MIN_PANEL_WIDTH_PX` (220 px) in `FileMenu.tsx`. The
+  panel states it as `--file-submenu-min-width` and the stylesheet's `min-width` reads that
+  property, so the CSS and the placement maths cannot drift apart (the clamp used to be 160 px
+  against a 220 px `min-width`, and the CSS won).
+- The whole panel fits neither side: it keeps the side with the most room that still offers
+  at least the minimum and gives up width (`--file-submenu-max-width`, never below 220 px)
+  instead of leaving the screen. A panel running past the bottom edge moves up, and scrolls
+  inside itself when taller than the screen.
+- Neither side offers the minimum (the strip just above the 650 px breakpoint, where the
+  menu leaves under 220 px on its right): this one submenu, for as long as it is open, uses
+  the inline layout below (`data-layout="inline"` on its `.file-submenu`). It is re-decided on
+  every placement, so widening the window gives the flyout back and closing the submenu drops
+  the mark. While an inline submenu is open the menu scrolls as a whole, as it does in the
+  narrow layout. `choosePanelPlacement` is the pure decision and is unit-tested.
 - At 650 px width and below, or 600 px height and below (a short window, or high zoom),
-  the panel is not a flyout but an inline expansion under its row (static position,
-  indented, left rule), because a flyout would leave the viewport or be clipped by the
+  every panel is an inline expansion under its row (static position, indented, left rule),
+  by stylesheet alone, because a flyout would leave the viewport or be clipped by the
   scrolling menu around it. The chevron points down, or up when open. The menu then
   scrolls as a whole (`max-height: calc(100dvh - 80px)`), so **Logout** and **Quit**
   stay reachable on a short screen. In flyout mode (taller than 600 px and wider than
@@ -142,7 +167,20 @@ close button. No entry opts out: only the submenu rows carry `data-menu-stays-op
 - Positions are measured when a panel opens, on window resize and whenever the open
   panel's own size changes (a `ResizeObserver`, disconnected on close): a panel whose
   items change (a project opens) can push it past an edge. Placement runs only when the
-  stylesheet made the panel absolutely positioned.
+  stylesheet made the panel absolutely positioned (or the previous placement made it
+  inline: every pass starts by undoing the last one).
+
+## Stacking
+
+The open menu sits above the toolbar's controls and below modal dialogs. The toolbar is a
+stacking context (`z-index: 5`), so the menu's level is only compared with the controls
+inside it. A disabled control (`opacity` below 1) forms a stacking context of its own and
+paints in document order among positioned boxes; the menu used to have no level, so the
+disabled Search and Save buttons that follow File painted over the **New project…** and
+**Open project…** rows, hiding their labels and stealing the pointer. `.file-menu-content`
+now has `z-index: 6`. A dialog (`.search-overlay`, `z-index: 10`) belongs to the page's root
+stacking context and outranks the whole toolbar, menu included. A flyout panel keeps its
+own level inside the menu.
 
 ## Motion
 
@@ -168,7 +206,8 @@ change.
   disabled items, hover intent and the diagonal path with fake timers, sibling
   exclusivity, reset on menu close, placement flip/shrink/shift/inline, re-placement
   and disconnect through a `ResizeObserver`, items kept mounted, each original handler
-  called exactly once.
+  called exactly once; no hover opening or swapping in a stylesheet-inline and in a
+  per-instance inline layout, while a flyout still opens on hover.
 - `src/App.test.tsx`: the real menu: first-level entries, submenu labels (EN, DE),
   per-level declared entries, one tab stop per level, disabled states without a project,
   native/web export difference, Logout/Quit separators, the comparison opened from
@@ -190,6 +229,23 @@ change.
   traps Tab and returns focus to File on Escape and on Close; a `.knxproj` comparison
   whose ETS import report (a `<details>` disclosure) is reached by Tab and by Shift+Tab
   and opens on Enter; a 1440 x 500 viewport where **Logout** stays reachable.
+- `e2e/file-menu-submenus.e2e.ts`, UISET-02: at 651, 660, 700, 760 and 900 px wide (800 px
+  high) and at 900 x 560 and 760 x 601, in EN and DE, every submenu is opened and its box and
+  every entry lie inside the viewport, the pointer at each entry's centre lands on that entry
+  and each enabled entry passes Playwright's real-pointer hit check; one activation per
+  window, all three submenus in one menu by consecutive real clicks. The panel's stated
+  minimum equals its computed `min-width`.
+- `e2e/file-menu-submenus.e2e.ts`, UISET-02 round 2, at 400 x 800, 900 x 560 and 660 x 800
+  (per-instance inline), in EN and DE: after a real click on one submenu the real mouse rests
+  more than 400 ms on the next row; the open submenu stays open and the next one stays
+  closed; a real click then opens the next one and folds the first. With nothing open a resting mouse opens nothing, and
+  ArrowRight/ArrowLeft/Enter/Space/Escape still work. At 1440 x 900 hover still opens and
+  swaps a flyout.
+- `e2e/file-menu-submenus.e2e.ts`, UISET-03: at 400 and 1440 px in Porcelain and Graphite,
+  with no project, `document.elementFromPoint` at the centre and at the text of every
+  first-level entry returns the entry; real clicks on **New project…** and **Open project…**
+  reach their handlers; with a modal open, the page's `inert` lifted and the menu forced open,
+  toolbar controls and menu rows still lie under the overlay.
 - `src/Overlay.test.tsx`: the shared focus trap counts a visible disclosure `summary`,
   `contenteditable` regions and media with `controls` as tab stops, and skips the
   contents of a closed `details`, `display: none` and `visibility: hidden` elements.

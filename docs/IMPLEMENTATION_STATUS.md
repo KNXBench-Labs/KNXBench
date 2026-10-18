@@ -36,6 +36,16 @@ PID78 comparisons match the `[A]` `property_matches` shape; a hidden
 archives and the writer reproduces each byte for byte (three negative controls
 red). No production code or admission change.
 
+## Table geometry at application scale — UISET-01/05 (18 October 2026)
+
+Table fitting, token/icon floors, pointer deltas and ARIA widths now share layout
+pixels, preserving browser-local width preferences through application scaling.
+Root-style appearance changes refresh geometry as well as token caches. The
+overlay browser check temporarily removes background inert during its stacking
+probe. Focused unit and browser regressions cover scale endpoints and saved-width
+restoration; [contract](contracts/table-column-widths.md). No project data,
+manufacturer grid or native-shell compatibility change.
+
 ## UI feedback wave 3 integration acceptance (18 October 2026)
 
 UI-02 (controls/separators), UI-03 (File submenus) and UI-06 (labelled,
@@ -141,7 +151,92 @@ the menu rests focus on File first, so every dialog returns focus there. Open pa
 re-placed when they grow (`ResizeObserver`); on short windows (600 px and below) the menu
 scrolls and submenus expand inline. Hover opens after 120 ms and survives a diagonal
 move, and the 140 ms slide is removed by motion level Off and reduced motion.
-Not done: type-ahead, native WebKitGTK/Tauri runs. [Contract](contracts/file-menu.md).
+Correction round (18 October 2026, UISET-02/03): a flyout has one minimum width
+(220 px, stated to the stylesheet as `--file-submenu-min-width`); where neither side keeps
+it, that submenu expands inline for as long as it is open instead of leaving the viewport.
+The open menu now has `z-index: 6` inside the toolbar, so disabled toolbar controls no longer
+paint over its first rows; dialogs stay above it. Hover is for flyouts only: an inline submenu
+(narrow, short window, or a mid-width one with no room beside its row) opens and folds by
+click and keyboard, because its opening moves the rows under a resting mouse and the hover that
+followed used to swap the submenu just clicked (and a mouse press on a sibling row no longer folds the open submenu before the click lands); the layout is read from the rendered panel, not
+a copied breakpoint. Not done: type-ahead, native WebKitGTK/Tauri runs. [Contract](contracts/file-menu.md).
+
+## UI-05 appearance relevance (18 October 2026)
+
+Ancestor geometry edits, including virtual-history spacer padding, retain table
+measurement caches. Typography/custom-property changes still invalidate them.
+Comparison reset owners require field changes, and repeated-table reset labels
+visibly name their table kind in EN/DE. The independent browser oracle preserves
+asymmetric horizontal insets. [Contract and regression coverage](contracts/table-column-widths.md).
+
+## UI-05 shared reset controls (18 October 2026)
+
+Comparison/history field tables, flow-inspector flag tables and address tables
+across installations each use one owner reset above their repeated list.
+It restores the shared preference and
+remeasures session floors in every mounted instance of that table kind.
+Per-column resets retain floors; single-instance controls remain available.
+[Contract and regression coverage](contracts/table-column-widths.md).
+
+## UI-05 invalidation and independent fit proof (18 October 2026)
+
+Adds colspan remapping and attribute-only observation of each table's mounted
+ancestor chain, preserving targeted ordinary-cell invalidation and ignoring
+geometry-only pane edits. Restores surface-specific padding through the existing
+CSS cascade. Browser fit checks use independent intrinsic measurement plus
+reviewed rendered budgets and negative controls; flow now fits its inspector
+with its original padding. Dynamic ancestry changes require remounting.
+[Contract and verification boundaries](contracts/table-column-widths.md).
+
+## UI-05 density and stability fixes (18 October 2026)
+
+Restores shared density/theme padding for header and body cells and accurate
+EN/DE location, topology and programming headings. Mutation targets invalidate
+only affected cells without full-cell serialization; unchanged cells reuse their
+measurements. Sort icon slots remain reserved, and measured floors only grow
+until table reset/remount. Instances keep independent measured maxima.
+Production EN/DE 1440/1920 fit-budget checks preserve local scrolling where the
+word-safe floor sum exceeds the available pane; 1440 px cannot fit the tested
+device overview or German flat objects with navigation present.
+[Exact behavior, measured budgets and tests](contracts/table-column-widths.md).
+
+## UI-05 measured word-safe fitting (18 October 2026)
+
+Replaces the earlier number/DPT fit constants with one measured header/cell
+word floor for every adjustable column in the shared adapter, capped at 320 px.
+Cached computed-font measurements preserve ordinary words while narrow panes
+scroll locally; explicit resizing retains the stored-preference delta model.
+Hidden panes defer measurement; unchanged cells reuse their measurements.
+Compact device headings retain full accessible names/tooltips, and table cells
+avoid redundant padding to preserve the tested wide fitting budgets.
+Browser regressions cover EN/DE grouped and flat objects at 360 px and status
+at 640 px, the long DE address-tree DPT and monitor decoded label at 400 px.
+The unchanged device-editor layout spec and 1440/1920 fixture fitting remain
+acceptance checks. [Precise behavior and verification](contracts/table-column-widths.md).
+
+## UI-05 second review fixes (18 October 2026)
+
+All column preferences can shrink below their defaults, while unresized tables
+retain pane fitting. Header stacking is isolated per scroll container. Separators
+announce measured pixels; active drags commit on unmount and ignore resize keys.
+Sort indicators remain outside clamped heading labels. The matrix owns its fixed
+object width. The [contract](contracts/table-column-widths.md) records the accepted
+one-frame pane-fit settling behaviour. A gate regression fix gives grouped and
+flat communication-object DPT columns a 114 px fit floor while preserving their
+100 px manual minimum; narrow panes scroll locally. The unchanged EN/DE
+device-editor layout spec checks intact DPT/master-text words at 360 px.
+
+## UI-05: browser-local table column widths (18 October 2026)
+
+Local-only presentation change: one width hook and accessible header separator,
+UI-02 paint, validated versioned localStorage, pointer/keyboard resizing and
+column/table reset. All 18 native table surfaces use the adapter; the matrix's
+select/address/name columns resize while its per-object columns remain fixed.
+Review fixes restore container-filling defaults, retain view-specific keys,
+coalesce drag previews with one final write, and improve accessible names/help. [Contract and complete coverage](contracts/table-column-widths.md).
+Focused hook/component/production tests and browser proof cover sortable devices,
+comparison and nested virtualised history tables. No API, domain, schema,
+parameter-grid, project-write or KNX bus change.
 
 ## UI-02: compact button variants, visible navigation separators (18 October 2026)
 

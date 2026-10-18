@@ -2501,6 +2501,8 @@ export const messages = {
   "draftGuard.discard": "Discard draft and continue",
   "workbench.device": "Device",
   "workbench.unassigned": "Unassigned",
+  "workbench.objectCount.one": "{count} communication object",
+  "workbench.objectCount.other": "{count} communication objects",
   "workbench.emptyStructure": "No entries yet. Add structure here or in the project tree.",
   "structure.editSelection": "Edit selected structure",
   "structure.addArea": "Add area",

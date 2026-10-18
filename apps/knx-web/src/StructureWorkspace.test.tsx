@@ -4,6 +4,8 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, it, vi } from "vitest";
 import StructureWorkspace from "./StructureWorkspace";
+import { resetUiLanguageForTests, saveUiLanguage } from "./uiLanguage";
+import { resetSettingsForTests, settingsStorage } from "./settingsStore";
 import type { ProjectTree } from "./bindings/ProjectTree";
 
 const apiMock = vi.hoisted(() => ({
@@ -29,7 +31,7 @@ const tree: ProjectTree = { schema_version: 11, errors: 0, warnings: 0, can_undo
   installations: [{ id: 1, name: "Example installation", topology: [{ id: 2, name: "Area", address: 1, lines: [{ id: 3, name: "Line", address: 2, devices: [device] }] }],
     buildings: [{ id: 4, name: "Floor", kind: "Floor", devices: [], children: [{ id: 5, name: "Room", kind: "Room", children: [], devices: [device] }] }], unassigned: [], group_addresses: [], group_ranges: [] }] };
 
-it("selects actual projected devices and lines in graphical topology, including by keyboard", async () => {
+it("selects actual projected devices and lines in graphical topology by click", async () => {
   const host = document.createElement("div"); document.body.append(host); const root = createRoot(host);
   const onSelect = vi.fn(); const onCatalog = vi.fn();
   await act(async () => root.render(<StructureWorkspace {...inert} tree={tree} view="topology" selection={null} onSelect={onSelect} onCatalog={onCatalog} />));
@@ -42,6 +44,105 @@ it("selects actual projected devices and lines in graphical topology, including 
   await act(async () => host.querySelector<HTMLButtonElement>('[data-catalog-line="3"]')!.click());
   expect(onCatalog).toHaveBeenCalledWith(3);
   await act(async () => root.unmount()); host.remove();
+});
+
+// The right-hand number on a device row is `DeviceNode.com_object_count`
+// (crates/knx-projection: `device.com_objects.len()`), so it is labelled as
+// communication objects, with a real plural, never left as a bare figure.
+const row = (id: number, name: string, count: number, address: string | null = "1.2.9") =>
+  ({ id, name, address, description: null, com_object_count: count });
+const metricTree: ProjectTree = { ...tree, installations: [{ ...tree.installations[0],
+  topology: [{ id: 2, name: "Area", address: 1, lines: [
+    { id: 3, name: "Empty line", address: 1, devices: [] },
+    { id: 6, name: "Busy line", address: 2, devices: [row(10, "Silent sensor", 0), row(11, "Single channel", 1), row(12, "Big gateway", 12345, null)] },
+  ] }], unassigned: [row(13, "Spare", 2, null)] }] };
+
+async function renderTopology(language: "en" | "de") {
+  saveUiLanguage(settingsStorage, language); resetUiLanguageForTests();
+  const host = document.createElement("div"); document.body.append(host); const root = createRoot(host);
+  await act(async () => root.render(<StructureWorkspace {...inert} tree={metricTree} view="topology" selection={null} onSelect={() => {}} onCatalog={() => {}} />));
+  return { host, done: async () => { await act(async () => root.unmount()); host.remove(); resetSettingsForTests(); resetUiLanguageForTests(); } };
+}
+const metricOf = (host: HTMLElement, name: string) =>
+  [...host.querySelectorAll<HTMLElement>(".diagram-device")].find((b) => b.textContent?.includes(name))!.querySelector<HTMLElement>(".device-object-count")!;
+
+it("labels every topology device figure as communication objects with an English plural", async () => {
+  const { host, done } = await renderTopology("en");
+  expect(metricOf(host, "Silent sensor").textContent).toBe("0 communication objects");
+  expect(metricOf(host, "Single channel").textContent).toBe("1 communication object");
+  expect(metricOf(host, "Big gateway").textContent).toBe("12345 communication objects");
+  expect(metricOf(host, "Spare").textContent).toBe("2 communication objects");
+  // The visible text carries the meaning; no hover text is needed to decode it.
+  expect(metricOf(host, "Big gateway").hasAttribute("title")).toBe(false);
+  // The accessible name of the row carries the meaning too, not just the glyphs.
+  const button = [...host.querySelectorAll<HTMLElement>(".diagram-device")].find((b) => b.textContent?.includes("Single channel"))!;
+  expect(button.textContent).toContain("1 communication object");
+  expect(host.querySelectorAll(".device-object-count")).toHaveLength(4);
+  await done();
+});
+
+it("labels the same figures in German with German plural forms", async () => {
+  const { host, done } = await renderTopology("de");
+  expect(metricOf(host, "Silent sensor").textContent).toBe("0 Kommunikationsobjekte");
+  expect(metricOf(host, "Single channel").textContent).toBe("1 Kommunikationsobjekt");
+  expect(metricOf(host, "Big gateway").textContent).toBe("12345 Kommunikationsobjekte");
+  await done();
+});
+
+it("moves focus with ArrowDown/ArrowUp/Home/End across topology controls", async () => {
+  const { host, done } = await renderTopology("en");
+  // Entries of the closed `+ New` menu are not rendered, so keys must never land on them.
+  const buttons = [...host.querySelectorAll<HTMLButtonElement>("button:not(:disabled)")].filter((b) => !b.closest("details:not([open])"));
+  expect(buttons.length).toBeLessThan(host.querySelectorAll("button:not(:disabled)").length);
+  const named = (text: string) => buttons.find((b) => b.textContent?.includes(text))!;
+  const press = async (target: HTMLElement, key: string) => act(async () => {
+    target.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true }));
+  });
+  const busy = named("2 · Busy line"); const first = named("Silent sensor");
+  busy.focus();
+  await press(busy, "ArrowDown");
+  expect(document.activeElement).toBe(buttons[buttons.indexOf(busy) + 1]); // the line's own "+" button
+  await press(document.activeElement as HTMLElement, "ArrowDown");
+  expect(document.activeElement).toBe(first);
+  await press(first, "ArrowUp"); await press(document.activeElement as HTMLElement, "ArrowUp");
+  expect(document.activeElement).toBe(busy);
+  await press(busy, "End");
+  expect(document.activeElement).toBe(buttons[buttons.length - 1]);
+  await press(document.activeElement as HTMLElement, "ArrowDown"); // clamps at the end
+  expect(document.activeElement).toBe(buttons[buttons.length - 1]);
+  await press(document.activeElement as HTMLElement, "Home");
+  expect(document.activeElement).toBe(buttons[0]);
+  await done();
+});
+
+it("keeps the open `+ New` menu's own wrapping: ArrowDown on the last entry wraps, ArrowUp on the first wraps, focus never leaves", async () => {
+  const { host, done } = await renderTopology("en");
+  const menu = host.querySelector<HTMLDetailsElement>("details.structure-new-menu")!;
+  await act(async () => { menu.open = true; });
+  const items = [...menu.querySelectorAll<HTMLButtonElement>("[data-create-entry]")];
+  expect(items.length).toBeGreaterThan(1);
+  const press = async (target: HTMLElement, key: string) => act(async () => {
+    target.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true }));
+  });
+  items[items.length - 1].focus();
+  await press(items[items.length - 1], "ArrowDown");
+  expect(document.activeElement).toBe(items[0]);
+  await press(items[0], "ArrowUp");
+  expect(document.activeElement).toBe(items[items.length - 1]);
+  for (const key of ["ArrowDown", "ArrowUp", "ArrowDown"]) {
+    await press(document.activeElement as HTMLElement, key);
+    expect(menu.contains(document.activeElement), `${key} keeps focus inside the menu`).toBe(true);
+  }
+  await done();
+});
+
+it("keeps an empty line free of metric labels and keeps names intact for long values", async () => {
+  const { host, done } = await renderTopology("en");
+  const lines = [...host.querySelectorAll(".topology-line")];
+  const empty = lines.find((l) => l.textContent?.includes("Empty line"))!;
+  expect(empty.querySelectorAll(".device-object-count")).toHaveLength(0);
+  expect(empty.querySelectorAll(".diagram-device")).toHaveLength(0);
+  await done();
 });
 
 it("renders building nesting without hiding devices assigned to rooms, and an empty state", async () => {

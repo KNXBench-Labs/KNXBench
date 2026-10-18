@@ -2371,6 +2371,8 @@ export const messages: Record<MessageKey, string> = {
   "draftGuard.discard": "Entwurf verwerfen und weiter",
   "workbench.device": "Gerät",
   "workbench.unassigned": "Nicht zugeordnet",
+  "workbench.objectCount.one": "{count} Kommunikationsobjekt",
+  "workbench.objectCount.other": "{count} Kommunikationsobjekte",
   "workbench.emptyStructure": "Noch keine Einträge. Struktur hier oder im Projektbaum anlegen.",
   "structure.editSelection": "Ausgewählte Struktur bearbeiten",
   "structure.addArea": "Bereich hinzufügen",

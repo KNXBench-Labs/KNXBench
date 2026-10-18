@@ -5,6 +5,7 @@
 //! closed acquisition allowlist, never a project or arbitrary error strings.
 //! Format 1 is the identity recipe; format 2 (ADR-0143) adds `memory.json`
 //! with the ProductDB-declared candidate ranges of `system2-declared-segments-v1`.
+mod central_directory;
 mod memory_evidence;
 
 use chrono::{DateTime, Utc};
@@ -444,22 +445,27 @@ pub fn read_bundle(bytes: &[u8]) -> Result<Report, String> {
     Ok(export.report)
 }
 /// Bounded, non-extracting independent readback of format 1 or 2.
-/// Unexpected/duplicate/missing members, unknown versions, CRC failures,
+/// Unexpected/duplicate (checked in the raw central directory)/missing members, ZIP64, unknown versions, CRC failures,
 /// length/hash mismatches and evidence that does not follow from its own
 /// plan all refuse.
 pub fn read_export(bytes: &[u8]) -> Result<Export, String> {
     if bytes.len() > MAX_ARCHIVE {
         return Err("diagnostics-archive-limit".into());
     }
+    // Before `ZipArchive`, which silently keeps one entry per name.
+    let raw_names = central_directory::entry_names(bytes)?;
     let mut zip =
         zip::ZipArchive::new(Cursor::new(bytes)).map_err(|_| "diagnostics-invalid-zip")?;
-    if !(4..=5).contains(&zip.len()) {
+    if !(4..=5).contains(&zip.len()) || zip.len() != raw_names.len() {
         return Err("diagnostics-member-count".into());
     }
     let mut files = BTreeMap::new();
-    for i in 0..zip.len() {
+    for (i, raw_name) in raw_names.into_iter().enumerate() {
         let mut f = zip.by_index(i).map_err(|_| "diagnostics-invalid-member")?;
         let name = f.name().to_string();
+        if name.as_bytes() != raw_name {
+            return Err("diagnostics-invalid-member".into());
+        }
         let limit = if name == "memory.json" {
             MAX_MEMORY_MEMBER
         } else {

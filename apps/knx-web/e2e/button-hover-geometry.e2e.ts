@@ -57,7 +57,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) f
     await page.getByRole("dialog").getByRole("button", { name: m["newProject.create"], exact: true }).click();
     await page.getByRole("dialog").getByRole("button", { name: m["projectWizard.done.close"], exact: true }).click();
     await page.locator(".file-menu summary").click();
-    await page.locator(".file-menu-content").getByRole("button", { name: m["toolbar.saveAs"], exact: true }).click();
+    await page.locator(".file-menu-content").getByRole("menuitem", { name: m["toolbar.saveAs"], exact: true }).click();
     const dialog = page.getByRole("dialog", { name: m["fsPicker.saveAs"], exact: true });
     const list = dialog.locator(".fs-picker-list");
     const filename = dialog.locator(`input[placeholder="${m["fsPicker.filenamePlaceholder"]}"]`);

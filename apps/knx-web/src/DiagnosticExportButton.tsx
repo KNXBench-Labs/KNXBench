@@ -8,12 +8,13 @@ import {loadPreferredGateway} from "./gatewayPreference";
 import {splitGatewayEndpoint,validateGatewayFields} from "./gatewayEndpoint";
 import type {ProjectTree} from "./bindings/ProjectTree";
 import * as api from "./diagnosticApi";
+import {useFileMenuItemProps} from "./FileMenu";
 import "./universalSupport.css";
 import "./diagnosticExport.css";
 
 export default function DiagnosticExportButton({project,deviceId=null}:{project:ProjectTree|null;deviceId?:number|null}){
- const t=useTranslate();const [open,setOpen]=useState(false);
- return <><button type="button" data-diagnostics-open disabled={!project} onClick={()=>setOpen(true)}>{t("diagnostics.title")}</button>{open&&createPortal(<Dialog project={project!} initialDevice={deviceId} close={()=>setOpen(false)}/>,document.body)}</>;
+ const t=useTranslate();const entry=useFileMenuItemProps();const [open,setOpen]=useState(false);
+ return <><button type="button" {...entry} data-diagnostics-open disabled={!project} onClick={()=>setOpen(true)}>{t("diagnostics.title")}</button>{open&&createPortal(<Dialog project={project!} initialDevice={deviceId} close={()=>setOpen(false)}/>,document.body)}</>;
 }
 function Dialog({project,initialDevice,close}:{project:ProjectTree;initialDevice:number|null;close:()=>void}){
  const t=useTranslate();const devices=[...collectDevices(project).values()];

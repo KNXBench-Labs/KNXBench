@@ -59,6 +59,32 @@ arrow/Home/End handler no longer lands on the hidden entries of the closed `+ Ne
 names ellipsise with a title. Still cards, not a data table: no column resizing.
 [Contract](contracts/topology-metrics.md).
 
+## UI-03: File menu with animated submenus (18 October 2026)
+
+Presentation and keyboard behaviour only, no API, schema, theme-pack or stored-data
+change. Owner request 1 of the [UI feedback set](goals/ui-feedback-2026-10-18.md#ui-03--file-menu-with-animated-submenus).
+**History & comparison**, **Help & diagnostics** and **Import & export** are now
+submenus of File that open to the right (flip left when the whole panel fits there,
+shrink at mid widths, expand inline under the row at 650 px and below); New project,
+Open, Open (.knxdb) and Save As stay on the first level. Every entry is the original
+button with its original handler, so native/web differences, disabled states, unsaved
+change guards and dialog lifecycles are untouched; closed submenus stay mounted so an
+in-flight import or comparison survives. The menu holds declared entries only: the
+project comparison's result moved out of the History panel into its own modal dialog
+(shared `Overlay`, opened by **Compare with…**, which closes the menu like every other
+entry), with the same file choice, counts, tables and refusal text. File is a WAI-ARIA menu button:
+the control carries `aria-haspopup` and `aria-expanded`, entries are declared explicitly
+(`FileMenuItem`, `useFileMenuItemProps`; no DOM tagging), each level has one roving tab
+stop, ArrowDown/ArrowUp/Enter/Space on File open the menu onto an entry, arrows and
+Home/End move, `→`/Enter/Space open a submenu, `←`/Escape close the innermost level,
+and Tab or Shift+Tab from any focusable element in the open menu close the whole menu
+and move on from File. An action that closes
+the menu rests focus on File first, so every dialog returns focus there. Open panels are
+re-placed when they grow (`ResizeObserver`); on short windows (600 px and below) the menu
+scrolls and submenus expand inline. Hover opens after 120 ms and survives a diagonal
+move, and the 140 ms slide is removed by motion level Off and reduced motion.
+Not done: type-ahead, native WebKitGTK/Tauri runs. [Contract](contracts/file-menu.md).
+
 ## UI-02: compact button variants, visible navigation separators (18 October 2026)
 
 Presentation only, no API, schema, theme-pack or stored-data change. Owner

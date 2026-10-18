@@ -29,8 +29,8 @@ start](../getting-started/06-first-start.md#the-introduction) describes it.
 The top row, left to right:
 
 - **KNXBench** — the brand, and also a button: it takes you back to the Overview.
-- **File** — a drop-down menu with project and export actions. It is
-  covered in [Projects](02-projects.md).
+- **File** — a drop-down menu with project actions and three submenus. See
+  [The File menu](#the-file-menu) below and [Projects](02-projects.md).
 - **Undo** and **Redo** — two arrow buttons. They are gray when there is nothing to
   undo or redo. Every edit in KNXBench goes through the same command stack, so undo
   works the same way for a renamed room as for a bulk delete.
@@ -42,14 +42,38 @@ The top row, left to right:
 - **The gear** — opens Settings. See
   [Settings, themes and languages](09-settings-and-appearance.md).
 
-**Since Alpha 13:** File groups the same actions under **Project**,
-**Import & export**, **History & comparison** and **Help & diagnostics**, rather
-than one long list. No action is removed and keyboard activation/Escape still
-work. These headings are navigation, not new import or export capabilities.
+### The File menu
+
+**In builds after Alpha 14:** the frequent project actions — **New project…**,
+**Open project…**, **Open (.knxdb)…** and **Save As…** — sit directly in File.
+Everything else is in three submenus under them:
+
+| Submenu | What is inside |
+| --- | --- |
+| **Import & export** (*Import & Export*) | selective import, group-address CSV export and import, documentation export, and in the web build **Export project…** |
+| **History & comparison** (*Verlauf & Vergleich*) | **Project history** and **Compare with…** |
+| **Help & diagnostics** (*Hilfe & Diagnose*) | debug report, support-gap analysis, device support report, diagnostic export, **Show introduction…**, **Achievements…** and **About KNXBench…** |
+
+A row with a **›** opens its submenu to the right (below the row on a narrow
+window, where there is no room beside it). Point at a row for a moment, or click it,
+or focus it and press `→`, `Enter` or `Space`. The panel slides in over about 0.14
+seconds; **Settings → Appearance → Motion level → Off** and your system's
+reduced-motion setting remove that slide. Inside a menu `↑` and `↓` move between
+entries (`Home` and `End` jump to the first and last), `←` or `Escape` closes the
+submenu and puts you back on its row, and a second `Escape` closes File. `Tab` and
+`Shift+Tab` leave the whole menu at once from any entry; focus continues from **File**. On a window that is very short
+(or zoomed far in) the submenus open under their row instead of beside it and the menu
+scrolls, so the last entries stay reachable. Moving the
+pointer from a row diagonally into its panel does not close it, and opening one
+submenu closes the other. No action was added or removed, and each entry works as
+before: **Project history** and **Compare with…** are still greyed out without a
+project. Elsewhere in this manual, **File → X** means "open File, and the submenu
+that holds X if it is in one".
 
 The web File menu includes **Export project…** for a local `.knxdb` copy of
 the open project. The desktop build instead has native file dialogs and adds
 **Quit**; a browser tab cannot close itself. Neither build exports `.knxproj`.
+**Logout** appears under the submenus only where a login exists.
 
 ## The strip below the header
 

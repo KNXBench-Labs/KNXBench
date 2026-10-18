@@ -7,10 +7,12 @@ import { getActiveUiLanguage } from "./uiLanguage";
 import * as api from "./contributionApi";
 import "./contribution.css";
 import ProcedureResolutionView from "./ProcedureResolutionView";
+import { useFileMenuItemProps } from "./FileMenu";
 
 export const CONTRIBUTION_REPOSITORY = "https://github.com/KNXBench-Labs/KNXBench";
 export default function ContributionButton() {
   const t = useTranslate();
+  const entry = useFileMenuItemProps();
   const [open, setOpen] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
   const previous = useRef(false);
@@ -18,7 +20,7 @@ export default function ContributionButton() {
     if (previous.current && !open) trigger.current?.closest("details")?.querySelector("summary")?.focus();
     previous.current = open;
   }, [open]);
-  return <><button ref={trigger} onClick={() => setOpen(true)}>{t("contribution.button")}</button>
+  return <><button {...entry} ref={trigger} onClick={() => setOpen(true)}>{t("contribution.button")}</button>
     {open && createPortal(<ContributionDialog onClose={() => setOpen(false)} />, document.body)}</>;
 }
 function ContributionDialog({ onClose }: { onClose: () => void }) {

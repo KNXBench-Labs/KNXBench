@@ -208,7 +208,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await explorer.locator(".navigation-section-toggle").click();
     await expect(explorer.locator(".project-explorer")).toBeVisible();
     await page.locator(".file-menu > summary").click();
-    await expect(page.locator(".file-menu-group > h3")).toHaveText([m["fileMenu.project"], m["fileMenu.exchange"], m["fileMenu.history"], m["fileMenu.help"]]);
+    await expect(page.locator(".file-submenu-trigger > span:first-child")).toHaveText([m["fileMenu.exchange"], m["fileMenu.history"], m["fileMenu.help"]]);
     await page.keyboard.press("Escape");
     await openList(page, language);
     await page.locator(".devices-table tbody td:nth-child(3) button").filter({ hasText: /^Actuator 1$/ }).click();

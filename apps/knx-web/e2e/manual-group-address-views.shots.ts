@@ -2,9 +2,8 @@
 
 // Same setup as manual-screenshots.shots.ts (fresh knx-server, production
 // frontend, fictional tools/manual_sample_project.py, loopback-only network
-// namespace), but kept separate: that spec's set is pinned to the published
-// Alpha 9 image, while these views exist only in source builds after it.
-// The few helpers are repeated on purpose so the pinned spec stays unchanged.
+// namespace), kept as its own spec so the four views can be recaptured alone.
+// The few helpers are repeated on purpose so each spec stays self-contained.
 
 import { expect, test, type Page } from "@playwright/test";
 import { mkdirSync } from "node:fs";
@@ -35,7 +34,7 @@ async function shot(page: Page, name: string): Promise<void> {
   await page.evaluate(() => {
     for (const element of document.querySelectorAll("*")) if (element.scrollTop) element.scrollTop = 0;
   });
-  await page.screenshot({ path: `${target}/porcelain-${name}.png` });
+  await page.screenshot({ path: `${target}/porcelain-${name}.png`, animations: "disabled" });
   console.log(`Captured porcelain-${name}.png`);
 }
 
@@ -64,6 +63,13 @@ test("manual screenshots of the four group-address presentations", async ({ page
   await expect(page.getByText("Project status")).toBeVisible({ timeout: 15_000 });
   await dismissToasts(page);
 
+  // Since Alpha 14 navigation blocks and explorer branches start closed.
+  for (const title of ["Workspaces", "Project explorer"]) {
+    const toggle = page.locator(".navigation-section-toggle", { hasText: title }).first();
+    if ((await toggle.getAttribute("aria-expanded")) === "false") await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  }
+  await page.locator(".project-explorer").getByRole("button", { name: "Expand all", exact: true }).click();
   await page.getByRole("navigation", { name: "Navigation" }).getByRole("button", { name: "Group addresses", exact: true }).click();
   const workspace = page.locator(".ga-workspace");
   await expect(workspace).toBeVisible();
@@ -100,6 +106,9 @@ test("manual screenshots of the four group-address presentations", async ({ page
   await expect(workspace.locator("[data-ga-cell]").first()).toBeVisible();
   // Load one device's object list through the real device-detail read, keep two
   // linked columns and add its first unlinked object so all three fit in frame.
+  // The chooser holds the device inventory; it starts closed since Alpha 14.
+  const picker = workspace.locator(".ga-column-picker");
+  if (!(await picker.evaluate((node) => (node as HTMLDetailsElement).open))) await picker.locator("summary").click();
   const ground = workspace.locator("[data-ga-inventory-device]").filter({ hasText: "Switch actuator ground floor" });
   await ground.locator("[data-ga-load-objects]").click();
   await expect(ground).toHaveAttribute("data-ga-inventory-state", "loaded");
@@ -107,8 +116,9 @@ test("manual screenshots of the four group-address presentations", async ({ page
   while ((await checked.count()) > 2) await checked.last().uncheck();
   await workspace.locator(".ga-column-choices label").filter({ has: page.locator("[data-ga-unlinked]") }).first().locator("input").check();
   await expect(workspace.locator(".ga-matrix-table thead [data-ga-unlinked]")).toHaveCount(1);
-  // Fold the column chooser (open by default) so the grid itself is in frame.
-  await workspace.locator(".ga-column-picker summary").click();
+  // Fold the column chooser again so the grid itself is in frame.
+  await picker.locator("summary").click();
+  await expect(picker).not.toHaveAttribute("open", "");
   await shot(page, "ga-view-matrix");
 
   await view(page, "tree");

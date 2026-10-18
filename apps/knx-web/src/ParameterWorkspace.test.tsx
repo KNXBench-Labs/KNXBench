@@ -5,10 +5,12 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it } from "vitest";
 import type { ParameterField, ParameterGroupLayout, ParameterSection, ParameterSeparator } from "./api";
 import ParameterWorkspace from "./ParameterWorkspace";
+import { resetUiLanguageForTests, saveUiLanguage } from "./uiLanguage";
+import { resetSettingsForTests, settingsStorage } from "./settingsStore";
 
 let host: HTMLDivElement;
 let root: Root;
-afterEach(async () => { if (root) await act(async () => root.unmount()); host?.remove(); });
+afterEach(async () => { if (root) await act(async () => root.unmount()); host?.remove(); resetSettingsForTests(); resetUiLanguageForTests(); });
 const field = (etsId: string, key?: string): ParameterField => ({
   etsId, group: key ? { key, label: key } : null, name: etsId, text: etsId, nameLanguage: null,
   textLanguage: null, kind: "Number", value: "5", valueSource: "Stored", editable: true,
@@ -34,6 +36,34 @@ function nav(name: string) {
 }
 
 describe("ParameterWorkspace", () => {
+  it.each([["en", "Parameter group 3"], ["de", "Parametergruppe 3"]])(
+    "%s searches the visible numbered caption and retains source context and editor identity", async (language, fallback) => {
+      saveUiLanguage(settingsStorage, language); resetUiLanguageForTests();
+      const data: ParameterSection[] = [{ scope: null, fields: [field("First", "One"), field("Second", "Two"),
+        { ...field("Target"), group: { key: "PB-3", label: "#", labelFill: { template: "Source {{0}}", source: "EmptyValue" } } }] }];
+      const before = structuredClone(data);
+      await mount(data);
+      const button = nav(fallback);
+      expect(button).toBeDefined();
+      expect(button.title).toContain("Source {{0}}");
+      await act(async () => button.click());
+      const row = host.querySelector<HTMLDivElement>('[data-parameter-row="Target"]')!;
+      const input = row.querySelector<HTMLInputElement>("input")!;
+      await act(async () => setInput(input, "7"));
+      const search = host.querySelector<HTMLInputElement>('input[type="search"]')!;
+      for (const query of [fallback, "#", "Source {{0}}", "Target"]) {
+        await act(async () => setInput(search, query));
+        expect(row.hidden, `search ${query}`).toBe(false);
+        expect(host.querySelectorAll(".parameter-workspace-row:not([hidden])")).toHaveLength(1);
+        expect(row.querySelector(".parameter-workspace-result-path")!.textContent).toContain(fallback);
+        expect(row.querySelector("input")).toBe(input);
+        expect(input.value).toBe("7");
+      }
+      await act(async () => setInput(search, ""));
+      expect(button.getAttribute("aria-current")).toBe("page");
+      expect(data).toEqual(before);
+    });
+
   it("uses the same safe captions in separator rows and declared grid captions", async () => {
     const data: ParameterSection[] = [{ scope: null, fields: [field("P", "Area")],
       separators: [{ position: 0, group: { key: "Area", label: "Area" }, elementId: "S", text: "{{0}}",

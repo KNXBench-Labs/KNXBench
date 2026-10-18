@@ -44,14 +44,23 @@ canvas, typography and phosphor-green headings. The added installation diagram
 and all its code/labels are removed following owner review. Story source is
 unchanged; shared visual principles do not mean loading its application runtime.
 
-Marketing h1/h2/h3 retain rolling glyphs: each roll randomly chooses right, left,
-up or down with an oppositely offset twin. Timing stays720ms. Rare single-glyph
-180ms glitches remain. Only visible headings animate; header Pause/Resume and
-live OS reduced motion cancel all effects, including button transitions. The
-setting is page-local, never persisted. No-JS/missing APIs leave static text;
-legal/privacy pages stay static. No animation needed to read or navigate.
+Marketing h1/h2/h3 now enter with SessionRadar-style staggered character fades,
+vertical movement and a slight 3D turn (650ms per character, up to 24ms stagger,
+600ms maximum total stagger). Leaving the inset viewport plays the same timeline
+backwards; quick re-entry reverses in place without jumping. Once settled, each
+ambient roll still randomly chooses right, left, up or down with an oppositely
+offset twin and 720ms timing. Rare single-glyph 180ms glitches remain. Entrance and
+ambient motion use separate character layers, preserving layout and readable text.
 
-Actual-browser recipes: `tests/verify-headlines.js`, `tests/verify-phosphor.js`,
+Only visible headings run ambient effects; a finite reverse entrance may finish
+offscreen and then releases its animations. Header Pause/Resume, live OS reduced
+motion, hidden-document and pagehide cleanup cancel both layers and restore all
+text. The setting is page-local, never persisted. No-JS/missing APIs/animation
+failure leave static text; legal/privacy pages stay static. No animation is
+needed to read or navigate.
+
+Actual-browser recipes: `tests/verify-headline-reveal.js`,
+`tests/verify-headlines.js`, `tests/verify-phosphor.js`,
 `tests/verify-roll-directions.js`. The direction recipe uses controlled RNG values
 against real WAAPI animations, not guessed randomness or a fake animation clock.
 Owner commit/push approval was received on15October2026; this revision is now

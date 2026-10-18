@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 import tempfile
@@ -184,31 +185,43 @@ class BuildTests(unittest.TestCase):
             self.assertIn("noindex", html)
             self.assertIn('class="preview-note"', html)
 
-    def test_alpha12_features_use_current_screenshots_and_upgrade_boundaries(self):
+    def test_alpha14_features_use_current_screenshots_and_upgrade_boundaries(self):
         self.require_build()
         for lang in ("de", "en"):
             page = (self.out / lang / "index.html").read_text()
             doc = Document(page)
-            for asset in ("alpha12-devices.webp", "alpha12-addresses.webp",
-                          "alpha12-instructions.webp", "alpha12-support.webp"):
+            for asset in ("alpha14-parameters.webp", "alpha14-vendor-zip.webp",
+                          "alpha14-notes.webp", "alpha14-diagnostics.webp"):
                 self.assertTrue(any(tag == "img" and attrs.get("src", "").endswith("/" + asset)
                                     and attrs.get("alt") for tag, attrs in doc.elements), (lang, asset))
+            self.assertNotIn("alpha12-", page)
             text = json.loads((WEBSITE / "content" / f"{lang}.json").read_text())
-            for key in ("release_title", "release_devices_body", "release_addresses_body",
-                        "release_instructions_body", "release_support_body", "upgrade_note", "release_scope_note"):
+            for key in ("release_title", "release_parameters_body", "release_vendor_body",
+                        "release_notes_body", "release_diagnostics_body", "upgrade_note", "release_scope_note"):
                 self.assertIn(text[key], page)
-            self.assertIn("Alpha 12", page)
+            self.assertIn("Alpha 14", page)
             self.assertIn("16", text["upgrade_note"])
-            self.assertIn("23", text["upgrade_note"])
-            self.assertIn("Alpha 11", text["upgrade_note"])
-            self.assertIn("v0.1.0-alpha.12", page)
-            self.assertNotIn("not mounted", text["release_scope_note"])
+            self.assertIn("24", text["upgrade_note"])
+            self.assertIn("Alpha 13", text["upgrade_note"])
+            self.assertIn("v0.1.0-alpha.14", page)
+            self.assertNotIn("v0.1.0-alpha.12", page)
 
-    def test_alpha12_media_has_reproducible_candidate_provenance(self):
+    def test_site_copy_and_captions_carry_no_negative_disclaimer_tags(self):
+        # Owner decision (18 October 2026): captions describe what is shown,
+        # without "no live bus" / "no hardware" style tags.
+        tags = re.compile(r"(?i)no live bus|no hardware|kein live-bus|kein hardware|keine hardware|"
+                          r"offline demo data|offline-demodaten|not new hardware|keine neue hardware")
+        for lang in ("de", "en"):
+            text = json.loads((WEBSITE / "content" / f"{lang}.json").read_text())
+            self.assertEqual([key for key, value in text.items() if tags.search(value)], [], lang)
+        for track in sorted((WEBSITE / "assets").glob("*.vtt")):
+            self.assertIsNone(tags.search(track.read_text()), track.name)
+
+    def test_alpha14_media_has_reproducible_release_provenance(self):
         media = json.loads((WEBSITE / "media.json").read_text())
-        self.assertIn("alpha12Capture", media)
-        capture = media["alpha12Capture"]
-        self.assertEqual(capture["application_release_candidate"], "v0.1.0-alpha.12")
+        self.assertIn("alpha14Capture", media)
+        capture = media["alpha14Capture"]
+        self.assertEqual(capture["application_release"], "v0.1.0-alpha.14")
         self.assertEqual(media["applicationSource"], capture["application_source_commit"])
         self.assertEqual(capture["capture_result"], {"passed": 1, "failed": 0, "skipped": 0})
         self.assertIn("recordingChecks", media["historicalRecording"])
@@ -216,18 +229,22 @@ class BuildTests(unittest.TestCase):
         self.assertEqual(len(source_commit), 40)
         self.assertEqual(subprocess.run(["git", "cat-file", "-e", source_commit + "^{commit}"],
                                         cwd=WEBSITE.parent, capture_output=True).returncode, 0)
-        for name in ("graphite.webp", "crt.webp", "lcars.webp", "alpha12-devices.webp",
-                     "alpha12-addresses.webp", "alpha12-instructions.webp", "alpha12-support.webp"):
+        manifest = WEBSITE.parent / capture["manifest"]
+        self.assertEqual(capture["manifest_sha256"], hashlib.sha256(manifest.read_bytes()).hexdigest())
+        self.assertEqual(json.loads(manifest.read_text())["application_source_commit"], source_commit)
+        for name in ("graphite.webp", "crt.webp", "lcars.webp", "alpha14-parameters.webp",
+                     "alpha14-vendor-zip.webp", "alpha14-notes.webp", "alpha14-diagnostics.webp"):
             record = media["assets"][name]
             source = WEBSITE.parent / record["source"]
             self.assertEqual(record["sourceSha256"], hashlib.sha256(source.read_bytes()).hexdigest(), name)
             self.assertEqual(record["applicationSource"], source_commit, name)
             self.assertIn("lossless", record["encoding"])
+        for name in ("project-work.mp4", "bus-flow.mp4", "group-details.mp4"):
+            self.assertEqual(media["assets"][name]["applicationSource"], source_commit, name)
         for lang in ("de", "en"):
             text = json.loads((WEBSITE / "content" / f"{lang}.json").read_text())
-            earlier = "Frühere Aufnahme" if lang == "de" else "Earlier recording"
             for key in ("project_caption", "flow_caption", "details_caption"):
-                self.assertIn(earlier, text[key], (lang, key))
+                self.assertIn("Alpha 14", text[key], (lang, key))
 
     def test_page_assets_are_local_exist_and_videos_do_not_autoplay(self):
         self.require_build()

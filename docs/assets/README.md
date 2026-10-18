@@ -11,6 +11,23 @@ All device names, rooms and products come from the generated **Sample house**
 or the first-project **Practice house** exercise. No customer project or live
 bus capture belongs in this directory.
 
+## Alpha 14 website media (18 October 2026)
+
+Seven PNGs and the [capture manifest](releases/alpha14/media-manifest.json) are in
+`releases/alpha14/`. They show the tagged Alpha 14 source (`8d104e2f`): production
+frontend, actual `knx-server` and the fictional Sample house, captured in an
+isolated loopback-only namespace with no application response replaced. Scenes:
+group addresses (Graphite, LCARS, green CRT), the parameter workspace, the note
+decision for a newly created, unlinked address, a vendor-ZIP preview of the
+fictional demo package (nothing installed) and the diagnostic export up to its
+read preview (start/export requests asserted absent). The website's three MP4s
+come from the same tagged source; their recorders, hashes and encoding are named
+in the manifest. README media are unchanged by this refresh.
+
+Reproduction: `apps/knx-web/e2e/release-media.shots.ts`, `readme-hero.shots.ts`,
+`readme-flow.shots.ts` and their configs; see
+[website media instructions](../../website/README.md#media).
+
 ## Alpha 12 website and README stills (15 October 2026)
 
 The ten current release-candidate PNGs are in [releases/alpha12](releases/alpha12/media-manifest.json).

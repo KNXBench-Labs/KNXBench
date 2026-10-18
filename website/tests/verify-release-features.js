@@ -1,4 +1,4 @@
-/** Real-browser acceptance of the built Alpha 12 marketing section. */
+/** Real-browser acceptance of the built Alpha 14 marketing section. */
 async (page) => {
   const origin = new URL(page.url()).origin;
   const checks = [], errors = [], unexpected = [];
@@ -6,7 +6,7 @@ async (page) => {
     if (!condition) throw new Error(name);
     checks.push(name);
   };
-  const assets = ['alpha12-devices.webp', 'alpha12-addresses.webp', 'alpha12-instructions.webp', 'alpha12-support.webp'];
+  const assets = ['alpha14-parameters.webp', 'alpha14-vendor-zip.webp', 'alpha14-notes.webp', 'alpha14-diagnostics.webp'];
   for (const javaScriptEnabled of [true, false]) {
     const context = await page.context().browser().newContext({ javaScriptEnabled, reducedMotion: 'reduce' });
     try {
@@ -26,7 +26,7 @@ async (page) => {
           await tab.evaluate(() => document.fonts.ready);
           const section = tab.locator('#release-features');
           await section.scrollIntoViewIfNeeded();
-          assert(`${prefix}: Alpha 12 heading`, (await section.locator('h2').textContent()).includes('Alpha 12'));
+          assert(`${prefix}: Alpha 14 heading`, (await section.locator('h2').textContent()).includes('Alpha 14'));
           assert(`${prefix}: four feature cards`, await section.locator('article').count() === 4);
           for (const asset of assets) {
             const image = section.locator(`img[src$="/${asset}"]`);
@@ -40,17 +40,19 @@ async (page) => {
             assert(`${prefix}: ${asset} decodes with honest dimensions and enlarge link`,
               !!data.alt && data.width === data.declaredWidth && data.height === data.declaredHeight && data.link.endsWith('/' + asset));
           }
-          assert(`${prefix}: release notes link`, await section.locator('a[href="https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.12"]').count() === 1);
+          assert(`${prefix}: release notes link`, await section.locator('a[href="https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.14"]').count() === 1);
           const status = await tab.locator('#status').textContent();
-          assert(`${prefix}: schema and downgrade boundaries`, status.includes('16') && status.includes('23') && status.includes('Alpha 11'));
-          assert(`${prefix}: earlier videos remain separately labelled`, (await tab.locator('#watch').textContent()).includes(lang === 'de' ? 'Frühere Aufnahme' : 'Earlier recording'));
+          assert(`${prefix}: schema and downgrade boundaries`, status.includes('16') && status.includes('24') && status.includes('Alpha 13'));
+          const watch = await tab.locator('#watch').textContent();
+          assert(`${prefix}: videos are labelled as Alpha 14 recordings`, (watch.match(/Alpha 14/g) || []).length >= 3);
+          assert(`${prefix}: no negative disclaimer tags`, !/no live bus|no hardware|kein live-bus|kein hardwarekontakt/i.test(await tab.locator('main').textContent()));
           assert(`${prefix}: no horizontal page overflow`, await tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
           assert(`${prefix}: Docker starts from ready-made image`, (await tab.locator('.docker-path ol').textContent()).includes(lang === 'de' ? 'fertige Image' : 'ready-made image'));
           if (javaScriptEnabled && [390, 1440].includes(width)) {
             await section.locator('article').first().scrollIntoViewIfNeeded();
-            await tab.screenshot({ path: `website/output/playwright/alpha12-${lang}-${width}-top.png` });
+            await tab.screenshot({ path: `website/output/playwright/alpha14-${lang}-${width}-top.png` });
             await section.locator('article').last().scrollIntoViewIfNeeded();
-            await tab.screenshot({ path: `website/output/playwright/alpha12-${lang}-${width}-bottom.png` });
+            await tab.screenshot({ path: `website/output/playwright/alpha14-${lang}-${width}-bottom.png` });
           }
         }
       }

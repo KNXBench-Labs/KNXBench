@@ -32,6 +32,31 @@ can repair every interrupted allocator, access-control or firmware state.
    plan and recovery method; the reporter separately approves each operation.
    Readback and human presence/brightness checks are both required.
 
+### Write ladder (owner go, 18 October 2026)
+
+The owner asked for a routine that writes more and more until the device is
+fully programmed. Accepted in this staged form, because the memory stages
+can grow step by step but the load procedure cannot (after Unload the device
+has no valid application until LoadCompleted):
+
+| Stage | Action | Writes |
+| --- | --- | --- |
+| 0 | Read the source-declared ranges only; compare offline with the ETS-programmed state | no |
+| 1 | Write back 3 identical octets, with own receipt and pre-Verify-Mode setup state | minimal |
+| 2 | Change one parameter, human function check, restore | yes |
+| 3 | Whole parameter segment | yes |
+| 4 | Tables (address, association, objects) | yes |
+| 5 | Complete load procedure as one non-incremental operation | all |
+
+Within one consented stage a routine may proceed automatically (receipt →
+write → readback → next block) and stops on any mismatch, timeout or error.
+It never moves to a higher stage by itself and never crosses into stage 5.
+A human function check sits between stages; a byte comparison does not show
+that the detector still works. Readback proves transfer, not correct content:
+stage 0's comparison against the device's existing ETS-programmed state is the
+content check. Repeated passes cost EEPROM write cycles; no unbounded loops.
+Stages 1–5 stay blocked by the boundaries in the sequence above.
+
 Continue every implementable item without asking again for offline permission.
 When a step needs unavailable defining evidence, record the exact dependency,
 finish independent work and report the actual boundary rather than claiming

@@ -2373,6 +2373,7 @@ export const messages: Record<MessageKey, string> = {
   "workbench.objectCount.one": "{count} Kommunikationsobjekt",
   "workbench.objectCount.other": "{count} Kommunikationsobjekte",
   "workbench.emptyStructure": "Noch keine Einträge. Struktur hier oder im Projektbaum anlegen.",
+  "workbench.emptyTopology": "Noch keine Geräte in dieser Installation. Leere Bereiche und Linien sind hier ausgeblendet; du verwaltest sie im Projektbaum.",
   "structure.editSelection": "Ausgewählte Struktur bearbeiten",
   "structure.addArea": "Bereich hinzufügen",
   "structure.addLineIn": "Linie in {name} hinzufügen",

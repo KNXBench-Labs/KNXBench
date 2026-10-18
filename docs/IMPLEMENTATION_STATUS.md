@@ -145,6 +145,17 @@ browser matrix checks the named dialog, toolbar, inspector and table controls'
 roles, focus and size and the separators in all five shipped themes.
 [Contract](contracts/controls-and-separators.md).
 
+## Device-empty topology ranges (18 October 2026 source, issue #25)
+
+The Topology diagram hides lines without devices and areas without a populated
+line. Zero-object devices and unassigned devices remain visible. Empty ranges
+remain in the project and explorer, and selecting one there retains its editor
+and the header's exact device-add target. No domain, persistence, export or
+protocol change. [Contract](contracts/topology-metrics.md#device-empty-ranges-issue-25-source-builds-after-alpha-14).
+Focused verification: named pre-fix RED; 22 component tests, 23 fixture browser
+cases and eight production heading/hover cases passed. Independent review
+accepted the corrected full diff. Integrated package acceptance is separate.
+
 ## Manual, README and screenshots after Alpha 14 (18 October 2026)
 
 Docs and media only, no application change. The manual's 46 stills, the four

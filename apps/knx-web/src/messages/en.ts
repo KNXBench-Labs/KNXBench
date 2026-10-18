@@ -2503,6 +2503,7 @@ export const messages = {
   "workbench.objectCount.one": "{count} communication object",
   "workbench.objectCount.other": "{count} communication objects",
   "workbench.emptyStructure": "No entries yet. Add structure here or in the project tree.",
+  "workbench.emptyTopology": "No devices in this installation yet. Empty areas and lines are hidden here; manage them in the project tree.",
   "structure.editSelection": "Edit selected structure",
   "structure.addArea": "Add area",
   "structure.addLineIn": "Add line in {name}",

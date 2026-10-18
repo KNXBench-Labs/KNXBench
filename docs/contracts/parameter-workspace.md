@@ -12,7 +12,10 @@ or protocol schema change; product database v24 adds typed presentation columns
   **Other parameters**, never an inferred channel.
 - The editing area uses aligned label/value rows. It is a compact comparison
   surface, **not** a semantic channel pivot, a recreation of ETS grid coordinates
-  or a product-specific faceplate. Original labels/options/values stay unchanged.
+  or a product-specific faceplate. Original labels/options/values stay unchanged;
+  section captions are a read-only resolved display over preserved source metadata.
+  See the [positional text contract](positional-text-templates.md#parameter-workspace-captions-issue-26)
+  for exact source references, readable fallbacks and tooltips.
 - Closed by default, like the other disclosures: the area register lists every
   area with its entry count, but no area opens until chosen. An explicitly
   chosen area stays open across project refreshes; newly appearing areas stay
@@ -100,8 +103,9 @@ or protocol schema change; product database v24 adds typed presentation columns
   source order: `Headline` as a heading, `Information`/`Error` as marked text
   (screen readers hear "Information:"/"Manufacturer warning:"), `HorizontalRuler`
   and textless separators as a rule, any other hint as plain text with the token
-  kept in `data-ui-hint`. Their text is the program's, never translated or
-  parsed.
+  kept in `data-ui-hint`. Their text is the program's, not translated; named
+  arguments and supported positional text references use the shared resolver.
+  Source text and fill provenance stay available in the tooltip.
 - Separators hidden or restricted by their own or their block's `Access` are not
   shown. Search results list fields only. An area rendered as a declared grid
   keeps its grid captions and shows no separator rows.

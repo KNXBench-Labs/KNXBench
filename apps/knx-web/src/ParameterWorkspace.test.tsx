@@ -34,6 +34,35 @@ function nav(name: string) {
 }
 
 describe("ParameterWorkspace", () => {
+  it("uses the same safe captions in separator rows and declared grid captions", async () => {
+    const data: ParameterSection[] = [{ scope: null, fields: [field("P", "Area")],
+      separators: [{ position: 0, group: { key: "Area", label: "Area" }, elementId: "S", text: "{{0}}",
+        uiHint: "Headline", access: null, blockAccess: null }] }];
+    await mount(data);
+    await act(async () => nav("Area").click());
+    expect(host.querySelector(".parameter-workspace-separator h5")!.textContent).toBe("Section text");
+    expect(host.querySelector<HTMLElement>(".parameter-workspace-separator")!.title).toContain("{{0}}");
+  });
+
+  it("uses readable section names and source tooltips instead of raw templates or hash labels", async () => {
+    const labels = ["Functions: {{0}}", "#", "", "   ", "{{9:unknown}}"];
+    const data: ParameterSection[] = [{ scope: null, fields: labels.map((label, index) => ({
+      ...field(`P-${index}`), group: { key: `PB-${index}`, label },
+    })) }];
+    const before = structuredClone(data);
+    await mount(data);
+    const buttons = [...host.querySelectorAll<HTMLButtonElement>(".parameter-workspace-nav button")];
+    expect(buttons).toHaveLength(5);
+    for (const [index, button] of buttons.entries()) {
+      expect(button.querySelector("span")!.textContent).toBe(`Parameter group ${index + 1}`);
+      expect(button.title).toContain("caption");
+      if (labels[index].trim()) expect(button.title).toContain(labels[index]);
+    }
+    await act(async () => buttons[0].click());
+    expect(host.querySelector(".parameter-workspace-heading h4")!.textContent).toBe("Parameter group 1");
+    expect(data).toEqual(before);
+  });
+
   it("starts closed: every area is listed with its count, but none opens until chosen", async () => {
     await mount();
     expect(host.querySelectorAll('.parameter-workspace-nav [aria-current="page"]')).toHaveLength(0);
@@ -129,6 +158,15 @@ describe("ParameterWorkspace declared grids", () => {
     groupLayouts: layout ? [layout] : [] }];
   const rowsParent = () => host.querySelector<HTMLDivElement>(".parameter-workspace-rows")!;
   const style = (etsId: string) => host.querySelector<HTMLDivElement>(`[data-parameter-row="${etsId}"]`)!.style;
+
+  it("safely labels unresolved separator captions in a declared grid", async () => {
+    await mount(gridSections(grid({ labels: [{ row: 1, column: 1, text: "{{0}}",
+      textFill: { template: "{{0}}", source: "NoReference" } }] })));
+    await act(async () => nav("Pairs").click());
+    const caption = host.querySelector<HTMLElement>('.parameter-matrix-caption[data-caption="label"]')!;
+    expect(caption.textContent).toBe("Section text");
+    expect(caption.title).toContain("{{0}}");
+  });
 
   it("starts closed and renders a matrix only after an area with a declared grid is chosen", async () => {
     await mount(gridSections());

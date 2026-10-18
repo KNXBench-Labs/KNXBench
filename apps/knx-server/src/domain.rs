@@ -5459,6 +5459,7 @@ fn unresolved_assembly(
 /// in `knx_productdb::device_evaluation` (ADR-0090), shared with the MCP
 /// adapter; this keeps the panel's stale/diagnostic wording unchanged.
 struct DeviceEvaluation {
+    caption_fills: crate::parameter_captions::CaptionFills,
     ref_ids: HashSet<String>,
     supplied: HashMap<String, String>,
     validated_scoped: HashMap<(String, String), String>,
@@ -5476,13 +5477,15 @@ fn evaluate_device(
     stored: Vec<(String, String)>,
     module_instances: &[knx_core::ModuleInstance],
 ) -> Result<DeviceEvaluation, String> {
-    let evaluation = knx_productdb::device_evaluation::evaluate_device(
+    let mut evaluation = knx_productdb::device_evaluation::evaluate_device(
         products,
         program_id,
         stored,
         module_instances,
     )
     .map_err(|e| e.to_string())?;
+    let caption_fills =
+        crate::parameter_captions::apply(products, program_id, &mut evaluation, module_instances)?;
     let mut instance_values: Vec<_> = evaluation
         .instance_scoped_ids
         .iter()
@@ -5499,6 +5502,7 @@ fn evaluate_device(
         .collect();
     instance_values.sort_by(|a, b| a.ets_id.cmp(&b.ets_id));
     Ok(DeviceEvaluation {
+        caption_fills,
         instance_values,
         ref_ids: evaluation.ref_ids,
         supplied: evaluation.supplied,
@@ -5635,6 +5639,7 @@ fn assemble_parameter_panel(
     };
 
     let DeviceEvaluation {
+        caption_fills,
         ref_ids,
         supplied,
         validated_scoped,
@@ -5908,7 +5913,17 @@ fn assemble_parameter_panel(
             if !grid_groups.iter().any(|(_, node)| *node == group.node_id) {
                 grid_groups.push((key.clone(), group.node_id));
             }
-            crate::routes::ParameterGroupDto { key, label }
+            let label_fill = caption_fills
+                .get(&(
+                    section.scope.as_ref().map(|s| s.node_chain()),
+                    group.node_id,
+                ))
+                .cloned();
+            crate::routes::ParameterGroupDto {
+                key,
+                label,
+                label_fill,
+            }
         };
         for (ref_id, (position, block_access)) in section.ref_ids.iter().zip(&section.activated) {
             // A ref the join dropped (see the diagnostic above) has no
@@ -6029,6 +6044,12 @@ fn assemble_parameter_panel(
                     text: separator_texts
                         .get(&(scope_key, separator.node_id))
                         .map(|text| text.to_string()),
+                    text_fill: caption_fills
+                        .get(&(
+                            separator.scope.as_ref().map(|s| s.node_chain()),
+                            separator.node_id,
+                        ))
+                        .cloned(),
                     ui_hint: declaration.ui_hint,
                     access: declaration.access,
                     block_access: separator.block_access.clone(),
@@ -6048,6 +6069,7 @@ fn assemble_parameter_panel(
                     definition,
                     key,
                     block_node,
+                    &caption_fills,
                     activation
                         .labels
                         .iter()

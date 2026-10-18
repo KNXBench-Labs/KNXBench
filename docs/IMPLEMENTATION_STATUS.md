@@ -12,6 +12,18 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Eleven more real diagnostic exports reviewed (18 October 2026)
+
+Eleven further read-only exports received by email (Hager, Berker, MDT,
+Video-Star) were reviewed and recorded in the
+[evidence note](research/2026-10-18-device-diagnostics-eleven-devices.md). First
+real `refused-ambiguous` replies (two PID78 refusals); eight of eight declared
+PID78 comparisons match the `[A]` `property_matches` shape; a hidden
+`HWT_Check` default equals its device's reply (G10 data point). New private gate
+`knx-app` `device_reports_corpus`: the strict reader accepts all twelve real
+archives and the writer reproduces each byte for byte (three negative controls
+red). No production code or admission change.
+
 ## UI feedback wave 3 integration acceptance (18 October 2026)
 
 UI-02 (controls/separators), UI-03 (File submenus) and UI-06 (labelled,

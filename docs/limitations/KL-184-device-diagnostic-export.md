@@ -30,3 +30,14 @@ written and the disconnect attempt completed
 The identity-only boundary is unchanged. A refusing or silent device, the
 `refused-ambiguous` path and post-run device behaviour are still unobserved on
 hardware.
+
+## Eleven more devices (18 October 2026)
+
+Eleven further exports arrived by email (Hager, Berker, MDT, Video-Star;
+masks `0701`, `0705`, `07B0`), all complete and read-only
+([evidence](../research/2026-10-18-device-diagnostics-eleven-devices.md)). Two Hager
+devices refused PID78 with zero elements, so `refused-ambiguous` is now observed
+on hardware; their applications declare no PID78 comparison. No device stayed
+silent. Post-run device behaviour is still unreported, and the identity-only
+boundary is unchanged. A private gate keeps the reader and writer bound to these
+real archives.

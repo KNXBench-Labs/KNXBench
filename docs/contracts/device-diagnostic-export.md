@@ -2,8 +2,8 @@
 
 [ADR-0134](../adr/0134-generic-read-only-diagnostic-export.md). A source-build
 feature after Alpha 13, released in [Alpha 14](../releases/alpha14.md).
-Simulator-verified, plus **one physical device so far** (see
-[First real device](#required-before-any-hardware-claim)).
+Simulator-verified, plus **twelve physical devices from five manufacturers so
+far** (see [Real devices](#required-before-any-hardware-claim)).
 
 ## What it is and is not
 
@@ -142,6 +142,14 @@ a Siemens `MV-0025` presence detector on a source build after Alpha 14
 all answered with the expected lengths; the disconnect attempt completed; the
 reviewed values are in the
 [evidence note](../research/2026-10-18-up258-device-diagnostics.md).
-Still unobserved: a refusing or silent device, and a report that the device
-kept working normally afterwards.
-One device does not make the export hardware-compatible in general.
+**Eleven more devices (18 October 2026, same build, by email):** Hager,
+Berker, MDT and Video-Star (GVS) units with masks `0701`, `0705` and `07B0`.
+All runs complete, nothing written, every assertion agreed with the device.
+Descriptor and PID12 answered everywhere; PID78 answered on nine and was
+refused with zero elements on two (`refused-ambiguous`, the path's first real
+observation). The private gate `crates/knx-app/tests/device_reports_corpus.rs`
+runs today's reader over all twelve archives and requires the writer to
+reproduce each byte for byte ([evidence note](../research/2026-10-18-device-diagnostics-eleven-devices.md)).
+Still unobserved: a silent device, and a report that a device kept working
+normally afterwards. Twelve devices do not make the export hardware-compatible
+in general.

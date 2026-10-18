@@ -56,7 +56,6 @@
 .project-history-confirmation { padding: 18px 0; }
 .project-history-confirmation h3 { margin-top: 0; }
 .project-history-confirmation p { line-height: 1.65; overflow-wrap: anywhere; }
-.project-history-panel .project-history-danger { background-color: var(--knx-surface); color: var(--knx-error-color); border-color: var(--knx-error-color); }
 .project-history-limit-note,
 .project-history-caveat { color: var(--knx-muted); font-size: .76rem; line-height: 1.6; }
 .project-history-footer { display: flex; justify-content: flex-start; margin-top: 16px; }

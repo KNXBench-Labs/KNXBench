@@ -45,12 +45,16 @@ export interface CssRule {
 /**
  * Tokens the component layer owns. A theme block that sets one of these is
  * rebuilding a user setting inside a palette, which is the failure mode
- * ADR-0022 exists to prevent: the motion pair belongs to T27's motion
- * control, the geometry pair to the density control.
+ * ADR-0022 exists to prevent: the motion tokens (durations, easing, the
+ * press scale) belong to T27's motion control, the geometry tokens (control
+ * height, padding, gap, cell padding) to the density control.
  */
 export const COMPONENT_LAYER_TOKENS: readonly string[] = [
   "--knx-cell-padding",
+  "--knx-control-gap",
   "--knx-control-height",
+  "--knx-control-padding-inline",
+  "--knx-control-press-scale",
   "--knx-feedback-duration",
   "--knx-motion-easing",
   "--knx-transition-duration",

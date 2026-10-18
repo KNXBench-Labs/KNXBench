@@ -132,7 +132,7 @@ function ImportDialog({ tree, scope, onTreeUpdate, onClose }: Props & { tree: Pr
       <details><summary>{t("selectiveImport.mappings")}</summary><ul>{preview.preview.mappings.map((m, index) => <li key={index}>{m.kind}: {m.source} → {m.target} ({t(m.reused ? "selectiveImport.reused" : "selectiveImport.created")})</li>)}</ul></details>
       {preview.preview.notes.map((note, index) => <p key={index}>{note}</p>)}
       <label className="selective-import-choice"><input type="checkbox" data-import-consent checked={consent} disabled={Boolean(mode)} onChange={e => setConsent(e.target.checked)} />{t("selectiveImport.consent")}</label>
-      <div className="selective-import-actions"><button disabled={!consent || Boolean(mode)} onClick={() => void run("apply")}>{t("selectiveImport.apply")}</button></div>
+      <div className="selective-import-actions"><button className="primary-action" disabled={!consent || Boolean(mode)} onClick={() => void run("apply")}>{t("selectiveImport.apply")}</button></div>
     </section>}
   </Overlay>;
 }

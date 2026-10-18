@@ -94,7 +94,7 @@ export default function FlowImageExportDialog(props: Props) {
     {failure && <p className="field-error" role="alert">{t(failure)}</p>}
     <p role="status"><span className={busy ? "task-status-text" : undefined}>{busy ? t("flow.export.working") : downloaded ? t("flow.export.downloadStarted") : ""}</span></p>
     {busy && <progress value={completed} max={total} aria-label={t("flow.export.progress")} />}
-    <div className="flow-export-actions"><button type="button" data-export-start onClick={start} disabled={busy || !consent || !sourceValid || (format === "gif" && !valid)}>{t("flow.export.start")}</button>
+    <div className="flow-export-actions"><button type="button" className="primary-action" data-export-start onClick={start} disabled={busy || !consent || !sourceValid || (format === "gif" && !valid)}>{t("flow.export.start")}</button>
       {busy && <button type="button" onClick={() => job.current?.abort()}>{t("flow.export.cancel")}</button>}
       <button type="button" onClick={props.onClose}>{t("flow.export.close")}</button></div>
     <small>GIF / Graphics Interchange Format: CompuServe Incorporated.</small>

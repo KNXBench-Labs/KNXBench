@@ -7,9 +7,16 @@ const LAYERS: Record<string, { name: MessageKey; help: MessageKey }> = {
   Inferred: { name: "valueSource.inferred", help: "valueSource.inferredHelp" },
   UserEdit: { name: "valueSource.userEdit", help: "valueSource.userEditHelp" },
 };
-export default function ValueProvenance({ layer }: { layer: string | null }) {
+// A value stated on the device instance is the ordinary case for an imported
+// project, so a field heading says nothing about it (UI-02). The layer stays in
+// the model and API; a deliberately opened technical reference names it. Each
+// layer is shown in exactly one place: the heading, or else the reference.
+const ROUTINE_LAYERS: ReadonlySet<string> = new Set(["Instance"]);
+export default function ValueProvenance({ layer, placement = "heading" }: {
+  layer: string | null; placement?: "heading" | "reference";
+}) {
   const t = useTranslate();
-  if (layer === null) return null;
+  if (layer === null || ROUTINE_LAYERS.has(layer) !== (placement === "reference")) return null;
   const keys = Object.hasOwn(LAYERS, layer) ? LAYERS[layer] : undefined;
   return <span className="provenance-badge" data-source-layer={layer}
     title={t(keys?.help ?? "valueSource.unknownHelp")}>

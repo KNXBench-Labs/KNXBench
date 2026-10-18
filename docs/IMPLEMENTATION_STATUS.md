@@ -12,6 +12,22 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## UI-02: compact button variants, visible navigation separators (18 October 2026)
+
+Presentation only, no API, schema, theme-pack or stored-data change. Owner
+requests 5–7 of the [UI feedback set](goals/ui-feedback-2026-10-18.md#ui-02--compact-distinctive-controls-and-visible-navigation).
+One shared Controls block in `styles.css` now owns every button's look: secondary
+by default, `primary-action`, `quiet-action`/`icon-action` and `danger-action`,
+compact (32px compact density, 12px padding) with colour-only hover and a small
+press scale that motion Off and reduced motion drop. Dialog confirmations name
+their primary or destructive role; the inspector's Delete reads as destructive,
+and the toolbar's Save no longer turns pale under the pointer.
+The navigation splitters draw a hairline at rest and an accent rule on hover,
+focus and drag; without a project the sections carry the same rule. The routine
+"Source: device instance" badge left the field headings and stays in the DPT
+technical reference and in the data.
+[Contract](contracts/controls-and-separators.md).
+
 ## Manual, README and screenshots after Alpha 14 (18 October 2026)
 
 Docs and media only, no application change. The manual's 46 stills, the four

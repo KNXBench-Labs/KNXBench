@@ -12,6 +12,16 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Table geometry at application scale — UISET-01/05 (18 October 2026)
+
+Table fitting, token/icon floors, pointer deltas and ARIA widths now share layout
+pixels, preserving browser-local width preferences through application scaling.
+Root-style appearance changes refresh geometry as well as token caches. The
+overlay browser check temporarily removes background inert during its stacking
+probe. Focused unit and browser regressions cover scale endpoints and saved-width
+restoration; [contract](contracts/table-column-widths.md). No project data,
+manufacturer grid or native-shell compatibility change.
+
 ## UI feedback wave 3 integration acceptance (18 October 2026)
 
 UI-02 (controls/separators), UI-03 (File submenus) and UI-06 (labelled,

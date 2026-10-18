@@ -34,8 +34,16 @@ Its latest worker reports 3,810 unit and 132 browser cases; controller added
 whole-set integration. Native WebKitGTK/Tauri interaction coverage remains
 absent. Unrelated research files and hardware-work claims are untouched.
 
+## Publication and remaining review
+
+Published `bc9d73c1`; conditional push succeeded and local/tracking/remote tips
+were read back equal. UI-05 follow-up review rejects on incomplete mutation
+invalidation, self-referential floor oracle and specialized block-padding
+regression. Correction round 7 addresses those findings; prior N1-N5 fixes
+were verified. This does not reopen the delivered UI-02/03/06 boundary.
+
 ## Next
 
-Verify conditional push/readback; finish UI-05 review and fixes if needed;
+Finish UI-05 review and fixes if needed;
 whole-set review and final integrated gate; update status and clean only
 inactive task-owned artifacts after acceptance.

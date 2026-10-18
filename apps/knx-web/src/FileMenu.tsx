@@ -3,6 +3,7 @@ import {
   createContext, useCallback, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState,
   type ButtonHTMLAttributes, type CSSProperties, type FocusEvent, type KeyboardEvent, type MouseEvent, type PointerEvent, type ReactNode,
 } from "react";
+import { appUiScale } from "./appUiScale";
 
 // Intent delay before a hovered trigger opens, and the grace period before a
 // hover-opened submenu closes again. The grace period is what lets a diagonal
@@ -10,6 +11,9 @@ import {
 // menu's padding or a sibling trigger on the way and the panel still wins.
 const HOVER_OPEN_DELAY_MS = 120;
 const HOVER_CLOSE_DELAY_MS = 320;
+// Every length in this file is a CSS layout px of the zoomed root, the unit the stylesheet and the
+// written caps and shifts use. Readings in visual px (DOMRect, the window size) are divided by the
+// application scale first (`layoutGeometry`); see docs/contracts/file-menu.md, "Units under zoom".
 const VIEWPORT_MARGIN_PX = 8;
 // Keep in step with `.file-submenu-panel` in styles.css (left/right offset).
 const SUBMENU_GAP_PX = 6;
@@ -184,19 +188,24 @@ export function FileMenuContent({ children, onClick }: FileMenuContentProps) {
   }, [cancelPending, isInline]);
   useEffect(() => cancelPending, [cancelPending]);
 
-  // A mouse press focuses its target between pointerdown and click. While a press is in flight a
-  // focus move is not a keyboard move out of the submenu: folding the open submenu there would shift
-  // the rows, and the pressed row would no longer be under the pointer when the button is released.
+  // A press focuses its target in the (compatibility) mousedown before the click. While a press is in
+  // flight a focus move is not a keyboard move out of the submenu: folding the open submenu there
+  // would shift the rows, and the pressed row would no longer be under the pointer at the click. A
+  // mouse sends mousedown before pointerup; a touch or pen tap sends pointerdown and pointerup first
+  // and its mousedown after them, so mousedown arms the guard again. A press abandoned outside the
+  // window (no release ever reaches the page) is forgotten when the window loses focus.
   const pressing = useRef(false);
   useEffect(() => {
     const release = () => { pressing.current = false; };
-    window.addEventListener("pointerup", release, true);
-    window.addEventListener("pointercancel", release, true);
+    const releases = ["pointerup", "pointercancel", "mouseup", "click"] as const;
+    for (const type of releases) window.addEventListener(type, release, true);
+    window.addEventListener("blur", release);
     return () => {
-      window.removeEventListener("pointerup", release, true);
-      window.removeEventListener("pointercancel", release, true);
+      for (const type of releases) window.removeEventListener(type, release, true);
+      window.removeEventListener("blur", release);
     };
   }, []);
+  const press = () => { pressing.current = true; };
 
   // One tab stop per level, re-derived whenever the menu renders (items come and go with the project).
   useLayoutEffect(() => {
@@ -313,7 +322,8 @@ export function FileMenuContent({ children, onClick }: FileMenuContentProps) {
         role="menu"
         onClick={onClick}
         onKeyDown={handleKeyDown}
-        onPointerDownCapture={(e) => { pressing.current = e.pointerType === "mouse"; }}
+        onPointerDownCapture={press}
+        onMouseDownCapture={press}
         onPointerOver={handlePointerOver}
         onPointerLeave={(e) => { if (e.pointerType === "mouse") scheduleClose(); }}
         onFocus={handleFocus}
@@ -330,6 +340,7 @@ export type PanelPlacement =
   | { readonly kind: "flyout"; readonly side: "right" | "left"; readonly maxWidth: number | null }
   | { readonly kind: "inline" };
 
+/** Placement geometry, all in CSS layout px. */
 interface PlacementInput {
   readonly viewportWidth: number;
   /** Left edge and natural width of the panel in its default place, right of its row. */
@@ -356,6 +367,43 @@ export function choosePanelPlacement({ viewportWidth, panelLeft, panelWidth, anc
   return { kind: "inline" };
 }
 
+/** The vertical placement input, in CSS layout px like `PlacementInput`. */
+interface ShiftInput {
+  readonly viewportHeight: number;
+  readonly panelTop: number;
+  readonly panelBottom: number;
+}
+
+/** How far a panel moves up: past the bottom edge it rises, but never above the top margin. */
+export function choosePanelShift({ viewportHeight, panelTop, panelBottom }: ShiftInput): number {
+  const overflow = panelBottom - (viewportHeight - VIEWPORT_MARGIN_PX);
+  return overflow > 0 ? Math.min(overflow, Math.max(0, panelTop - VIEWPORT_MARGIN_PX)) : 0;
+}
+
+type PanelGeometry = PlacementInput & ShiftInput;
+
+/**
+ * Converts the browser's readings into placement input. Under the application zoom
+ * (`--app-ui-scale` on the root) DOMRect and the window size are visual px, while the minimum,
+ * the gap, the margin and every length written back are layout px: each reading is divided by the
+ * scale, so all comparisons and outputs share one unit. The panel's left edge is its row's right
+ * edge plus the gap, not the panel's own box: the entry animation starts 6 px to the side, and a
+ * placement made as the panel opens would otherwise grant those 6 px a second time.
+ */
+export function layoutGeometry(
+  panel: Pick<DOMRect, "top" | "width" | "height">, anchor: Pick<DOMRect, "left" | "right">,
+  viewport: { readonly width: number; readonly height: number }, scale: number,
+): PanelGeometry {
+  return {
+    viewportWidth: viewport.width / scale, viewportHeight: viewport.height / scale,
+    panelLeft: anchor.right / scale + SUBMENU_GAP_PX, panelWidth: panel.width / scale, anchorLeft: anchor.left / scale,
+    panelTop: panel.top / scale, panelBottom: (panel.top + panel.height) / scale,
+  };
+}
+
+// Written lengths are rounded to a hundredth of a layout px: a division by 0.8 leaves binary noise.
+const px = (value: number) => `${Math.round(value * 100) / 100}px`;
+
 /** Undoes the previous placement pass, so a window that grows gives the flyout back. */
 function resetPlacement(panel: HTMLElement, anchor: HTMLElement) {
   delete panel.dataset.side;
@@ -367,36 +415,32 @@ function resetPlacement(panel: HTMLElement, anchor: HTMLElement) {
 /** True where the stylesheet lays the panel out as a flyout; false where it is an inline expansion. */
 const isFlyoutLayout = (panel: HTMLElement) => getComputedStyle(panel).position === "absolute";
 
-function placementOf(box: DOMRect, anchor: HTMLElement): PanelPlacement {
-  return choosePanelPlacement({
-    viewportWidth: document.documentElement.clientWidth || window.innerWidth,
-    panelLeft: box.left, panelWidth: box.width, anchorLeft: anchor.getBoundingClientRect().left,
-  });
+// `clientWidth` leaves out a vertical scrollbar; like `innerHeight` it is a window size, not zoomed.
+function measure(panel: HTMLElement, anchor: HTMLElement): PanelGeometry {
+  return layoutGeometry(panel.getBoundingClientRect(), anchor.getBoundingClientRect(),
+    { width: document.documentElement.clientWidth || window.innerWidth, height: window.innerHeight }, appUiScale());
 }
 
 /**
  * Applies `choosePanelPlacement` to a panel. Every pass first undoes the previous one. A panel
- * that would run past the bottom edge moves up. Where the stylesheet already makes the panel an
- * inline expansion (narrow or short screens) it is not absolutely positioned and there is
- * nothing to place.
+ * that would run past the bottom edge (at its final width) moves up. Where the stylesheet already
+ * makes the panel an inline expansion (narrow or short screens) it is not absolutely positioned
+ * and there is nothing to place.
  */
 function placePanel(panel: HTMLElement, anchor: HTMLElement) {
   resetPlacement(panel, anchor);
   if (!isFlyoutLayout(panel)) return;
-  const viewportHeight = window.innerHeight;
-  const box = panel.getBoundingClientRect();
-  const placement = placementOf(box, anchor);
+  const geometry = measure(panel, anchor);
+  const placement = choosePanelPlacement(geometry);
   if (placement.kind === "inline") {
     anchor.dataset.layout = "inline";
     return;
   }
   if (placement.side === "left") panel.dataset.side = "left";
-  if (placement.maxWidth !== null) panel.style.setProperty("--file-submenu-max-width", `${placement.maxWidth}px`);
-  const overflow = box.bottom - (viewportHeight - VIEWPORT_MARGIN_PX);
-  if (overflow > 0) {
-    const shift = Math.min(overflow, Math.max(0, box.top - VIEWPORT_MARGIN_PX));
-    panel.style.setProperty("--file-submenu-shift", `${-shift}px`);
-  }
+  if (placement.maxWidth !== null) panel.style.setProperty("--file-submenu-max-width", px(placement.maxWidth));
+  // A width cap wraps long entries, so the panel grows: the vertical fit is measured after it.
+  const shift = choosePanelShift(placement.maxWidth === null ? geometry : measure(panel, anchor));
+  if (shift > 0) panel.style.setProperty("--file-submenu-shift", px(-shift));
 }
 
 /**
@@ -410,7 +454,7 @@ function laysOutInline(panel: HTMLElement, anchor: HTMLElement): boolean {
   panel.hidden = false;
   try {
     resetPlacement(panel, anchor);
-    return !isFlyoutLayout(panel) || placementOf(panel.getBoundingClientRect(), anchor).kind === "inline";
+    return !isFlyoutLayout(panel) || choosePanelPlacement(measure(panel, anchor)).kind === "inline";
   } finally {
     panel.hidden = true;
   }
@@ -439,9 +483,10 @@ export function FileSubmenu({ id, label, children }: FileSubmenuProps) {
   const isOpen = menu.open?.id === id;
   const source = isOpen ? menu.open!.source : null;
 
-  // Placement runs on open, on window resize and whenever the panel's own size changes: a
-  // panel whose entries change while it is open (late data, a font or theme swap) can be pushed
-  // past an edge.
+  // Placement runs on open, on window resize, whenever the panel's own size changes (a panel whose
+  // entries change while it is open, late data, a font or theme swap, can be pushed past an edge)
+  // and when the application scale changes: a zoom step resizes neither the window nor the panel's
+  // layout box, yet every visual reading and the room in layout px change with it.
   useLayoutEffect(() => {
     const el = panel.current;
     const anchor = wrapper.current;
@@ -462,10 +507,13 @@ export function FileSubmenu({ id, label, children }: FileSubmenuProps) {
         frame = requestAnimationFrame(() => { if (sizeOf() !== placedSize) place(); });
       });
     observer?.observe(el);
+    const zoom = new MutationObserver(place);
+    zoom.observe(document.documentElement, { attributes: true, attributeFilter: ["style"] });
     return () => {
       window.removeEventListener("resize", place);
       cancelAnimationFrame(frame);
       observer?.disconnect();
+      zoom.disconnect();
       // A closed submenu leaves no layout mark behind: the menu's scrolling follows the open one.
       delete anchor.dataset.layout;
     };

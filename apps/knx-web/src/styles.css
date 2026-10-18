@@ -3145,7 +3145,7 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .file-submenu-chevron { color: var(--knx-muted); font-size: 16px; line-height: 1; }
 .file-submenu-panel {
   position: absolute; z-index: 5; top: calc(-9px + var(--file-submenu-shift, 0px)); left: calc(100% + 6px);
-  min-width: var(--file-submenu-min-width); width: max-content; max-width: var(--file-submenu-max-width, min(520px, calc(100vw - 16px))); max-height: calc(100dvh - 24px); overflow: auto;
+  min-width: var(--file-submenu-min-width); width: max-content; max-width: var(--file-submenu-max-width, min(520px, calc(100vw / var(--app-ui-scale, 1) - 16px))); max-height: calc(100dvh / var(--app-ui-scale, 1) - 24px); overflow: auto;
   background: var(--knx-surface); border: 1px solid var(--knx-border); border-radius: 8px;
   box-shadow: 0 12px 32px var(--knx-overlay-shadow); padding: 8px;
 }
@@ -3423,7 +3423,7 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 /* Narrow or short screens: a flyout would leave the viewport (or the scrolling menu around it would
    clip it), so a submenu expands inline under its row and the menu scrolls within the viewport. */
 @media (max-width: 650px), (max-height: 600px) {
-  .file-menu-content { max-height: calc(100dvh - 80px); overflow: auto; }
+  .file-menu-content { max-height: calc(100dvh / var(--app-ui-scale, 1) - 80px); overflow: auto; }
   .file-submenu-panel { position: static; width: auto; min-width: 0; max-width: none; max-height: none; overflow: visible; margin: 0 0 0 12px; padding: 0 0 0 8px; border: 0; border-left: 2px solid var(--knx-border); border-radius: 0; box-shadow: none; }
   .file-submenu-chevron { transform: rotate(90deg); }
   .file-submenu-trigger[aria-expanded="true"] .file-submenu-chevron { transform: rotate(-90deg); }
@@ -3433,8 +3433,9 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 }
 /* The same inline layout for one open submenu on a mid-width screen where no side keeps the panel's
    minimum width (FileMenu.tsx marks its row `data-layout="inline"`). The menu scrolls as a whole while
-   it is open, as it does in the narrow layout. */
-.file-menu-content:has(> .file-submenu[data-layout="inline"]) { max-height: calc(100dvh - 80px); overflow: auto; }
+   it is open, as it does in the narrow layout. Viewport units do not follow the root zoom, so every
+   File menu height and width limit divides them by --app-ui-scale first. */
+.file-menu-content:has(> .file-submenu[data-layout="inline"]) { max-height: calc(100dvh / var(--app-ui-scale, 1) - 80px); overflow: auto; }
 .file-submenu[data-layout="inline"] > .file-submenu-panel { position: static; width: auto; min-width: 0; max-width: none; max-height: none; overflow: visible; margin: 0 0 0 12px; padding: 0 0 0 8px; border: 0; border-left: 2px solid var(--knx-border); border-radius: 0; box-shadow: none; }
 .file-submenu[data-layout="inline"] .file-submenu-chevron { transform: rotate(90deg); }
 .file-submenu[data-layout="inline"] .file-submenu-trigger[aria-expanded="true"] .file-submenu-chevron { transform: rotate(-90deg); }

@@ -91,8 +91,10 @@ record describes the supported substitution's provenance, not whether the whole
 result is free of unsupported indices: a mixed `{{0}} / {{1:Keep}}` template can
 retain braces after filling `{{0}}`. The tooltip therefore describes the display
 policy neutrally, never labels every such result unresolved, and retains the
-result alongside its original template and exact resolver provenance. Both stay
-searchable. The UI does not strip braces, exempt a fill-source category, invent
+result alongside its original template and exact resolver provenance. For area/
+group captions, both stay searchable. Separator text/templates are not indexed
+and separators are hidden during search. The UI does not strip braces, exempt
+a fill-source category, invent
 a default or resolve parameter references itself.
 
 ## Bounds

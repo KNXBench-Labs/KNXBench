@@ -62,7 +62,10 @@ ranges without side effects. No hardware has exercised this profile.
    that the ranges are candidate locations, not a backup and not a restore
    basis, and private. Format 1 stays byte-identical. The reader recomputes
    the chunk plan and coverage and refuses evidence that does not follow from
-   them, and memory read without a verified identity.
+   them, memory read without the recorded identity matching the assertions,
+   chunk orders the collector cannot produce, and duplicate ZIP entries
+   (checked in the raw central directory). Only the ProductDB derivation can
+   build the acquisition plan.
 6. Entry point: the CLI only (`--profile`, `--product-db` required, preview
    without `--confirm-read`). The web/HTTP entry still offers only the
    identity profile.

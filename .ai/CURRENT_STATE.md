@@ -1,4 +1,12 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-10-19 00:55
+- **Completed:** UP258 stage 0 correction round 1 on `feat/up258-stage0-20261018` (local commits `ccc9ff8a` F1, `0984c548` F2, `568b6f73` F3, `9ee2005b` F4 plus docs; not pushed): opaque ProductDB-only memory plan (`compile_fail` doc-tests), format-2 reader re-checks identity admission, chunk order and stop reason, and refuses duplicate ZIP entries from the raw central directory (both formats; the duplicate bypass was real). Gates: five-crate tests 3062/0/100 ignored, public package 3/3, private corpus 155/155, Clippy, xtask, docs. Log `.ai/logs/2026-10-18_claude_up258-stage0-memory-evidence.md`.
+- **Pending/Next Steps:** Re-review and merge; the hardware run still awaits the reporter's explicit read consent.
+- **Notes for Codex oder Claude:** Stable rustdoc ignores `compile_fail` error codes; the RED run (snippets compiled with public fields) is the evidence. The CLI's `tunnel-disconnect-unconfirmed` is the one stop reason allowed without a cause in the chunks.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-10-18 23:59
 - **Completed:** UP258 stage 0 implemented offline on `feat/up258-stage0-20261018` (four local commits `394ae698`, `1b5257d4`, `5d69187d`, `0a747e19` plus docs; not pushed): read-only `system2-declared-segments-v1` diagnostic profile. ProductDB derives the AbsSegment ranges and PID78 comparison (UP 258D12: 0116h/330, 0260h/416, 0400h/512, 3C00h/256 = 1514 octets, 128 reads); `knx-net` reads memory only after descriptor/PID12/PID78 match, 12-octet chunks, 180 s deadline; archive format 2 with `memory.json`; CLI `--profile` with preview/`--simulate`. ADR-0143, contract, manual, goal, status, OPEN_WORK, draft reporter request. Gates: five-crate tests 3050/0/100 ignored, server diagnostics 5/5, public package 3/3, private corpus 155/155, Clippy, xtask, docs. Log `.ai/logs/2026-10-18_claude_up258-stage0-memory-evidence.md`.
 - **Pending/Next Steps:** Review and merge; then send the drafted request (docs/support/issue-22-up258-evidence-request.md) only after a build containing ADR-0143 is available. Hardware run awaits the reporter's explicit read consent; the offline comparison of the result is separate work. Web entry belongs to the UI owner.

@@ -81,10 +81,24 @@ ETS-programmed state offline with KNXBench's source interpretation.
   not-read, every chunk). Manifest `notice` and README say plainly:
   source-declared candidate locations, not proven runtime addresses; not a
   backup and not a restore basis; device configuration, keep private.
-  `read_export` accepts formats 1 and 2 strictly, recomputes the chunk plan and
-  coverage, and refuses memory read without a verified identity;
-  `read_bundle` refuses format 2 rather than dropping its memory. Unread
-  octets are never zero-filled. Same create-only `0600` writer with reread.
+  `read_export` accepts formats 1 and 2 strictly and recomputes the chunk
+  plan and coverage. Once any chunk shows an outcome, a time or bytes, it
+  re-checks the identity admission from the archive: all three items `read`
+  at their exact lengths (one element for PID 12 and PID 78, none for the
+  descriptor), descriptor = asserted mask, PID 12 = asserted manufacturer,
+  PID 78 `property_matches` the recorded `inlineData`. Every chunk with an
+  outcome carries attempt and completion times in that order; an unread one
+  carries neither. The chunk order must be one the collector can produce: a
+  refusal or partial answer (at least one octet; an empty answer is a
+  refusal) ends its range, an error ends the run and is the stop reason, an
+  unread chunk outside an ended range means `cancelled`, and a complete run
+  with nothing ended has no stop reason except the caller's
+  `tunnel-disconnect-unconfirmed`. `read_bundle` refuses format 2 rather than
+  dropping its memory. Unread octets are never zero-filled. Same create-only
+  `0600` writer with reread. The acquisition plan is opaque: only
+  `prepare_memory` (ProductDB derivation) builds it, `acquire_memory` takes
+  nothing else, and `compile_fail` doc-tests show outside code cannot forge
+  or edit its ranges; `collect_declared_memory` stays a lower-layer primitive.
 - **Entry point: CLI only.** `--profile system2-declared-segments-v1` needs
   `--product-db`; the device's application comes from the project's
   hardware-to-program mapping. The preview lists profile, application, the
@@ -114,7 +128,9 @@ reference shown locally only. `simulated: true` marks any simulator capture.
 The writer is create-only (never overwrites), owner-only `0600`, flushes and
 syncs, then rereads the held file and verifies it before reporting success. The
 reader refuses missing, extra, duplicate or oversized members, unknown formats,
-CRC/length/hash mismatches and inconsistent copies. Checksums detect corruption,
+CRC/length/hash mismatches and inconsistent copies. Duplicates are found in the
+raw central directory before the `zip` crate, which keeps only the last entry
+of a name, sees the archive; ZIP64 is refused (formats 1 and 2). Checksums detect corruption,
 not deliberate rewriting. Raw replies can still identify equipment: no anonymity
 is claimed.
 

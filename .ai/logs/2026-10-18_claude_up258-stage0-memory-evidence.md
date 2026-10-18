@@ -51,3 +51,41 @@ layering/headers/anchors/ledger/corpus-gates; documentation 0 errors; diff-check
 
 Reporter's consented run on the UP 258D12; offline comparison of the result;
 web entry (UI owner). No bus contact, push or merge in this package.
+
+## Correction round 1 (review findings F1–F4)
+
+Each finding got a test that failed on the previous HEAD first (scratch logs
+`red-cr1-F1..F4.log`), then the fix; one local commit per finding.
+
+- F1 `ccc9ff8a`: `DeclaredSegments` and `MemoryPrepared` fields private with
+  read-only accessors; only `derive_declared_segments` / `prepare_memory`
+  construct them. Five `compile_fail` doc-tests (forge or edit a profile or
+  plan) compiled on the old HEAD and fail now. Stable rustdoc does not check
+  the error code, so the RED run is the proof that each snippet is otherwise
+  valid. The largest-profile test now derives 8 × 256 octets from a
+  synthetic program and reads them from a consistent simulator. The net
+  collector documents the app service as its one admitted entry.
+- F2 `0984c548`: the format-2 reader re-checks identity admission when any
+  chunk shows an outcome, time or bytes (exact reads, element counts,
+  descriptor = mask, PID12 = manufacturer, PID78 `property_matches`
+  inlineData) and attempt ≤ completion times. 13 rehashed cases.
+- F3 `568b6f73`: the reader replays the collector's chunk order and stop
+  reason (refusal/partial end the range, error ends the run and names the
+  stop, unread gap = `cancelled`, nothing ended = no stop or the shared
+  `TUNNEL_DISCONNECT_UNCONFIRMED`; empty partial refused because the session
+  turns an empty answer into a refusal). 9 rehashed cases; real refused,
+  partial, timeout, cancelled and identity-mismatch simulator runs write and
+  reread identically.
+- F4 `9ee2005b`: confirmed on the old HEAD — two `memory.json` (format 2) or
+  two `report.json` (format 1) entries were accepted. `read_export` now walks
+  the raw EOCD and central directory first (≤ 64 entries, no extraction,
+  ZIP64 refused), refuses repeated names and requires ZipArchive to agree
+  name by name.
+
+Gates after the round: fmt; Clippy `-D warnings` productdb/net/app/cli all
+targets; `cargo test -p knx-core -p knx-productdb -p knx-net -p knx-app -p
+knx-cli --no-fail-fast` 3062 passed, 0 failed, 100 ignored; public UP258
+package 3/3; private corpus 155/155 in 34 targets (`device_reports_corpus`
+2/2, format 1 byte-identical); xtask layering/headers/anchors/ledger/
+corpus-gates; documentation 0 errors; diff-check. Contract, ADR-0143 and
+IMPLEMENTATION_STATUS updated. No bus contact, no push.

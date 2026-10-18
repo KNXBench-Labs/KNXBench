@@ -43,10 +43,12 @@ open work in this order:
    first, [KL-151](limitations/KL-151-product-package-size-profiles.md)), and
    database growth (one complete database grew to 4.56 GB) waits for a
    per-table measurement (census step 5).
-3. **Editors:** packed `TypeTime` units are offered as a decimal count; they
-   should fall back until their encoding is evidenced. `TypeDate` (first seen
-   in the addendum) is unmodelled and edited as free text; its value format
-   needs evidence before an editor.
+3. ~~**Editors:** packed `TypeTime` units are offered as a decimal count~~ —
+   done: only the six plain units the collection declares keep the count
+   control, everything else falls back
+   ([contract](contracts/parameter-editor-admission.md#packed-time-units-fall-back-2026-10-18)).
+   **Still open:** `TypeDate` (first seen in the addendum) is unmodelled and
+   edited as free text; its value format needs evidence before an editor.
 4. **Layouts:** inline sections, `IndentLevel`, `SuffixText`, object folders
    from `ShowInComObjectTree` (documented in Project Schema 23), flag/size
    columns; later conditional captions (`Rename`), objects by parameter page and

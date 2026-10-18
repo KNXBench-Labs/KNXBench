@@ -73,6 +73,22 @@ describe("parameter editor admission", () => {
     ];
     for (const value of wrong) expect(chooseParameterEditor(field, value, context)).toEqual({ kind: "fallback", reason: "source-conflict" });
   });
+  it("keeps the decimal count for every plain time unit the collection declares", () => {
+    for (const unit of ["Milliseconds", "TenMilliseconds", "HundredMilliseconds", "Seconds", "Minutes", "Hours"]) {
+      const metadata = { ...source, attributes: { ...source.attributes, Unit: unit } };
+      expect(chooseParameterEditor(field, metadata, context)).toEqual({ kind: "time-count", unit, min: "0", max: "3600" });
+    }
+  });
+  it("does not offer a packed or unknown time unit as a decimal count (census G6)", () => {
+    for (const unit of ["PackedSecondsAndMilliseconds", "PackedMinutesSecondsAndMilliseconds", "PackedDaysHoursMinutesAndSeconds", "Fortnights", ""]) {
+      const metadata = { ...source, attributes: { ...source.attributes, Unit: unit, UIHint: "Time_ssfff" } };
+      expect(chooseParameterEditor(field, metadata, context)).toEqual({ kind: "fallback", reason: "unsupported-codec" });
+    }
+  });
+  it("keeps an undeclared unit as an unlabelled count", () => {
+    const { Unit: _unit, ...attributes } = source.attributes;
+    expect(chooseParameterEditor(field, { ...source, attributes }, context)).toEqual({ kind: "time-count", unit: null, min: "0", max: "3600" });
+  });
   it("admits time as an unchanged decimal count, not guessed clock arithmetic", () => {
     const before = JSON.stringify({ field, source, context });
     expect(chooseParameterEditor(field, source, context)).toEqual({ kind: "time-count", unit: "Seconds", min: "0", max: "3600" });

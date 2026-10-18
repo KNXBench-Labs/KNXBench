@@ -34,6 +34,15 @@ export type ParameterEditorPlan =
   | { kind: "integer-slider"; min: number; max: number; step: 1 }
   | { kind: "fallback"; reason: "missing-evidence" | "source-conflict" | "unsupported-codec" | "unsupported-hints" | "invalid-range" | "module-scope" };
 
+/**
+ * `TypeTime` units whose raw value is offered as a plain count: exactly the plain units
+ * the local collection declares (18 October 2026: 1,004 of 1,456 declarations). Every
+ * other unit, the packed ones included, falls back.
+ */
+const COUNT_TIME_UNITS: ReadonlySet<string> = new Set([
+  "Milliseconds", "TenMilliseconds", "HundredMilliseconds", "Seconds", "Minutes", "Hours",
+]);
+
 export function chooseParameterEditor(
   field: ParameterEditorField,
   source: ParameterEditorSource | null,
@@ -79,7 +88,11 @@ export function chooseParameterEditor(
     return { kind: "integer-slider", min: Number(minimum), max: Number(maximum), step: 1 };
   }
   if (field.kind === "Time" && source.child === "TypeTime") {
-    return { kind: "time-count", unit: source.attributes.Unit ?? null, min: field.min, max: field.max };
+    const unit = source.attributes.Unit;
+    // A packed unit (`Packed…`) combines several fields in one integer; its layout is
+    // not documented, so a decimal count would mislabel the value (census G6).
+    if (unit !== undefined && !COUNT_TIME_UNITS.has(unit)) return { kind: "fallback", reason: "unsupported-codec" };
+    return { kind: "time-count", unit: unit ?? null, min: field.min, max: field.max };
   }
   return { kind: "fallback", reason: "missing-evidence" };
 }

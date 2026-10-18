@@ -39,8 +39,12 @@ The figure counts every object the device has, active or not. Tiles and line car
 stop growing at a fixed width, so on a wide screen the name and its count stay next
 to each other and several lines sit side by side; a name too long for the tile is cut
 with an ellipsis and shown in full on hover. The `+` button on a line header adds a
-device to that line. An empty line is drawn as an empty line, not hidden. (The
-screenshot above predates the written-out label.)
+device to that line. In source builds after Alpha 14 (issue #25), empty lines and
+areas without devices are hidden in this diagram. They are **not deleted**: select
+or edit them in the project explorer, or use it to add the first device. A line and
+its area appear as soon as a device is added; devices without a line remain in the
+unassigned card. Alpha 14 still draws empty lines. (The screenshot above predates
+the written-out label.)
 
 ![The Buildings view with the building "Sample house", its Ground floor and First
 floor cards, and rooms such as Living room, Kitchen and Hall holding their devices;

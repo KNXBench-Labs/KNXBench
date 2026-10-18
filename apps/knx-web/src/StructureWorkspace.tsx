@@ -1,4 +1,5 @@
 /** Graphical hierarchy over generated projections; no invented physical coordinates. */
+import ResizableTable from "./ResizableTable";
 import { useEffect, type ReactNode } from "react";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { BuildingNode } from "./bindings/BuildingNode";
@@ -13,6 +14,12 @@ import { findBuildingPart, flattenBuildingParts } from "./treeUtils";
 import Inspector from "./Inspector";
 import { structureCreateGroups } from "./structureCreateEntries";
 import { StructureCreateMenu, StructureCreatePanel, useStructureCreate } from "./StructureCreateMenu";
+
+const BUILDING_DEVICES_COLUMNS = [
+  { id: "device", width: 240, min: 120 },
+  { id: "address", width: 160, min: 100 },
+  { id: "objects", width: 200, min: 100 }
+];
 
 export type StructureView = "buildings" | "topology" | "addresses";
 
@@ -72,13 +79,14 @@ export default function StructureWorkspace(props: {
     </section>;
   }
   function deviceTable(nodes: DeviceNode[]) {
-    return <div className="workspace-table-wrap"><table className="workspace-table">
+    return <div><ResizableTable scrollClassName="workspace-table-wrap" tableId="building-devices"
+      columns={BUILDING_DEVICES_COLUMNS} className="workspace-table">
       <thead><tr><th>{t("workbench.device")}</th><th>{t("workbench.address")}</th><th>{t("inspector.communicationObjects")}</th></tr></thead>
       <tbody>{nodes.map((device) => <tr key={device.id} aria-selected={selected("device", device.id)}>
         <td><button className="table-select" onClick={() => onSelect({ kind: "device", id: device.id })}>{device.name}</button></td>
         <td className="mono">{device.address ?? t("workbench.unassigned")}</td><td>{device.com_object_count}</td>
       </tr>)}</tbody>
-    </table>{nodes.length === 0 && <p className="empty-device-list" role="status">{t("workbench.noDevices")}</p>}</div>;
+    </ResizableTable>{nodes.length === 0 && <p className="empty-device-list" role="status">{t("workbench.noDevices")}</p>}</div>;
   }
   return <section className="structure-workspace" onKeyDown={(e) => {
     if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(e.key) || !(e.target instanceof HTMLButtonElement)) return;

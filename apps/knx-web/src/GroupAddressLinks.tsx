@@ -1,4 +1,5 @@
 /** Members of one group address, shared by every group-address view and the Inspector. */
+import ResizableTable from "./ResizableTable";
 import { useState } from "react";
 import * as api from "./api";
 import type { GroupAddressNode } from "./bindings/GroupAddressNode";
@@ -10,6 +11,13 @@ import { useGroupAddressFormat } from "./gaNotation";
 import { useTranslate } from "./i18n";
 import DeviceLink from "./DeviceLink";
 import GroupAddressMemberAdd from "./GroupAddressMemberAdd";
+
+const GROUP_ADDRESS_MEMBERS_COLUMNS = [
+  { id: "device", width: 220, min: 120 },
+  { id: "object", width: 240, min: 120 },
+  { id: "direction", width: 160, min: 100 },
+  { id: "actions", width: 140, min: 100 }
+];
 
 // A member is one communication object's link (Send or Receive), not a
 // device: an object linked both ways is two members, as it holds two links.
@@ -106,7 +114,7 @@ export default function GroupAddressLinks(props: {
           {selected.links.map((link, index) => <LinkItem key={key(link, index)} ga={selected} link={link} onTreeUpdate={onTreeUpdate} />)}
         </ul>
       ) : (
-        <table className="workspace-table">
+        <ResizableTable tableId="group-address-members" columns={GROUP_ADDRESS_MEMBERS_COLUMNS} className="workspace-table">
           <thead>
             <tr>
               <th>{t("addressTable.participant")}</th>
@@ -118,7 +126,7 @@ export default function GroupAddressLinks(props: {
           <tbody>
             {selected.links.map((link, index) => <LinkRow key={key(link, index)} ga={selected} link={link} onTreeUpdate={onTreeUpdate} />)}
           </tbody>
-        </table>
+        </ResizableTable>
       )}
       {canAddMembers(tree, selected.id)
         ? <GroupAddressMemberAdd ga={selected} tree={tree} onTreeUpdate={onTreeUpdate} />

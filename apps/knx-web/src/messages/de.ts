@@ -19,6 +19,9 @@
 import type { MessageKey } from "./en";
 
 export const messages: Record<MessageKey, string> = {
+  "tableColumns.reset": "Spaltenbreiten zurücksetzen",
+  "tableColumns.help": "Spalte anpassen: Links/Rechts 8 px, Umschalt 40 px; Pos1 Minimum, Ende Maximum; Eingabe oder Doppelklick setzt zurück.",
+  "tableColumns.scroll": "Tabelle (scrollbar)",
   "parameters.objectFunctionsEmpty": "Diesem Objekt ist keine unterstützte Funktionsauswahl zugeordnet. Weitere Einstellungen findest du unter Parameter.",
   "parameters.functions": "Gerätefunktionen",
   "parameters.functionsEmpty": "Aktuell sind keine unterstützten Funktionsauswahlen sichtbar. Weitere Einstellungen findest du unter Parameter.",

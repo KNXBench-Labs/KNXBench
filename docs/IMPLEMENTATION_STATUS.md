@@ -12,6 +12,17 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## UI-05: browser-local table column widths (18 October 2026)
+
+Local-only presentation change: one width hook and accessible header separator,
+UI-02 paint, validated versioned localStorage, pointer/keyboard resizing and
+column/table reset. 17 native table surfaces converted; the selectable
+address/object matrix remains unchanged because its columns identify project
+objects. [Contract and complete coverage](contracts/table-column-widths.md).
+Focused hook/component/production tests and browser proof cover sortable devices,
+comparison and nested virtualised history tables. No API, domain, schema,
+parameter-grid, project-write or KNX bus change.
+
 ## UI-02: compact button variants, visible navigation separators (18 October 2026)
 
 Presentation only, no API, schema, theme-pack or stored-data change. Owner

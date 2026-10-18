@@ -4,6 +4,7 @@
 // decoration for sighted users and hidden from assistive technology; every
 // fact is reachable as text through keyboard selection and the Inspector,
 // so a busy bus does not turn into a stream of announcements.
+import ResizableTable from "./ResizableTable";
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import { FlowAnimator, type AnimatorScheduler, type AnimatorSink, type DrawnPulse } from "./flowAnimator";
 import { type DynamicNode } from "./flowDynamics";
@@ -26,6 +27,18 @@ import {
 } from "./flowModel";
 import { useTranslate, type Translate } from "./i18n";
 import type { MessageKey } from "./messages/en";
+
+const FLOW_FLAGS_COLUMNS = [
+  { id: "flag", width: 180, min: 100 },
+  { id: "value", width: 140, min: 80 }
+];
+const FLOW_VALUES_COLUMNS = [
+  { id: "address", width: 180, min: 100 },
+  { id: "value", width: 180, min: 100 },
+  { id: "origin", width: 160, min: 100 },
+  { id: "sender", width: 180, min: 100 },
+  { id: "sequence", width: 100, min: 64 }
+];
 
 const VIEW_WIDTH = 960;
 const VIEW_HEIGHT = 520;
@@ -88,7 +101,7 @@ function ObjectTable({ objects }: { objects: FlowObjectEvidence[] }) {
   return (
     <>
       {objects.map((object) => (
-        <table className="flow-flags" key={object.comObjectId}>
+        <ResizableTable tableId="flow-flags" columns={FLOW_FLAGS_COLUMNS} className="flow-flags" key={object.comObjectId}>
           <caption>
             {t("flow.inspector.objectCaption", {
               id: object.comObjectId,
@@ -96,6 +109,7 @@ function ObjectTable({ objects }: { objects: FlowObjectEvidence[] }) {
               active: object.active ? t("flow.inspector.isActive") : t("flow.inspector.isInactive"),
             })}
           </caption>
+          <thead><tr><th>{t("compare.field")}</th><th>{t("flow.inspector.value")}</th></tr></thead>
           <tbody>
             {FLAG_NAMES.map((name) => (
               <tr key={name}>
@@ -104,7 +118,7 @@ function ObjectTable({ objects }: { objects: FlowObjectEvidence[] }) {
               </tr>
             ))}
           </tbody>
-        </table>
+        </ResizableTable>
       ))}
     </>
   );
@@ -169,7 +183,7 @@ function Inspector({ model, node, nowMs, navigation, onClose }: {
       {values.length === 0 ? (
         <p className="flow-inspector-note">{t("flow.inspector.noValues")}</p>
       ) : (
-        <table className="flow-values">
+        <ResizableTable tableId="flow-values" columns={FLOW_VALUES_COLUMNS} className="flow-values">
           <thead>
             <tr>
               <th scope="col">{t("flow.inspector.groupAddress")}</th>
@@ -190,7 +204,7 @@ function Inspector({ model, node, nowMs, navigation, onClose }: {
               </tr>
             ))}
           </tbody>
-        </table>
+        </ResizableTable>
       )}
       <h4>{t("flow.inspector.connections")}</h4>
       {outgoing.length + incoming.length === 0 ? (

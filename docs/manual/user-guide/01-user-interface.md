@@ -360,6 +360,24 @@ preference it only changes colour.
 > Pane widths are not saved yet. Every start begins at the default layout. If that
 > annoys you, it annoys us as well; see [Known issues](../known-issues.md).
 
+## Table column widths (18 October 2026 source, local-only)
+
+On converted data tables, drag a header's right-edge separator to change that
+column's width. Tab to the separator for keyboard control: Left/Right adjusts
+by 8 pixels, Shift by 40; Home/End chooses its minimum/maximum. Enter or a
+double-click restores that column's default. **Reset column widths** above
+the table restores all its defaults. Wide tables scroll within their own view.
+
+Widths stay in this browser across reloads; they are shared by tables of the
+same kind, regardless of project, and never change project data or undo history.
+Clearing browser storage removes them. With browser storage blocked, resizing
+works for the current mounted session.
+
+The selectable address/object matrix remains at its existing layout; the
+[coverage checklist](../../contracts/table-column-widths.md) lists the 17
+converted surfaces and this remaining boundary. Manufacturer parameter grids,
+explorer trees and catalogue/history lists retain their own layouts.
+
 ## The overlays
 
 Seven things open on top of the window instead of inside it. All of them close with

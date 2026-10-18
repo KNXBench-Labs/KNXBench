@@ -913,4 +913,16 @@ If you find something this chapter does not mention, it is worth reporting
 even if you suspect it is known. The list above is what has been found, which
 is not the same as what exists.
 
+
+
+## Table column-width coverage (18 October 2026 source, local-only)
+
+The selectable address/object matrix retains fixed layout. Its columns identify
+project objects; browser-local width preferences currently admit only fixed
+presentation IDs. The other 17 native table surfaces are converted. Widths are
+browser-local and are lost when browser storage is cleared; blocked storage
+supports resizing only for the mounted session. Manufacturer parameter grids,
+trees and catalogue/history lists retain their existing layouts. See
+[Table column widths](../contracts/table-column-widths.md).
+
 [Manual index](README.md) · Next: [Implementation status](implementation-status.md) →

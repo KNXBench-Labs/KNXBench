@@ -2281,7 +2281,28 @@ mod tests {
     /// Truncation is treated as "cannot be sure", the same skip path an
     /// unreadable file already takes — a wrong answer here is worse than a
     /// skipped test.
+    ///
+    /// The probe also reads non-zero when another socket joins or leaves a
+    /// group between the two reads (sibling tests run in parallel, and other
+    /// programs on the host keep memberships too). That is a moving table,
+    /// not a truncated one, so it is retried a bounded number of times; a
+    /// table that is really larger than one page fails every attempt.
     fn read_proc_net_igmp() -> std::io::Result<String> {
+        const ATTEMPTS: u32 = 50;
+        for _ in 0..ATTEMPTS {
+            if let Some(table) = read_proc_net_igmp_once()? {
+                return Ok(table);
+            }
+            std::thread::sleep(std::time::Duration::from_millis(2));
+        }
+        Err(std::io::Error::other(
+            "/proc/net/igmp did not fit in one seq_file read(2) in any attempt; \
+             the snapshot is truncated or never settled and cannot be trusted",
+        ))
+    }
+
+    /// One pass: `None` when a second `read(2)` on the same fd found more.
+    fn read_proc_net_igmp_once() -> std::io::Result<Option<String>> {
         use std::io::Read;
 
         let mut file = std::fs::File::open("/proc/net/igmp")?;
@@ -2291,13 +2312,12 @@ mod tests {
 
         let mut probe = [0u8; 1];
         if file.read(&mut probe)? != 0 {
-            return Err(std::io::Error::other(
-                "/proc/net/igmp did not fit in one seq_file read(2); \
-                 the snapshot is truncated and cannot be trusted",
-            ));
+            return Ok(None);
         }
 
-        String::from_utf8(buf).map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
+        String::from_utf8(buf)
+            .map(Some)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
     }
 
     /// Every device in `/proc/net/igmp` currently holding a membership for
@@ -2378,7 +2398,14 @@ mod tests {
                 }
             };
 
-        let after = igmp_memberships(group).expect("/proc/net/igmp was readable a moment ago");
+        // Same skip path as `before`: a table that never settles cannot answer.
+        let Ok(after) = igmp_memberships(group) else {
+            eprintln!(
+                "skipping the_loopback_join_lands_on_lo_and_nowhere_else: \
+                 /proc/net/igmp did not settle into one consistent read"
+            );
+            return;
+        };
         assert!(
             after.contains_key("lo"),
             "a LOOPBACK_ONLY client must hold {group} on lo; /proc/net/igmp lists it on \

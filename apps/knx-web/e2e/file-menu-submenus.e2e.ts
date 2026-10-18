@@ -4,6 +4,7 @@ import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
 import { openFileSubmenu } from "./file-menu";
+import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 import { HISTORY_FIXTURE } from "../src/projectHistory.fixture";
 import { admitProjectHistory } from "../src/projectHistory";
 
@@ -331,6 +332,7 @@ async function serveProject(page: Page, { compareAdded = 0, knxproj = false }: {
     if (path === "/api/version") return ok({ version: "0.1.0-alpha.14" });
     if (path === "/api/project" && method === "GET") return ok(history.project);
     if (path === "/api/project/load-progress") return ok(null);
+    if (path === "/api/project/status-metrics" && method === "GET") return ok(statusMetricsFixtureBody(history.project));
     if (path === "/api/project/history" && method === "GET") return ok(history);
     if (path === "/api/project/diff" && method === "POST") return ok(report);
     if (path === "/api/fs/list") return ok([{ name: knxproj ? "compare-fictional.knxproj" : "compare-fictional.knxdb", is_dir: false }]);

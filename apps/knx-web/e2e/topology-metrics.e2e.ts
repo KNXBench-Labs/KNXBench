@@ -5,6 +5,7 @@ import type { ProjectTree } from "../src/bindings/ProjectTree";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 
 const LONG_NAME = "Bedroom north wall dimming actuator with sixteen channels and a very long label";
 const dev = (id: number, name: string, address: string | null, count: number) =>
@@ -51,6 +52,7 @@ async function openTopology(page: Page, language: "en" | "de", width: number, th
     };
     else if (path === "/api/project" && method === "GET") body = view === "buildings" ? buildingsTree : tree;
     else if (path === "/api/version" && method === "GET") body = { version: "0.1.0-alpha.9+gfixture" };
+    else if (path === "/api/project/status-metrics" && method === "GET") body = statusMetricsFixtureBody(view === "buildings" ? buildingsTree : tree);
     else if (path === "/api/bus/discover" && method === "POST") body = { interfaces: [] };
     else if (path === "/api/project/stored-bus-access" && method === "GET") body = { records: [] };
     else if (method === "GET" && ["/api/product-languages", "/api/catalog/manufacturers", "/api/catalog/items"].includes(path)) body = [];

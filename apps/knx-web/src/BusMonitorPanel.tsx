@@ -110,7 +110,10 @@ function ControlFacts({ control }: { control: BusTelegramRow["control"] }) {
 
 function decodeStateKey(decoded: BusTelegramRow["decoded"]) {
   switch (decoded?.kind) {
-    case "unresolved": return "busMonitor.decode.unresolved" as const;
+    case "unresolved":
+      if (decoded.reason === "noProject") return "busMonitor.decode.noProject" as const;
+      if (decoded.reason === "noDpt") return "busMonitor.decode.unresolved" as const;
+      return "busMonitor.decode.unresolvedUnknown" as const;
     case "conflict": return "busMonitor.decode.conflict" as const;
     case "error":
       if (decoded.reason === "unsupportedDpt") return "busMonitor.decode.unsupported" as const;

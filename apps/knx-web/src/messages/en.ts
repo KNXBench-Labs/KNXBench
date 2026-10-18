@@ -1809,6 +1809,8 @@ export const messages = {
   "busMonitor.control.notRepeated": "Not repeated",
   "busMonitor.column.payload": "Payload",
   "busMonitor.column.decoded": "Decoded",
+  "busMonitor.decode.noProject": "No project in session",
+  "busMonitor.decode.unresolvedUnknown": "DPT unresolved (reason unknown)",
   "busMonitor.decode.unresolved": "No DPT assigned",
   "busMonitor.decode.conflict": "Conflicting DPTs",
   "busMonitor.decode.unsupported": "Unsupported DPT",

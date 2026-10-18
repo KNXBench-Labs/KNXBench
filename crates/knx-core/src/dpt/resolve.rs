@@ -3,11 +3,10 @@
 //!
 //! This is a different question from `codec.rs`'s: that module turns a
 //! known `DptRef` into and out of wire bytes; this one decides *which*
-//! `DptRef`, if any, applies to a given `GroupAddressId` — a group address
-//! has no DPT field of its own (`group.rs`), only the com objects linked to
-//! it do, and they can disagree. Resolution never guesses: where the
-//! project model does not state a DPT, or states more than one, the answer
-//! is `None` or `Conflict`, never a pick.
+//! `DptRef`, if any, applies to a given `GroupAddressId`. Linked objects can
+//! disagree; an address can also declare its own type (ADR-0078). The
+//! linked-only resolver and the declaration-aware effective resolver stay
+//! distinct. Neither guesses a type from an object name or payload size.
 
 use std::collections::HashMap;
 
@@ -416,6 +415,61 @@ mod tests {
             group_ranges: vec![],
             group_addresses,
             parameters: vec![],
+        }
+    }
+
+    #[test]
+    fn a_named_two_byte_object_with_an_empty_dpt_does_not_invent_a_type() {
+        let ga = GroupAddressId(1);
+        let mut com = com_object(1, Override::Empty, vec![send(ga)], true);
+        com.text = Override::Value(Resolved {
+            value: crate::Text::Literal("Measurement".into()),
+            layer: Layer::Program,
+        });
+        com.size = Some(Resolved {
+            value: crate::ObjectSize::Byte(2),
+            layer: Layer::Program,
+        });
+        let mut project = project_with(vec![com]);
+        project
+            .installations
+            .push(installation(1, vec![group_address_entry(1, 17)]));
+        assert_eq!(
+            resolve_group_address_type(&project, ga).effective(),
+            GroupAddressDpt::None
+        );
+        assert!(!resolve_project_group_address_dpts(&project).contains_key(&17));
+        assert_eq!(
+            project
+                .devices
+                .com_object(ComObjectInstanceId(1))
+                .unwrap()
+                .dpt,
+            Override::Empty
+        );
+    }
+
+    #[test]
+    fn project_resolution_reads_linked_instance_program_and_object_reference_dpts() {
+        for layer in [Layer::Instance, Layer::Program, Layer::ProgramRef] {
+            let ga = GroupAddressId(1);
+            let mut project = project_with(vec![com_object(
+                1,
+                Override::Value(Resolved {
+                    value: dpt(9, 4),
+                    layer,
+                }),
+                vec![send(ga), receive(ga)],
+                true,
+            )]);
+            project
+                .installations
+                .push(installation(1, vec![group_address_entry(1, 17)]));
+            assert_eq!(
+                resolve_project_group_address_dpts(&project).get(&17),
+                Some(&GroupAddressDpt::Single(dpt(9, 4))),
+                "{layer:?}"
+            );
         }
     }
 

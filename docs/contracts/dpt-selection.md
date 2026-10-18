@@ -1,5 +1,38 @@
 # DPT presentation, selection and provenance
 
+## Monitor resolution reasons (UI-01, 18 October 2026)
+
+The monitor continues to use `knx_core::resolve_project_group_address_dpts`.
+An address's declaration is weighed against linked communication-object DPTs
+under ADR-0078; instance values and enriched Program/ProgramRef values follow
+that shared rule. An empty instance attribute, no declaration on the address,
+and no usable product declaration genuinely resolve to no type. A caption or
+object size cannot supply the missing type. Read-only private-source inspection
+confirmed that structure; public regressions use synthetic measurements only.
+No resolver omission was demonstrated for the reported structure.
+
+An unresolved captured row now has a structured `reason`: `noProject` means
+its session context had no project; `noDpt` means that context had no resolved
+DPT for the destination. HTTP and diagnostic bundles retain that distinction.
+The EN/DE panel labels these separately, without inspecting diagnostic prose or
+using the project's current open/closed state to reinterpret a historical row.
+A legacy or unknown unresolved reason shows an explicit unknown-reason label.
+Conflict, unsupported codec (`unsupportedDpt`) and malformed payload
+(`decodeFailed`) retain their separate outcomes; raw payloads remain available.
+This extends the handwritten bus DTO, not generated project bindings.
+
+Project load/switch and DPT/link edits do not silently refresh a monitor context.
+The authoritative stale-context notice and Send lock remain separate from each
+row's captured decode outcome. Reconnection or an explicit existing address-style
+publication refreshes future decoding only. Rows already captured retain their
+original destination/name, DPT/result, raw payload and context generation.
+
+Focused Core and HTTP tests cover missing declarations, linked Instance/Program/
+ProgramRef values, direct declarations, agreeing/conflicting candidates, codec
+failures and late project load/edit followed by explicit context publication.
+Panel tests cover structured reasons, EN/DE, legacy fallback and retained rows
+under stale context. No physical-bus acceptance is implied.
+
 ## Name-first monitor and address extension (2026-10-12 source)
 
 The shared display vocabulary now presents **Name (main.sub)**, for example

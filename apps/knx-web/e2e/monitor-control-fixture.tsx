@@ -2,14 +2,22 @@
 import { createRoot } from "react-dom/client";
 import BusMonitorPanel from "../src/BusMonitorPanel";
 import { setSetting } from "../src/settingsStore";
+import { useThemeId } from "../src/theme";
+import { useMotion } from "../src/motion";
 import { UI_LANGUAGE_STORAGE_KEY } from "../src/uiLanguage";
 import "../src/styles.css";
 
-const language = new URLSearchParams(location.search).get("lang") === "de" ? "de" : "en";
+const params = new URLSearchParams(location.search);
+const language = params.get("lang") === "de" ? "de" : "en";
 document.documentElement.lang = language;
 setSetting(UI_LANGUAGE_STORAGE_KEY, language);
-createRoot(document.getElementById("root")!).render(
-  <main className="workbench">
+setSetting("theme", params.get("theme") ?? "porcelain");
+setSetting("motionLevel", params.get("motion") ?? "off");
+function Fixture() {
+  useThemeId();
+  useMotion();
+  return <main className="workbench">
     <BusMonitorPanel projectOpen={false} />
-  </main>,
-);
+  </main>;
+}
+createRoot(document.getElementById("root")!).render(<Fixture />);

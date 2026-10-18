@@ -678,10 +678,10 @@ impl From<&DecodedValue> for DecodedValueDto {
                 text: text.clone(),
                 error: None,
             },
-            DecodedValue::Unresolved { text } => Self {
+            DecodedValue::Unresolved { reason, text } => Self {
                 kind: "unresolved",
                 dpt: None,
-                reason: None,
+                reason: Some(reason.as_str()),
                 text: text.clone(),
                 error: None,
             },

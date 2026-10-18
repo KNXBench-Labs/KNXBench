@@ -1771,6 +1771,8 @@ export const messages: Record<MessageKey, string> = {
   "busMonitor.control.notRepeated": "Nicht wiederholt",
   "busMonitor.column.payload": "Nutzdaten",
   "busMonitor.column.decoded": "Dekodiert",
+  "busMonitor.decode.noProject": "Kein Projekt im Sitzungskontext",
+  "busMonitor.decode.unresolvedUnknown": "DPT nicht aufgelöst (Ursache unbekannt)",
   "busMonitor.decode.unresolved": "Kein DPT zugewiesen",
   "busMonitor.decode.conflict": "Widersprüchliche DPTs",
   "busMonitor.decode.unsupported": "Nicht unterstützter DPT",

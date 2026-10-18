@@ -156,6 +156,21 @@ it("localizes monitor control labels but keeps unknown priorities explicit", asy
   await act(async () => root.unmount());
 });
 
+it("localizes distinct no-project and missing-DPT states in German", async () => {
+  setSetting(UI_LANGUAGE_STORAGE_KEY, "de");
+  apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({ nextSince: 3, telegrams: [
+    row({ seq: 0, decoded: { kind: "unresolved", reason: "noProject", text: "no project open" } }),
+    row({ seq: 1, decoded: { kind: "unresolved", reason: "noDpt", text: "no DPT resolved" } }),
+    row({ seq: 2, decoded: { kind: "unresolved", text: "legacy result" } }),
+  ] }));
+  const root = await renderPanel();
+  await flushReattach();
+  expect([...host!.querySelectorAll(".bus-monitor-decode-state")].map(node => node.textContent)).toEqual([
+    "Kein Projekt im Sitzungskontext", "Kein DPT zugewiesen", "DPT nicht aufgelöst (Ursache unbekannt)",
+  ]);
+  await act(async () => root.unmount());
+});
+
 function telegramsResponse(overrides: Partial<BusMonitorTelegramsResponse>): BusMonitorTelegramsResponse {
   return {
     sessionId: 1,
@@ -544,21 +559,52 @@ describe("BusMonitorPanel", () => {
     expect(host!.querySelectorAll(".bus-monitor-table tbody tr")).toHaveLength(2);
   });
 
-  it("labels unresolved, conflicting, unsupported and malformed decoded payloads without inferring from prose", async () => {
+  it("labels no project, missing type, conflicts, unsupported and malformed payloads from structured reasons", async () => {
     await renderPanel();
     await flushReattach();
-    apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({ nextSince: 4, telegrams: [
-      row({ seq: 0, decoded: { kind: "unresolved", text: "no project open" } }),
-      row({ seq: 1, decoded: { kind: "conflict", text: "conflicting DPTs: DPST-1-1, DPST-5-1" } }),
-      row({ seq: 2, decoded: { kind: "error", dpt: "DPST-40-1", reason: "unsupportedDpt", text: "unsupported datapoint type", error: "unsupported datapoint type" } }),
-      row({ seq: 3, decoded: { kind: "error", dpt: "DPST-1-1", reason: "decodeFailed", text: "wrong payload length", error: "wrong payload length" } }),
+    apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({ nextSince: 5, telegrams: [
+      row({ seq: 0, decoded: { kind: "unresolved", reason: "noProject", text: "retained session has no project" } }),
+      row({ seq: 1, decoded: { kind: "unresolved", reason: "noDpt", text: "no declaration in this session" } }),
+      row({ seq: 2, decoded: { kind: "conflict", text: "conflicting DPTs: DPST-1-1, DPST-5-1" } }),
+      row({ seq: 3, decoded: { kind: "error", dpt: "DPST-40-1", reason: "unsupportedDpt", text: "unsupported datapoint type", error: "unsupported datapoint type" } }),
+      row({ seq: 4, decoded: { kind: "error", dpt: "DPST-1-1", reason: "decodeFailed", text: "wrong payload length", error: "wrong payload length" } }),
     ] }));
     await connect();
     const states = Array.from(host!.querySelectorAll(".bus-monitor-decode-state"), (node) => node.textContent);
-    expect(states).toEqual(["No DPT assigned", "Conflicting DPTs", "Unsupported DPT", "Decode failed"]);
+    expect(states).toEqual(["No project in session", "No DPT assigned", "Conflicting DPTs", "Unsupported DPT", "Decode failed"]);
+    expect(host!.querySelector(".bus-monitor-table tbody tr")!.textContent).toContain("0x01 (6-bit)");
     expect(host!.querySelectorAll(".bus-monitor-decoded-error")).toHaveLength(2);
     expect(host!.textContent).toContain("40.001");
     expect(host!.textContent).toContain("wrong payload length");
+  });
+
+  it("keeps the captured no-project reason after a project loads and the server reports stale context", async () => {
+    apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({ projectOpen: false, telegrams: [
+      row({ seq: 0, rawPayload: "[0c, 80]", decoded: { kind: "unresolved", reason: "noProject", text: "no project open" } }),
+    ] }));
+    const root = await renderPanel(false);
+    await flushReattach();
+    expect(host!.querySelector(".bus-monitor-decode-state")!.textContent).toBe("No project in session");
+    apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({ contextStatus: "stale", projectOpen: true, telegrams: [] }));
+    await act(async () => { await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS); });
+    expect(host!.querySelector(".bus-monitor-stale-lock")).not.toBeNull();
+    expect(host!.querySelector(".bus-monitor-decode-state")!.textContent).toBe("No project in session");
+    expect(host!.querySelector(".bus-monitor-table tbody tr")!.textContent).toContain("[0c, 80]");
+    expect(host!.querySelector<HTMLInputElement>(".bus-compose-value")!.disabled).toBe(true);
+    expect(apiMock.writeBusValue).not.toHaveBeenCalled();
+    await act(async () => root.unmount());
+  });
+
+  it("does not infer an unresolved reason from legacy prose or the currently open project", async () => {
+    await renderPanel();
+    await flushReattach();
+    apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({ nextSince: 1, projectOpen: true, telegrams: [
+      row({ seq: 0, decoded: { kind: "unresolved", text: "no project open" } }),
+    ] }));
+    await connect();
+    expect(host!.querySelector(".bus-monitor-decode-state")!.textContent).toBe("DPT unresolved (reason unknown)");
+    expect(host!.textContent).toContain("no project open");
+    expect(host!.textContent).toContain("0x01 (6-bit)");
   });
 
   it("does not guess the cause of a legacy decode error without a structured reason", async () => {

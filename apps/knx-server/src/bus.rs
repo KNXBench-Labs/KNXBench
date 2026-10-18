@@ -32,7 +32,7 @@
 //! HTTP route reads any of this yet either — that is task 3. Every test
 //! below drives [`BusSession`] directly, no gateway, no socket, no HTTP.
 
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::fmt;
 use std::future::Future;
 use std::net::SocketAddrV4;
@@ -804,12 +804,15 @@ pub enum DecodedValue {
     /// response if it wants the dotted form there; this module only
     /// promises an unambiguous, round-trippable DPT identifier.
     Value { dpt: String, text: String },
-    /// No project was open at session start, or the group address resolved
-    /// to no DPT at all (`GroupAddressDpt::None`, or simply absent from the
-    /// map). Both collapse to the same outcome kind because a client only
-    /// has four kinds to render (§4.3); `text` still names which reason it
-    /// was, so nothing is lost, only folded into one tag.
-    Unresolved { text: String },
+    /// The captured session had no project, the destination was not in that
+    /// project, a known destination had no resolved DPT, or an explicit empty
+    /// instance DPT cleared a retained program default. The structured reason
+    /// distinguishes those four cases and never consults the project that
+    /// happens to be open when a client displays this row.
+    Unresolved {
+        reason: UnresolvedReason,
+        text: String,
+    },
     /// Linked communication objects disagree on this group address's DPT
     /// (`GroupAddressDpt::Conflict`) — `text` names every candidate, mirroring
     /// `format_decoded_value`'s `"conflicting DPTs: ..."` wording.
@@ -825,14 +828,48 @@ pub enum DecodedValue {
     },
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum UnresolvedReason {
+    NoProject,
+    NotInProject,
+    NoDpt,
+    ProgramDefaultCleared(Vec<DptRef>),
+}
+
+impl UnresolvedReason {
+    /// Dotted diagnostic references, already sorted/deduplicated by Core.
+    pub(crate) fn program_default_dpts(&self) -> Option<Vec<String>> {
+        match self {
+            Self::ProgramDefaultCleared(dpts) => Some(
+                dpts.iter()
+                    .map(|dpt| match dpt.sub {
+                        Some(sub) => format!("{}.{sub:03}", dpt.main),
+                        None => format!("{}.*", dpt.main),
+                    })
+                    .collect(),
+            ),
+            _ => None,
+        }
+    }
+
+    pub(crate) fn as_str(&self) -> &'static str {
+        match self {
+            Self::NoProject => "noProject",
+            Self::NoDpt => "noDpt",
+            Self::NotInProject => "notInProject",
+            Self::ProgramDefaultCleared(_) => "programDefaultCleared",
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DecodeFailureReason {
     UnsupportedDpt,
     DecodeFailed,
 }
 
-/// One coherent project-derived group-address style, DPT-resolution map and
-/// name map. A `None` project (nothing
+/// One coherent project-derived group-address style, DPT-resolution map,
+/// membership set and name map. A `None` project (nothing
 /// open when the session started) collapses `style` to `None` too, which
 /// [`GroupAddressContext::format_destination`] reads as "show the raw
 /// `u16`", per the design's explicit "no project open: raw `u16`, names
@@ -849,6 +886,10 @@ pub(crate) struct GroupAddressContext {
     style: Option<GroupAddressStyle>,
     dpts: HashMap<u16, GroupAddressDpt>,
     names: HashMap<u16, String>,
+    /// Raw addresses explicitly present in the session project.
+    group_addresses: HashSet<u16>,
+    /// ADR-0010/0027 diagnostic evidence, never a fallback codec input.
+    cleared_program_defaults: HashMap<u16, Vec<DptRef>>,
     /// AR20: the configured participants (devices, links, flags,
     /// activation) of the same project. Part of the comparison, so a
     /// link-, flag-, activation- or device-only edit is no longer
@@ -870,6 +911,8 @@ impl PartialEq for GroupAddressContext {
         self.style == other.style
             && self.dpts == other.dpts
             && self.names == other.names
+            && self.group_addresses == other.group_addresses
+            && self.cleared_program_defaults == other.cleared_program_defaults
             && *self.flow == *other.flow
     }
 }
@@ -890,16 +933,28 @@ impl GroupAddressContext {
                 style: None,
                 dpts: HashMap::new(),
                 names: HashMap::new(),
+                group_addresses: HashSet::new(),
+                cleared_program_defaults: HashMap::new(),
                 flow: Arc::new(FlowParticipants::default()),
                 generation: FIRST_FLOW_GENERATION,
             },
             Some(project) => {
                 let dpts = knx_core::resolve_project_group_address_dpts(project);
                 let flow = FlowParticipants::from_project(project, &dpts);
+                let group_addresses = project
+                    .installations
+                    .iter()
+                    .flat_map(|installation| &installation.group_addresses)
+                    .map(|entry| entry.address.raw())
+                    .collect();
                 Self {
                     style: Some(project.info.group_address_style),
                     dpts,
                     names: knx_core::resolve_project_group_address_names(project),
+                    group_addresses,
+                    cleared_program_defaults: knx_core::project_cleared_program_default_dpts(
+                        project,
+                    ),
                     flow: Arc::new(flow),
                     generation: FIRST_FLOW_GENERATION,
                 }
@@ -929,13 +984,34 @@ impl GroupAddressContext {
     fn decode(&self, ga: GroupAddress, value: &GroupValue) -> DecodedValue {
         if self.style.is_none() {
             return DecodedValue::Unresolved {
+                reason: UnresolvedReason::NoProject,
                 text: "no project open".to_string(),
             };
         }
+        if !self.group_addresses.contains(&ga.raw()) {
+            return DecodedValue::Unresolved {
+                reason: UnresolvedReason::NotInProject,
+                text: "address not in project".to_string(),
+            };
+        }
         match self.dpts.get(&ga.raw()) {
-            None | Some(GroupAddressDpt::None) => DecodedValue::Unresolved {
-                text: "no DPT resolved for this group address".to_string(),
-            },
+            None | Some(GroupAddressDpt::None) => {
+                if let Some(dpts) = self.cleared_program_defaults.get(&ga.raw()) {
+                    let reason = UnresolvedReason::ProgramDefaultCleared(dpts.clone());
+                    let names = reason.program_default_dpts().unwrap().join(", ");
+                    DecodedValue::Unresolved {
+                        reason,
+                        text: format!(
+                            "no DPT assigned: the project clears the program default (DPT {names})"
+                        ),
+                    }
+                } else {
+                    DecodedValue::Unresolved {
+                        reason: UnresolvedReason::NoDpt,
+                        text: "no DPT resolved for this group address".to_string(),
+                    }
+                }
+            }
             Some(GroupAddressDpt::Single(dpt)) => decode_single(*dpt, value),
             Some(GroupAddressDpt::Conflict(dpts)) => DecodedValue::Conflict {
                 text: format!("conflicting DPTs: {}", format_dpt_list(dpts)),
@@ -2329,7 +2405,7 @@ mod tests {
                 GroupAddressEntry {
                     id: GroupAddressId(2),
                     source: source(),
-                    name: "Unlinked".into(),
+                    name: String::new(),
                     address: GroupAddress::from_raw(2),
                     central: false,
                     unfiltered: false,
@@ -2366,7 +2442,8 @@ mod tests {
         }
 
         match ctx.decode(GroupAddress::from_raw(2), &GroupValue::Short(1)) {
-            DecodedValue::Unresolved { text } => {
+            DecodedValue::Unresolved { reason, text } => {
+                assert_eq!(reason, UnresolvedReason::NoDpt);
                 assert_eq!(text, "no DPT resolved for this group address");
             }
             other => panic!("expected Unresolved, got {other:?}"),
@@ -2382,13 +2459,33 @@ mod tests {
 
         let no_project = GroupAddressContext::from_project(None);
         match no_project.decode(GroupAddress::from_raw(1), &GroupValue::Short(1)) {
-            DecodedValue::Unresolved { text } => assert_eq!(text, "no project open"),
+            DecodedValue::Unresolved { reason, text } => {
+                assert_eq!(reason, UnresolvedReason::NoProject);
+                assert_eq!(text, "no project open");
+            }
             other => panic!("expected Unresolved, got {other:?}"),
         }
         assert_eq!(
             no_project.format_destination(GroupAddress::from_raw(1)),
             "1"
         );
+    }
+
+    #[test]
+    fn unnamed_project_address_membership_does_not_depend_on_the_name_map() {
+        let project = project_with_group_addresses();
+        let mut ctx = GroupAddressContext::from_project(Some(&project));
+        assert_eq!(ctx.name(GroupAddress::from_raw(2)), Some(String::new()));
+
+        ctx.names.clear();
+
+        match ctx.decode(GroupAddress::from_raw(2), &GroupValue::Short(1)) {
+            DecodedValue::Unresolved { reason, text } => {
+                assert_eq!(reason, UnresolvedReason::NoDpt);
+                assert_eq!(text, "no DPT resolved for this group address");
+            }
+            other => panic!("expected Unresolved, got {other:?}"),
+        }
     }
 
     #[test]

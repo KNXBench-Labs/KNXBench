@@ -937,3 +937,438 @@ async fn a_session_over_a_real_imported_project_does_not_panic_while_decoding() 
     let telegrams = poll_until_len(&app, 1).await;
     assert!(telegrams["telegrams"][0]["decoded"]["kind"].is_string());
 }
+
+#[tokio::test]
+async fn monitor_names_cleared_program_defaults_without_decoding_them() {
+    let mut project = project_with_resolving_and_unresolving_group_addresses();
+    let com = project
+        .devices
+        .com_object_mut(ComObjectInstanceId(1))
+        .unwrap();
+    com.dpt = Override::Empty;
+    let template = com.clone();
+    for (id, sub) in [(1, 4), (3, 1), (4, 4)] {
+        if id != 1 {
+            let mut com = template.clone();
+            com.id = ComObjectInstanceId(id);
+            project.devices.insert_com_object(com);
+        }
+        project.devices.set_program_defaults(
+            ComObjectInstanceId(id),
+            knx_core::ProgramDefaults {
+                dpt: Some(Resolved {
+                    value: knx_core::DptRef {
+                        main: 9,
+                        sub: Some(sub),
+                    },
+                    layer: Layer::Program,
+                }),
+                ..Default::default()
+            },
+        );
+    }
+    let (tunnel, handle) = fake_tunnel();
+    let state = knx_server::AppState {
+        connector: Box::new(FakeConnector::succeeding(tunnel)),
+        project: std::sync::Mutex::new(Some(project)),
+        ..Default::default()
+    };
+    let state = Arc::new(state);
+    let app = knx_server::app(Arc::clone(&state), None);
+    let start = call(
+        &app,
+        "POST",
+        "/api/bus/monitor/start",
+        Some(json!({"gateway": "192.0.2.10:3671"})),
+    )
+    .await;
+    assert_eq!(start.status(), StatusCode::OK);
+    handle
+        .sender()
+        .send(group_value_write(1, GroupValue::Bytes(vec![0x0c, 0x80])))
+        .unwrap();
+    let response = poll_until_len(&app, 1).await;
+    let row = &response["telegrams"][0];
+    assert_eq!(row["decoded"]["reason"], "programDefaultCleared");
+    assert_eq!(row["decoded"]["kind"], "unresolved");
+    assert_eq!(
+        row["decoded"]["text"],
+        "no DPT assigned: the project clears the program default (DPT 9.001, 9.004)"
+    );
+    assert_eq!(
+        row["decoded"]["programDefaultDpts"],
+        json!(["9.001", "9.004"])
+    );
+    assert!(row["decoded"].get("dpt").is_none());
+    assert_eq!(row["rawPayload"], "[0c, 80]");
+    // Diagnostic changes also stale the context, even though decoding stays None.
+    state
+        .project
+        .lock()
+        .unwrap()
+        .as_mut()
+        .unwrap()
+        .devices
+        .set_program_defaults(ComObjectInstanceId(3), knx_core::ProgramDefaults::default());
+    let response = body_json(call(&app, "GET", "/api/bus/monitor/telegrams", None).await).await;
+    assert_eq!(response["contextStatus"], "stale");
+    assert_eq!(response["telegrams"][0]["decoded"], row["decoded"]);
+    assert!(handle.sent_calls().is_empty());
+    call(&app, "POST", "/api/bus/monitor/stop", None).await;
+}
+
+#[tokio::test]
+async fn monitor_distinguishes_an_unknown_address_from_a_known_address_without_dpt() {
+    let project = project_with_resolving_and_unresolving_group_addresses();
+    let (tunnel, handle) = fake_tunnel();
+    let state = knx_server::AppState {
+        connector: Box::new(FakeConnector::succeeding(tunnel)),
+        project: std::sync::Mutex::new(Some(project)),
+        ..Default::default()
+    };
+    let app = knx_server::app(Arc::new(state), None);
+    let start = call(
+        &app,
+        "POST",
+        "/api/bus/monitor/start",
+        Some(json!({"gateway": "192.0.2.10:3671"})),
+    )
+    .await;
+    assert_eq!(start.status(), StatusCode::OK);
+    for raw in [2, 999] {
+        handle
+            .sender()
+            .send(group_value_write(raw, GroupValue::Bytes(vec![0x0c, 0x80])))
+            .unwrap();
+    }
+    let response = poll_until_len(&app, 2).await;
+    assert_eq!(
+        response["telegrams"][1]["decoded"]["reason"],
+        "notInProject"
+    );
+    assert_eq!(
+        response["telegrams"][1]["decoded"]["text"],
+        "address not in project"
+    );
+    assert_eq!(response["telegrams"][0]["decoded"]["reason"], "noDpt");
+    for row in response["telegrams"].as_array().unwrap() {
+        assert_eq!(row["decoded"]["kind"], "unresolved");
+        assert_eq!(row["rawPayload"], "[0c, 80]");
+    }
+    assert!(handle.sent_calls().is_empty());
+    call(&app, "POST", "/api/bus/monitor/stop", None).await;
+}
+
+/// Synthetic two-byte measurement: an empty instance attribute and no product
+/// declaration do not establish a DPT, regardless of the object's caption/size.
+#[tokio::test]
+async fn monitor_dpt_outcomes_follow_project_evidence_and_preserve_payloads() {
+    for case in [
+        "noProject",
+        "missing",
+        "declared",
+        "instance",
+        "program",
+        "programRef",
+        "agreeingLinks",
+        "conflictingLinks",
+        "compatibleDeclaration",
+        "sizeConflict",
+        "unsupported",
+        "malformed",
+    ] {
+        let mut project = project_with_resolving_and_unresolving_group_addresses();
+        let measurement = knx_core::DptRef {
+            main: 9,
+            sub: Some(4),
+        };
+        let stated = |value, layer| Override::Value(Resolved { value, layer });
+        let com = project
+            .devices
+            .com_object_mut(ComObjectInstanceId(1))
+            .unwrap();
+        com.dpt = stated(
+            measurement,
+            match case {
+                "program" => Layer::Program,
+                "programRef" => Layer::ProgramRef,
+                _ => Layer::Instance,
+            },
+        );
+        com.size = Some(Resolved {
+            value: knx_core::ObjectSize::Byte(2),
+            layer: Layer::Program,
+        });
+        com.text = Override::Value(Resolved {
+            value: knx_core::Text::Literal("Measurement".into()),
+            layer: Layer::Program,
+        });
+        if matches!(case, "missing" | "declared") {
+            com.dpt = Override::Empty;
+        }
+        if case == "unsupported" {
+            com.dpt = stated(
+                knx_core::DptRef {
+                    main: 40,
+                    sub: Some(1),
+                },
+                Layer::Instance,
+            );
+        }
+        if matches!(case, "agreeingLinks" | "conflictingLinks") {
+            let mut second = com.clone();
+            second.id = ComObjectInstanceId(3);
+            second.links[0].direction = Direction::Receive;
+            if case == "conflictingLinks" {
+                second.dpt = stated(
+                    knx_core::DptRef {
+                        main: 1,
+                        sub: Some(1),
+                    },
+                    Layer::ProgramRef,
+                );
+            }
+            project.devices.insert_com_object(second);
+        }
+        if matches!(case, "declared" | "compatibleDeclaration" | "sizeConflict") {
+            project.installations[0].group_addresses[0].declared_dpt = stated(
+                if case == "sizeConflict" {
+                    knx_core::DptRef {
+                        main: 1,
+                        sub: Some(1),
+                    }
+                } else if case == "compatibleDeclaration" {
+                    knx_core::DptRef {
+                        main: 9,
+                        sub: Some(1),
+                    }
+                } else {
+                    measurement
+                },
+                Layer::Instance,
+            );
+        }
+        let (tunnel, handle) = fake_tunnel();
+        let state = knx_server::AppState {
+            connector: Box::new(FakeConnector::succeeding(tunnel)),
+            project: std::sync::Mutex::new((case != "noProject").then_some(project)),
+            ..Default::default()
+        };
+        let app = knx_server::app(Arc::new(state), None);
+        let start = call(
+            &app,
+            "POST",
+            "/api/bus/monitor/start",
+            Some(json!({ "gateway": "192.0.2.10:3671" })),
+        )
+        .await;
+        assert_eq!(start.status(), StatusCode::OK, "{case}");
+        let payload = if case == "malformed" {
+            vec![0x0c]
+        } else {
+            vec![0x0c, 0x80]
+        };
+        handle
+            .sender()
+            .send(group_value_write(1, GroupValue::Bytes(payload)))
+            .unwrap();
+        let response = poll_until_len(&app, 1).await;
+        assert_eq!(response["contextStatus"], "current", "{case}");
+        let row = &response["telegrams"][0];
+        assert_eq!(
+            row["rawPayload"],
+            if case == "malformed" {
+                "[0c]"
+            } else {
+                "[0c, 80]"
+            },
+            "{case}"
+        );
+        let decoded = &row["decoded"];
+        match case {
+            "noProject" | "missing" => {
+                assert_eq!(decoded["kind"], "unresolved", "{case}");
+                assert_eq!(
+                    decoded["reason"],
+                    if case == "noProject" {
+                        "noProject"
+                    } else {
+                        "noDpt"
+                    },
+                    "{case}"
+                );
+                assert!(decoded.get("dpt").is_none(), "{case}");
+            }
+            "conflictingLinks" | "sizeConflict" => {
+                assert_eq!(decoded["kind"], "conflict", "{case}");
+                assert!(
+                    decoded["text"].as_str().unwrap().contains("DPST-9-4"),
+                    "{case}"
+                );
+                assert!(
+                    decoded["text"].as_str().unwrap().contains("DPST-1-1"),
+                    "{case}"
+                );
+            }
+            "unsupported" | "malformed" => {
+                assert_eq!(decoded["kind"], "error", "{case}");
+                assert_eq!(
+                    decoded["reason"],
+                    if case == "unsupported" {
+                        "unsupportedDpt"
+                    } else {
+                        "decodeFailed"
+                    },
+                    "{case}"
+                );
+                assert_eq!(
+                    decoded["dpt"],
+                    if case == "unsupported" {
+                        "DPST-40-1"
+                    } else {
+                        "DPST-9-4"
+                    },
+                    "{case}"
+                );
+            }
+            _ => {
+                assert_eq!(decoded["kind"], "value", "{case}");
+                assert_eq!(
+                    decoded["dpt"],
+                    if case == "compatibleDeclaration" {
+                        "DPST-9-1"
+                    } else {
+                        "DPST-9-4"
+                    },
+                    "{case}"
+                );
+            }
+        }
+        assert_eq!(
+            call(&app, "POST", "/api/bus/monitor/stop", None)
+                .await
+                .status(),
+            StatusCode::OK
+        );
+        assert!(
+            handle.sent_calls().is_empty(),
+            "monitor must not send values: {case}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn monitor_keeps_captured_dpt_context_after_edits_or_a_late_project_load() {
+    // Age is computed at poll time; every captured fact must remain equal.
+    let captured = |mut row: Value| {
+        row.as_object_mut().unwrap().remove("observedAgeMs");
+        row
+    };
+    for initially_open in [false, true] {
+        let mut project = project_with_resolving_and_unresolving_group_addresses();
+        project
+            .devices
+            .com_object_mut(ComObjectInstanceId(1))
+            .unwrap()
+            .dpt = Override::Empty;
+        let (tunnel, handle) = fake_tunnel();
+        let state = Arc::new(knx_server::AppState {
+            connector: Box::new(FakeConnector::succeeding(tunnel)),
+            project: std::sync::Mutex::new(initially_open.then_some(project.clone())),
+            ..Default::default()
+        });
+        let app = knx_server::app(Arc::clone(&state), None);
+        assert_eq!(
+            call(
+                &app,
+                "POST",
+                "/api/bus/monitor/start",
+                Some(json!({ "gateway": "192.0.2.10:3671" }))
+            )
+            .await
+            .status(),
+            StatusCode::OK
+        );
+        handle
+            .sender()
+            .send(group_value_write(1, GroupValue::Bytes(vec![0x0c, 0x80])))
+            .unwrap();
+        let before = poll_until_len(&app, 1).await;
+        let original = captured(before["telegrams"][0].clone());
+        assert_eq!(
+            original["decoded"]["reason"],
+            if initially_open { "noDpt" } else { "noProject" }
+        );
+
+        // A late open and a DPT edit change the current project, not the
+        // session snapshot. Use the real edit route for the assignment.
+        if !initially_open {
+            *state.project.lock().unwrap() = Some(project);
+        }
+        assert_eq!(
+            call(
+                &app,
+                "POST",
+                "/api/com-object-dpt",
+                Some(json!({ "comObjectId": 1, "dpt": "DPST-9-4" }))
+            )
+            .await
+            .status(),
+            StatusCode::OK
+        );
+        handle
+            .sender()
+            .send(group_value_write(1, GroupValue::Bytes(vec![0x0c, 0x80])))
+            .unwrap();
+        let stale = poll_until_len(&app, 2).await;
+        assert_eq!(stale["contextStatus"], "stale");
+        assert_eq!(stale["projectOpen"], true);
+        assert_eq!(
+            captured(stale["telegrams"][0].clone()),
+            original,
+            "historical row must not change"
+        );
+        assert_eq!(
+            stale["telegrams"][1]["decoded"], original["decoded"],
+            "new rows use the existing session context too"
+        );
+
+        // Existing explicit style publication refreshes the complete context,
+        // even for the same style. It affects future rows only.
+        assert_eq!(
+            call(
+                &app,
+                "POST",
+                "/api/project/group-address-style",
+                Some(json!({ "groupAddressStyle": "ThreeLevel" }))
+            )
+            .await
+            .status(),
+            StatusCode::OK
+        );
+        handle
+            .sender()
+            .send(group_value_write(1, GroupValue::Bytes(vec![0x0c, 0x80])))
+            .unwrap();
+        let refreshed = poll_until_len(&app, 3).await;
+        assert_eq!(refreshed["contextStatus"], "current");
+        assert_eq!(captured(refreshed["telegrams"][0].clone()), original);
+        assert_eq!(
+            captured(refreshed["telegrams"][1].clone()),
+            captured(stale["telegrams"][1].clone())
+        );
+        assert_eq!(refreshed["telegrams"][2]["decoded"]["kind"], "value");
+        assert_eq!(refreshed["telegrams"][2]["decoded"]["dpt"], "DPST-9-4");
+        assert_eq!(
+            refreshed["telegrams"][2]["rawPayload"],
+            original["rawPayload"]
+        );
+        assert!(handle.sent_calls().is_empty());
+        assert_eq!(
+            call(&app, "POST", "/api/bus/monitor/stop", None)
+                .await
+                .status(),
+            StatusCode::OK
+        );
+    }
+}

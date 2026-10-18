@@ -663,6 +663,8 @@ struct DecodedValueDto {
     dpt: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     reason: Option<&'static str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    program_default_dpts: Option<Vec<String>>,
     text: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     error: Option<String>,
@@ -675,13 +677,15 @@ impl From<&DecodedValue> for DecodedValueDto {
                 kind: "value",
                 dpt: Some(dpt.clone()),
                 reason: None,
+                program_default_dpts: None,
                 text: text.clone(),
                 error: None,
             },
-            DecodedValue::Unresolved { text } => Self {
+            DecodedValue::Unresolved { reason, text } => Self {
                 kind: "unresolved",
                 dpt: None,
-                reason: None,
+                reason: Some(reason.as_str()),
+                program_default_dpts: reason.program_default_dpts(),
                 text: text.clone(),
                 error: None,
             },
@@ -689,6 +693,7 @@ impl From<&DecodedValue> for DecodedValueDto {
                 kind: "conflict",
                 dpt: None,
                 reason: None,
+                program_default_dpts: None,
                 text: text.clone(),
                 error: None,
             },
@@ -704,6 +709,7 @@ impl From<&DecodedValue> for DecodedValueDto {
                     DecodeFailureReason::UnsupportedDpt => "unsupportedDpt",
                     DecodeFailureReason::DecodeFailed => "decodeFailed",
                 }),
+                program_default_dpts: None,
                 text: text.clone(),
                 error: Some(error.clone()),
             },

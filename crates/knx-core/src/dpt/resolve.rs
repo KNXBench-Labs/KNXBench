@@ -3,11 +3,10 @@
 //!
 //! This is a different question from `codec.rs`'s: that module turns a
 //! known `DptRef` into and out of wire bytes; this one decides *which*
-//! `DptRef`, if any, applies to a given `GroupAddressId` — a group address
-//! has no DPT field of its own (`group.rs`), only the com objects linked to
-//! it do, and they can disagree. Resolution never guesses: where the
-//! project model does not state a DPT, or states more than one, the answer
-//! is `None` or `Conflict`, never a pick.
+//! `DptRef`, if any, applies to a given `GroupAddressId`. Linked objects can
+//! disagree; an address can also declare its own type (ADR-0078). The
+//! linked-only resolver and the declaration-aware effective resolver stay
+//! distinct. Neither guesses a type from an object name or payload size.
 
 use std::collections::HashMap;
 
@@ -58,7 +57,8 @@ pub enum GroupAddressDpt {
 /// - A `ga` that names no group address in `project` at all resolves to
 ///   `None`, the same as one nothing links to. This function never panics
 ///   on an unknown id; it has no way to tell "unknown" from "known but
-///   unlinked" apart, and no caller listed in the spec needs it to.
+///   unlinked" apart. The bus monitor separately snapshots the project's
+///   raw group-address membership to distinguish those unresolved cases.
 ///
 /// # Before you widen the inputs
 ///
@@ -79,6 +79,14 @@ pub enum GroupAddressDpt {
 /// links or its activity, you have made the bus monitor report
 /// `"synced"` over a decode that has silently changed. Widening this
 /// function's inputs requires widening the fingerprint too.
+///
+/// `project_cleared_program_default_dpts` separately reads the ADR-0027
+/// side table for diagnostic reasons only. It does not change this resolver,
+/// effective DPTs, or encoding/decoding, so the legacy browser fingerprint's
+/// decode inputs stay unchanged. That fingerprint is only an invalidation hint
+/// (KL-82), never freshness evidence. The authoritative server context also
+/// snapshots and compares the cleared-default map, so diagnostic-only changes
+/// make it stale and captured rows retain their original explanation.
 pub fn resolve_group_address_dpt(project: &Project, ga: GroupAddressId) -> GroupAddressDpt {
     let dpts: Vec<DptRef> = project
         .devices
@@ -91,6 +99,42 @@ pub fn resolve_group_address_dpt(project: &Project, ga: GroupAddressId) -> Group
         .filter_map(|com| com.dpt.value().map(|resolved| resolved.value))
         .collect();
     group_address_dpt_from(dpts)
+}
+
+/// Program defaults behind explicitly cleared linked instance DPTs, by raw address.
+/// Diagnostic only; these values never contribute to DPT resolution.
+pub fn project_cleared_program_default_dpts(project: &Project) -> HashMap<u16, Vec<DptRef>> {
+    let mut by_id: HashMap<GroupAddressId, Vec<DptRef>> = HashMap::new();
+    for com in project
+        .devices
+        .com_objects()
+        .filter(|com| matches!(com.dpt, Override::Empty))
+    {
+        if let Some(dpt) = project
+            .devices
+            .program_defaults(com.id)
+            .and_then(|defaults| defaults.dpt.as_ref())
+        {
+            for link in &com.links {
+                by_id.entry(link.ga).or_default().push(dpt.value);
+            }
+        }
+    }
+    let mut by_raw: HashMap<u16, Vec<DptRef>> = HashMap::new();
+    for entry in project
+        .installations
+        .iter()
+        .flat_map(|installation| &installation.group_addresses)
+    {
+        if let Some(dpts) = by_id.get(&entry.id) {
+            by_raw.entry(entry.address.raw()).or_default().extend(dpts);
+        }
+    }
+    for dpts in by_raw.values_mut() {
+        dpts.sort_unstable();
+        dpts.dedup();
+    }
+    by_raw
 }
 
 /// What a group address states about its own type, set beside what its
@@ -416,6 +460,127 @@ mod tests {
             group_ranges: vec![],
             group_addresses,
             parameters: vec![],
+        }
+    }
+
+    #[test]
+    fn a_named_two_byte_object_with_an_empty_dpt_does_not_invent_a_type() {
+        let ga = GroupAddressId(1);
+        let mut com = com_object(1, Override::Empty, vec![send(ga)], true);
+        com.text = Override::Value(Resolved {
+            value: crate::Text::Literal("Measurement".into()),
+            layer: Layer::Program,
+        });
+        com.size = Some(Resolved {
+            value: crate::ObjectSize::Byte(2),
+            layer: Layer::Program,
+        });
+        let mut project = project_with(vec![com]);
+        project
+            .installations
+            .push(installation(1, vec![group_address_entry(1, 17)]));
+        assert_eq!(
+            resolve_group_address_type(&project, ga).effective(),
+            GroupAddressDpt::None
+        );
+        assert!(!resolve_project_group_address_dpts(&project).contains_key(&17));
+        assert_eq!(
+            project
+                .devices
+                .com_object(ComObjectInstanceId(1))
+                .unwrap()
+                .dpt,
+            Override::Empty
+        );
+    }
+
+    #[test]
+    fn cleared_program_defaults_are_reported_sorted_without_resolving_or_mutating_them() {
+        let ga = GroupAddressId(1);
+        let mut project = project_with(vec![
+            com_object(1, Override::Empty, vec![send(ga), receive(ga)], true),
+            com_object(2, Override::Empty, vec![receive(ga)], false),
+            com_object(3, Override::Empty, vec![send(ga)], true),
+            com_object(4, Override::Absent, vec![send(ga)], true),
+            com_object(5, stated(1, 1), vec![send(GroupAddressId(2))], true),
+        ]);
+        project.installations.push(installation(
+            1,
+            vec![
+                group_address_entry(1, 17),
+                group_address_entry(2, 18),
+                group_address_entry(3, 19),
+            ],
+        ));
+        for (id, value) in [
+            (1, dpt(9, 4)),
+            (2, dpt(9, 1)),
+            (3, dpt(9, 4)),
+            (4, dpt(1, 1)),
+            (5, dpt(9, 1)),
+        ] {
+            project.devices.set_program_defaults(
+                ComObjectInstanceId(id),
+                crate::ProgramDefaults {
+                    dpt: Some(Resolved {
+                        value,
+                        layer: Layer::Program,
+                    }),
+                    ..Default::default()
+                },
+            );
+        }
+        assert_eq!(
+            project_cleared_program_default_dpts(&project),
+            HashMap::from([(17, vec![dpt(9, 1), dpt(9, 4)])])
+        );
+        assert_eq!(
+            resolve_group_address_dpt(&project, ga),
+            GroupAddressDpt::None
+        );
+        assert!(!resolve_project_group_address_dpts(&project).contains_key(&17));
+        assert_eq!(
+            project
+                .devices
+                .com_object(ComObjectInstanceId(1))
+                .unwrap()
+                .dpt,
+            Override::Empty
+        );
+        assert_eq!(
+            project
+                .devices
+                .program_defaults(ComObjectInstanceId(1))
+                .unwrap()
+                .dpt
+                .as_ref()
+                .unwrap()
+                .value,
+            dpt(9, 4)
+        );
+    }
+
+    #[test]
+    fn project_resolution_reads_linked_instance_program_and_object_reference_dpts() {
+        for layer in [Layer::Instance, Layer::Program, Layer::ProgramRef] {
+            let ga = GroupAddressId(1);
+            let mut project = project_with(vec![com_object(
+                1,
+                Override::Value(Resolved {
+                    value: dpt(9, 4),
+                    layer,
+                }),
+                vec![send(ga), receive(ga)],
+                true,
+            )]);
+            project
+                .installations
+                .push(installation(1, vec![group_address_entry(1, 17)]));
+            assert_eq!(
+                resolve_project_group_address_dpts(&project).get(&17),
+                Some(&GroupAddressDpt::Single(dpt(9, 4))),
+                "{layer:?}"
+            );
         }
     }
 

@@ -12,6 +12,28 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Bus monitor review fixes — UI-01 (18 October 2026)
+
+ADR-0010 decoding policy stays unchanged. A separate Core diagnostic helper
+collects program defaults behind cleared instance DPTs (ADR-0027); monitor rows
+name them without decoding with them. Captured unresolved reasons now separate
+no project, address outside the project, known address without a type, and
+cleared program defaults. Server context comparison includes diagnostic changes;
+HTTP, diagnostic bundles and EN/DE labels retain the captured evidence. Synthetic
+Core/HTTP/panel regressions and default/reduced-motion browser variants cover the
+change. [Contract](contracts/dpt-selection.md#monitor-resolution-reasons-ui-01-18-october-2026).
+
+## Bus monitor unresolved reasons — UI-01 (18 October 2026)
+
+Read-only source inspection found a genuinely undeclared linked measurement,
+not an omitted resolvable DPT. Resolution remains shared and never infers a type
+from names or sizes. HTTP/diagnostic rows now distinguish a session without a
+project from a missing DPT; EN/DE labels and unknown legacy reasons follow that
+captured evidence. Raw bytes and previous interpretations survive project edits
+and explicit future-context refreshes. Synthetic Core, HTTP and panel regressions
+cover the production path; [contract](contracts/dpt-selection.md#monitor-resolution-reasons-ui-01-18-october-2026).
+No bus/hardware operation or deployment is part of this change.
+
 ## Manual, README and screenshots after Alpha 14 (18 October 2026)
 
 Docs and media only, no application change. The manual's 46 stills, the four

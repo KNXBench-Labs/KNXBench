@@ -110,7 +110,12 @@ function ControlFacts({ control }: { control: BusTelegramRow["control"] }) {
 
 function decodeStateKey(decoded: BusTelegramRow["decoded"]) {
   switch (decoded?.kind) {
-    case "unresolved": return "busMonitor.decode.unresolved" as const;
+    case "unresolved":
+      if (decoded.reason === "noProject") return "busMonitor.decode.noProject" as const;
+      if (decoded.reason === "notInProject") return "busMonitor.decode.notInProject" as const;
+      if (decoded.reason === "programDefaultCleared") return "busMonitor.decode.programDefaultCleared" as const;
+      if (decoded.reason === "noDpt") return "busMonitor.decode.unresolved" as const;
+      return "busMonitor.decode.unresolvedUnknown" as const;
     case "conflict": return "busMonitor.decode.conflict" as const;
     case "error":
       if (decoded.reason === "unsupportedDpt") return "busMonitor.decode.unsupported" as const;
@@ -1134,7 +1139,7 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
                     <td className="bus-monitor-control"><ControlFacts control={row.control} /></td>
                     <td>{row.rawPayload ?? "—"}</td>
                     <td className={row.decoded ? `bus-monitor-decoded-${row.decoded.kind}` : undefined}>
-                      {decodeKey && <span className="bus-monitor-decode-state">{t(decodeKey)}</span>}
+                      {decodeKey && <span className="bus-monitor-decode-state">{t(decodeKey, { dpts: row.decoded?.programDefaultDpts?.join(", ") ?? "?" })}</span>}
                       {decodedSummary(row, language)}
                     </td>
                   </tr>
@@ -1155,7 +1160,7 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
               </>}
               <dt>{t("busMonitor.column.decoded")}</dt><dd>
                 {decodeStateKey(selectedTelegram.decoded) && (
-                  <span className="bus-monitor-decode-state">{t(decodeStateKey(selectedTelegram.decoded)!)}</span>
+                  <span className="bus-monitor-decode-state">{t(decodeStateKey(selectedTelegram.decoded)!, { dpts: selectedTelegram.decoded?.programDefaultDpts?.join(", ") ?? "?" })}</span>
                 )}
                 {decodedSummary(selectedTelegram, language)}
                 {selectedTelegram.decoded?.error && <p className="field-error">{selectedTelegram.decoded.error}</p>}

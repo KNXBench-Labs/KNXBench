@@ -3264,6 +3264,11 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
   .diagram-device > span:first-of-type { flex: 1 1 0; }
   .device-object-count { flex: 1 0 100%; margin-left: 0; padding-left: 30px; text-align: left; }
 }
+/* Nested building cards can be 200px wide and clip their overflow: there the indent goes and
+   the label may wrap between number and words, so the count is never cut off. */
+@container (max-width: 15rem) {
+  .device-object-count { padding-left: 0; white-space: normal; overflow-wrap: anywhere; }
+}
 .diagram-device[aria-pressed="true"], .diagram-heading[aria-pressed="true"], .workspace-table tr[aria-selected="true"] { background: color-mix(in srgb, var(--knx-accent) 14%, var(--knx-surface)); }
 .building-diagram { display: grid; gap: 20px; }
 .building-diagram-children { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; padding: 16px; background: var(--knx-bg); }

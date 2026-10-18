@@ -27,7 +27,13 @@ const tree: ProjectTree = {
   }],
 };
 
-async function openTopology(page: Page, language: "en" | "de", width: number, theme: string) {
+// Buildings: a root with a nested room whose device carries a five-digit count.
+const buildingsTree: ProjectTree = { ...tree, installations: [{ ...tree.installations[0], topology: [], unassigned: [],
+  buildings: [{ id: 20, name: "Haus", kind: "Building", devices: [], children: [
+    { id: 21, name: "Raum", kind: "Room", children: [], devices: [dev(40, "Aktor", "1.1.1", 12345)] },
+  ] }] }] };
+
+async function openTopology(page: Page, language: "en" | "de", width: number, theme: string, view: "topology" | "buildings" = "topology") {
   const m = language === "en" ? en : de;
   const unexpected: string[] = [];
   const errors: string[] = [];
@@ -43,7 +49,7 @@ async function openTopology(page: Page, language: "en" | "de", width: number, th
         uiLanguage: language, theme, motionLevel: "normal", onboardingGuide: { seenStage: "alpha" },
       },
     };
-    else if (path === "/api/project" && method === "GET") body = tree;
+    else if (path === "/api/project" && method === "GET") body = view === "buildings" ? buildingsTree : tree;
     else if (path === "/api/version" && method === "GET") body = { version: "0.1.0-alpha.9+gfixture" };
     else if (path === "/api/bus/discover" && method === "POST") body = { interfaces: [] };
     else if (path === "/api/project/stored-bus-access" && method === "GET") body = { records: [] };
@@ -58,7 +64,7 @@ async function openTopology(page: Page, language: "en" | "de", width: number, th
   await page.goto("/?view=editor");
   await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
   await openNavigationSections(page);
-  await page.locator(".workbench-navigation").getByRole("button", { name: m["workbench.topology"], exact: true }).click();
+  await page.locator(".workbench-navigation").getByRole("button", { name: m[`workbench.${view}`], exact: true }).click();
   return { m, unexpected, errors };
 }
 
@@ -177,6 +183,46 @@ for (const key of ["Enter", "Space"] as const) {
     await expect(blinds).toHaveAttribute("aria-pressed", "true");
     await expect(page.locator(".structure-context-editor")).toBeVisible();
     await expect(page.locator(".structure-context-editor input").first()).toHaveValue(/Blinds/);
+    expect(errors).toEqual([]);
+    expect(unexpected).toEqual([]);
+  });
+}
+
+// The same stacked metric lives in Buildings, where nested cards can be as narrow as 200px
+// and every card clips its overflow: the count must still show in full.
+for (const language of ["de", "en"] as const) {
+  test(`${language} buildings: a 200px nested card shows a five-digit count in full`, async ({ page }) => {
+    const { unexpected, errors } = await openTopology(page, language, 1280, "porcelain", "buildings");
+    // Pin the nested column to the 200px grid minimum the layout allows.
+    await page.addStyleTag({ content: ".building-diagram-children { grid-template-columns: 200px !important; justify-content: start; }" });
+    const label = language === "de" ? "12345 Kommunikationsobjekte" : "12345 communication objects";
+    const card = page.locator(".building-diagram-children .building-diagram-node");
+    await expect(card).toHaveCount(1);
+    const count = card.locator(".device-object-count");
+    await expect(count).toHaveText(label);
+    const m = await card.evaluate(node => {
+      const box = node.getBoundingClientRect();
+      const metric = node.querySelector(".device-object-count")!;
+      const range = document.createRange();
+      range.selectNodeContents(metric);
+      const text = range.getBoundingClientRect();
+      const clips: { cls: string; clipsX: boolean }[] = [];
+      for (let el: Element | null = metric; el && el !== node.parentElement; el = el.parentElement) {
+        const css = getComputedStyle(el);
+        const bounds = el.getBoundingClientRect();
+        // Every box on the path, itself included, may clip: the text must lie inside its content edge.
+        if (css.overflowX !== "visible") clips.push({ cls: String(el.className), clipsX: text.left < bounds.left - 0.5 || text.right > bounds.right + 0.5 });
+      }
+      return { cardWidth: box.width, textLeft: text.left, textRight: text.right, cardLeft: box.left, cardRight: box.right,
+        selfOverflow: metric.scrollWidth > metric.clientWidth + 0.5, clips };
+    });
+    expect(Math.round(m.cardWidth), "nested card is the 200px minimum").toBe(200);
+    expect(m.textLeft, "count starts inside the card").toBeGreaterThanOrEqual(m.cardLeft - 0.5);
+    expect(m.textRight, "count ends inside the card").toBeLessThanOrEqual(m.cardRight + 0.5);
+    expect(m.selfOverflow, "count does not overflow its own box").toBe(false);
+    for (const clip of m.clips) expect(clip.clipsX, `${clip.cls} does not clip the count`).toBe(false);
+    // Whole words only: the number may sit on its own line, but no word is cut.
+    await expect(count).toBeVisible();
     expect(errors).toEqual([]);
     expect(unexpected).toEqual([]);
   });

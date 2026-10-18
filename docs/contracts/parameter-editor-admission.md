@@ -5,6 +5,27 @@ source-evidence slice is now implemented on published AP2/native13 main; it is
 not editor implementation, PDB-04 completion or compatibility acceptance.
 AP2 was published separately; its earlier source-bound receipts stay historical.
 
+## Packed time units fall back, 2026-10-18
+
+Census G6 ([gap census](../research/2026-10-17-product-database-gap-census.md)):
+`time-count` labelled every `TypeTime` as a decimal count of its declared unit,
+also when the unit is packed. A read-only count over the local collection
+(18 October 2026, member bodies deduplicated, values allowlisted, no names or
+ids) found 1,456 `TypeTime` declarations, all with a `Unit`: plain `Seconds` 551,
+`Milliseconds` 250, `HundredMilliseconds` 93, `Minutes` 90, `Hours` 10,
+`TenMilliseconds` 10, and packed `PackedSecondsAndMilliseconds` 443,
+`PackedMinutesSecondsAndMilliseconds` 5, `PackedDaysHoursMinutesAndSeconds` 4
+(79 programs). A packed unit combines several fields in one integer whose layout
+no local document defines.
+
+`chooseParameterEditor` now admits `time-count` only for the six plain units
+observed (and for an undeclared unit, shown as "not declared"); every other unit,
+the packed ones included, gets the existing `unsupported-codec` fallback: the
+original value is shown unconverted and no count input is offered. The server's
+validation and write path are unchanged. Tests: `plan.test.ts` (six plain units,
+three packed, an unknown and an empty unit, undeclared unit) and
+`ParameterEditor.test.tsx` (packed value shown, no input, no write).
+
 ## Public contract follow-up, 2026-10-12
 
 [Inspected source/access and module-scope qualification](../research/product-database.md#2026-10-12--ap3-colourpicture-contract-and-module-scope-follow-up)

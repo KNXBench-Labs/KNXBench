@@ -150,4 +150,13 @@ describe("isolated parameter editor", () => {
     expect(host.textContent).toContain("Wertformat"); expect(host.textContent).toContain(raw); expect(host.querySelector('img,iframe,script,input[type="color"],input[type="file"]')).toBeNull();
     expect(props.onApply).not.toHaveBeenCalled();
   });
+  it("shows a packed time value unchanged and offers no count input (census G6)", async () => {
+    const source = { ...base.source!, attributes: { ...base.source!.attributes, Unit: "PackedSecondsAndMilliseconds" } };
+    const { host, props } = await mount({ source });
+    expect(host.querySelector("input")).toBeNull();
+    expect(host.textContent).toContain("This value format is not verified. The original value is shown without conversion.");
+    expect(host.textContent).toContain("0010");
+    expect(host.textContent).not.toContain("Decimal count");
+    expect(props.onApply).not.toHaveBeenCalled();
+  });
 });

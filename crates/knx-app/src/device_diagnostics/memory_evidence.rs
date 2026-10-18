@@ -87,10 +87,48 @@ pub struct MemoryEvidence {
 }
 
 /// One selected device and the profile its application declares.
+///
+/// Opaque: only [`prepare_memory`] makes one, so every range
+/// [`acquire_memory`] reads comes from the ProductDB derivation. Outside code
+/// reads it through accessors and can neither build nor edit it:
+///
+/// ```compile_fail,E0451
+/// use knx_app::device_diagnostics::{MemoryPrepared, Prepared};
+/// use knx_productdb::declared_segments::DeclaredSegments;
+/// fn forge(base: Prepared, profile: DeclaredSegments) -> MemoryPrepared {
+///     MemoryPrepared { base, profile }
+/// }
+/// ```
+///
+/// ```compile_fail,E0616
+/// use knx_app::device_diagnostics::MemoryPrepared;
+/// use knx_productdb::declared_segments::DeclaredSegments;
+/// fn swap(plan: &mut MemoryPrepared, profile: DeclaredSegments) {
+///     plan.profile = profile;
+/// }
+/// ```
+///
+/// ```compile_fail,E0616
+/// use knx_app::device_diagnostics::{MemoryPrepared, Prepared};
+/// fn retarget(plan: &mut MemoryPrepared, base: Prepared) {
+///     plan.base = base;
+/// }
+/// ```
 #[derive(Debug, Clone)]
 pub struct MemoryPrepared {
-    pub base: Prepared,
-    pub profile: DeclaredSegments,
+    base: Prepared,
+    profile: DeclaredSegments,
+}
+
+impl MemoryPrepared {
+    /// The selected device, its asserted identity and the opaque reference.
+    pub fn base(&self) -> &Prepared {
+        &self.base
+    }
+    /// The ProductDB-derived profile, for previews.
+    pub fn profile(&self) -> &DeclaredSegments {
+        &self.profile
+    }
 }
 
 /// Resolves the device's application through the project → product mapping
@@ -121,7 +159,7 @@ pub fn prepare_memory(
     let profile = derive_declared_segments(&code)
         .map_err(|e| format!("diagnostics-profile-unavailable: {e}"))?;
     match (base.expected.mask, base.expected.manufacturer) {
-        (Some(mask), Some(_)) if mask == profile.mask => {}
+        (Some(mask), Some(_)) if mask == profile.mask() => {}
         (Some(_), Some(_)) => return Err("diagnostics-identity-inconsistent".into()),
         _ => return Err("diagnostics-identity-assertion-missing".into()),
     }
@@ -186,19 +224,19 @@ pub fn pending_memory(plan: &MemoryPrepared, build: &str, simulated: bool) -> Ex
     let mut memory = MemoryEvidence {
         profile: MEMORY_PROFILE.into(),
         notice: NOTICE.into(),
-        program_id: profile.program_id.clone(),
+        program_id: profile.program_id().to_string(),
         hardware_type_comparison: Comparison {
             object_index: 0,
             property_id: PID_HARDWARE_TYPE,
-            procedure_position: profile.compare_position,
-            inline_data: hex(&profile.hardware_type),
+            procedure_position: profile.compare_position(),
+            inline_data: hex(profile.hardware_type()),
         },
         chunk_octets: STANDARD_FRAME_CHUNK_OCTETS,
         ranges: profile
-            .ranges
+            .ranges()
             .ranges()
             .iter()
-            .zip(&profile.range_positions)
+            .zip(profile.range_positions())
             .enumerate()
             .map(|(i, (range, position))| RangeEvidence {
                 order: i + 1,
@@ -211,7 +249,7 @@ pub fn pending_memory(plan: &MemoryPrepared, build: &str, simulated: bool) -> Ex
         chunks: vec![],
     };
     let pending: Vec<MemoryItem> = profile
-        .ranges
+        .ranges()
         .chunks()
         .into_iter()
         .map(MemoryItem::pending)
@@ -247,8 +285,8 @@ pub async fn acquire_memory<T: ManagementTransport>(
         timing,
         MemoryRequest {
             expected: plan.base.expected,
-            hardware_type: &plan.profile.hardware_type,
-            ranges: &plan.profile.ranges,
+            hardware_type: plan.profile.hardware_type(),
+            ranges: plan.profile.ranges(),
         },
         cancel,
         |items, memory| {

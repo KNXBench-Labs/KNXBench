@@ -296,6 +296,12 @@ async fn identity_reads<T: ManagementTransport>(
 }
 
 /// What `collect_declared_memory` reads and what the device must prove first.
+///
+/// A lower-layer primitive: `DeclaredRanges` checks bounds, not provenance.
+/// The one admitted entry is the application service
+/// (`knx_app::device_diagnostics::acquire_memory`), whose opaque plan is
+/// made only from a ProductDB derivation (ADR-0143); CLI and HTTP never
+/// accept ranges from a user.
 #[derive(Debug, Clone, Copy)]
 pub struct MemoryRequest<'a> {
     /// Both values are required; a missing one refuses before connecting.

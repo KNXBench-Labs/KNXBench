@@ -116,11 +116,11 @@ fn sha256(bytes: &[u8]) -> String {
 fn the_profile_is_derived_from_product_data_with_required_identity() {
     let (_dir, db) = products(PROGRAM);
     let plan = prepare_memory(&project(), DeviceId(7), &db).unwrap();
-    assert_eq!(plan.base.expected.mask, Some(0x0025));
-    assert_eq!(plan.base.expected.manufacturer, Some(0x0001));
-    assert_eq!(plan.profile.program_id, "M-0001_A-0001-01-0000");
-    assert_eq!(plan.profile.ranges.total_octets(), 42);
-    assert_eq!(plan.profile.range_positions, [2, 3]);
+    assert_eq!(plan.base().expected.mask, Some(0x0025));
+    assert_eq!(plan.base().expected.manufacturer, Some(0x0001));
+    assert_eq!(plan.profile().program_id(), "M-0001_A-0001-01-0000");
+    assert_eq!(plan.profile().ranges().total_octets(), 42);
+    assert_eq!(plan.profile().range_positions(), [2, 3]);
     // Not the System-2 shape: refused before any adapter exists.
     let (_dir, other) = products(&PROGRAM.replace("MV-0025", "MV-0701"));
     let error = prepare_memory(&project(), DeviceId(7), &other).unwrap_err();
@@ -302,60 +302,45 @@ fn format_1_archives_keep_four_members_and_no_memory_notice() {
     assert!(!manifest.contains("notice"));
 }
 
-#[test]
-fn the_largest_admitted_profile_fits_the_archive_limits() {
-    use knx_app::device_diagnostics::{pending_memory, MemoryPrepared};
-    use knx_core::commissioning::declared_memory::{DeclaredRange, DeclaredRanges};
-    let ranges = DeclaredRanges::new(
-        (0..8)
-            .map(|i| DeclaredRange {
-                address: 0x1000 + 0x400 * i,
-                length: 256,
-            })
-            .collect(),
+/// The two declared segments of [`PROGRAM`], as they appear in it.
+const SEGMENTS: &str = r#"<LdCtrlAbsSegment LsmIdx="1" SegType="0" Address="278" Size="30" Access="51" MemType="3" SegFlags="0" />
+<LdCtrlAbsSegment LsmIdx="3" SegType="0" Address="15360" Size="12" Access="51" MemType="3" SegFlags="0" />"#;
+
+#[tokio::test]
+async fn the_largest_admitted_profile_fits_the_archive_limits() {
+    // Eight declared ranges of 256 octets: the 2048-octet profile limit,
+    // derived from product data and read from a device showing exactly the
+    // asserted identity, so the archive is a real, consistent acquisition.
+    let segments: String = (0..8u32)
+        .map(|i| {
+            format!(
+                r#"<LdCtrlAbsSegment LsmIdx="1" SegType="0" Address="{}" Size="256" Access="51" MemType="3" SegFlags="0" />"#,
+                0x1000 + 0x400 * i
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    assert!(PROGRAM.contains(SEGMENTS), "fixture drifted");
+    let (_dir, db) = products(&PROGRAM.replace(SEGMENTS, &segments));
+    let plan = prepare_memory(&project(), DeviceId(7), &db).unwrap();
+    assert_eq!(plan.profile().ranges().total_octets(), 2048);
+    let device = device();
+    for i in 0..8u32 {
+        device.preset_memory(0x1000 + 0x400 * i, &[0xFF; 256]);
+    }
+    let export = acquire_memory(
+        &device,
+        &plan,
+        Default::default(),
+        "synthetic",
+        &AtomicBool::new(false),
+        |_| {},
     )
-    .unwrap();
-    let plan = MemoryPrepared {
-        base: knx_app::device_diagnostics::Prepared {
-            target: knx_core::ContactableAddress::new("1.1.25".parse().unwrap()).unwrap(),
-            expected: knx_net::commissioning::diagnostic_export::Identity {
-                mask: Some(0x0025),
-                manufacturer: Some(1),
-            },
-            reference: "a".repeat(64),
-        },
-        profile: knx_productdb::declared_segments::DeclaredSegments {
-            program_id: "M-0001_A-0001-01-0000".into(),
-            mask: 0x0025,
-            ranges,
-            range_positions: (1..=8).collect(),
-            compare_position: 0,
-            hardware_type: vec![0xFF; 10],
-        },
-    };
-    let mut export = pending_memory(&plan, "synthetic", true);
-    let now = chrono::Utc::now().to_rfc3339();
-    for item in &mut export.report.items {
-        item.status = "read".into();
-        item.bytes = vec![0xFF; item.expected_bytes];
-        item.received_bytes = item.expected_bytes;
-        item.returned_elements = item.property_id.map(|_| 1);
-        item.attempted_at = Some(now.clone());
-        item.completed_at = Some(now.clone());
-    }
-    let memory = export.memory.as_mut().unwrap();
-    for chunk in &mut memory.chunks {
-        chunk.status = "read".into();
-        chunk.bytes = "ff".repeat(usize::from(chunk.requested_octets));
-        chunk.received_octets = usize::from(chunk.requested_octets);
-        chunk.attempted_at = Some(now.clone());
-        chunk.completed_at = Some(now.clone());
-    }
-    for range in &mut memory.ranges {
-        range.coverage.read = u32::from(range.length);
-        range.coverage.not_read = 0;
-    }
-    export.report.complete = true;
+    .await;
+    assert_eq!(export.report.stop_reason, None);
+    let memory = export.memory.as_ref().unwrap();
+    assert!(memory.chunks.iter().all(|c| c.status == "read"));
+    assert!(memory.ranges.iter().all(|r| r.coverage.read == 256));
     let bytes = bundle_export(&export).unwrap();
     assert_eq!(read_export(&bytes).unwrap(), export);
 }

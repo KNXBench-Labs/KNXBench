@@ -18,20 +18,66 @@ use crate::system2::{project_tool_metadata, MetadataError};
 pub const PROFILE: &str = "system2-declared-segments-v1";
 
 /// What the profile reads and what the device must prove first.
+///
+/// Only [`derive_declared_segments`] makes one, from a ProgramCode; outside
+/// code reads it through accessors and can neither build nor edit it:
+///
+/// ```compile_fail,E0451
+/// use knx_core::commissioning::declared_memory::{DeclaredRange, DeclaredRanges};
+/// use knx_productdb::declared_segments::DeclaredSegments;
+/// let ranges = DeclaredRanges::new(vec![DeclaredRange { address: 0x4000, length: 16 }]).unwrap();
+/// let _forged = DeclaredSegments {
+///     program_id: "M-0001_A-0001-01-0000".into(),
+///     mask: 0x0025,
+///     ranges,
+///     range_positions: vec![1],
+///     compare_position: 0,
+///     hardware_type: vec![1],
+/// };
+/// ```
+///
+/// ```compile_fail,E0616
+/// use knx_core::commissioning::declared_memory::DeclaredRanges;
+/// use knx_productdb::declared_segments::DeclaredSegments;
+/// fn widen(profile: &mut DeclaredSegments, ranges: DeclaredRanges) {
+///     profile.ranges = ranges;
+/// }
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DeclaredSegments {
+    program_id: String,
+    mask: u16,
+    ranges: DeclaredRanges,
+    range_positions: Vec<usize>,
+    compare_position: usize,
+    hardware_type: Vec<u8>,
+}
+
+impl DeclaredSegments {
     /// `ApplicationProgram/@Id`.
-    pub program_id: String,
+    pub fn program_id(&self) -> &str {
+        &self.program_id
+    }
     /// The declared mask (`MV-xxxx`), the identity the device must show.
-    pub mask: u16,
+    pub fn mask(&self) -> u16 {
+        self.mask
+    }
     /// The ranges, in source order.
-    pub ranges: DeclaredRanges,
+    pub fn ranges(&self) -> &DeclaredRanges {
+        &self.ranges
+    }
     /// Zero-based procedure position of each range's `LdCtrlAbsSegment`.
-    pub range_positions: Vec<usize>,
+    pub fn range_positions(&self) -> &[usize] {
+        &self.range_positions
+    }
     /// Zero-based procedure position of the `LdCtrlCompareProp`.
-    pub compare_position: usize,
+    pub fn compare_position(&self) -> usize {
+        self.compare_position
+    }
     /// Its `@InlineData`, compared with `property_matches`.
-    pub hardware_type: Vec<u8>,
+    pub fn hardware_type(&self) -> &[u8] {
+        &self.hardware_type
+    }
 }
 
 /// Why no profile exists for a program; never a partial profile.

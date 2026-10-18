@@ -1,0 +1,2537 @@
+{
+  "schemaVersion": 1,
+  "kind": "repository-open-work-planning-audit",
+  "date": "2026-10-18",
+  "sourceRevision": "961502d6bb62276f916c2777bffc3e906236d6f5",
+  "scope": {
+    "catalogue": "docs/limitations/catalogue.json",
+    "ledger": "docs/status/LEDGER.md",
+    "catalogueEntries": 195,
+    "ledgerIds": 208,
+    "nonterminalLedgerIds": 17,
+    "packages": 17,
+    "topicCounts": {
+      "Import and export": 25,
+      "Manufacturer data and parameters": 30,
+      "Project model and storage": 27,
+      "Commissioning and recovery": 35,
+      "Bus diagnostics and DPT": 25,
+      "UI and accessibility": 24,
+      "Platform, deployment and security": 18,
+      "Integrations and community": 7,
+      "Historical catalogue notes": 4
+    }
+  },
+  "limitations": [
+    "Planning classifications are not canonical per-ID statuses or implementation authorisation.",
+    "Repository documents and targeted current-source consumers were audited; no new format research, product tests, hardware or external issue-tracker audit.",
+    "Later commits are not covered unless explicitly reconciled; public/private original input bytes were not published.",
+    "Accepted boundaries are not automatically implementation tasks; active UI and exact-UP258 workstreams retain ownership."
+  ],
+  "packages": [
+    "WP-01",
+    "WP-02",
+    "WP-03",
+    "WP-04",
+    "WP-05",
+    "WP-06",
+    "WP-07",
+    "WP-08",
+    "WP-09",
+    "WP-10",
+    "WP-11",
+    "WP-12",
+    "WP-13",
+    "WP-14",
+    "WP-15",
+    "WP-16",
+    "WP-17"
+  ],
+  "activeExclusions": [
+    {
+      "route": "active-ui",
+      "source": "docs/goals/ui-feedback-2026-10-18.md",
+      "scope": "UI-05 and final whole-set integration; other five UI packages delivered at cutoff."
+    },
+    {
+      "route": "active-up258",
+      "source": "docs/goals/up258-programming-2026-10-18.md",
+      "scope": "Exact-device offline preparation, complete source-to-plan execution and whole-mutation recovery."
+    }
+  ],
+  "nonterminalLedgerRouting": [
+    {
+      "id": "FUTURE-01",
+      "route": "later-agent"
+    },
+    {
+      "id": "FUTURE-02",
+      "route": "later-automation"
+    },
+    {
+      "id": "FUTURE-05",
+      "route": "later-online-catalogue"
+    },
+    {
+      "id": "FUTURE-08",
+      "route": "optional-copy"
+    },
+    {
+      "id": "GAP-T30-04",
+      "route": "later-media"
+    },
+    {
+      "id": "IMPORT-02",
+      "route": "WP-10"
+    },
+    {
+      "id": "KL-110",
+      "route": "later-media"
+    },
+    {
+      "id": "KL-170",
+      "route": "WP-09"
+    },
+    {
+      "id": "KL-171",
+      "route": "WP-09"
+    },
+    {
+      "id": "KL-172",
+      "route": "WP-09"
+    },
+    {
+      "id": "MODEL-05",
+      "route": "WP-10"
+    },
+    {
+      "id": "PDB-04",
+      "route": "WP-08"
+    },
+    {
+      "id": "TOOLS-01",
+      "route": "external-statistics"
+    },
+    {
+      "id": "TOOLS-02",
+      "route": "external-statistics"
+    },
+    {
+      "id": "TOOLS-03",
+      "route": "external-statistics"
+    },
+    {
+      "id": "TOOLS-04",
+      "route": "external-statistics"
+    },
+    {
+      "id": "TOOLS-05",
+      "route": "external-statistics"
+    }
+  ],
+  "catalogueRouting": [
+    {
+      "key": "KL-001",
+      "disposition": "evidence",
+      "primary_route": "WP-10",
+      "related_routes": [],
+      "remaining": "Independent source and format evidence for schemas12/13/14/22 and wider program/manufacturer shapes; no repeat of completed independent schema23 preservation task.",
+      "sources": [
+        "docs/limitations/KL-001-independent-sample-coverage.md"
+      ],
+      "topic": "Import and export"
+    },
+    {
+      "key": "KL-002",
+      "disposition": "evidence",
+      "primary_route": "WP-10",
+      "related_routes": [],
+      "remaining": "Authoritative application/project XSD access remains missing; retain bounded structural validation. No unbounded rule expansion/research package without new admitted source.",
+      "sources": [
+        "docs/limitations/KL-002-structural-validation-without-authoritative-xsd.md"
+      ],
+      "topic": "Import and export"
+    },
+    {
+      "key": "KL-003",
+      "disposition": "implementation",
+      "primary_route": "WP-15",
+      "related_routes": [
+        "WP-02",
+        "WP-05",
+        "WP-06",
+        "WP-08",
+        "WP-07",
+        "WP-04",
+        "WP-13"
+      ],
+      "remaining": "Finite gaps are full-chain web scope identity; SuffixText; inline/caption fidelity; object folders/priority and optional page/comparison views. Date/packed/colour/picture/repeated construction remain evidence-first; no whole evaluator rewrite.",
+      "sources": [
+        "docs/limitations/KL-003-parameter-evaluation-and-editing-boundaries.md",
+        "apps/knx-web/src/api.ts:2285-2289",
+        "apps/knx-web/src/parameterPresentation.ts:42-54",
+        "apps/knx-web/src/parameterWorkspace.ts:35-45",
+        "crates/knx-productdb/src/parameter_editor.rs:18-21",
+        "docs/adr/0142-file-size-limits-follow-the-storage-ceiling.md"
+      ],
+      "topic": "Manufacturer data and parameters"
+    },
+    {
+      "key": "KL-006",
+      "disposition": "accepted-boundary",
+      "primary_route": "WP-13",
+      "related_routes": [
+        "WP-12"
+      ],
+      "remaining": "Never execute manufacturer DLLs/ETS apps in KNXBench. Configuration held only there remains outside scope; opaque adoption evidence tracked by KL186, not vendor runtime implementation.",
+      "sources": [
+        "docs/limitations/KL-006-devices-dependent-on-vendor-plug-ins.md"
+      ],
+      "topic": "Manufacturer data and parameters"
+    },
+    {
+      "key": "KL-007",
+      "disposition": "mixed_owned_offline_residue_and_semantic_gates",
+      "primary_route": "active-up258",
+      "related_routes": [
+        "WP-14"
+      ],
+      "remaining": "Exact UP258: finish explicit-field preparation, complete source image and ordered source-to-property translation, execution and independently exercised whole-mutation recovery. Other independent families still lack complete real-source construction and procedure/recovery integration. Source fixups/LegacyPatchAlways, effective parameter encoding, XML SegFlags/AllocExtraByte and resource/substitution semantics are defining evidence gates, not hardware-only tasks. Existing codecs, normalized simulation and session comparison are delivered; do not rebuild them.",
+      "sources": [
+        "docs/limitations/KL-007-bounded-commissioning-support.md",
+        "docs/goals/up258-programming-2026-10-18.md",
+        "docs/contracts/offline-download-expansion.md",
+        "docs/contracts/offline-property-plan-simulation.md"
+      ],
+      "topic": "Commissioning and recovery"
+    },
+    {
+      "key": "KL-008",
+      "disposition": "decision",
+      "primary_route": "later-product-scope",
+      "remaining": "Research adds no Secure runtime, keyring decoding, AES-project import or credential vault. Retained/native backups may contain sensitive material.",
+      "sources": [
+        "docs/limitations/KL-008-knx-secure-runtime.md"
+      ],
+      "topic": "Platform, deployment and security"
+    },
+    {
+      "key": "KL-009",
+      "disposition": "accepted-boundary",
+      "primary_route": "accepted-policy",
+      "remaining": "SQLite remains the canonical binary format; textual interchange is explicitly demand-driven. The Git diff recipe and read-only comparison exist; no textual-format implementation should be scheduled.",
+      "sources": [
+        "docs/limitations/KL-009-binary-project-files-and-version-control.md",
+        "docs/limitations/catalogue.json#KL-009",
+        "docs/status/LEDGER.md:220",
+        "docs/limitations/KL-157-in-place-native-project-migration.md"
+      ],
+      "topic": "Project model and storage"
+    },
+    {
+      "key": "KL-011",
+      "disposition": "evidence",
+      "primary_route": "WP-10",
+      "related_routes": [],
+      "remaining": "Product namespaces15–19/22 and broader vendor semantics require exact samples and contract before admission. PR/VD2 and encryption exclusions remain.",
+      "sources": [
+        "docs/limitations/KL-011-product-schema-and-namespace-coverage.md"
+      ],
+      "topic": "Manufacturer data and parameters"
+    },
+    {
+      "key": "KL-012",
+      "disposition": "decision",
+      "primary_route": "later-product-scope",
+      "related_routes": [
+        "WP-07"
+      ],
+      "remaining": "A dedicated manufacturer-DPT-alternative choice workflow needs explicit UI/storage/provenance design; ordinary explicit typed DPT override already exists. Never guess from names or linked address.",
+      "sources": [
+        "docs/limitations/KL-012-manufacturer-resolution-gaps.md"
+      ],
+      "topic": "Manufacturer data and parameters"
+    },
+    {
+      "key": "KL-013",
+      "disposition": "evidence",
+      "primary_route": "WP-10",
+      "related_routes": [
+        "later-product-scope"
+      ],
+      "remaining": "AES ETS6 container path requires authorized real protected sample plus implementation after contract; passwords for diff/product ingest are optional separate scope.",
+      "sources": [
+        "docs/limitations/KL-013-protected-project-import.md",
+        "crates/knx-etsproj/tests/schema20_import.rs"
+      ],
+      "topic": "Import and export"
+    },
+    {
+      "key": "KL-014",
+      "disposition": "accepted-boundary",
+      "primary_route": "accepted-policy",
+      "related_routes": [],
+      "remaining": "No trustworthy project-wide source language exists in available schema; do not derive it from one application or per-device language.",
+      "sources": [
+        "docs/limitations/KL-014-imported-project-default-language.md"
+      ],
+      "topic": "Import and export"
+    },
+    {
+      "key": "KL-015",
+      "disposition": "evidence",
+      "primary_route": "WP-10",
+      "related_routes": [
+        "WP-13"
+      ],
+      "remaining": "Only a real malformed bare/optional-value reproducer justifies widening typed source-value state. Existing deliberate fallback/reporting stays.",
+      "sources": [
+        "docs/limitations/KL-015-malformed-values-and-typed-mappings.md",
+        "docs/adr/0028-no-knxproj-export.md"
+      ],
+      "topic": "Import and export"
+    },
+    {
+      "key": "KL-016",
+      "disposition": "decision",
+      "primary_route": "owner-decisions",
+      "remaining": "The desktop remains GTK3-based. Withdrawn maintenance advisories provide neither a GTK4 port nor broader native-platform validation.",
+      "sources": [
+        "docs/limitations/KL-016-gtk3-desktop-dependency.md"
+      ],
+      "topic": "Platform, deployment and security"
+    },
+    {
+      "key": "KL-018",
+      "disposition": "delivered",
+      "primary_route": "delivered-or-historical",
+      "remaining": "No remaining stale-store-path fix. Imported project replacement clears the native target atomically; retained historical failure text must not be redispatched.",
+      "sources": [
+        "docs/limitations/KL-018-resolved-imported-project-store-path.md",
+        "docs/limitations/catalogue.json#KL-018",
+        "apps/knx-server/src/domain.rs:2475-2553",
+        "apps/knx-server/tests/http_project_routes.rs"
+      ],
+      "topic": "Project model and storage"
+    },
+    {
+      "key": "KL-020",
+      "disposition": "accepted-boundary",
+      "primary_route": "WP-11",
+      "remaining": "Modal/keyboard/help-tip fixes are delivered. Whole-theme focus-visible audit, real screen-reader and native WebKitGTK acceptance remain disclosed, explicitly excluded Alpha evidence; no blanket WCAG claim.",
+      "sources": [
+        "docs/limitations/KL-020-overlay-accessibility-evidence.md",
+        "docs/limitations/catalogue.json#KL-020",
+        "docs/status/LEDGER.md:174"
+      ],
+      "topic": "UI and accessibility"
+    },
+    {
+      "key": "KL-022",
+      "disposition": "decision",
+      "primary_route": "later-product-scope",
+      "remaining": "One password is not per-user rights or internet-security certification. Host-network exposure requires trusted LAN/VPN/firewall; unauthenticated listeners remain host-loopback-only.",
+      "sources": [
+        "docs/limitations/KL-022-server-authentication-and-exposure.md"
+      ],
+      "topic": "Platform, deployment and security"
+    },
+    {
+      "key": "KL-023",
+      "disposition": "delivered",
+      "primary_route": "delivered-or-historical",
+      "related_routes": [],
+      "remaining": "Temporary SQLite serialization before streaming is an intentional remaining cost, not the resolved whole-file response buffer. No new package.",
+      "sources": [
+        "docs/limitations/KL-023-native-project-download-streaming.md",
+        "apps/knx-server/src/fs_routes.rs:267"
+      ],
+      "topic": "Import and export"
+    },
+    {
+      "key": "KL-024",
+      "disposition": "delivered",
+      "primary_route": "delivered-or-historical",
+      "remaining": "Multi-file upload/drop exists; choosing one project is deliberate. Cancellation cannot roll back an already sent upload; do not schedule absent drag/drop or multi-upload.",
+      "sources": [
+        "docs/limitations/KL-024-file-picker-upload-and-selection.md",
+        "docs/limitations/catalogue.json#KL-024"
+      ],
+      "topic": "UI and accessibility"
+    },
+    {
+      "key": "KL-026",
+      "disposition": "decision",
+      "primary_route": "later-product-scope",
+      "remaining": "Tunnelling/routing/discovery have bounded implementations. Ordinary connectivity does not imply KNX IP Secure or extended discovery support.",
+      "sources": [
+        "docs/limitations/KL-026-knxnetip-protocol-scope.md"
+      ],
+      "topic": "Bus diagnostics and DPT"
+    },
+    {
+      "key": "KL-029",
+      "disposition": "delivered",
+      "primary_route": "delivered-or-historical",
+      "remaining": "Lifted by AR14: monitor and write use the --project style and show every installation's name. Three-level remains without --project and for route-send; joined names are not escaped.",
+      "sources": [
+        "docs/limitations/KL-029-cli-monitor-formatting.md"
+      ],
+      "topic": "Bus diagnostics and DPT"
+    },
+    {
+      "key": "KL-031",
+      "disposition": "evidence",
+      "primary_route": "WP-12",
+      "remaining": "Custom routing multicast selection is validated. Discovery/real custom-group traffic do not inherit verification from default paths or offline tests.",
+      "sources": [
+        "docs/limitations/KL-031-custom-routing-multicast-evidence.md"
+      ],
+      "topic": "Bus diagnostics and DPT"
+    },
+    {
+      "key": "KL-036",
+      "disposition": "accepted-boundary",
+      "primary_route": "accepted-policy",
+      "remaining": "Only retained capped entries/loss counts are exported. Evicted entries, replaced-project history and prior runs cannot be reconstructed; raw logs may identify projects.",
+      "sources": [
+        "docs/limitations/KL-036-session-log-export-window.md"
+      ],
+      "topic": "Bus diagnostics and DPT"
+    },
+    {
+      "key": "KL-037",
+      "disposition": "accepted-boundary",
+      "primary_route": "accepted-policy",
+      "remaining": "Parameter/catalogue/product/DPT fallback markers and report CO translations are delivered. Project-authored text stays exact; project-language/selected StringTable semantics need source evidence, not guessed locale inference.",
+      "sources": [
+        "docs/limitations/KL-037-translation-coverage.md",
+        "docs/limitations/catalogue.json#KL-037",
+        "docs/status/LEDGER.md:140"
+      ],
+      "topic": "UI and accessibility"
+    },
+    {
+      "key": "KL-038",
+      "disposition": "evidence",
+      "primary_route": "WP-10",
+      "related_routes": [],
+      "remaining": "Real ETS group-address CSV sample first; ETS-shaped profile then fixture-backed; ESF requires its own real sample and parser contract.",
+      "sources": [
+        "docs/limitations/KL-038-csv-interoperability.md"
+      ],
+      "topic": "Import and export"
+    },
+    {
+      "key": "KL-039",
+      "disposition": "decision",
+      "primary_route": "later-product-scope",
+      "related_routes": [],
+      "remaining": "Group-range exchange requires stable range identity/hierarchy/bounds contract; CSV row omission must not become deletion, and occupied target swaps remain refused.",
+      "sources": [
+        "docs/limitations/KL-039-csv-group-range-and-address-operations.md"
+      ],
+      "topic": "Import and export"
+    },
+    {
+      "key": "KL-040",
+      "disposition": "accepted-boundary",
+      "primary_route": "later-product-scope",
+      "related_routes": [],
+      "remaining": "Derived columns remain read-only and Description/Comment absent by recorded user decision. Model/CSV schema extensions require new decision.",
+      "sources": [
+        "docs/limitations/KL-040-csv-read-only-and-absent-columns.md"
+      ],
+      "topic": "Import and export"
+    },
+    {
+      "key": "KL-041",
+      "disposition": "evidence",
+      "primary_route": "WP-10",
+      "related_routes": [],
+      "remaining": "Concrete spreadsheet-transformed failing file needed before adding encoding/cell workarounds.",
+      "sources": [
+        "docs/limitations/KL-041-spreadsheet-transformations.md"
+      ],
+      "topic": "Import and export"
+    },
+    {
+      "key": "KL-042",
+      "disposition": "delivered",
+      "primary_route": "delivered-or-historical",
+      "remaining": "Transactional whole-project compatibility fallback is delivered. There is no promised row-incremental engine or incremental-performance acceptance to complete.",
+      "sources": [
+        "docs/limitations/KL-042-resolved-save-helper-claims.md",
+        "docs/limitations/catalogue.json#KL-042",
+        "docs/status/LEDGER.md:210",
+        "crates/knx-store/src/command_sync.rs",
+        "docs/contracts/STORAGE_COMMAND_CONTRACT.md"
+      ],
+      "topic": "Project model and storage"
+    },
+    {
+      "key": "KL-043",
+      "disposition": "delivered",
+      "primary_route": "later-product-scope",
+      "remaining": "Reduction-only per-category Toast/Achievement/Flow controls exist. CSS-parser/all-source motion enforcement remains deliberately deferred; no universal no-motion proof is claimed.",
+      "sources": [
+        "docs/limitations/KL-043-motion-controls-and-residual-surfaces.md",
+        "docs/limitations/catalogue.json#KL-043",
+        "docs/status/LEDGER.md:229",
+        "apps/knx-web/src/motion.ts",
+        "apps/knx-web/src/motionGuard.test.ts"
+      ],
+      "topic": "UI and accessibility"
+    },
+    {
+      "key": "KL-044",
+      "disposition": "evidence",
+      "primary_route": "WP-10",
+      "related_routes": [],
+      "remaining": "Real ETS report enables content-set comparison; any layout parity work is a later decision.",
+      "sources": [
+        "docs/limitations/KL-044-project-report-parity.md"
+      ],
+      "topic": "Import and export"
+    },
+    {
+      "key": "KL-045",
+      "disposition": "accepted-boundary",
+      "primary_route": "later-product-scope",
+      "related_routes": [],
+      "remaining": "Browser print-to-PDF is supported; direct renderer/CLI --pdf deliberately omitted.",
+      "sources": [
+        "docs/limitations/KL-045-pdf-output.md"
+      ],
+      "topic": "Import and export"
+    },
+    {
+      "key": "KL-046",
+      "disposition": "accepted-boundary",
+      "primary_route": "accepted-policy",
+      "related_routes": [],
+      "remaining": "Names necessarily require matching optional product data; raw references plus warning are correct when data absent/mismatched.",
+      "sources": [
+        "docs/limitations/KL-046-report-name-resolution.md"
+      ],
+      "topic": "Import and export"
+    },
+    {
+      "key": "KL-047",
+      "disposition": "evidence",
+      "primary_route": "WP-07",
+      "related_routes": [],
+      "remaining": "Complete report formatting for warned module/allocator values follows verified module/allocation semantics, not a separate replacement report engine.",
+      "sources": [
+        "docs/limitations/KL-047-report-parameter-semantics.md"
+      ],
+      "topic": "Import and export"
+    },
+    {
+      "key": "KL-048",
+      "disposition": "accepted-boundary",
+      "primary_route": "later-product-scope",
+      "related_routes": [],
+      "remaining": "English technical diagnostic sentences/raw values remain intentional; third locale or independent report-language selector is optional.",
+      "sources": [
+        "docs/limitations/KL-048-report-languages.md",
+        "docs/limitations/KL-048-report-languages.md:34-47"
+      ],
+      "topic": "Import and export"
+    },
+    {
+      "key": "KL-051",
+      "disposition": "accepted-boundary",
+      "primary_route": "WP-10",
+      "remaining": "Equivalent ETS matching/content rules cannot be assessed without a real ETS comparison sample. Obtaining one is optional reference evidence, not a comparer rebuild.",
+      "sources": [
+        "docs/limitations/KL-051-project-comparison-parity.md",
+        "docs/limitations/catalogue.json#KL-051",
+        "docs/status/LEDGER.md:168",
+        "crates/knx-diff/src/diff.rs:183"
+      ],
+      "topic": "Project model and storage"
+    },
+    {
+      "key": "KL-052",
+      "disposition": "accepted-boundary",
+      "primary_route": "WP-10",
+      "remaining": "An addressless device without a matching ETS id stays an add/remove. A real case is documented; no verified stronger stable identity permits a fallback.",
+      "sources": [
+        "docs/limitations/KL-052-device-matching-without-stable-keys.md",
+        "docs/limitations/catalogue.json#KL-052",
+        "docs/status/LEDGER.md:215",
+        "crates/knx-diff/src/key.rs",
+        "crates/knx-diff/src/diff.rs"
+      ],
+      "topic": "Project model and storage"
+    },
+    {
+      "key": "KL-053",
+      "disposition": "accepted-boundary",
+      "primary_route": "accepted-policy",
+      "remaining": "Same-name sibling natural-key ambiguity is deliberately reported, never guessed. Additional implementation requires demonstrated stable identity evidence and a new decision.",
+      "sources": [
+        "docs/limitations/KL-053-duplicate-building-part-names-in-comparison.md",
+        "docs/limitations/catalogue.json#KL-053",
+        "docs/status/LEDGER.md:216",
+        "crates/knx-diff/src/key.rs"
+      ],
+      "topic": "Project model and storage"
+    },
+    {
+      "key": "KL-054",
+      "disposition": "accepted-boundary",
+      "primary_route": "WP-10",
+      "remaining": "No defining ETS RefId-regeneration rule or demonstrated affected re-export pair. Preserve add/remove behavior until independent identity evidence exists.",
+      "sources": [
+        "docs/limitations/KL-054-regenerated-ets-identifiers.md",
+        "docs/limitations/catalogue.json#KL-054",
+        "docs/status/LEDGER.md:217",
+        "crates/knx-app/tests/project_diff.rs"
+      ],
+      "topic": "Project model and storage"
+    },
+    {
+      "key": "KL-055",
+      "disposition": "accepted-boundary",
+      "primary_route": "later-product-scope",
+      "remaining": "Read-only diff has no apply/merge engine. Activation would require an atomic conflict/revision/inverse-command design, including unsupported fields, before coding.",
+      "sources": [
+        "docs/limitations/KL-055-applying-or-merging-project-diffs.md",
+        "docs/limitations/catalogue.json#KL-055",
+        "docs/status/LEDGER.md:218",
+        "crates/knx-diff/src/diff.rs:183"
+      ],
+      "topic": "Project model and storage"
+    },
+    {
+      "key": "KL-056",
+      "disposition": "accepted-boundary",
+      "primary_route": "later-product-scope",
+      "remaining": "Two-project comparison only. A common-ancestor contract must precede three-way display; merge also depends on KL-055. Not an accepted-boundary coding task.",
+      "sources": [
+        "docs/limitations/KL-056-three-way-comparison.md",
+        "docs/limitations/catalogue.json#KL-056",
+        "docs/status/LEDGER.md:219",
+        "crates/knx-diff/src/diff.rs:183"
+      ],
+      "topic": "Project model and storage"
+    },
+    {
+      "key": "KL-060",
+      "disposition": "delivered",
+      "primary_route": "later-product-scope",
+      "remaining": "Filtered virtualized diff tables already exist. Cross-table search/Explorer jumps and a screen-reader witness are residual optional scopes; no apply/merge capability follows from display.",
+      "sources": [
+        "docs/limitations/KL-060-project-diff-table-presentation.md",
+        "docs/limitations/catalogue.json#KL-060",
+        "docs/status/LEDGER.md:169",
+        "apps/knx-web/src/ProjectDiffDetails.tsx:174-258"
+      ],
+      "topic": "UI and accessibility"
+    },
+    {
+      "key": "KL-061",
+      "disposition": "accepted-boundary",
+      "primary_route": "accepted-policy",
+      "remaining": "Main types 1–30 have explicit formats/rulings; subtype/FB semantics remain partial. Unsupported structured types and generic parameter-only writes are not silently admitted.",
+      "sources": [
+        "docs/limitations/KL-061-dpt-codec-coverage.md"
+      ],
+      "topic": "Bus diagnostics and DPT"
+    },
+    {
+      "key": "KL-062",
+      "disposition": "accepted-boundary",
+      "primary_route": "accepted-policy",
+      "remaining": "The GUI is tunnelling-based, single-session and client-filtered. Passive receive evidence does not verify every send/device/routing/history scenario.",
+      "sources": [
+        "docs/limitations/KL-062-group-monitor-evidence.md"
+      ],
+      "topic": "Bus diagnostics and DPT"
+    },
+    {
+      "key": "KL-063",
+      "disposition": "decision",
+      "primary_route": "later-product-scope",
+      "remaining": "Clients share one project/undo stack. Feature-specific guards are not general concurrent-edit isolation, accounts or collaboration.",
+      "sources": [
+        "docs/limitations/KL-063-shared-server-project-and-undo-stack.md"
+      ],
+      "topic": "Platform, deployment and security"
+    },
+    {
+      "key": "KL-064",
+      "disposition": "accepted-boundary",
+      "primary_route": "WP-17",
+      "related_routes": [],
+      "remaining": "Eight unmodelled MasterData families and unsurfaced consumers remain contract/evidence-dependent; collision provenance belongs to IP-MASTER. No blanket translation-ingestion task.",
+      "sources": [
+        "docs/limitations/KL-064-non-program-translation-semantics.md"
+      ],
+      "topic": "Manufacturer data and parameters"
+    },
+    {
+      "key": "KL-065",
+      "disposition": "accepted-boundary",
+      "primary_route": "accepted-policy",
+      "remaining": "Development builds identify HEAD not a dirty tree; release builds already enforce KNX_REQUIRE_CLEAN_TREE=1. No release provenance implementation task.",
+      "sources": [
+        "docs/limitations/KL-065-version-identity-and-dirty-builds.md"
+      ],
+      "topic": "Platform, deployment and security"
+    },
+    {
+      "key": "KL-066",
+      "disposition": "accepted-boundary",
+      "primary_route": "WP-13",
+      "remaining": "Translated diagnostic headlines plus raw English detail/log/toast disclosure exist. Full arbitrary backend prose localization is not scheduled; report table-label absence is superseded by Goal B8 and belongs to KL-048.",
+      "sources": [
+        "docs/limitations/KL-066-technical-prose-localization.md",
+        "docs/limitations/catalogue.json#KL-066",
+        "docs/status/LEDGER.md:142",
+        "docs/limitations/KL-048-report-languages.md"
+      ],
+      "topic": "UI and accessibility"
+    },
+    {
+      "key": "KL-068",
+      "disposition": "evidence",
+      "primary_route": "WP-07",
+      "related_routes": [],
+      "remaining": "Repeat expansion/activation, iteration-to-MI mapping and repeated writes require defining input; own stored values are readable but never evaluated/default-substituted.",
+      "sources": [
+        "docs/limitations/KL-068-repeated-module-activation.md"
+      ],
+      "topic": "Manufacturer data and parameters"
+    },
+    {
+      "key": "KL-069",
+      "disposition": "accepted-boundary",
+      "primary_route": "accepted-policy",
+      "related_routes": [],
+      "remaining": "A Module with no Id cannot acquire authority by invented ID. Only original manufacturer data can resolve this; no code package.",
+      "sources": [
+        "docs/limitations/KL-069-modules-without-identifiers.md"
+      ],
+      "topic": "Manufacturer data and parameters"
+    },
+    {
+      "key": "KL-070",
+      "disposition": "accepted-boundary",
+      "primary_route": "WP-13",
+      "related_routes": [],
+      "remaining": "Inactive/unsupported fields remain refused by panel authority, accepted by owner. Do not open hidden writes just because a declared parameter ID exists.",
+      "sources": [
+        "docs/limitations/KL-070-writing-inactive-parameters.md"
+      ],
+      "topic": "Manufacturer data and parameters"
+    },
+    {
+      "key": "KL-071",
+      "disposition": "accepted-boundary",
+      "primary_route": "accepted-policy",
+      "related_routes": [],
+      "remaining": "Pre-schema6 missing ModuleInstance ids require reimport; migration cannot fabricate authority. A tailored reimport diagnostic is optional UX, not a required ID-reconstruction engine.",
+      "sources": [
+        "docs/limitations/KL-071-pre-schema-6-module-identities.md"
+      ],
+      "topic": "Manufacturer data and parameters"
+    },
+    {
+      "key": "KL-072",
+      "disposition": "accepted-boundary",
+      "primary_route": "accepted-policy",
+      "remaining": "Sequential probing takes significant time and holds a tunnel. Pacing/exclusions mitigate cost; there is no instantaneous whole-line scan.",
+      "sources": [
+        "docs/limitations/KL-072-line-scan-duration-and-bus-load.md"
+      ],
+      "topic": "Bus diagnostics and DPT"
+    },
+    {
+      "key": "KL-073",
+      "disposition": "accepted-boundary",
+      "primary_route": "accepted-policy",
+      "remaining": "Scans establish occupancy/mask version, not product, manufacturer or serial identity. Those facts are not inferred.",
+      "sources": [
+        "docs/limitations/KL-073-line-scan-identity-limits.md"
+      ],
+      "topic": "Bus diagnostics and DPT"
+    },
+    {
+      "key": "KL-074",
+      "disposition": "accepted-boundary",
+      "primary_route": "accepted-policy",
+      "remaining": "Negative/missing confirms can yield the same vacant verdict. Busy devices are not reliably distinguished from absent addresses.",
+      "sources": [
+        "docs/limitations/KL-074-busy-devices-and-vacant-scan-results.md"
+      ],
+      "topic": "Bus diagnostics and DPT"
+    },
+    {
+      "key": "KL-075",
+      "disposition": "accepted-boundary",
+      "primary_route": "accepted-policy",
+      "remaining": "Shorter timeouts trade evidence for speed and can mark slow devices vacant. Silence is not proof of absence.",
+      "sources": [
+        "docs/limitations/KL-075-short-scan-timeouts.md"
+      ],
+      "topic": "Bus diagnostics and DPT"
+    },
+    {
+      "key": "KL-076",
+      "disposition": "accepted-boundary",
+      "primary_route": "accepted-policy",
+      "remaining": "Negative confirms have no fast vacancy path; dropped-frame ambiguity is not automatically retried. These are explicit scan policies.",
+      "sources": [
+        "docs/limitations/KL-076-scan-shortcuts-and-ambiguous-probes.md"
+      ],
+      "topic": "Bus diagnostics and DPT"
+    },
+    {
+      "key": "KL-077",
+      "disposition": "accepted-boundary",
+      "primary_route": "accepted-policy",
+      "remaining": "One line is scanned sequentially through one gateway. No automatic coupler traversal or multi-line scan.",
+      "sources": [
+        "docs/limitations/KL-077-single-line-scan-scope.md"
+      ],
+      "topic": "Bus diagnostics and DPT"
+    },
+    {
+      "key": "KL-078",
+      "disposition": "accepted-boundary",
+      "primary_route": "accepted-policy",
+      "remaining": "Only the scan's own tunnel address is excluded. Other endpoints can appear occupied without identifying physical devices.",
+      "sources": [
+        "docs/limitations/KL-078-gateway-endpoints-in-scan-results.md"
+      ],
+      "topic": "Bus diagnostics and DPT"
+    },
+    {
+      "key": "KL-079",
+      "disposition": "evidence",
+      "primary_route": "WP-11",
+      "remaining": "Discovery needs multicast and permitted unicast replies. Manual endpoints/host networking do not eliminate firewall, routing, capacity or bridge-HPAI constraints.",
+      "sources": [
+        "docs/limitations/KL-079-discovery-reachability.md"
+      ],
+      "topic": "Bus diagnostics and DPT"
+    },
+    {
+      "key": "KL-082",
+      "disposition": "delivered",
+      "primary_route": "delivered-or-historical",
+      "remaining": "Server-authoritative polling supersedes the browser-only stale lock. It is not cross-server coordination or complete traffic/audit history.",
+      "sources": [
+        "docs/limitations/KL-082-monitor-context-freshness.md"
+      ],
+      "topic": "Bus diagnostics and DPT"
+    },
+    {
+      "key": "KL-085",
+      "disposition": "evidence",
+      "primary_route": "later-product-scope",
+      "related_routes": [],
+      "remaining": "Detached-signature format/algorithm/canonicalization and public-key provenance are missing; no trust verification implementation without them. RegistrationSignature is separate and its checksum algorithm is also missing.",
+      "sources": [
+        "docs/limitations/KL-085-unverified-package-signatures.md"
+      ],
+      "topic": "Manufacturer data and parameters"
+    },
+    {
+      "key": "KL-086",
+      "disposition": "implementation",
+      "primary_route": "WP-17",
+      "related_routes": [],
+      "remaining": "Source-winner provenance and complete collision/orphan facts remain for master identity families; existing normalized duplicate detection is DONE and must not be reopened.",
+      "sources": [
+        "docs/limitations/KL-086-duplicate-product-identifiers.md",
+        "crates/knx-productdb/src/parse/master.rs:321-425"
+      ],
+      "topic": "Manufacturer data and parameters"
+    },
+    {
+      "key": "KL-087",
+      "disposition": "delivered",
+      "primary_route": "WP-13",
+      "related_routes": [],
+      "remaining": "Parser fix still needs deliberate retained-source migration/backfill or fresh ingest; generic parse-generation detection is a deferred design, not an automatic remaining task.",
+      "sources": [
+        "docs/limitations/KL-087-re-derivation-after-parser-fixes.md",
+        "docs/adr/0141-placements-and-enumeration-attributes-reach-columns.md:57-67"
+      ],
+      "topic": "Manufacturer data and parameters"
+    },
+    {
+      "key": "KL-088",
+      "disposition": "accepted-boundary",
+      "primary_route": "accepted-policy",
+      "related_routes": [],
+      "remaining": "Last-writer manufacturer display-name rule and first-blob replay order remain accepted; no reliable source recency signal exists. Do not silently change winners.",
+      "sources": [
+        "docs/limitations/KL-088-manufacturer-display-name-winner.md"
+      ],
+      "topic": "Manufacturer data and parameters"
+    },
+    {
+      "key": "KL-090",
+      "disposition": "delivered",
+      "primary_route": "delivered-or-historical",
+      "remaining": "46 was a catalogue count, not main type 46. This planning correction creates no codec support or new task.",
+      "sources": [
+        "docs/limitations/KL-090-historical-dpt-count-correction.md"
+      ],
+      "topic": "Bus diagnostics and DPT"
+    },
+    {
+      "key": "KL-092",
+      "disposition": "accepted_hardware_evidence_boundary",
+      "primary_route": "accepted-policy",
+      "related_routes": [],
+      "remaining": "Only additional identified-device/timing/failure-path evidence could narrow the claim. New hardware/vendor/ETS experiments were explicitly removed from the old commissioning completion contract. Historical no-frame/no-device sentences are superseded; not a new simulator implementation package.",
+      "sources": [
+        "docs/limitations/KL-092-simulator-versus-hardware-evidence.md",
+        "docs/status/LEDGER.md",
+        "docs/limitations/accepted-commissioning-validation-boundary.md",
+        "docs/limitations/KL-136-0701h-download-and-restart-evidence.md"
+      ],
+      "topic": "Commissioning and recovery"
+    },
+    {
+      "key": "KL-093",
+      "disposition": "accepted_parked_model_disagreement",
+      "primary_route": "accepted-policy",
+      "related_routes": [],
+      "remaining": "The core illustrative load_one_part still labels a universal PID_PROGRAM_VERSION write; it is not the admitted memory executor. A domain-compatible part-capability model and model/executor consistency tests are a real possible offline change, but the owner explicitly parked this non-goal. Reopen only for a feature consuming this model or a new decision; no reverse dependency from core to net.",
+      "sources": [
+        "docs/limitations/KL-093-declarative-procedure-version-writes.md",
+        "docs/status/LEDGER.md",
+        "crates/knx-core/src/commissioning/procedure.rs",
+        "crates/knx-net/src/commissioning/download.rs"
+      ],
+      "topic": "Commissioning and recovery"
+    },
+    {
+      "key": "KL-095",
+      "disposition": "resolved_documented_spec_ruling",
+      "primary_route": "accepted-policy",
+      "related_routes": [],
+      "remaining": "No implementation residue. Preserve clause-specific rulings; revisit only if a later standard or erratum resolves the contradictions. This pointer is not a general license to infer missing mappings.",
+      "sources": [
+        "docs/limitations/KL-095-documented-specification-contradictions.md",
+        "docs/COMPATIBILITY.md"
+      ],
+      "topic": "Commissioning and recovery"
+    },
+    {
+      "key": "KL-097",
+      "disposition": "accepted-boundary",
+      "primary_route": "accepted-policy",
+      "remaining": "Indeterminate truthful phase labels are intended. Percentages may be added only with real known totals and a measured worthwhile counting strategy, not fabricated progress.",
+      "sources": [
+        "docs/limitations/KL-097-indeterminate-import-progress.md",
+        "docs/limitations/catalogue.json#KL-097",
+        "docs/status/LEDGER.md:230"
+      ],
+      "topic": "UI and accessibility"
+    },
+    {
+      "key": "KL-098",
+      "disposition": "accepted-boundary",
+      "primary_route": "accepted-policy",
+      "remaining": "Short loads naturally show few decorative messages; do not delay loads or shorten rotation to expose more jokes.",
+      "sources": [
+        "docs/limitations/KL-098-load-banner-message-timing.md",
+        "docs/limitations/catalogue.json#KL-098",
+        "docs/status/LEDGER.md:231"
+      ],
+      "topic": "UI and accessibility"
+    },
+    {
+      "key": "KL-099",
+      "disposition": "accepted_labeled_inference",
+      "primary_route": "accepted-policy",
+      "related_routes": [],
+      "remaining": "Independent bit-numbered/reference evidence could settle nibble labeling; existing raw-byte roundtrip and CRC comparisons do not depend on the access-label convention. Accepted inference, not a new encoder task.",
+      "sources": [
+        "docs/limitations/KL-099-memory-control-access-nibble-inference.md",
+        "docs/status/LEDGER.md"
+      ],
+      "topic": "Commissioning and recovery"
+    },
+    {
+      "key": "KL-100",
+      "disposition": "accepted-boundary",
+      "primary_route": "accepted-policy",
+      "remaining": "Plain translated catalogue paragraphs are the approved help architecture. A third language or demonstrated help-growth need is the trigger for reconsideration, not an automatic Markdown/help-store task.",
+      "sources": [
+        "docs/limitations/KL-100-help-text-format.md",
+        "docs/limitations/catalogue.json#KL-100",
+        "docs/status/LEDGER.md:192"
+      ],
+      "topic": "UI and accessibility"
+    },
+    {
+      "key": "KL-101",
+      "disposition": "accepted_latency_policy",
+      "primary_route": "accepted-policy",
+      "related_routes": [],
+      "remaining": "Keep actual elapsed waits and event-based progress; no current UI promises a max_transition countdown. An ETA surface or new evidence of unacceptable latency could justify a bounded timing design later. Do not remove the required final attempt to shorten a test.",
+      "sources": [
+        "docs/limitations/KL-101-load-state-retry-latency.md",
+        "docs/status/LEDGER.md",
+        "apps/knx-web/src/DeviceDownloadPanel.tsx"
+      ],
+      "topic": "Commissioning and recovery"
+    },
+    {
+      "key": "KL-102",
+      "disposition": "accepted-boundary",
+      "primary_route": "accepted-policy",
+      "remaining": "A typed decode-error branch exists without a known honest end-to-end public-API trigger. Type coverage is not a real-trigger witness.",
+      "sources": [
+        "docs/limitations/KL-102-write-echo-error-branch.md"
+      ],
+      "topic": "Bus diagnostics and DPT"
+    },
+    {
+      "key": "KL-104",
+      "disposition": "accepted_protocol_cost_with_optional_test_residue",
+      "primary_route": "accepted-policy",
+      "related_routes": [],
+      "remaining": "Full reconnect after release is intentional. The documented Lagged-exclusion regression remains absent in commissioning.rs, while production explicitly excludes it. A small offline regression is possible hardening, not an unsatisfied accepted completion contract or reason to keep a released connection.",
+      "sources": [
+        "docs/limitations/KL-104-reconnect-cost-during-quiet-completion.md",
+        "docs/status/LEDGER.md",
+        "crates/knx-net/src/commissioning.rs"
+      ],
+      "topic": "Commissioning and recovery"
+    },
+    {
+      "key": "KL-105",
+      "disposition": "accepted_wire_evidence_gate_not_encoder_bug",
+      "primary_route": "accepted-policy",
+      "related_routes": [],
+      "remaining": "Only an independent TP1 trace could prove the gateway preserves requested SYSTEM priority. Correct control-frame construction is already delivered; no priority fix remains and the excluded experiment is not a release blocker.",
+      "sources": [
+        "docs/limitations/KL-105-control-frame-on-wire-priority.md",
+        "docs/status/LEDGER.md"
+      ],
+      "topic": "Commissioning and recovery"
+    },
+    {
+      "key": "KL-106",
+      "disposition": "accepted-boundary",
+      "primary_route": "accepted-policy",
+      "remaining": "Named redaction classes and disclosures are delivered; no blanket anonymization claim or unattended repair.",
+      "sources": [
+        "docs/limitations/KL-106-debug-report-privacy-limits.md"
+      ],
+      "topic": "Platform, deployment and security"
+    },
+    {
+      "key": "KL-107",
+      "disposition": "accepted-boundary",
+      "primary_route": "WP-13",
+      "remaining": "No general executable plug-in API by ADR-0025. The dossier's all-extensions/authentication/serialization prerequisites are historical and overbroad after bounded MCP/writes; do not infer a plug-in runtime is now required.",
+      "sources": [
+        "docs/limitations/KL-107-extension-api-scope.md",
+        "docs/limitations/catalogue.json#KL-107",
+        "docs/status/LEDGER.md:208",
+        "apps/knx-mcp/src/args.rs:13-18",
+        "docs/adr/0025-extension-is-data-not-code.md"
+      ],
+      "topic": "Integrations and community"
+    },
+    {
+      "key": "KL-108",
+      "disposition": "accepted_specification_policy",
+      "primary_route": "accepted-policy",
+      "related_routes": [],
+      "remaining": "No missing implementation: keep the specific MP exception-text ruling until a cited erratum/new edition changes it. Public write recovery restrictions remain separate.",
+      "sources": [
+        "docs/limitations/KL-108-occupied-address-specification-ruling.md",
+        "docs/status/LEDGER.md"
+      ],
+      "topic": "Commissioning and recovery"
+    },
+    {
+      "key": "KL-109",
+      "disposition": "accepted_safe_refusal",
+      "primary_route": "accepted-policy",
+      "related_routes": [],
+      "remaining": "Same-kind part ordering remains refused; reopen only with a real requiring product and defining relative order. Arbitrary ordering is not an offline completeness fix.",
+      "sources": [
+        "docs/limitations/KL-109-repeated-download-part-kinds.md",
+        "docs/status/LEDGER.md",
+        "crates/knx-net/src/commissioning/download.rs"
+      ],
+      "topic": "Commissioning and recovery"
+    },
+    {
+      "key": "KL-110",
+      "disposition": "later_scope_and_semantic_prerequisites",
+      "primary_route": "later-media",
+      "related_routes": [],
+      "remaining": "A new PL110 goal must identify exact variant/target/interface, prove group-responser and transport/recovery semantics, then implement wrong-medium refusal and codecs/services/simulation before separately approved bench work. No new source/scope arrived on 17 October. Do not add PL110-only writes to TP1/RF/IP.",
+      "sources": [
+        "docs/limitations/KL-110-pl110-group-responser-table.md",
+        "docs/contracts/powerline-readiness.md",
+        "docs/status/2026-10-17-ledger-residue-review.md",
+        "docs/status/LEDGER.md"
+      ],
+      "topic": "Commissioning and recovery"
+    },
+    {
+      "key": "KL-111",
+      "disposition": "accepted_destructive_operation_exclusion",
+      "primary_route": "accepted-policy",
+      "related_routes": [],
+      "remaining": "Address unload is intentionally unimplemented. Requires a new reviewed use case and explicit guarded complete-recovery design, not insertion into ordinary unload as a forgotten fifth part.",
+      "sources": [
+        "docs/limitations/KL-111-individual-address-unload.md",
+        "docs/status/LEDGER.md"
+      ],
+      "topic": "Commissioning and recovery"
+    },
+    {
+      "key": "KL-112",
+      "disposition": "accepted_key_assignment_exclusion",
+      "primary_route": "accepted-policy",
+      "related_routes": [],
+      "remaining": "A_Key_Write encoder/session operation and key-delete sentinel representation are genuinely missing but accepted outside current scope. Keep Required assignment refusal; reopen only for a key/Secure goal with secret handling, exact protocol and recoverability evidence. Existing-key authorization is a different feature.",
+      "sources": [
+        "docs/limitations/KL-112-access-key-assignment-during-download.md",
+        "docs/status/LEDGER.md",
+        "crates/knx-net/src/commissioning/download.rs"
+      ],
+      "topic": "Commissioning and recovery"
+    },
+    {
+      "key": "KL-113",
+      "disposition": "accepted_property_planner_boundary_not_memory_partial_gap",
+      "primary_route": "accepted-policy",
+      "related_routes": [
+        "WP-13"
+      ],
+      "remaining": "Property Downloader escalation still only reloads supplied plan parts and has no production caller found in apps/knx-app/productdb; all discovered calls are net unit tests. Future property partial support needs complete device-object-derived escalation plans. The shipped 070n memory partial selector is a different path and does not reopen this automatically. Historical no-partial-surface wording should distinguish the two.",
+      "sources": [
+        "docs/limitations/KL-113-partial-download-escalation-scope.md",
+        "docs/status/LEDGER.md",
+        "crates/knx-net/src/commissioning/download.rs",
+        "apps/knx-web/src/DeviceDownloadPanel.tsx",
+        "crates/knx-core/src/commissioning/partial_memory_download.rs"
+      ],
+      "topic": "Commissioning and recovery"
+    },
+    {
+      "key": "KL-114",
+      "disposition": "accepted_conservative_counter_policy",
+      "primary_route": "accepted-policy",
+      "related_routes": [],
+      "remaining": "Keep changed/unavailable counter refusal. Per-profile Coupler Model 2.0 procedure and per-part counter mapping are genuine future designs, not obligations to loosen the current System-B policy. No automatic full-download retry is implied.",
+      "sources": [
+        "docs/limitations/KL-114-download-counter-refusal-policy.md",
+        "docs/status/LEDGER.md",
+        "crates/knx-net/src/commissioning/download.rs"
+      ],
+      "topic": "Commissioning and recovery"
+    },
+    {
+      "key": "KL-115",
+      "disposition": "delivered_typed_waits_accepted_generic_retry_boundary",
+      "primary_route": "accepted-policy",
+      "related_routes": [],
+      "remaining": "Typed master-reset and individual-address callers already consume scoped waits. Generic failed-service restart-and-retry is absent by design until a real procedure needs it. The 3 October correction supersedes the old no-reader title; do not build an unused generic retry combinator.",
+      "sources": [
+        "docs/limitations/KL-115-recovery-and-restart-waits.md",
+        "docs/status/LEDGER.md",
+        "crates/knx-net/src/commissioning/master_reset.rs",
+        "crates/knx-net/src/commissioning/individual_address_write.rs"
+      ],
+      "topic": "Commissioning and recovery"
+    },
+    {
+      "key": "KL-116",
+      "disposition": "accepted_address_write_recovery_gate_with_optional_ui_residue",
+      "primary_route": "accepted-policy",
+      "related_routes": [],
+      "remaining": "CLI and Web programming-button wait are delivered. Public confirmed starts remain disabled/refused before a tunnel pending exact affected-storage semantics, durable complete pre-send receipt/readback and abort/restore proof. AddressProgrammingPanel still has no restartConfirmed display: a possible offline UI residue, but accepted scope and unreachable write admission mean it is not an automatically reopened task.",
+      "sources": [
+        "docs/limitations/KL-116-individual-address-write-procedure.md",
+        "docs/status/LEDGER.md",
+        "apps/knx-web/src/AddressProgrammingPanel.tsx"
+      ],
+      "topic": "Commissioning and recovery"
+    },
+    {
+      "key": "KL-121",
+      "disposition": "delivered",
+      "primary_route": "delivered-or-historical",
+      "remaining": "Five-second visible/focus preference refresh is delivered and published. No push channel, user isolation or general shared-project synchronization is promised.",
+      "sources": [
+        "docs/limitations/KL-121-cross-window-preference-refresh.md",
+        "docs/limitations/catalogue.json#KL-121",
+        "docs/status/LEDGER.md:228"
+      ],
+      "topic": "UI and accessibility"
+    },
+    {
+      "key": "KL-124",
+      "disposition": "delivered",
+      "primary_route": "delivered-or-historical",
+      "remaining": "Decoded optional metadata is shown; missing fields stay unavailable. Loopback/browser evidence is not real multicast/hardware verification.",
+      "sources": [
+        "docs/limitations/KL-124-discovery-metadata-display.md"
+      ],
+      "topic": "Bus diagnostics and DPT"
+    },
+    {
+      "key": "KL-125",
+      "disposition": "delivered",
+      "primary_route": "WP-13",
+      "related_routes": [],
+      "remaining": "Original second-independent-project object-ID lifting condition met. Arbitrary program coverage and module writes are not included.",
+      "sources": [
+        "docs/limitations/KL-125-independent-ets6-object-id-evidence.md"
+      ],
+      "topic": "Import and export"
+    },
+    {
+      "key": "KL-126",
+      "disposition": "accepted-boundary",
+      "primary_route": "accepted-policy",
+      "remaining": "Unexpected responses create product-less devices. Silence is not absence; deletions require explicit selection.",
+      "sources": [
+        "docs/limitations/KL-126-scan-reconciliation-is-occupancy-based.md"
+      ],
+      "topic": "Bus diagnostics and DPT"
+    },
+    {
+      "key": "KL-127",
+      "disposition": "evidence",
+      "primary_route": "WP-10",
+      "remaining": "Independent ETS Ground exports remain absent; MODEL-05 is separately BLOCKED_EXTERNAL until a multi-installation export or explicit native-site requirement. Installation rename/later-installation editing already shipped; old dossier claims are stale.",
+      "sources": [
+        "docs/limitations/KL-127-site-and-building-evidence.md",
+        "docs/limitations/catalogue.json#KL-127",
+        "docs/status/LEDGER.md:128",
+        "docs/adr/0125-multi-installation-site-is-blocked.md",
+        "docs/status/2026-10-17-ledger-residue-review.md:150-155",
+        "apps/knx-web/src/Inspector.tsx:1420-1422"
+      ],
+      "topic": "Project model and storage"
+    },
+    {
+      "key": "KL-128",
+      "disposition": "implementation",
+      "primary_route": "WP-03",
+      "related_routes": [
+        "WP-13"
+      ],
+      "remaining": "Store raw legacy binary enum values in available v25 column; G16 wording. Legacy DPT mapping needs actual encoding evidence; PR/VD2 and unverified hardware support remain excluded.",
+      "sources": [
+        "docs/limitations/KL-128-legacy-product-import-boundaries.md",
+        "docs/adr/0141-placements-and-enumeration-attributes-reach-columns.md:75-77",
+        "crates/knx-productdb/src/legacy/mapping_program.rs:253-292"
+      ],
+      "topic": "Manufacturer data and parameters"
+    },
+    {
+      "key": "KL-129",
+      "disposition": "accepted-boundary",
+      "primary_route": "owner-decisions",
+      "remaining": "Collision, rewind and exhaustion protection are delivered. ADR-0039 phases 3–5 remain an explicitly deferred architectural enforcement scope; the public Project.ids surface still exists.",
+      "sources": [
+        "docs/limitations/KL-129-allocator-safeguards-and-deferred-enforcement.md",
+        "docs/limitations/catalogue.json#KL-129",
+        "docs/status/LEDGER.md:73",
+        "docs/adr/0039-project-mutation-goes-through-commands.md",
+        "crates/knx-core/src/project.rs:275-291"
+      ],
+      "topic": "Project model and storage"
+    },
+    {
+      "key": "KL-130-GATE",
+      "disposition": "delivered",
+      "primary_route": "delivered-or-historical",
+      "remaining": "Runtime workspace-root validation resolves this gate defect. Historical evidence does not certify every unrelated tool's root handling.",
+      "sources": [
+        "docs/limitations/KL-130-GATE-resolved-gate-root-validation.md"
+      ],
+      "topic": "Platform, deployment and security"
+    },
+    {
+      "key": "KL-130-ZOOM",
+      "disposition": "accepted-boundary",
+      "primary_route": "WP-11",
+      "remaining": "Bounded 80–150 percent zoom is delivered. Native resize/focus/restart/hover evidence remains accepted out of Alpha; optional validation needs a fresh owner-approved native session.",
+      "sources": [
+        "docs/limitations/KL-130-ZOOM-application-zoom.md",
+        "docs/limitations/catalogue.json#KL-130-ZOOM",
+        "docs/status/LEDGER.md:173"
+      ],
+      "topic": "UI and accessibility"
+    },
+    {
+      "key": "KL-133",
+      "disposition": "evidence",
+      "primary_route": "WP-11",
+      "remaining": "Terminated processes can reload; hangs without termination remain a native close/recovery limitation. Chromium cannot settle that case.",
+      "sources": [
+        "docs/limitations/KL-133-terminated-versus-hung-webviews.md"
+      ],
+      "topic": "Platform, deployment and security"
+    },
+    {
+      "key": "KL-134",
+      "disposition": "implementation",
+      "primary_route": "WP-01",
+      "related_routes": [
+        "WP-13"
+      ],
+      "remaining": "Trace duplicate per-source unknown rows for standalone-plus-package Baggages/shared-source ingestion; other payload execution/viewing/installation semantics stay accepted opaque boundary.",
+      "sources": [
+        "docs/limitations/KL-134-baggage-classification-versus-interpretation.md",
+        "docs/OPEN_WORK.md:100-106"
+      ],
+      "topic": "Manufacturer data and parameters"
+    },
+    {
+      "key": "KL-135",
+      "disposition": "accepted-boundary",
+      "primary_route": "later-product-scope",
+      "related_routes": [],
+      "remaining": "First-installed winner and no version selector/pinning are explicitly user-deferred. Device application migration requires a separate policy decision.",
+      "sources": [
+        "docs/limitations/KL-135-product-and-application-identity-policy.md"
+      ],
+      "topic": "Manufacturer data and parameters"
+    },
+    {
+      "key": "KL-136",
+      "disposition": "accepted_target_scoped_hardware_evidence",
+      "primary_route": "accepted-policy",
+      "related_routes": [],
+      "remaining": "Three named programs on 0701h have full-download/readback/restore evidence; closing Basic Restart remains unacknowledged. Further target/revision/restart proof is evidence, not a missing download implementation. UI already distinguishes unconfirmed restart.",
+      "sources": [
+        "docs/limitations/KL-136-0701h-download-and-restart-evidence.md",
+        "apps/knx-web/src/DeviceDownloadPanel.tsx",
+        "docs/status/LEDGER.md"
+      ],
+      "topic": "Commissioning and recovery"
+    },
+    {
+      "key": "KL-137",
+      "disposition": "accepted-boundary",
+      "primary_route": "accepted-policy",
+      "remaining": "Captures are retained windows with separate server-loss/client-pruning counts. Pause cannot recover traffic; exports are size-bounded.",
+      "sources": [
+        "docs/limitations/KL-137-monitor-capture-retention.md"
+      ],
+      "topic": "Bus diagnostics and DPT"
+    },
+    {
+      "key": "KL-138",
+      "disposition": "accepted_key_evidence_boundary_with_optional_ui_residue",
+      "primary_route": "accepted-policy",
+      "related_routes": [],
+      "remaining": "Known-key authorization and project/key-file provenance are delivered; a locked-device run remains unverified and excluded from old commissioning completion. DeviceDownloadPanel and api event union still do not expose access-key provenance/authorized event/hint as described in the historical dossier: possible finite redacted presentation work only if separately requested, never raw-key display or a fresh hardware task.",
+      "sources": [
+        "docs/limitations/KL-138-download-authorization-key-provenance.md",
+        "docs/status/LEDGER.md",
+        "apps/knx-web/src/DeviceDownloadPanel.tsx",
+        "apps/knx-web/src/api.ts"
+      ],
+      "topic": "Commissioning and recovery"
+    },
+    {
+      "key": "KL-139",
+      "disposition": "accepted_device_support_and_recovery_gates",
+      "primary_route": "accepted-policy",
+      "related_routes": [],
+      "remaining": "The tested device ignored serial writes. Keep public serial writes refused before tunnel pending action-specific whole-storage recovery and a new go; support evidence from another target would not waive recovery. Service-control format-2 property/setup backup ordering and UI are delivered but cannot restore arbitrary manufacturer effects.",
+      "sources": [
+        "docs/limitations/KL-139-serial-number-address-write-evidence.md",
+        "docs/status/LEDGER.md"
+      ],
+      "topic": "Commissioning and recovery"
+    },
+    {
+      "key": "KL-140",
+      "disposition": "accepted_no_reset_ui_and_recovery_refusal",
+      "primary_route": "accepted-policy",
+      "related_routes": [],
+      "remaining": "No HTTP/UI reset by explicit decision. CLI also remains blocked before tunnel without complete per-device action recovery. Historical restart/multiple-device uncertainty does not create a reset-UI implementation task.",
+      "sources": [
+        "docs/limitations/KL-140-individual-address-reset-boundary.md",
+        "docs/status/LEDGER.md"
+      ],
+      "topic": "Commissioning and recovery"
+    },
+    {
+      "key": "KL-141",
+      "disposition": "accepted_erasing_reset_hardware_exclusion",
+      "primary_route": "accepted-policy",
+      "related_routes": [],
+      "remaining": "Typed protocol and simulator reset exist; hardware erasing scopes remain refused. Implementation-dependent erase effects and complete recovery need defining evidence before any new admission. Historical Lifted when allowlist/trace text alone is not sufficient under the later complete-recovery rule.",
+      "sources": [
+        "docs/limitations/KL-141-master-reset-evidence.md",
+        "docs/status/LEDGER.md",
+        "docs/limitations/accepted-commissioning-validation-boundary.md"
+      ],
+      "topic": "Commissioning and recovery"
+    },
+    {
+      "key": "KL-142",
+      "disposition": "delivered_feature_with_retained_evidence_and_semantic_limits",
+      "primary_route": "accepted-policy",
+      "related_routes": [],
+      "remaining": "Web partial selector and exact notWritten/partial transport are delivered and ledger DONE. Other-target scope/readback/restoration evidence remains narrow. AppliesTo and LegacyAllowPartialDownloadIfAp2Mismatch lack defining semantics; comparison intentionally offers complete scope only. Do not schedule the already delivered selector.",
+      "sources": [
+        "docs/limitations/KL-142-partial-download-evidence.md",
+        "docs/status/LEDGER.md",
+        "apps/knx-web/src/DeviceDownloadPanel.tsx",
+        "apps/knx-web/src/DeviceDownloadPanel.test.tsx",
+        "apps/knx-web/src/DeviceInspectionPanel.tsx"
+      ],
+      "topic": "Commissioning and recovery"
+    },
+    {
+      "key": "KL-143",
+      "disposition": "accepted_rf_hardware_and_source_boundary",
+      "primary_route": "accepted-policy",
+      "related_routes": [],
+      "remaining": "RF domain-address PDUs/procedures are simulator-tested; public read callers and real write admission absent. MP2.11 unspecified, secure/PL110/IP forms and router-broadcast ownership stay explicit exclusions. A new RF goal needs exact source/interface and whole-mutation recovery; no generic CLI/UI expansion is implied.",
+      "sources": [
+        "docs/limitations/KL-143-rf-domain-address-scope.md",
+        "docs/status/LEDGER.md"
+      ],
+      "topic": "Commissioning and recovery"
+    },
+    {
+      "key": "KL-144",
+      "disposition": "accepted_rf_semantic_and_implementation_exclusions",
+      "primary_route": "accepted-policy",
+      "related_routes": [],
+      "remaining": "Real software gaps include channel definitions/instance numbering, RF serial-number propagation, object-address/link iterators, E-Mode/BiBat and duty-cycle handling; PB link setup is separate scope. Existing simulator does not close these. Authoritative channel/source contracts and a new RF goal are prerequisites; do not mislabel the entire remainder as only hardware or schedule accepted exclusions automatically.",
+      "sources": [
+        "docs/limitations/KL-144-rf-configuration-scope.md",
+        "docs/status/LEDGER.md"
+      ],
+      "topic": "Commissioning and recovery"
+    },
+    {
+      "key": "KL-145",
+      "disposition": "accepted_reference_parity_boundary",
+      "primary_route": "accepted-policy",
+      "related_routes": [],
+      "remaining": "Instance/user-edit flags already materialize. Remaining unlinked-active communication-enable difference needs reference/manufacturer semantics before changing policy; no association currently routes traffic. Read-only byte comparison is not a download witness. Not an unimplemented instance-override fix.",
+      "sources": [
+        "docs/limitations/KL-145-unlinked-active-communication-objects.md",
+        "docs/status/LEDGER.md"
+      ],
+      "topic": "Commissioning and recovery"
+    },
+    {
+      "key": "KL-146",
+      "disposition": "evidence",
+      "primary_route": "WP-07",
+      "related_routes": [
+        "later-product-scope"
+      ],
+      "remaining": "Unadjudicated activation differences, unknown scoped sets, repeated activation and missing/ambiguous DPTs need exact semantic sources or explicit product workflow decision, not another diagnostic-delivery task.",
+      "sources": [
+        "docs/limitations/KL-146-object-activation-and-dpt-gaps.md"
+      ],
+      "topic": "Manufacturer data and parameters"
+    },
+    {
+      "key": "KL-149",
+      "disposition": "delivered",
+      "primary_route": "delivered-or-historical",
+      "related_routes": [],
+      "remaining": "No case-sensitive extension-dispatch task remains. Adjacent namespace/archive/runtime limits are separate.",
+      "sources": [
+        "docs/limitations/KL-149-resolved-product-filename-case-handling.md"
+      ],
+      "topic": "Manufacturer data and parameters"
+    },
+    {
+      "key": "KL-150",
+      "disposition": "delivered",
+      "primary_route": "WP-07",
+      "related_routes": [],
+      "remaining": "Storage/key-scoping defect is fixed. Nested semantic mapping and already-admitted mis-scoped historical rows are separate evidence/migration boundaries.",
+      "sources": [
+        "docs/limitations/KL-150-resolved-nested-module-storage.md"
+      ],
+      "topic": "Manufacturer data and parameters"
+    },
+    {
+      "key": "KL-151",
+      "disposition": "decision",
+      "primary_route": "WP-04",
+      "related_routes": [
+        "later-product-scope",
+        "WP-13"
+      ],
+      "remaining": "Web large profile remains CLI-only unless progress/cancellation/locking contract is explicitly selected. Actual measured old size refusals are solved by current standard profile; product DB growth should be measured before optimisation.",
+      "sources": [
+        "docs/limitations/KL-151-product-package-size-profiles.md",
+        "crates/knx-productdb/src/package.rs:39-50",
+        "apps/knx-server/src/catalogue_update_routes.rs:199",
+        "docs/adr/0142-file-size-limits-follow-the-storage-ceiling.md"
+      ],
+      "topic": "Manufacturer data and parameters"
+    },
+    {
+      "key": "KL-152",
+      "disposition": "delivered",
+      "primary_route": "WP-04",
+      "related_routes": [],
+      "remaining": "Measured XML evidence failures fixed; input-coupled work/depth/atomic refusal limits stay. Neighbour procedure-resolution DOM cap is separate stream-design candidate.",
+      "sources": [
+        "docs/limitations/KL-152-xml-evidence-budgets.md",
+        "crates/knx-productdb/src/parse/scheme_evidence.rs:23-24",
+        "docs/adr/0142-file-size-limits-follow-the-storage-ceiling.md:77-86"
+      ],
+      "topic": "Manufacturer data and parameters"
+    },
+    {
+      "key": "KL-153",
+      "disposition": "delivered",
+      "primary_route": "WP-10",
+      "related_routes": [],
+      "remaining": "No exact10/23 admission task remains. Unresearched namespaces and semantic coverage stay sample-gated.",
+      "sources": [
+        "docs/limitations/KL-153-exact-product-namespaces-10-and-23.md"
+      ],
+      "topic": "Manufacturer data and parameters"
+    },
+    {
+      "key": "KL-154",
+      "disposition": "evidence",
+      "primary_route": "WP-11",
+      "remaining": "Chromium readability/layout evidence has bounded capacity. Membership/inference is not measured delivery/device state; native/accessibility remains separate.",
+      "sources": [
+        "docs/limitations/KL-154-telegram-flow-evidence-and-capacity.md"
+      ],
+      "topic": "Bus diagnostics and DPT"
+    },
+    {
+      "key": "KL-155",
+      "disposition": "evidence",
+      "primary_route": "WP-12",
+      "remaining": "Route-Back has offline evidence; real bridged tunnels remain unverified. Linux host networking is the workaround, not elimination of multicast/gateway constraints.",
+      "sources": [
+        "docs/limitations/KL-155-bridge-network-tunnel-reachability.md"
+      ],
+      "topic": "Platform, deployment and security"
+    },
+    {
+      "key": "KL-156",
+      "disposition": "delivered",
+      "primary_route": "WP-02",
+      "related_routes": [
+        "WP-13"
+      ],
+      "remaining": "Unknown attribute under-reporting fixed and migrated. Typed SuffixText remains a distinct display scope, not repeat reporting fix.",
+      "sources": [
+        "docs/limitations/KL-156-parameter-attribute-reporting.md",
+        "docs/adr/0141-placements-and-enumeration-attributes-reach-columns.md:39-70",
+        "crates/knx-productdb/src/migration.rs:506-514",
+        "crates/knx-productdb/src/parse/program.rs:1215-1262"
+      ],
+      "topic": "Manufacturer data and parameters"
+    },
+    {
+      "key": "KL-157",
+      "disposition": "accepted-boundary",
+      "primary_route": "accepted-policy",
+      "remaining": "Readers now migrate in memory; first confirmed write still upgrades the original without an automatic backup. Do not schedule the already delivered read-only migration change.",
+      "sources": [
+        "docs/limitations/KL-157-in-place-native-project-migration.md",
+        "docs/limitations/catalogue.json#KL-157",
+        "docs/status/LEDGER.md:282",
+        "apps/knx-cli/tests/cli_native_readers_read_only.rs",
+        "crates/knx-app/tests/comparison_input.rs"
+      ],
+      "topic": "Project model and storage"
+    },
+    {
+      "key": "KL-158",
+      "disposition": "evidence",
+      "primary_route": "WP-11",
+      "remaining": "Source no longer universally forces X11. Old assets and one-host native startup evidence do not establish every-host compatibility.",
+      "sources": [
+        "docs/limitations/KL-158-appimage-display-backend-evidence.md"
+      ],
+      "topic": "Platform, deployment and security"
+    },
+    {
+      "key": "KL-159",
+      "disposition": "implementation",
+      "primary_route": "WP-16",
+      "related_routes": [
+        "WP-13"
+      ],
+      "remaining": "Known empty-directory malformed CRC/no-stream admission remains a finite post-alpha hardening candidate; current limit prose is stale.",
+      "sources": [
+        "docs/limitations/KL-159-project-archive-budgets-and-duplicate-names.md",
+        "crates/knx-etsproj/src/container/local_record.rs:127-151",
+        "crates/knx-etsproj/src/container.rs:46-55",
+        "crates/knx-core/src/limits.rs:14-24",
+        "docs/adr/0142-file-size-limits-follow-the-storage-ceiling.md"
+      ],
+      "topic": "Import and export"
+    },
+    {
+      "key": "KL-160",
+      "disposition": "accepted-boundary",
+      "primary_route": "accepted-policy",
+      "remaining": "One shared guide-seen record is explicitly accepted. Per-user guide state requires accounts or a separately chosen browser-store policy; no current fix.",
+      "sources": [
+        "docs/limitations/KL-160-shared-first-run-guide-state.md",
+        "docs/limitations/catalogue.json#KL-160",
+        "docs/status/LEDGER.md:284"
+      ],
+      "topic": "UI and accessibility"
+    },
+    {
+      "key": "KL-161",
+      "disposition": "delivered",
+      "primary_route": "delivered-or-historical",
+      "remaining": "Alpha.5 changed the identifier without automatic alpha.4 data migration. Copy preserved data deliberately; an empty new library is not evidence of deletion.",
+      "sources": [
+        "docs/limitations/KL-161-older-desktop-data-folder-transition.md"
+      ],
+      "topic": "Platform, deployment and security"
+    },
+    {
+      "key": "KL-162",
+      "disposition": "delivered",
+      "primary_route": "accepted-policy",
+      "remaining": "Permanent chained history maps are present, including the fourth rewrite. Historical hashes need remapping, not implementation; KL-185 remote refs/purge decision is owned by parent platform audit.",
+      "sources": [
+        "docs/limitations/KL-162-rewritten-git-commit-identities.md",
+        "docs/limitations/catalogue.json#KL-162",
+        "docs/history/COMMIT_MAP_2026-10-17.txt"
+      ],
+      "topic": "Historical catalogue notes"
+    },
+    {
+      "key": "KL-163",
+      "disposition": "accepted-boundary",
+      "primary_route": "accepted-policy",
+      "remaining": "A stop refuses new bus jobs and waits a bounded, configurable time for a running download/address programming; a write still running when that ends, or under SIGKILL, is cut mid-way.",
+      "sources": [
+        "docs/limitations/KL-163-server-shutdown-and-active-writes.md"
+      ],
+      "topic": "Platform, deployment and security"
+    },
+    {
+      "key": "KL-164",
+      "disposition": "delivered",
+      "primary_route": "accepted-policy",
+      "remaining": "Additive request-id counters fixed lost increments. Shared/UI-only counting and the 1024-batch replay horizon remain intentional; no duplicate-counter implementation is needed.",
+      "sources": [
+        "docs/limitations/KL-164-shared-achievement-counters.md",
+        "docs/limitations/catalogue.json#KL-164",
+        "apps/knx-server/src/achievements.rs"
+      ],
+      "topic": "UI and accessibility"
+    },
+    {
+      "key": "KL-165",
+      "disposition": "delivered",
+      "primary_route": "WP-13",
+      "remaining": "Read tools still load saved roots, not unsaved working history; visibility remains separate from Access authorization. Opt-in literal rename writer exists despite dossier's categorical cannot-change-anything wording. Other agent mutations stay FUTURE-01 LATER.",
+      "sources": [
+        "docs/limitations/KL-165-mcp-state-and-visibility-boundaries.md",
+        "docs/limitations/catalogue.json#KL-165",
+        "apps/knx-mcp/src/workspace.rs:186-207",
+        "apps/knx-mcp/src/args.rs:13-18",
+        "docs/adr/0116-opt-in-mcp-name-recipe-writer.md"
+      ],
+      "topic": "Integrations and community"
+    },
+    {
+      "key": "KL-166",
+      "disposition": "delivered",
+      "primary_route": "accepted-policy",
+      "remaining": "Wizard deliberately seeds one installation using bounded presets, no group addresses and no regional floor-name inference. A larger vocabulary needs a new requirement, not completion repair.",
+      "sources": [
+        "docs/limitations/KL-166-new-project-wizard-presets.md",
+        "docs/limitations/catalogue.json#KL-166"
+      ],
+      "topic": "Project model and storage"
+    },
+    {
+      "key": "KL-167",
+      "disposition": "delivered",
+      "primary_route": "accepted-policy",
+      "remaining": "Preview binds the names/addresses the user saw, not all project/catalogue state; later ordinary refusals are intentional. A stronger preview token would change the approved contract.",
+      "sources": [
+        "docs/limitations/KL-167-add-device-preview-freshness.md",
+        "docs/limitations/catalogue.json#KL-167"
+      ],
+      "topic": "Project model and storage"
+    },
+    {
+      "key": "KL-168",
+      "disposition": "decision",
+      "primary_route": "owner-decisions",
+      "remaining": "Images follow tags; latest may be an alpha. Provenance is not signing; base updates do not follow every source commit.",
+      "sources": [
+        "docs/limitations/KL-168-docker-release-image-publication.md"
+      ],
+      "topic": "Platform, deployment and security"
+    },
+    {
+      "key": "KL-169",
+      "disposition": "implementation",
+      "primary_route": "WP-13",
+      "remaining": "Stale raw/member/XML budget prose needs ADR-0142 reconciliation; navigation behaviour remains intentional. No fresh upload-limit implementation is needed.",
+      "sources": [
+        "docs/limitations/KL-169-browser-upload-and-navigation-limits.md"
+      ],
+      "topic": "Platform, deployment and security"
+    },
+    {
+      "key": "KL-170",
+      "disposition": "evidence_blocked_encoding",
+      "primary_route": "WP-09",
+      "related_routes": [],
+      "remaining": "Need defining per-type LittleEndian placement or discriminating independently admissible read-only witnesses, then bounded encoder implementation and signed/unsigned/multibyte/boundary regressions. Base-image defaults, schema declarations and correlations cannot settle runtime encoding. Probe, typed refusal and warning/checklist already exist; do not schedule their implementation again.",
+      "sources": [
+        "docs/limitations/KL-170-parameter-byte-order-download-boundary.md",
+        "docs/research/parameter-byte-order.md",
+        "docs/status/2026-10-17-ledger-residue-review.md",
+        "docs/status/LEDGER.md"
+      ],
+      "topic": "Commissioning and recovery"
+    },
+    {
+      "key": "KL-171",
+      "disposition": "evidence_blocked_encoding",
+      "primary_route": "WP-09",
+      "related_routes": [],
+      "remaining": "Need documented octet-versus-character field sizing, truncation and boundary behavior before adding UTF-8 materialization and multibyte boundary tests. No new defining source on 17 October; not a request to implement generic UTF-8 string copying.",
+      "sources": [
+        "docs/limitations/KL-171-utf-8-text-download-encoding.md",
+        "docs/research/schema23-offline-boundaries.md",
+        "docs/status/2026-10-17-ledger-residue-review.md",
+        "docs/status/LEDGER.md"
+      ],
+      "topic": "Commissioning and recovery"
+    },
+    {
+      "key": "KL-172",
+      "disposition": "evidence_blocked_private_payload_semantics",
+      "primary_route": "WP-09",
+      "related_routes": [],
+      "remaining": "Need public LoadedImage/CheckSums format or separately authorized controlled owner comparison before a bounded private decoder/differential verifier. Retention is delivered. Never treat decoded payload as download input/authority; no private raw extraction/publication is part of this audit.",
+      "sources": [
+        "docs/limitations/KL-172-stored-loaded-image-semantics.md",
+        "docs/research/schema23-offline-boundaries.md",
+        "docs/status/2026-10-17-ledger-residue-review.md",
+        "docs/status/LEDGER.md"
+      ],
+      "topic": "Commissioning and recovery"
+    },
+    {
+      "key": "KL-173",
+      "disposition": "delivered",
+      "primary_route": "WP-07",
+      "related_routes": [],
+      "remaining": "Preservation/diagnostic lifting condition is met. Applying retained inactive override after reactivation remains separate semantic work.",
+      "sources": [
+        "docs/limitations/KL-173-overrides-outside-the-active-object-tree.md"
+      ],
+      "topic": "Import and export"
+    },
+    {
+      "key": "KL-174",
+      "disposition": "accepted-boundary",
+      "primary_route": "accepted-policy",
+      "related_routes": [],
+      "remaining": "Opaque candidate descriptions deliberately do not certify App identity, execute/unpack payloads, infer licence, or add manifest semantics.",
+      "sources": [
+        "docs/limitations/KL-174-project-user-files-and-add-in-payloads.md"
+      ],
+      "topic": "Import and export"
+    },
+    {
+      "key": "KL-175",
+      "disposition": "delivered",
+      "primary_route": "later-product-scope",
+      "remaining": "Bounded literal raw-header candidate labels/previews are delivered; RTF field catalogue, validation, extraction and rendering are not promised and need their own evidence/decision.",
+      "sources": [
+        "docs/limitations/KL-175-raw-rich-text-header-candidates.md",
+        "docs/limitations/catalogue.json#KL-175",
+        "docs/status/LEDGER.md:293"
+      ],
+      "topic": "Project model and storage"
+    },
+    {
+      "key": "KL-176",
+      "disposition": "evidence",
+      "primary_route": "WP-11",
+      "remaining": "The alpha.9-and-earlier libwayland failure has a scoped launcher fix. One-host repair does not guarantee every Mesa/EGL/display backend.",
+      "sources": [
+        "docs/limitations/KL-176-appimage-mesa-egl-compatibility.md"
+      ],
+      "topic": "Platform, deployment and security"
+    },
+    {
+      "key": "KL-177",
+      "disposition": "evidence",
+      "primary_route": "WP-10",
+      "related_routes": [
+        "WP-07",
+        "WP-13"
+      ],
+      "remaining": "Nested SM- object identity grammar, schema22 device-bearing sample, reporter issue7 log/report and broader independent schema20 data remain.",
+      "sources": [
+        "docs/limitations/KL-177-ets-57-schema-20-evidence.md",
+        "docs/OPEN_WORK.md:241-258",
+        "docs/status/LEDGER.md:295",
+        "crates/knx-etsproj/src/values.rs:232"
+      ],
+      "topic": "Import and export"
+    },
+    {
+      "key": "KL-178",
+      "disposition": "delivered",
+      "primary_route": "accepted-policy",
+      "remaining": "Searchable picker and nonblocking DPT difference marks exist. Fuzzy ranking or device compatibility inference are not the contract; native acceptance remains unverified.",
+      "sources": [
+        "docs/limitations/KL-178-group-address-picker-matching.md",
+        "docs/limitations/catalogue.json#KL-178",
+        "docs/status/LEDGER.md:296"
+      ],
+      "topic": "UI and accessibility"
+    },
+    {
+      "key": "KL-179",
+      "disposition": "delivered",
+      "primary_route": "active-ui",
+      "remaining": "Requested tree/channel indentation geometry is delivered, capped at depth 12. Wider grouped-layout review is not supplied by these tests; active UI-05 retains table layout ownership.",
+      "sources": [
+        "docs/limitations/KL-179-tree-indentation-limits.md",
+        "docs/limitations/catalogue.json#KL-179",
+        "docs/status/LEDGER.md:297",
+        "docs/OPEN_WORK.md:3-20"
+      ],
+      "topic": "UI and accessibility"
+    },
+    {
+      "key": "KL-180",
+      "disposition": "accepted-boundary",
+      "primary_route": "accepted-policy",
+      "remaining": "Holder details cover this server's sessions only. Other clients are known through gateway refusal; timeout is not proof of busy.",
+      "sources": [
+        "docs/limitations/KL-180-named-gateway-refusals.md"
+      ],
+      "topic": "Bus diagnostics and DPT"
+    },
+    {
+      "key": "KL-181",
+      "disposition": "evidence",
+      "primary_route": "WP-11",
+      "remaining": "AppImages up to alpha.11 refuse saving the session log and monitor captures; fixed in source, ships with the next AppImage. Web and Docker unaffected.",
+      "sources": [
+        "docs/limitations/KL-181-desktop-export-commands.md"
+      ],
+      "topic": "Platform, deployment and security"
+    },
+    {
+      "key": "KL-182",
+      "disposition": "evidence",
+      "primary_route": "WP-11",
+      "remaining": "AppImages up to alpha.11 save in-app downloads silently into Downloads, replacing same-named files; fixed in source with a save dialog. Web and Docker unaffected.",
+      "sources": [
+        "docs/limitations/KL-182-desktop-silent-downloads.md"
+      ],
+      "topic": "Platform, deployment and security"
+    },
+    {
+      "key": "KL-183",
+      "disposition": "accepted-boundary",
+      "primary_route": "owner-decisions",
+      "remaining": "New native16 saves carry manufacturer files and app open reinstalls missing programs. Old files need hash-matched original restore; master ingestion, CLI reader reinstall and differing history manifests remain bounded. No real Docker rebuild witness was run.",
+      "sources": [
+        "docs/limitations/KL-183-knxdb-manufacturer-files.md",
+        "docs/limitations/catalogue.json#KL-183",
+        "docs/status/LEDGER.md:301",
+        "docs/adr/0128-native-project-files-carry-their-manufacturer-files.md",
+        "apps/knx-server/tests/http_knxdb_product_data.rs"
+      ],
+      "topic": "Project model and storage"
+    },
+    {
+      "key": "KL-184",
+      "disposition": "delivered_identity_export_remaining_read_evidence",
+      "primary_route": "WP-12",
+      "related_routes": [
+        "WP-13"
+      ],
+      "remaining": "First physical MV-0025 three-read identity export is now recorded. Refusing/silent device paths, ambiguous zero-element response and post-run behavior remain unobserved on hardware; firmware confirmation still pending for programming suitability. A safe memory profile needs its own independent runtime mapping/admission evidence. Identity bytes neither establish image encoding nor backup coverage. Update stale P7 no-device-run planning text only.",
+      "sources": [
+        "docs/limitations/KL-184-device-diagnostic-export.md",
+        "docs/contracts/device-diagnostic-export.md",
+        "docs/research/2026-10-18-up258-device-diagnostics.md",
+        "docs/goals/open-work-2026-10-17/p6-p8-not-goal-ready.md",
+        "docs/goals/up258-programming-2026-10-18.md"
+      ],
+      "topic": "Commissioning and recovery"
+    },
+    {
+      "key": "KL-185",
+      "disposition": "decision",
+      "primary_route": "owner-decisions",
+      "remaining": "History, messages and tags were rewritten on 2026-10-17 (map COMMIT_MAP_2026-10-17); GitHub still serves the pre-rewrite commits through two read-only pull-request refs and the fork.",
+      "sources": [
+        "docs/limitations/KL-185-git-history-local-machine-details.md"
+      ],
+      "topic": "Platform, deployment and security"
+    },
+    {
+      "key": "KL-186",
+      "disposition": "evidence",
+      "primary_route": "WP-12",
+      "related_routes": [],
+      "remaining": "Only owner verification in originating plug-in remains; command Undo exclusion, same-lineage/no remapping and one-device scope stay.",
+      "sources": [
+        "docs/limitations/KL-186-plugin-data-adoption.md",
+        "apps/knx-server/src/plugin_data_routes.rs:31-34",
+        "docs/contracts/plugin-data-adoption.md:69-100"
+      ],
+      "topic": "Import and export"
+    },
+    {
+      "key": "accepted-commissioning-validation-boundary",
+      "disposition": "explicit_user_validation_exclusion",
+      "primary_route": "accepted-policy",
+      "related_routes": [],
+      "remaining": "No work package: new hardware/power-loss/vendor/ETS experiments were removed from the old commissioning goal. Preserve notices and fail-closed gates. The later exact-UP258 offline goal renews that target only, not a blanket reversal of this exclusion.",
+      "sources": [
+        "docs/limitations/accepted-commissioning-validation-boundary.md",
+        "docs/goals/up258-programming-2026-10-18.md",
+        "docs/status/LEDGER.md"
+      ],
+      "topic": "Commissioning and recovery"
+    },
+    {
+      "key": "alpha8-release-snapshot",
+      "disposition": "delivered",
+      "primary_route": "delivered-or-historical",
+      "remaining": "Immutable dated release/evidence snapshot, not current support or a new task. Preserve its historical bounds; no release rework is implied.",
+      "sources": [
+        "docs/limitations/alpha8-release-snapshot.md",
+        "docs/limitations/catalogue.json#alpha8-release-snapshot"
+      ],
+      "topic": "Historical catalogue notes"
+    },
+    {
+      "key": "ap3-bounded-parameter-controls",
+      "disposition": "evidence",
+      "primary_route": "WP-08",
+      "related_routes": [
+        "WP-13"
+      ],
+      "remaining": "Colour/Picture value/resource contracts and module mapping remain PDB04; packed Time stays unsupported-codec fallback; no universal raw editor conversion.",
+      "sources": [
+        "docs/limitations/ap3-bounded-parameter-controls.md",
+        "apps/knx-web/src/ParameterPanel.tsx:152-185",
+        "apps/knx-web/src/ParameterSourceEditor.tsx:75-83",
+        "docs/contracts/parameter-editor-admission.md"
+      ],
+      "topic": "Manufacturer data and parameters"
+    },
+    {
+      "key": "backup-directory-synchronization",
+      "disposition": "documented_operational_assumption_optional_hardening",
+      "primary_route": "accepted-policy",
+      "related_routes": [],
+      "remaining": "Directory-chain sync and readback are delivered; path stability is assumed. Descriptor-pinned directory traversal/race defense is a genuine possible offline hardening project but no current requirement assigns it. Disk/controller power-loss proof is separate excluded physical evidence; failure artifacts are not receipts. Do not convert this assumption into a mandatory recovery feature without a new scope decision.",
+      "sources": [
+        "docs/limitations/backup-directory-synchronization.md"
+      ],
+      "topic": "Commissioning and recovery"
+    },
+    {
+      "key": "bus-activity-snapshot",
+      "disposition": "accepted-boundary",
+      "primary_route": "accepted-policy",
+      "remaining": "The partial server-lifetime snapshot is not a complete audit or device-mutation proof. Polling can miss actions; empty sessions do not prove gateway idleness.",
+      "sources": [
+        "docs/limitations/bus-activity-snapshot.md"
+      ],
+      "topic": "Bus diagnostics and DPT"
+    },
+    {
+      "key": "catalogue-batch-creation",
+      "disposition": "delivered",
+      "primary_route": "delivered-or-historical",
+      "related_routes": [],
+      "remaining": "1–32 one-command batch, optional names/addresses and incarnation-bound retry are bounded by design. No physical-bus occupancy inference or general distributed idempotence claim.",
+      "sources": [
+        "docs/limitations/catalogue-batch-creation.md"
+      ],
+      "topic": "Manufacturer data and parameters"
+    },
+    {
+      "key": "catalogue-metadata-semantics",
+      "disposition": "accepted-boundary",
+      "primary_route": "WP-13",
+      "related_routes": [
+        "later-product-scope"
+      ],
+      "remaining": "Raw manufacturer capability strings remain non-authoritative; typed capacities/Secure support and automatic version compatibility require new evidence/decision.",
+      "sources": [
+        "docs/limitations/catalogue-metadata-semantics.md",
+        "crates/knx-productdb/src/identity.rs:1141-1156",
+        "crates/knx-productdb/src/identity.rs:1236-1242",
+        "apps/knx-cli/src/main.rs:2149-2186"
+      ],
+      "topic": "Manufacturer data and parameters"
+    },
+    {
+      "key": "catalogue-updates-from-supplied-files",
+      "disposition": "decision",
+      "primary_route": "later-product-scope",
+      "related_routes": [],
+      "remaining": "Only online source/interface/licence prerequisite and explicit application-upgrade/winner policy remain new scope; full-db backup and twice-upload cost stay recorded.",
+      "sources": [
+        "docs/limitations/catalogue-updates-from-supplied-files.md",
+        "docs/limitations/catalogue-updates-from-supplied-files.md:29-50",
+        "docs/status/2026-10-17-ledger-residue-review.md"
+      ],
+      "topic": "Manufacturer data and parameters"
+    },
+    {
+      "key": "checked-parameter-editors",
+      "disposition": "evidence",
+      "primary_route": "WP-08",
+      "related_routes": [],
+      "remaining": "Missing codec/module contracts are the remaining PDB04 scope; real native/Orca evidence belongs to platform owner. Do not schedule host/revision integration again.",
+      "sources": [
+        "docs/limitations/checked-parameter-editors.md",
+        "apps/knx-web/src/ParameterPanel.tsx:152-185",
+        "apps/knx-web/src/ParameterSourceEditor.tsx:75-83"
+      ],
+      "topic": "Manufacturer data and parameters"
+    },
+    {
+      "key": "closed-entries-and-legacy-links",
+      "disposition": "delivered",
+      "primary_route": "delivered-or-historical",
+      "remaining": "Historical anchors/reserved identifiers are retained. Closed or withdrawn entries must not be reactivated or renumbered merely because the catalogue is reorganized.",
+      "sources": [
+        "docs/limitations/closed-entries-and-legacy-links.md",
+        "docs/limitations/catalogue.json#closed-entries-and-legacy-links"
+      ],
+      "topic": "Historical catalogue notes"
+    },
+    {
+      "key": "communication-object-table",
+      "disposition": "decision",
+      "primary_route": "active-ui",
+      "remaining": "Table/DPT presentation is delivered. Project-wide CO inventory, bulk/export/view persistence and reorderable columns would be new scopes; resizable columns overlap active UI-05 and must not become a second package.",
+      "sources": [
+        "docs/limitations/communication-object-table.md",
+        "docs/limitations/catalogue.json#communication-object-table",
+        "docs/goals/ui-feedback-2026-10-18.md",
+        "docs/OPEN_WORK.md:3-20"
+      ],
+      "topic": "UI and accessibility"
+    },
+    {
+      "key": "community-support-evidence",
+      "disposition": "evidence",
+      "primary_route": "WP-12",
+      "remaining": "Manual support/contribution export is bounded and not anonymous; transport cancellation does not synchronously stop parser work. Mailbox operation, native downloads and wider original-source safety need their own evidence/decision; do not imply delivery when merely opening a draft.",
+      "sources": [
+        "docs/limitations/community-support-evidence.md",
+        "docs/limitations/catalogue.json#community-support-evidence"
+      ],
+      "topic": "Integrations and community"
+    },
+    {
+      "key": "crt-motion",
+      "disposition": "delivered",
+      "primary_route": "WP-11",
+      "remaining": "Separate CRT motion and cancellation are delivered; Save glow means activation, not success. Native/Orca/whole-state contrast evidence remains unverified, not a theme-pack-v2 requirement.",
+      "sources": [
+        "docs/limitations/crt-motion.md",
+        "docs/limitations/catalogue.json#crt-motion"
+      ],
+      "topic": "UI and accessibility"
+    },
+    {
+      "key": "current-project-device-navigation",
+      "disposition": "decision",
+      "primary_route": "later-product-scope",
+      "remaining": "Current-project canonical links exist. The documented synthetic 5000-device render/filter cost is a measured concern; profile and agree a performance acceptance target before optimizing. URL history/grouping/state persistence are new scope.",
+      "sources": [
+        "docs/limitations/current-project-device-navigation.md",
+        "docs/limitations/catalogue.json#current-project-device-navigation",
+        "docs/DEVICE_NAVIGATION.md"
+      ],
+      "topic": "UI and accessibility"
+    },
+    {
+      "key": "device-editor-address-scope",
+      "disposition": "delivered",
+      "primary_route": "WP-13",
+      "remaining": "Line-bound address editing, coupler-evidence refusal, installation ownership and explicit topology repairs exist. Dossier API-only repair/later-installation dropdown wording is stale; physical programming is not this feature.",
+      "sources": [
+        "docs/limitations/device-editor-address-scope.md",
+        "docs/limitations/catalogue.json#device-editor-address-scope",
+        "apps/knx-web/src/Inspector.tsx:993-1050",
+        "docs/limitations/structure-editor-scope.md"
+      ],
+      "topic": "Project model and storage"
+    },
+    {
+      "key": "download-lifecycle-history",
+      "disposition": "delivered_bounded_lifecycle_stale_dossier_not_new_backend_task",
+      "primary_route": "WP-13",
+      "related_routes": [
+        "accepted-policy"
+      ],
+      "remaining": "Reconcile dossier publication/CLI/server/long-session pending wording with final SAFE-03/AUDIT-01 ledger reconciliation: all commissioning CLI/server durable callers closed at ae567d00; AUDIT-01 DONE and SAFE-03 ACCEPTED_BOUNDARY. Whole traffic audit, hard-kill/power-loss restoration and universal rollback remain unproved/excluded, not an unlanded lifecycle implementation.",
+      "sources": [
+        "docs/limitations/download-lifecycle-history.md",
+        "docs/status/LEDGER.md",
+        "docs/evidence/commission-integrated-gates-ae567d00-2026-10-05.json",
+        "apps/knx-web/src/BusActivityHistory.tsx"
+      ],
+      "topic": "Commissioning and recovery"
+    },
+    {
+      "key": "download-readiness-and-pre-write-backup",
+      "disposition": "delivered_readiness_guidance_bounded_recovery",
+      "primary_route": "accepted-policy",
+      "related_routes": [],
+      "remaining": "Pre-plan next-action/privacy-safe support guidance is delivered. Plan availability/default sample counts do not confer verification. Current receipts cover only planned overwritten memory and admissible Loaded state, not properties/keys/unwritten state. Whole-mutation restore for new families belongs inside the exact family package before physical admission, not a claim that this existing feature is universal recovery.",
+      "sources": [
+        "docs/limitations/download-readiness-and-pre-write-backup.md",
+        "docs/contracts/device-programming-support-guidance.md",
+        "docs/status/LEDGER.md",
+        "docs/goals/up258-programming-2026-10-18.md"
+      ],
+      "topic": "Commissioning and recovery"
+    },
+    {
+      "key": "fictional-community-demos",
+      "disposition": "delivered",
+      "primary_route": "accepted-policy",
+      "remaining": "Fictional offline demo data is published. Never a hardware/electrical design; stale in-package local-candidate prose is frozen by checksums until an explicitly repacked version, not grounds to mutate old assets.",
+      "sources": [
+        "docs/limitations/fictional-community-demos.md",
+        "docs/limitations/catalogue.json#fictional-community-demos"
+      ],
+      "topic": "Integrations and community"
+    },
+    {
+      "key": "four-group-address-views",
+      "disposition": "decision",
+      "primary_route": "later-product-scope",
+      "remaining": "Four delivered views deliberately use bounded loaded-device matrices, 12 columns and explicit render windows; GA7/GA8 further features are parked until feedback. No auto-load-all/live topology/matrix editor is required.",
+      "sources": [
+        "docs/limitations/four-group-address-views.md",
+        "docs/limitations/catalogue.json#four-group-address-views"
+      ],
+      "topic": "UI and accessibility"
+    },
+    {
+      "key": "group-address-membership-and-download-preparation",
+      "disposition": "delivered",
+      "primary_route": "accepted-policy",
+      "remaining": "Current-project member picker and bounded route hand-off exist. No UI DPT compatibility inference, extra bus permission, gateway verification or hardware acceptance is implied.",
+      "sources": [
+        "docs/limitations/group-address-membership-and-download-preparation.md",
+        "docs/limitations/catalogue.json#group-address-membership-and-download-preparation"
+      ],
+      "topic": "Project model and storage"
+    },
+    {
+      "key": "historical-native-notes-foundation",
+      "disposition": "delivered",
+      "primary_route": "WP-13",
+      "remaining": "Historical local-only/no-service/no-editor/selective-note-refusal wording is superseded by Notes host and ADR-0138; FUTURE-03 is DONE. Do not rebuild notes or reopen the completed row.",
+      "sources": [
+        "docs/limitations/historical-native-notes-foundation.md",
+        "docs/limitations/catalogue.json#historical-native-notes-foundation",
+        "docs/status/LEDGER.md:203",
+        "docs/limitations/project-notes-workbench.md:62-84",
+        "apps/knx-web/src/NotesWorkspace.tsx:95",
+        "docs/adr/0138-notes-get-an-explicit-decision-before-a-delete.md"
+      ],
+      "topic": "Project model and storage"
+    },
+    {
+      "key": "historical-reading-guide",
+      "disposition": "delivered",
+      "primary_route": "delivered-or-historical",
+      "remaining": "Dated 8 October guide is not current feature inventory or an assignment. Later dossiers and ledger win; preserve historical evidence rather than treat every old heading as open work.",
+      "sources": [
+        "docs/limitations/historical-reading-guide.md",
+        "docs/limitations/catalogue.json#historical-reading-guide"
+      ],
+      "topic": "Historical catalogue notes"
+    },
+    {
+      "key": "import-count-links-and-unsaved-change-dialogs",
+      "disposition": "delivered",
+      "primary_route": "WP-13",
+      "remaining": "Status links and shared dialogs exist. Current session log is 16000, not the dossier's stale 1000; durable original import-report storage also exists separately. Keep capped current-run-vs-report distinction.",
+      "sources": [
+        "docs/limitations/import-count-links-and-unsaved-change-dialogs.md",
+        "docs/limitations/catalogue.json#import-count-links-and-unsaved-change-dialogs",
+        "apps/knx-server/src/session_log.rs:85-92",
+        "apps/knx-web/src/LogPanel.tsx:153",
+        "apps/knx-web/src/sessionLogExport.ts:9"
+      ],
+      "topic": "UI and accessibility"
+    },
+    {
+      "key": "import-integrity-repairs",
+      "disposition": "delivered",
+      "primary_route": "WP-13",
+      "related_routes": [],
+      "remaining": "No remaining report-persistence implementation gap. Current source/native reports persist; channel/address/IP semantics remain bounded independently.",
+      "sources": [
+        "docs/limitations/import-integrity-repairs.md",
+        "docs/adr/0113-durable-native-import-evidence.md",
+        "crates/knx-app/src/import_evidence.rs:101-120"
+      ],
+      "topic": "Import and export"
+    },
+    {
+      "key": "independent-private-schema-23-review",
+      "disposition": "delivered",
+      "primary_route": "delivered-or-historical",
+      "related_routes": [],
+      "remaining": "Closed private review and original lifting condition do not imply universal ETS coverage; no outstanding nine-package review assignment.",
+      "sources": [
+        "docs/limitations/independent-private-schema-23-review.md",
+        "docs/evidence/private-schema23-review-closure-2026-10-11.json"
+      ],
+      "topic": "Import and export"
+    },
+    {
+      "key": "installation-instruction-editing",
+      "disposition": "delivered",
+      "primary_route": "accepted-policy",
+      "remaining": "Bounded exact Schema23 source editing plus natively authored devices are delivered. Other source encodings/schemas, missing imported originals and full rich-text/ETS export remain explicit refusals.",
+      "sources": [
+        "docs/limitations/installation-instruction-editing.md",
+        "docs/limitations/catalogue.json#installation-instruction-editing",
+        "docs/contracts/instruction-editing.md"
+      ],
+      "topic": "Project model and storage"
+    },
+    {
+      "key": "installation-node-editing",
+      "disposition": "delivered",
+      "primary_route": "WP-13",
+      "remaining": "Both installation fields already use revision-bound RenameNameField through api.renameEntity. Catalogue summary and dossier claim that web sends legacy unbound requests are stale since B1a; correction is documentation only.",
+      "sources": [
+        "docs/limitations/installation-node-editing.md",
+        "docs/limitations/catalogue.json#installation-node-editing",
+        "apps/knx-web/src/Inspector.tsx:1420-1422",
+        "apps/knx-web/src/Inspector.tsx:1808-1809",
+        "apps/knx-web/src/RenameNameField.tsx:54",
+        "apps/knx-web/src/api.ts:220-229",
+        "docs/contracts/revision-bound-writes.md:81-129"
+      ],
+      "topic": "UI and accessibility"
+    },
+    {
+      "key": "instruction-and-note-drafts-across-save",
+      "disposition": "evidence",
+      "primary_route": "WP-11",
+      "remaining": "Save-proof drafts and desktop beforeunload installation are delivered. Native WebKitGTK Stay/Leave, close/Quit interaction and Orca have not been exercised; browser/source evidence is not native acceptance.",
+      "sources": [
+        "docs/limitations/instruction-and-note-drafts-across-save.md",
+        "docs/limitations/catalogue.json#instruction-and-note-drafts-across-save",
+        "docs/limitations/project-notes-workbench.md:42-60"
+      ],
+      "topic": "Project model and storage"
+    },
+    {
+      "key": "lcars-presentation",
+      "disposition": "delivered",
+      "primary_route": "WP-11",
+      "remaining": "Built-in LCARS framing is delivered. Executable imported geometry, lossless v1 export, light/sound and general browser/WCAG/native support are not admitted.",
+      "sources": [
+        "docs/limitations/lcars-presentation.md",
+        "docs/limitations/catalogue.json#lcars-presentation"
+      ],
+      "topic": "UI and accessibility"
+    },
+    {
+      "key": "manufacturer-report-history",
+      "disposition": "accepted-boundary",
+      "primary_route": "WP-01",
+      "related_routes": [
+        "WP-17"
+      ],
+      "remaining": "Old installs without encounter ledger cannot gain invented historical facts; typed master sections/signatures remain feature-specific boundaries. Current duplicated unknown rows routed separately, not historical report rewrite.",
+      "sources": [
+        "docs/limitations/manufacturer-report-history.md"
+      ],
+      "topic": "Manufacturer data and parameters"
+    },
+    {
+      "key": "mcp-rename-confirmation",
+      "disposition": "decision",
+      "primary_route": "later-agent",
+      "remaining": "Explicitly opted-in literal rename writer is delivered and requires client elicitation. Real-human/operator identity cannot be proven by that form; broader FUTURE-01 mutation/chat requires a separately named revision/permission/validation/audit contract.",
+      "sources": [
+        "docs/limitations/mcp-rename-confirmation.md",
+        "docs/limitations/catalogue.json#mcp-rename-confirmation",
+        "docs/status/LEDGER.md:201",
+        "docs/status/2026-10-17-ledger-residue-review.md:21",
+        "docs/contracts/mcp-name-recipe-writer.md"
+      ],
+      "topic": "Integrations and community"
+    },
+    {
+      "key": "name-first-dpt-presentation",
+      "disposition": "accepted-boundary",
+      "primary_route": "accepted-policy",
+      "remaining": "Names are a display vocabulary, not codec/device support. Unknown/main-only identifiers stay exact; stored data, diagnostics and exports are not rewritten.",
+      "sources": [
+        "docs/limitations/name-first-dpt-presentation.md"
+      ],
+      "topic": "Bus diagnostics and DPT"
+    },
+    {
+      "key": "native-import-evidence-and-recorded-device-state",
+      "disposition": "delivered",
+      "primary_route": "delivered-or-historical",
+      "related_routes": [],
+      "remaining": "Missing historical report cannot be reconstructed; source-scoped selective reports do not replace primary counts; direct unbound download remains compatibility surface.",
+      "sources": [
+        "docs/limitations/native-import-evidence-and-recorded-device-state.md",
+        "crates/knx-app/src/import_evidence.rs",
+        "apps/knx-web/src/StoredBusAccess.tsx:118-139",
+        "apps/knx-web/src/App.tsx:1675"
+      ],
+      "topic": "Import and export"
+    },
+    {
+      "key": "notes-editor-integration",
+      "disposition": "delivered",
+      "primary_route": "WP-13",
+      "remaining": "Workbench mounting, real target catalogue, help, draft guards and post-apply refresh are delivered; FUTURE-03 is DONE. Unknown transport outcomes still require reload, not automatic mutation replay.",
+      "sources": [
+        "docs/limitations/notes-editor-integration.md",
+        "docs/limitations/catalogue.json#notes-editor-integration",
+        "apps/knx-web/src/NotesWorkspace.tsx:95",
+        "docs/limitations/project-notes-workbench.md:62-84"
+      ],
+      "topic": "Project model and storage"
+    },
+    {
+      "key": "offline-ap1-sequence-inspection",
+      "disposition": "delivered_inspection_not_executable_source_plan",
+      "primary_route": "WP-14",
+      "related_routes": [
+        "accepted-policy"
+      ],
+      "remaining": "Inspection remains bounded explicit uniquely associated MV-07B0 Load/ap1 reconstruction. Full parameter/table/relative-image placement, substitution/scopes, AP2/complete/partial translation and durable recovery are real downstream missing contracts. Existing parser/report limits and manual consented attachment are deliberate; do not relabel inspection as execution or start a second resolver.",
+      "sources": [
+        "docs/limitations/offline-ap1-sequence-inspection.md",
+        "docs/OFFLINE_PROCEDURE_RESOLUTION.md",
+        "docs/contracts/offline-download-expansion.md"
+      ],
+      "topic": "Commissioning and recovery"
+    },
+    {
+      "key": "offline-naming-recipes",
+      "disposition": "decision",
+      "primary_route": "later-automation",
+      "remaining": "Literal prefix/suffix recipe is delivered in CLI, web and opt-in MCP. FUTURE-02 remains LATER only for further templates/recorder/scheduler/selection expansion; nominate a second deterministic operation before a new goal.",
+      "sources": [
+        "docs/limitations/offline-naming-recipes.md",
+        "docs/limitations/catalogue.json#offline-naming-recipes",
+        "docs/status/LEDGER.md:202",
+        "docs/contracts/offline-name-recipe.md:53-87",
+        "docs/status/2026-10-17-ledger-residue-review.md:21-22"
+      ],
+      "topic": "Project model and storage"
+    },
+    {
+      "key": "parameter-and-dynamic-coverage",
+      "disposition": "evidence",
+      "primary_route": "WP-07",
+      "related_routes": [
+        "WP-08",
+        "WP-05",
+        "WP-13"
+      ],
+      "remaining": "Repeat/allocator/calculation and unknown value rules remain evidence/decision gated; vendor scripts never run. Finite caption/layout work and docs corrections are separated from semantic claims.",
+      "sources": [
+        "docs/limitations/parameter-and-dynamic-coverage.md",
+        "apps/knx-web/src/ParameterWorkspace.tsx:35-38",
+        "apps/knx-web/src/ParameterWorkspace.tsx:79-105",
+        "docs/adr/0137-declared-parameter-grids-reach-the-workspace.md"
+      ],
+      "topic": "Manufacturer data and parameters"
+    },
+    {
+      "key": "persistent-native-working-history",
+      "disposition": "delivered",
+      "primary_route": "accepted-policy",
+      "remaining": "Working-state/undo/redo journal and versions are delivered within explicit budgets. Same-file history is not an independent backup; unsaved-close retains the journal. Physical-power-loss/native evidence is not claimed.",
+      "sources": [
+        "docs/limitations/persistent-native-working-history.md",
+        "docs/limitations/catalogue.json#persistent-native-working-history",
+        "docs/status/LEDGER.md:181",
+        "docs/status/LEDGER.md:182",
+        "docs/PROJECT_HISTORY.md"
+      ],
+      "topic": "Project model and storage"
+    },
+    {
+      "key": "ported-ux-feedback-limits",
+      "disposition": "delivered",
+      "primary_route": "WP-13",
+      "remaining": "Toast queues, flow-image bounds and motion categories are delivered. Dossier calls its log browser-session/1000; actual diagnostic session log is server-session/16000. No unlimited queue/full-history promise.",
+      "sources": [
+        "docs/limitations/ported-ux-feedback-limits.md",
+        "docs/limitations/catalogue.json#ported-ux-feedback-limits",
+        "apps/knx-server/src/session_log.rs:85-92",
+        "apps/knx-web/src/messages/en.ts:1597",
+        "apps/knx-web/src/sessionLogExport.ts:9"
+      ],
+      "topic": "UI and accessibility"
+    },
+    {
+      "key": "project-local-name-editing",
+      "disposition": "delivered",
+      "primary_route": "WP-13",
+      "remaining": "Guarded individual renames are delivered. The old no-CLI/no-MCP/no-bulk wording is a historical package boundary, not current absence of the later bounded recipe.",
+      "sources": [
+        "docs/limitations/project-local-name-editing.md",
+        "docs/limitations/catalogue.json#project-local-name-editing",
+        "apps/knx-web/src/RenameNameField.tsx:54",
+        "docs/contracts/offline-name-recipe.md:53-87",
+        "docs/adr/0116-opt-in-mcp-name-recipe-writer.md"
+      ],
+      "topic": "Project model and storage"
+    },
+    {
+      "key": "project-notes-workbench",
+      "disposition": "delivered",
+      "primary_route": "accepted-policy",
+      "remaining": "FUTURE-03 closed after web note-disposition delete and selective note mapping. CLI/CSV/scan deletes intentionally refuse with named notes; no UI for unselected source notes is required because no shipped reader produces them.",
+      "sources": [
+        "docs/limitations/project-notes-workbench.md",
+        "docs/limitations/catalogue.json#project-notes-workbench",
+        "docs/status/LEDGER.md:203",
+        "apps/knx-web/src/NotesWorkspace.tsx:95",
+        "apps/knx-web/src/NoteDispositionDialog.tsx:158",
+        "docs/OPEN_WORK.md:36-46"
+      ],
+      "topic": "Project model and storage"
+    },
+    {
+      "key": "release-notifications",
+      "disposition": "delivered",
+      "primary_route": "accepted-policy",
+      "remaining": "Bounded GitHub release polling exists, not installer/integrity verification/latest-release certainty while offline. Native runtime acceptance is not established by common-bundle tests.",
+      "sources": [
+        "docs/limitations/release-notifications.md",
+        "docs/limitations/catalogue.json#release-notifications"
+      ],
+      "topic": "Integrations and community"
+    },
+    {
+      "key": "selective-import",
+      "disposition": "delivered",
+      "primary_route": "WP-13",
+      "related_routes": [
+        "WP-10"
+      ],
+      "remaining": "Selection, conflict refusal and source-privacy constraints remain accepted. Future normalized fields need explicit closure audit; authorized restore exports remain separately evidence-gated.",
+      "sources": [
+        "docs/limitations/selective-import.md",
+        "crates/knx-app/src/selective_import.rs:19-28",
+        "crates/knx-app/src/selective_import/source_notes.rs:55-116",
+        "docs/adr/0142-file-size-limits-follow-the-storage-ceiling.md"
+      ],
+      "topic": "Import and export"
+    },
+    {
+      "key": "structure-editor-scope",
+      "disposition": "delivered",
+      "primary_route": "later-product-scope",
+      "remaining": "Ownership-aware creates/edits/moves/link lists and two explicit repair flows exist. Cross-installation transfer, duplicate-id/hierarchy repair, orphan selection and catalogue workspace installation targeting are outside this delivered scope.",
+      "sources": [
+        "docs/limitations/structure-editor-scope.md",
+        "docs/limitations/catalogue.json#structure-editor-scope",
+        "apps/knx-web/src/Inspector.tsx:993-1050"
+      ],
+      "topic": "Project model and storage"
+    },
+    {
+      "key": "telegram-flow-delivery-and-scope",
+      "disposition": "delivered",
+      "primary_route": "delivered-or-historical",
+      "remaining": "Flow is implemented; approval-only wording is historical. Configured participants are not measured recipients/device state; Chromium/capacity limits remain in KL-154.",
+      "sources": [
+        "docs/limitations/telegram-flow-delivery-and-scope.md"
+      ],
+      "topic": "Bus diagnostics and DPT"
+    },
+    {
+      "key": "theme-pack-management",
+      "disposition": "delivered",
+      "primary_route": "accepted-policy",
+      "remaining": "Declarative guarded management is delivered, with saved-choice semantics rather than the removed preview. Multiprocess settings CAS, exact lexical recovery and complete WCAG/extension runtime are outside the contract.",
+      "sources": [
+        "docs/limitations/theme-pack-management.md",
+        "docs/limitations/catalogue.json#theme-pack-management"
+      ],
+      "topic": "UI and accessibility"
+    },
+    {
+      "key": "website-and-public-story",
+      "disposition": "delivered",
+      "primary_route": "accepted-policy",
+      "remaining": "Published website/story remain bounded to approved editions and recorded browser evidence. Owner explicitly accepted 18 October print/PDF omission of offscreen motion headings; this is not an open fix or legal/browser certification.",
+      "sources": [
+        "docs/limitations/website-and-public-story.md",
+        "docs/limitations/catalogue.json#website-and-public-story",
+        "docs/WEBSITE.md:74-115",
+        ".ai/CURRENT_STATE.md:23-29"
+      ],
+      "topic": "Integrations and community"
+    }
+  ],
+  "validation": {
+    "catalogueKeyMultiplicity": "Every key once; no missing or invented key.",
+    "nonterminalLedgerMultiplicity": "Every nonterminal ID once; no terminal ID in this routing table.",
+    "sourcePaths": "All referenced paths exist at the audit checkout.",
+    "allPackageRoutesPresent": true,
+    "canonicalLedgerModified": false
+  },
+  "ownershipSupplements": [
+    {
+      "revision": "ddd22362",
+      "time": "2026-10-18 22:18",
+      "source": ".ai/CURRENT_STATE.md",
+      "route": "active-issues25-26",
+      "scope": "Device-empty topology ranges and parameter-section caption resolution; keep caption slice of WP-05 with fix/issues25-26-20261018 and coordinate WP-15."
+    }
+  ]
+}

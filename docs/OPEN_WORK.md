@@ -1,5 +1,391 @@
 # Open work after the 0.1 alpha
 
+## Reconciled work packages — 18 October 2026
+
+This is the **current planning entry point**. The dated sections below retain
+context and delivery history; they are not additional jobs to execute. Planning
+here neither reopens an accepted limitation nor authorises implementation,
+bus access, desktop control, deployment, a release or third-party contact.
+
+**Evidence cutoff:** `961502d6` on `main`, fetched on 18 October 2026.
+The audit inventories all **195 catalogue entries** (including unnumbered
+boundaries) and **208 ledger IDs**. The ledger has 67 completed entries,
+124 accepted boundaries, 15 later-scope entries and 2 external blockers;
+those are unequal records, not a completion percentage or 141 coding tasks.
+Per-ID status remains solely in [LEDGER](status/LEDGER.md).
+[Audit routing](evidence/open-work-packages-2026-10-18.json) accounts for every
+catalogue entry and routes every non-terminal ledger ID once. This is a
+repository-evidence audit with targeted source checks, not a fresh KNX/spec,
+security, GitHub-issue, hardware or whole-codebase conformance audit.
+
+### Already owned — do not start a duplicate package
+
+- **UI feedback:** UI-01/02/03/04/06 are delivered. UI-05 and final whole-set
+  integration/acceptance remain with the existing
+  [UI workstream](goals/ui-feedback-2026-10-18.md). Its package labels are
+  scoped to that goal, not the historical `UI-*` ledger IDs.
+- **Exact UP 258D12 / issue #22:** the
+  [offline programming goal](goals/up258-programming-2026-10-18.md) owns
+  explicit source-field preparation, image/procedure/execution and full-state
+  recovery work for its named application. The first diagnostic export from
+  a real detector has arrived; this does **not** lift download admission.
+  Shared probe/commissioning changes require coordination with that owner.
+- **New ownership supplement (`ddd22362`, 22:18):** issues #25/#26 belong
+  to `fix/issues25-26-20261018`: hide device-empty topology ranges and resolve
+  parameter-section captions through the existing text resolver. This caption
+  slice of WP-05 is not unclaimed; coordinate WP-05/WP-15 changes with that
+  owner as well. The supplement changes reservations, not the pinned audit's
+  product-capability evidence.
+- The [17 October P1–P5](goals/open-work-2026-10-17/README.md) are delivered;
+  P6–P8 are waiting/decision buckets, not an implementation queue. Do not
+  rescue the object-function feature or rebuild plug-in adoption, note
+  disposition, Functions comparison or gate-hygiene fixes again.
+
+### Recommended package queue
+
+Priority here orders the *remaining work*, not the frozen ledger priorities.
+**P1** = integrity/correctness first; **P2** = bounded capability/usability;
+**P3** = validation or documentation follow-up. “Offline-ready” means no real
+bus/device access is needed; it does not replace the claim/implementation go.
+Each package needs its own scoped claim, review, tests and delivery evidence.
+
+| Package | Priority | Readiness / dependency | Bounded outcome |
+| --- | --- | --- | --- |
+| [WP-01](#wp-01--idempotent-unknown-evidence) | P1 | Offline-ready investigation | Unknown-evidence rows remain truthful across shared-source re-ingest. |
+| [WP-02](#wp-02--suffixtext-end-to-end) | P2 | Offline-ready, migration contract first | Source suffix text reaches the existing parameter rows without changing stored values. |
+| [WP-03](#wp-03--legacy-binary-enumeration-values) | P2 | Mapping evidence first | Legacy binary enum values use the existing typed storage or keep an explicit refusal/report. |
+| [WP-04](#wp-04--large-catalogues-measure-then-stream) | P1/P2 | Measurement first; three sequential slices | Measured database growth, bounded procedure parsing, then a cancellable web large-profile workflow. |
+| [WP-05](#wp-05--parameter-layout-fidelity) | P2 | Evidence/contract gate; coordinate with UI-05 | One evidenced layout feature at a time, never inferred manufacturer behaviour. |
+| [WP-06](#wp-06--communication-object-organisation) | P2 | Folder contract first; priority needs a separate model ADR | Declared object folders and, separately, lossless priority representation. |
+| [WP-07](#wp-07--module-instance-authority) | P1 | Defining mapping evidence required | One independently witnessed instance/repeat/number-offset mapping contract. |
+| [WP-08](#wp-08--parameter-value-codecs) | P2 | Per-type encoding evidence required | A separately admitted codec/editor per TypeDate, Colour or Picture form. |
+| [WP-09](#wp-09--offline-image-evidence-gates) | P1 | Research-bound; exact UP258 remains owned | Discriminating encoding/fill/placement evidence, not another permissive image builder. |
+| [WP-10](#wp-10--import-and-model-evidence) | P2 | Samples/grammar/authorisation required | Independently verified import/model cases with honest unsupported-data reports. |
+| [WP-11](#wp-11--native-linux-acceptance) | P2 | Separate desktop-control permission | Actual WebKitGTK/Wayland/Orca and AppImage evidence for named workflows. |
+| [WP-12](#wp-12--field-evidence-and-owner-acceptance) | P2 | Outside input or operation-specific consent | Reviewed tester/plug-in/diagnostic evidence, without silently expanding compatibility. |
+| [WP-13](#wp-13--documentation-drift) | P3 | Offline-ready, docs only | Current summaries agree with delivered behaviour; retained history stays intact. |
+| [WP-14](#wp-14--complete-offline-family-outcomes) | P1 | Source contracts first; UP258 excluded | Complete real-source System 1/B/300 image → procedure → execution → recovery slices. |
+| [WP-15](#wp-15--complete-module-scope-in-web-consumers) | P1 | Offline-ready; UI-owner coordination | Complete response-local module paths distinguish diagnostics and workspace identities. |
+| [WP-16](#wp-16--empty-directory-zip-integrity) | P1 | Offline-ready regression/hardening | Empty directories have valid CRC and complete compressed-stream representation. |
+| [WP-17](#wp-17--master-identity-provenance) | P1 | Offline-ready, schema/report contract first | Master identity winners, collisions and malformed declarations have truthful provenance. |
+
+#### WP-01 — Idempotent unknown evidence
+
+**Scope:** census-3 duplicate `ingest_unknown` rows (KL-151/report history).
+Reproduce shared-source, multi-package and retry ingestion with synthetic
+fixtures before selecting a fix. The recorded 978 repeated rows are a prior
+v24 measurement, not a fresh count or proof of the suspected cause.
+**Done when:** source/program/XPath/kind/name identity and occurrence semantics
+are explicit; repeat install, shared sources and database reopen cannot
+inflate evidence; distinct samples/provenance are not silently dropped;
+existing databases have a reviewed repair/migration policy; report totals and
+private matrix commitments are reconciled independently.
+[Finding](#product-database-census-3-18-october-2026) ·
+[report implementation](../crates/knx-productdb/src/report.rs).
+
+#### WP-02 — SuffixText end to end
+
+**Scope:** KL-003/KL-156, census P5. Preserve `Suffix` and `SuffixText` as
+separate source declarations, define precedence/fallback and translations,
+then migrate/backfill retained sources and expose the suffix through the
+existing parameter DTO/row. A suffix is presentation, never a value codec.
+**Done when:** fresh ingest equals migrated databases; absent, translated,
+conflicting and unknown declarations are tested; original values/drafts and
+write authority stay unchanged; relevant unknown-report rows retire only
+when actually modelled. No new generic editor framework.
+[Workspace contract](contracts/parameter-workspace.md) ·
+[source attribute inventory](../crates/knx-productdb/src/parse/program.rs).
+
+#### WP-03 — Legacy binary enumeration values
+
+**Scope:** KL-128 legacy `binary_value`, not the `.knxprod` half already
+stored since product DB v25 (ADR-0141). Establish the EX-IM field mapping
+against a retained legacy witness and its independent conversion; preserve
+binary lexemes/widths rather than coercing them to integers.
+**Done when:** fresh/re-ingested legacy enumerations expose exact binary
+values in the existing column with regression/report tests, or explicitly
+name the remaining mapping blocker. Independently runnable G16 follow-up:
+name a ZIP containing no product package accurately, and describe the actual
+`.vd1` inspection scope in CLI usage with regression tests; do not imply VD1
+import support. No live legacy download or PR/VD2 import.
+[Legacy boundary](limitations/KL-128-legacy-product-import-boundaries.md).
+
+#### WP-04 — Large catalogues: measure, then stream
+
+**Three separate deliveries, in order:**
+
+1. Measure per-table/index/source-byte growth and peak memory on a disposable
+   catalogue. Explain retained-source duplication and unknown-row growth
+   before proposing storage optimisation; WP-01 supplies the evidence policy.
+2. Inventory procedure resolver tree/byte/node/depth bounds; replace whole-tree
+   parsing only where measurements justify it. Require source-step/order,
+   refusal, malformed-input and expanded-budget parity; no procedure semantics
+   or wider device admission is invented by streaming.
+3. Only then design a web large-profile job with truthful progress,
+   cancellation, shared expansion budgets, preview binding and atomic
+   install/rollback. CLI large-profile support and raised storage ceilings
+   already exist: do not implement them again.
+
+**Done when per slice:** the measured baseline and nonempty parity/atomicity
+checks are recorded; web cancellation cannot publish a partial catalogue;
+CLI and web consume the same install service. A larger upload limit alone
+closes none of these slices.
+[ADR-0142](adr/0142-file-size-limits-follow-the-storage-ceiling.md) ·
+[KL-151](limitations/KL-151-product-package-size-profiles.md).
+
+#### WP-05 — Parameter layout fidelity
+
+**Scope:** KL-003 declared-grid/row presentation, not the delivered area
+register, matrix placement, separators, block access or indentation.
+First build a feature/evidence table for inline sections, Table versus Grid,
+`CollapseIfEmpty`, `TextParameterRefId`/`Rename`, translated row/column
+captions, nested blocks, in-cell buttons and remaining control hints.
+**Done when for one admitted feature:** its contract names source identity,
+activation/access interactions and unsupported fallback; browser regressions
+cover search, drafts, restricted rows, narrow layout and grid/row variants.
+Undefined hints stay visible as unsupported rather than guessed. Coordinate
+shared styles/table behaviour with the existing UI-05 owner before editing.
+Issue #26 already owns the section-caption resolver slice; do not duplicate it.
+[Grid ADR](adr/0137-declared-parameter-grids-reach-the-workspace.md) ·
+[gap census](research/2026-10-17-product-database-gap-census.md).
+
+#### WP-06 — Communication-object organisation
+
+**Two independent slices:** (a) project `GroupObjectTree` versus manufacturer
+`ShowInComObjectTree` folders, with an explicit source/identity contract;
+(b) object priority representation across core, persistence, import,
+projection and comparison, only after an ADR defines raw/effective provenance.
+**Done when:** deterministic folder membership is source-backed; ambiguous,
+inactive and module objects do not acquire invented folders; priority survives
+migration/save/reopen/undo where editable. Object size and effective flag
+columns are already present. Neither display slice changes bus priority or
+manufacturer activation rules.
+[Object table contract](COMMUNICATION_OBJECT_TABLE.md) ·
+[KL-003 census follow-up](limitations/KL-003-parameter-evaluation-and-editing-boundaries.md).
+
+#### WP-07 — Module-instance authority
+
+**Scope:** KL-068/PDB-01, module-scoped PDB-04 consumers and newly activated
+module-object construction. Read-only own instance values and unscoped object
+creation are delivered. Do not substitute caption matching for `ModuleDef`,
+`ModuleInstance`, repeat and number-offset identity.
+**First deliverable:** one admitted mapping contract backed by a real,
+independently counted witness, with missing/duplicate/nested/repeated cases.
+**Done when that slice is implemented:** evaluation, parameter writes and
+object reconciliation reuse that authority; ambiguous mappings refuse the
+whole edit without spending IDs or changing native history. Identity-keyed
+module comparison follows the mapping, not the other way round.
+[Instance ADR](adr/0108-read-only-module-instance-values.md) ·
+[object-refresh contract](contracts/parameter-object-refresh.md).
+
+#### WP-08 — Parameter value codecs
+
+**Scope:** PDB-04/PDB-05 and census `TypeDate`; separate subpackages for Date,
+Colour and Picture, not one “support all widgets” task. Packed `TypeTime`
+fallback is deliberate and remains until its own codec is established.
+**First deliverable:** documented lexical/native/resource encoding, width,
+invalid-value and roundtrip vectors for one exact type/form. **Done when:**
+independent vectors and malformed/boundary cases gate the codec, source-backed
+checked editor and all image consumers; unverified forms keep their inert
+original-value fallback. A DPT bus codec is not a product-parameter codec.
+[Admission contract](contracts/parameter-editor-admission.md) ·
+[17 October lift conditions](status/2026-10-17-ledger-residue-review.md).
+
+#### WP-09 — Offline image evidence gates
+
+**Scope:** KL-170 (per-type byte placement), KL-171 (UTF-8 byte capacity,
+termination/cut rule), KL-172 (LoadedImage/CheckSums payload), census G10
+(hidden PID-78 placement) and G14 (`Data` shorter than `Size`). Record each
+as a distinct evidence question; a probe for one does not settle the others.
+**Done when for one question:** a defining source or separately approved,
+discriminating observation establishes the exact rule, negative controls
+reject the plausible alternatives, and a reviewed bounded implementation
+retains unsupported cases. Do not write PID78, pad a segment, swap octets or
+turn retained compressed bytes into download authority on suspicion.
+The active exact-UP258 owner keeps its source/procedure/recovery work; System
+1/B/300 expansion still needs separate complete source-to-plan and
+whole-mutation recovery contracts, not a new mask allowlist.
+[Source stop lines](research/2026-10-16-offline-source-stop-lines.md) ·
+[census 3](research/2026-10-18-product-database-programmability-census.md).
+
+#### WP-10 — Import and model evidence
+
+**Independent, input-gated slices:** (a) `IMPORT-02` authorised ETS exports of
+distinct revisions plus independently reviewed baselines; (b) `MODEL-05` a
+multi-installation export or explicit native-site requirement before model
+change; (c) KL-177 project-side `SubModule` grammar plus schema-22/device
+witnesses and independent coverage for other untested schemas; (d) real
+CSV/ESF/report/compare references (KL-038/044/051) only when supplied.
+**Done when per case:** production import/service/native reopen and reports
+match the independent baseline, preserve unknowns, and refuse malformed or
+unsupported mappings honestly. Existing import/retention harnesses are reused;
+synthetic exports do not replace authorised real exports. AES/Secure is
+separately deferred, not smuggled into sample collection.
+[Authorised-export harness](AUTHORIZED_RESTORE_EXPORTS.md) ·
+[Site decision](adr/0125-multi-installation-site-is-blocked.md).
+
+#### WP-11 — Native Linux acceptance
+
+**Scope:** real WebKitGTK keyboard/focus/draft/dialog behaviour, Orca,
+Wayland save/cancel/overwrite paths, the unverified capture-export interaction
+and an AppImage smoke on a newer-Mesa host. Build a named workflow/platform
+matrix and use fictional/simulator data; bus contact is not necessary for the
+UI part. This is not a GTK4 port or a new fallback/window-close policy.
+**Done when:** actual native actions and resulting files/states are recorded
+for each tested cell, with unsupported environments left explicit. Chromium,
+Broadway startup and a mock Tauri runtime are not substitutes. Desktop control
+needs separate permission; existing owner-deferred evidence is not reopened
+as an alpha/release blocker by this plan.
+[KL-020](limitations/KL-020-overlay-accessibility-evidence.md) ·
+[AppImage launcher](APPIMAGE_LAUNCHER.md).
+
+#### WP-12 — Field evidence and owner acceptance
+
+**Separate cases, not one generic “hardware test”:** KL-184 refusing/silent
+identity reads and the reporter's post-run behaviour/firmware response;
+KL-186 originating plug-in acceptance after adopted bytes (software route is
+complete); KL-170 tester probe/report review; optional custom multicast,
+bridge Route-Back tunnel and other specifically identified live gaps.
+**Done when per case:** the exact build/device/application/operation and
+original evidence are verified, outcomes include refusal/unknown, and only
+the witnessed boundary is narrowed. Keep private projects, identity ZIPs and
+raw device evidence out of Git. Fresh device operations need their own go;
+this audit sends no requests and contacts no vendor/association.
+[Diagnostic evidence](research/2026-10-18-up258-device-diagnostics.md) ·
+[plug-in contract](contracts/plugin-data-adoption.md) ·
+[tester flow](adr/0121-tester-download-reports.md).
+
+#### WP-13 — Documentation drift
+
+**Scope:** reconcile current catalogue summaries/contracts with later dated
+updates and actual consumers, without rewriting preserved historical records.
+Confirmed examples: installation-name edits are already revision-bound
+(`RenameNameField` → `api.renameEntity`); `.knxprod` BinaryValue/placement
+columns and larger bounds ship on `main` since v25/ADR-0142; note disposition,
+Functions consumers, plug-in web routes and the UI waves are not missing
+backend/UI implementations. KL-181's “next AppImage” wording needs the
+published-release boundary rather than another ACL fix.
+**Done when:** the current summary, detailed boundary and user-facing route
+agree; generated limitations come from catalogue sources; links/ledger/local
+information guards pass. This planning pass corrects stale open-work prose;
+the wider catalogue/manual sweep remains this bounded follow-up. Also reconcile
+old lifecycle “publication pending” and property-planner versus memory-partial
+wording; final ledger evidence already closes the bounded lifecycle callers.
+G16 CLI/refusal-message code belongs to WP-03, not this docs-only slice.
+[Current ledger](status/LEDGER.md) ·
+[delivery index](IMPLEMENTATION_STATUS.md).
+
+#### WP-14 — Complete offline family outcomes
+
+**Three separately claimable family packages, not a replacement for the owned
+UP258 goal:**
+
+- **System 1:** complete a real-source image only after FixupList,
+  LegacyPatchAlways/default/Union encoding is established; then translate the
+  entire default procedure and exercise complete restoration.
+- **System B:** reuse relative views, Format-1 descriptors/link codecs and AP1
+  inspection; establish product-to-ASAP/source-scope/resource placement and
+  all source-step substitutions before complete image/execution integration.
+- **System 300:** reuse the pure Type6 property tables; first define object
+  index/instance/format/capacity discovery, parameter placement and service
+  framing, then the entire loading/rescan/recovery sequence.
+
+**Done when per family/witness:** an independent real-source oracle accounts
+for every transformation and source step, production planning/execution and
+fault-injected restoration cover setup, property, memory and allocation/task
+state as applicable. A codec, partial resolver return, memory-only backup or
+passing simulator never substitutes for those later layers. Shared System-2
+or probe code requires the active UP258 owner's handover/coordination; physical
+admission remains closed until its separate target/recovery/consent gate.
+[System 1 contract](contracts/offline-download-system1-image.md) ·
+[System B gaps](research/2026-10-16-relative-image-integration-gaps.md) ·
+[System 300 contract](contracts/offline-system300-property-tables.md).
+
+#### WP-15 — Complete module scope in web consumers
+
+**Scope:** adopt the existing `ModuleScopeDto.nodeChain` in the manual web
+`ModuleScope` type, diagnostic association and parameter-workspace identity.
+The backend already supplies outermost-first evaluation identity; consumers
+currently compare only `moduleNode`, `moduleId` and `moduleDefId`.
+**Done when:** nested nameless scopes sharing those legacy fields cannot merge
+diagnostics or exchange draft/navigation identity; complete chains and an
+explicit older-server fallback have discriminating regression tests. This
+response-local identity is not a durable ETS ID, a project module-instance
+mapping or additional write authority (WP-07 stays separate). Coordinate shared
+web files with the existing UI-05/final integration and issue #26 owners.
+[ADR-0063](adr/0063-parameter-scopes-preserve-evaluation-identity.md) ·
+[diagnostic grouping](../apps/knx-web/src/parameterPresentation.ts) ·
+[workspace index](../apps/knx-web/src/parameterWorkspace.ts).
+
+#### WP-16 — Empty-directory ZIP integrity
+
+**Scope:** KL-159's documented zero-size directory corner in project containers,
+including nested archives: a nonzero CRC for empty output and a deflated entry
+with no complete empty stream. Headers agreeing is not payload integrity.
+**Done when:** malformed CRC/no-stream cases refuse the whole import without
+changing existing data; valid stored and complete deflated empty directories
+(including Java/ETS shapes) keep working; existing name/budget/prefix rules are
+unchanged. Reproduce before choosing the minimum fix, and verify all relevant
+container consumers rather than adding a special-case UI refusal.
+[Remaining corner](limitations/KL-159-project-archive-budgets-and-duplicate-names.md) ·
+[directory check](../crates/knx-etsproj/src/container/local_record.rs).
+
+#### WP-17 — Master identity provenance
+
+**Scope:** KL-086's still-missing provenance for `datapoint_type`,
+`function_type`, `function_point` and `space_usage`. Cover same-file/cross-file
+collisions and missing IDs/parents in one schema/report contract; retain the
+existing normalized winner policy rather than quietly changing it.
+**Done when:** winner/losing declarations resolve to retained source bytes;
+malformed/orphan declarations are explicitly counted/reported; migration or
+replay provides deterministic facts and labels unavailable historical encounter
+facts as unavailable. Fresh/replayed databases and reports have independent
+regressions. This is distinct from WP-01's duplicate evidence-row bug and from
+version-pinning policy. Serialize product-DB migrations with WP-01/02/03.
+[KL-086](limitations/KL-086-duplicate-product-identifiers.md) ·
+[master parser](../crates/knx-productdb/src/parse/master.rs) ·
+[report contract](contracts/MANUFACTURER_REPORT_CONTRACT.md).
+
+### Deliberate later scope and owner decisions — not ready-made coding jobs
+
+| Route | IDs / boundary | Reopen condition |
+| --- | --- | --- |
+| Later automation | `FUTURE-01`, `FUTURE-02` | One named operation beyond the shipped literal rename/MCP writer, with revision/permission/preview/atomic undo/audit contract. No blanket macro VM or in-app agent scope. |
+| Later online catalogue | `FUTURE-05` | A public, licence-clear feed usable without vendor approval, then its own provenance/integrity/offline-fallback ADR. File-based web/CLI update and restore are complete. |
+| Later media/procedures | `KL-110`, `GAP-T30-04` | Separate Powerline or differential-download goal satisfying its readiness contract; no new family/transport/Secure scope merely to clear a KL row. |
+| External statistics | `TOOLS-01`, `TOOLS-02`, `TOOLS-03`, `TOOLS-04`, `TOOLS-05` | Work in the collector's own repository against [its measurement contract](contracts/statistics-measurement.md), not an invented KNXBench collector. |
+| Optional copy | `FUTURE-08` | New optional humour copy is requested; the original mechanism/lists already exist. |
+| Owner choices | KL-129/135/185; parked research; CI/container/privacy/repository retention | A new explicit decision for allocator enforcement, version pinning, external old-history refs, parked-note publication, CI re-enablement or destructive cleanup. Keep existing decisions; do not operate on containers/backups in a planning task. |
+| Wider product scope | Secure/AES/keyring; accounts/collaboration; native ports/mobile; general extension API; diff merge/three-way/native PDF; scan/monitor expansion; GA7/GA8 | Each needs a finite new requirement and architecture/evidence contract. Documented absence, protocol costs and deliberately conservative refusal policies are not unattended bugs. |
+
+Optional hardening is kept distinct from ready work: native hung-webview
+recovery design, redacted authorisation/restart status presentation, the
+quiet-poll Lagged regression, descriptor-pinned backup paths and profiled
+large-device navigation each need a named requirement before assignment.
+Existing safe refusals and the accepted operational assumptions stay in force.
+
+**Routing check:** the five later-scope ID groups above plus WP-08/09/10 route
+all 17 non-terminal ledger IDs once. Accepted boundaries and completed entries
+with narrower residue remain linked through the audit receipt, not converted
+into a second status ledger. All 195 catalogue keys have a package/exclusion
+route, including resolved and historical entries; a route is not a claim that
+the entry is fully fixed.
+
+**Suggested order:** WP-16 and WP-01 first; WP-17 next, then WP-02/WP-03
+(serialize shared product-DB migrations). WP-15 can proceed after the UI-owner
+handover. WP-04 starts with measurement, then its parser/web slices. Prepare WP-05/06
+contracts independently; implement shared UI changes only after UI-05's
+handover. WP-07/08/09/10/14 proceed only for their evidenced slices; do not repeat
+unproductive source searches without a new lead. WP-11 needs desktop consent;
+WP-12 waits on exact evidence/consent. WP-13 can proceed offline in parallel
+provided it preserves the active owners' status updates.
+
+## Prior dated detail — background, not a second queue
+
+The sections below retain the original topic/anchor context. Read current
+package readiness and ownership above first; an older “open”, “pending” or
+“not released” sentence is not authority to restart a delivered package.
+
 ## UI feedback packages (18 October 2026)
 
 [UI-01–UI-06](goals/ui-feedback-2026-10-18.md) group the owner's eight retained UI
@@ -272,10 +658,10 @@ Time/Number/Colour/Picture rows offer a **Checked editor**
 ([host](contracts/parameter-editor-host.md#workbench-host-12-october-2026)): exact
 source evidence verified per field, writes only through the existing route, drafts
 kept across Save. Open: module-scope source mapping, verified Colour/Picture value
-codecs (PDB-04 stays LATER), adopting the server's revision-bound parameter writes
-and installation renames in the web host (Goal B1;
-[contract](contracts/revision-bound-writes.md), server side delivered 13 October),
-native WebKitGTK/Orca checks.
+codecs (PDB-04 stays LATER), and native WebKitGTK/Orca checks. Revision-bound
+parameter writes and installation renames reached the web host with Goal B1a
+on 13 October ([contract](contracts/revision-bound-writes.md)); that is not
+an open implementation task.
 
 ## Installation instructions in the device editor (12 October 2026)
 
@@ -296,7 +682,8 @@ service's target catalogue including communication objects, a browser
 reload/tab-close prompt while drafts exist, and EN/DE action names in the review.
 Since Goal B2 the desktop webview asks before a reload too (source-based; run in
 Chromium and Firefox, not in a native WebKitGTK window). Open: native
-WebKitGTK/Orca checks, and FUTURE-03 as a whole (still LATER).
+WebKitGTK/Orca checks. The broader FUTURE-03 residue was delivered by P3 on
+17 October (note disposition and selective-import note mapping, above).
 
 ## AP7 catalogue updates (12 October 2026)
 
@@ -356,12 +743,14 @@ real confirmed browser mutations and native working/root recovery are separately
 source-bound; an empty Save-success parser error remains honestly partial and its
 missing saved-root restart was completed read-only, with no replay.
 The production mount, host catalogue and navigation refresh were delivered
-later the same day (section above); FUTURE-03 remains LATER, not whole AP4. AP3/AP5/AP6/AP7 data-tooling
-remainders and hardware/ETS/report compatibility are not closed by this leaf.
+later the same day (section above). FUTURE-03 was subsequently completed by
+P3 on 17 October; the AP3/AP5/AP6/AP7 remainders and hardware/ETS/report
+compatibility are not closed by this earlier leaf.
 
 
 **Baseline audit:** 2026-10-08, against `origin/main` `608a204b`; the dated
-sections on this page were added since, the newest on 12 October 2026. This page is the one
+sections on this page were added since. This historical baseline is superseded
+by the reconciled package queue above. This page is the one
 place that answers "what is not done?". It replaces the three finished alpha
 goals (removed 2026-10-08, see [REMOVED_DOCS](history/REMOVED_DOCS.md)). It does not change any
 status by itself: per-ID status stays in the [ledger](status/LEDGER.md),
@@ -400,7 +789,8 @@ acceptance. [Host contract](contracts/parameter-editor-host.md) and
 [receipt](evidence/parameter-editors-2026-10-11.json). Existing validation,
 dependencies, native persistence and write authority remain unchanged.
 Colour/Picture have an explicit unverified-codec original-value fallback; module
-mapping and Session1 shell mount remain open. PDB-04 remains LATER, not DONE.
+mapping remains open; the workbench host shipped on 12 October and bound
+writes on 13 October. PDB-04 remains LATER, not DONE.
 No physical device, universal codec, release or deployment claim.
 
 ## Alpha.8 publication boundary
@@ -544,7 +934,7 @@ execution limits remain research/follow-up work, not wider runtime support.
 
 | Track | State | Next step | Where |
 | --- | --- | --- | --- |
-| Legacy ETS3 product databases (`.vd3`–`.vd5`) | L1 inspection, L2 import/secret withholding, L3 web upload/password handling, the VD5 installer layout with measured bounds and L4 download plans from `s19_block` are on `main` | A first live legacy download (needs the maintainer's device go; none has run). Atomic types 3/5 are mapped (2026-10-13, KL-128); their `BinaryValue`s, and `.knxprod` `Enumeration/@BinaryValue`, are not modeled (the `.knxprod` ingest does not even report it). Merged legacy procedures (`07B0h`) stay refused. | [ADR-0094](adr/0094-legacy-exim-product-files.md), [VD4 import](VD4_PRODUCT_DATABASE_IMPORT.md), KL §128 |
+| Legacy ETS3 product databases (`.vd3`–`.vd5`) | L1 inspection, L2 import/secret withholding, L3 web upload/password handling, the VD5 installer layout with measured bounds and L4 download plans from `s19_block` are on `main` | A first live legacy download (needs the maintainer's device go; none has run). Atomic types 3/5 are mapped (2026-10-13, KL-128); legacy `BinaryValue` mapping remains WP-03. The `.knxprod` enumeration columns and reporting were delivered with v25/ADR-0141 on 18 October. Merged legacy procedures (`07B0h`) stay refused. | [ADR-0094](adr/0094-legacy-exim-product-files.md), [VD4 import](VD4_PRODUCT_DATABASE_IMPORT.md), KL §128 |
 | Website / published Evolution Story | Edition `2026-10-08.4` is approved and deployed with the site; first publication is complete | HTTP→HTTPS (301) and remote IPv6 HTTPS (four probes, 200/TLS valid) verified on 2026-10-09; Pages Node-24 actions and demo links deployed/verified; owner's privacy review and optional WebKit evidence remain separate | [story/](../story/README.md), [WEBSITE](WEBSITE.md), ADR-0068/0095 |
 | Web integration of finished leaves | All four packages delivered on 12 October: project notes, installation instructions, checked parameter editors, catalogue updates with backup/restore | None for this track. Colour/Picture keep the visible fallback; PDB-04 stays LATER | Web-lock lines in `.ai/CURRENT_STATE.md`, [parameter host](contracts/parameter-editor-host.md), [catalogue updates](contracts/catalogue-update.md) |
 | Parked-work adoption | Package 1 (native-evidence port) delivered on 12 October; package 2 (ux-feedback port) delivered on 13 October | Native-evidence residue check done on 13 October (nothing left, no schema bump); both parked worktrees removed on 13 October after an owner go (branches kept); stale-claim corrections re-checked and the ADR index completed on 13 October. Nothing left in this track | Web-lock lines in `.ai/CURRENT_STATE.md` |
@@ -573,8 +963,9 @@ refresh and ideas/roadmap audit** were published as `696f25b6` (8 October); the
 
 **Parked work (triaged 2026-10-12; owner decisions the same day).** The
 [parked-work triage](status/2026-10-12-parked-work-triage.md) has the
-file-by-file main check, the `merge-tree` conflict maps and the decisions. Nothing
-below is on the remote or merged:
+file-by-file main check, the `merge-tree` conflict maps and the decisions. The
+table includes subsequently delivered or retired packages as history; only
+the explicitly kept, unpublished research is still parked:
 
 | Package | What it holds | Owner decision |
 | --- | --- | --- |

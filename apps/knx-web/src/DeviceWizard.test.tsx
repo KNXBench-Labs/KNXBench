@@ -222,6 +222,8 @@ describe("DeviceWizard (ADR-0093)", () => {
     await click(button("Keep editing"));
     expect(document.body.textContent).not.toContain("Discard your entries?");
     await click(button("Cancel"));
+    expect(button("Discard").classList.contains("danger-action")).toBe(true);
+    expect(button("Keep editing").classList.contains("primary-action")).toBe(false);
     await click(button("Discard"));
     expect(onClose).toHaveBeenCalledTimes(1);
   });

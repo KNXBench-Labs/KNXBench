@@ -288,9 +288,10 @@ function ParameterFieldRow(props: {
       <span className="parameter-conflict-current">
         {t("parameters.conflictCurrent", { value: field.value ?? t("parameters.none") })}
       </span>
-      <button type="button" disabled={bindingKey === null || bindingKey === conflict.at}
+      {/* Each answer loses one side (the reloaded value or the draft), so both are destructive. */}
+      <button type="button" className="danger-action" disabled={bindingKey === null || bindingKey === conflict.at}
         onClick={() => void apply(true)}>{t("parameters.conflictApply")}</button>
-      <button type="button" className="parameter-conflict-discard" onClick={discard}>{t("parameters.conflictDiscard")}</button>
+      <button type="button" className="parameter-conflict-discard danger-action" onClick={discard}>{t("parameters.conflictDiscard")}</button>
     </div>}
     {offerChecked && <button type="button" className="parameter-checked-open" data-checked-for={field.etsId}
       title={t("parameters.checked.openHint")} onClick={() => setCheckedOpen(true)}>{t("parameters.checked.open")}</button>}

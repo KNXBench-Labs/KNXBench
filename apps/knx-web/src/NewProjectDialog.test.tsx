@@ -474,6 +474,7 @@ describe("NewProjectDialog", () => {
 
     await submitForm();
     expect(button("Discard changes and create").disabled).toBe(false);
+    expect(button("Discard changes and create").classList.contains("danger-action")).toBe(true);
 
     // The fields stay editable while the prompt is up. A blanked name makes
     // `submit()` return at its own guard, so a button that still looked
@@ -565,7 +566,10 @@ describe("NewProjectDialog", () => {
       await click(stepButton("Group structure"));
       // The first preset is "function, then floor": functions become main
       // groups from 1, the building step's floors become middle groups from 0.
+      // An empty list has nothing to replace; a filled one would be thrown away.
+      expect(button("Apply preset (replaces the list)").classList.contains("danger-action")).toBe(false);
       await click(button("Apply preset (replaces the list)"));
+      expect(button("Apply preset (replaces the list)").classList.contains("danger-action")).toBe(true);
       expect(labelled("Main group name").map((i) => i.value)).toEqual([
         "Lighting", "Shading", "Heating", "Ventilation", "Central functions",
       ]);

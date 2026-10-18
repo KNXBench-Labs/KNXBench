@@ -71,6 +71,7 @@ describe("AchievementSettings", () => {
     const tracker = fakeTracker(async () => RESET_REPLY);
     const view = await render(tracker);
     await act(async () => button(en["settings.achievementsReset"]).click());
+    expect(button(en["settings.achievementsResetConfirmButton"]).classList.contains("danger-action")).toBe(true);
     await act(async () => button(en["settings.achievementsResetConfirmButton"]).click());
     expect(tracker.reset).toHaveBeenCalledTimes(1);
     expect(view.textContent).toContain("achievements.reset-20261007T120000Z.json");

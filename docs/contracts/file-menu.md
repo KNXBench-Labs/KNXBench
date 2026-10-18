@@ -129,10 +129,17 @@ close button. No entry opts out: only the submenu rows carry `data-menu-stays-op
   grace delay, not a safe triangle.
 - A click opens a submenu and pins it (hover no longer closes it); clicking the row
   again closes it. Clicking a hover-opened row pins it instead of closing it.
-- A mouse press moves focus to the pressed row before the click. While a press is in flight
-  (`pointerdown` to `pointerup`) that focus move does not fold an open submenu, which would
-  shift the rows so that the button is released over another row and the click is lost. A
-  keyboard focus move out of an open submenu still folds it.
+- A press moves focus to the pressed row before the click, in the (compatibility) `mousedown`.
+  While a press is in flight that focus move does not fold an open submenu, which would shift
+  the rows so that the click lands on another row and is lost. The rule is the same for mouse,
+  touch and pen: `pointerdown` and `mousedown` (capture, on the menu) both arm the guard, and
+  `pointerup`, `pointercancel`, `mouseup` and `click` (capture, on the window) release it. Arming
+  on `mousedown` is what covers a tap: Chromium sends a touch tap's (and a hover-less pen tap's)
+  `pointerdown` and `pointerup` first and its `mousedown`, which moves focus, after them, so a
+  guard held from `pointerdown` to `pointerup` alone would already be released. A press whose
+  release never reaches the page (the button let go over another window) is forgotten when the
+  window loses focus (`blur`), and any key in the menu clears it too. A keyboard focus move out of
+  an open submenu still folds it.
 - An item click runs the original handler once and closes the whole menu. The row
   itself carries `data-menu-stays-open`, the existing opt-out of the activation
   handler, so opening a submenu never closes the menu.
@@ -150,9 +157,16 @@ close button. No entry opts out: only the submenu rows carry `data-menu-stays-op
 - The whole panel fits neither side: it keeps the side with the most room that still offers
   at least the minimum and gives up width (`--file-submenu-max-width`, never below 220 px)
   instead of leaving the screen. A panel running past the bottom edge moves up, and scrolls
-  inside itself when taller than the screen.
+  inside itself when taller than the screen. The bottom check uses the panel's height after the
+  cap: a capped panel wraps long entries and grows (it used to be checked before, and a capped
+  panel at 150% ended up to 26 visual px below the window).
+- The room on the right is measured from the row, not from the panel's own box: the panel
+  starts at the row's right edge plus the 6 px gap (`SUBMENU_GAP_PX`, the stylesheet's `left`).
+  Placement runs as the panel opens, while its entry animation still holds it at
+  `translateX(-6px)`; measuring the panel's box there granted those 6 px a second time, so a
+  capped panel ate 6 of the 8 px margin (at 100% as well; seen first at 150%).
 - Neither side offers the minimum (the strip just above the 650 px breakpoint, where the
-  menu leaves under 220 px on its right): this one submenu, for as long as it is open, uses
+  menu leaves under 220 px on its right, and under zoom much wider windows: 960–990 px at 150%): this one submenu, for as long as it is open, uses
   the inline layout below (`data-layout="inline"` on its `.file-submenu`). It is re-decided on
   every placement, so widening the window gives the flyout back and closing the submenu drops
   the mark. While an inline submenu is open the menu scrolls as a whole, as it does in the
@@ -164,9 +178,54 @@ close button. No entry opts out: only the submenu rows carry `data-menu-stays-op
   scrolls as a whole (`max-height: calc(100dvh - 80px)`), so **Logout** and **Quit**
   stay reachable on a short screen. In flyout mode (taller than 600 px and wider than
   650 px) the menu does not scroll; its own height is far below that limit.
-- Positions are measured when a panel opens, on window resize and whenever the open
+- Positions are measured when a panel opens, on window resize, whenever the open
   panel's own size changes (a `ResizeObserver`, disconnected on close): a panel whose
-  items change (a project opens) can push it past an edge. Placement runs only when the
+  items change (a project opens) can push it past an edge, and when the root's `style`
+  changes (a `MutationObserver` on `<html>`, disconnected on close): a zoom step resizes
+  neither the window nor the panel's layout box, but changes every visual reading.
+
+## Units under zoom
+
+The application scale (`--app-ui-scale`, 80–150%) is a CSS `zoom` on the root. Placement
+works in one unit throughout: CSS layout px of the zoomed root, the unit of the stylesheet,
+of `MIN_PANEL_WIDTH_PX` (220), the 6 px gap, the 8 px margin and of every length placement
+writes back (`--file-submenu-max-width`, `--file-submenu-shift`). Readings that come in visual
+px are divided by the scale (`appUiScale()`) before any comparison: the panel's and the row's
+`getBoundingClientRect()` and the window's `innerWidth`/`innerHeight` (`layoutGeometry` in
+`FileMenu.tsx`, a pure function). `choosePanelPlacement` and `choosePanelShift` take and return
+layout px only. Written lengths are rounded to 1/100 px.
+
+Viewport units do not follow the root zoom, so every File menu limit divides them by the
+scale first: the flyout's `max-width` fallback `min(520px, calc(100vw / scale - 16px))` and
+`max-height: calc(100dvh / scale - 24px)`, and the scrolling menu's
+`max-height: calc(100dvh / scale - 80px)` (narrow, short and per-instance inline layouts).
+The media queries (650 px wide, 600 px high) are not zoom-aware: they read the window in CSS
+px, so at 150% a 990 px window still starts in the flyout layout and placement decides per
+submenu (660 layout px wide: no side of the Import & export row keeps 220 layout px, so that
+submenu goes inline; at 1040 px it flies out with a cap).
+
+What Chromium reports inside the root-zoomed document was measured, not assumed (system
+Chromium 154, 18 October 2026, a 900 x 700 window, a 200 x 100 px box at 100, 50):
+
+| Reading | 100% | 150% | 80% |
+| --- | --- | --- | --- |
+| `document.documentElement.clientWidth` / `clientHeight` | 900 / 700 | 900 / 700 | 900 / 700 |
+| `innerWidth` / `innerHeight`, `visualViewport` | 900 / 700 | 900 / 700 | 900 / 700 |
+| box `getBoundingClientRect()` left, top, width | 100, 50, 200 | 150, 75, 300 | 80, 40, 160 |
+| box `offsetWidth`, computed `width` | 200, 200px | 200, 200px | 200, 200px |
+| `width: 100vw; height: 100dvh`: computed / rendered | 900 x 700 / 900 x 700 | 900 x 700 / 1350 x 1050 | 900 x 700 / 720 x 560 |
+| `max-width: calc(100vw - 16px)`: rendered width | 884 | 1326 | 707.2 |
+| pointer `clientX` at the box's DOMRect left + 10 | 110 | 160 | 90 |
+| `matchMedia("(max-width: 650px)")` | false | false | false |
+
+So the window size is visual (the window's own CSS px, never divided), DOMRect and pointer
+coordinates are visual, computed lengths are layout px, and a viewport unit is a layout length
+that the zoom then enlarges or shrinks. `elementFromPoint` takes visual coordinates (it hit the
+box at its DOMRect centre at all three scales).
+
+Native WebKitGTK/Tauri was not measured; if it reports DOMRect or the window size in another
+unit under `zoom`, the conversion would be wrong there
+([KL-130](../limitations/KL-130-ZOOM-application-zoom.md)). Placement runs only when the
   stylesheet made the panel absolutely positioned (or the previous placement made it
   inline: every pass starts by undoing the last one).
 
@@ -246,6 +305,34 @@ change.
   first-level entry returns the entry; real clicks on **New project…** and **Open project…**
   reach their handlers; with a modal open, the page's `inert` lifted and the menu forced open,
   toolbar controls and menu rows still lie under the overlay.
+- `src/FileMenu.test.tsx`, UISET2-01 (units under zoom): `layoutGeometry` divides every visual
+  reading by the scale and takes the panel's left edge from its row; at 150% a side with 309
+  visual (206 layout) px goes inline, a cap is written as the 236 layout px of room, not 354
+  visual; at 80% 181 visual (226 layout) px keep the flyout with a 226 px cap; at 150% and 80%
+  the shift is the 58 layout px of overflow; an open panel is placed again when the root's
+  scale changes; a cap is measured beside the row while the slide-in still holds the panel 6 px
+  to the side; the shift is measured after the cap wraps the entries. `choosePanelShift` is pure.
+- `src/FileMenu.test.tsx`, UISET2-02 (press guard): touch and pen taps in Chromium's order
+  (`pointerdown`, `pointerup`, then `mousedown` and the focus move) and in mouse order keep the
+  open submenu until the click lands; a press abandoned outside the window (`blur`) and a
+  cancelled touch press (`pointercancel`) are forgotten, so a later focus move folds again.
+- `e2e/file-menu-submenus.e2e.ts`, UISET2-01: the scale comes from a stored `uiScale` setting
+  through App (and once through Ctrl+Plus, the settings path, with a submenu open), never from a
+  direct `--app-ui-scale` write. At 150% at 960, 990, 1010, 1040, 1080 and 1440 x 900 and in the
+  short windows 1440 x 620 and 1100 x 640, and at 80% at 660, 690, 720 and 760 x 800 and
+  900 x 601, in EN and DE: every first-level entry and every entry of every submenu, scrolled into
+  view, lies inside the viewport and takes the pointer; a flyout is at least 220 layout px wide,
+  inside the viewport and above the bottom margin, its `max-height` is the viewport's in layout
+  px, a capped one ends exactly at the margin of its side and its cap times the scale is its
+  width, a moved one ends at the bottom (or top) margin; an inline one appears only where
+  neither side of its row holds 220 layout px (the test's own measurement); no sideways scroll.
+  The panel is read after its entry animation finished.
+- `e2e/file-menu-submenus.e2e.ts`, UISET2-02: on a touchscreen (`hasTouch`, `locator.tap()`) at
+  400 x 800 and 660 x 800 in EN and DE, a tap on a sibling row opens it while another submenu
+  is open, a tap on **Logout** below an open submenu runs it, and a tap on **New project…**
+  with a submenu open opens its dialog. With a pen (Chromium's input domain,
+  `Input.dispatchMouseEvent` with `pointerType: "pen"`, which arrives in mouse order; the page
+  sees `pointerType` `pen`) at the same widths: a sibling row opens and **Logout** runs.
 - `src/Overlay.test.tsx`: the shared focus trap counts a visible disclosure `summary`,
   `contenteditable` regions and media with `controls` as tab stops, and skips the
   contents of a closed `details`, `display: none` and `visibility: hidden` elements.
@@ -258,4 +345,11 @@ change.
 - After a Tab out of the menu, focus continues from **File**, not from the entry that
   had focus (the entry hides with the menu).
 - Native WebKitGTK/Tauri was not run; the behaviour is the DOM's and was verified in
-  Chromium and happy-dom only.
+  Chromium and happy-dom only. The units under zoom were measured in Chromium only.
+- At 80% the stylesheet's narrow rule takes over (650 px window) before any side of a row can
+  fall near 220 layout px, so the 80% browser cases exercise the converted CSS limits; the 80%
+  JavaScript conversion near the minimum is covered by unit tests only.
+- A pen with hover, and a pen tap in the touch-like order (`mousedown` after `pointerup`), were
+  not produced in a browser: Playwright emulates no pen, and Chromium's input domain delivers a
+  pen press in mouse order. The touch-like pen order is covered by unit tests only.
+- The media queries themselves are not zoom-aware (see Units under zoom).

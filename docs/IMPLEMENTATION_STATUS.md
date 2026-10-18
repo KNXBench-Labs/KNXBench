@@ -159,7 +159,14 @@ paint over its first rows; dialogs stay above it. Hover is for flyouts only: an 
 (narrow, short window, or a mid-width one with no room beside its row) opens and folds by
 click and keyboard, because its opening moves the rows under a resting mouse and the hover that
 followed used to swap the submenu just clicked (and a mouse press on a sibling row no longer folds the open submenu before the click lands); the layout is read from the rendered panel, not
-a copied breakpoint. Not done: type-ahead, native WebKitGTK/Tauri runs. [Contract](contracts/file-menu.md).
+a copied breakpoint. Second correction round (19 October 2026, UISET2-01/02): placement is
+zoom-aware; DOMRect and window readings are divided by the application scale, so the 220 px
+minimum, gap, margin, width cap and upward shift share CSS layout pixels at 80–150%, and the
+menu's viewport-unit limits are divided by the scale too (Chromium-measured units, KL-130). The
+room beside a row is taken from the row, not from the panel mid-slide, and the bottom check
+follows the capped height. The press guard now covers touch and pen: `mousedown` re-arms it,
+because a tap's focus move comes after `pointerup`, and a press abandoned outside the window is
+forgotten on `blur`. Not done: type-ahead, native WebKitGTK/Tauri runs. [Contract](contracts/file-menu.md).
 
 ## UI-05 appearance relevance (18 October 2026)
 

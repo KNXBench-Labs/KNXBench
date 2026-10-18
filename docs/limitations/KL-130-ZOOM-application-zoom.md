@@ -47,3 +47,24 @@ column fitting, pointer drag distance and announced widths at 80% and 150%.
 pane drags still add the raw pointer delta to a layout-pixel width, so at 150%
 the pane edge moves 1.5 times the pointer distance (0.8 times at 80%). Tracked
 in [open work](../OPEN_WORK.md#ui-feedback-packages-18-october-2026).
+
+## Update 19 October 2026: the File menu under application zoom
+
+The File menu's flyout placement is now zoom-aware (UISET2-01). It divides the
+panel's and row's DOMRect and the window size (`clientWidth`, `innerHeight`)
+by `--app-ui-scale` and compares, caps and shifts in CSS layout pixels only;
+its viewport-unit limits (`100vw`, `100dvh`) are divided by the scale in the
+stylesheet. A small probe recorded what Chromium 154 reports inside the
+root-zoomed document at 80%, 100% and 150%: the window size is never divided,
+DOMRect and pointer coordinates are zoomed, computed lengths are not, and a
+viewport unit renders at the zoomed size
+([table](../contracts/file-menu.md#units-under-zoom)). Browser cases set the
+scale through a stored `uiScale` setting and through Ctrl+Plus.
+
+This is Chromium-only evidence, like the table rule above. The menu's two
+media queries (650 px wide, 600 px high) still read the window, not layout
+pixels; placement covers the width side per submenu. WebKitGTK may report
+DOMRect or the window size differently under `zoom`.
+
+**Also lifted only when** the GUI-capable Linux run additionally opens every
+File submenu at 80% and 150% in a mid-width and a short window.

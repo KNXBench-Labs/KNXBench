@@ -46,6 +46,19 @@ reads are explicit. Response admission binds server, project and revision.
 cover save, Save As, failed save, native open, import, project switch, catalogue
 install, empty/unavailable databases, count identity and locale formatting.
 
+## UI-06: labelled object counts, bounded topology cards (18 October 2026)
+
+Presentation only, no API, schema or stored-data change. Owner request 9. The number
+on the right of a device tile (Topology, and the same tile in Buildings) is
+`DeviceNode.com_object_count`, the length of the device's communication-object list
+regardless of `is_active`; it was shown bare. It now reads "N communication object(s)" /
+"N Kommunikationsobjekt(e)" through the plural catalogue (review fix: the full unit is
+visible, no hover text); on a narrow tile the count sits under the name. The workspace
+arrow/Home/End handler no longer lands on the hidden entries of the closed `+ New` menu. Line cards are a grid with a 28rem column ceiling and device rows a
+32rem ceiling, so name and count stay a short glance apart on a widescreen; long
+names ellipsise with a title. Still cards, not a data table: no column resizing.
+[Contract](contracts/topology-metrics.md).
+
 ## UI-02: compact button variants, visible navigation separators (18 October 2026)
 
 Presentation only, no API, schema, theme-pack or stored-data change. Owner

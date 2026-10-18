@@ -20,6 +20,9 @@ use quick_xml::name::ResolveResult;
 use serde_json::{json, Value};
 
 const MAX_SCHEME_XML_BYTES: u64 = 64 * 1024 * 1024;
+/// The pinned composition. The collection gained one vendor ZIP with two
+/// inner packages in a pinned scope after Alpha 13 (117 instances); measure
+/// the 115-instance composition from a copy without it rather than re-pin.
 const EXPECTED_PACKAGE_INSTANCES: usize = 115;
 const EXPECTED_UNIQUE_PACKAGES: usize = 113;
 const EXPECTED_ISOLATED_INSTALLS: usize = 115;
@@ -99,14 +102,24 @@ const EXPECTED_SHARED_DEDUPLICATIONS: usize = 2;
 /// counts, outcomes, features and catalogue totals match. Independent XML
 /// census over 115 instances/113 unique packages/302 program blobs predicts
 /// -465/-463/-463/-157 at their actual aggregation granularities exactly.
+/// Re-pinned for ADR-0139 (schema v24): `Access` on `ParameterBlock` and
+/// `ParameterSeparator` is modelled, not unknown. An Alpha 13 (v23) / current
+/// pair on the same 115 instances changes exactly six of 102 projection
+/// leaves: unknown report totals 24174 -> 23999 (isolation/successful), 24050
+/// -> 23875 (unique installs), ingest_unknown 24448 -> 24273,
+/// package_install_unknown 9866 -> 9791, and the scheme-12/14
+/// `separator_access` evidence 2 -> 0. An independent XML census of the
+/// (blob, host xpath, Access) keys predicts -175/-175/-175/-75 at those
+/// granularities and the 2 scheme-12 separator occurrences exactly.
+/// Previous pin 997e7cec….
 const EXPECTED_BASELINE_COMMITMENT: &str =
-    "997e7cec1586c07d1680cd956256ca8a7d29dff0bad5466f664068adef7976dd";
-/// Current v23 outcomes/counts projected without the four v17 tables, the
-/// v20/v22 tables and PDB-11 identity; the previous v22 pin 97f3a9d3… moves
-/// only by the five ADR-0126 totals above. Historical v16 pin: c204acc8… (see
-/// Git history).
+    "d6641f8b8de4d1f1901d93d567903cdf77dd7ff5d6a810e2943d9ed519903ca6";
+/// Current v24 outcomes/counts projected without the four v17 tables, the
+/// v20/v22 tables and PDB-11 identity; the previous v23 pin b8179368… moves
+/// only by the six ADR-0139 leaves above (v22 pin 97f3a9d3…, historical v16
+/// pin c204acc8…, see Git history).
 const EXPECTED_V16_PROJECTION_COMMITMENT: &str =
-    "b8179368bb330435d3bb102adbd74b91e2fec0bf0e9b481de5a330c9ca6aaf10";
+    "342a5d2eed6b12b62edc588c4db2d6b8033b382528bda7957ee388b480baa935";
 /// Tables schema v17 added (ADR-0043), left out of the v16 projection.
 const V17_TABLES: [&str; 4] = [
     "package_source_name",
@@ -877,7 +890,8 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
             "applies_to": 22,
             "occurrence": 5,
             "horizontal_ruler": 5,
-            "separator_access": 2,
+            // ADR-0139 (v24) models separator `Access`; it is no longer unknown.
+            "separator_access": 0,
             "separator_ui_hint": 418,
             "ld_ctrl_declare_prop_desc": 14,
         }),
@@ -960,7 +974,8 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         json!({
             "attempt_count": 115,
             "member_count": 1606,
-            "unknown_count": 24174,
+            // ADR-0139 (v24): -175 retired block/separator `Access` keys.
+            "unknown_count": 23999,
             "conflict_count": 0,
             "dropped_datapoint_type_count": 0,
             "translation_counts": {"program": 2903208, "catalog": 2991, "hardware": 1424, "master": 112774},
@@ -971,7 +986,7 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         json!({
             "attempt_count": 113,
             "member_count": 1586,
-            "unknown_count": 24050,
+            "unknown_count": 23875,
             "conflict_count": 398,
             "dropped_datapoint_type_count": 39499,
             "translation_counts": {"program": 2779279, "catalog": 2353, "hardware": 1148, "master": 1640},
@@ -982,7 +997,7 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         json!({
             "attempt_count": 115,
             "member_count": 1606,
-            "unknown_count": 24174,
+            "unknown_count": 23999,
             "conflict_count": 400,
             "dropped_datapoint_type_count": 40232,
             "translation_counts": {"program": 2789468, "catalog": 2419, "hardware": 1162, "master": 1640},
@@ -1015,11 +1030,11 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
     // AR05 adds two TranslationUnit keys per package. ADR-0052's retired
     // Channel/@Number rows remain retired; no prior unknown evidence is lost.
     assert_eq!(
-        matrix["shared_final_database_counts"]["ingest_unknown"], 24448,
+        matrix["shared_final_database_counts"]["ingest_unknown"], 24273,
         "shared per-blob unknown evidence changed"
     );
     assert_eq!(
-        matrix["shared_final_database_counts"]["package_install_unknown"], 9866,
+        matrix["shared_final_database_counts"]["package_install_unknown"], 9791,
         "shared per-package unknown evidence changed"
     );
     for (table, rows) in [

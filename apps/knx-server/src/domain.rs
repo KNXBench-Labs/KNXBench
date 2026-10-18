@@ -5568,12 +5568,26 @@ fn assemble_parameter_panel(
     device_id: u32,
     language: Option<&str>,
 ) -> Result<PanelAssembly, String> {
-    let device = knx_core::DeviceId(device_id);
+    let project = state
+        .project
+        .lock()
+        .expect("state mutex poisoned")
+        .as_ref()
+        .ok_or("no project open")?
+        .clone();
+    assemble_parameter_panel_for_project(state, &project, device_id, language)
+}
 
-    // Step 1: lock only `project`.
+/// Shared read projection, also used to preflight the complete prospective command.
+/// The caller owns the project snapshot; catalogue locks never overlap its lock.
+fn assemble_parameter_panel_for_project(
+    state: &AppState,
+    project: &knx_core::Project,
+    device_id: u32,
+    language: Option<&str>,
+) -> Result<PanelAssembly, String> {
+    let device = knx_core::DeviceId(device_id);
     let (program_ref, stored, module_instances, object_metadata) = {
-        let project = state.project.lock().expect("state mutex poisoned");
-        let project = project.as_ref().ok_or("no project open")?;
         let dev = project
             .devices
             .get(device)
@@ -6557,7 +6571,7 @@ pub(crate) fn set_parameter_value_impl(
     }
     // Bind all preparation to the state before panel validation, including
     // legacy unbound callers. A revision change (even edit + undo) invalidates it.
-    let (base, source_revision, source_incarnation) = {
+    let (base, source_revision, source_incarnation, mut preview_stack) = {
         let project = state.project.lock().expect("state mutex poisoned");
         (
             project
@@ -6566,9 +6580,14 @@ pub(crate) fn set_parameter_value_impl(
                 .clone(),
             current_project_revision(state),
             state.project_incarnation.load(Ordering::Relaxed),
+            state
+                .command_stack
+                .lock()
+                .expect("state mutex poisoned")
+                .clone(),
         )
     };
-    let before = assemble_parameter_panel(state, device_id, language)
+    let before = assemble_parameter_panel_for_project(state, &base, device_id, language)
         .map_err(ParameterWriteError::Refused)?;
     let program_id = before.program_id.clone().ok_or_else(|| {
         ParameterWriteError::Refused("device has no resolvable application program".into())
@@ -6686,6 +6705,15 @@ pub(crate) fn set_parameter_value_impl(
         )
         .map_err(ParameterWriteError::Refused)?
     };
+    // Exercise the exact reconciled command through the existing stack, not a
+    // second value-mutation route. A refused projection must precede persistence.
+    let mut prospective = base.clone();
+    preview_stack
+        .do_command(&mut prospective, cmd.clone())
+        .map_err(|error| ParameterWriteError::Refused(error.to_string()))?;
+    let mut panel = assemble_parameter_panel_for_project(state, &prospective, device_id, language)
+        .map_err(ParameterWriteError::Refused)?
+        .dto;
     let tree = {
         let mut guard = state.project.lock().expect("state mutex poisoned");
         let project = guard
@@ -6705,8 +6733,8 @@ pub(crate) fn set_parameter_value_impl(
         .map_err(ParameterWriteError::Refused)?
     };
 
-    let mut panel =
-        parameter_panel_impl(state, device_id, language).map_err(ParameterWriteError::Refused)?;
+    // Return the already admitted snapshot. No fallible catalogue reread after
+    // durable publication, and no race with a subsequent edit's parameter panel.
     for diagnostic in object_diagnostics {
         if !panel.diagnostics.contains(&diagnostic) {
             panel.diagnostics.push(diagnostic);

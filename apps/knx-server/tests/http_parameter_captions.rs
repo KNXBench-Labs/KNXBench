@@ -276,6 +276,73 @@ async fn over_budget_caption_is_refused_without_partial_results_or_project_chang
 }
 
 #[tokio::test]
+async fn activation_over_budget_post_preserves_project_revision_history_and_native_bytes() {
+    // A small hidden template expands only after the otherwise valid edit.
+    let huge = "x".repeat(100_000);
+    let head = PROGRAM
+        .split("<Dynamic>")
+        .next()
+        .unwrap()
+        .replace("Ref default", &huge);
+    let template = "{{0}}".repeat(64);
+    let source = format!(
+        r#"{head}<Dynamic><ParameterRefRef RefId="R-N" />
+<choose ParamRefId="R-N"><when test="2"><ParameterBlock Id="PB-Large" Text="{template}" TextParameterRefId="R-T"><ParameterRefRef RefId="R-T" /></ParameterBlock></when></choose>
+</Dynamic></ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#
+    );
+    let (dir, products) = products_from(&source);
+    let mut state = state(products);
+    state.data_dir = dir.path().to_path_buf();
+    let state = Arc::new(state);
+    let app = knx_server::app(state.clone(), None);
+    assert_eq!(
+        get_panel(app.clone()).await["sections"][0]["fields"][0]["value"],
+        "1"
+    );
+    let save = Request::post("/api/project/save-as")
+        .header("content-type", "application/json")
+        .body(Body::from(json!({"path":"caption.knxdb"}).to_string()))
+        .unwrap();
+    assert_eq!(call(app.clone(), save).await.0, StatusCode::OK);
+    let path = state.store_path.lock().unwrap().clone().unwrap();
+    let bytes = std::fs::read(&path).unwrap();
+    let before = state.project.lock().unwrap().clone();
+    let revision = state
+        .project_revision
+        .load(std::sync::atomic::Ordering::Relaxed);
+    let generation = *state.history_generation.lock().unwrap();
+    let history = format!("{:?}", state.command_stack.lock().unwrap());
+    let post = Request::post("/api/device/1/parameters")
+        .header("content-type", "application/json")
+        .body(Body::from(json!({"etsId":"R-N", "raw":"2"}).to_string()))
+        .unwrap();
+    let (status, dto) = call(app.clone(), post).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(dto["error"], "device text projection budget exhausted");
+    assert_eq!(
+        *state.project.lock().unwrap(),
+        before,
+        "refused activation must not publish the edit"
+    );
+    assert_eq!(
+        state
+            .project_revision
+            .load(std::sync::atomic::Ordering::Relaxed),
+        revision
+    );
+    assert_eq!(*state.history_generation.lock().unwrap(), generation);
+    assert_eq!(
+        format!("{:?}", state.command_stack.lock().unwrap()),
+        history
+    );
+    assert_eq!(std::fs::read(&path).unwrap(), bytes);
+    assert_eq!(
+        get_panel(app).await["sections"][0]["fields"][0]["value"],
+        "1"
+    );
+}
+
+#[tokio::test]
 async fn module_captions_read_only_their_own_scoped_value_and_refuse_ambiguous_instances() {
     let top = PROGRAM.split("<Dynamic>").next().unwrap();
     let source = format!(

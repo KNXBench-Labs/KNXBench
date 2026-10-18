@@ -393,9 +393,10 @@ pub(crate) fn validate(report: &Report, m: &MemoryEvidence) -> Result<(), String
             // partial answer always holds at least one octet.
             "partial" => !bytes.is_empty() && bytes.len() != requested && chunk.error.is_some(),
             "refused-ambiguous" | "error" => bytes.is_empty() && chunk.error.is_some(),
+            // Never attempted, or (observer snapshot only) in flight.
             "not-read" => {
                 bytes.is_empty()
-                    && chunk.attempted_at.is_none()
+                    && (chunk.attempted_at.is_none() || !report.complete)
                     && chunk.completed_at.is_none()
                     && chunk.error.is_none()
             }
@@ -405,6 +406,13 @@ pub(crate) fn validate(report: &Report, m: &MemoryEvidence) -> Result<(), String
             || !status_ok
             || !(chunk.status == "not-read" || attempted_then_completed(chunk))
         {
+            return invalid();
+        }
+    }
+    // One request at a time, in plan order: nothing after an in-flight
+    // chunk has been attempted.
+    if let Some(at) = m.chunks.iter().position(in_flight) {
+        if m.chunks[at + 1..].iter().any(|c| c.attempted_at.is_some()) {
             return invalid();
         }
     }
@@ -438,7 +446,8 @@ pub(crate) fn validate(report: &Report, m: &MemoryEvidence) -> Result<(), String
 /// as the stop reason, and a chunk left unread outside an ended range means
 /// the run was cancelled before it. A complete run with nothing ended has no
 /// stop reason, or only the caller's unconfirmed tunnel teardown; an
-/// observer snapshot (`complete: false`) has none yet.
+/// observer snapshot (`complete: false`) has none yet, and its one in-flight
+/// chunk ends the sequence like an unread one.
 fn sequence_ok(report: &Report, chunks: &[ChunkReading], identity_admitted: bool) -> bool {
     let mut ended_range = None;
     // `Some(Some(error))` after an error, `Some(None)` after an unread chunk.
@@ -447,7 +456,8 @@ fn sequence_ok(report: &Report, chunks: &[ChunkReading], identity_admitted: bool
     for chunk in chunks {
         let unread = chunk.status == "not-read";
         if run_end.is_some() || ended_range == Some(chunk.range) {
-            if !unread {
+            // The collector never attempts a chunk it has already given up on.
+            if !unread || in_flight(chunk) {
                 return false;
             }
             continue;
@@ -472,6 +482,12 @@ fn sequence_ok(report: &Report, chunks: &[ChunkReading], identity_admitted: bool
         // Stopped before memory: some identity-phase reason.
         Some(None) => stop.is_some_and(|s| s != super::TUNNEL_DISCONNECT_UNCONFIRMED),
     }
+}
+
+/// The collector's in-flight shape: requested, no outcome yet. Admitted
+/// only in an observer snapshot (`complete: false`).
+fn in_flight(chunk: &ChunkReading) -> bool {
+    chunk.status == "not-read" && chunk.attempted_at.is_some()
 }
 
 /// A chunk with an outcome was attempted, then completed, in that order.

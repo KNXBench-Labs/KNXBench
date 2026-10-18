@@ -841,3 +841,130 @@ async fn the_fixed_archive_format_carries_no_zip_comment() {
         "diagnostics-invalid-zip"
     );
 }
+
+/// A chunk whose request is on its way: attempted, not completed.
+fn in_flight(export: &Export) -> bool {
+    let chunks = &export.memory.as_ref().unwrap().chunks;
+    chunks
+        .iter()
+        .any(|c| c.attempted_at.is_some() && c.completed_at.is_none())
+}
+
+#[tokio::test]
+async fn every_observer_snapshot_is_an_exportable_archive() {
+    let (_dir, db) = products(PROGRAM);
+    let plan = prepare_memory(&project(), DeviceId(7), &db).unwrap();
+    let dir = tempfile::tempdir().unwrap();
+    let mut outcomes = vec![];
+    let last = acquire_memory(
+        &device(),
+        &plan,
+        Default::default(),
+        "synthetic-test",
+        &AtomicBool::new(false),
+        |snapshot| {
+            // The real create-only write with its own reread, then an
+            // independent reread of the file on disk.
+            let path = dir.path().join(format!("snapshot-{}.zip", outcomes.len()));
+            let outcome = write_new_export(&path, snapshot)
+                .and_then(|()| read_export(&std::fs::read(&path).unwrap()))
+                .map(|reread| reread == *snapshot);
+            outcomes.push((in_flight(snapshot), snapshot.report.complete, outcome));
+        },
+    )
+    .await;
+    assert!(last.report.complete);
+    assert_eq!(statuses(&last), ["read"; 4]);
+    let in_flight_count = outcomes.iter().filter(|(f, _, _)| *f).count();
+    assert_eq!(in_flight_count, 4, "one in-flight snapshot per chunk");
+    assert_eq!(
+        outcomes.iter().filter(|(_, complete, _)| *complete).count(),
+        1
+    );
+    let failures: Vec<_> = outcomes
+        .iter()
+        .enumerate()
+        .filter(|(_, (_, _, outcome))| *outcome != Ok(true))
+        .collect();
+    assert!(
+        failures.is_empty(),
+        "{} of {} snapshots not exportable: {failures:?}",
+        failures.len(),
+        outcomes.len()
+    );
+}
+
+/// Turns chunk `index` of the successful fixture into the collector's
+/// in-flight shape: attempted, not completed, `not-read`, no bytes.
+fn set_in_flight(m: &mut serde_json::Value, index: usize) {
+    let attempted = m["chunks"][index]["attemptedAt"].clone();
+    assert!(attempted.is_string());
+    set_chunk(m, index, "not-read", "", None);
+    m["chunks"][index]["attemptedAt"] = attempted;
+}
+
+/// Leaves only chunks before `first` read; every later chunk becomes
+/// `not-read` without any time.
+fn unread_from(m: &mut serde_json::Value, first: usize) {
+    for index in first..4 {
+        set_chunk(m, index, "not-read", "", None);
+    }
+}
+
+#[tokio::test]
+async fn only_the_collector_in_flight_shape_is_admitted_in_a_snapshot() {
+    // Fixture chunks: range 1 = chunks 0, 1, 2 (12 + 12 + 6), range 2 = chunk 3.
+    let original = bundle_export(&export().await).unwrap();
+    let snapshot = rehashed(&original, |r, m| {
+        r["complete"] = false.into();
+        unread_from(m, 2);
+        set_in_flight(m, 1);
+    });
+    let reread = read_export(&snapshot).expect("the in-flight snapshot is exportable");
+    assert!(in_flight(&reread) && !reread.report.complete);
+    let cases: &[(&'static str, Edit)] = &[
+        ("two in-flight chunks", |r, m| {
+            r["complete"] = false.into();
+            unread_from(m, 2);
+            set_in_flight(m, 0);
+            set_in_flight(m, 1);
+        }),
+        ("an in-flight chunk followed by an attempted one", |r, m| {
+            r["complete"] = false.into();
+            set_in_flight(m, 1);
+        }),
+        (
+            "an in-flight chunk followed by an unread one with a time",
+            |r, m| {
+                r["complete"] = false.into();
+                unread_from(m, 2);
+                set_in_flight(m, 1);
+                m["chunks"][2]["attemptedAt"] = m["chunks"][1]["attemptedAt"].clone();
+            },
+        ),
+        ("an in-flight chunk in a complete report", |r, m| {
+            r["stopReason"] = "cancelled".into();
+            unread_from(m, 2);
+            set_in_flight(m, 1);
+        }),
+        ("an in-flight chunk after a refusal in its range", |r, m| {
+            r["complete"] = false.into();
+            unread_from(m, 2);
+            set_chunk(
+                m,
+                0,
+                "refused-ambiguous",
+                "",
+                Some("access-denied-or-memory-unavailable"),
+            );
+            set_in_flight(m, 1);
+        }),
+        ("an in-flight chunk carrying an error", |r, m| {
+            r["complete"] = false.into();
+            unread_from(m, 2);
+            set_in_flight(m, 1);
+            m["chunks"][1]["error"] = "timeout".into();
+        }),
+    ];
+    assert_eq!(accepted(&original, cases), Vec::<&str>::new());
+}

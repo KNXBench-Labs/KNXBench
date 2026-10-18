@@ -232,3 +232,102 @@ fn free_text_errors_never_enter_or_leave_an_archive() {
     stop.stop_reason = Some("Connection to 192.0.2.10 lost".into());
     assert!(bundle(&stop).is_err());
 }
+#[tokio::test]
+async fn every_identity_snapshot_is_an_exportable_archive() {
+    let plan = prepare(&project("1.1.25"), DeviceId(7), None).unwrap();
+    let d = SimulatedDevice::with_config(SimulatorConfig {
+        mask_version: 0xabcd,
+        ..Default::default()
+    });
+    d.preset_property(0, 12, &[0x12, 0x34]);
+    let dir = tempfile::tempdir().unwrap();
+    let mut outcomes = vec![];
+    acquire(
+        &d,
+        &plan,
+        Default::default(),
+        "synthetic-test",
+        &AtomicBool::new(false),
+        |snapshot| {
+            let in_flight = snapshot
+                .items
+                .iter()
+                .any(|i| i.attempted_at.is_some() && i.completed_at.is_none());
+            let path = dir.path().join(format!("snapshot-{}.zip", outcomes.len()));
+            let outcome = write_new_bundle(&path, snapshot)
+                .and_then(|()| read_bundle(&std::fs::read(&path).unwrap()))
+                .map(|reread| reread == *snapshot);
+            outcomes.push((in_flight, outcome));
+        },
+    )
+    .await;
+    assert_eq!(outcomes.iter().filter(|(f, _)| *f).count(), 3);
+    let failures: Vec<_> = outcomes
+        .iter()
+        .enumerate()
+        .filter(|(_, (_, outcome))| *outcome != Ok(true))
+        .collect();
+    assert!(failures.is_empty(), "not exportable: {failures:?}");
+}
+#[tokio::test]
+async fn only_the_collector_in_flight_identity_shape_is_exportable() {
+    let plan = prepare(&project("1.1.25"), DeviceId(7), None).unwrap();
+    let d = SimulatedDevice::with_config(SimulatorConfig {
+        mask_version: 0xabcd,
+        ..Default::default()
+    });
+    d.preset_property(0, 12, &[0x12, 0x34]);
+    let report = acquire(
+        &d,
+        &plan,
+        Default::default(),
+        "synthetic-test",
+        &AtomicBool::new(false),
+        |_| {},
+    )
+    .await;
+    let unread = |item: &mut knx_app::device_diagnostics::Reading, attempted: bool| {
+        item.status = "not-read".into();
+        item.bytes.clear();
+        item.received_bytes = 0;
+        item.returned_elements = None;
+        item.completed_at = None;
+        if !attempted {
+            item.attempted_at = None;
+        }
+    };
+    // The collector's own snapshot: item 2 requested, item 3 untouched.
+    let mut snapshot = report.clone();
+    snapshot.complete = false;
+    snapshot.disconnect_attempt_completed = false;
+    unread(&mut snapshot.items[1], true);
+    unread(&mut snapshot.items[2], false);
+    assert_eq!(read_bundle(&bundle(&snapshot).unwrap()).unwrap(), snapshot);
+    let mut two = snapshot.clone();
+    unread(&mut two.items[0], true);
+    let mut followed = snapshot.clone();
+    followed.items[2] = report.items[2].clone();
+    let mut attempted_after = snapshot.clone();
+    attempted_after.items[2].attempted_at = report.items[2].attempted_at.clone();
+    let mut complete = snapshot.clone();
+    complete.complete = true;
+    complete.stop_reason = Some("cancelled".into());
+    let mut errored = snapshot.clone();
+    errored.items[1].error = Some("timeout".into());
+    for (name, forged) in [
+        ("two in-flight items", two),
+        ("an in-flight item followed by a read one", followed),
+        (
+            "an in-flight item followed by an attempted one",
+            attempted_after,
+        ),
+        ("an in-flight item in a complete report", complete),
+        ("an in-flight item carrying an error", errored),
+    ] {
+        assert_eq!(
+            bundle(&forged).expect_err(name),
+            "diagnostics-invalid-pending",
+            "{name}"
+        );
+    }
+}

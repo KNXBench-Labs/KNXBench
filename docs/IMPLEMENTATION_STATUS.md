@@ -22,9 +22,11 @@ candidate's gate, two test-race fixes (ux-feedback, knx-net IGMP snapshot) and
 the v24 product-matrix re-pin found by the third (candidates `b08ed794`,
 `f59ace9b`, `54010888`, `bb7c896e` and `ec52706e` are retained, not tagged). Versions `0.1.0-alpha.14` in the four app crates
 and the web package. Native/model16 unchanged; product database 23 → 24.
-Exact-candidate source acceptance, no-publish AppImage/Docker builds and external
-publication verification are recorded separately; [scope and limits](releases/alpha14.md)
-remain explicit.
+Published on 18 October 2026 from the gated commit `8d104e2f` (36/36 gate stages,
+both dry runs clean, tag workflows successful): [source acceptance](releases/alpha14-acceptance.md),
+[external publication](evidence/release-alpha14-2026-10-18.json) with an isolated
+Docker smoke, a native-13 → 16 migration probe and a headless AppImage startup;
+[scope and limits](releases/alpha14.md) remain explicit.
 ## Docker frontend stage sees the shared temp helper (18 October 2026)
 
 The Alpha 14 Docker dry run failed on both architectures: since the shared

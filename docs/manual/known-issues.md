@@ -41,7 +41,7 @@ only a maintainer would care about, and ones about the reasoning behind a
 design decision rather than about a defect. Where an entry below has a
 counterpart there, the **Details** line links straight to it.
 
-[Alpha 14](../releases/alpha14.md) (October 2026) adds the parameter workspace,
+[Alpha 14](../releases/alpha14.md), published on 18 October 2026, adds the parameter workspace,
 function choices below each object, note decisions before deletes, plug-in data
 adoption, vendor-ZIP product install and a read-only diagnostic export; it does
 not expand programming admission. Historical measurements below retain their

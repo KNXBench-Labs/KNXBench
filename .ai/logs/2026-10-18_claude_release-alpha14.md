@@ -73,3 +73,23 @@ prepare and publish Alpha 14.
   output lives on a different filesystem than the corpus.
 - Not gated as release stages: media captures (manual, readme, readme-hero,
   release-media, diagnostic-guide), load benchmark, study.
+
+## Publication (2026-10-18 14:08)
+
+- Candidate 6 `8d104e2f` (cutoff `a0c2537d`): gate 36/36 green in 97 minutes,
+  dry runs 39118142434/39118144327 clean. Tagged and published as pre-release;
+  the release body adds a "By the numbers" section requested by the owner after
+  the freeze (it lives in the release body and in the post-release docs commit,
+  so the gated tag stays unchanged).
+- Tag workflows 39124698698 (AppImage) and 39124698730 (Docker) succeeded.
+  `main` was fast-forwarded to the tagged commit (no main commits after cutoff).
+- External verification ran isolated: the Alpha 11 verifier would have launched
+  the AppImage on the host display and the smoke script uses `--network host`, so
+  this release used a `--network none` server with a loopback-sharing Node client,
+  a Broadway/D-Bus AppImage startup in a loopback-only namespace and a native-13
+  fixture migration probe. The owner's container was updated to `latest` by a
+  pull/stop/remove/run at 14:02 between two verification runs, outside these
+  scripts.
+- Statistics across all attempts: 6 candidates, 7 gate attempts (~6.4 h), about
+  40,500 test executions, 839 targeted flake repeats, 12 dry runs (62 runner
+  minutes), 0 accidental publications.

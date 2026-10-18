@@ -389,7 +389,9 @@ pub(crate) fn validate(report: &Report, m: &MemoryEvidence) -> Result<(), String
                 .all(|t| DateTime::parse_from_rfc3339(t).is_ok());
         let status_ok = match chunk.status.as_str() {
             "read" => bytes.len() == requested && chunk.error.is_none(),
-            "partial" => bytes.len() != requested && chunk.error.is_some(),
+            // The session turns an empty answer into a refusal, so a
+            // partial answer always holds at least one octet.
+            "partial" => !bytes.is_empty() && bytes.len() != requested && chunk.error.is_some(),
             "refused-ambiguous" | "error" => bytes.is_empty() && chunk.error.is_some(),
             "not-read" => {
                 bytes.is_empty()
@@ -424,10 +426,52 @@ pub(crate) fn validate(report: &Report, m: &MemoryEvidence) -> Result<(), String
     let Some(hardware_type) = unhex(&comparison.inline_data) else {
         return invalid();
     };
-    if memory_entered && !identity_admits(report, &hardware_type) {
+    let admitted = identity_admits(report, &hardware_type);
+    if (memory_entered && !admitted) || !sequence_ok(report, &m.chunks, admitted) {
         return invalid();
     }
     Ok(())
+}
+
+/// The order `collect_declared_memory` reads chunks in: a refusal or a
+/// partial answer ends its own range, an error ends the run with that error
+/// as the stop reason, and a chunk left unread outside an ended range means
+/// the run was cancelled before it. A complete run with nothing ended has no
+/// stop reason, or only the caller's unconfirmed tunnel teardown; an
+/// observer snapshot (`complete: false`) has none yet.
+fn sequence_ok(report: &Report, chunks: &[ChunkReading], identity_admitted: bool) -> bool {
+    let mut ended_range = None;
+    // `Some(Some(error))` after an error, `Some(None)` after an unread chunk.
+    let mut run_end: Option<Option<&str>> = None;
+    let mut entered = false;
+    for chunk in chunks {
+        let unread = chunk.status == "not-read";
+        if run_end.is_some() || ended_range == Some(chunk.range) {
+            if !unread {
+                return false;
+            }
+            continue;
+        }
+        match chunk.status.as_str() {
+            "read" => {}
+            "partial" | "refused-ambiguous" => ended_range = Some(chunk.range),
+            "error" => run_end = Some(chunk.error.as_deref()),
+            _ => run_end = Some(None),
+        }
+        entered |= !unread;
+    }
+    let stop = report.stop_reason.as_deref();
+    if !report.complete {
+        return stop.is_none();
+    }
+    match run_end {
+        Some(Some(error)) => stop == Some(error),
+        None => stop.is_none_or(|s| s == super::TUNNEL_DISCONNECT_UNCONFIRMED),
+        // Admitted identity, then a chunk never attempted: cancelled first.
+        Some(None) if entered || identity_admitted => stop == Some("cancelled"),
+        // Stopped before memory: some identity-phase reason.
+        Some(None) => stop.is_some_and(|s| s != super::TUNNEL_DISCONNECT_UNCONFIRMED),
+    }
 }
 
 /// A chunk with an outcome was attempted, then completed, in that order.

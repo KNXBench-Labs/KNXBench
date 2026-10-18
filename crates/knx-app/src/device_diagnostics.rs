@@ -50,6 +50,9 @@ pub fn gateway_lease() -> Result<std::fs::File, String> {
 }
 
 pub const PROFILE: &str = "generic-identity-v1";
+/// The stop reason a caller records when its own tunnel teardown is not
+/// confirmed and the acquisition itself had none.
+pub const TUNNEL_DISCONNECT_UNCONFIRMED: &str = "tunnel-disconnect-unconfirmed";
 const MAX_ARCHIVE: usize = 256 * 1024;
 const MAX_MEMBER: u64 = 64 * 1024;
 /// `memory.json` of the largest admitted profile (2048 octets, at most 178

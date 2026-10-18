@@ -46,9 +46,10 @@ substitution already ran in the evaluation, but it stopped at the first `}}`, so
    filled where the server already builds them from that evaluation;
    product-layer object names are filled by one `knx-app` function after the
    translation overlay, for the device detail and the documentation report alike.
-   Project-owned names are never touched. Parameter block and separator titles
-   have their reference stored but no surface yet: the parameter panel lists
-   fields, not headings.
+   Project-owned names are never touched. The parameter workspace added later
+   exposes block and separator titles; issue #26 applies the same resolver to
+   those dynamic hosts (including separator grid labels), retaining fill provenance.
+   Unreadable captions get UI-only labels, never guessed parameter values.
 4. **Named arguments inside a default** are substituted before the positional
    pass, one nesting level deep, which is all the corpus uses.
 

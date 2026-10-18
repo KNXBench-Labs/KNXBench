@@ -35,6 +35,23 @@ PID78 comparisons match the `[A]` `property_matches` shape; a hidden
 `knx-app` `device_reports_corpus`: the strict reader accepts all twelve real
 archives and the writer reproduces each byte for byte (three negative controls
 red). No production code or admission change.
+## Parameter section captions — issue #26 (18 October 2026)
+
+The parameter workspace now applies ADR-0126 to block captions and activated
+separator text, including separator grid labels. It reuses the device evaluation's
+exact source-reference resolver: stored text overrides, then product defaults;
+explicitly empty values stay empty and ambiguous references decide nothing.
+Additive fill records preserve the original template and source. Navigator,
+selected heading and Restricted captions use readable localized fallbacks for
+empty, marker-only or unresolved text, with explanatory source tooltips. Source
+metadata, device configuration, field identity and existing write/undo paths stay
+unchanged. See the [caption contract](contracts/positional-text-templates.md#parameter-workspace-captions-issue-26).
+
+Focused regression evidence: the original raw-caption assertions failed before
+the fix; 69 HTTP tests (eight new caption cases), 101 focused web tests,
+production build, fixture TypeScript check (with a deliberate failing control)
+and touched-server all-target Clippy pass. Integrated full-gate acceptance and
+publication remain separate; this entry does not claim either.
 
 ## UI feedback wave 3 integration acceptance (18 October 2026)
 

@@ -377,10 +377,15 @@ fn copy_fixture(copies: usize, template: &str, default: &str, separator_groups: 
     )
 }
 
-async fn assert_caption_admission(source: &str, admitted: bool) {
+async fn assert_caption_admission(source: &str, admitted: bool) -> Value {
     let (_dir, products) = products_from(source);
     let state = Arc::new(state(products));
     let before = state.project.lock().unwrap().clone();
+    let revision = state
+        .project_revision
+        .load(std::sync::atomic::Ordering::Relaxed);
+    let generation = *state.history_generation.lock().unwrap();
+    let history = format!("{:?}", state.command_stack.lock().unwrap());
     let request = Request::get("/api/device/1/parameters")
         .body(Body::empty())
         .unwrap();
@@ -402,7 +407,77 @@ async fn assert_caption_admission(source: &str, admitted: bool) {
         assert!(dto.get("sections").is_none());
     }
     assert_eq!(*state.project.lock().unwrap(), before);
+    assert_eq!(
+        state
+            .project_revision
+            .load(std::sync::atomic::Ordering::Relaxed),
+        revision
+    );
+    assert_eq!(*state.history_generation.lock().unwrap(), generation);
+    assert_eq!(
+        format!("{:?}", state.command_stack.lock().unwrap()),
+        history
+    );
     assert!(!state.command_stack.lock().unwrap().can_undo());
+    dto
+}
+
+fn axis_caption_fixture(count: usize, row_axis: bool, text: &str) -> String {
+    let head = PROGRAM.split("<Dynamic>").next().unwrap();
+    let (axis, other) = if row_axis {
+        ("Row", "Column")
+    } else {
+        ("Column", "Row")
+    };
+    let entries = (0..count)
+        .map(|n| format!(r#"<{axis} Id="{axis}-{n}" Text="{text}" />"#))
+        .collect::<String>();
+    let axes = if row_axis {
+        format!(r#"<Rows>{entries}</Rows><Columns><{other} Id="Other" /></Columns>"#)
+    } else {
+        format!(r#"<Rows><{other} Id="Other" /></Rows><Columns>{entries}</Columns>"#)
+    };
+    format!(
+        r#"{head}<Dynamic><ParameterBlock Id="PB-Axis" Text="Grid" Layout="Table">{axes}<ParameterRefRef RefId="R-N" Cell="1,1" /></ParameterBlock></Dynamic></ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#
+    )
+}
+
+async fn assert_axis_caption_budget(row_axis: bool) {
+    // Only this axis carries text: six copies exceed the unchanged 4 MB ceiling.
+    // The opposite axis, block and field are identical in the admitted control.
+    let text = "axis caption ".repeat(55_000);
+    let dto = assert_caption_admission(&axis_caption_fixture(1, row_axis, &text), true).await;
+    let layouts = dto["sections"][0]["groupLayouts"].as_array().unwrap();
+    assert_eq!(layouts.len(), 1);
+    let grid = &layouts[0];
+    assert_eq!(grid["groupKey"], "PB-Axis");
+    assert_eq!(grid["status"], "grid");
+    assert_eq!(grid["labels"], json!([]));
+    assert_eq!(grid["issues"], json!([]));
+    let row = json!({"id":"Row-0", "text":text, "textParameterRefId":null, "collapseIfEmpty":null});
+    let column = json!({"id":"Column-0", "text":text, "textParameterRefId":null, "width":null});
+    let empty_row =
+        json!({"id":"Other", "text":null, "textParameterRefId":null, "collapseIfEmpty":null});
+    let empty_column = json!({"id":"Other", "text":null, "textParameterRefId":null, "width":null});
+    assert_eq!(
+        grid["rows"],
+        json!([if row_axis { row } else { empty_row }])
+    );
+    assert_eq!(
+        grid["columns"],
+        json!([if row_axis { empty_column } else { column }])
+    );
+    assert_caption_admission(&axis_caption_fixture(6, row_axis, &text), false).await;
+}
+
+#[tokio::test]
+async fn grid_row_caption_text_alone_exhausts_shared_output_budget() {
+    assert_axis_caption_budget(true).await;
+}
+
+#[tokio::test]
+async fn grid_column_caption_text_alone_exhausts_shared_output_budget() {
+    assert_axis_caption_budget(false).await;
 }
 
 #[tokio::test]

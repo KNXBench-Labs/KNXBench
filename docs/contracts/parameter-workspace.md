@@ -17,7 +17,11 @@ or protocol schema change; product database v24 adds typed presentation columns
   See the [positional text contract](positional-text-templates.md#parameter-workspace-captions-issue-26)
   for exact source references, readable fallbacks and tooltips. Block captions
   use untranslated program text; changing the product language does not translate
-  them (nor separator captions).
+  them (nor separator captions). The fallback policy deliberately also covers
+  literal template delimiters in already-resolved values. Tooltips describe that
+  policy without asserting the result is unresolved; the result, original
+  template and resolver provenance are retained, and result/template remain
+  searchable.
 - Closed by default, like the other disclosures: the area register lists every
   area with its entry count, but no area opens until chosen. An explicitly
   chosen area stays open across project refreshes; newly appearing areas stay

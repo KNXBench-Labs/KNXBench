@@ -36,6 +36,42 @@ function nav(name: string) {
 }
 
 describe("ParameterWorkspace", () => {
+  it.each([
+    ["en", "Parameter group 1", "Fallback caption shown"],
+    ["de", "Parametergruppe 1", "Ersatztitel"],
+  ] as const)("%s retains literal and mixed-template results in tooltips and search under conservative fallback", async (language, fallback, policy) => {
+    saveUiLanguage(settingsStorage, language); resetUiLanguageForTests();
+    const captions = [
+      { label: "Kitchen {{North}}", labelFill: { template: "{{0}}", source: "StoredValue" } },
+      { label: "Kitchen / {{1:Keep}}", labelFill: { template: "{{0}} / {{1:Keep}}", source: "StoredValue" } },
+    ] as const;
+    const data: ParameterSection[] = [{ scope: null, fields: captions.map((caption, index) => ({
+      ...field(`Target-${index}`), group: { key: `PB-${index}`, ...caption },
+    })) }];
+    const before = structuredClone(data);
+    await mount(data);
+    const buttons = [...host.querySelectorAll<HTMLButtonElement>(".parameter-workspace-nav button")];
+    expect(buttons).toHaveLength(2);
+    expect(buttons[0].textContent).toContain(fallback);
+    const search = host.querySelector<HTMLInputElement>('input[type="search"]')!;
+    for (const [index, caption] of captions.entries()) {
+      const button = buttons[index];
+      expect(button.title).toContain(policy);
+      expect(button.title).not.toMatch(/unresolved|unaufgelöst/i);
+      expect(button.title).toContain(caption.label);
+      expect(button.title).toContain(caption.labelFill.template);
+      await act(async () => button.click());
+      const heading = host.querySelector<HTMLElement>(".parameter-workspace-heading h4")!;
+      expect(heading.title).toBe(button.title);
+      for (const query of [caption.label, caption.labelFill.template]) {
+        await act(async () => setInput(search, query));
+        expect(host.querySelector<HTMLDivElement>(`[data-parameter-row="Target-${index}"]`)!.hidden, query).toBe(false);
+      }
+      await act(async () => setInput(search, ""));
+    }
+    expect(data).toEqual(before);
+  });
+
   it.each([["en", "Parameter group 3"], ["de", "Parametergruppe 3"]])(
     "%s searches the visible numbered caption and retains source context and editor identity", async (language, fallback) => {
       saveUiLanguage(settingsStorage, language); resetUiLanguageForTests();

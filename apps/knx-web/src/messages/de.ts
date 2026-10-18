@@ -24,7 +24,7 @@ export const messages: Record<MessageKey, string> = {
   "parameters.functionsEmpty": "Aktuell sind keine unterstützten Funktionsauswahlen sichtbar. Weitere Einstellungen findest du unter Parameter.",
   "parameters.functionsHint": "Diese Herstellerparameter steuern die verfügbaren Kommunikationsobjekte. Eine Auswahl wird sofort übernommen; Rückgängig stellt die vorherige Konfiguration wieder her.",
   "parameters.caption.text": "Abschnittstext",
-  "parameters.caption.unavailable": "Das Produkt liefert keinen lesbaren Abschnittstitel. Der Quelltext ist leer, ein Platzhalterzeichen oder eine unaufgelöste Vorlage. Quelle: {value}",
+  "parameters.caption.unavailable": "Ersatztitel für leeren Text, ein Platzhalterzeichen oder Text mit Vorlagenklammern (auch bei wörtlichen Klammern in aufgelösten Werten). Text: {value}",
   "parameters.groupNumber": "Parametergruppe {number}",
   "fileMenu.exchange": "Import & Export",
   "fileMenu.history": "Verlauf & Vergleich",

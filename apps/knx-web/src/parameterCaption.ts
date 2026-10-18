@@ -7,7 +7,10 @@ export interface ParameterCaptionSource {
   labelFill?: TextFill | null;
 }
 
-/** Keep source text in the tooltip, never interpret or substitute template syntax here. */
+/**
+ * Conservative display policy: even resolved values may contain literal delimiters.
+ * Keep the result and provenance in the tooltip; never parse or substitute here.
+ */
 export function parameterCaption(source: ParameterCaptionSource, fallback: string, t: Translate) {
   const { label, labelFill } = source;
   const unreadable = !label?.trim() || label.trim() === "#" || label.includes("{{") || label.includes("}}");

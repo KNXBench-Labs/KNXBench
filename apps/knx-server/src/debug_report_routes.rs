@@ -249,8 +249,8 @@ fn telegram_json(row: &crate::bus::TelegramRow) -> Value {
             crate::bus::DecodedValue::Value { dpt, text } => {
                 json!({ "kind": "value", "dpt": dpt, "text": text })
             }
-            crate::bus::DecodedValue::Unresolved { text } => {
-                json!({ "kind": "unresolved", "text": text })
+            crate::bus::DecodedValue::Unresolved { reason, text } => {
+                json!({ "kind": "unresolved", "reason": reason.as_str(), "text": text })
             }
             crate::bus::DecodedValue::Conflict { text } => {
                 json!({ "kind": "conflict", "text": text })
@@ -312,9 +312,17 @@ mod tests {
         );
         assert_eq!(
             telegram_json(&row(Some(DecodedValue::Unresolved {
+                reason: crate::bus::UnresolvedReason::NoDpt,
                 text: "no DPT resolved for this group address".into(),
             })))["decoded"],
-            json!({ "kind": "unresolved", "text": "no DPT resolved for this group address" })
+            json!({ "kind": "unresolved", "reason": "noDpt", "text": "no DPT resolved for this group address" })
+        );
+        assert_eq!(
+            telegram_json(&row(Some(DecodedValue::Unresolved {
+                reason: crate::bus::UnresolvedReason::NoProject,
+                text: "no project open".into(),
+            })))["decoded"],
+            json!({ "kind": "unresolved", "reason": "noProject", "text": "no project open" })
         );
         assert_eq!(
             telegram_json(&row(Some(DecodedValue::Conflict {

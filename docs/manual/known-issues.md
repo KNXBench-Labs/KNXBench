@@ -462,6 +462,17 @@ must not be described as either universally guessed or universally explicit.
   still carries every telegram across the wire.
 - **Details:** [§62 the group monitor GUI](../KNOWN_LIMITATIONS.md#62-the-group-monitor-gui-t15-is-tunnelling-only-single-session-client-filtered-and-only-its-passive-receive-path-has-real-gateway-evidence)
 
+### Some project telegrams have no declared datapoint type
+
+- **Affected:** monitor decoding for addresses whose linked objects and group
+  address provide no usable DPT, including an explicitly empty instance DPT.
+- **Consequence:** a descriptive caption or a two-byte object size does not
+  establish an encoding. Raw payloads remain visible; assign a verified type
+  and reconnect to use it for future telegrams. Historical rows keep their
+  original interpretation. A session without a project has a separate label;
+  older servers without a structured unresolved reason show that uncertainty.
+- **Details:** [Monitor resolution reasons](../contracts/dpt-selection.md#monitor-resolution-reasons-ui-01-18-october-2026).
+
 ### A line scan costs real bus time and cannot distinguish every case
 
 - **Affected:** scanning a line for devices.

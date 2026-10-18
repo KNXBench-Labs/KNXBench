@@ -806,10 +806,12 @@ pub enum DecodedValue {
     Value { dpt: String, text: String },
     /// No project was open at session start, or the group address resolved
     /// to no DPT at all (`GroupAddressDpt::None`, or simply absent from the
-    /// map). Both collapse to the same outcome kind because a client only
-    /// has four kinds to render (§4.3); `text` still names which reason it
-    /// was, so nothing is lost, only folded into one tag.
-    Unresolved { text: String },
+    /// map). The structured reason describes the captured session, never the
+    /// project that happens to be open when a client displays this row.
+    Unresolved {
+        reason: UnresolvedReason,
+        text: String,
+    },
     /// Linked communication objects disagree on this group address's DPT
     /// (`GroupAddressDpt::Conflict`) — `text` names every candidate, mirroring
     /// `format_decoded_value`'s `"conflicting DPTs: ..."` wording.
@@ -823,6 +825,21 @@ pub enum DecodedValue {
         text: String,
         error: String,
     },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UnresolvedReason {
+    NoProject,
+    NoDpt,
+}
+
+impl UnresolvedReason {
+    pub(crate) fn as_str(self) -> &'static str {
+        match self {
+            Self::NoProject => "noProject",
+            Self::NoDpt => "noDpt",
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -929,11 +946,13 @@ impl GroupAddressContext {
     fn decode(&self, ga: GroupAddress, value: &GroupValue) -> DecodedValue {
         if self.style.is_none() {
             return DecodedValue::Unresolved {
+                reason: UnresolvedReason::NoProject,
                 text: "no project open".to_string(),
             };
         }
         match self.dpts.get(&ga.raw()) {
             None | Some(GroupAddressDpt::None) => DecodedValue::Unresolved {
+                reason: UnresolvedReason::NoDpt,
                 text: "no DPT resolved for this group address".to_string(),
             },
             Some(GroupAddressDpt::Single(dpt)) => decode_single(*dpt, value),
@@ -2366,7 +2385,8 @@ mod tests {
         }
 
         match ctx.decode(GroupAddress::from_raw(2), &GroupValue::Short(1)) {
-            DecodedValue::Unresolved { text } => {
+            DecodedValue::Unresolved { reason, text } => {
+                assert_eq!(reason, UnresolvedReason::NoDpt);
                 assert_eq!(text, "no DPT resolved for this group address");
             }
             other => panic!("expected Unresolved, got {other:?}"),
@@ -2382,7 +2402,10 @@ mod tests {
 
         let no_project = GroupAddressContext::from_project(None);
         match no_project.decode(GroupAddress::from_raw(1), &GroupValue::Short(1)) {
-            DecodedValue::Unresolved { text } => assert_eq!(text, "no project open"),
+            DecodedValue::Unresolved { reason, text } => {
+                assert_eq!(reason, UnresolvedReason::NoProject);
+                assert_eq!(text, "no project open");
+            }
             other => panic!("expected Unresolved, got {other:?}"),
         }
         assert_eq!(

@@ -1690,13 +1690,14 @@ export function importRefusal(error: unknown): ComparisonImport | null {
 
 // `DecodedValueDto` (bus_routes.rs, struct `DecodedValueDto`) — D4's
 // `dpt` accompanies both successful values and failed decodes. For an
-// error, `reason` distinguishes a codec that does not implement the resolved
+// unresolved result, `reason` distinguishes no session project from no assigned DPT.
+// For an error, `reason` distinguishes a codec that does not implement the resolved
 // type from a supported type with invalid payload bytes; old responses may
 // lack it, so consumers must keep a generic failure fallback.
 export interface BusDecodedValue {
   kind: "value" | "unresolved" | "conflict" | "error";
   dpt?: string;
-  reason?: "unsupportedDpt" | "decodeFailed";
+  reason?: "noProject" | "noDpt" | "unsupportedDpt" | "decodeFailed";
   text: string;
   error?: string;
 }

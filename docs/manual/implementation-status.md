@@ -833,7 +833,9 @@ word floors for every adjustable column, capped at 320 px; narrower panes scroll
 within the table. Explicit shrinking can go below those floors. Narrow browser
 proof covers grouped/flat object words and status, a long German address DPT and
 monitor decoded text; wide fitting proof covers demo/fixture content. Resize handles announce the rendered
-width, and header sort indicators stay visible beside clamped labels. The matrix's
+width in layout pixels, and header sort indicators stay visible beside clamped labels.
+Application scaling keeps saved widths and keyboard steps in those same units;
+pointer drags follow visual movement at 80–150%. The matrix's
 select/address/name columns resize; its per-object columns remain fixed; lists, trees and manufacturer parameter
 grids are outside scope. See the [coverage checklist](../contracts/table-column-widths.md).
 

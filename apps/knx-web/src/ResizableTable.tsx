@@ -2,6 +2,7 @@
 import { Fragment, Children, cloneElement, isValidElement, useEffect, useId, useLayoutEffect, useRef, useState, type HTMLAttributes, type ReactElement, type ReactNode } from "react";
 import { useTranslate } from "./i18n";
 import { columnMax, useTableColumnWidths, type TableColumnWidth } from "./useTableColumnWidths";
+import { appUiScale } from "./appUiScale";
 import { TableWordFloors } from "./tableWordFloors";
 
 type WidthState = ReturnType<typeof useTableColumnWidths>;
@@ -9,7 +10,7 @@ export function ColumnResizeHandle({ column, state, labelId, helpId, renderedWid
   column: TableColumnWidth; state: WidthState; labelId: string; helpId: string; renderedWidth: number;
 }) {
   const t = useTranslate();
-  const drag = useRef<{ pointerId: number; x: number; width: number; next: number } | null>(null);
+  const drag = useRef<{ pointerId: number; x: number; scale: number; width: number; next: number } | null>(null);
   const frame = useRef<number | null>(null);
   const cancelFrame = () => { if (frame.current !== null) cancelAnimationFrame(frame.current); frame.current = null; };
   const latestFinish = useRef(() => {});
@@ -31,13 +32,13 @@ export function ColumnResizeHandle({ column, state, labelId, helpId, renderedWid
       event.stopPropagation();
       if (event.button !== 0) return;
       event.preventDefault(); event.currentTarget.focus();
-      drag.current = { pointerId: event.pointerId, x: event.clientX, width: state.widths[column.id], next: state.widths[column.id] };
+      drag.current = { pointerId: event.pointerId, x: event.clientX, scale: appUiScale(), width: state.widths[column.id], next: state.widths[column.id] };
       event.currentTarget.setPointerCapture(event.pointerId);
     }}
     onPointerMove={event => {
       event.stopPropagation();
       if (drag.current?.pointerId !== event.pointerId) return;
-      drag.current.next = drag.current.width + event.clientX - drag.current.x;
+      drag.current.next = drag.current.width + (event.clientX - drag.current.x) / drag.current.scale;
       if (frame.current === null) frame.current = requestAnimationFrame(() => {
         frame.current = null;
         if (drag.current) state.setWidth(column.id, drag.current.next, false);
@@ -100,6 +101,7 @@ export default function ResizableTable({
   const wordMeasurements = useRef(new TableWordFloors());
   const wordsDirty = useRef(true);
   const measureWords = useRef(() => {});
+  const measureGeometry = useRef(() => {});
   const state = useTableColumnWidths(tableId, columns, () => {
     wordMeasurements.current.clear(); setWordFloors([]); measureWords.current();
   });
@@ -140,7 +142,7 @@ export default function ResizableTable({
           && (before.getPropertyValue(property) !== after.getPropertyValue(property)
             || before.getPropertyPriority(property) !== after.getPropertyPriority(property)));
       });
-      if (relevant) { wordMeasurements.current.clear(); update(); }
+      if (relevant) { wordMeasurements.current.clear(); update(); measureGeometry.current(); }
     });
     // One observer owns only this mount's existing ancestor chain: no document
     // subtree subscription, no per-frame rescans. Shipped panes retain ancestry.
@@ -155,11 +157,14 @@ export default function ResizableTable({
     const element = viewport.current;
     if (!element) return;
     if (element.clientWidth && wordsDirty.current) measureWords.current();
+    // client/scroll dimensions are already layout pixels, unlike DOMRect.
     setAvailableWidth(element.clientWidth);
+    const scale = appUiScale();
     setOverflowing(element.scrollWidth > element.clientWidth || element.scrollHeight > element.clientHeight);
-    const next = Array.from(element.querySelectorAll(":scope > table > thead > tr > th"), heading => Math.round(heading.getBoundingClientRect().width));
+    const next = Array.from(element.querySelectorAll(":scope > table > thead > tr > th"), heading => Math.round(heading.getBoundingClientRect().width / scale));
     setMeasuredWidths(previous => previous.length === next.length && previous.every((width, index) => width === next[index]) ? previous : next);
   };
+  measureGeometry.current = measure;
   // Measure after every column edit as well as external pane/table resizes.
   useLayoutEffect(measure);
   useLayoutEffect(() => {

@@ -71,6 +71,7 @@ later is covered by the rule, not by this list.
 | Line-scan reconciliation | Apply selected changes, while a missing device (deleted) is selected; create-only stays primary |
 | Functions, details changed underneath | Apply my details anyway; Start again from the current details |
 | Parameter write conflict | Apply my value; Discard my value |
+| Checked parameter editor | Discard draft and reload, while the draft differs from the loaded value |
 | Inspector placement repair | Keep this placement; Keep under this area (the other placements or area references are removed) |
 | Language packs (Settings) | Remove (deletes the stored pack at once, no Undo) |
 | New project wizard, group structure | Apply preset (replaces the list), once the list is not empty |

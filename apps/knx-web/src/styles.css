@@ -793,7 +793,7 @@ main {
 .parameter-checked-editor { display: grid; gap: 0.5rem; justify-items: start; min-width: 0; }
 .parameter-checked-editor > section { justify-self: stretch; }
 /* Goal B1: a stale-write conflict keeps the draft. The current value gets its
-   own line; the explicit resend stays primary, discarding is quiet. */
+   own line; both explicit answers lose one side, so both are danger. */
 .parameter-conflict {
   display: flex;
   flex-wrap: wrap;
@@ -828,9 +828,9 @@ main {
 .functions-panel select, .functions-panel input, .functions-panel textarea { max-width: 100%; min-width: 0; box-sizing: border-box; }
 .functions-move select, .functions-details input, .functions-details select, .functions-details textarea { width: 100%; }
 .parameter-conflict > button, .functions-notice > button { max-width: 100%; }
-/* Secondary (the shared default, see "Controls") like the editor's own
-   buttons: entering or leaving the checked editor must not outshout its
-   Apply. Only the width bound is theirs. */
+/* Layout only: the role (secondary by default, danger for the conflict and
+   draft-losing answers) comes from the shared "Controls" block. Only the width
+   bound is theirs. */
 .parameter-checked-open,
 .parameter-conflict-discard,
 .functions-quiet,

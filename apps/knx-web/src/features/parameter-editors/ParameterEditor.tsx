@@ -115,7 +115,7 @@ function ParameterDraft<T>(props: ParameterEditorProps<T>) {
     </div>
     <div className={styles.actions}>
       <button type="button" disabled={pending || accepted || stale || restricted || unchanged || issue !== null} onClick={() => { void apply(); }}>{pending ? copy.busy : copy.apply}</button>
-      <button type="button" disabled={pending} onClick={() => { setDraft(field.value ?? ""); setBaseline(field.value); setLoadedRevision(revision); loadedSignature.current = fieldSignature; blockedRevision.current = null; setFailure(null); setAccepted(false); setSettled(false); }}>{copy.reset}</button>
+      <button type="button" className={unchanged ? undefined : "danger-action"} disabled={pending} onClick={() => { setDraft(field.value ?? ""); setBaseline(field.value); setLoadedRevision(revision); loadedSignature.current = fieldSignature; blockedRevision.current = null; setFailure(null); setAccepted(false); setSettled(false); }}>{copy.reset}</button>
     </div>
   </section>;
 }

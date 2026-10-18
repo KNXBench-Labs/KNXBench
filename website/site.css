@@ -134,6 +134,11 @@ summary { cursor: pointer; width: fit-content; }
 .char { display: inline-block; position: relative; }
 .char::after { content: attr(data-char); position: absolute; left: 0; top: 0; opacity: 0; transform: translateX(-100%); }
 .char-glyph { display: inline-block; }
+/* Only progressive enhancement may hide glyphs; motion-off is always readable. */
+:root[data-motion="on"] [data-headline-state="hidden"] .char {
+  opacity: 0;
+  transform: translateY(.3em) rotateX(-45deg);
+}
 .motion-toggle { background: none; border: 1px solid var(--rule); border-radius: 3px; padding: 8px 12px; min-height: 44px; font: 12px var(--mono); cursor: pointer; white-space: nowrap; }
 .motion-toggle:hover { border-color: var(--accent); }
 @media (prefers-reduced-motion: no-preference) {

@@ -12,6 +12,22 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## UI feedback wave 3 integration acceptance (18 October 2026)
+
+UI-02 (controls/separators), UI-03 (File submenus) and UI-06 (labelled,
+bounded topology) passed independent package reviews and the additional
+read-only acceptance audit with no findings. Frozen candidate `471ca75a`
+passed all 16 gate stages: web receipt complete/success/frozen, 4,915 Rust
+tests, 153/153 private corpus tests in 33 targets, Clippy, bindings, repository
+checks and 223 tooling tests (one existing skip). Main-first merge `13510653`
+preserves newer website/research/claim entries. App, core and tooling inputs
+are identical to `471ca75a`; documentation/build/type/Vitest/website/tooling
+and repository checks are delta acceptance, not another full gate. The first
+tooling attempt preceded Node dependency installation and failed three browser
+loader tests; the corrected full tooling rerun passed. UI-05 is not part of
+this integration and remains in independent review. Native WebKitGTK/Tauri
+interaction evidence is still absent; no full native UI parity claim.
+
 ## Bus monitor review fixes — UI-01 (18 October 2026)
 
 ADR-0010 decoding policy stays unchanged. A separate Core diagnostic helper

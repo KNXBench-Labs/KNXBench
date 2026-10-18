@@ -10,8 +10,11 @@ item 3 (“Update We”) as a typo. **In progress** (owner go, claimed 18 Octobe
 **Delivered:** UI-01 (the reported 1/5/6 telegram genuinely has no DPT in the
 project; the monitor now names why: no project, address not in project, no
 type, or a program default the project clears) and UI-04 (on-disk project and
-product database sizes, catalogue counts). **Reviewed, in the next gate:**
-UI-02 and UI-05. **In review:** UI-03, UI-06. Decisions and per-package worker
+product database sizes, catalogue counts). **Accepted for publication:** UI-02
+(compact controls and separators), UI-03 (File submenus) and UI-06 (labelled,
+bounded topology), with the frozen 16-stage gate on `471ca75a` and a main-first
+delta acceptance. **Still in independent review:** UI-05 (word-safe resizable
+tables, density/theme and stable measured floors). Decisions and per-package worker
 models are in the
 [goal file](goals/ui-feedback-2026-10-18.md#owner-go-and-decisions-18-october-2026-later-the-same-day).
 

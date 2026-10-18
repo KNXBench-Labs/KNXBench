@@ -238,7 +238,7 @@ export default function PluginDataDialog({ tree, deviceId, onTreeUpdate, onClose
       <label className="plugin-data-choice"><input type="checkbox" data-plugin-consent checked={consent} disabled={Boolean(mode)}
         onChange={e => setConsent(e.target.checked)} />{t("pluginData.consent")}</label>
       <div className="plugin-data-actions">
-        <button type="button" disabled={!consent || Boolean(mode)} onClick={() => void apply()}>{t("pluginData.apply")}</button>
+        <button type="button" className="primary-action" disabled={!consent || Boolean(mode)} onClick={() => void apply()}>{t("pluginData.apply")}</button>
         <button type="button" disabled={Boolean(mode)} onClick={() => dropShown()}>{t("pluginData.cancelPreview")}</button>
       </div>
     </section>}

@@ -38,8 +38,7 @@
 .name-recipe-unchanged { color: var(--knx-muted); font-style: italic; }
 .name-recipe-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 .name-recipe-actions button { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
-/* The one button that changes the project looks like it. */
-.name-recipe-actions .primary-action:not(:disabled) { background: var(--knx-accent); color: var(--knx-on-accent); border-color: var(--knx-accent); }
+/* The one button that changes the project looks like it: `primary-action`. */
 @media (max-width: 560px) {
   .search-panel.name-recipe-panel { padding: 16px; }
   .name-recipe-form { grid-template-columns: minmax(0, 1fr); }

@@ -135,7 +135,7 @@ function ContributionDialog({ onClose }: { onClose: () => void }) {
         {preview.files.map(f => <details key={f.path}><summary>{f.path}</summary><pre>{f.text ?? t("contribution.originalConsent")}</pre></details>)}
         <label className="contribution-sample"><input type="checkbox" data-consent="export" disabled={busy} checked={consent} onChange={e => setConsent(e.target.checked)} />{t("contribution.consent")}</label>
       </section>}
-      <div className="contribution-actions"><button disabled={!preview || !consent || busy} onClick={() => void run("export")}>{t("contribution.export")}</button>
+      <div className="contribution-actions"><button className="primary-action" disabled={!preview || !consent || busy} onClick={() => void run("export")}>{t("contribution.export")}</button>
         {downloadRequested && consent && (audience === "public" ?
           <a href={`${CONTRIBUTION_REPOSITORY}/issues/new?${issueQuery}`} target="_blank" rel="noopener noreferrer">{t("contribution.github")}</a> :
           <a href="mailto:contribute@knxbench.com?subject=KNXBench%20private%20contribution" target="_blank" rel="noopener noreferrer">{t("contribution.email")}</a>)}</div>

@@ -122,9 +122,9 @@ export default function CatalogUpdatePanel(props: {
       <p>{t("catalogUpdate.restore.message", { name: asking.backup.name })}</p>
       <p>{t("catalogUpdate.restore.projects")}</p>
       <footer className="quit-confirm-footer unsaved-changes-actions">
-        <button ref={keepRef} type="button" className="dialog-action dialog-action--secondary" onClick={() => setAsking(null)}>
+        <button ref={keepRef} type="button" className="dialog-action secondary-action" onClick={() => setAsking(null)}>
           {t("catalogUpdate.restore.keep")}</button>
-        <button type="button" className="dialog-action dialog-action--danger" onClick={() => { void restore(asking.backup.name); }}>
+        <button type="button" className="dialog-action danger-action" onClick={() => { void restore(asking.backup.name); }}>
           {t("catalogUpdate.restore.confirm")}</button>
       </footer>
     </Overlay>}
@@ -134,9 +134,9 @@ export default function CatalogUpdatePanel(props: {
       <h2 id="catalog-delete-title">{t("catalogUpdate.delete.title")}</h2>
       <p>{t("catalogUpdate.delete.message", { name: asking.backup.name })}</p>
       <footer className="quit-confirm-footer unsaved-changes-actions">
-        <button ref={keepRef} type="button" className="dialog-action dialog-action--secondary" onClick={() => setAsking(null)}>
+        <button ref={keepRef} type="button" className="dialog-action secondary-action" onClick={() => setAsking(null)}>
           {t("catalogUpdate.delete.keep")}</button>
-        <button type="button" className="dialog-action dialog-action--danger" onClick={() => { void remove(asking.backup); }}>
+        <button type="button" className="dialog-action danger-action" onClick={() => { void remove(asking.backup); }}>
           {t("catalogUpdate.delete.confirm")}</button>
       </footer>
     </Overlay>}

@@ -205,7 +205,7 @@ export default function ThemePackManager(props: { onDownload: (fileName: string,
       <p>{t("themePack.manager.replaceWarning")}</p>
       <div className="settings-actions">
         <button type="button" ref={cancelRef} onClick={closeQuestion}>{t("themePack.manager.replaceCancel")}</button>
-        <button type="button" disabled={busy || !available} onClick={() => { void confirm(replacement.plan, true, "saved"); }}>{t("themePack.manager.replaceConfirm")}</button>
+        <button type="button" className="danger-action" disabled={busy || !available} onClick={() => { void confirm(replacement.plan, true, "saved"); }}>{t("themePack.manager.replaceConfirm")}</button>
       </div>
     </Overlay>}
     {removal && <Overlay label={t("themePack.manager.removeTitle")}
@@ -215,7 +215,7 @@ export default function ThemePackManager(props: { onDownload: (fileName: string,
       <p>{t("themePack.manager.removeWarning")}</p>
       <div className="settings-actions">
         <button type="button" ref={cancelRef} onClick={closeQuestion}>{t("themePack.manager.removeCancel")}</button>
-        <button type="button" disabled={busy || !available} onClick={() => { void confirm(removal, false, "removed"); }}>{t("themePack.manager.removeConfirm")}</button>
+        <button type="button" className="danger-action" disabled={busy || !available} onClick={() => { void confirm(removal, false, "removed"); }}>{t("themePack.manager.removeConfirm")}</button>
       </div>
     </Overlay>}
   </section>;

@@ -37,7 +37,7 @@ export default function ProjectPasswordDialog(props: {
         <p className="settings-field-hint">{t("projectPassword.notStored")}</p>
         <div className="dialog-actions">
           <button type="button" onClick={onCancel}>{t("projectPassword.cancel")}</button>
-          <button type="submit" disabled={password === ""}>{t("projectPassword.import")}</button>
+          <button type="submit" className="primary-action" disabled={password === ""}>{t("projectPassword.import")}</button>
         </div>
       </form>
     </Overlay>

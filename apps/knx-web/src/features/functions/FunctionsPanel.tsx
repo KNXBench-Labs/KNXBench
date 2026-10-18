@@ -148,7 +148,7 @@ function DetailsForm(props: {
     {problem && <p className="field-error" role="alert">{problem}</p>}
     {props.children}
     <div className="functions-actions">
-      <button type="submit" disabled={props.busy || props.blocked || sameDetails(draft, base) && props.onCancel !== undefined}>{props.submitLabel}</button>
+      <button type="submit" className="primary-action" disabled={props.busy || props.blocked || sameDetails(draft, base) && props.onCancel !== undefined}>{props.submitLabel}</button>
       {props.onCancel && <button type="button" className="functions-quiet" disabled={props.busy} onClick={props.onCancel}>{t("functions.cancel")}</button>}
     </div>
   </form>;

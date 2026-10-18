@@ -18,6 +18,7 @@ Moved here from `docs/` on 2026-10-08 (relative links adjusted by script).
 | [PRODUCT_ZIP_LARGE_PROFILE](PRODUCT_ZIP_LARGE_PROFILE.md) | Measured profile behind the large-package CLI opt-in (KL-151, ADR-0082) |
 | [SERVICE_CONTROL_BACKUP](SERVICE_CONTROL_BACKUP.md) | Property-only service-control backup format |
 | [COMMISSIONING_ACTIVITY_HISTORY](COMMISSIONING_ACTIVITY_HISTORY.md) | Durable commissioning activity history |
+| [controls-and-separators](controls-and-separators.md) | UI-02 shared button variants (secondary default, primary, quiet/icon, destructive), their tokens and states; navigation separators visible at rest; routine instance source label hidden |
 | [task-status-shimmer](task-status-shimmer.md) | Slow readable text shimmer for active work; sweep/pause, state and accessibility boundaries |
 | [RELEASE_NOTIFICATIONS](RELEASE_NOTIFICATIONS.md) | Published GitHub release discovery, semantic version admission, notification-only UX and network/privacy bounds |
 | [project-functions](project-functions.md) | Project Functions (ADR-0124): model, invariant, commands, refusals, storage, import, projection, HTTP API, and what a workbench must keep (Goal A4 → B1) |

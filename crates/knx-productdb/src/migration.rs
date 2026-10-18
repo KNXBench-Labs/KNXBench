@@ -13,10 +13,10 @@ use rusqlite::{params, Connection};
 
 use crate::ingest::{classify, FileKind};
 use crate::parse::translation::{ingest_translations, TranslationScope};
-use crate::report::insert_unknown;
+use crate::report::{insert_unknown, UnknownKind};
 
 /// The product-database schema version this build writes.
-pub const CURRENT_PRODUCTDB_VERSION: i64 = 24;
+pub const CURRENT_PRODUCTDB_VERSION: i64 = 25;
 
 #[derive(Debug)]
 pub enum ProductDbError {
@@ -297,6 +297,7 @@ fn migrations() -> Vec<Migration> {
         migrate_v21_to_v22,
         migrate_v22_to_v23,
         migrate_v23_to_v24,
+        migrate_v24_to_v25,
     ]
 }
 
@@ -314,16 +315,26 @@ const TEXT_PARAMETER_REF_HOSTS: [&str; 4] = [
 /// host stay unmodelled and reported.
 const ACCESS_HOSTS: [&str; 2] = ["ParameterBlock", "ParameterSeparator"];
 
-/// One attribute a schema step stops reporting because it gained a column:
-/// the shared shape of v23 and v24. Names only; what fills the column is the
-/// step's own backfill.
+/// One kind of `ingest_unknown` row a schema step retires: `kind` and `name`
+/// at every xpath whose last step is one of `hosts`. An attribute row's xpath
+/// ends in the element carrying it; an element row's ends in its parent.
+struct Retired {
+    /// `ingest_unknown.kind`: `Attribute` or `Element`.
+    kind: crate::report::UnknownKind,
+    /// The unqualified name.
+    name: &'static str,
+    /// Element names (last xpath step) whose rows retire.
+    hosts: &'static [&'static str],
+}
+
+/// What a schema step stops reporting because it gained columns: the shared
+/// shape of v23, v24 and v25. Names only; what fills the columns is the step's
+/// own backfill.
 struct Promotion {
     /// Prefix of every cause this step records, e.g. `v23`.
     version: &'static str,
-    /// The unqualified attribute name whose `ingest_unknown` rows retire.
-    attribute: &'static str,
-    /// Element names (last xpath step) whose rows retire.
-    hosts: &'static [&'static str],
+    /// The rows that retire.
+    retired: &'static [Retired],
     /// `ingest_unknown.kind` and `.name` of a blob that was not carried forward.
     blob_error: (&'static str, &'static str),
     /// `ingest_unknown.name` of a report that could not be rewritten.
@@ -332,8 +343,11 @@ struct Promotion {
 
 const TEXT_PARAMETER_REF_PROMOTION: Promotion = Promotion {
     version: "v23",
-    attribute: "TextParameterRefId",
-    hosts: &TEXT_PARAMETER_REF_HOSTS,
+    retired: &[Retired {
+        kind: crate::report::UnknownKind::Attribute,
+        name: "TextParameterRefId",
+        hosts: &TEXT_PARAMETER_REF_HOSTS,
+    }],
     blob_error: (
         "TextParameterRefBackfillError",
         "backfill_text_parameter_refs",
@@ -343,8 +357,11 @@ const TEXT_PARAMETER_REF_PROMOTION: Promotion = Promotion {
 
 const ACCESS_PROMOTION: Promotion = Promotion {
     version: "v24",
-    attribute: "Access",
-    hosts: &ACCESS_HOSTS,
+    retired: &[Retired {
+        kind: crate::report::UnknownKind::Attribute,
+        name: "Access",
+        hosts: &ACCESS_HOSTS,
+    }],
     blob_error: ("PresentationBackfillError", "backfill_presentation"),
     report_error: "presentation_report_backfill",
 };
@@ -396,6 +413,231 @@ fn migrate_v23_to_v24(conn: &Connection) -> Result<(), ProductDbError> {
     retire_promoted_from_reports(conn, &retired, &ACCESS_PROMOTION)
 }
 
+/// The hosts whose own `Offset`/`BitOffset` v25 stores: `Parameter` (the corpus
+/// has them on union members).
+const PARAMETER_HOST: [&str; 1] = ["Parameter"];
+/// The parents a stored `Property` placement sits directly in.
+const PROPERTY_PARENTS: [&str; 2] = ["Parameter", "Union"];
+/// The element a `Property` placement's attributes sit on.
+const PROPERTY_HOST: [&str; 1] = ["Property"];
+
+const PLACEMENT_PROMOTION: Promotion = Promotion {
+    version: "v25",
+    retired: &[
+        Retired {
+            kind: UnknownKind::Attribute,
+            name: "Offset",
+            hosts: &PARAMETER_HOST,
+        },
+        Retired {
+            kind: UnknownKind::Attribute,
+            name: "BitOffset",
+            hosts: &PARAMETER_HOST,
+        },
+        Retired {
+            kind: UnknownKind::Element,
+            name: "Property",
+            hosts: &PROPERTY_PARENTS,
+        },
+        Retired {
+            kind: UnknownKind::Attribute,
+            name: "ObjectIndex",
+            hosts: &PROPERTY_HOST,
+        },
+        Retired {
+            kind: UnknownKind::Attribute,
+            name: "ObjectType",
+            hosts: &PROPERTY_HOST,
+        },
+        Retired {
+            kind: UnknownKind::Attribute,
+            name: "PropertyId",
+            hosts: &PROPERTY_HOST,
+        },
+        Retired {
+            kind: UnknownKind::Attribute,
+            name: "Offset",
+            hosts: &PROPERTY_HOST,
+        },
+        Retired {
+            kind: UnknownKind::Attribute,
+            name: "BitOffset",
+            hosts: &PROPERTY_HOST,
+        },
+        Retired {
+            kind: UnknownKind::Attribute,
+            name: "Occurrence",
+            hosts: &PROPERTY_HOST,
+        },
+    ],
+    blob_error: ("PlacementBackfillError", "backfill_placement_columns"),
+    report_error: "placement_report_backfill",
+};
+
+/// v24 -> v25 (census 3, G13). `parameter` gains a parameter's own
+/// `Offset`/`BitOffset` and its `Property` placement, `parameter_type_enum`
+/// gains `BinaryValue`, `Name`, `Icon` and `PictureAlignment`, and the
+/// `ingest_unknown` rows of what the columns now store retire.
+///
+/// v23's procedure (`promote_from_program_blobs`) with
+/// `backfill_placement_columns` as the backfill, retiring every row of those
+/// kinds; then the v21 pass (`add_attribute_unknowns`) over the blobs carried
+/// forward adds back what a current ingest still reports: an attribute value
+/// that is not an integer (its column stays empty) and every `Enumeration`
+/// attribute no column stores, which no earlier parser reported. Retiring
+/// everything and re-deriving the remainder makes the result equal a fresh
+/// install. A blob not carried forward keeps its rows and gets a
+/// `PlacementBackfillError` record; the measured reports counting it become
+/// `unavailable`.
+fn migrate_v24_to_v25(conn: &Connection) -> Result<(), ProductDbError> {
+    conn.execute_batch(
+        "ALTER TABLE parameter ADD COLUMN own_offset INTEGER;
+         ALTER TABLE parameter ADD COLUMN own_bit_offset INTEGER;
+         ALTER TABLE parameter ADD COLUMN property_object_index INTEGER;
+         ALTER TABLE parameter ADD COLUMN property_object_type INTEGER;
+         ALTER TABLE parameter ADD COLUMN property_id INTEGER;
+         ALTER TABLE parameter ADD COLUMN property_offset INTEGER;
+         ALTER TABLE parameter ADD COLUMN property_bit_offset INTEGER;
+         ALTER TABLE parameter ADD COLUMN property_occurrence INTEGER;
+         ALTER TABLE parameter_type_enum ADD COLUMN binary_value TEXT;
+         ALTER TABLE parameter_type_enum ADD COLUMN name TEXT;
+         ALTER TABLE parameter_type_enum ADD COLUMN icon TEXT;
+         ALTER TABLE parameter_type_enum ADD COLUMN picture_alignment TEXT;",
+    )?;
+    let retired =
+        promote_from_program_blobs(conn, &PLACEMENT_PROMOTION, backfill_placement_columns)?;
+    retire_promoted_from_reports(conn, &retired, &PLACEMENT_PROMOTION)?;
+    let mut carried = std::collections::HashSet::new();
+    for sha256 in retired.into_keys() {
+        let legacy: bool = conn.query_row(
+            "SELECT EXISTS(SELECT 1 FROM legacy_source WHERE payload_sha256 = ?1)",
+            [&sha256],
+            |r| r.get(0),
+        )?;
+        if !legacy {
+            carried.insert(sha256);
+        }
+    }
+    add_attribute_unknowns(conn, "v25", Some(&carried))
+}
+
+/// Fills the v25 columns of the programs one blob owns from its bytes, through
+/// the parser's own column rules (`integer_columns`, `PROPERTY_ATTRS`). A
+/// program another blob owns is left alone, as the parsers leave it.
+fn backfill_placement_columns(
+    conn: &Connection,
+    sha256: &str,
+    source_path: &str,
+    bytes: &[u8],
+) -> Result<(), ProductDbError> {
+    use crate::parse::program::{
+        integer_columns, is_stored_property, store_property_placement, OWN_OFFSET_ATTRS,
+        PROPERTY_ATTRS,
+    };
+    use quick_xml::events::Event;
+    let owned: std::collections::HashSet<String> = conn
+        .prepare("SELECT id FROM application_program WHERE source_sha256 = ?1")?
+        .query_map([sha256], |r| r.get(0))?
+        .collect::<Result<_, _>>()?;
+    let mut reader = quick_xml::Reader::from_reader(bytes);
+    let mut buf = Vec::new();
+    let mut open_path: Vec<String> = Vec::new();
+    let mut program: Option<String> = None;
+    let mut parameter: Option<String> = None;
+    // The open union's members and its own `Property` placement.
+    let mut union_members: Vec<String> = Vec::new();
+    let mut union_property: Option<[Option<i64>; 6]> = None;
+    loop {
+        buf.clear();
+        let event = reader
+            .read_event_into(&mut buf)
+            .map_err(|e| ProductDbError::Xml {
+                source_path: source_path.to_string(),
+                cause: e.to_string(),
+            })?;
+        let (start, empty) = match &event {
+            Event::Eof => break,
+            Event::Start(e) if crate::xml::local_name(e) == "Dynamic" => {
+                crate::xml::skip_subtree(&mut reader, e.name().as_ref(), source_path)?;
+                continue;
+            }
+            Event::End(_) => {
+                let name = open_path.pop().unwrap_or_default();
+                if name == "Parameter" {
+                    parameter = None;
+                } else if name == "Union" {
+                    if let (Some(program_id), Some(columns)) = (program.as_deref(), union_property)
+                    {
+                        for member in &union_members {
+                            store_property_placement(conn, program_id, member, columns)?;
+                        }
+                    }
+                    union_members.clear();
+                    union_property = None;
+                }
+                continue;
+            }
+            Event::Start(e) => (e, false),
+            Event::Empty(e) => (e, true),
+            _ => continue,
+        };
+        let name = crate::xml::local_name(start);
+        let a = crate::xml::attrs(start, source_path)?;
+        if name == "ApplicationProgram" {
+            program = a
+                .get("Id")
+                .filter(|id| owned.contains(*id))
+                .map(str::to_string);
+        } else if let Some(program_id) = program.as_deref() {
+            match name.as_str() {
+                "Parameter" => {
+                    let id = a.get("Id").unwrap_or_default().to_string();
+                    let [own_offset, own_bit_offset] = integer_columns(&a, OWN_OFFSET_ATTRS);
+                    conn.execute(
+                        "UPDATE parameter SET own_offset = ?3, own_bit_offset = ?4
+                         WHERE program_id = ?1 AND id = ?2",
+                        params![program_id, id, own_offset, own_bit_offset],
+                    )?;
+                    if open_path.last().map(String::as_str) == Some("Union") {
+                        union_members.push(id.clone());
+                    }
+                    parameter = (!empty).then_some(id);
+                }
+                "Property" if is_stored_property(&open_path) => {
+                    let columns = integer_columns(&a, PROPERTY_ATTRS);
+                    match (open_path.last().map(String::as_str), parameter.as_deref()) {
+                        (Some("Parameter"), Some(id)) => {
+                            store_property_placement(conn, program_id, id, columns)?;
+                        }
+                        (Some("Union"), _) => union_property = Some(columns),
+                        _ => {}
+                    }
+                }
+                "Enumeration" => {
+                    conn.execute(
+                        "UPDATE parameter_type_enum
+                         SET binary_value = ?3, name = ?4, icon = ?5, picture_alignment = ?6
+                         WHERE program_id = ?1 AND id = ?2",
+                        params![
+                            program_id,
+                            a.get("Id"),
+                            a.get("BinaryValue"),
+                            a.get("Name"),
+                            a.get("Icon"),
+                            a.get("PictureAlignment"),
+                        ],
+                    )?;
+                }
+                _ => {}
+            }
+        }
+        if !empty {
+            open_path.push(name);
+        }
+    }
+    Ok(())
+}
+
 /// The blob half of a [`Promotion`]: runs `backfill` on every stored
 /// `ApplicationProgram` blob whose bytes still match their key, each in its
 /// own savepoint, and deletes the blob's retired unknown rows. Returns blob ->
@@ -405,15 +647,15 @@ fn promote_from_program_blobs(
     conn: &Connection,
     promotion: &Promotion,
     backfill: fn(&Connection, &str, &str, &[u8]) -> Result<(), ProductDbError>,
-) -> Result<std::collections::HashMap<String, Vec<String>>, ProductDbError> {
+) -> Result<std::collections::HashMap<String, Vec<RetiredRow>>, ProductDbError> {
     let version = promotion.version;
     let blobs = conn
         .prepare("SELECT sha256, source_path FROM source_file ORDER BY sha256")?
         .query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))?
         .collect::<Result<Vec<_>, _>>()?;
-    // Blob -> the distinct xpaths whose rows it lost. A blob missing from this
+    // Blob -> the distinct keys whose rows it lost. A blob missing from this
     // map was not carried forward, and neither is any report that counts it.
-    let mut retired: std::collections::HashMap<String, Vec<String>> =
+    let mut retired: std::collections::HashMap<String, Vec<RetiredRow>> =
         std::collections::HashMap::new();
     for (sha256, source_path) in blobs {
         let failure = |cause: &str| ProductDbError::Xml {
@@ -453,9 +695,9 @@ fn promote_from_program_blobs(
             conn.execute_batch("SAVEPOINT promoted_attribute;")?;
             match backfill(conn, &sha256, &source_path, &bytes) {
                 Ok(()) => {
-                    let xpaths = retire_promoted_unknowns(conn, &sha256, promotion)?;
+                    let keys = retire_promoted_unknowns(conn, &sha256, promotion)?;
                     conn.execute_batch("RELEASE SAVEPOINT promoted_attribute;")?;
-                    retired.insert(sha256, xpaths);
+                    retired.insert(sha256, keys);
                     continue;
                 }
                 Err(ProductDbError::Sqlite(error)) => return Err(ProductDbError::Sqlite(error)),
@@ -540,40 +782,47 @@ fn backfill_text_parameter_refs(
     Ok(())
 }
 
-/// Deletes one blob's unqualified `promotion.attribute` rows at host xpaths
-/// and returns the distinct xpaths that had any: what one parse of it reported.
+/// One retired row key: `(xpath, kind, name)`.
+type RetiredRow = (String, crate::report::UnknownKind, &'static str);
+
+/// Deletes one blob's unqualified rows of every `promotion.retired` kind at
+/// their host xpaths and returns the distinct keys that had any: what one
+/// parse of it reported.
 fn retire_promoted_unknowns(
     conn: &Connection,
     sha256: &str,
     promotion: &Promotion,
-) -> Result<Vec<String>, ProductDbError> {
-    let xpaths: Vec<String> = conn
-        .prepare(
-            "SELECT DISTINCT xpath FROM ingest_unknown
-             WHERE source_sha256 = ?1 AND kind = 'Attribute' AND name = ?2
-             ORDER BY xpath",
-        )?
-        .query_map(params![sha256, promotion.attribute], |r| {
-            r.get::<_, String>(0)
-        })?
-        .collect::<Result<Vec<_>, _>>()?
-        .into_iter()
-        .filter(|xpath| {
-            xpath
-                .rsplit('/')
-                .next()
-                .is_some_and(|host| promotion.hosts.contains(&host))
-        })
-        .collect();
-    for xpath in &xpaths {
-        conn.execute(
-            "DELETE FROM ingest_unknown
-             WHERE source_sha256 = ?1 AND xpath = ?2 AND kind = 'Attribute'
-               AND name = ?3",
-            params![sha256, xpath, promotion.attribute],
-        )?;
+) -> Result<Vec<RetiredRow>, ProductDbError> {
+    let mut keys = Vec::new();
+    for retired in promotion.retired {
+        let xpaths: Vec<String> = conn
+            .prepare(
+                "SELECT DISTINCT xpath FROM ingest_unknown
+                 WHERE source_sha256 = ?1 AND kind = ?2 AND name = ?3
+                 ORDER BY xpath",
+            )?
+            .query_map(params![sha256, retired.kind.as_str(), retired.name], |r| {
+                r.get::<_, String>(0)
+            })?
+            .collect::<Result<Vec<_>, _>>()?
+            .into_iter()
+            .filter(|xpath| {
+                xpath
+                    .rsplit('/')
+                    .next()
+                    .is_some_and(|host| retired.hosts.contains(&host))
+            })
+            .collect();
+        for xpath in xpaths {
+            conn.execute(
+                "DELETE FROM ingest_unknown
+                 WHERE source_sha256 = ?1 AND xpath = ?2 AND kind = ?3 AND name = ?4",
+                params![sha256, xpath, retired.kind.as_str(), retired.name],
+            )?;
+            keys.push((xpath, retired.kind, retired.name));
+        }
     }
-    Ok(xpaths)
+    Ok(keys)
 }
 
 /// The package half of a [`Promotion`], the mirror of v18's
@@ -584,7 +833,7 @@ fn retire_promoted_unknowns(
 /// the report to `unavailable` with an `InstallReportBackfillError`.
 fn retire_promoted_from_reports(
     conn: &Connection,
-    retired: &std::collections::HashMap<String, Vec<String>>,
+    retired: &std::collections::HashMap<String, Vec<RetiredRow>>,
     promotion: &Promotion,
 ) -> Result<(), ProductDbError> {
     let version = promotion.version;
@@ -631,23 +880,21 @@ fn retire_promoted_from_reports(
         if !measured {
             continue;
         }
-        let mut xpaths: Vec<&str> = members
+        let mut keys: Vec<(&str, crate::report::UnknownKind, &str)> = members
             .iter()
             .filter_map(|m| retired.get(m))
             .flatten()
-            .map(String::as_str)
+            .map(|(xpath, kind, name)| (xpath.as_str(), *kind, *name))
             .collect();
-        xpaths.sort_unstable();
-        xpaths.dedup();
+        keys.sort_unstable_by_key(|(xpath, kind, name)| (*xpath, kind.as_str(), *name));
+        keys.dedup();
         let stale_member = members.iter().find(|m| !retired.contains_key(*m));
         conn.execute_batch("SAVEPOINT promoted_attribute_report;")?;
         let outcome = match stale_member {
             Some(member) => Ok(Err(crate::package::ReportNotUpgradable(format!(
                 "member {member} was not carried forward"
             )))),
-            None => {
-                crate::package::retire_report_unknowns(conn, &package, &xpaths, promotion.attribute)
-            }
+            None => crate::package::retire_report_rows(conn, &package, &keys),
         };
         let why = match outcome {
             Ok(Ok(())) => None,
@@ -742,6 +989,18 @@ fn migrate_v21_to_v22(conn: &Connection) -> Result<(), ProductDbError> {
 /// `unavailable` with an `InstallReportBackfillError`; the blob itself gets
 /// a `ParameterAttributeBackfillError`.
 fn migrate_v20_to_v21(conn: &Connection) -> Result<(), ProductDbError> {
+    add_attribute_unknowns(conn, "v21", None)
+}
+
+/// The body of `migrate_v20_to_v21`, also run by v25 with its own `version`
+/// in every recorded cause. `carried`, when given, limits it to those blobs
+/// and to the packages all of whose program members are among them: an earlier
+/// step of the same migration already recorded the others' failures.
+fn add_attribute_unknowns(
+    conn: &Connection,
+    version: &str,
+    carried: Option<&std::collections::HashSet<String>>,
+) -> Result<(), ProductDbError> {
     let blobs = conn
         .prepare(
             "SELECT s.sha256, s.source_path,
@@ -766,9 +1025,12 @@ fn migrate_v20_to_v21(conn: &Connection) -> Result<(), ProductDbError> {
     let mut gained: std::collections::HashMap<String, Vec<crate::report::UnknownConstruct>> =
         std::collections::HashMap::new();
     for (sha256, source_path, extended, members) in blobs {
+        if carried.is_some_and(|carried| !carried.contains(&sha256)) {
+            continue;
+        }
         let failure = |cause: &str| ProductDbError::Xml {
             source_path: source_path.clone(),
-            cause: format!("v21 backfill: {cause}"),
+            cause: format!("{version} backfill: {cause}"),
         };
         // One copy per package that re-parsed it, or one for a blob only a
         // standalone ingest parsed (the v16 rule).
@@ -826,14 +1088,16 @@ fn migrate_v20_to_v21(conn: &Connection) -> Result<(), ProductDbError> {
             &refused,
         )?;
     }
-    add_parameter_attributes_to_reports(conn, &gained)
+    add_parameter_attributes_to_reports(conn, &gained, version, carried)
 }
 
-/// The package half of `migrate_v20_to_v21`, the additive mirror of
+/// The package half of `add_attribute_unknowns`, the additive mirror of
 /// `retire_channel_number_from_reports`.
 fn add_parameter_attributes_to_reports(
     conn: &Connection,
     gained: &std::collections::HashMap<String, Vec<crate::report::UnknownConstruct>>,
+    version: &str,
+    carried: Option<&std::collections::HashSet<String>>,
 ) -> Result<(), ProductDbError> {
     let packages = conn
         .prepare("SELECT sha256 FROM package ORDER BY sha256")?
@@ -848,9 +1112,12 @@ fn add_parameter_attributes_to_reports(
             )?
             .query_map([&package], |r| r.get::<_, String>(0))?
             .collect::<Result<Vec<_>, _>>()?;
+        if carried.is_some_and(|carried| members.iter().any(|m| !carried.contains(m))) {
+            continue;
+        }
         let overflow = || ProductDbError::Xml {
             source_path: package.clone(),
-            cause: "v21 backfill: unknown counter overflow".into(),
+            cause: format!("{version} backfill: unknown counter overflow"),
         };
         let added = members.iter().try_fold(0u64, |total, m| {
             let rows = gained.get(m).map_or(0, Vec::len);
@@ -900,7 +1167,7 @@ fn add_parameter_attributes_to_reports(
                     "parameter_attribute_report_backfill",
                     &ProductDbError::Xml {
                         source_path: package.clone(),
-                        cause: format!("v21 backfill: {why}"),
+                        cause: format!("{version} backfill: {why}"),
                     },
                 )?;
             }

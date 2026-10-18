@@ -18,7 +18,8 @@ use zip::write::SimpleFileOptions;
 const MASTER: &[u8] = br#"<KNX xmlns="http://knx.org/xml/project/14"><MasterData><Manufacturers><Manufacturer Id="M-0001" Name="Example"/></Manufacturers></MasterData></KNX>"#;
 const HARDWARE: &[u8] = br#"<KNX xmlns="http://knx.org/xml/project/14"><ManufacturerData><Manufacturer RefId="M-0001"><Hardware><Hardware Id="H-1" Name="Example"/></Hardware></Manufacturer></ManufacturerData></KNX>"#;
 
-/// A plain parameter, a union member with its own placement, a prefixed
+/// A plain parameter, a union member with its own placement (an integer
+/// `Offset`/`BitOffset`, stored since v25 and so not reported), a prefixed
 /// foreign attribute, refs with and without extra attributes, and a
 /// `ModuleDef`'s static parameter.
 const PROGRAM: &[u8] = br#"<KNX xmlns="http://knx.org/xml/project/14" xmlns:x="urn:example:extension"><ManufacturerData><Manufacturer RefId="M-0001"><ApplicationPrograms><ApplicationProgram Id="M-0001_A-1" Name="Program">
@@ -82,9 +83,7 @@ fn expected() -> Vec<Row> {
         row(&parameter, "LegacyPatchAlways", 1, "true"),
         row(&parameter, "SuffixText", 2, "s"),
         row(&parameter, "{urn:example:extension}Note", 1, "foreign"),
-        row(&member, "BitOffset", 1, "4"),
         row(&member, "DefaultUnionParameter", 1, "true"),
-        row(&member, "Offset", 1, "0"),
         row(&reference, "ForbidGrantingUseByCustomer", 1, "true"),
         row(&reference, "InitialValue", 1, "2"),
         row(&reference, "Name", 1, "delayRef"),
@@ -311,8 +310,8 @@ fn the_rewind_is_a_genuine_v20_database() {
     assert_eq!(v20.version, 20);
     // Only the expanded-name evidence row survives, as v20 wrote it.
     assert_eq!(blob_rows(&conn).len(), 1);
-    assert_eq!(v20.unknowns.len(), fresh.unknowns.len() - 11);
-    assert_eq!(v20.report_unknowns.len(), fresh.report_unknowns.len() - 11);
+    assert_eq!(v20.unknowns.len(), fresh.unknowns.len() - 9);
+    assert_eq!(v20.report_unknowns.len(), fresh.report_unknowns.len() - 9);
     let count = |s: &Snapshot| {
         s.unknown_count[0][1]
             .clone()
@@ -320,7 +319,7 @@ fn the_rewind_is_a_genuine_v20_database() {
             .parse::<i64>()
             .unwrap()
     };
-    assert_eq!(count(&v20), count(&fresh) - 11);
+    assert_eq!(count(&v20), count(&fresh) - 9);
 }
 
 #[test]

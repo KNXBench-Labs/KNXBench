@@ -445,25 +445,33 @@ pub fn read_bundle(bytes: &[u8]) -> Result<Report, String> {
     Ok(export.report)
 }
 /// Bounded, non-extracting independent readback of format 1 or 2.
-/// Unexpected/duplicate (checked in the raw central directory)/missing members, ZIP64, unknown versions, CRC failures,
+/// Unexpected/duplicate (checked in the raw central directory)/missing members, a ZIP comment
+/// or trailing bytes, a directory `ZipArchive` reads differently, ZIP64, unknown versions, CRC failures,
 /// length/hash mismatches and evidence that does not follow from its own
 /// plan all refuse.
 pub fn read_export(bytes: &[u8]) -> Result<Export, String> {
     if bytes.len() > MAX_ARCHIVE {
         return Err("diagnostics-archive-limit".into());
     }
-    // Before `ZipArchive`, which silently keeps one entry per name.
-    let raw_names = central_directory::entry_names(bytes)?;
+    // Before `ZipArchive`, which silently keeps one entry per name, and
+    // bound to it: both must read the same directory, entry by entry.
+    let directory = central_directory::entries(bytes)?;
     let mut zip =
         zip::ZipArchive::new(Cursor::new(bytes)).map_err(|_| "diagnostics-invalid-zip")?;
-    if !(4..=5).contains(&zip.len()) || zip.len() != raw_names.len() {
+    if zip.central_directory_start() != directory.start {
+        return Err("diagnostics-invalid-zip".into());
+    }
+    if !(4..=5).contains(&zip.len()) || zip.len() != directory.entries.len() {
         return Err("diagnostics-member-count".into());
     }
     let mut files = BTreeMap::new();
-    for (i, raw_name) in raw_names.into_iter().enumerate() {
+    for (i, raw) in directory.entries.into_iter().enumerate() {
         let mut f = zip.by_index(i).map_err(|_| "diagnostics-invalid-member")?;
+        if f.central_header_start() != raw.central_offset || f.header_start() != raw.local_offset {
+            return Err("diagnostics-invalid-zip".into());
+        }
         let name = f.name().to_string();
-        if name.as_bytes() != raw_name {
+        if name.as_bytes() != raw.name {
             return Err("diagnostics-invalid-member".into());
         }
         let limit = if name == "memory.json" {

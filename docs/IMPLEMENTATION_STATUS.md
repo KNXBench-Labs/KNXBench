@@ -12,6 +12,30 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Census-3 fixes and storage-ceiling size bounds (18 October 2026)
+
+Follow-up to [census 3](research/2026-10-18-product-database-programmability-census.md#follow-up-delivered-18-october-2026):
+
+- **G11:** legacy EX-IM tables match case-insensitively, and case-only
+  duplicates are refused. Two real `.vd5` import their programs instead of
+  reading as empty.
+- **G10:** an unwritable placement is named before the value type (70 real
+  `0705h` refusals now name the `Property` placement).
+- **G13, product DB v25**
+  ([ADR-0141](adr/0141-placements-and-enumeration-attributes-reach-columns.md)):
+  placement and enumeration attributes reach typed columns, and the unknown
+  report retires them and reports what no column stores. v24→v25 migration
+  equals a fresh install on six real packages.
+- **G12** ([ADR-0142](adr/0142-file-size-limits-follow-the-storage-ceiling.md)):
+  every single file or member may reach SQLite's 1,000,000,000-byte value
+  limit (the new `knx_core::limits`), and expansions 4 GiB. This covers product
+  packages and both profiles, legacy files, editor/grid/master/contribution
+  scans, project containers, manufacturer files, selective import, payload
+  downloads (server and web client) and project history. The scheme-evidence
+  budgets follow too. The ZIP member count is the 16-bit format maximum. All
+  seven real packages above the former defaults install with the default
+  profile.
+
 ## Alpha 14 preparation (18 October 2026)
 
 Owner instruction: wait for P1 and the product-database series, then prepare and
@@ -27,6 +51,7 @@ both dry runs clean, tag workflows successful): [source acceptance](releases/alp
 [external publication](evidence/release-alpha14-2026-10-18.json) with an isolated
 Docker smoke, a native-13 → 16 migration probe and a headless AppImage startup;
 [scope and limits](releases/alpha14.md) remain explicit.
+
 ## Docker frontend stage sees the shared temp helper (18 October 2026)
 
 The Alpha 14 Docker dry run failed on both architectures: since the shared

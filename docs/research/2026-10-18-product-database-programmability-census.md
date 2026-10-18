@@ -244,5 +244,44 @@ as "missing knx_master.xml"; "no product package in this ZIP" would be accurate.
    only after the property-placement refusal is narrowed for exactly that case.
 4. G14 needs a source for the fill rule; G12 stays measurement-first.
 
+## Follow-up delivered (18 October 2026)
+
+Re-checked on the same local files with release builds of the claim commit
+(product DB v24) and of the fix branch (v25). Counts only; per-file results stay
+in agent scratch.
+
+- **G11 delivered.** EX-IM table names match case-insensitively; a file naming
+  one table twice in different case is refused as a duplicate. The two
+  upper-case `.vd5` files now inspect as 1 product each and import 394 and 244
+  parameters with 3,040 and 1,832 object rows, exactly the counts above. Before
+  the fix they inspected as 0 products and the import failed. The other five
+  files in that ZIP are unchanged.
+- **G10 message delivered.** The image builder names an unwritable placement
+  before the value type. In the complete 2017 database, 70 refusals now name the
+  `Property` placement; the one remaining `BinaryValue` refusal is the program
+  whose parameter is not property-placed. Nothing writes PID 78.
+- **G13 delivered**
+  ([ADR-0141](../adr/0141-placements-and-enumeration-attributes-reach-columns.md),
+  product DB v25). A parameter's own `Offset`/`BitOffset`, its `Property`
+  placement and `Enumeration` `BinaryValue`/`Name`/`Icon`/`PictureAlignment`
+  reach typed columns. Their unknown rows retire; `Enumeration` attributes no
+  column stores are now reported. Six real packages installed with v24, migrated
+  to v25 and compared with a fresh v25 install are equal in all 43 tables (in
+  `ingest_unknown` only the surrogate `id` differs). The migration retired 72 of
+  1,039 unknown rows and filled 1,153 own offsets, 34 property placements, 5
+  `BinaryValue` and 3 enumeration names or icons.
+- **G12 lifted**
+  ([ADR-0142](../adr/0142-file-size-limits-follow-the-storage-ceiling.md)).
+  Every single file or member may reach the storage ceiling (1,000,000,000
+  bytes, SQLite's largest value); an expanded package may reach 4 GiB by
+  default. All seven real packages that exceeded the former default bounds now
+  install with the default profile. They include the one with the 281.8 MiB
+  program (22 s, peak RSS 1.16 GB, after the scheme-evidence item budget was
+  raised as well) and the 1.7 GiB package (about 2 min, 0.7 GiB, 4.5 GB
+  database).
+
+Still open: G10 research (what a tool does with a hidden PID-78 parameter), G14,
+G15 and G16.
+
 Per-file results, program ids, the probes and their logs stay in agent scratch;
 no manufacturer bytes, texts or identifiers are recorded here.

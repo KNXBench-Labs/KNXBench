@@ -6,6 +6,17 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Storage-ceiling budgets (18 October 2026, ADR-0142)
+
+The 1,048,576-item budget refused a real 281.8 MiB application program once the
+member bound no longer did. Since
+[ADR-0142](../adr/0142-file-size-limits-follow-the-storage-ceiling.md) the item
+budget equals the storage ceiling (an element or raw attribute consumes at least
+one input byte) and the charged-byte estimate eight times that. That package
+installs in 22 s at a peak RSS of 1.16 GB. Depth, namespaces and all-or-nothing
+refusal are unchanged; the boundary tests keep the KL-152 numbers through an
+injected budget.
+
 <!-- BEGIN retained catalogue record -->
 
 ## §152 The XML evidence item limit refuses two real packages

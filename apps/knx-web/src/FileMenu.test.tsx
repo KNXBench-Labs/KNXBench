@@ -4,7 +4,9 @@ import { act, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { FileMenuContent, FileMenuItem, FileMenuSummary, FileSubmenu, useFileMenuItemProps } from "./FileMenu";
+import {
+  choosePanelPlacement, FileMenuContent, FileMenuItem, FileMenuSummary, FileSubmenu, MIN_PANEL_WIDTH_PX, useFileMenuItemProps,
+} from "./FileMenu";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -71,6 +73,7 @@ async function mount(h: Handlers = handlers(), extra?: ReactNode) {
 const trigger = (name: string) => host!.querySelector<HTMLButtonElement>(`[data-file-submenu-trigger="${name}"]`)!;
 const panel = (name: string) => host!.querySelector<HTMLElement>(`[data-file-submenu-panel="${name}"]`)!;
 const item = (text: string) => [...host!.querySelectorAll<HTMLButtonElement>("button")].find((b) => b.textContent === text)!;
+const submenu = (name: string) => host!.querySelector<HTMLElement>(`[data-file-submenu="${name}"]`)!;
 const content = () => host!.querySelector<HTMLElement>(".file-menu-content")!;
 const details = () => host!.querySelector<HTMLDetailsElement>("details")!;
 
@@ -273,6 +276,26 @@ describe("File menu keyboard", () => {
     expect(expanded("help")).toBe("false");
   });
 
+  it("keeps a submenu open while a pointer press moves focus to another row, so the click lands on that row", async () => {
+    await mount();
+    await click(trigger("exchange"), 1);
+    trigger("exchange").focus();
+    // A mouse press focuses its target between pointerdown and click. Folding the open (inline) panel
+    // there would move the pressed row away from under the pointer and lose the click.
+    await act(async () => {
+      trigger("history").dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, pointerType: "mouse" }));
+      trigger("history").focus();
+    });
+    expect(expanded("exchange")).toBe("true");
+    await act(async () => { window.dispatchEvent(new PointerEvent("pointerup", { pointerType: "mouse" })); });
+    await click(trigger("history"), 1);
+    expect(expanded("history")).toBe("true");
+    expect(expanded("exchange")).toBe("false");
+    // Without a press in flight, focus moving to another row still folds the submenu (keyboard path).
+    await act(async () => { item("Quit").focus(); });
+    expect(expanded("history")).toBe("false");
+  });
+
   it("keeps a submenu open when focus leaves the menu entirely", async () => {
     await mount();
     await key(trigger("help"), "ArrowRight");
@@ -347,7 +370,19 @@ describe("File menu siblings and reset", () => {
   });
 });
 
+/** The stylesheet's two layouts, as far as the menu can see them: a flyout is absolutely positioned. */
+function layoutStyle(position: "absolute" | "static") {
+  const style = document.createElement("style");
+  style.textContent = `.file-submenu-panel { position: ${position}; }`;
+  document.head.append(style);
+  return style;
+}
+
 describe("File menu hover intent", () => {
+  let layout: HTMLStyleElement;
+  beforeEach(() => { layout = layoutStyle("absolute"); });
+  afterEach(() => layout.remove());
+
   it("opens after a short intent delay and not before", async () => {
     await mount();
     await over(trigger("history"));
@@ -429,6 +464,82 @@ describe("File menu hover intent", () => {
     await over(item("Quit"));
     await advance(1000);
     expect(expanded("exchange")).toBe("true");
+  });
+});
+
+describe("File menu hover intent in an inline layout", () => {
+  let layout: HTMLStyleElement | undefined;
+  afterEach(() => { layout?.remove(); layout = undefined; window.innerWidth = 1024; });
+
+  it("opens nothing on hover where the stylesheet makes the panels inline", async () => {
+    layout = layoutStyle("static");
+    await mount();
+    await over(trigger("history"));
+    await advance(600);
+    expect(expanded("history")).toBe("false");
+    await over(trigger("exchange"));
+    await advance(600);
+    expect(expanded("exchange")).toBe("false");
+  });
+
+  it("keeps a clicked submenu open under a hover on a sibling row, and a click on the sibling swaps them", async () => {
+    layout = layoutStyle("static");
+    await mount();
+    await click(trigger("exchange"), 1);
+    await over(trigger("history"));
+    await advance(600);
+    expect(expanded("exchange")).toBe("true");
+    expect(expanded("history")).toBe("false");
+    await click(trigger("history"), 1);
+    expect(expanded("history")).toBe("true");
+    expect(expanded("exchange")).toBe("false");
+    await over(trigger("help"));
+    await advance(600);
+    expect(expanded("history")).toBe("true");
+    expect(expanded("help")).toBe("false");
+  });
+
+  it("still opens and closes by keyboard", async () => {
+    layout = layoutStyle("static");
+    await mount();
+    await key(trigger("history"), "ArrowRight");
+    expect(expanded("history")).toBe("true");
+    await key(document.activeElement!, "ArrowLeft");
+    expect(expanded("history")).toBe("false");
+  });
+
+  it("opens nothing on hover where no side keeps the panel's minimum width (per-instance inline)", async () => {
+    layout = layoutStyle("absolute");
+    window.innerWidth = 600;
+    const spy = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+      const box = (left: number, top: number, width: number, height: number) =>
+        ({ left, top, width, height, right: left + width, bottom: top + height, x: left, y: top, toJSON() {} }) as DOMRect;
+      if (this.dataset.fileSubmenuPanel) return box(396, 100, 240, 120);
+      if (this.classList.contains("file-submenu")) return box(100, 100, 200, 34);
+      return box(0, 0, 0, 0);
+    });
+    await mount();
+    await over(trigger("exchange"));
+    await advance(600);
+    expect(expanded("exchange")).toBe("false");
+    expect(panel("exchange").hidden).toBe(true);
+    // The probe leaves nothing behind: no layout mark on the row, no stray unhidden panel.
+    expect(host!.querySelector("[data-layout]")).toBeNull();
+    await click(trigger("exchange"), 1);
+    expect(expanded("exchange")).toBe("true");
+    await over(trigger("history"));
+    await advance(600);
+    expect(expanded("exchange")).toBe("true");
+    expect(expanded("history")).toBe("false");
+    spy.mockRestore();
+  });
+
+  it("a flyout still opens on hover where the panel fits beside its row", async () => {
+    layout = layoutStyle("absolute");
+    await mount();
+    await over(trigger("history"));
+    await advance(200);
+    expect(expanded("history")).toBe("true");
   });
 });
 
@@ -598,9 +709,9 @@ describe("File menu placement", () => {
     style.remove();
   });
 
-  it("gives up width instead of leaving the screen when neither side has room", async () => {
+  it("gives up width, down to the shared minimum, instead of leaving the screen when neither side fits the whole panel", async () => {
     const style = stylePanelsAbsolute();
-    window.innerWidth = 500;
+    window.innerWidth = 640;
     await mount();
     const spy = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
       if (this.dataset.fileSubmenuPanel) return rect(396, 100, 240, 120);
@@ -609,7 +720,55 @@ describe("File menu placement", () => {
     });
     await key(trigger("exchange"), "ArrowRight");
     expect(panel("exchange").dataset.side).toBeUndefined();
-    expect(panel("exchange").style.getPropertyValue("--file-submenu-max-width")).toBe("160px");
+    // 640 - 8 - 396 = 236 px of room, above the 220 px minimum.
+    expect(panel("exchange").style.getPropertyValue("--file-submenu-max-width")).toBe("236px");
+    expect(submenu("exchange").dataset.layout).toBeUndefined();
+    spy.mockRestore();
+    style.remove();
+  });
+
+  it("expands inline, never narrower than the minimum, when neither side has the minimum", async () => {
+    const style = stylePanelsAbsolute();
+    window.innerWidth = 600;
+    await mount();
+    const spy = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+      if (this.dataset.fileSubmenuPanel) return rect(396, 100, 240, 120);
+      if (this.classList.contains("file-submenu")) return rect(100, 100, 200, 34);
+      return rect(0, 0, 0, 0);
+    });
+    await key(trigger("exchange"), "ArrowRight");
+    // 600 - 8 - 396 = 196 px on the right, 100 - 6 - 8 = 86 px on the left: both below 220 px.
+    expect(submenu("exchange").dataset.layout).toBe("inline");
+    expect(panel("exchange").dataset.side).toBeUndefined();
+    expect(panel("exchange").style.getPropertyValue("--file-submenu-max-width")).toBe("");
+    spy.mockRestore();
+    style.remove();
+  });
+
+  it("states its minimum width on the panel, the one value the stylesheet reads", async () => {
+    await mount();
+    expect(panel("exchange").style.getPropertyValue("--file-submenu-min-width")).toBe("220px");
+  });
+
+  it("leaves inline mode when the window grows wide enough again, and when the panel closes", async () => {
+    const style = stylePanelsAbsolute();
+    window.innerWidth = 600;
+    await mount();
+    const spy = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+      if (this.dataset.fileSubmenuPanel) return rect(396, 100, 240, 120);
+      if (this.classList.contains("file-submenu")) return rect(100, 100, 200, 34);
+      return rect(0, 0, 0, 0);
+    });
+    await key(trigger("exchange"), "ArrowRight");
+    expect(submenu("exchange").dataset.layout).toBe("inline");
+    window.innerWidth = 1200;
+    await act(async () => { window.dispatchEvent(new Event("resize")); });
+    expect(submenu("exchange").dataset.layout).toBeUndefined();
+    window.innerWidth = 600;
+    await act(async () => { window.dispatchEvent(new Event("resize")); });
+    expect(submenu("exchange").dataset.layout).toBe("inline");
+    await key(trigger("exchange"), "Escape");
+    expect(submenu("exchange").dataset.layout).toBeUndefined();
     spy.mockRestore();
     style.remove();
   });
@@ -690,5 +849,40 @@ describe("File menu placement", () => {
       root = undefined;
       expect(observer.disconnected).toBe(true);
     });
+  });
+});
+
+describe("choosePanelPlacement", () => {
+  // The panel is 240 px wide, its row starts at x = 100, the panel at x = 396 (row 200 px + gap).
+  const at = (viewportWidth: number, anchorLeft = 100, panelWidth = 240) =>
+    choosePanelPlacement({ viewportWidth, panelLeft: anchorLeft + 296, panelWidth, anchorLeft });
+
+  it("keeps the right side while the whole panel fits", () => {
+    expect(at(1200)).toEqual({ kind: "flyout", side: "right", maxWidth: null });
+    expect(at(644)).toEqual({ kind: "flyout", side: "right", maxWidth: null });
+  });
+
+  it("flips left when the whole panel fits there and not on the right", () => {
+    expect(at(600, 300)).toEqual({ kind: "flyout", side: "left", maxWidth: null });
+  });
+
+  it("caps the width on the side with room for the minimum", () => {
+    // 640 - 8 - 396 = 236 px right, 100 - 6 - 8 = 86 px left.
+    expect(at(640)).toEqual({ kind: "flyout", side: "right", maxWidth: 236 });
+    // Right has 120 px, left has 260 - 6 - 8 = 246 px but the whole panel (300 px) does not fit.
+    expect(choosePanelPlacement({ viewportWidth: 524, panelLeft: 396, panelWidth: 300, anchorLeft: 260 }))
+      .toEqual({ kind: "flyout", side: "left", maxWidth: 246 });
+  });
+
+  it("offers exactly the minimum width and not a pixel less", () => {
+    expect(MIN_PANEL_WIDTH_PX).toBe(220);
+    // 396 + 220 + 8 = 624 px viewport: exactly 220 px of room on the right.
+    expect(at(624)).toEqual({ kind: "flyout", side: "right", maxWidth: 220 });
+    expect(at(623)).toEqual({ kind: "inline" });
+  });
+
+  it("goes inline when neither side keeps the minimum", () => {
+    expect(at(600)).toEqual({ kind: "inline" });
+    expect(at(430)).toEqual({ kind: "inline" });
   });
 });

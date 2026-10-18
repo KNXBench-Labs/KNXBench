@@ -127,7 +127,15 @@ the menu rests focus on File first, so every dialog returns focus there. Open pa
 re-placed when they grow (`ResizeObserver`); on short windows (600 px and below) the menu
 scrolls and submenus expand inline. Hover opens after 120 ms and survives a diagonal
 move, and the 140 ms slide is removed by motion level Off and reduced motion.
-Not done: type-ahead, native WebKitGTK/Tauri runs. [Contract](contracts/file-menu.md).
+Correction round (18 October 2026, UISET-02/03): a flyout has one minimum width
+(220 px, stated to the stylesheet as `--file-submenu-min-width`); where neither side keeps
+it, that submenu expands inline for as long as it is open instead of leaving the viewport.
+The open menu now has `z-index: 6` inside the toolbar, so disabled toolbar controls no longer
+paint over its first rows; dialogs stay above it. Hover is for flyouts only: an inline submenu
+(narrow, short window, or a mid-width one with no room beside its row) opens and folds by
+click and keyboard, because its opening moves the rows under a resting mouse and the hover that
+followed used to swap the submenu just clicked (and a mouse press on a sibling row no longer folds the open submenu before the click lands); the layout is read from the rendered panel, not
+a copied breakpoint. Not done: type-ahead, native WebKitGTK/Tauri runs. [Contract](contracts/file-menu.md).
 
 ## UI-05 appearance relevance (18 October 2026)
 

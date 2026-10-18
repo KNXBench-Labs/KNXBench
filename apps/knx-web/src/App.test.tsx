@@ -1693,7 +1693,7 @@ describe("App — the File menu by keyboard alone", () => {
     await act(async () => root.unmount());
   });
 
-  it("closes the comparison report on Escape before the menu, and restores focus at each step", async () => {
+  it("opens the comparison from History in a dialog; Escape closes it and focus returns to File", async () => {
     filePickerMock.pickOpenPath.mockResolvedValue("/tmp/project.knxproj");
     apiMock.importProject.mockResolvedValue(baseTree());
     apiMock.diffProject.mockResolvedValue({ infoChanges: [], installations: [] });
@@ -1706,35 +1706,19 @@ describe("App — the File menu by keyboard alone", () => {
     const menu = host!.querySelector<HTMLElement>(".file-menu")!;
     const history = menu.querySelector<HTMLButtonElement>('[data-file-submenu-trigger="history"]')!;
     await act(async () => history.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 0 })));
-    const compare = findButton("Compare with…");
-    await act(async () => compare.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    await act(async () => findButton("Compare with…").dispatchEvent(new MouseEvent("click", { bubbles: true })));
 
-    const panel = host!.querySelector<HTMLElement>(".project-diff-panel")!;
-    expect(panel.textContent).toContain("No differences found.");
-    // Focus moves into the report, so the next Escape has somewhere to land.
-    expect(document.activeElement).toBe(panel);
-
-    await act(async () => {
-      panel.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-    });
-    // Innermost first: the report is gone, the menu is still open, and focus
-    // sits back on the entry that opened the report.
-    expect(host!.querySelector(".project-diff-panel")).toBeNull();
-    expect(menu.hasAttribute("open")).toBe(true);
-    expect(document.activeElement).toBe(compare);
-
-    // UI-03: next the History submenu folds and focus lands on its parent
-    // item; the menu stays open until one more Escape.
-    await act(async () => {
-      compare.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-    });
-    expect(menu.hasAttribute("open")).toBe(true);
-    expect(history.getAttribute("aria-expanded")).toBe("false");
-    expect(document.activeElement).toBe(history);
+    // The menu closed like on every other entry; the result is a dialog outside it.
+    expect(menu.hasAttribute("open")).toBe(false);
+    const dialog = document.body.querySelector<HTMLElement>('[role="dialog"].project-diff-panel')!;
+    expect(dialog.textContent).toContain("No differences found.");
+    expect(menu.contains(dialog)).toBe(false);
+    expect(menu.querySelector("input, [role=group], .project-diff-panel")).toBeNull();
 
     await act(async () => {
-      history.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      dialog.querySelector("button")!.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     });
+    expect(document.body.querySelector(".project-diff-panel")).toBeNull();
     expect(menu.hasAttribute("open")).toBe(false);
     expect(document.activeElement).toBe(summary);
 
@@ -3059,12 +3043,9 @@ describe("App — the File menu's manners, the stacked splitters, Quit and About
     await act(async () => root.unmount());
   });
 
-  // The one entry that must survive its own activation: `Compare with…`
-  // renders its report *inside* the menu, so closing on that click would
-  // hide the answer the click asked for. `data-menu-stays-open` is the
-  // opt-out, and this pins that it is honoured for both the button and
-  // the report's own Close button.
-  it("keeps the menu open for the entries that render their result inside it", async () => {
+  // `Compare with…` is an entry like any other: the click closes the menu, and the result opens
+  // as a dialog of its own (UI-03), so no entry needs to keep the menu open.
+  it("closes the menu on Compare with… and shows the result in a dialog", async () => {
     apiMock.diffProject.mockResolvedValue({ infoChanges: [], installations: [] });
     const root = await openProject();
     const menu = await openMenu();
@@ -3072,14 +3053,16 @@ describe("App — the File menu's manners, the stacked splitters, Quit and About
     await act(async () => {
       findButton("Compare with…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
-    expect(menu.open).toBe(true);
-    const panel = host!.querySelector<HTMLElement>(".project-diff-panel")!;
-    expect(panel).not.toBeNull();
+    expect(menu.open).toBe(false);
+    const dialog = document.body.querySelector<HTMLElement>(".project-diff-panel")!;
+    expect(dialog.getAttribute("role")).toBe("dialog");
 
     await act(async () => {
-      panel.querySelector("button")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      [...dialog.querySelectorAll("button")].find((b) => b.textContent === "Close")!
+        .dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
-    expect(menu.open).toBe(true);
+    expect(document.body.querySelector(".project-diff-panel")).toBeNull();
+    expect(menu.open).toBe(false);
 
     await act(async () => root.unmount());
   });

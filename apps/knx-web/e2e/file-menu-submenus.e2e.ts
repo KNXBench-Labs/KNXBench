@@ -416,6 +416,46 @@ test.describe("File menu as a WAI-ARIA menu button", () => {
   });
 });
 
+test.describe("File menu holds entries only", () => {
+  test.beforeEach(async ({ page }) => { await page.setViewportSize({ width: 1440, height: 900 }); });
+
+  const levels = [{ name: "first level", submenu: null }, ...TRIGGERS.map((id) => ({ name: `${id} submenu`, submenu: id }))] as const;
+
+  test("every focusable descendant of the open menu is a declared entry", async ({ page }) => {
+    await serveProject(page);
+    await page.goto("/?view=editor");
+    await openFile(page);
+    for (const id of TRIGGERS) await openFileSubmenu(page, id);
+    const strays = await page.evaluate(() => [...document.querySelectorAll<HTMLElement>(
+      ".file-menu-content button, .file-menu-content input, .file-menu-content select, .file-menu-content textarea, .file-menu-content a[href], .file-menu-content [tabindex]",
+    )].filter((el) => !el.hasAttribute("data-file-menu-item") && !(el as HTMLButtonElement).disabled && el.getClientRects().length > 0)
+      .map((el) => `${el.tagName} ${el.textContent}`));
+    expect(strays).toEqual([]);
+    await expect(page.locator(".file-menu-content .project-diff-panel, .file-menu-content [role=group]")).toHaveCount(0);
+  });
+
+  for (const level of levels) for (const shift of [false, true]) {
+    test(`${shift ? "Shift+Tab" : "Tab"} from every entry of the ${level.name} closes File`, async ({ page }) => {
+      await serveProject(page);
+      await page.goto("/?view=editor");
+      const scope = level.submenu ? panel(page, level.submenu) : page.locator(".file-menu-content");
+      const entries = level.submenu ? "[data-file-menu-item]:not([disabled])" : ":scope > [data-file-menu-item]:not([disabled])";
+      await openFile(page);
+      if (level.submenu) await openFileSubmenu(page, level.submenu);
+      const count = await scope.locator(entries).count();
+      expect(count).toBeGreaterThan(0);
+      for (let at = 0; at < count; at += 1) {
+        if (!(await page.locator(".file-menu").evaluate((n: HTMLDetailsElement) => n.open))) await openFile(page);
+        if (level.submenu && !(await panel(page, level.submenu).isVisible())) await openFileSubmenu(page, level.submenu);
+        await scope.locator(entries).nth(at).focus();
+        await page.keyboard.press(shift ? "Shift+Tab" : "Tab");
+        await expect(page.locator(".file-menu")).toHaveJSProperty("open", false);
+        for (const id of TRIGGERS) await expect(trigger(page, id)).toHaveAttribute("aria-expanded", "false");
+      }
+    });
+  }
+});
+
 test.describe("File menu focus restoration", () => {
   test.beforeEach(async ({ page }) => { await page.setViewportSize({ width: 1440, height: 900 }); });
 
@@ -443,30 +483,37 @@ test.describe("File menu focus restoration", () => {
   }
 });
 
-test.describe("File menu placement under change", () => {
-  test("a comparison report that grows the History panel near the edges stays inside the viewport", async ({ page }) => {
+test.describe("File menu placement and comparison dialog", () => {
+  test("the comparison result opens as a dialog inside the viewport, the menu closes and File gets focus back", async ({ page }) => {
     const unexpected = await serveProject(page, { compareAdded: 60 });
     await page.setViewportSize({ width: 800, height: 640 });
     await page.goto("/?view=editor");
-    await openFile(page);
-    await openFileSubmenu(page, "history");
-    await viewportFit(page, panel(page, "history"));
-    await page.getByRole("menuitem", { name: en["projectDiff.compareButton"], exact: true }).click();
-    // Keyboard, not pointer: a pointer press in the web picker closes the menu (a desktop native
-    // dialog does not), and this test needs the report to arrive while the panel is open.
-    await page.getByRole("button", { name: "compare-fictional.knxdb", exact: true }).focus();
-    await page.keyboard.press("Enter");
-    const report = panel(page, "history").locator(".project-diff-panel");
-    await expect(report).toBeVisible();
-    await expect(panel(page, "history")).toBeVisible();
-    await viewportFit(page, panel(page, "history"));
-    // Expanding the entity tables grows the open panel further; it must still fit afterwards.
-    const before = await box(panel(page, "history"));
-    const toggles = report.locator(".project-diff-toggle");
-    for (let i = 0; i < await toggles.count(); i += 1) await toggles.nth(i).click();
-    await expect.poll(async () => (await box(panel(page, "history"))).height).toBeGreaterThan(before.height);
-    await viewportFit(page, panel(page, "history"));
-    await expect(report).toBeVisible();
+    for (const how of ["Escape", "close button"] as const) {
+      await openFile(page);
+      await openFileSubmenu(page, "history");
+      await page.getByRole("menuitem", { name: en["projectDiff.compareButton"], exact: true }).click();
+      await expect(page.locator(".file-menu")).toHaveJSProperty("open", false);
+      await page.getByRole("button", { name: "compare-fictional.knxdb", exact: true }).click();
+      const report = page.getByRole("dialog", { name: en["projectDiff.title"], exact: true });
+      await expect(report).toBeVisible();
+      await expect(report).toContainText("Group addresses: 60 added");
+      await expect(page.locator(".file-menu-content").getByRole("dialog")).toHaveCount(0);
+      await viewportFit(page, report);
+      // Expanding the entity tables grows the dialog; it still fits and scrolls inside itself.
+      const toggles = report.locator(".project-diff-toggle");
+      for (let i = 0; i < await toggles.count(); i += 1) await toggles.nth(i).click();
+      await viewportFit(page, report);
+      // The dialog is modal: Tab cycles inside it and never reaches the File control.
+      for (let i = 0; i < 12; i += 1) {
+        await page.keyboard.press("Tab");
+        expect(await page.evaluate(() => document.activeElement?.closest('[role="dialog"]') !== null)).toBe(true);
+      }
+      if (how === "Escape") await page.keyboard.press("Escape");
+      else await report.getByRole("button", { name: en["projectDiff.close"], exact: true }).click();
+      await expect(report).toBeHidden();
+      await expect(fileControl(page)).toBeFocused();
+      await expect(page.locator(".file-menu")).toHaveJSProperty("open", false);
+    }
     expect(unexpected).toEqual([]);
   });
 

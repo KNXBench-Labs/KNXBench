@@ -14,7 +14,7 @@ The File menu has two kinds of rows.
 | --- | --- |
 | First level | **New project…**, **Open project…**, **Open (.knxdb)…**, **Save As…** (frequent project actions), then **Logout** (only where a session exists) and **Quit** (desktop shell only) |
 | Submenu **Import & export** | web-only **Export project…**, selective import, group-address CSV export/import, documentation export |
-| Submenu **History & comparison** | **Project history**, **Compare with…** (and the comparison report) |
+| Submenu **History & comparison** | **Project history**, **Compare with…** (its result opens in a dialog, see below) |
 | Submenu **Help & diagnostics** | debug report, support-gap analysis, device support report, diagnostic export, introduction, achievements (while switched on), About |
 
 Native and web differences are unchanged because the conditions are unchanged:
@@ -33,10 +33,9 @@ child component keeps finding its summary for focus restoration.
 ## What a closed submenu keeps
 
 A folded submenu is `hidden`, not unmounted. Several entries own state that must
-outlive the panel: the selective-import, documentation, debug-report and support
-dialogs live in their button components, and the comparison report renders inside
-the History panel. Unmounting would have discarded an in-flight import or a shown
-report when the pointer drifted away. A reopened File menu starts with every
+outlive the panel: the selective-import, documentation, debug-report, support and
+comparison dialogs live in their button components. Unmounting would have discarded
+an in-flight import or a comparison in progress when the pointer drifted away. A reopened File menu starts with every
 submenu folded (the `open` attribute of the `<details>` is observed), but nothing
 inside is reset.
 
@@ -52,9 +51,16 @@ The File control and its menu follow the WAI-ARIA menu-button pattern, completel
   contribution, support report, diagnostic export) spreads `useFileMenuItemProps()`
   onto it. A declared entry has `role="menuitem"` and `data-file-menu-item`; outside a
   File menu the hook returns nothing, so the reused CSV and support buttons are plain
-  buttons elsewhere. Keyboard handling asks for declared entries only. A button without
-  the marker (the comparison report's **Close**, a toggle inside the report) is content:
-  no role, no arrow-key stop, and Tab treats it like any other control.
+  buttons elsewhere. Keyboard handling asks for declared entries only.
+- **The menu contains declared entries only.** Nothing interactive other than entries
+  lives inside the menu or a submenu panel: no report, input or toggle. What an entry
+  produces for the user to work with opens in a dialog rendered into the document body
+  (a portal), outside the menu. The project comparison is the case in point: **Compare
+  with…** is an ordinary entry (the click closes the menu like every other one), and its
+  result (`ProjectDiffPanel`, the shared `Overlay`) is a modal dialog labelled
+  **Comparison result**, with the grouped counts, the entity tables and **Close**. It
+  behaves as before otherwise (file choice, refusal text, import diagnostics, filter,
+  expandable tables, achievement event).
 - A submenu row is a declared `menuitem` with `aria-haspopup="menu"`, `aria-expanded`
   and `aria-controls`; its panel is a `role="menu"` labelled by that row.
 - **Roving tabindex, one tab stop per level.** In each menu level exactly one enabled
@@ -79,15 +85,17 @@ The File control and its menu follow the WAI-ARIA menu-button pattern, completel
 | ArrowDown, ArrowUp | any entry | next / previous enabled entry in the same menu, wrapping |
 | Home, End | any entry | first / last enabled entry in the same menu |
 | ArrowLeft | submenu entry | close the submenu, focus its row |
-| Escape | submenu entry, a control inside the submenu, or the row of an open submenu | close the submenu, focus its row; the menu stays open |
+| Escape | submenu entry, or the row of an open submenu | close the submenu, focus its row; the menu stays open |
 | Escape | first level | close the menu, focus **File** (unchanged) |
-| Tab / Shift+Tab | any declared entry, at any level | close the whole menu and rest focus on **File**; the browser's own Tab move then goes on from there (forward to what follows File, backward to what precedes it) |
+| Tab / Shift+Tab | any focusable element inside the open menu, at any level | close the whole menu and rest focus on **File**; the browser's own Tab move then goes on from there (forward to what follows File, backward to what precedes it) |
 
-Escape is innermost first: an open comparison report closes before its submenu,
-the submenu before the menu. Tab on a control the menu does not own (inside the
-report) is left alone. Focus that leaves the menu entirely (a file picker, a
-dialog) does not close a submenu, because the report renders inside it. A submenu
-opened by click or key still closes when focus moves to another entry of the menu.
+Escape is innermost first: a submenu closes before the menu. The Tab rule is
+decided by DOM containment, not by the React tree: a dialog an entry renders into the
+document body (comparison, About, import, support) is outside the menu even though
+React bubbles its key events through the portal, so Tab there keeps its own meaning
+(the dialog traps it). Focus that leaves the menu entirely (a file picker, a dialog)
+does not close a submenu. A submenu opened by click or key still closes when focus
+moves to another entry of the menu.
 
 ## Focus after an action
 
@@ -97,8 +105,8 @@ dialog mounts. The entry that was activated is hidden with the menu, so without 
 every dialog would capture a hidden element as its restore target and focus would fall
 to `<body>` on close. With it, App-owned and child-owned dialogs alike (About, Project
 history, Introduction, Achievements, support and diagnostic reports, documentation,
-debug report) return focus to **File** on Escape and on their close button. The
-comparison entry and its report opt out with `data-menu-stays-open` as before.
+debug report, the comparison result) return focus to **File** on Escape and on their
+close button. No entry opts out: only the submenu rows carry `data-menu-stays-open`.
 
 ## Pointer
 
@@ -132,9 +140,9 @@ comparison entry and its report opt out with `data-menu-stays-open` as before.
   stay reachable on a short screen. In flyout mode (taller than 600 px and wider than
   650 px) the menu does not scroll; its own height is far below that limit.
 - Positions are measured when a panel opens, on window resize and whenever the open
-  panel's own size changes (a `ResizeObserver`, disconnected on close): the comparison
-  report arrives after the panel is open and can push it past an edge. Placement runs
-  only when the stylesheet made the panel absolutely positioned.
+  panel's own size changes (a `ResizeObserver`, disconnected on close): a panel whose
+  items change (a project opens) can push it past an edge. Placement runs only when the
+  stylesheet made the panel absolutely positioned.
 
 ## Motion
 
@@ -155,24 +163,32 @@ change.
 
 - `src/FileMenu.test.tsx` (component): roles, keyboard paths (open, arrows, Home/End,
   ArrowLeft, Escape order, Escape on the parent row, Tab and Shift+Tab closing the
-  menu, ArrowDown/ArrowUp on the File control), declared entries only, roving tabindex,
+  menu from every kind of focusable descendant and leaving a portalled dialog alone,
+  ArrowDown/ArrowUp on the File control), declared entries only, roving tabindex,
   disabled items, hover intent and the diagonal path with fake timers, sibling
   exclusivity, reset on menu close, placement flip/shrink/shift/inline, re-placement
   and disconnect through a `ResizeObserver`, items kept mounted, each original handler
   called exactly once.
 - `src/App.test.tsx`: the real menu: first-level entries, submenu labels (EN, DE),
   per-level declared entries, one tab stop per level, disabled states without a project,
-  native/web export difference, Logout/Quit separators, report-before-submenu-before-menu
-  Escape, menu closing after an item runs, focus handed back to File after a dialog.
+  native/web export difference, Logout/Quit separators, the comparison opened from
+  History as a dialog (menu closed, Escape, focus on File), menu closing after an item
+  runs, focus handed back to File after a dialog.
+- `src/ProjectDiffPanel.test.tsx`: the comparison flow, counts, details and refusal, now
+  asserted in the dialog; the dialog itself (modal, labelled, outside the menu, Escape
+  and Close restore focus, Tab trapped) and the entry button alone in the menu.
 - `e2e/file-menu-submenus.e2e.ts` (Chromium): right placement and viewport fit, EN/DE;
   keyboard flow with real focus; outside click; hover intent and diagonal move with a
   real mouse; flip near the right edge; fit at 700 px; inline expansion at 400 px;
   animation name/duration standard, Off, reduced motion; legibility in Porcelain,
   Graphite, Cupertino, LCARS and CRT; the menu-button pattern (aria state, one tab
-  stop, ArrowDown/ArrowUp/Enter on File, Tab and Shift+Tab); focus back on File after
-  About, Project history and Diagnostic export close by Escape and by their button; a
-  comparison report that grows the History panel near the right and bottom edges; a
-  1440 x 500 viewport where **Logout** stays reachable.
+  stop, ArrowDown/ArrowUp/Enter on File, Tab and Shift+Tab); only declared entries are
+  focusable inside the open menu; Tab and Shift+Tab from every entry of the first level
+  and of each submenu close File; focus back on File after About, Project history and
+  Diagnostic export close by Escape and by their button; the comparison result opened
+  from History as a dialog that fits an 800 x 640 viewport with all tables expanded,
+  traps Tab and returns focus to File on Escape and on Close; a 1440 x 500 viewport
+  where **Logout** stays reachable.
 - Older specs that open an entry now open its submenu first through
   `e2e/file-menu.ts`.
 

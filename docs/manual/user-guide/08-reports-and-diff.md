@@ -340,18 +340,19 @@ explicit note that its own fields are unchanged.
 Open the **File** menu and choose **Compare with…**. Pick a KNXBench project (`.knxdb`)
 or a raw ETS project export (`.knxproj`); in the browser you can also upload one from
 your computer in the same picker. KNXBench compares the project you currently have open
-(the left side) against the file you picked (the right side) and opens a **Comparison
-result** panel.
+(the left side) against the file you picked (the right side). The File menu closes when
+you choose **Compare with…**, and the result opens in a **Comparison result** dialog of
+its own; `Escape` or **Close** dismisses it and returns focus to **File**.
 
-A `.knxproj` is imported for the comparison through the regular importer. The panel
+A `.knxproj` is imported for the comparison through the regular importer. The dialog
 then shows a collapsed **ETS import report** line above the result, for example
 *"ETS import report: 3 diagnostics (1 warning)"*. Open it to read every diagnostic:
 its severity, message, and where in the archive it was found. If the import reports
-an error, KNXBench does not compare at all: the panel says *"Comparison refused"* and
+an error, KNXBench does not compare at all: the dialog says *"Comparison refused"* and
 shows the diagnostics instead, because a partly misread file would produce a
 misleading comparison. Warnings do not stop the comparison.
 
-The panel lists, per installation, one line per entity kind with the counts in each
+The dialog lists, per installation, one line per entity kind with the counts in each
 bucket — *Areas*, *Lines*, *Devices*, *Group ranges*, *Group addresses*, *Buildings* —
 plus separate lines for changed project and installation info fields. If nothing
 differs it says *"No differences found."* and you close it again.

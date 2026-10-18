@@ -1,5 +1,6 @@
-/** Panel comparing the open project against another file on disk and rendering the entity diff. */
-import { useEffect, useRef, useState } from "react";
+/** File menu entry that compares the open project with another file; the diff opens in a dialog. */
+import { useId, useState } from "react";
+import { createPortal } from "react-dom";
 import { pickOpenPath } from "./filePicker";
 import * as api from "./api";
 import { emitAchievementEvent } from "./achievementEvents";
@@ -12,6 +13,7 @@ import ProjectDiffDetails from "./ProjectDiffDetails";
 import ProjectDiffImportDiagnostics from "./ProjectDiffImportDiagnostics";
 import { compareFilters } from "./projectDiffView";
 import { useFileMenuItemProps } from "./FileMenu";
+import Overlay from "./Overlay";
 
 // One non-generic entity table's shape, enough for the grouped-count
 // renderer below — every table in a `ProjectDiffReport` (`api.ts`'s
@@ -127,12 +129,14 @@ function summaryLines(t: Translate, report: ProjectDiffReport): string[] {
   return lines;
 }
 
-// Self-contained result panel, closer in spirit to `LogPanel.tsx` than to
-// `DocumentationExportButton.tsx`'s one-line toast: the comparison result
-// is a list of grouped counts plus an expandable entity list, not something
-// a single summary string can carry. Owns its `./api`/`./filePicker` calls the same way
-// `DocumentationExportButton` owns its own, but additionally owns the
-// fetched `ProjectDiffReport` and an open/closed toggle for the panel.
+// Self-contained comparison: the menu entry owns its `./api`/`./filePicker`
+// calls the same way `DocumentationExportButton` owns its own, plus the fetched
+// `ProjectDiffReport`. The result is too much for a one-line toast (grouped
+// counts plus an expandable entity list) and too interactive for a menu, whose
+// content is entries only; it renders in a modal dialog portalled to the
+// document body, like the other dialogs the File menu opens. The menu closes
+// on the click as for every other entry; the dialog hands focus back to the
+// File control when it closes.
 export default function ProjectDiffPanel(props: {
   tree: ProjectTree | null;
   onError: (e: unknown) => void;
@@ -141,34 +145,15 @@ export default function ProjectDiffPanel(props: {
   const { tree, onError, onClearErrors } = props;
   const t = useTranslate();
   const entry = useFileMenuItemProps();
+  const titleId = useId();
   const [report, setReport] = useState<ProjectDiffReport | null>(null);
   // A `.knxproj` the server refused over error-level import diagnostics:
-  // shown in this panel instead of a diff, never alongside a stale one.
+  // shown in the dialog instead of a diff, never alongside a stale one.
   const [refusal, setRefusal] = useState<ComparisonImport | null>(null);
   const [open, setOpen] = useState(false);
   // Remounts the details on every comparison, so a new report starts
   // collapsed instead of inheriting the previous one's expanded tables.
   const [generation, setGeneration] = useState(0);
-  const panelRef = useRef<HTMLDivElement | null>(null);
-  const compareRef = useRef<HTMLButtonElement | null>(null);
-
-  // This panel renders inside the File menu's `<details>`, whose own
-  // Escape handler closes the menu and returns focus to its summary. Before
-  // stage 4 that left this report `open` but hidden, so reopening the menu
-  // showed a stale comparison. Escape now closes the report first and stops
-  // there: a second Escape closes the menu, the usual innermost-first rule.
-  // Focus moves into the panel when it opens so that first Escape has
-  // somewhere to land, and back to the Compare button when it closes, so a
-  // keyboard walk of the menu resumes where it left off instead of at the
-  // top of the document.
-  useEffect(() => {
-    if (open) panelRef.current?.focus();
-  }, [open]);
-
-  function close() {
-    setOpen(false);
-    compareRef.current?.focus();
-  }
 
   async function compare() {
     // Not module-level (see the removed `COMPARE_FILTER` constant): the
@@ -201,33 +186,12 @@ export default function ProjectDiffPanel(props: {
 
   return (
     <>
-      {/* T28/F1: the File menu closes on any item activation that reaches
-          its container, and this is the one item that must not trigger
-          that — the report below renders *inside* the menu, so closing it
-          would hide the answer to the click that asked for it. The
-          attribute is the opt-out `App.tsx`'s `handleFileMenuActivation`
-          looks for; it does nothing anywhere else this panel is used. */}
-      <button {...entry} ref={compareRef} onClick={compare} disabled={!tree} data-menu-stays-open="true">
+      <button {...entry} onClick={compare} disabled={!tree}>
         {t("projectDiff.compareButton")}
       </button>
-      {open && (report || refusal) && (
-        <div
-          className="project-diff-panel"
-          ref={panelRef}
-          tabIndex={-1}
-          role="group"
-          aria-label={t("projectDiff.title")}
-          // Covers this panel's own Close button, by the same argument as
-          // the Compare button above: dismissing the report is not a
-          // reason to dismiss the menu holding it.
-          data-menu-stays-open="true"
-          onKeyDown={(e) => {
-            if (e.key !== "Escape") return;
-            e.stopPropagation();
-            close();
-          }}
-        >
-          <h2>{t("projectDiff.title")}</h2>
+      {open && (report || refusal) && createPortal(
+        <Overlay labelledBy={titleId} className="project-diff-panel" onClose={() => setOpen(false)}>
+          <h2 id={titleId}>{t("projectDiff.title")}</h2>
           {refusal && (
             <>
               <p className="project-diff-panel-refused" role="alert">
@@ -251,8 +215,9 @@ export default function ProjectDiffPanel(props: {
               <ProjectDiffDetails key={generation} report={report} />
             </>
           )}
-          <button onClick={close}>{t("projectDiff.close")}</button>
-        </div>
+          <button type="button" onClick={() => setOpen(false)}>{t("projectDiff.close")}</button>
+        </Overlay>,
+        document.body,
       )}
     </>
   );

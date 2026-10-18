@@ -259,7 +259,11 @@ already found lying in the grass.
   ([contract](contracts/file-menu.md)). Welcome-screen cards with the same label stay
   buttons. A new File entry must be declared (`FileMenuItem`, or
   `useFileMenuItemProps()` inside a reused component); an undeclared button gets no
-  role and no arrow-key or roving-tabindex handling.
+  role and no arrow-key or roving-tabindex handling. The menu holds declared entries
+  only: anything interactive that an entry produces (the project comparison's result)
+  opens in a portalled `Overlay` dialog, never inside the menu, and a dialog's keydowns
+  reach `FileMenuContent` through React's portal bubbling, so key handling there must
+  test DOM containment, not the React tree.
 - **Motion settings live in `data-motion-level`** (set by
   `apps/knx-web/src/motion.ts`), not `data-motion`; assert the attribute the
   app actually sets.

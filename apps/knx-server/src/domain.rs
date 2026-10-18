@@ -5969,6 +5969,7 @@ fn assemble_parameter_panel(
                 group,
                 controls_com_objects: presentation.controls_com_objects,
                 cell,
+                indent_level: presentation.indent_level,
                 controlled_com_object_ids: if section.scope.is_none() {
                     presentation
                         .controlled_object_refs

@@ -88,6 +88,11 @@ dpt_text: string | null,
  */
 dpt_text_language?: string,
 /**
+ * The object size the product data resolves (`ComObjectSize_t`, e.g.
+ * `"1 Bit"`, `"2 Bytes"`); absent when no layer states it (census O3).
+ */
+size?: string,
+/**
  * The product's `FunctionText` (`ComObjectRef` over `ComObject`), in
  * the requested language when translated, module arguments of the
  * object's own module instance substituted. The main-function label

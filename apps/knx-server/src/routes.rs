@@ -563,6 +563,9 @@ pub(crate) struct ParameterFieldDto {
     /// ADR-0137: this field's declared cell in its group's grid, only when
     /// that group's layout status is `grid` and the cell is unambiguous.
     pub(crate) cell: Option<ParameterGridCellDto>,
+    /// `ParameterRefRef/@IndentLevel` (1 to 8), only when one block declares
+    /// it consistently; presentation only.
+    pub(crate) indent_level: Option<u8>,
     /// Exact configured object IDs; empty when scope/identity cannot be established.
     pub(crate) controlled_com_object_ids: Vec<u32>,
     pub(crate) ets_id: String,

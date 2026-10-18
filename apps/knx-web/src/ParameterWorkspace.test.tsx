@@ -234,4 +234,14 @@ describe("ParameterWorkspace declared grids", () => {
     expect(host.querySelector<HTMLInputElement>('[data-parameter-row="Delay"] input')).toBe(input);
     expect(input.value).toBe("7");
   });
+  it("indents a row by its declared level, but not in search results", async () => {
+    const indented = { ...field("Delay", "Buttons"), indentLevel: 2 };
+    await mount([{ scope: null, fields: [field("Mode", "Buttons"), indented] }]);
+    await act(async () => nav("Buttons").click());
+    expect(host.querySelector('[data-parameter-row="Delay"]')!.getAttribute("data-indent")).toBe("2");
+    expect(host.querySelector('[data-parameter-row="Mode"]')!.hasAttribute("data-indent")).toBe(false);
+    const search = host.querySelector<HTMLInputElement>('input[type="search"]')!;
+    await act(async () => setInput(search, "Delay"));
+    expect(host.querySelector('[data-parameter-row="Delay"]')!.hasAttribute("data-indent")).toBe(false);
+  });
 });

@@ -62,6 +62,7 @@ function ObjectRow({ com, flat, hidden, matches, open, descriptionMatch, editor,
       <td className="com-object-effective-dpt" title={dpt ?? undefined}><span>{dptDisplay(dpt, language)}</span>
         {com.dpt === null && com.program_dpt !== null && <small className="com-object-dpt-origin">{t("inspector.programDefault")}</small>}
         {com.dpt_text && <small>{t("dpt.masterText", { value: com.dpt_text })}</small>}
+        {com.size && <small className="com-object-size">{t("comTable.size", { value: com.size })}</small>}
         {productLanguage !== null && fellBack(com.dpt_text, com.dpt_text_language) && <LanguageFallbackBadge selected={productLanguage} source={null} />}</td>
       <td className="mono ga-address">{com.links.length ? com.links.map((link, i) => <span key={`${link.ga_id}-${link.direction}-${i}`} className="com-address-value">
         {link.address === null ? t("comTable.unresolvedLink", { id: link.ga_id }) : formatGroupAddress(link.address)}</span>) : "—"}</td>

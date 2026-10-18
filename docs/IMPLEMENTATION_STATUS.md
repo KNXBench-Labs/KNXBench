@@ -12,6 +12,27 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Packed time units, row indentation and object size (18 October 2026)
+
+Census steps 3 and 4 (first part). **Packed time:** `chooseParameterEditor`
+admits the decimal-count control only for the six plain `TypeTime` units the
+collection declares (1,004 of 1,456 declarations); packed units (452, 79
+programs) and unknown units fall back to `unsupported-codec`, which shows the
+original value and offers no input
+([contract](contracts/parameter-editor-admission.md#packed-time-units-fall-back-2026-10-18)).
+**Indentation:** the grid reader also collects `ParameterRefRef/@IndentLevel`;
+a field gets `FieldLayout::indent_level` (DTO `indentLevel`, 1 to 8) only when
+it has one block and every occurrence there declares the same valid level; the
+workspace indents such rows in the row view
+([contract](contracts/parameter-workspace.md#row-indentation-census-p4-18-october-2026)).
+**Object size:** `ComObjectNode.size` (optional, `ComObjectSize_t` spelling)
+from the size the product data resolves; the object table names it in the DPT
+cell. No schema change. Still open: `SuffixText` (needs a product-database
+column), inline sections, `ShowInComObjectTree` folders, object priority.
+Tests: Vitest `plan` +3, `ParameterEditor` +1, `ParameterWorkspace` +1,
+`ComObjectTable` +1; ProductDB `parameter_layout` +3; HTTP `http_parameter_grid`
++1; projection +1. Mutants: packed fallback and three indent mutants killed.
+
 ## Vendor ZIPs of product packages (18 October 2026)
 
 Census step 2 ([ADR-0140](adr/0140-vendor-zips-of-product-packages-install-as-a-whole.md)).

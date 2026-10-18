@@ -460,6 +460,11 @@ edit the project; they do not connect to, program or download a KNX device.
 
 ### Communication objects
 
+*(Since Alpha 14:)* the **DPT** cell also names the object's size (for example
+**Size: 1 Bit** or **Size: 2 Bytes**) when the installed product data states it,
+which helps when picking a group address of matching size. Without product data
+the size stays blank rather than guessed.
+
 #### Device functions (source builds after Alpha 12)
 
 **Included in Alpha 13:** the device-mode controls, parameter groups and supported
@@ -684,6 +689,12 @@ unreadable layout description also falls back to rows and names the reason.
 Search results are always rows. Wide grids scroll sideways inside the area on
 narrow windows. Captions appear in the program's own language.
 See the [workspace contract](../../contracts/parameter-workspace.md).
+
+*(Since Alpha 14:)* rows the product data declares as indented (for example a
+setting that belongs to the one above it) are shown indented, in the row view
+only. A time parameter whose product data packs several fields into one number
+(units named `Packed…`) is no longer offered as a plain count: the field shows
+the original value unchanged, because that packing is not documented.
 
 The following release-era description explains the retained value/editing rules;
 the new workspace replaces ordinary section/block folding with area navigation.

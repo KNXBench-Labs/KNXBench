@@ -85,6 +85,7 @@ export default function ParameterWorkspace({ sections, renderField }: Props) {
               hidden={searching || matrix !== null || item.separator.groupKey !== activeKey} />
             : (row => <div key={row.key} data-parameter-row={row.field.etsId}
             className="parameter-workspace-row" hidden={!visible.has(row.key)}
+            data-indent={!searching && !matrix?.fields.has(row.key) && row.field.indentLevel ? row.field.indentLevel : undefined}
             style={matrix?.fields.has(row.key) ? matrixStyle(matrix.fields.get(row.key)!) : undefined}
             data-selected={selected === row.key} data-access={row.field.access} data-display-only={row.field.kind === "None"}
             onFocusCapture={() => setSelected(row.key)} onClick={() => setSelected(row.key)}>

@@ -13,6 +13,9 @@ use std::collections::{HashMap, HashSet};
 /// unavailable rather than claiming that no grid exists.
 pub const MAX_GRID_EVENTS: usize = 4_000_000;
 const MAX_DEPTH: usize = 64;
+/// Deepest `ParameterRefRef/@IndentLevel` shown. The collection declares 1 to 5
+/// (census P4); a larger or malformed value indents nothing.
+pub const MAX_INDENT_LEVEL: u8 = 8;
 
 /// A 1-based `row,col` position (Project Schema 23 §1.1.2.35 `CellRef_t`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -95,6 +98,9 @@ pub(super) struct SourceGrids {
     pub references: HashMap<(String, String), Cell>,
     /// Separator `@Id` → `(block @Id, cell)`.
     pub separators: HashMap<String, (String, Cell)>,
+    /// `(block @Id, ParameterRefRef @RefId)` → the one valid `@IndentLevel`
+    /// every occurrence in that block declares (census P4).
+    pub indents: HashMap<(String, String), u8>,
 }
 
 struct Frame {
@@ -108,6 +114,8 @@ struct Frame {
     malformed_axis: bool,
     /// `(element, reference, raw cell)` in document order.
     placed: Vec<(String, Option<String>, Option<String>)>,
+    /// `(ParameterRefRef @RefId, raw @IndentLevel)` in document order.
+    indents: Vec<(String, Option<String>)>,
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -205,6 +213,7 @@ fn read_grids_within(bytes: &[u8], program: &str, budget: usize) -> Option<Sourc
                             columns: Vec::new(),
                             malformed_axis: false,
                             placed: Vec::new(),
+                            indents: Vec::new(),
                         });
                         role = Role::Block(frames.len() - 1);
                         owner = Some(frames.len() - 1);
@@ -284,6 +293,14 @@ fn place(frames: &mut [Frame], owner: Option<usize>, kind: &str, attr: &crate::x
         return;
     };
     let cell = attr.evidence_value("Cell").map(str::to_owned);
+    if kind == "ParameterRefRef" {
+        if let Some(reference) = attr.evidence_value("RefId") {
+            frames[frame].indents.push((
+                reference.to_owned(),
+                attr.evidence_value("IndentLevel").map(str::to_owned),
+            ));
+        }
+    }
     if kind != "ParameterRefRef" && cell.is_none() {
         return;
     }
@@ -320,6 +337,7 @@ fn parse_cell(raw: &str, rows: usize, columns: usize) -> Result<Cell, GridIssueK
 fn finish(frames: Vec<Frame>) -> SourceGrids {
     let mut result = SourceGrids::default();
     for frame in frames {
+        place_indents(&frame, &mut result);
         let axes = frame.row_containers > 0 || frame.column_containers > 0;
         let status = match frame.layout.as_deref() {
             Some("Table" | "Grid") => {
@@ -354,6 +372,40 @@ fn finish(frames: Vec<Frame>) -> SourceGrids {
         );
     }
     result
+}
+
+/// A reference is indented only when every occurrence in the block declares
+/// the same valid level; absent, contradictory or malformed values give none.
+fn place_indents(frame: &Frame, result: &mut SourceGrids) {
+    let mut levels: HashMap<&str, Option<u8>> = HashMap::new();
+    for (reference, raw) in &frame.indents {
+        let level = raw.as_deref().and_then(indent_level);
+        levels
+            .entry(reference.as_str())
+            .and_modify(|previous| {
+                if *previous != level {
+                    *previous = None;
+                }
+            })
+            .or_insert(level);
+    }
+    for (reference, level) in levels {
+        if let Some(level) = level {
+            result
+                .indents
+                .insert((frame.id.clone(), reference.to_owned()), level);
+        }
+    }
+}
+
+/// `1..=MAX_INDENT_LEVEL` written as plain decimal digits.
+fn indent_level(raw: &str) -> Option<u8> {
+    if raw.is_empty() || raw.len() > 3 || !raw.bytes().all(|b| b.is_ascii_digit()) {
+        return None;
+    }
+    raw.parse::<u8>()
+        .ok()
+        .filter(|level| (1..=MAX_INDENT_LEVEL).contains(level))
 }
 
 /// An element gets a cell only when every occurrence names the same valid

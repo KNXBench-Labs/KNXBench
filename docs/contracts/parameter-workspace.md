@@ -109,6 +109,22 @@ or protocol schema change; product database v24 adds typed presentation columns
 - Separator rows are siblings of the field rows under the same parent and are
   keyed apart from them, so they never remount an editor.
 
+## Row indentation (census P4, 18 October 2026)
+
+- A row is indented by `ParameterRefRef/@IndentLevel` (14 px per level, 8 px
+  on narrow screens) when the field has one enclosing block and every
+  occurrence of its reference in that block declares the same level, written
+  as plain decimal digits between 1 and 8. The collection declares 1 to 5.
+  Absent, contradictory, out-of-range or malformed values indent nothing.
+- The level reaches the field DTO as `indentLevel` (null otherwise). It is read
+  from the retained source by the grid reader, so a source above the 8 MiB
+  presentation ceiling gets no indent (census G5).
+- Presentation only: no write, evaluation or ordering effect. Search results
+  and declared grids show no indentation.
+- Evidence level: name-level. The attribute is not defined in the local schema
+  document; indenting is the only reading the name allows, and it cannot change
+  data.
+
 ## Boundaries and evidence
 
 The HTTP projection exposes the nearest declared ParameterBlock plus its declared

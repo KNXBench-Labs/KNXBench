@@ -33,6 +33,7 @@ Last updated: 2026-10-16 21:18 CEST
 | Closed disclosure defaults | Navigation blocks, tree branches, parameter groups and details; manual opening and remembered address views retained | Main-only |
 | [Parameter workspace](contracts/parameter-workspace.md) | Declared areas (closed until chosen), compact label/value rows, cross-area search, retained editors and source metadata; no inferred device/grid geometry | Main-only |
 | [Declared parameter grids](adr/0137-declared-parameter-grids-reach-the-workspace.md) | Matrix view for areas whose product data declares a `Table`/`Grid`, same editors and write path; row view with a reason otherwise | Main-only |
+| [Row indentation](contracts/parameter-workspace.md#row-indentation-census-p4-18-october-2026) | Rows indented by a consistently declared `IndentLevel`; presentation only | Main-only |
 | [Packed time units fall back](contracts/parameter-editor-admission.md#packed-time-units-fall-back-2026-10-18) | Only plain time units get the count control; packed and undeclared-in-collection units show the original value | Main-only |
 | [Object-local function dropdowns](contracts/parameter-object-refresh.md) | Manufacturer enum choices below the expanded object's DPT; exact configured-ID mapping, no guessed module mapping; replaces the device-wide disclosure | Main-only |
 

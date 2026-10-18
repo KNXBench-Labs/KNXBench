@@ -36,6 +36,22 @@ They are reported as unknown and stored as kind `Other`, so the offline editor
 accepts any non-empty text for them; the download refuses them by name. The
 value format is not verified here, so no date editor or validation exists yet.
 
+## Product-database series (18 October 2026, after Alpha 13)
+
+[ADR-0140](../adr/0140-vendor-zips-of-product-packages-install-as-a-whole.md)
+installs vendor ZIPs. Packed `TypeTime` units (`Packed…`, 452 of 1,456
+declarations in the collection) and units the collection does not declare are
+no longer offered as a decimal count; they fall back and show the original value
+([contract](../contracts/parameter-editor-admission.md#packed-time-units-fall-back-2026-10-18)).
+`ParameterRefRef/@IndentLevel` indents rows when one block declares it
+consistently ([contract](../contracts/parameter-workspace.md#row-indentation-census-p4-18-october-2026)),
+and the object table names the object size the product data resolves. Still
+open from the census: `SuffixText` (needs a product-database column: the
+`parameter` row stores `Suffix`, the collection spells `SuffixText`), inline
+sections, `ShowInComObjectTree` folders, object priority, conditional `Rename`
+captions, objects by parameter page, identity-keyed module comparison, `TypeDate`,
+and the 8 MiB presentation ceiling.
+
 ## Declared parameter grids (17 October 2026 source, after Alpha 13)
 
 [ADR-0137](../adr/0137-declared-parameter-grids-reach-the-workspace.md) carries

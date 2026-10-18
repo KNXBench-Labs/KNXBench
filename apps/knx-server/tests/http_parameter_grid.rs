@@ -180,3 +180,20 @@ async fn an_unknown_layout_variant_is_preserved_and_reported_without_cells() {
     assert_eq!(layout["labels"], json!([]));
     assert_eq!(cell(&dto, "P-1_R-1"), Value::Null);
 }
+
+/// Census P4: `IndentLevel` reaches the field DTO as presentation metadata.
+#[tokio::test]
+async fn a_declared_indent_level_reaches_the_field_and_an_undeclared_one_stays_null() {
+    let dto = panel(r#"<ParameterBlock Id="PB-L" Text="Plain list"><ParameterRefRef RefId="P-1_R-1"/><ParameterRefRef RefId="P-2_R-1" IndentLevel="2"/></ParameterBlock>"#).await;
+    let field = |ets_id: &str| {
+        dto["sections"][0]["fields"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|field| field["etsId"] == ets_id)
+            .unwrap()
+            .clone()
+    };
+    assert_eq!(field("P-1_R-1")["indentLevel"], Value::Null);
+    assert_eq!(field("P-2_R-1")["indentLevel"], json!(2));
+}

@@ -24,6 +24,17 @@
 .parameter-workspace-row[hidden] { display: none; }
 .parameter-workspace-row[data-display-only="true"] { grid-template-columns: minmax(0, 1fr); border-bottom: 0; padding-top: 5px; padding-bottom: 5px; }
 .parameter-workspace-row[data-selected="true"] { background: var(--knx-surface); box-shadow: inset 2px 0 var(--knx-accent); }
+/* Census P4: ParameterRefRef/@IndentLevel, presentation only. */
+.parameter-workspace-row[data-indent="1"] { --parameter-indent: 1; }
+.parameter-workspace-row[data-indent="2"] { --parameter-indent: 2; }
+.parameter-workspace-row[data-indent="3"] { --parameter-indent: 3; }
+.parameter-workspace-row[data-indent="4"] { --parameter-indent: 4; }
+.parameter-workspace-row[data-indent="5"] { --parameter-indent: 5; }
+.parameter-workspace-row[data-indent="6"] { --parameter-indent: 6; }
+.parameter-workspace-row[data-indent="7"] { --parameter-indent: 7; }
+.parameter-workspace-row[data-indent="8"] { --parameter-indent: 8; }
+.parameter-workspace-row[data-indent] > .parameter-workspace-field { padding-inline-start: calc(var(--parameter-indent) * 14px); }
+@media (max-width: 600px) { .parameter-workspace-row[data-indent] > .parameter-workspace-field { padding-inline-start: calc(var(--parameter-indent) * 8px); } }
 .parameter-workspace-field { min-width: 0; }
 .parameter-workspace .parameter-workspace-row .parameter-field:not(.parameter-field-checked):not(.parameter-label-row):not(.parameter-spacer) { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); align-items: center; column-gap: 18px; row-gap: 5px; margin: 0; font-size: 13px; }
 .parameter-workspace .parameter-field-name { grid-column: 1; min-width: 0; overflow-wrap: anywhere; line-height: 1.45; }

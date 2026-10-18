@@ -168,6 +168,16 @@ counted, and offers **Show all log entries** to return. Keyboard users reach it 
 Tab and open it with Enter; focus moves to the explanation above the list. A zero is
 plain text, because there is nothing to show.
 
+The Technical details card also shows the current native project file's size
+on disk, unsaved changes, and the active product database's size and catalogue
+counts. A project that has never been saved says **Not saved yet**; this is
+different from a measured small file. The database size includes its current
+SQLite journal files when present. Manufacturers, catalogue products and
+application programs belong to the product database; the Devices count in
+Project contents counts instances in the project. Sizes use decimal MB with
+one digit after the decimal separator. Unavailable, loading and read errors
+are shown explicitly. [Measurement details](../../contracts/project-status-metrics.md).
+
 ## The workspace
 
 The center is whatever the selected view shows. Selecting a device from the tree,

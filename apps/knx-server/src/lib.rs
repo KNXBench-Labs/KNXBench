@@ -110,6 +110,7 @@ mod tunnel_holder;
 /// private: everything outside this crate talks to it over `/api/settings`.
 pub use settings::{CURRENT_SCHEMA_VERSION, SETTINGS_FILE_NAME};
 mod settings_routes;
+mod status_metrics_routes;
 mod stored_bus_access_routes;
 /// Exported so an integration test can seed a log entry directly. The two
 /// types and nothing else: the module also holds `SessionLog`'s internals

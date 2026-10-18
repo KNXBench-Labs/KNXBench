@@ -74,6 +74,9 @@ const apiMock = vi.hoisted(() => ({
   // the two that drive a load on purpose.
   loadProgress: vi.fn().mockResolvedValue(null),
   currentProject: vi.fn(),
+  // Overview reads storage metadata separately; keep unrelated shell tests
+  // pending at its explicit loading state.
+  statusMetrics: vi.fn(() => new Promise(() => {})),
   // `CatalogBrowser` fires both of these on mount. The help tests below
   // open it for real (it is the third dialog F1 has to replace), and an
   // unconfigured `vi.fn()` returns `undefined`, on which the component

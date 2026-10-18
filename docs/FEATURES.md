@@ -26,6 +26,12 @@ Last updated: 2026-10-18 07:55 CEST
 | MCP server | Read-only saved-file tools; opt-in rename writer from alpha.10 | alpha.6 |
 | Remote browser | Authenticated server; networking-dependent | alpha.6 |
 
+## Local-only UI feedback (unpublished)
+
+| Feature | Scope | Availability |
+| --- | --- | --- |
+| [Project status storage metrics](contracts/project-status-metrics.md) | Native project file size, unsaved flag, active product database footprint and canonical catalogue counts; explicit missing/loading/error states | Local-only |
+
 ## New in Alpha 14
 
 [Release scope](releases/alpha14.md) separates offline editing and product-data

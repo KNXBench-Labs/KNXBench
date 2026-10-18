@@ -47,7 +47,13 @@ Independent review completed: the only blocking finding concerned print/PDF
 rendering of offscreen headings (23 of 24 transparent in the reviewer's probe).
 On 18 October the owner explicitly authorized commit/push without that fix:
 printing/PDF is not important for this package. This limitation is recorded in
-`docs/WEBSITE.md`, not counted as a passing print test. Final commit/integration
-and publication verification follow that owner decision.
+`docs/WEBSITE.md`, not counted as a passing print test.
+
+Published merge: `3f76c161` on `main`, exact remote equality read back. Website
+and Story tests, documentation/header/anchor checks and the release build passed
+on the merge; 116 merged-release browser checks passed (66 entrance, 28 direction,
+22 public-build). Pages run `39153331822` completed successfully. Live headline JS
+and CSS returned HTTP 200 and matched the accepted source bytes exactly.
+The selected root checkout and other sessions' work were not synchronized or edited.
 Local Chromium acceptance is not a deployment receipt, Firefox/WebKit test,
 screen-reader certification or proof of native back-forward-cache behaviour.

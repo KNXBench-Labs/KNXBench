@@ -1,4 +1,12 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-10-18 14:35
+- **Completed:** Housekeeping, no code change: removed the merged, clean, detached worktree `KNXBench-v24probe-20261018` (HEAD `a0c2537d`, an ancestor of `origin/main`) and ran `git worktree prune`. Also removed its build target from the agent scratch, every scratch entry older than 2026-10-18 (about 150 entries from delivered packages; nothing referenced by a running process), and the stale `scratch.old` copy left over from the 2026-10-17 scratch relocation.
+- **Pending/Next Steps:** Once the census-3 claim (`fix/pdb-integrity-limits-20261018`) is delivered, delete its worktree and its ~195 GB `pdb-limits-target` cargo target from scratch. That one directory is almost all of the remaining scratch volume.
+- **Notes for Codex oder Claude:** Deliberately kept: worktree `KNXBench-pdb-limits-20261018` (unmerged commits; its gate was running during the cleanup), everything in scratch from 2026-10-18 (gate/matrix scripts, logs and probe folders of the active claim), and the owner's backup folder next to the checkout (not scratch, never pruned by agents).
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-10-18 14:08
 - **Completed:** **Alpha 14 published.** Tag `v0.1.0-alpha.14` → `8d104e2f` (annotated, peeled commit verified), pre-release with hand-written notes incl. a "By the numbers" section; `main` fast-forwarded to the tagged commit. Final gate 36/36 green (Vitest 3,742, fixture Chromium 596, 15 production configs 341, 8 further configs 41, Rust 4,882/0/212, native 24, tools 223, corpus 153/153 in 33 targets, product scope 16/16 in 6 targets, inputs frozen). Dry runs 39118142434/39118144327 clean; tag workflows 39124698698/39124698730 published. External verification: SHA256SUMS, `knx-mcp`/`knx-server` `0.1.0-alpha.14+g8d104e2`, OCI revision = full SHA, version and `latest` index digests equal (amd64+arm64), isolated authenticated Docker smoke, native-13 → 16 migration probe, headless AppImage startup (Broadway, embedded API + frontend 200). Records: `docs/releases/alpha14-acceptance.md`, `docs/evidence/release-alpha14-2026-10-18.json`.
 - **Pending/Next Steps:** Alpha 15 work is open again: census-3 claim (size limits, legacy EX-IM, unknown-report cleanup; its item 3 will move the product matrix pins), `SuffixText`, inline sections, object folders, object priority.

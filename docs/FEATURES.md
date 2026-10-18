@@ -32,6 +32,12 @@ Last updated: 2026-10-18 07:55 CEST
 | --- | --- | --- |
 | [Project status storage metrics](contracts/project-status-metrics.md) | Current on-disk size of the open project's native file (may include unsaved recovery-journal growth), separate unsaved flag, active product database footprint including SQLite side files, and catalogue counts for manufacturers with products or programs; explicit missing/loading/error states | Implemented |
 
+## Topology range visibility
+
+| Feature | Scope | Availability |
+| --- | --- | --- |
+| [Device-empty ranges](contracts/topology-metrics.md#device-empty-ranges-issue-25-source-builds-after-alpha-14) | Diagram hides areas/lines without devices; original structure and explorer editing remain unchanged | Local-only; integration pending |
+
 ## Parameter caption resolution
 
 | Feature | Scope | Availability |

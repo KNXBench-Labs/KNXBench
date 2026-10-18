@@ -17,18 +17,18 @@ import DeviceComparisonDialog, { ComparisonTag } from "./DeviceComparisonDialog"
 import "./deviceComparisons.css";
 
 const DEVICES_COLUMNS = [
-  { id: "select", width: 48, min: 48 },
-  { id: "address", width: 100, min: 100 },
-  { id: "name", width: 120, min: 120 },
-  { id: "programming", width: 100, min: 100 },
-  { id: "manufacturer", width: 90, min: 90 },
-  { id: "product", width: 110, min: 110 },
-  { id: "orderNumber", width: 80, min: 80 },
-  { id: "topology", width: 80, min: 80 },
-  { id: "building", width: 90, min: 90 },
-  { id: "com_object_count", width: 80, min: 80 },
-  { id: "description", width: 100, min: 100 },
-  { id: "comparison", width: 102, min: 102 }
+  { id: "select", width: 48, min: 32 },
+  { id: "address", width: 100, min: 48 },
+  { id: "name", width: 120, min: 48 },
+  { id: "programming", width: 100, min: 48 },
+  { id: "manufacturer", width: 90, min: 48 },
+  { id: "product", width: 110, min: 48 },
+  { id: "orderNumber", width: 80, min: 48 },
+  { id: "topology", width: 80, min: 48 },
+  { id: "building", width: 90, min: 48 },
+  { id: "com_object_count", width: 80, min: 48 },
+  { id: "description", width: 100, min: 48 },
+  { id: "comparison", width: 102, min: 48 }
 ];
 
 const COLUMNS: { column: DeviceSortColumn; label: MessageKey }[] = [
@@ -114,7 +114,7 @@ export default function DevicesWorkspace({ tree, active, selection, multiSelecti
         <th><span className="sr-only">{t("addressTable.selectColumn")}</span></th>
         {COLUMNS.map(({ column, label }) => <th key={column} aria-sort={sort.column === column ? (sort.descending ? "descending" : "ascending") : "none"}>
           <button type="button" onClick={() => setSort({ column, descending: sort.column === column && !sort.descending })}>
-            {t(label)}{sort.column === column && <span aria-hidden="true">{sort.descending ? " ↓" : " ↑"}</span>}
+            <span className="table-column-label">{t(label)}</span>{sort.column === column && <span aria-hidden="true">{sort.descending ? " ↓" : " ↑"}</span>}
           </button></th>)}
       <th>{t("compare.column")}</th>
       </tr></thead><tbody>{rows.map((row) => <tr key={row.id} data-rename-kind="device" data-rename-id={row.id} data-rename-value={row.name}

@@ -37,7 +37,7 @@ const FLOW_VALUES_COLUMNS = [
   { id: "value", width: 64, min: 48 },
   { id: "origin", width: 64, min: 48 },
   { id: "sender", width: 80, min: 48 },
-  { id: "sequence", width: 48, min: 48 }
+  { id: "sequence", width: 48, min: 32 }
 ];
 
 const VIEW_WIDTH = 960;

@@ -4758,7 +4758,7 @@ html[data-motion-flow="off"] .flow-camera,
 
 /* UI-05 shares UI-02's separator paint above; these rules own table layout only. */
 .resizable-table { display: flex; flex-direction: column; min-width: 0; max-width: 100%; }
-.resizable-table-scroll { min-height: 0; max-width: 100%; overflow: auto; }
+.resizable-table-scroll { isolation: isolate; min-height: 0; max-width: 100%; overflow: auto; }
 .resizable-table .resizable-data-table { table-layout: fixed; min-width: 100%; max-width: none; }
 .resizable-data-table :is(th, td) { overflow-wrap: anywhere; white-space: normal; }
 .resizable-data-table .resizable-table-heading { position: relative; padding-inline: 12px 16px; }
@@ -4775,9 +4775,14 @@ html[data-motion-flow="off"] .flow-camera,
 /* Fitted headings stay compact so a sticky header cannot cover the first rows.
    The complete label remains in the accessible name and native title tooltip. */
 .resizable-table-heading > span:first-child:not(:has(button)),
-.resizable-table-heading > span:first-child > button {
+.resizable-table-heading .table-column-label {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
   overflow: hidden;
 }
+
+/* Keep the direction indicator outside the clamped label's clipping box. */
+.resizable-table-heading > span:first-child > button { display: flex; align-items: center; gap: 2px; }
+.resizable-table-heading .table-column-label { min-width: 0; }
+.resizable-table-heading button > [aria-hidden="true"] { flex-shrink: 0; white-space: nowrap; }

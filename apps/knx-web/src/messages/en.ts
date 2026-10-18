@@ -58,7 +58,7 @@ export const messages = {
   "tableColumns.name.download-blocks": "Download blocks",
   "tableColumns.name.name-recipe": "Name recipe preview",
   "tableColumns.reset": "Reset column widths",
-  "tableColumns.help": "Resize column: Left/Right 8 px, Shift 40 px; Home minimum, End maximum; Enter or double-click resets; Escape cancels a drag.",
+  "tableColumns.help": "Shown value is the rendered column width; resize steps adjust its saved preference. Resize column: Left/Right 8 px, Shift 40 px; Home minimum, End maximum; Enter or double-click resets; Escape cancels a drag.",
   "tableColumns.scroll": "Table (scrollable)",
   "parameters.objectFunctionsEmpty": "No supported function selection can be mapped to this object. Other settings are under Parameters.",
   "parameters.functions": "Device functions",

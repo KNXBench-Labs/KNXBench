@@ -55,7 +55,19 @@ cards. Explorer trees, forms and manufacturer-declared parameter grids
   history field tables and tables remounted by virtualisation. Measured floors
   belong to each mount; differing content can produce different rendered widths.
   Other table kinds are isolated.
-- Each column declares a default and a lower minimum preference in pixels.
+- All width calculations and saved preferences use CSS layout pixels at every
+  application scale (80–150%). Token and flex-icon DOMRect widths, measured
+  header announcements and pointer deltas are divided by the root
+  `--app-ui-scale`, using the same finite-positive fallback as `Overlay`.
+  Computed-style insets, col/style widths and client/scroll dimensions already
+  use layout pixels. Keyboard steps stay 8/40 layout px; ARIA current/text values
+  announce rounded layout widths. A 60 visual px pointer movement changes the
+  preference by `60 / scale` layout px before integer preference rounding;
+  rendered movement can still be constrained by the fitting boundaries below.
+  Changing the root style invalidates token/icon caches through the existing
+  ancestor observer and refreshes geometry even when normalized floors stay
+  unchanged. Stored widths do not change units when application scale changes.
+- Each column declares a default and a lower minimum preference in layout pixels.
   The stored-preference maximum is 1200 px
   unless declared otherwise. Stored values must be finite numbers in range;
   invalid values revert individually to defaults. Unknown columns are ignored,
@@ -190,7 +202,8 @@ present. The independent test oracle copies computed typography/insets and
 control styles into isolated auto-layout, min-content single-cell tables. It
 retains asymmetric horizontal border, margin and padding longhands, removes
 component widths/colgroups and resize noise, preserves complete punctuated tokens, and includes mounted hidden rows and retained grouped maxima.
-It does not shrink the production viewport or read its columns as a minimum.
+Oracle DOMRect measurements are independently converted to layout pixels at the
+application root scale. It does not shrink the production viewport or read its columns as a minimum.
 
 | Window | Surface | EN intrinsic / pane | DE intrinsic / pane |
 | --- | --- | --- | --- |
@@ -205,7 +218,8 @@ Intrinsic and production token floors are different measurements. Native
 min-content includes a 44 px checkbox footprint while the declared text-free
 selection column renders at 32 px; shared inline branches also differ by up to
 8 px from separately summed token insets. Tests bound per-column differences
-(12 px for selection, 8 px elsewhere) and additionally assert reviewed rendered
+(12 px for selection, 8 px elsewhere, plus one Chromium geometry subpixel
+`1 / 64 / scale` for zoom rounding) and additionally assert reviewed rendered
 fixture totals within 2 px: devices EN 919 / DE 955 px; German flat objects
 800 px. Device text columns alone require 880 / 917 px, independently exceeding
 the 780 px pane. These fixture bounds reject inflated floors; they are not a
@@ -257,6 +271,9 @@ are preserved. No manufacturer parameter-grid code is changed.
 
 | Requirement | Test |
 | --- | --- |
+| Application scale 0.8/1.5: layout floors and flex icons, root-style observer firing, measured ARIA, pointer deltas and unchanged keyboard steps | `src/ResizableTable.test.tsx`: scale stores pointer deltas; root scale mutations remeasure tokens, flex icons and announcements |
+| Application scale 0.8/1.5: independent layout-pixel oracle, intact device words, real 60 visual px drag, keyboard, column/table reset and reload at 100% | `e2e/table-column-widths.e2e.ts`: scale layout-pixel fit, intact words, visual pointer tracking, keyboard, reset and restore |
+| Overlay stacking with background inert removed solely for synchronous hit testing | `e2e/table-column-widths.e2e.ts`: overlay paints above device headers; negative control raises table viewport above overlay |
 | Persist/remount, types/ranges, corrupt JSON, changed/reordered columns, multiple instances, reset, window events, storage denial | `src/useTableColumnWidths.test.tsx` |
 | Measured header versus styled cell floors, 320 px cap, cache reuse, targeted mutation invalidation in 1,000 rows, session maxima through filtering/reset/remount, hidden-pane deferral | `src/ResizableTable.test.tsx`: fits to the widest header or cell token; caps pathological tokens and caches measurement; invalidates only a changed cell; keeps session floors after filtering; defers hidden-pane word measurement |
 | Colspan remapping; table class/style, viewport/pane inherited typography and padding invalidation; bounded ownership/cleanup and geometry-only cache reuse | `e2e/table-column-widths.e2e.ts`: colspan mutation, inherited typography, inherited padding; `src/ResizableTable.test.tsx`: bounded ancestor subscriptions, ancestor pane width and height; ancestor geometry noise and presentation edits/removals |

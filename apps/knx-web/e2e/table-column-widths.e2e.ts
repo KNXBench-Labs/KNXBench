@@ -8,7 +8,7 @@ import { wordsIntact, scrollsLocally } from "./table-word-assertions";
 
 async function evidenceScreenshot(page: Page, name: string) {
   await page.screenshot({ path: test.info().outputPath(`${name}.png`), fullPage: true });
-  const context = await page.evaluate(() => ({ path: location.pathname, query: location.search,
+  const context = await page.evaluate(() => ({ uiScale: getComputedStyle(document.documentElement).getPropertyValue("--app-ui-scale"), path: location.pathname, query: location.search,
     viewport: { width: innerWidth, height: innerHeight }, theme: document.documentElement.dataset.theme ?? "unset",
     density: document.documentElement.dataset.density ?? "compact (CSS default)", fonts: document.fonts.status }));
   await writeFile(test.info().outputPath(`${name}.json`), JSON.stringify(context, null, 2));
@@ -24,8 +24,9 @@ async function preference(page: Page, table: string, column: string, value: numb
     JSON.parse(localStorage.getItem(`knxbench:table-column-widths:v1:${table}`) ?? "{}")[column], { table, column })).toBe(value);
 }
 async function announcedWidth(table: Locator, column: number) {
+  const scale = await table.evaluate(() => parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--app-ui-scale")) || 1);
   await expect.poll(async () => Math.abs(Number(await table.getByRole("separator").nth(column).getAttribute("aria-valuenow"))
-    - (await table.locator("thead th").nth(column).boundingBox())!.width)).toBeLessThan(1);
+    - (await table.locator("thead th").nth(column).boundingBox())!.width / scale)).toBeLessThan(1);
 }
 async function aligned(table: Locator, column: number) {
   const header = await table.locator("thead th").nth(column).boundingBox();
@@ -290,9 +291,17 @@ test("overlay paints above device headers", async ({ page }) => {
   const server = await intercept(page, "en"); await openProject(page, "en"); await openList(page, "en");
   const header = page.locator('[data-table-id="devices"] thead th').nth(1);
   const box = (await header.boundingBox())!;
-  expect(await header.evaluate(e => getComputedStyle(e.closest(".resizable-table-scroll")!).isolation)).toBe("isolate");
   await page.keyboard.press("Control+k"); await expect(page.locator(".search-overlay")).toBeVisible();
-  expect(await page.evaluate(({ x, y }) => !!document.elementFromPoint(x, y)?.closest(".search-overlay"), { x: box.x + box.width / 2, y: box.y + box.height / 2 })).toBe(true);
+  const overlayAboveHeader = await page.evaluate(({ x, y }) => {
+    // Inert excludes the background from hit testing even if it paints above
+    // the modal. Remove it only during this synchronous stacking probe.
+    const isolated = [...document.querySelectorAll<HTMLElement>("[inert]")];
+    try {
+      isolated.forEach(element => { element.inert = false; });
+      return !!document.elementFromPoint(x, y)?.closest(".search-overlay");
+    } finally { isolated.forEach(element => { element.inert = true; }); }
+  }, { x: box.x + box.width / 2, y: box.y + box.height / 2 });
+  expect(overlayAboveHeader, "overlay must paint above the non-inert device header").toBe(true);
   expect(server.unexpected).toEqual([]);
 });
 test("narrow German sorted heading retains its visible sort indicator", async ({ page }) => {
@@ -504,3 +513,56 @@ test("intrinsic oracle preserves asymmetric borders, padding and nested control 
   // 18 px borders + 16 px extra padding + 14 px nested margins.
   expect((await intrinsicFloors(table))[0] - baseline).toBe(48);
 });
+
+for (const scale of [0.8, 1.5]) {
+  test(`scale ${scale}: layout-pixel fit, intact words, visual pointer tracking, keyboard, reset and restore`, async ({ page }) => {
+    await page.setViewportSize({ width: Math.round(1440 * scale), height: 1000 });
+    const server = await intercept(page, "en"); await openProject(page, "en");
+    // Set root zoom before showing the table, so 100% session floors cannot
+    // mask underestimated words at 80%. This is the property App itself sets.
+    await page.evaluate(scale => { document.documentElement.style.setProperty("--app-ui-scale", String(scale)); }, scale);
+    await openList(page, "en");
+    const table = page.locator('[data-table-id="devices"]');
+    await defaultFit(page, table, `en-zoom-${scale}-devices`, true);
+    await wordsIntact(table.locator("thead .table-column-label"));
+    await wordsIntact(table.locator("tbody td"));
+    const handle = table.getByRole("separator").nth(1);
+    const heading = table.locator("thead th").nth(1);
+    const edge = async () => { const box = (await heading.boundingBox())!; return box.x + box.width; };
+    const layoutWidth = async () => (await heading.boundingBox())!.width / scale;
+    const initial = await layoutWidth();
+    await handle.scrollIntoViewIfNeeded();
+    const before = await edge();
+    await drag(page, handle, 60);
+    await preference(page, "devices", "address", 100 + 60 / scale);
+    await expect.poll(async () => Math.abs(await edge() - before - 60), "60 visual pixels follow the pointer").toBeLessThan(1);
+    await announcedWidth(table, 1);
+    const dragged = await layoutWidth();
+    await handle.press("ArrowRight");
+    await preference(page, "devices", "address", 108 + 60 / scale);
+    await expect.poll(async () => Math.abs(await layoutWidth() - dragged - 8)).toBeLessThan(1);
+    await announcedWidth(table, 1);
+    await handle.press("Enter");
+    await preference(page, "devices", "address", 100);
+    await expect.poll(async () => Math.abs(await layoutWidth() - initial)).toBeLessThan(1);
+    await drag(page, handle, 60);
+    await table.locator(".table-column-reset").click();
+    await expect.poll(async () => Math.abs(await layoutWidth() - initial)).toBeLessThan(1);
+    await drag(page, handle, 60);
+    const savedLayoutWidth = await layoutWidth();
+    const saved = 100 + 60 / scale;
+    await preference(page, "devices", "address", saved);
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.reload();
+    // A real button waits for React to mount after reload; a shortcut sent
+    // immediately after navigation can precede the global key listener.
+    await page.getByRole("button", { name: "Commands… (Ctrl+Shift+P)", exact: true }).click();
+    await page.getByRole("combobox").fill("Devices");
+    await page.getByRole("combobox").press("Enter");
+    await expect(table).toBeVisible();
+    await preference(page, "devices", "address", saved);
+    await expect.poll(async () => Math.abs((await heading.boundingBox())!.width - savedLayoutWidth), "same saved layout width at 100% after reload").toBeLessThan(1);
+    await announcedWidth(table, 1);
+    expect(server.unexpected).toEqual([]);
+  });
+}

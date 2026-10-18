@@ -19,7 +19,7 @@ beforeEach(async () => {
     <tbody><tr onClick={select}><td>Alpha</td><td>1.1.1</td></tr></tbody>
   </ResizableTable></StrictMode>));
 });
-afterEach(async () => { vi.restoreAllMocks(); await act(async () => root.unmount()); host.remove(); resetSettingsForTests(); resetUiLanguageForTests(); window.localStorage.clear(); });
+afterEach(async () => { vi.restoreAllMocks(); document.documentElement.style.removeProperty("--app-ui-scale"); await act(async () => root.unmount()); host.remove(); resetSettingsForTests(); resetUiLanguageForTests(); window.localStorage.clear(); });
 const handle = () => host.querySelector<HTMLElement>('[role="separator"]')!;
 const width = () => Number(handle().getAttribute("aria-valuenow"));
 async function key(key: string, shiftKey = false) { await act(async () => handle().dispatchEvent(new KeyboardEvent("keydown", { key, shiftKey, bubbles: true, cancelable: true }))); }
@@ -185,7 +185,7 @@ it("caps pathological tokens and caches measurement through resizing until conte
   await key("ArrowRight"); await key("Enter");
   expect(measured).toHaveLength(count);
   await act(async () => root.render(renderWords("x".repeat(100))));
-  expect(computedStyle).not.toHaveBeenCalled();
+  expect(computedStyle.mock.calls.every(([element]) => element === document.documentElement)).toBe(true);
   const unchangedCell = host.querySelector("tbody td:last-child");
   await act(async () => root.render(renderWords("Freshword")));
   expect(host.querySelector("col")!.style.width).toBe("320px");
@@ -229,7 +229,7 @@ it("invalidates only a changed cell in a large table without serializing unchang
   await act(async () => { changed.firstChild!.textContent = "Freshmeasurement"; });
   expect(walked.mock.calls.map(([cell]) => cell)).toEqual([changed]);
   expect(serialized).not.toHaveBeenCalled();
-  expect(styled.mock.calls.every(([element]) => changed.contains(element))).toBe(true);
+  expect(styled.mock.calls.every(([element]) => element === document.documentElement || changed.contains(element))).toBe(true);
   walked.mockClear(); styled.mockClear(); serialized.mockClear();
   await act(async () => {
     handle().setAttribute("aria-valuenow", "123");
@@ -370,4 +370,40 @@ it.each(["en", "de"] as const)("%s owner reset visibly names its repeated table 
   const label = language === "de" ? "Spaltenbreiten zurücksetzen: Feldänderungen" : "Reset column widths: Field changes";
   expect(button.textContent).toBe(label);
   expect(button.getAttribute("aria-label") ?? button.textContent).toBe(label);
+});
+
+
+it.each([0.8, 1.5])("scale %s stores pointer deltas in layout pixels and keeps keyboard steps unchanged", async scale => {
+  await act(async () => { document.documentElement.style.setProperty("--app-ui-scale", String(scale)); });
+  handle().setPointerCapture = vi.fn(); handle().releasePointerCapture = vi.fn();
+  await pointer("pointerdown", 100); await pointer("pointermove", 160); await pointer("pointerup", 160);
+  expect(width()).toBe(180 + 60 / scale);
+  expect(JSON.parse(window.localStorage.getItem("knxbench:table-column-widths:v1:component")!).name).toBe(180 + 60 / scale);
+  await key("ArrowRight"); expect(width()).toBe(188 + 60 / scale);
+  await key("Enter"); expect(width()).toBe(180);
+});
+
+it("root scale mutations remeasure tokens, flex icons and announcements in layout pixels", async () => {
+  let scale = 1;
+  vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(40);
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+    const layout = this.hasAttribute("data-table-word-measure") ? 100 : this.hasAttribute("data-icon") ? 12 : this.tagName === "TH" ? 250 : 0;
+    return { width: layout * scale } as DOMRect;
+  });
+  await act(async () => root.render(<ResizableTable key="zoom" tableId="zoom" columns={columns}>
+    <thead><tr><th style={{ padding: "0 10px" }}><button style={{ display: "flex", padding: 0, border: 0, columnGap: 3 }}>Name<span data-icon aria-hidden="true" /></button></th><th>Address</th></tr></thead>
+    <tbody><tr><td>Token</td><td>Address</td></tr></tbody>
+  </ResizableTable>));
+  expect(host.querySelector("col")!.style.width).toBe("135px");
+  const cleared = vi.spyOn(TableWordFloors.prototype, "clear");
+  const measured = vi.spyOn(TableWordFloors.prototype, "measure");
+  for (const next of [0.8, 1.5, 1]) {
+    cleared.mockClear(); measured.mockClear();
+    await act(async () => { scale = next; document.documentElement.style.setProperty("--app-ui-scale", String(next)); });
+    expect(cleared).toHaveBeenCalledTimes(1);
+    expect(measured).toHaveBeenCalledTimes(1);
+    expect(host.querySelector("col")!.style.width).toBe("135px");
+    expect(width()).toBe(250);
+    expect(handle().getAttribute("aria-valuetext")).toBe("250 px");
+  }
 });

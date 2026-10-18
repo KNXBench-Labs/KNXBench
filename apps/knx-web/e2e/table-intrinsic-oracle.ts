@@ -3,6 +3,8 @@ import { expect, type Locator } from "@playwright/test";
 
 export async function intrinsicFloors(table: Locator, retained: number[] = []) {
   return table.locator("table").evaluate((source: HTMLTableElement, retained) => {
+    const configured = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--app-ui-scale"));
+    const scale = Number.isFinite(configured) && configured > 0 ? configured : 1;
     const count = source.tHead!.rows[0].cells.length;
     const floors = Array.from({ length: count }, (_, i) => retained[i] ?? (i === 0 && source.classList.contains("devices-table") ? 32 : 48));
     // Copy presentation into isolated, auto-layout single-cell tables. The
@@ -54,7 +56,7 @@ export async function intrinsicFloors(table: Locator, retained: number[] = []) {
           const probe = document.createElement("table");
           probe.style.cssText = "table-layout:auto;width:min-content;min-width:0;border-collapse:separate;border-spacing:0";
           const probeRow = probe.insertRow(); probeRow.append(copy); sandbox.append(probe);
-          floors[column] = Math.max(floors[column], Math.min(320, Math.ceil(copy.getBoundingClientRect().width)));
+          floors[column] = Math.max(floors[column], Math.min(320, Math.ceil(copy.getBoundingClientRect().width / scale)));
           probe.remove();
         }
       }
@@ -64,14 +66,20 @@ export async function intrinsicFloors(table: Locator, retained: number[] = []) {
 }
 
 export async function assertFloorOverflow(table: Locator, floors: number[], reviewedTotal: number) {
-  const actual = await table.locator("thead th").evaluateAll(cells => cells.map(e => e.getBoundingClientRect().width));
+  const { actual, scale } = await table.locator("thead th").evaluateAll(cells => {
+    const configured = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--app-ui-scale"));
+    const scale = Number.isFinite(configured) && configured > 0 ? configured : 1;
+    return { actual: cells.map(e => e.getBoundingClientRect().width / scale), scale };
+  });
   expect(actual).toHaveLength(floors.length);
   // Native min-content includes a text-free checkbox footprint (44 px),
   // whereas the declared selection column uses 32 px. Text/control branches
   // can also share insets which the production token method sums separately.
   // Bound those differences AND pin the independently reviewed fixture total:
   // even small inflation of an already overflowing floor must fail.
+  // Allow one Chromium geometry subpixel after undoing root zoom.
+  const subpixel = 1 / 64 / scale;
   actual.forEach((width, i) => expect(Math.abs(width - floors[i]), `column ${i}: rendered ${width}, intrinsic ${floors[i]}`)
-    .toBeLessThanOrEqual(i === 0 && floors.length === 12 ? 12 : 8));
+    .toBeLessThanOrEqual((i === 0 && floors.length === 12 ? 12 : 8) + subpixel));
   expect(Math.abs(actual.reduce((a, b) => a + b, 0) - reviewedTotal), "reviewed compact Porcelain fixture budget").toBeLessThanOrEqual(2);
 }

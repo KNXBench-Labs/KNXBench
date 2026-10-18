@@ -11,6 +11,32 @@ use rusqlite::{Connection, OptionalExtension};
 
 use crate::ProductDbError;
 
+/// Canonical catalogue rows in the active product database. These are not
+/// project device instances or catalogue placements (`catalog_item`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CatalogueCounts {
+    pub manufacturers: u64,
+    pub products: u64,
+    pub application_programs: u64,
+}
+
+pub fn catalogue_counts(db: &Connection) -> Result<CatalogueCounts, ProductDbError> {
+    db.query_row(
+        "SELECT (SELECT COUNT(*) FROM manufacturer),
+                (SELECT COUNT(*) FROM product),
+                (SELECT COUNT(*) FROM application_program)",
+        [],
+        |row| {
+            Ok(CatalogueCounts {
+                manufacturers: row.get::<_, i64>(0)? as u64,
+                products: row.get::<_, i64>(1)? as u64,
+                application_programs: row.get::<_, i64>(2)? as u64,
+            })
+        },
+    )
+    .map_err(ProductDbError::Sqlite)
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ValueLayer {
     Program,

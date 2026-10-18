@@ -10,10 +10,13 @@ import { resetUiLanguageForTests, saveUiLanguage } from "./uiLanguage";
 import { messages as en } from "./messages/en";
 import { messages as de } from "./messages/de";
 
+const { statusMetrics } = vi.hoisted(() => ({ statusMetrics: vi.fn() }));
+vi.mock("./api", async (importOriginal) => ({ ...await importOriginal<typeof import("./api")>(), statusMetrics }));
+
 let host: HTMLDivElement;
 let root: Root;
 const tree = (): ProjectTree => ({schema_version:12,errors:0,warnings:0,can_undo:false,can_redo:false,is_modified:false,group_address_style:"ThreeLevel",installations:[]});
-beforeEach(() => { vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true); resetSettingsForTests(); resetUiLanguageForTests(); saveUiLanguage(settingsStorage, "en"); host=document.createElement("div"); document.body.append(host); root=createRoot(host); });
+beforeEach(() => { vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true); statusMetrics.mockReset(); statusMetrics.mockImplementation(() => new Promise(() => {})); resetSettingsForTests(); resetUiLanguageForTests(); saveUiLanguage(settingsStorage, "en"); host=document.createElement("div"); document.body.append(host); root=createRoot(host); });
 afterEach(() => { act(() => root.unmount()); vi.unstubAllGlobals(); host.remove(); resetSettingsForTests(); resetUiLanguageForTests(); });
 
 describe("native import evidence availability", () => {
@@ -59,6 +62,73 @@ describe("native import evidence availability", () => {
     act(() => root.render(<Dashboard tree={{...tree(),warnings:2}} />));
     expect(host.querySelector('[role="note"]')).toBeNull();
     expect(host.querySelector('.dashboard-issues')?.textContent).toContain("2");
+  });
+});
+
+describe("project and catalogue storage status", () => {
+  it("shows loading, then the last saved file size and distinct catalogue counts", async () => {
+    statusMetrics.mockResolvedValue({project:{state:"available",projectIncarnation:2,snapshotRevision:7,bytes:1_250_000},catalogue:{state:"available",bytes:2_500_000,counts:{manufacturers:3,products:4,applicationPrograms:5}}});
+    const snapshot = {...tree(),project_incarnation:2,snapshot_revision:7,is_modified:true};
+    act(() => root.render(<Dashboard tree={snapshot} />));
+    expect(host.textContent).toContain("Loading…");
+    await act(async () => { await Promise.resolve(); });
+    expect(host.textContent).toContain("1.3 MB");
+    expect(host.textContent).toContain("2.5 MB");
+    expect(host.textContent).toContain("Unsaved changesYes");
+    expect(host.textContent).toContain("Manufacturers3");
+    expect(host.textContent).toContain("Catalogue products4");
+    expect(host.textContent).toContain("Application programs5");
+  });
+
+  it("distinguishes a never-saved project and an unavailable database from measured zero", async () => {
+    statusMetrics.mockResolvedValue({project:{state:"notSavedYet",projectIncarnation:null,snapshotRevision:null,bytes:null},catalogue:{state:"unavailable",bytes:null,counts:null}});
+    act(() => root.render(<Dashboard tree={tree()} />));
+    await act(async () => { await Promise.resolve(); });
+    expect(host.textContent).toContain("Not saved yet");
+    expect(host.textContent).toContain("Product database unavailable");
+    expect(host.textContent).not.toContain("0.0 MB");
+  });
+
+  it("shows errors without leaking paths and formats a tiny German size", async () => {
+    saveUiLanguage(settingsStorage, "de"); resetUiLanguageForTests();
+    statusMetrics.mockResolvedValue({project:{state:"available",projectIncarnation:null,snapshotRevision:null,bytes:12},catalogue:{state:"error",bytes:null,counts:null}});
+    act(() => root.render(<Dashboard tree={tree()} />));
+    await act(async () => { await Promise.resolve(); });
+    expect(host.textContent).toContain("< 0,1 MB");
+    expect(host.textContent).toContain("Produktdatenbank konnte nicht gelesen werden");
+  });
+  it("does not attach a measurement from an older project snapshot", async () => {
+    statusMetrics.mockResolvedValue({project:{state:"available",projectIncarnation:1,snapshotRevision:6,bytes:9_000_000},catalogue:{state:"unavailable",bytes:null,counts:null}});
+    act(() => root.render(<Dashboard tree={{...tree(),project_incarnation:2,snapshot_revision:7}} />));
+    await act(async () => { await Promise.resolve(); });
+    expect(host.textContent).toContain("Status unavailable for this project snapshot");
+    expect(host.textContent).not.toContain("9.0 MB");
+  });
+  it("clears a displayed size immediately on project switch", async () => {
+    statusMetrics.mockResolvedValueOnce({project:{state:"available",projectIncarnation:1,snapshotRevision:6,bytes:9_000_000},catalogue:{state:"unavailable",bytes:null,counts:null}});
+    act(() => root.render(<Dashboard tree={{...tree(),project_incarnation:1,snapshot_revision:6}} />));
+    await act(async () => { await Promise.resolve(); });
+    expect(host.textContent).toContain("9.0 MB");
+    act(() => root.render(<Dashboard tree={{...tree(),project_incarnation:2,snapshot_revision:7}} />));
+    expect(host.textContent).not.toContain("9.0 MB");
+    expect(host.textContent).toContain("Loading…");
+  });
+  it("shows a read failure explicitly", async () => {
+    statusMetrics.mockRejectedValue(new Error("private path"));
+    act(() => root.render(<Dashboard tree={tree()} />));
+    await act(async () => { await Promise.resolve(); });
+    expect(host.textContent).toContain("Could not read size");
+    expect(host.textContent).not.toContain("private path");
+  });
+  it("renders a missing saved file as error while an empty catalogue remains measured", async () => {
+    statusMetrics.mockResolvedValue({project:{state:"error",projectIncarnation:null,snapshotRevision:null,bytes:null},catalogue:{state:"available",bytes:120_000,counts:{manufacturers:0,products:0,applicationPrograms:0}}});
+    act(() => root.render(<Dashboard tree={tree()} />));
+    await act(async () => { await Promise.resolve(); });
+    expect(host.textContent).toContain("Last saved project fileCould not read size");
+    expect(host.textContent).toContain("0.1 MB");
+    expect(host.textContent).toContain("Manufacturers0");
+    expect(host.textContent).toContain("Catalogue products0");
+    expect(host.textContent).not.toContain("Product database unavailable");
   });
 });
 
@@ -109,8 +179,10 @@ describe("project status import findings", () => {
     const labels = [...host.querySelectorAll("dt")].map((d) => d.textContent);
     expect(labels).toEqual([en["dashboard.installations"], en["dashboard.areas"], en["dashboard.lines"], en["dashboard.devices"],
       en["dashboard.buildingParts"], en["dashboard.groupAddresses"], en["dashboard.comObjects"],
-      en["dashboard.importErrors"], en["dashboard.importWarnings"], en["dashboard.schemaVersion"]]);
-    expect([...host.querySelectorAll("dd")].map((d) => d.textContent)).toEqual(["0","0","0","0","0","0","0","1","2","13"]);
+      en["dashboard.importErrors"], en["dashboard.importWarnings"], en["dashboard.schemaVersion"],
+      en["dashboard.metrics.savedFile"], en["dashboard.metrics.unsavedChanges"], en["dashboard.metrics.databaseSize"],
+      en["dashboard.metrics.manufacturers"], en["dashboard.metrics.products"], en["dashboard.metrics.programs"]]);
+    expect([...host.querySelectorAll("dd")].map((d) => d.textContent)).toEqual(["0","0","0","0","0","0","0","1","2","13","Loading…","No","Loading…","Loading…","Loading…","Loading…"]);
     for (const section of host.querySelectorAll("section")) {
       expect(host.querySelector(`#${section.getAttribute("aria-labelledby")}`)).not.toBeNull();
     }

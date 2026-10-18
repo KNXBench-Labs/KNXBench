@@ -12,6 +12,17 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## UI-04 project status storage metrics (18 October 2026, local-only)
+
+The Overview measures the current native project file and the active product
+database on disk, includes SQLite journal sidecars, and shows canonical
+catalogue counts separately from project device instances. New projects have
+no invented file size; pending, unavailable and failed reads are explicit.
+[Contract](contracts/project-status-metrics.md). Focused HTTP and Vitest tests
+cover save, Save As, failed save, import, project switch, catalogue install,
+empty/unavailable databases, count identity and locale formatting. This is an
+unpublished worktree change; the controller still owns final gate and delivery.
+
 ## Manual, README and screenshots after Alpha 14 (18 October 2026)
 
 Docs and media only, no application change. The manual's 46 stills, the four

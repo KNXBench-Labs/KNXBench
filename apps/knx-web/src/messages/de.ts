@@ -24,7 +24,6 @@ export const messages: Record<MessageKey, string> = {
   "parameters.functionsEmpty": "Aktuell sind keine unterstützten Funktionsauswahlen sichtbar. Weitere Einstellungen findest du unter Parameter.",
   "parameters.functionsHint": "Diese Herstellerparameter steuern die verfügbaren Kommunikationsobjekte. Eine Auswahl wird sofort übernommen; Rückgängig stellt die vorherige Konfiguration wieder her.",
   "parameters.groupNumber": "Parametergruppe {number}",
-  "fileMenu.project": "Projekt",
   "fileMenu.exchange": "Import & Export",
   "fileMenu.history": "Verlauf & Vergleich",
   "fileMenu.help": "Hilfe & Diagnose",

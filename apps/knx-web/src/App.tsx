@@ -7,6 +7,7 @@ import * as api from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { DeviceDetail } from "./bindings/DeviceDetail";
 import type { Selection } from "./selection";
+import { FileMenuContent, FileMenuItem, FileMenuSummary, FileSubmenu } from "./FileMenu";
 import NavigationSection from "./NavigationSection";
 import ProjectExplorer from "./ProjectExplorer";
 import ProjectHistoryDialog from "./ProjectHistoryDialog";
@@ -1253,7 +1254,7 @@ function App({ manifestVersion = packageVersion, session, editorReturn = false }
   }
 
   // F1, first half. One handler on the menu's container rather than an
-  // `onClick` per item: three of the items are child components whose
+  // `onClick` per item: several of the items are child components whose
   // buttons this file does not own (`GroupAddressCsvButtons`,
   // `DocumentationExportButton`, `ProjectDiffPanel`), so a per-button
   // approach would be incomplete the day one of them grows a fourth
@@ -1261,17 +1262,21 @@ function App({ manifestVersion = packageVersion, session, editorReturn = false }
   // `Space` on a `<button>` dispatch a real `click` that bubbles here just
   // like a mouse one.
   //
-  // The one opt-out is `data-menu-stays-open`, and exactly one item wears
-  // it: `ProjectDiffPanel`'s Compare button renders its report *inside*
-  // this menu, so closing the menu on that click would hide the very
-  // thing the click asked for.
+  // The one opt-out is `data-menu-stays-open`, worn by the submenu
+  // triggers: opening a submenu is not an action. Every entry closes the
+  // menu, including `Compare with…`, whose result opens as a dialog.
   function handleFileMenuActivation(e: ReactMouseEvent<HTMLDivElement>) {
     if (!(e.target instanceof Element)) return;
     const activated = e.target.closest("button");
     if (!activated || !e.currentTarget.contains(activated)) return;
     if (activated.closest("[data-menu-stays-open]")) return;
     const menu = fileMenuRef.current;
-    if (menu) menu.open = false;
+    if (!menu) return;
+    menu.open = false;
+    // Focus would otherwise fall to <body> when the activated entry hides with the menu. Resting on
+    // the File control before the action's dialog mounts gives every dialog (App- or child-owned)
+    // a visible element to hand focus back to when it closes.
+    menu.querySelector<HTMLElement>("summary")?.focus();
   }
 
   // F4. The server owns the clean project snapshot. Undo availability stays
@@ -1479,19 +1484,20 @@ function App({ manifestVersion = packageVersion, session, editorReturn = false }
       <header className="workbench-toolbar">
         <a className="workbench-brand" href="#" onClick={(e) => { e.preventDefault(); setView("overview"); setLogOpen(false); setMonitorOpen(false); }}><img className="workbench-logo" src={brandMark} width="44" height="34" alt="" draggable={false} /><strong>KNXBench</strong></a>
         <details ref={fileMenuRef} className="file-menu" onKeyDown={(e) => { if (e.key === "Escape") { e.currentTarget.open = false; e.currentTarget.querySelector("summary")?.focus(); } }}>
-          <summary>{t("workbench.file")} <span aria-hidden="true">⌄</span></summary>
-          <div className="file-menu-content" onClick={handleFileMenuActivation}>
-      <section className="file-menu-group"><h3>{t("fileMenu.project")}</h3>
-      <button onClick={startNewProject}>{t("toolbar.newProject")}</button>
-      <button onClick={pickProject} disabled={loading}>{t("toolbar.openProject")}</button>
-      <button onClick={openNativeProject} disabled={loading}>{t("toolbar.openNativeProject")}</button>
-      <button onClick={saveProjectAs} disabled={!tree}>
+          <FileMenuSummary>{t("workbench.file")} <span aria-hidden="true">⌄</span></FileMenuSummary>
+          <FileMenuContent onClick={handleFileMenuActivation}>
+      {/* UI-03: frequent project actions stay on the first level; the three groups that used to
+          be headed sections fold into submenus. Items are the same buttons with the same handlers. */}
+      <FileMenuItem onClick={startNewProject}>{t("toolbar.newProject")}</FileMenuItem>
+      <FileMenuItem onClick={pickProject} disabled={loading}>{t("toolbar.openProject")}</FileMenuItem>
+      <FileMenuItem onClick={openNativeProject} disabled={loading}>{t("toolbar.openNativeProject")}</FileMenuItem>
+      <FileMenuItem onClick={saveProjectAs} disabled={!tree}>
         {t("toolbar.saveAs")}
-      </button>
-      </section>
-      <section className="file-menu-group"><h3>{t("fileMenu.exchange")}</h3>
+      </FileMenuItem>
+      <div className="file-menu-separator" role="separator" />
+      <FileSubmenu id="exchange" label={t("fileMenu.exchange")}>
       {!isTauri() && (
-        <button onClick={exportProject} disabled={!tree}>{t("toolbar.exportProject")}</button>
+        <FileMenuItem onClick={exportProject} disabled={!tree}>{t("toolbar.exportProject")}</FileMenuItem>
       )}
       <SelectiveImportButton tree={tree} scope={loadKey} onTreeUpdate={handleTreeUpdate} />
       <GroupAddressCsvButtons
@@ -1507,34 +1513,35 @@ function App({ manifestVersion = packageVersion, session, editorReturn = false }
         onError={reportError}
         onClearErrors={clearErrors}
       />
-      </section>
-      <section className="file-menu-group"><h3>{t("fileMenu.history")}</h3>
-      <button onClick={openProjectHistory} disabled={!tree || loading}>{t("projectHistory.title")}</button>
+      </FileSubmenu>
+      <FileSubmenu id="history" label={t("fileMenu.history")}>
+      <FileMenuItem onClick={openProjectHistory} disabled={!tree || loading}>{t("projectHistory.title")}</FileMenuItem>
       <ProjectDiffPanel tree={tree} onError={reportError} onClearErrors={clearErrors} />
-      </section>
-      <section className="file-menu-group"><h3>{t("fileMenu.help")}</h3>
+      </FileSubmenu>
+      <FileSubmenu id="help" label={t("fileMenu.help")}>
       <DebugReportButton onSummary={pushFun} onError={reportError} onClearErrors={clearErrors} />
       <ContributionButton />
       <UniversalSupportButton project={tree} />
-      <button onClick={guide.show}>{t("command.showIntroduction")}</button>
-      {achievementsEnabled && <button onClick={() => setAchievementsOpen(true)}>{t("achievements.command")}</button>}
-      <button onClick={() => setAboutOpen(true)}>{t("toolbar.about")}</button>
-      </section>
+      <FileMenuItem onClick={guide.show}>{t("command.showIntroduction")}</FileMenuItem>
+      {achievementsEnabled && <FileMenuItem onClick={() => setAchievementsOpen(true)}>{t("achievements.command")}</FileMenuItem>}
+      <FileMenuItem onClick={() => setAboutOpen(true)}>{t("toolbar.about")}</FileMenuItem>
+      </FileSubmenu>
+      {(session?.required === true || canQuit()) && <div className="file-menu-separator" role="separator" />}
       {/* ADR-0026: only where a session exists to end. On the desktop shell
           — and on any server started without a password — `required` is
           false and a logout button would be an offer to leave a room with
           no door. */}
       {session?.required === true && (
-        <button className="file-menu-logout" onClick={session.logout}>
+        <FileMenuItem className="file-menu-logout" onClick={session.logout}>
           {t("toolbar.logout")}
-        </button>
+        </FileMenuItem>
       )}
       {/* F4: present only in the desktop shell. A browser tab cannot close
           itself, so in the web build this item would be a button that
           does nothing — see `quit.ts`. */}
-      {canQuit() && <button className="file-menu-quit" onClick={quitRequested}>{t("toolbar.quit")}</button>}
+      {canQuit() && <FileMenuItem className="file-menu-quit" onClick={quitRequested}>{t("toolbar.quit")}</FileMenuItem>}
 
-          </div>
+          </FileMenuContent>
         </details>
         <div className="history-actions">
           <button onClick={undo} disabled={!tree?.can_undo} title={t("toolbar.undo")} aria-label={t("toolbar.undo")}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="M8 4L3 9l5 5 M3 9h10a6 6 0 010 12" /></svg><span className="sr-only">{t("toolbar.undo")}</span></button>

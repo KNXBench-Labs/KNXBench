@@ -25,13 +25,39 @@ export interface OverlayResize {
  * between the Search, Command Palette and Catalog Browser dialogs and
  * stay with them.
  */
-export const FOCUSABLE_SELECTOR =
-  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+export const FOCUSABLE_SELECTOR = [
+  "a[href]",
+  "button:not([disabled])",
+  "input:not([disabled])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  '[tabindex]:not([tabindex="-1"])',
+  // Natively focusable without a tabindex. Only the first summary of a
+  // details element is its disclosure control.
+  "details > summary:first-of-type",
+  '[contenteditable]:not([contenteditable="false"])',
+  "audio[controls]",
+  "video[controls]",
+].join(", ");
+
+/**
+ * Whether the element takes part in layout and, inside a closed disclosure,
+ * is that disclosure's own summary. The panel itself is the stop of the walk.
+ */
+function isTabbable(el: HTMLElement, panel: HTMLElement): boolean {
+  if (el.closest("[hidden], [inert], [aria-hidden='true']")) return false;
+  const { visibility } = getComputedStyle(el);
+  if (visibility === "hidden" || visibility === "collapse") return false;
+  for (let node: HTMLElement | null = el, child: HTMLElement | null = null; node && node !== panel; child = node, node = node.parentElement) {
+    if (getComputedStyle(node).display === "none") return false;
+    // A closed details renders its first summary and nothing else.
+    if (node instanceof HTMLDetailsElement && !node.open && child && child !== node.querySelector(":scope > summary")) return false;
+  }
+  return true;
+}
 
 function focusableIn(panel: HTMLElement): HTMLElement[] {
-  return Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
-    (el) => !el.closest("[hidden], [inert], [aria-hidden='true']"),
-  );
+  return Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter((el) => isTabbable(el, panel));
 }
 
 export default function Overlay(props: {

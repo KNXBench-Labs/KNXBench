@@ -290,6 +290,95 @@ describe("Overlay", () => {
     root.unmount();
   });
 
+  async function tab(from: Element, shiftKey = false) {
+    await act(async () => { from.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", shiftKey, bubbles: true })); });
+  }
+
+  it("counts a disclosure summary as a tab stop and keeps the contents of a closed disclosure out", async () => {
+    const root = await mount(<Overlay onClose={vi.fn()}>
+      <button type="button" data-id="first">first</button>
+      <details>
+        <summary data-id="summary">report</summary>
+        <a href="#inside" data-id="inside">inside</a>
+        <button type="button" data-id="inside-button">inside button</button>
+      </details>
+    </Overlay>);
+    try {
+      const at = (id: string) => host!.querySelector<HTMLElement>(`[data-id="${id}"]`)!;
+      expect(document.activeElement).toBe(at("first"));
+      // The summary is the last tab stop: Shift+Tab from the first wraps onto it, Tab from it wraps home.
+      await tab(at("first"), true);
+      expect(document.activeElement).toBe(at("summary"));
+      await tab(at("summary"));
+      expect(document.activeElement).toBe(at("first"));
+    } finally { await act(async () => root.unmount()); }
+  });
+
+  it("reaches the controls of a disclosure once it is open", async () => {
+    const root = await mount(<Overlay onClose={vi.fn()}>
+      <button type="button" data-id="first">first</button>
+      <details open>
+        <summary data-id="summary">report</summary>
+        <button type="button" data-id="inside-button">inside button</button>
+      </details>
+    </Overlay>);
+    try {
+      const at = (id: string) => host!.querySelector<HTMLElement>(`[data-id="${id}"]`)!;
+      await tab(at("first"), true);
+      expect(document.activeElement).toBe(at("inside-button"));
+      await tab(at("inside-button"));
+      expect(document.activeElement).toBe(at("first"));
+    } finally { await act(async () => root.unmount()); }
+  });
+
+  it("does not count a summary that is not the first summary of its details, nor one outside details", async () => {
+    const root = await mount(<Overlay onClose={vi.fn()}>
+      <button type="button" data-id="first">first</button>
+      <summary data-id="loose">loose</summary>
+      <details open>
+        <summary data-id="real">real</summary>
+        <summary data-id="second">second</summary>
+      </details>
+    </Overlay>);
+    try {
+      const at = (id: string) => host!.querySelector<HTMLElement>(`[data-id="${id}"]`)!;
+      await tab(at("first"), true);
+      expect(document.activeElement).toBe(at("real"));
+    } finally { await act(async () => root.unmount()); }
+  });
+
+  it("skips display:none and visibility:hidden elements", async () => {
+    const root = await mount(<Overlay onClose={vi.fn()}>
+      <button type="button" data-id="first">first</button>
+      <button type="button" data-id="last">last</button>
+      <div style={{ display: "none" }}><button type="button" data-id="gone">gone</button></div>
+      <button type="button" style={{ visibility: "hidden" }} data-id="invisible">invisible</button>
+    </Overlay>);
+    try {
+      const at = (id: string) => host!.querySelector<HTMLElement>(`[data-id="${id}"]`)!;
+      await tab(at("first"), true);
+      expect(document.activeElement).toBe(at("last"));
+    } finally { await act(async () => root.unmount()); }
+  });
+
+  it("counts contenteditable regions and media with controls, but not contenteditable=false", async () => {
+    const root = await mount(<Overlay onClose={vi.fn()}>
+      <button type="button" data-id="first">first</button>
+      <div contentEditable={false} suppressContentEditableWarning data-id="locked">locked</div>
+      <div contentEditable="true" suppressContentEditableWarning data-id="editable">editable</div>
+      <audio controls data-id="audio" />
+      <video controls data-id="video" />
+      <audio data-id="bare-audio" />
+    </Overlay>);
+    try {
+      const at = (id: string) => host!.querySelector<HTMLElement>(`[data-id="${id}"]`)!;
+      await tab(at("first"), true);
+      expect(document.activeElement).toBe(at("video"));
+      await tab(at("video"));
+      expect(document.activeElement).toBe(at("first"));
+    } finally { await act(async () => root.unmount()); }
+  });
+
   it("restores focus to the previously focused element after unmount", async () => {
     const outside = document.createElement("button");
     outside.textContent = "outside";

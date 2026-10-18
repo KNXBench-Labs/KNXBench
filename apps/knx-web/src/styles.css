@@ -1504,17 +1504,13 @@ main {
   font-size: inherit;
 }
 
-/* `ProjectDiffPanel` — a result panel `open`ed from a toolbar button
-   rather than docked in `.workspace` like `.log-panel`, so it gets its
-   own card frame instead of `.log-panel`'s `flex: 1 1 60%`; the empty
-   state and list otherwise follow `.log-panel-empty`/`.log-panel-list`
-   exactly. */
-.project-diff-panel {
-  margin: 0.75rem 0;
+/* `ProjectDiffPanel` — the comparison result, a modal dialog opened from the
+   File menu's History submenu. It is a `.search-panel` (shared Overlay shell);
+   the width is its own because the entity tables are wide. */
+.search-panel.project-diff-panel {
+  width: min(56rem, 94vw);
+  max-height: 82vh;
   padding: 0.75rem 1rem;
-  background: var(--knx-surface);
-  border: 1px solid var(--knx-border);
-  border-radius: var(--knx-radius-card);
 }
 
 .project-diff-panel-empty {
@@ -3065,7 +3061,7 @@ h1, h2, h3 { letter-spacing: -0.025em; }
    that shrinks reads as a glitch, not a click. */
 .workbench-navigation button, .navigation-section-toggle, .table-select, .diagram-heading, .diagram-device, .tree-label,
 .fs-picker-list button, .help-panel-topics button, .rename-context-menu button, .file-menu-content > button,
-.file-menu-group > button, .parameter-group-toggle, .device-tabs button { --button-press-scale: 1; }
+.file-submenu-trigger, .file-submenu-panel > button, .parameter-group-toggle, .device-tabs button { --button-press-scale: 1; }
 /* Generic button hover scaling is clipped by the topology card's overflow,
    hiding edge icons, addresses and counts. Highlight without magnifying. */
 .diagram-device:hover:not(:disabled) { transform: none; box-shadow: none; }
@@ -3076,7 +3072,7 @@ h1, h2, h3 { letter-spacing: -0.025em; }
 kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .file-menu { position: relative; }
 .file-menu summary { cursor: pointer; padding: 7px 10px; list-style: none; }
-.file-menu-content { position: absolute; top: calc(100% + 8px); left: 0; min-width: 260px; max-height: 70dvh; overflow: auto; background: var(--knx-surface); border: 1px solid var(--knx-border); border-radius: 8px; box-shadow: 0 12px 32px var(--knx-overlay-shadow); padding: 8px; }
+.file-menu-content { position: absolute; top: calc(100% + 8px); left: 0; min-width: 260px; background: var(--knx-surface); border: 1px solid var(--knx-border); border-radius: 8px; box-shadow: 0 12px 32px var(--knx-overlay-shadow); padding: 8px; }
 .file-menu-content > button, .file-menu-content > div { display: block; width: 100%; margin: 3px 0; }
 .workbench-panel-controls { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; justify-content: space-between; min-height: 35px; border-bottom: 1px solid var(--knx-border); }
 .workbench-panel-controls .bulk-action-toolbar { flex: 1 1 260px; min-width: 0; max-width: 100%; margin: 4px 0; }
@@ -3138,9 +3134,33 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .navigation-section--grow > .navigation-section-content[hidden] { display: none; }
 .navigation-section-toggle { flex: 0 0 auto; display: flex; gap: 8px; align-items: center; width: 100%; padding: 8px 12px; text-align: left; border: 0; border-radius: 0; background: transparent; color: var(--knx-muted); font-size: 12px; box-shadow: none; }
 .navigation-section-toggle:hover:not(:disabled) { transform: none; box-shadow: none; }
-.file-menu-group + .file-menu-group { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--knx-border); }
-.file-menu-group > h3 { margin: 3px 8px; color: var(--knx-muted); font-size: 11px; }
-.file-menu-group > button, .file-menu-group > div { display: block; width: 100%; margin: 3px 0; }
+/* UI-03: the File menu keeps frequent project actions on its first level; History, Help and
+   Import / Export fold into submenus that open to the right (docs/contracts/file-menu.md). The
+   menu does not scroll while flyouts are in use (a flyout inside a scrolling box would be clipped);
+   on narrow or short screens the layout below gives it a viewport height limit with scrolling and
+   expands the submenus inline instead. */
+.file-menu-content > .file-menu-separator { height: 0; margin: 6px 0; padding: 0; border-top: 1px solid var(--knx-border); }
+.file-submenu { position: relative; display: block; width: 100%; margin: 3px 0; }
+.file-submenu-trigger { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; }
+.file-submenu-trigger[aria-expanded="true"] { background: color-mix(in srgb, var(--knx-accent) 14%, var(--knx-surface)); }
+.file-submenu-chevron { color: var(--knx-muted); font-size: 16px; line-height: 1; }
+.file-submenu-panel {
+  position: absolute; z-index: 5; top: calc(-9px + var(--file-submenu-shift, 0px)); left: calc(100% + 6px);
+  min-width: 220px; width: max-content; max-width: var(--file-submenu-max-width, min(520px, calc(100vw - 16px))); max-height: calc(100dvh - 24px); overflow: auto;
+  background: var(--knx-surface); border: 1px solid var(--knx-border); border-radius: 8px;
+  box-shadow: 0 12px 32px var(--knx-overlay-shadow); padding: 8px;
+}
+.file-submenu-panel[data-side="left"] { left: auto; right: calc(100% + 6px); }
+.file-submenu-panel > button, .file-submenu-panel > div { display: block; width: 100%; margin: 3px 0; }
+@keyframes knx-file-submenu-in { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: none; } }
+@keyframes knx-file-submenu-in-left { from { opacity: 0; transform: translateX(6px); } to { opacity: 1; transform: none; } }
+@keyframes knx-file-submenu-fade { from { opacity: 0; } to { opacity: 1; } }
+/* Short and subtle: 0.7 x the motion level's duration (140ms at Standard, 84ms at Subtle). Level
+   Off sets --knx-transition-duration to 0ms, so the panel appears at once; OS reduced motion never enters. */
+@media (prefers-reduced-motion: no-preference) {
+  .file-submenu-panel:not([hidden]) { animation: knx-file-submenu-in calc(var(--knx-transition-duration) * 0.7) var(--knx-motion-easing) both; }
+  .file-submenu-panel[data-side="left"]:not([hidden]) { animation-name: knx-file-submenu-in-left; }
+}
 
 .workbench-navigation { display: flex; flex-direction: column; gap: 2px; padding: 6px 8px 10px; }
 .workbench-navigation button { display: flex; align-items: center; gap: 10px; padding: 4px 10px; border-radius: var(--knx-radius-button); }
@@ -3400,6 +3420,17 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
   .navigation-section + .pane-splitter + .navigation-section { border-top: 1px solid var(--knx-border); }
   .workbench-center { padding: 16px; }
   .file-menu-content { position: fixed; left: 10px; right: 10px; top: 65px; }
+}
+/* Narrow or short screens: a flyout would leave the viewport (or the scrolling menu around it would
+   clip it), so a submenu expands inline under its row and the menu scrolls within the viewport. */
+@media (max-width: 650px), (max-height: 600px) {
+  .file-menu-content { max-height: calc(100dvh - 80px); overflow: auto; }
+  .file-submenu-panel { position: static; width: auto; min-width: 0; max-width: none; max-height: none; overflow: visible; margin: 0 0 0 12px; padding: 0 0 0 8px; border: 0; border-left: 2px solid var(--knx-border); border-radius: 0; box-shadow: none; }
+  .file-submenu-chevron { transform: rotate(90deg); }
+  .file-submenu-trigger[aria-expanded="true"] .file-submenu-chevron { transform: rotate(-90deg); }
+  @media (prefers-reduced-motion: no-preference) {
+    .file-submenu-panel:not([hidden]) { animation-name: knx-file-submenu-fade; }
+  }
 }
 .device-workspace { background: var(--knx-surface); border: 1px solid var(--knx-border); border-radius: 8px; padding: 20px; margin-top: 24px; }
 .device-workspace .workspace-heading { margin-bottom: 15px; }

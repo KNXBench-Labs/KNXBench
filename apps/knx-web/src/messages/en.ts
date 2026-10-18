@@ -44,7 +44,6 @@ export const messages = {
   "parameters.functionsEmpty": "No supported function choices are currently visible. Other settings are under Parameters.",
   "parameters.functionsHint": "These manufacturer parameters control the available communication objects. A selection is applied immediately; Undo restores the previous configuration.",
   "parameters.groupNumber": "Parameter group {number}",
-  "fileMenu.project": "Project",
   "fileMenu.exchange": "Import & export",
   "fileMenu.history": "History & comparison",
   "fileMenu.help": "Help & diagnostics",

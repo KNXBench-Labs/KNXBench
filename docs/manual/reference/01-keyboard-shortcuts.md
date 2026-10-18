@@ -80,8 +80,17 @@ underneath, reachable the same way by arrow keys and Enter](../../assets/screens
 
 **The File menu is keyboard-reachable even though it looks like a mouse dropdown.** It's
 a native HTML `<details>`/`<summary>` element: `Tab` to it, `Enter` or `Space` opens it,
-`Tab` moves through its items, and `Escape` closes it and returns focus to the menu
-button. Clicking anywhere outside it also closes it.
+and `Escape` closes it and returns focus to the menu button. Clicking anywhere outside
+it also closes it. In builds after Alpha 14 its
+**Import & export**, **History & comparison** and **Help & diagnostics** rows open
+submenus: with focus on **File**, `↓`, `Enter` or `Space` opens the menu on its first
+entry (`↑` on its last); `→`, `Enter` or `Space` on a submenu row opens it and focuses
+its first entry, `↑`/`↓` and `Home`/`End` move inside a menu, `←` or `Escape` closes
+the submenu and returns to its row, and the next `Escape` closes File. The menu holds
+entries only, so `Tab` and `Shift+Tab` from anywhere in it leave the menu: it closes
+and focus carries on from **File**. **Compare with…** shows its result in a dialog of
+its own (`Escape` or **Close** dismiss it, focus returns to **File**). See
+[The File menu](../user-guide/01-user-interface.md#the-file-menu).
 
 **Resizing panes is a keyboard operation too**, not just a drag:
 
@@ -100,7 +109,7 @@ contain and their pixel limits.
 1. A help tip bubble, if one is open.
 2. The dialog or overlay it's inside of (Search, the command palette, the catalog
    browser, Settings, Help, About, New project, the file picker, the quit confirmation).
-3. The open File menu.
+3. An open File submenu, then the open File menu.
 4. A multi-selection built with `Ctrl`-click or `Shift`-click in the tree or the
    group-address table, if nothing above applies.
 

@@ -460,7 +460,8 @@ is not a file KNXBench should write.
 
 ## The rest of the File menu
 
-Four more items are covered elsewhere:
+Four more items are covered elsewhere. All of them live in File's submenus (see
+[The File menu](01-user-interface.md#the-file-menu)):
 
 - **Export group addresses (CSV)…** and **Import group addresses (CSV)…** —
   [Working with group addresses](04-group-addresses.md).

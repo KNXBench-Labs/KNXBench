@@ -88,14 +88,23 @@ braces, invent a default or resolve parameter references itself.
 ## Bounds
 
 Filled channel headings count against the device detail's existing text
-projection budget; parameter-panel captions share one budget of the same size
-per evaluation, refusing the panel rather than truncating it; object names are
-filled under a separate budget of the same
-size, per request. Only a text containing `{{` is filled, so every other text
-costs nothing more than before. When a fill would not fit, nothing is
-shortened: the device detail is refused with the same `device text projection
-budget exhausted` error as any other over-budget product text, and the
-documentation report prints that device's names unfilled.
+projection budget. Parameter-panel captions retain one `TextProjectionBudget`
+through resolution and complete DTO construction, across all sections: resolver
+work, retained fill templates, every group-caption copy on fields and separators,
+separator text/provenance in both row and grid DTOs, and declared grid axis texts
+are admitted before copying. The ceiling is unchanged; exhaustion refuses the
+whole panel, never truncates it. Metadata and allocator overhead are outside this
+content policy. A parameter edit preflights the full reconciled command through
+the existing command stack on a project copy and assembles its complete panel
+before durable publication; a refused projection changes neither project,
+revision, history nor native bytes. Success returns that admitted panel, without
+a fallible post-commit reread.
+
+Object names use a separate budget of the same size per request. Only a text
+containing `{{` is filled on the object/channel surfaces. When a fill would not
+fit, nothing is shortened: device detail is refused with the same
+`device text projection budget exhausted` error as any other over-budget product
+text, and the documentation report prints that device's names unfilled.
 
 ## Not covered
 

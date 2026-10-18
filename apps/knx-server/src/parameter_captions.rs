@@ -7,7 +7,38 @@ use knx_productdb::text_parameters::{DeviceTexts, TextParameters};
 use knx_projection::TextFill;
 
 pub(crate) type CaptionKey = (Option<Vec<i64>>, i64);
-pub(crate) type CaptionFills = HashMap<CaptionKey, TextFill>;
+/// One request's resolver and DTO-copy admission context. Never reset per label or section.
+#[derive(Default)]
+pub(crate) struct CaptionFills {
+    fills: HashMap<CaptionKey, TextFill>,
+    budget: TextProjectionBudget,
+}
+
+impl CaptionFills {
+    pub(crate) fn copy_text(&mut self, text: Option<&str>) -> Result<Option<String>, String> {
+        text.map(|text| self.budget.copy_text(text))
+            .transpose()
+            .map_err(|e| e.to_string())
+    }
+
+    /// Admit both the rendered text and retained template before allocating a DTO copy.
+    pub(crate) fn copy(
+        &mut self,
+        key: CaptionKey,
+        text: Option<&str>,
+    ) -> Result<(Option<String>, Option<TextFill>), String> {
+        let fill = self.fills.get(&key);
+        if let Some(text) = text {
+            self.budget.admit_copy(text).map_err(|e| e.to_string())?;
+        }
+        if let Some(fill) = fill {
+            self.budget
+                .admit_copy(&fill.template)
+                .map_err(|e| e.to_string())?;
+        }
+        Ok((text.map(str::to_owned), fill.cloned()))
+    }
+}
 
 /// Overlay this request's evaluated labels only; source metadata and project values stay untouched.
 pub(crate) fn apply(
@@ -40,6 +71,10 @@ pub(crate) fn apply(
                 &mut budget,
             )
             .map_err(|e| e.to_string())?;
+        if value.source != knx_productdb::dynamic::PositionalSource::NoPlaceholder {
+            // The provenance template is a newly retained output, too.
+            budget.admit_copy(&label.text).map_err(|e| e.to_string())?;
+        }
         if let Some(fill) = crate::com_object_activation::text_fill(value.source, &label.text) {
             filled.push((index, value.text, fill));
         }
@@ -53,5 +88,5 @@ pub(crate) fn apply(
         );
         label.text = text;
     }
-    Ok(fills)
+    Ok(CaptionFills { fills, budget })
 }

@@ -5653,7 +5653,7 @@ fn assemble_parameter_panel_for_project(
     };
 
     let DeviceEvaluation {
-        caption_fills,
+        mut caption_fills,
         ref_ids,
         supplied,
         validated_scoped,
@@ -5906,20 +5906,22 @@ fn assemble_parameter_panel_for_project(
             .as_ref()
             .map_or("", |s| s.module_def_id.as_str());
         // The group a field or separator belongs to, as the wire names it.
-        let mut group_dto = |group: knx_productdb::parameter_layout::Group| {
+        let mut group_dto = |group: knx_productdb::parameter_layout::Group,
+                             captions: &mut crate::parameter_captions::CaptionFills|
+         -> Result<_, String> {
             let label = activation
                 .labels
                 .iter()
                 .find(|label| label.node_id == group.node_id && label.scope == section.scope)
-                .map(|label| label.text.clone())
-                .or(group.text)
+                .map(|label| label.text.as_str())
+                .or(group.text.as_deref())
                 .filter(|text| !text.trim().is_empty())
                 .or_else(|| {
                     group
                         .caption_ref
                         .as_ref()
                         .and_then(|reference| views_by_id.get(reference))
-                        .and_then(|caption| caption.text.clone().or(caption.name.clone()))
+                        .and_then(|caption| caption.text.as_deref().or(caption.name.as_deref()))
                 });
             let key = group
                 .element_id
@@ -5927,17 +5929,18 @@ fn assemble_parameter_panel_for_project(
             if !grid_groups.iter().any(|(_, node)| *node == group.node_id) {
                 grid_groups.push((key.clone(), group.node_id));
             }
-            let label_fill = caption_fills
-                .get(&(
+            let (label, label_fill) = captions.copy(
+                (
                     section.scope.as_ref().map(|s| s.node_chain()),
                     group.node_id,
-                ))
-                .cloned();
-            crate::routes::ParameterGroupDto {
+                ),
+                label,
+            )?;
+            Ok(crate::routes::ParameterGroupDto {
                 key,
                 label,
                 label_fill,
-            }
+            })
         };
         for (ref_id, (position, block_access)) in section.ref_ids.iter().zip(&section.activated) {
             // A ref the join dropped (see the diagnostic above) has no
@@ -5992,7 +5995,10 @@ fn assemble_parameter_panel_for_project(
             let editable = write_ets_id.is_some();
             let presentation = layout.field(definition, &view.id);
             let cell = presentation.cell.map(crate::parameter_grid::cell_dto);
-            let group = presentation.group.map(&mut group_dto);
+            let group = presentation
+                .group
+                .map(|group| group_dto(group, &mut caption_fills))
+                .transpose()?;
             field_positions.push(*position);
             fields.push(crate::routes::ParameterFieldDto {
                 group,
@@ -6050,26 +6056,28 @@ fn assemble_parameter_panel_for_project(
                     .cloned()
                     .unwrap_or_default();
                 let scope_key = separator.scope.as_ref().map(|s| s.node_chain());
-                crate::routes::ParameterSeparatorDto {
+                let (text, text_fill) = caption_fills.copy(
+                    (scope_key.clone(), separator.node_id),
+                    separator_texts
+                        .get(&(scope_key, separator.node_id))
+                        .copied(),
+                )?;
+                Ok(crate::routes::ParameterSeparatorDto {
                     position: field_positions
                         .partition_point(|&field| field < separator.parameter_refs_before),
-                    group: declaration.group.map(&mut group_dto),
+                    group: declaration
+                        .group
+                        .map(|group| group_dto(group, &mut caption_fills))
+                        .transpose()?,
                     element_id: declaration.element_id,
-                    text: separator_texts
-                        .get(&(scope_key, separator.node_id))
-                        .map(|text| text.to_string()),
-                    text_fill: caption_fills
-                        .get(&(
-                            separator.scope.as_ref().map(|s| s.node_chain()),
-                            separator.node_id,
-                        ))
-                        .cloned(),
+                    text,
+                    text_fill,
                     ui_hint: declaration.ui_hint,
                     access: declaration.access,
                     block_access: separator.block_access.clone(),
-                }
+                })
             })
-            .collect();
+            .collect::<Result<Vec<_>, String>>()?;
         push_write_refusals(
             &mut diagnostics,
             section.scope.as_ref().map(|s| module_scope_dto(s)),
@@ -6077,19 +6085,22 @@ fn assemble_parameter_panel_for_project(
         );
         let group_layouts = grid_groups
             .into_iter()
-            .filter_map(|(key, block_node)| {
+            .map(|(key, block_node)| {
                 crate::parameter_grid::group_layout_dto(
                     &layout,
                     definition,
                     key,
                     block_node,
-                    &caption_fills,
+                    &mut caption_fills,
                     activation
                         .labels
                         .iter()
                         .filter(|label| label.scope == section.scope),
                 )
             })
+            .collect::<Result<Vec<_>, String>>()?
+            .into_iter()
+            .flatten()
             .collect();
         sections.push(crate::routes::ParameterSectionDto {
             scope: section.scope.as_ref().map(|s| module_scope_dto(s)),

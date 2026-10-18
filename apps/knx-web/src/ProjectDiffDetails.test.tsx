@@ -1,5 +1,6 @@
 /** KL-60: ProjectDiffDetails remembers opened tables for one mount, and a remount starts closed. */
 // @vitest-environment happy-dom
+import { tableColumnSmoke } from "./tableColumnSmoke.fixture";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it } from "vitest";
@@ -61,4 +62,10 @@ describe("ProjectDiffDetails table memory", () => {
     await act(async () => root!.render(<ProjectDiffDetails key={2} report={report()} />));
     expect(toggle().getAttribute("aria-expanded")).toBe("false");
   });
+});
+
+tableColumnSmoke([["project-diff-fields", 3]], async () => {
+  host = document.createElement("div"); root = createRoot(host);
+  await act(async () => root!.render(<ProjectDiffDetails report={{ ...report(), infoChanges: [{ field: "name", left: "Before", right: "After" }] }} />));
+  await act(async () => toggle().click()); return { host };
 });

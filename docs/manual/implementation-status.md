@@ -826,9 +826,9 @@ historical test results or close another owner's ledger rows.
 
 ## Browser-local data-table column widths (18 October 2026 source, local-only)
 
-17 native data-table surfaces support pointer/keyboard resizing and column/table
-reset, with validated widths retained in this browser. The selectable
-address/object matrix remains unchanged; lists, trees and manufacturer parameter
+All 18 native data-table surfaces use the pointer/keyboard width adapter and
+column/table reset, with validated widths retained in this browser. The matrix's
+select/address/name columns resize; its per-object columns remain fixed; lists, trees and manufacturer parameter
 grids are outside scope. See the [coverage checklist](../contracts/table-column-widths.md).
 
 [Manual index](README.md) · Next: [Ideas and roadmap](ideas-and-roadmap.md) →

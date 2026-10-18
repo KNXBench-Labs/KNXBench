@@ -17,18 +17,18 @@ import DeviceComparisonDialog, { ComparisonTag } from "./DeviceComparisonDialog"
 import "./deviceComparisons.css";
 
 const DEVICES_COLUMNS = [
-  { id: "select", width: 64, min: 48 },
-  { id: "address", width: 160, min: 100 },
-  { id: "name", width: 240, min: 120 },
-  { id: "programming", width: 200, min: 120 },
-  { id: "manufacturer", width: 200, min: 100 },
-  { id: "product", width: 240, min: 120 },
-  { id: "orderNumber", width: 180, min: 100 },
-  { id: "topology", width: 180, min: 100 },
-  { id: "building", width: 200, min: 100 },
-  { id: "com_object_count", width: 180, min: 100 },
-  { id: "description", width: 260, min: 120 },
-  { id: "comparison", width: 240, min: 140 }
+  { id: "select", width: 48, min: 48 },
+  { id: "address", width: 100, min: 100 },
+  { id: "name", width: 120, min: 120 },
+  { id: "programming", width: 100, min: 100 },
+  { id: "manufacturer", width: 90, min: 90 },
+  { id: "product", width: 110, min: 110 },
+  { id: "orderNumber", width: 80, min: 80 },
+  { id: "topology", width: 80, min: 80 },
+  { id: "building", width: 90, min: 90 },
+  { id: "com_object_count", width: 80, min: 80 },
+  { id: "description", width: 100, min: 100 },
+  { id: "comparison", width: 102, min: 102 }
 ];
 
 const COLUMNS: { column: DeviceSortColumn; label: MessageKey }[] = [

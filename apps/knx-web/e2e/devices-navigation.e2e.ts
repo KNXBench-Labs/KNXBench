@@ -279,6 +279,8 @@ for (const language of ["en", "de"] as const) {
       await page.locator(".devices-table th button").filter({ hasText: new RegExp(`^${m["workbench.name"]}`) }).click();
       await page.getByRole("checkbox", { name: m["devices.select"].replace("{name}", "Actuator 1"), exact: true }).check();
       const scroller = page.locator(".devices-table-scroll");
+      // Defaults fit the desktop pane; explicitly widen before testing scroll memory.
+      await page.locator('[data-table-id="devices"]').getByRole("separator").last().press("End");
       await scroller.evaluate((node) => { node.scrollLeft = 180; });
       const scrollLeft = await scroller.evaluate((node) => node.scrollLeft);
       const before = state.requests.length;

@@ -917,9 +917,11 @@ is not the same as what exists.
 
 ## Table column-width coverage (18 October 2026 source, local-only)
 
-The selectable address/object matrix retains fixed layout. Its columns identify
-project objects; browser-local width preferences currently admit only fixed
-presentation IDs. The other 17 native table surfaces are converted. Widths are
+The address/object matrix's per-object columns retain 180 px preferred widths
+without resize controls.
+Its select/address/name columns resize and persist by presentation ID. A policy
+for object-column widths is still open because project-object identifiers
+cannot enter browser preferences. All 18 native table surfaces use the adapter. Widths are
 browser-local and are lost when browser storage is cleared; blocked storage
 supports resizing only for the mounted session. Manufacturer parameter grids,
 trees and catalogue/history lists retain their existing layouts. See

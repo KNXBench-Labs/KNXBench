@@ -1,6 +1,7 @@
 /** Verifies line-scan cost, six-state reporting, cancellation and protected exclusions. */
 // @vitest-environment happy-dom
 
+import { tableColumnSmoke } from "./tableColumnSmoke.fixture";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -497,4 +498,9 @@ describe("LineScanPanel", () => {
       )!.disabled,
     ).toBe(true);
   });
+});
+
+tableColumnSmoke([["line-scan", 2]], async () => {
+  apiMock.pollLineScan.mockResolvedValue(scanResponse("completed", [{ address: "1.1.1", outcome: { kind: "vacant" } }]));
+  await renderPanel(); return { host: host! };
 });

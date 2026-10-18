@@ -1,4 +1,5 @@
 /** Read-only projected link matrix with explicit bounded object-column choice. */
+import ResizableTable from "./ResizableTable";
 import type { GroupAddressWorkspaceViewProps } from "./groupAddressWorkspaceView";
 import type { GroupAddressMatrixColumn, GroupAddressMatrixIndex } from "./groupAddressMatrix";
 import type { GroupAddressObjectInventory } from "./groupAddressObjectInventory";
@@ -7,6 +8,11 @@ import { useGroupAddressFormat } from "./gaNotation";
 import GroupAddressWindowNotice from "./GroupAddressWindowNotice";
 import GroupAddressObjectInventoryList from "./GroupAddressObjectInventoryList";
 
+const MATRIX_COLUMNS = [
+  { id: "select", width: 48, min: 48 },
+  { id: "address", width: 140, min: 100 },
+  { id: "name", width: 240, min: 120 },
+];
 const MAX_COLUMNS = 12;
 const DEFAULT_COLUMNS = 6;
 export default function GroupAddressMatrix(props: GroupAddressWorkspaceViewProps & {
@@ -43,7 +49,7 @@ export default function GroupAddressMatrix(props: GroupAddressWorkspaceViewProps
       </label>)}</div>
       <GroupAddressObjectInventoryList inventory={props.inventory} query={needle} />
     </details>
-    <div className="workspace-table-wrap"><table className="workspace-table ga-matrix-table">
+    <ResizableTable tableId="group-address-matrix" columns={MATRIX_COLUMNS} fixedTrailingColumns={columns.length} scrollClassName="workspace-table-wrap" className="workspace-table ga-matrix-table">
       <thead><tr><th>{t("addressTable.selectColumn")}</th><th>{t("workbench.address")}</th><th>{t("workbench.name")}</th>
         {columns.map(column => <th key={column.key} scope="col">
           <span>{deviceLabel(column)}</span>
@@ -77,7 +83,7 @@ export default function GroupAddressMatrix(props: GroupAddressWorkspaceViewProps
           })}
         </tr>;
       })}</tbody>
-    </table></div>
+    </ResizableTable>
     <GroupAddressWindowNotice shown={rows.length} total={props.rows.length} onLimit={props.onLimit} />
     {props.rows.length === 0 && <p role="status">{t("addressTable.noMatches")}</p>}
     {columns.length === 0 && <p role="status">{t("gaWorkspace.noColumns")}</p>}

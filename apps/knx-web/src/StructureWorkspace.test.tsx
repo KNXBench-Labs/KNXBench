@@ -1,5 +1,6 @@
 /** Tests for the structure workspace's topology, nesting, room device table, and address scope. */
 // @vitest-environment happy-dom
+import { tableColumnSmoke } from "./tableColumnSmoke.fixture";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, it, vi } from "vitest";
@@ -340,4 +341,10 @@ it("creates under a parent selected in a later installation and roots there by n
   await act(async () => range.querySelector<HTMLButtonElement>("ul button")!.click());
   expect(apiMock.createGroupRange).toHaveBeenLastCalledWith("Later middle", "3/1/0", "3/1/255", 40);
   await act(async () => root.unmount());
+});
+
+tableColumnSmoke([["building-devices", 3]], async () => {
+  const host = document.createElement("div"); const root = createRoot(host);
+  await act(async () => root.render(<StructureWorkspace {...inert} tree={tree} view="buildings" selection={null} buildingScope={5} onSelect={() => {}} onCatalog={() => {}} />));
+  return { host, cleanup: async () => { await act(async () => root.unmount()); } };
 });

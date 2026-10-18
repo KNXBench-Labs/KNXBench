@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
 import DevicesWorkspace from "../src/DevicesWorkspace";
+import ComObjectTable from "../src/ComObjectTable";
 import ComparisonTable from "../src/ComparisonTable";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
 import { setSetting } from "../src/settingsStore";
@@ -23,6 +24,7 @@ function Fixture() {
   return <main className="workbench" style={{ display: "block", padding: 12, maxWidth: "100%", boxSizing: "border-box" }}>
     <DevicesWorkspace tree={tree} active selection={null} multiSelection={null} onItemClick={() => setClicks(value => value + 1)} onCatalogue={() => {}} />
     <output data-row-clicks>{clicks}</output>
+    <ComObjectTable objects={[]} editor={() => null} />
     <ComparisonTable rows={[{ kind: "raw", label: "Synthetic memory", address: 0x4000, project: "01 02 03", device: "01 02 04", reason: null }]} />
   </main>;
 }

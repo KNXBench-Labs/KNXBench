@@ -1,5 +1,6 @@
 /** Named values, translated decoder refusals and always-visible raw bytes. */
 // @vitest-environment happy-dom
+import { tableColumnSmoke } from "./tableColumnSmoke.fixture";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, it } from "vitest";
@@ -42,4 +43,9 @@ it("offers keyboard resizing and reset on the production comparison table", asyn
   expect(reset.textContent).toBe("Reset column widths");
   await act(async () => reset.click());
   expect(Number(handle.getAttribute("aria-valuenow"))).toBe(initial);
+});
+
+tableColumnSmoke([["device-comparison", 4]], async () => {
+  const host = document.createElement("div"); const root = createRoot(host);
+  dispose = () => root.unmount(); await act(async () => root.render(<ComparisonTable rows={[]} />)); return { host };
 });

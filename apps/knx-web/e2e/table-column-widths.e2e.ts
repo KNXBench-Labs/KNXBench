@@ -1,4 +1,6 @@
 /** Browser proofs for local column resizing, sortable devices and virtualised history diffs. */
+import { intercept, openList, openProject } from "./communication-fixture";
+import { fakeServer, node, openFlow, telegram } from "./telegram-flow-server";
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
 async function drag(page: Page, handle: Locator, delta: number) {
@@ -60,6 +62,8 @@ for (const [language, theme, width] of [
     await aligned(comparison, 0);
     await page.screenshot({ path: test.info().outputPath(`${theme}-${width}.png`), fullPage: true });
     await page.setViewportSize({ width: 400, height: 900 });
+    // Explicitly widen before asserting local scrolling after a reset.
+    for (const separator of await devices.getByRole("separator").all()) await separator.press("End");
     await localOverflow(page, devices); await localOverflow(page, comparison);
     await other.dblclick(); await expect(other).toHaveAttribute("aria-valuenow", "240");
     const paint = await other.evaluate(element => {
@@ -94,3 +98,66 @@ test("virtualised history field tables share widths, align through remounts and 
   await tables.first().locator(".table-column-reset").click();
   await expect(tables.nth(1).getByRole("separator").first()).toHaveAttribute("aria-valuenow", "180");
 });
+
+for (const width of [1440, 1920]) {
+  test(`${width}: unresized devices and objects fill their viewport; widening scrolls locally`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.route("**/api/**", route => route.fulfill({ status: 404, body: "{}" }));
+    await page.goto("/e2e/table-columns-fixture.html");
+    for (const id of ["devices", "communication-objects"]) {
+      const table = page.locator(`[data-table-id="${id}"]`);
+      const viewport = table.locator(".resizable-table-scroll");
+      expect(await viewport.evaluate(e => e.scrollWidth <= e.clientWidth)).toBe(true);
+      expect(await table.locator("table").evaluate(e => Math.abs(e.getBoundingClientRect().width - e.parentElement!.clientWidth))).toBeLessThanOrEqual(1);
+      for (const handle of await table.getByRole("separator").all()) await handle.press("End");
+      await localOverflow(page, table);
+    }
+  });
+  test(`${width}: monitor defaults fit; widened columns scroll locally`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.route("**/api/**", route => {
+      const path = new URL(route.request().url()).pathname;
+      const body = path.endsWith("/telegrams") ? { sessionId: 17, serverIncarnation: "fixture", contextStatus: "current", projectOpen: false, status: "active", nextSince: 1, droppedBefore: 0,
+        telegrams: [{ seq: 1, timestamp: "2026-09-30T12:00:00Z", source: "1.1.5", destination: "1/2/3", destinationName: null, service: "GroupValueWrite", rawPayload: null, decoded: null, control: null }] } : { interfaces: [] };
+      return route.fulfill({ contentType: "application/json", body: JSON.stringify(body) });
+    });
+    await page.goto("/e2e/monitor-control-fixture.html");
+    const table = page.locator('[data-table-id="bus-monitor"]'); await expect(table).toBeVisible();
+    expect(await table.locator(".resizable-table-scroll").evaluate(e => e.scrollWidth <= e.clientWidth)).toBe(true);
+    for (const handle of await table.getByRole("separator").all()) await handle.press("End");
+    await localOverflow(page, table);
+  });
+}
+test("resize target spans 24 pixels while a header button still sorts", async ({ page }) => {
+  await page.route("**/api/**", route => route.fulfill({ status: 404, body: "{}" }));
+  await page.goto("/e2e/table-columns-fixture.html");
+  const table = page.locator('[data-table-id="devices"]'); const handle = table.getByRole("separator").nth(1);
+  const box = (await handle.boundingBox())!; expect(box.width).toBeGreaterThanOrEqual(24);
+  const heading = table.locator("thead th").nth(1); const headingBox = (await heading.boundingBox())!;
+  expect(box.x).toBeLessThan(headingBox.x + headingBox.width); expect(box.x + box.width).toBeGreaterThan(headingBox.x + headingBox.width);
+  await heading.getByRole("button").click(); await expect(heading).toHaveAttribute("aria-sort", "descending");
+  await drag(page, handle, 48); await expect(heading).toHaveAttribute("aria-sort", "descending");
+});
+
+for (const width of [1440, 1920]) {
+  test(`${width}: built-app device and object defaults fit with navigation present`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await intercept(page, "en"); await openProject(page, "en"); await openList(page, "en");
+    const devices = page.locator('[data-table-id="devices"] .resizable-table-scroll');
+    const size = await devices.evaluate(e => ({ scroll: e.scrollWidth, client: e.clientWidth }));
+    expect(size.scroll, JSON.stringify(size)).toBeLessThanOrEqual(size.client);
+    await page.locator(".devices-table tbody td:nth-child(3) button").first().click();
+    const objects = page.locator('[data-table-id="communication-objects"] .resizable-table-scroll');
+    const objectSize = await objects.evaluate(e => ({ scroll: e.scrollWidth, client: e.clientWidth }));
+    expect(objectSize.scroll, JSON.stringify(objectSize)).toBeLessThanOrEqual(objectSize.client);
+  });
+  test(`${width}: flow inspector defaults fit its own pane`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    const server = await fakeServer(page); server.rows.push(telegram(1, "1", "On")); await openFlow(page);
+    await node(page, "Dimmer").focus(); await page.keyboard.press("Enter");
+    for (const viewport of await page.locator(".flow-inspector .resizable-table-scroll").all()) {
+      const size = await viewport.evaluate(e => ({ table: e.parentElement!.getAttribute("data-table-id"), scroll: e.scrollWidth, client: e.clientWidth }));
+      expect(size.scroll, JSON.stringify(size)).toBeLessThanOrEqual(size.client);
+    }
+  });
+}

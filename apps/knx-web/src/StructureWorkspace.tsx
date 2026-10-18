@@ -81,6 +81,8 @@ export default function StructureWorkspace(props: {
     </table>{nodes.length === 0 && <p className="empty-device-list" role="status">{t("workbench.noDevices")}</p>}</div>;
   }
   return <section className="structure-workspace" onKeyDown={(e) => {
+    // The open `+ New` menu wraps its own arrows; do not override a handled key.
+    if (e.defaultPrevented) return;
     if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(e.key) || !(e.target instanceof HTMLButtonElement)) return;
     // Entries of the closed `+ New` menu are not rendered; focusing one would drop focus.
     const buttons = [...e.currentTarget.querySelectorAll<HTMLButtonElement>("button:not(:disabled)")].filter((b) => !b.closest("details:not([open])"));

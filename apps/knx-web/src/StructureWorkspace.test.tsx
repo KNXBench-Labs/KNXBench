@@ -115,6 +115,27 @@ it("moves focus with ArrowDown/ArrowUp/Home/End across topology controls", async
   await done();
 });
 
+it("keeps the open `+ New` menu's own wrapping: ArrowDown on the last entry wraps, ArrowUp on the first wraps, focus never leaves", async () => {
+  const { host, done } = await renderTopology("en");
+  const menu = host.querySelector<HTMLDetailsElement>("details.structure-new-menu")!;
+  await act(async () => { menu.open = true; });
+  const items = [...menu.querySelectorAll<HTMLButtonElement>("[data-create-entry]")];
+  expect(items.length).toBeGreaterThan(1);
+  const press = async (target: HTMLElement, key: string) => act(async () => {
+    target.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true }));
+  });
+  items[items.length - 1].focus();
+  await press(items[items.length - 1], "ArrowDown");
+  expect(document.activeElement).toBe(items[0]);
+  await press(items[0], "ArrowUp");
+  expect(document.activeElement).toBe(items[items.length - 1]);
+  for (const key of ["ArrowDown", "ArrowUp", "ArrowDown"]) {
+    await press(document.activeElement as HTMLElement, key);
+    expect(menu.contains(document.activeElement), `${key} keeps focus inside the menu`).toBe(true);
+  }
+  await done();
+});
+
 it("keeps an empty line free of metric labels and keeps names intact for long values", async () => {
   const { host, done } = await renderTopology("en");
   const lines = [...host.querySelectorAll(".topology-line")];

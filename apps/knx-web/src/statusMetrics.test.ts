@@ -30,4 +30,8 @@ describe("admitStatusMetrics", () => {
     const noProject = { ...tree, project_incarnation: undefined, snapshot_revision: undefined };
     expect(admitStatusMetrics({ ...response(), project: { state: "unavailable", projectIncarnation: null, snapshotRevision: null, currentOnDiskBytes: null } }, noProject)?.projectMatches).toBe(true);
   });
+  it("admits an explicitly busy catalogue without measurements", () => {
+    const busy = { ...response(), catalogue: { state: "busy", bytes: null, counts: null } };
+    expect(admitStatusMetrics(busy, tree)?.metrics.catalogue).toEqual({ state: "busy", bytes: null, counts: null });
+  });
 });

@@ -102,10 +102,6 @@ async fn status_metrics_bind_saved_file_and_catalogue_to_their_own_resources() {
         std::fs::metadata(&path).unwrap().len()
     );
     assert_eq!(
-        measured["project"]["currentOnDiskBytes"],
-        std::fs::metadata(&path).unwrap().len()
-    );
-    assert_eq!(
         measured["project"]["snapshotRevision"],
         saved["snapshot_revision"]
     );
@@ -360,6 +356,43 @@ async fn status_metrics_wait_for_product_db_does_not_block_the_async_worker() {
         worker_was_free,
         "the async worker waited on the product DB mutex"
     );
+}
+
+#[tokio::test]
+async fn status_metrics_report_busy_catalogue_without_hiding_project_metrics() {
+    let dir = tempfile::tempdir().unwrap();
+    let project_path = dir.path().join("project.knxdb");
+    let db = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+    let state = Arc::new(knx_server::AppState {
+        product_db: Some(Mutex::new(db)),
+        ..Default::default()
+    });
+    let app = knx_server::app(state.clone(), None);
+    post(&app, "/api/project/new", json!({"name":"Open"})).await;
+    assert_eq!(
+        post(&app, "/api/project/save-as", json!({"path":project_path}))
+            .await
+            .0,
+        StatusCode::OK
+    );
+
+    let (ready_tx, ready_rx) = std::sync::mpsc::channel();
+    let (release_tx, release_rx) = std::sync::mpsc::channel();
+    let worker_state = state.clone();
+    let holder = std::thread::spawn(move || {
+        let _guard = worker_state.product_db.as_ref().unwrap().lock().unwrap();
+        ready_tx.send(()).unwrap();
+        let _ = release_rx.recv_timeout(Duration::from_secs(5));
+    });
+    ready_rx.recv_timeout(Duration::from_secs(2)).unwrap();
+
+    let metrics = get(&app, "/api/project/status-metrics").await;
+    release_tx.send(()).ok();
+    holder.join().unwrap();
+    assert_eq!(metrics["project"]["state"], "available");
+    assert_eq!(metrics["catalogue"]["state"], "busy");
+    assert!(metrics["catalogue"]["bytes"].is_null());
+    assert!(metrics["catalogue"]["counts"].is_null());
 }
 
 #[tokio::test]

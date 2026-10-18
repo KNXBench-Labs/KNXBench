@@ -925,7 +925,7 @@ export const messages: Record<MessageKey, string> = {
 
   "dashboard.title": "Projektstatus",
   "dashboard.schemaVersion": "Schemaversion",
-  "dashboard.metrics.savedFile": "Projektdatei auf dem Datenträger (aktuell)",
+  "dashboard.metrics.projectFileOnDisk": "Projektdatei auf dem Datenträger (aktuell)",
   "dashboard.metrics.unsavedChanges": "Ungespeicherte Änderungen",
   "dashboard.metrics.databaseSize": "Aktive Produktdatenbank (auf Datenträger, inkl. SQLite-Begleitdateien)",
   "dashboard.metrics.manufacturers": "Hersteller mit Produkten",
@@ -936,6 +936,7 @@ export const messages: Record<MessageKey, string> = {
   "dashboard.metrics.error": "Größe konnte nicht gelesen werden",
   "dashboard.metrics.countError": "Konnte nicht gelesen werden",
   "dashboard.metrics.catalogueError": "Produktdatenbank konnte nicht gelesen werden",
+  "dashboard.metrics.catalogueBusy": "Produktdatenbank beschäftigt (Installation läuft)",
   "dashboard.metrics.projectUnavailable": "Kein Projekt geöffnet",
   "dashboard.metrics.catalogueUnavailable": "Produktdatenbank nicht verfügbar",
   "dashboard.metrics.notSavedYet": "Noch nicht gespeichert",

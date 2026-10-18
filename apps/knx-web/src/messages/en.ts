@@ -943,7 +943,7 @@ export const messages = {
 
   "dashboard.title": "Project status",
   "dashboard.schemaVersion": "Schema version",
-  "dashboard.metrics.savedFile": "Project file on disk (current)",
+  "dashboard.metrics.projectFileOnDisk": "Project file on disk (current)",
   "dashboard.metrics.unsavedChanges": "Unsaved changes",
   "dashboard.metrics.databaseSize": "Active product database (on disk, incl. SQLite side files)",
   "dashboard.metrics.manufacturers": "Manufacturers with products",
@@ -954,6 +954,7 @@ export const messages = {
   "dashboard.metrics.error": "Could not read size",
   "dashboard.metrics.countError": "Could not read",
   "dashboard.metrics.catalogueError": "Product database could not be read",
+  "dashboard.metrics.catalogueBusy": "Product database busy (installation running)",
   "dashboard.metrics.projectUnavailable": "No project open",
   "dashboard.metrics.catalogueUnavailable": "Product database unavailable",
   "dashboard.metrics.notSavedYet": "Not saved yet",

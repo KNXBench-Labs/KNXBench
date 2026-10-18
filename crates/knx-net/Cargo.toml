@@ -26,6 +26,9 @@ socket2 = { workspace = true, features = ["all"] }
 # workspace-wide, including for the knx-cli/knx-server bin artifacts it
 # also builds — see knx-core/src/scan.rs's ScanPlan::unchecked_for_tests.
 knx-core = { workspace = true, features = ["test-support"] }
+# Paused virtual time proves the diagnostic memory profile's 180 s deadline
+# without waiting for it. A feature of the existing workspace tokio, test-only.
+tokio = { workspace = true, features = ["test-util"] }
 # K19's private telegram-capture test reads ETS's CommunicationLog XML.
 # Test-only: the library does not import that format.
 quick-xml.workspace = true

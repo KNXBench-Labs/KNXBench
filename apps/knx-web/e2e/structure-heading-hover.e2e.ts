@@ -21,7 +21,9 @@ const tree: ProjectTree = {
       ] },
     ] }],
     topology: [{ id: 2, name: "Area", address: 1, lines: [
-      { id: 3, name: "Line", address: 1, devices: [] },
+      { id: 3, name: "Line", address: 1, devices: [
+        { id: 8, name: "Example sensor", address: "1.1.1", description: null, com_object_count: 0 },
+      ] },
     ] }],
   }],
 };

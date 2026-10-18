@@ -19,6 +19,13 @@ pub const MAX_RANGES: usize = 8;
 /// admitting a generic dump.
 pub const MAX_TOTAL_OCTETS: u32 = 2048;
 
+/// At most this many octets in the profile's recorded `PID_HARDWARE_TYPE`
+/// comparison (`LdCtrlCompareProp/@InlineData`): the bound of the evidence
+/// archive, which records the value. The UP 258D12 declares 10. A longer
+/// comparison is refused when the profile is derived, before any read, so an
+/// admitted acquisition can always be saved.
+pub const MAX_COMPARISON_OCTETS: usize = 64;
+
 /// Octets per `A_Memory_Read`: the standard-frame limit, `15 − 3`.
 ///
 /// `[D]` RES §4.3.7.2.1 manages a device without `PID_MAX_APDU_LENGTH` with

@@ -6,6 +6,7 @@
  * project retires it, and only the shown preview can be confirmed. One
  * confirmation is one undo step. No pattern, no generated selection, no bus.
  */
+import ResizableTable from "../../ResizableTable";
 import { useEffect, useRef, useState } from "react";
 import type { ProjectTree } from "../../bindings/ProjectTree";
 import Overlay from "../../Overlay";
@@ -17,6 +18,12 @@ import {
   previewNameRecipe, utf8Bytes, type RecipeBinding, type RecipePreview, type RecipeRefusal,
 } from "./client";
 import "./nameRecipe.css";
+
+const NAME_RECIPE_COLUMNS = [
+  { id: "address", width: 140, min: 100 },
+  { id: "before", width: 260, min: 120 },
+  { id: "after", width: 260, min: 120 }
+];
 
 const REFUSALS = {
   nameRecipeSelection: "nameRecipe.refusal.selection",
@@ -151,8 +158,7 @@ export default function NameRecipeDialog(props: {
     {preview && <section className="name-recipe-preview" aria-labelledby="name-recipe-preview-title">
       <h3 id="name-recipe-preview-title">{preview.plan.noOp ? t("nameRecipe.nothingChanges")
         : t("nameRecipe.changes", { count: preview.plan.changed, total: count })}</h3>
-      <div className="name-recipe-table-wrap">
-        <table className="name-recipe-table">
+      <ResizableTable scrollClassName="name-recipe-table-wrap" tableId="name-recipe" columns={NAME_RECIPE_COLUMNS} className="name-recipe-table">
           <thead><tr><th scope="col">{t("nameRecipe.address")}</th><th scope="col">{t("nameRecipe.before")}</th>
             <th scope="col">{t("nameRecipe.after")}</th></tr></thead>
           <tbody>{preview.plan.rows.map((row) => {
@@ -163,8 +169,7 @@ export default function NameRecipeDialog(props: {
               <td>{row.changed ? row.after : <span className="name-recipe-unchanged">{t("nameRecipe.unchanged")}</span>}</td>
             </tr>;
           })}</tbody>
-        </table>
-      </div>
+        </ResizableTable>
       <p className="name-recipe-undo">{t("nameRecipe.undoHint")}</p>
     </section>}
     <footer className="name-recipe-actions">

@@ -1,5 +1,6 @@
 /** Device communication table interaction and editor-lifetime contracts. */
 // @vitest-environment happy-dom
+import { tableColumnSmoke } from "./tableColumnSmoke.fixture";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, it, vi, beforeEach } from "vitest";
@@ -217,4 +218,39 @@ it("names the object size the product data resolves, and nothing when it is unkn
   expect(row(1).querySelector(".com-object-size")?.textContent).toBe("Size: 2 Bytes");
   expect(row(2).querySelector(".com-object-size")).toBeNull();
   await v.cleanup();
+});
+
+tableColumnSmoke([["communication-objects", 6]], async () => { const v = await render([object(1)]); return v; });
+
+tableColumnSmoke([["communication-objects", 7]], async () => {
+  const v = await render([object(1)]); await v.click(v.button("All objects")); return v;
+});
+
+it.each(["By channel", "All objects"])("%s measures its DPT fit floor while preserving the stored minimum and rendered delta", async view => {
+  const actEnvironment = globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean };
+  const previousEnvironment = actEnvironment.IS_REACT_ACT_ENVIRONMENT;
+  actEnvironment.IS_REACT_ACT_ENVIRONMENT = true;
+  const pane = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(300);
+  window.localStorage.clear();
+  const measurement = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+    return { width: this.hasAttribute("data-table-word-measure") ? this.textContent!.length * 10 : 0 } as DOMRect;
+  });
+  const v = await render([object(1, { program_dpt: "DPST-9-1", dpt_text: "Windgeschwindigkeit" })]);
+  try {
+    await v.click(v.button(view));
+    const dptColumn = () => v.host.querySelector<HTMLTableColElement>("colgroup col:nth-child(4)")!;
+    const dptHandle = v.host.querySelector<HTMLElement>('th[data-column="dpt"] [role="separator"]')!;
+    expect(parseFloat(dptColumn().style.width)).toBe(190);
+    expect(parseFloat(v.host.querySelector<HTMLTableElement>(".com-table")!.style.width)).toBeGreaterThan(300);
+    await act(async () => dptHandle.dispatchEvent(new KeyboardEvent("keydown", { key: "Home", bubbles: true })));
+    expect(JSON.parse(window.localStorage.getItem("knxbench:table-column-widths:v1:communication-objects")!).dpt).toBe(100);
+    expect(parseFloat(dptColumn().style.width)).toBe(190 + 100 - (view === "All objects" ? 114 : 136));
+    await act(async () => dptHandle.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })));
+    expect(parseFloat(dptColumn().style.width)).toBe(190);
+  } finally {
+    await v.cleanup();
+    pane.mockRestore(); measurement.mockRestore();
+    actEnvironment.IS_REACT_ACT_ENVIRONMENT = previousEnvironment;
+    window.localStorage.clear();
+  }
 });

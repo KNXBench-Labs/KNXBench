@@ -2404,10 +2404,9 @@ main {
   font-weight: 600;
 }
 
-.device-download-blocks {
+.device-download-blocks-scroll {
   max-height: 320px;
   overflow: auto;
-  display: block;
 }
 
 .device-download-blocks td code {
@@ -3097,22 +3096,22 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
    capture keeps) turn it into a 2px accent rule over a faint accent band.
    The pane resizer's resting line is the pane's own border, so its
    hairline only appears when highlighted. */
-.pane-resizer, .pane-splitter {
+.pane-resizer, .pane-splitter, .table-column-resizer {
   --separator-line: var(--knx-border);
   --separator-band: transparent;
   --separator-weight: 1px;
   background: var(--separator-band);
 }
 .pane-resizer { --separator-line: transparent; }
-.pane-splitter::before, .pane-resizer::before {
+.pane-splitter::before, .pane-resizer::before, .table-column-resizer::before {
   content: "";
   position: absolute;
   background: var(--separator-line);
   pointer-events: none;
 }
 .pane-splitter::before { inset-inline: 0; top: calc(50% - var(--separator-weight) / 2); height: var(--separator-weight); }
-.pane-resizer::before { inset-block: 0; left: calc(50% - var(--separator-weight) / 2); width: var(--separator-weight); }
-:is(.pane-resizer, .pane-splitter):is(:hover, :focus-visible, :active) {
+:is(.pane-resizer, .table-column-resizer)::before { inset-block: 0; left: calc(50% - var(--separator-weight) / 2); width: var(--separator-weight); }
+:is(.pane-resizer, .pane-splitter, .table-column-resizer):is(:hover, :focus-visible, :active) {
   --separator-line: var(--knx-accent);
   --separator-band: color-mix(in srgb, var(--knx-accent) 16%, transparent);
   --separator-weight: 2px;
@@ -4810,3 +4809,41 @@ html[data-motion-flow="off"] .flow-camera,
     animation-name: none !important;
   }
 }
+
+/* UI-05 shares UI-02's separator paint above; these rules own table layout only. */
+.resizable-table { display: flex; flex-direction: column; min-width: 0; max-width: 100%; }
+.resizable-table-scroll { isolation: isolate; min-height: 0; max-width: 100%; overflow: auto; }
+.resizable-table .resizable-data-table { table-layout: fixed; min-width: 100%; max-width: none; }
+.resizable-data-table :is(th, td) { overflow-wrap: anywhere; white-space: normal; }
+/* The global cell token rule supplies density; surface padding keeps its specificity. */
+.resizable-data-table .resizable-table-heading { position: relative; }
+.resizable-table-heading > span > button { padding-inline: 0; }
+.resizable-data-table :is(.table-select, .flow-project-link), .resizable-data-table .device-comparison-actions > button { padding-inline: 0; }
+.devices-table .resizable-table-heading { font-size: 12px; }
+.table-column-resizer { position: absolute; inset-block: 0; right: -12px; width: 24px; z-index: 2; cursor: col-resize; touch-action: none; user-select: none; }
+.table-column-resizer:focus-visible { outline: 2px solid var(--knx-accent); outline-offset: -2px; }
+.table-column-reset { align-self: flex-start; flex-shrink: 0; margin-block: 4px; }
+:is(.devices-table, .com-table) .resizable-table-heading { position: sticky; }
+
+.resizable-table-heading > span > button { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+
+.resizable-table-heading:last-child .table-column-resizer { right: 0; }
+.resizable-table-heading:last-child .table-column-resizer::before { left: auto; right: 0; }
+
+/* Fitted headings stay compact so a sticky header cannot cover the first rows.
+   The complete label remains in the accessible name and native title tooltip. */
+.resizable-table-heading > span:first-child:not(:has(button)),
+.resizable-table-heading .table-column-label {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+
+/* Keep the direction indicator outside the clamped label's clipping box. */
+.resizable-table-heading > span:first-child > button { display: flex; align-items: center; gap: 2px; }
+.resizable-table-heading .table-column-label { min-width: 0; }
+.resizable-table-heading button > [aria-hidden="true"] { flex-shrink: 0; white-space: nowrap; }
+
+/* A stable footprint keeps sorting from changing measured column requirements. */
+.resizable-table-heading .table-sort-indicator { width: 1em; flex-shrink: 0; }

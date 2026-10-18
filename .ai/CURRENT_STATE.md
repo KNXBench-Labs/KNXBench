@@ -1,3 +1,11 @@
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-18 20:21
+- **Completed:** Issue #22 feedback (owner request): reviewed the reporter's emailed read-only diagnostic export for the Siemens UP 258D12 (private evidence collection, `DeviceReports/`; not committed). Manifest checksums verified; build `0.1.0-alpha.14+g0341483c`, `simulated:false`, `written:false`, complete. Replies: descriptor `0025`, PID12 `0001`, PID78 `00 01 00 00 00 5B`, which equals the first six of the ten `LdCtrlCompareProp` octets read again from the digest-pinned public package (`00010000005B00000000`), so the existing `[A]` rule `property_matches` matches; it stays an assumption. Docs-only commit `4acc7a20` on `main`: new `docs/research/2026-10-18-up258-device-diagnostics.md`; diagnostic-export contract, KL-184 (catalogue/overview/details), ledger row, OPEN_WORK, manual 08 and System-2 prerequisites no longer say no physical device was read. Issue reply posted (issuecomment-6253457514). Gates: docs 0 errors, anchors 1,519, ledger 208, tools 223 OK, local-info, diff-check.
+- **Pending/Next Steps:** Reporter asked (optional) whether the detector behaved normally after the read, and for the label firmware string; on a reply, update the evidence note, the contract and KL-184. Download refusal for MV-0025 unchanged.
+- **Notes for Codex oder Claude:** The reporter's comment calls the emailed file the offline support report "with no bus contact"; the archive is the diagnostic export (three reads). Noted neutrally in the note and the reply. No code change: `property_matches` tests already cover the six-versus-ten shape. Do not publish the archive's `projectReference`, timestamps or digests.
+
+---
+
 - **Last Agent:** codex
 - **Timestamp:** 2026-10-18 20:15
 - **Completed:** Reversible website headline entrances DELIVERED to `main` as merge `3f76c161` (remote equality verified): SessionRadar-style entry/exit on DE/EN marketing headings, rapid reversal in place, existing rolling letters retained. Website 29, Story 76 (one existing skip), docs/headers/anchors and release build green; merged release Chromium 116 checks in three recipes, zero errors/foreign requests. Earlier preview acceptance: 654 checks in nine recipes. Independent review completed; owner explicitly accepted the print/PDF limitation and authorized commit/push without a print fix.

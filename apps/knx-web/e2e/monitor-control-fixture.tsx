@@ -12,7 +12,7 @@ const language = params.get("lang") === "de" ? "de" : "en";
 document.documentElement.lang = language;
 setSetting(UI_LANGUAGE_STORAGE_KEY, language);
 setSetting("theme", params.get("theme") ?? "porcelain");
-setSetting("motionLevel", params.get("motion") ?? "off");
+if (params.has("motion")) setSetting("motionLevel", params.get("motion")!);
 function Fixture() {
   useThemeId();
   useMotion();

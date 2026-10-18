@@ -12,6 +12,17 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Bus monitor review fixes — UI-01 (18 October 2026)
+
+ADR-0010 decoding policy stays unchanged. A separate Core diagnostic helper
+collects program defaults behind cleared instance DPTs (ADR-0027); monitor rows
+name them without decoding with them. Captured unresolved reasons now separate
+no project, address outside the project, known address without a type, and
+cleared program defaults. Server context comparison includes diagnostic changes;
+HTTP, diagnostic bundles and EN/DE labels retain the captured evidence. Synthetic
+Core/HTTP/panel regressions and default/reduced-motion browser variants cover the
+change. [Contract](contracts/dpt-selection.md#monitor-resolution-reasons-ui-01-18-october-2026).
+
 ## Bus monitor unresolved reasons — UI-01 (18 October 2026)
 
 Read-only source inspection found a genuinely undeclared linked measurement,

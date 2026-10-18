@@ -191,7 +191,7 @@ records the tested commit separately from artifact publication verification.
 | HTTPS | Generated/supplied certificates | alpha.6 |
 | Persistent server data | Projects/catalog/settings | alpha.6 |
 | Gateway discovery | KNXnet/IP interfaces | alpha.6 |
-| Bus monitor | Tunnelling; telegram decoding; distinct missing-project/type and codec outcomes ([contract](contracts/dpt-selection.md#monitor-resolution-reasons-ui-01-18-october-2026)) | alpha.6 |
+| Bus monitor | Tunnelling; telegram decoding; distinct no-project, unknown-address, missing-type, cleared-default and codec outcomes ([contract](contracts/dpt-selection.md#monitor-resolution-reasons-ui-01-18-october-2026)) | alpha.6 |
 | Telegram Flow | Read-only; session-local graph | alpha.6 |
 | Separate Flow window | Source-bound; shared monitor | alpha.6 |
 | Flow images | PNG or 1–30 s GIF of the viewport, with consent | alpha.11 |

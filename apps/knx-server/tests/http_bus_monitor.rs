@@ -938,6 +938,127 @@ async fn a_session_over_a_real_imported_project_does_not_panic_while_decoding() 
     assert!(telegrams["telegrams"][0]["decoded"]["kind"].is_string());
 }
 
+#[tokio::test]
+async fn monitor_names_cleared_program_defaults_without_decoding_them() {
+    let mut project = project_with_resolving_and_unresolving_group_addresses();
+    let com = project
+        .devices
+        .com_object_mut(ComObjectInstanceId(1))
+        .unwrap();
+    com.dpt = Override::Empty;
+    let template = com.clone();
+    for (id, sub) in [(1, 4), (3, 1), (4, 4)] {
+        if id != 1 {
+            let mut com = template.clone();
+            com.id = ComObjectInstanceId(id);
+            project.devices.insert_com_object(com);
+        }
+        project.devices.set_program_defaults(
+            ComObjectInstanceId(id),
+            knx_core::ProgramDefaults {
+                dpt: Some(Resolved {
+                    value: knx_core::DptRef {
+                        main: 9,
+                        sub: Some(sub),
+                    },
+                    layer: Layer::Program,
+                }),
+                ..Default::default()
+            },
+        );
+    }
+    let (tunnel, handle) = fake_tunnel();
+    let state = knx_server::AppState {
+        connector: Box::new(FakeConnector::succeeding(tunnel)),
+        project: std::sync::Mutex::new(Some(project)),
+        ..Default::default()
+    };
+    let state = Arc::new(state);
+    let app = knx_server::app(Arc::clone(&state), None);
+    let start = call(
+        &app,
+        "POST",
+        "/api/bus/monitor/start",
+        Some(json!({"gateway": "192.0.2.10:3671"})),
+    )
+    .await;
+    assert_eq!(start.status(), StatusCode::OK);
+    handle
+        .sender()
+        .send(group_value_write(1, GroupValue::Bytes(vec![0x0c, 0x80])))
+        .unwrap();
+    let response = poll_until_len(&app, 1).await;
+    let row = &response["telegrams"][0];
+    assert_eq!(row["decoded"]["reason"], "programDefaultCleared");
+    assert_eq!(row["decoded"]["kind"], "unresolved");
+    assert_eq!(
+        row["decoded"]["text"],
+        "no DPT assigned: the project clears the program default (DPT 9.001, 9.004)"
+    );
+    assert_eq!(
+        row["decoded"]["programDefaultDpts"],
+        json!(["9.001", "9.004"])
+    );
+    assert!(row["decoded"].get("dpt").is_none());
+    assert_eq!(row["rawPayload"], "[0c, 80]");
+    // Diagnostic changes also stale the context, even though decoding stays None.
+    state
+        .project
+        .lock()
+        .unwrap()
+        .as_mut()
+        .unwrap()
+        .devices
+        .set_program_defaults(ComObjectInstanceId(3), knx_core::ProgramDefaults::default());
+    let response = body_json(call(&app, "GET", "/api/bus/monitor/telegrams", None).await).await;
+    assert_eq!(response["contextStatus"], "stale");
+    assert_eq!(response["telegrams"][0]["decoded"], row["decoded"]);
+    assert!(handle.sent_calls().is_empty());
+    call(&app, "POST", "/api/bus/monitor/stop", None).await;
+}
+
+#[tokio::test]
+async fn monitor_distinguishes_an_unknown_address_from_a_known_address_without_dpt() {
+    let project = project_with_resolving_and_unresolving_group_addresses();
+    let (tunnel, handle) = fake_tunnel();
+    let state = knx_server::AppState {
+        connector: Box::new(FakeConnector::succeeding(tunnel)),
+        project: std::sync::Mutex::new(Some(project)),
+        ..Default::default()
+    };
+    let app = knx_server::app(Arc::new(state), None);
+    let start = call(
+        &app,
+        "POST",
+        "/api/bus/monitor/start",
+        Some(json!({"gateway": "192.0.2.10:3671"})),
+    )
+    .await;
+    assert_eq!(start.status(), StatusCode::OK);
+    for raw in [2, 999] {
+        handle
+            .sender()
+            .send(group_value_write(raw, GroupValue::Bytes(vec![0x0c, 0x80])))
+            .unwrap();
+    }
+    let response = poll_until_len(&app, 2).await;
+    assert_eq!(
+        response["telegrams"][1]["decoded"]["reason"],
+        "notInProject"
+    );
+    assert_eq!(
+        response["telegrams"][1]["decoded"]["text"],
+        "address not in project"
+    );
+    assert_eq!(response["telegrams"][0]["decoded"]["reason"], "noDpt");
+    for row in response["telegrams"].as_array().unwrap() {
+        assert_eq!(row["decoded"]["kind"], "unresolved");
+        assert_eq!(row["rawPayload"], "[0c, 80]");
+    }
+    assert!(handle.sent_calls().is_empty());
+    call(&app, "POST", "/api/bus/monitor/stop", None).await;
+}
+
 /// Synthetic two-byte measurement: an empty instance attribute and no product
 /// declaration do not establish a DPT, regardless of the object's caption/size.
 #[tokio::test]

@@ -1697,7 +1697,9 @@ export function importRefusal(error: unknown): ComparisonImport | null {
 export interface BusDecodedValue {
   kind: "value" | "unresolved" | "conflict" | "error";
   dpt?: string;
-  reason?: "noProject" | "noDpt" | "unsupportedDpt" | "decodeFailed";
+  reason?: "noProject" | "notInProject" | "noDpt" | "programDefaultCleared" | "unsupportedDpt" | "decodeFailed";
+  /** Dotted references retained with a cleared-default diagnostic; never used to decode. */
+  programDefaultDpts?: string[];
   text: string;
   error?: string;
 }

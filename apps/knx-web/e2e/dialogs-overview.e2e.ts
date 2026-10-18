@@ -10,6 +10,7 @@ import { messages as de } from "../src/messages/de";
 import { GITHUB_RELEASES_API } from "../src/githubReleases";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
 import { statusMetricsFixtureBody } from "./status-metrics-fixture";
+import { openFileSubmenu } from "./file-menu";
 
 type Language = "en" | "de";
 type Catalogue = { readonly [K in keyof typeof en]: string };
@@ -90,14 +91,27 @@ async function contrasts(page: Page, selector: string): Promise<{ text: string; 
       const c = [r, g, b].map((v) => { const s = v / 255; return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4; });
       return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
     };
+    const over = ([r, g, b, a]: number[], under: number[]) => [r * a + under[0] * (1 - a), g * a + under[1] * (1 - a), b * a + under[2] * (1 - a), 1];
     return nodes.map((node) => {
       const style = getComputedStyle(node);
-      if (style.backgroundImage !== "none") return { text: node.textContent ?? "", ratio: -1 };
-      const bg = background(node);
+      const base = background(node);
+      // UI-02: a primary action paints the theme's gradient; judge the text
+      // against every colour stop (over the fill beneath) and keep the worst.
+      // An image that is not made of colour stops cannot be judged (-1).
+      let behind = [base];
+      if (style.backgroundImage !== "none") {
+        if (/url\(/.test(style.backgroundImage)) return { text: node.textContent ?? "", ratio: -1 };
+        const stops = style.backgroundImage.match(/rgba?\([^)]+\)|color\(srgb [^)]+\)/g) ?? [];
+        if (stops.length === 0) return { text: node.textContent ?? "", ratio: -1 };
+        behind = stops.map((stop) => over(parse(stop), base));
+      }
       const [r, g, b, a] = parse(style.color);
-      const fg = [r * a + bg[0] * (1 - a), g * a + bg[1] * (1 - a), b * a + bg[2] * (1 - a)];
-      const [l1, l2] = [luminance(fg), luminance(bg)].sort((x, y) => y - x);
-      return { text: node.textContent ?? "", ratio: (l1 + 0.05) / (l2 + 0.05) };
+      const ratios = behind.map((bg) => {
+        const fg = [r * a + bg[0] * (1 - a), g * a + bg[1] * (1 - a), b * a + bg[2] * (1 - a)];
+        const [l1, l2] = [luminance(fg), luminance(bg)].sort((x, y) => y - x);
+        return (l1 + 0.05) / (l2 + 0.05);
+      });
+      return { text: node.textContent ?? "", ratio: Math.min(...ratios) };
     });
   });
 }
@@ -118,7 +132,8 @@ async function openReplaceDialog(page: Page, m: Catalogue) {
 
 async function openAbout(page: Page, m: Catalogue) {
   await page.locator(".file-menu > summary").click();
-  await page.getByRole("button", { name: m["toolbar.about"], exact: true }).click();
+  await openFileSubmenu(page, "help");
+  await page.getByRole("menuitem", { name: m["toolbar.about"], exact: true }).click();
   const dialog = page.getByRole("dialog", { name: m["about.title"], exact: true });
   await expect(dialog).toBeVisible();
   return dialog;

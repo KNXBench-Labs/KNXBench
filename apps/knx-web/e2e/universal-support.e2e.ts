@@ -4,6 +4,7 @@ import {join} from "node:path";
 import {messages as en} from "../src/messages/en";
 import {messages as de} from "../src/messages/de";
 import {achievementsFixtureAnswer} from "./achievements-fixture";
+import { openFileSubmenu } from "./file-menu";
 
 for(const language of ["en","de"] as const)for(const width of [1440,400]){
  test(`${language} unknown device support preview and deliberate handoff ${width}px`,async({page})=>{
@@ -27,6 +28,7 @@ for(const language of ["en","de"] as const)for(const width of [1440,400]){
    await route.fulfill({status,contentType:"application/json",body:JSON.stringify(body)});
   });
   await page.goto("/");await page.locator(".file-menu > summary").click();
+  await openFileSubmenu(page,"help");
   await page.locator(".file-menu [data-support-open]").click();
   const dialog=page.getByRole("dialog",{name:m["support.title"],exact:true});await expect(dialog).toBeVisible();
   expect(calls.some(x=>x.includes("/api/support/"))).toBe(false);

@@ -79,7 +79,7 @@ export default function BulkActionToolbar(props: {
   return (
     <div className="bulk-action-toolbar">
       <span className="bulk-action-label">{label}</span>
-      <button onClick={deleteSelected}>{t("bulkAction.delete")}</button>
+      <button className="danger-action" onClick={deleteSelected}>{t("bulkAction.delete")}</button>
       {noteAware.dialog}
       {multiSelection.kind === "group_address" && (
         <button data-role="name-recipe" onClick={() => setRecipeOpen(true)}>{t("bulkAction.nameRecipe")}</button>

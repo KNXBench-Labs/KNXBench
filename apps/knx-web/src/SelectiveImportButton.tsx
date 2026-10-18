@@ -7,10 +7,12 @@ import * as api from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import { useTranslate } from "./i18n";
 import "./selectiveImport.css";
+import { useFileMenuItemProps } from "./FileMenu";
 
 type Props = { tree: ProjectTree | null; scope: string | number; onTreeUpdate: (tree: ProjectTree) => void };
 export default function SelectiveImportButton(props: Props) {
   const t = useTranslate();
+  const entry = useFileMenuItemProps();
   const [open, setOpen] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
   const previous = useRef(false);
@@ -18,7 +20,7 @@ export default function SelectiveImportButton(props: Props) {
     if (previous.current && !open) trigger.current?.closest("details")?.querySelector("summary")?.focus();
     previous.current = open;
   }, [open]);
-  return <><button ref={trigger} disabled={!props.tree} onClick={() => setOpen(true)}>{t("selectiveImport.button")}</button>
+  return <><button {...entry} ref={trigger} disabled={!props.tree} onClick={() => setOpen(true)}>{t("selectiveImport.button")}</button>
     {open && props.tree && createPortal(<ImportDialog key={props.scope} {...props} tree={props.tree} onClose={() => setOpen(false)} />, document.body)}</>;
 }
 function ImportDialog({ tree, scope, onTreeUpdate, onClose }: Props & { tree: ProjectTree; onClose: () => void }) {
@@ -132,7 +134,7 @@ function ImportDialog({ tree, scope, onTreeUpdate, onClose }: Props & { tree: Pr
       <details><summary>{t("selectiveImport.mappings")}</summary><ul>{preview.preview.mappings.map((m, index) => <li key={index}>{m.kind}: {m.source} → {m.target} ({t(m.reused ? "selectiveImport.reused" : "selectiveImport.created")})</li>)}</ul></details>
       {preview.preview.notes.map((note, index) => <p key={index}>{note}</p>)}
       <label className="selective-import-choice"><input type="checkbox" data-import-consent checked={consent} disabled={Boolean(mode)} onChange={e => setConsent(e.target.checked)} />{t("selectiveImport.consent")}</label>
-      <div className="selective-import-actions"><button disabled={!consent || Boolean(mode)} onClick={() => void run("apply")}>{t("selectiveImport.apply")}</button></div>
+      <div className="selective-import-actions"><button className="primary-action" disabled={!consent || Boolean(mode)} onClick={() => void run("apply")}>{t("selectiveImport.apply")}</button></div>
     </section>}
   </Overlay>;
 }

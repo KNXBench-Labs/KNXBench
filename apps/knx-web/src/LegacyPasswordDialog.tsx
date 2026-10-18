@@ -52,7 +52,7 @@ export default function LegacyPasswordDialog(props: {
         <p className="settings-field-hint">{t("legacyPassword.rememberHint")}</p>
         <div className="dialog-actions">
           <button type="button" onClick={onCancel}>{t("legacyPassword.cancel")}</button>
-          <button type="submit" disabled={password === ""}>{t("legacyPassword.import")}</button>
+          <button type="submit" className="primary-action" disabled={password === ""}>{t("legacyPassword.import")}</button>
         </div>
       </form>
     </Overlay>

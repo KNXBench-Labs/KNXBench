@@ -36,8 +36,11 @@ it("two-click removal deletes only the selected equal occurrence", async () => {
   await render(2);
   const secondEditor = host!.querySelectorAll(".line-scan-exclusions")[1]!;
   const duplicateButton = secondEditor.querySelectorAll<HTMLButtonElement>("li button")[1]!;
+  expect(duplicateButton.classList.contains("danger-action")).toBe(false);
   await act(async () => duplicateButton.click());
   expect(loadLineScanExclusions()).toEqual(["2.3.42", "2.3.42", " bad "]);
+  // The armed second click removes: it reads as destructive (UI02 review sweep).
+  expect(duplicateButton.classList.contains("danger-action")).toBe(true);
   await act(async () => duplicateButton.click());
   expect(loadLineScanExclusions()).toEqual(["2.3.42", " bad "]);
   expect(host!.querySelectorAll("code")[0]!.textContent).toBe("2.3.42");

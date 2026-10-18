@@ -4,6 +4,7 @@ import {join} from "node:path";
 import {mkdirSync} from "node:fs";
 import {messages as en} from "../src/messages/en";
 import {messages as de} from "../src/messages/de";
+import { openFileSubmenu } from "./file-menu";
 const evidence=process.env.KNX_DIAG_EVIDENCE;
 for(const language of ["en","de"] as const)for(const width of [1440,400]){
  test(`${language} simulated device diagnostic ZIP ${width}px`,async({page})=>{
@@ -12,7 +13,7 @@ for(const language of ["en","de"] as const)for(const width of [1440,400]){
   // Only presentation preference is overridden; diagnostic responses are real.
   await page.route("**/api/settings",async route=>{if(route.request().method()!=="GET"){await route.continue();return;}const response=await route.fetch();const body=await response.json();body.settings.uiLanguage=language;await route.fulfill({response,json:body});});
   const diagnosticRequests:string[]=[];page.on("request",r=>{if(r.url().includes("/api/device-diagnostics/"))diagnosticRequests.push(new URL(r.url()).pathname);});
-  await page.goto("/");await page.locator(".file-menu > summary").click();await page.locator(".file-menu [data-diagnostics-open]").click();
+  await page.goto("/");await page.locator(".file-menu > summary").click();await openFileSubmenu(page,"help");await page.locator(".file-menu [data-diagnostics-open]").click();
   const dialog=page.getByRole("dialog",{name:m["diagnostics.title"],exact:true});await expect(dialog).toBeVisible();
   expect(diagnosticRequests).toEqual([]);
   await dialog.locator("[data-diagnostics-device]").selectOption("1");await dialog.locator("[data-diagnostics-gateway]").fill("192.0.2.10:3671");
@@ -33,7 +34,7 @@ for(const language of ["en","de"] as const)for(const width of [1440,400]){
  });
 }
 test("cooperative stop after a real simulator response retains a downloadable partial",async({page})=>{
- await page.goto("/");await page.locator(".file-menu > summary").click();await page.locator(".file-menu [data-diagnostics-open]").click();
+ await page.goto("/");await page.locator(".file-menu > summary").click();await openFileSubmenu(page,"help");await page.locator(".file-menu [data-diagnostics-open]").click();
  const dialog=page.locator(".diagnostic-export");await dialog.locator("[data-diagnostics-device]").selectOption("1");await dialog.locator("[data-diagnostics-gateway]").fill("192.0.2.10:3671");
  const previewResponse=page.waitForResponse(r=>r.url().endsWith("/api/device-diagnostics/preview"));await dialog.locator("[data-diagnostics-preview]").click();const preview=await(await previewResponse).json();
  await dialog.locator("[data-diagnostics-read-consent]").check();await dialog.locator("[data-diagnostics-start]").click();

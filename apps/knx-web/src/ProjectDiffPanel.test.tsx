@@ -41,6 +41,7 @@ import { resetSettingsForTests, settingsStorage } from "./settingsStore";
 let host: HTMLDivElement | undefined;
 
 afterEach(() => {
+  document.querySelectorAll(".search-overlay").forEach((overlay) => overlay.remove());
   host?.remove();
   host = undefined;
   vi.clearAllMocks();
@@ -263,7 +264,7 @@ describe("ProjectDiffPanel", () => {
     expect(apiMock.diffProject).not.toHaveBeenCalled();
     expect(onError).not.toHaveBeenCalled();
     expect(onClearErrors).not.toHaveBeenCalled();
-    expect(host!.textContent).not.toContain("Comparison result");
+    expect(document.body.textContent).not.toContain("Comparison result");
     root.unmount();
   });
 
@@ -286,7 +287,7 @@ describe("ProjectDiffPanel", () => {
     apiMock.diffProject.mockResolvedValueOnce(emptyReport);
     const { root } = await renderPanel();
     await click(compareButton());
-    expect(host!.textContent).toContain("No differences found.");
+    expect(document.body.textContent).toContain("No differences found.");
     root.unmount();
   });
 
@@ -295,8 +296,8 @@ describe("ProjectDiffPanel", () => {
     apiMock.diffProject.mockResolvedValueOnce(changesReport);
     const { root } = await renderPanel();
     await click(compareButton());
-    expect(host!.textContent).toContain("Devices: 1 added");
-    expect(host!.textContent).toContain("Group addresses: 2 changed");
+    expect(document.body.textContent).toContain("Devices: 1 added");
+    expect(document.body.textContent).toContain("Group addresses: 2 changed");
     root.unmount();
   });
 
@@ -305,7 +306,7 @@ describe("ProjectDiffPanel", () => {
     apiMock.diffProject.mockResolvedValueOnce(ambiguousOnlyReport);
     const { root } = await renderPanel();
     await click(compareButton());
-    expect(host!.textContent).toContain("Group addresses: 1 ambiguous");
+    expect(document.body.textContent).toContain("Group addresses: 1 ambiguous");
     root.unmount();
   });
 
@@ -342,8 +343,8 @@ describe("ProjectDiffPanel", () => {
     apiMock.diffProject.mockResolvedValueOnce(functionOnly);
     const { root } = await renderPanel();
     await click(compareButton());
-    expect(host!.textContent).toContain("Functions: 1 removed");
-    expect(host!.textContent).not.toContain("No differences found.");
+    expect(document.body.textContent).toContain("Functions: 1 removed");
+    expect(document.body.textContent).not.toContain("No differences found.");
     root.unmount();
   });
 
@@ -353,7 +354,7 @@ describe("ProjectDiffPanel", () => {
     const { root, onError } = await renderPanel();
     await click(compareButton());
     expect(onError).toHaveBeenCalledTimes(1);
-    expect(host!.textContent).not.toContain("Comparison result");
+    expect(document.body.textContent).not.toContain("Comparison result");
     root.unmount();
   });
 
@@ -401,8 +402,8 @@ describe("ProjectDiffPanel", () => {
     // ("Vergleichen mit…"), so this locates the (only) button by role
     // rather than by an English-literal text match.
     await click(host!.querySelector("button")!);
-    expect(host!.textContent).toContain("Projektinfo: 1 Feld geändert");
-    expect(host!.textContent).toContain("Installationsinfo: 1 Feld geändert");
+    expect(document.body.textContent).toContain("Projektinfo: 1 Feld geändert");
+    expect(document.body.textContent).toContain("Installationsinfo: 1 Feld geändert");
     singular.root.unmount();
     host!.remove();
 
@@ -410,8 +411,8 @@ describe("ProjectDiffPanel", () => {
     apiMock.diffProject.mockResolvedValueOnce(pluralFieldChangeReport);
     const plural = await renderPanel();
     await click(host!.querySelector("button")!);
-    expect(host!.textContent).toContain("Projektinfo: 2 Felder geändert");
-    expect(host!.textContent).toContain("Installationsinfo: 2 Felder geändert");
+    expect(document.body.textContent).toContain("Projektinfo: 2 Felder geändert");
+    expect(document.body.textContent).toContain("Installationsinfo: 2 Felder geändert");
     plural.root.unmount();
   });
 });
@@ -419,7 +420,7 @@ describe("ProjectDiffPanel", () => {
 // CT-1: the expandable entity list below the grouped counts.
 
 function toggle(label: string): HTMLButtonElement {
-  const button = Array.from(host!.querySelectorAll<HTMLButtonElement>("button.project-diff-toggle")).find(
+  const button = Array.from(document.body.querySelectorAll<HTMLButtonElement>("button.project-diff-toggle")).find(
     (b) => b.textContent?.includes(label),
   );
   if (!button) throw new Error(`no disclosure labelled ${label}`);
@@ -474,8 +475,71 @@ function mixedGroupAddresses(added: number, removed: number): ProjectDiffReport 
 }
 
 function entryItems(): HTMLLIElement[] {
-  return Array.from(host!.querySelectorAll<HTMLLIElement>(".project-diff-entries > li"));
+  return Array.from(document.body.querySelectorAll<HTMLLIElement>(".project-diff-entries > li"));
 }
+
+describe("ProjectDiffPanel dialog", () => {
+  async function openComparison(report: ProjectDiffReport = changesReport) {
+    filePickerMock.pickOpenPath.mockResolvedValueOnce("/data/compare.knxdb");
+    apiMock.diffProject.mockResolvedValueOnce(report);
+    const rendered = await renderPanel();
+    compareButton().focus();
+    await click(compareButton());
+    return rendered;
+  }
+  const dialog = () => document.body.querySelector<HTMLElement>('[role="dialog"]');
+  const press = async (target: Element, key: string, init: KeyboardEventInit = {}) => {
+    await act(async () => {
+      target.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true, ...init }));
+    });
+  };
+
+  it("shows the result in a modal dialog outside the menu, titled and labelled", async () => {
+    const { root } = await openComparison();
+    const box = dialog()!;
+    expect(box).not.toBeNull();
+    expect(box.getAttribute("aria-modal")).toBe("true");
+    expect(host!.contains(box)).toBe(false);
+    const title = document.getElementById(box.getAttribute("aria-labelledby")!)!;
+    expect(title.textContent).toBe("Comparison result");
+    expect(box.textContent).toContain("Devices: 1 added");
+    root.unmount();
+  });
+
+  it("leaves nothing but the entry button where the menu renders it", async () => {
+    const { root } = await openComparison();
+    expect(host!.querySelectorAll("button, input, [tabindex], [role=group]")).toHaveLength(1);
+    expect(compareButton().hasAttribute("data-menu-stays-open")).toBe(false);
+    root.unmount();
+  });
+
+  it("closes on Escape and hands focus back to where the comparison was started", async () => {
+    const { root } = await openComparison();
+    await press(dialog()!.querySelector("button")!, "Escape");
+    expect(dialog()).toBeNull();
+    expect(document.activeElement).toBe(compareButton());
+    root.unmount();
+  });
+
+  it("closes with its Close button and hands focus back", async () => {
+    const { root } = await openComparison();
+    const close = Array.from(dialog()!.querySelectorAll("button")).find((b) => b.textContent === "Close")!;
+    await click(close);
+    expect(dialog()).toBeNull();
+    expect(document.activeElement).toBe(compareButton());
+    root.unmount();
+  });
+
+  it("keeps Tab inside the dialog", async () => {
+    const { root } = await openComparison();
+    const buttons = Array.from(dialog()!.querySelectorAll<HTMLElement>("button"));
+    const last = buttons[buttons.length - 1];
+    last.focus();
+    await press(last, "Tab");
+    expect(document.activeElement).toBe(buttons[0]);
+    root.unmount();
+  });
+});
 
 describe("ProjectDiffPanel entity details", () => {
   it("renders modern completion values without replacing them with a default", async () => {
@@ -490,21 +554,21 @@ describe("ProjectDiffPanel entity details", () => {
     const { root } = await openReport(report);
     await click(toggle("Project info (1)"));
     await click(toggle("Installation info (1)"));
-    const rows = Array.from(host!.querySelectorAll(".project-diff-fields tbody tr")).map((row) =>
+    const rows = Array.from(document.body.querySelectorAll(".project-diff-fields tbody tr")).map((row) =>
       Array.from(row.children).map((cell) => cell.textContent),
     );
     expect(rows).toEqual([
       ["completion", "FinishedCommissioning", "Locked"],
       ["completion", "Tested", "Locked"],
     ]);
-    expect(host!.textContent).not.toContain("Undefined");
+    expect(document.body.textContent).not.toContain("Undefined");
     root.unmount();
   });
 
   it("keeps every table collapsed until asked, then lists entities by natural key", async () => {
     const { root } = await openReport(changesReport);
     expect(toggle("Devices (1)").getAttribute("aria-expanded")).toBe("false");
-    expect(host!.textContent).not.toContain("New actuator");
+    expect(document.body.textContent).not.toContain("New actuator");
 
     await click(toggle("Devices (1)"));
     expect(toggle("Devices (1)").getAttribute("aria-expanded")).toBe("true");
@@ -543,7 +607,7 @@ describe("ProjectDiffPanel entity details", () => {
     const { root } = await openReport(singularFieldChangeReport);
     await click(toggle("Project info (1)"));
     await click(toggle("Installation info (1)"));
-    const rows = Array.from(host!.querySelectorAll(".project-diff-fields tbody tr")).map((row) =>
+    const rows = Array.from(document.body.querySelectorAll(".project-diff-fields tbody tr")).map((row) =>
       Array.from(row.children).map((cell) => cell.textContent),
     );
     expect(rows).toEqual([
@@ -605,10 +669,10 @@ describe("ProjectDiffPanel entity details", () => {
     };
     const { root } = await openReport(report);
     await click(toggle("Devices (1)"));
-    expect(host!.textContent).toContain("matched by natural key");
-    expect(host!.textContent).not.toContain("Parameters (");
+    expect(document.body.textContent).toContain("matched by natural key");
+    expect(document.body.textContent).not.toContain("Parameters (");
     await click(toggle("Communication objects (1)"));
-    const nested = host!.querySelector(".project-diff-entries .project-diff-entries > li")!;
+    const nested = document.body.querySelector(".project-diff-entries .project-diff-entries > li")!;
     expect(nested.textContent).toContain("removed");
     expect(nested.textContent).toContain("#3");
     expect(nested.textContent).toContain("Switch");
@@ -631,10 +695,10 @@ describe("ProjectDiffPanel entity details", () => {
 
     await pressKey(button, " ");
     expect(button.getAttribute("aria-expanded")).toBe("false");
-    expect(host!.textContent).not.toContain("New actuator");
+    expect(document.body.textContent).not.toContain("New actuator");
 
     await pressKey(button, "Escape");
-    expect(host!.textContent).not.toContain("Comparison result");
+    expect(document.body.textContent).not.toContain("Comparison result");
     root.unmount();
   });
 
@@ -656,10 +720,10 @@ describe("ProjectDiffPanel entity details", () => {
     const { root } = await openReport(changesReport);
     await click(toggle("Geräte (1)"));
     await click(toggle("Gruppenadressen (2)"));
-    expect(host!.textContent).toContain("hinzugefügt");
-    expect(host!.textContent).toContain("ohne Adresse (d1)");
-    expect(host!.textContent).toContain("zugeordnet über ETS-ID");
-    const headers = Array.from(host!.querySelectorAll(".project-diff-fields thead th")).map(
+    expect(document.body.textContent).toContain("hinzugefügt");
+    expect(document.body.textContent).toContain("ohne Adresse (d1)");
+    expect(document.body.textContent).toContain("zugeordnet über ETS-ID");
+    const headers = Array.from(document.body.querySelectorAll(".project-diff-fields thead th")).map(
       (th) => th.textContent,
     );
     expect(headers.slice(0, 3)).toEqual(["Feld", "Vorher", "Nachher"]);
@@ -668,8 +732,8 @@ describe("ProjectDiffPanel entity details", () => {
 
   // KL-60: a large table is a bounded, scrollable window over every entry,
   // with search and status filters instead of "Show more" paging.
-  const viewport = () => host!.querySelector<HTMLElement>(".project-diff-viewport");
-  const filterField = () => host!.querySelector<HTMLInputElement>('input[type="search"]');
+  const viewport = () => document.body.querySelector<HTMLElement>(".project-diff-viewport");
+  const filterField = () => document.body.querySelector<HTMLInputElement>('input[type="search"]');
   async function typeFilter(value: string) {
     const input = filterField()!;
     await act(async () => {
@@ -693,7 +757,7 @@ describe("ProjectDiffPanel entity details", () => {
     expect(first.length).toBeLessThan(80);
     expect(first[0].getAttribute("aria-posinset")).toBe("1");
     expect(first[0].getAttribute("aria-setsize")).toBe("3000");
-    expect(host!.textContent).not.toContain("Show more");
+    expect(document.body.textContent).not.toContain("Show more");
     await scrollTo(3000 * 40);
     const last = entryItems();
     expect(last.length).toBeLessThan(80);
@@ -705,17 +769,17 @@ describe("ProjectDiffPanel entity details", () => {
   it("filters by text and by status and says how many entries match", async () => {
     const { root } = await openReport(mixedGroupAddresses(200, 50));
     await click(toggle("Group addresses (250)"));
-    expect(host!.textContent).toContain("250 of 250 entries shown");
+    expect(document.body.textContent).toContain("250 of 250 entries shown");
     await typeFilter("GA 19");
-    expect(host!.textContent).toContain("11 of 250 entries shown");
+    expect(document.body.textContent).toContain("11 of 250 entries shown");
     expect(entryItems().map((item) => item.textContent).every((text) => text?.includes("GA 19"))).toBe(true);
     await typeFilter("");
-    const removed = Array.from(host!.querySelectorAll<HTMLButtonElement>("button[aria-pressed]"))
+    const removed = Array.from(document.body.querySelectorAll<HTMLButtonElement>("button[aria-pressed]"))
       .find((button) => button.textContent?.startsWith("removed"))!;
     expect(removed.textContent).toBe("removed (50)");
     await click(removed);
     expect(removed.getAttribute("aria-pressed")).toBe("true");
-    expect(host!.textContent).toContain("50 of 250 entries shown");
+    expect(document.body.textContent).toContain("50 of 250 entries shown");
     expect(entryItems().every((item) => item.textContent?.includes("removed"))).toBe(true);
     root.unmount();
   });
@@ -746,7 +810,7 @@ describe("ProjectDiffPanel entity details", () => {
     };
     const { root } = await openReport(report);
     await click(toggle("Devices (200)"));
-    const firstRow = () => host!.querySelector<HTMLLIElement>('.project-diff-viewport li[aria-posinset="1"]');
+    const firstRow = () => document.body.querySelector<HTMLLIElement>('.project-diff-viewport li[aria-posinset="1"]');
     await click(firstRow()!.querySelector<HTMLButtonElement>("button.project-diff-toggle")!);
     expect(firstRow()!.textContent).toContain("Switch");
     await scrollTo(200 * 40);
@@ -763,7 +827,7 @@ describe("ProjectDiffPanel entity details", () => {
     await click(toggle("Group addresses (30)"));
     await typeFilter("no such thing");
     expect(entryItems()).toHaveLength(0);
-    expect(host!.textContent).toContain("No entry matches the filter.");
+    expect(document.body.textContent).toContain("No entry matches the filter.");
     root.unmount();
   });
 
@@ -774,10 +838,10 @@ describe("ProjectDiffPanel entity details", () => {
     filterField()!.focus();
     await pressKey(filterField()!, "Escape");
     expect(filterField()!.value).toBe("");
-    expect(host!.textContent).toContain("Comparison result");
-    expect(host!.textContent).toContain("30 of 30 entries shown");
+    expect(document.body.textContent).toContain("Comparison result");
+    expect(document.body.textContent).toContain("30 of 30 entries shown");
     await pressKey(filterField()!, "Escape");
-    expect(host!.textContent).not.toContain("Comparison result");
+    expect(document.body.textContent).not.toContain("Comparison result");
     root.unmount();
   });
 
@@ -795,7 +859,7 @@ describe("ProjectDiffPanel entity details", () => {
     const { root } = await openReport(mixedGroupAddresses(20, 5));
     await click(toggle("Gruppenadressen (25)"));
     expect(filterField()!.getAttribute("aria-label")).toBe("Einträge filtern");
-    expect(host!.textContent).toContain("25 von 25 Einträgen angezeigt");
+    expect(document.body.textContent).toContain("25 von 25 Einträgen angezeigt");
     root.unmount();
   });
 });
@@ -845,7 +909,7 @@ function refusedError(): Error {
 }
 
 function importBlock(): HTMLDetailsElement | null {
-  return host!.querySelector<HTMLDetailsElement>("details.project-diff-import");
+  return document.body.querySelector<HTMLDetailsElement>("details.project-diff-import");
 }
 
 async function compareKnxproj(result: ProjectDiffReport | Error) {
@@ -869,9 +933,9 @@ describe("ProjectDiffPanel import diagnostics", () => {
     expect(items[0].textContent).toContain("FancyNewAttr");
     expect(items[0].textContent).toContain("/KNX/Project");
     // Above the diff: the block precedes the grouped counts in the panel.
-    const list = host!.querySelector(".project-diff-panel-list")!;
+    const list = document.body.querySelector(".project-diff-panel-list")!;
     expect(block.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(host!.textContent).toContain("Devices: 1 added");
+    expect(document.body.textContent).toContain("Devices: 1 added");
     root.unmount();
   });
 
@@ -889,20 +953,20 @@ describe("ProjectDiffPanel import diagnostics", () => {
       importDiagnostics: [knxprojDiagnostics[1]],
     });
     expect(importBlock()!.querySelector("summary")!.textContent).toBe("ETS import report: 1 diagnostic");
-    expect(host!.textContent).toContain("No differences found.");
+    expect(document.body.textContent).toContain("No differences found.");
     root.unmount();
   });
 
   it("shows a refused import's diagnostics in the panel instead of a diff, without an error toast", async () => {
     const { root, onError } = await compareKnxproj(refusedError());
     expect(onError).not.toHaveBeenCalled();
-    expect(host!.querySelector(".project-diff-panel-refused")!.textContent).toContain("Comparison refused");
+    expect(document.body.querySelector('[role="dialog"] .project-diff-panel-refused')!.textContent).toContain("Comparison refused");
     expect(importBlock()!.querySelector("summary")!.textContent).toBe(
       "ETS import report: 2 diagnostics (1 error)",
     );
-    expect(host!.textContent).toContain("DuplicateId");
-    expect(host!.querySelector(".project-diff-panel-list")).toBeNull();
-    expect(host!.textContent).not.toContain("No differences found.");
+    expect(document.body.textContent).toContain("DuplicateId");
+    expect(document.body.querySelector(".project-diff-panel-list")).toBeNull();
+    expect(document.body.textContent).not.toContain("No differences found.");
     root.unmount();
   });
 
@@ -912,7 +976,7 @@ describe("ProjectDiffPanel import diagnostics", () => {
     error.body = { error: "unprocessable" };
     const { root, onError } = await compareKnxproj(error);
     expect(onError).toHaveBeenCalledWith(error);
-    expect(host!.textContent).not.toContain("Comparison result");
+    expect(document.body.textContent).not.toContain("Comparison result");
     root.unmount();
   });
 
@@ -934,7 +998,7 @@ describe("ProjectDiffPanel import diagnostics", () => {
     host!.remove();
 
     const refused = await compareKnxproj(refusedError());
-    expect(host!.textContent).toContain("Vergleich abgelehnt");
+    expect(document.body.textContent).toContain("Vergleich abgelehnt");
     expect(importBlock()!.querySelector("summary")!.textContent).toBe(
       "ETS-Importbericht: 2 Meldungen (1 Fehler)",
     );

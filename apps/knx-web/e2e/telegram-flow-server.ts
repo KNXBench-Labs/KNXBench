@@ -1,5 +1,6 @@
 /** U20/U21 e2e helpers: a stateful fake monitor server and flow-view locators. */
 import type { Page, Route } from "@playwright/test";
+import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 
 const SWITCH = 0x1101;
 const LIGHT = 0x0801;
@@ -67,6 +68,7 @@ export async function fakeServer(page: Page) {
       return json(route, snapshot(Number(url.searchParams.get("sessionId")), generation, state.members[generation] ?? []));
     }
     if (method === "POST" && url.pathname === "/api/bus/discover") return json(route, { interfaces: [] });
+    if (method === "GET" && url.pathname === "/api/project/status-metrics") return json(route, statusMetricsFixtureBody(null));
     state.unexpected.push(`${method} ${url.pathname}`);
     return json(route, { error: "local fixture only" }, 404);
   });

@@ -574,6 +574,8 @@ describe("SettingsPanel — language packs (T25 task 7)", () => {
     const removeButton = host!.querySelector<HTMLButtonElement>(
       '[aria-label="Remove Nederlands"]',
     )!;
+    // Removal deletes the stored pack at once (no confirmation, no Undo): destructive look.
+    expect(removeButton.classList.contains("danger-action")).toBe(true);
     await act(async () => {
       removeButton.click();
     });

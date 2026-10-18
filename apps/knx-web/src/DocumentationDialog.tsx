@@ -175,7 +175,7 @@ export default function DocumentationDialog(props: {
         <button onClick={printPreview} disabled={!preview}>
           {t("documentationExport.print")}
         </button>
-        <button onClick={exportDocumentation}>{t("documentationExport.export")}</button>
+        <button className="primary-action" onClick={exportDocumentation}>{t("documentationExport.export")}</button>
         <button onClick={onClose}>{t("documentationExport.close")}</button>
       </div>
     </Overlay>,

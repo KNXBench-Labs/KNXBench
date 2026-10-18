@@ -46,6 +46,8 @@ describe("LegacyPasswordSettings", () => {
     });
     const root = await render();
     expect(host!.textContent).toContain("A password is remembered.");
+    // Forgetting deletes the stored secret without Undo: destructive look.
+    expect(forgetButton()!.classList.contains("danger-action")).toBe(true);
     await act(async () => forgetButton()!.click());
     expect(apiMock.forgetLegacyPassword).toHaveBeenCalledTimes(1);
     expect(host!.textContent).toContain("The remembered password was forgotten.");

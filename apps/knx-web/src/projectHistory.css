@@ -9,16 +9,8 @@
   padding: 24px;
   color: var(--knx-foreground);
 }
-.project-history-panel button,
-.project-history-panel button:hover {
-  transform: none;
-  box-shadow: none;
-  background-image: none;
-  background-color: var(--knx-surface);
-  color: var(--knx-foreground);
-  border: 1px solid var(--knx-border);
-}
-.project-history-panel button:disabled { color: var(--knx-muted); }
+/* Buttons take the shared variants (styles.css "Controls"); only the version
+   list rows below keep their own card look. */
 .project-history-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
 .project-history-heading > div { min-width: 0; }
 .project-history-heading h2 { margin: 0; font-size: 1.35rem; }
@@ -56,7 +48,6 @@
 .project-history-confirmation { padding: 18px 0; }
 .project-history-confirmation h3 { margin-top: 0; }
 .project-history-confirmation p { line-height: 1.65; overflow-wrap: anywhere; }
-.project-history-panel .project-history-danger { background-color: var(--knx-surface); color: var(--knx-error-color); border-color: var(--knx-error-color); }
 .project-history-limit-note,
 .project-history-caveat { color: var(--knx-muted); font-size: .76rem; line-height: 1.6; }
 .project-history-footer { display: flex; justify-content: flex-start; margin-top: 16px; }

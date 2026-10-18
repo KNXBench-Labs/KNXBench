@@ -19,10 +19,10 @@ export default function OverwriteConfirmDialog(props: { path: string; onAnswer: 
       <p className="quit-confirm-hint">{t("overwrite.history")}</p>
       {/* Cancel first, so the initial focus lands on the answer that loses nothing. */}
       <footer className="quit-confirm-footer unsaved-changes-actions">
-        <button type="button" className="dialog-action dialog-action--secondary" onClick={() => props.onAnswer(false)}>
+        <button type="button" className="dialog-action secondary-action" onClick={() => props.onAnswer(false)}>
           {t("overwrite.cancel")}
         </button>
-        <button type="button" className="dialog-action dialog-action--danger overwrite-confirm-replace"
+        <button type="button" className="dialog-action danger-action overwrite-confirm-replace"
           onClick={() => props.onAnswer(true)}>
           {t("overwrite.replace")}
         </button>

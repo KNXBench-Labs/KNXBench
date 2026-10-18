@@ -1571,8 +1571,11 @@ describe("App — the File menu by keyboard alone", () => {
     apiMock.importProject.mockResolvedValue(baseTree());
     const root = await renderApp();
     await act(async () => findButton("Open project…").click());
-    expect([...host!.querySelectorAll(".file-menu-group > h3")].map(node => node.textContent))
-      .toEqual(["Project", "Import & export", "History & comparison", "Help & diagnostics"]);
+    // UI-03: frequent project actions stay on the first level, the other three groups are submenus.
+    expect([...host!.querySelectorAll(".file-menu-content > button:not(.file-submenu-trigger)")].map(node => node.textContent))
+      .toEqual(["New project…", "Open project…", "Open (.knxdb)…", "Save As…"]);
+    expect([...host!.querySelectorAll(".file-submenu-trigger > span:first-child")].map(node => node.textContent))
+      .toEqual(["Import & export", "History & comparison", "Help & diagnostics"]);
     const sections = [...host!.querySelectorAll<HTMLElement>(".navigation-section")];
     expect(sections).toHaveLength(3);
     expect(sections.map(section => section.querySelector("button")!.getAttribute("aria-expanded"))).toEqual(["false", "false", "false"]);
@@ -1595,7 +1598,7 @@ describe("App — the File menu by keyboard alone", () => {
     return summary;
   }
 
-  it("opens from the keyboard, exposes every file entry in the tab order, and Escape returns focus", async () => {
+  it("opens from the keyboard, declares every file entry as a menuitem with one tab stop per level, and Escape returns focus", async () => {
     filePickerMock.pickOpenPath.mockResolvedValue("/tmp/project.knxproj");
     apiMock.importProject.mockResolvedValue(baseTree());
     const root = await renderApp();
@@ -1607,34 +1610,47 @@ describe("App — the File menu by keyboard alone", () => {
     const menu = host!.querySelector<HTMLElement>(".file-menu")!;
     expect(menu.hasAttribute("open")).toBe(true);
 
-    // Every entry is a real button with no negative tabindex, so a Tab walk
-    // from the summary reaches all of them in the order they are read.
-    const entries = [...menu.querySelectorAll<HTMLButtonElement>(".file-menu-content button")];
-    expect(entries.map((b) => b.textContent)).toEqual([
-      "New project…",
-      "Open project…",
-      "Open (.knxdb)…",
-      "Save As…",
-      "Export project…",
-      "Import selected lines/devices…",
-      "Export group addresses (CSV)…",
-      "Import group addresses (CSV)…",
-      "Export documentation…",
-      "Project history",
-      "Compare with…",
-      "Debug report…",
-      "Analyze support gaps…",
-      "Device support report",
-      "Export diagnostic data",
-      // ADR-0084: the first-run guide, reopened on request.
-      "Show introduction…",
-      // ADR-0089: present while achievements are switched on (the default).
-      "Achievements…",
-      // T28/F5. No "Quit" after it: `isTauri()` is mocked `false` here,
-      // and a browser tab cannot close itself.
-      "About KNXBench…",
+    // UI-03: the menu is a first level plus three submenus, each a `role="menu"` whose declared
+    // entries are `menuitem`s. The File control is a menu button; each level has one tab stop.
+    expect(summary.getAttribute("aria-haspopup")).toBe("menu");
+    expect(summary.getAttribute("aria-expanded")).toBe("true");
+    const declared = (level: Element) => [...level.querySelectorAll<HTMLButtonElement>("[data-file-menu-item]")]
+      .filter((b) => b.closest('[role="menu"]') === level);
+    const levels = () => [...menu.querySelectorAll<HTMLElement>('[role="menu"]')].map((level) =>
+      declared(level).map((b) => b.textContent));
+    expect(levels()).toEqual([
+      ["New project…", "Open project…", "Open (.knxdb)…", "Save As…", "Import & export›", "History & comparison›", "Help & diagnostics›"],
+      [
+        "Export project…",
+        "Import selected lines/devices…",
+        "Export group addresses (CSV)…",
+        "Import group addresses (CSV)…",
+        "Export documentation…",
+      ],
+      ["Project history", "Compare with…"],
+      [
+        "Debug report…",
+        "Analyze support gaps…",
+        "Device support report",
+        "Export diagnostic data",
+        // ADR-0084: the first-run guide, reopened on request.
+        "Show introduction…",
+        // ADR-0089: present while achievements are switched on (the default).
+        "Achievements…",
+        // T28/F5. No "Quit" after it: `isTauri()` is mocked `false` here,
+        // and a browser tab cannot close itself.
+        "About KNXBench…",
+      ],
     ]);
-    expect(entries.every((b) => b.tabIndex >= 0)).toBe(true);
+    for (const trigger of menu.querySelectorAll<HTMLButtonElement>(".file-submenu-trigger")) {
+      await act(async () => trigger.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 0 })));
+      expect(trigger.getAttribute("aria-expanded")).toBe("true");
+    }
+    for (const level of menu.querySelectorAll<HTMLElement>('[role="menu"]')) {
+      expect(declared(level).filter((b) => b.tabIndex === 0), "one tab stop per level").toHaveLength(1);
+      expect(declared(level).every((b) => b.getAttribute("role") === "menuitem")).toBe(true);
+    }
+    const entries = [...menu.querySelectorAll<HTMLButtonElement>("[data-file-menu-item]")];
     // Nothing in the menu is keyboard-dead: every entry here works on a
     // freshly imported project. (The one that used to be disabled without a
     // `.knxdb` path was the `.knxproj` export, withdrawn by ADR-0028.)
@@ -1660,7 +1676,27 @@ describe("App — the File menu by keyboard alone", () => {
     await act(async () => root.unmount());
   });
 
-  it("closes the comparison report on Escape before the menu, and restores focus at each step", async () => {
+  // UI03-FOCUS-02: the activated entry hides with the menu; focus must already rest on the visible
+  // File control when the action's dialog mounts, so every dialog restores focus to it.
+  it("hands focus back to the File control when a dialog opened from the menu closes", async () => {
+    const root = await renderApp();
+    const summary = await openFileMenu();
+    const menu = host!.querySelector<HTMLElement>(".file-menu")!;
+    const help = menu.querySelector<HTMLButtonElement>('[data-file-submenu-trigger="help"]')!;
+    await act(async () => help.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 0 })));
+    const about = findButton("About KNXBench…");
+    about.focus();
+    await act(async () => about.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    expect(menu.hasAttribute("open")).toBe(false);
+    const dialog = host!.querySelector<HTMLElement>('[role="dialog"]')!;
+    expect(dialog).not.toBeNull();
+    await act(async () => dialog.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+    expect(host!.querySelector('[role="dialog"]')).toBeNull();
+    expect(document.activeElement).toBe(summary);
+    await act(async () => root.unmount());
+  });
+
+  it("opens the comparison from History in a dialog; Escape closes it and focus returns to File", async () => {
     filePickerMock.pickOpenPath.mockResolvedValue("/tmp/project.knxproj");
     apiMock.importProject.mockResolvedValue(baseTree());
     apiMock.diffProject.mockResolvedValue({ infoChanges: [], installations: [] });
@@ -1671,26 +1707,21 @@ describe("App — the File menu by keyboard alone", () => {
 
     const summary = await openFileMenu();
     const menu = host!.querySelector<HTMLElement>(".file-menu")!;
-    const compare = findButton("Compare with…");
-    await act(async () => compare.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    const history = menu.querySelector<HTMLButtonElement>('[data-file-submenu-trigger="history"]')!;
+    await act(async () => history.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 0 })));
+    await act(async () => findButton("Compare with…").dispatchEvent(new MouseEvent("click", { bubbles: true })));
 
-    const panel = host!.querySelector<HTMLElement>(".project-diff-panel")!;
-    expect(panel.textContent).toContain("No differences found.");
-    // Focus moves into the report, so the next Escape has somewhere to land.
-    expect(document.activeElement).toBe(panel);
-
-    await act(async () => {
-      panel.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-    });
-    // Innermost first: the report is gone, the menu is still open, and focus
-    // sits back on the entry that opened the report.
-    expect(host!.querySelector(".project-diff-panel")).toBeNull();
-    expect(menu.hasAttribute("open")).toBe(true);
-    expect(document.activeElement).toBe(compare);
+    // The menu closed like on every other entry; the result is a dialog outside it.
+    expect(menu.hasAttribute("open")).toBe(false);
+    const dialog = document.body.querySelector<HTMLElement>('[role="dialog"].project-diff-panel')!;
+    expect(dialog.textContent).toContain("No differences found.");
+    expect(menu.contains(dialog)).toBe(false);
+    expect(menu.querySelector("input, [role=group], .project-diff-panel")).toBeNull();
 
     await act(async () => {
-      compare.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      dialog.querySelector("button")!.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     });
+    expect(document.body.querySelector(".project-diff-panel")).toBeNull();
     expect(menu.hasAttribute("open")).toBe(false);
     expect(document.activeElement).toBe(summary);
 
@@ -3015,12 +3046,9 @@ describe("App — the File menu's manners, the stacked splitters, Quit and About
     await act(async () => root.unmount());
   });
 
-  // The one entry that must survive its own activation: `Compare with…`
-  // renders its report *inside* the menu, so closing on that click would
-  // hide the answer the click asked for. `data-menu-stays-open` is the
-  // opt-out, and this pins that it is honoured for both the button and
-  // the report's own Close button.
-  it("keeps the menu open for the entries that render their result inside it", async () => {
+  // `Compare with…` is an entry like any other: the click closes the menu, and the result opens
+  // as a dialog of its own (UI-03), so no entry needs to keep the menu open.
+  it("closes the menu on Compare with… and shows the result in a dialog", async () => {
     apiMock.diffProject.mockResolvedValue({ infoChanges: [], installations: [] });
     const root = await openProject();
     const menu = await openMenu();
@@ -3028,14 +3056,16 @@ describe("App — the File menu's manners, the stacked splitters, Quit and About
     await act(async () => {
       findButton("Compare with…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
-    expect(menu.open).toBe(true);
-    const panel = host!.querySelector<HTMLElement>(".project-diff-panel")!;
-    expect(panel).not.toBeNull();
+    expect(menu.open).toBe(false);
+    const dialog = document.body.querySelector<HTMLElement>(".project-diff-panel")!;
+    expect(dialog.getAttribute("role")).toBe("dialog");
 
     await act(async () => {
-      panel.querySelector("button")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      [...dialog.querySelectorAll("button")].find((b) => b.textContent === "Close")!
+        .dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
-    expect(menu.open).toBe(true);
+    expect(document.body.querySelector(".project-diff-panel")).toBeNull();
+    expect(menu.open).toBe(false);
 
     await act(async () => root.unmount());
   });
@@ -3406,6 +3436,7 @@ describe("App — the File menu's manners, the stacked splitters, Quit and About
       expect(dialog.textContent).toContain("projects/villa.knxdb already exists.");
       expect(dialog.textContent).toContain("project history");
       expect(apiMock.currentProject).not.toHaveBeenCalled();
+      expect(document.querySelector(".overwrite-confirm-replace")!.classList.contains("danger-action")).toBe(true);
       await act(async () => document.querySelector<HTMLButtonElement>(".overwrite-confirm-replace")!.click());
       expect(apiMock.saveProjectAs).toHaveBeenLastCalledWith("projects/villa.knxdb", true);
       expect(apiMock.saveProjectAs).toHaveBeenCalledTimes(2);
@@ -3739,6 +3770,93 @@ describe("App — the File menu's manners, the stacked splitters, Quit and About
 
     await act(async () => root.unmount());
     filePickerMock.isTauri.mockReturnValue(false);
+  });
+});
+
+// UI-03. History, Help and Import / Export are submenus of File; the original
+// buttons keep their handlers, so these tests drive the real App.
+describe("App — File submenus (UI-03)", () => {
+  async function openMenu() {
+    const summary = host!.querySelector<HTMLElement>(".file-menu summary")!;
+    await act(async () => summary.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    return host!.querySelector<HTMLDetailsElement>(".file-menu")!;
+  }
+  const trigger = (id: string) => host!.querySelector<HTMLButtonElement>(`[data-file-submenu-trigger="${id}"]`)!;
+  const panel = (id: string) => host!.querySelector<HTMLElement>(`[data-file-submenu-panel="${id}"]`)!;
+
+  it("keeps the File menu open while a submenu opens and closes it after an item runs, once", async () => {
+    const root = await renderApp();
+    const menu = await openMenu();
+    await act(async () => trigger("help").dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 1 })));
+    expect(menu.open).toBe(true);
+    expect(panel("help").hidden).toBe(false);
+    expect(document.body.querySelector(".about-dialog, [role=dialog]")).toBeNull();
+
+    await act(async () => findButton("About KNXBench…").dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    expect(menu.open).toBe(false);
+    expect(document.body.querySelectorAll("[role=dialog]").length).toBe(1);
+
+    // Reopening shows the menu folded, not with the submenu that was open.
+    await act(async () => { menu.open = true; await Promise.resolve(); });
+    await act(async () => { menu.open = false; await Promise.resolve(); });
+    await act(async () => { menu.open = true; await Promise.resolve(); });
+    expect(trigger("help").getAttribute("aria-expanded")).toBe("false");
+    await act(async () => root.unmount());
+  });
+
+  it("shows the same disabled states as before in every submenu when no project is open", async () => {
+    const root = await renderApp();
+    await openMenu();
+    const state = (text: string) => findButton(text).disabled;
+    expect(state("Save As…")).toBe(true);
+    expect(state("Project history")).toBe(true);
+    expect(state("Compare with…")).toBe(true);
+    expect(state("Export project…")).toBe(true);
+    expect(state("Import selected lines/devices…")).toBe(true);
+    expect(state("Export documentation…")).toBe(true);
+    expect(state("Open project…")).toBe(false);
+    expect(state("About KNXBench…")).toBe(false);
+    // The triggers themselves are always available: a submenu is a place, not an action.
+    for (const id of ["exchange", "history", "help"]) expect(trigger(id).disabled).toBe(false);
+    await act(async () => root.unmount());
+  });
+
+  it("offers the browser export only outside the desktop shell, inside Import & export", async () => {
+    filePickerMock.isTauri.mockReturnValue(true);
+    const desktop = await renderApp();
+    await openMenu();
+    expect(panel("exchange").textContent).not.toContain("Export project…");
+    await act(async () => desktop.unmount());
+    host!.remove();
+    filePickerMock.isTauri.mockReturnValue(false);
+    const web = await renderApp();
+    await openMenu();
+    expect(panel("exchange").textContent).toContain("Export project…");
+    expect(panel("history").textContent).not.toContain("Export project…");
+    await act(async () => web.unmount());
+  });
+
+  it("shows no separator before Logout and Quit when neither is offered", async () => {
+    const root = await renderApp();
+    await openMenu();
+    expect(host!.querySelectorAll(".file-menu-content > .file-menu-separator").length).toBe(1);
+    await act(async () => root.unmount());
+  });
+
+  it("separates Logout and Quit from the submenus when a session exists", async () => {
+    const root = await renderApp(undefined, { required: true, logout: vi.fn() });
+    await openMenu();
+    expect(host!.querySelectorAll(".file-menu-content > .file-menu-separator").length).toBe(2);
+    await act(async () => root.unmount());
+  });
+
+  it("labels every submenu in German", async () => {
+    saveUiLanguage(settingsStorage, "de");
+    const root = await renderApp();
+    await openMenu();
+    expect([...host!.querySelectorAll(".file-submenu-trigger > span:first-child")].map((n) => n.textContent))
+      .toEqual([deMessages["fileMenu.exchange"], deMessages["fileMenu.history"], deMessages["fileMenu.help"]]);
+    await act(async () => root.unmount());
   });
 });
 
@@ -4381,6 +4499,8 @@ describe("App — project notes workspace", () => {
     await act(async () => findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true })));
     await act(async () => {});
     expect(document.querySelector(".note-draft-guard")).not.toBeNull();
+    expect(findButton(enMessages["draftGuard.discard"]).classList.contains("danger-action")).toBe(true);
+    expect(findButton(enMessages["draftGuard.keep"]).classList.contains("primary-action")).toBe(false);
     expect(apiMock.importProject).not.toHaveBeenCalled();
     await act(async () => findButton(enMessages["draftGuard.keep"]).click());
     expect(document.querySelector(".note-draft-guard")).toBeNull();

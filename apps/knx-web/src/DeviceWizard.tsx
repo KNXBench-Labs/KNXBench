@@ -336,7 +336,7 @@ export default function DeviceWizard(props: {
           {installedPackage && <p>{t("deviceWizard.discard.packageStays")}</p>}
           <div className="new-project-actions">
             <button type="button" onClick={() => setConfirmDiscard(false)}>{t("projectWizard.discard.keep")}</button>
-            <button type="button" onClick={close}>{t("projectWizard.discard.confirm")}</button>
+            <button type="button" className="danger-action" onClick={close}>{t("projectWizard.discard.confirm")}</button>
           </div>
         </section>
       )}

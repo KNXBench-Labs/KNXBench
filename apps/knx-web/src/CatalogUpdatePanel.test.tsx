@@ -116,6 +116,7 @@ describe("catalogue backups", () => {
     const { host, onInstalled } = await mount();
     await openBackups(host);
     await act(async () => button(host, "Restore…").click());
+    expect(button(document.querySelector('[role="dialog"]')!, "Restore backup").classList.contains("danger-action")).toBe(true);
     await act(async () => button(document.querySelector('[role="dialog"]')!, "Restore backup").click());
     expect(apiMock.restoreCatalogBackup).toHaveBeenCalledWith(BACKUP);
     expect(host.textContent).toContain(`Restored ${BACKUP}.`);
@@ -165,6 +166,7 @@ describe("catalogue backups", () => {
     const { host, onInstalled } = await mount();
     await openBackups(host);
     await act(async () => button(host.querySelectorAll(".catalog-backup-list li")[1], "Delete…").click());
+    expect(button(document.querySelector('[role="dialog"]')!, "Delete backup").classList.contains("danger-action")).toBe(true);
     await act(async () => button(document.querySelector('[role="dialog"]')!, "Delete backup").click());
     expect(apiMock.deleteCatalogBackup).toHaveBeenCalledWith(listed.backups[1].name, "id-older");
     expect(host.textContent).toContain(`Deleted ${listed.backups[1].name}.`);

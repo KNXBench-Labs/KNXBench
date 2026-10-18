@@ -7,6 +7,7 @@ import { HISTORY_FIXTURE } from "../src/projectHistory.fixture";
 import { admitProjectHistory } from "../src/projectHistory";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
 import { statusMetricsFixtureBody } from "./status-metrics-fixture";
+import { controlPaint } from "./control-roles";
 
 async function intercept(page: Page, language: "en" | "de", session = false) {
   const history = admitProjectHistory({...structuredClone(HISTORY_FIXTURE), limits: {...HISTORY_FIXTURE.limits, maxContextBytes: 268435456, maxDecodedImageBytes: 536870912, maxDecodedHistoryBytes: 536870912}});
@@ -112,4 +113,32 @@ for (const language of ["en", "de"] as const) test(`${language} session-only his
   await expect(panel).toContainText(m["projectHistory.session"]);
   await expect(panel.getByRole("button", { name: m["projectHistory.create"], exact: true })).toBeDisabled();
   expect(state.writes).toEqual([]); expect(state.unexpected).toEqual([]);
+});
+// Review UI02-001: every history confirmation destroys or replaces state, so it
+// paints as the shared destructive variant and its Cancel stays secondary.
+for (const theme of ["porcelain", "graphite"] as const) test(`restore, delete and clear confirmations render as danger (${theme})`, async ({ page }) => {
+  const m = en;
+  const state = await intercept(page, "en");
+  await page.route("**/api/settings", (route) => route.request().method() === "GET"
+    ? route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ schemaVersion: 1, status: "ok", settings: { uiLanguage: "en", theme } }) })
+    : route.fallback());
+  await page.setViewportSize({ width: 1440, height: 850 });
+  await openProject(page, "en");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+  const panel = await openHistory(page, "en");
+  await panel.locator(".project-history-versions button").first().click();
+  for (const [open, confirm] of [["projectHistory.restore", "projectHistory.confirmRestore"], ["projectHistory.delete", "projectHistory.confirmDelete"], ["projectHistory.clearUndo", "projectHistory.confirmClear"]] as const) {
+    await panel.getByRole("button", { name: m[open], exact: true }).click();
+    const confirmation = panel.getByRole("button", { name: m[confirm], exact: true });
+    await expect(confirmation).toBeEnabled();
+    await page.mouse.move(1, 1);
+    const paint = await controlPaint(confirmation);
+    expect(paint.role, `${m[confirm]}: ${JSON.stringify(paint)}`).toBe("danger");
+    const cancel = panel.getByRole("button", { name: m["projectHistory.cancel"], exact: true });
+    expect((await controlPaint(cancel)).role, `${m[confirm]} cancel`).toBe("secondary");
+    if (process.env.KNX_HISTORY_CAPTURE_DIR) await page.screenshot({ path: join(process.env.KNX_HISTORY_CAPTURE_DIR, `history-${open.split(".")[1]}-${theme}.png`) });
+    await cancel.click();
+  }
+  expect(state.writes).toEqual([]);
+  expect(state.unexpected).toEqual([]);
 });

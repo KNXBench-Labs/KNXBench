@@ -88,7 +88,12 @@ ETS-programmed state offline with KNXBench's source interpretation.
   descriptor), descriptor = asserted mask, PID 12 = asserted manufacturer,
   PID 78 `property_matches` the recorded `inlineData`. Every chunk with an
   outcome carries attempt and completion times in that order; an unread one
-  carries neither. The chunk order must be one the collector can produce: a
+  carries neither, except in an observer snapshot (`complete: false`): there
+  one chunk may be in flight (attempted, not completed, no bytes, no error),
+  with nothing after it attempted and never inside a range or run already
+  ended. Identity items follow the same in-flight rule in both formats, so
+  every observer snapshot is exportable; complete reports keep the strict
+  rule. The chunk order must be one the collector can produce: a
   refusal or partial answer (at least one octet; an empty answer is a
   refusal) ends its range, an error ends the run and is the stop reason, an
   unread chunk outside an ended range means `cancelled`, and a complete run
@@ -130,7 +135,11 @@ syncs, then rereads the held file and verifies it before reporting success. The
 reader refuses missing, extra, duplicate or oversized members, unknown formats,
 CRC/length/hash mismatches and inconsistent copies. Duplicates are found in the
 raw central directory before the `zip` crate, which keeps only the last entry
-of a name, sees the archive; ZIP64 is refused (formats 1 and 2). Checksums detect corruption,
+of a name, sees the archive; ZIP64 is refused (formats 1 and 2). The fixed
+format has no ZIP comment: the end record must be exactly the last 22 octets,
+so no competing end record can hide in a comment or trailing bytes. The `zip`
+crate must then report the same directory start and, entry by entry, the same
+name, central header offset and local header offset as the raw walk. Checksums detect corruption,
 not deliberate rewriting. Raw replies can still identify equipment: no anonymity
 is claimed.
 
@@ -185,17 +194,21 @@ unanswered read, wrong start index; exhaustive outgoing-service allowlist; plus 
 for the memory profile: full coverage, each identity mismatch and an inexact
 identity read without any memory read, missing assertion before any frame,
 refused range, partial, timeout, cancel, deadline),
-deadline unit test; `knx-app` `device_diagnostics` (7: export/reread/0600/no
+deadline unit test; `knx-app` `device_diagnostics` (9: export/reread/0600/no
 overwrite/privacy, exclusion before adapter, lease, cancelled partial, corrupt
-archives, durable activity kind, free-text error refusal);
+archives, durable activity kind, free-text error refusal, every observer
+snapshot exportable, in-flight item shape);
 `knx-server` `http_device_diagnostics` (5, including durable history and token
 separation); `knx-cli`
 `device_diagnostics` (2, real binary; plus 3 for the memory profile: preview
 with a silent loopback gateway, `--simulate` end to end, refusals); memory
 profile also `knx-core` `declared_memory` (5), `knx-productdb`
 `system2_declared_segments` (4) and the ignored exact public-package test,
-`knx-app` `device_diagnostics_memory` (6: derivation, format-2 roundtrip,
-0600/no overwrite, strict refusals, format 1 unchanged, size ceiling); web
+`knx-app` `device_diagnostics_memory` (16: derivation, format-2 roundtrip,
+0600/no overwrite, strict refusals, format 1 unchanged, size ceiling, identity
+admission, chunk order, real fault roundtrips, duplicate and competing-end-record
+ZIPs for both formats, ZIP comment, every observer snapshot exportable,
+in-flight chunk shape) and the raw central-directory unit tests (4); web
 component/client tests; built shell in
 Chromium against the real HTTP handlers and the regular simulator (EN/DE,
 1440/400 px, stop-with-partial), every downloaded ZIP independently re-verified.

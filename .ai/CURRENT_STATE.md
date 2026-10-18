@@ -1,4 +1,12 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-10-19 01:35
+- **Completed:** UP258 stage 0 correction round 2 on `feat/up258-stage0-20261018` (local commits `b56714b2` F4, `ad72c0b1` F5 plus docs; not pushed): the diagnostic reader refuses ZIP comments (EOCD exactly at the end) and binds the raw directory walk to `ZipArchive` by directory start and per-entry central/local offsets (the competing-end-record duplicate bypass was real in both formats); observer snapshots with the collector's one in-flight item or chunk are exportable while the report is incomplete. Gates: five-crate tests 3071/0/100 ignored, public package 3/3, private corpus 155/155, Clippy, xtask, docs. Log `.ai/logs/2026-10-18_claude_up258-stage0-memory-evidence.md`.
+- **Pending/Next Steps:** Re-review and merge; the hardware run still awaits the reporter's explicit read consent.
+- **Notes for Codex oder Claude:** The in-flight admission also covers identity items in format 1 (the "every snapshot exportable" test needed it); complete reports are as strict as before.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-10-19 00:55
 - **Completed:** UP258 stage 0 correction round 1 on `feat/up258-stage0-20261018` (local commits `ccc9ff8a` F1, `0984c548` F2, `568b6f73` F3, `9ee2005b` F4 plus docs; not pushed): opaque ProductDB-only memory plan (`compile_fail` doc-tests), format-2 reader re-checks identity admission, chunk order and stop reason, and refuses duplicate ZIP entries from the raw central directory (both formats; the duplicate bypass was real). Gates: five-crate tests 3062/0/100 ignored, public package 3/3, private corpus 155/155, Clippy, xtask, docs. Log `.ai/logs/2026-10-18_claude_up258-stage0-memory-evidence.md`.
 - **Pending/Next Steps:** Re-review and merge; the hardware run still awaits the reporter's explicit read consent.

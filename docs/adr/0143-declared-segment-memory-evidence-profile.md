@@ -64,7 +64,9 @@ ranges without side effects. No hardware has exercised this profile.
    the chunk plan and coverage and refuses evidence that does not follow from
    them, memory read without the recorded identity matching the assertions,
    chunk orders the collector cannot produce, and duplicate ZIP entries
-   (checked in the raw central directory). Only the ProductDB derivation can
+   (checked in the raw central directory, which must be the one the `zip`
+   crate reads: no ZIP comment, same offsets). Observer snapshots with the
+   collector's one in-flight chunk stay exportable. Only the ProductDB derivation can
    build the acquisition plan.
 6. Entry point: the CLI only (`--profile`, `--product-db` required, preview
    without `--confirm-read`). The web/HTTP entry still offers only the

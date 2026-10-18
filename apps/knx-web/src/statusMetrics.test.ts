@@ -1,3 +1,4 @@
+/** Status metrics admission and decimal-MB formatting reject anything that is not measured. */
 import { describe, expect, it } from "vitest";
 import { admitStatusMetrics } from "./statusMetrics";
 import type { ProjectTree } from "./bindings/ProjectTree";

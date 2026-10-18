@@ -4,6 +4,7 @@ import { openNavigationSections } from "./disclosure-fixture";
 import { expect, test, type Page } from "@playwright/test";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 
 const styles = ["ThreeLevel", "TwoLevel", "Free"] as const;
 
@@ -47,6 +48,8 @@ async function interceptApi(page: Page, settings: Record<string, unknown> = {}) 
       body = { error: "no project open" };
     } else if (path === "/api/project" && method === "GET") {
       body = state.current;
+    } else if (path === "/api/project/status-metrics" && method === "GET") {
+      body = statusMetricsFixtureBody(state.current);
     } else if (path === "/api/bus/discover" && method === "POST") {
       // The sidebar's automatic search is intercepted, never a real UDP scan.
       body = { interfaces: [] };

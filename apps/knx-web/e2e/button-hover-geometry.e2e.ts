@@ -5,6 +5,7 @@ import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
 import { fulfillNoProjectOpen } from "./server-project-fixture";
+import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 
 type Catalogue = { readonly [K in keyof typeof en]: string };
 const FILES = Array.from({ length: 14 }, (_, i) => ({
@@ -34,6 +35,7 @@ async function serve(page: Page, language: "en" | "de", motionLevel: "off" | "fu
     if (path === "/api/settings" && method === "PUT") return ok({ schemaVersion: 1, status: "ok", settings: route.request().postDataJSON().settings });
     if (path === "/api/project/new" && method === "POST") { projectOpen = true; return ok(tree); }
     if (path === "/api/project" && method === "GET") return projectOpen ? ok(tree) : fulfillNoProjectOpen(route);
+    if (path === "/api/project/status-metrics" && method === "GET") return ok(statusMetricsFixtureBody(tree));
     if (path === "/api/fs/list") return ok(FILES);
     if (path === "/api/bus/discover" && method === "POST") return ok({ interfaces: [] });
     if (method === "GET" && ["/api/product-languages", "/api/catalog/manufacturers", "/api/catalog/items"].includes(path)) return ok([]);

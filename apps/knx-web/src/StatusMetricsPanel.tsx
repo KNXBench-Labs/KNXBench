@@ -1,3 +1,4 @@
+/** Project and catalogue storage metrics on the Overview, bound to one project snapshot. */
 import { useEffect, useState } from "react";
 import * as api from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";

@@ -1,3 +1,4 @@
+//! HTTP tests: status metrics measure the right file, database and snapshot, never a path.
 use std::{
     io::Cursor,
     sync::{

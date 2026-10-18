@@ -116,3 +116,37 @@ it("publishes one completed drag to a peer and flushes the last unpainted move",
   await pointer("pointerup", 160);
   expect(peers()[0].getAttribute("aria-valuenow")).toBe("240"); expect(peers()[2].getAttribute("aria-valuenow")).toBe("240");
 });
+
+it("announces measured heading pixels instead of the stored preference", async () => {
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+    return { width: this.tagName === "TH" ? 211 : 0 } as DOMRect;
+  });
+  await act(async () => root.render(<ResizableTable key="measured" tableId="measured" columns={columns}><thead><tr><th>Name</th><th>Address</th></tr></thead></ResizableTable>));
+  expect(width()).toBe(211);
+  expect(handle().getAttribute("aria-valuetext")).toBe("211 px");
+  await key("ArrowRight");
+  expect(JSON.parse(window.localStorage.getItem("knxbench:table-column-widths:v1:measured")!).name).toBe(188);
+  expect(width()).toBe(211);
+});
+it("commits the last unpainted drag preview when its table unmounts", async () => {
+  const write = vi.spyOn(window.localStorage, "setItem"); handle().setPointerCapture = vi.fn();
+  await pointer("pointerdown", 100);
+  await act(async () => handle().dispatchEvent(new PointerEvent("pointermove", { pointerId: 1, clientX: 157, bubbles: true })));
+  await act(async () => root.render(null));
+  expect(write).toHaveBeenCalledTimes(1);
+  expect(JSON.parse(window.localStorage.getItem("knxbench:table-column-widths:v1:component")!).name).toBe(237);
+});
+it.each(["ArrowLeft", "ArrowRight", "Home", "End"])("ignores %s during a pointer drag", async pressed => {
+  const write = vi.spyOn(window.localStorage, "setItem"); handle().setPointerCapture = vi.fn(); handle().releasePointerCapture = vi.fn();
+  await pointer("pointerdown", 100); await pointer("pointermove", 140);
+  await key(pressed);
+  expect(write).not.toHaveBeenCalled(); expect(width()).toBe(220);
+  await pointer("pointerup", 140);
+  expect(write).toHaveBeenCalledTimes(1); expect(width()).toBe(220);
+});
+it("uses the caller's trailing width without fitting its fixed columns", async () => {
+  const trailing = { fixedTrailingColumns: 1, fixedTrailingWidth: 96 };
+  await act(async () => root.render(<ResizableTable tableId="trailing" columns={columns} {...trailing}><thead><tr><th>Name</th><th>Address</th><th>Fixed</th></tr></thead></ResizableTable>));
+  expect(host.querySelector("col:last-child")?.getAttribute("style")).toContain("width: 96px");
+  expect(host.querySelector("table")?.style.width).toBe("416px");
+});

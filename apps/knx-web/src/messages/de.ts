@@ -38,7 +38,7 @@ export const messages: Record<MessageKey, string> = {
   "tableColumns.name.download-blocks": "Download-Blöcke",
   "tableColumns.name.name-recipe": "Namensrezept-Vorschau",
   "tableColumns.reset": "Spaltenbreiten zurücksetzen",
-  "tableColumns.help": "Spalte anpassen: Links/Rechts 8 px, Umschalt 40 px; Pos1 Minimum, Ende Maximum; Eingabe oder Doppelklick setzt zurück; Escape bricht Ziehen ab.",
+  "tableColumns.help": "Der angezeigte Wert ist die sichtbare Spaltenbreite; Schritte ändern die gespeicherte Vorgabe. Spalte anpassen: Links/Rechts 8 px, Umschalt 40 px; Pos1 Minimum, Ende Maximum; Eingabe oder Doppelklick setzt zurück; Escape bricht Ziehen ab.",
   "tableColumns.scroll": "Tabelle (scrollbar)",
   "parameters.objectFunctionsEmpty": "Diesem Objekt ist keine unterstützte Funktionsauswahl zugeordnet. Weitere Einstellungen findest du unter Parameter.",
   "parameters.functions": "Gerätefunktionen",

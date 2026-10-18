@@ -12,6 +12,15 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## UI-05 second review fixes (18 October 2026)
+
+All column preferences can shrink below their defaults, while unresized tables
+retain pane fitting. Header stacking is isolated per scroll container. Separators
+announce measured pixels; active drags commit on unmount and ignore resize keys.
+Sort indicators remain outside clamped heading labels. The matrix owns its fixed
+object width. The [contract](contracts/table-column-widths.md) records the accepted
+one-frame pane-fit settling behaviour.
+
 ## UI-05: browser-local table column widths (18 October 2026)
 
 Local-only presentation change: one width hook and accessible header separator,

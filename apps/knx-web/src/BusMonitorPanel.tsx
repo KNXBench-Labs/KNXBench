@@ -34,14 +34,14 @@ import { useUiLanguage } from "./uiLanguage";
 import { dptDisplay } from "./dptLabels";
 
 const BUS_MONITOR_COLUMNS = [
-  { id: "sequence", width: 64, min: 64 },
+  { id: "sequence", width: 64, min: 48 },
   { id: "time", width: 160, min: 120 },
-  { id: "source", width: 100, min: 100 },
+  { id: "source", width: 100, min: 48 },
   { id: "destination", width: 160, min: 120 },
   { id: "service", width: 120, min: 100 },
   { id: "control", width: 160, min: 120 },
   { id: "payload", width: 120, min: 100 },
-  { id: "decoded", width: 140, min: 140 }
+  { id: "decoded", width: 140, min: 48 }
 ];
 
 // The identity of the one session this panel can ever be attached to

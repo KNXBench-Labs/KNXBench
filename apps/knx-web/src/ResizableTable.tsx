@@ -4,23 +4,25 @@ import { useTranslate } from "./i18n";
 import { columnMax, useTableColumnWidths, type TableColumnWidth } from "./useTableColumnWidths";
 
 type WidthState = ReturnType<typeof useTableColumnWidths>;
-export function ColumnResizeHandle({ column, state, labelId, helpId }: {
-  column: TableColumnWidth; state: WidthState; labelId: string; helpId: string;
+export function ColumnResizeHandle({ column, state, labelId, helpId, renderedWidth }: {
+  column: TableColumnWidth; state: WidthState; labelId: string; helpId: string; renderedWidth: number;
 }) {
   const t = useTranslate();
   const drag = useRef<{ pointerId: number; x: number; width: number; next: number } | null>(null);
   const frame = useRef<number | null>(null);
   const cancelFrame = () => { if (frame.current !== null) cancelAnimationFrame(frame.current); frame.current = null; };
-  useEffect(() => cancelFrame, []);
+  const latestFinish = useRef(() => {});
+  useEffect(() => () => latestFinish.current(), []);
   function finish(cancel = false) {
     const current = drag.current;
     if (!current) return;
     cancelFrame(); drag.current = null;
     state.setWidth(column.id, cancel ? current.width : current.next, !cancel);
   }
+  latestFinish.current = () => { finish(); cancelFrame(); };
   return <span className="table-column-resizer" role="separator" tabIndex={0}
-    aria-orientation="vertical" aria-labelledby={labelId} aria-describedby={helpId} aria-valuetext={`${state.widths[column.id]} px`} title={t("tableColumns.help")}
-    aria-valuemin={column.min} aria-valuemax={columnMax(column)} aria-valuenow={state.widths[column.id]}
+    aria-orientation="vertical" aria-labelledby={labelId} aria-describedby={helpId} aria-valuetext={`${renderedWidth} px`} title={t("tableColumns.help")}
+    aria-valuemin={Math.min(column.min, renderedWidth)} aria-valuemax={Math.max(columnMax(column), renderedWidth)} aria-valuenow={renderedWidth}
     onClick={event => { event.preventDefault(); event.stopPropagation(); }}
     onDoubleClick={event => { event.preventDefault(); event.stopPropagation(); state.resetColumn(column.id); }}
     onDragStart={event => { event.preventDefault(); event.stopPropagation(); }}
@@ -49,6 +51,9 @@ export function ColumnResizeHandle({ column, state, labelId, helpId }: {
     onPointerCancel={event => { event.stopPropagation(); if (drag.current?.pointerId === event.pointerId) finish(); }}
     onLostPointerCapture={event => { if (drag.current?.pointerId === event.pointerId) finish(); }}
     onKeyDown={event => {
+      if (drag.current && ["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
+        event.preventDefault(); event.stopPropagation(); return;
+      }
       const step = event.shiftKey ? 40 : 8;
       if (event.key === "Escape" && drag.current) {
         const pointerId = drag.current.pointerId; finish(true);
@@ -72,22 +77,28 @@ function headingText(nodes: ReactNode): string {
 
 /** Only decorates native thead/tr/th children; body editors and row ownership stay untouched. */
 export default function ResizableTable({
-  tableId, columns, children, className = "", style, scrollClassName = "", scrollLabel, fixedTrailingColumns = 0, ...props
+  tableId, columns, children, className = "", style, scrollClassName = "", scrollLabel, fixedTrailingColumns = 0, fixedTrailingWidth = 0, ...props
 }: {
-  tableId: string; columns: readonly TableColumnWidth[]; scrollClassName?: string; scrollLabel?: string; fixedTrailingColumns?: number;
+  tableId: string; columns: readonly TableColumnWidth[]; scrollClassName?: string; scrollLabel?: string; fixedTrailingColumns?: number; fixedTrailingWidth?: number;
 } & HTMLAttributes<HTMLTableElement>) {
   const t = useTranslate(); const state = useTableColumnWidths(tableId, columns); const id = useId();
   const viewport = useRef<HTMLDivElement>(null);
   const [overflowing, setOverflowing] = useState(false);
   const [availableWidth, setAvailableWidth] = useState(0);
+  const [measuredWidths, setMeasuredWidths] = useState<number[]>([]);
+  const measure = () => {
+    const element = viewport.current;
+    if (!element) return;
+    setAvailableWidth(element.clientWidth);
+    setOverflowing(element.scrollWidth > element.clientWidth || element.scrollHeight > element.clientHeight);
+    const next = Array.from(element.querySelectorAll(":scope > table > thead > tr > th"), heading => Math.round(heading.getBoundingClientRect().width));
+    setMeasuredWidths(previous => previous.length === next.length && previous.every((width, index) => width === next[index]) ? previous : next);
+  };
+  // Measure after every column edit as well as external pane/table resizes.
+  useLayoutEffect(measure);
   useLayoutEffect(() => {
     const element = viewport.current;
     if (!element) return;
-    const measure = () => {
-      setAvailableWidth(element.clientWidth);
-      setOverflowing(element.scrollWidth > element.clientWidth || element.scrollHeight > element.clientHeight);
-    };
-    measure();
     const observer = new ResizeObserver(measure);
     observer.observe(element); if (element.firstElementChild) observer.observe(element.firstElementChild);
     return () => observer.disconnect();
@@ -104,31 +115,31 @@ export default function ResizableTable({
         return cloneElement(node as ReactElement<HTMLAttributes<HTMLTableCellElement>>, {
           className: `${node.props.className ?? ""} resizable-table-heading`,
           style: { ...node.props.style, zIndex: columns.length + fixedTrailingColumns - position + 1 },
-        }, <span id={labelId} title={headingText(node.props.children)}>{node.props.children}</span>, <ColumnResizeHandle column={column} state={state} labelId={labelId} helpId={`${id}-help`} />);
+        }, <span id={labelId} title={headingText(node.props.children)}>{node.props.children}</span>, <ColumnResizeHandle column={column} state={state} labelId={labelId} helpId={`${id}-help`} renderedWidth={measuredWidths[position - 1] || fittedWidths[position - 1]} />);
       }
       if (node.type === "thead" || node.type === "tr" || node.type === Fragment) return cloneElement(node, {}, headers(node.props.children));
       return node;
     });
   }
+  const defaultWidth = columns.reduce((sum, column) => sum + column.width, 0);
+  // Fit defaults to the actual pane, including navigation/inspector space.
+  // User adjustments are pixel deltas on that baseline; only their surplus
+  // creates overflow. Fitting is off when callers supply fixed trailing columns.
+  // Two adjacent 24 px pointer targets must not cover a header's sort button.
+  const headerMinimum = (column: TableColumnWidth) => column.fitMin ?? Math.min(48, column.min);
+  const minimumWidth = columns.reduce((sum, column) => sum + headerMinimum(column), 0);
+  const fitBudget = availableWidth > 0 && fixedTrailingColumns === 0
+    ? Math.max(minimumWidth, Math.min(defaultWidth, availableWidth)) : defaultWidth;
+  const scale = defaultWidth > minimumWidth ? (fitBudget - minimumWidth) / (defaultWidth - minimumWidth) : 1;
+  const fittedWidths = columns.map(column => Math.max(Math.min(48, column.min),
+    headerMinimum(column) + Math.floor((column.width - headerMinimum(column)) * scale)
+      + state.widths[column.id] - column.width));
+  const totalWidth = fittedWidths.reduce((sum, width) => sum + width, 0) + fixedTrailingColumns * fixedTrailingWidth;
   const decorated = headers(children);
   useEffect(() => {
     if (import.meta.env.DEV && position !== columns.length + fixedTrailingColumns)
       console.warn(`ResizableTable ${tableId}: heading/column count mismatch`, position, columns.length + fixedTrailingColumns);
   }, [position, columns.length, fixedTrailingColumns, tableId]);
-  const defaultWidth = columns.reduce((sum, column) => sum + column.width, 0);
-  // Fit defaults to the actual pane, including navigation/inspector space.
-  // User adjustments are pixel deltas on that baseline; only their surplus
-  // creates overflow. Matrix object columns retain their separate fixed policy.
-  // Two adjacent 24 px pointer targets must not cover a header's sort button.
-  const headerMinimum = (column: TableColumnWidth) => column.fitMin ?? Math.min(48, column.width);
-  const minimumWidth = columns.reduce((sum, column) => sum + headerMinimum(column), 0);
-  const fitBudget = availableWidth > 0 && fixedTrailingColumns === 0
-    ? Math.max(minimumWidth, Math.min(defaultWidth, availableWidth)) : defaultWidth;
-  const scale = defaultWidth > minimumWidth ? (fitBudget - minimumWidth) / (defaultWidth - minimumWidth) : 1;
-  const fittedWidths = columns.map(column => Math.max(headerMinimum(column),
-    headerMinimum(column) + Math.floor((column.width - headerMinimum(column)) * scale)
-      + state.widths[column.id] - column.width));
-  const totalWidth = fittedWidths.reduce((sum, width) => sum + width, 0) + fixedTrailingColumns * 180;
   const caption = Children.toArray(children).find(child => isValidElement(child) && child.type === "caption");
   const captionText = isValidElement<{ children?: ReactNode }>(caption) && typeof caption.props.children === "string" ? caption.props.children : undefined;
   const tableName = scrollLabel ?? captionText ?? t(`tableColumns.name.${tableId}` as Parameters<typeof t>[0]);
@@ -138,7 +149,7 @@ export default function ResizableTable({
     <div ref={viewport} className={`resizable-table-scroll ${scrollClassName}`} tabIndex={scrollLabel || overflowing ? 0 : undefined} role={scrollLabel || overflowing ? "region" : undefined} aria-label={scrollLabel || overflowing ? tableName : undefined}>
       <table {...props} className={`${className} resizable-data-table`} style={{ ...style, width: totalWidth }}>
         {Children.map(children, child => isValidElement(child) && child.type === "caption" ? child : null)}
-        <colgroup>{columns.map((column, index) => <col key={column.id} style={{ width: fittedWidths[index] }} />)}{Array.from({ length: fixedTrailingColumns }, (_, index) => <col key={`fixed-${index}`} style={{ width: 180 }} />)}</colgroup>
+        <colgroup>{columns.map((column, index) => <col key={column.id} style={{ width: fittedWidths[index] }} />)}{Array.from({ length: fixedTrailingColumns }, (_, index) => <col key={`fixed-${index}`} style={{ width: fixedTrailingWidth }} />)}</colgroup>
         {decorated}
       </table>
     </div>

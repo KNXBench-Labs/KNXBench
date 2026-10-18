@@ -57,6 +57,8 @@ use crate::image::{
 /// so this bounds a probe to a few hundred reads; a program with more
 /// candidate fields has the excess listed in [`ProbePlan::skipped`].
 pub const MAX_PROBE_OCTETS: usize = 4096;
+/// Maximum explicit field selection for one offline source comparison.
+pub const MAX_SOURCE_PREVIEW_FIELDS: usize = 8;
 
 /// One field to read, and the value the project says is there.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -101,6 +103,8 @@ pub struct ProbeSkip {
 /// Why a parameter is not read.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SkipReason {
+    /// Outside the explicitly requested offline source-preview selection.
+    NotSelected,
     /// Its value reads the same in both orders.
     EitherOrder,
     /// It crosses an octet boundary without being whole octets.
@@ -118,6 +122,8 @@ pub enum SkipReason {
     },
     /// It reaches past the end of its segment.
     OutsideSegment,
+    /// The field extends beyond the sixteen-bit address space.
+    OutsideAddressSpace,
     /// The probe's read bound was reached.
     ReadBound,
     /// No value and no default.
@@ -129,6 +135,7 @@ pub enum SkipReason {
 impl fmt::Display for SkipReason {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            SkipReason::NotSelected => f.write_str("not selected for this source preview"),
             SkipReason::EitherOrder => f.write_str("its value reads the same in both orders"),
             SkipReason::NoDefinedArrangement => f.write_str(
                 "it crosses an octet boundary without being whole octets; no arrangement is defined",
@@ -142,6 +149,7 @@ impl fmt::Display for SkipReason {
             }
             SkipReason::Overlaps { other } => write!(f, "it shares bits with {other}"),
             SkipReason::OutsideSegment => f.write_str("it reaches past the end of its segment"),
+            SkipReason::OutsideAddressSpace => f.write_str("outside the sixteen-bit address space"),
             SkipReason::ReadBound => write!(f, "beyond the probe's bound of {MAX_PROBE_OCTETS} octets"),
             SkipReason::NoValue => f.write_str("no value, and no default"),
             SkipReason::Refused(why) => write!(f, "{why}"),
@@ -232,6 +240,94 @@ pub fn plan_probe(conn: &Connection, request: &ImageRequest) -> Result<ProbePlan
     plan_fields(conn, request, MAX_PROBE_OCTETS).map(|(plan, _)| plan)
 }
 
+/// Source-derived fields for review only, deliberately not a live [`ProbePlan`].
+/// Addresses are declarations, not observations of the device's runtime layout.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SourceProbePreview {
+    /// The application whose retained source was evaluated.
+    pub program_id: String,
+    /// Source-declared mask, not a product or firmware identification.
+    pub mask: MaskVersion,
+    /// Source-declared manufacturer.
+    pub manufacturer: u16,
+    /// Declared byte order, if present; absence proves no runtime encoding.
+    pub declared_order: Option<String>,
+    /// Exactly the explicitly selected fields, in deterministic probe order.
+    pub fields: Vec<ProbeField>,
+    /// Every omitted candidate, including those outside the explicit selection.
+    pub skipped: Vec<ProbeSkip>,
+    /// Evaluation warnings are evidence, never stripped to obtain a preview.
+    pub diagnostics: Vec<crate::dynamic::ScopedDiagnostic>,
+    /// The source contains legacy patch directives this preview does not interpret.
+    pub has_uninterpreted_legacy_patch: bool,
+}
+
+/// Prepares at most eight explicit fields without admitting a bus operation.
+/// Reuses the production evaluator and placement checks; does not build or
+/// weaken a download image, interpret legacy patching, or confirm runtime addresses.
+pub fn preview_system2_probe(
+    conn: &Connection,
+    request: &ImageRequest,
+    parameter_refs: &[String],
+) -> Result<SourceProbePreview, ProbeError> {
+    let refused = |what: String| ProbeError::Image(ImageError::Unsupported { what });
+    if parameter_refs.is_empty() || parameter_refs.len() > MAX_SOURCE_PREVIEW_FIELDS {
+        return Err(refused(
+            "select between one and eight source parameter references".into(),
+        ));
+    }
+    let selected: std::collections::BTreeSet<_> = parameter_refs.iter().collect();
+    if selected.len() != parameter_refs.len() || parameter_refs.iter().any(|r| r.is_empty()) {
+        return Err(refused(
+            "source parameter references must be nonempty and unique".into(),
+        ));
+    }
+    let (mut plan, code, diagnostics) =
+        plan_fields_for_scope(conn, request, MAX_PROBE_OCTETS, ProbeScope::System2Source)?;
+    for reference in parameter_refs {
+        if !plan
+            .fields
+            .iter()
+            .any(|field| field.parameter_ref == *reference)
+        {
+            let reason = plan
+                .skipped
+                .iter()
+                .find(|skip| skip.parameter_ref == *reference)
+                .map(|skip| skip.reason.to_string())
+                .unwrap_or_else(|| "not an active, readable numeric source field".into());
+            return Err(refused(format!("cannot preview {reference}: {reason}")));
+        }
+    }
+    plan.fields.retain(|field| {
+        if selected.contains(&field.parameter_ref) {
+            true
+        } else {
+            plan.skipped.push(ProbeSkip {
+                parameter_ref: field.parameter_ref.clone(),
+                reason: SkipReason::NotSelected,
+            });
+            false
+        }
+    });
+    Ok(SourceProbePreview {
+        program_id: plan.program_id,
+        mask: plan.mask,
+        manufacturer: plan.manufacturer,
+        declared_order: plan.declared_order,
+        fields: plan.fields,
+        skipped: plan.skipped,
+        has_uninterpreted_legacy_patch: code.has_legacy_patch_always,
+        diagnostics,
+    })
+}
+
+#[derive(Clone, Copy)]
+enum ProbeScope {
+    LiveMemory,
+    System2Source,
+}
+
 /// What a program's own base image says about the octet order of its
 /// multi-octet product defaults.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -296,11 +392,43 @@ fn plan_fields(
     request: &ImageRequest,
     bound: usize,
 ) -> Result<(ProbePlan, ProgramCode), ProbeError> {
+    plan_fields_for_scope(conn, request, bound, ProbeScope::LiveMemory)
+        .map(|(plan, code, _)| (plan, code))
+}
+
+fn plan_fields_for_scope(
+    conn: &Connection,
+    request: &ImageRequest,
+    bound: usize,
+    scope: ProbeScope,
+) -> Result<
+    (
+        ProbePlan,
+        ProgramCode,
+        Vec<crate::dynamic::ScopedDiagnostic>,
+    ),
+    ProbeError,
+> {
     let program_id = request.program_id.as_str();
     let code = load_program_code(conn, program_id)
         .map_err(ImageError::from)?
         .ok_or_else(|| ImageError::UnknownProgram(program_id.to_string()))?;
-    let mask = check_program_kind(&code).map_err(ProbeError::Program)?;
+    let mask = match scope {
+        ProbeScope::LiveMemory => check_program_kind(&code).map_err(ProbeError::Program)?,
+        ProbeScope::System2Source => {
+            crate::system2::project_tool_metadata(&code).map_err(|error| {
+                ProbeError::Image(ImageError::Unsupported {
+                    what: error.to_string(),
+                })
+            })?;
+            match code.mask_version.as_deref() {
+                Some("MV-0020") => MaskVersion(0x0020),
+                Some("MV-0021") => MaskVersion(0x0021),
+                Some("MV-0025") => MaskVersion(0x0025),
+                _ => unreachable!("source metadata validated the mask"),
+            }
+        }
+    };
     let manufacturer = manufacturer_of(program_id).map_err(ProbeError::Program)?;
     let types = ParameterTypes::load(conn, program_id, &code)?;
     let (values, activation) = activate(conn, request, &types)?;
@@ -414,12 +542,20 @@ fn plan_fields(
             skip(&mut skipped, parameter_ref, reason);
             continue;
         }
+        let address = segment.address.checked_add(field.offset);
+        let within_address_space = address
+            .and_then(|start| start.checked_add(covered_octets(field) as u32))
+            .is_some_and(|end| end <= u32::from(u16::MAX) + 1);
+        if !within_address_space {
+            skip(&mut skipped, parameter_ref, SkipReason::OutsideAddressSpace);
+            continue;
+        }
         candidates.push(Candidate {
             parameter: parameter.to_string(),
             field: ProbeField {
                 parameter_ref: parameter_ref.to_string(),
                 segment: segment_id.to_string(),
-                address: segment.address + field.offset,
+                address: address.expect("the field is inside the sixteen-bit address space"),
                 field,
                 value,
             },
@@ -459,7 +595,7 @@ fn plan_fields(
         fields: kept,
         skipped,
     };
-    Ok((plan, code))
+    Ok((plan, code, activation.diagnostics))
 }
 
 /// The leading `fields` whose covered octets add up to at most `bound`;

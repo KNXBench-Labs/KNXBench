@@ -142,6 +142,14 @@ one real Siemens `MV-0025` detector answered all three reads
 Still open: a refusing or silent device and post-run behaviour reports; any
 memory profile only with its own evidence and decision (ADR-0134).
 
+## Exact Siemens UP 258D12 programming work (18 October 2026)
+
+Owner-authorised offline work through the hardware boundary is tracked in the
+[exact-device goal](goals/up258-programming-2026-10-18.md). The bounded
+[source-field preview](contracts/system2-source-probe-preview.md) is available;
+it is not a memory read or programming unlock. Remaining image/procedure and
+recovery dependencies stay explicit; the reporter approves each hardware step.
+
 ## System 2 / System B download outcome (17 October 2026)
 
 Owner renewed the usable-download/admission objective. It remains **blocked on

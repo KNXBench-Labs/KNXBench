@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-18 20:55
+- **Completed:** Issue #22 offline source-preview slice implemented (not yet delivered): ProductDB → App → built CLI, explicit System-2 field selection, evaluation diagnostics retained, no network construction in preview. Focused acceptance: source preview 6, probe units 8, built CLI 2, exact public-package 2; touched-crate Clippy, docs and diff-check pass. Address-space crossing RED reproduced and corrected. Log `.ai/logs/2026-10-18_codex_up258-offline-preparation.md`.
+- **Pending/Next Steps:** Complete regression gate, integrate/recheck current main, publish the preparation slice; continue implementable exact-device work. Full image/procedure/recovery still need defining semantics. No physical read/write is authorised or enabled; reporter separately consents to each future operation.
+- **Notes for Codex oder Claude:** Claim remains active for `feat/up258-offline-20261018`; UI work remains with existing owner. Source preview is not a live ProbePlan, backup or programming support. The identical-byte write suggestion is not a no-op/whole-path proof: authorised setup can write Verify Mode before a memory operation, and a read-only session cannot write. Preserve root/unrelated untracked files. No ETA or hardware readiness claim from these passing preparation tests.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-18 20:36
 - **Completed:** CLAIM (owner go): exact UP 258D12 offline work toward a reporter-run programming test; scope/decisions in `docs/goals/up258-programming-2026-10-18.md`. Reuse existing probe/diagnostic/evaluator boundaries; no live bus. Recovery must work without ETS when it is unavailable; an ETS project or memory-only dump is not complete recovery proof.
 - **Pending/Next Steps:** Explicit bounded source-field preparation and tests, then image/procedure/execution/recovery work where source semantics permit. Reporter approves each eventual hardware step separately. No download admission change based solely on the identity ZIP.

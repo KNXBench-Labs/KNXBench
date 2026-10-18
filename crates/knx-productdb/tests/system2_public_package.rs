@@ -288,6 +288,32 @@ fn public_up258_configured_values_do_not_bypass_the_source_stopline() {
         assert_eq!(count(&format!("{PROGRAM}_P-903_R-904")), 0);
         // Existing diagnostics remain visible, not stripped to obtain an image.
         assert_eq!(activation.diagnostics.len(), 11);
+        let preview = knx_productdb::byte_order_probe::preview_system2_probe(
+            &conn,
+            &request,
+            &[
+                format!("{PROGRAM}_P-903_R-903"),
+                format!("{PROGRAM}_P-900_R-900"),
+            ],
+        )
+        .expect("the exact two source fields can be previewed without bus admission");
+        assert_eq!(preview.diagnostics, activation.diagnostics);
+        assert!(preview.has_uninterpreted_legacy_patch);
+        assert_eq!(preview.declared_order, None);
+        assert_eq!(preview.fields.len(), 2);
+        assert_eq!(
+            preview.fields[0].parameter_ref,
+            format!("{PROGRAM}_P-903_R-903")
+        );
+        assert_eq!(preview.fields[0].address, 0x3CF8);
+        assert_eq!(preview.fields[0].field.size_in_bit, 16);
+        assert_eq!(preview.fields[0].value.to_string(), requested);
+        assert_eq!(preview.fields[1].address, 0x3CFA);
+        assert_eq!(preview.fields[1].value, 0);
+        assert!(!preview
+            .fields
+            .iter()
+            .any(|f| f.parameter_ref.ends_with("R-904")));
         let error = build_system2_image(&conn, &request)
             .expect_err("configured values do not establish LegacyPatchAlways semantics");
         assert!(matches!(error, ImageError::Unsupported { ref what }

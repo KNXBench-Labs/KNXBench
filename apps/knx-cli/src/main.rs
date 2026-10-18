@@ -139,7 +139,9 @@ const USAGE: &str = "usage: knx import <file.knxproj> [--store <path.knxdb> [--r
      \x20         (READ ONLY generic identity export; preview without --confirm-read. No memory\n\
      \x20         profile, keys or download admission required. --simulate never opens a gateway.)\n\
      \x20     knx device byte-order-probe <area.line.device> --project <path.knxdb>\n\
-     \x20                  [--product-db <path>] --gateway <host:port>\n\
+     \x20                  [--product-db <path>] [--gateway <host:port>] [--preview]\n\
+     \x20                  [--system2-source --parameter-ref <id>...]\n\
+     \x20         (--preview is offline; System-2 source selection requires it and never enables a read.)\n\
      \x20         (READ ONLY, KL-170: for a device ETS programmed with this project, reads\n\
      \x20         only its multi-octet parameter fields and one-octet controls and says\n\
      \x20         whether it holds the values high or low octet first. Works for any declared\n\
@@ -2652,6 +2654,28 @@ fn run_device_byte_order_probe(args: &[String]) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
+    if parsed.system2_source {
+        let preview = match knx_app::device_download::prepare_system2_probe_preview(
+            &products,
+            &project,
+            target.address(),
+            &parsed.parameter_refs,
+        ) {
+            Ok(preview) => preview,
+            Err(error) => {
+                eprintln!("cannot prepare the source preview: {error}");
+                return ExitCode::FAILURE;
+            }
+        };
+        return match device_byte_order_probe::print_source_preview(&preview, &mut std::io::stdout())
+        {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(error) => {
+                eprintln!("could not print the source preview: {error}");
+                ExitCode::FAILURE
+            }
+        };
+    }
     let plan = match knx_app::device_download::prepare_byte_order_probe(
         &products,
         &project,
@@ -2663,6 +2687,15 @@ fn run_device_byte_order_probe(args: &[String]) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
+    if parsed.preview {
+        return match device_byte_order_probe::print_preview(&plan, &mut std::io::stdout()) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(error) => {
+                eprintln!("could not print the probe preview: {error}");
+                ExitCode::FAILURE
+            }
+        };
+    }
     let runtime = match tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
@@ -2673,7 +2706,9 @@ fn run_device_byte_order_probe(args: &[String]) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    let gateway = parsed.gateway;
+    let gateway = parsed
+        .gateway
+        .expect("non-preview probe requires a gateway");
     runtime.block_on(async {
         use knx_net::BusConnection;
         let tunnel = match knx_net::KnxNetIpClient::new().connect_tunnel(gateway).await {

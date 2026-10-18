@@ -26,11 +26,11 @@ Last updated: 2026-10-18 07:55 CEST
 | MCP server | Read-only saved-file tools; opt-in rename writer from alpha.10 | alpha.6 |
 | Remote browser | Authenticated server; networking-dependent | alpha.6 |
 
-## Local-only UI feedback (unpublished)
+## Project status feedback
 
 | Feature | Scope | Availability |
 | --- | --- | --- |
-| [Project status storage metrics](contracts/project-status-metrics.md) | Native project file size, unsaved flag, active product database footprint and canonical catalogue counts; explicit missing/loading/error states | Local-only |
+| [Project status storage metrics](contracts/project-status-metrics.md) | Current on-disk size of the open project's native file (may include unsaved recovery-journal growth), separate unsaved flag, active product database footprint including SQLite side files, and catalogue counts for manufacturers with products or programs; explicit missing/loading/error states | Implemented |
 
 ## New in Alpha 14
 

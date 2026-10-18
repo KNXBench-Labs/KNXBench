@@ -1,6 +1,10 @@
 use std::{
     io::Cursor,
-    sync::{Arc, Mutex},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, Mutex,
+    },
+    time::Duration,
 };
 
 use axum::{
@@ -65,6 +69,7 @@ async fn status_metrics_bind_saved_file_and_catalogue_to_their_own_resources() {
 
     let (_, fresh) = post(&app, "/api/project/new", json!({"name":"Measured"})).await;
     let initial = get(&app, "/api/project/status-metrics").await;
+    assert_eq!(initial["serverIncarnation"], fresh["server_incarnation"]);
     assert_eq!(initial["project"]["state"], "notSavedYet");
     assert_eq!(
         initial["project"]["projectIncarnation"],
@@ -91,8 +96,13 @@ async fn status_metrics_bind_saved_file_and_catalogue_to_their_own_resources() {
     let saved = get(&app, "/api/project").await;
     let measured = get(&app, "/api/project/status-metrics").await;
     assert_eq!(measured["project"]["state"], "available");
+    assert!(measured["project"].get("bytes").is_none());
     assert_eq!(
-        measured["project"]["bytes"],
+        measured["project"]["currentOnDiskBytes"],
+        std::fs::metadata(&path).unwrap().len()
+    );
+    assert_eq!(
+        measured["project"]["currentOnDiskBytes"],
         std::fs::metadata(&path).unwrap().len()
     );
     assert_eq!(
@@ -110,7 +120,7 @@ async fn status_metrics_bind_saved_file_and_catalogue_to_their_own_resources() {
     assert_eq!(modified["is_modified"], true);
     let before_resave = get(&app, "/api/project/status-metrics").await;
     assert_eq!(
-        before_resave["project"]["bytes"],
+        before_resave["project"]["currentOnDiskBytes"],
         std::fs::metadata(&path).unwrap().len()
     );
     assert_eq!(
@@ -123,7 +133,7 @@ async fn status_metrics_bind_saved_file_and_catalogue_to_their_own_resources() {
     );
     let resaved = get(&app, "/api/project/status-metrics").await;
     assert_eq!(
-        resaved["project"]["bytes"],
+        resaved["project"]["currentOnDiskBytes"],
         std::fs::metadata(&path).unwrap().len()
     );
     assert_eq!(get(&app, "/api/project").await["is_modified"], false);
@@ -131,8 +141,8 @@ async fn status_metrics_bind_saved_file_and_catalogue_to_their_own_resources() {
     let (failed, _) = post(&app, "/api/project/save-as", json!({"path":dir.path()})).await;
     assert_ne!(failed, StatusCode::OK);
     assert_eq!(
-        get(&app, "/api/project/status-metrics").await["project"]["bytes"],
-        resaved["project"]["bytes"]
+        get(&app, "/api/project/status-metrics").await["project"]["currentOnDiskBytes"],
+        resaved["project"]["currentOnDiskBytes"]
     );
     let other_path = dir.path().join("other.knxdb");
     assert_eq!(
@@ -142,7 +152,7 @@ async fn status_metrics_bind_saved_file_and_catalogue_to_their_own_resources() {
         StatusCode::OK
     );
     assert_eq!(
-        get(&app, "/api/project/status-metrics").await["project"]["bytes"],
+        get(&app, "/api/project/status-metrics").await["project"]["currentOnDiskBytes"],
         std::fs::metadata(&other_path).unwrap().len()
     );
 
@@ -210,7 +220,7 @@ async fn installing_catalogue_changes_only_catalogue_metrics() {
 
     let after = get(&app, "/api/project/status-metrics").await;
     assert_eq!(before["catalogue"]["counts"]["manufacturers"], 0);
-    assert_eq!(after["catalogue"]["counts"]["manufacturers"], 1);
+    assert_eq!(after["catalogue"]["counts"]["manufacturers"], 0);
     assert_eq!(after["catalogue"]["counts"]["products"], 0);
     assert_eq!(
         after["catalogue"]["bytes"],
@@ -230,10 +240,15 @@ async fn status_metrics_distinguish_unavailable_database_from_empty_catalogue() 
         Arc::new(knx_server::AppState::new(dir.path().to_path_buf())),
         None,
     );
-    assert_eq!(
-        get(&absent, "/api/project/status-metrics").await["catalogue"]["state"],
-        "unavailable"
-    );
+    let no_project = get(&absent, "/api/project/status-metrics").await;
+    assert_eq!(no_project["project"]["state"], "unavailable");
+    assert!(no_project["project"]["projectIncarnation"].is_null());
+    assert!(no_project["project"]["snapshotRevision"].is_null());
+    assert!(no_project["project"]["currentOnDiskBytes"].is_null());
+    assert!(no_project["serverIncarnation"]
+        .as_str()
+        .is_some_and(|s| !s.is_empty()));
+    assert_eq!(no_project["catalogue"]["state"], "unavailable");
 
     let db_path = dir.path().join("empty.sqlite");
     let db = knx_productdb::open_and_migrate(&db_path).unwrap();
@@ -249,6 +264,101 @@ async fn status_metrics_distinguish_unavailable_database_from_empty_catalogue() 
     assert_eq!(
         metrics["catalogue"]["counts"],
         json!({"manufacturers":0,"products":0,"applicationPrograms":0})
+    );
+}
+
+#[tokio::test]
+async fn failed_plain_save_keeps_unsaved_file_unavailable_and_native_open_restores_size() {
+    let dir = tempfile::tempdir().unwrap();
+    let app = knx_server::app(
+        Arc::new(knx_server::AppState::new(dir.path().to_path_buf())),
+        None,
+    );
+    post(&app, "/api/project/new", json!({"name":"Unsaved"})).await;
+    assert_ne!(
+        post(&app, "/api/project/save", json!({})).await.0,
+        StatusCode::OK
+    );
+    assert_eq!(
+        get(&app, "/api/project/status-metrics").await["project"]["state"],
+        "notSavedYet"
+    );
+    let path = dir.path().join("native.knxdb");
+    assert_eq!(
+        post(&app, "/api/project/save-as", json!({"path":path}))
+            .await
+            .0,
+        StatusCode::OK
+    );
+    let (_, opened) = post(&app, "/api/project/open", json!({"path":path})).await;
+    let metrics = get(&app, "/api/project/status-metrics").await;
+    assert_eq!(metrics["project"]["state"], "available");
+    assert_eq!(
+        metrics["project"]["currentOnDiskBytes"],
+        std::fs::metadata(&path).unwrap().len()
+    );
+    assert_eq!(
+        metrics["project"]["projectIncarnation"],
+        opened["project_incarnation"]
+    );
+    assert_eq!(metrics["serverIncarnation"], opened["server_incarnation"]);
+}
+
+#[tokio::test]
+async fn count_query_failure_with_database_file_present_is_error() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("products.sqlite");
+    let db = knx_productdb::open_and_migrate(&path).unwrap();
+    db.execute_batch("DROP TABLE product").unwrap();
+    let app = knx_server::app(
+        Arc::new(knx_server::AppState {
+            product_db: Some(Mutex::new(db)),
+            ..Default::default()
+        }),
+        None,
+    );
+    let metrics = get(&app, "/api/project/status-metrics").await;
+    assert!(path.is_file());
+    assert_eq!(metrics["catalogue"]["state"], "error");
+    assert!(metrics["catalogue"]["counts"].is_null());
+    assert!(metrics["catalogue"]["bytes"].is_null());
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn status_metrics_wait_for_product_db_does_not_block_the_async_worker() {
+    let dir = tempfile::tempdir().unwrap();
+    let db = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+    let state = Arc::new(knx_server::AppState {
+        product_db: Some(Mutex::new(db)),
+        ..Default::default()
+    });
+    let app = knx_server::app(state.clone(), None);
+    post(&app, "/api/project/new", json!({"name":"Open"})).await;
+    let (ready_tx, ready_rx) = std::sync::mpsc::channel();
+    let (release_tx, release_rx) = std::sync::mpsc::channel();
+    let released = Arc::new(AtomicBool::new(false));
+    let worker_state = state.clone();
+    let worker_released = released.clone();
+    let holder = std::thread::spawn(move || {
+        let guard = worker_state.product_db.as_ref().unwrap().lock().unwrap();
+        ready_tx.send(()).unwrap();
+        let _ = release_rx.recv_timeout(Duration::from_secs(2));
+        drop(guard);
+        worker_released.store(true, Ordering::SeqCst);
+    });
+    ready_rx.recv_timeout(Duration::from_secs(2)).unwrap();
+    let metrics_app = app.clone();
+    let waiting =
+        tokio::spawn(async move { get(&metrics_app, "/api/project/status-metrics").await });
+    tokio::task::yield_now().await;
+    get(&app, "/api/project").await;
+    let worker_was_free = !released.load(Ordering::SeqCst);
+    release_tx.send(()).ok();
+    waiting.await.unwrap();
+    holder.join().unwrap();
+    assert!(
+        worker_was_free,
+        "the async worker waited on the product DB mutex"
     );
 }
 
@@ -275,7 +385,7 @@ async fn status_metrics_report_missing_files_as_errors_without_paths() {
     let metrics = get(&app, "/api/project/status-metrics").await;
     assert_eq!(metrics["project"]["state"], "error");
     assert_eq!(metrics["catalogue"]["state"], "error");
-    assert!(metrics["project"]["bytes"].is_null());
+    assert!(metrics["project"]["currentOnDiskBytes"].is_null());
     assert!(metrics["catalogue"]["bytes"].is_null());
     assert!(!metrics.to_string().contains(dir.path().to_str().unwrap()));
 }

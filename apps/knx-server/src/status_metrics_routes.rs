@@ -4,7 +4,7 @@ use std::{fs, io, path::Path};
 use axum::{extract::State, Json};
 use serde::Serialize;
 
-use crate::SharedState;
+use crate::{errors::ApiError, SharedState};
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -12,7 +12,7 @@ struct ProjectFileMetric {
     state: &'static str,
     project_incarnation: Option<u64>,
     snapshot_revision: Option<u64>,
-    bytes: Option<u64>,
+    current_on_disk_bytes: Option<u64>,
 }
 
 #[derive(Serialize)]
@@ -34,6 +34,7 @@ struct CatalogueMetric {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct StatusMetrics {
+    server_incarnation: String,
     project: ProjectFileMetric,
     catalogue: CatalogueMetric,
 }
@@ -46,7 +47,7 @@ fn file_bytes(path: &Path) -> io::Result<u64> {
 /// reads never open, checkpoint, vacuum or write to the database.
 fn database_bytes(path: &Path) -> io::Result<u64> {
     let mut total = file_bytes(path)?;
-    for suffix in ["-wal", "-shm"] {
+    for suffix in ["-wal", "-shm", "-journal"] {
         let mut name = path.as_os_str().to_os_string();
         name.push(suffix);
         match fs::metadata(Path::new(&name)) {
@@ -58,7 +59,15 @@ fn database_bytes(path: &Path) -> io::Result<u64> {
     Ok(total)
 }
 
-pub(crate) async fn current(State(state): State<SharedState>) -> Json<StatusMetrics> {
+pub(crate) async fn current(
+    State(state): State<SharedState>,
+) -> Result<Json<StatusMetrics>, ApiError> {
+    tokio::task::spawn_blocking(move || current_blocking(&state))
+        .await
+        .map_err(|error| ApiError::internal(error.to_string()))
+}
+
+fn current_blocking(state: &crate::AppState) -> Json<StatusMetrics> {
     // The short metadata read shares the lock that publishes a replacement or
     // save. Thus the measured path belongs to the revision in this response.
     let project = {
@@ -68,7 +77,7 @@ pub(crate) async fn current(State(state): State<SharedState>) -> Json<StatusMetr
                 state: "unavailable",
                 project_incarnation: None,
                 snapshot_revision: None,
-                bytes: None,
+                current_on_disk_bytes: None,
             }
         } else {
             let incarnation = state
@@ -83,20 +92,20 @@ pub(crate) async fn current(State(state): State<SharedState>) -> Json<StatusMetr
                     state: "notSavedYet",
                     project_incarnation: Some(incarnation),
                     snapshot_revision: Some(revision),
-                    bytes: None,
+                    current_on_disk_bytes: None,
                 },
                 Some(path) => match file_bytes(path) {
                     Ok(bytes) => ProjectFileMetric {
                         state: "available",
                         project_incarnation: Some(incarnation),
                         snapshot_revision: Some(revision),
-                        bytes: Some(bytes),
+                        current_on_disk_bytes: Some(bytes),
                     },
                     Err(_) => ProjectFileMetric {
                         state: "error",
                         project_incarnation: Some(incarnation),
                         snapshot_revision: Some(revision),
-                        bytes: None,
+                        current_on_disk_bytes: None,
                     },
                 },
             }
@@ -133,7 +142,11 @@ pub(crate) async fn current(State(state): State<SharedState>) -> Json<StatusMetr
             }
         }
     };
-    Json(StatusMetrics { project, catalogue })
+    Json(StatusMetrics {
+        server_incarnation: state.server_incarnation.clone(),
+        project,
+        catalogue,
+    })
 }
 
 #[cfg(test)]
@@ -147,8 +160,9 @@ mod tests {
         std::fs::write(&path, [0; 1_000_000]).unwrap();
         std::fs::write(dir.path().join("active.sqlite-wal"), [0; 200_000]).unwrap();
         std::fs::write(dir.path().join("active.sqlite-shm"), [0; 8_000]).unwrap();
+        std::fs::write(dir.path().join("active.sqlite-journal"), [0; 4_000]).unwrap();
         std::fs::write(dir.path().join("source.knxprod"), [0; 50_000]).unwrap();
-        assert_eq!(database_bytes(&path).unwrap(), 1_208_000);
+        assert_eq!(database_bytes(&path).unwrap(), 1_212_000);
         assert_eq!(std::fs::metadata(&path).unwrap().len(), 1_000_000);
     }
 }

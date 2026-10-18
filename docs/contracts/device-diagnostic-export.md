@@ -39,10 +39,60 @@ existing matching unchanged.
 - Project/catalogue mask and manufacturer are **assertions**. A conflicting
   observed value stops further reads (`identity-mismatch`); a descriptor that is
   not exactly read (`descriptor-unverified`) stops them as well.
-- **Memory: `not-requested`** in format 1. There is no admitted safe memory
-  profile; product source offsets are not runtime addresses.
+- **Memory: `not-requested`** in format 1. Generic product source offsets
+  are not runtime addresses; the only memory profile is the separate,
+  ProductDB-declared one [below](#profile-system2-declared-segments-v1-format-2).
 - Bounds: 3 logical reads, 30 s acquisition deadline (checked before every
   read), 10 s gateway connect, 3 s cleanups, 512 retained octets per reply.
+
+## Profile `system2-declared-segments-v1` (format 2)
+
+[ADR-0143](../adr/0143-declared-segment-memory-evidence-profile.md); offline
+and simulator only, no hardware run yet. For stage 0 of the
+[UP 258D12 goal](../goals/up258-programming-2026-10-18.md): read the memory
+ranges a System-2 application's own load procedure declares, to compare the
+ETS-programmed state offline with KNXBench's source interpretation.
+
+- **Ranges from product data only.** `knx_productdb::declared_segments`
+  requires the shape `system2::project_tool_metadata` accepts, then takes every
+  `LdCtrlAbsSegment` (address, size) in source order and the one Device Object
+  PID 78 `LdCtrlCompareProp`. It refuses whole on another shape, zero or
+  repeated PID 78 comparisons, empty inline data, a zero size, a range
+  reaching `FFFFh`, overlap, more than 8 ranges or more than 2048 octets. For
+  `M-0001_A-9205-04-9270`: `0116h`/330, `0260h`/416, `0400h`/512, `3C00h`/256,
+  1514 octets in 128 reads (public-package test).
+- **Identity first.** Connect, descriptor, PID 12, PID 78 exactly as above.
+  Mask and manufacturer assertions are required (else
+  `identity-assertion-missing` before any frame). Memory is read only if all
+  three items are `read`, descriptor and PID 12 equal the assertions and
+  PID 78 `property_matches` the comparison; otherwise `identity-mismatch` or
+  `identity-unverified` and no `A_Memory_Read` is sent.
+- **Memory.** `A_Memory_Read` of 12 octets (standard frame), one item per
+  chunk with address, requested length, status, bytes, times and error token.
+  A zero-octet answer is `refused-ambiguous` and ends its range (rest
+  `not-read`); another length is `partial`, bytes kept, and ends its range;
+  timeout, connection loss, cancellation or the 180 s deadline end the run
+  with earlier chunks kept. No retry beyond the transport ladder.
+  `T_Disconnect` is always attempted. Simulator tests assert the exhaustive
+  outgoing service set (identity reads plus in-range `A_Memory_Read` only).
+- **Archive format 2:** the four members above plus `memory.json` (profile,
+  program id, PID 78 comparison with procedure position, each range with its
+  procedure position and coverage in octets read / refused / partial / error /
+  not-read, every chunk). Manifest `notice` and README say plainly:
+  source-declared candidate locations, not proven runtime addresses; not a
+  backup and not a restore basis; device configuration, keep private.
+  `read_export` accepts formats 1 and 2 strictly, recomputes the chunk plan and
+  coverage, and refuses memory read without a verified identity;
+  `read_bundle` refuses format 2 rather than dropping its memory. Unread
+  octets are never zero-filled. Same create-only `0600` writer with reread.
+- **Entry point: CLI only.** `--profile system2-declared-segments-v1` needs
+  `--product-db`; the device's application comes from the project's
+  hardware-to-program mapping. The preview lists profile, application, the
+  ranges and total, required identity values and that nothing will be
+  written, and builds no network client. `--simulate` takes the project and
+  product database too (the simulator shows the asserted identity; its memory
+  is the simulator's). The web/HTTP entry still offers only
+  `generic-identity-v1`.
 
 ## Result per item
 
@@ -86,7 +136,8 @@ is claimed.
   host:port --output new.zip [--product-db db] [--confirm-read]`; without
   `--confirm-read` it only previews. `--simulate` uses the built-in simulator
   and never constructs a network client. Ctrl-C stops cooperatively and saves
-  the partial result. Write/key/memory flags are refused.
+  the partial result. Write/key/memory flags are refused. `--profile
+  system2-declared-segments-v1` selects the memory profile above.
 
 ## Activity history
 
@@ -114,13 +165,22 @@ forces a second tunnel. Clients outside KNXBench are not covered by the lease.
 
 Simulator only: `knx-net` `diagnostic_export` (6) and `diagnostic_export_protocol`
 (5: malformed descriptor, element-count/length mismatch, timeout, cancel during an
-unanswered read, wrong start index; exhaustive outgoing-service allowlist),
+unanswered read, wrong start index; exhaustive outgoing-service allowlist; plus 9
+for the memory profile: full coverage, each identity mismatch and an inexact
+identity read without any memory read, missing assertion before any frame,
+refused range, partial, timeout, cancel, deadline),
 deadline unit test; `knx-app` `device_diagnostics` (7: export/reread/0600/no
 overwrite/privacy, exclusion before adapter, lease, cancelled partial, corrupt
 archives, durable activity kind, free-text error refusal);
 `knx-server` `http_device_diagnostics` (5, including durable history and token
 separation); `knx-cli`
-`device_diagnostics` (2, real binary); web component/client tests; built shell in
+`device_diagnostics` (2, real binary; plus 3 for the memory profile: preview
+with a silent loopback gateway, `--simulate` end to end, refusals); memory
+profile also `knx-core` `declared_memory` (5), `knx-productdb`
+`system2_declared_segments` (4) and the ignored exact public-package test,
+`knx-app` `device_diagnostics_memory` (6: derivation, format-2 roundtrip,
+0600/no overwrite, strict refusals, format 1 unchanged, size ceiling); web
+component/client tests; built shell in
 Chromium against the real HTTP handlers and the regular simulator (EN/DE,
 1440/400 px, stop-with-partial), every downloaded ZIP independently re-verified.
 The browser proof also asserts that a clean run shows no failure banner: the

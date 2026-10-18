@@ -77,5 +77,15 @@ with explicit field selection and no network client. Synthetic and exact-package
 acceptance are recorded in the [contract](../contracts/system2-source-probe-preview.md).
 This is a completed preparation slice, not completion of the programming goal.
 Image/procedure/recovery and separately authorised hardware acquisition remain
-pending. A first write-back of identical bytes does not prove no side effects
+pending.
+
+**Stage 0 implemented offline (18 October 2026):** the read-only profile
+`system2-declared-segments-v1` derives the four declared ranges (1514 octets)
+and the PID 78 comparison from ProductDB data, reads them only after the device
+shows the asserted mask, manufacturer and hardware type, and saves them as
+archive format 2 ([ADR-0143](../adr/0143-declared-segment-memory-evidence-profile.md),
+[contract](../contracts/device-diagnostic-export.md#profile-system2-declared-segments-v1-format-2)).
+Simulator and exact-package tests only; the CLI is the sole entry point. The
+hardware run awaits the reporter's explicit read consent for the named device;
+the offline comparison of its result is separate work. A first write-back of identical bytes does not prove no side effects
 or the full download path; it needs its own scope and setup/recovery contract.

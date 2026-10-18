@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-18 22:18
+- **Completed:** CLAIM (owner request): Issue #25 and issue #26 taken by the new-issues session on `fix/issues25-26-20261018`. Read both reports and screenshots and the #17 predecessor. Scope: hide device-empty topology ranges without changing project data; resolve parameter-section captions through the existing product text-resolution path, with honest display fallbacks and preserved source metadata.
+- **Pending/Next Steps:** Reproduce each symptom with regression tests, implement bounded fixes, independent review, integrated acceptance, publish, then reply and close each verified issue.
+- **Notes for Codex oder Claude:** UI-06 is already published; this is a narrow follow-up, not a topology redesign. UI-05/table-width work and the UP258 offline/commissioning claim remain with their current owners. No table-sizing, bus, hardware, deployment or release work. Protected root checkout is not synchronized. No implementation or acceptance claimed by this reservation.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-18 21:02
 - **Completed:** UI feedback UI-02/UI-03/UI-06 DELIVERED as `bc9d73c1` (conditional push and remote/tracking equality verified). Frozen `471ca75a` passed all 16 stages (web complete/success/frozen, Rust 4,915, private corpus 153/153, Clippy, bindings and tooling); extra read-only GPT-5.6 high acceptance audit accepted without findings. Main-first integration `13510653` preserves upstream `12eb7a0f`; app/core/tooling inputs equal the accepted candidate. Delta acceptance passed build/type/Vitest (3,852), website tests (29), repository checks and tooling rerun. Initial tooling preflight lacked Node deps; it is retained as failed, not relabelled. See `.ai/logs/2026-10-18_codex_ui-feedback-wave3.md`.
 - **Pending/Next Steps:** UI-05 remains uncommitted atop `44b25b9d`. GPT-5.6 high review accepted prior N1-N5 fixes but rejected on incomplete mutation invalidation (N6), a self-referential fit-budget oracle (N7), and specialized block-padding regression (N8 minor). GPT-6.1 high correction round 7 is running with behavioral REDs, independent oracle/negative control and current screenshots required. Then independent review, whole-set review, final integration acceptance, status/handover and task-owned cleanup.

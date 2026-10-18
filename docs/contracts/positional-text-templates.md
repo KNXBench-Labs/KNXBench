@@ -17,8 +17,10 @@ decision: [ADR-0126](../adr/0126-positional-text-placeholders.md).
   headings), parameter-block captions and activated separator text (row view and
   declared-grid labels), and the documentation report's object names. One product-database
   helper applies the rule; object names go through one `knx-app` function shared
-  by the device detail and the report. Resolution runs after the translation
-  overlay, on the translated template.
+  by the device detail and the report. For object names and channel headings,
+  resolution runs after the translation overlay, on the translated template.
+  Block and separator captions use untranslated program text; the requested
+  product language does not apply a caption translation overlay.
 - **Only product texts.** An object name at the `Program`/`ProgramRef` layer is
   resolved; a name the project owns (`Instance`, `UserEdit`, `Inferred`) is
   shown exactly as stored, braces included.

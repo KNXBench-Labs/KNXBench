@@ -15,7 +15,9 @@ or protocol schema change; product database v24 adds typed presentation columns
   or a product-specific faceplate. Original labels/options/values stay unchanged;
   section captions are a read-only resolved display over preserved source metadata.
   See the [positional text contract](positional-text-templates.md#parameter-workspace-captions-issue-26)
-  for exact source references, readable fallbacks and tooltips.
+  for exact source references, readable fallbacks and tooltips. Block captions
+  use untranslated program text; changing the product language does not translate
+  them (nor separator captions).
 - Closed by default, like the other disclosures: the area register lists every
   area with its entry count, but no area opens until chosen. An explicitly
   chosen area stays open across project refreshes; newly appearing areas stay

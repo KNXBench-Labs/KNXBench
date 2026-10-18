@@ -1254,7 +1254,7 @@ function App({ manifestVersion = packageVersion, session, editorReturn = false }
   }
 
   // F1, first half. One handler on the menu's container rather than an
-  // `onClick` per item: three of the items are child components whose
+  // `onClick` per item: several of the items are child components whose
   // buttons this file does not own (`GroupAddressCsvButtons`,
   // `DocumentationExportButton`, `ProjectDiffPanel`), so a per-button
   // approach would be incomplete the day one of them grows a fourth
@@ -1262,10 +1262,9 @@ function App({ manifestVersion = packageVersion, session, editorReturn = false }
   // `Space` on a `<button>` dispatch a real `click` that bubbles here just
   // like a mouse one.
   //
-  // The one opt-out is `data-menu-stays-open`, and exactly one item wears
-  // it: `ProjectDiffPanel`'s Compare button renders its report *inside*
-  // this menu, so closing the menu on that click would hide the very
-  // thing the click asked for.
+  // The one opt-out is `data-menu-stays-open`, worn by the submenu
+  // triggers: opening a submenu is not an action. Every entry closes the
+  // menu, including `Compare with…`, whose result opens as a dialog.
   function handleFileMenuActivation(e: ReactMouseEvent<HTMLDivElement>) {
     if (!(e.target instanceof Element)) return;
     const activated = e.target.closest("button");

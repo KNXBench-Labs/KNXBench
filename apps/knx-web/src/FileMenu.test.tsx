@@ -1,6 +1,7 @@
 /** Pins the File menu's submenu behaviour: ARIA roles, keyboard paths, hover intent, placement. */
 // @vitest-environment happy-dom
 import { act, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { FileMenuContent, FileMenuItem, FileMenuSummary, FileSubmenu, useFileMenuItemProps } from "./FileMenu";
@@ -105,12 +106,12 @@ describe("File menu roles", () => {
   });
 
   it("declares entries explicitly: components and hook users are menuitems, undeclared buttons are not", async () => {
-    await mount(handlers(), <div role="group" aria-label="report"><button>Report close</button></div>);
+    await mount(handlers(), <div role="group" aria-label="stray"><button>Stray button</button></div>);
     expect(item("New project").getAttribute("role")).toBe("menuitem");
     expect(item("Export project").getAttribute("role")).toBe("menuitem");
     expect(item("Child owned").getAttribute("role")).toBe("menuitem");
-    expect(item("Report close").getAttribute("role")).toBeNull();
-    expect(item("Report close").hasAttribute("data-file-menu-item")).toBe(false);
+    expect(item("Stray button").getAttribute("role")).toBeNull();
+    expect(item("Stray button").hasAttribute("data-file-menu-item")).toBe(false);
     // Nothing tags a button behind the menu's back: a late plain button stays a plain button.
     const late = document.createElement("button");
     late.textContent = "Late";
@@ -486,12 +487,44 @@ describe("File menu focus management", () => {
     expect(e.defaultPrevented).toBe(false);
   });
 
-  it("leaves Tab alone on a control inside a report that the menu does not own", async () => {
-    await mount(handlers(), <div role="group" aria-label="report"><button>Report close</button></div>);
+  const strayControls = (
+    <div role="group" aria-label="stray">
+      <button>Stray button</button>
+      <input aria-label="Stray input" />
+      <a href="#stray">Stray link</a>
+      <span tabIndex={0}>Stray stop</span>
+      <button tabIndex={-1}>Stray programmatic</button>
+    </div>
+  );
+
+  it.each([
+    ["button", "Stray button"], ["input", "Stray input"], ["link", "Stray link"], ["tabindex stop", "Stray stop"],
+    ["programmatic stop", "Stray programmatic"],
+  ])("Tab and Shift+Tab from any focusable descendant of an open submenu close the menu (%s)", async (_kind, name) => {
+    await mount(handlers(), strayControls);
+    const find = () => [...host!.querySelectorAll<HTMLElement>("button, input, a, span")]
+      .find((el) => el.textContent === name || el.getAttribute("aria-label") === name)!;
+    for (const shiftKey of [false, true]) {
+      await act(async () => { details().open = true; await Promise.resolve(); });
+      await key(trigger("history"), "ArrowRight");
+      find().focus();
+      const e = new KeyboardEvent("keydown", { key: "Tab", shiftKey, bubbles: true, cancelable: true });
+      await act(async () => { find().dispatchEvent(e); });
+      expect(details().open).toBe(false);
+      expect(expanded("history")).toBe("false");
+      expect(document.activeElement).toBe(summary());
+      expect(e.defaultPrevented).toBe(false);
+    }
+  });
+
+  it("leaves Tab alone in a dialog a menu entry renders elsewhere in the document", async () => {
+    const dialog = createPortal(<div role="dialog"><button>Dialog button</button></div>, document.body);
+    await mount(handlers(), dialog);
     await key(trigger("history"), "ArrowRight");
-    item("Report close").focus();
+    const inDialog = document.body.querySelector<HTMLElement>('[role="dialog"] button')!;
+    inDialog.focus();
     const e = new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true });
-    await act(async () => { item("Report close").dispatchEvent(e); });
+    await act(async () => { inDialog.dispatchEvent(e); });
     expect(details().open).toBe(true);
     expect(e.defaultPrevented).toBe(false);
   });
@@ -514,18 +547,8 @@ describe("File menu focus management", () => {
     expect(document.activeElement).toBe(item("Quit"));
   });
 
-  it("Escape in a report control closes the submenu around it and returns to its opener", async () => {
-    const h = await mount(handlers(), <div role="group" aria-label="report"><button>Report close</button></div>);
-    await key(trigger("history"), "ArrowRight");
-    item("Report close").focus();
-    await key(item("Report close"), "Escape");
-    expect(expanded("history")).toBe("false");
-    expect(document.activeElement).toBe(trigger("history"));
-    expect(h.summaryEscape).not.toHaveBeenCalled();
-  });
-
   it("arrow keys skip an undeclared control inside a submenu", async () => {
-    await mount(handlers(), <div role="group" aria-label="report"><button>Report close</button></div>);
+    await mount(handlers(), <div role="group" aria-label="stray"><button>Stray button</button></div>);
     await key(trigger("history"), "ArrowRight");
     await key(document.activeElement!, "End");
     expect(document.activeElement).toBe(item("Compare with"));

@@ -33,7 +33,8 @@ const FileMenuContext = createContext<FileMenuState | null>(null);
 const MENU = '[role="menu"]';
 // Entries are declared, never guessed: `FileMenuItem` for buttons the File block owns,
 // `useFileMenuItemProps` for the one button a reused component contributes. A button without the
-// marker (a comparison report's Close, say) is content: no role, no arrow-key stop, no tab trap.
+// marker is not an entry: no role, no arrow-key stop. The menu holds entries only; anything
+// interactive (the project comparison's result, say) opens in a dialog instead.
 const ITEM = "[data-file-menu-item]";
 const ITEM_PROPS = Object.freeze({ role: "menuitem", "data-file-menu-item": "" });
 const NO_PROPS = Object.freeze({});
@@ -201,13 +202,12 @@ export function FileMenuContent({ children, onClick }: FileMenuContentProps) {
 
   function handleKeyDown(e: KeyboardEvent<HTMLDivElement>) {
     if (e.altKey || e.ctrlKey || e.metaKey || !(e.target instanceof Element)) return;
+    // React bubbles through portals: a dialog an entry renders into the document body is not the menu.
+    if (!ref.current?.contains(e.target)) return;
+    // Tab from anything inside the menu leaves it, whether or not the control is a declared entry.
+    if (e.key === "Tab") return closeMenu();
     const item = e.target.closest<HTMLElement>(ITEM);
-    // Escape also answers from a control inside a submenu that is not an entry (a report's Close).
-    const level = (item ?? (e.key === "Escape" ? e.target : null))?.closest<HTMLElement>(MENU);
-    if (e.key === "Tab") {
-      if (item) closeMenu();
-      return;
-    }
+    const level = item?.closest<HTMLElement>(MENU);
     if (!level) return;
     const submenuId = level.dataset.fileSubmenuPanel;
     const move = (pick: (items: HTMLElement[], at: number) => HTMLElement | undefined) => {
@@ -260,7 +260,7 @@ export function FileMenuContent({ children, onClick }: FileMenuContentProps) {
   }
 
   // Tab and Shift+Tab out of an open submenu into the rest of the menu close it. Focus that
-  // leaves the menu altogether (a picker, a dialog) must not: a report renders inside the panel.
+  // leaves the menu altogether (a picker, a dialog) must not.
   function handleBlur(e: FocusEvent<HTMLDivElement>) {
     const current = openRef.current;
     const next = e.relatedTarget;
@@ -333,7 +333,7 @@ interface FileSubmenuProps {
 
 /**
  * One submenu of the File menu. Its items stay mounted while it is folded (`hidden`), because
- * several of them own dialogs and a comparison report that must outlive the panel.
+ * several of them own dialogs and pickers that must outlive the panel.
  */
 export function FileSubmenu({ id, label, children }: FileSubmenuProps) {
   const menu = useContext(FileMenuContext);

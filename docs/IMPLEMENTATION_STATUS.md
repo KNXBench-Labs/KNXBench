@@ -22,12 +22,16 @@ shrink at mid widths, expand inline under the row at 650 px and below); New proj
 Open, Open (.knxdb) and Save As stay on the first level. Every entry is the original
 button with its original handler, so native/web differences, disabled states, unsaved
 change guards and dialog lifecycles are untouched; closed submenus stay mounted so an
-open comparison report or an in-flight import survives. File is a WAI-ARIA menu button:
+in-flight import or comparison survives. The menu holds declared entries only: the
+project comparison's result moved out of the History panel into its own modal dialog
+(shared `Overlay`, opened by **Compare with…**, which closes the menu like every other
+entry), with the same file choice, counts, tables and refusal text. File is a WAI-ARIA menu button:
 the control carries `aria-haspopup` and `aria-expanded`, entries are declared explicitly
 (`FileMenuItem`, `useFileMenuItemProps`; no DOM tagging), each level has one roving tab
 stop, ArrowDown/ArrowUp/Enter/Space on File open the menu onto an entry, arrows and
 Home/End move, `→`/Enter/Space open a submenu, `←`/Escape close the innermost level,
-and Tab or Shift+Tab close the whole menu and move on from File. An action that closes
+and Tab or Shift+Tab from any focusable element in the open menu close the whole menu
+and move on from File. An action that closes
 the menu rests focus on File first, so every dialog returns focus there. Open panels are
 re-placed when they grow (`ResizeObserver`); on short windows (600 px and below) the menu
 scrolls and submenus expand inline. Hover opens after 120 ms and survives a diagonal

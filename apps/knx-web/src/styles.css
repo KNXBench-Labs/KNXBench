@@ -1504,17 +1504,13 @@ main {
   font-size: inherit;
 }
 
-/* `ProjectDiffPanel` — a result panel `open`ed from a toolbar button
-   rather than docked in `.workspace` like `.log-panel`, so it gets its
-   own card frame instead of `.log-panel`'s `flex: 1 1 60%`; the empty
-   state and list otherwise follow `.log-panel-empty`/`.log-panel-list`
-   exactly. */
-.project-diff-panel {
-  margin: 0.75rem 0;
+/* `ProjectDiffPanel` — the comparison result, a modal dialog opened from the
+   File menu's History submenu. It is a `.search-panel` (shared Overlay shell);
+   the width is its own because the entity tables are wide. */
+.search-panel.project-diff-panel {
+  width: min(56rem, 94vw);
+  max-height: 82vh;
   padding: 0.75rem 1rem;
-  background: var(--knx-surface);
-  border: 1px solid var(--knx-border);
-  border-radius: var(--knx-radius-card);
 }
 
 .project-diff-panel-empty {
@@ -3154,8 +3150,6 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 }
 .file-submenu-panel[data-side="left"] { left: auto; right: calc(100% + 6px); }
 .file-submenu-panel > button, .file-submenu-panel > div { display: block; width: 100%; margin: 3px 0; }
-/* The comparison report renders inside the History submenu, so the panel must hold it. */
-.file-submenu-panel .project-diff-panel { margin: 6px 0 3px; }
 @keyframes knx-file-submenu-in { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: none; } }
 @keyframes knx-file-submenu-in-left { from { opacity: 0; transform: translateX(6px); } to { opacity: 1; transform: none; } }
 @keyframes knx-file-submenu-fade { from { opacity: 0; } to { opacity: 1; } }

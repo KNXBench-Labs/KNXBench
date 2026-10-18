@@ -71,6 +71,37 @@ acceptance remains historical, not acceptance of this replacement. No
 Firefox/WebKit/Orca/native-screen-reader, hardware or electrical-plan certification.
 Self-review is not independent approval. Preview/public-variant builds do not deploy.
 
+## Alpha 14 refresh (18 October 2026)
+
+Owner request: bring knxbench.com to Alpha 14, refresh screenshots and videos,
+and drop "no bus / no hardware" style tags. Design, root language, legal/privacy
+copy, no-tracking policy and the approved Story are unchanged.
+
+- **Release section:** four cards for the Alpha 14 highlights: the parameter
+  workspace, vendor ZIPs in the catalogue, the note decision before a delete and
+  the read-only diagnostic export; link to the `v0.1.0-alpha.14` release.
+- **Media:** hero, CRT/LCARS gallery and the four card stills are new real-app
+  captures of the tagged source (`8d104e2f`); all three videos are re-recorded on
+  Alpha 14 (two real-server clips, one flow-view clip with simulated telegrams),
+  so no video is labelled "earlier recording" any more. Provenance:
+  [capture manifest](assets/releases/alpha14/media-manifest.json) and
+  `website/media.json`; procedure in the [website README](../website/README.md#media).
+- **Caption rule:** captions, alt texts, transcripts and the Docker hint describe
+  what is shown and carry no negative tags such as "no live bus" or "no hardware";
+  a website test enforces it. Real boundaries (import scope, downloads, KNX Secure)
+  stay in the status section and in the release notes.
+- **Upgrade note:** native schema 16 unchanged, product database 24 on first open,
+  Alpha 13's code refuses the newer product database, independent backups first.
+- **Recorder upkeep:** `readme-hero.shots.ts` follows the Alpha 14 UI (folded
+  navigation, device card name, object editor summary, searchable address
+  picker); `release-media.shots.ts` captures the new scenes.
+
+Acceptance (self-review, Chromium only): website unittest 29, story unittest
+unchanged, deterministic preview and release builds; offline browser recipes on
+the preview build 588 checks in 8 recipes and on the release build 350 checks in
+3 recipes, zero page errors and zero foreign requests; every still and sampled
+video frames inspected. No native WebKitGTK, screen-reader or every-browser claim.
+
 ## Alpha 12 refresh (15 October 2026)
 
 The existing dark DE/EN design, root language, editorial voice, legal/privacy

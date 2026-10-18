@@ -87,43 +87,48 @@ Imprint acceptance recipe: `tests/verify-imprint.js`.
 
 ## Media
 
-The hero, CRT/LCARS gallery and four feature stills show the **Alpha 12
-candidate**, built from the integrated source, with the real server and fictional
-Sample house in a loopback-only namespace. The instruction frame uses a device
-created through the real wizard: the old schema-11 sample deliberately has no
-supported imported instruction source. No API successes or UI controls were
-invented. Ten PNGs (including a separate offline-preview evidence frame) and
-source/spec/server hashes live in `docs/assets/releases/alpha12/`.
-The seven public WebPs are lossless and pixel-equal to those PNGs; `media.json`
-records each source and output hash. The previous Alpha 9 capture record stays
-historical, not newly certified.
+Everything on the page shows **Alpha 14** (`v0.1.0-alpha.14`, commit `8d104e2f`):
+the hero, the CRT/LCARS gallery, four feature stills and all three videos. Stills
+and the group-details clip come from the real server and production frontend of
+the tagged source with the fictional Sample house, in a loopback-only namespace.
+The note-decision scene uses a group address created through the real in-range
+create action (every sample address is linked, so a delete would rightly be
+refused); the vendor-ZIP scene previews the fictional demo package plus a manual
+and installs nothing; the diagnostic scene stops at the read preview. Seven PNGs
+and the capture manifest (server binary, spec/config and intermediate GIF hashes)
+live in `docs/assets/releases/alpha14/`. The public WebPs are lossless and
+pixel-equal to those PNGs; `media.json` records every source and output hash.
+Earlier Alpha 9/12 capture records stay as history.
 
-Regenerate the candidate media after building the real server/frontend:
+Regenerate after building the tagged server (`cargo build -p knx-server`) and
+frontend (`npm ci && npm run build` in `apps/knx-web`), under the shared gate
+leases (`flock` on the three lock files `tools/run_web_gate.py` names):
 
 ```sh
-KNX_SERVER_BIN="$PWD/target/debug/knx-server" \
-KNX_RELEASE_MEDIA_DIR="$TMPDIR/alpha12-media" \
-KNX_RELEASE_MEDIA_ARTIFACT_DIR="$TMPDIR/alpha12-browser-artifacts" \
+# Stills + group-details.mp4
+KNX_SERVER_BIN=<target>/debug/knx-server \
+KNX_RELEASE_MEDIA_DIR="$TMPDIR/alpha14-media" \
+KNX_RELEASE_MEDIA_ARTIFACT_DIR="$TMPDIR/alpha14-browser-artifacts" \
 unshare --user --map-root-user --net sh -c \
   'ip link set lo up && cd apps/knx-web && exec npx playwright test -c playwright.release-media.config.ts'
+# project-work clip (GIF; the website MP4 plays it at 2x): same wrapper with
+#   README_HERO_GIF=<out.gif> ... -c playwright.readme-hero.config.ts
+# bus-flow clip (GIF, fixture server with simulated telegrams): same wrapper with
+#   README_FLOW_GIF=<out.gif> ... -c playwright.readme.config.ts
 ```
 
-Use the repository's shared gate leases before running alongside another session.
-The capture spec, dedicated TypeScript config and original PNGs are committed;
-failed capture attempts are retained privately, not counted as accepted runs.
-Current browser recipe: `tests/verify-release-features.js`.
+The MP4s are H.264/yuv420p, faststart, no audio, cropped to even sizes; posters
+are lossless WebPs of a decoded frame. Exact commands and hashes: the manifest.
+Current browser recipe for the release section: `tests/verify-release-features.js`.
 
-Videos remain **earlier recordings**, clearly labelled in both languages.
-`project-work.mp4` and `bus-flow.mp4` are first-loop transcodes of existing README
-recordings, not current-version or performance measurements. The former includes
-camera zoom/timing and a half-duration transcode (28.2 s); the latter is the real
-monitor component with synthetic traffic. Historical `group-details.mp4` uses a
-fully intercepted fictional API fixture. Its checks remain under
-`historicalRecording` in `media.json`. Alpha 12 copy names native16/product23,
-independent backups, old-reader refusal and actual remaining programming limits.
+**Caption rule (owner, 18 October 2026):** captions, alt texts and transcripts
+say what is shown (release, theme, fictional project, zoom/speed) and carry no
+negative tags such as "no live bus" or "no hardware".
+`test_site_copy_and_captions_carry_no_negative_disclaimer_tags` keeps it that way.
+Real scope boundaries stay in the status section and the release notes.
 
 Videos do not autoplay or loop. They have native controls, same-host posters,
 DE/EN descriptive captions and text walkthroughs. Do not silently swap in an old
-clip after a workflow change; regenerate or clearly scope its caption/provenance.
+clip after a workflow change; regenerate it or scope its caption/provenance.
 The font licence file must remain in the artifact. See `media.json` for the exact
 source and output hashes. No third-party embeds, external fonts or analytics.

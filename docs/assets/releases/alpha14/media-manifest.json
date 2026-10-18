@@ -1,0 +1,112 @@
+{
+  "schema": "knxbench-alpha14-media/1",
+  "captured_on": "2026-10-18",
+  "application_release": "v0.1.0-alpha.14",
+  "application_source_commit": "8d104e2f91cf7f29fa9bdbf146a9e75e80ba72d1",
+  "knx_server_version": "knx-server 0.1.0-alpha.14+g8d104e2f",
+  "server_binary_sha256": "0f6b5bf1591d64e270f6a7b2169269edcd6edd7fe933448a3d645562eadd2330",
+  "frontend": "production build (npm ci && npm run build) of the tagged source",
+  "network": "isolated loopback-only user/network namespace (only interface: lo)",
+  "data": "fictional schema-11 Sample house (tools/manual_sample_project.py); fictional demo product package; documentation gateway address 192.0.2.10 for the diagnostic-read preview only",
+  "captures": {
+    "stills_and_group_details_clip": {
+      "spec": {
+        "path": "apps/knx-web/e2e/release-media.shots.ts",
+        "sha256": "e0d3416e7c0e6988793d9b8688f282158b6191d232b0507735b03faf6d33499a"
+      },
+      "config": {
+        "path": "apps/knx-web/playwright.release-media.config.ts",
+        "sha256": "3c0e8562064c37fb071a84ca2d8f515b2796626e166cd7d3c1ed2d0f1f97b45d"
+      },
+      "result": {
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0
+      },
+      "server": "actual knx-server; no application response replaced",
+      "refused_requests_asserted_absent": "support diagnose/export, device-diagnostics start/export, device download/address start, catalogue install/apply"
+    },
+    "project_work_clip": {
+      "spec": {
+        "path": "apps/knx-web/e2e/readme-hero.shots.ts",
+        "sha256": "8ce4e6e7a791ea10b82a40b0d56500d00e55801b26744676f23c376b5852348c"
+      },
+      "config": {
+        "path": "apps/knx-web/playwright.readme-hero.config.ts",
+        "sha256": "3d7df05efef06592b3d41d60411ad17b60b9a31c9a24f72b0c40c90d9ea2763e"
+      },
+      "result": {
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0
+      },
+      "server": "actual knx-server",
+      "intermediate_gif_sha256": "80b6e9d42d18e0c287ead4ef3d33cf0cf7f500772701d2c049b0f93f33a7a964",
+      "post_production": "recorder's own camera zoom; GIF at 1.00x (57.7 s), website MP4 at 2x speed"
+    },
+    "bus_flow_clip": {
+      "spec": {
+        "path": "apps/knx-web/e2e/readme-flow.shots.ts",
+        "sha256": "1be8b3662f9f40b48964ad4b1f9c1124a1b96c6100bd9a2fa8d35e2e6db546c9"
+      },
+      "config": {
+        "path": "apps/knx-web/playwright.readme.config.ts",
+        "sha256": "208bd08102dc53879f692f1f6a7492cd07fe3804ca6057987fbd06d69ca1fb63"
+      },
+      "result": {
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0
+      },
+      "server": "fixture Vite server of the tagged frontend; real flow-view component with simulated telegrams",
+      "intermediate_gif_sha256": "163cc42dc3c945322de727e6d0b2d5d86516aaf4eb926a484e5ae0d01f67b4e6"
+    }
+  },
+  "source_frozen": true,
+  "spec_changes": "release-media.shots.ts rewritten for Alpha 14 scenes; readme-hero.shots.ts follows Alpha 14 UI (folded navigation, device card name, object editor summary, searchable address picker). Application source unchanged.",
+  "visual_review": "all seven stills and sampled frames of all three clips inspected; no native WebKitGTK certification",
+  "assets": {
+    "graphite-addresses.png": {
+      "sha256": "86f83e90ab56dddda3b51cef514b2b1122bf8fc2ae6188d4da4f89c9704ae834",
+      "bytes": 184390,
+      "width": 1440,
+      "height": 1080
+    },
+    "graphite-parameters.png": {
+      "sha256": "769b6f566c11181614997f9bf0795e3e22b8e6d06360b4c6f3675beabb7b66b2",
+      "bytes": 170276,
+      "width": 1440,
+      "height": 1080
+    },
+    "graphite-note-decision.png": {
+      "sha256": "1ec0adf38bf10b9908ac4288fb7f86e0fd44381f4ebbfb18ff7a5e1ea7f67187",
+      "bytes": 181106,
+      "width": 1440,
+      "height": 1080
+    },
+    "graphite-vendor-zip.png": {
+      "sha256": "40ab8e1a9e9b8352bf581511e7abeb59bcdd5c38563ef1180c9ea4a6c2948e66",
+      "bytes": 225653,
+      "width": 1440,
+      "height": 1080
+    },
+    "graphite-diagnostics.png": {
+      "sha256": "74408e3649a3d9e4c8151e5f248ec45ab226722e2575d58f1a0b56b1f0f8fd21",
+      "bytes": 182109,
+      "width": 1440,
+      "height": 1080
+    },
+    "lcars-addresses.png": {
+      "sha256": "ef3c99afe22300a72c3d7813377d5f4e8042797864af93f3d58526d084805795",
+      "bytes": 195104,
+      "width": 1440,
+      "height": 1080
+    },
+    "user-modern-retro-green-crt-addresses.png": {
+      "sha256": "9d902cb96a0fd1d895b82eec7301449c02c39493e3bdf9a40616f8012b263041",
+      "bytes": 222854,
+      "width": 1440,
+      "height": 1080
+    }
+  }
+}

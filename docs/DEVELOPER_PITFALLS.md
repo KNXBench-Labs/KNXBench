@@ -176,6 +176,15 @@ already found lying in the grass.
 
 ## Web app
 
+- **The built-server native specs are outside the web gate.** `rename`,
+  `functions` and `name-recipe` (`*.native.ts`) run only through
+  `tools/verify_name_editing.py --spec`, so a change to disclosure defaults or
+  the open flow can leave them red until a release gate. Run all three after
+  such a change. Open helpers there wait for `POST /api/project/open` itself:
+  after a reload the welcome card is already gone, and a late open resets a
+  selection made in the meantime. A narrow layout remounts the navigation pane
+  with its sections folded again.
+
 - **Keep the central Chromium temp guard in every Playwright config.**
   `browserTmp.ts` and standalone Node launchers load `tools/browser_tmp.cjs`,
   which delegates allocation to `tools/browser_tmp.py`. The allocator budgets

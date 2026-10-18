@@ -267,6 +267,29 @@ fn duplicate_tables_are_refused() {
 }
 
 #[test]
+fn table_names_that_differ_only_in_case_are_duplicates() {
+    // Lookup ignores ASCII case, so two such tables would be ambiguous.
+    let twin = MINIMAL.replace("XXX", "-----\nT 4 MANUFACTURER\nC1 T4 1 4 N ID\nXXX");
+    let (_, reason) = syntax_line(parse_exim(&payload(&twin)));
+    assert!(reason.contains("duplicate table"), "{reason}");
+}
+
+#[test]
+fn a_table_is_found_whatever_the_case_of_its_declared_name() {
+    // Replaces the table line and the row line alike.
+    let upper = MINIMAL.replace("T 3 manufacturer", "T 3 MANUFACTURER");
+    let document = parse_exim(&payload(&upper)).unwrap();
+    let table = document
+        .table("manufacturer")
+        .expect("found by its lower-case name");
+    assert_eq!(
+        table.name(),
+        "MANUFACTURER",
+        "the declared spelling is kept"
+    );
+}
+
+#[test]
 fn a_table_without_columns_is_refused() {
     let text = MINIMAL.replace("XXX", "-----\nT 4 empty\nXXX");
     syntax_line(parse_exim(&payload(&text)));

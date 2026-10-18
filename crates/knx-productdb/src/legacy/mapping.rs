@@ -613,7 +613,11 @@ pub fn map_legacy_database(
     let mut diagnostics = Vec::new();
 
     for table in document.tables() {
-        if table.row_count() > 0 && !MAPPED_TABLES.contains(&table.name()) {
+        if table.row_count() > 0
+            && !MAPPED_TABLES
+                .iter()
+                .any(|mapped| mapped.eq_ignore_ascii_case(table.name()))
+        {
             diagnostics.push(MappingDiagnostic::UnmappedTable {
                 name: table.name().to_string(),
                 rows: table.row_count(),

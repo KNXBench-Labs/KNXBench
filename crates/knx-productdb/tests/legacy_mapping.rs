@@ -561,6 +561,75 @@ fn unmodelled_tables_are_reported_with_their_row_counts() {
     )));
 }
 
+/// The marvin payload with every table name upper-cased in its `T` and `R`
+/// record lines, as two measured EX-IM 6.3 product databases write them.
+fn upper_case_table_names(payload: &[u8]) -> Vec<u8> {
+    let text = std::str::from_utf8(payload).expect("the synthetic fixture is ASCII");
+    let mut names = std::collections::BTreeSet::new();
+    for line in text.split("\r\n") {
+        let fields: Vec<&str> = line.split(' ').collect();
+        if let ["T", id, name] = fields.as_slice() {
+            if id.bytes().all(|b| b.is_ascii_digit()) {
+                names.insert(name.to_string());
+            }
+        }
+    }
+    let lines: Vec<String> = text
+        .split("\r\n")
+        .map(|line| {
+            let fields: Vec<&str> = line.split(' ').collect();
+            match fields.as_slice() {
+                ["T", id, name] if names.contains(*name) => {
+                    format!("T {id} {}", name.to_ascii_uppercase())
+                }
+                ["R", n, "T", id, name] if names.contains(*name) => {
+                    format!("R {n} T {id} {}", name.to_ascii_uppercase())
+                }
+                _ => line.to_string(),
+            }
+        })
+        .collect();
+    lines.join("\r\n").into_bytes()
+}
+
+#[test]
+fn upper_case_table_names_map_like_lower_case_ones() {
+    let bytes = fixture("marvin-program-plain.vd4");
+    let payload = read_legacy_member(&bytes)
+        .unwrap()
+        .open_unencrypted()
+        .unwrap();
+    let upper = upper_case_table_names(payload.bytes());
+    assert_ne!(upper, payload.bytes(), "the rewrite changed nothing");
+
+    let document = parse_exim(&upper).unwrap();
+    assert!(document
+        .tables()
+        .iter()
+        .any(|t| t.name() == "APPLICATION_PROGRAM"));
+    let mapped = map_legacy_database(&document, &sha256_hex(&upper)).unwrap();
+    let (reference, _) = mapping();
+
+    assert_eq!(mapped.programs.len(), reference.programs.len());
+    for (a, b) in mapped.programs.iter().zip(&reference.programs) {
+        assert_eq!(a.parameters.len(), b.parameters.len());
+        assert_eq!(a.parameter_refs.len(), b.parameter_refs.len());
+        assert_eq!(a.com_objects.len(), b.com_objects.len());
+    }
+    let unmapped = |m: &LegacyMapping| -> Vec<(String, usize)> {
+        m.diagnostics
+            .iter()
+            .filter_map(|d| match d {
+                MappingDiagnostic::UnmappedTable { name, rows } => {
+                    Some((name.to_ascii_lowercase(), *rows))
+                }
+                _ => None,
+            })
+            .collect()
+    };
+    assert_eq!(unmapped(&mapped), unmapped(&reference));
+}
+
 #[test]
 fn mapping_is_deterministic() {
     let (a, _) = mapping();

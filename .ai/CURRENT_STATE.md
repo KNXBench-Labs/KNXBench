@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-18 22:23
+- **Completed:** Planning-only reconciliation of apparently open KL/tasks: audited 195 catalogue keys and 208 ledger IDs at `961502d6`, routed all 17 non-terminal IDs once, and added WP-01–WP-17 with scope, dependencies, entry gates and acceptance in `docs/OPEN_WORK.md`. Public routing receipt `docs/evidence/open-work-packages-2026-10-18.json`; corrected stale open-work absence/bounds/status prose, no ledger changes. Confirmed three additional concrete residues: web nodeChain adoption, empty-directory ZIP integrity, master identity provenance. Documentation 0 errors; anchors 1,544 none dead; ledger/headers/layering/corpus-gate structure pass; tooling 223 tests OK (one existing skip); fresh xtask build and routing/source-path/whitespace checks pass.
+- **Pending/Next Steps:** Scoped documentation delivery and final post-integration gates/readback. This request prepares packages only, starts no product implementation. Ready priorities WP-16/WP-01, then WP-17 and serialized product-data migrations; WP-15 after UI-owner coordination. Evidence/decision-gated packages retain their exact lift conditions.
+- **Notes for Codex oder Claude:** Preserve active UI-05/final integration and exact UP258 work. New reservation `ddd22362` also owns issues #25/#26 (empty topology and parameter-section captions): WP-05 caption work is not unclaimed; coordinate WP-15. Root remains dirty/behind and intentionally untouched. No product tests, KNX conformance claim, bus/device/vendor contact, deployment or release. Log `.ai/logs/2026-10-18_codex_open-work-reconciliation.md`.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-18 22:18
 - **Completed:** CLAIM (owner request): Issue #25 and issue #26 taken by the new-issues session on `fix/issues25-26-20261018`. Read both reports and screenshots and the #17 predecessor. Scope: hide device-empty topology ranges without changing project data; resolve parameter-section captions through the existing product text-resolution path, with honest display fallbacks and preserved source metadata.
 - **Pending/Next Steps:** Reproduce each symptom with regression tests, implement bounded fixes, independent review, integrated acceptance, publish, then reply and close each verified issue.

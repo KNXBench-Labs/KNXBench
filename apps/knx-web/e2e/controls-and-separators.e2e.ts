@@ -5,6 +5,7 @@ import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
 import { dismissToasts, intercept, openList, openProject as openCommunicationProject } from "./communication-fixture";
 import { separatorLine } from "./control-roles";
+import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 
 const THEMES = ["porcelain", "graphite", "cupertino", "lcars", "user-modern-retro-green-crt"] as const;
 type Catalogue = { readonly [K in keyof typeof en]: string };
@@ -43,6 +44,7 @@ async function serve(page: Page, { theme = "porcelain", motionLevel = "standard"
     }
     if (path === "/api/project/new" && method === "POST") { await created; projectOpen = true; return ok(tree); }
     if (path === "/api/bus/discover" && method === "POST") return ok({ interfaces: [] });
+    if (path === "/api/project/status-metrics" && method === "GET") return ok(statusMetricsFixtureBody(projectOpen ? tree : null));
     if (method === "GET" && ["/api/product-languages", "/api/catalog/manufacturers", "/api/catalog/items"].includes(path)) return ok([]);
     unexpected.push(`${method} ${path}`);
     return route.fulfill({ status: 404, contentType: "application/json", body: '{"error":"controls fixture only"}' });

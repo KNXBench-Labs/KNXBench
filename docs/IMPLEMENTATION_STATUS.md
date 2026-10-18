@@ -12,6 +12,19 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Docker frontend stage sees the shared temp helper (18 October 2026)
+
+The Alpha 14 Docker dry run failed on both architectures: since the shared
+Chromium temp helper moved to `tools/browser_tmp.cjs` (17 October), the web
+build's typecheck reaches it, and the image's frontend stage copied only
+`apps/knx-web`. The stage now mirrors the repository layout and copies the
+helper and its declaration; the runtime takes `dist` from the new place.
+`tools/tests/test_docker_frontend_context.py` checks every relative import that
+leaves the app against the stage's `COPY` lines (positive control on the known
+helper; mutants without the helper or its declaration fail). A local
+`docker build --target frontend` produced `dist/index.html`. Alpha 13's image
+was not affected.
+
 ## Packed time units, row indentation and object size (18 October 2026)
 
 Census steps 3 and 4 (first part). **Packed time:** `chooseParameterEditor`

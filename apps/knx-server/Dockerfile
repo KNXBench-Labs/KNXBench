@@ -1,9 +1,12 @@
 # syntax=docker/dockerfile:1
 
 FROM node:22-alpine AS frontend
-WORKDIR /src
+# Mirror the repository layout: the web build's typecheck reaches the shared
+# Playwright temp helper in tools/ (tools/tests/test_docker_frontend_context.py).
+WORKDIR /src/apps/knx-web
 COPY apps/knx-web/package.json apps/knx-web/package-lock.json ./
 RUN npm ci
+COPY tools/browser_tmp.cjs tools/browser_tmp.d.cts /src/tools/
 COPY apps/knx-web/ ./
 RUN npm run build
 
@@ -21,7 +24,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=backend /src/target/release/knx-server /usr/local/bin/knx-server
-COPY --from=frontend /src/dist /app/frontend
+COPY --from=frontend /src/apps/knx-web/dist /app/frontend
 ENV KNX_STATIC_DIR=/app/frontend
 ENV KNX_DATA_DIR=/data
 # The product database (application programs, ~/.local/share/knx/products.sqlite

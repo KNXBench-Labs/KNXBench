@@ -150,6 +150,16 @@ already found lying in the grass.
   count.** Convert such statements to named columns when a migration adds
   columns.
 
+## Docker image
+
+- **The image's frontend stage sees only the files it copies.** `npm run build`
+  typechecks `apps/knx-web`, and `src/fixtureServer.test.ts` imports the
+  Playwright config, which reaches `tools/browser_tmp.cjs`. A web build that
+  works in the checkout can therefore fail only in `docker build`. The stage
+  mirrors the repository layout (`/src/apps/knx-web`, helpers in `/src/tools`);
+  `tools/tests/test_docker_frontend_context.py` fails when an app file imports
+  a repository file the stage does not copy beside it.
+
 ## Desktop app
 
 - **An unpackaged release `knx-desktop` finds its UI only below a folder named

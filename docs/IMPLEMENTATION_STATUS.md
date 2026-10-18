@@ -19,8 +19,10 @@ memory ranges a System-2 application's load procedure declares from the
 product database (UP 258D12: four ranges, 1514 octets), reads them with
 `A_Memory_Read` only after the device shows the asserted mask, manufacturer and
 hardware type, and saves archive format 2 with per-chunk items and per-range
-coverage. Format 1 is unchanged. Simulator, built-CLI and exact-package tests
-only; no hardware run, write or web entry.
+coverage. Format 1 is unchanged. The plan is opaque (ProductDB-derived only),
+and the strict reader re-checks identity admission, chunk order and stop reason
+and refuses duplicate ZIP entries from the raw central directory. Simulator,
+built-CLI and exact-package tests only; no hardware run, write or web entry.
 [ADR-0143](adr/0143-declared-segment-memory-evidence-profile.md),
 [contract](contracts/device-diagnostic-export.md#profile-system2-declared-segments-v1-format-2).
 

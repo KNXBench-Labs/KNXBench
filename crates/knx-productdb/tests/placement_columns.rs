@@ -35,6 +35,7 @@ pub const PROGRAM: &[u8] = br#"<KNX xmlns="http://knx.org/xml/project/20"><Manuf
 </Union>
 </Parameters>
 <ParameterRefs><ParameterRef Id="P-1_R-1" RefId="P-1"/></ParameterRefs>
+<Property ObjectIndex="1" PropertyId="12" Offset="3" BitOffset="0" Occurrence="1"/>
 </Static>
 </ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
 
@@ -143,6 +144,8 @@ fn only_what_no_column_stores_is_reported() {
     assert_eq!(
         static_unknowns(&conn),
         [
+            // A `Property` that places no parameter stays unmodelled.
+            row("", "Element", "Property", 1, None),
             row(
                 "/ParameterTypes/ParameterType/TypeRestriction/Enumeration",
                 "Attribute",
@@ -157,6 +160,11 @@ fn only_what_no_column_stores_is_reported() {
                 1,
                 Some("x51"),
             ),
+            row("/Property", "Attribute", "BitOffset", 1, Some("0")),
+            row("/Property", "Attribute", "ObjectIndex", 1, Some("1")),
+            row("/Property", "Attribute", "Occurrence", 1, Some("1")),
+            row("/Property", "Attribute", "Offset", 1, Some("3")),
+            row("/Property", "Attribute", "PropertyId", 1, Some("12")),
         ]
     );
 }

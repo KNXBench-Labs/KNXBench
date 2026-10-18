@@ -323,8 +323,19 @@ struct Retired {
     kind: crate::report::UnknownKind,
     /// The unqualified name.
     name: &'static str,
-    /// Element names (last xpath step) whose rows retire.
+    /// The xpath suffixes whose rows retire: one element name (the last step)
+    /// or several steps (`Parameter/Property`).
     hosts: &'static [&'static str],
+}
+
+impl Retired {
+    fn retires(&self, xpath: &str) -> bool {
+        self.hosts.iter().any(|host| {
+            xpath
+                .strip_suffix(host)
+                .is_some_and(|parent| parent.ends_with('/'))
+        })
+    }
 }
 
 /// What a schema step stops reporting because it gained columns: the shared
@@ -418,8 +429,9 @@ fn migrate_v23_to_v24(conn: &Connection) -> Result<(), ProductDbError> {
 const PARAMETER_HOST: [&str; 1] = ["Parameter"];
 /// The parents a stored `Property` placement sits directly in.
 const PROPERTY_PARENTS: [&str; 2] = ["Parameter", "Union"];
-/// The element a `Property` placement's attributes sit on.
-const PROPERTY_HOST: [&str; 1] = ["Property"];
+/// The element a `Property` placement's attributes sit on, only where it
+/// places a parameter or a union; any other `Property` stays reported.
+const PROPERTY_HOST: [&str; 2] = ["Parameter/Property", "Union/Property"];
 
 const PLACEMENT_PROMOTION: Promotion = Promotion {
     version: "v25",
@@ -806,12 +818,7 @@ fn retire_promoted_unknowns(
             })?
             .collect::<Result<Vec<_>, _>>()?
             .into_iter()
-            .filter(|xpath| {
-                xpath
-                    .rsplit('/')
-                    .next()
-                    .is_some_and(|host| retired.hosts.contains(&host))
-            })
+            .filter(|xpath| retired.retires(xpath))
             .collect();
         for xpath in xpaths {
             conn.execute(

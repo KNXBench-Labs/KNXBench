@@ -12,6 +12,18 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Read-only declared-segment memory evidence, UP258 stage 0 (18 October 2026)
+
+`knx device diagnostics --profile system2-declared-segments-v1` derives the
+memory ranges a System-2 application's load procedure declares from the
+product database (UP 258D12: four ranges, 1514 octets), reads them with
+`A_Memory_Read` only after the device shows the asserted mask, manufacturer and
+hardware type, and saves archive format 2 with per-chunk items and per-range
+coverage. Format 1 is unchanged. Simulator, built-CLI and exact-package tests
+only; no hardware run, write or web entry.
+[ADR-0143](adr/0143-declared-segment-memory-evidence-profile.md),
+[contract](contracts/device-diagnostic-export.md#profile-system2-declared-segments-v1-format-2).
+
 ## Offline System-2 source-field preview (18 October 2026)
 
 The existing byte-order probe now supports an offline preview and a distinct

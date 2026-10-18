@@ -651,12 +651,37 @@ rules (plan first, a device-specific phrase, a backup before any write):
 | --- | --- |
 | `knx device readiness` | Offline: for every project device, whether a download is verified, untested, unsupported, excluded or has no address. Sends nothing |
 | `knx device compare` | Read only: reads what a download would write and lists every difference from the project |
-| `knx device diagnostics` | Read only: exports descriptor, manufacturer ID and hardware type of one project device (`--device-id`) to a new local ZIP; previews unless `--confirm-read`; `--simulate` needs no interface ([contract](../../contracts/device-diagnostic-export.md)) |
+| `knx device diagnostics` | Read only: exports descriptor, manufacturer ID and hardware type of one project device (`--device-id`) to a new local ZIP; previews unless `--confirm-read`; `--simulate` needs no interface; `--profile system2-declared-segments-v1` adds the memory ranges the application declares (see below; [contract](../../contracts/device-diagnostic-export.md)) |
 | `knx device byte-order-probe` | Read only: for a device ETS programmed, says whether it holds its multi-octet parameter values high or low octet first (see below) |
 | `knx device restore` | Writes a backup file back through the same load procedure, after backing up the current state |
 | `knx device find-serial` | Read only: which address has a serial number, or which serial number a device has |
 | `knx device service-control` | Reads, and after a backup changes, the Individual Address Write Enable bit |
 | `knx device reset-address`, `knx device address-by-serial` | Plan only today: confirmed writes are refused before a tunnel opens, like `program-address` below |
+
+### `knx device diagnostics --profile system2-declared-segments-v1` — declared memory, read only
+
+```bash
+knx device diagnostics --profile system2-declared-segments-v1 --project house.knxdb \
+  --device-id 12 --product-db products.sqlite --gateway 192.0.2.1:3671 --output up258.zip
+```
+
+For a System-2 device (today: an application with exactly one product load
+procedure, such as the Siemens UP 258D12) this reads the memory ranges the
+application's own load procedure declares, so its ETS-programmed state can be
+compared offline. The ranges come only from the product database; nothing is
+typed in. Without `--confirm-read` the command only prints the plan: the ranges
+with sizes and total octets, the identity the device must show first (mask,
+manufacturer, hardware type) and that nothing will be written. No network
+connection is made for the preview. Add `--confirm-read` to read; `--simulate`
+instead of `--gateway` runs the same plan against the built-in simulator.
+
+Memory is read only after the device shows exactly the expected identity;
+otherwise the ZIP records why and holds no memory. Unread or refused octets are
+listed as such, never as zeros. The ranges are source-declared candidate
+locations, not proven runtime addresses. The ZIP is **not a backup and not a
+restore basis**, and it contains device configuration: keep it private. The
+web export still offers only the identity profile.
+([ADR-0143](../../adr/0143-declared-segment-memory-evidence-profile.md))
 
 ### `knx device byte-order-probe` — help settle a little-endian device
 

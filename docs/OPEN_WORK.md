@@ -539,7 +539,7 @@ bases from [COMMIT_MAP_2026-10-17](history/COMMIT_MAP_2026-10-17.txt). Not
 [the maintainer's house](research/2026-10-18-house-device-diagnostics.md)): three refused
 PID78 with zero elements, two System-1 sensors ended the connection, one
 connection was rejected; the owner reports the house working normally
-afterwards. Still open: a fully silent device; any memory profile only with its own evidence and decision (ADR-0134).
+afterwards. Still open: a fully silent device; any memory profile only with its own evidence and decision (ADR-0134; the one admitted so far is ADR-0143's below).
 
 ## Exact Siemens UP 258D12 programming work (18 October 2026)
 
@@ -548,6 +548,11 @@ Owner-authorised offline work through the hardware boundary is tracked in the
 [source-field preview](contracts/system2-source-probe-preview.md) is available;
 it is not a memory read or programming unlock. Remaining image/procedure and
 recovery dependencies stay explicit; the reporter approves each hardware step.
+Stage 0 of the write ladder is implemented offline: the read-only, ProductDB-
+derived `system2-declared-segments-v1` diagnostic profile
+([ADR-0143](adr/0143-declared-segment-memory-evidence-profile.md), CLI only,
+simulator-tested). Open: the reporter's consented run on the device, the offline
+comparison of its result, and a web entry (UI owner).
 
 ## System 2 / System B download outcome (17 October 2026)
 

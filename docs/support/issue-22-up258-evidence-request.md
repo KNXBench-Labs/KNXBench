@@ -105,3 +105,49 @@ facts, **not** complete allocator recovery or all parameter/Union semantics.
 We will still have to finish and test the complete image, all 21 source positions
 and identity-bound recovery before proposing any KNXBench device download.
 Issue #22 stays open; the detector does not get volunteered as a crash-test dummy. 🙂
+
+---
+
+## Stage 0 request: declared memory, read only (draft, 18 October 2026)
+
+**Draft only, not posted and not sent.** It needs a source build that contains
+[ADR-0143](../adr/0143-declared-segment-memory-evidence-profile.md); no release
+carries it yet. Send only after the maintainer has confirmed the build.
+
+---
+
+Hi @thengsty — thank you again for the diagnostic export of your UP 258D12; it
+answered exactly as its application expects. If you are willing, one more
+**read-only** export would let us compare your ETS-programmed detector with how
+KNXBench reads the application, offline and without touching the device again.
+
+With the same project, device and interface as last time, plus a product
+database that contains the public UP 258D12 package:
+
+```bash
+knx device diagnostics --profile system2-declared-segments-v1 \
+  --project <your-project.knxdb> --device-id <device id of the detector> \
+  --product-db <products.sqlite> --gateway <interface-ip>:3671 \
+  --output up258-memory.zip
+```
+
+This first prints only the plan and contacts nothing. Please check that it
+lists four ranges — `0116h` 330, `0260h` 416, `0400h` 512 and `3C00h` 256
+octets, 1514 in total — and asks for mask `0025h`, manufacturer `0001h`.
+If it does, run the same command again with `--confirm-read` added.
+
+- **What is read:** the identity values from last time, then — only if the
+  detector shows exactly that identity — those four memory ranges, 12 octets
+  per request.
+- **What is not read:** keys, passwords, serial number, any other memory, any
+  other device. No project or address goes into the ZIP.
+- **It writes nothing:** no programming, no authorisation, no restart, no
+  parameter or memory write. If the detector refuses a range, the ZIP records
+  the refusal; nothing is retried.
+- **Privacy:** the ZIP contains your detector's configuration. Please do not
+  attach it to the public issue; send it by email to `issue@knxbench.com`.
+  It is not a backup and cannot be used to restore the device.
+
+A short reply is enough: whether the run finished, and the ZIP by email. If
+the plan shows anything other than the four ranges above, please stop and tell
+us instead. Thank you! 🙂

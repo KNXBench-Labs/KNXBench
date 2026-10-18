@@ -47,6 +47,11 @@ Astra families.
 
 Whole-set review after UI-06: Codex CLI, `gpt-6.1-sol`, xhigh.
 
+State (18 October, evening): UI-01 and UI-04 delivered (merge `fd1f69ee`, full
+gate green); UI-02 and UI-05 accepted after review rounds; UI-03 and UI-06 in
+review. Waves overlapped: UI-03 and UI-05 started on the UI-02 branch and
+UI-06 on its first fix round, so no package waited for a gate.
+
 ## Checked starting point
 
 Read the handover, architecture, implementation index and OPEN_WORK before

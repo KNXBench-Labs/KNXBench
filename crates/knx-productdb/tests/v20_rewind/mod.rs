@@ -8,11 +8,46 @@
 
 use rusqlite::Connection;
 
-/// Removes the schema-v24 `access` and `ui_hint` columns (ADR-0139), so that
-/// `migrate_v23_to_v24` finds no column already there. Only the columns: a
-/// rewind that needs a genuine v23 report uses `v23_rewind::rewind_to_v23`.
+/// Removes the schema-v25 placement and enumeration columns, so that
+/// `migrate_v24_to_v25` finds no column already there. Only the columns: a
+/// rewind that needs a genuine v24 report uses `v24_rewind::rewind_to_v24`.
+#[allow(dead_code)]
+pub fn drop_v25_objects(conn: &Connection) {
+    for (table, column) in [
+        ("parameter", "own_offset"),
+        ("parameter", "own_bit_offset"),
+        ("parameter", "property_object_index"),
+        ("parameter", "property_object_type"),
+        ("parameter", "property_id"),
+        ("parameter", "property_offset"),
+        ("parameter", "property_bit_offset"),
+        ("parameter", "property_occurrence"),
+        ("parameter_type_enum", "binary_value"),
+        ("parameter_type_enum", "name"),
+        ("parameter_type_enum", "icon"),
+        ("parameter_type_enum", "picture_alignment"),
+    ] {
+        let present: bool = conn
+            .query_row(
+                "SELECT EXISTS(SELECT 1 FROM pragma_table_info(?1) WHERE name = ?2)",
+                [table, column],
+                |r| r.get(0),
+            )
+            .unwrap();
+        if present {
+            conn.execute_batch(&format!("ALTER TABLE {table} DROP COLUMN {column};"))
+                .unwrap();
+        }
+    }
+}
+
+/// Removes the schema-v24 `access` and `ui_hint` columns (ADR-0139), and the
+/// newer ones first, so that `migrate_v23_to_v24` finds no column already
+/// there. Only the columns: a rewind that needs a genuine v23 report uses
+/// `v23_rewind::rewind_to_v23`.
 #[allow(dead_code)]
 pub fn drop_v24_objects(conn: &Connection) {
+    drop_v25_objects(conn);
     for column in ["access", "ui_hint"] {
         let present: bool = conn
             .query_row(

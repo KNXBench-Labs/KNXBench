@@ -370,8 +370,9 @@ fn v18_upgrade_rederives_source_fields_without_rewriting_the_measured_zero_insta
     assert_eq!(retry.translations, historical.translations);
     // The AR05 Languages rederivation is v19; v20 (ADR-0080), v21
     // (ADR-0081), v22 (ADR-0094, additive tables), v23 (ADR-0126, two
-    // columns) and v24 (ADR-0139, two columns) keep it.
-    assert_eq!(knx_productdb::CURRENT_PRODUCTDB_VERSION, 24);
+    // columns), v24 (ADR-0139, two columns) and v25 (census 3, placement and
+    // enumeration columns) keep it.
+    assert_eq!(knx_productdb::CURRENT_PRODUCTDB_VERSION, 25);
 }
 
 #[test]

@@ -147,3 +147,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0138](0138-notes-get-an-explicit-decision-before-a-delete.md) | Notes get an explicit decision before a delete or a selective import | Accepted | 2026-10-17 |
 | [0139](0139-block-access-and-separators-reach-the-parameter-tab.md) | Block access and separators reach the parameter tab | Accepted | 2026-10-17 |
 | [0140](0140-vendor-zips-of-product-packages-install-as-a-whole.md) | Vendor ZIPs of product packages install as a whole | Accepted | 2026-10-18 |
+| [0141](0141-placements-and-enumeration-attributes-reach-columns.md) | Placements and enumeration attributes reach columns; the report names the rest | Accepted | 2026-10-18 |

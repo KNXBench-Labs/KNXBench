@@ -2096,13 +2096,27 @@ pub(crate) fn retire_report_unknowns(
     xpaths: &[&str],
     name: &str,
 ) -> Result<Result<(), ReportNotUpgradable>, ProductDbError> {
+    let keys: Vec<_> = xpaths
+        .iter()
+        .map(|xpath| (*xpath, crate::report::UnknownKind::Attribute, name))
+        .collect();
+    retire_report_rows(conn, sha256, &keys)
+}
+
+/// `retire_report_unknowns` for any mix of row keys `(xpath, kind, name)`:
+/// element rows as well as attribute rows (v25).
+pub(crate) fn retire_report_rows(
+    conn: &Connection,
+    sha256: &str,
+    keys: &[(&str, crate::report::UnknownKind, &str)],
+) -> Result<Result<(), ReportNotUpgradable>, ProductDbError> {
     let Some(mut facts) = load_facts_unvalidated(conn, sha256)? else {
         return Ok(Ok(()));
     };
     facts.unknown_constructs.retain(|unknown| {
-        !(unknown.kind == crate::report::UnknownKind::Attribute
-            && unknown.name == name
-            && xpaths.contains(&unknown.xpath.as_str()))
+        !keys.iter().any(|(xpath, kind, name)| {
+            unknown.kind == *kind && unknown.name == *name && unknown.xpath == *xpath
+        })
     });
     facts
         .counts

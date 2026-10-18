@@ -59,10 +59,11 @@ const PROGRAM_ATTRS: &[&str] = &[
 ];
 
 /// The `Parameter` attributes the `parameter` row stores. Every other one
-/// (`SuffixText`, `InitialValue`, a union member's own `Offset`/`BitOffset`,
-/// …) is reported through `ingest_unknown` (KNOWN_LIMITATIONS §156,
-/// ADR-0081). `Suffix` stays listed: it is a column, even though the corpus
-/// spells the attribute `SuffixText`.
+/// (`SuffixText`, `InitialValue`, …) is reported through `ingest_unknown`
+/// (KNOWN_LIMITATIONS §156, ADR-0081). `Suffix` stays listed: it is a column,
+/// even though the corpus spells the attribute `SuffixText`. The parameter's
+/// own `Offset`/`BitOffset` (the corpus has them on union members) are
+/// columns since v25 ([`OWN_OFFSET_ATTRS`]), when they are integers.
 pub(crate) const PARAMETER_ATTRS: &[&str] = &[
     "Id",
     "Name",
@@ -86,21 +87,74 @@ pub(crate) const PARAMETER_REF_ATTRS: &[&str] = &[
     "Access",
 ];
 
-/// Reports what a `Parameter` or `ParameterRef` element carries beyond its
-/// stored columns. Shared by ingest and the v20 -> v21 backfill so the two
-/// cannot drift; any other element name reports nothing.
+/// `Parameter/@Offset` and `@BitOffset`, stored as `parameter.own_offset` and
+/// `own_bit_offset` since v25.
+pub(crate) const OWN_OFFSET_ATTRS: [&str; 2] = ["Offset", "BitOffset"];
+
+/// The attributes of a `Property` placement, stored as the `parameter.property_*`
+/// columns since v25, in that column order.
+pub(crate) const PROPERTY_ATTRS: [&str; 6] = [
+    "ObjectIndex",
+    "ObjectType",
+    "PropertyId",
+    "Offset",
+    "BitOffset",
+    "Occurrence",
+];
+
+/// The `Enumeration` attributes the `parameter_type_enum` row stores; the last
+/// four since v25. Every other one is reported.
+pub(crate) const ENUMERATION_ATTRS: &[&str] = &[
+    "Id",
+    "Value",
+    "Text",
+    "DisplayOrder",
+    "BinaryValue",
+    "Name",
+    "Icon",
+    "PictureAlignment",
+];
+
+/// The integer values of `names`, `None` where absent or not an integer.
+pub(crate) fn integer_columns<const N: usize>(a: &Attrs, names: [&str; N]) -> [Option<i64>; N] {
+    names.map(|name| parse_i64(a.get(name)))
+}
+
+/// A `Property` whose attributes reach columns: one placing the `Parameter`
+/// or the `Union` it sits directly in. Anywhere else it stays unmodelled.
+pub(crate) fn is_stored_property(open_path: &[String]) -> bool {
+    matches!(
+        open_path.last().map(String::as_str),
+        Some("Parameter" | "Union")
+    )
+}
+
+/// Reports what `Parameter`, `ParameterRef`, `Enumeration` or a stored
+/// `Property` carries beyond its columns: an attribute outside the stored set,
+/// and a numeric one that is not an integer, since its column stays empty.
+/// Shared by ingest and the v21/v25 backfills so they cannot drift; any other
+/// element reports nothing here.
 fn report_parameter_attrs(
     unknown: &mut UnknownCollector,
     open_path: &[String],
     name: &str,
     a: &Attrs,
 ) {
-    let known = match name {
-        "Parameter" => PARAMETER_ATTRS,
-        "ParameterRef" => PARAMETER_REF_ATTRS,
+    let (known, numeric): (&[&str], &[&str]) = match name {
+        "Parameter" => (PARAMETER_ATTRS, &OWN_OFFSET_ATTRS),
+        "ParameterRef" => (PARAMETER_REF_ATTRS, &[]),
+        "Enumeration" => (ENUMERATION_ATTRS, &[]),
+        "Property" if is_stored_property(open_path) => (&[], &PROPERTY_ATTRS),
         _ => return,
     };
-    report_unknown_attrs(unknown, &xpath_of_child(open_path, name), a, known);
+    let mut stored: Vec<&str> = known.to_vec();
+    stored.extend(
+        numeric
+            .iter()
+            .copied()
+            .filter(|attribute| parse_i64(a.get(attribute)).is_some()),
+    );
+    report_unknown_attrs(unknown, &xpath_of_child(open_path, name), a, &stored);
 }
 
 pub struct ProgramIngest {
@@ -126,6 +180,8 @@ struct UnionState {
     id: i64,
     size_in_bit: Option<i64>,
     memory: Option<(Option<String>, Option<i64>, Option<i64>)>,
+    /// The union's own `Property` placement, in [`PROPERTY_ATTRS`] order.
+    property: [Option<i64>; 6],
 }
 
 /// Where in the `Languages` tree the reader currently is: the open
@@ -140,6 +196,33 @@ struct TranslationState {
 
 fn parse_i64(v: Option<&str>) -> Option<i64> {
     v.and_then(|v| v.parse::<i64>().ok())
+}
+
+/// Writes one parameter's `Property` placement, in [`PROPERTY_ATTRS`] order.
+/// Shared by ingest and the v25 backfill.
+pub(crate) fn store_property_placement(
+    conn: &Connection,
+    program_id: &str,
+    parameter_id: &str,
+    [object_index, object_type, property_id, offset, bit_offset, occurrence]: [Option<i64>; 6],
+) -> Result<(), ProductDbError> {
+    conn.execute(
+        "UPDATE parameter SET property_object_index = ?3, property_object_type = ?4,
+             property_id = ?5, property_offset = ?6, property_bit_offset = ?7,
+             property_occurrence = ?8
+         WHERE program_id = ?1 AND id = ?2",
+        params![
+            program_id,
+            parameter_id,
+            object_index,
+            object_type,
+            property_id,
+            offset,
+            bit_offset,
+            occurrence
+        ],
+    )?;
+    Ok(())
 }
 
 /// The `/`-joined path of the elements currently open, outermost first.
@@ -519,10 +602,11 @@ fn fill_linkable(
     Ok(filled)
 }
 
-/// Re-derives, from one stored program blob, the `Parameter`/`ParameterRef`
-/// attribute rows a current ingest reports (ADR-0081, KNOWN_LIMITATIONS
-/// §156) and adds the ones the blob's `ingest_unknown` rows still lack.
-/// Backs `migration::migrate_v20_to_v21`.
+/// Re-derives, from one stored program blob, the attribute rows a current
+/// ingest reports on `Parameter`, `ParameterRef`, `Enumeration` and a stored
+/// `Property` (ADR-0081, ADR-0141) and adds the ones the blob's
+/// `ingest_unknown` rows still lack. Backs `migration::migrate_v20_to_v21`
+/// and the last step of `migrate_v24_to_v25`.
 ///
 /// Walks the bytes the way `ingest_program_detailed` does (same `open_path`,
 /// `Dynamic` skipped whole) through the same `report_parameter_attrs`, then
@@ -537,6 +621,9 @@ fn fill_linkable(
 /// inserted — what one install of this blob added to its package report. A
 /// blob already carrying them (installed by a v21 parser) returns nothing,
 /// so the backfill is idempotent.
+/// The elements `report_parameter_attrs` reports on.
+const REPORTED_HOSTS: [&str; 4] = ["Parameter", "ParameterRef", "Enumeration", "Property"];
+
 pub(crate) fn backfill_parameter_attribute_unknowns(
     conn: &Connection,
     source_sha256: &str,
@@ -567,14 +654,14 @@ pub(crate) fn backfill_parameter_attribute_unknowns(
             }
             Event::Empty(e) => {
                 let name = local_name(&e);
-                if matches!(name.as_str(), "Parameter" | "ParameterRef") {
+                if REPORTED_HOSTS.contains(&name.as_str()) {
                     let a = attrs(&e, source_path)?;
                     report_parameter_attrs(&mut unknown, &open_path, &name, &a);
                 }
             }
             Event::Start(e) => {
                 let name = local_name(&e);
-                if matches!(name.as_str(), "Parameter" | "ParameterRef") {
+                if REPORTED_HOSTS.contains(&name.as_str()) {
                     let a = attrs(&e, source_path)?;
                     report_parameter_attrs(&mut unknown, &open_path, &name, &a);
                 }
@@ -1119,12 +1206,14 @@ fn handle_start_or_empty(
             *expecting_type_child = true;
         }
         "Enumeration" => {
+            report_parameter_attrs(unknown, open_path, name, a);
             if !*already_present {
                 if let Some((pt_id, _)) = current_parameter_type.as_ref() {
                     conn.execute(
                         "INSERT INTO parameter_type_enum
-                         (program_id, parameter_type_id, id, value, text, display_order)
-                         VALUES (?1,?2,?3,?4,?5,?6)",
+                         (program_id, parameter_type_id, id, value, text, display_order,
+                          binary_value, name, icon, picture_alignment)
+                         VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10)",
                         params![
                             program_id.as_str(),
                             pt_id,
@@ -1132,6 +1221,10 @@ fn handle_start_or_empty(
                             a.get("Value"),
                             a.get("Text"),
                             parse_i64(a.get("DisplayOrder")),
+                            a.get("BinaryValue"),
+                            a.get("Name"),
+                            a.get("Icon"),
+                            a.get("PictureAlignment"),
                         ],
                     )?;
                 }
@@ -1143,6 +1236,7 @@ fn handle_start_or_empty(
                 id: *union_seq,
                 size_in_bit: parse_i64(a.get("SizeInBit")),
                 memory: None,
+                property: [None; 6],
             });
             *current_parameter = None;
         }
@@ -1151,18 +1245,24 @@ fn handle_start_or_empty(
             report_parameter_attrs(unknown, open_path, name, a);
             let id = a.get("Id").unwrap_or_default().to_string();
             if !*already_present {
-                let (union_id, union_size, seg, off, bit) = match current_union.as_ref() {
+                let (union_id, union_size, seg, off, bit, property) = match current_union.as_ref() {
                     Some(u) => {
                         let (seg, off, bit) = u.memory.clone().unwrap_or((None, None, None));
-                        (Some(u.id), u.size_in_bit, seg, off, bit)
+                        (Some(u.id), u.size_in_bit, seg, off, bit, u.property)
                     }
-                    None => (None, None, None, None, None),
+                    None => (None, None, None, None, None, [None; 6]),
                 };
+                let [own_offset, own_bit_offset] = integer_columns(a, OWN_OFFSET_ATTRS);
+                let [object_index, object_type, property_id, property_offset, property_bit, occurrence] =
+                    property;
                 conn.execute(
                     "INSERT INTO parameter
                      (program_id, id, name, text, parameter_type_id, access, value, suffix,
-                      code_segment, offset, bit_offset, union_id, union_size_in_bit)
-                     VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13)",
+                      code_segment, offset, bit_offset, union_id, union_size_in_bit,
+                      own_offset, own_bit_offset, property_object_index, property_object_type,
+                      property_id, property_offset, property_bit_offset, property_occurrence)
+                     VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,
+                             ?14,?15,?16,?17,?18,?19,?20,?21)",
                     params![
                         program_id.as_str(),
                         id,
@@ -1177,6 +1277,14 @@ fn handle_start_or_empty(
                         bit,
                         union_id,
                         union_size,
+                        own_offset,
+                        own_bit_offset,
+                        object_index,
+                        object_type,
+                        property_id,
+                        property_offset,
+                        property_bit,
+                        occurrence,
                     ],
                 )?;
                 entities.stored(EntityKind::Parameter)?;
@@ -1199,6 +1307,19 @@ fn handle_start_or_empty(
                     )?;
                 } else if let Some(u) = current_union.as_mut() {
                     u.memory = Some((seg, off, bit));
+                }
+            }
+        }
+        // A `Property` placing a parameter or a union (v25). Anywhere else it
+        // is the unmodelled element the fallthrough below reports.
+        "Property" if is_stored_property(open_path) => {
+            report_parameter_attrs(unknown, open_path, name, a);
+            if !*already_present {
+                let columns = integer_columns(a, PROPERTY_ATTRS);
+                if let Some(pid) = current_parameter.as_ref() {
+                    store_property_placement(conn, program_id, pid, columns)?;
+                } else if let Some(u) = current_union.as_mut() {
+                    u.property = columns;
                 }
             }
         }

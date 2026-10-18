@@ -404,7 +404,7 @@ export default function NewProjectDialog(props: {
             <p><strong>{t("projectWizard.discard.title")}</strong> {t("projectWizard.discard.body")}</p>
             <div className="new-project-actions">
               <button type="button" onClick={() => setConfirmDiscard(false)}>{t("projectWizard.discard.keep")}</button>
-              <button type="button" onClick={close}>{t("projectWizard.discard.confirm")}</button>
+              <button type="button" className="danger-action" onClick={close}>{t("projectWizard.discard.confirm")}</button>
             </div>
           </section>
         )}
@@ -421,7 +421,7 @@ export default function NewProjectDialog(props: {
                 {t("projectWizard.next")}
               </button>
             )}
-            <button type="submit" className="primary-action" disabled={!canSubmit}
+            <button type="submit" className="primary-action" disabled={!canSubmit} aria-busy={busy}
               onClick={(e) => {
                 // A click is always a deliberate create, whatever the step.
                 e.preventDefault();
@@ -447,18 +447,18 @@ export default function NewProjectDialog(props: {
               two ways out (save first, or resend discarding). */}
           <p className="new-project-conflict-detail">{conflict}</p>
           <div className="new-project-actions unsaved-changes-actions">
-            <button type="button" className="dialog-action dialog-action--secondary" onClick={dismiss}>
+            <button type="button" className="dialog-action secondary-action" onClick={dismiss}>
               {t("newProject.conflictKeep")}
             </button>
             {/* `!canSubmit`, not `busy`: the fields stay editable while the
                 prompt is up, so a name blanked here would make `submit()`
                 return silently and the button would do nothing at all. */}
-            <button type="button" className="dialog-action dialog-action--danger" disabled={!canSubmit} onClick={() => void submit(true)}>
+            <button type="button" className="dialog-action danger-action" disabled={!canSubmit} onClick={() => void submit(true)}>
               {busy ? t("newProject.creating") : t("newProject.conflictDiscard")}
             </button>
             <button
               type="button"
-              className="dialog-action dialog-action--primary primary-action new-project-save-and-create"
+              className="dialog-action primary-action new-project-save-and-create"
               disabled={!canSubmit}
               onClick={() => void submit(false, true)}
             >

@@ -71,4 +71,3 @@
 .ga-new-in-range-manual, .ga-new-in-range-name input { width: 100%; box-sizing: border-box; }
 .ga-new-in-range-name { display: grid; gap: 4px; margin: 0 0 12px; }
 .ga-new-in-range-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
-.ga-new-in-range-actions button:not(.primary-action) { background: transparent; color: var(--knx-foreground); border: 1px solid var(--knx-border); }

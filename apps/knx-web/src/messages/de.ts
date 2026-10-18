@@ -1195,6 +1195,7 @@ export const messages: Record<MessageKey, string> = {
   "dpt.masterText": "Stammdaten: {value}",
   "dpt.selectionHint": "Wähle einen Datenpunkttyp; verlasse das Feld oder drücke Enter zum Übernehmen.",
   "valueSource.label": "Quelle: {source}",
+  "valueSource.technicalReference": "Technische Referenz",
   "valueSource.program": "Applikationsprogramm",
   "valueSource.programHelp": "Dieser Wert stammt aus dem Applikationsprogramm des Geräts, nicht aus einer Projektänderung.",
   "valueSource.programRef": "Applikationsreferenz",

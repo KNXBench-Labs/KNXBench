@@ -63,7 +63,7 @@ export default function LegacyPasswordSettings(props: { access: LegacyPasswordAc
       )}
       {status?.problem && <p className="field-error">{status.problem}</p>}
       {status?.remembered && (
-        <button type="button" onClick={() => void forget()} disabled={busy}>
+        <button type="button" className="danger-action" onClick={() => void forget()} disabled={busy}>
           {t("settings.legacyPasswordForget")}
         </button>
       )}

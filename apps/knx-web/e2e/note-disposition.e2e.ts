@@ -6,6 +6,7 @@ import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
 import { openExplorerBranches } from "./disclosure-fixture";
 import { statusMetricsFixtureBody } from "./status-metrics-fixture";
+import { controlPaint } from "./control-roles";
 
 // Strictly fictional: names, addresses and notes are made up here.
 const address = (id: number, raw: string, name: string) => ({ id, name, address: raw, range: null, dpts: [], links: [] });
@@ -129,6 +130,13 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await dialog.getByRole("group", { name: `${notes[1].title} ${target}` }).getByRole("radio", { name: m["noteDisposition.delete"], exact: true }).check();
     await expectInViewport(page, width, m["noteDisposition.title"]);
     if (process.env.KNX_NOTE_DISPOSITION_CAPTURE_DIR) await page.screenshot({ path: join(process.env.KNX_NOTE_DISPOSITION_CAPTURE_DIR, `note-disposition-chosen-${language}-${width}.png`) });
+    // Review UI02-002: the confirmation deletes the element (and maybe notes), so it
+    // paints as the shared destructive variant; Cancel stays secondary.
+    await expect(confirm).toBeEnabled();
+    await page.mouse.move(1, 1);
+    const paint = await controlPaint(confirm);
+    expect(paint.role, JSON.stringify(paint)).toBe("danger");
+    expect((await controlPaint(dialog.getByRole("button", { name: m["noteDisposition.cancel"], exact: true }))).role).toBe("secondary");
     // A long dialog scrolls inside the shared panel cap; both actions stay reachable.
     for (const name of [m["noteDisposition.cancel"], m["noteDisposition.confirm"]]) {
       const action = dialog.getByRole("button", { name, exact: true });

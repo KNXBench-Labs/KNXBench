@@ -1300,6 +1300,8 @@ describe("Inspector — placement repair", () => {
     expect(host!.textContent).toContain("Placement conflict");
     const buttons = keepButtons("Keep this placement");
     expect(buttons).toHaveLength(2);
+    // Keeping one placement removes the others: each answer is destructive.
+    expect(buttons.map((button) => button.classList.contains("danger-action"))).toEqual([true, true]);
     await act(async () => buttons[0].click());
     expect(apiMock.repairDevicePlacement).toHaveBeenCalledExactlyOnceWith(42, { lineId: 11 });
     expect(onApplied).toHaveBeenCalledExactlyOnceWith(repaired);
@@ -1351,6 +1353,8 @@ describe("Inspector — placement repair", () => {
     expect(host!.textContent).toContain("This structure ID occurs more than once");
     const buttons = keepButtons("Keep under this area");
     expect(buttons).toHaveLength(2);
+    // Keeping one owner removes the other areas' references: each answer is destructive.
+    expect(buttons.map((button) => button.classList.contains("danger-action"))).toEqual([true, true]);
     await act(async () => buttons[1].click());
     expect(apiMock.repairLineOwner).toHaveBeenCalledExactlyOnceWith(11, 20);
     expect(onApplied).toHaveBeenCalledExactlyOnceWith(repaired);

@@ -25,6 +25,6 @@ export default function NativeExportDialog(props:{reviewed:ProjectTree,current:P
     <p>{t("nativeExport.local")}</p>
     {!available&&<p role="alert">{t("nativeExport.changed")}</p>}
     <footer><button type="button" className="native-export-cancel" ref={cancel} onClick={props.onClose}>{t("nativeExport.cancel")}</button>
-      <button type="button" disabled={!available} onClick={download}>{t("nativeExport.download")}</button></footer>
+      <button type="button" className="primary-action" disabled={!available} onClick={download}>{t("nativeExport.download")}</button></footer>
   </Overlay>;
 }

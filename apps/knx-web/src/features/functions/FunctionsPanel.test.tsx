@@ -181,10 +181,18 @@ describe("building-part Functions", () => {
     await render(<BuildingPartFunctions tree={tree(10)} buildingPartId={3} onApplied={vi.fn()} client={fake} />);
     expect(form.textContent).toContain("now: Renamed elsewhere, Tested");
     expect(button("Apply details", form).disabled).toBe(true);
+    expect(button("Apply details", form).classList.contains("primary-action")).toBe(true);
     await act(async () => form.requestSubmit());
     expect(edit).not.toHaveBeenCalled();
+    // Throwing the draft away loses the user's input, so it looks destructive.
+    expect(button("Start again from the current details", form).classList.contains("danger-action")).toBe(true);
+    expect(button("Keep my input", form).classList.contains("danger-action")).toBe(false);
     await act(async () => button("Keep my input", form).click());
-    await act(async () => button("Apply my details anyway", form).click());
+    // The forced apply overwrites the newer details, so it looks destructive, not routine.
+    const anyway = button("Apply my details anyway", form);
+    expect(anyway.classList.contains("danger-action")).toBe(true);
+    expect(anyway.classList.contains("primary-action")).toBe(false);
+    await act(async () => anyway.click());
     expect(edit).toHaveBeenCalledExactlyOnceWith(ctx(10), expect.objectContaining({ kind: "update", id: 1,
       details: expect.objectContaining({ name: "Mine", completion: "Editing" }) }));
   });
@@ -201,6 +209,8 @@ describe("building-part Functions", () => {
     await act(async () => button("Delete Function").click());
     expect(edit).not.toHaveBeenCalled();
     expect(host!.textContent).toContain("its 1 membership?");
+    expect(button("Delete").classList.contains("danger-action")).toBe(true);
+    expect(button("Cancel").classList.contains("primary-action")).toBe(false);
     await act(async () => button("Delete").click());
     expect(edit).toHaveBeenLastCalledWith(ctx(9), { kind: "delete", id: 1 });
     const select = labelled("Move to building part") as HTMLSelectElement;

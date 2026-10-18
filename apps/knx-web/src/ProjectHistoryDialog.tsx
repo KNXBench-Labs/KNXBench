@@ -122,7 +122,7 @@ export default function ProjectHistoryDialog(props: {
       <h3 id="project-history-confirm-title">{t(confirmation.kind === "restore" ? "projectHistory.restoreTitle" : confirmation.kind === "delete" ? "projectHistory.deleteTitle" : "projectHistory.clearTitle")}</h3>
       <p>{t(confirmation.kind === "restore" ? "projectHistory.restoreWarning" : confirmation.kind === "delete" ? "projectHistory.deleteWarning" : "projectHistory.clearWarning", { name: confirmation.version ? displayLabel(confirmation.version) : "" })}</p>
       <div className="project-history-actions"><button ref={cancelRef} type="button" disabled={busy} onClick={() => setConfirmation(null)}>{t("projectHistory.cancel")}</button>
-        <button type="button" className="project-history-danger" disabled={disabled} onClick={() => void action(confirmation.kind, confirmation.view, confirmation.version?.id)}>
+        <button type="button" className="danger-action" disabled={disabled} onClick={() => void action(confirmation.kind, confirmation.view, confirmation.version?.id)}>
           {t(confirmation.kind === "restore" ? "projectHistory.confirmRestore" : confirmation.kind === "delete" ? "projectHistory.confirmDelete" : "projectHistory.confirmClear")}</button></div>
     </section> : view && <>
       <p className={`project-history-persistence ${view.persistence === "native" ? "native" : "session"}`}>{t(view.persistence === "native" ? "projectHistory.native" : "projectHistory.session")}</p>

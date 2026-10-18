@@ -72,7 +72,9 @@ export default function LineScanExclusionsEditor({
           return <li key={`${index}:${address}`} data-invalid={invalid ? "true" : undefined}>
             <code>{address}</code>
             <span>{invalid ? t("lineScan.invalidLegacyExclusion") : t("lineScan.protected")}</span>
-            <button type="button" disabled={disabled} onClick={() => remove(index)}>
+            {/* Armed, the second click removes: only then does it read as destructive. */}
+            <button type="button" disabled={disabled} onClick={() => remove(index)}
+              className={confirmsCurrentOccurrence(confirmRemoval, index, exclusions) ? "danger-action" : undefined}>
               {confirmsCurrentOccurrence(confirmRemoval, index, exclusions)
                 ? t("lineScan.confirmRemoval")
                 : t("lineScan.remove")}

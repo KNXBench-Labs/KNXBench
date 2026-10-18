@@ -46,6 +46,32 @@ reads are explicit. Response admission binds server, project and revision.
 cover save, Save As, failed save, native open, import, project switch, catalogue
 install, empty/unavailable databases, count identity and locale formatting.
 
+## UI-02: compact button variants, visible navigation separators (18 October 2026)
+
+Presentation only, no API, schema, theme-pack or stored-data change. Owner
+requests 5–7 of the [UI feedback set](goals/ui-feedback-2026-10-18.md#ui-02--compact-distinctive-controls-and-visible-navigation).
+One shared Controls block in `styles.css` now owns the look of ordinary buttons
+(a listed set of tabs, rows, chips and link-like buttons keeps local paint):
+secondary by default, `primary-action`, `quiet-action`/`icon-action` and `danger-action`,
+compact (32px compact density, 12px padding) with colour-only hover and a small
+press scale that motion Off and reduced motion drop. Dialog confirmations name
+their primary or destructive role; the inspector's Delete reads as destructive,
+and the toolbar's Save no longer turns pale under the pointer.
+The navigation splitters draw a hairline at rest and an accent rule on hover,
+focus and drag; without a project the sections carry the same rule. The routine
+"Source: device instance" badge left the field headings and stays in the DPT and
+description technical references and in the data. After two review rounds the
+destructive answers found by the sweeps paint as destructive, each with a test:
+note-disposition, project-history, plug-in data, Function delete and forced
+overwrite, note and instruction removal, armed scan-exclusion removal, line-scan
+reconciliation that deletes, both parameter-conflict answers, placement repair,
+language-pack removal, preset over a filled group list, forgetting the legacy
+password, bulk delete. Help tips, toast dismiss, import-finding links and table
+device links have 24px targets; feature editors use the shared variants; a
+browser matrix checks the named dialog, toolbar, inspector and table controls'
+roles, focus and size and the separators in all five shipped themes.
+[Contract](contracts/controls-and-separators.md).
+
 ## Manual, README and screenshots after Alpha 14 (18 October 2026)
 
 Docs and media only, no application change. The manual's 46 stills, the four

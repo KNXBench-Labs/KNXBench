@@ -356,7 +356,16 @@ With a project open, two horizontal splitters appear inside the navigation pane:
 above the project explorer, one below it. They give height back and forth between the
 view buttons, the tree and the diagnostics block. They take arrow keys too — up and
 down instead of left and right, in the same 16-pixel steps, with Home and End for the
-limits.
+limits. Each splitter is drawn as a thin rule at rest, so you can see where the
+blocks meet without hunting for it; under the pointer, with keyboard focus or while
+you drag, it turns into a thicker accent-coloured rule. Without a project, the same
+thin rule separates the navigation sections.
+
+Buttons follow one scheme everywhere. The one accent-filled button on a surface is
+its main action (Create, Save, Apply, Export); ordinary actions are outlined; red
+outlined buttons destroy or discard something (Delete, Discard, Replace). A pressed
+button sinks slightly; with motion set to Off or with the system's reduced-motion
+preference it only changes colour.
 
 > **Tip**
 >

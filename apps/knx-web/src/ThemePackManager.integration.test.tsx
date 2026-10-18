@@ -169,6 +169,7 @@ describe("Appearance theme files through the actual parent/runtime", () => {
     expect(confirmation!.textContent).toContain(pack.version);
     const cancel = buttonByText("Cancel replacement", confirmation!)!;
     expect(document.activeElement).toBe(cancel);
+    expect(buttonByText("Replace and apply", confirmation!)!.classList.contains("danger-action")).toBe(true);
     await act(async () => buttonByText("Replace and apply", confirmation!)!.click());
     expect(methods()).toEqual(["GET", "GET", "PUT"]);
     expect(JSON.parse(String((fetchMock.mock.calls[2][1] as RequestInit).body))).toEqual({
@@ -289,6 +290,7 @@ describe("Appearance theme files through the actual parent/runtime", () => {
     expect(confirmation!.textContent).toContain(pack.id);
     expect(confirmation!.textContent).toContain("System");
     expect(document.activeElement).toBe(buttonByText("Cancel removal", confirmation!));
+    expect(buttonByText("Remove pack", confirmation!)!.classList.contains("danger-action")).toBe(true);
     await act(async () => buttonByText("Remove pack", confirmation!)!.click());
     expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(JSON.parse(String((fetchMock.mock.calls[2][1] as RequestInit).body))).toEqual({

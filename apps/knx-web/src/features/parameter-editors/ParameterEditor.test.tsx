@@ -74,7 +74,10 @@ describe("isolated parameter editor", () => {
     const { host, props, root } = await mount(); await edit(host, "12");
     await act(async () => root.render(<ParameterEditor {...props} revision="server1/snapshot2" field={{ ...base.field, value: "20" }} />));
     expect(host.querySelector<HTMLInputElement>('input[type="text"]')?.value).toBe("12"); await click(host, "Apply value"); expect(props.onApply).not.toHaveBeenCalled();
+    const discard = [...host.querySelectorAll("button")].find(button => button.textContent === "Discard draft and reload");
+    expect(discard?.classList.contains("danger-action")).toBe(true);
     await click(host, "Discard draft and reload"); expect(host.querySelector<HTMLInputElement>('input[type="text"]')?.value).toBe("20");
+    expect([...host.querySelectorAll("button")].find(button => button.textContent === "Discard draft and reload")?.classList.contains("danger-action")).toBe(false);
   });
   it("moves a draft onto a new revision when the field itself is unchanged (Save bumps the revision)", async () => {
     const { host, props, root } = await mount(); await edit(host, "12");

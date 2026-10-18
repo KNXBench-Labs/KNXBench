@@ -129,7 +129,7 @@ export default function NoteDispositionDialog({ deletion, required, onDeleted, o
     {failure && <p ref={alertRef} tabIndex={-1} role="alert">
       {failure.kind === "stale" ? t("noteDisposition.stale") : t("noteDisposition.refused", { reason: failure.reason })}</p>}
     <div className="note-disposition-actions">
-      <button type="button" data-note-disposition-confirm disabled={!wire || busy || failure?.kind === "stale"} onClick={() => void confirm()}>
+      <button type="button" className="danger-action" data-note-disposition-confirm disabled={!wire || busy || failure?.kind === "stale"} onClick={() => void confirm()}>
         {t("noteDisposition.confirm")}</button>
       <button type="button" disabled={busy} onClick={close}>{t("noteDisposition.cancel")}</button>
     </div>

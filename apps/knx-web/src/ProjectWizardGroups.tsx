@@ -78,7 +78,8 @@ export default function ProjectWizardGroups(props: {
             ))}
           </select>
         </label>
-        <button type="button" onClick={applyPreset}>{t("projectWizard.groups.applyPreset")}</button>
+        {/* Replacing an empty list loses nothing; replacing a filled one throws it away. */}
+        <button type="button" className={groupRanges.length > 0 ? "danger-action" : undefined} onClick={applyPreset}>{t("projectWizard.groups.applyPreset")}</button>
       </div>
       {presetError && <p className="field-error" role="alert">{presetError}</p>}
       {groupRanges.length === 0 && <p className="project-wizard-empty">{t("projectWizard.groups.empty")}</p>}

@@ -688,6 +688,26 @@ for lifting the limitation, so please share the output (it contains your device'
 parameter values) with the KNXBench maintainers if you are happy to. Exit 0: read and
 reported; 1: not probed (wrong device, read-protected memory, nothing to read).
 
+#### Preview first, without contacting a device
+
+On source builds after Alpha 14, add `--preview` to inspect planned fields
+without a gateway connection. The gateway is optional in this mode.
+
+For System-2 source comparisons, preview requires an explicit selection:
+
+```sh
+knx device byte-order-probe <area.line.device> --project <project.knxdb> \
+  --product-db <products.sqlite> --preview --system2-source \
+  --parameter-ref <parameter-reference> --parameter-ref <control-reference>
+```
+
+Select one to eight references from that device's application. Output shows
+project values, source-declared candidate addresses and possible byte orders;
+it does **not** show bytes read from the device. Warnings and omitted fields
+remain visible. System-2 selection cannot run without `--preview`, and does not
+enable reading, programming or backup/restore for an unsupported device.
+See the [exact comparison contract](../../contracts/system2-source-probe-preview.md).
+
 ### `knx device program-address` — give a device its individual address
 
 **This changes a device's individual address and restarts it.** It is not a download:

@@ -12,6 +12,15 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Offline System-2 source-field preview (18 October 2026)
+
+The existing byte-order probe now supports an offline preview and a distinct
+bounded System-2 source-selection preview. The same evaluator, parameter checks
+and project mapping are reused; no network client is created in preview mode.
+The exact Siemens A/B source fields are covered by the public-package regression;
+no real read, image, write or recovery route is enabled.
+[Contract](contracts/system2-source-probe-preview.md).
+
 ## House devices read with the diagnostic export (18 October 2026)
 
 Owner go: the shipped `knx device diagnostics` ran once against all 34

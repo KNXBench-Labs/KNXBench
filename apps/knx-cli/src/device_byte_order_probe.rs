@@ -33,8 +33,14 @@ pub struct ProbeArgs {
     pub project: String,
     /// The product database, if not the default one.
     pub product_db: Option<String>,
-    /// The gateway.
-    pub gateway: std::net::SocketAddrV4,
+    /// Optional for an offline preview; required for the existing live probe.
+    pub gateway: Option<std::net::SocketAddrV4>,
+    /// Preview only; no runtime, tunnel or device session is constructed.
+    pub preview: bool,
+    /// Preview source-derived System-2 fields, never enable a live override.
+    pub system2_source: bool,
+    /// Explicit references for a bounded System-2 source preview.
+    pub parameter_refs: Vec<String>,
 }
 
 /// Parses `knx device byte-order-probe`'s arguments.
@@ -43,6 +49,9 @@ pub fn parse_probe_args(args: &[String]) -> Result<ProbeArgs, String> {
     let mut project = None;
     let mut product_db = None;
     let mut gateway = None;
+    let mut preview = false;
+    let mut system2_source = false;
+    let mut parameter_refs = Vec::new();
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
@@ -58,6 +67,12 @@ pub fn parse_probe_args(args: &[String]) -> Result<ProbeArgs, String> {
                 gateway = Some(crate::take_value(args, i + 1, "--gateway")?);
                 i += 1;
             }
+            "--preview" => preview = true,
+            "--system2-source" => system2_source = true,
+            "--parameter-ref" => {
+                parameter_refs.push(crate::take_value(args, i + 1, "--parameter-ref")?);
+                i += 1;
+            }
             flag if flag.starts_with("--") => {
                 return Err(format!(
                     "unknown flag {flag} (the probe only reads; writing is `knx device download`)"
@@ -71,16 +86,126 @@ pub fn parse_probe_args(args: &[String]) -> Result<ProbeArgs, String> {
         }
         i += 1;
     }
+    if system2_source && !preview {
+        return Err("--system2-source requires --preview; it never enables a live probe".into());
+    }
+    if system2_source
+        && !(1..=knx_productdb::byte_order_probe::MAX_SOURCE_PREVIEW_FIELDS)
+            .contains(&parameter_refs.len())
+    {
+        return Err("--system2-source requires one to eight --parameter-ref selections".into());
+    }
+    if !system2_source && !parameter_refs.is_empty() {
+        return Err("--parameter-ref requires --system2-source --preview".into());
+    }
     let gateway = gateway
-        .ok_or("--gateway <host:port> is required: the probe reads the device")?
-        .parse()
-        .map_err(|_| "--gateway must be host:port, e.g. 192.0.2.1:3671".to_string())?;
+        .map(|g| {
+            g.parse()
+                .map_err(|_| "--gateway must be host:port, e.g. 192.0.2.1:3671".to_string())
+        })
+        .transpose()?;
+    if !preview && gateway.is_none() {
+        return Err("--gateway <host:port> is required: the probe reads the device".into());
+    }
     Ok(ProbeArgs {
         target: target.ok_or("missing the device address, e.g. 1.1.67")?,
         project: project.ok_or("--project <path.knxdb> is required")?,
         product_db,
         gateway,
+        preview,
+        system2_source,
+        parameter_refs,
     })
+}
+
+/// Prints declarations only; it cannot acquire or classify any device bytes.
+pub fn print_source_preview(
+    preview: &knx_productdb::byte_order_probe::SourceProbePreview,
+    out: &mut impl Write,
+) -> std::io::Result<()> {
+    writeln!(
+        out,
+        "Preview only: System-2 source fields; no bus contact, not a backup."
+    )?;
+    writeln!(
+        out,
+        "program: {}; declared mask {:04X}h, manufacturer {:04X}h",
+        preview.program_id, preview.mask.0, preview.manufacturer
+    )?;
+    writeln!(
+        out,
+        "Addresses below are source declarations, not confirmed runtime locations."
+    )?;
+    writeln!(
+        out,
+        "No device read, image, download permission or recovery proof is produced."
+    )?;
+    writeln!(
+        out,
+        "Declared ParameterByteOrder: {}",
+        preview
+            .declared_order
+            .as_deref()
+            .unwrap_or("absent; runtime order unconfirmed")
+    )?;
+    if preview.has_uninterpreted_legacy_patch {
+        writeln!(out, "Warning: LegacyPatchAlways remains uninterpreted; image construction is still refused.")?;
+    }
+    print_fields(out, &preview.fields)?;
+    for diagnostic in &preview.diagnostics {
+        writeln!(out, "source evaluation diagnostic: {diagnostic:?}")?;
+    }
+    for skip in &preview.skipped {
+        writeln!(
+            out,
+            "not selected/read: {}: {}",
+            skip.parameter_ref, skip.reason
+        )?;
+    }
+    Ok(())
+}
+
+/// Prints the existing probe's plan without opening a runtime or transport.
+pub fn print_preview(plan: &ProbePlan, out: &mut impl Write) -> std::io::Result<()> {
+    writeln!(
+        out,
+        "Preview only: no bus contact, no device bytes read; not a backup."
+    )?;
+    writeln!(
+        out,
+        "program: {}; declared mask {:04X}h, manufacturer {:04X}h",
+        plan.program_id, plan.mask.0, plan.manufacturer
+    )?;
+    print_fields(out, &plan.fields)?;
+    for skip in &plan.skipped {
+        writeln!(out, "not read: {}: {}", skip.parameter_ref, skip.reason)?;
+    }
+    Ok(())
+}
+
+fn print_fields(out: &mut impl Write, fields: &[ProbeField]) -> std::io::Result<()> {
+    for field in fields {
+        let count = covered_octets(field.field);
+        writeln!(
+            out,
+            "  {:04X}h {} octet(s), {} bit(s) at bit {}: {} = {}",
+            field.address,
+            count,
+            field.field.size_in_bit,
+            field.field.bit_offset,
+            field.parameter_ref,
+            field.value
+        )?;
+        if field.discriminates() {
+            writeln!(
+                out,
+                "    candidates only: high-first {}, low-first {}",
+                hex(&field.value.to_be_bytes()[8 - count..]),
+                hex(&field.value.to_le_bytes()[..count])
+            )?;
+        }
+    }
+    Ok(())
 }
 
 /// How a probe ended.
@@ -442,6 +567,48 @@ mod tests {
         assert!(out.contains("nothing to read"), "{out}");
         assert!(out.contains("P-9_R-1"), "{out}");
         assert!(device.seen().is_empty(), "no session for nothing");
+    }
+
+    #[test]
+    fn offline_source_preview_requires_no_gateway_but_cannot_be_used_for_a_live_probe() {
+        let args = |list: &[&str]| list.iter().map(|s| s.to_string()).collect::<Vec<_>>();
+        let base = [
+            "1.1.5",
+            "--project",
+            "p.knxdb",
+            "--system2-source",
+            "--parameter-ref",
+            "P_R",
+        ];
+        assert!(
+            parse_probe_args(&args(&base)).is_err(),
+            "no live System-2 override"
+        );
+        let mut preview = args(&base);
+        preview.push("--preview".into());
+        let parsed = parse_probe_args(&preview).expect("offline preview needs no gateway");
+        assert!(parsed.preview);
+        assert!(parsed.system2_source);
+        assert_eq!(parsed.parameter_refs, ["P_R"]);
+        assert_eq!(parsed.gateway, None);
+        for flag in ["--confirm-read", "--key-file", "--restart", "--force"] {
+            let mut invalid = preview.clone();
+            invalid.push(flag.into());
+            assert!(parse_probe_args(&invalid).is_err());
+        }
+    }
+
+    #[test]
+    fn source_preview_requires_an_explicit_nonempty_selection() {
+        let args = [
+            "1.1.5",
+            "--project",
+            "p.knxdb",
+            "--preview",
+            "--system2-source",
+        ]
+        .map(String::from);
+        assert!(parse_probe_args(&args).is_err());
     }
 
     #[test]

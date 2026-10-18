@@ -1,5 +1,13 @@
 # Architecture
 
+## Offline System-2 field preview (18 October 2026 source)
+
+ProductDB extends its existing field planner with a distinct, non-executable
+`SourceProbePreview`; App reuses project-to-request mapping and CLI returns
+before runtime/transport construction. Selection, diagnostics and unresolved
+source policies remain explicit. No schema, dependency, live-probe admission
+or protocol change. [Contract](contracts/system2-source-probe-preview.md).
+
 ## Object-local manufacturer function controls (17 October 2026 source)
 
 ProductDB extends its existing read-only structural parameter layout with exact

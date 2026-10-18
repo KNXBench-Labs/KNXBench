@@ -2698,7 +2698,7 @@
       "number": 184,
       "title": "Diagnostic export reads identity only",
       "topic": "Commissioning and recovery",
-      "summary": "The read-only diagnostic export reads descriptor, PID12 and PID78 only; no memory profile is admitted, a zero-element reply cannot separate refusal from absence, and no physical device has been read with it yet.",
+      "summary": "The read-only diagnostic export reads descriptor, PID12 and PID78 only; no memory profile is admitted, a zero-element reply cannot separate refusal from absence, and only one physical device (a Siemens `MV-0025` detector, 18 October 2026) has been read with it so far.",
       "file": "KL-184-device-diagnostic-export.md",
       "ledger_ids": [
         "KL-184"

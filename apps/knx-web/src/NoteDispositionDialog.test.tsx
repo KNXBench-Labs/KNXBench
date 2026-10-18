@@ -99,6 +99,9 @@ it("sends exactly the reviewed choices bound to the refusal's snapshot", async (
   await pick(1, "move");
   await moveTo(1, "device:5");
   await pick(3, "delete");
+  // Review UI02-002: this answer deletes the element, so it is destructive, never a primary.
+  expect(button("Delete and apply choices")!.className).toBe("danger-action");
+  expect(button("Cancel")!.className).toBe("");
   await act(async () => button("Delete and apply choices")!.click());
   expect(api.deleteWithNotes).toHaveBeenCalledWith(context, deletion, [
     { note: 1, action: { kind: "move", target: { kind: "device", id: 5 } } },

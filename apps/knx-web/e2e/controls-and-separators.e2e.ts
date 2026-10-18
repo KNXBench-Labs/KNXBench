@@ -4,6 +4,7 @@ import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
 import { dismissToasts, intercept, openList, openProject as openCommunicationProject } from "./communication-fixture";
+import { separatorLine } from "./control-roles";
 
 const THEMES = ["porcelain", "graphite", "cupertino", "lcars", "user-modern-retro-green-crt"] as const;
 type Catalogue = { readonly [K in keyof typeof en]: string };
@@ -64,40 +65,6 @@ async function unfold(page: Page, title: string) {
 async function openNavigation(page: Page) {
   const navigation = page.locator(".workbench-panel-controls button[aria-expanded]").first();
   if (await navigation.getAttribute("aria-expanded") === "false") await navigation.click();
-}
-
-/** WCAG-style contrast between a separator's painted line and the pane colour behind it. */
-async function separatorLine(separator: Locator) {
-  return separator.evaluate((node) => {
-    const probe = document.createElement("div");
-    document.body.append(probe);
-    const rgb = (value: string) => {
-      probe.style.color = value;
-      const m = getComputedStyle(probe).color.match(/[\d.]+/g)!.map(Number);
-      return { r: m[0], g: m[1], b: m[2], a: m[3] ?? 1 };
-    };
-    const opaque = (element: Element | null): { r: number; g: number; b: number } => {
-      if (!element) return { r: 255, g: 255, b: 255 };
-      const c = rgb(getComputedStyle(element).backgroundColor);
-      if (c.a >= 0.999) return c;
-      const under = opaque(element.parentElement);
-      return { r: c.r * c.a + under.r * (1 - c.a), g: c.g * c.a + under.g * (1 - c.a), b: c.b * c.a + under.b * (1 - c.a) };
-    };
-    const line = getComputedStyle(node, "::before");
-    const paint = rgb(line.backgroundColor);
-    const behind = opaque(node.parentElement);
-    const area = rgb(getComputedStyle(node).backgroundColor);
-    probe.remove();
-    const mixed = { r: paint.r * paint.a + behind.r * (1 - paint.a), g: paint.g * paint.a + behind.g * (1 - paint.a), b: paint.b * paint.a + behind.b * (1 - paint.a) };
-    const lum = ({ r, g, b }: { r: number; g: number; b: number }) => {
-      const c = [r, g, b].map((v) => { const s = v / 255; return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4; });
-      return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
-    };
-    const [hi, lo] = [lum(mixed), lum(behind)].sort((x, y) => y - x);
-    const box = node.getBoundingClientRect();
-    const own = Number.parseFloat(line.height === "auto" ? "0" : line.height);
-    return { contrast: (hi + 0.05) / (lo + 0.05), thickness: Math.min(own, box.height), content: line.content, paint: line.backgroundColor, area: area.a, width: box.width };
-  });
 }
 
 for (const theme of THEMES) {
@@ -219,7 +186,6 @@ for (const theme of ["porcelain", "graphite"] as const) for (const width of [144
     const actions = dialog.locator(".new-project-actions button");
     const cancel = dialog.getByRole("button", { name: m["newProject.cancel"], exact: true });
     const back = dialog.getByRole("button", { name: m["projectWizard.back"], exact: true });
-    const next = dialog.getByRole("button", { name: m["projectWizard.next"], exact: true });
     const create = dialog.getByRole("button", { name: m["newProject.create"], exact: true });
     await expect(back).toBeDisabled();
     const rest = await rowState(actions);
@@ -275,7 +241,6 @@ for (const theme of ["porcelain", "graphite"] as const) for (const width of [144
     // Destructive: the discard confirmation reads as a warning, not as another primary.
     await dialog.getByRole("textbox", { name: m["newProject.name"], exact: true }).fill("Fictional home");
     await cancel.click();
-    const discard = dialog.locator(".project-wizard-discard").getByRole("button", { name: m["projectWizard.discard.confirm"], exact: true });
     const keep = dialog.locator(".project-wizard-discard").getByRole("button", { name: m["projectWizard.discard.keep"], exact: true });
     const error = await page.evaluate(() => { const p = document.createElement("i"); p.style.color = "var(--knx-error-color)"; document.body.append(p); const c = getComputedStyle(p).color; p.remove(); return c; });
     const [keepState, discardState] = await rowState(dialog.locator(".project-wizard-discard button"));
@@ -340,8 +305,13 @@ for (const language of ["en", "de"] as const) {
     const editor = panel.locator('[data-editor-id="1"]');
     await expect(editor.locator(".dpt-field")).toBeVisible();
     await expect(editor.locator(".inspector-field-heading .provenance-badge")).toHaveCount(0);
-    await expect(editor.getByText(instance, { exact: true })).toBeHidden();
-    // Deliberately opened: the technical reference names the source layer.
+    // Both Instance layers wait in closed technical references (DPT and description).
+    await expect(editor.getByText(instance, { exact: true })).toHaveCount(2);
+    for (const label of await editor.getByText(instance, { exact: true }).all()) await expect(label).toBeHidden();
+    // Deliberately opened: each technical reference names its own field's source layer.
+    await editor.locator(".value-source-reference summary").click();
+    await expect(editor.locator(".value-source-reference .provenance-badge")).toHaveText(instance);
+    await expect(editor.locator(".value-source-reference .provenance-badge")).toHaveAttribute("data-source-layer", "Instance");
     await editor.locator(".dpt-reference summary").click();
     const recorded = editor.locator(".dpt-reference .provenance-badge");
     await expect(recorded).toBeVisible();

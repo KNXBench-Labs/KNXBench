@@ -524,8 +524,8 @@ does not save it as your edit. Source badges now belong to the DPT/description
 heading and explain their origin, e.g. **Source: application program / Quelle:
 Applikationsprogramm**. A value stated on the device instance in the project is the
 ordinary case, so its badge (**Source: device instance / Quelle: Geräteinstanz**)
-is not shown in the heading; open the DPT's **Technical reference** to see it. The
-information itself is unchanged in the project and its exports. Catalogue names do
+is not shown in the heading; open the field's **Technical reference** (DPT or
+description) to see it. The information itself is unchanged in the project and its exports. Catalogue names do
 not establish device or codec support.
 [Scope and evidence](../../contracts/dpt-selection.md).
 

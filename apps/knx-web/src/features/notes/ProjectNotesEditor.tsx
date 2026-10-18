@@ -135,7 +135,7 @@ export function ProjectNotesEditor({context,client=defaultClient,language="en",t
   {view&&<p className={styles.guidance}>{view.persistence==="session-only"?copy.session:copy.native}</p>}
   {!onApplied&&<p className={styles.notice}>{copy.readonly}</p>}
   {!view&&!error&&<p role="status"><span className="task-status-text">{copy.loading}</span></p>}{error&&<p ref={alertRef} className={styles.notice} role="alert">{error}</p>}{notice&&<p className={styles.notice} role="status">{notice}</p>}
-  {intent&&<div className={styles.notice} role="alert"><p>{copy.discardPrompt}</p><div className={styles.toolbar}><button type="button" onClick={()=>performSwitch(intent)}>{copy.discard}</button><button type="button" onClick={()=>setIntent(null)}>{copy.keep}</button></div></div>}
+  {intent&&<div className={styles.notice} role="alert"><p>{copy.discardPrompt}</p><div className={styles.toolbar}><button type="button" className="danger-action" onClick={()=>performSwitch(intent)}>{copy.discard}</button><button type="button" onClick={()=>setIntent(null)}>{copy.keep}</button></div></div>}
   {view&&<div className={styles.layout}>
    <nav className={styles.list} aria-label={copy.heading}>
     <label htmlFor={`${id}-filter`}>{copy.filter}</label><input id={`${id}-filter`} type="search" value={filter} onChange={event=>setFilter(event.target.value)}/>
@@ -164,7 +164,7 @@ export function ProjectNotesEditor({context,client=defaultClient,language="en",t
    {pending.noOp&&<p>{copy.noop}</p>}
    <div className={styles.preview}><div><h5>{copy.before}</h5>{pending.previous&&<><p className={styles.literal}>{pending.previous.title}</p><p className={styles.literal}>{pending.previous.body}</p><p>{targetLabel(pending.previous.target)} · {copy.include}: {pending.previous.includeInDocumentation?copy.yes:copy.no}</p><p>#{pending.previous.position}</p></>}</div>
     <div><h5>{copy.after}</h5>{reviewAfter&&<><p className={styles.literal}>{reviewAfter.title}</p><p className={styles.literal}>{reviewAfter.body}</p><p>{targetLabel(reviewAfter.target)} · {copy.include}: {reviewAfter.includeInDocumentation?copy.yes:copy.no}</p></>}{pending.action.kind==="move"&&<p>#{pending.action.position}</p>}</div></div>
-   <div className={styles.toolbar}><button type="button" disabled={!writable} onClick={()=>void confirm()}>{copy.confirm}</button><button type="button" disabled={busy} onClick={revoke}>{copy.cancel}</button></div>
+   <div className={styles.toolbar}><button type="button" className={pending.action.kind==="remove"?"danger-action":undefined} disabled={!writable} onClick={()=>void confirm()}>{copy.confirm}</button><button type="button" disabled={busy} onClick={revoke}>{copy.cancel}</button></div>
   </section>}
  </section>;
 }

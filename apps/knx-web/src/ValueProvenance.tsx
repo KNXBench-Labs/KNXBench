@@ -12,11 +12,13 @@ const LAYERS: Record<string, { name: MessageKey; help: MessageKey }> = {
 // the model and API; a deliberately opened technical reference names it. Each
 // layer is shown in exactly one place: the heading, or else the reference.
 const ROUTINE_LAYERS: ReadonlySet<string> = new Set(["Instance"]);
+/** True when the layer is left out of the heading, so a field must offer a technical reference for it. */
+export function isRoutineLayer(layer: string | null): boolean { return layer !== null && ROUTINE_LAYERS.has(layer); }
 export default function ValueProvenance({ layer, placement = "heading" }: {
   layer: string | null; placement?: "heading" | "reference";
 }) {
   const t = useTranslate();
-  if (layer === null || ROUTINE_LAYERS.has(layer) !== (placement === "reference")) return null;
+  if (layer === null || isRoutineLayer(layer) !== (placement === "reference")) return null;
   const keys = Object.hasOwn(LAYERS, layer) ? LAYERS[layer] : undefined;
   return <span className="provenance-badge" data-source-layer={layer}
     title={t(keys?.help ?? "valueSource.unknownHelp")}>

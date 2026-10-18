@@ -676,3 +676,69 @@ async fn real_refused_partial_interrupted_and_mismatched_acquisitions_round_trip
     assert_eq!(statuses(&e), ["not-read"; 4]);
     assert_eq!(e.report.stop_reason.as_deref(), Some("identity-mismatch"));
 }
+
+/// Puts a `decoy` member with other content before every genuine member,
+/// then renames it to `name` in the raw bytes (local header and central
+/// directory), so the archive holds two `name` entries, the later genuine.
+fn duplicated(original: &[u8], name: &str, decoy: &str, content: &[u8]) -> Vec<u8> {
+    assert_eq!(name.len(), decoy.len());
+    let mut input = zip::ZipArchive::new(Cursor::new(original)).unwrap();
+    let mut output = zip::ZipWriter::new(Cursor::new(vec![]));
+    output
+        .start_file(decoy, zip::write::SimpleFileOptions::default())
+        .unwrap();
+    output.write_all(content).unwrap();
+    for i in 0..input.len() {
+        let mut f = input.by_index(i).unwrap();
+        let member = f.name().to_string();
+        let mut data = vec![];
+        f.read_to_end(&mut data).unwrap();
+        output
+            .start_file(member, zip::write::SimpleFileOptions::default())
+            .unwrap();
+        output.write_all(&data).unwrap();
+    }
+    let mut bytes = output.finish().unwrap().into_inner();
+    let at: Vec<usize> = bytes
+        .windows(decoy.len())
+        .enumerate()
+        .filter(|(_, w)| *w == decoy.as_bytes())
+        .map(|(i, _)| i)
+        .collect();
+    assert_eq!(at.len(), 2, "decoy name once in each header");
+    for i in at {
+        bytes[i..i + name.len()].copy_from_slice(name.as_bytes());
+    }
+    bytes
+}
+
+#[tokio::test]
+async fn a_duplicated_memory_member_is_refused_even_if_one_copy_matches() {
+    let original = bundle_export(&export().await).unwrap();
+    let forged = duplicated(
+        &original,
+        "memory.json",
+        "memorz.json",
+        b"{\"forged\":true}",
+    );
+    assert_eq!(
+        read_export(&forged).expect_err("accepted two memory.json entries"),
+        "diagnostics-duplicate-member"
+    );
+}
+
+#[test]
+fn a_duplicated_format_1_report_member_is_refused() {
+    let plan = prepare(&project(), DeviceId(7), None).unwrap();
+    let original = bundle(&pending(&plan, "synthetic", true)).unwrap();
+    let forged = duplicated(
+        &original,
+        "report.json",
+        "reporz.json",
+        b"{\"forged\":true}",
+    );
+    assert_eq!(
+        read_bundle(&forged).expect_err("accepted two report.json entries"),
+        "diagnostics-duplicate-member"
+    );
+}

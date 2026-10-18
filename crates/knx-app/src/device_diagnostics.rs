@@ -333,7 +333,15 @@ fn validate(r: &Report) -> Result<(), String> {
         {
             return Err("diagnostics-invalid-coverage".into());
         }
-        if item.status == "not-read" && (!item.bytes.is_empty() || item.attempted_at.is_some()) {
+        // Unread, or (observer snapshot only) the collector's in-flight
+        // shape: attempted, not completed, nothing received.
+        let pending = item.attempted_at.is_none()
+            || (!r.complete
+                && item.completed_at.is_none()
+                && item.error.is_none()
+                && item.received_bytes == 0
+                && item.returned_elements.is_none());
+        if item.status == "not-read" && (!item.bytes.is_empty() || !pending) {
             return Err("diagnostics-invalid-pending".into());
         }
         for at in [&item.attempted_at, &item.completed_at]
@@ -343,6 +351,14 @@ fn validate(r: &Report) -> Result<(), String> {
             if DateTime::parse_from_rfc3339(at).is_err() {
                 return Err("diagnostics-invalid-time".into());
             }
+        }
+    }
+    // The collector attempts items in order, one at a time: nothing after an
+    // in-flight item has been attempted.
+    let in_flight = |item: &Reading| item.status == "not-read" && item.attempted_at.is_some();
+    if let Some(at) = r.items.iter().position(in_flight) {
+        if r.items[at + 1..].iter().any(|i| i.attempted_at.is_some()) {
+            return Err("diagnostics-invalid-pending".into());
         }
     }
     Ok(())

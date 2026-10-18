@@ -45,6 +45,9 @@ for (const theme of THEMES) for (const width of WIDTHS) {
     const state = await intercept(page, "en", 8, theme);
     // Import findings put the explorer footer's diagnostic links on screen.
     state.tree = { ...state.tree, errors: 2, warnings: 3 };
+    // One-letter labels: a row action or device link must not shrink to its glyph.
+    state.nodes[0].name = "A";
+    state.tree.installations[0].group_addresses[0].links[0].device_name = "A";
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/");
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
@@ -130,11 +133,22 @@ for (const theme of THEMES) for (const width of WIDTHS) {
     }
     await expect(page.locator(".project-explorer footer .import-diagnostic-link")).toHaveCount(2);
 
-    // Table row action: the device link in the devices table.
+    // Table device links: quiet, and a full target even around a one-letter label.
+    await page.getByRole("navigation", { name: en["workbench.navigation"], exact: true }).getByRole("button", { name: en["workbench.addresses"], exact: true }).click();
+    for (const expand of await page.locator("[data-ga-expand-all]").all()) await expand.click();
+    await page.locator(".address-table .table-select").first().click();
+    const deviceLink = page.locator(".ga-workspace .address-links-panel .device-link").first();
+    await expect(deviceLink).toHaveText("A");
+    await page.mouse.move(1, 1);
+    await expectRole(deviceLink, "quiet", "table device link");
+    await expectFocusRing(page, deviceLink, "table device link");
+
+    // Table row action: the one-letter device name in the devices table.
     await openList(page, "en");
     const rowAction = page.locator(".devices-table tbody td:nth-child(3) button").first();
-    const row = await box(rowAction);
-    expect(row.height, "table row action height").toBeGreaterThanOrEqual(FLOOR);
+    await expect(rowAction).toHaveText("A");
+    await page.mouse.move(1, 1);
+    await expectRole(rowAction, "quiet", "table row action");
     await expectFocusRing(page, rowAction, "table row action");
     await rowAction.click();
 

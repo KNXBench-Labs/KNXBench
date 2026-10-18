@@ -1013,7 +1013,8 @@ function DevicePlacementRepair(props: {
                 : t("inspector.placementUnassigned", { installation: slot.installation.name })}
               {slot.count > 1 && ` ${t("inspector.placementListedTimes", { count: slot.count })}`}
             </span>
-            <button type="button" disabled={busy} onClick={() => void keep(slot)}>
+            {/* Keeping one placement removes the others (undoable), so each answer is destructive. */}
+            <button type="button" className="danger-action" disabled={busy} onClick={() => void keep(slot)}>
               {t("inspector.keepPlacement")}
             </button>
           </li>
@@ -1060,7 +1061,7 @@ function LineOwnerRepair(props: { tree: ProjectTree; lineId: number; onApplied: 
         {areas.map((area) => (
           <li key={area.id}>
             <span>{t("inspector.areaLabel", { address: area.address, name: area.name })}</span>
-            <button type="button" disabled={busy} onClick={() => void keep(area.id)}>{t("inspector.keepLineOwner")}</button>
+            <button type="button" className="danger-action" disabled={busy} onClick={() => void keep(area.id)}>{t("inspector.keepLineOwner")}</button>
           </li>
         ))}
       </ul>

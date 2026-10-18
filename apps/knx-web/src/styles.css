@@ -827,7 +827,7 @@ main {
 .functions-list > li, .functions-members > li, .functions-details > label { min-width: 0; }
 .functions-panel select, .functions-panel input, .functions-panel textarea { max-width: 100%; min-width: 0; box-sizing: border-box; }
 .functions-move select, .functions-details input, .functions-details select, .functions-details textarea { width: 100%; }
-.parameter-conflict > button { max-width: 100%; }
+.parameter-conflict > button, .functions-notice > button { max-width: 100%; }
 /* Secondary (the shared default, see "Controls") like the editor's own
    buttons: entering or leaving the checked editor must not outshout its
    Apply. Only the width bound is theirs. */
@@ -2109,10 +2109,12 @@ main {
 .device-checks-result dt { color: var(--knx-muted); }
 .device-checks-result dd { margin: 0; overflow-wrap: anywhere; }
 
-/* ADR-0051 Debug: opt-in is a verified server setting; the action is separate. */
+/* ADR-0051 Debug: opt-in is a verified server setting; the action is separate.
+   The review panel shares its class with the button that opens it; only the
+   panel is tinted, the button keeps the shared secondary look. */
 .settings-section-debug,
 .service-control-warning,
-.service-control-review {
+.service-control-review:not(button) {
   border-left: 3px solid var(--knx-warning-color);
   background: color-mix(in srgb, var(--knx-warning-color) 7%, var(--knx-surface));
   padding: 12px;
@@ -3292,7 +3294,7 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .device-programming-parts dd { margin: 0; text-align: right; }
 .device-programming-parts > div[data-pending="true"] dd { color: var(--knx-warning-color); font-weight: 600; }
 .device-programming-actions { display: flex; flex-wrap: wrap; gap: 6px; }
-.workbench .device-link { display: inline; padding: 2px 4px; min-width: 0; max-width: 100%; white-space: normal; text-align: left; overflow-wrap: anywhere; }
+.workbench .device-link { display: inline; padding: 2px 4px; min-width: 24px; max-width: 100%; white-space: normal; text-align: left; overflow-wrap: anywhere; }
 .device-link-unresolved { cursor: help; }
 .ga-linked-devices { padding-left: 18px; }
 

@@ -113,6 +113,8 @@ function completionLabel(t: Translate, completion: string): string {
 /** Name, number, type, comment, description and completion, edited as one replacement. */
 function DetailsForm(props: {
   initial: FunctionDetailsDraft; busy: boolean; submitLabel: string;
+  /** Variant of the submit button; a forced overwrite of newer details is `danger-action`. */
+  submitRole?: "primary-action" | "danger-action";
   /** Submitting waits for an explicit decision (stored details changed underneath). */
   blocked?: boolean;
   onSubmit: (draft: FunctionDetailsDraft) => void; onCancel?: () => void; children?: ReactNode;
@@ -148,7 +150,7 @@ function DetailsForm(props: {
     {problem && <p className="field-error" role="alert">{problem}</p>}
     {props.children}
     <div className="functions-actions">
-      <button type="submit" className="primary-action" disabled={props.busy || props.blocked || sameDetails(draft, base) && props.onCancel !== undefined}>{props.submitLabel}</button>
+      <button type="submit" className={props.submitRole ?? "primary-action"} disabled={props.busy || props.blocked || sameDetails(draft, base) && props.onCancel !== undefined}>{props.submitLabel}</button>
       {props.onCancel && <button type="button" className="functions-quiet" disabled={props.busy} onClick={props.onCancel}>{t("functions.cancel")}</button>}
     </div>
   </form>;
@@ -224,11 +226,12 @@ function FunctionItem(props: {
       {editing === null
         ? <button type="button" className="functions-quiet" disabled={busy} onClick={() => setEditing({ base: contextOf(read), details: current })}>{t("functions.editDetails")}</button>
         : <DetailsForm initial={editing.details} busy={busy} blocked={changedUnderneath && !forced} submitLabel={changedUnderneath && forced ? t("functions.applyMineAnyway") : t("functions.applyDetails")}
+            submitRole={changedUnderneath && forced ? "danger-action" : "primary-action"}
             onSubmit={(draft) => void submitDetails(draft)} onCancel={() => { setEditing(null); setForced(false); }}>
             {changedUnderneath && <div className="functions-notice" role="status">
               {t("functions.changedUnderneath", { name: current.name, completion: completionLabel(t, current.completion) })}
               {!forced && <button type="button" className="functions-quiet" onClick={() => setForced(true)}>{t("functions.keepMine")}</button>}
-              <button type="button" className="functions-quiet" onClick={() => { setEditing({ base: contextOf(read), details: current }); setForced(false); }}>{t("functions.takeCurrent")}</button>
+              <button type="button" className="danger-action" onClick={() => { setEditing({ base: contextOf(read), details: current }); setForced(false); }}>{t("functions.takeCurrent")}</button>
             </div>}
           </DetailsForm>}
       <div className="functions-move">

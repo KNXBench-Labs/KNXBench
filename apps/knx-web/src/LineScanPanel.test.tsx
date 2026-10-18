@@ -454,6 +454,16 @@ describe("LineScanPanel", () => {
 
     await act(async () => choices[0].click());
     expect(apply.disabled).toBe(false);
+    // Creating devices only is the routine reconciliation; selecting a missing device turns the
+    // same button into a deletion, so it must look destructive for exactly as long as it is one.
+    expect(apply.classList.contains("primary-action")).toBe(true);
+    expect(apply.classList.contains("danger-action")).toBe(false);
+    await act(async () => choices[1].click());
+    expect(apply.classList.contains("danger-action")).toBe(true);
+    expect(apply.classList.contains("primary-action")).toBe(false);
+    await act(async () => choices[1].click());
+    expect(apply.classList.contains("primary-action")).toBe(true);
+    expect(apply.classList.contains("danger-action")).toBe(false);
     await act(async () => {
       apply.click();
       await Promise.resolve();

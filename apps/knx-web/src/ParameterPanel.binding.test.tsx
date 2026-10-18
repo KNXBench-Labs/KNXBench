@@ -128,6 +128,10 @@ describe("revision-bound parameter writes (Goal B1)", () => {
     await mount({ refreshKey: reloaded, onValueApplied: applied });
     expect(input().value).toBe("6");
     expect(host!.querySelector(".parameter-conflict-current")!.textContent).toContain("7");
+    // Each conflict answer loses one side (the reloaded value or the draft): both look destructive.
+    const choices = Array.from(host!.querySelectorAll<HTMLButtonElement>(".parameter-conflict button"));
+    expect(choices).toHaveLength(2);
+    expect(choices.map((choice) => choice.classList.contains("danger-action"))).toEqual([true, true]);
     await act(async () => input().dispatchEvent(new FocusEvent("focusout", { bubbles: true })));
     expect(apiMock.setParameterValue).toHaveBeenCalledOnce();
     await act(async () => button(language === "de" ? "Meinen Wert übernehmen" : "Apply my value").click());
@@ -144,6 +148,8 @@ describe("revision-bound parameter writes (Goal B1)", () => {
     await mount({ refreshKey: tree(2) });
     await commit("6");
     await mount({ refreshKey: reloaded });
+    expect(button("Discard my value").classList.contains("danger-action")).toBe(true);
+    expect(button("Apply my value").classList.contains("danger-action")).toBe(true);
     await act(async () => button("Discard my value").click());
     expect(input().value).toBe("7");
     expect(host!.querySelector(".parameter-conflict")).toBeNull();

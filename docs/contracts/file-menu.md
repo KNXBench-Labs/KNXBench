@@ -187,8 +187,12 @@ change.
   and of each submenu close File; focus back on File after About, Project history and
   Diagnostic export close by Escape and by their button; the comparison result opened
   from History as a dialog that fits an 800 x 640 viewport with all tables expanded,
-  traps Tab and returns focus to File on Escape and on Close; a 1440 x 500 viewport
-  where **Logout** stays reachable.
+  traps Tab and returns focus to File on Escape and on Close; a `.knxproj` comparison
+  whose ETS import report (a `<details>` disclosure) is reached by Tab and by Shift+Tab
+  and opens on Enter; a 1440 x 500 viewport where **Logout** stays reachable.
+- `src/Overlay.test.tsx`: the shared focus trap counts a visible disclosure `summary`,
+  `contenteditable` regions and media with `controls` as tab stops, and skips the
+  contents of a closed `details`, `display: none` and `visibility: hidden` elements.
 - Older specs that open an entry now open its submenu first through
   `e2e/file-menu.ts`.
 

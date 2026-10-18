@@ -346,8 +346,9 @@ export function FileSubmenu({ id, label, children }: FileSubmenuProps) {
   const isOpen = menu.open?.id === id;
   const source = isOpen ? menu.open!.source : null;
 
-  // Placement runs on open, on window resize and whenever the panel's own size changes: the
-  // comparison report arrives after the panel is open and can push it past an edge.
+  // Placement runs on open, on window resize and whenever the panel's own size changes: a
+  // panel whose entries change while it is open (late data, a font or theme swap) can be pushed
+  // past an edge.
   useLayoutEffect(() => {
     const el = panel.current;
     const anchor = wrapper.current;
@@ -399,7 +400,7 @@ export function FileSubmenu({ id, label, children }: FileSubmenuProps) {
         className="file-submenu-trigger"
         data-file-submenu-trigger={id}
         // `App` closes the menu on any button activation that reaches its container; opening a
-        // submenu is not an action, so the trigger carries the same opt-out the comparison button does.
+        // submenu is not an action, so submenu triggers are the only entries that carry this opt-out.
         data-menu-stays-open="true"
         aria-haspopup="menu"
         aria-expanded={isOpen}

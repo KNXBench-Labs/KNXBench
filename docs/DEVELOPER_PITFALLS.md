@@ -263,7 +263,9 @@ already found lying in the grass.
   only: anything interactive that an entry produces (the project comparison's result)
   opens in a portalled `Overlay` dialog, never inside the menu, and a dialog's keydowns
   reach `FileMenuContent` through React's portal bubbling, so key handling there must
-  test DOM containment, not the React tree.
+  test DOM containment, not the React tree. `Overlay`'s focus trap only wraps at the
+  ends of its own tab-stop list (`FOCUSABLE_SELECTOR`); a natively focusable element
+  missing from it (a `summary` was) is skipped at the ends and unreachable by keyboard.
 - **Motion settings live in `data-motion-level`** (set by
   `apps/knx-web/src/motion.ts`), not `data-motion`; assert the attribute the
   app actually sets.

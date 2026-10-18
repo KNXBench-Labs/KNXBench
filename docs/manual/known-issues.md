@@ -205,7 +205,8 @@ is the remaining copy defect.
   permanently, by decision rather than by omission.
 - **Consequence:** unsupported namespaces and encrypted modern packages are
   refused. Legacy VD3/VD4/VD5 offline import uses a separate supported path; a
-  legacy file over 128 MiB (payload over 256 MiB) is still refused. Successful
+  legacy file or payload over 1,000,000,000 bytes (the storage ceiling,
+  ADR-0142) is refused. Successful
   import does not guarantee full device semantics.
 - **Workaround:** product data that arrives inside a `.knxproj` is imported
   with the project, which covers the common case of working on an existing

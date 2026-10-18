@@ -38,7 +38,8 @@ individual fingerprints, project names or XML values.
 
 ## Read and integrity contract
 
-The manifest is bounded to 1 MiB; each export to 64 MiB, with existing container
+The manifest is bounded to 1 MiB; each export to the storage ceiling of
+1,000,000,000 bytes (ADR-0142; formerly 64 MiB), with existing container
 and XML ceilings still enforced. All baseline fields are required, export paths
 must be distinct, and at least two digests must differ. Exact lexical paths
 reject empty components, dot components, traversal, absolute/drive-like paths,

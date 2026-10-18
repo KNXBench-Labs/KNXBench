@@ -203,9 +203,10 @@ pub fn project_routes() -> Router<SharedState> {
         .route("/api/log", get(log))
 }
 
-/// The product database also validates a 256 MiB package bound. Applying the
-/// same bound here prevents multipart buffering from exceeding it first.
-const MAX_CATALOG_PACKAGE_BYTES: usize = 256 * 1024 * 1024;
+/// The product database validates its package input bound (the storage
+/// ceiling, ADR-0142). Applying the same bound here prevents multipart
+/// buffering from exceeding it first.
+const MAX_CATALOG_PACKAGE_BYTES: usize = knx_productdb::MAX_PACKAGE_INPUT_BYTES as usize;
 
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]

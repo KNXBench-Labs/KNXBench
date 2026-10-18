@@ -11,9 +11,14 @@ use rusqlite::{Connection, OptionalExtension};
 
 use crate::{sha256_hex, ProductDbError};
 
-/// Maximum source size inspected for this optional UI evidence.
-pub const MAX_EDITOR_SOURCE_BYTES: usize = 8 * 1024 * 1024;
-const MAX_EVENTS: usize = 100_000;
+/// Maximum source size inspected for this optional UI evidence: the storage
+/// ceiling, so a retained program is never too large to inspect (ADR-0142).
+/// 199 of 1,462 measured programs exceed the former 8 MiB; the largest is
+/// 281.8 MiB.
+pub const MAX_EDITOR_SOURCE_BYTES: usize = knx_core::limits::MAX_RETAINED_BYTES_USIZE;
+/// Every XML event consumes at least one input byte, so the source bound is
+/// also the walk bound.
+const MAX_EVENTS: usize = MAX_EDITOR_SOURCE_BYTES;
 const MAX_DEPTH: usize = 64;
 const MAX_ATTRIBUTES: usize = 64;
 const MAX_ATTRIBUTE_BYTES: usize = 4096;

@@ -298,12 +298,16 @@ fn an_oversized_declared_payload_is_refused_before_allocation() {
     assert!(matches!(open(&at), Err(LegacyError::Corrupt { .. })));
 }
 
-/// The bounds cover the largest measured file, the Siemens `.vd5` of
-/// November 2016 (67,538,254 bytes; payload 173,230,269 bytes), with room.
+/// The bounds cover the largest measured files with room: the Siemens `.vd5`
+/// of November 2016 (67,538,254 bytes; payload 173,230,269 bytes) and the
+/// ETS3 `.vd5` of census 3 (payload about 389.5 million bytes), which the
+/// former 256 MiB payload bound refused. Both are the storage ceiling now.
 #[test]
 fn the_bounds_admit_the_measured_vd5_with_headroom() {
     const { assert!(MAX_LEGACY_FILE >= 67_538_254 * 3 / 2) };
-    const { assert!(MAX_LEGACY_PAYLOAD >= 173_230_269 * 3 / 2) };
+    const { assert!(MAX_LEGACY_PAYLOAD >= 389_500_000 * 5 / 4) };
+    const { assert!(MAX_LEGACY_PAYLOAD == knx_core::limits::MAX_RETAINED_BYTES) };
+    // Zero-initialised and never touched past the length check.
     let oversized = vec![0u8; MAX_LEGACY_FILE + 1];
     assert!(matches!(
         open(&oversized),

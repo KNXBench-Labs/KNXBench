@@ -816,7 +816,8 @@ its semantic identity because empty Function tables are left out of it
 
 **Amendment (GitHub #21, 2026-10-14): schema 16, carried manufacturer files.**
 `migrate_v15_to_v16` adds `manufacturer_file` (`sha256` primary key, checked as
-64 lower-case hex digits; `source_path`; `len` up to 64 MiB; `codec = 'zlib'`;
+64 lower-case hex digits; `source_path`; `len` up to 64 MiB, since ADR-0142
+up to the storage ceiling of 1,000,000,000 bytes; `codec = 'zlib'`;
 `bytes`). It holds the bytes of the files the `manufacturer_ref` manifest names,
 so a `.knxdb` reopens with its application programs next to an empty product
 database. The rows belong to the file, not to `Project` (no Rust field changed)

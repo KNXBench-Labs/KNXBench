@@ -14,13 +14,14 @@ use flate2::read::DeflateDecoder;
 use super::error::LegacyError;
 use crate::package::{validated_zip_members, RawZipMember};
 
-/// Largest legacy file accepted. The biggest measured one is the Siemens
-/// `.vd5` of November 2016, 67,538,254 bytes (64.4 MiB); see
+/// Largest legacy file accepted: the storage ceiling (ADR-0142). The biggest
+/// measured one is a Siemens `.vd5` of 67,538,254 bytes (64.4 MiB); see
 /// `docs/research/legacy-vd-mapping.md` for the memory measured at that size.
-pub const MAX_LEGACY_FILE: usize = 128 * 1024 * 1024;
-/// Largest declared payload accepted. The biggest measured one is that
-/// `.vd5`'s, 173,230,269 bytes (165.2 MiB).
-pub const MAX_LEGACY_PAYLOAD: u64 = 256 * 1024 * 1024;
+pub const MAX_LEGACY_FILE: usize = knx_core::limits::MAX_RETAINED_BYTES_USIZE;
+/// Largest declared payload accepted: the storage ceiling, below the classic
+/// ZIP size field's 4 GiB. The biggest measured payload is an ETS3 `.vd5`'s,
+/// about 371 MiB (census 3).
+pub const MAX_LEGACY_PAYLOAD: u64 = knx_core::limits::MAX_RETAINED_BYTES;
 
 /// What the member's name says the file is.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

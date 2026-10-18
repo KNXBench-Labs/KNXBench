@@ -12,15 +12,19 @@ use crate::ingest::{classify, ingest_file_in_transaction, DetailedIngestOutcome}
 use crate::report::{insert_unknown, IdConflict, TranslationCounts, UnknownCollector};
 use crate::{sha256_hex, FileKind, IngestOutcome, ProductDbError};
 
-const MIB: u64 = 1024 * 1024;
-const MAX_PACKAGE_SIZE: usize = 256 * 1024 * 1024;
+use knx_core::limits::{MAX_EXPANDED_ARCHIVE_BYTES, MAX_RETAINED_BYTES, MAX_RETAINED_BYTES_USIZE};
+
+/// Raw package input: the input is retained whole as one `package.bytes`
+/// value, so the storage ceiling is its bound (ADR-0142).
+const MAX_PACKAGE_SIZE: usize = MAX_RETAINED_BYTES_USIZE;
 /// Largest raw package input `install_package` admits, for callers that must
 /// refuse by size before reading a file or opening a product database.
 pub const MAX_PACKAGE_INPUT_BYTES: u64 = MAX_PACKAGE_SIZE as u64;
 
-/// Expansion bounds of one product package (KL-151, ADR-0082). The raw input
-/// bound ([`MAX_PACKAGE_INPUT_BYTES`]) and every other ZIP/XML budget are
-/// the same for both profiles; only the decoded member and total sizes differ.
+/// Expansion bounds of one product package (KL-151, ADR-0082, ADR-0142). The
+/// raw input bound ([`MAX_PACKAGE_INPUT_BYTES`]), the decoded member bound and
+/// every other ZIP/XML budget are the same for both profiles; only the
+/// decoded total differs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PackageLimits {
     /// Largest decoded archive member, inclusive.
@@ -30,25 +34,35 @@ pub struct PackageLimits {
 }
 
 impl PackageLimits {
-    /// The default for every caller: 64 MiB per member, 256 MiB in total.
+    /// The default for every caller: a member up to the storage ceiling
+    /// (each member is retained as one value), 4 GiB in total. Admits every
+    /// measured real package: largest member 281.8 MiB, largest total 1.7 GiB.
     pub const STANDARD: Self = Self {
-        max_member_size: 64 * MIB,
-        max_expanded_size: 256 * MIB,
+        max_member_size: MAX_RETAINED_BYTES,
+        max_expanded_size: MAX_EXPANDED_ARCHIVE_BYTES,
     };
-    /// Explicit opt-in for complete manufacturer bundles: 256 MiB per member,
-    /// 4 GiB in total. Measured on the 15 public packages the standard
-    /// profile refuses (14 installed; at most ~0.8 GiB peak RSS, ~222 s and
-    /// ~7 GiB database growth for one package). Never a default.
+    /// Explicit opt-in beyond any measured package: 16 GiB in total. The 4 GiB
+    /// profile measured ~0.8 GiB peak RSS, ~222 s and ~7 GiB database growth
+    /// for its largest package; this scales the database growth. Never a
+    /// default.
     pub const LARGE: Self = Self {
-        max_member_size: 256 * MIB,
-        max_expanded_size: 4096 * MIB,
+        max_member_size: MAX_RETAINED_BYTES,
+        max_expanded_size: 4 * MAX_EXPANDED_ARCHIVE_BYTES,
     };
 }
-const MAX_MEMBERS: usize = 4096;
-const MAX_PATH_NODES: usize = 65_536;
-const MAX_CENTRAL_DIRECTORY_SIZE: usize = 24 * 1024 * 1024;
-const MAX_LOCAL_METADATA_SIZE: usize = 24 * 1024 * 1024;
-const MAX_DECODED_PATH_SIZE: usize = 72 * 1024 * 1024;
+/// The classic ZIP entry-count field is 16 bits (APPNOTE 6.3.10 §4.4.22);
+/// more entries need ZIP64, which is refused. The format maximum is the bound;
+/// a headroom above it could never be reached. Largest measured: 444.
+const MAX_MEMBERS: usize = u16::MAX as usize;
+/// Distinct path nodes of the member tree: 16 per member at the member
+/// maximum (measured packages need about 5). Bounds memory for crafted names
+/// that a 65,535-byte name field would otherwise allow.
+const MAX_PATH_NODES: usize = 16 * MAX_MEMBERS;
+/// ZIP metadata lives inside the input, so the input bound is its bound.
+const MAX_CENTRAL_DIRECTORY_SIZE: usize = MAX_PACKAGE_SIZE;
+const MAX_LOCAL_METADATA_SIZE: usize = MAX_PACKAGE_SIZE;
+/// A CP437 name byte decodes to at most three UTF-8 bytes.
+const MAX_DECODED_PATH_SIZE: usize = 3 * MAX_CENTRAL_DIRECTORY_SIZE;
 const MASTER_DIAGNOSTIC_PREFIX: &str = "/KNX/MasterData/";
 const BAGGAGE_DIAGNOSTIC_XML_PATH: &str = "/KNX/ManufacturerData/Manufacturer/Baggages/Baggage";
 /// A payload is a whole archive member, not an XML node: its diagnostic

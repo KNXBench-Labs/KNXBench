@@ -13,8 +13,14 @@ use knx_store::project_history::NativeSnapshot;
 use knx_store::{ManufacturerRef, StoredOpaqueEntry};
 use serde::{Deserialize, Serialize};
 
-/// A separate bounded offline selection path, never an increased importer limit.
-pub const MAX_SOURCE_BYTES: usize = 64 * 1024 * 1024;
+/// A separate bounded offline selection path: the storage ceiling, so any
+/// project the importer reads can be a source (ADR-0142; formerly 64 MiB,
+/// below the largest measured `.knxproj` of 110.5 MiB).
+pub const MAX_SOURCE_BYTES: usize = knx_core::limits::MAX_RETAINED_BYTES_USIZE;
+
+fn source_limit_message() -> String {
+    format!("selective-import source exceeds the {MAX_SOURCE_BYTES}-byte input limit")
+}
 /// Explicitly frozen reference closure; audit new fields before widening.
 /// v16 (ADR-0128) was audited: it adds no `Project` field, only the
 /// file-level `manufacturer_file` table, which a source never fills (its
@@ -125,7 +131,7 @@ pub fn read_source(path: &Path, password: Option<&ProjectPassword>) -> Result<So
     knx_etsproj::check_project_filename(path).map_err(|e| e.to_string())?;
     let file = std::fs::File::open(path).map_err(|e| e.to_string())?;
     if file.metadata().map_err(|e| e.to_string())?.len() > MAX_SOURCE_BYTES as u64 {
-        return Err("selective-import source exceeds the 64 MiB input limit".into());
+        return Err(source_limit_message());
     }
     let mut bytes = Vec::new();
     file.take(MAX_SOURCE_BYTES as u64 + 1)
@@ -139,7 +145,7 @@ pub fn source_from_bytes(
     password: Option<&ProjectPassword>,
 ) -> Result<Source, String> {
     if bytes.len() > MAX_SOURCE_BYTES {
-        return Err("selective-import source exceeds the 64 MiB input limit".into());
+        return Err(source_limit_message());
     }
     let hash = knx_etsproj::opaque::sha256_hex(&bytes);
     let prefix = format!("imports/{hash}");

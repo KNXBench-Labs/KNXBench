@@ -4,10 +4,17 @@ use quick_xml::{events::Event, name::ResolveResult, NsReader};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
-pub const MAX_EXPANDED_BYTES: u64 = 1024 * 1024 * 1024;
-pub const MAX_XML_BYTES: u64 = 8 * 1024 * 1024;
-const MAX_MEMBERS: usize = 4096;
-const MAX_EVENTS: usize = 200_000;
+/// The analysed archive's expansion budget: the same 4 GiB as a product
+/// package or project (ADR-0142; formerly 1024 MiB).
+pub const MAX_EXPANDED_BYTES: u64 = knx_core::limits::MAX_EXPANDED_ARCHIVE_BYTES;
+/// XML members up to the storage ceiling are scanned (ADR-0142; formerly
+/// 8 MiB, below 199 of 1,462 measured application programs).
+pub const MAX_XML_BYTES: u64 = knx_core::limits::MAX_RETAINED_BYTES;
+/// The classic ZIP entry-count field maximum (APPNOTE §4.4.22).
+const MAX_MEMBERS: usize = u16::MAX as usize;
+/// Every XML event consumes at least one input byte, so the expansion budget
+/// also bounds the events of all scanned members together.
+const MAX_EVENTS: usize = MAX_EXPANDED_BYTES as usize;
 const MAX_SHAPES: usize = 10_000;
 const MAX_DEPTH: usize = 128;
 const MAX_IDENTITY_BYTES: usize = 1024;
@@ -179,7 +186,7 @@ pub(super) fn inspect(bytes: &[u8], analysis: &mut Analysis) -> Result<bool, Ana
             .is_none_or(|n| n > MAX_EXPANDED_BYTES)
     {
         return Err(AnalysisError::Input(
-            "analysis archive exceeds 4096 members or 1024 MiB expanded",
+            "analysis archive exceeds 65535 members or 4 GiB expanded",
         ));
     }
     if entries.iter().any(|e| {

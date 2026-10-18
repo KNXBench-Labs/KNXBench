@@ -14,8 +14,26 @@ pub(crate) const MAX_EVIDENCE_DEPTH: usize = 1024;
 // Coupled scan-work ceilings, not a bound on process RSS. Raw attributes,
 // repeated paths, and expanded namespace names remain charged independently.
 // KL-152 measurement and policy rationale: docs/PRODUCT_DATABASE_CORPUS.md.
-pub(crate) const MAX_EVIDENCE_ITEMS: usize = 1_048_576;
-pub(crate) const MAX_EVIDENCE_BYTES: usize = 256 * 1024 * 1024;
+// Since ADR-0142 they follow the storage ceiling: an item (an element or a raw
+// attribute) consumes at least one input byte, so no retainable document can
+// exceed the item ceiling. The byte estimate also charges the repeated
+// ancestor path per item (KL-152 measured about 193 charged bytes per item on
+// real documents), so it gets eight times the ceiling. The former 1,048,576
+// items refused a measured 281.8 MiB application program.
+pub(crate) const MAX_EVIDENCE_ITEMS: usize = knx_core::limits::MAX_RETAINED_BYTES_USIZE;
+pub(crate) const MAX_EVIDENCE_BYTES: usize = MAX_EVIDENCE_ITEMS.saturating_mul(8);
+
+/// The work ceilings one scan charges against.
+#[derive(Debug, Clone, Copy)]
+struct EvidenceBudget {
+    items: usize,
+    bytes: usize,
+}
+
+const EVIDENCE_BUDGET: EvidenceBudget = EvidenceBudget {
+    items: MAX_EVIDENCE_ITEMS,
+    bytes: MAX_EVIDENCE_BYTES,
+};
 const SCHEME_12_NAMESPACE: &str = "http://knx.org/xml/project/12";
 const SCHEME_14_NAMESPACE: &str = "http://knx.org/xml/project/14";
 const SCHEME_21_NAMESPACE: &str = "http://knx.org/xml/project/21";
@@ -165,6 +183,7 @@ fn unknown_key(item: &UnknownConstruct) -> AliasKey {
 }
 
 fn charge_evidence_budget(
+    budget: EvidenceBudget,
     item_count: &mut usize,
     byte_count: &mut usize,
     path: &[PathElement],
@@ -196,22 +215,23 @@ fn charge_evidence_budget(
     *byte_count = byte_count
         .checked_add(estimated_bytes)
         .ok_or_else(|| xml_error(source_path, "XML evidence byte count overflow"))?;
-    if *item_count > MAX_EVIDENCE_ITEMS {
+    if *item_count > budget.items {
         return Err(xml_error(
             source_path,
-            format!("XML evidence exceeds item limit {MAX_EVIDENCE_ITEMS}"),
+            format!("XML evidence exceeds item limit {}", budget.items),
         ));
     }
-    if *byte_count > MAX_EVIDENCE_BYTES {
+    if *byte_count > budget.bytes {
         return Err(xml_error(
             source_path,
-            format!("XML evidence exceeds byte limit {MAX_EVIDENCE_BYTES}"),
+            format!("XML evidence exceeds byte limit {}", budget.bytes),
         ));
     }
     Ok(())
 }
 
 fn charge_expanded_name_budget<R: BufRead>(
+    budget: EvidenceBudget,
     reader: &NsReader<R>,
     byte_count: &mut usize,
     element: &BytesStart<'_>,
@@ -229,10 +249,10 @@ fn charge_expanded_name_budget<R: BufRead>(
     *byte_count = byte_count
         .checked_add(additional)
         .ok_or_else(|| xml_error(source_path, "XML evidence byte count overflow"))?;
-    if *byte_count > MAX_EVIDENCE_BYTES {
+    if *byte_count > budget.bytes {
         return Err(xml_error(
             source_path,
-            format!("XML evidence exceeds byte limit {MAX_EVIDENCE_BYTES}"),
+            format!("XML evidence exceeds byte limit {}", budget.bytes),
         ));
     }
     Ok(())
@@ -507,7 +527,7 @@ pub(crate) fn reconcile_targeted_unknowns(
     source_path: &str,
     unknown: &mut Vec<UnknownConstruct>,
 ) -> Result<(), ProductDbError> {
-    reconcile_unknowns(bytes, source_path, unknown, false)
+    reconcile_unknowns(bytes, source_path, unknown, false, EVIDENCE_BUDGET)
 }
 
 pub(crate) fn reconcile_package_unknowns(
@@ -515,7 +535,7 @@ pub(crate) fn reconcile_package_unknowns(
     source_path: &str,
     unknown: &mut Vec<UnknownConstruct>,
 ) -> Result<(), ProductDbError> {
-    reconcile_unknowns(bytes, source_path, unknown, true)
+    reconcile_unknowns(bytes, source_path, unknown, true, EVIDENCE_BUDGET)
 }
 
 fn reconcile_unknowns(
@@ -523,6 +543,7 @@ fn reconcile_unknowns(
     source_path: &str,
     unknown: &mut Vec<UnknownConstruct>,
     accept_extended_schemes: bool,
+    budget: EvidenceBudget,
 ) -> Result<(), ProductDbError> {
     let text = bytes.strip_prefix(&[0xEF, 0xBB, 0xBF]).unwrap_or(bytes);
     if text.iter().find(|byte| !byte.is_ascii_whitespace()) != Some(&b'<') {
@@ -570,6 +591,7 @@ fn reconcile_unknowns(
                     ));
                 }
                 charge_evidence_budget(
+                    budget,
                     &mut evidence_items,
                     &mut evidence_bytes,
                     &path,
@@ -602,6 +624,7 @@ fn reconcile_unknowns(
                     ),
                 };
                 charge_expanded_name_budget(
+                    budget,
                     &reader,
                     &mut evidence_bytes,
                     &element,
@@ -666,6 +689,7 @@ fn reconcile_unknowns(
                     project_namespace = Some(root_namespace);
                 }
                 charge_evidence_budget(
+                    budget,
                     &mut evidence_items,
                     &mut evidence_bytes,
                     &path,
@@ -698,6 +722,7 @@ fn reconcile_unknowns(
                     ),
                 };
                 charge_expanded_name_budget(
+                    budget,
                     &reader,
                     &mut evidence_bytes,
                     &element,
@@ -1087,8 +1112,15 @@ mod tests {
         let mut count = 0;
         let mut bytes = 0;
         for _ in 0..524_288 {
-            charge_evidence_budget(&mut count, &mut bytes, &[], &element, "fixture.xml")
-                .expect("bounded item policy must admit one million charged items");
+            charge_evidence_budget(
+                EVIDENCE_BUDGET,
+                &mut count,
+                &mut bytes,
+                &[],
+                &element,
+                "fixture.xml",
+            )
+            .expect("bounded item policy must admit one million charged items");
         }
         assert_eq!(count, 1_048_576);
         assert!(bytes < MAX_EVIDENCE_BYTES);
@@ -1102,8 +1134,15 @@ mod tests {
         let mut count = 0;
         let mut bytes = 0;
         for _ in 0..128 {
-            charge_evidence_budget(&mut count, &mut bytes, &[], &element, "fixture.xml")
-                .expect("bounded byte policy must admit repeated evidence above 64 MiB");
+            charge_evidence_budget(
+                EVIDENCE_BUDGET,
+                &mut count,
+                &mut bytes,
+                &[],
+                &element,
+                "fixture.xml",
+            )
+            .expect("bounded byte policy must admit repeated evidence above 64 MiB");
         }
         assert_eq!(count, 256);
         assert!(bytes > 128 * 1024 * 1024);
@@ -1116,10 +1155,18 @@ mod tests {
         element.push_attribute(("f", "v"));
         let mut count = MAX_EVIDENCE_ITEMS - 2;
         let mut bytes = 0;
-        charge_evidence_budget(&mut count, &mut bytes, &[], &element, "fixture.xml")
-            .expect("the exact item ceiling is inclusive");
+        charge_evidence_budget(
+            EVIDENCE_BUDGET,
+            &mut count,
+            &mut bytes,
+            &[],
+            &element,
+            "fixture.xml",
+        )
+        .expect("the exact item ceiling is inclusive");
         assert_eq!(count, MAX_EVIDENCE_ITEMS);
         let error = charge_evidence_budget(
+            EVIDENCE_BUDGET,
             &mut count,
             &mut bytes,
             &[],
@@ -1136,18 +1183,45 @@ mod tests {
         let mut count = 0;
         // The empty ancestor path plus /X charges three bytes.
         let mut bytes = MAX_EVIDENCE_BYTES - 3;
-        charge_evidence_budget(&mut count, &mut bytes, &[], &element, "fixture.xml")
-            .expect("the exact estimated-byte ceiling is inclusive");
+        charge_evidence_budget(
+            EVIDENCE_BUDGET,
+            &mut count,
+            &mut bytes,
+            &[],
+            &element,
+            "fixture.xml",
+        )
+        .expect("the exact estimated-byte ceiling is inclusive");
         assert_eq!(bytes, MAX_EVIDENCE_BYTES);
-        let error = charge_evidence_budget(&mut count, &mut bytes, &[], &element, "fixture.xml")
-            .expect_err("the next charged path must fail");
+        let error = charge_evidence_budget(
+            EVIDENCE_BUDGET,
+            &mut count,
+            &mut bytes,
+            &[],
+            &element,
+            "fixture.xml",
+        )
+        .expect_err("the next charged path must fail");
         assert!(error.to_string().contains("evidence exceeds byte limit"));
+    }
+
+    /// The KL-152 ceilings, small enough for a document fixture to cross; the
+    /// production ceilings (ADR-0142) charge the same way.
+    const KL152_BUDGET: EvidenceBudget = EvidenceBudget {
+        items: 1_048_576,
+        bytes: 256 * 1024 * 1024,
+    };
+
+    #[test]
+    fn the_ceilings_admit_a_document_of_the_storage_ceiling() {
+        const { assert!(MAX_EVIDENCE_ITEMS == knx_core::limits::MAX_RETAINED_BYTES_USIZE) };
+        const { assert!(MAX_EVIDENCE_BYTES >= 8 * MAX_EVIDENCE_ITEMS) };
     }
 
     #[test]
     fn budget_policy_late_item_refusal_preserves_existing_evidence() {
         let mut xml = String::from(r#"<KNX xmlns="http://knx.org/xml/project/14">"#);
-        for _ in 0..=MAX_EVIDENCE_ITEMS / 2 {
+        for _ in 0..=KL152_BUDGET.items / 2 {
             xml.push_str(r#"<Property Occurrence="2"/>"#);
         }
         xml.push_str("</KNX>");
@@ -1159,8 +1233,14 @@ mod tests {
             sample: None,
         };
         let mut unknown = vec![retained.clone()];
-        let error = reconcile_targeted_unknowns(xml.as_bytes(), "fixture.xml", &mut unknown)
-            .expect_err("late item exhaustion must reject the complete scan");
+        let error = reconcile_unknowns(
+            xml.as_bytes(),
+            "fixture.xml",
+            &mut unknown,
+            false,
+            KL152_BUDGET,
+        )
+        .expect_err("late item exhaustion must reject the complete scan");
         assert!(error.to_string().contains("evidence exceeds item limit"));
         assert_eq!(unknown, vec![retained]);
     }
@@ -1187,8 +1267,14 @@ mod tests {
             sample: None,
         };
         let mut unknown = vec![retained.clone()];
-        let error = reconcile_targeted_unknowns(xml.as_bytes(), "fixture.xml", &mut unknown)
-            .expect_err("repeated paths must not bypass the estimated-byte ceiling");
+        let error = reconcile_unknowns(
+            xml.as_bytes(),
+            "fixture.xml",
+            &mut unknown,
+            false,
+            KL152_BUDGET,
+        )
+        .expect_err("repeated paths must not bypass the estimated-byte ceiling");
         assert!(error.to_string().contains("evidence exceeds byte limit"));
         assert_eq!(unknown, vec![retained]);
     }
@@ -1225,8 +1311,15 @@ mod tests {
         let mut count = MAX_EVIDENCE_ITEMS;
         let mut bytes = 0;
 
-        let error = charge_evidence_budget(&mut count, &mut bytes, &[], &element, "fixture.xml")
-            .expect_err("one item beyond the budget must fail");
+        let error = charge_evidence_budget(
+            EVIDENCE_BUDGET,
+            &mut count,
+            &mut bytes,
+            &[],
+            &element,
+            "fixture.xml",
+        )
+        .expect_err("one item beyond the budget must fail");
 
         assert!(error.to_string().contains("evidence exceeds item limit"));
     }
@@ -1237,8 +1330,15 @@ mod tests {
         let mut count = 0;
         let mut bytes = MAX_EVIDENCE_BYTES;
 
-        let error = charge_evidence_budget(&mut count, &mut bytes, &[], &element, "fixture.xml")
-            .expect_err("one path beyond the byte budget must fail");
+        let error = charge_evidence_budget(
+            EVIDENCE_BUDGET,
+            &mut count,
+            &mut bytes,
+            &[],
+            &element,
+            "fixture.xml",
+        )
+        .expect_err("one path beyond the byte budget must fail");
 
         assert!(error.to_string().contains("evidence exceeds byte limit"));
     }
@@ -1254,9 +1354,15 @@ mod tests {
         };
         let mut bytes = MAX_EVIDENCE_BYTES;
 
-        let error =
-            charge_expanded_name_budget(&reader, &mut bytes, &element, &identity, "fixture.xml")
-                .expect_err("expanded names beyond the byte budget must fail");
+        let error = charge_expanded_name_budget(
+            EVIDENCE_BUDGET,
+            &reader,
+            &mut bytes,
+            &element,
+            &identity,
+            "fixture.xml",
+        )
+        .expect_err("expanded names beyond the byte budget must fail");
 
         assert!(error.to_string().contains("evidence exceeds byte limit"));
     }

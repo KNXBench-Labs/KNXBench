@@ -16,7 +16,7 @@ Last updated: 2026-10-18 07:55 CEST
 | Runtime | Platform | Availability |
 | --- | --- | --- |
 | Browser workbench | HTTPS server | alpha.6 |
-| Browser uploads | 1024 MiB streamed; product packages 256 MiB | alpha.9 |
+| Browser uploads | 1024 MiB streamed; product packages up to 1,000,000,000 bytes (ADR-0142; 256 MiB until Alpha 14) | alpha.9 |
 | Companion return | Current project; explicit navigation | alpha.7 |
 | Docker server | Linux amd64/arm64 | alpha.6 |
 | Linux desktop | x86-64 AppImage; bounded verification | alpha.6 |

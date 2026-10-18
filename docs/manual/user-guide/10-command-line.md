@@ -222,22 +222,24 @@ and other files in the ZIP are listed as `not installed: <path> (<size> bytes, s
 For a `.knxprod` package it prints one line covering the scheme, member count, unknown
 constructs, conflicts, captured translations and dropped duplicate datapoint types.
 
-Complete manufacturer bundles (for example Siemens' all-products download) are too large
-for the default bounds: one file inside the package may hold at most 64 MiB and the whole
-package may expand to at most 256 MiB. If you trust the file, `--allow-large-package`
-raises these two bounds to 256 MiB and 4 GiB:
+The default bounds admit every product package measured so far, complete manufacturer
+bundles included: the package file and each file inside it may hold up to 1,000,000,000
+bytes (the most the product database can store as one value), and the whole package may
+expand to 4 GiB ([ADR-0142](../../adr/0142-file-size-limits-follow-the-storage-ceiling.md)).
+For a package that expands even further, `--allow-large-package` raises the total to
+16 GiB:
 
 ```bash
 knx products ingest Siemens_HVAC_All_PDB.knxprod --allow-large-package
 ```
 
 The option also works for a manufacturer ZIP whose package inside is that large; the
-packages inside one ZIP share the same 4 GiB budget.
+packages inside one ZIP share one budget (4 GiB, or 16 GiB with the option).
 
-Expect it to take minutes, close to a gigabyte of memory and several gigabytes of
-database space for the largest bundles. The file itself must still be at most 256 MiB, and
-the option exists only on the command line; the catalog browser keeps the default
-bounds. For
+Expect the largest bundles to take minutes, about a gigabyte of memory and several
+gigabytes of database space (a 1.7 GiB package: about two minutes, 0.7 GiB of memory,
+4.5 GB of database). The option exists only on the command line; the catalog browser
+keeps the default bounds. For
 a `.knxproj` it prints:
 
 ```text

@@ -671,7 +671,7 @@ describe("File menu placement", () => {
       expect(panel("history").style.getPropertyValue("--file-submenu-shift")).toBe("");
       const observer = FakeResizeObserver.instances.find((o) => o.observed.includes(panel("history")))!;
       expect(observer).toBeDefined();
-      // The comparison report arrives and the panel grows past the bottom edge.
+      // The panel grows while open (late entries, a font swap) and now passes the bottom edge.
       height = 300;
       await act(async () => observer.fire());
       await advance(50);

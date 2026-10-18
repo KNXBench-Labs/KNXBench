@@ -302,7 +302,7 @@ test.describe("File submenus", () => {
 });
 
 /** An open fictional project with a project history and a comparison route; anything else is recorded. */
-async function serveProject(page: Page, { compareAdded = 0 }: { compareAdded?: number } = {}) {
+async function serveProject(page: Page, { compareAdded = 0, knxproj = false }: { compareAdded?: number; knxproj?: boolean } = {}) {
   const unexpected: string[] = [];
   const history = admitProjectHistory(structuredClone(HISTORY_FIXTURE));
   const emptyTable = { added: [], removed: [], changed: [], ambiguous: [] };
@@ -310,7 +310,10 @@ async function serveProject(page: Page, { compareAdded = 0 }: { compareAdded?: n
     { etsId: null, address: `1/1/${i}` },
     { name: `Fictional group address with a deliberately long descriptive name number ${i}`, central: false, unfiltered: false, range: null },
   ]);
-  const report = { inputKind: "knxdb", importReport: null, importDiagnostics: [], infoChanges: [], installations: [
+  const importDiagnostics = knxproj ? [
+    { timestamp: "2026-10-18T10:00:00Z", severity: "warning", source: "import", message: "Fictional unmapped parameter", location: "P-0001", detail: null },
+  ] : [];
+  const report = { inputKind: knxproj ? "knxproj" : "knxdb", importReport: null, importDiagnostics, infoChanges: [], installations: [
     { id: 0, status: "matched", fieldChanges: [], areas: emptyTable, lines: emptyTable, devices: emptyTable, groupRanges: emptyTable,
       groupAddresses: { ...emptyTable, added }, buildings: emptyTable, functions: emptyTable }] };
   await page.route("https://api.github.com/**", (route) => { unexpected.push(route.request().url()); return route.abort(); });
@@ -330,7 +333,7 @@ async function serveProject(page: Page, { compareAdded = 0 }: { compareAdded?: n
     if (path === "/api/project/load-progress") return ok(null);
     if (path === "/api/project/history" && method === "GET") return ok(history);
     if (path === "/api/project/diff" && method === "POST") return ok(report);
-    if (path === "/api/fs/list") return ok([{ name: "compare-fictional.knxdb", is_dir: false }]);
+    if (path === "/api/fs/list") return ok([{ name: knxproj ? "compare-fictional.knxproj" : "compare-fictional.knxdb", is_dir: false }]);
     if (path === "/api/bus/discover" && method === "POST") return ok({ interfaces: [] });
     if (method === "GET" && ["/api/product-languages", "/api/catalog/manufacturers", "/api/catalog/items"].includes(path)) return ok([]);
     unexpected.push(`${method} ${path}`);
@@ -513,6 +516,50 @@ test.describe("File menu placement and comparison dialog", () => {
       await expect(report).toBeHidden();
       await expect(fileControl(page)).toBeFocused();
       await expect(page.locator(".file-menu")).toHaveJSProperty("open", false);
+    }
+    expect(unexpected).toEqual([]);
+  });
+
+  test("a .knxproj comparison keeps the ETS import report reachable by Tab and Shift+Tab, and Enter opens it", async ({ page }) => {
+    const unexpected = await serveProject(page, { compareAdded: 3, knxproj: true });
+    await page.goto("/?view=editor");
+    await openFile(page);
+    await openFileSubmenu(page, "history");
+    await page.getByRole("menuitem", { name: en["projectDiff.compareButton"], exact: true }).click();
+    await page.getByRole("button", { name: "compare-fictional.knxproj", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: en["projectDiff.title"], exact: true });
+    await expect(dialog).toBeVisible();
+    const disclosure = dialog.locator("summary");
+    await expect(disclosure).toHaveText(/ETS import report: 1 diagnostic/);
+    const onDisclosure = () => disclosure.evaluate((node) => node === document.activeElement);
+    const inDialog = () => page.evaluate(() => document.activeElement?.closest('[role="dialog"]') !== null);
+    const stops = await dialog.locator("summary, button").count();
+    // Forward: the disclosure is one stop of a closed cycle, and focus never leaves the dialog.
+    let forward = false;
+    for (let i = 0; i < stops + 1; i += 1) {
+      await page.keyboard.press("Tab");
+      expect(await inDialog()).toBe(true);
+      forward ||= await onDisclosure();
+    }
+    expect(forward).toBe(true);
+    // Backward: Shift+Tab walks the same cycle and reaches it as well.
+    let backward = false;
+    for (let i = 0; i < stops + 1; i += 1) {
+      await page.keyboard.press("Shift+Tab");
+      expect(await inDialog()).toBe(true);
+      backward ||= await onDisclosure();
+    }
+    expect(backward).toBe(true);
+    // Enter on the focused disclosure opens it.
+    await disclosure.focus();
+    await expect(dialog.locator("details")).toHaveJSProperty("open", false);
+    await page.keyboard.press("Enter");
+    await expect(dialog.locator("details")).toHaveJSProperty("open", true);
+    await expect(dialog).toContainText("Fictional unmapped parameter");
+    // The opened report adds no stop that breaks the trap.
+    for (let i = 0; i < stops + 2; i += 1) {
+      await page.keyboard.press("Tab");
+      expect(await inDialog()).toBe(true);
     }
     expect(unexpected).toEqual([]);
   });

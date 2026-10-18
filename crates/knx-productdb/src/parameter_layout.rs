@@ -52,6 +52,10 @@ pub struct FieldLayout {
     pub cell: Option<Cell>,
     /// Declared references reachable through structural choice dependencies.
     pub controlled_object_refs: Vec<String>,
+    /// `ParameterRefRef/@IndentLevel` (census P4), only when the reference has
+    /// one group and every occurrence there declares the same valid level.
+    /// Presentation only.
+    pub indent_level: Option<u8>,
 }
 /// An activated separator's declared position, for grid captions.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -294,6 +298,19 @@ pub fn load(conn: &Connection, program: &str) -> Result<ParameterLayout, Product
                 }
                 _ => None,
             };
+            let indent_level = match (&group, &grids) {
+                (
+                    Some(Group {
+                        element_id: Some(block),
+                        ..
+                    }),
+                    Some(grids),
+                ) => grids
+                    .indents
+                    .get(&(block.clone(), reference.clone()))
+                    .copied(),
+                _ => None,
+            };
             result.fields.insert(
                 (scope.clone(), reference),
                 FieldLayout {
@@ -301,6 +318,7 @@ pub fn load(conn: &Connection, program: &str) -> Result<ParameterLayout, Product
                     controls_com_objects,
                     cell,
                     controlled_object_refs,
+                    indent_level,
                 },
             );
         }

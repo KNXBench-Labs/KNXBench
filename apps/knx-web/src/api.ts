@@ -2341,6 +2341,8 @@ export interface ParameterField {
   controlsComObjects?: boolean;
   /** Declared grid cell (ADR-0137); absent on older servers. */
   cell?: ParameterGridCell | null;
+  /** `ParameterRefRef/@IndentLevel` (1 to 8) when declared consistently; presentation only. */
+  indentLevel?: number | null;
   /** Exact configured object IDs; absent on older servers (no inferred mapping). */
   controlledComObjectIds?: number[];
   etsId: string;

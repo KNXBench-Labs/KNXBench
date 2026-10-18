@@ -116,3 +116,66 @@ fn object_controls_follow_dependencies_without_crossing_unrelated_branches() {
         .controlled_object_refs
         .is_empty());
 }
+
+/// Census P4: `ParameterRefRef/@IndentLevel` indents a row, presentation only.
+#[test]
+fn indent_level_comes_from_one_consistent_declaration_in_its_block() {
+    let dynamic = r#"<ParameterBlock Id="PB-1" Text="General"><ParameterRefRef RefId="P-1_R-1"/><choose ParamRefId="P-1_R-1"><when test="1"><ParameterRefRef RefId="P-2_R-1" IndentLevel="2"/></when><when test="0"><ParameterRefRef RefId="P-2_R-1" IndentLevel="2"/></when></choose></ParameterBlock>"#;
+    let result = layout(&source(dynamic));
+    assert_eq!(result.field("", "P-1_R-1").indent_level, None, "undeclared");
+    assert_eq!(result.field("", "P-2_R-1").indent_level, Some(2));
+}
+
+#[test]
+fn contradictory_or_malformed_indent_levels_indent_nothing() {
+    let contradictory = r#"<ParameterBlock Id="PB-1"><choose ParamRefId="P-1_R-1"><when test="1"><ParameterRefRef RefId="P-2_R-1" IndentLevel="1"/></when><when test="0"><ParameterRefRef RefId="P-2_R-1" IndentLevel="3"/></when></choose></ParameterBlock>"#;
+    assert_eq!(
+        layout(&source(contradictory))
+            .field("", "P-2_R-1")
+            .indent_level,
+        None
+    );
+    let partly = r#"<ParameterBlock Id="PB-1"><choose ParamRefId="P-1_R-1"><when test="1"><ParameterRefRef RefId="P-2_R-1" IndentLevel="1"/></when><when test="0"><ParameterRefRef RefId="P-2_R-1"/></when></choose></ParameterBlock>"#;
+    assert_eq!(
+        layout(&source(partly)).field("", "P-2_R-1").indent_level,
+        None,
+        "declared on one occurrence only"
+    );
+    for raw in ["0", "-1", "x", "1.5", " 1", "9", "300", ""] {
+        let dynamic = format!(
+            r#"<ParameterBlock Id="PB-1"><ParameterRefRef RefId="P-2_R-1" IndentLevel="{raw}"/></ParameterBlock>"#
+        );
+        assert_eq!(
+            layout(&source(&dynamic)).field("", "P-2_R-1").indent_level,
+            None,
+            "raw={raw:?}"
+        );
+    }
+    for raw in ["1", "8"] {
+        let dynamic = format!(
+            r#"<ParameterBlock Id="PB-1"><ParameterRefRef RefId="P-2_R-1" IndentLevel="{raw}"/></ParameterBlock>"#
+        );
+        assert_eq!(
+            layout(&source(&dynamic)).field("", "P-2_R-1").indent_level,
+            Some(raw.parse().unwrap()),
+            "raw={raw:?}"
+        );
+    }
+}
+
+#[test]
+fn a_reference_without_one_block_gets_no_indent() {
+    let outside = r#"<ParameterRefRef RefId="P-2_R-1" IndentLevel="1"/>"#;
+    assert_eq!(
+        layout(&source(outside)).field("", "P-2_R-1").indent_level,
+        None
+    );
+    let two_blocks = r#"<ParameterBlock Id="PB-1"><ParameterRefRef RefId="P-2_R-1" IndentLevel="1"/></ParameterBlock><ParameterBlock Id="PB-2"><ParameterRefRef RefId="P-2_R-1" IndentLevel="1"/></ParameterBlock>"#;
+    assert_eq!(
+        layout(&source(two_blocks))
+            .field("", "P-2_R-1")
+            .indent_level,
+        None,
+        "no single group, so no single row"
+    );
+}

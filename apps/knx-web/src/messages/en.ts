@@ -397,6 +397,7 @@ export const messages = {
   "comTable.addresses": "Group addresses",
   "comTable.status": "Status",
   "comTable.channel": "Channel",
+  "comTable.size": "Size: {value}",
   "comTable.search": "Search communication objects",
   "comTable.statusFilter": "Filter by activation status",
   "comTable.linkFilter": "Filter by links",

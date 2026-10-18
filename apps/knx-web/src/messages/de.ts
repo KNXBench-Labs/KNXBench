@@ -377,6 +377,7 @@ export const messages: Record<MessageKey, string> = {
   "comTable.addresses": "Gruppenadressen",
   "comTable.status": "Status",
   "comTable.channel": "Kanal",
+  "comTable.size": "Größe: {value}",
   "comTable.search": "Kommunikationsobjekte durchsuchen",
   "comTable.statusFilter": "Nach Aktivierungsstatus filtern",
   "comTable.linkFilter": "Nach Verknüpfungen filtern",

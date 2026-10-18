@@ -260,9 +260,14 @@ beside it, which is why ADR-0140 decides by content (RFC 1740 magic).
 1. G1/P2 and G2/P1: correctness first, both small and server-led. Done
    (17 October 2026, [ADR-0139](../adr/0139-block-access-and-separators-reach-the-parameter-tab.md)).
 2. G3 wrapper ZIPs: removes the most common install failure on real downloads.
-3. G6: make packed time units fall back.
+   Done (18 October 2026, [ADR-0140](../adr/0140-vendor-zips-of-product-packages-install-as-a-whole.md);
+   see the result below).
+3. G6: make packed time units fall back. Done (18 October 2026,
+   [contract](../contracts/parameter-editor-admission.md#packed-time-units-fall-back-2026-10-18)).
 4. P3, P4, P5, O1, O3: presentation work on data the server already holds or
-   can read from the retained source.
+   can read from the retained source. P4 (`IndentLevel`) and the size half of
+   O3 done (18 October 2026); P3, P5 (needs a product-database column), O1 and
+   object priority remain.
 5. G4/G5 (size ceilings, database growth) with measurements first; P6, P8, O2,
    O4 after their contracts.
 

@@ -211,3 +211,10 @@ it("#17: a filled product name and channel heading say where the text came from;
   expect(heading.title).toBe("Filled in from this device's value of the text parameter.\nProduct text: {{0:Page 1}}");
   await v.cleanup();
 });
+it("names the object size the product data resolves, and nothing when it is unknown (census O3)", async () => {
+  const v = await render([object(1, { size: "2 Bytes" }), object(2)]);
+  const row = (id: number) => v.host.querySelector(`tr[data-object-id="${id}"]`)!;
+  expect(row(1).querySelector(".com-object-size")?.textContent).toBe("Size: 2 Bytes");
+  expect(row(2).querySelector(".com-object-size")).toBeNull();
+  await v.cleanup();
+});

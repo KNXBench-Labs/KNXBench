@@ -384,6 +384,7 @@ mod tests {
             program_dpt: None,
             dpt_text: None,
             dpt_text_language: None,
+            size: None,
             function_text: None,
             name_fill: None,
         }

@@ -841,6 +841,11 @@ pub struct ComObjectNode {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub dpt_text_language: Option<String>,
+    /// The object size the product data resolves (`ComObjectSize_t`, e.g.
+    /// `"1 Bit"`, `"2 Bytes"`); absent when no layer states it (census O3).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub size: Option<String>,
     /// The product's `FunctionText` (`ComObjectRef` over `ComObject`), in
     /// the requested language when translated, module arguments of the
     /// object's own module instance substituted. The main-function label
@@ -1045,8 +1050,18 @@ fn build_com_object_node(com: &knx_core::ComObjectInstance, project: &Project) -
         program_dpt,
         dpt_text: None,
         dpt_text_language: None,
+        size: com.size.as_ref().map(|size| object_size_text(size.value)),
         function_text: None,
         name_fill: None,
+    }
+}
+
+/// `ComObjectSize_t` spelling (Project Schema 23 §1.1.2.5): `n Bit`, `1 Byte`, `n Bytes`.
+fn object_size_text(size: knx_core::ObjectSize) -> String {
+    match size {
+        knx_core::ObjectSize::Bit(n) => format!("{n} Bit"),
+        knx_core::ObjectSize::Byte(1) => "1 Byte".to_owned(),
+        knx_core::ObjectSize::Byte(n) => format!("{n} Bytes"),
     }
 }
 
@@ -1171,6 +1186,15 @@ mod tests {
             com_objects: vec![],
             binary_data: vec![],
         }
+    }
+
+    #[test]
+    fn object_sizes_use_the_schema_spelling() {
+        use knx_core::ObjectSize;
+        assert_eq!(object_size_text(ObjectSize::Bit(1)), "1 Bit");
+        assert_eq!(object_size_text(ObjectSize::Bit(4)), "4 Bit");
+        assert_eq!(object_size_text(ObjectSize::Byte(1)), "1 Byte");
+        assert_eq!(object_size_text(ObjectSize::Byte(14)), "14 Bytes");
     }
 
     #[test]

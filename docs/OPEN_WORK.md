@@ -49,10 +49,15 @@ open work in this order:
    ([contract](contracts/parameter-editor-admission.md#packed-time-units-fall-back-2026-10-18)).
    **Still open:** `TypeDate` (first seen in the addendum) is unmodelled and
    edited as free text; its value format needs evidence before an editor.
-4. **Layouts:** inline sections, `IndentLevel`, `SuffixText`, object folders
-   from `ShowInComObjectTree` (documented in Project Schema 23), flag/size
-   columns; later conditional captions (`Rename`), objects by parameter page and
-   identity-keyed module comparison. Each needs its own contract first.
+4. **Layouts:** ~~`IndentLevel`~~ and ~~object size~~ — done
+   ([row indentation](contracts/parameter-workspace.md#row-indentation-census-p4-18-october-2026);
+   the object table names the resolved size). **Still open:** inline sections,
+   `SuffixText` (needs a product-database column, since the `parameter` row
+   stores `Suffix` and the collection spells `SuffixText`), object folders from
+   `ShowInComObjectTree` (documented in Project Schema 23), object priority (not
+   in the core model); later conditional captions (`Rename`), objects by
+   parameter page and identity-keyed module comparison. Each needs its own
+   contract first.
 
 ## Plug-in data adoption: plug-in acceptance open (17 October 2026)
 

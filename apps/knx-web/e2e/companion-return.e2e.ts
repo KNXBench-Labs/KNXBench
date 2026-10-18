@@ -2,6 +2,7 @@
 import { expect, test, type BrowserContext } from "@playwright/test";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 
 async function interceptApi(context: BrowserContext, language = "en") {
   const unexpected: string[] = [];
@@ -18,6 +19,7 @@ async function interceptApi(context: BrowserContext, language = "en") {
     if (method === "GET" && path === "/api/auth/status") body = { required: false, authenticated: true };
     else if (method === "GET" && path === "/api/settings") body = { schemaVersion: 1, status: "ok", settings: { uiLanguage: language } };
     else if (method === "GET" && path === "/api/project") body = project;
+    else if (method === "GET" && path === "/api/project/status-metrics") body = statusMetricsFixtureBody(project);
     else if (method === "GET" && path === "/api/product-languages") body = [];
     else if (method === "POST" && path === "/api/bus/discover") body = { interfaces: [] };
     else if (method === "GET" && path === "/api/bus/monitor/telegrams") {

@@ -18,6 +18,7 @@ import ImportEvidencePanel from "./ImportEvidencePanel";
 import SourceReportPanel from "./SourceReportPanel";
 import ProjectPayloadPanel from "./ProjectPayloadPanel";
 import ProjectMetadataPanel from "./ProjectMetadataPanel";
+import StatusMetricsPanel from "./StatusMetricsPanel";
 import { useTranslate } from "./i18n";
 import type { MessageKey } from "./messages/en";
 import { useDeviceNavigation } from "./DeviceLink";
@@ -113,6 +114,7 @@ export default function Dashboard(props: {
           <h3 id="dashboard-file-heading">{t("dashboard.section.file")}</h3>
           <dl className="dashboard-stats">
             <Row label={t("dashboard.schemaVersion")}><span className="dashboard-value">{tree.schema_version}</span></Row>
+            <StatusMetricsPanel tree={tree} />
           </dl>
           <ProjectMetadataPanel tree={tree} />
         </section>

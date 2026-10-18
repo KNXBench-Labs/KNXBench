@@ -34,6 +34,18 @@ and explicit future-context refreshes. Synthetic Core, HTTP and panel regression
 cover the production path; [contract](contracts/dpt-selection.md#monitor-resolution-reasons-ui-01-18-october-2026).
 No bus/hardware operation or deployment is part of this change.
 
+## UI-04 project status storage metrics (18 October 2026)
+
+The Overview measures the current on-disk size of the open project's native
+file (which may include unsaved recovery-journal growth), its separate unsaved
+flag, and the active product database including SQLite side files. It counts
+manufacturers owning products or programs separately from project devices.
+New projects have no invented file size; pending, unavailable, stale and failed
+reads are explicit. Response admission binds server, project and revision.
+[Contract](contracts/project-status-metrics.md). Focused HTTP and Vitest tests
+cover save, Save As, failed save, native open, import, project switch, catalogue
+install, empty/unavailable databases, count identity and locale formatting.
+
 ## Manual, README and screenshots after Alpha 14 (18 October 2026)
 
 Docs and media only, no application change. The manual's 46 stills, the four

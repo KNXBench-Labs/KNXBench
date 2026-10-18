@@ -11,6 +11,51 @@ use rusqlite::{Connection, OptionalExtension};
 
 use crate::ProductDbError;
 
+/// Canonical catalogue rows in the active product database. These are not
+/// project device instances or catalogue placements (`catalog_item`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CatalogueCounts {
+    pub manufacturers: u64,
+    pub products: u64,
+    pub application_programs: u64,
+}
+
+pub fn catalogue_counts(db: &Connection) -> Result<CatalogueCounts, ProductDbError> {
+    db.query_row(
+        "SELECT (SELECT COUNT(*) FROM (SELECT manufacturer_id FROM product UNION SELECT manufacturer_id FROM application_program)),
+                (SELECT COUNT(*) FROM product),
+                (SELECT COUNT(*) FROM application_program)",
+        [],
+        |row| {
+            Ok(CatalogueCounts {
+                manufacturers: row.get::<_, i64>(0)? as u64,
+                products: row.get::<_, i64>(1)? as u64,
+                application_programs: row.get::<_, i64>(2)? as u64,
+            })
+        },
+    )
+    .map_err(ProductDbError::Sqlite)
+}
+
+#[cfg(test)]
+mod catalogue_count_tests {
+    use super::catalogue_counts;
+
+    #[test]
+    fn query_counts_only_manufacturers_with_products_or_programs() {
+        let dir = tempfile::tempdir().unwrap();
+        let db = crate::open_and_migrate(&dir.path().join("catalogue.sqlite")).unwrap();
+        db.execute_batch("INSERT INTO manufacturer (id, name) VALUES ('M-1','One'),('M-2','Two'),('M-3','Three');
+            INSERT INTO product (id, manufacturer_id, hardware_id, source_sha256) VALUES ('P-1','M-1','H-1','a');").unwrap();
+        let counts = catalogue_counts(&db).unwrap();
+        assert_eq!(counts.manufacturers, 1);
+        assert_eq!(counts.products, 1);
+        assert_eq!(counts.application_programs, 0);
+        db.execute_batch("INSERT INTO application_program (id, manufacturer_id, source_sha256) VALUES ('A-2','M-2','a');").unwrap();
+        assert_eq!(catalogue_counts(&db).unwrap().manufacturers, 2);
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ValueLayer {
     Program,

@@ -4,6 +4,7 @@ import { openExplorerBranches, openNavigationSections } from "./disclosure-fixtu
 import { expect, test, type Page } from "@playwright/test";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 
 const item = {
   id: "M-0001_H-1_P-1_CI-1", manufacturerId: "M-0001", name: "Switch actuator", number: "SA 4",
@@ -84,6 +85,8 @@ async function interceptApi(page: Page, settings: Record<string, unknown> = {}) 
       body = { error: "no project open" };
     } else if (path === "/api/project" && method === "GET") {
       body = state.current;
+    } else if (path === "/api/project/status-metrics" && method === "GET") {
+      body = statusMetricsFixtureBody(state.current);
     } else if (path === "/api/project/new" && method === "POST") {
       projectOpen = true;
       // The fixture's project stands in for what the seed would build.

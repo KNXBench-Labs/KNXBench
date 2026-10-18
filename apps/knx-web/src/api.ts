@@ -4,6 +4,7 @@
 //! swapping the import at each call site is the only change there.
 import type { Deletion, DispositionContext, WireChoice } from "./noteDisposition";
 import type { ProjectTree } from "./bindings/ProjectTree";
+import type { StatusMetrics } from "./statusMetrics";
 import type { AdoptionApplyResponse, AdoptionListing, AdoptionPreviewResponse } from "./pluginData";
 import {admitProjectMetadata,type ProjectMetadataView} from "./projectMetadata";
 import {admitRecordedDeviceState,type RecordedDeviceStateView} from "./recordedDeviceState";
@@ -288,6 +289,10 @@ export function cancelPluginData(confirmationToken: string): Promise<{ cancelled
 
 export function currentProject(): Promise<ProjectTree & { has_store_path: boolean }> {
   return request("/api/project");
+}
+
+export function statusMetrics(): Promise<StatusMetrics> {
+  return request("/api/project/status-metrics");
 }
 
 /**

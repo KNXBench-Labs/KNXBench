@@ -3,6 +3,7 @@ import { openNavigationSections } from "./disclosure-fixture";
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 import { snapshot, telegram, node } from "./telegram-flow-server";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 
 function project(revision = 1) {
   return { schema_version: 11, errors: 0, warnings: 0, can_undo: false, can_redo: false, is_modified: false,
@@ -30,6 +31,7 @@ async function editor(page: Page, context: BrowserContext) {
       if (state.holdProject) await new Promise<void>(resolve => state.releases.push(resolve));
       return json(tree);
     }
+    if (path === "/api/project/status-metrics" && method === "GET") return json(statusMetricsFixtureBody(state.tree));
     if (path === "/api/bus/discover" && method === "POST") return json({ interfaces: [] });
     if (path === "/api/bus/monitor/telegrams" && method === "GET") {
       const since = Number(new URL(r.url()).searchParams.get("since") ?? 0);

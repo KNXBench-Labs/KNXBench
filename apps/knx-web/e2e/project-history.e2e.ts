@@ -6,6 +6,7 @@ import { messages as de } from "../src/messages/de";
 import { HISTORY_FIXTURE } from "../src/projectHistory.fixture";
 import { admitProjectHistory } from "../src/projectHistory";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 
 async function intercept(page: Page, language: "en" | "de", session = false) {
   const history = admitProjectHistory({...structuredClone(HISTORY_FIXTURE), limits: {...HISTORY_FIXTURE.limits, maxContextBytes: 268435456, maxDecodedImageBytes: 536870912, maxDecodedHistoryBytes: 536870912}});
@@ -21,6 +22,7 @@ async function intercept(page: Page, language: "en" | "de", session = false) {
     else if (path === "/api/project" && method === "GET") { if (projectOpen) body = history.project; else { status = 400; body = { error: "no project open" }; } }
     else if (path === "/api/project/new" && method === "POST") { projectOpen = true; body = history.project; }
     else if (path === "/api/project/load-progress" && method === "GET") body = null;
+    else if (path === "/api/project/status-metrics" && method === "GET") body = statusMetricsFixtureBody(history.project);
     else if (path === "/api/bus/discover" && method === "POST") body = { interfaces: [] };
     else if (path === "/api/product-languages" && method === "GET") body = [];
     else if (path === "/api/project/history" && method === "GET") body = history;

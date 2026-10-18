@@ -7,6 +7,7 @@ import type { InstallationNode } from "../src/bindings/InstallationNode";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 
 type Language = "en" | "de";
 const installation = (): InstallationNode => ({
@@ -37,6 +38,7 @@ async function intercept(page: Page, language: Language, theme: string) {
     else if (path === "/api/project/new" && method === "POST") { projectOpen = true; body = state.tree; }
     else if (path === "/api/project" && method === "GET") { if (projectOpen) body = state.tree; else { status = 400; body = { error: "no project open" }; } }
     else if (path === "/api/project/load-progress" && method === "GET") body = null;
+    else if (path === "/api/project/status-metrics" && method === "GET") body = statusMetricsFixtureBody(state.tree);
     else if (path === "/api/bus/discover" && method === "POST") body = { interfaces: [] };
     else if (path === "/api/product-languages" && method === "GET") body = [];
     else if (path === "/api/group-addresses" && method === "POST") {

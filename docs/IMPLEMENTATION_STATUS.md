@@ -21,7 +21,9 @@ product database (UP 258D12: four ranges, 1514 octets), reads them with
 hardware type, and saves archive format 2 with per-chunk items and per-range
 coverage. Format 1 is unchanged. The plan is opaque (ProductDB-derived only),
 and the strict reader re-checks identity admission, chunk order and stop reason
-and refuses duplicate ZIP entries from the raw central directory. Simulator,
+and refuses duplicate ZIP entries from the raw central directory, which it
+binds to the `zip` crate's (no comment, same offsets). Every observer
+snapshot, including one with a request in flight, is exportable. Simulator,
 built-CLI and exact-package tests only; no hardware run, write or web entry.
 [ADR-0143](adr/0143-declared-segment-memory-evidence-profile.md),
 [contract](contracts/device-diagnostic-export.md#profile-system2-declared-segments-v1-format-2).

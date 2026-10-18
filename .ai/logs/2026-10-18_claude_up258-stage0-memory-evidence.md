@@ -89,3 +89,35 @@ package 3/3; private corpus 155/155 in 34 targets (`device_reports_corpus`
 2/2, format 1 byte-identical); xtask layering/headers/anchors/ledger/
 corpus-gates; documentation 0 errors; diff-check. Contract, ADR-0143 and
 IMPLEMENTATION_STATUS updated. No bus contact, no push.
+
+## Correction round 2 (re-review: F4 remainder, F5)
+
+RED first again (scratch logs `red-cr2-F4.log`, `red-cr2-F5.log`).
+
+- F4 `b56714b2`: confirmed on the old HEAD — the competing-end-record
+  construction (outer EOCD whose comment ends at EOF and holds an inner EOCD
+  plus padding pointing at a directory with a duplicate) was accepted for
+  `memory.json` (format 2) and `report.json` (format 1); a plain ZIP comment
+  was accepted too. The fixed format has no comment: the EOCD must be the
+  last 22 octets. The raw walk returns name, central and local header offset
+  per entry, and `read_export` requires `ZipArchive` to report the same
+  directory start and offsets entry by entry. A mutation run (old EOCD search
+  restored, binding kept) still refuses both competing constructions, so
+  either rule alone closes the bypass.
+- F5 `ad72c0b1`: the reader refused the collector's own in-flight snapshot —
+  for every memory chunk (`diagnostics-invalid-memory`) and, found by the
+  "bundle every snapshot" test, for every identity item in both formats
+  (`diagnostics-invalid-pending`; 7 of 17 format-2 snapshots, 3 of 7
+  format-1). Incomplete reports now admit one in-flight item/chunk
+  (attempted, not completed, nothing received, no error, nothing later
+  attempted, not inside an ended range or run). Complete reports keep the
+  strict rule. Extending the rule to identity items goes beyond the memory
+  scope of the finding; it was needed for "every snapshot exportable" and
+  matches the documented "observer snapshots remain exportable".
+
+Gates after round 2: fmt; Clippy `-D warnings` productdb/net/app/cli all
+targets; five-crate `cargo test --no-fail-fast` 3071 passed, 0 failed, 100
+ignored; public UP258 package 3/3; private corpus 155/155 in 34 targets
+(`device_reports_corpus` 2/2, all format-1 archives still read and rewrite
+byte-identically); xtask layering/headers/anchors/ledger/corpus-gates;
+documentation 0 errors; diff-check. No bus contact, no push.

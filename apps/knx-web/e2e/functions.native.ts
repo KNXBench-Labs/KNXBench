@@ -15,7 +15,13 @@ async function openCopy(page: Page, m: typeof en | typeof de) {
   const commands = page.getByRole("dialog", { name: m["command.overlayLabel"], exact: true });
   await commands.getByRole("combobox").fill(m["toolbar.openNativeProject"]);
   await commands.getByRole("option", { name: m["toolbar.openNativeProject"], exact: true }).click();
-  await page.getByRole("dialog", { name: m["fsPicker.open"], exact: true }).getByRole("button", { name: "functions-demo.knxdb", exact: true }).click();
+  // Wait for the open itself: after a reload the welcome card is already gone, and a
+  // late-finishing open would reset a selection made in the meantime.
+  const picker = page.getByRole("dialog", { name: m["fsPicker.open"], exact: true });
+  const opened = page.waitForResponse((r) => r.request().method() === "POST" && new URL(r.url()).pathname === "/api/project/open");
+  await picker.getByRole("button", { name: "functions-demo.knxdb", exact: true }).click();
+  expect((await opened).ok()).toBe(true);
+  await expect(picker).toHaveCount(0);
   await expect(page.locator(".welcome-card")).toHaveCount(0);
 }
 /** The Kitchen's Functions disclosure in Properties, opened. */

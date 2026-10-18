@@ -19,7 +19,13 @@ async function openCopy(page: Page, m: typeof en | typeof de) {
   const commands = page.getByRole("dialog", { name: m["command.overlayLabel"], exact: true });
   await commands.getByRole("combobox").fill(m["toolbar.openNativeProject"]);
   await commands.getByRole("option", { name: m["toolbar.openNativeProject"], exact: true }).click();
-  await page.getByRole("dialog", { name: m["fsPicker.open"], exact: true }).getByRole("button", { name: "rename-demo.knxdb", exact: true }).click();
+  // Wait for the open itself: after a reload the welcome card is already gone, and a
+  // late-finishing open would reset a selection made in the meantime.
+  const picker = page.getByRole("dialog", { name: m["fsPicker.open"], exact: true });
+  const opened = page.waitForResponse((r) => r.request().method() === "POST" && new URL(r.url()).pathname === "/api/project/open");
+  await picker.getByRole("button", { name: "rename-demo.knxdb", exact: true }).click();
+  expect((await opened).ok()).toBe(true);
+  await expect(picker).toHaveCount(0);
   await expect(page.locator(".welcome-card")).toHaveCount(0);
 }
 for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
@@ -72,6 +78,8 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
       await expect(inspector).toHaveValue("Retained conflict draft");
       await inspector.fill("Device via properties"); await inspector.press("Tab");
       await expect(page.locator(".device-workspace h2")).toHaveText("Device via properties");
+      // Explorer branches start folded; the device row exists only once its line is open.
+      await openExplorerBranches(page);
       const explorerDevice = page.locator(`.workbench-pane-left [data-rename-kind="device"][data-rename-id="${id}"]`).first();
       await explorerDevice.click({ button: "right" });
       await page.getByRole("menuitem", { name: new RegExp(m["rename.title"]) }).click();
@@ -105,6 +113,8 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await expect(installationField).toHaveValue("Retained installation draft"); await installationField.press("Enter");
     await expect(page.locator(".workbench-pane-right .inspector h2")).toHaveText("Retained installation draft");
     if (!await navigation.isVisible()) await page.locator(".workbench-panel-controls").getByRole("button", { name: m["workbench.navigation"], exact: true }).click();
+    // A narrow layout remounts the navigation pane, and its sections start folded again.
+    await openNavigationSections(page);
     await navigation.getByRole("button", { name: m["workbench.addresses"], exact: true }).click();
     // Issue #11: address lists start closed; this case works on rows, so open them like a user.
     // Issue #11: every installation's tree opens compact; open each one.

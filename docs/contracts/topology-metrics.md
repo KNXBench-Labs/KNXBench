@@ -44,9 +44,27 @@ container breakpoint it is not wrapped either (see Layout).
   own first/last wrapping. The view stays a set of cards, not a data table, so UI-05's column
   widths do not apply and no resize mechanism exists.
 
+## Device-empty ranges (issue #25, source builds after Alpha 14)
+
+The Topology diagram renders only lines that contain at least one device and
+areas with at least one such line. A device with zero communication objects
+still counts as a device. The separate unassigned-device card remains visible
+when populated. An installation without any devices shows a localized empty
+state explaining the hidden ranges and the project-tree editing route.
+
+This is a view-only filter over the projection: no area, line, device, address,
+identifier or source metadata is removed or changed. Empty areas and lines stay
+available in the project tree; the header's creation menu and an explicitly
+selected range's property editor remain usable. Adding a device reveals its
+line and area on the next project update; removing its last device hides them
+again. Each installation is filtered independently. Buildings and group-address
+views are unaffected.
+
 ## Tests
 
-`StructureWorkspace.test.tsx` (labels, plurals, empty line, large counts, EN/DE) and
+`StructureWorkspace.test.tsx` (labels, plurals, hidden empty lines/areas, live
+project updates, multiple installations, unassigned devices, preserved source,
+localized empty states, large counts, EN/DE) and
 `e2e/topology-metrics.e2e.ts` (1280, 2560, 700 and 480 px, Porcelain and Graphite, DE at
 2560, 700 and 480: full label text, count neither clipped nor wrapped nor overlapping
 the name, side by side from 1280 px, row and card width ceilings, ellipsis, overflow,

@@ -5,6 +5,7 @@ import { ACHIEVEMENTS } from "../src/achievementCatalog";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { fulfillNoProjectOpen } from "./server-project-fixture";
+import { openFileSubmenu } from "./file-menu";
 
 interface Fixture {
   settings: Record<string, unknown>;
@@ -132,8 +133,9 @@ test("switched off, nothing is counted, nothing pops up and the File menu has no
   expect(fixture.posts).toEqual([]);
 
   await page.locator(".file-menu summary").click();
-  await expect(page.locator(".file-menu-content").getByRole("button", { name: "Show introduction…" })).toBeVisible();
-  await expect(page.locator(".file-menu-content").getByRole("button", { name: "Achievements…" })).toHaveCount(0);
+  await openFileSubmenu(page, "help");
+  await expect(page.locator(".file-menu-content").getByRole("menuitem", { name: "Show introduction…" })).toBeVisible();
+  await expect(page.locator(".file-menu-content").getByRole("menuitem", { name: "Achievements…" })).toHaveCount(0);
   expect(fixture.unexpected).toEqual([]);
 });
 

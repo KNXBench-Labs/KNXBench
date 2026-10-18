@@ -7,10 +7,12 @@ import { getActiveUiLanguage } from "./uiLanguage";
 import * as api from "./contributionApi";
 import "./contribution.css";
 import ProcedureResolutionView from "./ProcedureResolutionView";
+import { useFileMenuItemProps } from "./FileMenu";
 
 export const CONTRIBUTION_REPOSITORY = "https://github.com/KNXBench-Labs/KNXBench";
 export default function ContributionButton() {
   const t = useTranslate();
+  const entry = useFileMenuItemProps();
   const [open, setOpen] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
   const previous = useRef(false);
@@ -18,7 +20,7 @@ export default function ContributionButton() {
     if (previous.current && !open) trigger.current?.closest("details")?.querySelector("summary")?.focus();
     previous.current = open;
   }, [open]);
-  return <><button ref={trigger} onClick={() => setOpen(true)}>{t("contribution.button")}</button>
+  return <><button {...entry} ref={trigger} onClick={() => setOpen(true)}>{t("contribution.button")}</button>
     {open && createPortal(<ContributionDialog onClose={() => setOpen(false)} />, document.body)}</>;
 }
 function ContributionDialog({ onClose }: { onClose: () => void }) {
@@ -135,7 +137,7 @@ function ContributionDialog({ onClose }: { onClose: () => void }) {
         {preview.files.map(f => <details key={f.path}><summary>{f.path}</summary><pre>{f.text ?? t("contribution.originalConsent")}</pre></details>)}
         <label className="contribution-sample"><input type="checkbox" data-consent="export" disabled={busy} checked={consent} onChange={e => setConsent(e.target.checked)} />{t("contribution.consent")}</label>
       </section>}
-      <div className="contribution-actions"><button disabled={!preview || !consent || busy} onClick={() => void run("export")}>{t("contribution.export")}</button>
+      <div className="contribution-actions"><button className="primary-action" disabled={!preview || !consent || busy} onClick={() => void run("export")}>{t("contribution.export")}</button>
         {downloadRequested && consent && (audience === "public" ?
           <a href={`${CONTRIBUTION_REPOSITORY}/issues/new?${issueQuery}`} target="_blank" rel="noopener noreferrer">{t("contribution.github")}</a> :
           <a href="mailto:contribute@knxbench.com?subject=KNXBench%20private%20contribution" target="_blank" rel="noopener noreferrer">{t("contribution.email")}</a>)}</div>

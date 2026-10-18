@@ -522,7 +522,11 @@ unchanged until you explicitly choose a different value. **No project DPT**
 clears the project value; if a program default exists, that option names it but
 does not save it as your edit. Source badges now belong to the DPT/description
 heading and explain their origin, e.g. **Source: application program / Quelle:
-Applikationsprogramm**. Catalogue names do not establish device or codec support.
+Applikationsprogramm**. A value stated on the device instance in the project is the
+ordinary case, so its badge (**Source: device instance / Quelle: Geräteinstanz**)
+is not shown in the heading; open the field's **Technical reference** (DPT or
+description) to see it. The information itself is unchanged in the project and its exports. Catalogue names do
+not establish device or codec support.
 [Scope and evidence](../../contracts/dpt-selection.md).
 
 ![Alpha 9 in Graphite: the communication-object editor’s named 1.001 – Switch choice, application-source badge and exact stored DPST-1-1 reference](../../assets/screenshots/graphite-dpt-selection.png)

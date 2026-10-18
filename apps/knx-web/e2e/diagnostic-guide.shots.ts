@@ -3,6 +3,7 @@
 // Nothing here is mocked: every pixel comes from an actual preview, read and save.
 import {test, expect, type Page, type Locator} from "@playwright/test";
 import {resolve} from "node:path";
+import { openFileSubmenu } from "./file-menu";
 
 const target = process.env.KNX_DIAG_GUIDE_OUT;
 
@@ -42,6 +43,7 @@ test("step-by-step stills for the diagnostic export guide", async ({page}) => {
 
   // Step 1: File menu entry.
   await page.locator(".file-menu > summary").click();
+  await openFileSubmenu(page, "help");
   const entry = page.locator(".file-menu [data-diagnostics-open]");
   await expect(entry).toBeVisible();
   await entry.hover();

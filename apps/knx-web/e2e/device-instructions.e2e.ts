@@ -8,6 +8,7 @@ import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
 import { statusMetricsFixtureBody } from "./status-metrics-fixture";
+import { controlPaint } from "./control-roles";
 
 type Language = "en" | "de";
 type Catalogue = { readonly [K in keyof typeof en]: string };
@@ -216,7 +217,11 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
 
     await panel.locator("textarea").fill("Mount above the kitchen door.");
     await panel.getByRole("button", { name: language === "de" ? "Änderung prüfen" : "Preview change", exact: true }).click();
-    await panel.getByRole("button", { name: language === "de" ? "Änderung anwenden" : "Apply change", exact: true }).click();
+    // An editing apply is an ordinary answer; the removing one below is destructive (UI-02 review).
+    const writeApply = panel.getByRole("button", { name: language === "de" ? "Änderung anwenden" : "Apply change", exact: true });
+    await page.mouse.move(1, 1);
+    expect((await controlPaint(writeApply)).role).toBe("secondary");
+    await writeApply.click();
     await expect(remove).toBeEnabled();
     expect(f.override?.runs.map((run) => run.text).join("")).toBe("Mount above the kitchen door.");
     await expect(panel.getByText(madeHere, { exact: true })).toBeVisible();
@@ -229,7 +234,11 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await change.scrollIntoViewIfNeeded();
     await noHorizontalOverflow(page);
     await capture(page, `native-${language}-${width}-3-remove`);
-    await change.getByRole("button", { name: language === "de" ? "Änderung anwenden" : "Apply change", exact: true }).click();
+    const removeApply = change.getByRole("button", { name: language === "de" ? "Änderung anwenden" : "Apply change", exact: true });
+    await page.mouse.move(1, 1);
+    const paint = await controlPaint(removeApply);
+    expect(paint.role, JSON.stringify(paint)).toBe("danger");
+    await removeApply.click();
     await expect(remove).toBeDisabled();
     expect(f.override).toBeNull();
     expect(f.applied).toBe(2);

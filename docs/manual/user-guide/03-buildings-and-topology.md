@@ -32,9 +32,15 @@ five devices and line 1.2 "First floor" holding three, each device tile with its
 address and communication-object count](../../assets/screenshots/porcelain-topology.png)
 
 The Topology view draws each area as a block, each line inside it, and each device as
-a tile with its individual address and its number of communication objects. The `+`
-button on a line header adds a device to that line. An empty line is drawn as an empty
-line, not hidden.
+a tile with its individual address and, on the right, its number of communication
+objects written out ("3 communication objects", "1 communication object"). On a narrow
+tile the count moves under the name.
+The figure counts every object the device has, active or not. Tiles and line cards
+stop growing at a fixed width, so on a wide screen the name and its count stay next
+to each other and several lines sit side by side; a name too long for the tile is cut
+with an ellipsis and shown in full on hover. The `+` button on a line header adds a
+device to that line. An empty line is drawn as an empty line, not hidden. (The
+screenshot above predates the written-out label.)
 
 ![The Buildings view with the building "Sample house", its Ground floor and First
 floor cards, and rooms such as Living room, Kitchen and Hall holding their devices;

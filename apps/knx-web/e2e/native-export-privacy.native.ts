@@ -5,6 +5,7 @@ import {join} from "node:path";
 import {execFileSync} from "node:child_process";
 import {messages as en} from "../src/messages/en";
 import {messages as de} from "../src/messages/de";
+import { openFileSubmenu } from "./file-menu";
 
 for(const language of ["en","de"] as const)for(const width of [400,1440]){
  test(`${language} reviewed real native export at ${width}px`,async({page,request})=>{
@@ -32,8 +33,8 @@ for(const language of ["en","de"] as const)for(const width of [400,1440]){
    return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({schemaVersion:1,status:"ok",settings:{uiLanguage:language,theme:language==="en"?"graphite":"porcelain"}})});
   });
   await page.setViewportSize({width,height:900});await page.goto("/?view=editor");
-  const summary=page.locator(".file-menu > summary");await summary.click();
-  await page.getByRole("button",{name:m["toolbar.exportProject"],exact:true}).click();
+  const summary=page.locator(".file-menu > summary");await summary.click();await openFileSubmenu(page,"exchange");
+  await page.getByRole("menuitem",{name:m["toolbar.exportProject"],exact:true}).click();
   const dialog=page.getByRole("dialog",{name:m["nativeExport.title"],exact:true});
   await expect(dialog).toBeVisible();await expect(dialog).toContainText(m["nativeExport.privacy"]);await expect(dialog).toContainText(m["nativeExport.scope"]);
   await expect(dialog.getByRole("button",{name:m["nativeExport.cancel"],exact:true})).toBeFocused();expect(await links()).toEqual([]);
@@ -41,7 +42,7 @@ for(const language of ["en","de"] as const)for(const width of [400,1440]){
   const fill=(name:string)=>dialog.getByRole("button",{name,exact:true}).evaluate(el=>{const style=getComputedStyle(el);return `${style.backgroundColor} ${style.backgroundImage}`;});
   expect(await fill(m["nativeExport.cancel"])).not.toBe(await fill(m["nativeExport.download"]));
   await dialog.getByRole("button",{name:m["nativeExport.cancel"],exact:true}).click();await expect(dialog).toBeHidden();expect(await links()).toEqual([]);
-  await summary.click();await page.getByRole("button",{name:m["toolbar.exportProject"],exact:true}).click();await expect(dialog).toBeVisible();
+  await summary.click();await openFileSubmenu(page,"exchange");await page.getByRole("menuitem",{name:m["toolbar.exportProject"],exact:true}).click();await expect(dialog).toBeVisible();
   const box=await dialog.boundingBox();expect(box).not.toBeNull();expect(box!.x).toBeGreaterThanOrEqual(0);expect(box!.x+box!.width).toBeLessThanOrEqual(width+1);
   const overflow=await dialog.evaluate(el=>el.scrollWidth-el.clientWidth);expect(overflow).toBeLessThanOrEqual(1);
   const footer=await dialog.locator("footer").boundingBox();expect(footer).not.toBeNull();

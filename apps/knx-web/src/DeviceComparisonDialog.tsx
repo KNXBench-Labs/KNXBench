@@ -38,7 +38,7 @@ export default function DeviceComparisonDialog({ controller: c }: { controller: 
       <label className="comparison-gateway-label">{t("deviceDownload.gateway")}
         <input className="comparison-gateway" value={gateway} onChange={(event) => { setGateway(event.target.value); setGatewayError(null); }} placeholder="192.0.2.10:3671" /></label>
       {gatewayError && <p className="field-error" role="alert">{gatewayError}</p>}
-      <div className="dialog-actions"><button type="button" onClick={confirm}>{t("compare.confirm")}</button>
+      <div className="dialog-actions"><button type="button" className="primary-action" onClick={confirm}>{t("compare.confirm")}</button>
         <button type="button" onClick={c.close}>{t("deviceChecks.cancel")}</button></div>
     </> : <>
       <p role="status">{t("compare.progress", { completed: c.progress.completed, total: review.targets.length })}

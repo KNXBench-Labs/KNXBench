@@ -112,7 +112,7 @@ export default function CatalogPackageUpdate(props: {
       <p className="inspector-description">{t("catalogUpdate.bindings")}</p>
       {phase.error !== null && <p className="field-error" role="alert">{t("catalogUpdate.error", { message: phase.error })}</p>}
       <div className="catalog-update-actions">
-        <button type="button" disabled={phase.applying} onClick={() => { void apply(); }}>
+        <button type="button" className="primary-action" disabled={phase.applying} aria-busy={phase.applying} onClick={() => { void apply(); }}>
           {phase.applying ? t("catalogUpdate.applying") : t("catalogUpdate.apply")}</button>
         <button type="button" className="catalog-update-cancel" disabled={phase.applying}
           onClick={onDone}>{t("catalogUpdate.cancel")}</button>

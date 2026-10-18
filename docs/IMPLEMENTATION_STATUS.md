@@ -64,6 +64,71 @@ interrupted reversal, disposal and readable cancellation/fallbacks. Independent
 review completed; the owner accepted the print/PDF limitation and authorized
 commit/push without a print fix. See [website contract](WEBSITE.md#reversible-headline-entrances-18-october-2026).
 
+## UI-06: labelled object counts, bounded topology cards (18 October 2026)
+
+Presentation only, no API, schema or stored-data change. Owner request 9. The number
+on the right of a device tile (Topology, and the same tile in Buildings) is
+`DeviceNode.com_object_count`, the length of the device's communication-object list
+regardless of `is_active`; it was shown bare. It now reads "N communication object(s)" /
+"N Kommunikationsobjekt(e)" through the plural catalogue (review fix: the full unit is
+visible, no hover text); on a narrow tile the count sits under the name. The workspace
+arrow/Home/End handler no longer lands on the hidden entries of the closed `+ New` menu. Line cards are a grid with a 28rem column ceiling and device rows a
+32rem ceiling, so name and count stay a short glance apart on a widescreen; long
+names ellipsise with a title. Still cards, not a data table: no column resizing.
+[Contract](contracts/topology-metrics.md).
+
+## UI-03: File menu with animated submenus (18 October 2026)
+
+Presentation and keyboard behaviour only, no API, schema, theme-pack or stored-data
+change. Owner request 1 of the [UI feedback set](goals/ui-feedback-2026-10-18.md#ui-03--file-menu-with-animated-submenus).
+**History & comparison**, **Help & diagnostics** and **Import & export** are now
+submenus of File that open to the right (flip left when the whole panel fits there,
+shrink at mid widths, expand inline under the row at 650 px and below); New project,
+Open, Open (.knxdb) and Save As stay on the first level. Every entry is the original
+button with its original handler, so native/web differences, disabled states, unsaved
+change guards and dialog lifecycles are untouched; closed submenus stay mounted so an
+in-flight import or comparison survives. The menu holds declared entries only: the
+project comparison's result moved out of the History panel into its own modal dialog
+(shared `Overlay`, opened by **Compare with…**, which closes the menu like every other
+entry), with the same file choice, counts, tables and refusal text. File is a WAI-ARIA menu button:
+the control carries `aria-haspopup` and `aria-expanded`, entries are declared explicitly
+(`FileMenuItem`, `useFileMenuItemProps`; no DOM tagging), each level has one roving tab
+stop, ArrowDown/ArrowUp/Enter/Space on File open the menu onto an entry, arrows and
+Home/End move, `→`/Enter/Space open a submenu, `←`/Escape close the innermost level,
+and Tab or Shift+Tab from any focusable element in the open menu close the whole menu
+and move on from File. An action that closes
+the menu rests focus on File first, so every dialog returns focus there. Open panels are
+re-placed when they grow (`ResizeObserver`); on short windows (600 px and below) the menu
+scrolls and submenus expand inline. Hover opens after 120 ms and survives a diagonal
+move, and the 140 ms slide is removed by motion level Off and reduced motion.
+Not done: type-ahead, native WebKitGTK/Tauri runs. [Contract](contracts/file-menu.md).
+
+## UI-02: compact button variants, visible navigation separators (18 October 2026)
+
+Presentation only, no API, schema, theme-pack or stored-data change. Owner
+requests 5–7 of the [UI feedback set](goals/ui-feedback-2026-10-18.md#ui-02--compact-distinctive-controls-and-visible-navigation).
+One shared Controls block in `styles.css` now owns the look of ordinary buttons
+(a listed set of tabs, rows, chips and link-like buttons keeps local paint):
+secondary by default, `primary-action`, `quiet-action`/`icon-action` and `danger-action`,
+compact (32px compact density, 12px padding) with colour-only hover and a small
+press scale that motion Off and reduced motion drop. Dialog confirmations name
+their primary or destructive role; the inspector's Delete reads as destructive,
+and the toolbar's Save no longer turns pale under the pointer.
+The navigation splitters draw a hairline at rest and an accent rule on hover,
+focus and drag; without a project the sections carry the same rule. The routine
+"Source: device instance" badge left the field headings and stays in the DPT and
+description technical references and in the data. After two review rounds the
+destructive answers found by the sweeps paint as destructive, each with a test:
+note-disposition, project-history, plug-in data, Function delete and forced
+overwrite, note and instruction removal, armed scan-exclusion removal, line-scan
+reconciliation that deletes, both parameter-conflict answers, placement repair,
+language-pack removal, preset over a filled group list, forgetting the legacy
+password, bulk delete. Help tips, toast dismiss, import-finding links and table
+device links have 24px targets; feature editors use the shared variants; a
+browser matrix checks the named dialog, toolbar, inspector and table controls'
+roles, focus and size and the separators in all five shipped themes.
+[Contract](contracts/controls-and-separators.md).
+
 ## Manual, README and screenshots after Alpha 14 (18 October 2026)
 
 Docs and media only, no application change. The manual's 46 stills, the four

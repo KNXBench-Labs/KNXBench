@@ -1,5 +1,6 @@
 /** EN/DE responsive Debug gate: all API calls intercepted locally, no KNX device. */
 import { expect, test } from "@playwright/test";
+import { controlPaint } from "./control-roles";
 
 const address = "1.1.67";
 const gateway = "192.0.2.10:3671";
@@ -57,7 +58,13 @@ for (const language of ["en", "de"] as const) {
       await page.locator(".service-control-read").click();
       await expect(page.locator(".service-control-observation")).toContainText("0000");
       expect(writes).toHaveLength(0);
-      await page.locator(".service-control-review").click();
+      // The Review opener is an ordinary button; only the review panel it opens carries the warning tint.
+      const review = page.locator("button.service-control-review");
+      await page.mouse.move(1, 1);
+      const paint = await controlPaint(review);
+      expect(paint.role, JSON.stringify(paint)).toBe("secondary");
+      await review.click();
+      await expect(page.locator("div.service-control-review")).toHaveCSS("border-left-width", "3px");
       expect(writes).toHaveLength(0);
       await page.locator('input[name="confirmation"]').fill("I confirm download to 1.1.67");
       await expect(page.locator(".service-control-write")).toBeDisabled();

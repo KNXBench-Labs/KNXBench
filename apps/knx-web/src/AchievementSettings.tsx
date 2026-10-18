@@ -44,7 +44,7 @@ export default function AchievementSettings(props: { tracker: AchievementTracker
             <button type="button" onClick={() => setConfirming(false)} disabled={busy}>
               {t("settings.achievementsResetCancel")}
             </button>
-            <button type="button" onClick={() => void reset()} disabled={busy}>
+            <button type="button" className="danger-action" onClick={() => void reset()} disabled={busy}>
               {t("settings.achievementsResetConfirmButton")}
             </button>
           </div>

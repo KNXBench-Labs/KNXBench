@@ -10,6 +10,7 @@ import { useTranslate } from "./i18n";
 import { useSavedThemeId } from "./theme";
 import { useUiLanguage } from "./uiLanguage";
 import { version as packageVersion } from "../package.json";
+import { useFileMenuItemProps } from "./FileMenu";
 
 // T29. The user asked for this after a testing session: somewhere to put
 // "here is what went wrong" that does not mean copying six panels by hand.
@@ -55,6 +56,7 @@ export default function DebugReportButton(props: {
 }) {
   const { onSummary, onError, onClearErrors } = props;
   const t = useTranslate();
+  const entry = useFileMenuItemProps();
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const wasOpen = useRef(false);
@@ -69,7 +71,7 @@ export default function DebugReportButton(props: {
 
   return (
     <>
-      <button ref={buttonRef} onClick={() => setOpen(true)}>{t("debugReport.button")}</button>
+      <button {...entry} ref={buttonRef} onClick={() => setOpen(true)}>{t("debugReport.button")}</button>
       {open && (
         <DebugReportDialog
           onClose={() => setOpen(false)}

@@ -28,6 +28,7 @@ describe("isolated project notes editor",()=>{
 });
 
 
+function byText(host:Element,label:string){const button=Array.from(host.querySelectorAll("button")).find(button=>button.textContent===label);expect(button,`missing button ${label}`).toBeDefined();return button!;}
 async function click(host:Element,label:string){const button=Array.from(host.querySelectorAll("button")).find(button=>button.textContent===label);expect(button,`missing button ${label}`).toBeDefined();await act(async()=>button!.click());}
 async function edit(host:Element,label:string,value:string){const caption=Array.from(host.querySelectorAll("label")).find(entry=>entry.textContent===label);expect(caption).toBeDefined();const field=document.getElementById(caption!.htmlFor) as HTMLTextAreaElement;expect(field).not.toBeNull();await act(async()=>{Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,"value")!.set!.call(field,value);field.dispatchEvent(new Event("input",{bubbles:true}));});}
 describe("notes editing gestures",()=>{
@@ -36,6 +37,7 @@ describe("notes editing gestures",()=>{
   await edit(host,"Title"," changed ");expect(onDirtyChange).toHaveBeenLastCalledWith(true);expect(client.preview).not.toHaveBeenCalled();
   await click(host,"Preview change");
   expect(client.preview).toHaveBeenCalledWith(context,{kind:"replace",id:1,draft:{target:{kind:"project"},title:" changed ",body:source.notes[0].body,includeInDocumentation:false}},expect.anything());
+  expect(byText(host,"Confirm change").classList.contains("danger-action")).toBe(false);
   expect(client.apply).not.toHaveBeenCalled();await click(host,"Confirm change");
   expect(client.apply).toHaveBeenCalledWith("synthetic-plan",expect.anything());expect(onApplied).toHaveBeenCalledOnce();expect(onDirtyChange).toHaveBeenLastCalledWith(false);
  });
@@ -53,6 +55,8 @@ describe("notes editing gestures",()=>{
  it("previews exact removal instead of deleting on the first gesture",async()=>{
   const client=fixture();const {host}=await mount(client);await click(host,"Remove note");
   expect(client.preview).toHaveBeenCalledWith(context,{kind:"remove",id:1},expect.anything());expect(client.apply).not.toHaveBeenCalled();
+  // Confirming a removal deletes the note: destructive look (UI02 review sweep); an edit's confirm is not.
+  expect(byText(host,"Confirm change").classList.contains("danger-action")).toBe(true);expect(byText(host,"Cancel preview").classList.contains("primary-action")).toBe(false);
   expect(host.textContent).toContain(" Existing ");await click(host,"Confirm change");expect(client.apply).toHaveBeenCalledOnce();
  });
  it("previews reordering against canonical positions rather than list display order",async()=>{
@@ -77,7 +81,7 @@ describe("notes editor ownership and recovery",()=>{
   const client=fixture();const {host}=await mount(client);await edit(host,"Title","retained draft");await click(host,"New note");
   expect(host.textContent).toContain("Discard the unsaved draft before switching?");
   await click(host,"Keep editing");expect(Array.from(host.querySelectorAll("textarea")).some(field=>field.value==="retained draft")).toBe(true);
-  await click(host,"New note");await click(host,"Discard draft");expect(Array.from(host.querySelectorAll("textarea"))[0].value).toBe("");expect(client.apply).not.toHaveBeenCalled();
+  await click(host,"New note");expect(byText(host,"Discard draft").classList.contains("danger-action")).toBe(true);await click(host,"Discard draft");expect(Array.from(host.querySelectorAll("textarea"))[0].value).toBe("");expect(client.apply).not.toHaveBeenCalled();
  });
  it("retains a dirty draft but revokes a preview on same-project revision changes that altered the notes",async()=>{
   const client=fixture({read:vi.fn().mockResolvedValueOnce(source).mockResolvedValue({...source,snapshotRevision:3,notes:[{...source.notes[0],title:"changed elsewhere"}]})});const callback=vi.fn();const {root,host}=await mount(client,{onApplied:callback});await edit(host,"Title","retained draft");await click(host,"Preview change");

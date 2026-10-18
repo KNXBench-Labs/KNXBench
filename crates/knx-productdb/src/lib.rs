@@ -9,6 +9,7 @@ pub mod baggage;
 pub mod blob;
 pub mod byte_order_probe;
 pub mod code;
+pub mod declared_segments;
 pub mod device_evaluation;
 pub mod download_plan;
 pub mod dynamic;

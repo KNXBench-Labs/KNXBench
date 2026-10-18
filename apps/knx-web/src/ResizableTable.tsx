@@ -51,7 +51,7 @@ export function ColumnResizeHandle({ column, state, labelId, helpId, renderedWid
     onPointerCancel={event => { event.stopPropagation(); if (drag.current?.pointerId === event.pointerId) finish(); }}
     onLostPointerCapture={event => { if (drag.current?.pointerId === event.pointerId) finish(); }}
     onKeyDown={event => {
-      if (drag.current && ["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
+      if (drag.current && ["ArrowLeft", "ArrowRight", "Home", "End", "Enter"].includes(event.key)) {
         event.preventDefault(); event.stopPropagation(); return;
       }
       const step = event.shiftKey ? 40 : 8;

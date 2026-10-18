@@ -65,7 +65,7 @@ cards. Explorer trees, forms and manufacturer-declared parameter grids
 - Pointer drag captures the pointer and clamps the changed column. Other pointer
   IDs are ignored. Drag previews update local state once per animation frame;
   pointer-up, cancellation, lost capture and unmount persist and broadcast once,
-  including the last unpainted pointer move. Arrow/Home/End keys are ignored
+  including the last unpainted pointer move. Arrow/Home/End/Enter keys are ignored
   during a pointer drag. Escape restores the starting width without persistence. Keyboard steps persist immediately.
   Resizing stops click, double-click, drag-start and handled key propagation,
   so header sorting and row selection are not activated.

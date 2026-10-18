@@ -136,7 +136,7 @@ it("commits the last unpainted drag preview when its table unmounts", async () =
   expect(write).toHaveBeenCalledTimes(1);
   expect(JSON.parse(window.localStorage.getItem("knxbench:table-column-widths:v1:component")!).name).toBe(237);
 });
-it.each(["ArrowLeft", "ArrowRight", "Home", "End"])("ignores %s during a pointer drag", async pressed => {
+it.each(["ArrowLeft", "ArrowRight", "Home", "End", "Enter"])("ignores %s during a pointer drag", async pressed => {
   const write = vi.spyOn(window.localStorage, "setItem"); handle().setPointerCapture = vi.fn(); handle().releasePointerCapture = vi.fn();
   await pointer("pointerdown", 100); await pointer("pointermove", 140);
   await key(pressed);

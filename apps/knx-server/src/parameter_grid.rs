@@ -23,37 +23,43 @@ pub(crate) fn group_layout_dto<'a>(
     definition: &str,
     group_key: String,
     block_node: i64,
-    caption_fills: &crate::parameter_captions::CaptionFills,
+    captions: &mut crate::parameter_captions::CaptionFills,
     active_labels: impl Iterator<Item = &'a ActiveLabel>,
-) -> Option<ParameterGroupLayoutDto> {
-    let grid = layout.grid(definition, block_node)?;
-    let labels = if grid.status == GridStatus::Grid {
-        active_labels
-            .filter(|label| label.kind == "ParameterSeparator")
-            .filter_map(|label| {
-                let placement = layout.separator(definition, label.node_id)?;
-                (placement.block_node == block_node).then(|| ParameterGridLabelDto {
-                    row: placement.cell.row,
-                    column: placement.cell.column,
-                    text: label.text.clone(),
-                    text_fill: caption_fills
-                        .get(&(label.scope.as_ref().map(|s| s.node_chain()), label.node_id))
-                        .cloned(),
-                })
-            })
-            .collect()
-    } else {
-        Vec::new()
+) -> Result<Option<ParameterGroupLayoutDto>, String> {
+    let Some(grid) = layout.grid(definition, block_node) else {
+        return Ok(None);
     };
-    Some(grid_dto(group_key, grid, labels))
+    let mut labels = Vec::new();
+    if grid.status == GridStatus::Grid {
+        for label in active_labels.filter(|label| label.kind == "ParameterSeparator") {
+            let Some(placement) = layout.separator(definition, label.node_id) else {
+                continue;
+            };
+            if placement.block_node != block_node {
+                continue;
+            }
+            let (text, text_fill) = captions.copy(
+                (label.scope.as_ref().map(|s| s.node_chain()), label.node_id),
+                Some(&label.text),
+            )?;
+            labels.push(ParameterGridLabelDto {
+                row: placement.cell.row,
+                column: placement.cell.column,
+                text: text.expect("present caption"),
+                text_fill,
+            });
+        }
+    }
+    grid_dto(group_key, grid, labels, captions).map(Some)
 }
 
 fn grid_dto(
     group_key: String,
     grid: &BlockGrid,
     labels: Vec<ParameterGridLabelDto>,
-) -> ParameterGroupLayoutDto {
-    ParameterGroupLayoutDto {
+    captions: &mut crate::parameter_captions::CaptionFills,
+) -> Result<ParameterGroupLayoutDto, String> {
+    Ok(ParameterGroupLayoutDto {
         group_key,
         version: PARAMETER_GROUP_LAYOUT_VERSION,
         declared_layout: grid.declared_layout.clone(),
@@ -66,23 +72,27 @@ fn grid_dto(
         rows: grid
             .rows
             .iter()
-            .map(|row| ParameterGridRowDto {
-                id: row.id.clone(),
-                text: row.text.clone(),
-                text_parameter_ref_id: row.text_parameter_ref_id.clone(),
-                collapse_if_empty: row.collapse_if_empty.clone(),
+            .map(|row| {
+                Ok(ParameterGridRowDto {
+                    id: row.id.clone(),
+                    text: captions.copy_text(row.text.as_deref())?,
+                    text_parameter_ref_id: row.text_parameter_ref_id.clone(),
+                    collapse_if_empty: row.collapse_if_empty.clone(),
+                })
             })
-            .collect(),
+            .collect::<Result<Vec<_>, String>>()?,
         columns: grid
             .columns
             .iter()
-            .map(|column| ParameterGridColumnDto {
-                id: column.id.clone(),
-                text: column.text.clone(),
-                text_parameter_ref_id: column.text_parameter_ref_id.clone(),
-                width: column.width.clone(),
+            .map(|column| {
+                Ok(ParameterGridColumnDto {
+                    id: column.id.clone(),
+                    text: captions.copy_text(column.text.as_deref())?,
+                    text_parameter_ref_id: column.text_parameter_ref_id.clone(),
+                    width: column.width.clone(),
+                })
             })
-            .collect(),
+            .collect::<Result<Vec<_>, String>>()?,
         labels,
         issues: grid
             .issues
@@ -100,5 +110,5 @@ fn grid_dto(
                 cell: issue.cell.clone(),
             })
             .collect(),
-    }
+    })
 }

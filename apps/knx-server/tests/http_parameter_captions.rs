@@ -342,6 +342,106 @@ async fn activation_over_budget_post_preserves_project_revision_history_and_nati
     );
 }
 
+fn copy_fixture(copies: usize, template: &str, default: &str, separator_groups: bool) -> String {
+    let head = PROGRAM
+        .split("<Dynamic>")
+        .next()
+        .unwrap()
+        .replace("Ref default", default);
+    let refs = (0..copies)
+        .map(|n| format!(r#"<ParameterRef Id="R-Copy-{n}" RefId="P-N" />"#))
+        .collect::<String>();
+    let head = head.replace("</ParameterRefs>", &format!("{refs}</ParameterRefs>"));
+    let items = (0..copies)
+        .map(|n| {
+            if separator_groups {
+                format!(r#"<ParameterSeparator Id="PS-{n}" Text="Note" />"#)
+            } else {
+                format!(r#"<ParameterRefRef RefId="R-Copy-{n}" />"#)
+            }
+        })
+        .collect::<String>();
+    format!(
+        r#"{head}<Dynamic><ParameterBlock Id="PB-Copies" Text="{template}" TextParameterRefId="R-T">{items}</ParameterBlock></Dynamic></ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#
+    )
+}
+
+async fn assert_caption_admission(source: &str, admitted: bool) {
+    let (_dir, products) = products_from(source);
+    let state = Arc::new(state(products));
+    let before = state.project.lock().unwrap().clone();
+    let request = Request::get("/api/device/1/parameters")
+        .body(Body::empty())
+        .unwrap();
+    let (status, dto) = call(knx_server::app(state.clone(), None), request).await;
+    if admitted {
+        assert_eq!(
+            status,
+            StatusCode::OK,
+            "small copy set must remain admitted"
+        );
+        assert!(dto["sections"].is_array());
+    } else {
+        assert_eq!(
+            status,
+            StatusCode::BAD_REQUEST,
+            "all rendered caption copies must share one budget"
+        );
+        assert_eq!(dto["error"], "device text projection budget exhausted");
+        assert!(dto.get("sections").is_none());
+    }
+    assert_eq!(*state.project.lock().unwrap(), before);
+    assert!(!state.command_stack.lock().unwrap().can_undo());
+}
+
+#[tokio::test]
+async fn repeated_field_caption_copies_exhaust_shared_output_budget() {
+    // Five source bytes produce half a megabyte, reused by every field DTO.
+    let default = "x".repeat(500_000);
+    assert_caption_admission(&copy_fixture(1, "{{0}}", &default, false), true).await;
+    assert_caption_admission(&copy_fixture(10, "{{0}}", &default, false), false).await;
+}
+
+#[tokio::test]
+async fn separator_group_caption_copies_exhaust_shared_output_budget() {
+    let default = "x".repeat(500_000);
+    assert_caption_admission(&copy_fixture(1, "{{0}}", &default, true), true).await;
+    assert_caption_admission(&copy_fixture(10, "{{0}}", &default, true), false).await;
+}
+
+#[tokio::test]
+async fn caption_provenance_copies_are_budgeted() {
+    let template = format!("{}{{{{0}}}}", "x".repeat(400_000));
+    assert_caption_admission(&copy_fixture(1, &template, "y", false), true).await;
+    assert_caption_admission(&copy_fixture(4, &template, "y", false), false).await;
+}
+
+fn separator_copy_fixture(count: usize, grid: bool) -> String {
+    let default = "x".repeat(700_000);
+    let head = PROGRAM
+        .split("<Dynamic>")
+        .next()
+        .unwrap()
+        .replace("Ref default", &default);
+    let layout = if grid { r#" Layout="Table""# } else { "" };
+    let axes = if grid {
+        r#"<Rows><Row Id="ROW" /></Rows><Columns><Column Id="COL" /></Columns>"#
+    } else {
+        ""
+    };
+    let separators = (0..count).map(|n| format!(r#"<ParameterSeparator Id="PS-{n}" Text="{{{{0}}}}" TextParameterRefId="R-T" Cell="1,1" />"#)).collect::<String>();
+    format!(
+        r#"{head}<Dynamic><ParameterBlock Id="PB-Grid" Text="Grid"{layout}>{axes}<ParameterRefRef RefId="R-N" Cell="1,1" />{separators}</ParameterBlock></Dynamic></ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#
+    )
+}
+
+#[tokio::test]
+async fn grid_separator_copies_share_row_caption_budget() {
+    assert_caption_admission(&separator_copy_fixture(1, true), true).await;
+    assert_caption_admission(&separator_copy_fixture(2, false), true).await;
+    assert_caption_admission(&separator_copy_fixture(2, true), false).await;
+}
+
 #[tokio::test]
 async fn module_captions_read_only_their_own_scoped_value_and_refuse_ambiguous_instances() {
     let top = PROGRAM.split("<Dynamic>").next().unwrap();

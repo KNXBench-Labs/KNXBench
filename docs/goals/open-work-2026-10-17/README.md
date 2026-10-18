@@ -13,14 +13,38 @@ below edits its files before it is published.
 
 ## Packages
 
-| Package | File | Kind | Starts when | Collides with |
-| --- | --- | --- | --- | --- |
-| P1 | [object-function rescue](p1-object-function-rescue.md) | integrate an unpublished feature | parameter grids are on `main` **and** the owner or Codex hands it over | parameter grids (`ParameterPanel.tsx`, `parameter_layout.rs`, Devices spec) |
-| P2 | [plug-in data adoption in the web app](p2-plugin-data-web.md) | implement (server + web) | any time | P3 (server router, web shell, message catalogues) |
-| P3 | [note-aware deletes and selective import](p3-note-delete-disposition.md) | implement (server + web + app) | after P2 is delivered | P2 |
-| P4 | [test-gate hygiene](p4-gate-hygiene.md) | tooling and tests only | any time | lane fingerprint: recompute after any web package merges first |
-| P5 | [OPEN_WORK synchronisation](p5-open-work-docs-sync.md) | docs only | first, before P2/P3 touch `OPEN_WORK.md` | every package edits `OPEN_WORK.md` at the end |
-| P6–P8 | [not goal-ready](p6-p8-not-goal-ready.md) | owner decisions, external evidence, later scope | never as a goal on their own | — |
+| Package | File | Kind | Starts when | Collides with | State (re-check 18 Oct) |
+| --- | --- | --- | --- | --- | --- |
+| P1 | [object-function rescue](p1-object-function-rescue.md) | integrate an unpublished feature | parameter grids are on `main` **and** the owner or Codex hands it over | parameter grids (`ParameterPanel.tsx`, `parameter_layout.rs`, Devices spec) | delivered (`55bcb203`, `4b961475`) |
+| P2 | [plug-in data adoption in the web app](p2-plugin-data-web.md) | implement (server + web) | any time | P3 (server router, web shell, message catalogues) | delivered (`f3d95d34`) |
+| P3 | [note-aware deletes and selective import](p3-note-delete-disposition.md) | implement (server + web + app) | after P2 is delivered | P2 | delivered (`daced2a2`, ADR-0138) |
+| P4 | [test-gate hygiene](p4-gate-hygiene.md) | tooling and tests only | any time | lane fingerprint: recompute after any web package merges first | delivered (merge `223c1f16`) |
+| P5 | [OPEN_WORK synchronisation](p5-open-work-docs-sync.md) | docs only | first, before P2/P3 touch `OPEN_WORK.md` | every package edits `OPEN_WORK.md` at the end | delivered (`7580601c`) |
+| P6–P8 | [not goal-ready](p6-p8-not-goal-ready.md) | owner decisions, external evidence, later scope | never as a goal on their own | — | open, see the file |
+
+## Re-check, 18 October 2026
+
+Checked on `origin/main` `83cb0d55` (06:51 CEST): P1–P5 are delivered, each an
+ancestor of `main`, and each package file names its delivery. Ledger by script:
+208 rows, DONE 67, ACCEPTED_BOUNDARY 124, LATER 15, BLOCKED_EXTERNAL 2
+(`MODEL-05`, `IMPORT-02`); no row is owned by an ended session. `FUTURE-03` is
+`DONE` (P3); `KL-186` stays `ACCEPTED_BOUNDARY` with only the plug-in
+acceptance check left. The browser-lane fingerprint, recomputed with the gate's
+own `fixture_fingerprint`, still matches. **This set has no goal-ready package
+left**; only [P6–P8](p6-p8-not-goal-ready.md) remain.
+
+Open work that appeared after this set and is **not** part of it:
+
+- Product-database series (census steps 2–4: wrapper ZIPs, packed time units,
+  layouts), claimed on 18 October at 06:06 by its own session; it is the
+  remaining prerequisite for Alpha 14, which `claude-release-alpha14` cuts
+  afterwards. Step 5 (size ceilings) goes to Alpha 15 unless measured.
+- Declared-grid fidelity and the census's later items (`TypeDate`, `Rename`
+  captions, objects by page): listed in [OPEN_WORK](../../OPEN_WORK.md); each
+  needs evidence or a contract first.
+- Small cleanup named by P1: the unused `ParameterView = "functions"` and the
+  `parameters.functions*` messages. Do it only after the product-database
+  series releases its claim on the parameter UI.
 
 Recommended order: **P5 → P2 → P3**, with **P4** in parallel to P2 or P3, and
 **P1** as soon as its two entry conditions hold. P2 and P3 run one after the

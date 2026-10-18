@@ -249,8 +249,12 @@ fn telegram_json(row: &crate::bus::TelegramRow) -> Value {
             crate::bus::DecodedValue::Value { dpt, text } => {
                 json!({ "kind": "value", "dpt": dpt, "text": text })
             }
-            crate::bus::DecodedValue::Unresolved { text } => {
-                json!({ "kind": "unresolved", "text": text })
+            crate::bus::DecodedValue::Unresolved { reason, text } => {
+                let mut value = json!({ "kind": "unresolved", "reason": reason.as_str(), "text": text });
+                if let Some(dpts) = reason.program_default_dpts() {
+                    value["programDefaultDpts"] = json!(dpts);
+                }
+                value
             }
             crate::bus::DecodedValue::Conflict { text } => {
                 json!({ "kind": "conflict", "text": text })
@@ -312,9 +316,41 @@ mod tests {
         );
         assert_eq!(
             telegram_json(&row(Some(DecodedValue::Unresolved {
+                reason: crate::bus::UnresolvedReason::NoDpt,
                 text: "no DPT resolved for this group address".into(),
             })))["decoded"],
-            json!({ "kind": "unresolved", "text": "no DPT resolved for this group address" })
+            json!({ "kind": "unresolved", "reason": "noDpt", "text": "no DPT resolved for this group address" })
+        );
+        assert_eq!(
+            telegram_json(&row(Some(DecodedValue::Unresolved {
+                reason: crate::bus::UnresolvedReason::NoProject,
+                text: "no project open".into(),
+            })))["decoded"],
+            json!({ "kind": "unresolved", "reason": "noProject", "text": "no project open" })
+        );
+        assert_eq!(
+            telegram_json(&row(Some(DecodedValue::Unresolved {
+                reason: crate::bus::UnresolvedReason::NotInProject,
+                text: "address not in project".into(),
+            })))["decoded"],
+            json!({ "kind": "unresolved", "reason": "notInProject", "text": "address not in project" })
+        );
+        assert_eq!(
+            telegram_json(&row(Some(DecodedValue::Unresolved {
+                reason: crate::bus::UnresolvedReason::ProgramDefaultCleared(vec![
+                    knx_core::DptRef {
+                        main: 9,
+                        sub: Some(1)
+                    },
+                    knx_core::DptRef {
+                        main: 9,
+                        sub: Some(4)
+                    },
+                ]),
+                text: "no DPT assigned: the project clears the program default (DPT 9.001, 9.004)"
+                    .into(),
+            })))["decoded"],
+            json!({ "kind": "unresolved", "reason": "programDefaultCleared", "programDefaultDpts": ["9.001", "9.004"], "text": "no DPT assigned: the project clears the program default (DPT 9.001, 9.004)" })
         );
         assert_eq!(
             telegram_json(&row(Some(DecodedValue::Conflict {

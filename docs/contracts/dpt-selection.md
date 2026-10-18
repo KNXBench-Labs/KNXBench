@@ -1,5 +1,54 @@
 # DPT presentation, selection and provenance
 
+## Monitor resolution reasons (UI-01, 18 October 2026)
+
+The monitor continues to use `knx_core::resolve_project_group_address_dpts`.
+An address's declaration is weighed against linked communication-object DPTs
+under ADR-0078. A stated value counts regardless of its layer. Under ADR-0010,
+an instance `DatapointType=""` is a stated, cleared value, distinct from an
+absent attribute. The resolver policy does not decode with a value the project
+clears. ADR-0027 retains program defaults separately in `Devices::program_defaults`:
+the object table can show that program default while the monitor names it but
+does not use it to decode. This is KNXBench's explicit policy, not a claim about
+undocumented ETS decoding. Captions and object sizes cannot establish a DPT.
+
+An unresolved captured row has one of four structured reasons:
+
+- `noProject`: its session context had no project.
+- `notInProject`: the destination has no group-address entry in that project.
+- `noDpt`: a known address has no resolved DPT and no cleared program default.
+- `programDefaultCleared`: a known address resolves to no DPT and at least one
+  linked object has an `Empty` instance DPT with a retained program DPT. Its
+  text and additive `programDefaultDpts` array name the sorted, deduplicated
+  program defaults. They are diagnostic references, never a decoder input.
+
+Core's separate read-only `project_cleared_program_default_dpts` helper gathers
+that evidence once per context alongside the DPT map. The authoritative server
+comparison includes it, so changing a cleared default makes a session stale.
+The legacy browser fingerprint is only an invalidation hint; its decoding
+inputs are unchanged and it cannot establish freshness (KL-82).
+
+HTTP and diagnostic bundles retain these distinctions. The EN/DE panel labels
+them without inspecting diagnostic prose or using the project's current state
+to reinterpret historical rows. A legacy or unknown unresolved reason shows an
+explicit unknown-reason label. Conflict, unsupported codec (`unsupportedDpt`)
+and malformed payload (`decodeFailed`) retain separate outcomes; raw payloads
+remain available. This extends the handwritten bus DTO, not generated bindings.
+
+Project load/switch and DPT/link edits do not silently refresh a monitor context.
+The authoritative stale-context notice and Send lock remain separate from each
+row's captured decode outcome. Reconnection or an explicit existing address-style
+publication refreshes future decoding only. Rows already captured retain their
+original destination/name, DPT/result, raw payload and context generation.
+
+Focused Core and HTTP tests cover missing declarations, direct declarations,
+a stated value counting regardless of its layer (not the enrichment path),
+cleared program defaults, unknown addresses, agreeing/conflicting candidates,
+codec failures and late project load/edit followed by explicit context publication.
+Panel tests cover structured reasons, EN/DE, legacy fallback and retained rows
+under stale context. Browser coverage includes reduced motion and one default-motion
+variant. No physical-bus acceptance is implied.
+
 ## Name-first monitor and address extension (2026-10-12 source)
 
 The shared display vocabulary now presents **Name (main.sub)**, for example

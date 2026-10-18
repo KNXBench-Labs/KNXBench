@@ -28,3 +28,22 @@ overwritten or discarded.
 keyboard pane resize, hide/show and restart, and topology-device hover at
 narrow, default and enlarged scales. No KNX hardware traffic is required.
 <!-- END retained catalogue record -->
+
+## Update 18 October 2026: resizable tables under application zoom
+
+Resizable data tables convert DOMRect widths and pointer deltas into CSS
+layout pixels by dividing by `--app-ui-scale` (the same rule as `Overlay`),
+and keep `clientWidth`/`scrollWidth` and computed-style lengths as they are.
+That split matches Chromium's standardized CSS `zoom` (Chrome 128 and later),
+where DOMRect and `clientX` are zoomed while `client*`/`scroll*` and computed
+lengths are not. It was verified only in system Chromium. WebKitGTK may report
+DOMRect differently under `zoom`; if it already divides by the zoom factor,
+the tables would correct twice and underestimate word floors at 150%.
+
+**Also lifted only when** the GUI-capable Linux run additionally checks table
+column fitting, pointer drag distance and announced widths at 80% and 150%.
+
+**Known open defect (not part of the table fix).** Navigation and inspector
+pane drags still add the raw pointer delta to a layout-pixel width, so at 150%
+the pane edge moves 1.5 times the pointer distance (0.8 times at 80%). Tracked
+in [open work](../OPEN_WORK.md#ui-feedback-packages-18-october-2026).

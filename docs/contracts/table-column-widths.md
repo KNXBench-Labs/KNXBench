@@ -67,6 +67,10 @@ cards. Explorer trees, forms and manufacturer-declared parameter grids
   Changing the root style invalidates token/icon caches through the existing
   ancestor observer and refreshes geometry even when normalized floors stay
   unchanged. Stored widths do not change units when application scale changes.
+  This unit split assumes Chromium's standardized CSS `zoom` (DOMRect and
+  pointer coordinates zoomed, `client*`/`scroll*` and computed lengths not). It
+  is verified in system Chromium only; WebKitGTK/Tauri behaviour under `zoom`
+  is unverified ([KL-130](../limitations/KL-130-ZOOM-application-zoom.md#update-18-october-2026-resizable-tables-under-application-zoom)).
 - Each column declares a default and a lower minimum preference in layout pixels.
   The stored-preference maximum is 1200 px
   unless declared otherwise. Stored values must be finite numbers in range;
@@ -271,9 +275,10 @@ are preserved. No manufacturer parameter-grid code is changed.
 
 | Requirement | Test |
 | --- | --- |
-| Application scale 0.8/1.5: layout floors and flex icons, root-style observer firing, measured ARIA, pointer deltas and unchanged keyboard steps | `src/ResizableTable.test.tsx`: scale stores pointer deltas; root scale mutations remeasure tokens, flex icons and announcements |
+| Application scale 0.8/1.5: layout floors and flex icons (fresh mount per scale, so retained session floors cannot mask an unnormalized measurement), root-style observer firing, geometry refresh without a resize event, measured ARIA, pointer deltas and unchanged keyboard steps | `src/ResizableTable.test.tsx`: scale stores pointer deltas; root scale mutations remeasure tokens, flex icons and announcements; a table first mounted at scale 0.8/1.5 measures layout-pixel floors; a root scale change re-reads header geometry without a resize event |
 | Application scale 0.8/1.5: independent layout-pixel oracle, intact device words, real 60 visual px drag, keyboard, column/table reset and reload at 100% | `e2e/table-column-widths.e2e.ts`: scale layout-pixel fit, intact words, visual pointer tracking, keyboard, reset and restore |
-| Overlay stacking with background inert removed solely for synchronous hit testing | `e2e/table-column-widths.e2e.ts`: overlay paints above device headers; negative control raises table viewport above overlay |
+| Each zoom path is load-bearing on its own (manual negative controls, 18 October 2026, not automated) | Removing the scale division from only the word floors fails the independent-oracle comparison (10 px and 22 px over the allowance); only the pointer delta fails the stored drag width (160 instead of 175/140); only the header measurement fails the announced width (14 px and 35 px off). Each file restored byte-exact. |
+| Overlay stacking with background inert removed solely for synchronous hit testing | `e2e/table-column-widths.e2e.ts`: overlay paints above device headers (a negative control that raised the table viewport above the overlay was run once during UISET-05; it is not automated) |
 | Persist/remount, types/ranges, corrupt JSON, changed/reordered columns, multiple instances, reset, window events, storage denial | `src/useTableColumnWidths.test.tsx` |
 | Measured header versus styled cell floors, 320 px cap, cache reuse, targeted mutation invalidation in 1,000 rows, session maxima through filtering/reset/remount, hidden-pane deferral | `src/ResizableTable.test.tsx`: fits to the widest header or cell token; caps pathological tokens and caches measurement; invalidates only a changed cell; keeps session floors after filtering; defers hidden-pane word measurement |
 | Colspan remapping; table class/style, viewport/pane inherited typography and padding invalidation; bounded ownership/cleanup and geometry-only cache reuse | `e2e/table-column-widths.e2e.ts`: colspan mutation, inherited typography, inherited padding; `src/ResizableTable.test.tsx`: bounded ancestor subscriptions, ancestor pane width and height; ancestor geometry noise and presentation edits/removals |

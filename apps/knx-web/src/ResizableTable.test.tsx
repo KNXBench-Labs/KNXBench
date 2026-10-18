@@ -407,3 +407,43 @@ it("root scale mutations remeasure tokens, flex icons and announcements in layou
     expect(handle().getAttribute("aria-valuetext")).toBe("250 px");
   }
 });
+
+// A session floor only grows, so a table first measured at 100% would mask an
+// unnormalized 80% measurement. Each scale therefore mounts a fresh table.
+it.each([0.8, 1.5])("a table first mounted at scale %s measures layout-pixel floors", async scale => {
+  document.documentElement.style.setProperty("--app-ui-scale", String(scale));
+  try {
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(40);
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+      const layout = this.hasAttribute("data-table-word-measure") ? 100 : this.hasAttribute("data-icon") ? 12 : 0;
+      return { width: layout * scale } as DOMRect;
+    });
+    await act(async () => root.render(<ResizableTable key={`fresh-${scale}`} tableId={`fresh-${scale}`} columns={columns}>
+      <thead><tr><th style={{ padding: "0 10px" }}><button style={{ display: "flex", padding: 0, border: 0, columnGap: 3 }}>Name<span data-icon aria-hidden="true" /></button></th><th>Address</th></tr></thead>
+      <tbody><tr><td>Token</td><td>Address</td></tr></tbody>
+    </ResizableTable>));
+    // 100 token + 20 padding + 12 icon + 3 gap, in layout pixels at any scale.
+    expect(host.querySelector("col")!.style.width).toBe("135px");
+  } finally {
+    document.documentElement.style.removeProperty("--app-ui-scale");
+  }
+});
+
+it("a root scale change re-reads header geometry without a resize event", async () => {
+  // A header whose visual width stays put while the scale changes: only a
+  // fresh geometry pass can announce the new layout width.
+  vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(40);
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+    return { width: this.tagName === "TH" ? 300 : 0 } as DOMRect;
+  });
+  try {
+    await act(async () => root.render(<ResizableTable key="geometry-scale" tableId="geometry-scale" columns={columns}>
+      <thead><tr><th>Name</th><th>Address</th></tr></thead><tbody><tr><td>A</td><td>B</td></tr></tbody>
+    </ResizableTable>));
+    expect(handle().getAttribute("aria-valuetext")).toBe("300 px");
+    await act(async () => { document.documentElement.style.setProperty("--app-ui-scale", "1.5"); });
+    expect(handle().getAttribute("aria-valuetext")).toBe("200 px");
+  } finally {
+    document.documentElement.style.removeProperty("--app-ui-scale");
+  }
+});

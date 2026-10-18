@@ -124,17 +124,26 @@ The **Decoded** column is the interesting one. If a project is open when you con
 KNXBench takes a snapshot of that project's group addresses and their datapoint types
 and decodes each telegram against it. A raw `0x01` becomes something you can read. See
 [Datapoint types](../knx-basics/04-datapoint-types.md) for what those types are.
-The row and its details distinguish **No project in session** from **No DPT assigned**,
-**Conflicting DPTs**, **Unsupported DPT** (the codec does not implement the resolved
-type) and **Decode failed** (the resolved type could not decode this payload). An
-older server that supplies an error without a structured reason is labelled
-**Decode error (reason unknown)** instead of guessing from its prose. An older
-server without an unresolved reason shows **DPT unresolved (reason unknown)**.
-These labels describe the captured session, even if a project is opened later.
-An object name or a two-byte size alone cannot establish a DPT: if neither the
-group address nor its linked objects state a usable type, assign a verified DPT
-in the project and reconnect. The raw
-payload, resolved DPT where known and original error text remain available.
+The row and its details distinguish four unresolved reasons: **No project in
+session** (`noProject`), **Address not in project** (`notInProject`), **No DPT
+assigned** for a known address (`noDpt`), and **No DPT assigned – the project
+clears the program default (DPT …)** (`programDefaultCleared`, naming all
+applicable defaults in sorted order without duplicates).
+
+Under KNXBench's ADR-0010 policy, an instance `DatapointType=""` is a stated,
+cleared value, distinct from an absent attribute. The object table can show the
+program default retained separately under ADR-0027. The monitor names that
+default but does not decode with a value the project clears. A caption or a
+two-byte object size alone cannot establish a DPT. Assign a verified DPT in the
+project and reconnect to use it for future rows.
+
+**Conflicting DPTs**, **Unsupported DPT** (the codec does not implement the
+resolved type) and **Decode failed** (the resolved type could not decode this
+payload) remain separate. An older server without a structured error reason
+shows **Decode error (reason unknown)**; an unresolved result without a reason
+shows **DPT unresolved (reason unknown)**. These labels describe the captured
+session, even if a project opens later. Raw payloads, resolved DPTs where known,
+and original diagnostic text remain available.
 
 Changing the group-address style refreshes the running session's complete address
 and decoding context, including a style change made through Undo or Redo. It does

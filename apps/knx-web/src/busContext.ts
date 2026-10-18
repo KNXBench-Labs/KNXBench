@@ -46,8 +46,8 @@ export const SESSION_CONTEXT_KEY = "knx-desktop:bus-session-context";
 export const CONTEXT_EVENT = "knx-desktop:context-changed";
 
 export interface ProjectContextRecord {
-  /// Fingerprint of everything `GroupAddressContext` freezes — see
-  /// `fingerprintProjectContext`.
+  /// Legacy fingerprint of decode/display facts; authoritative contextStatus
+  /// also compares diagnostic evidence. See `fingerprintProjectContext`.
   fingerprint: string;
   /// `Date.now()` at publication. Used only to order a project record
   /// against a session record, never displayed.
@@ -105,15 +105,18 @@ function fnv1a(text: string): string {
   return (hash >>> 0).toString(16).padStart(8, "0");
 }
 
-/// Exactly the project facts a `GroupAddressContext` freezes, and nothing
-/// else: for every group address, its formatted address (which carries the
-/// project's `GroupAddressStyle` — `bus.rs`'s `format_destination`), its
+/// Legacy decode-context invalidation hint: for every group address, its
+/// formatted address (which carries the project's `GroupAddressStyle` — `bus.rs`'s `format_destination`), its
 /// name (`GroupAddressContext::name`) and its DPTs (`dpts`, produced by the
 /// same `group_address_dpt_from` rule as `resolve_group_address_dpt` — see
 /// `bindings/GroupAddressNode.ts`). Device names, parameters, buildings and
 /// topology are deliberately absent: renaming a room cannot change how a
 /// telegram decodes, and a fingerprint that moved on such an edit would
 /// lock a session for no reason and train users to ignore the lock.
+///
+/// The server also snapshots cleared program defaults for diagnostic labels.
+/// They never change decoding and are compared by authoritative contextStatus;
+/// this legacy fingerprint cannot establish freshness (KL-82).
 ///
 /// `null` — no project open in this window — fingerprints as `"none"` so
 /// the value is always a string; whether that string is ever *published* is

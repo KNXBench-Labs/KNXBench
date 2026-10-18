@@ -17,9 +17,9 @@ pub use codec::{
     DptValue,
 };
 pub use resolve::{
-    group_address_dpt_from, group_address_type_from, resolve_group_address_dpt,
-    resolve_group_address_type, resolve_project_group_address_dpts, GroupAddressDpt,
-    GroupAddressType, GroupAddressTypeOutcome,
+    group_address_dpt_from, group_address_type_from, project_cleared_program_default_dpts,
+    resolve_group_address_dpt, resolve_group_address_type, resolve_project_group_address_dpts,
+    GroupAddressDpt, GroupAddressType, GroupAddressTypeOutcome,
 };
 
 /// A reference to a datapoint type, e.g. `DPST-1-1` (main type 1, subtype 1)

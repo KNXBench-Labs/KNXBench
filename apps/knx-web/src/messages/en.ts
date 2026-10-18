@@ -1810,6 +1810,8 @@ export const messages = {
   "busMonitor.column.payload": "Payload",
   "busMonitor.column.decoded": "Decoded",
   "busMonitor.decode.noProject": "No project in session",
+  "busMonitor.decode.notInProject": "Address not in project",
+  "busMonitor.decode.programDefaultCleared": "No DPT assigned – the project clears the program default (DPT {dpts})",
   "busMonitor.decode.unresolvedUnknown": "DPT unresolved (reason unknown)",
   "busMonitor.decode.unresolved": "No DPT assigned",
   "busMonitor.decode.conflict": "Conflicting DPTs",

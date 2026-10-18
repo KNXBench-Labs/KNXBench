@@ -827,17 +827,36 @@ pub enum DecodedValue {
     },
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UnresolvedReason {
     NoProject,
+    NotInProject,
     NoDpt,
+    ProgramDefaultCleared(Vec<DptRef>),
 }
 
 impl UnresolvedReason {
-    pub(crate) fn as_str(self) -> &'static str {
+    /// Dotted diagnostic references, already sorted/deduplicated by Core.
+    pub(crate) fn program_default_dpts(&self) -> Option<Vec<String>> {
+        match self {
+            Self::ProgramDefaultCleared(dpts) => Some(
+                dpts.iter()
+                    .map(|dpt| match dpt.sub {
+                        Some(sub) => format!("{}.{sub:03}", dpt.main),
+                        None => format!("{}.*", dpt.main),
+                    })
+                    .collect(),
+            ),
+            _ => None,
+        }
+    }
+
+    pub(crate) fn as_str(&self) -> &'static str {
         match self {
             Self::NoProject => "noProject",
             Self::NoDpt => "noDpt",
+            Self::NotInProject => "notInProject",
+            Self::ProgramDefaultCleared(_) => "programDefaultCleared",
         }
     }
 }
@@ -866,6 +885,8 @@ pub(crate) struct GroupAddressContext {
     style: Option<GroupAddressStyle>,
     dpts: HashMap<u16, GroupAddressDpt>,
     names: HashMap<u16, String>,
+    /// ADR-0010/0027 diagnostic evidence, never a fallback codec input.
+    cleared_program_defaults: HashMap<u16, Vec<DptRef>>,
     /// AR20: the configured participants (devices, links, flags,
     /// activation) of the same project. Part of the comparison, so a
     /// link-, flag-, activation- or device-only edit is no longer
@@ -887,6 +908,7 @@ impl PartialEq for GroupAddressContext {
         self.style == other.style
             && self.dpts == other.dpts
             && self.names == other.names
+            && self.cleared_program_defaults == other.cleared_program_defaults
             && *self.flow == *other.flow
     }
 }
@@ -907,6 +929,7 @@ impl GroupAddressContext {
                 style: None,
                 dpts: HashMap::new(),
                 names: HashMap::new(),
+                cleared_program_defaults: HashMap::new(),
                 flow: Arc::new(FlowParticipants::default()),
                 generation: FIRST_FLOW_GENERATION,
             },
@@ -917,6 +940,9 @@ impl GroupAddressContext {
                     style: Some(project.info.group_address_style),
                     dpts,
                     names: knx_core::resolve_project_group_address_names(project),
+                    cleared_program_defaults: knx_core::project_cleared_program_default_dpts(
+                        project,
+                    ),
                     flow: Arc::new(flow),
                     generation: FIRST_FLOW_GENERATION,
                 }
@@ -950,11 +976,30 @@ impl GroupAddressContext {
                 text: "no project open".to_string(),
             };
         }
+        if !self.names.contains_key(&ga.raw()) {
+            return DecodedValue::Unresolved {
+                reason: UnresolvedReason::NotInProject,
+                text: "address not in project".to_string(),
+            };
+        }
         match self.dpts.get(&ga.raw()) {
-            None | Some(GroupAddressDpt::None) => DecodedValue::Unresolved {
-                reason: UnresolvedReason::NoDpt,
-                text: "no DPT resolved for this group address".to_string(),
-            },
+            None | Some(GroupAddressDpt::None) => {
+                if let Some(dpts) = self.cleared_program_defaults.get(&ga.raw()) {
+                    let reason = UnresolvedReason::ProgramDefaultCleared(dpts.clone());
+                    let names = reason.program_default_dpts().unwrap().join(", ");
+                    DecodedValue::Unresolved {
+                        reason,
+                        text: format!(
+                            "no DPT assigned: the project clears the program default (DPT {names})"
+                        ),
+                    }
+                } else {
+                    DecodedValue::Unresolved {
+                        reason: UnresolvedReason::NoDpt,
+                        text: "no DPT resolved for this group address".to_string(),
+                    }
+                }
+            }
             Some(GroupAddressDpt::Single(dpt)) => decode_single(*dpt, value),
             Some(GroupAddressDpt::Conflict(dpts)) => DecodedValue::Conflict {
                 text: format!("conflicting DPTs: {}", format_dpt_list(dpts)),

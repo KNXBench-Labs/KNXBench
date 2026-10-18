@@ -578,6 +578,25 @@ describe("BusMonitorPanel", () => {
     expect(host!.textContent).toContain("wrong payload length");
   });
 
+  it.each([
+    ["en", "No DPT assigned – the project clears the program default (DPT 9.001, 9.004)", "Address not in project", "No DPT assigned"],
+    ["de", "Kein DPT zugewiesen – das Projekt hebt den Programmstandard auf (DPT 9.001, 9.004)", "Adresse nicht im Projekt", "Kein DPT zugewiesen"],
+  ])("labels cleared defaults and unknown addresses from captured evidence in %s", async (language, cleared, unknown, missing) => {
+    setSetting(UI_LANGUAGE_STORAGE_KEY, language);
+    apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({ telegrams: [
+      row({ seq: 0, decoded: { kind: "unresolved", reason: "programDefaultCleared", programDefaultDpts: ["9.001", "9.004"], text: "captured diagnostic" } }),
+      row({ seq: 1, decoded: { kind: "unresolved", reason: "notInProject", text: "captured diagnostic" } }),
+      row({ seq: 2, decoded: { kind: "unresolved", reason: "noDpt", text: "captured diagnostic" } }),
+    ] }));
+    const root = await renderPanel();
+    await flushReattach();
+    expect(Array.from(host!.querySelectorAll(".bus-monitor-decode-state"), node => node.textContent)).toEqual([cleared, unknown, missing]);
+    await act(async () => { host!.querySelector<HTMLTableRowElement>(".bus-monitor-table tbody tr")!.click(); });
+    expect(host!.querySelector(".telegram-details")!.textContent).toContain(cleared);
+    expect(host!.querySelector(".telegram-details")!.textContent).toContain("0x01 (6-bit)");
+    await act(async () => root.unmount());
+  });
+
   it("keeps the captured no-project reason after a project loads and the server reports stale context", async () => {
     apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({ projectOpen: false, telegrams: [
       row({ seq: 0, rawPayload: "[0c, 80]", decoded: { kind: "unresolved", reason: "noProject", text: "no project open" } }),

@@ -464,13 +464,20 @@ must not be described as either universally guessed or universally explicit.
 
 ### Some project telegrams have no declared datapoint type
 
-- **Affected:** monitor decoding for addresses whose linked objects and group
-  address provide no usable DPT, including an explicitly empty instance DPT.
-- **Consequence:** a descriptive caption or a two-byte object size does not
-  establish an encoding. Raw payloads remain visible; assign a verified type
-  and reconnect to use it for future telegrams. Historical rows keep their
-  original interpretation. A session without a project has a separate label;
-  older servers without a structured unresolved reason show that uncertainty.
+- **Affected:** monitor decoding when the session has no project, an address
+  is absent from its project, or a known address has no usable DPT.
+- **Limitation:** under ADR-0010, an explicitly empty instance DPT is a stated,
+  cleared value. The object table can show a retained program default
+  (ADR-0027); the monitor names it but does not decode with a value the project
+  clears. This is KNXBench's resolver policy. A caption or object size alone
+  does not establish an encoding.
+- **Consequence:** the four captured unresolved reasons are `noProject` (no
+  project in session), `notInProject` (address not in project), `noDpt` (known
+  address without a type), and `programDefaultCleared` (no assigned DPT; the
+  project clears the named program defaults). Raw payloads remain visible.
+  Assign a verified type and reconnect to use it for future telegrams;
+  historical rows retain their interpretation and explanation. Older servers
+  without a structured reason show that uncertainty.
 - **Details:** [Monitor resolution reasons](../contracts/dpt-selection.md#monitor-resolution-reasons-ui-01-18-october-2026).
 
 ### A line scan costs real bus time and cannot distinguish every case

@@ -27,7 +27,7 @@ from tools.web_gate_support import (MeasuredRun, browser_cases, partition_files,
 PRODUCTION_CONFIGS = (
     'catalogue', 'communication', 'device-download-support', 'devices', 'dialogs',
     'ga-members-download', 'group-addresses', 'instructions', 'notes', 'parameters',
-    'reload-guard', 'structure', 'task-status', 'updates', 'ux-feedback',
+    'reload-guard', 'structure', 'table-columns', 'task-status', 'updates', 'ux-feedback',
 )
 LOCKS = ('knx-workspace-gates.lock', 'knxbench-alpha-gate.lock',
          'knxbench-browser-fixture.lock')

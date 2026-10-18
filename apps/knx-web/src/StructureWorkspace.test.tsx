@@ -6,9 +6,8 @@ import { createRoot } from "react-dom/client";
 import { expect, it, vi } from "vitest";
 import StructureWorkspace from "./StructureWorkspace";
 import { resetUiLanguageForTests, saveUiLanguage } from "./uiLanguage";
-import { resetSettingsForTests, settingsStorage } from "./settingsStore";
+import { resetSettingsForTests, setSetting, settingsStorage } from "./settingsStore";
 import type { ProjectTree } from "./bindings/ProjectTree";
-import { resetSettingsForTests, setSetting } from "./settingsStore";
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 

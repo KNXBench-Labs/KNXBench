@@ -283,11 +283,12 @@ async fn activation_over_budget_post_preserves_project_revision_history_and_nati
         .split("<Dynamic>")
         .next()
         .unwrap()
-        .replace("Ref default", &huge);
+        .replace("Ref default", &huge)
+        .replace("</Static>", r#"<ComObjectTable><ComObject Id="A-1_O-1" Number="1" Text="Switch" ObjectSize="1 Bit" /></ComObjectTable><ComObjectRefs><ComObjectRef Id="A-1_O-1_R-1" RefId="A-1_O-1" /></ComObjectRefs></Static>"#);
     let template = "{{0}}".repeat(64);
     let source = format!(
         r#"{head}<Dynamic><ParameterRefRef RefId="R-N" />
-<choose ParamRefId="R-N"><when test="2"><ParameterBlock Id="PB-Large" Text="{template}" TextParameterRefId="R-T"><ParameterRefRef RefId="R-T" /></ParameterBlock></when></choose>
+<choose ParamRefId="R-N"><when test="2"><ComObjectRefRef RefId="A-1_O-1_R-1" /><ParameterBlock Id="PB-Large" Text="{template}" TextParameterRefId="R-T"><ParameterRefRef RefId="R-T" /></ParameterBlock></when></choose>
 </Dynamic></ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#
     );
     let (dir, products) = products_from(&source);
@@ -317,6 +318,16 @@ async fn activation_over_budget_post_preserves_project_revision_history_and_nati
         .body(Body::from(json!({"etsId":"R-N", "raw":"2"}).to_string()))
         .unwrap();
     let (status, dto) = call(app.clone(), post).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(dto["error"], "device text projection budget exhausted");
+    let bound_post = Request::post("/api/device/1/parameters")
+        .header("content-type", "application/json")
+        .body(Body::from(json!({"etsId":"R-N", "raw":"2",
+            "serverIncarnation":state.server_incarnation,
+            "projectIncarnation":state.project_incarnation.load(std::sync::atomic::Ordering::Relaxed),
+            "snapshotRevision":revision, "expectedValue":"1"}).to_string()))
+        .unwrap();
+    let (status, dto) = call(app.clone(), bound_post).await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
     assert_eq!(dto["error"], "device text projection budget exhausted");
     assert_eq!(

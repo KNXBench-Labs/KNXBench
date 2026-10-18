@@ -742,3 +742,102 @@ fn a_duplicated_format_1_report_member_is_refused() {
         "diagnostics-duplicate-member"
     );
 }
+
+fn u32_at(bytes: &[u8], at: usize) -> usize {
+    u32::from_le_bytes(bytes[at..at + 4].try_into().unwrap()) as usize
+}
+fn u16_at(bytes: &[u8], at: usize) -> usize {
+    usize::from(u16::from_le_bytes(bytes[at..at + 2].try_into().unwrap()))
+}
+
+/// The competing-EOCD construction: an outer end record whose comment ends
+/// exactly at the end of the archive points to a directory of unique names;
+/// its comment holds an inner end record, followed by padding, that points
+/// to the directory of [`duplicated`] with two `name` entries.
+/// A reader trusting the outer record sees unique names, while a reader
+/// that accepts a comment ending before the end of the file picks the inner.
+fn competing_directories(original: &[u8], name: &str, decoy: &str) -> Vec<u8> {
+    let inner = duplicated(original, name, decoy, b"{\"forged\":true}");
+    let inner_end = inner.len() - 22;
+    assert_eq!(u16_at(&inner, inner_end + 20), 0, "writer adds no comment");
+    let (size, start) = (
+        u32_at(&inner, inner_end + 12),
+        u32_at(&inner, inner_end + 16),
+    );
+    let mut headers: Vec<(&[u8], &[u8])> = vec![];
+    let mut at = start;
+    while at < start + size {
+        let n = u16_at(&inner, at + 28);
+        let next = at + 46 + n + u16_at(&inner, at + 30) + u16_at(&inner, at + 32);
+        headers.push((&inner[at + 46..at + 46 + n], &inner[at..next]));
+        at = next;
+    }
+    // One header per name, in first-seen order, the last copy winning: the
+    // view `ZipArchive` presents of the inner directory.
+    let headers_len = headers.len();
+    let mut unique: Vec<(&[u8], &[u8])> = vec![];
+    for (n, header) in headers {
+        match unique.iter_mut().find(|(seen, _)| *seen == n) {
+            Some(slot) => slot.1 = header,
+            None => unique.push((n, header)),
+        }
+    }
+    let count = unique.len() as u16;
+    assert_eq!(headers_len, usize::from(count) + 1, "exactly one duplicate");
+    let mut bytes = inner[..inner_end].to_vec();
+    let outer_start = bytes.len();
+    for (_, header) in &unique {
+        bytes.extend_from_slice(header);
+    }
+    let outer_size = bytes.len() - outer_start;
+    let mut comment = inner[inner_end..].to_vec();
+    comment.extend_from_slice(&[0; 8]);
+    bytes.extend_from_slice(b"PK\x05\x06\0\0\0\0");
+    bytes.extend_from_slice(&[count.to_le_bytes(), count.to_le_bytes()].concat());
+    bytes.extend_from_slice(&(outer_size as u32).to_le_bytes());
+    bytes.extend_from_slice(&(outer_start as u32).to_le_bytes());
+    bytes.extend_from_slice(&(comment.len() as u16).to_le_bytes());
+    bytes.extend_from_slice(&comment);
+    // The premise: `ZipArchive` really reads the inner, duplicated directory.
+    let zip = zip::ZipArchive::new(Cursor::new(&bytes)).unwrap();
+    assert_eq!(zip.central_directory_start(), start as u64);
+    assert_eq!(zip.len(), usize::from(count));
+    bytes
+}
+
+#[tokio::test]
+async fn a_competing_end_record_cannot_hide_a_duplicated_memory_member() {
+    let original = bundle_export(&export().await).unwrap();
+    let forged = competing_directories(&original, "memory.json", "memorz.json");
+    assert_eq!(
+        read_export(&forged).expect_err("accepted a competing end record"),
+        "diagnostics-invalid-zip"
+    );
+}
+
+#[test]
+fn a_competing_end_record_cannot_hide_a_duplicated_format_1_report() {
+    let plan = prepare(&project(), DeviceId(7), None).unwrap();
+    let original = bundle(&pending(&plan, "synthetic", true)).unwrap();
+    let forged = competing_directories(&original, "report.json", "reporz.json");
+    assert_eq!(
+        read_bundle(&forged).expect_err("accepted a competing end record"),
+        "diagnostics-invalid-zip"
+    );
+}
+
+#[tokio::test]
+async fn the_fixed_archive_format_carries_no_zip_comment() {
+    let mut bytes = bundle_export(&export().await).unwrap();
+    let end = bytes.len() - 22;
+    bytes[end + 20..end + 22].copy_from_slice(&5u16.to_le_bytes());
+    bytes.extend_from_slice(b"hello");
+    assert_eq!(
+        zip::ZipArchive::new(Cursor::new(&bytes)).unwrap().comment(),
+        b"hello"
+    );
+    assert_eq!(
+        read_export(&bytes).expect_err("accepted a ZIP comment"),
+        "diagnostics-invalid-zip"
+    );
+}

@@ -158,6 +158,7 @@ the descriptor and then ended the connection about 6.3 s after the PID12 request
 (`connection-lost`, the released-connection path, now observed); `1.1.253`
 rejected `T_Connect` (`connect-rejected`). The gate's house set pins all 34
 archives ([evidence note](../research/2026-10-18-house-device-diagnostics.md)).
-Still unobserved: a device that stays silent until the session timeout, and a
-report that a device kept working normally afterwards. 46 devices do not make
-the export hardware-compatible in general.
+Afterwards the owner reported that the whole installation keeps working
+normally (an operator observation, not a functional test per device).
+Still unobserved: a device that stays silent until the session timeout.
+46 devices do not make the export hardware-compatible in general.

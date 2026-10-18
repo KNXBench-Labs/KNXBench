@@ -49,5 +49,6 @@ With the owner's go, all 34 contactable house devices were read once
 actuator refused PID78 with zero elements; both `MV-0012` SmartSensors ended the
 connection after the PID12 request (`connection-lost`), the released-connection
 case the catalogue record above only assumed; `1.1.253` rejected the connection.
-A device that stays silent until the session timeout and post-run behaviour
-remain unobserved.
+The owner reported afterwards that the installation keeps working normally
+(operator observation, not a per-device functional test). A device that stays
+silent until the session timeout remains unobserved.

@@ -243,7 +243,8 @@ as an alpha/release blocker by this plan.
 
 **Separate cases, not one generic “hardware test”:** KL-184 fully silent
 identity reads (zero-element refusals, a device-ended and a rejected connection
-are observed since) and post-run behaviour/firmware responses;
+are observed since, and the owner reports the house working normally after a
+run) and firmware responses;
 KL-186 originating plug-in acceptance after adopted bytes (software route is
 complete); KL-170 tester probe/report review; optional custom multicast,
 bridge Route-Back tunnel and other specifically identified live gaps.
@@ -537,8 +538,8 @@ bases from [COMMIT_MAP_2026-10-17](history/COMMIT_MAP_2026-10-17.txt). Not
 [eleven more](research/2026-10-18-device-diagnostics-eleven-devices.md),
 [the maintainer's house](research/2026-10-18-house-device-diagnostics.md)): three refused
 PID78 with zero elements, two System-1 sensors ended the connection, one
-connection was rejected. Still open: a fully silent device and post-run
-behaviour reports; any memory profile only with its own evidence and decision (ADR-0134).
+connection was rejected; the owner reports the house working normally
+afterwards. Still open: a fully silent device; any memory profile only with its own evidence and decision (ADR-0134).
 
 ## System 2 / System B download outcome (17 October 2026)
 

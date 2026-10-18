@@ -6,6 +6,7 @@ import type { ProjectTree } from "../src/bindings/ProjectTree";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 
 type Language = "en" | "de";
 type Catalogue = { readonly [K in keyof typeof en]: string };
@@ -75,6 +76,7 @@ async function fixture(page: Page, language: Language, theme: string, width: num
     if (path === "/api/version") return ok({ version: "0.1.0-alpha.9+parameters-fixture" });
     if (path === "/api/project" && method === "GET") return ok(projectTree(f));
     if (path === "/api/project/load-progress") return ok(null);
+    if (path === "/api/project/status-metrics" && method === "GET") return ok(statusMetricsFixtureBody(projectTree(f)));
     if (path === "/api/log") return ok([]);
     if (path === "/api/bus/discover" && method === "POST") return ok({ interfaces: [] });
     if (["/api/product-languages", "/api/catalog/manufacturers", "/api/catalog/items"].includes(path)) return ok([]);

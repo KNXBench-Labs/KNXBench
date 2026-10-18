@@ -5,6 +5,7 @@ import type { DeviceNode } from "../src/bindings/DeviceNode";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 
 const devices = (count: number): DeviceNode[] => Array.from({ length: count }, (_, index) => ({
   id: index + 1, name: `Actuator ${index + 1}`, address: index < 2 ? `1.1.${index === 0 ? 2 : 10}` : null,
@@ -37,6 +38,7 @@ export async function intercept(page: Page, language: "en" | "de", count = 8, th
     }
     else if (path === "/api/project/new" && method === "POST") { state.projectOpen = true; body = state.tree; }
     else if (path === "/api/project/load-progress" && method === "GET") body = null;
+    else if (path === "/api/project/status-metrics" && method === "GET") body = statusMetricsFixtureBody(state.tree);
     else if (path === "/api/bus/discover" && method === "POST") body = { interfaces: [] };
     else if (path === "/api/com-object-dpt" && method === "POST") {
       const payload = route.request().postDataJSON();

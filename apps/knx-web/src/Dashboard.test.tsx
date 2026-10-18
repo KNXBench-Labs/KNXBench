@@ -10,10 +10,13 @@ import { resetUiLanguageForTests, saveUiLanguage } from "./uiLanguage";
 import { messages as en } from "./messages/en";
 import { messages as de } from "./messages/de";
 
+const { statusMetrics } = vi.hoisted(() => ({ statusMetrics: vi.fn() }));
+vi.mock("./api", async (importOriginal) => ({ ...await importOriginal<typeof import("./api")>(), statusMetrics }));
+
 let host: HTMLDivElement;
 let root: Root;
-const tree = (): ProjectTree => ({schema_version:12,errors:0,warnings:0,can_undo:false,can_redo:false,is_modified:false,group_address_style:"ThreeLevel",installations:[]});
-beforeEach(() => { vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true); resetSettingsForTests(); resetUiLanguageForTests(); saveUiLanguage(settingsStorage, "en"); host=document.createElement("div"); document.body.append(host); root=createRoot(host); });
+const tree = (): ProjectTree => ({schema_version:12,errors:0,warnings:0,can_undo:false,can_redo:false,is_modified:false,group_address_style:"ThreeLevel",server_incarnation:"server-a",project_incarnation:2,snapshot_revision:7,installations:[]});
+beforeEach(() => { vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true); statusMetrics.mockReset(); statusMetrics.mockImplementation(() => new Promise(() => {})); resetSettingsForTests(); resetUiLanguageForTests(); saveUiLanguage(settingsStorage, "en"); host=document.createElement("div"); document.body.append(host); root=createRoot(host); });
 afterEach(() => { act(() => root.unmount()); vi.unstubAllGlobals(); host.remove(); resetSettingsForTests(); resetUiLanguageForTests(); });
 
 describe("native import evidence availability", () => {
@@ -59,6 +62,140 @@ describe("native import evidence availability", () => {
     act(() => root.render(<Dashboard tree={{...tree(),warnings:2}} />));
     expect(host.querySelector('[role="note"]')).toBeNull();
     expect(host.querySelector('.dashboard-issues')?.textContent).toContain("2");
+  });
+});
+
+describe("project and catalogue storage status", () => {
+  it("shows no project open for an unavailable project response", async () => {
+    statusMetrics.mockResolvedValue({serverIncarnation:"server-a",project:{state:"unavailable",projectIncarnation:null,snapshotRevision:null,currentOnDiskBytes:null},catalogue:{state:"unavailable",bytes:null,counts:null}});
+    act(() => root.render(<Dashboard tree={{...tree(),project_incarnation:undefined,snapshot_revision:undefined}} />));
+    await act(async () => { await Promise.resolve(); });
+    expect(host.textContent).toContain("No project open");
+  });
+  it.each([["en", "Could not read"], ["de", "Konnte nicht gelesen werden"]] as const)("uses neutral count errors in %s", async (language, message) => {
+    saveUiLanguage(settingsStorage, language); resetUiLanguageForTests();
+    statusMetrics.mockResolvedValue({serverIncarnation:"server-a",project:{state:"error",projectIncarnation:2,snapshotRevision:7,currentOnDiskBytes:null},catalogue:{state:"error",bytes:null,counts:null}});
+    act(() => root.render(<Dashboard tree={tree()} />));
+    await act(async () => { await Promise.resolve(); });
+    expect(host.textContent).toContain(`${language === "en" ? "Manufacturers with products" : "Hersteller mit Produkten"}${message}`);
+  });
+  it.each([ ["en", "Project file on disk (current)", "Manufacturers with products"], ["de", "Projektdatei auf dem Datenträger (aktuell)", "Hersteller mit Produkten"] ] as const)("uses the measured file and catalogue labels in %s", (language, fileLabel, manufacturerLabel) => {
+    saveUiLanguage(settingsStorage, language); resetUiLanguageForTests();
+    act(() => root.render(<Dashboard tree={tree()} />));
+    const labels = [...host.querySelectorAll("dt")].map(node => node.textContent);
+    expect(labels).toContain(fileLabel);
+    expect(labels).toContain(manufacturerLabel);
+    expect(labels).toContain(language === "en" ? "Project devices" : "Projektgeräte");
+  });
+  it("keeps measurements during a same-incarnation edit and does not refetch an unchanged revision", async () => {
+    let finish: (value: unknown) => void = () => {};
+    statusMetrics.mockResolvedValueOnce({serverIncarnation:"server-a",project:{state:"available",projectIncarnation:2,snapshotRevision:7,currentOnDiskBytes:1_000_000},catalogue:{state:"available",bytes:2_000_000,counts:{manufacturers:1,products:2,applicationPrograms:3}}})
+      .mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+    act(() => root.render(<Dashboard tree={tree()} />));
+    await act(async () => { await Promise.resolve(); });
+    act(() => root.render(<Dashboard tree={{...tree()}} />));
+    expect(statusMetrics).toHaveBeenCalledTimes(1);
+    act(() => root.render(<Dashboard tree={{...tree(),snapshot_revision:8,is_modified:true}} />));
+    expect(host.textContent).toContain("1.0 MB");
+    expect(host.textContent).toContain("Manufacturers with products1");
+    expect(host.textContent).not.toContain("Status unavailable for this project snapshot");
+    expect(host.querySelector('[aria-busy="true"]')).not.toBeNull();
+    await act(async () => finish({serverIncarnation:"server-a",project:{state:"available",projectIncarnation:2,snapshotRevision:8,currentOnDiskBytes:1_500_000},catalogue:{state:"available",bytes:2_100_000,counts:{manufacturers:2,products:3,applicationPrograms:4}}}));
+    expect(host.textContent).toContain("1.5 MB");
+    expect(host.textContent).toContain("Manufacturers with products2");
+  });
+  it("shows one stale notice while retaining valid catalogue values on revision mismatch", async () => {
+    statusMetrics.mockResolvedValueOnce({serverIncarnation:"server-a",project:{state:"available",projectIncarnation:2,snapshotRevision:6,currentOnDiskBytes:9_000_000},catalogue:{state:"available",bytes:2_000_000,counts:{manufacturers:1,products:2,applicationPrograms:3}}})
+      .mockImplementationOnce(() => new Promise(() => {}));
+    act(() => root.render(<Dashboard tree={tree()} />));
+    await act(async () => { await Promise.resolve(); });
+    expect(host.textContent?.match(/Status unavailable for this project snapshot/g)).toHaveLength(1);
+    expect(host.textContent).toContain("Manufacturers with products1");
+    expect(host.textContent).not.toContain("9.0 MB");
+    act(() => root.render(<Dashboard tree={{...tree(), snapshot_revision:8}} />));
+    expect(host.textContent).not.toContain("9.0 MB");
+  });
+  it.each([
+    ["en", "Product database busy (installation running)", "1.0 MB"],
+    ["de", "Produktdatenbank beschäftigt (Installation läuft)", "1,0 MB"],
+  ] as const)("renders a busy product database in %s while keeping project metrics", async (language, message, projectSize) => {
+    saveUiLanguage(settingsStorage, language); resetUiLanguageForTests();
+    statusMetrics.mockResolvedValue({serverIncarnation:"server-a",project:{state:"available",projectIncarnation:2,snapshotRevision:7,currentOnDiskBytes:1_000_000},catalogue:{state:"busy",bytes:null,counts:null}});
+    act(() => root.render(<Dashboard tree={tree()} />));
+    await act(async () => { await Promise.resolve(); });
+    expect(host.textContent).toContain(projectSize);
+    expect(host.textContent).toContain(message);
+  });
+  it("renders malformed measurements as errors, never NaN", async () => {
+    statusMetrics.mockResolvedValue({serverIncarnation:"server-a",project:{state:"available",projectIncarnation:2,snapshotRevision:7},catalogue:{state:"available",bytes:2_000_000,counts:{manufacturers:1,products:2,applicationPrograms:3}}});
+    act(() => root.render(<Dashboard tree={tree()} />));
+    await act(async () => { await Promise.resolve(); });
+    expect(host.textContent).toContain("Could not read");
+    expect(host.textContent).not.toContain("NaN");
+  });
+  it("shows loading, then the current project file size and distinct catalogue counts", async () => {
+    statusMetrics.mockResolvedValue({serverIncarnation:"server-a",project:{state:"available",projectIncarnation:2,snapshotRevision:7,currentOnDiskBytes:1_250_000},catalogue:{state:"available",bytes:2_500_000,counts:{manufacturers:3,products:4,applicationPrograms:5}}});
+    const snapshot = {...tree(),project_incarnation:2,snapshot_revision:7,is_modified:true};
+    act(() => root.render(<Dashboard tree={snapshot} />));
+    expect(host.textContent).toContain("Loading…");
+    await act(async () => { await Promise.resolve(); });
+    expect(host.textContent).toContain("1.3 MB");
+    expect(host.textContent).toContain("2.5 MB");
+    expect(host.textContent).toContain("Unsaved changesYes");
+    expect(host.textContent).toContain("Manufacturers with products3");
+    expect(host.textContent).toContain("Catalogue products4");
+    expect(host.textContent).toContain("Application programs5");
+  });
+
+  it("distinguishes a never-saved project and an unavailable database from measured zero", async () => {
+    statusMetrics.mockResolvedValue({serverIncarnation:"server-a",project:{state:"notSavedYet",projectIncarnation:2,snapshotRevision:7,currentOnDiskBytes:null},catalogue:{state:"unavailable",bytes:null,counts:null}});
+    act(() => root.render(<Dashboard tree={tree()} />));
+    await act(async () => { await Promise.resolve(); });
+    expect(host.textContent).toContain("Not saved yet");
+    expect(host.textContent).toContain("Product database unavailable");
+    expect(host.textContent).not.toContain("0.0 MB");
+  });
+
+  it("shows errors without leaking paths and formats a tiny German size", async () => {
+    saveUiLanguage(settingsStorage, "de"); resetUiLanguageForTests();
+    statusMetrics.mockResolvedValue({serverIncarnation:"server-a",project:{state:"available",projectIncarnation:2,snapshotRevision:7,currentOnDiskBytes:12},catalogue:{state:"error",bytes:null,counts:null}});
+    act(() => root.render(<Dashboard tree={tree()} />));
+    await act(async () => { await Promise.resolve(); });
+    expect(host.textContent).toContain("< 0,1 MB");
+    expect(host.textContent).toContain("Produktdatenbank konnte nicht gelesen werden");
+  });
+  it("does not attach a measurement from an older project snapshot", async () => {
+    statusMetrics.mockResolvedValue({serverIncarnation:"server-a",project:{state:"available",projectIncarnation:1,snapshotRevision:6,currentOnDiskBytes:9_000_000},catalogue:{state:"unavailable",bytes:null,counts:null}});
+    act(() => root.render(<Dashboard tree={{...tree(),project_incarnation:2,snapshot_revision:7}} />));
+    await act(async () => { await Promise.resolve(); });
+    expect(host.textContent).toContain("Status unavailable for this project snapshot");
+    expect(host.textContent).not.toContain("9.0 MB");
+  });
+  it("clears a displayed size immediately on project switch", async () => {
+    statusMetrics.mockResolvedValueOnce({serverIncarnation:"server-a",project:{state:"available",projectIncarnation:1,snapshotRevision:6,currentOnDiskBytes:9_000_000},catalogue:{state:"unavailable",bytes:null,counts:null}});
+    act(() => root.render(<Dashboard tree={{...tree(),project_incarnation:1,snapshot_revision:6}} />));
+    await act(async () => { await Promise.resolve(); });
+    expect(host.textContent).toContain("9.0 MB");
+    act(() => root.render(<Dashboard tree={{...tree(),project_incarnation:2,snapshot_revision:7}} />));
+    expect(host.textContent).not.toContain("9.0 MB");
+    expect(host.textContent).toContain("Loading…");
+  });
+  it("shows a read failure explicitly", async () => {
+    statusMetrics.mockRejectedValue(new Error("private path"));
+    act(() => root.render(<Dashboard tree={tree()} />));
+    await act(async () => { await Promise.resolve(); });
+    expect(host.textContent).toContain("Could not read size");
+    expect(host.textContent).not.toContain("private path");
+  });
+  it("renders a missing saved file as error while an empty catalogue remains measured", async () => {
+    statusMetrics.mockResolvedValue({serverIncarnation:"server-a",project:{state:"error",projectIncarnation:2,snapshotRevision:7,currentOnDiskBytes:null},catalogue:{state:"available",bytes:120_000,counts:{manufacturers:0,products:0,applicationPrograms:0}}});
+    act(() => root.render(<Dashboard tree={tree()} />));
+    await act(async () => { await Promise.resolve(); });
+    expect(host.textContent).toContain("Project file on disk (current)Could not read size");
+    expect(host.textContent).toContain("0.1 MB");
+    expect(host.textContent).toContain("Manufacturers with products0");
+    expect(host.textContent).toContain("Catalogue products0");
+    expect(host.textContent).not.toContain("Product database unavailable");
   });
 });
 
@@ -109,8 +246,10 @@ describe("project status import findings", () => {
     const labels = [...host.querySelectorAll("dt")].map((d) => d.textContent);
     expect(labels).toEqual([en["dashboard.installations"], en["dashboard.areas"], en["dashboard.lines"], en["dashboard.devices"],
       en["dashboard.buildingParts"], en["dashboard.groupAddresses"], en["dashboard.comObjects"],
-      en["dashboard.importErrors"], en["dashboard.importWarnings"], en["dashboard.schemaVersion"]]);
-    expect([...host.querySelectorAll("dd")].map((d) => d.textContent)).toEqual(["0","0","0","0","0","0","0","1","2","13"]);
+      en["dashboard.importErrors"], en["dashboard.importWarnings"], en["dashboard.schemaVersion"],
+      en["dashboard.metrics.projectFileOnDisk"], en["dashboard.metrics.unsavedChanges"], en["dashboard.metrics.databaseSize"],
+      en["dashboard.metrics.manufacturers"], en["dashboard.metrics.products"], en["dashboard.metrics.programs"]]);
+    expect([...host.querySelectorAll("dd")].map((d) => d.textContent)).toEqual(["0","0","0","0","0","0","0","1","2","13","Loading…","No","Loading…","Loading…","Loading…","Loading…"]);
     for (const section of host.querySelectorAll("section")) {
       expect(host.querySelector(`#${section.getAttribute("aria-labelledby")}`)).not.toBeNull();
     }

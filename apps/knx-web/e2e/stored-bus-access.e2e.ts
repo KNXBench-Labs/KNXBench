@@ -7,6 +7,7 @@ import type { StoredRecord } from "../src/api";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 
 // RFC 5737 and a locally administered MAC: fictional on purpose.
 const HOST = "198.51.100.23", DEVICE_IP = "192.0.2.77", MAC = "02:00:5e:10:00:01";
@@ -56,6 +57,7 @@ async function intercept(page: Page, language: "en" | "de") {
     else if (path === "/api/project" && method === "GET") { if (projectOpen) body = tree; else { status = 400; body = { error: "no project open" }; } }
     else if (path === "/api/project/new" && method === "POST") { projectOpen = true; body = tree; }
     else if (path === "/api/project/load-progress" && method === "GET") body = null;
+    else if (path === "/api/project/status-metrics" && method === "GET") body = statusMetricsFixtureBody(tree);
     else if (path === "/api/product-languages" && method === "GET") body = [];
     // The workbench's own start-up interface discovery, answered empty: not this view.
     else if (path === "/api/bus/discover" && method === "POST") body = { interfaces: [] };

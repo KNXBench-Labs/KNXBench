@@ -6,6 +6,7 @@ import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
 import { join } from "node:path";
+import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 
 async function serve(page: Page, language: "en" | "de", theme: string) {
   const original: ProjectTree = {
@@ -36,6 +37,7 @@ async function serve(page: Page, language: "en" | "de", theme: string) {
     else if (path === "/api/settings" && method === "PUT") body = { schemaVersion: 1, status: "ok", settings: request.postDataJSON().settings };
     else if (path === "/api/project" && method === "GET") { if (projectOpen) body = current; else { status = 400; body = { error: "no project open" }; } }
     else if (path === "/api/project/new" && method === "POST") { projectOpen = true; body = current; }
+    else if (path === "/api/project/status-metrics" && method === "GET") body = statusMetricsFixtureBody(current);
     else if (path === "/api/bus/discover" && method === "POST") body = { interfaces: [] };
     else if (method === "GET" && ["/api/product-languages", "/api/catalog/manufacturers", "/api/catalog/items"].includes(path)) body = [];
     else if (path === "/api/installations/2" && method === "PATCH") {

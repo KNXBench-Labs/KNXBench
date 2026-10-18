@@ -9,6 +9,7 @@ import type { ProjectTree } from "../src/bindings/ProjectTree";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 
 for (const language of ["en","de"] as const) for (const width of [400,1440]) {
   test(`${language} full historical report at ${width}px`,async({page})=>{
@@ -30,6 +31,7 @@ for (const language of ["en","de"] as const) for (const width of [400,1440]) {
       else if(path==="/api/project"&&method==="GET")body=tree;
       else if(path==="/api/project/import-report"&&method==="GET") {reportReads++;body={available:true,historical:true,server_incarnation:tree.server_incarnation,project_incarnation:tree.project_incarnation,report_json:JSON.stringify(report)};}
       else if(path==="/api/project/load-progress"&&method==="GET")body=null;
+      else if(path==="/api/project/status-metrics"&&method==="GET")body=statusMetricsFixtureBody(tree);
       else if(path==="/api/product-languages"&&method==="GET")body=[];
       else if(path==="/api/bus/discover"&&method==="POST")body={interfaces:[]};
       else if(["/api/device-download/status","/api/device-address/status"].includes(path)&&method==="GET"){status=404;body={error:"no fixture operation"};}

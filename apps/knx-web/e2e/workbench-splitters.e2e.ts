@@ -2,6 +2,7 @@
 import { openNavigationSections } from "./disclosure-fixture";
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 
 // Forty installations: an explorer much taller than the column, as in a real project.
 const tree = {
@@ -25,6 +26,7 @@ async function openProject(page: Page) {
     else if (path === "/api/settings" && method === "GET") body = { schemaVersion: 1, status: "ok", settings: {} };
     else if (path === "/api/project" && method === "GET") { if (projectOpen) body = tree; else { status = 400; body = { error: "no project open" }; } }
     else if (path === "/api/project/new" && method === "POST") { projectOpen = true; body = tree; }
+    else if (path === "/api/project/status-metrics" && method === "GET") body = statusMetricsFixtureBody(tree);
     // The sidebar's automatic search is intercepted, never a real UDP scan.
     else if (path === "/api/bus/discover" && method === "POST") body = { interfaces: [] };
     else if (method === "GET" && ["/api/product-languages", "/api/catalog/manufacturers", "/api/catalog/items"].includes(path)) body = [];

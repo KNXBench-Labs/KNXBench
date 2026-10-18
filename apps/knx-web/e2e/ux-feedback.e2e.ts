@@ -8,6 +8,7 @@ import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { TOAST_EXIT_FALLBACK_MS, TOAST_MS } from "../src/toast";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 
 const SHOTS = process.env.UX_FEEDBACK_SHOTS;
 
@@ -39,6 +40,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
         : route.fulfill({ status: 400, contentType: "application/json", body: '{"error":"no project open"}' });
       if (path === "/api/bus/discover") return ok({ interfaces: [] });
       if (path === "/api/project/load-progress") return ok(null);
+      if (path === "/api/project/status-metrics" && method === "GET") return ok(statusMetricsFixtureBody(tree));
       if (path === "/api/fs/list") return ok([{ name: "synthetic.knxproj", is_dir: false }]);
       if (["/api/product-languages", "/api/catalog/manufacturers", "/api/catalog/items"].includes(path)) return ok([]);
       if (["/api/device-download/status", "/api/device-address/status"].includes(path)) {

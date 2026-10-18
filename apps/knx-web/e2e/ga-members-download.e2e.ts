@@ -11,6 +11,7 @@ import type { BusDiscoveredInterface, DeviceDownloadStatusResponse } from "../sr
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 
 type Language = "en" | "de";
 type Catalogue = { readonly [K in keyof typeof en]: string };
@@ -116,6 +117,7 @@ async function fixture(page: Page, options: Options): Promise<Fixture> {
     if (path === "/api/version") return ok({ version: "0.1.0-alpha.9+gfixture" });
     if (path === "/api/project" && method === "GET") return ok(tree());
     if (path === "/api/project/load-progress") return ok(null);
+    if (path === "/api/project/status-metrics" && method === "GET") return ok(statusMetricsFixtureBody(tree()));
     if (path === "/api/product-languages") return ok([]);
     if (path === "/api/bus/discover" && method === "POST") { f.discover += 1; return ok({ interfaces: options.gateways ?? [] }); }
     if (path === "/api/devices" && method === "GET") return ok({ schemaVersion: 1, serverIncarnation: "ga-members-browser", snapshotRevision: revision,

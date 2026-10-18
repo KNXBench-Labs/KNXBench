@@ -7,10 +7,10 @@
   const toggle = document.querySelector('[data-motion-toggle]');
   if (!headings.length || !toggle) return;
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
-  const boxes = new Map(), visible = new Set(), active = new Set();
+  const boxes = new Map(), reveals = new Map(), visible = new Set(), active = new Set();
   const SWAP = { duration: 720, easing: 'cubic-bezier(.65,0,.35,1)', id: 'ambient-char-swap' };
   const CLIP = 'inset(-0.4em -0.06em)';
-  let paused = false, unsupported = false, timer = 0, ticks = 0;
+  let paused = false, unsupported = false, pageHidden = false, timer = 0, ticks = 0;
 
   function split(heading) {
     const label = heading.cloneNode(true);
@@ -48,7 +48,60 @@
     return found;
   }
 
-  const allowed = () => !paused && !unsupported && !reduce.matches && !document.hidden;
+  const allowed = () => !paused && !unsupported && !pageHidden && !reduce.matches && !document.hidden;
+  function settleReveal(heading, shown) {
+    const state = reveals.get(heading);
+    state.shown = shown;
+    state.target = shown;
+    heading.dataset.headlineState = shown ? 'shown' : 'hidden';
+    const animations = state.animations;
+    state.animations = [];
+    animations.forEach(animation => animation.cancel());
+  }
+  function reveal(heading, shown) {
+    const state = reveals.get(heading);
+    if (state.animations.length) {
+      if (state.target !== shown) {
+        state.target = shown;
+        // Keep the exact current time: fast scroll reversals must not jump.
+        for (const animation of state.animations) {
+          animation.playbackRate = shown ? 1 : -1;
+          animation.play();
+        }
+      }
+      return;
+    }
+    if (state.shown === shown) return;
+    state.target = shown;
+    const chars = boxes.get(heading);
+    // SessionRadar's 650ms roll-in + 24ms stagger, capped for long headings.
+    const stagger = Math.min(24, 600 / Math.max(1, chars.length - 1));
+    const duration = 650 + stagger * Math.max(0, chars.length - 1);
+    const animations = state.animations;
+    try {
+      chars.forEach((box, index) => {
+        const hidden = { opacity: 0, transform: 'translateY(.3em) rotateX(-45deg)' };
+        const shownFrame = { opacity: 1, transform: 'translateY(0) rotateX(0)' };
+        const animation = box.animate([
+          { ...hidden, offset: 0 },
+          { ...hidden, offset: index * stagger / duration, easing: 'ease' },
+          { ...shownFrame, offset: (index * stagger + 650) / duration },
+          { ...shownFrame, offset: 1 }
+        ], { duration, fill: 'both', id: 'headline-reveal' });
+        animations.push(animation);
+        animation.currentTime = state.shown ? duration : 0;
+        animation.playbackRate = shown ? 1 : -1;
+        animation.play();
+      });
+      Promise.all(animations.map(animation => animation.finished)).then(() => {
+        if (state.animations === animations) settleReveal(heading, state.target);
+      }, () => {});
+    } catch (_) {
+      unsupported = true;
+      toggle.hidden = true;
+      sync();
+    }
+  }
   function cancelWhere(predicate) {
     for (const animation of active) if (predicate(animation)) animation.cancel();
   }
@@ -78,6 +131,8 @@
     if (!allowed() || !visible.size) return;
     const pool = [];
     for (const heading of visible) {
+      const state = reveals.get(heading);
+      if (!state.shown || state.animations.length) continue;
       for (const box of boxes.get(heading)) if (!box.getAnimations({ subtree: true }).length) pool.push(box);
     }
     ticks += 1;
@@ -100,23 +155,31 @@
   }
   function sync() {
     document.documentElement.dataset.motion = allowed() ? 'on' : 'off';
+    for (const heading of headings) {
+      if (allowed()) reveal(heading, visible.has(heading));
+      else settleReveal(heading, true);
+    }
     if (!allowed() || !visible.size) {
       window.clearTimeout(timer);
       timer = 0;
       cancelWhere(() => true);
     } else if (!timer) timer = window.setTimeout(tick, 1200);
   }
-  headings.forEach(heading => boxes.set(heading, split(heading)));
+  headings.forEach(heading => {
+    boxes.set(heading, split(heading));
+    reveals.set(heading, { shown: false, target: false, animations: [] });
+    heading.dataset.headlineState = 'hidden';
+  });
   const observer = new IntersectionObserver(entries => {
     for (const entry of entries) {
-      if (entry.isIntersecting) visible.add(entry.target);
+      if (entry.isIntersecting && entry.intersectionRatio >= .15) visible.add(entry.target);
       else {
         visible.delete(entry.target);
         cancelWhere(animation => entry.target.contains(animation.effect.target));
       }
     }
     sync();
-  });
+  }, { rootMargin: '-5% 0px -5% 0px', threshold: [0, .15] });
   headings.forEach(heading => observer.observe(heading));
   toggle.hidden = false;
   sync();
@@ -130,10 +193,11 @@
   else reduce.addListener(sync);
   document.addEventListener('visibilitychange', sync);
   window.addEventListener('pagehide', () => {
-    window.clearTimeout(timer);
-    timer = 0;
-    cancelWhere(() => true);
-    document.documentElement.dataset.motion = 'off';
+    pageHidden = true;
+    sync();
   });
-  window.addEventListener('pageshow', sync);
+  window.addEventListener('pageshow', () => {
+    pageHidden = false;
+    sync();
+  });
 })();

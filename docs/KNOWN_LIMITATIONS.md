@@ -1299,7 +1299,7 @@ Indentation caps at depth 12; flat views stay flat. Measured channel fixes do no
 ### Communication-object table
 
 **Ledger status:** Not separately tracked.
-DPT labels do not establish manufacturer semantics. Table word floors cap at 320 px; wider tokens or explicit shrinking can split words. Wide fitting is verified with demo/fixture content only.
+DPT labels do not establish manufacturer semantics. Table word floors cap at 320 px; wider tokens or explicit shrinking can split words. Wide fit budgets are verified with fixtures only: at 1440 px EN/DE devices and DE flat objects need local scrolling; these fixtures fit at 1920 px. Measured floors only grow until table reset/remount; instances with differing content can have differing widths despite shared preferences.
 [Details and history](limitations/communication-object-table.md)
 
 <a id="catalogue-crt-motion"></a>

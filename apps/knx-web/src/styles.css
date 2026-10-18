@@ -4761,10 +4761,8 @@ html[data-motion-flow="off"] .flow-camera,
 .resizable-table-scroll { isolation: isolate; min-height: 0; max-width: 100%; overflow: auto; }
 .resizable-table .resizable-data-table { table-layout: fixed; min-width: 100%; max-width: none; }
 .resizable-data-table :is(th, td) { overflow-wrap: anywhere; white-space: normal; }
-.resizable-data-table > :is(thead, tbody, tfoot) > tr > :is(th, td):not([colspan]) { padding-inline: 4px; }
-/* Spanning channel headings retain 12 px padding; preserve their child tree step. */
-.com-table .com-object-summary--grouped > td:first-child { padding-inline-start: 12px; }
-.resizable-data-table .resizable-table-heading { position: relative; padding-inline: 12px; }
+/* The global cell token rule supplies density; surface padding keeps its specificity. */
+.resizable-data-table .resizable-table-heading { position: relative; }
 .resizable-table-heading > span > button { padding-inline: 0; }
 .resizable-data-table :is(.table-select, .flow-project-link), .resizable-data-table .device-comparison-actions > button { padding-inline: 0; }
 .devices-table .resizable-table-heading { font-size: 12px; }
@@ -4792,3 +4790,6 @@ html[data-motion-flow="off"] .flow-camera,
 .resizable-table-heading > span:first-child > button { display: flex; align-items: center; gap: 2px; }
 .resizable-table-heading .table-column-label { min-width: 0; }
 .resizable-table-heading button > [aria-hidden="true"] { flex-shrink: 0; white-space: nowrap; }
+
+/* A stable footprint keeps sorting from changing measured column requirements. */
+.resizable-table-heading .table-sort-indicator { width: 1em; flex-shrink: 0; }

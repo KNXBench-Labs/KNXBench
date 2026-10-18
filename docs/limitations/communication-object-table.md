@@ -13,8 +13,17 @@ caps each automatic floor at 320 px. Tokens wider than that budget and explicit
 user shrinking can still wrap at character level. Spanning headings/editors and
 fixed matrix object columns retain their own layouts. Browser proof covers
 grouped/flat objects at 360 px, status at 640 px, a long German address DPT and
-monitor decoded label at 400 px; no-scroll checks at 1440/1920 px use shipped
-demo/fixture data, not arbitrary imported projects. The stored DPT preference
+monitor decoded label at 400 px. Production EN/DE fit-budget checks at 1440/1920 px
+use synthetic data, not arbitrary imported projects. With real density/theme
+padding, the 1440 px device panes cannot fit their measured floors (EN 919 px,
+DE 955 px, each in 780 px); independent intrinsic budgets are 924/961 px and
+text columns alone already exceed the pane. German flat objects need 800 px in
+738 px. These cases
+scroll locally. Grouped objects fit at 1440 px, and all tested tables fit at
+1920 px. Sorting reserves a fixed icon slot; mounted floors grow but never shrink
+until table reset/remount. History instances share preferences, not measured
+maxima. Ancestor class/style changes and colspan remapping invalidate the affected
+table; dynamic DOM reparenting requires remounting. Different content can still produce different widths. The stored DPT preference
 minimum is 100 px; the rendered width follows the fitted-baseline pixel delta
 and can be lower. [Contract and exact verification](../contracts/table-column-widths.md).
 

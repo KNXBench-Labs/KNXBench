@@ -168,7 +168,7 @@ export default function ComObjectTable({ objects, editor }: { objects: ComObject
         columns={columns.map(c => ({ id: c.column, width: c.column === "number" ? 120 : (flat ? 114 : 136), min: c.column === "number" ? 64 : 100 }))} className="workspace-table com-table"><thead><tr>{columns.map(c => <th scope="col" key={c.column} data-column={c.column}
         aria-sort={sort.column === c.column ? sort.descending ? "descending" : "ascending" : "none"}>
         <button type="button" onClick={() => setSort({ column: c.column, descending: sort.column === c.column && !sort.descending })}><span className="table-column-label">{t(c.label)}</span>
-          {sort.column === c.column && <span aria-hidden="true">{sort.descending ? " ↓" : " ↑"}</span>}</button></th>)}</tr></thead><tbody>{rows}</tbody></ResizableTable>
+          <span className="table-sort-indicator" aria-hidden="true" style={{ visibility: sort.column === c.column ? "visible" : "hidden" }}>{sort.column === c.column ? sort.descending ? "↓" : "↑" : ""}</span></button></th>)}</tr></thead><tbody>{rows}</tbody></ResizableTable>
     {view.objects.length === 0 && <p role="status">{t(objects.length === 0 ? "comTable.empty" : "comTable.noMatches")}</p>}
   </section>;
 }

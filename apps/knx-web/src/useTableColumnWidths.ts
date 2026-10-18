@@ -22,9 +22,11 @@ function validated(raw: Widths, columns: readonly TableColumnWidth[]): Widths {
   }));
 }
 
-export function useTableColumnWidths(tableId: string, columns: readonly TableColumnWidth[]) {
+export function useTableColumnWidths(tableId: string, columns: readonly TableColumnWidth[], onReset?: () => void) {
   const [stored, setStored] = useState(() => ({ tableId, widths: read(tableId) }));
   const latest = useRef(stored);
+  const resetListener = useRef(onReset);
+  resetListener.current = onReset;
   // Derive against today's schema on every render: changing columns cannot
   // briefly apply an old positional width to a new column.
   const widths = validated(stored.tableId === tableId ? stored.widths : read(tableId), columns);
@@ -35,8 +37,11 @@ export function useTableColumnWidths(tableId: string, columns: readonly TableCol
     };
     const refresh = () => accept(read(tableId));
     const changed = (event: Event) => {
-      const detail = (event as CustomEvent<{ tableId: string; widths: Widths }>).detail;
-      if (detail.tableId === tableId) accept(detail.widths);
+      const detail = (event as CustomEvent<{ tableId: string; widths: Widths; reset?: boolean }>).detail;
+      if (detail.tableId === tableId) {
+        accept(detail.widths);
+        if (detail.reset) resetListener.current?.();
+      }
     };
     const storage = (event: StorageEvent) => {
       if (event.key === null || event.key === COLUMN_WIDTH_KEY + tableId) refresh();
@@ -46,11 +51,11 @@ export function useTableColumnWidths(tableId: string, columns: readonly TableCol
     window.addEventListener("storage", storage);
     return () => { window.removeEventListener(CHANGED, changed); window.removeEventListener("storage", storage); };
   }, [tableId]);
-  function publish(next: Widths) {
+  function publish(next: Widths, reset = false) {
     latest.current = { tableId, widths: next };
     setStored(latest.current);
     try { window.localStorage.setItem(COLUMN_WIDTH_KEY + tableId, JSON.stringify(next)); } catch { /* Session-only if storage is unavailable. */ }
-    window.dispatchEvent(new CustomEvent(CHANGED, { detail: { tableId, widths: next } }));
+    window.dispatchEvent(new CustomEvent(CHANGED, { detail: { tableId, widths: next, reset } }));
   }
   function setWidth(id: string, width: number, persist = true) {
     const column = columns.find(column => column.id === id);
@@ -67,5 +72,5 @@ export function useTableColumnWidths(tableId: string, columns: readonly TableCol
   return { widths, setWidth, resetColumn: (id: string) => {
     const column = columns.find(column => column.id === id);
     if (column) setWidth(id, column.width);
-  }, reset: () => publish(Object.fromEntries(columns.map(column => [column.id, column.width]))) };
+  }, reset: () => publish(Object.fromEntries(columns.map(column => [column.id, column.width])), true) };
 }

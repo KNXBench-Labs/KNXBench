@@ -119,7 +119,7 @@ export default function DevicesWorkspace({ tree, active, selection, multiSelecti
         <th><span className="sr-only">{t("addressTable.selectColumn")}</span></th>
         {COLUMNS.map(({ column, label }) => <th key={column} aria-sort={sort.column === column ? (sort.descending ? "descending" : "ascending") : "none"}>
           <button type="button" aria-label={t(label)} title={t(label)} onClick={() => setSort({ column, descending: sort.column === column && !sort.descending })}>
-            <span className="table-column-label">{t(COMPACT_LABELS[column] ?? label)}</span>{sort.column === column && <span aria-hidden="true">{sort.descending ? " ↓" : " ↑"}</span>}
+            <span className="table-column-label">{t(COMPACT_LABELS[column] ?? label)}</span><span className="table-sort-indicator" aria-hidden="true" style={{ visibility: sort.column === column ? "visible" : "hidden" }}>{sort.column === column ? sort.descending ? "↓" : "↑" : ""}</span>
           </button></th>)}
       <th><span aria-label={t("compare.column")} title={t("compare.column")}>{t("compare.one")}</span></th>
       </tr></thead><tbody>{rows.map((row) => <tr key={row.id} data-rename-kind="device" data-rename-id={row.id} data-rename-value={row.name}

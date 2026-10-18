@@ -12,6 +12,45 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## UI-05 appearance relevance (18 October 2026)
+
+Ancestor geometry edits, including virtual-history spacer padding, retain table
+measurement caches. Typography/custom-property changes still invalidate them.
+Comparison reset owners require field changes, and repeated-table reset labels
+visibly name their table kind in EN/DE. The independent browser oracle preserves
+asymmetric horizontal insets. [Contract and regression coverage](contracts/table-column-widths.md).
+
+## UI-05 shared reset controls (18 October 2026)
+
+Comparison/history field tables, flow-inspector flag tables and address tables
+across installations each use one owner reset above their repeated list.
+It restores the shared preference and
+remeasures session floors in every mounted instance of that table kind.
+Per-column resets retain floors; single-instance controls remain available.
+[Contract and regression coverage](contracts/table-column-widths.md).
+
+## UI-05 invalidation and independent fit proof (18 October 2026)
+
+Adds colspan remapping and attribute-only observation of each table's mounted
+ancestor chain, preserving targeted ordinary-cell invalidation and ignoring
+geometry-only pane edits. Restores surface-specific padding through the existing
+CSS cascade. Browser fit checks use independent intrinsic measurement plus
+reviewed rendered budgets and negative controls; flow now fits its inspector
+with its original padding. Dynamic ancestry changes require remounting.
+[Contract and verification boundaries](contracts/table-column-widths.md).
+
+## UI-05 density and stability fixes (18 October 2026)
+
+Restores shared density/theme padding for header and body cells and accurate
+EN/DE location, topology and programming headings. Mutation targets invalidate
+only affected cells without full-cell serialization; unchanged cells reuse their
+measurements. Sort icon slots remain reserved, and measured floors only grow
+until table reset/remount. Instances keep independent measured maxima.
+Production EN/DE 1440/1920 fit-budget checks preserve local scrolling where the
+word-safe floor sum exceeds the available pane; 1440 px cannot fit the tested
+device overview or German flat objects with navigation present.
+[Exact behavior, measured budgets and tests](contracts/table-column-widths.md).
+
 ## UI-05 measured word-safe fitting (18 October 2026)
 
 Replaces the earlier number/DPT fit constants with one measured header/cell

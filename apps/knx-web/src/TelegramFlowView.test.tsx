@@ -259,6 +259,28 @@ it.each(["en", "de"] as const)("%s flag tables use Flag/Value headings", async l
   expect([...host!.querySelectorAll(".flow-flags thead th")].map(th => th.querySelector("span")!.textContent)).toEqual(["Flag", language === "de" ? "Wert" : "Value"]);
 });
 
+it.each(["en", "de"] as const)("%s inspector owns one reset across multiple connection flag tables", async language => {
+  saveUiLanguage(settingsStorage, language); resetUiLanguageForTests();
+  await render(model(m => { admitRows(m, [row(2, { source: "1.1.3", sourceRaw: 0x1103 })], flowNow()); }));
+  await key(node("Dimmer"), "Enter");
+  const tables = host!.querySelectorAll('[data-table-id="flow-flags"]');
+  expect(tables.length).toBeGreaterThan(1);
+  expect([...tables].every(table => !table.querySelector(".table-column-reset"))).toBe(true);
+  const name = language === "de" ? "Spaltenbreiten zurücksetzen: Objektflags" : "Reset column widths: Object flags";
+  const resets = host!.querySelectorAll<HTMLButtonElement>(`button[aria-label="${name}"]`);
+  expect(resets).toHaveLength(1);
+  expect(resets[0].textContent).toBe(name);
+  const first = tables[0].querySelector<HTMLElement>('[role="separator"]')!;
+  const handles = [...tables].map(table => table.querySelector<HTMLElement>('[role="separator"]')!);
+  const initial = first.getAttribute("aria-valuenow");
+  await key(first, "ArrowRight");
+  expect(first.getAttribute("aria-valuenow")).not.toBe(initial);
+  expect(handles.every(handle => handle.getAttribute("aria-valuenow") === first.getAttribute("aria-valuenow"))).toBe(true);
+  await act(async () => resets[0].click());
+  expect(first.getAttribute("aria-valuenow")).toBe(initial);
+  expect(handles.every(handle => handle.getAttribute("aria-valuenow") === initial)).toBe(true);
+});
+
 tableColumnSmoke([["flow-flags", 2], ["flow-values", 5]], async () => {
   await render(model()); await key(node("Dimmer"), "Enter"); return { host: host! };
 });

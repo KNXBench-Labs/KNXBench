@@ -1,5 +1,5 @@
 /** Graphical hierarchy over generated projections; no invented physical coordinates. */
-import ResizableTable from "./ResizableTable";
+import ResizableTable, { TableColumnReset } from "./ResizableTable";
 import { useEffect, type ReactNode } from "react";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { BuildingNode } from "./bindings/BuildingNode";
@@ -9,6 +9,9 @@ import type { ItemClickHandler } from "./multiSelection";
 import { useTranslate } from "./i18n";
 import WorkbenchIcon from "./WorkbenchIcon";
 import GroupAddressTable from "./GroupAddressTable";
+import { GROUP_ADDRESSES_COLUMNS } from "./GroupAddressTreeTable";
+import { MATRIX_COLUMNS } from "./GroupAddressMatrix";
+import { useGroupAddressView } from "./groupAddressViewPreference";
 import { rangePath } from "./groupAddressView";
 import { findBuildingPart, flattenBuildingParts } from "./treeUtils";
 import Inspector from "./Inspector";
@@ -47,6 +50,8 @@ export default function StructureWorkspace(props: {
 }) {
   const { tree, view, selection, onSelect, onCatalog, multiSelection, onItemClick, onTreeUpdate } = props;
   const t = useTranslate();
+  const [addressView] = useGroupAddressView();
+  const sharedAddressReset = view === "addresses" && tree.installations.length > 1;
   const focusedBuilding = view === "buildings" && props.buildingScope != null
     ? findBuildingPart(tree, props.buildingScope) : undefined;
   const scopedRange = view === "addresses" && props.rangeScope != null
@@ -111,6 +116,9 @@ export default function StructureWorkspace(props: {
     {focusedBuilding && <button className="building-overview-button" onClick={() => props.onBuildingScope?.(null)}>← {t("workbench.buildings")}</button>}
     {scopedRange && <button className="address-overview-button" onClick={() => props.onRangeScope?.(null)}>← {t("workbench.addresses")}</button>}
     {tree.installations.length === 0 && <p role="status">{t("workbench.emptyStructure")}</p>}
+    {sharedAddressReset && addressView !== "atlas" && <TableColumnReset
+      tableId={addressView === "matrix" ? "group-address-matrix" : "group-addresses"}
+      columns={addressView === "matrix" ? MATRIX_COLUMNS : GROUP_ADDRESSES_COLUMNS} />}
     {tree.installations.filter((installation) => !focusedBuilding || flattenBuildingParts(installation.buildings, []).some(({node}) => node.id === focusedBuilding.node.id)).map((installation) => <section key={installation.id} className="installation-diagram" aria-label={installation.name}>
       {view === "topology" && <>
         {installation.topology.length === 0 && <p role="status">{t("workbench.emptyStructure")}</p>}
@@ -135,6 +143,7 @@ export default function StructureWorkspace(props: {
         <GroupAddressTable key={`${tree.server_incarnation ?? "offline"}:${tree.project_incarnation ?? "unbound"}:${installation.id}`}
           projectContextKey={`${tree.server_incarnation ?? "offline"}:${tree.project_incarnation ?? "unbound"}`}
           installation={installation} tree={tree} selection={selection}
+          showColumnReset={!sharedAddressReset}
           multiSelection={multiSelection} onItemClick={onItemClick} onTreeUpdate={onTreeUpdate}
           rangeScope={props.rangeScope ?? null} />
       </>}

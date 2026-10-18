@@ -3,7 +3,8 @@
 import { act, StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { beforeEach, afterEach, expect, it, vi } from "vitest";
-import ResizableTable from "./ResizableTable";
+import ResizableTable, { TableColumnReset } from "./ResizableTable";
+import { TableWordFloors } from "./tableWordFloors";
 import { resetSettingsForTests, setSetting } from "./settingsStore";
 import { resetUiLanguageForTests } from "./uiLanguage";
 const columns = [{ id: "name", width: 180, min: 100, max: 400 }, { id: "address", width: 140, min: 80 }];
@@ -105,6 +106,7 @@ it.each(["en", "de"] as const)("%s reset identifies an unlabeled table by its lo
   await act(async () => setSetting("uiLanguage", language));
   await act(async () => root.render(<ResizableTable tableId="flow-values" columns={columns}><thead><tr><th>Name</th><th>Value</th></tr></thead></ResizableTable>));
   expect(host.querySelector(".table-column-reset")!.getAttribute("aria-label")).toBe(language === "de" ? "Spaltenbreiten zurücksetzen: Aktuelle Werte" : "Reset column widths: Current values");
+  expect(host.querySelector(".table-column-reset")!.textContent).toBe(language === "de" ? "Spaltenbreiten zurücksetzen" : "Reset column widths");
 });
 it("publishes one completed drag to a peer and flushes the last unpainted move", async () => {
   await act(async () => root.render(<>{[0, 1].map(i => <ResizableTable key={i} tableId="peers" columns={columns}><thead><tr><th>Name</th><th>Address</th></tr></thead></ResizableTable>)}</>));
@@ -186,7 +188,7 @@ it("caps pathological tokens and caches measurement through resizing until conte
   expect(computedStyle).not.toHaveBeenCalled();
   const unchangedCell = host.querySelector("tbody td:last-child");
   await act(async () => root.render(renderWords("Freshword")));
-  expect(host.querySelector("col")!.style.width).toBe("90px");
+  expect(host.querySelector("col")!.style.width).toBe("320px");
   expect(computedStyle.mock.calls.some(([element]) => element === unchangedCell)).toBe(false);
   expect(measured).toContain("Freshword");
   expect(measured.filter(text => text === "Address")).toHaveLength(addressCount);
@@ -209,4 +211,163 @@ it("defers hidden-pane word measurement until the viewport becomes visible", asy
   await act(async () => root.render(<div>{table()}</div>));
   expect(words).toContain("Windgeschwindigkeit");
   expect(host.querySelector("col")!.style.width).toBe("250px");
+});
+
+it("invalidates only a changed cell in a large table without serializing unchanged cells", async () => {
+  vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(40);
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+    return { width: this.hasAttribute("data-table-word-measure") ? this.textContent!.length * 10 : 0 } as DOMRect;
+  });
+  await act(async () => root.render(<ResizableTable tableId="large-mutations" columns={columns}>
+    <thead><tr><th>Name</th><th>Address</th></tr></thead>
+    <tbody>{Array.from({ length: 1000 }, (_, i) => <tr key={i}><td>Device {i}</td><td>1.1.{i}</td></tr>)}</tbody>
+  </ResizableTable>));
+  const serialized = vi.spyOn(Element.prototype, "outerHTML", "get");
+  const walked = vi.spyOn(document, "createTreeWalker");
+  const styled = vi.spyOn(globalThis, "getComputedStyle");
+  const changed = host.querySelector("tbody td")!;
+  await act(async () => { changed.firstChild!.textContent = "Freshmeasurement"; });
+  expect(walked.mock.calls.map(([cell]) => cell)).toEqual([changed]);
+  expect(serialized).not.toHaveBeenCalled();
+  expect(styled.mock.calls.every(([element]) => changed.contains(element))).toBe(true);
+  walked.mockClear(); styled.mockClear(); serialized.mockClear();
+  await act(async () => {
+    handle().setAttribute("aria-valuenow", "123");
+    handle().classList.add("focused");
+    host.querySelector("tbody tr")!.classList.add("bus-monitor-row-new");
+    host.querySelector("tbody tr")!.setAttribute("hidden", "");
+  });
+  expect(walked).not.toHaveBeenCalled();
+  expect(styled).not.toHaveBeenCalled();
+  expect(serialized).not.toHaveBeenCalled();
+});
+
+it("keeps session floors after filtering, grows for longer content and starts fresh on remount", async () => {
+  vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(40);
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+    return { width: this.hasAttribute("data-table-word-measure") ? this.textContent!.length * 10 : 0 } as DOMRect;
+  });
+  const table = (text: string, show: boolean, key = "session") => <ResizableTable key={key} tableId="stable-floors" columns={columns}>
+    <thead><tr><th>Name</th><th>Address</th></tr></thead>
+    <tbody><tr><td>Short</td><td>1.1.1</td></tr>{show && <tr><td>{text}</td><td>1.1.2</td></tr>}</tbody>
+  </ResizableTable>;
+  await act(async () => root.render(table("Longercontent", true)));
+  expect(host.querySelector("col")!.style.width).toBe("130px");
+  await act(async () => root.render(table("Longercontent", false)));
+  expect(host.querySelector("col")!.style.width).toBe("130px");
+  await act(async () => root.render(table("Evenlongercontent", true)));
+  expect(host.querySelector("col")!.style.width).toBe("170px");
+  await act(async () => root.render(table("", false)));
+  expect(host.querySelector("col")!.style.width).toBe("170px");
+  await act(async () => host.querySelector<HTMLButtonElement>(".table-column-reset")!.click());
+  expect(host.querySelector("col")!.style.width).toBe("50px");
+  await act(async () => root.render(table("Evenlongercontent", true)));
+  expect(host.querySelector("col")!.style.width).toBe("170px");
+  await act(async () => root.render(table("", false, "new-session")));
+  expect(host.querySelector("col")!.style.width).toBe("50px");
+});
+
+
+it("owns bounded ancestor attribute subscriptions and disconnects them on unmount", async () => {
+  const observe = vi.spyOn(MutationObserver.prototype, "observe");
+  const disconnect = vi.spyOn(MutationObserver.prototype, "disconnect");
+  await act(async () => root.render(<section className="pane"><ResizableTable key="bounded" tableId="bounded" columns={columns}>
+    <thead><tr><th>Name</th><th>Address</th></tr></thead><tbody><tr><td>Device</td><td>1.1.1</td></tr></tbody>
+  </ResizableTable></section>));
+  const table = host.querySelector("table")!;
+  const ancestry: Element[] = [];
+  for (let e: Element | null = table; e; e = e.parentElement) ancestry.push(e);
+  const attributes = observe.mock.calls.filter(([, options]) => options?.attributes && !options.subtree);
+  expect(attributes.map(([target]) => target)).toEqual(ancestry);
+  const subtrees = observe.mock.calls.filter(([, options]) => options?.subtree);
+  expect(subtrees.map(([target]) => (target as Element).tagName)).toEqual(["THEAD", "TBODY"]);
+  expect(subtrees.every(([, options]) => options?.attributeFilter?.includes("colspan"))).toBe(true);
+  disconnect.mockClear();
+  await act(async () => root.render(null));
+  expect(disconnect).toHaveBeenCalledTimes(2);
+});
+
+
+it("does not remeasure words for ancestor pane width and height edits", async () => {
+  vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(40);
+  await act(async () => root.render(<section className="pane"><ResizableTable key="geometry" tableId="geometry" columns={columns}>
+    <thead><tr><th>Name</th><th>Address</th></tr></thead><tbody><tr><td>Device</td><td>1.1.1</td></tr></tbody>
+  </ResizableTable></section>));
+  const walked = vi.spyOn(document, "createTreeWalker");
+  await act(async () => { host.querySelector("section")!.style.width = "80px"; host.querySelector("section")!.style.height = "200px"; });
+  expect(walked).not.toHaveBeenCalled();
+});
+
+it.each(["padding-top", "padding-bottom", "padding-left", "margin-right", "min-width", "max-height", "inset", "transform", "translate", "scroll-margin-top"])(
+  "ancestor %s geometry changes neither clear caches nor walk text", async property => {
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(40);
+    await act(async () => root.render(<section style={{ fontSize: "14px", wordSpacing: "2px" }}><ResizableTable key="noise" tableId="noise" columns={columns}>
+      <thead><tr><th>Name</th><th>Address</th></tr></thead><tbody><tr><td>Device</td><td>1.1.1</td></tr></tbody>
+    </ResizableTable></section>));
+    const cleared = vi.spyOn(TableWordFloors.prototype, "clear");
+    const walked = vi.spyOn(document, "createTreeWalker");
+    const styled = vi.spyOn(globalThis, "getComputedStyle");
+    const section = host.querySelector("section")!;
+    const before = section.getAttribute("style");
+    const records: MutationRecord[] = [];
+    const witness = new MutationObserver(list => records.push(...list));
+    witness.observe(section, { attributes: true, attributeFilter: ["style"] });
+    await act(async () => { section.style.setProperty(property,
+      property === "transform" ? "translateY(100px)" : "100px"); });
+    witness.disconnect();
+    // Positive control: the DOM must really have changed and reported it, or
+    // this case would pass without exercising the observer at all.
+    expect(section.getAttribute("style")).not.toBe(before);
+    expect(records.length).toBeGreaterThan(0);
+    expect(cleared).not.toHaveBeenCalled();
+    expect(walked).not.toHaveBeenCalled();
+    expect(styled).not.toHaveBeenCalled();
+  });
+
+it.each([
+  ["font shorthand", (pane: HTMLElement) => { pane.style.setProperty("font", "20px serif"); }],
+  ["!important priority flip", (pane: HTMLElement) => { pane.style.setProperty("font-size", "14px", "important"); }],
+  ["root data-density flip", () => { document.documentElement.setAttribute("data-density", "comfortable"); }],
+] as const)("ancestor %s remeasures once", async (_name, change) => {
+  vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(40);
+  await act(async () => root.render(<section style={{ fontSize: "14px" }}><ResizableTable key="shorthand" tableId="shorthand" columns={columns}>
+    <thead><tr><th>Name</th><th>Address</th></tr></thead><tbody><tr><td>Device</td><td>1.1.1</td></tr></tbody>
+  </ResizableTable></section>));
+  const cleared = vi.spyOn(TableWordFloors.prototype, "clear");
+  const pane = host.querySelector("section")!;
+  const density = document.documentElement.getAttribute("data-density");
+  try {
+    await act(async () => change(pane));
+    expect(cleared).toHaveBeenCalledTimes(1);
+  } finally {
+    if (density === null) document.documentElement.removeAttribute("data-density");
+    else document.documentElement.setAttribute("data-density", density);
+  }
+});
+
+it.each(["font-size", "--knx-cell-padding", "letter-spacing", "word-spacing", "text-transform", "line-height"])(
+  "ancestor %s presentation changes remeasure, including removal", async property => {
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(40);
+    await act(async () => root.render(<section><ResizableTable key="appearance" tableId="appearance" columns={columns}>
+      <thead><tr><th>Name</th><th>Address</th></tr></thead><tbody><tr><td>Device</td><td>1.1.1</td></tr></tbody>
+    </ResizableTable></section>));
+    const cleared = vi.spyOn(TableWordFloors.prototype, "clear");
+    const walked = vi.spyOn(document, "createTreeWalker");
+    const pane = host.querySelector("section")!;
+    await act(async () => { pane.style.setProperty(property, property === "text-transform" ? "uppercase" : "20px"); });
+    expect(cleared).toHaveBeenCalledTimes(1);
+    expect(walked).toHaveBeenCalledTimes(4);
+    cleared.mockClear(); walked.mockClear();
+    await act(async () => { pane.style.removeProperty(property); });
+    expect(cleared).toHaveBeenCalledTimes(1);
+    expect(walked).toHaveBeenCalledTimes(4);
+  });
+
+it.each(["en", "de"] as const)("%s owner reset visibly names its repeated table kind", async language => {
+  await act(async () => setSetting("uiLanguage", language));
+  await act(async () => root.render(<TableColumnReset tableId="project-diff-fields" columns={columns} />));
+  const button = host.querySelector("button")!;
+  const label = language === "de" ? "Spaltenbreiten zurücksetzen: Feldänderungen" : "Reset column widths: Field changes";
+  expect(button.textContent).toBe(label);
+  expect(button.getAttribute("aria-label") ?? button.textContent).toBe(label);
 });

@@ -222,12 +222,15 @@ and other files in the ZIP are listed as `not installed: <path> (<size> bytes, s
 For a `.knxprod` package it prints one line covering the scheme, member count, unknown
 constructs, conflicts, captured translations and dropped duplicate datapoint types.
 
-The default bounds admit every product package measured so far, complete manufacturer
-bundles included: the package file and each file inside it may hold up to 1,000,000,000
-bytes (the most the product database can store as one value), and the whole package may
-expand to 4 GiB ([ADR-0142](../../adr/0142-file-size-limits-follow-the-storage-ceiling.md)).
-For a package that expands even further, `--allow-large-package` raises the total to
-16 GiB:
+In source builds after Alpha 14 the default bounds admit every product package measured
+so far, complete manufacturer bundles included: the package file and each file inside it
+may hold up to 1,000,000,000 bytes (the most the product database can store as one value),
+and the whole package may expand to 4 GiB
+([ADR-0142](../../adr/0142-file-size-limits-follow-the-storage-ceiling.md)). For a package
+that expands even further, `--allow-large-package` raises the total to 16 GiB. In Alpha 14
+and earlier, one file inside the package may hold at most 64 MiB and the package may
+expand to at most 256 MiB; there the option raises these bounds to 256 MiB and 4 GiB, and
+the package file itself must stay at or below 256 MiB:
 
 ```bash
 knx products ingest Siemens_HVAC_All_PDB.knxprod --allow-large-package

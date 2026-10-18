@@ -33,8 +33,8 @@ No. A complete supported plan can be **untested** when it lacks matching hardwar
 evidence; it still requires the extra target-bound acknowledgement, ordinary
 confirmation and every server guard. **Unsupported** means a technical preparation
 boundary that no acknowledgement bypasses. Required executable-extension behavior
-is a separate unresolved prerequisite, not proven absent by the status. Current
-source builds show actionable refusal help and deliberate docs/issue/mail links
+is a separate unresolved prerequisite, not proven absent by the status. Since
+Alpha 12, KNXBench shows actionable refusal help and deliberate docs/issue/mail links
 before any plan or report exists. See
 [the download workflow](../user-guide/07-bus-and-interfaces.md#when-preparation-or-starting-is-refused).
 
@@ -56,7 +56,7 @@ attach it manually to an issue or email. Optional source context needs rights
 confirmation; original vendor/customer files are not attachments. This universal
 ZIP excludes parameter values; the older ended-download verification report is
 separate and can contain them. See the
-[reporting guide](../user-guide/08-reports-and-diff.md#universal-device-support-reporting-source-after-alpha-11).
+[reporting guide](../user-guide/08-reports-and-diff.md#universal-device-support-reporting).
 
 **Why does enabling a button not produce new communication objects?**
 
@@ -67,7 +67,7 @@ disclosure exists only in the Alpha 13 layout. The
 shared evaluator adds supported missing unscoped objects in the same undo step.
 The mechanism is not specific to MDT. Unsupported scripts and new module-instance
 mappings still produce explicit refusals rather than guessed objects. This is
-an offline project edit, not a download. See [Device functions](../user-guide/05-devices-and-products.md#device-functions-source-builds-after-alpha-12).
+an offline project edit, not a download. See [Device functions](../user-guide/05-devices-and-products.md#device-functions-since-alpha-13).
 
 **Is my project safe with KNXBench?**
 

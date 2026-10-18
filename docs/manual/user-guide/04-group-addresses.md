@@ -19,9 +19,9 @@ properly; this chapter is about the table.
 
 Pick **Group addresses** in the navigation pane.
 
-![The group-address table with columns Address, Name, Range, DPT and Links, listing
-the sample project's lighting addresses 0/0/1 to 0/1/4 and the first blind address
-1/0/1, with export and import buttons for CSV above it](../../assets/screenshots/porcelain-group-addresses.png)
+![The group-address tree table with columns Address, Name, Range, DPT and Links after
+Expand all: the Lighting range with its Switching addresses 0/0/1 to 0/0/4 and the start
+of Status, with export, import and New buttons above it](../../assets/screenshots/porcelain-group-addresses.png)
 
 Six columns, one row per address:
 
@@ -57,9 +57,8 @@ with or without project links.
 ### Four presentations of the same addresses
 
 **Since Alpha 10.** Alpha 9 and older show only the single flat table described
-above. The four screenshots in this section come from a source build made before
-the Alpha 10 version bump (so their status bar still reads `v0.1.0-alpha.9`);
-every other screenshot in this manual is Alpha 9.
+above. Like every screenshot in this manual, the four below show the published
+Alpha 14.
 
 The **Presentation** select switches between four views. They all show the same
 addresses, the same search, filter and range scope, and the same selection: select
@@ -73,15 +72,14 @@ the properties pane and the existing commands; no view edits on its own.
 | **Address atlas** | Cards for ranges and addresses with counts, DPT and number of project links. It is navigation through stored ranges, not a map of the physical topology. |
 | **Connection matrix** | Group addresses against communication objects: the ones linked to them, plus every object of the devices whose object list you load. `S` is a projected Send link, `R` a projected Receive link (German UI: `S`/`E`), `?` an unknown direction (exact value in the cell details), `—` no projected link. |
 
-![Source build after Alpha 9, Porcelain: the tree table groups the fictional Sample house by its stored ranges Lighting, Switching, Status and Blinds; Status is collapsed and shows its count, and the selected Kitchen light 0/0/2 is highlighted and open in Properties](../../assets/screenshots/porcelain-ga-view-tree.png)
+![Alpha 14, Porcelain: the tree table groups the fictional Sample house by its stored ranges Lighting, Switching, Status and Blinds; Status is collapsed and shows its count of 4, and the selected Kitchen light 0/0/2 is highlighted and open in Properties with its three links](../../assets/screenshots/porcelain-ga-view-tree.png)
 
 *Tree table, the default. Range headings fold away; the count stays visible.*
 
 **Which ranges are open** *(since Alpha 12; Alpha 11 and earlier open
 every range and forget what you closed)*. The tree table opens compact: main and
 middle ranges show with their counts, but no range unfolds its address list.
-**Source builds after Alpha 13** start with every range closed, including main
-ranges, unless this computer already remembers an explicit opening for the project.
+**Since Alpha 14** every range starts closed, including main ranges, unless this computer already remembers an explicit opening for the project.
 **Expand all** and **Collapse all** sit in the toolbar. Selecting an address — in
 the project explorer, from a link or from the search — opens the ranges above it;
 scoping the view to a range opens that range. While a search or filter is active,
@@ -90,17 +88,18 @@ search); clearing the search returns to what you had open. KNXBench remembers th
 open ranges per project on this computer: by the `.knxdb` file you opened or saved,
 or by the file you imported, until you save it. It is view state in the browser's
 local storage, never written into the project, and a new project that was never
-saved does not remember it. The screenshot above still shows the Alpha 9 view.
+saved does not remember it. The screenshot above was taken after **Expand all**
+and one click on Status.
 
-![Source build after Alpha 9, Porcelain: the column browser with a Range column listing Lighting, Blinds and Heating, a Lighting column listing Switching and Status, the breadcrumb All ranges / Switching, and the four Switching addresses below with Kitchen light still selected](../../assets/screenshots/porcelain-ga-view-columns.png)
+![Alpha 14, Porcelain: the column browser with a Range column listing Lighting, Blinds and Heating, a Lighting column listing Switching and Status, the breadcrumb All ranges / Switching, and the four Switching addresses below with Kitchen light still selected](../../assets/screenshots/porcelain-ga-view-columns.png)
 
 *Column browser: one column per range level. The selection came along from the tree.*
 
-![Source build after Alpha 9, Porcelain: the address atlas in the Switching range showing four address cards with DPT Switch (1.001) and their project link counts; the Kitchen light card is outlined as selected, with the Links panel below](../../assets/screenshots/porcelain-ga-view-atlas.png)
+![Alpha 14, Porcelain: the address atlas in the Switching range showing four address cards with DPT Switch (1.001) and their project link counts; the Kitchen light card is outlined as selected, with the Links panel below](../../assets/screenshots/porcelain-ga-view-atlas.png)
 
 *Address atlas: the same scope as cards. It is stored-range navigation, not a floor plan.*
 
-![Source build after Alpha 9, Porcelain: the connection matrix with its scope note for linked objects plus loaded devices, the S/R/?/— legend, the status line Object lists: 1 of 8 devices with objects loaded · 7 not loaded · 0 loading · 0 unavailable, a folded chooser reading 3 of 23 object columns selected (maximum 12), and a grid with two linked columns (Living room ceiling light 0/0/1 has R under Switch actuator ground floor, Channel A and S under Push button living room) and a third column, Switch actuator ground floor, Channel D: Switch #6, marked No project links with dashes all the way down](../../assets/screenshots/porcelain-ga-view-matrix.png)
+![Alpha 14, Porcelain: the connection matrix with its scope note for linked objects plus loaded devices, the S/R/?/— legend, the status line Object lists: 1 of 8 devices with objects loaded · 7 not loaded · 0 loading · 0 unavailable, a folded chooser reading 3 of 23 object columns selected (maximum 12), and a grid with two linked columns (Living room ceiling light 0/0/1 has R under Switch actuator ground floor, Channel A and S under Push button living room) and a third column, Switch actuator ground floor, Channel D: Switch #6, marked No project links with dashes all the way down](../../assets/screenshots/porcelain-ga-view-matrix.png)
 
 *Connection matrix: who sends and who receives, as planned in the project. The third
 column comes from loading the actuator's object list: Channel D is not linked

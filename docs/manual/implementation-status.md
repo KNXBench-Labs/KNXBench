@@ -18,9 +18,8 @@ The separate Device functions disclosure is removed. Expand an object to find
 its supported manufacturer enum controls below DPT. Exact structural references
 map to configured object IDs; ambiguous and module-local mappings are not guessed.
 Use Parameters to enable a device with no objects. Existing revision-bound
-writes, inline errors, Undo and native persistence remain in force. The published
-Alpha 13 package and historical screenshots are not retroactively changed.
-[Operating instructions](user-guide/05-devices-and-products.md#device-functions-source-builds-after-alpha-12).
+writes, inline errors, Undo and native persistence remain in force.
+[Operating instructions](user-guide/05-devices-and-products.md#device-functions-since-alpha-13).
 
 ## Notes when deleting (Alpha 14)
 
@@ -30,7 +29,7 @@ keep it on the project, move it to another element, or delete it; confirming
 applies your choices and the delete as one step that Undo reverses. The command
 line, a group address CSV import with delete rows and removing missing devices
 after a bus scan still refuse, but now name the affected notes instead of a
-generic error. Existing Alpha 13 binaries are unchanged.
+generic error.
 [Operating instructions](user-guide/01-user-interface.md#notes-when-deleting),
 [ADR-0138](../adr/0138-notes-get-an-explicit-decision-before-a-delete.md).
 
@@ -40,7 +39,7 @@ Parameter areas whose product data declares a `Table`/`Grid` layout render as a
 matrix of the existing editable rows at their declared cells, with declared
 captions. Other areas keep rows and say why (no grid, unknown variant, invalid or
 unreadable declaration). Drafts, write checks and closed areas are unchanged.
-Existing Alpha 13 binaries are unchanged. [Operating instructions](user-guide/05-devices-and-products.md#parameters),
+[Operating instructions](user-guide/05-devices-and-products.md#parameters),
 [ADR-0137](../adr/0137-declared-parameter-grids-reach-the-workspace.md).
 
 ## KNX Functions in comparisons, the desktop and MCP (Alpha 14)
@@ -61,8 +60,7 @@ rows, cross-area search and contextual source metadata. Areas follow the
 closed-by-default rule below: none opens until chosen. Device/module identities,
 read-only reasons, checked editors and revision-bound writes are reused; drafts
 stay mounted across navigation and search. This is not a manufacturer-specific
-faceplate or exact source-grid reproduction. Existing Alpha 13 binaries and manual
-screenshots are unchanged. [Operating instructions](user-guide/05-devices-and-products.md#parameters)
+faceplate or exact source-grid reproduction. [Operating instructions](user-guide/05-devices-and-products.md#parameters)
 and [contract](../contracts/parameter-workspace.md).
 
 ## Closed disclosure defaults (Alpha 14)
@@ -71,7 +69,7 @@ Navigation content blocks, explorer branches, parameter sections/source groups,
 Function entries, matrix column selection and report/evidence disclosures start
 closed. Manual opening, drafts, explicit search/selection reveal and remembered
 per-project group-address view choices remain supported. No domain, persistence,
-protocol or compatibility change. [Behaviour](user-guide/01-user-interface.md#closed-by-default-source-builds-after-alpha-13).
+protocol or compatibility change. [Behaviour](user-guide/01-user-interface.md#closed-by-default-since-alpha-14).
 
 ## Workbench configuration (Alpha 13)
 
@@ -82,7 +80,7 @@ parameter edits create missing positively active unscoped objects in one durable
 undoable batch without replacing existing links/overrides. Missing module mappings
 refuse, and ambiguous DPTs are not selected automatically. No new hardware or ETS
 compatibility is implied. These changes are in Alpha 13, not a
-retroactive update to an Alpha 12 AppImage. [Operating instructions](user-guide/05-devices-and-products.md#device-functions-source-builds-after-alpha-12)
+retroactive update to an Alpha 12 AppImage. [Operating instructions](user-guide/05-devices-and-products.md#device-functions-since-alpha-13)
 and [contract](../contracts/parameter-object-refresh.md).
 
 This chapter is the honest inventory: what exists, what half exists, and what
@@ -115,7 +113,7 @@ and new image types are not admitted. Both P4 packages are published in source o
 combined full51/51 and corpus152/152+16/16 pass after the separate inherited
 corpus-prerequisite correction. This is not an Alpha11 artifact update.
 [Publication record](../evidence/p4-device-comparison-parameters-2026-10-15.json).
-[Use and limits](user-guide/05-devices-and-products.md#comparing-the-project-with-devices-p4-source-build-after-alpha-11),
+[Use and limits](user-guide/05-devices-and-products.md#comparing-the-project-with-devices-p4-since-alpha-12),
 [contract](../contracts/device-comparison.md).
 
 ## Universal device-support evidence (15 October 2026 source)
@@ -155,7 +153,7 @@ and recovered undo need no migration. After a later device write, recovered
 snapshot undo conservatively invalidates older clean claims and can show extra
 pending parts without proving a device difference. This is project belief, not
 P4 live-device comparison; CLI/external work needs manual reconciliation.
-[Use and limits](user-guide/05-devices-and-products.md#programming-marks-p3-source-build-after-alpha-11),
+[Use and limits](user-guide/05-devices-and-products.md#programming-marks-p3-since-alpha-12),
 [ADR-0129](../adr/0129-per-part-pending-programming.md).
 
 <a id="community-hall-of-fame-link-14-october-2026-source-main-only"></a>
@@ -624,7 +622,7 @@ Main source delivery is [verified](../status/2026-10-09-offline-ap1-verification
 | Encrypted `.knxprod` packages, and legacy `.vd2` files | ❌ Not implemented, deliberately | A permanent scope exclusion, refused as a typed error |
 | Online catalog update from a manufacturer | ❌ Not implemented | Files are installed by hand — [`docs/GAP_ANALYSIS_ETS.md`](https://github.com/KNXBench-Labs/KNXBench/blob/994ac08c0328/docs/GAP_ANALYSIS_ETS.md), row C6 |
 | Devices configured by a manufacturer plug-in | ❌ Not implemented | No plug-in host exists and none is planned — [§6](../KNOWN_LIMITATIONS.md#6-devices-behind-vendor-plug-in-dlls) |
-| Adopting one device's stored plug-in data from a newer export (web, CLI; Alpha 14) | 🟡 Partial or experimental | Bytes copied verbatim after a preview by digest; same-lineage only; not in Undo, the way back is a project version; never verified that a plug-in or ETS accepts the result — [Devices and products](user-guide/05-devices-and-products.md#adopting-plug-in-data-source-builds-after-alpha-13), [§186](../KNOWN_LIMITATIONS.md#catalogue-kl-186) |
+| Adopting one device's stored plug-in data from a newer export (web, CLI; Alpha 14) | 🟡 Partial or experimental | Bytes copied verbatim after a preview by digest; same-lineage only; not in Undo, the way back is a project version; never verified that a plug-in or ETS accepts the result — [Devices and products](user-guide/05-devices-and-products.md#adopting-plug-in-data-since-alpha-14), [§186](../KNOWN_LIMITATIONS.md#catalogue-kl-186) |
 | Package/version identity inspection | 🟡 Bounded implementation | Source/candidate identity is recorded; a version pin/selector is not implemented. First-installed normalized rows remain the winner — [§135](../KNOWN_LIMITATIONS.md) |
 | Manufacturer signature verification | ❌ Not implemented | Signature members are retained and labelled, not cryptographically verified — [§85](../KNOWN_LIMITATIONS.md) |
 

@@ -190,7 +190,7 @@ The tagged form additionally checks that the artifact's file name matches the ta
 
 > **Note**
 >
-> The public alpha.12 AppImage is available through [Installation](../getting-started/04-installation.md#a-linux-appimage).
+> The public alpha.14 AppImage is available through [Installation](../getting-started/04-installation.md#a-linux-appimage).
 > Alpha.6 was the first one built by this release workflow (alpha.5 and earlier were built
 > locally). Native display policy and
 > tested host boundaries are documented in [the launcher contract](../../APPIMAGE_LAUNCHER.md).

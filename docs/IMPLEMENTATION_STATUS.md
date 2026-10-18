@@ -12,6 +12,25 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Manual, README and screenshots after Alpha 14 (18 October 2026)
+
+Docs and media only, no application change. The manual's 46 stills, the four
+group-address views and the three workflow GIFs were recaptured from the server
+and frontend extracted from the published `knxbench/knxbench-server:0.1.0-alpha.14`
+image (OCI revision `8d104e2f`), in a loopback-only namespace, with the fictional
+Sample house; [media manifest](assets/media-manifest.json). The two manual capture
+specs now open the Alpha 14 closed-by-default navigation blocks, explorer branches,
+address ranges and parameter areas the way a reader would, and the login check reads
+the expected version from `MANUAL_EXPECTED_VERSION` (default `0.1.0-alpha.14`).
+README stills now use these manual captures. Version labels in the manual say
+"since Alpha N" instead of "source builds after Alpha N-1"; renamed headings keep
+their old anchors. Stale claims fixed: "no version history yet" (README), the
+"Alpha 12 uses schema 23" upgrade notes, palette and help-topic counts (22 commands,
+13 topics) and the size limits that `main` raised after the tag (now labelled as
+source-only, with the Alpha 14 bounds next to them). The website, the media
+inventory page and the Alpha 14 release-media set belong to the parallel website
+claim of the same day.
+
 ## Census-3 fixes and storage-ceiling size bounds (18 October 2026)
 
 Follow-up to [census 3](research/2026-10-18-product-database-programmability-census.md#follow-up-delivered-18-october-2026):

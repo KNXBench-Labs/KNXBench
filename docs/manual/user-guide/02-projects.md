@@ -407,7 +407,7 @@ that file after a server/app restart restores the working project and both stack
 Changes can therefore recover while still marked unsaved: Save/autosave controls
 the clean baseline. Closing without saving does not erase the recovery journal.
 
-![Alpha 9 in Graphite: project history with a named version before the kitchen redesign, one undo step and explicit storage and backup limits](../../assets/screenshots/graphite-project-history.png)
+![Alpha 14 in Graphite: project history with the named version Before the kitchen redesign, one undo step, one project version, the history storage used and explicit storage and backup limits](../../assets/screenshots/graphite-project-history.png)
 
 *The fictional Sample house has already been saved to a native file. A version is
 a way back from an edit, not a second copy of that file.*
@@ -427,9 +427,10 @@ stays unchanged. Until the limit is resolved, a native-backed edit can be refuse
 Versions are stored **inside the same `.knxdb`**. They protect against an unwanted
 edit, not file/disk loss: keep independent copies of closed files. They preserve
 project data, opaque source bytes and manufacturer references, not the global
-catalogue, passwords or device/bus state. Alpha 12 uses native schema 16:
-Functions at 15 and retained manufacturer files at 16. Alpha 11 and earlier
-refuse upgraded native files. The separate product database uses schema 23.
+catalogue, passwords or device/bus state. Native schema 16 has been in use since
+Alpha 12 (Functions at 15, retained manufacturer files at 16); Alpha 11 and earlier
+refuse upgraded native files. The separate product database uses schema 24 since
+Alpha 14.
 Independently back up closed project files and the whole data directory before
 upgrading. Downgrading means returning to the pre-upgrade backup, not pressing Undo.
 Browser **Export project…** remains a fresh current-project serialization, not a

@@ -42,7 +42,7 @@ The top row, left to right:
 - **The gear** — opens Settings. See
   [Settings, themes and languages](09-settings-and-appearance.md).
 
-**Source builds after Alpha 12:** File groups the same actions under **Project**,
+**Since Alpha 13:** File groups the same actions under **Project**,
 **Import & export**, **History & comparison** and **Help & diagnostics**, rather
 than one long list. No action is removed and keyboard activation/Escape still
 work. These headings are navigation, not new import or export capabilities.
@@ -79,7 +79,9 @@ keep plain text. This needs a since Alpha 12; the published manual
 screenshots still show the earlier released UI. See
 [Motion settings](09-settings-and-appearance.md#motion-style-and-motion-level).
 
-## Closed by default (source builds after Alpha 13)
+<a id="closed-by-default-source-builds-after-alpha-13"></a>
+
+## Closed by default (since Alpha 14)
 
 Collapsible content starts closed: the Workspaces, Project explorer and Diagnostics
 navigation blocks, every new explorer branch, parameter sections and manufacturer
@@ -93,14 +95,15 @@ Opening a section is not an edit. Folding retains mounted parameter drafts and
 in-flight results. An explicit search reveal, selected group address or range
 scope can still open the path needed to show its target. Previously remembered
 group-address tree openings remain respected; the new default applies when no
-view state was saved. This is newer than the published Alpha 13 binary; existing
-manual screenshots keep their recorded release provenance.
+view state was saved. Alpha 13 and older open this content by default; the
+manual's screenshots show Alpha 14, so a folded block there is the new normal,
+not a missing feature.
 
 ## The navigation pane
 
 The left pane has three stacked blocks.
 
-**Source builds after Alpha 12:** click the **Workspaces**, **Project explorer**
+**Since Alpha 13:** click the **Workspaces**, **Project explorer**
 or **Diagnostics** heading to fold that entire block independently. Selection,
 open branches and in-progress inputs stay in place; opening it restores them.
 This is different from folding a branch inside the explorer or hiding the whole
@@ -127,8 +130,7 @@ Group Addresses, Group Ranges, and any unassigned devices. This is where you cre
 things. Each branch that can hold a new child has an inline row at the bottom of it:
 type a name, press Enter or click Add, and the object exists. No dialog opens.
 
-Every branch that can open has a chevron in front of it (source builds after
-v0.1.0-alpha.11): it points right while the branch is closed and turns down when it
+Every branch that can open has a chevron in front of it (since Alpha 12): it points right while the branch is closed and turns down when it
 opens. A closed branch shows how many entries it holds, for example a small **3**
 next to a line with three devices. The two buttons above the tree are **Expand
 all** and **Collapse all**; Collapse all keeps the installations open and folds
@@ -146,18 +148,16 @@ Since Alpha 12 (issue #23), selecting an already-active **Bus
 monitor** or **Log** entry keeps that panel open and preserves its current tab,
 input or filter. To leave it, choose another view explicitly; clicking the active
 entry is no longer a close toggle. Settings and the separate diagnostics window
-keep their existing opening behaviour. The screenshots still show the released UI.
+keep their existing opening behaviour.
 
-![The Overview of an imported project, showing counts for schema version,
-installations, areas, lines, devices, group addresses, building parts and
-communication objects, with the project tree on the
-left](../../assets/screenshots/porcelain-dashboard.png)
+![The Overview of an imported project in three cards: Project contents with the counts of installations, areas, lines, devices, building parts, group addresses and communication objects, Import report with 0 errors and 2 warnings, and Technical details with schema version 16; the navigation blocks on the left are still folded](../../assets/screenshots/porcelain-dashboard.png)
 
 The Overview of the fictional sample project the manual's screenshots use: 1 area,
 2 lines, 8 devices, 15 group addresses, 8 building parts, 39 communication objects.
-The tree on the left shows the same project, opened at its first line.
+Right after an import the navigation blocks on the left are folded; click
+**Workspaces** or **Project explorer** to open them.
 
-Alpha 10 (newer than this Alpha 9 screenshot) groups the same numbers
+Since Alpha 10 the Overview groups the same numbers
 into three cards: **Project contents**, **Import report** and **Technical details**.
 The import card states the overall result in words — errors recorded, imported with
 warnings, nothing recorded, or *not assessed* when no import report is available —
@@ -201,7 +201,7 @@ the read-only text and use Ctrl+C; if clipboard permission is refused, the
 record is selected for manual copying. Escape closes details and returns focus
 to the log row. Text is not interpreted as HTML or changed for copying.
 
-![Alpha 9 in Graphite: message details for a fictional project’s theme-change notification, with raw message and full-record copy controls](../../assets/screenshots/graphite-message-details.png)
+![Alpha 14 in Graphite: message details for the achievement notification Come to the Dark Side after a theme change, with Copy message, Copy all details and the original entry as selectable JSON](../../assets/screenshots/graphite-message-details.png)
 
 *This is a browser notification, not a bus telegram or a server-log export. The
 message really came from changing the theme; no error was invented for the camera.*
@@ -246,7 +246,7 @@ file download, not the server's Save As directory.
 **Notes** in the navigation pane, or **Notes** in the command palette, opens the
 project's engineering notebook: ordered plain-text notes attached to the project
 or to one of its parts. It needs an open project and is disabled without one.
-This view ships since Alpha 10 and is not in the Alpha 9 screenshots.
+This view ships since Alpha 10.
 
 - The list sits beside the editor. **Find notes** only filters what you see; it
   never reorders the project's notes.
@@ -284,13 +284,13 @@ This view ships since Alpha 10 and is not in the Alpha 9 screenshots.
   › **Reload**) asks the same way, in WebKit's **Stay**/**Leave** dialog; the
   window's close button uses the KNXBench dialog instead. *The browser prompt and
   the translated review names arrived in Alpha 11; the desktop reload prompt
-  after Alpha 11.*
+  in Alpha 12.*
 
 **Application help** in the notebook opens the help panel's *The window* topic.
 
 #### Notes when deleting
 
-*Source builds after Alpha 13.* Deleting something a note belongs to (a device,
+*Since Alpha 14.* Deleting something a note belongs to (a device,
 group address, area, line, building part or group range, from the properties
 pane or the bulk toolbar) opens **Notes need a decision** instead of deleting
 right away. It lists every affected note with what it is attached to; deleting a
@@ -322,9 +322,9 @@ deleted. The chapters that follow say which is which.
 One line at the bottom: the installation names of the open project (or just
 "KNXBench" when nothing is open) on the left, and the version on the right. The
 current screenshots in this manual were taken from the published
-`v0.1.0-alpha.9` frontend and server (Alpha 10 views are marked where they differ). Porcelain is the light theme; Graphite
-shows the same workbench in dark mode. Earlier README videos remain labelled
-as historical recordings in the [media inventory](../../assets/README.md).
+`v0.1.0-alpha.14` frontend and server. Porcelain is the light theme; Graphite
+shows the same workbench in dark mode. The [media inventory](../../assets/README.md)
+records how each picture was made.
 
 ## Resizing
 
@@ -368,23 +368,24 @@ Searching the sample project for "light": eight group addresses match, each show
 its name and its address.
 
 **The command palette** (`Ctrl+Shift+P`) lists every command KNXBench has as a
-keyboard-reachable list. There are sixteen: New project, Open project, Open
-(.knxdb), Save, Save As, Undo, Redo, Search, Log, Bus monitor, Settings, Diagnostics
-window, Product catalog, Show introduction, Achievements, Help. Typing filters the
-list by substring.
+keyboard-reachable list. There are twenty-two: New project, Open project, Open
+(.knxdb), Save, Save As, Undo, Redo, Project history, Adopt plug-in data, Search, Log,
+Bus monitor, Settings, Diagnostics window, Product catalog, Devices, Notes, Stored bus
+access, Add device, Show introduction, Achievements, Help. Typing filters the list by
+substring.
 
-![The command palette showing all sixteen commands, with Undo and Redo grayed out and
-the keyboard hints Ctrl+Z, Ctrl+Shift+Z, Ctrl+K and F1 on the rows that have
-them](../../assets/screenshots/porcelain-command-palette.png)
+![The command palette as a filterable list starting with New project…, Open project…
+and Open (.knxdb)…; Undo shows Ctrl+Z, the grayed-out Redo Ctrl+Shift+Z and Search…
+Ctrl+K, and the list scrolls on past Add device…](../../assets/screenshots/porcelain-command-palette.png)
 
-Undo and Redo are gray here because this project has no history yet. The palette shows
-each command's shortcut where it has one, which makes it a decent way to learn them.
+Redo is gray here because nothing has been undone yet. The palette shows each
+command's shortcut where it has one, which makes it a decent way to learn them.
 
-**Help** (`F1`, or the `?` button) has eleven short topics about this window
+**Help** (`F1`, or the `?` button) has thirteen short topics about this window
 and the KNX terms behind it: Getting started, The window, Buildings floors
 and rooms, Areas lines and devices, Group addresses, Group address ranges,
-Communication object flags, Bus monitor, Import, Keyboard, and What this
-does not do. A tip's `?` button opens its own full topic on click or Enter;
+Communication object flags, Bus monitor, Import, Notes when deleting, Plug-in
+data adoption, Keyboard, and What this does not do. A tip's `?` button opens its own full topic on click or Enter;
 F1 while that tip is focused opens the same topic. Elsewhere F1 starts at
 **The window** overview. The topic heading names the dialog for a screen
 reader and its prose can be reached by keyboard. In the Group addresses
@@ -393,8 +394,8 @@ not datapoint types or payload-value intervals. A validation toast for a
 malformed address, DPT or project language also shows the expected syntax
 and one example; the original server detail remains available for diagnostics.
 
-![The help panel with its eleven topics listed, among them Group address ranges and
-Import, and the "Getting started" topic
+![The help panel with its thirteen topics listed, among them Group address ranges,
+Import and Notes when deleting, and the "Getting started" topic
 open](../../assets/screenshots/porcelain-help-panel.png)
 
 The import topic is named **Import**, not "Import and export", because KNXBench does

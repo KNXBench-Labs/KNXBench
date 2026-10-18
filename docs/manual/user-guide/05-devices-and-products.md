@@ -61,12 +61,14 @@ grouping, free-text log parsing or project-diff links. The separate diagnostic
 companion does not become another editing window. See the
 [contract and evidence](../../DEVICE_NAVIGATION.md).
 
-![Alpha 9 in Graphite: the filterable Devices overview with fictional products, individual addresses, KNX-line placement and the selected device’s properties](../../assets/screenshots/graphite-devices.png)
+![Alpha 14 in Graphite: the Devices overview with 9 of 9 devices, a filter field, Pending only, Refresh product data and Compare all shown, Adr/App/Par/GA programming chips per device and the selected device’s properties](../../assets/screenshots/graphite-devices.png)
 
 The Devices view first shipped with Alpha 6 and remains in every later release. The older
 Alpha 5 AppImage does not include it.
 
-## Comparing the project with devices (P4, source build after Alpha 11)
+<a id="comparing-the-project-with-devices-p4-source-build-after-alpha-11"></a>
+
+## Comparing the project with devices (P4, since Alpha 12)
 
 **Included in Alpha 12:** both table and named-parameter comparison packages.
 Most earlier manual screenshots retain their stated capture version. The new
@@ -118,7 +120,9 @@ and memory columns; long target lists also scroll within their list.
 [Exact scope and limits](../../contracts/device-comparison.md),
 [device checks](07-bus-and-interfaces.md#device-checks-offline-readiness-then-an-optional-read-only-comparison).
 
-## Programming marks (P3, source build after Alpha 11)
+<a id="programming-marks-p3-source-build-after-alpha-11"></a>
+
+## Programming marks (P3, since Alpha 12)
 
 The **Programming** column in Devices shows the parts the project still needs
 sent to each device: **Adr** (individual address), **App** (application),
@@ -179,9 +183,9 @@ line in the Topology view. Both open the same centre workspace; only the target 
 differs. The `+ Add device` rows in the project explorer open the
 [add-device wizard](#the-add-device-wizard) instead.
 
-![Alpha 9’s Device catalog in the main workspace: an install file picker,
-manufacturer filter and search, and four fictional products. The first list row
-is highlighted, but no creation form or address preview is open](../../assets/screenshots/porcelain-product-catalog.png)
+![Alpha 14’s Device catalog in the main workspace: an install file picker,
+a closed Catalogue backups section, manufacturer filter and search, and four fictional
+products. The first list row is highlighted, but no creation form or address preview is open](../../assets/screenshots/porcelain-product-catalog.png)
 
 A row shows `name (number) — description`, as in the screenshot, and the same
 product can appear more
@@ -465,13 +469,15 @@ edit the project; they do not connect to, program or download a KNX device.
 which helps when picking a group address of matching size. Without product data
 the size stays blank rather than guessed.
 
-#### Device functions (source builds after Alpha 12)
+<a id="device-functions-source-builds-after-alpha-12"></a>
+
+#### Device functions (since Alpha 13)
 
 **Included in Alpha 13:** the device-mode controls, parameter groups and supported
 atomic object refresh described here. Unsupported module construction still
 refuses the complete edit; this does not add programming support.
 
-**Source builds after Alpha 13:** expand a communication object and use its
+**Since Alpha 14:** expand a communication object and use its
 manufacturer function dropdown below the **DPT** field. The separate **Device
 functions** disclosure is removed. Only active supported enum parameters mapped
 to this exact object's declared reference are offered; names and object numbers
@@ -554,11 +560,12 @@ starts; a delayed result cannot republish into a removed editor/another device.
 The table scrolls locally, keeping all columns reachable on narrow displays.
 [Full contract and evidence](../../COMMUNICATION_OBJECT_TABLE.md). The
 [earlier source screenshot](../../evidence/communication-objects/real-demo-editor.png)
-remains historical evidence; the workbench views shown here are Alpha 9.
+remains historical evidence; the workbench views shown here are Alpha 14.
 
-![Alpha 9 in Porcelain: device 1.1.1 with Communication objects selected,
-Channel A open and object 0 expanded. The DPT selector shows 1.001 – Switch with
-an application-source badge; the original reference remains DPST-1-1. Table
+![Alpha 14 in Porcelain: device 1.1.1 with Communication objects selected,
+Channel A open and object 0 expanded. The row names its size, 1 Bit; the DPT selector
+shows Switch (1.001) with an application-source badge, the technical reference is
+folded, and the sample program offers no function choice for this object. Table
 columns scroll within the workspace](../../assets/screenshots/porcelain-device-tab-communication-objects.png)
 
 One collapsible **channel group** per evaluated channel, initially closed. The
@@ -654,9 +661,8 @@ If no product database is installed, the import simply says so and skips this st
 
 ### Parameters
 
-**Source builds after Alpha 13** replace the ordinary tab's long accordion form
-with a compact parameter workspace. The screenshot below still shows its stated
-older release; this source change does not update a published AppImage/container.
+**Since Alpha 14** a compact parameter workspace replaces the ordinary tab's long
+accordion form. Alpha 13 and older AppImages and images keep the accordion.
 
 **Areas** lists the declared parameter areas with their entry counts. Like other
 folded content, nothing opens until you choose an area; your choice stays open
@@ -699,23 +705,23 @@ the original value unchanged, because that packing is not documented.
 The following release-era description explains the retained value/editing rules;
 the new workspace replaces ordinary section/block folding with area navigation.
 
-![The device panel with the Parameters tab selected. A Device section holds "Delay
-after bus voltage recovery (s)" set to 3, followed by "Operating mode" ("Normally
-open") and "Behaviour on bus voltage recovery" ("Keep state") once per channel. The
-sample program has no modules, so no module sections appear](../../assets/screenshots/porcelain-device-tab-parameters.png)
+![The Parameters tab as a workspace: Find parameters with 1 of 9 entries, an Areas
+register listing General and Channel A to D with their entry counts, and General open
+with Delay after bus voltage recovery (s) set to 3, its Checked editor button and an
+information button. The note says no grid is declared, so the rows are listed](../../assets/screenshots/porcelain-device-tab-parameters.png)
 
 The tab loads the device's parameters when you select the device. What you get:
 
 - **Sections.** One for the device itself, plus one per module instantiation —
   a device with twelve channels shows twelve sections, never one merged list.
 - **Fields.** A select for a choice parameter, a number field with the program's own
-  minimum and maximum for a numeric one, a text field otherwise. **Source builds
-  after Alpha 12** save a choice immediately; numeric/text fields still save on
+  minimum and maximum for a numeric one, a text field otherwise. **Since Alpha 13**
+  a choice saves immediately; numeric/text fields still save on
   blur or Enter. An ordinary refusal restores the committed value with its reason;
   a stale-write conflict keeps the draft as explained below. The refused write
   does not change the server state. Alpha 12 and earlier apply ordinary choices
   on blur/Enter too.
-- **Parameter groups (source after Alpha 12).** Fields use their nearest declared
+- **Parameter groups (since Alpha 13).** Fields use their nearest declared
   parameter block, with a product caption or a numbered fallback. Fold a block
   to hide all its fields without losing drafts. Missing/ambiguous metadata leaves
   fields ungrouped rather than hiding or assigning them to an invented channel.
@@ -738,7 +744,7 @@ Actual rejected edits still show their reason next to the edited field.
 #### Checked editor (since Alpha 10)
 
 Time, number, colour and picture fields have a **Checked editor** button under the
-field. It ships since Alpha 10 and is not in the Alpha 9 screenshots. It
+field. It ships since Alpha 10. It
 reads the parameter's type straight from the imported product data and only offers
 what that data proves:
 
@@ -860,7 +866,7 @@ from the interface language. See
 
 The sixth tab, **Installation instructions**, shows the installation hints a device
 brought along from an imported ETS project, and lets you replace them with your own
-text. It ships since Alpha 10 and is not in the Alpha 9 screenshots.
+text. It ships since Alpha 10.
 
 - The imported original is kept as it came in. **Imported original is preserved**
   or **Native override** above the text says which of the two you are looking at.
@@ -903,7 +909,9 @@ last successful download. Stored bus access and IP settings from ETS are a separ
 read-only view (see *Stored bus access* below).
 [Contract](../../contracts/recorded-device-state.md).
 
-## Adopting plug-in data (source builds after Alpha 13)
+<a id="adopting-plug-in-data-source-builds-after-alpha-13"></a>
+
+## Adopting plug-in data (since Alpha 14)
 
 Some devices are configured in ETS through a manufacturer plug-in. KNXBench
 keeps what such a plug-in stored (a `BinaryData` blob and numbered `ExtraData`

@@ -41,8 +41,8 @@ The left explorer answers **where**, the centre workspace answers **what**, and
 the inspector answers **which properties**. Screenshots use fictional data, not
 somebody's actual building. The [media inventory](../assets/README.md) records
 capture provenance and how to refresh them. The current stills show the published
-**Alpha 9**, in light Porcelain and dark Graphite. For the new named DPT choices,
-message details and release boundaries, see [Project status](getting-started/03-project-status.md).
+**Alpha 14**, in light Porcelain and dark Graphite. For what changed and the release
+boundaries, see [Project status](getting-started/03-project-status.md).
 
 > **Note**
 >

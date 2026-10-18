@@ -64,7 +64,7 @@ The **Theme** menu is the one place to choose a theme. It lists:
 
 A choice is saved immediately; to go back, pick the previous entry.
 
-![The published Alpha 9 workbench in Graphite, showing the fictional Sample house’s group addresses and Kitchen light properties](../../assets/screenshots/graphite-group-addresses.png)
+![The published Alpha 14 workbench in Graphite, showing the fictional Sample house’s open group-address ranges and Kitchen light properties](../../assets/screenshots/graphite-group-addresses.png)
 
 *Graphite is the ordinary dark workbench, not a different application. The light
 Porcelain views elsewhere in this manual use the same project and controls.*
@@ -153,8 +153,8 @@ errors, results or decision prompts, and adds no separate setting. This needs
 a since Alpha 12; the existing screenshots show the released UI.
 
 **Motion by category** (since Alpha 11) sets toast
-notifications, achievement popups and the telegram Flow separately. Source builds
-after Alpha 11 add **Structure lines in the explorer**: *Inherit* lets the lines grow
+notifications, achievement popups and the telegram Flow separately. Since Alpha 12
+there is also **Structure lines in the explorer**: *Inherit* lets the lines grow
 when a branch opens and pulse about every twelve seconds, *At most subtle* only lets
 them grow, *Off* draws them still. The pulse also pauses while the tab is hidden. Each starts at
 *Inherit* (follow the motion level) and can only go down: *At most subtle* or *Off*.

@@ -21,10 +21,9 @@ and pack them into a ZIP for you to email. You need no ETS, device reader or
 developer tool. The export only reads: nothing is programmed, written, restarted
 or reset.
 
-> **Which build has it?** The export is in the repository source after Alpha 13.
-> The released AppImage and the Docker Hub image up to Alpha 13 do not have it.
-> Until the next release, [build the container from source](../getting-started/04-installation.md#build-the-container-from-source)
-> or [build KNXBench from source](../getting-started/04-installation.md#c-from-source).
+> **Which build has it?** Alpha 14 and newer: the AppImage, the Docker Hub image
+> `knxbench/knxbench-server:0.1.0-alpha.14` (or `latest`) and source builds.
+> Alpha 13 and older do not have it; [update first](../getting-started/04-installation.md).
 > **File → About KNXBench** shows which build you are running.
 
 ### Before you start
@@ -133,11 +132,12 @@ The same export is available on the command line as `knx device diagnostics`;
 see [the command-line chapter](10-command-line.md). The exact behaviour and
 limits are in the [contract](../../contracts/device-diagnostic-export.md).
 
-## Universal device-support reporting (source after Alpha 11)
+<a id="universal-device-support-reporting-source-after-alpha-11"></a>
 
-This separate workflow needs **no open project**. Open **File → Device support report**, or use the same action in a device's download panel. The released
-screenshots in this manual still show the Alpha11 interface; use a newer source
-build for this feature.
+## Universal device-support reporting
+
+This separate workflow needs **no open project**. Open **File → Device support report**, or use the same action in a device's download panel. Available since
+Alpha 12.
 
 1. Select a project device, or keep manual identity and optionally enter its local
    individual address. Enter an application ID, mask or firmware only if known;
@@ -327,7 +327,7 @@ KNX Functions match by their ETS identifier, otherwise by their building part an
 name. A Function made in KNXBench therefore shows a rename as one removal plus one
 addition, and two same-named Functions in one room as **ambiguous**. Members compare
 by the underlying group address, so a project that only writes addresses in another
-notation shows no Function change. (Before the source builds after Alpha 13, all
+notation shows no Function change. (Before Alpha 14, all
 Functions differences appeared as one long *Project info* line.)
 
 Device changes nest: a device whose own fields are identical but whose communication

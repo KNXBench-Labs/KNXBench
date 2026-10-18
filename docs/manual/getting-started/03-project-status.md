@@ -21,8 +21,8 @@ separators, function choices below each object, note decisions before deletes,
 plug-in data adoption, Functions in comparisons, vendor-ZIP product install and a
 read-only diagnostic export. None of it unlocks new devices.
 [Release notes](../../releases/alpha14.md) keep the exact boundaries together.
-Website/README application stills remain labelled Alpha 12; older manual images
-retain their original capture dates.
+The manual and README screenshots show the published Alpha 14 server and
+frontend.
 
 **Before upgrading:** close the app and independently back up `.knxdb` files and
 all Docker data, including the product database. Native/model **16** is unchanged;
@@ -34,6 +34,14 @@ with the application.
 
 Colour/picture value codecs and Site grouping are not part of this release;
 Functions are now project-editing tools, not device programming.
+
+**Newer than Alpha 14 (source builds only, for now):** the product database moves on
+to **25** ([ADR-0141](../../adr/0141-placements-and-enumeration-attributes-reach-columns.md)),
+file-size bounds follow the storage ceiling instead of the older MiB limits
+([ADR-0142](../../adr/0142-file-size-limits-follow-the-storage-ceiling.md)), and
+legacy `.vd5` files with upper-case table names import instead of reading as empty. These arrive in a
+release with the next alpha; until then the Alpha 14 bounds apply to the AppImage and
+the Docker Hub image.
 
 **Source documentation and a release asset are different snapshots.** Check the
 running application's version and build commit before expecting a recently added

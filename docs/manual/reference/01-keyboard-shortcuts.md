@@ -29,15 +29,16 @@ These work anywhere in the main window, with no field focused:
 | `Ctrl+Shift+Z` | Redo | Same field-focus exception as Undo |
 | `Escape` | Close whatever is on top | See [Escape, in order](#escape-in-order) below |
 
-Twelve more actions are reachable only through the command palette or a button, with no
-shortcut of their own: New project, Open project, Open (`.knxdb`), Save, Save As, Log, Bus
-monitor, Settings, the Diagnostics window, the Product catalog, Show introduction, and
-Achievements. All sixteen palette commands, with the shortcuts that exist, are visible in
-the command palette itself:
+Eighteen more actions are reachable only through the command palette or a button, with no
+shortcut of their own: New project, Open project, Open (`.knxdb`), Save, Save As, Project
+history, Adopt plug-in data, Log, Bus monitor, Settings, the Diagnostics window, the Product
+catalog, Devices, Notes, Stored bus access, Add device, Show introduction and Achievements.
+All twenty-two palette commands, with the shortcuts that exist, are visible in the command
+palette itself:
 
-![The command palette listing all sixteen commands as a filterable list, with Undo and
-Redo shown disabled and the keyboard hints Ctrl+Z, Ctrl+Shift+Z, Ctrl+K and F1 next to the
-rows that have them](../../assets/screenshots/porcelain-command-palette.png)
+![The command palette as a filterable list starting with New project…, Open project… and
+Open (.knxdb)…; Undo shows Ctrl+Z, the grayed-out Redo Ctrl+Shift+Z and Search… Ctrl+K, and
+the list scrolls on to Show introduction, Achievements and Help](../../assets/screenshots/porcelain-command-palette.png)
 
 **Save** has no dedicated shortcut. It's a header button and a palette command, not a key
 combination — there is no `Ctrl+S` in this application today.

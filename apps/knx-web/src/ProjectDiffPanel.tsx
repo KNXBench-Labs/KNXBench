@@ -11,6 +11,7 @@ import type { MessageKey } from "./messages/en";
 import ProjectDiffDetails from "./ProjectDiffDetails";
 import ProjectDiffImportDiagnostics from "./ProjectDiffImportDiagnostics";
 import { compareFilters } from "./projectDiffView";
+import { useFileMenuItemProps } from "./FileMenu";
 
 // One non-generic entity table's shape, enough for the grouped-count
 // renderer below — every table in a `ProjectDiffReport` (`api.ts`'s
@@ -139,6 +140,7 @@ export default function ProjectDiffPanel(props: {
 }) {
   const { tree, onError, onClearErrors } = props;
   const t = useTranslate();
+  const entry = useFileMenuItemProps();
   const [report, setReport] = useState<ProjectDiffReport | null>(null);
   // A `.knxproj` the server refused over error-level import diagnostics:
   // shown in this panel instead of a diff, never alongside a stale one.
@@ -205,7 +207,7 @@ export default function ProjectDiffPanel(props: {
           would hide the answer to the click that asked for it. The
           attribute is the opt-out `App.tsx`'s `handleFileMenuActivation`
           looks for; it does nothing anywhere else this panel is used. */}
-      <button ref={compareRef} onClick={compare} disabled={!tree} data-menu-stays-open="true">
+      <button {...entry} ref={compareRef} onClick={compare} disabled={!tree} data-menu-stays-open="true">
         {t("projectDiff.compareButton")}
       </button>
       {open && (report || refusal) && (

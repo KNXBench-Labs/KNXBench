@@ -1,7 +1,7 @@
-/** File menu building blocks: a role="menu" list and submenus that fly out to the right. */
+/** File menu parts: the ARIA menu button, a roving-tabindex menu and flyout submenus. */
 import {
   createContext, useCallback, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState,
-  type FocusEvent, type KeyboardEvent, type MouseEvent, type PointerEvent, type ReactNode,
+  type ButtonHTMLAttributes, type FocusEvent, type KeyboardEvent, type MouseEvent, type PointerEvent, type ReactNode,
 } from "react";
 
 // Intent delay before a hovered trigger opens, and the grace period before a
@@ -31,24 +31,99 @@ interface FileMenuState {
 const FileMenuContext = createContext<FileMenuState | null>(null);
 
 const MENU = '[role="menu"]';
-const ITEM = '[role="menuitem"]';
+// Entries are declared, never guessed: `FileMenuItem` for buttons the File block owns,
+// `useFileMenuItemProps` for the one button a reused component contributes. A button without the
+// marker (a comparison report's Close, say) is content: no role, no arrow-key stop, no tab trap.
+const ITEM = "[data-file-menu-item]";
+const ITEM_PROPS = Object.freeze({ role: "menuitem", "data-file-menu-item": "" });
+const NO_PROPS = Object.freeze({});
 
-/** Enabled items that belong to this menu level, not to a submenu nested inside it. */
+const isDisabled = (el: HTMLElement) => el instanceof HTMLButtonElement && el.disabled;
+
+/** Every declared entry of this menu level, not those of a submenu nested inside it. */
+function declaredOf(level: HTMLElement): HTMLElement[] {
+  return [...level.querySelectorAll<HTMLElement>(ITEM)].filter((el) => el.closest(MENU) === level);
+}
+
+/** The declared entries of this level that can take focus. */
 function itemsOf(level: HTMLElement): HTMLElement[] {
-  return [...level.querySelectorAll<HTMLElement>(ITEM)]
-    .filter((el) => el.closest(MENU) === level && !(el instanceof HTMLButtonElement && el.disabled));
+  return declaredOf(level).filter((el) => !isDisabled(el));
 }
 
 /**
- * The entries of the File menu are buttons rendered by several components this
- * file does not own. Tagging them here keeps the menu pattern complete the day
- * one of them grows another button. A button inside a `role="group"` (the
- * comparison report) is content, not an entry.
+ * Roving tabindex: per menu level exactly one entry is a tab stop, the one that last had focus
+ * (or the first enabled one), so a level never costs more than one Tab press.
  */
-function tagMenuItems(root: HTMLElement) {
-  for (const button of root.querySelectorAll<HTMLButtonElement>("button:not([role])")) {
-    if (!button.closest('[role="group"]')) button.setAttribute("role", "menuitem");
+function syncRoving(root: HTMLElement, focused?: Element | null) {
+  for (const level of [root, ...root.querySelectorAll<HTMLElement>(MENU)]) {
+    const enabled = itemsOf(level);
+    const active = (focused && enabled.find((el) => el === focused))
+      ?? enabled.find((el) => el.getAttribute("tabindex") === "0") ?? enabled[0];
+    for (const el of declaredOf(level)) el.tabIndex = el === active ? 0 : -1;
   }
+}
+
+/** Marks a button as an entry of the File menu; outside a File menu it marks nothing. */
+export function useFileMenuItemProps(): Readonly<Record<string, string>> {
+  return useContext(FileMenuContext) ? ITEM_PROPS : NO_PROPS;
+}
+
+/** A button the File block owns, declared as a menu entry. */
+export function FileMenuItem(props: ButtonHTMLAttributes<HTMLButtonElement>) {
+  return <button {...useFileMenuItemProps()} {...props} />;
+}
+
+/**
+ * The File control of the menu button: a `<summary>` that announces its popup and whether it is
+ * open, and that opens the menu onto its first (ArrowDown, Enter, Space) or last (ArrowUp) entry.
+ */
+export function FileMenuSummary({ children }: { readonly children: ReactNode }) {
+  const ref = useRef<HTMLElement | null>(null);
+  const [expanded, setExpanded] = useState(false);
+  const pending = useRef<"first" | "last" | null>(null);
+
+  const entries = (owner: HTMLDetailsElement) => {
+    const level = [...owner.querySelectorAll<HTMLElement>(MENU)].find((el) => el.parentElement === owner);
+    return level ? itemsOf(level) : [];
+  };
+  const focusEntry = (owner: HTMLDetailsElement, which: "first" | "last") => {
+    const items = entries(owner);
+    items[which === "first" ? 0 : items.length - 1]?.focus();
+  };
+
+  useEffect(() => {
+    const owner = ref.current?.closest("details");
+    if (!owner) return;
+    setExpanded(owner.open);
+    const observer = new MutationObserver(() => {
+      setExpanded(owner.open);
+      const which = pending.current;
+      pending.current = null;
+      if (which && owner.open) focusEntry(owner, which);
+    });
+    observer.observe(owner, { attributes: true, attributeFilter: ["open"] });
+    return () => observer.disconnect();
+  }, []);
+
+  function handleKeyDown(e: KeyboardEvent<HTMLElement>) {
+    if ((e.key !== "ArrowDown" && e.key !== "ArrowUp") || e.altKey || e.ctrlKey || e.metaKey) return;
+    const owner = ref.current?.closest("details");
+    if (!owner) return;
+    e.preventDefault();
+    owner.open = true;
+    focusEntry(owner, e.key === "ArrowDown" ? "first" : "last");
+  }
+
+  // Enter and Space reach the summary as a click with detail 0; the toggle follows the click.
+  function handleClick(e: MouseEvent<HTMLElement>) {
+    pending.current = e.detail === 0 ? "first" : null;
+  }
+
+  return (
+    <summary ref={ref} aria-haspopup="menu" aria-expanded={expanded} onKeyDown={handleKeyDown} onClick={handleClick}>
+      {children}
+    </summary>
+  );
 }
 
 interface FileMenuContentProps {
@@ -94,14 +169,9 @@ export function FileMenuContent({ children, onClick }: FileMenuContentProps) {
   }, [cancelPending]);
   useEffect(() => cancelPending, [cancelPending]);
 
-  // Menu items: tagged on every render and whenever a child component adds a button of its own.
+  // One tab stop per level, re-derived whenever the menu renders (items come and go with the project).
   useLayoutEffect(() => {
-    const root = ref.current;
-    if (!root) return;
-    tagMenuItems(root);
-    const observer = new MutationObserver(() => tagMenuItems(root));
-    observer.observe(root, { childList: true, subtree: true });
-    return () => observer.disconnect();
+    if (ref.current) syncRoving(ref.current, ref.current.contains(document.activeElement) ? document.activeElement : null);
   });
 
   // The `<details>` closes from several places (Escape, outside click, any activation); a closed
@@ -119,15 +189,33 @@ export function FileMenuContent({ children, onClick }: FileMenuContentProps) {
   const focusTrigger = (id: string) =>
     ref.current?.querySelector<HTMLElement>(`[data-file-submenu-trigger="${id}"]`)?.focus();
 
+  // Tab leaves the whole menu: it closes, focus rests on the File control and the browser's own Tab
+  // move carries on from there (forward to what follows File, backward to what precedes it).
+  function closeMenu() {
+    const owner = ref.current?.closest("details");
+    closeSubmenu();
+    if (!owner) return;
+    owner.open = false;
+    owner.querySelector<HTMLElement>("summary")?.focus();
+  }
+
   function handleKeyDown(e: KeyboardEvent<HTMLDivElement>) {
     if (e.altKey || e.ctrlKey || e.metaKey || !(e.target instanceof Element)) return;
     const item = e.target.closest<HTMLElement>(ITEM);
-    const level = item?.closest<HTMLElement>(MENU);
-    if (!item || !level) return;
+    // Escape also answers from a control inside a submenu that is not an entry (a report's Close).
+    const level = (item ?? (e.key === "Escape" ? e.target : null))?.closest<HTMLElement>(MENU);
+    if (e.key === "Tab") {
+      if (item) closeMenu();
+      return;
+    }
+    if (!level) return;
     const submenuId = level.dataset.fileSubmenuPanel;
     const move = (pick: (items: HTMLElement[], at: number) => HTMLElement | undefined) => {
+      if (!item) return;
       const items = itemsOf(level);
-      pick(items, items.indexOf(item))?.focus();
+      const target = pick(items, items.indexOf(item));
+      target?.focus();
+      if (target && ref.current) syncRoving(ref.current, target);
       e.preventDefault();
     };
     switch (e.key) {
@@ -136,7 +224,7 @@ export function FileMenuContent({ children, onClick }: FileMenuContentProps) {
       case "Home": return move((items) => items[0]);
       case "End": return move((items) => items[items.length - 1]);
       case "ArrowRight": {
-        const id = item.dataset.fileSubmenuTrigger;
+        const id = item?.dataset.fileSubmenuTrigger;
         if (!id) return;
         e.preventDefault();
         openSubmenu(id, "key");
@@ -147,7 +235,7 @@ export function FileMenuContent({ children, onClick }: FileMenuContentProps) {
         // Innermost first: a submenu answers before the menu around it does. Escape on the parent
         // row of an open submenu (focus never entered it, say because every item is disabled)
         // closes that submenu too.
-        const parentOfOpen = e.key === "Escape" && item.dataset.fileSubmenuTrigger === openRef.current?.id;
+        const parentOfOpen = e.key === "Escape" && item !== null && item.dataset.fileSubmenuTrigger === openRef.current?.id;
         const target = submenuId ?? (parentOfOpen ? item.dataset.fileSubmenuTrigger : undefined);
         if (!target) return;
         e.preventDefault();
@@ -157,6 +245,10 @@ export function FileMenuContent({ children, onClick }: FileMenuContentProps) {
         return;
       }
     }
+  }
+
+  function handleFocus(e: FocusEvent<HTMLDivElement>) {
+    if (ref.current && e.target instanceof Element && e.target.matches(ITEM)) syncRoving(ref.current, e.target);
   }
 
   function handlePointerOver(e: PointerEvent<HTMLDivElement>) {
@@ -193,6 +285,7 @@ export function FileMenuContent({ children, onClick }: FileMenuContentProps) {
         onKeyDown={handleKeyDown}
         onPointerOver={handlePointerOver}
         onPointerLeave={(e) => { if (e.pointerType === "mouse") scheduleClose(); }}
+        onFocus={handleFocus}
         onBlur={handleBlur}
       >
         {children}
@@ -253,12 +346,33 @@ export function FileSubmenu({ id, label, children }: FileSubmenuProps) {
   const isOpen = menu.open?.id === id;
   const source = isOpen ? menu.open!.source : null;
 
+  // Placement runs on open, on window resize and whenever the panel's own size changes: the
+  // comparison report arrives after the panel is open and can push it past an edge.
   useLayoutEffect(() => {
-    if (!isOpen || !panel.current || !wrapper.current) return;
-    const place = () => placePanel(panel.current!, wrapper.current!);
+    const el = panel.current;
+    const anchor = wrapper.current;
+    if (!isOpen || !el || !anchor) return;
+    const sizeOf = () => { const box = el.getBoundingClientRect(); return `${box.width}x${box.height}`; };
+    let placedSize = "";
+    const place = () => { placePanel(el, anchor); placedSize = sizeOf(); };
     place();
     window.addEventListener("resize", place);
-    return () => window.removeEventListener("resize", place);
+    // Placing resizes the panel itself (width clamp, shift); only a size we did not place re-places.
+    // The re-placement waits for the next frame: changing the observed element inside the observer
+    // callback makes the browser report an undelivered-notifications loop.
+    let frame = 0;
+    const observer = typeof ResizeObserver === "undefined"
+      ? null
+      : new ResizeObserver(() => {
+        cancelAnimationFrame(frame);
+        frame = requestAnimationFrame(() => { if (sizeOf() !== placedSize) place(); });
+      });
+    observer?.observe(el);
+    return () => {
+      window.removeEventListener("resize", place);
+      cancelAnimationFrame(frame);
+      observer?.disconnect();
+    };
   }, [isOpen]);
 
   // Opening by keyboard moves focus into the panel; opening by pointer leaves it where it is.
@@ -281,7 +395,7 @@ export function FileSubmenu({ id, label, children }: FileSubmenuProps) {
       <button
         id={triggerId}
         type="button"
-        role="menuitem"
+        {...ITEM_PROPS}
         className="file-submenu-trigger"
         data-file-submenu-trigger={id}
         // `App` closes the menu on any button activation that reaches its container; opening a

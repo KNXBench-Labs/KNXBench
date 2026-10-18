@@ -7,7 +7,7 @@ import * as api from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { DeviceDetail } from "./bindings/DeviceDetail";
 import type { Selection } from "./selection";
-import { FileMenuContent, FileSubmenu } from "./FileMenu";
+import { FileMenuContent, FileMenuItem, FileMenuSummary, FileSubmenu } from "./FileMenu";
 import NavigationSection from "./NavigationSection";
 import ProjectExplorer from "./ProjectExplorer";
 import ProjectHistoryDialog from "./ProjectHistoryDialog";
@@ -1272,7 +1272,12 @@ function App({ manifestVersion = packageVersion, session, editorReturn = false }
     if (!activated || !e.currentTarget.contains(activated)) return;
     if (activated.closest("[data-menu-stays-open]")) return;
     const menu = fileMenuRef.current;
-    if (menu) menu.open = false;
+    if (!menu) return;
+    menu.open = false;
+    // Focus would otherwise fall to <body> when the activated entry hides with the menu. Resting on
+    // the File control before the action's dialog mounts gives every dialog (App- or child-owned)
+    // a visible element to hand focus back to when it closes.
+    menu.querySelector<HTMLElement>("summary")?.focus();
   }
 
   // F4. The server owns the clean project snapshot. Undo availability stays
@@ -1480,20 +1485,20 @@ function App({ manifestVersion = packageVersion, session, editorReturn = false }
       <header className="workbench-toolbar">
         <a className="workbench-brand" href="#" onClick={(e) => { e.preventDefault(); setView("overview"); setLogOpen(false); setMonitorOpen(false); }}><img className="workbench-logo" src={brandMark} width="44" height="34" alt="" draggable={false} /><strong>KNXBench</strong></a>
         <details ref={fileMenuRef} className="file-menu" onKeyDown={(e) => { if (e.key === "Escape") { e.currentTarget.open = false; e.currentTarget.querySelector("summary")?.focus(); } }}>
-          <summary>{t("workbench.file")} <span aria-hidden="true">⌄</span></summary>
+          <FileMenuSummary>{t("workbench.file")} <span aria-hidden="true">⌄</span></FileMenuSummary>
           <FileMenuContent onClick={handleFileMenuActivation}>
       {/* UI-03: frequent project actions stay on the first level; the three groups that used to
           be headed sections fold into submenus. Items are the same buttons with the same handlers. */}
-      <button onClick={startNewProject}>{t("toolbar.newProject")}</button>
-      <button onClick={pickProject} disabled={loading}>{t("toolbar.openProject")}</button>
-      <button onClick={openNativeProject} disabled={loading}>{t("toolbar.openNativeProject")}</button>
-      <button onClick={saveProjectAs} disabled={!tree}>
+      <FileMenuItem onClick={startNewProject}>{t("toolbar.newProject")}</FileMenuItem>
+      <FileMenuItem onClick={pickProject} disabled={loading}>{t("toolbar.openProject")}</FileMenuItem>
+      <FileMenuItem onClick={openNativeProject} disabled={loading}>{t("toolbar.openNativeProject")}</FileMenuItem>
+      <FileMenuItem onClick={saveProjectAs} disabled={!tree}>
         {t("toolbar.saveAs")}
-      </button>
+      </FileMenuItem>
       <div className="file-menu-separator" role="separator" />
       <FileSubmenu id="exchange" label={t("fileMenu.exchange")}>
       {!isTauri() && (
-        <button onClick={exportProject} disabled={!tree}>{t("toolbar.exportProject")}</button>
+        <FileMenuItem onClick={exportProject} disabled={!tree}>{t("toolbar.exportProject")}</FileMenuItem>
       )}
       <SelectiveImportButton tree={tree} scope={loadKey} onTreeUpdate={handleTreeUpdate} />
       <GroupAddressCsvButtons
@@ -1511,16 +1516,16 @@ function App({ manifestVersion = packageVersion, session, editorReturn = false }
       />
       </FileSubmenu>
       <FileSubmenu id="history" label={t("fileMenu.history")}>
-      <button onClick={openProjectHistory} disabled={!tree || loading}>{t("projectHistory.title")}</button>
+      <FileMenuItem onClick={openProjectHistory} disabled={!tree || loading}>{t("projectHistory.title")}</FileMenuItem>
       <ProjectDiffPanel tree={tree} onError={reportError} onClearErrors={clearErrors} />
       </FileSubmenu>
       <FileSubmenu id="help" label={t("fileMenu.help")}>
       <DebugReportButton onSummary={pushFun} onError={reportError} onClearErrors={clearErrors} />
       <ContributionButton />
       <UniversalSupportButton project={tree} />
-      <button onClick={guide.show}>{t("command.showIntroduction")}</button>
-      {achievementsEnabled && <button onClick={() => setAchievementsOpen(true)}>{t("achievements.command")}</button>}
-      <button onClick={() => setAboutOpen(true)}>{t("toolbar.about")}</button>
+      <FileMenuItem onClick={guide.show}>{t("command.showIntroduction")}</FileMenuItem>
+      {achievementsEnabled && <FileMenuItem onClick={() => setAchievementsOpen(true)}>{t("achievements.command")}</FileMenuItem>}
+      <FileMenuItem onClick={() => setAboutOpen(true)}>{t("toolbar.about")}</FileMenuItem>
       </FileSubmenu>
       {(session?.required === true || canQuit()) && <div className="file-menu-separator" role="separator" />}
       {/* ADR-0026: only where a session exists to end. On the desktop shell
@@ -1528,14 +1533,14 @@ function App({ manifestVersion = packageVersion, session, editorReturn = false }
           false and a logout button would be an offer to leave a room with
           no door. */}
       {session?.required === true && (
-        <button className="file-menu-logout" onClick={session.logout}>
+        <FileMenuItem className="file-menu-logout" onClick={session.logout}>
           {t("toolbar.logout")}
-        </button>
+        </FileMenuItem>
       )}
       {/* F4: present only in the desktop shell. A browser tab cannot close
           itself, so in the web build this item would be a button that
           does nothing — see `quit.ts`. */}
-      {canQuit() && <button className="file-menu-quit" onClick={quitRequested}>{t("toolbar.quit")}</button>}
+      {canQuit() && <FileMenuItem className="file-menu-quit" onClick={quitRequested}>{t("toolbar.quit")}</FileMenuItem>}
 
           </FileMenuContent>
         </details>

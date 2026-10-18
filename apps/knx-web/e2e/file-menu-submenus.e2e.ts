@@ -4,13 +4,15 @@ import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
 import { openFileSubmenu } from "./file-menu";
+import { HISTORY_FIXTURE } from "../src/projectHistory.fixture";
+import { admitProjectHistory } from "../src/projectHistory";
 
 const THEMES = ["porcelain", "graphite", "cupertino", "lcars", "user-modern-retro-green-crt"] as const;
 type Catalogue = { readonly [K in keyof typeof en]: string };
 const TRIGGERS = ["exchange", "history", "help"] as const;
 
-async function serve(page: Page, { theme = "porcelain", motionLevel = "standard", language = "en" }:
-  { theme?: string; motionLevel?: string; language?: "en" | "de" } = {}) {
+async function serve(page: Page, { theme = "porcelain", motionLevel = "standard", language = "en", sessionRequired = false }:
+  { theme?: string; motionLevel?: string; language?: "en" | "de"; sessionRequired?: boolean } = {}) {
   const unexpected: string[] = [];
   await page.route("https://api.github.com/**", (route) => { unexpected.push(route.request().url()); return route.abort(); });
   await page.route("**/api/**", async (route) => {
@@ -19,7 +21,7 @@ async function serve(page: Page, { theme = "porcelain", motionLevel = "standard"
     const ok = (body: unknown) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
     const achievements = achievementsFixtureAnswer(method, path);
     if (achievements !== undefined) return ok(achievements);
-    if (path === "/api/auth/status") return ok({ required: false, authenticated: true });
+    if (path === "/api/auth/status") return ok({ required: sessionRequired, authenticated: true });
     if (path === "/api/settings" && method === "GET") return ok({ schemaVersion: 1, status: "ok", settings: {
       uiLanguage: language, theme, motionLevel, releaseChecksEnabled: false, achievementsEnabled: "false",
       onboardingGuide: { seenStage: "alpha", version: "0.1.0-alpha.14" } } });
@@ -297,4 +299,196 @@ test.describe("File submenus", () => {
       await viewportFit(page, surface);
     });
   }
+});
+
+/** An open fictional project with a project history and a comparison route; anything else is recorded. */
+async function serveProject(page: Page, { compareAdded = 0 }: { compareAdded?: number } = {}) {
+  const unexpected: string[] = [];
+  const history = admitProjectHistory(structuredClone(HISTORY_FIXTURE));
+  const emptyTable = { added: [], removed: [], changed: [], ambiguous: [] };
+  const added = Array.from({ length: compareAdded }, (_, i) => [
+    { etsId: null, address: `1/1/${i}` },
+    { name: `Fictional group address with a deliberately long descriptive name number ${i}`, central: false, unfiltered: false, range: null },
+  ]);
+  const report = { inputKind: "knxdb", importReport: null, importDiagnostics: [], infoChanges: [], installations: [
+    { id: 0, status: "matched", fieldChanges: [], areas: emptyTable, lines: emptyTable, devices: emptyTable, groupRanges: emptyTable,
+      groupAddresses: { ...emptyTable, added }, buildings: emptyTable, functions: emptyTable }] };
+  await page.route("https://api.github.com/**", (route) => { unexpected.push(route.request().url()); return route.abort(); });
+  await page.route("**/api/**", async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    const method = route.request().method();
+    const ok = (body: unknown) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
+    const achievements = achievementsFixtureAnswer(method, path);
+    if (achievements !== undefined) return ok(achievements);
+    if (path === "/api/auth/status") return ok({ required: false, authenticated: true });
+    if (path === "/api/settings" && method === "GET") return ok({ conditionalPatchVersion: 1, schemaVersion: 1, status: "ok", settings: {
+      uiLanguage: "en", theme: "porcelain", motionLevel: "off", releaseChecksEnabled: false, achievementsEnabled: "false",
+      onboardingGuide: { seenStage: "alpha", version: "0.1.0-alpha.14" } } });
+    if (path === "/api/settings" && method === "PUT") return ok({ conditionalPatchVersion: 1, schemaVersion: 1, status: "ok", settings: route.request().postDataJSON().settings });
+    if (path === "/api/version") return ok({ version: "0.1.0-alpha.14" });
+    if (path === "/api/project" && method === "GET") return ok(history.project);
+    if (path === "/api/project/load-progress") return ok(null);
+    if (path === "/api/project/history" && method === "GET") return ok(history);
+    if (path === "/api/project/diff" && method === "POST") return ok(report);
+    if (path === "/api/fs/list") return ok([{ name: "compare-fictional.knxdb", is_dir: false }]);
+    if (path === "/api/bus/discover" && method === "POST") return ok({ interfaces: [] });
+    if (method === "GET" && ["/api/product-languages", "/api/catalog/manufacturers", "/api/catalog/items"].includes(path)) return ok([]);
+    unexpected.push(`${method} ${path}`);
+    return route.fulfill({ status: 404, contentType: "application/json", body: '{"error":"file-menu project fixture only"}' });
+  });
+  return unexpected;
+}
+
+const fileControl = (page: Page) => page.locator(".file-menu > summary");
+
+test.describe("File menu as a WAI-ARIA menu button", () => {
+  test.beforeEach(async ({ page }) => { await page.setViewportSize({ width: 1440, height: 900 }); });
+
+  test("the File control announces its popup and state, and the open menu has one tab stop per level", async ({ page }) => {
+    await serveProject(page);
+    await page.goto("/?view=editor");
+    await expect(fileControl(page)).toHaveAttribute("aria-haspopup", "menu");
+    await expect(fileControl(page)).toHaveAttribute("aria-expanded", "false");
+    await openFile(page);
+    await expect(fileControl(page)).toHaveAttribute("aria-expanded", "true");
+    const stops = await page.evaluate(() => [...document.querySelectorAll('.file-menu [role="menu"]')].map((level) =>
+      [...level.querySelectorAll<HTMLElement>("[data-file-menu-item]")]
+        .filter((el) => el.closest('[role="menu"]') === level && el.tabIndex === 0).length));
+    expect(stops).toEqual([1, 1, 1, 1]);
+  });
+
+  test("ArrowDown on File opens the menu onto its first entry; ArrowUp onto its last", async ({ page }) => {
+    await serve(page);
+    await page.goto("/");
+    const items = page.locator(".file-menu-content > [data-file-menu-item]:not([disabled])");
+    await fileControl(page).focus();
+    await page.keyboard.press("ArrowDown");
+    await expect(page.locator(".file-menu")).toHaveJSProperty("open", true);
+    await expect(items.first()).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(fileControl(page)).toBeFocused();
+    await page.keyboard.press("ArrowUp");
+    // The last enabled entry of the first level is the Help row (a submenu trigger).
+    await expect(trigger(page, "help")).toBeFocused();
+  });
+
+  test("Enter on File opens the menu with focus on its first entry", async ({ page }) => {
+    await serve(page);
+    await page.goto("/");
+    await fileControl(page).focus();
+    await page.keyboard.press("Enter");
+    await expect(page.locator(".file-menu")).toHaveJSProperty("open", true);
+    await expect(page.locator(".file-menu-content > [data-file-menu-item]:not([disabled])").first()).toBeFocused();
+  });
+
+  test("Tab and Shift+Tab close the whole menu, from the first level and from a submenu, and move on from File", async ({ page }) => {
+    await serve(page);
+    await page.goto("/");
+    // Natural Tab order from File: what follows it in the document, never something inside the closed menu.
+    const followsFile = () => page.evaluate(() => {
+      const file = document.querySelector(".file-menu > summary")!;
+      const active = document.activeElement!;
+      return !document.querySelector(".file-menu")!.contains(active)
+        && Boolean(file.compareDocumentPosition(active) & Node.DOCUMENT_POSITION_FOLLOWING);
+    });
+    await fileControl(page).focus();
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("Tab");
+    await expect(page.locator(".file-menu")).toHaveJSProperty("open", false);
+    expect(await followsFile()).toBe(true);
+
+    await fileControl(page).focus();
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("Shift+Tab");
+    await expect(page.locator(".file-menu")).toHaveJSProperty("open", false);
+    await expect(fileControl(page)).not.toBeFocused();
+    await expect(page.locator(".workbench-brand")).toBeFocused();
+
+    await fileControl(page).focus();
+    await page.keyboard.press("ArrowDown");
+    await trigger(page, "help").focus();
+    await page.keyboard.press("ArrowRight");
+    await expect(panel(page, "help")).toBeVisible();
+    await page.keyboard.press("Tab");
+    await expect(page.locator(".file-menu")).toHaveJSProperty("open", false);
+    await expect(panel(page, "help")).toBeHidden();
+    expect(await followsFile()).toBe(true);
+  });
+});
+
+test.describe("File menu focus restoration", () => {
+  test.beforeEach(async ({ page }) => { await page.setViewportSize({ width: 1440, height: 900 }); });
+
+  const dialogs = [
+    { name: "About", submenu: "help", entry: en["toolbar.about"], title: en["about.title"], close: en["about.close"] },
+    { name: "Project history", submenu: "history", entry: en["projectHistory.title"], title: en["projectHistory.title"], close: en["projectHistory.close"] },
+    { name: "Diagnostic export", submenu: "help", entry: en["diagnostics.title"], title: en["diagnostics.title"], close: en["support.close"] },
+  ] as const;
+
+  for (const dialog of dialogs) for (const how of ["Escape", "close button"] as const) {
+    test(`${dialog.name} opened from its submenu returns focus to File on ${how}`, async ({ page }) => {
+      const unexpected = await serveProject(page);
+      await page.goto("/?view=editor");
+      await openFile(page);
+      await openFileSubmenu(page, dialog.submenu);
+      await page.getByRole("menuitem", { name: dialog.entry, exact: true }).click();
+      const opened = page.getByRole("dialog", { name: dialog.title, exact: true });
+      await expect(opened).toBeVisible();
+      if (how === "Escape") await page.keyboard.press("Escape");
+      else await opened.getByRole("button", { name: dialog.close, exact: true }).click();
+      await expect(opened).toBeHidden();
+      await expect(fileControl(page)).toBeFocused();
+      expect(unexpected).toEqual([]);
+    });
+  }
+});
+
+test.describe("File menu placement under change", () => {
+  test("a comparison report that grows the History panel near the edges stays inside the viewport", async ({ page }) => {
+    const unexpected = await serveProject(page, { compareAdded: 60 });
+    await page.setViewportSize({ width: 800, height: 640 });
+    await page.goto("/?view=editor");
+    await openFile(page);
+    await openFileSubmenu(page, "history");
+    await viewportFit(page, panel(page, "history"));
+    await page.getByRole("menuitem", { name: en["projectDiff.compareButton"], exact: true }).click();
+    // Keyboard, not pointer: a pointer press in the web picker closes the menu (a desktop native
+    // dialog does not), and this test needs the report to arrive while the panel is open.
+    await page.getByRole("button", { name: "compare-fictional.knxdb", exact: true }).focus();
+    await page.keyboard.press("Enter");
+    const report = panel(page, "history").locator(".project-diff-panel");
+    await expect(report).toBeVisible();
+    await expect(panel(page, "history")).toBeVisible();
+    await viewportFit(page, panel(page, "history"));
+    // Expanding the entity tables grows the open panel further; it must still fit afterwards.
+    const before = await box(panel(page, "history"));
+    const toggles = report.locator(".project-diff-toggle");
+    for (let i = 0; i < await toggles.count(); i += 1) await toggles.nth(i).click();
+    await expect.poll(async () => (await box(panel(page, "history"))).height).toBeGreaterThan(before.height);
+    await viewportFit(page, panel(page, "history"));
+    await expect(report).toBeVisible();
+    expect(unexpected).toEqual([]);
+  });
+
+  test("a short, wide viewport scrolls the menu so the last row (Logout) stays reachable", async ({ page }) => {
+    await serve(page, { sessionRequired: true });
+    await page.setViewportSize({ width: 1440, height: 500 });
+    await page.goto("/");
+    await openFile(page);
+    const content = page.locator(".file-menu-content");
+    const logout = page.locator(".file-menu-logout");
+    await expect(logout).toHaveCount(1);
+    await openFileSubmenu(page, "help");
+    // Flyouts would be clipped by the scrolling menu, so the submenu expands inline.
+    await expect(panel(page, "help")).toHaveCSS("position", "static");
+    await expect(content).toHaveCSS("overflow-y", "auto");
+    expect(await content.evaluate((n) => n.scrollHeight > n.clientHeight), "the open menu is taller than its box").toBe(true);
+    await viewportFit(page, content);
+    await logout.scrollIntoViewIfNeeded();
+    const row = await box(logout);
+    const menu = await box(content);
+    expect(row.y, "Logout inside the menu box").toBeGreaterThanOrEqual(menu.y - 0.5);
+    expect(row.y + row.height, "Logout inside the menu box").toBeLessThanOrEqual(menu.y + menu.height + 0.5);
+    expect(row.y + row.height, "Logout inside the viewport").toBeLessThanOrEqual(500);
+  });
 });

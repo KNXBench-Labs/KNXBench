@@ -224,9 +224,9 @@ fn simulator(plan: &Plan) -> knx_net::commissioning::simulator::SimulatedDevice 
             d
         }
         Plan::Memory(plan) => {
-            let expected = plan.base.expected;
+            let expected = plan.base().expected;
             let d = SimulatedDevice::with_config_at(
-                plan.base.target.address(),
+                plan.base().target.address(),
                 SimulatorConfig {
                     mask_version: expected.mask.unwrap_or_default(),
                     ..Default::default()
@@ -237,37 +237,37 @@ fn simulator(plan: &Plan) -> knx_net::commissioning::simulator::SimulatedDevice 
                 12,
                 &expected.manufacturer.unwrap_or_default().to_be_bytes(),
             );
-            let hardware = &plan.profile.hardware_type;
+            let hardware = plan.profile().hardware_type();
             d.preset_property(0, 78, &hardware[..hardware.len().min(6)]);
             d
         }
     }
 }
 fn print_memory_preview(plan: &service::MemoryPrepared, via: &str) {
-    let profile = &plan.profile;
+    let profile = plan.profile();
     println!(
         "Profile {} for device {} via {via}.\nRead only. Nothing will be written: no programming, authorisation/key, Verify Mode, restart, memory or property write.",
         service::MEMORY_PROFILE,
-        plan.base.target.address()
+        plan.base().target.address()
     );
     println!(
         "Application {}. Required before any memory read: mask {:04X}h, manufacturer {:04X}h, PID78 matching {} (procedure position {}).",
-        profile.program_id,
-        plan.base.expected.mask.unwrap_or_default(),
-        plan.base.expected.manufacturer.unwrap_or_default(),
+        profile.program_id(),
+        plan.base().expected.mask.unwrap_or_default(),
+        plan.base().expected.manufacturer.unwrap_or_default(),
         profile
-            .hardware_type
+            .hardware_type()
             .iter()
             .map(|b| format!("{b:02x}"))
             .collect::<String>(),
-        profile.compare_position
+        profile.compare_position()
     );
     println!("Ranges (source-declared candidate locations, not proven runtime addresses):");
     for (i, (range, position)) in profile
-        .ranges
+        .ranges()
         .ranges()
         .iter()
-        .zip(&profile.range_positions)
+        .zip(profile.range_positions())
         .enumerate()
     {
         println!(
@@ -279,10 +279,10 @@ fn print_memory_preview(plan: &service::MemoryPrepared, via: &str) {
     }
     println!(
         "Total: {} octets in {} A_Memory_Read requests of at most {} octets.\nNot a backup and not a restore basis. The archive contains device configuration: keep it private.\nLocal selection reference: {}",
-        profile.ranges.total_octets(),
-        profile.ranges.chunks().len(),
+        profile.ranges().total_octets(),
+        profile.ranges().chunks().len(),
         knx_core::commissioning::declared_memory::STANDARD_FRAME_CHUNK_OCTETS,
-        plan.base.reference
+        plan.base().reference
     );
 }
 fn synthetic_project() -> Project {

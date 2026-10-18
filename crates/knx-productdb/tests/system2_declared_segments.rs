@@ -81,10 +81,10 @@ fn every_abs_segment_and_the_pid78_comparison_are_collected_in_source_order() {
     let source = code();
     let before = source.clone();
     let profile = derive_declared_segments(&source).expect("exact System-2 shape");
-    assert_eq!(profile.program_id, "M-0000_A-0001-01-0000");
-    assert_eq!(profile.mask, 0x0025);
+    assert_eq!(profile.program_id(), "M-0000_A-0001-01-0000");
+    assert_eq!(profile.mask(), 0x0025);
     assert_eq!(
-        profile.ranges.ranges(),
+        profile.ranges().ranges(),
         [
             DeclaredRange {
                 address: 0x0400,
@@ -96,10 +96,10 @@ fn every_abs_segment_and_the_pid78_comparison_are_collected_in_source_order() {
             }
         ]
     );
-    assert_eq!(profile.range_positions, [4, 5]);
-    assert_eq!(profile.compare_position, 1);
-    assert_eq!(profile.hardware_type, [0, 1, 0, 0, 0, 0x5B, 0, 0]);
-    assert_eq!(profile.ranges.total_octets(), 94);
+    assert_eq!(profile.range_positions(), [4, 5]);
+    assert_eq!(profile.compare_position(), 1);
+    assert_eq!(profile.hardware_type(), [0, 1, 0, 0, 0, 0x5B, 0, 0]);
+    assert_eq!(profile.ranges().total_octets(), 94);
     assert_eq!(source, before, "derivation never rewrites the source");
 }
 

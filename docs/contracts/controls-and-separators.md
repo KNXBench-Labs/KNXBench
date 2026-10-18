@@ -198,6 +198,9 @@ nothing else.
   and covered by `e2e/controls-and-separators.e2e.ts` and
   `e2e/workbench-splitters.e2e.ts`.
 
+Table-column handles reuse the same separator paint; their interaction and
+coverage are specified in [Table column widths](table-column-widths.md).
+
 ## Value source labels
 
 The routine **Source: device instance / Quelle: Geräteinstanz** badge is no

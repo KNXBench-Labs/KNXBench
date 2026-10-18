@@ -1,5 +1,6 @@
 /** Goal B7: the naming-recipe dialog binds, retires and confirms exactly the shown preview. */
 // @vitest-environment happy-dom
+import { tableColumnSmoke } from "../../tableColumnSmoke.fixture";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -180,4 +181,8 @@ describe("NameRecipeDialog", () => {
     }
     expect(de["nameRecipe.title.one"].replace("{count}", "1")).toBe("1 Gruppenadresse umbenennen");
   });
+});
+
+tableColumnSmoke([["name-recipe", 3]], async () => {
+  await render(); await type("[data-recipe-prefix]", "EG "); await preview(); return { host: panel() };
 });

@@ -17,6 +17,7 @@ export interface GroupAddressWorkspaceViewProps {
   onItemClick: ItemClickHandler;
   limit: number;
   onLimit: (limit: number) => void;
+  showColumnReset?: boolean;
 }
 
 export function groupAddressGroupLabel(t: Translate, group: GroupAddressPresentationGroup): string {

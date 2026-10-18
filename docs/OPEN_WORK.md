@@ -409,6 +409,24 @@ independent fit-budget regression evidence). Decisions and per-package worker
 models are in the
 [goal file](goals/ui-feedback-2026-10-18.md#owner-go-and-decisions-18-october-2026-later-the-same-day).
 
+UI-05 local candidate: all 18 native table surfaces use the width adapter. The
+address/object matrix's select/address/name columns resize; only its per-object
+columns still need a width policy that avoids project content in preference keys. [Coverage and boundary](contracts/table-column-widths.md).
+
+Open follow-ups found by the UISET review (18 October 2026), outside the table fix:
+
+- **Pane drags ignore application zoom.** Navigation and inspector pane
+  resizing adds the raw pointer delta to a layout-pixel width, so at 150% the
+  pane edge moves 1.5 times the pointer distance (0.8 times at 80%). Same
+  normalisation as the tables (`appUiScale()`), with a real-drag browser case
+  per scale. [KL-130](limitations/KL-130-ZOOM-application-zoom.md#update-18-october-2026-resizable-tables-under-application-zoom).
+- **Zoomed table cases bypass the Settings path.** The table browser fixture
+  renders the tables without `App`, so the 80%/150% cases set
+  `--app-ui-scale` on the root directly. The `uiScale` setting, the `App`
+  effect that writes the property and the narrow-window inspector stacking
+  math (`viewportWidth / uiScale`) are not exercised together with the tables.
+  One case through the real app (Settings at 150% → tables) would close this.
+
 ## Prepared goal packages (17 October 2026)
 
 The open work of 17 October is cut into

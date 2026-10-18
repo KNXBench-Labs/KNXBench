@@ -164,8 +164,9 @@ export default function ComObjectTable({ objects, editor }: { objects: ComObject
     </div>
     {removed > 0 && <p className="com-object-removal" role="status">{t("comTable.removed", { count: removed })}</p>}
     <p className="com-table-count" role="status">{t("comTable.count", { shown: view.objects.length, total: objects.length })}</p>
+      {/* Keep DPT/master-text words readable when fitting; explicit resizing retains the lower minimum. */}
       <ResizableTable scrollClassName="workspace-table-wrap com-table-scroll" scrollLabel={t("comTable.table")} tableId="communication-objects"
-        columns={columns.map(c => ({ id: c.column, width: c.column === "number" ? 120 : (flat ? 114 : 136), min: c.column === "number" ? 64 : 100, fitMin: c.column === "number" ? 120 : undefined }))} className="workspace-table com-table"><thead><tr>{columns.map(c => <th scope="col" key={c.column} data-column={c.column}
+        columns={columns.map(c => ({ id: c.column, width: c.column === "number" ? 120 : (flat ? 114 : 136), min: c.column === "number" ? 64 : 100, fitMin: c.column === "number" ? 120 : c.column === "dpt" ? 114 : undefined }))} className="workspace-table com-table"><thead><tr>{columns.map(c => <th scope="col" key={c.column} data-column={c.column}
         aria-sort={sort.column === c.column ? sort.descending ? "descending" : "ascending" : "none"}>
         <button type="button" onClick={() => setSort({ column: c.column, descending: sort.column === c.column && !sort.descending })}><span className="table-column-label">{t(c.label)}</span>
           {sort.column === c.column && <span aria-hidden="true">{sort.descending ? " ↓" : " ↑"}</span>}</button></th>)}</tr></thead><tbody>{rows}</tbody></ResizableTable>

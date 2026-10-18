@@ -225,3 +225,29 @@ tableColumnSmoke([["communication-objects", 6]], async () => { const v = await r
 tableColumnSmoke([["communication-objects", 7]], async () => {
   const v = await render([object(1)]); await v.click(v.button("All objects")); return v;
 });
+
+it.each(["By channel", "All objects"])("%s keeps a content-safe DPT fit floor while allowing manual shrinking", async view => {
+  const actEnvironment = globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean };
+  const previousEnvironment = actEnvironment.IS_REACT_ACT_ENVIRONMENT;
+  actEnvironment.IS_REACT_ACT_ENVIRONMENT = true;
+  const pane = vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(300);
+  window.localStorage.clear();
+  const v = await render([object(1, { program_dpt: "DPST-9-1", dpt_text: "Temperature" })]);
+  try {
+    await v.click(v.button(view));
+    const dptColumn = () => v.host.querySelector<HTMLTableColElement>("colgroup col:nth-child(4)")!;
+    const dptHandle = v.host.querySelector<HTMLElement>('th[data-column="dpt"] [role="separator"]')!;
+    expect(parseFloat(dptColumn().style.width)).toBeGreaterThanOrEqual(114);
+    expect(parseFloat(v.host.querySelector<HTMLTableElement>(".com-table")!.style.width)).toBeGreaterThan(300);
+    await act(async () => dptHandle.dispatchEvent(new KeyboardEvent("keydown", { key: "Home", bubbles: true })));
+    expect(JSON.parse(window.localStorage.getItem("knxbench:table-column-widths:v1:communication-objects")!).dpt).toBe(100);
+    expect(parseFloat(dptColumn().style.width)).toBeLessThan(114);
+    await act(async () => dptHandle.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })));
+    expect(parseFloat(dptColumn().style.width)).toBeGreaterThanOrEqual(114);
+  } finally {
+    await v.cleanup();
+    pane.mockRestore();
+    actEnvironment.IS_REACT_ACT_ENVIRONMENT = previousEnvironment;
+    window.localStorage.clear();
+  }
+});

@@ -19,7 +19,10 @@ retain pane fitting. Header stacking is isolated per scroll container. Separator
 announce measured pixels; active drags commit on unmount and ignore resize keys.
 Sort indicators remain outside clamped heading labels. The matrix owns its fixed
 object width. The [contract](contracts/table-column-widths.md) records the accepted
-one-frame pane-fit settling behaviour.
+one-frame pane-fit settling behaviour. A gate regression fix gives grouped and
+flat communication-object DPT columns a 114 px fit floor while preserving their
+100 px manual minimum; narrow panes scroll locally. The unchanged EN/DE
+device-editor layout spec checks intact DPT/master-text words at 360 px.
 
 ## UI-05: browser-local table column widths (18 October 2026)
 

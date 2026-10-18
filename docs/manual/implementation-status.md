@@ -828,8 +828,11 @@ historical test results or close another owner's ledger rows.
 
 All 18 native data-table surfaces use the pointer/keyboard width adapter and
 column/table reset, with validated width preferences retained in this browser.
-Columns can shrink below their defaults. Automatic fitting keeps a readable DPT
-column floor; narrower panes scroll within the table. Resize handles announce the rendered
+Columns can shrink below their defaults. Automatic fitting measures header/cell
+word floors for every adjustable column, capped at 320 px; narrower panes scroll
+within the table. Explicit shrinking can go below those floors. Narrow browser
+proof covers grouped/flat object words and status, a long German address DPT and
+monitor decoded text; wide fitting proof covers demo/fixture content. Resize handles announce the rendered
 width, and header sort indicators stay visible beside clamped labels. The matrix's
 select/address/name columns resize; its per-object columns remain fixed; lists, trees and manufacturer parameter
 grids are outside scope. See the [coverage checklist](../contracts/table-column-widths.md).

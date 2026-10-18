@@ -3,6 +3,7 @@ import { useState } from "react";
 import { createRoot } from "react-dom/client";
 import DevicesWorkspace from "../src/DevicesWorkspace";
 import ComObjectTable from "../src/ComObjectTable";
+import type { ComObjectNode } from "../src/bindings/ComObjectNode";
 import ComparisonTable from "../src/ComparisonTable";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
 import { setSetting } from "../src/settingsStore";
@@ -12,6 +13,12 @@ import "../src/styles.css";
 import "../src/deviceComparisons.css";
 
 const params = new URLSearchParams(location.search);
+const objects: ComObjectNode[] = params.has("words") ? [{
+  id: 1, number: 123, name: "Synthetic illumination sensor", dpt: "DPST-9-4", dpt_layer: null,
+  description: null, description_layer: null, is_active: true, activation: "Undetermined", channel: null,
+  program_dpt: null, dpt_text: "Windgeschwindigkeit", function_text: "Electromagnetic measurement",
+  read: true, write: false, transmit: true, update: false, communication: true, read_on_init: false, links: [],
+}] : [];
 setSetting("uiLanguage", params.get("lang") === "de" ? "de" : "en");
 setSetting("theme", params.get("theme") ?? "porcelain");
 const tree: ProjectTree = { schema_version: 11, errors: 0, warnings: 0, can_undo: false, can_redo: false,
@@ -24,7 +31,7 @@ function Fixture() {
   return <main className="workbench" style={{ display: "block", padding: 12, maxWidth: "100%", boxSizing: "border-box" }}>
     <DevicesWorkspace tree={tree} active selection={null} multiSelection={null} onItemClick={() => setClicks(value => value + 1)} onCatalogue={() => {}} />
     <output data-row-clicks>{clicks}</output>
-    <ComObjectTable objects={[]} editor={() => null} />
+    <ComObjectTable objects={objects} editor={() => null} />
     <ComparisonTable rows={[{ kind: "raw", label: "Synthetic memory", address: 0x4000, project: "01 02 03", device: "01 02 04", reason: null }]} />
   </main>;
 }

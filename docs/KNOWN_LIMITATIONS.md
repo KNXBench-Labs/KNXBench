@@ -1299,7 +1299,7 @@ Indentation caps at depth 12; flat views stay flat. Measured channel fixes do no
 ### Communication-object table
 
 **Ledger status:** Not separately tracked.
-DPT labels and object presentation do not establish manufacturer semantics. Raw references, effective flags and missing metadata retain separate provenance.
+DPT labels do not establish manufacturer semantics. Table word floors cap at 320 px; wider tokens or explicit shrinking can split words. Wide fitting is verified with demo/fixture content only.
 [Details and history](limitations/communication-object-table.md)
 
 <a id="catalogue-crt-motion"></a>

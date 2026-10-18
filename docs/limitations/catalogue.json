@@ -2140,7 +2140,7 @@
       "number": null,
       "title": "Communication-object table",
       "topic": "UI and accessibility",
-      "summary": "DPT labels and object presentation do not establish manufacturer semantics. Raw references, effective flags and missing metadata retain separate provenance.",
+      "summary": "DPT labels do not establish manufacturer semantics. Table word floors cap at 320 px; wider tokens or explicit shrinking can split words. Wide fitting is verified with demo/fixture content only.",
       "file": "communication-object-table.md",
       "ledger_ids": [],
       "anchors": [

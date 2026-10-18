@@ -43,6 +43,11 @@ const COLUMNS: { column: DeviceSortColumn; label: MessageKey }[] = [
   { column: "com_object_count", label: "inspector.communicationObjects" },
   { column: "description", label: "devices.description" },
 ];
+const COMPACT_LABELS: Partial<Record<DeviceSortColumn, MessageKey>> = {
+  address: "devices.addressShort", programming: "devices.programmingShort", manufacturer: "devices.manufacturerShort",
+  orderNumber: "devices.orderNumberShort", topology: "devices.topologyShort", building: "devices.buildingShort",
+  com_object_count: "devices.objectsShort", description: "devices.descriptionShort",
+};
 const CHECKBOX_CLICK = { shiftKey: false, ctrlKey: true, metaKey: false, preventDefault: () => {} };
 
 export default function DevicesWorkspace({ tree, active, selection, multiSelection, onItemClick, onCatalogue }: {
@@ -113,10 +118,10 @@ export default function DevicesWorkspace({ tree, active, selection, multiSelecti
         columns={DEVICES_COLUMNS} className="workspace-table devices-table"><thead><tr>
         <th><span className="sr-only">{t("addressTable.selectColumn")}</span></th>
         {COLUMNS.map(({ column, label }) => <th key={column} aria-sort={sort.column === column ? (sort.descending ? "descending" : "ascending") : "none"}>
-          <button type="button" onClick={() => setSort({ column, descending: sort.column === column && !sort.descending })}>
-            <span className="table-column-label">{t(label)}</span>{sort.column === column && <span aria-hidden="true">{sort.descending ? " ↓" : " ↑"}</span>}
+          <button type="button" aria-label={t(label)} title={t(label)} onClick={() => setSort({ column, descending: sort.column === column && !sort.descending })}>
+            <span className="table-column-label">{t(COMPACT_LABELS[column] ?? label)}</span>{sort.column === column && <span aria-hidden="true">{sort.descending ? " ↓" : " ↑"}</span>}
           </button></th>)}
-      <th>{t("compare.column")}</th>
+      <th><span aria-label={t("compare.column")} title={t("compare.column")}>{t("compare.one")}</span></th>
       </tr></thead><tbody>{rows.map((row) => <tr key={row.id} data-rename-kind="device" data-rename-id={row.id} data-rename-value={row.name}
         onClick={(event) => {
           if (event.target instanceof Element && event.target.closest("button, input")) return;

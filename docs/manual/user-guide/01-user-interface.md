@@ -369,6 +369,17 @@ double-click restores that column's default. Escape during a drag restores its
 starting width. **Reset column widths** above
 the table restores all its defaults. Wide tables scroll within their own view.
 
+Automatic fitting reserves space for the widest header/cell word in each
+column, up to 320 pixels. A narrow pane scrolls locally when those floors do
+not fit. Exceptionally long tokens can still wrap. Keyboard/pointer changes
+adjust a saved preference relative to that fitted baseline: Home chooses the
+stored minimum, so the rendered column can be narrower than that number and
+explicit shrinking can split words.
+
+Device-table headings use compact labels such as Mfr. to keep the twelve-column
+overview usable. Hover for the full name; keyboard and assistive sort controls
+keep their full names.
+
 Widths stay in this browser across reloads; they are shared by tables of the
 same kind, regardless of project, and never change project data or undo history.
 Clearing browser storage removes them. With browser storage blocked, resizing

@@ -285,7 +285,7 @@ describe("one editing workspace", () => {
     // `flowAnimator.ts` (frames and timers through an injected scheduler) and
     // `flowMotion.ts` (reads the Motion setting and the OS preference). None
     // touches the API or project state.
-    for (const module of ["flowModel.ts", "flowLayout.ts", "flowFeed.ts", "TelegramFlowView.tsx", "flowDynamics.ts", "flowAnimator.ts", "flowMotion.ts", "FlowImageExportDialog.tsx", "flowImageCapture.ts", "flowImageExport.ts", "flowImageExportLimits.ts", "gifEncoder.ts", "ResizableTable.tsx", "useTableColumnWidths.ts"]) {
+    for (const module of ["flowModel.ts", "flowLayout.ts", "flowFeed.ts", "TelegramFlowView.tsx", "flowDynamics.ts", "flowAnimator.ts", "flowMotion.ts", "FlowImageExportDialog.tsx", "flowImageCapture.ts", "flowImageExport.ts", "flowImageExportLimits.ts", "gifEncoder.ts", "ResizableTable.tsx", "useTableColumnWidths.ts", "tableWordFloors.ts"]) {
       const moduleGraph = valueImportGraph(module);
       expect(apiCallsIn(moduleGraph)).toEqual([]);
       expect(mutatingFetchesIn(moduleGraph)).toEqual([]);
@@ -445,6 +445,7 @@ describe("one editing workspace", () => {
       "settingsDiagnostic.ts",
       "settingsStore.ts",
       "sourceReports.ts",
+      "tableWordFloors.ts", // Computed-font DOM measurement only; checked for API/fetch above.
       "treeUtils.ts",
       "uiLanguage.ts",
       "useTableColumnWidths.ts", // Validated localStorage preferences, no project writes.

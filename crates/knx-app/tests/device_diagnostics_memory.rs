@@ -456,3 +456,223 @@ async fn memory_evidence_is_refused_unless_the_recorded_identity_admits_it() {
     ];
     assert_eq!(accepted(&original, cases), Vec::<&str>::new());
 }
+
+/// Sets chunk `index` (zero-based) of the successful fixture to `status`
+/// with `bytes` and `error`, and moves its octets in the range coverage.
+fn set_chunk(
+    m: &mut serde_json::Value,
+    index: usize,
+    status: &str,
+    bytes: &str,
+    error: Option<&str>,
+) {
+    let chunk = &mut m["chunks"][index];
+    let range = chunk["range"].as_u64().unwrap() as usize - 1;
+    let octets = chunk["requestedOctets"].as_u64().unwrap();
+    chunk["status"] = status.into();
+    chunk["bytes"] = bytes.into();
+    chunk["receivedOctets"] = (bytes.len() / 2).into();
+    chunk["error"] = error.into();
+    if status == "not-read" {
+        chunk["attemptedAt"] = serde_json::Value::Null;
+        chunk["completedAt"] = serde_json::Value::Null;
+    }
+    let coverage = &mut m["ranges"][range]["coverage"];
+    coverage["read"] = (coverage["read"].as_u64().unwrap() - octets).into();
+    let key = match status {
+        "refused-ambiguous" => "refusedAmbiguous",
+        "not-read" => "notRead",
+        other => other,
+    };
+    coverage[key] = (coverage[key].as_u64().unwrap() + octets).into();
+}
+
+#[tokio::test]
+async fn chunk_sequences_the_collector_cannot_produce_are_refused() {
+    // Fixture chunks: range 1 = chunks 0, 1, 2 (12 + 12 + 6), range 2 = chunk 3.
+    let original = bundle_export(&export().await).unwrap();
+    let cases: &[(&'static str, Edit)] = &[
+        ("a read after a refusal in the same range", |_, m| {
+            set_chunk(
+                m,
+                0,
+                "refused-ambiguous",
+                "",
+                Some("access-denied-or-memory-unavailable"),
+            );
+        }),
+        ("a read after a partial answer in the same range", |_, m| {
+            set_chunk(
+                m,
+                0,
+                "partial",
+                "0102030405060708090a0b",
+                Some("unexpected-length"),
+            );
+        }),
+        ("a partial answer without any octet", |_, m| {
+            set_chunk(m, 2, "partial", "", Some("unexpected-length"));
+        }),
+        ("reads after an error", |r, m| {
+            set_chunk(m, 1, "error", "", Some("timeout"));
+            r["stopReason"] = "timeout".into();
+        }),
+        ("an error the stop reason does not name", |r, m| {
+            set_chunk(m, 3, "error", "", Some("timeout"));
+            r["stopReason"] = "cancelled".into();
+        }),
+        ("an error without a stop reason", |_, m| {
+            set_chunk(m, 3, "error", "", Some("timeout"));
+        }),
+        ("a read after an unread chunk", |r, m| {
+            set_chunk(m, 1, "not-read", "", None);
+            r["stopReason"] = "cancelled".into();
+        }),
+        ("an unread chunk without a stop reason", |_, m| {
+            set_chunk(m, 3, "not-read", "", None);
+        }),
+        ("a stop reason with every chunk read", |r, _| {
+            r["stopReason"] = "timeout".into();
+        }),
+    ];
+    assert_eq!(accepted(&original, cases), Vec::<&str>::new());
+    // What the CLI adds after an unconfirmed tunnel teardown stays readable.
+    let unconfirmed = rehashed(&original, |r, _| {
+        r["stopReason"] = "tunnel-disconnect-unconfirmed".into();
+    });
+    read_export(&unconfirmed).expect("an unconfirmed tunnel teardown is no contradiction");
+}
+
+/// Test-only memory faults, injected between the simulator and the client.
+#[derive(Clone, Copy)]
+enum Fault {
+    None,
+    /// Answer one octet short at this address.
+    ShortAt(u16),
+    /// Drop the answer at this address.
+    SilentAt(u16),
+}
+struct Faulty {
+    device: SimulatedDevice,
+    tx: tokio::sync::broadcast::Sender<knx_net::TunnelEvent>,
+    fault: Fault,
+}
+impl Faulty {
+    fn new(device: SimulatedDevice, fault: Fault) -> Self {
+        Self {
+            device,
+            tx: tokio::sync::broadcast::channel(256).0,
+            fault,
+        }
+    }
+}
+impl knx_net::ManagementTransport for Faulty {
+    fn assigned_address(&self) -> knx_core::IndividualAddress {
+        self.device.assigned_address()
+    }
+    fn subscribe(&self) -> tokio::sync::broadcast::Receiver<knx_net::TunnelEvent> {
+        self.tx.subscribe()
+    }
+    fn target_kind(&self) -> knx_core::commissioning::mutation::TargetKind {
+        knx_core::commissioning::mutation::TargetKind::Simulator
+    }
+    async fn send_frame(
+        &self,
+        destination: knx_net::Destination,
+        tpci: knx_net::Tpci,
+        service: knx_net::ApplicationService,
+    ) -> Result<(), knx_net::BusError> {
+        let mut rx = self.device.subscribe();
+        self.device.send_frame(destination, tpci, service).await?;
+        while let Ok(mut event) = rx.try_recv() {
+            if let knx_net::TunnelEvent::Telegram(ref mut frame) = event {
+                if let knx_net::ApplicationService::MemoryResponse { address, data } =
+                    &mut frame.service
+                {
+                    match self.fault {
+                        Fault::SilentAt(at) if *address == at => continue,
+                        Fault::ShortAt(at) if *address == at => {
+                            data.pop();
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            let _ = self.tx.send(event);
+        }
+        Ok(())
+    }
+}
+
+/// Collector → bundle → create-only write → independent reread, identical.
+async fn written_and_reread(transport: &Faulty, cancel_after_first_chunk: bool) -> Export {
+    let (_dir, db) = products(PROGRAM);
+    let plan = prepare_memory(&project(), DeviceId(7), &db).unwrap();
+    let cancel = AtomicBool::new(false);
+    let export = acquire_memory(
+        transport,
+        &plan,
+        knx_net::SessionTiming {
+            response_timeout: std::time::Duration::from_millis(10),
+            connection_timeout: std::time::Duration::from_millis(10),
+            ..Default::default()
+        },
+        "synthetic-test",
+        &cancel,
+        |e| {
+            let first = &e.memory.as_ref().unwrap().chunks[0];
+            if cancel_after_first_chunk && first.completed_at.is_some() {
+                cancel.store(true, std::sync::atomic::Ordering::SeqCst);
+            }
+        },
+    )
+    .await;
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("evidence.zip");
+    write_new_export(&path, &export).unwrap();
+    assert_eq!(read_export(&std::fs::read(&path).unwrap()).unwrap(), export);
+    export
+}
+
+fn statuses(export: &Export) -> Vec<&str> {
+    let chunks = &export.memory.as_ref().unwrap().chunks;
+    chunks.iter().map(|c| c.status.as_str()).collect()
+}
+
+#[tokio::test]
+async fn real_refused_partial_interrupted_and_mismatched_acquisitions_round_trip() {
+    let refusing = SimulatedDevice::with_config(SimulatorConfig {
+        mask_version: 0x0025,
+        protected_memory: Some((0x0122, 0x0123)),
+        ..Default::default()
+    });
+    refusing.preset_property(0, 12, &[0x00, 0x01]);
+    refusing.preset_property(0, 78, &[0, 1, 0, 0, 0, 0x5B]);
+    refusing.preset_memory(0x0116, &(1..=30).collect::<Vec<u8>>());
+    refusing.preset_memory(0x3C00, &[0xEE; 12]);
+    let e = written_and_reread(&Faulty::new(refusing, Fault::None), false).await;
+    assert_eq!(
+        statuses(&e),
+        ["read", "refused-ambiguous", "not-read", "read"]
+    );
+    assert_eq!(e.report.stop_reason, None);
+
+    let e = written_and_reread(&Faulty::new(device(), Fault::ShortAt(0x0116)), false).await;
+    assert_eq!(statuses(&e), ["partial", "not-read", "not-read", "read"]);
+    assert_eq!(e.memory.as_ref().unwrap().chunks[0].received_octets, 11);
+    assert_eq!(e.report.stop_reason, None);
+
+    let e = written_and_reread(&Faulty::new(device(), Fault::SilentAt(0x0122)), false).await;
+    assert_eq!(statuses(&e), ["read", "error", "not-read", "not-read"]);
+    assert_eq!(e.report.stop_reason.as_deref(), Some("timeout"));
+
+    let e = written_and_reread(&Faulty::new(device(), Fault::None), true).await;
+    assert_eq!(statuses(&e), ["read", "not-read", "not-read", "not-read"]);
+    assert_eq!(e.report.stop_reason.as_deref(), Some("cancelled"));
+
+    let other = device();
+    other.preset_property(0, 12, &[0x00, 0x02]);
+    let e = written_and_reread(&Faulty::new(other, Fault::None), false).await;
+    assert_eq!(statuses(&e), ["not-read"; 4]);
+    assert_eq!(e.report.stop_reason.as_deref(), Some("identity-mismatch"));
+}

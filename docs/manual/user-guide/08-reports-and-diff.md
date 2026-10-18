@@ -43,9 +43,10 @@ The whole run takes about a minute, most of it spent reading this page.
 
 ### Step 1: open the export
 
-Open **File** and choose **Export diagnostic data** in the *Help & diagnostics*
-group. In the German interface this is **Datei → Diagnosedaten exportieren**,
-under *Hilfe & Diagnose*.
+Open **File**, open the *Help & diagnostics* submenu and choose **Export diagnostic
+data**. In the German interface this is **Datei → Hilfe & Diagnose →
+Diagnosedaten exportieren**. (The screenshot below predates the submenus and shows
+the entry in the older grouped list; the entry is the same.)
 
 ![The File menu with the Export diagnostic data entry in the Help & diagnostics group](../../assets/screenshots/porcelain-diagnostic-export-1-file-menu.png)
 

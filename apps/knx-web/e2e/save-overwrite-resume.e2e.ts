@@ -105,7 +105,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
 
     const saveAs = async () => {
       await page.locator(".file-menu summary").click();
-      await page.locator(".file-menu-content").getByRole("button", { name: m["toolbar.saveAs"], exact: true }).click();
+      await page.locator(".file-menu-content").getByRole("menuitem", { name: m["toolbar.saveAs"], exact: true }).click();
       const picker = page.getByRole("dialog", { name: m["fsPicker.saveAs"], exact: true });
       await picker.getByRole("button", { name: EXISTING, exact: true }).click();
       await picker.getByRole("button", { name: m["fsPicker.save"], exact: true }).click();

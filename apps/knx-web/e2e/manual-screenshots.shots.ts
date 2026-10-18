@@ -11,6 +11,7 @@ import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { recordManualGif } from "./manual-recording";
+import { openFileSubmenu } from "./file-menu";
 
 const target = resolve(
   process.env.MANUAL_SCREENSHOT_DIR ?? fileURLToPath(new URL("../../../docs/assets/screenshots", import.meta.url)),
@@ -99,7 +100,8 @@ async function setTheme(page: Page, theme: string): Promise<void> {
 
 async function history(page: Page): Promise<void> {
   await page.locator("summary", { hasText: "File" }).first().click();
-  await page.getByRole("button", { name: "Project history", exact: true }).click();
+  await openFileSubmenu(page, "history");
+  await page.getByRole("menuitem", { name: "Project history", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Project history", exact: true })).toBeVisible();
 }
 
@@ -212,16 +214,17 @@ test("manual screenshots of the finished application", async ({ page }) => {
   await shot(page, "dashboard");
 
   await page.locator("summary", { hasText: "File" }).first().click();
-  await expect(page.getByRole("button", { name: "New project…" })).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: "New project…" })).toBeVisible();
   await shot(page, "file-menu");
-  await page.getByRole("button", { name: "Analyze support gaps…", exact: true }).click();
+  await openFileSubmenu(page, "help");
+  await page.getByRole("menuitem", { name: "Analyze support gaps…", exact: true }).click();
   const analysis = page.getByRole("dialog", { name: "Analyze & contribute evidence", exact: true });
   await expect(analysis).toBeVisible();
   await shot(page, "support-gap-analysis");
   await analysis.getByRole("button", { name: "Close", exact: true }).click();
   await expect(analysis).toBeHidden();
   await page.locator("summary", { hasText: "File" }).first().click();
-  await page.getByRole("button", { name: "New project…" }).click();
+  await page.getByRole("menuitem", { name: "New project…" }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await shot(page, "new-project");
   const projectWizard = page.getByRole("dialog", { name: "New project", exact: true });
@@ -360,7 +363,7 @@ test("manual screenshots of the finished application", async ({ page }) => {
   await captureReleaseDetails(page);
   await recordManualGif(page, "new-project", async () => {
     await page.locator("summary", { hasText: "File" }).first().click();
-    await page.getByRole("button", { name: "New project…", exact: true }).click();
+    await page.getByRole("menuitem", { name: "New project…", exact: true }).click();
     const wizard = page.getByRole("dialog", { name: "New project", exact: true });
     await wizard.getByLabel("Project name", { exact: true }).fill("Practice house");
     await page.waitForTimeout(1200);
@@ -381,7 +384,7 @@ test("manual screenshots of the finished application", async ({ page }) => {
   await expect(save).toBeHidden();
   await expect.poll(async () => (await (await page.request.get("/api/project")).json()).is_modified).toBe(false);
   await page.locator("summary", { hasText: "File" }).first().click();
-  await page.getByRole("button", { name: "Open (.knxdb)…", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Open (.knxdb)…", exact: true }).click();
   await page.getByRole("button", { name: "practice-house.knxdb", exact: true }).click();
   await expect(page.locator("button.tree-label", { hasText: /^Line 1: Line 1\.1$/ })).toBeVisible();
   const reopened = await (await page.request.get("/api/project")).json();

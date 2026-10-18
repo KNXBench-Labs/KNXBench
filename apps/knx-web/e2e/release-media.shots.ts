@@ -5,6 +5,7 @@ import {mkdirSync, writeFileSync} from "node:fs";
 import {resolve} from "node:path";
 import {fileURLToPath} from "node:url";
 import {openNavigationSections} from "./disclosure-fixture";
+import { openFileSubmenu } from "./file-menu";
 
 const target = process.env.KNX_RELEASE_MEDIA_DIR;
 if (!target) throw new Error("set KNX_RELEASE_MEDIA_DIR to a task-owned capture directory");
@@ -212,6 +213,7 @@ test("Alpha 14 website stills, real application and fictional project", async ({
 
   // Diagnostic export: device, interface and the read-only preview.
   await page.locator(".file-menu > summary").click();
+  await openFileSubmenu(page, "help");
   await page.locator(".file-menu [data-diagnostics-open]").click();
   const diagnostics = page.getByRole("dialog", {name: "Export diagnostic data", exact: true});
   await expect(diagnostics).toBeVisible();

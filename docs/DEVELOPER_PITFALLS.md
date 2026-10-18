@@ -252,6 +252,12 @@ already found lying in the grass.
   are left), not with a snapshot of `.all()` locators: those are nth-based and lose
   track once two are visible. Reproduce a time-of-day failure by running the spec
   with a shifted `TZ` (e.g. `TZ=Asia/Tokyo`).
+- **File menu entries are `menuitem`s, and three submenus start folded.** Since
+  UI-03 `getByRole("button", { name: "About KNXBench…" })` finds nothing: use
+  `getByRole("menuitem", …)` and `openFileSubmenu(page, "help" | "history" | "exchange")`
+  from `e2e/file-menu.ts` before an entry of a submenu
+  ([contract](contracts/file-menu.md)). Welcome-screen cards with the same label stay
+  buttons.
 - **Motion settings live in `data-motion-level`** (set by
   `apps/knx-web/src/motion.ts`), not `data-motion`; assert the attribute the
   app actually sets.

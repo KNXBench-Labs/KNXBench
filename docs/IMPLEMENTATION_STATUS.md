@@ -12,6 +12,23 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## UI-03: File menu with animated submenus (18 October 2026)
+
+Presentation and keyboard behaviour only, no API, schema, theme-pack or stored-data
+change. Owner request 1 of the [UI feedback set](goals/ui-feedback-2026-10-18.md#ui-03--file-menu-with-animated-submenus).
+**History & comparison**, **Help & diagnostics** and **Import & export** are now
+submenus of File that open to the right (flip left when the whole panel fits there,
+shrink at mid widths, expand inline under the row at 650 px and below); New project,
+Open, Open (.knxdb) and Save As stay on the first level. Every entry is the original
+button with its original handler, so native/web differences, disabled states, unsaved
+change guards and dialog lifecycles are untouched; closed submenus stay mounted so an
+open comparison report or an in-flight import survives. The menu follows the ARIA
+menu pattern (menu/menuitem, `aria-haspopup`, `aria-expanded`; arrows, Home/End,
+`→`/Enter/Space, `←`/Escape innermost-first), hover opens after 120 ms and survives a
+diagonal move, and the 140 ms slide is removed by motion level Off and reduced motion.
+Not done: ArrowDown on the closed File summary, type-ahead, native WebKitGTK/Tauri
+runs. [Contract](contracts/file-menu.md).
+
 ## UI-02: compact button variants, visible navigation separators (18 October 2026)
 
 Presentation only, no API, schema, theme-pack or stored-data change. Owner

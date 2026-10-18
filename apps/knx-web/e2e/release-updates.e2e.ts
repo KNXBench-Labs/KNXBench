@@ -5,6 +5,7 @@ import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
 import { fulfillNoProjectOpen } from "./server-project-fixture";
 import { GITHUB_RELEASES_API } from "../src/githubReleases";
+import { openFileSubmenu } from "./file-menu";
 const UPDATE_CHECK_INTERVAL_MS = 60 * 60 * 1000;
 
 test.use({ timezoneId: "UTC" });
@@ -46,7 +47,8 @@ async function fixture(page: Page, language: "en" | "de", width: number, enabled
 async function about(page: Page, language: "en" | "de") {
   const m = language === "de" ? de : en;
   await page.locator(".file-menu > summary").click();
-  await page.getByRole("button", { name: m["toolbar.about"], exact: true }).click();
+  await openFileSubmenu(page, "help");
+  await page.getByRole("menuitem", { name: m["toolbar.about"], exact: true }).click();
   return page.getByRole("dialog", { name: m["about.title"], exact: true });
 }
 for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {

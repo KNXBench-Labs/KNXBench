@@ -2,7 +2,17 @@
 
 # Implementation status
 
-## Object-local function dropdowns (source after Alpha 13)
+## Product data and parameter presentation (Alpha 14)
+
+Manufacturer ZIPs that hold `.knxprod` packages install as a whole from the
+catalogue picker and `knx products ingest` (every inner package or none; other
+files listed, not stored; complete databases need `--allow-large-package` on the
+command line). Rows declared as indented are indented, the object table names an
+object's size, and packed time units show the original value instead of a count.
+[ADR-0140](../adr/0140-vendor-zips-of-product-packages-install-as-a-whole.md),
+[operating instructions](user-guide/05-devices-and-products.md#parameters).
+
+## Object-local function dropdowns (Alpha 14)
 
 The separate Device functions disclosure is removed. Expand an object to find
 its supported manufacturer enum controls below DPT. Exact structural references
@@ -12,7 +22,7 @@ writes, inline errors, Undo and native persistence remain in force. The publishe
 Alpha 13 package and historical screenshots are not retroactively changed.
 [Operating instructions](user-guide/05-devices-and-products.md#device-functions-source-builds-after-alpha-12).
 
-## Notes when deleting (source after Alpha 13)
+## Notes when deleting (Alpha 14)
 
 Deleting a device, group address, area, line, building part or group range that a
 project note belongs to now lists those notes first. For each one you choose:
@@ -24,7 +34,7 @@ generic error. Existing Alpha 13 binaries are unchanged.
 [Operating instructions](user-guide/01-user-interface.md#notes-when-deleting),
 [ADR-0138](../adr/0138-notes-get-an-explicit-decision-before-a-delete.md).
 
-## Declared parameter grids (source after Alpha 13)
+## Declared parameter grids (Alpha 14)
 
 Parameter areas whose product data declares a `Table`/`Grid` layout render as a
 matrix of the existing editable rows at their declared cells, with declared
@@ -33,7 +43,7 @@ unreadable declaration). Drafts, write checks and closed areas are unchanged.
 Existing Alpha 13 binaries are unchanged. [Operating instructions](user-guide/05-devices-and-products.md#parameters),
 [ADR-0137](../adr/0137-declared-parameter-grids-reach-the-workspace.md).
 
-## KNX Functions in comparisons, the desktop and MCP (source builds after Alpha 13)
+## KNX Functions in comparisons, the desktop and MCP (Alpha 14)
 
 A project comparison lists KNX Functions one by one (added, removed, changed,
 ambiguous), in the application, `knx diff` and MCP `diff_projects`. The
@@ -44,7 +54,7 @@ MCP or the CLI. [Comparison](user-guide/08-reports-and-diff.md#what-it-compares)
 [AI agents](user-guide/12-ai-agents.md#what-it-can-and-cannot-do) and
 [contract](../contracts/project-functions.md#comparison-desktop-and-mcp-17-october-2026).
 
-## Parameter workspace (source after Alpha 13)
+## Parameter workspace (Alpha 14)
 
 The ordinary Parameters tab uses source-group navigation, compact label/value
 rows, cross-area search and contextual source metadata. Areas follow the
@@ -55,7 +65,7 @@ faceplate or exact source-grid reproduction. Existing Alpha 13 binaries and manu
 screenshots are unchanged. [Operating instructions](user-guide/05-devices-and-products.md#parameters)
 and [contract](../contracts/parameter-workspace.md).
 
-## Closed disclosure defaults (source builds after Alpha 13)
+## Closed disclosure defaults (Alpha 14)
 
 Navigation content blocks, explorer branches, parameter sections/source groups,
 Function entries, matrix column selection and report/evidence disclosures start
@@ -79,10 +89,11 @@ This chapter is the honest inventory: what exists, what half exists, and what
 does not exist at all, area by area across the whole application.
 
 The detailed inventory retains its **8 October 2026** source audit and dated
-follow-ups. The current public snapshot is [Alpha 13](../releases/alpha13.md),
-published on 16 October 2026. [Source acceptance](../releases/alpha13-acceptance.md)
-and [public artifact verification](../evidence/release-alpha13-2026-10-16.json)
-pass independently; neither expands device admission.
+follow-ups. The next packaged snapshot is [Alpha 14](../releases/alpha14.md).
+Alpha 13 was published on 16 October 2026 ([source acceptance](../releases/alpha13-acceptance.md),
+[public artifact verification](../evidence/release-alpha13-2026-10-16.json)).
+Alpha 14's acceptance and publication checks are recorded separately; neither
+expands device admission.
 The version number is where the project starts counting, not a claim that
 anything has reached a finish line.
 
@@ -309,7 +320,7 @@ No automatic installation or upgrade-compatibility approval is implied. Offline
 and rate-limited checks leave editing usable. Included in Alpha.10; Alpha.9 does not have it. [Contract and privacy](../contracts/RELEASE_NOTIFICATIONS.md),
 [verified source scope](../evidence/release-notifications-2026-10-11.json).
 
-## Read-only diagnostic export (source after Alpha 13)
+## Read-only diagnostic export (Alpha 14)
 
 One-device identity export in the web UI and CLI, simulator-verified only; no
 memory reads and no hardware compatibility claim yet
@@ -614,7 +625,7 @@ Main source delivery is [verified](../status/2026-10-09-offline-ap1-verification
 | Encrypted `.knxprod` packages, and legacy `.vd2` files | ❌ Not implemented, deliberately | A permanent scope exclusion, refused as a typed error |
 | Online catalog update from a manufacturer | ❌ Not implemented | Files are installed by hand — [`docs/GAP_ANALYSIS_ETS.md`](https://github.com/KNXBench-Labs/KNXBench/blob/994ac08c0328/docs/GAP_ANALYSIS_ETS.md), row C6 |
 | Devices configured by a manufacturer plug-in | ❌ Not implemented | No plug-in host exists and none is planned — [§6](../KNOWN_LIMITATIONS.md#6-devices-behind-vendor-plug-in-dlls) |
-| Adopting one device's stored plug-in data from a newer export (web, CLI; source builds after Alpha 13) | 🟡 Partial or experimental | Bytes copied verbatim after a preview by digest; same-lineage only; not in Undo, the way back is a project version; never verified that a plug-in or ETS accepts the result — [Devices and products](user-guide/05-devices-and-products.md#adopting-plug-in-data-source-builds-after-alpha-13), [§186](../KNOWN_LIMITATIONS.md#catalogue-kl-186) |
+| Adopting one device's stored plug-in data from a newer export (web, CLI; Alpha 14) | 🟡 Partial or experimental | Bytes copied verbatim after a preview by digest; same-lineage only; not in Undo, the way back is a project version; never verified that a plug-in or ETS accepts the result — [Devices and products](user-guide/05-devices-and-products.md#adopting-plug-in-data-source-builds-after-alpha-13), [§186](../KNOWN_LIMITATIONS.md#catalogue-kl-186) |
 | Package/version identity inspection | 🟡 Bounded implementation | Source/candidate identity is recorded; a version pin/selector is not implemented. First-installed normalized rows remain the winner — [§135](../KNOWN_LIMITATIONS.md) |
 | Manufacturer signature verification | ❌ Not implemented | Signature members are retained and labelled, not cryptographically verified — [§85](../KNOWN_LIMITATIONS.md) |
 

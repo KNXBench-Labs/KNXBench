@@ -1,11 +1,11 @@
-Last updated: 2026-10-16 21:18 CEST
+Last updated: 2026-10-18 07:55 CEST
 
 # KNXBench Features
 
 | Reference | Value |
 | --- | --- |
-| Source snapshot | `v0.1.0-alpha.13` |
-| Released baseline | `v0.1.0-alpha.13` |
+| Source snapshot | `v0.1.0-alpha.14` |
+| Released baseline | `v0.1.0-alpha.14` |
 | Main-only | Newer than released baseline |
 | Local-only | Unpublished; not accepted on main |
 | Scope | Listed boundaries; not universal compatibility |
@@ -26,16 +26,22 @@ Last updated: 2026-10-16 21:18 CEST
 | MCP server | Read-only saved-file tools; opt-in rename writer from alpha.10 | alpha.6 |
 | Remote browser | Authenticated server; networking-dependent | alpha.6 |
 
-## Newer source changes
+## New in Alpha 14
+
+[Release scope](releases/alpha14.md) separates offline editing and product-data
+work from unfinished programming support. Native/model16 is unchanged; the
+product database moves from 23 to 24. Previous-reader compatibility is not verified.
 
 | Feature | Scope | Availability |
 | --- | --- | --- |
-| Closed disclosure defaults | Navigation blocks, tree branches, parameter groups and details; manual opening and remembered address views retained | Main-only |
-| [Parameter workspace](contracts/parameter-workspace.md) | Declared areas (closed until chosen), compact label/value rows, cross-area search, retained editors and source metadata; no inferred device/grid geometry | Main-only |
-| [Declared parameter grids](adr/0137-declared-parameter-grids-reach-the-workspace.md) | Matrix view for areas whose product data declares a `Table`/`Grid`, same editors and write path; row view with a reason otherwise | Main-only |
-| [Row indentation](contracts/parameter-workspace.md#row-indentation-census-p4-18-october-2026) | Rows indented by a consistently declared `IndentLevel`; presentation only | Main-only |
-| [Packed time units fall back](contracts/parameter-editor-admission.md#packed-time-units-fall-back-2026-10-18) | Only plain time units get the count control; packed and undeclared-in-collection units show the original value | Main-only |
-| [Object-local function dropdowns](contracts/parameter-object-refresh.md) | Manufacturer enum choices below the expanded object's DPT; exact configured-ID mapping, no guessed module mapping; replaces the device-wide disclosure | Main-only |
+| [Read-only diagnostic export](contracts/device-diagnostic-export.md) | One device's descriptor, manufacturer ID and hardware type over the existing tunnel lock, saved as a verified local ZIP; no writes, no programming unlock | alpha.14 |
+| [Functions in comparisons](contracts/project-functions.md) | Per-Function diff in app, CLI and MCP; read-only MCP `list_functions` | alpha.14 |
+| Closed disclosure defaults | Navigation blocks, tree branches, parameter groups and details; manual opening and remembered address views retained | alpha.14 |
+| [Parameter workspace](contracts/parameter-workspace.md) | Declared areas (closed until chosen), compact label/value rows, cross-area search, retained editors and source metadata; no inferred device/grid geometry | alpha.14 |
+| [Declared parameter grids](adr/0137-declared-parameter-grids-reach-the-workspace.md) | Matrix view for areas whose product data declares a `Table`/`Grid`, same editors and write path; row view with a reason otherwise | alpha.14 |
+| [Row indentation](contracts/parameter-workspace.md#row-indentation-census-p4-18-october-2026) | Rows indented by a consistently declared `IndentLevel`; presentation only | alpha.14 |
+| [Packed time units fall back](contracts/parameter-editor-admission.md#packed-time-units-fall-back-2026-10-18) | Only plain time units get the count control; packed and undeclared-in-collection units show the original value | alpha.14 |
+| [Object-local function dropdowns](contracts/parameter-object-refresh.md) | Manufacturer enum choices below the expanded object's DPT; exact configured-ID mapping, no guessed module mapping; replaces the device-wide disclosure | alpha.14 |
 
 ## New in Alpha 13
 
@@ -121,7 +127,7 @@ records the tested commit separately from artifact publication verification.
 | ETS project import | Schemas 11/21; bounded compatibility | alpha.6 |
 | Import reports | Warnings/errors/unsupported data | alpha.6 |
 | Selective import | Merge chosen lines/devices; preview, one undo step | alpha.8 |
-| [Plug-in data adoption](contracts/plugin-data-adoption.md) | One device's stored plug-in bytes from a same-lineage archive; preview by digest, way back = a project version, no Undo; acceptance unverified | Main-only |
+| [Plug-in data adoption](contracts/plugin-data-adoption.md) | One device's stored plug-in bytes from a same-lineage archive; preview by digest, way back = a project version, no Undo; acceptance unverified | alpha.14 |
 | Opaque preservation | Retained source; disclosed limitations | alpha.6 |
 | Product installation | `.knxprod`; evidenced schemes | alpha.6 |
 | Embedded products | From imported projects | alpha.6 |
@@ -168,11 +174,11 @@ records the tested commit separately from artifact publication verification.
 | Optional humour | Error/night/holiday messages | alpha.6 |
 | Project notes | Notebook view; review-first edits | alpha.10 |
 | Notes on objects | Communication objects as targets; tab-close prompt for drafts | alpha.11 |
-| [Notes when deleting](adr/0138-notes-get-an-explicit-decision-before-a-delete.md) | Keep, move or delete each affected note; one undo step with the delete | Main-only |
+| [Notes when deleting](adr/0138-notes-get-an-explicit-decision-before-a-delete.md) | Keep, move or delete each affected note; one undo step with the delete | alpha.14 |
 | Installation instructions | Device tab; imported hints, review-first | alpha.10 |
 | Checked parameter editor | Time count, integer slider; source-checked | alpha.10 |
 | Catalogue update with preview | Every package uses review; backup before install, restore/delete listed backups (alpha.12) | alpha.10 |
-| [Vendor ZIP install](adr/0140-vendor-zips-of-product-packages-install-as-a-whole.md) | A manufacturer ZIP of `.knxprod` packages installs all inner packages together (CLI and web preview); other files listed, not stored; large inner packages via the CLI flag | Main-only |
+| [Vendor ZIP install](adr/0140-vendor-zips-of-product-packages-install-as-a-whole.md) | A manufacturer ZIP of `.knxprod` packages installs all inner packages together (CLI and web preview); other files listed, not stored; large inner packages via the CLI flag | alpha.14 |
 | Project information | Modeled facts; read-only | alpha.10 |
 | Stored bus access | Redacted by default; reveal one saved endpoint, no connection | alpha.12 |
 | Recorded device state | Load belief; read-only, no bus | alpha.10 |

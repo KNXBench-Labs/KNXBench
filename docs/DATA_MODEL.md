@@ -1,5 +1,9 @@
 # Data model
 
+## Alpha 14 model and storage boundary
+
+Alpha 14 retains native/model **16**: note-aware deletes add command/error types and plug-in data adoption reuses existing opaque entries, without a new persisted kind. The dedicated product database moves **23 → 24** on first open (ADR-0139: typed `access` on parameter blocks/separators and `ui_hint` on separators, backfilled by re-parsing retained source bytes). Vendor ZIP install (ADR-0140), row indentation and object size add no column. Previous-reader compatibility is not verified; Alpha 13 refuses a v24 product database by its version check. [Upgrade boundary](releases/alpha14.md#upgrade-independent-backups-first).
+
 ## Alpha 13 model and storage boundary
 
 Alpha 13 retains native/model **16** and product **23** from Alpha 12. Parameter-driven object creation uses existing object/command/history types; no migration is introduced. Previous-reader compatibility for newly saved files is not verified. [Upgrade boundary](releases/alpha13.md#upgrade-independent-backups-first).

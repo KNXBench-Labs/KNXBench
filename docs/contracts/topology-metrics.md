@@ -20,7 +20,8 @@ tile is used by the Topology view and the Buildings view, so both carry the labe
 
 Key `workbench.objectCount` is a plural pair (`.one`/`.other`) resolved by the existing
 `Intl.PluralRules` helpers. The visible text names the metric on its own; there is no
-hover text to decode it. The count is never truncated or wrapped.
+hover text to decode it. The count is never truncated; above the 15rem
+container breakpoint it is not wrapped either (see Layout).
 
 ## Layout
 
@@ -31,7 +32,7 @@ hover text to decode it. The count is never truncated or wrapped.
 - `.diagram-devices` is one `minmax(0, 1fr)` column capped at 32rem (this also bounds
   the Buildings tile rows). The name column shrinks (`min-width: 0`), the name
   ellipsises and carries the full name as `title`; the icon and the count never shrink
-  or wrap. `.diagram-devices` is a size container: at 26rem inner width or less the
+  and, above 15rem, never wrap. `.diagram-devices` is a size container: at 26rem inner width or less the
   count drops onto its own line under the name (still left-aligned with the name),
   above that it sits at the right edge. Only the name may ellipsise. At 15rem or less
   (a 200px nested Buildings card, whose ancestors clip overflow) the indent goes and the

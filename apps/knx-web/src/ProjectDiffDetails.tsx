@@ -1,4 +1,5 @@
 /** Expandable per-table entity list of a project diff with before and after values. */
+import ResizableTable from "./ResizableTable";
 import { createContext, useCallback, useContext, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { FieldChange, MatchKind, ProjectDiffReport } from "./api";
@@ -8,6 +9,12 @@ import type { MessageKey } from "./messages/en";
 import { DIFF_FILTER_THRESHOLD, filterEntries, installationTables } from "./projectDiffView";
 import type { DiffEntry, DiffTableView, EntryStatus, KeyFormat } from "./projectDiffView";
 import { virtualWindow } from "./virtualWindow";
+
+const PROJECT_DIFF_FIELDS_COLUMNS = [
+  { id: "field", width: 180, min: 100 },
+  { id: "before", width: 240, min: 100 },
+  { id: "after", width: 240, min: 100 }
+];
 
 // Status is always spelled out as a word; the symbol is decoration for
 // sighted users scanning a long list and is hidden from screen readers,
@@ -74,7 +81,7 @@ function Disclosure(props: { label: string; children: ReactNode; memoryKey?: str
 function FieldChangeTable(props: { changes: FieldChange[] }) {
   const t = useTranslate();
   return (
-    <table className="project-diff-fields">
+    <ResizableTable tableId="project-diff-fields" columns={PROJECT_DIFF_FIELDS_COLUMNS} className="project-diff-fields">
       <thead>
         <tr>
           <th scope="col">{t("projectDiff.fieldHeader")}</th>
@@ -93,7 +100,7 @@ function FieldChangeTable(props: { changes: FieldChange[] }) {
           </tr>
         ))}
       </tbody>
-    </table>
+    </ResizableTable>
   );
 }
 

@@ -9,7 +9,7 @@ import { resetUiLanguageForTests } from "./uiLanguage";
 import { messages as en } from "./messages/en";
 import { messages as de } from "./messages/de";
 let dispose = () => {};
-afterEach(async () => { await act(async () => dispose()); resetSettingsForTests(); resetUiLanguageForTests(); });
+afterEach(async () => { await act(async () => dispose()); resetSettingsForTests(); resetUiLanguageForTests(); window.localStorage.clear(); });
 it.each(["en", "de"] as const)("%s shows exact named values and explains nondecodable bits without hiding raw", async (language) => {
   await act(async () => setSetting("uiLanguage", language));
   const host = document.createElement("div");document.body.append(host);const root = createRoot(host);
@@ -27,4 +27,19 @@ it.each(["en", "de"] as const)("%s shows exact named values and explains nondeco
   expect(rows[1].querySelector(".comparison-reason")?.textContent).toContain(language === "de" ? "Rohbytes" : "raw bytes");
   expect(rows[1].textContent).toContain((language === "de" ? de : en)["compare.unknown"]);
   expect(rows[2].textContent).toContain("FD 64");expect(rows[2].closest("details")).toBeNull();
+});
+
+it("offers keyboard resizing and reset on the production comparison table", async () => {
+  const host = document.createElement("div"); document.body.append(host); const root = createRoot(host);
+  dispose = () => { root.unmount(); host.remove(); };
+  await act(async () => root.render(<ComparisonTable rows={[]} />));
+  expect(host.querySelectorAll('[role="separator"]')).toHaveLength(4);
+  const handle = host.querySelector<HTMLElement>('[role="separator"]')!;
+  const initial = Number(handle.getAttribute("aria-valuenow"));
+  await act(async () => handle.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })));
+  expect(Number(handle.getAttribute("aria-valuenow"))).toBe(initial + 8);
+  const reset = host.querySelector<HTMLButtonElement>(".table-column-reset")!;
+  expect(reset.textContent).toBe("Reset column widths");
+  await act(async () => reset.click());
+  expect(Number(handle.getAttribute("aria-valuenow"))).toBe(initial);
 });

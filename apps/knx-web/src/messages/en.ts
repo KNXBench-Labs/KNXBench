@@ -39,6 +39,9 @@
 // two different ways in two files is a bug waiting to happen, not a
 // feature of the namespacing convention.
 export const messages = {
+  "tableColumns.reset": "Reset column widths",
+  "tableColumns.help": "Resize column: Left/Right 8 px, Shift 40 px; Home minimum, End maximum; Enter or double-click resets.",
+  "tableColumns.scroll": "Table (scrollable)",
   "parameters.objectFunctionsEmpty": "No supported function selection can be mapped to this object. Other settings are under Parameters.",
   "parameters.functions": "Device functions",
   "parameters.functionsEmpty": "No supported function choices are currently visible. Other settings are under Parameters.",

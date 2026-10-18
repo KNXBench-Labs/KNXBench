@@ -822,4 +822,13 @@ The [known-issues/status audit](../status/2026-10-08-known-issues-status-audit.m
 maps these areas to source consumers and evidence. It does not rewrite dated
 historical test results or close another owner's ledger rows.
 
+
+
+## Browser-local data-table column widths (18 October 2026 source, local-only)
+
+17 native data-table surfaces support pointer/keyboard resizing and column/table
+reset, with validated widths retained in this browser. The selectable
+address/object matrix remains unchanged; lists, trees and manufacturer parameter
+grids are outside scope. See the [coverage checklist](../contracts/table-column-widths.md).
+
 [Manual index](README.md) · Next: [Ideas and roadmap](ideas-and-roadmap.md) →

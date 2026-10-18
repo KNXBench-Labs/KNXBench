@@ -6,6 +6,7 @@
 // the project no longer gives (ADR-0045). Every data block is shown once
 // the device has read it back unchanged, with its address and octets.
 
+import ResizableTable from "./ResizableTable";
 import { downloadEndChangesProject } from "./programmingState";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as api from "./api";
@@ -31,6 +32,22 @@ import { collectDevices, projectContextKey } from "./treeUtils";
 import UniversalSupportButton from "./UniversalSupportButton";
 import { useProgrammingConsent } from "./useProgrammingConsent";
 import type { ProjectTree } from "./bindings/ProjectTree";
+
+const DOWNLOAD_UNWRITTEN_COLUMNS = [
+  { id: "address", width: 160, min: 100 },
+  { id: "octets", width: 200, min: 100 }
+];
+const DOWNLOAD_SEGMENTS_COLUMNS = [
+  { id: "segment", width: 240, min: 120 },
+  { id: "address", width: 160, min: 100 },
+  { id: "octets", width: 180, min: 100 }
+];
+const DOWNLOAD_BLOCKS_COLUMNS = [
+  { id: "step", width: 100, min: 64 },
+  { id: "address", width: 160, min: 100 },
+  { id: "data", width: 320, min: 120 },
+  { id: "total", width: 180, min: 100 }
+];
 
 const POLL_INTERVAL_MS = 500;
 
@@ -564,19 +581,19 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
               ) : (
                 <>
                   <p>{t("deviceDownload.notWrittenExplainer")}</p>
-                  <table>
+                  <ResizableTable tableId="download-unwritten" columns={DOWNLOAD_UNWRITTEN_COLUMNS}>
                     <thead><tr><th>{t("deviceDownload.address")}</th><th>{t("deviceDownload.notWrittenOctets")}</th></tr></thead>
                     <tbody>
                       {plan.notWritten.map(([at, octets]) => (
                         <tr key={at}><td><code>{hex(at, 4)}h</code></td><td>{octets}</td></tr>
                       ))}
                     </tbody>
-                  </table>
+                  </ResizableTable>
                 </>
               )}
             </section>
           )}
-          <table className="device-download-segments">
+          <ResizableTable tableId="download-segments" columns={DOWNLOAD_SEGMENTS_COLUMNS} className="device-download-segments">
             <thead><tr><th>{t("deviceDownload.segment")}</th><th>{t("deviceDownload.address")}</th><th>{t("deviceDownload.segmentOctets")}</th></tr></thead>
             <tbody>
               {plan.segments.map((segment) => (
@@ -587,7 +604,7 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
                 </tr>
               ))}
             </tbody>
-          </table>
+          </ResizableTable>
           <details>
             <summary>{t("deviceDownload.steps", { count: plan.steps.length })}</summary>
             <ol className="device-download-steps">{plan.steps.map((step, index) => <li key={index}>{step}</li>)}</ol>
@@ -656,7 +673,7 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
             </ul>
           )}
           {blocks.length > 0 && (
-            <table className="device-download-blocks">
+            <ResizableTable tableId="download-blocks" columns={DOWNLOAD_BLOCKS_COLUMNS} className="device-download-blocks">
               <caption>{t("deviceDownload.blocksCaption")}</caption>
               <thead><tr><th>{t("deviceDownload.step")}</th><th>{t("deviceDownload.address")}</th><th>{t("deviceDownload.data")}</th><th>{t("deviceDownload.running_total")}</th></tr></thead>
               <tbody>
@@ -669,7 +686,7 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </ResizableTable>
           )}
         </section>
       )}

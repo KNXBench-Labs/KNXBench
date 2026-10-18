@@ -1,5 +1,6 @@
 /** Bus monitor panel: starts or attaches a session, polls telegrams, and filters/renders them. */
 // apps/knx-web/src/BusMonitorPanel.tsx
+import ResizableTable from "./ResizableTable";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as api from "./api";
 import DeviceLink from "./DeviceLink";
@@ -31,6 +32,17 @@ import HelpTip from "./HelpTip";
 import { useSettingsState } from "./settingsStore";
 import { useUiLanguage } from "./uiLanguage";
 import { dptDisplay } from "./dptLabels";
+
+const BUS_MONITOR_COLUMNS = [
+  { id: "sequence", width: 80, min: 64 },
+  { id: "time", width: 220, min: 120 },
+  { id: "source", width: 140, min: 100 },
+  { id: "destination", width: 240, min: 120 },
+  { id: "service", width: 180, min: 100 },
+  { id: "control", width: 240, min: 120 },
+  { id: "payload", width: 180, min: 100 },
+  { id: "decoded", width: 280, min: 140 }
+];
 
 // The identity of the one session this panel can ever be attached to
 // (`AppState.bus_session` holds at most one — D3/D6). Deliberately not
@@ -1072,11 +1084,11 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
           <p className="bus-monitor-empty">{t("busMonitor.emptyFiltered")}</p>
         ) : (
           <div className="monitor-data">
-          <div className="monitor-table-scroll" role="region" aria-label={t("busMonitor.tableScrollLabel")} tabIndex={0}>
           {/* The second half of the stale lock: the banner says it, and the
               table carries it, so a decoded value read out of context on a
               screenshot still shows it was not current. */}
-          <table
+          <ResizableTable scrollClassName="monitor-table-scroll" scrollLabel={t("busMonitor.tableScrollLabel")} tableId="bus-monitor"
+            columns={BUS_MONITOR_COLUMNS}
             className={contextLock === "stale" ? "bus-monitor-table bus-monitor-stale-table" : "bus-monitor-table"}
           >
             <thead>
@@ -1141,8 +1153,7 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
                 );
               })}
             </tbody>
-          </table>
-          </div>
+          </ResizableTable>
           <aside className="telegram-details" aria-label={t("workbench.telegram")}>
             <h3>{t("workbench.telegram")}</h3>
             {selectedTelegram ? <dl>

@@ -1,5 +1,6 @@
 /** Read-only line diagnostics with cost preview, protected exclusions and incremental results. */
 
+import ResizableTable from "./ResizableTable";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as api from "./api";
 import DeviceLink from "./DeviceLink";
@@ -13,6 +14,11 @@ import {
 } from "./lineScanExclusions";
 import { useSettingsState } from "./settingsStore";
 import type { ProjectTree } from "./bindings/ProjectTree";
+
+const LINE_SCAN_COLUMNS = [
+  { id: "address", width: 160, min: 100 },
+  { id: "outcome", width: 320, min: 120 }
+];
 
 const POLL_INTERVAL_MS = 1000;
 
@@ -331,7 +337,7 @@ export default function LineScanPanel({
       {estimate && <section className="line-scan-estimate" aria-live="polite"><h3>{t("lineScan.estimateTitle")}</h3><p>{t("lineScan.candidates", { count: estimate.value.candidateCount })}</p><p>{t("lineScan.basis", { count: estimate.value.vacantConfirmations, timeout: estimate.value.responseTimeoutMs, confirmations: estimate.value.vacantConfirmations, pause: estimate.value.interProbePauseMs })}</p><strong>{t("lineScan.worstCase", { duration: seconds(estimate.value.worstCaseMs) })}</strong></section>}
       {error && <p className="form-error" role="alert">{error}</p>}
       {response && <section className="line-scan-progress" aria-live="polite"><p><span className={response.status === "running" ? "task-status-text" : undefined}>{t(statusKey(response.status))}</span> · {response.completedCount}/{response.totalCount}</p><progress max={response.totalCount} value={response.completedCount} />{response.error && <p className="form-error">{response.error}</p>}</section>}
-      {results.length > 0 && <table className="line-scan-results"><thead><tr><th>{t("lineScan.address")}</th><th>{t("lineScan.outcome")}</th></tr></thead><tbody>{results.map((result) => <tr key={result.address}><td><DeviceLink address={result.address}><code>{result.address}</code></DeviceLink></td><td><span data-scan-outcome={result.outcome.kind}>{outcomeLabel(result.outcome, t)}</span></td></tr>)}</tbody></table>}
+      {results.length > 0 && <ResizableTable tableId="line-scan" columns={LINE_SCAN_COLUMNS} className="line-scan-results"><thead><tr><th>{t("lineScan.address")}</th><th>{t("lineScan.outcome")}</th></tr></thead><tbody>{results.map((result) => <tr key={result.address}><td><DeviceLink address={result.address}><code>{result.address}</code></DeviceLink></td><td><span data-scan-outcome={result.outcome.kind}>{outcomeLabel(result.outcome, t)}</span></td></tr>)}</tbody></ResizableTable>}
       {response?.status === "completed" && !projectOpen && <p>{t("lineScan.reconciliation.projectRequired")}</p>}
       {response?.status === "completed" && projectOpen && comparisonLoading && <p><span className="task-status-text">{t("lineScan.reconciliation.loading")}</span></p>}
       {response?.status === "completed" && projectOpen && comparison && <section className="line-scan-reconciliation" aria-live="polite">

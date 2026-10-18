@@ -26,6 +26,12 @@ Last updated: 2026-10-18 07:55 CEST
 | MCP server | Read-only saved-file tools; opt-in rename writer from alpha.10 | alpha.6 |
 | Remote browser | Authenticated server; networking-dependent | alpha.6 |
 
+## Local source changes
+
+| Feature | Scope | Availability |
+| --- | --- | --- |
+| Resizable data-table columns | Pointer/keyboard resizing, per-column/table reset, validated browser-local widths; 17 native table surfaces, address/object matrix excluded — [coverage](contracts/table-column-widths.md) | Local-only |
+
 ## New in Alpha 14
 
 [Release scope](releases/alpha14.md) separates offline editing and product-data

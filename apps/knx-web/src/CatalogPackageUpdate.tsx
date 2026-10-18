@@ -6,7 +6,7 @@
 // route recognises as a legacy product database is handed back to the caller.
 import { useEffect, useRef, useState } from "react";
 import * as api from "./api";
-import type { CatalogueUpdateApplied, CatalogueUpdatePreview } from "./api";
+import type { CatalogueUpdateApplied, CatalogueUpdatePreview, CatalogueWrapperPreview } from "./api";
 import { CatalogInstallReportView } from "./CatalogInstallReport";
 import { installedVersionList } from "./catalogueUpdate";
 import { useTranslate } from "./i18n";
@@ -92,8 +92,10 @@ export default function CatalogPackageUpdate(props: {
     {phase.kind === "previewed" && <div className="catalog-update-preview" role="region" aria-labelledby="catalog-update-heading">
       <h2 id="catalog-update-heading">{t("catalogUpdate.heading", { name: phase.preview.sourceName })}</h2>
       <p className="catalog-update-notice" role="status">{t("catalogUpdate.nothingYet")}</p>
-      <p className="catalog-update-hash">{t("catalogUpdate.package")} <code>{phase.preview.packageSha256}</code></p>
-      {phase.preview.packageAlreadyInstalled && <p className="catalog-update-notice">{t("catalogUpdate.already")}</p>}
+      <p className="catalog-update-hash">{t(phase.preview.wrapper ? "catalogUpdate.wrapper.hash" : "catalogUpdate.package")} <code>{phase.preview.packageSha256}</code></p>
+      {phase.preview.packageAlreadyInstalled && <p className="catalog-update-notice">
+        {t(phase.preview.wrapper ? "catalogUpdate.wrapper.already" : "catalogUpdate.already")}</p>}
+      {phase.preview.wrapper && <WrapperContents wrapper={phase.preview.wrapper} />}
       <ul className="catalog-update-programs">
         {phase.preview.programs.map((program) => <li key={program.id}>
           <strong>{program.name ?? program.id}</strong>
@@ -124,7 +126,32 @@ export default function CatalogPackageUpdate(props: {
 
     {phase.kind === "applied" && <div className="catalog-update-preview">
       <p role="status">{t("catalogUpdate.applied", { backup: phase.result.backup })}</p>
-      <CatalogInstallReportView report={phase.result.report} />
+      {phase.result.packages.map((installed, index) => <div key={installed.path ?? index} className="catalog-update-installed">
+        {installed.path !== null && <h3>{t("catalogUpdate.wrapper.inner", { path: installed.path })}</h3>}
+        <CatalogInstallReportView report={installed.report} />
+      </div>)}
     </div>}
   </>;
+}
+
+/** A vendor ZIP: its inner packages (installed together) and what it carries besides (ADR-0140). */
+function WrapperContents(props: { wrapper: CatalogueWrapperPreview }) {
+  const { packages, otherMembers } = props.wrapper;
+  const t = useTranslate();
+  return <section className="catalog-update-wrapper" aria-labelledby="catalog-update-wrapper-heading">
+    <h3 id="catalog-update-wrapper-heading">{t("catalogUpdate.wrapper.region")}</h3>
+    <p>{t("catalogUpdate.wrapper.summary", { count: packages.length })}</p>
+    <ul className="catalog-update-wrapper-list">
+      {packages.map((inner) => <li key={inner.path}><code>{inner.path}</code>
+        {inner.alreadyInstalled && <span className="catalog-update-program-detail">{t("catalogUpdate.wrapper.known")}</span>}</li>)}
+    </ul>
+    {otherMembers.length > 0 && <>
+      <p>{t("catalogUpdate.wrapper.others", { count: otherMembers.length })}</p>
+      <ul className="catalog-update-wrapper-list">
+        {otherMembers.map((member) => <li key={member.path}><code>{member.path}</code>
+          <span className="catalog-update-program-detail">{t("catalogUpdate.wrapper.size", { count: member.size })}</span>
+          {member.kind === "appleDouble" && <span className="catalog-update-program-detail">{t("catalogUpdate.wrapper.appleDouble")}</span>}</li>)}
+      </ul>
+    </>}
+  </section>;
 }

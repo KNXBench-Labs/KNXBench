@@ -12,6 +12,33 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Vendor ZIPs of product packages (18 October 2026)
+
+Census step 2 ([ADR-0140](adr/0140-vendor-zips-of-product-packages-install-as-a-whole.md)).
+A ZIP without its own `knx_master.xml` that holds `*.knxprod` members was refused
+as "missing knx_master.xml"; it now installs as a whole. `knx_productdb::
+install_product_file` runs the ordinary package path for every inner package,
+byte-exact, in one transaction (source name `<zip>!/<member>`); a refused inner
+package refuses the ZIP and names itself; inner packages share one expansion
+budget of the chosen profile; other members are reported with size, SHA-256 and
+kind (`file`, or `appleDouble` for macOS sidecars recognised by RFC 1740 magic)
+and are not stored. The installer itself refuses such a ZIP as
+`WrapperArchive` naming its packages. Package code was restructured without a
+behaviour change: admission, the checked archive view and the member read are
+shared functions, and the inner install runs in the caller's transaction.
+Surfaces: `knx products ingest` takes `.zip` (a project archive under that name
+still reaches the project import) and `--allow-large-package` for vendor ZIPs;
+the previewed catalogue update (CLI and web) previews and applies vendor ZIPs
+(`preview.wrapper`; the apply response is now `packages: [{path, report}]`); the
+web dialog lists inner packages and every file not installed (EN/DE). The web
+keeps the standard profile. Real collection: 33 vendor ZIPs, 30 install with the
+standard profile, 2 with the large one, 1 correctly refused (backslash paths);
+47 inner packages ([census result](research/2026-10-17-product-database-gap-census.md#result-vendor-zips-18-october-2026)).
+Tests: ProductDB `wrapper_packages` 13, CLI `cli_vendor_zip` 4 and
+`cli_large_package` +1, HTTP `http_catalogue_update` +2, Vitest
+`CatalogPackageUpdate` +4. Mutants 6/6 killed (shared budget, case-insensitive
+name, other members, wrapper refusal, inner refusal naming, one transaction).
+
 ## Object-local function dropdowns (17 October 2026)
 
 Package P1 publishes Codex's unpublished feature `99dd6e65`, cherry-picked onto

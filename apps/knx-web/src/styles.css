@@ -1168,6 +1168,11 @@ main {
 .catalog-update-programs { margin: 0; padding: 0; list-style: none; display: grid; gap: 0.4rem; }
 .catalog-update-programs li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.6rem; min-width: 0; }
 .catalog-update-programs code, .catalog-update-program-detail { overflow-wrap: anywhere; color: var(--knx-muted); font-size: 0.85em; }
+.catalog-update-wrapper { display: grid; gap: 0.4rem; min-width: 0; }
+.catalog-update-wrapper h3, .catalog-update-installed h3 { margin: 0.4rem 0 0; font-size: 1em; }
+.catalog-update-wrapper-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 0.25rem; }
+.catalog-update-wrapper-list li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.6rem; min-width: 0; }
+.catalog-update-wrapper-list code { overflow-wrap: anywhere; }
 .catalog-update-status {
   padding: 0 0.4rem;
   border: 1px solid var(--knx-border);

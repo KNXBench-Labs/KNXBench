@@ -916,9 +916,19 @@ export interface CatalogueProgramUpdate {
 export interface CatalogueUpdatePreview {
   sourceName: string; packageSha256: string; packageAlreadyInstalled: boolean; programs: CatalogueProgramUpdate[];
   productsAdded: number; hardware2programsAdded: number; idConflicts: number; catalogueFingerprint: string; token: string;
+  /** Present for a vendor ZIP of product packages (ADR-0140); `programs` then spans every inner package. */
+  wrapper?: CatalogueWrapperPreview | null;
+}
+/** Inner packages of a vendor ZIP and the members that are reported but never stored. */
+export interface CatalogueWrapperPreview {
+  packages: { path: string; sha256: string; alreadyInstalled: boolean }[];
+  /** `appleDouble`: macOS file metadata (RFC 1740 magic), even when named like a `.knxprod`. */
+  otherMembers: { path: string; size: number; sha256: string; kind: "file" | "appleDouble" }[];
 }
 export interface CatalogueUpdatePreviewAnswer { applied: false; preview: CatalogueUpdatePreview }
-export interface CatalogueUpdateApplied { applied: true; preview: CatalogueUpdatePreview; backup: string; report: CatalogInstallReport }
+/** One entry per installed package: the file itself (`path` null) or each inner package of a vendor ZIP. */
+export interface CatalogueAppliedPackage { path: string | null; report: CatalogInstallReport }
+export interface CatalogueUpdateApplied { applied: true; preview: CatalogueUpdatePreview; backup: string; packages: CatalogueAppliedPackage[] }
 /** `identity` is opaque: which file the name was when listed; a deletion must present it (B5). */
 export interface CatalogueBackup { name: string; bytes: number; modifiedUnixSeconds: number; identity: string }
 export async function previewCatalogUpdate(file: File): Promise<CatalogueUpdatePreviewAnswer> {

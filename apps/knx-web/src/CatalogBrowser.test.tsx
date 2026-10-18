@@ -108,7 +108,7 @@ function mockApplied(report: CatalogInstallReport) {
     productsAdded: 0, hardware2programsAdded: 0, idConflicts: 0, catalogueFingerprint: "f".repeat(64), token: "t" };
   apiMock.previewCatalogUpdate.mockResolvedValueOnce({ applied: false, preview });
   apiMock.applyCatalogUpdate.mockResolvedValueOnce({ applied: true, preview,
-    backup: "products.sqlite.backup-1-abcdefabcdef.sqlite", report });
+    backup: "products.sqlite.backup-1-abcdefabcdef.sqlite", packages: [{ path: null, report }] });
 }
 async function confirmInstall() {
   const apply = Array.from(host!.querySelectorAll("button"))

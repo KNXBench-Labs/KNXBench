@@ -64,6 +64,8 @@ fn verify_package(bytes: &[u8], ordinal: usize) -> Option<String> {
             knx_productdb::PackageError::SizeLimit { .. } => "size limit",
             knx_productdb::PackageError::Encrypted { .. } => "encrypted member",
             knx_productdb::PackageError::MissingMaster => "missing master",
+            knx_productdb::PackageError::WrapperArchive { .. } => "vendor wrapper",
+            knx_productdb::PackageError::WrapperMember { .. } => "vendor wrapper member",
             knx_productdb::PackageError::UnsupportedNamespace { .. } => "unsupported namespace",
             knx_productdb::PackageError::ProjectArchive => "project archive",
             knx_productdb::PackageError::MissingManufacturerData => "missing manufacturer data",

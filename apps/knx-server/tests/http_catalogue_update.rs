@@ -235,7 +235,13 @@ async fn apply_needs_the_current_token_writes_a_backup_and_keeps_old_programs() 
     let backup = body["backup"].as_str().unwrap();
     assert!(!backup.contains('/') && !backup.contains('\\'), "{backup}");
     assert_eq!(backup_names(f.dir.path()), [backup.to_string()]);
-    assert_eq!(body["report"]["sha256"], body["preview"]["packageSha256"]);
+    assert_eq!(body["packages"].as_array().unwrap().len(), 1, "{body}");
+    assert_eq!(body["packages"][0]["path"], json!(null));
+    assert_eq!(
+        body["packages"][0]["report"]["sha256"],
+        body["preview"]["packageSha256"]
+    );
+    assert_eq!(body["preview"]["wrapper"], json!(null));
     assert_eq!(
         server_program_ids(&f.state),
         ["M-0001_A-0001-10-0001", "M-0001_A-0001-11-0001"]
@@ -650,4 +656,96 @@ async fn catalogue_update_routes_remain_inside_existing_authentication() {
     ] {
         assert_eq!(send(&app, request).await.0, StatusCode::UNAUTHORIZED);
     }
+}
+
+fn wrapper(members: &[(&str, &[u8])]) -> Vec<u8> {
+    let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
+    for (name, bytes) in members {
+        zip.start_file(*name, SimpleFileOptions::default()).unwrap();
+        zip.write_all(bytes).unwrap();
+    }
+    zip.finish().unwrap().into_inner()
+}
+
+#[tokio::test]
+async fn a_vendor_zip_is_previewed_and_installed_package_by_package() {
+    let f = fixture();
+    let bytes = wrapper(&[
+        ("Dimmer/dimmer-v17.knxprod", &package(0x11)),
+        ("Dimmer/Manual.pdf", b"%PDF-1.4 manual"),
+    ]);
+    let before = std::fs::read(f.db()).unwrap();
+    let (status, body) = send(
+        &f.app,
+        upload("/api/catalog/update/preview", "vendor.zip", &bytes, &[]),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(
+        std::fs::read(f.db()).unwrap(),
+        before,
+        "a preview never writes"
+    );
+    let preview = &body["preview"];
+    assert_eq!(
+        preview["wrapper"]["packages"][0]["path"],
+        json!("Dimmer/dimmer-v17.knxprod")
+    );
+    assert_eq!(
+        preview["wrapper"]["packages"][0]["alreadyInstalled"],
+        json!(false)
+    );
+    assert_eq!(
+        preview["wrapper"]["otherMembers"][0]["path"],
+        json!("Dimmer/Manual.pdf")
+    );
+    assert_eq!(preview["wrapper"]["otherMembers"][0]["size"], json!(15));
+    assert_eq!(preview["programs"][0]["status"], json!("newVersion"));
+    let token = preview["token"].as_str().unwrap().to_string();
+
+    let (status, body) = send(
+        &f.app,
+        upload(
+            "/api/catalog/update/apply",
+            "vendor.zip",
+            &bytes,
+            &[("token", &token)],
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(
+        body["packages"][0]["path"],
+        json!("Dimmer/dimmer-v17.knxprod")
+    );
+    assert_eq!(
+        body["packages"][0]["report"]["sha256"],
+        body["preview"]["wrapper"]["packages"][0]["sha256"]
+    );
+    assert_eq!(
+        server_program_ids(&f.state),
+        ["M-0001_A-0001-10-0001", "M-0001_A-0001-11-0001"]
+    );
+}
+
+#[tokio::test]
+async fn a_refused_inner_package_names_itself_and_changes_nothing() {
+    let f = fixture();
+    let bytes = wrapper(&[
+        ("good.knxprod", &package(0x11)),
+        ("broken.knxprod", b"not a zip"),
+    ]);
+    let before = std::fs::read(f.db()).unwrap();
+    let (status, body) = send(
+        &f.app,
+        upload("/api/catalog/update/preview", "vendor.zip", &bytes, &[]),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+    let message = body["error"].as_str().unwrap();
+    assert!(
+        message.contains("inner product package broken.knxprod"),
+        "{message}"
+    );
+    assert_eq!(std::fs::read(f.db()).unwrap(), before);
 }

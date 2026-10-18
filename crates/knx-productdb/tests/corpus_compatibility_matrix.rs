@@ -196,6 +196,8 @@ fn error_category(error: PackageError) -> &'static str {
         PackageError::DuplicateMember { .. } => "duplicate_member",
         PackageError::SizeLimit { .. } => "size_limit",
         PackageError::MissingMaster => "missing_master",
+        PackageError::WrapperArchive { .. } => "wrapper_archive",
+        PackageError::WrapperMember { .. } => "wrapper_member",
         PackageError::UnsupportedNamespace { .. } => "unsupported_namespace",
         PackageError::ProjectArchive => "project_archive",
         PackageError::MissingManufacturerData => "missing_manufacturer_data",

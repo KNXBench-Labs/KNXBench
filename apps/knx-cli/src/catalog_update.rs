@@ -11,7 +11,7 @@ use std::process::ExitCode;
 
 use serde_json::json;
 
-const UPDATE_USAGE: &str = "usage: knx products update <file.knxprod> [--product-db <path>] [--allow-large-package] [--confirm <token>]";
+const UPDATE_USAGE: &str = "usage: knx products update <file.knxprod|file.zip> [--product-db <path>] [--allow-large-package] [--confirm <token>]";
 const RESTORE_USAGE: &str = "usage: knx products restore <backup.sqlite> [--product-db <path>]";
 
 struct UpdateArgs {
@@ -62,7 +62,7 @@ fn parse_update(args: &[String]) -> Result<UpdateArgs, String> {
         }
     }
     Ok(UpdateArgs {
-        file: file.ok_or("missing <file.knxprod>")?,
+        file: file.ok_or("missing <file.knxprod|file.zip>")?,
         product_db,
         allow_large,
         confirm,

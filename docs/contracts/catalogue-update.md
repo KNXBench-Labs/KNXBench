@@ -5,8 +5,19 @@ Status: implemented by [ADR-0117](../adr/0117-previewed-recoverable-catalogue-up
 
 ## Source
 
-A `.knxprod` file the user obtained from the manufacturer. KNXBench downloads
-nothing. Provenance is the file name the user gave and the package SHA-256.
+A `.knxprod` file the user obtained from the manufacturer, or a vendor ZIP that
+holds `.knxprod` packages ([ADR-0140](../adr/0140-vendor-zips-of-product-packages-install-as-a-whole.md)).
+KNXBench downloads nothing. Provenance is the file name the user gave and the
+package SHA-256; an inner package of a vendor ZIP is recorded as
+`<zip name>!/<member path>`.
+
+**Vendor ZIPs.** A ZIP without its own `knx_master.xml` that holds at least one
+`*.knxprod` member is previewed and applied as a whole: every inner package is
+installed byte-exact in one transaction, a refused inner package refuses the whole
+ZIP (`inner product package <path>: <reason>`), and inner packages share one
+expansion budget of the chosen profile. Other members are listed, never stored;
+`kind` is `file`, or `appleDouble` for macOS metadata (RFC 1740 magic) that is
+named like a `.knxprod`.
 
 ## Preview — `knx products update <file.knxprod>`
 
@@ -16,7 +27,11 @@ ordinary install there and prints JSON: `applied: false`, the package hash,
 `newVersion` with `installedVersions` of the same manufacturer and
 application number, or `alreadyInstalled`), added products and
 Hardware2Program links, ID-conflict count, a catalogue fingerprint and a
-`token`. The database file is byte-identical afterwards. Malformed, legacy
+`token`, and `wrapper`: `null` for a package, or for a vendor ZIP
+`{packages:[{path, sha256, alreadyInstalled}], otherMembers:[{path, size, sha256, kind}]}`.
+`programs` and the counts then span every inner package, `packageSha256` is the
+ZIP's hash, and `packageAlreadyInstalled` means every inner package is known.
+The database file is byte-identical afterwards. Malformed, legacy
 (`.vd?`, EX-IM) and oversized packages are refused exactly as `products
 ingest` refuses them.
 
@@ -51,8 +66,11 @@ All behind the existing authentication; JSON is camelCase; errors are the usual
   422 kind `legacyProductDatabase`, as for install); no product database is 503 on
   every route below; database failures are 500. The database file is unchanged.
 - `POST /api/catalog/update/apply` — multipart: the same file field plus a text
-  field `token`. 200: `{applied:true, preview, backup, report}`; `backup` is the
-  backup's file name only and `report` the install report of `/api/catalog/install`.
+  field `token`. 200: `{applied:true, preview, backup, packages}`; `backup` is the
+  backup's file name only and `packages` is `[{path, report}]` with one install
+  report (as of `/api/catalog/install`) per installed package: `path` is null for a
+  plain package and the member path for each inner package of a vendor ZIP
+  (ADR-0140; until 18 October 2026 this was a single `report`).
   A token that no longer matches is 409 kind `catalogueUpdateStale` and nothing
   is written; a missing token is 400.
 - `GET /api/catalog/backups` — 200: `{backups:[{name, bytes, modifiedUnixSeconds, identity}]}`,
@@ -80,14 +98,14 @@ All behind the existing authentication; JSON is camelCase; errors are the usual
 
 Preview, apply, restore and delete hold the product-database mutex for their duration.
 
-**Web use (Goal B5).** The web installs every `.knxprod` through preview and apply
+**Web use (Goal B5).** The web installs every `.knxprod` and vendor ZIP through preview and apply
 (catalogue and device wizard); a preview refusal of kind `legacyProductDatabase`
 sends the file to `/api/catalog/install-legacy`. `/api/catalog/install` is no longer
 called by the web and stays unchanged for compatibility.
 
 ## Evidence
 
-`crates/knx-productdb/tests/catalog_update.rs`,
+`crates/knx-productdb/tests/catalog_update.rs`, `crates/knx-productdb/tests/wrapper_packages.rs`,
 `apps/knx-cli/tests/catalog_update_cli.rs` and, for the web routes,
 `apps/knx-server/tests/http_catalogue_update.rs`;
 [evidence record](../evidence/catalogue-update-2026-10-12.json).

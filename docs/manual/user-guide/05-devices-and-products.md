@@ -197,7 +197,12 @@ is not creating.
 ### Installing a product database
 
 The file picker at the top of the workspace takes a `.knxprod` file, the package format
-manufacturers publish. Installing reports what happened in one line: whether the
+manufacturers publish. *(Since Alpha 14:)* it also takes the ZIP many manufacturers
+actually ship, with one or more `.knxprod` packages and manuals inside. The preview
+then lists every package in the ZIP and every other file that is **not installed**
+(with its size); the packages install together or not at all, each unchanged. A ZIP
+whose package is too large for the default bounds is refused with that package's
+name; install it with `knx products ingest <file>.zip --allow-large-package`. Installing reports what happened in one line: whether the
 package was new or already installed, which scheme it used, and how many members,
 unknown entries and conflicts it contained. The catalog list refreshes immediately
 afterwards.

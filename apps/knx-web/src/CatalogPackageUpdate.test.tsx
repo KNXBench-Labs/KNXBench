@@ -87,7 +87,7 @@ describe("catalogue update with preview", () => {
 
   it("backs up and installs with the same file and token, then reloads", async () => {
     apiMock.previewCatalogUpdate.mockResolvedValue({ applied: false, preview });
-    apiMock.applyCatalogUpdate.mockResolvedValue({ applied: true, preview, backup: BACKUP, report });
+    apiMock.applyCatalogUpdate.mockResolvedValue({ applied: true, preview, backup: BACKUP, packages: [{ path: null, report }] });
     const { host, onInstalled, chosen } = await mount();
     await act(async () => button(host, "Back up and install").click());
     expect(apiMock.applyCatalogUpdate).toHaveBeenCalledWith(chosen, "token-1");
@@ -168,4 +168,71 @@ it("speaks German when the interface does", async () => {
   const { host } = await mount();
   expect(host.textContent).toContain("Noch ist nichts installiert.");
   expect(host.textContent).toContain("Sichern und installieren");
+});
+
+describe("a vendor ZIP of product packages (ADR-0140)", () => {
+  const wrapperPreview: CatalogueUpdatePreview = {
+    ...preview, sourceName: "vendor.zip", packageSha256: "cd34".repeat(16),
+    wrapper: {
+      packages: [
+        { path: "Dimmer/dimmer-v2.knxprod", sha256: "a".repeat(64), alreadyInstalled: false },
+        { path: "Switch/switch.knxprod", sha256: "b".repeat(64), alreadyInstalled: true },
+      ],
+      otherMembers: [{ path: "Dimmer/Manual.pdf", size: 2048, sha256: "c".repeat(64), kind: "file" },
+        { path: "__MACOSX/Dimmer/._dimmer-v2.knxprod", size: 120, sha256: "d".repeat(64), kind: "appleDouble" }],
+    },
+  };
+
+  it("lists every inner package and every file it will not install", async () => {
+    apiMock.previewCatalogUpdate.mockResolvedValue({ applied: false, preview: wrapperPreview });
+    const { host } = await mount(new File(["zip"], "vendor.zip"));
+    const section = host.querySelector<HTMLElement>(".catalog-update-wrapper")!;
+    expect(section.getAttribute("aria-labelledby")).toBe("catalog-update-wrapper-heading");
+    const text = section.textContent!;
+    expect(text).toContain("Packages in this ZIP");
+    expect(text).toContain("This vendor ZIP holds 2 product packages. They are installed together or not at all");
+    expect(text).toContain("Dimmer/dimmer-v2.knxprod");
+    expect(text).toContain("Switch/switch.knxprod");
+    expect(text).toContain("already installed");
+    expect(text).toContain("2 other files are not product data and are not installed:");
+    expect(text).toContain("macOS metadata");
+    const others = [...section.querySelectorAll(".catalog-update-wrapper-list")[1].querySelectorAll("li")].map((li) => li.textContent);
+    expect(others[0]).not.toContain("macOS metadata");
+    expect(others[1]).toContain("macOS metadata");
+    expect(text).toContain("Dimmer/Manual.pdf");
+    expect(text).toContain("2048 bytes");
+    expect(host.textContent).toContain("ZIP SHA-256");
+    expect(host.textContent).not.toContain("Package SHA-256");
+  });
+
+  it("shows one install report per inner package", async () => {
+    apiMock.previewCatalogUpdate.mockResolvedValue({ applied: false, preview: wrapperPreview });
+    apiMock.applyCatalogUpdate.mockResolvedValue({ applied: true, preview: wrapperPreview, backup: BACKUP, packages: [
+      { path: "Dimmer/dimmer-v2.knxprod", report },
+      { path: "Switch/switch.knxprod", report: { ...report, skipped: true } },
+    ] });
+    const { host } = await mount(new File(["zip"], "vendor.zip"));
+    await act(async () => button(host, "Back up and install").click());
+    const headings = Array.from(host.querySelectorAll(".catalog-update-installed h3")).map((h) => h.textContent);
+    expect(headings).toEqual(["Package Dimmer/dimmer-v2.knxprod", "Package Switch/switch.knxprod"]);
+  });
+
+  it("names a ZIP whose packages are all known as such", async () => {
+    apiMock.previewCatalogUpdate.mockResolvedValue({ applied: false, preview: { ...wrapperPreview, packageAlreadyInstalled: true } });
+    const { host } = await mount(new File(["zip"], "vendor.zip"));
+    expect(host.textContent).toContain("Every package in this ZIP is already installed");
+    expect(host.textContent).not.toContain("This package is already installed");
+  });
+
+  it("speaks German about the ZIP too", async () => {
+    saveUiLanguage(settingsStorage, "de"); resetUiLanguageForTests();
+    apiMock.previewCatalogUpdate.mockResolvedValue({ applied: false, preview: wrapperPreview });
+    const { host } = await mount(new File(["zip"], "vendor.zip"));
+    const text = host.querySelector(".catalog-update-wrapper")!.textContent!;
+    expect(text).toContain("Pakete in dieser ZIP-Datei");
+    expect(text).toContain("Diese Hersteller-ZIP enthält 2 Produktpakete.");
+    expect(text).toContain("2 weitere Dateien enthalten keine Produktdaten und werden nicht installiert:");
+    expect(text).toContain("macOS-Metadaten");
+    expect(text).toContain("2048 Byte");
+  });
 });

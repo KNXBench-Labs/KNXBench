@@ -89,6 +89,16 @@ pub enum PackageError {
         path: String,
     },
     MissingMaster,
+    /// A ZIP without its own `knx_master.xml` that holds `.knxprod`
+    /// packages: a vendor wrapper (ADR-0140). Paths in archive order.
+    WrapperArchive {
+        packages: Vec<String>,
+    },
+    /// One inner package of a wrapper was refused; the wrapper as a whole is.
+    WrapperMember {
+        path: String,
+        error: Box<PackageError>,
+    },
     UnsupportedNamespace {
         namespace: String,
     },
@@ -120,6 +130,28 @@ impl fmt::Display for PackageError {
             Self::DuplicateMember { path } => write!(f, "duplicate product ZIP member: {path}"),
             Self::SizeLimit { path } => write!(f, "product ZIP size limit exceeded: {path}"),
             Self::MissingMaster => write!(f, "product ZIP is missing knx_master.xml"),
+            Self::WrapperArchive { packages } => {
+                const SHOWN: usize = 5;
+                let mut names = packages
+                    .iter()
+                    .take(SHOWN)
+                    .map(String::as_str)
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                if packages.len() > SHOWN {
+                    names.push_str(&format!(" and {} more", packages.len() - SHOWN));
+                }
+                write!(
+                    f,
+                    "this ZIP has no knx_master.xml of its own but holds {} product package(s) \
+                     ({names}); install it as a vendor ZIP (knx products ingest or the \
+                     catalogue update) or install one inner package",
+                    packages.len()
+                )
+            }
+            Self::WrapperMember { path, error } => {
+                write!(f, "inner product package {path}: {error}")
+            }
             Self::UnsupportedNamespace { namespace } => {
                 write!(f, "unsupported product master namespace: {namespace}")
             }
@@ -766,7 +798,7 @@ struct ValidatedZipDirectory {
 
 /// Read-only overlay used only by `zip`: stale Unicode-path field IDs are
 /// replaced without cloning or altering the archive that is persisted.
-struct ZipParserReader<'a> {
+pub(crate) struct ZipParserReader<'a> {
     inner: Cursor<&'a [u8]>,
     neutralized_fields: Vec<usize>,
 }
@@ -2276,31 +2308,16 @@ fn persist_facts(
     Ok(())
 }
 
-/// Install a standalone product package, preserving the archive and every file.
-/// All storage and parsing share one transaction. Identical archive bytes are
-/// revalidated and re-extracted, but skip domain ingestion and database
-/// mutation, including when the caller supplies a different source name.
-pub fn install_package(
-    conn: &Connection,
-    source_name: &str,
-    bytes: &[u8],
-) -> Result<InstallReport, PackageError> {
-    install_package_with_limits(conn, source_name, bytes, PackageLimits::STANDARD)
+/// A wrapper member that is installed as a product package: its name ends in
+/// `.knxprod` (ASCII case-insensitive). Every other member is reported.
+pub(crate) fn is_inner_package_path(path: &str) -> bool {
+    path.to_ascii_lowercase().ends_with(".knxprod")
 }
 
-/// [`install_package`] with explicit expansion bounds. Only a caller that has
-/// accepted the resource cost of [`PackageLimits::LARGE`] (memory, time and
-/// database growth, while it holds its connection) should pass it.
-pub fn install_package_with_limits(
-    conn: &Connection,
-    source_name: &str,
-    bytes: &[u8],
-    limits: PackageLimits,
-) -> Result<InstallReport, PackageError> {
-    let PackageLimits {
-        max_member_size,
-        max_expanded_size,
-    } = limits;
+/// Name and content admission that precedes any transaction: the raw size
+/// bound, legacy names and legacy containers. Shared by standalone packages
+/// and the inner packages of a vendor wrapper (ADR-0140).
+pub(crate) fn admit_package_bytes(source_name: &str, bytes: &[u8]) -> Result<(), PackageError> {
     if bytes.len() > MAX_PACKAGE_SIZE {
         return Err(PackageError::SizeLimit {
             path: source_name.into(),
@@ -2337,48 +2354,27 @@ pub fn install_package_with_limits(
             len: legacy.len,
         });
     }
-    let sha256 = sha256_hex(bytes);
-    let tx = conn.unchecked_transaction().map_err(ProductDbError::from)?;
-    let prior_raw: Option<(i64, i64, i64, i64, i64, i64, i64)> = tx
-        .query_row(
-            "SELECT scheme, unknown_count, translation_program_count, translation_catalog_count,
-                    translation_hardware_count, translation_master_count,
-                    dropped_datapoint_type_count
-             FROM package WHERE sha256 = ?1",
-            [&sha256],
-            |r| {
-                Ok((
-                    r.get(0)?,
-                    r.get(1)?,
-                    r.get(2)?,
-                    r.get(3)?,
-                    r.get(4)?,
-                    r.get(5)?,
-                    r.get(6)?,
-                ))
-            },
-        )
-        .optional()?;
-    let prior = prior_raw
-        .map(|row| -> Result<_, ProductDbError> {
-            Ok((
-                u32::try_from(row.0).map_err(|_| report_error("invalid stored package scheme"))?,
-                usize::try_from(row.1).map_err(|_| report_error("invalid stored unknown count"))?,
-                TranslationCounts {
-                    program: usize::try_from(row.2)
-                        .map_err(|_| report_error("invalid program translation count"))?,
-                    catalog: usize::try_from(row.3)
-                        .map_err(|_| report_error("invalid catalog translation count"))?,
-                    hardware: usize::try_from(row.4)
-                        .map_err(|_| report_error("invalid hardware translation count"))?,
-                    master: usize::try_from(row.5)
-                        .map_err(|_| report_error("invalid master translation count"))?,
-                },
-                usize::try_from(row.6)
-                    .map_err(|_| report_error("invalid dropped datapoint count"))?,
-            ))
-        })
-        .transpose()?;
+    Ok(())
+}
+
+/// A product ZIP after every structural, identity, path and size check,
+/// before any member is decompressed. Package and wrapper installs read
+/// members only through this view.
+pub(crate) struct CheckedArchive<'a> {
+    pub(crate) archive: zip::ZipArchive<ZipParserReader<'a>>,
+    pub(crate) has_master: bool,
+    /// File members named `*.knxprod` (ASCII case-insensitive), archive order.
+    pub(crate) inner_packages: Vec<String>,
+}
+
+pub(crate) fn open_checked_archive(
+    bytes: &[u8],
+    limits: PackageLimits,
+) -> Result<CheckedArchive<'_>, PackageError> {
+    let PackageLimits {
+        max_member_size,
+        max_expanded_size,
+    } = limits;
     let directory = preflight_zip(bytes)?;
     let ValidatedZipDirectory {
         entries: checked_entries,
@@ -2471,6 +2467,7 @@ pub fn install_package_with_limits(
     }
     let mut paths = MemberPathTree::default();
     let mut has_master = false;
+    let mut inner_packages = Vec::new();
     let mut decoded_path_size = 0_usize;
     let mut total = 0_u64;
     for i in 0..archive.len() {
@@ -2506,6 +2503,9 @@ pub fn install_package_with_limits(
             }
         }
         has_master |= normalized == "knx_master.xml";
+        if !is_directory && is_inner_package_path(normalized) {
+            inner_packages.push(normalized.to_string());
+        }
         if file.encrypted() {
             return Err(PackageError::Encrypted { path: path.into() });
         }
@@ -2523,34 +2523,145 @@ pub fn install_package_with_limits(
             return Err(PackageError::ProjectArchive);
         }
     }
+    Ok(CheckedArchive {
+        archive,
+        has_master,
+        inner_packages,
+    })
+}
+
+/// Reads member `index` of a checked archive through `take(max + 1)`.
+/// `None` for an empty directory record; a directory carrying data is unsafe.
+pub(crate) fn read_checked_member(
+    archive: &mut zip::ZipArchive<ZipParserReader<'_>>,
+    index: usize,
+    max_member_size: u64,
+) -> Result<(String, Option<Vec<u8>>), PackageError> {
+    let mut file = archive.by_index(index).map_err(zip_error)?;
+    let path = file.name().to_string();
+    let is_directory = file.is_dir();
+    let mut data = Vec::new();
+    (&mut file)
+        .take(max_member_size + 1)
+        .read_to_end(&mut data)
+        .map_err(zip_error)?;
+    let data_len = usize_to_u64(data.len(), "decoded member size")?;
+    if data_len > max_member_size {
+        return Err(PackageError::SizeLimit { path });
+    }
+    if data_len != file.size() {
+        return Err(zip_error(format!("size mismatch for {path}")));
+    }
+    if is_directory {
+        if !data.is_empty() {
+            return Err(PackageError::UnsafeMember { path });
+        }
+        return Ok((path, None));
+    }
+    Ok((path, Some(data)))
+}
+
+/// Install a standalone product package, preserving the archive and every file.
+/// All storage and parsing share one transaction. Identical archive bytes are
+/// revalidated and re-extracted, but skip domain ingestion and database
+/// mutation, including when the caller supplies a different source name.
+pub fn install_package(
+    conn: &Connection,
+    source_name: &str,
+    bytes: &[u8],
+) -> Result<InstallReport, PackageError> {
+    install_package_with_limits(conn, source_name, bytes, PackageLimits::STANDARD)
+}
+
+/// [`install_package`] with explicit expansion bounds. Only a caller that has
+/// accepted the resource cost of [`PackageLimits::LARGE`] (memory, time and
+/// database growth, while it holds its connection) should pass it.
+pub fn install_package_with_limits(
+    conn: &Connection,
+    source_name: &str,
+    bytes: &[u8],
+    limits: PackageLimits,
+) -> Result<InstallReport, PackageError> {
+    admit_package_bytes(source_name, bytes)?;
+    let tx = conn.unchecked_transaction().map_err(ProductDbError::from)?;
+    let report = install_admitted_package(&tx, source_name, bytes, limits)?;
+    tx.commit().map_err(ProductDbError::from)?;
+    Ok(report)
+}
+
+/// [`install_package_with_limits`] inside the caller's transaction, after
+/// [`admit_package_bytes`]. Commits nothing: a wrapper install (ADR-0140)
+/// runs several of these and commits once.
+pub(crate) fn install_admitted_package(
+    tx: &Connection,
+    source_name: &str,
+    bytes: &[u8],
+    limits: PackageLimits,
+) -> Result<InstallReport, PackageError> {
+    let max_member_size = limits.max_member_size;
+    let sha256 = sha256_hex(bytes);
+    let prior_raw: Option<(i64, i64, i64, i64, i64, i64, i64)> = tx
+        .query_row(
+            "SELECT scheme, unknown_count, translation_program_count, translation_catalog_count,
+                    translation_hardware_count, translation_master_count,
+                    dropped_datapoint_type_count
+             FROM package WHERE sha256 = ?1",
+            [&sha256],
+            |r| {
+                Ok((
+                    r.get(0)?,
+                    r.get(1)?,
+                    r.get(2)?,
+                    r.get(3)?,
+                    r.get(4)?,
+                    r.get(5)?,
+                    r.get(6)?,
+                ))
+            },
+        )
+        .optional()?;
+    let prior = prior_raw
+        .map(|row| -> Result<_, ProductDbError> {
+            Ok((
+                u32::try_from(row.0).map_err(|_| report_error("invalid stored package scheme"))?,
+                usize::try_from(row.1).map_err(|_| report_error("invalid stored unknown count"))?,
+                TranslationCounts {
+                    program: usize::try_from(row.2)
+                        .map_err(|_| report_error("invalid program translation count"))?,
+                    catalog: usize::try_from(row.3)
+                        .map_err(|_| report_error("invalid catalog translation count"))?,
+                    hardware: usize::try_from(row.4)
+                        .map_err(|_| report_error("invalid hardware translation count"))?,
+                    master: usize::try_from(row.5)
+                        .map_err(|_| report_error("invalid master translation count"))?,
+                },
+                usize::try_from(row.6)
+                    .map_err(|_| report_error("invalid dropped datapoint count"))?,
+            ))
+        })
+        .transpose()?;
+    let CheckedArchive {
+        mut archive,
+        has_master,
+        inner_packages,
+    } = open_checked_archive(bytes, limits)?;
     if !has_master {
+        if !inner_packages.is_empty() {
+            return Err(PackageError::WrapperArchive {
+                packages: inner_packages,
+            });
+        }
         return Err(PackageError::MissingMaster);
     }
     let mut validated_members = Vec::new();
     let mut scheme = None;
     let mut has_manufacturer_data = false;
     for i in 0..archive.len() {
-        let mut file = archive.by_index(i).map_err(zip_error)?;
-        let path = file.name().to_string();
-        let is_directory = file.is_dir();
-        let mut data = Vec::new();
-        (&mut file)
-            .take(max_member_size + 1)
-            .read_to_end(&mut data)
-            .map_err(zip_error)?;
-        let data_len = usize_to_u64(data.len(), "decoded member size")?;
-        if data_len > max_member_size {
-            return Err(PackageError::SizeLimit { path });
-        }
-        if data_len != file.size() {
-            return Err(zip_error(format!("size mismatch for {path}")));
-        }
-        if is_directory {
-            if !data.is_empty() {
-                return Err(PackageError::UnsafeMember { path });
-            }
+        let (path, data) = read_checked_member(&mut archive, i, max_member_size)?;
+        let Some(data) = data else {
             continue;
-        }
+        };
+        let data_len = usize_to_u64(data.len(), "decoded member size")?;
         if path.ends_with(".xml") {
             validate_xml(&path, &data)?;
         }
@@ -2630,16 +2741,15 @@ pub fn install_package_with_limits(
                 "stored package member index differs from validated archive",
             ));
         }
-        let conflicts = package_conflicts(&tx, &sha256)?;
-        let facts = load_facts(&tx, &sha256)?;
-        let baggage = crate::baggage::load_baggage_inventory(&tx, &sha256)?;
+        let conflicts = package_conflicts(tx, &sha256)?;
+        let facts = load_facts(tx, &sha256)?;
+        let baggage = crate::baggage::load_baggage_inventory(tx, &sha256)?;
         // The only write of a retry: the name these bytes arrived under.
         tx.execute(
             "INSERT OR IGNORE INTO package_source_name (package_sha256, source_name) VALUES (?1, ?2)",
             params![sha256, source_name],
         )?;
-        let source_names = crate::identity::package_source_names(&tx, &sha256)?;
-        tx.commit().map_err(ProductDbError::from)?;
+        let source_names = crate::identity::package_source_names(tx, &sha256)?;
         return Ok(InstallReport {
             sha256: sha256.clone(),
             scheme,
@@ -2749,10 +2859,10 @@ pub fn install_package_with_limits(
         ) {
             // A retained raw member is not proof its domain rows were parsed.
             // The package hash, not the blob hash, controls package retries.
-            ingest_file_in_transaction(&tx, &path, &data, true, matches!(scheme, 21 | 23))?
+            ingest_file_in_transaction(tx, &path, &data, true, matches!(scheme, 21 | 23))?
         } else {
             let stored = crate::store_source_file(
-                &tx,
+                tx,
                 &crate::SourceFile {
                     source_path: path.clone(),
                     manufacturer_id: path
@@ -2764,7 +2874,7 @@ pub fn install_package_with_limits(
                 },
             )?;
             if stored {
-                crate::identity::record_producer(&tx, &member_sha, &data)?;
+                crate::identity::record_producer(tx, &member_sha, &data)?;
             }
             DetailedIngestOutcome {
                 outcome: IngestOutcome::Skipped {
@@ -2796,7 +2906,7 @@ pub fn install_package_with_limits(
             add_entities(&mut facts, &entities)?;
         }
         if role == "Master" {
-            let master = crate::parse::master::ingest_master_data_detailed(&tx, &data)?;
+            let master = crate::parse::master::ingest_master_data_detailed(tx, &data)?;
             let crate::parse::master::DetailedMasterIngest {
                 outcome: mut master_outcome,
                 entities,
@@ -2811,7 +2921,7 @@ pub fn install_package_with_limits(
                     &mut master_outcome.unknown,
                 )?;
             }
-            insert_unknown(&tx, &member_sha, &master_outcome.unknown)?;
+            insert_unknown(tx, &member_sha, &master_outcome.unknown)?;
             report.unknown = report
                 .unknown
                 .checked_add(master_outcome.unknown.len())
@@ -2886,7 +2996,7 @@ pub fn install_package_with_limits(
             let mut unknown = UnknownCollector::default();
             unknown.element("/Package", &path);
             let unknown = unknown.into_vec();
-            insert_unknown(&tx, &member_sha, &unknown)?;
+            insert_unknown(tx, &member_sha, &unknown)?;
             report.unknown = report
                 .unknown
                 .checked_add(unknown.len())
@@ -2920,7 +3030,7 @@ pub fn install_package_with_limits(
     }
     facts.unknown_constructs = unknowns.into_values().collect();
     let inventory = crate::baggage::BaggageInventory::resolve(baggage_indexes, baggage_payloads);
-    crate::baggage::persist(&tx, &report.sha256, &inventory)?;
+    crate::baggage::persist(tx, &report.sha256, &inventory)?;
     facts.diagnostics.extend(baggage_diagnostics(&inventory)?);
     report.baggage = Some(inventory);
     facts.sort()?;
@@ -2940,7 +3050,7 @@ pub fn install_package_with_limits(
         unknown_distinct,
     )?;
     finalize_facts(&mut facts)?;
-    persist_facts(&tx, &report.sha256, facts.clone())?;
+    persist_facts(tx, &report.sha256, facts.clone())?;
     report.facts = Some(facts);
     tx.execute(
         "UPDATE package SET unknown_count = ?2, translation_program_count = ?3,
@@ -2974,8 +3084,7 @@ pub fn install_package_with_limits(
             ],
         )?;
     }
-    report.conflicts = package_conflicts(&tx, &report.sha256)?;
-    tx.commit().map_err(ProductDbError::from)?;
+    report.conflicts = package_conflicts(tx, &report.sha256)?;
     Ok(report)
 }
 

@@ -33,6 +33,7 @@ pub mod source_diagnostics;
 pub mod system2;
 pub mod text_parameters;
 pub mod update;
+pub mod wrapper;
 pub use source_diagnostics::{source_diagnostics, SourceDiagnostic};
 pub mod xml;
 
@@ -69,4 +70,9 @@ pub use rusqlite::Connection;
 pub use update::{
     apply_package_update, preview_package_update, restore_product_db_backup, AppliedUpdate,
     InstalledVersion, ProgramUpdate, ProgramUpdateStatus, UpdateError, UpdatePreview,
+    WrapperPackagePreview, WrapperPreview,
+};
+pub use wrapper::{
+    install_product_file, InstalledPackage, ProductFileInstall, WrapperContents, WrapperMember,
+    WrapperMemberKind, WRAPPER_SOURCE_SEPARATOR,
 };

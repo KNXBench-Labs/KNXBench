@@ -6,6 +6,16 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Vendor ZIPs (18 October 2026, after Alpha 13)
+
+[ADR-0140](../adr/0140-vendor-zips-of-product-packages-install-as-a-whole.md):
+A vendor ZIP is checked with the chosen profile, and its inner packages then share
+one expansion budget of that same profile. `knx products ingest <file>.zip
+--allow-large-package` (and `knx products update`) accept the large profile for
+vendor ZIPs. The web keeps the standard profile: a ZIP whose inner package needs
+more is refused there with a message naming that inner package. The
+measurement-first rule for the profiles themselves is unchanged.
+
 <!-- BEGIN retained catalogue record -->
 
 ## §151 Real manufacturer packages exceed the product-ZIP size limits

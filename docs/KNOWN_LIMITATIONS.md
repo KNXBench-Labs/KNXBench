@@ -348,7 +348,7 @@ VD3–VD5 import is delivered. PR/VD2, legacy DPTs, unsupported parameter forms 
 ### 134. Baggage classification versus interpretation
 
 **Ledger status:** `ACCEPTED_BOUNDARY` ([KL-134](status/LEDGER.md#snapshot-ids)).
-Baggage is inventoried/classified, not installed or executed. Icons/destinations/timestamps remain raw or uninterpreted where documented.
+Baggage is inventoried/classified, not installed or executed. Icons/destinations/timestamps remain raw or uninterpreted where documented. Non-package members of a vendor ZIP are listed with size and digest, not stored.
 [Details and history](limitations/KL-134-baggage-classification-versus-interpretation.md)
 
 <a id="catalogue-kl-135"></a>
@@ -388,7 +388,7 @@ The database-constraint defect is fixed. Successful install does not prove neste
 ### 151. Product-package size profiles
 
 **Ledger status:** `DONE` ([KL-151](status/LEDGER.md#post-snapshot-ids)).
-Explicit bounded profiles admit larger measured bundles; production/web limits remain. Corpus inclusion is not unlimited admission/hardware verification.
+Explicit bounded profiles admit larger measured bundles; production/web limits remain. Vendor ZIPs share one budget of the chosen profile; the large profile stays CLI-only. Corpus inclusion is not unlimited admission/hardware verification.
 [Details and history](limitations/KL-151-product-package-size-profiles.md)
 
 <a id="catalogue-kl-152"></a>

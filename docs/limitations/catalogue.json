@@ -536,7 +536,7 @@
       "number": 134,
       "title": "Baggage classification versus interpretation",
       "topic": "Manufacturer data and parameters",
-      "summary": "Baggage is inventoried/classified, not installed or executed. Icons/destinations/timestamps remain raw or uninterpreted where documented.",
+      "summary": "Baggage is inventoried/classified, not installed or executed. Icons/destinations/timestamps remain raw or uninterpreted where documented. Non-package members of a vendor ZIP are listed with size and digest, not stored.",
       "file": "KL-134-baggage-classification-versus-interpretation.md",
       "ledger_ids": [
         "KL-134"
@@ -609,7 +609,7 @@
       "number": 151,
       "title": "Product-package size profiles",
       "topic": "Manufacturer data and parameters",
-      "summary": "Explicit bounded profiles admit larger measured bundles; production/web limits remain. Corpus inclusion is not unlimited admission/hardware verification.",
+      "summary": "Explicit bounded profiles admit larger measured bundles; production/web limits remain. Vendor ZIPs share one budget of the chosen profile; the large profile stays CLI-only. Corpus inclusion is not unlimited admission/hardware verification.",
       "file": "KL-151-product-package-size-profiles.md",
       "ledger_ids": [
         "KL-151"

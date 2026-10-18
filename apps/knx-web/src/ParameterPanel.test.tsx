@@ -137,6 +137,21 @@ function setSelectValue(select: HTMLSelectElement, value: string) {
 }
 
 describe("ParameterPanel", () => {
+  it("keeps Restricted section captions readable with original template evidence", async () => {
+    const panel = structuredClone(fixture);
+    panel.sections[0].fields[0] = { ...panel.sections[0].fields[0], access: "Read", editable: false,
+      writeEtsId: null, group: { key: "PB-1", label: "{{0}}", labelFill: { template: "{{0}}", source: "NoReference" } } };
+    apiMock.deviceParameters.mockResolvedValue(panel);
+    const root = await renderPanel(1, "restricted");
+    const button = host!.querySelector<HTMLButtonElement>(".parameter-group-toggle")!;
+    expect(button.textContent).toContain("Parameter group 1");
+    expect(button.textContent).not.toContain("{{");
+    expect(button.title).toContain("{{0}}");
+    expect(button.title).toContain("no text parameter");
+    expect(apiMock.setParameterValue).not.toHaveBeenCalled();
+    root.unmount();
+  });
+
   it("starts parameter areas closed, keeping an explicit choice while refreshed new areas stay closed", async () => {
     const grouped = { ...fixture, sections: [{ ...fixture.sections[0], fields: [
       { ...fixture.sections[0].fields[0], group: { key: "buttons", label: "Buttons" } },

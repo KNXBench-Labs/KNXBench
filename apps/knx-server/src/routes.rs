@@ -493,6 +493,8 @@ pub(crate) struct ParameterGridCellDto {
 #[derive(serde::Serialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ParameterGridLabelDto {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) text_fill: Option<knx_projection::TextFill>,
     pub(crate) row: u32,
     pub(crate) column: u32,
     pub(crate) text: String,
@@ -534,6 +536,8 @@ pub(crate) struct ModuleScopeDto {
 #[derive(serde::Serialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ParameterGroupDto {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) label_fill: Option<knx_projection::TextFill>,
     pub(crate) key: String,
     pub(crate) label: Option<String>,
 }
@@ -543,6 +547,8 @@ pub(crate) struct ParameterGroupDto {
 #[derive(serde::Serialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ParameterSeparatorDto {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) text_fill: Option<knx_projection::TextFill>,
     /// The index in the section's `fields` this separator stands before;
     /// `fields.len()` when it follows the last one.
     pub(crate) position: usize,

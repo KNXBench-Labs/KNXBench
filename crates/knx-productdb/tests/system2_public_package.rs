@@ -326,3 +326,33 @@ fn public_up258_configured_values_do_not_bypass_the_source_stopline() {
         assert_eq!(load_program_code(&conn, PROGRAM).unwrap().unwrap(), code);
     }
 }
+
+#[test]
+#[ignore = "requires the public Siemens UP258 package; set KNXBENCH_PUBLIC_UP258"]
+fn public_up258_declares_four_read_only_evidence_ranges_and_its_hardware_type() {
+    use knx_core::commissioning::declared_memory::DeclaredRange;
+    use knx_productdb::declared_segments::derive_declared_segments;
+
+    let (_dir, conn) = install_public_up258();
+    let code = load_program_code(&conn, PROGRAM)
+        .expect("application source readable")
+        .expect("exact application installed");
+    let profile = derive_declared_segments(&code).expect("exact System-2 evidence profile");
+    assert_eq!(profile.program_id, PROGRAM);
+    assert_eq!(profile.mask, 0x0025);
+    let range = |address, length| DeclaredRange { address, length };
+    assert_eq!(
+        profile.ranges.ranges(),
+        [
+            range(0x0116, 330),
+            range(0x0260, 416),
+            range(0x0400, 512),
+            range(0x3C00, 256),
+        ]
+    );
+    assert_eq!(profile.ranges.total_octets(), 1514);
+    assert_eq!(profile.range_positions, [6, 9, 12, 13]);
+    assert_eq!(profile.compare_position, 1);
+    assert_eq!(profile.hardware_type, [0, 1, 0, 0, 0, 0x5B, 0, 0, 0, 0]);
+    assert_eq!(profile.ranges.chunks().len(), 128);
+}

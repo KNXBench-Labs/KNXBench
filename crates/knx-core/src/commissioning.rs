@@ -5,6 +5,7 @@
 pub mod absolute_load_control;
 pub mod authorisation;
 pub mod byte_order_evidence;
+pub mod declared_memory;
 pub mod device_backup;
 pub mod domain_address;
 pub mod error_code;

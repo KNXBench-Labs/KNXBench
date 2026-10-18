@@ -3,42 +3,47 @@
 //! Corpus: `OriginalData/DeviceReports/` (private); contract:
 //! docs/contracts/device-diagnostic-export.md. The simulator tests prove the
 //! writer and reader agree with each other. This gate proves that archives
-//! collected on real hardware by a released source build still pass today's
-//! strict reader, that the current writer reproduces them byte for byte, and
-//! that the real replies have the shapes the contract promises. Override the
-//! directory with `KNXBENCH_DEVICE_REPORTS`.
+//! collected on real hardware still pass today's strict reader, that the
+//! current writer reproduces them byte for byte, and that the real replies have
+//! the shapes the contract promises. Two sets, each pinned separately: the
+//! emailed archives (`KNXBENCH_DEVICE_REPORTS`, the `*.zip` directly in the
+//! directory) and the maintainer's own house run
+//! (`KNXBENCH_HOUSE_DEVICE_REPORTS`, default `Unser Zuhause 2026-10-18/` below
+//! it).
 //!
 //! Only aggregate counts are asserted or printed: no file name, reply byte,
 //! project reference or timestamp leaves the corpus. The pins change only with
 //! a reviewed explanation (a new report arrived, or the reader changed).
 
 use std::collections::BTreeMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
-use knx_app::device_diagnostics::{bundle, read_bundle, Report};
+use knx_app::device_diagnostics::{bundle, read_bundle, Reading, Report};
 
-/// Twelve archives: the issue #22 detector plus eleven more devices received by
-/// email (docs/research/2026-10-18-device-diagnostics-eleven-devices.md).
-const ARCHIVES: usize = 12;
+/// Error tokens a real run produced. Anything else is new evidence to review.
+const REAL_ERRORS: &[&str] = &["access-denied-or-property-unsupported", "connection-lost"];
 
-fn reports_dir() -> PathBuf {
-    let dir = std::env::var_os("KNXBENCH_DEVICE_REPORTS")
+fn dir_from(var: &str, default: &Path) -> PathBuf {
+    let dir = std::env::var_os(var)
         .map(PathBuf::from)
-        .unwrap_or_else(|| knx_testsupport::workspace_root().join("OriginalData/DeviceReports"));
+        .unwrap_or_else(|| default.to_path_buf());
     assert!(
         dir.is_dir(),
-        "SKIP: set KNXBENCH_DEVICE_REPORTS; {} is not a directory",
+        "SKIP: set {var}; {} is not a directory",
         dir.display()
     );
     dir
 }
 
+fn reports_root() -> PathBuf {
+    knx_testsupport::workspace_root().join("OriginalData/DeviceReports")
+}
+
 /// Every `*.zip` directly in the directory, in a stable order. Directory or
 /// entry errors panic: an unreadable corpus must never shrink the sample.
-fn archives() -> Vec<Vec<u8>> {
-    let dir = reports_dir();
+fn archives(dir: &Path) -> Vec<Vec<u8>> {
     let mut paths = Vec::new();
-    for entry in std::fs::read_dir(&dir).expect("device reports directory unreadable") {
+    for entry in std::fs::read_dir(dir).expect("device reports directory unreadable") {
         let entry = entry.expect("device reports directory entry unreadable");
         let kind = entry
             .file_type()
@@ -55,7 +60,7 @@ fn archives() -> Vec<Vec<u8>> {
         .collect()
 }
 
-fn item<'a>(report: &'a Report, query: &str) -> &'a knx_app::device_diagnostics::Reading {
+fn item<'a>(report: &'a Report, query: &str) -> &'a Reading {
     report
         .items
         .iter()
@@ -67,18 +72,64 @@ fn word(bytes: &[u8]) -> Option<u16> {
     <[u8; 2]>::try_from(bytes).ok().map(u16::from_be_bytes)
 }
 
-#[test]
-#[ignore = "requires the gitignored OriginalData/DeviceReports corpus; run with --ignored"]
-fn real_device_exports_pass_the_strict_reader_and_keep_their_shapes() {
-    let archives = archives();
-    assert_eq!(archives.len(), ARCHIVES, "device report count drifted");
+/// Aggregates of one set; every field is pinned by the caller.
+#[derive(Debug, Default, PartialEq, Eq)]
+struct Summary {
+    archives: usize,
+    byte_identical: usize,
+    asserted: usize,
+    statuses: BTreeMap<(String, String), usize>,
+    stop_reasons: BTreeMap<String, usize>,
+    masks: BTreeMap<u16, usize>,
+    manufacturers: usize,
+}
 
-    let mut statuses: BTreeMap<(String, String), usize> = BTreeMap::new();
-    let mut masks: BTreeMap<u16, usize> = BTreeMap::new();
-    let mut manufacturers: BTreeMap<u16, usize> = BTreeMap::new();
-    let mut asserted = 0;
-    let mut byte_identical = 0;
+/// Checks one reading against the contract's per-item shapes. Returns whether
+/// the run has stopped at or before this item.
+fn check_reading(ordinal: usize, report: &Report, reading: &Reading, stopped: bool) -> bool {
+    match reading.status.as_str() {
+        "read" => {
+            assert!(!stopped, "archive #{ordinal}: a read after the stop");
+            assert_eq!(reading.bytes.len(), reading.expected_bytes);
+            assert_eq!(reading.error, None);
+            false
+        }
+        // AL §3.4.4.2: zero elements, no data, the ambiguous token; never
+        // zeros standing in for a value.
+        "refused-ambiguous" => {
+            assert!(reading.bytes.is_empty());
+            assert_eq!(reading.returned_elements, Some(0));
+            assert_eq!(
+                reading.error.as_deref(),
+                Some("access-denied-or-property-unsupported")
+            );
+            stopped
+        }
+        // An attempted read the device ended: no bytes invented, and nothing
+        // is requested after it.
+        "error" => {
+            assert!(reading.bytes.is_empty(), "archive #{ordinal}");
+            assert!(reading.attempted_at.is_some(), "archive #{ordinal}");
+            let token = reading.error.as_deref().unwrap_or_default();
+            assert!(REAL_ERRORS.contains(&token), "archive #{ordinal}: {token}");
+            assert_eq!(report.stop_reason.as_deref(), Some(token));
+            true
+        }
+        "not-read" => {
+            assert!(reading.bytes.is_empty() && reading.attempted_at.is_none());
+            assert!(report.stop_reason.is_some(), "archive #{ordinal}");
+            true
+        }
+        other => panic!("archive #{ordinal}: unexpected real status {other}"),
+    }
+}
 
+fn summarise(archives: &[Vec<u8>]) -> Summary {
+    let mut summary = Summary {
+        archives: archives.len(),
+        ..Summary::default()
+    };
+    let mut manufacturers = BTreeMap::<u16, usize>::new();
     for (ordinal, bytes) in archives.iter().enumerate() {
         let report = read_bundle(bytes)
             .unwrap_or_else(|code| panic!("archive #{ordinal} refused by the reader: {code}"));
@@ -91,88 +142,120 @@ fn real_device_exports_pass_the_strict_reader_and_keep_their_shapes() {
             "archive #{ordinal} is a simulator capture"
         );
         assert!(!report.written, "archive #{ordinal} claims a write");
-        assert!(report.complete, "archive #{ordinal} is partial");
-        assert_eq!(report.stop_reason, None, "archive #{ordinal}");
+        assert!(report.complete, "archive #{ordinal} is unfinished");
         assert_eq!(report.memory_status, "not-requested", "archive #{ordinal}");
         assert!(report.disconnect_attempt_completed, "archive #{ordinal}");
         assert_eq!(report.items.len(), 3, "archive #{ordinal}");
+        if let Some(reason) = &report.stop_reason {
+            *summary.stop_reasons.entry(reason.clone()).or_default() += 1;
+        }
 
         // Today's writer reproduces the real archive exactly.
         if bundle(&report).expect("a read report re-bundles") == *bytes {
-            byte_identical += 1;
+            summary.byte_identical += 1;
         }
 
+        let mut stopped = false;
         for reading in &report.items {
-            *statuses
+            *summary
+                .statuses
                 .entry((reading.query.clone(), reading.status.clone()))
                 .or_default() += 1;
-            match reading.status.as_str() {
-                "read" => {
-                    assert_eq!(reading.bytes.len(), reading.expected_bytes);
-                    assert_eq!(reading.error, None);
-                }
-                // AL §3.4.4.2: zero elements, no data, the ambiguous token;
-                // never zeros standing in for a value.
-                "refused-ambiguous" => {
-                    assert!(reading.bytes.is_empty());
-                    assert_eq!(reading.returned_elements, Some(0));
-                    assert_eq!(
-                        reading.error.as_deref(),
-                        Some("access-denied-or-property-unsupported")
-                    );
-                }
-                other => panic!("archive #{ordinal}: unexpected real status {other}"),
+            stopped = check_reading(ordinal, &report, reading, stopped);
+        }
+
+        let mask = word(&item(&report, "descriptor-type-0").bytes);
+        if let Some(mask) = mask {
+            *summary.masks.entry(mask).or_default() += 1;
+        }
+        if let Some(id) = word(&item(&report, "manufacturer-id").bytes) {
+            *manufacturers.entry(id).or_default() += 1;
+            if let Some(expected) = report.asserted_manufacturer {
+                assert_eq!(expected, id, "archive #{ordinal}: manufacturer assertion");
             }
         }
-
-        let mask = word(&item(&report, "descriptor-type-0").bytes).expect("descriptor read");
-        let manufacturer = word(&item(&report, "manufacturer-id").bytes).expect("PID 12 read");
-        *masks.entry(mask).or_default() += 1;
-        *manufacturers.entry(manufacturer).or_default() += 1;
-        // A completed run never carries an assertion the device contradicted.
+        // A finished run never carries an assertion the device contradicted.
         if let Some(expected) = report.asserted_mask {
-            assert_eq!(expected, mask, "archive #{ordinal}: mask assertion");
-            asserted += 1;
-        }
-        if let Some(expected) = report.asserted_manufacturer {
-            assert_eq!(
-                expected, manufacturer,
-                "archive #{ordinal}: manufacturer assertion"
-            );
+            assert_eq!(Some(expected), mask, "archive #{ordinal}: mask assertion");
+            summary.asserted += 1;
         }
     }
-
-    let count = |query: &str, status: &str| {
-        statuses
-            .get(&(query.to_string(), status.to_string()))
-            .copied()
-            .unwrap_or(0)
-    };
+    summary.manufacturers = manufacturers.len();
     eprintln!(
-        "device reports: {} archives, {} byte-identical, {} asserted, statuses {:?}",
-        archives.len(),
-        byte_identical,
-        asserted,
-        statuses.values().collect::<Vec<_>>()
+        "device reports: {} archives, {} byte-identical, {} asserted, statuses {:?}, stops {:?}",
+        summary.archives,
+        summary.byte_identical,
+        summary.asserted,
+        summary.statuses.values().collect::<Vec<_>>(),
+        summary.stop_reasons.values().collect::<Vec<_>>()
     );
+    summary
+}
+
+fn statuses(pins: &[(&str, &str, usize)]) -> BTreeMap<(String, String), usize> {
+    pins.iter()
+        .map(|(q, s, n)| ((q.to_string(), s.to_string()), *n))
+        .collect()
+}
+
+/// The issue #22 detector plus eleven more devices received by email
+/// (docs/research/2026-10-18-device-diagnostics-eleven-devices.md).
+#[test]
+#[ignore = "requires the gitignored OriginalData/DeviceReports corpus; run with --ignored"]
+fn emailed_device_exports_pass_the_strict_reader_and_keep_their_shapes() {
+    let dir = dir_from("KNXBENCH_DEVICE_REPORTS", &reports_root());
+    let summary = summarise(&archives(&dir));
     assert_eq!(
-        byte_identical, ARCHIVES,
-        "writer no longer reproduces real archives"
+        summary,
+        Summary {
+            archives: 12,
+            byte_identical: 12,
+            asserted: 11,
+            statuses: statuses(&[
+                ("descriptor-type-0", "read", 12),
+                ("hardware-type", "read", 10),
+                ("hardware-type", "refused-ambiguous", 2),
+                ("manufacturer-id", "read", 12),
+            ]),
+            stop_reasons: BTreeMap::new(),
+            masks: BTreeMap::from([(0x0025, 1), (0x0701, 7), (0x0705, 2), (0x07B0, 2)]),
+            manufacturers: 5,
+        }
     );
-    assert_eq!(asserted, 11, "catalogue-asserted runs");
-    assert_eq!(count("descriptor-type-0", "read"), 12);
-    assert_eq!(count("manufacturer-id", "read"), 12);
-    assert_eq!(count("hardware-type", "read"), 10);
-    assert_eq!(count("hardware-type", "refused-ambiguous"), 2);
+}
+
+/// The maintainer's own 34 contactable house devices, read once on 18 October
+/// 2026 (docs/research/2026-10-18-house-device-diagnostics.md).
+#[test]
+#[ignore = "requires the gitignored OriginalData/DeviceReports corpus; run with --ignored"]
+fn house_device_exports_pass_the_strict_reader_and_keep_their_shapes() {
+    let dir = dir_from(
+        "KNXBENCH_HOUSE_DEVICE_REPORTS",
+        &reports_root().join("Unser Zuhause 2026-10-18"),
+    );
+    let summary = summarise(&archives(&dir));
     assert_eq!(
-        statuses.values().sum::<usize>(),
-        36,
-        "no other status occurred"
+        summary,
+        Summary {
+            archives: 34,
+            byte_identical: 34,
+            asserted: 0,
+            statuses: statuses(&[
+                ("descriptor-type-0", "not-read", 1),
+                ("descriptor-type-0", "read", 33),
+                ("hardware-type", "not-read", 3),
+                ("hardware-type", "read", 30),
+                ("hardware-type", "refused-ambiguous", 1),
+                ("manufacturer-id", "error", 2),
+                ("manufacturer-id", "not-read", 1),
+                ("manufacturer-id", "read", 31),
+            ]),
+            stop_reasons: BTreeMap::from([
+                ("connect-rejected".to_string(), 1),
+                ("connection-lost".to_string(), 2),
+            ]),
+            masks: BTreeMap::from([(0x0012, 2), (0x0701, 31)]),
+            manufacturers: 3,
+        }
     );
-    assert_eq!(
-        masks,
-        BTreeMap::from([(0x0025, 1), (0x0701, 7), (0x0705, 2), (0x07B0, 2)]),
-        "mask distribution"
-    );
-    assert_eq!(manufacturers.len(), 5, "distinct manufacturers");
 }

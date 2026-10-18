@@ -41,3 +41,13 @@ on hardware; their applications declare no PID78 comparison. No device stayed
 silent. Post-run device behaviour is still unreported, and the identity-only
 boundary is unchanged. A private gate keeps the reader and writer bound to these
 real archives.
+
+## The maintainer's house (18 October 2026)
+
+With the owner's go, all 34 contactable house devices were read once
+([evidence](../research/2026-10-18-house-device-diagnostics.md)). The Merten
+actuator refused PID78 with zero elements; both `MV-0012` SmartSensors ended the
+connection after the PID12 request (`connection-lost`), the released-connection
+case the catalogue record above only assumed; `1.1.253` rejected the connection.
+A device that stays silent until the session timeout and post-run behaviour
+remain unobserved.

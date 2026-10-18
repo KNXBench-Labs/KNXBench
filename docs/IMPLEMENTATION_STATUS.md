@@ -12,6 +12,18 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## House devices read with the diagnostic export (18 October 2026)
+
+Owner go: the shipped `knx device diagnostics` ran once against all 34
+contactable devices of the maintainer's house (`1.1.220` excluded, never
+contacted); nothing written. 30 complete reads, one zero-element PID78 refusal,
+two `MV-0012` sensors ending the connection after PID12, one rejected
+connection; 29 of 29 declared PID78 comparisons match the `[A]` rule
+([evidence](research/2026-10-18-house-device-diagnostics.md)). The private gate
+`device_reports_corpus` gains a pinned house set (34 archives byte-identical
+after re-bundling; dropped and tampered archives red). No production code or
+admission change.
+
 ## Eleven more real diagnostic exports reviewed (18 October 2026)
 
 Eleven further read-only exports received by email (Hager, Berker, MDT,

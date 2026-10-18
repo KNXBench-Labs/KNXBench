@@ -111,7 +111,9 @@ regression-pinned.
    ([evidence](../research/2026-10-18-up258-device-diagnostics.md));
    seven more devices (Hager, Berker, MDT; `0701`/`0705`) show the same
    six-plus-zero-tail shape against their applications' comparisons
-   ([evidence](../research/2026-10-18-device-diagnostics-eleven-devices.md)), while one
+   ([evidence](../research/2026-10-18-device-diagnostics-eleven-devices.md)), and so
+   do 29 house devices on eight `0701` applications
+   ([evidence](../research/2026-10-18-house-device-diagnostics.md)), while one
    catalogue comparison is seven octets with a non-zero tail;
    the tool's comparison rule itself stays an assumption.
 3. Identity-bound durable recovery for property **and** memory changes, including

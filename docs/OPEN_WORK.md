@@ -241,9 +241,9 @@ as an alpha/release blocker by this plan.
 
 #### WP-12 — Field evidence and owner acceptance
 
-**Separate cases, not one generic “hardware test”:** KL-184 silent identity
-reads (zero-element refusals are observed on two devices since) and post-run
-behaviour/firmware responses;
+**Separate cases, not one generic “hardware test”:** KL-184 fully silent
+identity reads (zero-element refusals, a device-ended and a rejected connection
+are observed since) and post-run behaviour/firmware responses;
 KL-186 originating plug-in acceptance after adopted bytes (software route is
 complete); KL-170 tester probe/report review; optional custom multicast,
 bridge Route-Back tunnel and other specifically identified live gaps.
@@ -253,7 +253,8 @@ the witnessed boundary is narrowed. Keep private projects, identity ZIPs and
 raw device evidence out of Git. Fresh device operations need their own go;
 this audit sends no requests and contacts no vendor/association.
 [Diagnostic evidence](research/2026-10-18-up258-device-diagnostics.md),
-[eleven more devices](research/2026-10-18-device-diagnostics-eleven-devices.md) ·
+[eleven more devices](research/2026-10-18-device-diagnostics-eleven-devices.md),
+[house run](research/2026-10-18-house-device-diagnostics.md) ·
 [plug-in contract](contracts/plugin-data-adoption.md) ·
 [tester flow](adr/0121-tester-download-reports.md).
 
@@ -528,14 +529,16 @@ before the rewrite have rewritten copies under
 bases from [COMMIT_MAP_2026-10-17](history/COMMIT_MAP_2026-10-17.txt). Not
 `refs/rewritten/`: that namespace is per-worktree and belongs to `git rebase -r`.
 
-## Read-only diagnostic export: twelve hardware runs received (18 October 2026)
+## Read-only diagnostic export: 46 hardware runs (18 October 2026)
 
 [Implemented and simulator-verified](contracts/device-diagnostic-export.md);
-twelve real devices from five manufacturers answered
+46 real devices from eight manufacturers
 ([detector](research/2026-10-18-up258-device-diagnostics.md),
-[eleven more](research/2026-10-18-device-diagnostics-eleven-devices.md)); two refused
-PID78 with zero elements. Still open: a silent device and post-run behaviour
-reports; any memory profile only with its own evidence and decision (ADR-0134).
+[eleven more](research/2026-10-18-device-diagnostics-eleven-devices.md),
+[the maintainer's house](research/2026-10-18-house-device-diagnostics.md)): three refused
+PID78 with zero elements, two System-1 sensors ended the connection, one
+connection was rejected. Still open: a fully silent device and post-run
+behaviour reports; any memory profile only with its own evidence and decision (ADR-0134).
 
 ## System 2 / System B download outcome (17 October 2026)
 

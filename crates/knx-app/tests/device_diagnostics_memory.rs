@@ -1,6 +1,6 @@
 //! Format-2 diagnostic archives: declared memory evidence, strict reader, format 1 intact.
 use knx_app::device_diagnostics::{
-    acquire_memory, bundle, bundle_export, pending, prepare, prepare_memory, read_bundle,
+    acquire, acquire_memory, bundle, bundle_export, pending, prepare, prepare_memory, read_bundle,
     read_export, write_new_export, Export, MEMORY_PROFILE,
 };
 use knx_core::{DeviceId, DeviceInstance, Language, Project, SourceRef};
@@ -346,8 +346,9 @@ async fn the_largest_admitted_profile_fits_the_archive_limits() {
 }
 
 /// Re-encodes `report.json`, `properties.json` (always the report's items)
-/// and `memory.json` after `edit`, and rewrites the manifest's sizes and
-/// hashes to match, so only the reader's semantic checks can refuse it.
+/// and, in format 2, `memory.json` after `edit`, and rewrites the manifest's
+/// sizes and hashes to match, so only the reader's semantic checks can
+/// refuse it. A format-1 archive hands `edit` a `null` memory.
 fn rehashed(
     original: &[u8],
     edit: impl FnOnce(&mut serde_json::Value, &mut serde_json::Value),
@@ -355,19 +356,23 @@ fn rehashed(
     let member = |name: &str| {
         let mut zip = zip::ZipArchive::new(Cursor::new(original)).unwrap();
         let mut data = vec![];
-        zip.by_name(name).unwrap().read_to_end(&mut data).unwrap();
-        serde_json::from_slice::<serde_json::Value>(&data).unwrap()
+        let mut file = zip.by_name(name).ok()?;
+        file.read_to_end(&mut data).unwrap();
+        Some(serde_json::from_slice::<serde_json::Value>(&data).unwrap())
     };
-    let (mut report, mut memory) = (member("report.json"), member("memory.json"));
+    let mut report = member("report.json").unwrap();
+    let mut memory = member("memory.json").unwrap_or_default();
     edit(&mut report, &mut memory);
-    let encoded = [
+    let mut encoded = vec![
         ("report.json", serde_json::to_vec_pretty(&report).unwrap()),
         (
             "properties.json",
             serde_json::to_vec_pretty(&report["items"]).unwrap(),
         ),
-        ("memory.json", serde_json::to_vec_pretty(&memory).unwrap()),
     ];
+    if !memory.is_null() {
+        encoded.push(("memory.json", serde_json::to_vec_pretty(&memory).unwrap()));
+    }
     let edited = rewrite(original, |name, data| {
         Some(
             encoded
@@ -551,6 +556,8 @@ enum Fault {
     ShortAt(u16),
     /// Drop the answer at this address.
     SilentAt(u16),
+    /// Answer this Device Object property with `nr_of_elem = 0`.
+    RefuseProperty(u8),
 }
 struct Faulty {
     device: SimulatedDevice,
@@ -586,16 +593,31 @@ impl knx_net::ManagementTransport for Faulty {
         self.device.send_frame(destination, tpci, service).await?;
         while let Ok(mut event) = rx.try_recv() {
             if let knx_net::TunnelEvent::Telegram(ref mut frame) = event {
-                if let knx_net::ApplicationService::MemoryResponse { address, data } =
-                    &mut frame.service
-                {
-                    match self.fault {
-                        Fault::SilentAt(at) if *address == at => continue,
-                        Fault::ShortAt(at) if *address == at => {
-                            data.pop();
-                        }
-                        _ => {}
+                match (&mut frame.service, self.fault) {
+                    (
+                        knx_net::ApplicationService::MemoryResponse { address, .. },
+                        Fault::SilentAt(at),
+                    ) if *address == at => continue,
+                    (
+                        knx_net::ApplicationService::MemoryResponse { address, data },
+                        Fault::ShortAt(at),
+                    ) if *address == at => {
+                        data.pop();
                     }
+                    (
+                        knx_net::ApplicationService::PropertyValueResponse {
+                            object_index: 0,
+                            property_id,
+                            nr_of_elem,
+                            data,
+                            ..
+                        },
+                        Fault::RefuseProperty(refused),
+                    ) if *property_id == refused => {
+                        *nr_of_elem = 0;
+                        data.clear();
+                    }
+                    _ => {}
                 }
             }
             let _ = self.tx.send(event);
@@ -967,4 +989,247 @@ async fn only_the_collector_in_flight_shape_is_admitted_in_a_snapshot() {
         }),
     ];
     assert_eq!(accepted(&original, cases), Vec::<&str>::new());
+}
+
+/// A format-1 identity archive of [`device`] with the product data's
+/// asserted mask and manufacturer, so a mismatch is expressible.
+async fn identity_archive() -> Vec<u8> {
+    let (_dir, db) = products(PROGRAM);
+    let plan = prepare(&project(), DeviceId(7), Some(&db)).unwrap();
+    assert_eq!(plan.expected.mask, Some(0x0025));
+    let report = acquire(
+        &device(),
+        &plan,
+        Default::default(),
+        "synthetic-test",
+        &AtomicBool::new(false),
+        |_| {},
+    )
+    .await;
+    assert_eq!(report.stop_reason, None);
+    bundle(&report).unwrap()
+}
+
+/// Identity item `index`: never attempted, nothing recorded.
+fn untouched(r: &mut serde_json::Value, index: usize) {
+    let item = &mut r["items"][index];
+    item["status"] = "not-read".into();
+    item["bytes"] = serde_json::json!([]);
+    item["receivedBytes"] = 0.into();
+    item["returnedElements"] = serde_json::Value::Null;
+    item["attemptedAt"] = serde_json::Value::Null;
+    item["completedAt"] = serde_json::Value::Null;
+    item["error"] = serde_json::Value::Null;
+}
+
+/// Identity item `index` in the collector's in-flight shape.
+fn requested(r: &mut serde_json::Value, index: usize) {
+    let attempted = r["items"][index]["attemptedAt"].clone();
+    assert!(attempted.is_string());
+    untouched(r, index);
+    r["items"][index]["attemptedAt"] = attempted;
+}
+
+/// Identity item `index` completed with an error.
+fn errored(r: &mut serde_json::Value, index: usize) {
+    let item = &mut r["items"][index];
+    item["status"] = "error".into();
+    item["bytes"] = serde_json::json!([]);
+    item["receivedBytes"] = 0.into();
+    item["returnedElements"] = serde_json::Value::Null;
+    item["error"] = "timeout".into();
+}
+
+/// No memory chunk touched (format 2 only).
+fn memory_untouched(m: &mut serde_json::Value) {
+    if !m.is_null() {
+        unread_from(m, 0);
+    }
+}
+
+/// An observer snapshot: incomplete, no stop reason yet, memory untouched.
+fn identity_snapshot(r: &mut serde_json::Value, m: &mut serde_json::Value) {
+    r["complete"] = false.into();
+    r["stopReason"] = serde_json::Value::Null;
+    r["disconnectAttemptCompleted"] = false.into();
+    memory_untouched(m);
+}
+
+/// A complete report that stopped in the identity phase for `reason`.
+fn identity_stopped(r: &mut serde_json::Value, m: &mut serde_json::Value, reason: &str) {
+    r["stopReason"] = reason.into();
+    memory_untouched(m);
+}
+
+/// Identity sequences `identity_reads` cannot produce; every case is a
+/// rehashed archive so only the reader's semantic checks can refuse it.
+const IMPOSSIBLE_IDENTITY: &[(&str, Edit)] = &[
+    ("PID12 in flight with an untouched descriptor", |r, m| {
+        identity_snapshot(r, m);
+        untouched(r, 0);
+        requested(r, 1);
+        untouched(r, 2);
+    }),
+    ("PID12 in flight after a descriptor error", |r, m| {
+        identity_snapshot(r, m);
+        errored(r, 0);
+        requested(r, 1);
+        untouched(r, 2);
+    }),
+    ("PID12 in flight after a descriptor mismatch", |r, m| {
+        identity_snapshot(r, m);
+        r["items"][0]["bytes"] = serde_json::json!([7, 5]);
+        requested(r, 1);
+        untouched(r, 2);
+    }),
+    ("PID78 read without times after PID12 in flight", |r, m| {
+        identity_snapshot(r, m);
+        requested(r, 1);
+        r["items"][2]["attemptedAt"] = serde_json::Value::Null;
+        r["items"][2]["completedAt"] = serde_json::Value::Null;
+    }),
+    ("a read PID78 without times", |r, _| {
+        r["items"][2]["attemptedAt"] = serde_json::Value::Null;
+        r["items"][2]["completedAt"] = serde_json::Value::Null;
+    }),
+    ("a read PID12 without an attempt time", |r, _| {
+        r["items"][1]["attemptedAt"] = serde_json::Value::Null;
+    }),
+    ("a read item completed before it was attempted", |r, _| {
+        r["items"][1]["completedAt"] = "2000-01-01T00:00:00+00:00".into();
+    }),
+    ("an untouched item carrying a completion time", |r, m| {
+        identity_stopped(r, m, "cancelled");
+        let completed = r["items"][2]["completedAt"].clone();
+        untouched(r, 2);
+        r["items"][2]["completedAt"] = completed;
+    }),
+    ("PID12 read after a descriptor mismatch", |r, m| {
+        identity_stopped(r, m, "identity-mismatch");
+        r["items"][0]["bytes"] = serde_json::json!([7, 5]);
+    }),
+    ("PID12 read after a descriptor error", |r, m| {
+        identity_stopped(r, m, "timeout");
+        errored(r, 0);
+    }),
+    ("PID12 read after a partial descriptor", |r, m| {
+        identity_stopped(r, m, "descriptor-unverified");
+        let item = &mut r["items"][0];
+        item["status"] = "partial".into();
+        item["bytes"] = serde_json::json!([0]);
+        item["receivedBytes"] = 1.into();
+        item["error"] = "unexpected-length".into();
+    }),
+    ("PID78 read after a PID12 mismatch", |r, m| {
+        identity_stopped(r, m, "identity-mismatch");
+        r["items"][1]["bytes"] = serde_json::json!([0, 2]);
+    }),
+    ("PID78 read after a PID12 error", |r, m| {
+        identity_stopped(r, m, "timeout");
+        errored(r, 1);
+    }),
+];
+
+#[tokio::test]
+async fn format_1_refuses_identity_sequences_the_collector_cannot_produce() {
+    let original = identity_archive().await;
+    assert_eq!(accepted(&original, IMPOSSIBLE_IDENTITY), Vec::<&str>::new());
+}
+
+#[tokio::test]
+async fn format_2_refuses_identity_sequences_the_collector_cannot_produce() {
+    let original = bundle_export(&export().await).unwrap();
+    assert_eq!(accepted(&original, IMPOSSIBLE_IDENTITY), Vec::<&str>::new());
+}
+
+/// A refused PID12 does not stop `identity_reads`: PID78 is still read.
+/// Every snapshot of that run, and of runs stopped by a descriptor or a
+/// manufacturer mismatch, roundtrips in both formats.
+#[tokio::test]
+async fn every_snapshot_of_a_continued_or_stopped_identity_run_roundtrips() {
+    let (_dir, db) = products(PROGRAM);
+    let identity = prepare(&project(), DeviceId(7), Some(&db)).unwrap();
+    let memory = prepare_memory(&project(), DeviceId(7), &db).unwrap();
+    let refusing = Faulty::new(device(), Fault::RefuseProperty(12));
+    let other_mask = SimulatedDevice::with_config(SimulatorConfig {
+        mask_version: 0x0705,
+        ..Default::default()
+    });
+    let other_mask = Faulty::new(other_mask, Fault::None);
+    let other_manufacturer = device();
+    other_manufacturer.preset_property(0, 12, &[0x00, 0x02]);
+    let other_manufacturer = Faulty::new(other_manufacturer, Fault::None);
+    let dir = tempfile::tempdir().unwrap();
+    let mut written = 0;
+    let mut roundtrip = |export: &Export| {
+        written += 1;
+        let path = dir.path().join(format!("snapshot-{written}.zip"));
+        write_new_export(&path, export)
+            .and_then(|()| read_export(&std::fs::read(&path).unwrap()))
+            .map(|reread| reread == *export)
+    };
+    let mut failures = vec![];
+    for (name, device, identity_statuses, stop) in [
+        (
+            "refused PID12",
+            &refusing,
+            ["read", "refused-ambiguous", "read"],
+            None,
+        ),
+        (
+            "descriptor mismatch",
+            &other_mask,
+            ["read", "not-read", "not-read"],
+            Some("identity-mismatch"),
+        ),
+        (
+            "manufacturer mismatch",
+            &other_manufacturer,
+            ["read", "read", "not-read"],
+            Some("identity-mismatch"),
+        ),
+    ] {
+        let report = acquire(
+            device,
+            &identity,
+            Default::default(),
+            "synthetic-test",
+            &AtomicBool::new(false),
+            |snapshot| {
+                let export = Export {
+                    report: snapshot.clone(),
+                    memory: None,
+                };
+                if roundtrip(&export) != Ok(true) {
+                    failures.push((name, 1, snapshot.items.clone()));
+                }
+            },
+        )
+        .await;
+        let observed: Vec<&str> = report.items.iter().map(|i| i.status.as_str()).collect();
+        assert_eq!(observed, identity_statuses, "{name}");
+        assert_eq!(report.stop_reason.as_deref(), stop, "{name}");
+        let export = acquire_memory(
+            device,
+            &memory,
+            Default::default(),
+            "synthetic-test",
+            &AtomicBool::new(false),
+            |snapshot| {
+                if roundtrip(snapshot) != Ok(true) {
+                    failures.push((name, 2, snapshot.report.items.clone()));
+                }
+            },
+        )
+        .await;
+        let observed: Vec<&str> = export
+            .report
+            .items
+            .iter()
+            .map(|i| i.status.as_str())
+            .collect();
+        assert_eq!(observed, identity_statuses, "{name}");
+        assert_eq!(statuses(&export), ["not-read"; 4], "{name}");
+    }
+    assert!(failures.is_empty(), "not exportable: {failures:?}");
 }

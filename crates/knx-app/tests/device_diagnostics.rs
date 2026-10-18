@@ -292,6 +292,8 @@ async fn only_the_collector_in_flight_identity_shape_is_exportable() {
         item.received_bytes = 0;
         item.returned_elements = None;
         item.completed_at = None;
+        // PID78 is refused by this simulator; an untouched item has no error.
+        item.error = None;
         if !attempted {
             item.attempted_at = None;
         }

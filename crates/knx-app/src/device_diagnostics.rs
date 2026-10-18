@@ -333,17 +333,6 @@ fn validate(r: &Report) -> Result<(), String> {
         {
             return Err("diagnostics-invalid-coverage".into());
         }
-        // Unread, or (observer snapshot only) the collector's in-flight
-        // shape: attempted, not completed, nothing received.
-        let pending = item.attempted_at.is_none()
-            || (!r.complete
-                && item.completed_at.is_none()
-                && item.error.is_none()
-                && item.received_bytes == 0
-                && item.returned_elements.is_none());
-        if item.status == "not-read" && (!item.bytes.is_empty() || !pending) {
-            return Err("diagnostics-invalid-pending".into());
-        }
         for at in [&item.attempted_at, &item.completed_at]
             .into_iter()
             .flatten()
@@ -353,15 +342,81 @@ fn validate(r: &Report) -> Result<(), String> {
             }
         }
     }
-    // The collector attempts items in order, one at a time: nothing after an
-    // in-flight item has been attempted.
-    let in_flight = |item: &Reading| item.status == "not-read" && item.attempted_at.is_some();
-    if let Some(at) = r.items.iter().position(in_flight) {
-        if r.items[at + 1..].iter().any(|i| i.attempted_at.is_some()) {
-            return Err("diagnostics-invalid-pending".into());
+    identity_sequence(r)
+}
+/// `identity_reads` of `knx_net::commissioning::diagnostic_export`, re-checked
+/// from the archive (both formats). The collector attempts the items in
+/// order, one at a time; an item with an outcome was attempted, then
+/// completed. It attempts the next item only after an outcome that lets it
+/// continue ([`continues`]). After an untouched item, an in-flight one
+/// (observer snapshot only) or a stopping one, every later item is wholly
+/// untouched.
+fn identity_sequence(r: &Report) -> Result<(), String> {
+    let mut open = true;
+    for (item, query) in
+        r.items
+            .iter()
+            .zip([Query::Descriptor, Query::Manufacturer, Query::HardwareType])
+    {
+        let nothing_received = item.bytes.is_empty()
+            && item.received_bytes == 0
+            && item.returned_elements.is_none()
+            && item.error.is_none()
+            && item.completed_at.is_none();
+        let untouched =
+            item.status == "not-read" && item.attempted_at.is_none() && nothing_received;
+        if !open {
+            if !untouched {
+                return Err("diagnostics-invalid-pending".into());
+            }
+            continue;
         }
+        if item.status == "not-read" {
+            let in_flight = !r.complete && item.attempted_at.is_some() && nothing_received;
+            if !(untouched || in_flight) {
+                return Err("diagnostics-invalid-pending".into());
+            }
+            open = false;
+            continue;
+        }
+        if !attempted_then_completed(&item.attempted_at, &item.completed_at) {
+            return Err("diagnostics-invalid-time".into());
+        }
+        open = continues(r, item, query);
     }
     Ok(())
+}
+/// Whether `identity_reads` goes on after this completed item: never after
+/// an error or a read contradicting its assertion, and after the descriptor
+/// only if it was exactly read. A refused or partial PID12 continues to PID78.
+fn continues(r: &Report, item: &Reading, query: Query) -> bool {
+    let asserted = match query {
+        Query::Descriptor => r.asserted_mask,
+        Query::Manufacturer => r.asserted_manufacturer,
+        Query::HardwareType => None,
+    };
+    match item.status.as_str() {
+        "read" => match item.bytes[..] {
+            [high, low] => asserted.is_none_or(|v| v == u16::from_be_bytes([high, low])),
+            _ => asserted.is_none(),
+        },
+        "error" => false,
+        _ => query != Query::Descriptor,
+    }
+}
+/// An outcome was attempted, then completed, in that order.
+pub(crate) fn attempted_then_completed(
+    attempted: &Option<String>,
+    completed: &Option<String>,
+) -> bool {
+    let parse = |t: &Option<String>| {
+        t.as_deref()
+            .and_then(|t| DateTime::parse_from_rfc3339(t).ok())
+    };
+    matches!(
+        (parse(attempted), parse(completed)),
+        (Some(attempted), Some(completed)) if completed >= attempted
+    )
 }
 /// One diagnostic archive: the identity report, plus memory evidence in
 /// format 2 only.

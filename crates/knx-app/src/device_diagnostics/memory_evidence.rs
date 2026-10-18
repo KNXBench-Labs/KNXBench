@@ -492,14 +492,7 @@ fn in_flight(chunk: &ChunkReading) -> bool {
 
 /// A chunk with an outcome was attempted, then completed, in that order.
 fn attempted_then_completed(chunk: &ChunkReading) -> bool {
-    let parse = |t: &Option<String>| {
-        t.as_deref()
-            .and_then(|t| DateTime::parse_from_rfc3339(t).ok())
-    };
-    matches!(
-        (parse(&chunk.attempted_at), parse(&chunk.completed_at)),
-        (Some(attempted), Some(completed)) if completed >= attempted
-    )
+    super::attempted_then_completed(&chunk.attempted_at, &chunk.completed_at)
 }
 
 /// The collector's own admission, re-checked from the archive: all three

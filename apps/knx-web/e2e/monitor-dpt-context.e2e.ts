@@ -1,4 +1,4 @@
-/** Offline monitor reasons stay distinct and historical across themes, widths and a late project. */
+/** Offline monitor reasons stay distinct and historical across themes, widths and late projects. */
 import { test, expect } from "@playwright/test";
 import type { BusMonitorTelegramsResponse, BusTelegramRow } from "../src/api";
 import { messages as en } from "../src/messages/en";

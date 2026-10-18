@@ -90,8 +90,10 @@ cards. Explorer trees, forms and manufacturer-declared parameter grids
   apply on top of that baseline. A 48 px header footprint (32 px for defaults of
   48 px) retains separate sort and resize targets; the communication-object number column reserves 120 px
   for its existing indented disclosure at the default; explicit resizing can
-  shrink it below that footprint. Very narrow panes below that combined minimum scroll
-  locally. Flow inspector defaults fit its narrower pane. Widening beyond
+  shrink it below that footprint. The DPT column has a separate 114 px fit floor
+  in grouped and flat views, keeping DPT labels and master-text words intact at
+  360 px. Its explicit resize minimum stays 100 px. Very narrow panes below the
+  combined fit floors scroll locally rather than compressing those defaults further. Flow inspector defaults fit its narrower pane. Widening beyond
   the available space scrolls locally. Download blocks use the adapter viewport
   for both axes, capped at 320 px height; the table retains native table display.
 - Resize targets are 24 px wide, centred on interior column boundaries; the
@@ -135,6 +137,8 @@ are preserved. No manufacturer parameter-grid code is changed.
 | Requirement | Test |
 | --- | --- |
 | Persist/remount, types/ranges, corrupt JSON, changed/reordered columns, multiple instances, reset, window events, storage denial | `src/useTableColumnWidths.test.tsx` |
+| Grouped/flat DPT fit floor in a 300 px pane, local table overflow, lower manual minimum and reset | `src/ComObjectTable.test.tsx`: `%s keeps a content-safe DPT fit floor while allowing manual shrinking` |
+| EN/DE DPT/master-text words remain on one line per token at 360/1440 px; document overflow remains bounded | Unchanged `e2e/device-editor-layout.e2e.ts`: evaluated channel evidence stays keyboard-accessible |
 | Measured ARIA pixels, keyboard/Shift/bounds, pointer capture and IDs, no sorting/drag/selection, cancel/capture loss, unmount commit, keys ignored during pointer drag, caller-defined trailing widths, double-click and table reset | `src/ResizableTable.test.tsx` |
 | Every converted surface (including both object views and three fixed matrix columns) mounts with separators aligned to the declared columns and each column shrinks with ArrowLeft | Parameterized `column smoke: <table-id> exposes <count> resize separators` tests using `tableColumnSmoke.fixture.ts` |
 | Actual production comparison exposes operable separators | `src/ComparisonTable.test.tsx`: offers keyboard resizing and reset on the production comparison table |

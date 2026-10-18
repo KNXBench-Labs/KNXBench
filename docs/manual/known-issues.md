@@ -8,14 +8,15 @@ Historical titles do not mean that their old defect is still present. The
 [source/test audit](../status/2026-10-08-known-issues-status-audit.md) records
 the reconciliation; formal task dispositions remain in the engineering ledger.
 
-## Parameter layout (source after Alpha 13)
+## Parameter layout (Alpha 14)
 
 The new [parameter workspace](user-guide/05-devices-and-products.md#parameters)
 uses declared groups, compact rows and cross-area search. It does not reproduce
 all manufacturer grid coordinates or infer a physical button/channel arrangement.
 Missing grouping stays visible under Other parameters; unsupported value/script
-semantics still have their existing diagnostic/refusal behavior. Older screenshots
-and released Alpha 13 binaries do not contain this source-only layout change.
+semantics still have their existing diagnostic/refusal behavior. Rows declared as
+indented are indented; inline sections, `SuffixText` units and object folders are
+not shown yet. Older screenshots and Alpha 13 binaries do not contain this layout.
 
 ## Read these before your first serious project
 
@@ -40,13 +41,15 @@ only a maintainer would care about, and ones about the reasoning behind a
 design decision rather than about a defect. Where an entry below has a
 counterpart there, the **Details** line links straight to it.
 
-[Alpha 13](../releases/alpha13.md), published on 16 October 2026, adds workbench configuration and
-stricter offline image-integrity boundaries; it does not expand programming
-admission. Historical measurements below retain their original source dates,
-not new hardware verification. Native/model **16** and product **23** stay
-unchanged from Alpha 12. Independently back up projects and the whole Docker
-data directory: Alpha 11 and earlier refuse native16; opening new saves in
-Alpha 12 is not verified. Rollback needs independent copies.
+[Alpha 14](../releases/alpha14.md) (October 2026) adds the parameter workspace,
+function choices below each object, note decisions before deletes, plug-in data
+adoption, vendor-ZIP product install and a read-only diagnostic export; it does
+not expand programming admission. Historical measurements below retain their
+original source dates, not new hardware verification. Native/model **16** is
+unchanged; the product database moves from **23** to **24** and Alpha 13 refuses
+the newer one. Independently back up projects and the whole Docker data
+directory, including the product database: opening new saves in Alpha 13 is not
+verified. Rollback needs independent copies.
 
 > A long list of known issues is what happens when a project writes its
 > problems down, not proof that it has more of them than software that

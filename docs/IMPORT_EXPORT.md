@@ -1,5 +1,9 @@
 # Import and export
 
+## Alpha 14 persistence boundary
+
+No native schema change and no ETS format-support expansion relative to Alpha 13; there is still no `.knxproj` export. Product packages gain one input shape: a manufacturer ZIP without its own `knx_master.xml` that holds `.knxprod` members installs every inner package byte-exact in one transaction, or none ([ADR-0140](adr/0140-vendor-zips-of-product-packages-install-as-a-whole.md)); other members are listed, never stored. Plug-in data adoption copies one device's opaque bytes verbatim from a same-lineage `.knxproj` ([ADR-0136](adr/0136-plugin-data-adoption-is-audited-opaque-replacement.md)). Product database v24 on first open. [Release limits](releases/alpha14.md).
+
 ## Alpha 13 persistence boundary
 
 No native/product schema or ETS format-support expansion relative to Alpha 12. Relative source views retain metadata, while image assembly refuses unresolved transformations rather than omitting data. New edits reuse existing durable storage; [release limits](releases/alpha13.md) remain explicit.

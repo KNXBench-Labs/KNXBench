@@ -60,10 +60,10 @@ separate and can contain them. See the
 
 **Why does enabling a button not produce new communication objects?**
 
-In source builds after Alpha 13, enable the button and choose its initial mode
+Since Alpha 14, enable the button and choose its initial mode
 under **Parameters**. Then expand its communication object to change mapped
 manufacturer function choices below **DPT**. The separate **Device functions**
-disclosure exists only in the published Alpha 13 layout. The
+disclosure exists only in the Alpha 13 layout. The
 shared evaluator adds supported missing unscoped objects in the same undo step.
 The mechanism is not specific to MDT. Unsupported scripts and new module-instance
 mappings still produce explicit refusals rather than guessed objects. This is
@@ -123,7 +123,7 @@ exists," not certification by the KNX Association.
 **What does "alpha" mean for this project specifically?**
 
 Version `0.1.0-alpha` (each component counts its own `alpha.N`), with a public
-`v0.1.0-alpha.13` pre-release. Concretely: `docs/KNOWN_LIMITATIONS.md` lists
+`v0.1.0-alpha.14` pre-release. Concretely: `docs/KNOWN_LIMITATIONS.md` lists
 known limitations, several classified critical, and writing to a real device is verified
 only for narrowly recorded device/application cases. See
 [Project status](../getting-started/03-project-status.md) for the evidence boundaries and what

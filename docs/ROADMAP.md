@@ -1,5 +1,9 @@
 # Roadmap
 
+## Alpha 14 release boundary (18 October 2026)
+
+Owner instruction: Alpha 14 waits for P1 (object-local function choices) and the product-database series, then is prepared and published. Cutoff `a0c2537d` includes both (plus the Docker frontend-stage fix, the native-spec fold fix, two test-race fixes, ux-feedback and knx-net IGMP, and the v24 product-matrix re-pin found by earlier candidates), the parameter workspace/grids/block access, note decisions before deletes, plug-in data adoption, Functions in comparisons and the read-only diagnostic export. Native/model16 is unchanged; the product database moves 23 → 24. [Release scope](releases/alpha14.md) names the boundaries; census step 5 (size ceilings), `SuffixText`, inline sections, object folders and priority move to Alpha 15. Source acceptance and publication verification are recorded separately.
+
 ## Alpha 13 release boundary (16 October 2026)
 
 Alpha 13 is published at immutable `6105976f`, covering delivered source through `c9924165` without new feature scope, hardware writes or deployment. [Release scope](releases/alpha13.md) documents unchanged schemas and remaining source/procedure/recovery and module-instance blockers. All 59 ordered source stages and public artifact/registry/lifecycle/site checks pass; [publication evidence](evidence/release-alpha13-2026-10-16.json) keeps their boundaries distinct.

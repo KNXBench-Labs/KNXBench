@@ -12,6 +12,19 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Alpha 14 preparation (18 October 2026)
+
+Owner instruction: wait for P1 and the product-database series, then prepare and
+publish Alpha 14. Both prerequisites are on `main` (P1 `4b961475`, series
+`bfc0a9c5`); cutoff `a0c2537d` adds the Docker frontend-stage fix found by the
+first candidate's dry run, the native-spec fold fix found by the second
+candidate's gate, two test-race fixes (ux-feedback, knx-net IGMP snapshot) and
+the v24 product-matrix re-pin found by the third (candidates `b08ed794`,
+`f59ace9b`, `54010888`, `bb7c896e` and `ec52706e` are retained, not tagged). Versions `0.1.0-alpha.14` in the four app crates
+and the web package. Native/model16 unchanged; product database 23 → 24.
+Exact-candidate source acceptance, no-publish AppImage/Docker builds and external
+publication verification are recorded separately; [scope and limits](releases/alpha14.md)
+remain explicit.
 ## Docker frontend stage sees the shared temp helper (18 October 2026)
 
 The Alpha 14 Docker dry run failed on both architectures: since the shared

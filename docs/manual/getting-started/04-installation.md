@@ -18,16 +18,16 @@ Docker Desktop networking is not a verified substitute for Linux host networking
 ## a) Linux AppImage
 
 The current public pre-release is
-[`v0.1.0-alpha.13`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.13) .
-Download **both** `KNXBench_0.1.0-alpha.13_amd64.AppImage` and `SHA256SUMS` from
+[`v0.1.0-alpha.14`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.14) .
+Download **both** `KNXBench_0.1.0-alpha.14_amd64.AppImage` and `SHA256SUMS` from
 that release page into the same directory.
 
 From that directory:
 
 ```bash
 sha256sum -c --ignore-missing SHA256SUMS
-chmod +x KNXBench_0.1.0-alpha.13_amd64.AppImage
-./KNXBench_0.1.0-alpha.13_amd64.AppImage
+chmod +x KNXBench_0.1.0-alpha.14_amd64.AppImage
+./KNXBench_0.1.0-alpha.14_amd64.AppImage
 ```
 
 `SHA256SUMS` also lists the `knx-mcp` binary; `--ignore-missing` checks only the
@@ -52,9 +52,13 @@ The [launcher contract](../../APPIMAGE_LAUNCHER.md) records the tested boundary.
 older data directory. Keep the old files and open/copy them deliberately; see
 [known limitation §161](../../KNOWN_LIMITATIONS.md#161-alpha5-does-not-pick-up-the-alpha4-data-folder).
 
-**Alpha 13:** native/model16 and product23 are unchanged from Alpha 12. Opening
-new Alpha 13 saves in Alpha 12 is not verified; keep independent backups.
-[Current release scope](../../releases/alpha13.md#upgrade-independent-backups-first).
+**Alpha 14:** native/model16 is unchanged; the product database moves from 23 to
+24 on first open, and Alpha 13 refuses the newer product database. Opening new
+Alpha 14 saves in Alpha 13 is not verified; keep independent backups, including
+the product database.
+[Current release scope](../../releases/alpha14.md#upgrade-independent-backups-first).
+
+**Earlier Alpha 13:** native/model16 and product23 were unchanged from Alpha 12.
 
 **Earlier Alpha 12 storage upgrade:** close the app and independently back up native
 projects and all Docker data, including the product database. Native/model schema
@@ -109,7 +113,7 @@ compare the browser's certificate fingerprint with the one in
 
 **Choose your update policy:** `latest` follows published releases, including
 alpha pre-releases; it does not track `main`. Use
-`knxbench/knxbench-server:0.1.0-alpha.13` in both commands to pin that release.
+`knxbench/knxbench-server:0.1.0-alpha.14` in both commands to pin that release.
 The source server and source-built images now default to 8484. Keeping
 `-e KNX_PORT=8484` also makes the commands work with Alpha.9 and older images.
 Images start at `0.1.0-alpha.6` (9 October 2026); see

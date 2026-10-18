@@ -47,4 +47,10 @@ Initial inspection: the existing probe is coupled to memory-download mask
 admission, its CLI connects immediately, and System-2 image construction and
 property execution/recovery are separate missing links. This goal begins with
 an executable offline preparation path and explicit read-scope evidence.
-Implementation and verification are pending; the goal is not complete.
+The offline source preview is implemented: ProductDB → App → built CLI,
+with explicit field selection and no network client. Synthetic and exact-package
+acceptance are recorded in the [contract](../contracts/system2-source-probe-preview.md).
+This is a completed preparation slice, not completion of the programming goal.
+Image/procedure/recovery and separately authorised hardware acquisition remain
+pending. A first write-back of identical bytes does not prove no side effects
+or the full download path; it needs its own scope and setup/recovery contract.

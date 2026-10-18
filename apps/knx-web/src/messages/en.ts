@@ -44,7 +44,7 @@ export const messages = {
   "parameters.functionsEmpty": "No supported function choices are currently visible. Other settings are under Parameters.",
   "parameters.functionsHint": "These manufacturer parameters control the available communication objects. A selection is applied immediately; Undo restores the previous configuration.",
   "parameters.caption.text": "Section text",
-  "parameters.caption.unavailable": "The product provides no readable section caption. The source text is empty, a marker or an unresolved template. Source: {value}",
+  "parameters.caption.unavailable": "Fallback caption shown for empty text, a marker or text containing template delimiters (including literal delimiters in resolved values). Text: {value}",
   "parameters.groupNumber": "Parameter group {number}",
   "fileMenu.exchange": "Import & export",
   "fileMenu.history": "History & comparison",

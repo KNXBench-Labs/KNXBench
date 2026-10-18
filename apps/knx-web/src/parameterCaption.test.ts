@@ -16,6 +16,30 @@ describe("parameterCaption", () => {
     }
   });
 
+  it.each([
+    ["en", "Fallback caption shown", "literal delimiters in resolved values"],
+    ["de", "Ersatztitel", "wörtlichen Klammern in aufgelösten Werten"],
+  ] as const)("%s explains conservative delimiter fallback without changing resolver provenance", (language, policy, literalExplanation) => {
+    for (const [label, template, source] of [
+      ["Kitchen {{North}}", "{{0}}", "StoredValue"],
+      ["Kitchen / {{1:Keep}}", "{{0}} / {{1:Keep}}", "StoredValue"],
+      ["Kitchen / {{1:Keep}}", "{{0}} / {{1:Keep}}", "ProductDefault"],
+    ] as const) {
+      const input = { label, labelFill: { template, source } };
+      const before = structuredClone(input);
+      const translate: Translate = (key, values) => translateFor(language, key, values);
+      const caption = parameterCaption(input, "Group 1", translate);
+      expect(caption.label).toBe("Group 1");
+      expect(caption.title).toContain(policy);
+      expect(caption.title).toContain(literalExplanation);
+      expect(caption.title).not.toMatch(/unresolved|unaufgelöst/i);
+      expect(caption.title).toContain(label);
+      expect(caption.title).toContain(template);
+      expect(caption.title).toContain(translate(`comTable.textFill.${source}`));
+      expect(input).toEqual(before);
+    }
+  });
+
   it("keeps missing references explicit and never guesses the template's default", () => {
     for (const source of ["NoReference", "UnknownParameter", "NotTextParameter", "Undecided"] as const) {
       const input = { label: "{{0:Not verified}}", labelFill: { template: "{{0:Not verified}}", source } };

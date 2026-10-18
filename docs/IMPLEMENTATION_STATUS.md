@@ -12,6 +12,29 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Parameter caption final review evidence — issue #26 (19 October 2026)
+
+Added independent row-only and column-only HTTP caption-budget regressions. Each
+asserts the exact admitted axis DTO and whole-panel exhaustion with no project,
+revision or history mutation. Each test passed on the already-correct
+implementation, then failed with HTTP 200 instead of 400 when only its axis's
+copy charge was locally removed. Both charges were restored byte for byte. This
+closes missing discriminating evidence, not a newly discovered axis defect.
+
+The conservative delimiter fallback is unchanged: even a resolved value such as
+`Kitchen {{North}}` may use the localized label. EN/DE tooltips now describe this
+display policy neutrally rather than declaring the result unresolved. Tests cover
+stored-value literals and mixed supported/unsupported templates, retained exact
+resolver provenance, original text/template tooltips and search. Contracts and
+the user guide document the literal-delimiter limitation explicitly.
+
+Focused checks pass: 98 tests in 11 HTTP targets (15 caption cases), 110 UI tests
+and 24 i18n tests (JSON reports), production build, application and fixture
+TypeScript, owning-server all-target Clippy, formatting and documentation. Four
+localized tooltip tests first failed on the old wording. Independent re-review
+and the integrated production/package gate remain with the integration owner;
+no publication, main merge, bus or hardware action is claimed.
+
 ## Parameter caption review corrections — issue #26 (18 October 2026)
 
 Independent review found a post-commit projection refusal, unmetered caption-copy

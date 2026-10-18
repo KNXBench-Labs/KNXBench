@@ -84,8 +84,16 @@ The workspace navigator, selected heading, search/context paths and Restricted
 view use the resolved caption. Empty/whitespace-only text, a lone `#`, or any
 remaining template delimiter gets a localized numbered parameter-group label;
 separator/grid text uses a localized generic text label. Tooltips retain the
-source text and explain the fallback or exact fill source. The UI does not strip
-braces, invent a default or resolve parameter references itself.
+source text and explain the fallback or exact fill source. This is deliberately
+conservative: a `StoredValue` or `ProductDefault` result can contain literal `{{`
+or `}}` (for example `Kitchen {{North}}`) and still use the fallback. A fill
+record describes the supported substitution's provenance, not whether the whole
+result is free of unsupported indices: a mixed `{{0}} / {{1:Keep}}` template can
+retain braces after filling `{{0}}`. The tooltip therefore describes the display
+policy neutrally, never labels every such result unresolved, and retains the
+result alongside its original template and exact resolver provenance. Both stay
+searchable. The UI does not strip braces, exempt a fill-source category, invent
+a default or resolve parameter references itself.
 
 ## Bounds
 

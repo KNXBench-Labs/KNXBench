@@ -679,9 +679,12 @@ a no-result search does not delete fields or values.
 **Source-build change after Alpha 14 (issue #26).** Area captions and separator
 text fill supported text placeholders from the exact referenced text parameter: a
 stored device value first, otherwise its product default. An explicitly empty
-value stays empty. Unresolved/empty captions and a lone `#` get a readable group
-label instead; hover the caption to inspect the original text and why it could
-not be shown. This changes display only, not your settings or the product data.
+value stays empty. Empty captions, a lone `#`, and text containing `{{` or `}}`
+get a readable fallback label. This conservative display policy also applies to
+literal braces in a resolved value, such as `Kitchen {{North}}`; it does not mean
+the value is unresolved. Hover the caption to inspect the result, original
+template and reported value source; the result and template remain searchable.
+This changes display only, not your settings or the product data.
 
 Focus a parameter or use its **Information** button to inspect its original ID,
 type, accepted-value origin, access and declared numeric limits. An accepted

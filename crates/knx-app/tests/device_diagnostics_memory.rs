@@ -1,0 +1,361 @@
+//! Format-2 diagnostic archives: declared memory evidence, strict reader, format 1 intact.
+use knx_app::device_diagnostics::{
+    acquire_memory, bundle, bundle_export, pending, prepare, prepare_memory, read_bundle,
+    read_export, write_new_export, Export, MEMORY_PROFILE,
+};
+use knx_core::{DeviceId, DeviceInstance, Language, Project, SourceRef};
+use knx_net::commissioning::simulator::{SimulatedDevice, SimulatorConfig};
+use std::io::{Cursor, Read, Write};
+use std::sync::atomic::AtomicBool;
+
+/// A synthetic System-2 program in the exact `project_tool_metadata` shape:
+/// a PID78 comparison and two absolute segments (30 + 12 octets).
+const PROGRAM: &str = r#"<KNX xmlns="http://knx.org/xml/project/20"><ManufacturerData><Manufacturer RefId="M-0001">
+<ApplicationPrograms><ApplicationProgram Id="M-0001_A-0001-01-0000" Name="Synthetic" ApplicationNumber="1"
+ApplicationVersion="1" MaskVersion="MV-0025" LoadProcedureStyle="ProductProcedure"><Static>
+<Code><AbsoluteSegment Id="OBJ" Address="1024" Size="8" /></Code>
+<ComObjectTable CodeSegment="OBJ" Offset="0" />
+<LoadProcedures><LoadProcedure><LdCtrlConnect />
+<LdCtrlCompareProp ObjIdx="0" PropId="78" InlineData="00010000005B00000000" />
+<LdCtrlAbsSegment LsmIdx="1" SegType="0" Address="278" Size="30" Access="51" MemType="3" SegFlags="0" />
+<LdCtrlAbsSegment LsmIdx="3" SegType="0" Address="15360" Size="12" Access="51" MemType="3" SegFlags="0" />
+<LdCtrlTaskCtrl2 LsmIdx="3" Callback="0" Address="1024" Seg0="0" Seg1="0" />
+<LdCtrlTaskSegment LsmIdx="5" Address="1024" /><LdCtrlDisconnect /></LoadProcedure></LoadProcedures>
+</Static></ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
+
+const HARDWARE: &[u8] = br#"<KNX xmlns="http://knx.org/xml/project/20"><ManufacturerData><Manufacturer RefId="M-0001">
+<Hardware><Hardware Id="H" Name="Synthetic" SerialNumber="synthetic" VersionNumber="1">
+<Products><Product Id="M-0001_H-1_P-1" /></Products><Hardware2Programs><Hardware2Program Id="H_HP" MediumTypes="MT-0">
+<ApplicationProgramRef RefId="M-0001_A-0001-01-0000" /></Hardware2Program></Hardware2Programs>
+</Hardware></Hardware></Manufacturer></ManufacturerData></KNX>"#;
+
+fn products(program: &str) -> (tempfile::TempDir, knx_productdb::Connection) {
+    let dir = tempfile::tempdir().unwrap();
+    let db = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+    knx_productdb::ingest_file(&db, "synthetic.xml", program.as_bytes()).unwrap();
+    knx_productdb::ingest_file(&db, "Hardware.xml", HARDWARE).unwrap();
+    (dir, db)
+}
+
+fn project() -> Project {
+    project_with("H_HP")
+}
+
+fn project_with(program_ref: &str) -> Project {
+    let mut p = Project::new(Language("en".into()));
+    p.devices.insert(DeviceInstance {
+        id: DeviceId(7),
+        source: SourceRef {
+            path: "/home/alice/SECRET".into(),
+            ets_id: "SECRET_SOURCE".into(),
+        },
+        name: "SECRET_ROOM".into(),
+        description: None,
+        address: Some("1.1.25".parse().unwrap()),
+        product_ref: "M-0001_H-1_P-1".into(),
+        program_ref: program_ref.into(),
+        commissioning: Default::default(),
+        visibility_calculated: true,
+        com_objects: vec![],
+        binary_data: vec![],
+    });
+    p
+}
+
+fn device() -> SimulatedDevice {
+    let d = SimulatedDevice::with_config(SimulatorConfig {
+        mask_version: 0x0025,
+        ..Default::default()
+    });
+    d.preset_property(0, 12, &[0x00, 0x01]);
+    d.preset_property(0, 78, &[0, 1, 0, 0, 0, 0x5B]);
+    d.preset_memory(0x0116, &(1..=30).collect::<Vec<u8>>());
+    d.preset_memory(0x3C00, &[0xEE; 12]);
+    d
+}
+
+async fn export() -> Export {
+    let (_dir, db) = products(PROGRAM);
+    let plan = prepare_memory(&project(), DeviceId(7), &db).unwrap();
+    acquire_memory(
+        &device(),
+        &plan,
+        Default::default(),
+        "synthetic-test",
+        &AtomicBool::new(false),
+        |_| {},
+    )
+    .await
+}
+
+/// Rewrites an archive member by member, with `edit` deciding each member.
+fn rewrite(original: &[u8], mut edit: impl FnMut(&str, Vec<u8>) -> Option<Vec<u8>>) -> Vec<u8> {
+    let mut input = zip::ZipArchive::new(Cursor::new(original)).unwrap();
+    let mut output = zip::ZipWriter::new(Cursor::new(vec![]));
+    for i in 0..input.len() {
+        let mut f = input.by_index(i).unwrap();
+        let name = f.name().to_string();
+        let mut data = vec![];
+        f.read_to_end(&mut data).unwrap();
+        if let Some(data) = edit(&name, data) {
+            output
+                .start_file(&name, zip::write::SimpleFileOptions::default())
+                .unwrap();
+            output.write_all(&data).unwrap();
+        }
+    }
+    output.finish().unwrap().into_inner()
+}
+
+fn sha256(bytes: &[u8]) -> String {
+    use sha2::Digest;
+    format!("{:x}", sha2::Sha256::digest(bytes))
+}
+
+#[test]
+fn the_profile_is_derived_from_product_data_with_required_identity() {
+    let (_dir, db) = products(PROGRAM);
+    let plan = prepare_memory(&project(), DeviceId(7), &db).unwrap();
+    assert_eq!(plan.base.expected.mask, Some(0x0025));
+    assert_eq!(plan.base.expected.manufacturer, Some(0x0001));
+    assert_eq!(plan.profile.program_id, "M-0001_A-0001-01-0000");
+    assert_eq!(plan.profile.ranges.total_octets(), 42);
+    assert_eq!(plan.profile.range_positions, [2, 3]);
+    // Not the System-2 shape: refused before any adapter exists.
+    let (_dir, other) = products(&PROGRAM.replace("MV-0025", "MV-0701"));
+    let error = prepare_memory(&project(), DeviceId(7), &other).unwrap_err();
+    assert!(error.contains("diagnostics-profile-unavailable"), "{error}");
+    // No product mapping for the device: refused.
+    let error = prepare_memory(&project_with("H_OTHER"), DeviceId(7), &db).unwrap_err();
+    assert!(error.contains("diagnostics-program-unresolved"), "{error}");
+}
+
+#[tokio::test]
+async fn a_format_2_export_round_trips_with_memory_evidence_and_coverage() {
+    let export = export().await;
+    let report = &export.report;
+    assert_eq!(report.format, 2);
+    assert_eq!(report.profile, MEMORY_PROFILE);
+    assert_eq!(report.memory_status, "requested");
+    assert!(report.simulated && !report.written && report.complete);
+    assert_eq!(report.stop_reason, None);
+    let memory = export.memory.as_ref().unwrap();
+    assert_eq!(memory.program_id, "M-0001_A-0001-01-0000");
+    assert_eq!(memory.chunk_octets, 12);
+    assert_eq!(memory.chunks.len(), 4);
+    assert_eq!(memory.chunks[0].bytes, "0102030405060708090a0b0c");
+    assert_eq!(memory.ranges[0].procedure_position, 2);
+    assert_eq!(memory.ranges[0].coverage.read, 30);
+    assert_eq!(memory.ranges[1].coverage.read, 12);
+    assert_eq!(
+        memory.hardware_type_comparison.inline_data,
+        "00010000005b00000000"
+    );
+    let bytes = bundle_export(&export).unwrap();
+    assert_eq!(read_export(&bytes).unwrap(), export);
+    // A format-2 archive is never silently reduced to its identity part.
+    assert!(read_bundle(&bytes).is_err());
+    let names: Vec<String> = zip::ZipArchive::new(Cursor::new(&bytes))
+        .unwrap()
+        .file_names()
+        .map(str::to_string)
+        .collect();
+    assert_eq!(names.len(), 5);
+    assert!(names.iter().any(|n| n == "memory.json"));
+    let text = |name: &str| {
+        let mut zip = zip::ZipArchive::new(Cursor::new(&bytes)).unwrap();
+        let mut s = String::new();
+        zip.by_name(name).unwrap().read_to_string(&mut s).unwrap();
+        s
+    };
+    for name in ["README.txt", "manifest.json"] {
+        let content = text(name);
+        for phrase in [
+            "not proven runtime addresses",
+            "not a backup",
+            "not a restore basis",
+            "keep private",
+        ] {
+            assert!(content.contains(phrase), "{name} lacks {phrase}: {content}");
+        }
+    }
+    for secret in ["SECRET", "/home/", "1.1.25"] {
+        for name in ["report.json", "memory.json", "manifest.json"] {
+            assert!(!text(name).contains(secret), "{name} leaked {secret}");
+        }
+    }
+}
+
+#[tokio::test]
+async fn the_writer_is_create_only_owner_only_and_rereads() {
+    let export = export().await;
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("memory-evidence.zip");
+    write_new_export(&path, &export).unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        assert_eq!(
+            std::fs::metadata(&path).unwrap().permissions().mode() & 0o777,
+            0o600
+        );
+    }
+    let written = std::fs::read(&path).unwrap();
+    assert_eq!(read_export(&written).unwrap(), export);
+    assert!(
+        write_new_export(&path, &export).is_err(),
+        "never overwrites"
+    );
+    assert_eq!(std::fs::read(&path).unwrap(), written);
+}
+
+#[tokio::test]
+async fn the_strict_reader_refuses_missing_extra_and_tampered_memory_evidence() {
+    let original = bundle_export(&export().await).unwrap();
+    let missing = rewrite(&original, |name, data| {
+        (name != "memory.json").then_some(data)
+    });
+    assert!(
+        read_export(&missing).is_err(),
+        "accepted missing memory.json"
+    );
+    let mut extra = rewrite(&original, |_, data| Some(data));
+    {
+        let mut zip = zip::ZipWriter::new_append(Cursor::new(&mut extra)).unwrap();
+        zip.start_file("dump.bin", zip::write::SimpleFileOptions::default())
+            .unwrap();
+        zip.write_all(&[0; 4]).unwrap();
+        zip.finish().unwrap();
+    }
+    assert!(read_export(&extra).is_err(), "accepted an extra member");
+    let tampered = rewrite(&original, |name, mut data| {
+        if name == "memory.json" {
+            data.push(b' ');
+        }
+        Some(data)
+    });
+    assert!(read_export(&tampered).is_err(), "accepted a hash mismatch");
+    // Even with a matching hash, a chunk claimed read with other bytes, or a
+    // coverage that does not follow from the chunks, is refused.
+    for (from, to) in [
+        ("0102030405060708090a0b0c", "0102030405060708090a0b"),
+        ("\"read\": 30", "\"read\": 29"),
+        ("\"status\": \"read\"", "\"status\": \"not-read\""),
+    ] {
+        let mut memory = vec![];
+        let edited = rewrite(&original, |name, data| {
+            if name == "memory.json" {
+                let text = String::from_utf8(data).unwrap();
+                assert!(text.contains(from), "fixture lacks {from}");
+                memory = text.replacen(from, to, 1).into_bytes();
+                Some(memory.clone())
+            } else {
+                Some(data)
+            }
+        });
+        let fixed = rewrite(&edited, |name, data| {
+            if name == "manifest.json" {
+                let mut v: serde_json::Value = serde_json::from_slice(&data).unwrap();
+                v["files"]["memory.json"]["bytes"] = memory.len().into();
+                v["files"]["memory.json"]["sha256"] = sha256(&memory).into();
+                Some(serde_json::to_vec_pretty(&v).unwrap())
+            } else {
+                Some(data)
+            }
+        });
+        assert!(read_export(&fixed).is_err(), "accepted {from} -> {to}");
+    }
+    // A format-2 archive relabelled as format 1 is refused.
+    let relabelled = rewrite(&original, |name, data| {
+        if name == "manifest.json" {
+            let mut v: serde_json::Value = serde_json::from_slice(&data).unwrap();
+            v["format"] = 1.into();
+            Some(serde_json::to_vec_pretty(&v).unwrap())
+        } else {
+            Some(data)
+        }
+    });
+    assert!(read_export(&relabelled).is_err());
+}
+
+#[test]
+fn format_1_archives_keep_four_members_and_no_memory_notice() {
+    let plan = prepare(&project(), DeviceId(7), None).unwrap();
+    let report = pending(&plan, "synthetic", true);
+    let bytes = bundle(&report).unwrap();
+    assert_eq!(zip::ZipArchive::new(Cursor::new(&bytes)).unwrap().len(), 4);
+    let export = read_export(&bytes).unwrap();
+    assert_eq!(export.memory, None);
+    assert_eq!(read_bundle(&bytes).unwrap(), report);
+    assert_eq!(
+        bundle_export(&export).unwrap(),
+        bytes,
+        "byte-identical rewrite"
+    );
+    let mut manifest = String::new();
+    zip::ZipArchive::new(Cursor::new(&bytes))
+        .unwrap()
+        .by_name("manifest.json")
+        .unwrap()
+        .read_to_string(&mut manifest)
+        .unwrap();
+    assert!(!manifest.contains("notice"));
+}
+
+#[test]
+fn the_largest_admitted_profile_fits_the_archive_limits() {
+    use knx_app::device_diagnostics::{pending_memory, MemoryPrepared};
+    use knx_core::commissioning::declared_memory::{DeclaredRange, DeclaredRanges};
+    let ranges = DeclaredRanges::new(
+        (0..8)
+            .map(|i| DeclaredRange {
+                address: 0x1000 + 0x400 * i,
+                length: 256,
+            })
+            .collect(),
+    )
+    .unwrap();
+    let plan = MemoryPrepared {
+        base: knx_app::device_diagnostics::Prepared {
+            target: knx_core::ContactableAddress::new("1.1.25".parse().unwrap()).unwrap(),
+            expected: knx_net::commissioning::diagnostic_export::Identity {
+                mask: Some(0x0025),
+                manufacturer: Some(1),
+            },
+            reference: "a".repeat(64),
+        },
+        profile: knx_productdb::declared_segments::DeclaredSegments {
+            program_id: "M-0001_A-0001-01-0000".into(),
+            mask: 0x0025,
+            ranges,
+            range_positions: (1..=8).collect(),
+            compare_position: 0,
+            hardware_type: vec![0xFF; 10],
+        },
+    };
+    let mut export = pending_memory(&plan, "synthetic", true);
+    let now = chrono::Utc::now().to_rfc3339();
+    for item in &mut export.report.items {
+        item.status = "read".into();
+        item.bytes = vec![0xFF; item.expected_bytes];
+        item.received_bytes = item.expected_bytes;
+        item.returned_elements = item.property_id.map(|_| 1);
+        item.attempted_at = Some(now.clone());
+        item.completed_at = Some(now.clone());
+    }
+    let memory = export.memory.as_mut().unwrap();
+    for chunk in &mut memory.chunks {
+        chunk.status = "read".into();
+        chunk.bytes = "ff".repeat(usize::from(chunk.requested_octets));
+        chunk.received_octets = usize::from(chunk.requested_octets);
+        chunk.attempted_at = Some(now.clone());
+        chunk.completed_at = Some(now.clone());
+    }
+    for range in &mut memory.ranges {
+        range.coverage.read = u32::from(range.length);
+        range.coverage.not_read = 0;
+    }
+    export.report.complete = true;
+    let bytes = bundle_export(&export).unwrap();
+    assert_eq!(read_export(&bytes).unwrap(), export);
+}

@@ -3,10 +3,18 @@
 //! No download admission, source
 //! images or private research are consulted. Public archives contain only the
 //! closed acquisition allowlist, never a project or arbitrary error strings.
+//! Format 1 is the identity recipe; format 2 (ADR-0143) adds `memory.json`
+//! with the ProductDB-declared candidate ranges of `system2-declared-segments-v1`.
+mod memory_evidence;
+
 use chrono::{DateTime, Utc};
 use knx_core::{ContactableAddress, DeviceId, Project};
 use knx_net::commissioning::diagnostic_export::{self as net, Identity, Item, Query};
 use knx_net::{ManagementTransport, SessionTiming};
+pub use memory_evidence::{
+    acquire_memory, pending_memory, prepare_memory, ChunkReading, Comparison, Coverage,
+    MemoryEvidence, MemoryPrepared, RangeEvidence, MEMORY_PROFILE,
+};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
@@ -44,6 +52,9 @@ pub fn gateway_lease() -> Result<std::fs::File, String> {
 pub const PROFILE: &str = "generic-identity-v1";
 const MAX_ARCHIVE: usize = 256 * 1024;
 const MAX_MEMBER: u64 = 64 * 1024;
+/// `memory.json` of the largest admitted profile (2048 octets, at most 178
+/// chunks with timestamps) is well below this; the archive limit still holds.
+const MAX_MEMORY_MEMBER: u64 = 192 * 1024;
 const KIND: &str = "knxbench-device-diagnostics";
 const README: &str = "KNXBench read-only device diagnostics, format 1.\nOnly descriptor type 0 and Device Object properties 12/78 are requested.\nNo configuration memory, keys, serial number, project or gateway metadata.\nA property refusal cannot distinguish missing rights from a missing service.\nMask/manufacturer agreement is not product/application identity.\nNot a recovery backup or programming approval. No complete anonymity is promised.\nSIMULATED is recorded in report.json and manifest.json when using a simulator.\nNo automatic upload. Review the files, then send the ZIP to issue@knxbench.com or share a file link privately.\nChecksums detect corruption, not maliciously rewritten evidence.\n";
 #[derive(Debug, Clone)]
@@ -104,7 +115,7 @@ pub fn prepare(
 }
 /// Errors and stop reasons are fixed code tokens, never free text that could
 /// carry a path, name or address into a shared archive.
-fn is_token(s: &str) -> bool {
+pub(crate) fn is_token(s: &str) -> bool {
     (1..=64).contains(&s.len()) && s.bytes().all(|b| b.is_ascii_lowercase() || b == b'-')
 }
 fn hex16(s: &str) -> Option<u16> {
@@ -112,7 +123,7 @@ fn hex16(s: &str) -> Option<u16> {
         .then(|| u16::from_str_radix(s, 16).ok())
         .flatten()
 }
-fn hex(bytes: &[u8]) -> String {
+pub(crate) fn hex(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
 fn hash(bytes: &[u8]) -> String {
@@ -159,7 +170,7 @@ pub struct Report {
     /// the attempt only, never claims that a physical device acknowledged it.
     pub disconnect_attempt_completed: bool,
 }
-fn readings(items: &[Item]) -> Vec<Reading> {
+pub(crate) fn readings(items: &[Item]) -> Vec<Reading> {
     items
         .iter()
         .enumerate()
@@ -246,15 +257,30 @@ struct Manifest {
     build: String,
     collected_at: String,
     simulated: bool,
+    /// Format 2 only; absent from format 1, which keeps it byte-identical.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    notice: Option<String>,
     files: BTreeMap<String, Member>,
+}
+/// What each archive format promises about memory.
+fn format_matches(r: &Report) -> bool {
+    match r.format {
+        1 => r.profile == PROFILE && r.memory_status == "not-requested",
+        2 => {
+            r.profile == MEMORY_PROFILE
+                && r.memory_status == "requested"
+                && r.memory_reason == memory_evidence::MEMORY_REASON
+                && r.asserted_mask.is_some()
+                && r.asserted_manufacturer.is_some()
+        }
+        _ => false,
+    }
 }
 fn validate(r: &Report) -> Result<(), String> {
     if r.kind != KIND
-        || r.format != 1
-        || r.profile != PROFILE
+        || !format_matches(r)
         || r.device != "device-1"
         || r.written
-        || r.memory_status != "not-requested"
         || r.project_reference.len() != 64
         || !r.project_reference.bytes().all(|b| b.is_ascii_hexdigit())
         || r.build.is_empty()
@@ -317,23 +343,65 @@ fn validate(r: &Report) -> Result<(), String> {
     }
     Ok(())
 }
-/// Fixed names and checksummed lengths; no ZIP entry can be a host path.
+/// One diagnostic archive: the identity report, plus memory evidence in
+/// format 2 only.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Export {
+    pub report: Report,
+    /// `Some` exactly when `report.format` is 2.
+    pub memory: Option<MemoryEvidence>,
+}
+fn validate_export(export: &Export) -> Result<(), String> {
+    validate(&export.report)?;
+    match (export.report.format, &export.memory) {
+        (1, None) => Ok(()),
+        (2, Some(memory)) => memory_evidence::validate(&export.report, memory),
+        _ => Err("diagnostics-invalid-format".into()),
+    }
+}
+/// Format 1 only; a format-2 export goes through [`bundle_export`].
 pub fn bundle(report: &Report) -> Result<Vec<u8>, String> {
-    validate(report)?;
+    if report.format != 1 {
+        return Err("diagnostics-invalid-format".into());
+    }
+    bundle_export(&Export {
+        report: report.clone(),
+        memory: None,
+    })
+}
+/// Fixed names and checksummed lengths; no ZIP entry can be a host path.
+pub fn bundle_export(export: &Export) -> Result<Vec<u8>, String> {
+    validate_export(export)?;
+    let report = &export.report;
     let report_bytes = serde_json::to_vec_pretty(report).map_err(|_| "diagnostics-encoding")?;
     let properties =
         serde_json::to_vec_pretty(&report.items).map_err(|_| "diagnostics-encoding")?;
+    let readme = if export.memory.is_some() {
+        memory_evidence::README
+    } else {
+        README
+    };
     let mut files = BTreeMap::from([
         ("report.json".to_string(), report_bytes),
         ("properties.json".to_string(), properties),
-        ("README.txt".to_string(), README.as_bytes().to_vec()),
+        ("README.txt".to_string(), readme.as_bytes().to_vec()),
     ]);
+    if let Some(memory) = &export.memory {
+        files.insert(
+            "memory.json".into(),
+            serde_json::to_vec_pretty(memory).map_err(|_| "diagnostics-encoding")?,
+        );
+    }
     let manifest = Manifest {
         kind: KIND.into(),
-        format: 1,
+        format: report.format,
         build: report.build.clone(),
         collected_at: report.collected_at.clone(),
         simulated: report.simulated,
+        notice: export
+            .memory
+            .is_some()
+            .then(|| memory_evidence::NOTICE.to_string()),
         files: files
             .iter()
             .map(|(k, v)| {
@@ -358,30 +426,46 @@ pub fn bundle(report: &Report) -> Result<Vec<u8>, String> {
         zip.write_all(&bytes).map_err(|_| "diagnostics-zip")?;
     }
     let bytes = zip.finish().map_err(|_| "diagnostics-zip")?.into_inner();
-    if read_bundle(&bytes)? != *report {
+    if read_export(&bytes)? != *export {
         return Err("diagnostics-readback-differs".into());
     }
     Ok(bytes)
 }
-/// Bounded, non-extracting independent readback. Unexpected/duplicate/missing
-/// members, unknown versions, CRC failures, length/hash mismatches all refuse.
+/// Format 1 only: a format-2 archive is refused rather than silently reduced
+/// to its identity part; read it with [`read_export`].
 pub fn read_bundle(bytes: &[u8]) -> Result<Report, String> {
+    let export = read_export(bytes)?;
+    if export.memory.is_some() {
+        return Err("diagnostics-memory-evidence-needs-read-export".into());
+    }
+    Ok(export.report)
+}
+/// Bounded, non-extracting independent readback of format 1 or 2.
+/// Unexpected/duplicate/missing members, unknown versions, CRC failures,
+/// length/hash mismatches and evidence that does not follow from its own
+/// plan all refuse.
+pub fn read_export(bytes: &[u8]) -> Result<Export, String> {
     if bytes.len() > MAX_ARCHIVE {
         return Err("diagnostics-archive-limit".into());
     }
     let mut zip =
         zip::ZipArchive::new(Cursor::new(bytes)).map_err(|_| "diagnostics-invalid-zip")?;
-    if zip.len() != 4 {
+    if !(4..=5).contains(&zip.len()) {
         return Err("diagnostics-member-count".into());
     }
     let mut files = BTreeMap::new();
     for i in 0..zip.len() {
         let mut f = zip.by_index(i).map_err(|_| "diagnostics-invalid-member")?;
         let name = f.name().to_string();
+        let limit = if name == "memory.json" {
+            MAX_MEMORY_MEMBER
+        } else {
+            MAX_MEMBER
+        };
         if !matches!(
             name.as_str(),
-            "manifest.json" | "report.json" | "properties.json" | "README.txt"
-        ) || f.size() > MAX_MEMBER
+            "manifest.json" | "report.json" | "properties.json" | "README.txt" | "memory.json"
+        ) || f.size() > limit
             || f.is_dir()
             || files.contains_key(&name)
         {
@@ -390,48 +474,87 @@ pub fn read_bundle(bytes: &[u8]) -> Result<Report, String> {
         let size = f.size();
         let mut data = vec![];
         (&mut f)
-            .take(MAX_MEMBER + 1)
+            .take(limit + 1)
             .read_to_end(&mut data)
             .map_err(|_| "diagnostics-member-read")?;
-        if data.len() as u64 != size || data.len() as u64 > MAX_MEMBER {
+        if data.len() as u64 != size || data.len() as u64 > limit {
             return Err("diagnostics-member-limit".into());
         }
         files.insert(name, data);
     }
-    let m: Manifest = serde_json::from_slice(&files["manifest.json"])
-        .map_err(|_| "diagnostics-invalid-manifest")?;
-    if m.kind != KIND || m.format != 1 || m.files.len() != 3 {
+    let m: Manifest = serde_json::from_slice(
+        files
+            .get("manifest.json")
+            .ok_or("diagnostics-invalid-member")?,
+    )
+    .map_err(|_| "diagnostics-invalid-manifest")?;
+    let members: &[&str] = match (m.format, m.notice.as_deref()) {
+        (1, None) => &["report.json", "properties.json", "README.txt"],
+        (2, Some(memory_evidence::NOTICE)) => &[
+            "report.json",
+            "properties.json",
+            "README.txt",
+            "memory.json",
+        ],
+        _ => return Err("diagnostics-unknown-format".into()),
+    };
+    if m.kind != KIND || m.files.len() != members.len() || files.len() != members.len() + 1 {
         return Err("diagnostics-unknown-format".into());
     }
-    for name in ["report.json", "properties.json", "README.txt"] {
-        let v = &files[name];
-        let claim = m.files.get(name).ok_or("diagnostics-missing-hash")?;
+    for name in members {
+        let v = files.get(*name).ok_or("diagnostics-invalid-member")?;
+        let claim = m.files.get(*name).ok_or("diagnostics-missing-hash")?;
         if v.len() as u64 != claim.bytes || hash(v) != claim.sha256 {
             return Err("diagnostics-checksum-mismatch".into());
         }
     }
     let r: Report =
         serde_json::from_slice(&files["report.json"]).map_err(|_| "diagnostics-invalid-report")?;
-    validate(&r)?;
+    let memory: Option<MemoryEvidence> = files
+        .get("memory.json")
+        .map(|bytes| serde_json::from_slice(bytes).map_err(|_| "diagnostics-invalid-memory"))
+        .transpose()?;
+    let readme = if memory.is_some() {
+        memory_evidence::README
+    } else {
+        README
+    };
+    let export = Export { report: r, memory };
+    validate_export(&export)?;
+    let r = &export.report;
     let properties: Vec<Reading> = serde_json::from_slice(&files["properties.json"])
         .map_err(|_| "diagnostics-invalid-properties")?;
     if r.items != properties
+        || m.format != r.format
         || m.build != r.build
         || m.collected_at != r.collected_at
         || m.simulated != r.simulated
-        || files["README.txt"] != README.as_bytes()
+        || files["README.txt"] != readme.as_bytes()
     {
         return Err("diagnostics-inconsistent-archive".into());
     }
-    Ok(r)
+    Ok(export)
 }
 /// Create-only, flush+sync, seek and verify the actual held file before success.
 /// No path deletion on failure: preserve the failed artifact for inspection.
 pub fn write_new_bundle(path: &Path, report: &Report) -> Result<(), String> {
+    if report.format != 1 {
+        return Err("diagnostics-invalid-format".into());
+    }
+    write_new_export(
+        path,
+        &Export {
+            report: report.clone(),
+            memory: None,
+        },
+    )
+}
+/// [`write_new_bundle`] for either format.
+pub fn write_new_export(path: &Path, export: &Export) -> Result<(), String> {
     if path.extension().and_then(|s| s.to_str()) != Some("zip") {
         return Err("diagnostics-zip-extension-required".into());
     }
-    let bytes = bundle(report)?;
+    let bytes = bundle_export(export)?;
     let mut options = OpenOptions::new();
     options.read(true).write(true).create_new(true);
     // Raw device replies can be sensitive: owner-only from the first byte.
@@ -449,7 +572,7 @@ pub fn write_new_bundle(path: &Path, report: &Report) -> Result<(), String> {
     f.take((MAX_ARCHIVE + 1) as u64)
         .read_to_end(&mut held)
         .map_err(|_| "diagnostics-readback-failed")?;
-    if held != bytes || read_bundle(&held)? != *report {
+    if held != bytes || read_export(&held)? != *export {
         return Err("diagnostics-readback-differs".into());
     }
     Ok(())

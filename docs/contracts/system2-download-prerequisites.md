@@ -105,6 +105,11 @@ regression-pinned.
 2. Complete product-step translation, resource-specific machine mapping (including
    machine 5), hardware-property comparison semantics/width and per-mask admission.
    The existing System-B `Downloader` is simulator-only and is not this procedure.
+   The device side of the width question is measured: the reporter's detector
+   answers PID 78 with six octets equal to the first six of the ten source
+   octets, the rest being zero
+   ([evidence](../research/2026-10-18-up258-device-diagnostics.md));
+   the tool's comparison rule itself stays an assumption.
 3. Identity-bound durable recovery for property **and** memory changes, including
    setup/VerifyMode and indirect allocation effects. Existing memory-only backup
    coverage must not be advertised as sufficient.

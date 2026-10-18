@@ -1,8 +1,9 @@
 # Read-only device diagnostic export
 
 [ADR-0134](../adr/0134-generic-read-only-diagnostic-export.md). A source-build
-feature after Alpha 13; not a released-binary claim. Simulator-verified only:
-**no physical device has been read with it.**
+feature after Alpha 13, released in [Alpha 14](../releases/alpha14.md).
+Simulator-verified, plus **one physical device so far** (see
+[First real device](#required-before-any-hardware-claim)).
 
 ## What it is and is not
 
@@ -134,3 +135,13 @@ user's own interface, with the raw report reviewed: does the device answer PID12
 PID78, refuse them, or stay silent (devices without interface objects), and does
 `T_Disconnect` leave it in normal operation? Until then hardware compatibility is
 unconfirmed.
+
+**First real device (18 October 2026, issue #22):** one reporter-run export from
+a Siemens `MV-0025` presence detector on a source build after Alpha 14
+(`simulated: false`, `written: false`, complete). Descriptor, PID12 and PID78
+all answered with the expected lengths; the disconnect attempt completed; the
+reviewed values are in the
+[evidence note](../research/2026-10-18-up258-device-diagnostics.md).
+Still unobserved: a refusing or silent device, and a report that the device
+kept working normally afterwards.
+One device does not make the export hardware-compatible in general.

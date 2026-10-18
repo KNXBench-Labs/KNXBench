@@ -967,7 +967,7 @@ Only explicit, uniquely associated MV-07B0 Load/ap1 declarations are reconstruct
 ### 184. Diagnostic export reads identity only
 
 **Ledger status:** `ACCEPTED_BOUNDARY` ([KL-184](status/LEDGER.md#post-snapshot-ids)).
-The read-only diagnostic export reads descriptor, PID12 and PID78 only; no memory profile is admitted, a zero-element reply cannot separate refusal from absence, and no physical device has been read with it yet.
+The read-only diagnostic export reads descriptor, PID12 and PID78 only; no memory profile is admitted, a zero-element reply cannot separate refusal from absence, and only one physical device (a Siemens `MV-0025` detector, 18 October 2026) has been read with it so far.
 [Details and history](limitations/KL-184-device-diagnostic-export.md)
 
 ## Bus diagnostics and DPT

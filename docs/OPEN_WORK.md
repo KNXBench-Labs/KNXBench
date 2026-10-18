@@ -134,11 +134,13 @@ before the rewrite have rewritten copies under
 bases from [COMMIT_MAP_2026-10-17](history/COMMIT_MAP_2026-10-17.txt). Not
 `refs/rewritten/`: that namespace is per-worktree and belongs to `git rebase -r`.
 
-## Read-only diagnostic export: hardware check pending (17 October 2026)
+## Read-only diagnostic export: first hardware run received (18 October 2026)
 
 [Implemented and simulator-verified](contracts/device-diagnostic-export.md);
-next is one separately authorised read-only run against a named device, then
-any memory profile only with its own evidence and decision (ADR-0134).
+one real Siemens `MV-0025` detector answered all three reads
+([evidence](research/2026-10-18-up258-device-diagnostics.md)).
+Still open: a refusing or silent device and post-run behaviour reports; any
+memory profile only with its own evidence and decision (ADR-0134).
 
 ## System 2 / System B download outcome (17 October 2026)
 

@@ -20,3 +20,13 @@ a separately authorised read-only hardware run, then a memory profile only with
 its own evidence. [Contract](../contracts/device-diagnostic-export.md),
 [ADR-0134](../adr/0134-generic-read-only-diagnostic-export.md).
 <!-- END retained catalogue record -->
+
+## First real-device run (18 October 2026)
+
+One read-only export from a Siemens `MV-0025` presence detector (issue #22):
+descriptor `0025`, PID12 `0001` and a six-octet PID78 all answered, nothing was
+written and the disconnect attempt completed
+([evidence](../research/2026-10-18-up258-device-diagnostics.md)).
+The identity-only boundary is unchanged. A refusing or silent device, the
+`refused-ambiguous` path and post-run device behaviour are still unobserved on
+hardware.

@@ -123,8 +123,9 @@ paths, no serial number and no keys. The raw replies do identify the device type
 which is the point, so share the file like any other installation document.
 
 The file is **not a backup** and cannot restore a device. Configuration memory
-is not read. The export has been tested with KNXBench's simulator; reports from
-real devices are what confirm it on hardware. If a device behaves differently
+is not read. The export has been tested with KNXBench's simulator and, so far,
+with one real device (a Siemens presence detector); every further report from a
+real device helps confirm it on hardware. If a device behaves differently
 afterwards (not expected, since the export only reads), please say so in the
 issue.
 

@@ -922,6 +922,19 @@ the aggregate commitment only: it now counts the four legacy provenance
 tables, all empty in this `.knxprod` corpus (pinned at 0). With them left
 out, the v16-shaped projection stayed equal, so no outcome, report total or
 other table count moved.
+Schema v24 ([ADR-0139](adr/0139-block-access-and-separators-reach-the-parameter-tab.md))
+re-pinned both commitments during the Alpha 14 release gate (the change itself
+had not run this opt-in test): `Access` on `ParameterBlock`/`ParameterSeparator`
+is modelled, so an Alpha 13 / current pair on the same 115 instances changes
+exactly six of 102 projection leaves — unknown report totals 24,174 → 23,999
+(isolation and shared-successful), 24,050 → 23,875 (unique installs),
+`ingest_unknown` 24,448 → 24,273, `package_install_unknown` 9,866 → 9,791 and
+the scheme-12/14 `separator_access` evidence 2 → 0. An independent XML census of
+the (blob, host xpath, `Access`) keys predicts −175 / −175 / −175 / −75 and the
+two scheme-12 separator occurrences exactly. The collection gained one vendor
+ZIP with two inner packages in a pinned scope after Alpha 13 (117 instances;
+Alpha 13's own test counts 117 too), so the pins keep describing the
+115-instance composition, measured from a copy of the scopes without that file.
 The 2026-09-24
 gate bound 115 instances / 113 unique hashes: isolated 104 installed and 11
 unsupported; shared 102 installed, 2 already present, and 11 unsupported.

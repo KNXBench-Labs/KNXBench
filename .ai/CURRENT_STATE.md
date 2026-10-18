@@ -1,4 +1,10 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-10-18 12:07
+- **Completed:** Alpha 14 release gate found the opt-in product corpus matrix still pinned to v23: ADR-0139 (v24) models block/separator `Access`, so six of 102 projection leaves moved (unknown totals −175, `ingest_unknown` −175, `package_install_unknown` −75, scheme-12 `separator_access` 2 → 0), each predicted by an independent XML census. Both commitments and the explicit totals in `crates/knx-productdb/tests/corpus_compatibility_matrix.rs` are re-pinned; matrix target 11/11 (`--include-ignored`) on the pinned scopes.
+- **Pending/Next Steps:** Alpha 14 candidate 6 is cut from this commit; `main` stays release-frozen for code until the tag is published (docs-only commits are fine).
+- **Notes for Codex oder Claude:** For the census-3 claim: item (3), the unknown-construct cleanup, will move this matrix's unknown totals and commitments again. Run it opt-in with `KNXBENCH_PRODUCT_CORPUS` and `KNXBENCH_PRODUCT_CORPUS_SCOPES` (the two private scopes) and re-pin with a predicting census, like the ADR-0139 paragraph in `docs/IMPORT_EXPORT.md`. The collection gained one vendor ZIP with two inner packages in a pinned scope after Alpha 13 (117 instances); the pins describe 115, so measure from a copy of the scopes without that file rather than re-pinning the composition.
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-10-18 10:55
 - **Completed:** CLAIM (owner go): census-3 fix package: (1) G11 legacy EX-IM files with upper-case table names read as empty, (2) G10 refusal names the value type instead of the property placement, (3) G13 unknown-construct report cleanup (retire modelled constructs, report unread ones such as `Enumeration/@BinaryValue`), (4) owner request: raise input/data size limits so large real data is not refused (spec limit + 25 % where a spec defines one). Worktree `KNXBench-pdb-limits-20261018`, branch `fix/pdb-integrity-limits-20261018`.
 - **Pending/Next Steps:** In progress, one commit per item, one package gate.

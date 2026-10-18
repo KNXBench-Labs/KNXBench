@@ -138,6 +138,12 @@ const USAGE: &str = "usage: knx import <file.knxproj> [--store <path.knxdb> [--r
      \x20     knx device diagnostics --simulate --output <new.zip> [--confirm-read]\n\
      \x20         (READ ONLY generic identity export; preview without --confirm-read. No memory\n\
      \x20         profile, keys or download admission required. --simulate never opens a gateway.)\n\
+     \x20     knx device diagnostics --profile system2-declared-segments-v1 --project <path.knxdb>\n\
+     \x20                  --device-id <id> --product-db <path> (--gateway <host:port> | --simulate)\n\
+     \x20                  --output <new.zip> [--confirm-read]\n\
+     \x20         (READ ONLY: after the device shows the asserted mask, manufacturer and PID78,\n\
+     \x20         reads the memory ranges its System-2 load procedure declares; candidate\n\
+     \x20         locations, not a backup. Nothing is written. ADR-0143.)\n\
      \x20     knx device byte-order-probe <area.line.device> --project <path.knxdb>\n\
      \x20                  [--product-db <path>] [--gateway <host:port>] [--preview]\n\
      \x20                  [--system2-source --parameter-ref <id>...]\n\

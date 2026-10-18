@@ -6,10 +6,13 @@
 requests: monitor DPT correctness; compact controls, visible navigation
 separators and source-label cleanup; File submenus; storage sizes and counts;
 resizable table columns; labelled, bounded topology layout. The owner withdrew
-item 3 (“Update We”) as a typo. **In progress** (owner go, claimed 18 October):
-wave 1 runs UI-01, UI-02 and UI-04 in parallel worktrees, then UI-03 and UI-05,
-then UI-06; each package is delivered on its own. The reported defects are not
-reproduced yet. Decisions and per-package worker models are in the
+item 3 (“Update We”) as a typo. **In progress** (owner go, claimed 18 October).
+**Delivered:** UI-01 (the reported 1/5/6 telegram genuinely has no DPT in the
+project; the monitor now names why: no project, address not in project, no
+type, or a program default the project clears) and UI-04 (on-disk project and
+product database sizes, catalogue counts). **Reviewed, in the next gate:**
+UI-02 and UI-05. **In review:** UI-03, UI-06. Decisions and per-package worker
+models are in the
 [goal file](goals/ui-feedback-2026-10-18.md#owner-go-and-decisions-18-october-2026-later-the-same-day).
 
 ## Prepared goal packages (17 October 2026)

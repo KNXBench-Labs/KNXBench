@@ -927,4 +927,11 @@ supports resizing only for the mounted session. Manufacturer parameter grids,
 trees and catalogue/history lists retain their existing layouts. See
 [Table column widths](../contracts/table-column-widths.md).
 
+Automatic word floors stop at 320 px per column. Tokens wider than this cap can
+wrap into character fragments, as can ordinary words after explicit user
+shrinking. Home sets the stored preference minimum; the rendered width also
+depends on pane fitting and surplus distribution. Word floors exclude spanning
+group headings/editors. Demo/fixture no-scroll checks do not establish fitting
+for every imported project.
+
 [Manual index](README.md) · Next: [Implementation status](implementation-status.md) →

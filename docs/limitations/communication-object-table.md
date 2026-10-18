@@ -6,6 +6,21 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Measured table fitting (18 October 2026)
+
+The shared column adapter measures mounted single-column header/cell words and
+caps each automatic floor at 320 px. Tokens wider than that budget and explicit
+user shrinking can still wrap at character level. Spanning headings/editors and
+fixed matrix object columns retain their own layouts. Browser proof covers
+grouped/flat objects at 360 px, status at 640 px, a long German address DPT and
+monitor decoded label at 400 px; no-scroll checks at 1440/1920 px use shipped
+demo/fixture data, not arbitrary imported projects. The stored DPT preference
+minimum is 100 px; the rendered width follows the fitted-baseline pixel delta
+and can be lower. [Contract and exact verification](../contracts/table-column-widths.md).
+
+UI-05 supplies column resizing; the older no-resizing statement below is
+historical. Reordering remains outside that package.
+
 <!-- BEGIN retained catalogue record -->
 
 ## Communication-object table scope (2026-10-09)

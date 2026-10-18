@@ -2,6 +2,7 @@
 import { intercept, openList, openProject } from "./communication-fixture";
 import { fakeServer, node, openFlow, telegram } from "./telegram-flow-server";
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { wordsIntact, scrollsLocally } from "./table-word-assertions";
 
 async function drag(page: Page, handle: Locator, delta: number) {
   await handle.scrollIntoViewIfNeeded(); const box = (await handle.boundingBox())!;
@@ -28,6 +29,24 @@ async function localOverflow(page: Page, table: Locator) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   await region.evaluate(element => { element.scrollLeft = 100; });
   expect(await region.evaluate(element => element.scrollLeft)).toBeGreaterThan(0);
+}
+
+for (const language of ["en", "de"]) for (const flat of [false, true]) {
+  test(`${language} ${flat ? "flat" : "grouped"} objects keep every word intact at 360 and status at 640`, async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 900 });
+    await page.route("**/api/**", route => route.fulfill({ status: 404, body: "{}" }));
+    await page.goto(`/e2e/table-columns-fixture.html?lang=${language}&words=1`);
+    const table = page.locator('[data-table-id="communication-objects"]');
+    if (flat) await page.getByRole("button", { name: language === "de" ? "Alle Objekte" : "All objects", exact: true }).click();
+    else await page.locator(".com-object-channel-summary").click();
+    await expect(table.locator(".com-object-effective-dpt > span")).toHaveText(language === "de" ? "Beleuchtungsstärke (9.004)" : "Illuminance (9.004)");
+    await wordsIntact(table.locator(".com-object-summary td"));
+    await wordsIntact(table.locator("thead th"));
+    await scrollsLocally(page, table);
+    await page.setViewportSize({ width: 640, height: 900 });
+    await expect(table.locator(".com-object-status")).toHaveText(language === "de" ? "Nicht bestimmbar" : "Undetermined");
+    await wordsIntact(table.locator(".com-object-summary td:nth-child(6)"));
+  });
 }
 
 for (const [language, theme, width] of [
@@ -161,12 +180,18 @@ for (const width of [1440, 1920]) {
     await page.setViewportSize({ width, height: 900 });
     await intercept(page, "en"); await openProject(page, "en"); await openList(page, "en");
     const devices = page.locator('[data-table-id="devices"] .resizable-table-scroll');
-    const size = await devices.evaluate(e => ({ scroll: e.scrollWidth, client: e.clientWidth }));
+    const size = await devices.evaluate(e => ({ scroll: e.scrollWidth, client: e.clientWidth,
+      columns: Array.from(e.querySelectorAll("col"), col => col.style.width),
+      headings: Array.from(e.querySelectorAll("thead th"), th => th.textContent),
+      cells: Array.from(e.querySelectorAll("tbody tr:first-child td"), td => td.textContent),
+    }));
     expect(size.scroll, JSON.stringify(size)).toBeLessThanOrEqual(size.client);
     await page.locator(".devices-table tbody td:nth-child(3) button").first().click();
     const objects = page.locator('[data-table-id="communication-objects"] .resizable-table-scroll');
     const objectSize = await objects.evaluate(e => ({ scroll: e.scrollWidth, client: e.clientWidth }));
     expect(objectSize.scroll, JSON.stringify(objectSize)).toBeLessThanOrEqual(objectSize.client);
+    await page.getByRole("button", { name: "All objects", exact: true }).click();
+    await expect.poll(() => objects.evaluate(e => e.scrollWidth <= e.clientWidth)).toBe(true);
   });
   test(`${width}: flow inspector defaults fit its own pane`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });

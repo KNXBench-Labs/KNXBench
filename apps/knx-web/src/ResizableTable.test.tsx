@@ -150,3 +150,63 @@ it("uses the caller's trailing width without fitting its fixed columns", async (
   expect(host.querySelector("col:last-child")?.getAttribute("style")).toContain("width: 96px");
   expect(host.querySelector("table")?.style.width).toBe("416px");
 });
+
+it("fits to the widest header or cell token, including its padding and computed font", async () => {
+  vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(40);
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+    return { width: this.hasAttribute("data-table-word-measure") ? this.textContent!.length * parseFloat(this.style.fontSize) : 0 } as DOMRect;
+  });
+  await act(async () => root.render(<ResizableTable tableId="words" columns={columns}>
+    <thead><tr><th style={{ padding: "0 12px", fontSize: 10 }}>LongestHeader short</th><th style={{ padding: "0 12px", fontSize: 10 }}>Small</th></tr></thead>
+    <tbody><tr><td style={{ padding: "0 12px", fontSize: 10 }}>small words</td><td style={{ padding: "0 12px", fontSize: 10 }}><strong style={{ fontSize: 12 }}>Beleuchtungsstärke</strong> (9.004)</td></tr></tbody>
+  </ResizableTable>));
+  expect(Array.from(host.querySelectorAll("col"), col => parseFloat(col.style.width))).toEqual([154, 240]);
+  expect(parseFloat(host.querySelector("table")!.style.width)).toBe(394);
+});
+
+it("caps pathological tokens and caches measurement through resizing until content changes", async () => {
+  vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(40);
+  const measured: string[] = [];
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+    if (!this.hasAttribute("data-table-word-measure")) return { width: 0 } as DOMRect;
+    measured.push(this.textContent!);
+    return { width: this.textContent!.length * 10 } as DOMRect;
+  });
+  const renderWords = (text: string) => <ResizableTable tableId="cached-words" columns={columns}>
+    <thead><tr><th>Name</th><th>Address</th></tr></thead><tbody><tr><td>{text}</td><td>1.1.1</td></tr></tbody>
+  </ResizableTable>;
+  await act(async () => root.render(renderWords("x".repeat(100))));
+  expect(host.querySelector("col")!.style.width).toBe("320px");
+  const count = measured.length;
+  const addressCount = measured.filter(text => text === "Address").length;
+  const computedStyle = vi.spyOn(globalThis, "getComputedStyle");
+  await key("ArrowRight"); await key("Enter");
+  expect(measured).toHaveLength(count);
+  await act(async () => root.render(renderWords("x".repeat(100))));
+  expect(computedStyle).not.toHaveBeenCalled();
+  const unchangedCell = host.querySelector("tbody td:last-child");
+  await act(async () => root.render(renderWords("Freshword")));
+  expect(host.querySelector("col")!.style.width).toBe("90px");
+  expect(computedStyle.mock.calls.some(([element]) => element === unchangedCell)).toBe(false);
+  expect(measured).toContain("Freshword");
+  expect(measured.filter(text => text === "Address")).toHaveLength(addressCount);
+});
+
+it("defers hidden-pane word measurement until the viewport becomes visible", async () => {
+  let paneWidth = 0;
+  vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(() => paneWidth);
+  const words: string[] = [];
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+    if (this.hasAttribute("data-table-word-measure")) { words.push(this.textContent!); return { width: 250 } as DOMRect; }
+    return { width: 0 } as DOMRect;
+  });
+  const table = () => <ResizableTable tableId="hidden-pane" columns={columns}>
+    <thead><tr><th>Name</th><th>Address</th></tr></thead><tbody><tr><td>Windgeschwindigkeit</td><td>1.1.1</td></tr></tbody>
+  </ResizableTable>;
+  await act(async () => root.render(<div hidden>{table()}</div>));
+  expect(words).toEqual([]);
+  paneWidth = 300;
+  await act(async () => root.render(<div>{table()}</div>));
+  expect(words).toContain("Windgeschwindigkeit");
+  expect(host.querySelector("col")!.style.width).toBe("250px");
+});

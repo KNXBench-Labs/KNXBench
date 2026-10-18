@@ -54,7 +54,7 @@ cards. Explorer trees, forms and manufacturer-declared parameter grids
   Instances of the same table kind share widths, including nested history field
   tables and tables remounted by virtualisation. Other table kinds are isolated.
 - Each column declares a default and a lower minimum preference in pixels.
-  The maximum is 1200 px
+  The stored-preference maximum is 1200 px
   unless declared otherwise. Stored values must be finite numbers in range;
   invalid values revert individually to defaults. Unknown columns are ignored,
   new columns use defaults and reordered columns keep their identity. An invalid
@@ -62,7 +62,7 @@ cards. Explorer trees, forms and manufacturer-declared parameter grids
   view; absent keys outside 24–12000 px or with nonnumeric values are pruned.
   A table reset writes only the current schema defaults. Storage denial retains
   live session operation; reload persistence requires working browser storage.
-- Pointer drag captures the pointer and clamps the changed column. Other pointer
+- Pointer drag captures the pointer and clamps the changed preference. Other pointer
   IDs are ignored. Drag previews update local state once per animation frame;
   pointer-up, cancellation, lost capture and unmount persist and broadcast once,
   including the last unpainted pointer move. Arrow/Home/End/Enter keys are ignored
@@ -83,17 +83,44 @@ cards. Explorer trees, forms and manufacturer-declared parameter grids
   a border-colour hairline at rest and accent line/band on hover, focus and
   held drag. It introduces no animation or theme-pack tokens. Reset uses the
   shared quiet button class. All five themes and OS reduced motion are covered.
-- Default widths follow the previous layout budgets (devices 1100 px,
-  communication objects 800/804 px, monitor 1024 px); the table fills any surplus
-  container space. Defaults compress proportionally to the actual available
-  pane width, including navigation and inspector space; user pixel adjustments
-  apply on top of that baseline. A 48 px header footprint (32 px for defaults of
-  48 px) retains separate sort and resize targets; the communication-object number column reserves 120 px
-  for its existing indented disclosure at the default; explicit resizing can
-  shrink it below that footprint. The DPT column has a separate 114 px fit floor
-  in grouped and flat views, keeping DPT labels and master-text words intact at
-  360 px. Its explicit resize minimum stays 100 px. Very narrow panes below the
-  combined fit floors scroll locally rather than compressing those defaults further. Flow inspector defaults fit its narrower pane. Widening beyond
+- Every adjustable column uses the same measured word floor. Header and cell
+  text tokens are measured in hidden spans using their computed typography,
+  including nested bold/small/monospace text. Padding, borders, nested control
+  margins/minima and adjacent sort icons contribute to the floor; ignored
+  fixed-layout cell `min-width` declarations do not. The widest
+  requirement is rounded up and capped at 320 px per column. The header target
+  footprint remains at least 48 px (or the smaller declared preference minimum).
+  Spanning group headings/editors do not belong to a single column and are
+  excluded; mounted hidden object rows participate so expanding a group does
+  not first compress its words. No per-table DPT/number fit constants remain.
+- Token measurements are cached by text and typography per mounted table.
+  Content/style changes recompute changed cells, retaining unchanged cells and
+  tokens; theme/root appearance changes and font loading invalidate the cache.
+  Measurement spans are inserted together before their geometry is read and
+  then removed. Hidden panes defer measurement until their viewport has a width;
+  mounted hidden rows in a visible pane still participate. Width edits and pane
+  resizes do not remeasure tokens per frame.
+- Single-column cells use 4 px inline padding; sortable header buttons and
+  inline device/flow links avoid duplicate horizontal padding. Headings retain
+  12 px on each side for the 24 px resize targets. Grouped object number cells
+  retain their 12 px left inset to align with spanning channel headings.
+  The twelve-column device
+  table uses 12 px compact EN/DE headings (for example Mfr./Herst.); its full
+  sort names remain accessible and appear in title tooltips, including reset
+  separator context. This keeps measured floors within the tested wide pane
+  without shrinking the automatic baseline below its words.
+- Declared default budgets remain devices 1100 px, communication objects
+  800/804 px and monitor 1024 px. Each default baseline is raised to its measured
+  floor when necessary, then compressed proportionally toward that floor to fit
+  the actual pane, including navigation/inspector space. A pane narrower than
+  the sum of floors scrolls within its table. The table fills surplus space.
+  User resizing applies `stored preference - declared default` pixels to each
+  fitted baseline, with a final header-footprint clamp. Thus the DPT **stored
+  preference** minimum remains 100 px; Home can render below 100 px or below
+  the measured floor in a fitted pane. Rendered widths can also exceed the
+  preference when floors or surplus space require it. The automatic baseline
+  never shrinks below its measured floor; explicit user shrinking can split
+  words. Flow inspector fixture defaults fit its narrower pane. Widening beyond
   the available space scrolls locally. Download blocks use the adapter viewport
   for both axes, capped at 320 px height; the table retains native table display.
 - Resize targets are 24 px wide, centred on interior column boundaries; the
@@ -115,6 +142,11 @@ fitted layout can settle one frame after the pane and briefly show a horizontal
 scrollbar. This accepted cosmetic behaviour does not change saved preferences.
 Rendered movement can differ from a preference step when the table distributes
 surplus space or reaches its header footprint.
+The 320 px cap deliberately permits character-level wrapping for pathological
+tokens wider than that budget. Word safety applies to the mounted single-column
+text considered above, not arbitrary spanning editors or every possible imported
+project. Synthetic browser proof covers the labels and widths listed below;
+wide-screen no-scroll claims are limited to the shipped demo/fixture content.
 
 ## Remaining boundary
 
@@ -137,7 +169,11 @@ are preserved. No manufacturer parameter-grid code is changed.
 | Requirement | Test |
 | --- | --- |
 | Persist/remount, types/ranges, corrupt JSON, changed/reordered columns, multiple instances, reset, window events, storage denial | `src/useTableColumnWidths.test.tsx` |
-| Grouped/flat DPT fit floor in a 300 px pane, local table overflow, lower manual minimum and reset | `src/ComObjectTable.test.tsx`: `%s keeps a content-safe DPT fit floor while allowing manual shrinking` |
+| Measured header versus styled cell floors, 320 px cap, cache reuse through resize/content changes, hidden-pane deferral | `src/ResizableTable.test.tsx`: fits to the widest header or cell token; caps pathological tokens and caches measurement; defers hidden-pane word measurement |
+| Compact EN/DE device headings preserve full sort names and tooltips | `src/DevicesWorkspace.test.tsx`: `%s compact headings retain full sort names and tooltips` |
+| Grouped/flat measured DPT floor in a 300 px pane, local table overflow, stored 100 px minimum, exact rendered delta and reset | `src/ComObjectTable.test.tsx`: `%s measures its DPT fit floor while preserving the stored minimum and rendered delta` |
+| EN/DE grouped and flat object cell/header words intact at 360 px, actual local scrolling; status intact at 640 px | `e2e/table-column-widths.e2e.ts`: objects keep every word intact at 360 and status at 640 (long DE DPT/master text, EN function and undetermined status) |
+| DE `Beleuchtungsstärke (9.004)` and decoded value intact at 400 px, actual local scrolling and no page overflow | `e2e/group-address-views.e2e.ts`: German address tree preserves the long DPT label; `e2e/monitor-control.e2e.ts`: German monitor decoded DPT words stay intact |
 | EN/DE DPT/master-text words remain on one line per token at 360/1440 px; document overflow remains bounded | Unchanged `e2e/device-editor-layout.e2e.ts`: evaluated channel evidence stays keyboard-accessible |
 | Measured ARIA pixels, keyboard/Shift/bounds, pointer capture and IDs, no sorting/drag/selection, cancel/capture loss, unmount commit, keys ignored during pointer drag, caller-defined trailing widths, double-click and table reset | `src/ResizableTable.test.tsx` |
 | Every converted surface (including both object views and three fixed matrix columns) mounts with separators aligned to the declared columns and each column shrinks with ArrowLeft | Parameterized `column smoke: <table-id> exposes <count> resize separators` tests using `tableColumnSmoke.fixture.ts` |

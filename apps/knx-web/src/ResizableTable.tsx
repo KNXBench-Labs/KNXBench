@@ -2,6 +2,7 @@
 import { Fragment, Children, cloneElement, isValidElement, useEffect, useId, useLayoutEffect, useRef, useState, type HTMLAttributes, type ReactElement, type ReactNode } from "react";
 import { useTranslate } from "./i18n";
 import { columnMax, useTableColumnWidths, type TableColumnWidth } from "./useTableColumnWidths";
+import { TableWordFloors } from "./tableWordFloors";
 
 type WidthState = ReturnType<typeof useTableColumnWidths>;
 export function ColumnResizeHandle({ column, state, labelId, helpId, renderedWidth }: {
@@ -72,7 +73,7 @@ export function ColumnResizeHandle({ column, state, labelId, helpId, renderedWid
 
 function headingText(nodes: ReactNode): string {
   return Children.toArray(nodes).map(node => typeof node === "string" || typeof node === "number" ? String(node)
-    : isValidElement<{ children?: ReactNode }>(node) ? headingText(node.props.children) : "").join("");
+    : isValidElement<{ children?: ReactNode; "aria-label"?: string }>(node) ? node.props["aria-label"] ?? headingText(node.props.children) : "").join("");
 }
 
 /** Only decorates native thead/tr/th children; body editors and row ownership stay untouched. */
@@ -86,9 +87,39 @@ export default function ResizableTable({
   const [overflowing, setOverflowing] = useState(false);
   const [availableWidth, setAvailableWidth] = useState(0);
   const [measuredWidths, setMeasuredWidths] = useState<number[]>([]);
+  const [wordFloors, setWordFloors] = useState<number[]>([]);
+  const wordMeasurements = useRef(new TableWordFloors());
+  const wordsDirty = useRef(true);
+  const measureWords = useRef(() => {});
+  const columnCount = columns.length;
+  useLayoutEffect(() => {
+    const table = viewport.current?.querySelector("table");
+    if (!table) return;
+    const update = () => {
+      wordsDirty.current = true;
+      // Inactive workspaces have no rendered pane. Defer their content scan
+      // until ResizeObserver reports a visible viewport, then fit before paint.
+      if (!viewport.current || viewport.current.closest("[hidden]") || !viewport.current.clientWidth) return;
+      wordsDirty.current = false;
+      const next = wordMeasurements.current.measure(table, columnCount);
+      setWordFloors(previous => previous.length === next.length && previous.every((width, index) => width === next[index]) ? previous : next);
+    };
+    measureWords.current = update;
+    update();
+    const content = new MutationObserver(update);
+    // Observe content, not col widths or resize-handle ARIA changes.
+    for (const section of Array.from(table.children)) if (["THEAD", "TBODY", "TFOOT"].includes(section.tagName))
+      content.observe(section, { childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ["class", "style", "hidden"] });
+    const appearance = new MutationObserver(() => { wordMeasurements.current.clear(); update(); });
+    appearance.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "style", "data-theme", "data-density", "data-presentation"] });
+    const fonts = () => { wordMeasurements.current.clear(); update(); };
+    document.fonts?.addEventListener("loadingdone", fonts);
+    return () => { content.disconnect(); appearance.disconnect(); document.fonts?.removeEventListener("loadingdone", fonts); };
+  }, [columnCount]);
   const measure = () => {
     const element = viewport.current;
     if (!element) return;
+    if (element.clientWidth && wordsDirty.current) measureWords.current();
     setAvailableWidth(element.clientWidth);
     setOverflowing(element.scrollWidth > element.clientWidth || element.scrollHeight > element.clientHeight);
     const next = Array.from(element.querySelectorAll(":scope > table > thead > tr > th"), heading => Math.round(heading.getBoundingClientRect().width));
@@ -121,18 +152,19 @@ export default function ResizableTable({
       return node;
     });
   }
-  const defaultWidth = columns.reduce((sum, column) => sum + column.width, 0);
   // Fit defaults to the actual pane, including navigation/inspector space.
   // User adjustments are pixel deltas on that baseline; only their surplus
   // creates overflow. Fitting is off when callers supply fixed trailing columns.
   // Two adjacent 24 px pointer targets must not cover a header's sort button.
-  const headerMinimum = (column: TableColumnWidth) => column.fitMin ?? Math.min(48, column.min);
-  const minimumWidth = columns.reduce((sum, column) => sum + headerMinimum(column), 0);
+  const floors = columns.map((column, index) => Math.max(Math.min(48, column.min), wordFloors[index] ?? 0));
+  const baselines = columns.map((column, index) => Math.max(column.width, floors[index]));
+  const defaultWidth = baselines.reduce((sum, width) => sum + width, 0);
+  const minimumWidth = floors.reduce((sum, width) => sum + width, 0);
   const fitBudget = availableWidth > 0 && fixedTrailingColumns === 0
     ? Math.max(minimumWidth, Math.min(defaultWidth, availableWidth)) : defaultWidth;
   const scale = defaultWidth > minimumWidth ? (fitBudget - minimumWidth) / (defaultWidth - minimumWidth) : 1;
-  const fittedWidths = columns.map(column => Math.max(Math.min(48, column.min),
-    headerMinimum(column) + Math.floor((column.width - headerMinimum(column)) * scale)
+  const fittedWidths = columns.map((column, index) => Math.max(Math.min(48, column.min),
+    floors[index] + Math.floor((baselines[index] - floors[index]) * scale)
       + state.widths[column.id] - column.width));
   const totalWidth = fittedWidths.reduce((sum, width) => sum + width, 0) + fixedTrailingColumns * fixedTrailingWidth;
   const decorated = headers(children);

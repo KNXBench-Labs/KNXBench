@@ -30,7 +30,7 @@ Last updated: 2026-10-18 07:55 CEST
 
 | Feature | Scope | Availability |
 | --- | --- | --- |
-| Resizable data-table columns | Pointer/keyboard resizing below defaults, content-safe DPT fitting with local narrow scrolling, measured-width announcements, per-column/table reset, validated browser-local widths; 18 native table surfaces, matrix select/address/name included; per-object columns stay fixed — [coverage](contracts/table-column-widths.md) | Local-only |
+| Resizable data-table columns | Pointer/keyboard resizing below defaults, cached measured header/cell word floors capped at 320 px with local scrolling, measured-width announcements, per-column/table reset, validated browser-local preferences; narrow object/address/monitor and wide fixture fitting verified; 18 native table surfaces, matrix select/address/name included; per-object columns stay fixed — [coverage and limits](contracts/table-column-widths.md) | Local-only |
 
 ## New in Alpha 14
 

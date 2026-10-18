@@ -1,7 +1,7 @@
 /** Browser-local validated column widths, independent of project and server settings. */
 import { useEffect, useRef, useState } from "react";
 
-export interface TableColumnWidth { id: string; width: number; min: number; max?: number; fitMin?: number }
+export interface TableColumnWidth { id: string; width: number; min: number; max?: number }
 export const COLUMN_WIDTH_KEY = "knxbench:table-column-widths:v1:";
 const CHANGED = "knxbench:table-column-widths-changed";
 export const columnMax = (column: TableColumnWidth) => column.max ?? 1200;

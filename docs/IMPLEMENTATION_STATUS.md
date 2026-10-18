@@ -12,6 +12,20 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## UI-05 measured word-safe fitting (18 October 2026)
+
+Replaces the earlier number/DPT fit constants with one measured header/cell
+word floor for every adjustable column in the shared adapter, capped at 320 px.
+Cached computed-font measurements preserve ordinary words while narrow panes
+scroll locally; explicit resizing retains the stored-preference delta model.
+Hidden panes defer measurement; unchanged cells reuse their measurements.
+Compact device headings retain full accessible names/tooltips, and table cells
+avoid redundant padding to preserve the tested wide fitting budgets.
+Browser regressions cover EN/DE grouped and flat objects at 360 px and status
+at 640 px, the long DE address-tree DPT and monitor decoded label at 400 px.
+The unchanged device-editor layout spec and 1440/1920 fixture fitting remain
+acceptance checks. [Precise behavior and verification](contracts/table-column-widths.md).
+
 ## UI-05 second review fixes (18 October 2026)
 
 All column preferences can shrink below their defaults, while unresized tables

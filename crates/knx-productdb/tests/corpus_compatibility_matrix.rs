@@ -111,15 +111,28 @@ const EXPECTED_SHARED_DEDUPLICATIONS: usize = 2;
 /// `separator_access` evidence 2 -> 0. An independent XML census of the
 /// (blob, host xpath, Access) keys predicts -175/-175/-175/-75 at those
 /// granularities and the 2 scheme-12 separator occurrences exactly.
-/// Previous pin 997e7cec….
+/// Re-pinned for ADR-0141 (schema v25): a parameter's own `Offset`/`BitOffset`
+/// and a placing `Property` reach columns, so their rows retire. A v24 / v25
+/// pair on the same 115 instances changes exactly six of 102 projection
+/// leaves: unknown report totals 23999 -> 22900 (isolation/successful), 23875
+/// -> 22778 (unique installs), ingest_unknown 24273 -> 23176,
+/// package_install_unknown 9791 -> 9361, and the scheme-12/14 `occurrence`
+/// evidence 5 -> 0 (all five sit on placing properties). An independent XML
+/// census predicts -1099/-1097/-430 exactly and adds no `Enumeration`
+/// attribute in these scopes; classifying the retired kinds in a v24 database
+/// gives the -1097 `ingest_unknown` rows directly (768 own offsets, 264
+/// placement attributes, 65 `Property` elements). That count exceeds the
+/// census's distinct keys by 12 because v24 already stores duplicate
+/// `ingest_unknown` rows for some shared sources (OPEN_WORK). Previous pin
+/// d6641f8b….
 const EXPECTED_BASELINE_COMMITMENT: &str =
-    "d6641f8b8de4d1f1901d93d567903cdf77dd7ff5d6a810e2943d9ed519903ca6";
-/// Current v24 outcomes/counts projected without the four v17 tables, the
-/// v20/v22 tables and PDB-11 identity; the previous v23 pin b8179368… moves
-/// only by the six ADR-0139 leaves above (v22 pin 97f3a9d3…, historical v16
-/// pin c204acc8…, see Git history).
+    "d58e2af8918f3556016f17f748903bf3e8825b8fcc55a1947f51393796b57833";
+/// Current v25 outcomes/counts projected without the four v17 tables, the
+/// v20/v22 tables and PDB-11 identity; the previous v24 pin 342a5d2e… moves
+/// only by the six ADR-0141 leaves above (v23 pin b8179368…, v22 pin
+/// 97f3a9d3…, historical v16 pin c204acc8…, see Git history).
 const EXPECTED_V16_PROJECTION_COMMITMENT: &str =
-    "342a5d2eed6b12b62edc588c4db2d6b8033b382528bda7957ee388b480baa935";
+    "bdde7a5c1771d909a2c6f19debeea03b903f30f5cd000f6d32dd6a930dc3e736";
 /// Tables schema v17 added (ADR-0043), left out of the v16 projection.
 const V17_TABLES: [&str; 4] = [
     "package_source_name",
@@ -888,7 +901,8 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         matrix["scheme_12_14_feature_occurrences"],
         json!({
             "applies_to": 22,
-            "occurrence": 5,
+            // ADR-0141 (v25) stores a placing `Property`'s `Occurrence`.
+            "occurrence": 0,
             "horizontal_ruler": 5,
             // ADR-0139 (v24) models separator `Access`; it is no longer unknown.
             "separator_access": 0,
@@ -974,8 +988,8 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         json!({
             "attempt_count": 115,
             "member_count": 1606,
-            // ADR-0139 (v24): -175 retired block/separator `Access` keys.
-            "unknown_count": 23999,
+            // ADR-0141 (v25): -1099 retired placement keys (v24: -175 Access keys).
+            "unknown_count": 22900,
             "conflict_count": 0,
             "dropped_datapoint_type_count": 0,
             "translation_counts": {"program": 2903208, "catalog": 2991, "hardware": 1424, "master": 112774},
@@ -986,7 +1000,7 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         json!({
             "attempt_count": 113,
             "member_count": 1586,
-            "unknown_count": 23875,
+            "unknown_count": 22778,
             "conflict_count": 398,
             "dropped_datapoint_type_count": 39499,
             "translation_counts": {"program": 2779279, "catalog": 2353, "hardware": 1148, "master": 1640},
@@ -997,7 +1011,7 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         json!({
             "attempt_count": 115,
             "member_count": 1606,
-            "unknown_count": 23999,
+            "unknown_count": 22900,
             "conflict_count": 400,
             "dropped_datapoint_type_count": 40232,
             "translation_counts": {"program": 2789468, "catalog": 2419, "hardware": 1162, "master": 1640},
@@ -1030,11 +1044,11 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
     // AR05 adds two TranslationUnit keys per package. ADR-0052's retired
     // Channel/@Number rows remain retired; no prior unknown evidence is lost.
     assert_eq!(
-        matrix["shared_final_database_counts"]["ingest_unknown"], 24273,
+        matrix["shared_final_database_counts"]["ingest_unknown"], 23176,
         "shared per-blob unknown evidence changed"
     );
     assert_eq!(
-        matrix["shared_final_database_counts"]["package_install_unknown"], 9791,
+        matrix["shared_final_database_counts"]["package_install_unknown"], 9361,
         "shared per-package unknown evidence changed"
     );
     for (table, rows) in [
@@ -1067,14 +1081,18 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
     // ADR-0081: unstored `Parameter`/`ParameterRef` attributes are named.
     // (rows, distinct blobs or packages, occurrences), as the independent
     // recount predicts; expanded-name evidence rows are not counted here.
+    // ADR-0141 (v25) stores a parameter's own integer `Offset`/`BitOffset`:
+    // v24's (1914, 290, 247734) and (641, 103, 247734) lose exactly those
+    // rows, (768, 284, 174186) and (256, 99, 174186), measured in a v24
+    // shared install of the same instances.
     let kl156 = "kind='Attribute' AND (xpath LIKE '%/Parameter' OR xpath LIKE '%/ParameterRef')
                  AND instr(name, ':') = 0 AND substr(name, 1, 1) <> '{'";
     for (table, owner, expected) in [
-        ("ingest_unknown", "source_sha256", (1914, 290, 247_734)),
+        ("ingest_unknown", "source_sha256", (1146, 288, 73_548)),
         (
             "package_install_unknown",
             "package_sha256",
-            (641, 103, 247_734),
+            (385, 101, 73_548),
         ),
     ] {
         let measured: (i64, i64, i64) = shared

@@ -70,8 +70,9 @@ Retained bytes are not a promise of complete ETS semantics.
   The new-project wizard sets up areas, lines, rooms and group ranges in one step. The
   add-device wizard lets the server preview names and addresses *before* anything is created.
 - 📚 **A product database that eats `.knxprod` for breakfast.**
-  Install manufacturer packages, or use the product data inside your projects. In a test
-  run over 853 public manufacturer downloads, 852 installed (the biggest ones need a
+  Install manufacturer packages, or use the product data inside your projects. A
+  manufacturer ZIP with several packages inside installs in one go, previewed first. In a
+  test run over 853 public manufacturer downloads, 852 installed (the biggest ones need a
   command-line flag).
 - 🧠 **Watch your bus think.**
   Gateway discovery, KNXnet/IP tunnelling, a live group monitor and a
@@ -125,19 +126,19 @@ no actual building was switched on and off for this clip.</sub></p>
 
 <table>
   <tr>
-    <td><img src="docs/assets/releases/alpha12/porcelain-addresses.png" alt="Group address table with ranges, datapoint types and sending/receiving link counts"></td>
-    <td><img src="docs/assets/releases/alpha12/porcelain-parameters.png" alt="Parameters tab of a fictional switch actuator, next to the Diagnostics and Manufacturer fields tabs"></td>
-    <td><img src="docs/assets/releases/alpha12/porcelain-topology.png" alt="Topology view with area 1 House and the lines Ground floor and First floor"></td>
+    <td><img src="docs/assets/screenshots/porcelain-group-addresses.png" alt="Group address tree in the Porcelain theme after Expand all: the Lighting range with its Switching addresses 0/0/1 to 0/0/4, datapoint types and sending/receiving link counts"></td>
+    <td><img src="docs/assets/screenshots/porcelain-device-tab-parameters.png" alt="The parameter workspace of a fictional switch actuator: an Areas register with General and Channel A to D, General open with Delay after bus voltage recovery set to 3"></td>
+    <td><img src="docs/assets/screenshots/porcelain-topology.png" alt="Topology view with area 1 House: line 1.1 Ground floor and line 1.2 First floor with their device tiles"></td>
   </tr>
   <tr>
     <td align="center"><sub>Group addresses</sub></td>
-    <td align="center"><sub>Device parameters</sub></td>
+    <td align="center"><sub>Parameter workspace</sub></td>
     <td align="center"><sub>Topology</sub></td>
   </tr>
   <tr>
-    <td><img src="website/assets/graphite.webp" alt="KNXBench group addresses in the dark Graphite theme"></td>
-    <td><img src="website/assets/lcars.webp" alt="KNXBench group addresses in the orange and lavender LCARS theme"></td>
-    <td><img src="website/assets/crt.webp" alt="KNXBench group addresses in the phosphor-green Modern Retro CRT theme"></td>
+    <td><img src="docs/assets/screenshots/graphite-group-addresses.png" alt="KNXBench group addresses in the dark Graphite theme"></td>
+    <td><img src="docs/assets/screenshots/lcars-group-addresses.png" alt="KNXBench group addresses in the orange and lavender LCARS theme"></td>
+    <td><img src="docs/assets/screenshots/user-modern-retro-green-crt-group-addresses.png" alt="KNXBench group addresses in the phosphor-green Modern Retro CRT theme"></td>
   </tr>
   <tr>
     <td align="center"><sub>Graphite</sub></td>
@@ -146,7 +147,7 @@ no actual building was switched on and off for this clip.</sub></p>
   </tr>
 </table>
 
-<p align="center"><sub>Current stills: Alpha 12 candidate, real server, fictional Sample house. The earlier workflow clips remain earlier recordings; no live bus.</sub></p>
+<p align="center"><sub>Stills and workflow clips: the published Alpha 14 server and frontend, fictional Sample house, no live bus.</sub></p>
 
 ## Getting started
 
@@ -209,8 +210,9 @@ packages it needs and what has been tested.
 
 > [!IMPORTANT]
 > Before upgrading, close KNXBench and back up native project files and Docker
-> data, including the product database. Alpha 12 uses native schema 16 and product
-> schema 23; Alpha 11 and earlier refuse upgraded native files.
+> data, including the product database. Alpha 14 keeps native schema 16 and moves the
+> product database to schema 24, which Alpha 13's code refuses (read in its source, not
+> run); Alpha 11 and earlier refuse native schema 16 files.
 > To go back, restore the pre-upgrade backup. Internal versions are not external backups.
 
 ### Where it runs
@@ -228,7 +230,7 @@ All the details: [Installation](docs/manual/getting-started/04-installation.md).
 
 ### Release notifications (since Alpha 10)
 
-The current source checks GitHub at startup and hourly while the workbench is
+KNXBench checks GitHub at startup and hourly while the workbench is
 visible. A newer eligible release gets a toast with its release-notes link;
 **File → About KNXBench** keeps the information and offers **Check for updates**.
 **Settings → Updates** turns automatic checks off. Nothing is downloaded or
@@ -261,7 +263,7 @@ that converts it all into *Lord of the Rings* re-reads and ant colonies. It is a
 generated snapshot (last run 7 October 2026), so read its numbers as "as of".
 
 The [test catalogue](docs/TEST_CATALOGUE.md) explains what gets exercised; each
-[release note](docs/releases/alpha13.md) names its own scope. Test results belong to
+[release note](docs/releases/alpha14.md) names its own scope. Test results belong to
 an exact source snapshot, not a perpetually growing badge. The
 [architecture decisions](docs/adr/README.md) explain the engineering behind it.
 
@@ -291,7 +293,8 @@ an exact source snapshot, not a perpetually growing badge. The
 The short version of what bites first:
 
 - **Keep your original `.knxproj`.** Your working copy is `.knxdb`; there is no ETS export.
-- **Autosave is not a backup.** There is no version history yet, so keep your own copies.
+- **Autosave is not a backup.** Project versions live inside the same file, so keep your
+  own copies somewhere else.
 - **One server, one project, one undo stack.** Sharing a password is not collaboration.
 - **Hardware support is narrow.** A project edit is not commissioning, and undo does not
   take back a telegram.
@@ -342,10 +345,14 @@ bus probe is shipped — this one is certified for Markdown only.
   [contribution form](https://github.com/KNXBench-Labs/KNXBench/issues/new?template=analysis.yml).
   Read the [step-by-step guide](docs/contribution-intake/README.md)
   ([Deutsch](docs/contribution-intake/DEUTSCH.md)) first, and never attach customer files.
-- **Unknown device or programming refused?** Alpha 12 offers
-  **File → Device support report** even without an open project. Preview the
-  evidence, save locally and attach it deliberately; this reports a support gap,
-  not an unlock. [Reporting guide](docs/manual/user-guide/08-reports-and-diff.md#universal-device-support-reporting-source-after-alpha-11).
+- **Unknown device or programming refused?** **File → Device support report** works
+  even without an open project. Preview the evidence, save locally and attach it
+  deliberately; this reports a support gap, not an unlock.
+  [Reporting guide](docs/manual/user-guide/08-reports-and-diff.md#universal-device-support-reporting).
+- **A maintainer asked for data from your device?** **File → Export diagnostic data**
+  (since Alpha 14) reads three identity values from one device, read-only, and saves a
+  ZIP you can check before you send it. Nothing is programmed.
+  [Five-step guide](docs/manual/user-guide/08-reports-and-diff.md#send-diagnostic-data).
 - **An idea?** Open an issue and describe the problem it solves.
 - **Code?** Quality gates and conventions are in
   [Contributing](docs/manual/development/01-contributing.md).

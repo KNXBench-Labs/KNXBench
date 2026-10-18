@@ -345,7 +345,7 @@ replaces the old one and clears its rows.
 ## Device checks: offline readiness, then an optional read-only comparison
 
 The newer P4 **Devices** view adds confirmed single/filtered-batch comparison,
-session tags and decoded tables. See [project versus devices](05-devices-and-products.md#comparing-the-project-with-devices-p4-source-build-after-alpha-11).
+session tags and decoded tables. See [project versus devices](05-devices-and-products.md#comparing-the-project-with-devices-p4-since-alpha-12).
 Included in Alpha 12; package 2 adds named numeric/text parameter
 values from actual image bit attribution. Unknown values retain a reason and
 all raw bytes; existing image/device admission is unchanged.
@@ -508,7 +508,7 @@ executable extensions. You can help with a supported device as follows:
 A download that failed is worth reporting too: the tab offers the report after every
 download that has ended. On the command line the same report comes from `--report`
 ([step by step](10-command-line.md#helping-to-verify-a-device)). This ships since
-Alpha 11; the screenshots in this manual still show the Alpha 10 tab.
+Alpha 11.
 
 ## Programming an individual address
 

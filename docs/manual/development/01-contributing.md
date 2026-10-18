@@ -284,12 +284,14 @@ Read every changed
 picture before committing it, and update the alt text and the sentence around it in the
 same change.
 
-The four group-address presentation screenshots are newer than the pinned Alpha 9
-set, so they have their own spec and config. Same build, same namespace, only the
-config name differs: `npx playwright test -c playwright.manual-group-addresses.config.ts`.
-Their provenance lives in
-[`docs/evidence/group-address-views-manual-2026-10-12.json`](../../evidence/group-address-views-manual-2026-10-12.json),
-not in the Alpha 9 media manifest.
+The four group-address presentation screenshots have their own spec and config.
+Same build, same namespace, only the config name differs:
+`npx playwright test -c playwright.manual-group-addresses.config.ts`. For a release
+refresh, run both against the server and frontend extracted from the published image
+(`docker create` on the version tag, then `docker cp` of `/usr/local/bin/knx-server` and
+`/app/frontend`; set `KNX_SERVER_BIN` and `MANUAL_FRONTEND_DIR`), as the
+[media inventory](../../assets/README.md#reproduce-the-current-captures) shows; the
+[media manifest](../../assets/media-manifest.json) records the result.
 
 ## What to expect
 

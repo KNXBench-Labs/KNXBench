@@ -16,7 +16,7 @@ all manufacturer grid coordinates or infer a physical button/channel arrangement
 Missing grouping stays visible under Other parameters; unsupported value/script
 semantics still have their existing diagnostic/refusal behavior. Rows declared as
 indented are indented; inline sections, `SuffixText` units and object folders are
-not shown yet. Older screenshots and Alpha 13 binaries do not contain this layout.
+not shown yet. Alpha 13 and older binaries do not contain this layout.
 
 ## Read these before your first serious project
 
@@ -26,7 +26,7 @@ not shown yet. Older screenshots and Alpha 13 binaries do not contain this layou
 | Native history is not an independent disaster backup | Current releases keep versions inside the same file; alpha.6 had no persistent history. Keep independent copies | [Project history](user-guide/02-projects.md#project-history-restart-safe-undo-and-versions) |
 | Browser files live on the server | Save is not a download; Export project gives you a local copy | [Web and desktop differences](user-guide/11-web-and-docker.md#web-build-versus-desktop-build) |
 | Shared server, shared project | One password and one undo stack are not collaborative editing | [Deployment](user-guide/11-web-and-docker.md#authentication) |
-| Programming marks are project belief (P3, Alpha 12) | Adr/App/Par/GA track edits and server writes, not a live comparison. Recovered snapshot undo after a later write can conservatively show additional pending parts. Reconcile external/CLI programming manually; resolve refresh/storage warnings before trusting flags | [Programming marks](user-guide/05-devices-and-products.md#programming-marks-p3-source-build-after-alpha-11) |
+| Programming marks are project belief (P3, Alpha 12) | Adr/App/Par/GA track edits and server writes, not a live comparison. Recovered snapshot undo after a later write can conservatively show additional pending parts. Reconcile external/CLI programming manually; resolve refresh/storage warnings before trusting flags | [Programming marks](user-guide/05-devices-and-products.md#programming-marks-p3-since-alpha-12) |
 | Device comparison is a session observation (P4, Alpha 12) | Relevant edits invalidate tags, but external device changes are not monitored. The verified 0701 tables and named parameter decoder preserve all raw bytes. Named fields need exact active-write attribution and complete coverage; overwritten/masked fields, unknown encodings and negative signed device patterns remain Unknown with a reason. Other table profiles/new image types stay unsupported. Cancel drains the current read. | [Comparison scope](../contracts/device-comparison.md) |
 | Hardware support is narrow | A project edit is not commissioning, and undo does not reverse a bus write | [Bus boundaries](user-guide/07-bus-and-interfaces.md#what-knxbench-does-and-does-not-do-on-a-bus) |
 
@@ -63,7 +63,7 @@ Supported manufacturer-mode choices now refresh the object list and append missi
 unscoped objects without replacing existing links or overrides. A new active
 module object still needs verified instance/number mapping: the whole parameter
 edit is refused rather than partially saved. Manufacturer scripts and unsupported
-evaluator constructs remain unsupported. [Use and limits](user-guide/05-devices-and-products.md#device-functions-source-builds-after-alpha-12).
+evaluator constructs remain unsupported. [Use and limits](user-guide/05-devices-and-products.md#device-functions-since-alpha-13).
 
 ## Projects and import
 
@@ -206,7 +206,8 @@ is the remaining copy defect.
 - **Consequence:** unsupported namespaces and encrypted modern packages are
   refused. Legacy VD3/VD4/VD5 offline import uses a separate supported path; a
   legacy file or payload over 1,000,000,000 bytes (the storage ceiling,
-  ADR-0142) is refused. Successful
+  ADR-0142, source builds after Alpha 14) is refused; Alpha 14 and earlier
+  refuse a legacy file over 128 MiB or a payload over 256 MiB. Successful
   import does not guarantee full device semantics.
 - **Workaround:** product data that arrives inside a `.knxproj` is imported
   with the project, which covers the common case of working on an existing

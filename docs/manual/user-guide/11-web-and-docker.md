@@ -164,29 +164,26 @@ them from then on.
 ### Uploads and the data directory
 
 In the browser build, opening a project that is not already inside `/data` means
-uploading it. In current source, uploads land in `<data dir>/uploads` and accept
-files up to **1024 MiB** in the local 2026-10-11 source package, with a
-separate 16 KiB multipart-envelope allowance.
+uploading it. Uploads land in `<data dir>/uploads` and accept files up to
+**1024 MiB**, with a separate 16 KiB multipart-envelope allowance.
 The server streams into a temporary file and publishes only complete uploads;
 a duplicate name is refused rather than overwritten. Oversized requests receive
-HTTP 413 with an explicit limit. **The published alpha.6 image still has the
-100 MiB request ceiling**. Alpha.7/Alpha.8 include the earlier 256 MiB
-streamed-upload fix, not this local 1024 MiB package. No running container is
-replaced by a source edit.
+HTTP 413 with an explicit limit. Older images had lower ceilings: the alpha.6
+image 100 MiB, Alpha 7 and Alpha 8 256 MiB.
 
 For larger files, place the archive in the mounted data directory and choose it
 with the server file picker. A reverse proxy may impose its own smaller limit.
 Upload acceptance does not guarantee import acceptance: the importer still
 limits each expanded ZIP member to 1,000,000,000 bytes (the storage ceiling) and
-the expanded archive to 4 GiB
-([ADR-0142](../../adr/0142-file-size-limits-follow-the-storage-ceiling.md)).
+the expanded archive to 4 GiB in source builds after Alpha 14
+([ADR-0142](../../adr/0142-file-size-limits-follow-the-storage-ceiling.md)); Alpha 14
+and earlier limit a member to 64 MiB and the archive to 1024 MiB.
 An archive-size refusal names the expanded size and limit in your UI language,
 for example: “Die Datei ist entpackt mit 4400 MiB zu groß. Das Limit liegt bei
 4096 MiB.” The popup and persistent load-failure banner use the same wording.
 MiB means 1,048,576 bytes; this is not the compressed upload size. The message
 uses the actual server limit, so an older server can still report 1024 MiB or
 512 MiB.
-This local source change does not replace existing release/container artifacts.
 See the [upload and return contract](../../contracts/DOCKER_UPLOAD_AND_RETURN.md).
 The uploaded name is reduced to a plain file name, so nothing a client sends can climb
 out of that directory.

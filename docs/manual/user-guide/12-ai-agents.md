@@ -42,7 +42,7 @@ The read-only saved-file/no-bus boundary remains unchanged.
 | Show a device with objects, links, location, parameters | Read or write the bus |
 | Tell which parameters the saved settings show or hide | See changes you have not saved yet |
 | Show who sends to and listens on a group address | Apply a parameter's access rules |
-| List the KNX Functions of a project or one installation, with rooms and members (`list_functions`, source builds after Alpha 13) | Create or edit Functions |
+| List the KNX Functions of a project or one installation, with rooms and members (`list_functions`, since Alpha 14) | Create or edit Functions |
 | List structural problems (duplicates, conflicts, gaps) | Show a parameter's program default |
 | Compare two saved projects | Compare against ETS |
 | Check a proposed group-address CSV | Apply that CSV |

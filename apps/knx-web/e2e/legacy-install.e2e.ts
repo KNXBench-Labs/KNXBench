@@ -4,6 +4,7 @@ import { openNavigationSections } from "./disclosure-fixture";
 import { expect, test, type Page } from "@playwright/test";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 
 const labels = {
   en: {
@@ -58,6 +59,8 @@ async function interceptApi(page: Page, settings: Record<string, unknown>) {
     } else if ((path === "/api/project" && method === "GET") || (path === "/api/project/new" && method === "POST")) {
       if (method === "POST") projectOpen = true;
       body = current;
+    } else if (path === "/api/project/status-metrics" && method === "GET") {
+      body = statusMetricsFixtureBody(current);
     } else if (path === "/api/bus/discover" && method === "POST") {
       body = { interfaces: [] };
     } else if (method === "GET" && ["/api/product-languages", "/api/catalog/manufacturers", "/api/catalog/items"].includes(path)) {

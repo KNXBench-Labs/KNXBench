@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 
 // Strictly fictional: devices, digests and the archive name are made up here.
 const tree = (revision: number) => ({
@@ -43,6 +44,7 @@ async function intercept(page: Page, language: "en" | "de") {
     else if (path === "/api/project" && method === "GET") { if (state.open) body = tree(state.revision); else { status = 400; body = { error: "no project open" }; } }
     else if (path === "/api/project/new" && method === "POST") { state.open = true; body = tree(state.revision); }
     else if (path === "/api/project/load-progress" && method === "GET") body = null;
+    else if (path === "/api/project/status-metrics" && method === "GET") body = statusMetricsFixtureBody(tree(state.revision));
     else if (path === "/api/bus/discover" && method === "POST") body = { interfaces: [] };
     else if (path === "/api/product-languages" && method === "GET") body = [];
     else if (path === "/api/fs/list" && method === "GET") body = [{ name: "edited-export.knxproj", is_dir: false }];

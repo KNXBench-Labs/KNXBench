@@ -6,6 +6,7 @@ import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
 import { fulfillNoProjectOpen } from "./server-project-fixture";
+import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 
 type Catalogue = { readonly [K in keyof typeof en]: string };
 const EXISTING = "fictional-villa.knxdb";
@@ -54,6 +55,7 @@ async function serve(page: Page, language: "en" | "de", server: "empty" | "modif
     }
     if (path === "/api/fs/list") return ok([{ name: EXISTING, is_dir: false }]);
     if (path === "/api/project/load-progress") return ok(null);
+    if (path === "/api/project/status-metrics" && method === "GET") return ok(statusMetricsFixtureBody(state.project));
     if (path === "/api/bus/discover" && method === "POST") return ok({ interfaces: [] });
     if (method === "GET" && ["/api/product-languages", "/api/catalog/manufacturers", "/api/catalog/items"].includes(path)) return ok([]);
     state.unexpected.push(`${method} ${path}`);

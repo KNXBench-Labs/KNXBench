@@ -6,6 +6,7 @@ import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
 import { fulfillNoProjectOpen } from "./server-project-fixture";
+import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 
 type Catalogue = { readonly [K in keyof typeof en]: string };
 type Lines = "inherit" | "subtle" | "off";
@@ -47,6 +48,7 @@ async function serve(page: Page, language: "en" | "de", lines: Lines, extra = 0)
     if (path === "/api/project" && method === "GET") return projectOpen ? ok(tree(extra)) : fulfillNoProjectOpen(route);
     if (path === "/api/project/new" && method === "POST") { projectOpen = true; return ok(tree(extra)); }
     if (path === "/api/project/load-progress") return ok(null);
+    if (path === "/api/project/status-metrics" && method === "GET") return ok(statusMetricsFixtureBody(tree(extra)));
     if (path === "/api/bus/discover" && method === "POST") return ok({ interfaces: [] });
     if (method === "GET" && ["/api/product-languages", "/api/catalog/manufacturers", "/api/catalog/items"].includes(path)) return ok([]);
     unexpected.push(`${method} ${path}`);

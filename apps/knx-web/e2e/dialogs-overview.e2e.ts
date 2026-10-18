@@ -9,6 +9,7 @@ import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { GITHUB_RELEASES_API } from "../src/githubReleases";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 
 type Language = "en" | "de";
 type Catalogue = { readonly [K in keyof typeof en]: string };
@@ -48,6 +49,7 @@ async function fixture(page: Page, language: Language, theme: string, width: num
     if (path === "/api/version") return ok({ version: "0.1.0-alpha.9+gfictional-build-with-a-long-suffix" });
     if (path === "/api/project" && method === "GET") return ok(tree);
     if (path === "/api/project/load-progress") return ok(null);
+    if (path === "/api/project/status-metrics" && method === "GET") return ok(statusMetricsFixtureBody(tree));
     if (path === "/api/log") { f.logRequests += 1; return ok(log); }
     if (path === "/api/fs/list") return ok([{ name: "other-fictional.knxproj", is_dir: false }]);
     // The server refuses to replace unsaved edits; nothing is created.

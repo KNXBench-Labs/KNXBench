@@ -9,6 +9,7 @@ import type { ProjectTree } from "../src/bindings/ProjectTree";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 
 for (const language of ["en","de"] as const) for (const width of [400,1440]) {
   test(`${language} retained payload download at ${width}px`,async({page})=>{
@@ -39,6 +40,7 @@ for (const language of ["en","de"] as const) for (const width of [400,1440]) {
         return route.fulfill({status:200,headers:{"content-type":"application/octet-stream","content-length":String(selected.length),"content-disposition":"attachment; filename=\"retained-payload.bin\"","x-content-type-options":"nosniff"},body:selected});
       }
       else if(path==="/api/project/load-progress"&&method==="GET")body=null;
+      else if(path==="/api/project/status-metrics"&&method==="GET")body=statusMetricsFixtureBody(tree);
       else if(path==="/api/product-languages"&&method==="GET")body=[];
       else if(path==="/api/bus/discover"&&method==="POST")body={interfaces:[]};
       else if(["/api/device-download/status","/api/device-address/status"].includes(path)&&method==="GET"){status=404;body={error:"no fixture operation"};}

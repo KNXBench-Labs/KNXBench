@@ -8,6 +8,7 @@ import type { ProjectTree } from "../src/bindings/ProjectTree";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 
 for (const language of ["en", "de"] as const) for (const width of [400,1440]) for (const available of [false,true]) {
   test(`${language} native import evidence ${available ? "available" : "unavailable"} at ${width}px`, async ({ page }) => {
@@ -25,6 +26,7 @@ for (const language of ["en", "de"] as const) for (const width of [400,1440]) fo
       else if(path==="/api/settings" && method==="GET") body={schemaVersion:1,status:"ok",settings:{uiLanguage:language,theme:language==="en"?"graphite":"porcelain"}};
       else if(path==="/api/project" && method==="GET") body=tree;
       else if(path==="/api/project/load-progress" && method==="GET") body=null;
+      else if(path==="/api/project/status-metrics" && method==="GET") body=statusMetricsFixtureBody(tree);
       else if(path==="/api/product-languages" && method==="GET") body=[];
       else if(path==="/api/bus/discover" && method==="POST") body={interfaces:[]};
       else if(["/api/device-download/status","/api/device-address/status"].includes(path) && method==="GET") {status=404;body={error:"no fixture operation"};}

@@ -586,6 +586,11 @@ fn build_image(
                 parameter_ref: parameter_ref.to_string(),
                 cause: "no value, and no default".to_string(),
             })?;
+        // A placement the download cannot write is the reason, whatever the
+        // value's type (census 3, G10).
+        if let ParameterPlacement::Unmodelled { name, .. } = placement {
+            return Err(unwritable_placement(parameter, name));
+        }
         let value = types.value(parameter_ref, raw)?;
         if superseded.contains(parameter) {
             continue; // A later union member holds its bits.
@@ -1021,6 +1026,14 @@ fn overlap_or(
     }))
 }
 
+/// The refusal of a placement no memory image can hold (`Property` and the
+/// other placements [`crate::code`] keeps as unmodelled), by name.
+fn unwritable_placement(parameter: &str, name: &str) -> ImageError {
+    ImageError::Unsupported {
+        what: format!("{parameter}: placed by {name}"),
+    }
+}
+
 /// The segment and field a parameter's placement puts it at.
 pub(crate) fn field_of<'a>(
     parameter: &str,
@@ -1069,9 +1082,7 @@ pub(crate) fn field_of<'a>(
                 "{parameter}: a union member offset inside a union that starts mid-octet"
             ),
         }),
-        ParameterPlacement::Unmodelled { name, .. } => Err(ImageError::Unsupported {
-            what: format!("{parameter}: placed by {name}"),
-        }),
+        ParameterPlacement::Unmodelled { name, .. } => Err(unwritable_placement(parameter, name)),
     }
 }
 
@@ -2240,6 +2251,32 @@ mod tests {
         let error = build(PROGRAM, &[("P-1_R-1", "0")], vec![]).unwrap_err();
         assert!(
             matches!(&error, ImageError::Unsupported { what } if what.contains("P-3") && what.contains("Property")),
+            "{error}"
+        );
+    }
+
+    /// A hidden fixed value on a device property (census 3, G10: 70 programs
+    /// place a 48-bit `BinaryValue` on `PID_HARDWARE_TYPE`) is refused for its
+    /// placement, which is the real blocker, not for its value type.
+    #[test]
+    fn a_property_placement_is_named_before_the_value_type() {
+        let program = PROGRAM
+            .replace(
+                r#"<Parameter Id="P-3" Name="Prop" ParameterType="PT-N" Value="1">"#,
+                r#"<Parameter Id="P-3" Name="Prop" ParameterType="PT-B" Value="1">"#,
+            )
+            .replace(
+                "</ParameterTypes>",
+                r#"<ParameterType Id="PT-B" Name="B"><TypeRestriction Base="BinaryValue" SizeInBit="48">
+    <Enumeration Id="PT-B_EN-1" Text="hw" Value="1" BinaryValue="AAEAAgAD" />
+  </TypeRestriction></ParameterType>
+</ParameterTypes>"#,
+            );
+        assert_ne!(program, PROGRAM);
+        let error = build(&program, &[("P-1_R-1", "0")], vec![]).unwrap_err();
+        assert!(
+            matches!(&error, ImageError::Unsupported { what }
+                if what.contains("P-3") && what.contains("Property") && !what.contains("BinaryValue")),
             "{error}"
         );
     }

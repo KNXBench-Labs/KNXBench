@@ -39,22 +39,24 @@ export default function StatusMetricsPanel({ tree }: { tree: ProjectTree }) {
   const stale = result?.state === "stale" || (result?.state === "ready" && !result.projectMatches && !busy);
   const size = (bytes: number) => formatDecimalMb(bytes, language);
   const projectValue = !result ? t("dashboard.metrics.loading") : result.state === "error" ? t("dashboard.metrics.error")
-    : result.state === "stale" || (stale && !busy) ? "—"
+    : result.state === "stale" || (result.state === "ready" && !result.projectMatches) ? "—"
     : metrics!.project.state === "notSavedYet" ? t("dashboard.metrics.notSavedYet")
     : metrics!.project.state === "available" ? size(metrics!.project.currentOnDiskBytes!)
     : metrics!.project.state === "unavailable" ? t("dashboard.metrics.projectUnavailable") : t("dashboard.metrics.error");
   const catalogueValue = !result ? t("dashboard.metrics.loading") : result.state === "error" ? t("dashboard.metrics.catalogueError")
     : result.state === "stale" ? "—"
     : metrics!.catalogue.state === "available" ? size(metrics!.catalogue.bytes!)
+    : metrics!.catalogue.state === "busy" ? t("dashboard.metrics.catalogueBusy")
     : metrics!.catalogue.state === "unavailable" ? t("dashboard.metrics.catalogueUnavailable") : t("dashboard.metrics.catalogueError");
   const countValue = (count: number | undefined) => !result ? t("dashboard.metrics.loading") : result.state === "error" ? t("dashboard.metrics.countError")
     : result.state === "stale" ? "—"
     : metrics!.catalogue.state === "available" ? String(count)
+    : metrics!.catalogue.state === "busy" ? t("dashboard.metrics.catalogueBusy")
     : metrics!.catalogue.state === "unavailable" ? t("dashboard.metrics.catalogueUnavailable") : t("dashboard.metrics.countError");
 
   return <div aria-busy={busy}>
     {stale && <p role="status">{t("dashboard.metrics.stale")}</p>}
-    <div className="dashboard-row"><dt>{t("dashboard.metrics.savedFile")}</dt><dd><span className="dashboard-value">{projectValue}</span></dd></div>
+    <div className="dashboard-row"><dt>{t("dashboard.metrics.projectFileOnDisk")}</dt><dd><span className="dashboard-value">{projectValue}</span></dd></div>
     <div className="dashboard-row"><dt>{t("dashboard.metrics.unsavedChanges")}</dt><dd><span className="dashboard-value">{t(tree.is_modified ? "dashboard.metrics.yes" : "dashboard.metrics.no")}</span></dd></div>
     <div className="dashboard-row"><dt>{t("dashboard.metrics.databaseSize")}</dt><dd><span className="dashboard-value">{catalogueValue}</span></dd></div>
     <div className="dashboard-row"><dt>{t("dashboard.metrics.manufacturers")}</dt><dd><span className="dashboard-value">{countValue(metrics?.catalogue.counts?.manufacturers)}</span></dd></div>

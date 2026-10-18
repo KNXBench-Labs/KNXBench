@@ -1,10 +1,13 @@
 //! Read-only, snapshot-labelled storage metrics for the Overview.
-use std::{fs, io, path::Path};
+use std::{fs, io, path::Path, sync::TryLockError, time::Duration};
 
 use axum::{extract::State, Json};
 use serde::Serialize;
 
 use crate::{errors::ApiError, SharedState};
+
+const PRODUCT_DB_LOCK_ATTEMPTS: usize = 25;
+const PRODUCT_DB_LOCK_RETRY_DELAY: Duration = Duration::from_millis(10);
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -118,7 +121,33 @@ fn current_blocking(state: &crate::AppState) -> Json<StatusMetrics> {
             counts: None,
         },
         Some(db) => {
-            let db = db.lock().expect("product DB poisoned");
+            let mut locked = None;
+            for attempt in 0..PRODUCT_DB_LOCK_ATTEMPTS {
+                match db.try_lock() {
+                    Ok(guard) => {
+                        locked = Some(guard);
+                        break;
+                    }
+                    Err(TryLockError::WouldBlock) if attempt + 1 < PRODUCT_DB_LOCK_ATTEMPTS => {
+                        std::thread::sleep(PRODUCT_DB_LOCK_RETRY_DELAY);
+                    }
+                    Err(TryLockError::WouldBlock) => break,
+                    Err(TryLockError::Poisoned(error)) => {
+                        panic!("product DB poisoned: {error}")
+                    }
+                }
+            }
+            let Some(db) = locked else {
+                return Json(StatusMetrics {
+                    server_incarnation: state.server_incarnation.clone(),
+                    project,
+                    catalogue: CatalogueMetric {
+                        state: "busy",
+                        bytes: None,
+                        counts: None,
+                    },
+                });
+            };
             let measurement = db
                 .path()
                 .filter(|path| !path.is_empty())

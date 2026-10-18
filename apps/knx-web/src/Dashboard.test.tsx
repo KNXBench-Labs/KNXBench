@@ -105,12 +105,26 @@ describe("project and catalogue storage status", () => {
     expect(host.textContent).toContain("Manufacturers with products2");
   });
   it("shows one stale notice while retaining valid catalogue values on revision mismatch", async () => {
-    statusMetrics.mockResolvedValue({serverIncarnation:"server-a",project:{state:"available",projectIncarnation:2,snapshotRevision:6,currentOnDiskBytes:9_000_000},catalogue:{state:"available",bytes:2_000_000,counts:{manufacturers:1,products:2,applicationPrograms:3}}});
+    statusMetrics.mockResolvedValueOnce({serverIncarnation:"server-a",project:{state:"available",projectIncarnation:2,snapshotRevision:6,currentOnDiskBytes:9_000_000},catalogue:{state:"available",bytes:2_000_000,counts:{manufacturers:1,products:2,applicationPrograms:3}}})
+      .mockImplementationOnce(() => new Promise(() => {}));
     act(() => root.render(<Dashboard tree={tree()} />));
     await act(async () => { await Promise.resolve(); });
     expect(host.textContent?.match(/Status unavailable for this project snapshot/g)).toHaveLength(1);
     expect(host.textContent).toContain("Manufacturers with products1");
     expect(host.textContent).not.toContain("9.0 MB");
+    act(() => root.render(<Dashboard tree={{...tree(), snapshot_revision:8}} />));
+    expect(host.textContent).not.toContain("9.0 MB");
+  });
+  it.each([
+    ["en", "Product database busy (installation running)", "1.0 MB"],
+    ["de", "Produktdatenbank beschäftigt (Installation läuft)", "1,0 MB"],
+  ] as const)("renders a busy product database in %s while keeping project metrics", async (language, message, projectSize) => {
+    saveUiLanguage(settingsStorage, language); resetUiLanguageForTests();
+    statusMetrics.mockResolvedValue({serverIncarnation:"server-a",project:{state:"available",projectIncarnation:2,snapshotRevision:7,currentOnDiskBytes:1_000_000},catalogue:{state:"busy",bytes:null,counts:null}});
+    act(() => root.render(<Dashboard tree={tree()} />));
+    await act(async () => { await Promise.resolve(); });
+    expect(host.textContent).toContain(projectSize);
+    expect(host.textContent).toContain(message);
   });
   it("renders malformed measurements as errors, never NaN", async () => {
     statusMetrics.mockResolvedValue({serverIncarnation:"server-a",project:{state:"available",projectIncarnation:2,snapshotRevision:7},catalogue:{state:"available",bytes:2_000_000,counts:{manufacturers:1,products:2,applicationPrograms:3}}});
@@ -233,7 +247,7 @@ describe("project status import findings", () => {
     expect(labels).toEqual([en["dashboard.installations"], en["dashboard.areas"], en["dashboard.lines"], en["dashboard.devices"],
       en["dashboard.buildingParts"], en["dashboard.groupAddresses"], en["dashboard.comObjects"],
       en["dashboard.importErrors"], en["dashboard.importWarnings"], en["dashboard.schemaVersion"],
-      en["dashboard.metrics.savedFile"], en["dashboard.metrics.unsavedChanges"], en["dashboard.metrics.databaseSize"],
+      en["dashboard.metrics.projectFileOnDisk"], en["dashboard.metrics.unsavedChanges"], en["dashboard.metrics.databaseSize"],
       en["dashboard.metrics.manufacturers"], en["dashboard.metrics.products"], en["dashboard.metrics.programs"]]);
     expect([...host.querySelectorAll("dd")].map((d) => d.textContent)).toEqual(["0","0","0","0","0","0","0","1","2","13","Loading…","No","Loading…","Loading…","Loading…","Loading…"]);
     for (const section of host.querySelectorAll("section")) {

@@ -37,14 +37,18 @@ program, while products and application programs are canonical table counts.
 A `catalog_item` placement is not a product.
 An absent database reports `unavailable`; a database whose metadata or count
 query fails reports `error`. Empty tables are `available` with zero counts.
+If an installation holds the product-database mutex beyond the short bounded
+retry, the catalogue reports `busy` with null bytes and counts; the independent
+project measurement remains available.
 
 No path or raw file error leaves the server in this response. The client
 validates enum states, safe integer bytes/counts and null fields before
 formatting. Malformed replies show an error. The UI shows `loading` on an
 initial read and marks the group busy while fetching. It keeps measured values
 during a same-incarnation revision refresh. A revision mismatch invalidates
-the project-file value while independent catalogue values remain usable; a
-different server or project incarnation shows one stale notice.
+the project-file value and shows one stale notice while independent catalogue
+values remain usable. A different server or project incarnation shows one stale
+notice and hides both project-file and catalogue measurements.
 Sizes use decimal MB (`bytes / 1,000,000`) with one locale-formatted decimal;
 values below 100,000 bytes display as less than 0.1 MB. The endpoint is
 refreshed on an Overview mount and an accepted project snapshot change, so

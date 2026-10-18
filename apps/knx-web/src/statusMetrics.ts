@@ -10,7 +10,7 @@ export interface StatusMetrics {
     currentOnDiskBytes: number | null;
   };
   catalogue: {
-    state: "available" | "unavailable" | "error";
+    state: "available" | "unavailable" | "busy" | "error";
     bytes: number | null;
     counts: { manufacturers: number; products: number; applicationPrograms: number } | null;
   };
@@ -33,7 +33,7 @@ export function admitStatusMetrics(value: unknown, tree: ProjectTree): { metrics
       !nullableWhole(project.projectIncarnation) || !nullableWhole(project.snapshotRevision) || !nullableWhole(project.currentOnDiskBytes) ||
       (project.state === "available") !== (project.currentOnDiskBytes !== null) ||
       (project.state === "unavailable" ? project.projectIncarnation !== null || project.snapshotRevision !== null : !whole(project.projectIncarnation) || !whole(project.snapshotRevision)) ||
-      !(catalogue.state === "available" || catalogue.state === "unavailable" || catalogue.state === "error") || !nullableWhole(catalogue.bytes) ||
+      !(catalogue.state === "available" || catalogue.state === "unavailable" || catalogue.state === "busy" || catalogue.state === "error") || !nullableWhole(catalogue.bytes) ||
       (catalogue.state === "available") !== (catalogue.bytes !== null) ||
       (catalogue.state === "available" ? !record(catalogue.counts) || !whole(catalogue.counts.manufacturers) || !whole(catalogue.counts.products) || !whole(catalogue.counts.applicationPrograms) : catalogue.counts !== null)) throw new Error("Malformed status metrics");
   const metrics = value as unknown as StatusMetrics;

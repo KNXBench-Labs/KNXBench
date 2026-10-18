@@ -2,8 +2,8 @@
 
 [ADR-0134](../adr/0134-generic-read-only-diagnostic-export.md). A source-build
 feature after Alpha 13, released in [Alpha 14](../releases/alpha14.md).
-Simulator-verified, plus **twelve physical devices from five manufacturers so
-far** (see [Real devices](#required-before-any-hardware-claim)).
+Simulator-verified, plus **46 physical devices from eight manufacturers so far**
+(see [Real devices](#required-before-any-hardware-claim)).
 
 ## What it is and is not
 
@@ -150,6 +150,14 @@ refused with zero elements on two (`refused-ambiguous`, the path's first real
 observation). The private gate `crates/knx-app/tests/device_reports_corpus.rs`
 runs today's reader over all twelve archives and requires the writer to
 reproduce each byte for byte ([evidence note](../research/2026-10-18-device-diagnostics-eleven-devices.md)).
-Still unobserved: a silent device, and a report that a device kept working
-normally afterwards. Twelve devices do not make the export hardware-compatible
-in general.
+**The maintainer's house (18 October 2026, owner go, build `g611c5b7a`):** all
+34 contactable devices once, `1.1.220` excluded and never contacted. 30 answered
+all three reads; the Merten actuator refused PID78 with zero elements (its
+application declares no PID78 comparison); both `MV-0012` SmartSensors answered
+the descriptor and then ended the connection about 6.3 s after the PID12 request
+(`connection-lost`, the released-connection path, now observed); `1.1.253`
+rejected `T_Connect` (`connect-rejected`). The gate's house set pins all 34
+archives ([evidence note](../research/2026-10-18-house-device-diagnostics.md)).
+Still unobserved: a device that stays silent until the session timeout, and a
+report that a device kept working normally afterwards. 46 devices do not make
+the export hardware-compatible in general.

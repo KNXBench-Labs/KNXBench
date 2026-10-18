@@ -1,6 +1,8 @@
 //! The System-2 declared-segment profile is derived from source data or refused whole.
 
-use knx_core::commissioning::declared_memory::{DeclaredRange, RangeError, MAX_RANGES};
+use knx_core::commissioning::declared_memory::{
+    DeclaredRange, RangeError, MAX_COMPARISON_OCTETS, MAX_RANGES,
+};
 use knx_productdb::code::{AbsoluteSegment, LoadProcedure, LoadStep, ProgramCode, TablePlacement};
 use knx_productdb::declared_segments::{derive_declared_segments, DeclaredSegmentsError};
 use knx_productdb::system2::MetadataError;
@@ -204,5 +206,27 @@ fn unsafe_range_shapes_are_refused_without_a_partial_profile() {
     assert_eq!(
         derive_declared_segments(&source),
         Err(DeclaredSegmentsError::Ranges(RangeError::Empty))
+    );
+}
+
+#[test]
+fn a_pid78_comparison_longer_than_the_archive_bound_is_refused() {
+    // The six octets a device answers, then zeros: `property_matches` admits
+    // any such length, so the bound must be the derivation's.
+    let comparison = |octets: usize| {
+        let mut data = vec![0, 1, 0, 0, 0, 0x5B];
+        data.resize(octets, 0);
+        data
+    };
+    assert_eq!(MAX_COMPARISON_OCTETS, 64);
+    let mut source = code();
+    steps(&mut source)[1] = compare(&comparison(64));
+    let profile = derive_declared_segments(&source).expect("64 octets fit the archive");
+    assert_eq!(profile.hardware_type().len(), 64);
+    let mut source = code();
+    steps(&mut source)[1] = compare(&comparison(65));
+    assert_eq!(
+        derive_declared_segments(&source),
+        Err(DeclaredSegmentsError::HardwareTypeTooLong { octets: 65 })
     );
 }

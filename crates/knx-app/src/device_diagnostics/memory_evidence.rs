@@ -5,7 +5,7 @@
 //! a restore basis. Unknown octets stay absent, never zero-filled.
 use chrono::{DateTime, Utc};
 use knx_core::commissioning::declared_memory::{
-    DeclaredRange, DeclaredRanges, STANDARD_FRAME_CHUNK_OCTETS,
+    DeclaredRange, DeclaredRanges, MAX_COMPARISON_OCTETS, STANDARD_FRAME_CHUNK_OCTETS,
 };
 use knx_core::commissioning::memory_download::property_matches;
 use knx_core::commissioning::properties::PID_HARDWARE_TYPE;
@@ -339,7 +339,8 @@ pub(crate) fn validate(report: &Report, m: &MemoryEvidence) -> Result<(), String
             .all(|b| b.is_ascii_alphanumeric() || b"-_.".contains(&b))
         || comparison.object_index != 0
         || comparison.property_id != PID_HARDWARE_TYPE
-        || unhex(&comparison.inline_data).is_none_or(|v| v.is_empty() || v.len() > 64)
+        || unhex(&comparison.inline_data)
+            .is_none_or(|v| v.is_empty() || v.len() > MAX_COMPARISON_OCTETS)
         || m.chunk_octets != STANDARD_FRAME_CHUNK_OCTETS
     {
         return invalid();

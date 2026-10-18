@@ -1233,3 +1233,48 @@ async fn every_snapshot_of_a_continued_or_stopped_identity_run_roundtrips() {
     }
     assert!(failures.is_empty(), "not exportable: {failures:?}");
 }
+
+/// [`PROGRAM`] with a PID78 comparison of `octets`: the six the device
+/// answers, then zeros, which `property_matches` admits at any length.
+fn program_with_comparison(octets: usize) -> String {
+    let inline = format!("00010000005B{}", "00".repeat(octets - 6));
+    assert!(PROGRAM.contains("InlineData=\"00010000005B00000000\""));
+    PROGRAM.replace("00010000005B00000000", &inline)
+}
+
+#[tokio::test]
+async fn an_admitted_pid78_comparison_always_fits_the_archive() {
+    let (_dir, db) = products(&program_with_comparison(64));
+    let plan = prepare_memory(&project(), DeviceId(7), &db).expect("64 octets are admitted");
+    assert_eq!(plan.profile().hardware_type().len(), 64);
+    let pending = knx_app::device_diagnostics::pending_memory(&plan, "synthetic", true);
+    assert_eq!(
+        read_export(&bundle_export(&pending).unwrap()).unwrap(),
+        pending
+    );
+    let mut refused = vec![];
+    let export = acquire_memory(
+        &device(),
+        &plan,
+        Default::default(),
+        "synthetic-test",
+        &AtomicBool::new(false),
+        |snapshot| {
+            if let Err(e) = bundle_export(snapshot) {
+                refused.push(e);
+            }
+        },
+    )
+    .await;
+    assert!(refused.is_empty(), "snapshots not exportable: {refused:?}");
+    assert_eq!(statuses(&export), ["read"; 4]);
+    let dir = tempfile::tempdir().unwrap();
+    write_new_export(&dir.path().join("evidence.zip"), &export).unwrap();
+
+    // One octet more is refused at derivation, before any adapter exists,
+    // rather than acquired and then refused by the archive writer.
+    let (_dir, db) = products(&program_with_comparison(65));
+    let error = prepare_memory(&project(), DeviceId(7), &db)
+        .expect_err("65 octets must be refused before acquisition");
+    assert!(error.contains("diagnostics-profile-unavailable"), "{error}");
+}

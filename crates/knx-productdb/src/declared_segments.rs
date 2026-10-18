@@ -8,7 +8,9 @@
 
 use std::fmt;
 
-use knx_core::commissioning::declared_memory::{DeclaredRange, DeclaredRanges, RangeError};
+use knx_core::commissioning::declared_memory::{
+    DeclaredRange, DeclaredRanges, RangeError, MAX_COMPARISON_OCTETS,
+};
 use knx_core::commissioning::properties::PID_HARDWARE_TYPE;
 
 use crate::code::{LoadStep, ProgramCode};
@@ -92,6 +94,12 @@ pub enum DeclaredSegmentsError {
     },
     /// The comparison has no inline data, so nothing can match it.
     EmptyHardwareType,
+    /// The comparison is longer than [`MAX_COMPARISON_OCTETS`], so the
+    /// evidence archive could not record it.
+    HardwareTypeTooLong {
+        /// Octets declared.
+        octets: usize,
+    },
     /// The declared ranges are not a bounded read-only profile.
     Ranges(RangeError),
 }
@@ -107,6 +115,10 @@ impl fmt::Display for DeclaredSegmentsError {
             Self::EmptyHardwareType => {
                 write!(f, "the PID_HARDWARE_TYPE comparison has no inline data")
             }
+            Self::HardwareTypeTooLong { octets } => write!(
+                f,
+                "the PID_HARDWARE_TYPE comparison has {octets} octets, more than {MAX_COMPARISON_OCTETS}"
+            ),
             Self::Ranges(error) => write!(f, "declared segments refused: {error}"),
         }
     }
@@ -148,6 +160,11 @@ pub fn derive_declared_segments(
     };
     if hardware_type.is_empty() {
         return Err(DeclaredSegmentsError::EmptyHardwareType);
+    }
+    if hardware_type.len() > MAX_COMPARISON_OCTETS {
+        return Err(DeclaredSegmentsError::HardwareTypeTooLong {
+            octets: hardware_type.len(),
+        });
     }
     let (range_positions, ranges): (Vec<usize>, Vec<DeclaredRange>) = steps
         .iter()

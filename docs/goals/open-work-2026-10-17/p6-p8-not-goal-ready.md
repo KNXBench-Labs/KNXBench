@@ -9,10 +9,11 @@ finds the condition met turns the item into its own package file first.
 
 | Item | Decision needed |
 | --- | --- |
-| Root checkout | 235 commits behind `main`, with local edits to `.ai/CURRENT_STATE.md`, `docs/RESEARCH.md`, `docs/research/parameter-byte-order.md` and two root-only files (SmartSensor offline image note, local issue-22 triage). Synchronise through the local-details guard, or keep as is |
-| Old container `knxbench-old-sdc1-20261017` and the old source path | Remove on request |
-| GitHub pull-request refs `refs/pull/3`, `refs/pull/24` | Optionally ask GitHub Support to purge them (they still serve pre-rewrite commits) |
+| Root checkout | Re-check 18 Oct: synchronised by another session (at `8e612c29`, a few commits behind, no tracked edits). Two root-only files remain untracked: the SmartSensor offline image note and the local issue-22 triage. Publish them (through the local-details guard) or keep them local |
+| Old container `knxbench-old-sdc1-20261017` and the old source path | Remove on request (re-check 18 Oct: container still present, exited) |
+| GitHub pull-request refs `refs/pull/3`, `refs/pull/24` | Optionally ask GitHub Support to purge them. Re-check 18 Oct: both heads (`af1055e9`, `dd73e2f9`) are still served and are not on the rewritten history |
 | `wip/manufacturer-plugin-research-20261013` | Kept by decision of 14 October; nothing to do unless that changes |
+| Local `refs/kl185-rewritten/*` | Re-check 18 Oct: 16 refs remain (6 branch copies, `origin/main`, 9 tags). The copies of delivered packages (`feat/parameter-matrix`, `feat/plugin-data-adoption`, `docs/ledger-residue`, a detached gate head) can go once each is proven on `main`; the `wip/manufacturer-plugin-research` copy stays with its branch |
 
 ## P7 — Waiting on evidence or outside input
 

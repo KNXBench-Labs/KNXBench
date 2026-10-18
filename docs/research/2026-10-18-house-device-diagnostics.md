@@ -84,6 +84,9 @@ application XML.
   hardware: answered, refused with zero elements, connection ended by the
   device, connection rejected. Never observed: a device that stays completely
   silent until the session timeout.
-- Post-run behaviour: nobody has reported a device behaving differently after a
-  run. This run cannot show it either; a reply from the owner would.
+- Post-run behaviour: the owner reported the same evening that the whole
+  installation keeps working normally after the run. That is an operator
+  observation of everyday use, not a functional test of every device and
+  channel; it is the first post-run report for the export. The archives
+  themselves cannot show it.
 - No production code changes. The corpus gate gains the house set.

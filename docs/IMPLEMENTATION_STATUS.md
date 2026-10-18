@@ -16,9 +16,10 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 Local-only presentation change: one width hook and accessible header separator,
 UI-02 paint, validated versioned localStorage, pointer/keyboard resizing and
-column/table reset. 17 native table surfaces converted; the selectable
-address/object matrix remains unchanged because its columns identify project
-objects. [Contract and complete coverage](contracts/table-column-widths.md).
+column/table reset. All 18 native table surfaces use the adapter; the matrix's
+select/address/name columns resize while its per-object columns remain fixed.
+Review fixes restore container-filling defaults, retain view-specific keys,
+coalesce drag previews with one final write, and improve accessible names/help. [Contract and complete coverage](contracts/table-column-widths.md).
 Focused hook/component/production tests and browser proof cover sortable devices,
 comparison and nested virtualised history tables. No API, domain, schema,
 parameter-grid, project-write or KNX bus change.

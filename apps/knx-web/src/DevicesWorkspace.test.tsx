@@ -1,5 +1,6 @@
 /** Device table gestures, preserved view state and asynchronous metadata guards. */
 // @vitest-environment happy-dom
+import { tableColumnSmoke } from "./tableColumnSmoke.fixture";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
@@ -178,3 +179,5 @@ it("shows pending parts as chips and narrows to pending devices on request (ADR-
   await act(async () => pendingOnly.click());
   expect(host.querySelectorAll("tbody tr")).toHaveLength(3);
 });
+
+tableColumnSmoke([["devices", 12]], async () => { await render(); return { host }; });

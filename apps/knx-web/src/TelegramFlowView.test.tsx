@@ -1,5 +1,6 @@
 /** U20: the flow view renders reducer state honestly and is fully usable from the keyboard. */
 // @vitest-environment happy-dom
+import { tableColumnSmoke } from "./tableColumnSmoke.fixture";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it } from "vitest";
@@ -251,4 +252,13 @@ describe("TelegramFlowView motion", () => {
     await render(model());
     expect((host!.querySelector(".flow-edge") as SVGGElement).style.opacity).toBe("1");
   });
+});
+
+it.each(["en", "de"] as const)("%s flag tables use Flag/Value headings", async language => {
+  saveUiLanguage(settingsStorage, language); resetUiLanguageForTests(); await render(model()); await key(node("Dimmer"), "Enter");
+  expect([...host!.querySelectorAll(".flow-flags thead th")].map(th => th.querySelector("span")!.textContent)).toEqual(["Flag", language === "de" ? "Wert" : "Value"]);
+});
+
+tableColumnSmoke([["flow-flags", 2], ["flow-values", 5]], async () => {
+  await render(model()); await key(node("Dimmer"), "Enter"); return { host: host! };
 });

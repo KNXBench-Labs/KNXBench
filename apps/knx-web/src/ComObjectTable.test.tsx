@@ -1,5 +1,6 @@
 /** Device communication table interaction and editor-lifetime contracts. */
 // @vitest-environment happy-dom
+import { tableColumnSmoke } from "./tableColumnSmoke.fixture";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, it, vi, beforeEach } from "vitest";
@@ -217,4 +218,10 @@ it("names the object size the product data resolves, and nothing when it is unkn
   expect(row(1).querySelector(".com-object-size")?.textContent).toBe("Size: 2 Bytes");
   expect(row(2).querySelector(".com-object-size")).toBeNull();
   await v.cleanup();
+});
+
+tableColumnSmoke([["communication-objects", 6]], async () => { const v = await render([object(1)]); return v; });
+
+tableColumnSmoke([["communication-objects", 7]], async () => {
+  const v = await render([object(1)]); await v.click(v.button("All objects")); return v;
 });

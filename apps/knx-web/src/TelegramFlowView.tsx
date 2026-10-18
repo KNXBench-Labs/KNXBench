@@ -33,11 +33,11 @@ const FLOW_FLAGS_COLUMNS = [
   { id: "value", width: 140, min: 80 }
 ];
 const FLOW_VALUES_COLUMNS = [
-  { id: "address", width: 180, min: 100 },
-  { id: "value", width: 180, min: 100 },
-  { id: "origin", width: 160, min: 100 },
-  { id: "sender", width: 180, min: 100 },
-  { id: "sequence", width: 100, min: 64 }
+  { id: "address", width: 64, min: 48 },
+  { id: "value", width: 64, min: 48 },
+  { id: "origin", width: 64, min: 48 },
+  { id: "sender", width: 80, min: 48 },
+  { id: "sequence", width: 48, min: 48 }
 ];
 
 const VIEW_WIDTH = 960;
@@ -109,7 +109,7 @@ function ObjectTable({ objects }: { objects: FlowObjectEvidence[] }) {
               active: object.active ? t("flow.inspector.isActive") : t("flow.inspector.isInactive"),
             })}
           </caption>
-          <thead><tr><th>{t("compare.field")}</th><th>{t("flow.inspector.value")}</th></tr></thead>
+          <thead><tr><th>{t("flow.inspector.flag")}</th><th>{t("flow.inspector.value")}</th></tr></thead>
           <tbody>
             {FLAG_NAMES.map((name) => (
               <tr key={name}>

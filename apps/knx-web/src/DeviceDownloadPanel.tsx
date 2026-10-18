@@ -673,7 +673,7 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
             </ul>
           )}
           {blocks.length > 0 && (
-            <ResizableTable tableId="download-blocks" columns={DOWNLOAD_BLOCKS_COLUMNS} className="device-download-blocks">
+            <ResizableTable tableId="download-blocks" columns={DOWNLOAD_BLOCKS_COLUMNS} className="device-download-blocks" scrollClassName="device-download-blocks-scroll">
               <caption>{t("deviceDownload.blocksCaption")}</caption>
               <thead><tr><th>{t("deviceDownload.step")}</th><th>{t("deviceDownload.address")}</th><th>{t("deviceDownload.data")}</th><th>{t("deviceDownload.running_total")}</th></tr></thead>
               <tbody>

@@ -31,7 +31,8 @@ const plan = {
 const finished = {
   downloadId: 7, address: "1.1.67", deviceName: "Fictional actuator", steps: 3, dataOctets: 32,
   status: { state: "finished", written: "yes", restart: "acknowledged", restartNote: null },
-  nextSince: 0, events: [], backupFile: "device-backups/1.1.67_fixture.json",
+  nextSince: 32, events: Array.from({ length: 32 }, (_, index) => ({ kind: "dataWritten", number: 3,
+    address: 0x4400 + index, octets: [index], written: index + 1, of: 32 })), backupFile: "device-backups/1.1.67_fixture.json",
 };
 const report = {
   report: {
@@ -121,6 +122,16 @@ for (const language of ["en", "de"] as const) {
       await shown.getByRole("button", { name: m["deviceDownload.start"].replace("{address}", "1.1.67"), exact: true }).click();
       await page.locator(".programming-consent-dialog").getByRole("button", { name: m["programmingConsent.confirm"], exact: true }).click();
 
+      const blocks = panel.locator('[data-table-id="download-blocks"]');
+      await expect(blocks.locator("tbody tr")).toHaveCount(32);
+      const geometryBlocks = await blocks.locator("table").evaluate(table => ({
+        display: getComputedStyle(table).display, layout: getComputedStyle(table).tableLayout,
+        viewport: table.parentElement!.classList.contains("device-download-blocks-scroll"),
+        height: table.parentElement!.clientHeight, scroll: table.parentElement!.scrollHeight,
+      }));
+      expect(geometryBlocks.display).toBe("table"); expect(geometryBlocks.layout).toBe("fixed");
+      expect(geometryBlocks.viewport).toBe(true); expect(geometryBlocks.height).toBeLessThanOrEqual(320);
+      expect(geometryBlocks.scroll).toBeGreaterThan(geometryBlocks.height);
       const verify = panel.getByRole("region", { name: m["deviceDownload.verify.title"] });
       await expect(verify).toContainText(m["deviceDownload.verify.intro.untested"]);
       await expect(verify.locator(".device-download-verify-steps li")).toHaveCount(5);

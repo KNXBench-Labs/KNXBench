@@ -30,7 +30,7 @@ Last updated: 2026-10-18 07:55 CEST
 
 | Feature | Scope | Availability |
 | --- | --- | --- |
-| Resizable data-table columns | Pointer/keyboard resizing, per-column/table reset, validated browser-local widths; 17 native table surfaces, address/object matrix excluded — [coverage](contracts/table-column-widths.md) | Local-only |
+| Resizable data-table columns | Pointer/keyboard resizing, per-column/table reset, validated browser-local widths; 18 native table surfaces, matrix select/address/name included; per-object columns stay fixed — [coverage](contracts/table-column-widths.md) | Local-only |
 
 ## New in Alpha 14
 

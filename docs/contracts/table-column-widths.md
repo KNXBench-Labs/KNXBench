@@ -16,7 +16,7 @@ No table below has draggable headers or rows (explorer trees own drag/drop).
 | Devices — `DevicesWorkspace.tsx` | no | yes | no | converted |
 | Communication objects — `ComObjectTable.tsx` | no | yes | no | converted |
 | Address flat/tree table — `GroupAddressTreeTable.tsx` | no; bounded window | no | no | converted |
-| Address object matrix — `GroupAddressMatrix.tsx` | no; bounded window | no | no | **not converted**: project-object columns lack a stable presentation-only identity; see boundary below |
+| Address object matrix — `GroupAddressMatrix.tsx` | no; bounded window | no | no | fixed select/address/name columns converted; per-object columns stay fixed, see boundary below |
 | Address members — `GroupAddressLinks.tsx` | no | no | no | converted |
 | Building device list — `StructureWorkspace.tsx` | no | no | no | converted |
 | Monitor telegrams — `BusMonitorPanel.tsx` | no; bounded capture | no | no | converted |
@@ -57,37 +57,60 @@ cards. Explorer trees, forms and manufacturer-declared parameter grids
   unless declared otherwise. Stored values must be finite numbers in range;
   invalid values revert individually to defaults. Unknown columns are ignored,
   new columns use defaults and reordered columns keep their identity. An invalid
-  root shape or corrupt JSON silently uses defaults. The next edit/reset writes
-  a fresh validated record, dropping unknown columns. Storage denial retains
+  root shape or corrupt JSON silently uses defaults. Edits merge valid stored keys, including columns temporarily absent in another
+  view; absent keys outside 24–12000 px or with nonnumeric values are pruned.
+  A table reset writes only the current schema defaults. Storage denial retains
   live session operation; reload persistence requires working browser storage.
 - Pointer drag captures the pointer and clamps the changed column. Other pointer
-  IDs are ignored; pointer-up, cancellation and lost capture end the drag.
+  IDs are ignored. Drag previews update local state once per animation frame;
+  pointer-up, cancellation and lost capture persist and broadcast once. Escape
+  restores the starting width without persistence. Keyboard steps persist immediately.
   Resizing stops click, double-click, drag-start and handled key propagation,
   so header sorting and row selection are not activated.
 - The handle is a focusable vertical `role="separator"`, named by its header,
-  exposing `aria-valuenow/min/max`. Left/Right changes by 8 px; Shift changes
+  exposing `aria-valuenow/min/max`, pixel-valued `aria-valuetext` and a
+  reference to keyboard help. Left/Right changes by 8 px; Shift changes
   by 40 px; Home/End chooses minimum/maximum; Enter restores that column's
   default. Double-click also restores the default. Each table has a localized
-  **Reset column widths** action restoring all its defaults.
+  **Reset column widths** action named after its label, caption or localized
+  table kind, restoring all its defaults. A viewport is a focusable region only
+  when explicitly labelled or overflowing.
 - The handle reuses the [UI-02 separator paint](controls-and-separators.md):
   a border-colour hairline at rest and accent line/band on hover, focus and
   held drag. It introduces no animation or theme-pack tokens. Reset uses the
   shared quiet button class. All five themes and OS reduced motion are covered.
+- Default widths follow the previous layout budgets (devices 1100 px,
+  communication objects 800/804 px, monitor 1024 px); the table fills any surplus
+  container space. Defaults compress proportionally to the actual available
+  pane width, including navigation and inspector space; user pixel adjustments
+  apply on top of that baseline. A 48 px header footprint retains separate sort
+  and resize targets; the communication-object number column reserves 120 px
+  for its existing indented disclosure. Very narrow panes below that combined minimum scroll
+  locally. Flow inspector defaults fit its narrower pane. Widening beyond
+  the available space scrolls locally. Download blocks use the adapter viewport
+  for both axes, capped at 320 px height; the table retains native table display.
+- Resize targets are 24 px wide, centred on interior column boundaries; the
+  final target sits inside the viewport edge to avoid creating overflow. Header
+  stacking and padding keep sort buttons clickable. Fitted headings show at
+  most three lines, retaining the full accessible label and a title tooltip so
+  sticky headers cannot obscure the first data rows. Development builds warn
+  if native heading and declared column counts diverge.
 - Width overflow stays in the table viewport. Header/body share actual columns;
   device/object sticky headers retain their vertical viewport. Diff row
   measurements remain owned by the existing ResizeObserver/windowing code.
 
 ## Remaining boundary
 
-17 of 18 native table surfaces are converted. **The address/object matrix is
-not converted.** Its selectable object columns use project device/object keys.
-Persisting those as preference keys would violate this package's prohibition on
-project content in keys, while using the current ordinal would attach a width
-to a different object after selection changes. A future matrix-specific UX
-needs an explicit policy (for example, one common object-column width). This
-package neither invents that policy nor claims complete table coverage.
+All 18 native table surfaces use the adapter. The address/object matrix's three
+fixed columns (select, address, name) have stable presentation IDs and persist
+widths. Its per-object columns retain 180 px preferred widths without resize controls
+and do not produce preference keys. Their selectable project device/object keys cannot become
+browser preference IDs; ordinal persistence would follow a different object
+after selection changes. A future matrix-specific policy (for example, one
+common object-column width) remains open in OPEN_WORK. Complete per-column
+coverage is not claimed.
 
-The read-only flow flag property tables now have column headings (Field/Value)
+The read-only flow flag property tables now have column headings (Flag/Value)
 so their two resize handles have accessible names; captions and flag values
 are preserved. No manufacturer parameter-grid code is changed.
 
@@ -95,10 +118,11 @@ are preserved. No manufacturer parameter-grid code is changed.
 
 | Requirement | Test |
 | --- | --- |
-| Persist/remount, types/ranges, corrupt JSON, changed/reordered columns, multiple instances, reset, window events, storage denial | `src/useTableColumnWidths.test.tsx` (8 tests) |
-| ARIA, keyboard/Shift/bounds, pointer capture and IDs, no sorting/drag/selection, cancel/capture loss, double-click and table reset | `src/ResizableTable.test.tsx` (5 tests) |
+| Persist/remount, types/ranges, corrupt JSON, changed/reordered columns, multiple instances, reset, window events, storage denial | `src/useTableColumnWidths.test.tsx` |
+| ARIA, keyboard/Shift/bounds, pointer capture and IDs, no sorting/drag/selection, cancel/capture loss, double-click and table reset | `src/ResizableTable.test.tsx` |
+| Every converted surface (including both object views and three fixed matrix columns) mounts with separators aligned to the declared columns | Parameterized `column smoke: <table-id> exposes <count> resize separators` tests using `tableColumnSmoke.fixture.ts` |
 | Actual production comparison exposes operable separators | `src/ComparisonTable.test.tsx`: offers keyboard resizing and reset on the production comparison table |
-| Real device and comparison drag/keyboard, sort isolation, reset, reload, local narrow overflow, sticky headers, header/row alignment, zero API writes | `e2e/table-column-widths.e2e.ts`: five EN/DE theme/width cases |
+| Real device and comparison drag/keyboard, sort isolation, reset, reload, local narrow overflow, sticky headers, header/row alignment, default fit at 1440/1920, 24 px targets, zero API writes | `e2e/table-column-widths.e2e.ts`: five EN/DE theme/width cases |
 | Nested virtual history tables share widths, retain alignment at end of window, remount/reload/reset, bounded DOM and narrow scrolling | `e2e/table-column-widths.e2e.ts`: virtualised history field tables share widths, align through remounts and persist |
 
 Fixtures are fictional and intercept all API requests. No hardware, project

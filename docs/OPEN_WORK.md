@@ -12,9 +12,9 @@ then UI-06; each package is delivered on its own. The reported defects are not
 reproduced yet. Decisions and per-package worker models are in the
 [goal file](goals/ui-feedback-2026-10-18.md#owner-go-and-decisions-18-october-2026-later-the-same-day).
 
-UI-05 local candidate: 17/18 native table surfaces converted; the selectable
-address/object matrix still needs a width policy that avoids project content in
-preference keys. [Coverage and boundary](contracts/table-column-widths.md).
+UI-05 local candidate: all 18 native table surfaces use the width adapter. The
+address/object matrix's select/address/name columns resize; only its per-object
+columns still need a width policy that avoids project content in preference keys. [Coverage and boundary](contracts/table-column-widths.md).
 
 ## Prepared goal packages (17 October 2026)
 

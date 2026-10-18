@@ -7,6 +7,7 @@ import { COLUMN_WIDTH_KEY, useTableColumnWidths, type TableColumnWidth } from ".
 
 const columns: TableColumnWidth[] = [{ id: "name", width: 180, min: 100, max: 400 }, { id: "address", width: 140, min: 80 }];
 let states: ReturnType<typeof useTableColumnWidths>[];
+Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 let host: HTMLDivElement; let root: ReturnType<typeof createRoot>;
 function Probe({ index = 0, id = "test", schema = columns }: { index?: number; id?: string; schema?: TableColumnWidth[] }) {
   states[index] = useTableColumnWidths(id, schema); return null;
@@ -44,7 +45,7 @@ it("keeps IDs through reordered, added, removed and changed-bound columns", asyn
   expect(states[0].widths).toEqual({ address: 140, new: 300, name: 260 });
   await render([{ ...columns[0], min: 280, width: 300 }]);
   expect(states[0].widths).toEqual({ name: 300 });
-  await act(async () => states[0].setWidth("name", 320)); expect(stored()).toEqual({ name: 320 });
+  await act(async () => states[0].setWidth("name", 320)); expect(stored()).toEqual({ name: 320, address: 140 });
 });
 it("synchronizes multiple instances without overwriting another column or table", async () => {
   await act(async () => root.render(<><Probe /><Probe index={1} /><Probe index={2} id="other" /></>));
@@ -80,4 +81,22 @@ it("keeps session resizing usable when storage is unavailable", async () => {
   expect(states[1].widths).toEqual(states[0].widths);
   expect(deniedRead).toHaveBeenCalled();
   expect(denied).toHaveBeenCalledTimes(2);
+  deniedRead.mockRestore(); denied.mockRestore();
+});
+
+it("keeps flat-view Channel while a grouped instance edits Name and switches back", async () => {
+  const flat = [...columns, { id: "channel", width: 180, min: 80 }];
+  await act(async () => root.render(<><Probe schema={flat} /><Probe index={1} schema={columns} /></>));
+  await act(async () => states[0].setWidth("channel", 310));
+  await act(async () => states[1].setWidth("name", 260));
+  expect(stored().channel).toBe(310);
+  expect(states[0].widths.channel).toBe(310);
+  await render(columns); await render(flat);
+  expect(states[0].widths.channel).toBe(310);
+});
+it("merges valid absent keys and prunes only unreasonable values or a table reset", async () => {
+  window.localStorage.setItem(COLUMN_WIDTH_KEY + "test", JSON.stringify({ channel: 310, tiny: -5, huge: 1e12, text: "42" }));
+  await render(); await act(async () => states[0].setWidth("name", 240));
+  expect(stored()).toEqual({ channel: 310, name: 240, address: 140 });
+  await act(async () => states[0].reset()); expect(stored()).toEqual({ name: 180, address: 140 });
 });

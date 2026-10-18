@@ -1,7 +1,7 @@
 /** Browser-local validated column widths, independent of project and server settings. */
 import { useEffect, useRef, useState } from "react";
 
-export interface TableColumnWidth { id: string; width: number; min: number; max?: number }
+export interface TableColumnWidth { id: string; width: number; min: number; max?: number; fitMin?: number }
 export const COLUMN_WIDTH_KEY = "knxbench:table-column-widths:v1:";
 const CHANGED = "knxbench:table-column-widths-changed";
 export const columnMax = (column: TableColumnWidth) => column.max ?? 1200;
@@ -52,13 +52,17 @@ export function useTableColumnWidths(tableId: string, columns: readonly TableCol
     try { window.localStorage.setItem(COLUMN_WIDTH_KEY + tableId, JSON.stringify(next)); } catch { /* Session-only if storage is unavailable. */ }
     window.dispatchEvent(new CustomEvent(CHANGED, { detail: { tableId, widths: next } }));
   }
-  function setWidth(id: string, width: number) {
+  function setWidth(id: string, width: number, persist = true) {
     const column = columns.find(column => column.id === id);
     if (!column || !Number.isFinite(width)) return;
     // The synchronous notification updates refs before the next setter runs,
     // including when persistence fails or React batches two instances' edits.
     const current = latest.current.tableId === tableId ? latest.current.widths : read(tableId);
-    publish({ ...validated(current, columns), [id]: clamp(column, width) });
+    const retained = Object.fromEntries(Object.entries(current).filter(([, value]) =>
+      typeof value === "number" && Number.isFinite(value) && value >= 24 && value <= 12000));
+    const next = { ...retained, ...validated(current, columns), [id]: clamp(column, width) };
+    if (persist) publish(next);
+    else { latest.current = { tableId, widths: next }; setStored(latest.current); }
   }
   return { widths, setWidth, resetColumn: (id: string) => {
     const column = columns.find(column => column.id === id);

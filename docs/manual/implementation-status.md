@@ -2,6 +2,13 @@
 
 # Implementation status
 
+## Device-empty topology ranges (source builds after Alpha 14)
+
+The Topology diagram hides lines without devices and areas without a populated
+line. All ranges remain in the project tree, with the same editing and device
+creation actions. Devices with zero communication objects and unassigned devices
+remain visible. [Operating instructions](user-guide/03-buildings-and-topology.md#the-two-views).
+
 ## Product data and parameter presentation (Alpha 14)
 
 Manufacturer ZIPs that hold `.knxprod` packages install as a whole from the

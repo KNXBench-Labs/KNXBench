@@ -24,6 +24,7 @@ outside preserved historical blocks, or use the next free section number
 
 | Section | Where |
 | --- | --- |
+| [2026-10-18 — Product-database census 3: programmability](research/2026-10-18-product-database-programmability-census.md) | Third collection: 177 new programs, 3 build a download plan; a hidden PID-78 hardware-type parameter blocks 71 `0705h` programs; legacy files with upper-case table names read as empty; parameter and object completeness, DPT coverage |
 | [2026-10-17 — Product-database gap census](research/2026-10-17-product-database-gap-census.md) | Second collection: 546 new programs, installer outcomes (wrapper ZIPs, large databases), ignored block `Access`, invisible separators, derivable parameter and object layouts |
 | [2026-10-17 — Parameter-workspace layout census](research/2026-10-17-parameter-workspace-layout.md) | Bounded declaration shapes across local product packages; compact source groups, mixed field types and explicit-grid projection boundary |
 | [2026-10-17 — System 2 / System B admission recheck](research/2026-10-16-offline-source-stop-lines.md#17-october-renewed-download-outcome-and-fresh-checks) | 53 existing offline tests; exact source refusal and complete recovery still block admission; original public release notes and explicitly unrecovered help lead |

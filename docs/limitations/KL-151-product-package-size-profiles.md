@@ -6,6 +6,15 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Census 3 (18 October 2026): first member above the large profile
+
+[Census 3](../research/2026-10-18-product-database-programmability-census.md#installer-outcomes)
+measured the first package member beyond `PackageLimits::LARGE`: a 281.8 MiB
+application XML in a DALI-2 vendor package, so that download has no install
+route at all. A complete 2017 ETS5 database (74 MB package) installs with the
+large profile in 49.9 s at a peak of at most 333 MiB and a 1,497 MiB product
+database. Bounds unchanged (measurement first).
+
 ## Vendor ZIPs (18 October 2026, after Alpha 13)
 
 [ADR-0140](../adr/0140-vendor-zips-of-product-packages-install-as-a-whole.md):

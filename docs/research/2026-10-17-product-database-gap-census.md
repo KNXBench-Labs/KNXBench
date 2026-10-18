@@ -271,5 +271,9 @@ beside it, which is why ADR-0140 decides by content (RFC 1740 magic).
 5. G4/G5 (size ceilings, database growth) with measurements first; P6, P8, O2,
    O4 after their contracts.
 
+A third collection (18 October 2026) is measured for programmability and
+completeness in [census 3](2026-10-18-product-database-programmability-census.md)
+(gaps G10–G16).
+
 Detailed per-file results, program ids and the scanner stay in agent scratch;
 no manufacturer bytes, texts or identifiers are recorded here.

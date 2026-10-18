@@ -1595,7 +1595,7 @@ describe("App — the File menu by keyboard alone", () => {
     return summary;
   }
 
-  it("opens from the keyboard, exposes every file entry in the tab order, and Escape returns focus", async () => {
+  it("opens from the keyboard, declares every file entry as a menuitem with one tab stop per level, and Escape returns focus", async () => {
     filePickerMock.pickOpenPath.mockResolvedValue("/tmp/project.knxproj");
     apiMock.importProject.mockResolvedValue(baseTree());
     const root = await renderApp();
@@ -1607,14 +1607,14 @@ describe("App — the File menu by keyboard alone", () => {
     const menu = host!.querySelector<HTMLElement>(".file-menu")!;
     expect(menu.hasAttribute("open")).toBe(true);
 
-    // Every entry is a real button with no negative tabindex, so a Tab walk
-    // from the summary reaches all of them in the order they are read. UI-03:
-    // the menu is a first level plus three submenus, each a `role="menu"`
-    // whose items are `menuitem`s; the submenu items are in the tab order
-    // while their submenu is open.
+    // UI-03: the menu is a first level plus three submenus, each a `role="menu"` whose declared
+    // entries are `menuitem`s. The File control is a menu button; each level has one tab stop.
+    expect(summary.getAttribute("aria-haspopup")).toBe("menu");
+    expect(summary.getAttribute("aria-expanded")).toBe("true");
+    const declared = (level: Element) => [...level.querySelectorAll<HTMLButtonElement>("[data-file-menu-item]")]
+      .filter((b) => b.closest('[role="menu"]') === level);
     const levels = () => [...menu.querySelectorAll<HTMLElement>('[role="menu"]')].map((level) =>
-      [...level.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')]
-        .filter((b) => b.closest('[role="menu"]') === level).map((b) => b.textContent));
+      declared(level).map((b) => b.textContent));
     expect(levels()).toEqual([
       ["New project…", "Open project…", "Open (.knxdb)…", "Save As…", "Import & export›", "History & comparison›", "Help & diagnostics›"],
       [
@@ -1642,11 +1642,12 @@ describe("App — the File menu by keyboard alone", () => {
     for (const trigger of menu.querySelectorAll<HTMLButtonElement>(".file-submenu-trigger")) {
       await act(async () => trigger.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 0 })));
       expect(trigger.getAttribute("aria-expanded")).toBe("true");
-      expect(trigger.nextElementSibling!.querySelector<HTMLButtonElement>("button")!.tabIndex).toBeGreaterThanOrEqual(0);
     }
-    const entries = [...menu.querySelectorAll<HTMLButtonElement>(".file-menu-content button")]
-      .filter((b) => b.getAttribute("role") === "menuitem");
-    expect(entries.every((b) => b.tabIndex >= 0)).toBe(true);
+    for (const level of menu.querySelectorAll<HTMLElement>('[role="menu"]')) {
+      expect(declared(level).filter((b) => b.tabIndex === 0), "one tab stop per level").toHaveLength(1);
+      expect(declared(level).every((b) => b.getAttribute("role") === "menuitem")).toBe(true);
+    }
+    const entries = [...menu.querySelectorAll<HTMLButtonElement>("[data-file-menu-item]")];
     // Nothing in the menu is keyboard-dead: every entry here works on a
     // freshly imported project. (The one that used to be disabled without a
     // `.knxdb` path was the `.knxproj` export, withdrawn by ADR-0028.)
@@ -1669,6 +1670,26 @@ describe("App — the File menu by keyboard alone", () => {
     const entries = [...host!.querySelectorAll<HTMLButtonElement>(".file-menu-content button")].map((b) => b.textContent);
     expect(entries).toContain("Show introduction…");
     expect(entries).not.toContain("Achievements…");
+    await act(async () => root.unmount());
+  });
+
+  // UI03-FOCUS-02: the activated entry hides with the menu; focus must already rest on the visible
+  // File control when the action's dialog mounts, so every dialog restores focus to it.
+  it("hands focus back to the File control when a dialog opened from the menu closes", async () => {
+    const root = await renderApp();
+    const summary = await openFileMenu();
+    const menu = host!.querySelector<HTMLElement>(".file-menu")!;
+    const help = menu.querySelector<HTMLButtonElement>('[data-file-submenu-trigger="help"]')!;
+    await act(async () => help.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 0 })));
+    const about = findButton("About KNXBench…");
+    about.focus();
+    await act(async () => about.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    expect(menu.hasAttribute("open")).toBe(false);
+    const dialog = host!.querySelector<HTMLElement>('[role="dialog"]')!;
+    expect(dialog).not.toBeNull();
+    await act(async () => dialog.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+    expect(host!.querySelector('[role="dialog"]')).toBeNull();
+    expect(document.activeElement).toBe(summary);
     await act(async () => root.unmount());
   });
 

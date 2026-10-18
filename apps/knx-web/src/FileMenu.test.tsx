@@ -3,7 +3,7 @@
 import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { FileMenuContent, FileSubmenu } from "./FileMenu";
+import { FileMenuContent, FileMenuItem, FileMenuSummary, FileSubmenu, useFileMenuItemProps } from "./FileMenu";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -25,29 +25,35 @@ const handlers = () => ({
 });
 type Handlers = ReturnType<typeof handlers>;
 
+/** A child component that owns its button, like `DebugReportButton`, and declares it through the hook. */
+function ChildOwnedEntry({ onClick }: { onClick: () => void }) {
+  const entry = useFileMenuItemProps();
+  return <button {...entry} onClick={onClick}>Child owned</button>;
+}
+
 function Menu({ h, extra }: { h: Handlers; extra?: ReactNode }) {
   return (
     <details className="file-menu" open onKeyDown={(e) => { if (e.key === "Escape") h.summaryEscape(); }}>
-      <summary>File</summary>
+      <FileMenuSummary>File</FileMenuSummary>
       <FileMenuContent>
-        <button onClick={h.newProject}>New project</button>
-        <button onClick={h.open} disabled>Open project</button>
+        <FileMenuItem onClick={h.newProject}>New project</FileMenuItem>
+        <FileMenuItem onClick={h.open} disabled>Open project</FileMenuItem>
         <div role="separator" />
         <FileSubmenu id="exchange" label="Import & export">
-          <button disabled onClick={h.disabledImport}>Import disabled</button>
-          <button onClick={h.exportProject}>Export project</button>
-          <button onClick={h.importCsv}>Import CSV</button>
+          <FileMenuItem disabled onClick={h.disabledImport}>Import disabled</FileMenuItem>
+          <FileMenuItem onClick={h.exportProject}>Export project</FileMenuItem>
+          <FileMenuItem onClick={h.importCsv}>Import CSV</FileMenuItem>
         </FileSubmenu>
         <FileSubmenu id="history" label="History">
-          <button onClick={h.history}>Project history</button>
-          <button onClick={h.compare}>Compare with</button>
+          <FileMenuItem onClick={h.history}>Project history</FileMenuItem>
+          <FileMenuItem onClick={h.compare}>Compare with</FileMenuItem>
           {extra}
         </FileSubmenu>
         <FileSubmenu id="help" label="Help">
-          <button onClick={h.debug}>Debug report</button>
-          <button onClick={h.about}>About</button>
+          <ChildOwnedEntry onClick={h.debug} />
+          <FileMenuItem onClick={h.about}>About</FileMenuItem>
         </FileSubmenu>
-        <button onClick={h.quit}>Quit</button>
+        <FileMenuItem onClick={h.quit}>Quit</FileMenuItem>
       </FileMenuContent>
     </details>
   );
@@ -98,16 +104,39 @@ describe("File menu roles", () => {
     expect(trigger("exchange").textContent).toContain("Import & export");
   });
 
-  it("tags plain buttons as menuitems, including ones that appear later, and leaves report groups alone", async () => {
+  it("declares entries explicitly: components and hook users are menuitems, undeclared buttons are not", async () => {
     await mount(handlers(), <div role="group" aria-label="report"><button>Report close</button></div>);
     expect(item("New project").getAttribute("role")).toBe("menuitem");
     expect(item("Export project").getAttribute("role")).toBe("menuitem");
+    expect(item("Child owned").getAttribute("role")).toBe("menuitem");
     expect(item("Report close").getAttribute("role")).toBeNull();
+    expect(item("Report close").hasAttribute("data-file-menu-item")).toBe(false);
+    // Nothing tags a button behind the menu's back: a late plain button stays a plain button.
     const late = document.createElement("button");
     late.textContent = "Late";
     panel("help").append(late);
     await act(async () => { await Promise.resolve(); });
-    expect(late.getAttribute("role")).toBe("menuitem");
+    expect(late.getAttribute("role")).toBeNull();
+  });
+
+  it("hands out no item props outside a File menu", async () => {
+    function Probe() {
+      return <button data-probe {...useFileMenuItemProps()}>x</button>;
+    }
+    host = document.createElement("div");
+    document.body.append(host);
+    root = createRoot(host);
+    await act(async () => root!.render(<Probe />));
+    expect(host.querySelector("[data-probe]")!.getAttribute("role")).toBeNull();
+  });
+
+  it("makes the File control a menu button that reports whether its menu is open", async () => {
+    await mount();
+    const summary = host!.querySelector("summary")!;
+    expect(summary.getAttribute("aria-haspopup")).toBe("menu");
+    expect(summary.getAttribute("aria-expanded")).toBe("true");
+    await act(async () => { details().open = false; await Promise.resolve(); });
+    expect(summary.getAttribute("aria-expanded")).toBe("false");
   });
 
   it("keeps the items of a closed submenu mounted so their dialogs and reports survive", async () => {
@@ -259,7 +288,7 @@ describe("File menu activation", () => {
     const h = await mount();
     for (const [text, fn] of [
       ["New project", h.newProject], ["Export project", h.exportProject], ["Import CSV", h.importCsv],
-      ["Project history", h.history], ["Compare with", h.compare], ["Debug report", h.debug],
+      ["Project history", h.history], ["Compare with", h.compare], ["Child owned", h.debug],
       ["About", h.about], ["Quit", h.quit],
     ] as const) {
       await click(item(text));
@@ -402,6 +431,107 @@ describe("File menu hover intent", () => {
   });
 });
 
+describe("File menu focus management", () => {
+  const summary = () => host!.querySelector<HTMLElement>("summary")!;
+  const tabIndexes = (scope: Element) => [...scope.querySelectorAll<HTMLElement>("[data-file-menu-item]")]
+    .filter((el) => el.closest('[role="menu"]') === scope)
+    .map((el) => `${el.textContent}:${el.tabIndex}`);
+
+  it("keeps one tab stop per level: the first enabled entry, then wherever focus went", async () => {
+    await mount();
+    expect(tabIndexes(content())).toEqual([
+      "New project:0", "Open project:-1", "Import & export›:-1", "History›:-1", "Help›:-1", "Quit:-1",
+    ]);
+    expect(tabIndexes(panel("exchange"))).toEqual(["Import disabled:-1", "Export project:0", "Import CSV:-1"]);
+    item("Quit").focus();
+    await key(item("Quit"), "ArrowUp");
+    expect(tabIndexes(content()).filter((s) => s.endsWith(":0"))).toEqual(["Help›:0"]);
+    trigger("exchange").focus();
+    await key(trigger("exchange"), "ArrowRight");
+    expect(tabIndexes(panel("exchange")).filter((s) => s.endsWith(":0"))).toEqual(["Export project:0"]);
+    expect(tabIndexes(content()).filter((s) => s.endsWith(":0"))).toEqual(["Import & export›:0"]);
+  });
+
+  it("includes a declared entry that appears later in the roving set", async () => {
+    function Late({ show }: { show: boolean }) {
+      return <Menu h={handlers()} extra={show ? <FileMenuItem>Late entry</FileMenuItem> : null} />;
+    }
+    host = document.createElement("div");
+    document.body.append(host);
+    root = createRoot(host);
+    await act(async () => root!.render(<Late show={false} />));
+    await act(async () => root!.render(<Late show />));
+    expect(item("Late entry").tabIndex).toBe(-1);
+    expect(item("Late entry").getAttribute("role")).toBe("menuitem");
+  });
+
+  it.each([["Tab", false], ["Tab", true]])("%s (shift %s) on a top-level entry closes the menu, focus goes to File and the key is not swallowed", async (_k, shift) => {
+    await mount();
+    item("New project").focus();
+    const e = new KeyboardEvent("keydown", { key: "Tab", shiftKey: shift, bubbles: true, cancelable: true });
+    await act(async () => { item("New project").dispatchEvent(e); });
+    expect(details().open).toBe(false);
+    expect(document.activeElement).toBe(summary());
+    expect(e.defaultPrevented).toBe(false);
+  });
+
+  it("Tab inside an open submenu closes the whole menu, not just the submenu", async () => {
+    await mount();
+    await key(trigger("exchange"), "ArrowRight");
+    const e = new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true });
+    await act(async () => { document.activeElement!.dispatchEvent(e); });
+    expect(details().open).toBe(false);
+    expect(expanded("exchange")).toBe("false");
+    expect(document.activeElement).toBe(summary());
+    expect(e.defaultPrevented).toBe(false);
+  });
+
+  it("leaves Tab alone on a control inside a report that the menu does not own", async () => {
+    await mount(handlers(), <div role="group" aria-label="report"><button>Report close</button></div>);
+    await key(trigger("history"), "ArrowRight");
+    item("Report close").focus();
+    const e = new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true });
+    await act(async () => { item("Report close").dispatchEvent(e); });
+    expect(details().open).toBe(true);
+    expect(e.defaultPrevented).toBe(false);
+  });
+
+  it("ArrowDown on the File control opens its menu and focuses the first entry", async () => {
+    await mount();
+    await act(async () => { details().open = false; await Promise.resolve(); });
+    summary().focus();
+    await key(summary(), "ArrowDown");
+    expect(details().open).toBe(true);
+    expect(document.activeElement).toBe(item("New project"));
+  });
+
+  it("ArrowUp on the File control opens its menu and focuses the last entry", async () => {
+    await mount();
+    await act(async () => { details().open = false; await Promise.resolve(); });
+    summary().focus();
+    await key(summary(), "ArrowUp");
+    expect(details().open).toBe(true);
+    expect(document.activeElement).toBe(item("Quit"));
+  });
+
+  it("Escape in a report control closes the submenu around it and returns to its opener", async () => {
+    const h = await mount(handlers(), <div role="group" aria-label="report"><button>Report close</button></div>);
+    await key(trigger("history"), "ArrowRight");
+    item("Report close").focus();
+    await key(item("Report close"), "Escape");
+    expect(expanded("history")).toBe("false");
+    expect(document.activeElement).toBe(trigger("history"));
+    expect(h.summaryEscape).not.toHaveBeenCalled();
+  });
+
+  it("arrow keys skip an undeclared control inside a submenu", async () => {
+    await mount(handlers(), <div role="group" aria-label="report"><button>Report close</button></div>);
+    await key(trigger("history"), "ArrowRight");
+    await key(document.activeElement!, "End");
+    expect(document.activeElement).toBe(item("Compare with"));
+  });
+});
+
 describe("File menu placement", () => {
   function rect(left: number, top: number, width: number, height: number): DOMRect {
     return { left, top, width, height, right: left + width, bottom: top + height, x: left, y: top, toJSON() {} } as DOMRect;
@@ -487,5 +617,55 @@ describe("File menu placement", () => {
     await key(trigger("exchange"), "ArrowRight");
     expect(panel("exchange").dataset.side).toBeUndefined();
     spy.mockRestore();
+  });
+
+  describe("with a ResizeObserver", () => {
+    class FakeResizeObserver {
+      static instances: FakeResizeObserver[] = [];
+      observed: Element[] = [];
+      disconnected = false;
+      constructor(readonly callback: ResizeObserverCallback) { FakeResizeObserver.instances.push(this); }
+      observe(el: Element) { this.observed.push(el); }
+      unobserve() {}
+      disconnect() { this.disconnected = true; }
+      fire() { this.callback([], this as unknown as ResizeObserver); }
+    }
+    beforeEach(() => { FakeResizeObserver.instances = []; vi.stubGlobal("ResizeObserver", FakeResizeObserver); });
+    afterEach(() => vi.unstubAllGlobals());
+
+    it("places the panel again when its rendered size changes, and disconnects on close", async () => {
+      const style = stylePanelsAbsolute();
+      window.innerWidth = 1200;
+      window.innerHeight = 400;
+      await mount();
+      let height = 100;
+      const spy = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+        if (this.dataset.fileSubmenuPanel) return rect(440, 200, 240, height);
+        if (this.classList.contains("file-submenu")) return rect(100, 209, 200, 34);
+        return rect(0, 0, 0, 0);
+      });
+      await key(trigger("history"), "ArrowRight");
+      expect(panel("history").style.getPropertyValue("--file-submenu-shift")).toBe("");
+      const observer = FakeResizeObserver.instances.find((o) => o.observed.includes(panel("history")))!;
+      expect(observer).toBeDefined();
+      // The comparison report arrives and the panel grows past the bottom edge.
+      height = 300;
+      await act(async () => observer.fire());
+      await advance(50);
+      expect(panel("history").style.getPropertyValue("--file-submenu-shift")).toBe("-108px");
+      await key(document.activeElement!, "Escape");
+      expect(observer.disconnected).toBe(true);
+      spy.mockRestore();
+      style.remove();
+    });
+
+    it("disconnects when the menu unmounts with a panel open", async () => {
+      await mount();
+      await key(trigger("help"), "ArrowRight");
+      const observer = FakeResizeObserver.instances.find((o) => o.observed.includes(panel("help")))!;
+      await act(async () => root!.unmount());
+      root = undefined;
+      expect(observer.disconnected).toBe(true);
+    });
   });
 });

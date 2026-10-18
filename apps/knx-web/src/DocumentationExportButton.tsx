@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import DocumentationDialog from "./DocumentationDialog";
 import { useTranslate } from "./i18n";
+import { useFileMenuItemProps } from "./FileMenu";
 
 // Opens `DocumentationDialog`, which previews and writes the live project as
 // one self-contained "project documentation" HTML file (`crates/knx-report`,
@@ -22,6 +23,7 @@ export default function DocumentationExportButton(props: {
 }) {
   const { tree, onSummary, onError, onClearErrors } = props;
   const t = useTranslate();
+  const entry = useFileMenuItemProps();
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
 
@@ -40,7 +42,7 @@ export default function DocumentationExportButton(props: {
 
   return (
     <>
-      <button ref={buttonRef} onClick={() => setOpen(true)} disabled={!tree}>
+      <button {...entry} ref={buttonRef} onClick={() => setOpen(true)} disabled={!tree}>
         {t("documentationExport.button")}
       </button>
       {open && (

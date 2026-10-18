@@ -257,7 +257,9 @@ already found lying in the grass.
   `getByRole("menuitem", …)` and `openFileSubmenu(page, "help" | "history" | "exchange")`
   from `e2e/file-menu.ts` before an entry of a submenu
   ([contract](contracts/file-menu.md)). Welcome-screen cards with the same label stay
-  buttons.
+  buttons. A new File entry must be declared (`FileMenuItem`, or
+  `useFileMenuItemProps()` inside a reused component); an undeclared button gets no
+  role and no arrow-key or roving-tabindex handling.
 - **Motion settings live in `data-motion-level`** (set by
   `apps/knx-web/src/motion.ts`), not `data-motion`; assert the attribute the
   app actually sets.

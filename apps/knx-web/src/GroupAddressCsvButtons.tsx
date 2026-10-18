@@ -6,6 +6,7 @@ import { emitAchievementEvent } from "./achievementEvents";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import { useTranslate } from "./i18n";
 import type { Translate } from "./i18n";
+import { useFileMenuItemProps } from "./FileMenu";
 
 // T12 (GAP_ANALYSIS_ETS.md C2) — export/import of group addresses as
 // "KNXBench group-address CSV v1" (crates/knx-csv, design
@@ -76,6 +77,7 @@ export default function GroupAddressCsvButtons(props: {
 }) {
   const { tree, onTreeUpdate, onSummary, onError, onClearErrors } = props;
   const t = useTranslate();
+  const entry = useFileMenuItemProps();
   const csvFilter = [{ name: t("groupAddressCsv.filterName"), extensions: ["csv"] }];
   // MODEL-01: with several installations the user names the one the CSV
   // exchange acts on; with one, the calls stay exactly as before.
@@ -184,10 +186,10 @@ export default function GroupAddressCsvButtons(props: {
           ))}
         </select>
       )}
-      <button onClick={exportCsv} disabled={!tree}>
+      <button {...entry} onClick={exportCsv} disabled={!tree}>
         {t("groupAddressCsv.exportButton")}
       </button>
-      <button onClick={importCsv} disabled={!tree}>
+      <button {...entry} onClick={importCsv} disabled={!tree}>
         {t("groupAddressCsv.importButton")}
       </button>
     </>

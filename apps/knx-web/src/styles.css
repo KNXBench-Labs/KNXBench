@@ -3138,8 +3138,9 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .navigation-section-toggle:hover:not(:disabled) { transform: none; box-shadow: none; }
 /* UI-03: the File menu keeps frequent project actions on its first level; History, Help and
    Import / Export fold into submenus that open to the right (docs/contracts/file-menu.md). The
-   menu itself no longer scrolls (a flyout inside a scrolling box would be clipped); the narrow
-   layout below gives it back its height limit and expands the submenus inline instead. */
+   menu does not scroll while flyouts are in use (a flyout inside a scrolling box would be clipped);
+   on narrow or short screens the layout below gives it a viewport height limit with scrolling and
+   expands the submenus inline instead. */
 .file-menu-content > .file-menu-separator { height: 0; margin: 6px 0; padding: 0; border-top: 1px solid var(--knx-border); }
 .file-submenu { position: relative; display: block; width: 100%; margin: 3px 0; }
 .file-submenu-trigger { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; }
@@ -3404,8 +3405,12 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
   /* The hidden splitters took their rule with them; the boundary keeps one. */
   .navigation-section + .pane-splitter + .navigation-section { border-top: 1px solid var(--knx-border); }
   .workbench-center { padding: 16px; }
-  .file-menu-content { position: fixed; left: 10px; right: 10px; top: 65px; max-height: 70dvh; overflow: auto; }
-  /* Narrow screens: a flyout would leave the viewport, so a submenu expands inline under its row. */
+  .file-menu-content { position: fixed; left: 10px; right: 10px; top: 65px; }
+}
+/* Narrow or short screens: a flyout would leave the viewport (or the scrolling menu around it would
+   clip it), so a submenu expands inline under its row and the menu scrolls within the viewport. */
+@media (max-width: 650px), (max-height: 600px) {
+  .file-menu-content { max-height: calc(100dvh - 80px); overflow: auto; }
   .file-submenu-panel { position: static; width: auto; min-width: 0; max-width: none; max-height: none; overflow: visible; margin: 0 0 0 12px; padding: 0 0 0 8px; border: 0; border-left: 2px solid var(--knx-border); border-radius: 0; box-shadow: none; }
   .file-submenu-chevron { transform: rotate(90deg); }
   .file-submenu-trigger[aria-expanded="true"] .file-submenu-chevron { transform: rotate(-90deg); }

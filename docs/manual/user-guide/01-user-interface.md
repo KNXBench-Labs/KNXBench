@@ -60,7 +60,10 @@ or focus it and press `→`, `Enter` or `Space`. The panel slides in over about 
 seconds; **Settings → Appearance → Motion level → Off** and your system's
 reduced-motion setting remove that slide. Inside a menu `↑` and `↓` move between
 entries (`Home` and `End` jump to the first and last), `←` or `Escape` closes the
-submenu and puts you back on its row, and a second `Escape` closes File. Moving the
+submenu and puts you back on its row, and a second `Escape` closes File. `Tab` leaves
+the whole menu at once; focus continues from **File**. On a window that is very short
+(or zoomed far in) the submenus open under their row instead of beside it and the menu
+scrolls, so the last entries stay reachable. Moving the
 pointer from a row diagonally into its panel does not close it, and opening one
 submenu closes the other. No action was added or removed, and each entry works as
 before: **Project history** and **Compare with…** are still greyed out without a

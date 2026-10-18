@@ -38,6 +38,7 @@ export default function GroupAddressTable(props: {
   onItemClick: ItemClickHandler; onTreeUpdate: (tree: ProjectTree) => void;
   rangeScope: number | null;
   projectContextKey?: string;
+  showColumnReset?: boolean;
 }) {
   const { installation, selection, multiSelection, onItemClick, onTreeUpdate, rangeScope } = props;
   const t = useTranslate(); const [language] = useUiLanguage();
@@ -101,7 +102,7 @@ export default function GroupAddressTable(props: {
   const selectedRows = index.rows.filter(row => selection?.kind === "group_address" && row.node.id === selection.id);
   const selected = selectedRows.length === 1 ? selectedRows[0].node : null;
   const shared: GroupAddressWorkspaceViewProps = { installation, index, rows, baseRows, scope: validScope,
-    onScope: setScope, selection, multiSelection, onItemClick, limit, onLimit: setLimit };
+    onScope: setScope, selection, multiSelection, onItemClick, limit, onLimit: setLimit, showColumnReset: props.showColumnReset };
   const searching = query.trim() !== "" || filter !== "all";
   useEffect(() => { setClosedDuringSearch(new Set()); }, [query, filter]);
   const matches = searching ? groupsWithMatches(index, new Set(rows.map(row => row.key))) : null;

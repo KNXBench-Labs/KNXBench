@@ -9,7 +9,7 @@ import GroupAddressWindowNotice from "./GroupAddressWindowNotice";
 import GroupAddressObjectInventoryList from "./GroupAddressObjectInventoryList";
 
 const OBJECT_COLUMN_WIDTH = 180;
-const MATRIX_COLUMNS = [
+export const MATRIX_COLUMNS = [
   { id: "select", width: 48, min: 32 },
   { id: "address", width: 140, min: 100 },
   { id: "name", width: 240, min: 120 },
@@ -50,7 +50,7 @@ export default function GroupAddressMatrix(props: GroupAddressWorkspaceViewProps
       </label>)}</div>
       <GroupAddressObjectInventoryList inventory={props.inventory} query={needle} />
     </details>
-    <ResizableTable tableId="group-address-matrix" columns={MATRIX_COLUMNS} fixedTrailingColumns={columns.length} fixedTrailingWidth={OBJECT_COLUMN_WIDTH} scrollClassName="workspace-table-wrap" className="workspace-table ga-matrix-table">
+    <ResizableTable tableId="group-address-matrix" columns={MATRIX_COLUMNS} showReset={props.showColumnReset} fixedTrailingColumns={columns.length} fixedTrailingWidth={OBJECT_COLUMN_WIDTH} scrollClassName="workspace-table-wrap" className="workspace-table ga-matrix-table">
       <thead><tr><th>{t("addressTable.selectColumn")}</th><th>{t("workbench.address")}</th><th>{t("workbench.name")}</th>
         {columns.map(column => <th key={column.key} scope="col">
           <span>{deviceLabel(column)}</span>

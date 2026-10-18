@@ -4,7 +4,7 @@
 // decoration for sighted users and hidden from assistive technology; every
 // fact is reachable as text through keyboard selection and the Inspector,
 // so a busy bus does not turn into a stream of announcements.
-import ResizableTable from "./ResizableTable";
+import ResizableTable, { TableColumnReset } from "./ResizableTable";
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import { FlowAnimator, type AnimatorScheduler, type AnimatorSink, type DrawnPulse } from "./flowAnimator";
 import { type DynamicNode } from "./flowDynamics";
@@ -101,7 +101,7 @@ function ObjectTable({ objects }: { objects: FlowObjectEvidence[] }) {
   return (
     <>
       {objects.map((object) => (
-        <ResizableTable tableId="flow-flags" columns={FLOW_FLAGS_COLUMNS} className="flow-flags" key={object.comObjectId}>
+        <ResizableTable tableId="flow-flags" columns={FLOW_FLAGS_COLUMNS} showReset={false} className="flow-flags" key={object.comObjectId}>
           <caption>
             {t("flow.inspector.objectCaption", {
               id: object.comObjectId,
@@ -172,6 +172,8 @@ function Inspector({ model, node, nowMs, navigation, onClose }: {
   const values = allCurrentValues(model, node.id, nowMs);
   const outgoing = [...model.edges.values()].filter((edge) => edge.from === node.id);
   const incoming = [...model.edges.values()].filter((edge) => edge.to === node.id);
+  const hasFlagTables = outgoing.some(edge => [...edge.groups.values()].some(group => group.sourceObjects.length > 0))
+    || incoming.some(edge => [...edge.groups.values()].some(group => group.targetObjects.length > 0));
   return (
     <aside className="flow-inspector" aria-labelledby="flow-inspector-title">
       <div className="flow-inspector-heading"><h3 id="flow-inspector-title">{node.label}</h3>
@@ -207,6 +209,7 @@ function Inspector({ model, node, nowMs, navigation, onClose }: {
         </ResizableTable>
       )}
       <h4>{t("flow.inspector.connections")}</h4>
+      {hasFlagTables && <TableColumnReset tableId="flow-flags" columns={FLOW_FLAGS_COLUMNS} />}
       {outgoing.length + incoming.length === 0 ? (
         <p className="flow-inspector-note">{t("flow.inspector.noConnections")}</p>
       ) : (

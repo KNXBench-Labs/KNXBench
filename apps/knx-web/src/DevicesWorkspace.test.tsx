@@ -49,8 +49,21 @@ it.each(["en", "de"] as const)("%s compact headings retain full sort names and t
   const button = header.querySelector("button")!;
   expect(button.getAttribute("aria-label")).toBe(full);
   expect(button.title).toBe(full);
-  expect(button.textContent).toBe(language === "de" ? "Herst." : "Mfr.");
+  expect(button.querySelector(".table-column-label")!.textContent).toBe(language === "de" ? "Herst." : "Mfr.");
   expect(header.querySelector("span")!.title).toBe(full);
+});
+it.each(["en", "de"] as const)("%s compact location, topology and programming labels keep their meaning", async language => {
+  await act(async () => setSetting("uiLanguage", language));
+  await render();
+  const headings = host.querySelectorAll("thead th");
+  for (const [index, label, full] of language === "de"
+    ? [[3, "Prog.", "Programmierung"], [7, "Topologie", "Installation / KNX-Linie"], [8, "Ort", "Installation / Gebäude / Raum"]] as const
+    : [[3, "Prog.", "Programming"], [7, "Topology", "Installation / KNX line"], [8, "Location", "Installation / building / room"]] as const) {
+    const button = headings[index].querySelector("button")!;
+    expect(button.querySelector(".table-column-label")!.textContent).toBe(label);
+    expect(button.getAttribute("aria-label")).toBe(full);
+    expect(button.title).toBe(full);
+  }
 });
 it("compares only filtered rows after one gateway confirmation and makes relevant edits Outdated", async () => {
   const project = { ...tree, project_incarnation: 4, comparison_revisions: { 2: 1, 10: 0 } };

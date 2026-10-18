@@ -11,7 +11,7 @@ import { groupAddressTreeEntries, limitGroupAddressEntries, type GroupAddressTre
 import HelpTip from "./HelpTip";
 import GroupAddressWindowNotice from "./GroupAddressWindowNotice";
 
-const GROUP_ADDRESSES_COLUMNS = [
+export const GROUP_ADDRESSES_COLUMNS = [
   { id: "select", width: 80, min: 48 },
   { id: "address", width: 140, min: 100 },
   { id: "name", width: 240, min: 120 },
@@ -42,7 +42,7 @@ export default function GroupAddressTreeTable(props: GroupAddressWorkspaceViewPr
   return (
       <div>
         <ResizableTable scrollClassName="workspace-table-wrap" tableId="group-addresses"
-          columns={GROUP_ADDRESSES_COLUMNS} className="workspace-table address-table">
+          columns={GROUP_ADDRESSES_COLUMNS} showReset={props.showColumnReset} className="workspace-table address-table">
           <thead>
             <tr>
               <th className="address-table-check">

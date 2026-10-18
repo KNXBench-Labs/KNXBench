@@ -6,6 +6,9 @@ import { createRoot } from "react-dom/client";
 import { expect, it, vi } from "vitest";
 import StructureWorkspace from "./StructureWorkspace";
 import type { ProjectTree } from "./bindings/ProjectTree";
+import { resetSettingsForTests, setSetting } from "./settingsStore";
+
+Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
 const apiMock = vi.hoisted(() => ({
   createArea: vi.fn(),
@@ -29,6 +32,36 @@ const device = { id: 9, name: "Example actuator", address: "1.2.9", description:
 const tree: ProjectTree = { schema_version: 11, errors: 0, warnings: 0, can_undo: false, can_redo: false, is_modified: false, group_address_style: "ThreeLevel",
   installations: [{ id: 1, name: "Example installation", topology: [{ id: 2, name: "Area", address: 1, lines: [{ id: 3, name: "Line", address: 2, devices: [device] }] }],
     buildings: [{ id: 4, name: "Floor", kind: "Floor", devices: [], children: [{ id: 5, name: "Room", kind: "Room", children: [], devices: [device] }] }], unassigned: [], group_addresses: [], group_ranges: [] }] };
+
+it.each(["tree", "columns", "matrix"])("%s address tables across installations have one owner reset", async view => {
+  resetSettingsForTests(); setSetting("groupAddressView", view); window.localStorage.clear();
+  const host = document.createElement("div"); const root = createRoot(host);
+  const both = { ...tree, installations: [tree.installations[0], { ...tree.installations[0], id: 2, topology: [], buildings: [] }] };
+  const render = (project: ProjectTree) => root.render(<StructureWorkspace {...inert} tree={project} view="addresses"
+    selection={null} onSelect={() => {}} onCatalog={() => {}} />);
+  try {
+    await act(async () => render(both));
+    const tables = [...host.querySelectorAll('[data-table-id]')];
+    expect(tables).toHaveLength(2);
+    expect(host.querySelectorAll(".table-column-reset")).toHaveLength(1);
+    expect(tables.every(table => !table.querySelector(".table-column-reset"))).toBe(true);
+    const handles = tables.map(table => table.querySelectorAll<HTMLElement>('[role="separator"]')[1]);
+    await act(async () => handles[0].dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })));
+    expect(handles.map(handle => handle.getAttribute("aria-valuenow"))).toEqual(["148", "148"]);
+    await act(async () => host.querySelector<HTMLButtonElement>(".table-column-reset")!.click());
+    expect(handles.map(handle => handle.getAttribute("aria-valuenow"))).toEqual(["140", "140"]);
+    await act(async () => setSetting("groupAddressView", "atlas"));
+    expect(host.querySelectorAll('[data-table-id], .table-column-reset')).toHaveLength(0);
+    await act(async () => setSetting("groupAddressView", view));
+    expect(host.querySelectorAll(".table-column-reset")).toHaveLength(1);
+    // Removing the second installation restores the original per-table control.
+    await act(async () => render(tree));
+    expect(host.querySelectorAll('[data-table-id]')).toHaveLength(1);
+    expect(host.querySelectorAll('[data-table-id] .table-column-reset')).toHaveLength(1);
+  } finally {
+    await act(async () => root.unmount()); resetSettingsForTests(); window.localStorage.clear();
+  }
+});
 
 it("selects actual projected devices and lines in graphical topology, including by keyboard", async () => {
   const host = document.createElement("div"); document.body.append(host); const root = createRoot(host);

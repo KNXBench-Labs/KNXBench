@@ -1,6 +1,7 @@
 /** Exercises real device and comparison tables with fictional offline data. */
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
+import ResizableTable from "../src/ResizableTable";
 import DevicesWorkspace from "../src/DevicesWorkspace";
 import ComObjectTable from "../src/ComObjectTable";
 import type { ComObjectNode } from "../src/bindings/ComObjectNode";
@@ -28,6 +29,13 @@ const tree: ProjectTree = { schema_version: 11, errors: 0, warnings: 0, can_undo
 function Fixture() {
   useThemeId(); useAppearance();
   const [clicks, setClicks] = useState(0);
+  if (params.has("invalidation")) return <section data-invalidation-pane style={{ width: 100, fontSize: 10 }}>
+    <ResizableTable tableId="invalidation" scrollLabel="Invalidation fixture" style={{ fontSize: "inherit" }}
+      columns={["a", "b", "c"].map(id => ({ id, width: 48, min: 48 }))}>
+      <thead><tr><th>A</th><th>B</th><th>C</th></tr></thead>
+      <tbody><tr><td colSpan={2}>x</td><td>Electromagnetic</td></tr></tbody>
+    </ResizableTable>
+  </section>;
   return <main className="workbench" style={{ display: "block", padding: 12, maxWidth: "100%", boxSizing: "border-box" }}>
     <DevicesWorkspace tree={tree} active selection={null} multiSelection={null} onItemClick={() => setClicks(value => value + 1)} onCatalogue={() => {}} />
     <output data-row-clicks>{clicks}</output>

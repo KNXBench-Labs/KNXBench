@@ -9,16 +9,42 @@ const typography = ["fontFamily", "fontSize", "fontWeight", "fontStyle", "fontSt
 /** One cache per mounted table; measurements survive width edits, never enter preferences. */
 export class TableWordFloors {
   private cache = new Map<string, number>();
-  private cells = new WeakMap<HTMLTableCellElement, { signature: string; width: number; keys: string[] }>();
+  private cells = new WeakMap<HTMLTableCellElement, { width: number; keys: string[] }>();
 
   clear() { this.cache.clear(); this.cells = new WeakMap(); }
+
+  /** Invalidate typography/content only where observed records reach native cells. */
+  invalidate(records: MutationRecord[], table: HTMLTableElement): boolean {
+    let relevant = false;
+    for (const record of records) {
+      const target = record.target instanceof Element ? record.target : record.target.parentElement;
+      if (!target || target.closest("table") !== table
+        || target.closest('.sr-only, [role="separator"], .table-sort-indicator')) continue;
+      // Mounted hidden rows already participate. The monitor's arrival paint
+      // changes background only, so neither can change a word requirement.
+      if (record.attributeName === "hidden") continue;
+      if (record.attributeName === "class") {
+        const typographyClasses = (value: string) => value.split(/\s+/).filter(name => name !== "bus-monitor-row-new").sort().join(" ");
+        if (typographyClasses(record.oldValue ?? "") === typographyClasses(target.getAttribute("class") ?? "")) continue;
+      }
+      relevant = true;
+      const cell = target.closest<HTMLTableCellElement>("th, td");
+      if (cell) this.cells.delete(cell);
+      // A row/section style affects descendants. For childList, new cells have
+      // no cached measurement; moved/unchanged rows retain theirs, even on sort.
+      else if (record.type === "attributes") {
+        for (const descendant of target.querySelectorAll<HTMLTableCellElement>("th, td")) this.cells.delete(descendant);
+      }
+    }
+    return relevant;
+  }
 
   measure(table: HTMLTableElement, count: number): number[] {
     const floors = Array<number>(count).fill(0);
     const used = new Set<string>();
     const pending = new Map<string, HTMLSpanElement>();
     const requirements: { cell: HTMLTableCellElement; key: string; extra: number; minimum: number }[] = [];
-    const changed = new Map<HTMLTableCellElement, { signature: string; width: number; keys: string[]; column: number }>();
+    const changed = new Map<HTMLTableCellElement, { width: number; keys: string[]; column: number }>();
     const styles = new Map<Element, CSSStyleDeclaration>();
     const css = (element: Element) => {
       let style = styles.get(element);
@@ -32,14 +58,13 @@ export class TableWordFloors {
         // Group headings and embedded editors span columns: they must not
         // inflate the first column, nor measure a nested table twice.
         if (index >= count || cell.colSpan !== 1) continue;
-        const signature = `${row.className}|${row.style.cssText}|${cell.outerHTML}`;
         const cached = this.cells.get(cell);
-        if (cached?.signature === signature) {
+        if (cached) {
           floors[index] = Math.max(floors[index], cached.width);
           for (const key of cached.keys) used.add(key);
           continue;
         }
-        const record = { signature, width: 0, keys: [] as string[], column: index };
+        const record = { width: 0, keys: [] as string[], column: index };
         changed.set(cell, record);
         const walker = document.createTreeWalker(cell, NodeFilter.SHOW_TEXT);
         while (walker.nextNode()) {

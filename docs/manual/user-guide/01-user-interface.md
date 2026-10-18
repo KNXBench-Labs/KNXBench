@@ -367,23 +367,47 @@ column's width. Tab to the separator for keyboard control: Left/Right adjusts
 by 8 pixels, Shift by 40; Home/End chooses its minimum/maximum. Enter or a
 double-click restores that column's default. Escape during a drag restores its
 starting width. **Reset column widths** above
-the table restores all its defaults. Wide tables scroll within their own view.
+the table restores all its defaults. Repeated field tables in comparison/history
+details share one reset above the list; the flow inspector likewise has one
+reset for its object-flag tables across all connections. These actions reset
+the shared widths and recalculate current-content floors in every mounted table
+of that kind. Address tables across multiple installations also share one reset
+above the installation list, for the current tree/columns or matrix view.
+Owner actions name their table kind visibly, for example **Reset column widths:
+Field changes**. Comparisons with only added/removed entries and no field changes
+show no field-table reset. Single-instance tables keep their short reset label
+above the table.
+Wide tables scroll within their own view.
 
 Automatic fitting reserves space for the widest header/cell word in each
 column, up to 320 pixels. A narrow pane scrolls locally when those floors do
 not fit. Exceptionally long tokens can still wrap. Keyboard/pointer changes
 adjust a saved preference relative to that fitted baseline: Home chooses the
 stored minimum, so the rendered column can be narrower than that number and
-explicit shrinking can split words.
+explicit shrinking can split words. Table headers and cells follow the selected
+Compact/Comfortable density and theme padding; specialized report/preview tables
+keep their own spacing. Floors only grow while the table
+is mounted, so filtering does not narrow columns; **Reset column widths** also
+recalculates the floors for current content. Sorting reserves the indicator's
+space in every sortable heading.
 
 Device-table headings use compact labels such as Mfr. to keep the twelve-column
-overview usable. Hover for the full name; keyboard and assistive sort controls
+overview usable. Location/Ort and Topology/Topologie describe the full paths;
+Prog. identifies programming. Hover for the full name; keyboard and assistive sort controls
 keep their full names.
 
 Widths stay in this browser across reloads; they are shared by tables of the
 same kind, regardless of project, and never change project data or undo history.
 Clearing browser storage removes them. With browser storage blocked, resizing
-works for the current mounted session.
+works for the current mounted session. Tables of the same kind can still render
+different widths when their measured content differs, including history tables.
+
+A wide window does not guarantee no scrolling: navigation, the Inspector,
+density and content determine the available space. At 1440 pixels the tested
+EN/DE device overview and German flat objects need local scrolling; all these
+fixtures fit at 1920 pixels. The tested flow inspector fits with its specialized
+padding; other content can still need local scrolling in its narrower pane.
+Labels and meaningful fields remain available.
 
 The address/object matrix's select, address and name columns resize; its
 per-object columns keep 180 pixel preferred widths without resize controls. The

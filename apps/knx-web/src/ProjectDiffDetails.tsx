@@ -1,5 +1,5 @@
 /** Expandable per-table entity list of a project diff with before and after values. */
-import ResizableTable from "./ResizableTable";
+import ResizableTable, { TableColumnReset } from "./ResizableTable";
 import { createContext, useCallback, useContext, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { FieldChange, MatchKind, ProjectDiffReport } from "./api";
@@ -81,7 +81,7 @@ function Disclosure(props: { label: string; children: ReactNode; memoryKey?: str
 function FieldChangeTable(props: { changes: FieldChange[] }) {
   const t = useTranslate();
   return (
-    <ResizableTable tableId="project-diff-fields" columns={PROJECT_DIFF_FIELDS_COLUMNS} className="project-diff-fields">
+    <ResizableTable tableId="project-diff-fields" columns={PROJECT_DIFF_FIELDS_COLUMNS} showReset={false} className="project-diff-fields">
       <thead>
         <tr>
           <th scope="col">{t("projectDiff.fieldHeader")}</th>
@@ -366,6 +366,10 @@ function InfoSection(props: { labelKey: MessageKey; changes: FieldChange[] }) {
   );
 }
 
+function hasFieldChanges(tables: DiffTableView[]): boolean {
+  return tables.some(table => table.entries.some(entry => entry.fieldChanges.length > 0 || hasFieldChanges(entry.nested)));
+}
+
 /** Collapsed-by-default detail view below the grouped-count summary. */
 export default function ProjectDiffDetails(props: { report: ProjectDiffReport }) {
   const t = useTranslate();
@@ -375,6 +379,9 @@ export default function ProjectDiffDetails(props: { report: ProjectDiffReport })
     groupAddress: formatGroupAddress,
     unaddressed: t("projectDiff.key.unaddressed"),
   };
+  const installations = report.installations.map(installation => ({ installation, tables: installationTables(installation, format) }));
+  const hasFieldTables = report.infoChanges.length > 0 || installations.some(({ installation, tables }) =>
+    installation.fieldChanges.length > 0 || hasFieldChanges(tables));
   const multiple = report.installations.length > 1;
   // UI memory only, never part of the report.
   const [openTables] = useState(() => new Map<string, boolean>());
@@ -382,9 +389,9 @@ export default function ProjectDiffDetails(props: { report: ProjectDiffReport })
   return (
     <OpenTables.Provider value={openTables}>
       <section className="project-diff-details" aria-label={t("projectDiff.detailsHeading")}>
+        {hasFieldTables && <TableColumnReset tableId="project-diff-fields" columns={PROJECT_DIFF_FIELDS_COLUMNS} />}
         <InfoSection labelKey="projectDiff.projectInfo" changes={report.infoChanges} />
-        {report.installations.map((installation) => {
-          const tables = installationTables(installation, format);
+        {installations.map(({ installation, tables }) => {
           if (installation.fieldChanges.length === 0 && tables.length === 0) return null;
           return (
             <div key={installation.id} className="project-diff-installation">

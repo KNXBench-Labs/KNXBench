@@ -76,13 +76,22 @@ function headingText(nodes: ReactNode): string {
     : isValidElement<{ children?: ReactNode; "aria-label"?: string }>(node) ? node.props["aria-label"] ?? headingText(node.props.children) : "").join("");
 }
 
+/** A repeated table family's owner renders this once above its list. */
+export function TableColumnReset({ tableId, columns }: { tableId: string; columns: readonly TableColumnWidth[] }) {
+  const t = useTranslate();
+  const state = useTableColumnWidths(tableId, columns);
+  const tableName = t(`tableColumns.name.${tableId}` as Parameters<typeof t>[0]);
+  const label = t("tableColumns.resetNamed", { table: tableName });
+  return <button type="button" className="quiet-action table-column-reset" aria-label={label} onClick={state.reset}>{label}</button>;
+}
+
 /** Only decorates native thead/tr/th children; body editors and row ownership stay untouched. */
 export default function ResizableTable({
-  tableId, columns, children, className = "", style, scrollClassName = "", scrollLabel, fixedTrailingColumns = 0, fixedTrailingWidth = 0, ...props
+  tableId, columns, children, className = "", style, scrollClassName = "", scrollLabel, showReset = true, fixedTrailingColumns = 0, fixedTrailingWidth = 0, ...props
 }: {
-  tableId: string; columns: readonly TableColumnWidth[]; scrollClassName?: string; scrollLabel?: string; fixedTrailingColumns?: number; fixedTrailingWidth?: number;
+  tableId: string; columns: readonly TableColumnWidth[]; scrollClassName?: string; scrollLabel?: string; showReset?: boolean; fixedTrailingColumns?: number; fixedTrailingWidth?: number;
 } & HTMLAttributes<HTMLTableElement>) {
-  const t = useTranslate(); const state = useTableColumnWidths(tableId, columns); const id = useId();
+  const t = useTranslate(); const id = useId();
   const viewport = useRef<HTMLDivElement>(null);
   const [overflowing, setOverflowing] = useState(false);
   const [availableWidth, setAvailableWidth] = useState(0);
@@ -91,6 +100,9 @@ export default function ResizableTable({
   const wordMeasurements = useRef(new TableWordFloors());
   const wordsDirty = useRef(true);
   const measureWords = useRef(() => {});
+  const state = useTableColumnWidths(tableId, columns, () => {
+    wordMeasurements.current.clear(); setWordFloors([]); measureWords.current();
+  });
   const columnCount = columns.length;
   useLayoutEffect(() => {
     const table = viewport.current?.querySelector("table");
@@ -102,16 +114,39 @@ export default function ResizableTable({
       if (!viewport.current || viewport.current.closest("[hidden]") || !viewport.current.clientWidth) return;
       wordsDirty.current = false;
       const next = wordMeasurements.current.measure(table, columnCount);
-      setWordFloors(previous => previous.length === next.length && previous.every((width, index) => width === next[index]) ? previous : next);
+      setWordFloors(previous => {
+        const maxima = next.map((width, index) => Math.max(width, previous[index] ?? 0));
+        return previous.length === maxima.length && previous.every((width, index) => width === maxima[index]) ? previous : maxima;
+      });
     };
     measureWords.current = update;
     update();
-    const content = new MutationObserver(update);
+    const content = new MutationObserver(records => { if (wordMeasurements.current.invalidate(records, table)) update(); });
     // Observe content, not col widths or resize-handle ARIA changes.
     for (const section of Array.from(table.children)) if (["THEAD", "TBODY", "TFOOT"].includes(section.tagName))
-      content.observe(section, { childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ["class", "style", "hidden"] });
-    const appearance = new MutationObserver(() => { wordMeasurements.current.clear(); update(); });
-    appearance.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "style", "data-theme", "data-density", "data-presentation"] });
+      content.observe(section, { childList: true, characterData: true, subtree: true, attributes: true, attributeOldValue: true, attributeFilter: ["class", "style", "hidden", "colspan"] });
+    const before = document.createElement("span").style;
+    const after = document.createElement("span").style;
+    const affectsPresentation = (property: string) => property.startsWith("font") || property.startsWith("--")
+      || ["letter-spacing", "word-spacing", "text-transform", "line-height"].includes(property);
+    const appearance = new MutationObserver(records => {
+      // Ancestor box geometry (including virtual-list spacer padding) does
+      // not change cell insets or typography. Compare relevant declarations
+      // only, including removals and priority changes, without computed style.
+      const relevant = records.some(record => {
+        if (record.attributeName !== "style" || !(record.target instanceof HTMLElement)) return true;
+        before.cssText = record.oldValue ?? ""; after.cssText = record.target.style.cssText;
+        return [...new Set([...Array.from(before), ...Array.from(after)])].some(property => affectsPresentation(property)
+          && (before.getPropertyValue(property) !== after.getPropertyValue(property)
+            || before.getPropertyPriority(property) !== after.getPropertyPriority(property)));
+      });
+      if (relevant) { wordMeasurements.current.clear(); update(); }
+    });
+    // One observer owns only this mount's existing ancestor chain: no document
+    // subtree subscription, no per-frame rescans. Shipped panes retain ancestry.
+    for (let ancestor: Element | null = table; ancestor; ancestor = ancestor.parentElement)
+      appearance.observe(ancestor, { attributes: true, attributeOldValue: true,
+        attributeFilter: ["class", "style", "data-theme", "data-density", "data-presentation"] });
     const fonts = () => { wordMeasurements.current.clear(); update(); };
     document.fonts?.addEventListener("loadingdone", fonts);
     return () => { content.disconnect(); appearance.disconnect(); document.fonts?.removeEventListener("loadingdone", fonts); };
@@ -177,7 +212,7 @@ export default function ResizableTable({
   const tableName = scrollLabel ?? captionText ?? t(`tableColumns.name.${tableId}` as Parameters<typeof t>[0]);
   return <div className="resizable-table" data-table-id={tableId}>
     <span id={`${id}-help`} className="sr-only">{t("tableColumns.help")}</span>
-    <button type="button" className="quiet-action table-column-reset" aria-label={`${t("tableColumns.reset")}: ${tableName}`} onClick={state.reset}>{t("tableColumns.reset")}</button>
+    {showReset && <button type="button" className="quiet-action table-column-reset" aria-label={`${t("tableColumns.reset")}: ${tableName}`} onClick={state.reset}>{t("tableColumns.reset")}</button>}
     <div ref={viewport} className={`resizable-table-scroll ${scrollClassName}`} tabIndex={scrollLabel || overflowing ? 0 : undefined} role={scrollLabel || overflowing ? "region" : undefined} aria-label={scrollLabel || overflowing ? tableName : undefined}>
       <table {...props} className={`${className} resizable-data-table`} style={{ ...style, width: totalWidth }}>
         {Children.map(children, child => isValidElement(child) && child.type === "caption" ? child : null)}

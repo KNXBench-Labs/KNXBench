@@ -50,8 +50,10 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
       ]);
       if (path === "/api/project/import" && method === "POST") {
         imports++;
-        return imports === 1 ? ok(tree) : route.fulfill({ status: 422, contentType: "application/json",
-          body: JSON.stringify({ error: `Raw refused import ${imports}: ${"long/path/".repeat(35)}`, kind: "projectNotImportable" }) });
+        if (imports === 1) return ok(tree);
+        // Refusals answer late, as on a loaded machine: the next import must wait for the card.
+        const body = JSON.stringify({ error: `Raw refused import ${imports}: ${"long/path/".repeat(35)}`, kind: "projectNotImportable" });
+        return new Promise<void>((resolve) => setTimeout(() => resolve(route.fulfill({ status: 422, contentType: "application/json", body })), 1500));
       }
       unexpected.push(`${method} ${path}`); return route.abort();
     });
@@ -116,9 +118,11 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await page.locator('[data-motion-category="toasts"]').focus(); await page.keyboard.press("Escape");
     await expect(page.locator(".settings-panel")).toHaveCount(0);
 
-    // Two refusals: the second card no longer replaces the first.
-    await importProject(); await importProject();
+    // Two refusals: the second card no longer replaces the first. Like a user, retry only
+    // after the first refusal is shown; an open started during a running import is ignored.
     const cards = page.locator(".toast--error:not(.toast--leaving)");
+    await importProject(); await expect(cards).toHaveCount(1);
+    await importProject();
     await expect(cards).toHaveCount(2);
     await expect(cards.nth(0)).toContainText("Raw refused import 2:");
     await expect(cards.nth(1)).toContainText("Raw refused import 3:");

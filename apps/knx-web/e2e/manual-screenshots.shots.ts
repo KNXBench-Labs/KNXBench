@@ -27,7 +27,7 @@ async function shot(page: Page, name: string, theme = "porcelain"): Promise<void
     // Let finite transitions and newly arriving notifications settle first.
     await page.waitForTimeout(400);
     await dismissToasts(page);
-    await page.screenshot({ path: `${target}/${theme}-${name}.png` });
+    await page.screenshot({ path: `${target}/${theme}-${name}.png`, animations: "disabled" });
     console.log(`Captured ${theme}-${name}.png`);
   } finally {
     if (tall && viewport) await page.setViewportSize(viewport);
@@ -53,6 +53,34 @@ async function nav(page: Page, name: string): Promise<void> {
   await page.evaluate(() => {
     for (const element of document.querySelectorAll("*")) if (element.scrollTop) element.scrollTop = 0;
   });
+}
+
+// Since Alpha 14 navigation blocks, explorer branches, address ranges and
+// parameter areas start closed. Open them the way a reader would.
+async function unfoldNavigation(page: Page, title: string): Promise<void> {
+  const toggle = page.locator(".navigation-section-toggle", { hasText: title }).first();
+  if ((await toggle.getAttribute("aria-expanded")) === "false") await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+}
+
+async function openWorkbench(page: Page): Promise<void> {
+  await unfoldNavigation(page, "Workspaces");
+  await unfoldNavigation(page, "Project explorer");
+  await page.locator(".project-explorer").getByRole("button", { name: "Expand all", exact: true }).click();
+}
+
+async function expandAddresses(page: Page): Promise<void> {
+  await page.locator("[data-ga-expand-all]").click();
+}
+
+async function openParameterArea(page: Page, field: string): Promise<void> {
+  const areas = page.locator(".parameter-workspace-nav button:visible");
+  await expect(areas.first()).toBeVisible();
+  for (const area of await areas.all()) {
+    await area.click();
+    if (await page.getByText(field).first().isVisible()) return;
+  }
+  throw new Error(`no parameter area shows ${field}`);
 }
 
 async function setTheme(page: Page, theme: string): Promise<void> {
@@ -95,6 +123,7 @@ async function captureReleaseDetails(page: Page): Promise<void> {
   await shot(page, "installation-inspector", "graphite");
 
   await nav(page, "Group addresses");
+  await expandAddresses(page);
   await page.getByRole("button", { name: "0/0/2", exact: true }).first().click();
   await expect(page.locator(".workbench-pane-right").getByRole("textbox", { name: "Name", exact: true })).toHaveValue("Kitchen light");
   await shot(page, "group-addresses", "graphite");
@@ -110,6 +139,8 @@ async function captureReleaseDetails(page: Page): Promise<void> {
   await dpt.scrollIntoViewIfNeeded();
   await shot(page, "dpt-selection", "graphite");
   await tabs.getByRole("tab", { name: "Parameters", exact: true }).click();
+  await page.locator(".parameter-workspace-nav button", { hasText: "Channel A" }).first().click();
+  await expect(page.locator(".parameter-workspace-nav button[aria-current=\"page\"]")).toContainText("Channel A");
   await shot(page, "device-parameters", "graphite");
 
   await history(page);
@@ -131,6 +162,7 @@ async function captureReleaseDetails(page: Page): Promise<void> {
   for (const theme of ["user-modern-retro-green-crt", "lcars"]) {
     await setTheme(page, theme);
     await nav(page, "Group addresses");
+    await expandAddresses(page);
     await page.getByRole("button", { name: "0/0/2", exact: true }).first().click();
     await shot(page, "group-addresses", theme);
   }
@@ -200,6 +232,7 @@ test("manual screenshots of the finished application", async ({ page }) => {
   await projectWizard.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
 
+  await openWorkbench(page);
   await nav(page, "Buildings");
   await expect(page.getByText("Living room").first()).toBeVisible();
   await shot(page, "buildings");
@@ -224,7 +257,7 @@ test("manual screenshots of the finished application", async ({ page }) => {
   await tabs.evaluate((el) => el.scrollIntoView({ block: "start" }));
   await shot(page, "device-tab-communication-objects");
   await openTab("Parameters");
-  await expect(page.getByText("Delay after bus voltage recovery (s)").first()).toBeVisible();
+  await openParameterArea(page, "Delay after bus voltage recovery (s)");
   await tabs.evaluate((el) => el.scrollIntoView({ block: "start" }));
   await shot(page, "device-tab-parameters");
   await openTab("Product data");
@@ -233,6 +266,7 @@ test("manual screenshots of the finished application", async ({ page }) => {
   await shot(page, "device-tab-product-data");
 
   await nav(page, "Group addresses");
+  await expandAddresses(page);
   await expect(page.getByText("Living room ceiling light").first()).toBeVisible();
   await shot(page, "group-addresses");
 
@@ -300,6 +334,7 @@ test("manual screenshots of the finished application", async ({ page }) => {
   await shot(page, "help-panel");
   await page.keyboard.press("Escape");
 
+  await unfoldNavigation(page, "Diagnostics");
   await page.getByRole("button", { name: "Bus monitor", exact: true }).click();
   await expect(page.getByRole("heading", { name: /Bus monitor/ }).first()).toBeVisible();
   await shot(page, "bus-monitor");
@@ -365,6 +400,8 @@ test("manual screenshot of the sign-in page", async ({ page }) => {
   await page.evaluate(() => localStorage.setItem("knx-desktop:theme", "graphite"));
   await page.reload();
   await expect(page.getByLabel(/Password/i)).toBeVisible();
-  await expect(page.getByText(/0\.1\.0-alpha\.9/)).toBeVisible();
+  // The release being photographed; a stale frontend would show its own version.
+  const version = process.env.MANUAL_EXPECTED_VERSION ?? "0.1.0-alpha.14";
+  await expect(page.getByText(version, { exact: false })).toBeVisible();
   await shot(page, "login", "graphite");
 });

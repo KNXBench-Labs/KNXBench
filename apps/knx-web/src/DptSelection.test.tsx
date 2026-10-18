@@ -99,6 +99,45 @@ for (const [language, instance] of [["en", "Source: device instance"], ["de", "Q
     } finally { await v.cleanup(); }
   });
 }
+// Review UI02-003: each field's Instance layer is reachable on its own; hiding the
+// heading badge must never leave a layer without a deliberately opened reference.
+const descriptionField = (host: HTMLElement) =>
+  [...host.querySelectorAll<HTMLElement>(".inspector-field")].find(field => field.querySelector<HTMLInputElement>("input")?.value === "Stated")!;
+it("names a description-only Instance layer in the description's technical reference", async () => {
+  const v = await render(object({ dpt_layer: "Program", description: "Stated", description_layer: "Instance" }));
+  try {
+    const description = descriptionField(v.host);
+    expect(description.querySelector(".inspector-field-heading .provenance-badge")).toBeNull();
+    const reference = description.querySelector<HTMLDetailsElement>(".value-source-reference")!;
+    expect(reference, "description has its own technical reference").not.toBeNull();
+    expect(reference.open).toBe(false);
+    expect(reference.querySelector("summary")?.textContent).toBe("Technical reference");
+    expect(reference.querySelector(".provenance-badge")?.getAttribute("data-source-layer")).toBe("Instance");
+    expect(reference.querySelector(".provenance-badge")?.textContent).toBe("Source: device instance");
+    // The DPT keeps its non-routine layer in the heading, and its reference does not repeat it.
+    expect(v.host.querySelector(".dpt-field .inspector-field-heading .provenance-badge")?.textContent).toBe("Source: application program");
+    expect(v.host.querySelectorAll(".dpt-field .dpt-reference .provenance-badge")).toHaveLength(0);
+  } finally { await v.cleanup(); }
+});
+it("names a DPT-only Instance layer in the DPT reference and keeps the description heading badge", async () => {
+  const v = await render(object({ dpt_layer: "Instance", description: "Stated", description_layer: "UserEdit" }));
+  try {
+    expect(v.host.querySelector(".dpt-field .inspector-field-heading .provenance-badge")).toBeNull();
+    expect(v.host.querySelector(".dpt-field .dpt-reference .provenance-badge")?.getAttribute("data-source-layer")).toBe("Instance");
+    const description = descriptionField(v.host);
+    expect(description.querySelector(".inspector-field-heading .provenance-badge")?.textContent).toBe("Source: project edit");
+    expect(description.querySelector(".value-source-reference")).toBeNull();
+  } finally { await v.cleanup(); }
+});
+it("names the description reference in German", async () => {
+  setUiLanguage("de");
+  const v = await render(object({ description: "Stated", description_layer: "Instance" }));
+  try {
+    const reference = descriptionField(v.host).querySelector<HTMLDetailsElement>(".value-source-reference")!;
+    expect(reference.querySelector("summary")?.textContent).toBe("Technische Referenz");
+    expect(reference.querySelector(".provenance-badge")?.textContent).toBe("Quelle: Geräteinstanz");
+  } finally { await v.cleanup(); }
+});
 it("keeps every non-routine source visible in the field heading", async () => {
   for (const [layer, text] of [["ProgramRef", "Source: application reference"], ["Inferred", "Source: inferred value"], ["UserEdit", "Source: project edit"]] as const) {
     const v = await render(object({ dpt_layer: layer }));

@@ -285,6 +285,7 @@ it("feeds the shared BulkActionToolbar from the row checkboxes", async () => {
   expect(host!.textContent).toContain("1 group address selected");
   const deleteButton = [...host!.querySelectorAll<HTMLButtonElement>(".bulk-action-toolbar button")]
     .find((b) => b.textContent === "Delete")!;
+  expect(deleteButton.classList.contains("danger-action")).toBe(true);
   await act(async () => deleteButton.click());
   expect(apiMock.batchDeleteGroupAddresses).toHaveBeenCalledWith([31]);
   await act(async () => root.unmount());

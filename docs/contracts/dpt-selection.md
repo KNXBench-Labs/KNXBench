@@ -143,7 +143,7 @@ edit. `ProgramRef`, `Instance`, `Inferred` and `UserEdit` have distinct localize
 labels/explanations. Unrecognized source layers retain their verbatim identifier,
 including JavaScript prototype-property names; no source is guessed.
 Since UI-02 (18 October 2026) the routine `Instance` layer is not shown in the
-heading; the DPT field's opened technical reference names it, and the data is
+heading; the DPT or description field's own opened technical reference names it, and the data is
 unchanged ([controls and separators](controls-and-separators.md#value-source-labels)).
 
 A local inline-size container bounds the expanded editor to the table's viewport,

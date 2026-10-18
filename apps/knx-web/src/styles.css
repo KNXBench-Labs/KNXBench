@@ -332,7 +332,8 @@ main {
 .toast .toast-open:hover { transform: none; box-shadow: none; }
 .toast .toast-open:focus-visible { outline: 2px solid var(--knx-accent); outline-offset: 2px; }
 .toast-body, .toast > .achievement-badge { pointer-events: none; }
-.toast .toast-dismiss { position: relative; z-index: 1; }
+/* The × glyph stays 1rem; its button is a 24px target (controls contract floor). */
+.toast .toast-dismiss { position: relative; z-index: 1; min-width: 24px; min-height: 24px; display: inline-flex; align-items: center; justify-content: center; }
 .toast .toast-release-link { position: relative; z-index: 1; pointer-events: auto; color: var(--knx-accent); font-size: 0.8rem; }
 /* At most three cards; a tall stack scrolls instead of leaving the screen.
    Scrolling clips at the padding edge, so the stack takes the 1rem corner
@@ -570,7 +571,7 @@ main {
 }
 
 /* The footer counts open their log findings; they keep the text's look. */
-.project-explorer footer .import-diagnostic-link { min-height: auto; padding: 0; border: 0; background: transparent; box-shadow: none; color: inherit; font: inherit; text-align: left; white-space: normal; text-decoration: underline; text-transform: none; }
+.project-explorer footer .import-diagnostic-link { display: inline-flex; align-items: center; min-height: 24px; padding: 0; border: 0; background: transparent; box-shadow: none; color: inherit; font: inherit; text-align: left; white-space: normal; text-decoration: underline; text-transform: none; }
 .project-explorer footer .import-diagnostic-link:hover:not(:disabled) { transform: none; box-shadow: none; }
 
 .workspace {
@@ -1482,7 +1483,6 @@ main {
 /* A radio, not a text field: the global input rules would make it a wide, padded box. */
 .log-export-scope input[type="radio"] { flex: 0 0 1rem; width: 1rem; height: 1rem; min-height: 1rem; margin: 0; padding: 0; }
 .log-export-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
-.log-export-actions button:not(.primary-action) { background: transparent; color: var(--knx-foreground); border: 1px solid var(--knx-border); }
 
 /* ADR-0110: the raw preview keeps its literal, visible block under the row. */
 .log-entry-raw-label {
@@ -3436,7 +3436,6 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .com-table-toolbar select { min-width: 0; max-width: 230px; }
 .com-table-toolbar button { max-width: 100%; white-space: normal; }
 .com-table-views { display: flex; flex-wrap: wrap; gap: 4px; }
-.com-table-views button { background: var(--knx-surface); color: var(--knx-foreground) !important; box-shadow: none; }
 .com-table-views [aria-pressed="true"] { background: var(--knx-accent); border-color: var(--knx-accent); color: var(--knx-on-accent) !important; }
 .com-table-count { color: var(--knx-muted); font-size: 0.85rem; }
 .com-table-scroll { max-width: 100%; max-height: 65vh; overflow: auto; container-type: inline-size; }
@@ -3501,9 +3500,11 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .com-object-edit-fields .inspector-field-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .com-object-edit-fields .inspector-field-heading .provenance-badge { max-width: 100%; overflow-wrap: anywhere; opacity: 1; }
 .com-object-edit-fields .dpt-field select { box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; }
-.com-object-edit-fields .dpt-reference { overflow-wrap: anywhere; }
+.com-object-edit-fields .dpt-reference,
+.com-object-edit-fields .value-source-reference { overflow-wrap: anywhere; }
 /* The technical reference is where a routine source layer is still shown. */
 .dpt-reference .provenance-badge { display: inline-block; margin-inline-start: 6px; }
+.value-source-reference .provenance-badge { display: inline-block; }
 .com-object-edit-fields .group-link-list {
   flex-basis: 100%;
   min-width: 0;
@@ -3780,9 +3781,13 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
    structurally by the media query, as everywhere else in this file. */
 .help-tip { position: relative; display: inline-flex; align-items: center; }
 .help-tip-description { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.help-tip-trigger { width: 18px; height: 18px; min-height: 18px; padding: 0; border: 1px solid var(--knx-border); border-radius: 50%; background: transparent; box-shadow: none; color: var(--knx-muted); font-size: 11px; font-weight: 600; line-height: 1; letter-spacing: normal; display: inline-flex; align-items: center; justify-content: center; cursor: help; }
-.help-tip-trigger:hover:not(:disabled) { transform: none; box-shadow: none; color: var(--knx-accent); border-color: var(--knx-border-hover); }
-.help-tip-trigger:focus-visible { color: var(--knx-accent); border-color: var(--knx-accent); }
+/* A 24px hit box (the floor in docs/contracts/controls-and-separators.md) around
+   an 18px ring: the glyph stays small, the target does not. The negative block
+   margin keeps the line height the 18px ring had. */
+.help-tip-trigger { --help-tip-ring: var(--knx-border); position: relative; box-sizing: border-box; width: 24px; height: 24px; min-height: 24px; margin-block: -3px; padding: 0; border: 0; border-radius: 50%; background: transparent; box-shadow: none; color: var(--knx-muted); font-size: 11px; font-weight: 600; line-height: 1; letter-spacing: normal; display: inline-flex; align-items: center; justify-content: center; cursor: help; }
+.help-tip-trigger::before { content: ""; position: absolute; inset: 3px; border: 1px solid var(--help-tip-ring); border-radius: 50%; pointer-events: none; }
+.help-tip-trigger:hover:not(:disabled) { --help-tip-ring: var(--knx-border-hover); transform: none; box-shadow: none; color: var(--knx-accent); background: transparent; }
+.help-tip-trigger:focus-visible { --help-tip-ring: var(--knx-accent); color: var(--knx-accent); }
 .help-tip-bubble { position: fixed; top: 0; left: 0; box-sizing: border-box; z-index: 20; width: max-content; max-width: min(34ch, calc(100vw / var(--app-ui-scale, 1) - 16px)); max-height: calc(100vh / var(--app-ui-scale, 1) - 16px); overflow: auto; overflow-wrap: anywhere; padding: 8px 10px; background: var(--knx-surface); color: var(--knx-foreground); border: 1px solid var(--knx-border); border-radius: var(--knx-radius-card); box-shadow: 0 4px 24px var(--knx-overlay-shadow); font-size: 12px; font-weight: 400; line-height: 1.45; text-align: left; text-transform: none; white-space: normal; opacity: 0; pointer-events: none; }
 .help-tip-bubble.is-open { opacity: 1; }
 @media (prefers-reduced-motion: no-preference) {
@@ -3834,7 +3839,6 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .about-dialog .release-update-panel { margin: 0 0 14px; padding: 10px 0 2px; border-block: 1px solid var(--knx-border); overflow-wrap: anywhere; }
 .about-dialog .release-update-panel p { color: var(--knx-foreground); }
 .about-dialog .release-update-panel a { display: inline-block; margin: 0 0 8px; color: var(--knx-accent); }
-.about-dialog .release-update-panel button { background: var(--knx-surface); color: var(--knx-foreground); border: 1px solid var(--knx-border); box-shadow: none; }
 .about-dialog button:hover:not(:disabled) { transform: none; }
 /* The public community board is an explicit external link, never a bundled list. */
 .about-dialog .hall-of-fame { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--knx-border); }
@@ -3875,7 +3879,6 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .onboarding-language { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 4px; font-size: 13px; }
 /* A two-way toggle: the chosen language is the filled one. Buttons are
    filled by default, so the other one is drawn neutral rather than tinted. */
-.onboarding-language button { background: var(--knx-surface); color: var(--knx-foreground); border: 1px solid var(--knx-border); box-shadow: none; }
 .onboarding-language button[aria-pressed="true"] { background: var(--knx-accent); color: var(--knx-on-accent); border-color: var(--knx-accent); }
 .onboarding-list { margin: 0 0 6px; padding-left: 1.2rem; font-size: 13px; line-height: 1.55; }
 .onboarding-list li { margin-bottom: 4px; max-width: 72ch; }

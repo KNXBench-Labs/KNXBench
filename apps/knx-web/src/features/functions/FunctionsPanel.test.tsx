@@ -201,6 +201,8 @@ describe("building-part Functions", () => {
     await act(async () => button("Delete Function").click());
     expect(edit).not.toHaveBeenCalled();
     expect(host!.textContent).toContain("its 1 membership?");
+    expect(button("Delete").classList.contains("danger-action")).toBe(true);
+    expect(button("Cancel").classList.contains("primary-action")).toBe(false);
     await act(async () => button("Delete").click());
     expect(edit).toHaveBeenLastCalledWith(ctx(9), { kind: "delete", id: 1 });
     const select = labelled("Move to building part") as HTMLSelectElement;

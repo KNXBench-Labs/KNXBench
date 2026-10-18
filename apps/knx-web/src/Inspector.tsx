@@ -13,7 +13,7 @@ import ComObjectTable from "./ComObjectTable";
 import { useComMutation } from "./ComMutationBoundary";
 import { useUiLanguage } from "./uiLanguage";
 import { DPT_OPTIONS, dptDisplay, dptEntry, retainedDptOptions } from "./dptLabels";
-import ValueProvenance from "./ValueProvenance";
+import ValueProvenance, { isRoutineLayer } from "./ValueProvenance";
 import type { DeviceProductNode } from "./bindings/DeviceProductNode";
 import type { DeviceProductCatalog } from "./bindings/DeviceProductCatalog";
 import type { ProductResolution } from "./bindings/ProductResolution";
@@ -307,6 +307,10 @@ function ComObjectDescriptionField(props: {
           if (e.key === "Enter") (e.target as HTMLInputElement).blur();
         }}
       />
+      {isRoutineLayer(com.description_layer) && <details className="value-source-reference">
+        <summary>{t("valueSource.technicalReference")}</summary>
+        <ValueProvenance layer={com.description_layer} placement="reference" />
+      </details>}
       {error && <span className="field-error">{error}</span>}
     </label>
   );

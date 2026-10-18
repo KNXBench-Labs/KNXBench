@@ -246,7 +246,7 @@ function FunctionItem(props: {
       {confirmDelete
         ? <div className="functions-notice" role="group">
           {node.members.length === 0 ? t("functions.deleteConfirmEmpty") : t("functions.deleteConfirm", { count: node.members.length })}
-          <button type="button" disabled={busy} onClick={() => void edit({ kind: "delete", id: node.id }, contextOf(read))}>{t("functions.deleteConfirmButton")}</button>
+          <button type="button" className="danger-action" disabled={busy} onClick={() => void edit({ kind: "delete", id: node.id }, contextOf(read))}>{t("functions.deleteConfirmButton")}</button>
           <button type="button" className="functions-quiet" disabled={busy} onClick={() => setConfirmDelete(false)}>{t("functions.cancel")}</button>
         </div>
         : <button type="button" className="functions-quiet" disabled={busy} onClick={() => setConfirmDelete(true)}>{t("functions.delete")}</button>}

@@ -24,8 +24,13 @@ their primary or destructive role; the inspector's Delete reads as destructive,
 and the toolbar's Save no longer turns pale under the pointer.
 The navigation splitters draw a hairline at rest and an accent rule on hover,
 focus and drag; without a project the sections carry the same rule. The routine
-"Source: device instance" badge left the field headings and stays in the DPT
-technical reference and in the data.
+"Source: device instance" badge left the field headings and stays in the DPT and
+description technical references and in the data. After review: every confirmation
+that deletes, discards, replaces or clears paints as destructive (note-disposition,
+project-history, plug-in data, Function delete, note and instruction removal, armed
+scan-exclusion removal, bulk delete); help tips, toast dismiss and import-finding
+links have 24px targets; feature editors use the shared variants; a browser matrix
+checks roles, focus, targets and separators in all five shipped themes.
 [Contract](contracts/controls-and-separators.md).
 
 ## Manual, README and screenshots after Alpha 14 (18 October 2026)

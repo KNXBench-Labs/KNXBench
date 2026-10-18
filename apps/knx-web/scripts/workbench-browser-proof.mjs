@@ -137,7 +137,7 @@ try {
   checks.push('All five accents in both themes: primary-action text contrast >=4.5 and warning color independent of accent');
   await page.setViewportSize({width:1280,height:1080});
   await page.locator('.file-menu summary').click();
-  await page.locator('.file-menu').getByRole('button',{name:'Projekt öffnen…',exact:true}).click();
+  await page.locator('.file-menu').getByRole('menuitem',{name:'Projekt öffnen…',exact:true}).click();
   await page.getByRole('button',{name:'Grosses-Beispiel.knxproj'}).click();
   await page.locator('.workbench-navigation').getByRole('button',{name:'Gruppenadressen',exact:true}).click();
   assert.equal(await page.locator('.workspace-table tbody tr').count(),2000);

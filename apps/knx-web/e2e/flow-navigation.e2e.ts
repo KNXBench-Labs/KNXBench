@@ -110,7 +110,7 @@ test("a delayed navigation reply cannot select an entity after the editor replac
   await page.getByRole("button", { name: "Open device in project", exact: true }).click();
   await expect.poll(() => state.releases.length).toBe(1);
   await page.locator(".file-menu summary").click();
-  await page.getByRole("button", { name: "New project…", exact: true }).click();
+  await page.getByRole("menuitem", { name: "New project…", exact: true }).click();
   state.tree = project(2);
   await page.getByRole("dialog", { name: "New project", exact: true }).getByRole("button", { name: "Create project" }).click();
   state.releases[0]();

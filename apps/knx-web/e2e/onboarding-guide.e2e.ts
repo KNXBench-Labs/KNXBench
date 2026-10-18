@@ -3,6 +3,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
 import { fulfillNoProjectOpen } from "./server-project-fixture";
+import { openFileSubmenu } from "./file-menu";
 
 interface Fixture {
   settings: Record<string, unknown>;
@@ -142,6 +143,7 @@ test("switches to German from the first page and reopens from the File menu", as
   await german.getByRole("button", { name: "Einführung überspringen" }).click();
   await expect(german).toBeHidden();
   await page.getByText("Datei").click();
-  await page.getByRole("button", { name: "Einführung anzeigen…" }).click();
+  await openFileSubmenu(page, "help");
+  await page.getByRole("menuitem", { name: "Einführung anzeigen…" }).click();
   await expect(page.getByRole("dialog", { name: "Willkommen bei KNXBench" })).toBeVisible();
 });

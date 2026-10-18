@@ -290,7 +290,7 @@ also explains that the style can be changed later.
 
 ## Group addresses as CSV
 
-Two buttons sit above the table, and the same two are in the File menu: **Export group
+Two buttons sit above the table, and the same two are in the File menu's **Import & export** submenu: **Export group
 addresses (CSV)…** and **Import group addresses (CSV)…**. They exist so you can edit a
 few hundred names in a spreadsheet without clicking through a few hundred rows.
 

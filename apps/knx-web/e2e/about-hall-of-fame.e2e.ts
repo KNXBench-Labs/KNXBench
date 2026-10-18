@@ -4,6 +4,7 @@ import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
 import { fulfillNoProjectOpen } from "./server-project-fixture";
+import { openFileSubmenu } from "./file-menu";
 
 const boardUrl = "https://github.com/KNXBench-Labs/KNXBench/blob/main/docs/community/HALL_OF_FAME.md";
 
@@ -42,7 +43,8 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await page.goto("/");
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
     await page.locator(".file-menu > summary").click();
-    await page.getByRole("button", { name: m["toolbar.about"], exact: true }).click();
+    await openFileSubmenu(page, "help");
+    await page.getByRole("menuitem", { name: m["toolbar.about"], exact: true }).click();
     const dialog = page.getByRole("dialog", { name: m["about.title"], exact: true });
     const section = dialog.locator("[data-hall-of-fame]");
     const link = section.getByRole("link", { name: m["about.hallOfFame.board"], exact: true });

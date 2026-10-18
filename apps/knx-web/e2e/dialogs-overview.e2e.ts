@@ -9,6 +9,7 @@ import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { GITHUB_RELEASES_API } from "../src/githubReleases";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
+import { openFileSubmenu } from "./file-menu";
 
 type Language = "en" | "de";
 type Catalogue = { readonly [K in keyof typeof en]: string };
@@ -129,7 +130,8 @@ async function openReplaceDialog(page: Page, m: Catalogue) {
 
 async function openAbout(page: Page, m: Catalogue) {
   await page.locator(".file-menu > summary").click();
-  await page.getByRole("button", { name: m["toolbar.about"], exact: true }).click();
+  await openFileSubmenu(page, "help");
+  await page.getByRole("menuitem", { name: m["toolbar.about"], exact: true }).click();
   const dialog = page.getByRole("dialog", { name: m["about.title"], exact: true });
   await expect(dialog).toBeVisible();
   return dialog;

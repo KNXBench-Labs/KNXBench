@@ -939,6 +939,23 @@ two scheme-12 separator occurrences exactly. The collection gained one vendor
 ZIP with two inner packages in a pinned scope after Alpha 13 (117 instances;
 Alpha 13's own test counts 117 too), so the pins keep describing the
 115-instance composition, measured from a copy of the scopes without that file.
+Schema v25 ([ADR-0141](adr/0141-placements-and-enumeration-attributes-reach-columns.md))
+re-pinned both commitments again: a parameter's own `Offset`/`BitOffset` and a
+placing `Property` reach columns, so a v24 / v25 pair on the same 115 instances
+changes exactly six of 102 projection leaves. Unknown report totals move
+23,999 → 22,900 (isolation and shared-successful) and 23,875 → 22,778 (unique
+installs); `ingest_unknown` 24,273 → 23,176; `package_install_unknown`
+9,791 → 9,361; the scheme-12/14 `occurrence` evidence 5 → 0 (all five sit on
+placing properties). The independent XML census predicts −1,099 / −1,097 / −430
+exactly and finds no `Enumeration` attribute outside the stored set in these
+scopes. Classifying the retired kinds in a v24 database gives the −1,097
+`ingest_unknown` rows directly (768 own offsets, 264 placement attributes,
+65 `Property` elements). The ADR-0081 parameter-attribute pins lose exactly
+the own-offset rows: `ingest_unknown` (1,914, 290, 247,734) → (1,146, 288,
+73,548) and `package_install_unknown` (641, 103, 247,734) → (385, 101, 73,548)
+as (rows, owners, occurrences). The −1,097 is 12 more than the census's distinct keys,
+because v24 already stores duplicate `ingest_unknown` rows for some shared
+sources (OPEN_WORK, census 3 item 5).
 The 2026-09-24
 gate bound 115 instances / 113 unique hashes: isolated 104 installed and 11
 unsupported; shared 102 installed, 2 already present, and 11 unsupported.

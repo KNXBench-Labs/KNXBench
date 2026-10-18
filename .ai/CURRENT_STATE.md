@@ -1,3 +1,11 @@
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-18 20:36
+- **Completed:** CLAIM (owner go): exact UP 258D12 offline work toward a reporter-run programming test; scope/decisions in `docs/goals/up258-programming-2026-10-18.md`. Reuse existing probe/diagnostic/evaluator boundaries; no live bus. Recovery must work without ETS when it is unavailable; an ETS project or memory-only dump is not complete recovery proof.
+- **Pending/Next Steps:** Explicit bounded source-field preparation and tests, then image/procedure/execution/recovery work where source semantics permit. Reporter approves each eventual hardware step separately. No download admission change based solely on the identity ZIP.
+- **Notes for Codex oder Claude:** Own `feat/up258-offline-20261018`; avoid overlapping changes to probe preparation/commissioning boundaries without coordination. Existing UI feedback claim remains with its owner. Root checkout and unrelated untracked files stay untouched. Earlier conversational claims of guaranteed ETS restore and whole-image proof from one memory comparison are withdrawn.
+
+---
+
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-18 20:21
 - **Completed:** Issue #22 feedback (owner request): reviewed the reporter's emailed read-only diagnostic export for the Siemens UP 258D12 (private evidence collection, `DeviceReports/`; not committed). Manifest checksums verified; build `0.1.0-alpha.14+g0341483c`, `simulated:false`, `written:false`, complete. Replies: descriptor `0025`, PID12 `0001`, PID78 `00 01 00 00 00 5B`, which equals the first six of the ten `LdCtrlCompareProp` octets read again from the digest-pinned public package (`00010000005B00000000`), so the existing `[A]` rule `property_matches` matches; it stays an assumption. Docs-only commit `4acc7a20` on `main`: new `docs/research/2026-10-18-up258-device-diagnostics.md`; diagnostic-export contract, KL-184 (catalogue/overview/details), ledger row, OPEN_WORK, manual 08 and System-2 prerequisites no longer say no physical device was read. Issue reply posted (issuecomment-6253457514). Gates: docs 0 errors, anchors 1,519, ledger 208, tools 223 OK, local-info, diff-check.

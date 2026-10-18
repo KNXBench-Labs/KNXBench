@@ -10,6 +10,8 @@
   font-family: var(--knx-font-body);
   --knx-transition-duration: 200ms;
   --knx-motion-easing: cubic-bezier(0.4, 0, 0.2, 1);
+  /* How far a pressed button sinks (never with motion off or reduced). */
+  --knx-control-press-scale: 0.97;
 }
 
 /* ── The theme layer (ADR-0022) ──────────────────────────────────────────
@@ -330,7 +332,8 @@ main {
 .toast .toast-open:hover { transform: none; box-shadow: none; }
 .toast .toast-open:focus-visible { outline: 2px solid var(--knx-accent); outline-offset: 2px; }
 .toast-body, .toast > .achievement-badge { pointer-events: none; }
-.toast .toast-dismiss { position: relative; z-index: 1; }
+/* The × glyph stays 1rem; its button is a 24px target (controls contract floor). */
+.toast .toast-dismiss { position: relative; z-index: 1; min-width: 24px; min-height: 24px; display: inline-flex; align-items: center; justify-content: center; }
 .toast .toast-release-link { position: relative; z-index: 1; pointer-events: auto; color: var(--knx-accent); font-size: 0.8rem; }
 /* At most three cards; a tall stack scrolls instead of leaving the screen.
    Scrolling clips at the padding edge, so the stack takes the 1rem corner
@@ -568,7 +571,7 @@ main {
 }
 
 /* The footer counts open their log findings; they keep the text's look. */
-.project-explorer footer .import-diagnostic-link { min-height: auto; padding: 0; border: 0; background: transparent; box-shadow: none; color: inherit; font: inherit; text-align: left; white-space: normal; text-decoration: underline; text-transform: none; }
+.project-explorer footer .import-diagnostic-link { display: inline-flex; align-items: center; min-height: 24px; padding: 0; border: 0; background: transparent; box-shadow: none; color: inherit; font: inherit; text-align: left; white-space: normal; text-decoration: underline; text-transform: none; }
 .project-explorer footer .import-diagnostic-link:hover:not(:disabled) { transform: none; box-shadow: none; }
 
 .workspace {
@@ -790,7 +793,7 @@ main {
 .parameter-checked-editor { display: grid; gap: 0.5rem; justify-items: start; min-width: 0; }
 .parameter-checked-editor > section { justify-self: stretch; }
 /* Goal B1: a stale-write conflict keeps the draft. The current value gets its
-   own line; the explicit resend stays primary, discarding is quiet. */
+   own line; both explicit answers lose one side, so both are danger. */
 .parameter-conflict {
   display: flex;
   flex-wrap: wrap;
@@ -824,29 +827,14 @@ main {
 .functions-list > li, .functions-members > li, .functions-details > label { min-width: 0; }
 .functions-panel select, .functions-panel input, .functions-panel textarea { max-width: 100%; min-width: 0; box-sizing: border-box; }
 .functions-move select, .functions-details input, .functions-details select, .functions-details textarea { width: 100%; }
-.parameter-conflict > button { max-width: 100%; }
-/* Quiet like the editor's own buttons: entering or leaving the checked editor
-   must not outshout its Apply. */
+.parameter-conflict > button, .functions-notice > button { max-width: 100%; }
+/* Layout only: the role (secondary by default, danger for the conflict and
+   draft-losing answers) comes from the shared "Controls" block. Only the width
+   bound is theirs. */
 .parameter-checked-open,
 .parameter-conflict-discard,
 .functions-quiet,
-.parameter-checked-close {
-  max-width: 100%;
-  padding: 6px 12px;
-  color: var(--knx-foreground);
-  background: var(--knx-bg);
-  border: 1px solid var(--knx-border);
-  border-radius: var(--knx-radius-button);
-  box-shadow: none;
-}
-.parameter-checked-open:hover:not(:disabled),
-.parameter-conflict-discard:hover:not(:disabled),
-.functions-quiet:hover:not(:disabled),
-.parameter-checked-close:hover:not(:disabled) { box-shadow: none; border-color: var(--knx-accent); }
-.parameter-checked-open:focus-visible,
-.parameter-conflict-discard:focus-visible,
-.functions-quiet:focus-visible,
-.parameter-checked-close:focus-visible { outline: 2px solid var(--knx-accent); outline-offset: 2px; }
+.parameter-checked-close { max-width: 100%; }
 /* The access badge is a label, not a full-width bar, in the flex row. */
 .parameter-field > .provenance-badge { align-self: flex-start; }
 
@@ -1184,14 +1172,8 @@ main {
 .catalog-update-status--alreadyInstalled { color: var(--knx-muted); }
 .catalog-update-warning { color: var(--knx-warning-color); }
 .catalog-update-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-/* Cancel loses nothing, so it stays quiet next to the install. */
-.catalog-update-actions .catalog-update-cancel {
-  color: var(--knx-foreground);
-  background: var(--knx-bg);
-  border: 1px solid var(--knx-border);
-  box-shadow: none;
-}
-.catalog-update-actions .catalog-update-cancel:hover:not(:disabled) { box-shadow: none; border-color: var(--knx-accent); }
+/* Cancel loses nothing, so it stays secondary (the default) next to the
+   primary install. */
 .catalog-backups summary { cursor: pointer; }
 .catalog-backup-list { margin: 0.5rem 0 0; padding: 0; list-style: none; display: grid; gap: 0.4rem; }
 .catalog-backup-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.6rem; min-width: 0; }
@@ -1501,7 +1483,6 @@ main {
 /* A radio, not a text field: the global input rules would make it a wide, padded box. */
 .log-export-scope input[type="radio"] { flex: 0 0 1rem; width: 1rem; height: 1rem; min-height: 1rem; margin: 0; padding: 0; }
 .log-export-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
-.log-export-actions button:not(.primary-action) { background: transparent; color: var(--knx-foreground); border: 1px solid var(--knx-border); }
 
 /* ADR-0110: the raw preview keeps its literal, visible block under the row. */
 .log-entry-raw-label {
@@ -2128,10 +2109,12 @@ main {
 .device-checks-result dt { color: var(--knx-muted); }
 .device-checks-result dd { margin: 0; overflow-wrap: anywhere; }
 
-/* ADR-0051 Debug: opt-in is a verified server setting; the action is separate. */
+/* ADR-0051 Debug: opt-in is a verified server setting; the action is separate.
+   The review panel shares its class with the button that opens it; only the
+   panel is tinted, the button keeps the shared secondary look. */
 .settings-section-debug,
 .service-control-warning,
-.service-control-review {
+.service-control-review:not(button) {
   border-left: 3px solid var(--knx-warning-color);
   background: color-mix(in srgb, var(--knx-warning-color) 7%, var(--knx-surface));
   padding: 12px;
@@ -2850,36 +2833,111 @@ main {
   justify-content: flex-end;
 }
 
+/* ── Controls (UI-02) ────────────────────────────────────────────────────
+
+   The one owner of how a button looks; the contract is
+   docs/contracts/controls-and-separators.md. Four treatments:
+
+   - secondary — every `button` unless it says otherwise: surface fill,
+     hairline edge, foreground ink;
+   - `.primary-action` — the one accent-filled action of a surface, painted
+     with the theme's `--knx-gradient-primary`;
+   - `.quiet-action` — no fill and no edge until hovered (toolbars, inline
+     links that are buttons); add `.icon-action` for a square icon button;
+   - `.danger-action` — error ink and edge, tinted on hover, for actions
+     that destroy or discard.
+
+   A variant only sets the `--button-*` hooks below; the rules that read
+   them (rest, hover, press, disabled, pending) are written once. Hover and
+   press change colour and, for the press, a small scale: never the box, so
+   nothing around the button moves (issue #14 was a hover scale that pushed
+   rows into a scrollbar). A screen that paints its own `background`
+   directly simply opts out of these hooks, which is how the explorer rows,
+   tabs and table headers keep their established looks. */
+button,
+.secondary-action {
+  --button-bg: var(--knx-surface);
+  --button-ink: var(--knx-foreground);
+  --button-edge: var(--knx-border);
+  --button-hover-bg: color-mix(in srgb, var(--knx-accent) 8%, var(--knx-surface));
+  --button-hover-edge: color-mix(in srgb, var(--knx-accent) 45%, var(--knx-border));
+  --button-press-bg: color-mix(in srgb, var(--knx-accent) 15%, var(--knx-surface));
+  --button-veil: transparent;
+  --button-press-scale: var(--knx-control-press-scale);
+}
 button {
   font-family: var(--knx-font-body);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  border: none;
+  font-weight: 500;
+  line-height: 1.25;
+  border: 1px solid var(--button-edge);
   border-radius: var(--knx-radius-button);
-  padding: 0.5rem 1.25rem;
-  min-height: 44px;
-  color: var(--knx-on-accent);
-  background: var(--knx-gradient-primary);
-  box-shadow: var(--knx-shadow-raised);
+  padding: 4px var(--knx-control-padding-inline);
+  gap: var(--knx-control-gap);
+  color: var(--button-ink);
+  background: var(--button-bg);
+  box-shadow: none;
   cursor: pointer;
 }
+.primary-action {
+  --button-bg: var(--knx-accent);
+  --button-ink: var(--knx-on-accent);
+  --button-edge: transparent;
+  --button-hover-edge: transparent;
+  --button-hover-bg: var(--knx-accent);
+  --button-press-bg: var(--knx-accent);
+  font-weight: 600;
+  background: linear-gradient(var(--button-veil), var(--button-veil)), var(--knx-gradient-primary);
+  background-color: var(--button-bg);
+  box-shadow: var(--knx-shadow-raised);
+}
+.primary-action:hover:not(:disabled) { --button-veil: color-mix(in srgb, var(--knx-on-accent) 14%, transparent); box-shadow: var(--knx-shadow-hover); }
+.primary-action:active:not(:disabled) { --button-veil: color-mix(in srgb, var(--knx-on-accent) 26%, transparent); }
+.quiet-action {
+  --button-bg: transparent;
+  --button-edge: transparent;
+  --button-hover-bg: color-mix(in srgb, var(--knx-foreground) 7%, transparent);
+  --button-hover-edge: transparent;
+  --button-press-bg: color-mix(in srgb, var(--knx-foreground) 13%, transparent);
+}
+.icon-action {
+  display: inline-grid;
+  place-items: center;
+  min-width: var(--knx-control-height);
+  padding-inline: 0;
+}
+.danger-action {
+  --button-ink: var(--knx-error-color);
+  --button-edge: color-mix(in srgb, var(--knx-error-color) 55%, var(--knx-border));
+  --button-hover-bg: color-mix(in srgb, var(--knx-error-color) 10%, var(--knx-surface));
+  --button-hover-edge: var(--knx-error-color);
+  --button-press-bg: color-mix(in srgb, var(--knx-error-color) 18%, var(--knx-surface));
+}
+button:hover:not(:disabled) {
+  --button-bg: var(--button-hover-bg);
+  --button-edge: var(--button-hover-edge);
+}
+button:active:not(:disabled) { --button-bg: var(--button-press-bg); }
+button:focus-visible { outline: 2px solid var(--knx-accent); outline-offset: 2px; }
+/* Pending is not unavailable: a busy button keeps most of its ink. */
+button[aria-busy="true"] { cursor: progress; }
+button[aria-busy="true"]:disabled { opacity: 0.8; cursor: progress; }
 
 @media (prefers-reduced-motion: no-preference) {
   button {
-    transition: transform var(--knx-transition-duration) var(--knx-motion-easing),
-      box-shadow var(--knx-transition-duration) var(--knx-motion-easing);
+    transition: background-color min(var(--knx-feedback-duration), var(--knx-transition-duration)) var(--knx-motion-easing),
+      border-color min(var(--knx-feedback-duration), var(--knx-transition-duration)) var(--knx-motion-easing),
+      color min(var(--knx-feedback-duration), var(--knx-transition-duration)) var(--knx-motion-easing),
+      transform min(var(--knx-feedback-duration), var(--knx-transition-duration)) var(--knx-motion-easing);
   }
-}
-
-button:hover:not(:disabled) {
-  transform: scale(1.05);
-  box-shadow: var(--knx-shadow-hover);
+  /* Zero specificity on purpose: a surface that pins `transform` (tables,
+     scrolling lists) keeps it. The motion-off level presses without moving. */
+  :where(:root:not([data-motion-level="off"]) button:active:not(:disabled, [aria-busy="true"])) { transform: scale(var(--button-press-scale)); }
 }
 
 button:disabled {
   background: var(--knx-surface);
   color: var(--knx-muted);
+  border-color: var(--knx-border);
   box-shadow: none;
   opacity: 0.6;
   cursor: not-allowed;
@@ -2947,16 +3005,14 @@ h6 {
   border: 0;
 }
 
-:root { --knx-control-height: 32px; --knx-cell-padding: 7px 12px; }
-:root[data-density="comfortable"] { --knx-control-height: 40px; --knx-cell-padding: 11px 14px; }
+:root { --knx-control-height: 32px; --knx-cell-padding: 7px 12px; --knx-control-padding-inline: 12px; --knx-control-gap: 6px; }
+:root[data-density="comfortable"] { --knx-control-height: 40px; --knx-cell-padding: 11px 14px; --knx-control-padding-inline: 16px; --knx-control-gap: 8px; }
 * { box-sizing: border-box; }
 body { font-size: 13px; line-height: 1.5; }
 button, input, select, textarea { font-size: inherit; }
-button { min-height: var(--knx-control-height); text-transform: none; letter-spacing: normal; }
-/* Issue #14: the reset must out-rank the legacy `button:hover:not(:disabled)`
-   scale above (0,2,1); with `button:hover` alone (0,1,1) every unstyled button
-   still grew on hover, which pushed Save As rows into a horizontal scrollbar. */
-button:hover, button:hover:not(:disabled) { transform: none; }
+/* Issue #14 is why no hover rule may scale: a growing button pushed Save As
+   rows into a horizontal scrollbar. The Controls block above has none. */
+button { min-height: var(--knx-control-height); }
 input, select, textarea {
   min-height: var(--knx-control-height);
   padding: 6px 9px;
@@ -2990,10 +3046,6 @@ th, td { padding: var(--knx-cell-padding); }
 th { font-weight: 500; color: var(--knx-muted); }
 table { border-collapse: collapse; }
 h1, h2, h3 { letter-spacing: -0.025em; }
-@media (prefers-reduced-motion: no-preference) {
-  button { transition: background-color min(var(--knx-feedback-duration), var(--knx-transition-duration)) var(--knx-motion-easing); }
-}
-
 :root { --knx-feedback-duration: 120ms; }
 
 /* Whole-window zoom follows the versioned settings document, not browser-local zoom. */
@@ -3007,11 +3059,17 @@ h1, h2, h3 { letter-spacing: -0.025em; }
 .workbench-toolbar button, .workbench-navigation button, .workbench-panel-controls button, .diagram-heading, .diagram-device, .table-select, .diagram-line-heading > button {
   background: transparent; color: var(--knx-foreground) !important; box-shadow: none; border: 1px solid transparent; text-align: left; padding: 6px 10px;
 }
-.workbench-toolbar button:hover, .workbench-navigation button:hover, .diagram-device:hover, .diagram-heading:hover { background: color-mix(in srgb, var(--knx-accent) 8%, var(--knx-surface)); }
+.workbench-toolbar button:hover:not(.primary-action), .workbench-navigation button:hover, .diagram-device:hover, .diagram-heading:hover { background: color-mix(in srgb, var(--knx-accent) 8%, var(--knx-surface)); }
+:is(.workbench-toolbar, .workbench-navigation, .workbench-panel-controls) button:active:not(:disabled, .primary-action) { background: color-mix(in srgb, var(--knx-accent) 15%, var(--knx-surface)); }
+/* Rows and list entries answer a press with colour only: a full-width row
+   that shrinks reads as a glitch, not a click. */
+.workbench-navigation button, .navigation-section-toggle, .table-select, .diagram-heading, .diagram-device, .tree-label,
+.fs-picker-list button, .help-panel-topics button, .rename-context-menu button, .file-menu-content > button,
+.file-menu-group > button, .parameter-group-toggle, .device-tabs button { --button-press-scale: 1; }
 /* Generic button hover scaling is clipped by the topology card's overflow,
    hiding edge icons, addresses and counts. Highlight without magnifying. */
 .diagram-device:hover:not(:disabled) { transform: none; box-shadow: none; }
-.workbench-toolbar .primary-action { background: var(--knx-accent); color: var(--knx-on-accent) !important; padding-inline: 20px; }
+.workbench-toolbar .primary-action { background: linear-gradient(var(--button-veil), var(--button-veil)) var(--knx-accent); color: var(--knx-on-accent) !important; padding-inline: 16px; }
 .history-actions { display: flex; border-inline: 1px solid var(--knx-border); padding-inline: 8px; }
 .history-actions button { font-size: 23px; line-height: 1; }
 .workbench-toolbar .workbench-search { display: flex; justify-content: space-between; align-items: center; gap: 30px; flex: 1; min-width: 140px; border-color: var(--knx-border); color: var(--knx-muted) !important; }
@@ -3033,12 +3091,36 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .pane-resizer { position: absolute; inset-block: 0; width: 6px; cursor: col-resize; touch-action: none; z-index: 2; }
 .workbench-pane-left .pane-resizer { right: -3px; }
 .workbench-pane-right .pane-resizer { left: -3px; }
-.pane-resizer:hover, .pane-resizer:focus-visible { background: var(--knx-accent); opacity: 0.5; }
 /* T28/F3 — `.pane-resizer`'s horizontal counterpart. Not absolutely
    positioned like that one: this handle is a flex item sitting *between*
    the two blocks it divides, not an overlay on one block's edge. */
-.pane-splitter { flex: 0 0 6px; cursor: row-resize; touch-action: none; }
-.pane-splitter:hover, .pane-splitter:focus-visible { background: var(--knx-accent); opacity: 0.5; }
+.pane-splitter { position: relative; flex: 0 0 6px; cursor: row-resize; touch-action: none; }
+/* UI-02: a separator is seen at rest, not found by hovering. Each draws a
+   centred hairline in the theme's border colour inside its unchanged 6px
+   hit area; hover, keyboard focus and a held drag (`:active`, which pointer
+   capture keeps) turn it into a 2px accent rule over a faint accent band.
+   The pane resizer's resting line is the pane's own border, so its
+   hairline only appears when highlighted. */
+.pane-resizer, .pane-splitter {
+  --separator-line: var(--knx-border);
+  --separator-band: transparent;
+  --separator-weight: 1px;
+  background: var(--separator-band);
+}
+.pane-resizer { --separator-line: transparent; }
+.pane-splitter::before, .pane-resizer::before {
+  content: "";
+  position: absolute;
+  background: var(--separator-line);
+  pointer-events: none;
+}
+.pane-splitter::before { inset-inline: 0; top: calc(50% - var(--separator-weight) / 2); height: var(--separator-weight); }
+.pane-resizer::before { inset-block: 0; left: calc(50% - var(--separator-weight) / 2); width: var(--separator-weight); }
+:is(.pane-resizer, .pane-splitter):is(:hover, :focus-visible, :active) {
+  --separator-line: var(--knx-accent);
+  --separator-band: color-mix(in srgb, var(--knx-accent) 16%, transparent);
+  --separator-weight: 2px;
+}
 .workbench-center { flex: 1; min-width: 200px; overflow: auto; padding: 24px; }
 
 .parameter-group-toggle { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--knx-border); border-radius: 0; box-shadow: none; background: transparent; color: var(--knx-foreground); font-weight: 600; padding: 10px 4px; }
@@ -3060,11 +3142,15 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .file-menu-group > h3 { margin: 3px 8px; color: var(--knx-muted); font-size: 11px; }
 .file-menu-group > button, .file-menu-group > div { display: block; width: 100%; margin: 3px 0; }
 
-.workbench-navigation { display: flex; flex-direction: column; gap: 4px; padding: 16px 12px; }
-.workbench-navigation button { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 6px; }
+.workbench-navigation { display: flex; flex-direction: column; gap: 2px; padding: 6px 8px 10px; }
+.workbench-navigation button { display: flex; align-items: center; gap: 10px; padding: 4px 10px; border-radius: var(--knx-radius-button); }
 .workbench-navigation button[aria-current="page"] { color: var(--knx-accent) !important; background: color-mix(in srgb, var(--knx-accent) 14%, transparent); font-weight: 600; }
-.diagnostic-navigation { margin-top: auto; border-top: 1px solid var(--knx-border); }
-.workbench .project-explorer { padding: 14px 10px; flex: 0; font-size: 12px; border-top: 1px solid var(--knx-border); overflow-wrap: anywhere; }
+.diagnostic-navigation { margin-top: auto; }
+/* The rule between two sections sits on the section boundary (it used to
+   sit under each section's heading). With a project open a splitter stands
+   between the sections and draws that rule itself. */
+.navigation-section + .navigation-section { border-top: 1px solid var(--knx-border); }
+.workbench .project-explorer { padding: 14px 10px; flex: 0; font-size: 12px; overflow-wrap: anywhere; }
 .workbench-pane-left .workbench-pane-content { overflow: hidden; }
 /* `0 1 auto`, not `0 0 auto`: once a splitter has given one of these two
    blocks an explicit height, a short column must still be allowed to take
@@ -3095,6 +3181,8 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .inspector-heading { padding: 17px 20px; border-bottom: 1px solid var(--knx-border); font-weight: 600; }
 .inspector-empty { padding: 20px; color: var(--knx-muted); }
 .workbench .inspector-field { display: flex; flex-direction: column; gap: 6px; margin: 0 0 16px; }
+/* A bare action between fields (Delete, Show recorded state) keeps the fields' rhythm. */
+.workbench .inspector > button { margin: 0 0 16px; }
 .workbench .inspector-field input { margin: 0; width: 100%; }
 .workbench-status { display: flex; justify-content: space-between; gap: 20px; padding: 8px 20px; border-top: 1px solid var(--knx-border); color: var(--knx-muted); font-size: 11px; background: var(--knx-surface); }
 .welcome-workspace { width: min(100%, 62rem); margin: clamp(2rem, 8vh, 5rem) auto; }
@@ -3206,7 +3294,7 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .device-programming-parts dd { margin: 0; text-align: right; }
 .device-programming-parts > div[data-pending="true"] dd { color: var(--knx-warning-color); font-weight: 600; }
 .device-programming-actions { display: flex; flex-wrap: wrap; gap: 6px; }
-.workbench .device-link { display: inline; padding: 2px 4px; min-width: 0; max-width: 100%; white-space: normal; text-align: left; overflow-wrap: anywhere; }
+.workbench .device-link { display: inline; padding: 2px 4px; min-width: 24px; max-width: 100%; white-space: normal; text-align: left; overflow-wrap: anywhere; }
 .device-link-unresolved { cursor: help; }
 .ga-linked-devices { padding-left: 18px; }
 
@@ -3290,6 +3378,8 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
   .workbench-pane-left { width: 100% !important; }
   .workbench--welcome .workbench-pane-left { order: 0; }
   .pane-resizer, .pane-splitter { display: none; }
+  /* The hidden splitters took their rule with them; the boundary keeps one. */
+  .navigation-section + .pane-splitter + .navigation-section { border-top: 1px solid var(--knx-border); }
   .workbench-center { padding: 16px; }
   .file-menu-content { position: fixed; left: 10px; right: 10px; top: 65px; }
 }
@@ -3348,7 +3438,6 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .com-table-toolbar select { min-width: 0; max-width: 230px; }
 .com-table-toolbar button { max-width: 100%; white-space: normal; }
 .com-table-views { display: flex; flex-wrap: wrap; gap: 4px; }
-.com-table-views button { background: var(--knx-surface); color: var(--knx-foreground) !important; box-shadow: none; }
 .com-table-views [aria-pressed="true"] { background: var(--knx-accent); border-color: var(--knx-accent); color: var(--knx-on-accent) !important; }
 .com-table-count { color: var(--knx-muted); font-size: 0.85rem; }
 .com-table-scroll { max-width: 100%; max-height: 65vh; overflow: auto; container-type: inline-size; }
@@ -3413,7 +3502,11 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .com-object-edit-fields .inspector-field-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .com-object-edit-fields .inspector-field-heading .provenance-badge { max-width: 100%; overflow-wrap: anywhere; opacity: 1; }
 .com-object-edit-fields .dpt-field select { box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; }
-.com-object-edit-fields .dpt-reference { overflow-wrap: anywhere; }
+.com-object-edit-fields .dpt-reference,
+.com-object-edit-fields .value-source-reference { overflow-wrap: anywhere; }
+/* The technical reference is where a routine source layer is still shown. */
+.dpt-reference .provenance-badge { display: inline-block; margin-inline-start: 6px; }
+.value-source-reference .provenance-badge { display: inline-block; }
 .com-object-edit-fields .group-link-list {
   flex-basis: 100%;
   min-width: 0;
@@ -3577,7 +3670,6 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .settings-field-hint { color: var(--knx-muted); font-size: 0.75rem; }
 .new-project-filename-hint { margin: 16px 0 0; padding: 10px 12px; border-left: 2px solid var(--knx-accent); background: color-mix(in srgb, var(--knx-accent) 7%, var(--knx-surface)); color: var(--knx-foreground); font-size: 0.8rem; line-height: 1.5; }
 .new-project-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 16px; }
-.new-project-panel .primary-action { background: var(--knx-accent); color: var(--knx-on-accent); }
 .new-project-conflict { margin-top: 16px; padding: 12px 14px; border: 1px solid var(--knx-error-color); border-radius: 8px; }
 .new-project-conflict h3 { margin: 0 0 6px; font-size: 14px; }
 .new-project-conflict p { margin: 0 0 8px; font-size: 13px; }
@@ -3691,9 +3783,13 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
    structurally by the media query, as everywhere else in this file. */
 .help-tip { position: relative; display: inline-flex; align-items: center; }
 .help-tip-description { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.help-tip-trigger { width: 18px; height: 18px; min-height: 18px; padding: 0; border: 1px solid var(--knx-border); border-radius: 50%; background: transparent; box-shadow: none; color: var(--knx-muted); font-size: 11px; font-weight: 600; line-height: 1; letter-spacing: normal; display: inline-flex; align-items: center; justify-content: center; cursor: help; }
-.help-tip-trigger:hover:not(:disabled) { transform: none; box-shadow: none; color: var(--knx-accent); border-color: var(--knx-border-hover); }
-.help-tip-trigger:focus-visible { color: var(--knx-accent); border-color: var(--knx-accent); }
+/* A 24px hit box (the floor in docs/contracts/controls-and-separators.md) around
+   an 18px ring: the glyph stays small, the target does not. The negative block
+   margin keeps the line height the 18px ring had. */
+.help-tip-trigger { --help-tip-ring: var(--knx-border); position: relative; box-sizing: border-box; width: 24px; height: 24px; min-height: 24px; margin-block: -3px; padding: 0; border: 0; border-radius: 50%; background: transparent; box-shadow: none; color: var(--knx-muted); font-size: 11px; font-weight: 600; line-height: 1; letter-spacing: normal; display: inline-flex; align-items: center; justify-content: center; cursor: help; }
+.help-tip-trigger::before { content: ""; position: absolute; inset: 3px; border: 1px solid var(--help-tip-ring); border-radius: 50%; pointer-events: none; }
+.help-tip-trigger:hover:not(:disabled) { --help-tip-ring: var(--knx-border-hover); transform: none; box-shadow: none; color: var(--knx-accent); background: transparent; }
+.help-tip-trigger:focus-visible { --help-tip-ring: var(--knx-accent); color: var(--knx-accent); }
 .help-tip-bubble { position: fixed; top: 0; left: 0; box-sizing: border-box; z-index: 20; width: max-content; max-width: min(34ch, calc(100vw / var(--app-ui-scale, 1) - 16px)); max-height: calc(100vh / var(--app-ui-scale, 1) - 16px); overflow: auto; overflow-wrap: anywhere; padding: 8px 10px; background: var(--knx-surface); color: var(--knx-foreground); border: 1px solid var(--knx-border); border-radius: var(--knx-radius-card); box-shadow: 0 4px 24px var(--knx-overlay-shadow); font-size: 12px; font-weight: 400; line-height: 1.45; text-align: left; text-transform: none; white-space: normal; opacity: 0; pointer-events: none; }
 .help-tip-bubble.is-open { opacity: 1; }
 @media (prefers-reduced-motion: no-preference) {
@@ -3745,7 +3841,6 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .about-dialog .release-update-panel { margin: 0 0 14px; padding: 10px 0 2px; border-block: 1px solid var(--knx-border); overflow-wrap: anywhere; }
 .about-dialog .release-update-panel p { color: var(--knx-foreground); }
 .about-dialog .release-update-panel a { display: inline-block; margin: 0 0 8px; color: var(--knx-accent); }
-.about-dialog .release-update-panel button { background: var(--knx-surface); color: var(--knx-foreground); border: 1px solid var(--knx-border); box-shadow: none; }
 .about-dialog button:hover:not(:disabled) { transform: none; }
 /* The public community board is an explicit external link, never a bundled list. */
 .about-dialog .hall-of-fame { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--knx-border); }
@@ -3786,7 +3881,6 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .onboarding-language { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 4px; font-size: 13px; }
 /* A two-way toggle: the chosen language is the filled one. Buttons are
    filled by default, so the other one is drawn neutral rather than tinted. */
-.onboarding-language button { background: var(--knx-surface); color: var(--knx-foreground); border: 1px solid var(--knx-border); box-shadow: none; }
 .onboarding-language button[aria-pressed="true"] { background: var(--knx-accent); color: var(--knx-on-accent); border-color: var(--knx-accent); }
 .onboarding-list { margin: 0 0 6px; padding-left: 1.2rem; font-size: 13px; line-height: 1.55; }
 .onboarding-list li { margin-bottom: 4px; max-width: 72ch; }
@@ -3946,7 +4040,7 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
    manager's paste visible as a wrong dot count rather than invisible. */
 .login-field input { width: 100%; font-family: var(--knx-font-mono); letter-spacing: 0.08em; }
 .login-error { margin: 0; }
-.login-submit { width: 100%; background: var(--knx-accent); color: var(--knx-on-accent); justify-content: center; }
+.login-submit { width: 100%; justify-content: center; }
 /* The app-wide `button:disabled` paints a disabled button in the surface
    colour, which on a toolbar reads as "greyed out" and on this card — also
    surface — reads as a sentence that fell over. It is disabled for most of

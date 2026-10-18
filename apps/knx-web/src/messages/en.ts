@@ -1204,6 +1204,7 @@ export const messages = {
   "dpt.masterText": "Master data: {value}",
   "dpt.selectionHint": "Choose a datapoint type; leave the field or press Enter to apply.",
   "valueSource.label": "Source: {source}",
+  "valueSource.technicalReference": "Technical reference",
   "valueSource.program": "application program",
   "valueSource.programHelp": "This value comes from the device’s application program. It is not a project edit.",
   "valueSource.programRef": "application reference",

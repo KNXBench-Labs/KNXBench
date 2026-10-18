@@ -14,10 +14,10 @@ export default function NoteDraftGuardDialog({ onKeep, onDiscard }: { onKeep: ()
       <h2 id="note-draft-guard-title">{t("draftGuard.title")}</h2>
       <p>{t("draftGuard.message")}</p>
       <footer className="quit-confirm-footer unsaved-changes-actions">
-        <button type="button" className="dialog-action dialog-action--secondary" onClick={onKeep}>
+        <button type="button" className="dialog-action secondary-action" onClick={onKeep}>
           {t("draftGuard.keep")}
         </button>
-        <button type="button" className="dialog-action dialog-action--danger" onClick={onDiscard}>
+        <button type="button" className="dialog-action danger-action" onClick={onDiscard}>
           {t("draftGuard.discard")}
         </button>
       </footer>

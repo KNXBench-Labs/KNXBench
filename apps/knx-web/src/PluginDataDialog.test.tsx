@@ -96,6 +96,8 @@ it("previews under the shown binding, names every entry and digest, and applies 
   await act(async () => document.querySelector<HTMLInputElement>("[data-plugin-consent]")!.click());
   const applied = { preview: shown.preview, project: { ...tree, snapshot_revision: 8 }, rollbackVersion: { id: 5, label: "Before plug-in data adoption" } };
   api.applyPluginData.mockResolvedValue(applied);
+  // Replaces project data that Undo cannot restore: destructive, not primary (UI02 review sweep).
+  expect(button("Adopt plug-in data")!.className).toBe("danger-action");
   await click("Adopt plug-in data");
   expect(api.applyPluginData).toHaveBeenCalledWith("reviewed-token");
   expect(update).toHaveBeenCalledWith(applied.project);

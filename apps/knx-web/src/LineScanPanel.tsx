@@ -351,7 +351,8 @@ export default function LineScanPanel({
           <p>{t("lineScan.reconciliation.excludedHelp")}</p>
           {comparison.excludedInProject.length === 0 ? <p>{t("lineScan.reconciliation.none")}</p> : <ul>{comparison.excludedInProject.map((address) => <li key={address}><code>{address}</code></li>)}</ul>}
         </div>
-        <button className="primary-action" disabled={reconciling || selectedUnexpected.length + selectedMissing.length === 0} onClick={() => void reconcile()}>{t("lineScan.reconciliation.apply")}</button>
+        {/* Creating devices is routine; any selected missing device makes this a deletion. */}
+        <button className={selectedMissing.length > 0 ? "danger-action" : "primary-action"} disabled={reconciling || selectedUnexpected.length + selectedMissing.length === 0} onClick={() => void reconcile()}>{t("lineScan.reconciliation.apply")}</button>
       </section>}
     </section>
   );

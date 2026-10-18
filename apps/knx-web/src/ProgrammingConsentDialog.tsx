@@ -90,7 +90,7 @@ export default function ProgrammingConsentDialog(props: ProgrammingConsentDialog
         </button>
         <button
           type="button"
-          className="programming-consent-confirm"
+          className="programming-consent-confirm primary-action"
           onClick={() => onConfirm(OFFERS_REMEMBER.has(stage) && remember)}
         >
           {t("programmingConsent.confirm")}

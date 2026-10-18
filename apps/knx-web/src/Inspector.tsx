@@ -13,7 +13,7 @@ import ComObjectTable from "./ComObjectTable";
 import { useComMutation } from "./ComMutationBoundary";
 import { useUiLanguage } from "./uiLanguage";
 import { DPT_OPTIONS, dptDisplay, dptEntry, retainedDptOptions } from "./dptLabels";
-import ValueProvenance from "./ValueProvenance";
+import ValueProvenance, { isRoutineLayer } from "./ValueProvenance";
 import type { DeviceProductNode } from "./bindings/DeviceProductNode";
 import type { DeviceProductCatalog } from "./bindings/DeviceProductCatalog";
 import type { ProductResolution } from "./bindings/ProductResolution";
@@ -307,6 +307,10 @@ function ComObjectDescriptionField(props: {
           if (e.key === "Enter") (e.target as HTMLInputElement).blur();
         }}
       />
+      {isRoutineLayer(com.description_layer) && <details className="value-source-reference">
+        <summary>{t("valueSource.technicalReference")}</summary>
+        <ValueProvenance layer={com.description_layer} placement="reference" />
+      </details>}
       {error && <span className="field-error">{error}</span>}
     </label>
   );
@@ -369,6 +373,7 @@ function DptField(props: { com: ComObjectNode; onApplied: (tree: ProjectTree) =>
       {com.dpt !== null && <details className="dpt-reference">
         <summary>{t("dpt.technicalReference")}</summary>
         <small className="mono">{t("dpt.reference", { value: com.dpt })}</small>
+        <ValueProvenance layer={com.dpt_layer} placement="reference" />
       </details>}
       <small id={`com-dpt-hint-${com.id}`} className="inspector-description">{t("dpt.selectionHint")}</small>
       {error && <span className="field-error">{error}</span>}
@@ -1008,7 +1013,8 @@ function DevicePlacementRepair(props: {
                 : t("inspector.placementUnassigned", { installation: slot.installation.name })}
               {slot.count > 1 && ` ${t("inspector.placementListedTimes", { count: slot.count })}`}
             </span>
-            <button type="button" disabled={busy} onClick={() => void keep(slot)}>
+            {/* Keeping one placement removes the others (undoable), so each answer is destructive. */}
+            <button type="button" className="danger-action" disabled={busy} onClick={() => void keep(slot)}>
               {t("inspector.keepPlacement")}
             </button>
           </li>
@@ -1055,7 +1061,7 @@ function LineOwnerRepair(props: { tree: ProjectTree; lineId: number; onApplied: 
         {areas.map((area) => (
           <li key={area.id}>
             <span>{t("inspector.areaLabel", { address: area.address, name: area.name })}</span>
-            <button type="button" disabled={busy} onClick={() => void keep(area.id)}>{t("inspector.keepLineOwner")}</button>
+            <button type="button" className="danger-action" disabled={busy} onClick={() => void keep(area.id)}>{t("inspector.keepLineOwner")}</button>
           </li>
         ))}
       </ul>
@@ -1095,7 +1101,7 @@ function DeviceInspector(props: {
       <h2>{detail.name}</h2>
       <RenameNameField tree={tree} target={{ kind: "device", id: detail.id, name: detail.name }} onApplied={onApplied} />
       {canDelete ? (
-        <button onClick={remove}>{t("inspector.delete")}</button>
+        <button className="danger-action" onClick={remove}>{t("inspector.delete")}</button>
       ) : (
         <p className="inspector-description">
           {restrictedToOneInstallationMessage(t, "delete", "inspector.entity.devices")}
@@ -1181,7 +1187,7 @@ function GroupAddressInspector(props: {
       {/* Goal B1b: a member address cannot be deleted; its memberships are listed here. */}
       <GroupAddressFunctions tree={props.tree} groupAddressId={ga.id} onApplied={props.onApplied} />
       {canDelete ? (
-        <button onClick={remove}>{t("inspector.delete")}</button>
+        <button className="danger-action" onClick={remove}>{t("inspector.delete")}</button>
       ) : (
         <p className="inspector-description">
           {restrictedToOneInstallationMessage(t, "delete", "inspector.entity.groupAddresses")}
@@ -1345,7 +1351,7 @@ function GroupRangeInspector(props: {
           ) : (
             <p className="inspector-description">{t("inspector.rangePlacementAmbiguous")}</p>
           )}
-          <button onClick={remove}>{t("inspector.delete")}</button>
+          <button className="danger-action" onClick={remove}>{t("inspector.delete")}</button>
         </>
       ) : (
         <p className="inspector-description">
@@ -1526,7 +1532,7 @@ function AreaInspector(props: {
       {canEdit ? (
         <>
           <TopologyNameField kind="area" id={area.id} name={area.name} onApplied={onApplied} />
-          <button onClick={remove}>{t("inspector.delete")}</button>
+          <button className="danger-action" onClick={remove}>{t("inspector.delete")}</button>
         </>
       ) : (
         <p className="inspector-description">
@@ -1614,7 +1620,7 @@ function LineInspector(props: {
           ) : (
             <p className="inspector-description">{t("inspector.linePlacementAmbiguous")}</p>
           )}
-          <button onClick={remove}>{t("inspector.delete")}</button>
+          <button className="danger-action" onClick={remove}>{t("inspector.delete")}</button>
         </>
       ) : (
         <p className="inspector-description">
@@ -1756,7 +1762,7 @@ function BuildingPartInspector(props: {
           ) : (
             <p className="inspector-description">{t("inspector.buildingPlacementAmbiguous")}</p>
           )}
-          <button onClick={remove}>{t("inspector.delete")}</button>
+          <button className="danger-action" onClick={remove}>{t("inspector.delete")}</button>
         </>
       ) : (
         <p className="inspector-description">

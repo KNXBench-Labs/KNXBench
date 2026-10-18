@@ -66,7 +66,8 @@ describe("unsaved-changes dialog labels", () => {
 
   it("gives each answer an explicit role instead of inheriting the accent fill", async () => {
     const { buttons } = await mount({ keep: "Keep", discard: "Discard", save: "Save" });
-    expect(buttons.map((b) => b.className.match(/dialog-action--(\w+)/)?.[1])).toEqual(["secondary", "danger", "primary"]);
+    // UI-02: the shared control variants (styles.css "Controls"), not dialog-local ones.
+    expect(buttons.map((b) => b.className.match(/\b(secondary|danger|primary)-action\b/)?.[1])).toEqual(["secondary", "danger", "primary"]);
   });
 });
 

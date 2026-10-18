@@ -45,14 +45,14 @@ export default function UnsavedChangesDialog(props: UnsavedChangesDialogProps) {
           the answer that loses nothing. It stays live during a save: it
           withdraws the pending decision, not the save itself. */}
       <footer className="quit-confirm-footer unsaved-changes-actions">
-        <button type="button" className="dialog-action dialog-action--secondary" onClick={props.onKeep}>
+        <button type="button" className="dialog-action secondary-action" onClick={props.onKeep}>
           {props.keepLabel}
         </button>
-        <button type="button" className="dialog-action dialog-action--danger quit-confirm-discard"
+        <button type="button" className="dialog-action danger-action quit-confirm-discard"
           disabled={props.saving} onClick={props.onDiscard}>
           {props.discardLabel}
         </button>
-        <button type="button" className="dialog-action dialog-action--primary primary-action quit-confirm-save"
+        <button type="button" className="dialog-action primary-action quit-confirm-save"
           disabled={props.saving} onClick={props.onSave}>
           {props.saving ? props.savingLabel : props.saveLabel}
         </button>

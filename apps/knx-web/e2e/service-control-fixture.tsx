@@ -8,6 +8,8 @@ import "../src/styles.css";
 
 const language = new URLSearchParams(location.search).get("lang") === "de" ? "de" : "en";
 document.documentElement.lang = language;
+// The app always carries a resolved theme; without it no token resolves and buttons paint unthemed.
+document.documentElement.dataset.theme = "porcelain";
 setSetting(UI_LANGUAGE_STORAGE_KEY, language);
 createRoot(document.getElementById("root")!).render(
   <main className="workbench">

@@ -553,6 +553,7 @@ export default function SettingsPanel(props: {
                 </button>
                 <button
                   type="button"
+                  className="danger-action"
                   onClick={() => handleRemovePack(pack.tag)}
                   aria-label={t("languagePack.removePackAriaLabel", { name: pack.name })}
                 >

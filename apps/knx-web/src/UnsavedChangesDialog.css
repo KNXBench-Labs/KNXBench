@@ -6,8 +6,9 @@
 
    Actions: every button used to inherit the global accent fill, and the
    destructive one only swapped its text colour to warning ink, which made
-   its label all but invisible. Each answer now has its own complete
-   background/foreground pair taken from the active palette. */
+   its label all but invisible. Each answer now names its role with the
+   shared control variants (`secondary-action`, `danger-action`,
+   `primary-action` in styles.css); this file only lays the row out. */
 .search-panel.unsaved-changes-dialog {
   align-self: flex-start;
   width: fit-content;
@@ -27,33 +28,7 @@
   gap: 8px;
   margin-top: 16px;
 }
-.unsaved-changes-actions .dialog-action {
-  border: 1px solid transparent;
-  box-shadow: none;
-  white-space: nowrap;
-}
-/* Enlarging a button inside the overflow-scrolling panel clips it. */
-.unsaved-changes-actions .dialog-action:hover:not(:disabled) { transform: none; box-shadow: none; }
-.unsaved-changes-actions .dialog-action--secondary {
-  background: var(--knx-surface);
-  color: var(--knx-foreground);
-  border-color: var(--knx-border);
-}
-.unsaved-changes-actions .dialog-action--danger {
-  background: var(--knx-surface);
-  color: var(--knx-error-color);
-  border-color: var(--knx-error-color);
-}
-.unsaved-changes-actions .dialog-action--secondary:hover:not(:disabled),
-.unsaved-changes-actions .dialog-action--danger:hover:not(:disabled) {
-  background: color-mix(in srgb, currentColor 9%, var(--knx-surface));
-}
-.unsaved-changes-actions .dialog-action--primary {
-  background: var(--knx-accent);
-  color: var(--knx-on-accent);
-  border-color: var(--knx-accent);
-}
-
+.unsaved-changes-actions .dialog-action { white-space: nowrap; }
 /* Narrow windows: one full-width answer per row, in focus order. */
 @media (max-width: 40rem) {
   .unsaved-changes-actions { flex-direction: column; align-items: stretch; }

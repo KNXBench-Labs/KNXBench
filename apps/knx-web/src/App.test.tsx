@@ -3406,6 +3406,7 @@ describe("App — the File menu's manners, the stacked splitters, Quit and About
       expect(dialog.textContent).toContain("projects/villa.knxdb already exists.");
       expect(dialog.textContent).toContain("project history");
       expect(apiMock.currentProject).not.toHaveBeenCalled();
+      expect(document.querySelector(".overwrite-confirm-replace")!.classList.contains("danger-action")).toBe(true);
       await act(async () => document.querySelector<HTMLButtonElement>(".overwrite-confirm-replace")!.click());
       expect(apiMock.saveProjectAs).toHaveBeenLastCalledWith("projects/villa.knxdb", true);
       expect(apiMock.saveProjectAs).toHaveBeenCalledTimes(2);
@@ -4381,6 +4382,8 @@ describe("App — project notes workspace", () => {
     await act(async () => findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true })));
     await act(async () => {});
     expect(document.querySelector(".note-draft-guard")).not.toBeNull();
+    expect(findButton(enMessages["draftGuard.discard"]).classList.contains("danger-action")).toBe(true);
+    expect(findButton(enMessages["draftGuard.keep"]).classList.contains("primary-action")).toBe(false);
     expect(apiMock.importProject).not.toHaveBeenCalled();
     await act(async () => findButton(enMessages["draftGuard.keep"]).click());
     expect(document.querySelector(".note-draft-guard")).toBeNull();

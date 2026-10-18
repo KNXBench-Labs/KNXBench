@@ -476,6 +476,8 @@ ADR-0141), and size bounds at the storage ceiling (G12, ADR-0142). Open:
 
 1. **Research:** what a tool does with a hidden PID-78 parameter (write,
    compare or ignore); KNXBench must not write it without evidence (G10).
+   First device-side data point: an MDT `07B0` panel's `HWT_Check` default
+   equals its real PID78 reply ([evidence](research/2026-10-18-device-diagnostics-eleven-devices.md#g10-a-hidden-hardware-type-parameter-meets-its-device)).
 2. **Evidence first:** the fill rule for segment `Data` shorter than `Size`
    (G14).
 3. **Smaller:** configuration kept in ETS apps (G15, KL-174) and two message
@@ -524,13 +526,14 @@ before the rewrite have rewritten copies under
 bases from [COMMIT_MAP_2026-10-17](history/COMMIT_MAP_2026-10-17.txt). Not
 `refs/rewritten/`: that namespace is per-worktree and belongs to `git rebase -r`.
 
-## Read-only diagnostic export: first hardware run received (18 October 2026)
+## Read-only diagnostic export: twelve hardware runs received (18 October 2026)
 
 [Implemented and simulator-verified](contracts/device-diagnostic-export.md);
-one real Siemens `MV-0025` detector answered all three reads
-([evidence](research/2026-10-18-up258-device-diagnostics.md)).
-Still open: a refusing or silent device and post-run behaviour reports; any
-memory profile only with its own evidence and decision (ADR-0134).
+twelve real devices from five manufacturers answered
+([detector](research/2026-10-18-up258-device-diagnostics.md),
+[eleven more](research/2026-10-18-device-diagnostics-eleven-devices.md)); two refused
+PID78 with zero elements. Still open: a silent device and post-run behaviour
+reports; any memory profile only with its own evidence and decision (ADR-0134).
 
 ## System 2 / System B download outcome (17 October 2026)
 

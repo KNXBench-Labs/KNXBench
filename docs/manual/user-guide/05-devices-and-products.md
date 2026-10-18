@@ -683,7 +683,9 @@ value stays empty. Empty captions, a lone `#`, and text containing `{{` or `}}`
 get a readable fallback label. This conservative display policy also applies to
 literal braces in a resolved value, such as `Kitchen {{North}}`; it does not mean
 the value is unresolved. Hover the caption to inspect the result, original
-template and reported value source; the result and template remain searchable.
+template and reported value source. For area/group captions, the result and
+template remain searchable; separator text is hidden during search and is not
+part of the search index.
 This changes display only, not your settings or the product data.
 
 Focus a parameter or use its **Information** button to inspect its original ID,

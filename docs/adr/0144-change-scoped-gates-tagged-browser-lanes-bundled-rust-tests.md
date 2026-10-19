@@ -48,29 +48,41 @@ are implemented.
    web sources or unit tests read (a relative path literal or a run of path
    segments such as `"crates", "knx-app", "src", "progress.rs"`). Browser specs
    run when their static import and navigation closure reaches a changed web
-   file; runner, build and launch inputs select all of them. A production
-   suite runs for production-bundle and shared runner inputs and when one of
-   its own spec files or their test helpers changed; application sources are
-   covered by the default lane. Generated bindings select the bindings check.
+   file; runner, build and launch inputs select all of them, and a deleted
+   file selects every spec that still names it. A production suite runs for
+   production-bundle and shared runner inputs and when one of its own spec
+   files or their test helpers changed or was deleted; application sources
+   are covered by the default lane. Generated bindings select the bindings check.
    Corpus tests run for the affected packages only. A path no rule recognises
    selects the complete gate: inside `apps/knx-web/` only `src/`, `e2e/`,
    `presets/`, `themes/`, Playwright configs and the named build and runner
-   inputs have rules. A change to the planner or the package runner itself
-   selects the complete gate. The runner refuses an empty change set (it would
+   inputs have rules. A change to the planner, the package runner or the
+   proof checks they share (`tools/web_gate_support.py`) selects the complete
+   gate. Files that screenshot and load scripts write are not web inputs. The runner refuses an empty change set (it would
    test nothing) and uncommitted bindings when it would regenerate them. The
    plan and its reasons are part of the receipt.
 2. **Browser cases are parallel unless they measure real time.** Cases whose
    assertions depend on elapsed time or animation frames carry
    `{ tag: "@exclusive" }` on the test or an enclosing `describe` and run
    alone. `tools/browser_lanes.py` refuses an untagged real-time primitive
-   before the build. It follows named, default, namespace and dynamic imports,
-   re-exports, `.js` specifiers and directory indexes; functions, arrow
-   bindings, object properties and class methods taint their callers. A
-   helper module has no tag of its own, so a primitive there that no named
-   function holds (module code, a Playwright fixture declared with `extend`)
-   is refused in the helper; so is a test-side import of a `.tsx` module,
+   before the build. It reads every test-side module below `e2e/` that a
+   spec reaches through named, default, namespace, dynamic and side-effect
+   imports or re-exports (`export *`, `export * as`, `export { default as }`),
+   `.js` specifiers and directory indexes, and solves their taint as one
+   fixed point, so import cycles do not depend on order. Functions, arrow
+   bindings, object properties and class methods taint their callers, also
+   as member calls (`h.wait()`, `this.rest()`). A helper module has no tag of
+   its own, so a primitive there that no named function holds (module code, a
+   Playwright fixture declared with `extend`, a hook registered on import) is
+   refused in the helper; so is a test-side import of a `.tsx`/`.jsx` module,
    which the guard cannot read. Code handed to the page as a string
-   (`page.evaluate("…")`) counts like code. The hash policy file
+   (`page.evaluate("…")`) counts like code; Node's timer modules count under
+   any local name. Application modules (`../src/…`) are not followed: on the
+   test side they hold data and constants, and their own timers run in the
+   page. Known blind spots, accepted because no spec uses them and each is
+   loud in review: a primitive reached through destructuring
+   (`const { now } = performance`) or a re-bound alias
+   (`export const pause = nap`). The hash policy file
    `apps/knx-web/browser-lanes.json` is gone. Production suites keep the one
    worker their configs pin: they start their own preview servers, and four
    workers measured no gain worth the unreviewed risk (473 s against 505.6 s

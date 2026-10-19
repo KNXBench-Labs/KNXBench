@@ -177,6 +177,51 @@ describe("ParameterPanel", () => {
     expect(apiMock.setParameterValue).not.toHaveBeenCalled();
     await act(async () => root.unmount());
   });
+  // WP-15 / ADR-0063: nameless nested instances of one definition with equal
+  // legacy scope fields, field ID and group key; only `nodeChain` differs.
+  const nestedPanel = (chains: number[][], access: string | null = null): ParameterPanelDto => ({
+    ...fixture, stale: [], diagnostics: [],
+    sections: chains.map((nodeChain) => ({
+      scope: { nodeChain, moduleNode: 7, moduleId: null, moduleDefId: "Inner" },
+      fields: [{ ...fixture.sections[0].fields[0], etsId: "P", writeEtsId: access === null ? "P" : null,
+        editable: access === null, access, value: String(nodeChain[0]), group: { key: "g", label: "Channel" } }],
+    })),
+  });
+
+  it("keeps the chosen area and draft with their own nested nameless scope when a sibling scope disappears", async () => {
+    apiMock.deviceParameters.mockResolvedValue(nestedPanel([[3, 7], [5, 7]]));
+    const root = await renderPanel();
+    const areas = () => [...host!.querySelectorAll<HTMLButtonElement>(".parameter-workspace-nav button")];
+    expect(areas()).toHaveLength(2);
+    await act(async () => areas()[1].click());
+    const draft = host!.querySelectorAll<HTMLInputElement>(".parameter-field input")[1];
+    expect(draft.value).toBe("5");
+    await act(async () => setInputValue(draft, "9"));
+    apiMock.deviceParameters.mockResolvedValue(nestedPanel([[5, 7]]));
+    await act(async () => root.render(<ParameterPanel deviceId={1} refreshKey={{ ...shownTree, snapshot_revision: 3 }} onValueApplied={() => {}} />));
+    expect(areas().map((area) => area.getAttribute("aria-current"))).toEqual(["page"]);
+    const survivor = host!.querySelector<HTMLInputElement>(".parameter-field input")!;
+    expect(survivor).toBe(draft);
+    expect(survivor.value).toBe("9");
+    expect(survivor.closest("[hidden]")).toBeNull();
+    expect(apiMock.setParameterValue).not.toHaveBeenCalled();
+    await act(async () => root.unmount());
+  });
+
+  it("keeps an opened Restricted section with its own nested nameless scope when a sibling scope disappears", async () => {
+    apiMock.deviceParameters.mockResolvedValue(nestedPanel([[3, 7], [5, 7]], "Read"));
+    const root = await renderPanel(1, "restricted");
+    const sections = () => [...host!.querySelectorAll<HTMLDetailsElement>("details.parameter-section")];
+    expect(sections()).toHaveLength(2);
+    sections()[1].open = true;
+    apiMock.deviceParameters.mockResolvedValue(nestedPanel([[5, 7]], "Read"));
+    await act(async () => root.render(<ParameterPanel deviceId={1} view="restricted" refreshKey={{ ...shownTree, snapshot_revision: 3 }} onValueApplied={() => {}} />));
+    expect(sections()).toHaveLength(1);
+    expect(sections()[0].open).toBe(true);
+    expect(sections()[0].querySelector<HTMLInputElement>("input")!.value).toBe("5");
+    await act(async () => root.unmount());
+  });
+
   it("uses the source-group workspace for ordinary parameters without replacing bound write rows", async () => {
     apiMock.deviceParameters.mockResolvedValue(fixture);
     const root = await renderPanel();

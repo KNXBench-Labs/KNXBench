@@ -74,7 +74,7 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0060](0060-versioned-declarative-theme-packs.md) | Versioned declarative theme packs, never arbitrary CSS | Accepted; preview and per-theme management superseded by ADR-0079 | 2026-10-02 |
 | [0061](0061-unsupported-choose-controller-kinds.md) | Unsupported declared choose controllers fail closed, not as missing references | Accepted (published at `2d9aaeb8`) | 2026-10-02 |
 | [0062](0062-dynamic-evaluation-work-admission.md) | Dynamic evaluation admits repeated work before performing it | Accepted (bounded contract) | 2026-10-03 |
-| [0063](0063-parameter-scopes-preserve-evaluation-identity.md) | Parameter scopes preserve the full evaluation identity | Accepted (bounded backend contract) | 2026-10-03 |
+| [0063](0063-parameter-scopes-preserve-evaluation-identity.md) | Parameter scopes preserve the full evaluation identity | Accepted (bounded backend contract; web adoption WP-15) | 2026-10-03 |
 | [0064](0064-durable-activity-history-is-not-recovery.md) | Activity history is durable metadata, not recovery or bus proof | Accepted (bounded backend contract) | 2026-10-02 |
 | [0065](0065-dynamic-scalar-copy-admission.md) | Dynamic evaluation admits scalar copies before allocating them | Accepted (bounded Core/HTTP scalar admission; external projections open) | 2026-10-03 |
 | [0066](0066-outside-walk-text-refusal.md) | Outside-walk text substitution has explicit request-level refusal | Proposed (source audit and first public HTTP tracer; execution pending) | 2026-10-03 |

@@ -81,9 +81,11 @@ Each row's `system` field (camelCase `state` tag) is one of:
 | `unknownMask` | A well-formed mask the table does not list; `mask` is the number. |
 | `family` | A listed mask; `mask` and the `family` token. |
 
-The response is read-only and does not change the project. A client admits
-`system` strictly when present: unknown tokens, a non-16-bit mask or
-`noProduct` on a resolved product (and the reverse) refuse the whole batch.
+The response is read-only and does not change the project. `system` is
+required on every row: the web client ships with its server (the AppImage and
+the Docker image carry both), so no older server omits it. A missing or `null`
+`system`, unknown tokens, a non-16-bit mask or `noProduct` on a resolved
+product (and the reverse) refuse the whole batch.
 
 ## Not covered
 

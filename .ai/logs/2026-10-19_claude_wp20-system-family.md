@@ -49,3 +49,26 @@ extracts stay in profile scratch.
   pattern also matched the test's own expected table, so the guard assertion
   stopped it. It was repeated with a first-occurrence replacement and turned
   two tests red.
+
+## Correction round 1 (cross-vendor review)
+
+- WP20-01: `system` is now required on every `GET /api/devices` row. The web
+  client ships with its server (AppImage and Docker image carry both), so no
+  older server can omit it; a row without it, or with `null`, refuses the batch
+  instead of rendering *Not resolved* and hiding the device from a family
+  filter. `DeviceCatalogRow.system` lost its `?`; `systemLabel` no longer takes
+  `undefined`. *Not resolved* stays for the real state of a row without
+  metadata (lookup refused or not yet loaded), now shown by the cell itself
+  like its sibling product columns. Every fixture that answers `/api/devices`
+  with rows sends a `system` matching its resolution (`noProduct` when
+  unresolved, *System B* `07B0h` for the fictional resolved products).
+  Mutation: admission made optional again turns the new omission test red.
+- WP20-02: the contract's declared devices budget was stale (1100 px, the
+  twelve-column sum); the thirteen declared defaults in `DevicesWorkspace.tsx`
+  sum to 1180 px.
+- Re-measured `table-column-widths.e2e.ts` (production table-columns config,
+  48 passed) with the fixtures now sending `system`: rendered devices totals
+  unchanged (EN 1000 / DE 1037 px); intrinsic devices floors EN 1005 / DE
+  1042 px (the contract table still showed the twelve-column 924 / 961), text
+  columns alone 961 / 998 px (DE was 999; the only fixture change in that
+  column is the cell text *Nicht aufgelöst* → *System B*).

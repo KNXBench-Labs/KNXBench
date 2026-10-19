@@ -48,9 +48,8 @@ export function maskHex(mask: number): string {
 export interface SystemLabel { key: MessageKey; params?: Record<string, string> }
 
 /** The cell text; `null` means the product itself did not resolve (show its resolution). */
-export function systemLabel(system: DeviceSystem | undefined): SystemLabel | null {
-  switch (system?.state) {
-    case undefined: return { key: "devices.notResolved" };
+export function systemLabel(system: DeviceSystem): SystemLabel | null {
+  switch (system.state) {
     case "noProduct": return null;
     case "noApplicationProgram": return { key: "devices.system.noApplicationProgram" };
     case "applicationNotInDatabase": return { key: "devices.system.applicationNotInDatabase" };

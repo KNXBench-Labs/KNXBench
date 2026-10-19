@@ -163,9 +163,11 @@ cards. Explorer trees, forms and manufacturer-declared parameter grids
   EN/DE headings, including Location/Ort, Topology/Topologie and Prog.; full
   sort names remain accessible and appear in title tooltips, including
   separator context.
-- Declared default budgets remain devices 1100 px, communication objects
-  800/804 px and monitor 1024 px. Each default baseline is raised to its measured
-  floor when necessary, then compressed proportionally toward that floor to fit
+- Declared default budgets are devices 1180 px (the sum of the thirteen declared
+  column defaults; 1100 px before WP-20 added the 80 px System default),
+  communication objects 800/804 px and monitor 1024 px. Each default baseline
+  is raised to its measured floor when necessary, then compressed
+  proportionally toward that floor to fit
   the actual pane, including navigation/inspector space. A pane narrower than
   the sum of floors scrolls within its table. The table fills surplus space.
   User resizing applies `stored preference - declared default` pixels to each
@@ -212,10 +214,10 @@ application root scale. It does not shrink the production viewport or read its c
 
 | Window | Surface | EN intrinsic / pane | DE intrinsic / pane |
 | --- | --- | --- | --- |
-| 1440 px | Devices | 924 / 780 px: local scroll | 961 / 780 px: local scroll |
+| 1440 px | Devices | 1005 / 780 px: local scroll | 1042 / 780 px: local scroll |
 | 1440 px | Grouped objects | 599 / 738 px: fits | 683 / 738 px: fits |
 | 1440 px | Flat objects after grouped view | 690 / 738 px: fits | 800 / 738 px: local scroll |
-| 1920 px | Devices | 924 / 1260 px: fits | 961 / 1260 px: fits |
+| 1920 px | Devices | 1005 / 1260 px: fits | 1042 / 1260 px: fits |
 | 1920 px | Grouped objects | 599 / 1218 px: fits | 683 / 1218 px: fits |
 | 1920 px | Flat objects after grouped view | 690 / 1218 px: fits | 800 / 1218 px: fits |
 
@@ -227,7 +229,8 @@ selection column renders at 32 px; shared inline branches also differ by up to
 `1 / 64 / scale` for zoom rounding) and additionally assert reviewed rendered
 fixture totals within 2 px: devices EN 1000 / DE 1037 px (919 / 955 px before
 WP-20 added the System column, re-measured 19 October 2026); German flat objects
-800 px. Device text columns alone require 961 / 999 px (previously 880 / 917),
+800 px. Device text columns alone require 961 / 998 px (previously 880 / 917;
+DE 999 px while the fixtures still omitted `system`),
 independently exceeding the 780 px pane. These fixture bounds reject inflated floors; they are not a
 proof of globally optimal layout or arbitrary imported-project fit.
 

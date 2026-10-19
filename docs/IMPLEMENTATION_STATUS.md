@@ -28,10 +28,11 @@ source say so in the code and the
 `GET /api/devices` adds a closed `system` state per row: no product, no
 application program, program not installed, program of other hardware, no mask,
 unreadable mask, unknown mask or family. A program link to other hardware is
-not called "no application program". The client admits the field strictly, and
+not called "no application program". The client requires the field on every
+row and admits it strictly (a missing or `null` state refuses the batch), and
 the new *System* column sorts and filters by the shown label or the mask
 (`0701h`), in English and German. A mask read from a device is not used.
-Integration pending; [guide](manual/user-guide/05-devices-and-products.md#system-column-source-builds-after-alpha-14).
+[Guide](manual/user-guide/05-devices-and-products.md#system-column-source-builds-after-alpha-14).
 
 ## Package gates keep their hands off the developer's knx directories (19 October 2026)
 

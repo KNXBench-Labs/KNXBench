@@ -53,7 +53,7 @@ export async function intercept(page: Page, language: "en" | "de", count = 8, th
       else body = { schemaVersion: 1, serverIncarnation: "devices-browser", snapshotRevision: state.tree.snapshot_revision,
         devices: nodes.map((device) => ({ id: device.id, device, productRef: "Fictional-P-1", resolution: "Resolved",
           manufacturerId: "Fictional-M-1", manufacturerName: "Fictional Devices", productText: "Switch actuator", orderNumber: "SA-4",
-          productTextLanguage: null, productSourceLanguage: null })) };
+          productTextLanguage: null, productSourceLanguage: null, system: { state: "family", mask: 0x07b0, family: "systemB" } })) };
     } else if (/^\/api\/device\/\d+$/.test(path) && method === "GET") {
       const device = nodes.find((node) => node.id === Number(path.split("/").at(-1)));
       if (!device) { status = 400; body = { error: "device not found" }; }

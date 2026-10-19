@@ -24,6 +24,7 @@ export const metadata = (node: DeviceNode): DeviceCatalogRow => ({
   id: node.id, device: node, productRef: "P-1", resolution: "Resolved",
   manufacturerId: "M-1", manufacturerName: "Fictional Devices", productText: "Switch actuator",
   orderNumber: "SA-4", productTextLanguage: null, productSourceLanguage: null,
+  system: { state: "family", mask: 0x07b0, family: "systemB" },
 });
 const batch = (rows: DeviceCatalogRow[] = []): DeviceCatalog => ({
   schemaVersion: 1, serverIncarnation: "devices-test", snapshotRevision: 1, devices: rows,
@@ -114,7 +115,8 @@ describe("device catalogue admission", () => {
   it("admits explicit lookup failure while retaining canonical device identities", () => {
     const row = metadata(device(99));
     const unavailable = { ...row, resolution: "Unavailable" as const, manufacturerId: null,
-      manufacturerName: null, productText: null, orderNumber: null, productTextLanguage: null, productSourceLanguage: null };
+      manufacturerName: null, productText: null, orderNumber: null, productTextLanguage: null, productSourceLanguage: null,
+      system: { state: "noProduct" as const } };
     expect(admitDeviceCatalog({ ...batch([unavailable]), problem: "lookupFailed" }).devices[0].device.id).toBe(99);
   });
 
@@ -136,6 +138,21 @@ describe("device catalogue admission", () => {
     const missing = { ...row, resolution: "NotInDatabase" as const, manufacturerId: null, manufacturerName: null,
       productText: null, orderNumber: null, system: { state: "noProduct" as const } };
     expect(admitDeviceCatalog(batch([missing]))).toEqual(batch([missing]));
+  });
+  it("refuses a batch in which one row or every row omits the declared system (WP20-01)", () => {
+    // The web client ships with its server: there is no older server whose rows lack `system`.
+    const bare = (id: number) => { const row: Record<string, unknown> = { ...metadata(device(id)) }; delete row.system; return row; };
+    expect(() => admitDeviceCatalog(batch([metadata(device(2))]))).not.toThrow();
+    expect(() => admitDeviceCatalog({ ...batch(), devices: [metadata(device(2)), bare(10)] }))
+      .toThrow("Invalid device catalogue batch");
+    expect(() => admitDeviceCatalog({ ...batch(), devices: [bare(2), bare(10)] })).toThrow("Invalid device catalogue batch");
+    const unresolved = { ...bare(10), resolution: "NoReference", productRef: null, manufacturerId: null, manufacturerName: null,
+      productText: null, orderNumber: null };
+    expect(() => admitDeviceCatalog({ ...batch(), devices: [unresolved] })).toThrow("Invalid device catalogue batch");
+  });
+  it("refuses a row whose declared system is null (WP20-01)", () => {
+    expect(() => admitDeviceCatalog({ ...batch(), devices: [{ ...metadata(device(2)), system: null }] }))
+      .toThrow("Invalid device catalogue batch");
   });
   it("rejects old/future/wrong-server metadata for the current tree", () => {
     expect(catalogueMatchesTree({ ...batch(), snapshotRevision: 0 }, deviceTree())).toBe(false);

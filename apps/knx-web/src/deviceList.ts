@@ -17,8 +17,8 @@ export interface DeviceCatalogRow {
   orderNumber: string | null;
   productTextLanguage: string | null;
   productSourceLanguage: string | null;
-  /** Declared system family (WP-20); absent only from servers that predate it. */
-  system?: DeviceSystem;
+  /** Declared system family (WP-20); required, the client ships with its server. */
+  system: DeviceSystem;
 }
 export interface DeviceCatalog {
   schemaVersion: 1;
@@ -134,10 +134,9 @@ export function admitDeviceCatalog(value: unknown): DeviceCatalog {
         || ids.has(row.id as number) || !["Resolved", "NoReference", "NoDatabase", "NotInDatabase", "Unavailable"].includes(row.resolution as string)
         || fields.some((field) => row[field] !== null && typeof row[field] !== "string")) return fail();
     if (row.resolution !== "Resolved" && fields.filter((field) => field !== "productRef").some((field) => row[field] !== null)) return fail();
-    // WP-20: optional for older servers, strict when present; only an
-    // unresolved product may (and must) say `noProduct`.
-    if (row.system !== undefined && (!isDeviceSystem(row.system)
-        || (row.system.state === "noProduct") !== (row.resolution !== "Resolved"))) return fail();
+    // WP-20: required on every row (no older server pairs with this client);
+    // only an unresolved product may (and must) say `noProduct`.
+    if (!isDeviceSystem(row.system) || (row.system.state === "noProduct") !== (row.resolution !== "Resolved")) return fail();
     const device = row.device as Record<string, unknown> | null;
     if (!device || typeof device !== "object" || device.id !== row.id || typeof device.name !== "string"
         || (device.address !== null && typeof device.address !== "string")

@@ -545,14 +545,19 @@ crate. Open, each small and none blocking:
 - Three `file-menu-submenus` cases timed out at eight workers while a cold
   Vite development server started (passed at the gate's four workers and in
   reruns).
-- The gate runs Rust tests with the developer's real `HOME`, so a test that
-  spawns a binary without its own `XDG_DATA_HOME` reaches the user's product
-  database. The `knx-cli` cases that did (five `doc-export` runs, which also
-  migrated it) are fixed; an inotify sweep over all 185 `knx-cli` tests now
-  sees no access. Other crates' spawned binaries were not swept. Closing the
-  class in the gate (a scratch `XDG_DATA_HOME` for test stages) needs a check
-  that no test relies on the inherited value
-  ([pitfall](DEVELOPER_PITFALLS.md#gates)). Reading `products` commands and
+- **Closed in the gate (19 October 2026):** the package gate's test stages run
+  with scratch `XDG_DATA_HOME`/`XDG_CONFIG_HOME` and the gate fails when the
+  real `knx` directories change. Still open: a **direct** `cargo test` inherits
+  the real homes, and spawned binaries outside `knx-cli` (server, desktop, MCP)
+  were not swept. Four test comments still claim `AppState::default()` looks up
+  `default_path()` (`http_device_routes.rs`, `http_product_language.rs`,
+  `http_catalog_translation.rs`, a `domain.rs` test); it opens none (AR18 M8)
+  ([pitfall](DEVELOPER_PITFALLS.md#gates)).
+- A package gate stopped with SIGTERM during its browser stages leaves the
+  fixture Vite server (`npm exec vite --config vite.fixtures.config.ts` and its
+  `node` child) running, reparented to the user's systemd (seen three times on
+  19 October 2026). It holds its port for the next run; end it by PID until
+  `run_web_gate.py`'s cleanup reaches Playwright's `webServer` group. Reading `products` commands and
   `device readiness` open the default product database read-only now; `device
   download/compare/restore/byte-order-probe` still use the migrating opener
   (whether they write the catalogue was not audited).

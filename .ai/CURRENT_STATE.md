@@ -1,3 +1,11 @@
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-19 08:24
+- **Completed:** CLAIM (owner request): explain visually duplicate Device Catalog entries with their actual identity/version/source, and add previewed, recoverable cleanup of obsolete, unnecessary catalogue entries. Branch `feat/catalog-cleanup-20261019`. Inspection in progress; no live catalogue changes.
+- **Pending/Next Steps:** Trace catalogue identity and retention, define safe cleanup without deleting source data needed by projects, implement backend and web control with regression tests, review and change-scoped acceptance, then publish.
+- **Notes for Codex oder Claude:** Reserved: catalogue browse metadata/query, new catalogue cleanup service/routes/UI, `CatalogBrowser` and its tests. No product-DB schema, ingest, suffix parser, module identity, comparison, device-column or gate-runner changes; parallel Alpha 15 and test-speed claims remain protected. No bus access, live data cleanup or deployment.
+
+---
+
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-19 07:28
 - **Completed:** CLAIM (owner go: "implement the open-work packages that make sense for Alpha 15"): the Alpha 15 package set from `docs/OPEN_WORK.md` (*Reconciled work packages*). Selected because they are offline-ready and bounded: WP-16 empty-directory ZIP integrity (`fix/wp16-empty-dir-zip-20261019`); WP-01 idempotent unknown evidence, then WP-02 `SuffixText`, plus the G16 message half of WP-03, serialized on one product-DB branch (`feat/wp01-wp02-pdb-20261019`); WP-18 comparison shows what differs (`feat/wp18-comparison-diff-20261019`); WP-20 system family column (`feat/wp20-system-family-20261019`); WP-15 complete module scope in web consumers plus the two UI zoom follow-ups (`fix/wp15-module-scope-zoom-20261019`); WP-13 documentation drift last. Not selected: WP-04/05/06/07/08/09/10/11/12/14/17/19 (measurement-, evidence-, consent- or contract-first; WP-19 also needs WP-18). WP-17 is the first candidate for Alpha 16 (it serializes with the product-DB migrations here).

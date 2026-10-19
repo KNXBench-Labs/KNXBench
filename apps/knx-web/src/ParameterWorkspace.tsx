@@ -5,6 +5,7 @@ import { useTranslate } from "./i18n";
 import { indexParameterWorkspace, matchesParameterSearch, type ParameterWorkspaceSeparator } from "./parameterWorkspace";
 import { matrixStyle, planParameterMatrix, type GroupLayoutView } from "./parameterMatrix";
 import "./parameterWorkspace.css";
+import { parameterCaption } from "./parameterCaption";
 
 interface Props {
   sections: readonly ParameterSection[];
@@ -24,9 +25,12 @@ export default function ParameterWorkspace({ sections, renderField }: Props) {
   const closed = !searching && activeKey === null;
   const scopeLabel = (scope: ModuleScope | null) => scope === null ? t("parameters.deviceScope")
     : scope.moduleId ?? t("parameters.moduleNumber", { number: scope.moduleNode });
-  const groupLabel = (group: typeof groups[number]) => group.ungrouped ? t("parameters.workspace.ungrouped")
-    : group.label || t("parameters.groupNumber", { number: group.number });
-  const visible = new Set(rows.filter(row => searching ? matchesParameterSearch(row, query) : row.groupKey === activeKey).map(row => row.key));
+  const caption = (group: typeof groups[number]) => group.ungrouped
+    ? { label: t("parameters.workspace.ungrouped"), title: undefined }
+    : parameterCaption(group, t("parameters.groupNumber", { number: group.number }), t);
+  const groupLabel = (group: typeof groups[number]) => caption(group).label;
+  const displayedGroupLabels = new Map(groups.map(group => [group.key, groupLabel(group)]));
+  const visible = new Set(rows.filter(row => searching ? matchesParameterSearch(row, query, displayedGroupLabels.get(row.groupKey)) : row.groupKey === activeKey).map(row => row.key));
   const current = groups.find(group => group.key === activeKey);
   const selectedRow = rows.find(row => row.key === selected);
   const selectedField = selectedRow?.field;
@@ -57,7 +61,7 @@ export default function ParameterWorkspace({ sections, renderField }: Props) {
         {groups.map((group, index) => <div key={group.key} className="parameter-workspace-nav-entry">
           {(index === 0 || group.sectionKey !== groups[index - 1].sectionKey) &&
             <span className="parameter-workspace-scope">{scopeLabel(group.scope)}</span>}
-          <button type="button" aria-current={!searching && group.key === activeKey ? "page" : undefined}
+          <button type="button" title={caption(group).title} aria-current={!searching && group.key === activeKey ? "page" : undefined}
             onClick={() => { setActive(group.key); setQuery(""); }}>
             <span>{groupLabel(group)}</span><span className="parameter-workspace-nav-count">{resultCounts.get(group.key) ?? 0}</span>
           </button>
@@ -67,7 +71,7 @@ export default function ParameterWorkspace({ sections, renderField }: Props) {
         {closed ? <p className="parameter-workspace-closed">{t("parameters.workspace.closed")}</p> : <>
           <header className="parameter-workspace-heading">
             <div><span>{searching ? t("parameters.workspace.allAreas") : current && scopeLabel(current.scope)}</span>
-              <h4>{searching ? t("parameters.workspace.results") : current && groupLabel(current)}</h4></div>
+              <h4 title={current && !searching ? caption(current).title : undefined}>{searching ? t("parameters.workspace.results") : current && groupLabel(current)}</h4></div>
             <span>{t("parameters.workspace.sourceGroups")}</span>
           </header>
           {layoutView && <LayoutNote view={layoutView} />}
@@ -102,7 +106,8 @@ export default function ParameterWorkspace({ sections, renderField }: Props) {
           {/* Captions are siblings after the rows, so they never shift editor identity. */}
           {matrix && [...matrix.columnHeaders, ...matrix.rowHeaders, ...matrix.labels].map(caption =>
             <span key={caption.key} className="parameter-matrix-caption" data-caption={caption.key.split(":")[0]}
-              style={matrixStyle(caption.area)}>{caption.text}</span>)}
+              title={parameterCaption({ label: caption.text, labelFill: caption.textFill }, t("parameters.caption.text"), t).title}
+              style={matrixStyle(caption.area)}>{parameterCaption({ label: caption.text, labelFill: caption.textFill }, t("parameters.caption.text"), t).label}</span>)}
           {matrix?.unplacedHeading && <h5 key="matrix:unplaced" className="parameter-matrix-unplaced"
             style={matrixStyle(matrix.unplacedHeading)}>{t("parameters.matrix.unplaced")}</h5>}
         </div>
@@ -144,13 +149,14 @@ const SEPARATOR_PREFIX_KEYS = {
  */
 function SeparatorRow({ item, hidden }: { item: ParameterWorkspaceSeparator; hidden: boolean }) {
   const t = useTranslate();
-  const { text, uiHint, elementId } = item.separator;
+  const { text, textFill, uiHint, elementId } = item.separator;
+  const caption = parameterCaption({ label: text, labelFill: textFill }, t("parameters.caption.text"), t);
   const prefix = uiHint !== null && Object.hasOwn(SEPARATOR_PREFIX_KEYS, uiHint)
     ? SEPARATOR_PREFIX_KEYS[uiHint as keyof typeof SEPARATOR_PREFIX_KEYS] : null;
   return <div className="parameter-workspace-separator" data-ui-hint={uiHint ?? undefined}
-    data-separator={elementId ?? undefined} hidden={hidden}>
-    {text !== null && (uiHint === "Headline" ? <h5>{text}</h5>
-      : <p>{prefix && <span className="sr-only">{t(prefix)} </span>}{text}</p>)}
+    data-separator={elementId ?? undefined} hidden={hidden} title={text !== null ? caption.title : undefined}>
+    {text !== null && (uiHint === "Headline" ? <h5>{caption.label}</h5>
+      : <p>{prefix && <span className="sr-only">{t(prefix)} </span>}{caption.label}</p>)}
     {(text === null || uiHint === "HorizontalRuler") && <hr />}
   </div>;
 }

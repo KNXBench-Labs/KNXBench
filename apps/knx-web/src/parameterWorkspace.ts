@@ -1,5 +1,6 @@
 /** Read-only parameter navigation derived exclusively from declared scopes and groups. */
 import type { ModuleScope, ParameterField, ParameterSection, ParameterSeparator } from "./api";
+import type { TextFill } from "./bindings/TextFill";
 import { classifyGroupLayout, type GroupLayoutView } from "./parameterMatrix";
 
 export interface ParameterWorkspaceGroup {
@@ -7,6 +8,7 @@ export interface ParameterWorkspaceGroup {
   sectionKey: string;
   scope: ModuleScope | null;
   label: string | null;
+  labelFill?: TextFill | null;
   /** Source-order group number within its scope, not a channel number. */
   number: number;
   ungrouped: boolean;
@@ -51,7 +53,7 @@ export function indexParameterWorkspace(sections: readonly ParameterSection[]) {
       let found = declared.get(groupIdentity);
       if (!found) {
         found = { key: JSON.stringify([sectionKey, groupIdentity]), sectionKey, scope,
-          label: group?.label ?? null, number: declared.size + 1, ungrouped: group == null,
+          label: group?.label ?? null, labelFill: group?.labelFill, number: declared.size + 1, ungrouped: group == null,
           layout: classifyGroupLayout(section.groupLayouts, group?.key ?? null) };
         declared.set(groupIdentity, found);
         groups.push(found);
@@ -85,9 +87,10 @@ export function indexParameterWorkspace(sections: readonly ParameterSection[]) {
 }
 
 /** All terms must match; labels/options are searchable but never parsed for identity. */
-export function matchesParameterSearch(row: ParameterWorkspaceRow, query: string): boolean {
+export function matchesParameterSearch(row: ParameterWorkspaceRow, query: string, displayedGroupLabel?: string): boolean {
   const field = row.field;
-  const text = [field.etsId, field.name, field.text, field.value, row.groupLabel, row.scope?.moduleId,
+  const text = [field.etsId, field.name, field.text, field.value, displayedGroupLabel, row.groupLabel,
+    field.group?.labelFill?.template, row.scope?.moduleId,
     ...field.enumOptions.flatMap(option => [option.value, option.text])].join(" ").toLocaleLowerCase();
   return query.trim().toLocaleLowerCase().split(/\s+/u).every(term => text.includes(term));
 }

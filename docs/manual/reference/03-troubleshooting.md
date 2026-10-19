@@ -213,6 +213,26 @@ line. See
 `.knxproj` file already carried manufacturer data bundled inside it, that data is ingested
 automatically during import and needs no separate step.
 
+## Installing a product database does nothing, or the catalogue stays empty
+
+**You see:** the catalogue stays empty and installing a `.knxprod` or `.vd5` file is
+refused with **the product database at … cannot be opened: product database is version
+N, this build supports up to M — no downgrade path exists**. The same line is in the
+log (source **product database**) and on the server's or AppImage's standard error.
+Builds before 19 October 2026 said only **no product database configured**.
+
+**Why:** the product database file was last opened by a newer KNXBench, which moved it
+to a schema this build cannot read. A product database is never migrated backwards, so
+KNXBench runs without one and leaves the file untouched. Projects still open and import;
+they are just not enriched from the catalogue.
+
+**Do this:** use a KNXBench build at least as new as the one that last opened the file;
+it reads the file again unchanged. To stay on this build, move the file aside (do not
+delete it) and restart: KNXBench starts with an empty catalogue, and the moved file
+remains available for the newer build. The file is `products.sqlite` in
+`$XDG_DATA_HOME/knx/`, or `~/.local/share/knx/` when `XDG_DATA_HOME` is not set; the
+message names the exact path.
+
 ## Discovery finds no gateway
 
 **You see:** `knx bus discover` on the command line returns no results, even though you

@@ -38,6 +38,7 @@ fn state() -> Arc<knx_server::AppState> {
         project_revision: Default::default(),
         project_incarnation: Default::default(),
         product_db: None,
+        product_db_unavailable: None,
         session_log: Default::default(),
         connector: Box::new(knx_server::fake::FakeConnector::discovering(Vec::new())),
         bus_session: Default::default(),

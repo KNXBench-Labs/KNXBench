@@ -156,10 +156,7 @@ fn products(state: &SharedState) -> Result<(Products<'_>, PathBuf), ApiError> {
         .product_db
         .as_ref()
         .ok_or_else(|| {
-            ApiError::with_status(
-                StatusCode::SERVICE_UNAVAILABLE,
-                "no product database configured",
-            )
+            ApiError::with_status(StatusCode::SERVICE_UNAVAILABLE, state.product_db_missing())
         })?
         .lock()
         .expect("state mutex poisoned");

@@ -101,8 +101,7 @@ def stage_plan(profile: str, configs: list[str], production: tuple[str, ...] = P
             plan.extend(('browser-functional', 'browser-exclusive'))
     if profile in ('web', 'targeted'):
         for config in (PRODUCTION_CONFIGS if profile == 'web' else production):
-            plan.extend((f'production-{config}-inventory', f'production-{config}',
-                         f'production-{config}-exclusive'))
+            plan.extend((f'production-{config}-inventory', f'production-{config}'))
     if profile == 'web':
         plan.extend(('check-layering', 'check-headers', 'check-anchors', 'check-ledger',
                      'check-corpus-gates', 'diff-check'))
@@ -156,10 +155,11 @@ def browser_command(config: str, output: Path, workers: int, lane: str | None = 
                f'--output={output}']
     if listing:
         command.append('--list')
+    whole_tag = TAG + r'(?![\w-])'  # Playwright greps title and tags; `@exclusive-x` is not the tag
     if lane == 'functional':
-        command.append(f'--grep-invert={TAG}')
+        command.append(f'--grep-invert={whole_tag}')
     elif lane == 'exclusive':
-        command.append(f'--grep={TAG}')
+        command.append(f'--grep={whole_tag}')
     elif lane is not None:
         raise ValueError(f'unknown browser lane {lane!r}')
     if files is not None:
@@ -353,10 +353,11 @@ def main(argv: list[str] | None = None) -> int:
                     for config in (PRODUCTION_CONFIGS if args.profile == 'web' else production):
                         name = f'production-{config}'
                         file = f'playwright.{config}.config.ts'
+                        # One worker, as every production config pins: these suites
+                        # start their own preview server and are not lane-reviewed.
                         browser_stage(run, app, env, name + '-inventory', file, None, 1)
-                        functional, exclusive = split_lanes(read_cases(run.output / f'{name}-inventory.json'))
-                        browser_stage(run, app, env, name, file, 'functional', args.workers, functional)
-                        browser_stage(run, app, env, name + '-exclusive', file, 'exclusive', 1, exclusive)
+                        expected = read_cases(run.output / f'{name}-inventory.json')
+                        browser_stage(run, app, env, name, file, None, 1, expected)
                 if args.profile == 'web':
                     # Never reuse/move a foreign Cargo target; only xtask is compiled here.
                     env['CARGO_TARGET_DIR'] = str(output / 'cargo-target')

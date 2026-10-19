@@ -164,13 +164,18 @@ class GatePlan(unittest.TestCase):
         from tools.run_web_gate import browser_command, environment
         command = browser_command('playwright.config.ts', Path('/output'), 4, 'functional')
         self.assertEqual(command[:4], ['unshare', '--user', '--map-root-user', '--net'])
+        tag = '@exclusive(?![\\w-])'  # the whole tag: `@exclusive-x` is another tag
         for argument in ('--workers=4', '--retries=0', '--repeat-each=1', '--forbid-only',
-                         '--grep-invert=@exclusive'):
+                         f'--grep-invert={tag}'):
             self.assertIn(argument, command)
-        self.assertNotIn('--grep=@exclusive', command)
+        self.assertFalse([a for a in command if a.startswith('--grep=')])
         exclusive = browser_command('playwright.config.ts', Path('/output'), 1, 'exclusive')
-        self.assertIn('--grep=@exclusive', exclusive)
-        self.assertNotIn('--grep-invert=@exclusive', exclusive)
+        self.assertIn(f'--grep={tag}', exclusive)
+        self.assertFalse([a for a in exclusive if a.startswith('--grep-invert')])
+        import re
+        for title, hit in (('a > b @exclusive', True), ('a > b @exclusive @slow', True),
+                           ('a > b @exclusive-x', False), ('a > exclusive', False)):
+            self.assertEqual(bool(re.search(tag, title)), hit, title)
         listing = browser_command('playwright.config.ts', Path('/output'), 1, None, listing=True)
         self.assertFalse(any(a.startswith('--grep') for a in listing))
         selected = browser_command('playwright.config.ts', Path('/output'), 4, 'functional',
@@ -214,8 +219,9 @@ class GatePlan(unittest.TestCase):
         self.assertIn('browser-exclusive', plan)
         self.assertLess(plan.index('browser-lanes'), plan.index('build'))
         for config in runner.PRODUCTION_CONFIGS:
+            # One serial stage per suite: the configs pin `workers: 1` (ADR-0144 keeps that).
             self.assertIn(f'production-{config}', plan)
-            self.assertIn(f'production-{config}-exclusive', plan)
+        self.assertFalse([s for s in plan if s.startswith('production-') and s.endswith('-exclusive')])
         self.assertEqual(plan[-1], 'diff-check')
         benchmark = runner.stage_plan('benchmark', [])
         self.assertEqual(benchmark[0], 'browser-lanes')
@@ -226,14 +232,25 @@ class GatePlan(unittest.TestCase):
         from tools import run_web_gate as runner
         plan = runner.stage_plan('targeted', ['tsconfig.extra.json'], ('devices',), True)
         for stage in ('browser-lanes', 'build', 'tsconfig.extra', 'vitest', 'browser-inventory',
-                      'browser-functional', 'browser-exclusive', 'production-devices',
-                      'production-devices-exclusive'):
+                      'browser-functional', 'browser-exclusive', 'production-devices'):
             self.assertIn(stage, plan)
+        self.assertNotIn('production-devices-exclusive', plan)
         self.assertFalse([s for s in plan if s.startswith('production-') and 'devices' not in s])
         for stage in ('documentation', 'tool-tests', 'check-layering', 'diff-check'):
             self.assertNotIn(stage, plan)
         quiet = runner.stage_plan('targeted', [], (), False)
         self.assertEqual(quiet, ['browser-lanes', 'build', 'vitest'])
+
+    def test_production_suites_run_with_the_one_worker_their_configs_pin(self) -> None:
+        import inspect
+        from tools import run_web_gate as runner
+        source = inspect.getsource(runner.main)
+        self.assertIn("browser_stage(run, app, env, name, file, None, 1, expected)", source)
+        app = Path(__file__).resolve().parents[2] / 'apps/knx-web'
+        for config in runner.PRODUCTION_CONFIGS:
+            text = (app / f'playwright.{config}.config.ts').read_text()
+            self.assertNotRegex(text, r'workers:\s*[2-9]', config)
+
     def test_lease_timeout_and_release_are_real(self) -> None:
         import fcntl
         from tools.run_web_gate import LOCKS, leases

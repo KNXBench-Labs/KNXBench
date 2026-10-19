@@ -2314,6 +2314,7 @@ export interface ParameterGridAxis {
 
 /** An activated separator placed in a declared cell, original text. */
 export interface ParameterGridLabel {
+  textFill?: import("./bindings/TextFill").TextFill | null;
   row: number;
   column: number;
   text: string;
@@ -2345,7 +2346,7 @@ export interface ParameterGroupLayout {
 
 export interface ParameterField {
   /** Structural presentation metadata; absent on older servers. */
-  group?: { key: string; label: string | null } | null;
+  group?: { key: string; label: string | null; labelFill?: import("./bindings/TextFill").TextFill | null } | null;
   controlsComObjects?: boolean;
   /** Declared grid cell (ADR-0137); absent on older servers. */
   cell?: ParameterGridCell | null;
@@ -2387,9 +2388,10 @@ export interface ParameterField {
  * is the program's own, untranslated like group labels.
  */
 export interface ParameterSeparator {
+  textFill?: import("./bindings/TextFill").TextFill | null;
   /** Index in the section's `fields` it stands before; `fields.length` after the last. */
   position: number;
-  group: { key: string; label: string | null } | null;
+  group: { key: string; label: string | null; labelFill?: import("./bindings/TextFill").TextFill | null } | null;
   elementId: string | null;
   /** `null` for a ruler. */
   text: string | null;

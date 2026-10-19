@@ -14,10 +14,13 @@ decision: [ADR-0126](../adr/0126-positional-text-placeholders.md).
   A `ParameterRef` host is allowed by the Manufacturer Tool documentation but
   absent from the corpus; it stays unmodelled and reported.
 - **Surfaces:** the device's communication objects (names and channel
-  headings) and the documentation report's object names. One product-database
+  headings), parameter-block captions and activated separator text (row view and
+  declared-grid labels), and the documentation report's object names. One product-database
   helper applies the rule; object names go through one `knx-app` function shared
-  by the device detail and the report. Resolution runs after the translation
-  overlay, on the translated template.
+  by the device detail and the report. For object names and channel headings,
+  resolution runs after the translation overlay, on the translated template.
+  Block and separator captions use untranslated program text; the requested
+  product language does not apply a caption translation overlay.
 - **Only product texts.** An object name at the `Program`/`ProgramRef` layer is
   resolved; a name the project owns (`Instance`, `UserEdit`, `Inferred`) is
   shown exactly as stored, braces included.
@@ -39,7 +42,8 @@ For a host with `TextParameterRefId` = *R*, on one device:
 
 ## What stays verbatim
 
-Shown exactly as written, never guessed:
+Retained exactly as written in source metadata and unresolved API text, never guessed
+(the parameter workspace uses a presentation fallback instead of displaying raw templates):
 
 - a placeholder on a host **without** `TextParameterRefId`;
 - *R* that names no `ParameterRef` of the program, or a parameter that is not
@@ -62,15 +66,57 @@ source appear in the tooltip, so a surprising name can always be traced back.
 Names without a `{{0}}`, and every name the project owns, carry no record. The
 documentation report prints the filled name only.
 
+## Parameter workspace captions (issue #26)
+
+The parameter panel fills block and activated separator text from the same device
+evaluation and exact `(module definition, node ID)` source-reference lookup used
+for channel headings. Named arguments have already been substituted. Stored
+overrides win over product defaults; an explicitly empty stored value remains
+empty and does not revive a product default. Missing, non-text and ambiguous
+references remain unresolved, including when the template contains default text.
+
+Group `labelFill` and separator/grid-label `textFill` are additive optional records
+with the same `template` and `source` fields as the object/channel records. The
+source template stays unchanged in the product database. Reading the panel adds
+no project command; parameter writes and undo reuse the existing value path.
+
+The workspace navigator, selected heading, search/context paths and Restricted
+view use the resolved caption. Empty/whitespace-only text, a lone `#`, or any
+remaining template delimiter gets a localized numbered parameter-group label;
+separator/grid text uses a localized generic text label. Tooltips retain the
+source text and explain the fallback or exact fill source. This is deliberately
+conservative: a `StoredValue` or `ProductDefault` result can contain literal `{{`
+or `}}` (for example `Kitchen {{North}}`) and still use the fallback. A fill
+record describes the supported substitution's provenance, not whether the whole
+result is free of unsupported indices: a mixed `{{0}} / {{1:Keep}}` template can
+retain braces after filling `{{0}}`. The tooltip therefore describes the display
+policy neutrally, never labels every such result unresolved, and retains the
+result alongside its original template and exact resolver provenance. For area/
+group captions, both stay searchable. Separator text/templates are not indexed
+and separators are hidden during search. The UI does not strip braces, exempt
+a fill-source category, invent
+a default or resolve parameter references itself.
+
 ## Bounds
 
 Filled channel headings count against the device detail's existing text
-projection budget; object names are filled under a second budget of the same
-size, per request. Only a text containing `{{` is filled, so every other text
-costs nothing more than before. When a fill would not fit, nothing is
-shortened: the device detail is refused with the same `device text projection
-budget exhausted` error as any other over-budget product text, and the
-documentation report prints that device's names unfilled.
+projection budget. Parameter-panel captions retain one `TextProjectionBudget`
+through resolution and complete DTO construction, across all sections: resolver
+work, retained fill templates, every group-caption copy on fields and separators,
+separator text/provenance in both row and grid DTOs, and declared grid axis texts
+are admitted before copying. The ceiling is unchanged; exhaustion refuses the
+whole panel, never truncates it. Metadata and allocator overhead are outside this
+content policy. A parameter edit preflights the full reconciled command through
+the existing command stack on a project copy and assembles its complete panel
+before durable publication; a refused projection changes neither project,
+revision, history nor native bytes. Success returns that admitted panel, without
+a fallible post-commit reread.
+
+Object names use a separate budget of the same size per request. Only a text
+containing `{{` is filled on the object/channel surfaces. When a fill would not
+fit, nothing is shortened: device detail is refused with the same
+`device text projection budget exhausted` error as any other over-budget product
+text, and the documentation report prints that device's names unfilled.
 
 ## Not covered
 
@@ -80,5 +126,6 @@ documentation report prints that device's names unfilled.
 - Whether ETS fills in a value while the text parameter itself is hidden by the
   evaluated tree is not documented. KNXBench fills it in and says so.
 - Editing the text parameter from a channel heading.
-- Parameter block and separator titles: their reference is stored, but the
-  parameter panel lists fields, not headings, so no surface shows them yet.
+- Declared grid row/column `TextParameterRefId` captions are preserved, not
+  resolved. They are not dynamic-node hosts in this resolver. The UI uses a
+  readable fallback for unresolved caption syntax rather than guessing a value.

@@ -12,14 +12,24 @@ or protocol schema change; product database v24 adds typed presentation columns
   **Other parameters**, never an inferred channel.
 - The editing area uses aligned label/value rows. It is a compact comparison
   surface, **not** a semantic channel pivot, a recreation of ETS grid coordinates
-  or a product-specific faceplate. Original labels/options/values stay unchanged.
+  or a product-specific faceplate. Original labels/options/values stay unchanged;
+  section captions are a read-only resolved display over preserved source metadata.
+  See the [positional text contract](positional-text-templates.md#parameter-workspace-captions-issue-26)
+  for exact source references, readable fallbacks and tooltips. Block captions
+  use untranslated program text; changing the product language does not translate
+  them (nor separator captions). The fallback policy deliberately also covers
+  literal template delimiters in already-resolved values. Tooltips describe that
+  policy without asserting the result is unresolved; the result, original
+  template and resolver provenance are retained, and result/template remain
+  searchable.
 - Closed by default, like the other disclosures: the area register lists every
   area with its entry count, but no area opens until chosen. An explicitly
   chosen area stays open across project refreshes; newly appearing areas stay
   closed, and if the chosen area disappears the workspace returns to the closed
   overview rather than opening a different one.
 - Search covers all available source groups: parameter ID, original name/label,
-  accepted value, option text/value, group caption and module ID. All query terms
+  accepted value, option text/value, displayed group caption (including the
+  localized numbered fallback), retained source template and module ID. All query terms
   must match, without changing canonical order or project state. An empty search
   returns to the previously chosen area, or to the closed overview. Navigation displays search counts and
   clears search when an area is explicitly chosen.
@@ -100,8 +110,9 @@ or protocol schema change; product database v24 adds typed presentation columns
   source order: `Headline` as a heading, `Information`/`Error` as marked text
   (screen readers hear "Information:"/"Manufacturer warning:"), `HorizontalRuler`
   and textless separators as a rule, any other hint as plain text with the token
-  kept in `data-ui-hint`. Their text is the program's, never translated or
-  parsed.
+  kept in `data-ui-hint`. Their text is the program's, not translated; named
+  arguments and supported positional text references use the shared resolver.
+  Source text and fill provenance stay available in the tooltip.
 - Separators hidden or restricted by their own or their block's `Access` are not
   shown. Search results list fields only. An area rendered as a declared grid
   keeps its grid captions and shows no separator rows.

@@ -1,4 +1,5 @@
 //! Master declaration addresses and observed winners, separate from product identity.
+//!
 //! See ADR-0147. Replay never writes normalized values or historical reports.
 pub(crate) mod budget;
 mod reconcile;

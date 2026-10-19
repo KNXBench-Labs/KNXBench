@@ -124,6 +124,17 @@ and 859 historical diagnostics; originals and inherited receipts stay unchanged.
 Controller verified nine artifact hashes, read the raw matrix result and checked
 all 42 full-value verdicts. No preceding result was retagged as a new execution.
 
+## Package gate attempt 1
+
+`a5d3285a` passed formatting, documentation, browser-lane inventory and layering,
+then failed the header gate: the new provenance module's second doc-comment
+line continued the first paragraph, so the header was counted as absent and
+raised the absent total to 156 against ceiling 155. Adding the required blank
+module-doc separator changes documentation only. The exact header gate now
+reports 1,417 well-formed headers, 155 absent (ceiling 155); formatting and
+whitespace checks pass. The original failed receipt remains unchanged. No
+ceiling, test or runtime behavior was weakened; retry uses a new namespace.
+
 ## Pending acceptance
 
 Maintained change-scoped package gate (all 90 affected default browser specs,

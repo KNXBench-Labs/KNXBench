@@ -50,7 +50,7 @@ async function intercept(page: Page, language: "en" | "de", theme = "porcelain")
       body = { schemaVersion: 1, serverIncarnation: "pending-browser", snapshotRevision: state.tree.snapshot_revision,
         devices: devices.map((device) => ({ id: device.id, device, productRef: null, resolution: "NoReference",
           manufacturerId: null, manufacturerName: null, productText: null, orderNumber: null,
-          productTextLanguage: null, productSourceLanguage: null })) };
+          productTextLanguage: null, productSourceLanguage: null, system: { state: "noProduct" } })) };
     } else if (/^\/api\/device\/\d+$/.test(path) && method === "GET") {
       const device = state.tree.installations[0].topology[0].lines[0].devices.find((node) => node.id === Number(path.split("/").at(-1)));
       if (!device) { status = 400; body = { error: "device not found" }; }

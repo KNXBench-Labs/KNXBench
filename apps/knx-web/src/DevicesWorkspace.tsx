@@ -94,9 +94,9 @@ export default function DevicesWorkspace({ tree, active, selection, multiSelecti
     [tree, metadata, productLanguage, query, sort, language, pendingOnly, t]);
   const visibleOrder = rows.map((row) => row.id);
   const total = useMemo(() => projectDeviceRows(tree, currentMetadata).length, [tree, metadata, productLanguage]);
-  /** The declared family (WP-20); an unresolved product shows why, like its sibling columns. */
+  /** The declared family (WP-20); an unresolved product, or a row without metadata, shows why like its siblings. */
   function systemText(row: DeviceListRow): string {
-    const label = systemLabel(row.catalog?.system);
+    const label = row.catalog ? systemLabel(row.catalog.system) : null;
     return label ? t(label.key, label.params) : resolution(row);
   }
   function resolution(row: DeviceListRow): string {
@@ -148,7 +148,7 @@ export default function DevicesWorkspace({ tree, active, selection, multiSelecti
             && <LanguageFallbackBadge selected={productLanguage} source={row.catalog?.productSourceLanguage} />}
         </td>
         <td>{row.catalog?.orderNumber ?? resolution(row)}</td>
-        <td title={row.catalog?.system?.state === "family" ? t("devices.systemDeclared", { mask: maskHex(row.catalog.system.mask) }) : undefined}>
+        <td title={row.catalog?.system.state === "family" ? t("devices.systemDeclared", { mask: maskHex(row.catalog.system.mask) }) : undefined}>
           {systemText(row)}</td>
         <td>{row.topology.length ? row.topology.join(" · ") : t("workbench.unassigned")}</td>
         <td>{row.building.length ? row.building.join(" · ") : t("workbench.unassigned")}</td>

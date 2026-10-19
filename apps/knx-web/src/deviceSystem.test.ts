@@ -39,9 +39,6 @@ describe("device system family", () => {
   it("leaves an unresolved product to the row's product resolution text", () => {
     expect(systemLabel({ state: "noProduct" })).toBeNull();
   });
-  it("says Not resolved when the server reported no system state at all", () => {
-    expect(systemLabel(undefined)).toEqual({ key: "devices.notResolved" });
-  });
   it("formats masks as four upper-case hex digits with the h suffix", () => {
     expect(maskHex(0x0afd)).toBe("0AFDh");
     expect(maskHex(0x12)).toBe("0012h");

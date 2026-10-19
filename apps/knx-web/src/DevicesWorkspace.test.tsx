@@ -117,7 +117,8 @@ it("marks untranslated product text when a product language was requested", asyn
   await act(async () => setSetting("productLanguage", "de"));
   apiMock.deviceCatalog.mockResolvedValue({ ...batch, devices: [{ id: 2, device: tree.installations[0].unassigned[0],
     productRef: "P-1", resolution: "Resolved", manufacturerId: "M-1", manufacturerName: null,
-    productText: "Package product text", orderNumber: null, productTextLanguage: null, productSourceLanguage: "en-US" }] });
+    productText: "Package product text", orderNumber: null, productTextLanguage: null, productSourceLanguage: "en-US",
+    system: { state: "family", mask: 0x07b0, family: "systemB" } }] });
   await render();
   expect(host.querySelector(".language-fallback-badge")?.textContent).toContain("en-US");
 });
@@ -177,6 +178,8 @@ it("keeps project devices visible and explicitly reports a refused metadata read
   await render(); expect(host.querySelector('[role="alert"]')?.textContent).toContain("database unavailable");
   expect(host.querySelectorAll("tbody tr")).toHaveLength(2);
   expect(host.textContent).toContain("Not resolved");
+  // Without metadata the System cell says so too, like its sibling product columns (WP20-01).
+  expect([...host.querySelectorAll("tbody tr")].map((row) => row.querySelectorAll("td")[7].textContent)).toEqual(["Not resolved", "Not resolved"]);
 });
 it("discards a delayed catalogue from a previous project snapshot", async () => {
   let resolve!: (value: DeviceCatalog) => void;
@@ -234,7 +237,7 @@ it.each(["en", "de"] as const)("%s System column shows the declared family, expl
   const project: ProjectTree = { ...tree, installations: [{ ...tree.installations[0], unassigned }] };
   const resolved = { productRef: "P-1", resolution: "Resolved" as const, manufacturerId: "M-1", manufacturerName: null,
     productText: null, orderNumber: null, productTextLanguage: null, productSourceLanguage: null };
-  const systems: Record<number, NonNullable<DeviceCatalog["devices"][number]["system"]>> = {
+  const systems: Record<number, DeviceCatalog["devices"][number]["system"]> = {
     2: { state: "family", mask: 0x07b0, family: "systemB" }, 3: { state: "family", mask: 0x0012, family: "system1" },
     4: { state: "unknownMask", mask: 0x0afd }, 5: { state: "noApplicationProgram" }, 6: { state: "family", mask: 0x0300, family: "system300" },
   };

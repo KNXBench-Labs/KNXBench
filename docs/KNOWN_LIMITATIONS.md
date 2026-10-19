@@ -1493,7 +1493,7 @@ The alpha.9-and-earlier libwayland failure has a scoped launcher fix. One-host r
 ### 181. Desktop export commands
 
 **Ledger status:** `DONE` ([KL-181](status/LEDGER.md#post-snapshot-ids)).
-AppImages up to alpha.11 refuse saving the session log and monitor captures; fixed in source, ships with the next AppImage. Web and Docker unaffected.
+AppImages alpha.5 to alpha.11 refuse saving the session log and monitor captures; fixed since the alpha.12 AppImage. Web and Docker unaffected.
 [Details and history](limitations/KL-181-desktop-export-commands.md)
 
 <a id="catalogue-kl-182"></a>

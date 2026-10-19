@@ -1,4 +1,4 @@
-Last updated: 2026-10-18 07:55 CEST
+Last updated: 2026-10-19 19:30 CEST
 
 # KNXBench Features
 
@@ -42,7 +42,7 @@ Last updated: 2026-10-18 07:55 CEST
 
 | Feature | Scope | Availability |
 | --- | --- | --- |
-| [Device-empty ranges](contracts/topology-metrics.md#device-empty-ranges-issue-25-source-builds-after-alpha-14) | Diagram hides areas/lines without devices; original structure and explorer editing remain unchanged | Local-only; integration pending |
+| [Device-empty ranges](contracts/topology-metrics.md#device-empty-ranges-issue-25-source-builds-after-alpha-14) | Diagram hides areas/lines without devices; original structure and explorer editing remain unchanged | Main-only |
 
 ## Device list system family
 
@@ -54,7 +54,7 @@ Last updated: 2026-10-18 07:55 CEST
 
 | Feature | Scope | Availability |
 | --- | --- | --- |
-| [Parameter section captions](contracts/positional-text-templates.md#parameter-workspace-captions-issue-26) | Exact text-parameter resolution for block/separator captions; readable fallback labels and source tooltips; no configuration changes | Local-only; integration pending |
+| [Parameter section captions](contracts/positional-text-templates.md#parameter-workspace-captions-issue-26) | Exact text-parameter resolution for block/separator captions; readable fallback labels and source tooltips; no configuration changes | Main-only |
 
 ## Parameter unit suffix
 

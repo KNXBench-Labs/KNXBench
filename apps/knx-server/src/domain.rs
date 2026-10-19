@@ -5459,6 +5459,7 @@ fn unresolved_assembly(
 /// in `knx_productdb::device_evaluation` (ADR-0090), shared with the MCP
 /// adapter; this keeps the panel's stale/diagnostic wording unchanged.
 struct DeviceEvaluation {
+    caption_fills: crate::parameter_captions::CaptionFills,
     ref_ids: HashSet<String>,
     supplied: HashMap<String, String>,
     validated_scoped: HashMap<(String, String), String>,
@@ -5476,13 +5477,15 @@ fn evaluate_device(
     stored: Vec<(String, String)>,
     module_instances: &[knx_core::ModuleInstance],
 ) -> Result<DeviceEvaluation, String> {
-    let evaluation = knx_productdb::device_evaluation::evaluate_device(
+    let mut evaluation = knx_productdb::device_evaluation::evaluate_device(
         products,
         program_id,
         stored,
         module_instances,
     )
     .map_err(|e| e.to_string())?;
+    let caption_fills =
+        crate::parameter_captions::apply(products, program_id, &mut evaluation, module_instances)?;
     let mut instance_values: Vec<_> = evaluation
         .instance_scoped_ids
         .iter()
@@ -5499,6 +5502,7 @@ fn evaluate_device(
         .collect();
     instance_values.sort_by(|a, b| a.ets_id.cmp(&b.ets_id));
     Ok(DeviceEvaluation {
+        caption_fills,
         instance_values,
         ref_ids: evaluation.ref_ids,
         supplied: evaluation.supplied,
@@ -5564,12 +5568,26 @@ fn assemble_parameter_panel(
     device_id: u32,
     language: Option<&str>,
 ) -> Result<PanelAssembly, String> {
-    let device = knx_core::DeviceId(device_id);
+    let project = state
+        .project
+        .lock()
+        .expect("state mutex poisoned")
+        .as_ref()
+        .ok_or("no project open")?
+        .clone();
+    assemble_parameter_panel_for_project(state, &project, device_id, language)
+}
 
-    // Step 1: lock only `project`.
+/// Shared read projection, also used to preflight the complete prospective command.
+/// The caller owns the project snapshot; catalogue locks never overlap its lock.
+fn assemble_parameter_panel_for_project(
+    state: &AppState,
+    project: &knx_core::Project,
+    device_id: u32,
+    language: Option<&str>,
+) -> Result<PanelAssembly, String> {
+    let device = knx_core::DeviceId(device_id);
     let (program_ref, stored, module_instances, object_metadata) = {
-        let project = state.project.lock().expect("state mutex poisoned");
-        let project = project.as_ref().ok_or("no project open")?;
         let dev = project
             .devices
             .get(device)
@@ -5635,6 +5653,7 @@ fn assemble_parameter_panel(
     };
 
     let DeviceEvaluation {
+        mut caption_fills,
         ref_ids,
         supplied,
         validated_scoped,
@@ -5887,20 +5906,22 @@ fn assemble_parameter_panel(
             .as_ref()
             .map_or("", |s| s.module_def_id.as_str());
         // The group a field or separator belongs to, as the wire names it.
-        let mut group_dto = |group: knx_productdb::parameter_layout::Group| {
+        let mut group_dto = |group: knx_productdb::parameter_layout::Group,
+                             captions: &mut crate::parameter_captions::CaptionFills|
+         -> Result<_, String> {
             let label = activation
                 .labels
                 .iter()
                 .find(|label| label.node_id == group.node_id && label.scope == section.scope)
-                .map(|label| label.text.clone())
-                .or(group.text)
+                .map(|label| label.text.as_str())
+                .or(group.text.as_deref())
                 .filter(|text| !text.trim().is_empty())
                 .or_else(|| {
                     group
                         .caption_ref
                         .as_ref()
                         .and_then(|reference| views_by_id.get(reference))
-                        .and_then(|caption| caption.text.clone().or(caption.name.clone()))
+                        .and_then(|caption| caption.text.as_deref().or(caption.name.as_deref()))
                 });
             let key = group
                 .element_id
@@ -5908,7 +5929,18 @@ fn assemble_parameter_panel(
             if !grid_groups.iter().any(|(_, node)| *node == group.node_id) {
                 grid_groups.push((key.clone(), group.node_id));
             }
-            crate::routes::ParameterGroupDto { key, label }
+            let (label, label_fill) = captions.copy(
+                (
+                    section.scope.as_ref().map(|s| s.node_chain()),
+                    group.node_id,
+                ),
+                label,
+            )?;
+            Ok(crate::routes::ParameterGroupDto {
+                key,
+                label,
+                label_fill,
+            })
         };
         for (ref_id, (position, block_access)) in section.ref_ids.iter().zip(&section.activated) {
             // A ref the join dropped (see the diagnostic above) has no
@@ -5963,7 +5995,10 @@ fn assemble_parameter_panel(
             let editable = write_ets_id.is_some();
             let presentation = layout.field(definition, &view.id);
             let cell = presentation.cell.map(crate::parameter_grid::cell_dto);
-            let group = presentation.group.map(&mut group_dto);
+            let group = presentation
+                .group
+                .map(|group| group_dto(group, &mut caption_fills))
+                .transpose()?;
             field_positions.push(*position);
             fields.push(crate::routes::ParameterFieldDto {
                 group,
@@ -6021,20 +6056,28 @@ fn assemble_parameter_panel(
                     .cloned()
                     .unwrap_or_default();
                 let scope_key = separator.scope.as_ref().map(|s| s.node_chain());
-                crate::routes::ParameterSeparatorDto {
+                let (text, text_fill) = caption_fills.copy(
+                    (scope_key.clone(), separator.node_id),
+                    separator_texts
+                        .get(&(scope_key, separator.node_id))
+                        .copied(),
+                )?;
+                Ok(crate::routes::ParameterSeparatorDto {
                     position: field_positions
                         .partition_point(|&field| field < separator.parameter_refs_before),
-                    group: declaration.group.map(&mut group_dto),
+                    group: declaration
+                        .group
+                        .map(|group| group_dto(group, &mut caption_fills))
+                        .transpose()?,
                     element_id: declaration.element_id,
-                    text: separator_texts
-                        .get(&(scope_key, separator.node_id))
-                        .map(|text| text.to_string()),
+                    text,
+                    text_fill,
                     ui_hint: declaration.ui_hint,
                     access: declaration.access,
                     block_access: separator.block_access.clone(),
-                }
+                })
             })
-            .collect();
+            .collect::<Result<Vec<_>, String>>()?;
         push_write_refusals(
             &mut diagnostics,
             section.scope.as_ref().map(|s| module_scope_dto(s)),
@@ -6042,18 +6085,22 @@ fn assemble_parameter_panel(
         );
         let group_layouts = grid_groups
             .into_iter()
-            .filter_map(|(key, block_node)| {
+            .map(|(key, block_node)| {
                 crate::parameter_grid::group_layout_dto(
                     &layout,
                     definition,
                     key,
                     block_node,
+                    &mut caption_fills,
                     activation
                         .labels
                         .iter()
                         .filter(|label| label.scope == section.scope),
                 )
             })
+            .collect::<Result<Vec<_>, String>>()?
+            .into_iter()
+            .flatten()
             .collect();
         sections.push(crate::routes::ParameterSectionDto {
             scope: section.scope.as_ref().map(|s| module_scope_dto(s)),
@@ -6535,7 +6582,7 @@ pub(crate) fn set_parameter_value_impl(
     }
     // Bind all preparation to the state before panel validation, including
     // legacy unbound callers. A revision change (even edit + undo) invalidates it.
-    let (base, source_revision, source_incarnation) = {
+    let (base, source_revision, source_incarnation, mut preview_stack) = {
         let project = state.project.lock().expect("state mutex poisoned");
         (
             project
@@ -6544,9 +6591,14 @@ pub(crate) fn set_parameter_value_impl(
                 .clone(),
             current_project_revision(state),
             state.project_incarnation.load(Ordering::Relaxed),
+            state
+                .command_stack
+                .lock()
+                .expect("state mutex poisoned")
+                .clone(),
         )
     };
-    let before = assemble_parameter_panel(state, device_id, language)
+    let before = assemble_parameter_panel_for_project(state, &base, device_id, language)
         .map_err(ParameterWriteError::Refused)?;
     let program_id = before.program_id.clone().ok_or_else(|| {
         ParameterWriteError::Refused("device has no resolvable application program".into())
@@ -6664,6 +6716,15 @@ pub(crate) fn set_parameter_value_impl(
         )
         .map_err(ParameterWriteError::Refused)?
     };
+    // Exercise the exact reconciled command through the existing stack, not a
+    // second value-mutation route. A refused projection must precede persistence.
+    let mut prospective = base.clone();
+    preview_stack
+        .do_command(&mut prospective, cmd.clone())
+        .map_err(|error| ParameterWriteError::Refused(error.to_string()))?;
+    let mut panel = assemble_parameter_panel_for_project(state, &prospective, device_id, language)
+        .map_err(ParameterWriteError::Refused)?
+        .dto;
     let tree = {
         let mut guard = state.project.lock().expect("state mutex poisoned");
         let project = guard
@@ -6683,8 +6744,8 @@ pub(crate) fn set_parameter_value_impl(
         .map_err(ParameterWriteError::Refused)?
     };
 
-    let mut panel =
-        parameter_panel_impl(state, device_id, language).map_err(ParameterWriteError::Refused)?;
+    // Return the already admitted snapshot. No fallible catalogue reread after
+    // durable publication, and no race with a subsequent edit's parameter panel.
     for diagnostic in object_diagnostics {
         if !panel.diagnostics.contains(&diagnostic) {
             panel.diagnostics.push(diagnostic);

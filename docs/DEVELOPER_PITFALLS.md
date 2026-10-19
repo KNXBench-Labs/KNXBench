@@ -42,10 +42,11 @@ already found lying in the grass.
   predated the `doc-export` fix migrated the owner's fresh import (made with
   the Alpha 14 AppImage) to v26 again, inside its `rust-tests` stage. The
   package gate therefore runs its test stages (`tool-tests`, `rust-tests`,
-  `bindings`, `corpus`, website and story tests) with empty scratch
-  `XDG_DATA_HOME`/`XDG_CONFIG_HOME` below its output directory and fails when a
-  file in the real `knx` data or config directory is created, changed or
-  removed meanwhile (`userDataTouched` in the receipt). Rebase before gating, so
+  `bindings`, `corpus`, website and story tests, and the web gate's own
+  `tool-tests` step in a complete run) with empty scratch
+  `XDG_DATA_HOME`/`XDG_CONFIG_HOME` and fails when a file in the real `knx`
+  data or config directory, or behind a symlink in it, is created, changed or
+  removed meanwhile (`userDataTouched` in the receipt; `tools/user_data_guard.py`). Rebase before gating, so
   the branch carries this runner. A **direct** `cargo test` still inherits the
   real homes: export scratch values first, e.g.
   `XDG_DATA_HOME=$(mktemp -d) XDG_CONFIG_HOME=$(mktemp -d) cargo test …`.

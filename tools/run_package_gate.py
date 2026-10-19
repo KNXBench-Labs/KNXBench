@@ -29,6 +29,8 @@ import time
 if __package__ in (None, ''):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from tools import gate_scope
+from tools.user_data_guard import (USER_HOMES, isolated_environment, record_user_data, user_data_fingerprint,
+                                   user_knx_dirs)
 from tools.web_gate_support import MeasuredRun, source_fingerprint
 
 WORKSPACE_LOCK = 'knx-workspace-gates.lock'
@@ -43,7 +45,6 @@ CORPUS_SUMMARY = re.compile(r'^corpus tests: (\d+) of (\d+) passed', re.M)
 # fontconfig reads its fonts and configuration through them and browser specs
 # pin pixel widths.
 ISOLATED_STAGES = frozenset({'tool-tests', 'rust-tests', 'bindings', 'corpus', 'website-tests', 'story-tests'})
-USER_HOMES = (('XDG_DATA_HOME', '.local/share'), ('XDG_CONFIG_HOME', '.config'))
 
 
 def rust_selection(result: gate_scope.Plan, full: bool) -> list[str]:
@@ -167,55 +168,6 @@ def corpus_links(root: Path):
     finally:
         for link in created:
             link.unlink()
-
-
-def user_knx_dirs(environ: dict[str, str]) -> list[Path]:
-    """The developer's real `knx` data and config directories, resolved as the
-    apps resolve them (an empty variable counts as unset)."""
-    home = environ.get('HOME') or ''
-    dirs = []
-    for variable, fallback in USER_HOMES:
-        base = environ.get(variable) or (str(Path(home) / fallback) if home else '')
-        if base:
-            dirs.append(Path(base) / 'knx')
-    return dirs
-
-
-def user_data_fingerprint(dirs: list[Path]) -> dict[str, list[int]]:
-    """Size, modification time and inode of every file below `dirs`."""
-    found = {}
-    for directory in dirs:
-        for path in sorted(directory.rglob('*')) if directory.is_dir() else ():
-            if path.is_file() or path.is_symlink():
-                status = path.lstat()
-                found[str(path)] = [status.st_size, status.st_mtime_ns, status.st_ino]
-    return found
-
-
-def touched_user_data(before: dict[str, list[int]], after: dict[str, list[int]]) -> list[str]:
-    """Paths created, changed or removed between two fingerprints."""
-    return sorted(path for path in before.keys() | after.keys() if before.get(path) != after.get(path))
-
-
-def record_user_data(receipt: dict, before: dict[str, list[int]], after: dict[str, list[int]]) -> None:
-    """Fail the receipt when the real knx directories changed during the gate."""
-    touched = touched_user_data(before, after)
-    receipt['userDataTouched'] = touched
-    if touched:
-        receipt['planCompleted'] = False
-        reached = (f'the real knx data or config directories changed during the gate: '
-                   f'{", ".join(touched)} (a stage reached them, or an app ran meanwhile)')
-        receipt['error'] = '; '.join(filter(None, (receipt.get('error'), reached)))
-
-
-def isolated_environment(env: dict[str, str], scratch: Path) -> dict[str, str]:
-    """`env` with empty scratch data and config homes below `scratch`."""
-    isolated = dict(env)
-    for variable, _ in USER_HOMES:
-        directory = scratch / variable.lower().replace('_', '-')
-        directory.mkdir(parents=True, exist_ok=True)
-        isolated[variable] = str(directory)
-    return isolated
 
 
 @dataclass(frozen=True)

@@ -22,14 +22,18 @@ predated the fix, so its `cli_documentation_export` tests opened the existing
 file with the migrating opener. A fix on `main` cannot protect a gate that runs
 an older branch's tests, so the runner now isolates them: the package gate
 (`tools/run_package_gate.py`) gives its test stages (`tool-tests`, `rust-tests`,
-`bindings`, `corpus`, website and story tests) empty scratch `XDG_DATA_HOME`
-and `XDG_CONFIG_HOME` directories below the gate output, and fails, naming each
-path, when a file in the real `knx` data or config directory is created,
-changed or removed during the run (`userDataTouched` in the receipt). The web
-gate keeps the real values (fontconfig, pinned pixel widths). Tests:
+`bindings`, `corpus`, website and story tests; in a complete run also the web
+gate's own `tool-tests` step) empty scratch `XDG_DATA_HOME` and
+`XDG_CONFIG_HOME` directories, and fails, naming each path, when a file in the
+real `knx` data or config directory, or behind a symlink there, is created,
+changed or removed during the run (`userDataTouched` in the receipt; size,
+mtime, ctime and inode, symlinked directories followed once). Browser and build
+steps keep the real values (fontconfig, pinned pixel widths). Tests:
 `tools/tests/test_run_package_gate.py` (directory resolution like the apps,
-stage routing, created/changed/removed detection, receipt failure keeping an
-earlier error); mutants (isolation bypassed, detection disabled) turn them red.
+routing through both runners' real step functions, symlinked database and
+directory, same-size rewrite with the old mtime, receipt failure keeping an
+earlier error); 7 mutants turn them red. Cross-vendor review (Codex) found the
+web gate's `tool-tests` step and symlinked files unguarded; both fixed.
 The owner parked the migrated file unchanged. Still open: direct `cargo test`
 runs ([OPEN_WORK](OPEN_WORK.md#test-gates-change-scoped-by-default-19-october-2026)).
 [Pitfall](DEVELOPER_PITFALLS.md#gates).

@@ -35,7 +35,15 @@ Branch `feat/wp18-comparison-diff-20261019`, off `origin/main` `66dd858b`.
 
 ## Verification
 
-See the final report of this package: RED logs, Vitest, focused Playwright
-(production preview, intercepted API, private network namespace), mutation
-proofs (6 mutants killed), documentation/anchor/header/layering checks and the
-repository web gate.
+Before the pause: RED logs, focused Vitest, focused Playwright (production
+preview, intercepted API, private network namespace: devices 45 passed,
+table-columns 139 passed), 6 display-rule mutants killed, documentation,
+anchor, header and layering checks.
+
+After the rebase (resume): all 22 `tsconfig*.json` typechecks passed; the
+Device checks wiring mutant (drop `changes`) killed by the new panel test.
+Package gate attempt 1 (change-scoped, base `origin/main`): every stage passed
+except `web-gate`, whose Vitest stage had 4038 of 4039 passing; the one
+failure was the `LogPanel` 16000-entry test timing out at 5 s under host load
+(outside this package; passes alone). The controller is landing a separate
+test-hygiene fix on main; the gate is to be rerun after a rebase onto it.

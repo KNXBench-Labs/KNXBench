@@ -6,6 +6,17 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## `SuffixText` is stored (19 October 2026, WP-02, ADR-0146)
+
+Product DB v26 stores `SuffixText` on `Parameter` and `ParameterRef`
+(`suffix_text` on both rows, separate from `parameter.suffix`), so it is no
+longer reported on those two hosts; a fresh install and a migrated database
+retire the same rows. On the 115-instance matrix corpus that is 627 per-blob
+rows (56,783 occurrences), predicted by an XML census before the re-pin.
+`SuffixText` on any other host, and every other unstored attribute, stays
+reported as before. The value is shown next to the parameter value and is
+never part of it ([contract](../contracts/parameter-workspace.md#unit-suffix-wp-02-19-october-2026)).
+
 <!-- BEGIN retained catalogue record -->
 
 ## 156. Unstored `Parameter`/`ParameterRef` attributes are not reported

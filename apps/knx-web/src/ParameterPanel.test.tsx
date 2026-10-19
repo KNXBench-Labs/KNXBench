@@ -568,6 +568,41 @@ describe("ParameterPanel", () => {
     root.unmount();
   });
 
+  it("shows a declared suffix next to the value, never inside it (WP-02)", async () => {
+    const field = fixture.sections[0].fields[0];
+    const withSuffix: ParameterPanelDto = {
+      ...fixture,
+      sections: [{ scope: null, fields: [
+        { ...field, suffixText: "s", suffixTextLanguage: null },
+        { ...field, etsId: "P2", writeEtsId: "P2", name: "Field B", suffixText: "", suffixTextLanguage: null },
+        { ...field, etsId: "P3", writeEtsId: "P3", name: "Field C" },
+      ] }],
+    };
+    apiMock.deviceParameters.mockResolvedValue(withSuffix);
+    apiMock.setParameterValue.mockResolvedValue({ ...withSuffix, tree: shownTree });
+    const root = await renderPanel();
+
+    const row = (etsId: string) => host!.querySelector<HTMLElement>(`[data-ets-id="${etsId}"]`)!;
+    const suffix = row("P1").querySelector(".parameter-field-suffix")!;
+    expect(suffix.textContent).toBe("s");
+    const input = row("P1").querySelector<HTMLInputElement>('input[type="number"]')!;
+    expect(input.parentElement!.className).toBe("parameter-field-control");
+    expect(suffix.parentElement).toBe(input.parentElement);
+    expect(input.value).toBe("5");
+    // An empty or absent suffix leaves the row exactly as before.
+    for (const etsId of ["P2", "P3"]) {
+      expect(row(etsId).querySelector(".parameter-field-suffix")).toBeNull();
+      expect(row(etsId).querySelector("input")!.parentElement).toBe(row(etsId));
+    }
+    await act(async () => {
+      setInputValue(input, "6");
+      input.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+      await Promise.resolve();
+    });
+    expect(apiMock.setParameterValue).toHaveBeenCalledWith(1, "P1", "6", null, bound("5"));
+    root.unmount();
+  });
+
   it("renders a Time field as a bounded integer input like Number (PDB-9)", async () => {
     const timed: ParameterPanelDto = {
       ...fixture,

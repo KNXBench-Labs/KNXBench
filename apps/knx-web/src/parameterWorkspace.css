@@ -38,7 +38,12 @@
 .parameter-workspace-field { min-width: 0; }
 .parameter-workspace .parameter-workspace-row .parameter-field:not(.parameter-field-checked):not(.parameter-label-row):not(.parameter-spacer) { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); align-items: center; column-gap: 18px; row-gap: 5px; margin: 0; font-size: 13px; }
 .parameter-workspace .parameter-field-name { grid-column: 1; min-width: 0; overflow-wrap: anywhere; line-height: 1.45; }
-.parameter-workspace .parameter-field > input, .parameter-workspace .parameter-field > select { grid-column: 2; grid-row: 1; margin: 0; min-width: 0; width: 100%; box-sizing: border-box; padding: 7px 9px; min-height: 34px; font-size: 13px; }
+.parameter-workspace .parameter-field > input, .parameter-workspace .parameter-field > select, .parameter-workspace .parameter-field-control > input, .parameter-workspace .parameter-field-control > select { grid-column: 2; grid-row: 1; margin: 0; min-width: 0; width: 100%; box-sizing: border-box; padding: 7px 9px; min-height: 34px; font-size: 13px; }
+/* WP-02: a declared unit suffix sits right after its value control. */
+.parameter-field-control { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.parameter-field-control > input, .parameter-field-control > select { flex: 1 1 auto; min-width: 0; }
+.parameter-field-suffix { flex: none; font-size: 12px; color: var(--knx-muted); white-space: nowrap; }
+.parameter-workspace .parameter-field > .parameter-field-control { grid-column: 2; grid-row: 1; }
 .parameter-workspace .parameter-field > .parameter-field-caption, .parameter-workspace .parameter-field > .field-error { grid-column: 1 / -1; }
 .parameter-workspace .parameter-field > .provenance-badge, .parameter-workspace .parameter-field > .language-fallback-badge { grid-column: 1; }
 .parameter-workspace-row[data-access="ReadWrite"] .parameter-field > .provenance-badge { display: none; }
@@ -67,7 +72,7 @@
 .parameter-workspace-rows[data-layout="matrix"] { position: relative; display: grid; gap: 0 14px; align-items: start; overflow-x: auto; padding-bottom: 8px; border-top: 1px solid var(--knx-border); }
 .parameter-workspace-rows[data-layout="matrix"] > .parameter-workspace-row { min-width: 0; border-bottom: 0; padding: 8px 4px; }
 .parameter-workspace-rows[data-layout="matrix"] .parameter-workspace-row .parameter-field:not(.parameter-field-checked):not(.parameter-label-row):not(.parameter-spacer) { grid-template-columns: minmax(0, 1fr); row-gap: 4px; }
-.parameter-workspace-rows[data-layout="matrix"] .parameter-field > input, .parameter-workspace-rows[data-layout="matrix"] .parameter-field > select { grid-column: 1; grid-row: auto; }
+.parameter-workspace-rows[data-layout="matrix"] .parameter-field > input, .parameter-workspace-rows[data-layout="matrix"] .parameter-field > select, .parameter-workspace-rows[data-layout="matrix"] .parameter-field > .parameter-field-control { grid-column: 1; grid-row: auto; }
 .parameter-matrix-caption { min-width: 0; padding: 8px 4px; font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; color: var(--knx-foreground); font-weight: 600; }
 .parameter-matrix-caption[data-caption="column"] { align-self: end; color: var(--knx-muted); border-bottom: 1px solid var(--knx-border); }
 .parameter-matrix-caption[data-caption="row"] { padding-left: 8px; border-left: 2px solid var(--knx-border); }
@@ -91,7 +96,7 @@
 @container (max-width: 360px) {
   .parameter-workspace-columns { display: none; }
   .parameter-workspace .parameter-workspace-row .parameter-field:not(.parameter-field-checked):not(.parameter-label-row):not(.parameter-spacer) { grid-template-columns: minmax(0, 1fr); }
-  .parameter-workspace .parameter-field > input, .parameter-workspace .parameter-field > select { grid-column: 1; grid-row: auto; }
+  .parameter-workspace .parameter-field > input, .parameter-workspace .parameter-field > select, .parameter-workspace .parameter-field > .parameter-field-control { grid-column: 1; grid-row: auto; }
 }
 
 /* ADR-0139: manufacturer separators between the rows of a chosen area. */

@@ -133,15 +133,25 @@ const EXPECTED_SHARED_DEDUPLICATIONS: usize = 2;
 /// repeat another in 505 identity groups (24 sources: 18 masters, 6 programs)
 /// and 6 `IdConflict` rows repeat another, no group's copies differ. Previous
 /// pin d58e2af8….
+/// Re-pinned again in the same schema v26 for ADR-0146 part 2 (WP-02):
+/// `SuffixText` on `Parameter`/`ParameterRef` is stored, not reported. Against
+/// the part-1 pin, exactly five published counts move: unknown report totals
+/// 22900 -> 22265 (isolation/successful, -635) and 22778 -> 22145 (unique
+/// installs, -633), `ingest_unknown` 22327 -> 21700 (-627) and
+/// `package_install_unknown` 9361 -> 9144 (-217); outcomes and every other
+/// count are equal. An independent XML census of the same 115 instances / 113
+/// packages / 302 program blobs predicts all five at their own granularity
+/// (per program member, per unique blob, per package) and the two parameter
+/// attribute pins below. Previous pin 2610b3dc….
 const EXPECTED_BASELINE_COMMITMENT: &str =
-    "2610b3dcdab37bdcb414181cb2091855ceb3168974ff3242fba8f46d53d386ae";
+    "528a68851be3d19fbc4acf296e2eedf8ec203a260adc15386832ddff557e2c6b";
 /// Current v26 outcomes/counts projected without the four v17 tables, the
-/// v20/v22 tables and PDB-11 identity; the previous v25 pin bdde7a5c… moves
-/// only by the ADR-0146 `ingest_unknown` leaf above (v24 pin 342a5d2e…, v23
-/// pin b8179368…, v22 pin 97f3a9d3…, historical v16 pin c204acc8…, see Git
-/// history).
+/// v20/v22 tables and PDB-11 identity; moves only by the five ADR-0146
+/// part-2 leaves above (part-1 pin 2b875c8d…, v25 pin bdde7a5c…, v24 pin
+/// 342a5d2e…, v23 pin b8179368…, v22 pin 97f3a9d3…, historical v16 pin
+/// c204acc8…, see Git history).
 const EXPECTED_V16_PROJECTION_COMMITMENT: &str =
-    "2b875c8d6edecb3be1d99be37673644029e9671ed0a4c7c6c0b4ba641bc81fb3";
+    "0ee829e535332941e9a7162af0a875ccf18eff71436d9329381c7954fcff526e";
 /// Tables schema v17 added (ADR-0043), left out of the v16 projection.
 const V17_TABLES: [&str; 4] = [
     "package_source_name",
@@ -997,8 +1007,9 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         json!({
             "attempt_count": 115,
             "member_count": 1606,
-            // ADR-0141 (v25): -1099 retired placement keys (v24: -175 Access keys).
-            "unknown_count": 22900,
+            // ADR-0146 part 2 (v26): -635 retired SuffixText keys (v25: -1099
+            // placement keys, v24: -175 Access keys).
+            "unknown_count": 22265,
             "conflict_count": 0,
             "dropped_datapoint_type_count": 0,
             "translation_counts": {"program": 2903208, "catalog": 2991, "hardware": 1424, "master": 112774},
@@ -1009,7 +1020,7 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         json!({
             "attempt_count": 113,
             "member_count": 1586,
-            "unknown_count": 22778,
+            "unknown_count": 22145,
             "conflict_count": 398,
             "dropped_datapoint_type_count": 39499,
             "translation_counts": {"program": 2779279, "catalog": 2353, "hardware": 1148, "master": 1640},
@@ -1020,7 +1031,7 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         json!({
             "attempt_count": 115,
             "member_count": 1606,
-            "unknown_count": 22900,
+            "unknown_count": 22265,
             "conflict_count": 400,
             "dropped_datapoint_type_count": 40232,
             "translation_counts": {"program": 2789468, "catalog": 2419, "hardware": 1162, "master": 1640},
@@ -1052,13 +1063,14 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
     );
     // AR05 adds two TranslationUnit keys per package. ADR-0052's retired
     // Channel/@Number rows remain retired; no prior unknown evidence is lost.
-    // ADR-0146 (v26): one row per identity, 23176 -> 22327 (849 copies).
+    // ADR-0146 (v26): one row per identity, 23176 -> 22327 (849 copies), then
+    // 627 retired SuffixText keys -> 21700.
     assert_eq!(
-        matrix["shared_final_database_counts"]["ingest_unknown"], 22327,
+        matrix["shared_final_database_counts"]["ingest_unknown"], 21700,
         "shared per-blob unknown evidence changed"
     );
     assert_eq!(
-        matrix["shared_final_database_counts"]["package_install_unknown"], 9361,
+        matrix["shared_final_database_counts"]["package_install_unknown"], 9144,
         "shared per-package unknown evidence changed"
     );
     for (table, rows) in [
@@ -1096,15 +1108,17 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
     // rows, (768, 284, 174186) and (256, 99, 174186), measured in a v24
     // shared install of the same instances. ADR-0146 (v26) removes the
     // per-install copies of shared program blobs: (1146, 288, 73548) ->
-    // (1128, 288, 71634) per blob, the per-package table unchanged.
+    // (1128, 288, 71634) per blob, the per-package table unchanged. Its part 2
+    // stores `SuffixText`: -> (501, 252, 14851) and (385, 101, 73548) ->
+    // (168, 79, 14995), as the XML census predicts.
     let kl156 = "kind='Attribute' AND (xpath LIKE '%/Parameter' OR xpath LIKE '%/ParameterRef')
                  AND instr(name, ':') = 0 AND substr(name, 1, 1) <> '{'";
     for (table, owner, expected) in [
-        ("ingest_unknown", "source_sha256", (1128, 288, 71_634)),
+        ("ingest_unknown", "source_sha256", (501, 252, 14_851)),
         (
             "package_install_unknown",
             "package_sha256",
-            (385, 101, 73_548),
+            (168, 79, 14_995),
         ),
     ] {
         let measured: (i64, i64, i64) = shared

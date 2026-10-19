@@ -40,9 +40,43 @@ Resumed after the owner's pause on the branch rebased onto the test-speed merge.
 - Migration check: the v25 shared database copy opened with the branch CLI
   (`products verify`, 0 mismatches) equals the fresh v26 shared database in
   all 43 tables and every index definition (ids of `ingest_unknown` skipped).
+- WP-01 package gate on `4ac96f00` (change-scoped): fmt, documentation,
+  browser-lanes, check-layering/headers/anchors/ledger/corpus-gates,
+  tool-tests, clean-desktop, clippy, rust-tests (2,919 passed, 0 failed,
+  144 ignored, 22 binaries), corpus (97 of 97 selected), diff-check; all
+  exit 0, success.
+- Mutation proofs (each RED on its named test, restored byte-exact): plain
+  INSERT in `insert_unknown`, no identity indexes, conflicts without
+  `ON CONFLICT`, repair skipped, repair sums, repair keeps the newest sample,
+  conflict rows keyed like constructs.
 - Skill correction needed (not edited, per controller): the
   `private-corpus-regression-testing` skill still says the `ingest_unknown`
   surplus is "one copy per package member, by design"; since v26 it is gone.
   Its `run-product-matrix.sh` also still names `--test
   corpus_compatibility_matrix`, which since ADR-0144 is
   `--test it corpus_compatibility_matrix::`.
+
+## WP-02 (SuffixText end to end) — delivered in the same v26
+
+- RED first: `tests/it/suffix_text.rs` (7 tests, all failing before the
+  change), the server DTO test (`suffixText` was `null`) and the Vitest row
+  test (no suffix element).
+- `parameter.suffix_text` and `parameter_ref.suffix_text` (verbatim, an empty
+  declaration included); `parameter.suffix` stays for `Suffix`, stored and
+  not shown. `ParameterView.suffix_text`/`suffix_text_language` resolve like
+  `text`: each layer translated, then the ref's own declaration wins. The
+  field DTO carries `suffixText`/`suffixTextLanguage`; the web row wraps the
+  value control and a non-empty suffix in `.parameter-field-control`, rows
+  without a suffix are unchanged. The v26 promotion (v23 machinery) fills the
+  columns from retained blobs and retires the `SuffixText` rows on the two
+  hosts only; `SuffixTextBackfillError` for a blob not carried forward.
+- A prefixed `x:SuffixText` is read like every other column attribute
+  (`xml::attrs` keeps a prefixed value when no unqualified one exists); its
+  expanded-name evidence row stays. Pre-existing rule, now tested.
+- XML census (`<profile-scratch>` script, 115 instances / 113 packages / 302
+  program blobs) reproduced the part-1 parameter-attribute pins exactly and
+  predicted: report totals 22,900 -> 22,265 and 22,778 -> 22,145,
+  `ingest_unknown` 22,327 -> 21,700, `package_install_unknown` 9,361 -> 9,144,
+  pins (501, 252, 14,851) and (168, 79, 14,995). The matrix run matched all of
+  them and nothing else moved; re-pinned. The v25 shared database migrated
+  with the WP-02 CLI equals the fresh WP-02 shared database in all 43 tables.

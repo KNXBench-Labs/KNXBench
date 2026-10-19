@@ -59,11 +59,13 @@ const PROGRAM_ATTRS: &[&str] = &[
 ];
 
 /// The `Parameter` attributes the `parameter` row stores. Every other one
-/// (`SuffixText`, `InitialValue`, …) is reported through `ingest_unknown`
-/// (KNOWN_LIMITATIONS §156, ADR-0081). `Suffix` stays listed: it is a column,
-/// even though the corpus spells the attribute `SuffixText`. The parameter's
-/// own `Offset`/`BitOffset` (the corpus has them on union members) are
-/// columns since v25 ([`OWN_OFFSET_ATTRS`]), when they are integers.
+/// (`InitialValue`, …) is reported through `ingest_unknown`
+/// (KNOWN_LIMITATIONS §156, ADR-0081). `Suffix` and `SuffixText` are two
+/// separate columns (`suffix`, `suffix_text` since v26, WP-02): the corpus
+/// spells the unit text `SuffixText` and never declares `Suffix`. The
+/// parameter's own `Offset`/`BitOffset` (the corpus has them on union
+/// members) are columns since v25 ([`OWN_OFFSET_ATTRS`]), when they are
+/// integers.
 pub(crate) const PARAMETER_ATTRS: &[&str] = &[
     "Id",
     "Name",
@@ -72,11 +74,13 @@ pub(crate) const PARAMETER_ATTRS: &[&str] = &[
     "Access",
     "Value",
     "Suffix",
+    "SuffixText",
 ];
 
 /// The `ParameterRef` attributes the `parameter_ref` row stores; `Access`
-/// since ADR-0080 (written by the write-authority pass). Every other one is
-/// reported (KNOWN_LIMITATIONS §156, ADR-0081).
+/// since ADR-0080 (written by the write-authority pass), `SuffixText` since
+/// v26 (WP-02). Every other one is reported (KNOWN_LIMITATIONS §156,
+/// ADR-0081).
 pub(crate) const PARAMETER_REF_ATTRS: &[&str] = &[
     "Id",
     "RefId",
@@ -85,6 +89,7 @@ pub(crate) const PARAMETER_REF_ATTRS: &[&str] = &[
     "Text",
     "Value",
     "Access",
+    "SuffixText",
 ];
 
 /// `Parameter/@Offset` and `@BitOffset`, stored as `parameter.own_offset` and
@@ -1257,9 +1262,10 @@ fn handle_start_or_empty(
                      (program_id, id, name, text, parameter_type_id, access, value, suffix,
                       code_segment, offset, bit_offset, union_id, union_size_in_bit,
                       own_offset, own_bit_offset, property_object_index, property_object_type,
-                      property_id, property_offset, property_bit_offset, property_occurrence)
+                      property_id, property_offset, property_bit_offset, property_occurrence,
+                      suffix_text)
                      VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,
-                             ?14,?15,?16,?17,?18,?19,?20,?21)",
+                             ?14,?15,?16,?17,?18,?19,?20,?21,?22)",
                     params![
                         program_id.as_str(),
                         id,
@@ -1282,6 +1288,7 @@ fn handle_start_or_empty(
                         property_offset,
                         property_bit,
                         occurrence,
+                        a.get("SuffixText"),
                     ],
                 )?;
                 entities.stored(EntityKind::Parameter)?;
@@ -1374,8 +1381,8 @@ fn handle_start_or_empty(
             if !*already_present {
                 conn.execute(
                     "INSERT INTO parameter_ref
-                 (program_id, id, parameter_id, display_order, tag, text, value)
-                 VALUES (?1,?2,?3,?4,?5,?6,?7)",
+                 (program_id, id, parameter_id, display_order, tag, text, value, suffix_text)
+                 VALUES (?1,?2,?3,?4,?5,?6,?7,?8)",
                     params![
                         program_id.as_str(),
                         a.get("Id"),
@@ -1384,6 +1391,7 @@ fn handle_start_or_empty(
                         a.get("Tag"),
                         a.get("Text"),
                         a.get("Value"),
+                        a.get("SuffixText"),
                     ],
                 )?;
             }

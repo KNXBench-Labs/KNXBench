@@ -793,6 +793,12 @@ only. A time parameter whose product data packs several fields into one number
 (units named `Packed…`) is no longer offered as a plain count: the field shows
 the original value unchanged, because that packing is not documented.
 
+**In builds after Alpha 14:** a unit the product data declares for a parameter
+(for example `s` or `%`) appears right after the value, in the selected
+product language where the data translates it. It is only a label: what you
+type and what is stored or downloaded is the value alone. Opening a product
+database from an older build upgrades it once (schema v26).
+
 The following release-era description explains the retained value/editing rules;
 the new workspace replaces ordinary section/block folding with area navigation.
 

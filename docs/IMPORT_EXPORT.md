@@ -978,6 +978,25 @@ v26 gives a database equal to a fresh v26 install, table by table.
 | Master `RefId` source rows (rows, sources, occurrences) | (113, 67, 3,125) | (67, 67, 1,870) | (67, 67, 1,870) |
 | Master `Version` source rows (rows, sources, occurrences) | (113, 67, 3,125) | (67, 67, 1,870) | (67, 67, 1,870) |
 
+The same schema v26 then stores `SuffixText` on `Parameter` and
+`ParameterRef` (ADR-0146 part 2, WP-02) and re-pinned both commitments again.
+Against the part-1 pin exactly five published counts move; outcomes and every
+other count are equal. An independent XML census of the same 115 instances
+(113 packages, 302 program blobs) predicted each at its own granularity
+before the run, and reproduces the part-1 parameter-attribute pins exactly:
+
+| Moved leaf (WP-02) | Before | Predicted | Measured |
+|---|---:|---:|---:|
+| Unknown report total, isolation and successful attempts (per program member) | 22,900 | 22,265 | 22,265 |
+| Unknown report total, unique installs | 22,778 | 22,145 | 22,145 |
+| `ingest_unknown` rows (per unique blob) | 22,327 | 21,700 | 21,700 |
+| `package_install_unknown` rows (per package) | 9,361 | 9,144 | 9,144 |
+| ADR-0081 pin, `ingest_unknown` (rows, blobs, occurrences) | (1,128, 288, 71,634) | (501, 252, 14,851) | (501, 252, 14,851) |
+| ADR-0081 pin, `package_install_unknown` (rows, packages, occurrences) | (385, 101, 73,548) | (168, 79, 14,995) | (168, 79, 14,995) |
+
+The v25 shared database migrated to this v26 again equals a fresh v26
+install in all 43 tables.
+
 The 2026-09-24
 gate bound 115 instances / 113 unique hashes: isolated 104 installed and 11
 unsupported; shared 102 installed, 2 already present, and 11 unsupported.

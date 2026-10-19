@@ -5,6 +5,8 @@ use std::sync::atomic::Ordering;
 
 use axum::extract::{Query, State};
 use axum::Json;
+use knx_core::system_family::{declared_system, DeclaredSystem, SystemFamily};
+use knx_productdb::query::DeviceProgramRelation;
 use knx_projection::{build_device_node, DeviceNode};
 use serde::{Deserialize, Serialize};
 
@@ -25,10 +27,99 @@ enum ProductResolution {
     Unavailable,
 }
 
+/// WP-20: the system family the device's application program declares
+/// through its product-database mask version. A mask read from a device is a
+/// separate session fact and never reaches this field.
+#[derive(Clone, Serialize)]
+#[serde(tag = "state", rename_all = "camelCase")]
+enum DeviceSystem {
+    /// The product did not resolve; `resolution` says why.
+    NoProduct,
+    /// The device names no application program (empty program reference).
+    NoApplicationProgram,
+    /// The device names a program link, but the link or its application
+    /// program is not installed in the product database.
+    ApplicationNotInDatabase,
+    /// The program link belongs to other hardware than the device's
+    /// product; its program's mask says nothing about this product.
+    ApplicationNotOfProduct,
+    NoMaskVersion,
+    InvalidMask {
+        declared: String,
+    },
+    UnknownMask {
+        mask: u16,
+    },
+    Family {
+        mask: u16,
+        family: FamilyToken,
+    },
+}
+
+#[derive(Clone, Copy, Serialize)]
+#[serde(rename_all = "camelCase")]
+enum FamilyToken {
+    System1,
+    System2,
+    System7,
+    SystemB,
+    System300,
+    Coupler,
+    KnxnetIpRouter,
+    UsbInterface,
+    IrDecoder,
+    RfBidirectional,
+    RfUnidirectional,
+}
+
+impl From<SystemFamily> for FamilyToken {
+    fn from(family: SystemFamily) -> Self {
+        match family {
+            SystemFamily::System1 => Self::System1,
+            SystemFamily::System2 => Self::System2,
+            SystemFamily::System7 => Self::System7,
+            SystemFamily::SystemB => Self::SystemB,
+            SystemFamily::System300 => Self::System300,
+            SystemFamily::Coupler => Self::Coupler,
+            SystemFamily::KnxnetIpRouter => Self::KnxnetIpRouter,
+            SystemFamily::UsbInterface => Self::UsbInterface,
+            SystemFamily::IrDecoder => Self::IrDecoder,
+            SystemFamily::RfBidirectional => Self::RfBidirectional,
+            SystemFamily::RfUnidirectional => Self::RfUnidirectional,
+        }
+    }
+}
+
+impl DeviceSystem {
+    fn of(row: &knx_productdb::query::DeviceProductRow, program_ref: &str) -> Self {
+        if program_ref.is_empty() {
+            return Self::NoApplicationProgram;
+        }
+        match row.program_relation {
+            DeviceProgramRelation::HardwareMismatch => return Self::ApplicationNotOfProduct,
+            DeviceProgramRelation::Missing => return Self::ApplicationNotInDatabase,
+            DeviceProgramRelation::Matched if row.application_program_id.is_none() => {
+                return Self::ApplicationNotInDatabase
+            }
+            DeviceProgramRelation::Matched => {}
+        }
+        match declared_system(row.mask_version.as_deref()) {
+            DeclaredSystem::NoMaskVersion => Self::NoMaskVersion,
+            DeclaredSystem::InvalidMask(declared) => Self::InvalidMask { declared },
+            DeclaredSystem::UnknownMask(mask) => Self::UnknownMask { mask: mask.0 },
+            DeclaredSystem::Family { mask, family } => Self::Family {
+                mask: mask.0,
+                family: family.into(),
+            },
+        }
+    }
+}
+
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct ProductMetadata {
     resolution: ProductResolution,
+    system: DeviceSystem,
     manufacturer_id: Option<String>,
     manufacturer_name: Option<String>,
     product_text: Option<String>,
@@ -41,6 +132,7 @@ impl ProductMetadata {
     fn unavailable(resolution: ProductResolution) -> Self {
         Self {
             resolution,
+            system: DeviceSystem::NoProduct,
             manufacturer_id: None,
             manufacturer_name: None,
             product_text: None,
@@ -85,7 +177,10 @@ pub(crate) async fn get(
         let inputs: Vec<_> = project
             .devices
             .iter()
-            .map(|device| (build_device_node(device), device.product_ref.clone()))
+            .map(|device| {
+                let refs = (device.product_ref.clone(), device.program_ref.clone());
+                (build_device_node(device), refs)
+            })
             .collect();
         (state.project_revision.load(Ordering::Relaxed), inputs)
     };
@@ -97,21 +192,23 @@ pub(crate) async fn get(
         .as_ref()
         .map(|mutex| mutex.lock().expect("state mutex poisoned"));
     let mut devices = Vec::with_capacity(inputs.len());
-    for (device, product_ref) in inputs {
-        if !metadata.contains_key(&product_ref) {
+    for (device, refs) in inputs {
+        let (product_ref, program_ref) = &refs;
+        if !metadata.contains_key(&refs) {
             let value = if product_ref.is_empty() {
                 ProductMetadata::unavailable(ProductResolution::NoReference)
             } else if let Some(products) = &products {
-                // This list resolves product identity only, not application/program
-                // compatibility. An empty program ref avoids needless program work.
+                // Product identity plus the program's declared mask (WP-20); no
+                // application compatibility or parameter evaluation.
                 match knx_productdb::query::device_product(
                     products,
-                    &product_ref,
-                    "",
+                    product_ref,
+                    program_ref,
                     query.language.as_deref(),
                 ) {
                     Ok(Some(row)) => ProductMetadata {
                         resolution: ProductResolution::Resolved,
+                        system: DeviceSystem::of(&row, program_ref),
                         manufacturer_id: Some(row.manufacturer_id),
                         manufacturer_name: row.manufacturer_name,
                         product_text: row.product_text,
@@ -128,13 +225,13 @@ pub(crate) async fn get(
             } else {
                 ProductMetadata::unavailable(ProductResolution::NoDatabase)
             };
-            metadata.insert(product_ref.clone(), value);
+            metadata.insert(refs.clone(), value);
         }
         devices.push(DeviceCatalogRow {
             id: device.id,
             device,
-            product: metadata[&product_ref].clone(),
-            product_ref: (!product_ref.is_empty()).then_some(product_ref),
+            product: metadata[&refs].clone(),
+            product_ref: (!refs.0.is_empty()).then(|| refs.0.clone()),
         });
     }
     Ok(Json(DeviceCatalog {

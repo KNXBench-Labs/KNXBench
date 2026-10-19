@@ -44,6 +44,12 @@ Last updated: 2026-10-18 07:55 CEST
 | --- | --- | --- |
 | [Device-empty ranges](contracts/topology-metrics.md#device-empty-ranges-issue-25-source-builds-after-alpha-14) | Diagram hides areas/lines without devices; original structure and explorer editing remain unchanged | Local-only; integration pending |
 
+## Device list system family
+
+| Feature | Scope | Availability |
+| --- | --- | --- |
+| [System column](research/2026-10-19-mask-version-system-family.md) | Devices list names System 1/2/7/B and other profiles from the program's declared mask through one cited core table; unknown masks and missing product/program/mask states shown explicitly, never guessed; sortable and filterable by label or mask; device-read masks not used ([guide](manual/user-guide/05-devices-and-products.md#system-column-source-builds-after-alpha-14)) | Main-only |
+
 ## Parameter caption resolution
 
 | Feature | Scope | Availability |

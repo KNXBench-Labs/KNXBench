@@ -6,8 +6,9 @@ import type { ProjectTree } from "./bindings/ProjectTree";
 import type { MultiSelection, Selection } from "./selection";
 import type { ItemClickHandler } from "./multiSelection";
 import { catalogueMatchesTree, projectDeviceRows, visibleDeviceRows,
-  type DeviceCatalog, type DeviceCatalogRow, type DeviceSort, type DeviceSortColumn } from "./deviceList";
+  type DeviceCatalog, type DeviceCatalogRow, type DeviceListRow, type DeviceSort, type DeviceSortColumn } from "./deviceList";
 import { useTranslate, type MessageKey } from "./i18n";
+import { maskHex, systemLabel } from "./deviceSystem";
 import { useProductLanguage } from "./productLanguage";
 import { useUiLanguage } from "./uiLanguage";
 import { fellBack, LanguageFallbackBadge } from "./languageFallback";
@@ -24,6 +25,7 @@ const DEVICES_COLUMNS = [
   { id: "manufacturer", width: 90, min: 48 },
   { id: "product", width: 110, min: 48 },
   { id: "orderNumber", width: 80, min: 48 },
+  { id: "system", width: 80, min: 48 },
   { id: "topology", width: 80, min: 48 },
   { id: "building", width: 90, min: 48 },
   { id: "com_object_count", width: 80, min: 48 },
@@ -38,6 +40,7 @@ const COLUMNS: { column: DeviceSortColumn; label: MessageKey }[] = [
   { column: "manufacturer", label: "devices.manufacturer" },
   { column: "product", label: "devices.product" },
   { column: "orderNumber", label: "devices.orderNumber" },
+  { column: "system", label: "devices.system" },
   { column: "topology", label: "devices.topology" },
   { column: "building", label: "devices.building" },
   { column: "com_object_count", label: "inspector.communicationObjects" },
@@ -87,11 +90,16 @@ export default function DevicesWorkspace({ tree, active, selection, multiSelecti
     return () => { disposed = true; };
   }, [active, tree, productLanguage, refresh]);
   const currentMetadata = metadata?.tree === tree && metadata.language === productLanguage ? metadata.rows : [];
-  const rows = useMemo(() => visibleDeviceRows(projectDeviceRows(tree, currentMetadata), query, sort, language, { pendingOnly }),
-    [tree, metadata, productLanguage, query, sort, language, pendingOnly]);
+  const rows = useMemo(() => visibleDeviceRows(projectDeviceRows(tree, currentMetadata), query, sort, language, { pendingOnly, systemText }),
+    [tree, metadata, productLanguage, query, sort, language, pendingOnly, t]);
   const visibleOrder = rows.map((row) => row.id);
   const total = useMemo(() => projectDeviceRows(tree, currentMetadata).length, [tree, metadata, productLanguage]);
-  function resolution(row: (typeof rows)[number]): string {
+  /** The declared family (WP-20); an unresolved product shows why, like its sibling columns. */
+  function systemText(row: DeviceListRow): string {
+    const label = systemLabel(row.catalog?.system);
+    return label ? t(label.key, label.params) : resolution(row);
+  }
+  function resolution(row: DeviceListRow): string {
     switch (row.catalog?.resolution) {
       case "NoReference": return t("devices.noReference");
       case "NoDatabase": return t("devices.noDatabase");
@@ -140,6 +148,8 @@ export default function DevicesWorkspace({ tree, active, selection, multiSelecti
             && <LanguageFallbackBadge selected={productLanguage} source={row.catalog?.productSourceLanguage} />}
         </td>
         <td>{row.catalog?.orderNumber ?? resolution(row)}</td>
+        <td title={row.catalog?.system?.state === "family" ? t("devices.systemDeclared", { mask: maskHex(row.catalog.system.mask) }) : undefined}>
+          {systemText(row)}</td>
         <td>{row.topology.length ? row.topology.join(" · ") : t("workbench.unassigned")}</td>
         <td>{row.building.length ? row.building.join(" · ") : t("workbench.unassigned")}</td>
         <td>{row.com_object_count}</td><td>{row.description ?? "—"}</td>

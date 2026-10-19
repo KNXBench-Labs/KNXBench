@@ -223,7 +223,7 @@ async function defaultFit(page: Page, table: Locator, name: string, expectScroll
     // Device text columns alone exceed the pane, independently of the compact
     // selection-column exception in the reviewed rendered budget.
     if (name.endsWith("devices")) expect(minimum - floors[0]).toBeGreaterThan(size.client);
-    const reviewedTotal = name.endsWith("devices") ? (name.startsWith("de-") ? 955 : 919) : 800;
+    const reviewedTotal = name.endsWith("devices") ? (name.startsWith("de-") ? 1037 : 1000) : 800;
     await assertFloorOverflow(table, floors, reviewedTotal);
     expect(Math.abs(size.scroll - minimum), JSON.stringify(measurement)).toBeLessThanOrEqual(2 * floors.length);
     await scrollsLocally(page, table);
@@ -498,13 +498,13 @@ test("independent fit assertion rejects an inflated rendered floor and accepts r
   const server = await intercept(page, "en"); await openProject(page, "en"); await openList(page, "en");
   const table = page.locator('[data-table-id="devices"]');
   const floors = await intrinsicFloors(table);
-  await assertFloorOverflow(table, floors, 919);
+  await assertFloorOverflow(table, floors, 1000);
   const original = await table.locator("col").nth(2).getAttribute("style");
   await table.locator("col").nth(2).evaluate(e => { e.style.width = "240px"; });
   expect(await intrinsicFloors(table)).toEqual(floors);
-  await expect(assertFloorOverflow(table, floors, 919)).rejects.toThrow();
+  await expect(assertFloorOverflow(table, floors, 1000)).rejects.toThrow();
   await table.locator("col").nth(2).evaluate((e, style) => { e.setAttribute("style", style!); }, original);
-  await assertFloorOverflow(table, floors, 919);
+  await assertFloorOverflow(table, floors, 1000);
   expect(server.unexpected).toEqual([]);
 });
 

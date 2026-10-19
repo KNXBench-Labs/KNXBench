@@ -159,9 +159,10 @@ cards. Explorer trees, forms and manufacturer-declared parameter grids
   These actual insets contribute to the measured floors. Sortable
   header buttons and inline device/flow links avoid duplicate horizontal padding.
   Grouped object controls retain their nested tree indentation.
-  The twelve-column device table uses 12 px compact EN/DE headings, including
-  Location/Ort, Topology/Topologie and Prog.; full sort names remain accessible
-  and appear in title tooltips, including separator context.
+  The thirteen-column device table (System added by WP-20) uses 12 px compact
+  EN/DE headings, including Location/Ort, Topology/Topologie and Prog.; full
+  sort names remain accessible and appear in title tooltips, including
+  separator context.
 - Declared default budgets remain devices 1100 px, communication objects
   800/804 px and monitor 1024 px. Each default baseline is raised to its measured
   floor when necessary, then compressed proportionally toward that floor to fit
@@ -224,9 +225,10 @@ selection column renders at 32 px; shared inline branches also differ by up to
 8 px from separately summed token insets. Tests bound per-column differences
 (12 px for selection, 8 px elsewhere, plus one Chromium geometry subpixel
 `1 / 64 / scale` for zoom rounding) and additionally assert reviewed rendered
-fixture totals within 2 px: devices EN 919 / DE 955 px; German flat objects
-800 px. Device text columns alone require 880 / 917 px, independently exceeding
-the 780 px pane. These fixture bounds reject inflated floors; they are not a
+fixture totals within 2 px: devices EN 1000 / DE 1037 px (919 / 955 px before
+WP-20 added the System column, re-measured 19 October 2026); German flat objects
+800 px. Device text columns alone require 961 / 999 px (previously 880 / 917),
+independently exceeding the 780 px pane. These fixture bounds reject inflated floors; they are not a
 proof of globally optimal layout or arbitrary imported-project fit.
 
 The flat-view measurements include the grouped mount's retained number floor.

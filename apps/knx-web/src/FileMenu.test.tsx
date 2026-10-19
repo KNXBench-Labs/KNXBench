@@ -5,8 +5,8 @@ import { createPortal } from "react-dom";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  choosePanelPlacement, choosePanelShift, FileMenuContent, FileMenuItem, FileMenuSummary, FileSubmenu, layoutGeometry,
-  MIN_PANEL_WIDTH_PX, useFileMenuItemProps,
+  choosePanelPlacement, choosePanelShift, FileMenuContent, FileMenuItem, FileMenuSummary, FileSubmenu, chooseMenuFit,
+  layoutGeometry, menuGeometry, MIN_PANEL_WIDTH_PX, useFileMenuItemProps,
 } from "./FileMenu";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -986,6 +986,97 @@ describe("File menu placement", () => {
     });
   });
 
+  describe("first-level fit (UISET3-01)", () => {
+    // The menu's own box, in visual px at `scale`: a 280 x `height` layout px menu at (120, 60), or
+    // at `openHeight` while a submenu is unfolded.
+    const menuAt = (scale: number, layoutViewport: { width: number; height: number }, height: number, openHeight = height) => {
+      document.documentElement.style.setProperty("--app-ui-scale", String(scale));
+      window.innerWidth = layoutViewport.width * scale;
+      window.innerHeight = layoutViewport.height * scale;
+      return vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+        // An open inline submenu (happy-dom lays every panel out statically) makes the menu taller
+        // by its own height; the fit is the first level's, without it.
+        if (this.dataset.fileSubmenuPanel) return rect(0, 0, 0, this.hidden ? 0 : (openHeight - height) * scale);
+        // File's `<details>`, whose left edge an anchored menu starts at.
+        if (this.tagName === "DETAILS") return rect(120 * scale, 20 * scale, 80 * scale, 32 * scale);
+        if (!this.classList.contains("file-menu-content")) return rect(0, 0, 0, 0);
+        const unfolded = [...this.querySelectorAll<HTMLElement>("[data-file-submenu-panel]")].some((p) => !p.hidden);
+        // The menu's own shift moves it, as `left: var(--file-menu-shift)` does.
+        const shift = Number.parseFloat(this.style.getPropertyValue("--file-menu-shift")) || 0;
+        return rect((120 + shift) * scale, 60 * scale, 280 * scale, (unfolded ? openHeight : height) * scale);
+      });
+    };
+    afterEach(() => { document.documentElement.style.removeProperty("--app-ui-scale"); });
+
+    it("at 150% scrolls the whole menu and folds its submenus inline when the first level runs past the bottom", async () => {
+      // 1440 x 601 at 150%: 960 x 400.67 layout px; a 340 px first level at y = 60 ends at 400 > 392.67.
+      const spy = menuAt(1.5, { width: 960, height: 601 / 1.5 }, 340);
+      await mount();
+      expect(content().dataset.layout).toBe("inline");
+      spy.mockRestore();
+    });
+
+    it("keeps flyouts where the same first level fits: at 100% that window is 601 px high", async () => {
+      const spy = menuAt(1, { width: 1440, height: 601 }, 340);
+      await mount();
+      expect(content().dataset.layout).toBeUndefined();
+      spy.mockRestore();
+    });
+
+    it("decides again on a zoom step and on a window resize, and drops the mark on close", async () => {
+      let spy = menuAt(1, { width: 1440, height: 601 }, 340);
+      await mount();
+      expect(content().dataset.layout).toBeUndefined();
+      spy.mockRestore();
+      // Ctrl+Plus to 150%: the same window is now 400.67 layout px high.
+      spy = menuAt(1.5, { width: 960, height: 601 / 1.5 }, 340);
+      await act(async () => { document.documentElement.style.setProperty("--app-ui-scale", "1.5"); });
+      expect(content().dataset.layout).toBe("inline");
+      spy.mockRestore();
+      // The window grows to 1440 x 900 (600 layout px high): the first level fits again.
+      spy = menuAt(1.5, { width: 960, height: 600 }, 340);
+      await act(async () => { window.dispatchEvent(new Event("resize")); });
+      expect(content().dataset.layout).toBeUndefined();
+      spy.mockRestore();
+      spy = menuAt(1.5, { width: 960, height: 601 / 1.5 }, 340);
+      await act(async () => { window.dispatchEvent(new Event("resize")); });
+      expect(content().dataset.layout).toBe("inline");
+      await act(async () => { details().open = false; });
+      expect(content().dataset.layout).toBeUndefined();
+      spy.mockRestore();
+    });
+
+    it("at 150% moves a first level that runs past the right margin left by its layout overflow", async () => {
+      // 570 x 800 visual px at 150% are 380 layout px wide: the menu ends at 400, 28 px past 372.
+      const style = document.createElement("style");
+      style.textContent = ".file-menu-content { position: absolute; }";
+      document.head.append(style);
+      const spy = menuAt(1.5, { width: 380, height: 800 }, 300);
+      await mount();
+      expect(content().style.getPropertyValue("--file-menu-shift")).toBe("-28px");
+      expect(content().dataset.layout).toBeUndefined();
+      // Measured from File's box, not from the shifted menu: a refit finds the same shift.
+      await act(async () => { window.dispatchEvent(new Event("resize")); });
+      expect(content().style.getPropertyValue("--file-menu-shift")).toBe("-28px");
+      await act(async () => { details().open = false; });
+      expect(content().style.getPropertyValue("--file-menu-shift")).toBe("");
+      spy.mockRestore();
+      style.remove();
+    });
+
+    it("measures the first level with its submenus folded, so an open inline submenu does not count", async () => {
+      // The first level ends at 360 of 800 layout px; with a submenu open inline the menu would end at 960.
+      const spy = menuAt(1.5, { width: 960, height: 800 }, 300, 900);
+      await mount();
+      await key(trigger("exchange"), "ArrowRight");
+      expect(panel("exchange").hidden).toBe(false);
+      await act(async () => { window.dispatchEvent(new Event("resize")); });
+      expect(content().dataset.layout).toBeUndefined();
+      expect(panel("exchange").hidden).toBe(false);
+      spy.mockRestore();
+    });
+  });
+
   it("does not place the panel when the stylesheet makes it an inline expansion", async () => {
     window.innerWidth = 300;
     await mount();
@@ -1124,5 +1215,45 @@ describe("layoutGeometry", () => {
     expect(layoutGeometry({ top: 100, width: 240, height: 120 }, { left: 100, right: 390 }, { width: 640, height: 800 }, 1)).toEqual({
       viewportWidth: 640, viewportHeight: 800, panelLeft: 396, panelWidth: 240, anchorLeft: 100, panelTop: 100, panelBottom: 220,
     });
+  });
+});
+
+describe("chooseMenuFit", () => {
+  const fit = (input: Partial<Parameters<typeof chooseMenuFit>[0]>) =>
+    chooseMenuFit({ viewportWidth: 960, viewportHeight: 400, menuLeft: 120, menuRight: 400, menuBottom: 300, ...input });
+
+  it("takes the inline layout past the bottom margin and not a pixel before", () => {
+    expect(fit({ menuBottom: 392 })).toEqual({ inline: false, shift: 0 });
+    expect(fit({ menuBottom: 392.5 })).toEqual({ inline: true, shift: 0 });
+  });
+
+  it("moves left by its overflow past the right margin, never past the left margin", () => {
+    expect(fit({ viewportWidth: 440, menuRight: 432 })).toEqual({ inline: false, shift: 0 });
+    expect(fit({ viewportWidth: 440, menuRight: 461 })).toEqual({ inline: false, shift: 29 });
+    // Wider than the room: it stops at the left margin.
+    expect(fit({ viewportWidth: 300, menuLeft: 40, menuRight: 400 })).toEqual({ inline: false, shift: 32 });
+  });
+});
+
+describe("menuGeometry", () => {
+  it("divides the menu's DOMRect and the window by the scale: 601 visual px at 150% are 400.67 layout px", () => {
+    const geometry = menuGeometry({ left: 180, right: 600, bottom: 593 }, { width: 1440, height: 601 }, 1.5);
+    expect(geometry.viewportWidth).toBe(960);
+    expect(geometry.viewportHeight).toBeCloseTo(400.67, 2);
+    expect(geometry).toMatchObject({ menuLeft: 120, menuRight: 400 });
+    expect(geometry.menuBottom).toBeCloseTo(395.33, 2);
+    // Read unconverted, the same menu would pass (593 <= 601 - 8); converted it does not (395.33 > 392.67).
+    expect(chooseMenuFit({ viewportWidth: 1440, viewportHeight: 601, menuLeft: 180, menuRight: 600, menuBottom: 593 }).inline).toBe(false);
+    expect(chooseMenuFit(geometry).inline).toBe(true);
+  });
+
+  it("writes the shift in layout px: at 150% a 660 px window is 440 layout px wide", () => {
+    // A menu from 255 to 691.5 visual px is 170..461 layout px: 29 layout px past the right margin.
+    expect(chooseMenuFit(menuGeometry({ left: 255, right: 691.5, bottom: 600 }, { width: 660, height: 800 }, 1.5)).shift).toBeCloseTo(29, 6);
+  });
+
+  it("at 80% gives back the room the visual reading hides", () => {
+    // 640 visual px at 80% are 800 layout px; a menu ending at 620 visual px ends at 775.
+    expect(chooseMenuFit(menuGeometry({ left: 100, right: 400, bottom: 620 }, { width: 900, height: 640 }, 0.8))).toEqual({ inline: false, shift: 0 });
   });
 });

@@ -12,8 +12,8 @@ const THEMES = ["porcelain", "graphite", "cupertino", "lcars", "user-modern-retr
 type Catalogue = { readonly [K in keyof typeof en]: string };
 const TRIGGERS = ["exchange", "history", "help"] as const;
 
-async function serve(page: Page, { theme = "porcelain", motionLevel = "standard", language = "en", sessionRequired = false, uiScale }:
-  { theme?: string; motionLevel?: string; language?: "en" | "de"; sessionRequired?: boolean; uiScale?: number } = {}) {
+async function serve(page: Page, { theme = "porcelain", motionLevel = "standard", language = "en", sessionRequired = false, uiScale, density }:
+  { theme?: string; motionLevel?: string; language?: "en" | "de"; sessionRequired?: boolean; uiScale?: number; density?: "compact" | "comfortable" } = {}) {
   const unexpected: string[] = [];
   await page.route("https://api.github.com/**", (route) => { unexpected.push(route.request().url()); return route.abort(); });
   await page.route("**/api/**", async (route) => {
@@ -25,7 +25,7 @@ async function serve(page: Page, { theme = "porcelain", motionLevel = "standard"
     if (path === "/api/auth/status") return ok({ required: sessionRequired, authenticated: true });
     if (path === "/api/settings" && method === "GET") return ok({ schemaVersion: 1, status: "ok", settings: {
       uiLanguage: language, theme, motionLevel, releaseChecksEnabled: false, achievementsEnabled: "false",
-      onboardingGuide: { seenStage: "alpha", version: "0.1.0-alpha.14" }, ...(uiScale === undefined ? {} : { uiScale }) } });
+      onboardingGuide: { seenStage: "alpha", version: "0.1.0-alpha.14" }, ...(uiScale === undefined ? {} : { uiScale }), ...(density === undefined ? {} : { density }) } });
     if (path === "/api/settings" && method === "PUT") return ok({ schemaVersion: 1, status: "ok", settings: route.request().postDataJSON().settings });
     if (path === "/api/project" && method === "GET") return route.fulfill({ status: 400, contentType: "application/json", body: '{"error":"no project open"}' });
     if (path === "/api/bus/discover" && method === "POST") return ok({ interfaces: [] });
@@ -1023,3 +1023,89 @@ test.describe("File menu with a pen (UISET2-02)", () => {
     });
   }
 });
+
+test.describe("The File menu's first level under application zoom (UISET3-01)", () => {
+  // In layout px (window / scale) 1440x601 and 1440x700 at 150% are 401 and 467 px tall, short of
+  // the eight Comfortable rows with Logout, yet the window is taller than the 600 px media rule.
+  // 900x800 and 660x800 at 150% are 600x533 and 440x533 layout px: narrow and short, with a
+  // window wider than 650 px.
+  const CASES = [
+    { scale: 1.5, width: 1440, height: 601 }, { scale: 1.5, width: 1440, height: 700 },
+    { scale: 1.5, width: 900, height: 800 }, { scale: 1.5, width: 660, height: 800 },
+  ];
+  for (const language of ["en", "de"] as const) {
+    for (const { scale, width, height } of CASES) {
+      test(`${language} ${scale * 100}% ${width}x${height} Comfortable with a session: every first-level row and Logout stay reachable, folded and with each submenu open`, async ({ page }) => {
+        const unexpected = await serve(page, { language, uiScale: scale, density: "comfortable", sessionRequired: true });
+        let logouts = 0;
+        await page.route("**/api/auth/logout", (route) => { logouts += 1; return route.fulfill({ status: 200, contentType: "application/json", body: "{}" }); });
+        await page.setViewportSize({ width, height });
+        await page.goto("/");
+        await expect.poll(() => renderedScale(page), "the stored scale reaches the root").toBe(scale);
+        await expect(page.locator("html")).toHaveAttribute("data-density", "comfortable");
+        await dismissToasts(page);
+        await openFile(page);
+        await expect(page.locator(".file-menu-logout")).toHaveCount(1);
+        await checkFirstLevel(page);
+        for (const id of TRIGGERS) {
+          await trigger(page, id).scrollIntoViewIfNeeded();
+          await openFileSubmenu(page, id);
+          await checkZoomedSubmenu(page, id, scale);
+          await checkFirstLevel(page);
+        }
+        // Logout, the last row, scrolled to and pressed with the Help submenu still open.
+        const logout = page.locator(".file-menu-logout");
+        await logout.scrollIntoViewIfNeeded();
+        await viewportFit(page, logout);
+        await logout.click();
+        await expect.poll(() => logouts, "Logout runs on a real click").toBe(1);
+        expect(unexpected).toEqual([]);
+      });
+    }
+
+    // 640x800 at 80% is 800x1000 layout px, yet the window is narrow: the toolbar takes its narrow
+    // layout (a window rule, like every breakpoint outside the File menu) and the menu spans the
+    // window. The window rule keeps every submenu inline there at every scale; a flyout beside a
+    // menu that spans the window would have no room on either side anyway.
+    test(`${language} 80% 640x800 Comfortable with a session: the narrow window keeps the inline layout and every entry is reachable`, async ({ page }) => {
+      const unexpected = await serve(page, { language, uiScale: 0.8, density: "comfortable", sessionRequired: true });
+      await page.setViewportSize({ width: 640, height: 800 });
+      await page.goto("/");
+      await expect.poll(() => renderedScale(page), "the stored scale reaches the root").toBe(0.8);
+      await dismissToasts(page);
+      await openFile(page);
+      await checkFirstLevel(page);
+      for (const id of TRIGGERS) {
+        await trigger(page, id).scrollIntoViewIfNeeded();
+        await openFileSubmenu(page, id);
+        await expect(panel(page, id), `${id} expands inline`).toHaveCSS("position", "static");
+        await checkZoomedSubmenu(page, id, 0.8);
+        await checkFirstLevel(page);
+      }
+      expect(unexpected).toEqual([]);
+    });
+  }
+});
+
+/**
+ * Every first-level row of the open File menu (actions, submenu rows, Logout), scrolled into
+ * view, lies inside the viewport and the menu box and takes a real pointer; the menu box itself
+ * lies inside the viewport.
+ */
+async function checkFirstLevel(page: Page) {
+  const content = page.locator(".file-menu-content");
+  await viewportFit(page, content);
+  const rows = await page.locator(".file-menu-content > [data-file-menu-item], .file-menu-content > .file-submenu > [data-file-menu-item]").all();
+  expect(rows.length, "the first level has rows").toBeGreaterThanOrEqual(8);
+  for (const row of rows) {
+    const label = (await row.textContent())?.trim();
+    await row.scrollIntoViewIfNeeded();
+    await viewportFit(page, row);
+    const r = await box(row);
+    const menu = await box(content);
+    expect(r.y + r.height, `${label}: inside the menu box`).toBeLessThanOrEqual(menu.y + menu.height + 0.5);
+    expect(await paintsOnTop(row, "centre"), `${label}: the pointer reaches the row`).toBe(true);
+    if (await row.isEnabled()) await row.click({ trial: true });
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth), "no sideways scroll").toBeLessThanOrEqual(1);
+}

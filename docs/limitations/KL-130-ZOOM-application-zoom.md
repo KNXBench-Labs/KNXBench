@@ -61,10 +61,19 @@ viewport unit renders at the zoomed size
 ([table](../contracts/file-menu.md#units-under-zoom)). Browser cases set the
 scale through a stored `uiScale` setting and through Ctrl+Plus.
 
-This is Chromium-only evidence, like the table rule above. The menu's two
-media queries (650 px wide, 600 px high) still read the window, not layout
-pixels; placement covers the width side per submenu. WebKitGTK may report
-DOMRect or the window size differently under `zoom`.
+The first level is zoom-aware as well (UISET3-01): the menu measures its
+first level in layout pixels and takes the scrolling, inline layout when it
+runs past the bottom margin, and moves left when it runs past the right one,
+so at 150% **Logout** stays reachable in a 1440 x 601 window (Comfortable
+density, a session) and the menu stays on screen in a 660 px window. The two
+media queries (650 px wide, 600 px high) still read the window and remain as
+a floor; the toolbar's narrow layout follows the window at every scale, so at
+80% a 640 px window keeps the inline File menu although it is 800 layout
+pixels wide.
+
+This is Chromium-only evidence, like the table rule above. WebKitGTK may
+report DOMRect, the window size or the scroll height differently under
+`zoom`.
 
 **Also lifted only when** the GUI-capable Linux run additionally opens every
 File submenu at 80% and 150% in a mid-width and a short window.

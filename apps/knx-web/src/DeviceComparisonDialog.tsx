@@ -54,7 +54,7 @@ export default function DeviceComparisonDialog({ controller: c }: { controller: 
       })}</ul>
       {selected?.reason && <p className="comparison-reason">{selected.reason}</p>}
       {selected?.tag === "outdated" && <p className="form-warning">{t("compare.outdatedHint")}</p>}
-      {selected?.result && <ComparisonTable rows={selected.result.decoded} />}
+      {selected?.result && <ComparisonTable rows={selected.result.decoded} changes={selected.result.changes} />}
       {!c.running && <button type="button" onClick={c.close}>{t("compare.close")}</button>}
     </>}
     {c.error && <p className="field-error" role="alert">{c.error}</p>}

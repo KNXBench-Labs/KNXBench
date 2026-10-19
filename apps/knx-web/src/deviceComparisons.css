@@ -34,6 +34,16 @@
 .comparison-decoded tr[data-different] { box-shadow: inset 3px 0 var(--knx-warning-color); }
 .comparison-raw td { font-family: var(--knx-font-mono); }
 .comparison-reason { display: block; font-weight: normal; font-size: 0.85rem; color: var(--knx-muted); }
+/* WP-18: byte marks work without colour: differing bytes are bold and underlined,
+   unread or uncomparable ones italic with a dotted underline; each row also counts them. */
+.comparison-filter-bar { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; margin-top: 12px; }
+.comparison-filter { display: inline-flex; align-items: center; gap: 8px; }
+.comparison-hidden, .comparison-no-differences { margin: 0; color: var(--knx-muted); }
+.comparison-byte[data-mark="different"] { font-weight: 700; text-decoration: underline 2px; text-underline-offset: 3px;
+  background: color-mix(in srgb, var(--knx-warning-color) 24%, transparent); border-radius: 2px; }
+.comparison-byte[data-mark="unknown"] { font-style: italic; text-decoration: underline dotted 1px; text-underline-offset: 3px; color: var(--knx-muted); }
+.comparison-byte-count { display: block; font-weight: normal; font-size: 0.85rem; }
+.comparison-decoded tr[data-unknown]:not([data-different]) { box-shadow: inset 3px 0 var(--knx-muted); }
 @media (max-width: 600px) {
   .search-panel.device-comparison-dialog { padding: 16px; }
   .device-comparison-dialog .dialog-actions { display: flex; flex-wrap: wrap; gap: 8px; }

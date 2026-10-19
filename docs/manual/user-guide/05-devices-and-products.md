@@ -193,6 +193,13 @@ than once — one row per catalog item in the database, including
 several entries that differ only in a number. KNXBench shows what the database
 contains; it does not deduplicate on your behalf.
 
+*(Source builds after Alpha 14:)* under every row a few small lines say what tells
+it apart: the product and its application link, the application with its ID and
+version, the catalogue ID and section, and the file the entry came from. Two rows
+with the same name are usually two application versions of one device, or the same
+device listed by two packages. A newer application version is installed beside the
+old one on purpose, so projects built with the old one keep working.
+
 The manufacturer select and the search field combine: the search runs on the server
 over the filtered set, a moment after you stop typing. Arrow keys move through the
 results and Enter picks the highlighted one, which fills the name field below — picking
@@ -244,6 +251,30 @@ it listed: if a file with that name changed in the meantime, nothing is deleted 
 the list is read again. It never deletes backups on its own. (Alpha 10 and 11 cannot
 delete backups, and their plain **Install product database** picker installs
 directly, without a preview or backup.)
+
+### Cleaning up the catalogue (source builds after Alpha 14)
+
+**Clean up catalogue**, below the backups, removes catalogue entries you no longer
+want to pick from. It only ever removes the entries you tick:
+
+1. The list starts with nothing selected. Filter it, tick entries by hand, or use
+   **Select extra placements**: for every exact product + application link listed
+   more than once, it ticks all but one. It never prefers a version; an older
+   application version is removed only when you tick it.
+2. **Preview removal** shows the chosen entries and says **Preview only — nothing
+   has been removed.** An entry marked **Last catalogue entry for this product and
+   application** is the only one left for that link: devices using it keep working,
+   but the device inspector no longer shows a catalogue item name or number, and the
+   documentation uses the product text instead. The preview also counts the devices
+   of the open project that use the link; other saved projects are not checked.
+3. **Back up and remove** first saves a backup of the whole catalogue (listed under
+   **Catalogue backups**), then removes the entries. If the catalogue changed since
+   the preview, nothing is removed and you choose again.
+
+Products, application programs and the original package files stay in the
+database, so nothing in a project breaks and no disk space is freed. To get removed
+entries back, restore the backup: installing the same package again is skipped and
+does not bring them back.
 
 ### Old ETS3 product databases (`.vd3`, `.vd4`, `.vd5`)
 

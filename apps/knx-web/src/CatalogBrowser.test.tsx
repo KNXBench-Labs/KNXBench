@@ -29,6 +29,9 @@ const apiMock = vi.hoisted(() => ({
   applyCatalogUpdate: vi.fn(),
   restoreCatalogBackup: vi.fn(),
   isCatalogueUpdateStale: () => false,
+  previewCatalogCleanup: vi.fn(),
+  applyCatalogCleanup: vi.fn(),
+  isCatalogueCleanupStale: () => false,
 }));
 
 vi.mock("./api", () => ({
@@ -137,6 +140,63 @@ function deferred<T>() {
 }
 
 describe("CatalogBrowser", () => {
+  it("distinguishes identical labels by application, version, catalogue placement and source", async () => {
+    apiMock.catalogItems.mockResolvedValue([{ ...item, details: { applicationProgramId: "APP-1", applicationName: "Switch program",
+      applicationVersion: "16", catalogSectionId: "SECTION-1", sourceNames: ["switch-v1.knxprod"] } },
+      { ...item, id: "cat-v2", details: { applicationProgramId: "APP-2", applicationName: "Switch program",
+        applicationVersion: "32", catalogSectionId: "SECTION-2", sourceNames: ["switch-v2.knxprod"] } }]);
+    const { root } = await renderBrowser();
+    try {
+      await act(async () => { await new Promise((resolve) => setTimeout(resolve, 250)); });
+      const rows = host!.querySelectorAll('[role="option"]');
+      expect(rows).toHaveLength(2);
+      expect(rows[0].textContent).toContain("APP-1");
+      expect(rows[0].textContent).toContain("16");
+      expect(rows[0].textContent).toContain("SECTION-1");
+      expect(rows[0].textContent).toContain("switch-v1.knxprod");
+      expect(rows[1].textContent).toContain("APP-2");
+      expect(rows[1].textContent).toContain("32");
+      expect(rows[1].textContent).toContain("cat-v2");
+      expect(Array.from(host!.querySelectorAll("button")).some((b) => b.textContent === "Clean up catalogue")).toBe(true);
+    } finally { await act(async () => root.unmount()); }
+  });
+
+  it("names an application link whose program is not installed instead of calling it undeclared", async () => {
+    apiMock.catalogItems.mockResolvedValue([{ ...item, details: { applicationProgramId: null, applicationName: null,
+      applicationVersion: null, catalogSectionId: "SECTION-1", sourceNames: [] } }]);
+    const { root } = await renderBrowser();
+    try {
+      await act(async () => { await new Promise((resolve) => setTimeout(resolve, 250)); });
+      expect(host!.querySelector('[role="option"]')!.textContent).toContain("The application linked by HP-1 is not installed.");
+    } finally { await act(async () => root.unmount()); }
+  });
+
+  it("keeps the removal result in the catalogue and keeps a picked entry that was not removed", async () => {
+    apiMock.catalogItems.mockResolvedValue([item, item2]);
+    apiMock.previewCatalogCleanup.mockResolvedValue({ token: "t",
+      items: [{ ...item2, impact: { lastPlacementForBinding: false, openProjectDevices: 0 } }] });
+    apiMock.applyCatalogCleanup.mockResolvedValue({ removedItemIds: ["cat-2"], backup: "products.sqlite.backup-9-abcdefabcdef.sqlite" });
+    const { root } = await renderBrowser();
+    try {
+      await act(async () => { await new Promise((resolve) => setTimeout(resolve, 250)); });
+      await act(async () => (host!.querySelector("#catalog-option-0") as HTMLElement).click());
+      const nameField = () => host!.querySelector<HTMLInputElement>('input[aria-label="Device name"]');
+      expect(nameField()?.value).toBe("Actuator");
+      const button = (text: string) => Array.from(host!.querySelectorAll("button")).find((b) => b.textContent === text)!;
+      await act(async () => button("Clean up catalogue").click());
+      await act(async () => { await Promise.resolve(); });
+      apiMock.catalogItems.mockResolvedValue([item]);
+      await act(async () => host!.querySelector<HTMLInputElement>('input[value="cat-2"]')!.click());
+      await act(async () => button("Preview removal").click());
+      await act(async () => button("Back up and remove 1 entry").click());
+      await act(async () => button("Close").click());
+      expect(host!.querySelector('[role="dialog"]')).toBeNull();
+      expect(host!.querySelector(".catalog-cleanup-notice")?.textContent)
+        .toContain("Removed 1 catalogue entry. Backup: products.sqlite.backup-9-abcdefabcdef.sqlite");
+      expect(nameField()?.value, "the picked entry was not removed").toBe("Actuator");
+    } finally { await act(async () => root.unmount()); }
+  });
+
   it("keeps keyboard highlight visible without picking or creating the catalog item", async () => {
     apiMock.catalogItems.mockResolvedValue([item, item2]);
     const previous = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "scrollIntoView");

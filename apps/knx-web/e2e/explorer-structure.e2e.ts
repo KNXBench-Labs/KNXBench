@@ -74,7 +74,6 @@ async function openExplorer(page: Page, m: Catalogue, width: number) {
 const label = (page: Page, text: string) => page.locator(".project-explorer .tree-label", { hasText: new RegExp(`^${text}$`) });
 const toggle = (page: Page, text: string) => page.locator(`.project-explorer .tree-toggle[aria-label="${text}"]`);
 
-/** Computed style of a nested row's stem (::before) and tick (::after). */
 // The installed clock keeps flowing while the project opens, so where the
 // twelve-second pulse falls in a fixed `runFor` window depends on how long
 // opening took (on a loaded host it can start and end inside the window).
@@ -89,6 +88,7 @@ async function runUntilPulse(page: Page) {
   throw new Error("no structure-line pulse within one interval");
 }
 
+/** Computed style of a nested row's stem (::before) and tick (::after). */
 async function lineOf(page: Page, text: string) {
   return label(page, text).evaluate((el) => {
     const li = el.closest("li")!;

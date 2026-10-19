@@ -161,6 +161,28 @@ fn seed_historical_winners(conn: &Connection) -> Result<(), ProductDbError> {
     Ok(())
 }
 
+fn validate_winner_markers(conn: &Connection) -> Result<(), ProductDbError> {
+    for kind in [
+        MasterKind::DatapointType,
+        MasterKind::FunctionType,
+        MasterKind::FunctionPoint,
+        MasterKind::SpaceUsage,
+    ] {
+        let mut stmt = conn.prepare(&format!("SELECT id FROM {}", kind.as_str()))?;
+        let mut rows = stmt.query([])?;
+        while let Some(row) = rows.next()? {
+            let id = row
+                .get_ref(0)?
+                .as_str()
+                .map_err(|_| error("invalid master identity"))?;
+            if matches!(winner_marker(conn, kind, id)?, WinnerMarker::Absent) {
+                return Err(error("master winner marker missing during replay"));
+            }
+        }
+    }
+    Ok(())
+}
+
 pub(crate) fn retain(conn: &Connection, bytes: &[u8]) -> Result<String, ProductDbError> {
     if bytes.len() > MAX_MASTER_BYTES {
         return Err(error("master exceeds byte budget"));
@@ -302,8 +324,10 @@ pub fn rederive_master_provenance(conn: &Connection) -> Result<MasterReplayRepor
 }
 
 fn replay(conn: &Connection) -> Result<MasterReplayReport, ProductDbError> {
+    // Only schema creation may seed explicit historical-unavailable markers.
+    // On an existing v27 database, an absent marker is lost evidence, not history.
+    validate_winner_markers(conn)?;
     let mut report = MasterReplayReport::default();
-    seed_historical_winners(conn)?;
     let mut missing = conn.prepare("SELECT source_sha256 FROM master_source WHERE NOT EXISTS(SELECT 1 FROM source_file s WHERE s.sha256=master_source.source_sha256)
         UNION SELECT source_sha256 FROM package_member m WHERE role='Master' AND NOT EXISTS(SELECT 1 FROM source_file s WHERE s.sha256=m.source_sha256) ORDER BY 1")?;
     for sha in missing.query_map([], |r| r.get::<_, String>(0))? {

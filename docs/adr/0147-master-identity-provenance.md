@@ -115,7 +115,12 @@ opaque for MasterData. The old v9 → v10 migration uses a private legacy entry
 point of the same parser that requires no v27 tables.
 
 Migration v26 → v27 creates the tables unconditionally, seeds unavailable
-normalized winners, and invokes the public atomic replay. Replay calls the
+normalized winners **only at schema creation**, and invokes the public atomic
+replay. Ordinary v27 replay first validates that every normalized identity has
+an explicit, well-paired winner marker; a missing or half-NULL marker aborts
+without seeding a replacement or turning lost evidence into historical
+unavailability. Existing paired-NULL markers remain legitimate history.
+Replay calls the
 same parser in declaration-only mode: no normalized writes, manufacturer-name
 updates, translations, unknown-evidence retirement or historical report edits.
 Sources are examined deterministically by SHA-256, one bounded payload at a

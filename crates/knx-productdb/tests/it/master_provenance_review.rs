@@ -65,6 +65,63 @@ fn winner_markers_distinguish_explicit_history_from_missing_or_broken_pairs() {
 }
 
 #[test]
+fn replay_refuses_missing_or_broken_winner_markers_without_inventing_history() {
+    let (_dir, conn) = db();
+    ingest_master_data(&conn, FIRST.as_bytes()).unwrap();
+    // Normal replay and explicit paired-NULL history are both legitimate.
+    rederive_master_provenance(&conn).unwrap();
+    for (family, id) in [
+        ("datapoint_type", "D"),
+        ("datapoint_type", "S"),
+        ("function_type", "F"),
+        ("function_point", "P"),
+        ("space_usage", "U"),
+    ] {
+        for change in [
+            "DELETE FROM master_winner WHERE family=?1 AND logical_id=?2",
+            "UPDATE master_winner SET source_sha256=NULL WHERE family=?1 AND logical_id=?2",
+            "UPDATE master_winner SET ordinal=NULL WHERE family=?1 AND logical_id=?2",
+        ] {
+            conn.execute_batch("SAVEPOINT damage; PRAGMA ignore_check_constraints=ON")
+                .unwrap();
+            conn.execute(change, [family, id]).unwrap();
+            let tables = [
+                "master_source",
+                "master_declaration",
+                "master_winner",
+                "datapoint_type",
+                "function_type",
+                "function_point",
+                "space_usage",
+            ];
+            let before = table_values(&conn, &tables);
+            assert!(
+                rederive_master_provenance(&conn).is_err(),
+                "replay concealed marker loss: {family}/{id}: {change}"
+            );
+            assert!(
+                !conn.is_autocommit(),
+                "replay committed the caller's transaction"
+            );
+            assert_eq!(table_values(&conn, &tables), before);
+            conn.execute_batch(
+                "ROLLBACK TO damage; RELEASE damage; PRAGMA ignore_check_constraints=OFF",
+            )
+            .unwrap();
+        }
+    }
+    conn.execute(
+        "UPDATE master_winner SET source_sha256=NULL,ordinal=NULL",
+        [],
+    )
+    .unwrap();
+    let before = table_values(&conn, &["master_winner"]);
+    rederive_master_provenance(&conn).unwrap();
+    assert_eq!(table_values(&conn, &["master_winner"]), before);
+    assert!(conn.is_autocommit());
+}
+
+#[test]
 fn replay_reconciles_derived_fields_and_unobserved_inventory() {
     let (_dir, conn) = db();
     ingest_master_data(&conn, FIRST.as_bytes()).unwrap();

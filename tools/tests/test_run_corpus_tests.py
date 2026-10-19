@@ -91,6 +91,29 @@ class CorpusSelection(unittest.TestCase):
             with contextlib.redirect_stderr(io.StringIO()):
                 self.assertEqual(main(['--root', str(root), '--package', 'knx-typo']), 2)
 
+    def test_a_workspace_member_outside_apps_and_crates_is_a_known_package(self) -> None:
+        import contextlib
+        import io
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / 'xtask/src').mkdir(parents=True)
+            (root / 'xtask/Cargo.toml').write_text('[package]\nname = "xtask"\n')
+            (root / 'xtask/src/main.rs').write_text('')
+            with contextlib.redirect_stdout(io.StringIO()) as out:
+                self.assertEqual(main(['--root', str(root), '--list', '--package', 'xtask']), 0)
+            self.assertIn('none in the selected package', out.getvalue())
+
+    def test_a_selection_without_targets_still_refuses_on_a_problem(self) -> None:
+        import contextlib
+        import io
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            # A corpus test in a helper directory no cargo target compiles.
+            crate(root, 'knx-g', {'tests/support/x.rs': f'#[test]\n{MARK}\nfn lost() {{}}\n'})
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
+                self.assertEqual(main(['--root', str(root), '--package', 'knx-g']), 1)
+            self.assertIn('no cargo target owns this file', err.getvalue())
+
     def test_the_environment_drops_knx_variables_and_isolates_xdg(self) -> None:
         import os
         os.environ['KNX_GATEWAY'] = '192.0.2.1'

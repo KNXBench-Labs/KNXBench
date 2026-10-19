@@ -12,6 +12,25 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Device catalog: identity lines and placement cleanup (19 October 2026)
+
+Owner report: devices appear twice in the Device catalog, with no visible reason;
+asked for a cleanup of old entries. Cause: the catalog lists placements
+(`catalog_item` rows); several can share a product and application link, and a
+newer application version is installed beside the old one by design. Rows now show
+application ID, name and version, catalogue section and source file. **Clean up
+catalogue** removes only selected placements after a token-bound preview (with a
+"last entry for this product and application" warning and the open project's
+device count) and a full backup, in one writer reservation; products, programs,
+package bytes and all other tables stay byte-identical
+([ADR-0145](adr/0145-catalogue-cleanup-removes-placements-only.md),
+[contract](contracts/catalogue-update.md#placement-cleanup)). Evidence before the
+package gate: product-DB `catalog_update` 9/9 (RED first for every new behaviour),
+server `http_catalogue_update` 20/20 (4 new, RED first), Vitest 4,028/4,028 in 282
+files, 22 web typechecks, production catalogue browser config 14/14 (4 new cleanup
+cases, EN/DE × 1440/400, screenshots inspected), Clippy `-D warnings` for both
+crates, headers/layering/anchors. No schema change.
+
 ## Faster test gates: change-scoped by default, tagged browser lanes, bundled Rust tests (19 October 2026)
 
 Owner request: far too many tests ran for every change. Three owner decisions,

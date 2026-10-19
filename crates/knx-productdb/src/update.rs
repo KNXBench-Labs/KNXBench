@@ -324,7 +324,7 @@ pub fn preview_package_update(
 }
 
 /// A new file name next to `path` for a backup taken before installing `sha256`.
-fn backup_path(path: &Path, sha256: &str) -> Result<PathBuf, UpdateError> {
+pub(crate) fn backup_path(path: &Path, sha256: &str) -> Result<PathBuf, UpdateError> {
     let seconds = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|elapsed| elapsed.as_secs())
@@ -350,7 +350,7 @@ fn backup_path(path: &Path, sha256: &str) -> Result<PathBuf, UpdateError> {
 }
 
 /// Copies the database at `from` into the new file `to` with the online backup API.
-fn write_backup(from: &Path, to: &Path) -> Result<(), UpdateError> {
+pub(crate) fn write_backup(from: &Path, to: &Path) -> Result<(), UpdateError> {
     let flags = OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX;
     let source = Connection::open_with_flags(from, flags)?;
     source.busy_timeout(READ_ONLY_BUSY_TIMEOUT)?;

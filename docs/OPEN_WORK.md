@@ -514,6 +514,20 @@ The sections below retain the original topic/anchor context. Read current
 package readiness and ownership above first; an older “open”, “pending” or
 “not released” sentence is not authority to restart a delivered package.
 
+## Catalogue cleanup follow-ups (19 October 2026)
+
+Delivered: identity lines and placement cleanup
+([ADR-0145](adr/0145-catalogue-cleanup-removes-placements-only.md)). Not built, by
+decision, each a possible later package:
+
+- A persistent "hidden" marker, so a re-install of a *different* package that
+  declares the same placements does not bring them back (needs a product-DB
+  migration; serialize with the product-DB package queue).
+- Usage counts across saved projects; the preview counts only the open project.
+- Removing whole application programs or products, with a project scan.
+- Provenance query cost on very large catalogues is not measured; the details are
+  attached to every listing.
+
 ## UI feedback packages (18 October 2026)
 
 [UI-01–UI-06](goals/ui-feedback-2026-10-18.md) group the owner's eight retained UI

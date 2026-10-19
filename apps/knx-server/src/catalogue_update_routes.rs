@@ -9,7 +9,7 @@
 
 use crate::{
     errors::ApiError,
-    routes::{package_refusal, CatalogInstallReportDto},
+    routes::{package_refusal, CatalogInstallReportDto, CatalogItemDto},
     SharedState,
 };
 use axum::{
@@ -18,9 +18,12 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
-use knx_productdb::{PackageError, PackageLimits, ProductDbError, UpdateError, UpdatePreview};
+use knx_productdb::{
+    CleanupError, PackageError, PackageLimits, ProductDbError, UpdateError, UpdatePreview,
+};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use std::collections::HashMap;
 use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 use std::sync::MutexGuard;
@@ -45,6 +48,8 @@ pub(crate) fn router() -> Router<SharedState> {
         .route("/api/catalog/backups", get(backups))
         .route("/api/catalog/restore", post(restore))
         .route("/api/catalog/backups/delete", post(delete_backup))
+        .route("/api/catalog/cleanup/preview", post(cleanup_preview))
+        .route("/api/catalog/cleanup/apply", post(cleanup_apply))
 }
 
 #[derive(Serialize)]
@@ -427,5 +432,154 @@ async fn delete_backup(
         .map_err(|error| ApiError::internal(format!("the backup could not be deleted: {error}")))?;
     Ok(Json(Deleted {
         deleted: entry.name,
+    }))
+}
+
+// --- Catalogue placement cleanup ---------------------------------------------
+//
+// Removes only selected `catalog_item` rows after a preview whose token binds
+// the selection and the catalogue state; canonical products, programs and
+// sources stay, so existing devices keep resolving. See the contract
+// `docs/contracts/catalogue-update.md` (Placement cleanup).
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+struct CleanupPreviewRequest {
+    item_ids: Vec<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+struct CleanupApplyRequest {
+    item_ids: Vec<String>,
+    token: String,
+    #[serde(default)]
+    confirmed: bool,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CleanupImpact {
+    /// No placement of this exact product + application pair is left.
+    last_placement_for_binding: bool,
+    /// Devices of the open project bound to this exact pair; saved projects
+    /// that are not open are not inspected.
+    open_project_devices: usize,
+}
+
+#[derive(Serialize)]
+struct CleanupItemView {
+    #[serde(flatten)]
+    item: CatalogItemDto,
+    impact: CleanupImpact,
+}
+
+#[derive(Serialize)]
+struct CleanupPreviewView {
+    token: String,
+    items: Vec<CleanupItemView>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CleanupAppliedView {
+    removed_item_ids: Vec<String>,
+    /// File name only; never a path.
+    backup: String,
+}
+
+fn cleanup_error(error: CleanupError) -> ApiError {
+    match error {
+        error @ CleanupError::InvalidSelection(_) => ApiError::with_kind(
+            StatusCode::BAD_REQUEST,
+            "invalidCatalogueSelection",
+            error.to_string(),
+        ),
+        error @ CleanupError::ConfirmationRequired => ApiError::with_kind(
+            StatusCode::BAD_REQUEST,
+            "confirmationRequired",
+            error.to_string(),
+        ),
+        error @ CleanupError::StaleToken => {
+            ApiError::conflict("catalogueCleanupStale", error.to_string())
+        }
+        CleanupError::Backup(error) => ApiError::internal(format!(
+            "the catalogue backup could not be written, nothing was removed: {error}"
+        )),
+        error @ CleanupError::Database(_) => ApiError::internal(error.to_string()),
+    }
+}
+
+/// Devices per exact `(product_ref, program_ref)` pair in the open project.
+/// The project lock is released before the product database is locked; the
+/// two are never held together.
+fn open_project_bindings(state: &SharedState) -> HashMap<(String, String), usize> {
+    let project = state.project.lock().expect("state mutex poisoned");
+    let mut counts = HashMap::new();
+    if let Some(project) = project.as_ref() {
+        for device in project.devices.iter() {
+            *counts
+                .entry((device.product_ref.clone(), device.program_ref.clone()))
+                .or_default() += 1;
+        }
+    }
+    counts
+}
+
+async fn cleanup_preview(
+    State(state): State<SharedState>,
+    Json(request): Json<CleanupPreviewRequest>,
+) -> Result<Json<CleanupPreviewView>, ApiError> {
+    let bindings = open_project_bindings(&state);
+    let (products, _path) = products(&state)?;
+    let preview = knx_productdb::preview_catalog_cleanup(&products, &request.item_ids)
+        .map_err(cleanup_error)?;
+    drop(products);
+    let items = preview
+        .items
+        .into_iter()
+        .map(|item| {
+            let open_project_devices = match (&item.product_ref_id, &item.hardware2program_ref_id) {
+                (Some(product), Some(binding)) => bindings
+                    .get(&(product.clone(), binding.clone()))
+                    .copied()
+                    .unwrap_or(0),
+                _ => 0,
+            };
+            let last_placement_for_binding = preview.bindings_without_placement.contains(&item.id);
+            CleanupItemView {
+                item: item.into(),
+                impact: CleanupImpact {
+                    last_placement_for_binding,
+                    open_project_devices,
+                },
+            }
+        })
+        .collect();
+    Ok(Json(CleanupPreviewView {
+        token: preview.token,
+        items,
+    }))
+}
+
+async fn cleanup_apply(
+    State(state): State<SharedState>,
+    Json(request): Json<CleanupApplyRequest>,
+) -> Result<Json<CleanupAppliedView>, ApiError> {
+    // Held for the whole removal, like a package update: the backup and the
+    // deletion see the same catalogue as the token check.
+    let (mut products, _path) = products(&state)?;
+    let applied = knx_productdb::apply_catalog_cleanup(
+        &mut products,
+        &request.item_ids,
+        &request.token,
+        request.confirmed,
+    )
+    .map_err(cleanup_error)?;
+    let backup =
+        file_name(&applied.backup).ok_or_else(|| ApiError::internal("backup has no file name"))?;
+    Ok(Json(CleanupAppliedView {
+        removed_item_ids: applied.removed_item_ids,
+        backup,
     }))
 }

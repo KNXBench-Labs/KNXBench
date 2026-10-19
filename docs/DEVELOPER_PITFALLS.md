@@ -37,6 +37,21 @@ already found lying in the grass.
   `XDG_DATA_HOME` (a temporary directory, or one that never exists), and open
   the user's product database from a reading command only with
   `knx_productdb::open_read_only` (ADR-0090).
+- **A fix on `main` does not protect a gate on an older branch.** A gate runs
+  the branch's own tests: the same day, a gate on a product-DB branch that
+  predated the `doc-export` fix migrated the owner's fresh import (made with
+  the Alpha 14 AppImage) to v26 again, inside its `rust-tests` stage. The
+  package gate therefore runs its test stages (`tool-tests`, `rust-tests`,
+  `bindings`, `corpus`, website and story tests) with empty scratch
+  `XDG_DATA_HOME`/`XDG_CONFIG_HOME` below its output directory and fails when a
+  file in the real `knx` data or config directory is created, changed or
+  removed meanwhile (`userDataTouched` in the receipt). Rebase before gating, so
+  the branch carries this runner. A **direct** `cargo test` still inherits the
+  real homes: export scratch values first, e.g.
+  `XDG_DATA_HOME=$(mktemp -d) XDG_CONFIG_HOME=$(mktemp -d) cargo test …`.
+  The web gate keeps the real values on purpose (fontconfig reads fonts and
+  configuration through them, and browser specs pin pixel widths).
+  `AppState::default()` itself opens no product database (AR18 M8).
 - **CI runs exactly these checks** (`.github/workflows/`): `cargo fmt --all --check`,
   `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`,
   `npm ci`, `npm test` and `npm run build` in `apps/knx-web`, the ts-rs bindings

@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-19 21:11
+- **Completed:** CLAIM (owner request: work the next OPEN_WORK package): WP-17 master identity provenance, Alpha 16 work, isolated branch `feat/wp17-master-provenance-20261019` from `5faed038`. Startup/queue/implementation inspection complete; no product implementation yet.
+- **Pending/Next Steps:** Define the schema/report/replay contract, test first, implement provenance for datapoint_type, function_type, function_point and space_usage, independently review and run the maintained change-scoped package gate before delivery.
+- **Notes for Codex oder Claude:** Reserve master parsing, its new provenance/replay module, product-DB migration v27 and report integration for this package. Preserve normalized winners and historical install facts; explicitly unavailable history is not guessed from blob order. No bus, hardware, release, deployment or third-party contact. Selected dirty checkout and foreign research/statistics edits remain untouched. Earlier v23–v25 column-promotion repairs are separate scope.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-19 21:01
 - **Completed:** Alpha 15 published and externally verified at immutable `v0.1.0-alpha.15` / `c3d5b35f0f482dc64bebd07746a834e5b676215b`; source gate 31/31, tag workflows AppImage `39303949954` and Docker `39303949950` including publication green. Public hashes/provider digests, MCP/server/OCI identities, isolated authenticated save/reopen, native-10 → 16 migration (230 projected names), headless extracted AppImage startup, all 37 served website files passed. Source merged in `09a9d6ce`; result-only acceptance/publication records added. Failed packaging/verifier attempts remain retained, not relabelled green. Private archive `<profile>/evidence/release-alpha15-20261019/release-evidence.tar.gz`: SHA-256 `967cdb521b365aad9d386edeb246543ffdc7d1bea231af91d789c6df3963cba0`, all 610 members verified.
 - **Pending/Next Steps:** Release complete; no further release gates or watchers. Candidate worktree, release branch (local and remote), probe copies and task scratch retired after archive verification. New work belongs to Alpha 16; native-binding post-install check recorded in OPEN_WORK, original missing-binding cause unestablished. The selected dirty checkout stays unsynchronised intentionally.

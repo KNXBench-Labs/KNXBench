@@ -32,7 +32,10 @@ fn pre_pdb3_public_outcomes_remain_constructible() {
     let _ = DynamicIngest {
         unknown: Vec::new(),
     };
+    // WP17 adds dedicated master provenance beside the legacy counters.
     let _ = MasterIngest {
+        source_sha256: String::new(),
+        diagnostics: Vec::new(),
         unknown: Vec::new(),
         translations: 0,
         dropped_datapoint_types: 0,

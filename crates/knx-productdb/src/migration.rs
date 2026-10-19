@@ -16,7 +16,7 @@ use crate::parse::translation::{ingest_translations, TranslationScope};
 use crate::report::{insert_unknown, UnknownKind};
 
 /// The product-database schema version this build writes.
-pub const CURRENT_PRODUCTDB_VERSION: i64 = 26;
+pub const CURRENT_PRODUCTDB_VERSION: i64 = 27;
 
 #[derive(Debug)]
 pub enum ProductDbError {
@@ -269,6 +269,24 @@ fn migrate_v0_to_v1(conn: &Connection) -> Result<(), ProductDbError> {
     Ok(())
 }
 
+fn migrate_v26_to_v27(conn: &Connection) -> Result<(), ProductDbError> {
+    crate::master_provenance::create_schema(conn)?;
+    conn.execute_batch("CREATE TABLE package_install_diagnostic_v27 (
+        package_sha256 TEXT NOT NULL REFERENCES package_install_report(package_sha256),
+        ordinal INTEGER NOT NULL CHECK(ordinal>=0),
+        kind TEXT NOT NULL CHECK(kind IN ('unsupported-master-section','unsupported-master-subtree','unresolved-baggage-declaration','undeclared-baggage-payload','master-identity-collision','malformed-master-declaration')),
+        archive_path TEXT NOT NULL,xml_path TEXT NOT NULL,detail TEXT NOT NULL,
+        occurrences INTEGER NOT NULL CHECK(occurrences>0),
+        PRIMARY KEY(package_sha256,ordinal),
+        UNIQUE(package_sha256,kind,archive_path,xml_path,detail)
+    ) STRICT;
+    INSERT INTO package_install_diagnostic_v27 SELECT * FROM package_install_diagnostic;
+    DROP TABLE package_install_diagnostic;
+    ALTER TABLE package_install_diagnostic_v27 RENAME TO package_install_diagnostic;")?;
+    crate::master_provenance::rederive_master_provenance(conn)?;
+    Ok(())
+}
+
 type Migration = fn(&Connection) -> Result<(), ProductDbError>;
 
 fn migrations() -> Vec<Migration> {
@@ -299,6 +317,7 @@ fn migrations() -> Vec<Migration> {
         migrate_v23_to_v24,
         migrate_v24_to_v25,
         migrate_v25_to_v26,
+        migrate_v26_to_v27,
     ]
 }
 
@@ -2530,7 +2549,7 @@ fn backfill_function_and_space_data(conn: &Connection) -> Result<(), ProductDbEr
             continue;
         }
         conn.execute_batch("SAVEPOINT function_space_backfill_blob;")?;
-        match crate::parse::master::ingest_master_data(conn, &bytes) {
+        match crate::parse::master::ingest_master_data_legacy(conn, &bytes) {
             Ok(outcome) => {
                 conn.execute_batch("RELEASE SAVEPOINT function_space_backfill_blob;")?;
                 // Only the unknowns belonging to the three element families

@@ -26,6 +26,7 @@ mod legacy_secrets;
 mod malformed_input;
 mod master_evidence_rederive;
 mod master_language_evidence;
+mod master_provenance;
 mod nested_module_private;
 mod nested_module_storage;
 mod package_identity;

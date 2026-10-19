@@ -44,10 +44,24 @@ test comments still claim otherwise (recorded in OPEN_WORK).
   receipt (`userDataTouched`, error appended to an earlier one). An app the
   developer runs meanwhile also trips it; the message says so.
 
-## Evidence
+## Review round 1 (Codex `gpt-6.1-sol`, accept_with_fixes)
 
-- `tools/tests/test_run_package_gate.py`: 4 new cases, 7/7 OK. Mutants: routing
-  always plain → 1 failure; detection disabled → 1 failure; restored byte-exact.
+- XDG-01 IMPORTANT: a complete gate delegates `tool-tests` to
+  `run_web_gate.py`, which ran it with the real homes. Fixed: `run_web_gate`
+  routes `tool-tests` through `step_environment` inside `checked_step`
+  (scratch homes below the browser TMPDIR). The complete gate already running
+  was stopped (its result would not have proven the claim).
+- XDG-02 IMPORTANT: `lstat` only, so a write through a symlinked database or a
+  nested symlinked directory went unseen. Fixed: shared
+  `tools/user_data_guard.py` fingerprints the link and its target, follows
+  symlinked directories once (cycle-safe) and adds `ctime`.
+
+
+- `tools/tests/test_run_package_gate.py`: 10/10 OK; whole tool suite 311 OK
+  (1 skipped). Tests drive `check()` and `run_web_gate.checked_step()` with a
+  recording run. 7 mutants each turn one test red (web tool-tests not isolated,
+  package routing plain, symlink target ignored, symlinked dirs not followed,
+  ctime dropped, detection disabled, cycle protection removed); restored.
 - The planner requires the complete gate for a runner change; it doubles as the
   proof that no test relies on the inherited values.
 

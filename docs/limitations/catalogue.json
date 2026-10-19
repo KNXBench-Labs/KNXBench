@@ -2458,7 +2458,7 @@
       "number": 181,
       "title": "Desktop export commands",
       "topic": "Platform, deployment and security",
-      "summary": "AppImages up to alpha.11 refuse saving the session log and monitor captures; fixed in source, ships with the next AppImage. Web and Docker unaffected.",
+      "summary": "AppImages alpha.5 to alpha.11 refuse saving the session log and monitor captures; fixed since the alpha.12 AppImage. Web and Docker unaffected.",
       "file": "KL-181-desktop-export-commands.md",
       "ledger_ids": [
         "KL-181"

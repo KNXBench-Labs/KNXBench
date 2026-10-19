@@ -1,5 +1,28 @@
 # Data model
 
+## Alpha 15 model and storage boundary
+
+Alpha 15 keeps native/model **16**. The core/store diff adds diagnostic plan and
+system-family types and raises existing storage/history byte budgets, without a
+new persisted project kind or a native migration. An unchanged version is not a
+downgrade guarantee: opening Alpha-15-saved projects in Alpha 14 is **not verified**,
+particularly above the older size bounds.
+
+The dedicated product database migrates **24 → 25 → 26 on writable open**.
+[ADR-0141](adr/0141-placements-and-enumeration-attributes-reach-columns.md) stores
+parameter offsets/property placements and enumeration attributes;
+[ADR-0146](adr/0146-unknown-evidence-rows-have-an-identity.md) adds unknown-row
+identity/repair and separate parameter/reference `SuffixText` columns. Unit text
+is translated display metadata, never part of the parameter value or image.
+Read-only catalogue CLI opens leave the on-disk file unchanged, migrating an
+older copy only in memory. Older builds refuse product26 by
+their version check; that refusal is source-established, not an executed downgrade
+test. V23–v25 promotion residues remain open: some repeated program declarations
+can backfill a losing declaration, and some evidence retires where fresh ingest
+keeps it. V26 corrects these patterns for its own suffix promotion only. Keep
+independent pre-upgrade project/catalogue copies.
+[Upgrade boundary](releases/alpha15.md#upgrade-independent-backups-first).
+
 ## Alpha 14 model and storage boundary
 
 Alpha 14 retains native/model **16**: note-aware deletes add command/error types and plug-in data adoption reuses existing opaque entries, without a new persisted kind. The dedicated product database moves **23 → 24** on first open (ADR-0139: typed `access` on parameter blocks/separators and `ui_hint` on separators, backfilled by re-parsing retained source bytes). Vendor ZIP install (ADR-0140), row indentation and object size add no column. Previous-reader compatibility is not verified; Alpha 13 refuses a v24 product database by its version check. [Upgrade boundary](releases/alpha14.md#upgrade-independent-backups-first).

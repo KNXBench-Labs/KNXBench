@@ -2,7 +2,39 @@
 
 # Implementation status
 
-## System column in Devices (source builds after Alpha 14)
+## Alpha 15 workbench and data boundary
+
+Since Alpha 15, the File menu has keyboard/focus-aware submenus and viewport/zoom
+placement; shared controls distinguish primary and destructive actions; topology
+counts name communication objects. Measured/resizable table columns and pane
+drags account for zoom, Overview separates current file size from unsaved state
+and counts canonical catalogue entities, and the monitor explains missing DPTs
+without guessing one. These features are delivered at the cutoff, not local-only.
+[Table contract](../contracts/table-column-widths.md),
+[status metrics](../contracts/project-status-metrics.md).
+
+Product data migrates 24 → 26 on writable open: typed placements/enumerations,
+idempotent unknown-row identity/repair, and translated `SuffixText` beside values
+(including the checked editor). Complete response-local module paths keep nested
+nameless areas, diagnostics and drafts apart; they grant no durable instance mapping
+or new writes. Unavailable catalogue errors are retained and read-only CLI
+catalogue/documentation readers no longer create or migrate the on-disk database.
+
+Native/model16 stays with no new persisted project kind. Larger measured bounds
+and uppercase legacy-table import are included. Older builds refuse product26;
+opening Alpha 15 project saves in Alpha 14 is unverified. V23–v25 promotion
+residues remain open. Independently back up closed project/catalogue files and
+all Docker data before upgrade.
+
+The System-2 source preview is offline; the separate declared-memory diagnostic
+profile is CLI-only, ProductDB-derived and identity-gated, with offline/simulator
+evidence but no hardware run. Web diagnostics remain generic identity-only.
+Neither enables System-2 programming, new write admission or complete recovery.
+[Release scope and explicit boundaries](../releases/alpha15.md).
+
+<a id="system-column-in-devices-source-builds-after-alpha-14"></a>
+
+## System column in Devices (since Alpha 15)
 
 The Devices list shows each device's KNX system family (System 1, 2, 7 or B;
 other profiles by name) from the mask version its application program declares
@@ -12,7 +44,9 @@ device is not used. Sortable and filterable by label or mask.
 [Operating instructions](user-guide/05-devices-and-products.md#system-column-source-builds-after-alpha-14),
 [sources](../research/2026-10-19-mask-version-system-family.md).
 
-## Catalogue entries explained, and cleanup (source builds after Alpha 14)
+<a id="catalogue-entries-explained-and-cleanup-source-builds-after-alpha-14"></a>
+
+## Catalogue entries explained, and cleanup (since Alpha 15)
 
 Device catalog rows show the application, its version, the catalogue section and
 the source file, so entries with equal names can be told apart. **Clean up
@@ -22,7 +56,9 @@ catalogue backup. Products, applications and package files stay; no disk space i
 freed. [ADR-0145](../adr/0145-catalogue-cleanup-removes-placements-only.md),
 [operating instructions](user-guide/05-devices-and-products.md#cleaning-up-the-catalogue-source-builds-after-alpha-14).
 
-## Device-empty topology ranges (source builds after Alpha 14)
+<a id="device-empty-topology-ranges-source-builds-after-alpha-14"></a>
+
+## Device-empty topology ranges (since Alpha 15)
 
 The Topology diagram hides lines without devices and areas without a populated
 line. All ranges remain in the project tree, with the same editing and device
@@ -80,7 +116,9 @@ MCP or the CLI. [Comparison](user-guide/08-reports-and-diff.md#what-it-compares)
 [AI agents](user-guide/12-ai-agents.md#what-it-can-and-cannot-do) and
 [contract](../contracts/project-functions.md#comparison-desktop-and-mcp-17-october-2026).
 
-## Parameter captions (source-only after Alpha 14; integration pending)
+<a id="parameter-captions-source-only-after-alpha-14-integration-pending"></a>
+
+## Parameter captions (since Alpha 15)
 
 Issue #26 extends the existing text-parameter resolver to area captions and
 separator text. Readable fallbacks replace empty, marker-only or unresolved
@@ -121,10 +159,9 @@ This chapter is the honest inventory: what exists, what half exists, and what
 does not exist at all, area by area across the whole application.
 
 The detailed inventory retains its **8 October 2026** source audit and dated
-follow-ups. The current public snapshot is [Alpha 14](../releases/alpha14.md),
-published on 18 October 2026. [Source acceptance](../releases/alpha14-acceptance.md)
-and [public artifact verification](../evidence/release-alpha14-2026-10-18.json)
-pass independently; neither expands device admission.
+follow-ups. [Alpha 15](../releases/alpha15.md) covers source through cutoff
+`21b9d46f`. Source acceptance and artifact verification are separate; neither
+expands device admission.
 The version number is where the project starts counting, not a claim that
 anything has reached a finish line.
 
@@ -140,7 +177,7 @@ Devices has explicitly confirmed single/filtered-batch read-only comparison,
 progress/cancel, per-device failures and volatile tags. P3 content revisions
 invalidate old readings; identity is checked before memory. The 0701 address
 and association tables are decoded; all raw read ranges remain reachable.
-Source builds after Alpha 14 (WP-18) open the result with differences only,
+Since Alpha 15, WP-18 opens the result with differences only,
 mark differing and unread raw bytes without relying on colour, and reveal every
 row, including every raw read range, with **Show equal rows**
 ([what differs](user-guide/05-devices-and-products.md#what-differs-wp-18-source-builds-after-alpha-14)).

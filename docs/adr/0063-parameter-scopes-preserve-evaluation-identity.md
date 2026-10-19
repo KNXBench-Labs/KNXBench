@@ -1,7 +1,7 @@
 # ADR 0063: Parameter scopes preserve the full evaluation identity
 
 Date: 2026-10-03
-Status: Accepted for the bounded backend contract — actual integration 3711c4f7 verified, source/acceptance published and read back as3a8b66f4. UI adoption and broader AR07 remain open.
+Status: Accepted for the bounded backend contract — actual integration 3711c4f7 verified, source/acceptance published and read back as3a8b66f4. Web adoption delivered on a branch (WP-15, 19 October 2026, below); broader AR07 remains open.
 Session: 4, AR07
 
 ## Context and evidence
@@ -86,3 +86,22 @@ owned builds/raw scaffolding removed after process checks; minimal aggregates
 retained. Final receipt-only publication and checkout/branch cleanup follow
 separately. No real nested product, new UI consumer, ETS parity, complete AR07
 or Alpha acceptance follows from these gates.
+
+## Web adoption (WP-15, 19 October 2026)
+
+The manual web `ModuleScope` type carries `nodeChain?: number[]`.
+`apps/knx-web/src/moduleScope.ts` owns the one comparison rule: a chain is used
+only when it has the published shape (nonempty safe integers ending in
+`moduleNode`); otherwise, and always for an older server that sends no field,
+the identity falls back to the legacy `moduleNode`/`moduleId`/`moduleDefId`
+fields under a separate tag, so it can never equal a chained identity. A chain
+that breaks the shape is treated as absent rather than refusing the panel.
+Diagnostic grouping, the workspace section/group/row keys and the Restricted
+and Functions section views use that identity. Within one older-server
+response the workspace still separates equal legacy scopes by occurrence, but
+when one of them disappears the survivor takes the first slot: nested nameless
+scopes are only distinguishable with a server that sends the chain. The
+identity stays response-local; no durable ID, module-instance mapping or write
+authority follows. The client admission is unchanged: the parameter route has
+no strict shape check, so an older payload without the field and a newer one
+with it both load.

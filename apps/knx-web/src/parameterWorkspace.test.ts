@@ -1,7 +1,7 @@
 /** Source-bound parameter workspace indexing and search contracts. */
 import { describe, expect, it } from "vitest";
 import type { ParameterField, ParameterSection, ParameterSeparator } from "./api";
-import { indexParameterWorkspace, matchesParameterSearch } from "./parameterWorkspace";
+import { indexParameterWorkspace, matchesParameterSearch, parameterSectionKeys } from "./parameterWorkspace";
 
 const field = (etsId: string, group?: ParameterField["group"]): ParameterField => ({
   etsId, group, name: "Original name", text: "Original label", nameLanguage: null, textLanguage: null,
@@ -40,6 +40,38 @@ describe("parameter workspace index", () => {
     expect(index.groups).toHaveLength(2);
     expect(index.groups[1].label).toBe("");
     expect(indexParameterWorkspace([])).toEqual({ rows: [], groups: [], items: [] });
+  });
+
+  // WP-15 / ADR-0063: two nameless nested instances of one definition share
+  // every legacy field, the field ID and the group key.
+  const nested = (nodeChain?: number[]): ParameterSection => ({
+    scope: { ...(nodeChain ? { nodeChain } : {}), moduleNode: 7, moduleId: null, moduleDefId: "Inner" },
+    fields: [field("P", { key: "g", label: null })] });
+
+  it("keeps draft and navigation identity with its own nested nameless scope when a sibling disappears", () => {
+    const both = indexParameterWorkspace([nested([3, 7]), nested([5, 7])]);
+    expect(new Set(both.rows.map(row => row.key)).size).toBe(2);
+    const second = indexParameterWorkspace([nested([5, 7])]);
+    expect(second.rows[0].key).toBe(both.rows[1].key);
+    expect(second.groups[0].key).toBe(both.groups[1].key);
+    expect(second.groups[0].sectionKey).toBe(both.groups[1].sectionKey);
+    const reordered = indexParameterWorkspace([nested([5, 7]), nested([3, 7])]);
+    expect(reordered.rows.map(row => row.key)).toEqual([both.rows[1].key, both.rows[0].key]);
+    const deeper = indexParameterWorkspace([nested([1, 3, 7]), nested([2, 3, 7]), nested([3, 1, 7])]);
+    expect(new Set([...deeper.rows, ...both.rows].map(row => row.key)).size).toBe(5);
+  });
+
+  it("falls back to legacy fields plus source occurrence when an older server sends no chain", () => {
+    const both = indexParameterWorkspace([nested(), nested()]);
+    expect(new Set(both.rows.map(row => row.key)).size).toBe(2);
+    // The documented boundary: without a chain the survivor takes the first slot.
+    expect(indexParameterWorkspace([nested()]).rows[0].key).toBe(both.rows[0].key);
+    // A server upgrade never lets a chained scope inherit an unchained identity.
+    expect(indexParameterWorkspace([nested([7])]).rows[0].key).not.toBe(both.rows[0].key);
+    // The section views key by the same identity the workspace index uses.
+    const sections = [nested(), nested([7]), nested()];
+    expect(parameterSectionKeys(sections)).toEqual(indexParameterWorkspace(sections).groups.map(group => group.sectionKey));
+    expect(new Set(parameterSectionKeys(sections)).size).toBe(3);
   });
 
   it("preserves row identities across group moves and insertions", () => {

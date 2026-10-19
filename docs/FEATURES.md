@@ -50,6 +50,12 @@ Last updated: 2026-10-18 07:55 CEST
 | --- | --- | --- |
 | [Parameter section captions](contracts/positional-text-templates.md#parameter-workspace-captions-issue-26) | Exact text-parameter resolution for block/separator captions; readable fallback labels and source tooltips; no configuration changes | Local-only; integration pending |
 
+## Nested module scopes
+
+| Feature | Scope | Availability |
+| --- | --- | --- |
+| [Nested module scope identity](adr/0063-parameter-scopes-preserve-evaluation-identity.md#web-adoption-wp-15-19-october-2026) | Diagnostics, workspace areas, drafts and Restricted sections of nameless nested modules stay apart by their complete evaluation path; older servers fall back to the innermost fields | Main-only |
+
 ## Device comparison display
 
 | Feature | Scope | Availability |

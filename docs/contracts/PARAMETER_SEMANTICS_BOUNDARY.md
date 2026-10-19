@@ -636,3 +636,11 @@ checks; originals/foreign/root unchanged. Closing metadata gates/readback and
 clean checkout/branch/scaffolding removal remain, not new policy acceptance.
 AR06P KL-149 is the next ready package; broader AR07/Alpha/UI-native/ETS remain
 open. Published statistics-owner artifact preserved, not a local statistics refresh.
+
+## Web adoption of `nodeChain` — 2026-10-19 (WP-15)
+
+The web client compares complete chains for diagnostic grouping and workspace
+identity, with an explicit, tagged older-server fallback
+([ADR-0063](../adr/0063-parameter-scopes-preserve-evaluation-identity.md#web-adoption-wp-15-19-october-2026)).
+Response-local only; no authority, schema or value-resolution change. Real
+nested manufacturer evidence and the other AR07 residues remain open.

@@ -35,7 +35,7 @@ async function stepGifCapture(page: Page, panel: Locator, frames: number) {
 }
 
 for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
-  test(`flow images ${language} ${width}: selected-view PNG/GIF and cancellation`, async ({ page }) => {
+  test(`flow images ${language} ${width}: selected-view PNG/GIF and cancellation`, { tag: "@exclusive" }, async ({ page }) => {
     test.setTimeout(150_000);
     const copy = language === "de" ? de : en;
     // Decoded files go to FLOW_EXPORT_OUTPUT when set, else to this test's own output folder.
@@ -94,7 +94,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
   });
 }
 
-test("live GIF preserves all30 chronological samples with changing graph pixels", async ({ page }) => {
+test("live GIF preserves all30 chronological samples with changing graph pixels", { tag: "@exclusive" }, async ({ page }) => {
   const files = process.env.FLOW_EXPORT_OUTPUT ?? test.info().outputPath("flow-export");
   mkdirSync(files, { recursive: true });
   test.setTimeout(60_000);

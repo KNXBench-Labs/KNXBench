@@ -56,6 +56,6 @@ saved names until the user saves in KNXBench. Every success response carries
 
 ## Evidence
 
-[`apps/knx-mcp/tests/name_recipe_writer.rs`](../../apps/knx-mcp/tests/name_recipe_writer.rs)
+[`apps/knx-mcp/tests/name_recipe_writer.rs`](../../apps/knx-mcp/tests/it/name_recipe_writer.rs)
 drives the real binary over stdio for every row above;
 [evidence record](../evidence/mcp-name-recipe-writer-2026-10-12.json).

@@ -16,6 +16,11 @@ From apps/knx-web, after npm ci:
   lane only, counterbalanced order 1/2/4/4/2/1. Not full acceptance.
 
 Root entry: python3 tools/run_web_gate.py --profile web --workers 4 --output PATH.
+The change-scoped package gate (`tools/run_package_gate.py`, [ADR-0144](../adr/0144-change-scoped-gates-tagged-browser-lanes-bundled-rust-tests.md))
+calls `--profile targeted --specs a.e2e.ts,b.e2e.ts|all --production x,y`: build,
+every typecheck and the complete Vitest suite, then only the selected default
+spec files and production suites. `--profile web` remains the complete web gate
+of a release.
 Outputs must be a new directory outside sources or below a Git-ignored directory.
 An existing receipt path is refused. No silent npm installation occurs in a gate.
 
@@ -33,18 +38,32 @@ and is held by `tools/tests/test_rust_gate_order.py`.
   the extra app/flow/theme invocations are removed, not their coverage.
 - Original test selection, server/locale settings and every browser assertion are
   unchanged; all Playwright entries now import the common temp guard.
-- Source-hash admission: 45 reviewed, independently page-scoped functional files
-  can use multiple workers. All other files run once with one worker.
-- New or edited files fall back to exclusive execution. Changed shared fixtures,
-  configs or package lock revoke all parallel admission. Deleted policy entries
-  are a visible policy error, not an omitted test.
-- Compile the entire default case inventory before execution. Require exact case
-  identity equality for each lane, a nonempty intended scope, passed expectations,
+- Lanes by tag (ADR-0144, replaces the per-file hash admission): every case runs
+  with several workers unless it carries `{ tag: "@exclusive" }` on the test or
+  an enclosing `test.describe`; tagged cases run once with one worker.
+  `tools/browser_lanes.py` (gate stage `browser-lanes`, before the build) refuses
+  an untagged use of a real-time primitive (`waitForTimeout`, `performance.now`,
+  `Date.now`, `new Date().getTime()`, `requestAnimationFrame`, `setTimeout`,
+  `setInterval`, also in string code handed to `page.evaluate` and its
+  relatives, and Node's timer modules under any name), also through module,
+  describe-local and imported test-side helpers below `e2e/` (named, default,
+  namespace, dynamic and side-effect imports, re-exports, object and class
+  methods, solved as one fixed point). A primitive in a helper module outside
+  any named function, for example in a Playwright fixture or a hook registered
+  on import, is refused in the helper; a test-side `.tsx`/`.jsx` import is
+  refused. Application modules are not followed. Destructured clocks,
+  re-bound aliases, getters and bracket calls are known blind spots (ADR-0144).
+  The `--grep` for the tag matches the whole tag (`@exclusive(?![\w-])`).
+- Compile the entire default case inventory before execution and split it by
+  tag. Require exact case identity equality for each lane, passed expectations,
   one successful result, retry zero and no skips. Lane union preserves all cases.
+  A lane without cases is recorded as `empty` with the inventory as its reason;
+  it is never asked to run nothing.
 - Dedicated production modes remain separate and serial: catalogue,
   communication, device-download-support, devices, dialogs, ga-members-download,
   group-addresses, instructions, notes, parameters, reload-guard, structure,
-  task-status, updates and ux-feedback. No dev-versus-production deduplication.
+  table-columns, task-status, updates and ux-feedback. Each runs once with one
+  worker, as its config pins. No dev-versus-production deduplication.
 - Existing common-directory workspace/alpha/browser leases are respected in fixed
   order and retained for the whole package in this first version. Shorter locks,
   cross-suite parallelism, Rust/nextest/corpus work and GPU work are deferred.
@@ -188,7 +207,18 @@ proof. A separately source/build/tool-bound followup reproved the exact 278
 exclusive cases under the shared leases, with zero retries/skips. This is a scoped
 followup, not another full gate or scaling benchmark.
 
-**Re-admission (17 October 2026).** The temp-path tooling changes of 17 October
+**Lanes by tag (19 October 2026).** The hash admission closed again within a day
+of the 17 October re-admission (21 of 45 admitted specs and the shared fixtures
+changed), so every gate ran all 713 default cases on one worker: 1,172.9 s in
+the `browser-exclusive` stage of a full package gate on 19 October, plus 505.6 s of
+serial production suites (inventories included). The review criteria were mechanical (no fixed port,
+no file outside Playwright's output, no environment switch, no shared server
+state, no real-time budget), so the owner replaced the review by the tag guard.
+Every spec was scanned: 35 test declarations in 17 files measure real time and
+carry the tag; the guard reports 0 untagged uses. Measured results are in the
+[test-suite speed dossier](../research/2026-10-19-test-suite-speed.md).
+
+**Re-admission (17 October 2026, superseded by the tag lanes).** The temp-path tooling changes of 17 October
 moved the fixture fingerprint, so every file ran in the exclusive lane. The
 [lane review](../evidence/browser-lane-review-2026-10-17.md) classified every
 shared-input and spec change since the 14 October admission, re-admitted the

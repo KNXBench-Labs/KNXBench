@@ -31,6 +31,44 @@ misplaced `--root` or extra scan-task argument fails. AppImage verification
 uses the same root selection and retains its task-specific `--artifact-dir`
 and `--tag` options. `freeze-fixture` is a separate storage helper, not a scan.
 
+## Package gate: targeted by default, complete for releases
+
+One maintained runner replaces the private package-gate scripts
+([ADR-0144](adr/0144-change-scoped-gates-tagged-browser-lanes-bundled-rust-tests.md)):
+
+```sh
+python3 tools/run_package_gate.py --base origin/main --dry-run  # show the plan
+python3 tools/run_package_gate.py --base origin/main            # routine package
+python3 tools/run_package_gate.py --full                        # Alpha, Beta, release
+```
+
+The routine run always does the cheap static checks (format, documentation,
+browser lane guard, the five xtask checks, Python tool tests, diff check) and
+then only what the changed paths can affect: the Rust members that changed and,
+for library changes, their reverse dependents; crates whose sources name a
+changed, deleted or renamed file; web build, typechecks and Vitest for web
+changes and for repository files the web unit tests read; browser specs whose
+import/navigation closure reaches a changed web file; production suites for
+production-bundle and runner inputs and for changes to their own specs;
+bindings when `knx-projection` or the generated bindings change; corpus tests
+of the affected packages; website and story tests for their directories. A
+path without a rule selects the complete gate, and so does a change to the
+planner (`tools/gate_scope.py`) or this runner. `--full` runs the complete web profile (which itself holds the
+documentation, tool-test, lane-guard, xtask and diff checks, so the runner
+lists it as one stage), the whole Rust workspace,
+the bindings check, every corpus target, website and story tests.
+
+The receipt (`target/package-gates/<id>/receipt.json`) holds the plan with the
+paths that selected each stage, every stage's exit, wall time and counts, and
+the source fingerprint at start and end. The plan includes staged, unstaged
+and untracked files, so a dry run shows what an uncommitted change would
+select; for acceptance, run it on a committed candidate in a worktree nobody
+edits meanwhile, so the receipt names the commit it proves. It refuses to start
+on an empty change set and while `apps/knx-web/src/bindings` holds uncommitted
+changes that its bindings stage would restore. It takes the usual leases (browser stages via
+the web gate, Rust and corpus stages under `knx-workspace-gates.lock`) and
+links the private corpus from the main checkout only for the corpus stage.
+
 ## Rust workspace gate
 
 The web bundle comes first, also in a fresh worktree:
@@ -64,8 +102,9 @@ npm run test:benchmark # functional-only 1/2/4/4/2/1 scaling matrix
 The [web gate contract](contracts/web-test-gate.md) defines the exact profile
 coverage, Linux prerequisites, source-hash parallel admission and receipt limits.
 `test:gate` is **web-only**, not a Rust/private-corpus/release acceptance. Its
-browser default is at most four workers, capped by CPU affinity; timing/performance
-and unreviewed/changed specs remain exclusive. Override with `-- --workers 1` for
+browser default is at most four workers, capped by CPU affinity; cases tagged
+`@exclusive` (real-time and animation measurements, enforced by
+`tools/browser_lanes.py`) run alone. Override with `-- --workers 1` for
 serial execution or a constrained machine. Installed dependencies must match the
 lock; the runner never installs them silently.
 
@@ -164,7 +203,10 @@ unshare --user --map-root-user --net sh -c 'ip link set lo up && exec "$@"' sh \
 
 - **What it runs:** `tools/run_corpus_tests.py` selects every test that is
   `#[ignore]`d for `OriginalData`. It groups them by Cargo target and runs
-  each group with `--ignored`. `--list` prints only the selection.
+  each group with `--ignored`; tests in a bundled `tests/it` binary are named
+  by module path and run with `--exact`. `--list` prints only the selection,
+  `--package NAME` (repeatable) restricts it to the named packages, which the
+  change-scoped package gate uses.
 - **What it prints:** test names and counts, never corpus content.
 - **When it fails:**
   - exit `2`, with nothing run, if `OriginalData/` is missing;

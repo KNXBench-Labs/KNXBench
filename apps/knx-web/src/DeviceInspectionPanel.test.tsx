@@ -1,5 +1,6 @@
 /** Offline readiness and explicitly requested read-only comparison: no live bus in these tests. */
 // @vitest-environment happy-dom
+import { tableColumnSmoke } from "./tableColumnSmoke.fixture";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
@@ -260,4 +261,10 @@ it("reports nothing for a comparison it refuses", async () => {
     events.stop();
   }
   expect(events.seen.filter((event) => event.type === "deviceCompared")).toEqual([]);
+});
+
+tableColumnSmoke([["device-readiness", 5], ["device-changes", 4]], async id => {
+  await render();
+  if (id === "device-changes") { await prepare(); await act(async () => button(en["deviceChecks.confirm"]).click()); await flush(); }
+  return { host };
 });

@@ -1,4 +1,5 @@
 /** Offline project readiness and opt-in, read-only comparison of one device. */
+import ResizableTable from "./ResizableTable";
 import { useEffect, useRef, useState } from "react";
 import * as api from "./api";
 import DeviceLink from "./DeviceLink";
@@ -9,6 +10,20 @@ import { loadPreferredGateway } from "./gatewayPreference";
 import { splitGatewayEndpoint, validateGatewayFields } from "./gatewayEndpoint";
 import { useTranslate, type Translate } from "./i18n";
 import type { ProjectTree } from "./bindings/ProjectTree";
+
+const DEVICE_READINESS_COLUMNS = [
+  { id: "device", width: 220, min: 120 },
+  { id: "address", width: 140, min: 100 },
+  { id: "grade", width: 160, min: 100 },
+  { id: "evidence", width: 320, min: 140 },
+  { id: "planSize", width: 140, min: 100 }
+];
+const DEVICE_CHANGES_COLUMNS = [
+  { id: "address", width: 140, min: 100 },
+  { id: "segment", width: 160, min: 100 },
+  { id: "deviceBytes", width: 240, min: 120 },
+  { id: "projectBytes", width: 240, min: 120 }
+];
 
 function gradeLabel(t: Translate, code: string): string {
   switch (code) {
@@ -171,8 +186,8 @@ export default function DeviceInspectionPanel({ project }: { project: ProjectTre
           <ul className="device-checks-counts">
             {Object.entries(readiness.counts).map(([code, count]) => <li key={code}>{gradeLabel(t, code)}: <strong>{count}</strong></li>)}
           </ul>
-          <div className="device-checks-table-scroll" role="region" aria-label={t("deviceChecks.grade")} tabIndex={0}>
-            <table className="device-checks-readiness">
+          <ResizableTable scrollClassName="device-checks-table-scroll" scrollLabel={t("deviceChecks.grade")} tableId="device-readiness"
+            columns={DEVICE_READINESS_COLUMNS} className="device-checks-readiness">
               <thead><tr>
                 <th>{t("deviceDownload.device")}</th><th>{t("deviceChecks.address")}</th>
                 <th>{t("deviceChecks.grade")}</th><th>{t("deviceChecks.evidence")}</th>
@@ -186,8 +201,7 @@ export default function DeviceInspectionPanel({ project }: { project: ProjectTre
                 <td>{device.steps !== null || device.octets !== null
                   ? `${device.steps ?? "—"} / ${device.octets ?? "—"}` : "—"}</td>
               </tr>)}</tbody>
-            </table>
-          </div>
+            </ResizableTable>
           {ambiguous && <p className="form-warning">{t("deviceChecks.ambiguous")}</p>}
         </>}
       </section>
@@ -237,16 +251,15 @@ export default function DeviceInspectionPanel({ project }: { project: ProjectTre
             <ul>{result.loadStates.map((state, index) => <li key={index}>{state.machine}: {state.state}</li>)}</ul>}
           {result.decoded && <ComparisonTable rows={result.decoded} />}
           <h5>{t("deviceChecks.changes")}</h5>
-          {result.changes.length === 0 ? <p>{t("deviceChecks.noRanges")}</p> : <div className="device-checks-table-scroll" role="region" aria-label={t("deviceChecks.changes")} tabIndex={0}>
-            <table className="device-checks-changes">
+          {result.changes.length === 0 ? <p>{t("deviceChecks.noRanges")}</p> : <ResizableTable scrollClassName="device-checks-table-scroll" scrollLabel={t("deviceChecks.changes")} tableId="device-changes"
+            columns={DEVICE_CHANGES_COLUMNS} className="device-checks-changes">
               <thead><tr><th>{t("deviceChecks.address")}</th><th>{t("deviceChecks.segment")}</th>
                 <th>{t("deviceChecks.deviceBytes")}</th><th>{t("deviceChecks.projectBytes")}</th></tr></thead>
               <tbody>{result.changes.map((change, index) => <tr key={index}>
                 <td><code>{hex(change.address, 4)}</code></td><td><code>{change.segment ?? "—"}</code></td>
                 <td><code>{hexOctets(change.device)}</code></td><td><code>{hexOctets(change.project)}</code></td>
               </tr>)}</tbody>
-            </table>
-          </div>}
+            </ResizableTable>}
         </section>}
       </section>
     </>}

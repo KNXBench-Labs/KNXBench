@@ -6,6 +6,52 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Empty directories must hold an empty payload (19 October 2026, WP-16)
+
+The round-4 gap described in the retained record below is closed in the
+outer archive and in a nested payload, through the same directory check. A
+directory record that declares no content is now refused with
+`InconsistentRecord`, naming the directory and the reason, when:
+
+- its CRC-32 is not 0, the CRC-32 of no content (in both headers alike, or
+  in a data descriptor that agrees with them);
+- it is compressed but holds no complete stream: no bytes at all (with
+  any method other than stored), a deflate stream cut short (`03`, or an
+  empty stored block missing a byte), or bytes that are no deflate stream.
+
+The refusal happens while the container opens, before anything is parsed or
+written, so a project or product database that already exists stays
+byte-for-byte unchanged. Still accepted: stored empty directories (ETS6,
+`jar` with the UTF-8 flag and its `0xCAFE` extra field), Java
+`ZipOutputStream`'s deflated `03 00` with bit 3 and a signed descriptor, and
+any complete deflate stream that produces nothing (`01 00 00 ff ff`). Name,
+budget, prefix and layout rules are unchanged. File members never had the
+gap: they are read, and reading checks CRC and stream.
+
+Evidence: 9 more tests in `decoded_member_names.rs`. Five were RED before
+the fix: a nonzero CRC (stored and deflated) and a missing deflate stream
+were accepted; a truncated stream was refused only as "carries data", and an
+empty bzip2-method record only later, as an unsupported method. One more
+test in `knx-app`'s `import_service.rs` seeds a project and product database
+and compares their files and WALs after both refusals. A census of the
+private corpus found 222 directory records in 231 archives (38 readable
+nested payloads, 7,732 records), all stored with CRC 0 and no bytes, so none
+of them is refused.
+
+What remains (not part of this fix):
+
+- A deflated *file* whose compressed bytes continue behind the end of its
+  deflate stream imports, in both layers; the trailing bytes belong to no
+  member and are not retained. The `zip` reader stops at the end of the
+  stream. Recorded as open work.
+- The product-package reader (`knx-productdb`) reads every member with the
+  `zip` reader, so a nonzero CRC, a missing stream or a truncated stream in
+  an empty directory is already refused there, though without the member's
+  name. A deflated directory with bytes behind its `03 00` stream installs
+  there; KNXBench's project reader refuses it (round 3, N12).
+- A directory record with the encryption flag and no bytes is not checked
+  for an encryption header.
+
 <!-- BEGIN retained catalogue record -->
 
 <a id="159-a-project-archive-may-unpack-to-at-most-512-mib-and-every-member-name-must-be-unique"></a>

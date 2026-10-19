@@ -30,12 +30,24 @@ pub(super) const UNICODE: &str = "its local and central Unicode Path fields diff
 /// The record leaves bytes between itself and the next record (or the
 /// central directory), or overlaps it.
 pub(super) const LAYOUT: &str = "its local record does not end where the next record begins";
+/// A directory record declares or stores content.
+pub(super) const DIRECTORY_DATA: &str = "a directory record carries data";
+/// A compressed directory record holds no complete stream (none at all, or
+/// one cut short or malformed).
+pub(super) const DIRECTORY_STREAM: &str =
+    "a compressed directory record holds no complete compressed stream";
+/// An empty directory record declares a CRC-32 other than that of no content.
+pub(super) const DIRECTORY_CRC: &str =
+    "an empty directory record declares a CRC-32 other than 0, the CRC-32 of no content";
 
 const LOCAL_SIGNATURE: &[u8] = b"PK\x03\x04";
 const DESCRIPTOR_SIGNATURE: &[u8] = b"PK\x07\x08";
 const LOCAL_HEADER_LEN: usize = 30;
 const DATA_DESCRIPTOR_FLAG: u16 = 1 << 3;
+const STORED: u16 = 0;
 const DEFLATED: u16 = 8;
+/// The CRC-32 of zero bytes.
+const EMPTY_CRC: u32 = 0;
 const ZIP64_FIELD: u16 = 0x0001;
 const UNICODE_PATH_FIELD: u16 = 0x7075;
 /// The 32-bit size value that defers to a zip64 extra field.
@@ -124,31 +136,44 @@ pub(super) fn check(bytes: &[u8], start: usize, central: &Central) -> Result<Loc
     })
 }
 
-/// Whether a directory record holds anything (round 3, N12). Java's
-/// `ZipOutputStream` and `jar` write an empty directory as a deflated empty
-/// stream, which carries nothing; a stream that inflates to bytes, or that
-/// ends before its stored bytes do, carries data. `data` is the record's
-/// stored bytes, already checked against both headers by [`check`].
-pub(super) fn directory_carries_data(central: &Central, data: &[u8]) -> bool {
+/// Checks that a directory record holds an empty payload (round 3, N12;
+/// WP-16). It declares no content; it stores no byte, or a complete deflate
+/// stream that inflates to nothing and ends exactly where its stored bytes
+/// do, as Java's `ZipOutputStream` writes it (`03 00`); and its CRC-32 is
+/// that of no content, 0. Headers that agree are not a payload: a stored
+/// record can hold no bytes, a compressed one cannot. `data` is the
+/// record's stored bytes, already checked against both headers by [`check`].
+pub(super) fn check_directory(central: &Central, data: &[u8]) -> Result<(), &'static str> {
     if central.size > 0 {
-        return true;
+        return Err(DIRECTORY_DATA);
     }
-    if data.is_empty() {
-        return false;
+    match central.method {
+        STORED if data.is_empty() => {}
+        DEFLATED => empty_deflate_stream(data)?,
+        _ if data.is_empty() => return Err(DIRECTORY_STREAM),
+        _ => return Err(DIRECTORY_DATA),
     }
-    central.method != DEFLATED || !inflates_to_nothing(data)
+    if central.crc != EMPTY_CRC {
+        return Err(DIRECTORY_CRC);
+    }
+    Ok(())
 }
 
-/// True for a complete deflate stream that produces no byte and ends
-/// exactly at the end of `stream`.
-fn inflates_to_nothing(stream: &[u8]) -> bool {
+/// `Ok` for a complete deflate stream that produces no byte and ends
+/// exactly at the end of `stream`. A stream that produces a byte, or ends
+/// before `stream` does, carries data; anything else is no complete stream.
+fn empty_deflate_stream(stream: &[u8]) -> Result<(), &'static str> {
     let mut inflater = Decompress::new(false);
     let mut out = [0u8; 1];
-    matches!(
-        inflater.decompress(stream, &mut out, FlushDecompress::Finish),
-        Ok(Status::StreamEnd)
-    ) && inflater.total_out() == 0
-        && inflater.total_in() == stream.len() as u64
+    let status = inflater.decompress(stream, &mut out, FlushDecompress::Finish);
+    if inflater.total_out() > 0 {
+        return Err(DIRECTORY_DATA);
+    }
+    match status {
+        Ok(Status::StreamEnd) if inflater.total_in() == stream.len() as u64 => Ok(()),
+        Ok(Status::StreamEnd) => Err(DIRECTORY_DATA),
+        _ => Err(DIRECTORY_STREAM),
+    }
 }
 
 /// The local sizes `(uncompressed, compressed)`, a zip64 placeholder taken

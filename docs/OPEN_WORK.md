@@ -73,7 +73,7 @@ Each package needs its own scoped claim, review, tests and delivery evidence.
 | [WP-13](#wp-13--documentation-drift) | P3 | Offline-ready, docs only | Current summaries agree with delivered behaviour; retained history stays intact. |
 | [WP-14](#wp-14--complete-offline-family-outcomes) | P1 | Source contracts first; UP258 excluded | Complete real-source System 1/B/300 image → procedure → execution → recovery slices. |
 | [WP-15](#wp-15--complete-module-scope-in-web-consumers) | P1 | Delivered 19 Oct (web adoption); older-server boundary documented | Complete response-local module paths distinguish diagnostics and workspace identities. |
-| [WP-16](#wp-16--empty-directory-zip-integrity) | P1 | Offline-ready regression/hardening | Empty directories have valid CRC and complete compressed-stream representation. |
+| [WP-16](#wp-16--empty-directory-zip-integrity) | P1 | Delivered 19 Oct; trailing-stream and product-reader follow-ups open | Empty directories have valid CRC and complete compressed-stream representation. |
 | [WP-17](#wp-17--master-identity-provenance) | P1 | Offline-ready, schema/report contract first | Master identity winners, collisions and malformed declarations have truthful provenance. |
 | [WP-18](#wp-18--device-comparison-shows-what-differs) | P2 | Delivered on branch, awaiting controller review/merge (19 Oct); no live-device acceptance | Differing bytes are marked in the raw hex rows; the comparison result shows only differences by default, with a toggle for all rows. |
 | [WP-19](#wp-19--sync-from-a-device-comparison) | P2 | Contract first; project → device needs bus-write consent (owner request, 19 Oct) | A comparison result offers *project → device* (the existing download) or *device → project* (adopt verified values, one undo step). |
@@ -343,6 +343,19 @@ tell nested nameless scopes apart; no real nested manufacturer sample exists;
 the section caption still shows only the innermost module.
 
 #### WP-16 — Empty-directory ZIP integrity
+
+**Delivered (19 October 2026):**
+an empty directory record in a project container, outer or nested, is
+refused by name when its CRC-32 is not 0 or when it is compressed without a
+complete stream (none, truncated or malformed); stored, `jar`, Java
+`ZipOutputStream` and other complete empty deflate shapes still import, and a
+refusal leaves existing project and product databases unchanged
+([KL-159 update](limitations/KL-159-project-archive-budgets-and-duplicate-names.md)).
+**Remaining, unowned:** a deflated *file* whose compressed bytes continue
+behind the end of its stream imports with those bytes in no member (both
+layers); the product-package reader accepts the same trailing bytes behind
+a directory's empty stream and names no member in its CRC/stream refusals.
+Each needs its own package.
 
 **Scope:** KL-159's documented zero-size directory corner in project containers,
 including nested archives: a nonzero CRC for empty output and a deflated entry

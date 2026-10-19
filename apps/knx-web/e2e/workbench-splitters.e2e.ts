@@ -13,7 +13,9 @@ const tree = {
   })),
 };
 
-async function openProject(page: Page) {
+// `stored` (e.g. a `uiScale`) drives zoom the real way: a server setting App
+// applies itself. Only a caller that passes it accepts setting writes.
+async function openProject(page: Page, stored?: Record<string, unknown>) {
   const unexpected: string[] = [];
   // Like the real server: no project until the test creates one (ADR-0127).
   let projectOpen = false;
@@ -23,7 +25,10 @@ async function openProject(page: Page) {
     let body: unknown;
     let status = 200;
     if (path === "/api/auth/status" && method === "GET") body = { required: false, authenticated: true };
-    else if (path === "/api/settings" && method === "GET") body = { schemaVersion: 1, status: "ok", settings: {} };
+    else if (path === "/api/settings" && method === "GET") body = { schemaVersion: 1, status: "ok", settings: stored ?? {} };
+    else if (path === "/api/settings" && method === "PUT" && stored) {
+      Object.assign(stored, route.request().postDataJSON().settings); body = { schemaVersion: 1, status: "ok", settings: stored };
+    }
     else if (path === "/api/project" && method === "GET") { if (projectOpen) body = tree; else { status = 400; body = { error: "no project open" }; } }
     else if (path === "/api/project/new" && method === "POST") { projectOpen = true; body = tree; }
     else if (path === "/api/project/status-metrics" && method === "GET") body = statusMetricsFixtureBody(tree);
@@ -97,3 +102,51 @@ test("with both blocks dragged to their maximum, the explorer keeps a visible mi
   const settings = (await page.getByRole("navigation", { name: "Bus monitor" }).getByRole("button", { name: "Settings" }).boundingBox())!;
   expect(settings.y + settings.height).toBeLessThanOrEqual(column.y + column.height + 1);
 });
+
+async function dragX(page: Page, separator: Locator, dx: number) {
+  const box = (await separator.boundingBox())!;
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x + dx, y, { steps: 8 });
+  await page.mouse.up();
+}
+
+// UISET follow-up: pane edges follow the pointer at every application scale;
+// widths are layout pixels, so the stored width changes by 60 / scale.
+for (const scale of [0.8, 1, 1.5]) {
+  test(`scale ${scale}: navigation, inspector and block edges follow a real pointer drag`, async ({ page }) => {
+    const stored: Record<string, unknown> = { uiScale: scale };
+    const unexpected = await openProject(page, stored);
+    await expect.poll(() => page.evaluate(() => document.documentElement.style.getPropertyValue("--app-ui-scale"))).toBe(String(scale));
+    const navigation = page.locator(".workbench-pane-left");
+    const navigationSeparator = page.getByRole("separator", { name: "Navigation", exact: true });
+    const right = async () => { const box = (await navigation.boundingBox())!; return box.x + box.width; };
+    const beforeRight = await right();
+    await dragX(page, navigationSeparator, 60);
+    expect(Math.abs(await right() - beforeRight - 60), "navigation edge follows the pointer").toBeLessThan(1.5);
+    const navigationWidth = Math.round(250 + 60 / scale);
+    await expect.poll(() => stored.navigationPaneWidth).toBe(navigationWidth);
+    expect(Number(await navigationSeparator.getAttribute("aria-valuenow"))).toBe(navigationWidth);
+    expect(Math.abs((await navigation.boundingBox())!.width / scale - navigationWidth)).toBeLessThan(1);
+
+    const inspector = page.locator(".workbench-pane-right");
+    const inspectorSeparator = page.getByRole("separator", { name: "Properties", exact: true });
+    const left = async () => (await inspector.boundingBox())!.x;
+    const beforeLeft = await left();
+    await dragX(page, inspectorSeparator, -60);
+    expect(Math.abs(await left() - beforeLeft + 60), "inspector edge follows the pointer").toBeLessThan(1.5);
+    const inspectorWidth = Math.round(360 + 60 / scale);
+    await expect.poll(() => stored.inspectorPaneWidth).toBe(inspectorWidth);
+    expect(Number(await inspectorSeparator.getAttribute("aria-valuenow"))).toBe(inspectorWidth);
+
+    const separator = page.getByRole("separator", { name: "Height of the navigation block" });
+    const block = page.getByRole("navigation", { name: "Navigation" });
+    const before = await height(block);
+    await drag(page, separator, 60);
+    expect(Math.abs(await height(block) - before - 60), "block edge follows the pointer").toBeLessThan(1.5);
+    expect(Math.abs(Number(await separator.getAttribute("aria-valuenow")) - await height(block) / scale)).toBeLessThan(1);
+    expect(unexpected).toEqual([]);
+  });
+}

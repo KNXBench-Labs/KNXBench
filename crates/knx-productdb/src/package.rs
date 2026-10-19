@@ -592,6 +592,7 @@ fn validate_diagnostic(
     conn: &Connection,
     sha256: &str,
     diagnostic: &InstallDiagnostic,
+    master_sources: &mut crate::master_provenance::SourceInventoryCache,
 ) -> Result<(), ProductDbError> {
     validate_archive_path(&diagnostic.archive_path)?;
     validate_xml_path(&diagnostic.xml_path)?;
@@ -625,6 +626,7 @@ fn validate_diagnostic(
             )?;
             crate::master_provenance::validate_diagnostic(
                 conn,
+                master_sources,
                 &source,
                 diagnostic.kind,
                 &diagnostic.xml_path,
@@ -1693,8 +1695,22 @@ fn validate_facts(
         validate_xml_path(&unknown.xpath)?;
     }
     let mut diagnostic_identities = HashSet::new();
+    let mut master_sources = crate::master_provenance::SourceInventoryCache::default();
     for diagnostic in &facts.diagnostics {
-        validate_diagnostic(conn, sha256, diagnostic)?;
+        if matches!(
+            diagnostic.kind,
+            InstallDiagnosticKind::MasterIdentityCollision
+                | InstallDiagnosticKind::MalformedMasterDeclaration
+        ) {
+            master_sources.budget.stored_diagnostic(
+                &diagnostic.archive_path,
+                &diagnostic.xml_path,
+                &diagnostic.detail,
+            )?;
+        }
+    }
+    for diagnostic in &facts.diagnostics {
+        validate_diagnostic(conn, sha256, diagnostic, &mut master_sources)?;
         if !diagnostic_identities.insert((
             diagnostic.kind.as_str(),
             diagnostic.archive_path.as_str(),
@@ -1912,6 +1928,7 @@ fn load_facts_unvalidated(
     conn: &Connection,
     sha256: &str,
 ) -> Result<Option<InstallFacts>, ProductDbError> {
+    crate::master_provenance::budget::admit_report(conn, sha256)?;
     let header: Option<(i64, String, i64, i64)> = conn.query_row(
         "SELECT report_version, status, unknown_distinct, unknown_occurrences FROM package_install_report WHERE package_sha256 = ?1",
         [sha256],

@@ -126,12 +126,53 @@ unreadable sources. Unclassifiable oversized/damaged sources receive explicit
 unexamined markers; opaque baggage is never semantically parsed. Classification
 is inspection, not semantic import.
 
-Replay replaces only derived declaration evidence, retains observed outcomes
-and winners, reports failed/unexamined sources explicitly, and is idempotent.
-A bad source is a per-source inspection failure; SQLite/write failures abort
-all owned changes, including failures at outer RELEASE. Nested operations never
+Replay reconciles the complete byte-derived inventory at stable source/ordinal
+keys. It repairs ranges, paths and carried context in place, inserts missing
+unobserved declarations and removes surplus unobserved, unreferenced rows.
+Observed identity/eligibility changes, lost eligible outcomes in an observed
+source, damaged/missing observed keys and surplus winner-referenced keys are
+ambiguous: replay refuses the entire operation atomically instead of guessing
+history or rebinding a winner. Invalid definition/history headers also refuse.
+Trustworthy first-observed outcomes, winner addresses and immutable package
+snapshots remain unchanged. The result is idempotent and never publishes a
+complete inventory that its own source reader cannot admit.
+A bad source is a per-source inspection failure; evidence-budget exhaustion,
+ambiguous reconciliation and SQLite/write failures abort all owned changes,
+including failures at outer RELEASE. Nested operations never
 commit the caller's outer transaction. No historical order is inferred from
 rowid, filenames, hash order or current normalized values.
+
+## Bounded evidence output
+
+`MAX_MASTER_EVIDENCE_BYTES` is **16 × 1024 × 1024 bytes**, a conservative fixed
+policy, not a corpus- or machine-tuned allowance. It bounds one source operation
+(ingest or a replay source); report and identity reads aggregate all of their
+referenced inventories under one allowance. A small shared monotonic meter
+starts with 1,024 bytes of header headroom. Each declaration charges 256 bytes
+of record overhead plus its UTF-8 source-hash, family, element, Id, absolute
+path and carried function-type-Id lengths. Path length and every copied field
+are admitted **before** their output allocations. Dedicated ingest and replay
+reserve a second inventory's charge before accepting complete evidence, so the
+subsequent stored-versus-authoritative comparison remains admissible.
+
+Before formatting each emitted diagnostic, the same meter reserves two copies
+of `256 + path_bytes + 32 + 10 * id_bytes + 512`: record overhead, ordinal
+suffix, conservative debug-escaped Id and fixed source/hash/range/winner text.
+The second copy covers persisted reading/validation. This intentionally bounds
+repeated IDs, contexts and source hashes as well as repeated long ancestry;
+input size, depth and declaration count alone cannot bound that amplification.
+
+Persisted readers charge stored text lengths before decoding/copying strings,
+then charge the authoritative parser's inventory against the same meter. A
+package-report read preflights the stored master-diagnostic byte total before
+materializing its rows; report validation shares a meter across those strings,
+each distinct cached source inventory (both losing and kept sources) and
+diagnostic-prefix construction; the cache is shared for the complete report.
+Identity queries likewise share one meter across their distinct source reads.
+Source absence or invalid length/hash keeps retained-byte availability false,
+without rewriting historical snapshots or pretending the metadata was verified.
+An exhausted read returns no partial report; an exhausted ingest or replay rolls
+back its owned savepoint. No declarations or diagnostics are truncated.
 
 ## Acceptance and exclusions
 

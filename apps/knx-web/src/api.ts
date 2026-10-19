@@ -780,6 +780,8 @@ export interface CatalogInstallDiagnostic {
   kind:
     | "unsupported-master-section"
     | "unsupported-master-subtree"
+    | "master-identity-collision"
+    | "malformed-master-declaration"
     | "unresolved-baggage-declaration"
     | "undeclared-baggage-payload";
   archivePath: string;

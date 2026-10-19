@@ -1,5 +1,18 @@
 # Import and export
 
+## Master identity evidence (source builds after Alpha 15)
+
+Product database **26 → 27** adds declaration provenance for master DPTs,
+function types, function points and space usages. It preserves the existing
+normalized winner policy and exact retained master bytes. New collisions and
+missing-Id/orphan declarations are reported through existing install/import/CLI
+diagnostic channels. Deterministic replay derives source declarations without
+rewriting normalized data or historical package reports; earlier encounter/write
+and winning-source history remains explicitly unavailable when not observed.
+This is evidence handling, not a new master grammar, ETS schema, native-project
+schema or programming admission. Older builds refuse product27.
+[Contract](adr/0147-master-identity-provenance.md).
+
 ## Alpha 15 persistence boundary
 
 Native/model **16** stays; the core/store diff introduces no new persisted project

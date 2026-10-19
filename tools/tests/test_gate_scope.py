@@ -155,6 +155,26 @@ class GateScopeTests(unittest.TestCase):
         self.assertEqual(self.fixture.plan('docs/spec/codes.csv').rust_packages,
                          ['knx-cli', 'knx-server', 'knx-store'])
 
+    def test_a_deleted_fixture_page_or_helper_still_selects_the_specs_that_used_it(self) -> None:
+        (self.fixture.root / 'apps/knx-web/e2e/lonely-fixture.html').unlink()
+        self.assertEqual(self.fixture.plan('apps/knx-web/e2e/lonely-fixture.html').browser_specs,
+                         ['lonely.e2e.ts'])
+        (self.fixture.root / 'apps/knx-web/e2e/helper.ts').unlink()
+        result = self.fixture.plan('apps/knx-web/e2e/helper.ts')
+        self.assertEqual(result.browser_specs, ['app.e2e.ts', 'lonely.e2e.ts'])
+        self.assertEqual(result.production_configs, ['devices'])
+
+    def test_files_that_screenshot_scripts_write_are_not_web_inputs(self) -> None:
+        shots = self.fixture.root / 'apps/knx-web/e2e/readme.shots.ts'
+        shots.write_text('const OUT = "../../../docs/assets/screenshots/";\n')
+        (self.fixture.root / 'docs/assets/screenshots').mkdir(parents=True)
+        self.assertFalse(self.fixture.plan('docs/assets/screenshots/hero.png').web)
+
+    def test_single_quoted_path_segments_are_reads_too(self) -> None:
+        (self.fixture.root / 'apps/knx-web/src/quoted.test.ts').write_text(
+            "const p = join(repo, 'crates', 'knx-store', 'src', 'lib.rs');\n")
+        self.assertTrue(self.fixture.plan('crates/knx-store/src/lib.rs').web)
+
     def test_a_repository_file_read_by_a_web_unit_test_selects_the_web_checks(self) -> None:
         document = self.fixture.plan('docs/spec/table.csv')
         self.assertTrue(document.web)
@@ -175,10 +195,13 @@ class GateScopeTests(unittest.TestCase):
         self.assertFalse(self.fixture.plan('apps/knx-web/src/Panel.tsx').full)
 
     def test_shared_runner_inputs_select_every_production_suite(self) -> None:
-        for path in ('apps/knx-web/playwright.config.ts', 'apps/knx-web/browserTmp.ts',
-                     'tools/browser_lanes.py'):
+        for path in ('apps/knx-web/playwright.config.ts', 'apps/knx-web/browserTmp.ts'):
             self.assertEqual(self.fixture.plan(path).production_configs,
                              list(gate_scope.PRODUCTION_CONFIGS), path)
+        # The lane guard splits only the default lane; production suites run unsplit.
+        lanes = self.fixture.plan('tools/browser_lanes.py')
+        self.assertIsNone(lanes.browser_specs)
+        self.assertEqual(lanes.production_configs, [])
 
     def test_a_production_spec_or_its_helper_selects_its_suite(self) -> None:
         self.assertEqual(self.fixture.plan('apps/knx-web/e2e/app.e2e.ts').production_configs, ['devices'])
@@ -197,7 +220,7 @@ class GateScopeTests(unittest.TestCase):
         self.assertIn('rust: xtask (reads crates)', result.reasons)
 
     def test_changing_the_gate_planner_or_runner_selects_the_complete_gate(self) -> None:
-        for path in ('tools/gate_scope.py', 'tools/run_package_gate.py'):
+        for path in ('tools/gate_scope.py', 'tools/run_package_gate.py', 'tools/web_gate_support.py'):
             self.assertTrue(self.fixture.plan(path).full, path)
 
     def test_website_story_and_tools_have_their_own_stages(self) -> None:

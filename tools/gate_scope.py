@@ -38,13 +38,14 @@ BINDINGS = 'apps/knx-web/src/bindings/'
 PRODUCTION_INPUTS = re.compile(
     r'apps/knx-web/(package\.json|package-lock\.json|vite[\w.-]*\.ts|index\.html|public/.*'
     r'|playwright\.(?:[\w-]+\.)?config\.ts|browserTmp\.ts)$'
-    r'|tools/(browser_tmp\.(py|cjs|d\.cts)|run_web_gate\.py|web_gate_support\.py|browser_lanes\.py)$')
+    r'|tools/(browser_tmp\.(py|cjs|d\.cts)|run_web_gate\.py|web_gate_support\.py)$')
 RUST_GLOBAL = re.compile(r'(Cargo\.toml|Cargo\.lock|rust-toolchain\.toml|\.cargo/.*)$')
 DOCS = re.compile(r'(docs/.*|\.ai/.*|[^/]+\.md|LICENSE|ideas\.md|DREAMS\.md|devices\.md)$')
-# The planner and its runner decide what every other change runs.
-GATE_TOOLS = re.compile(r'tools/(gate_scope|run_package_gate)\.py$')
+# The planner, its runner and the proof checks every runner stage relies on.
+GATE_TOOLS = re.compile(r'tools/(gate_scope|run_package_gate|web_gate_support)\.py$')
 TOOLS = re.compile(r'(tools/.*|\.github/.*)$')
-REPOSITORY_TOPS = ('apps', 'crates', 'xtask', 'docs', 'design', 'tools', 'website', 'story', 'data', 'demos')
+REPOSITORY_TOPS = ('apps', 'crates', 'xtask', 'docs', 'design', 'tools', 'website', 'story', 'demos',
+                   'integrations', '.github')
 IMPORT = re.compile(r'''(?:\bfrom\s*|\bimport\s*\(?\s*|\bexport\s+\*\s+from\s*)["']([^"']+)["']''')
 GOTO = re.compile(r'''\.goto\(\s*(["'`])([^"'`]*)''')
 SCRIPT = re.compile(r'''<script[^>]*\bsrc=["']([^"']+)["']''')
@@ -143,7 +144,7 @@ def repository_reads(root: Path, members: dict[str, dict]) -> dict[str, dict[str
     return reads
 
 
-SEGMENTS = re.compile(r'"[\w.@-]+"(?:\s*,\s*"[\w.@-]+")+')
+SEGMENTS = re.compile(r'''(["'])[\w.@-]+\1(?:\s*,\s*(["'])[\w.@-]+\2)+''')
 WEB_LITERAL = re.compile(r'''["'`]((?:\.\./)+[\w.@/-]+?)(?:\?[\w=&]*)?["'`]''')
 
 
@@ -161,13 +162,14 @@ def web_reads(root: Path) -> dict[str, set[str]]:
     reads: dict[str, set[str]] = {}
     for top in ('src', 'e2e'):
         for file in sorted((app / top).rglob('*')):
-            if file.suffix not in ('.ts', '.tsx') or 'bindings' in file.relative_to(app).parts:
-                continue
+            if file.suffix not in ('.ts', '.tsx') or 'bindings' in file.relative_to(app).parts \
+                    or re.search(r'\.(shots|load)\.ts$', file.name):
+                continue  # screenshot and load scripts write files there; no gate runs them
             text = file.read_text(encoding='utf-8', errors='replace')
             reader = file.relative_to(root).as_posix()
             targets = [(file.parent / m.group(1)).resolve() for m in WEB_LITERAL.finditer(text)]
             for run in SEGMENTS.finditer(text):
-                parts = re.findall(r'"([\w.@-]+)"', run.group(0))
+                parts = re.findall(r'''["']([\w.@-]+)["']''', run.group(0))
                 if parts[0] in REPOSITORY_TOPS:
                     targets.append(root.joinpath(*parts))
             for target in targets:
@@ -309,7 +311,10 @@ def select_production(app: Path, changed_e2e: list[Path]) -> dict[str, str]:
             if patterns is not None and not any(fnmatch(spec.name, p) for p in patterns):
                 continue
             closure = graph.closure(spec)
-            hit = sorted(changed if closure is None else closure & changed)
+            if closure is None:  # names a deleted or unresolvable file: run the suite
+                chosen[config] = f'{spec.relative_to(app).as_posix()} (not statically analysable)'
+                break
+            hit = sorted(closure & changed)
             if hit:
                 chosen[config] = hit[0].relative_to(app).as_posix()
                 break
@@ -364,6 +369,10 @@ def plan(root: Path, changed: list[str], members: dict[str, dict] | None = None)
                         result.production_configs.append(config)
                 result.because('web: production bundle suites', path)
             continue
+        if GATE_TOOLS.match(path):
+            result.full = True
+            result.because('complete gate (the gate planner or runner changed)', path)
+            continue
         if WEB_GLOBAL.match(path):  # the browser tooling under tools/
             result.web = web_global = True
             result.because('web: every browser spec', path)
@@ -391,9 +400,6 @@ def plan(root: Path, changed: list[str], members: dict[str, dict] | None = None)
         elif path.startswith('story/'):
             result.story_tests = True
             result.because('story tests', path)
-        elif GATE_TOOLS.match(path):
-            result.full = True
-            result.because('complete gate (the gate planner or runner changed)', path)
         elif TOOLS.match(path):
             result.because('python tool tests', path)
             if path == 'tools/run_corpus_tests.py':
@@ -416,13 +422,17 @@ def plan(root: Path, changed: list[str], members: dict[str, dict] | None = None)
         if web_global:
             result.browser_specs = ALL
         else:
-            existing = [root / p for p in dict.fromkeys(web_changed) if (root / p).exists()]
-            specs, why = select_specs(app, existing) if existing else ([], {})
+            changed_web = list(dict.fromkeys(web_changed))
+            existing = [root / p for p in changed_web if (root / p).exists()]
+            # A deleted file is in no closure, but every spec that still names it
+            # fails to resolve and is selected as not statically analysable.
+            specs, why = select_specs(app, existing) if changed_web else ([], {})
             result.browser_specs = specs
             for spec, cause in why.items():
                 result.because(f'browser: {spec}', cause)
-            e2e = [p for p in existing if p.resolve().is_relative_to((app / 'e2e').resolve())]
-            for config, cause in select_production(app, e2e).items():
+            e2e_changed = [p for p in changed_web if p.startswith(WEB + 'e2e/')]
+            e2e = [root / p for p in e2e_changed if (root / p).exists()]
+            for config, cause in (select_production(app, e2e) if e2e_changed else {}).items():
                 if config not in result.production_configs:
                     result.production_configs.append(config)
                 result.because(f'web: production suite {config}', cause)

@@ -121,3 +121,34 @@ ignored; public UP258 package 3/3; private corpus 155/155 in 34 targets
 (`device_reports_corpus` 2/2, all format-1 archives still read and rewrite
 byte-identically); xtask layering/headers/anchors/ledger/corpus-gates;
 documentation 0 errors; diff-check. No bus contact, no push.
+
+## Correction round 3 (review 3: F6, F7)
+
+RED first (scratch logs `red-cr3-F6.log`, `red-cr3-F7.log`).
+
+- F6 `8e7612a0`: on the old HEAD both formats accepted all 13 rehashed
+  impossible identity sequences (PID12 in flight with an untouched
+  descriptor, after a descriptor error or mismatch; read items without
+  times or completed before attempted; an untouched item with a completion
+  time; items read after a descriptor mismatch/error/partial or a PID12
+  mismatch/error). One validator (`identity_sequence`) now replays
+  `identity_reads`: an outcome needs attempt then completion; the next item
+  is touched only after an outcome that continues (not error, no read
+  contradicting its assertion, descriptor only on an exact read; refused or
+  partial PID12 continues to PID78); after untouched/in-flight/stopping
+  items everything is wholly untouched. Every snapshot of refused-PID12,
+  mask-mismatch and manufacturer-mismatch runs roundtrips in both formats
+  (test transport refuses PID12 with `nr_of_elem = 0`; the simulator always
+  answers PID12). An older format-1 fixture left an error on an "untouched"
+  item; corrected. Private corpus `device_reports_corpus` 2/2 unchanged.
+- F7 `0a359ef4`: on the old HEAD a 65-octet comparison derived, acquired all
+  chunks, then both the pending snapshot and the result failed with
+  `diagnostics-invalid-memory` (throwaway probe in the RED log).
+  `MAX_COMPARISON_OCTETS = 64` in `knx-core` declared_memory; derivation
+  refuses longer with `HardwareTypeTooLong`; the reader uses the constant.
+
+Gates after round 3: fmt; Clippy `-D warnings` productdb/net/app/cli all
+targets; five-crate `cargo test --no-fail-fast` 3076 passed, 0 failed, 100
+ignored; public UP258 package 3/3; private corpus 155/155 in 34 targets;
+xtask layering/headers/anchors/ledger/corpus-gates; documentation 0 errors;
+diff-check. No bus contact, no push.

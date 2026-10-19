@@ -1,7 +1,7 @@
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-19 07:05
 - **Completed:** Owner bug fix, Hall of Fame bot: XP update comments no longer repeat the whole medal list. `tools/community_hall_of_fame.py`: completion notes name only the resolution medal reached by that award (awards ordered by `closed_at`, then issue number); PR credit comments name only the PR medal reached by that PR (author's PRs by number) and, when merged, the merge medal reached by it (`merged_at`, then number); no milestone, no medal line, and the "None yet" filler is gone. `pull_request_note` now takes the PR list. The board table keeps every medal; report-count medals appear only there. Page rules text, regenerated `docs/community/HALL_OF_FAME.md` (rules text only), contract amendment in `docs/contracts/community-recognition.md`, delivery entry in `docs/IMPLEMENTATION_STATUS.md`. Log `.ai/logs/2026-10-19_claude_hof-fresh-medals.md`.
-- **Pending/Next Steps:** After the push, the next scheduled/event Hall of Fame run edits each maintained PR credit comment once (old collection line dropped); posted completion notes are not touched. Optionally check that run's result.
+- **Pending/Next Steps:** None. Pushed as `7c828709`; manual Hall of Fame run `39202398429` succeeded on it and edited the only maintained PR credit comment (`6216417065`, PR #24), which now reads "Medals unlocked by this PR: Patch Pilot · Green Merge Ribbon" instead of all eight medals. Posted completion notes are untouched by design.
 - **Notes for Codex oder Claude:** Thresholds, XP, ranks, snapshot schema and workflow are unchanged. The test-speed claim's files were not touched.
 
 ---

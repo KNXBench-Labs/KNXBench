@@ -207,8 +207,12 @@ already found lying in the grass.
   `Date.now`, `requestAnimationFrame`, `setTimeout` and `setInterval` in a test,
   hook or helper it calls must sit in a test or `describe` carrying the tag;
   `python3 tools/browser_lanes.py` names the line otherwise, and the gate stops
-  before the build. Prefer an explicit settled-state wait over the tag where
-  the case does not measure time (ADR-0144).
+  before the build. A Playwright fixture (`test.extend`) or module code that
+  waits cannot be tagged and is refused where it is declared: move the wait
+  into a named helper the tagged tests call. Keep test-side helpers in `.ts`;
+  a `.tsx` import from a spec or helper is refused. Prefer an explicit
+  settled-state wait over the tag where the case does not measure time
+  (ADR-0144).
 
 - **An installed Playwright clock keeps running.** After `page.clock.install()`
   time flows naturally until `pauseAt`, so the phase of an app interval

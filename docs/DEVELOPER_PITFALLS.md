@@ -46,7 +46,10 @@ already found lying in the grass.
   `tool-tests` step in a complete run) with empty scratch
   `XDG_DATA_HOME`/`XDG_CONFIG_HOME` and fails when a file in the real `knx`
   data or config directory, or behind a symlink in it, is created, changed or
-  removed meanwhile (`userDataTouched` in the receipt; `tools/user_data_guard.py`). Rebase before gating, so
+  removed meanwhile (`userDataTouched` in the receipt; `tools/user_data_guard.py`).
+  It also fails when it cannot check them (`userDataUnchecked`: a directory it
+  may not list, a symlink to an ancestor or to `$HOME`, which it does not walk,
+  or more than 5,000 entries). Rebase before gating, so
   the branch carries this runner. A **direct** `cargo test` still inherits the
   real homes: export scratch values first, e.g.
   `XDG_DATA_HOME=$(mktemp -d) XDG_CONFIG_HOME=$(mktemp -d) cargo test …`.

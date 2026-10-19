@@ -27,13 +27,19 @@ gate's own `tool-tests` step) empty scratch `XDG_DATA_HOME` and
 `XDG_CONFIG_HOME` directories, and fails, naming each path, when a file in the
 real `knx` data or config directory, or behind a symlink there, is created,
 changed or removed during the run (`userDataTouched` in the receipt; size,
-mtime, ctime and inode, symlinked directories followed once). Browser and build
+mtime, ctime and inode, symlinked directories followed once), or when it cannot
+check them (`userDataUnchecked`: an unlistable directory, a link to an ancestor
+or to `$HOME`, more than 5,000 entries; an entry vanishing mid-scan is a
+change, not a crash). Browser and build
 steps keep the real values (fontconfig, pinned pixel widths). Tests:
 `tools/tests/test_run_package_gate.py` (directory resolution like the apps,
 routing through both runners' real step functions, symlinked database and
-directory, same-size rewrite with the old mtime, receipt failure keeping an
-earlier error); 7 mutants turn them red. Cross-vendor review (Codex) found the
-web gate's `tool-tests` step and symlinked files unguarded; both fixed.
+directory, same-size rewrite with the old mtime, unlistable directory, entry
+removed mid-scan, link to `$HOME`, entry bound, retargeted link, receipt
+failure keeping an earlier error); 14 mutants turn them red. Two cross-vendor
+review rounds (Codex) found six gaps (web `tool-tests` step, symlinks,
+unlistable directories, mid-scan removal, links to `$HOME`, a test tied to the
+production stage set); all fixed.
 The owner parked the migrated file unchanged. Still open: direct `cargo test`
 runs ([OPEN_WORK](OPEN_WORK.md#test-gates-change-scoped-by-default-19-october-2026)).
 [Pitfall](DEVELOPER_PITFALLS.md#gates).

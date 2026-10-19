@@ -86,7 +86,8 @@ pub(crate) fn record_unreadable_baggage_index(
 ) -> Result<(), ProductDbError> {
     conn.execute(
         "INSERT INTO ingest_unknown (source_sha256, program_id, xpath, kind, name, occurrences, sample)
-         VALUES (?1, NULL, ?2, ?3, 'Baggages.xml', 1, ?4)",
+         VALUES (?1, NULL, ?2, ?3, 'Baggages.xml', 1, ?4)
+         ON CONFLICT DO NOTHING",
         rusqlite::params![sha256, source_path, UNREADABLE_BAGGAGE_INDEX, error.to_string()],
     )?;
     Ok(())

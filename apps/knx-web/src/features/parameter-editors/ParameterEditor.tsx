@@ -1,5 +1,5 @@
 /** Presents explicit parameter drafts without selecting codecs or issuing implicit writes. */
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type ReactElement } from "react";
 import { chooseParameterEditor, parameterDraftIssue, type ParameterEditorContext, type ParameterEditorField, type ParameterEditorSource } from "./plan";
 import { parameterEditorCopy } from "./copy";
 import styles from "./editor.module.css";
@@ -13,6 +13,9 @@ export interface ParameterEditorProps<T> {
   /** Host-owned server/project/snapshot identity, not an optimistic counter. */
   revision: string;
   label: string;
+  /** Presentation unit shown beside the value; never part of the draft, the
+   * value or its codec. Absent or empty adds nothing. */
+  suffix?: string | null;
   locale?: "en" | "de";
   onApply: (writeEtsId: string, value: string) => Promise<T>;
   /** Publish the service's actual panel/tree, not a local reconstruction. */
@@ -89,18 +92,22 @@ function ParameterDraft<T>(props: ParameterEditorProps<T>) {
     }
   }
 
+  // A suffix needs a value to stand beside; "no value is present" gets none.
+  const withSuffix = (value: ReactElement) => props.suffix
+    ? <div className={styles.value}>{value}<span className={styles.suffix}>{props.suffix}</span></div> : value;
   if (plan.kind === "fallback") {
     return <section className={styles.panel} aria-label={props.label}>
       <h4>{props.label}</h4><p role="status" className={styles.notice}>{copy.fallback[plan.reason]}</p>
-      <div className={styles.raw} aria-label={copy.original}>{field.value === null ? copy.absent : field.value}</div>
+      {field.value === null ? <div className={styles.raw} aria-label={copy.original}>{copy.absent}</div>
+        : withSuffix(<div className={styles.raw} aria-label={copy.original}>{field.value}</div>)}
     </section>;
   }
   return <section className={styles.panel} aria-label={props.label}>
     <label htmlFor={id} className={styles.label}>{props.label}</label>
     {plan.kind === "time-count" && <p id={`${id}-count`} className={styles.caption}>{copy.count} <span>{plan.unit ?? copy.unspecified}</span></p>}
-    <input id={id} type="text" inputMode="numeric" className={styles.input} value={draft}
+    {withSuffix(<input id={id} type="text" inputMode="numeric" className={styles.input} value={draft}
       disabled={restricted || pending || accepted} aria-invalid={!unchanged && issue !== null}
-      aria-describedby={`${id}-status`} onChange={event => { setDraft(event.target.value); setFailure(null); setSettled(false); }} />
+      aria-describedby={`${id}-status`} onChange={event => { setDraft(event.target.value); setFailure(null); setSettled(false); }} />)}
     {plan.kind === "integer-slider" && <input type="range" className={styles.slider} aria-label={`${props.label}: ${copy.slider}`}
       min={plan.min} max={plan.max} step={plan.step} value={issue === null ? Number(draft) : Number(field.value)}
       disabled={restricted || pending || accepted || stale || issue !== null}

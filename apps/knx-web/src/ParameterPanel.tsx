@@ -1,5 +1,5 @@
 /** Panel rendering and editing a device's application-program parameters, fetched per selection. */
-import { Fragment, useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState, type ReactElement } from "react";
 import * as api from "./api";
 import type {
   ModuleScope,
@@ -98,6 +98,13 @@ function ParameterLabelRow(props: { field: ParameterField; language: string | nu
       )}
     </div>
   );
+}
+
+/** WP-02: a declared unit suffix sits right after the value control and is
+ * never part of the value; an absent or empty suffix leaves the row as it was. */
+function withSuffix(control: ReactElement, suffix: string | null | undefined) {
+  if (!suffix) return control;
+  return <span className="parameter-field-control">{control}<span className="parameter-field-suffix">{suffix}</span></span>;
 }
 
 function ParameterFieldRow(props: {
@@ -229,6 +236,45 @@ function ParameterFieldRow(props: {
     </div>;
   }
 
+  const control = field.kind === "Restriction" ? (
+    <select
+      value={value}
+      disabled={disabled}
+      onChange={(e) => { const next = e.target.value; setValue(next); void apply(false, next); }}
+    >
+      <option value="">{t("parameters.none")}</option>
+      {field.enumOptions.map((opt) => (
+        <option key={opt.value} value={opt.value}>
+          {opt.text ?? opt.value}
+        </option>
+      ))}
+    </select>
+  ) : field.kind === "Number" || field.kind === "Time" ? (
+    <input
+      type="number"
+      value={value}
+      min={field.min ?? undefined}
+      max={field.max ?? undefined}
+      disabled={disabled}
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={() => void apply()}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+      }}
+    />
+  ) : (
+    <input
+      type="text"
+      value={value}
+      disabled={disabled}
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={() => void apply()}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+      }}
+    />
+  );
+
   return <>
     <label className="inspector-field parameter-field" data-ets-id={field.etsId}>
       <span className="parameter-field-name">{label}</span>
@@ -236,44 +282,7 @@ function ParameterFieldRow(props: {
       {untranslated && language !== null && (
         <LanguageFallbackBadge selected={language} source={sourceLanguage} part={untranslated} />
       )}
-      {field.kind === "Restriction" ? (
-        <select
-          value={value}
-          disabled={disabled}
-          onChange={(e) => { const next = e.target.value; setValue(next); void apply(false, next); }}
-        >
-          <option value="">{t("parameters.none")}</option>
-          {field.enumOptions.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.text ?? opt.value}
-            </option>
-          ))}
-        </select>
-      ) : field.kind === "Number" || field.kind === "Time" ? (
-        <input
-          type="number"
-          value={value}
-          min={field.min ?? undefined}
-          max={field.max ?? undefined}
-          disabled={disabled}
-          onChange={(e) => setValue(e.target.value)}
-          onBlur={() => void apply()}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") (e.target as HTMLInputElement).blur();
-          }}
-        />
-      ) : (
-        <input
-          type="text"
-          value={value}
-          disabled={disabled}
-          onChange={(e) => setValue(e.target.value)}
-          onBlur={() => void apply()}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") (e.target as HTMLInputElement).blur();
-          }}
-        />
-      )}
+      {withSuffix(control, field.suffixText)}
       {restricted && (
         <span className="parameter-field-caption">
           {t(manufacturerAccess === null

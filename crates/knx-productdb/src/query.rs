@@ -525,6 +525,14 @@ pub struct ParameterView {
     /// One entry per `enum_options` entry, same order: the stored language
     /// that answered its label, `None` for the package's own text.
     pub enum_option_languages: Vec<Option<String>>,
+    /// The unit text shown after the value (WP-02, ADR-0146):
+    /// `pick(parameter.suffix_text, parameter_ref.suffix_text)`, each layer
+    /// translated before the pick like `text`. Verbatim, an empty declaration
+    /// included. Presentation only: never part of the value. `Parameter/@Suffix`
+    /// is stored but not shown here.
+    pub suffix_text: Option<String>,
+    /// As `name_language`, for the layer that supplied `suffix_text`.
+    pub suffix_text_language: Option<String>,
 }
 
 struct ParameterRawRow {
@@ -547,6 +555,8 @@ struct ParameterRawRow {
     max_inclusive: Option<String>,
     size_in_bit: Option<i64>,
     parameter_type_id: String,
+    p_suffix_text: Option<String>,
+    pr_suffix_text: Option<String>,
 }
 
 /// One overlay lookup, or `None` when there is no overlay for this call at
@@ -641,7 +651,7 @@ pub fn parameter_views(
         "SELECT pr.id, pr.display_order, pr.tag,
                 p.id, p.name, p.text, pr.text,
                 pt.kind, p.access, pt.min_inclusive, pt.max_inclusive, pt.size_in_bit, pt.id,
-                pr.access
+                pr.access, p.suffix_text, pr.suffix_text
          FROM parameter_ref pr
          JOIN parameter p ON p.program_id = pr.program_id AND p.id = pr.parameter_id
          JOIN parameter_type pt ON pt.program_id = p.program_id AND pt.id = p.parameter_type_id
@@ -665,6 +675,8 @@ pub fn parameter_views(
                 size_in_bit: r.get(11)?,
                 parameter_type_id: r.get(12)?,
                 ref_access: r.get(13)?,
+                p_suffix_text: r.get(14)?,
+                pr_suffix_text: r.get(15)?,
             })
         })?
         .collect::<Result<Vec<_>, _>>()?;
@@ -689,6 +701,19 @@ pub fn parameter_views(
         let text_language = match text_layer {
             ValueLayer::Program => overlay_language(overlay.as_ref(), &raw.parameter_id, "Text"),
             ValueLayer::ProgramRef => overlay_language(overlay.as_ref(), &raw.id, "Text"),
+        };
+        // The suffix resolves exactly like `text`: each layer translated,
+        // then the ref's own declaration wins (WP-02).
+        let p_suffix =
+            overlay_text(overlay.as_ref(), &raw.parameter_id, "SuffixText").or(raw.p_suffix_text);
+        let pr_suffix =
+            overlay_text(overlay.as_ref(), &raw.id, "SuffixText").or(raw.pr_suffix_text);
+        let (suffix_text, suffix_layer) = pick(p_suffix, pr_suffix);
+        let suffix_text_language = match suffix_layer {
+            ValueLayer::Program => {
+                overlay_language(overlay.as_ref(), &raw.parameter_id, "SuffixText")
+            }
+            ValueLayer::ProgramRef => overlay_language(overlay.as_ref(), &raw.id, "SuffixText"),
         };
         let name_language = overlay_language(overlay.as_ref(), &raw.parameter_id, "Name");
         let name = overlay_text(overlay.as_ref(), &raw.parameter_id, "Name").or(raw.name);
@@ -721,6 +746,8 @@ pub fn parameter_views(
             size_in_bit: raw.size_in_bit,
             enum_options,
             enum_option_languages,
+            suffix_text,
+            suffix_text_language,
         });
     }
     Ok(views)

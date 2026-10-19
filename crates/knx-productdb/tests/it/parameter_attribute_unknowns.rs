@@ -69,6 +69,8 @@ fn package() -> Vec<u8> {
 type Row = (String, String, i64, Option<String>);
 
 /// The rows §156 is about, in one place: the expected install output.
+/// `SuffixText` is stored since v26 (WP-02), so the fixture's three are not
+/// among them.
 fn expected() -> Vec<Row> {
     let parameter = format!("{STATIC}/Parameters/Parameter");
     let member = format!("{STATIC}/Parameters/Union/Parameter");
@@ -80,13 +82,11 @@ fn expected() -> Vec<Row> {
         row(&module, "InternalDescription", 1, "note"),
         row(&parameter, "InitialValue", 1, "1"),
         row(&parameter, "LegacyPatchAlways", 1, "true"),
-        row(&parameter, "SuffixText", 2, "s"),
         row(&parameter, "{urn:example:extension}Note", 1, "foreign"),
         row(&member, "DefaultUnionParameter", 1, "true"),
         row(&reference, "ForbidGrantingUseByCustomer", 1, "true"),
         row(&reference, "InitialValue", 1, "2"),
         row(&reference, "Name", 1, "delayRef"),
-        row(&reference, "SuffixText", 1, "sec"),
     ];
     rows.sort();
     rows
@@ -309,8 +309,8 @@ fn the_rewind_is_a_genuine_v20_database() {
     assert_eq!(v20.version, 20);
     // Only the expanded-name evidence row survives, as v20 wrote it.
     assert_eq!(blob_rows(&conn).len(), 1);
-    assert_eq!(v20.unknowns.len(), fresh.unknowns.len() - 9);
-    assert_eq!(v20.report_unknowns.len(), fresh.report_unknowns.len() - 9);
+    assert_eq!(v20.unknowns.len(), fresh.unknowns.len() - 7);
+    assert_eq!(v20.report_unknowns.len(), fresh.report_unknowns.len() - 7);
     let count = |s: &Snapshot| {
         s.unknown_count[0][1]
             .clone()
@@ -318,7 +318,7 @@ fn the_rewind_is_a_genuine_v20_database() {
             .parse::<i64>()
             .unwrap()
     };
-    assert_eq!(count(&v20), count(&fresh) - 9);
+    assert_eq!(count(&v20), count(&fresh) - 7);
 }
 
 #[test]
@@ -336,9 +336,12 @@ fn v20_to_v21_reproduces_a_fresh_install() {
 }
 
 #[test]
-fn v20_to_v21_records_a_shared_program_once_per_package_that_parsed_it() {
-    // Two packages carry the same program bytes; each install re-parses it,
-    // so a fresh database holds its rows twice. The backfill must too.
+fn v20_to_v21_records_a_shared_program_once() {
+    // Two packages carry the same program bytes and each install re-parses
+    // it. Until v26 a fresh database held its rows twice (one copy per
+    // package member) and this test pinned that copy count; ADR-0146 made a
+    // row a fact about the bytes, so a fresh install holds them once and the
+    // backfill, through the same idempotent `insert_unknown`, must too.
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("products.sqlite");
     let second = archive(&[
@@ -358,7 +361,7 @@ fn v20_to_v21_records_a_shared_program_once_per_package_that_parsed_it() {
                 |r| r.get(0),
             )
             .unwrap();
-        assert_eq!(rows, 2 * expected().len() as i64);
+        assert_eq!(rows, expected().len() as i64);
         let fresh = snapshot(&conn);
         rewind_to_v20(&conn);
         fresh

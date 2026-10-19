@@ -588,6 +588,12 @@ pub(crate) struct ParameterFieldDto {
     pub(crate) text: Option<String>,
     /// As `nameLanguage`, for `text`.
     pub(crate) text_language: Option<String>,
+    /// WP-02: the unit text shown after the value (`SuffixText`, the ref's
+    /// own declaration over the parameter's), verbatim; `null` when neither
+    /// declares one. Presentation only: never part of `value` or a write.
+    pub(crate) suffix_text: Option<String>,
+    /// As `nameLanguage`, for `suffixText`.
+    pub(crate) suffix_text_language: Option<String>,
     pub(crate) kind: String,
     pub(crate) value: Option<String>,
     pub(crate) value_source: String,

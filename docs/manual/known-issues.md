@@ -15,8 +15,8 @@ uses declared groups, compact rows and cross-area search. It does not reproduce
 all manufacturer grid coordinates or infer a physical button/channel arrangement.
 Missing grouping stays visible under Other parameters; unsupported value/script
 semantics still have their existing diagnostic/refusal behavior. Rows declared as
-indented are indented; inline sections, `SuffixText` units and object folders are
-not shown yet. Alpha 13 and older binaries do not contain this layout.
+indented are indented, and (in builds after Alpha 14) declared units appear after
+the value; inline sections and object folders are not shown yet. Alpha 13 and older binaries do not contain this layout.
 
 ## Read these before your first serious project
 

@@ -58,8 +58,8 @@ Each package needs its own scoped claim, review, tests and delivery evidence.
 
 | Package | Priority | Readiness / dependency | Bounded outcome |
 | --- | --- | --- | --- |
-| [WP-01](#wp-01--idempotent-unknown-evidence) | P1 | Offline-ready investigation | Unknown-evidence rows remain truthful across shared-source re-ingest. |
-| [WP-02](#wp-02--suffixtext-end-to-end) | P2 | Offline-ready, migration contract first | Source suffix text reaches the existing parameter rows without changing stored values. |
+| [WP-01](#wp-01--idempotent-unknown-evidence) | P1 | Delivered 19 October (product DB v26, ADR-0146) | Unknown-evidence rows remain truthful across shared-source re-ingest. |
+| [WP-02](#wp-02--suffixtext-end-to-end) | P2 | Delivered 19 October (product DB v26, ADR-0146) | Source suffix text reaches the existing parameter rows without changing stored values. |
 | [WP-03](#wp-03--legacy-binary-enumeration-values) | P2 | Mapping evidence first | Legacy binary enum values use the existing typed storage or keep an explicit refusal/report. |
 | [WP-04](#wp-04--large-catalogues-measure-then-stream) | P1/P2 | Measurement first; three sequential slices | Measured database growth, bounded procedure parsing, then a cancellable web large-profile workflow. |
 | [WP-05](#wp-05--parameter-layout-fidelity) | P2 | Evidence/contract gate; coordinate with UI-05 | One evidenced layout feature at a time, never inferred manufacturer behaviour. |
@@ -81,30 +81,58 @@ Each package needs its own scoped claim, review, tests and delivery evidence.
 
 #### WP-01 — Idempotent unknown evidence
 
-**Scope:** census-3 duplicate `ingest_unknown` rows (KL-151/report history).
-Reproduce shared-source, multi-package and retry ingestion with synthetic
-fixtures before selecting a fix. The recorded 978 repeated rows are a prior
-v24 measurement, not a fresh count or proof of the suspected cause.
-**Done when:** source/program/XPath/kind/name identity and occurrence semantics
-are explicit; repeat install, shared sources and database reopen cannot
-inflate evidence; distinct samples/provenance are not silently dropped;
-existing databases have a reviewed repair/migration policy; report totals and
-private matrix commitments are reconciled independently.
+**Delivered 19 October 2026** ([ADR-0146](adr/0146-unknown-evidence-rows-have-an-identity.md),
+product DB v26). Cause, reproduced with synthetic packages: every package
+install re-parsed the members it shares with an earlier package (and the
+master) and wrote their rows again; a re-parsed losing blob repeated its
+`IdConflict` row. A refused install, its retry, a repeat install and a reopen
+did not inflate on their own. A row is now a fact about one blob's bytes,
+enforced by two unique indexes; `occurrences` is one parse's count. The v26
+repair keeps each group's oldest row with the largest count and the oldest
+sample; package reports are untouched. On the 115-instance matrix corpus the
+re-pin removes exactly the 849 predicted copies (`ingest_unknown` 23,176 →
+22,327), and a migrated v25 shared database equals a fresh v26 install.
+**Remaining boundary:** a later parse's *different* sample for the same
+construct is not stored separately (none measured; the bytes stay retained).
 [Finding](#product-database-census-3-18-october-2026) ·
 [report implementation](../crates/knx-productdb/src/report.rs).
 
 #### WP-02 — SuffixText end to end
 
-**Scope:** KL-003/KL-156, census P5. Preserve `Suffix` and `SuffixText` as
-separate source declarations, define precedence/fallback and translations,
-then migrate/backfill retained sources and expose the suffix through the
-existing parameter DTO/row. A suffix is presentation, never a value codec.
-**Done when:** fresh ingest equals migrated databases; absent, translated,
-conflicting and unknown declarations are tested; original values/drafts and
-write authority stay unchanged; relevant unknown-report rows retire only
-when actually modelled. No new generic editor framework.
-[Workspace contract](contracts/parameter-workspace.md) ·
+**Delivered 19 October 2026** in the same product DB v26
+([ADR-0146, part 2](adr/0146-unknown-evidence-rows-have-an-identity.md#part-2-suffixtext-reaches-the-parameter-row-wp-02)).
+`Suffix` and `SuffixText` are separate columns on `parameter`; `parameter_ref`
+stores its own `SuffixText`. The ref's declaration wins over the parameter's
+(even when empty), each layer translated like `Text`; the field DTO carries
+`suffixText`/`suffixTextLanguage` and the web row shows a non-empty suffix after
+the value. Values, drafts, writes and write authority are unchanged. The
+`SuffixText` report rows retire only on the two modelled hosts; a migrated v25
+database equals a fresh install. **Remaining boundaries:** `Suffix` is stored
+but not shown (never seen in the collections, no evidenced meaning); legacy
+EX-IM programs get no suffix.
+[Workspace contract](contracts/parameter-workspace.md#unit-suffix-wp-02-19-october-2026) ·
 [source attribute inventory](../crates/knx-productdb/src/parse/program.rs).
+
+**Open (found while closing the WP-02 review, 19 October 2026): earlier column
+promotions share the two migration defects v26 fixes.** A probe (not
+committed) migrated synthetic fixtures through each earlier step and compared
+them with a fresh install:
+
+- *A program declared twice in one file* (fresh ingest keeps the first
+  declaration): the v25 placement backfill stores the second declaration's
+  `own_offset`/`binary_value`, the v23 backfill its
+  `ComObjectRef/@TextParameterRefId`. v24 already keeps the first.
+- *Evidence deleted that fresh ingest keeps reporting*: v23 retires
+  `Dynamic/ComObjectRef/@TextParameterRefId` and
+  `Static/…/ParameterBlock/@TextParameterRefId`, v24
+  `Static/…/ParameterBlock/@Access`, v25 `Dynamic/Parameter/@Offset` and
+  `@BitOffset`.
+
+Both only affect databases migrated through those steps from v22–v24 with such
+inputs; a fresh install is correct. Fix as its own package: one regression per
+step (install, rewind with `v20_rewind::drop_v2{3,4,5}_objects`, set
+`user_version`, migrate, compare with the fresh snapshot), then a repair step
+in the next schema version, since released databases already passed v23–v25.
 
 #### WP-03 — Legacy binary enumeration values
 
@@ -694,9 +722,8 @@ open work in this order:
    edited as free text; its value format needs evidence before an editor.
 4. **Layouts:** ~~`IndentLevel`~~ and ~~object size~~ — done
    ([row indentation](contracts/parameter-workspace.md#row-indentation-census-p4-18-october-2026);
-   the object table names the resolved size). **Still open:** inline sections,
-   `SuffixText` (needs a product-database column, since the `parameter` row
-   stores `Suffix` and the collection spells `SuffixText`), object folders from
+   the object table names the resolved size); ~~`SuffixText`~~ — done (WP-02,
+   product DB v26). **Still open:** inline sections, object folders from
    `ShowInComObjectTree` (documented in Project Schema 23), object priority (not
    in the core model); later conditional captions (`Rename`), objects by
    parameter page and identity-keyed module comparison. Each needs its own
@@ -723,13 +750,14 @@ ADR-0141), and size bounds at the storage ceiling (G12, ADR-0142). Open:
 4. **Streaming:** procedure resolution still builds a whole-document tree with
    its own bounds (ADR-0142, unchanged on purpose); the legacy importer could
    fill `parameter_type_enum.binary_value` too.
-5. **Duplicate unknown rows (new finding, pre-existing):** a v24 shared
-   install of the 115-instance matrix corpus holds 978 `ingest_unknown` rows
-   that repeat another row of the same source, program, xpath, kind and name
-   (577 key groups in 48 sources, some without a program). The report totals
-   are not affected (the v25 re-pin matched the XML census there exactly); the
-   row table over-counts. Cause not yet traced; a re-ingest of a source shared
-   by several packages is the first suspect.
+5. **Duplicate unknown rows: fixed 19 October (WP-01, ADR-0146).** A v24
+   shared install of the 115-instance matrix corpus held 978 `ingest_unknown`
+   rows repeating another row of the same source, program, xpath, kind and
+   name (577 key groups in 48 sources). Cause: each package install re-parsed
+   the members it shares with earlier packages and wrote their rows again.
+   Product DB v26 gives the row an identity and merges existing copies; the
+   v25 measurement (843 construct and 6 conflict copies) is gone after the
+   re-pin. Report totals were never affected.
 
 ## Plug-in data adoption: plug-in acceptance open (17 October 2026)
 

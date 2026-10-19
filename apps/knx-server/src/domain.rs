@@ -6108,6 +6108,8 @@ fn assemble_parameter_panel_for_project(
                 name_language: view.name_language.clone(),
                 text: view.text.clone(),
                 text_language: view.text_language.clone(),
+                suffix_text: view.suffix_text.clone(),
+                suffix_text_language: view.suffix_text_language.clone(),
                 kind: view.kind.clone(),
                 value,
                 value_source,
@@ -7524,6 +7526,8 @@ mod tests {
             size_in_bit: None,
             enum_options: Vec::new(),
             enum_option_languages: Vec::new(),
+            suffix_text: None,
+            suffix_text_language: None,
         }
     }
 

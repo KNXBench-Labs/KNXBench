@@ -23,6 +23,7 @@ const bound = (expectedValue: string | null) => ({ serverIncarnation: "srv-p", p
 const apiMock = vi.hoisted(() => ({
   deviceParameters: vi.fn(),
   setParameterValue: vi.fn(),
+  parameterEditorSource: vi.fn(),
 }));
 
 vi.mock("./api", () => ({
@@ -565,6 +566,89 @@ describe("ParameterPanel", () => {
     expect(host!.textContent).toContain("Allgemein");
     expect(host!.textContent).not.toContain("General");
 
+    root.unmount();
+  });
+
+  it("shows a declared suffix next to the value, never inside it (WP-02)", async () => {
+    const field = fixture.sections[0].fields[0];
+    const withSuffix: ParameterPanelDto = {
+      ...fixture,
+      sections: [{ scope: null, fields: [
+        { ...field, suffixText: "s", suffixTextLanguage: null },
+        { ...field, etsId: "P2", writeEtsId: "P2", name: "Field B", suffixText: "", suffixTextLanguage: null },
+        { ...field, etsId: "P3", writeEtsId: "P3", name: "Field C" },
+      ] }],
+    };
+    apiMock.deviceParameters.mockResolvedValue(withSuffix);
+    apiMock.setParameterValue.mockResolvedValue({ ...withSuffix, tree: shownTree });
+    const root = await renderPanel();
+
+    const row = (etsId: string) => host!.querySelector<HTMLElement>(`[data-ets-id="${etsId}"]`)!;
+    const suffix = row("P1").querySelector(".parameter-field-suffix")!;
+    expect(suffix.textContent).toBe("s");
+    const input = row("P1").querySelector<HTMLInputElement>('input[type="number"]')!;
+    expect(input.parentElement!.className).toBe("parameter-field-control");
+    expect(suffix.parentElement).toBe(input.parentElement);
+    expect(input.value).toBe("5");
+    // An empty or absent suffix leaves the row exactly as before.
+    for (const etsId of ["P2", "P3"]) {
+      expect(row(etsId).querySelector(".parameter-field-suffix")).toBeNull();
+      expect(row(etsId).querySelector("input")!.parentElement).toBe(row(etsId));
+    }
+    await act(async () => {
+      setInputValue(input, "6");
+      input.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+      await Promise.resolve();
+    });
+    expect(apiMock.setParameterValue).toHaveBeenCalledWith(1, "P1", "6", null, bound("5"));
+    root.unmount();
+  });
+
+  it("keeps a declared suffix beside the checked editor's value, never inside it (WP-02)", async () => {
+    const field = { ...fixture.sections[0].fields[0], suffixText: "s", suffixTextLanguage: null };
+    const suffixed: ParameterPanelDto = { ...fixture, sections: [{ scope: null, fields: [
+      field,
+      { ...field, etsId: "P2", writeEtsId: "P2", name: "Field B" },
+      { ...field, etsId: "P3", writeEtsId: "P3", name: "Field C", suffixText: "" },
+    ] }] };
+    apiMock.deviceParameters.mockResolvedValue(suffixed);
+    // P1 and P3 declare a slider (an editable control), P2 nothing (the
+    // checked editor's read-only fallback).
+    apiMock.parameterEditorSource.mockImplementation(async (_device: number, etsId: string) => ({
+      device: 1, parameterRefId: etsId, serverIncarnation: "srv-p", projectIncarnation: 1, snapshotRevision: 2,
+      evidence: { status: "declared", source: { sourceSha256: "c".repeat(64), programId: "PROG-1", parameterTypeId: "PT", schema: 21,
+        child: "TypeNumber", attributes: etsId === "P2" ? { Type: "unsignedInt" } : { Type: "unsignedInt", UIHint: "Slider", minInclusive: "0", maxInclusive: "10" },
+        parentAttributes: { Id: "PT" } } },
+    }));
+    apiMock.setParameterValue.mockResolvedValue({ ...suffixed, tree: shownTree });
+    host = document.createElement("div");
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(<ParameterPanel deviceId={1} refreshKey={shownTree} onValueApplied={() => {}}
+        snapshot={{ serverIncarnation: "srv-p", projectIncarnation: 1, snapshotRevision: 2 }} />);
+    });
+    const row = (etsId: string) => host!.querySelector<HTMLElement>(`[data-ets-id="${etsId}"]`)!;
+    for (const etsId of ["P1", "P2", "P3"]) {
+      await act(async () => host!.querySelector<HTMLButtonElement>(`[data-checked-for="${etsId}"]`)!.click());
+    }
+    const editor = row("P1").querySelector(".parameter-checked-editor")!;
+    const input = editor.querySelector<HTMLInputElement>('input[type="text"]')!;
+    expect(input.value).toBe("5");
+    expect(input.nextElementSibling?.textContent).toBe("s");
+    // The fallback shows the original value verbatim, and the suffix beside it.
+    const original = row("P2").querySelector('[aria-label="Unchanged original value"]')!;
+    expect(original.textContent).toBe("5");
+    expect(original.nextElementSibling?.textContent).toBe("s");
+    // An empty suffix adds nothing.
+    const plain = row("P3").querySelector<HTMLInputElement>('input[type="text"]')!;
+    expect(plain.nextElementSibling?.tagName).toBe("INPUT");
+    await act(async () => {
+      setInputValue(input, "6");
+      await Promise.resolve();
+    });
+    await act(async () => Array.from(editor.querySelectorAll("button")).find((b) => b.textContent === "Apply value")!.click());
+    expect(apiMock.setParameterValue).toHaveBeenCalledWith(1, "P1", "6", null, bound("5"));
     root.unmount();
   });
 

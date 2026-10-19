@@ -20,11 +20,6 @@ security, GitHub-issue, hardware or whole-codebase conformance audit.
 
 ### Already owned — do not start a duplicate package
 
-- **Alpha 15 package set (claimed 19 October 2026):** WP-16, WP-01 with
-  WP-02 and the G16 half of WP-03, WP-18, WP-20, WP-15 with the two UI
-  zoom follow-ups, then WP-13. One worktree per package; each is reviewed,
-  gated and delivered on its own. Not in this set: WP-04/05/06/07/08/09/10/
-  11/12/14/17/19 (measurement, evidence, consent or contract first).
 - **UI feedback:** UI-01–UI-06 and the whole-set corrections are delivered
   ([UI workstream](goals/ui-feedback-2026-10-18.md)); the claim is released.
   Two follow-ups remain unowned (below, under *UI feedback packages*). Its
@@ -70,12 +65,12 @@ Each package needs its own scoped claim, review, tests and delivery evidence.
 | [WP-10](#wp-10--import-and-model-evidence) | P2 | Samples/grammar/authorisation required | Independently verified import/model cases with honest unsupported-data reports. |
 | [WP-11](#wp-11--native-linux-acceptance) | P2 | Separate desktop-control permission | Actual WebKitGTK/Wayland/Orca and AppImage evidence for named workflows. |
 | [WP-12](#wp-12--field-evidence-and-owner-acceptance) | P2 | Outside input or operation-specific consent | Reviewed tester/plug-in/diagnostic evidence, without silently expanding compatibility. |
-| [WP-13](#wp-13--documentation-drift) | P3 | Offline-ready, docs only | Current summaries agree with delivered behaviour; retained history stays intact. |
+| [WP-13](#wp-13--documentation-drift) | P3 | First slice delivered 19 Oct; wider catalogue/manual sweep open | Current summaries agree with delivered behaviour; retained history stays intact. |
 | [WP-14](#wp-14--complete-offline-family-outcomes) | P1 | Source contracts first; UP258 excluded | Complete real-source System 1/B/300 image → procedure → execution → recovery slices. |
 | [WP-15](#wp-15--complete-module-scope-in-web-consumers) | P1 | Delivered 19 Oct (web adoption); older-server boundary documented | Complete response-local module paths distinguish diagnostics and workspace identities. |
 | [WP-16](#wp-16--empty-directory-zip-integrity) | P1 | Delivered 19 Oct; trailing-stream and product-reader follow-ups open | Empty directories have valid CRC and complete compressed-stream representation. |
 | [WP-17](#wp-17--master-identity-provenance) | P1 | Offline-ready, schema/report contract first | Master identity winners, collisions and malformed declarations have truthful provenance. |
-| [WP-18](#wp-18--device-comparison-shows-what-differs) | P2 | Delivered on branch, awaiting controller review/merge (19 Oct); no live-device acceptance | Differing bytes are marked in the raw hex rows; the comparison result shows only differences by default, with a toggle for all rows. |
+| [WP-18](#wp-18--device-comparison-shows-what-differs) | P2 | Delivered 19 Oct; no live-device acceptance | Differing bytes are marked in the raw hex rows; the comparison result shows only differences by default, with a toggle for all rows. |
 | [WP-19](#wp-19--sync-from-a-device-comparison) | P2 | Contract first; project → device needs bus-write consent (owner request, 19 Oct) | A comparison result offers *project → device* (the existing download) or *device → project* (adopt verified values, one undo step). |
 | [WP-20](#wp-20--system-family-in-the-device-list) | P2 | Delivered 19 Oct; a mask read from a device stays a separate session fact | The device list shows each device's system family (System 1, 2, 7 or B) from its mask version. |
 
@@ -314,6 +309,14 @@ the wider catalogue/manual sweep remains this bounded follow-up. Also reconcile
 old lifecycle “publication pending” and property-planner versus memory-partial
 wording; final ledger evidence already closes the bounded lifecycle callers.
 G16 CLI/refusal-message code belongs to WP-03, not this docs-only slice.
+**First slice (19 October 2026):** KL-181 names the shipping AppImage
+(alpha.12, verified by tag ancestry) in its catalogue summary, regenerated
+overview and a dated dossier section; the FEATURES rows for issues #25/#26 say
+`Main-only` (delivered, issues closed); WP-18's queue row says delivered; the
+released Alpha 15 claim is removed; the intermittent SIGTERM tool test is
+recorded under test gates. The confirmed examples above (rename, `.knxprod`
+placement, note disposition, Functions, plug-in routes, UI waves) and the
+lifecycle/property-planner wording remain this package's open sweep.
 [Current ledger](status/LEDGER.md) ·
 [delivery index](IMPLEMENTATION_STATUS.md).
 
@@ -592,6 +595,14 @@ crate. Open, each small and none blocking:
   `default_path()` (`http_device_routes.rs`, `http_product_language.rs`,
   `http_catalog_translation.rs`, a `domain.rs` test); it opens none (AR18 M8)
   ([pitfall](DEVELOPER_PITFALLS.md#gates)).
+- `tools.tests.test_browser_tmp_launch`'s
+  `test_cli_sigterm_waits_for_child_shutdown_before_cleanup` intermittently
+  times out (`child.communicate(timeout=10)`) inside gate `tool-tests` runs
+  under load (four gates on 19 October 2026; 60/60 green alone). A real
+  forwarder-after-spawn race exists and has a RED test on the parked branch
+  `fix/browser-tmp-signal-race-20261019`, but that fix's own gate still hit the
+  timeout, so the observed failure is not explained yet; reproduce it in the
+  gate's exact shape before shipping a fix.
 - A package gate stopped with SIGTERM during its browser stages leaves the
   fixture Vite server (`npm exec vite --config vite.fixtures.config.ts` and its
   `node` child) running, reparented to the user's systemd (seen three times on

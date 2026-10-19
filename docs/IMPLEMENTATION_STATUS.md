@@ -12,6 +12,20 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Alpha 15 set closed; documentation drift, first slice (19 October 2026)
+
+The Alpha 15 package set is delivered: WP-16, WP-18, WP-15 with the two zoom
+follow-ups, WP-20 and WP-01 + WP-02 (product DB v26), plus two packages the
+work itself required (gate isolation of the developer's knx directories and
+the fit-assertion catalogue race). Not delivered from the claim: the G16 half
+of WP-03 (CLI/refusal messages for legacy binary enumerations), which stays
+open under WP-03. WP-13's first slice corrects release-relevant drift: KL-181
+now names the alpha.12 AppImage as the first fixed one (tag ancestry of
+`72d407d1`), generated from the catalogue; FEATURES lists issues #25/#26 as
+`Main-only`; the OPEN_WORK queue and claim list match the deliveries; the
+intermittent SIGTERM tool test is recorded as open. Docs only.
+[OPEN_WORK WP-13](OPEN_WORK.md#wp-13--documentation-drift).
+
 ## Parameter units after the value: `SuffixText` in product DB v26 (19 October 2026)
 
 WP-02 ([ADR-0146, part 2](adr/0146-unknown-evidence-rows-have-an-identity.md#part-2-suffixtext-reaches-the-parameter-row-wp-02)).

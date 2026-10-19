@@ -1,3 +1,11 @@
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-19 06:42
+- **Completed:** Delivered issues #25 and #26 to `main` (this merge). #25: the topology diagram hides lines without devices and areas without a populated line; display only, project data/tree/explorer unchanged. #26: parameter-area and active separator captions resolve through the existing positional text resolver (stored value, then product default), with localized readable fallbacks, preserved template/provenance tooltips, pre-commit caption-budget preflight and one request-wide text budget. Acceptance: full gate passed at `e47a2621` (19 package/63 web stages, 3,869 Vitest, 1,073 browser cases, Rust 4,993 passed/0 failed, corpus 155/155); targeted gate passed at `cde83f54` (Rust inputs byte-equal to `e47a2621`; build, all typechecks, 4,017 Vitest, 207 production Devices/Structure/table-column browser cases, repository and local-info checks). The final upstream delta was handover/OPEN_WORK only; app/core/tool sources are byte-equal to the accepted candidate. `docs/OPEN_WORK.md` reservations replaced with the delivered state.
+- **Pending/Next Steps:** Post delivery comments in #25/#26 with the published commit, close both and read back. Remove the issue worktrees/branches. Open caption boundaries (source-language block/separator captions, grid-axis references) remain unclaimed WP-05 scope.
+- **Notes for Codex oder Claude:** No bus, hardware, release or deployment action. Alpha 14 is unchanged; the fixes ship with the next release.
+
+---
+
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-19 06:24
 - **Completed:** Planning only: owner answered both WP-18 questions; recorded as "Owner decision (19 October 2026)" in WP-18 of `docs/OPEN_WORK.md`. Requests 1 and 2 mean the result display of the device-versus-project comparison. The differences-only default also hides raw ranges proven equal (all bytes read and equal); any range with a differing or unread byte, unknown and not-decoded rows stay visible; a toggle reveals every original read range with a hidden count. Display only: response, session tags and "Synced" unchanged. Docs check and anchors green. No code change, no claim.

@@ -72,8 +72,8 @@ Retained bytes are not a promise of complete ETS semantics.
 - 📚 **A product database that eats `.knxprod` for breakfast.**
   Install manufacturer packages, or use the product data inside your projects. A
   manufacturer ZIP with several packages inside installs in one go, previewed first. In a
-  test run over 853 public manufacturer downloads, 852 installed (the biggest ones need a
-  command-line flag).
+  test run over 853 public manufacturer downloads, 852 installed. Alpha 15 raises
+  measured storage bounds; expansion above 4 GiB still needs the CLI large profile.
 - 🧠 **Watch your bus think.**
   Gateway discovery, KNXnet/IP tunnelling, a live group monitor and a
   [flow view](docs/manual/user-guide/07-bus-and-interfaces.md#the-flow-view) where
@@ -97,12 +97,11 @@ Retained bytes are not a promise of complete ETS semantics.
   command line for the scriptable bits.
 
 > [!NOTE]
-> **Alpha 14:** a parameter workspace with declared grids, function choices right
-> below each object, notes that get a say before a delete, manufacturer ZIPs that
-> install in one step and a read-only diagnostic export for bug reports.
-> [Release notes](docs/releases/alpha14.md) separate shipped editing from unfinished
-> device support. Native schema **16** stays; the product database moves **23 → 24**.
-> Backups before bravery.
+> **Alpha 15:** readable parameter captions, clearer catalogue entries with previewed
+> cleanup, resizable tables, honest storage metrics and device comparisons that mark
+> the differing bytes. [Release scope](docs/releases/alpha15.md) separates workbench
+> improvements from unfinished device support. Native/model **16** stays; the product
+> database moves **24 → 26** on writable open. Independent backups before bravery.
 
 ## See it in action
 
@@ -170,7 +169,7 @@ import a `.knxproj`. Your projects live in `data/` and survive restarts.
 
 Images are available for **x86-64 (`amd64`) and 64-bit Arm (`arm64`)**. `latest`
 follows published releases, including alphas, not the newest source. To stay on a
-specific release, use `knxbench/knxbench-server:0.1.0-alpha.14` in both commands
+specific release, use a version tag in both commands (`0.1.0-alpha.15` once published)
 ([tags and details](docs/manual/user-guide/11-web-and-docker.md#ready-made-image-from-docker-hub)).
 
 Want changes newer than the release? [Build the container from source](docs/manual/getting-started/04-installation.md#build-the-container-from-source).
@@ -193,15 +192,16 @@ and may enter shell history.
 ### Linux desktop, via AppImage
 
 ```bash
-REL=https://github.com/KNXBench-Labs/KNXBench/releases/download/v0.1.0-alpha.14
-curl -LO "$REL/KNXBench_0.1.0-alpha.14_amd64.AppImage"
+REL=https://github.com/KNXBench-Labs/KNXBench/releases/download/v0.1.0-alpha.15
+curl -LO "$REL/KNXBench_0.1.0-alpha.15_amd64.AppImage"
 curl -LO "$REL/SHA256SUMS"
 sha256sum -c --ignore-missing SHA256SUMS
-chmod +x KNXBench_0.1.0-alpha.14_amd64.AppImage
-./KNXBench_0.1.0-alpha.14_amd64.AppImage
+chmod +x KNXBench_0.1.0-alpha.15_amd64.AppImage
+./KNXBench_0.1.0-alpha.15_amd64.AppImage
 ```
 
-This is the `v0.1.0-alpha.14` pre-release, x86-64 only, built by the release workflow.
+The intended `v0.1.0-alpha.15` AppImage is x86-64 only; the release workflow
+builds it separately from this source update.
 `--ignore-missing` skips the `knx-mcp` binary listed in the same checksum file.
 Source changes after this tag still need a
 [source build](docs/manual/getting-started/04-installation.md#c-from-source). The
@@ -210,9 +210,11 @@ packages it needs and what has been tested.
 
 > [!IMPORTANT]
 > Before upgrading, close KNXBench and back up native project files and Docker
-> data, including the product database. Alpha 14 keeps native schema 16 and moves the
-> product database to schema 24, which Alpha 13's code refuses (read in its source, not
-> run); Alpha 11 and earlier refuse native schema 16 files.
+> data, including the product database. Alpha 15 keeps native/model schema 16 and
+> migrates the product database 24 → 26 on writable open. Older builds refuse
+> product26 by their version check (source-established, not a downgrade test). Opening
+> new Alpha 15 project saves in Alpha 14 is not verified; larger bounds may matter.
+> Alpha 11 and earlier refuse native schema 16 files.
 > To go back, restore the pre-upgrade backup. Internal versions are not external backups.
 
 ### Where it runs
@@ -240,7 +242,8 @@ Alpha.10 is the first release with it; Alpha.9 and older packages do not check.
 ## Project status
 
 **Alpha — and we mean it.** The current pre-release is
-[`v0.1.0-alpha.14`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.14).
+[Alpha 15](docs/releases/alpha15.md); the release page is the authority for
+available downloads.
 The test suite is large, the documentation is honest, and things still move.
 
 - **Solid:** importing real ETS projects with a full report, editing with undo, the
@@ -263,7 +266,7 @@ that converts it all into *Lord of the Rings* re-reads and ant colonies. It is a
 generated snapshot (last run 7 October 2026), so read its numbers as "as of".
 
 The [test catalogue](docs/TEST_CATALOGUE.md) explains what gets exercised; each
-[release note](docs/releases/alpha14.md) names its own scope. Test results belong to
+[release note](docs/releases/alpha15.md) names its own scope. Test results belong to
 an exact source snapshot, not a perpetually growing badge. The
 [architecture decisions](docs/adr/README.md) explain the engineering behind it.
 

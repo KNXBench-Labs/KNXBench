@@ -10,10 +10,11 @@ than anything inside them:
 3. **Ideas and experiments** — things someone wrote down. Not commitments.
 
 No future release schedule is promised here. KNXBench is in its `0.1.0-alpha`
-series with a public alpha.5 pre-release. This source-level overview was checked
-on **8 October 2026**. An item's position in
-part 2 does not schedule it or reopen a recorded alpha boundary. This audit
-covers source `608a204b`; the released AppImage is a separate snapshot.
+series; [Alpha 15](../releases/alpha15.md) is the prepared source scope, not a
+publication claim. The original source audit below was checked on **8 October
+2026**, at `608a204b`; dated release updates supersede its delivery status, not
+its historical evidence. An item's position in part 2 does not schedule it or
+reopen a recorded alpha boundary. Released artifacts are separate snapshots.
 
 > The distinction is boring until the day somebody buys hardware because a
 > documentation page sounded confident. So: part 3 is daydreaming, part 2 is
@@ -23,6 +24,15 @@ covers source `608a204b`; the released AppImage is a separate snapshot.
 ---
 
 ## What is already built
+
+**Since Alpha 15:** readable parameter captions, `SuffixText` units, separate nested
+module areas, previewed catalogue placement cleanup, resizable/zoom-aware tables,
+labelled topology counts, storage metrics, monitor DPT reasons, differences-first
+comparison marks and a product-declared System column. Larger measured file bounds
+and uppercase legacy-table import are included too. The CLI System-2 source
+preview and declared-memory diagnostic profile do not enable programming.
+V23–v25 migration residues and complete source/procedure/recovery remain open.
+[Release boundaries](../releases/alpha15.md#still-alpha-explicit-boundaries).
 
 The full inventory is [Implementation status](implementation-status.md), with
 finer-grained format detail in
@@ -73,7 +83,7 @@ are finished at their recorded scope, not proof that every feature exists.
 | Item | Where it stands | Waiting on |
 | --- | --- | --- |
 | Persistent project undo and native versions | Implemented in the local 2026-10-09 source package: native-backed undo/redo, named/save/pre-restore versions and guarded restore. Not in alpha.6; commissioning metadata remains a different history. | [Project history](../PROJECT_HISTORY.md). Independent disaster-backup copies remain necessary. |
-| Legacy device download and oversized `.vd5` coverage | Web/CLI offline import, password dialog and one remembered password already exist for the evidenced legacy scope. | Resource measurement before raising legacy limits; separate L4 mapping and recovery evidence. |
+| Legacy device download and oversized `.vd5` coverage | Web/CLI offline import, password dialog and one remembered password exist; Alpha 15 raises retained-file/payload bounds to the storage ceiling and accepts uppercase table names. | Larger inputs still need resources; legacy binary-enumeration diagnostics and separate L4 mapping/recovery evidence remain. |
 | Selective import, diff apply/merge and three-way comparison | Source selected-device/line merge has a shared application planner, File-menu preview/consent and CLI; diff apply/merge and three-way comparison remain separate future work. | [Selective import](../SELECTIVE_IMPORT.md); [source integration acceptance](../status/2026-10-10-import-expansion-integration.md); authorized historical ETS exports and released-artifact acceptance remain separate. |
 | Specialized parameter widgets and online manufacturer updates | Checked Time and Slider controls; previewed `.knxprod` updates with backup and restore (application and CLI). | Colour/Picture value codecs, module-scoped parameters, and any online catalogue source. |
 | Commissioning more real devices | A device download (application tables and parameters) has been run and read back on one real device after an explicit go-ahead; the property-based procedures are verified against a simulator this project wrote. Address programming is refused until durable recovery exists. | Test hardware and a per-target go-ahead. The only bus available is a house people live in, so every new device, write scope or experiment needs its own explicit approval. |

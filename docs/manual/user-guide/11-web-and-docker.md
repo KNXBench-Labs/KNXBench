@@ -99,8 +99,8 @@ warning. The quick-start plaintext password is visible in the container environm
 and may enter shell history; use [Setting a password](#setting-a-password) for a
 hashed credential in a lasting setup.
 
-- **Tags:** the release version without its `v` (`0.1.0-alpha.14` for the tag
-  `v0.1.0-alpha.14`) and `latest`. While KNXBench is in alpha, `latest` moves
+- **Tags:** the release version without its `v` (`0.1.0-alpha.15` for the tag
+  `v0.1.0-alpha.15`) and `latest`. While KNXBench is in alpha, `latest` moves
   with every pre-release; pin a version tag if an update should be your own
   decision.
 - **Availability:** from `v0.1.0-alpha.6` (9 October 2026) on; `v0.1.0-alpha.5`
@@ -161,6 +161,18 @@ those devices' **Parameters** tab and choose **Restore from original .knxproj…
 project byte for byte are installed; save the project afterwards so its file carries
 them from then on.
 
+### Alpha 15 upgrade boundary
+
+Close KNXBench and independently back up the entire mounted data directory before
+replacing the container. Native/model16 stays; the product database migrates
+24 → 26 on writable startup/open. Older builds refuse product26 by their source
+version check, not an executed downgrade test. Opening Alpha 15 project saves in
+Alpha 14 is unverified, especially at larger byte bounds; rollback requires the
+pre-upgrade copies. Earlier v23–v25 promotion residues are not generally repaired
+by v26. An unavailable catalogue now names its actual open error instead of
+pretending that no database was configured. Port 8484 and host-network exposure
+are unchanged. [Release scope](../../releases/alpha15.md).
+
 ### Uploads and the data directory
 
 In the browser build, opening a project that is not already inside `/data` means
@@ -175,7 +187,7 @@ For larger files, place the archive in the mounted data directory and choose it
 with the server file picker. A reverse proxy may impose its own smaller limit.
 Upload acceptance does not guarantee import acceptance: the importer still
 limits each expanded ZIP member to 1,000,000,000 bytes (the storage ceiling) and
-the expanded archive to 4 GiB in source builds after Alpha 14
+the expanded archive to 4 GiB since Alpha 15
 ([ADR-0142](../../adr/0142-file-size-limits-follow-the-storage-ceiling.md)); Alpha 14
 and earlier limit a member to 64 MiB and the archive to 1024 MiB.
 An archive-size refusal names the expanded size and limit in your UI language,
@@ -343,7 +355,7 @@ stopping fails, the service remains stopped until you correct it; this is not an
 automatic rollback.
 
 To choose a fixed release, replace `latest` in **both** image references with a
-published version such as `0.1.0-alpha.14`. The Linux default keeps
+published version such as `0.1.0-alpha.15`. The Linux default keeps
 `--network host` and `-e KNX_PORT=8484` (or your chosen port), as explained in
 [Networking](#networking). If migrating an older bridge deployment to host mode,
 review the firewall first: the authenticated listener becomes reachable on all

@@ -15,8 +15,9 @@ uses declared groups, compact rows and cross-area search. It does not reproduce
 all manufacturer grid coordinates or infer a physical button/channel arrangement.
 Missing grouping stays visible under Other parameters; unsupported value/script
 semantics still have their existing diagnostic/refusal behavior. Rows declared as
-indented are indented, and (in builds after Alpha 14) declared units appear after
-the value; inline sections and object folders are not shown yet. Alpha 13 and older binaries do not contain this layout.
+indented are indented; since Alpha 15 declared `SuffixText` units appear after
+the value and supported caption placeholders resolve with readable fallbacks.
+Inline sections and object folders are not shown yet. Alpha 13 and older binaries do not contain this layout.
 
 ## Read these before your first serious project
 
@@ -41,15 +42,24 @@ only a maintainer would care about, and ones about the reasoning behind a
 design decision rather than about a defect. Where an entry below has a
 counterpart there, the **Details** line links straight to it.
 
-[Alpha 14](../releases/alpha14.md), published on 18 October 2026, adds the parameter workspace,
-function choices below each object, note decisions before deletes, plug-in data
-adoption, vendor-ZIP product install and a read-only diagnostic export; it does
-not expand programming admission. Historical measurements below retain their
-original source dates, not new hardware verification. Native/model **16** is
-unchanged; the product database moves from **23** to **24** and Alpha 13 refuses
-the newer one. Independently back up projects and the whole Docker data
-directory, including the product database: opening new saves in Alpha 13 is not
-verified. Rollback needs independent copies.
+[Alpha 15](../releases/alpha15.md) is the prepared source scope; release acceptance
+and public artifact verification remain separate. It fixes captions and empty
+topology cards, explains unavailable catalogues and adds previewed placement
+cleanup, byte-level comparison marks and product-declared System labels, without
+expanding programming admission. Historical measurements below retain their
+original source dates, not new hardware verification. Native/model **16** stays;
+product **24 → 26** migrates on writable open, and older builds refuse product26
+by their version check. Opening new project saves in Alpha 14 is **not verified**,
+particularly at larger byte bounds. Independently back up projects and the whole
+Docker data directory, including the catalogue; rollback needs those copies.
+
+**Migration boundary:** v23–v25 promotions still have repeated-program and
+evidence-retirement residues; v26 corrects these patterns for its own suffix
+promotion, not earlier columns. Legacy EX-IM has no suffix mapping; stored
+`Suffix` remains undisplayed. The System-2 declared-memory diagnostic profile is
+CLI-only with offline/simulator evidence, not a hardware-verified backup, restore
+basis or programming path. The web diagnostic profile stays identity-only.
+[Exact limits](../releases/alpha15.md#still-alpha-explicit-boundaries).
 
 > A long list of known issues is what happens when a project writes its
 > problems down, not proof that it has more of them than software that
@@ -206,7 +216,7 @@ is the remaining copy defect.
 - **Consequence:** unsupported namespaces and encrypted modern packages are
   refused. Legacy VD3/VD4/VD5 offline import uses a separate supported path; a
   legacy file or payload over 1,000,000,000 bytes (the storage ceiling,
-  ADR-0142, source builds after Alpha 14) is refused; Alpha 14 and earlier
+  ADR-0142, since Alpha 15) is refused; Alpha 14 and earlier
   refuse a legacy file over 128 MiB or a payload over 256 MiB. Successful
   import does not guarantee full device semantics.
 - **Workaround:** product data that arrives inside a `.knxproj` is imported

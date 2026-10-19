@@ -58,6 +58,17 @@ ZIP excludes parameter values; the older ended-download verification report is
 separate and can contain them. See the
 [reporting guide](../user-guide/08-reports-and-diff.md#universal-device-support-reporting).
 
+**What changes when I upgrade to Alpha 15?**
+
+Native/model16 stays, but the product database migrates 24 → 26 on writable
+application open. Older builds refuse product26 by their source version check;
+opening new project saves in Alpha 14 is not verified. Close KNXBench and keep
+independent project/catalogue/Docker-data backups first. V23–v25 promotion
+residues remain open; UI improvements and stored placement/binary attributes do
+not enable new programming. The new System-2 memory diagnostic profile is
+CLI-only, identity-gated and not hardware-verified; the web export remains
+generic identity-only. [Release scope](../../releases/alpha15.md).
+
 **Why does enabling a button not produce new communication objects?**
 
 Since Alpha 14, enable the button and choose its initial mode
@@ -122,8 +133,7 @@ exists," not certification by the KNX Association.
 
 **What does "alpha" mean for this project specifically?**
 
-Version `0.1.0-alpha` (each component counts its own `alpha.N`), with a public
-`v0.1.0-alpha.14` pre-release. Concretely: `docs/KNOWN_LIMITATIONS.md` lists
+The `0.1.0-alpha` series is at `v0.1.0-alpha.15`. Concretely: `docs/KNOWN_LIMITATIONS.md` lists
 known limitations, several classified critical, and writing to a real device is verified
 only for narrowly recorded device/application cases. See
 [Project status](../getting-started/03-project-status.md) for the evidence boundaries and what

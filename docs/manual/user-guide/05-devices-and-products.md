@@ -32,7 +32,9 @@ number, system or placement. Click a column heading to sort it; click again to
 reverse it. Individual addresses sort numerically. The wide table scrolls
 locally on small screens rather than widening the whole page.
 
-### System column (source builds after Alpha 14)
+<a id="system-column-source-builds-after-alpha-14"></a>
+
+### System column (since Alpha 15)
 
 **System** names the KNX system family of each device: *System 1*, *System 2*,
 *System 7* or *System B*. Other profiles keep their own names, for example
@@ -144,7 +146,7 @@ and memory columns; long target lists also scroll within their list.
 
 <a id="what-differs-wp-18-source-builds-after-alpha-14"></a>
 
-### What differs (WP-18, source builds after Alpha 14)
+### What differs (WP-18, since Alpha 15)
 
 The result first shows **only the rows that differ or are unknown**. Rows
 proven equal are hidden: decoded entries whose project and device values are
@@ -237,7 +239,7 @@ than once — one row per catalog item in the database, including
 several entries that differ only in a number. KNXBench shows what the database
 contains; it does not deduplicate on your behalf.
 
-*(Source builds after Alpha 14:)* under every row a few small lines say what tells
+*(Since Alpha 15:)* under every row a few small lines say what tells
 it apart: the product and its application link, the application with its ID and
 version, the catalogue ID and section, and the file the entry came from. Two rows
 with the same name are usually two application versions of one device, or the same
@@ -256,11 +258,23 @@ manufacturers publish. *(Since Alpha 14:)* it also takes the ZIP many manufactur
 actually ship, with one or more `.knxprod` packages and manuals inside. The preview
 then lists every package in the ZIP and every other file that is **not installed**
 (with its size); the packages install together or not at all, each unchanged. A ZIP
-whose package is too large for the default bounds is refused with that package's
-name; install it with `knx products ingest <file>.zip --allow-large-package`. Installing reports what happened in one line: whether the
+whose package exceeds the default bounds is refused with that package's
+name. Since Alpha 15, the CLI large profile raises only the expanded-total budget
+from 4 GiB to 16 GiB: `knx products ingest <file>.zip --allow-large-package`.
+The 1,000,000,000-byte retained-file/member ceiling remains in both profiles. Installing reports what happened in one line: whether the
 package was new or already installed, which scheme it used, and how many members,
 unknown entries and conflicts it contained. The catalog list refreshes immediately
 afterwards.
+
+**Since Alpha 15:** if the product database cannot be opened (including a future
+schema), the session log and affected operations name the actual reason instead
+of treating it as an absent catalogue. Native/model16 stays, but writable
+application opens migrate the separate product database 24 → 26. Older builds
+refuse product26 by their source version check; opening new project saves in
+Alpha 14 is not verified. Back up both stores independently before upgrading.
+V23–v25 promotion residues remain open; typed property placements and
+`BinaryValue` columns do not enable their execution.
+[Upgrade boundary](../../releases/alpha15.md#upgrade-independent-backups-first).
 
 ### Updating with a preview (since Alpha 10)
 
@@ -296,7 +310,9 @@ the list is read again. It never deletes backups on its own. (Alpha 10 and 11 ca
 delete backups, and their plain **Install product database** picker installs
 directly, without a preview or backup.)
 
-### Cleaning up the catalogue (source builds after Alpha 14)
+<a id="cleaning-up-the-catalogue-source-builds-after-alpha-14"></a>
+
+### Cleaning up the catalogue (since Alpha 15)
 
 **Clean up catalogue**, below the backups, removes catalogue entries you no longer
 want to pick from. It only ever removes the entries you tick:
@@ -329,6 +345,11 @@ password, in a file only its own user can read (`~/.config/knx/legacy-vd-passwor
 mode 0600), so later imports need none. A second remembered password replaces the
 first. **Settings → Legacy product database password** shows whether one is
 remembered and forgets it.
+
+Since Alpha 15, evidenced uppercase legacy table names are recognised instead
+of making the file appear empty. The retained legacy file/payload ceiling is
+1,000,000,000 bytes; this is not a memory-use guarantee or new legacy download
+verification.
 
 The report lists the application programs, the catalog entries, parameters,
 communication objects and translations, and every import note. Devices from such a
@@ -746,12 +767,15 @@ accordion form. Alpha 13 and older AppImages and images keep the accordion.
 **Areas** lists the declared parameter areas with their entry counts. Like other
 folded content, nothing opens until you choose an area; your choice stays open
 when the project refreshes, while new areas stay closed. The main pane aligns
-parameter labels and values; device and module scopes remain separate. Missing group information is
-available under **Other parameters**. Search by parameter name, ID, value or
+parameter labels and values; device and module scopes remain separate. Since
+Alpha 15 complete response-local evaluation paths keep even nameless nested module
+areas, diagnostics and drafts apart. Older servers without those paths cannot
+separate every such scope; this is not a durable module-instance mapping or new
+write authority. Missing group information is available under **Other parameters**. Search by parameter name, ID, value or
 option caption across all areas. Clearing search returns to your chosen area;
 a no-result search does not delete fields or values.
 
-**Source-build change after Alpha 14 (issue #26).** Area captions and separator
+**Since Alpha 15 (issue #26).** Area captions and separator
 text fill supported text placeholders from the exact referenced text parameter: a
 stored device value first, otherwise its product default. An explicitly empty
 value stays empty. Empty captions, a lone `#`, and text containing `{{` or `}}`
@@ -793,11 +817,14 @@ only. A time parameter whose product data packs several fields into one number
 (units named `Packed…`) is no longer offered as a plain count: the field shows
 the original value unchanged, because that packing is not documented.
 
-**In builds after Alpha 14:** a unit the product data declares for a parameter
+**Since Alpha 15:** a unit the product data declares for a parameter
 (for example `s` or `%`) appears right after the value, in the selected
 product language where the data translates it. It is only a label: what you
 type and what is stored or downloaded is the value alone. Opening a product
-database from an older build upgrades it once (schema v26).
+database from an older build upgrades it on writable open (schema v26); read-only
+CLI catalogue readers leave the on-disk file unchanged. The checked editor shows the same suffix.
+The reference's own `SuffixText` wins over the parameter's, even when empty;
+legacy EX-IM has no suffix mapping and the separate stored `Suffix` is not shown.
 
 The following release-era description explains the retained value/editing rules;
 the new workspace replaces ordinary section/block folding with area navigation.

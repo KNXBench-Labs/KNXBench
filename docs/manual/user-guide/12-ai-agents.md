@@ -29,7 +29,16 @@ similar) can look things up in a project instead of guessing:
 > file. It never reaches the KNX bus: the program is not even linked against
 > the bus code. The tool names and answers may still change during the alpha.
 
-**Alpha.8 upgrade:** use the matching `knx-mcp-x86_64-linux` binary for
+**Alpha 15 upgrade:** update `knx-mcp` with the application. Native/model16
+stays; the application migrates product24 → 26 on writable open, while the MCP
+reader leaves the on-disk catalogue unchanged (older files are copied and
+migrated only in memory). Older builds refuse product26; opening
+new Alpha 15 project saves in Alpha 14 is unverified. Back up project/catalogue
+files independently. The CLI-only declared-memory diagnostic profile is not an
+MCP tool and adds no bus capability here.
+[Release scope](../../releases/alpha15.md).
+
+**Earlier Alpha.8 upgrade:** use the matching `knx-mcp-x86_64-linux` binary for
 schema12 native projects. Old MCP builds may refuse the new store schema.
 The read-only saved-file/no-bus boundary remains unchanged.
 

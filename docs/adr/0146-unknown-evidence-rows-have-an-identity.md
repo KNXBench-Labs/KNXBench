@@ -144,6 +144,11 @@ for display only.
    `ParameterRef` inside `Dynamic` reaches no column, the backfill skips
    `Dynamic`, and ingest keeps reporting it, so the migration does too. This
    exclusion is a flag only v26 sets; v23 to v25 retire as before.
+7. **Same row identity as ingest** (correction round 2). A `Parameter`
+   without `Id` is stored by ingest under the empty id, so the backfill looks
+   it up there too; before, it skipped such a parameter, left its suffix
+   empty and still retired its evidence row. A `ParameterRef` without `Id`
+   never reaches its table (`id` is `NOT NULL`, ingest refuses the package).
 
 **Consequences.** Unknown report totals and `ingest_unknown` /
 `package_install_unknown` shrink by the retired rows (matrix re-pin in

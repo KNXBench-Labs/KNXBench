@@ -592,6 +592,38 @@ fn v25_to_v26_keeps_the_suffix_evidence_inside_dynamic() {
     assert_eq!(snapshot(&conn), fresh);
 }
 
+/// A `Parameter` without `Id` (PDB-04): ingest stores it under the empty id,
+/// so the backfill must find it there, or a migrated database loses the
+/// suffix that a fresh install shows, and its evidence row with it.
+const NAMELESS_PROGRAM: &[u8] = br#"<KNX xmlns="http://knx.org/xml/project/14"><ManufacturerData><Manufacturer RefId="M-0001"><ApplicationPrograms>
+<ApplicationProgram Id="M-0001_A-4" Name="Program"><Static>
+<ParameterTypes><ParameterType Id="M-0001_A-4_PT-1" Name="n"><TypeNumber SizeInBit="8" Type="unsignedInt" minInclusive="0" maxInclusive="99"/></ParameterType></ParameterTypes>
+<Parameters><Parameter Name="delay" ParameterType="M-0001_A-4_PT-1" Text="Delay" Value="5" SuffixText="s"/></Parameters>
+</Static></ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
+
+#[test]
+fn v25_to_v26_fills_the_suffix_of_a_parameter_without_an_id() {
+    let (_dir, path) = installed_with(NAMELESS_PROGRAM);
+    let fresh = snapshot(&Connection::open(&path).unwrap());
+    let suffix = |conn: &Connection| -> Option<String> {
+        conn.query_row(
+            "SELECT suffix_text FROM parameter WHERE program_id = 'M-0001_A-4' AND id = ''",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap()
+    };
+    assert_eq!(suffix(&Connection::open(&path).unwrap()), some("s"));
+    rewind_to_v25_with(
+        &Connection::open(&path).unwrap(),
+        NAMELESS_PROGRAM,
+        &[("/Static/Parameters/Parameter", 1, "s")],
+    );
+    let conn = open_and_migrate(&path).unwrap();
+    assert_eq!(suffix(&conn), some("s"));
+    assert_eq!(snapshot(&conn), fresh);
+}
+
 /// Why the v26 backfill needs no first-winner rule below the program: a
 /// parameter or ref id declared twice in one program refuses the whole
 /// package at ingest (the table key), so no stored blob carries one.

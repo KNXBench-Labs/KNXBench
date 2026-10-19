@@ -655,7 +655,14 @@ fn backfill_suffix_text(
             continue;
         };
         let a = crate::xml::attrs(start, source_path)?;
-        if let (Some(id), Some(suffix)) = (a.get("Id"), a.get("SuffixText")) {
+        // The parser's row identity: a `Parameter` without `Id` is stored
+        // under `""`; a `ParameterRef` without one never reaches the table
+        // (its `id` is NOT NULL and ingest refuses the package).
+        let id = match table {
+            "parameter" => Some(a.get("Id").unwrap_or_default()),
+            _ => a.get("Id"),
+        };
+        if let (Some(id), Some(suffix)) = (id, a.get("SuffixText")) {
             conn.execute(
                 &format!("UPDATE {table} SET suffix_text = ?3 WHERE program_id = ?1 AND id = ?2"),
                 params![program_id, id, suffix],

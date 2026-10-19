@@ -119,3 +119,21 @@ Resumed after the owner's pause on the branch rebased onto the test-speed merge.
   `Dynamic/Parameter/@Offset`/`@BitOffset` (v25), and for hosts outside the
   modelled tree `Static/.../ParameterBlock/@TextParameterRefId` (v23) and
   `@Access` (v24).
+
+## Correction round 2 (controller, 19 October 2026)
+
+Second cross-vendor review (Codex `gpt-6.1-sol`): PDB-01, PDB-02 and PDB-03
+confirmed fixed; the OPEN_WORK note on the earlier promotions confirmed
+consistent with the code. New finding **PDB-04 (IMPORTANT)**: a `Parameter`
+without `Id` is stored by ingest under `""`
+(`parse/program.rs`, `a.get("Id").unwrap_or_default()`), but
+`backfill_suffix_text` required `Some(Id)`, so a migrated database lost the
+suffix a fresh install shows and still retired its evidence row. Fix: the
+backfill uses the parser's identity (`""` for a nameless `Parameter`);
+`ParameterRef` is unaffected (`id NOT NULL`). Regression
+`suffix_text::v25_to_v26_fills_the_suffix_of_a_parameter_without_an_id`
+(fresh vs migrated snapshot): RED on the old code (`None` vs `Some("s")`),
+green after; mutant (the parameter arm back to `a.get("Id")`) RED again,
+source restored byte-exact. `knx-productdb` 457 + 573 + 2 passed, 0 failed,
+Clippy clean. A package gate started before this edit was stopped and voided
+(the edit landed in its worktree).

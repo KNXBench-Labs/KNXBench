@@ -185,8 +185,31 @@ are worth keeping:
   16th suite (`table-columns`, 123.7 s with its exclusive part) in the
   meantime. They still run one after another.
 
+### After two review rounds (`3fc73c77`)
+
+Two independent read-only reviews of the branch found gaps in the planner
+(deleted files, web unit tests reading Rust and docs, unknown web paths, the
+missing `table-columns` suite, an `xtask` corpus selection that always failed)
+and in the lane guard (fixtures, methods, several import shapes, helper
+findings dropped silently). All were fixed test-first; production suites went
+back to one worker each, as their configs pin, because four workers had
+overridden that without a lane review.
+
+The complete gate on the fixed candidate passed: 2,244.1 s of stages (37.4
+min) plus 143.5 s waiting for the browser leases of another session's gate.
+Web gate 1,770.8 s: functional lane 781 cases on four workers in 453.9 s,
+exclusive lane 65 cases in 277.5 s (513.5 s and 102 cases before the
+file-menu clock change), production suites 771.7 s on one worker each
+(`table-columns` alone 231.3 s against 123.7 s when split by tag). Rust tests
+124.0 s with a warm target (4,993 passed, 0 failed, 215 ignored), corpus
+335.8 s (155 of 155).
+
 A routine package does not pay for any of this unless it touches the web
 app's shared inputs; that is where most of the time goes back to development.
+A change to `tools/browser_lanes.py` alone, for example, ran the
+change-scoped gate with every default spec but no Rust, corpus or production
+stage: 11 stages, all 846 default cases (781 functional, 65 exclusive), 790.4 s
+of work plus 1,324.3 s waiting for another session's browser leases.
 
 ## Limits of these numbers
 

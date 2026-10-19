@@ -487,6 +487,27 @@ provided it preserves the active owners' status updates. WP-18 and WP-20 are
 independent offline UI packages; WP-19 follows WP-18 and starts with its
 contract.
 
+## Test gates: change-scoped by default (19 October 2026)
+
+Delivered ([ADR-0144](adr/0144-change-scoped-gates-tagged-browser-lanes-bundled-rust-tests.md),
+[dossier](research/2026-10-19-test-suite-speed.md)): routine packages run
+`python3 tools/run_package_gate.py`, releases `--full`; browser cases run in
+parallel unless tagged `@exclusive`; one Rust integration-test binary per
+crate. Open, each small and none blocking:
+
+- Production suites run one after another with one worker each (771.7 s in
+  the last complete gate; `table-columns` alone 231.3 s). A lane review per
+  suite could let tag-split parallel runs back in where they are safe.
+- The plan names a deleted web file's specs as "not statically analysable";
+  name the deleted path instead (`tools/gate_scope.py`; a planner change, so
+  it costs one complete gate).
+- The lane guard does not see a clock reached through destructuring, a
+  re-bound alias, a getter or a bracket call, and matches member calls by
+  name (ADR-0144); no spec uses those forms today.
+- Three `file-menu-submenus` cases timed out at eight workers while a cold
+  Vite development server started (passed at the gate's four workers and in
+  reruns).
+
 ## Prior dated detail — background, not a second queue
 
 The sections below retain the original topic/anchor context. Read current

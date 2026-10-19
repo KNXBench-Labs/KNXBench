@@ -161,9 +161,23 @@ reservation; preserve that exact entry. The selected checkout's foreign files,
 index and HEAD are snapshotted privately and will be checked unchanged after
 integration/publication. Integration uses a separate owned worktree, main-first.
 
+## Merged attempt 1: browser fixture acquisition
+
+Main-first merge `7aed9ddd` preserves the successor claim exactly and has no
+runtime differences from the accepted feature. The merged gate passed its
+nine static/tooling stages and the web build, typechecks, Vitest and 797 of
+798 functional browser cases. One DE controls case failed while Playwright
+created its `page` fixture, before the test body/navigation. The retained trace
+points to the Playwright target-map lookup in `doCreateNewPage`, not an
+application assertion. Exact root cause remains unestablished.
+
+On unchanged source the same named case passed 20 explicit repetitions, four
+workers, no retries, inside the same offline/leased harness. This does not
+prove a root-cause fix or full acceptance. No product, test, dependency or guard
+was modified. Original failed receipt and trace remain intact; a new merged
+gate attempt reruns the complete scope in its own evidence namespace.
+
 ## Pending acceptance
 
-Main-first merge acceptance, publication and owned cleanup remain pending.
-The merged candidate reruns the maintained package gate with the same affected
-browser/production/Rust/corpus scope; no implementation has been pushed.
+Complete merged acceptance, publication and owned cleanup remain pending.
 Earlier green web results are not whole-package acceptance.

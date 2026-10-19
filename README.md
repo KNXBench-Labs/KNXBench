@@ -216,6 +216,10 @@ packages it needs and what has been tested.
 > new Alpha 15 project saves in Alpha 14 is not verified; larger bounds may matter.
 > Alpha 11 and earlier refuse native schema 16 files.
 > To go back, restore the pre-upgrade backup. Internal versions are not external backups.
+>
+> Source builds after Alpha 15 advance the product database to **27** for
+> [master-data source provenance](docs/manual/user-guide/05-devices-and-products.md#master-data-diagnostics-source-builds-after-alpha-15).
+> Alpha 15 refuses that newer catalogue; keep a separate pre-upgrade copy.
 
 ### Where it runs
 

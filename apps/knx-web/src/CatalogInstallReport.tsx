@@ -74,6 +74,8 @@ function unknownKindLabel(t: Translate, kind: CatalogUnknownConstruct["kind"]): 
 const diagnosticKindMessage: Record<CatalogInstallDiagnostic["kind"], MessageKey> = {
   "unsupported-master-section": "catalog.installReport.diagnosticKind.unsupportedMasterSection",
   "unsupported-master-subtree": "catalog.installReport.diagnosticKind.unsupportedMasterSubtree",
+  "master-identity-collision": "catalog.installReport.diagnosticKind.masterIdentityCollision",
+  "malformed-master-declaration": "catalog.installReport.diagnosticKind.malformedMasterDeclaration",
   "unresolved-baggage-declaration": "catalog.installReport.diagnosticKind.unresolvedBaggageDeclaration",
   "undeclared-baggage-payload": "catalog.installReport.diagnosticKind.undeclaredBaggagePayload",
 };
@@ -81,6 +83,8 @@ const diagnosticKindMessage: Record<CatalogInstallDiagnostic["kind"], MessageKey
 const diagnosticDescriptionMessage: Record<CatalogInstallDiagnostic["kind"], MessageKey> = {
   "unsupported-master-section": "catalog.installReport.diagnostic.unsupportedMasterSection",
   "unsupported-master-subtree": "catalog.installReport.diagnostic.unsupportedMasterSubtree",
+  "master-identity-collision": "catalog.installReport.diagnostic.masterIdentityCollision",
+  "malformed-master-declaration": "catalog.installReport.diagnostic.malformedMasterDeclaration",
   "unresolved-baggage-declaration": "catalog.installReport.diagnostic.unresolvedBaggageDeclaration",
   "undeclared-baggage-payload": "catalog.installReport.diagnostic.undeclaredBaggagePayload",
 };
@@ -195,6 +199,12 @@ export function CatalogInstallReportView(props: { report: CatalogInstallReport }
                     {installReport.facts.diagnostics.map((diagnostic) => (
                       <li key={`${diagnostic.kind}:${diagnostic.archivePath}:${diagnostic.xmlPath}`}>
                         {describeInstallDiagnostic(t, diagnostic)}
+                        {(diagnostic.kind === "master-identity-collision" || diagnostic.kind === "malformed-master-declaration") && (
+                          <details>
+                            <summary>{t("catalog.installReport.technicalSourceDetails")}</summary>
+                            <p>{diagnostic.detail}</p>
+                          </details>
+                        )}
                       </li>
                     ))}
                   </ul>

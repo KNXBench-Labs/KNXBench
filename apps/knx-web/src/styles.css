@@ -1239,6 +1239,8 @@ main {
 }
 
 .catalog-report {
+  min-width: 0;
+  overflow-wrap: anywhere;
   font-size: 0.85rem;
   opacity: 0.8;
   margin: 0 0 0.5rem;

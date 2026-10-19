@@ -278,6 +278,58 @@ describe("CatalogBrowser", () => {
     root.unmount();
   });
 
+  it.each([
+    ["en", "Master identity collision", "Malformed master declaration", "Technical source details"],
+    ["de", "Kollision einer Master-Identität", "Fehlerhafte Master-Deklaration", "Technische Quelldetails"],
+  ] as const)("shows master provenance diagnostics and retained source details in %s", async (language, collisionLabel, malformedLabel, detailsLabel) => {
+    saveUiLanguage(settingsStorage, language);
+    resetUiLanguageForTests();
+    const collisionDetail = 'function_type FT-1; candidate source 0123#4; winner source abcd#1';
+    const malformedDetail = 'FunctionPoint at declaration 8: missing parent; <untrusted> stays text';
+    const diagnostics: CatalogInstallDiagnostic[] = [
+      { kind: "master-identity-collision", archivePath: "knx_master.xml", xmlPath: "/KNX/MasterData/FunctionTypes/FunctionType[4]", detail: collisionDetail, occurrences: 2 },
+      { kind: "malformed-master-declaration", archivePath: "knx_master.xml", xmlPath: "/KNX/MasterData/FunctionTypes/FunctionPoint[8]", detail: malformedDetail, occurrences: 1 },
+    ];
+    mockApplied(installReport({ facts: { counts: [], unknownConstructs: [], unknownOccurrences: 0, diagnostics } }));
+    const { root } = await renderBrowser();
+    const input = host!.querySelector<HTMLInputElement>('input[type="file"]')!;
+    await act(async () => {
+      Object.defineProperty(input, "files", { value: [new File(["package"], "master.knxprod")] });
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    await confirmInstall();
+    const report = host!.querySelector<HTMLElement>(".catalog-report");
+    expect(report).not.toBeNull();
+    expect(report!.querySelector("h4:last-of-type")?.textContent).toBe(language === "de" ? "Quelldiagnosen" : "Source diagnostics");
+    expect(report!.textContent).toContain(collisionLabel);
+    expect(report!.textContent).toContain(malformedLabel);
+    const diagnosticRows = Array.from(report!.querySelectorAll("li"));
+    const collisionRow = diagnosticRows.find((row) => row.textContent?.startsWith(collisionLabel));
+    const malformedRow = diagnosticRows.find((row) => row.textContent?.startsWith(malformedLabel));
+    expect(collisionRow).toBeDefined();
+    expect(malformedRow).toBeDefined();
+    const collisionDescription = language === "de"
+      ? "Eine Deklaration unterlag einer bereits vorhandenen Identität. Der normalisierte Wert bleibt unverändert; der Quellnachweis bleibt erhalten."
+      : "A declaration lost to an existing identity. The normalized value is unchanged; its source evidence is retained.";
+    const malformedDescription = language === "de"
+      ? "Eine Deklaration ohne nutzbare Identität oder übergeordneten Eintrag wurde nicht normalisiert gespeichert. Die Originalquelle bleibt erhalten."
+      : "A declaration without a usable identity or parent was not stored as a normalized entry. Its original source is retained.";
+    expect(collisionRow!.textContent).toContain(collisionDescription);
+    expect(collisionRow!.textContent).not.toContain(malformedDescription);
+    expect(malformedRow!.textContent).toContain(malformedDescription);
+    expect(malformedRow!.textContent).not.toContain(collisionDescription);
+    expect(report!.textContent).toContain("FunctionType[4]");
+    expect(report!.textContent).toContain("FunctionPoint[8]");
+    const details = Array.from(report!.querySelectorAll("details"));
+    expect(details).toHaveLength(2);
+    expect(details.every((entry) => entry.querySelector("summary")?.textContent === detailsLabel)).toBe(true);
+    expect(details[0].textContent).toContain(collisionDetail);
+    expect(details[1].textContent).toContain(malformedDetail);
+    expect(report!.querySelector("untrusted")).toBeNull();
+    expect(diagnostics.map((row) => row.detail)).toEqual([collisionDetail, malformedDetail]);
+    root.unmount();
+  });
+
   it("uses a neutral report name and explicit unavailable text for historical facts", async () => {
     mockApplied(installReport({ skipped: true }));
     const { root } = await renderBrowser();

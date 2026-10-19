@@ -6,6 +6,24 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## WP-17 — source provenance after Alpha 15 (19 October 2026)
+
+Product DB v27 adds source-addressable declaration evidence for
+`datapoint_type` (both mains and subtypes), `function_type`, `function_point`
+and `space_usage`. Fresh normalized winners name retained source bytes plus
+an ordinal/start-tag byte range. Same-file and cross-file losing declarations
+stay individually addressable. Missing Id and orphan parent are explicitly
+reported, not disguised as identity collisions; empty Id retains its existing
+separate behavior. The parser's current normalized winner/context rules remain
+unchanged. [ADR-0147](../adr/0147-master-identity-provenance.md).
+
+Migration/replay derives declarations without rewriting normalized values or
+historical install reports. **Remaining boundary:** old winner/encounter/write
+history cannot be recovered from retained bytes or inferred from blob order.
+Those facts stay explicitly unavailable; failed/unexamined source inspections
+are not clean or empty evidence. No version-pinning policy or unsupported
+identifier family is implemented by this provenance change.
+
 <!-- BEGIN retained catalogue record -->
 
 ## 86. Duplicate identifiers inside one file — recorded for normalized product identifiers; DPT provenance remains limited

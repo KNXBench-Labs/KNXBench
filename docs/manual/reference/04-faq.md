@@ -69,6 +69,14 @@ not enable new programming. The new System-2 memory diagnostic profile is
 CLI-only, identity-gated and not hardware-verified; the web export remains
 generic identity-only. [Release scope](../../releases/alpha15.md).
 
+**Why does Alpha 15 refuse a catalogue used by a newer source build?**
+
+Source builds after Alpha 15 use product DB **27** for master-declaration
+provenance; Alpha 15 supports product26. The refusal protects data rather than
+attempting an unverified downgrade. Restore an independent pre-upgrade catalogue
+copy to go back. Native/model16 does not change in this package. See
+[master-data diagnostics](../user-guide/05-devices-and-products.md#master-data-diagnostics-source-builds-after-alpha-15).
+
 **Why does enabling a button not produce new communication objects?**
 
 Since Alpha 14, enable the button and choose its initial mode

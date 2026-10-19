@@ -1,5 +1,24 @@
 # Roadmap
 
+## Alpha 15 release boundary (19 October 2026)
+
+Prepared from cutoff `21b9d46f`, after the Alpha 15 package set landed. The
+[scope note](releases/alpha15.md) includes issues #25/#26, explicit unavailable
+catalogue errors, catalogue identity/placement cleanup, the UI feedback waves,
+differences-first comparison marks, System labels, complete response-local module
+identity, zoom-aware panes, product v25/v26, `SuffixText`, larger measured bounds,
+uppercase legacy tables and project ZIP directory integrity. Offline System-2
+field preview and the CLI-only declared-memory diagnostic profile are investigation
+tools, not programming admission. Native/model16 stays; product24 migrates to26
+on writable open. Previous-reader project compatibility is unverified; independent
+backups are required.
+
+Still open, not implicitly scheduled for Alpha 16: older v23–v25 promotion repairs,
+legacy binary-enumeration diagnostics, inline sections, object folders/priority,
+complete source image/procedure/recovery and new hardware evidence. `SuffixText`
+and the measured size-ceiling work listed as future work at the Alpha 14 cutoff
+are included here; historical sections below retain their original boundary.
+
 ## Alpha 14 release boundary (18 October 2026)
 
 Owner instruction: Alpha 14 waits for P1 (object-local function choices) and the product-database series, then is prepared and published. Cutoff `a0c2537d` includes both (plus the Docker frontend-stage fix, the native-spec fold fix, two test-race fixes, ux-feedback and knx-net IGMP, and the v24 product-matrix re-pin found by earlier candidates), the parameter workspace/grids/block access, note decisions before deletes, plug-in data adoption, Functions in comparisons and the read-only diagnostic export. Native/model16 is unchanged; the product database moves 23 → 24. [Release scope](releases/alpha14.md) names the boundaries; census step 5 (size ceilings), `SuffixText`, inline sections, object folders and priority move to Alpha 15. Published on 18 October 2026 at immutable `8d104e2f` ([acceptance](releases/alpha14-acceptance.md), [publication record](evidence/release-alpha14-2026-10-18.json)).

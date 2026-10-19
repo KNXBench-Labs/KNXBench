@@ -1,5 +1,34 @@
 # Import and export
 
+## Alpha 15 persistence boundary
+
+Native/model **16** stays; the core/store diff introduces no new persisted project
+kind. Product databases migrate **24 → 26 on writable open**: typed placement and
+enumeration columns (v25), then identity/repair of repeated per-blob unknown rows
+and parameter/reference `SuffixText` (v26). The identity repair alone leaves
+package-report totals unchanged; promoting `SuffixText` separately retires its
+supported-host report rows. Earlier v23–v25 promotion residues remain open; this
+is not a blanket migrated-equals-fresh guarantee for every historical database.
+Read-only CLI catalogue/documentation readers no longer create or migrate the
+on-disk product database; older catalogues are copied/migrated only in memory.
+An unavailable catalogue keeps its actual open error.
+
+[ADR-0142](adr/0142-file-size-limits-follow-the-storage-ceiling.md) raises a
+retained file/member to **1,000,000,000 bytes**, standard expanded archives to
+**4 GiB**, and the CLI large-product profile to **16 GiB**. Browser project upload
+remains **1024 MiB**. These distinct bounds do not imply unlimited input, wider
+ETS semantics or new device admission. Uppercase legacy table names no longer
+make evidenced `.vd5` files look empty. Project ZIP directory records must have
+CRC 0 and a complete empty stream where compressed; inconsistent records refuse
+before changing existing project/catalogue data. Remaining trailing-stream and
+product-reader directory cases are not claimed fixed.
+
+No `.knxproj` export or programming expansion is added. Older builds refuse
+product26 by their source version checks; opening Alpha 15 project saves in
+Alpha 14 has not been verified, particularly at the larger bounds. Back up closed
+project files, the catalogue and all Docker data independently before upgrading.
+[Release scope](releases/alpha15.md).
+
 ## Alpha 14 persistence boundary
 
 No native schema change and no ETS format-support expansion relative to Alpha 13; there is still no `.knxproj` export. Product packages gain one input shape: a manufacturer ZIP without its own `knx_master.xml` that holds `.knxprod` members installs every inner package byte-exact in one transaction, or none ([ADR-0140](adr/0140-vendor-zips-of-product-packages-install-as-a-whole.md)); other members are listed, never stored. Plug-in data adoption copies one device's opaque bytes verbatim from a same-lineage `.knxproj` ([ADR-0136](adr/0136-plugin-data-adoption-is-audited-opaque-replacement.md)). Product database v24 on first open. [Release limits](releases/alpha14.md).

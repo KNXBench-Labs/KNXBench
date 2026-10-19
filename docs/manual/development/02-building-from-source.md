@@ -183,7 +183,7 @@ The workflow also validates the artifact afterwards, and you can run that check 
 
 ```bash
 cargo run -p xtask -- check-appimage
-cargo run -p xtask -- check-appimage --tag v0.1.0-alpha.14
+cargo run -p xtask -- check-appimage --tag v0.1.0-alpha.15
 ```
 
 The tagged form additionally checks that the artifact's file name matches the tag.
@@ -259,6 +259,13 @@ and look at the plan first:
 python3 tools/run_package_gate.py --base origin/main --dry-run
 python3 tools/run_package_gate.py --base origin/main
 ```
+
+Since Alpha 15, package-gate test stages use isolated scratch XDG data/config
+directories and the runner refuses if the real `knx` directories change or cannot
+be checked. **Direct `cargo test` does not inherit that protection**: isolate its
+HOME/XDG data yourself; never point tests at your working catalogue. Read-only
+CLI catalogue readers and `doc-export` no longer migrate the on-disk database, but this
+is not a claim that every CLI device command uses a read-only opener.
 
 Releases (Alpha, Beta, full) run everything with `--full`. The rules are in
 [ADR-0144](../../adr/0144-change-scoped-gates-tagged-browser-lanes-bundled-rust-tests.md)

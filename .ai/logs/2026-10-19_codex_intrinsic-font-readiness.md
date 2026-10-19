@@ -44,3 +44,13 @@ production component, width budget, threshold, retry or timeout changed.
 
 Independent review of the font-helper delta and a fresh complete package gate.
 The previous guard review remains accepted; the failed full gate is retained.
+
+## Correction (Claude, 19 October 2026, later the same day)
+
+The product-DB gate failed the same assertion on a branch that already carried
+this barrier, with the same numbers (77/77 then 76/71, Manufacturer and Order
+number). The gate-4 failure was not a font race: the product catalogue was
+still loading (cells *Not resolved*) at the first measurement. Holding the
+catalogue reproduces it exactly; fixed test-only in the spec
+(`openResolvedList`, held-catalogue regression). The font barrier remains valid
+hardening with its own RED proof but did not explain the failure.

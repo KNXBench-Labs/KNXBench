@@ -12,6 +12,26 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## The fit assertion measures the resolved catalogue, not the loading one (19 October 2026)
+
+`table-column-widths.e2e.ts`' independent fit assertion failed twice in package
+gates (gate isolation full gate 4, product-DB gate 2) with the same numbers:
+Manufacturer and Order number floors 77 at the first measurement, 76 and 71
+at the second. Cause: `openList()` returns once the Devices list is visible,
+while the product catalogue (`/api/devices`) still loads; until it answers those
+cells read *Not resolved*, so under load the first measurement saw another
+table than the second. Proof: holding the catalogue response until after the
+first measurement fails the old test with exactly those numbers. The spec now
+opens the list through `openResolvedList()`, which waits for a resolved product
+cell and for the loading status to disappear, in every case that measures the
+Devices table (default fit, overflow and drag, overlay, inflated-floor, the zoom
+cases, stored scale), and again after both reload paths. Regression: with the catalogue held, the wait must refuse
+(`rejects`) instead of letting a measurement start; an empty wait turns it red.
+Test-only; no application code, width budget, tolerance or retry changed. This
+corrects the earlier reading of gate 4 as a late-font race: the font barrier
+added then stays as hardening with its own regression, but it did not explain
+that failure.
+
 ## System column in the Devices list, from one cited mask table (19 October 2026)
 
 Owner request (WP-20): the Devices list names each device's KNX system family.
@@ -37,9 +57,10 @@ the new *System* column sorts and filters by the shown label or the mask
 ## Package gates keep their hands off the developer's knx directories (19 October 2026)
 
 Acceptance follow-up: full gate 4 on `a86cb1f9` stopped at one browser test
-(788 functional cases passed). The independent intrinsic-width oracle measured
-before the mounted table's final font loaded; it now flushes the source table's
-layout and awaits current font readiness. A held-font-response regression fails
+(788 functional cases passed). The independent intrinsic-width oracle now
+flushes the source table's layout and awaits current font readiness (*later
+correction:* the gate-4 failure itself was a catalogue race, see the entry
+above). A held-font-response regression fails
 without the barrier; the complete table-column spec passes 50/50 with it. No
 application code, width tolerance or retry policy changed. Both reviews
 accepted; complete package gate green on `72e92e86` (68 web stages, 855

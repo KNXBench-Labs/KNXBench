@@ -376,6 +376,125 @@ fn namespace_refusal_preserves_existing_project_and_product_databases() {
     }
 }
 
+/// Edits an archive given the offsets of one record's local header and
+/// central record.
+type Damage = fn(&mut [u8], usize, usize);
+
+/// The synthetic minimal project plus an empty `P-0001/BinaryData/`
+/// directory record, then `damage` applied to the directory's local header
+/// and its central record alike, so the two still agree.
+fn minimal_with_directory(damage: Damage) -> Vec<u8> {
+    use std::io::{Cursor, Read, Write};
+    const DIRECTORY: &[u8] = b"P-0001/BinaryData/";
+    let mut template =
+        zip::ZipArchive::new(Cursor::new(knx_testsupport::minimal_knxproj_bytes())).unwrap();
+    let stored =
+        zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored);
+    let mut writer = zip::ZipWriter::new(Cursor::new(Vec::new()));
+    for i in 0..template.len() {
+        let mut entry = template.by_index(i).unwrap();
+        let mut bytes = Vec::new();
+        entry.read_to_end(&mut bytes).unwrap();
+        writer.start_file(entry.name(), stored).unwrap();
+        writer.write_all(&bytes).unwrap();
+    }
+    writer
+        .add_directory(std::str::from_utf8(DIRECTORY).unwrap(), stored)
+        .unwrap();
+    let mut bytes = writer.finish().unwrap().into_inner();
+    let find = |signature: &[u8], name_at: usize| {
+        (0..bytes.len())
+            .find(|&at| {
+                bytes[at..].starts_with(signature) && bytes[at + name_at..].starts_with(DIRECTORY)
+            })
+            .expect("the directory record")
+    };
+    let local = find(b"PK\x03\x04", 30);
+    let central = find(b"PK\x01\x02", 46);
+    damage(&mut bytes, local, central);
+    bytes
+}
+
+#[test]
+fn a_malformed_empty_directory_refuses_without_changing_existing_databases() {
+    // WP-16: both headers agree, so only the payload rule can refuse it.
+    let crc = |bytes: &mut [u8], local: usize, central: usize| {
+        bytes[local + 14..local + 18].copy_from_slice(&0xdead_beefu32.to_le_bytes());
+        bytes[central + 16..central + 20].copy_from_slice(&0xdead_beefu32.to_le_bytes());
+    };
+    let no_stream = |bytes: &mut [u8], local: usize, central: usize| {
+        bytes[local + 8..local + 10].copy_from_slice(&8u16.to_le_bytes());
+        bytes[central + 10..central + 12].copy_from_slice(&8u16.to_le_bytes());
+    };
+    let damaged: [(Damage, &str); 2] = [
+        (crc, "CRC-32"),
+        (no_stream, "no complete compressed stream"),
+    ];
+
+    for use_products in [false, true] {
+        let dir = tempfile::tempdir().unwrap();
+        let options = |products| knx_app::ImportOptions {
+            product_db: use_products.then_some(products),
+        };
+        // The undamaged archive imports, so a refusal below is the damage.
+        let control_path = dir.path().join("control.knxproj");
+        std::fs::write(&control_path, minimal_with_directory(|_, _, _| {})).unwrap();
+        let control_store = open_and_migrate(&dir.path().join("control.sqlite")).unwrap();
+        let control_products =
+            knx_productdb::open_and_migrate(&dir.path().join("control-products.sqlite")).unwrap();
+        knx_app::import_ets_project_with(&control_path, &control_store, options(&control_products))
+            .unwrap();
+
+        let store_path = dir.path().join("project.sqlite");
+        let products_path = dir.path().join("products.sqlite");
+        let store = open_and_migrate(&store_path).unwrap();
+        let products = knx_productdb::open_and_migrate(&products_path).unwrap();
+        let seed_path = knx_testsupport::write_minimal_knxproj(dir.path());
+        let seed = knx_app::import_ets_project_with(
+            &seed_path,
+            &store,
+            knx_app::ImportOptions {
+                product_db: Some(&products),
+            },
+        )
+        .unwrap();
+        knx_store::save_project(&store, &seed.project).unwrap();
+        assert!(!seed.project.installations.is_empty());
+        assert!(!load_opaque(&store).unwrap().is_empty());
+        let snapshot = || {
+            [&store_path, &products_path]
+                .into_iter()
+                .flat_map(|path| {
+                    [
+                        path.clone(),
+                        PathBuf::from(format!("{}-wal", path.display())),
+                    ]
+                })
+                .map(|path| std::fs::read(path).ok())
+                .collect::<Vec<_>>()
+        };
+        let before = snapshot();
+        for (damage, why) in damaged {
+            let rejected_path = dir.path().join("rejected.knxproj");
+            std::fs::write(&rejected_path, minimal_with_directory(damage)).unwrap();
+            match knx_app::import_ets_project_with(&rejected_path, &store, options(&products)) {
+                Err(knx_app::AppError::Import(knx_etsproj::ImportFailure::Container(
+                    knx_etsproj::ContainerError::InconsistentRecord { path, reason },
+                ))) => {
+                    assert_eq!(path, "P-0001/BinaryData/");
+                    assert!(reason.contains(why), "{reason}");
+                }
+                _ => panic!("the damaged directory was not refused ({why})"),
+            }
+            assert!(
+                snapshot() == before,
+                "refusal modified durable database bytes"
+            );
+            assert!(knx_store::load_project(&store).unwrap() == seed.project);
+        }
+    }
+}
+
 #[test]
 #[ignore = "requires the gitignored OriginalData/ corpus; run with --ignored"]
 fn importing_persists_the_opaque_entries() {

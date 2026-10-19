@@ -174,10 +174,11 @@ pub enum ContainerError {
     },
     /// A record whose parts disagree, so two readers would see two
     /// different archives (AR18 re-check round 2, N7/N9; round 3, N11): a
-    /// directory that carries bytes, a directory named like a file, a local
-    /// header that differs from its central record (name, flags, method,
-    /// CRC, sizes, data descriptor, Unicode Path), or bytes between records
-    /// that no record claims. `reason` says which.
+    /// directory that carries bytes or whose empty payload is malformed
+    /// (WP-16), a directory named like a file, a local header that differs
+    /// from its central record (name, flags, method, CRC, sizes, data
+    /// descriptor, Unicode Path), or bytes between records that no record
+    /// claims. `reason` says which.
     InconsistentRecord {
         path: String,
         reason: &'static str,
@@ -847,7 +848,9 @@ fn check_member_names(bytes: &[u8], start: u64) -> Result<Vec<RawRecord>, Contai
 ///   sharing one local record);
 /// - records that do not follow each other without a gap up to the central
 ///   directory, so no byte between them belongs to no record or to two;
-/// - a directory record that carries data, or that is named like a file.
+/// - a directory record that carries data, whose payload is not an empty
+///   one (a CRC-32 other than 0, no complete compressed stream; WP-16), or
+///   that is named like a file.
 fn check_decoded_names<R: Read + std::io::Seek>(
     archive: &mut ZipArchive<R>,
     raw: &[RawRecord],
@@ -917,9 +920,8 @@ fn check_decoded_names<R: Read + std::io::Seek>(
     // Only now, with no two records sharing a byte, is a directory's data
     // inflated: together these reads cover the archive at most once.
     for (name, central, data) in &directories {
-        if local_record::directory_carries_data(central, &bytes[data.clone()]) {
-            return Err(inconsistent(name, "a directory record carries data"));
-        }
+        local_record::check_directory(central, &bytes[data.clone()])
+            .map_err(|reason| inconsistent(name, reason))?;
     }
     let clash = directories.iter().find(|(name, _, _)| {
         files.contains(&name.trim_end_matches(['/', '\\']).to_ascii_lowercase())

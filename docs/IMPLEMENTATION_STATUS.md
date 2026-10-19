@@ -12,6 +12,24 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Empty ZIP directories must really be empty, WP-16 (19 October 2026)
+
+Closes the KL-159 round-4 corner. A directory record in a `.knxproj`, outer
+archive or protected nested payload, whose CRC-32 is not 0 or which is
+compressed without a complete stream (none, truncated or malformed) is now
+refused as an inconsistent record that names the directory and the reason.
+Both headers agreeing had been enough before. The check runs while the
+container opens, so an existing project and product database stay
+byte-for-byte unchanged. Stored (ETS6, `jar`) and Java `ZipOutputStream`
+directories still import; name, budget, prefix and layout rules are
+unchanged. Evidence: 9 new container tests (5 RED first) and one application
+test comparing seeded database files and WALs; a private-corpus census found
+222 directory records, all stored and empty with CRC 0
+([KL-159](limitations/KL-159-project-archive-budgets-and-duplicate-names.md)).
+Open: bytes behind the end of a deflated *file's* stream, and the product
+reader's equivalent for directories
+([WP-16](OPEN_WORK.md#wp-16--empty-directory-zip-integrity)).
+
 ## Pane edges follow the pointer at every zoom level (19 October 2026)
 
 The two UISET zoom follow-ups (WP-15 part B). Navigation and inspector pane

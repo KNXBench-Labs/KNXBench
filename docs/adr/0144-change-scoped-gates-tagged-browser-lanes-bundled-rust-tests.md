@@ -81,8 +81,11 @@ are implemented.
    test side they hold data and constants, and their own timers run in the
    page. Known blind spots, accepted because no spec uses them and each is
    loud in review: a primitive reached through destructuring
-   (`const { now } = performance`) or a re-bound alias
-   (`export const pause = nap`). The hash policy file
+   (`const { now } = performance`), a re-bound alias
+   (`export const pause = nap`), a getter (`get now() { return Date.now(); }`)
+   or a bracket call (`h["wait"](page)`). Member matching is by name, so a
+   tainted method `wait` also flags an unrelated `x.wait(` in the same scope;
+   that errs towards the exclusive lane. The hash policy file
    `apps/knx-web/browser-lanes.json` is gone. Production suites keep the one
    worker their configs pin: they start their own preview servers, and four
    workers measured no gain worth the unreviewed risk (473 s against 505.6 s

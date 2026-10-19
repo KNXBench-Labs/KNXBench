@@ -51,8 +51,8 @@ and is held by `tools/tests/test_rust_gate_order.py`.
   methods, solved as one fixed point). A primitive in a helper module outside
   any named function, for example in a Playwright fixture or a hook registered
   on import, is refused in the helper; a test-side `.tsx`/`.jsx` import is
-  refused. Application modules are not followed. Destructured clocks and
-  re-bound aliases are known blind spots (ADR-0144).
+  refused. Application modules are not followed. Destructured clocks,
+  re-bound aliases, getters and bracket calls are known blind spots (ADR-0144).
   The `--grep` for the tag matches the whole tag (`@exclusive(?![\w-])`).
 - Compile the entire default case inventory before execution and split it by
   tag. Require exact case identity equality for each lane, passed expectations,

@@ -334,8 +334,8 @@ def functions(code: str) -> list[tuple[str, int, int, str]]:
         end = matching(code, k) if code[k:k + 1] == '{' else statement_end(code, k)
         found.append((name, match.start(), end, kind))
     for match in METHOD.finditer(code):  # `name(params) {` in object literals and classes
-        if match.group('name') in NOT_METHODS:
-            continue
+        if match.group('name') in NOT_METHODS or re.search(r'\bfunction\s*\*?\s*$', code[max(0, match.start() - 24):match.start()]):
+            continue  # `function name(…) {` is a declaration, already recorded as a function
         close = matching(code, match.end() - 1)
         body = re.match(r'\s*(?::[^{;=()]+)?\{', code[close + 1:])
         if body:

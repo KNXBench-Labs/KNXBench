@@ -12,6 +12,49 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Parameter units after the value: `SuffixText` in product DB v26 (19 October 2026)
+
+WP-02 ([ADR-0146, part 2](adr/0146-unknown-evidence-rows-have-an-identity.md#part-2-suffixtext-reaches-the-parameter-row-wp-02)).
+The product collections declare a parameter's unit text as `SuffixText`; the
+database stored only a `Suffix` column the collections never use. The same
+schema v26 now stores `SuffixText` on `parameter` and `parameter_ref`
+(separately from `Suffix`), resolves it like `Text` (the reference's own
+declaration first, each layer translated), and the parameter row shows it right
+after the value. It is never part of the value, a draft or a write. The
+`SuffixText` report rows retire only on those two hosts.
+
+On the 115-instance matrix corpus an XML census predicted all five moved counts
+before the run and the run matched them (unknown report totals −635 / −633,
+`ingest_unknown` −627, `package_install_unknown` −217, and both
+parameter-attribute pins); the migrated v25 shared database equals a fresh v26
+install in all 43 tables.
+
+A cross-vendor review then found three gaps, closed in the same package: a
+migration filled the second declaration of a program id repeated in one file
+(ingest keeps the first), it retired the `SuffixText` evidence inside `Dynamic`
+that ingest keeps reporting, and the checked editor did not show the suffix.
+The matrix does not move (only the migration changed) and the migrated v25
+database again equals a fresh install.
+
+## Unknown evidence is recorded once per blob: product DB v26 (19 October 2026)
+
+WP-01 ([ADR-0146](adr/0146-unknown-evidence-rows-have-an-identity.md)).
+Census 3 had found `ingest_unknown` rows repeating each other. Synthetic
+packages reproduced the cause: a package install re-parses the members it
+shares with earlier packages, and the master, and wrote their unknown rows
+again; a re-parsed losing blob repeated its `IdConflict` row. Product DB v26
+gives the row an identity (two unique indexes), writes idempotently and, on
+upgrade, merges existing copies into the oldest row with the largest per-parse
+count and the oldest sample. Package reports, `package.unknown_count` and
+everything a user sees in an install report are unchanged.
+
+On the 115-instance product matrix corpus a census of the v25 shared database
+predicted every moved number, and the v26 run matched it exactly:
+`ingest_unknown` 23,176 → 22,327, the parameter-attribute pin (1,146, 288,
+73,548) → (1,128, 288, 71,634), the master-language pins (113, 67, 3,125) →
+(67, 67, 1,870); outcomes and all other counts equal. The v25 shared database
+migrated to v26 equals a fresh v26 install in all 43 tables.
+
 ## The fit assertion measures the resolved catalogue, not the loading one (19 October 2026)
 
 `table-column-widths.e2e.ts`' independent fit assertion failed twice in package

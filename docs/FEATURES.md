@@ -56,6 +56,12 @@ Last updated: 2026-10-18 07:55 CEST
 | --- | --- | --- |
 | [Parameter section captions](contracts/positional-text-templates.md#parameter-workspace-captions-issue-26) | Exact text-parameter resolution for block/separator captions; readable fallback labels and source tooltips; no configuration changes | Local-only; integration pending |
 
+## Parameter unit suffix
+
+| Feature | Scope | Availability |
+| --- | --- | --- |
+| [Unit suffix](contracts/parameter-workspace.md#unit-suffix-wp-02-19-october-2026) | The product data's `SuffixText` after a parameter value (the reference's own over the parameter's, translated); presentation only, never part of the value | Main-only |
+
 ## Nested module scopes
 
 | Feature | Scope | Availability |

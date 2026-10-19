@@ -274,17 +274,97 @@ impl UnknownCollector {
     }
 }
 
+/// The two identities of an `ingest_unknown` row (schema v26, ADR-0146).
+///
+/// A row is a fact about the bytes of one source blob, not about an install:
+///
+/// * every kind except `IdConflict` (unmodelled constructs and named
+///   diagnostics) is one row per `(source_sha256, program_id, xpath, kind,
+///   name)`. `occurrences` is how often **one parse** of those bytes met the
+///   construct and `sample` the first value it saw. Parsing the same bytes
+///   again (a second package sharing the member, a standalone ingest followed
+///   by a package, a reinstall) restates the same fact, so it never adds a
+///   row or sums a count;
+/// * an `IdConflict` row is one row per everything it carries: kept blob,
+///   table (`xpath`), id (`name`), per-file occurrence and losing blob
+///   (`sample`). Two different losers, or two repeats inside one file, are
+///   two facts and stay two rows.
+///
+/// `program_id` is `NULL` on every row this crate writes; `ifnull` keeps a
+/// `NULL` from making two otherwise equal rows distinct.
+pub(crate) const UNKNOWN_IDENTITY_INDEXES: &str =
+    "CREATE UNIQUE INDEX ingest_unknown_construct_identity ON ingest_unknown
+         (source_sha256, ifnull(program_id, ''), xpath, kind, name) WHERE kind <> 'IdConflict';
+     CREATE UNIQUE INDEX ingest_unknown_conflict_identity ON ingest_unknown
+         (source_sha256, xpath, name, occurrences, ifnull(sample, '')) WHERE kind = 'IdConflict';";
+
+/// The v25 -> v26 repair: collapses every identity group of
+/// [`UNKNOWN_IDENTITY_INDEXES`] to its oldest row (lowest `id`).
+///
+/// A group's rows were written by separate parses of the same bytes, so
+/// summing them would count one sighting once per parse — the inflation this
+/// repair removes. The kept row takes the **largest** `occurrences` any one
+/// parse recorded (each parse counted real occurrences in the same bytes, so
+/// the maximum never exceeds what the bytes hold, and a parse whose context
+/// reconciled some of them away cannot shrink it) and the oldest non-`NULL`
+/// `sample`. A later parse's different sample is another value of the same
+/// construct in the same retained bytes; it is not kept separately, exactly
+/// as one parse keeps only its first sample. Conflict groups are exact
+/// copies by construction of their key.
+pub(crate) fn merge_repeated_unknowns(conn: &Connection) -> Result<(), ProductDbError> {
+    const CONSTRUCT_KEY: &str = "source_sha256, ifnull(program_id, ''), xpath, kind, name";
+    const CONFLICT_KEY: &str = "source_sha256, xpath, name, occurrences, ifnull(sample, '')";
+    conn.execute_batch(&format!(
+        "CREATE TEMP TABLE unknown_merge AS
+           SELECT min(id) AS keep, max(occurrences) AS occurrences
+           FROM ingest_unknown WHERE kind <> 'IdConflict'
+           GROUP BY {CONSTRUCT_KEY} HAVING count(*) > 1;
+         UPDATE ingest_unknown AS u
+           SET occurrences = m.occurrences,
+               sample = (SELECT v.sample FROM ingest_unknown AS v
+                         WHERE v.kind <> 'IdConflict' AND v.source_sha256 = u.source_sha256
+                           AND ifnull(v.program_id, '') = ifnull(u.program_id, '')
+                           AND v.xpath = u.xpath AND v.kind = u.kind AND v.name = u.name
+                           AND v.sample IS NOT NULL
+                         ORDER BY v.id LIMIT 1)
+           FROM unknown_merge AS m WHERE u.id = m.keep;
+         DROP TABLE unknown_merge;"
+    ))?;
+    conn.execute(
+        &format!(
+            "DELETE FROM ingest_unknown WHERE id NOT IN (
+               SELECT min(id) FROM ingest_unknown WHERE kind <> 'IdConflict' GROUP BY {CONSTRUCT_KEY}
+               UNION ALL
+               SELECT min(id) FROM ingest_unknown WHERE kind = 'IdConflict' GROUP BY {CONFLICT_KEY})"
+        ),
+        [],
+    )?;
+    Ok(())
+}
+
+/// Records one blob's unmodelled constructs. Idempotent per row identity
+/// ([`UNKNOWN_IDENTITY_INDEXES`]): a construct already recorded for this
+/// blob keeps its row, its first sample and the larger of the two counts.
+///
+/// An update-then-insert rather than `ON CONFLICT`: the migrations before
+/// v26 call this too, on databases that do not have the identity indexes
+/// yet, and a targeted upsert refuses to run without them.
 pub fn insert_unknown(
     conn: &Connection,
     source_sha256: &str,
     unknown: &[UnknownConstruct],
 ) -> Result<(), ProductDbError> {
+    let mut update = conn.prepare(
+        "UPDATE ingest_unknown SET occurrences = max(occurrences, ?6), sample = coalesce(sample, ?7)
+         WHERE source_sha256 = ?1 AND ifnull(program_id, '') = ifnull(?2, '')
+           AND xpath = ?3 AND kind = ?4 AND name = ?5 AND kind <> 'IdConflict'",
+    )?;
     let mut stmt = conn.prepare(
         "INSERT INTO ingest_unknown (source_sha256, program_id, xpath, kind, name, occurrences, sample)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
     )?;
     for u in unknown {
-        stmt.execute(params![
+        let row = params![
             source_sha256,
             Option::<String>::None,
             u.xpath,
@@ -292,7 +372,10 @@ pub fn insert_unknown(
             u.name,
             i64::from(u.occurrences),
             u.sample,
-        ])?;
+        ];
+        if update.execute(row)? == 0 {
+            stmt.execute(row)?;
+        }
     }
     Ok(())
 }
@@ -304,11 +387,13 @@ pub fn insert_unknown(
 /// KNOWN_LIMITATIONS.md §86 was closed, since that was the only value
 /// `first_winner` ever produced; a same-file collision now lands here as
 /// whatever repeat count it was, so this row alone says which kind it was
-/// without a schema change to `ingest_unknown`.
+/// without a schema change to `ingest_unknown`. Recording the same
+/// conflict again (the losing blob parsed by a later package) is a no-op.
 pub fn insert_conflicts(conn: &Connection, conflicts: &[IdConflict]) -> Result<(), ProductDbError> {
     let mut stmt = conn.prepare(
         "INSERT INTO ingest_unknown (source_sha256, program_id, xpath, kind, name, occurrences, sample)
-         VALUES (?1, NULL, ?2, 'IdConflict', ?3, ?4, ?5)",
+         VALUES (?1, NULL, ?2, 'IdConflict', ?3, ?4, ?5)
+         ON CONFLICT DO NOTHING",
     )?;
     for c in conflicts {
         stmt.execute(params![

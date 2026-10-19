@@ -6,6 +6,18 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Unknown evidence recorded once per blob (19 October 2026, ADR-0146)
+
+[ADR-0146](../adr/0146-unknown-evidence-rows-have-an-identity.md), product DB
+v26: `ingest_unknown` no longer grows with every package that carries an
+already stored member. Each install re-parsed the members it shared with an
+earlier package and wrote their rows again; on the 115-instance matrix corpus
+that was 849 of 23,176 rows. The rows now have an identity, existing copies are
+merged on upgrade (largest per-parse count, oldest sample), and package reports
+are unchanged. This removes one source of database growth that scaled with the
+number of packages, not with their content; the size profiles themselves are
+unchanged.
+
 ## Storage-ceiling bounds (18 October 2026, ADR-0142)
 
 [ADR-0142](../adr/0142-file-size-limits-follow-the-storage-ceiling.md): the

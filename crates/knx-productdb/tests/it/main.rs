@@ -52,6 +52,7 @@ mod scheme23;
 mod source_diagnostics;
 mod source_file_length;
 mod standalone_packages;
+mod suffix_text;
 mod system1_image;
 mod system1_source_corpus;
 mod system2_declared_segments;

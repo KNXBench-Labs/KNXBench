@@ -16,7 +16,7 @@ use crate::parse::translation::{ingest_translations, TranslationScope};
 use crate::report::{insert_unknown, UnknownKind};
 
 /// The product-database schema version this build writes.
-pub const CURRENT_PRODUCTDB_VERSION: i64 = 25;
+pub const CURRENT_PRODUCTDB_VERSION: i64 = 26;
 
 #[derive(Debug)]
 pub enum ProductDbError {
@@ -298,6 +298,7 @@ fn migrations() -> Vec<Migration> {
         migrate_v22_to_v23,
         migrate_v23_to_v24,
         migrate_v24_to_v25,
+        migrate_v25_to_v26,
     ]
 }
 
@@ -326,10 +327,18 @@ struct Retired {
     /// The xpath suffixes whose rows retire: one element name (the last step)
     /// or several steps (`Parameter/Property`).
     hosts: &'static [&'static str],
+    /// Keeps the rows the `Dynamic` parser wrote (every xpath with a
+    /// `Dynamic` step): set where the promoted column is filled from `Static`
+    /// only, so a host inside `Dynamic` still reaches no column and ingest
+    /// keeps reporting it. Only v26 sets it; v23 to v25 retire as they did.
+    keeps_dynamic: bool,
 }
 
 impl Retired {
     fn retires(&self, xpath: &str) -> bool {
+        if self.keeps_dynamic && xpath.contains("/Dynamic/") {
+            return false;
+        }
         self.hosts.iter().any(|host| {
             xpath
                 .strip_suffix(host)
@@ -358,6 +367,7 @@ const TEXT_PARAMETER_REF_PROMOTION: Promotion = Promotion {
         kind: crate::report::UnknownKind::Attribute,
         name: "TextParameterRefId",
         hosts: &TEXT_PARAMETER_REF_HOSTS,
+        keeps_dynamic: false,
     }],
     blob_error: (
         "TextParameterRefBackfillError",
@@ -372,6 +382,7 @@ const ACCESS_PROMOTION: Promotion = Promotion {
         kind: crate::report::UnknownKind::Attribute,
         name: "Access",
         hosts: &ACCESS_HOSTS,
+        keeps_dynamic: false,
     }],
     blob_error: ("PresentationBackfillError", "backfill_presentation"),
     report_error: "presentation_report_backfill",
@@ -440,46 +451,55 @@ const PLACEMENT_PROMOTION: Promotion = Promotion {
             kind: UnknownKind::Attribute,
             name: "Offset",
             hosts: &PARAMETER_HOST,
+            keeps_dynamic: false,
         },
         Retired {
             kind: UnknownKind::Attribute,
             name: "BitOffset",
             hosts: &PARAMETER_HOST,
+            keeps_dynamic: false,
         },
         Retired {
             kind: UnknownKind::Element,
             name: "Property",
             hosts: &PROPERTY_PARENTS,
+            keeps_dynamic: false,
         },
         Retired {
             kind: UnknownKind::Attribute,
             name: "ObjectIndex",
             hosts: &PROPERTY_HOST,
+            keeps_dynamic: false,
         },
         Retired {
             kind: UnknownKind::Attribute,
             name: "ObjectType",
             hosts: &PROPERTY_HOST,
+            keeps_dynamic: false,
         },
         Retired {
             kind: UnknownKind::Attribute,
             name: "PropertyId",
             hosts: &PROPERTY_HOST,
+            keeps_dynamic: false,
         },
         Retired {
             kind: UnknownKind::Attribute,
             name: "Offset",
             hosts: &PROPERTY_HOST,
+            keeps_dynamic: false,
         },
         Retired {
             kind: UnknownKind::Attribute,
             name: "BitOffset",
             hosts: &PROPERTY_HOST,
+            keeps_dynamic: false,
         },
         Retired {
             kind: UnknownKind::Attribute,
             name: "Occurrence",
             hosts: &PROPERTY_HOST,
+            keeps_dynamic: false,
         },
     ],
     blob_error: ("PlacementBackfillError", "backfill_placement_columns"),
@@ -531,6 +551,125 @@ fn migrate_v24_to_v25(conn: &Connection) -> Result<(), ProductDbError> {
         }
     }
     add_attribute_unknowns(conn, "v25", Some(&carried))
+}
+
+/// The hosts v26 stores `SuffixText` on: `Parameter` (also a union member or a
+/// `ModuleDef`'s) and `ParameterRef`, in `Static` only. Any other host, and
+/// both inside `Dynamic`, stays reported.
+const SUFFIX_TEXT_HOSTS: [&str; 2] = ["Parameter", "ParameterRef"];
+
+const SUFFIX_TEXT_PROMOTION: Promotion = Promotion {
+    version: "v26",
+    retired: &[Retired {
+        kind: UnknownKind::Attribute,
+        name: "SuffixText",
+        hosts: &SUFFIX_TEXT_HOSTS,
+        keeps_dynamic: true,
+    }],
+    blob_error: ("SuffixTextBackfillError", "backfill_suffix_text"),
+    report_error: "suffix_text_report_backfill",
+};
+
+/// v25 -> v26 (ADR-0146: WP-01 and WP-02).
+///
+/// WP-01: `ingest_unknown` gains its row identity. Every package install
+/// re-parsed its shared members and wrote their unknown rows again, so a blob
+/// shared by several packages carried one copy per install. The repair merges
+/// each identity group into its oldest row (`report::merge_repeated_unknowns`:
+/// largest per-parse count, oldest sample), then two unique indexes make a
+/// second copy impossible. Install reports and `package.unknown_count` are per
+/// package and were never derived from these rows, so the repair leaves them.
+///
+/// WP-02: `parameter` and `parameter_ref` gain `suffix_text`, and `SuffixText`
+/// on those two hosts stops being an unknown attribute. v23's procedure
+/// (`promote_from_program_blobs`) with `backfill_suffix_text`: a blob that is
+/// not carried forward keeps its rows and gets a `SuffixTextBackfillError`
+/// record, and the measured reports counting it become `unavailable`.
+fn migrate_v25_to_v26(conn: &Connection) -> Result<(), ProductDbError> {
+    crate::report::merge_repeated_unknowns(conn)?;
+    conn.execute_batch(crate::report::UNKNOWN_IDENTITY_INDEXES)?;
+    conn.execute_batch(
+        "ALTER TABLE parameter ADD COLUMN suffix_text TEXT;
+         ALTER TABLE parameter_ref ADD COLUMN suffix_text TEXT;",
+    )?;
+    let retired = promote_from_program_blobs(conn, &SUFFIX_TEXT_PROMOTION, backfill_suffix_text)?;
+    retire_promoted_from_reports(conn, &retired, &SUFFIX_TEXT_PROMOTION)
+}
+
+/// Fills `suffix_text` of the parameters and refs of the programs one blob
+/// owns from its bytes, verbatim as the parser stores it. A program another
+/// blob owns is left alone, as the parsers leave it; so is every repeated
+/// declaration of a program id in this blob, which ingest's `first_winner`
+/// stores nothing of. `Dynamic` is skipped whole, as the parser skips it. A
+/// parameter or ref id repeated inside one program needs no rule here: the
+/// table keys refuse such a blob at ingest, so no stored blob carries one.
+fn backfill_suffix_text(
+    conn: &Connection,
+    sha256: &str,
+    source_path: &str,
+    bytes: &[u8],
+) -> Result<(), ProductDbError> {
+    use quick_xml::events::Event;
+    let owned: std::collections::HashSet<String> = conn
+        .prepare("SELECT id FROM application_program WHERE source_sha256 = ?1")?
+        .query_map([sha256], |r| r.get(0))?
+        .collect::<Result<_, _>>()?;
+    let mut reader = quick_xml::Reader::from_reader(bytes);
+    let mut buf = Vec::new();
+    let mut program: Option<String> = None;
+    let mut declared = std::collections::HashSet::new();
+    loop {
+        buf.clear();
+        let event = reader
+            .read_event_into(&mut buf)
+            .map_err(|e| ProductDbError::Xml {
+                source_path: source_path.to_string(),
+                cause: e.to_string(),
+            })?;
+        let start = match &event {
+            Event::Eof => break,
+            Event::Start(e) if crate::xml::local_name(e) == "Dynamic" => {
+                crate::xml::skip_subtree(&mut reader, e.name().as_ref(), source_path)?;
+                continue;
+            }
+            Event::Start(e) | Event::Empty(e) => e,
+            _ => continue,
+        };
+        let name = crate::xml::local_name(start);
+        let table = match name.as_str() {
+            "ApplicationProgram" => {
+                // The parser's program identity, `""` for a missing `Id`.
+                let id = crate::xml::attrs(start, source_path)?
+                    .get("Id")
+                    .unwrap_or_default()
+                    .to_string();
+                let first = declared.insert(id.clone());
+                program = (first && owned.contains(&id)).then_some(id);
+                continue;
+            }
+            "Parameter" => "parameter",
+            "ParameterRef" => "parameter_ref",
+            _ => continue,
+        };
+        let Some(program_id) = program.as_deref() else {
+            continue;
+        };
+        let a = crate::xml::attrs(start, source_path)?;
+        // The parser's row identity: a `Parameter` without `Id` is stored
+        // under `""`; a `ParameterRef` without one never reaches the table
+        // (its `id` is NOT NULL and ingest refuses the package).
+        let id = match table {
+            "parameter" => Some(a.get("Id").unwrap_or_default()),
+            _ => a.get("Id"),
+        };
+        if let (Some(id), Some(suffix)) = (id, a.get("SuffixText")) {
+            conn.execute(
+                &format!("UPDATE {table} SET suffix_text = ?3 WHERE program_id = ?1 AND id = ?2"),
+                params![program_id, id, suffix],
+            )?;
+        }
+    }
+    Ok(())
 }
 
 /// Fills the v25 columns of the programs one blob owns from its bytes, through
@@ -982,8 +1121,10 @@ fn migrate_v21_to_v22(conn: &Connection) -> Result<(), ProductDbError> {
 /// stored blob that classifies as an `ApplicationProgram` and whose bytes
 /// still match their key, in its own savepoint,
 /// `parse::program::backfill_parameter_attribute_unknowns` adds the rows a
-/// current ingest writes, for the keys the blob lacks, once per package
-/// member that re-parsed it (or once for a standalone blob): the v16 rule. Scheme-evidence reconciliation runs in the mode ingest used: the
+/// current ingest writes, for the keys the blob lacks. Until v26 that was
+/// once per package member that re-parsed it (the v16 rule); since ADR-0146
+/// `insert_unknown` is idempotent per row identity, so it is once per blob.
+/// Scheme-evidence reconciliation runs in the mode ingest used: the
 /// package mode for a blob some scheme-21/23 package carries.
 ///
 /// Every measured package report then gains its members' new rows, merged
@@ -1013,9 +1154,7 @@ fn add_attribute_unknowns(
             "SELECT s.sha256, s.source_path,
                     EXISTS (SELECT 1 FROM package_member AS m JOIN package AS p
                             ON p.sha256 = m.package_sha256
-                            WHERE m.source_sha256 = s.sha256 AND p.scheme IN (21, 23)),
-                    (SELECT count(*) FROM package_member AS m
-                     WHERE m.source_sha256 = s.sha256 AND m.role = 'ApplicationProgram')
+                            WHERE m.source_sha256 = s.sha256 AND p.scheme IN (21, 23))
              FROM source_file AS s ORDER BY s.sha256",
         )?
         .query_map([], |r| {
@@ -1023,7 +1162,6 @@ fn add_attribute_unknowns(
                 r.get::<_, String>(0)?,
                 r.get::<_, String>(1)?,
                 r.get::<_, bool>(2)?,
-                r.get::<_, i64>(3)?,
             ))
         })?
         .collect::<Result<Vec<_>, _>>()?;
@@ -1031,7 +1169,7 @@ fn add_attribute_unknowns(
     // not carried forward, and neither is any report that counts it.
     let mut gained: std::collections::HashMap<String, Vec<crate::report::UnknownConstruct>> =
         std::collections::HashMap::new();
-    for (sha256, source_path, extended, members) in blobs {
+    for (sha256, source_path, extended) in blobs {
         if carried.is_some_and(|carried| !carried.contains(&sha256)) {
             continue;
         }
@@ -1039,9 +1177,6 @@ fn add_attribute_unknowns(
             source_path: source_path.clone(),
             cause: format!("{version} backfill: {cause}"),
         };
-        // One copy per package that re-parsed it, or one for a blob only a
-        // standalone ingest parsed (the v16 rule).
-        let copies = usize::try_from(members.max(1)).unwrap_or(1);
         let Some(bytes) = crate::load_source_file(conn, &sha256)? else {
             continue;
         };
@@ -1069,7 +1204,6 @@ fn add_attribute_unknowns(
                 &source_path,
                 &bytes,
                 extended,
-                copies,
             ) {
                 Ok(rows) => {
                     conn.execute_batch("RELEASE SAVEPOINT v21_parameter_attributes;")?;
@@ -2404,8 +2538,9 @@ fn backfill_function_and_space_data(conn: &Connection) -> Result<(), ProductDbEr
                 // collector is file-wide, and every blob reaching this
                 // backfill was already ingested once — by `install_package`,
                 // which called `insert_unknown` on that same file-wide set.
-                // `ingest_unknown` has no unique key and `insert_unknown` is
-                // a plain `INSERT`, so handing it the whole set again would
+                // Before v26 `ingest_unknown` had no unique key and
+                // `insert_unknown` was a plain `INSERT` (ADR-0146 made it
+                // idempotent), so handing it the whole set again would
                 // silently double each `Manufacturer`/`DatapointType`
                 // unknown that install already recorded: a count that
                 // depends on install history rather than on bytes, which is
@@ -3082,7 +3217,8 @@ fn record_backfill_failure(
 ) -> Result<(), ProductDbError> {
     conn.execute(
         "INSERT INTO ingest_unknown (source_sha256, program_id, xpath, kind, name, occurrences, sample)
-         VALUES (?1, NULL, ?2, ?3, ?4, 1, ?5)",
+         VALUES (?1, NULL, ?2, ?3, ?4, 1, ?5)
+         ON CONFLICT DO NOTHING",
         params![sha256, source_path, kind, name, error.to_string()],
     )?;
     Ok(())
@@ -4538,8 +4674,8 @@ mod tests {
     /// The backfill replays the *whole* `ingest_master_data`, whose unknown
     /// collector is file-wide, but the blob it replays was already ingested
     /// once — `install_package` called `insert_unknown` on that same
-    /// file-wide set at install time, and `ingest_unknown` has no unique key
-    /// to collide on. Recording the whole set a second time would double
+    /// file-wide set at install time, and before v26 (ADR-0146)
+    /// `ingest_unknown` had no unique key to collide on. Recording the whole set a second time would double
     /// every unknown the *old* parser had already seen, turning a count into
     /// a function of how many times a database happened to be migrated.
     /// Only the two element families this migration newly parses may

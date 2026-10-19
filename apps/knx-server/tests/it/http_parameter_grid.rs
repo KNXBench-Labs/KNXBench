@@ -18,17 +18,30 @@ const HARDWARE: &str = r#"<KNX xmlns="http://knx.org/xml/project/11"><Manufactur
 
 fn program(dynamic: &str) -> String {
     let ids = ["P-1", "P-2", "P-3", "P-4", "P-5"];
+    // WP-02: P-2 declares a unit suffix, P-3 too, overridden by its ref.
+    let suffix = |id: &str| match id {
+        "P-2" | "P-3" => r#" SuffixText="s""#,
+        _ => "",
+    };
     let parameters: String = ids
         .iter()
         .map(|id| {
             format!(
-                r#"<Parameter Id="{id}" Text="Fictional {id}" ParameterType="PT-1" Value="0"/>"#
+                r#"<Parameter Id="{id}" Text="Fictional {id}" ParameterType="PT-1" Value="0"{}/>"#,
+                suffix(id)
             )
         })
         .collect();
     let refs: String = ids
         .iter()
-        .map(|id| format!(r#"<ParameterRef Id="{id}_R-1" RefId="{id}"/>"#))
+        .map(|id| {
+            let own = if *id == "P-3" {
+                r#" SuffixText="ms""#
+            } else {
+                ""
+            };
+            format!(r#"<ParameterRef Id="{id}_R-1" RefId="{id}"{own}/>"#)
+        })
         .collect();
     format!(
         r#"<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-1"><ApplicationPrograms><ApplicationProgram Id="A-1" Name="Grid" ApplicationVersion="1" MaskVersion="MV-0701"><Static>
@@ -196,4 +209,30 @@ async fn a_declared_indent_level_reaches_the_field_and_an_undeclared_one_stays_n
     };
     assert_eq!(field("P-1_R-1")["indentLevel"], Value::Null);
     assert_eq!(field("P-2_R-1")["indentLevel"], json!(2));
+}
+
+/// WP-02: the resolved `SuffixText` reaches the field next to, never inside,
+/// its value; the ref's own declaration wins, and no suffix stays `null`.
+#[tokio::test]
+async fn a_declared_suffix_reaches_the_field_and_leaves_the_value_alone() {
+    let dto = panel(r#"<ParameterBlock Id="PB-L" Text="Plain list"><ParameterRefRef RefId="P-1_R-1"/><ParameterRefRef RefId="P-2_R-1"/><ParameterRefRef RefId="P-3_R-1"/></ParameterBlock>"#).await;
+    let field = |ets_id: &str| {
+        dto["sections"][0]["fields"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|field| field["etsId"] == ets_id)
+            .unwrap()
+            .clone()
+    };
+    let (plain, own, overridden) = (field("P-1_R-1"), field("P-2_R-1"), field("P-3_R-1"));
+    assert_eq!(plain["suffixText"], Value::Null);
+    assert_eq!(own["suffixText"], json!("s"));
+    assert_eq!(overridden["suffixText"], json!("ms"));
+    for field in [&plain, &own, &overridden] {
+        assert_eq!(field["suffixTextLanguage"], Value::Null);
+        assert_eq!(field["value"], plain["value"]);
+        assert_eq!(field["editable"], plain["editable"]);
+        assert_eq!(field["writeEtsId"].is_null(), plain["writeEtsId"].is_null());
+    }
 }

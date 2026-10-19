@@ -22,14 +22,20 @@ written by a gate on the unmerged WP-01/02 branch. Five `knx-cli` tests spawned
 product database with `open_and_migrate`. `AppState::with_user_product_db` then
 turned v25's `FutureVersion` refusal into `.ok()`, so server and desktop ran
 without products and every route said only "no product database configured".
-Fixes: `doc-export` opens the database with `open_read_only` (ADR-0090; RED: an
-empty, version-0 file grew to a full schema); the CLI tests' helpers give `knx` a
-never-existing `XDG_DATA_HOME` (inotify sweep over all 185 tests: 5 → 0 opens);
-`AppState::with_product_db_at` keeps the open error in `product_db_unavailable`,
-prints it, logs it as a `product database` error that survives the log reset on
-new/open/import, and every refusal (catalogue, install, legacy install,
-parameter writes) names it (two mutants killed). Troubleshooting page, developer
-pitfall and an OPEN_WORK item (gate-wide `XDG_DATA_HOME`) record the rest.
+Fixes: `doc-export` and the reading commands `products list/coverage/verify/
+show/identity/family/order-number` and `device readiness` open the database
+read-only (`open_read_only`, as the MCP adapter does, ADR-0090); a missing file
+reads as an empty in-memory catalogue and is not created (RED: all eight
+commands grew an empty, version-0 file to a full schema or created one). The CLI
+tests' helpers give `knx` a never-existing `XDG_DATA_HOME` (inotify sweep over
+the 185 tests: 5 → 0 opens). `AppState::with_product_db_at` keeps the open error
+in `product_db_unavailable`, prints it, logs it as a `product database` error
+that survives the log reset on new/open/import, and every refusal (catalogue,
+package and legacy install, parameter writes, download preparation, device
+readiness, manufacturer-file restore) names it; six mutants killed. Cross-vendor
+review (Codex `gpt-6.1-sol`, high): accept with fixes, all three findings fixed
+test-first. Troubleshooting page, developer pitfall and an OPEN_WORK item
+(gate-wide `XDG_DATA_HOME`) record the rest.
 
 ## Empty ZIP directories must really be empty, WP-16 (19 October 2026)
 

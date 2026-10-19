@@ -45,6 +45,26 @@ and the catalogue stayed empty.
   at … cannot be opened: product database is version 26, this build supports
   up to 25 — no downgrade path exists".
 
+## Review round
+
+Codex `gpt-6.1-sol` (high, read-only): ACCEPT WITH FIXES.
+
+- IMPORTANT: reading `products` commands and `device readiness` still migrated
+  the default product DB via `open_products_db`. Fixed with
+  `open_products_db_for_reading` (`open_read_only`; a missing file opens as an
+  empty `:memory:` catalogue). RED on the old binary: all 8 commands × {older
+  file, missing file} wrote (491,520 bytes or a created file). New test
+  `cli_native_readers_read_only::product_database_readers_leave_the_default_product_database_untouched`.
+- IMPORTANT: download preparation (two sites), device readiness and the
+  manufacturer-file restore still hid the reason. Fixed with
+  `AppState::product_db_missing_or` and `no_application_program`; wording and
+  status codes unchanged when no reason exists.
+- MINOR: the HTTP test now also covers package install, readiness, an ETS
+  import's log reset and the manufacturer-file restore.
+- Mutants killed: refusal ignores reason, new-project reset drops it,
+  readiness ignores it, manufacturer restore ignores it, install ignores it,
+  import reset drops it.
+
 ## Not done / follow-ups
 
 - The owner's real file was not touched (copies only). Recovery: a build with

@@ -302,9 +302,15 @@ impl AppState {
     /// The refusal of a route that needs the product database while none is
     /// open: the startup reason when there is one, else the plain fact.
     pub fn product_db_missing(&self) -> String {
+        self.product_db_missing_or(NO_PRODUCT_DATABASE)
+    }
+
+    /// [`Self::product_db_missing`] for a refusal with its own wording: the
+    /// startup reason when there is one, else `generic` unchanged.
+    pub fn product_db_missing_or(&self, generic: &str) -> String {
         self.product_db_unavailable
             .clone()
-            .unwrap_or_else(|| NO_PRODUCT_DATABASE.to_string())
+            .unwrap_or_else(|| generic.to_string())
     }
 
     /// State rooted at `data_dir` with **no** product database: nothing

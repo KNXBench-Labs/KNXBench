@@ -787,9 +787,9 @@ fn run_doc_export(args: &[String]) -> ExitCode {
     // reads only `ReportOptions`, which is what keeps its own tests
     // deterministic (see `knx-report`'s doc comment; `knx-server` does the
     // same thing on the HTTP side).
-    // ADR-0090: a reader never writes the user's product database. Opening
-    // it with `open_and_migrate` would move an older file to this build's
-    // version and lock every older KNXBench out of its own catalogue.
+    // Read-only, as the MCP adapter opens it (ADR-0090): migrating the
+    // user's file in place would lock every older KNXBench out of its own
+    // catalogue.
     let products = knx_productdb::default_path()
         .filter(|path| path.exists())
         .and_then(|path| match knx_productdb::open_read_only(&path) {
@@ -1504,6 +1504,23 @@ fn open_products_db(explicit: Option<&str>) -> Result<knx_productdb::Connection,
         .map_err(|e| format!("failed to open product database at {}: {e}", path.display()))
 }
 
+/// [`open_products_db`] for a command that only reads the catalogue: the
+/// file is opened read-only and an older one is migrated in memory only
+/// (`open_read_only`, as the MCP adapter does, ADR-0090); a missing one
+/// reads as an empty in-memory catalogue. The user's file is never created
+/// or migrated, so a newer CLI cannot lock an older KNXBench out of it.
+fn open_products_db_for_reading(
+    explicit: Option<&str>,
+) -> Result<knx_productdb::Connection, String> {
+    let path = resolve_product_db_path(explicit)?;
+    let opened = if path.exists() {
+        knx_productdb::open_read_only(&path).map(|products| products.conn)
+    } else {
+        knx_productdb::open_and_migrate(Path::new(":memory:"))
+    };
+    opened.map_err(|e| format!("failed to open product database at {}: {e}", path.display()))
+}
+
 /// `knx products coverage`: the download support level of every program
 /// (`knx_app::download_support`), offline.
 fn run_products_coverage(args: &[String]) -> ExitCode {
@@ -1522,7 +1539,7 @@ fn run_products_coverage(args: &[String]) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    let conn = match open_products_db(product_db.as_deref()) {
+    let conn = match open_products_db_for_reading(product_db.as_deref()) {
         Ok(conn) => conn,
         Err(e) => {
             eprintln!("{e}");
@@ -1628,7 +1645,7 @@ fn run_products_list(args: &[String]) -> ExitCode {
         i += 1;
     }
 
-    let conn = match open_products_db(product_db.as_deref()) {
+    let conn = match open_products_db_for_reading(product_db.as_deref()) {
         Ok(conn) => conn,
         Err(e) => {
             eprintln!("{e}");
@@ -1959,7 +1976,7 @@ fn run_products_show(args: &[String]) -> ExitCode {
         return ExitCode::FAILURE;
     };
 
-    let conn = match open_products_db(product_db.as_deref()) {
+    let conn = match open_products_db_for_reading(product_db.as_deref()) {
         Ok(conn) => conn,
         Err(e) => {
             eprintln!("{e}");
@@ -2044,7 +2061,7 @@ fn run_products_verify(args: &[String]) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    let conn = match open_products_db(product_db.as_deref()) {
+    let conn = match open_products_db_for_reading(product_db.as_deref()) {
         Ok(conn) => conn,
         Err(e) => {
             eprintln!("{e}");
@@ -2087,7 +2104,7 @@ fn products_positionals(
         eprintln!("{missing}\n{USAGE}");
         return Err(ExitCode::FAILURE);
     }
-    let conn = open_products_db(product_db.as_deref()).map_err(|e| {
+    let conn = open_products_db_for_reading(product_db.as_deref()).map_err(|e| {
         eprintln!("{e}");
         ExitCode::FAILURE
     })?;
@@ -2601,7 +2618,7 @@ fn run_device_readiness(args: &[String]) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    let products = match open_products_db(parsed.product_db.as_deref()) {
+    let products = match open_products_db_for_reading(parsed.product_db.as_deref()) {
         Ok(conn) => conn,
         Err(e) => {
             eprintln!("{e}");

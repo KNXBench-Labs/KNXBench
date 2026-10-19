@@ -3447,7 +3447,7 @@ struct CatalogItemsQuery {
 
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
-struct CatalogItemDto {
+pub(crate) struct CatalogItemDto {
     id: String,
     manufacturer_id: String,
     name: Option<String>,
@@ -3463,6 +3463,12 @@ struct CatalogItemDto {
     visible_description_language: Option<String>,
     /// `CatalogItem/@DefaultLanguage`, verbatim; `null` when undeclared.
     source_language: Option<String>,
+    /// Application, version, catalogue section and recorded source names (file
+    /// names only), so entries with equal labels can be told apart. Its fields
+    /// are null when the item has no application link or the linked program
+    /// is not installed; the field itself is absent only from older servers.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    details: Option<knx_productdb::CatalogItemDetails>,
 }
 
 impl From<knx_productdb::query::CatalogItemRow> for CatalogItemDto {
@@ -3478,6 +3484,7 @@ impl From<knx_productdb::query::CatalogItemRow> for CatalogItemDto {
             name_language: r.name_language,
             visible_description_language: r.visible_description_language,
             source_language: r.source_language,
+            details: r.details,
         }
     }
 }

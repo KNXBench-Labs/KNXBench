@@ -2,7 +2,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { join } from "node:path";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
-import type { CatalogueUpdatePreview } from "../src/api";
+import type { CatalogCleanupItem, CatalogItem, CatalogueUpdatePreview } from "../src/api";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
@@ -26,8 +26,25 @@ const preview: CatalogueUpdatePreview = {
   productsAdded: 2, hardware2programsAdded: 2, idConflicts: 0, catalogueFingerprint: "c".repeat(64), token: "fixture-token",
 };
 
+/** Two placements of one fictional product + application, and a newer application version. */
+function catalogItem(id: string, binding: string, version: string, source: string): CatalogItem {
+  return { id, manufacturerId: "M-00FA", name: "Fictional dimmer", number: "DIM-1", visibleDescription: null,
+    productRefId: "M-00FA_H-1_P-1", hardware2programRefId: binding, nameLanguage: null, visibleDescriptionLanguage: null,
+    sourceLanguage: null, details: { applicationProgramId: `M-00FA_A-0001-${version}-0001`, applicationName: "Fictional dimmer",
+      applicationVersion: version, catalogSectionId: "M-00FA_CS-1", sourceNames: [source] } };
+}
+const ITEMS: CatalogItem[] = [
+  catalogItem("M-00FA_CI-1", "M-00FA_H-1_HP-0001-10-0001", "10", "fictional-dimmer-v1.knxprod"),
+  catalogItem("M-00FA_CI-2", "M-00FA_H-1_HP-0001-10-0001", "10", "fictional-dimmer-v1-copy.knxprod"),
+  catalogItem("M-00FA_CI-3", "M-00FA_H-1_HP-0001-20-0001", "20", "fictional-dimmer-v2.knxprod"),
+];
+const CLEANUP_BACKUP = "products.sqlite.backup-1760270500-ef56ef56ef56.sqlite";
+
 interface Fixture {
   unexpected: string[];
+  items: CatalogItem[];
+  cleanupPreviews: string[][];
+  cleanupApplies: { itemIds: string[]; token: string; confirmed: boolean }[];
   previews: number;
   applies: { token: boolean }[];
   restores: string[];
@@ -48,7 +65,7 @@ const report = { sha256: preview.packageSha256, scheme: 20, skipped: false, memb
   translations: { program: 0, catalog: 0, hardware: 0, master: 0 }, droppedDatapointTypes: 0, facts: null };
 
 async function fixture(page: Page, language: Language, theme: string, width: number): Promise<Fixture> {
-  const f: Fixture = { unexpected: [], previews: 0, applies: [], restores: [], deletes: [], directInstalls: 0, applyMode: "ok", restoreMode: "ok",
+  const f: Fixture = { unexpected: [], items: [], cleanupPreviews: [], cleanupApplies: [], previews: 0, applies: [], restores: [], deletes: [], directInstalls: 0, applyMode: "ok", restoreMode: "ok",
     backups: [{ name: "products.sqlite.backup-1750000000-cd34cd34cd34.sqlite", bytes: 3 * 1024 * 1024, modifiedUnixSeconds: 1750000000, identity: "id-older" }] };
   await page.setViewportSize({ width, height: 900 });
   await page.route("https://api.github.com/**", (route) => { f.unexpected.push(route.request().url()); return route.abort(); });
@@ -70,7 +87,22 @@ async function fixture(page: Page, language: Language, theme: string, width: num
     if (path === "/api/project/status-metrics" && method === "GET") return ok(statusMetricsFixtureBody(tree));
     if (path === "/api/log") return ok([]);
     if (path === "/api/bus/discover" && method === "POST") return ok({ interfaces: [] });
-    if (["/api/product-languages", "/api/catalog/manufacturers", "/api/catalog/items"].includes(path)) return ok([]);
+    if (["/api/product-languages", "/api/catalog/manufacturers"].includes(path)) return ok([]);
+    if (path === "/api/catalog/items" && method === "GET") return ok(f.items);
+    if (path === "/api/catalog/cleanup/preview" && method === "POST") {
+      const ids = (route.request().postDataJSON() as { itemIds: string[] }).itemIds;
+      f.cleanupPreviews.push(ids);
+      const items: CatalogCleanupItem[] = f.items.filter((item) => ids.includes(item.id)).map((item) => ({ ...item,
+        impact: { lastPlacementForBinding: !f.items.some((other) => !ids.includes(other.id)
+          && other.hardware2programRefId === item.hardware2programRefId), openProjectDevices: item.id === "M-00FA_CI-3" ? 0 : 2 } }));
+      return ok({ token: `token-${ids.join("+")}`, items });
+    }
+    if (path === "/api/catalog/cleanup/apply" && method === "POST") {
+      const body = route.request().postDataJSON() as { itemIds: string[]; token: string; confirmed: boolean };
+      f.cleanupApplies.push(body);
+      f.items = f.items.filter((item) => !body.itemIds.includes(item.id));
+      return ok({ removedItemIds: body.itemIds, backup: CLEANUP_BACKUP });
+    }
     if (["/api/device-download/status", "/api/device-address/status"].includes(path)) return refuse(404, "none", "no fixture operation");
     if (path === "/api/devices" && method === "GET") return ok({ schemaVersion: 1, serverIncarnation: "catalogue-fixture", snapshotRevision: 1, devices: [] });
     if (path === "/api/catalog/update/preview" && method === "POST") { f.previews += 1; return ok({ applied: false, preview }); }
@@ -193,6 +225,61 @@ for (const language of ["en", "de"] as const) for (const theme of ["porcelain", 
     await noHorizontalOverflow(page);
     await capture(page, `${tag}-6-deleted`);
     expect(f.directInstalls).toBe(0);
+    expect(f.unexpected).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+}
+
+for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
+  test(`${language} ${width}: entries show their identity, cleanup previews before it backs up and removes`, async ({ page }) => {
+    const m: Catalogue = language === "de" ? de : en;
+    const tag = `cleanup-${language}-${width}`;
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    const f = await fixture(page, language, "porcelain", width);
+    f.items = [...ITEMS];
+    const catalogue = await openCatalogue(page, m);
+    // Equal labels, told apart by application version and source.
+    // The results listbox, not the manufacturer filter's own options.
+    const rows = catalogue.getByRole("listbox").getByRole("option");
+    await expect(rows).toHaveCount(3);
+    await expect(rows.nth(2)).toContainText("fictional-dimmer-v2.knxprod");
+    await expect(rows.nth(2)).toContainText("M-00FA_A-0001-20-0001");
+    await noHorizontalOverflow(page);
+    await capture(page, `${tag}-1-identity`);
+
+    await catalogue.getByRole("button", { name: m["catalog.cleanup.open"], exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: m["catalog.cleanup.title"] });
+    await expect(dialog.getByRole("checkbox")).toHaveCount(3);
+    await expect(dialog.getByRole("checkbox", { checked: true })).toHaveCount(0);
+    await dialog.getByRole("button", { name: m["catalog.cleanup.suggest"], exact: true }).click();
+    await expect(dialog.getByRole("checkbox", { checked: true })).toHaveCount(1);
+    await expect(dialog.getByRole("checkbox", { name: /fictional-dimmer-v1-copy/ })).toBeChecked();
+    // The older version is chosen by hand; no version is ever preferred automatically.
+    await dialog.getByRole("checkbox", { name: /M-00FA_CI-1/ }).check();
+    const box = (await dialog.boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(width);
+    await noHorizontalOverflow(page);
+    await capture(page, `${tag}-2-select`);
+
+    await dialog.getByRole("button", { name: m["catalog.cleanup.preview"], exact: true }).click();
+    await expect(dialog).toContainText(m["catalog.cleanup.nothingYet"]);
+    await expect(dialog.locator(".catalog-cleanup-warning")).toHaveCount(2);
+    expect(f.cleanupPreviews).toEqual([["M-00FA_CI-1", "M-00FA_CI-2"]]);
+    expect(f.cleanupApplies).toEqual([]);
+    await noHorizontalOverflow(page);
+    await capture(page, `${tag}-3-preview`);
+
+    await dialog.getByRole("button", { name: m["catalog.cleanup.confirm.other"].replace("{count}", "2"), exact: true }).click();
+    await expect(dialog).toContainText(CLEANUP_BACKUP);
+    expect(f.cleanupApplies).toEqual([{ itemIds: ["M-00FA_CI-1", "M-00FA_CI-2"], token: "token-M-00FA_CI-1+M-00FA_CI-2", confirmed: true }]);
+    await capture(page, `${tag}-4-done`);
+    await dialog.getByRole("button", { name: m["catalog.cleanup.close"], exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(rows).toHaveCount(1);
+    // The result stays in the catalogue after the dialog is gone.
+    await expect(catalogue.locator(".catalog-cleanup-notice")).toContainText(CLEANUP_BACKUP);
     expect(f.unexpected).toEqual([]);
     expect(errors).toEqual([]);
   });

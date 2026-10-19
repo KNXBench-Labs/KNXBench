@@ -2,6 +2,16 @@
 
 # Implementation status
 
+## Catalogue entries explained, and cleanup (source builds after Alpha 14)
+
+Device catalog rows show the application, its version, the catalogue section and
+the source file, so entries with equal names can be told apart. **Clean up
+catalogue** removes only entries you select, after a preview that names entries
+that are the last one for their product and application, and after a full
+catalogue backup. Products, applications and package files stay; no disk space is
+freed. [ADR-0145](../adr/0145-catalogue-cleanup-removes-placements-only.md),
+[operating instructions](user-guide/05-devices-and-products.md#cleaning-up-the-catalogue-source-builds-after-alpha-14).
+
 ## Device-empty topology ranges (source builds after Alpha 14)
 
 The Topology diagram hides lines without devices and areas without a populated

@@ -1180,6 +1180,63 @@ main {
 .catalog-backup-name { overflow-wrap: anywhere; word-break: break-all; font-size: 0.85em; }
 .catalog-backup-meta { color: var(--knx-muted); font-size: 0.85em; }
 .catalog-backup-actions { display: inline-flex; flex-wrap: wrap; gap: 0.4rem; }
+/* Identity under each catalogue row: what tells equal labels apart. */
+.catalog-item-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  margin-top: 0.15rem;
+  color: var(--knx-muted);
+  font-size: 0.8em;
+  overflow-wrap: anywhere;
+}
+.catalog-cleanup-open { margin: 0.5rem 0; }
+.catalog-cleanup-notice { margin: 0 0 0.5rem; font-size: 0.85rem; overflow-wrap: anywhere; }
+/* Sized to its content like the unsaved-changes dialog: the shared overlay
+   stretches its panel to the 70vh cap otherwise. The action row stays in
+   view while the panel scrolls, so the confirmation is never below the fold. */
+.search-panel.catalog-cleanup-dialog {
+  align-self: flex-start;
+  box-sizing: border-box;
+  width: min(48rem, calc(100vw / var(--app-ui-scale, 1) - 2rem));
+  max-height: calc(100dvh / var(--app-ui-scale, 1) - 10vh - 1rem);
+  padding: 1rem 1.25rem 0;
+}
+.catalog-cleanup-dialog h2 { margin-top: 0; }
+.catalog-cleanup-dialog > footer {
+  position: sticky;
+  bottom: 0;
+  margin-top: 0.5rem;
+  padding: 0.6rem 0 1rem;
+  background: var(--knx-surface);
+  border-top: 1px solid var(--knx-border);
+}
+.catalog-cleanup-list {
+  list-style: none;
+  margin: 0.5rem 0;
+  padding: 0;
+  display: grid;
+  gap: 0.4rem;
+  max-height: min(24rem, 45vh);
+  overflow: auto;
+}
+.catalog-cleanup-list li {
+  min-width: 0;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--knx-border);
+  border-radius: var(--knx-radius-input);
+}
+.catalog-cleanup-list label { display: flex; align-items: flex-start; gap: 0.5rem; min-width: 0; }
+.catalog-cleanup-list label > span { min-width: 0; }
+.catalog-cleanup-list p { margin: 0.3rem 0 0; font-size: 0.85em; }
+.catalog-cleanup-warning { color: var(--knx-warning-color); }
+.catalog-cleanup-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: flex-end; }
+.catalog-cleanup-tools { justify-content: flex-start; }
+/* Narrow windows: one scroll area (the panel), full-width answers. */
+@media (max-width: 40rem) {
+  .catalog-cleanup-list { max-height: none; overflow: visible; }
+  .catalog-cleanup-dialog > footer .dialog-action { flex: 1 1 auto; }
+}
 
 .catalog-report {
   font-size: 0.85rem;

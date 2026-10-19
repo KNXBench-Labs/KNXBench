@@ -14,6 +14,312 @@ use knx_productdb::{
 };
 use zip::write::SimpleFileOptions;
 
+fn cleanup_database(dir: &Path) -> knx_productdb::Connection {
+    let path = database_with(dir, &[0x10]);
+    let conn = open_and_migrate(&path).unwrap();
+    conn.execute_batch(
+        "INSERT INTO catalog_item (id, manufacturer_id, section_id, name,
+             product_ref_id, hardware2program_ref_id, source_sha256)
+         SELECT 'CI-A', 'M-0001', 'SECTION', 'Dimmer', 'M-0001_H-1_P-1',
+                'M-0001_H-1_HP-0001-10-0001', source_sha256
+         FROM application_program;
+         INSERT INTO catalog_item SELECT 'CI-B', manufacturer_id, section_id,
+             name, number, visible_description, product_ref_id,
+             hardware2program_ref_id, default_language, source_sha256
+         FROM catalog_item WHERE id = 'CI-A';",
+    )
+    .unwrap();
+    conn
+}
+
+/// Every canonical and provenance row, including original blob bytes.
+fn retained_rows(conn: &knx_productdb::Connection) -> Vec<(String, Vec<String>)> {
+    let tables: Vec<String> = conn
+        .prepare(
+            "SELECT name FROM sqlite_schema WHERE type = 'table' AND name != 'catalog_item'
+         ORDER BY name",
+        )
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap();
+    tables
+        .into_iter()
+        .map(|table| {
+            let mut stmt = conn
+                .prepare(&format!("SELECT * FROM \"{table}\" ORDER BY rowid"))
+                .unwrap();
+            let columns = stmt.column_count();
+            let rows = stmt
+                .query_map([], |r| {
+                    Ok(format!(
+                        "{:?}",
+                        (0..columns)
+                            .map(|i| r.get::<_, rusqlite::types::Value>(i))
+                            .collect::<Result<Vec<_>, _>>()?
+                    ))
+                })
+                .unwrap()
+                .collect::<Result<_, _>>()
+                .unwrap();
+            (table, rows)
+        })
+        .collect()
+}
+
+#[test]
+fn cleanup_preview_is_deterministic_read_only_and_exposes_provenance() {
+    let dir = tempfile::tempdir().unwrap();
+    let conn = cleanup_database(dir.path());
+    let before = std::fs::read(conn.path().unwrap()).unwrap();
+    let preview =
+        knx_productdb::preview_catalog_cleanup(&conn, &["CI-B".into(), "CI-A".into()]).unwrap();
+    let repeat =
+        knx_productdb::preview_catalog_cleanup(&conn, &["CI-A".into(), "CI-B".into()]).unwrap();
+    assert_eq!(preview.token, repeat.token);
+    assert_eq!(
+        preview
+            .items
+            .iter()
+            .map(|i| i.id.as_str())
+            .collect::<Vec<_>>(),
+        ["CI-A", "CI-B"]
+    );
+    let details = preview.items[0].details.as_ref().unwrap();
+    assert_eq!(
+        details.application_program_id.as_deref(),
+        Some("M-0001_A-0001-10-0001")
+    );
+    assert_eq!(details.application_name.as_deref(), Some("Dimmer"));
+    assert_eq!(details.application_version.as_deref(), Some("16"));
+    assert_eq!(details.catalog_section_id.as_deref(), Some("SECTION"));
+    assert_eq!(details.source_names, ["dimmer-v16.knxprod"]);
+    assert_eq!(
+        knx_productdb::query::catalog_item(&conn, "CI-A")
+            .unwrap()
+            .unwrap()
+            .details,
+        preview.items[0].details
+    );
+    assert_eq!(
+        knx_productdb::query::catalog_items(&conn, None, None, Some("de")).unwrap()[0].details,
+        preview.items[0].details
+    );
+    assert_eq!(std::fs::read(conn.path().unwrap()).unwrap(), before);
+    assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 1);
+}
+
+#[test]
+fn cleanup_keeps_every_nonplacement_row_and_restore_recovers_the_selection() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut conn = cleanup_database(dir.path());
+    let before = retained_rows(&conn);
+    let selection = ["CI-A".into()];
+    let preview = knx_productdb::preview_catalog_cleanup(&conn, &selection).unwrap();
+    let applied =
+        knx_productdb::apply_catalog_cleanup(&mut conn, &selection, &preview.token, true).unwrap();
+    assert_eq!(applied.removed_item_ids, ["CI-A"]);
+    assert_eq!(retained_rows(&conn), before);
+    assert!(knx_productdb::query::catalog_item(&conn, "CI-A")
+        .unwrap()
+        .is_none());
+    assert_eq!(
+        knx_productdb::query::catalog_items(&conn, None, None, None)
+            .unwrap()
+            .len(),
+        1
+    );
+    assert_eq!(
+        resolve_program(&conn, "M-0001_H-1_HP-0001-10-0001")
+            .unwrap()
+            .as_deref(),
+        Some("M-0001_A-0001-10-0001")
+    );
+    restore_product_db_backup(Path::new(conn.path().unwrap()), &applied.backup).unwrap();
+    assert!(knx_productdb::query::catalog_item(&conn, "CI-A")
+        .unwrap()
+        .is_some());
+    assert_eq!(retained_rows(&conn), before);
+    assert!(matches!(
+        knx_productdb::apply_catalog_cleanup(&mut conn, &selection, &preview.token, true),
+        Err(knx_productdb::CleanupError::StaleToken)
+    ));
+}
+
+#[test]
+fn cleanup_refuses_invalid_unconfirmed_stale_and_changed_metadata_without_mutation() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut conn = cleanup_database(dir.path());
+    for selection in [
+        vec![],
+        vec!["CI-A".into(), "CI-A".into()],
+        vec!["CI-A".into(), "missing".into()],
+        vec!["".into()],
+        vec![" CI-A".into()],
+        vec!["CI-\nA".into()],
+    ] {
+        assert!(matches!(
+            knx_productdb::preview_catalog_cleanup(&conn, &selection),
+            Err(knx_productdb::CleanupError::InvalidSelection(_))
+        ));
+    }
+    let selection = ["CI-A".into()];
+    let preview = knx_productdb::preview_catalog_cleanup(&conn, &selection).unwrap();
+    assert!(matches!(
+        knx_productdb::apply_catalog_cleanup(&mut conn, &selection, &preview.token, false),
+        Err(knx_productdb::CleanupError::ConfirmationRequired)
+    ));
+    assert!(matches!(
+        knx_productdb::apply_catalog_cleanup(&mut conn, &selection, "wrong", true),
+        Err(knx_productdb::CleanupError::StaleToken)
+    ));
+    for sql in [
+        "UPDATE catalog_item SET name = 'Changed' WHERE id = 'CI-A'",
+        "UPDATE application_program SET application_version = 'other'",
+        "UPDATE package_source_name SET source_name = 'other.knxprod'",
+    ] {
+        let preview = knx_productdb::preview_catalog_cleanup(&conn, &selection).unwrap();
+        conn.execute_batch(sql).unwrap();
+        let before = std::fs::read(conn.path().unwrap()).unwrap();
+        assert!(
+            matches!(
+                knx_productdb::apply_catalog_cleanup(&mut conn, &selection, &preview.token, true),
+                Err(knx_productdb::CleanupError::StaleToken)
+            ),
+            "{sql}"
+        );
+        assert_eq!(std::fs::read(conn.path().unwrap()).unwrap(), before);
+    }
+    assert_eq!(
+        std::fs::read_dir(dir.path()).unwrap().count(),
+        1,
+        "no backups on refusal"
+    );
+}
+
+#[test]
+fn cleanup_preview_names_bindings_left_without_any_placement() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut conn = cleanup_database(dir.path());
+    conn.execute_batch(
+        "INSERT INTO catalog_item (id, manufacturer_id, section_id, name, source_sha256)
+         SELECT 'CI-UNBOUND', manufacturer_id, section_id, name, source_sha256
+         FROM catalog_item WHERE id = 'CI-A';",
+    )
+    .unwrap();
+    let product = "M-0001_H-1_P-1";
+    let binding = "M-0001_H-1_HP-0001-10-0001";
+    let catalog_name = |conn: &knx_productdb::Connection| {
+        knx_productdb::query::device_product(conn, product, binding, None)
+            .unwrap()
+            .unwrap()
+            .catalog_item_name
+    };
+    // One sibling placement survives: existing devices keep their catalogue name.
+    let one = [String::from("CI-A")];
+    let preview = knx_productdb::preview_catalog_cleanup(&conn, &one).unwrap();
+    assert!(preview.bindings_without_placement.is_empty());
+    let unbound = [String::from("CI-UNBOUND")];
+    assert!(knx_productdb::preview_catalog_cleanup(&conn, &unbound)
+        .unwrap()
+        .bindings_without_placement
+        .is_empty());
+    knx_productdb::apply_catalog_cleanup(&mut conn, &one, &preview.token, true).unwrap();
+    assert_eq!(catalog_name(&conn).as_deref(), Some("Dimmer"));
+    // The last placement of the pair: named in the preview, and the effect is real.
+    let last = [String::from("CI-B")];
+    let preview = knx_productdb::preview_catalog_cleanup(&conn, &last).unwrap();
+    assert_eq!(preview.bindings_without_placement, ["CI-B"]);
+    knx_productdb::apply_catalog_cleanup(&mut conn, &last, &preview.token, true).unwrap();
+    assert_eq!(catalog_name(&conn), None);
+    assert_eq!(
+        knx_productdb::query::device_product(&conn, product, binding, None)
+            .unwrap()
+            .unwrap()
+            .application_program_id
+            .as_deref(),
+        Some("M-0001_A-0001-10-0001"),
+        "the device still resolves its application"
+    );
+}
+
+#[test]
+fn catalog_details_name_source_files_never_their_directories() {
+    let dir = tempfile::tempdir().unwrap();
+    let conn = cleanup_database(dir.path());
+    // The CLI records the argument it was given; a wrapper adds `!/<member>`.
+    conn.execute_batch(
+        "UPDATE package_source_name SET source_name = '/home/alice/Downloads/dimmer.knxprod';
+         INSERT INTO package_source_name (package_sha256, source_name)
+         SELECT package_sha256, 'C:\\Users\\alice\\vendor.zip!/sub/dir/inner.knxprod'
+         FROM package_source_name;",
+    )
+    .unwrap();
+    let item = knx_productdb::query::catalog_item(&conn, "CI-A")
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        item.details.unwrap().source_names,
+        ["dimmer.knxprod", "vendor.zip!/inner.knxprod"]
+    );
+}
+
+#[test]
+fn cleanup_failure_after_the_backup_removes_that_backup_and_keeps_every_row() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut conn = cleanup_database(dir.path());
+    conn.execute_batch(
+        "CREATE TRIGGER refuse_delete BEFORE DELETE ON catalog_item
+         BEGIN SELECT RAISE(ABORT, 'refused by test'); END;",
+    )
+    .unwrap();
+    let selection = [String::from("CI-A")];
+    let preview = knx_productdb::preview_catalog_cleanup(&conn, &selection).unwrap();
+    let result = knx_productdb::apply_catalog_cleanup(&mut conn, &selection, &preview.token, true);
+    assert!(
+        matches!(result, Err(knx_productdb::CleanupError::Database(_))),
+        "{result:?}"
+    );
+    assert!(knx_productdb::query::catalog_item(&conn, "CI-A")
+        .unwrap()
+        .is_some());
+    assert_eq!(
+        std::fs::read_dir(dir.path()).unwrap().count(),
+        1,
+        "a backup of a removal that did not happen is not left behind"
+    );
+}
+
+#[test]
+fn cleanup_of_an_in_memory_database_is_its_own_refusal() {
+    let conn = knx_productdb::Connection::open_in_memory().unwrap();
+    let result = knx_productdb::preview_catalog_cleanup(&conn, &[String::from("CI-A")]);
+    assert!(
+        matches!(result, Err(knx_productdb::CleanupError::NotFileBacked)),
+        "{result:?}"
+    );
+}
+
+#[test]
+fn cleanup_backup_failure_never_deletes_a_placement() {
+    use std::os::unix::fs::PermissionsExt;
+    let dir = tempfile::tempdir().unwrap();
+    let mut conn = cleanup_database(dir.path());
+    let selection = ["CI-A".into()];
+    let preview = knx_productdb::preview_catalog_cleanup(&conn, &selection).unwrap();
+    std::fs::set_permissions(dir.path(), std::fs::Permissions::from_mode(0o500)).unwrap();
+    let result = knx_productdb::apply_catalog_cleanup(&mut conn, &selection, &preview.token, true);
+    std::fs::set_permissions(dir.path(), std::fs::Permissions::from_mode(0o700)).unwrap();
+    assert!(
+        matches!(result, Err(knx_productdb::CleanupError::Backup(_))),
+        "{result:?}"
+    );
+    assert!(knx_productdb::query::catalog_item(&conn, "CI-A")
+        .unwrap()
+        .is_some());
+}
+
 const MASTER: &[u8] = br#"<KNX xmlns="http://knx.org/xml/project/20"><MasterData><Manufacturers><Manufacturer Id="M-0001" Name="Example"/></Manufacturers></MasterData></KNX>"#;
 
 fn program(version: u8) -> String {

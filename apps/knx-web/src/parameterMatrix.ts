@@ -1,4 +1,5 @@
 /** Declared parameter-grid classification and placement (ADR-0137), pure. */
+import type { TextFill } from "./bindings/TextFill";
 import type { ParameterGridCell, ParameterGroupLayout } from "./api";
 
 /** The only layout description version this build renders. */
@@ -27,7 +28,7 @@ export function classifyGroupLayout(layouts: readonly ParameterGroupLayout[] | u
 
 /** CSS grid lines, 1-based; `columnSpan: -1` spans every track. */
 export interface MatrixArea { row: number; rowSpan: number; column: number; columnSpan: number }
-export interface MatrixText { key: string; text: string; area: MatrixArea }
+export interface MatrixText { key: string; text: string; textFill?: TextFill | null; area: MatrixArea }
 export interface ParameterMatrixPlan {
   templateColumns: string;
   columnHeaders: MatrixText[];
@@ -72,12 +73,12 @@ export function planParameterMatrix(layout: ParameterGroupLayout,
   const firstRow = columnHeaderTrack ? 2 : 1;
 
   // Per-cell stacking order: captions first, then fields.
-  const cells = new Map<string, { kind: "label" | "field"; key: string; text?: string }[]>();
-  const push = (cell: ParameterGridCell, item: { kind: "label" | "field"; key: string; text?: string }) => {
+  const cells = new Map<string, { kind: "label" | "field"; key: string; text?: string; textFill?: TextFill | null }[]>();
+  const push = (cell: ParameterGridCell, item: { kind: "label" | "field"; key: string; text?: string; textFill?: TextFill | null }) => {
     const id = `${cell.row},${cell.column}`;
     cells.set(id, [...(cells.get(id) ?? []), item]);
   };
-  layout.labels.forEach((label, index) => { if (valid(label)) push(label, { kind: "label", key: `label:${index}`, text: label.text }); });
+  layout.labels.forEach((label, index) => { if (valid(label)) push(label, { kind: "label", key: `label:${index}`, text: label.text, textFill: label.textFill }); });
   const unplaced: string[] = [];
   for (const row of rows) {
     if (valid(row.cell)) push(row.cell, { kind: "field", key: row.key });
@@ -99,7 +100,7 @@ export function planParameterMatrix(layout: ParameterGroupLayout,
     items.forEach((item, offset) => {
       const at = area(starts[row - 1] + offset, firstColumn + column - 1);
       if (item.kind === "field") fields.set(item.key, at);
-      else labels.push({ key: item.key, text: item.text ?? "", area: at });
+      else labels.push({ key: item.key, text: item.text ?? "", ...(item.textFill ? { textFill: item.textFill } : {}), area: at });
     });
   }
   labels.sort((a, b) => Number(a.key.slice(6)) - Number(b.key.slice(6)));

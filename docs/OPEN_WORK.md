@@ -551,8 +551,13 @@ recovery dependencies stay explicit; the reporter approves each hardware step.
 Stage 0 of the write ladder is implemented offline: the read-only, ProductDB-
 derived `system2-declared-segments-v1` diagnostic profile
 ([ADR-0143](adr/0143-declared-segment-memory-evidence-profile.md), CLI only,
-simulator-tested). Open: the reporter's consented run on the device, the offline
-comparison of its result, and a web entry (UI owner).
+simulator-tested; four independent reviews, the last accepting). Open: the
+reporter's consented run on the device, the offline comparison of its result,
+a web entry (UI owner), and one MINOR reader gap: the identity stop reason
+(e.g. `identity-mismatch`) is not cross-checked against the identity items, so
+a deliberately rewritten and rehashed archive could carry a wrong reason. It
+does not change recorded bytes, coverage or what the collector sends;
+checksums never claimed to detect deliberate rewriting.
 
 ## System 2 / System B download outcome (17 October 2026)
 

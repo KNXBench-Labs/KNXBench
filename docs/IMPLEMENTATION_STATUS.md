@@ -32,9 +32,11 @@ the 185 tests: 5 → 0 opens). `AppState::with_product_db_at` keeps the open err
 in `product_db_unavailable`, prints it, logs it as a `product database` error
 that survives the log reset on new/open/import, and every refusal (catalogue,
 package and legacy install, parameter writes, download preparation, device
-readiness, manufacturer-file restore) names it; six mutants killed. Cross-vendor
-review (Codex `gpt-6.1-sol`, high): accept with fixes, all three findings fixed
-test-first. Troubleshooting page, developer pitfall and an OPEN_WORK item
+readiness, manufacturer-file restore) names it while keeping its status and kind;
+without a reason the wording is unchanged (pinned by a test). A location that
+cannot be checked is refused instead of read as an empty catalogue. Nine mutants
+killed. Cross-vendor review (Codex `gpt-6.1-sol`, high) and its re-review of
+the fix round: accept with fixes, every finding fixed test-first. Troubleshooting page, developer pitfall and an OPEN_WORK item
 (gate-wide `XDG_DATA_HOME`) record the rest.
 
 ## Empty ZIP directories must really be empty, WP-16 (19 October 2026)

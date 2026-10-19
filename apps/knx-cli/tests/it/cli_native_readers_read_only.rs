@@ -294,10 +294,21 @@ fn a_real_ga_import_still_writes_and_upgrades_an_older_store() {
         .any(|entry| entry.name == "Written"));
 }
 
+/// The default product database as a reading command finds it.
+#[derive(Clone, Copy, Debug)]
+enum DefaultProducts {
+    /// An empty, version-0 file: what a migrating open would rewrite.
+    Older,
+    /// A file at this build's version: opened as the file itself, `query_only`.
+    Current,
+    /// No file: must not be created.
+    Missing,
+}
+
 /// Commands that only read the product database never write the user's
-/// default one: an older (here empty, version-0) file keeps its bytes and
-/// gains no sidecar, and a missing one is not created. A reader migrating
-/// it in place locks every older KNXBench out of its own catalogue.
+/// default one: an older or current file keeps its bytes and gains no
+/// sidecar, and a missing one is not created. A reader migrating it in place
+/// locks every older KNXBench out of its own catalogue.
 #[test]
 fn product_database_readers_leave_the_default_product_database_untouched() {
     let case = Case::new(SAVED);
@@ -312,36 +323,67 @@ fn product_database_readers_leave_the_default_product_database_untouched() {
         vec!["device", "readiness", "--project", case.project()],
     ];
     for args in &commands {
-        for existing in [true, false] {
+        for state in [
+            DefaultProducts::Older,
+            DefaultProducts::Current,
+            DefaultProducts::Missing,
+        ] {
             let data_home = tempfile::tempdir().unwrap();
             let products_dir = data_home.path().join("knx");
-            if existing {
-                std::fs::create_dir_all(&products_dir).unwrap();
-                std::fs::write(products_dir.join("products.sqlite"), b"").unwrap();
+            let products = products_dir.join("products.sqlite");
+            match state {
+                DefaultProducts::Older => {
+                    std::fs::create_dir_all(&products_dir).unwrap();
+                    std::fs::write(&products, b"").unwrap();
+                }
+                DefaultProducts::Current => {
+                    drop(knx_productdb::open_and_migrate(&products).unwrap());
+                }
+                DefaultProducts::Missing => {}
             }
+            let before = if matches!(state, DefaultProducts::Missing) {
+                Vec::new()
+            } else {
+                directory_bytes(&products_dir)
+            };
             let output = std::process::Command::new(env!("CARGO_BIN_EXE_knx"))
                 .args(args)
                 .env("XDG_DATA_HOME", data_home.path())
                 .output()
                 .expect("run knx");
-            if existing {
-                let after = std::fs::read(products_dir.join("products.sqlite")).unwrap();
-                assert!(
-                    after.is_empty(),
-                    "{args:?} migrated the product database to {} bytes: {output:?}",
-                    after.len()
-                );
-                assert_eq!(
-                    directory_bytes(&products_dir).len(),
-                    1,
-                    "{args:?} left a sidecar"
-                );
-            } else {
-                assert!(
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            assert!(
+                !stderr.contains("failed to open product database"),
+                "{args:?} with {state:?} did not get past opening: {stderr}"
+            );
+            match state {
+                DefaultProducts::Missing => assert!(
                     !products_dir.exists(),
                     "{args:?} created a product database: {output:?}"
-                );
+                ),
+                _ => assert!(
+                    directory_bytes(&products_dir) == before,
+                    "{args:?} with {state:?} changed the product database: {output:?}"
+                ),
             }
         }
     }
+}
+
+/// A default location that cannot even be checked (here a file where the
+/// data directory belongs) is refused, not read as an empty catalogue: a
+/// `products verify` that reports "0 mismatches" for it would be false.
+#[test]
+fn an_uncheckable_default_product_database_is_refused_not_read_as_empty() {
+    let data_home = tempfile::NamedTempFile::new().unwrap();
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_knx"))
+        .args(["products", "verify"])
+        .env("XDG_DATA_HOME", data_home.path())
+        .output()
+        .expect("run knx");
+    assert!(!output.status.success(), "{output:?}");
+    assert!(
+        String::from_utf8_lossy(&output.stderr).contains("failed to open product database"),
+        "{output:?}"
+    );
 }

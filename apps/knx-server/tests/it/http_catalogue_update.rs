@@ -177,12 +177,134 @@ fn backup_names(dir: &Path) -> Vec<String> {
     names
 }
 
+/// The session log's lines that name why the product database is not open.
+async fn product_database_lines(app: &axum::Router) -> Vec<Value> {
+    let (_, log) = send(app, json_request("GET", "/api/log", Value::Null)).await;
+    log.as_array()
+        .unwrap()
+        .iter()
+        .filter(|entry| entry["source"] == json!("product database"))
+        .cloned()
+        .collect()
+}
+
+/// Every refusal of a route that needs products, as `(route, status, body)`:
+/// listing, preview, install, readiness, download plan and, with a project
+/// open, the manufacturer-file restore.
+async fn product_refusals(
+    app: &axum::Router,
+    project_name: &str,
+) -> Vec<(String, StatusCode, Value)> {
+    let mut refusals = Vec::new();
+    for uri in [
+        "/api/catalog/manufacturers",
+        "/api/catalog/items",
+        "/api/device-readiness",
+    ] {
+        let (status, body) = send(app, json_request("GET", uri, Value::Null)).await;
+        refusals.push((uri.to_string(), status, body));
+    }
+    for uri in ["/api/catalog/update/preview", "/api/catalog/install"] {
+        let (status, body) = send(app, upload(uri, "dimmer.knxprod", &package(0x10), &[])).await;
+        refusals.push((uri.to_string(), status, body));
+    }
+    let (status, body) = send(
+        app,
+        json_request(
+            "POST",
+            "/api/device-download/plan",
+            json!({ "address": "1.1.1" }),
+        ),
+    )
+    .await;
+    refusals.push(("/api/device-download/plan".to_string(), status, body));
+    let (status, body) = send(
+        app,
+        json_request(
+            "POST",
+            "/api/project/manufacturer-files/restore",
+            json!({ "path": project_name }),
+        ),
+    )
+    .await;
+    refusals.push((
+        "/api/project/manufacturer-files/restore".to_string(),
+        status,
+        body,
+    ));
+    refusals
+}
+
+/// The status, kind and wording each refusal had before the reason existed.
+const PLAIN_REFUSALS: [(&str, StatusCode, Option<&str>, &str); 7] = [
+    (
+        "/api/catalog/manufacturers",
+        StatusCode::BAD_REQUEST,
+        None,
+        "no product database configured",
+    ),
+    (
+        "/api/catalog/items",
+        StatusCode::BAD_REQUEST,
+        None,
+        "no product database configured",
+    ),
+    (
+        "/api/device-readiness",
+        StatusCode::CONFLICT,
+        Some("downloadProductDataMissing"),
+        "no product database is configured, so no application program can be read",
+    ),
+    (
+        "/api/catalog/update/preview",
+        StatusCode::SERVICE_UNAVAILABLE,
+        None,
+        "no product database configured",
+    ),
+    (
+        "/api/catalog/install",
+        StatusCode::INTERNAL_SERVER_ERROR,
+        None,
+        "no product database configured",
+    ),
+    (
+        "/api/device-download/plan",
+        StatusCode::CONFLICT,
+        Some("downloadProductDataMissing"),
+        "no product database is configured, so no application program can be read",
+    ),
+    (
+        "/api/project/manufacturer-files/restore",
+        StatusCode::UNPROCESSABLE_ENTITY,
+        Some("noProductDatabase"),
+        "this server has no product database to install manufacturer files into",
+    ),
+];
+
+/// Imports the minimal project into `data` and returns its file name.
+async fn import_minimal_project(app: &axum::Router, data: &Path) -> String {
+    std::fs::create_dir_all(data).unwrap();
+    let project = knx_testsupport::write_minimal_knxproj(data);
+    let name = project.file_name().unwrap().to_str().unwrap().to_string();
+    let (status, body) = send(
+        app,
+        json_request(
+            "POST",
+            "/api/project/import",
+            json!({ "path": name, "discardChanges": true }),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    name
+}
+
 /// A product database a newer KNXBench already migrated (a newer build, or
 /// a test run that reached the user's real file) used to vanish silently:
-/// the server ran without one and every install said only "no product
-/// database configured". Now the catalogue, preview and log name the file
-/// and both versions, the reason survives a new project's log reset, and
-/// the file keeps its bytes.
+/// the server ran without one and every refusal said only "no product
+/// database configured". Now every refusal keeps its status and kind and
+/// names the file and both versions, the log line survives each reset
+/// (new, import, native open), and the file keeps its bytes.
 #[tokio::test]
 async fn a_newer_product_database_is_named_in_every_refusal_and_left_untouched() {
     let dir = tempfile::tempdir().unwrap();
@@ -193,8 +315,9 @@ async fn a_newer_product_database_is_named_in_every_refusal_and_left_untouched()
     drop(conn);
     let before = std::fs::read(&path).unwrap();
 
+    let data = dir.path().join("data");
     let state = Arc::new(knx_server::AppState::with_product_db_at(
-        dir.path().join("data"),
+        data.clone(),
         Some(path.clone()),
     ));
     assert!(state.product_db.is_none());
@@ -207,64 +330,43 @@ async fn a_newer_product_database_is_named_in_every_refusal_and_left_untouched()
                 knx_productdb::CURRENT_PRODUCTDB_VERSION
             ))
     };
-
-    for uri in ["/api/catalog/manufacturers", "/api/catalog/items"] {
-        let (status, body) = send(&app, json_request("GET", uri, Value::Null)).await;
-        assert_eq!(status, StatusCode::BAD_REQUEST, "{uri}: {body}");
+    let assert_logged = |lines: Vec<Value>, after: &str| {
+        assert_eq!(lines.len(), 1, "after {after}: {lines:?}");
+        assert_eq!(lines[0]["severity"], json!("error"), "after {after}");
         assert!(
-            names_the_cause(body["error"].as_str().unwrap()),
-            "{uri}: {body}"
+            names_the_cause(lines[0]["message"].as_str().unwrap()),
+            "after {after}: {lines:?}"
         );
-    }
-    let (status, body) = send(
-        &app,
-        upload(
-            "/api/catalog/update/preview",
-            "dimmer.knxprod",
-            &package(0x10),
-            &[],
-        ),
-    )
-    .await;
-    assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE, "{body}");
-    assert!(names_the_cause(body["error"].as_str().unwrap()), "{body}");
-    let (status, body) = send(
-        &app,
-        upload(
-            "/api/catalog/install",
-            "dimmer.knxprod",
-            &package(0x10),
-            &[],
-        ),
-    )
-    .await;
-    assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR, "{body}");
-    assert!(names_the_cause(body["error"].as_str().unwrap()), "{body}");
-    let (status, body) = send(
-        &app,
-        json_request("GET", "/api/device-readiness", Value::Null),
-    )
-    .await;
-    assert_eq!(status, StatusCode::CONFLICT, "{body}");
-    let message = body["error"].as_str().unwrap();
-    assert!(names_the_cause(message), "{body}");
-    assert!(
-        message.ends_with("so no application program can be read"),
-        "{body}"
-    );
+    };
+    assert_logged(product_database_lines(&app).await, "startup");
 
-    // Both log resets keep the reason: a new project, then an ETS import.
     let (status, _) = send(&app, json_request("POST", "/api/project/new", json!({}))).await;
     assert_eq!(status, StatusCode::OK);
-    std::fs::create_dir_all(dir.path().join("data")).unwrap();
-    let project = knx_testsupport::write_minimal_knxproj(&dir.path().join("data"));
-    let project_name = project.file_name().unwrap().to_str().unwrap();
+    assert_logged(product_database_lines(&app).await, "new project");
+
+    let project_name = import_minimal_project(&app, &data).await;
+    assert_logged(product_database_lines(&app).await, "ETS import");
+
+    for ((route, status, body), (plain_route, plain_status, kind, plain)) in
+        product_refusals(&app, &project_name)
+            .await
+            .into_iter()
+            .zip(PLAIN_REFUSALS)
+    {
+        assert_eq!(route, plain_route);
+        assert_eq!(status, plain_status, "{route}: {body}");
+        assert_eq!(body["kind"].as_str(), kind, "{route}: {body}");
+        let message = body["error"].as_str().unwrap();
+        assert!(names_the_cause(message), "{route}: {body}");
+        assert_ne!(message, plain, "{route}");
+    }
+
     let (status, body) = send(
         &app,
         json_request(
             "POST",
-            "/api/project/import",
-            json!({ "path": project_name, "discardChanges": true }),
+            "/api/project/save-as",
+            json!({ "path": "saved.knxdb" }),
         ),
     )
     .await;
@@ -273,28 +375,39 @@ async fn a_newer_product_database_is_named_in_every_refusal_and_left_untouched()
         &app,
         json_request(
             "POST",
-            "/api/project/manufacturer-files/restore",
-            json!({ "path": project_name }),
+            "/api/project/open",
+            json!({ "path": "saved.knxdb", "discardChanges": true }),
         ),
     )
     .await;
-    assert_eq!(body["kind"], json!("noProductDatabase"), "{status}: {body}");
-    assert!(names_the_cause(body["error"].as_str().unwrap()), "{body}");
-    let (_, log) = send(&app, json_request("GET", "/api/log", Value::Null)).await;
-    let product_lines: Vec<&Value> = log
-        .as_array()
-        .unwrap()
-        .iter()
-        .filter(|entry| entry["source"] == json!("product database"))
-        .collect();
-    assert_eq!(product_lines.len(), 1, "{log}");
-    assert_eq!(product_lines[0]["severity"], json!("error"), "{log}");
-    assert!(
-        names_the_cause(product_lines[0]["message"].as_str().unwrap()),
-        "{log}"
-    );
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_logged(product_database_lines(&app).await, "native open");
 
     assert_eq!(std::fs::read(&path).unwrap(), before);
+}
+
+/// Without a startup reason (no product database was ever asked for) every
+/// refusal keeps its old status, kind and exact wording, and the log has no
+/// product-database line.
+#[tokio::test]
+async fn without_a_startup_reason_the_refusals_keep_their_plain_wording() {
+    let dir = tempfile::tempdir().unwrap();
+    let data = dir.path().join("data");
+    let app = knx_server::app(Arc::new(knx_server::AppState::new(data.clone())), None);
+    let project_name = import_minimal_project(&app, &data).await;
+
+    for ((route, status, body), (plain_route, plain_status, kind, plain)) in
+        product_refusals(&app, &project_name)
+            .await
+            .into_iter()
+            .zip(PLAIN_REFUSALS)
+    {
+        assert_eq!(route, plain_route);
+        assert_eq!(status, plain_status, "{route}: {body}");
+        assert_eq!(body["kind"].as_str(), kind, "{route}: {body}");
+        assert_eq!(body["error"], json!(plain), "{route}");
+    }
+    assert!(product_database_lines(&app).await.is_empty());
 }
 
 #[tokio::test]

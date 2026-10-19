@@ -87,7 +87,7 @@ async function konami(page: Page) {
   for (const key of KONAMI) await page.keyboard.press(key);
 }
 
-test("the Konami code unlocks a popup, the record is saved, and the palette opens the overview", async ({ page }) => {
+test("the Konami code unlocks a popup, the record is saved, and the palette opens the overview", { tag: "@exclusive" }, async ({ page }) => {
   const fixture = fresh();
   await serve(page, fixture);
   await page.goto("/");
@@ -121,7 +121,7 @@ test("the Konami code unlocks a popup, the record is saved, and the palette open
   expect(fixture.unexpected).toEqual([]);
 });
 
-test("switched off, nothing is counted, nothing pops up and the File menu has no entry", async ({ page }) => {
+test("switched off, nothing is counted, nothing pops up and the File menu has no entry", { tag: "@exclusive" }, async ({ page }) => {
   const fixture = fresh({ achievementsEnabled: "false" });
   await serve(page, fixture);
   await page.goto("/");
@@ -164,7 +164,7 @@ async function dismissAndMeasure(page: Page) {
   return measured;
 }
 
-test("a dismissed popup slides out and is removed when its exit animation ends", async ({ page }) => {
+test("a dismissed popup slides out and is removed when its exit animation ends", { tag: "@exclusive" }, async ({ page }) => {
   const fixture = fresh();
   await serve(page, fixture);
   await page.goto("/");
@@ -177,7 +177,7 @@ test("a dismissed popup slides out and is removed when its exit animation ends",
   await expect(page.locator(".toast--achievement")).toHaveCount(0);
 });
 
-test("with reduced motion the popup vanishes at once and the fallback removes it", async ({ page }) => {
+test("with reduced motion the popup vanishes at once and the fallback removes it", { tag: "@exclusive" }, async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   const fixture = fresh();
   await serve(page, fixture);

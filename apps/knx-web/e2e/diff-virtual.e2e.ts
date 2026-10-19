@@ -14,7 +14,7 @@ async function open(page: Page) {
 const settle = (page: Page) =>
   page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 
-test("renders a bounded window and reaches every entry by scrolling, with real row heights", async ({ page }) => {
+test("renders a bounded window and reaches every entry by scrolling, with real row heights", { tag: "@exclusive" }, async ({ page }) => {
   await open(page);
   const viewport = page.locator(".project-diff-viewport");
   expect(await rows(page).count()).toBeLessThan(120);
@@ -51,7 +51,7 @@ test("scrolls with the keyboard from the focused list", async ({ page }) => {
   await expect(rows(page).first()).toHaveAttribute("aria-posinset", "1");
 });
 
-test("keeps visible rows steady while unmeasured rows above them grow", async ({ page }) => {
+test("keeps visible rows steady while unmeasured rows above them grow", { tag: "@exclusive" }, async ({ page }) => {
   await open(page);
   const viewport = page.getByRole("region", { name: "Entries (scrollable)" });
   await viewport.focus();

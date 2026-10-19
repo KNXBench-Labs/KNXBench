@@ -47,7 +47,7 @@ async function framesStopped(page: Page) {
   return (await frames(page)) - before;
 }
 
-test("draws pulses for live traffic and stops every frame when Motion is switched off mid-flight", async ({ page }) => {
+test("draws pulses for live traffic and stops every frame when Motion is switched off mid-flight", { tag: "@exclusive" }, async ({ page }) => {
   await instrument(page);
   const server = await fakeServer(page);
   const traffic = feed(server);
@@ -63,7 +63,7 @@ test("draws pulses for live traffic and stops every frame when Motion is switche
   traffic.stop();
 });
 
-test("stops when the OS asks to reduce motion mid-flight", async ({ page }) => {
+test("stops when the OS asks to reduce motion mid-flight", { tag: "@exclusive" }, async ({ page }) => {
   await instrument(page);
   const server = await fakeServer(page);
   const traffic = feed(server);
@@ -76,7 +76,7 @@ test("stops when the OS asks to reduce motion mid-flight", async ({ page }) => {
   traffic.stop();
 });
 
-test("Freeze keeps every node in place while traffic, pulses and values continue", async ({ page }) => {
+test("Freeze keeps every node in place while traffic, pulses and values continue", { tag: "@exclusive" }, async ({ page }) => {
   const server = await fakeServer(page);
   const traffic = feed(server);
   await openFlow(page);
@@ -97,7 +97,7 @@ test("Freeze keeps every node in place while traffic, pulses and values continue
   traffic.stop();
 });
 
-test("leaving the flow tab stops its frames and its refresh timer", async ({ page }) => {
+test("leaving the flow tab stops its frames and its refresh timer", { tag: "@exclusive" }, async ({ page }) => {
   await instrument(page);
   const server = await fakeServer(page);
   const traffic = feed(server);
@@ -114,7 +114,7 @@ test("leaving the flow tab stops its frames and its refresh timer", async ({ pag
   traffic.stop();
 });
 
-test("with motion off from the start, no frame runs under live traffic and markers stay", async ({ page }) => {
+test("with motion off from the start, no frame runs under live traffic and markers stay", { tag: "@exclusive" }, async ({ page }) => {
   await instrument(page);
   const server = await fakeServer(page);
   const traffic = feed(server);

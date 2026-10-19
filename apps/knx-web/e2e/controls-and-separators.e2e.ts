@@ -178,7 +178,7 @@ const settled = (page: Page) => page.evaluate(() => Promise.race([
 ]));
 
 for (const theme of ["porcelain", "graphite"] as const) for (const width of [1440, 400]) for (const language of ["en", "de"] as const) {
-  test(`button variants: rest, hover, press, focus, disabled and pending without layout shift (${theme}, ${width}px, ${language})`, async ({ page }) => {
+  test(`button variants: rest, hover, press, focus, disabled and pending without layout shift (${theme}, ${width}px, ${language})`, { tag: "@exclusive" }, async ({ page }) => {
     const m: Catalogue = language === "de" ? de : en;
     const f = await serve(page, { theme, language, holdCreate: true });
     await page.setViewportSize({ width, height: 900 });
@@ -332,7 +332,7 @@ for (const language of ["en", "de"] as const) {
 }
 
 for (const theme of ["porcelain", "graphite"] as const) {
-  test(`the toolbar's Save stays an accent primary under hover and press (${theme})`, async ({ page }) => {
+  test(`the toolbar's Save stays an accent primary under hover and press (${theme})`, { tag: "@exclusive" }, async ({ page }) => {
     const f = await serve(page, { theme });
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/");

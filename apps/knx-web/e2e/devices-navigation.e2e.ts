@@ -421,7 +421,7 @@ test("catalogue failures retain every project device and explain unavailable pro
   await expect(page.locator(".devices-table tbody tr")).toHaveCount(3);
   expect(state.unexpected).toEqual([]);
 });
-test("measures a 5000-device production table and keeps the last device searchable", async ({ page }, info) => {
+test("measures a 5000-device production table and keeps the last device searchable", { tag: "@exclusive" }, async ({ page }, info) => {
   test.setTimeout(120_000);
   const state = await intercept(page, "en", 5000); await openProject(page, "en");
   const started = Date.now(); await openList(page, "en");

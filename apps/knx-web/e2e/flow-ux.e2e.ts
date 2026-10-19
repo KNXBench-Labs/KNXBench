@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 import { messages } from "../src/messages/en";
 import { fakeServer, node, openFlow, telegram } from "./telegram-flow-server";
 
-test("details consume space only on selection; maximize restores and manual zoom overrides auto-fit", async ({ page }) => {
+test("details consume space only on selection; maximize restores and manual zoom overrides auto-fit", { tag: "@exclusive" }, async ({ page }) => {
   await page.setViewportSize({ width: 1500, height: 1000 });
   const server = await fakeServer(page); server.rows.push(telegram(1, "1", "On"));
   await openFlow(page);

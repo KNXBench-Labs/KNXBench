@@ -33,7 +33,7 @@ test("reaches a device and its current values with the keyboard alone", async ({
   await expect(page.getByTestId("inspector")).toContainText("Current values");
 });
 
-test("freeze keeps every position while traffic and counters continue", async ({ page }) => {
+test("freeze keeps every position while traffic and counters continue", { tag: "@exclusive" }, async ({ page }) => {
   await open(page);
   await page.getByRole("button", { name: "Freeze layout" }).click();
   await expect(page.getByRole("button", { name: "Freeze layout" })).toHaveAttribute("aria-pressed", "true");
@@ -45,7 +45,7 @@ test("freeze keeps every position while traffic and counters continue", async ({
   expect(await admitted(page)).toBeGreaterThan(count);
 });
 
-test("with motion off nothing moves or pulses, but values still arrive", async ({ page }) => {
+test("with motion off nothing moves or pulses, but values still arrive", { tag: "@exclusive" }, async ({ page }) => {
   await open(page, "?motion=off");
   await page.waitForTimeout(1500);
   const visiblePulses = await page.locator("circle.flow-pulse").evaluateAll((dots) => dots.filter((dot) => (dot as SVGElement).style.display !== "none").length);

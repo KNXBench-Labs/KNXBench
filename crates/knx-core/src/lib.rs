@@ -28,6 +28,7 @@ pub mod project;
 pub mod provenance;
 pub mod scan;
 pub mod string_table;
+pub mod system_family;
 pub mod topology;
 pub mod validation;
 

@@ -398,3 +398,204 @@ async fn device_catalog_refuses_no_project_without_changing_server_state() {
         0
     );
 }
+
+/// WP-20: one product per case, each with its own hardware, program link and
+/// application program declaring `mask` (`None` omits the attribute).
+fn system_family_product_db(
+    cases: &[(&str, Option<&str>)],
+) -> (tempfile::TempDir, knx_productdb::Connection) {
+    let mut hardware = String::new();
+    let mut programs = String::new();
+    for (key, mask) in cases {
+        hardware.push_str(&format!(
+            r#"<Hardware Id="H-{key}" Name="X" SerialNumber="S" VersionNumber="1">
+<Products><Product Id="M-1_P-{key}" Text="Product {key}" OrderNumber="ORD-{key}" /></Products>
+<Hardware2Programs><Hardware2Program Id="H-{key}_HP-1" MediumTypes="MT-0">
+<ApplicationProgramRef RefId="A-{key}" /></Hardware2Program></Hardware2Programs></Hardware>"#
+        ));
+        let mask = mask.map_or(String::new(), |m| format!(r#" MaskVersion="{m}""#));
+        programs.push_str(&format!(
+            r#"<ApplicationProgram Id="A-{key}" Name="P" ApplicationNumber="1" ApplicationVersion="1"{mask}>
+<Static><ParameterTypes /><Parameters /><ParameterRefs /></Static><Dynamic /></ApplicationProgram>"#
+        ));
+    }
+    let wrap = |body: &str, tag: &str| {
+        format!(
+            r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-1">
+<{tag}>{body}</{tag}></Manufacturer></ManufacturerData></KNX>"#
+        )
+    };
+    let dir = tempfile::tempdir().unwrap();
+    let conn = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+    knx_productdb::ingest_file(
+        &conn,
+        "M-1/Hardware.xml",
+        wrap(&hardware, "Hardware").as_bytes(),
+    )
+    .unwrap();
+    knx_productdb::ingest_file(
+        &conn,
+        "M-1/A.xml",
+        wrap(&programs, "ApplicationPrograms").as_bytes(),
+    )
+    .unwrap();
+    (dir, conn)
+}
+
+/// Devices `1..` in order, each `(product_ref, program_ref)`.
+fn state_with_devices(
+    products: Option<knx_productdb::Connection>,
+    refs: &[(&str, &str)],
+) -> knx_server::AppState {
+    let state = state_with_device(products, refs[0].0, refs[0].1);
+    {
+        let mut guard = state.project.lock().unwrap();
+        let project = guard.as_mut().unwrap();
+        let original = project.devices.get(DeviceId(1)).unwrap().clone();
+        for (index, (product_ref, program_ref)) in refs.iter().enumerate().skip(1) {
+            let mut device = original.clone();
+            device.id = DeviceId(index as u32 + 1);
+            device.product_ref = (*product_ref).into();
+            device.program_ref = (*program_ref).into();
+            project.devices.insert(device);
+        }
+    }
+    state
+}
+
+async fn device_systems(state: knx_server::AppState) -> Vec<Value> {
+    let state = Arc::new(state);
+    let before = state.project.lock().unwrap().clone();
+    let response = knx_server::app(state.clone(), None)
+        .oneshot(
+            Request::builder()
+                .uri("/api/devices?language=de")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = body_json(response).await;
+    assert_eq!(*state.project.lock().unwrap(), before, "read-only");
+    body["devices"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|row| row["system"].clone())
+        .collect()
+}
+
+#[tokio::test]
+async fn device_catalog_names_each_mapped_system_family_from_the_declared_mask() {
+    let cases = [
+        ("s1", Some("MV-0012")),
+        ("s2", Some("MV-0025")),
+        ("s7", Some("MV-0701")),
+        ("sb", Some("MV-07B0")),
+        ("s300", Some("MV-0300")),
+        ("cpl", Some("MV-0912")),
+    ];
+    let (_dir, products) = system_family_product_db(&cases);
+    let refs: Vec<(String, String)> = cases
+        .iter()
+        .map(|(key, _)| (format!("M-1_P-{key}"), format!("H-{key}_HP-1")))
+        .collect();
+    let refs: Vec<(&str, &str)> = refs.iter().map(|(a, b)| (a.as_str(), b.as_str())).collect();
+    let systems = device_systems(state_with_devices(Some(products), &refs)).await;
+    assert_eq!(
+        systems,
+        vec![
+            serde_json::json!({ "state": "family", "mask": 0x0012, "family": "system1" }),
+            serde_json::json!({ "state": "family", "mask": 0x0025, "family": "system2" }),
+            serde_json::json!({ "state": "family", "mask": 0x0701, "family": "system7" }),
+            serde_json::json!({ "state": "family", "mask": 0x07B0, "family": "systemB" }),
+            serde_json::json!({ "state": "family", "mask": 0x0300, "family": "system300" }),
+            serde_json::json!({ "state": "family", "mask": 0x0912, "family": "coupler" }),
+        ]
+    );
+}
+
+#[tokio::test]
+async fn device_catalog_reports_unknown_missing_and_unreadable_masks_explicitly() {
+    let cases = [
+        ("unknown", Some("MV-0AFD")),
+        ("absent", None),
+        ("bad", Some("MV-07")),
+    ];
+    let (_dir, products) = system_family_product_db(&cases);
+    let systems = device_systems(state_with_devices(
+        Some(products),
+        &[
+            ("M-1_P-unknown", "H-unknown_HP-1"),
+            ("M-1_P-absent", "H-absent_HP-1"),
+            ("M-1_P-bad", "H-bad_HP-1"),
+        ],
+    ))
+    .await;
+    assert_eq!(
+        systems,
+        vec![
+            serde_json::json!({ "state": "unknownMask", "mask": 0x0AFD }),
+            serde_json::json!({ "state": "noMaskVersion" }),
+            serde_json::json!({ "state": "invalidMask", "declared": "MV-07" }),
+        ]
+    );
+}
+
+#[tokio::test]
+async fn device_catalog_separates_missing_product_and_program_states() {
+    let cases = [("a", Some("MV-0701")), ("b", Some("MV-07B0"))];
+    let (_dir, products) = system_family_product_db(&cases);
+    // A program link that is installed while its application program is not.
+    knx_productdb::ingest_file(
+        &products,
+        "M-1/Hardware-ghost.xml",
+        br#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-1"><Hardware>
+<Hardware Id="H-g" Name="X" SerialNumber="S" VersionNumber="1">
+<Products><Product Id="M-1_P-g" Text="Product g" OrderNumber="ORD-g" /></Products>
+<Hardware2Programs><Hardware2Program Id="H-g_HP-1" MediumTypes="MT-0">
+<ApplicationProgramRef RefId="A-g" /></Hardware2Program></Hardware2Programs></Hardware>
+</Hardware></Manufacturer></ManufacturerData></KNX>"#,
+    )
+    .unwrap();
+    let systems = device_systems(state_with_devices(
+        Some(products),
+        &[
+            ("", ""),                      // no product reference
+            ("M-1_P-missing", "H-a_HP-1"), // product not installed
+            ("M-1_P-a", ""),               // no program reference
+            ("M-1_P-a", "H-a_HP-missing"), // program link not installed
+            ("M-1_P-g", "H-g_HP-1"),       // link installed, program not
+            ("M-1_P-a", "H-b_HP-1"),       // link belongs to other hardware
+            ("M-1_P-a", "H-a_HP-1"),       // same product, matching program
+        ],
+    ))
+    .await;
+    let no_product = serde_json::json!({ "state": "noProduct" });
+    let not_installed = serde_json::json!({ "state": "applicationNotInDatabase" });
+    assert_eq!(
+        systems,
+        vec![
+            no_product.clone(),
+            no_product,
+            serde_json::json!({ "state": "noApplicationProgram" }),
+            not_installed.clone(),
+            not_installed,
+            serde_json::json!({ "state": "applicationNotOfProduct" }),
+            serde_json::json!({ "state": "family", "mask": 0x0701, "family": "system7" }),
+        ]
+    );
+}
+
+#[tokio::test]
+async fn device_catalog_without_database_or_with_failed_lookup_has_no_product_system() {
+    let systems = device_systems(state_with_device(None, "M-1_P-1", "H-1_HP-1")).await;
+    assert_eq!(systems, vec![serde_json::json!({ "state": "noProduct" })]);
+    let (_dir, products) = temp_product_db();
+    products.execute_batch("DROP TABLE product").unwrap();
+    let systems = device_systems(state_with_device(Some(products), "M-1_P-1", "H-1_HP-1")).await;
+    assert_eq!(systems, vec![serde_json::json!({ "state": "noProduct" })]);
+}

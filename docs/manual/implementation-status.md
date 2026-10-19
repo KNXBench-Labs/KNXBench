@@ -2,6 +2,16 @@
 
 # Implementation status
 
+## System column in Devices (source builds after Alpha 14)
+
+The Devices list shows each device's KNX system family (System 1, 2, 7 or B;
+other profiles by name) from the mask version its application program declares
+in the product database, through one cited table. Unknown masks and missing
+product, program or mask are shown as such, never guessed; a mask read from a
+device is not used. Sortable and filterable by label or mask.
+[Operating instructions](user-guide/05-devices-and-products.md#system-column-source-builds-after-alpha-14),
+[sources](../research/2026-10-19-mask-version-system-family.md).
+
 ## Catalogue entries explained, and cleanup (source builds after Alpha 14)
 
 Device catalog rows show the application, its version, the catalogue section and

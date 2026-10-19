@@ -77,7 +77,11 @@ fn restore_blocking(state: &crate::AppState, path: PathBuf) -> Result<RestoreDto
     let Some(products) = state.product_db.as_ref() else {
         return Err(ApiError::refused(
             "noProductDatabase",
-            "this server has no product database to install manufacturer files into",
+            match &state.product_db_unavailable {
+                Some(reason) => format!("manufacturer files cannot be installed: {reason}"),
+                None => "this server has no product database to install manufacturer files into"
+                    .to_string(),
+            },
         ));
     };
     let len = std::fs::metadata(&path)

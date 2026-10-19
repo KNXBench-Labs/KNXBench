@@ -545,6 +545,17 @@ crate. Open, each small and none blocking:
 - Three `file-menu-submenus` cases timed out at eight workers while a cold
   Vite development server started (passed at the gate's four workers and in
   reruns).
+- The gate runs Rust tests with the developer's real `HOME`, so a test that
+  spawns a binary without its own `XDG_DATA_HOME` reaches the user's product
+  database. The `knx-cli` cases that did (five `doc-export` runs, which also
+  migrated it) are fixed; an inotify sweep over all 185 `knx-cli` tests now
+  sees no access. Other crates' spawned binaries were not swept. Closing the
+  class in the gate (a scratch `XDG_DATA_HOME` for test stages) needs a check
+  that no test relies on the inherited value
+  ([pitfall](DEVELOPER_PITFALLS.md#gates)). Reading `products` commands and
+  `device readiness` open the default product database read-only now; `device
+  download/compare/restore/byte-order-probe` still use the migrating opener
+  (whether they write the catalogue was not audited).
 
 ## Prior dated detail — background, not a second queue
 

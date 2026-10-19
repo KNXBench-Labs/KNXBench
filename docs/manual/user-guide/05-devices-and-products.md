@@ -107,15 +107,34 @@ bits; text follows the program's already-supported encoding. Missing/masked,
 overwritten or unsupported fields show **Unknown / not read** with a reason,
 not a guessed zero or empty string. Negative signed device patterns remain
 unknown; negative signed project values still prevent a plan. No enum label or
-engineering unit is inferred. Every raw read range remains underneath, always
-visible rather than collapsed or filtered. Wrong application is checked before
+engineering unit is inferred. Every raw read range remains underneath, never
+collapsed. Wrong application is checked before
 plan memory is read, using
 the existing verified application identity; missing/short/ambiguous identity
 is Not comparable, not a guessed mismatch. Unread, masked, malformed or
-unattributable fields stay unknown with a reason. Raw bytes are never hidden.
+unattributable fields stay unknown with a reason.
 A byte match with an unloaded compared part does not earn Synced. At narrow
 widths scroll the comparison table horizontally to reach the device value
 and memory columns; long target lists also scroll within their list.
+
+<a id="what-differs-wp-18-source-builds-after-alpha-14"></a>
+
+### What differs (WP-18, source builds after Alpha 14)
+
+The result first shows **only the rows that differ or are unknown**. Rows
+proven equal are hidden: decoded entries whose project and device values are
+both known and equal, and raw ranges whose bytes were all read and are all
+equal. A note says how many equal rows are hidden. Tick **Show equal rows (N)**
+to see every row again, including every original raw read range; untick it to
+return to the differences. Rows with *Unknown / not read*, a not-decoded
+parameter, or any differing or unread byte are never hidden.
+
+In raw rows each differing byte is **bold and underlined** on both the project
+and the device side, and each byte that was not read or cannot be compared is
+*italic with a dotted underline*. Hover a marked byte for its meaning; the row
+heading also counts the differing and unread bytes, so the marks do not depend
+on colour. The marks come from the bytes the server returned; the filter
+changes only what is shown, not the comparison result, its tag or Synced.
 
 [Exact scope and limits](../../contracts/device-comparison.md),
 [device checks](07-bus-and-interfaces.md#device-checks-offline-readiness-then-an-optional-read-only-comparison).

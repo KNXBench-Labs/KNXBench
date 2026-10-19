@@ -12,6 +12,22 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Device comparison shows what differs — WP-18 (19 October 2026)
+
+Owner requests 1 and 2 for the *Project file versus device* result. Raw hex
+rows mark every differing byte on both sides (bold, solid underline) and every
+unread or uncomparable byte differently (italic, dotted underline); tooltips and
+a per-row byte count make the marks independent of colour. Marks come from an
+equal-length comparison of the server's hex bytes plus its byte-level
+`changes`, never from a UI codec. The result opens with only rows not proven
+equal; *Show equal rows (N)* reveals every row and every original read range.
+Display only: response, session tags and Synced are unchanged. The comparison
+contract's "no differences-only filter" sentence is amended (no filter may hide
+a differing or unread byte), with a matching ADR-0130 note
+([contract](contracts/device-comparison.md#result-display-wp-18-owner-amendment-19-october-2026)).
+Offline verification only: Vitest and the intercepted production-build browser
+spec in dark/light themes at 1440/400 px; no real device was read.
+
 ## Device catalog: identity lines and placement cleanup (19 October 2026)
 
 Owner report: devices appear twice in the Device catalog, with no visible reason;

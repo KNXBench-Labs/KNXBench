@@ -59,8 +59,10 @@ local Not comparable outcome.
   No byte beyond that range is attributed as an entry. Missing compared bytes,
   invalid counts, TSAP zero/out-of-range and incomplete fields are unknown with
   a reason, never silently zero, empty or read from neighboring parameter data.
-- Every original read range is also listed as project/device raw bytes. No
-  differences-only filter or collapsed raw disclosure hides unattributed bytes.
+- Every original read range is also listed as project/device raw bytes, never
+  in a collapsed disclosure. No filter may hide a differing or unread byte, and
+  the *Show equal rows* toggle always reveals every original read range (see
+  [Result display](#result-display-wp-18-owner-amendment-19-october-2026)).
   Unwritten/masked bytes are outside the read scope, even when the image has a
   desired value there. Another mask is raw-only, not a borrowed table codec.
 - Parameter attribution is captured only after an actual successful active image
@@ -79,6 +81,43 @@ local Not comparable outcome.
   named row is unknown. Manufacturer names, stable references and technical bit
   metadata are not invented translations. No schema migration, new device type
   admission, enum/DPT unit inference or full ETS/device compatibility claim.
+
+## Result display (WP-18, owner amendment 19 October 2026)
+
+The owner decision of 19 October 2026
+([WP-18](../OPEN_WORK.md#wp-18--device-comparison-shows-what-differs))
+supersedes the earlier "no differences-only filter" sentence. Display only:
+the response, the session tags and the Synced claim are unchanged, and the
+filter never edits or reorders the response rows.
+
+- **Rule:** no filter may hide a differing or unread byte, and the toggle
+  always reveals every original read range.
+- The result opens with only differing rows. Hidden by default are only rows
+  proven equal: a known decoded kind (address/association table entries and
+  counts, named parameters) whose two sides are known, equal and carry no
+  reason, and a raw range whose bytes were all read on both sides, parse as
+  bytes, have equal length and are all equal. Unknown or not-read rows,
+  not-decoded rows, rows with a reason, unknown row kinds and any raw range
+  with a differing or unread byte stay visible.
+- A *Show equal rows (N)* checkbox shows every row in response order; while
+  rows are hidden a note states how many. When every row is proven equal, the
+  table says so instead of appearing silently empty.
+- Raw rows mark each byte on both sides. A byte is *differing* when the two
+  displayed sides differ at that position (equal-length byte comparison of the
+  server's hex text) **or** when the server's byte-level `changes` (run
+  address plus project and device bytes, computed per plan write) cover its
+  address. The two server sources are computed separately (the raw row from an
+  address map of all plan writes, `changes` per write step); where they
+  disagree the byte is marked differing, never equal. A byte without a known
+  counterpart (side unknown, unequal length, malformed token) is *not read or
+  not comparable*, marked differently from a differing byte. No KNX codec is
+  added in the UI.
+- Marks do not rely on colour: differing bytes are bold with a solid
+  underline, unread bytes italic with a dotted underline, both carry a
+  tooltip, and each raw row counts its differing and unread bytes in text.
+- The shared table also serves the device-check comparison
+  (`DeviceInspectionPanel`); there it receives no `changes` and marks by the
+  byte comparison alone. Its separate *Differing ranges* table is unchanged.
 
 ## Required evidence
 

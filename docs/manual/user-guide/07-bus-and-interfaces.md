@@ -363,7 +363,11 @@ session tags and decoded tables. See [project versus devices](05-devices-and-pro
 Included in Alpha 12; package 2 adds named numeric/text parameter
 values from actual image bit attribution. Unknown values retain a reason and
 all raw bytes; existing image/device admission is unchanged.
-The existing Device checks result also uses the shared decoded-table renderer.
+The existing Device checks result also uses the shared decoded-table renderer,
+including its differences-only default and **Show equal rows** toggle
+([what differs](05-devices-and-products.md#what-differs-wp-18-source-builds-after-alpha-14)).
+There bytes are marked by comparing the shown project and device bytes; the
+**Differing ranges** table below it still lists every changed run.
 
 
 Open a project, choose **Bus monitor** in the navigation sidebar, then **Device

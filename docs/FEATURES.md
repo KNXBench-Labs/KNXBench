@@ -50,6 +50,12 @@ Last updated: 2026-10-18 07:55 CEST
 | --- | --- | --- |
 | [Parameter section captions](contracts/positional-text-templates.md#parameter-workspace-captions-issue-26) | Exact text-parameter resolution for block/separator captions; readable fallback labels and source tooltips; no configuration changes | Local-only; integration pending |
 
+## Device comparison display
+
+| Feature | Scope | Availability |
+| --- | --- | --- |
+| [What differs (WP-18)](manual/user-guide/05-devices-and-products.md#what-differs-wp-18-source-builds-after-alpha-14) | Differing and unread raw bytes marked on both sides without relying on colour; differences-only default with a *Show equal rows* toggle revealing every read range; display only ([contract](contracts/device-comparison.md#result-display-wp-18-owner-amendment-19-october-2026)) | Main-only |
+
 ## New in Alpha 14
 
 [Release scope](releases/alpha14.md) separates offline editing and product-data

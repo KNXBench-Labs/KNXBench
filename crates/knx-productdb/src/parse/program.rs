@@ -615,11 +615,11 @@ fn fill_linkable(
 /// Only rows whose key this walk produced are kept: reconciliation also
 /// re-derives evidence for the whole document, which the blob already has.
 ///
-/// `copies` is how many times ingest recorded this blob: `ingest_unknown`
-/// has no unique key, and every package install re-parses its program
-/// members (the v16 rule). Returns the rows that were missing and are now
-/// inserted — what one install of this blob added to its package report. A
-/// blob already carrying them (installed by a v21 parser) returns nothing,
+/// The rows are inserted once per blob: until v26 this wrote one copy per
+/// package member that re-parsed the blob (the v16 rule), which ADR-0146
+/// retired with the row identity. Returns the rows that were missing and are
+/// now inserted — what one install of this blob added to its package report.
+/// A blob already carrying them (installed by a v21 parser) returns nothing,
 /// so the backfill is idempotent.
 /// The elements `report_parameter_attrs` reports on.
 const REPORTED_HOSTS: [&str; 4] = ["Parameter", "ParameterRef", "Enumeration", "Property"];
@@ -630,7 +630,6 @@ pub(crate) fn backfill_parameter_attribute_unknowns(
     source_path: &str,
     bytes: &[u8],
     extended_scheme_package: bool,
-    copies: usize,
 ) -> Result<Vec<UnknownConstruct>, ProductDbError> {
     let mut reader = Reader::from_reader(bytes);
     let mut buf = Vec::new();
@@ -695,9 +694,7 @@ pub(crate) fn backfill_parameter_attribute_unknowns(
             missing.push(u);
         }
     }
-    for _ in 0..copies {
-        crate::report::insert_unknown(conn, source_sha256, &missing)?;
-    }
+    crate::report::insert_unknown(conn, source_sha256, &missing)?;
     Ok(missing)
 }
 

@@ -336,9 +336,12 @@ fn v20_to_v21_reproduces_a_fresh_install() {
 }
 
 #[test]
-fn v20_to_v21_records_a_shared_program_once_per_package_that_parsed_it() {
-    // Two packages carry the same program bytes; each install re-parses it,
-    // so a fresh database holds its rows twice. The backfill must too.
+fn v20_to_v21_records_a_shared_program_once() {
+    // Two packages carry the same program bytes and each install re-parses
+    // it. Until v26 a fresh database held its rows twice (one copy per
+    // package member) and this test pinned that copy count; ADR-0146 made a
+    // row a fact about the bytes, so a fresh install holds them once and the
+    // backfill, through the same idempotent `insert_unknown`, must too.
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("products.sqlite");
     let second = archive(&[
@@ -358,7 +361,7 @@ fn v20_to_v21_records_a_shared_program_once_per_package_that_parsed_it() {
                 |r| r.get(0),
             )
             .unwrap();
-        assert_eq!(rows, 2 * expected().len() as i64);
+        assert_eq!(rows, expected().len() as i64);
         let fresh = snapshot(&conn);
         rewind_to_v20(&conn);
         fresh

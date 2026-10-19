@@ -1104,3 +1104,360 @@ fn late_parser_failure_rolls_back_package_blobs_and_domain_rows() {
         assert_eq!(rows, 0, "{table} escaped transaction rollback");
     }
 }
+
+// WP-01: one `ingest_unknown` row per (source, program, xpath, kind, name),
+// and one `IdConflict` row per (kept, table, id, occurrence, other), however
+// often the same bytes are parsed again.
+
+const SHARED_MASTER: &[u8] = br#"<KNX xmlns="http://knx.org/xml/project/11"><MasterData>
+<Manufacturers><Manufacturer Id="M-0001" Name="Example"/></Manufacturers>
+<Languages><Language Identifier="en-US"><TranslationUnit RefId="M-0001" Version="1"/></Language></Languages>
+</MasterData></KNX>"#;
+/// Declares `H-1` like `FULL_HARDWARE` with different bytes: an id conflict.
+const RIVAL_HARDWARE: &[u8] = br#"<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-0001"><Hardware><Hardware Id="H-1" Name="Rival"><Products><Product Id="P-1" Text="Rival" OrderNumber="1"/></Products></Hardware></Hardware></Manufacturer></ManufacturerData></KNX>"#;
+
+fn shared_archive(extra: &[(&str, &[u8])]) -> Vec<u8> {
+    let mut entries: Vec<(&str, &[u8])> = vec![
+        ("knx_master.xml", SHARED_MASTER),
+        ("M-0001/Hardware.xml", FULL_HARDWARE),
+        ("M-0001/A.xml", FULL_PROGRAM),
+    ];
+    entries.extend_from_slice(extra);
+    archive(&entries)
+}
+
+/// Key groups holding more than one row: construct rows by their identity,
+/// conflict rows by every field they carry.
+fn repeated_unknown_groups(conn: &Connection) -> i64 {
+    conn.query_row(
+        "SELECT
+           (SELECT count(*) FROM (SELECT 1 FROM ingest_unknown WHERE kind <> 'IdConflict'
+              GROUP BY source_sha256, ifnull(program_id, ''), xpath, kind, name
+              HAVING count(*) > 1))
+         + (SELECT count(*) FROM (SELECT 1 FROM ingest_unknown WHERE kind = 'IdConflict'
+              GROUP BY source_sha256, xpath, name, occurrences, ifnull(sample, '')
+              HAVING count(*) > 1))",
+        [],
+        |row| row.get(0),
+    )
+    .unwrap()
+}
+
+fn unknown_rows(conn: &Connection) -> Vec<(String, String, String, String, i64, Option<String>)> {
+    conn.prepare(
+        "SELECT source_sha256, xpath, kind, name, occurrences, sample FROM ingest_unknown
+         ORDER BY source_sha256, xpath, kind, name, occurrences, sample",
+    )
+    .unwrap()
+    .query_map([], |r| {
+        Ok((
+            r.get(0)?,
+            r.get(1)?,
+            r.get(2)?,
+            r.get(3)?,
+            r.get(4)?,
+            r.get(5)?,
+        ))
+    })
+    .unwrap()
+    .collect::<Result<_, _>>()
+    .unwrap()
+}
+
+fn rows_of(conn: &Connection, source: &[u8]) -> Vec<(String, String, i64, Option<String>)> {
+    conn.prepare(
+        "SELECT kind, name, occurrences, sample FROM ingest_unknown WHERE source_sha256 = ?1
+         ORDER BY kind, xpath, name",
+    )
+    .unwrap()
+    .query_map([sha256_hex(source)], |r| {
+        Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?))
+    })
+    .unwrap()
+    .collect::<Result<_, _>>()
+    .unwrap()
+}
+
+#[test]
+fn members_shared_by_two_packages_record_their_unknown_evidence_once() {
+    let dir = tempfile::tempdir().unwrap();
+    let conn = open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+    let first = install_package(&conn, "first.knxprod", &shared_archive(&[])).unwrap();
+    let alone = unknown_rows(&conn);
+    let second = install_package(
+        &conn,
+        "second.knxprod",
+        &shared_archive(&[("M-0001/Baggages/second.bin", b"two")]),
+    )
+    .unwrap();
+    assert!(!second.skipped);
+    assert_eq!(repeated_unknown_groups(&conn), 0);
+    // The second package adds nothing its shared members had not said.
+    assert_eq!(unknown_rows(&conn), alone);
+    assert_eq!(
+        rows_of(&conn, FULL_PROGRAM)
+            .into_iter()
+            .filter(|(_, name, _, _)| name == "Mystery" || name == "Foo")
+            .collect::<Vec<_>>(),
+        vec![
+            ("Attribute".into(), "Foo".into(), 2, Some("1".into())),
+            ("Element".into(), "Mystery".into(), 2, None),
+        ]
+    );
+    let master: Vec<_> = rows_of(&conn, SHARED_MASTER)
+        .into_iter()
+        .filter(|(kind, _, _, _)| kind == "Attribute")
+        .map(|(_, name, occurrences, _)| (name, occurrences))
+        .collect();
+    assert_eq!(master, vec![("RefId".into(), 1), ("Version".into(), 1)]);
+    // Each package's own report still counts every shared member.
+    let (first, second) = (first.facts.unwrap(), second.facts.unwrap());
+    assert_eq!(first.unknown_constructs, second.unknown_constructs);
+    assert_eq!(first.unknown_occurrences, second.unknown_occurrences);
+    assert_eq!(
+        fact_count(
+            &first,
+            InstallCategory::UnknownConstruct,
+            InstallDisposition::Read
+        ),
+        first.unknown_occurrences
+    );
+}
+
+#[test]
+fn a_standalone_ingest_and_a_later_package_record_the_blob_once() {
+    let dir = tempfile::tempdir().unwrap();
+    let conn = open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+    knx_productdb::ingest_file(&conn, "M-0001/A.xml", FULL_PROGRAM).unwrap();
+    let standalone = rows_of(&conn, FULL_PROGRAM);
+    assert!(!standalone.is_empty());
+    install_package(&conn, "first.knxprod", &shared_archive(&[])).unwrap();
+    assert_eq!(repeated_unknown_groups(&conn), 0);
+    assert_eq!(rows_of(&conn, FULL_PROGRAM), standalone);
+}
+
+#[test]
+fn a_refused_install_a_retry_and_a_repeat_install_leave_one_row_per_key() {
+    const BAD_PROGRAM: &[u8] = br#"<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-0001"><ApplicationPrograms><ApplicationProgram Id="A-BAD"><Static><Parameters><Parameter Id="DUP"/><Parameter Id="DUP"/></Parameters></Static></ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
+    let dir = tempfile::tempdir().unwrap();
+    let conn = open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+    let good = shared_archive(&[]);
+    install_package(&conn, "good.knxprod", &good).unwrap();
+    let before = unknown_rows(&conn);
+    let refused = shared_archive(&[("M-0001/Z.xml", BAD_PROGRAM)]);
+    assert!(install_package(&conn, "refused.knxprod", &refused).is_err());
+    assert!(install_package(&conn, "refused.knxprod", &refused).is_err());
+    assert_eq!(unknown_rows(&conn), before);
+    let retry = install_package(&conn, "again.knxprod", &good).unwrap();
+    assert!(retry.skipped);
+    let other = shared_archive(&[("M-0001/Baggages/x.bin", b"x")]);
+    install_package(&conn, "other.knxprod", &other).unwrap();
+    install_package(&conn, "other-again.knxprod", &other).unwrap();
+    assert_eq!(repeated_unknown_groups(&conn), 0);
+    assert_eq!(unknown_rows(&conn), before);
+}
+
+#[test]
+fn a_reparsed_losing_blob_records_its_id_conflict_once() {
+    let dir = tempfile::tempdir().unwrap();
+    let conn = open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+    install_package(&conn, "first.knxprod", &shared_archive(&[])).unwrap();
+    let rival = |payload: &'static [u8]| {
+        archive(&[
+            ("knx_master.xml", SHARED_MASTER),
+            ("M-0001/Hardware.xml", RIVAL_HARDWARE),
+            ("M-0001/Baggages/p.bin", payload),
+        ])
+    };
+    let second = install_package(&conn, "second.knxprod", &rival(b"2")).unwrap();
+    let third = install_package(&conn, "third.knxprod", &rival(b"3")).unwrap();
+    // Each install still reports the conflict it met.
+    assert!(!second.conflicts.is_empty());
+    assert_eq!(second.conflicts.len(), third.conflicts.len());
+    let recorded: i64 = conn
+        .query_row(
+            "SELECT count(*) FROM ingest_unknown WHERE kind = 'IdConflict' AND sample = ?1",
+            [sha256_hex(RIVAL_HARDWARE)],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(recorded, i64::try_from(second.conflicts.len()).unwrap());
+    assert_eq!(repeated_unknown_groups(&conn), 0);
+}
+
+#[test]
+fn reopening_the_database_keeps_unknown_evidence_unchanged() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("products.sqlite");
+    let rows = {
+        let conn = open_and_migrate(&path).unwrap();
+        install_package(&conn, "first.knxprod", &shared_archive(&[])).unwrap();
+        install_package(
+            &conn,
+            "second.knxprod",
+            &shared_archive(&[("M-0001/Baggages/s.bin", b"s")]),
+        )
+        .unwrap();
+        unknown_rows(&conn)
+    };
+    let conn = open_and_migrate(&path).unwrap();
+    assert_eq!(unknown_rows(&conn), rows);
+    install_package(
+        &conn,
+        "third.knxprod",
+        &shared_archive(&[("M-0001/Baggages/t.bin", b"t")]),
+    )
+    .unwrap();
+    assert_eq!(unknown_rows(&conn), rows);
+    assert_eq!(repeated_unknown_groups(&conn), 0);
+}
+
+/// Per-package report state the repair must leave alone.
+fn report_state(conn: &Connection) -> Vec<(String, i64, i64, i64)> {
+    conn.prepare(
+        "SELECT p.sha256, p.unknown_count, r.unknown_distinct, r.unknown_occurrences
+         FROM package AS p JOIN package_install_report AS r ON r.package_sha256 = p.sha256
+         ORDER BY p.sha256",
+    )
+    .unwrap()
+    .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))
+    .unwrap()
+    .collect::<Result<_, _>>()
+    .unwrap()
+}
+
+fn package_unknown_rows(conn: &Connection) -> i64 {
+    conn.query_row("SELECT count(*) FROM package_install_unknown", [], |r| {
+        r.get(0)
+    })
+    .unwrap()
+}
+
+/// Turns a v26 database back into what v25 wrote for the same installs:
+/// every package install after the first re-parsed the members it shares and
+/// stored their rows (and the losing blob's conflict) once more.
+fn rewind_to_v25_with_copies(conn: &Connection, copies: usize) {
+    v20_rewind::drop_v26_objects(conn);
+    for _ in 0..copies {
+        conn.execute_batch(
+            "INSERT INTO ingest_unknown (source_sha256, program_id, xpath, kind, name, occurrences, sample)
+             SELECT source_sha256, program_id, xpath, kind, name, occurrences, sample
+             FROM ingest_unknown WHERE id IN (SELECT min(id) FROM ingest_unknown
+               GROUP BY source_sha256, xpath, kind, name, occurrences, ifnull(sample, ''));",
+        )
+        .unwrap();
+    }
+    conn.pragma_update(None, "user_version", 25).unwrap();
+}
+
+#[test]
+fn the_v26_repair_of_a_shared_v25_install_equals_a_fresh_install() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("products.sqlite");
+    let (fresh_rows, fresh_reports, fresh_package_rows, inflated) = {
+        let conn = open_and_migrate(&path).unwrap();
+        install_package(&conn, "first.knxprod", &shared_archive(&[])).unwrap();
+        install_package(
+            &conn,
+            "second.knxprod",
+            &shared_archive(&[("M-0001/Baggages/s.bin", b"s")]),
+        )
+        .unwrap();
+        install_package(
+            &conn,
+            "rival.knxprod",
+            &archive(&[
+                ("knx_master.xml", SHARED_MASTER),
+                ("M-0001/Hardware.xml", RIVAL_HARDWARE),
+            ]),
+        )
+        .unwrap();
+        let fresh = (
+            unknown_rows(&conn),
+            report_state(&conn),
+            package_unknown_rows(&conn),
+        );
+        rewind_to_v25_with_copies(&conn, 2);
+        let inflated: i64 = conn
+            .query_row("SELECT count(*) FROM ingest_unknown", [], |r| r.get(0))
+            .unwrap();
+        (fresh.0, fresh.1, fresh.2, inflated)
+    };
+    assert_eq!(inflated, 3 * fresh_rows.len() as i64);
+    let conn = open_and_migrate(&path).unwrap();
+    assert_eq!(unknown_rows(&conn), fresh_rows);
+    assert_eq!(report_state(&conn), fresh_reports);
+    assert_eq!(package_unknown_rows(&conn), fresh_package_rows);
+    assert_eq!(repeated_unknown_groups(&conn), 0);
+}
+
+#[test]
+fn the_v26_repair_keeps_the_largest_count_the_oldest_sample_and_every_distinct_conflict() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("products.sqlite");
+    {
+        let conn = open_and_migrate(&path).unwrap();
+        v20_rewind::drop_v26_objects(&conn);
+        conn.execute_batch(
+            "INSERT INTO ingest_unknown (source_sha256, program_id, xpath, kind, name, occurrences, sample) VALUES
+               ('blob', NULL, '/KNX/X', 'Attribute', 'Fancy', 2, NULL),
+               ('blob', NULL, '/KNX/X', 'Attribute', 'Fancy', 5, 'second'),
+               ('blob', NULL, '/KNX/X', 'Attribute', 'Fancy', 3, 'third'),
+               ('blob', NULL, '/KNX/X', 'Element', 'Fancy', 1, NULL),
+               ('other', NULL, '/KNX/X', 'Attribute', 'Fancy', 1, 'own'),
+               ('kept', NULL, 'hardware', 'IdConflict', 'H-1', 1, 'loser-a'),
+               ('kept', NULL, 'hardware', 'IdConflict', 'H-1', 1, 'loser-a'),
+               ('kept', NULL, 'hardware', 'IdConflict', 'H-1', 1, 'loser-b'),
+               ('kept', NULL, 'hardware', 'IdConflict', 'H-1', 2, 'loser-a');",
+        )
+        .unwrap();
+        conn.pragma_update(None, "user_version", 25).unwrap();
+    }
+    let conn = open_and_migrate(&path).unwrap();
+    let rows: Vec<(String, String, String, i64, Option<String>)> = conn
+        .prepare(
+            "SELECT source_sha256, kind, name, occurrences, sample FROM ingest_unknown
+             ORDER BY source_sha256, kind, name, occurrences, sample",
+        )
+        .unwrap()
+        .query_map([], |r| {
+            Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?))
+        })
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap();
+    let row = |s: &str, k: &str, o: i64, sample: Option<&str>| {
+        let name = if k == "IdConflict" { "H-1" } else { "Fancy" };
+        (
+            s.to_string(),
+            k.to_string(),
+            name.to_string(),
+            o,
+            sample.map(str::to_string),
+        )
+    };
+    assert_eq!(
+        rows,
+        vec![
+            row("blob", "Attribute", 5, Some("second")),
+            row("blob", "Element", 1, None),
+            row("kept", "IdConflict", 1, Some("loser-a")),
+            row("kept", "IdConflict", 1, Some("loser-b")),
+            row("kept", "IdConflict", 2, Some("loser-a")),
+            row("other", "Attribute", 1, Some("own")),
+        ]
+    );
+    // The identity is now the schema's: a second copy is refused outright.
+    let copy = conn.execute(
+        "INSERT INTO ingest_unknown (source_sha256, program_id, xpath, kind, name, occurrences, sample)
+         VALUES ('blob', NULL, '/KNX/X', 'Attribute', 'Fancy', 1, NULL)",
+        [],
+    );
+    assert!(copy.is_err(), "duplicate construct row accepted");
+    let copy = conn.execute(
+        "INSERT INTO ingest_unknown (source_sha256, program_id, xpath, kind, name, occurrences, sample)
+         VALUES ('kept', NULL, 'hardware', 'IdConflict', 'H-1', 1, 'loser-b')",
+        [],
+    );
+    assert!(copy.is_err(), "duplicate conflict row accepted");
+}

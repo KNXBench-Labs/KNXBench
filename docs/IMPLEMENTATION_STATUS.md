@@ -12,6 +12,28 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Package gates keep their hands off the developer's knx directories (19 October 2026)
+
+The same day as the `doc-export` fix, a second gate migrated the owner's fresh
+product database (an ETS import made at 14:37 with the Alpha 14 AppImage) to
+the unmerged v26 schema: the gate's `rust-tests` stage on the product-DB branch
+ran 15:16:06–15:17:57, the file was written at 15:16:33, and that branch still
+predated the fix, so its `cli_documentation_export` tests opened the existing
+file with the migrating opener. A fix on `main` cannot protect a gate that runs
+an older branch's tests, so the runner now isolates them: the package gate
+(`tools/run_package_gate.py`) gives its test stages (`tool-tests`, `rust-tests`,
+`bindings`, `corpus`, website and story tests) empty scratch `XDG_DATA_HOME`
+and `XDG_CONFIG_HOME` directories below the gate output, and fails, naming each
+path, when a file in the real `knx` data or config directory is created,
+changed or removed during the run (`userDataTouched` in the receipt). The web
+gate keeps the real values (fontconfig, pinned pixel widths). Tests:
+`tools/tests/test_run_package_gate.py` (directory resolution like the apps,
+stage routing, created/changed/removed detection, receipt failure keeping an
+earlier error); mutants (isolation bypassed, detection disabled) turn them red.
+The owner parked the migrated file unchanged. Still open: direct `cargo test`
+runs ([OPEN_WORK](OPEN_WORK.md#test-gates-change-scoped-by-default-19-october-2026)).
+[Pitfall](DEVELOPER_PITFALLS.md#gates).
+
 ## A product database the build cannot read is named, not hidden (19 October 2026)
 
 Owner report on `0.1.0-alpha.14+g6d92fda` (AppImage): after an ETS import, product

@@ -94,7 +94,7 @@ Reproduce the opt-in corpus check with the private originals available:
 
 ```sh
 KNXBENCH_PRODUCT_CORPUS="<private-corpus>" cargo test --release -p knx-app \
-  --test procedure_resolution_corpus -- --ignored
+  --test it procedure_resolution_corpus:: -- --ignored
 ```
 
 Review is **self-review**, not independent review. Important findings (report

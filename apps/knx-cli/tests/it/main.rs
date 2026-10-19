@@ -1,0 +1,35 @@
+//! knx-cli integration tests in one binary: one link, one test pool (ADR-0144).
+
+mod catalog_metadata;
+mod catalog_update_cli;
+mod cli_activity_history;
+mod cli_address_programming_recovery;
+mod cli_address_reset_recovery;
+mod cli_bus_address_style;
+mod cli_bus_dpt;
+mod cli_compare_activity;
+mod cli_documentation_export;
+mod cli_ga_csv_installations;
+mod cli_group_address_csv;
+mod cli_import;
+mod cli_import_evidence;
+mod cli_large_package;
+mod cli_legacy_import;
+mod cli_legacy_inspect;
+mod cli_native_readers_read_only;
+mod cli_package_raw_admission;
+mod cli_password_import;
+mod cli_probe_preview;
+mod cli_product_extension_case;
+mod cli_product_identity;
+mod cli_project_diff;
+mod cli_read_activity;
+mod cli_vendor_zip;
+mod cli_version;
+mod contribution;
+mod device_diagnostics;
+mod live_memory_download;
+mod memory_download_simulated;
+mod name_recipe_cli;
+mod plugin_data_cli;
+mod selective_import_cli;

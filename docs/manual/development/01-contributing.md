@@ -98,6 +98,12 @@ Questions are welcome as issues. If the answer turns out to be "the manual shoul
 said that", the fix is usually a documentation change, which is a perfectly respectable
 outcome.
 
+The [Code of Conduct](../../../CODE_OF_CONDUCT.md) (Contributor Covenant 3.0) applies in
+the issue tracker, in pull requests and in mail to any `knxbench.com` address. A conduct
+problem is reported privately to
+[contact@knxbench.com](mailto:contact@knxbench.com) with the subject line "Code of
+Conduct", never in a public issue.
+
 ## The license, and what contributing under it means
 
 KNXBench is licensed under the **GNU Affero General Public License, version 3 or later**

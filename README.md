@@ -356,6 +356,8 @@ bus probe is shipped — this one is certified for Markdown only.
 - **An idea?** Open an issue and describe the problem it solves.
 - **Code?** Quality gates and conventions are in
   [Contributing](docs/manual/development/01-contributing.md).
+- **Everywhere:** the [Code of Conduct](CODE_OF_CONDUCT.md) applies. Report a problem
+  privately to [contact@knxbench.com](mailto:contact@knxbench.com), not in a public issue.
 
 There is no sponsorship page. A good bug report is the currency we accept.
 

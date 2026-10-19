@@ -80,3 +80,42 @@ Resumed after the owner's pause on the branch rebased onto the test-speed merge.
   pins (501, 252, 14,851) and (168, 79, 14,995). The matrix run matched all of
   them and nothing else moved; re-pinned. The v25 shared database migrated
   with the WP-02 CLI equals the fresh WP-02 shared database in all 43 tables.
+
+## WP-02 correction round 1 (cross-vendor review findings)
+
+- PDB-01: `backfill_suffix_text` let the second declaration of a program id
+  in one blob overwrite the first; ingest keeps the first (`first_winner`).
+  It now tracks the declared ids like the `Dynamic` parser does and fills only
+  the first owned declaration. A parameter or ref id repeated inside one
+  program is refused whole at ingest (`UNIQUE constraint failed`), so no
+  stored blob carries one; pinned by a test instead of a backfill rule.
+- PDB-02: `Retired::retires` matched only the last step, so v26 deleted the
+  `SuffixText` rows of `Parameter`/`ParameterRef` inside `Dynamic`, which the
+  `Dynamic` parser reports on every fresh ingest. `Retired` gained
+  `keeps_dynamic`; only the v26 promotion sets it.
+- PDB-03: the checked editor dropped the suffix. `ParameterEditor` takes an
+  optional `suffix` prop shown beside the draft input (and beside the
+  unchanged original value in its fallback), outside field, plan and draft;
+  `ParameterSourceEditor` passes `field.suffixText`.
+- RED first: `suffix_text::v25_to_v26_keeps_the_first_declaration_of_a_program_declared_twice`
+  (migrated `h`/`hours` instead of `s`/`sec`),
+  `suffix_text::v25_to_v26_keeps_the_suffix_evidence_inside_dynamic` (three
+  `Dynamic` rows gone after migration) and the Vitest case "keeps a declared
+  suffix beside the checked editor's value" (no suffix beside the input).
+- Mutants (each RED on its named test, restored byte-exact): guard removed,
+  v26 `keeps_dynamic: false`, `suffix` not passed by the host.
+- Matrix: no leaf could move (only migration changed; the corpus has no
+  same-blob duplicate program id and no `Dynamic` `SuffixText` row). The run
+  passed on the existing pins and its output equals the previous run's byte
+  for byte. The kept v25 shared database migrated with this tree equals the
+  fresh shared database of the same run in all 43 tables and indexes.
+- Found, not fixed (reported to the controller as open work):
+  `backfill_placement_columns` (v25) and `backfill_text_parameter_refs` (v23)
+  have the same duplicate-program defect (probe: migrated `own_offset` 4 and
+  `binary_value` 9 instead of 0 and 1; `text_parameter_ref_id` of the second
+  declaration); v24 does not (its re-parse uses the `Dynamic` parser's
+  first-declaration rule). The v23 and v25 retirements also delete rows that
+  fresh ingest keeps: `Dynamic/ComObjectRef/@TextParameterRefId` (v23),
+  `Dynamic/Parameter/@Offset`/`@BitOffset` (v25), and for hosts outside the
+  modelled tree `Static/.../ParameterBlock/@TextParameterRefId` (v23) and
+  `@Access` (v24).

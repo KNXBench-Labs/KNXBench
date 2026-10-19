@@ -29,6 +29,13 @@ before the run and the run matched them (unknown report totals −635 / −633,
 parameter-attribute pins); the migrated v25 shared database equals a fresh v26
 install in all 43 tables.
 
+A cross-vendor review then found three gaps, closed in the same package: a
+migration filled the second declaration of a program id repeated in one file
+(ingest keeps the first), it retired the `SuffixText` evidence inside `Dynamic`
+that ingest keeps reporting, and the checked editor did not show the suffix.
+The matrix does not move (only the migration changed) and the migrated v25
+database again equals a fresh install.
+
 ## Unknown evidence is recorded once per blob: product DB v26 (19 October 2026)
 
 WP-01 ([ADR-0146](adr/0146-unknown-evidence-rows-have-an-identity.md)).

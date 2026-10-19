@@ -110,7 +110,7 @@ export default function ParameterSourceEditor(props: ParameterSourceEditorProps)
     {projected !== null && <ParameterEditor field={editorField(field)} source={source}
       context={{ programId, sourceSha256: source?.sourceSha256 ?? "", moduleScoped: scope !== null }}
       selectionKey={parameterSelectionKey(snapshot, deviceId, scope)} revision={revision} label={props.label}
-      locale={uiLanguage === "de" ? "de" : "en"} onApply={onApply} onApplied={onApplied} />}
+      suffix={field.suffixText} locale={uiLanguage === "de" ? "de" : "en"} onApply={onApply} onApplied={onApplied} />}
     <button type="button" className="parameter-checked-close" onClick={props.onClose}>{t("parameters.checked.close")}</button>
   </div>;
 }

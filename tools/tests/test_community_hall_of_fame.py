@@ -41,6 +41,85 @@ def build(issues, comments=(), previous=None):
     return hall.build_snapshot(issues, list(comments), POLICY, "example/project", NOW, previous)
 
 
+ALL_MEDALS = (hall.REPORT_MEDALS + hall.RESOLUTION_MEDALS +
+              hall.PULL_REQUEST_MEDALS + hall.MERGE_MEDALS)
+
+
+def medal_names_in(text):
+    return [name for _, name in ALL_MEDALS if name in text]
+
+
+class UnlockedMedalNoticeTests(unittest.TestCase):
+    """Bot comments name only what the event unlocked; the board keeps the collection."""
+
+    def test_completion_note_names_only_the_medal_this_completion_unlocked(self):
+        snapshot = build([issue(i + 1, state="closed", reason="completed") for i in range(20)])
+        self.assertEqual(len(snapshot["contributors"][0]["medals"]), 6)  # 2 report + 4 completion
+        unlocked = {5: ["Loose End Lasso"], 10: ["Regression Repair Ribbon"],
+                    15: ["Acknowledgement Ace"], 20: ["Closed-Loop Champion"]}
+        for number in range(1, 21):
+            note = hall.closing_note(snapshot, number)
+            self.assertEqual(medal_names_in(note), unlocked.get(number, []), number)
+            self.assertEqual("Medal unlocked" in note, number in unlocked, number)
+            self.assertNotIn("Medals earned", note)
+
+    def test_completion_order_follows_closure_time_not_issue_number(self):
+        issues = [issue(i + 1, state="closed", reason="completed") for i in range(5)]
+        issues[0]["closed_at"] = "2026-10-14T09:00:00Z"  # #1 was the last one closed
+        snapshot = build(issues)
+        self.assertEqual(medal_names_in(hall.closing_note(snapshot, 1)), ["Loose End Lasso"])
+        self.assertEqual(medal_names_in(hall.closing_note(snapshot, 5)), [])
+
+    def test_two_completions_in_one_refresh_still_credit_the_milestone(self):
+        previous = build([issue(i + 1, state="closed", reason="completed") for i in range(4)])
+        both = build([issue(i + 1, state="closed", reason="completed") for i in range(6)], previous=previous)
+        self.assertEqual(medal_names_in(hall.closing_note(both, 5)), ["Loose End Lasso"])
+        self.assertEqual(medal_names_in(hall.closing_note(both, 6)), [])
+
+    def test_report_count_medals_stay_on_the_board_not_in_completion_notes(self):
+        snapshot = build([issue(i + 1) for i in range(10)] + [issue(11, state="closed", reason="completed")])
+        self.assertIn("Golden Bus Probe", snapshot["contributors"][0]["medals"])
+        self.assertIn("Golden Bus Probe", hall.render_table(snapshot))
+        self.assertEqual(medal_names_in(hall.closing_note(snapshot, 11)), [])
+
+    def test_first_merged_pr_unlocks_both_tracks(self):
+        pull = {**issue(2, state="closed"), "merged_at": NOW}
+        snapshot = hall.build_snapshot([], [], POLICY, "example/project", NOW, pull_requests=[pull])
+        body = hall.pull_request_note(snapshot, pull, [pull])
+        self.assertEqual(medal_names_in(body), ["Patch Pilot", "Green Merge Ribbon"])
+        self.assertIn("Medals unlocked by this PR", body)
+
+    def test_pr_without_a_milestone_shows_no_medal_line(self):
+        pulls = [{**issue(n), "merged_at": None} for n in range(2, 8)]  # six open PRs
+        snapshot = hall.build_snapshot([], [], POLICY, "example/project", NOW, pull_requests=pulls)
+        expected = {2: ["Patch Pilot"], 6: ["Patch Panel Pro"]}
+        for pull in pulls:
+            body = hall.pull_request_note(snapshot, pull, pulls)
+            self.assertEqual(medal_names_in(body), expected.get(pull["number"], []), pull["number"])
+            self.assertNotIn("Medals earned", body)
+            self.assertNotIn("trophy cabinet is warming up", body)
+
+    def test_merge_track_follows_merge_time_and_ignores_other_authors(self):
+        early, late = "2026-10-13T20:05:00Z", "2026-10-13T21:00:00Z"
+        pulls = [{**issue(2, state="closed"), "merged_at": late},
+                 {**issue(3, state="closed"), "merged_at": early},
+                 {**issue(4, "someone-else", state="closed"), "merged_at": NOW}]
+        snapshot = hall.build_snapshot([], [], POLICY, "example/project", NOW, pull_requests=pulls)
+        self.assertEqual(medal_names_in(hall.pull_request_note(snapshot, pulls[0], pulls)), ["Patch Pilot"])
+        self.assertEqual(medal_names_in(hall.pull_request_note(snapshot, pulls[1], pulls)), ["Green Merge Ribbon"])
+        self.assertEqual(medal_names_in(hall.pull_request_note(snapshot, pulls[2], pulls)),
+                         ["Patch Pilot", "Green Merge Ribbon"])
+
+    def test_notify_posts_the_unlocked_medal_not_the_collection(self):
+        pulls = [{**issue(2, state="closed"), "merged_at": NOW}, {**issue(3), "merged_at": None}]
+        snapshot = hall.build_snapshot([], [], POLICY, "example/project", NOW, pull_requests=pulls)
+        api = PrApi(pulls[1])  # live re-read only matches #3, so #1 is skipped as stale
+        hall.notify_pull_requests(snapshot, pulls, api)
+        self.assertEqual([number for number, _ in api.posts], [3])
+        self.assertEqual(medal_names_in(api.posts[0][1]), [])
+        self.assertIn("Patch Pilot", hall.render_table(snapshot))
+
+
 class PullRequestTests(unittest.TestCase):
     def test_pr_author_gets_state_specific_xp_without_becoming_an_issue(self):
         pulls = [
@@ -376,7 +455,6 @@ class PresentationTests(unittest.TestCase):
                          "| Place | Bug hunter | Rank & title | Medal | XP | Issues | Replies | Resolved | PRs | Open PRs | Merged PRs | Closed unmerged | XP sources |")
         for medal in snapshot["contributors"][0]["medals"]:
             self.assertIn(medal, table)
-            self.assertIn(medal, hall.closing_note(snapshot, 20))
         cells = table.splitlines()[2].split("|")[1:-1]
         self.assertEqual([cell.strip() for cell in cells[4:]], ["**300**", "20", "0", "20", "0", "0", "0", "0",
                                                                 "100 issue + 0 reply + 200 completion + 0 PR"])
@@ -390,7 +468,7 @@ class PresentationTests(unittest.TestCase):
     def test_public_goals_hint_without_revealing_unearned_medal_names(self):
         snapshot = build([issue(i + 1, state="closed", reason="completed") for i in range(20)])
         outputs = [hall.render_page(snapshot), hall.replace_readme(hall.START + hall.END, snapshot),
-                   json.dumps(snapshot), hall.closing_note(snapshot, 20)]
+                   json.dumps(snapshot)]
         earned = snapshot["contributors"][0]["medals"]
         for output in outputs:
             for _, name in (hall.REPORT_MEDALS + hall.RESOLUTION_MEDALS +
@@ -478,14 +556,12 @@ class PullRequestNotificationTests(unittest.TestCase):
         self.assertEqual((len(api.posts), len(api.edits), len(api.comments)), (1, 3, 1))
         self.assertEqual(api.readbacks, [42, 42, 42, 42])
 
-    def test_only_earned_medals_appear_in_pr_notice(self):
+    def test_only_the_medal_unlocked_by_this_pr_appears_in_pr_notice(self):
         pull = {**issue(2), "merged_at": None}
         snapshot = hall.build_snapshot([], [], POLICY, "example/project", NOW, pull_requests=[pull])
-        body = hall.pull_request_note(snapshot, pull)
-        earned = snapshot["contributors"][0]["medals"]
-        for _, name in (hall.REPORT_MEDALS + hall.RESOLUTION_MEDALS +
-                        hall.PULL_REQUEST_MEDALS + hall.MERGE_MEDALS):
-            self.assertEqual(name in body, name in earned, name)
+        body = hall.pull_request_note(snapshot, pull, [pull])
+        for _, name in ALL_MEDALS:
+            self.assertEqual(name in body, name == "Patch Pilot", name)
 
     def test_trusted_existing_notice_is_edited_in_place_not_reposted(self):
         pull = {**issue(2), "merged_at": None}
@@ -566,7 +642,7 @@ class PullRequestNotificationTests(unittest.TestCase):
         api = PrApi(pull)
         api.comments = [reply(10, hall.BOT, 2, "Bot", "<!-- knxbench-pr-credit:2 -->")]
         with patch.object(api, "edit_comment", return_value={"id": 99}), \
-             patch.object(api, "get_comment", return_value={"id": 99, "body": hall.pull_request_note(snapshot, pull)}):
+             patch.object(api, "get_comment", return_value={"id": 99, "body": hall.pull_request_note(snapshot, pull, [pull])}):
             with self.assertRaisesRegex(ValueError, "target"):
                 hall.notify_pull_requests(snapshot, [pull], api)
 

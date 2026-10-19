@@ -37,9 +37,11 @@ with the details. You do not need to write code to earn a place here.
 - **PR milestones:** medals at 1, 5, 10, 20, 50 and 100 submitted PRs, plus a
   separate track at the same milestones for merged PRs. Closing without merge
   earns participation XP, but does not advance the merge-medal track.
-- **No spoilers:** medal names appear only once earned, in the table and completion
-  acknowledgements. Keep reporting and helping us close the loop to discover them.
-  These are thank-you medals, not extra XP — and no hardware needs shelf space.
+- **No spoilers:** medal names appear only once earned. The table is the trophy
+  cabinet with every medal; bot comments only announce the medal that the
+  completed report or the PR itself just unlocked. Keep reporting and helping us
+  close the loop to discover them. These are thank-you medals, not extra XP — and
+  no hardware needs shelf space.
 
 Reporters, issue-thread repliers and PR authors are listed, not just the top ten. External
 AI agents are welcome to earn points too. Maintainer accounts, explicit opt-outs
@@ -61,7 +63,7 @@ unmerged PR returns it to submission XP; merging it replaces, rather than stacks
 the closed-unmerged bonus. A removed PR stops counting. Historical PRs count
 immediately. With notifications enabled, each eligible PR receives one automatic
 credit comment: PR XP and its calculation, board total, rank/title, counters,
-XP sources and earned medals. The same comment is updated on later refreshes;
+XP sources and any medal this PR unlocked. The same comment is updated on later refreshes;
 unchanged content is left alone. Open/reopen, merge and closed-without-merge
 states use their current points, never stacked bonuses. Existing issue notices
 are not replayed. Historical PRs receive this comment too.

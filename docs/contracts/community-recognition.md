@@ -107,8 +107,9 @@ Total: 15 XP · Title: Bus Bug Scout
 Rank up: Telegram Trainee → Bus Bug Scout.
 ```
 
-Real comments also link the board and include every currently earned medal.
-New milestones are reconciled retroactively on the board, without reposting
+Real comments also link the board. They name only a medal that this completion
+unlocked (see "Medals in bot comments" below); the full collection lives in the
+board table. New milestones are reconciled retroactively on the board, without reposting
 already-notified issue comments or creating separate milestone-comment spam. Do not invent
 an extra rank-up when the bonus stays within the current band. Historical closures
 before `notify_since` receive scoreboard credit without retroactive comment spam.
@@ -130,14 +131,14 @@ from a marker that no longer exists; no claim of distributed exactly-once delive
 comment per eligible PR, including historical and open/draft PRs. The comment
 shows this PR's total XP and submission/outcome calculation, its current status,
 the author's board total and title, issue/reply/completion/PR counters, XP source
-breakdown, all currently earned medals and the board link. No unearned names are
+breakdown, any medal this PR unlocked and the board link. No unearned names are
 revealed and no extra XP is awarded for the comment.
 
 A trusted `<!-- knxbench-pr-credit:<number> -->` marker identifies the existing
 comment. Create if absent; PATCH that exact comment when the generated body
 changes; perform no write when unchanged. Reopen, close without merge and merge
 update the same comment, with live 5/15/25 PR XP rather than accumulating bonuses.
-Other contribution changes can also update the displayed board total/medals.
+Other contribution changes can also update the displayed board total.
 All eligible PRs reconcile on every run, recovering superseded event runs.
 
 Only explicitly trusted notice accounts or the correctly typed scoreboard bot
@@ -166,6 +167,29 @@ alongside existing `issues: write`. API failures expose only an HTTP status when
 available, never raw response or submitted comment contents. It still executes
 only default-branch code, never PR code, and bot comments remain excluded from
 scoring and self-triggering.
+
+## Medals in bot comments (owner amendment, 19 October 2026)
+
+The owner reported that every XP update repeated the contributor's whole medal
+list. The board table is now the only place that shows the collection; a bot
+comment shows a medal line only when the event it acknowledges reached a
+milestone, and shows no medal line otherwise.
+
+- **Completion note:** the reporter's retained awards are ordered by closure time
+  (`closed_at`, then issue number); the n-th award unlocks the resolution medal
+  whose threshold is n. Two completions counted in one refresh therefore still
+  credit the milestone to the right issue.
+- **PR credit comment:** the author's counted PRs are ordered by PR number; the
+  n-th PR unlocks the PR medal with threshold n. A merged PR additionally takes
+  its place among the author's merged PRs (`merged_at`, then number) for the
+  merge track. A first PR that is merged therefore names both first medals.
+- Report-count medals (every ten authored issues) belong to no single event that
+  the bot acknowledges, so they appear only on the board.
+
+Medal thresholds, XP, ranks and the snapshot schema are unchanged. Because PR
+credit comments are maintained, the first refresh after this change edits each
+existing PR credit comment once to drop the old collection line; already-posted
+completion notes are not edited or reposted.
 
 ## About dialog (issue #19, owner amendment, 14 October 2026)
 
@@ -242,3 +266,10 @@ bot comment `6216417065` on PR #24 with exact id/body readback. A second live ru
 `38907250544` succeeds without another comment or any body/updated-at change.
 The initial live POST failure is retained as failed evidence, not relabelled.
 No new application/domain/schema/scoring/dependency or hardware/release scope.
+
+Medal-notice amendment (19 October 2026): 81 community tests pass, including
+completion milestones 5/10/15/20 named on exactly their issue, closure-order
+attribution, two completions in one refresh, report medals kept to the board,
+first merged PR naming both tracks, merge-time ordering across authors and a
+posted PR comment without a medal line. The live workflow run is not part of
+this local acceptance.

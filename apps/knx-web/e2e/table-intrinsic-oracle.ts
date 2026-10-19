@@ -2,7 +2,12 @@
 import { expect, type Locator } from "@playwright/test";
 
 export async function intrinsicFloors(table: Locator, retained: number[] = []) {
-  return table.locator("table").evaluate((source: HTMLTableElement, retained) => {
+  return table.locator("table").evaluate(async (source: HTMLTableElement, retained) => {
+    // A just-mounted table can request another face (e.g. the address font)
+    // after navigation's fonts.ready resolved. Flush its layout, then wait for
+    // the current font set before comparing independent intrinsic widths.
+    source.getBoundingClientRect();
+    await source.ownerDocument.fonts.ready;
     const configured = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--app-ui-scale"));
     const scale = Number.isFinite(configured) && configured > 0 ? configured : 1;
     const count = source.tHead!.rows[0].cells.length;

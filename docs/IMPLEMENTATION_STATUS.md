@@ -12,6 +12,25 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Product-column promotion repair — reviewed candidate (20 October 2026)
+
+The v28 corrective migration ([ADR-0148](adr/0148-repair-product-column-promotions.md))
+repairs caption, placement and enumeration presentation columns in databases
+that already crossed v23–v25. It reuses authoritative parsers on authenticated
+retained bytes, preserves normalized ownership and unrelated operation history,
+and restores scoped unsupported evidence. Ambiguous per-member history or
+unrepairable sources keep explicit diagnostics and unavailable reports rather
+than fabricated measurements. The fixed 16 MiB evidence policy is not a
+process-memory guarantee or KNX format limit.
+
+Independent corrected-source review accepts with no unresolved findings;
+46 focused cases and four independent probes passed on a frozen export.
+The controller's full ProductDB check passes 459 library, 644 integration and
+two doc tests (31 ignored). Original semantic REDs and rejected attempts remain
+retained separately. Corpus equivalence, branch/integrated package gates and
+publication remain pending; no delivery, release or new ETS compatibility is
+claimed here.
+
 ## WP-17 master provenance — delivered on main (19 October 2026)
 
 Product database **v27** adds separate source/declaration/winner evidence for

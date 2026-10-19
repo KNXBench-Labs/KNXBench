@@ -20,10 +20,10 @@ keep their scope; this goal orders slices rather than renumbering the queue.
    sources supply the facts, never guessed values or changed historical
    install outcomes. Prove fresh/migrated equivalence for admitted sources and
    explicit, non-destructive diagnostics for sources that cannot be repaired.
-   **Dependency:** WP-17 owns v27 and shared migration/report surfaces. Its
-   publication and release of that reservation precede this package's schema
-   implementation. Until then, only independent analysis and regression
-   preparation are allowed; never edit the other worktree.
+   **Dependency satisfied:** WP-17's product schema v27 and reservation release
+   are published at `dc83e939`. The repair uses a separate v28 corrective step
+   ([ADR-0148](../adr/0148-repair-product-column-promotions.md)); master replay
+   and historical encounter evidence remain outside its mutation scope.
 2. **WP-04.1 — measure large catalogues.** Record per-table/index/source-byte
    growth and peak memory using disposable catalogues. Account for retained
    bytes and unknown-evidence growth before proposing optimisation. Preserve
@@ -76,8 +76,16 @@ why the retained Alpha 15 attempt lacked the binding.
 
 ## Current state
 
-The first package has a proposed repair contract, eight observed semantic RED
-regressions, 24 passing existing baseline tests and an accepted read-only review
-of the bounded test preparation. WP-17 still retains its migration reservation.
-No repair implementation, accepted package gate or package delivery is claimed
-by this planning document.
+The first package's v28 implementation and already-upgraded regressions are
+present. Original review rejected resource admission, role dispatch and
+historical counter attribution; its observations remain retained. A correction
+round adds 11 review regressions (nine observed semantic REDs against original
+production, all 11 GREEN after correction). Controller updated the one obsolete
+shared-aggregate test to require unavailable history rather than guessed member
+counters, while retaining exact single-member recovery and unaffected-history
+assertions. The final focused selection passes all 46 tests. Independent
+correction review accepts the full feature with no remaining findings and four
+additional passing reviewer probes. The complete ProductDB recheck passes
+459 library, 644 integration and two doc tests (31 ignored). Private corpus
+equivalence and the maintained branch/integrated package gates remain pending.
+No package delivery is claimed by this planning document.

@@ -263,7 +263,8 @@ werden nicht versprochen. Öffentliche Testdateien brauchen eine separate
 Erlaubnisprüfung. Öffentliche Beiträge können kopiert oder indexiert werden;
 Löschen garantiert nicht, dass alle Kopien verschwinden. Sicherheitslücken sind
 keine gewöhnlichen Sample-Beiträge: Geheimnisse oder vertrauliche Exploit-Originale
-hier nicht veröffentlichen.
+hier nicht veröffentlichen. Melde sie privat, wie [SECURITY.md](../../SECURITY.md)
+beschreibt.
 
 ## Quellen zu den GitHub-Schritten
 

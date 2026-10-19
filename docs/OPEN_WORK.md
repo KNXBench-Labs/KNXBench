@@ -113,6 +113,27 @@ EX-IM programs get no suffix.
 [Workspace contract](contracts/parameter-workspace.md#unit-suffix-wp-02-19-october-2026) ·
 [source attribute inventory](../crates/knx-productdb/src/parse/program.rs).
 
+**Open (found while closing the WP-02 review, 19 October 2026): earlier column
+promotions share the two migration defects v26 fixes.** A probe (not
+committed) migrated synthetic fixtures through each earlier step and compared
+them with a fresh install:
+
+- *A program declared twice in one file* (fresh ingest keeps the first
+  declaration): the v25 placement backfill stores the second declaration's
+  `own_offset`/`binary_value`, the v23 backfill its
+  `ComObjectRef/@TextParameterRefId`. v24 already keeps the first.
+- *Evidence deleted that fresh ingest keeps reporting*: v23 retires
+  `Dynamic/ComObjectRef/@TextParameterRefId` and
+  `Static/…/ParameterBlock/@TextParameterRefId`, v24
+  `Static/…/ParameterBlock/@Access`, v25 `Dynamic/Parameter/@Offset` and
+  `@BitOffset`.
+
+Both only affect databases migrated through those steps from v22–v24 with such
+inputs; a fresh install is correct. Fix as its own package: one regression per
+step (install, rewind with `v20_rewind::drop_v2{3,4,5}_objects`, set
+`user_version`, migrate, compare with the fresh snapshot), then a repair step
+in the next schema version, since released databases already passed v23–v25.
+
 #### WP-03 — Legacy binary enumeration values
 
 **Scope:** KL-128 legacy `binary_value`, not the `.knxprod` half already

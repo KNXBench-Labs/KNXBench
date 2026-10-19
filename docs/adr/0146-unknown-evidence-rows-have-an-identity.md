@@ -1,4 +1,4 @@
-# ADR-0146: Unknown-evidence rows have an identity
+# ADR-0146: Unknown-evidence rows have an identity; `SuffixText` reaches the parameter row
 
 Status: accepted.
 Date: 2026-10-19.
@@ -94,8 +94,58 @@ ledger counted one fact several times.
 - Sums of `occurrences` over this table (the matrix's parameter-attribute
   and master-language pins) now count each blob once.
 
+## Part 2: `SuffixText` reaches the parameter row (WP-02)
+
+The same schema step v26 also stores `SuffixText`, so a product database
+changes version once for both packages.
+
+**Context.** [V] The product collections declare the unit text shown after a
+parameter value as `SuffixText` on `Parameter` and on `ParameterRef` (census P5
+in the [gap census](../research/2026-10-17-product-database-gap-census.md));
+on the 115-instance matrix corpus 627 per-blob report rows with 56,783
+occurrences, and 57,184 `SuffixText` translations already stored at program
+scope. The `parameter` row had a `suffix` column for `Suffix`, a spelling the
+collections never use. [A] No KNX specification text available to the project
+defines either attribute; their meaning is taken from the name, the place the
+corpus puts them and the existing translation unit, so KNXBench uses the value
+for display only.
+
+**Decision.**
+
+1. `parameter.suffix_text` and `parameter_ref.suffix_text` store the attribute
+   verbatim, an empty declaration included. `parameter.suffix` keeps `Suffix`
+   as a separate declaration: stored, never displayed, because nothing shows
+   what it would mean.
+2. **Precedence as for `Text`:** the ref's own declaration wins over the
+   parameter's, even when empty; each layer is translated (translation rows
+   keyed by that element's id, attribute `SuffixText`) before the choice, and
+   the view names the language that answered (AR10).
+3. **Presentation only.** The suffix is never part of the value, its
+   validation, a draft, a write or an image. The web parameter row shows a
+   non-empty suffix right after the value control.
+4. **Reporting:** `SuffixText` stops being reported only on `Parameter` and
+   `ParameterRef`. On any other host it stays an unknown attribute; a prefixed
+   spelling is read like every other column attribute (`xml::attrs`), and its
+   expanded-name evidence row stays.
+5. **Migration** is v23's promotion procedure: per program blob whose bytes
+   still match their key, `backfill_suffix_text` fills both columns from the
+   bytes and the blob's `SuffixText` rows on the two hosts retire, then the
+   measured reports and `package.unknown_count` lose the same rows. A blob not
+   carried forward keeps its rows and gets a `SuffixTextBackfillError` record;
+   the measured reports counting it become `unavailable`.
+
+**Consequences.** Unknown report totals and `ingest_unknown` /
+`package_install_unknown` shrink by the retired rows (matrix re-pin in
+`docs/IMPORT_EXPORT.md`). Legacy EX-IM programs get no suffix: the legacy
+mapper maps no suffix field, and whether EX-IM carries one was not checked. `Suffix` is still not displayed.
+
 ## Evidence
 
+`crates/knx-productdb/tests/it/suffix_text.rs` (separate storage, precedence,
+translation, the hosts that stay reported, v25 rewind equal to a fresh
+install, damaged blob), `apps/knx-server/tests/it/http_parameter_grid.rs`
+(the field DTO), `apps/knx-web/src/ParameterPanel.test.tsx` and
+`e2e/parameter-captions.e2e.ts` (the row), and for Part 1:
 `crates/knx-productdb/tests/it/install_reports.rs` (shared members, standalone
 then package, refused install and retry, repeat install, reopen, repeated
 conflict, the v25 repair equal to a fresh install with report totals asserted

@@ -1,4 +1,4 @@
-/** Resolved parameter captions in the Parameters tab, with strictly intercepted fictional data. */
+/** Parameter captions and a unit suffix in the Parameters tab, on intercepted fictional data. */
 import { expect, test, type Page } from "@playwright/test";
 import { join } from "node:path";
 import type { ParameterField, ParameterPanel } from "../src/api";
@@ -26,7 +26,7 @@ async function intercept(page: Page, language: "en" | "de") {
     sections: [{ scope: null, fields: [
       { ...base("Defaults", "defaults", "Functions: Ref default"), group: { key: "defaults", label: "Functions: Ref default",
         labelFill: { template: "Functions: {{0}}", source: "ProductDefault" } } },
-      { ...base("Stored", "stored", "Functions: Kitchen"), group: { key: "stored", label: "Functions: Kitchen",
+      { ...base("Stored", "stored", "Functions: Kitchen"), suffixText: "s", suffixTextLanguage: null, group: { key: "stored", label: "Functions: Kitchen",
         labelFill: { template: "Functions: {{0}}", source: "StoredValue" } } },
       { ...base("Unresolved", "missing", "{{0}}"), group: { key: "missing", label: "{{0}}",
         labelFill: { template: "{{0}}", source: "UnknownParameter" } } },
@@ -103,6 +103,15 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await expect(workspace.locator(".parameter-workspace-heading h4")).toHaveAttribute("title", /\{\{0\}\}/);
     await buttons.nth(1).click();
     await expect(workspace.locator(".parameter-workspace-separator h5")).toHaveText("Note: Kitchen");
+    // WP-02: the unit suffix sits right after the value, on its line, and is not part of it.
+    const stored = workspace.locator('[data-ets-id="Stored"]');
+    await expect(stored.locator(".parameter-field-suffix")).toHaveText("s");
+    await expect(stored.locator("input")).toHaveValue("1");
+    const input = (await stored.locator("input").boundingBox())!;
+    const suffix = (await stored.locator(".parameter-field-suffix").boundingBox())!;
+    expect(suffix.x).toBeGreaterThanOrEqual(input.x + input.width - 1);
+    expect(Math.abs(suffix.y + suffix.height / 2 - (input.y + input.height / 2))).toBeLessThanOrEqual(4);
+    expect(suffix.x + suffix.width).toBeLessThanOrEqual(width);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
     expect(state.posts).toEqual([]);
     expect(state.unexpected).toEqual([]);

@@ -69,6 +69,8 @@ fn package() -> Vec<u8> {
 type Row = (String, String, i64, Option<String>);
 
 /// The rows §156 is about, in one place: the expected install output.
+/// `SuffixText` is stored since v26 (WP-02), so the fixture's three are not
+/// among them.
 fn expected() -> Vec<Row> {
     let parameter = format!("{STATIC}/Parameters/Parameter");
     let member = format!("{STATIC}/Parameters/Union/Parameter");
@@ -80,13 +82,11 @@ fn expected() -> Vec<Row> {
         row(&module, "InternalDescription", 1, "note"),
         row(&parameter, "InitialValue", 1, "1"),
         row(&parameter, "LegacyPatchAlways", 1, "true"),
-        row(&parameter, "SuffixText", 2, "s"),
         row(&parameter, "{urn:example:extension}Note", 1, "foreign"),
         row(&member, "DefaultUnionParameter", 1, "true"),
         row(&reference, "ForbidGrantingUseByCustomer", 1, "true"),
         row(&reference, "InitialValue", 1, "2"),
         row(&reference, "Name", 1, "delayRef"),
-        row(&reference, "SuffixText", 1, "sec"),
     ];
     rows.sort();
     rows
@@ -309,8 +309,8 @@ fn the_rewind_is_a_genuine_v20_database() {
     assert_eq!(v20.version, 20);
     // Only the expanded-name evidence row survives, as v20 wrote it.
     assert_eq!(blob_rows(&conn).len(), 1);
-    assert_eq!(v20.unknowns.len(), fresh.unknowns.len() - 9);
-    assert_eq!(v20.report_unknowns.len(), fresh.report_unknowns.len() - 9);
+    assert_eq!(v20.unknowns.len(), fresh.unknowns.len() - 7);
+    assert_eq!(v20.report_unknowns.len(), fresh.report_unknowns.len() - 7);
     let count = |s: &Snapshot| {
         s.unknown_count[0][1]
             .clone()
@@ -318,7 +318,7 @@ fn the_rewind_is_a_genuine_v20_database() {
             .parse::<i64>()
             .unwrap()
     };
-    assert_eq!(count(&v20), count(&fresh) - 9);
+    assert_eq!(count(&v20), count(&fresh) - 7);
 }
 
 #[test]

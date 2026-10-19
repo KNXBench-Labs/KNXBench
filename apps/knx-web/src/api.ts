@@ -2395,6 +2395,10 @@ export interface ParameterField {
   cell?: ParameterGridCell | null;
   /** `ParameterRefRef/@IndentLevel` (1 to 8) when declared consistently; presentation only. */
   indentLevel?: number | null;
+  /** Unit text shown after the value (`SuffixText`, WP-02); never part of `value`. Absent on older servers. */
+  suffixText?: string | null;
+  /** Stored language of `suffixText`'s translation; `null` for the package's own text. */
+  suffixTextLanguage?: string | null;
   /** Exact configured object IDs; absent on older servers (no inferred mapping). */
   controlledComObjectIds?: number[];
   etsId: string;

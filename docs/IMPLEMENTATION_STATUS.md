@@ -12,6 +12,23 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Parameter units after the value: `SuffixText` in product DB v26 (19 October 2026)
+
+WP-02 ([ADR-0146, part 2](adr/0146-unknown-evidence-rows-have-an-identity.md#part-2-suffixtext-reaches-the-parameter-row-wp-02)).
+The product collections declare a parameter's unit text as `SuffixText`; the
+database stored only a `Suffix` column the collections never use. The same
+schema v26 now stores `SuffixText` on `parameter` and `parameter_ref`
+(separately from `Suffix`), resolves it like `Text` (the reference's own
+declaration first, each layer translated), and the parameter row shows it right
+after the value. It is never part of the value, a draft or a write. The
+`SuffixText` report rows retire only on those two hosts.
+
+On the 115-instance matrix corpus an XML census predicted all five moved counts
+before the run and the run matched them (unknown report totals −635 / −633,
+`ingest_unknown` −627, `package_install_unknown` −217, and both
+parameter-attribute pins); the migrated v25 shared database equals a fresh v26
+install in all 43 tables.
+
 ## Unknown evidence is recorded once per blob: product DB v26 (19 October 2026)
 
 WP-01 ([ADR-0146](adr/0146-unknown-evidence-rows-have-an-identity.md)).

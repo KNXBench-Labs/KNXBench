@@ -59,7 +59,7 @@ Each package needs its own scoped claim, review, tests and delivery evidence.
 | Package | Priority | Readiness / dependency | Bounded outcome |
 | --- | --- | --- | --- |
 | [WP-01](#wp-01--idempotent-unknown-evidence) | P1 | Delivered 19 October (product DB v26, ADR-0146) | Unknown-evidence rows remain truthful across shared-source re-ingest. |
-| [WP-02](#wp-02--suffixtext-end-to-end) | P2 | Offline-ready, migration contract first | Source suffix text reaches the existing parameter rows without changing stored values. |
+| [WP-02](#wp-02--suffixtext-end-to-end) | P2 | Delivered 19 October (product DB v26, ADR-0146) | Source suffix text reaches the existing parameter rows without changing stored values. |
 | [WP-03](#wp-03--legacy-binary-enumeration-values) | P2 | Mapping evidence first | Legacy binary enum values use the existing typed storage or keep an explicit refusal/report. |
 | [WP-04](#wp-04--large-catalogues-measure-then-stream) | P1/P2 | Measurement first; three sequential slices | Measured database growth, bounded procedure parsing, then a cancellable web large-profile workflow. |
 | [WP-05](#wp-05--parameter-layout-fidelity) | P2 | Evidence/contract gate; coordinate with UI-05 | One evidenced layout feature at a time, never inferred manufacturer behaviour. |
@@ -99,15 +99,18 @@ construct is not stored separately (none measured; the bytes stay retained).
 
 #### WP-02 — SuffixText end to end
 
-**Scope:** KL-003/KL-156, census P5. Preserve `Suffix` and `SuffixText` as
-separate source declarations, define precedence/fallback and translations,
-then migrate/backfill retained sources and expose the suffix through the
-existing parameter DTO/row. A suffix is presentation, never a value codec.
-**Done when:** fresh ingest equals migrated databases; absent, translated,
-conflicting and unknown declarations are tested; original values/drafts and
-write authority stay unchanged; relevant unknown-report rows retire only
-when actually modelled. No new generic editor framework.
-[Workspace contract](contracts/parameter-workspace.md) ·
+**Delivered 19 October 2026** in the same product DB v26
+([ADR-0146, part 2](adr/0146-unknown-evidence-rows-have-an-identity.md#part-2-suffixtext-reaches-the-parameter-row-wp-02)).
+`Suffix` and `SuffixText` are separate columns on `parameter`; `parameter_ref`
+stores its own `SuffixText`. The ref's declaration wins over the parameter's
+(even when empty), each layer translated like `Text`; the field DTO carries
+`suffixText`/`suffixTextLanguage` and the web row shows a non-empty suffix after
+the value. Values, drafts, writes and write authority are unchanged. The
+`SuffixText` report rows retire only on the two modelled hosts; a migrated v25
+database equals a fresh install. **Remaining boundaries:** `Suffix` is stored
+but not shown (never seen in the collections, no evidenced meaning); legacy
+EX-IM programs get no suffix.
+[Workspace contract](contracts/parameter-workspace.md#unit-suffix-wp-02-19-october-2026) ·
 [source attribute inventory](../crates/knx-productdb/src/parse/program.rs).
 
 #### WP-03 — Legacy binary enumeration values
@@ -698,9 +701,8 @@ open work in this order:
    edited as free text; its value format needs evidence before an editor.
 4. **Layouts:** ~~`IndentLevel`~~ and ~~object size~~ — done
    ([row indentation](contracts/parameter-workspace.md#row-indentation-census-p4-18-october-2026);
-   the object table names the resolved size). **Still open:** inline sections,
-   `SuffixText` (needs a product-database column, since the `parameter` row
-   stores `Suffix` and the collection spells `SuffixText`), object folders from
+   the object table names the resolved size); ~~`SuffixText`~~ — done (WP-02,
+   product DB v26). **Still open:** inline sections, object folders from
    `ShowInComObjectTree` (documented in Project Schema 23), object priority (not
    in the core model); later conditional captions (`Rename`), objects by
    parameter page and identity-keyed module comparison. Each needs its own

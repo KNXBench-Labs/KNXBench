@@ -534,17 +534,106 @@ fn migrate_v24_to_v25(conn: &Connection) -> Result<(), ProductDbError> {
     add_attribute_unknowns(conn, "v25", Some(&carried))
 }
 
-/// v25 -> v26 (ADR-0146, WP-01). `ingest_unknown` gains its row identity:
-/// every package install re-parsed its shared members and wrote their
-/// unknown rows again, so a blob shared by several packages carried one copy
-/// per install. The repair merges each identity group into its oldest row
-/// (`report::merge_repeated_unknowns`: largest per-parse count, oldest
-/// sample), then two unique indexes make a second copy impossible. Install
-/// reports and `package.unknown_count` are per package and were never
-/// derived from these rows, so they do not change.
+/// The hosts v26 stores `SuffixText` on: `Parameter` (also a union member or a
+/// `ModuleDef`'s) and `ParameterRef`. Any other host stays reported.
+const SUFFIX_TEXT_HOSTS: [&str; 2] = ["Parameter", "ParameterRef"];
+
+const SUFFIX_TEXT_PROMOTION: Promotion = Promotion {
+    version: "v26",
+    retired: &[Retired {
+        kind: UnknownKind::Attribute,
+        name: "SuffixText",
+        hosts: &SUFFIX_TEXT_HOSTS,
+    }],
+    blob_error: ("SuffixTextBackfillError", "backfill_suffix_text"),
+    report_error: "suffix_text_report_backfill",
+};
+
+/// v25 -> v26 (ADR-0146: WP-01 and WP-02).
+///
+/// WP-01: `ingest_unknown` gains its row identity. Every package install
+/// re-parsed its shared members and wrote their unknown rows again, so a blob
+/// shared by several packages carried one copy per install. The repair merges
+/// each identity group into its oldest row (`report::merge_repeated_unknowns`:
+/// largest per-parse count, oldest sample), then two unique indexes make a
+/// second copy impossible. Install reports and `package.unknown_count` are per
+/// package and were never derived from these rows, so the repair leaves them.
+///
+/// WP-02: `parameter` and `parameter_ref` gain `suffix_text`, and `SuffixText`
+/// on those two hosts stops being an unknown attribute. v23's procedure
+/// (`promote_from_program_blobs`) with `backfill_suffix_text`: a blob that is
+/// not carried forward keeps its rows and gets a `SuffixTextBackfillError`
+/// record, and the measured reports counting it become `unavailable`.
 fn migrate_v25_to_v26(conn: &Connection) -> Result<(), ProductDbError> {
     crate::report::merge_repeated_unknowns(conn)?;
     conn.execute_batch(crate::report::UNKNOWN_IDENTITY_INDEXES)?;
+    conn.execute_batch(
+        "ALTER TABLE parameter ADD COLUMN suffix_text TEXT;
+         ALTER TABLE parameter_ref ADD COLUMN suffix_text TEXT;",
+    )?;
+    let retired = promote_from_program_blobs(conn, &SUFFIX_TEXT_PROMOTION, backfill_suffix_text)?;
+    retire_promoted_from_reports(conn, &retired, &SUFFIX_TEXT_PROMOTION)
+}
+
+/// Fills `suffix_text` of the parameters and refs of the programs one blob
+/// owns from its bytes, verbatim as the parser stores it. A program another
+/// blob owns is left alone, as the parsers leave it; `Dynamic` is skipped
+/// whole, as the parser skips it.
+fn backfill_suffix_text(
+    conn: &Connection,
+    sha256: &str,
+    source_path: &str,
+    bytes: &[u8],
+) -> Result<(), ProductDbError> {
+    use quick_xml::events::Event;
+    let owned: std::collections::HashSet<String> = conn
+        .prepare("SELECT id FROM application_program WHERE source_sha256 = ?1")?
+        .query_map([sha256], |r| r.get(0))?
+        .collect::<Result<_, _>>()?;
+    let mut reader = quick_xml::Reader::from_reader(bytes);
+    let mut buf = Vec::new();
+    let mut program: Option<String> = None;
+    loop {
+        buf.clear();
+        let event = reader
+            .read_event_into(&mut buf)
+            .map_err(|e| ProductDbError::Xml {
+                source_path: source_path.to_string(),
+                cause: e.to_string(),
+            })?;
+        let start = match &event {
+            Event::Eof => break,
+            Event::Start(e) if crate::xml::local_name(e) == "Dynamic" => {
+                crate::xml::skip_subtree(&mut reader, e.name().as_ref(), source_path)?;
+                continue;
+            }
+            Event::Start(e) | Event::Empty(e) => e,
+            _ => continue,
+        };
+        let name = crate::xml::local_name(start);
+        let table = match name.as_str() {
+            "ApplicationProgram" => {
+                program = crate::xml::attrs(start, source_path)?
+                    .get("Id")
+                    .filter(|id| owned.contains(*id))
+                    .map(str::to_string);
+                continue;
+            }
+            "Parameter" => "parameter",
+            "ParameterRef" => "parameter_ref",
+            _ => continue,
+        };
+        let Some(program_id) = program.as_deref() else {
+            continue;
+        };
+        let a = crate::xml::attrs(start, source_path)?;
+        if let (Some(id), Some(suffix)) = (a.get("Id"), a.get("SuffixText")) {
+            conn.execute(
+                &format!("UPDATE {table} SET suffix_text = ?3 WHERE program_id = ?1 AND id = ?2"),
+                params![program_id, id, suffix],
+            )?;
+        }
+    }
     Ok(())
 }
 

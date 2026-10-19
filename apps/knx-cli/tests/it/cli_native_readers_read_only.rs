@@ -312,17 +312,44 @@ enum DefaultProducts {
 #[test]
 fn product_database_readers_leave_the_default_product_database_untouched() {
     let case = Case::new(SAVED);
-    let commands: Vec<Vec<&str>> = vec![
-        vec!["products", "list"],
-        vec!["products", "coverage"],
-        vec!["products", "verify"],
-        vec!["products", "show", "M-0001_A-0001-01-0001"],
-        vec!["products", "identity", "product", "M-0001_H-1_P-1"],
-        vec!["products", "family", "M-0001_A-0001-01-0001"],
-        vec!["products", "order-number", "M-0001", "DIM-1"],
-        vec!["device", "readiness", "--project", case.project()],
+    // Each command with the exit code and a line it prints for an empty
+    // catalogue, so a usage error, a panic or a refused `query_only` write
+    // cannot pass for a read.
+    let commands: Vec<(Vec<&str>, i32, &str)> = vec![
+        (vec!["products", "list"], 0, ""),
+        (
+            vec!["products", "coverage"],
+            0,
+            "0 programs: 0 verified, 0 untested, 0 unsupported",
+        ),
+        (vec!["products", "verify"], 0, "0 mismatch(es)"),
+        (
+            vec!["products", "show", "M-0001_A-0001-01-0001"],
+            1,
+            "no such program: M-0001_A-0001-01-0001",
+        ),
+        (
+            vec!["products", "identity", "product", "M-0001_H-1_P-1"],
+            0,
+            "winner: (no stored row)",
+        ),
+        (
+            vec!["products", "family", "M-0001_A-0001-01-0001"],
+            1,
+            "no such program: M-0001_A-0001-01-0001",
+        ),
+        (
+            vec!["products", "order-number", "M-0001", "DIM-1"],
+            0,
+            "0 product(s) with order number \"DIM-1\"",
+        ),
+        (
+            vec!["device", "readiness", "--project", case.project()],
+            0,
+            "download readiness per project device",
+        ),
     ];
-    for args in &commands {
+    for (args, code, line) in &commands {
         for state in [
             DefaultProducts::Older,
             DefaultProducts::Current,
@@ -351,10 +378,19 @@ fn product_database_readers_leave_the_default_product_database_untouched() {
                 .env("XDG_DATA_HOME", data_home.path())
                 .output()
                 .expect("run knx");
-            let stderr = String::from_utf8_lossy(&output.stderr);
+            let printed = format!(
+                "{}{}",
+                String::from_utf8_lossy(&output.stdout),
+                String::from_utf8_lossy(&output.stderr)
+            );
+            assert_eq!(
+                output.status.code(),
+                Some(*code),
+                "{args:?} with {state:?}: {printed}"
+            );
             assert!(
-                !stderr.contains("failed to open product database"),
-                "{args:?} with {state:?} did not get past opening: {stderr}"
+                printed.contains(line),
+                "{args:?} with {state:?} did not read the catalogue: {printed}"
             );
             match state {
                 DefaultProducts::Missing => assert!(

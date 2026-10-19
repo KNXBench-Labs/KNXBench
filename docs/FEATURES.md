@@ -1,10 +1,10 @@
-Last updated: 2026-10-19 (Alpha 15)
+Last updated: 2026-10-19 (Alpha 15 baseline; WP-17 on main)
 
 # KNXBench Features
 
 | Reference | Value |
 | --- | --- |
-| Source snapshot | `v0.1.0-alpha.15` |
+| Source snapshot | `d18ce65e` (WP-17 after Alpha 15) |
 | Released baseline | `v0.1.0-alpha.15` |
 | Main-only | Newer than released baseline |
 | Local-only | Unpublished; not accepted on main |
@@ -58,7 +58,7 @@ builds refuse product26; opening new project saves in Alpha 14 is unverified.
 
 | Feature | Scope | Availability |
 | --- | --- | --- |
-| [Master identity provenance](adr/0147-master-identity-provenance.md) | Product DB v27: retained-source positions for all four master families and both DPT forms, same/cross-file collisions and malformed declarations; historical winner/encounter facts remain unavailable, normalized values unchanged; readable EN/DE catalogue diagnostics | Local-only; reviewed and branch-gated; merged acceptance pending |
+| [Master identity provenance](adr/0147-master-identity-provenance.md) | Product DB v27: retained-source positions for all four master families and both DPT forms, same/cross-file collisions and malformed declarations; historical winner/encounter facts remain unavailable, normalized values unchanged; readable EN/DE catalogue diagnostics | Main-only; `d18ce65e` |
 
 ## Data-table columns
 

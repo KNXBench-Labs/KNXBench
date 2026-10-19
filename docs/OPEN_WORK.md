@@ -20,11 +20,10 @@ security, GitHub-issue, hardware or whole-codebase conformance audit.
 
 ### Already owned — do not start a duplicate package
 
-- **WP-17 master identity provenance:** taken for Alpha 16 on
-  `feat/wp17-master-provenance-20261019` (claim `041bbd1d`). Reserve master
-  parsing/provenance, product DB migration v27 and its report consumers; do not
-  start overlapping product-DB migrations until this delivery releases them.
-  Implementation/review/gates are in progress, not delivered.
+- **WP-17 is delivered** on `main` (`d18ce65e`, 19 October): product DB v27
+  master provenance; its parsing/provenance/report/migration claim is released.
+  The separately claimed Alpha 16 column-promotion repair must follow v27,
+  not reuse it. Historical winner/encounter availability remains bounded below.
 - **UI feedback:** UI-01–UI-06 and the whole-set corrections are delivered
   ([UI workstream](goals/ui-feedback-2026-10-18.md)); the claim is released.
   Two follow-ups remain unowned (below, under *UI feedback packages*). Its
@@ -84,7 +83,7 @@ Each package needs its own scoped claim, review, tests and delivery evidence.
 | [WP-14](#wp-14--complete-offline-family-outcomes) | P1 | Source contracts first; UP258 excluded | Complete real-source System 1/B/300 image → procedure → execution → recovery slices. |
 | [WP-15](#wp-15--complete-module-scope-in-web-consumers) | P1 | Delivered 19 Oct (web adoption); older-server boundary documented | Complete response-local module paths distinguish diagnostics and workspace identities. |
 | [WP-16](#wp-16--empty-directory-zip-integrity) | P1 | Delivered 19 Oct; trailing-stream and product-reader follow-ups open | Empty directories have valid CRC and complete compressed-stream representation. |
-| [WP-17](#wp-17--master-identity-provenance) | P1 | In progress, Alpha 16; claim `041bbd1d`, ADR-0147 | Master identity winners, collisions and malformed declarations have truthful provenance. |
+| [WP-17](#wp-17--master-identity-provenance) | P1 | Delivered 19 Oct; product DB v27, ADR-0147, `d18ce65e` | Master identity winners, collisions and malformed declarations have truthful provenance. |
 | [WP-18](#wp-18--device-comparison-shows-what-differs) | P2 | Delivered 19 Oct; no live-device acceptance | Differing bytes are marked in the raw hex rows; the comparison result shows only differences by default, with a toggle for all rows. |
 | [WP-19](#wp-19--sync-from-a-device-comparison) | P2 | Contract first; project → device needs bus-write consent (owner request, 19 Oct) | A comparison result offers *project → device* (the existing download) or *device → project* (adopt verified values, one undo step). |
 | [WP-20](#wp-20--system-family-in-the-device-list) | P2 | Delivered 19 Oct; a mask read from a device stays a separate session fact | The device list shows each device's system family (System 1, 2, 7 or B) from its mask version. |
@@ -416,7 +415,22 @@ container consumers rather than adding a special-case UI refusal.
 
 #### WP-17 — Master identity provenance
 
-**Scope:** KL-086's still-missing provenance for `datapoint_type`,
+**Delivered 19 October 2026** on `main` as `d18ce65e`, product DB **v27**
+([ADR-0147](adr/0147-master-identity-provenance.md)). All four master families,
+including DPT mains/subtypes, retain individually addressable declarations and
+fresh winner links; malformed/missing-parent cases and collisions get distinct
+reports through direct import, CLI, HTTP and the EN/DE catalogue display.
+Migration/replay preserves normalized values and historical reports; unavailable
+historical winner/encounter facts are not guessed. Independent review and the
+15-stage merged package gate passed, including 863 default browser cases,
+18 catalogue production cases and selected corpus 97/97. The separate product
+matrix passed 11/11; controlled migration preserves all 42 unaffected full-table
+values and 859 historical diagnostics. Claim released. **Remaining boundaries:**
+unrecoverable historical encounters/winners, unsupported identifier families and
+version-pinning policy; earlier v23–v25 column-promotion repair is separate scope.
+Older builds refuse a v27 product database; back up before upgrading.
+
+**Original scope:** KL-086's still-missing provenance for `datapoint_type`,
 `function_type`, `function_point` and `space_usage`. Cover same-file/cross-file
 collisions and missing IDs/parents in one schema/report contract; retain the
 existing normalized winner policy rather than quietly changing it.

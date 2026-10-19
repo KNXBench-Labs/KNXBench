@@ -20,6 +20,11 @@ security, GitHub-issue, hardware or whole-codebase conformance audit.
 
 ### Already owned — do not start a duplicate package
 
+- **Alpha 15 package set (claimed 19 October 2026):** WP-16, WP-01 with
+  WP-02 and the G16 half of WP-03, WP-18, WP-20, WP-15 with the two UI
+  zoom follow-ups, then WP-13. One worktree per package; each is reviewed,
+  gated and delivered on its own. Not in this set: WP-04/05/06/07/08/09/10/
+  11/12/14/17/19 (measurement, evidence, consent or contract first).
 - **UI feedback:** UI-01–UI-06 and the whole-set corrections are delivered
   ([UI workstream](goals/ui-feedback-2026-10-18.md)); the claim is released.
   Two follow-ups remain unowned (below, under *UI feedback packages*). Its

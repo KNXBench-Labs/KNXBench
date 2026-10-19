@@ -1,4 +1,5 @@
 /** Device table with preserved list state and snapshot-bound product metadata. */
+import ResizableTable from "./ResizableTable";
 import { useEffect, useMemo, useState } from "react";
 import * as api from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
@@ -15,6 +16,21 @@ import { useDeviceComparisons } from "./useDeviceComparisons";
 import DeviceComparisonDialog, { ComparisonTag } from "./DeviceComparisonDialog";
 import "./deviceComparisons.css";
 
+const DEVICES_COLUMNS = [
+  { id: "select", width: 48, min: 32 },
+  { id: "address", width: 100, min: 48 },
+  { id: "name", width: 120, min: 48 },
+  { id: "programming", width: 100, min: 48 },
+  { id: "manufacturer", width: 90, min: 48 },
+  { id: "product", width: 110, min: 48 },
+  { id: "orderNumber", width: 80, min: 48 },
+  { id: "topology", width: 80, min: 48 },
+  { id: "building", width: 90, min: 48 },
+  { id: "com_object_count", width: 80, min: 48 },
+  { id: "description", width: 100, min: 48 },
+  { id: "comparison", width: 102, min: 48 }
+];
+
 const COLUMNS: { column: DeviceSortColumn; label: MessageKey }[] = [
   { column: "address", label: "workbench.address" },
   { column: "name", label: "workbench.name" },
@@ -27,6 +43,11 @@ const COLUMNS: { column: DeviceSortColumn; label: MessageKey }[] = [
   { column: "com_object_count", label: "inspector.communicationObjects" },
   { column: "description", label: "devices.description" },
 ];
+const COMPACT_LABELS: Partial<Record<DeviceSortColumn, MessageKey>> = {
+  address: "devices.addressShort", programming: "devices.programmingShort", manufacturer: "devices.manufacturerShort",
+  orderNumber: "devices.orderNumberShort", topology: "devices.topologyShort", building: "devices.buildingShort",
+  com_object_count: "devices.objectsShort", description: "devices.descriptionShort",
+};
 const CHECKBOX_CLICK = { shiftKey: false, ctrlKey: true, metaKey: false, preventDefault: () => {} };
 
 export default function DevicesWorkspace({ tree, active, selection, multiSelection, onItemClick, onCatalogue }: {
@@ -93,14 +114,14 @@ export default function DevicesWorkspace({ tree, active, selection, multiSelecti
     </div>
     {loading && <p role="status"><span className="task-status-text">{t("devices.loading")}</span></p>}
     {error && <p className="field-error" role="alert">{t("devices.catalogueFailed", { reason: error })}</p>}
-    <div className="workspace-table-wrap devices-table-scroll" tabIndex={0} aria-label={t("devices.table")}>
-      <table className="workspace-table devices-table"><thead><tr>
+      <ResizableTable scrollClassName="workspace-table-wrap devices-table-scroll" scrollLabel={t("devices.table")} tableId="devices"
+        columns={DEVICES_COLUMNS} className="workspace-table devices-table"><thead><tr>
         <th><span className="sr-only">{t("addressTable.selectColumn")}</span></th>
         {COLUMNS.map(({ column, label }) => <th key={column} aria-sort={sort.column === column ? (sort.descending ? "descending" : "ascending") : "none"}>
-          <button type="button" onClick={() => setSort({ column, descending: sort.column === column && !sort.descending })}>
-            {t(label)}{sort.column === column && <span aria-hidden="true">{sort.descending ? " ↓" : " ↑"}</span>}
+          <button type="button" aria-label={t(label)} title={t(label)} onClick={() => setSort({ column, descending: sort.column === column && !sort.descending })}>
+            <span className="table-column-label">{t(COMPACT_LABELS[column] ?? label)}</span><span className="table-sort-indicator" aria-hidden="true" style={{ visibility: sort.column === column ? "visible" : "hidden" }}>{sort.column === column ? sort.descending ? "↓" : "↑" : ""}</span>
           </button></th>)}
-      <th>{t("compare.column")}</th>
+      <th><span aria-label={t("compare.column")} title={t("compare.column")}>{t("compare.one")}</span></th>
       </tr></thead><tbody>{rows.map((row) => <tr key={row.id} data-rename-kind="device" data-rename-id={row.id} data-rename-value={row.name}
         onClick={(event) => {
           if (event.target instanceof Element && event.target.closest("button, input")) return;
@@ -124,8 +145,7 @@ export default function DevicesWorkspace({ tree, active, selection, multiSelecti
         <td>{row.com_object_count}</td><td>{row.description ?? "—"}</td>
         <td className="device-comparison-actions"><ComparisonTag entry={comparisons.entry(row.id)} onClick={() => comparisons.inspect(row)} />
           <button type="button" disabled={comparisons.running} onClick={() => comparisons.open([row])}>{t("compare.one")}</button></td>
-      </tr>)}</tbody></table>
-    </div>
+      </tr>)}</tbody></ResizableTable>
     <DeviceComparisonDialog controller={comparisons} />
     {rows.length === 0 && <p role="status">{t(total === 0 ? "workbench.noDevices" : "devices.noMatches")}</p>}
   </section>;

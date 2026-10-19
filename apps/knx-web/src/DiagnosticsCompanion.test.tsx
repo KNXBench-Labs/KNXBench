@@ -285,7 +285,7 @@ describe("one editing workspace", () => {
     // `flowAnimator.ts` (frames and timers through an injected scheduler) and
     // `flowMotion.ts` (reads the Motion setting and the OS preference). None
     // touches the API or project state.
-    for (const module of ["flowModel.ts", "flowLayout.ts", "flowFeed.ts", "TelegramFlowView.tsx", "flowDynamics.ts", "flowAnimator.ts", "flowMotion.ts", "FlowImageExportDialog.tsx", "flowImageCapture.ts", "flowImageExport.ts", "flowImageExportLimits.ts", "gifEncoder.ts"]) {
+    for (const module of ["flowModel.ts", "flowLayout.ts", "flowFeed.ts", "TelegramFlowView.tsx", "flowDynamics.ts", "flowAnimator.ts", "flowMotion.ts", "FlowImageExportDialog.tsx", "flowImageCapture.ts", "flowImageExport.ts", "flowImageExportLimits.ts", "gifEncoder.ts", "ResizableTable.tsx", "useTableColumnWidths.ts", "tableWordFloors.ts", "appUiScale.ts"]) {
       const moduleGraph = valueImportGraph(module);
       expect(apiCallsIn(moduleGraph)).toEqual([]);
       expect(mutatingFetchesIn(moduleGraph)).toEqual([]);
@@ -386,10 +386,12 @@ describe("one editing workspace", () => {
       "LogExportDialog.tsx",
       "LogPanel.tsx",
       "Overlay.tsx",
+      "ResizableTable.tsx", // Browser-local presentation only; checked for API/fetch above.
       "TelegramFlowView.tsx",
       "achievementEvents.ts",
       "activityHistory.ts",
       "api.ts",
+      "appUiScale.ts", // Root computed style only; no API or project mutation.
       "bundledLanguagePacks.ts",
       "busContext.ts",
       "busDiscovery.ts",
@@ -444,8 +446,10 @@ describe("one editing workspace", () => {
       "settingsDiagnostic.ts",
       "settingsStore.ts",
       "sourceReports.ts",
+      "tableWordFloors.ts", // Computed-font DOM measurement only; checked for API/fetch above.
       "treeUtils.ts",
       "uiLanguage.ts",
+      "useTableColumnWidths.ts", // Validated localStorage preferences, no project writes.
     ]);
 
     // Every `api.x(...)` the graph performs. Four of them are `POST`s.

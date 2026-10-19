@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { readFileSync } from "node:fs";
+import { tableColumnSmoke } from "./tableColumnSmoke.fixture";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -1716,4 +1717,10 @@ describe("BusMonitorPanel achievement events", () => {
       stop();
     }
   });
+});
+
+tableColumnSmoke([["bus-monitor", 8]], async () => {
+  apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({ telegrams: [row({ seq: 1 })] }));
+  const root = await renderPanel(); await flushReattach();
+  return { host: host!, cleanup: async () => { await act(async () => root.unmount()); } };
 });

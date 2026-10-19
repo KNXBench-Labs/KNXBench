@@ -931,4 +931,25 @@ If you find something this chapter does not mention, it is worth reporting
 even if you suspect it is known. The list above is what has been found, which
 is not the same as what exists.
 
+
+
+## Table column-width coverage (18 October 2026 source, local-only)
+
+The address/object matrix's per-object columns retain 180 px preferred widths
+without resize controls.
+Its select/address/name columns resize and persist by presentation ID. A policy
+for object-column widths is still open because project-object identifiers
+cannot enter browser preferences. All 18 native table surfaces use the adapter. Widths are
+browser-local and are lost when browser storage is cleared; blocked storage
+supports resizing only for the mounted session. Manufacturer parameter grids,
+trees and catalogue/history lists retain their existing layouts. See
+[Table column widths](../contracts/table-column-widths.md).
+
+Automatic word floors stop at 320 px per column. Tokens wider than this cap can
+wrap into character fragments, as can ordinary words after explicit user
+shrinking. Home sets the stored preference minimum; the rendered width also
+depends on pane fitting and surplus distribution. Word floors exclude spanning
+group headings/editors. Demo/fixture no-scroll checks do not establish fitting
+for every imported project.
+
 [Manual index](README.md) · Next: [Implementation status](implementation-status.md) →

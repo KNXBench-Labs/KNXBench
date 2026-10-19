@@ -1191,6 +1191,7 @@ main {
   overflow-wrap: anywhere;
 }
 .catalog-cleanup-open { margin: 0.5rem 0; }
+.catalog-cleanup-notice { margin: 0 0 0.5rem; font-size: 0.85rem; overflow-wrap: anywhere; }
 /* Sized to its content like the unsaved-changes dialog: the shared overlay
    stretches its panel to the 70vh cap otherwise. The action row stays in
    view while the panel scrolls, so the confirmation is never below the fold. */

@@ -3,13 +3,13 @@
 //! Canonical products, programs, original sources and project bindings are
 //! deliberately retained, so existing devices keep resolving.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap};
 use std::path::{Path, PathBuf};
 
 use rusqlite::{Connection, TransactionBehavior};
 use sha2::{Digest, Sha256};
 
-use crate::query::{catalog_item, CatalogItemRow};
+use crate::query::{catalog_items_by_id, CatalogItemRow};
 use crate::update::{backup_path, write_backup};
 use crate::{ProductDbError, UpdateError};
 
@@ -35,6 +35,9 @@ pub enum CleanupError {
     InvalidSelection(String),
     ConfirmationRequired,
     StaleToken,
+    /// Cleanup writes a backup next to the database file; a database
+    /// without one (in memory) is refused before anything is read.
+    NotFileBacked,
     Database(ProductDbError),
     Backup(UpdateError),
 }
@@ -47,6 +50,7 @@ impl std::fmt::Display for CleanupError {
                 write!(f, "catalogue cleanup needs explicit confirmation")
             }
             Self::StaleToken => write!(f, "the catalogue changed since the preview; preview again"),
+            Self::NotFileBacked => write!(f, "catalogue cleanup needs a file-backed database"),
             Self::Database(error) => write!(f, "{error}"),
             Self::Backup(error) => write!(f, "the catalogue backup could not be written: {error}"),
         }
@@ -89,9 +93,7 @@ fn database_path(conn: &Connection) -> Result<PathBuf, CleanupError> {
     conn.path()
         .filter(|path| !path.is_empty())
         .map(PathBuf::from)
-        .ok_or_else(|| {
-            CleanupError::InvalidSelection("cleanup needs a file-backed database".into())
-        })
+        .ok_or(CleanupError::NotFileBacked)
 }
 
 fn bind_query(conn: &Connection, hash: &mut Sha256, sql: &str) -> Result<(), CleanupError> {
@@ -160,18 +162,37 @@ fn bind_incarnation(conn: &Connection, hash: &mut Sha256, path: &Path) -> Result
     Ok(())
 }
 
+/// What a selected ID that names no placement means.
+#[derive(Clone, Copy)]
+enum Unknown {
+    /// A preview: the caller sent an ID the catalogue never had.
+    Refuse,
+    /// An apply: the preview found it, so the catalogue changed since.
+    Stale,
+}
+
 fn preview_in_snapshot(
     conn: &Connection,
     item_ids: &[String],
+    unknown: Unknown,
 ) -> Result<CleanupPreview, CleanupError> {
-    let selected = selection(item_ids)?;
     let path = database_path(conn)?;
-    let mut items = Vec::with_capacity(selected.len());
-    for id in &selected {
-        items.push(
-            catalog_item(conn, id)?
-                .ok_or_else(|| CleanupError::InvalidSelection(format!("unknown item ID: {id}")))?,
-        );
+    let selected = selection(item_ids)?;
+    let ids: Vec<&str> = selected.iter().copied().collect();
+    let items = catalog_items_by_id(conn, &ids)?;
+    if items.len() != ids.len() {
+        let found: BTreeSet<&str> = items.iter().map(|item| item.id.as_str()).collect();
+        let missing = ids
+            .iter()
+            .find(|id| !found.contains(**id))
+            .copied()
+            .unwrap_or_default();
+        return Err(match unknown {
+            Unknown::Refuse => {
+                CleanupError::InvalidSelection(format!("unknown item ID: {missing}"))
+            }
+            Unknown::Stale => CleanupError::StaleToken,
+        });
     }
     let mut hash = Sha256::new();
     hash.update(b"catalogue-cleanup-v1\n");
@@ -203,32 +224,38 @@ fn preview_in_snapshot(
 
 /// A device finds its catalogue entry by the exact pair, so only rows naming
 /// both references can leave a binding behind; the token already binds the
-/// whole `catalog_item` table this count is taken from.
+/// whole `catalog_item` table this count is taken from. One pass over the
+/// table, whatever the size of the selection.
 fn bindings_without_placement(
     conn: &Connection,
     selected: &BTreeSet<&str>,
     items: &[CatalogItemRow],
 ) -> Result<Vec<String>, CleanupError> {
+    let mut survivors: HashMap<(String, String), usize> = HashMap::new();
     let mut statement = conn.prepare(
-        "SELECT id FROM catalog_item WHERE product_ref_id = ?1 AND hardware2program_ref_id = ?2",
+        "SELECT id, product_ref_id, hardware2program_ref_id FROM catalog_item
+         WHERE product_ref_id IS NOT NULL AND hardware2program_ref_id IS NOT NULL",
     )?;
-    let mut orphaned = Vec::new();
-    for item in items {
-        let (Some(product), Some(binding)) = (&item.product_ref_id, &item.hardware2program_ref_id)
-        else {
-            continue;
-        };
-        let survivors = statement
-            .query_map([product, binding], |row| row.get::<_, String>(0))?
-            .collect::<Result<Vec<_>, _>>()?
-            .into_iter()
-            .filter(|id| !selected.contains(id.as_str()))
-            .count();
-        if survivors == 0 {
-            orphaned.push(item.id.clone());
+    let mut rows = statement.query([])?;
+    while let Some(row) = rows.next()? {
+        let id: String = row.get(0)?;
+        let count = survivors.entry((row.get(1)?, row.get(2)?)).or_default();
+        if !selected.contains(id.as_str()) {
+            *count += 1;
         }
     }
-    Ok(orphaned)
+    Ok(items
+        .iter()
+        .filter(
+            |item| match (&item.product_ref_id, &item.hardware2program_ref_id) {
+                (Some(product), Some(binding)) => {
+                    survivors.get(&(product.clone(), binding.clone())) == Some(&0)
+                }
+                _ => false,
+            },
+        )
+        .map(|item| item.id.clone())
+        .collect())
 }
 
 /// Reads one consistent snapshot without creating/migrating a database or
@@ -238,7 +265,7 @@ pub fn preview_catalog_cleanup(
     item_ids: &[String],
 ) -> Result<CleanupPreview, CleanupError> {
     let tx = conn.unchecked_transaction()?;
-    let preview = preview_in_snapshot(&tx, item_ids)?;
+    let preview = preview_in_snapshot(&tx, item_ids, Unknown::Refuse)?;
     tx.commit()?;
     Ok(preview)
 }
@@ -247,6 +274,9 @@ pub fn preview_catalog_cleanup(
 /// the full backup and deletion. The backup's second read-only connection can
 /// read both rollback-journal and WAL databases: no DELETE has run yet, so this
 /// transaction holds only a RESERVED lock, never the EXCLUSIVE commit lock.
+/// If the deletion or the commit fails after the backup, the transaction rolls
+/// back and that backup is removed again: it would describe a removal that did
+/// not happen.
 pub fn apply_catalog_cleanup(
     conn: &mut Connection,
     item_ids: &[String],
@@ -258,17 +288,27 @@ pub fn apply_catalog_cleanup(
     }
     let path = database_path(conn)?;
     let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
-    let preview = preview_in_snapshot(&tx, item_ids)?;
+    let preview = preview_in_snapshot(&tx, item_ids, Unknown::Stale)?;
     if preview.token != token {
         return Err(CleanupError::StaleToken);
     }
     let backup = backup_path(&path, token).map_err(CleanupError::Backup)?;
-    write_backup(&path, &backup).map_err(CleanupError::Backup)?;
-    let removed_item_ids: Vec<String> = preview.items.into_iter().map(|item| item.id).collect();
-    for id in &removed_item_ids {
-        tx.execute("DELETE FROM catalog_item WHERE id = ?1", [id])?;
+    if let Err(error) = write_backup(&path, &backup) {
+        // A partial file of a failed copy is no backup either.
+        let _ = std::fs::remove_file(&backup);
+        return Err(CleanupError::Backup(error));
     }
-    tx.commit()?;
+    let removed_item_ids: Vec<String> = preview.items.into_iter().map(|item| item.id).collect();
+    let removed = (|| -> Result<(), rusqlite::Error> {
+        for id in &removed_item_ids {
+            tx.execute("DELETE FROM catalog_item WHERE id = ?1", [id])?;
+        }
+        tx.commit()
+    })();
+    if let Err(error) = removed {
+        let _ = std::fs::remove_file(&backup);
+        return Err(error.into());
+    }
     Ok(AppliedCleanup {
         removed_item_ids,
         backup,

@@ -271,13 +271,15 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await noHorizontalOverflow(page);
     await capture(page, `${tag}-3-preview`);
 
-    await dialog.getByRole("button", { name: m["catalog.cleanup.confirm"].replace("{count}", "2"), exact: true }).click();
+    await dialog.getByRole("button", { name: m["catalog.cleanup.confirm.other"].replace("{count}", "2"), exact: true }).click();
     await expect(dialog).toContainText(CLEANUP_BACKUP);
     expect(f.cleanupApplies).toEqual([{ itemIds: ["M-00FA_CI-1", "M-00FA_CI-2"], token: "token-M-00FA_CI-1+M-00FA_CI-2", confirmed: true }]);
     await capture(page, `${tag}-4-done`);
     await dialog.getByRole("button", { name: m["catalog.cleanup.close"], exact: true }).click();
     await expect(dialog).toHaveCount(0);
     await expect(rows).toHaveCount(1);
+    // The result stays in the catalogue after the dialog is gone.
+    await expect(catalogue.locator(".catalog-cleanup-notice")).toContainText(CLEANUP_BACKUP);
     expect(f.unexpected).toEqual([]);
     expect(errors).toEqual([]);
   });

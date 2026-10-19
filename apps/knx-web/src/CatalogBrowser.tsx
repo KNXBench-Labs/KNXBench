@@ -18,7 +18,7 @@ import { describeCreationDiagnostic, newRequestId } from "./CatalogInstallReport
 import CatalogUpdatePanel from "./CatalogUpdatePanel";
 import ProductInstallControl from "./ProductInstallControl";
 import CatalogItemIdentity from "./CatalogItemIdentity";
-import CatalogCleanupDialog from "./CatalogCleanupDialog";
+import CatalogCleanupDialog, { type CatalogCleanupResult } from "./CatalogCleanupDialog";
 
 // T2 (GAP_ANALYSIS_ETS.md) — the device-from-catalog workspace. Feeds T1's
 // `Command::CreateDevice` (backend-only since 2026-09-08). The search input is a combobox
@@ -51,6 +51,8 @@ export default function CatalogBrowser(props: {
   const [items, setItems] = useState<CatalogItem[]>([]);
   const [itemsLoaded, setItemsLoaded] = useState(false);
   const [cleanupOpen, setCleanupOpen] = useState(false);
+  // Kept here, not in the dialog: the result outlives a dialog that closes.
+  const [cleanupResult, setCleanupResult] = useState<CatalogCleanupResult | null>(null);
   const [highlight, setHighlight] = useState(0);
   const [selected, setSelected] = useState<CatalogItem | null>(null);
   const [name, setName] = useState("");
@@ -268,10 +270,15 @@ export default function CatalogBrowser(props: {
         onInstalled={reloadAfterProductInstall} />
       <CatalogUpdatePanel onInstalled={reloadAfterInstall} installRevision={installRevision} />
       <button type="button" className="catalog-cleanup-open" disabled={creating || batchOutcomeUnconfirmed} onClick={() => setCleanupOpen(true)}>{t("catalog.cleanup.open")}</button>
-      {cleanupOpen && active && <CatalogCleanupDialog onClose={() => setCleanupOpen(false)} onRemoved={async () => {
-        setSelected(null); setName("");
+      {cleanupOpen && active && <CatalogCleanupDialog onClose={() => setCleanupOpen(false)} onRemoved={async (result) => {
+        setCleanupResult(result);
+        // Only a picked entry that is gone now leaves the creation form.
+        if (selected && result.removedItemIds.includes(selected.id)) { setSelected(null); setName(""); }
         await reloadAfterProductInstall();
       }} />}
+      {cleanupResult && <p className="catalog-cleanup-notice" role="status">
+        {t("catalog.cleanup.done", { count: cleanupResult.removedItemIds.length, backup: cleanupResult.backup })}
+      </p>}
       <select value={manufacturer} onChange={(e) => changeManufacturer(e.target.value)}>
         <option value="">{t("catalog.allManufacturers")}</option>
         {manufacturers.map((m) => (

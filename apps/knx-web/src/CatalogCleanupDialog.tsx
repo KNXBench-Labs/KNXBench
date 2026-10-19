@@ -1,5 +1,5 @@
 /** Explicit selection, read-only preview and backed-up catalogue placement cleanup. */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import * as api from "./api";
 import type { CatalogCleanupPreview, CatalogItem } from "./api";
 import { useTranslate } from "./i18n";
@@ -8,14 +8,28 @@ import Overlay from "./Overlay";
 import CatalogItemIdentity from "./CatalogItemIdentity";
 import { redundantCatalogPlacements } from "./catalogCleanup";
 
-export default function CatalogCleanupDialog(props: { onRemoved: () => void | Promise<void>; onClose: () => void }) {
+export interface CatalogCleanupResult { removedItemIds: string[]; backup: string }
+
+/** The values a row shows, lower-cased: the filter matches these, never field names. */
+function searchText(item: CatalogItem): string {
+  const d = item.details;
+  return [item.name, item.number, item.id, item.productRefId, item.hardware2programRefId, d?.applicationProgramId,
+    d?.applicationName, d?.applicationVersion, d?.catalogSectionId, ...(d?.sourceNames ?? [])]
+    .filter((value): value is string => typeof value === "string").join("\n").toLowerCase();
+}
+
+export default function CatalogCleanupDialog(props: {
+  /** Called once with the confirmed result; the owner keeps it after the dialog closes. */
+  onRemoved: (result: CatalogCleanupResult) => void | Promise<void>;
+  onClose: () => void;
+}) {
   const t = useTranslate();
   const [language] = useProductLanguage();
   const [items, setItems] = useState<CatalogItem[] | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [preview, setPreview] = useState<CatalogCleanupPreview | null>(null);
-  const [done, setDone] = useState<{ removedItemIds: string[]; backup: string } | null>(null);
+  const [done, setDone] = useState<CatalogCleanupResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [blocked, setBlocked] = useState(false);
   const [working, setWorking] = useState(false);
@@ -65,9 +79,10 @@ export default function CatalogCleanupDialog(props: { onRemoved: () => void | Pr
     pending.current = true; setWorking(true); setError(null);
     try {
       const result = await api.applyCatalogCleanup(preview.items.map((item) => item.id), preview.token);
-      // Refresh the owning catalogue even when navigation dismissed this view.
       if (alive.current) { setDone(result); setPreview(null); }
-      await props.onRemoved();
+      // The removal is confirmed; a failing refresh must not relabel it uncertain.
+      // The owner is told even when navigation dismissed this view.
+      try { await props.onRemoved(result); } catch { /* the owner reports its own refresh */ }
     } catch (e) {
       if (!alive.current) return;
       const failure = e as { status?: number };
@@ -82,8 +97,9 @@ export default function CatalogCleanupDialog(props: { onRemoved: () => void | Pr
   }
 
   const needle = search.trim().toLowerCase();
-  const visible = (items ?? []).filter((item) => !needle || JSON.stringify(item).toLowerCase().includes(needle));
-  const suggestions = redundantCatalogPlacements(items ?? []);
+  const texts = useMemo(() => new Map((items ?? []).map((item) => [item.id, searchText(item)])), [items]);
+  const visible = useMemo(() => (items ?? []).filter((item) => !needle || texts.get(item.id)!.includes(needle)), [items, texts, needle]);
+  const suggestions = useMemo(() => redundantCatalogPlacements(items ?? []), [items]);
   return <Overlay className="catalog-cleanup-dialog" labelledBy="catalog-cleanup-title" initialFocusRef={closeRef}
     onClose={() => { if (!pending.current) props.onClose(); }}>
     <h2 id="catalog-cleanup-title">{t("catalog.cleanup.title")}</h2>

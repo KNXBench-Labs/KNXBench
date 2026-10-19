@@ -503,11 +503,25 @@ fn cleanup_error(error: CleanupError) -> ApiError {
         error @ CleanupError::StaleToken => {
             ApiError::conflict("catalogueCleanupStale", error.to_string())
         }
-        CleanupError::Backup(error) => ApiError::internal(format!(
-            "the catalogue backup could not be written, nothing was removed: {error}"
-        )),
-        error @ CleanupError::Database(_) => ApiError::internal(error.to_string()),
+        // The cause names local paths; it goes to the server log, not the client.
+        CleanupError::Backup(error) => {
+            eprintln!("knx-server: catalogue cleanup backup failed: {error}");
+            ApiError::internal("the catalogue backup could not be written; nothing was removed")
+        }
+        error @ (CleanupError::Database(_) | CleanupError::NotFileBacked) => {
+            ApiError::internal(error.to_string())
+        }
     }
+}
+
+/// Cleanup reads the whole catalogue for its token: off the async workers,
+/// like other heavy product-database work.
+async fn blocking<T: Send + 'static>(
+    work: impl FnOnce() -> Result<T, ApiError> + Send + 'static,
+) -> Result<T, ApiError> {
+    tokio::task::spawn_blocking(work)
+        .await
+        .map_err(|_| ApiError::internal("catalogue cleanup worker failed"))?
 }
 
 /// Devices per exact `(product_ref, program_ref)` pair in the open project.
@@ -531,10 +545,11 @@ async fn cleanup_preview(
     Json(request): Json<CleanupPreviewRequest>,
 ) -> Result<Json<CleanupPreviewView>, ApiError> {
     let bindings = open_project_bindings(&state);
-    let (products, _path) = products(&state)?;
-    let preview = knx_productdb::preview_catalog_cleanup(&products, &request.item_ids)
-        .map_err(cleanup_error)?;
-    drop(products);
+    let preview = blocking(move || {
+        let (products, _path) = products(&state)?;
+        knx_productdb::preview_catalog_cleanup(&products, &request.item_ids).map_err(cleanup_error)
+    })
+    .await?;
     let items = preview
         .items
         .into_iter()
@@ -568,14 +583,17 @@ async fn cleanup_apply(
 ) -> Result<Json<CleanupAppliedView>, ApiError> {
     // Held for the whole removal, like a package update: the backup and the
     // deletion see the same catalogue as the token check.
-    let (mut products, _path) = products(&state)?;
-    let applied = knx_productdb::apply_catalog_cleanup(
-        &mut products,
-        &request.item_ids,
-        &request.token,
-        request.confirmed,
-    )
-    .map_err(cleanup_error)?;
+    let applied = blocking(move || {
+        let (mut products, _path) = products(&state)?;
+        knx_productdb::apply_catalog_cleanup(
+            &mut products,
+            &request.item_ids,
+            &request.token,
+            request.confirmed,
+        )
+        .map_err(cleanup_error)
+    })
+    .await?;
     let backup =
         file_name(&applied.backup).ok_or_else(|| ApiError::internal("backup has no file name"))?;
     Ok(Json(CleanupAppliedView {

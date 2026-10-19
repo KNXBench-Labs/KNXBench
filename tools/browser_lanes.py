@@ -14,19 +14,28 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import dataclass
+import os
 from pathlib import Path
 import re
 import sys
 
 TAG = '@exclusive'
 PRIMITIVE = re.compile(
-    r'(?<![\w$.])(?:performance\s*\.\s*now|Date\s*\.\s*now)\b'
+    r'(?<![\w$])(?:performance\s*\.\s*now|Date\s*\.\s*now)\b'
+    r'|(?<![\w$])new\s+Date\s*\(\s*\)\s*\.\s*(?:getTime|valueOf)\b'
     r'|(?<![\w$])(?:waitForTimeout|requestAnimationFrame|setTimeout|setInterval)\b')
 CALL = re.compile(
     r'(?<![\w$.])test(?P<member>(?:\.(?:describe|serial|parallel|only|skip|fixme|fail|slow'
     r'|beforeEach|afterEach|beforeAll|afterAll))*)\s*\(')
 HOOKS = {'beforeEach', 'afterEach', 'beforeAll', 'afterAll'}
-IMPORT = re.compile(r'import\s*(?:type\s*)?\{(?P<names>[^}]*)\}\s*from\s*["\'](?P<path>\.[^"\']+)["\']')
+# `import … from`, `export … from` (re-exports) and dynamic `import()` of relative modules.
+IMPORT_FROM = re.compile(r'\b(?P<keyword>import|export)\s+(?P<type>type\s+)?(?P<clause>[^;"\'`]*?)\s*from\s*'
+                         r'["\'](?P<path>\.[^"\']+)["\']')
+DYNAMIC_IMPORT = re.compile(r'\bimport\s*\(\s*["\'](?P<path>\.[^"\']+)["\']')
+# Code handed to the page as a string runs there like a function body would.
+PAGE_CODE = re.compile(r'\.\s*(?:evaluate|evaluateHandle|addInitScript|waitForFunction)\s*\(\s*(?=["\'`])')
+NOT_METHODS = {'if', 'for', 'while', 'switch', 'catch', 'function', 'return', 'with', 'typeof',
+               'await', 'new', 'yield', 'void', 'delete', 'in', 'of', 'super', 'import'}
 REGEX_KEYWORDS = {'return', 'typeof', 'case', 'do', 'else', 'in', 'of', 'new', 'delete',
                   'void', 'throw', 'await', 'yield'}
 
@@ -201,9 +210,33 @@ class Module:
     source: str
     code: str
     scopes: list[Scope]
+    fixtures: list[tuple[int, int]]  # argument spans of `.extend(...)` fixture declarations
 
     def line(self, offset: int) -> int:
         return self.source.count('\n', 0, offset) + 1
+
+
+def fixture_spans(code: str) -> list[tuple[int, int]]:
+    """Argument spans of `x.extend(...)` / `x.extend<T>(...)` calls (Playwright fixtures)."""
+    spans = []
+    for match in re.finditer(r'\.\s*extend\s*', code):
+        k = match.end()
+        if code[k:k + 1] == '<':
+            depth = 0
+            while k < len(code):
+                if code[k] == '<':
+                    depth += 1
+                elif code[k] == '>' and code[k - 1] != '=':
+                    depth -= 1
+                    if depth == 0:
+                        break
+                k += 1
+            k += 1
+            while k < len(code) and code[k].isspace():
+                k += 1
+        if code[k:k + 1] == '(':
+            spans.append((k, matching(code, k)))
+    return spans
 
 
 def parse(source: str) -> Module:
@@ -233,7 +266,7 @@ def parse(source: str) -> Module:
                      and code[arguments[1][0]:arguments[1][1]].strip().startswith('{')
                      and tagged(source[arguments[1][0]:arguments[1][1]]))
         scopes.append(Scope(open_at, close_at, kind, exclusive))
-    return Module(source, code, scopes)
+    return Module(source, code, scopes, fixture_spans(code))
 
 
 def enclosing(module: Module, offset: int) -> list[Scope]:
@@ -241,7 +274,10 @@ def enclosing(module: Module, offset: int) -> list[Scope]:
 
 
 FUNCTION = re.compile(r'(?<![\w$.])function\s*\*?\s*(?P<name>[A-Za-z_$][\w$]*)\s*\(')
-BINDING = re.compile(r'(?<![\w$.])(?:const|let|var)\s+(?P<name>[A-Za-z_$][\w$]*)\s*(?::[^=;]+)?=(?!=)\s*')
+# `const name = …` bindings and `name: …` object properties holding an arrow function.
+BINDING = re.compile(r'(?<![\w$.])(?:(?:const|let|var)\s+(?P<name>[A-Za-z_$][\w$]*)\s*(?::[^=;]+)?=(?!=)'
+                     r'|(?P<prop>[A-Za-z_$][\w$]*)\s*:(?!:))\s*')
+METHOD = re.compile(r'(?<![\w$.])(?P<name>[A-Za-z_$][\w$]*)\s*\(')
 
 
 def statement_end(code: str, start: int) -> int:
@@ -261,7 +297,7 @@ def statement_end(code: str, start: int) -> int:
 
 
 def functions(code: str) -> list[tuple[str, int, int]]:
-    """Named function declarations and function-valued bindings at any depth."""
+    """Named functions at any depth: declarations, arrow bindings and properties, methods."""
     found = []
     for match in FUNCTION.finditer(code):
         params_end = matching(code, match.end() - 1)
@@ -269,13 +305,14 @@ def functions(code: str) -> list[tuple[str, int, int]]:
         if body >= 0:
             found.append((match.group('name'), match.start(), matching(code, body)))
     for match in BINDING.finditer(code):
+        name = match.group('name') or match.group('prop')
         k = match.end()
         if code.startswith('async', k) and not code[k + 5:k + 6].isalnum():
             k = len(code) - len(code[k + 5:].lstrip())
         if code.startswith('function', k):
             params = code.find('(', k)
             body = code.find('{', matching(code, params))
-            found.append((match.group('name'), match.start(), matching(code, body)))
+            found.append((name, match.start(), matching(code, body)))
             continue
         if k < len(code) and code[k] == '(':
             k = matching(code, k) + 1
@@ -288,7 +325,14 @@ def functions(code: str) -> list[tuple[str, int, int]]:
             continue
         k += arrow.end()
         end = matching(code, k) if code[k:k + 1] == '{' else statement_end(code, k)
-        found.append((match.group('name'), match.start(), end))
+        found.append((name, match.start(), end))
+    for match in METHOD.finditer(code):  # `name(params) {` in object literals and classes
+        if match.group('name') in NOT_METHODS:
+            continue
+        close = matching(code, match.end() - 1)
+        body = re.match(r'\s*(?::[^{;=()]+)?\{', code[close + 1:])
+        if body:
+            found.append((match.group('name'), match.start(), matching(code, close + body.end())))
     return found
 
 
@@ -299,86 +343,200 @@ def judge(module: Module, offset: int, spans: list[tuple[str, int, int]]) -> str
         return 'ok'
     if any(s.kind in ('test', 'hook') for s in scopes):
         return 'finding'
+    if any(start < offset < end for start, end in module.fixtures):
+        return 'finding'  # a fixture runs for every test that uses it; no tag reaches it here
     inside = [f for f in spans if f[1] <= offset <= f[2]]
     if inside:
         return 'helper:' + min(inside, key=lambda f: f[2] - f[1])[0]
     return 'finding'
 
 
-def uses(module: Module, tainted: set[str]) -> list[tuple[int, str]]:
-    found = [(m.start(), re.sub(r'\s+', '', m.group(0))) for m in PRIMITIVE.finditer(module.code)]
+def label(text: str) -> str:
+    return re.sub(r'\s+', ' ', re.sub(r'\(\s*\)', '()', re.sub(r'\s*\.\s*', '.', text)))
+
+
+def page_code(module: Module) -> list[tuple[int, str]]:
+    """Primitives inside string code handed to the page (`page.evaluate("…")`)."""
+    found = []
+    for call in PAGE_CODE.finditer(module.source):
+        if module.code[call.start()] != module.source[call.start()]:
+            continue  # the call itself sits in a comment or string
+        quote, start = module.source[call.end()], call.end() + 1
+        k = start
+        while k < len(module.source) and module.source[k] != quote:
+            k += 2 if module.source[k] == '\\' else 1
+        found.extend((start + m.start(), label(m.group(0)))
+                     for m in PRIMITIVE.finditer(module.source[start:k]))
+    return found
+
+
+def uses(module: Module, tainted: set[str], members: set[str] = frozenset()) -> list[tuple[int, str]]:
+    """Primitives and calls of tainted functions; `members` also match as `x.name(`."""
+    found = [(m.start(), label(m.group(0))) for m in PRIMITIVE.finditer(module.code)
+             if module.code[m.start():m.end()] == module.source[m.start():m.end()]  # `new Date("…")` is fixed
+             and not re.search(r'\btypeof\s*$', module.code[max(0, m.start() - 16):m.start()])]  # a type
+    found.extend(page_code(module))
     for name in tainted:
         found.extend((m.start(), name) for m in
                      re.finditer(r'(?<![\w$.])' + re.escape(name) + r'\s*\(', module.code)
                      if not module.code[:m.start()].rstrip().endswith('function'))
+    for name in members - tainted:
+        found.extend((m.start() + 1, name) for m in
+                     re.finditer(r'\.\s*' + re.escape(name) + r'\s*\(', module.code))
     return sorted(found)
 
 
-def tainted_names(module: Module, imported: set[str]) -> set[str]:
+def tainted_names(module: Module, imported: set[str], members: set[str] = frozenset()) -> set[str]:
     """Functions whose bodies reach a primitive or a call of another tainted function."""
     spans = functions(module.code)
     tainted = set(imported)
     while True:
-        verdicts = {judge(module, offset, spans) for offset, _ in uses(module, tainted)}
+        verdicts = {judge(module, offset, spans) for offset, _ in uses(module, tainted, members)}
         grown = tainted | {v.split(':', 1)[1] for v in verdicts if v.startswith('helper:')}
         if grown == tainted:
             return tainted
         tainted = grown
 
 
-def imports(module: Module, directory: Path) -> dict[str, tuple[Path, str]]:
-    """Local name -> (resolved helper file, exported name) for relative imports."""
-    found: dict[str, tuple[Path, str]] = {}
-    for match in IMPORT.finditer(module.source):
-        target = (directory / match.group('path')).resolve()
-        # Only test-side TypeScript helpers are followed. `.tsx` modules are
-        # fixture pages rendered inside the browser (JSX), not Node test code.
-        candidates = [target] if target.suffix == '.ts' else [target.with_name(target.name + '.ts')]
-        path = next((p for p in candidates if p.is_file()), None)
+def resolve(directory: Path, specifier: str) -> Path | None:
+    """The TypeScript/JavaScript module a relative specifier loads; None for data files.
+
+    `.tsx`/`.jsx` modules are browser fixture pages (JSX) that this guard cannot
+    read; a test-side import of one is refused instead of silently skipped.
+    """
+    target = directory / specifier
+    script = {'.ts': ['.ts'], '.mts': ['.mts'], '.cts': ['.cts'],
+              '.js': ['.ts', '.js'], '.mjs': ['.mts', '.mjs'], '.cjs': ['.cts', '.cjs']}
+    if target.suffix in ('.tsx', '.jsx'):
+        raise ValueError(f'imports {specifier}: a .tsx/.jsx module cannot be checked; '
+                         'keep test-side helpers in .ts')
+    if target.suffix in script:
+        candidates = [target.with_suffix(s) for s in script[target.suffix]]
+    else:
+        for jsx in (target.with_name(target.name + '.tsx'), target / 'index.tsx'):
+            if jsx.is_file() and not target.with_name(target.name + '.ts').is_file():
+                raise ValueError(f'imports {specifier}: a .tsx module cannot be checked; '
+                                 'keep test-side helpers in .ts')
+        candidates = [target.with_name(target.name + '.ts'), target / 'index.ts',
+                      target.with_name(target.name + '.js')]
+    return next((c.resolve() for c in candidates if c.is_file()), None)
+
+
+@dataclass
+class Reference:
+    keyword: str  # import | export | dynamic
+    path: Path
+    named: list[tuple[str, str]]  # (exported name, local name)
+    default: str | None = None
+    namespace: str | None = None
+    star: bool = False  # `export * from`
+
+
+def references(module: Module, directory: Path) -> list[Reference]:
+    found = []
+    for match in IMPORT_FROM.finditer(module.source):
+        if module.code[match.start()] != module.source[match.start()]:
+            continue  # inside a comment or string
+        clause = match.group('clause').strip()
+        names = re.search(r'\{([^}]*)\}', clause)
+        if match.group('type') or (names and clause.startswith('{') and all(
+                part.strip().startswith('type ') for part in names.group(1).split(',') if part.strip())):
+            continue  # type-only: erased before anything runs
+        path = resolve(directory, match.group('path'))
         if path is None:
             continue
-        for part in match.group('names').split(','):
-            words = part.replace('type ', '').split(' as ')
-            if words[0].strip():
-                found[words[-1].strip()] = (path, words[0].strip())
+        named = []
+        if braces := re.search(r'\{([^}]*)\}', clause):
+            for part in braces.group(1).split(','):
+                words = part.replace('type ', '').split(' as ')
+                if words[0].strip():
+                    named.append((words[0].strip(), words[-1].strip()))
+        namespace = re.search(r'\*\s*as\s+([A-Za-z_$][\w$]*)', clause)
+        default = re.match(r'([A-Za-z_$][\w$]*)\s*(?:,|$)', clause)
+        found.append(Reference(match.group('keyword'), path, named,
+                               default.group(1) if default and match.group('keyword') == 'import' else None,
+                               namespace.group(1) if namespace else None,
+                               clause == '*'))
+    for match in DYNAMIC_IMPORT.finditer(module.source):
+        if module.code[match.start()] != module.source[match.start()]:
+            continue
+        path = resolve(directory, match.group('path'))
+        if path is not None:
+            found.append(Reference('dynamic', path, []))
     return found
 
 
-def exported_taint(path: Path, cache: dict[Path, set[str]], visiting: frozenset = frozenset()) -> set[str]:
-    if path in cache:
-        return cache[path]
-    if path in visiting:
-        return set()
-    module = parse(path.read_text(encoding='utf-8'))
-    imported = {local for local, (source, name) in imports(module, path.parent).items()
-                if name in exported_taint(source, cache, visiting | {path})}
-    cache[path] = tainted_names(module, imported)
-    return cache[path]
+class Checker:
+    """Follows every module the specs load and remembers what each one taints."""
 
+    def __init__(self, e2e: Path) -> None:
+        self.e2e = e2e.resolve()
+        self.taint: dict[Path, set[str]] = {}
+        self.findings: list[Finding] = []
 
-def check_file(path: Path, cache: dict[Path, set[str]], label: str) -> list[Finding]:
-    module = parse(path.read_text(encoding='utf-8'))
-    imported = {local for local, (source, name) in imports(module, path.parent).items()
-                if name in exported_taint(source, cache)}
-    tainted = tainted_names(module, imported)
-    spans = functions(module.code)
-    return [Finding(label, module.line(offset), primitive)
-            for offset, primitive in uses(module, tainted)
-            if judge(module, offset, spans) == 'finding']
+    def name(self, path: Path) -> str:
+        return os.path.relpath(path, self.e2e)
+
+    def imported(self, module: Module, directory: Path,
+                 visiting: frozenset) -> tuple[set[str], set[str], set[str]]:
+        """(tainted local names, tainted member names, names this module re-exports tainted)."""
+        local, members, exported = set(), set(), set()
+        for ref in references(module, directory):
+            source = self.exported(ref.path, visiting)
+            if not source:
+                continue
+            members |= source
+            if ref.keyword == 'export':
+                exported |= source if ref.star else {alias for name, alias in ref.named if name in source}
+                continue
+            local |= {alias for name, alias in ref.named if name in source}
+            if ref.default:
+                local.add(ref.default)
+        return local, members, exported
+
+    def exported(self, path: Path, visiting: frozenset = frozenset()) -> set[str]:
+        if path in self.taint:
+            return self.taint[path]
+        if path in visiting:
+            return set()
+        try:
+            module = parse(path.read_text(encoding='utf-8'))
+        except ValueError as error:
+            raise ValueError(f'{self.name(path)}: {error}') from error
+        local, members, exported = self.imported(module, path.parent, visiting | {path})
+        tainted = tainted_names(module, local, members)
+        spans = functions(module.code)
+        # A helper has no tag of its own: what is not inside a named function
+        # (module code, fixtures) cannot be attributed to a test and is refused.
+        self.findings.extend(Finding(self.name(path), module.line(offset), primitive)
+                             for offset, primitive in uses(module, tainted, members)
+                             if judge(module, offset, spans) == 'finding')
+        self.taint[path] = tainted | exported
+        return self.taint[path]
+
+    def check_spec(self, path: Path) -> list[Finding]:
+        path = path.resolve()
+        module = parse(path.read_text(encoding='utf-8'))
+        local, members, _ = self.imported(module, path.parent, frozenset({path.resolve()}))
+        tainted = tainted_names(module, local, members)
+        spans = functions(module.code)
+        return [Finding(self.name(path), module.line(offset), primitive)
+                for offset, primitive in uses(module, tainted, members)
+                if judge(module, offset, spans) == 'finding']
 
 
 def check_directory(e2e: Path) -> list[Finding]:
     specs = sorted(e2e.rglob('*.e2e.ts'))
     if not specs:
         raise ValueError(f'no *.e2e.ts browser specs below {e2e}')
-    cache: dict[Path, set[str]] = {}
+    checker = Checker(e2e)
     findings = []
     for spec in specs:
         try:
-            findings.extend(check_file(spec, cache, str(spec.relative_to(e2e))))
+            findings.extend(checker.check_spec(spec))
         except ValueError as error:
             raise ValueError(f'{spec.relative_to(e2e)}: {error}') from error
-    return findings
+    return findings + sorted(set(checker.findings), key=lambda f: (f.file, f.line, f.primitive))
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -866,12 +866,16 @@ async function checkZoomedSubmenu(page: Page, id: string, scale: number) {
 }
 
 /**
- * Dismisses the date-dependent startup toast. Toasts rightly paint above the menu, and at 150% the
- * bottom-right toast reaches over a flyout's lower entries; the hit tests are about the menu.
+ * A weekday noon: no holiday and not late at night, so the app pushes no startup toast. Toasts
+ * rightly paint above the menu, and at 150% the bottom-right toast reaches over a flyout's lower
+ * entries; the hit tests are about the menu. Pinning the date (timers keep running) replaces a
+ * fixed wait for a toast that may or may not come, which raced on a loaded host.
  */
-async function dismissToasts(page: Page) {
-  await page.waitForTimeout(300);
-  for (const dismiss of await page.locator(".toast-dismiss").all()) await dismiss.click();
+const TOASTLESS_START = new Date("2026-10-14T12:00:00");
+async function startWithoutToast(page: Page) {
+  await page.clock.setFixedTime(TOASTLESS_START);
+}
+async function expectNoToast(page: Page) {
   await expect(page.locator(".toast")).toHaveCount(0);
 }
 
@@ -887,13 +891,14 @@ test.describe("File submenus under application zoom (UISET2-01)", () => {
   ];
   for (const language of ["en", "de"] as const) {
     for (const { scale, width, height } of CASES) {
-      test(`${language} ${scale * 100}% ${width}x${height}: every submenu fits, holds its minimum and every entry takes a real pointer`, { tag: "@exclusive" }, async ({ page }) => {
+      test(`${language} ${scale * 100}% ${width}x${height}: every submenu fits, holds its minimum and every entry takes a real pointer`, async ({ page }) => {
         const m: Catalogue = language === "de" ? de : en;
         const unexpected = await serve(page, { language, uiScale: scale });
         await page.setViewportSize({ width, height });
+        await startWithoutToast(page);
         await page.goto("/");
         await expect.poll(() => renderedScale(page), "the stored scale reaches the root").toBe(scale);
-        await dismissToasts(page);
+        await expectNoToast(page);
         await openFile(page);
         for (const entry of await page.locator(".file-menu-content > [data-file-menu-item], .file-menu-content > .file-submenu > [data-file-menu-item]").all()) {
           await entry.scrollIntoViewIfNeeded();
@@ -910,13 +915,14 @@ test.describe("File submenus under application zoom (UISET2-01)", () => {
     }
   }
 
-  test("a zoom step with a submenu open places it again (Ctrl+Plus through the settings path)", { tag: "@exclusive" }, async ({ page }) => {
+  test("a zoom step with a submenu open places it again (Ctrl+Plus through the settings path)", async ({ page }) => {
     const unexpected = await serve(page);
     // 1000 px keeps a whole flyout at 100%; at 150% the same window is 667 layout px wide, which
     // leaves the room right of the menu near the 220 px minimum.
     await page.setViewportSize({ width: 1000, height: 900 });
+    await startWithoutToast(page);
     await page.goto("/");
-    await dismissToasts(page);
+    await expectNoToast(page);
     await openFile(page);
     await openFileSubmenu(page, "help");
     await checkZoomedSubmenu(page, "help", 1);
@@ -1035,15 +1041,16 @@ test.describe("The File menu's first level under application zoom (UISET3-01)", 
   ];
   for (const language of ["en", "de"] as const) {
     for (const { scale, width, height } of CASES) {
-      test(`${language} ${scale * 100}% ${width}x${height} Comfortable with a session: every first-level row and Logout stay reachable, folded and with each submenu open`, { tag: "@exclusive" }, async ({ page }) => {
+      test(`${language} ${scale * 100}% ${width}x${height} Comfortable with a session: every first-level row and Logout stay reachable, folded and with each submenu open`, async ({ page }) => {
         const unexpected = await serve(page, { language, uiScale: scale, density: "comfortable", sessionRequired: true });
         let logouts = 0;
         await page.route("**/api/auth/logout", (route) => { logouts += 1; return route.fulfill({ status: 200, contentType: "application/json", body: "{}" }); });
         await page.setViewportSize({ width, height });
+        await startWithoutToast(page);
         await page.goto("/");
         await expect.poll(() => renderedScale(page), "the stored scale reaches the root").toBe(scale);
         await expect(page.locator("html")).toHaveAttribute("data-density", "comfortable");
-        await dismissToasts(page);
+        await expectNoToast(page);
         await openFile(page);
         await expect(page.locator(".file-menu-logout")).toHaveCount(1);
         await checkFirstLevel(page);
@@ -1067,12 +1074,13 @@ test.describe("The File menu's first level under application zoom (UISET3-01)", 
     // layout (a window rule, like every breakpoint outside the File menu) and the menu spans the
     // window. The window rule keeps every submenu inline there at every scale; a flyout beside a
     // menu that spans the window would have no room on either side anyway.
-    test(`${language} 80% 640x800 Comfortable with a session: the narrow window keeps the inline layout and every entry is reachable`, { tag: "@exclusive" }, async ({ page }) => {
+    test(`${language} 80% 640x800 Comfortable with a session: the narrow window keeps the inline layout and every entry is reachable`, async ({ page }) => {
       const unexpected = await serve(page, { language, uiScale: 0.8, density: "comfortable", sessionRequired: true });
       await page.setViewportSize({ width: 640, height: 800 });
+      await startWithoutToast(page);
       await page.goto("/");
       await expect.poll(() => renderedScale(page), "the stored scale reaches the root").toBe(0.8);
-      await dismissToasts(page);
+      await expectNoToast(page);
       await openFile(page);
       await checkFirstLevel(page);
       for (const id of TRIGGERS) {

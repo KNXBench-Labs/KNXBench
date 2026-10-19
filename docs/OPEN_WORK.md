@@ -577,7 +577,9 @@ derived `system2-declared-segments-v1` diagnostic profile
 ([ADR-0143](adr/0143-declared-segment-memory-evidence-profile.md), CLI only,
 simulator-tested; four independent reviews, the last accepting). Open: the
 reporter's consented run on the device, the offline comparison of its result,
-a web entry (UI owner), and one MINOR reader gap: the identity stop reason
+a web entry (UI owner), a `--device <area.line.device>` selector for the CLI
+(today only the internal `--device-id`, which no surface displays; the issue #22
+request uses a `sqlite3` query instead), and one MINOR reader gap: the identity stop reason
 (e.g. `identity-mismatch`) is not cross-checked against the identity items, so
 a deliberately rewritten and rehashed archive could carry a wrong reason. It
 does not change recorded bytes, coverage or what the collector sends;

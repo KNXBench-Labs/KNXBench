@@ -327,10 +327,18 @@ struct Retired {
     /// The xpath suffixes whose rows retire: one element name (the last step)
     /// or several steps (`Parameter/Property`).
     hosts: &'static [&'static str],
+    /// Keeps the rows the `Dynamic` parser wrote (every xpath with a
+    /// `Dynamic` step): set where the promoted column is filled from `Static`
+    /// only, so a host inside `Dynamic` still reaches no column and ingest
+    /// keeps reporting it. Only v26 sets it; v23 to v25 retire as they did.
+    keeps_dynamic: bool,
 }
 
 impl Retired {
     fn retires(&self, xpath: &str) -> bool {
+        if self.keeps_dynamic && xpath.contains("/Dynamic/") {
+            return false;
+        }
         self.hosts.iter().any(|host| {
             xpath
                 .strip_suffix(host)
@@ -359,6 +367,7 @@ const TEXT_PARAMETER_REF_PROMOTION: Promotion = Promotion {
         kind: crate::report::UnknownKind::Attribute,
         name: "TextParameterRefId",
         hosts: &TEXT_PARAMETER_REF_HOSTS,
+        keeps_dynamic: false,
     }],
     blob_error: (
         "TextParameterRefBackfillError",
@@ -373,6 +382,7 @@ const ACCESS_PROMOTION: Promotion = Promotion {
         kind: crate::report::UnknownKind::Attribute,
         name: "Access",
         hosts: &ACCESS_HOSTS,
+        keeps_dynamic: false,
     }],
     blob_error: ("PresentationBackfillError", "backfill_presentation"),
     report_error: "presentation_report_backfill",
@@ -441,46 +451,55 @@ const PLACEMENT_PROMOTION: Promotion = Promotion {
             kind: UnknownKind::Attribute,
             name: "Offset",
             hosts: &PARAMETER_HOST,
+            keeps_dynamic: false,
         },
         Retired {
             kind: UnknownKind::Attribute,
             name: "BitOffset",
             hosts: &PARAMETER_HOST,
+            keeps_dynamic: false,
         },
         Retired {
             kind: UnknownKind::Element,
             name: "Property",
             hosts: &PROPERTY_PARENTS,
+            keeps_dynamic: false,
         },
         Retired {
             kind: UnknownKind::Attribute,
             name: "ObjectIndex",
             hosts: &PROPERTY_HOST,
+            keeps_dynamic: false,
         },
         Retired {
             kind: UnknownKind::Attribute,
             name: "ObjectType",
             hosts: &PROPERTY_HOST,
+            keeps_dynamic: false,
         },
         Retired {
             kind: UnknownKind::Attribute,
             name: "PropertyId",
             hosts: &PROPERTY_HOST,
+            keeps_dynamic: false,
         },
         Retired {
             kind: UnknownKind::Attribute,
             name: "Offset",
             hosts: &PROPERTY_HOST,
+            keeps_dynamic: false,
         },
         Retired {
             kind: UnknownKind::Attribute,
             name: "BitOffset",
             hosts: &PROPERTY_HOST,
+            keeps_dynamic: false,
         },
         Retired {
             kind: UnknownKind::Attribute,
             name: "Occurrence",
             hosts: &PROPERTY_HOST,
+            keeps_dynamic: false,
         },
     ],
     blob_error: ("PlacementBackfillError", "backfill_placement_columns"),
@@ -535,7 +554,8 @@ fn migrate_v24_to_v25(conn: &Connection) -> Result<(), ProductDbError> {
 }
 
 /// The hosts v26 stores `SuffixText` on: `Parameter` (also a union member or a
-/// `ModuleDef`'s) and `ParameterRef`. Any other host stays reported.
+/// `ModuleDef`'s) and `ParameterRef`, in `Static` only. Any other host, and
+/// both inside `Dynamic`, stays reported.
 const SUFFIX_TEXT_HOSTS: [&str; 2] = ["Parameter", "ParameterRef"];
 
 const SUFFIX_TEXT_PROMOTION: Promotion = Promotion {
@@ -544,6 +564,7 @@ const SUFFIX_TEXT_PROMOTION: Promotion = Promotion {
         kind: UnknownKind::Attribute,
         name: "SuffixText",
         hosts: &SUFFIX_TEXT_HOSTS,
+        keeps_dynamic: true,
     }],
     blob_error: ("SuffixTextBackfillError", "backfill_suffix_text"),
     report_error: "suffix_text_report_backfill",
@@ -577,8 +598,11 @@ fn migrate_v25_to_v26(conn: &Connection) -> Result<(), ProductDbError> {
 
 /// Fills `suffix_text` of the parameters and refs of the programs one blob
 /// owns from its bytes, verbatim as the parser stores it. A program another
-/// blob owns is left alone, as the parsers leave it; `Dynamic` is skipped
-/// whole, as the parser skips it.
+/// blob owns is left alone, as the parsers leave it; so is every repeated
+/// declaration of a program id in this blob, which ingest's `first_winner`
+/// stores nothing of. `Dynamic` is skipped whole, as the parser skips it. A
+/// parameter or ref id repeated inside one program needs no rule here: the
+/// table keys refuse such a blob at ingest, so no stored blob carries one.
 fn backfill_suffix_text(
     conn: &Connection,
     sha256: &str,
@@ -593,6 +617,7 @@ fn backfill_suffix_text(
     let mut reader = quick_xml::Reader::from_reader(bytes);
     let mut buf = Vec::new();
     let mut program: Option<String> = None;
+    let mut declared = std::collections::HashSet::new();
     loop {
         buf.clear();
         let event = reader
@@ -613,10 +638,13 @@ fn backfill_suffix_text(
         let name = crate::xml::local_name(start);
         let table = match name.as_str() {
             "ApplicationProgram" => {
-                program = crate::xml::attrs(start, source_path)?
+                // The parser's program identity, `""` for a missing `Id`.
+                let id = crate::xml::attrs(start, source_path)?
                     .get("Id")
-                    .filter(|id| owned.contains(*id))
-                    .map(str::to_string);
+                    .unwrap_or_default()
+                    .to_string();
+                let first = declared.insert(id.clone());
+                program = (first && owned.contains(&id)).then_some(id);
                 continue;
             }
             "Parameter" => "parameter",

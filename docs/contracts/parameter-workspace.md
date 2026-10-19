@@ -149,6 +149,9 @@ or protocol schema change; product database v24 adds typed presentation columns
 - The field DTO carries it as `suffixText` with `suffixTextLanguage` (the stored
   language that answered, `null` for the package's own text); both are absent
   on older servers.
+- The checked editor keeps it beside its own value control (the draft input,
+  or the unchanged original value its fallback shows), outside the draft, the
+  value and the codec; "no value is present" gets none.
 - Presentation only: the value, its validation, drafts, writes and download
   images never contain the suffix. `Parameter/@Suffix` is stored but not shown.
 - Evidence level: name-level and corpus placement, no schema definition; see

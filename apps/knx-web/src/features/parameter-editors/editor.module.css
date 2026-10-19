@@ -3,6 +3,10 @@
 .label { font-weight: 600; overflow-wrap: anywhere; }
 .caption { color: var(--knx-muted); font-size: .85rem; line-height: 1.5; }
 .input { box-sizing: border-box; width: 100%; min-width: 0; padding: 10px; border: 1px solid var(--knx-border); border-radius: var(--knx-radius-input); color: var(--knx-foreground); background: var(--knx-bg); font: inherit; }
+/* A declared unit suffix sits right after the value it describes (WP-02). */
+.value { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.value > .input, .value > .raw { flex: 1 1 auto; }
+.suffix { flex: none; color: var(--knx-muted); white-space: nowrap; }
 .slider { box-sizing: border-box; width: 100%; min-width: 0; accent-color: var(--knx-accent); }
 .messages { display: grid; gap: 8px; line-height: 1.5; }
 .notice { padding-inline-start: 10px; border-inline-start: 3px solid var(--knx-warning-color); line-height: 1.5; }

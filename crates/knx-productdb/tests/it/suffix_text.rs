@@ -75,20 +75,70 @@ fn archive(entries: &[(&str, &[u8])]) -> Vec<u8> {
     writer.finish().unwrap().into_inner()
 }
 
-fn package() -> Vec<u8> {
+/// One program declared twice in one file (PDB-01), with different suffixes.
+/// Ingest keeps the first declaration (`first_winner`), so a migration must
+/// too.
+const DUPLICATE_PROGRAM: &[u8] = br#"<KNX xmlns="http://knx.org/xml/project/14"><ManufacturerData><Manufacturer RefId="M-0001"><ApplicationPrograms>
+<ApplicationProgram Id="M-0001_A-2" Name="First"><Static>
+<ParameterTypes><ParameterType Id="M-0001_A-2_PT-1" Name="n"><TypeNumber SizeInBit="8" Type="unsignedInt" minInclusive="0" maxInclusive="99"/></ParameterType></ParameterTypes>
+<Parameters><Parameter Id="M-0001_A-2_P-1" Name="delay" ParameterType="M-0001_A-2_PT-1" Text="Delay" Value="5" SuffixText="s"/></Parameters>
+<ParameterRefs><ParameterRef Id="M-0001_A-2_P-1_R-1" RefId="M-0001_A-2_P-1" SuffixText="sec" DisplayOrder="1"/></ParameterRefs>
+</Static></ApplicationProgram>
+<ApplicationProgram Id="M-0001_A-2" Name="Second"><Static>
+<ParameterTypes><ParameterType Id="M-0001_A-2_PT-1" Name="n"><TypeNumber SizeInBit="8" Type="unsignedInt" minInclusive="0" maxInclusive="99"/></ParameterType></ParameterTypes>
+<Parameters><Parameter Id="M-0001_A-2_P-1" Name="delay" ParameterType="M-0001_A-2_PT-1" Text="Delay" Value="5" SuffixText="h"/></Parameters>
+<ParameterRefs><ParameterRef Id="M-0001_A-2_P-1_R-1" RefId="M-0001_A-2_P-1" SuffixText="hours" DisplayOrder="1"/></ParameterRefs>
+</Static></ApplicationProgram>
+</ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
+
+/// What a v25 parser reported for `DUPLICATE_PROGRAM` and v26 does not: both
+/// declarations' attributes are reported, the first one's value is the sample.
+const DUPLICATE_V25_ONLY: &[(&str, i64, &str)] = &[
+    ("/Static/Parameters/Parameter", 2, "s"),
+    ("/Static/ParameterRefs/ParameterRef", 2, "sec"),
+];
+
+/// `Parameter` and `ParameterRef` inside `Dynamic` (PDB-02), in the program's
+/// tree and in a `ModuleDef`'s. No column stores them: the `Dynamic` parser
+/// reports every attribute of an element it does not model, `SuffixText`
+/// included, in v25 and v26 alike. The one `Static` parameter is what v26
+/// does promote.
+const DYNAMIC_PROGRAM: &[u8] = br#"<KNX xmlns="http://knx.org/xml/project/14"><ManufacturerData><Manufacturer RefId="M-0001"><ApplicationPrograms>
+<ApplicationProgram Id="M-0001_A-3" Name="Program"><Static>
+<ParameterTypes><ParameterType Id="M-0001_A-3_PT-1" Name="n"><TypeNumber SizeInBit="8" Type="unsignedInt" minInclusive="0" maxInclusive="99"/></ParameterType></ParameterTypes>
+<Parameters><Parameter Id="M-0001_A-3_P-1" Name="delay" ParameterType="M-0001_A-3_PT-1" Text="Delay" Value="5" SuffixText="s"/></Parameters>
+<ParameterRefs><ParameterRef Id="M-0001_A-3_P-1_R-1" RefId="M-0001_A-3_P-1" DisplayOrder="1"/></ParameterRefs>
+</Static>
+<ModuleDefs><ModuleDef Id="M-0001_A-3_MD-1" Name="Module"><Dynamic><ChannelIndependentBlock><ParameterBlock Id="M-0001_A-3_MD-1_PB-1"><Parameter Id="M-0001_A-3_MD-1_P-9" SuffixText="mm"/></ParameterBlock></ChannelIndependentBlock></Dynamic></ModuleDef></ModuleDefs>
+<Dynamic><ChannelIndependentBlock><ParameterBlock Id="M-0001_A-3_PB-1" Text="Block"><ParameterRefRef RefId="M-0001_A-3_P-1_R-1"/><Parameter Id="M-0001_A-3_P-9" SuffixText="dyn"/><ParameterRef Id="M-0001_A-3_P-9_R-1" RefId="M-0001_A-3_P-9" SuffixText="dynref"/></ParameterBlock></ChannelIndependentBlock></Dynamic>
+</ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
+
+/// What a v25 parser reported for `DYNAMIC_PROGRAM` and v26 does not: the
+/// `Static` parameter only.
+const DYNAMIC_V25_ONLY: &[(&str, i64, &str)] = &[("/Static/Parameters/Parameter", 1, "s")];
+
+fn package_of(program: &[u8]) -> Vec<u8> {
     archive(&[
         ("knx_master.xml", MASTER),
         ("M-0001/Hardware.xml", HARDWARE),
-        ("M-0001/M-0001_A-1.xml", PROGRAM),
+        ("M-0001/M-0001_A-1.xml", program),
     ])
 }
 
-fn installed() -> (tempfile::TempDir, std::path::PathBuf) {
+fn package() -> Vec<u8> {
+    package_of(PROGRAM)
+}
+
+fn installed_with(program: &[u8]) -> (tempfile::TempDir, std::path::PathBuf) {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("products.sqlite");
     let conn = open_and_migrate(&path).unwrap();
-    install_package(&conn, "sample.knxprod", &package()).unwrap();
+    install_package(&conn, "sample.knxprod", &package_of(program)).unwrap();
     (dir, path)
+}
+
+fn installed() -> (tempfile::TempDir, std::path::PathBuf) {
+    installed_with(PROGRAM)
 }
 
 type Columns = Vec<(String, Option<String>, Option<String>)>;
@@ -256,12 +306,17 @@ const V25_ONLY: &[(&str, i64, &str)] = &[
     ),
 ];
 
-/// Rewinds a v26 install of this fixture to a genuine v25 database: the
-/// columns go, and the `SuffixText` rows a v25 parser wrote come back in
-/// `ingest_unknown`, the measured report and `package.unknown_count`.
+/// Rewinds a v26 install of `PROGRAM` to a genuine v25 database.
 fn rewind_to_v25(conn: &Connection) {
+    rewind_to_v25_with(conn, PROGRAM, V25_ONLY);
+}
+
+/// Rewinds a v26 install of one program blob to a genuine v25 database: the
+/// columns go, and the `SuffixText` rows a v25 parser wrote (`v25_only`) come
+/// back in `ingest_unknown`, the measured report and `package.unknown_count`.
+fn rewind_to_v25_with(conn: &Connection, program: &[u8], v25_only: &[(&str, i64, &str)]) {
     v20_rewind::drop_v26_objects(conn);
-    let blob = sha256_hex(PROGRAM);
+    let blob = sha256_hex(program);
     let package: String = conn
         .query_row(
             "SELECT package_sha256 FROM package_member WHERE source_sha256 = ?1",
@@ -269,7 +324,7 @@ fn rewind_to_v25(conn: &Connection) {
             |r| r.get(0),
         )
         .unwrap();
-    for (xpath, occurrences, sample) in V25_ONLY {
+    for (xpath, occurrences, sample) in v25_only {
         conn.execute(
             "INSERT INTO ingest_unknown (source_sha256, program_id, xpath, kind, name, occurrences, sample)
              VALUES (?1, NULL, ?2, 'Attribute', 'SuffixText', ?3, ?4)",
@@ -289,7 +344,7 @@ fn rewind_to_v25(conn: &Connection) {
         .unwrap()
         .collect::<Result<_, _>>()
         .unwrap();
-    for (xpath, occurrences, sample) in V25_ONLY {
+    for (xpath, occurrences, sample) in v25_only {
         rows.push((
             format!("{PROGRAMS}{xpath}"),
             "Attribute".into(),
@@ -337,7 +392,7 @@ fn rewind_to_v25(conn: &Connection) {
     }
     conn.execute(
         "UPDATE package SET unknown_count = unknown_count + ?2 WHERE sha256 = ?1",
-        params![package, V25_ONLY.len() as i64],
+        params![package, v25_only.len() as i64],
     )
     .unwrap();
     conn.execute_batch("PRAGMA user_version = 25;").unwrap();
@@ -470,4 +525,123 @@ fn v25_to_v26_names_a_damaged_blob_keeps_its_rows_and_downgrades_its_report() {
         })
         .unwrap();
     assert_eq!(status, "unavailable");
+}
+
+/// PDB-01: a migration fills the first declaration's suffixes, as ingest
+/// stores them, not the second one's.
+#[test]
+fn v25_to_v26_keeps_the_first_declaration_of_a_program_declared_twice() {
+    let (_dir, path) = installed_with(DUPLICATE_PROGRAM);
+    let fresh = snapshot(&Connection::open(&path).unwrap());
+    let (parameters, refs) = columns(&Connection::open(&path).unwrap());
+    assert_eq!(
+        (parameters[0].2.as_deref(), refs[0].2.as_deref()),
+        (Some("s"), Some("sec")),
+        "ingest keeps the first declaration"
+    );
+    rewind_to_v25_with(
+        &Connection::open(&path).unwrap(),
+        DUPLICATE_PROGRAM,
+        DUPLICATE_V25_ONLY,
+    );
+    let conn = open_and_migrate(&path).unwrap();
+    assert_eq!(columns(&conn), (parameters, refs));
+    assert_eq!(snapshot(&conn), fresh);
+}
+
+/// PDB-02: `SuffixText` on a `Parameter` or `ParameterRef` inside `Dynamic`
+/// reaches no column, so a migration keeps reporting it, as ingest does.
+#[test]
+fn v25_to_v26_keeps_the_suffix_evidence_inside_dynamic() {
+    let (_dir, path) = installed_with(DYNAMIC_PROGRAM);
+    let fresh = snapshot(&Connection::open(&path).unwrap());
+    let dynamic = |conn: &Connection| -> Vec<(String, String, i64, Option<String>)> {
+        suffix_rows(conn, "ingest_unknown")
+            .into_iter()
+            .filter(|row| row.0.contains("/Dynamic/"))
+            .collect()
+    };
+    let expected = vec![
+        (
+            format!("{PROGRAMS}/Dynamic/Parameter"),
+            "SuffixText".to_string(),
+            1,
+            some("dyn"),
+        ),
+        (
+            format!("{PROGRAMS}/Dynamic/ParameterRef"),
+            "SuffixText".to_string(),
+            1,
+            some("dynref"),
+        ),
+        (
+            format!("{PROGRAMS}/ModuleDefs/ModuleDef/Dynamic/Parameter"),
+            "SuffixText".to_string(),
+            1,
+            some("mm"),
+        ),
+    ];
+    assert_eq!(dynamic(&Connection::open(&path).unwrap()), expected);
+    rewind_to_v25_with(
+        &Connection::open(&path).unwrap(),
+        DYNAMIC_PROGRAM,
+        DYNAMIC_V25_ONLY,
+    );
+    let conn = open_and_migrate(&path).unwrap();
+    assert_eq!(dynamic(&conn), expected);
+    assert_eq!(snapshot(&conn), fresh);
+}
+
+/// Why the v26 backfill needs no first-winner rule below the program: a
+/// parameter or ref id declared twice in one program refuses the whole
+/// package at ingest (the table key), so no stored blob carries one.
+#[test]
+fn a_parameter_or_ref_declared_twice_in_one_program_refuses_the_package() {
+    let program = |parameters: &str, refs: &str| {
+        format!(
+            r#"<KNX xmlns="http://knx.org/xml/project/14"><ManufacturerData><Manufacturer RefId="M-0001"><ApplicationPrograms>
+<ApplicationProgram Id="M-0001_A-4" Name="Program"><Static>
+<ParameterTypes><ParameterType Id="M-0001_A-4_PT-1" Name="n"><TypeNumber SizeInBit="8" Type="unsignedInt" minInclusive="0" maxInclusive="99"/></ParameterType></ParameterTypes>
+<Parameters>{parameters}</Parameters><ParameterRefs>{refs}</ParameterRefs>
+</Static></ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#
+        )
+    };
+    let parameter = |suffix: &str| {
+        format!(
+            r#"<Parameter Id="M-0001_A-4_P-1" Name="delay" ParameterType="M-0001_A-4_PT-1" Value="5" SuffixText="{suffix}"/>"#
+        )
+    };
+    let reference = |suffix: &str| {
+        format!(
+            r#"<ParameterRef Id="M-0001_A-4_P-1_R-1" RefId="M-0001_A-4_P-1" SuffixText="{suffix}"/>"#
+        )
+    };
+    for (twice, bytes) in [
+        (
+            "parameter",
+            program(&(parameter("s") + &parameter("h")), &reference("sec")),
+        ),
+        (
+            "parameter_ref",
+            program(&parameter("s"), &(reference("sec") + &reference("hours"))),
+        ),
+    ] {
+        let dir = tempfile::tempdir().unwrap();
+        let conn = open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+        let error = install_package(&conn, "sample.knxprod", &package_of(bytes.as_bytes()))
+            .unwrap_err()
+            .to_string();
+        assert!(
+            error.contains(&format!("UNIQUE constraint failed: {twice}.program_id")),
+            "{twice}: {error}"
+        );
+        let stored: i64 = conn
+            .query_row(
+                "SELECT (SELECT count(*) FROM source_file) + (SELECT count(*) FROM parameter)",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(stored, 0, "{twice}: nothing of the package is kept");
+    }
 }

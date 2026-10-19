@@ -133,6 +133,17 @@ for display only.
    measured reports and `package.unknown_count` lose the same rows. A blob not
    carried forward keeps its rows and gets a `SuffixTextBackfillError` record;
    the measured reports counting it become `unavailable`.
+6. **Migration equals ingest** (correction round 1, cross-vendor review). The
+   backfill mirrors the parser's first-winner rule: when one blob declares the
+   same `ApplicationProgram/@Id` twice, ingest stores only the first
+   declaration, so the backfill fills only that one (it used to let the second
+   one's `UPDATE` win). A parameter or ref id declared twice inside one program
+   needs no rule: the table keys refuse such a package at ingest, so no stored
+   blob carries one. And the retirement keeps every row the `Dynamic` parser
+   wrote (an xpath with a `Dynamic` step): `SuffixText` on a `Parameter` or
+   `ParameterRef` inside `Dynamic` reaches no column, the backfill skips
+   `Dynamic`, and ingest keeps reporting it, so the migration does too. This
+   exclusion is a flag only v26 sets; v23 to v25 retire as before.
 
 **Consequences.** Unknown report totals and `ingest_unknown` /
 `package_install_unknown` shrink by the retired rows (matrix re-pin in
@@ -143,7 +154,8 @@ mapper maps no suffix field, and whether EX-IM carries one was not checked. `Suf
 
 `crates/knx-productdb/tests/it/suffix_text.rs` (separate storage, precedence,
 translation, the hosts that stay reported, v25 rewind equal to a fresh
-install, damaged blob), `apps/knx-server/tests/it/http_parameter_grid.rs`
+install, a program declared twice, `SuffixText` inside `Dynamic`, a repeated
+parameter or ref id refused at ingest, damaged blob), `apps/knx-server/tests/it/http_parameter_grid.rs`
 (the field DTO), `apps/knx-web/src/ParameterPanel.test.tsx` and
 `e2e/parameter-captions.e2e.ts` (the row), and for Part 1:
 `crates/knx-productdb/tests/it/install_reports.rs` (shared members, standalone

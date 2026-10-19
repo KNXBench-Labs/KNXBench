@@ -54,6 +54,10 @@ async function intercept(page: Page, language: "en" | "de") {
         system: { state: "family", mask: 0x07b0, family: "systemB" } }] };
     else if (path === "/api/device/1" && method === "GET") body = { ...device, com_objects: [], product: { resolution: "NoReference", product_ref: null, program_ref: null, catalog: null } };
     else if (path === "/api/device/1/parameters" && method === "GET") body = panel();
+    else if (path === "/api/device/1/parameter-editor-source" && method === "GET" && url.searchParams.get("etsId") === "Stored") body = {
+      device: 1, parameterRefId: "Stored", serverIncarnation: "matrix-browser", projectIncarnation: 1, snapshotRevision: 1,
+      evidence: { status: "declared", source: { sourceSha256: "c".repeat(64), programId: "A-FICTIONAL", parameterTypeId: "PT-Stored", schema: 21,
+        child: "TypeNumber", attributes: { Type: "unsignedInt", UIHint: "Slider", minInclusive: "0", maxInclusive: "100" }, parentAttributes: { Id: "PT-Stored" } } } };
     else if (path === "/api/bus/monitor/telegrams" && method === "GET") body = { sessionId: 1, serverIncarnation: "matrix-browser", contextStatus: "current",
       projectOpen: true, status: "active", nextSince: 0, droppedBefore: 0, telegrams: [] };
     else if (path === "/api/device-readiness" && method === "GET") body = { devices: [], counts: {} };
@@ -113,11 +117,28 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     expect(Math.abs(suffix.y + suffix.height / 2 - (input.y + input.height / 2))).toBeLessThanOrEqual(4);
     expect(suffix.x + suffix.width).toBeLessThanOrEqual(width);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
-    expect(state.posts).toEqual([]);
-    expect(state.unexpected).toEqual([]);
     if (process.env.KNX_PARAMETER_CAPTIONS_CAPTURE_DIR) {
       await workspace.scrollIntoViewIfNeeded();
       await workspace.screenshot({ path: join(process.env.KNX_PARAMETER_CAPTIONS_CAPTURE_DIR, `captions-${language}-${width}.png`) });
     }
+    // The checked editor keeps the suffix beside its own value control.
+    await workspace.locator('[data-checked-for="Stored"]').click();
+    const editor = stored.locator(".parameter-checked-editor");
+    const draft = editor.locator('input[type="text"]');
+    await expect(draft).toHaveValue("1");
+    const checkedSuffix = editor.locator('input[type="text"] + span');
+    await expect(checkedSuffix).toHaveText("s");
+    const draftBox = (await draft.boundingBox())!;
+    const checkedBox = (await checkedSuffix.boundingBox())!;
+    expect(checkedBox.x).toBeGreaterThanOrEqual(draftBox.x + draftBox.width - 1);
+    expect(Math.abs(checkedBox.y + checkedBox.height / 2 - (draftBox.y + draftBox.height / 2))).toBeLessThanOrEqual(4);
+    expect(checkedBox.x + checkedBox.width).toBeLessThanOrEqual(width);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+    if (process.env.KNX_PARAMETER_CAPTIONS_CAPTURE_DIR) {
+      await editor.scrollIntoViewIfNeeded();
+      await editor.screenshot({ path: join(process.env.KNX_PARAMETER_CAPTIONS_CAPTURE_DIR, `checked-${language}-${width}.png`) });
+    }
+    expect(state.posts).toEqual([]);
+    expect(state.unexpected).toEqual([]);
   });
 }

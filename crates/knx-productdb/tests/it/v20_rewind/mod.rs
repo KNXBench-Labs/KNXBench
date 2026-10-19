@@ -8,11 +8,24 @@
 
 use rusqlite::Connection;
 
+/// Removes the schema-v26 objects (ADR-0146): the two `ingest_unknown`
+/// identity indexes, so an older migration may write the repeated rows it
+/// always wrote and `migrate_v25_to_v26` can create them again.
+#[allow(dead_code)]
+pub fn drop_v26_objects(conn: &Connection) {
+    conn.execute_batch(
+        "DROP INDEX IF EXISTS ingest_unknown_construct_identity;
+         DROP INDEX IF EXISTS ingest_unknown_conflict_identity;",
+    )
+    .unwrap();
+}
+
 /// Removes the schema-v25 placement and enumeration columns, so that
 /// `migrate_v24_to_v25` finds no column already there. Only the columns: a
 /// rewind that needs a genuine v24 report uses `v24_rewind::rewind_to_v24`.
 #[allow(dead_code)]
 pub fn drop_v25_objects(conn: &Connection) {
+    drop_v26_objects(conn);
     for (table, column) in [
         ("parameter", "own_offset"),
         ("parameter", "own_bit_offset"),

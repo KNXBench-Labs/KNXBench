@@ -16,7 +16,7 @@ use crate::parse::translation::{ingest_translations, TranslationScope};
 use crate::report::{insert_unknown, UnknownKind};
 
 /// The product-database schema version this build writes.
-pub const CURRENT_PRODUCTDB_VERSION: i64 = 25;
+pub const CURRENT_PRODUCTDB_VERSION: i64 = 26;
 
 #[derive(Debug)]
 pub enum ProductDbError {
@@ -298,6 +298,7 @@ fn migrations() -> Vec<Migration> {
         migrate_v22_to_v23,
         migrate_v23_to_v24,
         migrate_v24_to_v25,
+        migrate_v25_to_v26,
     ]
 }
 
@@ -531,6 +532,20 @@ fn migrate_v24_to_v25(conn: &Connection) -> Result<(), ProductDbError> {
         }
     }
     add_attribute_unknowns(conn, "v25", Some(&carried))
+}
+
+/// v25 -> v26 (ADR-0146, WP-01). `ingest_unknown` gains its row identity:
+/// every package install re-parsed its shared members and wrote their
+/// unknown rows again, so a blob shared by several packages carried one copy
+/// per install. The repair merges each identity group into its oldest row
+/// (`report::merge_repeated_unknowns`: largest per-parse count, oldest
+/// sample), then two unique indexes make a second copy impossible. Install
+/// reports and `package.unknown_count` are per package and were never
+/// derived from these rows, so they do not change.
+fn migrate_v25_to_v26(conn: &Connection) -> Result<(), ProductDbError> {
+    crate::report::merge_repeated_unknowns(conn)?;
+    conn.execute_batch(crate::report::UNKNOWN_IDENTITY_INDEXES)?;
+    Ok(())
 }
 
 /// Fills the v25 columns of the programs one blob owns from its bytes, through
@@ -982,8 +997,10 @@ fn migrate_v21_to_v22(conn: &Connection) -> Result<(), ProductDbError> {
 /// stored blob that classifies as an `ApplicationProgram` and whose bytes
 /// still match their key, in its own savepoint,
 /// `parse::program::backfill_parameter_attribute_unknowns` adds the rows a
-/// current ingest writes, for the keys the blob lacks, once per package
-/// member that re-parsed it (or once for a standalone blob): the v16 rule. Scheme-evidence reconciliation runs in the mode ingest used: the
+/// current ingest writes, for the keys the blob lacks. Until v26 that was
+/// once per package member that re-parsed it (the v16 rule); since ADR-0146
+/// `insert_unknown` is idempotent per row identity, so it is once per blob.
+/// Scheme-evidence reconciliation runs in the mode ingest used: the
 /// package mode for a blob some scheme-21/23 package carries.
 ///
 /// Every measured package report then gains its members' new rows, merged
@@ -1013,9 +1030,7 @@ fn add_attribute_unknowns(
             "SELECT s.sha256, s.source_path,
                     EXISTS (SELECT 1 FROM package_member AS m JOIN package AS p
                             ON p.sha256 = m.package_sha256
-                            WHERE m.source_sha256 = s.sha256 AND p.scheme IN (21, 23)),
-                    (SELECT count(*) FROM package_member AS m
-                     WHERE m.source_sha256 = s.sha256 AND m.role = 'ApplicationProgram')
+                            WHERE m.source_sha256 = s.sha256 AND p.scheme IN (21, 23))
              FROM source_file AS s ORDER BY s.sha256",
         )?
         .query_map([], |r| {
@@ -1023,7 +1038,6 @@ fn add_attribute_unknowns(
                 r.get::<_, String>(0)?,
                 r.get::<_, String>(1)?,
                 r.get::<_, bool>(2)?,
-                r.get::<_, i64>(3)?,
             ))
         })?
         .collect::<Result<Vec<_>, _>>()?;
@@ -1031,7 +1045,7 @@ fn add_attribute_unknowns(
     // not carried forward, and neither is any report that counts it.
     let mut gained: std::collections::HashMap<String, Vec<crate::report::UnknownConstruct>> =
         std::collections::HashMap::new();
-    for (sha256, source_path, extended, members) in blobs {
+    for (sha256, source_path, extended) in blobs {
         if carried.is_some_and(|carried| !carried.contains(&sha256)) {
             continue;
         }
@@ -1039,9 +1053,6 @@ fn add_attribute_unknowns(
             source_path: source_path.clone(),
             cause: format!("{version} backfill: {cause}"),
         };
-        // One copy per package that re-parsed it, or one for a blob only a
-        // standalone ingest parsed (the v16 rule).
-        let copies = usize::try_from(members.max(1)).unwrap_or(1);
         let Some(bytes) = crate::load_source_file(conn, &sha256)? else {
             continue;
         };
@@ -1069,7 +1080,6 @@ fn add_attribute_unknowns(
                 &source_path,
                 &bytes,
                 extended,
-                copies,
             ) {
                 Ok(rows) => {
                     conn.execute_batch("RELEASE SAVEPOINT v21_parameter_attributes;")?;
@@ -2404,8 +2414,9 @@ fn backfill_function_and_space_data(conn: &Connection) -> Result<(), ProductDbEr
                 // collector is file-wide, and every blob reaching this
                 // backfill was already ingested once — by `install_package`,
                 // which called `insert_unknown` on that same file-wide set.
-                // `ingest_unknown` has no unique key and `insert_unknown` is
-                // a plain `INSERT`, so handing it the whole set again would
+                // Before v26 `ingest_unknown` had no unique key and
+                // `insert_unknown` was a plain `INSERT` (ADR-0146 made it
+                // idempotent), so handing it the whole set again would
                 // silently double each `Manufacturer`/`DatapointType`
                 // unknown that install already recorded: a count that
                 // depends on install history rather than on bytes, which is
@@ -3082,7 +3093,8 @@ fn record_backfill_failure(
 ) -> Result<(), ProductDbError> {
     conn.execute(
         "INSERT INTO ingest_unknown (source_sha256, program_id, xpath, kind, name, occurrences, sample)
-         VALUES (?1, NULL, ?2, ?3, ?4, 1, ?5)",
+         VALUES (?1, NULL, ?2, ?3, ?4, 1, ?5)
+         ON CONFLICT DO NOTHING",
         params![sha256, source_path, kind, name, error.to_string()],
     )?;
     Ok(())
@@ -4538,8 +4550,8 @@ mod tests {
     /// The backfill replays the *whole* `ingest_master_data`, whose unknown
     /// collector is file-wide, but the blob it replays was already ingested
     /// once — `install_package` called `insert_unknown` on that same
-    /// file-wide set at install time, and `ingest_unknown` has no unique key
-    /// to collide on. Recording the whole set a second time would double
+    /// file-wide set at install time, and before v26 (ADR-0146)
+    /// `ingest_unknown` had no unique key to collide on. Recording the whole set a second time would double
     /// every unknown the *old* parser had already seen, turning a count into
     /// a function of how many times a database happened to be migrated.
     /// Only the two element families this migration newly parses may

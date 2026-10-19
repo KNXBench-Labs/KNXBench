@@ -407,13 +407,13 @@ not yet merged):** the pure display rules live in
 equal-length comparison of the server's hex text, plus the server's
 byte-level `changes`, which can only add *differing* marks; proven-equal
 filter). `ComparisonTable` renders per-byte marks, row byte counts and the
-*Show equal rows (N)* toggle; the Devices dialog passes `changes`. The
+*Show equal rows (N)* toggle; the Devices dialog and the Device checks
+panel both pass the server's `changes`. The
 [contract](contracts/device-comparison.md#result-display-wp-18-owner-amendment-19-october-2026)
 and ADR-0130 carry the amendment. Verified offline only (Vitest, the
 intercepted production-build browser spec in dark/light themes at 1440/400 px);
-no real device was read. Remaining boundaries: the Device checks panel reuses
-the table without `changes` (marks by byte comparison; its own differing-ranges
-table is unchanged); the toggle choice is per mounted table, not persisted;
+no real device was read. Remaining boundaries: the Device checks panel's own
+differing-ranges table is unchanged; the toggle choice is per mounted table, not persisted;
 no forced-colours/high-contrast check beyond the shape/weight marks.
 
 #### WP-19 — Sync from a device comparison

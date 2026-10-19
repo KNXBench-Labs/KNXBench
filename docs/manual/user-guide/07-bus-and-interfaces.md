@@ -366,7 +366,8 @@ all raw bytes; existing image/device admission is unchanged.
 The existing Device checks result also uses the shared decoded-table renderer,
 including its differences-only default and **Show equal rows** toggle
 ([what differs](05-devices-and-products.md#what-differs-wp-18-source-builds-after-alpha-14)).
-There bytes are marked by comparing the shown project and device bytes; the
+There bytes are marked the same way as in **Devices**: by comparing the shown
+project and device bytes and by the changed runs the server reports; the
 **Differing ranges** table below it still lists every changed run.
 
 

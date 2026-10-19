@@ -21,7 +21,8 @@ a per-row byte count make the marks independent of colour. Marks come from an
 equal-length comparison of the server's hex bytes plus its byte-level
 `changes`, never from a UI codec. The result opens with only rows not proven
 equal; *Show equal rows (N)* reveals every row and every original read range.
-Display only: response, session tags and Synced are unchanged. The comparison
+The Devices dialog and the Device checks panel share the table and both pass
+the server's `changes`. Display only: response, session tags and Synced are unchanged. The comparison
 contract's "no differences-only filter" sentence is amended (no filter may hide
 a differing or unread byte), with a matching ADR-0130 note
 ([contract](contracts/device-comparison.md#result-display-wp-18-owner-amendment-19-october-2026)).

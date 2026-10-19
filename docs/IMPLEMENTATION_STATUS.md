@@ -12,6 +12,21 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Hall of Fame bot comments name only fresh medals (19 October 2026)
+
+Owner bug report: every XP update from the scoreboard bot repeated the
+contributor's whole medal list. The board table now is the only place that shows
+the collection. A completion note names a medal only when that completed report
+reached a resolution milestone (awards ordered by closure time); a PR credit
+comment names only the PR and/or merge medal that PR reached (PRs by number,
+merges by merge time). Without a milestone there is no medal line, and the
+"trophy cabinet is warming up" filler is gone. Report-count medals stay on the
+board only. Thresholds, XP, ranks and the snapshot schema are unchanged; the
+first refresh edits each maintained PR credit comment once, while posted
+completion notes stay as they are
+([contract](contracts/community-recognition.md#medals-in-bot-comments-owner-amendment-19-october-2026)).
+81 community tests pass; the live workflow run follows the push.
+
 ## UI feedback set delivered — UI-05 and whole-set corrections (19 October 2026)
 
 UI-05 (word-safe resizable tables) and the corrections from the

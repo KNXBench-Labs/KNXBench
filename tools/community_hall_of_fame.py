@@ -78,6 +78,23 @@ def medals_for(issues, resolutions, pull_requests=0, merges=0):
             [name for minimum, name in MERGE_MEDALS if merges >= minimum])
 
 
+def unlocked_at(track, ordinal):
+    """Medal names whose milestone is reached exactly by the ordinal-th event."""
+    return [name for minimum, name in track if minimum == ordinal]
+
+
+def ordinal_of(key, keys):
+    return sorted(keys).index(key) + 1
+
+
+def unlocked_line(names, subject):
+    """Bot comments announce only fresh medals; the board shows the collection."""
+    if not names:
+        return ""
+    label = "Medal" if len(names) == 1 else "Medals"
+    return f"**{label} unlocked by this {subject}:** " + " · ".join(f"🏅 {name}" for name in names)
+
+
 START = "<!-- HALL-OF-FAME:START -->"
 END = "<!-- HALL-OF-FAME:END -->"
 BOT = "github-actions[bot]"
@@ -306,9 +323,11 @@ def render_page(snapshot):
 - **PR milestones:** medals at 1, 5, 10, 20, 50 and 100 submitted PRs, plus a
   separate track at the same milestones for merged PRs. Closing without merge
   earns participation XP, but does not advance the merge-medal track.
-- **No spoilers:** medal names appear only once earned, in the table and completion
-  acknowledgements. Keep reporting and helping us close the loop to discover them.
-  These are thank-you medals, not extra XP — and no hardware needs shelf space.
+- **No spoilers:** medal names appear only once earned. The table is the trophy
+  cabinet with every medal; bot comments only announce the medal that the
+  completed report or the PR itself just unlocked. Keep reporting and helping us
+  close the loop to discover them. These are thank-you medals, not extra XP — and
+  no hardware needs shelf space.
 
 Reporters, issue-thread repliers and PR authors are listed, not just the top ten. External
 AI agents are welcome to earn points too. Maintainer accounts, explicit opt-outs
@@ -330,7 +349,7 @@ unmerged PR returns it to submission XP; merging it replaces, rather than stacks
 the closed-unmerged bonus. A removed PR stops counting. Historical PRs count
 immediately. With notifications enabled, each eligible PR receives one automatic
 credit comment: PR XP and its calculation, board total, rank/title, counters,
-XP sources and earned medals. The same comment is updated on later refreshes;
+XP sources and any medal this PR unlocked. The same comment is updated on later refreshes;
 unchanged content is left alone. Open/reopen, merge and closed-without-merge
 states use their current points, never stacked bonuses. Existing issue notices
 are not replayed. Historical PRs receive this comment too.
@@ -359,7 +378,13 @@ def closing_note(snapshot, number):
     previous_rank = rank_for(target["xp"] - award["xp"])["title"]
     current_rank = target["rank"]["title"]
     rank_up = f"\n\n**Rank up:** {previous_rank} → **{current_rank}**." if current_rank != previous_rank else ""
-    medal = ("\n\n**Medals earned:** " + " · ".join(f"🏅 {name}" for name in target["medals"])) if target["medals"] else ""
+    # Order this login's retained awards by closure; the n-th one reaches milestone n.
+    order = {identifier: (timestamp(item["closed_at"]), int(identifier))
+             for identifier, item in snapshot["resolution_awards"].items()
+             if item["login"].casefold() == award["login"].casefold()}
+    position = ordinal_of(order[str(number)], order.values())
+    medal = unlocked_line(unlocked_at(RESOLUTION_MEDALS, position), "completion")
+    medal = "\n\n" + medal if medal else ""
     return (f"🏅 **Field-test credit for @{target['login']}: +{award['xp']} XP** for this completed issue.\n\n"
             f"**Total: {target['xp']} XP · Title: {current_rank}**\n"
             f"{target['issues']} issues · {target['replies']} replies · {target['resolutions']} completed reports."
@@ -391,7 +416,18 @@ def notify_pending(snapshot, api):
         award["notified"] = True
 
 
-def pull_request_note(snapshot, pull):
+def pull_request_milestones(pull, pulls):
+    """Medals this PR unlocked: its place among the author's PRs and merges."""
+    who = pull["user"]["login"].casefold()
+    own = [item for item in unique(pulls, "id") if (item.get("user") or {}).get("login", "").casefold() == who]
+    names = unlocked_at(PULL_REQUEST_MEDALS, ordinal_of(pull["number"], [item["number"] for item in own]))
+    if pull["merged_at"] is not None:
+        merges = [(timestamp(item["merged_at"]), item["number"]) for item in own if item["merged_at"] is not None]
+        names += unlocked_at(MERGE_MEDALS, ordinal_of((timestamp(pull["merged_at"]), pull["number"]), merges))
+    return names
+
+
+def pull_request_note(snapshot, pull, pulls):
     who = pull["user"]["login"]
     target = next(row for row in snapshot["contributors"] if row["login"].casefold() == who.casefold())
     policy = snapshot["policy"]
@@ -402,7 +438,7 @@ def pull_request_note(snapshot, pull):
         state, bonus, label = "Closed without merge", policy["pull_request_closed_xp"], "participation bonus"
     else:
         state, bonus, label = "Open", 0, "outcome bonus"
-    medals = " · ".join(f"🏅 {name}" for name in target["medals"]) or "None yet — the trophy cabinet is warming up."
+    medal = unlocked_line(pull_request_milestones(pull, pulls), "PR")
     xp = target["xp_breakdown"]
     return (f"🏅 **PR credit for @{who}: {base + bonus} XP total for this PR**\n\n"
             f"**Status: {state}** · {base} submission + {bonus} {label}.\n"
@@ -413,7 +449,7 @@ def pull_request_note(snapshot, pull):
             f"{target['pull_requests_merged']} merged · {target['pull_requests_closed']} closed without merge.\n\n"
             f"**XP sources:** {xp['issues']} issue + {xp['replies']} reply + "
             f"{xp['resolutions']} completion + {xp['pull_requests']} PR.\n\n"
-            f"**Medals earned:** {medals}\n\n"
+            + (medal + "\n\n" if medal else "") +
             "This comment follows the latest board refresh; reopening returns this PR to submission XP.\n"
             "Thanks for helping KNXBench — every patch deserves a little bus applause.\n\n"
             f"[Bug Hunters’ Hall of Fame](https://github.com/{snapshot['repository']}/blob/HEAD/docs/community/HALL_OF_FAME.md)\n\n"
@@ -435,7 +471,7 @@ def notify_pull_requests(snapshot, pulls, api):
                      (comment["user"].get("login") == BOT and comment["user"].get("type") == "Bot"))]
         if len(comments) > 1:
             raise ValueError("multiple trusted PR credit comments; refusing ambiguous update")
-        body = pull_request_note(snapshot, pull)
+        body = pull_request_note(snapshot, pull, pulls)
         # Re-read the exact target after comment discovery and before any write.
         live = api.get_pull_request(number)
         if (any(live.get(key) != pull.get(key) for key in

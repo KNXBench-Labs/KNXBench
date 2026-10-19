@@ -14,6 +14,14 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Package gates keep their hands off the developer's knx directories (19 October 2026)
 
+Acceptance follow-up: full gate 4 on `a86cb1f9` stopped at one browser test
+(788 functional cases passed). The independent intrinsic-width oracle measured
+before the mounted table's final font loaded; it now flushes the source table's
+layout and awaits current font readiness. A held-font-response regression fails
+without the barrier; the complete table-column spec passes 50/50 with it. No
+application code, width tolerance or retry policy changed. Guard review is
+accepted; complete package acceptance remains pending.
+
 The same day as the `doc-export` fix, a second gate migrated the owner's fresh
 product database (an ETS import made at 14:37 with the Alpha 14 AppImage) to
 the unmerged v26 schema: the gate's `rust-tests` stage on the product-DB branch

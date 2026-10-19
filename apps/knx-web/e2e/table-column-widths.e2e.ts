@@ -439,6 +439,60 @@ test("intrinsic oracle bounds known words, padding, controls and ignores rendere
   expect((await intrinsicFloors(table))[1]).toBe(320);
 });
 
+test("intrinsic oracle waits for a font requested after the table appears", async ({ page }) => {
+  await page.goto("/e2e/table-columns-fixture.html?invalidation=1");
+  await page.evaluate(() => document.fonts.ready.then(() => undefined));
+  const table = page.locator('[data-table-id="invalidation"]');
+  let release!: () => void;
+  const released = new Promise<void>(resolve => { release = resolve; });
+  let requested!: () => void;
+  const request = new Promise<void>(resolve => { requested = resolve; });
+  await page.route("**/oracle-deferred.woff2", async route => {
+    requested(); await released;
+    await route.fulfill({ path: "node_modules/@fontsource/jetbrains-mono/files/jetbrains-mono-latin-400-normal.woff2",
+      contentType: "font/woff2" });
+  });
+  await table.evaluate(element => {
+    const face = new FontFace("OracleDeferred", 'url("/oracle-deferred.woff2")');
+    document.fonts.add(face);
+    element.querySelectorAll<HTMLElement>("th, td, th *, td *").forEach(cell => {
+      cell.style.fontFamily = '"OracleDeferred", monospace';
+    });
+    element.getBoundingClientRect(); // Request the font before starting the measurement.
+  });
+  await request;
+  await request;
+  await table.evaluate(() => {
+    const fonts = document.fonts;
+    Object.defineProperty(document, "fonts", { configurable: true, get: () => {
+      document.documentElement.dataset.oracleFontRead = "true";
+      return fonts;
+    } });
+    // Observe the oracle's isolated measurement sandbox, not production table
+    // remeasurement (which may legitimately happen while this font is pending).
+    new MutationObserver(records => {
+      for (const record of records) for (const node of record.addedNodes) {
+        if (node instanceof HTMLElement && node.style.contain === "layout style"
+          && node.style.visibility === "hidden") {
+          document.documentElement.dataset.oracleMeasured = "true";
+        }
+      }
+    }).observe(document.body, { childList: true });
+  });
+  const measurement = intrinsicFloors(table);
+  try {
+    // Observe the helper entering either its font barrier or its measurement;
+    // no sleep or assumption about Node/browser message scheduling is needed.
+    await page.waitForFunction(() => document.documentElement.dataset.oracleFontRead
+      || document.documentElement.dataset.oracleMeasured);
+    expect(await page.evaluate(() => document.documentElement.dataset.oracleMeasured),
+      "the oracle must not measure fallback-font widths").toBeUndefined();
+  } finally { release(); }
+  const floors = await measurement;
+  expect(await page.evaluate(() => document.fonts.check('12px "OracleDeferred"'))).toBe(true);
+  expect(await intrinsicFloors(table)).toEqual(floors);
+});
+
 test("independent fit assertion rejects an inflated rendered floor and accepts restoration", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   const server = await intercept(page, "en"); await openProject(page, "en"); await openList(page, "en");

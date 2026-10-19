@@ -84,9 +84,33 @@ it("compares only filtered rows after one gateway confirmation and makes relevan
   expect(apiMock.compareDevice).toHaveBeenCalledExactlyOnceWith("1.1.2", "192.0.2.1:3671",
     { serverIncarnation: "table-test", projectIncarnation: 4, deviceId: 2, comparisonRevision: 1 });
   expect(host.querySelector(".comparison-tag")?.textContent).toBe("Synced");
+  // The equal raw range is hidden by default (WP-18) and the toggle reveals it.
+  expect(document.querySelectorAll(".comparison-decoded tbody tr")).toHaveLength(0);
+  expect(document.querySelector(".comparison-hidden")?.textContent).toContain("1 equal row is hidden");
+  await act(async () => document.querySelector<HTMLInputElement>(".comparison-filter input")!.click());
   expect(document.querySelector(".comparison-decoded")?.textContent).toContain("21");
+  expect(host.querySelector(".comparison-tag")?.textContent).toBe("Synced");
   await render(true, { ...project, snapshot_revision: 2, comparison_revisions: { 2: 2, 10: 0 } });
   expect(host.querySelector(".comparison-tag")?.textContent).toBe("Outdated");
+});
+
+it("hands the server's byte-level changes to the result table, so a reported byte is marked", async () => {
+  const project = { ...tree, project_incarnation: 4, comparison_revisions: { 2: 1, 10: 0 } };
+  apiMock.compareDevice.mockResolvedValue({ serverIncarnation: "table-test", projectIncarnation: 4, deviceId: 2, comparisonRevision: 1,
+    address: "1.1.2", deviceName: "Device 2", programId: "A", written: false, partial: false, mask: 0x0701, manufacturer: 0x83,
+    same: false, octets: 2, differingOctets: 1, changes: [{ address: 0x4001, segment: null, device: [0x22], project: [0x30] }],
+    loadStates: [{ machine: "Application", state: "Loaded" }], outdated: false,
+    decoded: [{ kind: "raw", label: "", address: 0x4000, project: "21 22", device: "21 22", reason: null }] });
+  await render(true, project); await query("Device 2");
+  await act(async () => [...host.querySelectorAll("button")].find((b) => b.textContent === "Compare all shown")!.click());
+  const gateway = document.querySelector<HTMLInputElement>(".comparison-gateway")!;
+  await act(async () => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(gateway, "192.0.2.1:3671");
+    gateway.dispatchEvent(new Event("input", { bubbles: true })); });
+  await act(async () => [...document.querySelectorAll("button")].find((b) => b.textContent === "Confirm read-only comparison")!.click());
+  expect(host.querySelector(".comparison-tag")?.textContent).toBe("Different");
+  expect(document.querySelectorAll(".comparison-decoded tbody tr")).toHaveLength(1);
+  const device = document.querySelectorAll(".comparison-decoded tbody tr td")[1];
+  expect([...device.querySelectorAll(".comparison-byte")].map((b) => b.getAttribute("data-mark"))).toEqual(["equal", "different"]);
 });
 
 it("marks untranslated product text when a product language was requested", async () => {

@@ -87,4 +87,12 @@ of existing admitted writers, not new protocol claims. Negative signed project
 values remain refused; unknown device patterns are not guessed. Neither package
 promises continuous freshness, a new backup format or full ETS compatibility.
 
+**Amendment (WP-18, owner decision 19 October 2026):** point 6's "remains
+visible" now means *reachable without loss*. The result display opens with
+differences only. A raw range proven fully read and equal may be hidden by
+default, and *Show equal rows* reveals every original read range. No filter
+hides a differing or unread byte. This changes the display only: the response,
+the tags and Synced are unchanged, and the UI still has no KNX codec
+([result display](../contracts/device-comparison.md#result-display-wp-18-owner-amendment-19-october-2026)).
+
 [Behavioural contract](../contracts/device-comparison.md).

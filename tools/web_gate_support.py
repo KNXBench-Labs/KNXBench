@@ -76,6 +76,20 @@ class MeasuredRun:
         self.save()
         return stage
 
+    def empty(self, name: str, reason: str) -> dict:
+        """Record a planned lane whose compiled inventory holds no case.
+
+        No command runs, so there is nothing to time; the stage carries the
+        inventory-backed reason instead of pretending to have executed.
+        """
+        if any(s['name'] == name for s in self.receipt['stages']):
+            raise ValueError('duplicate stage name')
+        stage = {'name': name, 'command': None, 'exit': 0, 'wallSeconds': 0.0,
+                 'proofValid': True, 'evidence': 0, 'empty': reason}
+        self.receipt['stages'].append(stage)
+        self.save()
+        return stage
+
     def finish(self, before: str, after: str) -> bool:
         stages = self.receipt['stages']
         complete = bool(stages) and (self.expected is None or
@@ -121,18 +135,14 @@ def source_fingerprint(root: Path) -> str:
     return digest.hexdigest()
 
 
-def partition_files(files: dict[str, bytes], policy: dict) -> tuple[list[str], list[str]]:
-    """New or edited specs default to the exclusive lane, never to omission."""
-    if policy.get('format') != 1 or not isinstance(policy.get('parallel'), dict):
-        raise ValueError('invalid browser lane policy')
-    parallel = []
-    for file, digest in policy['parallel'].items():
-        if (not re.fullmatch(r'[a-z0-9-]+\.e2e\.ts', file) or file not in files
-                or not isinstance(digest, str) or not re.fullmatch(r'[0-9a-f]{64}', digest)):
-            raise ValueError('invalid or missing browser lane policy file')
-        if hashlib.sha256(files[file]).hexdigest() == digest:
-            parallel.append(file)
-    return sorted(parallel), sorted(set(files) - set(parallel))
+EXCLUSIVE_TAG = 'exclusive'
+
+
+def split_lanes(cases: dict[str, dict]) -> tuple[dict[str, dict], dict[str, dict]]:
+    """Cases tagged @exclusive run alone; every other case is functional (ADR-0144)."""
+    exclusive = {key: case for key, case in cases.items() if EXCLUSIVE_TAG in case['tags']}
+    functional = {key: case for key, case in cases.items() if key not in exclusive}
+    return functional, exclusive
 
 
 def browser_cases(report: dict) -> dict[str, dict]:
@@ -157,7 +167,10 @@ def browser_cases(report: dict) -> dict[str, dict]:
                         raise ValueError('duplicate browser case identity')
                     if test.get('expectedStatus') != 'passed':
                         raise ValueError('non-passing browser expectation is not admitted')
-                    cases[key] = {'file': spec['file'], **test}
+                    tags = spec.get('tags', [])
+                    if not isinstance(tags, list) or not all(isinstance(t, str) for t in tags):
+                        raise ValueError('invalid browser tag list')
+                    cases[key] = {'file': spec['file'], 'tags': tags, **test}
             visit(suite.get('suites', []))
 
     visit(report['suites'])

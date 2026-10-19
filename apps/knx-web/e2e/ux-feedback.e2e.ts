@@ -13,7 +13,7 @@ import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 const SHOTS = process.env.UX_FEEDBACK_SHOTS;
 
 for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
-  test(`${language} ${width}: Explorer counts open log findings, error cards stay and pause`, async ({ page }) => {
+  test(`${language} ${width}: Explorer counts open log findings, error cards stay and pause`, { tag: "@exclusive" }, async ({ page }) => {
     const m = language === "de" ? de : en;
     await page.setViewportSize({ width, height: 900 });
     await page.clock.install({ time: new Date("2026-10-14T10:00:00Z") });

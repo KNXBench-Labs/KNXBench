@@ -5,7 +5,7 @@ import { loadavg } from "node:os";
 import { fakeServer, node, openFlow, telegram } from "./telegram-flow-server";
 
 for (const mode of ["standard", "category-off", "os-reduce"] as const) {
-  test(`camera ${mode}: preserves observed rows and respects motion priorities`, async ({ page }) => {
+  test(`camera ${mode}: preserves observed rows and respects motion priorities`, { tag: "@exclusive" }, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.emulateMedia({ reducedMotion: mode === "os-reduce" ? "reduce" : "no-preference" });
     const server = await fakeServer(page); server.rows.push(telegram(1, "1", "First"));

@@ -20,8 +20,9 @@ import time
 if __package__ in (None, ''):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from tools.browser_tmp import browser_directory, fits_temp_root
-from tools.web_gate_support import (MeasuredRun, browser_cases, partition_files,
-                                    source_fingerprint, validate_vitest)
+from tools.browser_lanes import TAG, parse as parse_spec
+from tools.web_gate_support import (MeasuredRun, browser_cases, source_fingerprint,
+                                    split_lanes, validate_vitest)
 
 # Production modes remain distinct from dev-fixture tests; no overlap is removed.
 PRODUCTION_CONFIGS = (
@@ -75,40 +76,43 @@ def check_temp_root(base: Path) -> None:
         raise ValueError('Chromium socket path is too long; select a shorter TMPDIR')
 
 
-def stage_plan(profile: str, configs: list[str], parallel: bool, exclusive: bool) -> list[str]:
+def stage_plan(profile: str, configs: list[str], production: tuple[str, ...] = PRODUCTION_CONFIGS,
+               browser: bool = True) -> list[str]:
+    """Every planned stage is named before the gate starts; empty lanes are recorded.
+
+    `targeted` (the change-scoped package gate, ADR-0144) keeps build, every
+    typecheck and Vitest, then runs only the selected spec files and the
+    selected production suites; documentation, tool and xtask checks are the
+    package runner's own stages there.
+    """
     plan = ['documentation', 'tool-tests'] if profile == 'web' else []
+    plan.append('browser-lanes')  # seconds; refuses untagged real-time cases before any build
     if profile != 'benchmark':
         plan.append('build')
-    if profile == 'web':
+    if profile in ('web', 'targeted'):
         plan.extend(config.removesuffix('.json') for config in configs)
         plan.append('vitest')
-    plan.extend(('browser-start', 'browser-inventory'))
-    if profile == 'benchmark':
-        plan.extend(f'benchmark-{index}-w{workers}'
-                    for index, workers in enumerate((1, 2, 4, 4, 2, 1), 1))
-    else:
-        if parallel:
-            plan.append('browser-functional')
-        if exclusive:
-            plan.append('browser-exclusive')
+    if browser:
+        plan.extend(('browser-start', 'browser-inventory'))
+        if profile == 'benchmark':
+            plan.extend(f'benchmark-{index}-w{workers}'
+                        for index, workers in enumerate((1, 2, 4, 4, 2, 1), 1))
+        else:
+            plan.extend(('browser-functional', 'browser-exclusive'))
+    if profile in ('web', 'targeted'):
+        for config in (PRODUCTION_CONFIGS if profile == 'web' else production):
+            plan.extend((f'production-{config}-inventory', f'production-{config}',
+                         f'production-{config}-exclusive'))
     if profile == 'web':
-        for config in PRODUCTION_CONFIGS:
-            plan.extend((f'production-{config}-inventory', f'production-{config}'))
         plan.extend(('check-layering', 'check-headers', 'check-anchors', 'check-ledger',
                      'check-corpus-gates', 'diff-check'))
     return plan
 
 
-def fixture_fingerprint(app: Path) -> str:
-    """Shared fixture/config changes revoke every parallel admission."""
-    paths = [p for p in (app / 'e2e').rglob('*') if p.is_file() and not p.name.endswith('.e2e.ts')]
-    paths.extend(app / name for name in ('playwright.config.ts', 'browserTmp.ts',
-                                       'vite.fixtures.config.ts', 'vite.config.ts', 'package-lock.json'))
-    paths.extend(app.parent.parent / 'tools' / name for name in ('browser_tmp.py', 'browser_tmp.cjs'))
-    digest = hashlib.sha256()
-    for file in sorted(paths):
-        digest.update(str(file.relative_to(app.parent.parent)).encode() + b'\0' + file.read_bytes())
-    return digest.hexdigest()
+def exclusive_scopes(app: Path) -> int:
+    """Count tagged test/describe scopes; a gate without any is suspicious, not faster."""
+    return sum(1 for spec in (app / 'e2e').rglob('*.e2e.ts')
+               for scope in parse_spec(spec.read_text(encoding='utf-8')).scopes if scope.exclusive)
 
 
 @contextmanager
@@ -143,14 +147,21 @@ def offline(command: list[str]) -> list[str]:
             'ip link set lo up && exec "$@"', 'sh', *command]
 
 
-def browser_command(config: str, output: Path, files: list[str] | None,
-                    workers: int, listing: bool = False) -> list[str]:
+def browser_command(config: str, output: Path, workers: int, lane: str | None = None,
+                    listing: bool = False, files: list[str] | None = None) -> list[str]:
+    """`lane` selects by tag: 'functional' excludes @exclusive, 'exclusive' keeps only it."""
     command = ['node', 'node_modules/@playwright/test/cli.js', 'test',
                f'--config={config}', f'--workers={workers}', '--retries=0',
                '--repeat-each=1', '--forbid-only', '--reporter=json',
                f'--output={output}']
     if listing:
         command.append('--list')
+    if lane == 'functional':
+        command.append(f'--grep-invert={TAG}')
+    elif lane == 'exclusive':
+        command.append(f'--grep={TAG}')
+    elif lane is not None:
+        raise ValueError(f'unknown browser lane {lane!r}')
     if files is not None:
         if not files:
             raise ValueError('empty browser selection')
@@ -174,15 +185,25 @@ def read_cases(path: Path) -> dict[str, dict]:
 
 
 def browser_stage(run: MeasuredRun, app: Path, env: dict[str, str], name: str,
-                  config: str, files: list[str] | None, workers: int,
-                  expected: dict[str, dict] | None = None) -> dict:
+                  config: str, lane: str | None, workers: int,
+                  expected: dict[str, dict] | None = None,
+                  files: list[str] | None = None) -> dict:
+    """Run one lane (or list the inventory when `expected` is None).
+
+    An expected lane without cases is recorded as empty instead of asking
+    Playwright to run nothing (which it refuses with a nonzero exit).
+    """
     from tools.web_gate_support import validate_browser
+    if expected is not None and not expected:
+        stage = run.empty(name, f'the compiled inventory has no {lane} case')
+        print(f'{name}: empty lane (inventory-backed)', flush=True)
+        return stage
     report = run.output / f'{name}.json'
     stage_env = {**env, 'PLAYWRIGHT_JSON_OUTPUT_NAME': str(report)}
     verify = (lambda: len(read_cases(report))) if expected is None else (
         lambda: validate_browser(json.loads(report.read_text()), expected))
-    stage = run.step(name, browser_command(config, run.output / f'{name}-artifacts',
-                                          files, workers, listing=expected is None),
+    stage = run.step(name, browser_command(config, run.output / f'{name}-artifacts', workers,
+                                          lane, listing=expected is None, files=files),
                      app, stage_env, verify)
     print(f'{name}: exit={stage["exit"]}, proof={stage["proofValid"]}, '
           f'wall={stage["wallSeconds"]:.2f}s', flush=True)
@@ -191,19 +212,8 @@ def browser_stage(run: MeasuredRun, app: Path, env: dict[str, str], name: str,
     return stage
 
 
-def lanes(app: Path) -> tuple[list[str], list[str], bool]:
-    files = {str(p.relative_to(app / 'e2e')): p.read_bytes()
-             for p in (app / 'e2e').rglob('*.e2e.ts')}
-    policy = json.loads((app / 'browser-lanes.json').read_text())
-    parallel, exclusive = partition_files(files, policy)
-    fixture_match = policy.get('fixturesSha256') == fixture_fingerprint(app)
-    if not fixture_match:
-        parallel, exclusive = [], sorted(files)
-    return parallel, exclusive, fixture_match
-
-
 def run_browser(run: MeasuredRun, app: Path, env: dict[str, str], workers: int,
-                benchmark: bool = False) -> None:
+                benchmark: bool = False, files: list[str] | None = None) -> None:
     probe = ("const {chromium}=require('playwright');(async()=>{"
              "const b=await chromium.launch({executablePath:'/usr/bin/chromium'});"
              "try{const p=await b.newPage();await p.goto('data:text/html,web-gate-probe');"
@@ -211,31 +221,28 @@ def run_browser(run: MeasuredRun, app: Path, env: dict[str, str], workers: int,
              "}finally{await b.close();}})().catch(e=>{console.error(e);process.exit(1);});")
     checked_step(run, 'browser-start', offline(['node', '-e', probe]), app, env)
     config = 'playwright.config.ts'
-    browser_stage(run, app, env, 'browser-inventory', config, None, 1)
+    browser_stage(run, app, env, 'browser-inventory', config, None, 1, files=files)
     all_cases = read_cases(run.output / 'browser-inventory.json')
-    parallel, exclusive, fixture_match = lanes(app)
-    known = set(parallel + exclusive)
-    if set(c['file'] for c in all_cases.values()) != known:
-        raise ValueError('compiled browser files differ from the source lane inventory')
-    groups = {lane: {key: case for key, case in all_cases.items() if case['file'] in selection}
-              for lane, selection in (('functional', parallel), ('exclusive', exclusive))}
-    run.receipt['browser'] = {'total': len(all_cases), 'functional': len(groups['functional']),
-                              'exclusive': len(groups['exclusive']), 'fixturesMatch': fixture_match,
-                              'functionalFiles': parallel, 'exclusiveFiles': exclusive}
+    functional, exclusive = split_lanes(all_cases)
+    if files is None and exclusive_scopes(app) and not exclusive:
+        raise ValueError('tagged @exclusive scopes compiled to no exclusive case')
+    if files is not None and {c['file'] for c in all_cases.values()} != set(files):
+        raise ValueError('selected spec files differ from the compiled inventory')
+    run.receipt['browser'] = {'total': len(all_cases), 'functional': len(functional),
+                              'exclusive': len(exclusive)}
     run.save()
     if benchmark:
-        if not parallel:
-            raise ValueError('no unchanged reviewed functional files for benchmark')
+        if not functional:
+            raise ValueError('no functional browser case for the benchmark')
         # Counterbalance warm-cache/order bias. No retry or failed-attempt replacement.
         for index, count in enumerate((1, 2, 4, 4, 2, 1), 1):
             browser_stage(run, app, env, f'benchmark-{index}-w{count}', config,
-                          parallel, count, groups['functional'])
+                          'functional', count, functional)
     else:
-        for lane, selection, count in (('functional', parallel, workers),
-                                       ('exclusive', exclusive, 1)):
-            if selection:
-                browser_stage(run, app, env, f'browser-{lane}', config, selection,
-                              count, groups[lane])
+        browser_stage(run, app, env, 'browser-functional', config, 'functional', workers,
+                      functional, files=files)
+        browser_stage(run, app, env, 'browser-exclusive', config, 'exclusive', 1,
+                      exclusive, files=files)
 
 
 def checked_step(run: MeasuredRun, name: str, command: list[str], root: Path,
@@ -254,7 +261,11 @@ def main(argv: list[str] | None = None) -> int:
     signal.signal(signal.SIGTERM, interrupted)
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--root', type=Path, default=Path(__file__).resolve().parents[1])
-    parser.add_argument('--profile', choices=('browser', 'web', 'benchmark'), default='web')
+    parser.add_argument('--profile', choices=('browser', 'web', 'benchmark', 'targeted'), default='web')
+    parser.add_argument('--specs', default='all',
+                        help="targeted: comma-separated default-lane spec files, 'all' or '' for none")
+    parser.add_argument('--production', default='',
+                        help='targeted: comma-separated production suites, e.g. devices,notes')
     parser.add_argument('--workers', type=int, choices=(1, 2, 4),
                         default=default_workers(len(os.sched_getaffinity(0))))
     parser.add_argument('--output', type=Path, help='new, empty attempt path; default is unique under target/web-gates')
@@ -287,9 +298,18 @@ def main(argv: list[str] | None = None) -> int:
         if not (app / 'node_modules/@playwright/test/cli.js').is_file():
             raise ValueError('npm ci is required before the web gate')
         run.receipt['toolVersionsStart'] = runtime_identity(app)
-        parallel, exclusive, _ = lanes(app)
         configs = typecheck_configs(app)
-        run.expected = stage_plan(args.profile, configs, bool(parallel), bool(exclusive))
+        specs = None if args.specs == 'all' else [s for s in args.specs.split(',') if s]
+        production = tuple(c for c in args.production.split(',') if c)
+        if args.profile != 'targeted' and (specs is not None or production):
+            parser.error('--specs/--production select a targeted run only')
+        known = {p.relative_to(app / 'e2e').as_posix() for p in (app / 'e2e').rglob('*.e2e.ts')}
+        if specs is not None and set(specs) - known:
+            raise ValueError(f'unknown spec files: {sorted(set(specs) - known)}')
+        if set(production) - set(PRODUCTION_CONFIGS):
+            raise ValueError(f'unknown production suites: {sorted(set(production) - set(PRODUCTION_CONFIGS))}')
+        run.receipt['selection'] = {'specs': 'all' if specs is None else specs, 'production': list(production)}
+        run.expected = stage_plan(args.profile, configs, production, specs is None or bool(specs))
         run.receipt['expectedStages'] = run.expected
         run.receipt['loadAtStart'] = os.getloadavg()
         run.save()
@@ -310,11 +330,13 @@ def main(argv: list[str] | None = None) -> int:
                     checked_step(run, 'documentation', ['python3', 'tools/check_documentation.py'], root, env)
                     checked_step(run, 'tool-tests', ['python3', '-m', 'unittest', 'discover',
                                                      '-s', 'tools/tests', '-t', '.'], root, env)
+                checked_step(run, 'browser-lanes', ['python3', 'tools/browser_lanes.py',
+                                                    '--root', str(root)], root, env)
                 if args.profile != 'benchmark':
                     checked_step(run, 'build', ['npm', 'run', 'build'], app, env)
                     run.receipt['buildStart'] = build_fingerprint(app)
                     run.save()
-                if args.profile == 'web':
+                if args.profile in ('web', 'targeted'):
                     for config in typecheck_configs(app):
                         checked_step(run, config.removesuffix('.json'),
                                      ['node', 'node_modules/typescript/bin/tsc', '--noEmit', '-p', config], app, env)
@@ -325,14 +347,17 @@ def main(argv: list[str] | None = None) -> int:
                     print(f'vitest: exit={stage["exit"]}, wall={stage["wallSeconds"]:.2f}s', flush=True)
                     if not stage['proofValid']:
                         raise ValueError('invalid Vitest stage; original output retained')
-                run_browser(run, app, env, args.workers, args.profile == 'benchmark')
-                if args.profile == 'web':
-                    for config in PRODUCTION_CONFIGS:
+                if specs is None or specs:
+                    run_browser(run, app, env, args.workers, args.profile == 'benchmark', specs)
+                if args.profile in ('web', 'targeted'):
+                    for config in (PRODUCTION_CONFIGS if args.profile == 'web' else production):
                         name = f'production-{config}'
                         file = f'playwright.{config}.config.ts'
                         browser_stage(run, app, env, name + '-inventory', file, None, 1)
-                        expected = read_cases(run.output / f'{name}-inventory.json')
-                        browser_stage(run, app, env, name, file, None, 1, expected)
+                        functional, exclusive = split_lanes(read_cases(run.output / f'{name}-inventory.json'))
+                        browser_stage(run, app, env, name, file, 'functional', args.workers, functional)
+                        browser_stage(run, app, env, name + '-exclusive', file, 'exclusive', 1, exclusive)
+                if args.profile == 'web':
                     # Never reuse/move a foreign Cargo target; only xtask is compiled here.
                     env['CARGO_TARGET_DIR'] = str(output / 'cargo-target')
                     env['CARGO_BUILD_JOBS'] = '4'

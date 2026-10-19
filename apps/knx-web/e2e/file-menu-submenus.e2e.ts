@@ -171,7 +171,7 @@ test.describe("File submenus", () => {
     await expect(page.locator(".file-menu")).toHaveJSProperty("open", false);
   });
 
-  test("hover opens after a short intent delay and a diagonal move into the panel does not close it", async ({ page }) => {
+  test("hover opens after a short intent delay and a diagonal move into the panel does not close it", { tag: "@exclusive" }, async ({ page }) => {
     await serve(page);
     await page.goto("/");
     await openFile(page);
@@ -734,7 +734,7 @@ test.describe("Inline submenus ignore hover (UISET-02 round 2)", () => {
 
   for (const language of ["en", "de"] as const) {
     for (const { width, height } of INLINE_WINDOWS) {
-      test(`${language} ${width}x${height}: a hover never opens or swaps a submenu, a click does`, async ({ page }) => {
+      test(`${language} ${width}x${height}: a hover never opens or swaps a submenu, a click does`, { tag: "@exclusive" }, async ({ page }) => {
         await serve(page, { language });
         await page.setViewportSize({ width, height });
         await page.goto("/");
@@ -760,7 +760,7 @@ test.describe("Inline submenus ignore hover (UISET-02 round 2)", () => {
         for (const id of ["exchange", "history"] as const) await expect(trigger(page, id)).toHaveAttribute("aria-expanded", "false");
       });
 
-      test(`${language} ${width}x${height}: with nothing open a resting mouse opens nothing, and the keyboard still discloses`, async ({ page }) => {
+      test(`${language} ${width}x${height}: with nothing open a resting mouse opens nothing, and the keyboard still discloses`, { tag: "@exclusive" }, async ({ page }) => {
         await serve(page, { language });
         await page.setViewportSize({ width, height });
         await page.goto("/");
@@ -785,7 +785,7 @@ test.describe("Inline submenus ignore hover (UISET-02 round 2)", () => {
       });
     }
 
-    test(`${language} 1440x900: a flyout still opens and swaps on hover intent`, async ({ page }) => {
+    test(`${language} 1440x900: a flyout still opens and swaps on hover intent`, { tag: "@exclusive" }, async ({ page }) => {
       await serve(page, { language });
       await page.setViewportSize({ width: 1440, height: 900 });
       await page.goto("/");
@@ -887,7 +887,7 @@ test.describe("File submenus under application zoom (UISET2-01)", () => {
   ];
   for (const language of ["en", "de"] as const) {
     for (const { scale, width, height } of CASES) {
-      test(`${language} ${scale * 100}% ${width}x${height}: every submenu fits, holds its minimum and every entry takes a real pointer`, async ({ page }) => {
+      test(`${language} ${scale * 100}% ${width}x${height}: every submenu fits, holds its minimum and every entry takes a real pointer`, { tag: "@exclusive" }, async ({ page }) => {
         const m: Catalogue = language === "de" ? de : en;
         const unexpected = await serve(page, { language, uiScale: scale });
         await page.setViewportSize({ width, height });
@@ -910,7 +910,7 @@ test.describe("File submenus under application zoom (UISET2-01)", () => {
     }
   }
 
-  test("a zoom step with a submenu open places it again (Ctrl+Plus through the settings path)", async ({ page }) => {
+  test("a zoom step with a submenu open places it again (Ctrl+Plus through the settings path)", { tag: "@exclusive" }, async ({ page }) => {
     const unexpected = await serve(page);
     // 1000 px keeps a whole flyout at 100%; at 150% the same window is 667 layout px wide, which
     // leaves the room right of the menu near the 220 px minimum.
@@ -1035,7 +1035,7 @@ test.describe("The File menu's first level under application zoom (UISET3-01)", 
   ];
   for (const language of ["en", "de"] as const) {
     for (const { scale, width, height } of CASES) {
-      test(`${language} ${scale * 100}% ${width}x${height} Comfortable with a session: every first-level row and Logout stay reachable, folded and with each submenu open`, async ({ page }) => {
+      test(`${language} ${scale * 100}% ${width}x${height} Comfortable with a session: every first-level row and Logout stay reachable, folded and with each submenu open`, { tag: "@exclusive" }, async ({ page }) => {
         const unexpected = await serve(page, { language, uiScale: scale, density: "comfortable", sessionRequired: true });
         let logouts = 0;
         await page.route("**/api/auth/logout", (route) => { logouts += 1; return route.fulfill({ status: 200, contentType: "application/json", body: "{}" }); });
@@ -1067,7 +1067,7 @@ test.describe("The File menu's first level under application zoom (UISET3-01)", 
     // layout (a window rule, like every breakpoint outside the File menu) and the menu spans the
     // window. The window rule keeps every submenu inline there at every scale; a flyout beside a
     // menu that spans the window would have no room on either side anyway.
-    test(`${language} 80% 640x800 Comfortable with a session: the narrow window keeps the inline layout and every entry is reachable`, async ({ page }) => {
+    test(`${language} 80% 640x800 Comfortable with a session: the narrow window keeps the inline layout and every entry is reachable`, { tag: "@exclusive" }, async ({ page }) => {
       const unexpected = await serve(page, { language, uiScale: 0.8, density: "comfortable", sessionRequired: true });
       await page.setViewportSize({ width: 640, height: 800 });
       await page.goto("/");

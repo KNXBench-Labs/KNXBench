@@ -480,7 +480,7 @@
       "number": 86,
       "title": "Duplicate product identifiers",
       "topic": "Manufacturer data and parameters",
-      "summary": "Normalized duplicates are reported. DPT provenance and unsupported identifier families retain separate boundaries.",
+      "summary": "Normalized duplicates are reported. Source builds after Alpha 15 add four-family master provenance; historical winner/encounter facts and unsupported identifier families retain separate boundaries.",
       "file": "KL-086-duplicate-product-identifiers.md",
       "ledger_ids": [
         "KL-86"

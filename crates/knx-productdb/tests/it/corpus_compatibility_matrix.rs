@@ -143,15 +143,27 @@ const EXPECTED_SHARED_DEDUPLICATIONS: usize = 2;
 /// packages / 302 program blobs predicts all five at their own granularity
 /// (per program member, per unique blob, per package) and the two parameter
 /// attribute pins below. Previous pin 2610b3dc….
+/// Re-pinned for ADR-0147 (schema v27, WP-17): an immutable v26 / v27
+/// pair over the same 115 instances / 113 unique packages changes only the
+/// three new provenance tables (67 sources, 26110 declarations, 459 winners)
+/// and `package_install_diagnostic` 859 -> 44490. An independent XML census
+/// and collision model predict +43508 identity collisions and +123 malformed
+/// declarations at per-unique-package snapshot granularity. All other 42
+/// existing table counts, every outcome and every report total are equal.
+/// Previous full pin 528a6885…; unlike the added tables, the diagnostic delta
+/// remains in the v16-shaped projection and requires its own new pin.
 const EXPECTED_BASELINE_COMMITMENT: &str =
-    "528a68851be3d19fbc4acf296e2eedf8ec203a260adc15386832ddff557e2c6b";
-/// Current v26 outcomes/counts projected without the four v17 tables, the
-/// v20/v22 tables and PDB-11 identity; moves only by the five ADR-0146
-/// part-2 leaves above (part-1 pin 2b875c8d…, v25 pin bdde7a5c…, v24 pin
-/// 342a5d2e…, v23 pin b8179368…, v22 pin 97f3a9d3…, historical v16 pin
-/// c204acc8…, see Git history).
+    "4a6e565b50712765fadc8e2b74cc770d77261ecde168f1a110db22d2b7fc990a";
+/// Current v27 outcomes/counts projected without the four v17 tables, the
+/// v20/v22/v27 tables and PDB-11 identity; moves only by the predicted
+/// diagnostic count 859 -> 44490 above. On the corrected core, restoring
+/// only that count to 859 reproduces the v26 projection commitment exactly;
+/// applying the independently predicted +43631 reproduces this new pin.
+/// Previous pins: v26 part-2 0ee829e5…, part-1 2b875c8d…, v25 bdde7a5c…,
+/// v24 342a5d2e…, v23 b8179368…, v22 97f3a9d3…, historical v16 c204acc8…
+/// (see Git history).
 const EXPECTED_V16_PROJECTION_COMMITMENT: &str =
-    "0ee829e535332941e9a7162af0a875ccf18eff71436d9329381c7954fcff526e";
+    "e98b5e4f35ce364f5d54c11e35c65a43e5ae8ee821a1613d8f7124d23905affd";
 /// Tables schema v17 added (ADR-0043), left out of the v16 projection.
 const V17_TABLES: [&str; 4] = [
     "package_source_name",
@@ -172,6 +184,9 @@ const V22_TABLES: [&str; 4] = [
     "legacy_source",
     "legacy_source_file",
 ];
+/// Tables schema v27 added (ADR-0147), left out of the v16 projection.
+/// The independently predicted diagnostic rows remain in that projection.
+const V27_TABLES: [&str; 3] = ["master_source", "master_declaration", "master_winner"];
 
 fn configured_output() -> PathBuf {
     std::env::var_os("KNXBENCH_PRODUCT_MATRIX_OUTPUT")
@@ -823,6 +838,12 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
                 "v22 table {table} not counted"
             );
         }
+        for table in V27_TABLES {
+            assert!(
+                counts.remove(table).is_some(),
+                "v27 table {table} not counted"
+            );
+        }
         v16
     };
     let v16_commitment = baseline_commitment(&private_records, v16_projection);
@@ -868,6 +889,7 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
             "v17_tables": V17_TABLES.map(|t| (t, matrix["shared_final_database_counts"][t].clone())),
             "v20_tables": V20_TABLES.map(|t| (t, matrix["shared_final_database_counts"][t].clone())),
             "v22_tables": V22_TABLES.map(|t| (t, matrix["shared_final_database_counts"][t].clone())),
+            "v27_tables": V27_TABLES.map(|t| (t, matrix["shared_final_database_counts"][t].clone())),
             "baseline_commitment": matrix["aggregate_identity_and_outcome_commitment"].clone(),
         })
     );
@@ -1058,7 +1080,7 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         "shared install-count rows changed"
     );
     assert_eq!(
-        matrix["shared_final_database_counts"]["package_install_diagnostic"], 859,
+        matrix["shared_final_database_counts"]["package_install_diagnostic"], 44490,
         "shared install-diagnostic rows changed"
     );
     // AR05 adds two TranslationUnit keys per package. ADR-0052's retired
@@ -1089,6 +1111,11 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         ("source_identity_scan", 528),
         ("source_producer", 629),
         ("parameter_calculation_ref", 4849),
+        // ADR-0147 (v27): independent unique-source declaration census and
+        // baseline first-winner totals; no normalized row is replaced.
+        ("master_source", 67),
+        ("master_declaration", 26110),
+        ("master_winner", 459),
         // ADR-0094 (schema v22): no legacy import in this corpus.
         ("legacy_diagnostic", 0),
         ("legacy_program", 0),

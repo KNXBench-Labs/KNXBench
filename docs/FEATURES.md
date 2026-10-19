@@ -54,6 +54,12 @@ builds refuse product26; opening new project saves in Alpha 14 is unverified.
 
 <a id="local-source-changes"></a>
 
+## After Alpha 15 — source changes
+
+| Feature | Scope | Availability |
+| --- | --- | --- |
+| [Master identity provenance](adr/0147-master-identity-provenance.md) | Product DB v27: retained-source positions for all four master families and both DPT forms, same/cross-file collisions and malformed declarations; historical winner/encounter facts remain unavailable, normalized values unchanged; readable EN/DE catalogue diagnostics | Local-only; reviewed, package/integration gates pending |
+
 ## Data-table columns
 
 | Feature | Scope | Availability |

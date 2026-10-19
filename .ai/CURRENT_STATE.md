@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-19 22:14
+- **Completed:** CLAIM (owner go: work the advised sequence until redirected): Alpha 16 successor sequence on `feat/alpha16-successor-sequence-20261019`. Ordered scope: (1) repair the v23–v25 column-promotion defects recorded under WP-02; (2) WP-04's measurement, justified parser changes and atomic/cancellable web workflow in separate deliveries; (3) WP-19 contract, offline device-to-project adoption and handover to the existing download route; (4) one evidence-admitted WP-05 layout feature at a time. The small AppImage native-binding check is independent permitted follow-up. Reserve only the first repair package now; later packages require fresh overlap checks.
+- **Pending/Next Steps:** Read-only repair analysis and regression preparation first. WP-17 is active and owns migration v27, master parsing/provenance/replay and report integration: no changes to those reserved surfaces until its published release of the claim. Repair schema version must follow the delivered WP-17 version, never compete for v27. Each package needs independent review, the maintained scoped gate, main-first integration, push/readback and task-owned cleanup; then continue the next package without another go.
+- **Notes for Codex oder Claude:** This is owner-authorised implementation order, not a release, deployment, desktop-control or bus-write permission. Real hardware writes remain operation-specific consent; unsupported semantics stay fail-closed. Preserve the selected dirty checkout and all foreign research/statistics edits. The next repair is a separate package, not extra WP-17 scope. No quota checks or quota pauses.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-19 21:11
 - **Completed:** CLAIM (owner request: work the next OPEN_WORK package): WP-17 master identity provenance, Alpha 16 work, isolated branch `feat/wp17-master-provenance-20261019` from `5faed038`. Startup/queue/implementation inspection complete; no product implementation yet.
 - **Pending/Next Steps:** Define the schema/report/replay contract, test first, implement provenance for datapoint_type, function_type, function_point and space_usage, independently review and run the maintained change-scoped package gate before delivery.

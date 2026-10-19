@@ -1,22 +1,42 @@
-Last updated: 2026-10-19 19:30 CEST
+Last updated: 2026-10-19 (Alpha 15)
 
 # KNXBench Features
 
 | Reference | Value |
 | --- | --- |
-| Source snapshot | `v0.1.0-alpha.14` |
-| Released baseline | `v0.1.0-alpha.14` |
+| Source snapshot | `v0.1.0-alpha.15` |
+| Released baseline | `v0.1.0-alpha.15` |
 | Main-only | Newer than released baseline |
 | Local-only | Unpublished; not accepted on main |
 | Scope | Listed boundaries; not universal compatibility |
 | Later scope | No delivery dates promised |
+
+## New in Alpha 15
+
+The [release scope](releases/alpha15.md) covers changes after Alpha 14 up to
+cutoff `21b9d46f`.
+Native/model16 is unchanged; product24 migrates to26 on writable open. Older
+builds refuse product26; opening new project saves in Alpha 14 is unverified.
+
+| Feature | Scope | Availability |
+| --- | --- | --- |
+| [File menu](contracts/file-menu.md) | Keyboard submenus, focus restoration, viewport/zoom-aware placement and touch/pen activation; same actions and guards | alpha.15 |
+| [Control feedback](contracts/controls-and-separators.md) | Primary/secondary/quiet/destructive variants, visible separators, quieter routine provenance | alpha.15 |
+| [Topology metrics](contracts/topology-metrics.md) | Explicit communication-object count labels and bounded narrow/wide layouts | alpha.15 |
+| [Monitor DPT reasons](contracts/dpt-selection.md#monitor-resolution-reasons-ui-01-18-october-2026) | No project, unknown address, missing type, cleared program default and codec outcomes stay distinct; no guessed DPT | alpha.15 |
+| [Product v25/v26](adr/0146-unknown-evidence-rows-have-an-identity.md) | Placement/enumeration columns; idempotent unknown evidence with repair; `SuffixText`; earlier v23–v25 promotion residues remain open | alpha.15 |
+| [Larger measured bounds](adr/0142-file-size-limits-follow-the-storage-ceiling.md) | 1,000,000,000 bytes per retained file/member; 4 GiB standard expansion, 16 GiB CLI large profile; distinct 1024 MiB project upload | alpha.15 |
+| [System-2 source preview](contracts/system2-source-probe-preview.md) | Explicit selected fields, offline candidate locations/byte order; cannot override live refusal | alpha.15 |
+| [Declared-memory diagnostics](adr/0143-declared-segment-memory-evidence-profile.md) | CLI-only ProductDB-derived profile, preview and separately confirmed identity-gated reads; offline/simulator evidence, no hardware/profile write claim; web remains generic identity-only | alpha.15 |
+| Catalogue availability errors | Preserve future-schema/open failure reasons; read-only CLI catalogue/documentation readers do not create or migrate the database | alpha.15 |
+| Import hardening | Evidenced uppercase legacy table names; project ZIP empty-directory CRC/stream checks before persistence | alpha.15 |
 
 ## Runtime options
 
 | Runtime | Platform | Availability |
 | --- | --- | --- |
 | Browser workbench | HTTPS server | alpha.6 |
-| Browser uploads | 1024 MiB streamed; product packages up to 1,000,000,000 bytes (ADR-0142; 256 MiB until Alpha 14) | alpha.9 |
+| Browser uploads | 1024 MiB streamed since alpha.9; separate product-package ceiling 1,000,000,000 bytes since alpha.15 (ADR-0142; 256 MiB through Alpha 14) | alpha.9 |
 | Companion return | Current project; explicit navigation | alpha.7 |
 | Docker server | Linux amd64/arm64 | alpha.6 |
 | Linux desktop | x86-64 AppImage; bounded verification | alpha.6 |
@@ -30,49 +50,51 @@ Last updated: 2026-10-19 19:30 CEST
 
 | Feature | Scope | Availability |
 | --- | --- | --- |
-| [Project status storage metrics](contracts/project-status-metrics.md) | Current on-disk size of the open project's native file (may include unsaved recovery-journal growth), separate unsaved flag, active product database footprint including SQLite side files, and catalogue counts for manufacturers with products or programs; explicit missing/loading/error states | Implemented |
+| [Project status storage metrics](contracts/project-status-metrics.md) | Current on-disk size of the open project's native file (may include unsaved recovery-journal growth), separate unsaved flag, active product database footprint including SQLite side files, and catalogue counts for manufacturers with products or programs; explicit missing/loading/error states | alpha.15 |
 
-## Local source changes
+<a id="local-source-changes"></a>
+
+## Data-table columns
 
 | Feature | Scope | Availability |
 | --- | --- | --- |
-| Resizable data-table columns | Pointer/keyboard resizing below defaults, density/theme-aware cached header/cell word floors capped at 320 px, stable mounted maxima and local scrolling, measured-width announcements, per-column/table reset, validated browser-local preferences; narrow object/address/monitor and EN/DE 1440/1920 fit budgets verified (local scroll where floors exceed the pane); 18 native table surfaces, matrix select/address/name included; per-object columns stay fixed — [coverage and limits](contracts/table-column-widths.md) | Local-only |
+| Resizable data-table columns | Pointer/keyboard resizing below defaults, density/theme-aware cached header/cell word floors capped at 320 px, stable mounted maxima and local scrolling, measured-width announcements, per-column/table reset, validated browser-local preferences; narrow object/address/monitor and EN/DE 1440/1920 fit budgets verified (local scroll where floors exceed the pane); 18 HTML table surfaces, matrix select/address/name included; per-object columns stay fixed — [coverage and limits](contracts/table-column-widths.md) | alpha.15 |
 
 ## Topology range visibility
 
 | Feature | Scope | Availability |
 | --- | --- | --- |
-| [Device-empty ranges](contracts/topology-metrics.md#device-empty-ranges-issue-25-source-builds-after-alpha-14) | Diagram hides areas/lines without devices; original structure and explorer editing remain unchanged | Main-only |
+| [Device-empty ranges](contracts/topology-metrics.md#device-empty-ranges-issue-25-source-builds-after-alpha-14) | Diagram hides areas/lines without devices; original structure and explorer editing remain unchanged | alpha.15 |
 
 ## Device list system family
 
 | Feature | Scope | Availability |
 | --- | --- | --- |
-| [System column](research/2026-10-19-mask-version-system-family.md) | Devices list names System 1/2/7/B and other profiles from the program's declared mask through one cited core table; unknown masks and missing product/program/mask states shown explicitly, never guessed; sortable and filterable by label or mask; device-read masks not used ([guide](manual/user-guide/05-devices-and-products.md#system-column-source-builds-after-alpha-14)) | Main-only |
+| [System column](research/2026-10-19-mask-version-system-family.md) | Devices list names System 1/2/7/B and other profiles from the program's declared mask through one cited core table; unknown masks and missing product/program/mask states shown explicitly, never guessed; sortable and filterable by label or mask; device-read masks not used ([guide](manual/user-guide/05-devices-and-products.md#system-column-source-builds-after-alpha-14)) | alpha.15 |
 
 ## Parameter caption resolution
 
 | Feature | Scope | Availability |
 | --- | --- | --- |
-| [Parameter section captions](contracts/positional-text-templates.md#parameter-workspace-captions-issue-26) | Exact text-parameter resolution for block/separator captions; readable fallback labels and source tooltips; no configuration changes | Main-only |
+| [Parameter section captions](contracts/positional-text-templates.md#parameter-workspace-captions-issue-26) | Exact text-parameter resolution for block/separator captions; readable fallback labels and source tooltips; no configuration changes | alpha.15 |
 
 ## Parameter unit suffix
 
 | Feature | Scope | Availability |
 | --- | --- | --- |
-| [Unit suffix](contracts/parameter-workspace.md#unit-suffix-wp-02-19-october-2026) | The product data's `SuffixText` after a parameter value (the reference's own over the parameter's, translated); presentation only, never part of the value | Main-only |
+| [Unit suffix](contracts/parameter-workspace.md#unit-suffix-wp-02-19-october-2026) | The product data's `SuffixText` after a parameter value (the reference's own over the parameter's, translated); presentation only, never part of the value | alpha.15 |
 
 ## Nested module scopes
 
 | Feature | Scope | Availability |
 | --- | --- | --- |
-| [Nested module scope identity](adr/0063-parameter-scopes-preserve-evaluation-identity.md#web-adoption-wp-15-19-october-2026) | Diagnostics, workspace areas, drafts and Restricted sections of nameless nested modules stay apart by their complete evaluation path; older servers fall back to the innermost fields | Main-only |
+| [Nested module scope identity](adr/0063-parameter-scopes-preserve-evaluation-identity.md#web-adoption-wp-15-19-october-2026) | Diagnostics, workspace areas, drafts and Restricted sections of nameless nested modules stay apart by their complete evaluation path; older servers fall back to the innermost fields | alpha.15 |
 
 ## Device comparison display
 
 | Feature | Scope | Availability |
 | --- | --- | --- |
-| [What differs (WP-18)](manual/user-guide/05-devices-and-products.md#what-differs-wp-18-source-builds-after-alpha-14) | Differing and unread raw bytes marked on both sides without relying on colour; differences-only default with a *Show equal rows* toggle revealing every read range; display only ([contract](contracts/device-comparison.md#result-display-wp-18-owner-amendment-19-october-2026)) | Main-only |
+| [What differs (WP-18)](manual/user-guide/05-devices-and-products.md#what-differs-wp-18-source-builds-after-alpha-14) | Differing and unread raw bytes marked on both sides without relying on colour; differences-only default with a *Show equal rows* toggle revealing every read range; display only ([contract](contracts/device-comparison.md#result-display-wp-18-owner-amendment-19-october-2026)) | alpha.15 |
 
 ## New in Alpha 14
 
@@ -227,7 +249,7 @@ records the tested commit separately from artifact publication verification.
 | Checked parameter editor | Time count, integer slider; source-checked | alpha.10 |
 | Catalogue update with preview | Every package uses review; backup before install, restore/delete listed backups (alpha.12) | alpha.10 |
 | [Vendor ZIP install](adr/0140-vendor-zips-of-product-packages-install-as-a-whole.md) | A manufacturer ZIP of `.knxprod` packages installs all inner packages together (CLI and web preview); other files listed, not stored; large inner packages via the CLI flag | alpha.14 |
-| [Catalogue cleanup](adr/0145-catalogue-cleanup-removes-placements-only.md) | Catalogue rows show application, version, section and source; selected entries removed after a preview and a full backup; products, programs and package files kept | Main-only |
+| [Catalogue cleanup](adr/0145-catalogue-cleanup-removes-placements-only.md) | Catalogue rows show application, version, section and source; selected entries removed after a preview and a full backup; products, programs and package files kept | alpha.15 |
 | Project information | Modeled facts; read-only | alpha.10 |
 | Stored bus access | Redacted by default; reveal one saved endpoint, no connection | alpha.12 |
 | Recorded device state | Load belief; read-only, no bus | alpha.10 |
@@ -240,7 +262,7 @@ records the tested commit separately from artifact publication verification.
 | HTTPS | Generated/supplied certificates | alpha.6 |
 | Persistent server data | Projects/catalog/settings | alpha.6 |
 | Gateway discovery | KNXnet/IP interfaces | alpha.6 |
-| Bus monitor | Tunnelling; telegram decoding; distinct no-project, unknown-address, missing-type, cleared-default and codec outcomes ([contract](contracts/dpt-selection.md#monitor-resolution-reasons-ui-01-18-october-2026)) | alpha.6 |
+| Bus monitor | Tunnelling; telegram decoding; since alpha.15 distinct no-project, unknown-address, missing-type, cleared-default and codec outcomes ([contract](contracts/dpt-selection.md#monitor-resolution-reasons-ui-01-18-october-2026)) | alpha.6 |
 | Telegram Flow | Read-only; session-local graph | alpha.6 |
 | Separate Flow window | Source-bound; shared monitor | alpha.6 |
 | Flow images | PNG or 1–30 s GIF of the viewport, with consent | alpha.11 |

@@ -1,8 +1,24 @@
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-19 20:39
+- **Completed:** Alpha 15 tagged and GitHub pre-release created at immutable `c3d5b35f0f482dc64bebd07746a834e5b676215b` (`v0.1.0-alpha.15`); notes read back, relative links rewritten and their tag paths checked. Full source-bound release gate passed 31/31 (49.6 minutes), package-full with 68 web stages, frozen inputs and no real user-directory changes. Docker dry run `39293688659` built both architectures; AppImage dry run `39300880522` passed after failed `39293684573` (missing optional Rolldown binding; why npm omitted it is not established). Both dry-run publication jobs were skipped. The tag workflows are AppImage `39303949954` and Docker `39303949950`.
+- **Pending/Next Steps:** Keep the release freeze until actual public asset checksums, binary and OCI identities, isolated authenticated save/reopen, migration and headless AppImage checks pass. Publication workflows and external verification are pending; do not call the release complete. Then record acceptance, release the freeze and retire owned scratch/worktrees. The task-specific watcher provides twenty-minute publication updates.
+- **Notes for Codex oder Claude:** Tag must not be moved. Merge carries exactly the gated product sources; only handover bookkeeping differs. Do not replace the owner's running container or change the selected checkout's untracked files. Follow-ups remain Alpha 16, including a post-install native-binding check; this release does not establish its absence's original cause. No bus operations.
+
+---
+
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-19 19:23
 - **Completed:** Release freeze taken for Alpha 15 (owner request "Release Alpha 15"). Candidate `c3d5b35f` on `release/alpha15-20261019`, cut from `21b9d46f` (this `main` before this entry): versions `0.1.0-alpha.15`, scope note `docs/releases/alpha15.md`, docs pass. Owner decision: one complete gate on the candidate, then packaging dry runs and artifact smokes.
 - **Pending/Next Steps:** `main` stays release-frozen for code until the tag `v0.1.0-alpha.15` is published: no pushes to `main` from other packages (local work, gates and branch-local commits are fine); new work goes to Alpha 16. Release session: full gate, AppImage/Docker dry runs, tag, pre-release, external verification, acceptance record, then `Release freeze: released by claude-release-alpha15`.
 - **Notes for Codex oder Claude:** The candidate must stay the accepted source; do not rebase it. Its own handover entry lives on the release branch and lands on `main` with the tag merge.
+
+---
+
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-19 19:21
+- **Completed:** Alpha 15 release candidate prepared (owner request "Release Alpha 15") on `release/alpha15-20261019` off cutoff `21b9d46f` (= `main` after the Alpha 15 set and housekeeping). Versions `0.1.0-alpha.15` in the four app crates and the web package + lock; `Cargo.lock` changes only the four workspace versions. Scope note `docs/releases/alpha15.md` (reporter fixes #25/#26, catalogue-unavailable reason, catalogue identity lines + cleanup; UI waves; differences-first comparison; System column; module identity and zoom panes; product DB v25/v26 with `SuffixText`; larger measured bounds; uppercase legacy tables; empty-directory ZIP integrity; offline System-2 preview and the CLI-only declared-memory profile as investigation tools, not programming support). Docs pass: README, FEATURES (Main-only/Local-only rows whose commits are after Alpha 14 and in the cutoff → alpha.15, snapshot/baseline alpha.15), DATA_MODEL, IMPORT_EXPORT, ROADMAP, manual (status, install, known issues, FAQ, Docker, devices, AI agents, building). Native/model 16 unchanged (core/store diff checked for persisted kinds); product DB 24 → 26 on writable open, older builds refuse v26. Owner decision: one complete gate on this combined candidate, then packaging dry runs and artifact smokes; per-WP reviews and mutants are not repeated.
+- **Pending/Next Steps:** Release gate on this exact candidate (maintained `tools/run_package_gate.py --full` plus release-only extras: further browser configs, native evidence + three edit specs, opt-in product-corpus modules and the 115-instance matrix), AppImage/Docker no-publish dry runs on the pushed branch, then tag `v0.1.0-alpha.15` on the gated commit, GitHub pre-release with hand-written notes, external verification, acceptance record on `main`.
+- **Notes for Codex oder Claude:** Release freeze for `main` until the tag is published: new work goes to Alpha 16. The SIGTERM tool-test flake is not a release blocker (read-only triage: the parked `fix/browser-tmp-signal-race-20261019` fixes a real but different race and stays parked); if it fails in the release gate, the failed receipt is kept and the cause investigated, not retried green. The candidate must stay the accepted source; do not rebase it.
 
 ---
 

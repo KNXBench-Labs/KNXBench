@@ -45,10 +45,14 @@ and is held by `tools/tests/test_rust_gate_order.py`.
   an untagged use of a real-time primitive (`waitForTimeout`, `performance.now`,
   `Date.now`, `new Date().getTime()`, `requestAnimationFrame`, `setTimeout`,
   `setInterval`, also in string code handed to `page.evaluate` and its
-  relatives), also through module, describe-local and imported helpers (named,
-  default, namespace and dynamic imports, re-exports, methods). A primitive in
-  a helper module outside any named function, for example in a Playwright
-  fixture, is refused in the helper; a test-side `.tsx` import is refused.
+  relatives, and Node's timer modules under any name), also through module,
+  describe-local and imported test-side helpers below `e2e/` (named, default,
+  namespace, dynamic and side-effect imports, re-exports, object and class
+  methods, solved as one fixed point). A primitive in a helper module outside
+  any named function, for example in a Playwright fixture or a hook registered
+  on import, is refused in the helper; a test-side `.tsx`/`.jsx` import is
+  refused. Application modules are not followed. Destructured clocks and
+  re-bound aliases are known blind spots (ADR-0144).
   The `--grep` for the tag matches the whole tag (`@exclusive(?![\w-])`).
 - Compile the entire default case inventory before execution and split it by
   tag. Require exact case identity equality for each lane, passed expectations,

@@ -209,8 +209,11 @@ already found lying in the grass.
   `python3 tools/browser_lanes.py` names the line otherwise, and the gate stops
   before the build. A Playwright fixture (`test.extend`) or module code that
   waits cannot be tagged and is refused where it is declared: move the wait
-  into a named helper the tagged tests call. Keep test-side helpers in `.ts`;
-  a `.tsx` import from a spec or helper is refused. Prefer an explicit
+  into a named helper the tagged tests call. Keep test-side helpers in `.ts`
+  below `e2e/`; a `.tsx` import from a spec or helper is refused, and helpers
+  in the app tree are not followed. Call clocks directly
+  (`performance.now()`), not through destructuring or a re-bound alias, which
+  the guard does not see. Prefer an explicit
   settled-state wait over the tag where the case does not measure time
   (ADR-0144).
 

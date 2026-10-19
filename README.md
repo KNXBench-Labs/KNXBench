@@ -354,8 +354,10 @@ bus probe is shipped — this one is certified for Markdown only.
   ZIP you can check before you send it. Nothing is programmed.
   [Five-step guide](docs/manual/user-guide/08-reports-and-diff.md#send-diagnostic-data).
 - **An idea?** Open an issue and describe the problem it solves.
-- **Code?** Quality gates and conventions are in
-  [Contributing](docs/manual/development/01-contributing.md).
+- **Code?** Start with [CONTRIBUTING.md](CONTRIBUTING.md); quality gates and
+  conventions are in [Contributing](docs/manual/development/01-contributing.md).
+- **A security problem?** Never in a public issue: report it privately as
+  [SECURITY.md](SECURITY.md) describes.
 - **Everywhere:** the [Code of Conduct](CODE_OF_CONDUCT.md) applies. Report a problem
   privately to [contact@knxbench.com](mailto:contact@knxbench.com), not in a public issue.
 

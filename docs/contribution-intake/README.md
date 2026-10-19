@@ -229,7 +229,8 @@ number changed. Updates follow on the issue; there is no automatic fix or
 promised response time. Any public regression fixture needs permission review.
 Public contributions may be indexed or copied; deletion cannot guarantee that
 all copies disappear. Security vulnerabilities are not ordinary sample reports:
-do not post secrets or confidential exploit-bearing originals here.
+do not post secrets or confidential exploit-bearing originals here. Report them
+privately as [SECURITY.md](../../SECURITY.md) describes.
 
 ## Sources for GitHub steps
 

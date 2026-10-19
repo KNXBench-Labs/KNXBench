@@ -10,6 +10,13 @@ not.
 
 Everything happens in one place:
 [github.com/KNXBench-Labs/KNXBench](https://github.com/KNXBench-Labs/KNXBench).
+The one-page summary is [`CONTRIBUTING.md`](../../../CONTRIBUTING.md) at the repository
+root; this chapter is the full version. Pull requests open with a checklist from
+[`.github/pull_request_template.md`](../../../.github/pull_request_template.md).
+
+Security vulnerabilities are the exception to "everything in public": report them
+privately as [`SECURITY.md`](../../../SECURITY.md) describes, through GitHub's private
+vulnerability reporting or by email.
 
 ## Reporting a bug
 

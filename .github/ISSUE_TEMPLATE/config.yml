@@ -1,6 +1,9 @@
 # Blank issues stay allowed: this is the main repository, not an intake-only one.
 blank_issues_enabled: true
 contact_links:
+  - name: Report a Code of Conduct problem privately
+    url: https://github.com/KNXBench-Labs/KNXBench/blob/main/CODE_OF_CONDUCT.md#reporting-an-issue
+    about: Email contact@knxbench.com with the subject "Code of Conduct" instead of opening a public issue.
   - name: Contribution guide and private-intake status
     url: https://github.com/KNXBench-Labs/KNXBench/blob/main/docs/contribution-intake/README.md
     about: Read before sharing. Private intake and the proposed mailbox are not operationally verified.

@@ -21,6 +21,20 @@ def members(root: Path) -> list[Path]:
     return sorted(m.parent for m in manifests if m.is_file())
 
 
+def reachable(bundle: Path) -> set[Path]:
+    """Every module file `main.rs` reaches through `mod name;` declarations."""
+    seen, stack = set(), [bundle / 'main.rs']
+    while stack:
+        file = stack.pop()
+        if file in seen or not file.is_file():
+            continue
+        seen.add(file)
+        directory = file.parent if file.name in ('main.rs', 'mod.rs') else file.parent / file.stem
+        for name in MOD.findall(file.read_text(encoding='utf-8')):
+            stack += [directory / f'{name}.rs', directory / name / 'mod.rs']
+    return seen
+
+
 def layout_problems(root: Path) -> list[str]:
     problems = []
     for crate in members(root):
@@ -39,12 +53,17 @@ def layout_problems(root: Path) -> list[str]:
         if not bundles and len(loose) > 1:
             problems.append(f'{name}: {len(loose)} test binaries; bundle them in tests/it (ADR-0144)')
         for bundle in bundles:
-            declared = set(MOD.findall((bundle / 'main.rs').read_text(encoding='utf-8')))
-            present = {p.stem for p in bundle.glob('*.rs') if p.name != 'main.rs'}
-            present |= {p.parent.name for p in bundle.glob('*/mod.rs')}
-            for missing in sorted(present - declared):
-                problems.append(f'{bundle.relative_to(root).as_posix()}/{missing}: never compiled; '
-                                f'add `mod {missing};` to main.rs')
+            compiled = reachable(bundle)
+            for file in sorted(set(bundle.rglob('*.rs')) - compiled):
+                inner = file.relative_to(bundle)
+                where = bundle.relative_to(root).as_posix()
+                if len(inner.parts) == 1 or inner.parts[1:] == ('mod.rs',):
+                    problems.append(f'{where}/{inner.parts[0].removesuffix(".rs")}: never compiled; '
+                                    f'add `mod {inner.parts[0].removesuffix(".rs")};` to main.rs')
+                else:
+                    stem = file.parent.name if file.name == 'mod.rs' else file.stem
+                    problems.append(f'{where}/{inner.as_posix()}: never compiled; '
+                                    f'declare `mod {stem};` in its parent module')
     for path in sorted(STANDALONE):
         if not (root / path).is_file():
             problems.append(f'{path}: listed as standalone but missing; update the allowlist')
@@ -70,6 +89,24 @@ class RustTestLayout(unittest.TestCase):
             problems = [p for p in layout_problems(root) if 'knx-x' in p]
             self.assertEqual(len(problems), 2, problems)
             self.assertIn('two: never compiled', problems[1])
+
+    def test_a_nested_module_file_nobody_declares_is_refused(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            crate = root / 'crates/knx-z'
+            (crate / 'tests/it/support').mkdir(parents=True)
+            (crate / 'Cargo.toml').write_text('[package]\nname = "knx-z"\n')
+            (crate / 'tests/it/main.rs').write_text('mod support;\nmod tree;\n')
+            (crate / 'tests/it/support/mod.rs').write_text('pub mod paths;\n')
+            (crate / 'tests/it/support/paths.rs').write_text('')
+            (crate / 'tests/it/tree.rs').write_text('mod scalar;\n')
+            (crate / 'tests/it/tree/scalar/mod.rs').parent.mkdir(parents=True)
+            (crate / 'tests/it/tree/scalar/mod.rs').write_text('')
+            self.assertEqual([p for p in layout_problems(root) if 'knx-z' in p], [])
+            (crate / 'tests/it/support/forgotten.rs').write_text('')
+            problems = [p for p in layout_problems(root) if 'knx-z' in p]
+            self.assertEqual(len(problems), 1, problems)
+            self.assertIn('support/forgotten.rs', problems[0])
 
     def test_a_crate_may_keep_one_unbundled_test_file(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

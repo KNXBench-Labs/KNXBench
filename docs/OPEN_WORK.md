@@ -525,8 +525,9 @@ decision, each a possible later package:
   migration; serialize with the product-DB package queue).
 - Usage counts across saved projects; the preview counts only the open project.
 - Removing whole application programs or products, with a project scan.
-- Provenance query cost on very large catalogues is not measured; the details are
-  attached to every listing.
+- Provenance and cleanup cost on very large catalogues is bounded by design (chunked
+  ID lookups, one pass for token and last-placement check) but not measured on a
+  real large catalogue.
 
 ## UI feedback packages (18 October 2026)
 

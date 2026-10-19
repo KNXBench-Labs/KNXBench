@@ -1477,6 +1477,32 @@ pub fn catalog_item(conn: &Connection, id: &str) -> Result<Option<CatalogItemRow
     Ok(items.pop())
 }
 
+/// The rows with exactly these IDs, in ID order, with details attached once.
+/// IDs without a row are simply absent; callers compare the counts.
+pub(crate) fn catalog_items_by_id(
+    conn: &Connection,
+    ids: &[&str],
+) -> Result<Vec<CatalogItemRow>, ProductDbError> {
+    let mut items = Vec::with_capacity(ids.len());
+    for chunk in ids.chunks(crate::catalog_details::ID_CHUNK) {
+        let sql = format!(
+            "SELECT {CATALOG_ITEM_COLUMNS} FROM catalog_item WHERE id IN ({})",
+            crate::catalog_details::placeholders(chunk.len())
+        );
+        let mut stmt = conn.prepare(&sql)?;
+        let rows = stmt.query_map(
+            rusqlite::params_from_iter(chunk.iter()),
+            row_to_catalog_item,
+        )?;
+        for row in rows {
+            items.push(row?);
+        }
+    }
+    items.sort_by(|a, b| a.id.cmp(&b.id));
+    crate::catalog_details::attach_details(conn, &mut items)?;
+    Ok(items)
+}
+
 /// The evidence a catalog item provides for device creation.  A catalog row
 /// alone is insufficient: its product, hardware, hardware-to-program and
 /// application-program references must form one consistent chain before the

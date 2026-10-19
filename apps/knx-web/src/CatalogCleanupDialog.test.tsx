@@ -25,7 +25,7 @@ const items: CatalogItem[] = ["cat-a", "cat-b", "cat-v2"].map((id, index) => ({ 
     catalogSectionId: `section-${index}`, sourceNames: [`source-${index}.knxprod`] } }));
 let root: Root;
 let host: HTMLDivElement;
-let onRemoved: ReturnType<typeof vi.fn<() => void>>;
+let onRemoved: ReturnType<typeof vi.fn<(result: { removedItemIds: string[]; backup: string }) => void | Promise<void>>>;
 let onClose: ReturnType<typeof vi.fn<() => void>>;
 beforeEach(() => {
   vi.resetAllMocks(); resetUiLanguageForTests(); resetSettingsForTests();
@@ -34,7 +34,7 @@ beforeEach(() => {
     items: [{ ...items[1], impact: { lastPlacementForBinding: false, openProjectDevices: 0 } }] });
   api.applyCatalogCleanup.mockResolvedValue({ removedItemIds: ["cat-b"], backup: "products.sqlite.backup-1-abcdefabcdef.sqlite" });
   host = document.createElement("div"); document.body.append(host); root = createRoot(host);
-  onRemoved = vi.fn<() => void>(); onClose = vi.fn<() => void>();
+  onRemoved = vi.fn<(result: { removedItemIds: string[]; backup: string }) => void | Promise<void>>(); onClose = vi.fn<() => void>();
 });
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); });
 async function render() { await act(async () => root.render(<CatalogCleanupDialog onRemoved={onRemoved} onClose={onClose} />)); }
@@ -60,9 +60,10 @@ describe("CatalogCleanupDialog", () => {
     expect(api.applyCatalogCleanup).not.toHaveBeenCalled();
     expect(host.textContent).toContain("Preview only — nothing has been removed.");
     expect(host.textContent).toContain("cat-b");
-    await click("Back up and remove 1 entries");
+    await click("Back up and remove 1 entry");
     expect(api.applyCatalogCleanup).toHaveBeenCalledExactlyOnceWith(["cat-b"], "bound-token");
-    expect(onRemoved).toHaveBeenCalledOnce(); expect(host.textContent).toContain("Backup: products.sqlite.backup-1-abcdefabcdef.sqlite");
+    expect(onRemoved).toHaveBeenCalledExactlyOnceWith({ removedItemIds: ["cat-b"], backup: "products.sqlite.backup-1-abcdefabcdef.sqlite" });
+    expect(host.textContent).toContain("Removed 1 catalogue entry. Backup: products.sqlite.backup-1-abcdefabcdef.sqlite");
     expect(host.textContent).toContain("does not necessarily restore");
   });
 
@@ -84,9 +85,31 @@ describe("CatalogCleanupDialog", () => {
     expect(host.textContent).toContain("Saved projects that are not open are not checked");
   });
 
+  it("filters on what a row shows, not on its wire format", async () => {
+    await render();
+    const filter = host.querySelector<HTMLInputElement>('input[aria-label="Filter entries to clean up"]')!;
+    const type = async (value: string) => act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(filter, value);
+      filter.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await type("null");
+    expect(host.querySelectorAll('input[type="checkbox"]')).toHaveLength(0);
+    await type("source-2");
+    expect(Array.from(host.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')).map((i) => i.value)).toEqual(["cat-v2"]);
+    await type("16");
+    expect(host.querySelectorAll('input[type="checkbox"]')).toHaveLength(2);
+  });
+
+  it("keeps a confirmed removal confirmed when the catalogue refresh fails", async () => {
+    onRemoved.mockRejectedValue(new Error("refresh failed"));
+    await render(); await select("cat-b"); await click("Preview removal"); await click("Back up and remove 1 entry");
+    expect(host.textContent).toContain("Removed 1 catalogue entry.");
+    expect(host.querySelector('[role="alert"]')).toBeNull();
+  });
+
   it("invalidates a stale preview instead of offering a blind apply retry", async () => {
     api.applyCatalogCleanup.mockRejectedValue({ status: 409, body: { kind: "catalogueCleanupStale" } });
-    await render(); await select("cat-b"); await click("Preview removal"); await click("Back up and remove 1 entries");
+    await render(); await select("cat-b"); await click("Preview removal"); await click("Back up and remove 1 entry");
     expect(host.querySelector('[role="alert"]')?.textContent).toContain("catalogue changed");
     expect(Array.from(host.querySelectorAll("button")).some((b) => b.textContent?.startsWith("Back up and remove"))).toBe(false);
     expect(onRemoved).not.toHaveBeenCalled(); await click("Read catalogue again");
@@ -96,7 +119,7 @@ describe("CatalogCleanupDialog", () => {
 
   it("keeps an unconfirmed removal distinct from refusal and does not resend", async () => {
     api.applyCatalogCleanup.mockRejectedValue(new Error("connection lost"));
-    await render(); await select("cat-b"); await click("Preview removal"); await click("Back up and remove 1 entries");
+    await render(); await select("cat-b"); await click("Preview removal"); await click("Back up and remove 1 entry");
     expect(host.querySelector('[role="alert"]')?.textContent).toContain("could not be confirmed");
     expect(api.applyCatalogCleanup).toHaveBeenCalledOnce(); expect(onRemoved).not.toHaveBeenCalled();
     expect(Array.from(host.querySelectorAll("button")).some((b) => b.textContent?.startsWith("Back up and remove"))).toBe(false);
@@ -106,7 +129,7 @@ describe("CatalogCleanupDialog", () => {
     let resolve!: (v: { removedItemIds: string[]; backup: string }) => void;
     api.applyCatalogCleanup.mockImplementation(() => new Promise((r) => { resolve = r; }));
     await render(); await select("cat-b"); await click("Preview removal");
-    await click("Back up and remove 1 entries");
+    await click("Back up and remove 1 entry");
     await act(async () => host.querySelector('[role="dialog"]')!.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
     expect(onClose).not.toHaveBeenCalled(); expect(api.applyCatalogCleanup).toHaveBeenCalledOnce();
     await act(async () => resolve({ removedItemIds: ["cat-b"], backup: "backup.sqlite" }));

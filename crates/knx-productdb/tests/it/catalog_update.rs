@@ -245,6 +245,63 @@ fn cleanup_preview_names_bindings_left_without_any_placement() {
 }
 
 #[test]
+fn catalog_details_name_source_files_never_their_directories() {
+    let dir = tempfile::tempdir().unwrap();
+    let conn = cleanup_database(dir.path());
+    // The CLI records the argument it was given; a wrapper adds `!/<member>`.
+    conn.execute_batch(
+        "UPDATE package_source_name SET source_name = '/home/alice/Downloads/dimmer.knxprod';
+         INSERT INTO package_source_name (package_sha256, source_name)
+         SELECT package_sha256, 'C:\\Users\\alice\\vendor.zip!/sub/dir/inner.knxprod'
+         FROM package_source_name;",
+    )
+    .unwrap();
+    let item = knx_productdb::query::catalog_item(&conn, "CI-A")
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        item.details.unwrap().source_names,
+        ["dimmer.knxprod", "vendor.zip!/inner.knxprod"]
+    );
+}
+
+#[test]
+fn cleanup_failure_after_the_backup_removes_that_backup_and_keeps_every_row() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut conn = cleanup_database(dir.path());
+    conn.execute_batch(
+        "CREATE TRIGGER refuse_delete BEFORE DELETE ON catalog_item
+         BEGIN SELECT RAISE(ABORT, 'refused by test'); END;",
+    )
+    .unwrap();
+    let selection = [String::from("CI-A")];
+    let preview = knx_productdb::preview_catalog_cleanup(&conn, &selection).unwrap();
+    let result = knx_productdb::apply_catalog_cleanup(&mut conn, &selection, &preview.token, true);
+    assert!(
+        matches!(result, Err(knx_productdb::CleanupError::Database(_))),
+        "{result:?}"
+    );
+    assert!(knx_productdb::query::catalog_item(&conn, "CI-A")
+        .unwrap()
+        .is_some());
+    assert_eq!(
+        std::fs::read_dir(dir.path()).unwrap().count(),
+        1,
+        "a backup of a removal that did not happen is not left behind"
+    );
+}
+
+#[test]
+fn cleanup_of_an_in_memory_database_is_its_own_refusal() {
+    let conn = knx_productdb::Connection::open_in_memory().unwrap();
+    let result = knx_productdb::preview_catalog_cleanup(&conn, &[String::from("CI-A")]);
+    assert!(
+        matches!(result, Err(knx_productdb::CleanupError::NotFileBacked)),
+        "{result:?}"
+    );
+}
+
+#[test]
 fn cleanup_backup_failure_never_deletes_a_placement() {
     use std::os::unix::fs::PermissionsExt;
     let dir = tempfile::tempdir().unwrap();

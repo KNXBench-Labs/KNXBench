@@ -111,8 +111,11 @@ Status: implemented by [ADR-0145](../adr/0145-catalogue-cleanup-removes-placemen
 `{applicationProgramId, applicationName, applicationVersion, catalogSectionId,
 sourceNames}`. The application follows the row's Hardware2Program link;
 `sourceNames` are the recorded names of the package(s) holding the placement's
-source file (file names only), or the member file name for a standalone XML
-ingest. Older servers omit the field; the web shows "unavailable" then.
+source file, or the file name for a standalone XML ingest, always without any
+directory (a name recorded as `/srv/in/vendor.zip!/sub/inner.knxprod` is shown as
+`vendor.zip!/inner.knxprod`). The application fields are null when the item has no
+Hardware2Program link or its program is not installed. Older servers omit the
+field; the web shows "unavailable" then.
 
 ## Placement cleanup
 
@@ -135,13 +138,16 @@ application.
 - `POST /api/catalog/cleanup/apply` — JSON `{itemIds, token, confirmed}`. Without
   `confirmed: true` 400 kind `confirmationRequired`. The token is recomputed inside a
   writer reservation; a mismatch (other selection, any catalogue/program/source-name
-  change, a restore of the file) is 409 kind `catalogueCleanupStale` and nothing is
-  written. Then a full backup is written (same name scheme as an update, listed by
-  `GET /api/catalog/backups`) and the rows are deleted in the same transaction. A
-  backup failure is 500 and nothing is removed. 200: `{removedItemIds, backup}`;
-  `backup` is the file name only.
-- Both routes: no product database is 503; both hold the product-database mutex,
-  and the open project is read before it, never both at once.
+  change, a restore of the file, a selected ID that is gone) is 409 kind
+  `catalogueCleanupStale` and nothing is written. Then a full backup is written (same
+  name scheme as an update, listed by `GET /api/catalog/backups`) and the rows are
+  deleted in the same transaction. A backup failure is 500 with a fixed message (the
+  cause, which names local paths, goes to the server log) and nothing is removed; a
+  deletion or commit failure after the backup rolls back and removes that backup.
+  200: `{removedItemIds, backup}`; `backup` is the file name only.
+- Both routes: no product database is 503; unknown request fields are refused
+  (client error, nothing written); both run off the async workers, hold the
+  product-database mutex, and read the open project before it, never both at once.
 
 Recovery is the backup. Re-installing an already known package is skipped and
 does not restore removed placements.

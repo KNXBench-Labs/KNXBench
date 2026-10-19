@@ -856,6 +856,7 @@ async fn cleanup_preview_counts_open_project_devices_and_last_placements() {
         .map(|i| i["id"].as_str().unwrap())
         .collect();
     assert_eq!(ids, ["CI-A", "CI-B"]);
+    assert_eq!(both["items"][0]["impact"]["lastPlacementForBinding"], true);
     assert_eq!(both["items"][1]["impact"]["lastPlacementForBinding"], true);
     assert_eq!(placement_ids(&f.state), before, "a preview writes nothing");
     assert!(backup_names(f.dir.path()).is_empty());
@@ -927,9 +928,9 @@ async fn cleanup_apply_needs_confirmation_and_the_shown_preview_then_backs_up_fi
     )
     .await;
     assert_eq!(
-        status,
-        StatusCode::BAD_REQUEST,
-        "a spent selection is unknown now: {body}"
+        (status, body["kind"].as_str()),
+        (StatusCode::CONFLICT, Some("catalogueCleanupStale")),
+        "a spent selection means the catalogue changed since its preview: {body}"
     );
 
     // The backup restores the removed placement through the existing route.
@@ -979,4 +980,89 @@ async fn cleanup_refuses_malformed_selections_and_a_missing_database() {
     )
     .await;
     assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+}
+
+#[tokio::test]
+async fn cleanup_refuses_unknown_request_fields_without_touching_anything() {
+    let f = fixture();
+    add_twin_placements(&f);
+    let (_, preview) = cleanup_preview(&f, &["CI-A"]).await;
+    let token = preview["token"].as_str().unwrap().to_string();
+    let (status, _) = send(
+        &f.app,
+        json_request(
+            "POST",
+            "/api/catalog/cleanup/apply",
+            json!({ "itemIds": ["CI-A"], "token": token, "confirmed": true, "force": true }),
+        ),
+    )
+    .await;
+    assert!(status.is_client_error(), "{status}");
+    assert_eq!(placement_ids(&f.state), ["CI-A", "CI-B"]);
+    assert!(backup_names(f.dir.path()).is_empty());
+}
+
+/// ABA: a restore brings back exactly the previewed contents, but through a
+/// reopened connection. The old confirmation must not remove anything.
+#[tokio::test]
+async fn cleanup_preview_from_before_a_restore_is_stale_even_for_equal_contents() {
+    let f = fixture();
+    add_twin_placements(&f);
+    // A backup of exactly this state: remove nothing real (a third placement)
+    // and restore the backup taken right before.
+    {
+        let conn = f.state.product_db.as_ref().unwrap().lock().unwrap();
+        conn.execute_batch(
+            "INSERT INTO catalog_item (id, manufacturer_id, section_id, name, source_sha256)
+             SELECT 'CI-TEMP', manufacturer_id, section_id, name, source_sha256
+             FROM catalog_item WHERE id = 'CI-A';",
+        )
+        .unwrap();
+    }
+    let (_, temp) = cleanup_preview(&f, &["CI-TEMP"]).await;
+    let (status, removed) = send(
+        &f.app,
+        json_request(
+            "POST",
+            "/api/catalog/cleanup/apply",
+            json!({ "itemIds": ["CI-TEMP"], "token": temp["token"], "confirmed": true }),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{removed}");
+    // Preview on the state without CI-TEMP, then restore the backup (with it),
+    // then remove CI-TEMP again so the contents equal the previewed state.
+    let (_, preview) = cleanup_preview(&f, &["CI-A"]).await;
+    let token = preview["token"].as_str().unwrap().to_string();
+    let (status, body) = send(
+        &f.app,
+        json_request(
+            "POST",
+            "/api/catalog/restore",
+            json!({ "name": removed["backup"] }),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    {
+        let conn = f.state.product_db.as_ref().unwrap().lock().unwrap();
+        conn.execute_batch("DELETE FROM catalog_item WHERE id = 'CI-TEMP'")
+            .unwrap();
+    }
+    assert_eq!(placement_ids(&f.state), ["CI-A", "CI-B"]);
+    let (status, body) = send(
+        &f.app,
+        json_request(
+            "POST",
+            "/api/catalog/cleanup/apply",
+            json!({ "itemIds": ["CI-A"], "token": token, "confirmed": true }),
+        ),
+    )
+    .await;
+    assert_eq!(
+        (status, body["kind"].as_str()),
+        (StatusCode::CONFLICT, Some("catalogueCleanupStale")),
+        "{body}"
+    );
+    assert_eq!(placement_ids(&f.state), ["CI-A", "CI-B"]);
 }

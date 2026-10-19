@@ -48,9 +48,12 @@ Hardware2Program pair, for the device inspector and the documentation export.
    restore of older contents still invalidates an old preview).
 4. **Back up, then delete, in one writer reservation.** Apply takes an `IMMEDIATE`
    transaction, recomputes the token, writes a full backup through the existing
-   online-backup helper and only then deletes. A refused or failed step writes
-   nothing; a failed backup deletes nothing. The backup is listed and restorable
-   through the existing backup routes.
+   online-backup helper and only then deletes. A refusal writes nothing; a failed
+   backup deletes nothing and leaves no partial file; a deletion or commit that fails
+   after the backup rolls back and removes that backup again, so every listed backup
+   belongs to a removal that happened. The backup is listed and restorable through
+   the existing backup routes. A selected ID that is gone at apply time means the
+   catalogue changed since the preview: 409, like any other change.
 5. **People choose, the software does not.** The web dialog starts with nothing
    selected. Its only suggestion selects all but one placement per exact
    manufacturer + product + Hardware2Program triple. No version ordering, name or
@@ -66,6 +69,14 @@ Hardware2Program pair, for the device inspector and the documentation export.
 - Re-installing an already known package is skipped and does **not** bring removed
   placements back; the backup does. A different package that declares the same
   placements may add them again; there is no suppression marker.
+- Identity evidence (`source_identity`, `package_conflict`, `ingest_unknown`) keeps
+  the removed IDs, as it keeps everything a package declared; identity reports
+  then show those IDs without a stored winner. A re-parse of the package stores the
+  row again before checking agreement, so ingest is unaffected.
+- Cost: a preview or apply reads the selected rows in chunks of 500 IDs and makes
+  one pass over `catalog_item` for its token and for the last-placement check,
+  whatever the selection size; both run off the async workers. Listings attach
+  details only for the rows they return. Not yet measured on a large catalogue.
 - No schema change, migration or ingest change.
 
 ## Alternatives considered

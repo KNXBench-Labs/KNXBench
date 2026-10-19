@@ -8,8 +8,11 @@ export default function CatalogItemIdentity({ item }: { item: CatalogItem }) {
   return <span className="catalog-item-identity">
     <span>{t("catalog.details.references", { product: item.productRefId ?? unknown, binding: item.hardware2programRefId ?? unknown })}</span>
     {item.details ? <>
-      <span>{t("catalog.details.application", { name: item.details.applicationName ?? unknown,
-        id: item.details.applicationProgramId ?? unknown, version: item.details.applicationVersion ?? unknown })}</span>
+      {item.hardware2programRefId && item.details.applicationProgramId === null
+        // A declared link whose program is missing is not the same as no link.
+        ? <span>{t("catalog.details.notInstalled", { id: item.hardware2programRefId })}</span>
+        : <span>{t("catalog.details.application", { name: item.details.applicationName ?? unknown,
+          id: item.details.applicationProgramId ?? unknown, version: item.details.applicationVersion ?? unknown })}</span>}
       <span>{t("catalog.details.placement", { id: item.id, section: item.details.catalogSectionId ?? unknown })}</span>
       <span>{t("catalog.details.sources", { sources: item.details.sourceNames.length ? item.details.sourceNames.join(", ") : unknown })}</span>
     </> : <>

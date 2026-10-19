@@ -150,3 +150,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0141](0141-placements-and-enumeration-attributes-reach-columns.md) | Placements and enumeration attributes reach columns; the report names the rest | Accepted | 2026-10-18 |
 | [0142](0142-file-size-limits-follow-the-storage-ceiling.md) | File-size limits follow the storage ceiling | Accepted | 2026-10-18 |
 | [0143](0143-declared-segment-memory-evidence-profile.md) | A ProductDB-declared, read-only memory evidence profile | Accepted (simulator scope) | 2026-10-18 |
+| [0144](0144-change-scoped-gates-tagged-browser-lanes-bundled-rust-tests.md) | Change-scoped gates, tagged browser lanes and bundled Rust tests | Accepted | 2026-10-19 |

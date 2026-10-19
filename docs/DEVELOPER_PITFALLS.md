@@ -49,6 +49,32 @@ already found lying in the grass.
 - **Read gate verdicts from the gate, not from a pipeline.** In
   `cmd | tail -1; echo $?` the status belongs to `tail`. Redirect to a log and
   read the gate's own exit line.
+- **Pick the gate by purpose.** A routine package runs
+  `python3 tools/run_package_gate.py --base origin/main` (change-scoped); only
+  Alpha, Beta and full releases run it with `--full` (ADR-0144). Look at
+  `--dry-run` first: if the plan says `COMPLETE GATE`, a path without a rule
+  was changed; give `tools/gate_scope.py` a rule instead of living with it.
+- **A new Rust integration test is a module, not a file of its own.** Put it in
+  `<crate>/tests/it/<name>.rs` and add `mod <name>;` to `tests/it/main.rs`; a
+  file the bundle does not declare is never compiled, and a new loose
+  `tests/*.rs` costs a link of its own. `tools/tests/test_rust_test_layout.py`
+  refuses both. Run one file's tests with `cargo test -p <crate> --test it <name>::`.
+  All tests of a crate share one process, so a test must not rely on
+  library-level global state being fresh. A helper module used by one test
+  file only and reaching back with `super::` lives below that file
+  (`tests/it/dynamic_tree/dynamic_scalar_copy/mod.rs`); shared helpers sit in
+  `tests/it/<helper>/` and are named with `crate::`. Trait imports are shared
+  too: a `.as_ref()` that was unambiguous in a file of its own can become
+  ambiguous in the bundle, so compare with explicit types (`&*bytes`).
+- **Every commit relinks the binaries' dependents.** `knx-build-stamp` watches
+  `HEAD` and its reflog in development builds, so a commit, checkout or reset
+  rebuilds `knx-cli`, `knx-mcp` and `knx-server` and everything that links
+  them (147 s for the old 356-binary layout on 19 October 2026). Commit, then
+  test, rather than alternating, when timing matters.
+- **Full debug information is opt-in.** The workspace builds with line tables
+  and optimised third-party dependencies (ADR-0144). Backtraces keep file and
+  line; for variable inspection in a debugger build with
+  `CARGO_PROFILE_DEV_DEBUG=2`.
 
 - **Do not run `cargo test` as namespace root.** Under
   `unshare --user --map-root-user`, `knx-mcp`'s
@@ -175,6 +201,14 @@ already found lying in the grass.
   computer-use driver; its GTK dialogs need foreground keyboard input.
 
 ## Web app
+
+- **A browser case that measures real time gets `{ tag: "@exclusive" }`.**
+  Everything else runs with four workers. `waitForTimeout`, `performance.now`,
+  `Date.now`, `requestAnimationFrame`, `setTimeout` and `setInterval` in a test,
+  hook or helper it calls must sit in a test or `describe` carrying the tag;
+  `python3 tools/browser_lanes.py` names the line otherwise, and the gate stops
+  before the build. Prefer an explicit settled-state wait over the tag where
+  the case does not measure time (ADR-0144).
 
 - **The built-server native specs are outside the web gate.** `rename`,
   `functions` and `name-recipe` (`*.native.ts`) run only through

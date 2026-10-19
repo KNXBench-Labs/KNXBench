@@ -83,6 +83,15 @@ the switched commands and that `:memory:` never touches the filesystem.
 - Mutants killed: `exists` instead of `try_exists`, `products coverage` back on
   the migrating opener, native-open reset dropping the reason (9 in total).
 
+## Second re-review
+
+Codex `gpt-6.1-sol` (high): ACCEPT WITH FIXES, no CRITICAL/IMPORTANT; R1 and
+R3 closed, no-reason contract matches `origin/main`, `:memory:` safe. One
+MINOR: the reader test pins each command's exit code and a line it prints for
+an empty catalogue (usage errors, panics or refused `query_only` writes can no
+longer pass for a read). The package gate started on the previous head was
+stopped as superseded (receipt `interrupted`, inputs frozen, 9 stages green).
+
 ## Not done / follow-ups
 
 - The owner's real file was not touched (copies only). Recovery: a build with

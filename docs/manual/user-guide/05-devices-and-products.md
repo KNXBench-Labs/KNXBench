@@ -310,6 +310,22 @@ the list is read again. It never deletes backups on its own. (Alpha 10 and 11 ca
 delete backups, and their plain **Install product database** picker installs
 directly, without a preview or backup.)
 
+### Master-data diagnostics (source builds after Alpha 15)
+
+A product file can restate standard DPT, function or space definitions already
+in the catalogue. **Master identity collision** means the existing normalized
+entry won; it does not switch your project's definitions to the newer file.
+**Malformed master declaration** names a declaration without an Id or usable
+parent. Original source bytes remain retained in either case.
+
+Expand **Technical source details** for the source hash, declaration position
+and reason. These technical details are source evidence, not translated product
+text. Older catalogues gain byte-derived declarations on upgrade to product
+DB **27**, but previously unrecorded winning-source and installation history
+stays explicitly unavailable. Existing historical install reports are not
+rewritten to appear newly measured. Alpha 15 itself supports product26 and
+cannot open product27: keep an independent pre-upgrade catalogue backup.
+
 <a id="cleaning-up-the-catalogue-source-builds-after-alpha-14"></a>
 
 ### Cleaning up the catalogue (since Alpha 15)

@@ -24,6 +24,7 @@ pub mod inference;
 pub mod ingest;
 pub mod legacy;
 pub mod master_evidence;
+pub mod master_provenance;
 pub mod migration;
 pub mod package;
 pub mod parameter_editor;

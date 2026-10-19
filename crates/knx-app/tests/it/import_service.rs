@@ -537,3 +537,61 @@ fn a_failed_import_leaves_the_store_untouched() {
     assert!(import_ets_project(Path::new("/nonexistent.knxproj"), &conn).is_err());
     assert_eq!(load_opaque(&conn).unwrap().len(), 0);
 }
+
+#[test]
+fn master_identity_diagnostics_reach_the_project_import_report() {
+    let mut template =
+        knx_etsproj::Container::open(knx_testsupport::minimal_knxproj_bytes()).unwrap();
+    let topology = template.read("P-0001/0.xml").unwrap();
+    let info = template.read("P-0001/Project.xml").unwrap();
+    let manufacturer = template.read("M-0001/M-0001_A-1.xml").unwrap();
+    let master=br#"<KNX xmlns="http://knx.org/xml/project/11"><MasterData><SpaceUsage Id="U"/><SpaceUsage Id="U"/><FunctionPoint/><DatapointType/></MasterData></KNX>"#;
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("master-diagnostics.knxproj");
+    std::fs::write(
+        &path,
+        knx_testsupport::zip_with_entries(&[
+            ("P-0001.signature", b"x"),
+            ("P-0001/0.xml", &topology),
+            ("P-0001/Project.xml", &info),
+            ("M-0001/M-0001_A-1.xml", &manufacturer),
+            ("knx_master.xml", master),
+        ]),
+    )
+    .unwrap();
+    let native = knx_store::open_and_migrate(&dir.path().join("project.knxdb")).unwrap();
+    let products = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+    let imported = knx_app::import_ets_project_with(
+        &path,
+        &native,
+        knx_app::ImportOptions {
+            product_db: Some(&products),
+        },
+    )
+    .unwrap();
+    let diagnostics = imported
+        .report
+        .unsupported
+        .iter()
+        .filter(|d| d.what.starts_with("master provenance: "))
+        .collect::<Vec<_>>();
+    assert_eq!(diagnostics.len(), 3);
+    assert_eq!(
+        diagnostics
+            .iter()
+            .filter(|d| d.what.contains("master-identity-collision"))
+            .count(),
+        1
+    );
+    assert_eq!(
+        diagnostics
+            .iter()
+            .filter(|d| d.what.contains("malformed-master-declaration"))
+            .count(),
+        2
+    );
+    for d in diagnostics {
+        assert!(d.consequence.contains(&sha256_hex(master)));
+        assert!(d.consequence.contains("declaration"));
+    }
+}

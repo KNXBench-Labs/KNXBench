@@ -1,5 +1,14 @@
 # Compatibility
 
+## Master provenance (source builds after Alpha 15)
+
+WP-17 adds source evidence, not new ETS/master grammar compatibility. Product
+DB v27 preserves normalized master winners; old winner/encounter history is
+unavailable where it was never recorded. Replayed declarations are current
+byte-derived evidence, not recovered installation events. Alpha 15 supports
+product26 and refuses product27; native/model16 is unchanged. Keep a separate
+pre-upgrade catalogue copy. [ADR-0147](adr/0147-master-identity-provenance.md).
+
 ## Exact UP258 vertical recheck (16 October 2026)
 
 [Fresh source/configured regressions](research/2026-10-16-up258-vertical-path-audit.md)

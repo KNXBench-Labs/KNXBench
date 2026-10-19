@@ -192,3 +192,49 @@ fn identity_rejects_an_unknown_table_and_family_an_unknown_program() {
     assert!(empty.contains("winner: (no stored row)"), "{empty}");
     assert!(empty.contains("0 candidate(s)"), "{empty}");
 }
+
+#[test]
+fn project_ingest_prints_master_identity_diagnostics() {
+    let mut template =
+        knx_etsproj::Container::open(knx_testsupport::minimal_knxproj_bytes()).unwrap();
+    let topology = template.read("P-0001/0.xml").unwrap();
+    let info = template.read("P-0001/Project.xml").unwrap();
+    let manufacturer = template.read("M-0001/M-0001_A-1.xml").unwrap();
+    let master=br#"<KNX xmlns="http://knx.org/xml/project/11"><MasterData><SpaceUsage Id="U"/><SpaceUsage Id="U"/><FunctionPoint/><DatapointType/></MasterData></KNX>"#;
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("master-diagnostics.knxproj");
+    std::fs::write(
+        &path,
+        knx_testsupport::zip_with_entries(&[
+            ("P-0001.signature", b"x"),
+            ("P-0001/0.xml", &topology),
+            ("P-0001/Project.xml", &info),
+            ("M-0001/M-0001_A-1.xml", &manufacturer),
+            ("knx_master.xml", master),
+        ]),
+    )
+    .unwrap();
+    let db = dir.path().join("products.sqlite");
+    let output = ok_stdout(run_cli(&[
+        "products",
+        "ingest",
+        path.to_str().unwrap(),
+        "--product-db",
+        db.to_str().unwrap(),
+    ]));
+    assert_eq!(
+        output.matches("master-identity-collision:").count(),
+        1,
+        "{output}"
+    );
+    assert_eq!(
+        output.matches("malformed-master-declaration:").count(),
+        2,
+        "{output}"
+    );
+    assert!(
+        output.contains(&knx_productdb::sha256_hex(master)),
+        "{output}"
+    );
+    assert!(output.contains("bytes ["), "{output}");
+}

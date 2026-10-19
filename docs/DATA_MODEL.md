@@ -1,5 +1,18 @@
 # Data model
 
+## Master provenance (source builds after Alpha 15)
+
+Product database **27**, independent of native/model **16**, adds
+`master_source`, `master_declaration` and `master_winner`
+([ADR-0147](adr/0147-master-identity-provenance.md)). Each declaration has a
+source SHA-256, ordinal and exact start-tag byte range. Fresh normalized writes
+record the winning declaration; migration preserves normalized values and marks
+historical winners/outcomes unavailable rather than guessing. Missing Id and
+missing parent are explicit flags, not collisions; an empty Id retains its
+existing distinct meaning. Historical package reports are unchanged. Builds
+supporting only product26 refuse product27; keep independent pre-upgrade copies.
+Earlier column-promotion repair boundaries below remain open.
+
 ## Alpha 15 model and storage boundary
 
 Alpha 15 keeps native/model **16**. The core/store diff adds diagnostic plan and

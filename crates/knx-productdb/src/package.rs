@@ -333,6 +333,8 @@ pub struct InstallDiagnostic {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum InstallDiagnosticKind {
+    MasterIdentityCollision,
+    MalformedMasterDeclaration,
     UnsupportedMasterSection,
     UnsupportedMasterSubtree,
     UnresolvedBaggageDeclaration,
@@ -342,6 +344,8 @@ pub enum InstallDiagnosticKind {
 impl InstallDiagnosticKind {
     pub const fn as_str(self) -> &'static str {
         match self {
+            Self::MasterIdentityCollision => "master-identity-collision",
+            Self::MalformedMasterDeclaration => "malformed-master-declaration",
             Self::UnsupportedMasterSection => "unsupported-master-section",
             Self::UnsupportedMasterSubtree => "unsupported-master-subtree",
             Self::UnresolvedBaggageDeclaration => "unresolved-baggage-declaration",
@@ -351,6 +355,8 @@ impl InstallDiagnosticKind {
 
     fn from_db(value: &str) -> Result<Self, ProductDbError> {
         match value {
+            "master-identity-collision" => Ok(Self::MasterIdentityCollision),
+            "malformed-master-declaration" => Ok(Self::MalformedMasterDeclaration),
             "unsupported-master-section" => Ok(Self::UnsupportedMasterSection),
             "unsupported-master-subtree" => Ok(Self::UnsupportedMasterSubtree),
             "unresolved-baggage-declaration" => Ok(Self::UnresolvedBaggageDeclaration),
@@ -586,6 +592,7 @@ fn validate_diagnostic(
     conn: &Connection,
     sha256: &str,
     diagnostic: &InstallDiagnostic,
+    master_sources: &mut crate::master_provenance::SourceInventoryCache,
 ) -> Result<(), ProductDbError> {
     validate_archive_path(&diagnostic.archive_path)?;
     validate_xml_path(&diagnostic.xml_path)?;
@@ -607,6 +614,25 @@ fn validate_diagnostic(
     };
 
     match diagnostic.kind {
+        InstallDiagnosticKind::MasterIdentityCollision
+        | InstallDiagnosticKind::MalformedMasterDeclaration => {
+            if role != "Master" || diagnostic.occurrences != 1 {
+                return Err(report_error("invalid master declaration diagnostic"));
+            }
+            let source: String = conn.query_row(
+                "SELECT source_sha256 FROM package_member WHERE package_sha256=?1 AND path=?2",
+                params![sha256, diagnostic.archive_path],
+                |r| r.get(0),
+            )?;
+            crate::master_provenance::validate_diagnostic(
+                conn,
+                master_sources,
+                &source,
+                diagnostic.kind,
+                &diagnostic.xml_path,
+                &diagnostic.detail,
+            )?;
+        }
         InstallDiagnosticKind::UnsupportedMasterSection => {
             if role != "Master" {
                 return Err(report_error(
@@ -1669,8 +1695,22 @@ fn validate_facts(
         validate_xml_path(&unknown.xpath)?;
     }
     let mut diagnostic_identities = HashSet::new();
+    let mut master_sources = crate::master_provenance::SourceInventoryCache::default();
     for diagnostic in &facts.diagnostics {
-        validate_diagnostic(conn, sha256, diagnostic)?;
+        if matches!(
+            diagnostic.kind,
+            InstallDiagnosticKind::MasterIdentityCollision
+                | InstallDiagnosticKind::MalformedMasterDeclaration
+        ) {
+            master_sources.budget.stored_diagnostic(
+                &diagnostic.archive_path,
+                &diagnostic.xml_path,
+                &diagnostic.detail,
+            )?;
+        }
+    }
+    for diagnostic in &facts.diagnostics {
+        validate_diagnostic(conn, sha256, diagnostic, &mut master_sources)?;
         if !diagnostic_identities.insert((
             diagnostic.kind.as_str(),
             diagnostic.archive_path.as_str(),
@@ -1888,6 +1928,7 @@ fn load_facts_unvalidated(
     conn: &Connection,
     sha256: &str,
 ) -> Result<Option<InstallFacts>, ProductDbError> {
+    crate::master_provenance::budget::admit_report(conn, sha256)?;
     let header: Option<(i64, String, i64, i64)> = conn.query_row(
         "SELECT report_version, status, unknown_distinct, unknown_occurrences FROM package_install_report WHERE package_sha256 = ?1",
         [sha256],
@@ -2941,6 +2982,7 @@ pub(crate) fn install_admitted_package(
                 master_sections_read,
                 unsupported_sections,
                 uninterpreted_subtrees,
+                declarations: _,
             } = master;
             if matches!(scheme, 21 | 23) {
                 crate::parse::scheme_evidence::reconcile_package_unknowns(
@@ -2964,6 +3006,15 @@ pub(crate) fn install_admitted_package(
                 .dropped_datapoint_types
                 .checked_add(master_outcome.dropped_datapoint_types)
                 .ok_or_else(|| report_error("dropped datapoint counter overflow"))?;
+            for diagnostic in master_outcome.diagnostics {
+                facts.diagnostics.push(InstallDiagnostic::new(
+                    diagnostic.kind,
+                    path.clone(),
+                    diagnostic.xml_path,
+                    diagnostic.detail,
+                    1,
+                )?);
+            }
             add_entities(&mut facts, &entities)?;
             add_count(
                 &mut facts,

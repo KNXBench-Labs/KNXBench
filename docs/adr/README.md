@@ -153,3 +153,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0144](0144-change-scoped-gates-tagged-browser-lanes-bundled-rust-tests.md) | Change-scoped gates, tagged browser lanes and bundled Rust tests | Accepted | 2026-10-19 |
 | [0145](0145-catalogue-cleanup-removes-placements-only.md) | Catalogue cleanup removes placements only | Accepted | 2026-10-19 |
 | [0146](0146-unknown-evidence-rows-have-an-identity.md) | Unknown-evidence rows have an identity; `SuffixText` reaches the parameter row | Accepted | 2026-10-19 |
+| [0147](0147-master-identity-provenance.md) | Master declarations have provenance; historical winners are not reconstructed | Accepted | 2026-10-19 |

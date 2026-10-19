@@ -76,7 +76,7 @@ function nodeBoxes(page: Page) {
 const overlap = (p: Box, q: Box) =>
   Math.min(Math.min(p.right, q.right) - Math.max(p.left, q.left), Math.min(p.bottom, q.bottom) - Math.max(p.top, q.top));
 
-test("a busy hub settles with every circle, name and value block clear of its neighbours", async ({ page }) => {
+test("a busy hub settles with every circle, name and value block clear of its neighbours", { tag: "@exclusive" }, async ({ page }) => {
   await hubServer(page);
   await page.setViewportSize({ width: 1400, height: 1000 });
   await page.goto("/e2e/telegram-flow-fixture.html?lang=en&theme=graphite");

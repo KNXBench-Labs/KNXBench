@@ -331,7 +331,7 @@ for (const [style, shown] of [["Free", "2049"], ["TwoLevel", "1/1"]] as const) {
   });
 }
 
-test("large synthetic project switches all four views within measured bounds", async ({ page }) => {
+test("large synthetic project switches all four views within measured bounds", { tag: "@exclusive" }, async ({ page }) => {
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1440, height: 1000 });
   const ranges: GroupRangeNode[] = []; const addresses: GroupAddressNode[] = [];

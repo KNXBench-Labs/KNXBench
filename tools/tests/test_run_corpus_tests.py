@@ -41,6 +41,23 @@ class CorpusSelection(unittest.TestCase):
                  ('knx-a', ('--test', 'golden'), ['golden_counts'])],
             )
 
+    def test_a_bundled_binary_names_tests_by_module_path_and_runs_them_exactly(self) -> None:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            crate(root, 'knx-f', {
+                'tests/it/main.rs': 'mod golden;\nmod support;\n',
+                'tests/it/golden.rs': f'#[test]\n{MARK}\nfn counts() {{}}\n',
+                'tests/it/support/mod.rs': f'#[test]\n{MARK}\nfn helper_counts() {{}}\n',
+                'tests/alone.rs': f'#[test]\n{MARK}\nfn alone() {{}}\n',
+            })
+            targets, problems = corpus_tests(root)
+            self.assertEqual(problems, [])
+            self.assertEqual(
+                [(t.flags, t.names, t.exact) for t in targets],
+                [(('--test', 'alone'), ['alone'], False),
+                 (('--test', 'it'), ['golden::counts', 'support::helper_counts'], True)],
+            )
+
     def test_an_attribute_without_a_test_is_a_problem(self) -> None:
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -53,6 +70,49 @@ class CorpusSelection(unittest.TestCase):
             root = Path(tmp)
             crate(root, 'knx-c', {'src/x.rs': f'{MARK}\nfn t() {{}}\n'})
             self.assertEqual(main(['--root', str(root)]), 2)
+
+    def test_a_package_filter_selects_only_that_package(self) -> None:
+        import contextlib
+        import io
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            crate(root, 'knx-d', {'src/x.rs': f'#[test]\n{MARK}\nfn d() {{}}\n'})
+            crate(root, 'knx-e', {'src/x.rs': '#[test]\nfn plain() {}\n'})
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                self.assertEqual(main(['--root', str(root), '--list', '--package', 'knx-d']), 0)
+            self.assertIn('knx-d:--lib: 1', out.getvalue())
+            # The selected package holds corpus tests, so a missing corpus still refuses.
+            self.assertEqual(main(['--root', str(root), '--package', 'knx-d']), 2)
+            # A package without corpus tests is an honest zero, even without OriginalData.
+            with contextlib.redirect_stdout(io.StringIO()) as quiet:
+                self.assertEqual(main(['--root', str(root), '--package', 'knx-e']), 0)
+            self.assertIn('none in the selected package', quiet.getvalue())
+            with contextlib.redirect_stderr(io.StringIO()):
+                self.assertEqual(main(['--root', str(root), '--package', 'knx-typo']), 2)
+
+    def test_a_workspace_member_outside_apps_and_crates_is_a_known_package(self) -> None:
+        import contextlib
+        import io
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / 'xtask/src').mkdir(parents=True)
+            (root / 'xtask/Cargo.toml').write_text('[package]\nname = "xtask"\n')
+            (root / 'xtask/src/main.rs').write_text('')
+            with contextlib.redirect_stdout(io.StringIO()) as out:
+                self.assertEqual(main(['--root', str(root), '--list', '--package', 'xtask']), 0)
+            self.assertIn('none in the selected package', out.getvalue())
+
+    def test_a_selection_without_targets_still_refuses_on_a_problem(self) -> None:
+        import contextlib
+        import io
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            # A corpus test in a helper directory no cargo target compiles.
+            crate(root, 'knx-g', {'tests/support/x.rs': f'#[test]\n{MARK}\nfn lost() {{}}\n'})
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
+                self.assertEqual(main(['--root', str(root), '--package', 'knx-g']), 1)
+            self.assertIn('no cargo target owns this file', err.getvalue())
 
     def test_the_environment_drops_knx_variables_and_isolates_xdg(self) -> None:
         import os

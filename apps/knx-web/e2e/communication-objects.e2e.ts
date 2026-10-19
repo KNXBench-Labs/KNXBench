@@ -128,7 +128,7 @@ test("committed DPT re-evaluates the filter without losing the editing exception
   await panel.locator('[data-object-id="1"] summary').click();
   await expect(panel.locator('[data-object-id="1"]')).toBeHidden(); expect(state.unexpected).toEqual([]);
 });
-test("production synthetic 1000-object device records visible-operation timings", async ({ page }) => {
+test("production synthetic 1000-object device records visible-operation timings", { tag: "@exclusive" }, async ({ page }) => {
   test.setTimeout(90_000);
   const state = await intercept(page, "en", 1000); await openProject(page, "en"); await openList(page, "en");
   let start = performance.now(); await page.locator(".devices-table tbody td:nth-child(3) button").first().click();

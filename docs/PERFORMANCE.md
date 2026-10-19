@@ -70,8 +70,9 @@ written only for this benchmark:
 
 An `#[ignore]`d `cargo test` integration test. `cargo test --workspace`
 (the mandatory gate every commit runs) skips it by default — it never adds
-a second to that run — while `cargo test -p knx-app --release --test
-perf_baseline -- --ignored` runs it on demand. A feature flag would have
+a second to that run — while `cargo test -p knx-app --release --test it
+perf_baseline:: -- --ignored` runs it on demand (one module of the crate's
+bundled test binary since ADR-0144). A feature flag would have
 meant a second Cargo feature just for one test file; a dedicated binary
 would have meant reimplementing the store and import wiring `knx-app`'s
 existing dev-dependencies already provide. `--ignored` was the smallest
@@ -82,7 +83,7 @@ change that satisfied "does not slow the normal test run."
 From a clean checkout of this repository:
 
 ```sh
-cargo test -p knx-app --release --test perf_baseline -- --ignored --nocapture
+cargo test -p knx-app --release --test it perf_baseline:: -- --ignored --nocapture
 ```
 
 `--release`: debug-mode XML parsing and SQLite inserts are not what a real
@@ -109,7 +110,7 @@ Measured 2026-09-14 on:
 Command:
 
 ```sh
-cargo test -p knx-app --release --test perf_baseline -- --ignored --nocapture
+cargo test -p knx-app --release --test it perf_baseline:: -- --ignored --nocapture
 ```
 
 Output (the 2026-09-14 harness, which still had an `export` stage and

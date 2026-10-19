@@ -46,7 +46,7 @@ async function serve(page: Page, language: "en" | "de", motionLevel: "off" | "fu
 }
 
 for (const language of ["en", "de"] as const) for (const width of [1440, 400]) for (const motionLevel of ["off", "full"] as const) {
-  test(`hovering Save As rows moves nothing (${language}, ${width}px, motion ${motionLevel})`, async ({ page }) => {
+  test(`hovering Save As rows moves nothing (${language}, ${width}px, motion ${motionLevel})`, { tag: "@exclusive" }, async ({ page }) => {
     const m: Catalogue = language === "de" ? de : en;
     const errors: string[] = [];
     page.on("pageerror", (error) => errors.push(error.message));

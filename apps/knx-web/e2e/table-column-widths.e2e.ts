@@ -468,7 +468,7 @@ for (const target of ["table", "viewport", "pane"] as const) {
   });
 }
 
-test("scrolling virtualised history does not remeasure retained field tables", async ({ page }) => {
+test("scrolling virtualised history does not remeasure retained field tables", { tag: "@exclusive" }, async ({ page }) => {
   await page.goto("/e2e/diff-virtual-fixture.html");
   await page.getByRole("button", { name: "Group addresses (3300)" }).click();
   await page.getByRole("button", { name: "changed (300)", exact: true }).click();

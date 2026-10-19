@@ -245,6 +245,25 @@ cargo test -p knx-etsproj
 cargo test -p knx-core addresses
 ```
 
+Each crate's integration tests are one binary called `it`, with one module per
+former test file, so one file's tests run like this:
+
+```bash
+cargo test -p knx-server --test it http_fs_routes::
+```
+
+Before handing a change over, let the package gate pick what it can affect,
+and look at the plan first:
+
+```bash
+python3 tools/run_package_gate.py --base origin/main --dry-run
+python3 tools/run_package_gate.py --base origin/main
+```
+
+Releases (Alpha, Beta, full) run everything with `--full`. The rules are in
+[ADR-0144](../../adr/0144-change-scoped-gates-tagged-browser-lanes-bundled-rust-tests.md)
+and [Repository verification targets](../../VERIFICATION.md#package-gate-targeted-by-default-complete-for-releases).
+
 Frontend, from `apps/knx-web` after `npm ci`:
 
 ```bash

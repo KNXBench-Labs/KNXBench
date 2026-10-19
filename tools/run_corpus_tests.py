@@ -39,6 +39,10 @@ class Target:
     package: str
     flags: tuple[str, ...]
     names: list[str] = field(default_factory=list)
+    # Bundled test binaries (tests/<dir>/main.rs, ADR-0144) name each test by
+    # its module path, and run with --exact so a same-named test elsewhere in
+    # the binary can never be counted instead.
+    exact: bool = False
 
     @property
     def label(self) -> str:
@@ -67,6 +71,17 @@ def target_flags(crate_dir: Path, file: Path) -> tuple[str, ...] | None:
     if rel[0] == 'tests' and len(rel) > 2 and (crate_dir / 'tests' / rel[1] / 'main.rs').exists():
         return ('--test', rel[1])
     return None
+
+
+def module_path(crate_dir: Path, file: Path) -> str | None:
+    """`a::b` for tests/<dir>/a/b.rs in a bundled binary; None elsewhere."""
+    rel = file.relative_to(crate_dir).parts
+    if rel[0] != 'tests' or len(rel) < 3 or not (crate_dir / 'tests' / rel[1] / 'main.rs').exists():
+        return None
+    parts = [p.removesuffix('.rs') for p in rel[2:]]
+    if parts[-1] in ('mod', 'main'):
+        parts.pop()
+    return '::'.join(parts)
 
 
 def corpus_tests(root: Path) -> tuple[list[Target], list[str]]:
@@ -100,10 +115,23 @@ def corpus_tests(root: Path) -> tuple[list[Target], list[str]]:
                     problems.append(f'{where}: no cargo target owns this file')
                     continue
                 key = (package_name(crate_dir), flags)
-                targets.setdefault(key, Target(*key)).names.append(name)
+                target = targets.setdefault(key, Target(*key))
+                prefix = module_path(crate_dir, file)
+                if prefix is not None:
+                    target.exact = True
+                    name = f'{prefix}::{name}' if prefix else name
+                target.names.append(name)
     for target in targets.values():
         target.names = sorted(set(target.names))
     return sorted(targets.values(), key=lambda t: t.label), problems
+
+
+def workspace_packages(root: Path) -> set[str]:
+    """Packages below apps/ and crates/ plus top-level members such as xtask."""
+    manifests = [*root.glob('*/Cargo.toml'),
+                 *(m for top in ('apps', 'crates') for m in (root / top).glob('**/Cargo.toml'))]
+    return {package_name(manifest.parent) for manifest in manifests
+            if 'target' not in manifest.parts and 'node_modules' not in manifest.parts}
 
 
 def scrubbed_environment(data_home: str) -> dict[str, str]:
@@ -119,7 +147,7 @@ def run(root: Path, targets: list[Target], cargo_args: list[str]) -> int:
         env = scrubbed_environment(data_home)
         for target in targets:
             command = ['cargo', 'test', *cargo_args, '-p', target.package, *target.flags,
-                       '--', '--ignored', *target.names]
+                       '--', '--ignored', *(['--exact'] if target.exact else []), *target.names]
             done = subprocess.run(command, cwd=root, env=env, capture_output=True, text=True)
             passed = bad = 0
             for line in done.stdout.splitlines():
@@ -145,12 +173,25 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=(__doc__ or '').splitlines()[0])
     parser.add_argument('--root', type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument('--list', action='store_true', help='print the selection and exit')
+    parser.add_argument('--package', action='append', default=[], metavar='NAME',
+                        help='only targets of this Cargo package (repeatable; change-scoped gate)')
     parser.add_argument('cargo_args', nargs='*', default=['--offline', '--locked'],
                         help='extra cargo test arguments (default: --offline --locked)')
     args = parser.parse_args(argv)
     targets, problems = corpus_tests(args.root)
+    if args.package:
+        unknown = set(args.package) - {t.package for t in targets} - workspace_packages(args.root)
+        if unknown:
+            print(f'unknown package(s): {", ".join(sorted(unknown))}', file=sys.stderr)
+            return 2
+        targets = [t for t in targets if t.package in args.package]
     for problem in problems:
         print(f'problem: {problem}', file=sys.stderr)
+    if args.package and not targets:
+        # A selection without corpus tests is an honest zero, not a refusal,
+        # unless the scan itself found a corpus test no target compiles.
+        print(f'corpus tests: none in the selected package(s) {", ".join(sorted(args.package))}')
+        return 1 if problems else 0
     if args.list:
         for target in targets:
             print(f'{target.label}: {len(target.names)}')

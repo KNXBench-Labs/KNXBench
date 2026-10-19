@@ -60,7 +60,7 @@ function fresh(settings: Record<string, unknown> = {}): Fixture {
   return { settings: { releaseChecksEnabled: false, ...settings }, puts: [], versionRequests: 0, unexpected: [] };
 }
 
-test("opens on a first alpha start, is remembered on Escape, and stays closed after a reload", async ({ page }) => {
+test("opens on a first alpha start, is remembered on Escape, and stays closed after a reload", { tag: "@exclusive" }, async ({ page }) => {
   const fixture = fresh();
   await serve(page, fixture);
   await page.goto("/");

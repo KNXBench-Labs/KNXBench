@@ -26,8 +26,8 @@ The test intentionally does not claim revision chronology from filenames.
 
 ```text
 KNXBENCH_RESTORE_EXPORT_MANIFEST=/private/exports/manifest.json \
-  cargo test -p knx-app --test authorized_restore_exports \
-  authorized_restore_point_exports_match_private_baselines_and_native_roundtrips \
+  cargo test -p knx-app --test it \
+  authorized_restore_exports::authorized_restore_point_exports_match_private_baselines_and_native_roundtrips \
   -- --ignored --exact --nocapture
 ```
 

@@ -74,6 +74,20 @@ async function openExplorer(page: Page, m: Catalogue, width: number) {
 const label = (page: Page, text: string) => page.locator(".project-explorer .tree-label", { hasText: new RegExp(`^${text}$`) });
 const toggle = (page: Page, text: string) => page.locator(`.project-explorer .tree-toggle[aria-label="${text}"]`);
 
+// The installed clock keeps flowing while the project opens, so where the
+// twelve-second pulse falls in a fixed `runFor` window depends on how long
+// opening took (on a loaded host it can start and end inside the window).
+// Step the clock until a pulse has started instead of assuming its phase.
+const PULSE_STEP_MS = 200;
+async function runUntilPulse(page: Page) {
+  const explorer = page.locator(".project-explorer");
+  for (let elapsed = 0; elapsed <= 12_000 + PULSE_STEP_MS; elapsed += PULSE_STEP_MS) {
+    if (await explorer.getAttribute("data-tree-pulse") === "") return;
+    await page.clock.runFor(PULSE_STEP_MS);
+  }
+  throw new Error("no structure-line pulse within one interval");
+}
+
 /** Computed style of a nested row's stem (::before) and tick (::after). */
 async function lineOf(page: Page, text: string) {
   return label(page, text).evaluate((el) => {
@@ -140,8 +154,7 @@ test("lines connect every child, grow below a node opened by hand and pulse abou
   if (process.env.KNX_P2_CAPTURE_DIR) await page.locator(".project-explorer").screenshot({ path: `${process.env.KNX_P2_CAPTURE_DIR}/lines-standard.png` });
   const explorer = page.locator(".project-explorer");
   await expect(explorer).not.toHaveAttribute("data-tree-pulse");
-  await page.clock.runFor(12_000);
-  await expect(explorer).toHaveAttribute("data-tree-pulse", "");
+  await runUntilPulse(page);
   // The explorer pane is short: the first device row is on screen, so it pulses.
   expect((await lineOf(page, "1.1.1 Switch actuator")).stemAnimation).toBe("knx-tree-pulse");
   await page.clock.runFor(2_400);
@@ -154,8 +167,10 @@ test("a pulse in a long tree touches only the rows on screen", async ({ page }) 
   await page.clock.install({ time: new Date("2026-10-14T12:00:00Z") });
   await serve(page, "en", "inherit", 400);
   await openExplorer(page, en, 1440);
-  await page.clock.runFor(12_000);
-  await expect(page.locator(".project-explorer")).toHaveAttribute("data-tree-pulse", "");
+  // Expand-all renders 400+ rows; the pulse marks the rows on screen when it
+  // starts, so the tree must be there before the clock reaches the pulse.
+  await expect.poll(() => page.locator(".project-explorer .tree-root li li").count()).toBeGreaterThan(400);
+  await runUntilPulse(page);
   const counts = await page.locator(".project-explorer").evaluate((el) => {
     const box = el.getBoundingClientRect();
     const marked = [...el.querySelectorAll<HTMLElement>("li[data-tree-pulse-row]")];

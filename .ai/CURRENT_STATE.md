@@ -1,4 +1,12 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-10-19 02:45
+- **Completed:** UP258 stage 0 accepted: fourth independent review (Codex `gpt-6.1-sol`, high) verdict accept, F1–F7 fixed; remaining F8 (identity stop reason not cross-checked against identity items) is MINOR, non-blocking, recorded in OPEN_WORK and the contract. Delivery: full package gate on the branch, then fast-forward of `main` if it has not moved.
+- **Pending/Next Steps:** Owner approval before posting the stage-0 reporter request (draft in `docs/support/issue-22-up258-evidence-request.md`); it needs a build containing ADR-0143. Then, on the reporter's ZIP: offline comparison of the 1514 octets with KNXBench's source interpretation (LegacyPatchAlways, byte order, tables). Follow-up: F8. Stage 1 (3 identical octets) stays blocked on a pre-Verify-Mode receipt and exact-range restore contract.
+- **Notes for Codex oder Claude:** The web entry still offers only `generic-identity-v1`. No bus contact in this whole package.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-10-19 02:10
 - **Completed:** UP258 stage 0 correction round 3 on `feat/up258-stage0-20261018` (local commits `8e7612a0` F6, `0a359ef4` F7 plus docs; not pushed): one identity-sequence validator replays `identity_reads` in both archive formats (13 impossible sequences were accepted before); PID78 comparisons over `MAX_COMPARISON_OCTETS` = 64 are refused at derivation instead of after acquisition. Gates: five-crate tests 3076/0/100 ignored, public package 3/3, private corpus 155/155, Clippy, xtask, docs. Log `.ai/logs/2026-10-18_claude_up258-stage0-memory-evidence.md`.
 - **Pending/Next Steps:** Re-review and merge; the hardware run still awaits the reporter's explicit read consent.

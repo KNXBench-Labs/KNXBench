@@ -105,7 +105,8 @@ ETS-programmed state offline with KNXBench's source interpretation.
   refusal) ends its range, an error ends the run and is the stop reason, an
   unread chunk outside an ended range means `cancelled`, and a complete run
   with nothing ended has no stop reason except the caller's
-  `tunnel-disconnect-unconfirmed`. `read_bundle` refuses format 2 rather than
+  `tunnel-disconnect-unconfirmed`. Not yet checked: whether an *identity*
+  stop reason matches the identity items (open work, MINOR). `read_bundle` refuses format 2 rather than
   dropping its memory. Unread octets are never zero-filled. Same create-only
   `0600` writer with reread. The acquisition plan is opaque: only
   `prepare_memory` (ProductDB derivation) builds it, `acquire_memory` takes

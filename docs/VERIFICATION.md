@@ -50,7 +50,9 @@ changed file; browser specs whose import/navigation closure reaches a changed
 web file; production suites for production-bundle inputs; bindings when
 `knx-projection` is affected; corpus tests of the affected packages; website
 and story tests for their directories. A path without a rule selects the
-complete gate. `--full` runs the complete web profile, the whole Rust workspace,
+complete gate. `--full` runs the complete web profile (which itself holds the
+documentation, tool-test, lane-guard, xtask and diff checks, so the runner
+lists it as one stage), the whole Rust workspace,
 the bindings check, every corpus target, website and story tests.
 
 The receipt (`target/package-gates/<id>/receipt.json`) holds the plan with the

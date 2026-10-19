@@ -12,6 +12,31 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## UI feedback set delivered — UI-05 and whole-set corrections (19 October 2026)
+
+UI-05 (word-safe resizable tables) and the corrections from the
+[whole-set review](goals/ui-feedback-2026-10-18.md#delivery-record-1819-october-2026)
+are on `main`. Resized-table row actions keep the 24 px target floor of UI-02.
+Tables and the File menu convert DOMRect and window readings to CSS layout
+pixels under application zoom (80–150%). File submenus share one 220 px minimum
+and expand inline where no side keeps it. The open menu paints above the
+toolbar. Inline submenus open by click, tap or keyboard only. A press with
+mouse, touch or pen no longer folds the open submenu before it lands. The first
+level measures itself and scrolls or moves left when it does not fit, so Logout
+stays reachable at 150% in a 601 px high window. Presentation only: no project
+data, API, schema or manufacturer grid change.
+
+Evidence: the full 16-stage gate on the delivery merge `951a5451` passed (web
+receipt complete, success and frozen with 66 of 66 stages; 4,925 Rust tests;
+private corpus 155 of 155; clippy, fmt, bindings, layering, headers, anchors,
+ledger and 223 tooling tests). Worker runs before it covered 4,000 Vitest cases
+and the full default browser lane (842). Every fix round was reviewed by the
+other vendor; the last review accepted without findings. Zoom behaviour is
+measured in Chromium only, not in WebKitGTK
+([KL-130](limitations/KL-130-ZOOM-application-zoom.md)). Open follow-ups: pane
+drags under zoom and a table zoom case through the scale setting
+([open work](OPEN_WORK.md#ui-feedback-packages-18-october-2026)).
+
 ## Offline System-2 source-field preview (18 October 2026)
 
 The existing byte-order probe now supports an offline preview and a distinct

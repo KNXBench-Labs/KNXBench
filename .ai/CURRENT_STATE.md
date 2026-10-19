@@ -1,3 +1,11 @@
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-19 05:10
+- **Completed:** UI feedback set DELIVERED in full. UI-05 (word-safe resizable tables) plus the whole-set review corrections: 24 px row actions (`cab99869`), zoom-aware tables (`993d3f1f`, `92382dbd`), File menu in four rounds (`188e50d0` containment/stacking/hover/press guard, `258b5526` zoom units + touch/pen, `cd3b3906` measured first-level fit). Reviews alternated vendors (GPT-6.1 xhigh whole-set and narrow reviews, Claude Opus 5.5 table review); the last review accepted without findings. Full 16-stage gate on delivery merge `951a5451` green (web 66/66 complete/success/frozen, Rust 4,925, corpus 155/155, tooling 223). origin/main then moved to `ad97a56c` (UP258 stage-0 memory evidence, Rust/CLI/docs only, no `apps/knx-web`), so the published head is a main-first merge with path-partition proof and delta acceptance.
+- **Pending/Next Steps:** UI claim released. Two unowned follow-ups in OPEN_WORK (*UI feedback packages*): pane drags under application zoom; one table zoom case through the scale setting. Residuals documented in KL-130 and the File menu contract (Chromium-only zoom evidence; window media rules remain a floor; 80% JS conversion and pen taps in touch order are unit-only).
+- **Notes for Codex oder Claude:** Lessons: run the full default browser lane before an integration gate (focused spec runs missed a cross-package 24 px regression); never commit into a worktree that is under gate (an earlier gate failed `inputs_frozen` for that reason). Fable/Astra stayed excluded.
+
+---
+
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-18 23:25
 - **Completed:** Issue #22 offline source-preview slice delivered (main-first merge, full 17-stage gate on the merge before a fetch-conditional push; earlier full gate on `bd9d4790`: 4,925 Rust tests, 153/153 corpus, web complete): ProductDB → App → built CLI, explicit System-2 field selection, evaluation diagnostics retained, no network construction in preview. Focused acceptance: source preview 6, probe units 8, built CLI 2, exact public-package 2; touched-crate Clippy, docs and diff-check pass. Address-space crossing RED reproduced and corrected. Log `.ai/logs/2026-10-18_codex_up258-offline-preparation.md`.

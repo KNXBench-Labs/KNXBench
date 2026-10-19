@@ -40,7 +40,8 @@ ranges without side effects. No hardware has exercised this profile.
    `project_tool_metadata`, then every `AbsSegment` in source order and the one
    Device Object PID 78 `CompareProp`. No product is named in code.
 2. The derivation refuses whole — no partial profile — on another shape, a
-   missing or repeated PID 78 comparison, empty inline data, a zero size, a
+   missing or repeated PID 78 comparison, empty inline data or more than the
+   64 octets the archive records (`MAX_COMPARISON_OCTETS`), a zero size, a
    range reaching `FFFFh` (where CP §3.5.2 switches to the user-memory
    service), overlapping ranges, more than 8 ranges or more than 2048 octets
    (`knx_core::commissioning::declared_memory`).
@@ -63,7 +64,7 @@ ranges without side effects. No hardware has exercised this profile.
    basis, and private. Format 1 stays byte-identical. The reader recomputes
    the chunk plan and coverage and refuses evidence that does not follow from
    them, memory read without the recorded identity matching the assertions,
-   chunk orders the collector cannot produce, and duplicate ZIP entries
+   chunk or identity-item orders the collector cannot produce, and duplicate ZIP entries
    (checked in the raw central directory, which must be the one the `zip`
    crate reads: no ZIP comment, same offsets). Observer snapshots with the
    collector's one in-flight chunk stay exportable. Only the ProductDB derivation can

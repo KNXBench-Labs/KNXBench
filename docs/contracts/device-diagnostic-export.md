@@ -57,7 +57,9 @@ ETS-programmed state offline with KNXBench's source interpretation.
   requires the shape `system2::project_tool_metadata` accepts, then takes every
   `LdCtrlAbsSegment` (address, size) in source order and the one Device Object
   PID 78 `LdCtrlCompareProp`. It refuses whole on another shape, zero or
-  repeated PID 78 comparisons, empty inline data, a zero size, a range
+  repeated PID 78 comparisons, empty inline data or more than 64 octets of it
+  (`MAX_COMPARISON_OCTETS`, the archive's bound, so every admitted plan is
+  exportable), a zero size, a range
   reaching `FFFFh`, overlap, more than 8 ranges or more than 2048 octets. For
   `M-0001_A-9205-04-9270`: `0116h`/330, `0260h`/416, `0400h`/512, `3C00h`/256,
   1514 octets in 128 reads (public-package test).
@@ -91,9 +93,14 @@ ETS-programmed state offline with KNXBench's source interpretation.
   carries neither, except in an observer snapshot (`complete: false`): there
   one chunk may be in flight (attempted, not completed, no bytes, no error),
   with nothing after it attempted and never inside a range or run already
-  ended. Identity items follow the same in-flight rule in both formats, so
-  every observer snapshot is exportable; complete reports keep the strict
-  rule. The chunk order must be one the collector can produce: a
+  ended. Identity items (both formats) must follow `identity_reads` exactly:
+  an item with an outcome was attempted, then completed; the next item is
+  touched only after an outcome that lets the collector go on (no error, no
+  read contradicting its assertion, and after the descriptor only an exact
+  read; a refused or partial PID 12 still continues to PID 78); after an
+  untouched item, the one in-flight item (`complete: false` only) or a
+  stopping item, every later item is wholly untouched. So every observer
+  snapshot is exportable; complete reports keep the strict rule. The chunk order must be one the collector can produce: a
   refusal or partial answer (at least one octet; an empty answer is a
   refusal) ends its range, an error ends the run and is the stop reason, an
   unread chunk outside an ended range means `cancelled`, and a complete run
@@ -203,12 +210,14 @@ separation); `knx-cli`
 `device_diagnostics` (2, real binary; plus 3 for the memory profile: preview
 with a silent loopback gateway, `--simulate` end to end, refusals); memory
 profile also `knx-core` `declared_memory` (5), `knx-productdb`
-`system2_declared_segments` (4) and the ignored exact public-package test,
-`knx-app` `device_diagnostics_memory` (16: derivation, format-2 roundtrip,
+`system2_declared_segments` (5) and the ignored exact public-package test,
+`knx-app` `device_diagnostics_memory` (20: derivation, format-2 roundtrip,
 0600/no overwrite, strict refusals, format 1 unchanged, size ceiling, identity
 admission, chunk order, real fault roundtrips, duplicate and competing-end-record
 ZIPs for both formats, ZIP comment, every observer snapshot exportable,
-in-flight chunk shape) and the raw central-directory unit tests (4); web
+in-flight chunk shape, impossible identity sequences in each format, every
+snapshot of refused-PID12 and mismatch runs, the 64/65-octet PID 78 bound)
+and the raw central-directory unit tests (4); web
 component/client tests; built shell in
 Chromium against the real HTTP handlers and the regular simulator (EN/DE,
 1440/400 px, stop-with-partial), every downloaded ZIP independently re-verified.

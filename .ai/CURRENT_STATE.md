@@ -1,4 +1,12 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-10-19 02:10
+- **Completed:** UP258 stage 0 correction round 3 on `feat/up258-stage0-20261018` (local commits `8e7612a0` F6, `0a359ef4` F7 plus docs; not pushed): one identity-sequence validator replays `identity_reads` in both archive formats (13 impossible sequences were accepted before); PID78 comparisons over `MAX_COMPARISON_OCTETS` = 64 are refused at derivation instead of after acquisition. Gates: five-crate tests 3076/0/100 ignored, public package 3/3, private corpus 155/155, Clippy, xtask, docs. Log `.ai/logs/2026-10-18_claude_up258-stage0-memory-evidence.md`.
+- **Pending/Next Steps:** Re-review and merge; the hardware run still awaits the reporter's explicit read consent.
+- **Notes for Codex oder Claude:** Identity stop-reason consistency (e.g. `descriptor-unverified` vs the items) is not re-checked by the reader; only the item sequence is.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-10-19 01:35
 - **Completed:** UP258 stage 0 correction round 2 on `feat/up258-stage0-20261018` (local commits `b56714b2` F4, `ad72c0b1` F5 plus docs; not pushed): the diagnostic reader refuses ZIP comments (EOCD exactly at the end) and binds the raw directory walk to `ZipArchive` by directory start and per-entry central/local offsets (the competing-end-record duplicate bypass was real in both formats); observer snapshots with the collector's one in-flight item or chunk are exportable while the report is incomplete. Gates: five-crate tests 3071/0/100 ignored, public package 3/3, private corpus 155/155, Clippy, xtask, docs. Log `.ai/logs/2026-10-18_claude_up258-stage0-memory-evidence.md`.
 - **Pending/Next Steps:** Re-review and merge; the hardware run still awaits the reporter's explicit read consent.

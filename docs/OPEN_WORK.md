@@ -75,7 +75,7 @@ Each package needs its own scoped claim, review, tests and delivery evidence.
 | [WP-15](#wp-15--complete-module-scope-in-web-consumers) | P1 | Offline-ready; UI-owner coordination | Complete response-local module paths distinguish diagnostics and workspace identities. |
 | [WP-16](#wp-16--empty-directory-zip-integrity) | P1 | Offline-ready regression/hardening | Empty directories have valid CRC and complete compressed-stream representation. |
 | [WP-17](#wp-17--master-identity-provenance) | P1 | Offline-ready, schema/report contract first | Master identity winners, collisions and malformed declarations have truthful provenance. |
-| [WP-18](#wp-18--device-comparison-shows-what-differs) | P2 | Offline-ready (owner request, 19 Oct) | Differing bytes are marked in the raw hex rows; the comparison result shows only differences by default, with a toggle for all rows. |
+| [WP-18](#wp-18--device-comparison-shows-what-differs) | P2 | Delivered on branch, awaiting controller review/merge (19 Oct); no live-device acceptance | Differing bytes are marked in the raw hex rows; the comparison result shows only differences by default, with a toggle for all rows. |
 | [WP-19](#wp-19--sync-from-a-device-comparison) | P2 | Contract first; project → device needs bus-write consent (owner request, 19 Oct) | A comparison result offers *project → device* (the existing download) or *device → project* (adopt verified values, one undo step). |
 | [WP-20](#wp-20--system-family-in-the-device-list) | P2 | Offline-ready; cited mask table first (owner request, 19 Oct) | The device list shows each device's system family (System 1, 2, 7 or B) from its mask version. |
 
@@ -401,6 +401,20 @@ themes hold. The comparison stays read-only, and session-only tags are
 unchanged.
 [Comparison table](../apps/knx-web/src/ComparisonTable.tsx) ·
 [manual](manual/user-guide/05-devices-and-products.md#comparing-the-project-with-devices-p4-since-alpha-12).
+**Delivered state (19 October 2026, branch `feat/wp18-comparison-diff-20261019`,
+not yet merged):** the pure display rules live in
+[comparisonDiff.ts](../apps/knx-web/src/comparisonDiff.ts) (byte marks by an
+equal-length comparison of the server's hex text, plus the server's
+byte-level `changes`, which can only add *differing* marks; proven-equal
+filter). `ComparisonTable` renders per-byte marks, row byte counts and the
+*Show equal rows (N)* toggle; the Devices dialog and the Device checks
+panel both pass the server's `changes`. The
+[contract](contracts/device-comparison.md#result-display-wp-18-owner-amendment-19-october-2026)
+and ADR-0130 carry the amendment. Verified offline only (Vitest, the
+intercepted production-build browser spec in dark/light themes at 1440/400 px);
+no real device was read. Remaining boundaries: the Device checks panel's own
+differing-ranges table is unchanged; the toggle choice is per mounted table, not persisted;
+no forced-colours/high-contrast check beyond the shape/weight marks.
 
 #### WP-19 — Sync from a device comparison
 

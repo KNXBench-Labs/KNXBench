@@ -129,7 +129,11 @@ alpha boundary is not implemented functionality or an active work package.
 Devices has explicitly confirmed single/filtered-batch read-only comparison,
 progress/cancel, per-device failures and volatile tags. P3 content revisions
 invalidate old readings; identity is checked before memory. The 0701 address
-and association tables are decoded; all raw read ranges remain visible.
+and association tables are decoded; all raw read ranges remain reachable.
+Source builds after Alpha 14 (WP-18) open the result with differences only,
+mark differing and unread raw bytes without relying on colour, and reveal every
+row, including every raw read range, with **Show equal rows**
+([what differs](user-guide/05-devices-and-products.md#what-differs-wp-18-source-builds-after-alpha-14)).
 Named parameter rows show name/reference/bit metadata and separate project/device
 values for supported numeric and text fields. Unknown, incomplete or overwritten
 fields keep an explicit reason and all raw bytes. Negative signed project values

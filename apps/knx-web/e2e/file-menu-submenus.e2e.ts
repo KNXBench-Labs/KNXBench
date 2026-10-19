@@ -871,6 +871,8 @@ async function checkZoomedSubmenu(page: Page, id: string, scale: number) {
  * entries; the hit tests are about the menu. Pinning the date (timers keep running) replaces a
  * fixed wait for a toast that may or may not come, which raced on a loaded host.
  */
+// Local noon on purpose: Node and the browser share the host's time zone (the config sets no
+// `timezoneId`), so the page sees 12:00 wherever the gate runs; a UTC noon is late night at +12.
 const TOASTLESS_START = new Date("2026-10-14T12:00:00");
 async function startWithoutToast(page: Page) {
   await page.clock.setFixedTime(TOASTLESS_START);

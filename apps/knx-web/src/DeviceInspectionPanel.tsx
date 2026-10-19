@@ -249,7 +249,7 @@ export default function DeviceInspectionPanel({ project }: { project: ProjectTre
           <h5>{t("deviceChecks.loadStates")}</h5>
           {result.loadStates.length === 0 ? <p>{t("deviceChecks.noLoadStates")}</p> :
             <ul>{result.loadStates.map((state, index) => <li key={index}>{state.machine}: {state.state}</li>)}</ul>}
-          {result.decoded && <ComparisonTable rows={result.decoded} />}
+          {result.decoded && <ComparisonTable rows={result.decoded} changes={result.changes} />}
           <h5>{t("deviceChecks.changes")}</h5>
           {result.changes.length === 0 ? <p>{t("deviceChecks.noRanges")}</p> : <ResizableTable scrollClassName="device-checks-table-scroll" scrollLabel={t("deviceChecks.changes")} tableId="device-changes"
             columns={DEVICE_CHANGES_COLUMNS} className="device-checks-changes">

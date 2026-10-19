@@ -116,8 +116,9 @@ filter never edits or reorders the response rows.
   underline, unread bytes italic with a dotted underline, both carry a
   tooltip, and each raw row counts its differing and unread bytes in text.
 - The shared table also serves the device-check comparison
-  (`DeviceInspectionPanel`); there it receives no `changes` and marks by the
-  byte comparison alone. Its separate *Differing ranges* table is unchanged.
+  (`DeviceInspectionPanel`). Its response is the same `/api/device-compare`
+  shape, so it passes the same byte-level `changes` and follows the same
+  differences-only rule. Its separate *Differing ranges* table is unchanged.
 
 ## Required evidence
 

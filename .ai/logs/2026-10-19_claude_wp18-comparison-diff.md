@@ -24,8 +24,12 @@ Branch `feat/wp18-comparison-diff-20261019`, off `origin/main` `66dd858b`.
   reason; raw range fully read on both sides, equal length > 0, all equal and
   no `changes` byte. Everything else stays visible.
 - Toggle: a checkbox "Show equal rows (N)", per mounted table, not persisted.
-- `DeviceInspectionPanel` left unchanged (out of package scope); it gets the
-  new table behaviour without `changes`.
+- `DeviceInspectionPanel` (controller decision after the pause): its result is
+  the same `DeviceCompareResponse`, which already carries byte-level
+  `changes`, so it now passes them (one-line change). Unit test
+  `DeviceInspectionPanel.test.tsx` › "opens with differences only and never
+  hides a differing or unread byte, using the server's byte changes" was RED
+  before the change (row hidden) and GREEN after.
 - Existing e2e fixture's change run address corrected from 4003h to 4004h to
   match its own raw row (byte index 1 of the run at 4003h).
 

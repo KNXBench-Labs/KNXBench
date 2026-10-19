@@ -76,6 +76,29 @@ it("shows server-decoded tables and keeps unattributed raw values visible", asyn
   expect(table?.textContent).toContain("2/2/4"); expect(table?.textContent).toContain("CD 34");
 });
 
+it("opens with differences only and never hides a differing or unread byte, using the server's byte changes", async () => {
+  const changes = [
+    { address: 0x4000, segment: "seg-4", device: [0, 255], project: [1, 2] },
+    { address: 0x4031, segment: "seg-4", device: [0x23], project: [0x22] },
+  ];
+  apiMock.compareDevice.mockResolvedValue({ ...comparison, differingOctets: 3, changes, decoded: [
+    { kind: "raw", label: "", address: 0x4000, project: "01 02", device: "00 FF", reason: null },
+    { kind: "raw", label: "", address: 0x4010, project: "AA BB", device: "AA BB", reason: null },
+    { kind: "raw", label: "", address: 0x4020, project: "AA BB", device: "AA", reason: null },
+    { kind: "raw", label: "", address: 0x4030, project: "11 22", device: "11 22", reason: null },
+  ] });
+  await render(); await prepare(); await act(async () => button(en["deviceChecks.confirm"]).click()); await flush();
+  const table = host.querySelector(".comparison-decoded")!;
+  const location = () => [...table.querySelectorAll("tbody tr")].map((row) => row.querySelector("td.mono")?.textContent);
+  expect(location()).toEqual(["4000h", "4020h", "4030h"]);
+  const reported = [...table.querySelectorAll("tbody tr")][2];
+  expect([...reported.querySelectorAll(".comparison-byte")].map((byte) => byte.getAttribute("data-mark")))
+    .toEqual(["equal", "different", "equal", "different"]);
+  expect(host.querySelector(".comparison-hidden")?.textContent).toContain("1 equal row");
+  await act(async () => host.querySelector<HTMLInputElement>(".comparison-filter input[type=checkbox]")!.click());
+  expect(location()).toEqual(["4000h", "4010h", "4020h", "4030h"]);
+});
+
 it("stays entirely offline until asked and shows every readiness grade with its evidence", async () => {
   await render();
   expect(apiMock.getDeviceReadiness).toHaveBeenCalledTimes(1);

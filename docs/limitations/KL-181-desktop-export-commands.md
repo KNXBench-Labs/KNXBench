@@ -6,6 +6,13 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Shipped since alpha.12 (19 October 2026, WP-13)
+
+The fix (`72d407d1`, *the AppImage may save its own logs again*) is contained
+in `v0.1.0-alpha.12` and every later tag and absent from `v0.1.0-alpha.11`
+(`git merge-base --is-ancestor`). The retained record's "next AppImage" is
+therefore the alpha.12 AppImage; affected are alpha.5 to alpha.11 only.
+
 <!-- BEGIN retained catalogue record -->
 
 ## 181. AppImages up to alpha.11 cannot save the session log or a bus monitor capture

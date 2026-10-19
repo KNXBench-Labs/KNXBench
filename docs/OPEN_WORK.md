@@ -30,12 +30,14 @@ security, GitHub-issue, hardware or whole-codebase conformance audit.
   recovery work for its named application. The first diagnostic export from
   a real detector has arrived; this does **not** lift download admission.
   Shared probe/commissioning changes require coordination with that owner.
-- **New ownership supplement (`ddd22362`, 22:18):** issues #25/#26 belong
-  to `fix/issues25-26-20261018`: hide device-empty topology ranges and resolve
-  parameter-section captions through the existing text resolver. This caption
-  slice of WP-05 is not unclaimed; coordinate WP-05/WP-15 changes with that
-  owner as well. The supplement changes reservations, not the pinned audit's
-  product-capability evidence.
+- **Delivered (19 October 2026):** issues #25/#26 are on `main`: the
+  topology diagram hides device-empty ranges (display only) and supported
+  parameter-section captions resolve through the existing text resolver with
+  readable fallbacks. Remaining caption boundaries (source-language block and
+  separator captions, unresolved grid-axis references) are recorded in
+  [positional text templates](contracts/positional-text-templates.md); they are
+  open WP-05 scope, not claimed by anyone. The pinned audit's
+  product-capability evidence is unchanged.
 - The [17 October P1–P5](goals/open-work-2026-10-17/README.md) are delivered;
   P6–P8 are waiting/decision buckets, not an implementation queue. Do not
   rescue the object-function feature or rebuild plug-in adoption, note
@@ -148,7 +150,7 @@ activation/access interactions and unsupported fallback; browser regressions
 cover search, drafts, restricted rows, narrow layout and grid/row variants.
 Undefined hints stay visible as unsupported rather than guessed. Coordinate
 shared styles/table behaviour with the existing UI-05 owner before editing.
-Issue #26 already owns the section-caption resolver slice; do not duplicate it.
+The delivered #26 section-caption resolver is the base for this work; reuse it rather than adding a second one.
 [Grid ADR](adr/0137-declared-parameter-grids-reach-the-workspace.md) ·
 [gap census](research/2026-10-17-product-database-gap-census.md).
 
@@ -319,7 +321,7 @@ diagnostics or exchange draft/navigation identity; complete chains and an
 explicit older-server fallback have discriminating regression tests. This
 response-local identity is not a durable ETS ID, a project module-instance
 mapping or additional write authority (WP-07 stays separate). Coordinate shared
-web files with the existing UI-05/final integration and issue #26 owners.
+web files with any active owner named in `.ai/CURRENT_STATE.md`.
 [ADR-0063](adr/0063-parameter-scopes-preserve-evaluation-identity.md) ·
 [diagnostic grouping](../apps/knx-web/src/parameterPresentation.ts) ·
 [workspace index](../apps/knx-web/src/parameterWorkspace.ts).

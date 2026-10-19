@@ -22,6 +22,22 @@
 
 ---
 
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-19 00:11
+- **Completed:** Issues #25/#26 code and regression evidence accepted by independent review. #26 initial I1/I2/M3/M4 corrected through `f68cbff3`; final axis-budget witnesses and truthful delimiter-fallback copy `730be7a9`; final review `deleg_6c89c98d` accepted implementation/tests with one documentation nit, corrected in `fd5f1dd4`. Both row/column charge-removal mutants fail their exact HTTP assertions; source restored byte-exact. Main-first integration `616bb7b3` has `4cfcfbd7` first parent. Controller preflight: all 3,869 Vitest tests in 278 files pass, format/docs pass; focused caption HTTP 15/15 and UI 56/56 also rerun. No fix publication yet.
+- **Pending/Next Steps:** Freeze this candidate, run the complete package gate (web including permanent production Devices/Structure regressions, Rust workspace/desktop, Clippy, bindings, repository/tooling and private corpus). Reconcile remote movement before publication, then issue replies/closure, exact readback and owned cleanup. UI-05 now has its own additional review corrections, not an implementation prerequisite for these two fixes; its publication watcher was stopped rather than holding this delivery indefinitely. Do not commit into this worktree while its gate runs.
+- **Notes for Codex oder Claude:** Own `integrate/issues25-26-20261018` only. UI-05 and UP258 claims remain protected; no live bus, device, deployment or release action. Source templates, topology entities and original data remain unchanged. Current root checkout stays dirty/behind and is not synchronized by publication. Raw acceptance evidence stays private under task scratch `issue-fixes-20261018`.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-18 23:03
+- **Completed:** Issues #25/#26 implemented locally as separate commits `6602ede6` and `74c36dda`, main-first integration `b84164d3` on `3133a077`. #25 independently accepted after closing the hover-fixture and hidden-line reachability findings (22 component, 23 fixture browser and eight production heading cases). #26 worker focused checks: 69 HTTP, 101 UI, four production browser cases; parent inspected all four caption screenshots and source paths. Controller on the combined tree: 108 UI tests, build, fixture/tooling typechecks, format and documentation checks passed. Added permanent production browser coverage in the existing Devices/Structure configs.
+- **Pending/Next Steps:** Independent #26 full-feature review `deleg_885e2e31` is pending. Then resolve findings, reconcile newer main and UI-05, and run full integrated package acceptance before publication/issue closure. Extra #25 production-topology attempt was canceled while still queued with zero stages; that scope now lives in the maintained production Structure config. No full package acceptance or fix publication yet.
+- **Notes for Codex oder Claude:** Own `integrate/issues25-26-20261018` only; preserve UI-05 and exact UP258 claims. No schema, bus, device, deployment or release action. Original templates and project topology are preserved. Selected root remains dirty/behind and protected. Evidence is private task scratch `issue-fixes-20261018`; do not publish raw logs or local paths.
+
+---
+
 - **Last Agent:** Claude
 - **Timestamp:** 2026-10-19 02:45
 - **Completed:** UP258 stage 0 accepted: fourth independent review (Codex `gpt-6.1-sol`, high) verdict accept, F1–F7 fixed; remaining F8 (identity stop reason not cross-checked against identity items) is MINOR, non-blocking, recorded in OPEN_WORK and the contract. Delivery: full package gate on the branch, then fast-forward of `main` if it has not moved.

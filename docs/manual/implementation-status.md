@@ -2,6 +2,13 @@
 
 # Implementation status
 
+## Device-empty topology ranges (source builds after Alpha 14)
+
+The Topology diagram hides lines without devices and areas without a populated
+line. All ranges remain in the project tree, with the same editing and device
+creation actions. Devices with zero communication objects and unassigned devices
+remain visible. [Operating instructions](user-guide/03-buildings-and-topology.md#the-two-views).
+
 ## Product data and parameter presentation (Alpha 14)
 
 Manufacturer ZIPs that hold `.knxprod` packages install as a whole from the
@@ -52,6 +59,13 @@ now covered by a test of the shell itself. No Function can be edited through
 MCP or the CLI. [Comparison](user-guide/08-reports-and-diff.md#what-it-compares),
 [AI agents](user-guide/12-ai-agents.md#what-it-can-and-cannot-do) and
 [contract](../contracts/project-functions.md#comparison-desktop-and-mcp-17-october-2026).
+
+## Parameter captions (source-only after Alpha 14; integration pending)
+
+Issue #26 extends the existing text-parameter resolver to area captions and
+separator text. Readable fallbacks replace empty, marker-only or unresolved
+section names; tooltips preserve the source and reason. Device values and source
+metadata do not change. [Caption contract](../contracts/positional-text-templates.md#parameter-workspace-captions-issue-26).
 
 ## Parameter workspace (Alpha 14)
 

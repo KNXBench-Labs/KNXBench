@@ -2,7 +2,18 @@
 import { createRoot } from "react-dom/client";
 import type { EntityChange, GroupAddressFields, GroupAddressKey, ProjectDiffReport } from "../src/api";
 import ProjectDiffDetails from "../src/ProjectDiffDetails";
+import { TableWordFloors } from "../src/tableWordFloors";
 import "../src/styles.css";
+
+// Fixture-only counter: count measurement passes by native table identity so
+// scrolling tests can distinguish retained tables from newly mounted rows.
+const measurements = new WeakMap<HTMLTableElement, number>();
+(window as unknown as { diffTableMeasurements: typeof measurements }).diffTableMeasurements = measurements;
+const measure = TableWordFloors.prototype.measure;
+TableWordFloors.prototype.measure = function (table, count) {
+  measurements.set(table, (measurements.get(table) ?? 0) + 1);
+  return measure.call(this, table, count);
+};
 
 // 3,000 one-line added rows and 300 changed rows carrying a field table of
 // one to three lines, so row heights really vary.

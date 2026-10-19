@@ -51,7 +51,9 @@ const UNSTYLED_BY_DESIGN = new Set([
  */
 function ownedTokens(source: string): string[] {
   const found = new Set<string>();
-  for (const match of source.matchAll(/(?<![\w$-])([a-z][a-z0-9]*(?:-[a-z0-9]+)+)(?![\w$-])/g)) {
+  // Presentation IDs are adapter keys, not CSS classes applied by a panel.
+  const classSource = source.replace(/\btableId="[^"]*"/g, "");
+  for (const match of classSource.matchAll(/(?<![\w$-])([a-z][a-z0-9]*(?:-[a-z0-9]+)+)(?![\w$-])/g)) {
     const token = match[1];
     if (OWNED_PREFIXES.some((prefix) => token.startsWith(prefix))) found.add(token);
   }
@@ -66,6 +68,10 @@ function definedClasses(css: string): Set<string> {
 
 describe("diagnostic panels stay inside the shell", () => {
   const css = readFileSync(join(SRC_DIR, "styles.css"), "utf-8");
+
+  it("distinguishes presentation table IDs from diagnostic CSS class names", () => {
+    expect(ownedTokens('<ResizableTable tableId="bus-monitor" className="bus-monitor-row-new" />')).toEqual(["bus-monitor-row-new"]);
+  });
 
   it("has a stylesheet rule for every class name the panels apply", () => {
     const defined = definedClasses(css);

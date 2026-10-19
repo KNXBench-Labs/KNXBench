@@ -32,6 +32,12 @@ Last updated: 2026-10-18 07:55 CEST
 | --- | --- | --- |
 | [Project status storage metrics](contracts/project-status-metrics.md) | Current on-disk size of the open project's native file (may include unsaved recovery-journal growth), separate unsaved flag, active product database footprint including SQLite side files, and catalogue counts for manufacturers with products or programs; explicit missing/loading/error states | Implemented |
 
+## Local source changes
+
+| Feature | Scope | Availability |
+| --- | --- | --- |
+| Resizable data-table columns | Pointer/keyboard resizing below defaults, density/theme-aware cached header/cell word floors capped at 320 px, stable mounted maxima and local scrolling, measured-width announcements, per-column/table reset, validated browser-local preferences; narrow object/address/monitor and EN/DE 1440/1920 fit budgets verified (local scroll where floors exceed the pane); 18 native table surfaces, matrix select/address/name included; per-object columns stay fixed — [coverage and limits](contracts/table-column-widths.md) | Local-only |
+
 ## New in Alpha 14
 
 [Release scope](releases/alpha14.md) separates offline editing and product-data

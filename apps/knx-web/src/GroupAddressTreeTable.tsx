@@ -1,4 +1,5 @@
 /** Native hierarchical address table over the shared presentation index. */
+import ResizableTable from "./ResizableTable";
 import type { GroupAddressNode } from "./bindings/GroupAddressNode";
 import type { GroupRangeNode } from "./bindings/GroupRangeNode";
 import type { GroupAddressWorkspaceViewProps } from "./groupAddressWorkspaceView";
@@ -9,6 +10,15 @@ import { dptText, hasDptConflict, linkDirectionCounts, rangePath } from "./group
 import { groupAddressTreeEntries, limitGroupAddressEntries, type GroupAddressTreeEntry } from "./groupAddressPresentation";
 import HelpTip from "./HelpTip";
 import GroupAddressWindowNotice from "./GroupAddressWindowNotice";
+
+export const GROUP_ADDRESSES_COLUMNS = [
+  { id: "select", width: 80, min: 48 },
+  { id: "address", width: 140, min: 100 },
+  { id: "name", width: 240, min: 120 },
+  { id: "range", width: 200, min: 100 },
+  { id: "dpt", width: 200, min: 100 },
+  { id: "links", width: 160, min: 100 }
+];
 const CHECKBOX_CLICK = { shiftKey: false, ctrlKey: true, metaKey: false, preventDefault: () => {} };
 /** One step per tree level, capped so imported deep trees cannot push the table off screen. */
 const treeIndent = (depth: number) => `${Math.min(depth, 12) * 1.2}rem`;
@@ -30,8 +40,9 @@ export default function GroupAddressTreeTable(props: GroupAddressWorkspaceViewPr
   const visibleOrder = entries.flatMap(entry => entry.kind === "address" && entry.row.selectable ? [entry.row.node.id] : []);
   const checked = (ga: GroupAddressNode) => multiSelection?.kind === "group_address" && multiSelection.ids.has(ga.id);
   return (
-      <div className="workspace-table-wrap">
-        <table className="workspace-table address-table">
+      <div>
+        <ResizableTable scrollClassName="workspace-table-wrap" tableId="group-addresses"
+          columns={GROUP_ADDRESSES_COLUMNS} showReset={props.showColumnReset} className="workspace-table address-table">
           <thead>
             <tr>
               <th className="address-table-check">
@@ -129,7 +140,7 @@ export default function GroupAddressTreeTable(props: GroupAddressWorkspaceViewPr
               );
             })}
           </tbody>
-        </table>
+        </ResizableTable>
         {rows.length === 0 && (
           <p role="status">
             {installation.group_addresses.length === 0

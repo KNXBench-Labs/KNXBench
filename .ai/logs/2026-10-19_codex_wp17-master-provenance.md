@@ -135,6 +135,18 @@ reports 1,417 well-formed headers, 155 absent (ceiling 155); formatting and
 whitespace checks pass. The original failed receipt remains unchanged. No
 ceiling, test or runtime behavior was weakened; retry uses a new namespace.
 
+## Package gate attempt 2
+
+`7bd83f4a` passed the first eight static stages, including the corrected header
+check, anchors, ledger and corpus registration. Tool-tests then failed because
+the Rust layout guard follows conventional child modules, not a sibling file
+included via a custom `#[path]`. Cargo had compiled those tests; the guard's
+layout contract was not satisfied. Moved the review file byte-identically to
+`master_provenance/review.rs` and removed the custom attribute. No test assertion,
+production code or guard changed. All 25 provenance integration tests pass;
+the full tooling run passes (317 run, one skip). Failed gate 2 remains intact;
+gate 3 uses a distinct receipt directory and reruns the complete planned scope.
+
 ## Pending acceptance
 
 Maintained change-scoped package gate (all 90 affected default browser specs,

@@ -1,5 +1,4 @@
 //! Independent master identity provenance acceptance fixtures (ADR-0147).
-#[path = "master_provenance_review.rs"]
 mod review;
 use knx_productdb::{ingest_master_data, open_and_migrate, sha256_hex, Connection};
 

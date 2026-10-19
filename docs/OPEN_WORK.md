@@ -77,7 +77,7 @@ Each package needs its own scoped claim, review, tests and delivery evidence.
 | [WP-17](#wp-17--master-identity-provenance) | P1 | Offline-ready, schema/report contract first | Master identity winners, collisions and malformed declarations have truthful provenance. |
 | [WP-18](#wp-18--device-comparison-shows-what-differs) | P2 | Delivered on branch, awaiting controller review/merge (19 Oct); no live-device acceptance | Differing bytes are marked in the raw hex rows; the comparison result shows only differences by default, with a toggle for all rows. |
 | [WP-19](#wp-19--sync-from-a-device-comparison) | P2 | Contract first; project → device needs bus-write consent (owner request, 19 Oct) | A comparison result offers *project → device* (the existing download) or *device → project* (adopt verified values, one undo step). |
-| [WP-20](#wp-20--system-family-in-the-device-list) | P2 | Offline-ready; cited mask table first (owner request, 19 Oct) | The device list shows each device's system family (System 1, 2, 7 or B) from its mask version. |
+| [WP-20](#wp-20--system-family-in-the-device-list) | P2 | Delivered 19 Oct; a mask read from a device stays a separate session fact | The device list shows each device's system family (System 1, 2, 7 or B) from its mask version. |
 
 #### WP-01 — Idempotent unknown evidence
 
@@ -488,6 +488,17 @@ with an unknown mask show an explicit state; regressions cover every mapped
 family and the unknown case; the column follows the resizable-table contract
 and can be filtered like the existing list columns.
 [Devices workspace](../apps/knx-web/src/DevicesWorkspace.tsx).
+**State (19 October 2026):** delivered. One cited table of 37 rows in
+[`knx-core` `system_family`](../crates/knx-core/src/system_family.rs)
+([sources and rows](research/2026-10-19-mask-version-system-family.md));
+`GET /api/devices` carries a closed `system` state (`noProduct`,
+`noApplicationProgram`, `applicationNotInDatabase`, `applicationNotOfProduct`,
+`noMaskVersion`, `invalidMask`, `unknownMask`, `family`); the web client
+requires it on every row and admits it strictly, and the Devices list shows a
+sortable, filterable *System* column in EN/DE. **Remaining boundaries:** the mask read from a device is not shown or
+compared; masks the cited tables do not list stay *Unknown* until a cited row is
+added. The table reuses the commissioning `MaskVersion` type by import; the
+commissioning code itself (UP258 owner) is unchanged.
 
 ### Deliberate later scope and owner decisions — not ready-made coding jobs
 

@@ -28,9 +28,34 @@ It separates installation/KNX-line placement from complete building/room paths;
 a device listed in both branches is not counted twice.
 
 Filter by name, individual address, description, manufacturer, product, order
-number or placement. Click a column heading to sort it; click again to reverse
-it. Individual addresses sort numerically. The wide table scrolls locally on
-small screens rather than widening the whole page.
+number, system or placement. Click a column heading to sort it; click again to
+reverse it. Individual addresses sort numerically. The wide table scrolls
+locally on small screens rather than widening the whole page.
+
+### System column (source builds after Alpha 14)
+
+**System** names the KNX system family of each device: *System 1*, *System 2*,
+*System 7* or *System B*. Other profiles keep their own names, for example
+*System 300*, *Coupler*, *KNXnet/IP router* or *USB interface*. The value is the
+mask version that the device's application program **declares** in the product
+database; hover a family to see that mask (for example `0701h`). A mask read
+from a real device is not used here.
+
+The column never guesses. Instead of a family it can show:
+
+- *Unknown (mask 0AFDh)* — a mask that the cited KNX tables do not assign to a
+  family;
+- *No mask version* or *Unreadable mask “…”* — the program declares none, or
+  something that is not a mask;
+- *No application program*, *Program not installed* or *Program does not
+  belong to this product* — the device names no program, its program is not in
+  the product database, or its program link points at other hardware;
+- the product's own reason (for example *No product reference*) when the
+  product itself did not resolve.
+
+Filtering matches the shown text and the mask, so `System B`, `unknown` or
+`0701h` all work. The table and its sources are listed in the
+[research note](../../research/2026-10-19-mask-version-system-family.md).
 
 Click a row/name/address to open the existing device editor **as the central
 view**, with Properties still on the right. **Back** returns to the view you

@@ -43,20 +43,23 @@ and is held by `tools/tests/test_rust_gate_order.py`.
   an enclosing `test.describe`; tagged cases run once with one worker.
   `tools/browser_lanes.py` (gate stage `browser-lanes`, before the build) refuses
   an untagged use of a real-time primitive (`waitForTimeout`, `performance.now`,
-  `Date.now`, `requestAnimationFrame`, `setTimeout`, `setInterval`), also through
-  module or describe-local helpers and imported `.ts` helpers.
+  `Date.now`, `new Date().getTime()`, `requestAnimationFrame`, `setTimeout`,
+  `setInterval`, also in string code handed to `page.evaluate` and its
+  relatives), also through module, describe-local and imported helpers (named,
+  default, namespace and dynamic imports, re-exports, methods). A primitive in
+  a helper module outside any named function, for example in a Playwright
+  fixture, is refused in the helper; a test-side `.tsx` import is refused.
+  The `--grep` for the tag matches the whole tag (`@exclusive(?![\w-])`).
 - Compile the entire default case inventory before execution and split it by
   tag. Require exact case identity equality for each lane, passed expectations,
   one successful result, retry zero and no skips. Lane union preserves all cases.
   A lane without cases is recorded as `empty` with the inventory as its reason;
   it is never asked to run nothing.
-- Dedicated production modes remain separate suites: catalogue, communication,
-  device-download-support, devices, dialogs, ga-members-download, group-addresses,
-  instructions, notes, parameters, reload-guard, structure, task-status, updates
-  and ux-feedback. Each runs its untagged cases with the worker default and its
-  tagged cases alone (`production-<suite>` / `production-<suite>-exclusive`).
-  No dev-versus-production deduplication. All production servers are static
-  `vite preview` instances; API state lives in page-local route fixtures.
+- Dedicated production modes remain separate and serial: catalogue,
+  communication, device-download-support, devices, dialogs, ga-members-download,
+  group-addresses, instructions, notes, parameters, reload-guard, structure,
+  table-columns, task-status, updates and ux-feedback. Each runs once with one
+  worker, as its config pins. No dev-versus-production deduplication.
 - Existing common-directory workspace/alpha/browser leases are respected in fixed
   order and retained for the whole package in this first version. Shorter locks,
   cross-suite parallelism, Rust/nextest/corpus work and GPU work are deferred.

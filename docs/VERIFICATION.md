@@ -46,19 +46,26 @@ The routine run always does the cheap static checks (format, documentation,
 browser lane guard, the five xtask checks, Python tool tests, diff check) and
 then only what the changed paths can affect: the Rust members that changed and,
 for library changes, their reverse dependents; crates whose sources name a
-changed file; browser specs whose import/navigation closure reaches a changed
-web file; production suites for production-bundle inputs; bindings when
-`knx-projection` is affected; corpus tests of the affected packages; website
-and story tests for their directories. A path without a rule selects the
-complete gate. `--full` runs the complete web profile (which itself holds the
+changed, deleted or renamed file; web build, typechecks and Vitest for web
+changes and for repository files the web unit tests read; browser specs whose
+import/navigation closure reaches a changed web file; production suites for
+production-bundle and runner inputs and for changes to their own specs;
+bindings when `knx-projection` or the generated bindings change; corpus tests
+of the affected packages; website and story tests for their directories. A
+path without a rule selects the complete gate, and so does a change to the
+planner (`tools/gate_scope.py`) or this runner. `--full` runs the complete web profile (which itself holds the
 documentation, tool-test, lane-guard, xtask and diff checks, so the runner
 lists it as one stage), the whole Rust workspace,
 the bindings check, every corpus target, website and story tests.
 
 The receipt (`target/package-gates/<id>/receipt.json`) holds the plan with the
 paths that selected each stage, every stage's exit, wall time and counts, and
-the source fingerprint at start and end. Run it on a committed candidate in a
-worktree nobody edits meanwhile. It takes the usual leases (browser stages via
+the source fingerprint at start and end. The plan includes staged, unstaged
+and untracked files, so a dry run shows what an uncommitted change would
+select; for acceptance, run it on a committed candidate in a worktree nobody
+edits meanwhile, so the receipt names the commit it proves. It refuses to start
+on an empty change set and while `apps/knx-web/src/bindings` holds uncommitted
+changes that its bindings stage would restore. It takes the usual leases (browser stages via
 the web gate, Rust and corpus stages under `knx-workspace-gates.lock`) and
 links the private corpus from the main checkout only for the corpus stage.
 

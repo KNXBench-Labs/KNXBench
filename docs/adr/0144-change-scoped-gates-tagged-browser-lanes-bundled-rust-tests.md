@@ -40,18 +40,41 @@ are implemented.
    the stages they can affect. Cheap static checks always run. Rust tests run
    for the changed members and, when a library input changed (anything but
    `tests/`, `benches/`, `examples/` or Markdown), for every member that
-   depends on it; crates whose sources name a changed repository file re-run
-   too. Browser specs run when their static import and navigation closure
-   reaches a changed web file; runner, build and launch inputs select all of
-   them. Production suites run only for production-bundle inputs. Corpus tests
-   run for the affected packages only. A path no rule recognises selects the
-   complete gate. The plan and its reasons are part of the receipt.
+   depends on it. A crate whose sources name a changed repository path re-runs
+   too, with its dependents when the name sits in its library; the names are
+   collected from string literals whether the path still exists, so deleting
+   or renaming a read file re-runs its readers. Web build, typechecks and the
+   whole Vitest suite run for every web change and for repository files that
+   web sources or unit tests read (a relative path literal or a run of path
+   segments such as `"crates", "knx-app", "src", "progress.rs"`). Browser specs
+   run when their static import and navigation closure reaches a changed web
+   file; runner, build and launch inputs select all of them. A production
+   suite runs for production-bundle and shared runner inputs and when one of
+   its own spec files or their test helpers changed; application sources are
+   covered by the default lane. Generated bindings select the bindings check.
+   Corpus tests run for the affected packages only. A path no rule recognises
+   selects the complete gate: inside `apps/knx-web/` only `src/`, `e2e/`,
+   `presets/`, `themes/`, Playwright configs and the named build and runner
+   inputs have rules. A change to the planner or the package runner itself
+   selects the complete gate. The runner refuses an empty change set (it would
+   test nothing) and uncommitted bindings when it would regenerate them. The
+   plan and its reasons are part of the receipt.
 2. **Browser cases are parallel unless they measure real time.** Cases whose
    assertions depend on elapsed time or animation frames carry
    `{ tag: "@exclusive" }` on the test or an enclosing `describe` and run
-   alone. `tools/browser_lanes.py` refuses an untagged real-time primitive,
-   also through module, describe-local and imported helpers, before the build.
-   The hash policy file `apps/knx-web/browser-lanes.json` is gone.
+   alone. `tools/browser_lanes.py` refuses an untagged real-time primitive
+   before the build. It follows named, default, namespace and dynamic imports,
+   re-exports, `.js` specifiers and directory indexes; functions, arrow
+   bindings, object properties and class methods taint their callers. A
+   helper module has no tag of its own, so a primitive there that no named
+   function holds (module code, a Playwright fixture declared with `extend`)
+   is refused in the helper; so is a test-side import of a `.tsx` module,
+   which the guard cannot read. Code handed to the page as a string
+   (`page.evaluate("…")`) counts like code. The hash policy file
+   `apps/knx-web/browser-lanes.json` is gone. Production suites keep the one
+   worker their configs pin: they start their own preview servers, and four
+   workers measured no gain worth the unreviewed risk (473 s against 505.6 s
+   for the same 15 suites, under foreign load).
 3. **Each crate's integration tests are one binary** (`tests/it/main.rs` with
    one module per former file). A test that must own its process stays a
    standalone file and is named with its reason in

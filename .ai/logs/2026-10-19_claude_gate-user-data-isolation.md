@@ -56,12 +56,32 @@ test comments still claim otherwise (recorded in OPEN_WORK).
   `tools/user_data_guard.py` fingerprints the link and its target, follows
   symlinked directories once (cycle-safe) and adds `ctime`.
 
+## Review round 2 (Codex, accept_with_fixes)
 
-- `tools/tests/test_run_package_gate.py`: 10/10 OK; whole tool suite 311 OK
+XDG-01 confirmed fixed, XDG-02 partially. New: XDG-03 an unlistable (execute-
+only) directory gave an empty, "clean" fingerprint; XDG-04 an entry removed
+between listing and `lstat` crashed the gate before its receipt; XDG-05 a link
+such as `~/.config/knx/home -> $HOME` walked the whole home (and gate logs then
+counted as changes); XDG-06 the isolation test iterated the production set.
+Fixes: `user_data_snapshot` never raises and returns entries plus coverage
+problems; problems fail the receipt (`userDataUnchecked`); vanished entries are
+skipped (the other snapshot shows the change); a symlinked directory resolving
+to an ancestor of the knx directory or of `$HOME` is recorded and not walked;
+at most `MAX_ENTRIES` (5,000) entries; link entries recorded so retargeting is
+a change; the test asserts an explicit list of six stages. The complete gate
+running on the round-1 head was stopped.
+
+## Evidence
+
+- `tools/tests/test_run_package_gate.py`: 15/15 OK; whole tool suite 316 OK
   (1 skipped). Tests drive `check()` and `run_web_gate.checked_step()` with a
-  recording run. 7 mutants each turn one test red (web tool-tests not isolated,
-  package routing plain, symlink target ignored, symlinked dirs not followed,
-  ctime dropped, detection disabled, cycle protection removed); restored.
+  recording run. 14 mutants each turn a test red (web tool-tests not isolated,
+  package routing plain, rust-tests dropped from the set, symlink target
+  ignored, symlinked dirs not followed, ctime dropped, detection disabled,
+  cycle protection removed, unlistable directory silent, vanishing entry
+  crashes, ancestor links walked, no entry bound, link entries not recorded,
+  problems not failing the receipt); restored. On the dev machine's real
+  directories the snapshot finds 2 entries and no problems in under 1 ms.
 - The planner requires the complete gate for a runner change; it doubles as the
   proof that no test relies on the inherited values.
 

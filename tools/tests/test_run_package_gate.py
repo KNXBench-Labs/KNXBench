@@ -12,8 +12,18 @@ import unittest
 from tools import gate_scope
 from tools import run_web_gate
 from tools.run_package_gate import ISOLATED_STAGES, StageEnvironments, check, preflight, stage_plan
-from tools.user_data_guard import (isolated_environment, record_user_data, touched_user_data,
-                                   user_data_fingerprint, user_knx_dirs)
+from tools import user_data_guard
+from tools.user_data_guard import (Snapshot, isolated_environment, record_user_data, touched_user_data,
+                                   user_data_snapshot, user_knx_dirs)
+
+# Independent of the production set: dropping a stage from it must fail a test.
+REQUIRED_ISOLATED = ('tool-tests', 'rust-tests', 'bindings', 'corpus', 'website-tests', 'story-tests')
+
+
+def entries(dirs, home=None):
+    snapshot = user_data_snapshot(dirs, home)
+    assert snapshot.problems == [], snapshot.problems
+    return snapshot.entries
 
 
 def git(root: Path, *args: str) -> None:
@@ -98,7 +108,8 @@ class UserDataIsolation(unittest.TestCase):
                           'web-gate', 'fmt', 'clippy', 'diff-check'):
                 check(run, stage, ['true'], self.root, envs)
             check(run, 'bindings', ['true'], self.root, envs, extra={'TS_RS_EXPORT_DIR': 'out'})
-        for stage in ISOLATED_STAGES:
+        self.assertTrue(set(REQUIRED_ISOLATED) <= ISOLATED_STAGES)
+        for stage in REQUIRED_ISOLATED:
             self.assert_scratch(run.envs[stage], self.root / 'homes', stage)
         for stage in ('web-gate', 'fmt', 'clippy', 'diff-check'):
             self.assertEqual(run.envs[stage], self.plain, stage)
@@ -120,13 +131,13 @@ class UserDataIsolation(unittest.TestCase):
         (data / 'products.sqlite').write_bytes(b'v25')
         (data / 'old').write_bytes(b'x')
         dirs = [data, self.root / 'config/knx']
-        before = user_data_fingerprint(dirs)
-        self.assertEqual(touched_user_data(before, user_data_fingerprint(dirs)), [])
+        before = entries(dirs)
+        self.assertEqual(touched_user_data(before, entries(dirs)), [])
         (data / 'products.sqlite').write_bytes(b'v26 migrated')
         (data / 'old').unlink()
         (self.root / 'config/knx').mkdir(parents=True)
         (self.root / 'config/knx/settings.json').write_text('{}')
-        self.assertEqual(touched_user_data(before, user_data_fingerprint(dirs)),
+        self.assertEqual(touched_user_data(before, entries(dirs)),
                          sorted(str(p) for p in (data / 'products.sqlite', data / 'old',
                                                  self.root / 'config/knx/settings.json')))
 
@@ -140,12 +151,12 @@ class UserDataIsolation(unittest.TestCase):
         (data / 'products.sqlite').symlink_to(elsewhere / 'products.sqlite')
         (data / 'linked').symlink_to(elsewhere / 'nested', target_is_directory=True)
         (data / 'loop').symlink_to(data, target_is_directory=True)  # a cycle must not hang the walk
-        before = user_data_fingerprint([data])
+        before = entries([data])
         self.assertIn(str(data / 'linked/remembered'), before)
-        self.assertEqual(touched_user_data(before, user_data_fingerprint([data])), [])
+        self.assertEqual(touched_user_data(before, entries([data])), [])
         (elsewhere / 'products.sqlite').write_bytes(b'v26 migrated database')
         (elsewhere / 'nested/remembered').write_bytes(b'b')
-        self.assertEqual(touched_user_data(before, user_data_fingerprint([data])),
+        self.assertEqual(touched_user_data(before, entries([data])),
                          [str(data / 'linked/remembered'), str(data / 'products.sqlite')])
 
     def test_a_same_size_rewrite_with_the_old_mtime_still_counts_as_touched(self) -> None:
@@ -154,20 +165,96 @@ class UserDataIsolation(unittest.TestCase):
         database = data / 'products.sqlite'
         database.write_bytes(b'v25')
         status = database.stat()
-        before = user_data_fingerprint([data])
+        before = entries([data])
         database.write_bytes(b'v26')
         os.utime(database, ns=(status.st_atime_ns, status.st_mtime_ns))
-        self.assertEqual(touched_user_data(before, user_data_fingerprint([data])), [str(database)])
+        self.assertEqual(touched_user_data(before, entries([data])), [str(database)])
 
     def test_a_touched_real_directory_fails_the_receipt_and_keeps_an_earlier_error(self) -> None:
         clean = {'planCompleted': True}
-        record_user_data(clean, {'/a': [1, 2, 3]}, {'/a': [1, 2, 3]})
-        self.assertEqual(clean, {'planCompleted': True, 'userDataTouched': []})
+        record_user_data(clean, Snapshot({'/a': [1, 2, 3]}), Snapshot({'/a': [1, 2, 3]}))
+        self.assertEqual(clean, {'planCompleted': True, 'userDataTouched': [], 'userDataUnchecked': []})
         failed = {'planCompleted': True, 'error': 'failed stage rust-tests'}
-        record_user_data(failed, {}, {'/home/alice/.local/share/knx/products.sqlite': [9, 9, 9]})
+        record_user_data(failed, Snapshot(), Snapshot({'/home/alice/.local/share/knx/products.sqlite': [9, 9, 9]}))
         self.assertFalse(failed['planCompleted'])
         self.assertEqual(failed['userDataTouched'], ['/home/alice/.local/share/knx/products.sqlite'])
         self.assertTrue(failed['error'].startswith('failed stage rust-tests; the real knx data'))
+
+    def test_a_directory_that_cannot_be_listed_fails_instead_of_counting_as_clean(self) -> None:
+        data = self.root / 'share/knx'
+        data.mkdir(parents=True)
+        (data / 'products.sqlite').write_bytes(b'v25')
+        data.chmod(0o100)  # execute-only: the file opens, the directory does not list
+        self.addCleanup(data.chmod, 0o700)
+        if os.access(data, os.R_OK):
+            self.skipTest('running with a capability that reads any directory')
+        snapshot = user_data_snapshot([data])
+        self.assertEqual(snapshot.entries, {})
+        self.assertEqual(len(snapshot.problems), 1)
+        self.assertIn('cannot be listed', snapshot.problems[0])
+        receipt = {'planCompleted': True}
+        record_user_data(receipt, snapshot, snapshot)
+        self.assertFalse(receipt['planCompleted'])
+        self.assertIn('could not be fully checked', receipt['error'])
+
+    def test_a_file_removed_while_scanning_is_a_change_not_a_crash(self) -> None:
+        data = self.root / 'share/knx'
+        data.mkdir(parents=True)
+        (data / 'products.sqlite').write_bytes(b'v25')
+        (data / 'products.sqlite-wal').write_bytes(b'wal')
+        before = user_data_snapshot([data])
+        real_entry = user_data_guard._entry
+
+        def vanishing(path: Path) -> list:
+            if path.name == 'products.sqlite-wal' and path.exists():
+                path.unlink()  # the app checkpoints between listing and lstat
+            return real_entry(path)
+
+        user_data_guard._entry = vanishing
+        self.addCleanup(setattr, user_data_guard, '_entry', real_entry)
+        after = user_data_snapshot([data])
+        self.assertEqual(after.problems, [])
+        self.assertEqual(touched_user_data(before.entries, after.entries), [str(data / 'products.sqlite-wal')])
+
+    def test_a_link_to_home_or_an_ancestor_is_reported_and_not_walked(self) -> None:
+        home = self.root / 'home'
+        (home / 'src/checkout/target').mkdir(parents=True)
+        (home / 'src/checkout/target/gate.log').write_text('busy')
+        config = home / '.config/knx'
+        config.mkdir(parents=True)
+        (config / 'legacy-vd-password').write_text('x')
+        (config / 'home').symlink_to(home, target_is_directory=True)
+        (config / 'up').symlink_to(home / '.config', target_is_directory=True)
+        snapshot = user_data_snapshot([config], str(home))
+        self.assertEqual(sorted(snapshot.entries), [str(config / 'home'), str(config / 'legacy-vd-password'),
+                                                    str(config / 'up')])
+        self.assertEqual(len(snapshot.problems), 2)
+        self.assertTrue(all('ancestor of the knx directory or of HOME' in p for p in snapshot.problems))
+        (home / 'src/checkout/target/gate.log').write_text('busier')
+        self.assertEqual(touched_user_data(snapshot.entries, user_data_snapshot([config], str(home)).entries), [])
+
+    def test_more_entries_than_the_bound_are_reported_not_walked_forever(self) -> None:
+        data = self.root / 'share/knx'
+        data.mkdir(parents=True)
+        for index in range(4):
+            (data / f'f{index}').write_text('x')
+        bound = user_data_guard.MAX_ENTRIES
+        user_data_guard.MAX_ENTRIES = 2
+        self.addCleanup(setattr, user_data_guard, 'MAX_ENTRIES', bound)
+        snapshot = user_data_snapshot([data])
+        self.assertEqual(len(snapshot.entries), 3)
+        self.assertIn('more than 2 entries', snapshot.problems[0])
+
+    def test_retargeting_a_linked_directory_counts_as_touched(self) -> None:
+        (self.root / 'one').mkdir()
+        (self.root / 'two').mkdir()
+        data = self.root / 'share/knx'
+        data.mkdir(parents=True)
+        (data / 'store').symlink_to(self.root / 'one', target_is_directory=True)
+        before = entries([data])
+        (data / 'store').unlink()
+        (data / 'store').symlink_to(self.root / 'two', target_is_directory=True)
+        self.assertEqual(touched_user_data(before, entries([data])), [str(data / 'store')])
 
 
 if __name__ == '__main__':

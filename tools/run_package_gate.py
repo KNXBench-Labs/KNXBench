@@ -29,7 +29,7 @@ import time
 if __package__ in (None, ''):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from tools import gate_scope
-from tools.user_data_guard import (USER_HOMES, isolated_environment, record_user_data, user_data_fingerprint,
+from tools.user_data_guard import (USER_HOMES, isolated_environment, record_user_data, user_data_snapshot,
                                    user_knx_dirs)
 from tools.web_gate_support import MeasuredRun, source_fingerprint
 
@@ -236,7 +236,7 @@ def main(argv: list[str] | None = None) -> int:
     env.update(PYTHONDONTWRITEBYTECODE='1', CARGO_TERM_COLOR='never')
     envs = StageEnvironments(env, isolated_environment(env, output / 'scratch-homes'))
     user_dirs = user_knx_dirs(env)
-    user_before = user_data_fingerprint(user_dirs)
+    user_before = user_data_snapshot(user_dirs, env.get('HOME'))
     run.receipt['isolatedHomes'] = {'stages': sorted(ISOLATED_STAGES),
                                     **{k: envs.isolated[k] for k, _ in USER_HOMES}}
     app = root / 'apps/knx-web'
@@ -314,7 +314,7 @@ def main(argv: list[str] | None = None) -> int:
     except KeyboardInterrupt:
         run.receipt['error'] = 'interrupted'
         run.receipt['planCompleted'] = False
-    record_user_data(run.receipt, user_before, user_data_fingerprint(user_dirs))
+    record_user_data(run.receipt, user_before, user_data_snapshot(user_dirs, env.get('HOME')))
     success = run.finish(before, source_fingerprint(root)) and run.receipt['planCompleted']
     run.receipt['success'] = success
     run.save()

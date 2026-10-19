@@ -13,11 +13,16 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import asdict, dataclass, field
+from fnmatch import fnmatch
 import json
 from pathlib import Path, PurePosixPath
 import re
 import subprocess
 import sys
+
+if __package__ in (None, ''):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from tools.run_web_gate import PRODUCTION_CONFIGS  # one list: the web gate's own
 
 WEB = 'apps/knx-web/'
 # Web inputs that every browser case consumes (server, build, runner or launch).
@@ -25,19 +30,21 @@ WEB_GLOBAL = re.compile(
     r'apps/knx-web/(package\.json|package-lock\.json|vite[\w.-]*\.ts|vitest[\w.-]*\.ts'
     r'|playwright\.config\.ts|browserTmp\.ts|tsconfig[\w.-]*\.json|index\.html|public/.*)$'
     r'|tools/(browser_tmp\.(py|cjs|d\.cts)|run_web_gate\.py|web_gate_support\.py|browser_lanes\.py)$')
-# Inputs whose risk is specific to the production bundle.
+# Web paths whose effect the static graph follows; any other web path selects
+# the complete gate (a new build config, an env file, a script).
+WEB_KNOWN = re.compile(r'apps/knx-web/((src|e2e|presets|themes)/.*|playwright\.[\w-]+\.config\.ts)$')
+BINDINGS = 'apps/knx-web/src/bindings/'
+# Inputs whose risk is specific to the production bundle or every production suite.
 PRODUCTION_INPUTS = re.compile(
     r'apps/knx-web/(package\.json|package-lock\.json|vite[\w.-]*\.ts|index\.html|public/.*'
-    r'|playwright\.[\w-]+\.config\.ts)$'
-    r'|tools/(browser_tmp\.(py|cjs|d\.cts)|run_web_gate\.py|web_gate_support\.py)$')
+    r'|playwright\.(?:[\w-]+\.)?config\.ts|browserTmp\.ts)$'
+    r'|tools/(browser_tmp\.(py|cjs|d\.cts)|run_web_gate\.py|web_gate_support\.py|browser_lanes\.py)$')
 RUST_GLOBAL = re.compile(r'(Cargo\.toml|Cargo\.lock|rust-toolchain\.toml|\.cargo/.*)$')
 DOCS = re.compile(r'(docs/.*|\.ai/.*|[^/]+\.md|LICENSE|ideas\.md|DREAMS\.md|devices\.md)$')
+# The planner and its runner decide what every other change runs.
+GATE_TOOLS = re.compile(r'tools/(gate_scope|run_package_gate)\.py$')
 TOOLS = re.compile(r'(tools/.*|\.github/.*)$')
-PRODUCTION_CONFIGS = (
-    'catalogue', 'communication', 'device-download-support', 'devices', 'dialogs',
-    'ga-members-download', 'group-addresses', 'instructions', 'notes', 'parameters',
-    'reload-guard', 'structure', 'task-status', 'updates', 'ux-feedback',
-)
+REPOSITORY_TOPS = ('apps', 'crates', 'xtask', 'docs', 'design', 'tools', 'website', 'story', 'data', 'demos')
 IMPORT = re.compile(r'''(?:\bfrom\s*|\bimport\s*\(?\s*|\bexport\s+\*\s+from\s*)["']([^"']+)["']''')
 GOTO = re.compile(r'''\.goto\(\s*(["'`])([^"'`]*)''')
 SCRIPT = re.compile(r'''<script[^>]*\bsrc=["']([^"']+)["']''')
@@ -99,15 +106,18 @@ def owning_member(members: dict[str, dict], path: str) -> str | None:
     return max(owners)[1] if owners else None
 
 
-def repository_reads(root: Path, members: dict[str, dict]) -> dict[str, set[str]]:
+def repository_reads(root: Path, members: dict[str, dict]) -> dict[str, dict[str, bool]]:
     """Members whose sources name another repository path (docs, fixtures, web files).
 
     Every string literal that looks like a relative path is resolved against
     the crate directory, the source file's directory and the repository root;
-    a literal naming an existing path outside the crate records the crate as
-    a reader of that path. Over-reporting only re-runs one crate's tests.
+    each resolution outside the crate records the crate as a reader of that
+    path, whether the path exists or not: a deleted or renamed file must still
+    re-run its readers. The value says whether the literal sits in a library
+    input (then the reader's dependents re-run too). Over-reporting only
+    re-runs one crate's tests.
     """
-    reads: dict[str, set[str]] = {}
+    reads: dict[str, dict[str, bool]] = {}
     literal = re.compile(r'"/?((?:\.\./)*[\w.@-]+(?:/[\w.@-]+)*/?)(["{])')
     root = root.resolve()
     for name, member in members.items():
@@ -115,6 +125,7 @@ def repository_reads(root: Path, members: dict[str, dict]) -> dict[str, set[str]
         for file in crate.rglob('*.rs'):
             if 'target' in file.parts:
                 continue
+            library = library_input(member['dir'], file.relative_to(root).as_posix())
             for match in literal.finditer(file.read_text(encoding='utf-8', errors='replace')):
                 text, end = match.group(1), match.group(2)
                 inner = re.sub(r'^(\.\./)+', '', text)
@@ -125,11 +136,50 @@ def repository_reads(root: Path, members: dict[str, dict]) -> dict[str, set[str]
                     text = text.rsplit('/', 1)[0] + '/'  # "dir/file-{n}": the directory is read
                 for base in (crate, file.parent, root):
                     candidate = (base / text).resolve()
-                    if candidate.exists() and candidate.is_relative_to(root) \
-                            and not candidate.is_relative_to(crate) and candidate != root:
-                        reads.setdefault(candidate.relative_to(root).as_posix(), set()).add(name)
-                        break
+                    if candidate.is_relative_to(root) and not candidate.is_relative_to(crate) \
+                            and candidate != root:
+                        readers = reads.setdefault(candidate.relative_to(root).as_posix(), {})
+                        readers[name] = readers.get(name, False) or library
     return reads
+
+
+SEGMENTS = re.compile(r'"[\w.@-]+"(?:\s*,\s*"[\w.@-]+")+')
+WEB_LITERAL = re.compile(r'''["'`]((?:\.\./)+[\w.@/-]+?)(?:\?[\w=&]*)?["'`]''')
+
+
+def web_reads(root: Path) -> dict[str, set[str]]:
+    """Repository paths outside the web app that web sources or tests read.
+
+    Two literal shapes are recognised: a relative path (`"../../../docs/x.csv"`,
+    resolved against the reading file) and a run of path segments passed to
+    `join` (`"crates", "knx-app", "src", "progress.rs"`) that starts at a
+    repository top-level directory. Existence is not required, so a deleted
+    file still selects its readers.
+    """
+    root = root.resolve()
+    app = root / WEB.rstrip('/')
+    reads: dict[str, set[str]] = {}
+    for top in ('src', 'e2e'):
+        for file in sorted((app / top).rglob('*')):
+            if file.suffix not in ('.ts', '.tsx') or 'bindings' in file.relative_to(app).parts:
+                continue
+            text = file.read_text(encoding='utf-8', errors='replace')
+            reader = file.relative_to(root).as_posix()
+            targets = [(file.parent / m.group(1)).resolve() for m in WEB_LITERAL.finditer(text)]
+            for run in SEGMENTS.finditer(text):
+                parts = re.findall(r'"([\w.@-]+)"', run.group(0))
+                if parts[0] in REPOSITORY_TOPS:
+                    targets.append(root.joinpath(*parts))
+            for target in targets:
+                if target.is_relative_to(root) and not target.is_relative_to(app) and target != root:
+                    reads.setdefault(target.relative_to(root).as_posix(), set()).add(reader)
+    return reads
+
+
+def ancestors(path: str) -> list[str]:
+    """The path and every parent directory, as repository-relative strings."""
+    parts = path.split('/')
+    return ['/'.join(parts[:i]) for i in range(len(parts), 0, -1)]
 
 
 def library_input(member_dir: str, path: str) -> bool:
@@ -226,12 +276,44 @@ def select_specs(app: Path, changed_web: list[Path]) -> tuple[list[str] | None, 
     return sorted(chosen), chosen
 
 
-def production_specs(app: Path, config: str) -> set[str]:
-    text = (app / f'playwright.{config}.config.ts').read_text(encoding='utf-8')
+def production_specs(app: Path, config: str) -> list[str] | None:
+    """Spec file patterns a production suite runs; None when it does not say (all).
+
+    A missing config selects nothing here; the web gate refuses it when it runs.
+    """
+    file = app / f'playwright.{config}.config.ts'
+    if not file.is_file():
+        return []
+    text = file.read_text(encoding='utf-8')
     match = re.search(r'testMatch:\s*(\[[^\]]*\]|"[^"]*")', text)
     if not match:
-        return set()
-    return {Path(name).name for name in re.findall(r'"([^"]+)"', match.group(1))}
+        return None
+    return [Path(name).name for name in re.findall(r'"([^"]+)"', match.group(1))]
+
+
+def select_production(app: Path, changed_e2e: list[Path]) -> dict[str, str]:
+    """Production suites one of whose own specs reaches a changed browser-test file.
+
+    Application sources are deliberately not followed here: a production suite
+    re-runs for its own test code and for production-bundle inputs (ADR-0144);
+    the default lane covers what the sources do.
+    """
+    app = app.resolve()
+    changed = {p.resolve() for p in changed_e2e}
+    graph = WebGraph(app)
+    specs = sorted((app / 'e2e').rglob('*.e2e.ts'))
+    chosen: dict[str, str] = {}
+    for config in PRODUCTION_CONFIGS:
+        patterns = production_specs(app, config)
+        for spec in specs:
+            if patterns is not None and not any(fnmatch(spec.name, p) for p in patterns):
+                continue
+            closure = graph.closure(spec)
+            hit = sorted(changed if closure is None else closure & changed)
+            if hit:
+                chosen[config] = hit[0].relative_to(app).as_posix()
+                break
+    return chosen
 
 
 # ---------------------------------------------------------------- planning
@@ -243,22 +325,32 @@ def plan(root: Path, changed: list[str], members: dict[str, dict] | None = None)
         return result
     members = cargo_members(root) if members is None else members
     reads = repository_reads(root, members)
+    readers_in_web = web_reads(root)
     seeds: set[str] = set()  # members whose library changed: reverse dependents re-run
     direct: set[str] = set()  # members whose own tests or test inputs changed
     web_changed: list[str] = []
     web_global = False
     for path in result.changed:
-        # Tests that read this file from another crate re-run wherever it lives.
-        matched = False
-        for prefix, readers in reads.items():
-            if path == prefix or path.startswith(prefix + '/'):
-                direct |= readers
-                for reader in readers:
-                    result.because(f'rust: {reader} (reads {prefix})', path)
-                matched = True
+        # Code that reads this file from elsewhere re-runs wherever the file lives.
+        for prefix in ancestors(path):
+            for reader, library in sorted(reads.get(prefix, {}).items()):
+                (seeds if library else direct).add(reader)
+                result.because(f'rust: {reader} (reads {prefix})', path)
+            for reader in sorted(readers_in_web.get(prefix, ())):
+                result.web = True
+                if not re.search(r'\.test\.tsx?$', reader):  # unit tests are in no browser graph
+                    web_changed.append(reader)
+                result.because('web: build, typecheck, vitest', path)
         if path.startswith(WEB):
+            if not (WEB_GLOBAL.match(path) or WEB_KNOWN.match(path)):
+                result.full = True
+                result.because('complete gate (no rule for this path)', path)
+                continue
             result.web = True
             result.because('web: build, typecheck, vitest', path)
+            if path.startswith(BINDINGS):
+                result.bindings = True
+                result.because('bindings: generated types', path)
             if WEB_GLOBAL.match(path):
                 web_global = True
                 result.because('web: every browser spec', path)
@@ -299,13 +391,16 @@ def plan(root: Path, changed: list[str], members: dict[str, dict] | None = None)
         elif path.startswith('story/'):
             result.story_tests = True
             result.because('story tests', path)
+        elif GATE_TOOLS.match(path):
+            result.full = True
+            result.because('complete gate (the gate planner or runner changed)', path)
         elif TOOLS.match(path):
             result.because('python tool tests', path)
             if path == 'tools/run_corpus_tests.py':
                 result.corpus_packages = ['*']
         elif DOCS.match(path):
             result.because('documentation checks', path)
-        elif not matched:
+        else:
             result.full = True
             result.because('complete gate (no rule for this path)', path)
     if result.full:
@@ -313,7 +408,7 @@ def plan(root: Path, changed: list[str], members: dict[str, dict] | None = None)
     names = set(members)
     affected = names if result.rust_all else reverse_closure(members, seeds) | direct
     result.rust_packages = sorted(affected)
-    result.bindings = 'knx-projection' in affected
+    result.bindings = result.bindings or 'knx-projection' in affected
     if result.corpus_packages != ['*']:
         result.corpus_packages = sorted(affected)
     if result.web:
@@ -321,10 +416,16 @@ def plan(root: Path, changed: list[str], members: dict[str, dict] | None = None)
         if web_global:
             result.browser_specs = ALL
         else:
-            specs, why = select_specs(app, [root / p for p in web_changed if (root / p).exists()])
+            existing = [root / p for p in dict.fromkeys(web_changed) if (root / p).exists()]
+            specs, why = select_specs(app, existing) if existing else ([], {})
             result.browser_specs = specs
             for spec, cause in why.items():
                 result.because(f'browser: {spec}', cause)
+            e2e = [p for p in existing if p.resolve().is_relative_to((app / 'e2e').resolve())]
+            for config, cause in select_production(app, e2e).items():
+                if config not in result.production_configs:
+                    result.production_configs.append(config)
+                result.because(f'web: production suite {config}', cause)
     return result
 
 

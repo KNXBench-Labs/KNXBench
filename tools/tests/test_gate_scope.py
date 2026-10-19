@@ -40,6 +40,15 @@ class Fixture:
             'crates/knx-core/src/lib.rs': '// core\n',
             'crates/knx-core/tests/doc_inventory.rs': 'const DOC: &str = "../../docs/spec/inventory.md";\n',
             'docs/spec/inventory.md': '# inventory\n',
+            'docs/spec/table.csv': 'a,b\n',
+            # knx-store compiles a repository document into its library.
+            'docs/spec/codes.csv': 'x\n',
+            'crates/knx-store/src/lib.rs': 'const C: &str = include_str!("../../../docs/spec/codes.csv");\n',
+            # A Vitest file reading a repository document and Rust sources by segments.
+            'apps/knx-web/src/table.test.ts': (
+                'const csv = readFileSync(new URL("../../../docs/spec/table.csv", import.meta.url));\n'
+                'const repo = join(here, "..", "..", "..");\n'
+                'const rust = [join(repo, "crates", "knx-core", "src", "lib.rs")];\n'),
         }
         for name, text in files.items():
             path = self.root / name
@@ -137,6 +146,59 @@ class GateScopeTests(unittest.TestCase):
         (self.fixture.root / 'apps/knx-web/src/Panel.tsx').write_text('import "./missing";\n')
         self.assertEqual(self.fixture.plan('apps/knx-web/src/Lonely.tsx').browser_specs,
                          ['app.e2e.ts', 'lonely.e2e.ts'])
+
+    def test_a_deleted_file_still_reruns_the_crates_that_read_it(self) -> None:
+        (self.fixture.root / 'docs/spec/inventory.md').unlink()
+        self.assertEqual(self.fixture.plan('docs/spec/inventory.md').rust_packages, ['knx-core'])
+
+    def test_a_file_compiled_into_a_library_reruns_the_library_and_its_dependents(self) -> None:
+        self.assertEqual(self.fixture.plan('docs/spec/codes.csv').rust_packages,
+                         ['knx-cli', 'knx-server', 'knx-store'])
+
+    def test_a_repository_file_read_by_a_web_unit_test_selects_the_web_checks(self) -> None:
+        document = self.fixture.plan('docs/spec/table.csv')
+        self.assertTrue(document.web)
+        self.assertEqual(document.browser_specs, [])
+        self.assertIn('web: build, typecheck, vitest', document.reasons)
+        rust = self.fixture.plan('crates/knx-core/src/lib.rs')
+        self.assertTrue(rust.web)
+        self.assertEqual(rust.browser_specs, [])
+
+    def test_every_production_suite_of_the_web_gate_is_known(self) -> None:
+        from tools import run_web_gate
+        self.assertEqual(gate_scope.PRODUCTION_CONFIGS, run_web_gate.PRODUCTION_CONFIGS)
+
+    def test_an_unrecognised_web_app_file_selects_the_complete_gate(self) -> None:
+        for path in ('apps/knx-web/postcss.config.cjs', 'apps/knx-web/scripts/proof.mjs',
+                     'apps/knx-web/.gitignore', 'apps/knx-web/.env.production'):
+            self.assertTrue(self.fixture.plan(path).full, path)
+        self.assertFalse(self.fixture.plan('apps/knx-web/src/Panel.tsx').full)
+
+    def test_shared_runner_inputs_select_every_production_suite(self) -> None:
+        for path in ('apps/knx-web/playwright.config.ts', 'apps/knx-web/browserTmp.ts',
+                     'tools/browser_lanes.py'):
+            self.assertEqual(self.fixture.plan(path).production_configs,
+                             list(gate_scope.PRODUCTION_CONFIGS), path)
+
+    def test_a_production_spec_or_its_helper_selects_its_suite(self) -> None:
+        self.assertEqual(self.fixture.plan('apps/knx-web/e2e/app.e2e.ts').production_configs, ['devices'])
+        self.assertEqual(self.fixture.plan('apps/knx-web/e2e/helper.ts').production_configs, ['devices'])
+        self.assertEqual(self.fixture.plan('apps/knx-web/src/Panel.tsx').production_configs, [])
+
+    def test_generated_bindings_select_the_bindings_check(self) -> None:
+        self.assertTrue(self.fixture.plan('apps/knx-web/src/bindings/Device.ts').bindings)
+
+    def test_a_path_read_by_a_crate_but_without_a_rule_still_selects_the_complete_gate(self) -> None:
+        walker = self.fixture.root / 'xtask/src/main.rs'
+        walker.parent.mkdir(parents=True)
+        walker.write_text('fn crate_dir(n: &str) -> String { format!("crates/{n}") }\n')
+        result = self.fixture.plan('crates/README.txt')
+        self.assertTrue(result.full)
+        self.assertIn('rust: xtask (reads crates)', result.reasons)
+
+    def test_changing_the_gate_planner_or_runner_selects_the_complete_gate(self) -> None:
+        for path in ('tools/gate_scope.py', 'tools/run_package_gate.py'):
+            self.assertTrue(self.fixture.plan(path).full, path)
 
     def test_website_story_and_tools_have_their_own_stages(self) -> None:
         self.assertTrue(self.fixture.plan('website/index.html').website_tests)

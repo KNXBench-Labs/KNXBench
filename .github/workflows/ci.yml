@@ -93,6 +93,7 @@ jobs:
           python3 -m unittest discover -s tools/tests -p test_browser_lanes.py
           python3 -m unittest discover -s tools/tests -p test_gate_scope.py
           python3 -m unittest discover -s tools/tests -p test_run_corpus_tests.py
+          python3 -m unittest discover -s tools/tests -p test_run_package_gate.py
           python3 tools/browser_lanes.py
 
       - name: Corpus gate (a missing corpus is never a pass)

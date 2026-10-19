@@ -127,8 +127,10 @@ def corpus_tests(root: Path) -> tuple[list[Target], list[str]]:
 
 
 def workspace_packages(root: Path) -> set[str]:
-    return {package_name(manifest.parent) for top in ('apps', 'crates')
-            for manifest in (root / top).glob('**/Cargo.toml')
+    """Packages below apps/ and crates/ plus top-level members such as xtask."""
+    manifests = [*root.glob('*/Cargo.toml'),
+                 *(m for top in ('apps', 'crates') for m in (root / top).glob('**/Cargo.toml'))]
+    return {package_name(manifest.parent) for manifest in manifests
             if 'target' not in manifest.parts and 'node_modules' not in manifest.parts}
 
 
@@ -183,12 +185,13 @@ def main(argv: list[str] | None = None) -> int:
             print(f'unknown package(s): {", ".join(sorted(unknown))}', file=sys.stderr)
             return 2
         targets = [t for t in targets if t.package in args.package]
-        if not targets:
-            # A selection without corpus tests is an honest zero, not a refusal.
-            print(f'corpus tests: none in the selected package(s) {", ".join(sorted(args.package))}')
-            return 0
     for problem in problems:
         print(f'problem: {problem}', file=sys.stderr)
+    if args.package and not targets:
+        # A selection without corpus tests is an honest zero, not a refusal,
+        # unless the scan itself found a corpus test no target compiles.
+        print(f'corpus tests: none in the selected package(s) {", ".join(sorted(args.package))}')
+        return 1 if problems else 0
     if args.list:
         for target in targets:
             print(f'{target.label}: {len(target.names)}')

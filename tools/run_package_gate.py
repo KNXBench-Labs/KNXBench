@@ -69,6 +69,21 @@ def stage_plan(result: gate_scope.Plan, full: bool) -> list[str]:
     return plan
 
 
+def preflight(root: Path, result: gate_scope.Plan, full: bool) -> list[str]:
+    """Reasons not to start at all; each would otherwise end in a misleading verdict."""
+    refusals = []
+    if not full and not result.changed:
+        refusals.append('no change against the base: a change-scoped gate would test nothing; '
+                        'name another --base or run --full')
+    if full or result.bindings:
+        dirty = subprocess.run(['git', 'status', '--porcelain', '--', gate_scope.BINDINGS],
+                               cwd=root, check=True, capture_output=True, text=True).stdout.strip()
+        if dirty:
+            refusals.append(f'uncommitted changes in {gate_scope.BINDINGS.rstrip("/")}: the bindings stage '
+                            'restores that directory from HEAD; commit or stash them first')
+    return refusals
+
+
 def rust_counts(log: Path) -> dict:
     found = RUST_RESULT.findall(log.read_text(errors='replace'))
     if not found:
@@ -180,8 +195,13 @@ def main(argv: list[str] | None = None) -> int:
     stages = stage_plan(result, full)
     print(gate_scope.describe(result))
     print(f'mode: {"COMPLETE" if full else "change-scoped"}; stages: {", ".join(stages)}', flush=True)
+    refusals = preflight(root, result, full)
+    for refusal in refusals:
+        print(f'refused: {refusal}', flush=True)
     if args.dry_run:
         return 0
+    if refusals:
+        return 2
     output = (args.output or root / 'target/package-gates' / str(time.time_ns())).resolve()
     if output.is_relative_to(root) and subprocess.run(['git', 'check-ignore', '-q', str(output)],
                                                      cwd=root).returncode != 0:
@@ -245,6 +265,8 @@ def main(argv: list[str] | None = None) -> int:
                     selection = [arg for name in packages for arg in ('--package', name)]
                     listing = subprocess.run(['python3', 'tools/run_corpus_tests.py', '--root', '.', '--list',
                                               *selection], cwd=root, env=env, capture_output=True, text=True)
+                    if listing.returncode == 2:
+                        raise ValueError(f'corpus selection refused: {listing.stderr.strip()}')
                     if listing.returncode == 0 and not re.search(r'^[1-9]\d* corpus tests', listing.stdout, re.M):
                         run.empty('corpus', 'the selected packages hold no corpus test')
                         print('corpus: empty selection (no corpus test in the selected packages)', flush=True)

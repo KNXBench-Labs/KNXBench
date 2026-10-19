@@ -692,6 +692,45 @@ export interface CatalogItem {
   nameLanguage: string | null;
   visibleDescriptionLanguage: string | null;
   sourceLanguage: string | null;
+  /** Additive provenance metadata; absent on older servers. */
+  details?: CatalogItemDetails;
+}
+
+export interface CatalogItemDetails {
+  applicationProgramId: string | null;
+  applicationName: string | null;
+  applicationVersion: string | null;
+  catalogSectionId: string | null;
+  sourceNames: string[];
+}
+
+/** What removing one placement means; saved projects that are not open are not checked. */
+export interface CatalogCleanupImpact {
+  /** No placement of this exact product + application pair is left afterwards. */
+  lastPlacementForBinding: boolean;
+  /** Devices of the open project bound to this exact pair. */
+  openProjectDevices: number;
+}
+
+export type CatalogCleanupItem = CatalogItem & { impact: CatalogCleanupImpact };
+
+export interface CatalogCleanupPreview {
+  token: string;
+  items: CatalogCleanupItem[];
+}
+
+/** The catalogue changed since the preview: nothing was removed, preview again. */
+export function isCatalogueCleanupStale(e: unknown): boolean {
+  const error = e as { status?: unknown; body?: { kind?: unknown } } | null;
+  return error?.status === 409 && error.body?.kind === "catalogueCleanupStale";
+}
+
+export function previewCatalogCleanup(itemIds: string[]): Promise<CatalogCleanupPreview> {
+  return request("/api/catalog/cleanup/preview", { method: "POST", body: JSON.stringify({ itemIds }) });
+}
+
+export function applyCatalogCleanup(itemIds: string[], token: string): Promise<{ removedItemIds: string[]; backup: string }> {
+  return request("/api/catalog/cleanup/apply", { method: "POST", body: JSON.stringify({ itemIds, token, confirmed: true }) });
 }
 
 export interface CatalogInstallMember {

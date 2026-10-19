@@ -8,6 +8,8 @@
 pub mod baggage;
 pub mod blob;
 pub mod byte_order_probe;
+mod catalog_details;
+pub mod cleanup;
 pub mod code;
 pub mod declared_segments;
 pub mod device_evaluation;
@@ -29,6 +31,10 @@ pub mod parameter_layout;
 pub mod parse;
 pub mod procedure_resolution;
 pub mod query;
+pub use catalog_details::CatalogItemDetails;
+pub use cleanup::{
+    apply_catalog_cleanup, preview_catalog_cleanup, AppliedCleanup, CleanupError, CleanupPreview,
+};
 pub mod report;
 pub mod source_diagnostics;
 pub mod system2;

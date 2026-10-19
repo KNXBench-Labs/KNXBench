@@ -1,5 +1,16 @@
 # Architecture
 
+## Catalogue placement cleanup (19 October 2026 source)
+
+`knx-productdb::catalog_details` adds read-only provenance to catalogue rows;
+`knx-productdb::cleanup` previews and removes selected `catalog_item` rows only,
+reusing the update backup helper inside one `IMMEDIATE` writer reservation. The
+server routes live beside the other catalogue-update routes and read the open
+project before locking the product database, never both. The web dialog is a view
+over these routes; its suggestion helper compares exact references only. No schema,
+migration, ingest or layer-edge change.
+[ADR-0145](adr/0145-catalogue-cleanup-removes-placements-only.md).
+
 ## Offline System-2 field preview (18 October 2026 source)
 
 ProductDB extends its existing field planner with a distinct, non-executable

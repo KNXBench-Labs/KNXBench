@@ -103,9 +103,55 @@ Preview, apply, restore and delete hold the product-database mutex for their dur
 sends the file to `/api/catalog/install-legacy`. `/api/catalog/install` is no longer
 called by the web and stays unchanged for compatibility.
 
+## Catalogue item details
+
+Status: implemented by [ADR-0145](../adr/0145-catalogue-cleanup-removes-placements-only.md).
+
+`GET /api/catalog/items` rows carry an additive, optional `details` object:
+`{applicationProgramId, applicationName, applicationVersion, catalogSectionId,
+sourceNames}`. The application follows the row's Hardware2Program link;
+`sourceNames` are the recorded names of the package(s) holding the placement's
+source file (file names only), or the member file name for a standalone XML
+ingest. Older servers omit the field; the web shows "unavailable" then.
+
+## Placement cleanup
+
+Status: implemented by [ADR-0145](../adr/0145-catalogue-cleanup-removes-placements-only.md).
+Library: `knx_productdb::preview_catalog_cleanup` / `apply_catalog_cleanup`.
+
+Only the selected `catalog_item` rows are removed. Every other table, including
+original package bytes, is unchanged; devices keep resolving their product and
+application.
+
+- `POST /api/catalog/cleanup/preview` — JSON `{itemIds}`. 200:
+  `{token, items:[{...catalogItem, impact:{lastPlacementForBinding, openProjectDevices}}]}`,
+  items sorted by ID. `lastPlacementForBinding`: no placement of this exact product +
+  Hardware2Program pair is left once the whole selection is gone (devices bound to
+  it then show no catalogue item name/number). `openProjectDevices`: devices of the
+  open project bound to that pair; saved projects that are not open are not checked.
+  Nothing is written. An empty selection, a duplicate, malformed (empty,
+  surrounding whitespace, control characters) or unknown ID is 400 kind
+  `invalidCatalogueSelection`.
+- `POST /api/catalog/cleanup/apply` — JSON `{itemIds, token, confirmed}`. Without
+  `confirmed: true` 400 kind `confirmationRequired`. The token is recomputed inside a
+  writer reservation; a mismatch (other selection, any catalogue/program/source-name
+  change, a restore of the file) is 409 kind `catalogueCleanupStale` and nothing is
+  written. Then a full backup is written (same name scheme as an update, listed by
+  `GET /api/catalog/backups`) and the rows are deleted in the same transaction. A
+  backup failure is 500 and nothing is removed. 200: `{removedItemIds, backup}`;
+  `backup` is the file name only.
+- Both routes: no product database is 503; both hold the product-database mutex,
+  and the open project is read before it, never both at once.
+
+Recovery is the backup. Re-installing an already known package is skipped and
+does not restore removed placements.
+
 ## Evidence
 
 `crates/knx-productdb/tests/catalog_update.rs`, `crates/knx-productdb/tests/wrapper_packages.rs`,
 `apps/knx-cli/tests/catalog_update_cli.rs` and, for the web routes,
 `apps/knx-server/tests/http_catalogue_update.rs`;
-[evidence record](../evidence/catalogue-update-2026-10-12.json).
+[evidence record](../evidence/catalogue-update-2026-10-12.json). Placement cleanup:
+the `cleanup_*` tests in the first and last of these files, the
+`CatalogCleanupDialog`/`catalogCleanup` component tests and the cleanup cases of
+`apps/knx-web/e2e/catalogue-update.e2e.ts`.

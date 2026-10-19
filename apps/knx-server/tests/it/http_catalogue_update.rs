@@ -749,3 +749,234 @@ async fn a_refused_inner_package_names_itself_and_changes_nothing() {
     );
     assert_eq!(std::fs::read(f.db()).unwrap(), before);
 }
+
+// --- Catalogue placement cleanup -------------------------------------------
+
+const PRODUCT: &str = "M-0001_H-1_P-1";
+const BINDING: &str = "M-0001_H-1_HP-0001-10-0001";
+
+/// Two placements of the same product + application pair.
+fn add_twin_placements(f: &Fixture) {
+    let conn = f.state.product_db.as_ref().unwrap().lock().unwrap();
+    conn.execute_batch(&format!(
+        "INSERT INTO catalog_item (id, manufacturer_id, section_id, name, product_ref_id,
+             hardware2program_ref_id, source_sha256)
+         SELECT 'CI-A', 'M-0001', 'SECTION', 'Dimmer', '{PRODUCT}', '{BINDING}', source_sha256
+         FROM application_program;
+         INSERT INTO catalog_item (id, manufacturer_id, section_id, name, product_ref_id,
+             hardware2program_ref_id, source_sha256)
+         SELECT 'CI-B', 'M-0001', 'SECTION', 'Dimmer', '{PRODUCT}', '{BINDING}', source_sha256
+         FROM application_program;"
+    ))
+    .unwrap();
+}
+
+fn placement_ids(state: &knx_server::AppState) -> Vec<String> {
+    let conn = state.product_db.as_ref().unwrap().lock().unwrap();
+    let mut statement = conn
+        .prepare("SELECT id FROM catalog_item ORDER BY id")
+        .unwrap();
+    let ids = statement
+        .query_map([], |row| row.get(0))
+        .unwrap()
+        .collect::<Result<Vec<String>, _>>()
+        .unwrap();
+    ids
+}
+
+fn open_project_using_the_binding(f: &Fixture, devices: u32) {
+    let mut project = knx_core::Project::new(knx_core::Language("en".into()));
+    for id in 1..=devices {
+        project.devices.insert(knx_core::DeviceInstance {
+            id: knx_core::DeviceId(id),
+            source: knx_core::SourceRef {
+                path: "t".into(),
+                ets_id: format!("d{id}"),
+            },
+            name: format!("Dimmer {id}"),
+            description: None,
+            address: None,
+            product_ref: PRODUCT.into(),
+            program_ref: BINDING.into(),
+            commissioning: knx_core::CommissioningState::default(),
+            visibility_calculated: true,
+            com_objects: vec![],
+            binary_data: vec![],
+        });
+    }
+    *f.state.project.lock().unwrap() = Some(project);
+}
+
+async fn cleanup_preview(f: &Fixture, ids: &[&str]) -> (StatusCode, Value) {
+    send(
+        &f.app,
+        json_request(
+            "POST",
+            "/api/catalog/cleanup/preview",
+            json!({ "itemIds": ids }),
+        ),
+    )
+    .await
+}
+
+#[tokio::test]
+async fn catalogue_items_show_application_version_and_source() {
+    let f = fixture();
+    add_twin_placements(&f);
+    let (status, body) = send(
+        &f.app,
+        json_request("GET", "/api/catalog/items", Value::Null),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let details = &body[0]["details"];
+    assert_eq!(details["applicationProgramId"], "M-0001_A-0001-10-0001");
+    assert_eq!(details["applicationVersion"], "16");
+    assert_eq!(details["catalogSectionId"], "SECTION");
+    assert_eq!(details["sourceNames"], json!(["dimmer-v16.knxprod"]));
+}
+
+#[tokio::test]
+async fn cleanup_preview_counts_open_project_devices_and_last_placements() {
+    let f = fixture();
+    add_twin_placements(&f);
+    open_project_using_the_binding(&f, 2);
+    let before = placement_ids(&f.state);
+    let (status, one) = cleanup_preview(&f, &["CI-A"]).await;
+    assert_eq!(status, StatusCode::OK, "{one}");
+    assert_eq!(one["items"][0]["id"], "CI-A");
+    assert_eq!(one["items"][0]["impact"]["lastPlacementForBinding"], false);
+    assert_eq!(one["items"][0]["impact"]["openProjectDevices"], 2);
+    let (status, both) = cleanup_preview(&f, &["CI-B", "CI-A"]).await;
+    assert_eq!(status, StatusCode::OK, "{both}");
+    let ids: Vec<&str> = both["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|i| i["id"].as_str().unwrap())
+        .collect();
+    assert_eq!(ids, ["CI-A", "CI-B"]);
+    assert_eq!(both["items"][1]["impact"]["lastPlacementForBinding"], true);
+    assert_eq!(placement_ids(&f.state), before, "a preview writes nothing");
+    assert!(backup_names(f.dir.path()).is_empty());
+}
+
+#[tokio::test]
+async fn cleanup_apply_needs_confirmation_and_the_shown_preview_then_backs_up_first() {
+    let f = fixture();
+    add_twin_placements(&f);
+    let (_, preview) = cleanup_preview(&f, &["CI-A"]).await;
+    let token = preview["token"].as_str().unwrap().to_string();
+    let apply = |body: Value| json_request("POST", "/api/catalog/cleanup/apply", body);
+
+    let (status, body) = send(
+        &f.app,
+        apply(json!({ "itemIds": ["CI-A"], "token": token })),
+    )
+    .await;
+    assert_eq!(
+        (status, body["kind"].as_str()),
+        (StatusCode::BAD_REQUEST, Some("confirmationRequired")),
+        "{body}"
+    );
+    let (status, body) = send(
+        &f.app,
+        apply(json!({ "itemIds": ["CI-A"], "token": "stale", "confirmed": true })),
+    )
+    .await;
+    assert_eq!(
+        (status, body["kind"].as_str()),
+        (StatusCode::CONFLICT, Some("catalogueCleanupStale")),
+        "{body}"
+    );
+    let (status, body) = send(
+        &f.app,
+        apply(json!({ "itemIds": ["CI-B"], "token": token, "confirmed": true })),
+    )
+    .await;
+    assert_eq!(
+        status,
+        StatusCode::CONFLICT,
+        "another selection never reuses a token: {body}"
+    );
+    assert_eq!(placement_ids(&f.state), ["CI-A", "CI-B"]);
+    assert!(
+        backup_names(f.dir.path()).is_empty(),
+        "no backup for a refusal"
+    );
+
+    let (status, body) = send(
+        &f.app,
+        apply(json!({ "itemIds": ["CI-A"], "token": token, "confirmed": true })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["removedItemIds"], json!(["CI-A"]));
+    assert_eq!(placement_ids(&f.state), ["CI-B"]);
+    let backup = body["backup"].as_str().unwrap();
+    assert!(!backup.contains('/'), "file name only");
+    let (_, listed) = send(
+        &f.app,
+        json_request("GET", "/api/catalog/backups", Value::Null),
+    )
+    .await;
+    assert_eq!(listed["backups"][0]["name"], backup);
+    let (status, body) = send(
+        &f.app,
+        apply(json!({ "itemIds": ["CI-A"], "token": token, "confirmed": true })),
+    )
+    .await;
+    assert_eq!(
+        status,
+        StatusCode::BAD_REQUEST,
+        "a spent selection is unknown now: {body}"
+    );
+
+    // The backup restores the removed placement through the existing route.
+    let (status, body) = send(
+        &f.app,
+        json_request("POST", "/api/catalog/restore", json!({ "name": backup })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(placement_ids(&f.state), ["CI-A", "CI-B"]);
+}
+
+#[tokio::test]
+async fn cleanup_refuses_malformed_selections_and_a_missing_database() {
+    let f = fixture();
+    add_twin_placements(&f);
+    for ids in [
+        json!([]),
+        json!(["CI-A", "CI-A"]),
+        json!(["CI-A", "missing"]),
+    ] {
+        let (status, body) = send(
+            &f.app,
+            json_request(
+                "POST",
+                "/api/catalog/cleanup/preview",
+                json!({ "itemIds": ids }),
+            ),
+        )
+        .await;
+        assert_eq!(
+            (status, body["kind"].as_str()),
+            (StatusCode::BAD_REQUEST, Some("invalidCatalogueSelection")),
+            "{ids}: {body}"
+        );
+    }
+    assert_eq!(placement_ids(&f.state), ["CI-A", "CI-B"]);
+    let state = Arc::new(knx_server::AppState::new(f.dir.path().join("none")));
+    let app = knx_server::app(state, None);
+    let (status, _) = send(
+        &app,
+        json_request(
+            "POST",
+            "/api/catalog/cleanup/preview",
+            json!({ "itemIds": ["CI-A"] }),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+}

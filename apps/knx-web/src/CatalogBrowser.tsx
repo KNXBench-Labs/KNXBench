@@ -17,6 +17,8 @@ import { useActiveOptionScroll } from "./useActiveOptionScroll";
 import { describeCreationDiagnostic, newRequestId } from "./CatalogInstallReport";
 import CatalogUpdatePanel from "./CatalogUpdatePanel";
 import ProductInstallControl from "./ProductInstallControl";
+import CatalogItemIdentity from "./CatalogItemIdentity";
+import CatalogCleanupDialog from "./CatalogCleanupDialog";
 
 // T2 (GAP_ANALYSIS_ETS.md) — the device-from-catalog workspace. Feeds T1's
 // `Command::CreateDevice` (backend-only since 2026-09-08). The search input is a combobox
@@ -48,6 +50,7 @@ export default function CatalogBrowser(props: {
   const [search, setSearch] = useState("");
   const [items, setItems] = useState<CatalogItem[]>([]);
   const [itemsLoaded, setItemsLoaded] = useState(false);
+  const [cleanupOpen, setCleanupOpen] = useState(false);
   const [highlight, setHighlight] = useState(0);
   const [selected, setSelected] = useState<CatalogItem | null>(null);
   const [name, setName] = useState("");
@@ -264,6 +267,11 @@ export default function CatalogBrowser(props: {
       <ProductInstallControl className="catalog-install" label={t("catalog.installLabel")}
         onInstalled={reloadAfterProductInstall} />
       <CatalogUpdatePanel onInstalled={reloadAfterInstall} installRevision={installRevision} />
+      <button type="button" className="catalog-cleanup-open" disabled={creating || batchOutcomeUnconfirmed} onClick={() => setCleanupOpen(true)}>{t("catalog.cleanup.open")}</button>
+      {cleanupOpen && active && <CatalogCleanupDialog onClose={() => setCleanupOpen(false)} onRemoved={async () => {
+        setSelected(null); setName("");
+        await reloadAfterProductInstall();
+      }} />}
       <select value={manufacturer} onChange={(e) => changeManufacturer(e.target.value)}>
         <option value="">{t("catalog.allManufacturers")}</option>
         {manufacturers.map((m) => (
@@ -306,6 +314,7 @@ export default function CatalogBrowser(props: {
             {language !== null && fellBack(item.visibleDescription, item.visibleDescriptionLanguage) && (
               <LanguageFallbackBadge selected={language} source={item.sourceLanguage} />
             )}
+            <CatalogItemIdentity item={item} />
           </li>
         ))}
       </ul>

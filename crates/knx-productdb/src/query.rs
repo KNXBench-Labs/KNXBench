@@ -1248,6 +1248,8 @@ pub fn programs(
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CatalogItemRow {
+    /// Additive provenance for catalogue presentation; never a replacement identity.
+    pub details: Option<crate::CatalogItemDetails>,
     pub id: String,
     pub manufacturer_id: String,
     pub name: Option<String>,
@@ -1268,6 +1270,7 @@ pub struct CatalogItemRow {
 
 fn row_to_catalog_item(r: &rusqlite::Row) -> rusqlite::Result<CatalogItemRow> {
     Ok(CatalogItemRow {
+        details: None,
         id: r.get(0)?,
         manufacturer_id: r.get(1)?,
         name: r.get(2)?,
@@ -1322,9 +1325,10 @@ pub fn catalog_items(
              ORDER BY manufacturer_id, name"
         );
         let mut stmt = conn.prepare(&sql)?;
-        let rows = stmt
+        let mut rows = stmt
             .query_map([manufacturer, search], row_to_catalog_item)?
             .collect::<Result<Vec<_>, _>>()?;
+        crate::catalog_details::attach_details(conn, &mut rows)?;
         return Ok(rows);
     };
 
@@ -1389,6 +1393,7 @@ pub fn catalog_items(
         (a.manufacturer_id.as_str(), a.name.as_deref())
             .cmp(&(b.manufacturer_id.as_str(), b.name.as_deref()))
     });
+    crate::catalog_details::attach_details(conn, &mut rows)?;
     Ok(rows)
 }
 
@@ -1463,9 +1468,13 @@ fn catalog_overlay(
 /// The single-row lookup `apps/knx-server`'s device creation uses.
 pub fn catalog_item(conn: &Connection, id: &str) -> Result<Option<CatalogItemRow>, ProductDbError> {
     let sql = format!("SELECT {CATALOG_ITEM_COLUMNS} FROM catalog_item WHERE id = ?1");
-    conn.query_row(&sql, [id], row_to_catalog_item)
+    let item = conn
+        .query_row(&sql, [id], row_to_catalog_item)
         .optional()
-        .map_err(Into::into)
+        .map_err(ProductDbError::from)?;
+    let mut items: Vec<_> = item.into_iter().collect();
+    crate::catalog_details::attach_details(conn, &mut items)?;
+    Ok(items.pop())
 }
 
 /// The evidence a catalog item provides for device creation.  A catalog row

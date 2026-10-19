@@ -137,6 +137,27 @@ function deferred<T>() {
 }
 
 describe("CatalogBrowser", () => {
+  it("distinguishes identical labels by application, version, catalogue placement and source", async () => {
+    apiMock.catalogItems.mockResolvedValue([{ ...item, details: { applicationProgramId: "APP-1", applicationName: "Switch program",
+      applicationVersion: "16", catalogSectionId: "SECTION-1", sourceNames: ["switch-v1.knxprod"] } },
+      { ...item, id: "cat-v2", details: { applicationProgramId: "APP-2", applicationName: "Switch program",
+        applicationVersion: "32", catalogSectionId: "SECTION-2", sourceNames: ["switch-v2.knxprod"] } }]);
+    const { root } = await renderBrowser();
+    try {
+      await act(async () => { await new Promise((resolve) => setTimeout(resolve, 250)); });
+      const rows = host!.querySelectorAll('[role="option"]');
+      expect(rows).toHaveLength(2);
+      expect(rows[0].textContent).toContain("APP-1");
+      expect(rows[0].textContent).toContain("16");
+      expect(rows[0].textContent).toContain("SECTION-1");
+      expect(rows[0].textContent).toContain("switch-v1.knxprod");
+      expect(rows[1].textContent).toContain("APP-2");
+      expect(rows[1].textContent).toContain("32");
+      expect(rows[1].textContent).toContain("cat-v2");
+      expect(Array.from(host!.querySelectorAll("button")).some((b) => b.textContent === "Clean up catalogue")).toBe(true);
+    } finally { await act(async () => root.unmount()); }
+  });
+
   it("keeps keyboard highlight visible without picking or creating the catalog item", async () => {
     apiMock.catalogItems.mockResolvedValue([item, item2]);
     const previous = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "scrollIntoView");

@@ -1,5 +1,16 @@
 # Architecture
 
+## Master declaration provenance (source builds after Alpha 15)
+
+ProductDB's master parser records declaration positions and actual normalized
+write outcomes through a separate `master_provenance` module. Product database
+v27 adds source-inspection, declaration and winner evidence without changing
+Core, project storage or the existing six product-identity kinds. Replay uses
+the same parser without normalized writes; unknown historical winners are never
+inferred from retained-blob order. Existing package/import/CLI diagnostics carry
+collisions and malformed declarations; the web only translates their labels and
+displays escaped technical source details. [ADR-0147](adr/0147-master-identity-provenance.md).
+
 ## Catalogue placement cleanup (19 October 2026 source)
 
 `knx-productdb::catalog_details` adds read-only provenance to catalogue rows;

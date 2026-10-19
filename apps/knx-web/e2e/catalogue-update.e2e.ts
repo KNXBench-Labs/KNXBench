@@ -2,7 +2,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { join } from "node:path";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
-import type { CatalogCleanupItem, CatalogItem, CatalogueUpdatePreview } from "../src/api";
+import type { CatalogCleanupItem, CatalogInstallReport, CatalogItem, CatalogueUpdatePreview } from "../src/api";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
@@ -41,6 +41,7 @@ const ITEMS: CatalogItem[] = [
 const CLEANUP_BACKUP = "products.sqlite.backup-1760270500-ef56ef56ef56.sqlite";
 
 interface Fixture {
+  report: CatalogInstallReport;
   unexpected: string[];
   items: CatalogItem[];
   cleanupPreviews: string[][];
@@ -65,7 +66,7 @@ const report = { sha256: preview.packageSha256, scheme: 20, skipped: false, memb
   translations: { program: 0, catalog: 0, hardware: 0, master: 0 }, droppedDatapointTypes: 0, facts: null };
 
 async function fixture(page: Page, language: Language, theme: string, width: number): Promise<Fixture> {
-  const f: Fixture = { unexpected: [], items: [], cleanupPreviews: [], cleanupApplies: [], previews: 0, applies: [], restores: [], deletes: [], directInstalls: 0, applyMode: "ok", restoreMode: "ok",
+  const f: Fixture = { report: { ...report }, unexpected: [], items: [], cleanupPreviews: [], cleanupApplies: [], previews: 0, applies: [], restores: [], deletes: [], directInstalls: 0, applyMode: "ok", restoreMode: "ok",
     backups: [{ name: "products.sqlite.backup-1750000000-cd34cd34cd34.sqlite", bytes: 3 * 1024 * 1024, modifiedUnixSeconds: 1750000000, identity: "id-older" }] };
   await page.setViewportSize({ width, height: 900 });
   await page.route("https://api.github.com/**", (route) => { f.unexpected.push(route.request().url()); return route.abort(); });
@@ -111,7 +112,7 @@ async function fixture(page: Page, language: Language, theme: string, width: num
       f.applies.push({ token: form.includes("fixture-token") });
       if (f.applyMode === "stale") return refuse(409, "catalogueUpdateStale", "the product database or the package changed since the preview; preview again");
       f.backups.unshift({ name: BACKUP, bytes: 3 * 1024 * 1024, modifiedUnixSeconds: 1760270400, identity: "id-newest" });
-      return ok({ applied: true, preview, backup: BACKUP, packages: [{ path: null, report }] });
+      return ok({ applied: true, preview, backup: BACKUP, packages: [{ path: null, report: f.report }] });
     }
     if (path === "/api/catalog/backups" && method === "GET") return ok({ backups: f.backups });
     if (path === "/api/catalog/backups/delete" && method === "POST") {
@@ -156,6 +157,57 @@ async function noHorizontalOverflow(page: Page) {
 }
 async function capture(page: Page, name: string) {
   if (CAPTURE) await page.screenshot({ path: join(CAPTURE, `${name}.png`), fullPage: false });
+}
+
+for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
+  test(`${language} ${width}: master provenance diagnostics keep readable source details`, async ({ page }) => {
+    const m: Catalogue = language === "de" ? de : en;
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    const f = await fixture(page, language, "graphite", width);
+    const source = "a".repeat(64);
+    const winner = "b".repeat(64);
+    const detail = `function_type FT-1; candidate ${source}#4; winner ${winner}#1`;
+    const malformed = "FunctionPoint at declaration 8: missing parent; <source-text>";
+    f.report.facts = { counts: [], unknownConstructs: [], unknownOccurrences: 0, diagnostics: [
+      { kind: "master-identity-collision", archivePath: "knx_master.xml", xmlPath: "/KNX/MasterData/FunctionTypes/FunctionType[4]", detail, occurrences: 2 },
+      { kind: "malformed-master-declaration", archivePath: "knx_master.xml", xmlPath: "/KNX/MasterData/FunctionTypes/FunctionPoint[8]", detail: malformed, occurrences: 1 },
+    ] };
+    const catalogue = await openCatalogue(page, m);
+    await choosePackage(catalogue);
+    await catalogue.getByRole("button", { name: m["catalogUpdate.apply"], exact: true }).click();
+    const shown = catalogue.getByRole("region", { name: m["catalog.installReport.heading"] });
+    await expect(shown).toBeVisible();
+    await expect(shown).toContainText(m["catalog.installReport.diagnosticKind.masterIdentityCollision"]);
+    await expect(shown).toContainText(m["catalog.installReport.diagnosticKind.malformedMasterDeclaration"]);
+    const diagnosticRows = shown.locator("li");
+    await expect(diagnosticRows.filter({ hasText: m["catalog.installReport.diagnosticKind.masterIdentityCollision"] }))
+      .toContainText(m["catalog.installReport.diagnostic.masterIdentityCollision"]);
+    await expect(diagnosticRows.filter({ hasText: m["catalog.installReport.diagnosticKind.malformedMasterDeclaration"] }))
+      .toContainText(m["catalog.installReport.diagnostic.malformedMasterDeclaration"]);
+    const disclosures = shown.locator("details");
+    await expect(disclosures).toHaveCount(2);
+    for (let index = 0; index < 2; index += 1) {
+      const disclosure = disclosures.nth(index);
+      await expect(disclosure).not.toHaveAttribute("open", "");
+      await disclosure.getByText(m["catalog.installReport.technicalSourceDetails"], { exact: true }).click();
+      await expect(disclosure).toHaveAttribute("open", "");
+      await expect(disclosure.locator("p")).toBeVisible();
+    }
+    await expect(disclosures.nth(0).locator("p")).toHaveText(detail);
+    await expect(disclosures.nth(1).locator("p")).toHaveText(malformed);
+    await expect(shown.locator("source-text")).toHaveCount(0);
+    await shown.scrollIntoViewIfNeeded();
+    const bounds = (await shown.boundingBox())!;
+    expect(bounds.x).toBeGreaterThanOrEqual(0);
+    expect(bounds.x + bounds.width).toBeLessThanOrEqual(width);
+    await noHorizontalOverflow(page);
+    expect(await shown.evaluate((element) => element.scrollWidth - element.clientWidth)).toBeLessThanOrEqual(1);
+    if (CAPTURE) await shown.screenshot({ path: join(CAPTURE, `${language}-${width}-master-provenance.png`) });
+    expect(f.applies).toEqual([{ token: true }]);
+    expect(f.unexpected).toEqual([]);
+    expect(errors).toEqual([]);
+  });
 }
 
 for (const language of ["en", "de"] as const) for (const theme of ["porcelain", "graphite"]) for (const width of [1440, 400]) {

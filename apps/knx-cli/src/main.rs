@@ -1955,9 +1955,21 @@ fn run_products_ingest(args: &[String]) -> ExitCode {
         .iter()
         .find(|e| e.kind == knx_etsproj::opaque::OpaqueKind::MasterData)
     {
-        if let Err(e) = knx_productdb::ingest_master_data(&conn, &master.bytes) {
-            eprintln!("failed to ingest master data: {e}");
-            return ExitCode::FAILURE;
+        match knx_productdb::ingest_master_data(&conn, &master.bytes) {
+            Ok(findings) => {
+                for diagnostic in findings.diagnostics {
+                    println!(
+                        "{}: {}: {}",
+                        diagnostic.kind.as_str(),
+                        diagnostic.xml_path,
+                        diagnostic.detail
+                    );
+                }
+            }
+            Err(e) => {
+                eprintln!("failed to ingest master data: {e}");
+                return ExitCode::FAILURE;
+            }
         }
     }
 

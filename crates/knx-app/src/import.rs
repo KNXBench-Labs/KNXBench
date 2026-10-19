@@ -269,6 +269,19 @@ fn persist_outcome(
                 let findings = knx_productdb::ingest_master_data(products, &master.bytes)?;
                 outcome
                     .report
+                    .unsupported
+                    .extend(findings.diagnostics.into_iter().map(|diagnostic| {
+                        knx_etsproj::report::UnsupportedFeature {
+                            what: format!(
+                                "master provenance: {} {}",
+                                diagnostic.kind.as_str(),
+                                diagnostic.xml_path
+                            ),
+                            consequence: diagnostic.detail,
+                        }
+                    }));
+                outcome
+                    .report
                     .unknown
                     .extend(findings.unknown.into_iter().map(|finding| {
                         knx_etsproj::UnknownConstruct {

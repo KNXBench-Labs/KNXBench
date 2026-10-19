@@ -61,6 +61,11 @@ up project/catalogue files and all Docker data independently before updating.
 Read-only CLI catalogue readers leave the on-disk product database unchanged.
 [Current release scope](../../releases/alpha15.md#upgrade-independent-backups-first).
 
+**Source builds after Alpha 15:** product DB **27** adds master-declaration
+source evidence. Alpha 15 supports only product26 and refuses that newer
+catalogue; native/model16 is unchanged. Keep an independent pre-upgrade copy.
+See [master-data diagnostics](../user-guide/05-devices-and-products.md#master-data-diagnostics-source-builds-after-alpha-15).
+
 **Earlier Alpha 13:** native/model16 and product23 were unchanged from Alpha 12.
 
 **Earlier Alpha 12 storage upgrade:** close the app and independently back up native

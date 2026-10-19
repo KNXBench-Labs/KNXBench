@@ -6,6 +6,30 @@ owned artifacts verified. Closing receipt `65b91777` published; both owned
 checkouts, branch and task scratch removed after verification. Base:
 `f4b845a3880f4380e66c9d94a218a6dfff16e724`; product database v18 -> v19.
 
+## WP-17 extension — source builds after Alpha 15 (19 October 2026)
+
+[ADR-0147](../adr/0147-master-identity-provenance.md) extends the original
+AR05 boundary with product DB v27. The same master parser emits declarations
+and observed write decisions for DPT main/subtypes, function types, function
+points and space usages. Retained-source hashes, declaration ordinals and exact
+start-tag byte ranges resolve both winning and losing declarations. Missing-Id
+and orphan-parent flags are explicit and distinct from collisions; a declaration
+with both flags is one malformed declaration, not two encounters.
+
+Existing package diagnostics gain `master-identity-collision` and
+`malformed-master-declaration`, one occurrence per affected declaration; direct
+project/CLI ingestion reports them too. The old normalized winner policies and
+DPT counters stay unchanged. Current Rust source/identity queries are separate
+from immutable package-install snapshots. Replaying old sources cannot recover
+historical encounter/write outcomes or winners: those stay unavailable rather
+than being fabricated by sorted replay. Failed/unexamined sources are explicit,
+not zero declarations. Generic standalone MasterData remains opaque.
+
+Earlier AR05 descriptions and acceptance below retain their historical scope;
+their former missing-provenance wording is superseded only for the four
+families and observed operations defined here. No new master schema or ETS
+compatibility, programming, version-pinning or unsupported-family claim follows.
+
 ## Baseline facts before implementation (v18)
 
 The source owns separate paths:

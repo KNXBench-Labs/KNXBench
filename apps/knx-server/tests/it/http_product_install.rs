@@ -455,3 +455,58 @@ async fn a_signature_members_role_is_qualified_as_unverified_in_the_install_repo
         .unwrap();
     assert_eq!(signature_member["role"], "Signature (stored, not verified)");
 }
+
+#[tokio::test]
+async fn master_identity_diagnostic_vocabulary_and_source_details_survive_http_and_retry() {
+    let (_dir, state) = state();
+    let app = knx_server::app(Arc::new(state), None);
+    let master=br#"<KNX xmlns="http://knx.org/xml/project/11"><MasterData><SpaceUsage Id="U"/><SpaceUsage Id="U"/><FunctionPoint/><DatapointType/></MasterData></KNX>"#;
+    let bytes = package_with_master(master);
+    let first = app
+        .clone()
+        .oneshot(multipart("master.knxprod", &bytes))
+        .await
+        .unwrap();
+    assert_eq!(first.status(), StatusCode::OK);
+    let first = json(first).await;
+    let diagnostics = first["facts"]["diagnostics"].as_array().unwrap();
+    let relevant = diagnostics
+        .iter()
+        .filter(|d| {
+            d["kind"] == "master-identity-collision" || d["kind"] == "malformed-master-declaration"
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(relevant.len(), 3);
+    assert_eq!(
+        relevant
+            .iter()
+            .filter(|d| d["kind"] == "master-identity-collision")
+            .count(),
+        1
+    );
+    assert_eq!(
+        relevant
+            .iter()
+            .filter(|d| d["kind"] == "malformed-master-declaration")
+            .count(),
+        2
+    );
+    for diagnostic in relevant {
+        assert_eq!(diagnostic["archivePath"], "knx_master.xml");
+        assert_eq!(diagnostic["occurrences"], 1);
+        assert!(diagnostic["xmlPath"]
+            .as_str()
+            .unwrap()
+            .contains("[@master-ordinal="));
+        assert!(diagnostic["detail"]
+            .as_str()
+            .unwrap()
+            .contains(&knx_productdb::sha256_hex(master)));
+    }
+    let retry = app
+        .oneshot(multipart("retry.knxprod", &bytes))
+        .await
+        .unwrap();
+    assert_eq!(retry.status(), StatusCode::OK);
+    assert_eq!(json(retry).await["facts"], first["facts"]);
+}

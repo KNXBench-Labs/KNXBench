@@ -100,3 +100,15 @@ tokio = "1"
 rmcp = { version = "3.5.1", default-features = false, features = ["server", "macros", "transport-io", "elicitation"] }
 tower = "0.5"
 tower-http = "0.6"
+
+# Development and test builds (ADR-0144): line tables keep backtraces with file
+# and line while cutting link time and target size; third-party dependencies are
+# compiled once, optimised and without debug information, because tests run
+# their code (SQLite, ZIP, XML, compression) far more often than it is rebuilt.
+# Full debug information for a debugger: CARGO_PROFILE_DEV_DEBUG=2.
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+opt-level = 2
+debug = false

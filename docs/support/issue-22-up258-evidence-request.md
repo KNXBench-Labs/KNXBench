@@ -108,11 +108,20 @@ Issue #22 stays open; the detector does not get volunteered as a crash-test dumm
 
 ---
 
-## Stage 0 request: declared memory, read only (draft, 18 October 2026)
+## Stage 0 request: declared memory, read only (18 October 2026)
 
-**Draft only, not posted and not sent.** It needs a source build that contains
-[ADR-0143](../adr/0143-declared-segment-memory-evidence-profile.md); no release
-carries it yet. Send only after the maintainer has confirmed the build.
+**Posted 19 October 2026** with the owner's approval, as an extended version of
+the draft below: [issue comment](https://github.com/KNXBench-Labs/KNXBench/issues/22#issuecomment-6259234245).
+The posted text adds a plain explanation of why the read matters, the write
+ladder with each step's status, how to build the CLI (`main` at or after
+`ad97a56c`; neither Alpha 14 nor the Docker image ships `knx`), how to install
+the public package into a fresh product file and find the internal device ID,
+and an optional list of the parameters changed from their defaults. Before
+posting, the exact commands were replayed with that build against the pinned
+public package and a synthetic one-device project: the preview listed the four
+ranges, 1514 octets and 128 reads and created no file; `--simulate
+--confirm-read` saved and re-read a five-member archive. No real device was
+contacted.
 
 ---
 

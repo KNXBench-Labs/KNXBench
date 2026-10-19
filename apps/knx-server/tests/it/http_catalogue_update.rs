@@ -177,6 +177,77 @@ fn backup_names(dir: &Path) -> Vec<String> {
     names
 }
 
+/// A product database a newer KNXBench already migrated (a newer build, or
+/// a test run that reached the user's real file) used to vanish silently:
+/// the server ran without one and every install said only "no product
+/// database configured". Now the catalogue, preview and log name the file
+/// and both versions, the reason survives a new project's log reset, and
+/// the file keeps its bytes.
+#[tokio::test]
+async fn a_newer_product_database_is_named_in_every_refusal_and_left_untouched() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("products.sqlite");
+    let newer = knx_productdb::CURRENT_PRODUCTDB_VERSION + 1;
+    let conn = knx_productdb::open_and_migrate(&path).unwrap();
+    conn.pragma_update(None, "user_version", newer).unwrap();
+    drop(conn);
+    let before = std::fs::read(&path).unwrap();
+
+    let state = Arc::new(knx_server::AppState::with_product_db_at(
+        dir.path().join("data"),
+        Some(path.clone()),
+    ));
+    assert!(state.product_db.is_none());
+    let app = knx_server::app(state.clone(), None);
+    let names_the_cause = |message: &str| {
+        message.contains(&path.display().to_string())
+            && message.contains(&format!("product database is version {newer}"))
+            && message.contains(&format!(
+                "this build supports up to {}",
+                knx_productdb::CURRENT_PRODUCTDB_VERSION
+            ))
+    };
+
+    for uri in ["/api/catalog/manufacturers", "/api/catalog/items"] {
+        let (status, body) = send(&app, json_request("GET", uri, Value::Null)).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{uri}: {body}");
+        assert!(
+            names_the_cause(body["error"].as_str().unwrap()),
+            "{uri}: {body}"
+        );
+    }
+    let (status, body) = send(
+        &app,
+        upload(
+            "/api/catalog/update/preview",
+            "dimmer.knxprod",
+            &package(0x10),
+            &[],
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE, "{body}");
+    assert!(names_the_cause(body["error"].as_str().unwrap()), "{body}");
+
+    let (status, _) = send(&app, json_request("POST", "/api/project/new", json!({}))).await;
+    assert_eq!(status, StatusCode::OK);
+    let (_, log) = send(&app, json_request("GET", "/api/log", Value::Null)).await;
+    let product_lines: Vec<&Value> = log
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|entry| entry["source"] == json!("product database"))
+        .collect();
+    assert_eq!(product_lines.len(), 1, "{log}");
+    assert_eq!(product_lines[0]["severity"], json!("error"), "{log}");
+    assert!(
+        names_the_cause(product_lines[0]["message"].as_str().unwrap()),
+        "{log}"
+    );
+
+    assert_eq!(std::fs::read(&path).unwrap(), before);
+}
+
 #[tokio::test]
 async fn preview_reports_the_new_version_and_leaves_the_database_file_unchanged() {
     let f = fixture();

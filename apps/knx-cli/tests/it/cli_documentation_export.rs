@@ -102,9 +102,15 @@ fn write_store(path: &Path, project: &Project) {
     knx_store::save_project(&conn, project).expect("save project");
 }
 
+/// Runs `knx` without the developer's own product database: `XDG_DATA_HOME`
+/// names a directory no test creates, so `default_path()` finds nothing.
 fn run_cli(args: &[&str]) -> Output {
     Command::new(env!("CARGO_BIN_EXE_knx"))
         .args(args)
+        .env(
+            "XDG_DATA_HOME",
+            Path::new(env!("CARGO_TARGET_TMPDIR")).join("knx-cli-no-user-data"),
+        )
         .output()
         .expect("failed to run the knx binary")
 }
@@ -247,6 +253,48 @@ fn doc_export_reports_the_actual_default_product_database_open_error() {
         stderr.contains(&format!("this build supports up to {supported}")),
         "{stderr}"
     );
+}
+
+/// ADR-0090: `doc-export` only reads the user's product database. A newer
+/// build migrating it in place locks every older KNXBench out of its own
+/// catalogue (it then runs without one), so an older file — here an empty,
+/// version-0 one — must keep its bytes and gain no sidecar.
+#[test]
+fn doc_export_reads_an_older_default_product_database_without_writing_it() {
+    let dir = tempfile::tempdir().unwrap();
+    let store = dir.path().join("project.knxdb");
+    let html_path = dir.path().join("documentation.html");
+    let data_home = dir.path().join("data");
+    let products_dir = data_home.join("knx");
+    std::fs::create_dir_all(&products_dir).unwrap();
+    std::fs::write(products_dir.join("products.sqlite"), b"").unwrap();
+    write_store(&store, &tiny_project());
+
+    let out = Command::new(env!("CARGO_BIN_EXE_knx"))
+        .args([
+            "doc-export",
+            store.to_str().unwrap(),
+            html_path.to_str().unwrap(),
+        ])
+        .env("XDG_DATA_HOME", &data_home)
+        .env_remove("HOME")
+        .output()
+        .expect("failed to run the knx binary");
+
+    assert_eq!(out.status.code(), Some(0), "{out:?}");
+    let stderr = String::from_utf8(out.stderr).unwrap();
+    assert!(!stderr.contains("product database"), "{stderr}");
+    let after = std::fs::read(products_dir.join("products.sqlite")).unwrap();
+    assert!(
+        after.is_empty(),
+        "a reader migrated the product database: it grew to {} bytes",
+        after.len()
+    );
+    let names: Vec<String> = std::fs::read_dir(&products_dir)
+        .unwrap()
+        .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+        .collect();
+    assert_eq!(names, vec!["products.sqlite".to_string()], "no sidecar");
 }
 
 #[test]

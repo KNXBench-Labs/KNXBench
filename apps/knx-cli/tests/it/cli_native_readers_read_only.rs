@@ -18,9 +18,15 @@ const WORKING: &[u8] = include_bytes!(
     "../../../../crates/knx-store/tests/fixtures/native13-before-notes-working.sqlite"
 );
 
+/// Runs `knx` without the developer's own product database: `XDG_DATA_HOME`
+/// names a directory no test creates, so `default_path()` finds nothing.
 fn knx(args: &[&str]) -> Output {
     std::process::Command::new(env!("CARGO_BIN_EXE_knx"))
         .args(args)
+        .env(
+            "XDG_DATA_HOME",
+            Path::new(env!("CARGO_TARGET_TMPDIR")).join("knx-cli-no-user-data"),
+        )
         .output()
         .expect("run knx")
 }

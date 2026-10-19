@@ -787,10 +787,13 @@ fn run_doc_export(args: &[String]) -> ExitCode {
     // reads only `ReportOptions`, which is what keeps its own tests
     // deterministic (see `knx-report`'s doc comment; `knx-server` does the
     // same thing on the HTTP side).
+    // ADR-0090: a reader never writes the user's product database. Opening
+    // it with `open_and_migrate` would move an older file to this build's
+    // version and lock every older KNXBench out of its own catalogue.
     let products = knx_productdb::default_path()
         .filter(|path| path.exists())
-        .and_then(|path| match knx_productdb::open_and_migrate(&path) {
-            Ok(products) => Some(products),
+        .and_then(|path| match knx_productdb::open_read_only(&path) {
+            Ok(products) => Some(products.conn),
             Err(error) => {
                 eprintln!(
                     "warning: failed to open product database at {}: {error}",

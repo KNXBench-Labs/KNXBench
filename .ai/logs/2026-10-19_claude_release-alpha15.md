@@ -44,7 +44,37 @@ window, but its own gate still timed out, so it does not explain the flake and
 stays parked. Not a release blocker. The isolated tooling preflight passed
 317 tests (1 skipped) on the candidate inputs.
 
-## Pending
+## Publication completed
 
-Full release gate, packaging dry runs, tag, release, external verification.
-No bus operation; the owner's container is not replaced by this release work.
+Immutable tag `v0.1.0-alpha.15` points to `c3d5b35f`; main-first merge
+`09a9d6ce` carries exactly the accepted product sources (handover differs).
+Full gate 31/31 in 49.6 minutes, package 10 stages / web 68 stages, inputs
+frozen. Public tag workflows AppImage `39303949954` and Docker `39303949950`
+passed including publication. AppImage dry run `39300880522` supersedes failed
+`39293684573` on the same source; Docker dry run `39293688659` passed. The
+missing optional Rolldown binding's original cause is not established.
+
+Public downloads/checksums/provider digests, MCP/server/OCI identities,
+authenticated isolated save/reopen, native-10 → 16 migration (230 projected
+names), extracted unchanged AppRun under Broadway, and all 37 served site
+files passed. The external verifier initially rejected expected SIGTERM wait
+143; the retained continuation proves signal semantics and completes the
+remaining checks without replaying green product checks. Native-portal
+warnings remain disclosed. Owner container ID/image/start, selected HEAD/index
+and unrelated research-file hashes unchanged. No bus operation or deployment.
+
+See `docs/releases/alpha15-acceptance.md` and
+`docs/evidence/release-alpha15-2026-10-19.json`. The private evidence archive
+contains 609 files plus manifest, all 610 members hash-verified, excluding bulk
+builds/dependencies/downloads/corpus copies/credentials. Release helper guidance
+now distinguishes expected intentional TERM from failed startup.
+
+## Closure
+
+Release freeze: released by claude-release-alpha15.
+Alpha 16 follow-up: fail clearly after frontend dependency installation if a
+required native binding is missing; no retroactive cause claim or tag move.
+Candidate worktree, release branch (local/remote), task scratch, temporary
+artifact copies and pulled version-image copies retired. The compact private
+archive stays durable; every member and archive digest verified before deletion.
+The selected dirty checkout and its unrelated research files remain in place.

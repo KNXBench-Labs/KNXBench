@@ -43,6 +43,16 @@ security, GitHub-issue, hardware or whole-codebase conformance audit.
   rescue the object-function feature or rebuild plug-in adoption, note
   disposition, Functions comparison or gate-hygiene fixes again.
 
+### Release-engineering follow-up — Alpha 16
+
+The first Alpha 15 AppImage dry run lacked the optional native Rolldown binding
+after `npm ci`; the exact-source successor passed. Why npm omitted the binding
+is unestablished. Add a bounded post-install native-binding presence check with
+missing-binding regression coverage, preserving tag-only publication semantics.
+This is an unclaimed workflow-hardening follow-up, not a product-source change
+or a reason to move the Alpha 15 tag. See the
+[retained attempts](releases/alpha15-acceptance.md#retained-non-green-attempts).
+
 ### Recommended package queue
 
 Priority here orders the *remaining work*, not the frozen ledger priorities.

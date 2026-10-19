@@ -207,6 +207,42 @@ export function FileMenuContent({ children, onClick }: FileMenuContentProps) {
   }, []);
   const press = () => { pressing.current = true; };
 
+  // The first level has to fit the viewport too (UISET3-01): at 150% with Comfortable rows and a
+  // session's Logout row it is taller than a window the 600 px media rule calls tall, and wider
+  // than the room right of File in a window the 650 px rule calls wide. Decided from the measured
+  // first level, so zoom, density, language and session state all count, and again whenever the
+  // menu opens, the window resizes, the scale changes or the menu's own size changes (a row that
+  // appears while it is open).
+  useLayoutEffect(() => {
+    const menu = ref.current;
+    const owner = menu?.closest("details");
+    if (!menu || !owner) return;
+    let measuredSize = "";
+    const sizeOf = () => { const box = menu.getBoundingClientRect(); return `${box.width}x${box.height}`; };
+    const fit = () => { fitMenu(menu, owner.open); measuredSize = sizeOf(); };
+    fit();
+    window.addEventListener("resize", fit);
+    const observer = new MutationObserver(fit);
+    observer.observe(owner, { attributes: true, attributeFilter: ["open"] });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["style"] });
+    // As in `FileSubmenu`: the re-fit waits for the next frame, and a size the fit itself caused
+    // (the scroll cap) does not fit again.
+    let frame = 0;
+    const resize = typeof ResizeObserver === "undefined"
+      ? null
+      : new ResizeObserver(() => {
+        cancelAnimationFrame(frame);
+        frame = requestAnimationFrame(() => { if (sizeOf() !== measuredSize) fit(); });
+      });
+    resize?.observe(menu);
+    return () => {
+      window.removeEventListener("resize", fit);
+      observer.disconnect();
+      cancelAnimationFrame(frame);
+      resize?.disconnect();
+    };
+  }, []);
+
   // One tab stop per level, re-derived whenever the menu renders (items come and go with the project).
   useLayoutEffect(() => {
     if (ref.current) syncRoving(ref.current, ref.current.contains(document.activeElement) ? document.activeElement : null);
@@ -374,10 +410,15 @@ interface ShiftInput {
   readonly panelBottom: number;
 }
 
+/** How far a box spanning `start..end` on one axis moves back: its overflow, never past the near margin. */
+function shiftInto(extent: number, start: number, end: number): number {
+  const overflow = end - (extent - VIEWPORT_MARGIN_PX);
+  return overflow > 0 ? Math.min(overflow, Math.max(0, start - VIEWPORT_MARGIN_PX)) : 0;
+}
+
 /** How far a panel moves up: past the bottom edge it rises, but never above the top margin. */
 export function choosePanelShift({ viewportHeight, panelTop, panelBottom }: ShiftInput): number {
-  const overflow = panelBottom - (viewportHeight - VIEWPORT_MARGIN_PX);
-  return overflow > 0 ? Math.min(overflow, Math.max(0, panelTop - VIEWPORT_MARGIN_PX)) : 0;
+  return shiftInto(viewportHeight, panelTop, panelBottom);
 }
 
 type PanelGeometry = PlacementInput & ShiftInput;
@@ -401,6 +442,77 @@ export function layoutGeometry(
   };
 }
 
+/** The open menu's first level, every submenu folded, unshifted and without a scroll cap, in CSS layout px. */
+interface MenuFitInput {
+  readonly viewportWidth: number;
+  readonly viewportHeight: number;
+  readonly menuLeft: number;
+  readonly menuRight: number;
+  readonly menuBottom: number;
+}
+
+/** How the first level fits: in the inline layout or not, and how far it moves left. */
+export interface MenuFit { readonly inline: boolean; readonly shift: number }
+
+/**
+ * Fits the first level into the viewport margins, the layout-px counterpart of the stylesheet's
+ * window rules. Past the bottom margin the whole menu takes the scrolling, inline layout of short
+ * windows (a scroll cap would clip a flyout, so no submenu flies out of a menu that scrolls). Past
+ * the right margin it moves left, as a narrow window's menu spans the window, but never past the
+ * left margin; whether a submenu still flies out beside it is then `choosePanelPlacement`'s call.
+ */
+export function chooseMenuFit({ viewportWidth, viewportHeight, menuLeft, menuRight, menuBottom }: MenuFitInput): MenuFit {
+  return { inline: menuBottom > viewportHeight - VIEWPORT_MARGIN_PX, shift: shiftInto(viewportWidth, menuLeft, menuRight) };
+}
+
+/** Converts the menu's DOMRect and the window size (visual px) into `chooseMenuFit` input. */
+export function menuGeometry(
+  menu: Pick<DOMRect, "left" | "right" | "bottom">, viewport: { readonly width: number; readonly height: number }, scale: number,
+): MenuFitInput {
+  return {
+    viewportWidth: viewport.width / scale, viewportHeight: viewport.height / scale,
+    menuLeft: menu.left / scale, menuRight: menu.right / scale, menuBottom: menu.bottom / scale,
+  };
+}
+
+/**
+ * Applies `chooseMenuFit` to an open menu (`data-layout="inline"`, `--file-menu-shift`); a closed
+ * menu keeps neither. The first level is measured as it would lie without this function's marks,
+ * and without writing anything to measure it (open submenus place again on every write): the
+ * shift is left out, a scroll cap is undone through the scroll height (converted to
+ * visual px by the ratio of the menu's box to its own offset height), and a submenu open inline
+ * under its row does not count (inline panels have no vertical margin; a flyout is out of flow).
+ */
+function fitMenu(menu: HTMLElement, open: boolean) {
+  let fit: MenuFit = { inline: false, shift: 0 };
+  if (open) {
+    const scale = appUiScale();
+    const box = menu.getBoundingClientRect();
+    // Unshifted, an anchored menu starts at the left edge of File's `<details>` (`left: 0`, no
+    // border there). Read from that box, not from the shifted menu, a refit finds the same shift to
+    // the pixel; layout rounding would otherwise rewrite it, and every write places the open
+    // submenus again (mid-animation, which restarts it). A narrow window's fixed menu is not anchored.
+    const container = getComputedStyle(menu).position === "absolute" ? menu.parentElement : null;
+    const left = container ? container.getBoundingClientRect().left : box.left;
+    const ratio = menu.offsetHeight > 0 ? box.height / menu.offsetHeight : 1;
+    const height = menu.scrollHeight > menu.clientHeight
+      ? (menu.scrollHeight + menu.offsetHeight - menu.clientHeight) * ratio : box.height;
+    const unfolded = [...menu.querySelectorAll<HTMLElement>("[data-file-submenu-panel]")]
+      .filter((p) => !p.hidden && !isFlyoutLayout(p))
+      .reduce((sum, p) => sum + p.getBoundingClientRect().height, 0);
+    fit = chooseMenuFit(menuGeometry(
+      { left, right: left + box.width, bottom: box.top + height - unfolded }, viewportSize(), scale));
+  }
+  // Written only on a change: the open submenus place again when the mark or the shift changes.
+  const shift = fit.shift > 0 ? px(-fit.shift) : "";
+  if (menu.style.getPropertyValue("--file-menu-shift") !== shift) {
+    if (shift) menu.style.setProperty("--file-menu-shift", shift);
+    else menu.style.removeProperty("--file-menu-shift");
+  }
+  if (!fit.inline && menu.dataset.layout !== undefined) delete menu.dataset.layout;
+  if (fit.inline && menu.dataset.layout !== "inline") menu.dataset.layout = "inline";
+}
+
 // Written lengths are rounded to a hundredth of a layout px: a division by 0.8 leaves binary noise.
 const px = (value: number) => `${Math.round(value * 100) / 100}px`;
 
@@ -416,9 +528,10 @@ function resetPlacement(panel: HTMLElement, anchor: HTMLElement) {
 const isFlyoutLayout = (panel: HTMLElement) => getComputedStyle(panel).position === "absolute";
 
 // `clientWidth` leaves out a vertical scrollbar; like `innerHeight` it is a window size, not zoomed.
+const viewportSize = () => ({ width: document.documentElement.clientWidth || window.innerWidth, height: window.innerHeight });
+
 function measure(panel: HTMLElement, anchor: HTMLElement): PanelGeometry {
-  return layoutGeometry(panel.getBoundingClientRect(), anchor.getBoundingClientRect(),
-    { width: document.documentElement.clientWidth || window.innerWidth, height: window.innerHeight }, appUiScale());
+  return layoutGeometry(panel.getBoundingClientRect(), anchor.getBoundingClientRect(), viewportSize(), appUiScale());
 }
 
 /**
@@ -484,9 +597,10 @@ export function FileSubmenu({ id, label, children }: FileSubmenuProps) {
   const source = isOpen ? menu.open!.source : null;
 
   // Placement runs on open, on window resize, whenever the panel's own size changes (a panel whose
-  // entries change while it is open, late data, a font or theme swap, can be pushed past an edge)
-  // and when the application scale changes: a zoom step resizes neither the window nor the panel's
-  // layout box, yet every visual reading and the room in layout px change with it.
+  // entries change while it is open, late data, a font or theme swap, can be pushed past an edge),
+  // when the root's style changes (the application scale; a theme pack's properties cost a spare
+  // pass) and when the menu around it changes layout or moves: a zoom step resizes neither the
+  // window nor the panel's layout box, yet every visual reading and the room in layout px change.
   useLayoutEffect(() => {
     const el = panel.current;
     const anchor = wrapper.current;
@@ -509,6 +623,8 @@ export function FileSubmenu({ id, label, children }: FileSubmenuProps) {
     observer?.observe(el);
     const zoom = new MutationObserver(place);
     zoom.observe(document.documentElement, { attributes: true, attributeFilter: ["style"] });
+    // The menu taking or leaving its inline layout or moving left (`fitMenu`) changes this panel's room.
+    if (anchor.parentElement) zoom.observe(anchor.parentElement, { attributes: true, attributeFilter: ["data-layout", "style"] });
     return () => {
       window.removeEventListener("resize", place);
       cancelAnimationFrame(frame);

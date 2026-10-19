@@ -171,18 +171,39 @@ close button. No entry opts out: only the submenu rows carry `data-menu-stays-op
   every placement, so widening the window gives the flyout back and closing the submenu drops
   the mark. While an inline submenu is open the menu scrolls as a whole, as it does in the
   narrow layout. `choosePanelPlacement` is the pure decision and is unit-tested.
-- At 650 px width and below, or 600 px height and below (a short window, or high zoom),
-  every panel is an inline expansion under its row (static position, indented, left rule),
-  by stylesheet alone, because a flyout would leave the viewport or be clipped by the
-  scrolling menu around it. The chevron points down, or up when open. The menu then
-  scrolls as a whole (`max-height: calc(100dvh - 80px)`), so **Logout** and **Quit**
-  stay reachable on a short screen. In flyout mode (taller than 600 px and wider than
-  650 px) the menu does not scroll; its own height is far below that limit.
+- At a window of 650 px width and below, or 600 px height and below, every panel is an
+  inline expansion under its row (static position, indented, left rule), by stylesheet
+  alone, because a flyout would leave the viewport or be clipped by the scrolling menu
+  around it. The chevron points down, or up when open. The menu then scrolls as a whole
+  (`max-height: calc(100dvh / scale - 80px)`), so **Logout** and **Quit** stay reachable on
+  a short screen. These two rules read the window, at every scale (see Units under zoom).
+- The first level itself has to fit (UISET3-01), measured in layout px, so the scale,
+  density, language and session state (the **Logout** row) all count. `chooseMenuFit` is
+  the pure decision, the layout-px counterpart of both window rules:
+  - Past the bottom margin, the whole menu takes the same scrolling, inline layout
+    (`data-layout="inline"` on `.file-menu-content`): at 150% a 1440 x 601 window is
+    400.67 layout px high and the Comfortable first level with **Logout** ends at 443, yet
+    the 600 px window rule does not match. A scroll cap would clip a flyout, so no submenu
+    flies out of a menu that scrolls.
+  - Past the right margin, the menu moves left by its overflow (`--file-menu-shift`, never
+    past the left margin), as a narrow window's menu spans the window: at 150% a 660 px
+    window is 440 layout px wide and the menu, anchored at File, ended at 461. Whether a
+    submenu then flies out beside it is placement's call per submenu (above).
+  - The first level is measured as it lies without these marks, with nothing written to
+    measure it: the shift is left out (the menu's left edge is File's), a scroll cap is
+    undone through the scroll height, and a submenu open inline under its row does not
+    count. Both marks are written only when they change, because every write places the
+    open submenus again, and a placement during the entry animation restarts it.
+  - Decided when the menu opens, on window resize, when the root's `style` changes (a zoom
+    step) and when the menu's own size changes (a `ResizeObserver`); a closed menu keeps
+    neither mark. An open submenu places again when the menu's mark or shift changes.
 - Positions are measured when a panel opens, on window resize, whenever the open
   panel's own size changes (a `ResizeObserver`, disconnected on close): a panel whose
-  items change (a project opens) can push it past an edge, and when the root's `style`
-  changes (a `MutationObserver` on `<html>`, disconnected on close): a zoom step resizes
-  neither the window nor the panel's layout box, but changes every visual reading.
+  items change (a project opens) can push it past an edge, when the menu around it changes
+  its layout or shift, and when the root's `style` changes (a `MutationObserver` on
+  `<html>`, disconnected on close): a zoom step resizes neither the window nor the panel's
+  layout box, but changes every visual reading. App writes the scale there, and theme
+  packs write their properties there too; those cost a bounded extra placement pass each.
 
 ## Units under zoom
 
@@ -199,10 +220,18 @@ Viewport units do not follow the root zoom, so every File menu limit divides the
 scale first: the flyout's `max-width` fallback `min(520px, calc(100vw / scale - 16px))` and
 `max-height: calc(100dvh / scale - 24px)`, and the scrolling menu's
 `max-height: calc(100dvh / scale - 80px)` (narrow, short and per-instance inline layouts).
-The media queries (650 px wide, 600 px high) are not zoom-aware: they read the window in CSS
-px, so at 150% a 990 px window still starts in the flyout layout and placement decides per
-submenu (660 layout px wide: no side of the Import & export row keeps 220 layout px, so that
-submenu goes inline; at 1040 px it flies out with a cap).
+The media queries (650 px wide, 600 px high) read the window in CSS px, not layout px; CSS has
+no media query on a custom property. They stay as a window floor, and both get the same
+zoom-aware complement measured in layout px: the first level's bottom edge decides the whole
+menu's inline layout and its right edge decides the shift (`chooseMenuFit`, under Placement),
+while placement decides per submenu whether a side keeps 220 layout px. So at 150% a 990 px
+window still starts in the flyout layout (660 layout px wide: no side of the Import & export
+row keeps 220 layout px, so that submenu goes inline; at 1040 px it flies out with a cap), and
+a 1440 x 601 window takes the inline layout for the whole menu. Below 100% the window floor is
+the stricter rule: at 80% a 640 x 800 window is 800 layout px wide, yet the toolbar takes its
+narrow layout (a window rule like every breakpoint outside the File menu), the menu spans the
+window and every submenu stays inline; a flyout beside a menu that spans the window would have
+no room on either side anyway.
 
 What Chromium reports inside the root-zoomed document was measured, not assumed (system
 Chromium 154, 18 October 2026, a 900 x 700 window, a 200 x 100 px box at 100, 50):
@@ -327,6 +356,21 @@ change.
   width, a moved one ends at the bottom (or top) margin; an inline one appears only where
   neither side of its row holds 220 layout px (the test's own measurement); no sideways scroll.
   The panel is read after its entry animation finished.
+- `src/FileMenu.test.tsx`, UISET3-01 (first-level fit): `chooseMenuFit` takes the inline
+  layout past the bottom margin and not a pixel before, moves left by the overflow past the
+  right margin and never past the left one; `menuGeometry` converts a 1440 x 601 window at
+  150% to 400.67 layout px, where a menu ending at 593 visual px no longer fits, and a 660 px
+  window to a 29 px shift; at 80% it gives the hidden height back. In the component: the
+  menu is marked inline at 150% and not at 100% in the same window, decided again on a zoom
+  step and on resize, unmarked on close; the shift is written in layout px, found again on a
+  refit and dropped on close; an open inline submenu does not count toward the first level.
+- `e2e/file-menu-submenus.e2e.ts`, UISET3-01: through a stored `uiScale` with Comfortable
+  density and a session (**Logout**), in EN and DE, at 150% in 1440 x 601, 1440 x 700,
+  900 x 800 and 660 x 800: every first-level row, scrolled into view, lies inside the
+  viewport and the menu box and takes the pointer, folded and again with each submenu open
+  (each submenu checked as in UISET2-01), no sideways scroll, and a real click on **Logout**
+  with Help open logs out. At 80% in 640 x 800 every submenu is inline and every row and
+  entry is reachable.
 - `e2e/file-menu-submenus.e2e.ts`, UISET2-02: on a touchscreen (`hasTouch`, `locator.tap()`) at
   400 x 800 and 660 x 800 in EN and DE, a tap on a sibling row opens it while another submenu
   is open, a tap on **Logout** below an open submenu runs it, and a tap on **New project…**
@@ -352,4 +396,6 @@ change.
 - A pen with hover, and a pen tap in the touch-like order (`mousedown` after `pointerup`), were
   not produced in a browser: Playwright emulates no pen, and Chromium's input domain delivers a
   pen press in mouse order. The touch-like pen order is covered by unit tests only.
-- The media queries themselves are not zoom-aware (see Units under zoom).
+- The two media queries still read the window; the first-level fit and placement make the
+  menu zoom-aware around them (see Units under zoom). The toolbar's own narrow layout, and
+  with it the full-width menu of a narrow window, follow the window at every scale.

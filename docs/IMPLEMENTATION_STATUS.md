@@ -166,7 +166,11 @@ menu's viewport-unit limits are divided by the scale too (Chromium-measured unit
 room beside a row is taken from the row, not from the panel mid-slide, and the bottom check
 follows the capped height. The press guard now covers touch and pen: `mousedown` re-arms it,
 because a tap's focus move comes after `pointerup`, and a press abandoned outside the window is
-forgotten on `blur`. Not done: type-ahead, native WebKitGTK/Tauri runs. [Contract](contracts/file-menu.md).
+forgotten on `blur`. Third round (19 October 2026, UISET3-01): the first level is measured in
+layout pixels too. Past the bottom margin the whole menu scrolls and folds its submenus inline
+(at 150%, Comfortable density and a session, **Logout** sat below a 1440 x 601 window the 600 px
+window rule calls tall); past the right margin it moves left (a 660 px window at 150%). The
+window rules stay as a floor. Not done: type-ahead, native WebKitGTK/Tauri runs. [Contract](contracts/file-menu.md).
 
 ## UI-05 appearance relevance (18 October 2026)
 

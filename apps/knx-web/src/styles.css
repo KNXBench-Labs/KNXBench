@@ -3071,7 +3071,7 @@ h1, h2, h3 { letter-spacing: -0.025em; }
 kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .file-menu { position: relative; }
 .file-menu summary { cursor: pointer; padding: 7px 10px; list-style: none; }
-.file-menu-content { position: absolute; z-index: 6; top: calc(100% + 8px); left: 0; min-width: 260px; background: var(--knx-surface); border: 1px solid var(--knx-border); border-radius: 8px; box-shadow: 0 12px 32px var(--knx-overlay-shadow); padding: 8px; }
+.file-menu-content { position: absolute; z-index: 6; top: calc(100% + 8px); left: var(--file-menu-shift, 0px); min-width: 260px; background: var(--knx-surface); border: 1px solid var(--knx-border); border-radius: 8px; box-shadow: 0 12px 32px var(--knx-overlay-shadow); padding: 8px; }
 .file-menu-content > button, .file-menu-content > div { display: block; width: 100%; margin: 3px 0; }
 .workbench-panel-controls { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; justify-content: space-between; min-height: 35px; border-bottom: 1px solid var(--knx-border); }
 .workbench-panel-controls .bulk-action-toolbar { flex: 1 1 260px; min-width: 0; max-width: 100%; margin: 4px 0; }
@@ -3432,14 +3432,21 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
   }
 }
 /* The same inline layout for one open submenu on a mid-width screen where no side keeps the panel's
-   minimum width (FileMenu.tsx marks its row `data-layout="inline"`). The menu scrolls as a whole while
-   it is open, as it does in the narrow layout. Viewport units do not follow the root zoom, so every
-   File menu height and width limit divides them by --app-ui-scale first. */
+   minimum width (FileMenu.tsx marks its row `data-layout="inline"`), and for the whole menu where its
+   first level does not fit the viewport in layout px (FileMenu.tsx marks the menu: the media rule
+   above reads the window, which at 150% is half again the layout viewport). The menu scrolls as a
+   whole while it is open, as it does in the narrow layout. Viewport units do not follow the root
+   zoom, so every File menu height and width limit divides them by --app-ui-scale first. */
+.file-menu-content[data-layout="inline"],
 .file-menu-content:has(> .file-submenu[data-layout="inline"]) { max-height: calc(100dvh / var(--app-ui-scale, 1) - 80px); overflow: auto; }
+.file-menu-content[data-layout="inline"] > .file-submenu > .file-submenu-panel,
 .file-submenu[data-layout="inline"] > .file-submenu-panel { position: static; width: auto; min-width: 0; max-width: none; max-height: none; overflow: visible; margin: 0 0 0 12px; padding: 0 0 0 8px; border: 0; border-left: 2px solid var(--knx-border); border-radius: 0; box-shadow: none; }
+.file-menu-content[data-layout="inline"] .file-submenu-chevron,
 .file-submenu[data-layout="inline"] .file-submenu-chevron { transform: rotate(90deg); }
+.file-menu-content[data-layout="inline"] .file-submenu-trigger[aria-expanded="true"] .file-submenu-chevron,
 .file-submenu[data-layout="inline"] .file-submenu-trigger[aria-expanded="true"] .file-submenu-chevron { transform: rotate(-90deg); }
 @media (prefers-reduced-motion: no-preference) {
+  .file-menu-content[data-layout="inline"] > .file-submenu > .file-submenu-panel:not([hidden]),
   .file-submenu[data-layout="inline"] > .file-submenu-panel:not([hidden]) { animation-name: knx-file-submenu-fade; }
 }
 .device-workspace { background: var(--knx-surface); border: 1px solid var(--knx-border); border-radius: 8px; padding: 20px; margin-top: 24px; }

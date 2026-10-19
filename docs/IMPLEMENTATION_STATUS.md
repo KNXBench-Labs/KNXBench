@@ -12,6 +12,33 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Pane edges follow the pointer at every zoom level (19 October 2026)
+
+The two UISET zoom follow-ups (WP-15 part B). Navigation and inspector pane
+drags and the left column's block splitters divide the pointer delta, and the
+splitter its measured height, by the application scale, so at 150% a pane edge
+no longer runs 1.5 times ahead of the pointer. One table case now drives the
+scale only through the stored `uiScale` setting, the zoom shortcuts and a
+reload, so App's own scale effect, the narrow-window inspector stacking and a
+startup with a stored scale run together with the table measurement
+([KL-130](limitations/KL-130-ZOOM-application-zoom.md#update-19-october-2026-pane-drags-and-a-setting-driven-table-case)).
+Six Vitest cases and the 80%/150% real-drag browser cases were RED before the
+fix; four source mutants each fail a named case. Chromium-only evidence.
+
+## Nested module scopes keep their own identity in the web client (19 October 2026)
+
+WP-15: the web client adopts ADR-0063's `nodeChain`. Two nameless nested
+instances of one module definition share `moduleNode`, `moduleId` and
+`moduleDefId`. Their diagnostics no longer merge into one group. When one of
+them disappears after a parameter change, the chosen area, a typed draft and
+an opened Restricted section stay with their own scope. An older server
+without the field gets a tagged legacy fallback that can never equal a chained
+identity. A malformed chain is treated as absent instead of refusing the panel
+([ADR-0063](adr/0063-parameter-scopes-preserve-evaluation-identity.md#web-adoption-wp-15-19-october-2026)).
+Seven new Vitest cases were RED before the fix; six source mutants (chain
+ignored, clipped, reordered, untagged fallback, shape check removed, position
+keys) each fail a named case.
+
 ## Device comparison shows what differs — WP-18 (19 October 2026)
 
 Owner requests 1 and 2 for the *Project file versus device* result. Raw hex

@@ -241,3 +241,24 @@ it("ignores a pointer-down from a button other than the primary one", async () =
   });
   expect(now(splitter)).toBe(200);
 });
+
+// UISET follow-up: under application zoom the measured DOMRect and the
+// pointer delta are visual pixels; the block height is a layout length.
+it.each([[0.8, 160, 275], [1.5, 300, 240]])("at scale %s converts the measured height and the drag to layout pixels",
+  async (scale, visualHeight, dragged) => {
+    document.documentElement.style.setProperty("--app-ui-scale", String(scale));
+    try {
+      vi.spyOn(Element.prototype, "getBoundingClientRect").mockReturnValue(
+        { height: visualHeight, width: 0, top: 0, left: 0, right: 0, bottom: 0, x: 0, y: 0, toJSON: () => ({}) });
+      const splitter = await mount("above", null);
+      expect(now(splitter)).toBe(200);
+      await drag(splitter, 300, 360);
+      expect(stored()).toBe(`${dragged}px`);
+      expect(now(splitter)).toBe(dragged);
+      // Keyboard steps stay layout pixels.
+      await press(splitter, "ArrowDown");
+      expect(now(splitter)).toBe(dragged + 16);
+    } finally {
+      document.documentElement.style.removeProperty("--app-ui-scale");
+    }
+  });

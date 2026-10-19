@@ -566,3 +566,84 @@ for (const scale of [0.8, 1.5]) {
     expect(server.unexpected).toEqual([]);
   });
 }
+
+// UISET follow-up: the cases above write the root property directly. This one
+// drives the scale only through the real `uiScale` setting (stored on the
+// server, then the zoom shortcuts), so App's own effect, its narrow-window
+// inspector stacking (`viewportWidth / uiScale`) and a startup with a stored
+// scale run together with the table's measurement.
+async function fitsOrScrollsLocally(page: Page, table: Locator, name: string) {
+  const viewport = table.locator(".resizable-table-scroll");
+  await announcedWidth(table, 1);
+  const floors = await intrinsicFloors(table);
+  const size = await viewport.evaluate(e => ({ scroll: e.scrollWidth, client: e.clientWidth }));
+  const minimum = floors.reduce((a, b) => a + b, 0);
+  const measurement = { name, ...size, minimum, floors };
+  await test.info().attach(`${name}-fit-budget`, { body: JSON.stringify(measurement), contentType: "application/json" });
+  if (minimum > size.client) {
+    expect(Math.abs(size.scroll - minimum), JSON.stringify(measurement)).toBeLessThanOrEqual(2 * floors.length);
+    await scrollsLocally(page, table);
+  } else expect(size.scroll, JSON.stringify(measurement)).toBeLessThanOrEqual(size.client);
+  await wordsIntact(table.locator("thead .table-column-label"));
+  await wordsIntact(table.locator("tbody td"));
+}
+
+async function pointerTracks(page: Page, table: Locator, scale: number) {
+  const handle = table.getByRole("separator").nth(1);
+  const heading = table.locator("thead th").nth(1);
+  const edge = async () => { const box = (await heading.boundingBox())!; return box.x + box.width; };
+  await handle.scrollIntoViewIfNeeded();
+  const before = await edge();
+  await drag(page, handle, 60);
+  await preference(page, "devices", "address", 100 + 60 / scale);
+  await expect.poll(async () => Math.abs(await edge() - before - 60), "60 visual pixels follow the pointer").toBeLessThan(1);
+  await announcedWidth(table, 1);
+  await handle.press("Enter");
+  await preference(page, "devices", "address", 100);
+}
+
+test("stored uiScale: App's own scale drives inspector stacking, table fit and drags; a reload remeasures at the stored scale", async ({ page }) => {
+  await page.setViewportSize({ width: 1200, height: 1000 });
+  const server = await intercept(page, "en");
+  const settings: Record<string, unknown> = { uiLanguage: "en", theme: "porcelain", uiScale: 1.5 };
+  const scales: unknown[] = [];
+  // Registered after `intercept`, so it answers settings first.
+  await page.route("**/api/settings", route => {
+    if (route.request().method() === "PUT") {
+      const patch = route.request().postDataJSON().settings as Record<string, unknown>;
+      if ("uiScale" in patch) scales.push(patch.uiScale);
+      Object.assign(settings, patch);
+    } else if (route.request().method() !== "GET") server.unexpected.push(`${route.request().method()} /api/settings`);
+    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ schemaVersion: 1, status: "ok", settings }) });
+  });
+  const rootScale = () => page.evaluate(() => document.documentElement.style.getPropertyValue("--app-ui-scale"));
+  const workbench = page.locator("main.workbench");
+  const table = page.locator('[data-table-id="devices"]');
+  await openProject(page, "en");
+  await expect.poll(rootScale, "App applies the stored scale").toBe("1.5");
+  await openList(page, "en");
+  // 1200 / 1.5 = 800 layout px, below 250 + 360 + 200: stacked (not at 100%).
+  await expect(workbench).toHaveClass(/workbench--stacked-inspector/);
+  expect(Math.abs((await page.locator(".workbench-pane-right").boundingBox())!.width - 1200)).toBeLessThan(2);
+  await fitsOrScrollsLocally(page, table, "en-setting-1.5-devices");
+  await pointerTracks(page, table, 1.5);
+  // The real shortcut path: 150% → 100% → 90% → 80%, each written as a setting.
+  await table.getByRole("separator").nth(1).focus();
+  for (const key of ["Control+0", "Control+Minus", "Control+Minus"]) await page.keyboard.press(key);
+  await expect.poll(rootScale).toBe("0.8");
+  await expect.poll(() => scales).toEqual([1, 0.9, 0.8]);
+  // 1200 / 0.8 = 1500 layout px: side by side again, the mounted table remeasured.
+  await expect(workbench).not.toHaveClass(/workbench--stacked-inspector/);
+  await fitsOrScrollsLocally(page, table, "en-setting-0.8-mounted-devices");
+  // Startup: the stored 80% is applied before the table mounts again.
+  await page.reload();
+  await expect.poll(rootScale, "startup applies the stored scale").toBe("0.8");
+  await page.getByRole("button", { name: "Commands… (Ctrl+Shift+P)", exact: true }).click();
+  await page.getByRole("combobox").fill("Devices");
+  await page.getByRole("combobox").press("Enter");
+  await expect(table).toBeVisible();
+  await expect(workbench).not.toHaveClass(/workbench--stacked-inspector/);
+  await fitsOrScrollsLocally(page, table, "en-setting-0.8-startup-devices");
+  await pointerTracks(page, table, 0.8);
+  expect(server.unexpected).toEqual([]);
+});

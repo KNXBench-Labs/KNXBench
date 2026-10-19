@@ -20,6 +20,7 @@ import { snapshotContextFromTree, type SnapshotContext } from "./snapshotIdentit
 import { isRevisionConflict } from "./revisionConflict";
 import ParameterSourceEditor from "./ParameterSourceEditor";
 import ParameterWorkspace from "./ParameterWorkspace";
+import { parameterSectionKeys } from "./parameterWorkspace";
 import { isSourceEditorCandidate } from "./parameterSourceHost";
 import UnresolvedProgramNotice from "./UnresolvedProgramNotice";
 import { useComMutation } from "./ComMutationBoundary";
@@ -627,6 +628,9 @@ export function ParameterPanelContent(props: ParameterPanelProps & {
     (separator) => view === "parameters" && !isSeparatorRestricted(separator),
   )).filter((section) => section.fields.length > 0 || (section.separators?.length ?? 0) > 0);
 
+  // WP-15: a section view keeps its own scope's state when a sibling vanishes.
+  const sectionKeys = parameterSectionKeys(sections);
+
   if (view === "functions" && sections.length === 0) return <p className="inspector-description">{t("parameters.functionsEmpty")}</p>;
 
   return (
@@ -650,7 +654,7 @@ export function ParameterPanelContent(props: ParameterPanelProps & {
             ? { programId: panel.programId, snapshot: props.snapshot, writeBinding: snapshot, scope } : null} />}
       /> : sections.map((section, i) => (
         <ParameterSectionView
-          key={i}
+          key={sectionKeys[i]}
           section={section}
           deviceId={deviceId}
           language={language}

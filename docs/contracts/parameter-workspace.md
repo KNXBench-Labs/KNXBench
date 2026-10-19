@@ -35,8 +35,10 @@ or protocol schema change; product database v24 adds typed presentation columns
   clears search when an area is explicitly chosen.
 - All editors stay under a single stable source-ordered parent. Navigation and
   search hide rows rather than unmounting them; keys use full scope and field
-  identity, not translated labels, group ownership or list position. Repeated
-  field occurrences receive separate occurrence keys. Device/application/product
+  identity, not translated labels, group ownership or list position. Scope
+  identity is the complete ADR-0063 `nodeChain`, or for an older server the
+  tagged legacy scope fields (WP-15). Repeated scopes and field occurrences
+  receive separate occurrence keys. Device/application/product
   language changes reset this presentation context.
 - Focusing a row or its keyboard-accessible information button selects contextual
   source metadata: exact ID/type/access, accepted value and its reported origin,

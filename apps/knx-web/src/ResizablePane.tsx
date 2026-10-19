@@ -1,5 +1,6 @@
 /** Pointer and keyboard resizing; pane content remains native document content. */
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { appUiScale } from "./appUiScale";
 export default function ResizablePane(props: {
   label: string; side: "left" | "right"; initialWidth: number; min: number; max: number; children: ReactNode;
   onWidthCommit?: (width: number) => void;
@@ -7,7 +8,7 @@ export default function ResizablePane(props: {
   const clamp = (value: number) => Math.max(props.min, Math.min(props.max, value));
   const [width, setWidth] = useState(() => clamp(props.initialWidth));
   const widthRef = useRef(width);
-  const drag = useRef<{ x: number; width: number } | null>(null);
+  const drag = useRef<{ x: number; width: number; scale: number } | null>(null);
   useEffect(() => {
     const next = clamp(props.initialWidth);
     widthRef.current = next;
@@ -34,12 +35,15 @@ export default function ResizablePane(props: {
       }}
       onPointerDown={(e) => {
         if (e.button !== 0) return;
-        drag.current = { x: e.clientX, width: widthRef.current };
+        drag.current = { x: e.clientX, width: widthRef.current, scale: appUiScale() };
         e.currentTarget.setPointerCapture(e.pointerId);
       }}
       onPointerMove={(e) => {
         if (!drag.current) return;
-        const next = clamp(drag.current.width + (e.clientX - drag.current.x) * direction);
+        // `clientX` is visual pixels under application zoom, the width a
+        // layout length; whole layout pixels keep the saved width tidy.
+        const delta = (e.clientX - drag.current.x) / drag.current.scale;
+        const next = clamp(Math.round(drag.current.width + delta * direction));
         widthRef.current = next;
         setWidth(next);
       }}

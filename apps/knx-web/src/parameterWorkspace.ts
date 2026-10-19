@@ -2,6 +2,7 @@
 import type { ModuleScope, ParameterField, ParameterSection, ParameterSeparator } from "./api";
 import type { TextFill } from "./bindings/TextFill";
 import { classifyGroupLayout, type GroupLayoutView } from "./parameterMatrix";
+import { moduleScopeIdentity } from "./moduleScope";
 
 export interface ParameterWorkspaceGroup {
   key: string;
@@ -34,17 +35,28 @@ export type ParameterWorkspaceItem =
   | { kind: "field"; row: ParameterWorkspaceRow }
   | { kind: "separator"; separator: ParameterWorkspaceSeparator };
 
+/**
+ * One key per section: its scope identity (ADR-0063 chain, else the legacy
+ * fields) plus its occurrence among equal identities in this response.
+ */
+export function parameterSectionKeys(sections: readonly ParameterSection[]): string[] {
+  const occurrences = new Map<string, number>();
+  return sections.map(section => {
+    const identity = moduleScopeIdentity(section.scope);
+    const occurrence = occurrences.get(identity) ?? 0;
+    occurrences.set(identity, occurrence + 1);
+    return JSON.stringify([identity, occurrence]);
+  });
+}
+
 export function indexParameterWorkspace(sections: readonly ParameterSection[]) {
   const rows: ParameterWorkspaceRow[] = [];
   const groups: ParameterWorkspaceGroup[] = [];
   const items: ParameterWorkspaceItem[] = [];
-  const sectionOccurrences = new Map<string, number>();
-  for (const section of sections) {
+  const sectionKeys = parameterSectionKeys(sections);
+  for (const [sectionIndex, section] of sections.entries()) {
     const scope = section.scope;
-    const identity = JSON.stringify(scope === null ? null : [scope.moduleNode, scope.moduleId, scope.moduleDefId]);
-    const occurrence = sectionOccurrences.get(identity) ?? 0;
-    sectionOccurrences.set(identity, occurrence + 1);
-    const sectionKey = JSON.stringify([identity, occurrence]);
+    const sectionKey = sectionKeys[sectionIndex];
     const declared = new Map<string, ParameterWorkspaceGroup>();
     // A group is opened by whichever comes first, field or separator, so a
     // block holding only text is an area of its own (ADR-0139).

@@ -6,6 +6,17 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Nested module scopes in the web client (19 October 2026, WP-15)
+
+The web client now adopts the server's `nodeChain` (`moduleScope.ts`), the
+"UI residue" named in the retained nested-module record below: diagnostic
+grouping, workspace keys and the Restricted/Functions section views compare
+complete chains. The `sameScope()` helper named there no longer exists. An older server
+without the field gets a tagged legacy fallback: its nested nameless scopes
+stay indistinguishable, and a surviving section can take a vanished sibling's
+position. There is still no real nested manufacturer sample
+([ADR-0063](../adr/0063-parameter-scopes-preserve-evaluation-identity.md#web-adoption-wp-15-19-october-2026)).
+
 ## Product-database gap census (17 October 2026)
 
 A [census of a second local product-database collection](../research/2026-10-17-product-database-gap-census.md)

@@ -2289,6 +2289,149 @@ pub(crate) fn add_report_unknowns(
     }
 }
 
+/// Replace a byte-derived subset without repairing or inventing historical
+/// facts. Unlike the older additive helpers, validate the original report too.
+pub(crate) fn reconcile_promotion_report(
+    conn: &Connection,
+    sha256: &str,
+    repair: crate::promotion_repair::reports::ReportRepair,
+) -> Result<Result<(), ReportNotUpgradable>, ProductDbError> {
+    let stored_size:i64=conn.query_row("SELECT coalesce(sum(512+length(CAST(xpath AS BLOB))+length(CAST(name AS BLOB))+coalesce(length(CAST(sample AS BLOB)),0)),0) FROM package_install_unknown WHERE package_sha256=?1",[sha256],|r|r.get(0))?;
+    let mut budget = crate::promotion_repair::reports::RepairBudget::default();
+    let admitted = usize::try_from(stored_size)
+        .ok()
+        .and_then(|size| budget.charge(size).ok());
+    if admitted.is_none() {
+        return Ok(Err(ReportNotUpgradable(
+            "v28 stored report evidence allowance exceeded".into(),
+        )));
+    }
+    let mut facts = match load_facts(conn, sha256) {
+        Ok(Some(facts)) => facts,
+        Ok(None) => return Ok(Ok(())),
+        Err(ProductDbError::Sqlite(error)) => return Err(ProductDbError::Sqlite(error)),
+        Err(error) => return Ok(Err(ReportNotUpgradable(error.to_string()))),
+    };
+    // A merged row cannot identify which of several program members lost a
+    // counter unit. Released promotions deleted whole report keys while only
+    // subtracting the source rows they actually retired. Require the complete
+    // positive source-derived aggregate for overlapping members; otherwise
+    // keep the original package counter and downgrade, never guess encounters.
+    for (candidate, members) in &repair.candidate_members {
+        if *members <= 1 {
+            continue;
+        }
+        let matches = |row: &&crate::report::UnknownConstruct| {
+            row.xpath == candidate.0 && row.kind.as_str() == candidate.1 && row.name == candidate.2
+        };
+        let expected = repair
+            .replacements
+            .iter()
+            .filter(matches)
+            .try_fold(0_u64, |n, r| n.checked_add(u64::from(r.occurrences)));
+        let replacement_members = repair.replacements.iter().filter(matches).count() as u64;
+        let measured = facts.unknown_constructs.iter().find(|r| {
+            r.xpath == candidate.0 && r.kind.as_str() == candidate.1 && r.name == candidate.2
+        });
+        if replacement_members < *members
+            || measured.is_none_or(|r| Some(u64::from(r.occurrences)) != expected)
+        {
+            return Ok(Err(ReportNotUpgradable(
+                "ambiguous per-member promotion counter history".into(),
+            )));
+        }
+    }
+    let mut previous_members = repair.preserved_members;
+    for row in &facts.unknown_constructs {
+        if let Some((_, count)) = repair
+            .candidate_members
+            .iter()
+            .find(|(k, _)| row.xpath == k.0 && row.kind.as_str() == k.1 && row.name == k.2)
+        {
+            previous_members = checked_sum(previous_members, *count, "target member distinct")?;
+        }
+    }
+    let old_count: i64 = conn.query_row(
+        "SELECT unknown_count FROM package WHERE sha256=?1",
+        [sha256],
+        |r| r.get(0),
+    )?;
+    let updated = i64_to_u64(old_count, "package unknown count")?
+        .checked_sub(previous_members)
+        .and_then(|n| n.checked_add(repair.replacements.len() as u64));
+    let Some(updated) = updated else {
+        return Ok(Err(ReportNotUpgradable(
+            "inconsistent targeted package member count".into(),
+        )));
+    };
+    facts.unknown_constructs.retain(|row| {
+        !repair
+            .affected
+            .iter()
+            .any(|k| row.xpath == k.0 && row.kind.as_str() == k.1 && row.name == k.2)
+    });
+    let mut merged: BTreeMap<_, crate::report::UnknownConstruct> = BTreeMap::new();
+    let mut replacement_keys = crate::promotion_repair::reports::RepairBudget::default();
+    for row in repair.replacements {
+        replacement_keys
+            .charge(256 + row.xpath.len() + row.kind.as_str().len() + row.name.len())?;
+        let key = (row.xpath.clone(), row.kind.as_str(), row.name.clone());
+        match merged.entry(key) {
+            std::collections::btree_map::Entry::Vacant(entry) => {
+                entry.insert(row);
+            }
+            std::collections::btree_map::Entry::Occupied(mut entry) => {
+                let current = entry.get_mut();
+                current.occurrences = current
+                    .occurrences
+                    .checked_add(row.occurrences)
+                    .ok_or_else(|| report_error("unknown occurrence counter overflow"))?;
+            }
+        }
+    }
+    facts.unknown_constructs.extend(merged.into_values());
+    facts
+        .counts
+        .retain(|row| row.category != InstallCategory::UnknownConstruct);
+    facts.sort()?;
+    let distinct = usize_to_u64(facts.unknown_constructs.len(), "unknown distinct")?;
+    let occurrences = facts.unknown_occurrences;
+    add_count(
+        &mut facts,
+        InstallCategory::UnknownConstruct,
+        InstallDisposition::Read,
+        occurrences,
+    )?;
+    add_count(
+        &mut facts,
+        InstallCategory::UnknownConstruct,
+        InstallDisposition::Stored,
+        distinct,
+    )?;
+    for table in [
+        "package_install_count",
+        "package_install_unknown",
+        "package_install_diagnostic",
+        "package_install_report",
+    ] {
+        conn.execute(
+            &format!("DELETE FROM {table} WHERE package_sha256=?1"),
+            [sha256],
+        )?;
+    }
+    match persist_facts(conn, sha256, facts).and_then(|()| load_facts(conn, sha256).map(|_| ())) {
+        Ok(()) => {
+            conn.execute(
+                "UPDATE package SET unknown_count=?2 WHERE sha256=?1",
+                params![sha256, u64_to_i64(updated, "package unknown count")?],
+            )?;
+            Ok(Ok(()))
+        }
+        Err(ProductDbError::Sqlite(error)) => Err(ProductDbError::Sqlite(error)),
+        Err(error) => Ok(Err(ReportNotUpgradable(error.to_string()))),
+    }
+}
+
 /// Downgrades one package's measured report to `unavailable`, with no
 /// detail rows: what a migration does when it cannot carry a report
 /// forward truthfully. A package with no report row, or an already

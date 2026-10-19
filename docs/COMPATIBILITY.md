@@ -1,5 +1,24 @@
 # Compatibility
 
+## Corrective catalogue upgrade (v28 candidate, after Alpha 15)
+
+The v28 candidate addresses the earlier v23–v25 migration residues, not a new
+KNX/ETS format or device-support claim. Source reconstruction is conditional on
+authentic retained data; missing/corrupt or resource-refused reconstruction must
+retain original affected values/evidence and explicitly downgrade affected
+measured reports rather than invent history. Native/model16 and master
+provenance semantics are unchanged. Independent review, corpus reconciliation
+and integrated package acceptance are still pending. Older product readers
+refuse v28; keep a separate closed-catalogue backup before upgrade.
+Missing or partial aggregates shared by multiple program members cannot prove
+which historical counter units earlier migrations removed. Such packages keep
+their original counter and an explicitly unavailable report; replay is not
+historical attribution. Opaque members remain opaque even when their bytes
+match a program, and inconsistent semantic non-program evidence cannot support
+a measured rewrite. The fixed 16 MiB evidence allowance is a conservative
+repair policy, not a format limit or process-memory guarantee.
+[ADR-0148](adr/0148-repair-product-column-promotions.md).
+
 ## Master provenance (source builds after Alpha 15)
 
 WP-17 adds source evidence, not new ETS/master grammar compatibility. Product

@@ -74,6 +74,23 @@ it excludes `Dynamic` and returns only additions missing from the global ledger.
   history measured.
 - Package counters count distinct constructs per member; report rows merge
   matching keys across members. Neither is a global-ledger row-count delta.
+  An absent or partial shared aggregate does not identify which program's
+  counter units earlier retirement removed. Preserve that package's original
+  counter, record ambiguous per-member history and make its report unavailable;
+  retained XML cannot manufacture historical member attribution. Complete shared
+  aggregates and unambiguous single-member cases remain eligible for repair.
+- Dispatch by the stored member role and path, not SHA alone: opaque baggage
+  never inherits semantic evidence from a byte-identical program. Authenticate
+  semantic non-program target ledgers against the retained source's parser
+  result before using them; missing or invented rows require unavailable
+  reports rather than rewriting measured counts or samples.
+- Admit lexical/evidence work before semantic parsing and owned evidence copies.
+  The repair's fixed 16 MiB allowance is a conservative working-set policy,
+  not a KNX format limit or a process-RSS guarantee. Commit retained cross-source
+  budget consumption only after a source succeeds, matching its savepoint.
+  A failed source must not spend the allowance of later healthy sources.
+  A repair failure without a source measurement marker is a public diagnostic
+  reader error, never absent evidence or invented measured parse statistics.
 - Validate before and after reconciliation. If truthful reconstruction fails,
   retain source evidence and derived rows, record an explicit failure and make
   the affected measured report unavailable through the established mechanism.
@@ -107,7 +124,8 @@ Acceptance requires:
 
 ## Ownership
 
-WP-17's schema, master parser, provenance/replay and report integration remain
-reserved until that package is published and its claim released. Read its final
-contract before allocating a successor version or extending rewind helpers. The
-present preparation does not take over or modify that workstream.
+WP-17's v27 delivery and reservation release are published at `dc83e939`.
+The successor allocates v28 under
+[ADR-0148](../adr/0148-repair-product-column-promotions.md), preserving WP-17's
+final report-validation/provenance contracts. No other worktree is taken over.
+The first repair's implementation and broader acceptance remain pending.

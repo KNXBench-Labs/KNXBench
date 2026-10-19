@@ -607,7 +607,7 @@ mod promotion_repair_regressions {
         assert_eq!(
             conn.pragma_query_value(None, "user_version", |r| r.get::<_, i64>(0))
                 .unwrap(),
-            CURRENT_PRODUCTDB_VERSION as i64
+            CURRENT_PRODUCTDB_VERSION
         );
         assert_reports_consistent(&conn);
         assert_eq!(
@@ -855,6 +855,95 @@ mod promotion_repair_regressions {
             named_evidence(&migrated, name),
             expected,
             "v{version} repair must preserve unsupported host evidence"
+        );
+        assert_final(&path, migrated, &fresh);
+    }
+
+    #[test]
+    fn v27_contaminated_caption_is_replaced_or_cleared() {
+        for winner in [Some("first-caption"), None] {
+            let (_dir, path, conn) = installed(&package(&format!(
+                "{}{}",
+                object_program(winner, "first"),
+                object_program(Some("loser-caption"), "second")
+            )));
+            let fresh = snapshot(&conn);
+            conn.execute(
+                "UPDATE com_object_ref SET text_parameter_ref_id='loser-caption'",
+                [],
+            )
+            .unwrap();
+            conn.pragma_update(None, "user_version", 27).unwrap();
+            drop(conn);
+            let migrated = open_and_migrate(&path).unwrap();
+            assert_eq!(
+                object_caption(&migrated).as_deref(),
+                winner,
+                "already-upgraded v27 caption repair"
+            );
+            assert_final(&path, migrated, &fresh);
+        }
+    }
+
+    #[test]
+    fn v27_contaminated_placement_and_enum_are_replaced_or_cleared() {
+        for stated in [true, false] {
+            let (_dir, path, conn) = installed(&package(&format!(
+                "{}{}",
+                placement_program(stated, false),
+                placement_program(true, true)
+            )));
+            let fresh = snapshot(&conn);
+            conn.execute_batch(
+                "UPDATE parameter SET own_offset=12, own_bit_offset=1,
+                property_object_index=14, property_object_type=15, property_id=79,
+                property_offset=16, property_bit_offset=1, property_occurrence=18;
+                UPDATE parameter_type_enum SET binary_value='Ag==', name='second-enum',
+                icon='second.png', picture_alignment='Right'; PRAGMA user_version=27;",
+            )
+            .unwrap();
+            drop(conn);
+            let migrated = open_and_migrate(&path).unwrap();
+            assert_eq!(
+                placement_values(&migrated),
+                fresh[3]
+                    .iter()
+                    .map(|r| r[13..21].to_vec())
+                    .collect::<Vec<_>>(),
+                "already-upgraded v27 placement repair"
+            );
+            assert_final(&path, migrated, &fresh);
+        }
+    }
+
+    /// Released v23-v25 removed these rows and consistently reduced all
+    /// unknown counters. No non-unknown history is invented or re-observed.
+    fn remove_unknowns(conn: &Connection) {
+        conn.execute_batch("DELETE FROM ingest_unknown WHERE kind='Attribute' AND name IN ('Access','TextParameterRefId','Offset','BitOffset');
+            DELETE FROM package_install_unknown WHERE kind='Attribute' AND name IN ('Access','TextParameterRefId','Offset','BitOffset');
+            UPDATE package_install_report SET
+                unknown_distinct=(SELECT count(*) FROM package_install_unknown),
+                unknown_occurrences=(SELECT coalesce(sum(occurrences),0) FROM package_install_unknown);
+            UPDATE package_install_count SET count=CASE disposition WHEN 'read' THEN
+                (SELECT coalesce(sum(occurrences),0) FROM package_install_unknown) ELSE
+                (SELECT count(*) FROM package_install_unknown) END WHERE category='unknown_construct';
+            UPDATE package SET unknown_count=(SELECT count(*) FROM package_install_unknown);").unwrap();
+    }
+
+    #[test]
+    fn v27_deleted_static_and_dynamic_evidence_is_restored() {
+        let (_dir, path, conn) = installed(&package(
+            "<ApplicationProgram Id=\"A-1\"><Static><ParameterBlock Access=\"Read\" TextParameterRefId=\"caption\"/></Static>
+             <Dynamic><ComObjectRef TextParameterRefId=\"dynamic\"/><Parameter Offset=\"8\" BitOffset=\"2\"/></Dynamic></ApplicationProgram>"));
+        let fresh = snapshot(&conn);
+        remove_unknowns(&conn);
+        conn.pragma_update(None, "user_version", 27).unwrap();
+        drop(conn);
+        let migrated = open_and_migrate(&path).unwrap();
+        assert_eq!(
+            named_evidence(&migrated, "TextParameterRefId").len(),
+            2,
+            "already-upgraded v27 deleted evidence repair"
         );
         assert_final(&path, migrated, &fresh);
     }

@@ -52,7 +52,16 @@ For the exact scope, invariants and acceptance matrix see the
    evidence, record a named backfill diagnostic and downgrade affected measured
    reports through the existing unavailable mechanism. SQL failures roll back
    the enclosing migration. Never invent a successful install or historical
-   observation by replaying sources.
+   observation by replaying sources. Missing/partial shared program aggregates
+   cannot prove which member counter units were retired: preserve the package
+   counter and mark ambiguous history unavailable. Complete aggregates and
+   unambiguous single-member evidence remain repairable. Dispatch semantic work
+   by stored member role/path; byte-identical opaque members stay opaque.
+   Authenticate non-program target ledgers against retained-source parser facts
+   before using them. Admit lexical/evidence work before semantic parsing and
+   copies under the fixed conservative working-set policy; commit cumulative
+   retained budget only after source success. Without a measurement marker,
+   failure diagnostics surface as a reader error, not fabricated measurements.
 6. Legacy EX-IM payloads retain their exclusion; opaque retained files are not
    XML inputs. Source identity and length/hash admission precede parsing.
 

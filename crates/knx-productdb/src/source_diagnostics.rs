@@ -24,7 +24,31 @@ pub fn source_diagnostics(
             |r| r.get(0),
         )
         .optional()?;
+    // None must continue to mean unmeasured. A named repair refusal is an
+    // error, not a parse marker or a synthetic measured diagnostic inventory.
     if measured.is_none() {
+        let failure: Option<(String,String,i64,Option<String>)> = conn.query_row(
+            "SELECT xpath,name,occurrences,sample FROM ingest_unknown WHERE source_sha256=?1 AND kind='PromotionRepairError' ORDER BY id LIMIT 1",
+            [sha256],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?))).optional()?;
+        if let Some((path, name, count, sample)) = failure {
+            if path.is_empty()
+                || name != "promotion_repair"
+                || count != 1
+                || sample.as_deref().is_none_or(str::is_empty)
+            {
+                return Err(ProductDbError::Xml {
+                    source_path: "stored ingest diagnostics".into(),
+                    cause: "invalid persisted diagnostic kind or count".into(),
+                });
+            }
+            return Err(ProductDbError::Xml {
+                source_path: path,
+                cause: format!(
+                    "unmeasured source: promotion repair failed: {}",
+                    sample.unwrap_or_default()
+                ),
+            });
+        }
         return Ok(None);
     }
     let mut stmt = conn.prepare("SELECT xpath,kind,name,occurrences,sample FROM ingest_unknown WHERE (source_sha256=?1 AND kind != 'IdConflict') OR (kind='IdConflict' AND (sample=?1 OR source_sha256=?1)) ORDER BY xpath,kind,name,occurrences,sample")?;
@@ -46,12 +70,22 @@ pub fn source_diagnostics(
         };
         if !matches!(
             kind.as_str(),
-            "Element" | "Attribute" | "IdConflict" | "BaggageIndexParseError"
+            "Element"
+                | "Attribute"
+                | "IdConflict"
+                | "BaggageIndexParseError"
+                | "PromotionRepairError"
         ) {
             return Err(invalid());
         }
         let occurrences = u32::try_from(count).map_err(|_| invalid())?;
-        if occurrences == 0 {
+        if occurrences == 0
+            || (kind == "PromotionRepairError"
+                && (occurrences != 1
+                    || name != "promotion_repair"
+                    || xpath.is_empty()
+                    || sample.as_deref().is_none_or(str::is_empty)))
+        {
             return Err(invalid());
         }
         findings.push(SourceDiagnostic {

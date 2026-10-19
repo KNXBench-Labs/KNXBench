@@ -1,5 +1,18 @@
 # Data model
 
+## Corrective product migration (v28 candidate, after Alpha 15)
+
+Product DB **27 → 28** is a data-repair step, not new schema objects or a native
+model change. It corrects the named v23–v25 promoted columns from authentic
+retained source facts, including replacing a losing declaration's non-NULL
+value or restoring NULL when the winning declaration omitted it. Targeted
+unsupported evidence is restored separately from historical install outcomes;
+master provenance and unrelated values remain outside the correction scope.
+The candidate is under review; no blanket historical-database equality is
+claimed. Builds supporting at most product27 refuse product28 through the
+existing version check; no old-binary downgrade run has been performed. Keep
+an independent catalogue backup. [ADR-0148](adr/0148-repair-product-column-promotions.md).
+
 ## Master provenance (source builds after Alpha 15)
 
 Product database **27**, independent of native/model **16**, adds

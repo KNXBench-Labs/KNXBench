@@ -68,6 +68,9 @@ Each package needs its own scoped claim, review, tests and delivery evidence.
 | [WP-15](#wp-15--complete-module-scope-in-web-consumers) | P1 | Offline-ready; UI-owner coordination | Complete response-local module paths distinguish diagnostics and workspace identities. |
 | [WP-16](#wp-16--empty-directory-zip-integrity) | P1 | Offline-ready regression/hardening | Empty directories have valid CRC and complete compressed-stream representation. |
 | [WP-17](#wp-17--master-identity-provenance) | P1 | Offline-ready, schema/report contract first | Master identity winners, collisions and malformed declarations have truthful provenance. |
+| [WP-18](#wp-18--device-comparison-shows-what-differs) | P2 | Offline-ready (owner request, 19 Oct) | Differing bytes are marked in the raw hex rows; decoded rows default to differences only (raw ranges stay visible by contract). |
+| [WP-19](#wp-19--sync-from-a-device-comparison) | P2 | Contract first; project → device needs bus-write consent (owner request, 19 Oct) | A comparison result offers *project → device* (the existing download) or *device → project* (adopt verified values, one undo step). |
+| [WP-20](#wp-20--system-family-in-the-device-list) | P2 | Offline-ready; cited mask table first (owner request, 19 Oct) | The device list shows each device's system family (System 1, 2, 7 or B) from its mask version. |
 
 #### WP-01 — Idempotent unknown evidence
 
@@ -350,6 +353,91 @@ version-pinning policy. Serialize product-DB migrations with WP-01/02/03.
 [master parser](../crates/knx-productdb/src/parse/master.rs) ·
 [report contract](contracts/MANUFACTURER_REPORT_CONTRACT.md).
 
+WP-18–WP-20 are owner requests of 19 October 2026, added after the pinned
+audit. They route no ledger ID and are not part of the
+[audit receipt](evidence/open-work-packages-2026-10-18.json).
+
+#### WP-18 — Device comparison shows what differs
+
+**Scope:** owner requests 1 (marking) and 2 (diff only) for the read-only
+*Project file versus device* review
+([ADR-0130](adr/0130-session-device-comparison.md)). Today
+`ComparisonTable` marks only a whole row (`data-different`) and prints raw
+ranges as plain strings, although the server response already carries
+byte-level `changes` (address plus project and device bytes).
+(a) Raw hex rows mark every differing byte on both sides. Unread or unknown
+bytes are marked differently from differing bytes, and the marking also works
+without colour (shape or weight plus an accessible label or count).
+(b) The result table opens with only differing rows. A visible toggle shows
+all rows, with a count of the hidden equal rows. Only decoded rows whose two
+sides are known and equal are hidden. *Unknown / not read* and not-decoded rows
+are not proven equal, so they stay visible. **Contract constraint:** the
+[comparison contract](contracts/device-comparison.md#decoding-and-integrity)
+forbids a differences-only filter that hides unattributed bytes, so every raw
+range stays visible in the default view too (the byte marks from (a) carry the
+difference). Hiding equal raw ranges needs an explicit owner decision and an
+amendment to that contract first. Interpretation to confirm at the claim:
+"list" means the result table, not the device list in the dialog.
+**Done when:** marking uses the server's byte-level data or an
+equal-length byte comparison, never a new KNX codec in the UI; regressions cover
+a single differing byte, adjacent and separate runs, unread bytes, all equal,
+no raw range, the filter with unknown rows, and raw ranges that stay visible
+under the filter; the resizable-table contract
+([column widths](contracts/table-column-widths.md)) and the dark and light
+themes hold. The comparison stays read-only, and session-only tags are
+unchanged.
+[Comparison table](../apps/knx-web/src/ComparisonTable.tsx) ·
+[manual](manual/user-guide/05-devices-and-products.md#comparing-the-project-with-devices-p4-since-alpha-12).
+
+#### WP-19 — Sync from a device comparison
+
+**Scope:** owner request 1 (sync option). From a bound, current comparison
+result (not *Outdated*, *Wrong application* or *Not comparable*), offer two
+explicit directions:
+(a) **Project → device:** hand over to the existing download workflow for
+that device, with its admission checks, confirmation phrase, history and
+recovery rules. It writes the full validated plan; a differential write
+stays later scope (`GAP-T30-04`). No second write path.
+(b) **Device → project:** adopt only the values the comparison decoded with
+verified attribution (named parameter fields; group-address and association
+entries where the project-side mapping is unambiguous) as one undoable
+project change. Raw-only, unknown, masked or not-decoded bytes are never
+adopted. An ambiguous association-to-object or address mapping refuses the
+whole adoption with its reason, instead of applying part of it.
+The comparison session itself stays read-only: it admits no phrase, key or
+write authorisation, and a sync is always a separate, confirmed operation.
+**First deliverable:** an amendment to the
+[comparison contract](contracts/device-comparison.md) and ADR-0130: which row
+kinds can be adopted, how the comparison revision binds the adoption, what the
+preview shows, refusal reasons, and how the adoption appears in undo and
+history.
+**Done when:** (b) passes offline tests (stale revision refused, mixed
+adoptable and unknown rows, one undo step restores the project, adopted values
+re-compare as equal on a simulator); (a) reuses the download path unchanged,
+including its [support classification and target-bound
+acknowledgement](contracts/device-programming-support-guidance.md), and is
+accepted on real hardware only with operation-specific consent. Depends on
+WP-18 for a readable preview.
+
+#### WP-20 — System family in the device list
+
+**Scope:** owner request 3. The Devices list gets a sortable, filterable
+*System* column showing System 1, System 2, System 7 or System B. Other
+profiles (for example System 300) keep their own names, and an unknown mask is
+shown as *Unknown (mask XXXXh)*, never guessed. The value comes from the mask
+version of the device's application program in the product database. A mask
+version read from a device is a separate, session-only fact and is never
+mixed with the declared one.
+**First deliverable:** one central, cited mask-version → family table in the
+core or product layer (KNX Resources and Profiles; reuse the existing
+commissioning mask profiles where they already cite their source), exposed
+through the device DTO. No mapping in the UI.
+**Done when:** devices without a product, without an application program, or
+with an unknown mask show an explicit state; regressions cover every mapped
+family and the unknown case; the column follows the resizable-table contract
+and can be filtered like the existing list columns.
+[Devices workspace](../apps/knx-web/src/DevicesWorkspace.tsx).
+
 ### Deliberate later scope and owner decisions — not ready-made coding jobs
 
 | Route | IDs / boundary | Reopen condition |
@@ -382,7 +470,9 @@ contracts independently; implement shared UI changes only after UI-05's
 handover. WP-07/08/09/10/14 proceed only for their evidenced slices; do not repeat
 unproductive source searches without a new lead. WP-11 needs desktop consent;
 WP-12 waits on exact evidence/consent. WP-13 can proceed offline in parallel
-provided it preserves the active owners' status updates.
+provided it preserves the active owners' status updates. WP-18 and WP-20 are
+independent offline UI packages; WP-19 follows WP-18 and starts with its
+contract.
 
 ## Prior dated detail — background, not a second queue
 

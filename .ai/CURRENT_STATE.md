@@ -1,4 +1,12 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-10-19 06:14
+- **Completed:** Planning only (owner request): added WP-18–WP-20 to the package queue in `docs/OPEN_WORK.md`. WP-18 device comparison shows what differs (byte marks in the raw hex rows, decoded rows default to differences only); WP-19 sync from a comparison (project → device = handover to the existing full download, device → project = undoable adoption of verified decoded values; contract amendment first); WP-20 system family column (System 1/2/7/B) in the device list from a central, cited mask table. Marked as owner requests after the pinned 18 October audit; the audit receipt JSON is unchanged. Docs check 0 errors, anchors 1,563 none dead. No code change, no claim.
+- **Pending/Next Steps:** Each package needs its own claim and owner go. Open owner question for WP-18: `docs/contracts/device-comparison.md` forbids a differences-only filter that hides unattributed bytes, so raw ranges stay visible by default; hiding equal raw ranges would need an explicit decision and a contract amendment. Also confirm that "list" in request 2 means the result table.
+- **Notes for Codex oder Claude:** WP-19 (a) must not open a second write path or a differential download (`GAP-T30-04` stays later scope). WP-20 maps masks in core/product layer only, never in the UI; a mask read from a device is a separate session fact. The root checkout's uncommitted handover edit belongs to another session and was not touched.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-10-19 06:00
 - **Completed:** CLAIM (owner go): test-suite speed package. Owner decisions: (1) browser tests parallel by default, only real-time/animation measurements tagged `@exclusive`, enforced by a static guard instead of the per-file hash admission (the parallel lane has been closed since 17 Oct, so every gate ran 713 cases on one worker, 19.5 min); (2) the complete gate runs only for Alpha/Beta/full releases, routine packages run a targeted, change-scoped selection; (3) Rust test binaries (about 370) are measured first and bundled per crate if the gain is clear. Worktree `KNXBench-test-speed-20261019`, branch `perf/test-speed-20261019`.
 - **Pending/Next Steps:** In progress: browser lane tags + guard, maintained change-scoped package gate runner, Rust measurement/bundling, contract/ADR/VERIFICATION updates.

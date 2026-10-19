@@ -65,6 +65,24 @@ Codex `gpt-6.1-sol` (high, read-only): ACCEPT WITH FIXES.
   readiness ignores it, manufacturer restore ignores it, install ignores it,
   import reset drops it.
 
+## Re-review of the fix round
+
+Codex `gpt-6.1-sol` (high, read-only): ACCEPT WITH FIXES; confirmed no writes in
+the switched commands and that `:memory:` never touches the filesystem.
+
+- IMPORTANT: `path.exists()` read an uncheckable location (permission, a file
+  where the data directory belongs) as "no catalogue", so `products verify`
+  would report 0 mismatches. Now `try_exists()`; the error refuses the command.
+  Test `an_uncheckable_default_product_database_is_refused_not_read_as_empty`.
+- MINOR: the reader test now also covers a current-schema file (the
+  `query_only` file connection) and asserts every command got past opening.
+- MINOR: the HTTP test asserts the log line after startup, new project, ETS
+  import and native open separately, covers the download plan, and pins each
+  refusal's status and kind; a second test pins the exact old wording,
+  status and kind of all seven refusals when there is no startup reason.
+- Mutants killed: `exists` instead of `try_exists`, `products coverage` back on
+  the migrating opener, native-open reset dropping the reason (9 in total).
+
 ## Not done / follow-ups
 
 - The owner's real file was not touched (copies only). Recovery: a build with

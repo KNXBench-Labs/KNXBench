@@ -1513,12 +1513,17 @@ fn open_products_db_for_reading(
     explicit: Option<&str>,
 ) -> Result<knx_productdb::Connection, String> {
     let path = resolve_product_db_path(explicit)?;
-    let opened = if path.exists() {
+    let failed = |e: &dyn std::fmt::Display| {
+        format!("failed to open product database at {}: {e}", path.display())
+    };
+    // `try_exists`, not `exists`: a path that cannot be checked (permission,
+    // a file where a directory belongs) is refused, not read as "no catalogue".
+    let opened = if path.try_exists().map_err(|e| failed(&e))? {
         knx_productdb::open_read_only(&path).map(|products| products.conn)
     } else {
         knx_productdb::open_and_migrate(Path::new(":memory:"))
     };
-    opened.map_err(|e| format!("failed to open product database at {}: {e}", path.display()))
+    opened.map_err(|e| failed(&e))
 }
 
 /// `knx products coverage`: the download support level of every program

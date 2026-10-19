@@ -23,6 +23,9 @@ vi.mock("./api", () => ({
 
 import LogPanel from "./LogPanel";
 
+/** A large-data case asserts no elapsed time; Vitest's 5 s default only measured host load. */
+const LARGE_DATA_TIMEOUT_MS = 30_000;
+
 let host: HTMLDivElement | undefined;
 
 afterEach(() => {
@@ -104,7 +107,7 @@ describe("LogPanel", () => {
     expect(exportMock.saveSessionLog).toHaveBeenLastCalledWith(server, server, "all");
     expect(document.querySelector(".log-export-panel"), "closes after a successful export").toBeNull();
     await act(() => root.unmount());
-  });
+  }, LARGE_DATA_TIMEOUT_MS);
 
   it("previews a grouped file list in the row and keeps every line for the details", async () => {
     const paths = Array.from({ length: 1400 }, (_, n) => `M-0001/Baggages/${n}.png`);

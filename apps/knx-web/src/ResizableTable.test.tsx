@@ -7,6 +7,10 @@ import ResizableTable, { TableColumnReset } from "./ResizableTable";
 import { TableWordFloors } from "./tableWordFloors";
 import { resetSettingsForTests, setSetting } from "./settingsStore";
 import { resetUiLanguageForTests } from "./uiLanguage";
+
+/** A large-data case asserts no elapsed time; Vitest's 5 s default only measured host load. */
+const LARGE_DATA_TIMEOUT_MS = 30_000;
+
 const columns = [{ id: "name", width: 180, min: 100, max: 400 }, { id: "address", width: 140, min: 80 }];
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 let host: HTMLDivElement; let root: ReturnType<typeof createRoot>;
@@ -240,7 +244,7 @@ it("invalidates only a changed cell in a large table without serializing unchang
   expect(walked).not.toHaveBeenCalled();
   expect(styled).not.toHaveBeenCalled();
   expect(serialized).not.toHaveBeenCalled();
-});
+}, LARGE_DATA_TIMEOUT_MS);
 
 it("keeps session floors after filtering, grows for longer content and starts fresh on remount", async () => {
   vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(40);

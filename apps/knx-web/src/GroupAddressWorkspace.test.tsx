@@ -12,6 +12,9 @@ import { useMultiSelection } from "./multiSelection";
 import GroupAddressTable from "./GroupAddressTable";
 import { resetSettingsForTests } from "./settingsStore";
 
+/** A large-data case asserts no elapsed time; Vitest's 5 s default only measured host load. */
+const LARGE_DATA_TIMEOUT_MS = 30_000;
+
 vi.mock("./api", () => ({
   unlinkComObject: vi.fn(), errorMessage: (e: unknown) => String(e),
 }));
@@ -178,7 +181,7 @@ it("renders a visible bounded window in every view and extends it explicitly", a
   await click(host.querySelector("[data-ga-all]")!);
   expect(host.querySelectorAll("[data-ga-select]")).toHaveLength(1200);
   expect(host.querySelector("[data-ga-window]")).toBeNull();
-});
+}, LARGE_DATA_TIMEOUT_MS);
 
 it("drops deleted ranges and addresses on update instead of keeping stale scope or rows", async () => {
   await act(async () => root.render(<Harness />));

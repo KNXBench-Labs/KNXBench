@@ -1,4 +1,12 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-10-19 06:24
+- **Completed:** Planning only: owner answered both WP-18 questions; recorded as "Owner decision (19 October 2026)" in WP-18 of `docs/OPEN_WORK.md`. Requests 1 and 2 mean the result display of the device-versus-project comparison. The differences-only default also hides raw ranges proven equal (all bytes read and equal); any range with a differing or unread byte, unknown and not-decoded rows stay visible; a toggle reveals every original read range with a hidden count. Display only: response, session tags and "Synced" unchanged. Docs check and anchors green. No code change, no claim.
+- **Pending/Next Steps:** WP-18 delivery must amend `docs/contracts/device-comparison.md` (its "no differences-only filter" sentence) in the same change, with the rule "no filter hides a differing or unread byte". WP-18/19/20 still need a claim and implementation go.
+- **Notes for Codex oder Claude:** Do not amend the comparison contract ahead of the implementation; it describes delivered behaviour until WP-18 lands.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-10-19 06:14
 - **Completed:** Planning only (owner request): added WP-18–WP-20 to the package queue in `docs/OPEN_WORK.md`. WP-18 device comparison shows what differs (byte marks in the raw hex rows, decoded rows default to differences only); WP-19 sync from a comparison (project → device = handover to the existing full download, device → project = undoable adoption of verified decoded values; contract amendment first); WP-20 system family column (System 1/2/7/B) in the device list from a central, cited mask table. Marked as owner requests after the pinned 18 October audit; the audit receipt JSON is unchanged. Docs check 0 errors, anchors 1,563 none dead. No code change, no claim.
 - **Pending/Next Steps:** Each package needs its own claim and owner go. Open owner question for WP-18: `docs/contracts/device-comparison.md` forbids a differences-only filter that hides unattributed bytes, so raw ranges stay visible by default; hiding equal raw ranges would need an explicit decision and a contract amendment. Also confirm that "list" in request 2 means the result table.

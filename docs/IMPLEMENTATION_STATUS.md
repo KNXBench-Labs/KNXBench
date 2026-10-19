@@ -12,7 +12,7 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
-## WP-17 master provenance — Alpha 16 source candidate (19 October 2026)
+## WP-17 master provenance — delivered on main (19 October 2026)
 
 Product database **v27** adds separate source/declaration/winner evidence for
 DPT mains/subtypes, function types/points and space usage. Normalized winner
@@ -31,9 +31,14 @@ than pretending to be fresh observations. Earlier failed attempts stay retained.
 The maintained branch gate on `d2807f70` passed all 15 stages, including 4,136
 component tests, 863 default browser cases, 18 catalogue production cases,
 2,985 Rust tests and 97 selected corpus tests, with frozen inputs and no changes
-to real user directories. Main-first integration, merged acceptance and
-publication remain pending. Alpha 15 binaries do not contain this candidate. Older builds refuse a v27 product database;
-keep a backup before opening with a new source build.
+to real user directories. Main-first merge `7aed9ddd` and its result-only
+follow-up `d18ce65e` are published on `main`; the final merged 15-stage gate
+passes the same complete scope, including all 863 default browser cases and
+18 production cases. Local/tracking/live refs were verified equal after push.
+The earlier merged browser-page acquisition failure remains retained (root cause
+unestablished); a fresh complete merged run passed without changing product or
+test code. Alpha 15 binaries do not contain this source change. Older builds
+refuse a v27 product database; keep a backup before upgrading.
 
 ## Alpha 15 publication verified — 19 October 2026
 

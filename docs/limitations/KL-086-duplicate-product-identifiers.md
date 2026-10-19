@@ -8,7 +8,7 @@ updates supersede them; they are not new work assignments.
 
 ## WP-17 — source provenance after Alpha 15 (19 October 2026)
 
-Product DB v27 adds source-addressable declaration evidence for
+Product DB v27 (delivered on `main` as `d18ce65e`, not an Alpha 15 artifact) adds source-addressable declaration evidence for
 `datapoint_type` (both mains and subtypes), `function_type`, `function_point`
 and `space_usage`. Fresh normalized winners name retained source bytes plus
 an ordinal/start-tag byte range. Same-file and cross-file losing declarations

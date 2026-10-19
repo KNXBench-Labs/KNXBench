@@ -177,7 +177,38 @@ prove a root-cause fix or full acceptance. No product, test, dependency or guard
 was modified. Original failed receipt and trace remain intact; a new merged
 gate attempt reruns the complete scope in its own evidence namespace.
 
-## Pending acceptance
+## Merged acceptance, publication and retirement
 
-Complete merged acceptance, publication and owned cleanup remain pending.
+The fresh merged gate on `d18ce65e` passes all 15 stages with frozen inputs,
+empty touched/unchecked real user-directory lists and no failed stage. Its web
+subgate passes 30 stages: 4,136 Vitest cases, 798 functional + 65 exclusive
+browser cases, and 18 catalogue production cases. Selected Rust results are
+2,985 passed / 0 failed / 144 ignored; selected offline corpus is 97/97.
+Controller read both complete receipts, raw result summaries and the exact
+planned-stage inventory. The earlier browser fixture failure remains a separate
+failed attempt, not relabelled success.
+
+Published `d18ce65e` to `main`; local HEAD, fetched tracking and live remote
+were read back equal. WP-17 is delivered and releases its claim; the separate
+Alpha 16 column-promotion repair follows schema v27. No release, tag, deployment,
+hardware operation or artifact upgrade was performed.
+
+Compact private evidence archive: `<profile>/evidence/wp17-delivery-20261019/`
+`wp17-evidence.tar.gz`, SHA-256
+`e734c918ef14d17a1ecece92c26759fa5dc67af8f906d2d62fe2b5e7328cf881`;
+all 734 member bytes verified. It retains successful/failed receipts, raw logs,
+review/mutation evidence, scripts, screenshots and the failed-browser trace;
+rebuildable targets, worktrees and corpus/database payload copies are excluded.
+Historical narrow screenshots still show the pre-neutral diagnostic heading;
+they prove that frame's wrapping only, not final wording (current assertions
+and complete catalogue tests cover the neutral heading).
+
+Five owned feature/corpus worktrees and the merged feature branch are retired.
+Root HEAD/index and original foreign research files remain preserved. Another
+owner updated the root's handover for a limitation reassessment during this task;
+those live bytes are untouched and are not absorbed into this delivery. Closing
+documentation uses additive docs/ledger/anchor checks and runtime-input equality,
+not a relabelled runtime run. Its finalizer removes the remaining owned integration
+checkout and task scratch only after remote readback; closing receipts remain
+next to the verified archive.
 Earlier green web results are not whole-package acceptance.

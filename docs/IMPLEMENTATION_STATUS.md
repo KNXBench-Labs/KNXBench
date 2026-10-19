@@ -12,6 +12,39 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Faster test gates: change-scoped by default, tagged browser lanes, bundled Rust tests (19 October 2026)
+
+Owner request: far too many tests ran for every change. Three owner decisions,
+recorded in [ADR-0144](adr/0144-change-scoped-gates-tagged-browser-lanes-bundled-rust-tests.md)
+with the measurements in the
+[speed dossier](research/2026-10-19-test-suite-speed.md):
+
+- **Complete gate for releases only.** `python3 tools/run_package_gate.py`
+  plans a routine package from its changed paths (`tools/gate_scope.py`):
+  static checks always, then only the Rust packages, browser specs, production
+  suites, corpus packages, bindings and website/story tests the change can
+  affect; deleted files still select their readers, and a path without a rule
+  selects everything. `--full` is the Alpha, Beta and release gate. Replayed
+  over the last 40 commits on `main`, none needed the complete gate.
+- **Browser cases run in parallel unless they measure time.** A
+  `{ tag: "@exclusive" }` marks real-time cases; `tools/browser_lanes.py`
+  refuses an untagged real-time primitive before the build, also through
+  helpers, fixtures and methods. The decayed hash admission
+  (`browser-lanes.json`) is gone. The parallel lane found two load-dependent
+  races in `explorer-structure` (fixed in the spec), and 37 file-menu zoom
+  cases left the exclusive lane by pinning a toast-free date instead of
+  waiting 300 ms. Production suites keep one worker each.
+- **One integration-test binary per crate** (356 → 37) and line-table debug
+  information with optimised dependencies: cold test build 206.5 s → 118.0 s,
+  rebuild after a `knx-core` change 194.6 s → 10.0 s, test run 467.2 s →
+  145.0 s, target directory 71.6 GB → 6.7 GB, same tests passing.
+
+Two independent reviews were closed test-first. The complete gate on the
+reviewed candidate passed in 37.4 min of stages (web 1,770.8 s, Rust tests
+4,993 passed, corpus 155 of 155); the change-scoped gate for the last guard
+fix ran 11 stages and every default spec, but no Rust, corpus or production
+stage, in 13.2 min of work.
+
 ## Hall of Fame bot comments name only fresh medals (19 October 2026)
 
 Owner bug report: every XP update from the scoreboard bot repeated the

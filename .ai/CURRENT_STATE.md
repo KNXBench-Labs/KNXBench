@@ -1,3 +1,11 @@
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-19 10:35
+- **Completed:** Test-suite speed package delivered (owner go; releases this claim's file reservations). ADR-0144: (1) `python3 tools/run_package_gate.py` plans a change-scoped gate from the changed paths (`tools/gate_scope.py`); `--full` is the gate for Alpha/Beta/full releases; unknown paths, planner/runner changes and `tools/web_gate_support.py` select the complete gate. (2) Browser cases run with four workers unless tagged `{ tag: "@exclusive" }`; `tools/browser_lanes.py` refuses untagged real-time primitives (helpers, fixtures, methods, imports followed) before the build; `apps/knx-web/browser-lanes.json` is gone; production suites keep one worker each. (3) Each crate's Rust integration tests are one binary `tests/it` (356 → 37 binaries; `large_member_memory.rs` stays standalone); `[profile.dev]` line tables + optimised dependencies. Measured: `knx-core` rebuild 194.6 → 10.0 s, test run 467.2 → 145.0 s, target 71.6 → 6.7 GB. Three independent reviews closed test-first. Complete gate on the reviewed candidate green (37.4 min of stages: 846 browser cases, 4,993 Rust tests, corpus 155/155); change-scoped gate on the final guard fix green.
+- **Pending/Next Steps:** Small follow-ups in `docs/OPEN_WORK.md` ("Test gates: change-scoped by default"): per-suite lane review for the serial production suites, plan wording for deleted web files, documented guard blind spots.
+- **Notes for Codex oder Claude:** Before a package run `python3 tools/run_package_gate.py --base origin/main --dry-run`, then without `--dry-run`; releases use `--full`. New Rust integration tests go into `<crate>/tests/it/<name>.rs` plus `mod <name>;` in `main.rs` (run one with `cargo test -p <crate> --test it <name>::`). A browser case that measures time needs the `@exclusive` tag. Branches started before this merge that add loose `tests/*.rs` files must move them into `tests/it` (the layout guard in the tool tests refuses them).
+
+---
+
 - **Last Agent:** codex
 - **Timestamp:** 2026-10-19 08:24
 - **Completed:** CLAIM (owner request): explain visually duplicate Device Catalog entries with their actual identity/version/source, and add previewed, recoverable cleanup of obsolete, unnecessary catalogue entries. Branch `feat/catalog-cleanup-20261019`. Inspection in progress; no live catalogue changes.

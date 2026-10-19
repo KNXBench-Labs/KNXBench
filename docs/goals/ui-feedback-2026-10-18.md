@@ -1,5 +1,9 @@
 # UI feedback work packages — 18 October 2026
 
+**Status (19 October 2026): delivered.** UI-01–UI-06 and the whole-set
+corrections are on `main`; see *Delivery record* below. The next paragraph is
+the original planning introduction and is kept as written.
+
 Planning only, based on eight retained items from the owner's nine numbered
 requests. Item 3 (“Update We”) was withdrawn by the owner as a typo on
 18 October 2026 and creates no work package. No package is
@@ -47,10 +51,35 @@ Astra families.
 
 Whole-set review after UI-06: Codex CLI, `gpt-6.1-sol`, xhigh.
 
-State (18 October, evening): UI-01 and UI-04 delivered (merge `fd1f69ee`, full
+State (18 October, evening; historical): UI-01 and UI-04 delivered (merge `fd1f69ee`, full
 gate green); UI-02 and UI-05 accepted after review rounds; UI-03 and UI-06 in
 review. Waves overlapped: UI-03 and UI-05 started on the UI-02 branch and
 UI-06 on its first fix round, so no package waited for a gate.
+
+## Delivery record (18–19 October 2026)
+
+- **Wave 1:** UI-01 and UI-04, merge `fd1f69ee`, full gate green.
+- **Wave 3:** UI-02, UI-03 and UI-06, published as `bc9d73c1` after the frozen
+  16-stage gate on `471ca75a`.
+- **UI-05:** nine correction rounds (GPT-6.1 high), reviews by Claude Opus 5.5
+  and GPT-5.6; committed `0531ce32`, the web gate gained the
+  `production-table-columns` stage.
+- **Whole-set review** (GPT-6.1 xhigh) rejected the first integration with
+  UISET-01 (tables ignored application zoom), UISET-02 (File submenus left the
+  window above 650 px), UISET-03 (disabled toolbar buttons painted over the
+  open menu; already on `main`), UISET-04 (stale status) and UISET-05 (overlay
+  test not paint-sensitive). The first full gate on the integration also found
+  11 px row actions from UI-05 (below the UI-02 24 px floor).
+- **Correction rounds:** zoom-aware tables (GPT-6.1 high, reviewed by Claude
+  Opus 5.5); File menu in four rounds (Claude Sonnet 5.5, then Claude Opus 5.5,
+  each reviewed by GPT-6.1 xhigh): one shared 220 px minimum with an inline
+  fallback, a stacking level, inline submenus that ignore hover, a press guard
+  for mouse, touch and pen, placement in layout pixels under zoom, and a measured
+  first-level fit, so Logout stays reachable at 150% in a 601 px high window.
+- **Final:** the last review accepted without findings; the delivery merge onto
+  `main` passed the full 16-stage gate (see IMPLEMENTATION_STATUS).
+- **Follow-ups (unowned):** pane drags under zoom and a table zoom case
+  through the scale setting ([open work](../OPEN_WORK.md#ui-feedback-packages-18-october-2026)).
 
 ## Checked starting point
 

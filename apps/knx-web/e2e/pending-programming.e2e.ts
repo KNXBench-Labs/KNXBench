@@ -102,7 +102,9 @@ for (const language of ["en", "de"] as const) {
       const theme = width === 1440 && language === "en" ? "graphite" : "porcelain";
       const state = await intercept(page, language, theme); await openProject(page, language); await openList(page, language);
       await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
-      const headers = await page.locator(".devices-table th").allTextContents();
+      // Visible headings may be compact ("Prog."); the column is identified by its accessible name.
+      const headers = await page.locator(".devices-table thead th").evaluateAll((cells) =>
+        cells.map((cell) => cell.querySelector("[aria-label]")?.getAttribute("aria-label") ?? cell.textContent ?? ""));
       expect(headers.indexOf(m["devices.programming"])).toBe(headers.findIndex((text) => text.startsWith(m["workbench.name"])) + 1);
       const row = (name: string) => page.locator(".devices-table tbody tr").filter({ hasText: name });
       await expect(row("Dimmer kitchen").locator(".programming-chip")).toHaveText([

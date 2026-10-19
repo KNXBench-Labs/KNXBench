@@ -12,8 +12,8 @@ const THEMES = ["porcelain", "graphite", "cupertino", "lcars", "user-modern-retr
 type Catalogue = { readonly [K in keyof typeof en]: string };
 const TRIGGERS = ["exchange", "history", "help"] as const;
 
-async function serve(page: Page, { theme = "porcelain", motionLevel = "standard", language = "en", sessionRequired = false }:
-  { theme?: string; motionLevel?: string; language?: "en" | "de"; sessionRequired?: boolean } = {}) {
+async function serve(page: Page, { theme = "porcelain", motionLevel = "standard", language = "en", sessionRequired = false, uiScale, density }:
+  { theme?: string; motionLevel?: string; language?: "en" | "de"; sessionRequired?: boolean; uiScale?: number; density?: "compact" | "comfortable" } = {}) {
   const unexpected: string[] = [];
   await page.route("https://api.github.com/**", (route) => { unexpected.push(route.request().url()); return route.abort(); });
   await page.route("**/api/**", async (route) => {
@@ -25,7 +25,7 @@ async function serve(page: Page, { theme = "porcelain", motionLevel = "standard"
     if (path === "/api/auth/status") return ok({ required: sessionRequired, authenticated: true });
     if (path === "/api/settings" && method === "GET") return ok({ schemaVersion: 1, status: "ok", settings: {
       uiLanguage: language, theme, motionLevel, releaseChecksEnabled: false, achievementsEnabled: "false",
-      onboardingGuide: { seenStage: "alpha", version: "0.1.0-alpha.14" } } });
+      onboardingGuide: { seenStage: "alpha", version: "0.1.0-alpha.14" }, ...(uiScale === undefined ? {} : { uiScale }), ...(density === undefined ? {} : { density }) } });
     if (path === "/api/settings" && method === "PUT") return ok({ schemaVersion: 1, status: "ok", settings: route.request().postDataJSON().settings });
     if (path === "/api/project" && method === "GET") return route.fulfill({ status: 400, contentType: "application/json", body: '{"error":"no project open"}' });
     if (path === "/api/bus/discover" && method === "POST") return ok({ interfaces: [] });
@@ -588,3 +588,524 @@ test.describe("File menu placement and comparison dialog", () => {
     expect(row.y + row.height, "Logout inside the viewport").toBeLessThanOrEqual(500);
   });
 });
+
+/** True when the pointer at the node's centre, or at its text, lands on the node or a descendant. */
+async function paintsOnTop(locator: Locator, where: "centre" | "label") {
+  return locator.evaluate((node, spot) => {
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    const r = spot === "label" ? range.getBoundingClientRect() : node.getBoundingClientRect();
+    const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    return hit !== null && node.contains(hit);
+  }, where);
+}
+
+test.describe("File submenus just above the inline breakpoint (UISET-02)", () => {
+  const WINDOWS = [
+    ...[651, 660, 700, 760, 900].map((width) => ({ width, height: 800 })),
+    { width: 900, height: 560 }, // short: the inline layout by height
+    { width: 760, height: 601 }, // just taller than the short limit: flyouts with a moved-up panel
+  ];
+  for (const language of ["en", "de"] as const) {
+    for (const { width, height } of WINDOWS) {
+      test(`${language} ${width}x${height}: every submenu box stays in the viewport and every entry takes a real pointer`, async ({ page }) => {
+        await serve(page, { language });
+        await page.setViewportSize({ width, height });
+        await page.goto("/");
+        for (const id of TRIGGERS) {
+          // One menu for all three submenus: consecutive real clicks, no fresh menu in between.
+          if (id === TRIGGERS[0]) await openFile(page);
+          await openFileSubmenu(page, id);
+          await viewportFit(page, panel(page, id));
+          const entries = panel(page, id).locator("[data-file-menu-item]");
+          const count = await entries.count();
+          expect(count, `${id} has entries`).toBeGreaterThan(0);
+          for (let i = 0; i < count; i += 1) {
+            const entry = entries.nth(i);
+            const label = (await entry.textContent())?.trim();
+            await viewportFit(page, entry);
+            expect(await paintsOnTop(entry, "centre"), `${id} / ${label}: the pointer reaches the entry`).toBe(true);
+            if (await entry.isEnabled()) await entry.click({ trial: true });
+          }
+          expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth), "no sideways scroll").toBeLessThanOrEqual(1);
+        }
+        // One real activation per window: About opens from the last submenu whatever its layout.
+        await page.getByRole("menuitem", { name: (language === "de" ? de : en)["toolbar.about"], exact: true }).click();
+        await expect(page.getByRole("dialog", { name: (language === "de" ? de : en)["about.title"], exact: true })).toBeVisible();
+      });
+    }
+  }
+
+  test("the minimum width is one value: the panel states it and the stylesheet applies it", async ({ page }) => {
+    await serve(page);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/");
+    await openFile(page);
+    await openFileSubmenu(page, "exchange");
+    const stated = await panel(page, "exchange").evaluate((n) => (n as HTMLElement).style.getPropertyValue("--file-submenu-min-width"));
+    expect(stated).toMatch(/^\d+px$/);
+    await expect(panel(page, "exchange")).toHaveCSS("min-width", stated);
+  });
+});
+
+test.describe("The open File menu paints above the toolbar (UISET-03)", () => {
+  for (const theme of ["porcelain", "graphite"] as const) {
+    for (const width of [400, 1440]) {
+      test(`${theme} ${width}px, no project: every first-level entry is reachable at its centre and its label`, async ({ page }) => {
+        await serve(page, { theme });
+        await page.setViewportSize({ width, height: 900 });
+        await page.goto("/");
+        await openFile(page);
+        // The disabled toolbar controls (Search, Save) are what used to paint over the menu.
+        await expect(page.locator(".workbench-toolbar button:disabled").first()).toBeVisible();
+        const entries = page.locator(".file-menu-content > [data-file-menu-item], .file-menu-content > .file-submenu > [data-file-menu-item]");
+        const count = await entries.count();
+        expect(count).toBeGreaterThanOrEqual(7);
+        for (let i = 0; i < count; i += 1) {
+          const entry = entries.nth(i);
+          const label = (await entry.textContent())?.trim();
+          expect(await paintsOnTop(entry, "centre"), `${label}: centre`).toBe(true);
+          expect(await paintsOnTop(entry, "label"), `${label}: label`).toBe(true);
+        }
+      });
+    }
+  }
+
+  for (const width of [400, 1440]) {
+    test(`${width}px: real-pointer clicks on New project and Open run their own handlers`, async ({ page }) => {
+      await serve(page);
+      let listed = 0;
+      await page.route("**/api/fs/list**", (route) => { listed += 1; return route.fulfill({ status: 200, contentType: "application/json", body: "[]" }); });
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto("/");
+      await openFile(page);
+      await page.getByRole("menuitem", { name: en["toolbar.newProject"], exact: true }).click();
+      await expect(page.getByRole("dialog", { name: en["newProject.title"], exact: true })).toBeVisible();
+      expect(listed, "New project does not browse files").toBe(0);
+      await page.keyboard.press("Escape");
+      await expect(page.getByRole("dialog", { name: en["newProject.title"], exact: true })).toHaveCount(0);
+      await openFile(page);
+      await page.getByRole("menuitem", { name: en["toolbar.openProject"], exact: true }).click();
+      await expect.poll(() => listed, "Open browses the mounted files").toBeGreaterThan(0);
+    });
+  }
+
+  test("a modal opened from the menu paints above the toolbar and above a menu left open", async ({ page }) => {
+    await serve(page);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/");
+    await openFile(page);
+    await openFileSubmenu(page, "help");
+    await page.getByRole("menuitem", { name: en["toolbar.about"], exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: en["about.title"], exact: true });
+    await expect(dialog).toBeVisible();
+    // The modal makes the page behind it inert, which alone would hide it from hit testing. Lift
+    // that and force the menu open again, so the answer depends on paint order only.
+    await page.evaluate(() => {
+      document.querySelectorAll("[inert]").forEach((node) => node.removeAttribute("inert"));
+      (document.querySelector(".file-menu") as HTMLDetailsElement).open = true;
+    });
+    const behind = [".workbench-toolbar button:disabled", ".file-menu-content > [data-file-menu-item]", ".file-menu > summary"];
+    for (const selector of behind) {
+      const target = page.locator(selector).first();
+      await expect(target, selector).toBeVisible();
+      const covered = await target.evaluate((node) => {
+        const r = node.getBoundingClientRect();
+        const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        return hit !== null && hit.closest(".search-overlay") !== null;
+      });
+      expect(covered, `${selector} lies under the modal overlay`).toBe(true);
+    }
+  });
+});
+
+test.describe("Inline submenus ignore hover (UISET-02 round 2)", () => {
+  // 400: the narrow media rule; 900x560: the short-window rule; 660: the per-instance inline strip.
+  const INLINE_WINDOWS = [{ width: 400, height: 800 }, { width: 900, height: 560 }, { width: 660, height: 800 }];
+  const expanded = (page: Page, id: string) => trigger(page, id).getAttribute("aria-expanded");
+
+  /** Moves the real mouse onto the middle of a row and rests there, longer than any hover timer. */
+  async function restOn(page: Page, locator: Locator) {
+    await locator.scrollIntoViewIfNeeded();
+    const b = await box(locator);
+    await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 6 });
+    await page.waitForTimeout(500);
+  }
+
+  for (const language of ["en", "de"] as const) {
+    for (const { width, height } of INLINE_WINDOWS) {
+      test(`${language} ${width}x${height}: a hover never opens or swaps a submenu, a click does`, async ({ page }) => {
+        await serve(page, { language });
+        await page.setViewportSize({ width, height });
+        await page.goto("/");
+        await openFile(page);
+        const pairs = [["exchange", "history"], ["history", "help"]] as const;
+        await openFileSubmenu(page, pairs[0][0]);
+        await expect(panel(page, pairs[0][0]), "the opened panel is laid out inline").toHaveCSS("position", "static");
+        for (const [open, next] of pairs) {
+          await restOn(page, trigger(page, next));
+          expect(await expanded(page, open), `${open} stays open under a resting mouse on ${next}`).toBe("true");
+          expect(await expanded(page, next), `${next} stays closed without a click`).toBe("false");
+          await expect(panel(page, open)).toBeVisible();
+          await expect(panel(page, next)).toBeHidden();
+          await trigger(page, next).click();
+          await expect(trigger(page, next)).toHaveAttribute("aria-expanded", "true");
+          await expect(panel(page, next)).toBeVisible();
+          await expect(trigger(page, open)).toHaveAttribute("aria-expanded", "false");
+          await expect(panel(page, open)).toBeHidden();
+        }
+        // A rest after the last click, wherever the rows went, changes nothing either.
+        await page.waitForTimeout(500);
+        await expect(trigger(page, "help")).toHaveAttribute("aria-expanded", "true");
+        for (const id of ["exchange", "history"] as const) await expect(trigger(page, id)).toHaveAttribute("aria-expanded", "false");
+      });
+
+      test(`${language} ${width}x${height}: with nothing open a resting mouse opens nothing, and the keyboard still discloses`, async ({ page }) => {
+        await serve(page, { language });
+        await page.setViewportSize({ width, height });
+        await page.goto("/");
+        await openFile(page);
+        await restOn(page, trigger(page, "exchange"));
+        for (const id of TRIGGERS) await expect(trigger(page, id)).toHaveAttribute("aria-expanded", "false");
+        await trigger(page, "exchange").focus();
+        await page.keyboard.press("ArrowRight");
+        await expect(trigger(page, "exchange")).toHaveAttribute("aria-expanded", "true");
+        // No project: every Import / Export entry is disabled, so focus stays on the row; Escape folds it.
+        await page.keyboard.press("Escape");
+        await expect(trigger(page, "exchange")).toHaveAttribute("aria-expanded", "false");
+        await trigger(page, "help").focus();
+        await page.keyboard.press("Enter");
+        await expect(trigger(page, "help")).toHaveAttribute("aria-expanded", "true");
+        await expect(panel(page, "help").getByRole("menuitem").first()).toBeFocused();
+        await page.keyboard.press("ArrowLeft");
+        await expect(trigger(page, "help")).toHaveAttribute("aria-expanded", "false");
+        await expect(trigger(page, "help")).toBeFocused();
+        await page.keyboard.press("Space");
+        await expect(trigger(page, "help")).toHaveAttribute("aria-expanded", "true");
+      });
+    }
+
+    test(`${language} 1440x900: a flyout still opens and swaps on hover intent`, async ({ page }) => {
+      await serve(page, { language });
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await page.goto("/");
+      await openFile(page);
+      await restOn(page, trigger(page, "exchange"));
+      await expect(panel(page, "exchange")).toBeVisible();
+      await expect(panel(page, "exchange")).toHaveCSS("position", "absolute");
+      await restOn(page, trigger(page, "history"));
+      await expect(panel(page, "history")).toBeVisible();
+      await expect(panel(page, "exchange")).toBeHidden();
+    });
+  }
+});
+
+/** The application scale the page renders with, read the way App writes it onto the root. */
+const renderedScale = (page: Page) => page.evaluate(() =>
+  Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--app-ui-scale")) || 1);
+
+/**
+ * Checks one open submenu at application scale `scale` against geometry the test reads itself
+ * (DOMRect and the window, both visual px): a flyout lies inside the viewport, is at least the
+ * 220 layout px minimum wide, uses exactly the room it was capped to and sits above the bottom
+ * margin; an inline submenu only appears where neither side of its row holds that minimum in
+ * layout px. Then every entry, scrolled into view, lies inside the viewport and takes the pointer.
+ */
+async function checkZoomedSubmenu(page: Page, id: string, scale: number) {
+  // The slide-in starts 6 px to the side; geometry is read where the panel comes to rest.
+  await panel(page, id).evaluate((node) => Promise.all(node.getAnimations().map((a) => a.finished)));
+  const g = await page.evaluate((sid) => {
+    const node = document.querySelector<HTMLElement>(`[data-file-submenu-panel="${sid}"]`)!;
+    const row = node.parentElement!;
+    const r = (b: DOMRect) => ({ left: b.left, top: b.top, right: b.right, bottom: b.bottom, width: b.width });
+    const style = getComputedStyle(node);
+    return {
+      position: style.position, maxHeight: Number.parseFloat(style.maxHeight), perInstance: row.dataset.layout === "inline",
+      side: node.dataset.side ?? "right", cap: node.style.getPropertyValue("--file-submenu-max-width"),
+      shift: node.style.getPropertyValue("--file-submenu-shift"),
+      panel: r(node.getBoundingClientRect()), row: r(row.getBoundingClientRect()), width: innerWidth, height: innerHeight,
+    };
+  }, id);
+  const margin = 8 * scale;
+  const minimum = 220 * scale;
+  if (g.position === "absolute") {
+    await viewportFit(page, panel(page, id));
+    expect(g.panel.width, `${id}: at least the minimum width`).toBeGreaterThanOrEqual(minimum - 0.5);
+    expect(g.panel.bottom, `${id}: above the bottom margin`).toBeLessThanOrEqual(g.height - margin + 1);
+    expect(g.maxHeight * scale, `${id}: its height limit is the viewport's, in layout px`).toBeCloseTo(g.height - 24 * scale, 0);
+    if (g.cap) {
+      // A capped panel takes its side's whole room, and the cap is that room in layout px.
+      if (g.side === "right") expect(g.panel.right, `${id}: capped to the right room`).toBeCloseTo(g.width - margin, 0);
+      else expect(g.panel.left, `${id}: capped to the left room`).toBeCloseTo(margin, 0);
+      expect(Number.parseFloat(g.cap) * scale, `${id}: the cap is layout px`).toBeCloseTo(g.panel.width, 0);
+    }
+    if (g.shift) {
+      const stopsAtBottom = Math.abs(g.panel.bottom - (g.height - margin)) <= 1;
+      const stopsAtTop = Math.abs(g.panel.top - margin) <= 1;
+      expect(stopsAtBottom || stopsAtTop, `${id}: moved up exactly to the bottom margin (or the top one)`).toBe(true);
+    }
+  } else if (g.perInstance) {
+    // Inline by placement: neither side of the row keeps the minimum, measured in layout px.
+    const right = (g.width - margin - (g.row.right + 6 * scale)) / scale;
+    const left = (g.row.left - 6 * scale - margin) / scale;
+    expect(Math.max(right, left), `${id}: inline only where no side holds 220 layout px`).toBeLessThan(220 + 0.5);
+  }
+  await viewportFit(page, page.locator(".file-menu-content"));
+  const entries = panel(page, id).locator("[data-file-menu-item]");
+  const count = await entries.count();
+  expect(count, `${id} has entries`).toBeGreaterThan(0);
+  for (let i = 0; i < count; i += 1) {
+    const entry = entries.nth(i);
+    const label = (await entry.textContent())?.trim();
+    await entry.scrollIntoViewIfNeeded();
+    await viewportFit(page, entry);
+    expect(await paintsOnTop(entry, "centre"), `${id} / ${label}: the pointer reaches the entry`).toBe(true);
+    if (await entry.isEnabled()) await entry.click({ trial: true });
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth), "no sideways scroll").toBeLessThanOrEqual(1);
+}
+
+/**
+ * Dismisses the date-dependent startup toast. Toasts rightly paint above the menu, and at 150% the
+ * bottom-right toast reaches over a flyout's lower entries; the hit tests are about the menu.
+ */
+async function dismissToasts(page: Page) {
+  await page.waitForTimeout(300);
+  for (const dismiss of await page.locator(".toast-dismiss").all()) await dismiss.click();
+  await expect(page.locator(".toast")).toHaveCount(0);
+}
+
+test.describe("File submenus under application zoom (UISET2-01)", () => {
+  // Widths at 150% put the room right of the menu (layout px = visual / 1.5) on both sides of the
+  // 220 px minimum; at 80% the room the visual reading understates. 1440x620 and 1100x640 at 150%
+  // are short in layout px (413 and 427) without reaching the 600 px media rule.
+  const CASES = [
+    ...[960, 990, 1010, 1040, 1080, 1440].map((width) => ({ scale: 1.5, width, height: 900 })),
+    { scale: 1.5, width: 1440, height: 620 }, { scale: 1.5, width: 1100, height: 640 },
+    ...[660, 690, 720, 760].map((width) => ({ scale: 0.8, width, height: 800 })),
+    { scale: 0.8, width: 900, height: 601 },
+  ];
+  for (const language of ["en", "de"] as const) {
+    for (const { scale, width, height } of CASES) {
+      test(`${language} ${scale * 100}% ${width}x${height}: every submenu fits, holds its minimum and every entry takes a real pointer`, async ({ page }) => {
+        const m: Catalogue = language === "de" ? de : en;
+        const unexpected = await serve(page, { language, uiScale: scale });
+        await page.setViewportSize({ width, height });
+        await page.goto("/");
+        await expect.poll(() => renderedScale(page), "the stored scale reaches the root").toBe(scale);
+        await dismissToasts(page);
+        await openFile(page);
+        for (const entry of await page.locator(".file-menu-content > [data-file-menu-item], .file-menu-content > .file-submenu > [data-file-menu-item]").all()) {
+          await entry.scrollIntoViewIfNeeded();
+          await viewportFit(page, entry);
+        }
+        for (const id of TRIGGERS) {
+          await openFileSubmenu(page, id);
+          await checkZoomedSubmenu(page, id, scale);
+        }
+        expect(unexpected).toEqual([]);
+        await page.getByRole("menuitem", { name: m["toolbar.about"], exact: true }).click();
+        await expect(page.getByRole("dialog", { name: m["about.title"], exact: true })).toBeVisible();
+      });
+    }
+  }
+
+  test("a zoom step with a submenu open places it again (Ctrl+Plus through the settings path)", async ({ page }) => {
+    const unexpected = await serve(page);
+    // 1000 px keeps a whole flyout at 100%; at 150% the same window is 667 layout px wide, which
+    // leaves the room right of the menu near the 220 px minimum.
+    await page.setViewportSize({ width: 1000, height: 900 });
+    await page.goto("/");
+    await dismissToasts(page);
+    await openFile(page);
+    await openFileSubmenu(page, "help");
+    await checkZoomedSubmenu(page, "help", 1);
+    for (const expected of [1.1, 1.2, 1.3, 1.4, 1.5]) {
+      await page.keyboard.press("Control+Equal");
+      await expect.poll(() => renderedScale(page)).toBeCloseTo(expected, 5);
+    }
+    await expect(page.locator(".file-menu")).toHaveJSProperty("open", true);
+    await expect(panel(page, "help")).toBeVisible();
+    await checkZoomedSubmenu(page, "help", 1.5);
+    expect(unexpected).toEqual([]);
+  });
+});
+
+test.describe("File menu on a touchscreen (UISET2-02)", () => {
+  test.use({ hasTouch: true });
+  // 400: the narrow inline layout; 660: the per-instance inline strip above the breakpoint.
+  for (const { width, height } of [{ width: 400, height: 800 }, { width: 660, height: 800 }]) {
+    for (const language of ["en", "de"] as const) {
+      test(`${language} ${width}x${height}: a tap on a sibling row opens it while another is open`, async ({ page }) => {
+        const unexpected = await serve(page, { language });
+        await page.setViewportSize({ width, height });
+        await page.goto("/");
+        await page.locator(".file-menu > summary").tap();
+        await expect(page.locator(".file-menu-content")).toBeVisible();
+        await trigger(page, "exchange").tap();
+        await expect(trigger(page, "exchange")).toHaveAttribute("aria-expanded", "true");
+        await expect(panel(page, "exchange"), "the open panel is laid out inline").toHaveCSS("position", "static");
+        for (const [open, next] of [["exchange", "history"], ["history", "help"]] as const) {
+          await trigger(page, next).scrollIntoViewIfNeeded();
+          await trigger(page, next).tap();
+          await expect(trigger(page, next), `${next} opens on a tap while ${open} is open`).toHaveAttribute("aria-expanded", "true");
+          await expect(panel(page, next)).toBeVisible();
+          await expect(trigger(page, open)).toHaveAttribute("aria-expanded", "false");
+        }
+        expect(unexpected).toEqual([]);
+      });
+
+      test(`${language} ${width}x${height}: a tap on a first-level action below an open submenu activates it`, async ({ page }) => {
+        const m: Catalogue = language === "de" ? de : en;
+        const unexpected = await serve(page, { language, sessionRequired: true });
+        let logouts = 0;
+        await page.route("**/api/auth/logout", (route) => { logouts += 1; return route.fulfill({ status: 200, contentType: "application/json", body: "{}" }); });
+        await page.setViewportSize({ width, height });
+        await page.goto("/");
+        await page.locator(".file-menu > summary").tap();
+        await trigger(page, "help").tap();
+        await expect(trigger(page, "help")).toHaveAttribute("aria-expanded", "true");
+        // Logout sits below the open Help panel: folding Help first would pull it up from under the finger.
+        const logout = page.locator(".file-menu-logout");
+        await logout.scrollIntoViewIfNeeded();
+        await logout.tap();
+        await expect.poll(() => logouts, "Logout runs on the tap").toBe(1);
+        expect(unexpected).toEqual([]);
+        // New project, above the open submenu, activates on a tap as well.
+        await page.goto("/");
+        await page.locator(".file-menu > summary").tap();
+        await trigger(page, "exchange").tap();
+        await expect(trigger(page, "exchange")).toHaveAttribute("aria-expanded", "true");
+        await page.getByRole("menuitem", { name: m["toolbar.newProject"], exact: true }).tap();
+        await expect(page.getByRole("dialog", { name: m["newProject.title"], exact: true })).toBeVisible();
+      });
+    }
+  }
+});
+
+test.describe("File menu with a pen (UISET2-02)", () => {
+  /** A pen press and release at the node's centre through Chromium's input domain (`pointerType: "pen"`). */
+  async function penTap(page: Page, locator: Locator) {
+    await locator.scrollIntoViewIfNeeded();
+    const b = await box(locator);
+    const at = { x: b.x + b.width / 2, y: b.y + b.height / 2, pointerType: "pen" as const };
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send("Input.dispatchMouseEvent", { type: "mouseMoved", ...at });
+    await cdp.send("Input.dispatchMouseEvent", { type: "mousePressed", button: "left", clickCount: 1, ...at });
+    await cdp.send("Input.dispatchMouseEvent", { type: "mouseReleased", button: "left", clickCount: 1, ...at });
+    await cdp.detach();
+  }
+
+  for (const { width, height } of [{ width: 400, height: 800 }, { width: 660, height: 800 }]) {
+    test(`${width}x${height}: pen taps open a sibling row and run Logout below an open submenu`, async ({ page }) => {
+      const unexpected = await serve(page, { sessionRequired: true });
+      let logouts = 0;
+      await page.route("**/api/auth/logout", (route) => { logouts += 1; return route.fulfill({ status: 200, contentType: "application/json", body: "{}" }); });
+      await page.setViewportSize({ width, height });
+      await page.goto("/");
+      await page.evaluate(() => {
+        const seen: string[] = [];
+        addEventListener("pointerdown", (e) => seen.push(e.pointerType), true);
+        (window as unknown as { penKinds: string[] }).penKinds = seen;
+      });
+      await penTap(page, page.locator(".file-menu > summary"));
+      await expect(page.locator(".file-menu-content")).toBeVisible();
+      await penTap(page, trigger(page, "exchange"));
+      await expect(trigger(page, "exchange")).toHaveAttribute("aria-expanded", "true");
+      await expect(panel(page, "exchange")).toHaveCSS("position", "static");
+      await penTap(page, trigger(page, "history"));
+      await expect(trigger(page, "history"), "history opens on a pen tap while exchange is open").toHaveAttribute("aria-expanded", "true");
+      await expect(trigger(page, "exchange")).toHaveAttribute("aria-expanded", "false");
+      await penTap(page, page.locator(".file-menu-logout"));
+      await expect.poll(() => logouts, "Logout runs on a pen tap").toBe(1);
+      expect(await page.evaluate(() => (window as unknown as { penKinds: string[] }).penKinds), "the browser reported pen presses").toEqual(["pen", "pen", "pen", "pen"]);
+      expect(unexpected).toEqual([]);
+    });
+  }
+});
+
+test.describe("The File menu's first level under application zoom (UISET3-01)", () => {
+  // In layout px (window / scale) 1440x601 and 1440x700 at 150% are 401 and 467 px tall, short of
+  // the eight Comfortable rows with Logout, yet the window is taller than the 600 px media rule.
+  // 900x800 and 660x800 at 150% are 600x533 and 440x533 layout px: narrow and short, with a
+  // window wider than 650 px.
+  const CASES = [
+    { scale: 1.5, width: 1440, height: 601 }, { scale: 1.5, width: 1440, height: 700 },
+    { scale: 1.5, width: 900, height: 800 }, { scale: 1.5, width: 660, height: 800 },
+  ];
+  for (const language of ["en", "de"] as const) {
+    for (const { scale, width, height } of CASES) {
+      test(`${language} ${scale * 100}% ${width}x${height} Comfortable with a session: every first-level row and Logout stay reachable, folded and with each submenu open`, async ({ page }) => {
+        const unexpected = await serve(page, { language, uiScale: scale, density: "comfortable", sessionRequired: true });
+        let logouts = 0;
+        await page.route("**/api/auth/logout", (route) => { logouts += 1; return route.fulfill({ status: 200, contentType: "application/json", body: "{}" }); });
+        await page.setViewportSize({ width, height });
+        await page.goto("/");
+        await expect.poll(() => renderedScale(page), "the stored scale reaches the root").toBe(scale);
+        await expect(page.locator("html")).toHaveAttribute("data-density", "comfortable");
+        await dismissToasts(page);
+        await openFile(page);
+        await expect(page.locator(".file-menu-logout")).toHaveCount(1);
+        await checkFirstLevel(page);
+        for (const id of TRIGGERS) {
+          await trigger(page, id).scrollIntoViewIfNeeded();
+          await openFileSubmenu(page, id);
+          await checkZoomedSubmenu(page, id, scale);
+          await checkFirstLevel(page);
+        }
+        // Logout, the last row, scrolled to and pressed with the Help submenu still open.
+        const logout = page.locator(".file-menu-logout");
+        await logout.scrollIntoViewIfNeeded();
+        await viewportFit(page, logout);
+        await logout.click();
+        await expect.poll(() => logouts, "Logout runs on a real click").toBe(1);
+        expect(unexpected).toEqual([]);
+      });
+    }
+
+    // 640x800 at 80% is 800x1000 layout px, yet the window is narrow: the toolbar takes its narrow
+    // layout (a window rule, like every breakpoint outside the File menu) and the menu spans the
+    // window. The window rule keeps every submenu inline there at every scale; a flyout beside a
+    // menu that spans the window would have no room on either side anyway.
+    test(`${language} 80% 640x800 Comfortable with a session: the narrow window keeps the inline layout and every entry is reachable`, async ({ page }) => {
+      const unexpected = await serve(page, { language, uiScale: 0.8, density: "comfortable", sessionRequired: true });
+      await page.setViewportSize({ width: 640, height: 800 });
+      await page.goto("/");
+      await expect.poll(() => renderedScale(page), "the stored scale reaches the root").toBe(0.8);
+      await dismissToasts(page);
+      await openFile(page);
+      await checkFirstLevel(page);
+      for (const id of TRIGGERS) {
+        await trigger(page, id).scrollIntoViewIfNeeded();
+        await openFileSubmenu(page, id);
+        await expect(panel(page, id), `${id} expands inline`).toHaveCSS("position", "static");
+        await checkZoomedSubmenu(page, id, 0.8);
+        await checkFirstLevel(page);
+      }
+      expect(unexpected).toEqual([]);
+    });
+  }
+});
+
+/**
+ * Every first-level row of the open File menu (actions, submenu rows, Logout), scrolled into
+ * view, lies inside the viewport and the menu box and takes a real pointer; the menu box itself
+ * lies inside the viewport.
+ */
+async function checkFirstLevel(page: Page) {
+  const content = page.locator(".file-menu-content");
+  await viewportFit(page, content);
+  const rows = await page.locator(".file-menu-content > [data-file-menu-item], .file-menu-content > .file-submenu > [data-file-menu-item]").all();
+  expect(rows.length, "the first level has rows").toBeGreaterThanOrEqual(8);
+  for (const row of rows) {
+    const label = (await row.textContent())?.trim();
+    await row.scrollIntoViewIfNeeded();
+    await viewportFit(page, row);
+    const r = await box(row);
+    const menu = await box(content);
+    expect(r.y + r.height, `${label}: inside the menu box`).toBeLessThanOrEqual(menu.y + menu.height + 0.5);
+    expect(await paintsOnTop(row, "centre"), `${label}: the pointer reaches the row`).toBe(true);
+    if (await row.isEnabled()) await row.click({ trial: true });
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth), "no sideways scroll").toBeLessThanOrEqual(1);
+}

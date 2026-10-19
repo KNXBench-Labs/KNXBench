@@ -4,6 +4,7 @@
 // decoration for sighted users and hidden from assistive technology; every
 // fact is reachable as text through keyboard selection and the Inspector,
 // so a busy bus does not turn into a stream of announcements.
+import ResizableTable, { TableColumnReset } from "./ResizableTable";
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import { FlowAnimator, type AnimatorScheduler, type AnimatorSink, type DrawnPulse } from "./flowAnimator";
 import { type DynamicNode } from "./flowDynamics";
@@ -26,6 +27,18 @@ import {
 } from "./flowModel";
 import { useTranslate, type Translate } from "./i18n";
 import type { MessageKey } from "./messages/en";
+
+const FLOW_FLAGS_COLUMNS = [
+  { id: "flag", width: 180, min: 100 },
+  { id: "value", width: 140, min: 80 }
+];
+const FLOW_VALUES_COLUMNS = [
+  { id: "address", width: 64, min: 48 },
+  { id: "value", width: 64, min: 48 },
+  { id: "origin", width: 64, min: 48 },
+  { id: "sender", width: 80, min: 48 },
+  { id: "sequence", width: 48, min: 32 }
+];
 
 const VIEW_WIDTH = 960;
 const VIEW_HEIGHT = 520;
@@ -88,7 +101,7 @@ function ObjectTable({ objects }: { objects: FlowObjectEvidence[] }) {
   return (
     <>
       {objects.map((object) => (
-        <table className="flow-flags" key={object.comObjectId}>
+        <ResizableTable tableId="flow-flags" columns={FLOW_FLAGS_COLUMNS} showReset={false} className="flow-flags" key={object.comObjectId}>
           <caption>
             {t("flow.inspector.objectCaption", {
               id: object.comObjectId,
@@ -96,6 +109,7 @@ function ObjectTable({ objects }: { objects: FlowObjectEvidence[] }) {
               active: object.active ? t("flow.inspector.isActive") : t("flow.inspector.isInactive"),
             })}
           </caption>
+          <thead><tr><th>{t("flow.inspector.flag")}</th><th>{t("flow.inspector.value")}</th></tr></thead>
           <tbody>
             {FLAG_NAMES.map((name) => (
               <tr key={name}>
@@ -104,7 +118,7 @@ function ObjectTable({ objects }: { objects: FlowObjectEvidence[] }) {
               </tr>
             ))}
           </tbody>
-        </table>
+        </ResizableTable>
       ))}
     </>
   );
@@ -158,6 +172,8 @@ function Inspector({ model, node, nowMs, navigation, onClose }: {
   const values = allCurrentValues(model, node.id, nowMs);
   const outgoing = [...model.edges.values()].filter((edge) => edge.from === node.id);
   const incoming = [...model.edges.values()].filter((edge) => edge.to === node.id);
+  const hasFlagTables = outgoing.some(edge => [...edge.groups.values()].some(group => group.sourceObjects.length > 0))
+    || incoming.some(edge => [...edge.groups.values()].some(group => group.targetObjects.length > 0));
   return (
     <aside className="flow-inspector" aria-labelledby="flow-inspector-title">
       <div className="flow-inspector-heading"><h3 id="flow-inspector-title">{node.label}</h3>
@@ -169,7 +185,7 @@ function Inspector({ model, node, nowMs, navigation, onClose }: {
       {values.length === 0 ? (
         <p className="flow-inspector-note">{t("flow.inspector.noValues")}</p>
       ) : (
-        <table className="flow-values">
+        <ResizableTable tableId="flow-values" columns={FLOW_VALUES_COLUMNS} className="flow-values">
           <thead>
             <tr>
               <th scope="col">{t("flow.inspector.groupAddress")}</th>
@@ -190,9 +206,10 @@ function Inspector({ model, node, nowMs, navigation, onClose }: {
               </tr>
             ))}
           </tbody>
-        </table>
+        </ResizableTable>
       )}
       <h4>{t("flow.inspector.connections")}</h4>
+      {hasFlagTables && <TableColumnReset tableId="flow-flags" columns={FLOW_FLAGS_COLUMNS} />}
       {outgoing.length + incoming.length === 0 ? (
         <p className="flow-inspector-note">{t("flow.inspector.noConnections")}</p>
       ) : (

@@ -1,5 +1,7 @@
 /** Shared group-address workspace interaction and lifetime tests. */
 // @vitest-environment happy-dom
+import { tableColumnSmoke } from "./tableColumnSmoke.fixture";
+import GroupAddressLinks from "./GroupAddressLinks";
 import { act, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
@@ -125,6 +127,11 @@ it("selects a matrix relationship with separate projected directions and explici
   await act(async () => root.render(<Harness input={input} />));
   await chooseView("matrix");
   expect(host.querySelector("[data-ga-matrix]"), "matrix must be mounted in the production workspace").not.toBeNull();
+  const handles = host.querySelectorAll<HTMLElement>('[data-table-id="group-address-matrix"] [role="separator"]');
+  expect(handles).toHaveLength(3);
+  await act(async () => handles[2].dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })));
+  const preferences = JSON.parse(window.localStorage.getItem("knxbench:table-column-widths:v1:group-address-matrix")!);
+  expect(Object.keys(preferences)).toEqual(["select", "address", "name"]);
   const cell = host.querySelector<HTMLButtonElement>('[data-ga-cell="address:30:0|device:1:object:10"]')!;
   expect(cell.title).toContain("Send"); expect(cell.title).toContain("Receive"); expect(cell.title).toContain("Future");
   expect(cell.textContent).toContain("S"); expect(cell.textContent).toContain("R"); expect(cell.textContent).toContain("?");
@@ -187,4 +194,15 @@ it("drops deleted ranges and addresses on update instead of keeping stale scope 
   expect(host.querySelector('[data-ga-scope="range:21:0"]')).toBeNull();
   expect(host.querySelector('[data-ga-select="31"]')).toBeNull();
   expect(host.querySelector('[data-ga-select="30"]')).not.toBeNull();
+});
+
+tableColumnSmoke([["group-addresses", 6], ["group-address-matrix", 3], ["group-address-members", 4]], async id => {
+  if (id === "group-address-members") {
+    const ga = { ...installation.group_addresses[0], links: [{ device_id: 1, device_name: "Switch", device_address: "1.1.1", com_object_id: 10, com_object_name: "Switch", com_object_number: 0, direction: "Send" }] };
+    await act(async () => root.render(<GroupAddressLinks ga={ga} tree={{ installations: [installation] } as ProjectTree} onTreeUpdate={() => {}} />));
+  } else {
+    await act(async () => root.render(<Harness />));
+    await chooseView(id === "group-address-matrix" ? "matrix" : "tree");
+  }
+  return { host };
 });

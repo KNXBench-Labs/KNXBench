@@ -212,8 +212,8 @@ already found lying in the grass.
   into a named helper the tagged tests call. Keep test-side helpers in `.ts`
   below `e2e/`; a `.tsx` import from a spec or helper is refused, and helpers
   in the app tree are not followed. Call clocks directly
-  (`performance.now()`), not through destructuring or a re-bound alias, which
-  the guard does not see. Prefer an explicit
+  (`performance.now()`), not through destructuring, a re-bound alias, a
+  getter or a bracket call, which the guard does not see. Prefer an explicit
   settled-state wait over the tag where the case does not measure time
   (ADR-0144).
 

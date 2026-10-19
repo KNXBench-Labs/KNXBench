@@ -164,6 +164,19 @@ class BrowserLaneGuardTests(unittest.TestCase):
                   '});\n')
         self.assertEqual(scan(source), ['10:wait', '11:pause', '12:twice'])
 
+    def test_a_function_declaration_is_not_a_method_of_every_object(self) -> None:
+        source = ('async function press(page) {\n  await page.waitForTimeout(5);\n}\n'
+                  'test("tagged", { tag: "@exclusive" }, async ({ page }) => { await press(page); });\n'
+                  'test("a", async ({ page }) => {\n'
+                  '  await page.keyboard.press("Enter");\n'
+                  '  await page.locator("x").press("Tab");\n'
+                  '});\n')
+        self.assertEqual(scan(source), [])
+        helper = ('async function press(page) {\n  await page.waitForTimeout(5);\n}\n'
+                  'export async function login(page) {\n  await page.keyboard.press("Enter");\n}\n')
+        self.assertEqual(scan('import { login } from "./auth";\n' + UNTAGGED_CALL % 'login(page)',
+                              {'auth.ts': helper}), [])
+
     def test_more_import_and_export_shapes_are_followed(self) -> None:
         impl = 'export async function nap(page) {\n  await page.waitForTimeout(1);\n}\n'
         helpers = {

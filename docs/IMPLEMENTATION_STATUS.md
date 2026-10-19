@@ -12,6 +12,33 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## A product database the build cannot read is named, not hidden (19 October 2026)
+
+Owner report on `0.1.0-alpha.14+g6d92fda` (AppImage): after an ETS import, product
+databases did not install, no error was visible and the catalogue stayed empty.
+Cause, reproduced on a copy of the owner's file: the product database was at v26,
+written by a gate on the unmerged WP-01/02 branch. Five `knx-cli` tests spawned
+`knx doc-export` with the developer's `HOME`, and `doc-export` opened the default
+product database with `open_and_migrate`. `AppState::with_user_product_db` then
+turned v25's `FutureVersion` refusal into `.ok()`, so server and desktop ran
+without products and every route said only "no product database configured".
+Fixes: `doc-export` and the reading commands `products list/coverage/verify/
+show/identity/family/order-number` and `device readiness` open the database
+read-only (`open_read_only`, as the MCP adapter does, ADR-0090); a missing file
+reads as an empty in-memory catalogue and is not created (RED: all eight
+commands grew an empty, version-0 file to a full schema or created one). The CLI
+tests' helpers give `knx` a never-existing `XDG_DATA_HOME` (inotify sweep over
+the 185 tests: 5 → 0 opens). `AppState::with_product_db_at` keeps the open error
+in `product_db_unavailable`, prints it, logs it as a `product database` error
+that survives the log reset on new/open/import, and every refusal (catalogue,
+package and legacy install, parameter writes, download preparation, device
+readiness, manufacturer-file restore) names it while keeping its status and kind;
+without a reason the wording is unchanged (pinned by a test). A location that
+cannot be checked is refused instead of read as an empty catalogue. Nine mutants
+killed. Cross-vendor review (Codex `gpt-6.1-sol`, high) and its re-review of
+the fix round: accept with fixes, every finding fixed test-first. Troubleshooting page, developer pitfall and an OPEN_WORK item
+(gate-wide `XDG_DATA_HOME`) record the rest.
+
 ## Empty ZIP directories must really be empty, WP-16 (19 October 2026)
 
 Closes the KL-159 round-4 corner. A directory record in a `.knxproj`, outer

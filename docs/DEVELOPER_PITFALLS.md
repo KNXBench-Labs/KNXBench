@@ -27,6 +27,16 @@ already found lying in the grass.
   `the_loopback_join_lands_on_lo_and_nowhere_else` refuses the truncated snapshot
   and fails. That is host state, not the change under test: rerun `knx-net` on the
   frozen tree and report both results.
+- **A test that spawns a binary inherits the developer's `HOME`.** `knx`,
+  `knx-server` and the desktop shell find the user's product database through
+  `knx_productdb::default_path()` (`$XDG_DATA_HOME/knx/products.sqlite`, else
+  `~/.local/share/knx/`). A spawned `knx doc-export` used to migrate that real
+  file to the branch's schema: one gate on a product-DB migration branch left the
+  owner's database at v26, and every `main` build and AppImage (v25) then ran
+  without a catalogue (19 October 2026). Give every spawned command its own
+  `XDG_DATA_HOME` (a temporary directory, or one that never exists), and open
+  the user's product database from a reading command only with
+  `knx_productdb::open_read_only` (ADR-0090).
 - **CI runs exactly these checks** (`.github/workflows/`): `cargo fmt --all --check`,
   `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`,
   `npm ci`, `npm test` and `npm run build` in `apps/knx-web`, the ts-rs bindings

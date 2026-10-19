@@ -225,6 +225,15 @@ pub(crate) fn prepare_error(target: IndividualAddress, error: &PrepareError) -> 
     }
 }
 
+/// The refusal of a download step without a product database: names the
+/// startup reason (for example a newer schema) when one is known.
+pub(crate) fn no_application_program(state: &crate::AppState) -> String {
+    format!(
+        "{}, so no application program can be read",
+        state.product_db_missing_or("no product database is configured")
+    )
+}
+
 /// Prepares from the project as it is now. Both locks are released before
 /// this returns; they are never held together.
 pub(crate) fn prepare(
@@ -236,7 +245,7 @@ pub(crate) fn prepare(
         return Err(ApiError::with_kind(
             StatusCode::CONFLICT,
             "downloadProductDataMissing",
-            "no product database is configured, so no application program can be read",
+            no_application_program(state),
         ));
     };
     let project_guard = state.project.lock().expect("state mutex poisoned");
@@ -481,7 +490,7 @@ async fn start(
         let Some(products) = state.product_db.as_ref() else {
             return Err(ApiError::with_status(
                 StatusCode::CONFLICT,
-                "no product database is configured, so no application program can be read",
+                no_application_program(&state),
             ));
         };
         let products = products.lock().expect("state mutex poisoned");

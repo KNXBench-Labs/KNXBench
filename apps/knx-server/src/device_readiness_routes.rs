@@ -55,7 +55,7 @@ async fn readiness(State(state): State<SharedState>) -> Result<Json<ReadinessRes
         return Err(ApiError::with_kind(
             StatusCode::CONFLICT,
             "downloadProductDataMissing",
-            "no product database is configured, so no application program can be read",
+            crate::device_download_routes::no_application_program(&state),
         ));
     };
     let evidence = shipped_evidence()

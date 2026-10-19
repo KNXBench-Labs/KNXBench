@@ -101,12 +101,20 @@ pub struct AppState {
     pub project_incarnation: AtomicU64,
     /// The shared product database, opened once at startup from
     /// `knx_productdb::default_path()`. `None` if no path could be
-    /// derived, the file doesn't exist yet, or it failed to open/migrate
-    /// — never a startup error (ADR-0012's "missing product database is
-    /// ordinary, not an error"). `Mutex`, not `RwLock`: every access here
+    /// derived or the file failed to open/migrate — never a startup error
+    /// (ADR-0012: the server runs without products), but never silent
+    /// either: [`Self::product_db_unavailable`] keeps the reason. A file
+    /// that does not exist yet is created, so it never lands here.
+    /// `Mutex`, not `RwLock`: every access here
     /// is a handful of `SELECT`s or one `enrich()` pass, never held long
     /// enough for reader/writer contention to matter.
     pub product_db: Option<Mutex<knx_productdb::Connection>>,
+    /// Why the user's product database is not open, when
+    /// [`Self::with_user_product_db`] tried and failed (a newer schema
+    /// than this build reads, an unreadable file, no location). `None`
+    /// when it is open or was never asked for (tests). Routes that need
+    /// products refuse with [`Self::product_db_missing`], which names it.
+    pub product_db_unavailable: Option<String>,
     /// In-memory record of import diagnostics and operational feedback for
     /// this server run (T11) — never persisted, never reset by anything
     /// other than a successful `open_project`/`open_native_project`. See
@@ -233,13 +241,76 @@ impl AppState {
     /// database at `knx_productdb::default_path()`, opened (and created or
     /// migrated if needed). Only the server and desktop binaries call this.
     pub fn with_user_product_db(data_dir: PathBuf) -> Self {
-        let product_db = knx_productdb::default_path()
-            .and_then(|path| knx_productdb::open_and_migrate(&path).ok())
-            .map(Mutex::new);
-        let mut state = Self::with_product_db(data_dir, product_db);
+        let mut state = Self::with_product_db_at(data_dir, knx_productdb::default_path());
         state.legacy_password = knx_app::legacy::default_remembered_password_path()
             .map(knx_app::legacy::RememberedPassword::at);
         state
+    }
+
+    /// [`Self::new`] plus the product database at `path` (`None`: no
+    /// location could be derived), opened, created or migrated. A file
+    /// that cannot be opened — typically one a newer KNXBench already
+    /// migrated past this build — leaves the server running without
+    /// products and says why: on stderr, in the session log and in every
+    /// refusal of a route that needs products. The file is not touched.
+    pub fn with_product_db_at(data_dir: PathBuf, path: Option<PathBuf>) -> Self {
+        let opened = match &path {
+            Some(path) => knx_productdb::open_and_migrate(path).map_err(|error| {
+                format!(
+                    "the product database at {} cannot be opened: {error}",
+                    path.display()
+                )
+            }),
+            None => Err(
+                "no product database location: neither XDG_DATA_HOME nor HOME is set".to_string(),
+            ),
+        };
+        let (product_db, unavailable) = match opened {
+            Ok(products) => (Some(Mutex::new(products)), None),
+            Err(reason) => (None, Some(reason)),
+        };
+        let mut state = Self::with_product_db(data_dir, product_db);
+        if let Some(reason) = &unavailable {
+            eprintln!("warning: {reason}");
+        }
+        state.product_db_unavailable = unavailable;
+        if let Some(entry) = state.product_db_log_entry() {
+            state
+                .session_log
+                .lock()
+                .expect("state mutex poisoned")
+                .push(entry);
+        }
+        state
+    }
+
+    /// The session-log line naming why the product database is not open,
+    /// if a startup attempt failed. Kept across log resets, so opening or
+    /// importing a project does not hide it (see [`restart_session_log`]).
+    fn product_db_log_entry(&self) -> Option<LogEntry> {
+        self.product_db_unavailable.as_ref().map(|reason| LogEntry {
+            timestamp: session_log::now(),
+            severity: Severity::Error,
+            source: "product database".to_string(),
+            message: reason.clone(),
+            location: None,
+            diagnostic: None,
+            detail: None,
+        })
+    }
+
+    /// The refusal of a route that needs the product database while none is
+    /// open: the startup reason when there is one, else the plain fact.
+    pub fn product_db_missing(&self) -> String {
+        self.product_db_missing_or(NO_PRODUCT_DATABASE)
+    }
+
+    /// [`Self::product_db_missing`] for a refusal with its own wording: the
+    /// startup reason when there is one, else `generic` unchanged.
+    pub fn product_db_missing_or(&self, generic: &str) -> String {
+        self.product_db_unavailable
+            .clone()
+            .unwrap_or_else(|| generic.to_string())
     }
 
     /// State rooted at `data_dir` with **no** product database: nothing
@@ -275,6 +346,7 @@ impl AppState {
             project_revision: AtomicU64::new(0),
             project_incarnation: AtomicU64::new(0),
             product_db,
+            product_db_unavailable: None,
             session_log: Mutex::new(SessionLog::default()),
             connector: Box::new(RealConnector::default()),
             bus_session: tokio::sync::Mutex::new(None),
@@ -308,6 +380,22 @@ impl AppState {
             stop_admission: Default::default(),
         }
     }
+}
+
+/// What a route that needs products says when no product database was
+/// ever asked for (tests) and no startup reason exists.
+pub const NO_PRODUCT_DATABASE: &str = "no product database configured";
+
+/// Clears the session log for a newly opened, imported or created project,
+/// keeping the one line that still holds: why the product database is not
+/// open. Lock order as before: only `session_log` is held.
+fn restart_session_log(state: &AppState) -> std::sync::MutexGuard<'_, SessionLog> {
+    let mut log = state.session_log.lock().expect("state mutex poisoned");
+    log.reset();
+    if let Some(entry) = state.product_db_log_entry() {
+        log.push(entry);
+    }
+    log
 }
 
 fn new_server_incarnation() -> String {
@@ -616,8 +704,7 @@ pub fn open_project_with_password(
     *state.view_path_key.lock().expect("state mutex poisoned") = Some(import_key.clone());
     tree.view_key = Some(import_key);
 
-    let mut log = state.session_log.lock().expect("state mutex poisoned");
-    log.reset();
+    let mut log = restart_session_log(state);
     for entry in session_log::from_import_report(&report) {
         log.push(entry);
     }
@@ -827,8 +914,7 @@ pub fn open_native_project(
     .map_err(|UnsavedChanges| unsaved_changes_refusal(state, "open"))?;
     let reinstalled = reinstall_manufacturer_files(state, path, progress);
 
-    let mut log = state.session_log.lock().expect("state mutex poisoned");
-    log.reset();
+    let mut log = restart_session_log(state);
     log.push(LogEntry {
         timestamp: session_log::now(),
         severity: Severity::Info,
@@ -1046,8 +1132,7 @@ fn new_project_impl_with_pause(
         }
     };
 
-    let mut log = state.session_log.lock().expect("state mutex poisoned");
-    log.reset();
+    let mut log = restart_session_log(state);
     log.push(LogEntry {
         timestamp: session_log::now(),
         severity: Severity::Info,
@@ -3719,7 +3804,7 @@ pub fn catalog_manufacturers_impl(
     let products = state
         .product_db
         .as_ref()
-        .ok_or("no product database configured")?
+        .ok_or_else(|| state.product_db_missing())?
         .lock()
         .expect("state mutex poisoned");
     knx_productdb::query::manufacturers(&products).map_err(|e| e.to_string())
@@ -3734,7 +3819,7 @@ pub fn catalog_items_impl(
     let products = state
         .product_db
         .as_ref()
-        .ok_or("no product database configured")?
+        .ok_or_else(|| state.product_db_missing())?
         .lock()
         .expect("state mutex poisoned");
     knx_productdb::query::catalog_items(
@@ -3788,7 +3873,7 @@ pub fn install_catalog_package_impl(
     let products = state
         .product_db
         .as_ref()
-        .ok_or_else(|| CatalogInstallError::Internal("no product database configured".into()))?
+        .ok_or_else(|| CatalogInstallError::Internal(state.product_db_missing()))?
         .lock()
         .expect("state mutex poisoned");
     knx_productdb::install_package(&products, source_name, bytes).map_err(|error| match &error {
@@ -3863,7 +3948,7 @@ pub fn install_legacy_impl(
         let products = state
             .product_db
             .as_ref()
-            .ok_or_else(|| LegacyInstallError::Internal("no product database configured".into()))?
+            .ok_or_else(|| LegacyInstallError::Internal(state.product_db_missing()))?
             .lock()
             .expect("state mutex poisoned");
         knx_productdb::legacy::publish_legacy(&products, source_name, bytes, &payload).map_err(
@@ -4411,7 +4496,7 @@ fn read_catalog_product(
     let products = state
         .product_db
         .as_ref()
-        .ok_or("no product database configured")?
+        .ok_or_else(|| state.product_db_missing())?
         .lock()
         .expect("state mutex poisoned");
     let item = knx_productdb::query::catalog_item(&products, &request.catalog_item_id)
@@ -6703,7 +6788,7 @@ pub(crate) fn set_parameter_value_impl(
         let products = state
             .product_db
             .as_ref()
-            .ok_or_else(|| ParameterWriteError::Refused("no product database configured".into()))?
+            .ok_or_else(|| ParameterWriteError::Refused(state.product_db_missing()))?
             .lock()
             .expect("state mutex poisoned");
         crate::parameter_objects::include_missing(

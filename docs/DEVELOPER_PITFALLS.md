@@ -290,6 +290,13 @@ already found lying in the grass.
   and `apps/knx-web/src/diagnosticShell.test.ts` scans literal hyphenated ids as
   class names. A new module on a shared import path can turn them red, so run
   the whole Vitest suite once, not only the package's own tests.
+- **Large-data unit tests carry their own timeout.** A Vitest case that renders
+  thousands of rows and asserts no elapsed time takes 1–3 s alone, but 5–6.5 s
+  in the full suite while other worktrees build (load average about 20 on 16
+  cores): Vitest's 5 s default then measures the host, not the code. Such cases
+  pass `LARGE_DATA_TIMEOUT_MS` (30 s) as the third argument of `it`. Never use
+  it for a case whose assertion depends on time, and never raise a budget that
+  a test asserts.
 - **Bus-workspace browser fixtures must answer
   `GET /api/bus/monitor/telegrams`.** The bus monitor panel polls it
   (`pollBusTelegrams` in `apps/knx-web/src/api.ts`; server route in

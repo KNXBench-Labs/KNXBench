@@ -65,6 +65,9 @@ import { snapshotJson } from "./flowTestFixtures";
 import { parseFlowSnapshot } from "./flowWire";
 import { subscribeAchievementEvents, type AchievementEvent } from "./achievementEvents";
 
+/** A large-data case asserts no elapsed time; Vitest's 5 s default only measured host load. */
+const LARGE_DATA_TIMEOUT_MS = 30_000;
+
 // `act()` only flushes reliably when this is set (React 19's own check,
 // `isConcurrentActEnvironment`) — `LogPanel.test.tsx` never needs it
 // because its one `act()` call wraps the *initial* `render()`, which is
@@ -1081,7 +1084,7 @@ describe("BusMonitorPanel and the shared session's context", () => {
     expect(host!.querySelectorAll(".bus-monitor-stats-sources li").length).toBeLessThanOrEqual(10);
     await tick();
     expect(apiMock.pollBusTelegrams).toHaveBeenLastCalledWith(batch.length);
-  });
+  }, LARGE_DATA_TIMEOUT_MS);
 
   it("locks the table and the compose form when the project changes under a running session", async () => {
     publishProjectContext(projectTree("Kitchen ceiling"));

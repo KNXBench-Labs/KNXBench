@@ -4,6 +4,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, expect, it, vi } from "vitest";
 import type { ProjectTree } from "./bindings/ProjectTree";
+import { admitDeviceCatalog, type DeviceCatalog } from "./deviceList";
 import { renameTree } from "./rename.fixture";
 import RenameNameField from "./RenameNameField";
 const apiMock = vi.hoisted(() => ({ renameEntity: vi.fn(), currentProject: vi.fn(), deviceCatalog: vi.fn(), errorMessage: (e: unknown) => e instanceof Error ? e.message : String(e) }));
@@ -95,8 +96,13 @@ it("a lost response for an unplaced canonical device can be reconciled without a
   apiMock.renameEntity.mockRejectedValue(new Error("Lost response"));
   const input = await type("Already committed"); await key(input, "Enter");
   apiMock.currentProject.mockResolvedValue({ ...tree, snapshot_revision: 2 });
-  apiMock.deviceCatalog.mockResolvedValue({ serverIncarnation: "rename", snapshotRevision: 2,
-    devices: [{ id: 99, device: { id: 99, name: "Already committed" } }] });
+  // A complete batch the real admission accepts: a contract change fails to compile here.
+  const catalogue: DeviceCatalog = { schemaVersion: 1, serverIncarnation: "rename", snapshotRevision: 2,
+    devices: [{ id: 99, device: { id: 99, name: "Already committed", address: null, description: null, com_object_count: 0 },
+      productRef: null, resolution: "NoReference", manufacturerId: null, manufacturerName: null, productText: null,
+      orderNumber: null, productTextLanguage: null, productSourceLanguage: null, system: { state: "noProduct" } }] };
+  expect(admitDeviceCatalog(catalogue)).toBe(catalogue);
+  apiMock.deviceCatalog.mockResolvedValue(catalogue);
   await act(async () => [...host.querySelectorAll("button")].find((b) => b.textContent === "Refresh state")!.click());
   expect(applied).toHaveBeenCalledTimes(1); expect(input.value).toBe("Already committed");
   await key(input, "Enter"); expect(apiMock.renameEntity).toHaveBeenCalledTimes(1);

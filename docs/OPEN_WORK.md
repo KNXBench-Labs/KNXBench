@@ -68,7 +68,7 @@ Each package needs its own scoped claim, review, tests and delivery evidence.
 | [WP-15](#wp-15--complete-module-scope-in-web-consumers) | P1 | Offline-ready; UI-owner coordination | Complete response-local module paths distinguish diagnostics and workspace identities. |
 | [WP-16](#wp-16--empty-directory-zip-integrity) | P1 | Offline-ready regression/hardening | Empty directories have valid CRC and complete compressed-stream representation. |
 | [WP-17](#wp-17--master-identity-provenance) | P1 | Offline-ready, schema/report contract first | Master identity winners, collisions and malformed declarations have truthful provenance. |
-| [WP-18](#wp-18--device-comparison-shows-what-differs) | P2 | Offline-ready (owner request, 19 Oct) | Differing bytes are marked in the raw hex rows; decoded rows default to differences only (raw ranges stay visible by contract). |
+| [WP-18](#wp-18--device-comparison-shows-what-differs) | P2 | Offline-ready (owner request, 19 Oct) | Differing bytes are marked in the raw hex rows; the comparison result shows only differences by default, with a toggle for all rows. |
 | [WP-19](#wp-19--sync-from-a-device-comparison) | P2 | Contract first; project → device needs bus-write consent (owner request, 19 Oct) | A comparison result offers *project → device* (the existing download) or *device → project* (adopt verified values, one undo step). |
 | [WP-20](#wp-20--system-family-in-the-device-list) | P2 | Offline-ready; cited mask table first (owner request, 19 Oct) | The device list shows each device's system family (System 1, 2, 7 or B) from its mask version. |
 
@@ -368,21 +368,27 @@ byte-level `changes` (address plus project and device bytes).
 (a) Raw hex rows mark every differing byte on both sides. Unread or unknown
 bytes are marked differently from differing bytes, and the marking also works
 without colour (shape or weight plus an accessible label or count).
-(b) The result table opens with only differing rows. A visible toggle shows
-all rows, with a count of the hidden equal rows. Only decoded rows whose two
-sides are known and equal are hidden. *Unknown / not read* and not-decoded rows
-are not proven equal, so they stay visible. **Contract constraint:** the
-[comparison contract](contracts/device-comparison.md#decoding-and-integrity)
-forbids a differences-only filter that hides unattributed bytes, so every raw
-range stays visible in the default view too (the byte marks from (a) carry the
-difference). Hiding equal raw ranges needs an explicit owner decision and an
-amendment to that contract first. Interpretation to confirm at the claim:
-"list" means the result table, not the device list in the dialog.
+(b) The result display opens with only differing rows. A visible toggle shows
+all rows, with a count of the hidden equal rows. Hidden by default are only
+rows proven equal: decoded rows whose two sides are known and equal, and raw
+ranges whose bytes were all read and are all equal. *Unknown / not read* and
+not-decoded rows, and any raw range with a differing or unread byte, stay
+visible. The filter changes the display only; the response, the session tags
+and the "Synced" claim are unchanged.
+**Owner decision (19 October 2026):** requests 1 and 2 mean the result display
+of the comparison between a device's state and the project's state, not the
+device list in the dialog. The differences-only default is a display choice and
+also applies to raw ranges proven equal. That supersedes the
+[comparison contract](contracts/device-comparison.md#decoding-and-integrity)'s
+"no differences-only filter" sentence: WP-18 amends it in the same delivery
+(rule: no filter may hide a differing or unread byte, and the toggle always
+reveals every original read range).
 **Done when:** marking uses the server's byte-level data or an
 equal-length byte comparison, never a new KNX codec in the UI; regressions cover
 a single differing byte, adjacent and separate runs, unread bytes, all equal,
-no raw range, the filter with unknown rows, and raw ranges that stay visible
-under the filter; the resizable-table contract
+no raw range, the filter with unknown rows, an equal raw range hidden and a
+raw range with one differing or unread byte kept visible, and the toggle
+revealing every original read range; the resizable-table contract
 ([column widths](contracts/table-column-widths.md)) and the dark and light
 themes hold. The comparison stays read-only, and session-only tags are
 unchanged.

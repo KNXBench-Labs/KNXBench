@@ -956,6 +956,28 @@ the own-offset rows: `ingest_unknown` (1,914, 290, 247,734) → (1,146, 288,
 as (rows, owners, occurrences). The −1,097 is 12 more than the census's distinct keys,
 because v24 already stores duplicate `ingest_unknown` rows for some shared
 sources (OPEN_WORK, census 3 item 5).
+Schema v26 ([ADR-0146](adr/0146-unknown-evidence-rows-have-an-identity.md))
+removed those copies and re-pinned both commitments: an `ingest_unknown` row
+now has an identity (one per blob, construct and name; an `IdConflict` row per
+everything it carries), so a member several packages carry is recorded once. A
+v25 / v26 pair on the same 115 instances changes exactly one published count,
+`ingest_unknown` 23,176 → 22,327; outcomes, report totals and every other
+table are equal. A census of the v25 shared database predicted the −849
+exactly: 843 construct rows repeating another in 505 identity groups (24
+sources: 18 master files, 6 programs) and 6 repeated `IdConflict` rows, with
+no group whose copies differ. The ADR-0081 pin moves `ingest_unknown`
+(1,146, 288, 73,548) → (1,128, 288, 71,634) and the master-language
+`RefId`/`Version` pins (113, 67, 3,125) → (67, 67, 1,870), both as predicted;
+`package_install_unknown` does not move. Migrating the v25 shared database to
+v26 gives a database equal to a fresh v26 install, table by table.
+
+| Moved leaf (v25 → v26) | v25 | Predicted | Measured |
+|---|---:|---:|---:|
+| `ingest_unknown` rows | 23,176 | 22,327 | 22,327 |
+| ADR-0081 pin, `ingest_unknown` (rows, blobs, occurrences) | (1,146, 288, 73,548) | (1,128, 288, 71,634) | (1,128, 288, 71,634) |
+| Master `RefId` source rows (rows, sources, occurrences) | (113, 67, 3,125) | (67, 67, 1,870) | (67, 67, 1,870) |
+| Master `Version` source rows (rows, sources, occurrences) | (113, 67, 3,125) | (67, 67, 1,870) | (67, 67, 1,870) |
+
 The 2026-09-24
 gate bound 115 instances / 113 unique hashes: isolated 104 installed and 11
 unsupported; shared 102 installed, 2 already present, and 11 unsupported.

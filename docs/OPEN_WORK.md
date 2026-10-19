@@ -58,7 +58,7 @@ Each package needs its own scoped claim, review, tests and delivery evidence.
 
 | Package | Priority | Readiness / dependency | Bounded outcome |
 | --- | --- | --- | --- |
-| [WP-01](#wp-01--idempotent-unknown-evidence) | P1 | Offline-ready investigation | Unknown-evidence rows remain truthful across shared-source re-ingest. |
+| [WP-01](#wp-01--idempotent-unknown-evidence) | P1 | Delivered 19 October (product DB v26, ADR-0146) | Unknown-evidence rows remain truthful across shared-source re-ingest. |
 | [WP-02](#wp-02--suffixtext-end-to-end) | P2 | Offline-ready, migration contract first | Source suffix text reaches the existing parameter rows without changing stored values. |
 | [WP-03](#wp-03--legacy-binary-enumeration-values) | P2 | Mapping evidence first | Legacy binary enum values use the existing typed storage or keep an explicit refusal/report. |
 | [WP-04](#wp-04--large-catalogues-measure-then-stream) | P1/P2 | Measurement first; three sequential slices | Measured database growth, bounded procedure parsing, then a cancellable web large-profile workflow. |
@@ -81,15 +81,19 @@ Each package needs its own scoped claim, review, tests and delivery evidence.
 
 #### WP-01 — Idempotent unknown evidence
 
-**Scope:** census-3 duplicate `ingest_unknown` rows (KL-151/report history).
-Reproduce shared-source, multi-package and retry ingestion with synthetic
-fixtures before selecting a fix. The recorded 978 repeated rows are a prior
-v24 measurement, not a fresh count or proof of the suspected cause.
-**Done when:** source/program/XPath/kind/name identity and occurrence semantics
-are explicit; repeat install, shared sources and database reopen cannot
-inflate evidence; distinct samples/provenance are not silently dropped;
-existing databases have a reviewed repair/migration policy; report totals and
-private matrix commitments are reconciled independently.
+**Delivered 19 October 2026** ([ADR-0146](adr/0146-unknown-evidence-rows-have-an-identity.md),
+product DB v26). Cause, reproduced with synthetic packages: every package
+install re-parsed the members it shares with an earlier package (and the
+master) and wrote their rows again; a re-parsed losing blob repeated its
+`IdConflict` row. A refused install, its retry, a repeat install and a reopen
+did not inflate on their own. A row is now a fact about one blob's bytes,
+enforced by two unique indexes; `occurrences` is one parse's count. The v26
+repair keeps each group's oldest row with the largest count and the oldest
+sample; package reports are untouched. On the 115-instance matrix corpus the
+re-pin removes exactly the 849 predicted copies (`ingest_unknown` 23,176 →
+22,327), and a migrated v25 shared database equals a fresh v26 install.
+**Remaining boundary:** a later parse's *different* sample for the same
+construct is not stored separately (none measured; the bytes stay retained).
 [Finding](#product-database-census-3-18-october-2026) ·
 [report implementation](../crates/knx-productdb/src/report.rs).
 
@@ -723,13 +727,14 @@ ADR-0141), and size bounds at the storage ceiling (G12, ADR-0142). Open:
 4. **Streaming:** procedure resolution still builds a whole-document tree with
    its own bounds (ADR-0142, unchanged on purpose); the legacy importer could
    fill `parameter_type_enum.binary_value` too.
-5. **Duplicate unknown rows (new finding, pre-existing):** a v24 shared
-   install of the 115-instance matrix corpus holds 978 `ingest_unknown` rows
-   that repeat another row of the same source, program, xpath, kind and name
-   (577 key groups in 48 sources, some without a program). The report totals
-   are not affected (the v25 re-pin matched the XML census there exactly); the
-   row table over-counts. Cause not yet traced; a re-ingest of a source shared
-   by several packages is the first suspect.
+5. **Duplicate unknown rows: fixed 19 October (WP-01, ADR-0146).** A v24
+   shared install of the 115-instance matrix corpus held 978 `ingest_unknown`
+   rows repeating another row of the same source, program, xpath, kind and
+   name (577 key groups in 48 sources). Cause: each package install re-parsed
+   the members it shares with earlier packages and wrote their rows again.
+   Product DB v26 gives the row an identity and merges existing copies; the
+   v25 measurement (843 construct and 6 conflict copies) is gone after the
+   re-pin. Report totals were never affected.
 
 ## Plug-in data adoption: plug-in acceptance open (17 October 2026)
 

@@ -12,6 +12,19 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Alpha 15 publication verified — 19 October 2026
+
+`v0.1.0-alpha.15` points to immutable `c3d5b35f`: one complete release gate
+**31/31**, frozen inputs, then successful AppImage and dual-architecture Docker
+publication. Public checksums/provider digests, binary/OCI revision binding,
+isolated authenticated save/reopen, native-10 → 16 migration, headless extracted
+AppImage startup and all 37 served website files passed. The owner's running
+container was not upgraded. Failed packaging/verifier attempts remain explicit;
+see the [acceptance record](releases/alpha15-acceptance.md) and
+[publication receipt](evidence/release-alpha15-2026-10-19.json). Native schema
+16 and product-database schema 26 retain the documented compatibility boundaries.
+No new bus/device, FUSE/Mesa, native visual or screen-reader evidence is claimed.
+
 ## Alpha 15 set closed; documentation drift, first slice (19 October 2026)
 
 The Alpha 15 package set is delivered: WP-16, WP-18, WP-15 with the two zoom

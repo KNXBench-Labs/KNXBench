@@ -1,0 +1,241 @@
+{
+  "schema": "knxbench-release-publication/1",
+  "tag": "v0.1.0-alpha.15",
+  "candidate": "c3d5b35f0f482dc64bebd07746a834e5b676215b",
+  "published_date": "2026-10-19",
+  "release_url": "https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.15",
+  "prerelease": true,
+  "draft": false,
+  "source_acceptance": "../releases/alpha15-acceptance.md",
+  "source_gate": {
+    "stages": 31,
+    "success": true,
+    "inputs_frozen": true,
+    "minutes": 49.6,
+    "package_stages": 10,
+    "web_stages": 68,
+    "vitest": 4134,
+    "fixture_browser": {
+      "total": 859,
+      "parallel": 794,
+      "exclusive": 65
+    },
+    "production_browser": {
+      "production-catalogue": 14,
+      "production-communication": 59,
+      "production-device-download-support": 33,
+      "production-devices": 45,
+      "production-dialogs": 14,
+      "production-ga-members-download": 23,
+      "production-group-addresses": 20,
+      "production-instructions": 15,
+      "production-notes": 13,
+      "production-parameters": 15,
+      "production-reload-guard": 2,
+      "production-structure": 23,
+      "production-table-columns": 141,
+      "production-task-status": 27,
+      "production-updates": 7,
+      "production-ux-feedback": 55
+    },
+    "additional_browser": {
+      "config-issue09": 10,
+      "config-monitor-control": 7,
+      "config-address-unavailable": 4,
+      "config-device-checks": 4,
+      "config-service-control": 4,
+      "config-site": 4,
+      "config-support": 4,
+      "config-device-diagnostics": 5
+    },
+    "rust": {
+      "passed": 5053,
+      "failed": 0,
+      "ignored": 215,
+      "binaries": 54
+    },
+    "bindings": {
+      "passed": 59,
+      "failed": 0,
+      "ignored": 0,
+      "binaries": 2
+    },
+    "private_corpus": {
+      "passed": 155,
+      "selected": 155
+    },
+    "product_corpus": {
+      "product-dynamic_tree": {
+        "passed": 6,
+        "failed": 0,
+        "ignored": 0,
+        "binaries": 1
+      },
+      "product-legacy_member_names_corpus": {
+        "passed": 1,
+        "failed": 0,
+        "ignored": 0,
+        "binaries": 1
+      },
+      "product-parameter_views_corpus": {
+        "passed": 1,
+        "failed": 0,
+        "ignored": 0,
+        "binaries": 1
+      },
+      "product-program_code": {
+        "passed": 5,
+        "failed": 0,
+        "ignored": 0,
+        "binaries": 1
+      },
+      "product-standalone_packages": {
+        "passed": 3,
+        "failed": 0,
+        "ignored": 0,
+        "binaries": 1
+      },
+      "product-matrix": {
+        "passed": 11,
+        "failed": 0,
+        "ignored": 0,
+        "binaries": 1
+      }
+    },
+    "real_user_data_touched": false
+  },
+  "dry_runs": [
+    {
+      "workflow": "Linux AppImage",
+      "run_id": 39293684573,
+      "head_sha": "c3d5b35f0f482dc64bebd07746a834e5b676215b",
+      "build": "failure: optional native Rolldown binding absent after npm ci",
+      "publish_job": "skipped",
+      "cause": "Why npm omitted the optional binding is not established; original failure retained."
+    },
+    {
+      "workflow": "Linux AppImage",
+      "run_id": 39300880522,
+      "head_sha": "c3d5b35f0f482dc64bebd07746a834e5b676215b",
+      "build": "success",
+      "publish_job": "skipped"
+    },
+    {
+      "workflow": "Docker release",
+      "run_id": 39293688659,
+      "head_sha": "c3d5b35f0f482dc64bebd07746a834e5b676215b",
+      "build": "success (linux/amd64, linux/arm64)",
+      "publish_job": "skipped"
+    }
+  ],
+  "workflows": [
+    {
+      "workflow": "Linux AppImage",
+      "event": "push",
+      "run_id": 39303949954,
+      "head_sha": "c3d5b35f0f482dc64bebd07746a834e5b676215b",
+      "publication_success": true
+    },
+    {
+      "workflow": "Docker release",
+      "event": "push",
+      "run_id": 39303949950,
+      "head_sha": "c3d5b35f0f482dc64bebd07746a834e5b676215b",
+      "publication_success": true
+    }
+  ],
+  "assets": [
+    {
+      "name": "knx-mcp-x86_64-linux",
+      "bytes": 12855392,
+      "sha256": "c55eb30ae4b6efa03d0f07d61bf83ea6319a769ec19372611c59dbca5078d136"
+    },
+    {
+      "name": "KNXBench_0.1.0-alpha.15_amd64.AppImage",
+      "bytes": 90081784,
+      "sha256": "4ffeae3825ec803c9cc78c496d2613f8d4134b392bbbb771a1fdcd2464d5c7bf"
+    },
+    {
+      "name": "SHA256SUMS",
+      "bytes": 194,
+      "sha256": "7f1882f6e40337c9f9abbeacf4d542ee68ba7ebdd7673f7c59d6eed50926b62d"
+    }
+  ],
+  "sha256sums_check": "sha256sum -c SHA256SUMS exit 0 on public downloads; sizes and digests also match provider metadata",
+  "mcp_version": "knx-mcp 0.1.0-alpha.15+gc3d5b35",
+  "mcp_build_suffix_is_tag_prefix": true,
+  "appimage": {
+    "scope": "Extracted unchanged AppRun with Broadway, private D-Bus, loopback-only network namespace and isolated HOME/XDG; not FUSE, Mesa EGL, native visual or screen-reader acceptance. Restricted-namespace desktop-portal warnings remain in the private log.",
+    "api_version": "0.1.0-alpha.15+gc3d5b35",
+    "frontend_status": 200,
+    "libwayland_client_bundled": 0,
+    "egl_bad_or_abort_lines": 0,
+    "owned_process_teardown": "App process group TERM; Broadway intentionally TERM, Bash wait 143; no owned process survived"
+  },
+  "docker": {
+    "image": "docker.io/knxbench/knxbench-server:0.1.0-alpha.15",
+    "index_digest": "sha256:1cf3f03219b7cc5df0a80cf566dfd95fb913add49d51436aa582aa55c98209bf",
+    "latest_index_digest_equal": true,
+    "platforms": [
+      "linux/amd64",
+      "linux/arm64"
+    ],
+    "oci_labels": {
+      "org.opencontainers.image.revision": "c3d5b35f0f482dc64bebd07746a834e5b676215b",
+      "org.opencontainers.image.version": "v0.1.0-alpha.15"
+    },
+    "version": "knx-server 0.1.0-alpha.15+gc3d5b35",
+    "pulled": "version tag only, anonymous fresh DOCKER_CONFIG; local copy removed; latest compared remotely",
+    "smoke": {
+      "success": true,
+      "network": "none; client shares probe loopback only",
+      "checks": [
+        "healthz HTTPS",
+        "unauthenticated version 401",
+        "login session",
+        "authenticated version 200",
+        "create/save/switch/reopen preserves installation"
+      ]
+    },
+    "migration": {
+      "success": true,
+      "fixture": "demos/1.0.0/single-family-home.knxdb",
+      "fixture_schema": 10,
+      "saved_schema": 16,
+      "projected_names_before": 230,
+      "projected_names_after": 230,
+      "fixture_original_unchanged": true,
+      "history_scope": "History endpoint HTTP 200 before/after; individual undo/redo entries not compared"
+    },
+    "owner_container": "ID, immutable image ID and StartedAt identical before/after; not upgraded"
+  },
+  "website": {
+    "verified": true,
+    "scope": "No deployment performed; all served inventoried files match accepted release build",
+    "inventoried_files": 39,
+    "served_files_verified": 37,
+    "excluded_hosting_control_files": [
+      ".nojekyll",
+      "CNAME"
+    ]
+  },
+  "verifier_continuation": {
+    "initial": "external-attempt1 stopped after assets/OCI checks because it incorrectly required Broadway TERM wait=0",
+    "continuation": "external-continuation1 validates expected intentional TERM=143 with a deterministic control, then completes migration, website and unchanged-owner checks; accepted product checks not replayed",
+    "source_changed": false
+  },
+  "private_evidence_archive": {
+    "file": "release-evidence.tar.gz",
+    "sha256": "967cdb521b365aad9d386edeb246543ffdc7d1bea231af91d789c6df3963cba0",
+    "evidence_files": 609,
+    "members_verified": 610,
+    "scope": "Private logs, receipts, helpers and controls; no build caches, downloaded binaries, copied corpus or credential stores"
+  },
+  "boundaries": [
+    "No new live KNX/bus/device operation",
+    "No wider ETS or programming compatibility claim",
+    "No previous-release opening guarantee",
+    "No owner-container deployment",
+    "No FUSE/Mesa/native visual/screen-reader acceptance"
+  ]
+}

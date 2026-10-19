@@ -552,7 +552,10 @@ crate. Open, each small and none blocking:
   sees no access. Other crates' spawned binaries were not swept. Closing the
   class in the gate (a scratch `XDG_DATA_HOME` for test stages) needs a check
   that no test relies on the inherited value
-  ([pitfall](DEVELOPER_PITFALLS.md#gates)).
+  ([pitfall](DEVELOPER_PITFALLS.md#gates)). Reading `products` commands and
+  `device readiness` open the default product database read-only now; `device
+  download/compare/restore/byte-order-probe` still use the migrating opener
+  (whether they write the catalogue was not audited).
 
 ## Prior dated detail — background, not a second queue
 

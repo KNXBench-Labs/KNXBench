@@ -228,9 +228,58 @@ async fn a_newer_product_database_is_named_in_every_refusal_and_left_untouched()
     .await;
     assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE, "{body}");
     assert!(names_the_cause(body["error"].as_str().unwrap()), "{body}");
+    let (status, body) = send(
+        &app,
+        upload(
+            "/api/catalog/install",
+            "dimmer.knxprod",
+            &package(0x10),
+            &[],
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR, "{body}");
+    assert!(names_the_cause(body["error"].as_str().unwrap()), "{body}");
+    let (status, body) = send(
+        &app,
+        json_request("GET", "/api/device-readiness", Value::Null),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CONFLICT, "{body}");
+    let message = body["error"].as_str().unwrap();
+    assert!(names_the_cause(message), "{body}");
+    assert!(
+        message.ends_with("so no application program can be read"),
+        "{body}"
+    );
 
+    // Both log resets keep the reason: a new project, then an ETS import.
     let (status, _) = send(&app, json_request("POST", "/api/project/new", json!({}))).await;
     assert_eq!(status, StatusCode::OK);
+    std::fs::create_dir_all(dir.path().join("data")).unwrap();
+    let project = knx_testsupport::write_minimal_knxproj(&dir.path().join("data"));
+    let project_name = project.file_name().unwrap().to_str().unwrap();
+    let (status, body) = send(
+        &app,
+        json_request(
+            "POST",
+            "/api/project/import",
+            json!({ "path": project_name, "discardChanges": true }),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let (status, body) = send(
+        &app,
+        json_request(
+            "POST",
+            "/api/project/manufacturer-files/restore",
+            json!({ "path": project_name }),
+        ),
+    )
+    .await;
+    assert_eq!(body["kind"], json!("noProductDatabase"), "{status}: {body}");
+    assert!(names_the_cause(body["error"].as_str().unwrap()), "{body}");
     let (_, log) = send(&app, json_request("GET", "/api/log", Value::Null)).await;
     let product_lines: Vec<&Value> = log
         .as_array()

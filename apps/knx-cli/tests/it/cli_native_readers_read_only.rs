@@ -293,3 +293,55 @@ fn a_real_ga_import_still_writes_and_upgrades_an_older_store() {
         .flat_map(|installation| &installation.group_addresses)
         .any(|entry| entry.name == "Written"));
 }
+
+/// Commands that only read the product database never write the user's
+/// default one: an older (here empty, version-0) file keeps its bytes and
+/// gains no sidecar, and a missing one is not created. A reader migrating
+/// it in place locks every older KNXBench out of its own catalogue.
+#[test]
+fn product_database_readers_leave_the_default_product_database_untouched() {
+    let case = Case::new(SAVED);
+    let commands: Vec<Vec<&str>> = vec![
+        vec!["products", "list"],
+        vec!["products", "coverage"],
+        vec!["products", "verify"],
+        vec!["products", "show", "M-0001_A-0001-01-0001"],
+        vec!["products", "identity", "product", "M-0001_H-1_P-1"],
+        vec!["products", "family", "M-0001_A-0001-01-0001"],
+        vec!["products", "order-number", "M-0001", "DIM-1"],
+        vec!["device", "readiness", "--project", case.project()],
+    ];
+    for args in &commands {
+        for existing in [true, false] {
+            let data_home = tempfile::tempdir().unwrap();
+            let products_dir = data_home.path().join("knx");
+            if existing {
+                std::fs::create_dir_all(&products_dir).unwrap();
+                std::fs::write(products_dir.join("products.sqlite"), b"").unwrap();
+            }
+            let output = std::process::Command::new(env!("CARGO_BIN_EXE_knx"))
+                .args(args)
+                .env("XDG_DATA_HOME", data_home.path())
+                .output()
+                .expect("run knx");
+            if existing {
+                let after = std::fs::read(products_dir.join("products.sqlite")).unwrap();
+                assert!(
+                    after.is_empty(),
+                    "{args:?} migrated the product database to {} bytes: {output:?}",
+                    after.len()
+                );
+                assert_eq!(
+                    directory_bytes(&products_dir).len(),
+                    1,
+                    "{args:?} left a sidecar"
+                );
+            } else {
+                assert!(
+                    !products_dir.exists(),
+                    "{args:?} created a product database: {output:?}"
+                );
+            }
+        }
+    }
+}

@@ -1,3 +1,11 @@
+- **Last Agent:** Claude
+- **Timestamp:** 2026-10-19 06:00
+- **Completed:** CLAIM (owner go): test-suite speed package. Owner decisions: (1) browser tests parallel by default, only real-time/animation measurements tagged `@exclusive`, enforced by a static guard instead of the per-file hash admission (the parallel lane has been closed since 17 Oct, so every gate ran 713 cases on one worker, 19.5 min); (2) the complete gate runs only for Alpha/Beta/full releases, routine packages run a targeted, change-scoped selection; (3) Rust test binaries (about 370) are measured first and bundled per crate if the gain is clear. Worktree `KNXBench-test-speed-20261019`, branch `perf/test-speed-20261019`.
+- **Pending/Next Steps:** In progress: browser lane tags + guard, maintained change-scoped package gate runner, Rust measurement/bundling, contract/ADR/VERIFICATION updates.
+- **Notes for Codex oder Claude:** Until this claim's release entry, do not edit `apps/knx-web/browser-lanes.json`, `tools/run_web_gate.py`, `tools/web_gate_support.py`, `tools/run_corpus_tests.py`, the Playwright configs, `docs/contracts/web-test-gate.md`, `docs/VERIFICATION.md` or the workspace `Cargo.toml` profiles. Adding new Rust integration test files is fine, but expect them to be moved into a per-crate test binary when this lands. Measurements wait for `knx-workspace-gates.lock`, so they never compete with a running gate.
+
+---
+
 - **Last Agent:** codex
 - **Timestamp:** 2026-10-19 05:10
 - **Completed:** UI feedback set DELIVERED in full. UI-05 (word-safe resizable tables) plus the whole-set review corrections: 24 px row actions (`cab99869`), zoom-aware tables (`993d3f1f`, `92382dbd`), File menu in four rounds (`188e50d0` containment/stacking/hover/press guard, `258b5526` zoom units + touch/pen, `cd3b3906` measured first-level fit). Reviews alternated vendors (GPT-6.1 xhigh whole-set and narrow reviews, Claude Opus 5.5 table review); the last review accepted without findings. Full 16-stage gate on delivery merge `951a5451` green (web 66/66 complete/success/frozen, Rust 4,925, corpus 155/155, tooling 223). origin/main then moved to `ad97a56c` (UP258 stage-0 memory evidence, Rust/CLI/docs only, no `apps/knx-web`), so the published head is a main-first merge with path-partition proof and delta acceptance.

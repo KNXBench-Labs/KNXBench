@@ -210,6 +210,13 @@ already found lying in the grass.
   before the build. Prefer an explicit settled-state wait over the tag where
   the case does not measure time (ADR-0144).
 
+- **An installed Playwright clock keeps running.** After `page.clock.install()`
+  time flows naturally until `pauseAt`, so the phase of an app interval
+  relative to a later `runFor` depends on how long the steps before it took.
+  Step the clock until the awaited state appears (see `runUntilPulse` in
+  `explorer-structure.e2e.ts`) instead of assuming where a tick falls, and wait
+  for rendered content before advancing past the timer that measures it.
+
 - **The built-server native specs are outside the web gate.** `rename`,
   `functions` and `name-recipe` (`*.native.ts`) run only through
   `tools/verify_name_editing.py --spec`, so a change to disclosure defaults or

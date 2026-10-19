@@ -4,9 +4,9 @@
 
 [WP-17](OPEN_WORK.md#wp-17--master-identity-provenance) implements product DB
 v27 master declarations and source-addressable winners/losers, with unchanged
-normalized rules and explicitly unavailable historical encounter facts. Core
-review, final 11/11 corpus matrix and full-value migration preservation pass;
-package/integration gates and publication are pending. This is source-only,
+normalized rules and explicitly unavailable historical encounter facts. core review, final 11/11 corpus matrix, full-value migration preservation and
+the maintained branch package gate pass; merged acceptance and publication
+remain pending. This is source-only,
 not an Alpha 15 artifact upgrade or a new compatibility/programming claim.
 The separate v23–v25 column-promotion repair follows the released WP-17 schema
 claim; it must not compete for v27 or expand this provenance package.

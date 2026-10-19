@@ -28,8 +28,11 @@ Independent review and correction review accept core `887f024a`. ProductDB:
 migration preserves every value in all **42 unaffected tables** and all **859
 historical diagnostic rows**; new migrated evidence remains historical rather
 than pretending to be fresh observations. Earlier failed attempts stay retained.
-This candidate still requires the package gate, integration and publication;
-Alpha 15 binaries do not contain it. Older builds refuse a v27 product database;
+The maintained branch gate on `d2807f70` passed all 15 stages, including 4,136
+component tests, 863 default browser cases, 18 catalogue production cases,
+2,985 Rust tests and 97 selected corpus tests, with frozen inputs and no changes
+to real user directories. Main-first integration, merged acceptance and
+publication remain pending. Alpha 15 binaries do not contain this candidate. Older builds refuse a v27 product database;
 keep a backup before opening with a new source build.
 
 ## Alpha 15 publication verified — 19 October 2026

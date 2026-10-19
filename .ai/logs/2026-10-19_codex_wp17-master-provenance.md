@@ -147,11 +147,23 @@ production code or guard changed. All 25 provenance integration tests pass;
 the full tooling run passes (317 run, one skip). Failed gate 2 remains intact;
 gate 3 uses a distinct receipt directory and reruns the complete planned scope.
 
+## Branch acceptance and integration boundary
+
+Gate 3 on `d2807f70` passed all 15 planned stages, with frozen inputs and
+no touched/unchecked real user directories. Its 30-stage web subgate passed
+4,136 Vitest cases, all 863 selected default browser cases and all 18 production
+catalogue cases. Selected Rust packages passed 2,985 tests (144 ignored), and
+the offline selected corpus passed 97/97. Controller read both complete
+receipts and their stage proofs. Failed earlier attempts remain unchanged.
+
+Fresh upstream `2ff5b370` differs from the claim only in the successor's handover
+reservation; preserve that exact entry. The selected checkout's foreign files,
+index and HEAD are snapshotted privately and will be checked unchanged after
+integration/publication. Integration uses a separate owned worktree, main-first.
+
 ## Pending acceptance
 
-Maintained change-scoped package gate (all 90 affected default browser specs,
-catalogue production lane, seven Rust packages and selected private corpus),
-main-first integration, merged acceptance, publication and owned cleanup remain
-pending. Gate input preparation includes the justified final matrix pins and
-current capability/ledger/limitations summaries; no implementation has been pushed.
+Main-first merge acceptance, publication and owned cleanup remain pending.
+The merged candidate reruns the maintained package gate with the same affected
+browser/production/Rust/corpus scope; no implementation has been pushed.
 Earlier green web results are not whole-package acceptance.

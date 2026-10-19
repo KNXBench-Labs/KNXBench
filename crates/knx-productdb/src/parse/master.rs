@@ -210,10 +210,12 @@ pub(crate) fn ingest_master_data_detailed(
     master_provenance::atomic(conn, "master_ingest", || {
         let sha = master_provenance::retain(conn, bytes)?;
         crate::xml::validate_complete_document("knx_master.xml", bytes)?;
-        let mut detailed = parse_master(conn, bytes, true)?;
+        let mut budget = master_provenance::budget::EvidenceBudget::default();
+        let mut detailed = parse_master_with_budget(conn, bytes, true, &mut budget)?;
+        budget.reserve_validation()?;
         master_provenance::persist(conn, &sha, &detailed.declarations, true)?;
         detailed.outcome.diagnostics =
-            master_provenance::diagnostics(conn, &detailed.declarations)?;
+            master_provenance::diagnostics(conn, &detailed.declarations, &mut budget)?;
         Ok(detailed)
     })
 }
@@ -244,10 +246,23 @@ pub(crate) fn parse_master(
     bytes: &[u8],
     writes: bool,
 ) -> Result<DetailedMasterIngest, ProductDbError> {
+    let mut budget = master_provenance::budget::EvidenceBudget::default();
+    let parsed = parse_master_with_budget(conn, bytes, writes, &mut budget)?;
+    budget.reserve_validation()?;
+    Ok(parsed)
+}
+
+pub(crate) fn parse_master_with_budget(
+    conn: &Connection,
+    bytes: &[u8],
+    writes: bool,
+    budget: &mut master_provenance::budget::EvidenceBudget,
+) -> Result<DetailedMasterIngest, ProductDbError> {
     let source_path = "knx_master.xml";
     if bytes.len() > master_provenance::MAX_MASTER_BYTES {
         return Err(master_provenance::error("master exceeds byte budget"));
     }
+    budget.charge(64)?;
     let source_sha256 = crate::sha256_hex(bytes);
     let mut declarations = Vec::new();
     let language_unknowns = if writes {
@@ -320,6 +335,7 @@ pub(crate) fn parse_master(
                     _ => None,
                 };
                 let function_type_id = if name == "FunctionPoint" {
+                    budget.charge(current_function_type.as_ref().map_or(0, String::len))?;
                     current_function_type.clone()
                 } else {
                     None
@@ -528,13 +544,31 @@ pub(crate) fn parse_master(
                     } else {
                         None
                     };
+                    let components = parents.iter().map(String::as_str).chain([name.as_str()]);
+                    let path_len = components
+                        .clone()
+                        .try_fold(0usize, |n, part| n.checked_add(1)?.checked_add(part.len()))
+                        .ok_or_else(|| {
+                            master_provenance::error("master evidence byte budget exceeded")
+                        })?;
+                    budget.record()?;
+                    budget.charge(source_sha256.len())?;
+                    budget.charge(name.len())?;
+                    budget.charge(family.as_str().len())?;
+                    budget.charge(a.get("Id").map_or(0, str::len))?;
+                    budget.charge(path_len)?;
+                    let mut xml_path = String::with_capacity(path_len);
+                    for part in components {
+                        xml_path.push('/');
+                        xml_path.push_str(part);
+                    }
                     declarations.push(MasterDeclaration {
                         source_sha256: source_sha256.clone(),
                         ordinal: declarations.len() as u32 + 1,
                         family,
                         element: name.clone(),
                         logical_id: a.get("Id").map(str::to_owned),
-                        xml_path: format!("/{}/{}", parents.join("/"), name),
+                        xml_path,
                         byte_start: u32::try_from(byte_start)
                             .map_err(|_| master_provenance::error("master byte offset overflow"))?,
                         byte_end: u32::try_from(byte_end)

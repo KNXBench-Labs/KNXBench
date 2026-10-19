@@ -1,6 +1,13 @@
 //! Master declaration addresses and observed winners, separate from product identity.
 //! See ADR-0147. Replay never writes normalized values or historical reports.
+pub(crate) mod budget;
+mod reconcile;
+use budget::EvidenceBudget;
+pub use budget::MAX_MASTER_EVIDENCE_BYTES;
+mod diagnostic_reader;
+mod reader;
 use crate::{sha256_hex, ProductDbError};
+use reader::master_source_report_with_budget;
 use rusqlite::{params, Connection, OptionalExtension};
 
 pub const MASTER_PROVENANCE_VERSION: i64 = 1;
@@ -194,6 +201,7 @@ pub(crate) fn persist(
     declarations: &[MasterDeclaration],
     observed: bool,
 ) -> Result<(), ProductDbError> {
+    reconcile::reconcile(conn, sha, declarations)?;
     source_status(
         conn,
         sha,
@@ -207,7 +215,7 @@ pub(crate) fn persist(
     )?;
     for d in declarations {
         conn.execute("INSERT INTO master_declaration(source_sha256,ordinal,family,element,logical_id,xml_path,byte_start,byte_end,main_number,function_type_id,missing_id,orphan_parent,observed_write)
-            VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13) ON CONFLICT(source_sha256,ordinal) DO UPDATE SET observed_write=coalesce(master_declaration.observed_write,excluded.observed_write)",
+            VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13) ON CONFLICT(source_sha256,ordinal) DO UPDATE SET family=excluded.family,element=excluded.element,logical_id=excluded.logical_id,xml_path=excluded.xml_path,byte_start=excluded.byte_start,byte_end=excluded.byte_end,main_number=excluded.main_number,function_type_id=excluded.function_type_id,missing_id=excluded.missing_id,orphan_parent=excluded.orphan_parent,observed_write=coalesce(master_declaration.observed_write,excluded.observed_write)",
             params![sha,d.ordinal,d.family.as_str(),d.element,d.logical_id,d.xml_path,d.byte_start,d.byte_end,d.main_number,d.function_type_id,d.missing_id,d.orphan_parent,if observed {d.observed_write} else {None}])?;
         if observed && d.observed_write == Some(true) {
             conn.execute("INSERT INTO master_winner(family,logical_id,source_sha256,ordinal) VALUES(?1,?2,?3,?4)
@@ -219,6 +227,7 @@ pub(crate) fn persist(
 pub(crate) fn diagnostics(
     conn: &Connection,
     declarations: &[MasterDeclaration],
+    budget: &mut EvidenceBudget,
 ) -> Result<Vec<MasterDiagnostic>, ProductDbError> {
     let mut out = Vec::new();
     for d in declarations {
@@ -226,6 +235,7 @@ pub(crate) fn diagnostics(
         if !malformed && d.observed_write != Some(false) {
             continue;
         }
+        budget.diagnostic(d)?;
         let kind = if malformed {
             crate::InstallDiagnosticKind::MalformedMasterDeclaration
         } else {
@@ -240,10 +250,19 @@ pub(crate) fn diagnostics(
         let kept = if malformed {
             String::new()
         } else {
-            let winner:Option<(Option<String>,Option<u32>)>=conn.query_row("SELECT source_sha256,ordinal FROM master_winner WHERE family=?1 AND logical_id=?2",params![d.family.as_str(),d.logical_id],|r|Ok((r.get(0)?,r.get(1)?))).optional()?;
-            match winner {
-                Some((Some(sha), Some(n))) => format!("; kept source {sha} declaration {n}"),
-                _ => "; kept winner historical-unavailable".into(),
+            match winner_marker(
+                conn,
+                d.family,
+                d.logical_id
+                    .as_deref()
+                    .ok_or_else(|| error("collision identity missing"))?,
+            )? {
+                WinnerMarker::Observed(winner) => format!(
+                    "; kept source {} declaration {}",
+                    winner.source_sha256, winner.ordinal
+                ),
+                WinnerMarker::Historical => "; kept winner historical-unavailable".into(),
+                WinnerMarker::Absent => return Err(error("master winner marker missing")),
             }
         };
         out.push(MasterDiagnostic {
@@ -265,173 +284,7 @@ pub(crate) fn diagnostics(
     Ok(out)
 }
 
-fn declaration(row: &rusqlite::Row<'_>) -> Result<MasterDeclaration, rusqlite::Error> {
-    let element: String = row.get(3)?;
-    let family = MasterKind::from_element(&element).ok_or(rusqlite::Error::InvalidQuery)?;
-    let stored: String = row.get(2)?;
-    let bool_value = |n: i64| match n {
-        0 => Ok(false),
-        1 => Ok(true),
-        _ => Err(rusqlite::Error::InvalidQuery),
-    };
-    let missing_id = bool_value(row.get(10)?)?;
-    let orphan_parent = bool_value(row.get(11)?)?;
-    let observed_write = row.get::<_, Option<i64>>(12)?.map(bool_value).transpose()?;
-    let d = MasterDeclaration {
-        source_sha256: row.get(0)?,
-        ordinal: row.get(1)?,
-        family,
-        element,
-        logical_id: row.get(4)?,
-        xml_path: row.get(5)?,
-        byte_start: row.get(6)?,
-        byte_end: row.get(7)?,
-        main_number: row.get(8)?,
-        function_type_id: row.get(9)?,
-        missing_id,
-        orphan_parent,
-        observed_write,
-    };
-    let expected_orphan = (d.element == "DatapointSubtype" && d.main_number.is_none())
-        || (d.element == "FunctionPoint" && d.function_type_id.is_none());
-    let path_valid = d.xml_path.starts_with('/')
-        && !d.xml_path.contains(['\\', '\0'])
-        && !d.xml_path[1..]
-            .split('/')
-            .any(|part| matches!(part, "" | "." | ".."))
-        && d.xml_path.rsplit('/').next() == Some(d.element.as_str());
-    if stored != family.as_str()
-        || d.ordinal == 0
-        || d.ordinal as usize > MAX_MASTER_DECLARATIONS
-        || d.byte_start >= d.byte_end
-        || d.byte_end as usize > MAX_MASTER_BYTES
-        || !path_valid
-        || !valid_sha(&d.source_sha256)
-        || d.logical_id.is_none() != d.missing_id
-        || d.orphan_parent != expected_orphan
-        || (d.element == "DatapointType" && d.main_number.is_none())
-        || (family != MasterKind::DatapointType && d.main_number.is_some())
-        || (d.element != "FunctionPoint" && d.function_type_id.is_some())
-        || (d.observed_write.is_some() && (d.missing_id || d.orphan_parent))
-    {
-        return Err(rusqlite::Error::InvalidQuery);
-    }
-    Ok(d)
-}
-const COLUMNS:&str="source_sha256,ordinal,family,element,logical_id,xml_path,byte_start,byte_end,main_number,function_type_id,missing_id,orphan_parent,observed_write";
-pub fn master_source_report(
-    conn: &Connection,
-    sha: &str,
-) -> Result<Option<MasterSourceReport>, ProductDbError> {
-    let header:Option<(i64,String,String,Option<String>)>=conn.query_row("SELECT definition_version,history,status,reason FROM master_source WHERE source_sha256=?1",[sha],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?))).optional()?;
-    let Some((version, history, status, reason)) = header else {
-        return Ok(None);
-    };
-    if version != MASTER_PROVENANCE_VERSION
-        || !["observed", "historical-unavailable"].contains(&history.as_str())
-        || !["complete", "failed", "unexamined"].contains(&status.as_str())
-        || (status == "complete") != reason.is_none()
-    {
-        return Err(error("invalid master source header"));
-    }
-    let declarations: Vec<MasterDeclaration> = conn
-        .prepare(&format!(
-            "SELECT {COLUMNS} FROM master_declaration WHERE source_sha256=?1 ORDER BY ordinal"
-        ))?
-        .query_map([sha], declaration)?
-        .collect::<Result<Vec<_>, _>>()?;
-    if declarations.iter().enumerate().any(|(i, d)| {
-        d.ordinal as usize != i + 1
-            || (history == "historical-unavailable" && d.observed_write.is_some())
-            || (history == "observed"
-                && !d.missing_id
-                && !d.orphan_parent
-                && d.observed_write.is_none())
-    }) || reason.as_ref().is_some_and(|s| s.is_empty())
-        || (status == "complete" && !valid_sha(sha))
-    {
-        return Err(error("inconsistent master source declarations"));
-    }
-    let bytes = verified_source(conn, sha)?;
-    let retained_source_available = bytes.is_some();
-    if let Some(bytes) = bytes.filter(|_| status == "complete") {
-        // Reuse the authoritative parser, including unusual carried contexts;
-        // never trust persisted offsets or introduce another declaration scanner.
-        let actual = crate::parse::master::parse_master(conn, &bytes, false)?.declarations;
-        if actual.len() != declarations.len()
-            || actual.iter().zip(&declarations).any(|(actual, stored)| {
-                let mut stored = stored.clone();
-                stored.observed_write = None;
-                actual != &stored
-            })
-        {
-            return Err(error("master declarations disagree with retained bytes"));
-        }
-    }
-    Ok(Some(MasterSourceReport {
-        source_sha256: sha.into(),
-        history,
-        status,
-        reason,
-        declarations,
-        retained_source_available,
-    }))
-}
-pub fn master_identity(
-    conn: &Connection,
-    family: MasterKind,
-    id: &str,
-) -> Result<MasterIdentityReport, ProductDbError> {
-    let normalized_present: bool = conn.query_row(
-        &format!(
-            "SELECT EXISTS(SELECT 1 FROM {} WHERE id=?1)",
-            family.as_str()
-        ),
-        [id],
-        |r| r.get(0),
-    )?;
-    let mut winner=conn.query_row("SELECT source_sha256,ordinal FROM master_winner WHERE family=?1 AND logical_id=?2 AND source_sha256 IS NOT NULL",params![family.as_str(),id],|r|Ok(MasterWinner {source_sha256:r.get(0)?,ordinal:r.get(1)?,retained_source_available:false})).optional()?;
-    let mut candidates = Vec::new();
-    let mut availability = std::collections::BTreeMap::new();
-    let sources=conn.prepare("SELECT DISTINCT source_sha256 FROM master_declaration WHERE family=?1 AND logical_id=?2 ORDER BY source_sha256")?.query_map(params![family.as_str(),id],|r|r.get::<_,String>(0))?.collect::<Result<Vec<_>,_>>()?;
-    // One authenticated source read/parse per distinct source, not per candidate.
-    for sha in sources {
-        let source = master_source_report(conn, &sha)?
-            .ok_or_else(|| error("candidate source header is missing"))?;
-        availability.insert(sha, source.retained_source_available);
-        candidates.extend(
-            source
-                .declarations
-                .into_iter()
-                .filter(|d| d.family == family && d.logical_id.as_deref() == Some(id)),
-        );
-    }
-    let unavailable_sources = availability
-        .iter()
-        .filter(|(_, available)| !**available)
-        .map(|(sha, _)| sha.clone())
-        .collect();
-    if let Some(winner) = &mut winner {
-        let d = candidates
-            .iter()
-            .find(|d| d.source_sha256 == winner.source_sha256 && d.ordinal == winner.ordinal)
-            .ok_or_else(|| error("winner declaration is missing or disagrees with its identity"))?;
-        if !normalized_present || d.observed_write != Some(true) {
-            return Err(error("winner disagrees with its declaration"));
-        }
-        winner.retained_source_available = *availability
-            .get(&winner.source_sha256)
-            .ok_or_else(|| error("winner source is missing"))?;
-    }
-    Ok(MasterIdentityReport {
-        family,
-        logical_id: id.into(),
-        normalized_present,
-        winner,
-        candidates,
-        unavailable_sources,
-    })
-}
+pub use reader::{master_identity, master_source_report};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct MasterReplayReport {
@@ -533,6 +386,11 @@ fn replay(conn: &Connection) -> Result<MasterReplayReport, ProductDbError> {
                     .ok_or_else(|| error("master declaration count overflow"))?;
                 persist(conn, &sha, &derived.declarations, false)?;
             }
+            Err(e @ ProductDbError::Xml { .. })
+                if e.to_string().contains("evidence byte budget") =>
+            {
+                return Err(e)
+            }
             Err(ProductDbError::Xml { cause, .. }) => {
                 source_status(conn, &sha, "historical-unavailable", "failed", Some(&cause))?;
                 report.failed_sources += 1;
@@ -543,6 +401,43 @@ fn replay(conn: &Connection) -> Result<MasterReplayReport, ProductDbError> {
     Ok(report)
 }
 
+enum WinnerMarker {
+    Absent,
+    Historical,
+    Observed(MasterWinner),
+}
+fn winner_marker(
+    conn: &Connection,
+    family: MasterKind,
+    id: &str,
+) -> Result<WinnerMarker, ProductDbError> {
+    let mut stmt = conn.prepare(
+        "SELECT source_sha256,ordinal FROM master_winner WHERE family=?1 AND logical_id=?2",
+    )?;
+    let mut rows = stmt.query(params![family.as_str(), id])?;
+    let Some(row) = rows.next()? else {
+        return Ok(WinnerMarker::Absent);
+    };
+    let ordinal: Option<u32> = row.get(1)?;
+    match (row.get_ref(0)?, ordinal) {
+        (rusqlite::types::ValueRef::Null, None) => Ok(WinnerMarker::Historical),
+        (rusqlite::types::ValueRef::Text(bytes), Some(ordinal)) => {
+            // Validate the bounded hash before copying persisted text.
+            let sha =
+                std::str::from_utf8(bytes).map_err(|_| error("invalid winner source hash"))?;
+            if !valid_sha(sha) || ordinal == 0 || ordinal as usize > MAX_MASTER_DECLARATIONS {
+                return Err(error("invalid master winner marker"));
+            }
+            Ok(WinnerMarker::Observed(MasterWinner {
+                source_sha256: sha.into(),
+                ordinal,
+                retained_source_available: false,
+            }))
+        }
+        _ => Err(error("invalid master winner marker pair")),
+    }
+}
+
 fn valid_sha(sha: &str) -> bool {
     sha.len() == 64
         && sha
@@ -550,94 +445,4 @@ fn valid_sha(sha: &str) -> bool {
             .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
 }
 
-fn verified_source(conn: &Connection, sha: &str) -> Result<Option<Vec<u8>>, ProductDbError> {
-    let header: Option<(i64, i64)> = conn
-        .query_row(
-            "SELECT len,length(bytes) FROM source_file WHERE sha256=?1",
-            [sha],
-            |r| Ok((r.get(0)?, r.get(1)?)),
-        )
-        .optional()?;
-    let Some((len, actual)) = header else {
-        return Ok(None);
-    };
-    if len != actual || !(0..=MAX_MASTER_BYTES as i64).contains(&actual) {
-        return Ok(None);
-    }
-    let bytes: Vec<u8> = conn.query_row(
-        "SELECT bytes FROM source_file WHERE sha256=?1",
-        [sha],
-        |r| r.get(0),
-    )?;
-    Ok((sha256_hex(&bytes) == sha).then_some(bytes))
-}
-
-pub(crate) fn validate_diagnostic(
-    conn: &Connection,
-    sha: &str,
-    kind: crate::InstallDiagnosticKind,
-    path: &str,
-    detail: &str,
-) -> Result<(), ProductDbError> {
-    let invalid = || error("invalid master declaration diagnostic");
-    let (xml_path, ordinal) = path
-        .strip_suffix(']')
-        .and_then(|p| p.rsplit_once("[@master-ordinal="))
-        .ok_or_else(invalid)?;
-    let ordinal: u32 = ordinal.parse().map_err(|_| invalid())?;
-    let d = conn
-        .query_row(
-            &format!(
-                "SELECT {COLUMNS} FROM master_declaration WHERE source_sha256=?1 AND ordinal=?2"
-            ),
-            params![sha, ordinal],
-            declaration,
-        )
-        .optional()?
-        .ok_or_else(invalid)?;
-    if d.xml_path != xml_path {
-        return Err(invalid());
-    }
-    let malformed = d.missing_id || d.orphan_parent;
-    if (kind == crate::InstallDiagnosticKind::MalformedMasterDeclaration) != malformed {
-        return Err(invalid());
-    }
-    let reason = match (d.missing_id, d.orphan_parent) {
-        (true, true) => "missing Id; orphan parent",
-        (true, false) => "missing Id",
-        (false, true) => "orphan parent",
-        _ => "identity collision",
-    };
-    let prefix = format!(
-        "{} {:?}: {}; source {} declaration {} bytes [{}..{})",
-        d.family.as_str(),
-        d.logical_id,
-        reason,
-        d.source_sha256,
-        d.ordinal,
-        d.byte_start,
-        d.byte_end
-    );
-    if malformed {
-        if detail != prefix {
-            return Err(invalid());
-        }
-    } else {
-        let suffix = detail.strip_prefix(&prefix).ok_or_else(invalid)?;
-        if suffix != "; kept winner historical-unavailable" {
-            let (kept, n) = suffix
-                .strip_prefix("; kept source ")
-                .and_then(|s| s.split_once(" declaration "))
-                .ok_or_else(invalid)?;
-            let n: u32 = n.parse().map_err(|_| invalid())?;
-            if !valid_sha(kept) || n == 0 {
-                return Err(invalid());
-            }
-            let matching:bool=conn.query_row("SELECT EXISTS(SELECT 1 FROM master_declaration WHERE source_sha256=?1 AND ordinal=?2 AND family=?3 AND logical_id=?4 AND observed_write=1)",params![kept,n,d.family.as_str(),d.logical_id],|r|r.get(0))?;
-            if !matching {
-                return Err(invalid());
-            }
-        }
-    }
-    Ok(())
-}
+pub(crate) use diagnostic_reader::{validate_diagnostic, SourceInventoryCache};

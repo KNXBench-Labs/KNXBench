@@ -1,5 +1,6 @@
 /** Pure presentation grouping; all source diagnostics and access metadata stay intact. */
 import type { ParameterDiagnostic, ParameterField, ParameterSection, ParameterSeparator } from "./api";
+import { moduleScopeIdentity } from "./moduleScope";
 
 const restricting = (access: string | null | undefined) => access === "None" || access === "Read";
 
@@ -42,10 +43,9 @@ export function filterParameterSection(section: ParameterSection, keepField: (fi
 export function groupParameterDiagnostics(diagnostics: readonly ParameterDiagnostic[]) {
   const groups = new Map<string, ParameterDiagnostic[]>();
   for (const diagnostic of diagnostics) {
-    const scope = diagnostic.scope;
     const key = JSON.stringify([
       diagnostic.kind, diagnostic.severity === "info" ? "info" : "warning", diagnostic.message,
-      scope === null ? null : [scope.moduleNode, scope.moduleId, scope.moduleDefId],
+      moduleScopeIdentity(diagnostic.scope),
     ]);
     const group = groups.get(key);
     if (group) group.push(diagnostic);

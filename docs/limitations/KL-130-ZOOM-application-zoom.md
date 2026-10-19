@@ -77,3 +77,26 @@ report DOMRect, the window size or the scroll height differently under
 
 **Also lifted only when** the GUI-capable Linux run additionally opens every
 File submenu at 80% and 150% in a mid-width and a short window.
+
+## Update 19 October 2026: pane drags and a setting-driven table case
+
+The navigation and inspector pane drags (`ResizablePane`) and the left
+column's block splitters (`PaneSplitter`) now divide the pointer delta, and the
+splitter its measured DOMRect height, by `--app-ui-scale`; pane widths are
+rounded to whole layout pixels. Keyboard steps are unchanged layout pixels.
+This closes the open defect named in the 18 October update. Browser cases at
+80%, 100% and 150% set the scale through a stored `uiScale` setting and drag
+with a real pointer (`e2e/workbench-splitters.e2e.ts`). One table case
+(`e2e/table-column-widths.e2e.ts`, "stored uiScale") drives the scale only
+through the setting: a stored 150%, then the zoom shortcuts to 80%, then a
+reload. It checks App's inspector stacking at 1200 px, table fit or local
+scrolling, intact words and pointer tracking. Chromium-only, like the rules
+above.
+
+Evidence: six Vitest cases (`Workbench.test.tsx` four, `PaneSplitter.test.tsx`
+two) and the 80% and 150% browser cases were RED before the fix (the
+navigation edge ran 12 and 30 visual pixels off the pointer); 100% passed as
+the control. Four source mutants each fail a named case: the pane delta, the
+splitter delta, the splitter's observed height and its interaction-time
+height left unscaled. Rounding the pane width to whole layout pixels is not
+discriminated by these scales (60 / 0.8 and 60 / 1.5 are whole numbers).

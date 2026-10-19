@@ -32,6 +32,38 @@ describe("parameter presentation", () => {
     expect(groupParameterDiagnostics(records).map((group) => group.length)).toEqual(Array(8).fill(1));
   });
 
+  // WP-15 / ADR-0063: nameless nested instances of one definition share every
+  // legacy field; only the complete outermost-first chain tells them apart.
+  it("keeps nested nameless scopes with identical legacy fields apart by their complete node chain", () => {
+    const at = (nodeChain: number[], detail: string): ParameterDiagnostic => ({ ...diagnostic, detail,
+      scope: { nodeChain, moduleNode: 7, moduleId: null, moduleDefId: "Inner" } });
+    const records = [at([3, 7], "a"), at([5, 7], "b"), at([3, 7], "c"), at([1, 3, 7], "d"), at([2, 3, 7], "e"),
+      at([3, 5, 7], "f"), at([5, 3, 7], "g")];
+    expect(groupParameterDiagnostics(records).map((group) => group.map((item) => item.detail)))
+      .toEqual([["a", "c"], ["b"], ["d"], ["e"], ["f"], ["g"]]);
+  });
+
+  it("falls back to the legacy fields for an older server, never merging with a chained scope", () => {
+    const legacy = { moduleNode: 7, moduleId: null, moduleDefId: "Inner" };
+    const records: ParameterDiagnostic[] = [
+      { ...diagnostic, detail: "old 1", scope: { ...legacy } },
+      { ...diagnostic, detail: "chained", scope: { ...legacy, nodeChain: [7] } },
+      { ...diagnostic, detail: "old 2", scope: { ...legacy } },
+    ];
+    expect(groupParameterDiagnostics(records).map((group) => group.map((item) => item.detail)))
+      .toEqual([["old 1", "old 2"], ["chained"]]);
+  });
+
+  it("does not trust a chain that breaks the published shape, treating it as absent instead of refusing it", () => {
+    const legacy = { moduleNode: 7, moduleId: null, moduleDefId: "Inner" };
+    const malformed = [[], [3, 8], [3, 7.5, 7], [3, "7"], "3/7", null, [Number.MAX_SAFE_INTEGER + 1, 7]];
+    const records: ParameterDiagnostic[] = [{ ...diagnostic, detail: "old", scope: legacy },
+      ...malformed.map((nodeChain, i) => ({ ...diagnostic, detail: `bad ${i}`,
+        scope: { ...legacy, nodeChain } as unknown as ParameterDiagnostic["scope"] })),
+      { ...diagnostic, detail: "valid", scope: { ...legacy, nodeChain: [3, 7] } }];
+    expect(groupParameterDiagnostics(records).map((group) => group.length)).toEqual([malformed.length + 1, 1]);
+  });
+
   it("treats missing and unknown severities as warnings rather than merging them with notes", () => {
     const unknown = { ...diagnostic, severity: "future" as "warning" };
     const missing = { ...diagnostic, severity: undefined as unknown as "warning" };

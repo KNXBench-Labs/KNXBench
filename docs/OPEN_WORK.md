@@ -72,7 +72,7 @@ Each package needs its own scoped claim, review, tests and delivery evidence.
 | [WP-12](#wp-12--field-evidence-and-owner-acceptance) | P2 | Outside input or operation-specific consent | Reviewed tester/plug-in/diagnostic evidence, without silently expanding compatibility. |
 | [WP-13](#wp-13--documentation-drift) | P3 | Offline-ready, docs only | Current summaries agree with delivered behaviour; retained history stays intact. |
 | [WP-14](#wp-14--complete-offline-family-outcomes) | P1 | Source contracts first; UP258 excluded | Complete real-source System 1/B/300 image → procedure → execution → recovery slices. |
-| [WP-15](#wp-15--complete-module-scope-in-web-consumers) | P1 | Offline-ready; UI-owner coordination | Complete response-local module paths distinguish diagnostics and workspace identities. |
+| [WP-15](#wp-15--complete-module-scope-in-web-consumers) | P1 | Delivered 19 Oct (web adoption); older-server boundary documented | Complete response-local module paths distinguish diagnostics and workspace identities. |
 | [WP-16](#wp-16--empty-directory-zip-integrity) | P1 | Offline-ready regression/hardening | Empty directories have valid CRC and complete compressed-stream representation. |
 | [WP-17](#wp-17--master-identity-provenance) | P1 | Offline-ready, schema/report contract first | Master identity winners, collisions and malformed declarations have truthful provenance. |
 | [WP-18](#wp-18--device-comparison-shows-what-differs) | P2 | Delivered on branch, awaiting controller review/merge (19 Oct); no live-device acceptance | Differing bytes are marked in the raw hex rows; the comparison result shows only differences by default, with a toggle for all rows. |
@@ -331,6 +331,17 @@ web files with any active owner named in `.ai/CURRENT_STATE.md`.
 [diagnostic grouping](../apps/knx-web/src/parameterPresentation.ts) ·
 [workspace index](../apps/knx-web/src/parameterWorkspace.ts).
 
+**Delivered (19 October 2026):** the web `ModuleScope` carries `nodeChain`;
+[`moduleScope.ts`](../apps/knx-web/src/moduleScope.ts) compares complete
+chains for diagnostic grouping, workspace section/group/row keys and the
+Restricted/Functions section views. Regression tests cover nameless nested
+scopes with equal legacy fields, outer-only and order differences, a sibling
+that disappears (chosen area and draft stay with their own scope), the tagged
+older-server fallback and malformed chains (treated as absent, panel still
+loads). **Remaining boundary:** an older server without the field still cannot
+tell nested nameless scopes apart; no real nested manufacturer sample exists;
+the section caption still shows only the innermost module.
+
 #### WP-16 — Empty-directory ZIP integrity
 
 **Scope:** KL-159's documented zero-size directory corner in project containers,
@@ -585,6 +596,12 @@ Open follow-ups found by the UISET review (18 October 2026), outside the table f
   the tables (the File menu cases do use a stored `uiScale`). One table case
   through Settings or a stored `uiScale`, including startup remeasurement,
   would close this.
+
+**Both follow-ups delivered (19 October 2026, WP-15 branch):** pane and
+block drags normalise by `appUiScale()`; one table case runs through the stored
+`uiScale` setting and a reload
+([KL-130](limitations/KL-130-ZOOM-application-zoom.md#update-19-october-2026-pane-drags-and-a-setting-driven-table-case)).
+Still open: the same cases on WebKitGTK (Chromium-only evidence, KL-130).
 
 ## Prepared goal packages (17 October 2026)
 

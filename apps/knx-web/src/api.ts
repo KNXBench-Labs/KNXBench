@@ -2322,6 +2322,10 @@ export function writeBusValue(
 // ---------------------------------------------------------------------
 
 export interface ModuleScope {
+  /** ADR-0063: outermost-first evaluation path ending in `moduleNode`; absent
+   * on older servers. Response-local identity only: not a durable ETS or
+   * module-instance ID and never a write target (`moduleScope.ts`). */
+  nodeChain?: number[];
   moduleNode: number;
   moduleId: string | null;
   moduleDefId: string;

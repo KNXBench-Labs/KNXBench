@@ -124,14 +124,24 @@ const EXPECTED_SHARED_DEDUPLICATIONS: usize = 2;
 /// census's distinct keys by 12 because v24 already stores duplicate
 /// `ingest_unknown` rows for some shared sources (OPEN_WORK). Previous pin
 /// d6641f8b….
+/// Re-pinned for ADR-0146 (schema v26): an `ingest_unknown` row has an
+/// identity, so a member several packages carry no longer stores one copy per
+/// install. A v25 / v26 pair on the same 115 instances changes exactly one
+/// published count besides this commitment, `ingest_unknown` 23176 -> 22327;
+/// outcomes and every other table count and report total are equal. A
+/// census of the v25 shared database predicts it exactly: 843 construct rows
+/// repeat another in 505 identity groups (24 sources: 18 masters, 6 programs)
+/// and 6 `IdConflict` rows repeat another, no group's copies differ. Previous
+/// pin d58e2af8….
 const EXPECTED_BASELINE_COMMITMENT: &str =
-    "d58e2af8918f3556016f17f748903bf3e8825b8fcc55a1947f51393796b57833";
-/// Current v25 outcomes/counts projected without the four v17 tables, the
-/// v20/v22 tables and PDB-11 identity; the previous v24 pin 342a5d2e… moves
-/// only by the six ADR-0141 leaves above (v23 pin b8179368…, v22 pin
-/// 97f3a9d3…, historical v16 pin c204acc8…, see Git history).
+    "2610b3dcdab37bdcb414181cb2091855ceb3168974ff3242fba8f46d53d386ae";
+/// Current v26 outcomes/counts projected without the four v17 tables, the
+/// v20/v22 tables and PDB-11 identity; the previous v25 pin bdde7a5c… moves
+/// only by the ADR-0146 `ingest_unknown` leaf above (v24 pin 342a5d2e…, v23
+/// pin b8179368…, v22 pin 97f3a9d3…, historical v16 pin c204acc8…, see Git
+/// history).
 const EXPECTED_V16_PROJECTION_COMMITMENT: &str =
-    "bdde7a5c1771d909a2c6f19debeea03b903f30f5cd000f6d32dd6a930dc3e736";
+    "2b875c8d6edecb3be1d99be37673644029e9671ed0a4c7c6c0b4ba641bc81fb3";
 /// Tables schema v17 added (ADR-0043), left out of the v16 projection.
 const V17_TABLES: [&str; 4] = [
     "package_source_name",
@@ -1042,8 +1052,9 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
     );
     // AR05 adds two TranslationUnit keys per package. ADR-0052's retired
     // Channel/@Number rows remain retired; no prior unknown evidence is lost.
+    // ADR-0146 (v26): one row per identity, 23176 -> 22327 (849 copies).
     assert_eq!(
-        matrix["shared_final_database_counts"]["ingest_unknown"], 23176,
+        matrix["shared_final_database_counts"]["ingest_unknown"], 22327,
         "shared per-blob unknown evidence changed"
     );
     assert_eq!(
@@ -1083,11 +1094,13 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
     // ADR-0141 (v25) stores a parameter's own integer `Offset`/`BitOffset`:
     // v24's (1914, 290, 247734) and (641, 103, 247734) lose exactly those
     // rows, (768, 284, 174186) and (256, 99, 174186), measured in a v24
-    // shared install of the same instances.
+    // shared install of the same instances. ADR-0146 (v26) removes the
+    // per-install copies of shared program blobs: (1146, 288, 73548) ->
+    // (1128, 288, 71634) per blob, the per-package table unchanged.
     let kl156 = "kind='Attribute' AND (xpath LIKE '%/Parameter' OR xpath LIKE '%/ParameterRef')
                  AND instr(name, ':') = 0 AND substr(name, 1, 1) <> '{'";
     for (table, owner, expected) in [
-        ("ingest_unknown", "source_sha256", (1146, 288, 73_548)),
+        ("ingest_unknown", "source_sha256", (1128, 288, 71_634)),
         (
             "package_install_unknown",
             "package_sha256",
@@ -1110,6 +1123,8 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
         );
     }
     // AR05: unconsumed metadata is named, never falsely declared interpreted.
+    // ADR-0146 (v26): one row per master blob, (113, 67, 3125) -> (67, 67,
+    // 1870); the per-package rows and the unique-source sum do not move.
     let master_path = "/KNX/MasterData/Languages/Language/TranslationUnit";
     for name in ["RefId", "Version"] {
         let source_totals: (i64, i64, i64) = shared
@@ -1123,7 +1138,7 @@ fn product_corpus_is_measured_in_isolation_and_shared_order() {
             .expect("count master-language source evidence");
         assert_eq!(
             source_totals,
-            (113, 67, 3125),
+            (67, 67, 1870),
             "master {name} evidence changed"
         );
         let package_totals: (i64, i64) = shared

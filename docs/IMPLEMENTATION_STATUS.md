@@ -12,6 +12,25 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Unknown evidence is recorded once per blob: product DB v26 (19 October 2026)
+
+WP-01 ([ADR-0146](adr/0146-unknown-evidence-rows-have-an-identity.md)).
+Census 3 had found `ingest_unknown` rows repeating each other. Synthetic
+packages reproduced the cause: a package install re-parses the members it
+shares with earlier packages, and the master, and wrote their unknown rows
+again; a re-parsed losing blob repeated its `IdConflict` row. Product DB v26
+gives the row an identity (two unique indexes), writes idempotently and, on
+upgrade, merges existing copies into the oldest row with the largest per-parse
+count and the oldest sample. Package reports, `package.unknown_count` and
+everything a user sees in an install report are unchanged.
+
+On the 115-instance product matrix corpus a census of the v25 shared database
+predicted every moved number, and the v26 run matched it exactly:
+`ingest_unknown` 23,176 → 22,327, the parameter-attribute pin (1,146, 288,
+73,548) → (1,128, 288, 71,634), the master-language pins (113, 67, 3,125) →
+(67, 67, 1,870); outcomes and all other counts equal. The v25 shared database
+migrated to v26 equals a fresh v26 install in all 43 tables.
+
 ## The fit assertion measures the resolved catalogue, not the loading one (19 October 2026)
 
 `table-column-widths.e2e.ts`' independent fit assertion failed twice in package

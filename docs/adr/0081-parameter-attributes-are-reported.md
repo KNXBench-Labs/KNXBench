@@ -6,6 +6,9 @@ Session: 4 (manufacturer semantics), alpha follow-up to AR07
 Amends: none. Applies the static parser's existing rule (an attribute that
 reaches no column is reported, e.g. `ComObjectTable`/`ModuleDef`,
 KNOWN_LIMITATIONS §7) to the two elements that skipped it.
+Amended by: [ADR-0146](0146-unknown-evidence-rows-have-an-identity.md) (since
+schema v26 the backfill in point 2 writes one row per blob, not one copy per
+package member).
 
 ## Context
 

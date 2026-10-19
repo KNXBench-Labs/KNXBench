@@ -24,7 +24,8 @@ const tree: ProjectTree = {
         dev(10, "Hall", "1.2.1", 0), dev(11, "Kitchen", "1.2.2", 1), dev(12, LONG_NAME, "1.2.3", 12345),
       ] },
       { id: 5, name: "Blinds", address: 3, devices: [dev(13, "Shutter", "1.3.1", 8)] },
-    ] }],
+    ] }, { id: 6, name: "Empty area", address: 0, lines: [{ id: 7, name: "Empty backbone", address: 0, devices: [] }] },
+    { id: 8, name: "Area without lines", address: 2, lines: [] }],
   }],
 };
 
@@ -81,6 +82,12 @@ for (const [language, width, theme] of [
     const { m, unexpected, errors } = await openTopology(page, language, width, theme);
     const rows = page.locator(".topology-line .diagram-device");
     await expect(rows).toHaveCount(5); // four on lines, one unassigned
+    await expect(page.locator(".topology-area")).toHaveCount(1);
+    await expect(page.locator(".topology-line")).toHaveCount(3);
+    await expect(page.locator(".topology-area")).not.toContainText("Empty line");
+    await expect(page.locator(".topology-area")).not.toContainText("Empty backbone");
+    await expect(page.locator(".topology-area")).not.toContainText("Empty area");
+    await expect(page.locator(".topology-area")).not.toContainText("Area without lines");
 
     // Every figure says what it counts, with the right plural.
     const unit = language === "en"
@@ -136,7 +143,7 @@ for (const [language, width, theme] of [
     for (const box of lineBoxes) expect(box.width).toBeLessThanOrEqual(28 * rem + 2);
     if (width >= 2000) {
       const row = lineBoxes.filter(box => Math.abs(box.top - lineBoxes[0].top) < 2);
-      expect(row.length, "wide screens place several lines side by side").toBeGreaterThanOrEqual(3);
+      expect(row.length, "wide screens place the two populated lines side by side").toBe(2);
     }
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
     expect(overflow).toBeLessThanOrEqual(1);

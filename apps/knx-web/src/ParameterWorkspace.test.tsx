@@ -5,10 +5,12 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it } from "vitest";
 import type { ParameterField, ParameterGroupLayout, ParameterSection, ParameterSeparator } from "./api";
 import ParameterWorkspace from "./ParameterWorkspace";
+import { resetUiLanguageForTests, saveUiLanguage } from "./uiLanguage";
+import { resetSettingsForTests, settingsStorage } from "./settingsStore";
 
 let host: HTMLDivElement;
 let root: Root;
-afterEach(async () => { if (root) await act(async () => root.unmount()); host?.remove(); });
+afterEach(async () => { if (root) await act(async () => root.unmount()); host?.remove(); resetSettingsForTests(); resetUiLanguageForTests(); });
 const field = (etsId: string, key?: string): ParameterField => ({
   etsId, group: key ? { key, label: key } : null, name: etsId, text: etsId, nameLanguage: null,
   textLanguage: null, kind: "Number", value: "5", valueSource: "Stored", editable: true,
@@ -34,6 +36,100 @@ function nav(name: string) {
 }
 
 describe("ParameterWorkspace", () => {
+  it.each([
+    ["en", "Parameter group 1", "Fallback caption shown"],
+    ["de", "Parametergruppe 1", "Ersatztitel"],
+  ] as const)("%s retains literal and mixed-template results in tooltips and search under conservative fallback", async (language, fallback, policy) => {
+    saveUiLanguage(settingsStorage, language); resetUiLanguageForTests();
+    const captions = [
+      { label: "Kitchen {{North}}", labelFill: { template: "{{0}}", source: "StoredValue" } },
+      { label: "Kitchen / {{1:Keep}}", labelFill: { template: "{{0}} / {{1:Keep}}", source: "StoredValue" } },
+    ] as const;
+    const data: ParameterSection[] = [{ scope: null, fields: captions.map((caption, index) => ({
+      ...field(`Target-${index}`), group: { key: `PB-${index}`, ...caption },
+    })) }];
+    const before = structuredClone(data);
+    await mount(data);
+    const buttons = [...host.querySelectorAll<HTMLButtonElement>(".parameter-workspace-nav button")];
+    expect(buttons).toHaveLength(2);
+    expect(buttons[0].textContent).toContain(fallback);
+    const search = host.querySelector<HTMLInputElement>('input[type="search"]')!;
+    for (const [index, caption] of captions.entries()) {
+      const button = buttons[index];
+      expect(button.title).toContain(policy);
+      expect(button.title).not.toMatch(/unresolved|unaufgelöst/i);
+      expect(button.title).toContain(caption.label);
+      expect(button.title).toContain(caption.labelFill.template);
+      await act(async () => button.click());
+      const heading = host.querySelector<HTMLElement>(".parameter-workspace-heading h4")!;
+      expect(heading.title).toBe(button.title);
+      for (const query of [caption.label, caption.labelFill.template]) {
+        await act(async () => setInput(search, query));
+        expect(host.querySelector<HTMLDivElement>(`[data-parameter-row="Target-${index}"]`)!.hidden, query).toBe(false);
+      }
+      await act(async () => setInput(search, ""));
+    }
+    expect(data).toEqual(before);
+  });
+
+  it.each([["en", "Parameter group 3"], ["de", "Parametergruppe 3"]])(
+    "%s searches the visible numbered caption and retains source context and editor identity", async (language, fallback) => {
+      saveUiLanguage(settingsStorage, language); resetUiLanguageForTests();
+      const data: ParameterSection[] = [{ scope: null, fields: [field("First", "One"), field("Second", "Two"),
+        { ...field("Target"), group: { key: "PB-3", label: "#", labelFill: { template: "Source {{0}}", source: "EmptyValue" } } }] }];
+      const before = structuredClone(data);
+      await mount(data);
+      const button = nav(fallback);
+      expect(button).toBeDefined();
+      expect(button.title).toContain("Source {{0}}");
+      await act(async () => button.click());
+      const row = host.querySelector<HTMLDivElement>('[data-parameter-row="Target"]')!;
+      const input = row.querySelector<HTMLInputElement>("input")!;
+      await act(async () => setInput(input, "7"));
+      const search = host.querySelector<HTMLInputElement>('input[type="search"]')!;
+      for (const query of [fallback, "#", "Source {{0}}", "Target"]) {
+        await act(async () => setInput(search, query));
+        expect(row.hidden, `search ${query}`).toBe(false);
+        expect(host.querySelectorAll(".parameter-workspace-row:not([hidden])")).toHaveLength(1);
+        expect(row.querySelector(".parameter-workspace-result-path")!.textContent).toContain(fallback);
+        expect(host.querySelector('[data-parameter-row="Target"]')).toBe(row);
+        expect(row.querySelector("input")).toBe(input);
+        expect(input.value).toBe("7");
+      }
+      await act(async () => setInput(search, ""));
+      expect(button.getAttribute("aria-current")).toBe("page");
+      expect(data).toEqual(before);
+    });
+
+  it("uses the same safe captions in separator rows and declared grid captions", async () => {
+    const data: ParameterSection[] = [{ scope: null, fields: [field("P", "Area")],
+      separators: [{ position: 0, group: { key: "Area", label: "Area" }, elementId: "S", text: "{{0}}",
+        uiHint: "Headline", access: null, blockAccess: null }] }];
+    await mount(data);
+    await act(async () => nav("Area").click());
+    expect(host.querySelector(".parameter-workspace-separator h5")!.textContent).toBe("Section text");
+    expect(host.querySelector<HTMLElement>(".parameter-workspace-separator")!.title).toContain("{{0}}");
+  });
+
+  it("uses readable section names and source tooltips instead of raw templates or hash labels", async () => {
+    const labels = ["Functions: {{0}}", "#", "", "   ", "{{9:unknown}}"];
+    const data: ParameterSection[] = [{ scope: null, fields: labels.map((label, index) => ({
+      ...field(`P-${index}`), group: { key: `PB-${index}`, label },
+    })) }];
+    const before = structuredClone(data);
+    await mount(data);
+    const buttons = [...host.querySelectorAll<HTMLButtonElement>(".parameter-workspace-nav button")];
+    expect(buttons).toHaveLength(5);
+    for (const [index, button] of buttons.entries()) {
+      expect(button.querySelector("span")!.textContent).toBe(`Parameter group ${index + 1}`);
+      expect(button.title).toContain("caption");
+      if (labels[index].trim()) expect(button.title).toContain(labels[index]);
+    }
+    await act(async () => buttons[0].click());
+    expect(host.querySelector(".parameter-workspace-heading h4")!.textContent).toBe("Parameter group 1");
+    expect(data).toEqual(before);
+  });
+
   it("starts closed: every area is listed with its count, but none opens until chosen", async () => {
     await mount();
     expect(host.querySelectorAll('.parameter-workspace-nav [aria-current="page"]')).toHaveLength(0);
@@ -129,6 +225,15 @@ describe("ParameterWorkspace declared grids", () => {
     groupLayouts: layout ? [layout] : [] }];
   const rowsParent = () => host.querySelector<HTMLDivElement>(".parameter-workspace-rows")!;
   const style = (etsId: string) => host.querySelector<HTMLDivElement>(`[data-parameter-row="${etsId}"]`)!.style;
+
+  it("safely labels unresolved separator captions in a declared grid", async () => {
+    await mount(gridSections(grid({ labels: [{ row: 1, column: 1, text: "{{0}}",
+      textFill: { template: "{{0}}", source: "NoReference" } }] })));
+    await act(async () => nav("Pairs").click());
+    const caption = host.querySelector<HTMLElement>('.parameter-matrix-caption[data-caption="label"]')!;
+    expect(caption.textContent).toBe("Section text");
+    expect(caption.title).toContain("{{0}}");
+  });
 
   it("starts closed and renders a matrix only after an area with a declared grid is chosen", async () => {
     await mount(gridSections());

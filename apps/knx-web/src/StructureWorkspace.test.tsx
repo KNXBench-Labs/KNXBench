@@ -169,14 +169,96 @@ it("keeps the open `+ New` menu's own wrapping: ArrowDown on the last entry wrap
   await done();
 });
 
-it("keeps an empty line free of metric labels and keeps names intact for long values", async () => {
-  const { host, done } = await renderTopology("en");
-  const lines = [...host.querySelectorAll(".topology-line")];
-  const empty = lines.find((l) => l.textContent?.includes("Empty line"))!;
-  expect(empty.querySelectorAll(".device-object-count")).toHaveLength(0);
-  expect(empty.querySelectorAll(".diagram-device")).toHaveLength(0);
-  await done();
+it("hides device-empty topology lines and areas without changing their project data (#25)", async () => {
+  const emptyTree: ProjectTree = { ...metricTree, installations: [{ ...metricTree.installations[0],
+    topology: [...metricTree.installations[0].topology,
+      { id: 20, name: "Empty area", address: 0, lines: [{ id: 21, name: "Empty backbone", address: 0, devices: [] }] },
+      { id: 22, name: "Area without lines", address: 2, lines: [] }],
+  }] };
+  const before = JSON.stringify(emptyTree);
+  const host = document.createElement("div"); document.body.append(host); const root = createRoot(host);
+  await act(async () => root.render(<StructureWorkspace {...inert} tree={emptyTree} view="topology" selection={null} onSelect={() => {}} onCatalog={() => {}} />));
+  expect(host.querySelectorAll(".topology-area")).toHaveLength(1);
+  expect(host.querySelectorAll(".topology-line")).toHaveLength(2); // populated line and unassigned devices
+  expect(host.querySelector(".topology-lines")?.textContent).not.toContain("Empty line");
+  expect(host.textContent).not.toContain("Empty backbone");
+  expect(host.textContent).not.toContain("Empty area");
+  expect(host.textContent).not.toContain("Area without lines");
+  expect(host.querySelectorAll(".diagram-device")).toHaveLength(4); // zero-object devices count too
+  expect(JSON.stringify(emptyTree)).toBe(before);
+  await act(async () => root.unmount()); host.remove();
 });
+
+it("updates visible topology ranges when devices are added or removed across installations (#25)", async () => {
+  const empty: ProjectTree = { ...tree, installations: [
+    { ...tree.installations[0], topology: [{ id: 2, name: "Main area", address: 1, lines: [{ id: 3, name: "Main line", address: 2, devices: [] }] }] },
+    { ...tree.installations[0], id: 10, name: "Second installation", topology: [{ id: 11, name: "Second area", address: 2, lines: [{ id: 12, name: "Second line", address: 1, devices: [] }] }] },
+  ] };
+  const withDevices = structuredClone(empty);
+  withDevices.installations[1].topology[0].lines[0].devices = [row(13, "New sensor", 0, "2.1.1")];
+  const host = document.createElement("div"); document.body.append(host); const root = createRoot(host);
+  const onSelect = vi.fn(); const onCatalog = vi.fn();
+  const render = (value: ProjectTree) => root.render(<StructureWorkspace {...inert} tree={value} view="topology" selection={null} onSelect={onSelect} onCatalog={onCatalog} />);
+  await act(async () => render(empty));
+  expect(host.querySelectorAll(".topology-area")).toHaveLength(0);
+  // Creation remains possible even though the diagram has no populated ranges.
+  expect(menuEntry(host, "area", 1)).not.toBeNull();
+  expect(menuEntry(host, "area", 10)).not.toBeNull();
+  await act(async () => render(withDevices));
+  expect(host.querySelectorAll(".topology-area")).toHaveLength(1);
+  expect(host.querySelectorAll(".topology-line")).toHaveLength(1);
+  const sensor = host.querySelector<HTMLButtonElement>(".diagram-device")!;
+  expect(sensor.textContent).toContain("New sensor");
+  await act(async () => sensor.click());
+  expect(onSelect).toHaveBeenCalledWith({ kind: "device", id: 13 });
+  await act(async () => host.querySelector<HTMLButtonElement>('[data-catalog-line="12"]')!.click());
+  expect(onCatalog).toHaveBeenCalledWith(12);
+  await act(async () => render(empty));
+  expect(host.querySelectorAll(".topology-area")).toHaveLength(0);
+  expect(empty.installations[1].topology[0].lines).toHaveLength(1);
+  await act(async () => root.unmount()); host.remove();
+});
+
+it("keeps an explorer-selected empty line editable and offers its exact catalog target (#25)", async () => {
+  const empty: ProjectTree = { ...tree, installations: [{ ...tree.installations[0],
+    topology: [{ id: 2, name: "Empty area", address: 1, lines: [{ id: 3, name: "Empty line", address: 2, devices: [] }] }],
+  }] };
+  const before = JSON.stringify(empty);
+  const host = document.createElement("div"); document.body.append(host); const root = createRoot(host);
+  const onCatalog = vi.fn();
+  await act(async () => root.render(<StructureWorkspace {...inert} tree={empty} view="topology" selection={{ kind: "line", id: 3 }} onSelect={() => {}} onCatalog={onCatalog} />));
+  expect(host.querySelectorAll(".topology-area")).toHaveLength(0);
+  const editor = host.querySelector<HTMLElement>(".structure-context-editor");
+  expect(editor).not.toBeNull();
+  expect([...editor!.querySelectorAll<HTMLInputElement>("input")].some((input) => input.value === "Empty line")).toBe(true);
+  const addDevice = menuEntry(host, "device");
+  expect(addDevice).not.toBeNull();
+  await act(async () => addDevice!.click());
+  expect(onCatalog).toHaveBeenCalledWith(3);
+  expect(JSON.stringify(empty)).toBe(before);
+  await act(async () => root.unmount()); host.remove();
+});
+
+for (const language of ["en", "de"] as const) {
+  it(`explains hidden empty ranges in ${language} without an empty-state claim for unassigned devices (#25)`, async () => {
+    saveUiLanguage(settingsStorage, language); resetUiLanguageForTests();
+    const empty: ProjectTree = { ...metricTree, installations: [{ ...metricTree.installations[0],
+      topology: [{ id: 2, name: "Empty area", address: 1, lines: [{ id: 3, name: "Empty line", address: 1, devices: [] }] }], unassigned: [],
+    }] };
+    const host = document.createElement("div"); document.body.append(host); const root = createRoot(host);
+    const render = (value: ProjectTree) => root.render(<StructureWorkspace {...inert} tree={value} view="topology" selection={null} onSelect={() => {}} onCatalog={() => {}} />);
+    await act(async () => render(empty));
+    const status = host.querySelector('[role="status"]');
+    expect(status).not.toBeNull();
+    expect(status!.textContent).toContain(language === "en" ? "Empty areas and lines are hidden" : "Leere Bereiche und Linien sind hier ausgeblendet");
+    await act(async () => render({ ...empty, installations: [{ ...empty.installations[0], unassigned: [row(14, "Spare sensor", 0, null)] }] }));
+    expect(host.querySelector('[role="status"]')).toBeNull();
+    expect(host.querySelectorAll(".diagram-device")).toHaveLength(1);
+    expect(host.querySelectorAll(".topology-area")).toHaveLength(0);
+    expect(host.querySelectorAll(".topology-line")).toHaveLength(1);
+    await act(async () => root.unmount()); host.remove(); resetSettingsForTests(); resetUiLanguageForTests();
+  });
+}
 
 it("renders building nesting without hiding devices assigned to rooms, and an empty state", async () => {
   const host = document.createElement("div"); const root = createRoot(host);

@@ -12,6 +12,47 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Package gates keep their hands off the developer's knx directories (19 October 2026)
+
+Acceptance follow-up: full gate 4 on `a86cb1f9` stopped at one browser test
+(788 functional cases passed). The independent intrinsic-width oracle measured
+before the mounted table's final font loaded; it now flushes the source table's
+layout and awaits current font readiness. A held-font-response regression fails
+without the barrier; the complete table-column spec passes 50/50 with it. No
+application code, width tolerance or retry policy changed. Guard review is
+accepted; complete package acceptance remains pending.
+
+The same day as the `doc-export` fix, a second gate migrated the owner's fresh
+product database (an ETS import made at 14:37 with the Alpha 14 AppImage) to
+the unmerged v26 schema: the gate's `rust-tests` stage on the product-DB branch
+ran 15:16:06–15:17:57, the file was written at 15:16:33, and that branch still
+predated the fix, so its `cli_documentation_export` tests opened the existing
+file with the migrating opener. A fix on `main` cannot protect a gate that runs
+an older branch's tests, so the runner now isolates them: the package gate
+(`tools/run_package_gate.py`) gives its test stages (`tool-tests`, `rust-tests`,
+`bindings`, `corpus`, website and story tests; in a complete run also the web
+gate's own `tool-tests` step) empty scratch `XDG_DATA_HOME` and
+`XDG_CONFIG_HOME` directories, and fails, naming each path, when a file in the
+real `knx` data or config directory, or behind a symlink there, is created,
+changed or removed during the run (`userDataTouched` in the receipt; size,
+mtime, ctime and inode, symlinked directories followed once), or when it cannot
+check them (`userDataUnchecked`: an unlistable directory or unsearchable parent,
+a link to an ancestor
+or to `$HOME`, more than 5,000 entries; an entry vanishing mid-scan is a
+change, not a crash). Browser and build
+steps keep the real values (fontconfig, pinned pixel widths). Tests:
+`tools/tests/test_run_package_gate.py` (directory resolution like the apps,
+routing through both runners' real step functions, symlinked database and
+directory, same-size rewrite with the old mtime, unlistable directory, entry
+removed mid-scan, link to `$HOME`, entry bound, retargeted link, receipt
+failure keeping an earlier error); 15 mutants turn them red. Three cross-vendor
+review rounds (Codex) found seven gaps (web `tool-tests` step, symlinks,
+unlistable directories, an unsearchable parent read as absent, mid-scan
+removal, links to `$HOME`, a test tied to the production stage set); all fixed.
+The owner parked the migrated file unchanged. Still open: direct `cargo test`
+runs ([OPEN_WORK](OPEN_WORK.md#test-gates-change-scoped-by-default-19-october-2026)).
+[Pitfall](DEVELOPER_PITFALLS.md#gates).
+
 ## A product database the build cannot read is named, not hidden (19 October 2026)
 
 Owner report on `0.1.0-alpha.14+g6d92fda` (AppImage): after an ETS import, product

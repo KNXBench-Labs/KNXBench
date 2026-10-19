@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import argparse
 from contextlib import contextmanager
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 import fcntl
 import json
 import os
@@ -29,12 +29,22 @@ import time
 if __package__ in (None, ''):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from tools import gate_scope
+from tools.user_data_guard import (USER_HOMES, isolated_environment, record_user_data, user_data_snapshot,
+                                   user_knx_dirs)
 from tools.web_gate_support import MeasuredRun, source_fingerprint
 
 WORKSPACE_LOCK = 'knx-workspace-gates.lock'
 XTASK_CHECKS = ('check-layering', 'check-headers', 'check-anchors', 'check-ledger', 'check-corpus-gates')
 RUST_RESULT = re.compile(r'^test result: \w+\. (\d+) passed; (\d+) failed; (\d+) ignored', re.M)
 CORPUS_SUMMARY = re.compile(r'^corpus tests: (\d+) of (\d+) passed', re.M)
+# Stages that run the branch's tests get scratch data and config homes: a
+# spawned `knx`, server or desktop binary otherwise resolves the developer's
+# real `$XDG_DATA_HOME/knx/products.sqlite` and may migrate it to the branch's
+# schema (it did, twice, on 19 October 2026). A fix on `main` cannot protect a
+# gate that runs an older branch's tests. The web gate keeps the real values:
+# fontconfig reads its fonts and configuration through them and browser specs
+# pin pixel widths.
+ISOLATED_STAGES = frozenset({'tool-tests', 'rust-tests', 'bindings', 'corpus', 'website-tests', 'story-tests'})
 
 
 def rust_selection(result: gate_scope.Plan, full: bool) -> list[str]:
@@ -160,9 +170,18 @@ def corpus_links(root: Path):
             link.unlink()
 
 
-def check(run: MeasuredRun, name: str, command: list[str], cwd: Path, env: dict[str, str],
-          verify=None) -> dict:
-    stage = run.step(name, command, cwd, env, verify)
+@dataclass(frozen=True)
+class StageEnvironments:
+    plain: dict[str, str]
+    isolated: dict[str, str]
+
+    def for_stage(self, name: str) -> dict[str, str]:
+        return self.isolated if name in ISOLATED_STAGES else self.plain
+
+
+def check(run: MeasuredRun, name: str, command: list[str], cwd: Path, envs: StageEnvironments,
+          verify=None, extra: dict[str, str] | None = None) -> dict:
+    stage = run.step(name, command, cwd, {**envs.for_stage(name), **(extra or {})}, verify)
     detail = f', {stage["evidence"]}' if stage.get('evidence') not in (None, 0) else ''
     print(f'{name}: exit={stage["exit"]}, proof={stage["proofValid"]}, '
           f'wall={stage["wallSeconds"]:.1f}s{detail}', flush=True)
@@ -215,17 +234,22 @@ def main(argv: list[str] | None = None) -> int:
     run.save()
     env = {k: v for k, v in os.environ.items() if not k.startswith('KNX_')}  # never address hardware
     env.update(PYTHONDONTWRITEBYTECODE='1', CARGO_TERM_COLOR='never')
+    envs = StageEnvironments(env, isolated_environment(env, output / 'scratch-homes'))
+    user_dirs = user_knx_dirs(env)
+    user_before = user_data_snapshot(user_dirs, env.get('HOME'))
+    run.receipt['isolatedHomes'] = {'stages': sorted(ISOLATED_STAGES),
+                                    **{k: envs.isolated[k] for k, _ in USER_HOMES}}
     app = root / 'apps/knx-web'
     try:
-        check(run, 'fmt', ['cargo', 'fmt', '--all', '--check'], root, env)
+        check(run, 'fmt', ['cargo', 'fmt', '--all', '--check'], root, envs)
         if not full:
-            check(run, 'documentation', ['python3', 'tools/check_documentation.py'], root, env)
-            check(run, 'browser-lanes', ['python3', 'tools/browser_lanes.py', '--root', str(root)], root, env)
+            check(run, 'documentation', ['python3', 'tools/check_documentation.py'], root, envs)
+            check(run, 'browser-lanes', ['python3', 'tools/browser_lanes.py', '--root', str(root)], root, envs)
             for task in XTASK_CHECKS:
                 check(run, task, ['cargo', 'run', '--offline', '--locked', '-q', '-p', 'xtask', '--',
-                                  '--root', str(root), task], root, env)
+                                  '--root', str(root), task], root, envs)
             check(run, 'tool-tests', ['python3', '-m', 'unittest', 'discover', '-s', 'tools/tests', '-t', '.'],
-                  root, env)
+                  root, envs)
         if 'web-gate' in stages:
             web = ['python3', 'tools/run_web_gate.py', '--root', str(root), '--output', str(output / 'web'),
                    '--lease-timeout', str(args.lease_timeout)]
@@ -235,7 +259,7 @@ def main(argv: list[str] | None = None) -> int:
                 specs = 'all' if result.browser_specs is None else ','.join(result.browser_specs)
                 web += ['--profile', 'targeted', f'--specs={specs}',
                         f'--production={",".join(result.production_configs)}']
-            check(run, 'web-gate', web, root, env, lambda: web_receipt(output / 'web/receipt.json'))
+            check(run, 'web-gate', web, root, envs, lambda: web_receipt(output / 'web/receipt.json'))
         rust = rust_selection(result, full)
         needs_lease = any(s in stages for s in ('clippy', 'bindings', 'corpus'))
         if needs_lease:
@@ -245,18 +269,18 @@ def main(argv: list[str] | None = None) -> int:
                         if not (app / 'dist/index.html').is_file():
                             raise ValueError('knx-desktop bundles apps/knx-web/dist: run '
                                              '`npm ci && npm run build` in apps/knx-web first')
-                        check(run, 'clean-desktop', ['cargo', 'clean', '-p', 'knx-desktop'], root, env)
+                        check(run, 'clean-desktop', ['cargo', 'clean', '-p', 'knx-desktop'], root, envs)
                     check(run, 'clippy', ['cargo', 'clippy', '--offline', '--locked', *rust, '--all-targets',
-                                          '--', '-D', 'warnings'], root, env)
+                                          '--', '-D', 'warnings'], root, envs)
                     check(run, 'rust-tests', ['cargo', 'test', '--offline', '--locked', '--no-fail-fast', *rust],
-                          root, env, lambda: rust_counts(output / 'rust-tests.log'))
+                          root, envs, lambda: rust_counts(output / 'rust-tests.log'))
                 if 'bindings' in stages:
                     try:
                         check(run, 'bindings', ['cargo', 'test', '--offline', '--locked', '-p', 'knx-projection'],
-                              root, {**env, 'TS_RS_EXPORT_DIR': '../../apps/knx-web/src/bindings'},
-                              lambda: rust_counts(output / 'bindings.log'))
+                              root, envs, lambda: rust_counts(output / 'bindings.log'),
+                              extra={'TS_RS_EXPORT_DIR': '../../apps/knx-web/src/bindings'})
                         check(run, 'bindings-diff', ['git', 'diff', '--exit-code', '--ignore-space-at-eol', '--',
-                                                     'apps/knx-web/src/bindings'], root, env)
+                                                     'apps/knx-web/src/bindings'], root, envs)
                     finally:
                         subprocess.run(['git', 'restore', '--source=HEAD', '--', 'apps/knx-web/src/bindings'],
                                        cwd=root, check=False)
@@ -264,7 +288,8 @@ def main(argv: list[str] | None = None) -> int:
                     packages = [] if full or result.corpus_packages == ['*'] else result.corpus_packages
                     selection = [arg for name in packages for arg in ('--package', name)]
                     listing = subprocess.run(['python3', 'tools/run_corpus_tests.py', '--root', '.', '--list',
-                                              *selection], cwd=root, env=env, capture_output=True, text=True)
+                                              *selection], cwd=root, env=envs.for_stage('corpus'),
+                                             capture_output=True, text=True)
                     if listing.returncode == 2:
                         raise ValueError(f'corpus selection refused: {listing.stderr.strip()}')
                     if listing.returncode == 0 and not re.search(r'^[1-9]\d* corpus tests', listing.stdout, re.M):
@@ -275,13 +300,13 @@ def main(argv: list[str] | None = None) -> int:
                             check(run, 'corpus', ['unshare', '--user', '--map-root-user', '--net', 'sh', '-c',
                                                   'ip link set lo up && exec "$@"', 'sh', 'python3', '-I',
                                                   'tools/run_corpus_tests.py', '--root', '.', *selection],
-                                  root, env, lambda: corpus_counts(output / 'corpus.log'))
+                                  root, envs, lambda: corpus_counts(output / 'corpus.log'))
         if 'website-tests' in stages:
-            check(run, 'website-tests', ['python3', '-m', 'unittest', 'discover', '-s', 'website/tests'], root, env)
+            check(run, 'website-tests', ['python3', '-m', 'unittest', 'discover', '-s', 'website/tests'], root, envs)
         if 'story-tests' in stages:
-            check(run, 'story-tests', ['python3', '-m', 'unittest', 'discover', '-s', 'tests'], root / 'story', env)
+            check(run, 'story-tests', ['python3', '-m', 'unittest', 'discover', '-s', 'tests'], root / 'story', envs)
         if 'diff-check' in stages:
-            check(run, 'diff-check', ['git', 'diff', '--check', 'HEAD'], root, env)
+            check(run, 'diff-check', ['git', 'diff', '--check', 'HEAD'], root, envs)
         run.receipt['planCompleted'] = True
     except (OSError, ValueError, TimeoutError, subprocess.SubprocessError) as error:
         run.receipt['error'] = str(error)
@@ -289,6 +314,7 @@ def main(argv: list[str] | None = None) -> int:
     except KeyboardInterrupt:
         run.receipt['error'] = 'interrupted'
         run.receipt['planCompleted'] = False
+    record_user_data(run.receipt, user_before, user_data_snapshot(user_dirs, env.get('HOME')))
     success = run.finish(before, source_fingerprint(root)) and run.receipt['planCompleted']
     run.receipt['success'] = success
     run.save()

@@ -21,6 +21,7 @@ if __package__ in (None, ''):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from tools.browser_tmp import browser_directory, fits_temp_root
 from tools.browser_lanes import TAG, parse as parse_spec
+from tools.user_data_guard import isolated_environment
 from tools.web_gate_support import (MeasuredRun, browser_cases, source_fingerprint,
                                     split_lanes, validate_vitest)
 
@@ -245,9 +246,20 @@ def run_browser(run: MeasuredRun, app: Path, env: dict[str, str], workers: int,
                       exclusive, files=files)
 
 
+# Steps that run the branch's tests get scratch knx homes (tools/user_data_guard.py);
+# the browser and build steps keep the real ones (fontconfig, pinned widths).
+ISOLATED_STEPS = frozenset({'tool-tests'})
+
+
+def step_environment(name: str, env: dict[str, str]) -> dict[str, str]:
+    if name not in ISOLATED_STEPS:
+        return env
+    return isolated_environment(env, Path(env['TMPDIR']) / 'scratch-homes')
+
+
 def checked_step(run: MeasuredRun, name: str, command: list[str], root: Path,
                  env: dict[str, str]) -> None:
-    stage = run.step(name, command, root, env)
+    stage = run.step(name, command, root, step_environment(name, env))
     print(f'{name}: exit={stage["exit"]}, wall={stage["wallSeconds"]:.2f}s', flush=True)
     if not stage['proofValid']:
         raise ValueError(f'failed stage {name}; original output retained')

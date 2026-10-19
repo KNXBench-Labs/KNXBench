@@ -1087,6 +1087,170 @@ fn a_record_that_runs_past_the_archive_is_refused() {
     );
 }
 
+// WP-16 (KL-159 round 4, N14): both headers of an empty directory can agree
+// on a payload that is not one. A record that declares no content must
+// carry the CRC-32 of no content (0), and a compressed one a complete
+// stream that ends exactly at its stored bytes. `unzip -t` reports both as
+// damaged; the import is refused as a whole, naming the directory.
+
+const EMPTY_CRC: &str = "CRC-32";
+const NO_STREAM: &str = "no complete";
+
+/// An empty directory record: no declared content, `data` stored as is.
+fn directory(name: &str, method: u16, data: &[u8], crc: u32) -> Member {
+    Member {
+        method,
+        crc: Some(crc),
+        declared: 0,
+        ..member(name, data)
+    }
+}
+
+/// Java `ZipOutputStream`'s directory record, as a current JDK writes it:
+/// deflated `03 00`, UTF-8 and bit 3 set, zeros in the local header, a
+/// signed descriptor after the stream.
+fn java_stream_directory(name: &str, crc: u32) -> Member {
+    let m = directory(name, 8, &EMPTY_DEFLATE, crc);
+    with_descriptor(
+        Member {
+            flags: UTF8_FLAG,
+            ..m
+        },
+        true,
+    )
+}
+
+/// `make()` refused in the outer archive and inside a protected payload,
+/// each as an inconsistent record that names the directory and `why`.
+fn refused_in_both_layers(make: impl Fn() -> Member, why: &str) {
+    let name = String::from_utf8(make().name).unwrap();
+    let check = |error: ContainerError| {
+        let message = error.to_string();
+        match error {
+            ContainerError::InconsistentRecord { path, reason } => {
+                assert_eq!(path, name);
+                assert!(reason.contains(why), "{name}: {reason}");
+                assert!(
+                    message.contains(&name) && message.contains(why),
+                    "{message}"
+                );
+            }
+            other => panic!("expected an inconsistent record ({why}), got {other:?}"),
+        }
+    };
+    match import_knxproj_bytes(project_with(vec![make()]), "f.knxproj") {
+        Err(ImportFailure::Container(error)) => check(error),
+        other => panic!("expected a refusal ({why}), got {:?}", other.map(|_| ())),
+    }
+    match Container::open_with_password(protected_with(vec![make()]), "fictional") {
+        Err(error) => check(error),
+        Ok(_) => panic!("expected the nested payload to be refused ({why})"),
+    }
+}
+
+/// `make()` imports in the outer archive and opens inside a protected payload.
+fn accepted_in_both_layers(make: impl Fn() -> Member) {
+    imports(project_with(vec![
+        make(),
+        member("P-0001/BinaryData/a.dat", b"bytes"),
+    ]));
+    let container = Container::open_with_password(protected_with(vec![make()]), "fictional")
+        .unwrap_or_else(|e| panic!("expected the nested payload to open, got {e:?}"));
+    assert!(container.find("P-0001/0.xml").is_some());
+}
+
+#[test]
+fn an_empty_stored_directory_with_a_nonzero_crc_is_refused() {
+    refused_in_both_layers(
+        || directory("P-0001/BinaryData/", 0, b"", 0xdead_beef),
+        EMPTY_CRC,
+    );
+}
+
+#[test]
+fn an_empty_deflated_directory_with_a_nonzero_crc_is_refused() {
+    refused_in_both_layers(
+        || directory("P-0001/BinaryData/", 8, &EMPTY_DEFLATE, 1),
+        EMPTY_CRC,
+    );
+    // The lie can sit in the descriptor as well (both headers agree).
+    refused_in_both_layers(|| java_stream_directory("P-0001/BinaryData/", 1), EMPTY_CRC);
+}
+
+#[test]
+fn a_deflated_directory_without_a_stream_is_refused() {
+    refused_in_both_layers(|| directory("P-0001/BinaryData/", 8, b"", 0), NO_STREAM);
+}
+
+#[test]
+fn a_directory_with_another_method_and_no_stream_is_refused() {
+    // Only a stored record can hold no bytes; every compressed format has
+    // a header or end marker (bzip2, method 12, here). Before WP-16 the
+    // `zip` reader refused this one later, as an unsupported method.
+    refused_in_both_layers(|| directory("P-0001/BinaryData/", 12, b"", 0), NO_STREAM);
+}
+
+#[test]
+fn a_deflated_directory_with_a_truncated_stream_is_refused() {
+    // A fixed block missing its end code, and an empty stored block
+    // missing the last byte of its length complement.
+    refused_in_both_layers(|| directory("P-0001/BinaryData/", 8, &[0x03], 0), NO_STREAM);
+    refused_in_both_layers(
+        || directory("P-0001/BinaryData/", 8, &[0x01, 0x00, 0x00, 0xff], 0),
+        NO_STREAM,
+    );
+}
+
+#[test]
+fn ets_and_jar_shaped_empty_directories_import_in_both_layers() {
+    // ETS6: stored, no flags. `jar` (current JDK): stored with the UTF-8
+    // flag, the first one with Java's 0xCAFE extra field in both headers.
+    accepted_in_both_layers(|| directory("P-0001/BinaryData/", 0, b"", 0));
+    accepted_in_both_layers(|| Member {
+        flags: UTF8_FLAG,
+        extra: vec![0xfe, 0xca, 0x00, 0x00],
+        ..directory("P-0001/BinaryData/", 0, b"", 0)
+    });
+}
+
+#[test]
+fn java_zip_output_stream_directories_import_in_both_layers() {
+    accepted_in_both_layers(|| java_stream_directory("P-0001/BinaryData/", 0));
+    accepted_in_both_layers(|| directory("P-0001/BinaryData/", 8, &EMPTY_DEFLATE, 0));
+}
+
+#[test]
+fn a_directory_holding_a_complete_empty_stored_deflate_block_imports() {
+    // `01 00 00 ff ff`: a final stored block of length 0, a complete
+    // stream that produces nothing.
+    accepted_in_both_layers(|| {
+        directory("P-0001/BinaryData/", 8, &[0x01, 0x00, 0x00, 0xff, 0xff], 0)
+    });
+}
+
+#[test]
+fn empty_file_members_with_a_bad_crc_or_no_stream_are_refused_when_read() {
+    // Files never had the gap: they are read, and reading checks the CRC
+    // and the stream. Pinned so the directory rule stays the only one.
+    let files: [fn() -> Member; 3] = [
+        || directory("P-0001/BinaryData/a.dat", 0, b"", 7),
+        || directory("P-0001/BinaryData/a.dat", 8, b"", 0),
+        || directory("P-0001/BinaryData/a.dat", 8, &[0x03], 0),
+    ];
+    for file in files {
+        match import_knxproj_bytes(project_with(vec![file()]), "f.knxproj") {
+            Err(ImportFailure::Container(ContainerError::Read { path, .. })) => {
+                assert_eq!(path, "P-0001/BinaryData/a.dat");
+            }
+            other => panic!("expected a read refusal, got {:?}", other.map(|_| ())),
+        }
+        match Container::open_with_password(protected_with(vec![file()]), "fictional") {
+            Err(ContainerError::Read { path, .. }) => assert_eq!(path, "P-0001/BinaryData/a.dat"),
+            other => panic!("expected a read refusal, got {:?}", other.map(|_| ())),
+        }
+    }
+}
+
 // Controls: shapes real writers produce must keep importing.
 
 fn every_member(edit: impl Fn(Member) -> Member) -> Vec<Member> {

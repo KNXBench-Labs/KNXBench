@@ -11,13 +11,18 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def scan(source: str, helpers: dict[str, str] | None = None) -> list[str]:
-    """Return 'line:primitive' strings for every untagged real-time use."""
+    """Return 'line:primitive' for spec findings and 'file:line:primitive' for helper findings."""
     with tempfile.TemporaryDirectory() as directory:
         e2e = Path(directory)
         (e2e / 'spec.e2e.ts').write_text(source)
         for name, text in (helpers or {}).items():
+            (e2e / name).parent.mkdir(parents=True, exist_ok=True)
             (e2e / name).write_text(text)
-        return [f'{f.line}:{f.primitive}' for f in lanes.check_directory(e2e)]
+        return [f'{f.line}:{f.primitive}' if f.file == 'spec.e2e.ts' else f'{f.file}:{f.line}:{f.primitive}'
+                for f in lanes.check_directory(e2e)]
+
+
+UNTAGGED_CALL = 'test("a", async ({ page }) => {\n  await %s;\n});\n'
 
 
 class BrowserLaneGuardTests(unittest.TestCase):
@@ -58,6 +63,12 @@ class BrowserLaneGuardTests(unittest.TestCase):
                   '});\n')
         self.assertEqual(scan(source), [])
 
+    def test_a_type_reference_is_not_a_use(self) -> None:
+        helper = 'interface Clock {\n  timer?: ReturnType<typeof setTimeout>;\n}\nexport const MAX = 3;\n'
+        source = ('import { MAX } from "./clock";\n'
+                  'test("a", async () => {\n  let t: ReturnType<typeof setInterval> | undefined;\n});\n')
+        self.assertEqual(scan(source, {'clock.ts': helper}), [])
+
     def test_code_inside_a_template_literal_counts(self) -> None:
         self.assertEqual(scan('test("a", async () => {\n  const s = `id-${Date.now()}`;\n});\n'),
                          ['2:Date.now'])
@@ -93,6 +104,76 @@ class BrowserLaneGuardTests(unittest.TestCase):
         source = ('import { measure } from "./timing";\n'
                   'test("a", async ({ page }) => {\n  await measure(page);\n});\n')
         self.assertEqual(scan(source, {'timing.ts': helper}), ['3:measure'])
+
+    def test_a_fixture_that_waits_is_refused_where_it_is_declared(self) -> None:
+        helper = ('import { test as base } from "@playwright/test";\n'
+                  'export const test = base.extend<{ settled: void }>({\n'
+                  '  settled: async ({ page }, use) => {\n'
+                  '    await page.waitForTimeout(300);\n'
+                  '    await use();\n'
+                  '  },\n'
+                  '});\n')
+        source = 'import { test } from "./fixtures";\ntest("a", async ({ settled }) => {});\n'
+        self.assertEqual(scan(source, {'fixtures.ts': helper}), ['fixtures.ts:4:waitForTimeout'])
+
+    def test_a_helper_primitive_outside_any_function_is_refused_in_the_helper(self) -> None:
+        source = 'import { started } from "./clock";\ntest("a", async () => {});\n'
+        self.assertEqual(scan(source, {'clock.ts': 'export const started = Date.now();\n'}),
+                         ['clock.ts:1:Date.now'])
+
+    def test_object_and_class_methods_taint_their_member_calls(self) -> None:
+        helper = ('export const h = {\n  async settle(page) {\n    await page.waitForTimeout(1);\n  },\n'
+                  '  pause: async (page) => { await page.waitForTimeout(1); },\n};\n'
+                  'export class Clock {\n  async rest(page) {\n    await page.waitForTimeout(1);\n  }\n}\n')
+        source = ('import { h, Clock } from "./h";\n'
+                  'test("a", async ({ page }) => {\n'
+                  '  await h.settle(page);\n'
+                  '  await h.pause(page);\n'
+                  '  await new Clock().rest(page);\n'
+                  '  await page.click("x");\n'
+                  '});\n')
+        self.assertEqual(scan(source, {'h.ts': helper}), ['3:settle', '4:pause', '5:rest'])
+
+    def test_every_import_shape_is_followed(self) -> None:
+        timing = 'export async function measure(page) {\n  return performance.now();\n}\n'
+        helpers = {
+            'timing.ts': timing,
+            'settle.ts': 'export default async function settle(page) {\n  await page.waitForTimeout(1);\n}\n',
+            'helpers/impl.ts': 'export async function sleep(page) {\n  await page.waitForTimeout(1);\n}\n',
+            'helpers/index.ts': 'export { sleep } from "./impl";\nexport * from "./impl";\n',
+        }
+        cases = {
+            'import { measure } from "./timing.js";\n': 'measure(page)',
+            'import * as t from "./timing";\n': 't.measure(page)',
+            'import wait from "./settle";\n': 'wait(page)',
+            'import { sleep } from "./helpers";\n': 'sleep(page)',
+            'import { sleep as nap } from "./helpers/index";\n': 'nap(page)',
+        }
+        for header, call in cases.items():
+            self.assertEqual(len(scan(header + UNTAGGED_CALL % call, helpers)), 1, header)
+
+    def test_an_imported_tsx_module_is_refused(self) -> None:
+        with self.assertRaises(ValueError):
+            scan('import { Page } from "./page";\ntest("a", async () => {});\n',
+                 {'page.tsx': 'export const Page = () => <div />;\n'})
+
+    def test_qualified_clocks_and_date_arithmetic_count(self) -> None:
+        source = ('test("a", async () => {\n'
+                  '  const a = window.performance.now();\n'
+                  '  const b = globalThis.Date.now();\n'
+                  '  const c = new Date().getTime();\n'
+                  '  const stamp = new Date().toISOString();\n'
+                  '  const fixed = new Date("2026-01-01").getTime();\n'
+                  '});\n')
+        self.assertEqual(scan(source), ['2:performance.now', '3:Date.now', '4:new Date().getTime'])
+
+    def test_code_passed_to_the_page_as_a_string_counts(self) -> None:
+        source = ('test("a setTimeout( title", async ({ page }) => {\n'
+                  '  await page.evaluate("new Promise((r) => setTimeout(r, 50))");\n'
+                  '  await page.addInitScript(`window.tick = setInterval(() => {}, 5)`);\n'
+                  '  await page.fill("#x", "setTimeout(1)");\n'
+                  '});\n')
+        self.assertEqual(scan(source), ['2:setTimeout', '3:setInterval'])
 
     def test_untagged_hook_with_a_primitive_is_refused(self) -> None:
         source = ('test.beforeEach(async ({ page }) => {\n  await page.waitForTimeout(1);\n});\n'

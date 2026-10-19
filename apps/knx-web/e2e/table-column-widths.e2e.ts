@@ -5,6 +5,8 @@ import { fakeServer, node, openFlow, telegram } from "./telegram-flow-server";
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { intrinsicFloors, assertFloorOverflow } from "./table-intrinsic-oracle";
 import { wordsIntact, scrollsLocally } from "./table-word-assertions";
+import { messages as en } from "../src/messages/en";
+import { messages as de } from "../src/messages/de";
 
 async function evidenceScreenshot(page: Page, name: string) {
   await page.screenshot({ path: test.info().outputPath(`${name}.png`), fullPage: true });
@@ -14,6 +16,19 @@ async function evidenceScreenshot(page: Page, name: string) {
   await writeFile(test.info().outputPath(`${name}.json`), JSON.stringify(context, null, 2));
 }
 
+/** Opens the Devices list and waits for the product catalogue. Until it
+ * answers, the product cells read "Not resolved"; a width measured in that
+ * window belongs to another table than one measured a moment later. */
+async function openResolvedList(page: Page, language: "en" | "de") {
+  await openList(page, language);
+  await waitForCatalogue(page, language);
+}
+async function waitForCatalogue(page: Page, language: "en" | "de", timeout?: number) {
+  const devices = page.locator('[data-table-id="devices"]');
+  await expect(devices.locator("tbody td", { hasText: "Fictional Devices" }).first()).toBeVisible({ timeout });
+  const loading = (language === "en" ? en : de)["devices.loading"];
+  await expect(page.locator(".devices-workspace").getByRole("status").filter({ hasText: loading })).toHaveCount(0, { timeout });
+}
 async function drag(page: Page, handle: Locator, delta: number) {
   await handle.scrollIntoViewIfNeeded(); const box = (await handle.boundingBox())!;
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
@@ -236,7 +251,7 @@ async function defaultFit(page: Page, table: Locator, name: string, expectScroll
 for (const language of ["en", "de"] as const) for (const width of [1440, 1920]) {
   test(`${language} ${width}: built-app defaults fit or scroll at measured word floors with navigation present`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
-    const server = await intercept(page, language); await openProject(page, language); await openList(page, language);
+    const server = await intercept(page, language); await openProject(page, language); await openResolvedList(page, language);
     const devices = page.locator('[data-table-id="devices"]');
     await defaultFit(page, devices, `${language}-${width}-devices`, width === 1440);
     await wordsIntact(devices.locator("thead .table-column-label"));
@@ -269,7 +284,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 1920]) 
 
 test("1440: devices shrink by keyboard and pointer and redistribute space with local scrolling", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  const server = await intercept(page, "en"); await openProject(page, "en"); await openList(page, "en");
+  const server = await intercept(page, "en"); await openProject(page, "en"); await openResolvedList(page, "en");
   const table = page.locator('[data-table-id="devices"]'); const viewport = table.locator(".resizable-table-scroll");
   const initialScroll = await viewport.evaluate(e => e.scrollWidth);
   await localOverflow(page, table);
@@ -288,7 +303,7 @@ test("1440: devices shrink by keyboard and pointer and redistribute space with l
 });
 test("overlay paints above device headers", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  const server = await intercept(page, "en"); await openProject(page, "en"); await openList(page, "en");
+  const server = await intercept(page, "en"); await openProject(page, "en"); await openResolvedList(page, "en");
   const header = page.locator('[data-table-id="devices"] thead th').nth(1);
   const box = (await header.boundingBox())!;
   await page.keyboard.press("Control+k"); await expect(page.locator(".search-overlay")).toBeVisible();
@@ -495,7 +510,17 @@ test("intrinsic oracle waits for a font requested after the table appears", asyn
 
 test("independent fit assertion rejects an inflated rendered floor and accepts restoration", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  const server = await intercept(page, "en"); await openProject(page, "en"); await openList(page, "en");
+  const server = await intercept(page, "en");
+  // Hold the catalogue so the list is seen in its "Not resolved" state first:
+  // the gates' flake measured that state once and the resolved table later.
+  let release!: () => void; const held = new Promise<void>(resolve => { release = resolve; });
+  await page.route("**/api/devices*", async route => { await held; await route.fallback(); });
+  await openProject(page, "en"); await openList(page, "en");
+  await expect(page.locator(".devices-workspace").getByRole("status").filter({ hasText: en["devices.loading"] })).toBeVisible();
+  // While the answer is held, the wait must not let a measurement start.
+  await expect(waitForCatalogue(page, "en", 1_000)).rejects.toThrow();
+  release();
+  await waitForCatalogue(page, "en");
   const table = page.locator('[data-table-id="devices"]');
   const floors = await intrinsicFloors(table);
   await assertFloorOverflow(table, floors, 1000);
@@ -575,7 +600,7 @@ for (const scale of [0.8, 1.5]) {
     // Set root zoom before showing the table, so 100% session floors cannot
     // mask underestimated words at 80%. This is the property App itself sets.
     await page.evaluate(scale => { document.documentElement.style.setProperty("--app-ui-scale", String(scale)); }, scale);
-    await openList(page, "en");
+    await openResolvedList(page, "en");
     const table = page.locator('[data-table-id="devices"]');
     await defaultFit(page, table, `en-zoom-${scale}-devices`, true);
     await wordsIntact(table.locator("thead .table-column-label"));
@@ -614,6 +639,7 @@ for (const scale of [0.8, 1.5]) {
     await page.getByRole("combobox").fill("Devices");
     await page.getByRole("combobox").press("Enter");
     await expect(table).toBeVisible();
+    await waitForCatalogue(page, "en");
     await preference(page, "devices", "address", saved);
     await expect.poll(async () => Math.abs((await heading.boundingBox())!.width - savedLayoutWidth), "same saved layout width at 100% after reload").toBeLessThan(1);
     await announcedWidth(table, 1);
@@ -675,7 +701,7 @@ test("stored uiScale: App's own scale drives inspector stacking, table fit and d
   const table = page.locator('[data-table-id="devices"]');
   await openProject(page, "en");
   await expect.poll(rootScale, "App applies the stored scale").toBe("1.5");
-  await openList(page, "en");
+  await openResolvedList(page, "en");
   // 1200 / 1.5 = 800 layout px, below 250 + 360 + 200: stacked (not at 100%).
   await expect(workbench).toHaveClass(/workbench--stacked-inspector/);
   expect(Math.abs((await page.locator(".workbench-pane-right").boundingBox())!.width - 1200)).toBeLessThan(2);
@@ -696,6 +722,7 @@ test("stored uiScale: App's own scale drives inspector stacking, table fit and d
   await page.getByRole("combobox").fill("Devices");
   await page.getByRole("combobox").press("Enter");
   await expect(table).toBeVisible();
+  await waitForCatalogue(page, "en");
   await expect(workbench).not.toHaveClass(/workbench--stacked-inspector/);
   await fitsOrScrollsLocally(page, table, "en-setting-0.8-startup-devices");
   await pointerTracks(page, table, 0.8);

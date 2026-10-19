@@ -20,10 +20,10 @@ security, GitHub-issue, hardware or whole-codebase conformance audit.
 
 ### Already owned — do not start a duplicate package
 
-- **UI feedback:** UI-01/02/03/04/06 are delivered. UI-05 and final whole-set
-  integration/acceptance remain with the existing
-  [UI workstream](goals/ui-feedback-2026-10-18.md). Its package labels are
-  scoped to that goal, not the historical `UI-*` ledger IDs.
+- **UI feedback:** UI-01–UI-06 and the whole-set corrections are delivered
+  ([UI workstream](goals/ui-feedback-2026-10-18.md)); the claim is released.
+  Two follow-ups remain unowned (below, under *UI feedback packages*). Its
+  package labels are scoped to that goal, not the historical `UI-*` ledger IDs.
 - **Exact UP 258D12 / issue #22:** the
   [offline programming goal](goals/up258-programming-2026-10-18.md) owns
   explicit source-field preparation, image/procedure/execution and full-state
@@ -396,20 +396,24 @@ package readiness and ownership above first; an older “open”, “pending” 
 requests: monitor DPT correctness; compact controls, visible navigation
 separators and source-label cleanup; File submenus; storage sizes and counts;
 resizable table columns; labelled, bounded topology layout. The owner withdrew
-item 3 (“Update We”) as a typo. **In progress** (owner go, claimed 18 October).
-**Delivered:** UI-01 (the reported 1/5/6 telegram genuinely has no DPT in the
+item 3 (“Update We”) as a typo. **Delivered** (owner go, claimed 18 October,
+claim released 19 October). **Delivered:** UI-01 (the reported 1/5/6 telegram genuinely has no DPT in the
 project; the monitor now names why: no project, address not in project, no
 type, or a program default the project clears) and UI-04 (on-disk project and
 product database sizes, catalogue counts). **Delivered:** UI-02
 (compact controls and separators), UI-03 (File submenus) and UI-06 (labelled,
 bounded topology), published as `bc9d73c1` after the frozen 16-stage gate on
-`471ca75a` and main-first delta acceptance. **Still in correction/review:**
-UI-05 (word-safe resizable tables, density/theme, stable measured floors and
-independent fit-budget regression evidence). Decisions and per-package worker
+`471ca75a` and main-first delta acceptance. **Delivered (19 October):** UI-05
+(word-safe resizable tables, density/theme, stable measured floors, independent
+fit-budget evidence) together with the corrections from the whole-set review:
+24 px row actions in resized tables, tables and File menu under application zoom,
+a File menu that stays inside the window and above the toolbar, inline submenus
+that ignore hover, taps and clicks that no longer fold the open submenu, and a
+first level that scrolls when it does not fit at 150%. Decisions and per-package worker
 models are in the
 [goal file](goals/ui-feedback-2026-10-18.md#owner-go-and-decisions-18-october-2026-later-the-same-day).
 
-UI-05 local candidate: all 18 native table surfaces use the width adapter. The
+UI-05: all 18 native table surfaces use the width adapter. The
 address/object matrix's select/address/name columns resize; only its per-object
 columns still need a width policy that avoids project content in preference keys. [Coverage and boundary](contracts/table-column-widths.md).
 
@@ -420,12 +424,14 @@ Open follow-ups found by the UISET review (18 October 2026), outside the table f
   pane edge moves 1.5 times the pointer distance (0.8 times at 80%). Same
   normalisation as the tables (`appUiScale()`), with a real-drag browser case
   per scale. [KL-130](limitations/KL-130-ZOOM-application-zoom.md#update-18-october-2026-resizable-tables-under-application-zoom).
-- **Zoomed table cases bypass the Settings path.** The table browser fixture
-  renders the tables without `App`, so the 80%/150% cases set
-  `--app-ui-scale` on the root directly. The `uiScale` setting, the `App`
-  effect that writes the property and the narrow-window inspector stacking
-  math (`viewportWidth / uiScale`) are not exercised together with the tables.
-  One case through the real app (Settings at 150% → tables) would close this.
+- **Zoomed table cases bypass the scale setting.** The 80%/150% table cases
+  load the real app but write `--app-ui-scale` on the root directly while the
+  `uiScale` setting stays at 100%. The setting-driven effect in `App`, the
+  narrow-window inspector stacking math (`viewportWidth / uiScale`) and the
+  startup order with a stored scale are therefore not exercised together with
+  the tables (the File menu cases do use a stored `uiScale`). One table case
+  through Settings or a stored `uiScale`, including startup remeasurement,
+  would close this.
 
 ## Prepared goal packages (17 October 2026)
 

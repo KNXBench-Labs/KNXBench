@@ -82,9 +82,11 @@ def user_data_snapshot(dirs: list[Path], home: str | None = None) -> Snapshot:
     home_path = Path(home).resolve() if home else None
     for top in dirs:
         try:
-            if not top.exists() and not top.is_symlink():
-                continue  # nothing there yet: a file created later shows as a change
+            # An explicit lstat: `Path.exists()` reads a permission error as "absent".
+            top.lstat()
             guards = [top.resolve().parent, *([home_path] if home_path else [])]
+        except FileNotFoundError:
+            continue  # nothing there yet: a file created later shows as a change
         except OSError as error:
             snapshot.problems.append(f'{top}: cannot be checked ({_reason(error)})')
             continue

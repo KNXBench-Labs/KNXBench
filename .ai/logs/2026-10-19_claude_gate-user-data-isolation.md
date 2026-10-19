@@ -71,16 +71,27 @@ at most `MAX_ENTRIES` (5,000) entries; link entries recorded so retargeting is
 a change; the test asserts an explicit list of six stages. The complete gate
 running on the round-1 head was stopped.
 
+## Review round 3 (Codex, accept_with_fixes)
+
+XDG-04/05/06 confirmed fixed; XDG-03 partially: Python 3.14's `Path.exists()`
+reads a permission error as "absent", so an unsearchable parent of the knx
+directory gave an empty, problem-free snapshot. Fix: an explicit `lstat`,
+`FileNotFoundError` = absent, any other error = coverage problem; regression
+test with a `0600` parent. The complete gate just started on the round-2 head
+was stopped; its fixture Vite server was left orphaned (third time; recorded in
+OPEN_WORK).
+
 ## Evidence
 
-- `tools/tests/test_run_package_gate.py`: 15/15 OK; whole tool suite 316 OK
+- `tools/tests/test_run_package_gate.py`: 16/16 OK; whole tool suite 317 OK
   (1 skipped). Tests drive `check()` and `run_web_gate.checked_step()` with a
-  recording run. 14 mutants each turn a test red (web tool-tests not isolated,
+  recording run. 15 mutants each turn a test red (web tool-tests not isolated,
   package routing plain, rust-tests dropped from the set, symlink target
   ignored, symlinked dirs not followed, ctime dropped, detection disabled,
   cycle protection removed, unlistable directory silent, vanishing entry
   crashes, ancestor links walked, no entry bound, link entries not recorded,
-  problems not failing the receipt); restored. On the dev machine's real
+  problems not failing the receipt, `exists()` hiding an unsearchable parent);
+  restored. On the dev machine's real
   directories the snapshot finds 2 entries and no problems in under 1 ms.
 - The planner requires the complete gate for a runner change; it doubles as the
   proof that no test relies on the inherited values.

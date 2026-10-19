@@ -48,7 +48,7 @@ already found lying in the grass.
   data or config directory, or behind a symlink in it, is created, changed or
   removed meanwhile (`userDataTouched` in the receipt; `tools/user_data_guard.py`).
   It also fails when it cannot check them (`userDataUnchecked`: a directory it
-  may not list, a symlink to an ancestor or to `$HOME`, which it does not walk,
+  may not list or reach, a symlink to an ancestor or to `$HOME`, which it does not walk,
   or more than 5,000 entries). Rebase before gating, so
   the branch carries this runner. A **direct** `cargo test` still inherits the
   real homes: export scratch values first, e.g.

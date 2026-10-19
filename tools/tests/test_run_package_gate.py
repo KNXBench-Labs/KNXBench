@@ -256,6 +256,20 @@ class UserDataIsolation(unittest.TestCase):
         (data / 'store').symlink_to(self.root / 'two', target_is_directory=True)
         self.assertEqual(touched_user_data(before, entries([data])), [str(data / 'store')])
 
+    def test_a_parent_that_cannot_be_searched_fails_instead_of_counting_as_absent(self) -> None:
+        share = self.root / 'share'
+        (share / 'knx').mkdir(parents=True)
+        (share / 'knx/products.sqlite').write_bytes(b'v25')
+        share.chmod(0o600)  # readable, not searchable: `exists()` would say "absent"
+        self.addCleanup(share.chmod, 0o700)
+        if os.access(share / 'knx', os.F_OK):
+            self.skipTest('running with a capability that searches any directory')
+        snapshot = user_data_snapshot([share / 'knx'])
+        self.assertEqual(snapshot.entries, {})
+        self.assertEqual(len(snapshot.problems), 1)
+        self.assertIn('cannot be checked', snapshot.problems[0])
+        self.assertEqual(user_data_snapshot([self.root / 'missing/knx']).problems, [])
+
 
 if __name__ == '__main__':
     unittest.main()

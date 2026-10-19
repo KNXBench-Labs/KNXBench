@@ -552,7 +552,12 @@ crate. Open, each small and none blocking:
   were not swept. Four test comments still claim `AppState::default()` looks up
   `default_path()` (`http_device_routes.rs`, `http_product_language.rs`,
   `http_catalog_translation.rs`, a `domain.rs` test); it opens none (AR18 M8)
-  ([pitfall](DEVELOPER_PITFALLS.md#gates)). Reading `products` commands and
+  ([pitfall](DEVELOPER_PITFALLS.md#gates)).
+- A package gate stopped with SIGTERM during its browser stages leaves the
+  fixture Vite server (`npm exec vite --config vite.fixtures.config.ts` and its
+  `node` child) running, reparented to the user's systemd (seen three times on
+  19 October 2026). It holds its port for the next run; end it by PID until
+  `run_web_gate.py`'s cleanup reaches Playwright's `webServer` group. Reading `products` commands and
   `device readiness` open the default product database read-only now; `device
   download/compare/restore/byte-order-probe` still use the migrating opener
   (whether they write the catalogue was not audited).

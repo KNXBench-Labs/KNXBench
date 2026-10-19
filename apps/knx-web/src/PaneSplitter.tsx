@@ -13,6 +13,7 @@
 // with `Home`/`End` for the limits, and a pointer drag held by pointer
 // capture so it survives the cursor leaving the 6px hit area.
 import { useLayoutEffect, useRef, useState, type RefObject } from "react";
+import { appUiScale } from "./appUiScale";
 
 // Same step `ResizablePane` moves by, so the two separators in the
 // workbench feel like one control in two orientations rather than two
@@ -36,7 +37,7 @@ export default function PaneSplitter(props: {
   max: number;
 }) {
   const { label, target, resizes, value, onChange, min, max } = props;
-  const drag = useRef<{ y: number; height: number } | null>(null);
+  const drag = useRef<{ y: number; height: number; scale: number } | null>(null);
   const clamp = (n: number) => Math.max(min, Math.min(max, n));
   const direction = resizes === "above" ? 1 : -1;
 
@@ -53,7 +54,8 @@ export default function PaneSplitter(props: {
     const element = target.current;
     if (!element) return;
     const measure = () => {
-      const height = element.getBoundingClientRect().height;
+      // DOMRect is visual pixels under application zoom; heights are layout.
+      const height = element.getBoundingClientRect().height / appUiScale();
       if (height > 0) setMeasured(height);
     };
     measure();
@@ -66,7 +68,7 @@ export default function PaneSplitter(props: {
   const current = clamp(value ?? measured ?? min);
   // Read at interaction time too: a first input can precede ResizeObserver.
   const interactionHeight = () => {
-    const height = target.current?.getBoundingClientRect().height ?? 0;
+    const height = (target.current?.getBoundingClientRect().height ?? 0) / appUiScale();
     return value === null && height > 0 ? clamp(height) : current;
   };
 
@@ -93,7 +95,7 @@ export default function PaneSplitter(props: {
       }}
       onPointerDown={(e) => {
         if (e.button !== 0) return;
-        drag.current = { y: e.clientY, height: interactionHeight() };
+        drag.current = { y: e.clientY, height: interactionHeight(), scale: appUiScale() };
         // Guarded rather than assumed: a pointer event can arrive without
         // a capture API behind it (a synthesised one in a test, an older
         // engine), and a drag that cannot be captured is still a drag
@@ -102,7 +104,7 @@ export default function PaneSplitter(props: {
       }}
       onPointerMove={(e) => {
         if (!drag.current) return;
-        onChange(clamp(drag.current.height + (e.clientY - drag.current.y) * direction));
+        onChange(clamp(drag.current.height + (e.clientY - drag.current.y) / drag.current.scale * direction));
       }}
       onPointerUp={() => {
         drag.current = null;

@@ -597,6 +597,12 @@ Open follow-ups found by the UISET review (18 October 2026), outside the table f
   through Settings or a stored `uiScale`, including startup remeasurement,
   would close this.
 
+**Both follow-ups delivered (19 October 2026, WP-15 branch):** pane and
+block drags normalise by `appUiScale()`; one table case runs through the stored
+`uiScale` setting and a reload
+([KL-130](limitations/KL-130-ZOOM-application-zoom.md#update-19-october-2026-pane-drags-and-a-setting-driven-table-case)).
+Still open: the same cases on WebKitGTK (Chromium-only evidence, KL-130).
+
 ## Prepared goal packages (17 October 2026)
 
 The open work of 17 October is cut into

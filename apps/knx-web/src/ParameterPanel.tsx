@@ -14,6 +14,7 @@ import type { ProjectTree } from "./bindings/ProjectTree";
 import { useProductLanguage } from "./productLanguage";
 import { LanguageFallbackBadge } from "./languageFallback";
 import { filterParameterSection, groupParameterDiagnostics, isManufacturerRestricted, isSeparatorRestricted, restrictingAccess } from "./parameterPresentation";
+import { parameterCaption } from "./parameterCaption";
 import { useTranslate, type Translate, type TranslatableKey } from "./i18n";
 import { snapshotContextFromTree, type SnapshotContext } from "./snapshotIdentity";
 import { isRevisionConflict } from "./revisionConflict";
@@ -406,12 +407,13 @@ function ParameterSectionView(props: {
       <div className="parameter-fields">
         {fields.map((field, index) => <Fragment key={field.etsId}>
           {field.group && field.group.key !== fields[index - 1]?.group?.key && <button type="button"
+            title={parameterCaption(field.group, t("parameters.groupNumber", { number: groupOrder.indexOf(field.group.key) + 1 }), t).title}
             className="parameter-group-toggle" aria-expanded={expanded.has(field.group.key)}
             onClick={() => setExpanded(previous => {
               const next = new Set(previous); const key = field.group!.key;
               if (next.has(key)) next.delete(key); else next.add(key); return next;
             })}><span aria-hidden="true">{!expanded.has(field.group.key) ? "▸" : "▾"}</span>
-            {field.group.label || t("parameters.groupNumber", { number: groupOrder.indexOf(field.group.key) + 1 })}
+            {parameterCaption(field.group, t("parameters.groupNumber", { number: groupOrder.indexOf(field.group.key) + 1 }), t).label}
           </button>}
           <div className="parameter-field-wrapper" hidden={field.group ? !expanded.has(field.group.key) : false}>
           <ParameterFieldRow

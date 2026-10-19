@@ -65,6 +65,50 @@ The exact Siemens A/B source fields are covered by the public-package regression
 no real read, image, write or recovery route is enabled.
 [Contract](contracts/system2-source-probe-preview.md).
 
+## Parameter caption final review evidence — issue #26 (19 October 2026)
+
+Added independent row-only and column-only HTTP caption-budget regressions. Each
+asserts the exact admitted axis DTO and whole-panel exhaustion with no project,
+revision or history mutation. Each test passed on the already-correct
+implementation, then failed with HTTP 200 instead of 400 when only its axis's
+copy charge was locally removed. Both charges were restored byte for byte. This
+closes missing discriminating evidence, not a newly discovered axis defect.
+
+The conservative delimiter fallback is unchanged: even a resolved value such as
+`Kitchen {{North}}` may use the localized label. EN/DE tooltips now describe this
+display policy neutrally rather than declaring the result unresolved. Tests cover
+stored-value literals and mixed supported/unsupported templates, retained exact
+resolver provenance, original text/template tooltips and search. Contracts and
+the user guide document the literal-delimiter limitation explicitly.
+
+Focused checks pass: 98 tests in 11 HTTP targets (15 caption cases), 110 UI tests
+and 24 i18n tests (JSON reports), production build, application and fixture
+TypeScript, owning-server all-target Clippy, formatting and documentation. Four
+localized tooltip tests first failed on the old wording. Independent re-review
+and the integrated production/package gate remain with the integration owner;
+no publication, main merge, bus or hardware action is claimed.
+
+## Parameter caption review corrections — issue #26 (18 October 2026)
+
+Independent review found a post-commit projection refusal, unmetered caption-copy
+fan-out, unsearchable localized fallback labels and an overbroad translation
+claim. Parameter writes now preflight the exact reconciled command through the
+existing stack on a project copy and construct the full response before durable
+publication. The request's existing caption budget survives through every DTO
+text/provenance copy, including separators and grids, with no ceiling increase.
+Search includes the displayed localized fallback beside original source context;
+caption translation boundaries are explicit in both contracts.
+
+Named REDs were observed for all four findings. Focused correction checks pass:
+96 tests in 11 HTTP targets, 106 web tests (JSON report), production build,
+fixture TypeScript, owning-server all-target Clippy, formatting and documentation.
+The stronger HTTP refusal case also includes object reconciliation, bound and
+unbound callers, revision/history/generation and persisted-byte invariance.
+Optional browser rerun: cancelled while queued on the foreign lease, zero cases
+executed; not browser acceptance. Independent re-review and integrated full
+package/browser acceptance remain pending with the integration owner. No
+publication or hardware action is claimed.
+
 ## House devices read with the diagnostic export (18 October 2026)
 
 Owner go: the shipped `knx device diagnostics` ran once against all 34
@@ -88,6 +132,23 @@ PID78 comparisons match the `[A]` `property_matches` shape; a hidden
 `knx-app` `device_reports_corpus`: the strict reader accepts all twelve real
 archives and the writer reproduces each byte for byte (three negative controls
 red). No production code or admission change.
+## Parameter section captions — issue #26 (18 October 2026)
+
+The parameter workspace now applies ADR-0126 to block captions and activated
+separator text, including separator grid labels. It reuses the device evaluation's
+exact source-reference resolver: stored text overrides, then product defaults;
+explicitly empty values stay empty and ambiguous references decide nothing.
+Additive fill records preserve the original template and source. Navigator,
+selected heading and Restricted captions use readable localized fallbacks for
+empty, marker-only or unresolved text, with explanatory source tooltips. Source
+metadata, device configuration, field identity and existing write/undo paths stay
+unchanged. See the [caption contract](contracts/positional-text-templates.md#parameter-workspace-captions-issue-26).
+
+Focused regression evidence: the original raw-caption assertions failed before
+the fix; 69 HTTP tests (eight new caption cases), 101 focused web tests,
+production build, fixture TypeScript check (with a deliberate failing control)
+and touched-server all-target Clippy pass. Integrated full-gate acceptance and
+publication remain separate; this entry does not claim either.
 
 ## Table geometry at application scale — UISET-01/05 (18 October 2026)
 
@@ -327,6 +388,17 @@ device links have 24px targets; feature editors use the shared variants; a
 browser matrix checks the named dialog, toolbar, inspector and table controls'
 roles, focus and size and the separators in all five shipped themes.
 [Contract](contracts/controls-and-separators.md).
+
+## Device-empty topology ranges (18 October 2026 source, issue #25)
+
+The Topology diagram hides lines without devices and areas without a populated
+line. Zero-object devices and unassigned devices remain visible. Empty ranges
+remain in the project and explorer, and selecting one there retains its editor
+and the header's exact device-add target. No domain, persistence, export or
+protocol change. [Contract](contracts/topology-metrics.md#device-empty-ranges-issue-25-source-builds-after-alpha-14).
+Focused verification: named pre-fix RED; 22 component tests, 23 fixture browser
+cases and eight production heading/hover cases passed. Independent review
+accepted the corrected full diff. Integrated package acceptance is separate.
 
 ## Manual, README and screenshots after Alpha 14 (18 October 2026)
 

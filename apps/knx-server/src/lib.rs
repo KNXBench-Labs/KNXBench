@@ -51,6 +51,7 @@ mod device_catalog;
 mod device_compare_routes;
 mod device_diagnostics_routes;
 mod device_download;
+mod parameter_captions;
 mod parameter_grid;
 mod parameter_objects;
 mod plugin_data_routes;

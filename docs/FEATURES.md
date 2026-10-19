@@ -38,6 +38,18 @@ Last updated: 2026-10-18 07:55 CEST
 | --- | --- | --- |
 | Resizable data-table columns | Pointer/keyboard resizing below defaults, density/theme-aware cached header/cell word floors capped at 320 px, stable mounted maxima and local scrolling, measured-width announcements, per-column/table reset, validated browser-local preferences; narrow object/address/monitor and EN/DE 1440/1920 fit budgets verified (local scroll where floors exceed the pane); 18 native table surfaces, matrix select/address/name included; per-object columns stay fixed — [coverage and limits](contracts/table-column-widths.md) | Local-only |
 
+## Topology range visibility
+
+| Feature | Scope | Availability |
+| --- | --- | --- |
+| [Device-empty ranges](contracts/topology-metrics.md#device-empty-ranges-issue-25-source-builds-after-alpha-14) | Diagram hides areas/lines without devices; original structure and explorer editing remain unchanged | Local-only; integration pending |
+
+## Parameter caption resolution
+
+| Feature | Scope | Availability |
+| --- | --- | --- |
+| [Parameter section captions](contracts/positional-text-templates.md#parameter-workspace-captions-issue-26) | Exact text-parameter resolution for block/separator captions; readable fallback labels and source tooltips; no configuration changes | Local-only; integration pending |
+
 ## New in Alpha 14
 
 [Release scope](releases/alpha14.md) separates offline editing and product-data

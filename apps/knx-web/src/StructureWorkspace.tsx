@@ -124,10 +124,10 @@ export default function StructureWorkspace(props: {
       columns={addressView === "matrix" ? MATRIX_COLUMNS : GROUP_ADDRESSES_COLUMNS} />}
     {tree.installations.filter((installation) => !focusedBuilding || flattenBuildingParts(installation.buildings, []).some(({node}) => node.id === focusedBuilding.node.id)).map((installation) => <section key={installation.id} className="installation-diagram" aria-label={installation.name}>
       {view === "topology" && <>
-        {installation.topology.length === 0 && <p role="status">{t("workbench.emptyStructure")}</p>}
-        {installation.topology.map((area) => <section className="topology-area" key={area.id}>
+        {installation.topology.every((area) => area.lines.every((line) => line.devices.length === 0)) && installation.unassigned.length === 0 && <p role="status">{t("workbench.emptyTopology")}</p>}
+        {installation.topology.filter((area) => area.lines.some((line) => line.devices.length > 0)).map((area) => <section className="topology-area" key={area.id}>
           <button className="diagram-heading" aria-pressed={selected("area", area.id)} onClick={() => onSelect({ kind: "area", id: area.id })}><WorkbenchIcon name="topology" />{area.address} · {area.name}</button>
-          <div className="topology-lines">{area.lines.map((line) => <section className="topology-line" key={line.id}>
+          <div className="topology-lines">{area.lines.filter((line) => line.devices.length > 0).map((line) => <section className="topology-line" key={line.id}>
             <div className="diagram-line-heading"><button className="diagram-heading" aria-pressed={selected("line", line.id)} onClick={() => onSelect({ kind: "line", id: line.id })}>{area.address}.{line.address} · {line.name}</button>
               <button data-catalog-line={line.id} aria-label={`${t("workbench.device")} · ${line.name}`} onClick={() => onCatalog(line.id)}>+</button></div>
             {devices(line.devices)}

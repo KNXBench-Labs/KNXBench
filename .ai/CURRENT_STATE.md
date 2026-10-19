@@ -1,4 +1,12 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-10-19 19:23
+- **Completed:** Release freeze taken for Alpha 15 (owner request "Release Alpha 15"). Candidate `c3d5b35f` on `release/alpha15-20261019`, cut from `21b9d46f` (this `main` before this entry): versions `0.1.0-alpha.15`, scope note `docs/releases/alpha15.md`, docs pass. Owner decision: one complete gate on the candidate, then packaging dry runs and artifact smokes.
+- **Pending/Next Steps:** `main` stays release-frozen for code until the tag `v0.1.0-alpha.15` is published: no pushes to `main` from other packages (local work, gates and branch-local commits are fine); new work goes to Alpha 16. Release session: full gate, AppImage/Docker dry runs, tag, pre-release, external verification, acceptance record, then `Release freeze: released by claude-release-alpha15`.
+- **Notes for Codex oder Claude:** The candidate must stay the accepted source; do not rebase it. Its own handover entry lives on the release branch and lands on `main` with the tag merge.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-10-19 19:10
 - **Completed:** Housekeeping (owner request), no code change. Remote: deleted `feat/up258-stage0-20261018` (`ad97a56c`) and `feat/up258-offline-20261018` (`b9dc72f1`), both merged; `release/alpha14-20261018-r6` (`8d104e2f`, identical to tag `v0.1.0-alpha.14`); and the superseded Alpha 14 candidates `release/alpha14-20261018` (`b08ed794`), `-r2` (`f59ace9b`), `-r3` (`54010888`), `-r4` (`bb7c896e`), `-r5` (`ec52706e`), one unmerged prepare commit each, replaced by r6. The server now holds only `main` and the tags; no open PRs. Worktrees: removed `KNXBench-a15-pdb-20261019` and `KNXBench-a15-wp13-20261019` (clean, detached on merged commits) and `KNXBench-a15-sigterm-20261019` (clean; its branch stays). Local branches: deleted the merged `docs/wp13-drift-20261019` and `feat/wp01-wp02-pdb-20261019`, and the consumed hand-off `wip/alpha14-release-media-handoff-20261018` (`c84152f1`; the website claim it served is delivered). Agent scratch emptied (about 5 GB, 498 entries from delivered packages incl. the Alpha 15 review/gate evidence; nothing open or running). Root checkout fast-forwarded to `main`; Codex's unpublished 06:43 closing entry for #25/#26 (comments posted, issues closed) carried over verbatim into its chronological place below.
 - **Pending/Next Steps:** None for housekeeping. Unchanged: Alpha 15 can be cut from `main` after a full gate.

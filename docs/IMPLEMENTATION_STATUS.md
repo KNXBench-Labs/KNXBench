@@ -12,6 +12,26 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## WP-17 master provenance — Alpha 16 source candidate (19 October 2026)
+
+Product database **v27** adds separate source/declaration/winner evidence for
+DPT mains/subtypes, function types/points and space usage. Normalized winner
+rules stay unchanged; losing and malformed declarations have source positions
+and distinct diagnostics through direct import, CLI, HTTP and the catalogue
+report. Historical winners and encounters are explicitly unavailable, not guessed.
+[ADR-0147](adr/0147-master-identity-provenance.md) defines bounded, atomic replay
+and the fixed 16 MiB logical evidence allowance; it is not a process-memory limit.
+
+Independent review and correction review accept core `887f024a`. ProductDB:
+458 library, 598 integration and 2 doc tests passed; Clippy passed. The final
+115-instance matrix passed **11/11** with frozen inputs. Controlled v26 → v27
+migration preserves every value in all **42 unaffected tables** and all **859
+historical diagnostic rows**; new migrated evidence remains historical rather
+than pretending to be fresh observations. Earlier failed attempts stay retained.
+This candidate still requires the package gate, integration and publication;
+Alpha 15 binaries do not contain it. Older builds refuse a v27 product database;
+keep a backup before opening with a new source build.
+
 ## Alpha 15 publication verified — 19 October 2026
 
 `v0.1.0-alpha.15` points to immutable `c3d5b35f`: one complete release gate

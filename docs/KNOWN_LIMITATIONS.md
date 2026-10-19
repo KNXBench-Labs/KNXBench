@@ -316,7 +316,7 @@ Signature members are retained/classified, not verified. Storage does not establ
 ### 86. Duplicate product identifiers
 
 **Ledger status:** `DONE` ([KL-86](status/LEDGER.md#snapshot-ids)).
-Normalized duplicates are reported. DPT provenance and unsupported identifier families retain separate boundaries.
+Normalized duplicates are reported. Source builds after Alpha 15 add four-family master provenance; historical winner/encounter facts and unsupported identifier families retain separate boundaries.
 [Details and history](limitations/KL-086-duplicate-product-identifiers.md)
 
 <a id="catalogue-kl-087"></a>

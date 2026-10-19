@@ -1,5 +1,16 @@
 # Roadmap
 
+## After Alpha 15 — master provenance candidate (19 October 2026)
+
+[WP-17](OPEN_WORK.md#wp-17--master-identity-provenance) implements product DB
+v27 master declarations and source-addressable winners/losers, with unchanged
+normalized rules and explicitly unavailable historical encounter facts. Core
+review, final 11/11 corpus matrix and full-value migration preservation pass;
+package/integration gates and publication are pending. This is source-only,
+not an Alpha 15 artifact upgrade or a new compatibility/programming claim.
+The separate v23–v25 column-promotion repair follows the released WP-17 schema
+claim; it must not compete for v27 or expand this provenance package.
+
 ## Alpha 15 release boundary (19 October 2026)
 
 Prepared from cutoff `21b9d46f`, after the Alpha 15 package set landed. The

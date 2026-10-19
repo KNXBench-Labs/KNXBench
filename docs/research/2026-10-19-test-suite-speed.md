@@ -132,7 +132,61 @@ alongside (load average 18–20 on 16 threads): 5 × 686 passed, 0 failed,
 
 The default inventory on the candidate holds 842 cases: 740 untagged
 (functional lane, four workers) and 102 tagged `@exclusive` in 17 files, most
-of them the File-menu hover specs (52). BROWSER_RESULT
+of them the File-menu hover specs (52).
+
+The first complete gate on the candidate ran the functional lane (744 cases
+after the rebase, four workers) in 384.5 s, against 1,172.9 s for the whole
+default inventory on one worker before. It failed one case, which had passed
+serially every time: `explorer-structure` "a pulse in a long tree touches only
+the rows on screen". Two races in the spec, not in the app: Playwright's
+installed clock keeps flowing while the project opens, so a fixed
+`runFor(12_000)` window contains the start of the twelve-second pulse only
+when opening was quick; and the case measured the marked rows before
+expand-all had rendered them. Eight competing workers reproduced the phase
+race in 40 of 40 runs. The specs now step the clock until a pulse starts and
+wait for the tree first: 90 of 90 passed under the same load. Parallel
+execution is doing its job here: it shows the load-dependence that a quiet
+one-worker run hides.
+
+## The complete gate on the candidate
+
+`python3 tools/run_package_gate.py --full` on the rebased candidate passed in
+2,386.5 s (39.8 min, no lease wait): web gate 1,727.3 s, clippy 81.0 s, Rust
+tests 174.5 s including the build (4,993 passed, 0 failed, 215 ignored, 54
+test binaries with unit tests), bindings 5.8 s, corpus 392.6 s (155 of 155),
+website and story tests 3.2 s. For comparison, the issues 25/26 gate ran its
+web part for 29.7 min and its Rust tests for another 10.9 min before the
+corpus stage.
+
+The web gate itself shrank only from 1,780.2 s to 1,727.3 s, and the reasons
+are worth keeping:
+
+- Five workers of another session built and tested without the workspace
+  lease while the functional lane ran (load average up to 25): its 744 cases
+  needed 1,823 s of summed case time (the whole default inventory of 713
+  cases had needed 1,172.9 s on one worker before) and still finished in
+  495.9 s. An unloaded run will be faster; it was not measured here.
+- The exclusive lane took 513.5 s for 102 cases. `file-menu-submenus` alone
+  took 206 s; most of it were application-zoom hit tests that measure no time
+  at all. They waited 300 ms for a date-dependent startup toast and were
+  tagged through that helper. They now pin a weekday noon with
+  `page.clock.setFixedTime` (no holiday, not late at night, so no startup
+  toast; timers keep running) and lost the tag: 37 of the file's 52
+  exclusive cases now run in the functional lane, 15 hover-intent cases stay
+  exclusive. Stress check with eight workers, three repetitions: all moved
+  cases passed in both runs (138 of 138 in the focused second run). The first
+  run, over the whole file's untagged cases, also lost three cases of
+  "File menu holds entries only", which this change does not touch: each
+  timed out in its first 30 s waiting for the File button, all within the first
+  75 of 327 starts, i.e. while eight workers loaded the app from a cold Vite
+  development server at once. The gate uses four workers; the cases passed
+  there and in the focused rerun. Recorded here, not fixed.
+- The production suites took 596.8 s against 505.6 s, because `main` gained a
+  16th suite (`table-columns`, 123.7 s with its exclusive part) in the
+  meantime. They still run one after another.
+
+A routine package does not pay for any of this unless it touches the web
+app's shared inputs; that is where most of the time goes back to development.
 
 ## Limits of these numbers
 

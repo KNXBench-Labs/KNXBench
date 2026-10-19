@@ -19,8 +19,10 @@ Acceptance follow-up: full gate 4 on `a86cb1f9` stopped at one browser test
 before the mounted table's final font loaded; it now flushes the source table's
 layout and awaits current font readiness. A held-font-response regression fails
 without the barrier; the complete table-column spec passes 50/50 with it. No
-application code, width tolerance or retry policy changed. Guard review is
-accepted; complete package acceptance remains pending.
+application code, width tolerance or retry policy changed. Both reviews
+accepted; complete package gate green on `72e92e86` (68 web stages, 855
+browser cases, Rust 5,023/0, corpus 155/155; no user data touched or
+unchecked); delivered in merge `9535e132`.
 
 The same day as the `doc-export` fix, a second gate migrated the owner's fresh
 product database (an ETS import made at 14:37 with the Alpha 14 AppImage) to

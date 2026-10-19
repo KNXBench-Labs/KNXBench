@@ -15,6 +15,35 @@ use rusqlite::Connection;
 /// report uses `suffix_text::rewind_to_v25`.
 #[allow(dead_code)]
 pub fn drop_v26_objects(conn: &Connection) {
+    // Every pre-v26 fixture must also remove the later v27 provenance tables.
+    conn.execute_batch("DROP TABLE IF EXISTS master_winner; DROP TABLE IF EXISTS master_declaration; DROP TABLE IF EXISTS master_source;").unwrap();
+    if conn
+        .query_row(
+            "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE name='package_install_diagnostic')",
+            [],
+            |r| r.get::<_, bool>(0),
+        )
+        .unwrap()
+    {
+        let removed=conn.execute("DELETE FROM package_install_diagnostic WHERE kind IN ('master-identity-collision','malformed-master-declaration')",[]).unwrap();
+        if removed > 0 {
+            // Old fixture rebuilds append at count(*); retire v27-only gaps too.
+            let offset: i64 = conn
+                .query_row(
+                    "SELECT coalesce(max(ordinal),0)+1 FROM package_install_diagnostic",
+                    [],
+                    |r| r.get(0),
+                )
+                .unwrap();
+            conn.execute(
+                "UPDATE package_install_diagnostic SET ordinal=ordinal+?1",
+                [offset],
+            )
+            .unwrap();
+            conn.execute_batch("WITH ranked AS MATERIALIZED (SELECT rowid AS rid,row_number() OVER(PARTITION BY package_sha256 ORDER BY ordinal)-1 AS n FROM package_install_diagnostic)
+                UPDATE package_install_diagnostic SET ordinal=(SELECT n FROM ranked WHERE ranked.rid=package_install_diagnostic.rowid)").unwrap();
+        }
+    }
     conn.execute_batch(
         "DROP INDEX IF EXISTS ingest_unknown_construct_identity;
          DROP INDEX IF EXISTS ingest_unknown_conflict_identity;",

@@ -333,6 +333,8 @@ pub struct InstallDiagnostic {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum InstallDiagnosticKind {
+    MasterIdentityCollision,
+    MalformedMasterDeclaration,
     UnsupportedMasterSection,
     UnsupportedMasterSubtree,
     UnresolvedBaggageDeclaration,
@@ -342,6 +344,8 @@ pub enum InstallDiagnosticKind {
 impl InstallDiagnosticKind {
     pub const fn as_str(self) -> &'static str {
         match self {
+            Self::MasterIdentityCollision => "master-identity-collision",
+            Self::MalformedMasterDeclaration => "malformed-master-declaration",
             Self::UnsupportedMasterSection => "unsupported-master-section",
             Self::UnsupportedMasterSubtree => "unsupported-master-subtree",
             Self::UnresolvedBaggageDeclaration => "unresolved-baggage-declaration",
@@ -351,6 +355,8 @@ impl InstallDiagnosticKind {
 
     fn from_db(value: &str) -> Result<Self, ProductDbError> {
         match value {
+            "master-identity-collision" => Ok(Self::MasterIdentityCollision),
+            "malformed-master-declaration" => Ok(Self::MalformedMasterDeclaration),
             "unsupported-master-section" => Ok(Self::UnsupportedMasterSection),
             "unsupported-master-subtree" => Ok(Self::UnsupportedMasterSubtree),
             "unresolved-baggage-declaration" => Ok(Self::UnresolvedBaggageDeclaration),
@@ -607,6 +613,24 @@ fn validate_diagnostic(
     };
 
     match diagnostic.kind {
+        InstallDiagnosticKind::MasterIdentityCollision
+        | InstallDiagnosticKind::MalformedMasterDeclaration => {
+            if role != "Master" || diagnostic.occurrences != 1 {
+                return Err(report_error("invalid master declaration diagnostic"));
+            }
+            let source: String = conn.query_row(
+                "SELECT source_sha256 FROM package_member WHERE package_sha256=?1 AND path=?2",
+                params![sha256, diagnostic.archive_path],
+                |r| r.get(0),
+            )?;
+            crate::master_provenance::validate_diagnostic(
+                conn,
+                &source,
+                diagnostic.kind,
+                &diagnostic.xml_path,
+                &diagnostic.detail,
+            )?;
+        }
         InstallDiagnosticKind::UnsupportedMasterSection => {
             if role != "Master" {
                 return Err(report_error(
@@ -2941,6 +2965,7 @@ pub(crate) fn install_admitted_package(
                 master_sections_read,
                 unsupported_sections,
                 uninterpreted_subtrees,
+                declarations: _,
             } = master;
             if matches!(scheme, 21 | 23) {
                 crate::parse::scheme_evidence::reconcile_package_unknowns(
@@ -2964,6 +2989,15 @@ pub(crate) fn install_admitted_package(
                 .dropped_datapoint_types
                 .checked_add(master_outcome.dropped_datapoint_types)
                 .ok_or_else(|| report_error("dropped datapoint counter overflow"))?;
+            for diagnostic in master_outcome.diagnostics {
+                facts.diagnostics.push(InstallDiagnostic::new(
+                    diagnostic.kind,
+                    path.clone(),
+                    diagnostic.xml_path,
+                    diagnostic.detail,
+                    1,
+                )?);
+            }
             add_entities(&mut facts, &entities)?;
             add_count(
                 &mut facts,

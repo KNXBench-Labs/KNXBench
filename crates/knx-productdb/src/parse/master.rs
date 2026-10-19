@@ -20,6 +20,7 @@ use rusqlite::{params, Connection};
 use super::master_language::master_language_unknowns;
 use super::report_unknown_attrs;
 use super::translation::{ingest_translations, TranslationScope};
+use crate::master_provenance::{self, MasterDeclaration, MasterDiagnostic, MasterKind};
 use crate::report::{EntityCounts, EntityKind, UnknownCollector, UnknownConstruct};
 use crate::xml::{attrs, local_name};
 use crate::ProductDbError;
@@ -170,24 +171,17 @@ fn parse_i64(v: Option<&str>) -> Option<i64> {
 /// measured the same way `ingest_translations` measures its own, never
 /// predicted from the XML.
 ///
-/// `dropped_datapoint_types` is KNOWN_LIMITATIONS.md §86's counter: `id` is
-/// `datapoint_type`'s whole primary key (`migration.rs`), no
-/// `source_sha256` column exists on it at all, and every manufacturer's
-/// `knx_master.xml` restates the entire KNX-standard DPT catalogue rather
-/// than only the DPTs its own products use. So every package after the
-/// first one installed collides on nearly every id it declares, `INSERT OR
-/// IGNORE` drops the second copy, and — unlike `hardware`/`product`/
-/// `catalog_item`/`application_program`, which at least get an `IdConflict`
-/// when the collision crosses a file — nothing recorded that a collision
-/// happened at all before this field existed. It counts drops, not
-/// mismatches: two files declaring the identical id with different
-/// `Name`/`Text` would drop just as silently and this field cannot tell
-/// that case from an exact repeat, because the table never kept either
-/// candidate's source to compare.
+/// Legacy `dropped_datapoint_types` counts every zero-row DPT insert,
+/// including missing-Id constraint drops, but not parentless subtypes whose
+/// insert is skipped. Preserve that counter's existing meaning. The dedicated
+/// provenance tables and returned diagnostics now distinguish malformed drops
+/// from collisions and identify exact retained declarations in all four families.
 pub struct MasterIngest {
     pub unknown: Vec<UnknownConstruct>,
     pub translations: usize,
     pub dropped_datapoint_types: usize,
+    pub source_sha256: String,
+    pub diagnostics: Vec<MasterDiagnostic>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -202,6 +196,7 @@ pub(crate) struct DetailedMasterIngest {
     pub master_sections_read: u64,
     pub unsupported_sections: Vec<UnsupportedMasterSection>,
     pub uninterpreted_subtrees: Vec<UninterpretedMasterSubtree>,
+    pub declarations: Vec<MasterDeclaration>,
 }
 
 pub fn ingest_master_data(conn: &Connection, bytes: &[u8]) -> Result<MasterIngest, ProductDbError> {
@@ -212,8 +207,54 @@ pub(crate) fn ingest_master_data_detailed(
     conn: &Connection,
     bytes: &[u8],
 ) -> Result<DetailedMasterIngest, ProductDbError> {
+    master_provenance::atomic(conn, "master_ingest", || {
+        let sha = master_provenance::retain(conn, bytes)?;
+        crate::xml::validate_complete_document("knx_master.xml", bytes)?;
+        let mut detailed = parse_master(conn, bytes, true)?;
+        master_provenance::persist(conn, &sha, &detailed.declarations, true)?;
+        detailed.outcome.diagnostics =
+            master_provenance::diagnostics(conn, &detailed.declarations)?;
+        Ok(detailed)
+    })
+}
+
+// The v9 -> v10 migration predates provenance tables. Same grammar, no v27 writes.
+pub(crate) fn ingest_master_data_legacy(
+    conn: &Connection,
+    bytes: &[u8],
+) -> Result<MasterIngest, ProductDbError> {
+    Ok(parse_master(conn, bytes, true)?.outcome)
+}
+
+fn execute(
+    conn: &Connection,
+    writes: bool,
+    sql: &str,
+    params: impl rusqlite::Params,
+) -> Result<usize, ProductDbError> {
+    if writes {
+        Ok(conn.execute(sql, params)?)
+    } else {
+        Ok(0)
+    }
+}
+
+pub(crate) fn parse_master(
+    conn: &Connection,
+    bytes: &[u8],
+    writes: bool,
+) -> Result<DetailedMasterIngest, ProductDbError> {
     let source_path = "knx_master.xml";
-    let language_unknowns = master_language_unknowns(bytes)?;
+    if bytes.len() > master_provenance::MAX_MASTER_BYTES {
+        return Err(master_provenance::error("master exceeds byte budget"));
+    }
+    let source_sha256 = crate::sha256_hex(bytes);
+    let mut declarations = Vec::new();
+    let language_unknowns = if writes {
+        master_language_unknowns(bytes)?
+    } else {
+        Vec::new()
+    };
     let mut reader = Reader::from_reader(bytes);
     let mut buf = Vec::new();
     let mut unknown = UnknownCollector::default();
@@ -227,12 +268,14 @@ pub(crate) fn ingest_master_data_detailed(
 
     loop {
         buf.clear();
+        let byte_start = reader.buffer_position();
         let event = reader
             .read_event_into(&mut buf)
             .map_err(|e| ProductDbError::Xml {
                 source_path: source_path.to_string(),
                 cause: e.to_string(),
             })?;
+        let byte_end = reader.buffer_position();
         // Self-closing elements fire no matching `Event::End`, so any
         // "current" scope opened for one must be closed again before the
         // match arm below returns — nothing downstream gets a second
@@ -267,6 +310,23 @@ pub(crate) fn ingest_master_data_detailed(
                         })?;
                     }
                 }
+                if parents.len() >= master_provenance::MAX_MASTER_DEPTH {
+                    return Err(master_provenance::error("master depth budget exceeded"));
+                }
+                let family = MasterKind::from_element(&name);
+                let main_number = match name.as_str() {
+                    "DatapointType" => Some(parse_i64(a.get("Number")).unwrap_or_default()),
+                    "DatapointSubtype" => current_main,
+                    _ => None,
+                };
+                let function_type_id = if name == "FunctionPoint" {
+                    current_function_type.clone()
+                } else {
+                    None
+                };
+                let orphan_parent = (name == "DatapointSubtype" && main_number.is_none())
+                    || (name == "FunctionPoint" && function_type_id.is_none());
+                let mut last_write = None;
                 match name.as_str() {
                     "Manufacturer" => {
                         report_unknown_attrs(
@@ -275,7 +335,9 @@ pub(crate) fn ingest_master_data_detailed(
                             &a,
                             MANUFACTURER_ATTRS,
                         );
-                        conn.execute(
+                        execute(
+                            conn,
+                            writes,
                             "INSERT INTO manufacturer (id, name) VALUES (?1, ?2)
                              ON CONFLICT(id) DO UPDATE SET name = excluded.name",
                             params![a.get("Id"), a.get("Name")],
@@ -301,11 +363,14 @@ pub(crate) fn ingest_master_data_detailed(
                         // rather than wait for the first manufacturer who
                         // writes one.
                         current_main = if is_self_closing { None } else { Some(main) };
-                        let written = conn.execute(
+                        let written = execute(
+                            conn,
+                            writes,
                             "INSERT OR IGNORE INTO datapoint_type (id, main, sub, name, text)
                              VALUES (?1, ?2, NULL, ?3, ?4)",
                             params![a.get("Id"), main, a.get("Name"), a.get("Text")],
                         )?;
+                        last_write = Some(written);
                         if written == 0 {
                             dropped_datapoint_types = dropped_datapoint_types
                                 .checked_add(1)
@@ -327,7 +392,9 @@ pub(crate) fn ingest_master_data_detailed(
                             DATAPOINT_SUBTYPE_ATTRS,
                         );
                         if let Some(main) = current_main {
-                            let written = conn.execute(
+                            let written = execute(
+                                conn,
+                                writes,
                                 "INSERT OR IGNORE INTO datapoint_type (id, main, sub, name, text)
                                  VALUES (?1, ?2, ?3, ?4, ?5)",
                                 params![
@@ -338,6 +405,7 @@ pub(crate) fn ingest_master_data_detailed(
                                     a.get("Text"),
                                 ],
                             )?;
+                            last_write = Some(written);
                             if written == 0 {
                                 dropped_datapoint_types = dropped_datapoint_types
                                     .checked_add(1)
@@ -372,7 +440,9 @@ pub(crate) fn ingest_master_data_detailed(
                         } else {
                             a.get("Id").map(str::to_string)
                         };
-                        conn.execute(
+                        last_write = Some(execute(
+                            conn,
+                            writes,
                             "INSERT OR IGNORE INTO function_type (id, number, text, status)
                              VALUES (?1, ?2, ?3, ?4)",
                             params![
@@ -381,7 +451,7 @@ pub(crate) fn ingest_master_data_detailed(
                                 a.get("Text"),
                                 a.get("Status"),
                             ],
-                        )?;
+                        )?);
                     }
                     "FunctionPoint" => {
                         report_unknown_attrs(
@@ -396,7 +466,7 @@ pub(crate) fn ingest_master_data_detailed(
                         // has no parent to key its foreign key on, so it is
                         // skipped rather than stored half-addressed.
                         if let Some(function_type_id) = current_function_type.as_deref() {
-                            conn.execute(
+                            last_write = Some(execute(conn, writes,
                                 "INSERT OR IGNORE INTO function_point
                                      (id, function_type_id, datapoint_type, role, characteristics, text)
                                  VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
@@ -408,7 +478,7 @@ pub(crate) fn ingest_master_data_detailed(
                                     a.get("Characteristics"),
                                     a.get("Text"),
                                 ],
-                            )?;
+                            )?);
                         }
                     }
                     "SpaceUsage" => {
@@ -418,13 +488,63 @@ pub(crate) fn ingest_master_data_detailed(
                             &a,
                             SPACE_USAGE_ATTRS,
                         );
-                        conn.execute(
+                        last_write = Some(execute(
+                            conn,
+                            writes,
                             "INSERT OR IGNORE INTO space_usage (id, number, text)
                              VALUES (?1, ?2, ?3)",
                             params![a.get("Id"), parse_i64(a.get("Number")), a.get("Text")],
-                        )?;
+                        )?);
                     }
                     _ => {}
+                }
+                if let Some(family) = family {
+                    if declarations.len() >= master_provenance::MAX_MASTER_DECLARATIONS {
+                        return Err(master_provenance::error(
+                            "master declaration budget exceeded",
+                        ));
+                    }
+                    let missing_id = a.get("Id").is_none();
+                    let observed_write = if writes && !missing_id && !orphan_parent {
+                        let written = last_write.ok_or_else(|| {
+                            master_provenance::error("missing master insert evidence")
+                        })?;
+                        if written == 0 {
+                            let exists: bool = conn.query_row(
+                                &format!(
+                                    "SELECT EXISTS(SELECT 1 FROM {} WHERE id=?1)",
+                                    family.as_str()
+                                ),
+                                [a.get("Id")],
+                                |r| r.get(0),
+                            )?;
+                            if !exists {
+                                return Err(master_provenance::error(
+                                    "unexplained master insert suppression",
+                                ));
+                            }
+                        }
+                        Some(written > 0)
+                    } else {
+                        None
+                    };
+                    declarations.push(MasterDeclaration {
+                        source_sha256: source_sha256.clone(),
+                        ordinal: declarations.len() as u32 + 1,
+                        family,
+                        element: name.clone(),
+                        logical_id: a.get("Id").map(str::to_owned),
+                        xml_path: format!("/{}/{}", parents.join("/"), name),
+                        byte_start: u32::try_from(byte_start)
+                            .map_err(|_| master_provenance::error("master byte offset overflow"))?,
+                        byte_end: u32::try_from(byte_end)
+                            .map_err(|_| master_provenance::error("master byte offset overflow"))?,
+                        main_number,
+                        function_type_id,
+                        missing_id,
+                        orphan_parent,
+                        observed_write,
+                    });
                 }
                 if !is_self_closing {
                     parents.push(name);
@@ -437,16 +557,27 @@ pub(crate) fn ingest_master_data_detailed(
     // and `Hardware.xml`'s own `Languages` blocks (`ingest.rs`):
     // `knx_master.xml` carries no owning element to key its translations to,
     // so `TranslationScope::Master` uses the empty-string sentinel instead.
-    let translations = ingest_translations(conn, TranslationScope::Master, source_path, bytes)?;
-    let uninterpreted_subtrees = uninterpreted_master_subtrees(bytes)?;
+    let translations = if writes {
+        ingest_translations(conn, TranslationScope::Master, source_path, bytes)?
+    } else {
+        0
+    };
+    let uninterpreted_subtrees = if writes {
+        uninterpreted_master_subtrees(bytes)?
+    } else {
+        Vec::new()
+    };
     let mut unknown = unknown.into_vec();
     unknown.extend(language_unknowns);
     Ok(DetailedMasterIngest {
+        declarations,
         uninterpreted_subtrees,
         outcome: MasterIngest {
             unknown,
             translations,
             dropped_datapoint_types,
+            source_sha256,
+            diagnostics: Vec::new(),
         },
         entities,
         master_sections_read,

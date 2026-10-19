@@ -371,7 +371,7 @@ fn v18_upgrade_rederives_source_fields_without_rewriting_the_measured_zero_insta
     // (ADR-0081), v22 (ADR-0094, additive tables), v23 (ADR-0126, two
     // columns), v24 (ADR-0139, two columns), v25 (census 3, placement and
     // enumeration columns) and v26 (ADR-0146, unknown-row identity) keep it.
-    assert_eq!(knx_productdb::CURRENT_PRODUCTDB_VERSION, 26);
+    assert_eq!(knx_productdb::CURRENT_PRODUCTDB_VERSION, 27);
 }
 
 #[test]

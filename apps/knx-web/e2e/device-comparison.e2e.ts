@@ -1,5 +1,5 @@
 /** P4: real App gestures with strictly intercepted, fictional device comparisons only. */
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { join } from "node:path";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
 import type { DeviceNode } from "../src/bindings/DeviceNode";
@@ -26,8 +26,8 @@ function result(binding: ComparisonBinding, address: string): BoundDeviceCompari
   const different = binding.deviceId === 2;
   return { ...binding, address, deviceName: `Fictional device ${binding.deviceId}`, programId: "Fictional application",
     written: false, partial: false, mask: 0x0701, manufacturer: 0x83, loadStates: [{ machine: "ApplicationProgram", state: "Loaded" }],
-    octets: 3, differingOctets: different ? 1 : 0, same: !different, outdated: false,
-    changes: different ? [{ address: 0x4003, segment: "Addresses", project: [3], device: [4] }] : [],
+    octets: different ? 6 : 3, differingOctets: different ? 1 : 0, same: !different, outdated: false,
+    changes: different ? [{ address: 0x4004, segment: "Addresses", project: [3], device: [4] }] : [],
     decoded: [
       { kind: "groupAddress", label: "1", address: 0x4003, project: "2/2/3", device: different ? "2/2/4" : "2/2/3", reason: null },
       { kind: "association", label: "0", address: 0x4101, project: "TSAP 1 → 2/2/3 · object 7", device: `TSAP 1 → ${different ? "2/2/4" : "2/2/3"} · object 7`, reason: null },
@@ -35,6 +35,12 @@ function result(binding: ComparisonBinding, address: string): BoundDeviceCompari
       { kind: "parameter", label: "Room text · R-Text · bit 0 / 48", address: 0x4410, project: "Grüß", device: different ? "5 € ok" : "Grüß", reason: null },
       { kind: "parameter", label: "Unknown encoding · R-Unknown · bit 0 / 16", address: 0x4420, project: "12", device: null, reason: "parameterNotDecoded" },
       { kind: "raw", label: "", address: 0x4003, project: "12 03 A5", device: different ? "12 04 A5" : "12 03 A5", reason: null },
+      // WP-18: an equal decoded row and an equal raw range are hidden by default; an unread range is not.
+      ...different ? [
+        { kind: "groupAddress", label: "2", address: 0x4005, project: "2/2/5", device: "2/2/5", reason: null },
+        { kind: "raw", label: "", address: 0x4400, project: "EB 00", device: "EB 00", reason: null },
+        { kind: "raw", label: "", address: 0x4500, project: null, device: "5A", reason: null },
+      ] : [],
     ] };
 }
 async function intercept(page: Page, language: "en" | "de", mode: "normal" | "busy" | "held" = "normal") {
@@ -81,6 +87,45 @@ async function open(page: Page, language: "en" | "de") {
   await page.keyboard.press("Control+Shift+P"); await page.getByRole("combobox").fill(m["workbench.devices"]);
   await page.getByRole("combobox").press("Enter"); await expect(page.locator(".devices-workspace")).toBeVisible();
 }
+/** WP-18: marked bytes, the differences-only default and the toggle revealing every read range. */
+async function differencesOnly(page: Page, dialog: Locator, language: "en" | "de", width: number) {
+  const m = language === "en" ? en : de;
+  expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe(language === "en" ? "graphite" : "porcelain");
+  const table = dialog.locator(".comparison-decoded");
+  const raw = () => table.locator("tbody tr.comparison-raw td.mono").allTextContents();
+  expect(await raw()).toEqual(["4003h", "4500h"]);
+  await expect(dialog.locator(".comparison-hidden")).toHaveText(m["compare.hiddenEqual.other"].replace("{count}", "2"));
+  const differing = table.locator("tbody tr.comparison-raw").filter({ hasText: "4003h" });
+  for (const [cell, text] of [[0, "03"], [1, "04"]] as const) {
+    await expect(differing.locator("td").nth(cell).locator('[data-mark="different"]')).toHaveText(text);
+    await expect(differing.locator("td").nth(cell).locator('[data-mark="equal"]')).toHaveText(["12", "A5"]);
+  }
+  await expect(differing.locator(".comparison-byte-count")).toHaveText(m["compare.bytesDifferent.one"].replace("{count}", "1"));
+  // Without colour: weight and a solid underline for differing, italic and a dotted underline for unread.
+  const mark = differing.locator('[data-mark="different"]').first();
+  expect(await mark.evaluate((el) => [getComputedStyle(el).fontWeight, getComputedStyle(el).textDecorationLine])).toEqual(["700", "underline"]);
+  const unread = table.locator("tbody tr.comparison-raw").filter({ hasText: "4500h" });
+  await expect(unread.locator("td").nth(0)).toHaveText(m["compare.unknown"]);
+  const unknown = unread.locator('[data-mark="unknown"]');
+  await expect(unknown).toHaveText("5A");
+  expect(await unknown.evaluate((el) => [getComputedStyle(el).fontStyle, getComputedStyle(el).textDecorationStyle])).toEqual(["italic", "dotted"]);
+  await dialog.locator(".comparison-decoded").scrollIntoViewIfNeeded();
+  await capture(page, `differences-${language}-${width}`);
+  const toggle = dialog.getByRole("checkbox", { name: m["compare.showEqual"].replace("{count}", "2"), exact: true });
+  await toggle.check();
+  expect(await raw()).toEqual(["4003h", "4400h", "4500h"]);
+  await expect(table.locator("tbody tr").filter({ hasText: "2/2/5" })).toHaveCount(1);
+  await expect(dialog.locator(".comparison-hidden")).toHaveCount(0);
+  // Column-width contract: header and body cells stay aligned in the filtered table.
+  for (const column of [0, 1, 2, 3]) {
+    const header = await table.locator("thead th").nth(column).boundingBox();
+    const cell = await table.locator("tbody tr").first().locator("th, td").nth(column).boundingBox();
+    expect(Math.abs(header!.x - cell!.x)).toBeLessThan(1); expect(Math.abs(header!.width - cell!.width)).toBeLessThan(1);
+  }
+  await capture(page, `all-rows-${language}-${width}`);
+  await toggle.uncheck();
+  expect(await raw()).toEqual(["4003h", "4500h"]);
+}
 async function capture(page: Page, name: string) {
   if (process.env.KNX_COMPARE_CAPTURE_DIR) {
     const mode = test.info().config.configFile?.endsWith("playwright.devices.config.ts") ? "production" : "development";
@@ -116,6 +161,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await expect(dialog.locator(".comparison-decoded")).toContainText("5 € ok");
     await expect(dialog.locator(".comparison-decoded .comparison-reason")).toHaveText(m["compare.parameterNotDecoded"]);
     await expect(dialog.locator(".comparison-tag-synced")).toHaveCSS("background-color", await dialog.evaluate((el) => getComputedStyle(el).backgroundColor));
+    await differencesOnly(page, dialog, language, width);
     const box = await dialog.boundingBox(); expect(box!.x).toBeGreaterThanOrEqual(0); expect(box!.x + box!.width).toBeLessThanOrEqual(width + 1);
     expect(box!.y + box!.height).toBeLessThanOrEqual(884);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);

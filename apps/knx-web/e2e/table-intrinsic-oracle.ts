@@ -70,6 +70,8 @@ export async function intrinsicFloors(table: Locator, retained: number[] = []) {
   }, retained);
 }
 
+const DEVICES_COLUMNS = 13;
+
 export async function assertFloorOverflow(table: Locator, floors: number[], reviewedTotal: number) {
   const { actual, scale } = await table.locator("thead th").evaluateAll(cells => {
     const configured = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--app-ui-scale"));
@@ -83,8 +85,10 @@ export async function assertFloorOverflow(table: Locator, floors: number[], revi
   // Bound those differences AND pin the independently reviewed fixture total:
   // even small inflation of an already overflowing floor must fail.
   // Allow one Chromium geometry subpixel after undoing root zoom.
+  // The devices table (selection + 12 text columns since WP-20's System) is
+  // the only checked table whose first column is a selection checkbox.
   const subpixel = 1 / 64 / scale;
   actual.forEach((width, i) => expect(Math.abs(width - floors[i]), `column ${i}: rendered ${width}, intrinsic ${floors[i]}`)
-    .toBeLessThanOrEqual((i === 0 && floors.length === 12 ? 12 : 8) + subpixel));
+    .toBeLessThanOrEqual((i === 0 && floors.length === DEVICES_COLUMNS ? 12 : 8) + subpixel));
   expect(Math.abs(actual.reduce((a, b) => a + b, 0) - reviewedTotal), "reviewed compact Porcelain fixture budget").toBeLessThanOrEqual(2);
 }

@@ -122,7 +122,8 @@ async function fixture(page: Page, options: Options): Promise<Fixture> {
     if (path === "/api/bus/discover" && method === "POST") { f.discover += 1; return ok({ interfaces: options.gateways ?? [] }); }
     if (path === "/api/devices" && method === "GET") return ok({ schemaVersion: 1, serverIncarnation: "ga-members-browser", snapshotRevision: revision,
       devices: Object.values(DEVICES).map((device) => ({ id: device.id, device, productRef: null, resolution: "NoReference", manufacturerId: null,
-        manufacturerName: null, productText: null, orderNumber: null, productTextLanguage: null, productSourceLanguage: null })), problem: null });
+        manufacturerName: null, productText: null, orderNumber: null, productTextLanguage: null, productSourceLanguage: null,
+        system: { state: "noProduct" } })), problem: null });
     if (/^\/api\/device\/\d+$/.test(path) && method === "GET") { f.reads.push(path); return ok(detail(Number(path.split("/").at(-1)), links)); }
     if (/^\/api\/device\/\d+\/parameters$/.test(path) && method === "GET") return ok({ programId: null, sections: [], stale: [], diagnostics: [] });
     if (path === "/api/group-links" && (method === "POST" || method === "DELETE")) {

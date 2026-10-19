@@ -12,6 +12,28 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## System column in the Devices list, from one cited mask table (19 October 2026)
+
+Owner request (WP-20): the Devices list names each device's KNX system family.
+One table in `knx-core` (`system_family`, 37 rows) maps the mask version that
+the application program **declares** in the product database to System 1,
+System 2, System 7, System B or another profile under its own name (System 300,
+Coupler, KNXnet/IP router, USB interface, IR decoder, RF uni-/bidirectional).
+Every row was checked against the original KNX pages (Resources Table 7,
+Profiles Table 1, the mask 2705h/27B0h/2920h profiles); rows with a single
+source say so in the code and the
+[research note](research/2026-10-19-mask-version-system-family.md).
+`0AFDh`/`0AFEh` and unlisted neighbours stay *Unknown (mask XXXXh)*.
+
+`GET /api/devices` adds a closed `system` state per row: no product, no
+application program, program not installed, program of other hardware, no mask,
+unreadable mask, unknown mask or family. A program link to other hardware is
+not called "no application program". The client requires the field on every
+row and admits it strictly (a missing or `null` state refuses the batch), and
+the new *System* column sorts and filters by the shown label or the mask
+(`0701h`), in English and German. A mask read from a device is not used.
+[Guide](manual/user-guide/05-devices-and-products.md#system-column-source-builds-after-alpha-14).
+
 ## Package gates keep their hands off the developer's knx directories (19 October 2026)
 
 Acceptance follow-up: full gate 4 on `a86cb1f9` stopped at one browser test

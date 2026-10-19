@@ -24,6 +24,7 @@ export const metadata = (node: DeviceNode): DeviceCatalogRow => ({
   id: node.id, device: node, productRef: "P-1", resolution: "Resolved",
   manufacturerId: "M-1", manufacturerName: "Fictional Devices", productText: "Switch actuator",
   orderNumber: "SA-4", productTextLanguage: null, productSourceLanguage: null,
+  system: { state: "family", mask: 0x07b0, family: "systemB" },
 });
 const batch = (rows: DeviceCatalogRow[] = []): DeviceCatalog => ({
   schemaVersion: 1, serverIncarnation: "devices-test", snapshotRevision: 1, devices: rows,
@@ -59,7 +60,7 @@ describe("device list", () => {
     const rows = projectDeviceRows(deviceTree(), [metadata(device(2))]);
     expect(visibleDeviceRows(rows, query, { column: "name", descending: false }, "en").map((row) => row.id)).toEqual([2]);
   });
-  it.each(["name", "manufacturer", "product", "orderNumber", "topology", "building", "com_object_count", "description", "programming"] as DeviceSortColumn[])("sorts column %s without dropping devices", (column) => {
+  it.each(["name", "manufacturer", "product", "orderNumber", "topology", "building", "com_object_count", "description", "programming", "system"] as DeviceSortColumn[])("sorts column %s without dropping devices", (column) => {
     expect(visibleDeviceRows(projectDeviceRows(deviceTree()), "", { column, descending: false }, "en")).toHaveLength(2);
   });
   it("sorts by how much is pending and filters to devices with pending parts (ADR-0129)", () => {
@@ -79,6 +80,27 @@ describe("device list", () => {
     expect(visibleDeviceRows(rows, "Device 1", byName, "en", { pendingOnly: true }).map((row) => row.id)).toEqual([11]);
     expect(visibleDeviceRows(rows, "", byName, "en", { pendingOnly: false })).toHaveLength(4);
   });
+  it("sorts and filters the System column through the shown label and declared mask (WP-20)", () => {
+    const tree = deviceTree();
+    tree.installations[0].unassigned.push(device(11), device(12));
+    const systems: Record<number, DeviceCatalogRow["system"]> = {
+      2: { state: "family", mask: 0x07b0, family: "systemB" },
+      10: { state: "family", mask: 0x0012, family: "system1" },
+      11: { state: "unknownMask", mask: 0x0afd },
+      12: { state: "family", mask: 0x0701, family: "system7" },
+    };
+    const rows = projectDeviceRows(tree, [2, 10, 11, 12].map((id) => ({ ...metadata(device(id)), system: systems[id] })));
+    const labels: Record<number, string> = { 2: "System B", 10: "System 1", 11: "Unknown (mask 0AFDh)", 12: "System 7" };
+    const systemText = (row: { id: number }) => labels[row.id];
+    const sort = (descending: boolean) => ({ column: "system" as const, descending });
+    expect(visibleDeviceRows(rows, "", sort(false), "en", { systemText }).map((row) => row.id)).toEqual([10, 12, 2, 11]);
+    expect(visibleDeviceRows(rows, "", sort(true), "en", { systemText }).map((row) => row.id)).toEqual([11, 2, 12, 10]);
+    const byName = { column: "name" as const, descending: false };
+    expect(visibleDeviceRows(rows, "system b", byName, "en", { systemText }).map((row) => row.id)).toEqual([2]);
+    expect(visibleDeviceRows(rows, "unknown", byName, "en", { systemText }).map((row) => row.id)).toEqual([11]);
+    expect(visibleDeviceRows(rows, "0701h", byName, "en", { systemText }).map((row) => row.id)).toEqual([12]);
+    expect(visibleDeviceRows(rows, "0afd", byName, "en").map((row) => row.id)).toEqual([11]);
+  });
   it("keeps 5000 devices and derives/filter/sorts their rows without quadratic placement lookup", () => {
     const tree = deviceTree(); tree.installations[0].buildings = [];
     tree.installations[0].unassigned = Array.from({ length: 5000 }, (_, i) => device(i + 1, null));
@@ -93,7 +115,8 @@ describe("device catalogue admission", () => {
   it("admits explicit lookup failure while retaining canonical device identities", () => {
     const row = metadata(device(99));
     const unavailable = { ...row, resolution: "Unavailable" as const, manufacturerId: null,
-      manufacturerName: null, productText: null, orderNumber: null, productTextLanguage: null, productSourceLanguage: null };
+      manufacturerName: null, productText: null, orderNumber: null, productTextLanguage: null, productSourceLanguage: null,
+      system: { state: "noProduct" as const } };
     expect(admitDeviceCatalog({ ...batch([unavailable]), problem: "lookupFailed" }).devices[0].device.id).toBe(99);
   });
 
@@ -103,6 +126,33 @@ describe("device catalogue admission", () => {
       pending_programming: { address: false, application: true, parameters: false, group_addresses: false } });
     expect(admitDeviceCatalog(batch([reported]))).toEqual(batch([reported]));
     expect(catalogueMatchesTree(batch(), deviceTree())).toBe(true);
+  });
+  it("admits each declared system state with a consistent product resolution (WP-20)", () => {
+    for (const system of [{ state: "family", mask: 0x0701, family: "system7" }, { state: "unknownMask", mask: 0x0afd },
+      { state: "noMaskVersion" }, { state: "invalidMask", declared: "MV-07" }, { state: "noApplicationProgram" },
+      { state: "applicationNotInDatabase" }, { state: "applicationNotOfProduct" }] as const) {
+      const row = { ...metadata(device(2)), system };
+      expect(admitDeviceCatalog(batch([row]))).toEqual(batch([row]));
+    }
+    const row = metadata(device(2));
+    const missing = { ...row, resolution: "NotInDatabase" as const, manufacturerId: null, manufacturerName: null,
+      productText: null, orderNumber: null, system: { state: "noProduct" as const } };
+    expect(admitDeviceCatalog(batch([missing]))).toEqual(batch([missing]));
+  });
+  it("refuses a batch in which one row or every row omits the declared system (WP20-01)", () => {
+    // The web client ships with its server: there is no older server whose rows lack `system`.
+    const bare = (id: number) => { const row: Record<string, unknown> = { ...metadata(device(id)) }; delete row.system; return row; };
+    expect(() => admitDeviceCatalog(batch([metadata(device(2))]))).not.toThrow();
+    expect(() => admitDeviceCatalog({ ...batch(), devices: [metadata(device(2)), bare(10)] }))
+      .toThrow("Invalid device catalogue batch");
+    expect(() => admitDeviceCatalog({ ...batch(), devices: [bare(2), bare(10)] })).toThrow("Invalid device catalogue batch");
+    const unresolved = { ...bare(10), resolution: "NoReference", productRef: null, manufacturerId: null, manufacturerName: null,
+      productText: null, orderNumber: null };
+    expect(() => admitDeviceCatalog({ ...batch(), devices: [unresolved] })).toThrow("Invalid device catalogue batch");
+  });
+  it("refuses a row whose declared system is null (WP20-01)", () => {
+    expect(() => admitDeviceCatalog({ ...batch(), devices: [{ ...metadata(device(2)), system: null }] }))
+      .toThrow("Invalid device catalogue batch");
   });
   it("rejects old/future/wrong-server metadata for the current tree", () => {
     expect(catalogueMatchesTree({ ...batch(), snapshotRevision: 0 }, deviceTree())).toBe(false);
@@ -116,6 +166,12 @@ describe("device catalogue admission", () => {
     { ...batch(), devices: [{ ...metadata(device(2)), manufacturerName: 12 }] },
     { ...batch(), devices: [{ ...metadata(device(2)), resolution: "NoDatabase" }] },
     { ...batch(), devices: [metadata({ ...device(2), pending_programming: { address: true } as never })] },
+    { ...batch(), devices: [{ ...metadata(device(2)), system: { state: "family", mask: 0x0701, family: "system9" } }] },
+    { ...batch(), devices: [{ ...metadata(device(2)), system: { state: "unknownMask", mask: 0x10000 } }] },
+    { ...batch(), devices: [{ ...metadata(device(2)), system: null }] },
+    { ...batch(), devices: [{ ...metadata(device(2)), system: { state: "noProduct" } }] },
+    { ...batch(), devices: [{ ...metadata(device(2)), resolution: "NoDatabase", manufacturerId: null, manufacturerName: null,
+      productText: null, orderNumber: null, system: { state: "family", mask: 0x0701, family: "system7" } }] },
   ])("refuses malformed, unknown or conflicting batches", (value) => {
     expect(() => admitDeviceCatalog(value)).toThrow("device catalogue");
   });

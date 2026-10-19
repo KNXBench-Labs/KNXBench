@@ -325,11 +325,13 @@ describe("one editing workspace", () => {
     // The exact API and project-mutation inventories below stay unchanged.
     // P3 (ADR-0129) adds `programmingState.ts`: pure reading of a device
     // node's pending parts; its only `api` import is type-only.
+    // WP-20 adds `deviceSystem.ts`: pure admission and labels of the
+    // server's declared system-family state; its only import is type-only.
     const deviceListGraph = valueImportGraph("deviceList.ts");
-    expect([...deviceListGraph.keys()].sort()).toEqual(["deviceList.ts", "programmingState.ts", "treeUtils.ts"]);
+    expect([...deviceListGraph.keys()].sort()).toEqual(["deviceList.ts", "deviceSystem.ts", "programmingState.ts", "treeUtils.ts"]);
     expect(apiCallsIn(deviceListGraph)).toEqual([]);
     expect(mutatingFetchesIn(deviceListGraph)).toEqual([]);
-    for (const module of ["DeviceLink.tsx", "deviceList.ts", "programmingState.ts", "treeUtils.ts"]) {
+    for (const module of ["DeviceLink.tsx", "deviceList.ts", "deviceSystem.ts", "programmingState.ts", "treeUtils.ts"]) {
       expect(graph.get(module)).not.toMatch(/\b(?:fetch|XMLHttpRequest|WebSocket|EventSource)\s*\(/);
     }
     // The project-status import links add `importFindings.ts` through the
@@ -399,6 +401,7 @@ describe("one editing workspace", () => {
       "busMonitorStatistics.ts",
       "canonicalJson.ts",
       "deviceList.ts",
+      "deviceSystem.ts",
       "diagnosticsWindow.ts",
       "dptLabels.ts",
       "filePicker.ts",

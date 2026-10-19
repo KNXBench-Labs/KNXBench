@@ -57,8 +57,8 @@ it.each(["en", "de"] as const)("%s compact location, topology and programming la
   await render();
   const headings = host.querySelectorAll("thead th");
   for (const [index, label, full] of language === "de"
-    ? [[3, "Prog.", "Programmierung"], [7, "Topologie", "Installation / KNX-Linie"], [8, "Ort", "Installation / Gebäude / Raum"]] as const
-    : [[3, "Prog.", "Programming"], [7, "Topology", "Installation / KNX line"], [8, "Location", "Installation / building / room"]] as const) {
+    ? [[3, "Prog.", "Programmierung"], [8, "Topologie", "Installation / KNX-Linie"], [9, "Ort", "Installation / Gebäude / Raum"]] as const
+    : [[3, "Prog.", "Programming"], [8, "Topology", "Installation / KNX line"], [9, "Location", "Installation / building / room"]] as const) {
     const button = headings[index].querySelector("button")!;
     expect(button.querySelector(".table-column-label")!.textContent).toBe(label);
     expect(button.getAttribute("aria-label")).toBe(full);
@@ -117,7 +117,8 @@ it("marks untranslated product text when a product language was requested", asyn
   await act(async () => setSetting("productLanguage", "de"));
   apiMock.deviceCatalog.mockResolvedValue({ ...batch, devices: [{ id: 2, device: tree.installations[0].unassigned[0],
     productRef: "P-1", resolution: "Resolved", manufacturerId: "M-1", manufacturerName: null,
-    productText: "Package product text", orderNumber: null, productTextLanguage: null, productSourceLanguage: "en-US" }] });
+    productText: "Package product text", orderNumber: null, productTextLanguage: null, productSourceLanguage: "en-US",
+    system: { state: "family", mask: 0x07b0, family: "systemB" } }] });
   await render();
   expect(host.querySelector(".language-fallback-badge")?.textContent).toContain("en-US");
 });
@@ -177,6 +178,8 @@ it("keeps project devices visible and explicitly reports a refused metadata read
   await render(); expect(host.querySelector('[role="alert"]')?.textContent).toContain("database unavailable");
   expect(host.querySelectorAll("tbody tr")).toHaveLength(2);
   expect(host.textContent).toContain("Not resolved");
+  // Without metadata the System cell says so too, like its sibling product columns (WP20-01).
+  expect([...host.querySelectorAll("tbody tr")].map((row) => row.querySelectorAll("td")[7].textContent)).toEqual(["Not resolved", "Not resolved"]);
 });
 it("discards a delayed catalogue from a previous project snapshot", async () => {
   let resolve!: (value: DeviceCatalog) => void;
@@ -228,4 +231,39 @@ it("shows pending parts as chips and narrows to pending devices on request (ADR-
   expect(host.querySelectorAll("tbody tr")).toHaveLength(3);
 });
 
-tableColumnSmoke([["devices", 12]], async () => { await render(); return { host }; });
+it.each(["en", "de"] as const)("%s System column shows the declared family, explicit states, sorts and filters (WP-20)", async language => {
+  await act(async () => setSetting("uiLanguage", language));
+  const unassigned = [2, 3, 4, 5, 6, 10].map((id) => ({ id, name: `Device ${id}`, address: `1.1.${id}`, description: null, com_object_count: 0 }));
+  const project: ProjectTree = { ...tree, installations: [{ ...tree.installations[0], unassigned }] };
+  const resolved = { productRef: "P-1", resolution: "Resolved" as const, manufacturerId: "M-1", manufacturerName: null,
+    productText: null, orderNumber: null, productTextLanguage: null, productSourceLanguage: null };
+  const systems: Record<number, DeviceCatalog["devices"][number]["system"]> = {
+    2: { state: "family", mask: 0x07b0, family: "systemB" }, 3: { state: "family", mask: 0x0012, family: "system1" },
+    4: { state: "unknownMask", mask: 0x0afd }, 5: { state: "noApplicationProgram" }, 6: { state: "family", mask: 0x0300, family: "system300" },
+  };
+  apiMock.deviceCatalog.mockResolvedValue({ ...batch, devices: [
+    ...unassigned.filter((device) => device.id !== 10).map((device) => ({ id: device.id, device, ...resolved, system: systems[device.id] })),
+    { id: 10, device: unassigned[5], productRef: null, resolution: "NoReference", manufacturerId: null, manufacturerName: null,
+      productText: null, orderNumber: null, productTextLanguage: null, productSourceLanguage: null, system: { state: "noProduct" } },
+  ] });
+  await render(true, project);
+  const header = host.querySelectorAll("thead th")[7];
+  const button = header.querySelector("button")!;
+  expect(button.getAttribute("aria-label")).toBe("System");
+  expect(header.getAttribute("aria-sort")).toBe("none");
+  const cells = () => Object.fromEntries([...host.querySelectorAll("tbody tr")]
+    .map((row) => [row.getAttribute("data-rename-id"), row.querySelectorAll("td")[7].textContent]));
+  const de = language === "de";
+  expect(cells()).toEqual({ 2: "System B", 3: "System 1", 4: de ? "Unbekannt (Maske 0AFDh)" : "Unknown (mask 0AFDh)",
+    5: de ? "Kein Applikationsprogramm" : "No application program", 6: "System 300", 10: de ? "Keine Produktreferenz" : "No product reference" });
+  const first = host.querySelector("tbody tr")!.querySelectorAll("td")[7];
+  expect(first.getAttribute("title")).toBe(de ? "Deklarierte Maskenversion 07B0h (Produktdatenbank)" : "Declared mask version 07B0h (product database)");
+  await act(async () => button.click());
+  expect(header.getAttribute("aria-sort")).toBe("ascending");
+  const order = () => [...host.querySelectorAll("tbody tr")].map((row) => row.getAttribute("data-rename-id"));
+  expect(order()).toEqual(["5", "10", "3", "6", "2", "4"]);
+  await query("system b"); expect(order()).toEqual(["2"]);
+  await query("0afd"); expect(order()).toEqual(["4"]);
+});
+
+tableColumnSmoke([["devices", 13]], async () => { await render(); return { host }; });

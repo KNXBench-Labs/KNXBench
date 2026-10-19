@@ -152,6 +152,76 @@ class BrowserLaneGuardTests(unittest.TestCase):
         for header, call in cases.items():
             self.assertEqual(len(scan(header + UNTAGGED_CALL % call, helpers)), 1, header)
 
+    def test_same_file_object_and_class_methods_taint_their_member_calls(self) -> None:
+        source = ('const h = {\n  async wait(page) { await page.waitForTimeout(1); },\n'
+                  '  pause: async (page) => { await page.waitForTimeout(1); },\n};\n'
+                  'class Clock {\n  async rest(page) { await page.waitForTimeout(1); }\n'
+                  '  async twice(page) { await this.rest(page); }\n}\n'
+                  'test("a", async ({ page }) => {\n'
+                  '  await h.wait(page);\n'
+                  '  await h.pause(page);\n'
+                  '  await new Clock().twice(page);\n'
+                  '});\n')
+        self.assertEqual(scan(source), ['10:wait', '11:pause', '12:twice'])
+
+    def test_more_import_and_export_shapes_are_followed(self) -> None:
+        impl = 'export async function nap(page) {\n  await page.waitForTimeout(1);\n}\n'
+        helpers = {
+            'impl.ts': impl,
+            'deflt.ts': 'export default async function snooze(page) {\n  await page.waitForTimeout(1);\n}\n',
+            'ns.ts': 'export * as timing from "./impl";\n',
+            'named.ts': 'export { default as snooze } from "./deflt";\n',
+        }
+        cases = {
+            'import { timing } from "./ns";\n': 'timing.nap(page)',
+            'import { snooze } from "./named";\n': 'snooze(page)',
+            'const { nap } = await import("./impl");\n': 'nap(page)',
+            'import { default as snooze } from "./deflt";\n': 'snooze(page)',
+        }
+        for header, call in cases.items():
+            self.assertEqual(len(scan(header + UNTAGGED_CALL % call, helpers)), 1, header)
+
+    def test_a_side_effect_import_that_registers_a_waiting_hook_is_refused(self) -> None:
+        setup = 'import { test } from "@playwright/test";\ntest.beforeEach(async ({ page }) => {\n  await page.waitForTimeout(1);\n});\n'
+        self.assertEqual(scan('import "./setup";\ntest("a", async () => {});\n', {'setup.ts': setup}),
+                         ['setup.ts:3:waitForTimeout'])
+
+    def test_a_js_specifier_for_a_tsx_module_is_refused(self) -> None:
+        with self.assertRaises(ValueError):
+            scan('import { Page } from "./page.js";\ntest("a", async () => {});\n',
+                 {'page.tsx': 'export const Page = () => <div />;\n'})
+
+    def test_import_cycles_are_judged_the_same_in_any_order(self) -> None:
+        helpers = {
+            'b.ts': 'import { c } from "./c";\nexport async function b(page) {\n  await c(page);\n}\n',
+            'c.ts': ('import { b } from "./b";\nexport async function c(page) {\n  await page.waitForTimeout(1);\n}\n'
+                     'export async function d(page) {\n  await b(page);\n}\n'),
+        }
+        for header in ('import { b } from "./b";\nimport { c, d } from "./c";\n',
+                       'import { c, d } from "./c";\nimport { b } from "./b";\n'):
+            self.assertEqual(len(scan(header + UNTAGGED_CALL % 'b(page)', helpers)), 1, header)
+
+    def test_app_modules_outside_the_browser_tests_are_not_followed(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            app = Path(directory)
+            (app / 'e2e').mkdir()
+            (app / 'src').mkdir()
+            (app / 'src/toast.ts').write_text('export function add(x) {\n  return setTimeout(() => x, 5);\n}\n')
+            (app / 'e2e/spec.e2e.ts').write_text(
+                'import { add } from "../src/toast";\n'
+                'test("a", async () => {\n  const seen = new Set();\n  seen.add(1);\n});\n')
+            self.assertEqual(lanes.check_directory(app / 'e2e'), [])
+
+    def test_timer_forms_beyond_the_globals_count(self) -> None:
+        source = ('import { setTimeout as sleep } from "node:timers/promises";\n'
+                  'test("tagged", { tag: "@exclusive" }, async () => {\n  await sleep(5);\n});\n'
+                  'test("a", async () => {\n'
+                  '  await sleep(5);\n'
+                  '  await scheduler.wait(5);\n'
+                  '  const kind = typeof Date.now();\n'
+                  '});\n')
+        self.assertEqual(scan(source), ['6:sleep', '7:scheduler.wait', '8:Date.now'])
+
     def test_an_imported_tsx_module_is_refused(self) -> None:
         with self.assertRaises(ValueError):
             scan('import { Page } from "./page";\ntest("a", async () => {});\n',

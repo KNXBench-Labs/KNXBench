@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import dataclass
-import os
 from pathlib import Path
 import re
 import sys
@@ -23,6 +22,7 @@ TAG = '@exclusive'
 PRIMITIVE = re.compile(
     r'(?<![\w$])(?:performance\s*\.\s*now|Date\s*\.\s*now)\b'
     r'|(?<![\w$])new\s+Date\s*\(\s*\)\s*\.\s*(?:getTime|valueOf)\b'
+    r'|(?<![\w$])scheduler\s*\.\s*wait\b'
     r'|(?<![\w$])(?:waitForTimeout|requestAnimationFrame|setTimeout|setInterval)\b')
 CALL = re.compile(
     r'(?<![\w$.])test(?P<member>(?:\.(?:describe|serial|parallel|only|skip|fixme|fail|slow'
@@ -32,6 +32,12 @@ HOOKS = {'beforeEach', 'afterEach', 'beforeAll', 'afterAll'}
 IMPORT_FROM = re.compile(r'\b(?P<keyword>import|export)\s+(?P<type>type\s+)?(?P<clause>[^;"\'`]*?)\s*from\s*'
                          r'["\'](?P<path>\.[^"\']+)["\']')
 DYNAMIC_IMPORT = re.compile(r'\bimport\s*\(\s*["\'](?P<path>\.[^"\']+)["\']')
+SIDE_EFFECT = re.compile(r'\bimport\s*["\'](?P<path>\.[^"\']+)["\']')
+# Any import statement: primitives named in it are bindings, not uses.
+IMPORT_STATEMENT = re.compile(r'\bimport\s+[^;"\'`]*?\bfrom\s*["\'][^"\']+["\']')
+# Node's timer modules: their imports are real-time functions under any local name.
+NODE_TIMERS = re.compile(r'\bimport\s*\{(?P<names>[^}]*)\}\s*from\s*["\']node:timers(?:/promises)?["\']')
+TIMER_EXPORTS = {'setTimeout', 'setInterval', 'setImmediate', 'scheduler'}
 # Code handed to the page as a string runs there like a function body would.
 PAGE_CODE = re.compile(r'\.\s*(?:evaluate|evaluateHandle|addInitScript|waitForFunction)\s*\(\s*(?=["\'`])')
 NOT_METHODS = {'if', 'for', 'while', 'switch', 'catch', 'function', 'return', 'with', 'typeof',
@@ -296,23 +302,24 @@ def statement_end(code: str, start: int) -> int:
     return len(code)
 
 
-def functions(code: str) -> list[tuple[str, int, int]]:
+def functions(code: str) -> list[tuple[str, int, int, str]]:
     """Named functions at any depth: declarations, arrow bindings and properties, methods."""
     found = []
     for match in FUNCTION.finditer(code):
         params_end = matching(code, match.end() - 1)
         body = code.find('{', params_end)
         if body >= 0:
-            found.append((match.group('name'), match.start(), matching(code, body)))
+            found.append((match.group('name'), match.start(), matching(code, body), 'function'))
     for match in BINDING.finditer(code):
         name = match.group('name') or match.group('prop')
+        kind = 'function' if match.group('name') else 'member'
         k = match.end()
         if code.startswith('async', k) and not code[k + 5:k + 6].isalnum():
             k = len(code) - len(code[k + 5:].lstrip())
         if code.startswith('function', k):
             params = code.find('(', k)
             body = code.find('{', matching(code, params))
-            found.append((name, match.start(), matching(code, body)))
+            found.append((name, match.start(), matching(code, body), kind))
             continue
         if k < len(code) and code[k] == '(':
             k = matching(code, k) + 1
@@ -325,18 +332,18 @@ def functions(code: str) -> list[tuple[str, int, int]]:
             continue
         k += arrow.end()
         end = matching(code, k) if code[k:k + 1] == '{' else statement_end(code, k)
-        found.append((name, match.start(), end))
+        found.append((name, match.start(), end, kind))
     for match in METHOD.finditer(code):  # `name(params) {` in object literals and classes
         if match.group('name') in NOT_METHODS:
             continue
         close = matching(code, match.end() - 1)
         body = re.match(r'\s*(?::[^{;=()]+)?\{', code[close + 1:])
         if body:
-            found.append((match.group('name'), match.start(), matching(code, close + body.end())))
+            found.append((match.group('name'), match.start(), matching(code, close + body.end()), 'member'))
     return found
 
 
-def judge(module: Module, offset: int, spans: list[tuple[str, int, int]]) -> str:
+def judge(module: Module, offset: int, spans: list[tuple[str, int, int, str]]) -> str:
     """'ok' (tagged scope), 'helper:<name>' (judged at call sites) or 'finding'."""
     scopes = enclosing(module, offset)
     if any(s.exclusive for s in scopes):
@@ -370,28 +377,59 @@ def page_code(module: Module) -> list[tuple[int, str]]:
     return found
 
 
+def type_reference(module: Module, start: int, end: int) -> bool:
+    """`typeof setTimeout` in a type names the function; `typeof Date.now()` still calls it."""
+    if not re.search(r'\btypeof\s*$', module.code[max(0, start - 16):start]):
+        return False
+    return not re.match(r'\s*(?:\.\s*[\w$]+\s*)*\(', module.code[end:end + 60])
+
+
 def uses(module: Module, tainted: set[str], members: set[str] = frozenset()) -> list[tuple[int, str]]:
     """Primitives and calls of tainted functions; `members` also match as `x.name(`."""
-    found = [(m.start(), label(m.group(0))) for m in PRIMITIVE.finditer(module.code)
-             if module.code[m.start():m.end()] == module.source[m.start():m.end()]  # `new Date("…")` is fixed
-             and not re.search(r'\btypeof\s*$', module.code[max(0, m.start() - 16):m.start()])]  # a type
-    found.extend(page_code(module))
+    imports = [(m.start(), m.end()) for m in IMPORT_STATEMENT.finditer(module.source)
+               if module.code[m.start()] == module.source[m.start()]]
+    found: dict[int, str] = {}
+    for m in PRIMITIVE.finditer(module.code):
+        if module.code[m.start():m.end()] != module.source[m.start():m.end()]:
+            continue  # `new Date("…")` is a fixed date, not the clock
+        if type_reference(module, m.start(), m.end()) or any(a <= m.start() < b for a, b in imports):
+            continue
+        found.setdefault(m.start(), label(m.group(0)))
+    for offset, primitive in page_code(module):
+        found.setdefault(offset, primitive)
     for name in tainted:
-        found.extend((m.start(), name) for m in
-                     re.finditer(r'(?<![\w$.])' + re.escape(name) + r'\s*\(', module.code)
-                     if not module.code[:m.start()].rstrip().endswith('function'))
-    for name in members - tainted:
-        found.extend((m.start() + 1, name) for m in
-                     re.finditer(r'\.\s*' + re.escape(name) + r'\s*\(', module.code))
-    return sorted(found)
+        for m in re.finditer(r'(?<![\w$.])' + re.escape(name) + r'\s*\(', module.code):
+            if not module.code[:m.start()].rstrip().endswith('function'):
+                found.setdefault(m.start(), name)
+    for name in members:
+        for m in re.finditer(r'\.\s*' + re.escape(name) + r'\s*\(', module.code):
+            found.setdefault(m.start() + 1, name)
+    return sorted(found.items())
 
 
-def tainted_names(module: Module, imported: set[str], members: set[str] = frozenset()) -> set[str]:
-    """Functions whose bodies reach a primitive or a call of another tainted function."""
-    spans = functions(module.code)
-    tainted = set(imported)
+def timer_aliases(module: Module) -> set[str]:
+    aliases = set()
+    for match in NODE_TIMERS.finditer(module.source):
+        for part in match.group('names').split(','):
+            words = [w.strip() for w in part.split(' as ')]
+            if words[0] in TIMER_EXPORTS:
+                aliases.add(words[-1])
+    return aliases
+
+
+def tainted_names(module: Module, imported: set[str], members: set[str] = frozenset(),
+                  spans: list[tuple[str, int, int, str]] | None = None) -> set[str]:
+    """Functions whose bodies reach a primitive or a call of another tainted function.
+
+    Object properties and class methods of this module are called as members
+    (`h.wait()`, `this.rest()`), so once tainted they also match that way.
+    """
+    spans = functions(module.code) if spans is None else spans
+    own_members = {name for name, _, _, kind in spans if kind == 'member'}
+    tainted = set(imported) | timer_aliases(module)
     while True:
-        verdicts = {judge(module, offset, spans) for offset, _ in uses(module, tainted, members)}
+        calls = uses(module, tainted, set(members) | (tainted & own_members))
+        verdicts = {judge(module, offset, spans) for offset, _ in calls}
         grown = tainted | {v.split(':', 1)[1] for v in verdicts if v.startswith('helper:')}
         if grown == tainted:
             return tainted
@@ -407,24 +445,26 @@ def resolve(directory: Path, specifier: str) -> Path | None:
     target = directory / specifier
     script = {'.ts': ['.ts'], '.mts': ['.mts'], '.cts': ['.cts'],
               '.js': ['.ts', '.js'], '.mjs': ['.mts', '.mjs'], '.cjs': ['.cts', '.cjs']}
-    if target.suffix in ('.tsx', '.jsx'):
-        raise ValueError(f'imports {specifier}: a .tsx/.jsx module cannot be checked; '
+    refused = ValueError(f'imports {specifier}: a .tsx/.jsx module cannot be checked; '
                          'keep test-side helpers in .ts')
+    if target.suffix in ('.tsx', '.jsx'):
+        raise refused
     if target.suffix in script:
         candidates = [target.with_suffix(s) for s in script[target.suffix]]
+        jsx = [target.with_suffix('.tsx'), target.with_suffix('.jsx')]
     else:
-        for jsx in (target.with_name(target.name + '.tsx'), target / 'index.tsx'):
-            if jsx.is_file() and not target.with_name(target.name + '.ts').is_file():
-                raise ValueError(f'imports {specifier}: a .tsx module cannot be checked; '
-                                 'keep test-side helpers in .ts')
         candidates = [target.with_name(target.name + '.ts'), target / 'index.ts',
                       target.with_name(target.name + '.js')]
-    return next((c.resolve() for c in candidates if c.is_file()), None)
+        jsx = [target.with_name(target.name + '.tsx'), target / 'index.tsx']
+    found = next((c.resolve() for c in candidates if c.is_file()), None)
+    if found is None and any(j.is_file() for j in jsx):
+        raise refused
+    return found
 
 
 @dataclass
 class Reference:
-    keyword: str  # import | export | dynamic
+    keyword: str  # import | export | dynamic | side
     path: Path
     named: list[tuple[str, str]]  # (exported name, local name)
     default: str | None = None
@@ -432,11 +472,22 @@ class Reference:
     star: bool = False  # `export * from`
 
 
-def references(module: Module, directory: Path) -> list[Reference]:
+def references(module: Module, directory: Path, scope: Path) -> list[Reference]:
+    """Relative module references that stay inside `scope` (the browser-test tree).
+
+    Application modules (`../src/…`) run in the browser, or are data and
+    constants on the test side; the guard judges test code, not the app.
+    """
+    def inside(specifier: str) -> bool:
+        return (directory / specifier).resolve().is_relative_to(scope)
+
+    def code(offset: int) -> bool:
+        return module.code[offset] == module.source[offset]  # not in a comment or string
+
     found = []
     for match in IMPORT_FROM.finditer(module.source):
-        if module.code[match.start()] != module.source[match.start()]:
-            continue  # inside a comment or string
+        if not code(match.start()) or not inside(match.group('path')):
+            continue
         clause = match.group('clause').strip()
         names = re.search(r'\{([^}]*)\}', clause)
         if match.group('type') or (names and clause.startswith('{') and all(
@@ -446,8 +497,8 @@ def references(module: Module, directory: Path) -> list[Reference]:
         if path is None:
             continue
         named = []
-        if braces := re.search(r'\{([^}]*)\}', clause):
-            for part in braces.group(1).split(','):
+        if names:
+            for part in names.group(1).split(','):
                 words = part.replace('type ', '').split(' as ')
                 if words[0].strip():
                     named.append((words[0].strip(), words[-1].strip()))
@@ -457,72 +508,98 @@ def references(module: Module, directory: Path) -> list[Reference]:
                                default.group(1) if default and match.group('keyword') == 'import' else None,
                                namespace.group(1) if namespace else None,
                                clause == '*'))
-    for match in DYNAMIC_IMPORT.finditer(module.source):
-        if module.code[match.start()] != module.source[match.start()]:
-            continue
-        path = resolve(directory, match.group('path'))
-        if path is not None:
-            found.append(Reference('dynamic', path, []))
+    for pattern, keyword in ((DYNAMIC_IMPORT, 'dynamic'), (SIDE_EFFECT, 'side')):
+        for match in pattern.finditer(module.source):
+            if code(match.start()) and inside(match.group('path')):
+                path = resolve(directory, match.group('path'))
+                if path is not None:
+                    found.append(Reference(keyword, path, []))
     return found
 
 
 class Checker:
-    """Follows every module the specs load and remembers what each one taints."""
+    """Loads every test-side module the specs reach and solves their taint together.
+
+    The taint of all modules is computed as one fixed point, so an import
+    cycle gives the same answer whichever module a spec imports first.
+    """
 
     def __init__(self, e2e: Path) -> None:
         self.e2e = e2e.resolve()
-        self.taint: dict[Path, set[str]] = {}
-        self.findings: list[Finding] = []
+        self.modules: dict[Path, Module] = {}
+        self.refs: dict[Path, list[Reference]] = {}
+        self.spans: dict[Path, list[tuple[str, int, int, str]]] = {}
 
     def name(self, path: Path) -> str:
-        return os.path.relpath(path, self.e2e)
+        return path.relative_to(self.e2e).as_posix()
 
-    def imported(self, module: Module, directory: Path,
-                 visiting: frozenset) -> tuple[set[str], set[str], set[str]]:
+    def load(self, start: Path) -> None:
+        stack = [start.resolve()]
+        while stack:
+            path = stack.pop()
+            if path in self.modules:
+                continue
+            try:
+                module = parse(path.read_text(encoding='utf-8'))
+                self.refs[path] = references(module, path.parent, self.e2e)
+            except ValueError as error:
+                raise ValueError(f'{self.name(path)}: {error}') from error
+            self.modules[path] = module
+            self.spans[path] = functions(module.code)
+            stack.extend(ref.path for ref in self.refs[path])
+
+    def imported(self, path: Path, taint: dict[Path, set[str]]) -> tuple[set[str], set[str], set[str]]:
         """(tainted local names, tainted member names, names this module re-exports tainted)."""
         local, members, exported = set(), set(), set()
-        for ref in references(module, directory):
-            source = self.exported(ref.path, visiting)
-            if not source:
+        for ref in self.refs[path]:
+            source = taint[ref.path]
+            if ref.keyword == 'side' or not source:
                 continue
             members |= source
-            if ref.keyword == 'export':
-                exported |= source if ref.star else {alias for name, alias in ref.named if name in source}
+            if ref.keyword == 'dynamic':  # `const { x } = await import(…)`: any name may be bound
+                local |= source
                 continue
-            local |= {alias for name, alias in ref.named if name in source}
-            if ref.default:
-                local.add(ref.default)
+
+            def has(name: str) -> bool:
+                return name in source or name == 'default'  # a default export is judged conservatively
+
+            if ref.keyword == 'export':
+                if ref.star or ref.namespace:
+                    exported |= source
+                    if ref.namespace:
+                        exported.add(ref.namespace)
+                exported |= {alias for name, alias in ref.named if has(name)}
+                continue
+            local |= {alias for name, alias in ref.named if has(name)}
+            local |= {n for n in (ref.default, ref.namespace) if n}
         return local, members, exported
 
-    def exported(self, path: Path, visiting: frozenset = frozenset()) -> set[str]:
-        if path in self.taint:
-            return self.taint[path]
-        if path in visiting:
-            return set()
-        try:
-            module = parse(path.read_text(encoding='utf-8'))
-        except ValueError as error:
-            raise ValueError(f'{self.name(path)}: {error}') from error
-        local, members, exported = self.imported(module, path.parent, visiting | {path})
-        tainted = tainted_names(module, local, members)
-        spans = functions(module.code)
-        # A helper has no tag of its own: what is not inside a named function
-        # (module code, fixtures) cannot be attributed to a test and is refused.
-        self.findings.extend(Finding(self.name(path), module.line(offset), primitive)
-                             for offset, primitive in uses(module, tainted, members)
-                             if judge(module, offset, spans) == 'finding')
-        self.taint[path] = tainted | exported
-        return self.taint[path]
+    def solve(self) -> dict[Path, set[str]]:
+        taint: dict[Path, set[str]] = {path: set() for path in self.modules}
+        while True:
+            changed = False
+            for path, module in self.modules.items():
+                local, members, exported = self.imported(path, taint)
+                grown = tainted_names(module, local, members, self.spans[path]) | exported
+                if grown != taint[path]:
+                    taint[path], changed = grown, True
+            if not changed:
+                return taint
 
-    def check_spec(self, path: Path) -> list[Finding]:
-        path = path.resolve()
-        module = parse(path.read_text(encoding='utf-8'))
-        local, members, _ = self.imported(module, path.parent, frozenset({path.resolve()}))
-        tainted = tainted_names(module, local, members)
-        spans = functions(module.code)
-        return [Finding(self.name(path), module.line(offset), primitive)
-                for offset, primitive in uses(module, tainted, members)
-                if judge(module, offset, spans) == 'finding']
+    def findings(self) -> list[Finding]:
+        """Every untagged use; a helper has no tag of its own, so what no named
+        function holds there (module code, fixtures) is refused in the helper."""
+        taint = self.solve()
+        found = []
+        for path, module in self.modules.items():
+            local, members, _ = self.imported(path, taint)
+            spans = self.spans[path]
+            tainted = tainted_names(module, local, members, spans)
+            own = {name for name, _, _, kind in spans if kind == 'member'} & tainted
+            found.extend(Finding(self.name(path), module.line(offset), primitive)
+                         for offset, primitive in uses(module, tainted, set(members) | own)
+                         if judge(module, offset, spans) == 'finding')
+        return sorted(found, key=lambda f: (f.file, f.line, f.primitive))
 
 
 def check_directory(e2e: Path) -> list[Finding]:
@@ -530,13 +607,9 @@ def check_directory(e2e: Path) -> list[Finding]:
     if not specs:
         raise ValueError(f'no *.e2e.ts browser specs below {e2e}')
     checker = Checker(e2e)
-    findings = []
     for spec in specs:
-        try:
-            findings.extend(checker.check_spec(spec))
-        except ValueError as error:
-            raise ValueError(f'{spec.relative_to(e2e)}: {error}') from error
-    return findings + sorted(set(checker.findings), key=lambda f: (f.file, f.line, f.primitive))
+        checker.load(spec)
+    return checker.findings()
 
 
 def main(argv: list[str] | None = None) -> int:

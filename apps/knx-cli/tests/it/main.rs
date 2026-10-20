@@ -16,6 +16,7 @@ mod cli_import_evidence;
 mod cli_large_package;
 mod cli_legacy_import;
 mod cli_legacy_inspect;
+mod cli_monitor_export;
 mod cli_native_readers_read_only;
 mod cli_package_raw_admission;
 mod cli_password_import;

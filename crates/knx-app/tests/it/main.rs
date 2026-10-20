@@ -38,6 +38,7 @@ mod legacy_remembered;
 mod load_progress;
 mod manufacturer_files;
 mod modeled_metadata;
+mod monitor_export;
 mod name_recipe;
 mod note_disposition;
 mod note_edit;

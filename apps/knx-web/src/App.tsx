@@ -69,6 +69,7 @@ import GroupAddressCsvButtons from "./GroupAddressCsvButtons";
 import SelectiveImportButton from "./SelectiveImportButton";
 import PluginDataDialog from "./PluginDataDialog";
 import DocumentationExportButton from "./DocumentationExportButton";
+import MonitoringExportButton from "./MonitoringExportButton";
 import DebugReportButton from "./DebugReportButton";
 import ContributionButton from "./ContributionButton";
 import UniversalSupportButton from "./UniversalSupportButton";
@@ -1507,6 +1508,7 @@ function App({ manifestVersion = packageVersion, session, editorReturn = false }
         onError={reportError}
         onClearErrors={clearErrors}
       />
+      <MonitoringExportButton tree={tree} />
       <DocumentationExportButton
         tree={tree}
         onSummary={pushFun}

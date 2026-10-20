@@ -12,6 +12,48 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Monitoring snapshot export candidate (20 October 2026)
+
+One current normalized installation can be projected into a deterministic local
+ZIP containing `project.json`, its hash-bound `export-report.json` and a scope
+README. Shared App mapping supports native recoverable-working-state CLI export
+and current-open-snapshot HTTP preview/download; an EN/DE File → Exchange dialog
+requires a fresh bound preview. Unknown security/flags are omitted and reported,
+not fabricated. The [sparse contract](contracts/monitor-project-export.md) and
+[ADR-0151](adr/0151-monitoring-export-is-a-sparse-snapshot.md) distinguish this
+monitoring projection from backups, complete external schemas and engineering
+roundtrips.
+
+Frozen corrected App checks contain 62 focused passes (9 unit, 53 integration),
+and the corrected CLI selection contains 2 publication unit and 27 actual-binary
+integration passes. The original semantic failures and before/after bindings are
+retained for the record-ID collision and filesystem-layout fixes. Fifteen CLI
+binary probes additionally check complete source/sidecar preservation; these
+probes overlap the test selection and are not a unique-test total. The web client
+now checks the complete received ZIP digest before saving; its focused/dependent
+selection passes 329 tests across 6 files and its production build passes.
+
+Actual standalone HTTP preview/download/hash refusal and unchanged open-project
+state pass against a synthetic native fixture on the earlier candidate;
+independently read CLI/HTTP ZIPs pass structural/reference/count checks and reject
+nine deliberately corrupt variants. Both independent correction rereviews ACCEPT
+with no remaining findings. Corrected-source HTTP tests pass all ten exact cases;
+rebuilt production Chromium completes twenty assertions through the actual menu,
+preview and download. Its saved ZIP matches the real response and reviewed digest;
+independent readback accepts it and rejects nine corruption controls. Source,
+production-asset and runtime bindings remain unchanged. The maintained branch
+package gate passes all fifteen ordered stages, including 2,056 Rust passes,
+867 browser cases and 91/91 selected corpus tests; frozen-input and user-data
+checks pass. Feature source is committed as `2d258acb`. A test-only module
+relocation preserves its bytes and compiled identities while satisfying the
+repository layout checker. The first main-first integration `d1f32756` passes the
+same complete fifteen-stage scope and counts with frozen inputs and clear
+user-data guards. Publication was deferred because upstream added the independent
+private catalogue-admission kernel. Fresh main-first integration and a
+consumed-input-bound delta gate remain pending; unchanged web evidence remains
+bound to its actual earlier execution. None of these scopes is receiver acceptance. No native/product migration, ETS writer, live receiver, telegram store
+or bus operation is added.
+
 ## WP-04.3 A2 admission kernel — delivered (21 October 2026)
 
 The construction-disabled private server kernel is published on `main` as

@@ -364,6 +364,12 @@ describe("one editing workspace", () => {
     expect(apiCallsIn(payloadGraph)).toEqual([]);
     expect(mutatingFetchesIn(payloadGraph)).toEqual([]);
     expect(payloadGraph.get("projectPayloads.ts")).not.toMatch(/\b(?:fetch|XMLHttpRequest|WebSocket|EventSource)\s*\(/);
+    // The export dialog is editor-only; its shared admission helper is pure.
+    const monitorExportGraph = valueImportGraph("monitorExport.ts");
+    expect([...monitorExportGraph.keys()]).toEqual(["monitorExport.ts"]);
+    expect(apiCallsIn(monitorExportGraph)).toEqual([]);
+    expect(mutatingFetchesIn(monitorExportGraph)).toEqual([]);
+    expect(monitorExportGraph.get("monitorExport.ts")).not.toMatch(/\b(?:fetch|XMLHttpRequest|WebSocket|EventSource)\s*\(/);
     const metadataGraph = valueImportGraph("projectMetadata.ts");
     expect([...metadataGraph.keys()]).toEqual(["projectMetadata.ts"]);
     expect(apiCallsIn(metadataGraph)).toEqual([]);
@@ -438,6 +444,7 @@ describe("one editing workspace", () => {
       "messages/en.ts",
       "messages/tlh.ts",
       "modalIsolation.ts",
+      "monitorExport.ts",
       "motion.ts",
       "programmingState.ts",
       "projectHistory.ts",

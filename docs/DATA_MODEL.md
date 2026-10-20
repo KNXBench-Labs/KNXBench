@@ -1,5 +1,14 @@
 # Data model
 
+## Monitoring projection boundary (implementation in progress)
+
+The [monitoring export](contracts/monitor-project-export.md) adds no persisted
+Core fields, allocator, native migration or product schema. Unknown object flags
+remain unknown and group-level security is not inferred from retained sources.
+The reduced wire profile omits those fields with explicit diagnostics; stable
+project-local IDs serve relationships, not universal identities. It is not a
+roundtrip model or a backup. Runtime export acceptance remains pending.
+
 <a id="corrective-product-migration-v28-candidate-after-alpha-15"></a>
 ## Corrective product migration (v28 source delivery)
 

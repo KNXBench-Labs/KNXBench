@@ -12,8 +12,9 @@ Nested payload accounting and declared-size/inflation checks still apply;
 these are payload admission limits, not a peak-process-memory guarantee.
 Duplicate/case-colliding names and inconsistent ZIP records remain refused.
 The empty-directory CRC/complete-stream repair described below is delivered;
-its trailing-file-stream, product-reader and encryption-header follow-ups
-remain open.
+its trailing-file-stream and encryption-header follow-ups remain open.
+The product-reader follow-up is implemented locally; delivery acceptance
+is pending as recorded below.
 
 Evidence: [shared limits](../../crates/knx-core/src/limits.rs),
 [project container](../../crates/knx-etsproj/src/container.rs),
@@ -70,6 +71,30 @@ What remains (not part of this fix):
   there; KNXBench's project reader refuses it (round 3, N12).
 - A directory record with the encryption flag and no bytes is not checked
   for an encryption header.
+
+## Product directory follow-up (20 October 2026)
+
+Implemented locally; independent review and maintained delivery gate pending.
+`knx-productdb` now checks exact compressed-stream consumption for empty
+DEFLATE directories after its existing bounded CRC reader. Fixed buffers avoid
+allocating expanded contents for this secondary check. Member-open/read errors
+retain `InvalidZip` and the technical reason while adding the validated decoded
+leaf name, including reachable unsupported-codec failures. Wrapper errors retain
+both outer package context and inner leaf context.
+
+The controller reproduced 27 named RED cases against original production and
+then passed those plus ten original positives and three multi-chunk controls.
+Tests cover fresh/populated database preservation, earlier-inner-package rollback,
+source-name retry integrity, alternate empty encodings and both descriptor forms.
+Independent source review accepted (zero Critical/Important); two repair-removal
+controls fail eleven and 29 named cases, respectively, then exact restoration
+passes all 40 cases and Clippy again. Maintained merged acceptance is pending.
+
+A read-only census found 260 stored empty directory records across 350 readable
+ZIP instances; none would be newly rejected. No real DEFLATE directory occurred,
+so that behavior is synthetic-test evidence only. The original ordinary-file
+trailing-input and encryption-header boundaries above remain separate open work.
+[Research, primary sources and evidence boundaries](../research/2026-10-20-product-directory-stream-integrity.md).
 
 <!-- BEGIN retained catalogue record -->
 

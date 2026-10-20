@@ -12,6 +12,20 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Product directory stream integrity (20 October 2026; acceptance pending)
+
+The product reader rejects trailing bytes after an empty DEFLATE directory
+stream and adds validated decoded member names to open/read refusals without
+changing error variants or ordinary-file stream policy. Fixed-buffer checks
+preserve descriptor boundaries. Controller replay proves the original 27 named
+failures and ten positives; all 40 focused cases now pass, including three
+multi-chunk controls. Fresh/populated database preservation, historical retry
+and rollback of earlier wrapper members are covered. Independent source review
+accepted with zero Critical/Important findings. Repair-removal controls cause
+eleven and 29 named failures; exact restoration passes 40 cases and Clippy.
+Maintained merged package acceptance remains pending.
+[Evidence and limits](research/2026-10-20-product-directory-stream-integrity.md).
+
 ## Workbench splitter browser spec reaches the typecheck gate (20 October 2026)
 
 A focused derived config includes the existing `workbench-splitters.e2e.ts`;

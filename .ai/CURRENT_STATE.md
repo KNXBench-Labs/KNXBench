@@ -1,4 +1,36 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-20 09:11
+- **Completed:** WP16 independent source review ACCEPTED with0Critical/Important and verified bound source digests. Controller mutation controls fail11trailing cases without stream check and29cases without leaf context; production restored byte-exact,40/40focused cases and final Clippy GREEN. Initial mutation-count expectation corrected in retained accounting, not hidden. Docs/limitations/test-index checks pass; frontend build exists for desktop dependents.
+- **Pending/Next Steps:** Commit reviewed feature, verify fresh origin/main, run maintained14-stage scoped package gate on frozen committed head (downstream Rust+selected corpus; no web browser). Review receipt/source freeze/user-data guards, then publish/readback, docs-only final result tail and owned cleanup. No new go required. Other owners retain Alpha16/exact-UP258.
+- **Notes for Codex oder Claude:** Base/remote `a211a51e`; owned branch `fix/wp16-product-directory-20261020`. Evidence `<profile-scratch>/wp16-product-directory-20261020`: mutation-receipt.json, tests-red/controller-restored-green.json, tests-red/controller-final-clippy.json; source-reviewed production hash unchanged. No project-reader/ordinary-file trailing/encryption/schema/dependency/protocol behavior change. Census is structural only/no real deflated directories. Preserve private identities and root stale/dirty files.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-20 09:06
+- **Completed:** WP16 production-only bounded streaming check and decoded member-open/read context implemented. Controller reproduced original27RED/10GREEN and passed37/37after repair, then40/40with three new multi-chunk controls. Focused Clippy warnings denied passed before chunk-test addition; npm dependency install/frontend build passed for downstream desktop gate. Public source/census/integrity limits updated; no delivery acceptance yet.
+- **Pending/Next Steps:** Independent review `sa-0-49509c06` running; no production mutations until its bound verdict returns. Prepared `<profile-scratch>/wp16-product-directory-20261020/mutations.py` removes each repair independently, expects11trailing/17context failures, restores exact production bytes. Run then restore40GREEN+Clippy, precommit checks, merge fresh main-first and maintained14-stage change-scoped gate including downstream Rust/corpus. Do not end work merely after this checkpoint; original owner go remains active.
+- **Notes for Codex oder Claude:** Owned worktree branch `fix/wp16-product-directory-20261020`, published claim `a211a51e`; only production `knx-productdb/src/package.rs`, two synthetic test files and docs. No changes to ordinary-file trailing policy/project reader/encryption/schema/dependencies/protocol. Controller evidence in `tests-red/controller-{original,green,chunk-green}.json`, reconciliation JSON at task root. Census private identities never publish. Root stale/dirty and foreign claims preserved; other owners retain Alpha16/exact-UP258. Gate plan requires desktop dist (already built), tool tests and selected corpus, not web browser acceptance.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-20 08:54
+- **Completed:** WP16 read-only census independently reconciled:171unchanged inputs,350ZIP instances/314distinct contents,260stored empty directories,no observed directory-only rejection/no real DEFLATE directories.35synthetic scanner controls pass; controller reran retained-manifest verifier16/16GREEN. Public aggregate evidence and limitations documented. No production implementation or importer-runtime acceptance yet.
+- **Pending/Next Steps:** Tests-only original-source reproduction worker `sa-0-f42f4894` still running; consume its completion without polling. Verify named REDs in `<profile-scratch>/wp16-product-directory-20261020/tests-red` before minimal product-only implementation, GREEN/mutation controls, independent review, maintained scoped merged gate and publication/readback/cleanup. Owner authorization remains active.
+- **Notes for Codex oder Claude:** Census artifacts retained under `<profile-scratch>/wp16-product-directory-20261020/census`; private identities never publish. Controller verifier exit0 confirmed, not a production admission result. Test worker owns standalone/wrapper tests, parent owns production/docs. Claim `a211a51e` published; owned branch `fix/wp16-product-directory-20261020`. Root stale/dirty preserved. Project-reader/ordinary-file-stream/encryption/schema/dependency/protocol/desktop/release remain outside scope; other owners retain Alpha16/exact-UP258.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-20 08:48
+- **Completed:** WP16 product-directory follow-up investigated and public primary ZIP/DEFLATE/flate2 API facts documented before implementation. Prior splitter evidence archived with218member digests verified; its owned worktree/integration branch/rebuildable scratch retired. No production change yet. Local docs-only investigation checkpoint, not delivered feature acceptance.
+- **Pending/Next Steps:** Delegated read-only product/wrapper census `sa-0-999a77bb` and synthetic tests-only original-source reproduction `sa-0-f42f4894` are running independently. Reconcile exact reports under `<profile-scratch>/wp16-product-directory-20261020/{census,tests-red}` before stricter production admission. Then minimal product-only fix, GREEN/mutation controls, review, maintained scoped merged gate, publication/readback and cleanup. No further go required; original owner task remains active.
+- **Notes for Codex oder Claude:** Published claim `a211a51e`; owned branch `fix/wp16-product-directory-20261020`. Test worker exclusively owns standalone/wrapper test files; parent owns source/docs. Census is read-only authorized product corpus only; all private identities stay local. Parent wrote research note/index and local log; do not confuse those with runtime acceptance. Root stale/dirty preserved. No project-reader/ordinary-file-stream/encryption/schema/dependency/protocol/desktop/release operation; other owners retain Alpha16/exact-UP258.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-20 08:40
 - **Completed:** CLAIM (owner request: next open tasks): bounded WP-16 product-directory integrity follow-up on `fix/wp16-product-directory-20261020`. Scope: exactly consumed empty deflate directory payloads and decoded member context on product open/read refusals, tests and compatibility analysis. Product reader only; no project/ordinary-file stream policy, encryption, discovery/schema/codec or protocol change. Splitter package code and result tail published (`73d02240`, `c375bd65`).
 - **Pending/Next Steps:** Read-only product/wrapper directory compatibility census and synthetic named REDs first; no stricter production admission before evidence. Then smallest bounded helper/error context, independent review, maintained scoped merged gate, publication/readback and owned cleanup. Unknown/census refusals remain explicit, no compatibility claim beyond measured inputs.

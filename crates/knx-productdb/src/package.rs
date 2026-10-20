@@ -4,6 +4,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fmt;
 use std::io::{Cursor, Read, Seek, SeekFrom};
 
+use flate2::{Decompress, FlushDecompress, Status};
 use quick_xml::events::Event;
 use quick_xml::name::ResolveResult;
 use rusqlite::{params, Connection, OptionalExtension};
@@ -2606,14 +2607,26 @@ pub(crate) fn read_checked_member(
     index: usize,
     max_member_size: u64,
 ) -> Result<(String, Option<Vec<u8>>), PackageError> {
-    let mut file = archive.by_index(index).map_err(zip_error)?;
-    let path = file.name().to_string();
+    // Raw metadata is available even when opening the supported-codec view
+    // fails. Its decoded name has already passed the archive path checks.
+    let path = archive
+        .by_index_raw(index)
+        .map_err(zip_error)?
+        .name()
+        .to_string();
+    let member_error = |error: &dyn fmt::Display| zip_error(format!("{path}: {error}"));
+    let mut file = archive
+        .by_index(index)
+        .map_err(|error| member_error(&error))?;
     let is_directory = file.is_dir();
+    let deflated_empty_directory =
+        is_directory && file.size() == 0 && file.compression() == zip::CompressionMethod::Deflated;
+    let compressed_size = file.compressed_size();
     let mut data = Vec::new();
     (&mut file)
         .take(max_member_size + 1)
         .read_to_end(&mut data)
-        .map_err(zip_error)?;
+        .map_err(|error| member_error(&error))?;
     let data_len = usize_to_u64(data.len(), "decoded member size")?;
     if data_len > max_member_size {
         return Err(PackageError::SizeLimit { path });
@@ -2625,9 +2638,59 @@ pub(crate) fn read_checked_member(
         if !data.is_empty() {
             return Err(PackageError::UnsafeMember { path });
         }
+        if deflated_empty_directory {
+            drop(file);
+            let mut raw = archive
+                .by_index_raw(index)
+                .map_err(|error| member_error(&error))?;
+            check_empty_directory_stream(&mut raw, compressed_size)
+                .map_err(|error| member_error(&error))?;
+        }
         return Ok((path, None));
     }
     Ok((path, Some(data)))
+}
+
+/// Recheck only empty directory DEFLATE payloads, after the usual CRC reader.
+/// Fixed buffers bound both compressed staging and expanded output; raw member
+/// reads exclude the already validated data descriptor. Ordinary files retain
+/// the codec reader's existing trailing-input policy.
+fn check_empty_directory_stream(
+    raw: &mut impl Read,
+    compressed_size: u64,
+) -> Result<(), &'static str> {
+    let mut inflater = Decompress::new(false);
+    let mut input = [0_u8; 8192];
+    let mut output = [0_u8; 1];
+    loop {
+        let read = raw
+            .read(&mut input)
+            .map_err(|_| "directory stream read failed")?;
+        let mut offset = 0;
+        loop {
+            let before = inflater.total_in();
+            let status =
+                inflater.decompress(&input[offset..read], &mut output, FlushDecompress::None);
+            if inflater.total_out() != 0 {
+                return Err("directory deflate stream carries data");
+            }
+            if matches!(status, Ok(Status::StreamEnd)) {
+                return if inflater.total_in() == compressed_size {
+                    Ok(())
+                } else {
+                    Err("trailing data after directory deflate stream")
+                };
+            }
+            let consumed = inflater.total_in() - before;
+            if status.is_err() || consumed == 0 {
+                return Err("incomplete or malformed directory deflate stream");
+            }
+            offset += consumed as usize;
+            if offset == read {
+                break;
+            }
+        }
+    }
 }
 
 /// Install a standalone product package, preserving the archive and every file.

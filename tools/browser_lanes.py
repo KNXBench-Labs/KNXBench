@@ -24,6 +24,10 @@ PRIMITIVE = re.compile(
     r'|(?<![\w$])new\s+Date\s*\(\s*\)\s*\.\s*(?:getTime|valueOf)\b'
     r'|(?<![\w$])scheduler\s*\.\s*wait\b'
     r'|(?<![\w$])(?:waitForTimeout|requestAnimationFrame|setTimeout|setInterval)\b')
+# Find the receiver and opening bracket in masked code; read only its literal key
+# from the source. Never unmask strings for the general primitive/scope analysis.
+CLOCK_BRACKET = re.compile(r'(?<![\w$])(?P<clock>performance|Date)\s*\[')
+CLOCK_NOW = re.compile(r'''\s*(?P<quote>["'])now(?P=quote)\s*\](?=\s*\()''')
 CALL = re.compile(
     r'(?<![\w$.])test(?P<member>(?:\.(?:describe|serial|parallel|only|skip|fixme|fail|slow'
     r'|beforeEach|afterEach|beforeAll|afterAll))*)\s*\(')
@@ -395,6 +399,11 @@ def uses(module: Module, tainted: set[str], members: set[str] = frozenset()) -> 
         if type_reference(module, m.start(), m.end()) or any(a <= m.start() < b for a, b in imports):
             continue
         found.setdefault(m.start(), label(m.group(0)))
+    for m in CLOCK_BRACKET.finditer(module.code):
+        key = CLOCK_NOW.match(module.source, m.end())
+        if key:
+            quote = key.group('quote')
+            found.setdefault(m.start(), f'{m.group("clock")}[{quote}now{quote}]')
     for offset, primitive in page_code(module):
         found.setdefault(offset, primitive)
     for name in tainted:

@@ -730,9 +730,13 @@ Open, each small and none blocking:
   static-analysis fallback reasons. It does not infer exact per-spec causality
   from an unresolved closure. Selection, retries, budgets and complete-gate
   admission are unchanged; the planner edit itself requires a complete gate.
-- The lane guard does not see a clock reached through destructuring, a
-  re-bound alias, a getter or a bracket call, and matches member calls by
-  name (ADR-0144); no spec uses those forms today.
+- **Literal-bracket clocks (20 October source, acceptance pending):** the guard
+  recognises unescaped literal `Date["now"]()` / `performance['now']()` with
+  either quote and whitespace, including function callbacks and test helpers.
+  Computed/escaped properties, decoded page-code bracket calls, destructuring,
+  re-bound aliases and getters remain outside its bounded analysis. It still
+  matches member calls by name (ADR-0144), not a complete JavaScript parser.
+  [Evidence and scope](status/2026-10-20-literal-bracket-clocks.md).
 - Three `file-menu-submenus` cases timed out at eight workers while a cold
   Vite development server started (passed at the gate's four workers and in
   reruns).

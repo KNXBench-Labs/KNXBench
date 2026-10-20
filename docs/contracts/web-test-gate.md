@@ -58,8 +58,15 @@ and is held by `tools/tests/test_rust_gate_order.py`.
   methods, solved as one fixed point). A primitive in a helper module outside
   any named function, for example in a Playwright fixture or a hook registered
   on import, is refused in the helper; a test-side `.tsx`/`.jsx` import is
-  refused. Application modules are not followed. Destructured clocks,
-  re-bound aliases, getters and bracket calls are known blind spots (ADR-0144).
+  refused. Application modules are not followed. In ordinary code and page
+  function callbacks the guard also recognises literal `Date["now"]()` and
+  `performance['now']()` with either unescaped quote and whitespace/newlines.
+  Receivers are found in masked code; only their adjacent literal key is read
+  from source, preserving offsets, text masking and existing helper propagation.
+  Bracket calls in decoded page-code strings, escaped/computed keys, destructured
+  clocks, re-bound aliases and getters remain blind spots (ADR-0144). This is a
+  developer safety net, not a complete or adversarial JavaScript parser. No
+  lane selection, tag admission, budget or retry change.
   The `--grep` for the tag matches the whole tag (`@exclusive(?![\w-])`).
 - Compile the entire default case inventory before execution and split it by
   tag. Require exact case identity equality for each lane, passed expectations,

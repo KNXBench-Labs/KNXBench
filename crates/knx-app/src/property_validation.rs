@@ -321,7 +321,7 @@ impl OperationStore {
         let mut previous = String::new();
         let mut state = State::new(expected.clone());
         for (sequence, name) in names.iter().enumerate() {
-            if name != &format!("checkpoint-{sequence:08}.json").as_str() {
+            if name != format!("checkpoint-{sequence:08}.json").as_str() {
                 return Err(invalid("missing or unexpected protocol checkpoint"));
             }
             let path = directory.join(name);

@@ -77,7 +77,7 @@ Each package needs its own scoped claim, review, tests and delivery evidence.
 | [WP-01](#wp-01--idempotent-unknown-evidence) | P1 | Delivered 19 October (product DB v26, ADR-0146) | Unknown-evidence rows remain truthful across shared-source re-ingest. |
 | [WP-02](#wp-02--suffixtext-end-to-end) | P2 | Delivered 19 October (product DB v26, ADR-0146) | Source suffix text reaches the existing parameter rows without changing stored values. |
 | [WP-03](#wp-03--legacy-binary-enumeration-values) | P2 | Mapping evidence first | Legacy binary enum values use the existing typed storage or keep an explicit refusal/report. |
-| [WP-04](#wp-04--large-catalogues-measure-then-stream) | P1/P2 | WP-04.1 delivered; WP-04.2/.3 remain open | Measured database growth, bounded procedure parsing, then a cancellable web large-profile workflow. |
+| [WP-04](#wp-04--large-catalogues-measure-then-stream) | P1/P2 | WP-04.1/.2 delivered; WP-04.3 remains open | Measured database growth, bounded procedure parsing, then a cancellable web large-profile workflow. |
 | [WP-05](#wp-05--parameter-layout-fidelity) | P2 | Evidence/contract gate; coordinate with UI-05 | One evidenced layout feature at a time, never inferred manufacturer behaviour. |
 | [WP-06](#wp-06--communication-object-organisation) | P2 | Folder contract first; priority needs a separate model ADR | Declared object folders and, separately, lossless priority representation. |
 | [WP-07](#wp-07--module-instance-authority) | P1 | Defining mapping evidence required | One independently witnessed instance/repeat/number-offset mapping contract. |
@@ -163,8 +163,8 @@ publication readback; [the result record](IMPLEMENTATION_STATUS.md#product-colum
 keeps original and final-delta evidence separate. Missing/unavailable history,
 ambiguous shared member counters and resource/source-refused reconstruction
 remain explicit boundaries; this is not universal historical equality or a release.
-**Current ordered package: WP-04.2 — resolver bounds and parsing disposition.**
-WP-04.1 is delivered; WP-04.3 and WP-19 remain later slices. WP-04 is not closed.
+**WP-04.1 and WP-04.2 are delivered.** WP-04.3 is the next ordered slice,
+followed by WP-19. WP-04 overall is not closed.
 
 #### WP-03 — Legacy binary enumeration values
 
@@ -204,14 +204,15 @@ deliveries; WP-04 stays open. The repair's fixed evidence allowance is not a
 whole-process memory guarantee. The [delivery record](IMPLEMENTATION_STATUS.md#wp-041-synthetic-measurement-baseline-20-october-2026)
 records passed integration gates and published source separately from study review.
 
-**WP-04.2 in progress:** the [resolver bounds and disposition](testing/procedure-resolution-bounds.md)
+**WP-04.2 delivered (20 October 2026):** the [resolver bounds and disposition](testing/procedure-resolution-bounds.md)
 retains the existing parser and limits because the resolver-specific baseline
 neither isolates a parser allocation bottleneck nor demonstrates rewrite benefit.
 The focused 53-test selection and complete ProductDB run (1226 passes, 31 ignored)
 pass on unchanged production; selections overlap. Independent review and twelve
 compiled isolated discrimination cases are accepted, with baseline/restored
-selections green. Maintained gates and delivery remain pending. This does not
-implement the WP-04.3 web workflow.
+selections green. The [delivery record](IMPLEMENTATION_STATUS.md#wp-042-resolver-bounds--unchanged-parser-candidate-20-october-2026)
+records passed maintained integration and published source `6f68bcdd`. This does
+not implement the WP-04.3 web workflow.
 
 **Three separate deliveries, in order:**
 

@@ -112,3 +112,17 @@ baseline. The independent whole-change review is accepted with the sole prose
 spacing finding closed. Runtime/test bytes are frozen at their reviewed hashes.
 Only observed result/status notes were added afterwards. The maintained14stage
 branch gate and integrated acceptance/publication remain pending.
+
+## Source publication
+
+Published main-first `6f68bcdd1fc19c54538f68cd48a0b069cc9cfa49` with verified
+local/tracking/live equality. Branch and integrated maintained gates each pass
+14/14 ordered stages, 3,199 Rust tests (144 ignored), 97/97 selected corpus
+cases and 410 registered tool tests with six optional skips. Inputs are frozen
+and checked user-data guards clear. Counts are not added and no functional
+browser or bindings lane was selected. Original focused/owning/mutation evidence
+retains its actual source identity; publication does not retag those runs.
+
+Result-only documentation closure, compact verified evidence archive and owned
+retirement remain pending. WP-04.3 and WP-19 are not supplied by this tests and
+unchanged-parser disposition. Existing historical attempt failures are retained.

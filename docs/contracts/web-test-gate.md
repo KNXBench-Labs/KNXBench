@@ -36,6 +36,10 @@ and is held by `tools/tests/test_rust_gate_order.py`.
 
 - Application tsc stays in npm run build. Every tsconfig.*.json is retained once;
   the extra app/flow/theme invocations are removed, not their coverage.
+  `tsconfig.workbench-fixtures.json` includes the existing workbench-splitters
+  browser spec and its imported helpers; runner discovery/inclusion has a
+  regression in `tools/tests/test_web_gate.py`. This adds static coverage,
+  not another browser execution or a change to test selection.
 - Original test selection, server/locale settings and every browser assertion are
   unchanged; all Playwright entries now import the common temp guard.
 - Lanes by tag (ADR-0144, replaces the per-file hash admission): every case runs

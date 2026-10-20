@@ -148,6 +148,15 @@ class MeasuredRun(unittest.TestCase):
 
 
 class GatePlan(unittest.TestCase):
+    def test_workbench_splitter_spec_is_in_a_discovered_typecheck_config(self) -> None:
+        from tools.run_web_gate import typecheck_configs
+        app = Path(__file__).resolve().parents[2] / 'apps/knx-web'
+        name = 'tsconfig.workbench-fixtures.json'
+        self.assertIn(name, typecheck_configs(app), 'splitter typecheck config is missing')
+        config = json.loads((app / name).read_text())
+        self.assertEqual(config['extends'], './tsconfig.json')
+        self.assertIn('e2e/workbench-splitters.e2e.ts', config['include'])
+
     def test_app_is_checked_once_and_every_derived_config_is_preserved(self) -> None:
         try:
             runner = importlib.import_module('tools.run_web_gate')

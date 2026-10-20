@@ -23,8 +23,18 @@ crash-boundary journals and destructive-Unload refusal. Source-dependent tests
 are explicitly opt-in, not silently counted in ordinary runs.
 [Executable procedure and remaining boundaries](contracts/up258-system2-validation.md).
 This is **STRONG HYPOTHESIS / SIMULATOR TESTED**, not physical/ETS compatibility.
-Independent final review and the complete relevant package gate are recorded
-separately at delivery; no release/tag or bus access is part of this candidate.
+Final acceptance on `1d761840` completed successfully: the maintained 10-stage
+package gate (including all 69 nested web stages), 155/155 private corpus tests,
+8/8 explicitly selected exact-source App tests and 16/16 experimental-image tests
+including the pinned public source. The CLI was rebuilt and the executable
+workflow returned `finished` then disk-reopened `restored`. An explicit hardware
+attempt returned the expected refusal before socket/operation creation. Frozen
+input manifests match; user-data touch/unchecked lists are empty. Ordinary Rust
+summaries contain 5,578 passes and 222 ignored tests; source/corpus selections
+above are separate runs, not an inflated unique-test total. The initial failed
+gate's pre-existing nested measurement-lease fixture was separately corrected,
+reviewed and retested; its failed receipt is retained, not counted as success.
+No release/tag, deployment, bus or device access occurred.
 
 <a id="wp-042-resolver-bounds--unchanged-parser-candidate-20-october-2026"></a>
 ## WP-04.2 resolver bounds — unchanged-parser delivery (20 October 2026)

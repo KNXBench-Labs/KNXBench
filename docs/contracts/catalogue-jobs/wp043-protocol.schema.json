@@ -1,0 +1,2690 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "wp043-protocol.schema.json",
+  "title": "WP04.3 exact wire shapes; policy semantic rules mandatory",
+  "$defs": {
+    "U64": {
+      "type": "string",
+      "maxLength": 20,
+      "x-maxUtf8Bytes": 20,
+      "pattern": "^(0|[1-9][0-9]{0,19})$",
+      "x-maximumDecimal": "18446744073709551615"
+    },
+    "Id": {
+      "type": "string",
+      "maxLength": 32,
+      "x-maxUtf8Bytes": 32,
+      "pattern": "^[0-9a-f]{32}$"
+    },
+    "Digest": {
+      "type": "string",
+      "maxLength": 64,
+      "x-maxUtf8Bytes": 64,
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "Capability": {
+      "type": "string",
+      "maxLength": 64,
+      "x-maxUtf8Bytes": 64,
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "Handle": {
+      "type": "object",
+      "properties": {
+        "serverIncarnation": {
+          "$ref": "#/$defs/Id"
+        },
+        "admissionSerial": {
+          "$ref": "#/$defs/U64"
+        },
+        "jobId": {
+          "$ref": "#/$defs/Id"
+        }
+      },
+      "required": [
+        "serverIncarnation",
+        "admissionSerial",
+        "jobId"
+      ],
+      "additionalProperties": false
+    },
+    "Profile": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "enum": [
+            "standard",
+            "large"
+          ]
+        },
+        "maxMemberBytes": {
+          "const": "1000000000"
+        },
+        "maxExpandedBytes": {
+          "type": "string",
+          "enum": [
+            "4294967296",
+            "17179869184"
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "maxMemberBytes",
+        "maxExpandedBytes"
+      ],
+      "additionalProperties": false
+    },
+    "Source": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "maxLength": 512,
+          "x-maxUtf8Bytes": 512
+        },
+        "declaredBytes": {
+          "$ref": "#/$defs/U64"
+        },
+        "receivedBytes": {
+          "$ref": "#/$defs/U64"
+        },
+        "sha256": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Digest"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "declaredBytes",
+        "receivedBytes",
+        "sha256"
+      ],
+      "additionalProperties": false
+    },
+    "Progress": {
+      "type": "object",
+      "properties": {
+        "stage": {
+          "type": "string",
+          "enum": [
+            "receiving",
+            "hashing",
+            "archiveScan",
+            "decoding",
+            "xmlParsing",
+            "snapshotCopy",
+            "rehearsal",
+            "binding",
+            "backupCopy",
+            "install",
+            "reporting",
+            "cleanup"
+          ]
+        },
+        "pass": {
+          "$ref": "#/$defs/U64"
+        },
+        "unit": {
+          "type": "string",
+          "enum": [
+            "bytes",
+            "entries",
+            "events",
+            "pages",
+            "records"
+          ]
+        },
+        "completed": {
+          "$ref": "#/$defs/U64"
+        },
+        "total": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/U64"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "stage",
+        "pass",
+        "unit",
+        "completed",
+        "total"
+      ],
+      "additionalProperties": false
+    },
+    "Lease": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "receiving",
+            "working",
+            "ready",
+            "retention"
+          ]
+        },
+        "deadlineTickMs": {
+          "$ref": "#/$defs/U64"
+        }
+      },
+      "required": [
+        "kind",
+        "deadlineTickMs"
+      ],
+      "additionalProperties": false
+    },
+    "Failure": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "invalidRequest",
+            "invalidHandle",
+            "unsupportedMediaType",
+            "bodyLimit",
+            "unauthenticated",
+            "outcomeUnavailable",
+            "incarnationChanged",
+            "staleOffer",
+            "commandConflict",
+            "jobBusy",
+            "invalidPhase",
+            "uploadNotReplayable",
+            "consentExpired",
+            "catalogueUpdateStale",
+            "uploadLengthMismatch",
+            "serverStopping",
+            "counterExhausted",
+            "artifactStoreUnavailable",
+            "catalogueUnavailable",
+            "catalogueAdmissionLimit",
+            "catalogueGrowthLimit",
+            "resultLimit",
+            "recordLimit",
+            "publicProjectionRefused",
+            "unsupportedCatalogue",
+            "legacyProductDatabase",
+            "packageRefused",
+            "writerTimeout",
+            "uploadAborted",
+            "ioFailure",
+            "databaseFailure",
+            "workerFailed",
+            "reportMismatch",
+            "cleanupFailed",
+            "outcomeUnknown",
+            "cancelled",
+            "receivingIdleTimeout",
+            "receivingTimeout",
+            "workingTimeout",
+            "serverStop",
+            "readyExpired"
+          ]
+        },
+        "context": {
+          "const": null
+        }
+      },
+      "required": [
+        "kind",
+        "context"
+      ],
+      "additionalProperties": false
+    },
+    "Commit": {
+      "type": "object",
+      "properties": {
+        "outcome": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "committed",
+            "notCommitted",
+            "unknown"
+          ]
+        },
+        "evidence": {
+          "type": "string",
+          "enum": [
+            "notAttempted",
+            "commitReturnedOk",
+            "noLiveMutation",
+            "explicitRollback",
+            "automaticRollbackBeforeCommit",
+            "ambiguousCommit",
+            "unresolvedRollback",
+            "workerLost"
+          ]
+        }
+      },
+      "required": [
+        "outcome",
+        "evidence"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "outcome": {
+                "const": "pending"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "evidence": {
+                "enum": [
+                  "notAttempted"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "outcome": {
+                "const": "committed"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "evidence": {
+                "enum": [
+                  "commitReturnedOk"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "outcome": {
+                "const": "notCommitted"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "evidence": {
+                "enum": [
+                  "noLiveMutation",
+                  "explicitRollback",
+                  "automaticRollbackBeforeCommit"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "outcome": {
+                "const": "unknown"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "evidence": {
+                "enum": [
+                  "ambiguousCommit",
+                  "unresolvedRollback",
+                  "workerLost"
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    "Cleanup": {
+      "type": "object",
+      "properties": {
+        "disposition": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "complete",
+            "quarantined"
+          ]
+        },
+        "failureKind": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "cleanupFailed",
+                "ioFailure",
+                "workerFailed"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "disposition",
+        "failureKind"
+      ],
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "properties": {
+            "disposition": {
+              "enum": [
+                "pending",
+                "complete"
+              ]
+            },
+            "failureKind": {
+              "const": null
+            }
+          }
+        },
+        {
+          "properties": {
+            "disposition": {
+              "const": "quarantined"
+            },
+            "failureKind": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "Backup": {
+      "type": "object",
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": [
+            "none",
+            "staging",
+            "published",
+            "retained",
+            "quarantined"
+          ]
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 512,
+              "x-maxUtf8Bytes": 512
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "identity": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 32,
+              "x-maxUtf8Bytes": 32,
+              "pattern": "^[0-9a-f]{32}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "publication": {
+          "type": "string",
+          "enum": [
+            "none",
+            "fileAndDirectorySyncAcknowledged"
+          ]
+        }
+      },
+      "required": [
+        "state",
+        "name",
+        "identity",
+        "publication"
+      ],
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "properties": {
+            "state": {
+              "enum": [
+                "none",
+                "staging"
+              ]
+            },
+            "name": {
+              "const": null
+            },
+            "identity": {
+              "const": null
+            },
+            "publication": {
+              "const": "none"
+            }
+          }
+        },
+        {
+          "properties": {
+            "state": {
+              "enum": [
+                "published",
+                "retained"
+              ]
+            },
+            "name": {
+              "type": "string"
+            },
+            "identity": {
+              "type": "string"
+            },
+            "publication": {
+              "const": "fileAndDirectorySyncAcknowledged"
+            }
+          }
+        },
+        {
+          "properties": {
+            "state": {
+              "const": "quarantined"
+            }
+          }
+        }
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "quarantined"
+              }
+            }
+          },
+          "then": {
+            "oneOf": [
+              {
+                "properties": {
+                  "name": {
+                    "const": null
+                  },
+                  "identity": {
+                    "const": null
+                  },
+                  "publication": {
+                    "const": "none"
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "identity": {
+                    "type": "string"
+                  },
+                  "publication": {
+                    "const": "fileAndDirectorySyncAcknowledged"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "Artifact": {
+      "type": "object",
+      "properties": {
+        "artifactId": {
+          "$ref": "#/$defs/Id"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "preview",
+            "result"
+          ]
+        },
+        "publicSha256": {
+          "$ref": "#/$defs/Digest"
+        },
+        "publicBytes": {
+          "$ref": "#/$defs/U64"
+        },
+        "records": {
+          "$ref": "#/$defs/U64"
+        },
+        "withheldFields": {
+          "$ref": "#/$defs/U64"
+        },
+        "withheldRecords": {
+          "$ref": "#/$defs/U64"
+        },
+        "withheldOccurrences": {
+          "$ref": "#/$defs/U64"
+        },
+        "projection": {
+          "const": "redactedCompleteV1"
+        }
+      },
+      "required": [
+        "artifactId",
+        "kind",
+        "publicSha256",
+        "publicBytes",
+        "records",
+        "withheldFields",
+        "withheldRecords",
+        "withheldOccurrences",
+        "projection"
+      ],
+      "additionalProperties": false
+    },
+    "Preview": {
+      "type": "object",
+      "properties": {
+        "consentId": {
+          "$ref": "#/$defs/Id"
+        },
+        "artifact": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/Artifact"
+            },
+            {
+              "properties": {
+                "kind": {
+                  "const": "preview"
+                }
+              }
+            }
+          ]
+        },
+        "packageAlreadyInstalled": {
+          "type": "boolean"
+        },
+        "wrapper": {
+          "type": "boolean"
+        },
+        "packages": {
+          "$ref": "#/$defs/U64"
+        },
+        "programs": {
+          "$ref": "#/$defs/U64"
+        },
+        "productsAdded": {
+          "$ref": "#/$defs/U64"
+        },
+        "hardware2ProgramsAdded": {
+          "$ref": "#/$defs/U64"
+        },
+        "idConflicts": {
+          "$ref": "#/$defs/U64"
+        },
+        "growthCliffPossible": {
+          "const": true
+        }
+      },
+      "required": [
+        "consentId",
+        "artifact",
+        "packageAlreadyInstalled",
+        "wrapper",
+        "packages",
+        "programs",
+        "productsAdded",
+        "hardware2ProgramsAdded",
+        "idConflicts",
+        "growthCliffPossible"
+      ],
+      "additionalProperties": false
+    },
+    "Result": {
+      "type": "object",
+      "properties": {
+        "artifact": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/Artifact"
+            },
+            {
+              "properties": {
+                "kind": {
+                  "const": "result"
+                }
+              }
+            }
+          ]
+        },
+        "cataloguePageBytes": {
+          "$ref": "#/$defs/U64"
+        },
+        "nextJobInputLimitExceeded": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "artifact",
+        "cataloguePageBytes",
+        "nextJobInputLimitExceeded"
+      ],
+      "additionalProperties": false
+    },
+    "Apply": {
+      "type": "object",
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": [
+            "unavailable",
+            "available",
+            "accepted",
+            "spent"
+          ]
+        },
+        "acceptedCommandId": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "state",
+        "acceptedCommandId"
+      ],
+      "additionalProperties": false
+    },
+    "Status": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "policyVersion": {
+          "const": "wp043-v1"
+        },
+        "handle": {
+          "$ref": "#/$defs/Handle"
+        },
+        "revision": {
+          "$ref": "#/$defs/U64"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "profile": {
+          "$ref": "#/$defs/Profile"
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "running",
+            "succeeded",
+            "cancelled",
+            "stale",
+            "expired",
+            "failed"
+          ]
+        },
+        "phase": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "receiving",
+                "previewing",
+                "ready",
+                "waitingForWriter",
+                "validating",
+                "backingUp",
+                "installing",
+                "committing",
+                "settling"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "gate": {
+          "type": "string",
+          "enum": [
+            "open",
+            "cancelAccepted",
+            "commitClaimed"
+          ]
+        },
+        "stopCause": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "userCancel",
+                "readyExpired",
+                "receivingIdleTimeout",
+                "receivingTimeout",
+                "workingTimeout",
+                "serverStop",
+                "counterExhausted"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "progress": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Progress"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "lease": {
+          "$ref": "#/$defs/Lease"
+        },
+        "apply": {
+          "$ref": "#/$defs/Apply"
+        },
+        "preview": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Preview"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "result": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Result"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "failure": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Failure"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "commit": {
+          "$ref": "#/$defs/Commit"
+        },
+        "cleanup": {
+          "$ref": "#/$defs/Cleanup"
+        },
+        "backup": {
+          "$ref": "#/$defs/Backup"
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "policyVersion",
+        "handle",
+        "revision",
+        "source",
+        "profile",
+        "state",
+        "phase",
+        "gate",
+        "stopCause",
+        "progress",
+        "lease",
+        "apply",
+        "preview",
+        "result",
+        "failure",
+        "commit",
+        "cleanup",
+        "backup"
+      ],
+      "additionalProperties": false,
+      "x-semanticRules": "All policy.json stateRules, crossFieldRules and document sections P3-P6 are REQUIRED, not schema-only acceptance.",
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "running"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "phase": {
+                "not": {
+                  "type": "null"
+                }
+              },
+              "cleanup": {
+                "properties": {
+                  "disposition": {
+                    "const": "pending"
+                  }
+                }
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "phase": {
+                "const": null
+              },
+              "progress": {
+                "const": null
+              },
+              "lease": {
+                "properties": {
+                  "kind": {
+                    "const": "retention"
+                  }
+                }
+              },
+              "cleanup": {
+                "properties": {
+                  "disposition": {
+                    "type": "string",
+                    "enum": [
+                      "complete",
+                      "quarantined"
+                    ]
+                  }
+                }
+              },
+              "commit": {
+                "properties": {
+                  "outcome": {
+                    "type": "string",
+                    "enum": [
+                      "committed",
+                      "notCommitted",
+                      "unknown"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "phase": {
+                "const": "receiving"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "source": {
+                "properties": {
+                  "sha256": {
+                    "const": null
+                  }
+                }
+              },
+              "preview": {
+                "const": null
+              },
+              "result": {
+                "const": null
+              },
+              "apply": {
+                "properties": {
+                  "state": {
+                    "const": "unavailable"
+                  },
+                  "acceptedCommandId": {
+                    "const": null
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "phase": {
+                "const": "ready"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "preview": {
+                "$ref": "#/$defs/Preview"
+              },
+              "result": {
+                "const": null
+              },
+              "gate": {
+                "const": "open"
+              },
+              "apply": {
+                "properties": {
+                  "state": {
+                    "const": "available"
+                  },
+                  "acceptedCommandId": {
+                    "const": null
+                  }
+                }
+              },
+              "lease": {
+                "properties": {
+                  "kind": {
+                    "const": "ready"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "phase": {
+                "const": "committing"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "gate": {
+                "const": "commitClaimed"
+              },
+              "commit": {
+                "properties": {
+                  "outcome": {
+                    "const": "pending"
+                  }
+                }
+              },
+              "apply": {
+                "properties": {
+                  "state": {
+                    "const": "accepted"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "succeeded"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "gate": {
+                "const": "commitClaimed"
+              },
+              "result": {
+                "$ref": "#/$defs/Result"
+              },
+              "commit": {
+                "properties": {
+                  "outcome": {
+                    "const": "committed"
+                  },
+                  "evidence": {
+                    "const": "commitReturnedOk"
+                  }
+                }
+              },
+              "failure": {
+                "const": null
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "type": "string",
+                "enum": [
+                  "cancelled",
+                  "stale",
+                  "expired"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "commit": {
+                "properties": {
+                  "outcome": {
+                    "const": "notCommitted"
+                  }
+                }
+              },
+              "cleanup": {
+                "properties": {
+                  "disposition": {
+                    "const": "complete"
+                  }
+                }
+              },
+              "result": {
+                "const": null
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "gate": {
+                "const": "cancelAccepted"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "stopCause": {
+                "type": "string"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "stopCause": {
+                "const": null
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "commit": {
+                "properties": {
+                  "outcome": {
+                    "const": "committed"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "gate": {
+                "const": "commitClaimed"
+              },
+              "result": {
+                "$ref": "#/$defs/Result"
+              },
+              "apply": {
+                "properties": {
+                  "acceptedCommandId": {
+                    "$ref": "#/$defs/Id"
+                  }
+                }
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "result": {
+                "const": null
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "commit": {
+                "properties": {
+                  "outcome": {
+                    "const": "committed"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "source": {
+                "properties": {
+                  "sha256": {
+                    "$ref": "#/$defs/Digest"
+                  }
+                }
+              },
+              "preview": {
+                "$ref": "#/$defs/Preview"
+              }
+            }
+          }
+        }
+      ],
+      "oneOf": [
+        {
+          "properties": {
+            "state": {
+              "const": "running"
+            },
+            "phase": {
+              "const": "receiving"
+            },
+            "gate": {
+              "enum": [
+                "open"
+              ]
+            },
+            "lease": {
+              "properties": {
+                "kind": {
+                  "const": "receiving"
+                }
+              }
+            },
+            "apply": {
+              "properties": {
+                "state": {
+                  "const": "unavailable"
+                },
+                "acceptedCommandId": {
+                  "const": null
+                }
+              }
+            },
+            "source": {
+              "properties": {
+                "sha256": {
+                  "const": null
+                }
+              }
+            },
+            "preview": {
+              "const": null
+            },
+            "result": {
+              "const": null
+            },
+            "commit": {
+              "properties": {
+                "outcome": {
+                  "enum": [
+                    "pending"
+                  ]
+                }
+              }
+            },
+            "backup": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "none"
+                  ]
+                }
+              }
+            },
+            "cleanup": {
+              "properties": {
+                "disposition": {
+                  "const": "pending"
+                },
+                "failureKind": {
+                  "const": null
+                }
+              }
+            },
+            "failure": {
+              "const": null
+            }
+          }
+        },
+        {
+          "properties": {
+            "state": {
+              "const": "running"
+            },
+            "phase": {
+              "const": "previewing"
+            },
+            "gate": {
+              "enum": [
+                "open"
+              ]
+            },
+            "lease": {
+              "properties": {
+                "kind": {
+                  "const": "working"
+                }
+              }
+            },
+            "apply": {
+              "properties": {
+                "state": {
+                  "const": "unavailable"
+                },
+                "acceptedCommandId": {
+                  "const": null
+                }
+              }
+            },
+            "source": {
+              "properties": {
+                "sha256": {
+                  "$ref": "#/$defs/Digest"
+                }
+              }
+            },
+            "preview": {
+              "const": null
+            },
+            "result": {
+              "const": null
+            },
+            "commit": {
+              "properties": {
+                "outcome": {
+                  "enum": [
+                    "pending"
+                  ]
+                }
+              }
+            },
+            "backup": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "none"
+                  ]
+                }
+              }
+            },
+            "cleanup": {
+              "properties": {
+                "disposition": {
+                  "const": "pending"
+                },
+                "failureKind": {
+                  "const": null
+                }
+              }
+            },
+            "failure": {
+              "const": null
+            }
+          }
+        },
+        {
+          "properties": {
+            "state": {
+              "const": "running"
+            },
+            "phase": {
+              "const": "ready"
+            },
+            "gate": {
+              "enum": [
+                "open"
+              ]
+            },
+            "lease": {
+              "properties": {
+                "kind": {
+                  "const": "ready"
+                }
+              }
+            },
+            "apply": {
+              "properties": {
+                "state": {
+                  "const": "available"
+                },
+                "acceptedCommandId": {
+                  "const": null
+                }
+              }
+            },
+            "source": {
+              "properties": {
+                "sha256": {
+                  "$ref": "#/$defs/Digest"
+                }
+              }
+            },
+            "preview": {
+              "$ref": "#/$defs/Preview"
+            },
+            "result": {
+              "const": null
+            },
+            "commit": {
+              "properties": {
+                "outcome": {
+                  "enum": [
+                    "pending"
+                  ]
+                }
+              }
+            },
+            "backup": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "none"
+                  ]
+                }
+              }
+            },
+            "cleanup": {
+              "properties": {
+                "disposition": {
+                  "const": "pending"
+                },
+                "failureKind": {
+                  "const": null
+                }
+              }
+            },
+            "failure": {
+              "const": null
+            }
+          }
+        },
+        {
+          "properties": {
+            "state": {
+              "const": "running"
+            },
+            "phase": {
+              "const": "waitingForWriter"
+            },
+            "gate": {
+              "enum": [
+                "open"
+              ]
+            },
+            "lease": {
+              "properties": {
+                "kind": {
+                  "const": "working"
+                }
+              }
+            },
+            "apply": {
+              "properties": {
+                "state": {
+                  "const": "accepted"
+                },
+                "acceptedCommandId": {
+                  "$ref": "#/$defs/Id"
+                }
+              }
+            },
+            "source": {
+              "properties": {
+                "sha256": {
+                  "$ref": "#/$defs/Digest"
+                }
+              }
+            },
+            "preview": {
+              "$ref": "#/$defs/Preview"
+            },
+            "result": {
+              "const": null
+            },
+            "commit": {
+              "properties": {
+                "outcome": {
+                  "enum": [
+                    "pending"
+                  ]
+                }
+              }
+            },
+            "backup": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "none"
+                  ]
+                }
+              }
+            },
+            "cleanup": {
+              "properties": {
+                "disposition": {
+                  "const": "pending"
+                },
+                "failureKind": {
+                  "const": null
+                }
+              }
+            },
+            "failure": {
+              "const": null
+            }
+          }
+        },
+        {
+          "properties": {
+            "state": {
+              "const": "running"
+            },
+            "phase": {
+              "const": "validating"
+            },
+            "gate": {
+              "enum": [
+                "open"
+              ]
+            },
+            "lease": {
+              "properties": {
+                "kind": {
+                  "const": "working"
+                }
+              }
+            },
+            "apply": {
+              "properties": {
+                "state": {
+                  "const": "accepted"
+                },
+                "acceptedCommandId": {
+                  "$ref": "#/$defs/Id"
+                }
+              }
+            },
+            "source": {
+              "properties": {
+                "sha256": {
+                  "$ref": "#/$defs/Digest"
+                }
+              }
+            },
+            "preview": {
+              "$ref": "#/$defs/Preview"
+            },
+            "result": {
+              "const": null
+            },
+            "commit": {
+              "properties": {
+                "outcome": {
+                  "enum": [
+                    "pending"
+                  ]
+                }
+              }
+            },
+            "backup": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "none"
+                  ]
+                }
+              }
+            },
+            "cleanup": {
+              "properties": {
+                "disposition": {
+                  "const": "pending"
+                },
+                "failureKind": {
+                  "const": null
+                }
+              }
+            },
+            "failure": {
+              "const": null
+            }
+          }
+        },
+        {
+          "properties": {
+            "state": {
+              "const": "running"
+            },
+            "phase": {
+              "const": "backingUp"
+            },
+            "gate": {
+              "enum": [
+                "open"
+              ]
+            },
+            "lease": {
+              "properties": {
+                "kind": {
+                  "const": "working"
+                }
+              }
+            },
+            "apply": {
+              "properties": {
+                "state": {
+                  "const": "accepted"
+                },
+                "acceptedCommandId": {
+                  "$ref": "#/$defs/Id"
+                }
+              }
+            },
+            "source": {
+              "properties": {
+                "sha256": {
+                  "$ref": "#/$defs/Digest"
+                }
+              }
+            },
+            "preview": {
+              "$ref": "#/$defs/Preview"
+            },
+            "result": {
+              "const": null
+            },
+            "commit": {
+              "properties": {
+                "outcome": {
+                  "enum": [
+                    "pending"
+                  ]
+                }
+              }
+            },
+            "backup": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "none",
+                    "staging",
+                    "published"
+                  ]
+                }
+              }
+            },
+            "cleanup": {
+              "properties": {
+                "disposition": {
+                  "const": "pending"
+                },
+                "failureKind": {
+                  "const": null
+                }
+              }
+            },
+            "failure": {
+              "const": null
+            }
+          }
+        },
+        {
+          "properties": {
+            "state": {
+              "const": "running"
+            },
+            "phase": {
+              "const": "installing"
+            },
+            "gate": {
+              "enum": [
+                "open"
+              ]
+            },
+            "lease": {
+              "properties": {
+                "kind": {
+                  "const": "working"
+                }
+              }
+            },
+            "apply": {
+              "properties": {
+                "state": {
+                  "const": "accepted"
+                },
+                "acceptedCommandId": {
+                  "$ref": "#/$defs/Id"
+                }
+              }
+            },
+            "source": {
+              "properties": {
+                "sha256": {
+                  "$ref": "#/$defs/Digest"
+                }
+              }
+            },
+            "preview": {
+              "$ref": "#/$defs/Preview"
+            },
+            "result": {
+              "const": null
+            },
+            "commit": {
+              "properties": {
+                "outcome": {
+                  "enum": [
+                    "pending"
+                  ]
+                }
+              }
+            },
+            "backup": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "published"
+                  ]
+                }
+              }
+            },
+            "cleanup": {
+              "properties": {
+                "disposition": {
+                  "const": "pending"
+                },
+                "failureKind": {
+                  "const": null
+                }
+              }
+            },
+            "failure": {
+              "const": null
+            }
+          }
+        },
+        {
+          "properties": {
+            "state": {
+              "const": "running"
+            },
+            "phase": {
+              "const": "committing"
+            },
+            "gate": {
+              "enum": [
+                "commitClaimed"
+              ]
+            },
+            "lease": {
+              "properties": {
+                "kind": {
+                  "const": "working"
+                }
+              }
+            },
+            "apply": {
+              "properties": {
+                "state": {
+                  "const": "accepted"
+                },
+                "acceptedCommandId": {
+                  "$ref": "#/$defs/Id"
+                }
+              }
+            },
+            "source": {
+              "properties": {
+                "sha256": {
+                  "$ref": "#/$defs/Digest"
+                }
+              }
+            },
+            "preview": {
+              "$ref": "#/$defs/Preview"
+            },
+            "result": {
+              "const": null
+            },
+            "commit": {
+              "properties": {
+                "outcome": {
+                  "enum": [
+                    "pending"
+                  ]
+                }
+              }
+            },
+            "backup": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "published"
+                  ]
+                }
+              }
+            },
+            "cleanup": {
+              "properties": {
+                "disposition": {
+                  "const": "pending"
+                },
+                "failureKind": {
+                  "const": null
+                }
+              }
+            },
+            "failure": {
+              "const": null
+            }
+          }
+        },
+        {
+          "properties": {
+            "state": {
+              "const": "running"
+            },
+            "phase": {
+              "const": "settling"
+            },
+            "gate": {
+              "enum": [
+                "open",
+                "cancelAccepted",
+                "commitClaimed"
+              ]
+            },
+            "lease": {
+              "properties": {
+                "kind": {
+                  "const": "working"
+                }
+              }
+            },
+            "apply": {
+              "properties": {
+                "state": {
+                  "const": "spent"
+                }
+              }
+            },
+            "commit": {
+              "properties": {
+                "outcome": {
+                  "enum": [
+                    "pending",
+                    "notCommitted",
+                    "committed",
+                    "unknown"
+                  ]
+                }
+              }
+            },
+            "backup": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "none",
+                    "staging",
+                    "published",
+                    "retained",
+                    "quarantined"
+                  ]
+                }
+              }
+            },
+            "cleanup": {
+              "properties": {
+                "disposition": {
+                  "const": "pending"
+                },
+                "failureKind": {
+                  "const": null
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "state": {
+              "const": "succeeded"
+            },
+            "phase": {
+              "const": null
+            },
+            "gate": {
+              "enum": [
+                "commitClaimed"
+              ]
+            },
+            "lease": {
+              "properties": {
+                "kind": {
+                  "const": "retention"
+                }
+              }
+            },
+            "apply": {
+              "properties": {
+                "state": {
+                  "const": "spent"
+                }
+              }
+            },
+            "source": {
+              "properties": {
+                "sha256": {
+                  "$ref": "#/$defs/Digest"
+                }
+              }
+            },
+            "preview": {
+              "$ref": "#/$defs/Preview"
+            },
+            "result": {
+              "$ref": "#/$defs/Result"
+            },
+            "commit": {
+              "properties": {
+                "outcome": {
+                  "enum": [
+                    "committed"
+                  ]
+                }
+              }
+            },
+            "backup": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "retained",
+                    "quarantined"
+                  ]
+                }
+              }
+            },
+            "progress": {
+              "const": null
+            },
+            "cleanup": {
+              "properties": {
+                "disposition": {
+                  "enum": [
+                    "complete",
+                    "quarantined"
+                  ]
+                }
+              }
+            },
+            "failure": {
+              "const": null
+            }
+          }
+        },
+        {
+          "properties": {
+            "state": {
+              "const": "cancelled"
+            },
+            "phase": {
+              "const": null
+            },
+            "gate": {
+              "enum": [
+                "cancelAccepted"
+              ]
+            },
+            "lease": {
+              "properties": {
+                "kind": {
+                  "const": "retention"
+                }
+              }
+            },
+            "apply": {
+              "properties": {
+                "state": {
+                  "const": "spent"
+                }
+              }
+            },
+            "result": {
+              "const": null
+            },
+            "commit": {
+              "properties": {
+                "outcome": {
+                  "enum": [
+                    "notCommitted"
+                  ]
+                }
+              }
+            },
+            "backup": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "none"
+                  ]
+                }
+              }
+            },
+            "progress": {
+              "const": null
+            },
+            "cleanup": {
+              "properties": {
+                "disposition": {
+                  "enum": [
+                    "complete"
+                  ]
+                }
+              }
+            },
+            "failure": {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/Failure"
+                },
+                {
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "cancelled",
+                        "serverStop"
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "properties": {
+            "state": {
+              "const": "stale"
+            },
+            "phase": {
+              "const": null
+            },
+            "gate": {
+              "enum": [
+                "open"
+              ]
+            },
+            "lease": {
+              "properties": {
+                "kind": {
+                  "const": "retention"
+                }
+              }
+            },
+            "apply": {
+              "properties": {
+                "state": {
+                  "const": "spent"
+                }
+              }
+            },
+            "source": {
+              "properties": {
+                "sha256": {
+                  "$ref": "#/$defs/Digest"
+                }
+              }
+            },
+            "preview": {
+              "$ref": "#/$defs/Preview"
+            },
+            "result": {
+              "const": null
+            },
+            "commit": {
+              "properties": {
+                "outcome": {
+                  "enum": [
+                    "notCommitted"
+                  ]
+                }
+              }
+            },
+            "backup": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "none"
+                  ]
+                }
+              }
+            },
+            "progress": {
+              "const": null
+            },
+            "cleanup": {
+              "properties": {
+                "disposition": {
+                  "enum": [
+                    "complete"
+                  ]
+                }
+              }
+            },
+            "failure": {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/Failure"
+                },
+                {
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "catalogueUpdateStale"
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "properties": {
+            "state": {
+              "const": "expired"
+            },
+            "phase": {
+              "const": null
+            },
+            "gate": {
+              "enum": [
+                "cancelAccepted"
+              ]
+            },
+            "lease": {
+              "properties": {
+                "kind": {
+                  "const": "retention"
+                }
+              }
+            },
+            "apply": {
+              "properties": {
+                "state": {
+                  "const": "spent"
+                }
+              }
+            },
+            "result": {
+              "const": null
+            },
+            "commit": {
+              "properties": {
+                "outcome": {
+                  "enum": [
+                    "notCommitted"
+                  ]
+                }
+              }
+            },
+            "backup": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "none"
+                  ]
+                }
+              }
+            },
+            "progress": {
+              "const": null
+            },
+            "cleanup": {
+              "properties": {
+                "disposition": {
+                  "enum": [
+                    "complete"
+                  ]
+                }
+              }
+            },
+            "failure": {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/Failure"
+                },
+                {
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "readyExpired",
+                        "receivingIdleTimeout",
+                        "receivingTimeout",
+                        "workingTimeout"
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "properties": {
+            "state": {
+              "const": "failed"
+            },
+            "phase": {
+              "const": null
+            },
+            "gate": {
+              "enum": [
+                "open",
+                "cancelAccepted",
+                "commitClaimed"
+              ]
+            },
+            "lease": {
+              "properties": {
+                "kind": {
+                  "const": "retention"
+                }
+              }
+            },
+            "apply": {
+              "properties": {
+                "state": {
+                  "const": "spent"
+                }
+              }
+            },
+            "commit": {
+              "properties": {
+                "outcome": {
+                  "enum": [
+                    "notCommitted",
+                    "committed",
+                    "unknown"
+                  ]
+                }
+              }
+            },
+            "backup": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "none",
+                    "retained",
+                    "quarantined"
+                  ]
+                }
+              }
+            },
+            "progress": {
+              "const": null
+            },
+            "cleanup": {
+              "properties": {
+                "disposition": {
+                  "enum": [
+                    "complete",
+                    "quarantined"
+                  ]
+                }
+              }
+            },
+            "failure": {
+              "$ref": "#/$defs/Failure"
+            }
+          }
+        }
+      ]
+    },
+    "Admission": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "policyVersion": {
+          "const": "wp043-v1"
+        },
+        "serverIncarnation": {
+          "$ref": "#/$defs/Id"
+        },
+        "nextAdmissionSerial": {
+          "$ref": "#/$defs/U64"
+        },
+        "serverTickMs": {
+          "$ref": "#/$defs/U64"
+        },
+        "admission": {
+          "type": "string",
+          "enum": [
+            "open",
+            "busy",
+            "stopping",
+            "exhausted",
+            "artifactStoreUnavailable",
+            "catalogueUnavailable"
+          ]
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "policyVersion",
+        "serverIncarnation",
+        "nextAdmissionSerial",
+        "serverTickMs",
+        "admission"
+      ],
+      "additionalProperties": false
+    },
+    "Create": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "policyVersion": {
+          "const": "wp043-v1"
+        },
+        "serverIncarnation": {
+          "$ref": "#/$defs/Id"
+        },
+        "admissionSerial": {
+          "$ref": "#/$defs/U64"
+        },
+        "sourceName": {
+          "type": "string",
+          "maxLength": 512,
+          "x-maxUtf8Bytes": 512
+        },
+        "declaredBytes": {
+          "$ref": "#/$defs/U64"
+        },
+        "profile": {
+          "type": "string",
+          "enum": [
+            "standard",
+            "large"
+          ]
+        },
+        "allowLargePackage": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "policyVersion",
+        "serverIncarnation",
+        "admissionSerial",
+        "sourceName",
+        "declaredBytes",
+        "profile",
+        "allowLargePackage"
+      ],
+      "additionalProperties": false
+    },
+    "ApplyCommand": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "commandId": {
+          "$ref": "#/$defs/Id"
+        },
+        "consentId": {
+          "$ref": "#/$defs/Id"
+        },
+        "previewArtifactId": {
+          "$ref": "#/$defs/Id"
+        },
+        "previewPublicSha256": {
+          "$ref": "#/$defs/Digest"
+        },
+        "confirmed": {
+          "const": true
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "commandId",
+        "consentId",
+        "previewArtifactId",
+        "previewPublicSha256",
+        "confirmed"
+      ],
+      "additionalProperties": false
+    },
+    "CancelCommand": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "commandId": {
+          "$ref": "#/$defs/Id"
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "commandId"
+      ],
+      "additionalProperties": false
+    },
+    "CancelReply": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "commandId": {
+          "$ref": "#/$defs/Id"
+        },
+        "outcome": {
+          "type": "string",
+          "enum": [
+            "requested",
+            "alreadyRequested",
+            "alreadyTerminal",
+            "tooLate"
+          ]
+        },
+        "job": {
+          "$ref": "#/$defs/Status"
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "commandId",
+        "outcome",
+        "job"
+      ],
+      "additionalProperties": false
+    },
+    "DisposeReply": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "handle": {
+          "$ref": "#/$defs/Handle"
+        },
+        "disposition": {
+          "const": "disposed"
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "handle",
+        "disposition"
+      ],
+      "additionalProperties": false
+    },
+    "Error": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "invalidRequest",
+            "invalidHandle",
+            "unsupportedMediaType",
+            "bodyLimit",
+            "unauthenticated",
+            "outcomeUnavailable",
+            "incarnationChanged",
+            "staleOffer",
+            "commandConflict",
+            "jobBusy",
+            "invalidPhase",
+            "uploadNotReplayable",
+            "consentExpired",
+            "catalogueUpdateStale",
+            "uploadLengthMismatch",
+            "serverStopping",
+            "counterExhausted",
+            "artifactStoreUnavailable",
+            "catalogueUnavailable",
+            "catalogueAdmissionLimit",
+            "catalogueGrowthLimit",
+            "resultLimit",
+            "recordLimit",
+            "publicProjectionRefused",
+            "unsupportedCatalogue",
+            "legacyProductDatabase",
+            "packageRefused",
+            "writerTimeout",
+            "uploadAborted",
+            "ioFailure",
+            "databaseFailure",
+            "workerFailed",
+            "reportMismatch",
+            "cleanupFailed",
+            "outcomeUnknown",
+            "cancelled",
+            "receivingIdleTimeout",
+            "receivingTimeout",
+            "workingTimeout",
+            "serverStop",
+            "readyExpired"
+          ]
+        },
+        "context": {
+          "const": null
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "kind",
+        "context"
+      ],
+      "additionalProperties": false
+    },
+    "DetailQuery": {
+      "type": "object",
+      "properties": {
+        "artifactId": {
+          "$ref": "#/$defs/Id"
+        },
+        "publicSha256": {
+          "$ref": "#/$defs/Digest"
+        },
+        "offset": {
+          "$ref": "#/$defs/U64"
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 200
+        }
+      },
+      "required": [
+        "artifactId",
+        "publicSha256",
+        "offset",
+        "limit"
+      ],
+      "additionalProperties": false
+    },
+    "Page": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "handle": {
+          "$ref": "#/$defs/Handle"
+        },
+        "artifactId": {
+          "$ref": "#/$defs/Id"
+        },
+        "publicSha256": {
+          "$ref": "#/$defs/Digest"
+        },
+        "offset": {
+          "$ref": "#/$defs/U64"
+        },
+        "totalRecords": {
+          "$ref": "#/$defs/U64"
+        },
+        "records": {
+          "type": "array",
+          "items": {
+            "$ref": "wp043-artifact-records.schema.json#/$defs/PublicRecord"
+          },
+          "maxItems": 200
+        },
+        "nextOffset": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/U64"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "handle",
+        "artifactId",
+        "publicSha256",
+        "offset",
+        "totalRecords",
+        "records",
+        "nextOffset"
+      ],
+      "additionalProperties": false
+    },
+    "CatalogueDrain": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "end": {
+          "type": "string",
+          "enum": [
+            "nothingRunning",
+            "finished",
+            "timedOut",
+            "secondSignal"
+          ]
+        },
+        "workOutstanding": {
+          "type": "boolean"
+        },
+        "cleanup": {
+          "type": "string",
+          "enum": [
+            "complete",
+            "quarantined",
+            "pending"
+          ]
+        },
+        "commit": {
+          "type": "string",
+          "enum": [
+            "notApplicable",
+            "pending",
+            "committed",
+            "notCommitted",
+            "unknown"
+          ]
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "end",
+        "workOutstanding",
+        "cleanup",
+        "commit"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/Status"
+    },
+    {
+      "$ref": "#/$defs/Admission"
+    },
+    {
+      "$ref": "#/$defs/Create"
+    },
+    {
+      "$ref": "#/$defs/ApplyCommand"
+    },
+    {
+      "$ref": "#/$defs/CancelCommand"
+    },
+    {
+      "$ref": "#/$defs/CancelReply"
+    },
+    {
+      "$ref": "#/$defs/DisposeReply"
+    },
+    {
+      "$ref": "#/$defs/Error"
+    },
+    {
+      "$ref": "#/$defs/DetailQuery"
+    },
+    {
+      "$ref": "#/$defs/Page"
+    },
+    {
+      "$ref": "#/$defs/CatalogueDrain"
+    }
+  ]
+}

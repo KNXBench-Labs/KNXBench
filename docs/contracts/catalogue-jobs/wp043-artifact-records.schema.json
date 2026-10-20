@@ -1,0 +1,2281 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "wp043-artifact-records.schema.json",
+  "$defs": {
+    "U64": {
+      "type": "string",
+      "maxLength": 20,
+      "x-maxUtf8Bytes": 20,
+      "pattern": "^(0|[1-9][0-9]{0,19})$",
+      "x-maximumDecimal": "18446744073709551615"
+    },
+    "Id": {
+      "type": "string",
+      "maxLength": 32,
+      "x-maxUtf8Bytes": 32,
+      "pattern": "^[0-9a-f]{32}$"
+    },
+    "Digest": {
+      "type": "string",
+      "maxLength": 64,
+      "x-maxUtf8Bytes": 64,
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "Withheld": {
+      "type": "object",
+      "properties": {
+        "field": {
+          "type": "string",
+          "enum": [
+            "name",
+            "sample",
+            "detail",
+            "alias",
+            "declarationId",
+            "targetPath",
+            "installOnImport",
+            "timeInfo",
+            "fileVersion"
+          ]
+        },
+        "reason": {
+          "const": "untrustedFreeText"
+        },
+        "rawUtf8Bytes": {
+          "$ref": "#/$defs/U64"
+        }
+      },
+      "required": [
+        "field",
+        "reason",
+        "rawUtf8Bytes"
+      ],
+      "additionalProperties": false
+    },
+    "Raw_previewSummary": {
+      "type": "object",
+      "properties": {
+        "ordinal": {
+          "$ref": "#/$defs/U64"
+        },
+        "kind": {
+          "const": "previewSummary"
+        },
+        "packageAlreadyInstalled": {
+          "type": "boolean"
+        },
+        "wrapper": {
+          "type": "boolean"
+        },
+        "packages": {
+          "$ref": "#/$defs/U64"
+        },
+        "programs": {
+          "$ref": "#/$defs/U64"
+        },
+        "productsAdded": {
+          "$ref": "#/$defs/U64"
+        },
+        "hardware2ProgramsAdded": {
+          "$ref": "#/$defs/U64"
+        },
+        "idConflicts": {
+          "$ref": "#/$defs/U64"
+        },
+        "growthCliffPossible": {
+          "const": true
+        }
+      },
+      "required": [
+        "ordinal",
+        "kind",
+        "packageAlreadyInstalled",
+        "wrapper",
+        "packages",
+        "programs",
+        "productsAdded",
+        "hardware2ProgramsAdded",
+        "idConflicts",
+        "growthCliffPossible"
+      ],
+      "additionalProperties": false
+    },
+    "Public_previewSummary": {
+      "type": "object",
+      "properties": {
+        "ordinal": {
+          "$ref": "#/$defs/U64"
+        },
+        "kind": {
+          "const": "previewSummary"
+        },
+        "packageAlreadyInstalled": {
+          "type": "boolean"
+        },
+        "wrapper": {
+          "type": "boolean"
+        },
+        "packages": {
+          "$ref": "#/$defs/U64"
+        },
+        "programs": {
+          "$ref": "#/$defs/U64"
+        },
+        "productsAdded": {
+          "$ref": "#/$defs/U64"
+        },
+        "hardware2ProgramsAdded": {
+          "$ref": "#/$defs/U64"
+        },
+        "idConflicts": {
+          "$ref": "#/$defs/U64"
+        },
+        "growthCliffPossible": {
+          "const": true
+        },
+        "withheld": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Withheld"
+          },
+          "maxItems": 0
+        }
+      },
+      "required": [
+        "ordinal",
+        "kind",
+        "packageAlreadyInstalled",
+        "wrapper",
+        "packages",
+        "programs",
+        "productsAdded",
+        "hardware2ProgramsAdded",
+        "idConflicts",
+        "growthCliffPossible",
+        "withheld"
+      ],
+      "additionalProperties": false
+    },
+    "Raw_program": {
+      "type": "object",
+      "properties": {
+        "ordinal": {
+          "$ref": "#/$defs/U64"
+        },
+        "kind": {
+          "const": "program"
+        },
+        "programKey": {
+          "$ref": "#/$defs/U64"
+        },
+        "packageKey": {
+          "$ref": "#/$defs/U64"
+        },
+        "id": {
+          "type": "string",
+          "maxLength": 512,
+          "x-maxUtf8Bytes": 512,
+          "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.-]*$"
+        },
+        "manufacturerId": {
+          "type": "string",
+          "maxLength": 512,
+          "x-maxUtf8Bytes": 512,
+          "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.-]*$"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 65536,
+              "x-maxUtf8Bytes": 65536
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "applicationNumber": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 512,
+              "x-maxUtf8Bytes": 512,
+              "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.-]*$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "applicationVersion": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 512,
+              "x-maxUtf8Bytes": 512,
+              "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.-]*$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "new",
+            "newVersion",
+            "alreadyInstalled"
+          ]
+        }
+      },
+      "required": [
+        "ordinal",
+        "kind",
+        "programKey",
+        "packageKey",
+        "id",
+        "manufacturerId",
+        "name",
+        "applicationNumber",
+        "applicationVersion",
+        "status"
+      ],
+      "additionalProperties": false
+    },
+    "Public_program": {
+      "type": "object",
+      "properties": {
+        "ordinal": {
+          "$ref": "#/$defs/U64"
+        },
+        "kind": {
+          "const": "program"
+        },
+        "programKey": {
+          "$ref": "#/$defs/U64"
+        },
+        "packageKey": {
+          "$ref": "#/$defs/U64"
+        },
+        "id": {
+          "type": "string",
+          "maxLength": 512,
+          "x-maxUtf8Bytes": 512,
+          "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.-]*$"
+        },
+        "manufacturerId": {
+          "type": "string",
+          "maxLength": 512,
+          "x-maxUtf8Bytes": 512,
+          "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.-]*$"
+        },
+        "name": {
+          "const": null
+        },
+        "applicationNumber": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 512,
+              "x-maxUtf8Bytes": 512,
+              "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.-]*$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "applicationVersion": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 512,
+              "x-maxUtf8Bytes": 512,
+              "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.-]*$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "new",
+            "newVersion",
+            "alreadyInstalled"
+          ]
+        },
+        "withheld": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Withheld"
+          },
+          "maxItems": 1
+        }
+      },
+      "required": [
+        "ordinal",
+        "kind",
+        "programKey",
+        "packageKey",
+        "id",
+        "manufacturerId",
+        "name",
+        "applicationNumber",
+        "applicationVersion",
+        "status",
+        "withheld"
+      ],
+      "additionalProperties": false
+    },
+    "Raw_installedVersion": {
+      "type": "object",
+      "properties": {
+        "ordinal": {
+          "$ref": "#/$defs/U64"
+        },
+        "kind": {
+          "const": "installedVersion"
+        },
+        "programKey": {
+          "$ref": "#/$defs/U64"
+        },
+        "id": {
+          "type": "string",
+          "maxLength": 512,
+          "x-maxUtf8Bytes": 512,
+          "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.-]*$"
+        },
+        "applicationVersion": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 512,
+              "x-maxUtf8Bytes": 512,
+              "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.-]*$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "ordinal",
+        "kind",
+        "programKey",
+        "id",
+        "applicationVersion"
+      ],
+      "additionalProperties": false
+    },
+    "Public_installedVersion": {
+      "type": "object",
+      "properties": {
+        "ordinal": {
+          "$ref": "#/$defs/U64"
+        },
+        "kind": {
+          "const": "installedVersion"
+        },
+        "programKey": {
+          "$ref": "#/$defs/U64"
+        },
+        "id": {
+          "type": "string",
+          "maxLength": 512,
+          "x-maxUtf8Bytes": 512,
+          "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.-]*$"
+        },
+        "applicationVersion": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 512,
+              "x-maxUtf8Bytes": 512,
+              "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.-]*$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "withheld": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Withheld"
+          },
+          "maxItems": 0
+        }
+      },
+      "required": [
+        "ordinal",
+        "kind",
+        "programKey",
+        "id",
+        "applicationVersion",
+        "withheld"
+      ],
+      "additionalProperties": false
+    },
+    "Raw_wrapperPackage": {
+      "type": "object",
+      "properties": {
+        "ordinal": {
+          "$ref": "#/$defs/U64"
+        },
+        "kind": {
+          "const": "wrapperPackage"
+        },
+        "packageKey": {
+          "$ref": "#/$defs/U64"
+        },
+        "path": {
+          "type": "string",
+          "maxLength": 65536,
+          "x-maxUtf8Bytes": 65536
+        },
+        "sha256": {
+          "$ref": "#/$defs/Digest"
+        },
+        "alreadyInstalled": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "ordinal",
+        "kind",
+        "packageKey",
+        "path",
+        "sha256",
+        "alreadyInstalled"
+      ],
+      "additionalProperties": false
+    },
+    "Public_wrapperPackage": {
+      "type": "object",
+      "properties": {
+        "ordinal": {
+          "$ref": "#/$defs/U64"
+        },
+        "kind": {
+          "const": "wrapperPackage"
+        },
+        "packageKey": {
+          "$ref": "#/$defs/U64"
+        },
+        "path": {
+          "type": "string",
+          "maxLength": 65536,
+          "x-maxUtf8Bytes": 65536
+        },
+        "sha256": {
+          "$ref": "#/$defs/Digest"
+        },
+        "alreadyInstalled": {
+          "type": "boolean"
+        },
+        "withheld": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Withheld"
+          },
+          "maxItems": 0
+        }
+      },
+      "required": [
+        "ordinal",
+        "kind",
+        "packageKey",
+        "path",
+        "sha256",
+        "alreadyInstalled",
+        "withheld"
+      ],
+      "additionalProperties": false
+    },
+    "Raw_wrapperOtherMember": {
+      "type": "object",
+      "properties": {
+        "ordinal": {
+          "$ref": "#/$defs/U64"
+        },
+        "kind": {
+          "const": "wrapperOtherMember"
+        },
+        "path": {
+          "type": "string",
+          "maxLength": 65536,
+          "x-maxUtf8Bytes": 65536
+        },
+        "size": {
+          "$ref": "#/$defs/U64"
+        },
+        "sha256": {
+          "$ref": "#/$defs/Digest"
+        },
+        "memberKind": {
+          "type": "string",
+          "enum": [
+            "file",
+            "appleDouble"
+          ]
+        }
+      },
+      "required": [
+        "ordinal",
+        "kind",
+        "path",
+        "size",
+        "sha256",
+        "memberKind"
+      ],
+      "additionalProperties": false
+    },
+    "Public_wrapperOtherMember": {
+      "type": "object",
+      "properties": {
+        "ordinal": {
+          "$ref": "#/$defs/U64"
+        },
+        "kind": {
+          "const": "wrapperOtherMember"
+        },
+        "path": {
+          "type": "string",
+          "maxLength": 65536,
+          "x-maxUtf8Bytes": 65536
+        },
+        "size": {
+          "$ref": "#/$defs/U64"
+        },
+        "sha256": {
+          "$ref": "#/$defs/Digest"
+        },
+        "memberKind": {
+          "type": "string",
+          "enum": [
+            "file",
+            "appleDouble"
+          ]
+        },
+        "withheld": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Withheld"
+          },
+          "maxItems": 0
+        }
+      },
+      "required": [
+        "ordinal",
+        "kind",
+        "path",
+        "size",
+        "sha256",
+        "memberKind",
+        "withheld"
+      ],
+      "additionalProperties": false
+    },
+    "Raw_packageReport": {
+      "type": "object",
+      "properties": {
+        "ordinal": {
+          "$ref": "#/$defs/U64"
+        },
+        "kind": {
+          "const": "packageReport"
+        },
+        "packageKey": {
+          "$ref": "#/$defs/U64"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 65536,
+              "x-maxUtf8Bytes": 65536
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sha256": {
+          "$ref": "#/$defs/Digest"
+        },
+        "scheme": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "skipped": {
+          "type": "boolean"
+        },
+        "unknown": {
+          "$ref": "#/$defs/U64"
+        },
+        "conflicts": {
+          "$ref": "#/$defs/U64"
+        },
+        "translations": {
+          "type": "object",
+          "properties": {
+            "program": {
+              "$ref": "#/$defs/U64"
+            },
+            "catalog": {
+              "$ref": "#/$defs/U64"
+            },
+            "hardware": {
+              "$ref": "#/$defs/U64"
+            },
+            "master": {
+              "$ref": "#/$defs/U64"
+            }
+          },
+          "required": [
+            "program",
+            "catalog",
+            "hardware",
+            "master"
+          ],
+          "additionalProperties": false
+        },
+        "droppedDatapointTypes": {
+          "$ref": "#/$defs/U64"
+        },
+        "facts": {
+          "type": "string",
+          "enum": [
+            "available",
+            "unavailable"
+          ]
+        },
+        "unknownOccurrences": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/U64"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "baggage": {
+          "type": "string",
+          "enum": [
+            "available",
+            "unavailable"
+          ]
+        }
+      },
+      "required": [
+        "ordinal",
+        "kind",
+        "packageKey",
+        "path",
+        "sha256",
+        "scheme",
+        "skipped",
+        "unknown",
+        "conflicts",
+        "translations",
+        "droppedDatapointTypes",
+        "facts",
+        "unknownOccurrences",
+        "baggage"
+      ],
+      "additionalProperties": false
+    },
+    "Public_packageReport": {
+      "type": "object",
+      "properties": {
+        "ordinal": {
+          "$ref": "#/$defs/U64"
+        },
+        "kind": {
+          "const": "packageReport"
+        },
+        "packageKey": {
+          "$ref": "#/$defs/U64"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 65536,
+              "x-maxUtf8Bytes": 65536
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sha256": {
+          "$ref": "#/$defs/Digest"
+        },
+        "scheme": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "skipped": {
+          "type": "boolean"
+        },
+        "unknown": {
+          "$ref": "#/$defs/U64"
+        },
+        "conflicts": {
+          "$ref": "#/$defs/U64"
+        },
+        "translations": {
+          "type": "object",
+          "properties": {
+            "program": {
+              "$ref": "#/$defs/U64"
+            },
+            "catalog": {
+              "$ref": "#/$defs/U64"
+            },
+            "hardware": {
+              "$ref": "#/$defs/U64"
+            },
+            "master": {
+              "$ref": "#/$defs/U64"
+            }
+          },
+          "required": [
+            "program",
+            "catalog",
+            "hardware",
+            "master"
+          ],
+          "additionalProperties": false
+        },
+        "droppedDatapointTypes": {
+          "$ref": "#/$defs/U64"
+        },
+        "facts": {
+          "type": "string",
+          "enum": [
+            "available",
+            "unavailable"
+          ]
+        },
+        "unknownOccurrences": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/U64"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "withheld": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Withheld"
+          },
+          "maxItems": 0
+        },
+        "baggage": {
+          "type": "string",
+          "enum": [
+            "available",
+            "unavailable"
+          ]
+        }
+      },
+      "required": [
+        "ordinal",
+        "kind",
+        "packageKey",
+        "path",
+        "sha256",
+        "scheme",
+        "skipped",
+        "unknown",
+        "conflicts",
+        "translations",
+        "droppedDatapointTypes",
+        "facts",
+        "unknownOccurrences",
+        "withheld",
+        "baggage"
+      ],
+      "additionalProperties": false
+    },
+    "Raw_member": {
+      "type": "object",
+      "properties": {
+        "ordinal": {
+          "$ref": "#/$defs/U64"
+        },
+        "kind": {
+          "const": "member"
+        },
+        "packageKey": {
+          "$ref": "#/$defs/U64"
+        },
+        "path": {
+          "type": "string",
+          "maxLength": 65536,
+          "x-maxUtf8Bytes": 65536
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "Master",
+            "Signature",
+            "Catalog",
+            "Hardware",
+            "ApplicationProgram",
+            "Baggages",
+            "Baggage",
+            "MasterData",
+            "Unrecognized"
+          ]
+        },
+        "sha256": {
+          "$ref": "#/$defs/Digest"
+        },
+        "size": {
+          "$ref": "#/$defs/U64"
+        }
+      },
+      "required": [
+        "ordinal",
+        "kind",
+        "packageKey",
+        "path",
+        "role",
+        "sha256",
+        "size"
+      ],
+      "additionalProperties": false
+    },
+    "Public_member": {
+      "type": "object",
+      "properties": {
+        "ordinal": {
+          "$ref": "#/$defs/U64"
+        },
+        "kind": {
+          "const": "member"
+        },
+        "packageKey": {
+          "$ref": "#/$defs/U64"
+        },
+        "path": {
+          "type": "string",
+          "maxLength": 65536,
+          "x-maxUtf8Bytes": 65536
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "Master",
+            "Signature",
+            "Catalog",
+            "Hardware",
+            "ApplicationProgram",
+            "Baggages",
+            "Baggage",
+            "MasterData",
+            "Unrecognized"
+          ]
+        },
+        "sha256": {
+          "$ref": "#/$defs/Digest"
+        },
+        "size": {
+          "$ref": "#/$defs/U64"
+        },
+        "withheld": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Withheld"
+          },
+          "maxItems": 0
+        }
+      },
+      "required": [
+        "ordinal",
+        "kind",
+        "packageKey",
+        "path",
+        "role",
+        "sha256",
+        "size",
+        "withheld"
+      ],
+      "additionalProperties": false
+    },
+    "Raw_installCount": {
+      "type": "object",
+      "properties": {
+        "ordinal": {
+          "$ref": "#/$defs/U64"
+        },
+        "kind": {
+          "const": "installCount"
+        },
+        "packageKey": {
+          "$ref": "#/$defs/U64"
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "archive_member",
+            "product",
+            "application_program",
+            "parameter",
+            "communication_object",
+            "dynamic_node",
+            "module",
+            "baggage_index",
+            "baggage",
+            "unknown_construct",
+            "master_section",
+            "master_subtree",
+            "datapoint_type"
+          ]
+        },
+        "disposition": {
+          "type": "string",
+          "enum": [
+            "read",
+            "stored",
+            "deduplicated",
+            "retained-but-uninterpreted",
+            "unsupported",
+            "dropped"
+          ]
+        },
+        "count": {
+          "$ref": "#/$defs/U64"
+        }
+      },
+      "required": [
+        "ordinal",
+        "kind",
+        "packageKey",
+        "category",
+        "disposition",
+        "count"
+      ],
+      "additionalProperties": false
+    },
+    "Public_installCount": {
+      "type": "object",
+      "properties": {
+        "ordinal": {
+          "$ref": "#/$defs/U64"
+        },
+        "kind": {
+          "const": "installCount"
+        },
+        "packageKey": {
+          "$ref": "#/$defs/U64"
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "archive_member",
+            "product",
+            "application_program",
+            "parameter",
+            "communication_object",
+            "dynamic_node",
+            "module",
+            "baggage_index",
+            "baggage",
+            "unknown_construct",
+            "master_section",
+            "master_subtree",
+            "datapoint_type"
+          ]
+        },
+        "disposition": {
+          "type": "string",
+          "enum": [
+            "read",
+            "stored",
+            "deduplicated",
+            "retained-but-uninterpreted",
+            "unsupported",
+            "dropped"
+          ]
+        },
+        "count": {
+          "$ref": "#/$defs/U64"
+        },
+        "withheld": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Withheld"
+          },
+          "maxItems": 0
+        }
+      },
+      "required": [
+        "ordinal",
+        "kind",
+        "packageKey",
+        "category",
+        "disposition",
+        "count",
+        "withheld"
+      ],
+      "additionalProperties": false
+    },
+    "Raw_unknownConstruct": {
+      "type": "object",
+      "properties": {
+        "ordinal": {
+          "$ref": "#/$defs/U64"
+        },
+        "kind": {
+          "const": "unknownConstruct"
+        },
+        "packageKey": {
+          "$ref": "#/$defs/U64"
+        },
+        "xpath": {
+          "type": "string",
+          "maxLength": 65536,
+          "x-maxUtf8Bytes": 65536
+        },
+        "unknownKind": {
+          "type": "string",
+          "enum": [
+            "Element",
+            "Attribute"
+          ]
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 65536,
+          "x-maxUtf8Bytes": 65536
+        },
+        "occurrences": {
+          "$ref": "#/$defs/U64"
+        },
+        "sample": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 65536,
+              "x-maxUtf8Bytes": 65536
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "ordinal",
+        "kind",
+        "packageKey",
+        "xpath",
+        "unknownKind",
+        "name",
+        "occurrences",
+        "sample"
+      ],
+      "additionalProperties": false
+    },
+    "Public_unknownConstruct": {
+      "type": "object",
+      "properties": {
+        "ordinal": {
+          "$ref": "#/$defs/U64"
+        },
+        "kind": {
+          "const": "unknownConstruct"
+        },
+        "packageKey": {
+          "$ref": "#/$defs/U64"
+        },
+        "xpath": {
+          "type": "string",
+          "maxLength": 65536,
+          "x-maxUtf8Bytes": 65536
+        },
+        "unknownKind": {
+          "type": "string",
+          "enum": [
+            "Element",
+            "Attribute"
+          ]
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 65536,
+          "x-maxUtf8Bytes": 65536
+        },
+        "occurrences": {
+          "$ref": "#/$defs/U64"
+        },
+        "sample": {
+          "const": null
+        },
+        "withheld": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Withheld"
+          },
+          "maxItems": 1
+        }
+      },
+      "required": [
+        "ordinal",
+        "kind",
+        "packageKey",
+        "xpath",
+        "unknownKind",
+        "name",
+        "occurrences",
+        "sample",
+        "withheld"
+      ],
+      "additionalProperties": false
+    },
+    "Raw_diagnostic": {
+      "type": "object",
+      "properties": {
+        "ordinal": {
+          "$ref": "#/$defs/U64"
+        },
+        "kind": {
+          "const": "diagnostic"
+        },
+        "packageKey": {
+          "$ref": "#/$defs/U64"
+        },
+        "diagnosticKind": {
+          "type": "string",
+          "enum": [
+            "master-identity-collision",
+            "malformed-master-declaration",
+            "unsupported-master-section",
+            "unsupported-master-subtree",
+            "unresolved-baggage-declaration",
+            "undeclared-baggage-payload"
+          ]
+        },
+        "archivePath": {
+          "type": "string",
+          "maxLength": 65536,
+          "x-maxUtf8Bytes": 65536
+        },
+        "xmlPath": {
+          "type": "string",
+          "maxLength": 65536,
+          "x-maxUtf8Bytes": 65536
+        },
+        "detail": {
+          "type": "string",
+          "maxLength": 65536,
+          "x-maxUtf8Bytes": 65536
+        },
+        "occurrences": {
+          "$ref": "#/$defs/U64"
+        }
+      },
+      "required": [
+        "ordinal",
+        "kind",
+        "packageKey",
+        "diagnosticKind",
+        "archivePath",
+        "xmlPath",
+        "detail",
+        "occurrences"
+      ],
+      "additionalProperties": false
+    },
+    "Public_diagnostic": {
+      "type": "object",
+      "properties": {
+        "ordinal": {
+          "$ref": "#/$defs/U64"
+        },
+        "kind": {
+          "const": "diagnostic"
+        },
+        "packageKey": {
+          "$ref": "#/$defs/U64"
+        },
+        "diagnosticKind": {
+          "type": "string",
+          "enum": [
+            "master-identity-collision",
+            "malformed-master-declaration",
+            "unsupported-master-section",
+            "unsupported-master-subtree",
+            "unresolved-baggage-declaration",
+            "undeclared-baggage-payload"
+          ]
+        },
+        "archivePath": {
+          "type": "string",
+          "maxLength": 65536,
+          "x-maxUtf8Bytes": 65536
+        },
+        "xmlPath": {
+          "type": "string",
+          "maxLength": 65536,
+          "x-maxUtf8Bytes": 65536
+        },
+        "detail": {
+          "const": null
+        },
+        "occurrences": {
+          "$ref": "#/$defs/U64"
+        },
+        "withheld": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Withheld"
+          },
+          "maxItems": 1
+        }
+      },
+      "required": [
+        "ordinal",
+        "kind",
+        "packageKey",
+        "diagnosticKind",
+        "archivePath",
+        "xmlPath",
+        "detail",
+        "occurrences",
+        "withheld"
+      ],
+      "additionalProperties": false
+    },
+    "Raw_idConflict": {
+      "type": "object",
+      "properties": {
+        "ordinal": {
+          "$ref": "#/$defs/U64"
+        },
+        "kind": {
+          "const": "idConflict"
+        },
+        "packageKey": {
+          "$ref": "#/$defs/U64"
+        },
+        "table": {
+          "type": "string",
+          "maxLength": 512,
+          "x-maxUtf8Bytes": 512
+        },
+        "id": {
+          "type": "string",
+          "maxLength": 65536,
+          "x-maxUtf8Bytes": 65536
+        },
+        "keptSha256": {
+          "$ref": "#/$defs/Digest"
+        },
+        "otherSha256": {
+          "$ref": "#/$defs/Digest"
+        },
+        "occurrence": {
+          "$ref": "#/$defs/U64"
+        }
+      },
+      "required": [
+        "ordinal",
+        "kind",
+        "packageKey",
+        "table",
+        "id",
+        "keptSha256",
+        "otherSha256",
+        "occurrence"
+      ],
+      "additionalProperties": false
+    },
+    "Public_idConflict": {
+      "type": "object",
+      "properties": {
+        "ordinal": {
+          "$ref": "#/$defs/U64"
+        },
+        "kind": {
+          "const": "idConflict"
+        },
+        "packageKey": {
+          "$ref": "#/$defs/U64"
+        },
+        "table": {
+          "type": "string",
+          "maxLength": 512,
+          "x-maxUtf8Bytes": 512
+        },
+        "id": {
+          "type": "string",
+          "maxLength": 65536,
+          "x-maxUtf8Bytes": 65536
+        },
+        "keptSha256": {
+          "$ref": "#/$defs/Digest"
+        },
+        "otherSha256": {
+          "$ref": "#/$defs/Digest"
+        },
+        "occurrence": {
+          "$ref": "#/$defs/U64"
+        },
+        "withheld": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Withheld"
+          },
+          "maxItems": 0
+        }
+      },
+      "required": [
+        "ordinal",
+        "kind",
+        "packageKey",
+        "table",
+        "id",
+        "keptSha256",
+        "otherSha256",
+        "occurrence",
+        "withheld"
+      ],
+      "additionalProperties": false
+    },
+    "Raw_provenance": {
+      "type": "object",
+      "properties": {
+        "ordinal": {
+          "$ref": "#/$defs/U64"
+        },
+        "kind": {
+          "const": "provenance"
+        },
+        "sourceKey": {
+          "$ref": "#/$defs/U64"
+        },
+        "sha256": {
+          "$ref": "#/$defs/Digest"
+        },
+        "alias": {
+          "type": "string",
+          "maxLength": 65536,
+          "x-maxUtf8Bytes": 65536
+        },
+        "packageKey": {
+          "$ref": "#/$defs/U64"
+        }
+      },
+      "required": [
+        "ordinal",
+        "kind",
+        "sourceKey",
+        "sha256",
+        "alias",
+        "packageKey"
+      ],
+      "additionalProperties": false
+    },
+    "Public_provenance": {
+      "type": "object",
+      "properties": {
+        "ordinal": {
+          "$ref": "#/$defs/U64"
+        },
+        "kind": {
+          "const": "provenance"
+        },
+        "sourceKey": {
+          "$ref": "#/$defs/U64"
+        },
+        "sha256": {
+          "$ref": "#/$defs/Digest"
+        },
+        "alias": {
+          "const": null
+        },
+        "withheld": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Withheld"
+          },
+          "maxItems": 1
+        },
+        "packageKey": {
+          "$ref": "#/$defs/U64"
+        }
+      },
+      "required": [
+        "ordinal",
+        "kind",
+        "sourceKey",
+        "sha256",
+        "alias",
+        "withheld",
+        "packageKey"
+      ],
+      "additionalProperties": false
+    },
+    "Raw_historyUnavailable": {
+      "type": "object",
+      "properties": {
+        "ordinal": {
+          "$ref": "#/$defs/U64"
+        },
+        "kind": {
+          "const": "historyUnavailable"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "notRecorded",
+            "unavailable"
+          ]
+        },
+        "packageKey": {
+          "$ref": "#/$defs/U64"
+        },
+        "evidenceKind": {
+          "type": "string",
+          "enum": [
+            "installFacts",
+            "baggage"
+          ]
+        }
+      },
+      "required": [
+        "ordinal",
+        "kind",
+        "reason",
+        "packageKey",
+        "evidenceKind"
+      ],
+      "additionalProperties": false
+    },
+    "Public_historyUnavailable": {
+      "type": "object",
+      "properties": {
+        "ordinal": {
+          "$ref": "#/$defs/U64"
+        },
+        "kind": {
+          "const": "historyUnavailable"
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "notRecorded",
+            "unavailable"
+          ]
+        },
+        "withheld": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Withheld"
+          },
+          "maxItems": 0
+        },
+        "packageKey": {
+          "$ref": "#/$defs/U64"
+        },
+        "evidenceKind": {
+          "type": "string",
+          "enum": [
+            "installFacts",
+            "baggage"
+          ]
+        }
+      },
+      "required": [
+        "ordinal",
+        "kind",
+        "reason",
+        "withheld",
+        "packageKey",
+        "evidenceKind"
+      ],
+      "additionalProperties": false
+    },
+    "Raw_resultSummary": {
+      "type": "object",
+      "properties": {
+        "ordinal": {
+          "$ref": "#/$defs/U64"
+        },
+        "kind": {
+          "const": "resultSummary"
+        },
+        "packages": {
+          "$ref": "#/$defs/U64"
+        },
+        "cataloguePageBytes": {
+          "$ref": "#/$defs/U64"
+        },
+        "nextJobInputLimitExceeded": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "ordinal",
+        "kind",
+        "packages",
+        "cataloguePageBytes",
+        "nextJobInputLimitExceeded"
+      ],
+      "additionalProperties": false
+    },
+    "Public_resultSummary": {
+      "type": "object",
+      "properties": {
+        "ordinal": {
+          "$ref": "#/$defs/U64"
+        },
+        "kind": {
+          "const": "resultSummary"
+        },
+        "packages": {
+          "$ref": "#/$defs/U64"
+        },
+        "cataloguePageBytes": {
+          "$ref": "#/$defs/U64"
+        },
+        "nextJobInputLimitExceeded": {
+          "type": "boolean"
+        },
+        "withheld": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Withheld"
+          },
+          "maxItems": 0
+        }
+      },
+      "required": [
+        "ordinal",
+        "kind",
+        "packages",
+        "cataloguePageBytes",
+        "nextJobInputLimitExceeded",
+        "withheld"
+      ],
+      "additionalProperties": false
+    },
+    "RawRecord": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/Raw_previewSummary"
+        },
+        {
+          "$ref": "#/$defs/Raw_program"
+        },
+        {
+          "$ref": "#/$defs/Raw_installedVersion"
+        },
+        {
+          "$ref": "#/$defs/Raw_wrapperPackage"
+        },
+        {
+          "$ref": "#/$defs/Raw_wrapperOtherMember"
+        },
+        {
+          "$ref": "#/$defs/Raw_packageReport"
+        },
+        {
+          "$ref": "#/$defs/Raw_member"
+        },
+        {
+          "$ref": "#/$defs/Raw_installCount"
+        },
+        {
+          "$ref": "#/$defs/Raw_unknownConstruct"
+        },
+        {
+          "$ref": "#/$defs/Raw_diagnostic"
+        },
+        {
+          "$ref": "#/$defs/Raw_idConflict"
+        },
+        {
+          "$ref": "#/$defs/Raw_provenance"
+        },
+        {
+          "$ref": "#/$defs/Raw_historyUnavailable"
+        },
+        {
+          "$ref": "#/$defs/Raw_resultSummary"
+        },
+        {
+          "$ref": "#/$defs/Raw_baggageSummary"
+        },
+        {
+          "$ref": "#/$defs/Raw_baggageDeclaration"
+        },
+        {
+          "$ref": "#/$defs/Raw_baggagePayload"
+        }
+      ],
+      "x-maxSerializedUtf8Bytes": 65536
+    },
+    "PublicRecord": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/Public_previewSummary"
+        },
+        {
+          "$ref": "#/$defs/Public_program"
+        },
+        {
+          "$ref": "#/$defs/Public_installedVersion"
+        },
+        {
+          "$ref": "#/$defs/Public_wrapperPackage"
+        },
+        {
+          "$ref": "#/$defs/Public_wrapperOtherMember"
+        },
+        {
+          "$ref": "#/$defs/Public_packageReport"
+        },
+        {
+          "$ref": "#/$defs/Public_member"
+        },
+        {
+          "$ref": "#/$defs/Public_installCount"
+        },
+        {
+          "$ref": "#/$defs/Public_unknownConstruct"
+        },
+        {
+          "$ref": "#/$defs/Public_diagnostic"
+        },
+        {
+          "$ref": "#/$defs/Public_idConflict"
+        },
+        {
+          "$ref": "#/$defs/Public_provenance"
+        },
+        {
+          "$ref": "#/$defs/Public_historyUnavailable"
+        },
+        {
+          "$ref": "#/$defs/Public_resultSummary"
+        },
+        {
+          "$ref": "#/$defs/Public_baggageSummary"
+        },
+        {
+          "$ref": "#/$defs/Public_baggageDeclaration"
+        },
+        {
+          "$ref": "#/$defs/Public_baggagePayload"
+        }
+      ],
+      "x-maxSerializedUtf8Bytes": 65536
+    },
+    "Raw_baggageSummary": {
+      "type": "object",
+      "properties": {
+        "ordinal": {
+          "$ref": "#/$defs/U64"
+        },
+        "kind": {
+          "const": "baggageSummary"
+        },
+        "packageKey": {
+          "$ref": "#/$defs/U64"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "available",
+            "unavailable"
+          ]
+        },
+        "declarations": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/U64"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "payloads": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/U64"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "ordinal",
+        "kind",
+        "packageKey",
+        "status",
+        "declarations",
+        "payloads"
+      ],
+      "additionalProperties": false
+    },
+    "Public_baggageSummary": {
+      "type": "object",
+      "properties": {
+        "ordinal": {
+          "$ref": "#/$defs/U64"
+        },
+        "kind": {
+          "const": "baggageSummary"
+        },
+        "packageKey": {
+          "$ref": "#/$defs/U64"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "available",
+            "unavailable"
+          ]
+        },
+        "declarations": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/U64"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "payloads": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/U64"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "withheld": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Withheld"
+          },
+          "maxItems": 0
+        }
+      },
+      "required": [
+        "ordinal",
+        "kind",
+        "packageKey",
+        "status",
+        "declarations",
+        "payloads",
+        "withheld"
+      ],
+      "additionalProperties": false
+    },
+    "Raw_baggageDeclaration": {
+      "type": "object",
+      "properties": {
+        "ordinal": {
+          "$ref": "#/$defs/U64"
+        },
+        "kind": {
+          "const": "baggageDeclaration"
+        },
+        "packageKey": {
+          "$ref": "#/$defs/U64"
+        },
+        "indexPath": {
+          "type": "string",
+          "maxLength": 8192,
+          "x-maxUtf8Bytes": 8192
+        },
+        "declarationOrdinal": {
+          "$ref": "#/$defs/U64"
+        },
+        "declarationId": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 65536,
+              "x-maxUtf8Bytes": 65536
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 65536,
+              "x-maxUtf8Bytes": 65536
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "targetPath": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 65536,
+              "x-maxUtf8Bytes": 65536
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "installOnImport": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 65536,
+              "x-maxUtf8Bytes": 65536
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "timeInfo": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 65536,
+              "x-maxUtf8Bytes": 65536
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "fileVersion": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 65536,
+              "x-maxUtf8Bytes": 65536
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "detail": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 65536,
+              "x-maxUtf8Bytes": 65536
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "resolution": {
+          "type": "string",
+          "enum": [
+            "resolved",
+            "missing",
+            "invalid"
+          ]
+        },
+        "memberPath": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 8192,
+              "x-maxUtf8Bytes": 8192
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "ordinal",
+        "kind",
+        "packageKey",
+        "indexPath",
+        "declarationOrdinal",
+        "declarationId",
+        "name",
+        "targetPath",
+        "installOnImport",
+        "timeInfo",
+        "fileVersion",
+        "detail",
+        "resolution",
+        "memberPath"
+      ],
+      "additionalProperties": false
+    },
+    "Public_baggageDeclaration": {
+      "type": "object",
+      "properties": {
+        "ordinal": {
+          "$ref": "#/$defs/U64"
+        },
+        "kind": {
+          "const": "baggageDeclaration"
+        },
+        "packageKey": {
+          "$ref": "#/$defs/U64"
+        },
+        "indexPath": {
+          "type": "string",
+          "maxLength": 8192,
+          "x-maxUtf8Bytes": 8192
+        },
+        "declarationOrdinal": {
+          "$ref": "#/$defs/U64"
+        },
+        "declarationId": {
+          "const": null
+        },
+        "name": {
+          "const": null
+        },
+        "targetPath": {
+          "const": null
+        },
+        "installOnImport": {
+          "const": null
+        },
+        "timeInfo": {
+          "const": null
+        },
+        "fileVersion": {
+          "const": null
+        },
+        "detail": {
+          "const": null
+        },
+        "resolution": {
+          "type": "string",
+          "enum": [
+            "resolved",
+            "missing",
+            "invalid"
+          ]
+        },
+        "memberPath": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 8192,
+              "x-maxUtf8Bytes": 8192
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "withheld": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Withheld"
+          },
+          "maxItems": 7
+        }
+      },
+      "required": [
+        "ordinal",
+        "kind",
+        "packageKey",
+        "indexPath",
+        "declarationOrdinal",
+        "declarationId",
+        "name",
+        "targetPath",
+        "installOnImport",
+        "timeInfo",
+        "fileVersion",
+        "detail",
+        "resolution",
+        "memberPath",
+        "withheld"
+      ],
+      "additionalProperties": false
+    },
+    "Raw_baggagePayload": {
+      "type": "object",
+      "properties": {
+        "ordinal": {
+          "$ref": "#/$defs/U64"
+        },
+        "kind": {
+          "const": "baggagePayload"
+        },
+        "packageKey": {
+          "$ref": "#/$defs/U64"
+        },
+        "memberPath": {
+          "type": "string",
+          "maxLength": 8192,
+          "x-maxUtf8Bytes": 8192
+        },
+        "sha256": {
+          "$ref": "#/$defs/Digest"
+        },
+        "size": {
+          "$ref": "#/$defs/U64"
+        },
+        "mediaClass": {
+          "type": "string",
+          "enum": [
+            "empty",
+            "png",
+            "jpeg",
+            "gif",
+            "bmp",
+            "pdf",
+            "zip",
+            "pe-executable",
+            "ole2-compound",
+            "xml",
+            "unknown"
+          ]
+        },
+        "declarations": {
+          "$ref": "#/$defs/U64"
+        },
+        "nested": {
+          "type": "object",
+          "properties": {
+            "state": {
+              "type": "string",
+              "enum": [
+                "notArchive",
+                "unreadable",
+                "read"
+              ]
+            },
+            "entries": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/U64"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "declaredExpandedSize": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/U64"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "encryptedEntries": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/U64"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "archiveNamedEntries": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/U64"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "state",
+            "entries",
+            "declaredExpandedSize",
+            "encryptedEntries",
+            "archiveNamedEntries"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "ordinal",
+        "kind",
+        "packageKey",
+        "memberPath",
+        "sha256",
+        "size",
+        "mediaClass",
+        "declarations",
+        "nested"
+      ],
+      "additionalProperties": false
+    },
+    "Public_baggagePayload": {
+      "type": "object",
+      "properties": {
+        "ordinal": {
+          "$ref": "#/$defs/U64"
+        },
+        "kind": {
+          "const": "baggagePayload"
+        },
+        "packageKey": {
+          "$ref": "#/$defs/U64"
+        },
+        "memberPath": {
+          "type": "string",
+          "maxLength": 8192,
+          "x-maxUtf8Bytes": 8192
+        },
+        "sha256": {
+          "$ref": "#/$defs/Digest"
+        },
+        "size": {
+          "$ref": "#/$defs/U64"
+        },
+        "mediaClass": {
+          "type": "string",
+          "enum": [
+            "empty",
+            "png",
+            "jpeg",
+            "gif",
+            "bmp",
+            "pdf",
+            "zip",
+            "pe-executable",
+            "ole2-compound",
+            "xml",
+            "unknown"
+          ]
+        },
+        "declarations": {
+          "$ref": "#/$defs/U64"
+        },
+        "nested": {
+          "type": "object",
+          "properties": {
+            "state": {
+              "type": "string",
+              "enum": [
+                "notArchive",
+                "unreadable",
+                "read"
+              ]
+            },
+            "entries": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/U64"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "declaredExpandedSize": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/U64"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "encryptedEntries": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/U64"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "archiveNamedEntries": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/U64"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "state",
+            "entries",
+            "declaredExpandedSize",
+            "encryptedEntries",
+            "archiveNamedEntries"
+          ],
+          "additionalProperties": false
+        },
+        "withheld": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Withheld"
+          },
+          "maxItems": 0
+        }
+      },
+      "required": [
+        "ordinal",
+        "kind",
+        "packageKey",
+        "memberPath",
+        "sha256",
+        "size",
+        "mediaClass",
+        "declarations",
+        "nested",
+        "withheld"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/RawRecord"
+    },
+    {
+      "$ref": "#/$defs/PublicRecord"
+    }
+  ]
+}

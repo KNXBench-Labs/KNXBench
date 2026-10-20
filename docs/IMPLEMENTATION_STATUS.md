@@ -12,6 +12,24 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## G16 ZIP and legacy-inspection diagnostics (20 October 2026)
+
+The existing `MissingMaster` error now says that the ZIP is not a standalone
+product package and names the missing `knx_master.xml` file. No new error
+variant, archive rule, installer or database schema. Library cases exercise
+manual/installer/legacy/nested-only inputs, AppleDouble-only metadata, a master-
+named directory (with and without a valid inner package), and the unchanged
+empty-archive structural refusal. Built CLI and HTTP install/preview cases pin
+the message; library and HTTP cases also preserve existing product data.
+
+The CLI inspection usage names `.vd1` for its already-existing content-based
+EX-IM reader, without advertising VD1 import. Import and inspection get separate
+missing-file hints from the shared argument parser. Two built-CLI regressions
+pin that distinction; password handling and actual format admission are unchanged.
+[Scope and retained source observations](research/2026-10-18-product-database-programmability-census.md#g16-diagnostic-follow-up-20-october-2026).
+Legacy binary enums, new import compatibility and programming remain outside
+this slice.
+
 ## AppImage frontend native-binding preflight (20 October 2026)
 
 The Linux AppImage workflow loads the installed Rolldown package immediately

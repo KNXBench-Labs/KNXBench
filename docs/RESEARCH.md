@@ -24,6 +24,7 @@ outside preserved historical blocks, or use the next free section number
 
 | Section | Where |
 | --- | --- |
+| [2026-10-20 — System-2 download integrity](research/2026-10-20-system2-download-integrity.md) | Original reference/Union, descriptor/priority and allocation-fill sources; explicit inactive-policy refusal and integrated sparse-index/bit-preservation tests; no new executable admission |
 | [2026-10-19 — Mask version → system family](research/2026-10-19-mask-version-system-family.md) | WP-20: 37 cited rows (Resources Table 7, Profiles Table 1, mask 2705h/27B0h/2920h profiles) behind the Devices *System* column; single-source rows named; `0AFDh`/`0AFEh` stay unknown; declared mask only |
 | [2026-10-18 — House diagnostic exports](research/2026-10-18-house-device-diagnostics.md) | All 34 contactable house devices read once (owner go): 29 of 29 declared PID 78 comparisons match the `[A]` rule; Merten zero-element refusal; `MV-0012` SmartSensors end the connection after PID 12; `1.1.253` rejects `T_Connect` |
 | [2026-10-18 — Eleven more diagnostic exports](research/2026-10-18-device-diagnostics-eleven-devices.md) | Same reporter, eleven devices from four manufacturers (`0701`/`0705`/`07B0`): first real zero-element PID 78 refusals; eight of eight declared PID 78 comparisons match the `[A]` six-plus-zero-tail rule; a hidden `HWT_Check` default equals its device's reply (G10); one seven-octet catalogue counterexample |

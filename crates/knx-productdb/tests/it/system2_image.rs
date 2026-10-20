@@ -70,6 +70,107 @@ fn real_product_evaluator_builds_parameter_and_legacy_table_images_without_admit
 }
 
 #[test]
+fn sparse_objects_and_sorted_addresses_keep_their_legacy_association_indices() {
+    // Four literal source slots, including inactive 0 and 2; pointers and types
+    // must survive. The active source order is deliberately 3, then 1.
+    let xml = PROGRAM
+        .replace(r#"Id="OBJ" Address="1024" Size="8"><Data>AqcSJQA0pQg="#,
+                 r#"Id="OBJ" Address="1024" Size="14"><Data>BKcSJQA0pQhW9Ql4IAo="#)
+        .replace("</ComObjectTable>", r#"<ComObject Id="O3" Number="3" ObjectSize="2 Bytes" ReadFlag="Disabled" WriteFlag="Enabled" CommunicationFlag="Enabled" TransmitFlag="Disabled" UpdateFlag="Enabled" ReadOnInitFlag="Disabled" /></ComObjectTable>"#)
+        .replace("</ComObjectRefs>", r#"<ComObjectRef Id="O3_R" RefId="O3" /></ComObjectRefs>"#)
+        .replace(r#"<ComObjectRefRef RefId="O_R" />"#, r#"<ComObjectRefRef RefId="O3_R" /><ComObjectRefRef RefId="O_R" />"#);
+    let (_dir, conn, mut request) = fixture(&xml);
+    request.links.extend([
+        Link {
+            object: 3,
+            group_address: GroupAddress::from_raw(0x4567),
+            sending: true,
+        },
+        Link {
+            object: 3,
+            group_address: GroupAddress::from_raw(0x0102),
+            sending: false,
+        },
+    ]);
+    let image = build_system2_image(&conn, &request).unwrap();
+    assert_eq!(
+        image.objects.iter().map(|o| o.number).collect::<Vec<_>>(),
+        [1, 3]
+    );
+    assert_eq!(
+        image.segment("OBJ").unwrap().octets,
+        [4, 0xA7, 0x12, 0x21, 0, 0x34, 0x6F, 7, 0x56, 0xF1, 9, 0x78, 0xB7, 8]
+    );
+    assert_eq!(
+        &image.segment("GA").unwrap().octets[..9],
+        &[4, 0x12, 0x34, 1, 2, 0x34, 0x56, 0x45, 0x67]
+    );
+    assert_eq!(
+        &image.segment("AA").unwrap().octets[..11],
+        &[5, 0xFE, 0, 2, 1, 0xFE, 2, 3, 3, 1, 3]
+    );
+    request.links.reverse();
+    assert_eq!(build_system2_image(&conn, &request).unwrap(), image);
+    assert!(knx_productdb::download_plan::plan_memory_download(&image).is_err());
+}
+
+#[test]
+fn two_active_object_references_with_the_same_number_are_a_conflict() {
+    let xml = PROGRAM
+        .replace(
+            "</ComObjectRefs>",
+            r#"<ComObjectRef Id="O_ALIAS" RefId="O" /></ComObjectRefs>"#,
+        )
+        .replace(
+            r#"<ComObjectRefRef RefId="O_R" />"#,
+            r#"<ComObjectRefRef RefId="O_R" /><ComObjectRefRef RefId="O_ALIAS" />"#,
+        );
+    let (_dir, conn, request) = fixture(&xml);
+    let before = conn.total_changes();
+    let error = build_system2_image(&conn, &request).unwrap_err();
+    assert_eq!(
+        error.to_string(),
+        "not supported for a download: group object 1 is listed twice"
+    );
+    assert_eq!(conn.total_changes(), before);
+}
+
+#[test]
+fn active_reference_defaults_and_project_values_preserve_unrelated_template_bits() {
+    let xml = PROGRAM
+        .replace("ABIAAA==", "q6XN7w==")
+        .replace(r#"SizeInBit="8""#, r#"SizeInBit="3""#)
+        .replace(r#"Value="18""#, r#"Value="2""#)
+        .replace(r#"Offset="1" BitOffset="0""#, r#"Offset="1" BitOffset="2""#)
+        .replace(
+            r#"<ParameterRef Id="P_R" RefId="P" />"#,
+            r#"<ParameterRef Id="P_R" RefId="P" Value="5" />"#,
+        );
+    let (_dir, conn, mut request) = fixture(&xml);
+    request.values.clear();
+    let defaults = build_system2_image(&conn, &request).unwrap();
+    // 0xA5 = 10|100|101; only the middle three bits belong to this field.
+    assert_eq!(
+        defaults.segment("PAR").unwrap().octets,
+        [0xAB, 0xAD, 0xCD, 0xEF]
+    );
+    assert_eq!(defaults.parameters.get("P_R"), Some(&5));
+    request.values.insert("P_R".into(), "3".into());
+    let edited = build_system2_image(&conn, &request).unwrap();
+    assert_eq!(
+        edited.segment("PAR").unwrap().octets,
+        [0xAB, 0x9D, 0xCD, 0xEF]
+    );
+    assert_eq!(edited.parameters.get("P_R"), Some(&3));
+    assert_eq!(edited.parameter_fields.len(), 1);
+    assert_eq!(edited.parameter_fields[0].reference, "P_R");
+    assert_eq!(
+        edited.code.segment("PAR").unwrap().data.as_deref(),
+        Some(&[0xAB, 0xA5, 0xCD, 0xEF][..])
+    );
+}
+
+#[test]
 fn uninterpreted_fixup_declarations_refuse_system2_images_without_database_changes() {
     let (_dir, baseline, request) = fixture(PROGRAM);
     assert!(build_system2_image(&baseline, &request).is_ok());
@@ -121,6 +222,68 @@ fn inactive_legacy_patch_declarations_do_not_return_partial_system2_images() {
             "an inactive uninterpreted patch declaration must not yield an image"
         );
         assert_eq!(conn.total_changes(), before);
+    }
+}
+
+#[test]
+fn explicit_invisible_parameter_policies_never_return_an_uninterpreted_image() {
+    // A nonzero inactive field distinguishes background data from an invented zero.
+    let xml = PROGRAM
+        .replace("ABIAAA==", "ABKlAA==")
+        .replace(
+            "</Parameters>",
+            r#"<Parameter Id="Q" ParameterType="PT" Value="7"><Memory CodeSegment="PAR" Offset="2" BitOffset="0" /></Parameter></Parameters>"#,
+        )
+        .replace(
+            "</ParameterRefs>",
+            r#"<ParameterRef Id="Q_R" RefId="Q" Value="9" /></ParameterRefs>"#,
+        );
+    let (_dir, conn, mut request) = fixture(&xml);
+    request.values.insert("Q_R".into(), "33".into());
+    assert_eq!(
+        build_system2_image(&conn, &request)
+            .unwrap()
+            .segment("PAR")
+            .unwrap()
+            .octets,
+        [0, 0x56, 0xA5, 0]
+    );
+    for policy in ["Background", "Default", "None", "", "future-policy"] {
+        let source = xml.replace(
+            "<Static>",
+            &format!(r#"<Static><Options DownloadInvisibleParameters="{policy}" />"#),
+        );
+        let (_dir, conn, mut request) = fixture(&source);
+        request.values.insert("Q_R".into(), "33".into());
+        let before = conn.total_changes();
+        let error = build_system2_image(&conn, &request).expect_err(
+            "an explicit unimplemented policy must not silently use active-only writes",
+        );
+        assert!(
+            matches!(error, knx_productdb::image::ImageError::Unsupported { ref what }
+                if what == &format!("System2 DownloadInvisibleParameters={policy:?} requires a separate source interpretation")),
+            "unexpected refusal: {error}"
+        );
+        assert_eq!(conn.total_changes(), before);
+    }
+}
+
+#[test]
+fn extension_policy_lookalikes_do_not_become_download_instructions() {
+    for declaration in [
+        r#"<Options xmlns:ext="urn:example:extension" ext:DownloadInvisibleParameters="Background" />"#,
+        r#"<Extension><Options DownloadInvisibleParameters="Background" /></Extension>"#,
+    ] {
+        let xml = PROGRAM.replace("</Static>", &format!("{declaration}</Static>"));
+        let (_dir, conn, request) = fixture(&xml);
+        assert_eq!(
+            build_system2_image(&conn, &request)
+                .unwrap()
+                .segment("PAR")
+                .unwrap()
+                .octets,
+            [0, 0x56, 0, 0]
+        );
     }
 }
 

@@ -6,6 +6,17 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## System-2 inactive-policy follow-up (20 October 2026 source)
+
+An explicit `DownloadInvisibleParameters` option now refuses offline System2
+image assembly by name; retaining the option without interpreting it no longer
+returns an apparent active-only success. This is a conservative integrity
+boundary, not implementation of the inactive/default/legacy patch rules.
+[The source/test matrix](../research/2026-10-20-system2-download-integrity.md)
+separates verified descriptor/association rules from unresolved tool policy.
+System1/Easy3 policies, module mapping, complete-image translation, full-state
+recovery and public mask admission stay unchanged. No new device support.
+
 ## Explicit parameter-bit follow-up (16 October 2026)
 
 [Direct single-octet fields](../contracts/offline-explicit-parameter-bits.md) now

@@ -2,6 +2,19 @@
 
 [Current summary and ledger status](../KNOWN_LIMITATIONS.md#catalogue-kl-182)
 
+## First fixed AppImage: alpha.12 (20 October 2026 reconciliation)
+
+The retained record's "next AppImage" is now historical.
+[Alpha 12 release notes](../releases/alpha12.md) include the staged-download
+repair and native save dialog; the retained
+[publication receipt](../evidence/release-alpha12-2026-10-15.json) identifies
+the published `v0.1.0-alpha.12` AppImage. Alpha.11 and older assets are not
+retroactively repaired, and publication does not upgrade an installed copy.
+
+The fallback when private staging fails remains reported and non-overwriting.
+The recorded X11 check is not new Wayland, failure-dialog or companion-window
+acceptance. Evidence: [download handler](../../apps/knx-desktop/src-tauri/src/download_handler.rs).
+
 This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.

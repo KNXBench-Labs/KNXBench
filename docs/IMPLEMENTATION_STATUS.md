@@ -12,6 +12,20 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Limitation-summary reconciliation (20 October 2026)
+
+Eight current catalogue summaries now match their delivered consumers: supported
+parameter captions, guarded release stamping, actual archive ceilings, scoped
+shutdown admission, Alpha 12 download availability, manifest-scoped native
+portability, CLI versus generic diagnostic profiles and bound web installation
+renames. Nine dossiers gain dated current-reading notes, including the fourth
+motion category. Manufacturer-file portability is narrowed in the operating
+manual too: the additional catalogue-created-device case is source-traced,
+not runtime-reproduced or fixed. The generated overview follows the catalogue;
+preserved history and every formal ledger disposition remain unchanged.
+[Scope, evidence and validation boundary](status/2026-10-20-limitations-reassessment.md).
+Documentation only; no new compatibility, hardware or recovery admission.
+
 ## WP-17 master provenance — delivered on main (19 October 2026)
 
 Product database **v27** adds separate source/declaration/winner evidence for

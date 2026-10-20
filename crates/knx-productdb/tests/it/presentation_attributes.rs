@@ -124,9 +124,13 @@ fn some(value: &str) -> Option<String> {
 #[test]
 fn both_hosts_store_access_and_the_separator_its_hint() {
     // v25 (ADR-0141) and v26 (ADR-0146) leave `dynamic_node` as v24 made it.
-    assert_eq!(CURRENT_PRODUCTDB_VERSION, 27);
     let (_dir, path) = installed();
     let conn = open_and_migrate(&path).unwrap();
+    assert_eq!(
+        conn.pragma_query_value(None, "user_version", |r| r.get::<_, i64>(0))
+            .unwrap(),
+        CURRENT_PRODUCTDB_VERSION
+    );
     assert_eq!(node(&conn, "PB-1"), (None, None, some("Name=open")));
     assert_eq!(node(&conn, "PB-2"), (some("Read"), None, some("Name=ro")));
     assert_eq!(node(&conn, "PS-1"), (None, some("Headline"), None));

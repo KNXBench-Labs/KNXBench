@@ -67,8 +67,11 @@ fn program_id(bytes: &[u8]) -> String {
 fn the_schema_is_v22_with_the_legacy_provenance_tables() {
     // v23 (ADR-0126), v24 (ADR-0139) and v25 (census 3) add columns elsewhere,
     // v26 (ADR-0146) two `ingest_unknown` indexes; all keep these tables.
-    assert_eq!(CURRENT_PRODUCTDB_VERSION, 27);
     let (_dir, conn) = database();
+    assert_eq!(
+        count(&conn, "PRAGMA user_version"),
+        CURRENT_PRODUCTDB_VERSION
+    );
     for table in [
         "legacy_source",
         "legacy_source_file",

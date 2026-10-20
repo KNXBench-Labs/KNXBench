@@ -149,6 +149,15 @@ step (install, rewind with `v20_rewind::drop_v2{3,4,5}_objects`, set
 `user_version`, migrate, compare with the fresh snapshot), then a repair step
 in the next schema version, since released databases already passed v23–v25.
 
+**Implementation in progress (20 October 2026):** the separately claimed
+Alpha 16 successor follows delivered WP-17/v27 with a distinct corrective v28
+step ([ADR-0148](adr/0148-repair-product-column-promotions.md),
+[repair contract](contracts/product-promotion-repair.md)). Eight early-entry
+regressions reproduce the defects; already-upgraded and report-preservation
+fixtures are added. ProductDB tests/Clippy pass on the worker candidate, but
+independent review, remaining budget coverage, corpus-selection reconciliation
+and the integrated package gate are pending. This is not a delivered fix.
+
 #### WP-03 — Legacy binary enumeration values
 
 **Scope:** KL-128 legacy `binary_value`, not the `.knxprod` half already

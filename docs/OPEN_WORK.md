@@ -452,9 +452,12 @@ clear. Product file-stream claim released. The additional fixed-buffer decode
 cost is disclosed as 1.38–1.84 times baseline direct-reader time in four synthetic
 profiles, not an installation-speed or peak-memory claim.
 
-**Remaining, unowned:** project-reader ordinary-file trailing streams and
-directory encryption-header semantics require separate packages. Standalone and
-inner product archives previously retained the accepted trailers, while their
+**Remaining:** project-reader ordinary-file trailing-stream evidence is
+**claimed (20 October 2026)** for source/contract/synthetic investigation first,
+including the normal and already supported ZipCrypto read boundaries. No new
+encryption support or project admission-policy change follows from that claim.
+Directory encryption-header validity remains **unowned** separate scope.
+Standalone and inner product archives previously retained the accepted trailers, while their
 normalized outputs and wrapper-only reports did not represent them; do not
 conflate that boundary with total archive data loss.
 

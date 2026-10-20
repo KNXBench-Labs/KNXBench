@@ -357,3 +357,21 @@ immutable parent blobs; removing the incoming sections recovers the feature
 and the journal also recovers upstream when removing owned prefixes. Runtime
 and accepted contract hashes remain unchanged. Integrated14stage acceptance
 and publication are pending; no old branch result is relabeled merged execution.
+
+## A2 integrated acceptance and verified source publication (21 October 2026)
+
+Main-first9ebb7cc6 independently passes all14ordered maintained stages, matching
+its3354tracked input manifest and empty touched/unchecked user-data guards.
+Actual integrated counts are1111RustPASS/53ignored,51/51corpus in2targets and
+411registered tooltests/sixoptional skips; earlier overlapping counts are not
+summed. Fresh upstream handover has no active publication reservation; the
+other observed branch gate had ended and no foreign publishing worker was
+observed active. Source publication then verifies local/tracking/live equality.
+The initial private-kernel push failed before write because its PATH lacked
+the credential helper; the actual terminal retry succeeds with exact readback.
+
+Current status/contract prose now records this delivered private-only increment.
+Result-only closure checks and scoped evidence archival/retirement remain
+separate, pending observations. No source execution is rerun or relabelled by
+this prose update. Managed binding remains the next dependency; no production
+constructor, authentication, SQL installer, route or full settlement is claimed.

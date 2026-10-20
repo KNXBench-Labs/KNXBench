@@ -1,7 +1,12 @@
 # A2 internal catalogue admission kernel
 
-Status: **bounded implementation decision accepted; no A2 execution yet**
-(20 October 2026). Refines stage A of [ADR-0150](../../adr/0150-cancellable-catalogue-jobs.md)
+Status: **private A2 kernel delivered on main** (`9ebb7cc6`, 21 October 2026).
+Independent corrected-source review accepts I1 closure. Fresh parent checks pass
+30 focused tests and 1,087 owning server tests / 53 ignored (overlapping selections).
+Feature and main-first integrated gates each pass all 14 selected stages; see the
+[delivery record](../../IMPLEMENTATION_STATUS.md#wp-043-a2-admission-kernel--delivered-21-october-2026).
+Construction remains test-only; there is no production Ready/apply API or real
+binding producer. Refines stage A of [ADR-0150](../../adr/0150-cancellable-catalogue-jobs.md)
 and [R1](../catalogue-update-jobs.md#readyapplyexpiry-admission-r1), without enabling
 a production job, Ready consent, installer or route. The existing synchronous
 APIs and delivered A1 publication primitive remain unchanged.

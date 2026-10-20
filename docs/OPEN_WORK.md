@@ -237,13 +237,17 @@ Independent review accepts A1 and all six compiled critical wrong-branch control
 are detected by the unchanged tests. Feature and main-first integrated gates
 pass all 14 maintained stages; A1 is published as `8610f317` on `main`
 ([delivery record](IMPLEMENTATION_STATUS.md#wp-043-a1-publication-primitive--local-verification-20-october-2026)).
-Ready admission,
-transitive installer control, server lifecycle and shared UI remain unimplemented.
-The private [A2 admission decision](contracts/catalogue-jobs/control-admission.md)
-is independently accepted for construction-disabled TDD only. The corrected
-internal kernel has 30 focused and 1,087 owning server passes / 53 ignored
+Production Ready admission, transitive installer control, server lifecycle and
+shared UI remain unimplemented. The private
+[A2 admission kernel](contracts/catalogue-jobs/control-admission.md) is delivered
+on `main` as `9ebb7cc6`, with construction still disabled outside tests. The
+corrected kernel has 30 focused and 1,087 owning server passes / 53 ignored
 (overlapping selections); I1 rereview accepts its deterministic clock-ownership
-coverage. Maintained package gates/publication remain pending, not a usable job path.
+coverage. Feature and main-first integrated maintained gates each pass 14/14
+stages (1,111 Rust passes / 53 ignored, 51/51 corpus tests in two targets, 411
+registered tool tests / six optional skips). Immediate remote readback confirms
+publication. This is not a usable job path; managed binding remains the next
+staged dependency.
 Existing synchronous behavior and profile limits remain unchanged.
 
 **Three separate deliveries, in order:**

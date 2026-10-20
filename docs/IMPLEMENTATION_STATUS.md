@@ -12,6 +12,26 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## WP-04.3 A2 admission kernel — delivered (21 October 2026)
+
+The construction-disabled private server kernel is published on `main` as
+main-first merge `9ebb7cc6` (feature `29a52f53`). Local, tracking and live remote
+refs agree immediately after publication. The selected shared checkout is not
+synchronized; its foreign work is untouched by this delivery.
+
+Both feature and integrated maintained gates pass all **14 ordered stages**:
+1,111 Rust passes / 53 ignored, 51/51 corpus tests in two selected targets and
+411 registered tool tests / six optional skips. Each run has a complete frozen
+3,354-file tracked-input manifest and no touched or unchecked user data. Counts
+belong to each run; they are not added to the earlier overlapping owning checks.
+Source review, I1 correction, bounded wrong-branch controls and parent checks are
+recorded below with their original source identities and historical verdicts.
+
+There is no production constructor, capability authentication, real binding,
+SQL/installer integration, job route, full Status or final worker-settlement
+claim. WP-04.3 and WP-19 remain open. The next staged dependency is the managed
+snapshot/binding foundation, not enabling the deferred production constructor.
+
 ## WP-04.3 A2 admission kernel — decision accepted (20 October 2026)
 
 The [bounded internal admission contract](contracts/catalogue-jobs/control-admission.md)
@@ -62,10 +82,10 @@ I1 rereview returns **ACCEPT — I1 closed**, with no unresolved in-scope findin
 the parent authenticates its 486 distinct input files and 18 outputs. This
 supersedes the original REJECT for the corrected tests without changing the
 historical proofs. Overall source review and owning checks are accepted;
-The maintained feature gate on `29a52f53` passes all 14 stages: 1,111 Rust
-passes / 53 ignored, 51/51 corpus tests in two targets and 411 registered tool
-tests / six optional skips. Main-first integrated gates and publication remain
-pending. No
+the maintained feature gate on `29a52f53` and main-first integrated gate on
+`9ebb7cc6` each pass all 14 stages: 1,111 Rust passes / 53 ignored, 51/51 corpus
+tests in two targets and 411 registered tool tests / six optional skips. The
+merge is published with immediate local/tracking/live-ref equality. No
 authenticated owner, real binding or full Status/settlement outcome is claimed;
 WP-04.3 remains open.
 

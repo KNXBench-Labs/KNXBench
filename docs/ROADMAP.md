@@ -1,5 +1,15 @@
 # Roadmap
 
+## UP258 System-2 validation candidate (20 October 2026)
+
+The [complete-defaults simulator path](contracts/up258-system2-validation.md)
+now joins source image, ordered procedure, existing executor and durable explicit
+same-shape recovery. This narrows the offline goal; it does not complete general
+System-2/ETS compatibility or lift physical admission. Next technical dependency
+is a defining/independently discriminating rule for the 338 masked allocation
+bytes and real resource/pointer behavior, followed by a separately approved
+hardware adapter/validation. No bus access is implied by this roadmap.
+
 ## After Alpha 15 — promotion repair source delivered (20 October 2026)
 
 The [earlier promotion repair](contracts/product-promotion-repair.md) is

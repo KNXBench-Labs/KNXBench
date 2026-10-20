@@ -19,7 +19,7 @@
 //! the client sends what the Standard says a client sends; it proves nothing
 //! whatsoever about what a physical device does with it.
 
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
 use std::ops::Range;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
@@ -267,6 +267,10 @@ pub struct SimulatorConfig {
     /// one: it proves that a reader refuses a short answer instead of
     /// comparing or classifying fewer octets than it asked for.
     pub short_memory_answers: bool,
+    /// Explicit experimental counter-hypothesis: accepted Unload removes bytes in
+    /// this owner's modeled absolute extents. False preserves historical simulator
+    /// behavior. Neither setting asserts what real System-2 firmware does.
+    pub experimental_destroy_allocation_memory_on_unload: bool,
     /// The octet at `0060h`, the programming-mode byte.
     ///
     /// This is also what `NM_IndividualAddress_Write` step 2 and step 3
@@ -648,6 +652,7 @@ impl Default for SimulatorConfig {
             protected_memory: None,
             corrupt_memory_writes: false,
             short_memory_answers: false,
+            experimental_destroy_allocation_memory_on_unload: false,
             programming_mode: false,
             other_programming_mode_devices: Vec::new(),
             other_programming_mode_devices_ignore_restart: false,
@@ -756,6 +761,112 @@ pub enum Seen {
     Other(&'static str),
 }
 
+/// The bounded System-2 resource owners modeled here, not arbitrary interface objects.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SimulatedSystem2Object {
+    /// Object 1.
+    AddressTable,
+    /// Object 2.
+    AssociationTable,
+    /// Object 3.
+    Application,
+}
+
+impl SimulatedSystem2Object {
+    /// The literal property interface-object index.
+    pub const fn index(self) -> u8 {
+        match self {
+            Self::AddressTable => 1,
+            Self::AssociationTable => 2,
+            Self::Application => 3,
+        }
+    }
+}
+
+/// An owned absolute data/stack extent, decoded independently of production encoders.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SimulatedAbsoluteAllocation {
+    /// Raw allocation subtype: 0 (data) or 1 (stack).
+    pub subtype: u8,
+    /// Raw word at payload offsets 2..4.
+    pub start: u16,
+    /// Raw word at offsets 4..6.
+    pub length: u16,
+    /// Raw access octet at offset 6 (not inferred from a source flag).
+    pub access: u8,
+    /// Raw memory-type octet at offset 7.
+    pub memory_type: u8,
+    /// Raw memory-attribute octet at offset 8.
+    pub attributes: u8,
+}
+
+/// Independently decoded subtype 2 table/task identity and setup fields.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SimulatedTaskSegment {
+    /// Offsets 2..4; may be zero for a task with no direct memory pointer.
+    pub start: u16,
+    /// Offset 4.
+    pub pei_type: u8,
+    /// Offsets 5..7.
+    pub manufacturer: u16,
+    /// Offsets 7..9.
+    pub application: u16,
+    /// Offset 9.
+    pub version: u8,
+}
+
+/// Independently decoded subtype 5 words; no inferred execution semantics.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SimulatedTaskControl2 {
+    /// Offsets 2..4.
+    pub callback: u16,
+    /// Offsets 4..6.
+    pub communication_objects: u16,
+    /// Offsets 6..8.
+    pub segment_1: u16,
+    /// Offsets 8..10.
+    pub segment_2: u16,
+}
+
+/// Observable resource state. This is a fixture/oracle, never a readable PID command log.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SimulatedSystem2ObjectState {
+    /// Stable load state, excluding a transient completing-poll countdown.
+    pub load_state: LoadState,
+    /// Current pointer; generic protocol reads retain their four-octet default.
+    pub table_reference: u32,
+    /// All owned extents in declaration order, including repeated allocations.
+    pub allocations: Vec<SimulatedAbsoluteAllocation>,
+    /// Last declared subtype 2 identity/setup record, if any.
+    pub task_segment: Option<SimulatedTaskSegment>,
+    /// Last declared subtype 5 control words, if any.
+    pub task_control_2: Option<SimulatedTaskControl2>,
+}
+
+impl Default for SimulatedSystem2ObjectState {
+    fn default() -> Self {
+        Self {
+            load_state: LoadState::Unloaded,
+            table_reference: 0,
+            allocations: Vec::new(),
+            task_segment: None,
+            task_control_2: None,
+        }
+    }
+}
+
+/// Persistent modeled state only: no trace, connection, retry or fault counters.
+/// Equality is software-model evidence, not a firmware reconstruction guarantee.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SimulatedSystem2Snapshot {
+    /// Resource owners 1, 2 and 3, in that order.
+    pub objects: [SimulatedSystem2ObjectState; 3],
+    /// Every explicitly stored byte, including preserved/unowned bytes.
+    pub memory: BTreeMap<u32, u8>,
+    /// Stored properties, with connection-local Verify Mode normalized off.
+    pub properties: BTreeMap<(u8, u8), Vec<u8>>,
+}
+
 #[derive(Debug)]
 struct State {
     /// Where the simulated device currently lives. Starts at
@@ -822,6 +933,9 @@ struct State {
     completing: HashMap<u8, u8>,
     error_code: HashMap<u8, u8>,
     reference: HashMap<u8, u32>,
+    absolute_allocations: HashMap<u8, Vec<SimulatedAbsoluteAllocation>>,
+    task_segments: HashMap<u8, SimulatedTaskSegment>,
+    task_controls_2: HashMap<u8, SimulatedTaskControl2>,
     /// How many allocations have been attempted per object, so that
     /// [`SimulatorConfig::allocation_fails_once_for`] can fail exactly the
     /// first one.
@@ -956,6 +1070,9 @@ impl SimulatedDevice {
             completing: HashMap::new(),
             error_code: HashMap::new(),
             reference: HashMap::new(),
+            absolute_allocations: HashMap::new(),
+            task_segments: HashMap::new(),
+            task_controls_2: HashMap::new(),
             allocation_attempts: HashMap::new(),
             mcb: HashMap::new(),
             properties,
@@ -1054,6 +1171,82 @@ impl SimulatedDevice {
             .get(&object_index.octet())
             .copied()
             .unwrap_or(LoadState::Unloaded)
+    }
+
+    /// Seeds an explicitly supplied known-old oracle, not a source-plan replay.
+    ///
+    /// This fixture method sends no service and does not create readable command PIDs.
+    /// Memory and stable identity properties are seeded separately with the existing
+    /// `preset_memory`/`preset_property` methods. Panics for a non-0025 fixture.
+    pub fn preset_system2_object(
+        &self,
+        object: SimulatedSystem2Object,
+        fixture: SimulatedSystem2ObjectState,
+    ) {
+        assert_eq!(
+            self.config.mask_version, 0x0025,
+            "System-2 fixture requires mask 0025"
+        );
+        let object = object.index();
+        let mut state = self.lock();
+        state.load.insert(object, fixture.load_state);
+        state.reference.insert(object, fixture.table_reference);
+        state
+            .absolute_allocations
+            .insert(object, fixture.allocations);
+        state.task_segments.remove(&object);
+        state.task_controls_2.remove(&object);
+        if let Some(task) = fixture.task_segment {
+            state.task_segments.insert(object, task);
+        }
+        if let Some(control) = fixture.task_control_2 {
+            state.task_controls_2.insert(object, control);
+        }
+        state.completing.remove(&object);
+        state.error_code.remove(&object);
+    }
+
+    /// Captures modeled persistent resources independently of the request trace.
+    /// Unwritten memory remains absent rather than being invented as readable zeroes.
+    pub fn system2_snapshot(&self) -> SimulatedSystem2Snapshot {
+        let state = self.lock();
+        let objects = std::array::from_fn(|slot| {
+            let object = slot as u8 + 1;
+            SimulatedSystem2ObjectState {
+                load_state: state
+                    .load
+                    .get(&object)
+                    .copied()
+                    .unwrap_or(LoadState::Unloaded),
+                table_reference: state.reference.get(&object).copied().unwrap_or(0),
+                allocations: state
+                    .absolute_allocations
+                    .get(&object)
+                    .cloned()
+                    .unwrap_or_default(),
+                task_segment: state.task_segments.get(&object).cloned(),
+                task_control_2: state.task_controls_2.get(&object).cloned(),
+            }
+        });
+        let mut properties: BTreeMap<_, _> = state
+            .properties
+            .iter()
+            .map(|(key, value)| (*key, value.clone()))
+            .collect();
+        if let Some(control) = properties.get_mut(&(0, PID_DEVICE_CONTROL)) {
+            if let Some(octet) = control.first_mut() {
+                *octet = with_verify_mode(*octet, false);
+            }
+        }
+        SimulatedSystem2Snapshot {
+            objects,
+            memory: state
+                .memory
+                .iter()
+                .map(|(address, byte)| (*address, *byte))
+                .collect(),
+            properties,
+        }
     }
 
     /// Everything the device was asked to do, in order.
@@ -1451,8 +1644,30 @@ impl SimulatedDevice {
         let mut state = self.lock();
         state.load.insert(object_index, after);
         if after == LoadState::Unloaded {
-            // §7.6: an unload frees the memory and zeroes the reference.
+            // Release the reference. Owned extents below are software-model
+            // state; byte retention/destruction is an explicit fixture choice.
             state.reference.remove(&object_index);
+            if event == LoadEvent::Unload
+                && self.config.mask_version == 0x0025
+                && (1..=3).contains(&object_index)
+            {
+                if self.config.experimental_destroy_allocation_memory_on_unload {
+                    if let Some(allocations) =
+                        state.absolute_allocations.get(&object_index).cloned()
+                    {
+                        for allocation in allocations {
+                            let start = u32::from(allocation.start);
+                            let end = start + u32::from(allocation.length);
+                            state
+                                .memory
+                                .retain(|address, _| !(*address >= start && *address < end));
+                        }
+                    }
+                }
+                state.absolute_allocations.remove(&object_index);
+                state.task_segments.remove(&object_index);
+                state.task_controls_2.remove(&object_index);
+            }
         }
         if after != LoadState::Error {
             state.error_code.remove(&object_index);
@@ -1464,8 +1679,36 @@ impl SimulatedDevice {
         }
     }
 
+    /// Stores declared TaskCtrl2 words only; no task execution is emulated.
+    fn apply_system2_task_control(&self, object_index: u8, payload: &[u8]) {
+        if self.config.mask_version != 0x0025
+            || !(1..=3).contains(&object_index)
+            || self.config.drop_load_state_writes
+            || payload.len() != 10
+            || payload[1] != 5
+            || self.load_state(ObjectIndex::new(object_index)) != LoadState::Loading
+        {
+            return;
+        }
+        self.lock().task_controls_2.insert(
+            object_index,
+            SimulatedTaskControl2 {
+                callback: u16::from_be_bytes([payload[2], payload[3]]),
+                communication_objects: u16::from_be_bytes([payload[4], payload[5]]),
+                segment_1: u16::from_be_bytes([payload[6], payload[7]]),
+                segment_2: u16::from_be_bytes([payload[8], payload[9]]),
+            },
+        );
+    }
+
     /// An `Additional Load Control` whose subtype allocates, in `Loading`.
     fn apply_allocation(&self, object_index: u8, payload: &[u8]) {
+        if self.config.mask_version == 0x0025
+            && (1..=3).contains(&object_index)
+            && self.config.drop_load_state_writes
+        {
+            return;
+        }
         if payload.len() < 2 {
             return;
         }
@@ -1516,6 +1759,38 @@ impl SimulatedDevice {
                 {
                     return;
                 }
+            }
+            if subtype <= 1
+                && (1..=3).contains(&object_index)
+                && !self.config.drop_load_state_writes
+            {
+                self.lock()
+                    .absolute_allocations
+                    .entry(object_index)
+                    .or_default()
+                    .push(SimulatedAbsoluteAllocation {
+                        subtype,
+                        start: u16::from_be_bytes([payload[2], payload[3]]),
+                        length: u16::from_be_bytes([payload[4], payload[5]]),
+                        access: payload[6],
+                        memory_type: payload[7],
+                        attributes: payload[8],
+                    });
+            }
+            if subtype == 2
+                && (1..=3).contains(&object_index)
+                && !self.config.drop_load_state_writes
+            {
+                self.lock().task_segments.insert(
+                    object_index,
+                    SimulatedTaskSegment {
+                        start: u16::from_be_bytes([payload[2], payload[3]]),
+                        pei_type: payload[4],
+                        manufacturer: u16::from_be_bytes([payload[5], payload[6]]),
+                        application: u16::from_be_bytes([payload[7], payload[8]]),
+                        version: payload[9],
+                    },
+                );
             }
             start
         } else {
@@ -2355,6 +2630,7 @@ impl SimulatedDevice {
                 self.apply_event(object_index, event);
                 if event == LoadEvent::AdditionalLoadControls {
                     self.apply_allocation(object_index, data);
+                    self.apply_system2_task_control(object_index, data);
                 }
                 // `[D]` CP NOTE 9 with AL §3.4.4.2, p. 66: the answer to a
                 // write of a PDT_CONTROL property is a read of it, and a

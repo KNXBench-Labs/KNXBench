@@ -79,8 +79,15 @@
 //!   (`[V]`, docs/RESEARCH.md §19.1). Any other change to a masked octet is
 //!   refused.
 
+mod experimental;
 mod legacy_source;
 mod system1;
+
+pub use experimental::{
+    build_experimental_system2_image, ExperimentalParameterCoverage,
+    ExperimentalParameterDisposition, ExperimentalSystem2Image, ExperimentalSystem2ImagePolicy,
+    ExperimentalSystem2SourceBinding,
+};
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
@@ -474,6 +481,15 @@ fn build_image(
     request: &ImageRequest,
     layout: ImageLayout,
 ) -> Result<DownloadImage, ImageError> {
+    build_image_selected(conn, request, layout, None)
+}
+
+fn build_image_selected(
+    conn: &Connection,
+    request: &ImageRequest,
+    layout: ImageLayout,
+    experimental: Option<&experimental::Prepared>,
+) -> Result<DownloadImage, ImageError> {
     let program_id = request.program_id.as_str();
     let code = load_program_code(conn, program_id)?
         .ok_or_else(|| ImageError::UnknownProgram(program_id.to_string()))?;
@@ -495,7 +511,7 @@ fn build_image(
     // The strict source-image entries require this unresolved declaration to
     // be closed. Easy3 keeps its existing inference policy; changing its
     // established source/execution contract is a separate compatibility task.
-    if layout != ImageLayout::Easy3 && code.has_legacy_patch_always {
+    if layout != ImageLayout::Easy3 && experimental.is_none() && code.has_legacy_patch_always {
         return Err(ImageError::Unsupported {
             what: format!(
                 "{} LegacyPatchAlways requires a separate source interpretation",
@@ -506,7 +522,7 @@ fn build_image(
     // Explicit inactive-parameter policies affect selection and possibly masks.
     // Keeping their source text is not the same as applying them; do not return
     // an active-only System-2 image while silently ignoring the declaration.
-    if layout == ImageLayout::System2 {
+    if layout == ImageLayout::System2 && experimental.is_none() {
         if let Some(policy) = code.options.get("DownloadInvisibleParameters") {
             return Err(ImageError::Unsupported {
                 what: format!(
@@ -541,13 +557,23 @@ fn build_image(
     for (parameter_ref, value) in &request.values {
         types.value(parameter_ref, value)?;
     }
-    let (values, activation) = activate(conn, request, &types)?;
+    let (values, mut activation) = activate(conn, request, &types)?;
+    if let Some(policy) = experimental {
+        policy.extend_activation(&mut activation, &types)?;
+    }
 
+    let experimental_base = experimental
+        .map(|policy| policy.background(conn, &code, &types, &activation, &protected_tables))
+        .transpose()?;
     let mut images: Vec<(&AbsoluteSegment, ParameterImage)> = code
         .segments
         .iter()
         .filter_map(|segment| {
-            let data = segment.data.clone()?;
+            let data = experimental_base
+                .as_ref()
+                .and_then(|base| base.get(&segment.id))
+                .cloned()
+                .or_else(|| segment.data.clone())?;
             Some((segment, ParameterImage::new(data)))
         })
         .collect();
@@ -603,7 +629,10 @@ fn build_image(
         if let ParameterPlacement::Unmodelled { name, .. } = placement {
             return Err(unwritable_placement(parameter, name));
         }
-        let value = types.value(parameter_ref, raw)?;
+        let value = match experimental {
+            Some(policy) => policy.value(&types, parameter_ref, raw)?,
+            None => types.value(parameter_ref, raw)?,
+        };
         if superseded.contains(parameter) {
             continue; // A later union member holds its bits.
         }
@@ -618,25 +647,26 @@ fn build_image(
         }
         let (segment_id, field) = field_of(parameter, placement, types.size(parameter_ref)?)?;
         if let Some(defaults) = &defaults {
-            let raw_default =
-                defaults
-                    .get_unscoped(parameter_ref)
-                    .ok_or_else(|| ImageError::Unsupported {
+            if experimental.is_none() {
+                let raw_default = defaults.get_unscoped(parameter_ref).ok_or_else(|| {
+                    ImageError::Unsupported {
                         what: format!(
                             "{parameter_ref}: {} source default unavailable",
                             layout.family()
                         ),
-                    })?;
-            let default_value = types.value(parameter_ref, raw_default)?;
-            legacy_source::validate_default(
-                &code,
-                layout,
-                segment_id,
-                field,
-                parameter_ref,
-                placement,
-                (&default_value, &value),
-            )?;
+                    }
+                })?;
+                let default_value = types.value(parameter_ref, raw_default)?;
+                legacy_source::validate_default(
+                    &code,
+                    layout,
+                    segment_id,
+                    field,
+                    parameter_ref,
+                    placement,
+                    (&default_value, &value),
+                )?;
+            }
         }
         let field_start = field.offset as usize;
         let field_end =

@@ -24,6 +24,7 @@ outside preserved historical blocks, or use the next free section number
 
 | Section | Where |
 | --- | --- |
+| [2026-10-20 — System-2 validation rules](research/2026-10-20-system2-validation-rules.md) | Independently inspected historical schema prose, revision-bound schema20 mirror and original property-control grammar; explicit candidate hypotheses and physical recovery limits |
 | [2026-10-20 — Directory encryption-header validity](research/2026-10-20-directory-encryption-header-validity.md) | Source-traced outer/direct-inner/project/product boundaries, 94 verified original-runtime controls and explicit refusal contract; no new encryption support |
 | [2026-10-20 — Project file-stream boundaries](research/2026-10-20-project-file-stream-boundaries.md) | Project outer/nested/ZipCrypto plaintext extents, normal versus selective preservation, error/report contracts and measured original-source behavior before stricter admission |
 | [2026-10-20 — Product file-stream extent investigation](research/2026-10-20-product-file-stream-integrity.md) | WP-16 follow-up: primary ZIP/DEFLATE/API facts, retained-archive versus normalized-member boundaries and evidence required before changing ordinary-file admission |

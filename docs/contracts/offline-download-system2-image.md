@@ -8,6 +8,12 @@ the explicit Release real-source refusal regression. Merged acceptance includes
 isolated corpus152/152 in33targets and2892unchanged source paths. This is not a
 successful whole-Siemens image or a new executable device path. [Receipt](../evidence/offline-download-system2-image-2026-10-16.json).
 
+The offline builder described below remains conservative. A later, **separate**
+[source-bound simulator candidate](up258-system2-validation.md) opts into explicit
+versioned hypotheses for the exact UP258 defaults-only source and retains all
+source positions. It does not relax this ordinary image contract or enable a
+physical device route.
+
 ## Explicit inactive-policy boundary (20 October 2026 source)
 
 The System2 entry now refuses an explicitly declared unqualified

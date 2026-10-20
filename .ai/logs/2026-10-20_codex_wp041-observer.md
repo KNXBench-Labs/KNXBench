@@ -219,3 +219,20 @@ stale-opening finding was corrected to bounded synthetic-study acceptance. Addit
 pass 26/26 (13 probe,13 supervisor). These are separate post-study executions,
 not a replay of the 54-operation measurements. Maintained branch and merged
 package gates, publication/readback and evidence archival/retirement are pending.
+
+## Source publication
+
+Published main-first `0f44135b3e593c6d26c3e883695bab50b51b2ae1` with verified
+local/tracking/live equality. The maintained integrated gate passes 16/16,
+5,498 Rust tests (215 ignored),155/155 selected corpus and410 registered tool
+methods (six optional skips); input identities are frozen and user-data guards
+clear. The separate branch gate passes5,497 Rust tests and155/155 corpus.
+Counts are not combined. No functional browser suite was selected. Raw study
+measurements remain bound to9834daff; neither gate replays that study.
+
+The first private final verifier incorrectly demanded a nonempty successful
+formatting log. Its corrected projection permits silent fmt/diff checks while
+requiring exact ordered exits/proofs, completed plan, frozen input identities
+and checked user-data guards; no test or gate replay was needed. The raw gate
+receipt remains unchanged. A result-only documentation gate, publication
+readback, compact evidence archive and owned retirement remain pending.

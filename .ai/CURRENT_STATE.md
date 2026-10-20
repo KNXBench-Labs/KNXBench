@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-20 18:19
+- **Completed:** WP-04.1 SOURCE DELIVERED on main-first0f44135b3e593c6d26c3e883695bab50b51b2ae1; local/tracking/live equality verified. Maintained integrated gate16/16passes,5498Rust/215ignored,155/155selectedcorpus,410registeredtooltests/sixoptional skips; ordered proofs/frozeninputs/clearuserdata authenticated. Separate accepted54-operation study remains bound to9834daff; source publication does not relabel it. Branch5b9b9555 passed5497Rust/155corpus. Public results and implementation/status/queue now distinguish these boundaries.
+- **Pending/Next Steps:** Result-only closure documentation gate/publication/readback, evidence archive/member-hash verification and owned measurement worktree/two branches/build-scratch retirement remain. Then immediately continue WP-04.2 resolver-bounds inventory and evidence-based parsing disposition, WP-04.3 web workflow, then WP-19; no new go needed. WP-04 overall remains open.
+- **Notes for Codex oder Claude:** Private `<profile-scratch>/three-packages-20261020-su2358tf`: wp041-publication.json and controller-integrated-gate1-accepted.json. Selected root intentionally remains stale/dirty; foreign files/history preserved, no root synchronization claimed. No functional browser suite selected. No production parser/schema/budget change; no bus/device,desktop-control,release/tag,deployment/contact operation. Claim WP-04.1 released at source boundary; cleanup still parent-owned.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-20 18:09
 - **Completed:** WP-04.1 branch candidate5b9b9555 ACCEPTED: maintained16/16ordered stages,5497Rust passes/215ignored,155/155selectedcorpus,410registered tooltests/sixoptional skips; frozen inputs and clear checked user-data guards. Actual54-operation synthetic study and factual/privacy results review accepted. Main-first integration onto00f41ced preserves upstream folder-retention tests/contracts and queue/status histories; two additive documentation conflicts resolved from immutable parents with preservation proofs. No production parser/schema/budget changes.
 - **Pending/Next Steps:** Commit merged candidate and run maintained16stage integrated gate against00f41ced. Integration acceptance,conditionalpublication/readback and ownedarchive/retirement remain pending. Next ordered dependency isWP-04.2 bounds inventory/disposition,thenWP-04.3 andWP-19; no new go needed. Do not alter candidate while integrated gate runs.

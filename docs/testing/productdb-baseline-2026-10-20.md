@@ -111,6 +111,7 @@ baseline. It does not establish vendor-corpus/ETS compatibility, production-scal
 capacity, controlled-cache timing, internal-phase RSS, transient disk/journal
 peaks, desktop/bus/device behavior or an optimisation. WP-04.2 must inventory
 resolver byte/node/depth/expansion bounds before deciding whether any parser
-change is justified; WP-04.3 and WP-19 remain separate. Maintained package gates,
-integration and publication are separate delivery checks, not supplied by the
-study review.
+change is justified; WP-04.3 and WP-19 remain separate. The
+[delivery entry](../IMPLEMENTATION_STATUS.md#wp-041-synthetic-measurement-baseline-20-october-2026)
+records the separately passed maintained integration gate and published source;
+these are not supplied by the study review.

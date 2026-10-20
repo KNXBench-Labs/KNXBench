@@ -52,9 +52,10 @@ const USAGE: &str = "usage: knx import <file.knxproj> [--store <path.knxdb> [--r
      \x20     knx products ingest <file.knxproj|file.knxprod|file.zip|file.vd2> [--product-db <path>] [--allow-large-package]\n\
      \x20     knx products update <file.knxprod|file.zip> [--product-db <path>] [--allow-large-package] [--confirm <token>]\n\
      \x20     knx products restore <backup.sqlite> [--product-db <path>]\n\
-     \x20     knx products inspect-legacy <file.vd3|file.vd4|file.vd5|file.pr5>\n\
+     \x20     knx products inspect-legacy <file.vd1|file.vd3|file.vd4|file.vd5|file.pr5>\n\
      \x20                  [--password-stdin | --password-file <path>]\n\
-     \x20         (reads a legacy ETS3-era EX-IM file and summarises it; writes nothing.\n\
+     \x20         (reads a legacy EX-IM file and summarises it; writes nothing.\n\
+     \x20         VD1 inspection only; no VD1 import support is claimed.\n\
      \x20         The password is never accepted on the command line, never stored)\n\
      \x20     knx products import-legacy <file.vd3|file.vd4|file.vd5> [--product-db <path>]\n\
      \x20                  [--password-stdin | --password-file <path>] [--remember]\n\

@@ -7,6 +7,19 @@ headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
 
+## G16 diagnostic follow-up (20 October 2026 source)
+
+`MissingMaster` now says "ZIP is not a standalone product package: missing
+knx_master.xml file"; the typed error, archive checks and transaction behavior
+are unchanged. This remains true when a master-named directory prevents the
+existing wrapper dispatch even though an inner package is present; the package
+is still refused, not newly admitted. The regression pins both public APIs. CLI usage names `.vd1` for content-based EX-IM inspection, not import.
+Inspection and import have separate missing-file hints so one cannot advertise
+the other's formats. This implements census G16 only; legacy binary enum values
+remain unmodelled. Synthetic tests cover the library, built CLI, HTTP installation
+and preview, including preservation of an existing product database. This is
+not a new real-file corpus run or new legacy import/encoding support.
+
 ## Census-3 fixes (18 October 2026)
 
 EX-IM table names now match case-insensitively (census 3, G11): the two

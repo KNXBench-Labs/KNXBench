@@ -1,4 +1,20 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-20 08:01
+- **Completed:** G16 correction/whole-diff independent review ACCEPTS all16changed-file identities with no unresolved findings. R1 counterexample reproduced, final wording true for all MissingMaster origins; R2 evidence statement corrected. Revised focused40tests and three-crate Clippy pass; final test bytes produce seven named failures against original production source. No parser/discovery/variant/schema/codec change. AppImage package already delivered and owned resources retired.
+- **Pending/Next Steps:** Freeze committed main-first candidate, maintained14-stage scoped merged gate, validate stage/proof/input/user-data receipts, conditional publication/readback and owned cleanup. Source review accepted; final package acceptance is still pending. Scope remains only WP-03 G16 diagnostics, not legacy binary-enum mapping or new VD1 import support.
+- **Notes for Codex oder Claude:** Fresh main unchanged at claim `eb1b1cf7`; separate Alpha16 sequence and exact-UP258 owners remain protected. Raw evidence `<profile-scratch>/g16-diagnostics-20261020`; prior failed review/tests retained. Root deliberately stale/dirty, foreign files preserved. No hardware, desktop, release/tag, deployment or vendor operation.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-20 07:48
+- **Completed:** G16 diagnostic slice implemented locally (claim `eb1b1cf7`). Existing MissingMaster text now names no product package; same variant, classification, archive/admission and transaction logic. CLI inspection help names VD1 without import claims; separate per-caller missing-file hints prevent inspection/import format bleed. Three named REDs observed; focused wrapper13/vendorCLI4/inspection11/import10 and named HTTP1 pass. HTTP install/preview preserve response status/shape, existing DB bytes/programs and no backups. Docs updated without changing retained history. npm install/build, docs/local-info/catalogue and formatting checks pass.
+- **Pending/Next Steps:** Independent whole-diff review `deleg_110fc6ab` / `sa-0-4c00ba3b` pending. Original-source final-regression controls run in separate owned worktree as `proc_1271f4934870`, receipt `<profile-scratch>/g16-diagnostics-20261020/original-controls.json`; inspect named REDs, not wrapper exit alone. Wrapper test formatting changed after its frozen control copy: recopy/rerun that control on final bytes before claiming exact final-test evidence. Clippy first flagged two err().expect() extractions; corrected to explicit match but lint rerun pending. Then independent findings, frozen main-first candidate and maintained14-stage scoped gate, publication/readback and cleanup.
+- **Notes for Codex oder Claude:** Earlier focused failure wrongly expected MissingMaster for empty ZIP; test now preserves earlier InvalidZip, no parser fix. Read-only G16 source brief `deleg_d8a9d01b` remains on old AppImage worktree; wait for child before retiring that tree. AppImage already published/archived121members; its claim released. No schema/codecs/VD1 import, bus/device/desktop/release/deployment/vendor operation. Root remains stale/dirty by design, prior handover/foreign files preserved.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-20 07:31
 - **Completed:** CLAIM (owner request: next open tasks): WP-03 G16 diagnostic follow-up on `fix/g16-product-diagnostics-20261020`. Scope: accurate refusal when a ZIP has neither a standalone product master nor an installable inner product package, and CLI usage that names content-based VD1 EX-IM inspection without advertising VD1 import. AppImage preflight code and green acceptance tail are published (`f9cf7a65`, `416d5552`).
 - **Pending/Next Steps:** Synthetic production-path refusal/usage regressions first, smallest diagnostic change, independent review, maintained scoped gate and main-first delivery. Legacy binary-enum mapping/encoding, archive security behavior and schema repair are excluded. Existing Alpha 16 sequence and exact-UP258 work retain their owners.

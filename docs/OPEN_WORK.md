@@ -87,7 +87,7 @@ Each package needs its own scoped claim, review, tests and delivery evidence.
 | [WP-13](#wp-13--documentation-drift) | P3 | Named remaining prose reconciled 20 Oct; separate KL-183 runtime follow-up open | Current summaries agree with delivered behaviour; retained history stays intact. |
 | [WP-14](#wp-14--complete-offline-family-outcomes) | P1 | Source contracts first; UP258 excluded | Complete real-source System 1/B/300 image → procedure → execution → recovery slices. |
 | [WP-15](#wp-15--complete-module-scope-in-web-consumers) | P1 | Delivered 19 Oct (web adoption); older-server boundary documented | Complete response-local module paths distinguish diagnostics and workspace identities. |
-| [WP-16](#wp-16--empty-directory-zip-integrity) | P1 | Project repair delivered 19 Oct; product repair delivered 20 Oct; file-stream/encryption-header follow-ups open | Empty directories have valid CRC and complete compressed-stream representation. |
+| [WP-16](#wp-16--empty-directory-zip-integrity) | P1 | Project/product directory and file-stream repairs delivered; encrypted-directory refusal delivered 20 Oct; separate metadata questions remain | Empty directories have valid CRC and complete compressed-stream representation. |
 | [WP-17](#wp-17--master-identity-provenance) | P1 | Delivered 19 Oct; product DB v27, ADR-0147, `d18ce65e` | Master identity winners, collisions and malformed declarations have truthful provenance. |
 | [WP-18](#wp-18--device-comparison-shows-what-differs) | P2 | Delivered 19 Oct; no live-device acceptance | Differing bytes are marked in the raw hex rows; the comparison result shows only differences by default, with a toggle for all rows. |
 | [WP-19](#wp-19--sync-from-a-device-comparison) | P2 | Contract first; project → device needs bus-write consent (owner request, 19 Oct) | A comparison result offers *project → device* (the existing download) or *device → project* (adopt verified values, one undo step). |
@@ -484,21 +484,23 @@ Valid proofs, frozen inputs, clear user-data guards and publication readback
 verified; project ordinary-file claim released. No new encryption support,
 exhaustive project extent census or compatibility-safe guarantee.
 
-**Remaining, claimed (20 October 2026):** directory encryption-header validity,
-evidence-first investigation by next-open-tasks. Source audit and 94 named
-original-runtime synthetic cases are independently verified, including exact
-controller replay and frozen fixture/dependency bindings. The
+**Encrypted-directory follow-up delivered (20 October 2026, `cf5b0fb0`):**
+source audit and 94 named original-runtime cases are independently verified,
+including exact controller replay and frozen fixture/dependency bindings. The
 [source evidence](research/2026-10-20-directory-encryption-header-validity.md) and
-[new contract](contracts/project-encrypted-directory-admission.md) choose explicit
+[contract](contracts/project-encrypted-directory-admission.md) choose explicit
 bit-0 project-directory refusal, not decryption: fourteen nested acceptance pins
-are deliberately superseded; 48 existing refusal diagnostics change. Local
-implementation passes parent core404/16ignored and app16new/41owning3ignored,
-both-crate Clippy and header checks. Guard removal reproduces72semantic failures
+are deliberately superseded; 48 existing refusal diagnostics change. Parent
+core404/16ignored and app16new/41owning3ignored, both-crate Clippy and header
+checks pass (selections overlap). Guard removal reproduces72semantic failures
 between121-pass baseline/restored runs. Independent review accepts with zero
-Critical/Important findings; its minor stale-status wording is corrected.
-Maintained gate remains pending; selections overlap, not broad compatibility.
+Critical/Important findings; minor stale-status wording corrected. Maintained
+scoped14/14GREEN,2,638Rust passes/149selected corpus, frozen inputs, valid proofs,
+clear user-data guards and publication readback verified. Claim released.
 No new cipher support, password guessing or real encrypted-corpus acquisition.
-Bit-6-only flag consistency and AES extra-field equality remain separate scope.
+
+**Remaining, unowned:** bit-6-only flag consistency and AES extra-field semantic
+equality are separate questions, not verified strong-encryption support.
 Standalone and inner product archives previously retained the accepted trailers, while their
 normalized outputs and wrapper-only reports did not represent them; do not
 conflate that boundary with total archive data loss.

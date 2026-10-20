@@ -12,7 +12,7 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
-## Project encrypted-directory refusal (20 October 2026; delivery pending)
+## Project encrypted-directory refusal (20 October 2026)
 
 The shared project-directory check locally refuses ZIP bit-0 directories with
 an explicit unsupported reason and validated decoded path, after structural
@@ -27,7 +27,11 @@ in an isolated snapshot; canonical runtime never mutated. Scoped application
 snapshots/native reopen prove quiescent early refusal, not live WAL/crash/general
 cross-store atomicity. Independent full-diff review accepts with zero
 Critical/Important findings; its minor stale-status wording is corrected.
-Maintained delivery gate pending.
+Delivered on `main` as main-first merge `cf5b0fb0` (feature `14fdd4b2`):
+maintained scoped gate 14/14 GREEN, 2,638 Rust passes across 27 binaries
+(175 ignored) and 149/149 selected corpus cases. Ordered stage proofs, frozen
+inputs and clear user-data guards verified; local/tracking/live publication
+readback agreed. Claim released. No full-workspace/browser/release acceptance.
 [Contract](contracts/project-encrypted-directory-admission.md) ·
 [Evidence](research/2026-10-20-directory-encryption-header-validity.md).
 

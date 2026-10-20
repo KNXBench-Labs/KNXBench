@@ -1,6 +1,6 @@
 # Compatibility
 
-## Project encrypted-directory admission (20 October 2026; delivery pending)
+## Project encrypted-directory admission (20 October 2026)
 
 The [new refusal contract](contracts/project-encrypted-directory-admission.md)
 explicitly treats bit-0 ZIP directory records as unsupported in outer and direct
@@ -11,8 +11,10 @@ already-refused shapes gain an explicit decoded-path diagnostic. This is a
 stricter KNXBench admission policy, not a claim that genuine encrypted empty
 directories are universally invalid ZIPs. No new cipher, real encrypted-project
 compatibility census, product-package support or strong-encryption metadata
-semantics. Local core/application tests and independent full-diff review pass;
-maintained delivery acceptance remains pending.
+semantics. Delivered on `main` as `cf5b0fb0` after independent full-diff review
+and maintained scoped 14/14 GREEN, including 2,638 Rust passes and 149/149
+selected corpus cases. Valid proofs, frozen inputs and clear user-data guards
+verified. This is source delivery, not a new release or universal ZIP compatibility.
 
 ## System-2 explicit inactive-policy integrity (20 October 2026 source)
 

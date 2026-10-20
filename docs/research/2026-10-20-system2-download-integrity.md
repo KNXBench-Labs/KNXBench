@@ -94,9 +94,19 @@ subsequent GREEN are separate evidence. A failed mutation-harness setup found
 no Cargo on its interpreter PATH before any source mutation; the corrected
 harness established a green baseline before all three mutations.
 
-Whole-package acceptance and publication are recorded in the delivery history
-and handover only after execution. These focused tests are not a full corpus,
-physical-device test or ETS byte-equivalence measurement.
+The maintained change-scoped gate on main-first merge `76864b51` passed all
+14planned stages with frozen inputs and empty userDataTouched/userDataUnchecked:
+317tooling tests,2990Rust tests passed/0failed/144ignored, all-target Clippy and
+97/97selected offline corpus tests. The exact merge was pushed and local,
+tracking and live main equality verified. No full web/browser or full workspace
+release gate was claimed; the frontend production build was a separate passed
+desktop-input preflight. This is self-reviewed final source, not independent
+final-source approval or physical/ETS byte-equivalence acceptance.
+
+The subsequent [UP258 source inventory recheck](2026-10-16-up258-public-package-evidence.md#independent-inventory-recheck-20-october-2026)
+confirms the owner's counts and corrects the short-data premise: all four
+decoded Data blobs equal their reserved sizes. No padding or length relaxation
+is needed for that exact source.
 
 ## Remaining questions and next admissible work
 

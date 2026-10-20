@@ -51,9 +51,22 @@ expansion is justified by the remaining tool-policy uncertainties.
 
 ## Delivery boundary
 
-Focused work and documentation are ready for the maintained change-scoped
-package gate. Branch/merged acceptance, publication/readback and cleanup remain
-PENDING until their actual receipts are inspected. Research/contract/status,
-compatibility, known-limit dossier and WP09 route the unresolved questions
-without closing formal ledger rows. No release, hardware, desktop or vendor
-operation was performed.
+The maintained merged change-scoped gate on `76864b51` passes14/14stages,
+all proof flags valid, inputStart=inputEnd, inputsFrozen=true and no touched or
+unchecked user data:317tool tests,2990Rust passed/0failed/144ignored in22test
+results,97/97selected corpus tests. Raw logs independently corroborate counts.
+Exact code was published and local/tracking/live equality verified. Feature
+`aa650833`, main-first merge `76864b51`; no independent final-source approval
+claimed. Cleanup follows the result-only documentation tail, not before it.
+
+The later bounded direct-member UP258 recount confirms all owner inventory
+counts, offsets and static table-management declaration, but decoded Data lengths
+are330/416/512/256(equal Size), not shorter. Masks are330/416/512/absent.
+Exact-source hashes and correction are in the maintained public-package dossier;
+no code/parser padding relaxation. Seven result-only tail checks pass:
+documentation,14catalogue-preservation tests,1638anchors/681Markdown files,
+208ledger rows,local-info,runtime equality and whitespace. Runtime evidence
+remains bound to76864b51, not relabelled as a new execution. Publication/readback
+and owned retirement follow this record. Research/contract/status/compatibility/WP09
+route remaining semantics without changing formal ledger states. No release,
+hardware, desktop or vendor operation was performed.

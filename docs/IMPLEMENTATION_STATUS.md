@@ -23,7 +23,12 @@ of neighbouring bits. No second evaluator, schema, codec or download route.
 [Evidence, focused test/mutation results and unresolved semantics](research/2026-10-20-system2-download-integrity.md).
 This is bounded source-integrity hardening, not implemented inactive/default/
 LegacyPatchAlways policy, ETS byte-equivalence or public System-2 programming
-support. Whole-package gate/publication verdicts belong to the final handover.
+support. Main-first merge `76864b51` passed the maintained scoped gate14/14:
+317tool tests,2990Rust passed/0failed/144ignored and97/97selected corpus cases;
+inputs frozen and user-data guards clear. Exact code pushed/read back. Final
+source received separate self-review, not independent approval. The later
+[exact UP258 inventory](research/2026-10-16-up258-public-package-evidence.md#independent-inventory-recheck-20-october-2026)
+confirms counts and corrects the short-data premise; no parser padding change.
 
 ## Limitation-summary reconciliation (20 October 2026)
 

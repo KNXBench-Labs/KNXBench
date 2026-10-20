@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-20 07:31
+- **Completed:** AppImage native-binding preflight DELIVERED on main-first merge `f9cf7a65` (feature `a36ab617`); local/tracking/live equality verified. Independent correction review ACCEPTS with no findings. Maintained scoped merged gate 13/13 GREEN: 322 registered tool tests (one existing optional skip), 103 Rust tests, Clippy and repository checks; frozen inputs and user-data guards clear. Selected xtask corpus stage is empty, not fresh corpus acceptance. Five binding regressions and two caught failure-masking controls; frontend production build passes. Native-binding claim RELEASED.
+- **Pending/Next Steps:** Publish this result-only documentation tail and retire owned package resources after preserving evidence. Read-only G16 preparation `deleg_d8a9d01b` remains pending; next claim is only WP-03 G16 no-product ZIP/VD1 usage diagnostics, not binary encoding. Existing Alpha 16 repair and its ordered successors stay with their owner.
+- **Notes for Codex oder Claude:** Original npm omission cause unknown; local validation is not hosted Node22/full AppImage acceptance. No dependency/schema, release/tag, desktop, bus/device, deployment or vendor operation. Selected dirty root remains unsynchronised and foreign files intact. Raw receipts `<profile-scratch>/open-tasks-20261020`; source gate binds `f9cf7a65`, not this docs-only tail.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-20 07:25
 - **Completed:** AppImage native-binding preflight implemented locally on `fix/appimage-native-binding-20261020`. Named missing-step RED; five focused binding regressions and existing AppImage tests pass (31 passed, one existing optional skip), frontend production build passes. Initial independent review approves with one minor test-strength finding, corrected by loading the intact copied library before corruption and checking its canonical path in the refusal cause. Both failure-masking negative controls fail as intended without changing source files.
 - **Pending/Next Steps:** Focused correction review `deleg_7171c36f` is pending; then committed main-first candidate, maintained 13-stage scoped gate, publication/readback and owned cleanup. Next independent candidate is WP-03 G16 ZIP/VD1 diagnostics after a fresh claim/overlap check; not legacy binary encoding.

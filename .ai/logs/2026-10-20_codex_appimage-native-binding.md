@@ -26,8 +26,13 @@ failure cause. The retained test now does both in the same isolated tree. A
 first correction attempt exposed a logical-versus-canonical temporary path
 mismatch in the assertion; the actual refusal was correct. The assertion now
 uses the canonical copied-library path. Focused suite: 31 passed, one existing
-optional skip. Frontend production build succeeds. Correction re-review and
-maintained scoped package gate remain pending. No hosted
+optional skip. Frontend production build succeeds. Correction re-review ACCEPTS
+with no remaining findings. Main-first merge `f9cf7a65` passes all 13 maintained
+scoped gate stages with frozen inputs: 322 registered tool tests (one existing
+skip), 103 Rust tests, Clippy and all repository checks. The selected xtask
+corpus is empty, not new corpus evidence. Both user-data guard lists are empty.
+Code publication verified local = tracking = live. Two final in-memory failure-
+masking controls are caught; no candidate source mutation. No hosted
 workflow dispatch, new AppImage artifact or physical desktop acceptance claimed.
 The existing Alpha 16 schema owner and exact-UP258 owner retain their scopes.
 Raw command receipts are retained privately under the active profile.

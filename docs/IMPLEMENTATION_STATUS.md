@@ -24,6 +24,10 @@ native library can be inherited through a symlink to the original loader.
 The AppImage job also runs those regressions. No dependency or product-source
 change; the original Alpha 15 npm omission cause remains unestablished. This
 local check is not a fresh hosted AppImage build or desktop acceptance.
+Delivered on main-first merge `f9cf7a65`, independent review accepted and
+maintained scoped gate 13/13 green: 322 registered tool tests (one existing
+optional skip), 103 Rust tests; frozen inputs and user-data guards clear.
+The selected xtask corpus stage is empty, not a new corpus run.
 [Build follow-up](OPEN_WORK.md#release-engineering-follow-up--alpha-16).
 
 ## System-2 offline image integrity follow-up (20 October 2026)

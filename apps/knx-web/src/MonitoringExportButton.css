@@ -1,0 +1,26 @@
+/** Locally scoped monitoring consent and bounded report presentation. */
+/* The global notification stack is at 100; inert messages must not paint over consent. */
+.search-overlay:has(> .monitoring-export-dialog) { z-index: 101; }
+.search-panel.monitoring-export-dialog {
+  width: min(48rem, calc(100vw / var(--app-ui-scale, 1) - 2rem));
+  align-self: flex-start;
+  max-height: calc(90dvh / var(--app-ui-scale, 1) - 1rem);
+  display: flex; flex-direction: column; overflow: hidden; overflow-wrap: anywhere;
+}
+.monitoring-export-dialog .monitoring-export-body { min-height: 0; overflow-y: auto; }
+.monitoring-export-dialog p { line-height: 1.5; }
+.monitoring-export-dialog .monitoring-export-privacy { font-weight: 600; }
+.monitoring-export-dialog .monitoring-export-options { display: flex; flex-wrap: wrap; gap: 1rem; }
+.monitoring-export-dialog .monitoring-export-options label { display: grid; gap: .4rem; flex: 1 1 12rem; min-width: 0; }
+.monitoring-export-dialog select { width: 100%; max-width: 100%; }
+.monitoring-export-dialog .monitoring-export-counts { overflow-x: auto; max-width: 100%; }
+.monitoring-export-dialog table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.monitoring-export-dialog th, .monitoring-export-dialog td { padding: .4rem; text-align: end; white-space: nowrap; border-bottom: 1px solid var(--knx-border); }
+.monitoring-export-dialog th:first-child { text-align: start; }
+.monitoring-export-dialog li { margin-block: .5rem; }
+.monitoring-export-dialog .monitoring-export-outdated { opacity: .65; }
+.monitoring-export-dialog footer { flex: 0 0 auto; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .75rem; padding-block-start: 1rem; }
+.monitoring-export-dialog button { box-shadow: none; transform: none; }
+@media (max-width: 40rem) {
+  .monitoring-export-dialog th, .monitoring-export-dialog td { padding: .25rem; }
+}

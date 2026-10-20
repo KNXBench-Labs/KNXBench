@@ -1,5 +1,15 @@
 # Roadmap
 
+## Offline monitoring handoff (implementation in progress, 20 October 2026)
+
+The owner authorised a bounded [monitoring snapshot export](contracts/monitor-project-export.md):
+one current installation, explicit omissions, a hash-bound report and one local
+ZIP through shared App logic with CLI/HTTP/web adapters. Independent design
+corrections are admitted by ADR-0151; frozen runtime acceptance, publication and
+separate receiving-tool JSON integration remain pending. This does not start a
+telegram database, CommunicationLog work, live backend coupling or a device/bus
+operation. Existing workstream ordering and ownership remain unchanged.
+
 ## UP258 System-2 validation candidate (20 October 2026)
 
 The [complete-defaults simulator path](contracts/up258-system2-validation.md)

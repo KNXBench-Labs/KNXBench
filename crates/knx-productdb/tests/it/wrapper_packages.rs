@@ -647,35 +647,37 @@ mod wp16 {
         assert_eq!(stored_packages(&conn), [(sha256_hex(&bytes), bytes)]);
     }
 
-    // CHARACTERIZATION only: outer wrapper bytes are not persisted by design,
-    // unlike original inner package bytes. Future admission policy is separate.
+    // Deliberately supersedes original currently_accepts characterization pins;
+    // malformed controls remain unchanged and original evidence is retained.
     mod file_stream_characterization {
         use super::*;
         use crate::standalone_packages::wp16::file_stream_characterization as c;
 
         #[test]
-        fn standalone_entry_currently_accepts_nonzero_trailer_and_retains_archive() {
+        fn standalone_entry_refuses_nonzero_trailer_without_mutation() {
             let bytes = c::package(&[c::A, b"\xa5"].concat());
-            c::accepted(&bytes, |conn| {
-                let mut result = install(conn, &bytes).unwrap();
-                assert!(result.wrapper.is_none());
-                assert_eq!(result.packages.len(), 1);
-                result.packages.remove(0).report
-            });
+            for populated in [false, true] {
+                named_invalid(
+                    preserved_refusal(
+                        |conn| {
+                            if populated {
+                                seed(conn);
+                            }
+                        },
+                        |conn| install(conn, &bytes),
+                    ),
+                    c::PATH,
+                    &["trailing"],
+                );
+            }
         }
 
         #[test]
-        fn inner_package_currently_accepts_second_stream_with_signed_descriptor() {
+        fn inner_package_refuses_second_stream_with_signed_descriptor_and_rolls_back() {
             let bytes = descriptor(c::package(&[c::A, c::B].concat()), true);
-            let wrapper = zip_of(&[("good.knxprod", &bytes)]);
-            c::accepted(&bytes, |conn| {
-                let mut result = install(conn, &wrapper).unwrap();
-                assert_eq!(result.sha256, sha256_hex(&wrapper));
-                assert!(result.wrapper.is_some());
-                assert_eq!(result.packages.len(), 1);
-                assert_eq!(result.packages[0].path.as_deref(), Some("good.knxprod"));
-                result.packages.remove(0).report
-            });
+            for populated in [false, true] {
+                named_invalid(inner_error(&bytes, populated), c::PATH, &["trailing"]);
+            }
         }
 
         // A single literal stored DEFLATE block, independent of ZIP's writer.
@@ -695,64 +697,86 @@ mod wp16 {
                 raw_zip(&[c::member(b"good.knxprod", &stream, &inner)]),
                 signed,
             );
-            c::accepted(&inner, |conn| {
-                let mut result = install(conn, &wrapper).unwrap();
-                assert_eq!(result.sha256, sha256_hex(&wrapper));
-                assert!(result.wrapper.as_ref().unwrap().other_members.is_empty());
-                assert_eq!(result.packages.len(), 1);
-                assert_eq!(result.packages[0].path.as_deref(), Some("good.knxprod"));
-                assert_eq!(
-                    conn.query_row(
-                        "SELECT count(*) FROM package WHERE sha256 = ?1",
-                        [sha256_hex(&wrapper)],
-                        |r| r.get::<_, i64>(0)
-                    )
-                    .unwrap(),
-                    0,
-                    "outer archive (including its compressed trailer) is not retained"
+            for populated in [false, true] {
+                named_invalid(
+                    preserved_refusal(
+                        |conn| {
+                            if populated {
+                                seed(conn);
+                            }
+                        },
+                        |conn| install(conn, &wrapper),
+                    ),
+                    "good.knxprod",
+                    &["trailing"],
                 );
-                result.packages.remove(0).report
-            });
+            }
         }
 
         #[test]
-        fn outer_package_leaf_currently_accepts_nonzero_trailer_with_signed_descriptor() {
+        fn outer_package_leaf_refuses_nonzero_trailer_with_signed_descriptor() {
             outer_leaf(b"\xa5", true);
         }
 
         #[test]
-        fn outer_package_leaf_currently_accepts_zero_trailer_with_unsigned_descriptor() {
+        fn outer_package_leaf_refuses_zero_trailer_with_unsigned_descriptor() {
             outer_leaf(b"\x00", false);
         }
 
         #[test]
-        fn outer_other_member_currently_accepts_second_stream_and_reports_first_output_only() {
-            let inner = c::package(c::A);
-            let stream = [c::B, c::A].concat();
-            let wrapper = raw_zip(&[
-                RawMember::stored(b"good.knxprod", &inner),
-                c::member(b"docs/ordinary.bin", &stream, b"B"),
+        fn outer_other_member_refuses_second_stream_without_mutation() {
+            outer_refusal(&[c::B, c::A].concat(), b"B", &["trailing"]);
+        }
+
+        #[test]
+        fn inner_output_boundary_trailer_rolls_back_earlier_new_package() {
+            let plain = vec![0x61; 196609];
+            let stream = [c::stored_blocks(&plain, true), vec![0]].concat();
+            let bytes = product(c::member(c::PATH.as_bytes(), &stream, &plain));
+            for populated in [false, true] {
+                named_invalid(inner_error(&bytes, populated), c::PATH, &["trailing"]);
+            }
+        }
+
+        #[test]
+        fn outer_output_boundary_trailer_preserves_fresh_and_populated_databases() {
+            let plain = vec![0x61; 196609];
+            let stream = [c::stored_blocks(&plain, true), vec![0]].concat();
+            outer_refusal(&stream, &plain, &["trailing"]);
+        }
+
+        #[test]
+        fn historical_inner_retry_rolls_back_earlier_new_package_and_source_names() {
+            let bytes = c::package(&[c::A, b"\x00"].concat());
+            let wrapper = zip_of(&[
+                ("first-new.knxprod", &package(0x11)),
+                ("retry.knxprod", &bytes),
             ]);
-            c::accepted(&inner, |conn| {
-                let mut result = install(conn, &wrapper).unwrap();
-                let others = &result.wrapper.as_ref().unwrap().other_members;
-                assert_eq!(others.len(), 1);
-                assert_eq!(others[0].path, "docs/ordinary.bin");
-                assert_eq!(others[0].size, 1);
-                assert_eq!(others[0].sha256, sha256_hex(b"B"));
-                assert_eq!(others[0].kind, WrapperMemberKind::File);
-                assert_eq!(
-                    conn.query_row(
-                        "SELECT count(*) FROM source_file WHERE sha256 = ?1",
-                        [sha256_hex(b"B")],
-                        |r| r.get::<_, i64>(0)
-                    )
-                    .unwrap(),
-                    0,
-                    "outer non-package members are reported, not retained"
+            for populated in [false, true] {
+                let error = preserved_refusal(
+                    |conn| {
+                        if populated {
+                            seed(conn);
+                        }
+                        c::historical(conn, &bytes);
+                        assert_eq!(
+                            count(
+                                conn,
+                                "SELECT count(*) FROM application_program WHERE application_version = 17"
+                            ),
+                            0
+                        );
+                    },
+                    |conn| install(conn, &wrapper),
                 );
-                result.packages.remove(0).report
-            });
+                match error {
+                    PackageError::WrapperMember { path, error } => {
+                        assert_eq!(path, "retry.knxprod");
+                        named_invalid(*error, c::PATH, &["trailing"]);
+                    }
+                    other => panic!("expected contextual historical retry refusal, got {other}"),
+                }
+            }
         }
 
         fn outer_refusal(stream: &[u8], plain: &[u8], reason: &[&str]) {

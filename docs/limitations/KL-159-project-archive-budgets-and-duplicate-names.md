@@ -100,6 +100,38 @@ so that behavior is synthetic-test evidence only. The original ordinary-file
 trailing-input and encryption-header boundaries above remain separate open work.
 [Research, primary sources and evidence boundaries](../research/2026-10-20-product-directory-stream-integrity.md).
 
+## Product ordinary-file follow-up (20 October 2026; delivery pending)
+
+The separate product-only investigation is complete. Controller-verified
+characterization demonstrates accepted zero/nonzero trailers and concatenated
+streams; normalized member hashes/bytes describe the first stream only. Original
+standalone and inner package archives are retained byte-exact, so this is not
+total package data loss. Outer wrappers and their non-package extras have a
+separate report-only contract. The earlier historical wording about unretained
+trailing bytes must not be extended to all product archives.
+
+The bounded ordinary-file census measured 12,772 complete, exact unencrypted
+DEFLATE extents and 2,243 stored extents; fourteen encrypted entries remain
+unmeasured. No measured trailer or CRC/size/stream error occurred. The 260
+directory records were not counted as ordinary-file evidence. Independent
+verification/calibration, scope and privacy limits are recorded in the
+[research note](../research/2026-10-20-product-file-stream-integrity.md).
+
+The [one-stream policy](../contracts/product-file-stream-integrity.md) explicitly
+supersedes the current ordinary-file acceptance pins while preserving valid
+alternate block forms, descriptors and error variants. A fixed-buffer secondary
+check keeps the existing CRC decoder. It uses 8 KiB input and 64 KiB output
+buffers with exact input/output counters and output-only progress handling.
+Original production reaches 25 intended refusal failures and 53 passes; the
+candidate passes all 78 focused cases and parent-run all-targets Clippy.
+Historical retry and outer/inner wrapper rollback compare closed database bytes.
+The additional direct-reader decode cost is measured at 1.38–1.84 times baseline
+across four synthetic workloads, not end-to-end installation or peak memory.
+Independent full-diff review accepted with zero Critical/Important findings.
+Maintained delivery acceptance is pending. Project-reader ordinary-file and
+encryption-header work remain separate; no full ZIP/ETS
+compatibility is claimed.
+
 <!-- BEGIN retained catalogue record -->
 
 <a id="159-a-project-archive-may-unpack-to-at-most-512-mib-and-every-member-name-must-be-unique"></a>

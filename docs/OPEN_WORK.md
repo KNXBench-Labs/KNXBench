@@ -440,9 +440,18 @@ remain accepted. [Evidence and scope](research/2026-10-20-product-directory-stre
 
 **Remaining:** a deflated *file* whose compressed bytes continue
 behind the end of its stream imports with those bytes in no member (both
-layers). The product-reader/wrapper investigation is **claimed (20 October
-2026)** for bounded source research, synthetic reproduction and read-only
-compatibility evidence before any admission-policy change. Project-reader file
+layers). The product-reader/wrapper follow-up is **claimed (20 October
+2026)**: bounded research, 21 production characterization cases and a read-only
+census are reconciled. All 12,772 measured DEFLATE file instances have exact
+extents; fourteen encrypted entries remain unmeasured. The explicit
+[one-stream contract](contracts/product-file-stream-integrity.md) is implemented
+locally: 25 original-production semantic failures become 78 focused passes;
+parent-run Clippy is green. Fixed 8 KiB/64 KiB buffers bound the secondary decode;
+its measured synthetic direct-reader cost is disclosed as 1.38–1.84 times
+baseline. Independent full-diff review accepted with zero Critical/Important
+findings; maintained delivery gate remains pending.
+Raw standalone/inner archives retained the formerly accepted trailers; normalized
+member outputs and wrapper-only reports do not represent them. Project-reader file
 streams and directory encryption-header semantics remain **unowned** separate
 packages; neither was changed by the product-directory repair.
 

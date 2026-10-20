@@ -12,6 +12,22 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Product file-stream extent integrity (20 October 2026; acceptance pending)
+
+The local product-reader repair checks complete, exact DEFLATE extents for
+ordinary files after the normal bounded CRC/size decoder. It preserves valid
+block shapes/descriptors, existing error variants and directory refusals while
+explicitly superseding thirteen old acceptance pins. Controller-verified
+original-source replay has 25 intended failures and 53 passes; the candidate
+passes all 78 focused cases and all-targets Clippy. Historical retries and
+fresh/populated wrapper rollback have complete closed-database byte assertions.
+The added decoder uses fixed 8 KiB/64 KiB buffers. Direct-reader synthetic costs
+are measured and disclosed (1.38–1.84 times baseline), not an installation-speed
+claim. Independent full-diff review accepted with zero Critical/Important findings;
+source hashes rechecked. Maintained committed-head delivery gate remains pending.
+[Contract](contracts/product-file-stream-integrity.md) ·
+[Evidence and limits](research/2026-10-20-product-file-stream-integrity.md).
+
 ## Product directory stream integrity (20 October 2026)
 
 The product reader rejects trailing bytes after an empty DEFLATE directory

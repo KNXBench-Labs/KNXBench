@@ -111,7 +111,39 @@ complete stream per admitted unencrypted DEFLATE file, excluding descriptors,
 and names the current acceptance pins to supersede explicitly. Fixed-buffer
 secondary validation keeps the normal CRC decoder and error variants; measure
 the additional decode cost before delivery. Research/census/characterization
-are verified; implementation and independent delivery acceptance remain pending.
+are verified; the local implementation passes all 78 focused cases after 25
+original-production semantic failures (53 original passes). The controller
+reran the focused suite and all-targets Clippy and verified unchanged source
+hashes. Thirteen acceptance pins were explicitly superseded; 39 prior directory
+cases and nine other characterization controls remain, with seventeen added
+cases covering output-only progress, empty files, input/output boundaries and
+historical retries. Selections overlap, so those counts are not additive.
+
+### Measured secondary-decode cost
+
+[V] Same optimized executable, deterministic prebuilt inputs, warmups and ten
+alternating rounds on one pinned CPU; 80 samples. The controller recomputed all
+four medians from the samples and verified the executable identity. The probe
+copies final candidate and original reader code into scratch, with fixture
+building and preflight outside timing and allocation/decode inside timing.
+
+| Synthetic workload | Original microseconds/read | Candidate microseconds/read | Ratio |
+| --- | ---: | ---: | ---: |
+| 4 KiB compressible | 2.277 | 4.080 | 1.792 |
+| 4 KiB incompressible | 1.233 | 2.263 | 1.836 |
+| 4 MiB compressible | 321.582 | 491.687 | 1.529 |
+| 4 MiB incompressible | 377.574 | 522.101 | 1.383 |
+
+The extra buffers are fixed (8 KiB input, 64 KiB output), with no second expanded
+copy. This is additional bounded decoder work, not a performance improvement or
+end-to-end installation benchmark. CPU frequency/thermal isolation and peak RSS
+were not measured. An initial probe selected zero tests and was rejected; the
+final source-bound run executes exactly one benchmark and retains all samples.
+Initial historical fixtures lacked member indexes; corrected fixtures were rerun
+against original production before claiming the final 25 semantic failures.
+
+Independent full-diff review accepted with zero Critical/Important findings and
+source bindings rechecked. Maintained committed-head delivery gate remains pending.
 Private paths, member identities and content hashes stay local; only aggregate
 technical outcomes are published here. No new codec, ETS, browser, device or
 release compatibility is claimed.

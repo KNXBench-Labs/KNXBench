@@ -1492,36 +1492,19 @@ pub(super) mod wp16 {
         ));
     }
 
+    // Deliberately supersedes ordinary_file_trailing_deflate_policy_is_unchanged:
+    // exact compressed extents are now an explicit admission policy.
     #[test]
-    fn ordinary_file_trailing_deflate_policy_is_unchanged() {
+    fn ordinary_file_trailing_deflate_is_refused_by_exact_extent_policy() {
         let bytes = product(RawMember {
             name: b"M-0001/Baggages/ordinary.bin",
             ..RawMember::directory(DIRECTORY, TRAILING)
         });
-        let (_dir, conn) = db();
-        let report = install_package(&conn, "ordinary-tail.knxprod", &bytes).unwrap();
-        let member = report
-            .members
-            .iter()
-            .find(|member| member.path == "M-0001/Baggages/ordinary.bin")
-            .unwrap();
-        assert_eq!(member.size, 0);
-        assert_eq!(member.sha256, knx_productdb::sha256_hex(&[]));
-        let retained: Vec<u8> = conn
-            .query_row(
-                "SELECT bytes FROM package WHERE sha256 = ?1",
-                [&report.sha256],
-                |r| r.get(0),
-            )
-            .unwrap();
-        assert!(
-            retained == bytes,
-            "ordinary-file policy does not rewrite the archive"
-        );
+        file_stream_characterization::refuses(&bytes, &["trailing"]);
     }
 
-    // CHARACTERIZATION of original production, not a promised admission policy.
-    // A later test-first policy change may deliberately replace these successes.
+    // Former currently_accepts pins are deliberately superseded. Original
+    // characterization source/results remain in private baseline evidence.
     pub(crate) mod file_stream_characterization {
         use super::*;
         use knx_productdb::{sha256_hex, InstallReport};
@@ -1553,10 +1536,7 @@ pub(super) mod wp16 {
                     |r| r.get(0),
                 )
                 .unwrap();
-            assert_eq!(
-                raw, bytes,
-                "compressed trailer survives in the original package"
-            );
+            assert_eq!(raw, bytes, "original package bytes are retained exactly");
             let normalized = report.members.iter().find(|m| m.path == PATH).unwrap();
             assert_eq!(normalized.size, 1);
             assert_eq!(normalized.sha256, sha256_hex(b"A"));
@@ -1565,8 +1545,8 @@ pub(super) mod wp16 {
                 [&report.sha256, PATH], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
             ).unwrap();
             assert_eq!((hash, size, plain), (sha256_hex(b"A"), 1, b"A".to_vec()));
-            // Neither a trailer nor a concatenated stream is normalized member
-            // output. This is not total archive loss: raw bytes above are exact.
+            // Valid inputs retain both the original archive and exact decoded
+            // member content; refusal cases never reach this positive helper.
         }
 
         pub(crate) fn accepted(bytes: &[u8], install: impl Fn(&Connection) -> InstallReport) {
@@ -1610,29 +1590,36 @@ pub(super) mod wp16 {
             });
         }
 
-        #[test]
-        fn currently_accepts_nonzero_trailer() {
-            accepts(&[A, b"\xa5"].concat(), None);
+        fn rejects(stream: &[u8], signed: Option<bool>) {
+            let bytes = package(stream);
+            let bytes =
+                signed.map_or_else(|| bytes.clone(), |signed| descriptor(bytes.clone(), signed));
+            refuses(&bytes, &["trailing"]);
         }
 
         #[test]
-        fn currently_accepts_zero_trailer() {
-            accepts(&[A, b"\x00"].concat(), None);
+        fn refuses_nonzero_trailer() {
+            rejects(&[A, b"\xa5"].concat(), None);
         }
 
         #[test]
-        fn currently_accepts_concatenated_nonempty_second_stream() {
-            accepts(&[A, B].concat(), None);
+        fn refuses_zero_trailer() {
+            rejects(&[A, b"\x00"].concat(), None);
         }
 
         #[test]
-        fn currently_accepts_nonzero_trailer_with_signed_descriptor() {
-            accepts(&[A, b"\xa5"].concat(), Some(true));
+        fn refuses_concatenated_nonempty_second_stream() {
+            rejects(&[A, B].concat(), None);
         }
 
         #[test]
-        fn currently_accepts_zero_trailer_with_unsigned_descriptor() {
-            accepts(&[A, b"\x00"].concat(), Some(false));
+        fn refuses_nonzero_trailer_with_signed_descriptor() {
+            rejects(&[A, b"\xa5"].concat(), Some(true));
+        }
+
+        #[test]
+        fn refuses_zero_trailer_with_unsigned_descriptor() {
+            rejects(&[A, b"\x00"].concat(), Some(false));
         }
 
         #[test]
@@ -1654,21 +1641,21 @@ pub(super) mod wp16 {
         }
 
         #[test]
-        fn currently_accepts_one_trailing_byte_after_multiple_input_blocks() {
+        fn refuses_one_trailing_byte_after_multiple_input_blocks() {
             let mut stream = b"\x00\x00\x00\xff\xff".repeat(2_000);
             stream.extend_from_slice(A);
             stream.push(0xa5);
-            accepts(&stream, None);
+            rejects(&stream, None);
         }
 
         #[test]
-        fn currently_accepts_trailer_larger_than_8192_bytes() {
+        fn refuses_trailer_larger_than_8192_bytes() {
             let mut stream = A.to_vec();
             stream.extend_from_slice(&[0xa5; 8193]);
-            accepts(&stream, None);
+            rejects(&stream, None);
         }
 
-        fn refuses(bytes: &[u8], cause: &[&str]) {
+        pub(crate) fn refuses(bytes: &[u8], cause: &[&str]) {
             for populated in [false, true] {
                 named_invalid(
                     preserved_refusal(
@@ -1713,6 +1700,222 @@ pub(super) mod wp16 {
                 );
                 assert!(
                     matches!(error, PackageError::InvalidZip { cause } if cause == "data descriptor differs from central directory")
+                );
+            }
+        }
+
+        // Independent stored DEFLATE blocks; finality and whole-byte extents
+        // are explicit rather than delegated to the ZIP writer.
+        pub(crate) fn stored_blocks(plain: &[u8], final_block: bool) -> Vec<u8> {
+            let mut stream = Vec::new();
+            let chunks = plain.chunks(65535);
+            let count = chunks.len();
+            for (i, chunk) in chunks.enumerate() {
+                let len = u16::try_from(chunk.len()).unwrap();
+                stream.push(u8::from(final_block && i + 1 == count));
+                stream.extend_from_slice(&len.to_le_bytes());
+                stream.extend_from_slice(&(!len).to_le_bytes());
+                stream.extend_from_slice(chunk);
+            }
+            stream
+        }
+
+        fn accepted_plain(plain: &[u8], stream: &[u8]) {
+            for populated in [false, true] {
+                let (dir, conn) = db();
+                if populated {
+                    seed(&conn);
+                }
+                let bytes = product(member(PATH.as_bytes(), stream, plain));
+                let report = install_package(&conn, "valid-boundary.knxprod", &bytes).unwrap();
+                let normalized = report.members.iter().find(|m| m.path == PATH).unwrap();
+                assert_eq!(normalized.size, plain.len() as u64);
+                assert_eq!(normalized.sha256, sha256_hex(plain));
+                let raw: Vec<u8> = conn
+                    .query_row(
+                        "SELECT bytes FROM package WHERE sha256 = ?1",
+                        [&report.sha256],
+                        |r| r.get(0),
+                    )
+                    .unwrap();
+                assert_eq!(raw, bytes);
+                let decoded: Vec<u8> = conn
+                    .query_row(
+                        "SELECT bytes FROM source_file WHERE sha256 = ?1",
+                        [sha256_hex(plain)],
+                        |r| r.get(0),
+                    )
+                    .unwrap();
+                assert_eq!(decoded, plain);
+                drop(conn);
+                let before = files(dir.path());
+                let conn = open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+                assert!(
+                    install_package(&conn, "valid-boundary.knxprod", &bytes)
+                        .unwrap()
+                        .skipped
+                );
+                drop(conn);
+                assert!(files(dir.path()) == before);
+            }
+        }
+
+        #[test]
+        fn zero_length_ordinary_deflate_accepts_alternate_blocks_and_alignment_bits() {
+            for stream in [
+                EMPTY,
+                &b"\x01\x00\x00\xff\xff"[..],
+                &b"\xf9\x00\x00\xff\xff"[..],
+            ] {
+                accepted_plain(b"", stream);
+            }
+        }
+
+        fn refuses_empty_tail(trailer: &[u8]) {
+            let stream = [EMPTY, trailer].concat();
+            refuses(
+                &product(member(PATH.as_bytes(), &stream, b"")),
+                &["trailing"],
+            );
+        }
+
+        #[test]
+        fn zero_length_ordinary_deflate_refuses_zero_trailer() {
+            refuses_empty_tail(b"\x00");
+        }
+
+        #[test]
+        fn zero_length_ordinary_deflate_refuses_nonzero_trailer() {
+            refuses_empty_tail(b"\xa5");
+        }
+
+        #[test]
+        fn zero_length_ordinary_deflate_refuses_concatenation() {
+            refuses_empty_tail(A);
+        }
+
+        #[test]
+        fn valid_stored_blocks_cross_input_and_output_boundaries() {
+            for len in [8187, 8188, 65535, 65536, 65537, 196609] {
+                let plain = vec![0x61; len];
+                accepted_plain(&plain, &stored_blocks(&plain, true));
+            }
+        }
+
+        #[test]
+        fn trailer_at_exact_input_chunk_boundary_is_refused() {
+            let plain = vec![0x61; 8187];
+            let mut stream = stored_blocks(&plain, true);
+            assert_eq!(stream.len(), 8192);
+            stream.push(0);
+            refuses(
+                &product(member(PATH.as_bytes(), &stream, &plain)),
+                &["trailing"],
+            );
+        }
+
+        fn refuses_output_boundary_tail(trailer: &[u8]) {
+            // First case already crosses several staging and output buffers.
+            for len in [196609, 65536, 65537] {
+                let plain = vec![0x61; len];
+                let stream = [stored_blocks(&plain, true), trailer.to_vec()].concat();
+                refuses(
+                    &product(member(PATH.as_bytes(), &stream, &plain)),
+                    &["trailing"],
+                );
+            }
+        }
+
+        #[test]
+        fn output_boundary_zero_trailer_is_refused() {
+            refuses_output_boundary_tail(b"\x00");
+        }
+
+        #[test]
+        fn output_boundary_nonzero_trailer_is_refused() {
+            refuses_output_boundary_tail(b"\xa5");
+        }
+
+        #[test]
+        fn output_boundary_second_stream_is_refused() {
+            refuses_output_boundary_tail(B);
+        }
+
+        #[test]
+        fn incomplete_stream_after_multiple_output_chunks_is_refused() {
+            let plain = vec![0x61; 196609];
+            let stream = stored_blocks(&plain, false);
+            refuses(
+                &product(member(PATH.as_bytes(), &stream, &plain)),
+                STREAM_CAUSE,
+            );
+        }
+
+        #[test]
+        fn malformed_stream_after_multiple_output_chunks_is_refused() {
+            let plain = vec![0x61; 196609];
+            let mut stream = stored_blocks(&plain, false);
+            stream.push(0xff);
+            refuses(
+                &product(member(PATH.as_bytes(), &stream, &plain)),
+                STREAM_CAUSE,
+            );
+        }
+
+        fn compressed(plain: &[u8]) -> Vec<u8> {
+            let mut encoder =
+                flate2::write::DeflateEncoder::new(Vec::new(), flate2::Compression::default());
+            encoder.write_all(plain).unwrap();
+            encoder.finish().unwrap()
+        }
+
+        #[test]
+        fn high_ratio_stream_drains_output_without_new_input() {
+            let plain = vec![0x61; 2 * 1024 * 1024];
+            let stream = compressed(&plain);
+            assert!(stream.len() < 8192);
+            accepted_plain(&plain, &stream);
+        }
+
+        #[test]
+        fn high_ratio_stream_with_trailer_is_refused_after_output_drain() {
+            let plain = vec![0x61; 2 * 1024 * 1024];
+            let mut stream = compressed(&plain);
+            stream.push(0);
+            refuses(
+                &product(member(PATH.as_bytes(), &stream, &plain)),
+                &["trailing"],
+            );
+        }
+
+        pub(crate) fn historical(conn: &Connection, bytes: &[u8]) {
+            // Model a package admitted under the old policy, with explicit
+            // unavailable legacy reports, not an invalid report-loader fixture.
+            let clean = install_package(conn, "clean-history.knxprod", &package(A)).unwrap();
+            let hash = sha256_hex(bytes);
+            conn.execute("INSERT INTO package (sha256, source_name, scheme, size, bytes, unknown_count) VALUES (?1, 'historical.knxprod', 11, ?2, ?3, 0)", rusqlite::params![hash, bytes.len() as i64, bytes]).unwrap();
+            conn.execute("INSERT INTO package_member (package_sha256, ordinal, path, role, source_sha256, size) SELECT ?1, ordinal, path, role, source_sha256, size FROM package_member WHERE package_sha256 = ?2", rusqlite::params![hash, clean.sha256]).unwrap();
+            conn.execute("INSERT INTO package_source_name (package_sha256, source_name) VALUES (?1, 'historical.knxprod')", [&hash]).unwrap();
+            conn.execute("INSERT INTO package_install_report (package_sha256, report_version, status, unknown_distinct, unknown_occurrences) VALUES (?1, 1, 'unavailable', 0, 0)", [&hash]).unwrap();
+            conn.execute("INSERT INTO package_baggage_inventory (package_sha256, status) VALUES (?1, 'unavailable')", [&hash]).unwrap();
+        }
+
+        #[test]
+        fn historical_hash_retry_revalidates_file_before_source_name_writes() {
+            let bytes = package(&[A, b"\x00"].concat());
+            for populated in [false, true] {
+                named_invalid(
+                    preserved_refusal(
+                        |conn| {
+                            if populated {
+                                seed(conn);
+                            }
+                            historical(conn, &bytes);
+                        },
+                        |conn| install_package(conn, "must-not-be-added.knxprod", &bytes),
+                    ),
+                    PATH,
+                    &["trailing"],
                 );
             }
         }

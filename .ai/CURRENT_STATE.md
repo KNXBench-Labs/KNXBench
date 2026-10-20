@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-20 08:22
+- **Completed:** Splitter-spec typecheck implementation independently ACCEPTED with no findings on published claim `e109ba13`. Added only focused derived config, discovery/inclusion regression and docs. Missing-config RED and real compiler negative control observed; application config misses the deliberate spec-local type error, new config catches it, original browser spec restored byte-exact and typecheck GREEN. Focused26tool tests and reviewer compiler pass; all reviewed hashes verified. No app/runtime, browser assertions, dependencies or policy changed.
+- **Pending/Next Steps:** Commit/freeze main-first candidate, maintained11-stage scoped package gate (full Vitest, all typechecks/default browser inventory; no Rust/corpus), verify proofs/frozen inputs/user-data guard, conditional publication/readback and owned cleanup. Fresh main is unchanged; final acceptance still pending.
+- **Notes for Codex oder Claude:** G16 package published/archived/cleaned; separate Alpha16 sequence and exact-UP258 owners protected. Root deliberately stale/dirty, prior journal/foreign files preserved. Raw evidence `<profile-scratch>/splitter-typecheck-20261020`. No schema/codec, hardware, desktop, release/tag/deployment/vendor operation.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-20 08:16
 - **Completed:** CLAIM (owner request: next open tasks): missing workbench-splitters typecheck coverage on `test/splitter-typecheck-20261020`. Fresh source confirms the existing six-case browser spec is not included by any committed derived tsconfig; maintained runner already discovers every derived config. Scope: one focused config, regression proving maintained discovery/inclusion and compiler negative control; no app UI or behavior change. G16 code/tail delivered (`b13b0ff9`, `248b1f87`), archive164members verified privately; cleanup follows separately.
 - **Pending/Next Steps:** Named RED for missing typecheck admission, smallest config, real compiler inclusion/negative-control proof, independent review, maintained package acceptance and main-first publication/readback. Existing Alpha16 sequence and exact-UP258 owners remain separate.

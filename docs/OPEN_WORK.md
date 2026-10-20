@@ -637,7 +637,12 @@ Delivered ([ADR-0144](adr/0144-change-scoped-gates-tagged-browser-lanes-bundled-
 [dossier](research/2026-10-19-test-suite-speed.md)): routine packages run
 `python3 tools/run_package_gate.py`, releases `--full`; browser cases run in
 parallel unless tagged `@exclusive`; one Rust integration-test binary per
-crate. Open, each small and none blocking:
+crate. The 20 October source also includes the existing workbench-splitters
+browser regression in `tsconfig.workbench-fixtures.json`, discovered by the
+unchanged maintained runner; static coverage only, no application or browser
+assertion change. A compiler sentinel is rejected by that config while the
+application-only config does not see it; the browser spec is restored byte-exact.
+Open, each small and none blocking:
 
 - Production suites run one after another with one worker each (771.7 s in
   the last complete gate; `table-columns` alone 231.3 s). A lane review per

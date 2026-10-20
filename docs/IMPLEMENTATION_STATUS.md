@@ -12,6 +12,20 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## AppImage frontend native-binding preflight (20 October 2026)
+
+The Linux AppImage workflow loads the installed Rolldown package immediately
+following `npm ci`, before building with Tauri. Missing or unloadable native
+bindings now fail at a named preflight step instead of first surfacing during
+the desktop build. Five focused regressions check step placement, actual load,
+missing/corrupt native libraries and unchanged tag-only publication. The failure
+fixtures copy real installed loader code outside the checkout; no working
+native library can be inherited through a symlink to the original loader.
+The AppImage job also runs those regressions. No dependency or product-source
+change; the original Alpha 15 npm omission cause remains unestablished. This
+local check is not a fresh hosted AppImage build or desktop acceptance.
+[Build follow-up](OPEN_WORK.md#release-engineering-follow-up--alpha-16).
+
 ## System-2 offline image integrity follow-up (20 October 2026)
 
 The existing image assembler now refuses an explicit

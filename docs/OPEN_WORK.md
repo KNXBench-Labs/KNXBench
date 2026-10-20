@@ -240,6 +240,14 @@ original-value fallback. A DPT bus codec is not a product-parameter codec.
 
 #### WP-09 — Offline image evidence gates
 
+**20 October source-integrity follow-up:** the generic offline System2 entry
+refuses an explicit `DownloadInvisibleParameters` declaration rather than
+ignoring it. Integrated tests pin existing table-index/value/bit rules.
+[Evidence and next admissible questions](research/2026-10-20-system2-download-integrity.md).
+This does not close inactive/legacy patch selection, numeric-tag overlap order,
+module mapping, per-type encodings, executable translation or recovery; the
+exact-UP258 owner retains that application's work.
+
 **Scope:** KL-170 (per-type byte placement), KL-171 (UTF-8 byte capacity,
 termination/cut rule), KL-172 (LoadedImage/CheckSums payload), census G10
 (hidden PID-78 placement) and G14 (`Data` shorter than `Size`). Record each

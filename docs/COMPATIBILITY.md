@@ -1,5 +1,17 @@
 # Compatibility
 
+## System-2 explicit inactive-policy integrity (20 October 2026 source)
+
+The offline System2 image entry now refuses an explicit
+`DownloadInvisibleParameters` option rather than silently ignoring it. This
+narrows accepted source artifacts; it does not implement invisible-parameter or
+LegacyPatchAlways policy. Existing System1/Easy3 policies, source preservation,
+public mask admission and executable loading/recovery are unchanged. Literal
+integrated regressions pin sparse object slots, remapped sorted group addresses,
+duplicate active-reference refusal and reference/project bitfield values.
+[Evidence and remaining contracts](research/2026-10-20-system2-download-integrity.md).
+No ETS byte-equivalence, complete System-2 product support or hardware claim.
+
 ## Master provenance (source builds after Alpha 15)
 
 WP-17 adds source evidence, not new ETS/master grammar compatibility. Product

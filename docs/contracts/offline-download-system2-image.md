@@ -8,6 +8,26 @@ the explicit Release real-source refusal regression. Merged acceptance includes
 isolated corpus152/152 in33targets and2892unchanged source paths. This is not a
 successful whole-Siemens image or a new executable device path. [Receipt](../evidence/offline-download-system2-image-2026-10-16.json).
 
+## Explicit inactive-policy boundary (20 October 2026 source)
+
+The System2 entry now refuses an explicitly declared unqualified
+`Static/Options/@DownloadInvisibleParameters`, naming its value, before
+parameter evaluation or image assembly. The source reader already retained the
+option; the assembler previously ignored it. This is a conservative
+unsupported-policy refusal, **not implementation of Background, default or
+exclusion semantics**. Empty/unknown values refuse too; extension lookalikes
+are not instructions. Existing FixupList/relative/legacy-patch precedence stays.
+Without the option the prior bounded active-only contract is unchanged, not
+asserted equivalent to ETS's absent-option behaviour. Easy3/System1 policies,
+public mask admission and all load/recovery paths remain unchanged.
+
+[Evidence, integrated byte tests and remaining semantics](../research/2026-10-20-system2-download-integrity.md).
+The integrated tests pin sparse descriptor indices, sorted address-to-association
+mapping, duplicate active-reference refusal, reference/project value precedence
+and preservation of nonzero neighbouring parameter bits. They strengthen
+existing codecs rather than introducing a new table layout or overlap policy.
+Historical acceptance counts below remain bound to their original revisions.
+
 ## Scope
 
 `knx_productdb::image::build_system2_image` is an explicit offline entry point.

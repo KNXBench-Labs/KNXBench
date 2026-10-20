@@ -44,6 +44,9 @@ pub mod project_history;
 pub mod project_payloads;
 pub mod project_readiness;
 pub mod project_seed;
+pub mod property_validation;
+pub mod property_validation_bundle;
+mod property_validation_execution;
 pub mod recorded_device_state;
 pub mod selective_import;
 pub mod serial_address_recovery;
@@ -51,6 +54,7 @@ pub mod serial_number;
 pub mod service_control_backup;
 pub mod stored_bus_access;
 pub mod support_report;
+pub mod system2_validation_preparation;
 
 pub use import::{
     import_ets_project, import_ets_project_bytes, import_ets_project_observed,

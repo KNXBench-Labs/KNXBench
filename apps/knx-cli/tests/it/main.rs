@@ -28,6 +28,7 @@ mod cli_vendor_zip;
 mod cli_version;
 mod contribution;
 mod device_diagnostics;
+mod device_system2_validation;
 mod live_memory_download;
 mod memory_download_simulated;
 mod name_recipe_cli;

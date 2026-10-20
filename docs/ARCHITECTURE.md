@@ -1,5 +1,17 @@
 # Architecture
 
+## Source-bound System-2 simulator validation (20 October 2026)
+
+A separate experimental ProductDB image entry and complete source-procedure
+translator feed normalized Core property plans into the existing Net management
+executor. App owns private durable operation/recovery journals; CLI only invokes
+concrete simulator orchestration. The versioned UP258 identity/policy profile is
+data, not manufacturer-specific Core logic. Ordinary image/mask admission is
+unchanged. Complete-source recovery is same-application/procedure/shape only;
+physical execution remains refused for unresolved masked-allocation effects.
+[ADR-0149](adr/0149-source-bound-system2-validation.md),
+[contract and executable validation](contracts/up258-system2-validation.md).
+
 <a id="product-column-repair-v28-candidate-after-alpha-15"></a>
 ## Product-column repair (v28 source delivery)
 

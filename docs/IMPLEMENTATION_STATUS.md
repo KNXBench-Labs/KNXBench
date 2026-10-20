@@ -12,6 +12,20 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## UP258 bounded System-2 simulator candidate (20 October 2026)
+
+Complete source/profile-bound defaults-only image preparation, all 21 ordered
+source positions, existing property execution and private durable same-shape
+recovery are implemented. The real public package completes import → preparation
+→ simulator download → reopened-file recovery; integrated tests compare full
+modeled persistent bytes, allocation/task state and cover faults, cancellation,
+crash-boundary journals and destructive-Unload refusal. Source-dependent tests
+are explicitly opt-in, not silently counted in ordinary runs.
+[Executable procedure and remaining boundaries](contracts/up258-system2-validation.md).
+This is **STRONG HYPOTHESIS / SIMULATOR TESTED**, not physical/ETS compatibility.
+Independent final review and the complete relevant package gate are recorded
+separately at delivery; no release/tag or bus access is part of this candidate.
+
 <a id="wp-042-resolver-bounds--unchanged-parser-candidate-20-october-2026"></a>
 ## WP-04.2 resolver bounds — unchanged-parser delivery (20 October 2026)
 

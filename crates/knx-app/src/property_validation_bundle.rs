@@ -1,0 +1,423 @@
+//! Immutable normalized bundles and exact operation-specific recovery serialization.
+//!
+//! A bundle is input, never physical admission: hashes detect accidental drift,
+//! not provenance or malicious rewriting. Source/profile translation stays upstream.
+use crate::property_validation::Binding;
+use knx_core::commissioning::{
+    load_control::{self, LoadControlSubtype},
+    load_state::{LoadEvent, LoadState, MaskVersion},
+    property_download::{PropertyDownloadPlan, PropertyDownloadStep, PropertyOperation},
+};
+use knx_core::{ContactableAddress, IndividualAddress};
+use knx_net::commissioning::property_recovery::{
+    ExperimentalPropertyPreconditions, PropertyRecoveryRegion, PropertyRecoveryResource,
+    PropertyRecoverySnapshot,
+};
+use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
+use std::io;
+
+pub(crate) fn invalid(message: &'static str) -> io::Error {
+    io::Error::new(io::ErrorKind::InvalidData, message)
+}
+pub(crate) fn digest(bytes: &[u8]) -> String {
+    format!("{:x}", Sha256::digest(bytes))
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PlanRecord {
+    pub target: String,
+    pub mask: u16,
+    pub manufacturer: u16,
+    pub steps: Vec<StepRecord>,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct StepRecord {
+    pub source_index: usize,
+    pub operation: OperationRecord,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+pub enum OperationRecord {
+    Connect,
+    HardwareCheck {
+        expected: [u8; 6],
+    },
+    LoadControl {
+        object: u8,
+        octets: [u8; 10],
+    },
+    WriteMemory {
+        object: u8,
+        address: u16,
+        data: Vec<u8>,
+    },
+    ToolMetadata {
+        table_address: u16,
+    },
+    Disconnect,
+}
+impl PlanRecord {
+    pub fn from_plan(plan: &PropertyDownloadPlan) -> Self {
+        Self {
+            target: plan.target().to_string(),
+            mask: plan.mask().0,
+            manufacturer: plan.manufacturer(),
+            steps: plan
+                .steps()
+                .iter()
+                .map(|s| StepRecord {
+                    source_index: s.source_index,
+                    operation: match &s.operation {
+                        PropertyOperation::Connect => OperationRecord::Connect,
+                        PropertyOperation::HardwareCheck { expected } => {
+                            OperationRecord::HardwareCheck {
+                                expected: *expected,
+                            }
+                        }
+                        PropertyOperation::LoadControl { object, payload } => {
+                            OperationRecord::LoadControl {
+                                object: *object,
+                                octets: *payload.octets(),
+                            }
+                        }
+                        PropertyOperation::WriteMemory {
+                            object,
+                            address,
+                            data,
+                        } => OperationRecord::WriteMemory {
+                            object: *object,
+                            address: *address,
+                            data: data.clone(),
+                        },
+                        PropertyOperation::ToolMetadata { table_address } => {
+                            OperationRecord::ToolMetadata {
+                                table_address: *table_address,
+                            }
+                        }
+                        PropertyOperation::Disconnect => OperationRecord::Disconnect,
+                    },
+                })
+                .collect(),
+        }
+    }
+    pub fn sha256(&self) -> io::Result<String> {
+        Ok(digest(&serde_json::to_vec(self).map_err(io::Error::other)?))
+    }
+    pub fn to_plan(&self) -> io::Result<PropertyDownloadPlan> {
+        let target = self
+            .target
+            .parse::<IndividualAddress>()
+            .map_err(|_| invalid("invalid normalized target"))?;
+        ContactableAddress::new(target).map_err(|_| invalid("excluded normalized target"))?;
+        let steps = self
+            .steps
+            .iter()
+            .map(|s| {
+                Ok(PropertyDownloadStep {
+                    source_index: s.source_index,
+                    operation: match &s.operation {
+                        OperationRecord::Connect => PropertyOperation::Connect,
+                        OperationRecord::Disconnect => PropertyOperation::Disconnect,
+                        OperationRecord::HardwareCheck { expected } => {
+                            PropertyOperation::HardwareCheck {
+                                expected: *expected,
+                            }
+                        }
+                        OperationRecord::WriteMemory {
+                            object,
+                            address,
+                            data,
+                        } => PropertyOperation::WriteMemory {
+                            object: *object,
+                            address: *address,
+                            data: data.clone(),
+                        },
+                        OperationRecord::ToolMetadata { table_address } => {
+                            PropertyOperation::ToolMetadata {
+                                table_address: *table_address,
+                            }
+                        }
+                        OperationRecord::LoadControl { object, octets } => {
+                            // Rebuild only Core's represented payload classes, then validate
+                            // exact byte equality and the complete immutable plan below.
+                            let payload = match octets[0] {
+                                1 => load_control::event_payload(LoadEvent::StartLoading),
+                                2 => load_control::event_payload(LoadEvent::LoadCompleted),
+                                4 => load_control::event_payload(LoadEvent::Unload),
+                                3 => {
+                                    let subtype = match octets[1] {
+                                        0 => LoadControlSubtype::AllocAbsDataSeg,
+                                        1 => LoadControlSubtype::AllocAbsStackSeg,
+                                        2 => LoadControlSubtype::AllocAbsTaskSeg,
+                                        3 => LoadControlSubtype::TaskPtr,
+                                        4 => LoadControlSubtype::TaskCtrl1,
+                                        5 => LoadControlSubtype::TaskCtrl2,
+                                        _ => {
+                                            return Err(invalid(
+                                                "unsupported stored control subtype",
+                                            ))
+                                        }
+                                    };
+                                    load_control::additional_load_control(
+                                        subtype,
+                                        octets[2..]
+                                            .try_into()
+                                            .map_err(|_| invalid("stored control width"))?,
+                                    )
+                                }
+                                _ => return Err(invalid("unsupported stored load event")),
+                            };
+                            if payload.octets() != octets {
+                                return Err(invalid("stored control is not exact"));
+                            }
+                            PropertyOperation::LoadControl {
+                                object: *object,
+                                payload,
+                            }
+                        }
+                    },
+                })
+            })
+            .collect::<io::Result<Vec<_>>>()?;
+        PropertyDownloadPlan::new(target, MaskVersion(self.mask), self.manufacturer, steps)
+            .map_err(|_| invalid("stored property plan is invalid"))
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PreparedBundle {
+    pub format: u16,
+    pub binding: Binding,
+    pub normalized_plan: PlanRecord,
+}
+impl PreparedBundle {
+    pub fn new(binding: Binding, normalized_plan: PlanRecord) -> io::Result<Self> {
+        let bundle = Self {
+            format: 1,
+            binding,
+            normalized_plan,
+        };
+        bundle.plan()?;
+        Ok(bundle)
+    }
+    pub fn plan(&self) -> io::Result<PropertyDownloadPlan> {
+        self.binding.validate()?;
+        if self.format != 1
+            || self.normalized_plan.sha256()? != self.binding.plan_sha256
+            || self.normalized_plan.target != self.binding.target
+            || self.normalized_plan.mask != self.binding.mask
+            || self.normalized_plan.manufacturer != self.binding.manufacturer
+        {
+            return Err(invalid("bundle format or exact plan binding differs"));
+        }
+        let plan = self.normalized_plan.to_plan()?;
+        if !plan.steps().iter().any(|s| matches!(&s.operation, PropertyOperation::HardwareCheck { expected } if *expected == self.binding.hardware)) {
+            return Err(invalid("bundle hardware identity differs from plan"));
+        }
+        Ok(plan)
+    }
+    pub fn preconditions(&self) -> io::Result<ExperimentalPropertyPreconditions> {
+        ExperimentalPropertyPreconditions::same_application_reinstallation(
+            &self.plan()?,
+            self.binding.serial,
+            self.binding.application,
+        )
+        .map_err(|_| invalid("same-application recovery premise cannot represent this plan"))
+    }
+    pub fn consent_phrase(&self) -> String {
+        format!(
+            "I confirm property validation to {} plan {}",
+            self.binding.target, self.binding.plan_sha256
+        )
+    }
+    pub fn acceptance_phrase(&self) -> String {
+        format!(
+            "I accept STRONG HYPOTHESIS to {} plan {}",
+            self.binding.target, self.binding.plan_sha256
+        )
+    }
+    pub fn restore_phrase(&self) -> String {
+        format!(
+            "I confirm property recovery to {} plan {}",
+            self.binding.target, self.binding.plan_sha256
+        )
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ResourceRecord {
+    pub object: u8,
+    pub state: u8,
+    pub pointer: [u8; 4],
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RegionRecord {
+    pub operation_index: usize,
+    pub source_index: usize,
+    pub object: u8,
+    pub address: u16,
+    pub data: Vec<u8>,
+}
+/// Stores the *original* source procedure including every allocation/task control;
+/// region originals replace only its exact data payloads during reinstallation.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RecoveryRecord {
+    pub version: u16,
+    pub original_bundle: PreparedBundle,
+    pub old_device_control: u8,
+    pub resources: Vec<ResourceRecord>,
+    pub allocations: Vec<RegionRecord>,
+    pub regions: Vec<RegionRecord>,
+}
+impl RecoveryRecord {
+    pub fn from_snapshot(
+        snapshot: &PropertyRecoverySnapshot,
+        bundle: &PreparedBundle,
+    ) -> io::Result<Self> {
+        if snapshot.original_plan != bundle.plan()?
+            || snapshot.preconditions != bundle.preconditions()?
+        {
+            return Err(invalid(
+                "acquired recovery does not bind the exact prepared bundle",
+            ));
+        }
+        let record = Self {
+            version: snapshot.version,
+            original_bundle: bundle.clone(),
+            old_device_control: snapshot.old_device_control,
+            resources: snapshot
+                .resources
+                .iter()
+                .map(|r| ResourceRecord {
+                    object: r.object,
+                    state: r.state.octet(),
+                    pointer: r.pointer,
+                })
+                .collect(),
+            allocations: snapshot
+                .allocations
+                .iter()
+                .map(|r| RegionRecord {
+                    operation_index: r.operation_index,
+                    source_index: r.source_index,
+                    object: r.object,
+                    address: r.address,
+                    data: r.data.clone(),
+                })
+                .collect(),
+            regions: snapshot
+                .regions
+                .iter()
+                .map(|r| RegionRecord {
+                    operation_index: r.operation_index,
+                    source_index: r.source_index,
+                    object: r.object,
+                    address: r.address,
+                    data: r.data.clone(),
+                })
+                .collect(),
+        };
+        record.to_snapshot(bundle)?;
+        Ok(record)
+    }
+    pub fn to_snapshot(&self, bundle: &PreparedBundle) -> io::Result<PropertyRecoverySnapshot> {
+        if self.version != 1 || self.original_bundle != *bundle {
+            return Err(invalid(
+                "recovery source/application/profile/plan binding differs",
+            ));
+        }
+        let plan = bundle.plan()?;
+        let preconditions = bundle.preconditions()?;
+        if self.resources.len() != preconditions.source_pointers.len()
+            || self
+                .resources
+                .iter()
+                .zip(&preconditions.source_pointers)
+                .any(|(a, b)| {
+                    a.object != b.object
+                        || a.pointer != b.value
+                        || a.state != LoadState::Loaded.octet()
+                })
+        {
+            return Err(invalid(
+                "recovery resource/control coverage differs from source",
+            ));
+        }
+        let writes: Vec<_> = plan
+            .steps()
+            .iter()
+            .enumerate()
+            .filter_map(|(i, s)| match &s.operation {
+                PropertyOperation::WriteMemory {
+                    object,
+                    address,
+                    data,
+                } => Some((i, s.source_index, *object, *address, data.len())),
+                _ => None,
+            })
+            .collect();
+        if self.regions.len() != writes.len()
+            || self.regions.iter().zip(writes).any(|(r, (i, s, o, a, n))| {
+                (
+                    r.operation_index,
+                    r.source_index,
+                    r.object,
+                    r.address,
+                    r.data.len(),
+                ) != (i, s, o, a, n)
+            })
+        {
+            return Err(invalid(
+                "recovery memory coverage is incomplete or reordered",
+            ));
+        }
+        let snapshot = PropertyRecoverySnapshot {
+            version: self.version,
+            original_plan: plan.clone(),
+            preconditions,
+            old_device_control: self.old_device_control,
+            resources: self
+                .resources
+                .iter()
+                .map(|r| PropertyRecoveryResource {
+                    object: r.object,
+                    state: LoadState::Loaded,
+                    pointer: r.pointer,
+                })
+                .collect(),
+            allocations: self
+                .allocations
+                .iter()
+                .map(|r| PropertyRecoveryRegion {
+                    operation_index: r.operation_index,
+                    source_index: r.source_index,
+                    object: r.object,
+                    address: r.address,
+                    data: r.data.clone(),
+                })
+                .collect(),
+            regions: self
+                .regions
+                .iter()
+                .map(|r| PropertyRecoveryRegion {
+                    operation_index: r.operation_index,
+                    source_index: r.source_index,
+                    object: r.object,
+                    address: r.address,
+                    data: r.data.clone(),
+                })
+                .collect(),
+        };
+        snapshot
+            .recovery_plan(&plan)
+            .map_err(|_| invalid("recovery allocation coverage or original bytes differ"))?;
+        Ok(snapshot)
+    }
+}

@@ -89,7 +89,8 @@ impl std::error::Error for PropertyPlanError {}
 /// An immutable, structurally complete offline plan for the bounded 0025 slice.
 ///
 /// Success proves neither product-source mapping, per-resource profile support,
-/// durable recovery nor physical compatibility. Only the simulator consumes it.
+/// durable recovery nor physical compatibility. Execution requires separate
+/// target-specific experimental preconditions and authorization.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PropertyDownloadPlan {
     target: IndividualAddress,
@@ -217,7 +218,8 @@ impl PropertyDownloadPlan {
                                 }
                                 allocations.push((*object, start, end, source));
                             }
-                            2 | 5 if *object == 3 => {}
+                            2 => {}
+                            5 if *object == 3 => {}
                             _ => {
                                 return Err(fail(
                                     index,
@@ -280,6 +282,35 @@ impl PropertyDownloadPlan {
             source_positions,
             effects,
         })
+    }
+
+    /// Replace only ordered memory payloads, preserving the complete procedure.
+    ///
+    /// Recovery callers must separately bind the original plan and identity.
+    /// Exact count and lengths prevent a partial image or allocation-shape change;
+    /// replay is same-procedure reinstallation, not raw allocator-state rollback.
+    pub fn with_memory_payloads(&self, payloads: &[Vec<u8>]) -> Result<Self, PropertyPlanError> {
+        let mut steps = self.steps.clone();
+        let mut replacements = payloads.iter();
+        for (operation, step) in steps.iter_mut().enumerate() {
+            if let PropertyOperation::WriteMemory { data, .. } = &mut step.operation {
+                let replacement = replacements
+                    .next()
+                    .filter(|bytes| bytes.len() == data.len())
+                    .ok_or(PropertyPlanError {
+                        operation,
+                        reason: "recovery memory coverage differs from original plan",
+                    })?;
+                *data = replacement.clone();
+            }
+        }
+        if replacements.next().is_some() {
+            return Err(PropertyPlanError {
+                operation: steps.len(),
+                reason: "excess recovery memory payloads",
+            });
+        }
+        Self::new(self.target, self.mask, self.manufacturer, steps)
     }
 
     /// The immutable operations in their retained order.

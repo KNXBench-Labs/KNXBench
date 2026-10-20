@@ -32,8 +32,15 @@ named semantic assertions; both exact-module nine-test baselines pass. Test-tail
 bytes and raw Cargo/standalone identities agree. This is bounded discrimination,
 not exhaustive atomic scheduling proof. The maintained 14-stage feature gate
 passes on `e27bbc8c`: 3,248 Rust passes / 151 ignored, 97/97 corpus tests and
-411 registered tool tests / six optional skips. Integrated gate/publication
-remain pending. No user-facing cancellation feature is claimed.
+411 registered tool tests / six optional skips. The main-first merge
+`8610f317` independently passes the same 14-stage scope and observed counts,
+with frozen inputs and no touched or unchecked user data, and is published
+on `main` with local/tracking/live-ref equality verified. The 388-entry private
+core evidence archive preserves original logs, assertions, source identities and
+compiled binaries; its members are individually verified before the owned
+rebuildable target is retired. No user-facing cancellation feature is claimed.
+WP-04.3 remains open; A2 Ready/apply/expiry admission and transitive installer,
+server and UI integration are not implemented.
 
 ## WP-04.3 approved architecture; implementation pending (20 October 2026)
 

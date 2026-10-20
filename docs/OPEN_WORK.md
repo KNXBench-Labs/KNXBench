@@ -234,8 +234,10 @@ runtime, latency/RSS/quota, browser or cancellation guarantees. The unwired A1
 gate/typed Stop primitive has nine focused parent passes and a complete owning
 ProductDB run (1,255 passes, 32 ignored); these overlap, not additive coverage.
 Independent review accepts A1 and all six compiled critical wrong-branch controls
-are detected by the unchanged tests. The feature gate passes; integrated
-acceptance/publication remain pending. Ready admission,
+are detected by the unchanged tests. Feature and main-first integrated gates
+pass all 14 maintained stages; A1 is published as `8610f317` on `main`
+([delivery record](IMPLEMENTATION_STATUS.md#wp-043-a1-publication-primitive--local-verification-20-october-2026)).
+Ready admission,
 transitive installer control, server lifecycle and shared UI remain unimplemented.
 Existing synchronous behavior and profile limits remain unchanged.
 

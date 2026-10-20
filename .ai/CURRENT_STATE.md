@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-20 07:23
+- **Completed:** CLAIM (owner request: work the next open tasks): bounded AppImage native-binding post-install check on `fix/appimage-native-binding-20261020`. Scope is the Linux AppImage workflow, a small frontend dependency smoke check and missing-binding regressions; original npm omission cause remains unknown.
+- **Pending/Next Steps:** Test-first implementation, independent review, maintained scoped acceptance, main-first integration and publication/readback. After this delivery, claim the independent WP-03 G16 ZIP/VD1 diagnostic follow-up after a fresh overlap check; legacy binary encoding is not included.
+- **Notes for Codex oder Claude:** Alpha 16 migration repair and its ordered successor work retain their existing owner. No product schema, bus/device, desktop, release/tag, deployment or vendor operation. Preserve the selected dirty root and foreign research files. Only the native-binding follow-up is reserved now.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-20 07:01
 - **Completed:** Generic System-2 offline integrity code DELIVERED on main-first merge76864b51 (featureaa650833); local/tracking/live equality verified. Maintained scoped merged gate14/14GREEN, valid proofs/frozen inputs,317tool tests,2990Rust passed/0failed/144ignored,97/97selected corpus; no user data touched/unchecked. Five integrated regressions and three caught/restored mutants; separate final-source self-review, not independent approval. Additional UP258 inventory independently verified against exact public digest; decoded Data lengths330/416/512/256equal reservations, masks330/416/512/absent; no padding change.
 - **Pending/Next Steps:** Result-only tail passes all seven checks: documentation,14catalogue-preservation tests,1638anchors/681Markdown files,208ledger rows,local-info,runtime equality and whitespace. Tail publication/readback and owned evidence archival/cleanup follow. Generic claim released by delivered code; exact UP258 image/procedure/recovery, inactive/legacy patch semantics, numeric-tag overlap order, module mapping and unverified codecs remain separate boundaries. No new executable admission or live operation.

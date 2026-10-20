@@ -49,8 +49,12 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci --prefix apps/knx-web
 
+      - name: Check frontend native binding
+        working-directory: apps/knx-web
+        run: node --input-type=module -e "await import('rolldown'); console.log('Rolldown native binding loaded')"
+
       - name: Test AppImage launcher policy
-        run: python3 -m unittest tools.tests.test_appimage_launcher -v
+        run: python3 -m unittest tools.tests.test_appimage_launcher tools.tests.test_appimage_frontend_binding -v
 
       - name: Build AppImage
         working-directory: apps/knx-desktop

@@ -51,10 +51,14 @@ security, GitHub-issue, hardware or whole-codebase conformance audit.
 
 The first Alpha 15 AppImage dry run lacked the optional native Rolldown binding
 after `npm ci`; the exact-source successor passed. Why npm omitted the binding
-is unestablished. Add a bounded post-install native-binding presence check with
-missing-binding regression coverage, preserving tag-only publication semantics.
-This is an unclaimed workflow-hardening follow-up, not a product-source change
-or a reason to move the Alpha 15 tag. See the
+is unestablished. The workflow now imports the installed `rolldown` immediately
+after installation, before the expensive Tauri build; a load failure stops the
+job. Regression tests execute that exact command against the installed loader
+and isolated copies with missing or corrupt native libraries. They also retain
+the manual-build/tag-only-publication boundary. This is a bounded build
+preflight, not a repair of npm installation, a new AppImage acceptance run or
+a reason to move the Alpha 15 tag. Package acceptance/publication is tracked in
+the current handover. See the
 [retained attempts](releases/alpha15-acceptance.md#retained-non-green-attempts).
 
 ### Recommended package queue

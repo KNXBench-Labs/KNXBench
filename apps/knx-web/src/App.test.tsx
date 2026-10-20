@@ -1625,6 +1625,7 @@ describe("App — the File menu by keyboard alone", () => {
         "Import selected lines/devices…",
         "Export group addresses (CSV)…",
         "Import group addresses (CSV)…",
+        "Monitoring export…",
         "Export documentation…",
       ],
       ["Project history", "Compare with…"],
@@ -1651,10 +1652,9 @@ describe("App — the File menu by keyboard alone", () => {
       expect(declared(level).every((b) => b.getAttribute("role") === "menuitem")).toBe(true);
     }
     const entries = [...menu.querySelectorAll<HTMLButtonElement>("[data-file-menu-item]")];
-    // Nothing in the menu is keyboard-dead: every entry here works on a
-    // freshly imported project. (The one that used to be disabled without a
-    // `.knxdb` path was the `.knxproj` export, withdrawn by ADR-0028.)
-    expect(entries.filter((b) => b.disabled).map((b) => b.textContent)).toEqual([]);
+    // This minimal offline tree has neither an installation nor live snapshot identity:
+    // monitoring export must refuse it. Other entries retain their existing availability.
+    expect(entries.filter((b) => b.disabled).map((b) => b.textContent)).toEqual(["Monitoring export…"]);
 
     await act(async () => {
       entries[0].dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));

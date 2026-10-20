@@ -74,6 +74,7 @@ mod debug_report_routes;
 mod domain;
 mod import_evidence_routes;
 mod modeled_metadata_routes;
+mod monitor_export_routes;
 mod project_payload_routes;
 mod recorded_device_state_routes;
 mod serial_address_routes;
@@ -217,6 +218,7 @@ pub fn app_with_auth(state: SharedState, static_dir: Option<PathBuf>, auth: Auth
         .merge(stored_bus_access_routes::router())
         .merge(manufacturer_file_routes::router())
         .merge(fs_routes::fs_routes())
+        .merge(monitor_export_routes::router())
         .merge(bus_routes::bus_routes())
         .merge(bus_activity_routes::bus_activity_routes())
         .merge(device_download_routes::device_download_routes())

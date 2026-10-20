@@ -1,0 +1,7 @@
+/** Typed synthetic project and the admitted app report contract; no imported project data. */
+import type {ProjectTree} from "./bindings/ProjectTree";
+import type {ExportReport, MonitorExportRequest} from "./monitorExport";
+export const tree = (): ProjectTree => ({schema_version:12,errors:0,warnings:0,can_undo:false,can_redo:false,is_modified:false,group_address_style:"ThreeLevel",server_incarnation:"fictional-server",project_incarnation:1,snapshot_revision:2,installations:[{id:7,name:"Installation",topology:[],buildings:[],unassigned:[],group_addresses:[],group_ranges:[]}]});
+export const request: MonitorExportRequest = {serverIncarnation:"fictional-server",projectIncarnation:1,projectRevision:2,installation:7};
+export const report = (): ExportReport => ({format_version:1,profile:"monitoring-sparse-v1",producer:"KNXBench",producer_version:"0.1.0",installation:7,project_sha256:"a".repeat(64),counts:{devices:{selected:2,exported:1,omitted:1},communication_objects:{selected:0,exported:0,omitted:0},group_addresses:{selected:1,exported:1,omitted:0},spaces:{selected:0,exported:0,omitted:0},functions:{selected:0,exported:0,omitted:0}},issues:[{code:"unavailable",entity:"GA-1",field:"data_secure",detail:"Group-address security is unavailable; omitted, not false."}],excluded_data:["parameters", "keys/passwords"]});
+export const preview = () => ({report:report(),binding:{serverIncarnation:request.serverIncarnation,projectIncarnation:1,projectRevision:2},bundleSha256:"b".repeat(64)});

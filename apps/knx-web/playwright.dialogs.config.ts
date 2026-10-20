@@ -4,7 +4,7 @@ import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./e2e",
-  testMatch: "dialogs-overview.e2e.ts",
+  testMatch: ["dialogs-overview.e2e.ts", "monitoring-export.e2e.ts"],
   outputDir: "../../target/playwright/dialogs-overview",
   fullyParallel: false,
   workers: 1,

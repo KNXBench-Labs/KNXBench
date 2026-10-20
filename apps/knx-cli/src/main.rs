@@ -24,6 +24,7 @@ mod device_system2_validation;
 mod legacy_import;
 mod legacy_inspect;
 mod legacy_password;
+mod monitor_export;
 mod name_recipe;
 mod plugin_data;
 mod scan;
@@ -44,6 +45,9 @@ const USAGE: &str = "usage: knx import <file.knxproj> [--store <path.knxdb> [--r
      \x20     knx ga-export <store.knxdb> <out.csv> [--installation <id>]\n\
      \x20     knx ga-import <store.knxdb> <in.csv> [--dry-run] [--confirm <token>]\n\
      \x20                   [--installation <id>]\n\
+     \x20     knx monitor-export <project.knxdb> <new.zip> [--installation <id>]\n\
+     \x20                   [--language <code>] [--product-db <path>] [--no-product-db]\n\
+     \x20         (offline reduced monitoring projection, not a backup; never overwrites)\n\
      \x20     knx doc-export <store.knxdb> <out.html>\n\
      \x20     knx diff [--exit-code] <a.knxdb|a.knxproj> <b.knxdb|b.knxproj>\n\
      \x20     knx contribution analyze <file.knxproj|file.knxprod>\n\
@@ -220,6 +224,7 @@ fn main() -> ExitCode {
         Some("ga-export") => run_ga_export(&args[1..]),
         Some("ga-import") => run_ga_import(&args[1..]),
         Some("doc-export") => run_doc_export(&args[1..]),
+        Some("monitor-export") => monitor_export::run(&args[1..]),
         Some("diff") => run_diff(&args[1..]),
         Some("products") => run_products(&args[1..]),
         Some("contribution") => contribution::run(&args[1..]),

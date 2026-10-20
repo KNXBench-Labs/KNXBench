@@ -1,5 +1,16 @@
 # Architecture
 
+## Monitoring export decision (implementation in progress)
+
+[ADR-0151](adr/0151-monitoring-export-is-a-sparse-snapshot.md) admits a separate
+App-owned read-only snapshot projection. CLI and HTTP/web are adapters over the
+same mapping/validation service; Core does not learn JSON fields or depend on UI.
+A deterministic ZIP binds plain JSON and the omission report. Sparse unknown
+booleans, current-state selection and reviewed digest binding are explicit
+[contract boundaries](contracts/monitor-project-export.md), not yet runtime or
+receiving-application acceptance. Native/product schemas and protocol admission
+are unchanged.
+
 Only accepted and implemented behavior below is a runtime capability. The
 [WP-04.3 catalogue-job design candidate](contracts/catalogue-update-jobs.md) and
 [transaction research](research/2026-10-20-catalogue-job-transactions.md) retain the original REVISE and scoped correction ACCEPT separately. The

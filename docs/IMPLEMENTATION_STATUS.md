@@ -12,6 +12,16 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Workbench splitter browser spec reaches the typecheck gate (20 October 2026)
+
+A focused derived config includes the existing `workbench-splitters.e2e.ts`;
+the maintained web gate discovers it without runner changes. A tool regression
+pins discovery, inheritance and the spec root. Real compiler controls prove
+that a deliberate type error in that spec is invisible to the application-only
+config but refused by the new config; the spec is restored byte-exact and the
+new typecheck passes. No UI behavior, browser case, retry, lane policy or
+dependency changes. [Gate contract](contracts/web-test-gate.md).
+
 ## G16 ZIP and legacy-inspection diagnostics (20 October 2026)
 
 The existing `MissingMaster` error now says that the ZIP is not a standalone

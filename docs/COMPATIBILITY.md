@@ -1,6 +1,6 @@
 # Compatibility
 
-## Monitoring snapshot profile (implementation in progress)
+## Monitoring snapshot profile (source delivered, 21 October 2026)
 
 The [monitoring export contract](contracts/monitor-project-export.md) defines an
 explicit `monitoring-sparse-v1` projection, not complete external-schema

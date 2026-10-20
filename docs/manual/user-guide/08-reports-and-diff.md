@@ -13,13 +13,13 @@ describes it to someone who cannot open it, and an answer to "what changed?". KN
 has one feature for each.
 
 <a id="monitoring-export"></a>
-## Offline monitoring export (source implementation in progress)
+## Offline monitoring export (source builds since 21 October 2026)
 
-The source candidate's **File → Import & export → Monitoring export…** action
-prepares a reduced snapshot of one installation. It does not contact the KNX bus,
-require an ETS file or upload anything. Focused and actual browser/backend checks
-have passed; maintained package/integrated acceptance remains pending. No
-released-build availability or receiving-tool compatibility is claimed here.
+**File → Import & export → Monitoring export…** prepares a reduced snapshot of
+one installation. It does not contact the KNX bus, require an ETS file or upload
+anything. Available in source builds containing `4eee65d8` or newer;
+[internal acceptance is complete](../../IMPLEMENTATION_STATUS.md#monitoring-snapshot-export--source-delivery).
+This is not a new tagged release or verified receiving-tool integration.
 
 Choose the installation, optionally choose a text language, and request a preview.
 Review the selected/exported/omitted entity counts and diagnostics before choosing

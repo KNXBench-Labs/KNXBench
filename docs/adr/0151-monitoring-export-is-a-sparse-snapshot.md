@@ -4,6 +4,11 @@ Date: 2026-10-20
 Status: Accepted implementation decision after bounded independent design review;
 required corrections recorded in the contract, runtime acceptance pending
 
+Status update (2026-10-21): source delivered on `main` as `4eee65d8`, after
+independent correction review, full branch/integrated gates and an input-bound
+upstream delta gate. [Delivery record](../IMPLEMENTATION_STATUS.md#monitoring-snapshot-export--source-delivery).
+Receiver interoperability and released artifacts remain separate.
+
 ## Context
 
 Offline monitoring needs current names, group addresses, object relationships,

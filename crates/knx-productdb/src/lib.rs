@@ -26,6 +26,7 @@ pub mod legacy;
 pub mod master_evidence;
 pub mod master_provenance;
 pub mod migration;
+pub mod operation;
 pub mod package;
 pub mod parameter_editor;
 pub mod parameter_layout;

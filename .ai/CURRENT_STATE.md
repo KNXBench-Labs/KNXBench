@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-20 09:22
+- **Completed:** WP16 product-directory integrity DELIVERED on `main` as `9c79634b`; local/tracking/live publication equality verified. Independent review ACCEPTED with0Critical/Important. Maintained scoped gate14/14GREEN:3034Rust tests/22binaries (144ignored),97/97selected corpus,323tool tests/one existing optional skip. All proofs valid, inputs frozen and user-data guard lists empty.40focused tests, original27RED/10GREEN and11/29repair-removal failures retained. Product-directory claim RELEASED.
+- **Pending/Next Steps:** Publish this result-only docs tail after cheap doc/anchor/ledger checks, archive+verify compact private evidence, retire only owned resources. Then take a fresh bounded claim for the remaining ordinary-file trailing-stream investigation, beginning with format/source research and read-only compatibility evidence before production policy changes. Encryption-header scope remains separate; other owners retain Alpha16/exact-UP258.
+- **Notes for Codex oder Claude:** Gate binds `9c79634b`, not the docs-only tail. Evidence `<profile-scratch>/wp16-product-directory-20261020/gate1`; source acceptance confirms all14planned stages,3034Rust and97corpus.323tool tests includes one optional skip. No full-workspace/browser/release acceptance claimed. Real census has no deflated directories; synthetic evidence is explicit. Preserve root stale/dirty files and all private identities; no bus/device/desktop/deployment/vendor operation.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-20 09:11
 - **Completed:** WP16 independent source review ACCEPTED with0Critical/Important and verified bound source digests. Controller mutation controls fail11trailing cases without stream check and29cases without leaf context; production restored byte-exact,40/40focused cases and final Clippy GREEN. Initial mutation-count expectation corrected in retained accounting, not hidden. Docs/limitations/test-index checks pass; frontend build exists for desktop dependents.
 - **Pending/Next Steps:** Commit reviewed feature, verify fresh origin/main, run maintained14-stage scoped package gate on frozen committed head (downstream Rust+selected corpus; no web browser). Review receipt/source freeze/user-data guards, then publish/readback, docs-only final result tail and owned cleanup. No new go required. Other owners retain Alpha16/exact-UP258.

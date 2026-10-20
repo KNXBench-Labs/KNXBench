@@ -87,7 +87,7 @@ Each package needs its own scoped claim, review, tests and delivery evidence.
 | [WP-13](#wp-13--documentation-drift) | P3 | First slice 19 Oct; limitation-summary reconciliation 20 Oct; wider sweep open | Current summaries agree with delivered behaviour; retained history stays intact. |
 | [WP-14](#wp-14--complete-offline-family-outcomes) | P1 | Source contracts first; UP258 excluded | Complete real-source System 1/B/300 image → procedure → execution → recovery slices. |
 | [WP-15](#wp-15--complete-module-scope-in-web-consumers) | P1 | Delivered 19 Oct (web adoption); older-server boundary documented | Complete response-local module paths distinguish diagnostics and workspace identities. |
-| [WP-16](#wp-16--empty-directory-zip-integrity) | P1 | Delivered 19 Oct; trailing-stream and product-reader follow-ups open | Empty directories have valid CRC and complete compressed-stream representation. |
+| [WP-16](#wp-16--empty-directory-zip-integrity) | P1 | Project repair delivered 19 Oct; product repair delivered 20 Oct; file-stream/encryption-header follow-ups open | Empty directories have valid CRC and complete compressed-stream representation. |
 | [WP-17](#wp-17--master-identity-provenance) | P1 | Delivered 19 Oct; product DB v27, ADR-0147, `d18ce65e` | Master identity winners, collisions and malformed declarations have truthful provenance. |
 | [WP-18](#wp-18--device-comparison-shows-what-differs) | P2 | Delivered 19 Oct; no live-device acceptance | Differing bytes are marked in the raw hex rows; the comparison result shows only differences by default, with a toggle for all rows. |
 | [WP-19](#wp-19--sync-from-a-device-comparison) | P2 | Contract first; project → device needs bus-write consent (owner request, 19 Oct) | A comparison result offers *project → device* (the existing download) or *device → project* (adopt verified values, one undo step). |
@@ -431,7 +431,7 @@ complete stream (none, truncated or malformed); stored, `jar`, Java
 `ZipOutputStream` and other complete empty deflate shapes still import, and a
 refusal leaves existing project and product databases unchanged
 ([KL-159 update](limitations/KL-159-project-archive-budgets-and-duplicate-names.md)).
-**Implemented follow-up (20 October 2026; delivery acceptance pending):** the
+**Delivered follow-up (20 October 2026, `9c79634b`):** the
 product-package reader checks complete, exactly consumed empty DEFLATE directory
 streams after its existing bounded CRC reader. Member-open/read refusals include
 the validated decoded leaf name. Standalone, outer-wrapper, inner-package and

@@ -161,3 +161,21 @@ Fetched main remains9d6f2d68. An owned main-first no-ff merge is prepared withou
 conflicts; selected-root foreign edits are untouched. The integrated14-stage
 run and publication/readback are still pending. This checkpoint supersedes
 older pending feature-gate statements without rewriting their historical bytes.
+
+## A1 source publication and evidence closure
+
+Main-first8610f317 passes its own14-stage maintained gate. Both branch and
+integrated raw runs report3248Rust passes/151ignored,97/97corpus tests in6targets
+and411registered tooltests/sixoptional skips. Ordered stage names/exits/proofs,
+frozen3351tracked identities and empty user-data touched/unchecked lists are
+verified separately. Required KNXBench author/committer and no co-author trailer
+are confirmed. Explicit main push and local/tracking/live equality succeed.
+
+The private core archive has388verified evidence entries plus its manifest,
+including actual original unit and mutant binaries. Every member is verified
+before removing only the stopped owned6.48GB rebuildable target. Full job
+capability is not delivered: Ready/apply/expiry admission and transitive service,
+SQL, server lifecycle and UI are later steps. This result-only prose still needs
+its own maintained documentation gate/publication; raw closure supplement and
+remaining owned A1 scratch retirement are pending at this checkpoint. Selected
+root and concurrent monitoring-export ownership remain untouched.

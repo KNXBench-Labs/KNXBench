@@ -214,6 +214,22 @@ selections green. The [delivery record](IMPLEMENTATION_STATUS.md#wp-042-resolver
 records passed maintained integration and published source `6f68bcdd`. This does
 not implement the WP-04.3 web workflow.
 
+**WP-04.3 design in progress (20 October 2026):** both source inventories are
+identity-verified (110 file/report entries, no mismatch). The
+[catalogue-job contract candidate](contracts/catalogue-update-jobs.md) proposes
+shared controlled installation, disk rehearsal, atomic cancel/commit arbitration,
+explicit current-schema prerequisites and one owned server lifecycle. Its
+[primary transaction research](research/2026-10-20-catalogue-job-transactions.md)
+is documentation evidence, not execution. The scoped rereview accepts Ready/apply expiry, root UI ownership and bounded
+replay. [Concrete consolidated choices](contracts/catalogue-jobs/design-readiness.md)
+for managed binding, named resources, artifact ownership, strict DTOs and real
+process drain are independently DESIGN READY after scoped corrections.
+[ADR-0150](adr/0150-cancellable-catalogue-jobs.md) accepts staged A–F implementation;
+the job functionality, runtime verification and delivery remain pending.
+Pinned sources and five synthetic SQLite mechanics cases do not supply new runtime,
+latency/RSS/quota, browser or cancellation guarantee is delivered. Existing
+synchronous behavior and profile limits remain unchanged.
+
 **Three separate deliveries, in order:**
 
 1. Measure per-table/index/source-byte growth and peak memory on a disposable

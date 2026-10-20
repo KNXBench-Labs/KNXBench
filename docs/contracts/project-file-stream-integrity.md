@@ -90,7 +90,59 @@ separately rather than asserting whole-archive atomicity it never promised.
   selected existing corpus regressions precede delivery. Corpus test success is
   not a new exhaustive real-project compressed-extent or encryption census.
 
+## Local implementation and measured verification
+
+The container repair is implemented locally. A shared physical-index reader
+covers normal outer files and direct compressed nested-carrier acquisition,
+after the existing bounded decoder/CRC. Its secondary extent probe uses fixed
+8 KiB input/output buffers and checked decoded-length-plus-one limits. Plain and
+ZipCrypto nested paths retain the existing decoder and compare its actual
+consumed-input counter against compressed plaintext length, without a second
+expanded copy. Existing outer upper-bound size policy, nested CRC/exact size,
+lazy opening, directory checks and password ambiguity are preserved.
+
+Original production reaches 58 intended semantic failures and 95 positive
+controls in the owning suite; the candidate passes all 153. Prior 62 test bodies
+and fifteen retained characterizations remain byte-exact; fifteen old acceptance
+pins are deliberately superseded. Additional archive/password/container tests
+pass (185 unique core Rust passes, three existing corpus-dependent ignores).
+Parent reran the 153 owning cases and all-targets Clippy.
+
+The application baseline has eighteen intended failures and eight positive
+controls. Parent candidate execution passes all 26 new cases and the owning
+selection (59 passes, three existing ignores; selections overlap). Tests verify
+quiescent source/database/sidecar snapshots and native/product readback, new-source
+selective refusal, preservation of authentic baseline selective archive/reports
+without recertification, and restoration's intentional selected-member
+continuation. These prove the scoped pre-persistence/read boundaries, not live
+WAL, crash recovery or general cross-database atomicity.
+
+### Measured project-path work
+
+Same optimized binary, exact original/candidate module copies, production-matching
+69 shared dependency versions/checksums, sixteen deterministic profiles and 320
+samples with warmup/alternating order. Parent checked executable identity and
+recomputed all sixteen medians. Candidate/original median ranges:
+
+| Synthetic path | Ratio range |
+| --- | ---: |
+| Direct outer read | 1.384–1.738 |
+| Compressed-carrier preparation | 1.017–1.130 |
+| Plain nested preparation/read | 0.998–1.003 |
+| ZipCrypto nested preparation/read | 1.000–1.003 |
+
+Only 4 KiB/1 MiB compressible/incompressible hot-memory inputs were measured.
+Outer rows time repeated reads after opening; nested rows include source cloning,
+preparation, prepared-read cloning and destruction. Near-unity differences are
+noise, not speedups. No CPU affinity/frequency/thermal isolation, peak RSS,
+end-to-end application import or real-project compatibility claim. The first
+benchmark used newer cached dependencies after regenerating its lock; its output
+is retained but excluded. The corrected source-bound run preserves production
+dependency versions/checksums.
+
 ## Status
 
-Policy recorded before production changes. Implementation, original-source REDs,
-consumer tests, measurements and delivery acceptance pending.
+Policy recorded before production changes. Local core and application checks
+pass; independent full-diff review accepted with zero Critical/Important findings
+and final source/test bindings rechecked. Maintained committed-head delivery gate
+remains pending. No new real-project census or broad compatibility claim.

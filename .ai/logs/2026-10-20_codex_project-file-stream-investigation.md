@@ -53,8 +53,34 @@ records the admission/error/persistence decision before production changes.
 It preserves password ambiguity, lazy and per-member read semantics and historic
 reports; enforcement spans normal outer reads and nested-carrier preparation.
 
+## Implementation evidence
+
+The core worker's final source/test digests match. Original58semanticRED/95GREEN
+becomes153owningGREEN; additional core checks give185unique passes/3existing
+ignores. Fifteen old suffix-acceptance pins are explicitly superseded;62original
+bodies and15retained characterization bodies stay byte-exact. Outer/direct-carrier
+reads share a normal-CRC-then-fixed-buffer extent check; nested paths retain the
+existing decoder's actual total_in. Cipher/header/size/lazy semantics are unchanged.
+
+Application worker ran original immutable export:18intendedRED/8GREEN. Parent
+ran candidate26/26focused,59owning/3ignored (overlap),153core owning and all-targets
+Clippy successfully with exact frozen seven-file source/test binding. Tests cover
+pre-persistence refusal snapshots, authentic historical selective raw/source report
+preservation across native reopen, and restore per-member continuation. No live
+WAL/crash/general-crossDB atomicity guarantee is claimed.
+
+Parent recomputed all16benchmark medians/320samples, verified executable hash
+and69shared production dependency versions/checksums. Outer direct-read ratio
+1.384–1.738; compressed carrier1.017–1.130; plain nested0.998–1.003;
+ZipCrypto1.000–1.003. Synthetic hot-memory4KiB/1MiB only; near-unity noise is not
+a speedup. First regenerated-lock benchmark used newer cached dependencies and
+is retained/uncredited; final benchmark corrects that binding.
+
 ## Pending
 
-Test-first container repair, actual application/selective/restore consumer tests,
-project-path cost measurement, independent full-diff review and maintained delivery
-acceptance. No production implementation is claimed at this checkpoint.
+Independent full-diff review accepted with zero Critical/Important findings;
+parent verified all seven source/test hashes and unchanged directory checker.
+Earliest historical harvest receipt lacks a test-source manifest; later frozen
+runs bind the final synthetic fixture, and that provenance limitation is retained.
+Maintained committed-head gate, publication/readback and owned retirement pending.
+No real project extent census or compatibility-safe guarantee.

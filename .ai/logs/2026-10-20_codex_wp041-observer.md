@@ -195,3 +195,27 @@ builds, calibration of that release helper, the repeated 54-observation study,
 actual DEFAULT semantic verification, result review, scoped gates and publication
 remain pending. Component acceptance is not WP-04.1 completion, product
 compatibility or an accepted release-memory baseline.
+
+## Actual release-study acceptance
+
+The clean tooling candidate `9834daff` supplied offline/locked release CLI,
+probe and native supervisor builds with authenticated unchanged executable
+identities. The successor private study completed five release controls,
+20 native-enabled methods, 54 measured operations over three repetitions,
+and the independent DEFAULT XML/SQL/typed-stream semantic oracle.
+
+Independent actual-study review accepts without findings: 108 accounting
+endpoints and 30 final databases reconcile, all target proofs/commands match,
+three expected nonzero refusals retain raw failure with exact preservation,
+and the separate semantic/resource verdicts are not conflated. The controller
+rehashes all 29 frozen review artifacts and 4521 original evidence files,
+checks the current candidate/binaries and all 253 recorded PIDs absent.
+The original missing-private-evidence-parent attempt remains retained as a
+setup failure before workload execution, not a product regression.
+
+Public aggregate results record the exact measured source and limits rather
+than private paths or system details. The narrow factual/privacy review accepts the figures and scope; its sole
+stale-opening finding was corrected to bounded synthetic-study acceptance. Additional release-profile example tests actually
+pass 26/26 (13 probe,13 supervisor). These are separate post-study executions,
+not a replay of the 54-operation measurements. Maintained branch and merged
+package gates, publication/readback and evidence archival/retirement are pending.

@@ -12,7 +12,7 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
-## WP-04.1 measurement tooling — reviewed candidate (20 October 2026)
+## WP-04.1 synthetic measurement baseline (20 October 2026)
 
 Opt-in synthetic fixture generation, complete SQLite/source/evidence accounting,
 strict release-build binding, a thin current-database/AP1 probe and a native
@@ -23,12 +23,16 @@ and the demonstrated live-helper spawn/checkpoint ownership gap. Raw expected
 refusals remain nonzero; incomplete observations cannot become accepted results.
 [Measurement method](testing/productdb-measurement.md).
 
-These are reviewed tooling and synthetic-control results, not an accepted
-production workload or release-memory baseline. The actual clean-source release
-build, repeated 54-observation study, independent normalized/evidence comparison,
-scoped delivery gates and publication remain pending. WP-04 remains open;
-WP-04.2/.3 and WP-19 are not supplied by this candidate. ProductDB schema,
-production parser budgets and KNX/device compatibility are unchanged.
+The source-bound release study and independent review are accepted: three
+complete repetitions, 54 measured operations, 108 accounting endpoints and
+30 final databases reconcile. Expected raw refusals retain nonzero exits;
+independent DEFAULT XML/SQL comparison verifies preservation and normalized
+semantics. The [measured results and limits](testing/productdb-baseline-2026-10-20.md)
+separate target RSS from wrapper peaks and account for retained bytes, normalized
+data, indexes and free pages. This is a synthetic baseline, not production-scale
+or vendor/ETS compatibility acceptance. Delivery gates and publication remain
+separate; WP-04.2/.3 and WP-19 are not completed. ProductDB schema and production
+parser budgets are unchanged.
 
 <a id="product-column-promotion-repair--source-delivery"></a>
 ## Product-column promotion repair — source delivery (20 October 2026)

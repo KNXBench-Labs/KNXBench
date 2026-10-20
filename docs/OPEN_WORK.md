@@ -718,9 +718,11 @@ Open, each small and none blocking:
 - Production suites run one after another with one worker each (771.7 s in
   the last complete gate; `table-columns` alone 231.3 s). A lane review per
   suite could let tag-split parallel runs back in where they are safe.
-- The plan names a deleted web file's specs as "not statically analysable";
-  name the deleted path instead (`tools/gate_scope.py`; a planner change, so
-  it costs one complete gate).
+- **Closed (20 October 2026 source):** the plan explicitly names deleted or
+  missing known web inputs by repository-relative path, alongside unchanged
+  static-analysis fallback reasons. It does not infer exact per-spec causality
+  from an unresolved closure. Selection, retries, budgets and complete-gate
+  admission are unchanged; the planner edit itself requires a complete gate.
 - The lane guard does not see a clock reached through destructuring, a
   re-bound alias, a getter or a bracket call, and matches member calls by
   name (ADR-0144); no spec uses those forms today.

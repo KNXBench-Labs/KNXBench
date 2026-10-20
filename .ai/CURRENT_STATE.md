@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-20 22:53
+- **Completed:** Added a short independently worded manual overview of System 1/2/7/B, example TP masks, introduction-date caveats and a plain-language mask explanation. Linked from the manual index and Devices System column; extended existing research provenance and delivery index only. Checked primary course page and public PDFs; System 1 dated 1991, System B documented by 2007, exact later-family launch years explicitly unverified. Documentation checker passes 708 Markdown files/6374 local targets/33 chapters; 12 checker regressions pass. Separate in-session self-review; no runtime or compatibility change.
+- **Pending/Next Steps:** No additional feature scope requested. Keep uncertain introduction years explicit; family labels and declared masks do not prove live-device identity or programming compatibility. WP-04.3 and monitoring export remain other-session owned.
+- **Notes for Codex oder Claude:** Own manual/research prose only in isolated docs/system-families-overview-20261020. Preserve selected-root foreign edits and handover; no synchronization, bus/device operation, deployment, release or external contact. Source material remains outside Git; existing exact mask mapping is unchanged.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-20 22:37
 - **Completed:** Unwired A1 publication gate/typed Stop delivered on main-first8610f317. Feature and integrated maintained gates each14/14, Rust3248PASS/151ignored, corpus97/97 in6targets, tool411registered/sixoptional skips; all ordered exits/proofs, frozen3351tracked inputs and empty touched/unchecked lists authenticated. Independent source review ACCEPT/no findings,6compiled intended semantic mutation kills and exact9-test baselines authenticated; counts overlap, not summed. Local/tracking/live source equality verified after push. Core private evidence archive388entries individually verified, original binaries retained; stopped owned6.48GB rebuildable target removed. Shared selected root remains stale/foreign and untouched.
 - **Pending/Next Steps:** Gate/publish this result-only documentation closure (not another runtime execution); fresh remote/conditional readback, supplementary closure evidence and owned A1 raw/cache/branch retirement remain. Keep this active WP043 worktree/design evidence for A2. Continue strict test-first A2 Ready/apply/expiry/stop admission per accepted contract without another go; no installer/SQL/server/UI wiring until required core/application controls exist. WP04.3/WP19 remain open.

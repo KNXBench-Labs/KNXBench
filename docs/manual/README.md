@@ -71,6 +71,10 @@ Enough KNX to use KNXBench. Not a KNX textbook.
 10. [Datapoint types](knx-basics/04-datapoint-types.md)
 11. [Products and product databases](knx-basics/05-products-and-product-databases.md)
 
+Wondering what **System 1, 2, 7 or B** and masks such as **0701h** mean?
+Start with the [short systems-and-masks overview](knx-basics/05-products-and-product-databases.md#systems-and-mask-versions-in-plain-english),
+including a table of families, example masks and historical dates.
+
 ## User guide
 
 12. [The user interface](user-guide/01-user-interface.md)

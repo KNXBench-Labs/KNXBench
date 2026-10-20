@@ -94,3 +94,40 @@ product (and the reverse) refuse the whole batch.
 - No family is derived from product names, order numbers or medium types.
 - Profiles that later KNX editions add are unknown until a cited row is added
   to `MASK_FAMILIES` and its pinned test.
+
+## Plain-language manual overview (20 October 2026)
+
+The manual's [systems and masks overview](../manual/knx-basics/05-products-and-product-databases.md#systems-and-mask-versions-in-plain-english)
+is a short, independently worded explanation, not a reproduction of the
+standard or a new compatibility claim. Its TP example masks are a subset of
+`MASK_FAMILIES` above; no application mapping changes.
+
+Public primary material checked for the explanation and chronology:
+
+- **KNX Association, KNX Basic Course, KNX Bus Devices,
+  `Bus devices_E1213a`, §4.1, printed p. 9/16.** The
+  [public HTML copy, book page 83](https://online.anyflip.com/lnpy/jxtk/files/basic-html/page83.html)
+  dates the first System-1 generation to **1991**, places System 2 and 7 a few
+  years later without exact years, and describes System B as a development
+  from System 7 with larger object/address capacities. The HTML page body and
+  KNX authorship/footer were retrieved and checked, not just its search title.
+- **KNX Association, KNX Basic Course, KNX Bus Devices,
+  `Busdevices_E0608c`, §2, printed pp. 5–6/16; §4.1, p. 9/16.** The
+  [public course PDF mirror](http://knx.com.ua/attachments/article/132/KNX-basic_course_full.pdf)
+  explains the two-byte mask, medium and revision digits, BCU/BIM aliases and
+  the purpose of System 7. The retrieved PDF's SHA-256 is
+  `04ad9ca93366f04475c0cad925e3ad78fc110678afb8d3457649035f9d449546`.
+  Its illustrative System-7 wildcard spelling is not used as a mapping rule;
+  the manual uses only exact masks from the maintained source table.
+- **KNX Association, Datapoint Types v02.02.01, Document updates,
+  entry dated 14 December 2007.** The
+  [official public PDF](https://support.knx.org/hc/en-us/article_attachments/15392631105682)
+  records incorporation of AN057 concerning System B. Retrieved PDF SHA-256:
+  `72f924a6c793314d1e20573d71f697f07ce76072525b80c53ee0f68e3b7190af`.
+  This proves that System B was documented **by 2007**, not when the first
+  certified product shipped or the family was first introduced.
+
+No exact launch year for System 2, System 7 or System B was established by
+these sources. The manual retains that uncertainty rather than inferring a
+year from family numbers, a product's release or a later document's date.
+No standard text, source PDFs or manufacturer material is added to Git.

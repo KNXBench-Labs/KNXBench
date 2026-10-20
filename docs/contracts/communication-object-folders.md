@@ -96,8 +96,32 @@ harness compilation failed before execution and remains separate from passes.
 **Witness limit:** the two literal object-reference sequences are also
 lexicographically sorted. They detect reversal but do not distinguish encounter
 order from lexicographic sorting. No broader ordering discrimination is claimed.
-The maintained merged gate/publication remain pending. No new native save/reopen
-or folder-rendering execution is implied.
+No new native save/reopen or folder-rendering execution is implied.
+
+### Verified package delivery
+
+Published as main-first `9145b03f` (feature `04754bc3`) onto `77601107`.
+The maintained scoped gate passed all 13 ordered stages: owning `knx-etsproj`
+and checker `xtask`, 579 Rust passes (58 ignored), 55/55 selected corpus cases
+and 340 registered tooling tests (one existing optional skip). Warning-denied
+Clippy, format/documentation/repository checks also passed. The three named
+importer cases appear as actual passes in the gate's raw Rust log.
+
+The parent independently checked complete/success/plan/freeze flags, exact
+ordered stage proofs, unchanged reviewed test bytes and frozen input hashes,
+raw Rust/corpus summaries and empty touched/unchecked-user-data lists. Local,
+tracking and live publication tips agreed. The selected scope includes no web,
+full-workspace or release acceptance. Corpus passes are regressions, not new
+manufacturer-folder or schema-conformance proof.
+
+The compact private archive was verified member-by-member: 275 evidence files
+plus one manifest, including original logs, independent review, exact source
+manifests/overlays and both compiled discrimination controls. Reproducible
+exports and build/dependency caches are excluded explicitly. Implementation
+worktree, two merged branches and scratch are retired; a rebuildable target
+remains only for the result-documentation gate. Foreign work and the selected
+stale/dirty checkout were preserved. This releases the WP-06A claim, not the
+remaining WP-06 display or priority requirements.
 
 ## Remaining admission requirements
 

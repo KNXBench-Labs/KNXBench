@@ -20,13 +20,6 @@ security, GitHub-issue, hardware or whole-codebase conformance audit.
 
 ### Already owned — do not start a duplicate package
 
-- **WP-06A folder retention (codex, 20 October):** tests/contract-only evidence
-  slice: exact public synthetic project-tree retention and device-qualified
-  source identity. Owns importer `tests/it/import_integrity.rs` and focused
-  contract/status prose. No folder DTO/UI, manufacturer derivation, priority,
-  product DB/migration, activation or module-identity implementation. WP-06
-  display acceptance remains open; other owners' WP-04/WP-19 scopes stay reserved.
-
 
 - **WP-17 is delivered** on `main` (`d18ce65e`, 19 October): product DB v27
   master provenance; its parsing/provenance/report/migration claim is released.
@@ -252,12 +245,16 @@ inactive and module objects do not acquire invented folders; priority survives
 migration/save/reopen/undo where editable. Object size and effective flag
 columns are already present. Neither display slice changes bus priority or
 manufacturer activation rules.
-**WP-06A first evidence slice (20 October, focused tests passed):** the
+**WP-06A first evidence slice delivered (20 October, `9145b03f`):** the
 [source/identity contract](contracts/communication-object-folders.md) separates
 saved tree retention from evaluated Dynamic channels. Its named importer
 characterization uses unchanged public trees (Folder `RefId` remains absent),
 exact bytes/source/device ownership and object order. This is coverage/contract
 work only, not folder rendering, manufacturer mapping or completion of WP-06.
+Independent review accepted with no findings; maintained 13/13-stage gate passed
+579 Rust tests and 55 selected corpus cases. Exact source/report ownership and
+raw-byte discrimination are verified; this does not independently establish
+encounter order versus lexicographic sorting. Claim released.
 [Object table contract](COMMUNICATION_OBJECT_TABLE.md) ·
 [KL-003 census follow-up](limitations/KL-003-parameter-evaluation-and-editing-boundaries.md).
 

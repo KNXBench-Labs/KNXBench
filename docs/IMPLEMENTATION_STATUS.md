@@ -12,6 +12,23 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Project-folder retention characterization (20 October 2026 source)
+
+WP-06A adds one named production-import regression and a source/identity contract.
+Two unchanged public synthetic trees retain their missing Folder `RefId`, exact
+raw XML, source member and distinct owning-device locator. Complete opaque/report
+inventories and per-device object order/link assertions prevent a duplicate key
+from concealing a missing tree. Original production source already passes;
+three exact cases (new, order, namespace) pass in both child and parent execution.
+Existing test bytes are unchanged; no production or storage change. Independent
+review accepts with zero findings and three exact passes; two isolated compiled
+wrong-owner/raw-tree mutations fail as intended between baseline/restored passes.
+Fourteen reviewer result-corruption controls calibrate assertions separately.
+The literals do not distinguish encounter order from lexicographic sorting.
+Maintained merged acceptance/publication remain pending.
+WP-06 folder rendering/manufacturer mapping and priority are not delivered.
+[Folder boundary contract](contracts/communication-object-folders.md).
+
 ## Product-column promotion repair — reviewed candidate (20 October 2026)
 
 The v28 corrective migration ([ADR-0148](adr/0148-repair-product-column-promotions.md))

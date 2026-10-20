@@ -21,8 +21,34 @@ Product encrypted-member refusal and project password diagnostics remain
 separate contracts. Any stricter compatibility policy requires documented
 format/source evidence and original-production characterization first.
 
-## Pending
+## Source audit accepted; runtime characterization pending
 
-Source audit, primary specification reconciliation, synthetic characterization,
-then a bounded decision (implement or explicitly retain a limitation). No
-runtime acceptance or real encrypted-project compatibility claim yet.
+The controller verified all twelve audited source/test/manifest hashes and the
+audit artifact. The selected cached dependency source bytes match the locked
+`zip` crate archive. Public APPNOTE/WinZip snapshots and their digests are retained.
+An initial absent local checksum-sidecar probe yielded no integrity verdict;
+crate-archive comparison established the final source binding.
+
+The source-traced gap is a direct nested project-directory skip before cipher
+handling. Outer normal project opening and the independent product reader refuse
+encrypted members through different paths. Raw directory payload checks do not
+prove cipher-header validity. Primary references and exact source locations are
+recorded in the research dossier; the audit is not a runtime reproduction.
+
+## Original-runtime verification and decision
+
+`deleg_1ae075bf` completed with94named discovered/executed/passed cases. The
+controller verified every evidence/fixture/source hash, all144tracked local
+Rust/manifest identities and registry versions/checksums against Cargo.lock,
+then replayed the bound executable into a separate directory. All94per-case
+receipts match exactly;188fixture/control files,73dependency packages and
+2774source files remain unchanged. No corrections or fabricated runtime output.
+These characterize original runtime only; replay is not extra unique coverage.
+
+The contract records explicit bit-0 project-directory refusal before production
+changes:14nested admissions deliberately become refusals;48previously refused
+cases receive a named unsupported-directory reason. No directory decryption,
+new AES, strong-bit-only semantic change or product behavior change. Core and
+application original-sourceRED/candidateGREEN, mutation controls, independent
+review and maintained committed-head gate remain pending. No private encrypted
+corpus or real credential operation authorised.

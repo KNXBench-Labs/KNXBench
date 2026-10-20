@@ -168,6 +168,21 @@ and clear user-data guards; publication readback agrees. Project ordinary-file
 claim released. New AES support and directory encryption-header validity stay
 separate.
 
+## Directory encryption-header investigation (20 October 2026)
+
+The [source audit](../research/2026-10-20-directory-encryption-header-validity.md)
+locates a direct-inner project-directory skip before cipher-header handling.
+Outer-project normal opening and the independent product reader have different
+refusal paths. Directory preflight currently examines raw bytes, not decrypted
+content. Public format facts and 94 original-runtime synthetic cases are
+independently verified, including exact controller replay. The
+[admission contract](../contracts/project-encrypted-directory-admission.md)
+chooses explicit bit-0 project-directory refusal, deliberately superseding
+fourteen nested acceptance pins and changing 48 refusal diagnostics. Production
+implementation and delivery checks remain pending. No new encrypted-directory
+support, persistence or real-project compatibility claim. Bit-6-only consistency
+and AES extra-field semantics remain separate questions.
+
 <!-- BEGIN retained catalogue record -->
 
 <a id="159-a-project-archive-may-unpack-to-at-most-512-mib-and-every-member-name-must-be-unique"></a>

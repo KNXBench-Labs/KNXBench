@@ -467,9 +467,16 @@ verified; project ordinary-file claim released. No new encryption support,
 exhaustive project extent census or compatibility-safe guarantee.
 
 **Remaining, claimed (20 October 2026):** directory encryption-header validity,
-evidence-first investigation by next-open-tasks. Primary format/parser audit and
-synthetic outer/nested controls precede any policy or production change; no new
-cipher support, password guessing or real encrypted-corpus acquisition.
+evidence-first investigation by next-open-tasks. Source audit and 94 named
+original-runtime synthetic cases are independently verified, including exact
+controller replay and frozen fixture/dependency bindings. The
+[source evidence](research/2026-10-20-directory-encryption-header-validity.md) and
+[new contract](contracts/project-encrypted-directory-admission.md) choose explicit
+bit-0 project-directory refusal, not decryption: fourteen nested acceptance pins
+are deliberately superseded; 48 existing refusal diagnostics change. Production,
+regression/application verification, review and maintained gate remain pending.
+No new cipher support, password guessing or real encrypted-corpus acquisition.
+Bit-6-only flag consistency and AES extra-field equality remain separate scope.
 Standalone and inner product archives previously retained the accepted trailers, while their
 normalized outputs and wrapper-only reports did not represent them; do not
 conflate that boundary with total archive data loss.

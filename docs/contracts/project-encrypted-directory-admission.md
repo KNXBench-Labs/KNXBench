@@ -1,6 +1,6 @@
 # Project encrypted-directory admission
 
-## Decision — 20 October 2026 (implementation pending)
+## Decision — 20 October 2026 (delivery acceptance pending)
 
 Refuse a project directory record carrying ZIP general-purpose bit 0, in both
 outer archives and directly opened nested project ZIPs. Report its validated
@@ -75,6 +75,46 @@ Do not add controller replay counts to unique test coverage.
    valid proofs, frozen inputs and clear user-data guards before publication.
    No browser/full-workspace/release acceptance follows from this package.
 
-**Status:** original behavior independently reproduced; policy recorded before
-production edits. Implementation, regression RED/GREEN, review and delivery
-acceptance remain pending.
+## Local implementation evidence
+
+The shared directory check now refuses bit 0 before raw payload/CRC inspection;
+caller structural/layout validation remains first. Existing decoded-path
+`InconsistentRecord` mapping and ordinary-file crypto behavior are unchanged.
+The new core regression module executes 121 named cases: final original-source
+RED has 72 intended semantic failures and 49 unchanged controls; the candidate
+passes all 121. The owning integration suite passes 404 cases with sixteen
+existing ignored cases (focused selection overlaps). All-targets core Clippy
+passes. An initial AES ordinary-file control expected the wrong leaf context;
+corrected final test bytes were rerun against original production before repair.
+The earlier attempt is retained and uncredited.
+
+Sixteen new application tests have eight intended original-source failures and
+eight positive controls, through actual application password/import APIs. Four
+inner cases previously admitted, four outer cases returned the older password-
+required diagnostic. The controller candidate passes all sixteen and the owning
+import-service selection (41 passes, three existing ignores; selections overlap),
+plus all-targets Clippy for both affected crates. Tests verify fresh/populated,
+already migrated and quiescent DELETE-mode stores, exact source/database/sidecar
+snapshots, manufacturer/opaque witness readback and native reopen. They do not
+prove live WAL, crash recovery or general cross-store atomicity. A receipt-parser
+correction was evaluated against retained original logs without changing tests.
+
+The header gate found both new test files lacked the required paragraph break
+after their first sentence (157 absent versus the unchanged ceiling of 155).
+The comment-only correction now passes the header gate at the unchanged ceiling.
+Final-byte original-source controls reproduce the same 72 core/eight application
+semantic failures, and parent candidate2 passes the owning suites and both-crate
+Clippy again. The only test delta is one blank module-doc separator per new file.
+
+In an isolated snapshot the guard-removal proof passes 121 baseline cases,
+reproduces precisely 72 intended failures with 49 controls, then passes all 121
+again after byte-exact restoration. Canonical source was never mutated. Initial
+archive-mode setup and output-parser failures are retained but uncredited.
+The mutation used pre-separator test comments; final-byte original RED and
+candidate GREEN separately bind the header-compliant tests.
+
+**Status:** controller core/application/header checks and isolated guard mutation
+verified. Independent full-diff review accepted with zero Critical/Important
+findings; its sole minor stale implementation-status sentence is corrected.
+The parent verified all fifteen reviewed path identities before the docs-only
+correction. Maintained committed-head delivery acceptance remains pending.

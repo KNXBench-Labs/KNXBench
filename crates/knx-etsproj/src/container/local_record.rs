@@ -30,6 +30,8 @@ pub(super) const UNICODE: &str = "its local and central Unicode Path fields diff
 /// The record leaves bytes between itself and the next record (or the
 /// central directory), or overlaps it.
 pub(super) const LAYOUT: &str = "its local record does not end where the next record begins";
+/// Encrypted directory records are outside the supported project format.
+pub(super) const DIRECTORY_ENCRYPTED: &str = "encrypted directory records are unsupported";
 /// A directory record declares or stores content.
 pub(super) const DIRECTORY_DATA: &str = "a directory record carries data";
 /// A compressed directory record holds no complete stream (none at all, or
@@ -136,14 +138,18 @@ pub(super) fn check(bytes: &[u8], start: usize, central: &Central) -> Result<Loc
     })
 }
 
-/// Checks that a directory record holds an empty payload (round 3, N12;
-/// WP-16). It declares no content; it stores no byte, or a complete deflate
+/// Checks that a plaintext directory record holds an empty payload (round 3, N12;
+/// WP-16). Encrypted directories are unsupported, not raw plaintext streams.
+/// A plaintext directory declares no content; it stores no byte, or a complete deflate
 /// stream that inflates to nothing and ends exactly where its stored bytes
 /// do, as Java's `ZipOutputStream` writes it (`03 00`); and its CRC-32 is
 /// that of no content, 0. Headers that agree are not a payload: a stored
 /// record can hold no bytes, a compressed one cannot. `data` is the
 /// record's stored bytes, already checked against both headers by [`check`].
 pub(super) fn check_directory(central: &Central, data: &[u8]) -> Result<(), &'static str> {
+    if central.flags & 1 != 0 {
+        return Err(DIRECTORY_ENCRYPTED);
+    }
     if central.size > 0 {
         return Err(DIRECTORY_DATA);
     }

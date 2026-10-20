@@ -473,8 +473,12 @@ controller replay and frozen fixture/dependency bindings. The
 [source evidence](research/2026-10-20-directory-encryption-header-validity.md) and
 [new contract](contracts/project-encrypted-directory-admission.md) choose explicit
 bit-0 project-directory refusal, not decryption: fourteen nested acceptance pins
-are deliberately superseded; 48 existing refusal diagnostics change. Production,
-regression/application verification, review and maintained gate remain pending.
+are deliberately superseded; 48 existing refusal diagnostics change. Local
+implementation passes parent core404/16ignored and app16new/41owning3ignored,
+both-crate Clippy and header checks. Guard removal reproduces72semantic failures
+between121-pass baseline/restored runs. Independent review accepts with zero
+Critical/Important findings; its minor stale-status wording is corrected.
+Maintained gate remains pending; selections overlap, not broad compatibility.
 No new cipher support, password guessing or real encrypted-corpus acquisition.
 Bit-6-only flag consistency and AES extra-field equality remain separate scope.
 Standalone and inner product archives previously retained the accepted trailers, while their

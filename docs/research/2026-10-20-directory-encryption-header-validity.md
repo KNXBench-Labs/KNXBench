@@ -9,7 +9,8 @@ extent consumption. The latter is delivered under the
 The research itself changes no production admission rule, cipher, dependency,
 credential plumbing or persistence behavior. The subsequent
 [admission contract](../contracts/project-encrypted-directory-admission.md)
-chooses explicit bit-0 directory refusal; implementation remains pending.
+chooses explicit bit-0 directory refusal; local implementation is complete,
+while maintained delivery acceptance remains pending.
 
 [V] A read-only audit of runtime revision `8ccb99b3` (unchanged through claim
 `2a4b60b6`) was independently checked against twelve source/test/manifest file
@@ -114,9 +115,21 @@ It deliberately supersedes fourteen direct-inner acceptance pins and changes
 unchanged. A raw encrypted directory is refused as unsupported rather than
 silently skipped or presented as a validated plaintext directory.
 
-Implementation, original-source regression REDs, candidate GREEN, application
-preservation checks, independent review and maintained delivery acceptance remain
-pending. No directory decryption, new AES, private encrypted-corpus acquisition
+The minimal shared bit-0 guard is locally implemented. Final formatted core
+tests reproduce 72 intended original-source failures plus 49 unchanged controls;
+the candidate passes all 121 and its 404-pass/sixteen-ignore owning integration
+suite. Parent execution passes all sixteen application cases and the owning
+41-pass/three-ignore import-service selection, plus owning core and both-crate
+all-targets Clippy. Quiescent migrated-store/source/sidecar snapshots and native
+reopen are exercised, not general cross-store atomicity or crash recovery. An
+initial AES-control context assumption was corrected and the complete final
+original-source RED rerun; its earlier attempt is uncredited. Header-compliant
+final bytes reproduce the same 72 core/eight app REDs and pass owning suites,
+header gate and both-crate Clippy. Isolated guard removal yields 72 semantic
+failures/49 controls between 121-pass baseline/restored runs; canonical runtime
+was never mutated. Independent review accepted with zero Critical/Important
+findings; its sole minor status-sentence inconsistency is corrected. Maintained
+delivery remains pending. No directory decryption, new AES, private encrypted-corpus acquisition
 or broader strong-encryption metadata policy is included. The earlier maintained
 product note is
 [product directory stream integrity](2026-10-20-product-directory-stream-integrity.md).

@@ -48,7 +48,19 @@ These characterize original runtime only; replay is not extra unique coverage.
 The contract records explicit bit-0 project-directory refusal before production
 changes:14nested admissions deliberately become refusals;48previously refused
 cases receive a named unsupported-directory reason. No directory decryption,
-new AES, strong-bit-only semantic change or product behavior change. Core and
-application original-sourceRED/candidateGREEN, mutation controls, independent
-review and maintained committed-head gate remain pending. No private encrypted
-corpus or real credential operation authorised.
+new AES, strong-bit-only semantic change or product behavior change.
+
+## Final controller verification
+
+Parent accepted the isolated mutation evidence after independently matching raw
+outputs, phase exits and exact named failures:121baselineGREEN →72semanticRED
+and49controls →121restoredGREEN. Canonical never mutated; initial archive-mode
+setup and parser failures retained/uncredited. Mutation binds pre-header comments.
+Final comment-only module-doc separators were separately executed on immutable
+original production (same72core/8appRED), then adopted byte-exact. Parent
+candidate2 passes app16new/41owning3ignored, core404owning16ignored, both-crate
+all-targetsClippy, format/layout/header at unchanged155ceiling. No test logic
+changed, only one blank //! per new module. Independent full-diff review ACCEPTS
+with0Critical/Important and1minor: research intro stale implementation-pending
+sentence. Parent verified15reviewed path identities then corrected only that
+status meaning and result notes. Maintained committed-head gate remains pending.

@@ -239,6 +239,11 @@ pass all 14 maintained stages; A1 is published as `8610f317` on `main`
 ([delivery record](IMPLEMENTATION_STATUS.md#wp-043-a1-publication-primitive--local-verification-20-october-2026)).
 Ready admission,
 transitive installer control, server lifecycle and shared UI remain unimplemented.
+The private [A2 admission decision](contracts/catalogue-jobs/control-admission.md)
+is independently accepted for construction-disabled TDD only. The corrected
+internal kernel has 30 focused and 1,087 owning server passes / 53 ignored
+(overlapping selections); I1 rereview accepts its deterministic clock-ownership
+coverage. Maintained package gates/publication remain pending, not a usable job path.
 Existing synchronous behavior and profile limits remain unchanged.
 
 **Three separate deliveries, in order:**

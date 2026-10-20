@@ -27,6 +27,7 @@ use std::collections::BTreeMap;
 use std::io::{Cursor, Read};
 
 use flate2::read::DeflateDecoder;
+use flate2::{Decompress, FlushDecompress, Status};
 use knx_secure::zipcrypto::{self, CheckBytes, ZipCryptoError};
 use zip::{CompressionMethod, ZipArchive};
 
@@ -325,16 +326,10 @@ impl Container {
             });
         }
 
-        let mut payload = container
-            .archive
-            .by_index(container.archive_indices[&nested_info.path])
-            .map_err(|e| ContainerError::Read {
-                path: nested_info.path.clone(),
-                cause: e.to_string(),
-            })?;
-        let payload_size = payload.size();
-        let payload_bytes = read_declared(&mut payload, payload_size, nested_info.path.clone())?;
-        drop(payload);
+        let payload_bytes = container.read_archive_index(
+            container.archive_indices[&nested_info.path],
+            nested_info.path.clone(),
+        )?;
 
         // Borrows `payload_bytes` rather than consuming it, so the raw
         // on-disk local-file-header bytes stay available below for the AES
@@ -671,15 +666,42 @@ impl Container {
             return Ok(plain.clone());
         }
 
+        self.read_archive_index(self.archive_indices[&real_path], real_path)
+    }
+
+    /// Keep normal bounded decoding and CRC errors first. Both ordinary reads
+    /// and direct acquisition of the nested ZIP carrier must validate the same
+    /// physical member, without eagerly reading unrelated outer files.
+    fn read_archive_index(
+        &mut self,
+        index: usize,
+        path: String,
+    ) -> Result<Vec<u8>, ContainerError> {
+        let read_error = |cause| ContainerError::Read {
+            path: path.clone(),
+            cause,
+        };
         let mut entry = self
             .archive
-            .by_index(self.archive_indices[&real_path])
-            .map_err(|e| ContainerError::Read {
-                path: real_path.clone(),
-                cause: e.to_string(),
-            })?;
+            .by_index(index)
+            .map_err(|e| read_error(e.to_string()))?;
         let declared = entry.size();
-        read_declared(&mut entry, declared, real_path)
+        let deflated = entry.compression() == CompressionMethod::Deflated;
+        let plain = read_declared(&mut entry, declared, path.clone())?;
+        drop(entry);
+        if deflated {
+            let mut raw = self
+                .archive
+                .by_index_raw(index)
+                .map_err(|e| read_error(e.to_string()))?;
+            let compressed_size = raw.compressed_size();
+            // Raw reads are limited to this validated member's compressed data,
+            // excluding its descriptor. Bound the second pass by the actual
+            // normal read, not the declaration: outer size policy is upper-only.
+            check_deflate_extent(&mut raw, compressed_size, plain.len() as u64)
+                .map_err(read_error)?;
+        }
+        Ok(plain)
     }
 
     /// Case-insensitive over the inventory; `Project.xml` and `project.xml`
@@ -757,6 +779,55 @@ fn read_declared(
         });
     }
     Ok(buf)
+}
+
+/// Verify one complete raw DEFLATE stream with fixed staging buffers, never a
+/// second expanded copy. Counters, not the raw reader's read-ahead position,
+/// establish exact consumption. At most one excess decoded byte is produced.
+fn check_deflate_extent(
+    raw: &mut impl Read,
+    compressed_size: u64,
+    decoded_size: u64,
+) -> Result<(), String> {
+    let mut decoder = Decompress::new(false);
+    let mut input = [0u8; 8192];
+    let mut output = [0u8; 8192];
+    let (mut at, mut end) = (0, 0);
+    let mut eof = false;
+    loop {
+        if at == end && !eof {
+            end = raw.read(&mut input).map_err(|e| e.to_string())?;
+            at = 0;
+            eof = end == 0;
+        }
+        let before_in = decoder.total_in();
+        let before_out = decoder.total_out();
+        let capacity =
+            (decoded_size.saturating_add(1) - before_out).min(output.len() as u64) as usize;
+        let status = decoder
+            .decompress(
+                &input[at..end],
+                &mut output[..capacity],
+                FlushDecompress::None,
+            )
+            .map_err(|e| format!("invalid DEFLATE stream: {e}"))?;
+        at += (decoder.total_in() - before_in) as usize;
+        if decoder.total_out() > decoded_size {
+            return Err("DEFLATE stream exceeds the normally decoded length".to_string());
+        }
+        if status == Status::StreamEnd {
+            return if decoder.total_in() == compressed_size && decoder.total_out() == decoded_size {
+                Ok(())
+            } else {
+                Err("DEFLATE stream does not exactly consume its compressed extent".to_string())
+            };
+        }
+        // Output-only progress is valid, including draining after raw EOF.
+        // A no-progress state cannot become a complete stream without new input.
+        if decoder.total_in() == before_in && decoder.total_out() == before_out {
+            return Err("incomplete DEFLATE stream".to_string());
+        }
+    }
 }
 
 /// Refuses an archive whose members together declare more than
@@ -963,7 +1034,9 @@ fn decompress(
         CompressionMethod::Deflated => {
             let limit = declared_size.saturating_add(1);
             let mut out = Vec::new();
-            DeflateDecoder::new(bytes)
+            let mut decoder = DeflateDecoder::new(bytes);
+            decoder
+                .by_ref()
                 .take(limit)
                 .read_to_end(&mut out)
                 .map_err(|e| ContainerError::Read {
@@ -974,6 +1047,17 @@ fn decompress(
                 return Err(ContainerError::Read {
                     path,
                     cause: format!("inflated to more than the declared {declared_size} bytes"),
+                });
+            }
+            // The bound still has one byte left, so successful read_to_end
+            // reached decoder EOF (an incomplete final stream is an I/O error).
+            // total_in is actual DEFLATE consumption, unlike read-ahead. For
+            // ZipCrypto, bytes is already plaintext with its header removed.
+            if decoder.total_in() != bytes.len() as u64 {
+                return Err(ContainerError::Read {
+                    path,
+                    cause: "DEFLATE stream does not exactly consume its compressed extent"
+                        .to_string(),
                 });
             }
             Ok(out)

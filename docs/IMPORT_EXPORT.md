@@ -1,5 +1,23 @@
 # Import and export
 
+## Stream-integrity source follow-ups (20 October 2026)
+
+Product directory and ordinary-file repairs are delivered (`9c79634b`,
+`29b69f36`): admitted DEFLATE payloads must consume their checked compressed
+extent, while valid alternative blocks/descriptors remain. Raw product package
+retention is distinct from normalized member bytes and reported-only wrapper
+extras. No product/native schema or supported codec change.
+[Product contract](contracts/product-file-stream-integrity.md).
+
+Project outer/nested/legacy-ZipCrypto stream admission is a separate pending
+repair under the [project contract](contracts/project-file-stream-integrity.md).
+Its source/characterization evidence does not prove real-project compatibility
+or application database preservation. Full project imports return decoded
+members; selective imports additionally retain an original source archive and
+scoped report. Historical records remain evidence of their original import,
+not a fresh measurement under a later policy. New AES support and directory
+encryption-header validity remain excluded.
+
 ## Master identity evidence (source builds after Alpha 15)
 
 Product database **26 → 27** adds declaration provenance for master DPTs,

@@ -340,9 +340,27 @@ The [project-specific integrity contract](../contracts/project-file-stream-integ
 now chooses one complete stream per validated plaintext compressed extent. It
 explicitly preserves encrypted-corruption-to-`WrongPassword`, outer size policy,
 lazy reads, selected-member restoration and historical report evidence. It
-requires new-source refusal/reopen tests and direct project-path measurement.
-No private project extent census or compatibility-safe guarantee is claimed;
-implementation and delivery acceptance remain pending.
+require new-source refusal/reopen tests and direct project-path measurement.
+
+Subsequent local implementation now passes 153 owning core cases after58intended
+original-source failures/95passes, with15old acceptance pins explicitly
+superseded. Parent candidate execution passes26new application tests and the
+59pass/3ignore owning selection, plus both crates' all-targets Clippy. Tests
+cover scoped source/database/sidecar preservation before import persistence,
+authentic historical selective raw archives/reports across normal native reopen,
+and restoration's intentional selected-member continuation. These are quiescent
+DELETE-journal observations, not live-WAL/crash/general-crossDB atomicity proof.
+
+A source-bound sixteen-profile/320sample project-path comparison discloses the
+extra outer decode cost; nested paths reuse the decoder counter. See the
+[contract measurement](../contracts/project-file-stream-integrity.md#measured-project-path-work)
+for actual timing units and limits. The corrected benchmark keeps all69shared
+dependency versions/checksums aligned with production; earlier regenerated-lock
+results remain uncredited. Independent full-diff review accepted with zero
+Critical/Important findings; maintained delivery gate remains pending. Earliest
+historical harvest receipt lacks a test-source manifest; later frozen runs bind
+the final synthetic fixture. No private project extent census or
+compatibility-safe guarantee.
 
 ## Reviewed paths and source identities
 

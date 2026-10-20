@@ -1336,7 +1336,8 @@ fn a_protected_payload_with_a_consistent_unicode_path_opens() {
     assert!(container.find("P-0001/BinaryData/x.dat").is_some());
 }
 
-// ORIGINAL-production evidence, not the policy for a subsequent repair.
+// Valid-shape/original refusal controls retain their characterized behavior.
+// Fifteen historical suffix-acceptance pins are superseded by exact-extent refusals.
 mod ordinary_file_stream_characterization {
     use super::*;
     use knx_etsproj::{import_knxproj_with, ProjectPassword};
@@ -1534,10 +1535,6 @@ mod ordinary_file_stream_characterization {
         }
     }
 
-    fn trailer(layer: Layer, suffix: &[u8]) {
-        accepted(layer, file(&[A, suffix].concat(), b"A"), b"A");
-    }
-
     #[test]
     fn outer_currently_accepts_exact_literal_stream() {
         accepted(Layer::Outer, file(A, b"A"), b"A");
@@ -1551,40 +1548,40 @@ mod ordinary_file_stream_characterization {
         accepted(Layer::ZipCrypto, file(A, b"A"), b"A");
     }
     #[test]
-    fn outer_currently_accepts_zero_trailer() {
-        trailer(Layer::Outer, &[0]);
+    fn outer_refuses_zero_trailer() {
+        refused(Layer::Outer, file(&[A, &[0]].concat(), b"A"), false);
     }
     #[test]
-    fn nested_currently_accepts_zero_trailer() {
-        trailer(Layer::Nested, &[0]);
+    fn nested_refuses_zero_trailer() {
+        refused(Layer::Nested, file(&[A, &[0]].concat(), b"A"), false);
     }
     #[test]
-    fn zipcrypto_currently_accepts_zero_trailer() {
-        trailer(Layer::ZipCrypto, &[0]);
+    fn zipcrypto_refuses_zero_trailer() {
+        refused(Layer::ZipCrypto, file(&[A, &[0]].concat(), b"A"), false);
     }
     #[test]
-    fn outer_currently_accepts_nonzero_trailer() {
-        trailer(Layer::Outer, &[0xa5]);
+    fn outer_refuses_nonzero_trailer() {
+        refused(Layer::Outer, file(&[A, &[0xa5]].concat(), b"A"), false);
     }
     #[test]
-    fn nested_currently_accepts_nonzero_trailer() {
-        trailer(Layer::Nested, &[0xa5]);
+    fn nested_refuses_nonzero_trailer() {
+        refused(Layer::Nested, file(&[A, &[0xa5]].concat(), b"A"), false);
     }
     #[test]
-    fn zipcrypto_currently_accepts_nonzero_trailer() {
-        trailer(Layer::ZipCrypto, &[0xa5]);
+    fn zipcrypto_refuses_nonzero_trailer() {
+        refused(Layer::ZipCrypto, file(&[A, &[0xa5]].concat(), b"A"), false);
     }
     #[test]
-    fn outer_currently_accepts_concatenated_second_stream() {
-        trailer(Layer::Outer, B);
+    fn outer_refuses_concatenated_second_stream() {
+        refused(Layer::Outer, file(&[A, B].concat(), b"A"), false);
     }
     #[test]
-    fn nested_currently_accepts_concatenated_second_stream() {
-        trailer(Layer::Nested, B);
+    fn nested_refuses_concatenated_second_stream() {
+        refused(Layer::Nested, file(&[A, B].concat(), b"A"), false);
     }
     #[test]
-    fn zipcrypto_currently_accepts_concatenated_second_stream() {
-        trailer(Layer::ZipCrypto, B);
+    fn zipcrypto_refuses_concatenated_second_stream() {
+        refused(Layer::ZipCrypto, file(&[A, B].concat(), b"A"), false);
     }
 
     #[test]
@@ -1592,22 +1589,76 @@ mod ordinary_file_stream_characterization {
         all_layers(|| file(&EMPTY_DEFLATE, b""), b"");
     }
     #[test]
-    fn currently_accepts_empty_file_zero_trailer_in_all_read_paths() {
-        all_layers(
-            || file(&[EMPTY_DEFLATE.as_slice(), &[0]].concat(), b""),
-            b"",
+    fn outer_refuses_empty_file_zero_trailer() {
+        refused(
+            Layer::Outer,
+            file(&[EMPTY_DEFLATE.as_slice(), &[0]].concat(), b""),
+            false,
         );
     }
     #[test]
-    fn currently_accepts_empty_file_nonzero_trailer_in_all_read_paths() {
-        all_layers(
-            || file(&[EMPTY_DEFLATE.as_slice(), &[0xa5]].concat(), b""),
-            b"",
+    fn nested_refuses_empty_file_zero_trailer() {
+        refused(
+            Layer::Nested,
+            file(&[EMPTY_DEFLATE.as_slice(), &[0]].concat(), b""),
+            false,
         );
     }
     #[test]
-    fn currently_accepts_empty_file_second_stream_in_all_read_paths() {
-        all_layers(|| file(&[EMPTY_DEFLATE.as_slice(), B].concat(), b""), b"");
+    fn zipcrypto_refuses_empty_file_zero_trailer() {
+        refused(
+            Layer::ZipCrypto,
+            file(&[EMPTY_DEFLATE.as_slice(), &[0]].concat(), b""),
+            false,
+        );
+    }
+    #[test]
+    fn outer_refuses_empty_file_nonzero_trailer() {
+        refused(
+            Layer::Outer,
+            file(&[EMPTY_DEFLATE.as_slice(), &[0xa5]].concat(), b""),
+            false,
+        );
+    }
+    #[test]
+    fn nested_refuses_empty_file_nonzero_trailer() {
+        refused(
+            Layer::Nested,
+            file(&[EMPTY_DEFLATE.as_slice(), &[0xa5]].concat(), b""),
+            false,
+        );
+    }
+    #[test]
+    fn zipcrypto_refuses_empty_file_nonzero_trailer() {
+        refused(
+            Layer::ZipCrypto,
+            file(&[EMPTY_DEFLATE.as_slice(), &[0xa5]].concat(), b""),
+            false,
+        );
+    }
+    #[test]
+    fn outer_refuses_empty_file_second_stream() {
+        refused(
+            Layer::Outer,
+            file(&[EMPTY_DEFLATE.as_slice(), B].concat(), b""),
+            false,
+        );
+    }
+    #[test]
+    fn nested_refuses_empty_file_second_stream() {
+        refused(
+            Layer::Nested,
+            file(&[EMPTY_DEFLATE.as_slice(), B].concat(), b""),
+            false,
+        );
+    }
+    #[test]
+    fn zipcrypto_refuses_empty_file_second_stream() {
+        refused(
+            Layer::ZipCrypto,
+            file(&[EMPTY_DEFLATE.as_slice(), B].concat(), b""),
+            false,
+        );
     }
 
     #[test]
@@ -1619,17 +1670,51 @@ mod ordinary_file_stream_characterization {
         all_layers(|| with_descriptor(file(A, b"A"), false), b"A");
     }
     #[test]
-    fn currently_accepts_trailer_before_signed_descriptor_in_all_read_paths() {
-        all_layers(
-            || with_descriptor(file(&[A, &[0xa5]].concat(), b"A"), true),
-            b"A",
+    fn outer_refuses_trailer_before_signed_descriptor() {
+        refused(
+            Layer::Outer,
+            with_descriptor(file(&[A, &[0xa5]].concat(), b"A"), true),
+            false,
         );
     }
     #[test]
-    fn currently_accepts_trailer_before_unsigned_descriptor_in_all_read_paths() {
-        all_layers(
-            || with_descriptor(file(&[A, &[0]].concat(), b"A"), false),
-            b"A",
+    fn nested_refuses_trailer_before_signed_descriptor() {
+        refused(
+            Layer::Nested,
+            with_descriptor(file(&[A, &[0xa5]].concat(), b"A"), true),
+            false,
+        );
+    }
+    #[test]
+    fn zipcrypto_refuses_trailer_before_signed_descriptor() {
+        refused(
+            Layer::ZipCrypto,
+            with_descriptor(file(&[A, &[0xa5]].concat(), b"A"), true),
+            false,
+        );
+    }
+    #[test]
+    fn outer_refuses_trailer_before_unsigned_descriptor() {
+        refused(
+            Layer::Outer,
+            with_descriptor(file(&[A, &[0]].concat(), b"A"), false),
+            false,
+        );
+    }
+    #[test]
+    fn nested_refuses_trailer_before_unsigned_descriptor() {
+        refused(
+            Layer::Nested,
+            with_descriptor(file(&[A, &[0]].concat(), b"A"), false),
+            false,
+        );
+    }
+    #[test]
+    fn zipcrypto_refuses_trailer_before_unsigned_descriptor() {
+        refused(
+            Layer::ZipCrypto,
+            with_descriptor(file(&[A, &[0]].concat(), b"A"), false),
+            false,
         );
     }
 
@@ -1662,15 +1747,39 @@ mod ordinary_file_stream_characterization {
         all_layers(|| deflated(PATH, &plain), &plain);
     }
     #[test]
-    fn currently_accepts_trailer_after_high_ratio_output() {
-        let plain = vec![b'x'; 200_000];
-        all_layers(
-            || {
-                let mut m = deflated(PATH, &plain);
+    fn outer_refuses_trailer_after_high_ratio_output() {
+        refused(
+            Layer::Outer,
+            {
+                let mut m = deflated(PATH, &vec![b'x'; 200_000]);
                 m.data.push(0xa5);
                 m
             },
-            &plain,
+            false,
+        );
+    }
+    #[test]
+    fn nested_refuses_trailer_after_high_ratio_output() {
+        refused(
+            Layer::Nested,
+            {
+                let mut m = deflated(PATH, &vec![b'x'; 200_000]);
+                m.data.push(0xa5);
+                m
+            },
+            false,
+        );
+    }
+    #[test]
+    fn zipcrypto_refuses_trailer_after_high_ratio_output() {
+        refused(
+            Layer::ZipCrypto,
+            {
+                let mut m = deflated(PATH, &vec![b'x'; 200_000]);
+                m.data.push(0xa5);
+                m
+            },
+            false,
         );
     }
 
@@ -1752,5 +1861,430 @@ mod ordinary_file_stream_characterization {
     #[test]
     fn zipcrypto_currently_maps_invalid_block_to_wrong_password_context() {
         refused(Layer::ZipCrypto, file(&[7], b"A"), false);
+    }
+
+    fn result_error(result: Result<Container, ContainerError>) -> ContainerError {
+        match result {
+            Err(error) => error,
+            Ok(_) => panic!("expected exact DEFLATE extent refusal"),
+        }
+    }
+
+    fn carrier(stream_suffix: &[u8], signature: Option<bool>, wide: bool) -> Vec<u8> {
+        let payload = zip(&[
+            member("0.xml", INSTALLATION),
+            member("Project.xml", PROJECT_INFO),
+        ]);
+        let mut m = deflated("P-0001.zip", &payload);
+        m.data.extend_from_slice(stream_suffix);
+        if let Some(signed) = signature {
+            m = with_descriptor(m, signed);
+        }
+        m.zip64 = wide;
+        zip(&[member("P-0001.signature", b"x"), m])
+    }
+
+    fn carrier_refused(suffix: &[u8], signature: Option<bool>, wide: bool) {
+        let source = carrier(suffix, signature, wide);
+        // Opening the inventory remains lazy even for a damaged compressed carrier.
+        let outer = Container::open_outer(source.clone()).unwrap();
+        assert!(outer.find("P-0001.zip").is_some());
+        let error = result_error(Container::open_with_password(
+            source,
+            ZIPCRYPTO_MINIMAL_PASSWORD,
+        ));
+        match error {
+            ContainerError::Read { path, cause } => {
+                assert_eq!(path, "P-0001.zip");
+                assert!(cause.to_ascii_lowercase().contains("deflate"), "{cause}");
+            }
+            other => panic!("unexpected carrier error: {other:?}"),
+        }
+    }
+
+    fn rootless_refused(layer: Layer, suffix: &[u8]) {
+        let mut m = file(&[A, suffix].concat(), b"A");
+        m.name = b"BinaryData/extent.dat".to_vec();
+        let error = result_error(open(layer, archive(layer, m)));
+        match (layer, error) {
+            (Layer::Nested, ContainerError::Read { path, cause }) => {
+                assert_eq!(path, PATH);
+                assert!(cause.to_ascii_lowercase().contains("deflate"), "{cause}");
+            }
+            (Layer::ZipCrypto, ContainerError::WrongPassword { nested_entry }) => {
+                assert_eq!(nested_entry, "P-0001.zip");
+            }
+            (_, other) => panic!("unexpected rootless error: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn compressed_carrier_refuses_zero_trailer() {
+        carrier_refused(&[0], None, false);
+    }
+
+    #[test]
+    fn compressed_carrier_refuses_nonzero_trailer() {
+        carrier_refused(&[0xa5], None, false);
+    }
+
+    #[test]
+    fn compressed_carrier_refuses_second_empty_stream() {
+        carrier_refused(&EMPTY_DEFLATE, None, false);
+    }
+
+    #[test]
+    fn compressed_carrier_refuses_second_nonempty_stream() {
+        carrier_refused(B, None, false);
+    }
+
+    #[test]
+    fn compressed_carrier_refuses_trailer_before_signed_descriptor() {
+        carrier_refused(&[0xa5], Some(true), false);
+    }
+
+    #[test]
+    fn compressed_carrier_accepts_signed_descriptor() {
+        let mut c = Container::open_with_password(
+            carrier(&[], Some(true), false),
+            ZIPCRYPTO_MINIMAL_PASSWORD,
+        )
+        .unwrap();
+        assert_eq!(c.read("P-0001/0.xml").unwrap(), INSTALLATION);
+    }
+
+    #[test]
+    fn compressed_carrier_refuses_trailer_before_zip64_signed_descriptor() {
+        carrier_refused(&[0xa5], Some(true), true);
+    }
+
+    #[test]
+    fn compressed_carrier_accepts_zip64_signed_descriptor() {
+        let mut c = Container::open_with_password(
+            carrier(&[], Some(true), true),
+            ZIPCRYPTO_MINIMAL_PASSWORD,
+        )
+        .unwrap();
+        assert_eq!(c.read("P-0001/0.xml").unwrap(), INSTALLATION);
+    }
+
+    #[test]
+    fn compressed_carrier_refuses_trailer_before_unsigned_descriptor() {
+        carrier_refused(&[0xa5], Some(false), false);
+    }
+
+    #[test]
+    fn compressed_carrier_accepts_unsigned_descriptor() {
+        let mut c = Container::open_with_password(
+            carrier(&[], Some(false), false),
+            ZIPCRYPTO_MINIMAL_PASSWORD,
+        )
+        .unwrap();
+        assert_eq!(c.read("P-0001/0.xml").unwrap(), INSTALLATION);
+    }
+
+    #[test]
+    fn compressed_carrier_refuses_trailer_before_zip64_unsigned_descriptor() {
+        carrier_refused(&[0xa5], Some(false), true);
+    }
+
+    #[test]
+    fn compressed_carrier_accepts_zip64_unsigned_descriptor() {
+        let mut c = Container::open_with_password(
+            carrier(&[], Some(false), true),
+            ZIPCRYPTO_MINIMAL_PASSWORD,
+        )
+        .unwrap();
+        assert_eq!(c.read("P-0001/0.xml").unwrap(), INSTALLATION);
+    }
+
+    #[test]
+    fn rootless_nested_refuses_zero_trailer() {
+        rootless_refused(Layer::Nested, &[0]);
+    }
+
+    #[test]
+    fn rootless_nested_refuses_nonzero_trailer() {
+        rootless_refused(Layer::Nested, &[0xa5]);
+    }
+
+    #[test]
+    fn rootless_nested_refuses_second_empty_stream() {
+        rootless_refused(Layer::Nested, &EMPTY_DEFLATE);
+    }
+
+    #[test]
+    fn rootless_nested_refuses_second_nonempty_stream() {
+        rootless_refused(Layer::Nested, B);
+    }
+
+    #[test]
+    fn rootless_zipcrypto_refuses_zero_trailer() {
+        rootless_refused(Layer::ZipCrypto, &[0]);
+    }
+
+    #[test]
+    fn rootless_zipcrypto_refuses_nonzero_trailer() {
+        rootless_refused(Layer::ZipCrypto, &[0xa5]);
+    }
+
+    #[test]
+    fn rootless_zipcrypto_refuses_second_empty_stream() {
+        rootless_refused(Layer::ZipCrypto, &EMPTY_DEFLATE);
+    }
+
+    #[test]
+    fn rootless_zipcrypto_refuses_second_nonempty_stream() {
+        rootless_refused(Layer::ZipCrypto, B);
+    }
+
+    #[test]
+    fn outer_refuses_second_empty_stream() {
+        refused(
+            Layer::Outer,
+            file(&[A, EMPTY_DEFLATE.as_slice()].concat(), b"A"),
+            false,
+        );
+    }
+
+    #[test]
+    fn outer_refuses_empty_followed_by_empty_stream() {
+        refused(
+            Layer::Outer,
+            file(
+                &[EMPTY_DEFLATE.as_slice(), EMPTY_DEFLATE.as_slice()].concat(),
+                b"",
+            ),
+            false,
+        );
+    }
+
+    #[test]
+    fn outer_refuses_trailer_after_multiple_input_chunks() {
+        refused(
+            Layer::Outer,
+            {
+                let plain: Vec<_> = (0..150_000).map(|i| (i % 251) as u8).collect();
+                let mut stream = stored_blocks(&plain);
+                stream.push(0xa5);
+                file(&stream, &plain)
+            },
+            false,
+        );
+    }
+
+    #[test]
+    fn outer_refuses_no_deflate_stream() {
+        refused(Layer::Outer, file(&[], b""), false);
+    }
+
+    #[test]
+    fn outer_refuses_truncated_final_block() {
+        refused(Layer::Outer, file(&A[..2], b"A"), false);
+    }
+
+    #[test]
+    fn outer_refuses_missing_final_block() {
+        refused(Layer::Outer, file(&[0, 1, 0, 254, 255, b'A'], b"A"), false);
+    }
+
+    #[test]
+    fn outer_refuses_trailer_before_zip64_signed_descriptor() {
+        let mut m = with_descriptor(file(&[A, &[0xa5]].concat(), b"A"), true);
+        m.zip64 = true;
+        refused(Layer::Outer, m, false);
+    }
+
+    #[test]
+    fn outer_refuses_trailer_before_zip64_unsigned_descriptor() {
+        let mut m = with_descriptor(file(&[A, &[0xa5]].concat(), b"A"), false);
+        m.zip64 = true;
+        refused(Layer::Outer, m, false);
+    }
+
+    #[test]
+    fn nested_refuses_second_empty_stream() {
+        refused(
+            Layer::Nested,
+            file(&[A, EMPTY_DEFLATE.as_slice()].concat(), b"A"),
+            false,
+        );
+    }
+
+    #[test]
+    fn nested_refuses_empty_followed_by_empty_stream() {
+        refused(
+            Layer::Nested,
+            file(
+                &[EMPTY_DEFLATE.as_slice(), EMPTY_DEFLATE.as_slice()].concat(),
+                b"",
+            ),
+            false,
+        );
+    }
+
+    #[test]
+    fn nested_refuses_trailer_after_multiple_input_chunks() {
+        refused(
+            Layer::Nested,
+            {
+                let plain: Vec<_> = (0..150_000).map(|i| (i % 251) as u8).collect();
+                let mut stream = stored_blocks(&plain);
+                stream.push(0xa5);
+                file(&stream, &plain)
+            },
+            false,
+        );
+    }
+
+    #[test]
+    fn nested_refuses_no_deflate_stream() {
+        refused(Layer::Nested, file(&[], b""), false);
+    }
+
+    #[test]
+    fn nested_refuses_truncated_final_block() {
+        refused(Layer::Nested, file(&A[..2], b"A"), false);
+    }
+
+    #[test]
+    fn nested_refuses_missing_final_block() {
+        refused(Layer::Nested, file(&[0, 1, 0, 254, 255, b'A'], b"A"), false);
+    }
+
+    #[test]
+    fn nested_refuses_trailer_before_zip64_signed_descriptor() {
+        let mut m = with_descriptor(file(&[A, &[0xa5]].concat(), b"A"), true);
+        m.zip64 = true;
+        refused(Layer::Nested, m, false);
+    }
+
+    #[test]
+    fn nested_refuses_trailer_before_zip64_unsigned_descriptor() {
+        let mut m = with_descriptor(file(&[A, &[0xa5]].concat(), b"A"), false);
+        m.zip64 = true;
+        refused(Layer::Nested, m, false);
+    }
+
+    #[test]
+    fn zipcrypto_refuses_second_empty_stream() {
+        refused(
+            Layer::ZipCrypto,
+            file(&[A, EMPTY_DEFLATE.as_slice()].concat(), b"A"),
+            false,
+        );
+    }
+
+    #[test]
+    fn zipcrypto_refuses_empty_followed_by_empty_stream() {
+        refused(
+            Layer::ZipCrypto,
+            file(
+                &[EMPTY_DEFLATE.as_slice(), EMPTY_DEFLATE.as_slice()].concat(),
+                b"",
+            ),
+            false,
+        );
+    }
+
+    #[test]
+    fn zipcrypto_refuses_trailer_after_multiple_input_chunks() {
+        refused(
+            Layer::ZipCrypto,
+            {
+                let plain: Vec<_> = (0..150_000).map(|i| (i % 251) as u8).collect();
+                let mut stream = stored_blocks(&plain);
+                stream.push(0xa5);
+                file(&stream, &plain)
+            },
+            false,
+        );
+    }
+
+    #[test]
+    fn zipcrypto_refuses_no_deflate_stream() {
+        refused(Layer::ZipCrypto, file(&[], b""), false);
+    }
+
+    #[test]
+    fn zipcrypto_refuses_truncated_final_block() {
+        refused(Layer::ZipCrypto, file(&A[..2], b"A"), false);
+    }
+
+    #[test]
+    fn zipcrypto_refuses_missing_final_block() {
+        refused(
+            Layer::ZipCrypto,
+            file(&[0, 1, 0, 254, 255, b'A'], b"A"),
+            false,
+        );
+    }
+
+    #[test]
+    fn zipcrypto_refuses_trailer_before_zip64_signed_descriptor() {
+        let mut m = with_descriptor(file(&[A, &[0xa5]].concat(), b"A"), true);
+        m.zip64 = true;
+        refused(Layer::ZipCrypto, m, false);
+    }
+
+    #[test]
+    fn zipcrypto_refuses_trailer_before_zip64_unsigned_descriptor() {
+        let mut m = with_descriptor(file(&[A, &[0xa5]].concat(), b"A"), false);
+        m.zip64 = true;
+        refused(Layer::ZipCrypto, m, false);
+    }
+
+    #[test]
+    fn accepts_ignored_alignment_bits_in_consumed_bytes() {
+        all_layers(|| file(&[0xf9, 0, 0, 255, 255], b""), b"");
+    }
+
+    #[test]
+    fn accepts_zip64_descriptors_with_true_local_values() {
+        for signed in [true, false] {
+            all_layers(
+                || {
+                    let mut m = with_descriptor(file(A, b"A"), signed);
+                    m.zip64 = true;
+                    m.descriptor.as_mut().unwrap().keep_local = true;
+                    m
+                },
+                b"A",
+            );
+        }
+    }
+
+    #[test]
+    fn outer_preserves_upper_bound_only_decoded_size_policy() {
+        let mut m = file(A, b"A");
+        m.declared = 2;
+        let mut c = Container::open(archive(Layer::Outer, m)).unwrap();
+        assert_eq!(c.find(PATH).unwrap().size, 2);
+        assert_eq!(c.read(PATH).unwrap(), b"A");
+    }
+
+    #[test]
+    fn nested_preserves_exact_decoded_size_policy() {
+        let mut m = file(A, b"A");
+        m.declared = 2;
+        match result_error(open(Layer::Nested, archive(Layer::Nested, m))) {
+            ContainerError::Read { path, cause } => {
+                assert_eq!(path, PATH);
+                assert_eq!(cause, "decompressed to 1 bytes, but the archive declares 2");
+            }
+            other => panic!("unexpected size error: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn zipcrypto_preserves_exact_decoded_size_password_mapping() {
+        let mut m = file(A, b"A");
+        m.declared = 2;
+        assert_eq!(
+            result_error(open(Layer::ZipCrypto, archive(Layer::ZipCrypto, m))),
+            ContainerError::WrongPassword {
+                nested_entry: "P-0001.zip".into()
+            }
+        );
     }
 }

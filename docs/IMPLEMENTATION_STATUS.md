@@ -12,6 +12,22 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Project file-stream extent integrity (20 October 2026; acceptance pending)
+
+Local project-container reads now enforce one complete DEFLATE extent across
+outer files, direct compressed nested carriers, plain nested files and supported
+ZipCrypto plaintext. Directory/cipher/password categories, lazy reads and existing
+decoded-size policies remain unchanged. Original source reaches 58 intended
+core failures; candidate owning suite passes 153. Eighteen original application
+failures become 26 new candidate passes; historical selective raw archives/reports,
+quiescent database preservation and intentional restore continuation are exercised.
+Parent-run owning tests and all-targets Clippy pass. Project-path synthetic cost
+measurements are disclosed; they are not installation or real-project compatibility
+proof. Independent full-diff review accepted with zero Critical/Important findings
+and all seven source/test bindings verified. Maintained delivery gate pending.
+[Contract](contracts/project-file-stream-integrity.md) ·
+[Source/format evidence](research/2026-10-20-project-file-stream-boundaries.md).
+
 ## Product file-stream extent integrity (20 October 2026)
 
 The local product-reader repair checks complete, exact DEFLATE extents for

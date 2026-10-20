@@ -134,6 +134,37 @@ and clear user-data guards. Publication readback agreed; the product file-stream
 claim is released. Project-reader ordinary-file and encryption-header work
 remain separate; no full ZIP/ETS compatibility is claimed.
 
+## Project ordinary-file policy (20 October 2026; implementation pending)
+
+The separate [source audit](../research/2026-10-20-project-file-stream-boundaries.md)
+identifies normal outer reads, direct nested ZIP acquisition, plain nested files
+and supported ZipCrypto-decrypted files as different enforcement boundaries.
+Thirty original-production characterizations pass with 83 existing controls
+(113 unique Rust identities). They establish trailer/concatenation acceptance,
+decoded first-stream output and existing typed CRC/password refusal identities;
+they do not establish database preservation or real-project compatibility.
+
+The [project contract](../contracts/project-file-stream-integrity.md) explicitly
+chooses exact complete plaintext DEFLATE extents and identifies fifteen acceptance
+pins to supersede. ZipCrypto's twelve-byte header and ZIP descriptors are outside
+the compared plaintext stream. Existing encrypted-corruption `WrongPassword`
+mapping, outer decoded-size policy, lazy reads and restoration's per-member
+continuation remain. Full import returns decoded members; selective import has
+an additional original-archive/report retention boundary. Historical native and
+scoped evidence must not be silently relabeled by the new source-admission rule.
+
+No private project extent census was performed. The local implementation passes
+153owning core cases after58original semantic failures; fifteen old acceptance
+pins are explicitly superseded. Parent application checks pass26new cases and
+the59pass/3ignore owning selection plus all-targetsClippy. Scoped source/closed
+DB/sidecar preservation, native reopen, historical selective archives/reports
+and restoration continuation are exercised; no live-WAL/crash/crossDB atomicity
+claim follows. Source-bound synthetic project-path cost is disclosed in the
+[contract](../contracts/project-file-stream-integrity.md#measured-project-path-work).
+Independent full-diff review accepted with zero Critical/Important findings;
+maintained delivery acceptance remains pending. New AES
+support and directory encryption-header validity stay separate.
+
 <!-- BEGIN retained catalogue record -->
 
 <a id="159-a-project-archive-may-unpack-to-at-most-512-mib-and-every-member-name-must-be-unique"></a>

@@ -453,9 +453,19 @@ cost is disclosed as 1.38–1.84 times baseline direct-reader time in four synth
 profiles, not an installation-speed or peak-memory claim.
 
 **Remaining:** project-reader ordinary-file trailing-stream evidence is
-**claimed (20 October 2026)** for source/contract/synthetic investigation first,
-including the normal and already supported ZipCrypto read boundaries. No new
-encryption support or project admission-policy change follows from that claim.
+**claimed (20 October 2026)**. Source/format audit and thirty original-production
+characterization tests are reconciled (113 unique Rust cases with prior controls).
+The [project-specific contract](contracts/project-file-stream-integrity.md) chooses
+exact plaintext-stream extents, including direct compressed nested-carrier reads,
+while retaining ZipCrypto `WrongPassword` mapping and selective/historical report
+boundaries. Local repair passes153owning core cases after58original-source
+semantic failures; parent candidate application checks pass26new cases,
+59owning/3ignored and all-targetsClippy. Fifteen old acceptance pins explicitly
+change under the new contract. Quiescent persistence/selective-history/restore
+consumer boundaries are tested, not whole-service atomicity. Independent full-diff
+review accepted with zero Critical/Important findings; maintained delivery gate
+remains pending. No new encryption support or
+compatibility-safe real-project claim is made.
 Directory encryption-header validity remains **unowned** separate scope.
 Standalone and inner product archives previously retained the accepted trailers, while their
 normalized outputs and wrapper-only reports did not represent them; do not

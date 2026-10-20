@@ -595,3 +595,428 @@ fn master_identity_diagnostics_reach_the_project_import_report() {
         assert!(d.consequence.contains("declaration"));
     }
 }
+
+// WP-16: these tests establish pre-persistence refusal only. Later service
+// failures do not have a cross-database transaction/whole-import atomicity claim.
+use super::project_stream_fixture as stream;
+
+fn stream_refusal_preserves_destinations(
+    layer: stream::Layer,
+    seeded: bool,
+    use_products: bool,
+    manufacturer: bool,
+) {
+    use knx_store::project_history::NativeSnapshot;
+    let dir = tempfile::tempdir().unwrap();
+    let native_path = dir.path().join("project.knxdb");
+    let product_path = dir.path().join("products.sqlite");
+    assert!(!native_path.exists() && !product_path.exists());
+    let store = open_and_migrate(&native_path).unwrap();
+    let products = knx_productdb::open_and_migrate(&product_path).unwrap();
+    store.execute_batch("PRAGMA journal_mode=DELETE").unwrap();
+    products
+        .execute_batch("PRAGMA journal_mode=DELETE")
+        .unwrap();
+    let expected = if seeded {
+        let seed_path = knx_testsupport::write_minimal_knxproj(dir.path());
+        let seed = knx_app::import_ets_project_with(
+            &seed_path,
+            &store,
+            knx_app::ImportOptions {
+                product_db: Some(&products),
+            },
+        )
+        .unwrap();
+        assert!(seed.manufacturer_ingested > 0);
+        assert!(seed.project.devices.iter().next().is_some());
+        knx_store::save_project(&store, &seed.project).unwrap();
+        Some(NativeSnapshot::read(&store).unwrap())
+    } else {
+        assert!(load_opaque(&store).unwrap().is_empty());
+        assert!(knx_store::load_manufacturer_refs(&store)
+            .unwrap()
+            .is_empty());
+        None
+    };
+    let expected_product_sources: Vec<_> = knx_store::load_manufacturer_refs(&store)
+        .unwrap()
+        .into_iter()
+        .map(|reference| {
+            let bytes = knx_productdb::load_source_file(&products, &reference.sha256)
+                .unwrap()
+                .unwrap();
+            assert_eq!(sha256_hex(&bytes), reference.sha256);
+            (reference.sha256, bytes)
+        })
+        .collect();
+    assert_eq!(expected_product_sources.is_empty(), !seeded);
+    let early_hash = sha256_hex(&stream::manufacturer("early-new"));
+    assert!(
+        !knx_productdb::has_source_file(&products, &early_hash).unwrap(),
+        "early manufacturer must be truly new, not a hash skip"
+    );
+    let source = stream::project(layer, true, manufacturer);
+    let source_path = dir.path().join("fixed-source.knxproj");
+    std::fs::write(&source_path, &source).unwrap();
+    // Inventory order is the actual collector order, not just ZIP write order.
+    let inventory = knx_etsproj::Container::open_outer(source.clone()).unwrap();
+    let early = inventory
+        .entries()
+        .iter()
+        .position(|e| e.path == stream::EARLY)
+        .unwrap();
+    let late = match layer {
+        stream::Layer::Outer => {
+            if manufacturer {
+                stream::LATE_MANUFACTURER
+            } else {
+                stream::LATE_OPAQUE
+            }
+        }
+        _ => "P-0001.zip",
+    };
+    let late_index = inventory
+        .entries()
+        .iter()
+        .position(|e| e.path == late)
+        .unwrap();
+    assert!(
+        early < late_index,
+        "new manufacturer must precede damage in logical inventory"
+    );
+    drop(inventory);
+    drop(store);
+    drop(products);
+    let before = stream::disk_snapshot(dir.path());
+    // Already migrated connections: DB creation/migration is deliberately outside
+    // the refusal boundary, and fresh-store sidecar absence is snapshotted too.
+    let store = Connection::open(&native_path).unwrap();
+    let products = knx_productdb::Connection::open(&product_path).unwrap();
+    let password = stream::password(layer);
+    let result = knx_app::import_ets_project_with_password(
+        &source_path,
+        &store,
+        knx_app::ImportOptions {
+            product_db: use_products.then_some(&products),
+        },
+        password.as_ref(),
+        &(),
+    );
+    let error = match result {
+        Err(knx_app::AppError::Import(knx_etsproj::ImportFailure::Container(error))) => error,
+        Err(other) => panic!("expected container refusal, got {other}"),
+        Ok(_) => panic!("stream policy must refuse before application persistence"),
+    };
+    match (layer, error) {
+        (stream::Layer::ZipCrypto, knx_etsproj::ContainerError::WrongPassword { nested_entry }) => {
+            assert_eq!(nested_entry, "P-0001.zip")
+        }
+        (stream::Layer::ZipCrypto, other) => {
+            panic!("correct-credential encrypted damage changed existing mapper: {other}")
+        }
+        (_, knx_etsproj::ContainerError::Read { path, cause }) => {
+            let expected_path = if matches!(layer, stream::Layer::PlainNested) {
+                stream::NESTED_LEAF
+            } else {
+                late
+            };
+            assert_eq!(path, expected_path);
+            assert!(
+                !cause.is_empty(),
+                "stream refusal needs its technical cause"
+            );
+        }
+        (_, other) => panic!("expected named Read refusal, got {other}"),
+    }
+    assert!(!knx_productdb::has_source_file(&products, &early_hash).unwrap());
+    drop(store);
+    drop(products);
+    assert!(
+        stream::disk_snapshot(dir.path()) == before,
+        "refusal changed source, DB paths/bytes or sidecar bytes/absence"
+    );
+    assert_eq!(std::fs::read(&source_path).unwrap(), source);
+    let reopened = open_and_migrate(&native_path).unwrap();
+    if let Some(expected) = expected {
+        assert!(
+            NativeSnapshot::read(&reopened).unwrap() == expected,
+            "seeded native data changed on reopen"
+        );
+    } else {
+        assert!(knx_store::load_project(&reopened).is_err());
+        assert!(load_opaque(&reopened).unwrap().is_empty());
+        assert!(knx_store::load_manufacturer_refs(&reopened)
+            .unwrap()
+            .is_empty());
+    }
+    let products = knx_productdb::open_and_migrate(&product_path).unwrap();
+    assert!(!knx_productdb::has_source_file(&products, &early_hash).unwrap());
+    for (hash, bytes) in expected_product_sources {
+        assert_eq!(
+            knx_productdb::load_source_file(&products, &hash)
+                .unwrap()
+                .unwrap(),
+            bytes
+        );
+    }
+    drop(reopened);
+    drop(products);
+    assert!(
+        stream::disk_snapshot(dir.path()) == before,
+        "native reopen changed closed-file snapshot"
+    );
+}
+
+#[test]
+fn wp16_outer_opaque_refusal_fresh_with_products() {
+    stream_refusal_preserves_destinations(stream::Layer::Outer, false, true, false);
+}
+#[test]
+fn wp16_outer_opaque_refusal_fresh_without_products() {
+    stream_refusal_preserves_destinations(stream::Layer::Outer, false, false, false);
+}
+#[test]
+fn wp16_outer_opaque_refusal_seeded_with_products() {
+    stream_refusal_preserves_destinations(stream::Layer::Outer, true, true, false);
+}
+#[test]
+fn wp16_outer_opaque_refusal_seeded_without_products() {
+    stream_refusal_preserves_destinations(stream::Layer::Outer, true, false, false);
+}
+#[test]
+fn wp16_outer_manufacturer_refusal_fresh_with_products() {
+    stream_refusal_preserves_destinations(stream::Layer::Outer, false, true, true);
+}
+#[test]
+fn wp16_outer_manufacturer_refusal_fresh_without_products() {
+    stream_refusal_preserves_destinations(stream::Layer::Outer, false, false, true);
+}
+#[test]
+fn wp16_outer_manufacturer_refusal_seeded_with_products() {
+    stream_refusal_preserves_destinations(stream::Layer::Outer, true, true, true);
+}
+#[test]
+fn wp16_outer_manufacturer_refusal_seeded_without_products() {
+    stream_refusal_preserves_destinations(stream::Layer::Outer, true, false, true);
+}
+#[test]
+fn wp16_plain_nested_refusal_fresh_without_products() {
+    stream_refusal_preserves_destinations(stream::Layer::PlainNested, false, false, false);
+}
+#[test]
+fn wp16_plain_nested_refusal_seeded_with_products() {
+    stream_refusal_preserves_destinations(stream::Layer::PlainNested, true, true, false);
+}
+#[test]
+fn wp16_correct_password_zipcrypto_refusal_fresh_with_products() {
+    stream_refusal_preserves_destinations(stream::Layer::ZipCrypto, false, true, false);
+}
+#[test]
+fn wp16_correct_password_zipcrypto_refusal_seeded_without_products() {
+    stream_refusal_preserves_destinations(stream::Layer::ZipCrypto, true, false, false);
+}
+#[test]
+fn wp16_compressed_nested_carrier_refusal_seeded_with_products() {
+    stream_refusal_preserves_destinations(stream::Layer::CompressedCarrier, true, true, false);
+}
+
+fn stream_control_reopens(layer: stream::Layer) {
+    use knx_store::project_history::NativeSnapshot;
+    let dir = tempfile::tempdir().unwrap();
+    let source_path = dir.path().join("control.knxproj");
+    let native_path = dir.path().join("control.knxdb");
+    let source = stream::project(layer, false, false);
+    std::fs::write(&source_path, &source).unwrap();
+    let store = open_and_migrate(&native_path).unwrap();
+    let product_path = dir.path().join("products.sqlite");
+    let products = knx_productdb::open_and_migrate(&product_path).unwrap();
+    let password = stream::password(layer);
+    let imported = knx_app::import_ets_project_with_password(
+        &source_path,
+        &store,
+        knx_app::ImportOptions {
+            product_db: Some(&products),
+        },
+        password.as_ref(),
+        &(),
+    )
+    .unwrap();
+    assert_eq!(imported.project.info.name, "Minimal");
+    assert_eq!(imported.project.devices.iter().count(), 1);
+    let early = stream::manufacturer("early-new");
+    let hash = sha256_hex(&early);
+    assert_eq!(
+        knx_productdb::load_source_file(&products, &hash)
+            .unwrap()
+            .unwrap(),
+        early
+    );
+    let refs = knx_store::load_manufacturer_refs(&store).unwrap();
+    assert!(refs
+        .iter()
+        .any(|r| r.source_path == stream::EARLY && r.sha256 == hash));
+    let opaque = load_opaque(&store).unwrap();
+    let leaf_path = if matches!(layer, stream::Layer::Outer) {
+        stream::LATE_OPAQUE
+    } else {
+        stream::NESTED_LEAF
+    };
+    let witness = opaque.iter().find(|e| e.source_path == leaf_path).unwrap();
+    assert_eq!(witness.bytes, stream::WITNESS);
+    assert_eq!(witness.sha256, sha256_hex(stream::WITNESS));
+    if matches!(layer, stream::Layer::ZipCrypto) {
+        // Independently decode the actual encrypted leaf with zip's cipher.
+        use std::io::{Cursor, Read};
+        let mut outer = zip::ZipArchive::new(Cursor::new(&source)).unwrap();
+        let mut nested = Vec::new();
+        outer
+            .by_name("P-0001.zip")
+            .unwrap()
+            .read_to_end(&mut nested)
+            .unwrap();
+        let mut inner = zip::ZipArchive::new(Cursor::new(nested)).unwrap();
+        let mut leaf = inner
+            .by_name_decrypt(
+                stream::LATE_OPAQUE,
+                knx_testsupport::ZIPCRYPTO_MINIMAL_PASSWORD.as_bytes(),
+            )
+            .unwrap();
+        assert!(leaf.encrypted());
+        assert_eq!(
+            leaf.compressed_size(),
+            stream::WITNESS.len() as u64 + 5 + 12
+        );
+        let mut decoded = Vec::new();
+        leaf.read_to_end(&mut decoded).unwrap();
+        assert_eq!(decoded, stream::WITNESS);
+    }
+    assert!(!imported
+        .report
+        .to_json()
+        .contains(knx_testsupport::ZIPCRYPTO_MINIMAL_PASSWORD));
+    if !matches!(layer, stream::Layer::Outer) {
+        assert!(
+            imported.report.unsupported.iter().any(|feature| {
+                feature.what == "project password protection (P-0001.zip, ZipCrypto)"
+                    && feature.consequence == "the project part was decrypted for import and is kept unprotected from here on (in memory, in the retained original files and in a saved .knxdb); the password protection itself is not preserved"
+            }),
+            "prepared nested imports retain the exact existing protection-loss warning"
+        );
+    }
+    knx_store::save_project(&store, &imported.project).unwrap();
+    let expected = NativeSnapshot::read(&store).unwrap();
+    drop(store);
+    drop(products);
+    let reopened = open_and_migrate(&native_path).unwrap();
+    assert!(NativeSnapshot::read(&reopened).unwrap() == expected);
+    let products = knx_productdb::open_and_migrate(&product_path).unwrap();
+    assert_eq!(
+        knx_productdb::load_source_file(&products, &hash)
+            .unwrap()
+            .unwrap(),
+        early
+    );
+    assert_eq!(std::fs::read(source_path).unwrap(), source);
+}
+
+#[test]
+fn wp16_valid_alternate_outer_stream_reopens_exact_bytes() {
+    stream_control_reopens(stream::Layer::Outer);
+}
+#[test]
+fn wp16_valid_alternate_plain_nested_stream_reopens_exact_bytes() {
+    stream_control_reopens(stream::Layer::PlainNested);
+}
+#[test]
+fn wp16_valid_alternate_zipcrypto_stream_reopens_exact_bytes() {
+    stream_control_reopens(stream::Layer::ZipCrypto);
+}
+#[test]
+fn wp16_valid_alternate_compressed_carrier_reopens_exact_bytes() {
+    stream_control_reopens(stream::Layer::CompressedCarrier);
+}
+
+#[test]
+fn wp16_correct_password_invalid_zipcrypto_stream_keeps_existing_wrong_password_contract() {
+    let dir = tempfile::tempdir().unwrap();
+    let source_path = dir.path().join("correct-password-damaged.knxproj");
+    let source = stream::invalid_zipcrypto_project();
+    std::fs::write(&source_path, &source).unwrap();
+    let native_path = dir.path().join("empty.knxdb");
+    let store = open_and_migrate(&native_path).unwrap();
+    store.execute_batch("PRAGMA journal_mode=DELETE").unwrap();
+    drop(store);
+    let before = stream::disk_snapshot(dir.path());
+    let store = Connection::open(&native_path).unwrap();
+    let password = stream::password(stream::Layer::ZipCrypto).unwrap();
+    let result = knx_app::import_ets_project_with_password(
+        &source_path,
+        &store,
+        knx_app::ImportOptions::default(),
+        Some(&password),
+        &(),
+    );
+    match result {
+        Err(knx_app::AppError::Import(knx_etsproj::ImportFailure::Container(
+            knx_etsproj::ContainerError::WrongPassword { nested_entry },
+        ))) => assert_eq!(nested_entry, "P-0001.zip"),
+        Err(other) => panic!("existing correct-password corruption identity changed: {other}"),
+        Ok(_) => panic!("invalid encrypted DEFLATE must fail under the correct credential"),
+    }
+    drop(store);
+    assert!(stream::disk_snapshot(dir.path()) == before);
+    let reopened = open_and_migrate(&native_path).unwrap();
+    assert!(load_opaque(&reopened).unwrap().is_empty());
+    assert!(knx_store::load_manufacturer_refs(&reopened)
+        .unwrap()
+        .is_empty());
+    assert!(knx_store::load_project(&reopened).is_err());
+    assert!(!dir.path().join("products.sqlite").exists());
+    assert_eq!(std::fs::read(source_path).unwrap(), source);
+}
+
+#[test]
+fn wp16_valid_alternate_late_manufacturer_stream_installs_and_reopens_exact_bytes() {
+    let dir = tempfile::tempdir().unwrap();
+    let source = stream::project(stream::Layer::Outer, false, true);
+    let source_path = dir.path().join("valid-manufacturer.knxproj");
+    std::fs::write(&source_path, &source).unwrap();
+    let native_path = dir.path().join("valid.knxdb");
+    let product_path = dir.path().join("products.sqlite");
+    let store = open_and_migrate(&native_path).unwrap();
+    let products = knx_productdb::open_and_migrate(&product_path).unwrap();
+    let imported = knx_app::import_ets_project_with(
+        &source_path,
+        &store,
+        knx_app::ImportOptions {
+            product_db: Some(&products),
+        },
+    )
+    .unwrap();
+    let bytes = stream::manufacturer("late-new");
+    let hash = sha256_hex(&bytes);
+    assert_eq!(
+        knx_productdb::load_source_file(&products, &hash)
+            .unwrap()
+            .unwrap(),
+        bytes
+    );
+    assert!(knx_store::load_manufacturer_refs(&store)
+        .unwrap()
+        .iter()
+        .any(|r| r.source_path == stream::LATE_MANUFACTURER && r.sha256 == hash));
+    knx_store::save_project(&store, &imported.project).unwrap();
+    let expected = knx_store::project_history::NativeSnapshot::read(&store).unwrap();
+    drop(store);
+    drop(products);
+    let reopened = open_and_migrate(&native_path).unwrap();
+    assert!(knx_store::project_history::NativeSnapshot::read(&reopened).unwrap() == expected);
+    let products = knx_productdb::open_and_migrate(&product_path).unwrap();
+    assert_eq!(
+        knx_productdb::load_source_file(&products, &hash)
+            .unwrap()
+            .unwrap(),
+        bytes
+    );
+    assert_eq!(std::fs::read(source_path).unwrap(), source);
+}

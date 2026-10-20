@@ -1,4 +1,36 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-20 09:43
+- **Completed:** Product ordinary-file evidence gate reconciled: controller reran independent verifier (54controls,15029rows,15015extent hashes,171unchanged inputs; zero measured trailers,14encrypted skips).21original-production characterization+40prior tests verified. Explicit one-complete-stream/exact-compressed-extent policy documented in `docs/contracts/product-file-stream-integrity.md` before implementation; valid alternate blocks/descriptors preserved. No production change yet.
+- **Pending/Next Steps:** Implement bounded product-only repair after named REDs, explicitly superseding characterization acceptance pins and prior ordinary-file trailing pin. Fixed-buffer secondary decoder reuses existing trust boundary; measure baseline/candidate extra decode cost. Then independent review, maintained scoped committed-head gate, publication/readback and owned cleanup. No new go required; source/format investigation gate satisfied within original task.
+- **Notes for Codex oder Claude:** Evidence claim `c7bf2662`; branch `research/wp16-file-stream-20261020`. Census verifier successfully rerun by controller; original importer compatibility remains unmeasured. Raw package archive retention is distinct from normalized-member/report behavior. Implementation is product-only, not project reader/encryption/schema/dependencies/protocol. Other owners retain Alpha16/exact-UP258. Private evidence stays local, root stale/dirty preserved.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-20 09:35
+- **Completed:** File-stream characterization attempt2 `proc_0d3fe1358ae3` exited0; controller independently verified4stage exits,21new+40existing named cases matching compiled inventory, frozen source hashes and unchanged production. Clippy passed. Failed setup attempt1 retained/uncredited. Census scanner separately corroborated15029file records (12772exact DEFLATE,2243stored,14encrypted skips) and171unchanged inputs; final independent verification still pending. Existing behavior characterized, not repaired.
+- **Pending/Next Steps:** Consume final batch `deleg_ff1dfcfa` handoffs: census worker `sa-0-e828e7f6` independent calibration/accounting/source bindings and characterization worker `sa-1-ac45fb90` fixture/retention review. Parent reconciliation saved; no competing rerun. After final evidence review, choose explicit policy and fresh test-first implementation boundary; do not claim full package/release acceptance from focused probes. Owner authorization remains active.
+- **Notes for Codex oder Claude:** Controller reconciliation files at `<profile-scratch>/wp16-file-stream-20261020/controller-{characterization,scanner-notice}-reconciliation.json`; accepted focused attempt `characterization/attempt2/receipt.json`.14encrypted records remain unmeasured; recursive census does not establish production wrapper nesting admission. Published claim `c7bf2662`; worker owns two test files, parent docs/source. Preserve private identities, stale/dirty root and foreign Alpha16/exact-UP258 claims.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-20 09:33
+- **Completed:** Characterization setup attempt1 (`proc_71dc64ffda37`) failed before test execution at old-test preservation guard. Controller independently compared reconstructed old bytes: exactly one added blank line before enclosing WP16 module close in each owned test file, no old test-content delta. Diagnosis retained privately; no result credited as tests passed and no production changes.
+- **Pending/Next Steps:** Characterization worker `sa-1-ac45fb90` still active; steered to correct exact insertion-range restoration without whitespace blanket exemptions, retain failed attempt and run unique successor. Census worker `sa-0-e828e7f6` also active. Consume their completion reports, verify frozen identities and real executed counts before choosing stricter admission. No competing runner or polling; owner authorization remains active.
+- **Notes for Codex oder Claude:** Read `<profile-scratch>/wp16-file-stream-20261020/characterization/controller-preservation-diagnosis.json` for exact two blank-line diffs; this is harness setup, not production defect or test acceptance. Worker owns two test files; parent owns docs/source. Published evidence claim `c7bf2662`; root stale/dirty preserved. Prior directory package already delivered/archived/retired. Product ordinary-file investigation only; no project-reader/encryption/schema/dependency/protocol changes.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-20 09:29
+- **Completed:** Product-directory delivery fully closed (`9c79634b` code, `87fea45e` docs);181private archive member digests verified and owned resources retired. Next product-file-stream evidence claim `c7bf2662` published/read back equal. Primary ZIP/DEFLATE/zip8.6.0/flate2 1.1.10 sources retrieved and installed-source boundary inspected; source note/index/local log written. No new production behavior.
+- **Pending/Next Steps:** Independent batch `deleg_ff1dfcfa`: census `sa-0-e828e7f6` and original-production characterization `sa-1-ac45fb90` running. Consume completions, verify artifacts/identities and reconcile scope before choosing admission/implementation. Worktree `research/wp16-file-stream-20261020`; scratch `<profile-scratch>/wp16-file-stream-20261020/{census,characterization,research}`. No polling/wait required; owner go remains active.
+- **Notes for Codex oder Claude:** Characterization worker exclusively owns standalone/wrapper test files; parent owns docs/source, census owns local scratch only. Tests label existing ordinary-file trailing acceptance, not a fix. Raw standalone archive retention is distinct from normalized member bytes and wrapper-reported-only extras. No project-reader/encryption/schema/dependency/protocol change. Other owners retain Alpha16/exact-UP258. Private evidence archive `<profile>/evidence/2026-10-20_product-directory-integrity.tar.gz`; preserve private identities and stale/dirty selected root.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-20 09:25
 - **Completed:** WP16 product-directory package closed: code `9c79634b`, result-only docs tail `87fea45e` published and local/tracking/live verified. Compact private evidence archive member-digest verified before owned worktree/branch/rebuildable scratch retirement. New CLAIM (owner request next open tasks): ordinary-file trailing-DEFLATE evidence/integrity investigation for the product reader and its wrapper consumers only, on `research/wp16-file-stream-20261020`.
 - **Pending/Next Steps:** Read current reader contracts and primary API/format sources; characterize original-production acceptance with named synthetic independent ZIP fixtures and a bounded read-only product-corpus file-stream census before deciding any stricter admission or implementation. Start from existing validated compressed extents; no assumptions about publisher padding. Evidence-first go/no-go and performance implications precede production changes.

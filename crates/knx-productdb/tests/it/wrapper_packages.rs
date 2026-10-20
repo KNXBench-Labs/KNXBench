@@ -646,6 +646,154 @@ mod wp16 {
         assert_eq!(result.packages.len(), 1);
         assert_eq!(stored_packages(&conn), [(sha256_hex(&bytes), bytes)]);
     }
+
+    // CHARACTERIZATION only: outer wrapper bytes are not persisted by design,
+    // unlike original inner package bytes. Future admission policy is separate.
+    mod file_stream_characterization {
+        use super::*;
+        use crate::standalone_packages::wp16::file_stream_characterization as c;
+
+        #[test]
+        fn standalone_entry_currently_accepts_nonzero_trailer_and_retains_archive() {
+            let bytes = c::package(&[c::A, b"\xa5"].concat());
+            c::accepted(&bytes, |conn| {
+                let mut result = install(conn, &bytes).unwrap();
+                assert!(result.wrapper.is_none());
+                assert_eq!(result.packages.len(), 1);
+                result.packages.remove(0).report
+            });
+        }
+
+        #[test]
+        fn inner_package_currently_accepts_second_stream_with_signed_descriptor() {
+            let bytes = descriptor(c::package(&[c::A, c::B].concat()), true);
+            let wrapper = zip_of(&[("good.knxprod", &bytes)]);
+            c::accepted(&bytes, |conn| {
+                let mut result = install(conn, &wrapper).unwrap();
+                assert_eq!(result.sha256, sha256_hex(&wrapper));
+                assert!(result.wrapper.is_some());
+                assert_eq!(result.packages.len(), 1);
+                assert_eq!(result.packages[0].path.as_deref(), Some("good.knxprod"));
+                result.packages.remove(0).report
+            });
+        }
+
+        // A single literal stored DEFLATE block, independent of ZIP's writer.
+        fn stored_stream(plain: &[u8]) -> Vec<u8> {
+            let len: u16 = plain.len().try_into().unwrap();
+            let mut stream = vec![1];
+            stream.extend_from_slice(&len.to_le_bytes());
+            stream.extend_from_slice(&(!len).to_le_bytes());
+            stream.extend_from_slice(plain);
+            stream
+        }
+
+        fn outer_leaf(trailer: &[u8], signed: bool) {
+            let inner = c::package(c::A);
+            let stream = [stored_stream(&inner), trailer.to_vec()].concat();
+            let wrapper = descriptor(
+                raw_zip(&[c::member(b"good.knxprod", &stream, &inner)]),
+                signed,
+            );
+            c::accepted(&inner, |conn| {
+                let mut result = install(conn, &wrapper).unwrap();
+                assert_eq!(result.sha256, sha256_hex(&wrapper));
+                assert!(result.wrapper.as_ref().unwrap().other_members.is_empty());
+                assert_eq!(result.packages.len(), 1);
+                assert_eq!(result.packages[0].path.as_deref(), Some("good.knxprod"));
+                assert_eq!(
+                    conn.query_row(
+                        "SELECT count(*) FROM package WHERE sha256 = ?1",
+                        [sha256_hex(&wrapper)],
+                        |r| r.get::<_, i64>(0)
+                    )
+                    .unwrap(),
+                    0,
+                    "outer archive (including its compressed trailer) is not retained"
+                );
+                result.packages.remove(0).report
+            });
+        }
+
+        #[test]
+        fn outer_package_leaf_currently_accepts_nonzero_trailer_with_signed_descriptor() {
+            outer_leaf(b"\xa5", true);
+        }
+
+        #[test]
+        fn outer_package_leaf_currently_accepts_zero_trailer_with_unsigned_descriptor() {
+            outer_leaf(b"\x00", false);
+        }
+
+        #[test]
+        fn outer_other_member_currently_accepts_second_stream_and_reports_first_output_only() {
+            let inner = c::package(c::A);
+            let stream = [c::B, c::A].concat();
+            let wrapper = raw_zip(&[
+                RawMember::stored(b"good.knxprod", &inner),
+                c::member(b"docs/ordinary.bin", &stream, b"B"),
+            ]);
+            c::accepted(&inner, |conn| {
+                let mut result = install(conn, &wrapper).unwrap();
+                let others = &result.wrapper.as_ref().unwrap().other_members;
+                assert_eq!(others.len(), 1);
+                assert_eq!(others[0].path, "docs/ordinary.bin");
+                assert_eq!(others[0].size, 1);
+                assert_eq!(others[0].sha256, sha256_hex(b"B"));
+                assert_eq!(others[0].kind, WrapperMemberKind::File);
+                assert_eq!(
+                    conn.query_row(
+                        "SELECT count(*) FROM source_file WHERE sha256 = ?1",
+                        [sha256_hex(b"B")],
+                        |r| r.get::<_, i64>(0)
+                    )
+                    .unwrap(),
+                    0,
+                    "outer non-package members are reported, not retained"
+                );
+                result.packages.remove(0).report
+            });
+        }
+
+        fn outer_refusal(stream: &[u8], plain: &[u8], reason: &[&str]) {
+            let bytes = outer(c::member(b"docs/broken.bin", stream, plain));
+            for populated in [false, true] {
+                named_invalid(
+                    preserved_refusal(
+                        |conn| {
+                            if populated {
+                                seed(conn);
+                            }
+                        },
+                        |conn| install(conn, &bytes),
+                    ),
+                    "docs/broken.bin",
+                    reason,
+                );
+            }
+        }
+
+        #[test]
+        fn outer_malformed_stream_still_refuses_without_database_mutation() {
+            outer_refusal(&[0xff], b"A", STREAM_CAUSE);
+        }
+
+        #[test]
+        fn outer_wrong_crc_still_refuses_without_database_mutation() {
+            outer_refusal(c::A, b"B", CRC_CAUSE);
+        }
+
+        #[test]
+        fn inner_malformed_stream_still_names_both_layers_without_database_mutation() {
+            for populated in [false, true] {
+                named_invalid(
+                    inner_error(&c::package(&[0xff]), populated),
+                    c::PATH,
+                    STREAM_CAUSE,
+                );
+            }
+        }
+    }
 }
 
 /// RFC 1740 AppleDouble header: magic 0x00051607, version 0x00020000.

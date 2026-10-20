@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-20 11:37
+- **Completed:** CLAIM (owner request: work the next packages): WP-13 remaining documentation sweep on `docs/wp13-sweep-20261020`. Scope is current reader-facing descriptions of rename, product placement, note disposition, Functions, plug-in routes, UI waves and lifecycle/property-planner boundaries; retained historical records and formal ledger dispositions stay unchanged.
+- **Pending/Next Steps:** Trace each current claim to its source/contract and correct only verified contradictions. Run documentation regressions and the maintained scoped package gate, review separately in-session, then main-first delivery/readback and owned cleanup. Subsequent packages require a fresh ownership check.
+- **Notes for Codex oder Claude:** Alpha16 successor sequence, exact-UP258 and directory encryption-header work remain with their existing owners. No product schema, application behavior, bus/device, desktop, release, deployment or vendor operation. Selected root stays deliberately stale/dirty; preserve its prior journal and foreign research files.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-20 11:27
 - **Completed:** Project ordinary-file package fully closed: runtime `8ccb99b3`, docs-only tail `0bd97509` published/readback equal; compact private evidence member-digest verified before owned worktree/branch/rebuildable scratch retirement. New CLAIM (owner next-open-tasks): remaining directory encryption-header validity, evidence-first only on `research/wp16-directory-crypto-20261020`.
 - **Pending/Next Steps:** Inspect project/product directory flag/header/raw-method/size paths and primary ZIP/cipher facts; characterize synthetic outer/nested encrypted directory records with absent/truncated/valid structural headers, descriptors and existing password/AES outcomes. No stricter policy or production implementation before evidence and explicit unsupported/encryption boundary. No real credential/password or encrypted corpus access in this claim.

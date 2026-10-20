@@ -27,8 +27,9 @@ security, GitHub-issue, hardware or whole-codebase conformance audit.
   not reuse it. Historical winner/encounter availability remains bounded below.
 - **UI feedback:** UI-01–UI-06 and the whole-set corrections are delivered
   ([UI workstream](goals/ui-feedback-2026-10-18.md)); the claim is released.
-  Two follow-ups remain unowned (below, under *UI feedback packages*). Its
-  package labels are scoped to that goal, not the historical `UI-*` ledger IDs.
+  Both zoom follow-ups are delivered (below, under *UI feedback packages*);
+  native WebKitGTK parity and the matrix width policy remain separate boundaries.
+  Its package labels are scoped to that goal, not the historical `UI-*` ledger IDs.
 - **Exact UP 258D12 / issue #22:** the
   [offline programming goal](goals/up258-programming-2026-10-18.md) owns
   explicit source-field preparation, image/procedure/execution and full-state
@@ -842,22 +843,6 @@ models are in the
 UI-05: all 18 native table surfaces use the width adapter. The
 address/object matrix's select/address/name columns resize; only its per-object
 columns still need a width policy that avoids project content in preference keys. [Coverage and boundary](contracts/table-column-widths.md).
-
-Open follow-ups found by the UISET review (18 October 2026), outside the table fix:
-
-- **Pane drags ignore application zoom.** Navigation and inspector pane
-  resizing adds the raw pointer delta to a layout-pixel width, so at 150% the
-  pane edge moves 1.5 times the pointer distance (0.8 times at 80%). Same
-  normalisation as the tables (`appUiScale()`), with a real-drag browser case
-  per scale. [KL-130](limitations/KL-130-ZOOM-application-zoom.md#update-18-october-2026-resizable-tables-under-application-zoom).
-- **Zoomed table cases bypass the scale setting.** The 80%/150% table cases
-  load the real app but write `--app-ui-scale` on the root directly while the
-  `uiScale` setting stays at 100%. The setting-driven effect in `App`, the
-  narrow-window inspector stacking math (`viewportWidth / uiScale`) and the
-  startup order with a stored scale are therefore not exercised together with
-  the tables (the File menu cases do use a stored `uiScale`). One table case
-  through Settings or a stored `uiScale`, including startup remeasurement,
-  would close this.
 
 **Both follow-ups delivered (19 October 2026, WP-15 branch):** pane and
 block drags normalise by `appUiScale()`; one table case runs through the stored

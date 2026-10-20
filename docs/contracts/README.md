@@ -6,6 +6,7 @@ Moved here from `docs/` on 2026-10-08 (relative links adjusted by script).
 
 | Contract | Scope |
 | --- | --- |
+| [communication-object-folders](communication-object-folders.md) | WP-06A saved project-tree retention and device identity versus evaluated Dynamic channels; no folder implementation |
 | [parameter-workspace](parameter-workspace.md) | Source-group navigation, compact rows, retained editors, search and metadata; no inferred channel/grid mapping |
 | [device-comparison](device-comparison.md) | P4 bound read-only comparison, volatile tags, decoder/raw integrity and staged parameter scope |
 | [IMPORT_BOUNDARY_CONTRACT](IMPORT_BOUNDARY_CONTRACT.md) | AR06 project-import boundary: namespaces, project vs. product-package evidence |

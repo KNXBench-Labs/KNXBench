@@ -252,6 +252,12 @@ inactive and module objects do not acquire invented folders; priority survives
 migration/save/reopen/undo where editable. Object size and effective flag
 columns are already present. Neither display slice changes bus priority or
 manufacturer activation rules.
+**WP-06A first evidence slice (20 October, focused tests passed):** the
+[source/identity contract](contracts/communication-object-folders.md) separates
+saved tree retention from evaluated Dynamic channels. Its named importer
+characterization uses unchanged public trees (Folder `RefId` remains absent),
+exact bytes/source/device ownership and object order. This is coverage/contract
+work only, not folder rendering, manufacturer mapping or completion of WP-06.
 [Object table contract](COMMUNICATION_OBJECT_TABLE.md) ·
 [KL-003 census follow-up](limitations/KL-003-parameter-evaluation-and-editing-boundaries.md).
 

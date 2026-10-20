@@ -51,7 +51,7 @@ it differs, 1 not compared). No `bus` command returns `2`.
 ## Working with projects
 
 <a id="monitor-export"></a>
-### `knx monitor-export` — offline monitoring snapshot (source implementation in progress)
+### `knx monitor-export` — offline monitoring snapshot (source builds since 21 October 2026)
 
 ```bash
 knx monitor-export house.knxdb house-monitoring.zip --no-product-db
@@ -90,8 +90,9 @@ as a complete ZIP published with unconfirmed durability, not as no file written.
 No bus, network, manufacturer reinstall or receiver service is involved. Treat
 names, room labels and addresses as private. See the
 [monitoring workflow and exclusions](08-reports-and-diff.md#monitoring-export).
-This source candidate has passed focused and actual browser/backend checks;
-maintained package/integrated acceptance and release availability remain separate.
+Available in source builds containing `4eee65d8` or newer, with
+[internal acceptance complete](../../IMPLEMENTATION_STATUS.md#monitoring-snapshot-export--source-delivery).
+A new tagged release and receiving-tool compatibility are not implied.
 
 ### `knx import` — read an ETS project
 

@@ -8,8 +8,8 @@ loss report in one deterministic ZIP. `monitoring-sparse-v1` omits and reports
 unknown security/flag fields rather than inventing false values. It is not a
 complete external schema, native backup or ETS writer. File adapters select the
 recoverable working snapshot; HTTP adapters use the open snapshot. No native or
-product schema change is introduced. Runtime acceptance and receiving-application
-integration are separate and remain pending for this in-progress feature.
+product schema change is introduced. [Source delivery and internal runtime checks](IMPLEMENTATION_STATUS.md#monitoring-snapshot-export--source-delivery)
+are complete; receiving-application integration remains separately unverified.
 
 <a id="earlier-promotion-repair-v28-candidate-after-alpha-15"></a>
 ## Earlier promotion repair (v28 source delivery)

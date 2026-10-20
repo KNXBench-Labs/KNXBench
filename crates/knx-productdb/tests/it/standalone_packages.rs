@@ -980,6 +980,547 @@ fn decoded_file_prefix_collisions_and_directory_payloads_are_rejected() {
     assert!(install_package(&conn, "directory.knxprod", &ordinary_directory).is_ok());
 }
 
+// Shared only with wrapper_packages: exact compressed fixtures must not go
+// through ZipWriter, which would rewrite the streams being tested.
+pub(super) mod wp16 {
+    use super::*;
+
+    pub(crate) const DIRECTORY: &[u8] = b"M-0001/Baggages/empty/";
+    pub(crate) const EMPTY: &[u8] = &[0x03, 0x00];
+    pub(crate) const TRAILING: &[u8] = b"\x03\x00hidden";
+
+    pub(crate) struct RawMember<'a> {
+        pub name: &'a [u8],
+        pub data: &'a [u8],
+        pub method: u16,
+        pub crc: u32,
+        pub size: u32,
+        pub flags: u16,
+        pub extra: &'a [u8],
+    }
+
+    impl<'a> RawMember<'a> {
+        pub(crate) fn stored(name: &'a [u8], data: &'a [u8]) -> Self {
+            Self {
+                name,
+                data,
+                method: 0,
+                crc: crc32fast::hash(data),
+                size: data.len().try_into().unwrap(),
+                flags: 0,
+                extra: &[],
+            }
+        }
+
+        pub(crate) fn directory(name: &'a [u8], stream: &'a [u8]) -> Self {
+            Self {
+                method: 8,
+                crc: 0,
+                size: 0,
+                ..Self::stored(name, stream)
+            }
+        }
+    }
+
+    pub(crate) fn raw_zip(members: &[RawMember<'_>]) -> Vec<u8> {
+        let mut bytes = Vec::new();
+        let mut central = Vec::new();
+        for member in members {
+            let offset: u32 = bytes.len().try_into().unwrap();
+            let compressed: u32 = member.data.len().try_into().unwrap();
+            let name_len: u16 = member.name.len().try_into().unwrap();
+            let extra_len: u16 = member.extra.len().try_into().unwrap();
+            let mut local = [0_u8; 30];
+            local[..4].copy_from_slice(b"PK\x03\x04");
+            local[4..6].copy_from_slice(&20_u16.to_le_bytes());
+            local[6..8].copy_from_slice(&member.flags.to_le_bytes());
+            local[8..10].copy_from_slice(&member.method.to_le_bytes());
+            local[14..18].copy_from_slice(&member.crc.to_le_bytes());
+            local[18..22].copy_from_slice(&compressed.to_le_bytes());
+            local[22..26].copy_from_slice(&member.size.to_le_bytes());
+            local[26..28].copy_from_slice(&name_len.to_le_bytes());
+            local[28..30].copy_from_slice(&extra_len.to_le_bytes());
+            bytes.extend_from_slice(&local);
+            bytes.extend_from_slice(member.name);
+            bytes.extend_from_slice(member.extra);
+            bytes.extend_from_slice(member.data);
+
+            let mut header = [0_u8; 46];
+            header[..4].copy_from_slice(b"PK\x01\x02");
+            header[4..6].copy_from_slice(&20_u16.to_le_bytes());
+            header[6..8].copy_from_slice(&20_u16.to_le_bytes());
+            header[8..10].copy_from_slice(&member.flags.to_le_bytes());
+            header[10..12].copy_from_slice(&member.method.to_le_bytes());
+            header[16..20].copy_from_slice(&member.crc.to_le_bytes());
+            header[20..24].copy_from_slice(&compressed.to_le_bytes());
+            header[24..28].copy_from_slice(&member.size.to_le_bytes());
+            header[28..30].copy_from_slice(&name_len.to_le_bytes());
+            header[30..32].copy_from_slice(&extra_len.to_le_bytes());
+            header[42..46].copy_from_slice(&offset.to_le_bytes());
+            central.extend_from_slice(&header);
+            central.extend_from_slice(member.name);
+            central.extend_from_slice(member.extra);
+        }
+        let directory: u32 = bytes.len().try_into().unwrap();
+        let central_size: u32 = central.len().try_into().unwrap();
+        let count: u16 = members.len().try_into().unwrap();
+        bytes.extend(central);
+        let mut end = [0_u8; 22];
+        end[..4].copy_from_slice(b"PK\x05\x06");
+        end[8..10].copy_from_slice(&count.to_le_bytes());
+        end[10..12].copy_from_slice(&count.to_le_bytes());
+        end[12..16].copy_from_slice(&central_size.to_le_bytes());
+        end[16..20].copy_from_slice(&directory.to_le_bytes());
+        bytes.extend_from_slice(&end);
+        bytes
+    }
+
+    pub(crate) fn descriptor(bytes: Vec<u8>, signed: bool) -> Vec<u8> {
+        add_data_descriptor_to_last_member(bytes, signed, false)
+    }
+
+    pub(crate) fn product(member: RawMember<'_>) -> Vec<u8> {
+        raw_zip(&[
+            RawMember::stored(b"knx_master.xml", MASTER),
+            RawMember::stored(b"M-0001/Hardware.xml", HARDWARE),
+            member,
+        ])
+    }
+
+    pub(crate) fn seed(conn: &Connection) {
+        install_package(
+            conn,
+            "seed.knxprod",
+            &archive(&[
+                ("knx_master.xml", MASTER),
+                ("M-0001/Hardware.xml", HARDWARE),
+                ("M-0001/Baggages/retained.bin", b"retained source bytes"),
+            ]),
+        )
+        .unwrap();
+    }
+
+    fn files(dir: &std::path::Path) -> Vec<(std::ffi::OsString, Vec<u8>)> {
+        let mut files: Vec<_> = std::fs::read_dir(dir)
+            .unwrap()
+            .map(|entry| {
+                let entry = entry.unwrap();
+                (entry.file_name(), std::fs::read(entry.path()).unwrap())
+            })
+            .collect();
+        files.sort_by(|a, b| a.0.cmp(&b.0));
+        files
+    }
+
+    // Close/reopen around the attempt, then compare every database/sidecar
+    // byte, not a subset of table counts. All files are test-owned synthetic data.
+    pub(crate) fn preserved_refusal<T>(
+        prepare: impl FnOnce(&Connection),
+        attempt: impl FnOnce(&Connection) -> Result<T, PackageError>,
+    ) -> PackageError {
+        let (dir, conn) = db();
+        prepare(&conn);
+        drop(conn);
+        let before = files(dir.path());
+        let conn = open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+        let result = attempt(&conn);
+        drop(conn);
+        let error = match result {
+            Err(error) => error,
+            Ok(_) => panic!("WP16 malformed member must refuse, not install"),
+        };
+        assert!(
+            files(dir.path()) == before,
+            "WP16 refusal must preserve every database and sidecar byte"
+        );
+        let reopened = open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+        assert_eq!(
+            reopened
+                .query_row("PRAGMA integrity_check", [], |row| row.get::<_, String>(0))
+                .unwrap(),
+            "ok"
+        );
+        error
+    }
+
+    pub(crate) fn named_invalid(error: PackageError, path: &str, reason: &[&str]) {
+        let cause = match error {
+            PackageError::InvalidZip { cause } => cause,
+            other => panic!("expected WP16 InvalidZip refusal, got {other}"),
+        };
+        let lower = cause.to_ascii_lowercase();
+        assert!(
+            reason.iter().any(|fragment| lower.contains(fragment)),
+            "lost WP16 cause {reason:?}: {cause}"
+        );
+        assert!(cause.contains(path), "missing decoded leaf {path}: {cause}");
+    }
+
+    pub(crate) const STREAM_CAUSE: &[&str] = &["deflate", "stream", "end of file", "eof"];
+    pub(crate) const CRC_CAUSE: &[&str] = &["crc", "checksum"];
+
+    fn refused_member(member: RawMember<'_>, reason: &[&str]) {
+        let bytes = product(member);
+        let error = preserved_refusal(seed, |conn| {
+            install_package(conn, "damaged.knxprod", &bytes)
+        });
+        named_invalid(error, "M-0001/Baggages/empty/", reason);
+    }
+
+    fn accepted_directory(bytes: Vec<u8>) {
+        let (_dir, conn) = db();
+        let report = install_package(&conn, "empty-directory.knxprod", &bytes).unwrap();
+        assert_eq!(
+            report.members.len(),
+            2,
+            "directories are not retained files"
+        );
+        assert_eq!(report.unknown, 0, "no new directory diagnostics");
+        assert!(report.conflicts.is_empty());
+        assert_eq!(report.sha256, knx_productdb::sha256_hex(&bytes));
+        let retained: Vec<u8> = conn
+            .query_row(
+                "SELECT bytes FROM package WHERE sha256 = ?1",
+                [&report.sha256],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert!(
+            retained == bytes,
+            "original archive must be retained byte-exact"
+        );
+        for (path, data) in [
+            ("knx_master.xml", MASTER),
+            ("M-0001/Hardware.xml", HARDWARE),
+        ] {
+            let member = report
+                .members
+                .iter()
+                .find(|member| member.path == path)
+                .unwrap();
+            assert_eq!(member.size, data.len() as u64);
+            assert_eq!(member.sha256, knx_productdb::sha256_hex(data));
+            let retained: Vec<u8> = conn
+                .query_row(
+                    "SELECT bytes FROM source_file WHERE sha256 = ?1",
+                    [&member.sha256],
+                    |r| r.get(0),
+                )
+                .unwrap();
+            assert_eq!(retained, data);
+        }
+    }
+
+    fn multi_chunk_empty_stream() -> Vec<u8> {
+        // 2,000 non-final stored empty blocks cross the production staging
+        // boundary; a final fixed empty block terminates the same stream.
+        let mut stream = b"\x00\x00\x00\xff\xff".repeat(2_000);
+        stream.extend_from_slice(EMPTY);
+        stream
+    }
+
+    #[test]
+    fn multi_chunk_empty_directory_keeps_exact_archive_bytes() {
+        let stream = multi_chunk_empty_stream();
+        accepted_directory(product(RawMember::directory(DIRECTORY, &stream)));
+    }
+
+    #[test]
+    fn multi_chunk_directory_stream_refuses_trailing_bytes() {
+        let mut stream = multi_chunk_empty_stream();
+        stream.extend_from_slice(b"hidden");
+        refused_member(RawMember::directory(DIRECTORY, &stream), &["trailing"]);
+    }
+
+    #[test]
+    fn multi_chunk_directory_stream_refuses_missing_final_block() {
+        let mut stream = multi_chunk_empty_stream();
+        stream.truncate(stream.len() - EMPTY.len());
+        refused_member(RawMember::directory(DIRECTORY, &stream), STREAM_CAUSE);
+    }
+
+    #[test]
+    fn trailing_directory_stream_refuses_on_a_fresh_database() {
+        let bytes = product(RawMember::directory(DIRECTORY, TRAILING));
+        let error = preserved_refusal(
+            |_| {},
+            |conn| install_package(conn, "trailing.knxprod", &bytes),
+        );
+        named_invalid(error, "M-0001/Baggages/empty/", &["trailing"]);
+    }
+
+    #[test]
+    fn trailing_directory_stream_preserves_a_populated_database() {
+        refused_member(RawMember::directory(DIRECTORY, TRAILING), &["trailing"]);
+    }
+
+    #[test]
+    fn trailing_directory_stream_before_a_signed_descriptor_refuses() {
+        let bytes = add_data_descriptor_to_last_member(
+            product(RawMember::directory(DIRECTORY, TRAILING)),
+            true,
+            false,
+        );
+        let error = preserved_refusal(seed, |conn| {
+            install_package(conn, "signed-tail.knxprod", &bytes)
+        });
+        named_invalid(error, "M-0001/Baggages/empty/", &["trailing"]);
+    }
+
+    #[test]
+    fn trailing_directory_stream_before_an_unsigned_descriptor_refuses() {
+        let bytes = add_data_descriptor_to_last_member(
+            product(RawMember::directory(DIRECTORY, TRAILING)),
+            false,
+            false,
+        );
+        let error = preserved_refusal(seed, |conn| {
+            install_package(conn, "unsigned-tail.knxprod", &bytes)
+        });
+        named_invalid(error, "M-0001/Baggages/empty/", &["trailing"]);
+    }
+
+    #[test]
+    fn historical_hash_retry_revalidates_a_trailing_directory_before_source_names() {
+        let bytes = product(RawMember::directory(DIRECTORY, TRAILING));
+        let valid = product(RawMember::directory(DIRECTORY, EMPTY));
+        let bad_hash = knx_productdb::sha256_hex(&bytes);
+        let error = preserved_refusal(
+            |conn| {
+                let clean = install_package(conn, "clean.knxprod", &valid).unwrap();
+                conn.execute(
+                    "INSERT INTO package (sha256, source_name, scheme, size, bytes, unknown_count) VALUES (?1, 'historical.knxprod', 11, ?2, ?3, 0)",
+                    rusqlite::params![bad_hash, bytes.len() as i64, bytes],
+                ).unwrap();
+                conn.execute(
+                    "INSERT INTO package_member (package_sha256, ordinal, path, role, source_sha256, size) SELECT ?1, ordinal, path, role, source_sha256, size FROM package_member WHERE package_sha256 = ?2",
+                    rusqlite::params![bad_hash, clean.sha256],
+                ).unwrap();
+                conn.execute(
+                    "INSERT INTO package_source_name (package_sha256, source_name) VALUES (?1, 'historical.knxprod')",
+                    [&bad_hash],
+                ).unwrap();
+                // A legitimate historical package has an explicit unavailable
+                // report marker; omitting it would fail in report loading, not
+                // at the directory boundary this regression is meant to pin.
+                conn.execute(
+                    "INSERT INTO package_install_report (package_sha256, report_version, status, unknown_distinct, unknown_occurrences) VALUES (?1, 1, 'unavailable', 0, 0)",
+                    [&bad_hash],
+                ).unwrap();
+                conn.execute(
+                    "INSERT INTO package_baggage_inventory (package_sha256, status) VALUES (?1, 'unavailable')",
+                    [&bad_hash],
+                ).unwrap();
+            },
+            |conn| install_package(conn, "retry-must-not-be-added.knxprod", &bytes),
+        );
+        named_invalid(error, "M-0001/Baggages/empty/", &["trailing"]);
+    }
+
+    #[test]
+    fn missing_directory_stream_names_the_decoded_leaf() {
+        refused_member(RawMember::directory(DIRECTORY, &[]), STREAM_CAUSE);
+    }
+
+    #[test]
+    fn malformed_directory_stream_names_the_decoded_leaf() {
+        refused_member(RawMember::directory(DIRECTORY, &[0xff]), STREAM_CAUSE);
+    }
+
+    #[test]
+    fn truncated_directory_stream_names_the_decoded_leaf() {
+        refused_member(RawMember::directory(DIRECTORY, &[0x03]), STREAM_CAUSE);
+    }
+
+    #[test]
+    fn one_byte_directory_output_keeps_the_unsafe_member_variant() {
+        // A final stored deflate block containing exactly one byte, truthfully
+        // declared: keep the established directory-carries-data refusal.
+        let bytes = product(RawMember {
+            method: 8,
+            data: b"\x01\x01\x00\xfe\xffx",
+            ..RawMember::stored(DIRECTORY, b"x")
+        });
+        let error = preserved_refusal(seed, |conn| {
+            install_package(conn, "one-byte.knxprod", &bytes)
+        });
+        match error {
+            PackageError::UnsafeMember { path } => assert_eq!(path, "M-0001/Baggages/empty/"),
+            other => panic!("expected the established UnsafeMember refusal, got {other}"),
+        }
+    }
+
+    #[test]
+    fn zero_declared_directory_with_one_byte_output_names_the_leaf() {
+        refused_member(
+            RawMember::directory(DIRECTORY, b"\x01\x01\x00\xfe\xffx"),
+            &["output", "data", "crc", "checksum"],
+        );
+    }
+
+    #[test]
+    fn stored_directory_crc_error_names_the_leaf() {
+        refused_member(
+            RawMember {
+                crc: 1,
+                ..RawMember::stored(DIRECTORY, &[])
+            },
+            CRC_CAUSE,
+        );
+    }
+
+    #[test]
+    fn deflated_directory_crc_error_names_the_leaf() {
+        refused_member(
+            RawMember {
+                crc: 1,
+                ..RawMember::directory(DIRECTORY, EMPTY)
+            },
+            CRC_CAUSE,
+        );
+    }
+
+    #[test]
+    fn signed_descriptor_directory_crc_error_names_the_leaf() {
+        let bytes = add_data_descriptor_to_last_member(
+            product(RawMember {
+                crc: 1,
+                ..RawMember::directory(DIRECTORY, EMPTY)
+            }),
+            true,
+            false,
+        );
+        let error = preserved_refusal(seed, |conn| {
+            install_package(conn, "crc-descriptor.knxprod", &bytes)
+        });
+        named_invalid(error, "M-0001/Baggages/empty/", CRC_CAUSE);
+    }
+
+    #[test]
+    fn ordinary_file_crc_error_uses_the_cp437_decoded_leaf() {
+        let bytes = product(RawMember {
+            crc: 0,
+            ..RawMember::stored(b"M-0001/Baggages/Gr\x81sse.bin", b"ordinary bytes")
+        });
+        let error = preserved_refusal(seed, |conn| {
+            install_package(conn, "file-crc.knxprod", &bytes)
+        });
+        named_invalid(error, "M-0001/Baggages/Grüsse.bin", CRC_CAUSE);
+    }
+
+    #[test]
+    fn ordinary_file_stream_error_names_the_leaf() {
+        let bytes = product(RawMember {
+            name: b"M-0001/Baggages/broken.bin",
+            ..RawMember::directory(DIRECTORY, &[0xff])
+        });
+        let error = preserved_refusal(seed, |conn| {
+            install_package(conn, "file-stream.knxprod", &bytes)
+        });
+        named_invalid(error, "M-0001/Baggages/broken.bin", STREAM_CAUSE);
+    }
+
+    pub(crate) fn named_open_error(error: PackageError, path: &str) {
+        named_invalid(error, path, &["compression method not supported: 12"]);
+    }
+
+    #[test]
+    fn member_open_error_names_the_cp437_decoded_leaf() {
+        let bytes = product(RawMember {
+            method: 12,
+            ..RawMember::stored(b"M-0001/Baggages/Gr\x81sse-codec.bin", &[])
+        });
+        // Prove this fixture reaches member-open: archive construction and
+        // raw metadata both succeed, exposing a checked decoded identity.
+        // This does not impose leaf context on earlier archive-level errors.
+        let mut parsed = zip::ZipArchive::new(Cursor::new(&bytes)).unwrap();
+        assert_eq!(
+            parsed.by_index_raw(2).unwrap().name(),
+            "M-0001/Baggages/Grüsse-codec.bin"
+        );
+        match parsed.by_index(2) {
+            Err(zip::result::ZipError::CompressionMethodNotSupported(12)) => {}
+            Err(other) => panic!("expected codec refusal at member open, got {other}"),
+            Ok(_) => panic!("unsupported codec must refuse at member open"),
+        }
+        let error = preserved_refusal(seed, |conn| install_package(conn, "codec.knxprod", &bytes));
+        named_open_error(error, "M-0001/Baggages/Grüsse-codec.bin");
+    }
+
+    #[test]
+    fn stored_empty_directory_keeps_archive_and_member_bytes() {
+        accepted_directory(product(RawMember::stored(DIRECTORY, &[])));
+    }
+
+    #[test]
+    fn jar_shaped_stored_empty_directory_keeps_archive_and_member_bytes() {
+        accepted_directory(product(RawMember {
+            flags: 1 << 11,
+            extra: &[0xfe, 0xca, 0, 0],
+            ..RawMember::stored(DIRECTORY, &[])
+        }));
+    }
+
+    #[test]
+    fn fixed_empty_deflate_directory_keeps_archive_and_member_bytes() {
+        accepted_directory(product(RawMember::directory(DIRECTORY, EMPTY)));
+    }
+
+    #[test]
+    fn alternate_empty_deflate_directory_keeps_archive_and_member_bytes() {
+        accepted_directory(product(RawMember::directory(
+            DIRECTORY,
+            &[0x01, 0, 0, 0xff, 0xff],
+        )));
+    }
+
+    #[test]
+    fn java_signed_descriptor_empty_directory_is_not_trailing_stream_data() {
+        let bytes = product(RawMember {
+            flags: 1 << 11,
+            ..RawMember::directory(DIRECTORY, EMPTY)
+        });
+        accepted_directory(add_data_descriptor_to_last_member(bytes, true, false));
+    }
+
+    #[test]
+    fn unsigned_descriptor_empty_directory_is_not_trailing_stream_data() {
+        accepted_directory(add_data_descriptor_to_last_member(
+            product(RawMember::directory(DIRECTORY, EMPTY)),
+            false,
+            false,
+        ));
+    }
+
+    #[test]
+    fn ordinary_file_trailing_deflate_policy_is_unchanged() {
+        let bytes = product(RawMember {
+            name: b"M-0001/Baggages/ordinary.bin",
+            ..RawMember::directory(DIRECTORY, TRAILING)
+        });
+        let (_dir, conn) = db();
+        let report = install_package(&conn, "ordinary-tail.knxprod", &bytes).unwrap();
+        let member = report
+            .members
+            .iter()
+            .find(|member| member.path == "M-0001/Baggages/ordinary.bin")
+            .unwrap();
+        assert_eq!(member.size, 0);
+        assert_eq!(member.sha256, knx_productdb::sha256_hex(&[]));
+        let retained: Vec<u8> = conn
+            .query_row(
+                "SELECT bytes FROM package WHERE sha256 = ?1",
+                [&report.sha256],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert!(
+            retained == bytes,
+            "ordinary-file policy does not rewrite the archive"
+        );
+    }
+}
+
 #[test]
 fn central_extent_local_ranges_and_crc_size_metadata_must_agree() {
     let valid = archive(&[

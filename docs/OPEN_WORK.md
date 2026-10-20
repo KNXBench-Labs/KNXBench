@@ -431,11 +431,17 @@ complete stream (none, truncated or malformed); stored, `jar`, Java
 `ZipOutputStream` and other complete empty deflate shapes still import, and a
 refusal leaves existing project and product databases unchanged
 ([KL-159 update](limitations/KL-159-project-archive-budgets-and-duplicate-names.md)).
+**Implemented follow-up (20 October 2026; delivery acceptance pending):** the
+product-package reader checks complete, exactly consumed empty DEFLATE directory
+streams after its existing bounded CRC reader. Member-open/read refusals include
+the validated decoded leaf name. Standalone, outer-wrapper, inner-package and
+historical retry regressions preserve database bytes; valid directory shapes
+remain accepted. [Evidence and scope](research/2026-10-20-product-directory-stream-integrity.md).
+
 **Remaining, unowned:** a deflated *file* whose compressed bytes continue
 behind the end of its stream imports with those bytes in no member (both
-layers); the product-package reader accepts the same trailing bytes behind
-a directory's empty stream and names no member in its CRC/stream refusals.
-Each needs its own package.
+layers). Ordinary-file trailing policy and directory encryption-header semantics
+require separate packages; neither is changed here.
 
 **Scope:** KL-159's documented zero-size directory corner in project containers,
 including nested archives: a nonzero CRC for empty output and a deflated entry

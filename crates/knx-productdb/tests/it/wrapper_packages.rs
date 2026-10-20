@@ -458,6 +458,196 @@ fn a_plain_package_preview_has_no_wrapper_section() {
     assert!(preview.wrapper.is_none());
 }
 
+mod wp16 {
+    use super::*;
+    use crate::standalone_packages::wp16::{
+        descriptor, named_invalid, named_open_error, preserved_refusal, product, raw_zip,
+        RawMember, CRC_CAUSE, DIRECTORY, EMPTY, STREAM_CAUSE, TRAILING,
+    };
+
+    fn seed(conn: &Connection) {
+        install_package(conn, "existing.knxprod", &package(0x10)).unwrap();
+    }
+
+    fn outer(member: RawMember<'_>) -> Vec<u8> {
+        raw_zip(&[RawMember::stored(b"good.knxprod", &package(0x11)), member])
+    }
+
+    fn install(
+        conn: &Connection,
+        bytes: &[u8],
+    ) -> Result<knx_productdb::ProductFileInstall, PackageError> {
+        install_product_file(conn, "vendor.zip", bytes, PackageLimits::STANDARD)
+    }
+
+    fn inner_error(bytes: &[u8], populated: bool) -> PackageError {
+        let wrapper = zip_of(&[
+            ("first-new.knxprod", &package(0x11)),
+            ("broken.knxprod", bytes),
+        ]);
+        let error = preserved_refusal(
+            |conn| {
+                if populated {
+                    seed(conn);
+                }
+                assert_eq!(
+                    count(
+                        conn,
+                        "SELECT count(*) FROM application_program WHERE application_version = 17"
+                    ),
+                    0,
+                    "first member must be a new install, not an idempotent skip"
+                );
+            },
+            |conn| install(conn, &wrapper),
+        );
+        match error {
+            PackageError::WrapperMember { path, error } => {
+                assert_eq!(path, "broken.knxprod");
+                *error
+            }
+            other => panic!("expected a refusal inside broken.knxprod, got {other}"),
+        }
+    }
+
+    #[test]
+    fn standalone_entry_point_refuses_a_trailing_directory_stream() {
+        let bytes = product(RawMember::directory(DIRECTORY, TRAILING));
+        let error = preserved_refusal(seed, |conn| install(conn, &bytes));
+        named_invalid(error, "M-0001/Baggages/empty/", &["trailing"]);
+    }
+
+    #[test]
+    fn outer_trailing_directory_refuses_on_a_fresh_database() {
+        let bytes = outer(RawMember::directory(b"docs/empty/", TRAILING));
+        let error = preserved_refusal(|_| {}, |conn| install(conn, &bytes));
+        named_invalid(error, "docs/empty/", &["trailing"]);
+    }
+
+    #[test]
+    fn outer_trailing_directory_preserves_a_populated_database() {
+        let bytes = outer(RawMember::directory(b"docs/empty/", TRAILING));
+        let error = preserved_refusal(seed, |conn| install(conn, &bytes));
+        named_invalid(error, "docs/empty/", &["trailing"]);
+    }
+
+    #[test]
+    fn inner_trailing_directory_rolls_back_an_earlier_new_package_on_a_fresh_database() {
+        let bytes = product(RawMember::directory(DIRECTORY, TRAILING));
+        named_invalid(
+            inner_error(&bytes, false),
+            "M-0001/Baggages/empty/",
+            &["trailing"],
+        );
+    }
+
+    #[test]
+    fn inner_trailing_directory_rolls_back_an_earlier_new_package_on_a_populated_database() {
+        let bytes = product(RawMember::directory(DIRECTORY, TRAILING));
+        named_invalid(
+            inner_error(&bytes, true),
+            "M-0001/Baggages/empty/",
+            &["trailing"],
+        );
+    }
+
+    #[test]
+    fn outer_directory_crc_error_names_the_leaf_without_mutation() {
+        let bytes = outer(RawMember {
+            crc: 1,
+            ..RawMember::stored(b"docs/empty/", &[])
+        });
+        let error = preserved_refusal(seed, |conn| install(conn, &bytes));
+        named_invalid(error, "docs/empty/", CRC_CAUSE);
+    }
+
+    #[test]
+    fn inner_directory_crc_error_names_both_layers_and_rolls_back() {
+        let bytes = product(RawMember {
+            crc: 1,
+            ..RawMember::directory(DIRECTORY, EMPTY)
+        });
+        named_invalid(
+            inner_error(&bytes, true),
+            "M-0001/Baggages/empty/",
+            CRC_CAUSE,
+        );
+    }
+
+    #[test]
+    fn outer_directory_stream_error_names_the_cp437_decoded_leaf() {
+        let bytes = outer(RawMember::directory(b"docs/Gr\x81sse/", &[0xff]));
+        let error = preserved_refusal(seed, |conn| install(conn, &bytes));
+        named_invalid(error, "docs/Grüsse/", STREAM_CAUSE);
+    }
+
+    #[test]
+    fn inner_directory_stream_error_names_both_layers_and_rolls_back() {
+        let bytes = product(RawMember::directory(DIRECTORY, &[0x03]));
+        named_invalid(
+            inner_error(&bytes, true),
+            "M-0001/Baggages/empty/",
+            STREAM_CAUSE,
+        );
+    }
+
+    #[test]
+    fn inner_stream_refusal_rolls_back_an_earlier_new_package_on_a_fresh_database() {
+        let bytes = product(RawMember::directory(DIRECTORY, &[0xff]));
+        named_invalid(
+            inner_error(&bytes, false),
+            "M-0001/Baggages/empty/",
+            STREAM_CAUSE,
+        );
+    }
+
+    #[test]
+    fn outer_member_open_error_names_the_leaf_without_mutation() {
+        let bytes = outer(RawMember {
+            method: 12,
+            ..RawMember::stored(b"docs/codec.bin", &[])
+        });
+        named_open_error(
+            preserved_refusal(seed, |conn| install(conn, &bytes)),
+            "docs/codec.bin",
+        );
+    }
+
+    #[test]
+    fn inner_member_open_error_names_both_layers_and_rolls_back() {
+        let bytes = product(RawMember {
+            method: 12,
+            ..RawMember::stored(b"M-0001/Baggages/codec.bin", &[])
+        });
+        named_open_error(inner_error(&bytes, true), "M-0001/Baggages/codec.bin");
+    }
+
+    #[test]
+    fn outer_valid_signed_descriptor_directory_installs_the_new_package() {
+        let bytes = descriptor(outer(RawMember::directory(b"docs/empty/", EMPTY)), true);
+        let (_dir, conn) = fresh();
+        let result = install(&conn, &bytes).unwrap();
+        assert!(result.wrapper.is_some());
+        assert_eq!(result.packages.len(), 1);
+        assert_eq!(result.packages[0].path.as_deref(), Some("good.knxprod"));
+        assert_eq!(
+            stored_packages(&conn),
+            [(sha256_hex(&package(0x11)), package(0x11))]
+        );
+    }
+
+    #[test]
+    fn inner_valid_unsigned_descriptor_directory_keeps_exact_package_bytes() {
+        let bytes = descriptor(product(RawMember::directory(DIRECTORY, EMPTY)), false);
+        let wrapper = zip_of(&[("good.knxprod", &bytes)]);
+        let (_dir, conn) = fresh();
+        let result = install(&conn, &wrapper).unwrap();
+        assert!(result.wrapper.is_some());
+        assert_eq!(result.packages.len(), 1);
+        assert_eq!(stored_packages(&conn), [(sha256_hex(&bytes), bytes)]);
+    }
+}
+
 /// RFC 1740 AppleDouble header: magic 0x00051607, version 0x00020000.
 const APPLE_DOUBLE: &[u8] = b"\x00\x05\x16\x07\x00\x02\x00\x00Mac OS X        ";
 

@@ -1,7 +1,8 @@
 # Offline monitoring project export
 
-Status: implemented candidate; focused App/CLI/HTTP/web checks executed, final
-integrated acceptance and receiving-application acceptance remain separate.
+Status: source delivered on `main` as `4eee65d8` (21 October 2026), with
+[internal acceptance recorded](../IMPLEMENTATION_STATUS.md#monitoring-snapshot-export--source-delivery).
+Receiving-application interoperability remains unverified; this is not a new release.
 
 ## Purpose and boundaries
 

@@ -63,4 +63,22 @@ is needed.
 
 ## Delivery status
 
-Policy recorded before implementation. Production changes and acceptance pending.
+Policy recorded before implementation. The local repair extends the secondary
+check with fixed 8 KiB input and 64 KiB output buffers. It requires exact consumed
+input and checked output length, allowing output-only decoder progress and at
+most one byte beyond the checked expanded length before refusal.
+
+The original production passes 53 and fails 25 focused cases at the intended
+accepted-instead-of-refused assertion. The candidate passes all 78; standalone
+and wrapper owning selections and Clippy also pass. Thirteen acceptance pins
+are explicitly superseded, 39 previous directory-package cases and nine positive
+or malformed characterization controls remain, and seventeen named cases are
+added. These overlapping selections must not be added as distinct coverage.
+
+The same optimized synthetic reader probe measured 80 samples over four profiles
+with warmups and alternating order. Candidate/original median ratios range from
+1.38 to 1.84; the extra decode cost is real and disclosed, not an optimization.
+This is a hot-memory direct-reader measurement, not installation latency or
+peak-RSS evidence. Independent source review accepted with zero Critical/Important
+findings and final source hashes verified. Maintained delivery acceptance remains
+pending.

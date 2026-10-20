@@ -2619,8 +2619,7 @@ pub(crate) fn read_checked_member(
         .by_index(index)
         .map_err(|error| member_error(&error))?;
     let is_directory = file.is_dir();
-    let deflated_empty_directory =
-        is_directory && file.size() == 0 && file.compression() == zip::CompressionMethod::Deflated;
+    let deflated = file.compression() == zip::CompressionMethod::Deflated;
     let compressed_size = file.compressed_size();
     let mut data = Vec::new();
     (&mut file)
@@ -2634,62 +2633,74 @@ pub(crate) fn read_checked_member(
     if data_len != file.size() {
         return Err(zip_error(format!("size mismatch for {path}")));
     }
+    if is_directory && !data.is_empty() {
+        return Err(PackageError::UnsafeMember { path });
+    }
+    if deflated {
+        drop(file);
+        let mut raw = archive
+            .by_index_raw(index)
+            .map_err(|error| member_error(&error))?;
+        check_deflate_stream(&mut raw, compressed_size, data_len)
+            .map_err(|error| member_error(&error))?;
+    }
     if is_directory {
-        if !data.is_empty() {
-            return Err(PackageError::UnsafeMember { path });
-        }
-        if deflated_empty_directory {
-            drop(file);
-            let mut raw = archive
-                .by_index_raw(index)
-                .map_err(|error| member_error(&error))?;
-            check_empty_directory_stream(&mut raw, compressed_size)
-                .map_err(|error| member_error(&error))?;
-        }
         return Ok((path, None));
     }
     Ok((path, Some(data)))
 }
 
-/// Recheck only empty directory DEFLATE payloads, after the usual CRC reader.
-/// Fixed buffers bound both compressed staging and expanded output; raw member
-/// reads exclude the already validated data descriptor. Ordinary files retain
-/// the codec reader's existing trailing-input policy.
-fn check_empty_directory_stream(
+/// Recheck DEFLATE extents after the usual CRC and size reader. Fixed buffers
+/// bound staging and output without retaining a second expanded copy. Raw
+/// member reads exclude the already validated data descriptor.
+fn check_deflate_stream(
     raw: &mut impl Read,
     compressed_size: u64,
+    expected_size: u64,
 ) -> Result<(), &'static str> {
     let mut inflater = Decompress::new(false);
     let mut input = [0_u8; 8192];
-    let mut output = [0_u8; 1];
+    let mut output = [0_u8; 65536];
+    let mut read = 0;
+    let mut offset = 0;
     loop {
-        let read = raw
-            .read(&mut input)
-            .map_err(|_| "directory stream read failed")?;
-        let mut offset = 0;
-        loop {
-            let before = inflater.total_in();
-            let status =
-                inflater.decompress(&input[offset..read], &mut output, FlushDecompress::None);
-            if inflater.total_out() != 0 {
-                return Err("directory deflate stream carries data");
-            }
-            if matches!(status, Ok(Status::StreamEnd)) {
-                return if inflater.total_in() == compressed_size {
-                    Ok(())
-                } else {
-                    Err("trailing data after directory deflate stream")
-                };
-            }
-            let consumed = inflater.total_in() - before;
-            if status.is_err() || consumed == 0 {
-                return Err("incomplete or malformed directory deflate stream");
-            }
-            offset += consumed as usize;
-            if offset == read {
-                break;
-            }
+        if offset == read {
+            read = raw
+                .read(&mut input)
+                .map_err(|_| "deflate stream read failed")?;
+            offset = 0;
         }
+        // Allow at most one byte beyond the already checked decoded length.
+        // Subtraction is safe: every preceding call checked total_out below.
+        let output_limit =
+            (expected_size - inflater.total_out()).min(output.len() as u64 - 1) as usize + 1;
+        let before_in = inflater.total_in();
+        let before_out = inflater.total_out();
+        let status = inflater.decompress(
+            &input[offset..read],
+            &mut output[..output_limit],
+            FlushDecompress::None,
+        );
+        if inflater.total_out() > expected_size {
+            return Err("deflate stream exceeds checked output size");
+        }
+        if matches!(status, Ok(Status::StreamEnd)) {
+            return if inflater.total_in() != compressed_size {
+                Err("trailing data after deflate stream")
+            } else if inflater.total_out() != expected_size {
+                Err("deflate stream output size mismatch")
+            } else {
+                Ok(())
+            };
+        }
+        let consumed = inflater.total_in() - before_in;
+        let produced = inflater.total_out() - before_out;
+        if status.is_err() || (consumed == 0 && produced == 0) {
+            return Err("incomplete or malformed deflate stream");
+        }
+        offset += consumed as usize;
+        // Output-only progress is valid, including after raw EOF: drain it
+        // until StreamEnd or a no-progress refusal rather than spinning.
     }
 }
 

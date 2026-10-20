@@ -12,6 +12,60 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## WP-04.3 A2 admission kernel — decision accepted (20 October 2026)
+
+The [bounded internal admission contract](contracts/catalogue-jobs/control-admission.md)
+passes independent implementation-decision review with no required or important
+findings. Two nonblocking clarifications distinguish synthetic preseeded binding
+payloads from later real preview production, and the partial internal Settling
+lease from eventual full protocol Status projection. The parent authenticated
+21 review inputs and 26 outputs; this is source/design evidence, not runtime.
+
+Test-first implementation is present in a private server module, with no
+production constructor, route, AppState field, SQL or installer integration.
+The actual A1 gate remains unchanged. Parent authentication reconciles 1,357
+worker evidence artifacts, 18 intended semantic REDs, six interface-absence
+observations, 22 incremental GREEN baselines and 11 already-GREEN characterization
+additions. Three setup/fixture/compile failures and the initial test-only Clippy
+refusal remain separately retained. One semantic RED is an actual unchecked-add
+runtime panic, not a returned typed refusal.
+
+Final worker Cargo discovery/execution agree on 29 passes / zero ignored;
+all-target warning-denied Clippy and package formatting pass on those same
+frozen source bytes. These are authenticated worker results, not independent
+code-review or package-delivery acceptance. Fresh parent checks on the same
+frozen bytes pass 29 focused tests and 1,086 owning server tests / 53 ignored,
+plus warning-denied all-target Clippy; selections overlap. The parent sequence
+still refuses at the maintained header check: the new test file lacks its
+module header (156 absent, ceiling 155). This is a convention defect, not a
+failed behavior test; the lint ceiling is not raised. Independent whole-source
+review returns REJECT for one important test-discrimination gap (I1), with no
+kernel implementation defect found: the original contended clock witness can
+observe the parent's mutex ownership rather than apply's. Eight separately
+compiled original-test wrong-branch controls are detected at their intended
+semantic assertions, with 29-test original/restored baselines; 291 retained
+mutation artifacts are authenticated. Those bounded controls do not resolve I1.
+The test-only correction is authenticated against 156 retained outputs and
+13 inputs: the new uncontended ownership witness has no competing mutex holder,
+and the retained deadline-crossing case now describes its rendezvous accurately.
+Corrected original / restored module baselines each pass 30 tests. A private
+compiled variant actually moves sampling before acquisition and consumes that
+stored sample; the new named assertion fails with observed `[false]` versus
+`[true]`. Fresh worker Cargo 30/30, all-target Clippy, formatting and headers
+pass, with the absent-header ceiling unchanged at 155. Kernel/lib/A1/contract
+bytes are unchanged. The original eight mutants retain their original test-byte
+provenance and mapped assertion lines; they were not rerun on corrected tests.
+Fresh parent corrected-source checks also pass: 30 exact focused tests,
+1,087 owning server tests / 53 ignored, warning-denied all-target Clippy and
+maintained headers. Selections overlap and are not added. Narrow independent
+I1 rereview returns **ACCEPT — I1 closed**, with no unresolved in-scope findings;
+the parent authenticates its 486 distinct input files and 18 outputs. This
+supersedes the original REJECT for the corrected tests without changing the
+historical proofs. Overall source review and owning checks are accepted;
+maintained branch/integrated package gates and publication remain pending. No
+authenticated owner, real binding or full Status/settlement outcome is claimed;
+WP-04.3 remains open.
+
 ## WP-04.3 A1 publication primitive — local verification (20 October 2026)
 
 `knx_productdb::operation` adds an unwired, non-resettable atomic publication

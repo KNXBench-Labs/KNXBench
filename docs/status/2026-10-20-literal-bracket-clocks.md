@@ -44,3 +44,33 @@ retirement must be recorded only after execution.
 [Contract](../contracts/web-test-gate.md) ·
 [Detector](../../tools/browser_lanes.py) ·
 [Tests](../../tools/tests/test_browser_lanes.py).
+
+## Verified delivery and retirement
+
+Delivered as main-first `c7a6aa8e` (feature `0a3ce3aa`) onto `b481842f`.
+Maintained change-scoped gate: all 11 parent and 29 web stages pass, including
+build, 22 derived typechecks, 4,136 Vitest cases and the complete 863-case
+default browser inventory (798 functional / 65 exclusive). All 340 registered
+tooling tests complete with one pre-existing optional skip. No production
+suites, Rust runtime, private corpus or release gate was selected.
+
+Controller checks require exact ordered stages, valid proofs, frozen input
+fingerprints, unchanged build/tool identities within the run, and empty
+parent touched/unchecked-user-data lists. Compiled browser identities match
+both lanes exactly; no retry, skip or invented empty lane. Local, tracking
+and live publication readback agreed. Source/test bytes match the review.
+
+The publishing wrapper initially refused because it stripped the captured
+handover's trailing newline on only one side. Exact raw blocks were identical;
+the original refusal remains retained. Subsequent re-verification observed a
+local Node update from v26.7.0 to v26.8.1 **after** the accepted gate. Retained
+acceptance remains bound to the measured v26.7.0 start/end identity and unchanged
+source/build/dependency inputs; it does not certify execution on the later
+runtime. A separate retained-evidence verifier reconciles this distinction;
+no runtime test was replayed or relabelled to repair publication bookkeeping.
+
+The private compact archive was verified member-by-member: 256 evidence files
+plus one manifest. Only the implementation worktree, two ancestor-checked
+merged branches and owned scratch were retired; the rebuildable target stays
+only through the result-documentation gate. The selected stale/dirty checkout,
+foreign research and other owners' work were preserved. Claim released.

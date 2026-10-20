@@ -20,12 +20,6 @@ security, GitHub-issue, hardware or whole-codebase conformance audit.
 
 ### Already owned — do not start a duplicate package
 
-- **Literal-bracket browser clocks (codex, 20 October):** bounded guard repair
-  for `Date["now"]()` / `performance['now']()` with either unescaped literal
-  quote and whitespace. Owns `tools/browser_lanes.py`, its focused tests and
-  web-gate contract/status updates. Preserve masking, helper/import propagation
-  and offsets; no arbitrary computed-property/alias parser or lane-selection
-  changes. Tests-first implementation follows the delivered planner package.
 
 - **WP-17 is delivered** on `main` (`d18ce65e`, 19 October): product DB v27
   master provenance; its parsing/provenance/report/migration claim is released.
@@ -730,7 +724,7 @@ Open, each small and none blocking:
   static-analysis fallback reasons. It does not infer exact per-spec causality
   from an unresolved closure. Selection, retries, budgets and complete-gate
   admission are unchanged; the planner edit itself requires a complete gate.
-- **Literal-bracket clocks (20 October source, acceptance pending):** the guard
+- **Literal-bracket clocks delivered (20 October, `c7a6aa8e`):** the guard
   recognises unescaped literal `Date["now"]()` / `performance['now']()` with
   either quote and whitespace, including function callbacks and test helpers.
   Computed/escaped properties, decoded page-code bracket calls, destructuring,

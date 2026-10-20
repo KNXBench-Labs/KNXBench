@@ -217,7 +217,7 @@ selections green. The [delivery record](IMPLEMENTATION_STATUS.md#wp-042-resolver
 records passed maintained integration and published source `6f68bcdd`. This does
 not implement the WP-04.3 web workflow.
 
-**WP-04.3 design in progress (20 October 2026):** both source inventories are
+**WP-04.3 implementation in progress (20 October 2026):** both source inventories are
 identity-verified (110 file/report entries, no mismatch). The
 [catalogue-job contract candidate](contracts/catalogue-update-jobs.md) proposes
 shared controlled installation, disk rehearsal, atomic cancel/commit arbitration,
@@ -229,9 +229,15 @@ for managed binding, named resources, artifact ownership, strict DTOs and real
 process drain are independently DESIGN READY after scoped corrections.
 [ADR-0150](adr/0150-cancellable-catalogue-jobs.md) accepts staged A–F implementation;
 the job functionality, runtime verification and delivery remain pending.
-Pinned sources and five synthetic SQLite mechanics cases do not supply new runtime,
-latency/RSS/quota, browser or cancellation guarantee is delivered. Existing
-synchronous behavior and profile limits remain unchanged.
+Pinned sources and five synthetic SQLite mechanics cases do not supply product
+runtime, latency/RSS/quota, browser or cancellation guarantees. The unwired A1
+gate/typed Stop primitive has nine focused parent passes and a complete owning
+ProductDB run (1,255 passes, 32 ignored); these overlap, not additive coverage.
+Independent review accepts A1 and all six compiled critical wrong-branch controls
+are detected by the unchanged tests. The feature gate passes; integrated
+acceptance/publication remain pending. Ready admission,
+transitive installer control, server lifecycle and shared UI remain unimplemented.
+Existing synchronous behavior and profile limits remain unchanged.
 
 **Three separate deliveries, in order:**
 

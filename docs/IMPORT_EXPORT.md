@@ -1,5 +1,16 @@
 # Import and export
 
+## Monitoring snapshot profile (implementation in progress)
+
+The separately admitted [monitoring export](contracts/monitor-project-export.md)
+projects one current normalized installation into plain JSON plus a hash-bound
+loss report in one deterministic ZIP. `monitoring-sparse-v1` omits and reports
+unknown security/flag fields rather than inventing false values. It is not a
+complete external schema, native backup or ETS writer. File adapters select the
+recoverable working snapshot; HTTP adapters use the open snapshot. No native or
+product schema change is introduced. Runtime acceptance and receiving-application
+integration are separate and remain pending for this in-progress feature.
+
 <a id="earlier-promotion-repair-v28-candidate-after-alpha-15"></a>
 ## Earlier promotion repair (v28 source delivery)
 

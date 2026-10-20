@@ -50,6 +50,49 @@ it differs, 1 not compared). No `bus` command returns `2`.
 
 ## Working with projects
 
+<a id="monitor-export"></a>
+### `knx monitor-export` — offline monitoring snapshot (source implementation in progress)
+
+```bash
+knx monitor-export house.knxdb house-monitoring.zip --no-product-db
+knx monitor-export house.knxdb house-monitoring-de.zip --installation 0 --language de --product-db products.sqlite
+```
+
+Creates a **new** ZIP containing plain `project.json`, its hash-bound
+`export-report.json` and `README.txt`. Existing destinations, including symbolic
+links, are refused rather than overwritten. This command reads recoverable native
+working state consistently; it does not see edits held only in another running
+process. Native/project and catalogue readers do not migrate the user's files.
+
+**File-reader boundary:** both inputs must be quiescent standalone SQLite files
+in rollback-journal layout, without `-wal`, `-shm` or `-journal` entries. WAL mode
+is refused even after a checkpoint removes the sidecars. Dangling catalogue links
+are errors, not an absent optional catalogue. Do not delete sidecars to bypass a
+refusal: close the owning application normally or use a safely consolidated copy.
+The exporter never recovers, checkpoints or changes journal mode for you. It does
+not coordinate with a concurrent external writer. For an already-open project,
+use the UI export, which reads the current live snapshot instead of reopening the
+native file. [Technical scope](../../research/2026-10-20-monitor-export-input-layout.md).
+
+The single installation is selected automatically; with several installations,
+`--installation` is required. `--language` selects text resolution language, not
+address notation; the project's GA style is retained. `--no-product-db` and
+`--product-db` are mutually exclusive. Missing product metadata is disclosed,
+never a reason to invent a manufacturer or default object flag.
+
+The output is deliberately `monitoring-sparse-v1`, not a complete external schema,
+ETS project or native backup. Unknown security/flag fields and unaddressed-device
+omissions appear in the report. Success prints exact entity counts and issue rows;
+issues do not mean the original project was changed. Exit `1` means refusal or an
+I/O failure. A directory-sync failure **after** publication is explicitly reported
+as a complete ZIP published with unconfirmed durability, not as no file written.
+
+No bus, network, manufacturer reinstall or receiver service is involved. Treat
+names, room labels and addresses as private. See the
+[monitoring workflow and exclusions](08-reports-and-diff.md#monitoring-export).
+This source candidate has passed focused and actual browser/backend checks;
+maintained package/integrated acceptance and release availability remain separate.
+
 ### `knx import` — read an ETS project
 
 ```bash

@@ -24,6 +24,7 @@ outside preserved historical blocks, or use the next free section number
 
 | Section | Where |
 | --- | --- |
+| [2026-10-20 — Monitoring-export input layout](research/2026-10-20-monitor-export-input-layout.md) | SQLite primary header/WAL/recovery facts, quiescent standalone CLI admission and actual-binary source-preservation regressions; no concurrent-writer guarantee |
 | [2026-10-20 — Catalogue job transactions](research/2026-10-20-catalogue-job-transactions.md) | Inspected SQLite backup/transaction/interrupt/observer documentation; proposed WP-04.3 boundary, no runtime cancellation or resource acceptance |
 | [2026-10-20 — System-2 validation rules](research/2026-10-20-system2-validation-rules.md) | Independently inspected historical schema prose, revision-bound schema20 mirror and original property-control grammar; explicit candidate hypotheses and physical recovery limits |
 | [2026-10-20 — Directory encryption-header validity](research/2026-10-20-directory-encryption-header-validity.md) | Source-traced outer/direct-inner/project/product boundaries, 94 verified original-runtime controls and explicit refusal contract; no new encryption support |

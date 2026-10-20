@@ -54,6 +54,7 @@ mod http_legacy_install;
 mod http_load_progress;
 mod http_log_route;
 mod http_modeled_metadata;
+mod http_monitor_export;
 mod http_name_recipe;
 mod http_native_export_binding;
 mod http_note_disposition;

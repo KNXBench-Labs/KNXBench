@@ -1,5 +1,16 @@
 # Compatibility
 
+## Monitoring snapshot profile (implementation in progress)
+
+The [monitoring export contract](contracts/monitor-project-export.md) defines an
+explicit `monitoring-sparse-v1` projection, not complete external-schema
+conformance. Unknown security/flag fields are omitted with diagnostics, and
+unrepresented engineering data remains in the native project, not in this ZIP.
+Structural/hash/reference checks, native/CLI/HTTP/UI execution and actual
+receiving-application import are distinct acceptance boundaries. No direct
+JSON/ZIP ingress or interoperability in a receiving application is verified.
+No ETS writer, backup format, model/product migration or bus support is added.
+
 ## UP258 System-2 candidate (20 October 2026)
 
 The [bounded source-to-simulator path](contracts/up258-system2-validation.md)

@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-20 11:27
+- **Completed:** Project ordinary-file package fully closed: runtime `8ccb99b3`, docs-only tail `0bd97509` published/readback equal; compact private evidence member-digest verified before owned worktree/branch/rebuildable scratch retirement. New CLAIM (owner next-open-tasks): remaining directory encryption-header validity, evidence-first only on `research/wp16-directory-crypto-20261020`.
+- **Pending/Next Steps:** Inspect project/product directory flag/header/raw-method/size paths and primary ZIP/cipher facts; characterize synthetic outer/nested encrypted directory records with absent/truncated/valid structural headers, descriptors and existing password/AES outcomes. No stricter policy or production implementation before evidence and explicit unsupported/encryption boundary. No real credential/password or encrypted corpus access in this claim.
+- **Notes for Codex oder Claude:** Previous project-file claim released. New scope does NOT implement directory decryption/AES/new codecs or weaken product encryption refusal. Parent owns handover/docs, future workers must have disjoint source/test ownership. Prior archive `<profile>/evidence/2026-10-20_project-file-stream-integrity.tar.gz` verified before cleanup. Preserve rootdirty/private identities/foreignAlpha16+UP258; no bus/device/desktop/release/deployment/vendor operation.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-20 11:23
 - **Completed:** Project ordinary-file stream package DELIVERED on `main` as `8ccb99b3`; local/tracking/live publication equality verified. Maintained scoped14/14GREEN:2500Rust tests/27binaries(175ignored),149/149selected corpus,323tool tests/one existing optional skip. Valid proofs/frozen inputs/empty user-data guard lists verified. Independent review0Critical/Important;153core/26newapp/59owning3ignored and core58/app18originalRED retained. Project-file claim RELEASED.
 - **Pending/Next Steps:** Publish result-only docs tail after cheap checks, archive+verify compact private evidence, retire only owned resources. Then fresh bounded investigation of remaining directory encryption-header validity (format/source/synthetic evidence before policy/production). No new encryption support, credential probing or private encrypted corpus scan follows from general task. Other owners retain Alpha16/exact-UP258.

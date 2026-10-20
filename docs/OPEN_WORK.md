@@ -466,7 +466,10 @@ Valid proofs, frozen inputs, clear user-data guards and publication readback
 verified; project ordinary-file claim released. No new encryption support,
 exhaustive project extent census or compatibility-safe guarantee.
 
-**Remaining, unowned:** directory encryption-header validity is separate scope.
+**Remaining, claimed (20 October 2026):** directory encryption-header validity,
+evidence-first investigation by next-open-tasks. Primary format/parser audit and
+synthetic outer/nested controls precede any policy or production change; no new
+cipher support, password guessing or real encrypted-corpus acquisition.
 Standalone and inner product archives previously retained the accepted trailers, while their
 normalized outputs and wrapper-only reports did not represent them; do not
 conflate that boundary with total archive data loss.

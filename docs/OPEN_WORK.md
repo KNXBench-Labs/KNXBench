@@ -642,6 +642,9 @@ browser regression in `tsconfig.workbench-fixtures.json`, discovered by the
 unchanged maintained runner; static coverage only, no application or browser
 assertion change. A compiler sentinel is rejected by that config while the
 application-only config does not see it; the browser spec is restored byte-exact.
+Delivered on main-first `73d02240` with accepted independent review and maintained
+scoped gate11/11/web29/29passed (4136Vitest,863default browser cases, all23derived
+typechecks; frozen inputs and user-data guards clear). Splitter claim released.
 Open, each small and none blocking:
 
 - Production suites run one after another with one worker each (771.7 s in

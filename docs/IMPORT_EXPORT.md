@@ -9,10 +9,12 @@ retention is distinct from normalized member bytes and reported-only wrapper
 extras. No product/native schema or supported codec change.
 [Product contract](contracts/product-file-stream-integrity.md).
 
-Project outer/nested/legacy-ZipCrypto stream admission is a separate pending
-repair under the [project contract](contracts/project-file-stream-integrity.md).
-Its source/characterization evidence does not prove real-project compatibility
-or application database preservation. Full project imports return decoded
+Project outer/nested/legacy-ZipCrypto stream admission is delivered as `8ccb99b3`
+under the [project contract](contracts/project-file-stream-integrity.md): exact
+plaintext compressed extents, existing password/size/lazy semantics preserved.
+Scoped application refusal/native-reopen/selective-history/restore-continuation
+tests pass; this is not general cross-database atomicity, live-WAL/crash proof
+or exhaustive real-project compatibility. Full project imports return decoded
 members; selective imports additionally retain an original source archive and
 scoped report. Historical records remain evidence of their original import,
 not a fresh measurement under a later policy. New AES support and directory

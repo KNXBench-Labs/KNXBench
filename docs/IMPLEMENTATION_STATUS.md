@@ -12,7 +12,7 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
-## Project file-stream extent integrity (20 October 2026; acceptance pending)
+## Project file-stream extent integrity (20 October 2026)
 
 Local project-container reads now enforce one complete DEFLATE extent across
 outer files, direct compressed nested carriers, plain nested files and supported
@@ -24,7 +24,11 @@ quiescent database preservation and intentional restore continuation are exercis
 Parent-run owning tests and all-targets Clippy pass. Project-path synthetic cost
 measurements are disclosed; they are not installation or real-project compatibility
 proof. Independent full-diff review accepted with zero Critical/Important findings
-and all seven source/test bindings verified. Maintained delivery gate pending.
+and all seven source/test bindings verified. Delivered on `main` as `8ccb99b3`:
+maintained scoped gate 14/14 GREEN, 2,500 Rust tests across 27 binaries (175
+ignored) and 149/149 selected corpus cases. Valid proofs, frozen source inputs,
+clear user-data guards and local/tracking/live publication equality verified.
+Project ordinary-file claim released; no full-workspace/browser/release claim.
 [Contract](contracts/project-file-stream-integrity.md) ·
 [Source/format evidence](research/2026-10-20-project-file-stream-boundaries.md).
 

@@ -144,5 +144,9 @@ dependency versions/checksums.
 
 Policy recorded before production changes. Local core and application checks
 pass; independent full-diff review accepted with zero Critical/Important findings
-and final source/test bindings rechecked. Maintained committed-head delivery gate
-remains pending. No new real-project census or broad compatibility claim.
+and final source/test bindings rechecked. Delivered on `main` as `8ccb99b3`:
+maintained scoped gate 14/14 GREEN, 2,500 Rust tests across 27 binaries (175
+ignored) and 149/149 selected corpus cases. All stage proofs valid, sources
+frozen, user-data guards clear and publication readback equal. Project
+ordinary-file claim released. No new real-project extent census, broad
+compatibility, full-workspace/browser or release claim.

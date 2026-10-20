@@ -12,6 +12,44 @@ Two things you will eventually want from any engineering project: a document tha
 describes it to someone who cannot open it, and an answer to "what changed?". KNXBench
 has one feature for each.
 
+<a id="monitoring-export"></a>
+## Offline monitoring export (source implementation in progress)
+
+The source candidate's **File → Import & export → Monitoring export…** action
+prepares a reduced snapshot of one installation. It does not contact the KNX bus,
+require an ETS file or upload anything. Focused and actual browser/backend checks
+have passed; maintained package/integrated acceptance remains pending. No
+released-build availability or receiving-tool compatibility is claimed here.
+
+Choose the installation, optionally choose a text language, and request a preview.
+Review the selected/exported/omitted entity counts and diagnostics before choosing
+**Download ZIP**. A project edit or changed catalogue-derived output invalidates
+the review: preview again rather than downloading an older selection. The dialog
+shows only a bounded diagnostic window; the complete report is inside the ZIP.
+
+The ZIP contains:
+
+- `project.json`: current names, addresses, objects, links, topology, rooms and
+  Functions in the deliberately reduced `monitoring-sparse-v1` profile;
+- `export-report.json`: counts, unavailable fields, omissions and the SHA-256 of
+  the exact project JSON;
+- `README.txt`: scope and handling instructions.
+
+**Not a backup.** Parameters, notes/instructions, manufacturer source files,
+attachments, keys, history and recovery data are excluded. Unknown group security
+and individual object flags are omitted and reported, not converted to `false`.
+Addressless devices and their objects are omitted explicitly. Duplicate addresses,
+ambiguous ownership and invalid hierarchy/reference graphs refuse the export.
+The profile is not a complete external engineering schema; a receiving tool needs
+its own separately tested JSON adapter. Renaming JSON to `.knxproj` does not make
+it an ETS archive.
+
+Names, room labels and installation addresses are private content. Review the ZIP
+before sharing; local export is not anonymization. Keep the original `.knxdb` for
+editing and recovery. For headless use see
+[`knx monitor-export`](10-command-line.md#monitor-export).
+[Engineering boundaries](../../contracts/monitor-project-export.md).
+
 <a id="send-diagnostic-data"></a>
 ## Sending diagnostic data from one device
 

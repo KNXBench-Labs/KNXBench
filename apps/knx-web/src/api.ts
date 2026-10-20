@@ -22,6 +22,41 @@ import { admitHistoryPage, assertHistoryBounds, HistoryContractError, type Histo
 import { admitActivitySnapshot, type ActivitySnapshot } from "./liveActivity";
 import { gatewayRefusalMessage } from "./gatewayRefusal";
 import { parseFlowSnapshot, type FlowSnapshot } from "./flowWire";
+import { admitMonitorExportPreview, type MonitorExportRequest, type MonitorExportPreview } from "./monitorExport";
+
+/** Explicit preview of one current installation; response identity must match the request. */
+export async function previewMonitorExport(options: MonitorExportRequest): Promise<MonitorExportPreview> {
+  return admitMonitorExportPreview(await request<unknown>("/api/project/monitor-export/preview", {
+    method: "POST", cache: "no-store", body: JSON.stringify(options),
+  }), options);
+}
+/** Fetch inert ZIP bytes, never navigate directly to an export endpoint. */
+export async function downloadMonitorExport(options: MonitorExportRequest, bundleSha256: string): Promise<Blob> {
+  if (!/^[a-f0-9]{64}$/.test(bundleSha256)) throw new Error("Invalid monitoring export digest");
+  const path = "/api/project/monitor-export/download";
+  const response = await fetch(path, {method: "POST", cache: "no-store", headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({...options, bundleSha256})});
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    noteRefusal(path, response.status);
+    throw requestError(response.status, body?.error ?? `${response.status} ${response.statusText}`, body);
+  }
+  const length = response.headers.get("content-length");
+  if (response.headers.get("content-type") !== "application/zip" ||
+    !/^attachment(?:;|$)/i.test(response.headers.get("content-disposition") ?? "") ||
+    (length !== null && (!/^\d+$/.test(length) || Number(length) > 64 * 1024 * 1024))) {
+    await response.body?.cancel(); throw new Error("Malformed monitoring export download");
+  }
+  const blob = await response.blob();
+  if (blob.size < 4 || blob.size > 64 * 1024 * 1024 || (length !== null && Number(length) !== blob.size)) throw new Error("Incomplete monitoring export download");
+  const signature = new Uint8Array(await blob.slice(0, 4).arrayBuffer());
+  if (signature[0] !== 80 || signature[1] !== 75 || signature[2] !== 3 || signature[3] !== 4) throw new Error("Invalid monitoring export ZIP");
+  if (!globalThis.crypto?.subtle) throw new Error("Monitoring export verification requires secure browser cryptography");
+  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", await blob.arrayBuffer()));
+  const actualSha256 = Array.from(digest, byte => byte.toString(16).padStart(2, "0")).join("");
+  if (actualSha256 !== bundleSha256) throw new Error("Monitoring export digest mismatch");
+  return blob;
+}
 
 /**
  * The three endpoints a login screen talks to (ADR-0026). Their own 401 is

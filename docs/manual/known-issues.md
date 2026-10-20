@@ -8,6 +8,20 @@ Historical titles do not mean that their old defect is still present. The
 [source/test audit](../status/2026-10-08-known-issues-status-audit.md) records
 the reconciliation; formal task dispositions remain in the engineering ledger.
 
+## Monitoring export profile (source implementation in progress)
+
+The [monitoring ZIP](user-guide/08-reports-and-diff.md#monitoring-export) is a
+reduced current snapshot, not a native/ETS backup or a complete external schema.
+It omits unknown group-security and object-flag fields with diagnostics instead
+of inventing `false`; addressless devices and their objects are counted as omitted.
+Manufacturer channel/module metadata and engineering-only data are not projected.
+Receiving applications need a separately verified sparse JSON adapter. The CLI
+file reader supports quiescent standalone rollback-layout stores only, refusing
+WAL mode and any WAL/SHM/journal entries before opening either input. Do not delete
+sidecars to bypass the refusal; see [CLI input handling](user-guide/10-command-line.md#monitor-export).
+Runtime acceptance and release availability remain pending; no receiver/bus
+compatibility is claimed by the implementation work.
+
 ## UP258 System-2 candidate (source, 20 October 2026)
 
 The [complete-defaults validation workflow](../contracts/up258-system2-validation.md)

@@ -169,7 +169,10 @@ fn replay_and_v26_migration_never_choose_historical_winners_or_rewrite_values() 
     conn.execute_batch("DROP TABLE master_winner; DROP TABLE master_declaration; DROP TABLE master_source; PRAGMA user_version=26").unwrap();
     drop(conn);
     let conn = open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
-    assert_eq!(number(&conn, "PRAGMA user_version"), 27);
+    assert_eq!(
+        number(&conn, "PRAGMA user_version"),
+        knx_productdb::CURRENT_PRODUCTDB_VERSION
+    );
     assert_eq!(
         table_values(
             &conn,

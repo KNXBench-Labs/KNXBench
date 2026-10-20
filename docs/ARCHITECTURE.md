@@ -1,5 +1,17 @@
 # Architecture
 
+## Product-column repair (v28 candidate, after Alpha 15)
+
+The dedicated ProductDB migration invokes a focused `promotion_repair` module.
+Authoritative static/dynamic parsers write only to a disposable scratch database;
+the migration copies back named derived columns and targeted unsupported evidence,
+retaining normalized source ownership and first-declaration selection. Report
+reconciliation reuses existing validated facts/persistence and preserves
+non-unknown historical outcomes. Core, native storage, UI and KNXnet/IP gain no
+new edge or mutation route. The implementation is under review, not yet accepted
+or released. [ADR-0148](adr/0148-repair-product-column-promotions.md),
+[contract](contracts/product-promotion-repair.md).
+
 ## Master declaration provenance (source builds after Alpha 15)
 
 ProductDB's master parser records declaration positions and actual normalized

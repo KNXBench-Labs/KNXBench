@@ -31,6 +31,7 @@ pub mod parameter_editor;
 pub mod parameter_layout;
 pub mod parse;
 pub mod procedure_resolution;
+mod promotion_repair;
 pub mod query;
 pub use catalog_details::CatalogItemDetails;
 pub use cleanup::{

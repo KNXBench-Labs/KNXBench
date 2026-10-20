@@ -57,8 +57,9 @@ job. Regression tests execute that exact command against the installed loader
 and isolated copies with missing or corrupt native libraries. They also retain
 the manual-build/tag-only-publication boundary. This is a bounded build
 preflight, not a repair of npm installation, a new AppImage acceptance run or
-a reason to move the Alpha 15 tag. Package acceptance/publication is tracked in
-the current handover. See the
+a reason to move the Alpha 15 tag. **Delivered 20 October 2026** on main-first
+merge `f9cf7a65`: independent review accepted; maintained scoped gate 13/13,
+frozen inputs, user-data guards clear. Native-binding claim released. See the
 [retained attempts](releases/alpha15-acceptance.md#retained-non-green-attempts).
 
 ### Recommended package queue

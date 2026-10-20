@@ -20,6 +20,13 @@ security, GitHub-issue, hardware or whole-codebase conformance audit.
 
 ### Already owned — do not start a duplicate package
 
+- **Literal-bracket browser clocks (codex, 20 October):** bounded guard repair
+  for `Date["now"]()` / `performance['now']()` with either unescaped literal
+  quote and whitespace. Owns `tools/browser_lanes.py`, its focused tests and
+  web-gate contract/status updates. Preserve masking, helper/import propagation
+  and offsets; no arbitrary computed-property/alias parser or lane-selection
+  changes. Tests-first implementation follows the delivered planner package.
+
 - **WP-17 is delivered** on `main` (`d18ce65e`, 19 October): product DB v27
   master provenance; its parsing/provenance/report/migration claim is released.
   The separately claimed Alpha 16 column-promotion repair must follow v27,

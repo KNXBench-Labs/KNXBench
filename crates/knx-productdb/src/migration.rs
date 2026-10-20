@@ -16,7 +16,7 @@ use crate::parse::translation::{ingest_translations, TranslationScope};
 use crate::report::{insert_unknown, UnknownKind};
 
 /// The product-database schema version this build writes.
-pub const CURRENT_PRODUCTDB_VERSION: i64 = 27;
+pub const CURRENT_PRODUCTDB_VERSION: i64 = 28;
 
 #[derive(Debug)]
 pub enum ProductDbError {
@@ -318,7 +318,18 @@ fn migrations() -> Vec<Migration> {
         migrate_v24_to_v25,
         migrate_v25_to_v26,
         migrate_v26_to_v27,
+        crate::promotion_repair::repair,
     ]
+}
+
+/// An isolated current-parser schema, never a recursive v28 open. No retained
+/// sources exist while the historical schema steps run.
+pub(crate) fn promotion_scratch() -> Result<Connection, ProductDbError> {
+    let conn = Connection::open_in_memory()?;
+    for migration in migrations().into_iter().take(27) {
+        migration(&conn)?;
+    }
+    Ok(conn)
 }
 
 /// The hosts ADR-0126 models `TextParameterRefId` on, by element name: the

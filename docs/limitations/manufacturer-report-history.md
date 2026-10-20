@@ -46,3 +46,19 @@ The companion document is [COMPATIBILITY.md](../COMPATIBILITY.md), which states
 what is verified. A verified narrower capability may coexist with a remaining
 limitation here; the scopes must agree rather than erase each other.
 <!-- END retained catalogue record -->
+
+## v28 correction candidate: lost member attribution (20 October 2026)
+
+The [promotion repair](../contracts/product-promotion-repair.md) reconstructs
+only byte-derived columns and targeted unsupported evidence. Earlier migrations
+could delete a report key shared by several programs while subtracting only
+some member counter units. Missing/partial aggregates cannot identify those
+units after the fact: the candidate preserves the package counter and marks
+its report unavailable, with a named diagnostic. Complete shared aggregates
+and unambiguous single-member history remain eligible for reconciliation.
+Opaque members never inherit program semantics by matching content hashes;
+inconsistent non-program target ledgers also require unavailable reports.
+The fixed evidence allowance is conservative repair policy, not a format or
+process-RSS limit. Independent review accepts the corrected candidate; corpus
+proof and integrated acceptance remain pending. This section does not claim
+delivery or new ETS compatibility.

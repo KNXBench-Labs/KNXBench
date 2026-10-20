@@ -1,5 +1,19 @@
 # Import and export
 
+## Earlier promotion repair (v28 candidate, after Alpha 15)
+
+The v28 candidate repairs derived catalogue metadata affected by the released
+v23–v25 column promotions, rather than changing the product import grammar.
+The first declaration of the stored program source supplies object-caption
+references, parameter placements and enumeration presentation fields; unsupported
+constructs outside promoted parser contexts remain reported. Targeted measured
+report evidence may be reconciled, but non-unknown historical outcomes and
+master-provenance snapshots must not be re-invented. Missing or unavailable
+reports remain so. Candidate acceptance is pending; failed source reconstruction
+requires preservation and explicit diagnostics, not a guessed partial result.
+No ETS export, native format, device programming or compatibility expansion.
+[Contract](contracts/product-promotion-repair.md).
+
 ## Stream-integrity source follow-ups (20 October 2026)
 
 Product directory and ordinary-file repairs are delivered (`9c79634b`,

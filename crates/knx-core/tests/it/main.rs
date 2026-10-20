@@ -13,6 +13,7 @@ mod legacy_object_table;
 mod multi_installation;
 mod notes;
 mod property_download;
+mod property_recovery;
 mod system300_group_tables;
 mod systemb_group_tables;
 mod systemb_object_table;

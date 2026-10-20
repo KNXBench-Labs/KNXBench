@@ -31,6 +31,7 @@ pub mod master_reset;
 pub mod memory_download;
 pub mod programming_button_wait;
 pub mod property_download;
+pub mod property_recovery;
 pub mod rf_configuration;
 pub mod serial_number_write;
 pub mod service_control;

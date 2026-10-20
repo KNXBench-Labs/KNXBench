@@ -8,6 +8,14 @@ Historical titles do not mean that their old defect is still present. The
 [source/test audit](../status/2026-10-08-known-issues-status-audit.md) records
 the reconciliation; formal task dispositions remain in the engineering ledger.
 
+## UP258 System-2 candidate (source, 20 October 2026)
+
+The [complete-defaults validation workflow](../contracts/up258-system2-validation.md)
+is simulator-only and must be labeled **strong hypothesis, simulator-tested**.
+It does not program a real detector. A saved memory image cannot prove allocator,
+task-state or masked-byte recovery; real-device download remains refused until
+those technical rules are established, in addition to separate user approval.
+
 ## Parameter layout (Alpha 14)
 
 The new [parameter workspace](user-guide/05-devices-and-products.md#parameters)

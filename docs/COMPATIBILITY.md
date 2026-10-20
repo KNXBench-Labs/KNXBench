@@ -1,5 +1,17 @@
 # Compatibility
 
+## UP258 System-2 candidate (20 October 2026)
+
+The [bounded source-to-simulator path](contracts/up258-system2-validation.md)
+prepares the exact `M-0001_A-9205-04-9270` complete-defaults/no-links candidate
+and executes all source positions with durable same-shape recovery. Classify
+it only as **STRONG HYPOTHESIS / SIMULATOR TESTED**. Historical original schema
+prose and a revision-bound third-party schema mirror do not confirm namespace20
+policy equivalence or device firmware behavior. No ETS-equivalence, ordinary
+System-2 admission or physical programming support is added. 338 masked bytes
+and unobserved allocator/task effects still prevent the real-device route;
+operator consent cannot substitute for that missing technical contract.
+
 <a id="corrective-catalogue-upgrade-v28-candidate-after-alpha-15"></a>
 ## Corrective catalogue upgrade (v28 source delivery)
 

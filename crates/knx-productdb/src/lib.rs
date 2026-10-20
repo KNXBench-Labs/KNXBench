@@ -40,6 +40,7 @@ pub use cleanup::{
 pub mod report;
 pub mod source_diagnostics;
 pub mod system2;
+pub mod system2_procedure;
 pub mod text_parameters;
 pub mod update;
 pub mod wrapper;

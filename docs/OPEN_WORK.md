@@ -203,6 +203,9 @@ No new growth or peak-memory result is claimed here. WP-04.2 bounded parsing
 and WP-04.3 cancellable web installation remain later, separate deliveries;
 the WP-04 package stays open. The repair's fixed evidence allowance is not
 this measurement baseline or a whole-process memory guarantee.
+[Measurement contract](testing/productdb-measurement.md) defines the production
+CLI path, observer/accounting scope and actual-execution acceptance; tooling and
+synthetic baselines remain under implementation, not delivered measurements.
 
 **Three separate deliveries, in order:**
 

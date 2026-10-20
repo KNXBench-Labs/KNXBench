@@ -26,7 +26,18 @@ base64.workspace = true
 flate2.workspace = true
 
 [dev-dependencies]
+# Linux wait4 ABI for the opt-in measurement supervisor; already locked transitively.
+libc = "=0.2.189"
 rustix.workspace = true
 serde_json.workspace = true
 tempfile.workspace = true
 knx-testsupport.workspace = true
+
+# Keep opt-in measurement regressions in the package's maintained test inventory.
+[[example]]
+name = "productdb_measure"
+test = true
+
+[[example]]
+name = "productdb_observe"
+test = true

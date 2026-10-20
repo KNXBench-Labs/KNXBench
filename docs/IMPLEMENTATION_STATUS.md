@@ -27,6 +27,16 @@ belong to each run; they are not added to the earlier overlapping owning checks.
 Source review, I1 correction, bounded wrong-branch controls and parent checks are
 recorded below with their original source identities and historical verdicts.
 
+Result-only documentation `c012f714` separately passes its 10 selected maintained
+stages and is published with immediate remote equality. Private provenance is
+retained in an independently verified core archive (7,995 entries) and a
+supplement (288 new/changed versions); they cover 8,281 current retained entries,
+with overlapping archive populations rather than additive file totals. Every
+original Cargo ELF is retained, including the
+3,491 in the core archive. All 91 exact A2 raw scratch roots are now absent;
+rebuildable non-ELF caches are retired. B1 inputs and the successor worktree are
+preserved. No runtime checks are relabelled by this bookkeeping.
+
 There is no production constructor, capability authentication, real binding,
 SQL/installer integration, job route, full Status or final worker-settlement
 claim. WP-04.3 and WP-19 remain open. The next staged dependency is the managed

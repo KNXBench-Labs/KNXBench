@@ -205,3 +205,43 @@ compatibility, browser or shutdown result is claimed.
 [4] https://www.sqlite.org/c3ref/interrupt.html
 [5] https://www.sqlite.org/c3ref/progress_handler.html
 [6] https://www.sqlite.org/wal.html
+
+## Schema-admission implementation basis — 21 October 2026
+
+The Stage B1 read-only inventory identifies a new exact-schema admission boundary,
+not a defect in the existing quiet version-based openers. Its 178 input hashes
+(174 immutable candidate blobs/modes) and 30 output hashes are independently
+reconciled at `c012f714`. The proposed helper is read-only and private; no complete
+witness, managed binding, production A2 constructor, installer or API is inferred.
+The actual bundled-engine migration/introspection oracle is pending separately.
+The 46-table / 120-stored-object source inventory remains a static expectation,
+not a newly measured database or a count-only admission rule.
+
+Two official primary bodies were retrieved directly over HTTPS and their relevant
+passages inspected. The configured extractor again refused because its backend
+is search-only; actual retrieval uses urllib and HTMLParser excluding script/style
+bodies. Private receipts retain final URLs, status/content type, complete bodies,
+text digests and a task-local citation ledger. The current documentation establishes:
+
+- `table_list` exposes schema/name/type, column count including hidden/generated
+  columns, WITHOUT ROWID and STRICT flags; `table_xinfo` includes hidden/generated
+  fields omitted by table_info. `index_xinfo` describes both key and auxiliary
+  columns, including expression/rowid markers, direction and collation.
+  Source: SQLite, *PRAGMA Statements*,
+  <https://www.sqlite.org/pragma.html#pragma_table_list>,
+  <https://www.sqlite.org/pragma.html#pragma_table_xinfo>,
+  <https://www.sqlite.org/pragma.html#pragma_index_xinfo>.
+- The schema relation has no stored row describing itself. Its SQL is normalized
+  CREATE text as subsequently modified by ALTER; automatic PK/UNIQUE indexes have
+  NULL SQL. Rootpage is observed layout metadata, not a universal allowlist value.
+  Source: SQLite, *The Schema Table*,
+  <https://www.sqlite.org/schematab.html>.
+
+These are documented facts, not observation of the locked bundled runtime. The
+implementation must compare actual final migration-generated SQL/introspection,
+keep all unfamiliar variants refused and retain independent source/fixture identity.
+Neither a static CREATE parser nor Python's separate SQLite runtime can certify
+that oracle. A transaction borrow limits lifetime but does not prove immutability
+against other calls on the same connection; later orchestration still owns the
+transaction and mutation/reservation discipline. No compatibility promise for
+unmeasured historical SQL variants follows from a fresh-chain fixture.

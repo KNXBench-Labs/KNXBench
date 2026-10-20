@@ -12,6 +12,9 @@
 - Separate in-session self-review: no Critical/Important findings; not independent
   approval. Old11test bodies preserved exactly, all12executed identities matched
   final source; all-targets serverClippy and docs preflight GREEN. Maintained
-  scoped merged gate still pending.
+- Maintained scoped merged gate13/13GREEN on `0dbef5cf`, published/readback
+  equal:1057Rust/0failed/53ignored,51/51selected corpus,323tools/one optional
+  skip. Proofs valid, inputs frozen and user-data guard lists empty. No whole
+  workspace/browser/release or production-repair claim.
 - Existing Alpha16, exact-UP258 and directory-encryption owners protected.
 - No bus/device, desktop, deployment, release or vendor operation.

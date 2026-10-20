@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-20 12:16
+- **Completed:** KL-183 characterization fully closed: accepted `0dbef5cf`, result tail `cfb3168a` published/readback equal; scoped13/13 and docs-tail10/10GREEN. Private evidence72files plus manifest verified before owned worktree/two merged branches/rebuildable scratch retirement. WP-13 archive holds87evidence files plus manifest (file counts exclude the manifest). New CLAIM: deleted/missing web-input planner explanations on `fix/deleted-web-reasons-20261020`.
+- **Pending/Next Steps:** Add an explicit repository-relative missing/deleted-input reason to the existing plan without pretending an unresolved spec has a proven exact dependency. Preserve selected suites, graph fallback, retries, budgets and complete-gate admission. Named REDs before implementation; source/tests/docs review, then maintained COMPLETE gate because the planner itself changes, main-first publication/readback and owned retirement.
+- **Notes for Codex oder Claude:** Scope only `tools/gate_scope.py`, its existing tool tests and relevant docs/handover. Existing Alpha16/exact-UP258/directory-encryption owners protected. No app/domain/schema/protocol or bus/device/desktop/release/deployment/vendor operation. KL-183 source-acquisition contract/repair remains open. Verified prior archive `<profile>/evidence/2026-10-20_kl183-authoring-characterization.tar.gz`, SHA256 `7a5cab0ce5415355ec7e3630380fda0c523294add16e73e19de64619e597b1ad`.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-20 12:11
 - **Completed:** KL-183 catalogue-authoring characterization DELIVERED on `main` as main-first `0dbef5cf` (feature `4b7b8db0`), local/tracking/live readback equal. Maintained scoped13/13GREEN:1057Rust tests/0failed/53ignored,51/51selected corpus,323registered tools/one existing optional skip; all proofs valid, frozen inputs and clear user-data guard lists. Desired-portability RED retained; final12owningHTTP inventory verified and old11test bodies preserved. Separate self-review, not independent approval. Production unchanged; not a portability repair. Claim RELEASED.
 - **Pending/Next Steps:** Result-only docs tail, verified private evidence archive and owned retirement. Then fresh bounded gate-planner follow-up: name deleted web inputs in conservative selection reasons without changing selected suites or weakening full-gate admission. Read-only source preparation only so far; fresh claim/RED required before edits. KL-183 source-dependency/manifest acquisition contract and actual repair remain separate open work.

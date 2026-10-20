@@ -1,6 +1,7 @@
 # Data model
 
-## Corrective product migration (v28 candidate, after Alpha 15)
+<a id="corrective-product-migration-v28-candidate-after-alpha-15"></a>
+## Corrective product migration (v28 source delivery)
 
 Product DB **27 → 28** is a data-repair step, not new schema objects or a native
 model change. It corrects the named v23–v25 promoted columns from authentic
@@ -8,10 +9,15 @@ retained source facts, including replacing a losing declaration's non-NULL
 value or restoring NULL when the winning declaration omitted it. Targeted
 unsupported evidence is restored separately from historical install outcomes;
 master provenance and unrelated values remain outside the correction scope.
-The candidate is under review; no blanket historical-database equality is
-claimed. Builds supporting at most product27 refuse product28 through the
-existing version check; no old-binary downgrade run has been performed. Keep
-an independent catalogue backup. [ADR-0148](adr/0148-repair-product-column-promotions.md).
+The v28 source correction is delivered as `8fa0d76b9fd41f81c4e135c29e54f2a98d516b38`;
+[acceptance scope](IMPLEMENTATION_STATUS.md#product-column-promotion-repair--source-delivery)
+is not a blanket historical-database equality guarantee. Current source uses
+product **28** and unchanged native/model **16**. Writable catalogue open
+applies pending migrations; read-only catalogue readers migrate only an
+in-memory copy, not the original file. Builds supporting at most product27
+refuse product28 through their existing version check; this is source-established,
+not an executed old-binary downgrade test. No downgrade is supplied. Keep an
+independent pre-upgrade catalogue backup. [ADR-0148](adr/0148-repair-product-column-promotions.md).
 
 ## Master provenance (source builds after Alpha 15)
 
@@ -24,7 +30,11 @@ historical winners/outcomes unavailable rather than guessing. Missing Id and
 missing parent are explicit flags, not collisions; an empty Id retains its
 existing distinct meaning. Historical package reports are unchanged. Builds
 supporting only product26 refuse product27; keep independent pre-upgrade copies.
-Earlier column-promotion repair boundaries below remain open.
+The v28 correction above supersedes the earlier column-promotion residue;
+unavailable historical master winner/encounter facts remain a boundary.
+
+The release-boundary sections below retain their original version and evidence scope;
+they do not describe the newer v28 source build.
 
 ## Alpha 15 model and storage boundary
 

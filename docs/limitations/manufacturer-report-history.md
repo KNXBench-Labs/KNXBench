@@ -6,6 +6,32 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## v28 source delivery and remaining report boundary (20 October 2026)
+
+The [promotion repair](../contracts/product-promotion-repair.md) is
+[source-delivered as `8fa0d76b9fd41f81c4e135c29e54f2a98d516b38`](../IMPLEMENTATION_STATUS.md#product-column-promotion-repair--source-delivery).
+The candidate checkpoint below is retained review history; its pending
+acceptance/publication statements are superseded, not a new open repair job.
+
+Only existing measured reports with authentic, sufficiently attributable
+member evidence are reconciled. Missing reports remain missing and unavailable
+reports remain unavailable. Missing/partial aggregates shared by program
+members cannot identify previously retired counter units: preserve the
+original package counter and mark the report unavailable with diagnostics.
+Complete shared aggregates and unambiguous single-member evidence remain
+repairable. Role/path dispatch keeps opaque members opaque even when bytes
+match a program; inconsistent semantic non-program ledgers cannot authorize
+a measured rewrite. Failed source/resource reconstruction preserves the
+affected values and evidence, not an invented successful partial repair.
+
+The fixed 16 MiB evidence allowance admits lexical work before semantic
+parsing/owned copies and commits retained cross-source consumption only after
+source success. It is conservative repair policy, not a source-format limit,
+a whole-catalogue size guarantee or a process-RSS bound. Missing measurement
+markers surface as a diagnostic-reader error, not fabricated measured facts.
+Legacy EX-IM is not XML replay input. PDB-03 remains an accepted history
+boundary; no signature, vendor-semantic or ETS-compatibility claim changes.
+
 <!-- BEGIN retained catalogue record -->
 
 ## PDB-3 report history and coverage boundary

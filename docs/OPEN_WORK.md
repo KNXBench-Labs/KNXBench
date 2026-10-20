@@ -76,7 +76,7 @@ Each package needs its own scoped claim, review, tests and delivery evidence.
 | [WP-01](#wp-01--idempotent-unknown-evidence) | P1 | Delivered 19 October (product DB v26, ADR-0146) | Unknown-evidence rows remain truthful across shared-source re-ingest. |
 | [WP-02](#wp-02--suffixtext-end-to-end) | P2 | Delivered 19 October (product DB v26, ADR-0146) | Source suffix text reaches the existing parameter rows without changing stored values. |
 | [WP-03](#wp-03--legacy-binary-enumeration-values) | P2 | Mapping evidence first | Legacy binary enum values use the existing typed storage or keep an explicit refusal/report. |
-| [WP-04](#wp-04--large-catalogues-measure-then-stream) | P1/P2 | Measurement first; three sequential slices | Measured database growth, bounded procedure parsing, then a cancellable web large-profile workflow. |
+| [WP-04](#wp-04--large-catalogues-measure-then-stream) | P1/P2 | Current ordered slice WP-04.1: measurement; WP-04.2/.3 remain open | Measured database growth, bounded procedure parsing, then a cancellable web large-profile workflow. |
 | [WP-05](#wp-05--parameter-layout-fidelity) | P2 | Evidence/contract gate; coordinate with UI-05 | One evidenced layout feature at a time, never inferred manufacturer behaviour. |
 | [WP-06](#wp-06--communication-object-organisation) | P2 | Folder contract first; priority needs a separate model ADR | Declared object folders and, separately, lossless priority representation. |
 | [WP-07](#wp-07--module-instance-authority) | P1 | Defining mapping evidence required | One independently witnessed instance/repeat/number-offset mapping contract. |
@@ -128,6 +128,10 @@ EX-IM programs get no suffix.
 [Workspace contract](contracts/parameter-workspace.md#unit-suffix-wp-02-19-october-2026) ·
 [source attribute inventory](../crates/knx-productdb/src/parse/program.rs).
 
+**Retained 19 October discovery and original repair prescription:** the
+following “Open” label records that checkpoint, not another open repair job;
+the dated v28 delivery below supersedes it.
+
 **Open (found while closing the WP-02 review, 19 October 2026): earlier column
 promotions share the two migration defects v26 fixes.** A probe (not
 committed) migrated synthetic fixtures through each earlier step and compared
@@ -149,14 +153,17 @@ step (install, rewind with `v20_rewind::drop_v2{3,4,5}_objects`, set
 `user_version`, migrate, compare with the fresh snapshot), then a repair step
 in the next schema version, since released databases already passed v23–v25.
 
-**Implementation in progress (20 October 2026):** the separately claimed
-Alpha 16 successor follows delivered WP-17/v27 with a distinct corrective v28
-step ([ADR-0148](adr/0148-repair-product-column-promotions.md),
-[repair contract](contracts/product-promotion-repair.md)). Eight early-entry
-regressions reproduce the defects; already-upgraded and report-preservation
-fixtures are added. ProductDB tests/Clippy pass on the worker candidate, but
-independent review, remaining budget coverage, corpus-selection reconciliation
-and the integrated package gate are pending. This is not a delivered fix.
+**Delivered 20 October 2026:** the separately claimed Alpha 16 successor
+repairs the earlier v23–v25 promotions with product v28, after WP-17/v27
+([ADR-0148](adr/0148-repair-product-column-promotions.md),
+[repair contract](contracts/product-promotion-repair.md)). Source
+`8fa0d76b9fd41f81c4e135c29e54f2a98d516b38` has accepted final integration and verified
+publication readback; [the result record](IMPLEMENTATION_STATUS.md#product-column-promotion-repair--source-delivery)
+keeps original and final-delta evidence separate. Missing/unavailable history,
+ambiguous shared member counters and resource/source-refused reconstruction
+remain explicit boundaries; this is not universal historical equality or a release.
+**Current ordered package: WP-04.1 — measure large catalogues.** WP-04.2,
+WP-04.3 and WP-19 remain later slices; WP-04 is not closed.
 
 #### WP-03 — Legacy binary enumeration values
 
@@ -183,6 +190,12 @@ no live legacy download or PR/VD2 import.
 [Legacy boundary](limitations/KL-128-legacy-product-import-boundaries.md).
 
 #### WP-04 — Large catalogues: measure, then stream
+
+**Current ordered slice after v28 source delivery: WP-04.1 (measurement).**
+No new growth or peak-memory result is claimed here. WP-04.2 bounded parsing
+and WP-04.3 cancellable web installation remain later, separate deliveries;
+the WP-04 package stays open. The repair's fixed evidence allowance is not
+this measurement baseline or a whole-process memory guarantee.
 
 **Three separate deliveries, in order:**
 
@@ -708,6 +721,10 @@ WP-12 waits on exact evidence/consent. WP-13 can proceed offline in parallel
 provided it preserves the active owners' status updates. WP-18 and WP-20 are
 independent offline UI packages; WP-19 follows WP-18 and starts with its
 contract.
+
+For the owner-authorised Alpha 16 successor, the
+[active sequence](goals/alpha16-successor-sequence-2026-10-19.md#current-state)
+now advances only to WP-04.1 after the v28 repair's delivery.
 
 ## Test gates: change-scoped by default (19 October 2026)
 

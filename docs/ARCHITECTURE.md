@@ -1,6 +1,7 @@
 # Architecture
 
-## Product-column repair (v28 candidate, after Alpha 15)
+<a id="product-column-repair-v28-candidate-after-alpha-15"></a>
+## Product-column repair (v28 source delivery)
 
 The dedicated ProductDB migration invokes a focused `promotion_repair` module.
 Authoritative static/dynamic parsers write only to a disposable scratch database;
@@ -8,8 +9,11 @@ the migration copies back named derived columns and targeted unsupported evidenc
 retaining normalized source ownership and first-declaration selection. Report
 reconciliation reuses existing validated facts/persistence and preserves
 non-unknown historical outcomes. Core, native storage, UI and KNXnet/IP gain no
-new edge or mutation route. The implementation is under review, not yet accepted
-or released. [ADR-0148](adr/0148-repair-product-column-promotions.md),
+new edge or mutation route. The v28 source repair is delivered on `main` as `8fa0d76b9fd41f81c4e135c29e54f2a98d516b38`
+after accepted final integration and verified publication readback;
+[the delivery record](IMPLEMENTATION_STATUS.md#product-column-promotion-repair--source-delivery)
+separates retained migration acceptance from the final delta. This is not a
+new release artifact. [ADR-0148](adr/0148-repair-product-column-promotions.md),
 [contract](contracts/product-promotion-repair.md).
 
 ## Master declaration provenance (source builds after Alpha 15)

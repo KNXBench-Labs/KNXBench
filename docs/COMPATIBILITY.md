@@ -1,15 +1,21 @@
 # Compatibility
 
-## Corrective catalogue upgrade (v28 candidate, after Alpha 15)
+<a id="corrective-catalogue-upgrade-v28-candidate-after-alpha-15"></a>
+## Corrective catalogue upgrade (v28 source delivery)
 
-The v28 candidate addresses the earlier v23–v25 migration residues, not a new
+The delivered v28 source repair addresses the earlier v23–v25 migration residues, not a new
 KNX/ETS format or device-support claim. Source reconstruction is conditional on
 authentic retained data; missing/corrupt or resource-refused reconstruction must
 retain original affected values/evidence and explicitly downgrade affected
 measured reports rather than invent history. Native/model16 and master
-provenance semantics are unchanged. Independent review, corpus reconciliation
-and integrated package acceptance are still pending. Older product readers
-refuse v28; keep a separate closed-catalogue backup before upgrade.
+provenance semantics are unchanged. [Accepted source delivery](IMPLEMENTATION_STATUS.md#product-column-promotion-repair--source-delivery)
+is published as `8fa0d76b9fd41f81c4e135c29e54f2a98d516b38`; this is not an Alpha 15 artifact
+upgrade or new release. Current source uses product28/native-model16.
+Alpha 15 supports product26, and the preceding master-provenance source
+supports product27; builds with either older maximum refuse product28 by
+their version check. This is source-established refusal, not an executed
+old-binary downgrade test. Keep a separate closed-catalogue backup before
+writable upgrade; rollback requires the older catalogue copy.
 Missing or partial aggregates shared by multiple program members cannot prove
 which historical counter units earlier migrations removed. Such packages keep
 their original counter and an explicitly unavailable report; replay is not

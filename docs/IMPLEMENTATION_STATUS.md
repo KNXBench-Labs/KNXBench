@@ -12,6 +12,51 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+<a id="product-column-promotion-repair--source-delivery"></a>
+## Product-column promotion repair — source delivery (20 October 2026)
+
+Product DB v28 repairs the earlier v23–v25 promoted caption, placement and
+enumeration columns from authenticated retained source facts, with first
+program declarations and stored source ownership preserved. Parser-owned
+targeted unsupported evidence is restored; unrelated normalized data,
+retained bytes, master provenance and non-unknown historical outcomes remain
+outside the correction. Native/model16, import grammar and programming
+admission are unchanged. [ADR-0148](adr/0148-repair-product-column-promotions.md)
+and [contract](contracts/product-promotion-repair.md).
+
+Published source is `8fa0d76b9fd41f81c4e135c29e54f2a98d516b38`; final integration acceptance
+is bound to `8fa0d76b9fd41f81c4e135c29e54f2a98d516b38`.
+The final maintained migration/clock delta passed all 11 parent stages and
+29 web stages, including the web build, 22 derived typecheck configurations,
+4,136 Vitest cases and 863 default-browser cases (798 functional, 65 exclusive).
+Ordered proofs, unchanged input/build/tool identities and clear user-data
+guards were verified; no production-browser suite was selected.
+The retained main-first integration `0be962f9653805d073e8644bde41deee8165e143` passed
+14/14 maintained stages, with 3,162 Rust passes, zero failures, 144 ignored
+and 97/97 selected corpus cases. Its Rust/Cargo/xtask/Rust-app inputs are
+byte-identical to the published source; these results are carried forward,
+not fresh Rust or corpus executions on the final delta. Original corrected-source
+review, branch acceptance and private equivalence evidence retain their
+original source bindings; overlapping selections are not added together.
+Publication readback recorded local HEAD, tracking `origin/main` and live
+`refs/heads/main` equal to the published source above on 20 October 2026.
+Original accepted, rejected and interrupted attempts remain separate evidence;
+the reviewed-candidate checkpoint below records its original pending state.
+
+The retained private fresh/migrated comparison covers 46 tables and 7,422,273
+rows per side with no mismatches under the sole declared `ingest_unknown.id`
+normalization; 21,700 IDs remain stable. This bounded comparison does not
+make every historical database reconstructable. Missing/unavailable reports
+stay so; ambiguous shared member history preserves the package counter and
+makes the report unavailable rather than inventing attribution. Source or
+resource refusal preserves affected values/evidence and records diagnostics.
+The fixed 16 MiB evidence allowance is repair policy, not a KNX format limit
+or process-RSS guarantee. Legacy EX-IM remains excluded from XML replay.
+
+This is accepted source delivery, not a release/artifact upgrade, universal
+ETS compatibility or hardware acceptance. The current successor package is
+WP-04.1 measurement; WP-04.2/.3 and WP-19 remain later, and WP-04 stays open.
+
 ## Product-column promotion repair — reviewed candidate (20 October 2026)
 
 The v28 corrective migration ([ADR-0148](adr/0148-repair-product-column-promotions.md))

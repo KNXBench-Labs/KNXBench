@@ -12,6 +12,27 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## WP-04.3 A1 publication primitive — local verification (20 October 2026)
+
+`knx_productdb::operation` adds an unwired, non-resettable atomic publication
+gate and typed Stop. Accepted cancellation and one unique commit claimant are
+mutually exclusive; repeat/late outcomes and checkpoints are explicit. This
+primitive performs no SQL and does not prove rollback, cleanup, successful
+COMMIT or a cancellable installer. Existing installers and job routes are not
+changed; Ready/apply/expiry admission is still a later increment.
+
+Parent authentication reconciles 137 worker evidence entries, five incremental
+new-API semantic REDs, two interface-absence failures and nine final discovered/
+executed passes. Fresh parent Cargo runs pass the same nine focused tests and
+1,255 owning ProductDB tests with 32 ignored; these selections overlap. All-target
+Clippy with warnings denied and the maintained header check pass on the frozen
+source. Independent whole-primitive review accepts the frozen source with no
+findings. Six isolated compiled wrong-branch variants fail at their intended
+named semantic assertions; both exact-module nine-test baselines pass. Test-tail
+bytes and raw Cargo/standalone identities agree. This is bounded discrimination,
+not exhaustive atomic scheduling proof. Maintained package gates/publication
+remain pending. No user-facing cancellation feature is claimed.
+
 ## WP-04.3 approved architecture; implementation pending (20 October 2026)
 
 The controller authenticated both read-only source inventories: all 110

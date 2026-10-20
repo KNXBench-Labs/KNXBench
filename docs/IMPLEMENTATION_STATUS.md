@@ -12,6 +12,19 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## System-2 offline image integrity follow-up (20 October 2026)
+
+The existing image assembler now refuses an explicit
+`DownloadInvisibleParameters` source option rather than returning an image
+without interpreting it. Synthetic importer/evaluator regressions also pin
+sparse descriptor slots, sorted address/association mapping, duplicate active
+object references, reference-default/project-value precedence and preservation
+of neighbouring bits. No second evaluator, schema, codec or download route.
+[Evidence, focused test/mutation results and unresolved semantics](research/2026-10-20-system2-download-integrity.md).
+This is bounded source-integrity hardening, not implemented inactive/default/
+LegacyPatchAlways policy, ETS byte-equivalence or public System-2 programming
+support. Whole-package gate/publication verdicts belong to the final handover.
+
 ## Limitation-summary reconciliation (20 October 2026)
 
 Eight current catalogue summaries now match their delivered consumers: supported

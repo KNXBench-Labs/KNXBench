@@ -503,6 +503,18 @@ fn build_image(
             ),
         });
     }
+    // Explicit inactive-parameter policies affect selection and possibly masks.
+    // Keeping their source text is not the same as applying them; do not return
+    // an active-only System-2 image while silently ignoring the declaration.
+    if layout == ImageLayout::System2 {
+        if let Some(policy) = code.options.get("DownloadInvisibleParameters") {
+            return Err(ImageError::Unsupported {
+                what: format!(
+                    "System2 DownloadInvisibleParameters={policy:?} requires a separate source interpretation"
+                ),
+            });
+        }
+    }
     if let Some(order) = code
         .options
         .get("ParameterByteOrder")

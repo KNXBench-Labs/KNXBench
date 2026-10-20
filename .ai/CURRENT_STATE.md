@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-20 11:53
+- **Completed:** WP-13 fully closed: accepted merge `d4a5c4fc`, result-only tail `be481bd8` published/readback equal; both maintained10-stage docs gates GREEN. Private87member evidence archive digest-verified, owned worktree/two merged branches/rebuildable scratch retired. New CLAIM: KL-183 catalogue-authored-project portability characterization on `test/kl183-authoring-20261020`.
+- **Pending/Next Steps:** Exercise real catalogue create → Save → reopen with an empty product database using fictional synthetic sources; distinguish successful persistence and retained model/values from missing source manifest/application resolution. Reproduce desired portability failure before any repair claim, retain source-bound evidence and document exact current outcomes. This package owns one HTTP regression file and its docs only; production repair requires a separate source-dependency/manifest contract, not guessed file inclusion.
+- **Notes for Codex oder Claude:** Existing Alpha16 successor, exact-UP258 and directory encryption-header reservations remain protected. No product migration/parser/domain source edits, new format/encryption compatibility, bus/device/desktop/release/deployment/vendor operation. Root stays stale/dirty. WP-13 archive `<profile>/evidence/2026-10-20_wp13-documentation-sweep.tar.gz` SHA256 `6f3f36a39326539d0cbf2a21233f50c26f4356a55d3fe8098add722eb394a2fc`.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-20 11:50
 - **Completed:** WP-13 named remaining prose sweep DELIVERED on `main` as main-first `d4a5c4fc` (feature `c9f021a1`), push/live/tracking equality verified. Maintained scoped gate10/10 GREEN,323 registered tooling tests/one existing optional skip; all proofs valid, inputs frozen and user-data guard lists empty. Separate in-session self-review, not independent approval. Ledger/catalogue and retained dossier blocks unchanged. WP-13 claim RELEASED.
 - **Pending/Next Steps:** Result-only handover/checks, private evidence archival verification and owned retirement. Then fresh bounded KL-183 catalogue-create/Save/empty-product-DB characterization through real HTTP/service paths; source-traced case is not yet runtime-confirmed or repaired. Claim separately after a fresh overlap check.

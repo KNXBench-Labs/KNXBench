@@ -20,9 +20,18 @@ helper propagation. Masking, source positions and prior tests remain unchanged.
 Original-source execution of the final 43 test methods produces 85 intended
 assertion failures in seven methods; the corrected guard passes all 43, and
 its real repository scan reports zero untagged uses in 90 specs. These are
-focused checks, not merged-gate or publication acceptance. Computed/escaped
+focused checks. Independent review accepts with zero findings, 43 methods and
+121 separate probes. Delivered on main-first `c7a6aa8e` (feature `0a3ce3aa`):
+maintained gate 11/11 parent and 29/29 web stages, 22 derived typechecks,
+4,136 Vitest and all 863 default browser cases (798 functional/65 exclusive),
+340 registered tooling tests. Ordered proofs, frozen inputs, clear user-data
+guards and local/tracking/live readback verified. A private newline-comparison
+refusal was corrected separately without replaying the accepted runtime;
+a subsequent local Node update is not relabelled as tested. Computed/escaped
 properties, aliases/getters and decoded page-code bracket calls remain bounded
-out. No lane selection, retry, budget, application or KNX change.
+out. No lane selection, retry, budget, application or KNX change, production-suite
+or release acceptance. Private 256-file evidence archive plus manifest verified;
+implementation worktree, two merged branches and owned scratch retired. Claim released.
 [Contract](contracts/web-test-gate.md) ·
 [Evidence](status/2026-10-20-literal-bracket-clocks.md).
 

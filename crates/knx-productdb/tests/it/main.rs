@@ -40,6 +40,8 @@ mod placement_columns;
 mod presentation_attributes;
 mod procedure_resolution;
 mod program_code;
+mod promotion_repair;
+mod promotion_repair_review;
 mod public_api_compat;
 mod read_only_open;
 mod relative_program_code;

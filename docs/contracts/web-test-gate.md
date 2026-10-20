@@ -19,7 +19,10 @@ Root entry: python3 tools/run_web_gate.py --profile web --workers 4 --output PAT
 The change-scoped package gate (`tools/run_package_gate.py`, [ADR-0144](../adr/0144-change-scoped-gates-tagged-browser-lanes-bundled-rust-tests.md))
 calls `--profile targeted --specs a.e2e.ts,b.e2e.ts|all --production x,y`: build,
 every typecheck and the complete Vitest suite, then only the selected default
-spec files and production suites. `--profile web` remains the complete web gate
+spec files and production suites. The receipt also names changed known web paths that are
+missing/deleted in a separate, repository-relative explanation. This does not
+replace unresolved-closure fallback reasons or claim exact per-spec causality;
+it changes no selected suite. `--profile web` remains the complete web gate
 of a release.
 Outputs must be a new directory outside sources or below a Git-ignored directory.
 An existing receipt path is refused. No silent npm installation occurs in a gate.

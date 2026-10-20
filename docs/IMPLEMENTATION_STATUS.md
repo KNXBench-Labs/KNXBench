@@ -35,6 +35,17 @@ readback agreed. Claim released. No full-workspace/browser/release acceptance.
 [Contract](contracts/project-encrypted-directory-admission.md) ·
 [Evidence](research/2026-10-20-directory-encryption-header-validity.md).
 
+## Explicit missing web-input plan reasons (20 October 2026)
+
+The gate planner adds an informational, repository-relative reason for deleted
+or missing known web inputs. Existing static-analysis fallback reasons and every
+selection/admission field remain unchanged; unknown inputs still require the
+complete gate. Three original named assertion failures become 32 planner passes;
+22 synthetic original/candidate comparisons preserve selection and prior reasons.
+The planner edit itself requires maintained complete-gate acceptance, separately
+from these focused results. No application or KNX behavior changes.
+[Contract and evidence](status/2026-10-20-deleted-web-input-reasons.md).
+
 ## Catalogue-authoring portability characterization (20 October 2026)
 
 The formerly source-traced KL-183 authoring path is now exercised through real

@@ -353,6 +353,8 @@ def plan(root: Path, changed: list[str], members: dict[str, dict] | None = None)
                 continue
             result.web = True
             result.because('web: build, typecheck, vitest', path)
+            if not (root / path).exists():
+                result.because('web: deleted or missing input (selection stays conservative)', path)
             if path.startswith(BINDINGS):
                 result.bindings = True
                 result.because('bindings: generated types', path)

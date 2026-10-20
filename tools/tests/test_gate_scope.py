@@ -164,6 +164,59 @@ class GateScopeTests(unittest.TestCase):
         self.assertEqual(result.browser_specs, ['app.e2e.ts', 'lonely.e2e.ts'])
         self.assertEqual(result.production_configs, ['devices'])
 
+    def test_deleted_web_fixture_is_named_without_changing_selection(self) -> None:
+        path = 'apps/knx-web/e2e/lonely-fixture.html'
+        (self.fixture.root / path).unlink()
+        result = self.fixture.plan(path)
+        reason = 'web: deleted or missing input (selection stays conservative)'
+        self.assertIn(reason, result.reasons)
+        self.assertEqual(result.reasons[reason], [path])
+        self.assertEqual(result.browser_specs, ['lonely.e2e.ts'])
+        self.assertEqual(result.production_configs, [])
+        self.assertIn(f'{reason} <- {path}', gate_scope.describe(result))
+        self.assertNotIn(str(self.fixture.root), gate_scope.describe(result))
+
+    def test_multiple_deleted_web_inputs_are_named_once_in_sorted_order(self) -> None:
+        paths = ['apps/knx-web/e2e/lonely-fixture.html', 'apps/knx-web/e2e/helper.ts']
+        for path in paths:
+            (self.fixture.root / path).unlink()
+        result = self.fixture.plan(*paths, paths[0])
+        reason = 'web: deleted or missing input (selection stays conservative)'
+        self.assertIn(reason, result.reasons)
+        self.assertEqual(result.reasons[reason], sorted(paths))
+        self.assertEqual(result.browser_specs, ['app.e2e.ts', 'lonely.e2e.ts'])
+        self.assertEqual(result.production_configs, ['devices'])
+        # A failed closure still does not prove the exact cause per spec.
+        for spec in result.browser_specs:
+            self.assertEqual(result.reasons[f'browser: {spec}'],
+                             ['not statically analysable (runs on every web change)'])
+
+    def test_existing_web_inputs_are_not_named_as_missing(self) -> None:
+        result = self.fixture.plan('apps/knx-web/src/Panel.tsx', 'apps/knx-web/e2e/helper.ts')
+        reason = 'web: deleted or missing input (selection stays conservative)'
+        self.assertNotIn(reason, result.reasons)
+        self.assertEqual(result.browser_specs, ['app.e2e.ts'])
+        self.assertEqual(result.production_configs, ['devices'])
+        self.assertFalse(result.full)
+
+    def test_deleted_global_web_input_keeps_every_spec_and_production_suite(self) -> None:
+        path = 'apps/knx-web/vite.config.ts'
+        file = self.fixture.root / path
+        file.write_text('export default {};\n')
+        file.unlink()
+        result = self.fixture.plan(path)
+        reason = 'web: deleted or missing input (selection stays conservative)'
+        self.assertIn(reason, result.reasons)
+        self.assertEqual(result.reasons[reason], [path])
+        self.assertIsNone(result.browser_specs)
+        self.assertEqual(result.production_configs, list(gate_scope.PRODUCTION_CONFIGS))
+
+    def test_missing_unknown_web_input_still_requires_the_complete_gate(self) -> None:
+        path = 'apps/knx-web/scripts/missing.mjs'
+        result = self.fixture.plan(path)
+        self.assertTrue(result.full)
+        self.assertEqual(result.reasons['complete gate (no rule for this path)'], [path])
+
     def test_files_that_screenshot_scripts_write_are_not_web_inputs(self) -> None:
         shots = self.fixture.root / 'apps/knx-web/e2e/readme.shots.ts'
         shots.write_text('const OUT = "../../../docs/assets/screenshots/";\n')

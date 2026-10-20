@@ -42,8 +42,13 @@ or missing known web inputs. Existing static-analysis fallback reasons and every
 selection/admission field remain unchanged; unknown inputs still require the
 complete gate. Three original named assertion failures become 32 planner passes;
 22 synthetic original/candidate comparisons preserve selection and prior reasons.
-The planner edit itself requires maintained complete-gate acceptance, separately
-from these focused results. No application or KNX behavior changes.
+Delivered on `main` as `e49d863d` after independent review, complete acceptance
+on `cd33b0d0` (10 parent/69 web stages) and a 14-stage main-first integration
+delta acceptance: 2,638 Rust passes and 149 selected corpus passes. Unchanged
+web evidence remains bound to its original candidate; publication readback and
+443-file private evidence archive verification completed. Owned worktree,
+two merged branches and scratch retired; claim released. No application or
+KNX behavior changes, and no release acceptance.
 [Contract and evidence](status/2026-10-20-deleted-web-input-reasons.md).
 
 ## Catalogue-authoring portability characterization (20 October 2026)

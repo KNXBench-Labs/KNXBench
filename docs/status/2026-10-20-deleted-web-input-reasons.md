@@ -36,3 +36,25 @@ results. Final source-bound gate results belong in the delivery handover.
 
 [Planner](../../tools/gate_scope.py) · [Tests](../../tools/tests/test_gate_scope.py) ·
 [ADR-0144](../adr/0144-change-scoped-gates-tagged-browser-lanes-bundled-rust-tests.md).
+
+## Verified delivery
+
+Published on `main` as main-first merge `e49d863d` (feature `fdfb0691`).
+Independent whole-change review accepted with no findings. The complete gate
+on frozen `cd33b0d0` passed 10 parent and 69 web stages: 22 derived configs,
+4,136 Vitest cases, 863 default browser cases and all 16 production suites;
+5,287 Rust passes (215 ignored) and 155/155 selected corpus cases. Those results
+remain bound to that candidate, not relabelled as a fresh integration run.
+
+Upstream directory-integrity changes required a main-first remerge onto
+`65d2f001`. The maintained 14-stage delta gate on `e49d863d` passed, including
+2,638 Rust passes (175 ignored) and 149/149 selected corpus cases. Exact source
+and build/tool identities prove unchanged web/planner inputs; ordered stage
+proofs, frozen inputs and empty touched/unchecked-user-data lists were verified.
+Local, tracking and live publication tips agreed. This is package delivery,
+not release acceptance.
+
+The private evidence archive was verified member-by-member: 443 evidence files
+plus one manifest. Only owned worktree, two merged branches and rebuildable
+scratch were retired; the selected stale/dirty checkout and foreign research
+were preserved. The planner claim is released.

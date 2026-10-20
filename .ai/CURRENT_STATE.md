@@ -1,4 +1,20 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-20 17:51
+- **Completed:** WP-04.1 actual synthetic release study and results-prose review accepted. Parent authenticated all five reviewed document identities; the sole stale opening sentence now states bounded study acceptance, with gates/publication separate. 54 measured operations,108 accounting endpoints,30 final databases, unchanged source/build/binaries and expected raw refusal preservation retain their original9834daff binding. Additional26release-example tests pass. No production code changed after review.
+- **Pending/Next Steps:** Commit exact seven-path result/docs/handover scope as KNXBench; run maintained16-stage branch gate against77601107 (Cargo.lock selects all Rust,bindings,corpus; no functional browser suite). Then fresh main-first integration and merged gate, conditional publication/readback, owned evidence archival/retirement. Continue WP-04.2/.3 then WP-19 without another go.
+- **Notes for Codex oder Claude:** Private `<profile-scratch>/three-packages-20261020-su2358tf`: controller-results-doc-review-closed.json and controller-release-study2-review-accepted.json. npm dependencies and ignored web build prerequisites prepared; static checks rerun before commit. Gate/result acceptance not yet publication. Preserve selected-root foreign changes/history and upstream ownership. No bus/device, desktop-control, release/tag, deployment or contact operation.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-20 17:49
+- **Completed:** WP-04.1 actual release-study review ACCEPT with no findings. Parent authenticated 29 review artifacts, 4521 unchanged original evidence files, current source/build/binary bindings and 253 absent recorded PIDs. Study covers 54 operations,108 accounting endpoints,30 final databases; expected refusals remain raw nonzero. Public baseline and four status/method documents now record measured results and limits. Additional release example tests pass26/26. Web dependencies and ignored desktop build inputs prepared; static documentation/format checks pass.
+- **Pending/Next Steps:** Narrow results-prose review deleg_e74f4c87/sa-0-c4fffd67 active; consume before final documentation commit. Then maintained branch gate (16 stages: lockfile selects all Rust/workspace,bindings,corpus; no browser functionality lane), fresh main-first integration, merged gate, conditional publication/readback and owned evidence archival/retirement. Continue WP-04.2/.3 then WP-19 without another go.
+- **Notes for Codex oder Claude:** Private `<profile-scratch>/three-packages-20261020-su2358tf`: controller-release-study2-review-accepted.json binds review; wp041-results-doc-review.md expected from prose reviewer. Measured source9834daff remains the historical measurement identity; only documentation changed since. Selected root preserved except owned handover/log; use owned worktree for integration and leave foreign history/research untouched. No production schema/parser/budget change or corpus/desktop/bus/device/release/tag/deployment/contact operation in this checkpoint; gates/publication pending.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-20 17:22
 - **Completed:** All WP-04.1 implementation-review blockers closed at documented boundaries. Final R2 review ACCEPT authenticated:131newreviewartifact hashes, current source/helper identities,363recordedPIDs absent; fresh20native-enabled methods pass without failures/skips/ResourceWarnings. Earlier native/accounting/adapter/privateoracle reviews remain unchanged. Candidate docs/status and observer log distinguish reviewed tooling from the still-pending actual study.
 - **Pending/Next Steps:** Freeze and commit reviewed tooling candidate locally as KNXBench after source/documentation/header/privacy preflight, then clean-source release CLI/probe/supervisor build, release calibration and3repetitions/54observations plus actual DEFAULT semantic verification. Do not mutate the measurement checkout during source-bound runs. Results/docs/review/scoped gates/main-first integration/publication/readback/owned cleanup follow; continue WP-04.2/.3 then WP-19 without another go.

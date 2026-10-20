@@ -1,8 +1,10 @@
 # Product database measurement (WP-04.1)
 
-Status: implementation in progress after the v28 source repair; no new install,
-resolver or memory baseline has been accepted yet. This contract defines the
-measurement deliverable, not a new product format, installer or memory guarantee.
+Status: the source-bound synthetic release study is independently accepted;
+[results and limits](productdb-baseline-2026-10-20.md) record its install, resolver
+and target-memory baseline. Maintained delivery gates, integration and publication
+are separate checks. This contract is not a new product format, installer or
+production memory guarantee.
 [Ordered work](../goals/alpha16-successor-sequence-2026-10-19.md) ·
 [WP-04](../OPEN_WORK.md#wp-04--large-catalogues-measure-then-stream).
 
@@ -67,8 +69,10 @@ Independent correction review accepts this bounded recovery, with a fresh
 20-method native-enabled pass and exact-group cleanup before fixture rescue.
 This does not claim authentication of pre-exec or already-dead leaders, and
 earlier fully checkpointed timeout passes do not supply that missing evidence.
-All implementation-review blockers are closed; the source-bound release study
-and final package acceptance remain pending.
+All implementation-review blockers are closed. The actual source-bound release
+study is independently accepted; [results and limits](productdb-baseline-2026-10-20.md)
+record its 54 observations. Maintained delivery gates, integration and publication
+remain separate from study acceptance.
 
 Before accepting target-memory measurements, exercise the exact built helper
 through the maintained adapter and its actual outer interruption path:

@@ -76,6 +76,26 @@ why the retained Alpha 15 attempt lacked the binding.
 
 ## Current state
 
+### Source delivery and current package (20 October 2026)
+
+The first package is source-delivered as `8fa0d76b9fd41f81c4e135c29e54f2a98d516b38` with
+[accepted final integration and verified publication](../IMPLEMENTATION_STATUS.md#product-column-promotion-repair--source-delivery).
+It advances the dedicated product database to 28, not native/model16 or an
+Alpha15 release artifact. Authentic-source reconstruction, missing/unavailable
+history, ambiguous member-counter attribution and conservative resource
+refusals remain boundaries under the existing repair contract.
+
+**Current ordered package: WP-04.1 — measure large catalogues.** Its output
+is a disposable-catalogue growth/peak-memory baseline, not a storage or parser
+change. No measurement has been performed by this documentation tail.
+WP-04.2, WP-04.3, WP-19 and WP-05 remain later ordered work. WP-04 is open;
+no later package is claimed or completed by this update.
+
+### Retained pre-delivery checkpoint (20 October 2026)
+
+The following paragraph preserves the original review/gate checkpoint; its
+pending assertions are historical, superseded by the delivery record above.
+
 The first package's v28 implementation and already-upgraded regressions are
 present. Original review rejected resource admission, role dispatch and
 historical counter attribution; its observations remain retained. A correction

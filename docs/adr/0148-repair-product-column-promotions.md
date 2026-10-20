@@ -1,6 +1,7 @@
 # ADR-0148: Repair released product-column promotions from retained source facts
 
-Status: accepted for implementation; runtime acceptance pending.
+Status: accepted; implemented and source-delivered as `8fa0d76b9fd41f81c4e135c29e54f2a98d516b38`
+on 20 October 2026. [Acceptance record](../IMPLEMENTATION_STATUS.md#product-column-promotion-repair--source-delivery).
 Date: 2026-10-20.
 Amends: [ADR-0020](0020-migrations-may-rederive-from-stored-bytes.md),
 [ADR-0126](0126-positional-text-placeholders.md),

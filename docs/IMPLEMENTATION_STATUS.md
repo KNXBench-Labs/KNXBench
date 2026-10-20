@@ -12,6 +12,19 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Catalogue-authoring portability characterization (20 October 2026)
+
+The formerly source-traced KL-183 authoring path is now exercised through real
+HTTP package install, catalogue creation, Save As/Save and native reopen with
+fictional sources. The project model survives exactly, but its empty source
+manifest carries no application files: only the original or reinstalled product
+data resolves the program. The empty-database diagnostic's `missingFiles: 0`
+is not a portability certificate. A desired-portability assertion first fails
+at the named unresolved program; the committed limitation characterization and
+all 12 owning HTTP cases pass. This is test/evidence delivery, not a production
+repair or a universal package/native/Docker compatibility claim.
+[Scope, exact outcomes and next contract](status/2026-10-20-catalogue-authoring-portability.md).
+
 ## Remaining WP-13 documentation reconciliation (20 October 2026)
 
 The named prose sweep now describes the current v16 selective-import guard,

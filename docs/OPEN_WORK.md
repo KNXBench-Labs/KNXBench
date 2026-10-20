@@ -374,10 +374,15 @@ normalized property-planner distinction are verified unchanged, not rebuilt.
 This closes that named prose sweep; it changes no formal ledger disposition or
 runtime admission and claims no fresh application/release acceptance.
 
-**Separate verification follow-up, not an implemented fix:** the KL-183
-catalogue-added-application case is source-traced only; exercise catalogue
-device create → Save → reopen with an empty product database before claiming
-a runtime-confirmed regression or repair.
+**Separate runtime characterization (20 October 2026), not a repair:**
+the KL-183 catalogue-create → Save As/Save → empty-product-database reopen case
+is now exercised through real HTTP routes with fictional sources. The complete
+project model survives, but the program is unresolved and the saved manifest
+and carried-source table are empty; `missingFiles: 0` does not establish
+portability. Reinstallation of the exact synthetic package resolves the program
+without changing the model or saved bytes. [Evidence and remaining contract](status/2026-10-20-catalogue-authoring-portability.md).
+A separate source-dependency/manifest acquisition contract and repair remain
+open; this characterization neither changes production nor closes KL-183.
 [Reconciliation scope](status/2026-10-20-limitations-reassessment.md) ·
 [Current ledger](status/LEDGER.md) ·
 [delivery index](IMPLEMENTATION_STATUS.md).

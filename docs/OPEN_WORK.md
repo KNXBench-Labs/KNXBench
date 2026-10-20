@@ -438,10 +438,13 @@ the validated decoded leaf name. Standalone, outer-wrapper, inner-package and
 historical retry regressions preserve database bytes; valid directory shapes
 remain accepted. [Evidence and scope](research/2026-10-20-product-directory-stream-integrity.md).
 
-**Remaining, unowned:** a deflated *file* whose compressed bytes continue
+**Remaining:** a deflated *file* whose compressed bytes continue
 behind the end of its stream imports with those bytes in no member (both
-layers). Ordinary-file trailing policy and directory encryption-header semantics
-require separate packages; neither is changed here.
+layers). The product-reader/wrapper investigation is **claimed (20 October
+2026)** for bounded source research, synthetic reproduction and read-only
+compatibility evidence before any admission-policy change. Project-reader file
+streams and directory encryption-header semantics remain **unowned** separate
+packages; neither was changed by the product-directory repair.
 
 **Scope:** KL-159's documented zero-size directory corner in project containers,
 including nested archives: a nonzero CRC for empty output and a deflated entry

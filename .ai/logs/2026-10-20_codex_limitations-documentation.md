@@ -28,7 +28,11 @@ limitations generator/preservation suite: 14 tests passed. No new application
 runtime/hardware acceptance is inferred. The earlier audit's 385 Web unit
 passes remain bound to their original `2ff5b370` source.
 
-The maintained scoped gate, actual merged candidate, publication readback and
-owned cleanup remain pending until their results are recorded in the handover.
-Private commands/logs and receipts stay under `<profile-scratch>` until archived.
+The maintained scoped gate on main-first merge `52a42218` passed all 13 planned
+stages with frozen inputs: 317 tool tests, 103 xtask tests, Clippy, 1,636
+anchors across 680 Markdown files and 208 ledger rows. No real user data was
+touched or unchecked. The xtask-only corpus stage was a no-op, not a corpus
+execution. No application/browser/native/hardware tests were rerun for this
+prose-only change. Publication readback and owned cleanup follow the result-only
+documentation tail; the finalizer preserves receipts privately.
 No source, schema, real user catalogue or bus operation is part of this package.

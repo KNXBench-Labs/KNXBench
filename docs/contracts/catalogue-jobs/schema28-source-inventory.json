@@ -1,0 +1,2129 @@
+{
+  "kind": "static_source_derived_not_runtime_schema",
+  "tables": [
+    {
+      "name": "application_program",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 147,
+      "columns_at_creation": [
+        "id",
+        "manufacturer_id",
+        "name",
+        "application_number",
+        "application_version",
+        "program_type",
+        "mask_version",
+        "pei_type",
+        "load_procedure_style",
+        "default_language",
+        "hash",
+        "linkable",
+        "original_manufacturer",
+        "source_sha256"
+      ],
+      "pk": [
+        "id"
+      ],
+      "integer_primary_key": false,
+      "unique_clauses": [],
+      "ddl": "CREATE TABLE application_program (\n             id                    TEXT PRIMARY KEY,\n             manufacturer_id       TEXT NOT NULL,\n             name                  TEXT,\n             application_number    TEXT,\n             application_version   TEXT,\n             program_type          TEXT,\n             mask_version          TEXT,\n             pei_type              TEXT,\n             load_procedure_style  TEXT,\n             default_language      TEXT,\n             hash                  TEXT,\n             linkable              INTEGER,\n             original_manufacturer TEXT,\n             source_sha256         TEXT NOT NULL\n         )",
+      "alter_add_columns": [
+        {
+          "table": "application_program",
+          "column": "is_secure_enabled",
+          "ddl": "ALTER TABLE application_program ADD COLUMN is_secure_enabled TEXT;",
+          "migration_from": 12,
+          "line": 2337
+        },
+        {
+          "table": "application_program",
+          "column": "max_security_group_key_table_entries",
+          "ddl": "ALTER TABLE application_program ADD COLUMN max_security_group_key_table_entries TEXT;",
+          "migration_from": 12,
+          "line": 2338
+        },
+        {
+          "table": "application_program",
+          "column": "max_security_individual_address_entries",
+          "ddl": "ALTER TABLE application_program ADD COLUMN max_security_individual_address_entries TEXT;",
+          "migration_from": 12,
+          "line": 2339
+        },
+        {
+          "table": "application_program",
+          "column": "max_security_p2p_key_table_entries",
+          "ddl": "ALTER TABLE application_program ADD COLUMN max_security_p2p_key_table_entries TEXT;",
+          "migration_from": 12,
+          "line": 2340
+        },
+        {
+          "table": "application_program",
+          "column": "max_tunneling_user_entries",
+          "ddl": "ALTER TABLE application_program ADD COLUMN max_tunneling_user_entries TEXT;",
+          "migration_from": 12,
+          "line": 2341
+        },
+        {
+          "table": "application_program",
+          "column": "max_user_entries",
+          "ddl": "ALTER TABLE application_program ADD COLUMN max_user_entries TEXT;",
+          "migration_from": 12,
+          "line": 2342
+        },
+        {
+          "table": "application_program",
+          "column": "min_ets_version",
+          "ddl": "ALTER TABLE application_program ADD COLUMN min_ets_version TEXT;",
+          "migration_from": 12,
+          "line": 2343
+        },
+        {
+          "table": "application_program",
+          "column": "replaces_versions",
+          "ddl": "ALTER TABLE application_program ADD COLUMN replaces_versions TEXT;",
+          "migration_from": 12,
+          "line": 2344
+        },
+        {
+          "table": "application_program",
+          "column": "write_authority_recorded",
+          "ddl": "ALTER TABLE application_program\n             ADD COLUMN write_authority_recorded INTEGER NOT NULL DEFAULT 0;",
+          "migration_from": 19,
+          "line": 1366
+        }
+      ],
+      "final_column_names_static": [
+        "id",
+        "manufacturer_id",
+        "name",
+        "application_number",
+        "application_version",
+        "program_type",
+        "mask_version",
+        "pei_type",
+        "load_procedure_style",
+        "default_language",
+        "hash",
+        "linkable",
+        "original_manufacturer",
+        "source_sha256",
+        "is_secure_enabled",
+        "max_security_group_key_table_entries",
+        "max_security_individual_address_entries",
+        "max_security_p2p_key_table_entries",
+        "max_tunneling_user_entries",
+        "max_user_entries",
+        "min_ets_version",
+        "replaces_versions",
+        "write_authority_recorded"
+      ],
+      "rowid_alias_proposed": "_rowid_",
+      "without_rowid": false,
+      "autoincrement": false
+    },
+    {
+      "name": "catalog_item",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 90,
+      "columns_at_creation": [
+        "id",
+        "manufacturer_id",
+        "section_id",
+        "name",
+        "number",
+        "visible_description",
+        "product_ref_id",
+        "hardware2program_ref_id",
+        "default_language",
+        "source_sha256"
+      ],
+      "pk": [
+        "id"
+      ],
+      "integer_primary_key": false,
+      "unique_clauses": [],
+      "ddl": "CREATE TABLE catalog_item (\n             id                      TEXT PRIMARY KEY,\n             manufacturer_id         TEXT NOT NULL,\n             section_id              TEXT NOT NULL,\n             name                    TEXT,\n             number                  TEXT,\n             visible_description     TEXT,\n             product_ref_id          TEXT,\n             hardware2program_ref_id TEXT,\n             default_language        TEXT,\n             source_sha256           TEXT NOT NULL\n         )",
+      "alter_add_columns": [],
+      "final_column_names_static": [
+        "id",
+        "manufacturer_id",
+        "section_id",
+        "name",
+        "number",
+        "visible_description",
+        "product_ref_id",
+        "hardware2program_ref_id",
+        "default_language",
+        "source_sha256"
+      ],
+      "rowid_alias_proposed": "_rowid_",
+      "without_rowid": false,
+      "autoincrement": false
+    },
+    {
+      "name": "catalog_section",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 80,
+      "columns_at_creation": [
+        "id",
+        "manufacturer_id",
+        "parent_id",
+        "name",
+        "number",
+        "visible_description",
+        "default_language",
+        "source_sha256"
+      ],
+      "pk": [
+        "id"
+      ],
+      "integer_primary_key": false,
+      "unique_clauses": [],
+      "ddl": "CREATE TABLE catalog_section (\n             id                  TEXT PRIMARY KEY,\n             manufacturer_id     TEXT NOT NULL,\n             parent_id           TEXT,\n             name                TEXT,\n             number              TEXT,\n             visible_description TEXT,\n             default_language    TEXT,\n             source_sha256       TEXT NOT NULL\n         )",
+      "alter_add_columns": [],
+      "final_column_names_static": [
+        "id",
+        "manufacturer_id",
+        "parent_id",
+        "name",
+        "number",
+        "visible_description",
+        "default_language",
+        "source_sha256"
+      ],
+      "rowid_alias_proposed": "_rowid_",
+      "without_rowid": false,
+      "autoincrement": false
+    },
+    {
+      "name": "com_object",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 212,
+      "columns_at_creation": [
+        "program_id",
+        "id",
+        "number",
+        "name",
+        "text",
+        "function_text",
+        "visible_description",
+        "object_size",
+        "priority",
+        "dpt_list",
+        "read_flag",
+        "write_flag",
+        "transmit_flag",
+        "update_flag",
+        "communication_flag",
+        "read_on_init_flag"
+      ],
+      "pk": [
+        "program_id",
+        "id"
+      ],
+      "integer_primary_key": false,
+      "unique_clauses": [],
+      "ddl": "CREATE TABLE com_object (\n             program_id          TEXT NOT NULL,\n             id                  TEXT NOT NULL,\n             number              INTEGER,\n             name                TEXT,\n             text                TEXT,\n             function_text       TEXT,\n             visible_description TEXT,\n             object_size         TEXT,\n             priority            TEXT,\n             dpt_list            TEXT,\n             read_flag           TEXT,\n             write_flag          TEXT,\n             transmit_flag       TEXT,\n             update_flag         TEXT,\n             communication_flag  TEXT,\n             read_on_init_flag   TEXT,\n             PRIMARY KEY (program_id, id)\n         )",
+      "alter_add_columns": [],
+      "final_column_names_static": [
+        "program_id",
+        "id",
+        "number",
+        "name",
+        "text",
+        "function_text",
+        "visible_description",
+        "object_size",
+        "priority",
+        "dpt_list",
+        "read_flag",
+        "write_flag",
+        "transmit_flag",
+        "update_flag",
+        "communication_flag",
+        "read_on_init_flag"
+      ],
+      "rowid_alias_proposed": "_rowid_",
+      "without_rowid": false,
+      "autoincrement": false
+    },
+    {
+      "name": "com_object_ref",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 231,
+      "columns_at_creation": [
+        "program_id",
+        "id",
+        "com_object_id",
+        "tag",
+        "text",
+        "function_text",
+        "visible_description",
+        "object_size",
+        "priority",
+        "dpt_list",
+        "read_flag",
+        "write_flag",
+        "transmit_flag",
+        "update_flag",
+        "communication_flag",
+        "read_on_init_flag"
+      ],
+      "pk": [
+        "program_id",
+        "id"
+      ],
+      "integer_primary_key": false,
+      "unique_clauses": [],
+      "ddl": "CREATE TABLE com_object_ref (\n             program_id          TEXT NOT NULL,\n             id                  TEXT NOT NULL,\n             com_object_id       TEXT NOT NULL,\n             tag                 TEXT,\n             text                TEXT,\n             function_text       TEXT,\n             visible_description TEXT,\n             object_size         TEXT,\n             priority            TEXT,\n             dpt_list            TEXT,\n             read_flag           TEXT,\n             write_flag          TEXT,\n             transmit_flag       TEXT,\n             update_flag         TEXT,\n             communication_flag  TEXT,\n             read_on_init_flag   TEXT,\n             PRIMARY KEY (program_id, id)\n         )",
+      "alter_add_columns": [
+        {
+          "table": "com_object_ref",
+          "column": "text_parameter_ref_id",
+          "ddl": "ALTER TABLE com_object_ref ADD COLUMN text_parameter_ref_id TEXT;",
+          "migration_from": 22,
+          "line": 438
+        }
+      ],
+      "final_column_names_static": [
+        "program_id",
+        "id",
+        "com_object_id",
+        "tag",
+        "text",
+        "function_text",
+        "visible_description",
+        "object_size",
+        "priority",
+        "dpt_list",
+        "read_flag",
+        "write_flag",
+        "transmit_flag",
+        "update_flag",
+        "communication_flag",
+        "read_on_init_flag",
+        "text_parameter_ref_id"
+      ],
+      "rowid_alias_proposed": "_rowid_",
+      "without_rowid": false,
+      "autoincrement": false
+    },
+    {
+      "name": "datapoint_type",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 261,
+      "columns_at_creation": [
+        "id",
+        "main",
+        "sub",
+        "name",
+        "text"
+      ],
+      "pk": [
+        "id"
+      ],
+      "integer_primary_key": false,
+      "unique_clauses": [],
+      "ddl": "CREATE TABLE datapoint_type (\n             id   TEXT PRIMARY KEY,\n             main INTEGER NOT NULL,\n             sub  INTEGER,\n             name TEXT,\n             text TEXT\n         )",
+      "alter_add_columns": [],
+      "final_column_names_static": [
+        "id",
+        "main",
+        "sub",
+        "name",
+        "text"
+      ],
+      "rowid_alias_proposed": "_rowid_",
+      "without_rowid": false,
+      "autoincrement": false
+    },
+    {
+      "name": "dynamic_node",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 3134,
+      "columns_at_creation": [
+        "program_id",
+        "module_def_id",
+        "node_id",
+        "parent_id",
+        "position",
+        "kind",
+        "element_id",
+        "ref_id",
+        "test",
+        "is_default",
+        "text",
+        "extra"
+      ],
+      "pk": [
+        "program_id",
+        "module_def_id",
+        "node_id"
+      ],
+      "integer_primary_key": false,
+      "unique_clauses": [],
+      "ddl": "CREATE TABLE dynamic_node (\n            program_id    TEXT NOT NULL,\n            module_def_id TEXT NOT NULL,\n            node_id       INTEGER NOT NULL,\n            parent_id     INTEGER,\n            position      INTEGER NOT NULL,\n            kind          TEXT NOT NULL,\n            element_id    TEXT,\n            ref_id        TEXT,\n            test          TEXT,\n            is_default    INTEGER,\n            text          TEXT,\n            extra         TEXT,\n            PRIMARY KEY (program_id, module_def_id, node_id)\n        )",
+      "alter_add_columns": [
+        {
+          "table": "dynamic_node",
+          "column": "value",
+          "ddl": "ALTER TABLE dynamic_node ADD COLUMN value TEXT;",
+          "migration_from": 10,
+          "line": 2655
+        },
+        {
+          "table": "dynamic_node",
+          "column": "name",
+          "ddl": "ALTER TABLE dynamic_node ADD COLUMN name TEXT;",
+          "migration_from": 17,
+          "line": 1493
+        },
+        {
+          "table": "dynamic_node",
+          "column": "number",
+          "ddl": "ALTER TABLE dynamic_node ADD COLUMN number TEXT;",
+          "migration_from": 17,
+          "line": 1494
+        },
+        {
+          "table": "dynamic_node",
+          "column": "text_parameter_ref_id",
+          "ddl": "ALTER TABLE dynamic_node ADD COLUMN text_parameter_ref_id TEXT;",
+          "migration_from": 22,
+          "line": 437
+        },
+        {
+          "table": "dynamic_node",
+          "column": "access",
+          "ddl": "ALTER TABLE dynamic_node ADD COLUMN access TEXT;",
+          "migration_from": 23,
+          "line": 461
+        },
+        {
+          "table": "dynamic_node",
+          "column": "ui_hint",
+          "ddl": "ALTER TABLE dynamic_node ADD COLUMN ui_hint TEXT;",
+          "migration_from": 23,
+          "line": 462
+        }
+      ],
+      "final_column_names_static": [
+        "program_id",
+        "module_def_id",
+        "node_id",
+        "parent_id",
+        "position",
+        "kind",
+        "element_id",
+        "ref_id",
+        "test",
+        "is_default",
+        "text",
+        "extra",
+        "value",
+        "name",
+        "number",
+        "text_parameter_ref_id",
+        "access",
+        "ui_hint"
+      ],
+      "rowid_alias_proposed": "_rowid_",
+      "without_rowid": false,
+      "autoincrement": false
+    },
+    {
+      "name": "function_point",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 2454,
+      "columns_at_creation": [
+        "id",
+        "function_type_id",
+        "datapoint_type",
+        "role",
+        "characteristics",
+        "text"
+      ],
+      "pk": [
+        "id"
+      ],
+      "integer_primary_key": false,
+      "unique_clauses": [],
+      "ddl": "CREATE TABLE IF NOT EXISTS function_point (\n             id               TEXT PRIMARY KEY,\n             function_type_id TEXT NOT NULL,\n             datapoint_type   TEXT,\n             role             TEXT,\n             characteristics  TEXT,\n             text             TEXT\n         )",
+      "alter_add_columns": [],
+      "final_column_names_static": [
+        "id",
+        "function_type_id",
+        "datapoint_type",
+        "role",
+        "characteristics",
+        "text"
+      ],
+      "rowid_alias_proposed": "_rowid_",
+      "without_rowid": false,
+      "autoincrement": false
+    },
+    {
+      "name": "function_type",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 2448,
+      "columns_at_creation": [
+        "id",
+        "number",
+        "text",
+        "status"
+      ],
+      "pk": [
+        "id"
+      ],
+      "integer_primary_key": false,
+      "unique_clauses": [],
+      "ddl": "CREATE TABLE IF NOT EXISTS function_type (\n             id     TEXT PRIMARY KEY,\n             number INTEGER,\n             text   TEXT,\n             status TEXT\n         )",
+      "alter_add_columns": [],
+      "final_column_names_static": [
+        "id",
+        "number",
+        "text",
+        "status"
+      ],
+      "rowid_alias_proposed": "_rowid_",
+      "without_rowid": false,
+      "autoincrement": false
+    },
+    {
+      "name": "hardware",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 103,
+      "columns_at_creation": [
+        "id",
+        "manufacturer_id",
+        "name",
+        "serial_number",
+        "version_number",
+        "bus_current",
+        "has_individual_address",
+        "has_application_program",
+        "is_accessory",
+        "is_coupler",
+        "is_power_supply",
+        "is_ip_enabled",
+        "is_power_line_repeater",
+        "original_manufacturer",
+        "source_sha256"
+      ],
+      "pk": [
+        "id"
+      ],
+      "integer_primary_key": false,
+      "unique_clauses": [],
+      "ddl": "CREATE TABLE hardware (\n             id                      TEXT PRIMARY KEY,\n             manufacturer_id         TEXT NOT NULL,\n             name                    TEXT,\n             serial_number           TEXT,\n             version_number          TEXT,\n             bus_current             TEXT,\n             has_individual_address  INTEGER,\n             has_application_program INTEGER,\n             is_accessory            INTEGER,\n             is_coupler              INTEGER,\n             is_power_supply         INTEGER,\n             is_ip_enabled           INTEGER,\n             is_power_line_repeater  INTEGER,\n             original_manufacturer   TEXT,\n             source_sha256           TEXT NOT NULL\n         )",
+      "alter_add_columns": [],
+      "final_column_names_static": [
+        "id",
+        "manufacturer_id",
+        "name",
+        "serial_number",
+        "version_number",
+        "bus_current",
+        "has_individual_address",
+        "has_application_program",
+        "is_accessory",
+        "is_coupler",
+        "is_power_supply",
+        "is_ip_enabled",
+        "is_power_line_repeater",
+        "original_manufacturer",
+        "source_sha256"
+      ],
+      "rowid_alias_proposed": "_rowid_",
+      "without_rowid": false,
+      "autoincrement": false
+    },
+    {
+      "name": "hardware2program",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 134,
+      "columns_at_creation": [
+        "id",
+        "manufacturer_id",
+        "hardware_id",
+        "application_program_ref",
+        "medium_types",
+        "hash",
+        "registration_number",
+        "registration_status",
+        "registration_signature",
+        "source_sha256"
+      ],
+      "pk": [
+        "id"
+      ],
+      "integer_primary_key": false,
+      "unique_clauses": [],
+      "ddl": "CREATE TABLE hardware2program (\n             id                      TEXT PRIMARY KEY,\n             manufacturer_id         TEXT NOT NULL,\n             hardware_id             TEXT NOT NULL,\n             application_program_ref TEXT,\n             medium_types            TEXT,\n             hash                    TEXT,\n             registration_number     TEXT,\n             registration_status     TEXT,\n             registration_signature  TEXT,\n             source_sha256           TEXT NOT NULL\n         )",
+      "alter_add_columns": [],
+      "final_column_names_static": [
+        "id",
+        "manufacturer_id",
+        "hardware_id",
+        "application_program_ref",
+        "medium_types",
+        "hash",
+        "registration_number",
+        "registration_status",
+        "registration_signature",
+        "source_sha256"
+      ],
+      "rowid_alias_proposed": "_rowid_",
+      "without_rowid": false,
+      "autoincrement": false
+    },
+    {
+      "name": "ingest_unknown",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 65,
+      "columns_at_creation": [
+        "id",
+        "source_sha256",
+        "program_id",
+        "xpath",
+        "kind",
+        "name",
+        "occurrences",
+        "sample"
+      ],
+      "pk": [
+        "id"
+      ],
+      "integer_primary_key": true,
+      "unique_clauses": [],
+      "ddl": "CREATE TABLE ingest_unknown (\n             id            INTEGER PRIMARY KEY,\n             source_sha256 TEXT NOT NULL,\n             program_id    TEXT,\n             xpath         TEXT NOT NULL,\n             kind          TEXT NOT NULL,\n             name          TEXT NOT NULL,\n             occurrences   INTEGER NOT NULL,\n             sample        TEXT\n         )",
+      "alter_add_columns": [],
+      "final_column_names_static": [
+        "id",
+        "source_sha256",
+        "program_id",
+        "xpath",
+        "kind",
+        "name",
+        "occurrences",
+        "sample"
+      ],
+      "rowid_alias_proposed": "_rowid_",
+      "without_rowid": false,
+      "autoincrement": false
+    },
+    {
+      "name": "legacy_diagnostic",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 1138,
+      "columns_at_creation": [
+        "payload_sha256",
+        "ordinal",
+        "kind",
+        "detail"
+      ],
+      "pk": [
+        "payload_sha256",
+        "ordinal"
+      ],
+      "integer_primary_key": false,
+      "unique_clauses": [],
+      "ddl": "CREATE TABLE legacy_diagnostic (\n             payload_sha256 TEXT NOT NULL REFERENCES legacy_source (payload_sha256),\n             ordinal INTEGER NOT NULL,\n             kind TEXT NOT NULL,\n             detail TEXT NOT NULL,\n             PRIMARY KEY (payload_sha256, ordinal)\n         )",
+      "alter_add_columns": [],
+      "final_column_names_static": [
+        "payload_sha256",
+        "ordinal",
+        "kind",
+        "detail"
+      ],
+      "rowid_alias_proposed": "_rowid_",
+      "without_rowid": false,
+      "autoincrement": false
+    },
+    {
+      "name": "legacy_program",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 1133,
+      "columns_at_creation": [
+        "program_id",
+        "payload_sha256",
+        "exim_program_id"
+      ],
+      "pk": [
+        "program_id"
+      ],
+      "integer_primary_key": false,
+      "unique_clauses": [],
+      "ddl": "CREATE TABLE legacy_program (\n             program_id TEXT PRIMARY KEY,\n             payload_sha256 TEXT NOT NULL REFERENCES legacy_source (payload_sha256),\n             exim_program_id TEXT NOT NULL\n         )",
+      "alter_add_columns": [],
+      "final_column_names_static": [
+        "program_id",
+        "payload_sha256",
+        "exim_program_id"
+      ],
+      "rowid_alias_proposed": "_rowid_",
+      "without_rowid": false,
+      "autoincrement": false
+    },
+    {
+      "name": "legacy_source",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 1116,
+      "columns_at_creation": [
+        "payload_sha256",
+        "namespace",
+        "member_name",
+        "member_kind",
+        "format_version",
+        "exported_at",
+        "producer",
+        "charset"
+      ],
+      "pk": [
+        "payload_sha256"
+      ],
+      "integer_primary_key": false,
+      "unique_clauses": [
+        "namespace TEXT NOT NULL UNIQUE"
+      ],
+      "ddl": "CREATE TABLE legacy_source (\n             payload_sha256 TEXT PRIMARY KEY,\n             namespace TEXT NOT NULL UNIQUE,\n             member_name TEXT NOT NULL,\n             member_kind TEXT NOT NULL,\n             format_version TEXT,\n             exported_at TEXT,\n             producer TEXT,\n             charset TEXT NOT NULL\n         )",
+      "alter_add_columns": [],
+      "final_column_names_static": [
+        "payload_sha256",
+        "namespace",
+        "member_name",
+        "member_kind",
+        "format_version",
+        "exported_at",
+        "producer",
+        "charset"
+      ],
+      "rowid_alias_proposed": "_rowid_",
+      "without_rowid": false,
+      "autoincrement": false
+    },
+    {
+      "name": "legacy_source_file",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 1126,
+      "columns_at_creation": [
+        "payload_sha256",
+        "original_sha256",
+        "source_name",
+        "encrypted"
+      ],
+      "pk": [
+        "payload_sha256",
+        "original_sha256",
+        "source_name"
+      ],
+      "integer_primary_key": false,
+      "unique_clauses": [],
+      "ddl": "CREATE TABLE legacy_source_file (\n             payload_sha256 TEXT NOT NULL REFERENCES legacy_source (payload_sha256),\n             original_sha256 TEXT NOT NULL,\n             source_name TEXT NOT NULL,\n             encrypted INTEGER NOT NULL,\n             PRIMARY KEY (payload_sha256, original_sha256, source_name)\n         )",
+      "alter_add_columns": [],
+      "final_column_names_static": [
+        "payload_sha256",
+        "original_sha256",
+        "source_name",
+        "encrypted"
+      ],
+      "rowid_alias_proposed": "_rowid_",
+      "without_rowid": false,
+      "autoincrement": false
+    },
+    {
+      "name": "manufacturer",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 76,
+      "columns_at_creation": [
+        "id",
+        "name"
+      ],
+      "pk": [
+        "id"
+      ],
+      "integer_primary_key": false,
+      "unique_clauses": [],
+      "ddl": "CREATE TABLE manufacturer (\n             id   TEXT PRIMARY KEY,\n             name TEXT\n         )",
+      "alter_add_columns": [],
+      "final_column_names_static": [
+        "id",
+        "name"
+      ],
+      "rowid_alias_proposed": "_rowid_",
+      "without_rowid": false,
+      "autoincrement": false
+    },
+    {
+      "name": "master_declaration",
+      "source": "crates/knx-productdb/src/master_provenance.rs",
+      "line": 126,
+      "columns_at_creation": [
+        "source_sha256",
+        "ordinal",
+        "family",
+        "element",
+        "logical_id",
+        "xml_path",
+        "byte_start",
+        "byte_end",
+        "main_number",
+        "function_type_id",
+        "missing_id",
+        "orphan_parent",
+        "observed_write"
+      ],
+      "pk": [
+        "source_sha256",
+        "ordinal"
+      ],
+      "integer_primary_key": false,
+      "unique_clauses": [],
+      "ddl": "CREATE TABLE master_declaration (\n        source_sha256 TEXT NOT NULL REFERENCES master_source(source_sha256),\n        ordinal INTEGER NOT NULL CHECK(ordinal>0),\n        family TEXT NOT NULL CHECK(family IN ('datapoint_type','function_type','function_point','space_usage')),\n        element TEXT NOT NULL CHECK(element IN ('DatapointType','DatapointSubtype','FunctionType','FunctionPoint','SpaceUsage')),\n        logical_id TEXT, xml_path TEXT NOT NULL,\n        byte_start INTEGER NOT NULL CHECK(byte_start>=0),\n        byte_end INTEGER NOT NULL CHECK(byte_end>byte_start),\n        main_number INTEGER, function_type_id TEXT,\n        missing_id INTEGER NOT NULL CHECK(missing_id IN (0,1)),\n        orphan_parent INTEGER NOT NULL CHECK(orphan_parent IN (0,1)),\n        observed_write INTEGER CHECK(observed_write IN (0,1)),\n        CHECK(missing_id=(logical_id IS NULL)),\n        CHECK(observed_write IS NULL OR (missing_id=0 AND orphan_parent=0)),\n        PRIMARY KEY(source_sha256,ordinal)\n    )",
+      "alter_add_columns": [],
+      "final_column_names_static": [
+        "source_sha256",
+        "ordinal",
+        "family",
+        "element",
+        "logical_id",
+        "xml_path",
+        "byte_start",
+        "byte_end",
+        "main_number",
+        "function_type_id",
+        "missing_id",
+        "orphan_parent",
+        "observed_write"
+      ],
+      "rowid_alias_proposed": "_rowid_",
+      "without_rowid": false,
+      "autoincrement": false
+    },
+    {
+      "name": "master_source",
+      "source": "crates/knx-productdb/src/master_provenance.rs",
+      "line": 118,
+      "columns_at_creation": [
+        "source_sha256",
+        "definition_version",
+        "history",
+        "status",
+        "reason"
+      ],
+      "pk": [
+        "source_sha256"
+      ],
+      "integer_primary_key": false,
+      "unique_clauses": [],
+      "ddl": "CREATE TABLE master_source (\n        source_sha256 TEXT PRIMARY KEY,\n        definition_version INTEGER NOT NULL CHECK(definition_version=1),\n        history TEXT NOT NULL CHECK(history IN ('observed','historical-unavailable')),\n        status TEXT NOT NULL CHECK(status IN ('complete','failed','unexamined')),\n        reason TEXT,\n        CHECK((status='complete')=(reason IS NULL))\n    )",
+      "alter_add_columns": [],
+      "final_column_names_static": [
+        "source_sha256",
+        "definition_version",
+        "history",
+        "status",
+        "reason"
+      ],
+      "rowid_alias_proposed": "_rowid_",
+      "without_rowid": false,
+      "autoincrement": false
+    },
+    {
+      "name": "master_winner",
+      "source": "crates/knx-productdb/src/master_provenance.rs",
+      "line": 143,
+      "columns_at_creation": [
+        "family",
+        "logical_id",
+        "source_sha256",
+        "ordinal"
+      ],
+      "pk": [
+        "family",
+        "logical_id"
+      ],
+      "integer_primary_key": false,
+      "unique_clauses": [],
+      "ddl": "CREATE TABLE master_winner (\n        family TEXT NOT NULL CHECK(family IN ('datapoint_type','function_type','function_point','space_usage')),\n        logical_id TEXT NOT NULL,\n        source_sha256 TEXT, ordinal INTEGER,\n        CHECK((source_sha256 IS NULL)=(ordinal IS NULL)),\n        FOREIGN KEY(source_sha256,ordinal) REFERENCES master_declaration(source_sha256,ordinal),\n        PRIMARY KEY(family,logical_id)\n    )",
+      "alter_add_columns": [],
+      "final_column_names_static": [
+        "family",
+        "logical_id",
+        "source_sha256",
+        "ordinal"
+      ],
+      "rowid_alias_proposed": "_rowid_",
+      "without_rowid": false,
+      "autoincrement": false
+    },
+    {
+      "name": "module_def_argument",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 2642,
+      "columns_at_creation": [
+        "program_id",
+        "module_def_id",
+        "id",
+        "name",
+        "arg_type",
+        "allocates",
+        "position",
+        "extra"
+      ],
+      "pk": [
+        "program_id",
+        "module_def_id",
+        "id"
+      ],
+      "integer_primary_key": false,
+      "unique_clauses": [],
+      "ddl": "CREATE TABLE module_def_argument (\n            program_id    TEXT NOT NULL,\n            module_def_id TEXT NOT NULL,\n            id            TEXT NOT NULL,\n            name          TEXT,\n            arg_type      TEXT,\n            allocates     INTEGER,\n            position      INTEGER NOT NULL,\n            extra         TEXT,\n            PRIMARY KEY (program_id, module_def_id, id)\n        )",
+      "alter_add_columns": [],
+      "final_column_names_static": [
+        "program_id",
+        "module_def_id",
+        "id",
+        "name",
+        "arg_type",
+        "allocates",
+        "position",
+        "extra"
+      ],
+      "rowid_alias_proposed": "_rowid_",
+      "without_rowid": false,
+      "autoincrement": false
+    },
+    {
+      "name": "package",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 3259,
+      "columns_at_creation": [
+        "sha256",
+        "source_name",
+        "scheme",
+        "size",
+        "bytes",
+        "unknown_count"
+      ],
+      "pk": [
+        "sha256"
+      ],
+      "integer_primary_key": false,
+      "unique_clauses": [],
+      "ddl": "CREATE TABLE package (\n            sha256 TEXT PRIMARY KEY,\n            source_name TEXT NOT NULL,\n            scheme INTEGER NOT NULL,\n            size INTEGER NOT NULL,\n            bytes BLOB NOT NULL,\n            unknown_count INTEGER NOT NULL\n        )",
+      "alter_add_columns": [
+        {
+          "table": "package",
+          "column": "translation_program_count",
+          "ddl": "ALTER TABLE package ADD COLUMN translation_program_count INTEGER NOT NULL DEFAULT 0;",
+          "migration_from": 4,
+          "line": 2959
+        },
+        {
+          "table": "package",
+          "column": "translation_catalog_count",
+          "ddl": "ALTER TABLE package ADD COLUMN translation_catalog_count INTEGER NOT NULL DEFAULT 0;",
+          "migration_from": 4,
+          "line": 2959
+        },
+        {
+          "table": "package",
+          "column": "translation_hardware_count",
+          "ddl": "ALTER TABLE package ADD COLUMN translation_hardware_count INTEGER NOT NULL DEFAULT 0;",
+          "migration_from": 4,
+          "line": 2959
+        },
+        {
+          "table": "package",
+          "column": "translation_master_count",
+          "ddl": "ALTER TABLE package ADD COLUMN translation_master_count INTEGER NOT NULL DEFAULT 0;",
+          "migration_from": 4,
+          "line": 2959
+        },
+        {
+          "table": "package",
+          "column": "dropped_datapoint_type_count",
+          "ddl": "ALTER TABLE package ADD COLUMN dropped_datapoint_type_count INTEGER NOT NULL DEFAULT 0;",
+          "migration_from": 5,
+          "line": 2933
+        }
+      ],
+      "final_column_names_static": [
+        "sha256",
+        "source_name",
+        "scheme",
+        "size",
+        "bytes",
+        "unknown_count",
+        "translation_program_count",
+        "translation_catalog_count",
+        "translation_hardware_count",
+        "translation_master_count",
+        "dropped_datapoint_type_count"
+      ],
+      "rowid_alias_proposed": "_rowid_",
+      "without_rowid": false,
+      "autoincrement": false
+    },
+    {
+      "name": "package_baggage_declaration",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 1854,
+      "columns_at_creation": [
+        "package_sha256",
+        "index_path",
+        "ordinal",
+        "baggage_id",
+        "name",
+        "target_path",
+        "install_on_import",
+        "time_info",
+        "file_version",
+        "resolution",
+        "member_path",
+        "detail"
+      ],
+      "pk": [
+        "package_sha256",
+        "index_path",
+        "ordinal"
+      ],
+      "integer_primary_key": false,
+      "unique_clauses": [],
+      "ddl": "CREATE TABLE package_baggage_declaration (\n            package_sha256 TEXT NOT NULL REFERENCES package_baggage_inventory(package_sha256),\n            index_path TEXT NOT NULL,\n            ordinal INTEGER NOT NULL CHECK (ordinal >= 0),\n            baggage_id TEXT,\n            name TEXT,\n            target_path TEXT,\n            install_on_import TEXT,\n            time_info TEXT,\n            file_version TEXT,\n            resolution TEXT NOT NULL CHECK (resolution IN ('resolved','missing','invalid')),\n            member_path TEXT,\n            detail TEXT,\n            PRIMARY KEY (package_sha256, index_path, ordinal),\n            CHECK ((resolution = 'resolved') = (member_path IS NOT NULL)),\n            CHECK ((resolution = 'resolved') = (detail IS NULL))\n        )",
+      "alter_add_columns": [],
+      "final_column_names_static": [
+        "package_sha256",
+        "index_path",
+        "ordinal",
+        "baggage_id",
+        "name",
+        "target_path",
+        "install_on_import",
+        "time_info",
+        "file_version",
+        "resolution",
+        "member_path",
+        "detail"
+      ],
+      "rowid_alias_proposed": "_rowid_",
+      "without_rowid": false,
+      "autoincrement": false
+    },
+    {
+      "name": "package_baggage_inventory",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 1831,
+      "columns_at_creation": [
+        "package_sha256",
+        "status"
+      ],
+      "pk": [
+        "package_sha256"
+      ],
+      "integer_primary_key": false,
+      "unique_clauses": [],
+      "ddl": "CREATE TABLE package_baggage_inventory (\n            package_sha256 TEXT PRIMARY KEY REFERENCES package(sha256),\n            status TEXT NOT NULL CHECK (status IN ('measured','unavailable'))\n        )",
+      "alter_add_columns": [],
+      "final_column_names_static": [
+        "package_sha256",
+        "status"
+      ],
+      "rowid_alias_proposed": "_rowid_",
+      "without_rowid": false,
+      "autoincrement": false
+    },
+    {
+      "name": "package_baggage_payload",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 1835,
+      "columns_at_creation": [
+        "package_sha256",
+        "member_path",
+        "sha256",
+        "size",
+        "media_class",
+        "declarations",
+        "nested_status",
+        "nested_entries",
+        "nested_expanded_size",
+        "nested_encrypted_entries",
+        "nested_archive_names"
+      ],
+      "pk": [
+        "package_sha256",
+        "member_path"
+      ],
+      "integer_primary_key": false,
+      "unique_clauses": [],
+      "ddl": "CREATE TABLE package_baggage_payload (\n            package_sha256 TEXT NOT NULL REFERENCES package_baggage_inventory(package_sha256),\n            member_path TEXT NOT NULL,\n            sha256 TEXT NOT NULL REFERENCES source_file(sha256),\n            size INTEGER NOT NULL CHECK (size >= 0),\n            media_class TEXT NOT NULL CHECK (media_class IN ('empty','png','jpeg','gif','bmp','pdf','zip','pe-executable','ole2-compound','xml','unknown')),\n            declarations INTEGER NOT NULL CHECK (declarations >= 0),\n            nested_status TEXT NOT NULL CHECK (nested_status IN ('not-archive','unreadable','read')),\n            nested_entries INTEGER CHECK (nested_entries >= 0),\n            nested_expanded_size INTEGER CHECK (nested_expanded_size >= 0),\n            nested_encrypted_entries INTEGER CHECK (nested_encrypted_entries >= 0),\n            nested_archive_names INTEGER CHECK (nested_archive_names >= 0),\n            PRIMARY KEY (package_sha256, member_path),\n            CHECK ((nested_status = 'read') = (nested_entries IS NOT NULL)),\n            CHECK ((nested_entries IS NULL) = (nested_expanded_size IS NULL)),\n            CHECK ((nested_entries IS NULL) = (nested_encrypted_entries IS NULL)),\n            CHECK ((nested_entries IS NULL) = (nested_archive_names IS NULL)),\n            CHECK ((media_class = 'zip') = (nested_status <> 'not-archive'))\n        )",
+      "alter_add_columns": [],
+      "final_column_names_static": [
+        "package_sha256",
+        "member_path",
+        "sha256",
+        "size",
+        "media_class",
+        "declarations",
+        "nested_status",
+        "nested_entries",
+        "nested_expanded_size",
+        "nested_encrypted_entries",
+        "nested_archive_names"
+      ],
+      "rowid_alias_proposed": "_rowid_",
+      "without_rowid": false,
+      "autoincrement": false
+    },
+    {
+      "name": "package_conflict",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 3281,
+      "columns_at_creation": [
+        "package_sha256",
+        "ordinal",
+        "table_name",
+        "logical_id",
+        "kept_sha256",
+        "other_sha256"
+      ],
+      "pk": [
+        "package_sha256",
+        "ordinal"
+      ],
+      "integer_primary_key": false,
+      "unique_clauses": [],
+      "ddl": "CREATE TABLE package_conflict (\n            package_sha256 TEXT NOT NULL REFERENCES package(sha256),\n            ordinal INTEGER NOT NULL,\n            table_name TEXT NOT NULL,\n            logical_id TEXT NOT NULL,\n            kept_sha256 TEXT NOT NULL,\n            other_sha256 TEXT NOT NULL,\n            PRIMARY KEY (package_sha256, ordinal)\n        )",
+      "alter_add_columns": [
+        {
+          "table": "package_conflict",
+          "column": "occurrence",
+          "ddl": "ALTER TABLE package_conflict ADD COLUMN occurrence INTEGER NOT NULL DEFAULT 1;",
+          "migration_from": 6,
+          "line": 2916
+        }
+      ],
+      "final_column_names_static": [
+        "package_sha256",
+        "ordinal",
+        "table_name",
+        "logical_id",
+        "kept_sha256",
+        "other_sha256",
+        "occurrence"
+      ],
+      "rowid_alias_proposed": "_rowid_",
+      "without_rowid": false,
+      "autoincrement": false
+    },
+    {
+      "name": "package_install_count",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 2166,
+      "columns_at_creation": [
+        "package_sha256",
+        "ordinal",
+        "category",
+        "disposition",
+        "count"
+      ],
+      "pk": [
+        "package_sha256",
+        "ordinal"
+      ],
+      "integer_primary_key": false,
+      "unique_clauses": [
+        "UNIQUE (package_sha256, category, disposition)"
+      ],
+      "ddl": "CREATE TABLE package_install_count_v14 (\n            package_sha256 TEXT NOT NULL REFERENCES package_install_report(package_sha256),\n            ordinal INTEGER NOT NULL CHECK (ordinal >= 0),\n            category TEXT NOT NULL CHECK (category IN ('archive_member','product','application_program','parameter','communication_object','dynamic_node','module','baggage_index','baggage','unknown_construct','master_section','master_subtree','datapoint_type')),\n            disposition TEXT NOT NULL CHECK (disposition IN ('read','stored','deduplicated','retained-but-uninterpreted','unsupported','dropped')),\n            count INTEGER NOT NULL CHECK (count >= 0),\n            PRIMARY KEY (package_sha256, ordinal),\n            UNIQUE (package_sha256, category, disposition)\n        )",
+      "source_definition_name": "package_install_count_v14",
+      "alter_add_columns": [],
+      "final_column_names_static": [
+        "package_sha256",
+        "ordinal",
+        "category",
+        "disposition",
+        "count"
+      ],
+      "rowid_alias_proposed": "_rowid_",
+      "without_rowid": false,
+      "autoincrement": false
+    },
+    {
+      "name": "package_install_diagnostic",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 274,
+      "columns_at_creation": [
+        "package_sha256",
+        "ordinal",
+        "kind",
+        "archive_path",
+        "xml_path",
+        "detail",
+        "occurrences"
+      ],
+      "pk": [
+        "package_sha256",
+        "ordinal"
+      ],
+      "integer_primary_key": false,
+      "unique_clauses": [
+        "UNIQUE(package_sha256,kind,archive_path,xml_path,detail)"
+      ],
+      "ddl": "CREATE TABLE package_install_diagnostic_v27 (\n        package_sha256 TEXT NOT NULL REFERENCES package_install_report(package_sha256),\n        ordinal INTEGER NOT NULL CHECK(ordinal>=0),\n        kind TEXT NOT NULL CHECK(kind IN ('unsupported-master-section','unsupported-master-subtree','unresolved-baggage-declaration','undeclared-baggage-payload','master-identity-collision','malformed-master-declaration')),\n        archive_path TEXT NOT NULL,xml_path TEXT NOT NULL,detail TEXT NOT NULL,\n        occurrences INTEGER NOT NULL CHECK(occurrences>0),\n        PRIMARY KEY(package_sha256,ordinal),\n        UNIQUE(package_sha256,kind,archive_path,xml_path,detail)\n    )",
+      "source_definition_name": "package_install_diagnostic_v27",
+      "alter_add_columns": [],
+      "final_column_names_static": [
+        "package_sha256",
+        "ordinal",
+        "kind",
+        "archive_path",
+        "xml_path",
+        "detail",
+        "occurrences"
+      ],
+      "rowid_alias_proposed": "_rowid_",
+      "without_rowid": false,
+      "autoincrement": false
+    },
+    {
+      "name": "package_install_report",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 2392,
+      "columns_at_creation": [
+        "package_sha256",
+        "report_version",
+        "status",
+        "unknown_distinct",
+        "unknown_occurrences"
+      ],
+      "pk": [
+        "package_sha256"
+      ],
+      "integer_primary_key": false,
+      "unique_clauses": [],
+      "ddl": "CREATE TABLE package_install_report (\n            package_sha256 TEXT PRIMARY KEY REFERENCES package(sha256),\n            report_version INTEGER NOT NULL CHECK (report_version = 1),\n            status TEXT NOT NULL CHECK (status IN ('measured','unavailable')),\n            unknown_distinct INTEGER NOT NULL CHECK (unknown_distinct >= 0),\n            unknown_occurrences INTEGER NOT NULL CHECK (unknown_occurrences >= 0),\n            CHECK (status = 'measured' OR (unknown_distinct = 0 AND unknown_occurrences = 0))\n        )",
+      "alter_add_columns": [],
+      "final_column_names_static": [
+        "package_sha256",
+        "report_version",
+        "status",
+        "unknown_distinct",
+        "unknown_occurrences"
+      ],
+      "rowid_alias_proposed": "_rowid_",
+      "without_rowid": false,
+      "autoincrement": false
+    },
+    {
+      "name": "package_install_unknown",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 2409,
+      "columns_at_creation": [
+        "package_sha256",
+        "ordinal",
+        "xpath",
+        "kind",
+        "name",
+        "occurrences",
+        "sample"
+      ],
+      "pk": [
+        "package_sha256",
+        "ordinal"
+      ],
+      "integer_primary_key": false,
+      "unique_clauses": [
+        "UNIQUE (package_sha256, xpath, kind, name)"
+      ],
+      "ddl": "CREATE TABLE package_install_unknown (\n            package_sha256 TEXT NOT NULL REFERENCES package_install_report(package_sha256),\n            ordinal INTEGER NOT NULL CHECK (ordinal >= 0),\n            xpath TEXT NOT NULL,\n            kind TEXT NOT NULL CHECK (kind IN ('Element','Attribute')),\n            name TEXT NOT NULL,\n            occurrences INTEGER NOT NULL CHECK (occurrences > 0),\n            sample TEXT,\n            PRIMARY KEY (package_sha256, ordinal),\n            UNIQUE (package_sha256, xpath, kind, name)\n        )",
+      "alter_add_columns": [],
+      "final_column_names_static": [
+        "package_sha256",
+        "ordinal",
+        "xpath",
+        "kind",
+        "name",
+        "occurrences",
+        "sample"
+      ],
+      "rowid_alias_proposed": "_rowid_",
+      "without_rowid": false,
+      "autoincrement": false
+    },
+    {
+      "name": "package_member",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 3267,
+      "columns_at_creation": [
+        "package_sha256",
+        "ordinal",
+        "path",
+        "role",
+        "source_sha256",
+        "size"
+      ],
+      "pk": [
+        "package_sha256",
+        "path"
+      ],
+      "integer_primary_key": false,
+      "unique_clauses": [
+        "UNIQUE (package_sha256, ordinal)"
+      ],
+      "ddl": "CREATE TABLE package_member (\n            package_sha256 TEXT NOT NULL REFERENCES package(sha256),\n            ordinal INTEGER NOT NULL,\n            path TEXT NOT NULL,\n            role TEXT NOT NULL,\n            source_sha256 TEXT NOT NULL REFERENCES source_file(sha256),\n            size INTEGER NOT NULL,\n            PRIMARY KEY (package_sha256, path),\n            UNIQUE (package_sha256, ordinal)\n        )",
+      "alter_add_columns": [],
+      "final_column_names_static": [
+        "package_sha256",
+        "ordinal",
+        "path",
+        "role",
+        "source_sha256",
+        "size"
+      ],
+      "rowid_alias_proposed": "_rowid_",
+      "without_rowid": false,
+      "autoincrement": false
+    },
+    {
+      "name": "package_source_name",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 1734,
+      "columns_at_creation": [
+        "package_sha256",
+        "source_name"
+      ],
+      "pk": [
+        "package_sha256",
+        "source_name"
+      ],
+      "integer_primary_key": false,
+      "unique_clauses": [],
+      "ddl": "CREATE TABLE package_source_name (\n            package_sha256 TEXT NOT NULL REFERENCES package(sha256),\n            source_name    TEXT NOT NULL,\n            PRIMARY KEY (package_sha256, source_name)\n        )",
+      "alter_add_columns": [],
+      "final_column_names_static": [
+        "package_sha256",
+        "source_name"
+      ],
+      "rowid_alias_proposed": "_rowid_",
+      "without_rowid": false,
+      "autoincrement": false
+    },
+    {
+      "name": "parameter",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 185,
+      "columns_at_creation": [
+        "program_id",
+        "id",
+        "name",
+        "text",
+        "parameter_type_id",
+        "access",
+        "value",
+        "suffix",
+        "code_segment",
+        "offset",
+        "bit_offset",
+        "union_id",
+        "union_size_in_bit"
+      ],
+      "pk": [
+        "program_id",
+        "id"
+      ],
+      "integer_primary_key": false,
+      "unique_clauses": [],
+      "ddl": "CREATE TABLE parameter (\n             program_id        TEXT NOT NULL,\n             id                TEXT NOT NULL,\n             name              TEXT,\n             text              TEXT,\n             parameter_type_id TEXT,\n             access            TEXT,\n             value             TEXT,\n             suffix            TEXT,\n             code_segment      TEXT,\n             offset            INTEGER,\n             bit_offset        INTEGER,\n             union_id          INTEGER,\n             union_size_in_bit INTEGER,\n             PRIMARY KEY (program_id, id)\n         )",
+      "alter_add_columns": [
+        {
+          "table": "parameter",
+          "column": "own_offset",
+          "ddl": "ALTER TABLE parameter ADD COLUMN own_offset INTEGER;",
+          "migration_from": 24,
+          "line": 556
+        },
+        {
+          "table": "parameter",
+          "column": "own_bit_offset",
+          "ddl": "ALTER TABLE parameter ADD COLUMN own_bit_offset INTEGER;",
+          "migration_from": 24,
+          "line": 557
+        },
+        {
+          "table": "parameter",
+          "column": "property_object_index",
+          "ddl": "ALTER TABLE parameter ADD COLUMN property_object_index INTEGER;",
+          "migration_from": 24,
+          "line": 558
+        },
+        {
+          "table": "parameter",
+          "column": "property_object_type",
+          "ddl": "ALTER TABLE parameter ADD COLUMN property_object_type INTEGER;",
+          "migration_from": 24,
+          "line": 559
+        },
+        {
+          "table": "parameter",
+          "column": "property_id",
+          "ddl": "ALTER TABLE parameter ADD COLUMN property_id INTEGER;",
+          "migration_from": 24,
+          "line": 560
+        },
+        {
+          "table": "parameter",
+          "column": "property_offset",
+          "ddl": "ALTER TABLE parameter ADD COLUMN property_offset INTEGER;",
+          "migration_from": 24,
+          "line": 561
+        },
+        {
+          "table": "parameter",
+          "column": "property_bit_offset",
+          "ddl": "ALTER TABLE parameter ADD COLUMN property_bit_offset INTEGER;",
+          "migration_from": 24,
+          "line": 562
+        },
+        {
+          "table": "parameter",
+          "column": "property_occurrence",
+          "ddl": "ALTER TABLE parameter ADD COLUMN property_occurrence INTEGER;",
+          "migration_from": 24,
+          "line": 563
+        },
+        {
+          "table": "parameter",
+          "column": "suffix_text",
+          "ddl": "ALTER TABLE parameter ADD COLUMN suffix_text TEXT;",
+          "migration_from": 25,
+          "line": 622
+        }
+      ],
+      "final_column_names_static": [
+        "program_id",
+        "id",
+        "name",
+        "text",
+        "parameter_type_id",
+        "access",
+        "value",
+        "suffix",
+        "code_segment",
+        "offset",
+        "bit_offset",
+        "union_id",
+        "union_size_in_bit",
+        "own_offset",
+        "own_bit_offset",
+        "property_object_index",
+        "property_object_type",
+        "property_id",
+        "property_offset",
+        "property_bit_offset",
+        "property_occurrence",
+        "suffix_text"
+      ],
+      "rowid_alias_proposed": "_rowid_",
+      "without_rowid": false,
+      "autoincrement": false
+    },
+    {
+      "name": "parameter_calculation_ref",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 1368,
+      "columns_at_creation": [
+        "program_id",
+        "calculation_id",
+        "side",
+        "parameter_ref_id"
+      ],
+      "pk": [
+        "program_id",
+        "calculation_id",
+        "side",
+        "parameter_ref_id"
+      ],
+      "integer_primary_key": false,
+      "unique_clauses": [],
+      "ddl": "CREATE TABLE parameter_calculation_ref (\n             program_id       TEXT NOT NULL,\n             calculation_id   TEXT NOT NULL,\n             side             TEXT NOT NULL CHECK (side IN ('L', 'R')),\n             parameter_ref_id TEXT NOT NULL,\n             PRIMARY KEY (program_id, calculation_id, side, parameter_ref_id)\n         )",
+      "alter_add_columns": [],
+      "final_column_names_static": [
+        "program_id",
+        "calculation_id",
+        "side",
+        "parameter_ref_id"
+      ],
+      "rowid_alias_proposed": "_rowid_",
+      "without_rowid": false,
+      "autoincrement": false
+    },
+    {
+      "name": "parameter_ref",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 201,
+      "columns_at_creation": [
+        "program_id",
+        "id",
+        "parameter_id",
+        "display_order",
+        "tag",
+        "text",
+        "value"
+      ],
+      "pk": [
+        "program_id",
+        "id"
+      ],
+      "integer_primary_key": false,
+      "unique_clauses": [],
+      "ddl": "CREATE TABLE parameter_ref (\n             program_id    TEXT NOT NULL,\n             id            TEXT NOT NULL,\n             parameter_id  TEXT NOT NULL,\n             display_order INTEGER,\n             tag           TEXT,\n             text          TEXT,\n             value         TEXT,\n             PRIMARY KEY (program_id, id)\n         )",
+      "alter_add_columns": [
+        {
+          "table": "parameter_ref",
+          "column": "access",
+          "ddl": "ALTER TABLE parameter_ref ADD COLUMN access TEXT;",
+          "migration_from": 19,
+          "line": 1365
+        },
+        {
+          "table": "parameter_ref",
+          "column": "suffix_text",
+          "ddl": "ALTER TABLE parameter_ref ADD COLUMN suffix_text TEXT;",
+          "migration_from": 25,
+          "line": 623
+        }
+      ],
+      "final_column_names_static": [
+        "program_id",
+        "id",
+        "parameter_id",
+        "display_order",
+        "tag",
+        "text",
+        "value",
+        "access",
+        "suffix_text"
+      ],
+      "rowid_alias_proposed": "_rowid_",
+      "without_rowid": false,
+      "autoincrement": false
+    },
+    {
+      "name": "parameter_type",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 163,
+      "columns_at_creation": [
+        "program_id",
+        "id",
+        "name",
+        "kind",
+        "size_in_bit",
+        "base",
+        "min_inclusive",
+        "max_inclusive",
+        "number_type"
+      ],
+      "pk": [
+        "program_id",
+        "id"
+      ],
+      "integer_primary_key": false,
+      "unique_clauses": [],
+      "ddl": "CREATE TABLE parameter_type (\n             program_id     TEXT NOT NULL,\n             id             TEXT NOT NULL,\n             name           TEXT,\n             kind           TEXT NOT NULL,\n             size_in_bit    INTEGER,\n             base           TEXT,\n             min_inclusive  TEXT,\n             max_inclusive  TEXT,\n             number_type    TEXT,\n             PRIMARY KEY (program_id, id)\n         )",
+      "alter_add_columns": [],
+      "final_column_names_static": [
+        "program_id",
+        "id",
+        "name",
+        "kind",
+        "size_in_bit",
+        "base",
+        "min_inclusive",
+        "max_inclusive",
+        "number_type"
+      ],
+      "rowid_alias_proposed": "_rowid_",
+      "without_rowid": false,
+      "autoincrement": false
+    },
+    {
+      "name": "parameter_type_enum",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 175,
+      "columns_at_creation": [
+        "program_id",
+        "parameter_type_id",
+        "id",
+        "value",
+        "text",
+        "display_order"
+      ],
+      "pk": [
+        "program_id",
+        "id"
+      ],
+      "integer_primary_key": false,
+      "unique_clauses": [],
+      "ddl": "CREATE TABLE parameter_type_enum (\n             program_id        TEXT NOT NULL,\n             parameter_type_id TEXT NOT NULL,\n             id                TEXT NOT NULL,\n             value             TEXT,\n             text              TEXT,\n             display_order     INTEGER,\n             PRIMARY KEY (program_id, id)\n         )",
+      "alter_add_columns": [
+        {
+          "table": "parameter_type_enum",
+          "column": "binary_value",
+          "ddl": "ALTER TABLE parameter_type_enum ADD COLUMN binary_value TEXT;",
+          "migration_from": 24,
+          "line": 564
+        },
+        {
+          "table": "parameter_type_enum",
+          "column": "name",
+          "ddl": "ALTER TABLE parameter_type_enum ADD COLUMN name TEXT;",
+          "migration_from": 24,
+          "line": 565
+        },
+        {
+          "table": "parameter_type_enum",
+          "column": "icon",
+          "ddl": "ALTER TABLE parameter_type_enum ADD COLUMN icon TEXT;",
+          "migration_from": 24,
+          "line": 566
+        },
+        {
+          "table": "parameter_type_enum",
+          "column": "picture_alignment",
+          "ddl": "ALTER TABLE parameter_type_enum ADD COLUMN picture_alignment TEXT;",
+          "migration_from": 24,
+          "line": 567
+        }
+      ],
+      "final_column_names_static": [
+        "program_id",
+        "parameter_type_id",
+        "id",
+        "value",
+        "text",
+        "display_order",
+        "binary_value",
+        "name",
+        "icon",
+        "picture_alignment"
+      ],
+      "rowid_alias_proposed": "_rowid_",
+      "without_rowid": false,
+      "autoincrement": false
+    },
+    {
+      "name": "product",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 120,
+      "columns_at_creation": [
+        "id",
+        "manufacturer_id",
+        "hardware_id",
+        "text",
+        "order_number",
+        "is_rail_mounted",
+        "width_in_millimeter",
+        "default_language",
+        "hash",
+        "registration_status",
+        "source_sha256"
+      ],
+      "pk": [
+        "id"
+      ],
+      "integer_primary_key": false,
+      "unique_clauses": [],
+      "ddl": "CREATE TABLE product (\n             id                  TEXT PRIMARY KEY,\n             manufacturer_id     TEXT NOT NULL,\n             hardware_id         TEXT NOT NULL,\n             text                TEXT,\n             order_number        TEXT,\n             is_rail_mounted     INTEGER,\n             width_in_millimeter TEXT,\n             default_language    TEXT,\n             hash                TEXT,\n             registration_status TEXT,\n             source_sha256       TEXT NOT NULL\n         )",
+      "alter_add_columns": [],
+      "final_column_names_static": [
+        "id",
+        "manufacturer_id",
+        "hardware_id",
+        "text",
+        "order_number",
+        "is_rail_mounted",
+        "width_in_millimeter",
+        "default_language",
+        "hash",
+        "registration_status",
+        "source_sha256"
+      ],
+      "rowid_alias_proposed": "_rowid_",
+      "without_rowid": false,
+      "autoincrement": false
+    },
+    {
+      "name": "schema_meta",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 55,
+      "columns_at_creation": [
+        "key",
+        "value"
+      ],
+      "pk": [
+        "key"
+      ],
+      "integer_primary_key": false,
+      "unique_clauses": [],
+      "ddl": "CREATE TABLE schema_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)",
+      "alter_add_columns": [],
+      "final_column_names_static": [
+        "key",
+        "value"
+      ],
+      "rowid_alias_proposed": "_rowid_",
+      "without_rowid": false,
+      "autoincrement": false
+    },
+    {
+      "name": "source_file",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 57,
+      "columns_at_creation": [
+        "sha256",
+        "source_path",
+        "manufacturer_id",
+        "len",
+        "bytes"
+      ],
+      "pk": [
+        "sha256"
+      ],
+      "integer_primary_key": false,
+      "unique_clauses": [],
+      "ddl": "CREATE TABLE source_file (\n             sha256          TEXT PRIMARY KEY,\n             source_path     TEXT NOT NULL,\n             manufacturer_id TEXT,\n             len             INTEGER NOT NULL,\n             bytes           BLOB NOT NULL\n         )",
+      "alter_add_columns": [],
+      "final_column_names_static": [
+        "sha256",
+        "source_path",
+        "manufacturer_id",
+        "len",
+        "bytes"
+      ],
+      "rowid_alias_proposed": "_rowid_",
+      "without_rowid": false,
+      "autoincrement": false
+    },
+    {
+      "name": "source_identity",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 1746,
+      "columns_at_creation": [
+        "source_sha256",
+        "table_name",
+        "logical_id",
+        "occurrence",
+        "digest"
+      ],
+      "pk": [
+        "source_sha256",
+        "table_name",
+        "logical_id",
+        "occurrence"
+      ],
+      "integer_primary_key": false,
+      "unique_clauses": [],
+      "ddl": "CREATE TABLE source_identity (\n            source_sha256 TEXT NOT NULL REFERENCES source_identity_scan(source_sha256),\n            table_name    TEXT NOT NULL CHECK (table_name IN ('catalog_section','catalog_item','hardware','product','hardware2program','application_program')),\n            logical_id    TEXT NOT NULL,\n            occurrence    INTEGER NOT NULL CHECK (occurrence >= 1),\n            digest        TEXT NOT NULL CHECK (length(digest) = 64),\n            PRIMARY KEY (source_sha256, table_name, logical_id, occurrence)\n        )",
+      "alter_add_columns": [],
+      "final_column_names_static": [
+        "source_sha256",
+        "table_name",
+        "logical_id",
+        "occurrence",
+        "digest"
+      ],
+      "rowid_alias_proposed": "_rowid_",
+      "without_rowid": false,
+      "autoincrement": false
+    },
+    {
+      "name": "source_identity_scan",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 1739,
+      "columns_at_creation": [
+        "source_sha256",
+        "status",
+        "reason",
+        "scanner"
+      ],
+      "pk": [
+        "source_sha256"
+      ],
+      "integer_primary_key": false,
+      "unique_clauses": [],
+      "ddl": "CREATE TABLE source_identity_scan (\n            source_sha256 TEXT PRIMARY KEY REFERENCES source_file(sha256),\n            status        TEXT NOT NULL CHECK (status IN ('measured','unavailable')),\n            reason        TEXT,\n            scanner       INTEGER NOT NULL,\n            CHECK ((status = 'unavailable') = (reason IS NOT NULL))\n        )",
+      "alter_add_columns": [],
+      "final_column_names_static": [
+        "source_sha256",
+        "status",
+        "reason",
+        "scanner"
+      ],
+      "rowid_alias_proposed": "_rowid_",
+      "without_rowid": false,
+      "autoincrement": false
+    },
+    {
+      "name": "source_parse_evidence",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 3277,
+      "columns_at_creation": [
+        "sha256"
+      ],
+      "pk": [
+        "sha256"
+      ],
+      "integer_primary_key": false,
+      "unique_clauses": [],
+      "ddl": "CREATE TABLE source_parse_evidence (\n            sha256 TEXT PRIMARY KEY REFERENCES source_file(sha256)\n        )",
+      "alter_add_columns": [],
+      "final_column_names_static": [
+        "sha256"
+      ],
+      "rowid_alias_proposed": "_rowid_",
+      "without_rowid": false,
+      "autoincrement": false
+    },
+    {
+      "name": "source_producer",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 1755,
+      "columns_at_creation": [
+        "source_sha256",
+        "root_namespace",
+        "created_by",
+        "tool_version"
+      ],
+      "pk": [
+        "source_sha256"
+      ],
+      "integer_primary_key": false,
+      "unique_clauses": [],
+      "ddl": "CREATE TABLE source_producer (\n            source_sha256  TEXT PRIMARY KEY REFERENCES source_file(sha256),\n            root_namespace TEXT,\n            created_by     TEXT,\n            tool_version   TEXT\n        )",
+      "alter_add_columns": [],
+      "final_column_names_static": [
+        "source_sha256",
+        "root_namespace",
+        "created_by",
+        "tool_version"
+      ],
+      "rowid_alias_proposed": "_rowid_",
+      "without_rowid": false,
+      "autoincrement": false
+    },
+    {
+      "name": "space_usage",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 2463,
+      "columns_at_creation": [
+        "id",
+        "number",
+        "text"
+      ],
+      "pk": [
+        "id"
+      ],
+      "integer_primary_key": false,
+      "unique_clauses": [],
+      "ddl": "CREATE TABLE IF NOT EXISTS space_usage (\n             id     TEXT PRIMARY KEY,\n             number INTEGER,\n             text   TEXT\n         )",
+      "alter_add_columns": [],
+      "final_column_names_static": [
+        "id",
+        "number",
+        "text"
+      ],
+      "rowid_alias_proposed": "_rowid_",
+      "without_rowid": false,
+      "autoincrement": false
+    },
+    {
+      "name": "translation",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 3012,
+      "columns_at_creation": [
+        "scope",
+        "scope_id",
+        "language",
+        "ref_id",
+        "attribute_name",
+        "text"
+      ],
+      "pk": [
+        "scope",
+        "scope_id",
+        "language",
+        "ref_id",
+        "attribute_name"
+      ],
+      "integer_primary_key": false,
+      "unique_clauses": [],
+      "ddl": "CREATE TABLE translation_v4 (\n            scope          TEXT NOT NULL,\n            scope_id       TEXT NOT NULL,\n            language       TEXT NOT NULL,\n            ref_id         TEXT NOT NULL,\n            attribute_name TEXT NOT NULL,\n            text           TEXT,\n            PRIMARY KEY (scope, scope_id, language, ref_id, attribute_name)\n        )",
+      "source_definition_name": "translation_v4",
+      "alter_add_columns": [],
+      "final_column_names_static": [
+        "scope",
+        "scope_id",
+        "language",
+        "ref_id",
+        "attribute_name",
+        "text"
+      ],
+      "rowid_alias_proposed": "_rowid_",
+      "without_rowid": false,
+      "autoincrement": false
+    }
+  ],
+  "explicit_indexes": [
+    {
+      "name": "application_program_source",
+      "table": "application_program",
+      "unique": false,
+      "columns": "source_sha256",
+      "predicate": null,
+      "ddl": "CREATE INDEX IF NOT EXISTS application_program_source ON application_program (source_sha256);",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 1766
+    },
+    {
+      "name": "catalog_item_section",
+      "table": "catalog_item",
+      "unique": false,
+      "columns": "section_id",
+      "predicate": null,
+      "ddl": "CREATE INDEX catalog_item_section ON catalog_item (section_id);",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 102
+    },
+    {
+      "name": "catalog_item_source",
+      "table": "catalog_item",
+      "unique": false,
+      "columns": "source_sha256",
+      "predicate": null,
+      "ddl": "CREATE INDEX IF NOT EXISTS catalog_item_source ON catalog_item (source_sha256);",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 1762
+    },
+    {
+      "name": "catalog_section_source",
+      "table": "catalog_section",
+      "unique": false,
+      "columns": "source_sha256",
+      "predicate": null,
+      "ddl": "CREATE INDEX IF NOT EXISTS catalog_section_source ON catalog_section (source_sha256);",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 1761
+    },
+    {
+      "name": "com_object_ref_object",
+      "table": "com_object_ref",
+      "unique": false,
+      "columns": "program_id, com_object_id",
+      "predicate": null,
+      "ddl": "CREATE INDEX com_object_ref_object ON com_object_ref (program_id, com_object_id);",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 251
+    },
+    {
+      "name": "com_object_ref_program",
+      "table": "com_object_ref",
+      "unique": false,
+      "columns": "program_id",
+      "predicate": null,
+      "ddl": "CREATE INDEX com_object_ref_program ON com_object_ref (program_id);",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 250
+    },
+    {
+      "name": "dynamic_node_sibling",
+      "table": "dynamic_node",
+      "unique": true,
+      "columns": "program_id, module_def_id, parent_id, position",
+      "predicate": null,
+      "ddl": "CREATE UNIQUE INDEX dynamic_node_sibling\n            ON dynamic_node (program_id, module_def_id, parent_id, position);",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 3149
+    },
+    {
+      "name": "function_point_function_type",
+      "table": "function_point",
+      "unique": false,
+      "columns": "function_type_id",
+      "predicate": null,
+      "ddl": "CREATE INDEX IF NOT EXISTS function_point_function_type ON function_point (function_type_id);",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 2462
+    },
+    {
+      "name": "hardware2program_program",
+      "table": "hardware2program",
+      "unique": false,
+      "columns": "application_program_ref",
+      "predicate": null,
+      "ddl": "CREATE INDEX hardware2program_program ON hardware2program (application_program_ref);",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 146
+    },
+    {
+      "name": "hardware2program_source",
+      "table": "hardware2program",
+      "unique": false,
+      "columns": "source_sha256",
+      "predicate": null,
+      "ddl": "CREATE INDEX IF NOT EXISTS hardware2program_source ON hardware2program (source_sha256);",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 1765
+    },
+    {
+      "name": "hardware_source",
+      "table": "hardware",
+      "unique": false,
+      "columns": "source_sha256",
+      "predicate": null,
+      "ddl": "CREATE INDEX IF NOT EXISTS hardware_source ON hardware (source_sha256);",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 1763
+    },
+    {
+      "name": "ingest_unknown_conflict_identity",
+      "table": "ingest_unknown",
+      "unique": true,
+      "columns": "source_sha256, xpath, name, occurrences, ifnull(sample, '')",
+      "predicate": "kind = 'IdConflict'",
+      "ddl": "CREATE UNIQUE INDEX ingest_unknown_conflict_identity ON ingest_unknown\n         (source_sha256, xpath, name, occurrences, ifnull(sample, '')) WHERE kind = 'IdConflict';",
+      "source": "crates/knx-productdb/src/report.rs",
+      "line": 298
+    },
+    {
+      "name": "ingest_unknown_construct_identity",
+      "table": "ingest_unknown",
+      "unique": true,
+      "columns": "source_sha256, ifnull(program_id, ''), xpath, kind, name",
+      "predicate": "kind <> 'IdConflict'",
+      "ddl": "CREATE UNIQUE INDEX ingest_unknown_construct_identity ON ingest_unknown\n         (source_sha256, ifnull(program_id, ''), xpath, kind, name) WHERE kind <> 'IdConflict';",
+      "source": "crates/knx-productdb/src/report.rs",
+      "line": 296
+    },
+    {
+      "name": "ingest_unknown_source",
+      "table": "ingest_unknown",
+      "unique": false,
+      "columns": "source_sha256",
+      "predicate": null,
+      "ddl": "CREATE INDEX ingest_unknown_source ON ingest_unknown (source_sha256);",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 75
+    },
+    {
+      "name": "master_declaration_identity",
+      "table": "master_declaration",
+      "unique": false,
+      "columns": "family,logical_id,source_sha256,ordinal",
+      "predicate": null,
+      "ddl": "CREATE INDEX master_declaration_identity ON master_declaration(family,logical_id,source_sha256,ordinal);",
+      "source": "crates/knx-productdb/src/master_provenance.rs",
+      "line": 142
+    },
+    {
+      "name": "module_def_argument_scope",
+      "table": "module_def_argument",
+      "unique": false,
+      "columns": "program_id, module_def_id",
+      "predicate": null,
+      "ddl": "CREATE INDEX module_def_argument_scope\n            ON module_def_argument (program_id, module_def_id);",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 2653
+    },
+    {
+      "name": "parameter_calculation_ref_member",
+      "table": "parameter_calculation_ref",
+      "unique": false,
+      "columns": "program_id, parameter_ref_id",
+      "predicate": null,
+      "ddl": "CREATE INDEX parameter_calculation_ref_member\n             ON parameter_calculation_ref (program_id, parameter_ref_id);",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 1375
+    },
+    {
+      "name": "parameter_ref_program",
+      "table": "parameter_ref",
+      "unique": false,
+      "columns": "program_id",
+      "predicate": null,
+      "ddl": "CREATE INDEX parameter_ref_program ON parameter_ref (program_id);",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 211
+    },
+    {
+      "name": "parameter_type_enum_type",
+      "table": "parameter_type_enum",
+      "unique": false,
+      "columns": "program_id, parameter_type_id",
+      "predicate": null,
+      "ddl": "CREATE INDEX parameter_type_enum_type ON parameter_type_enum (program_id, parameter_type_id);",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 184
+    },
+    {
+      "name": "product_hardware",
+      "table": "product",
+      "unique": false,
+      "columns": "hardware_id",
+      "predicate": null,
+      "ddl": "CREATE INDEX product_hardware ON product (hardware_id);",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 133
+    },
+    {
+      "name": "product_source",
+      "table": "product",
+      "unique": false,
+      "columns": "source_sha256",
+      "predicate": null,
+      "ddl": "CREATE INDEX IF NOT EXISTS product_source ON product (source_sha256);",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 1764
+    },
+    {
+      "name": "source_file_manufacturer",
+      "table": "source_file",
+      "unique": false,
+      "columns": "manufacturer_id",
+      "predicate": null,
+      "ddl": "CREATE INDEX source_file_manufacturer ON source_file (manufacturer_id);",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 64
+    },
+    {
+      "name": "source_identity_by_id",
+      "table": "source_identity",
+      "unique": false,
+      "columns": "table_name, logical_id",
+      "predicate": null,
+      "ddl": "CREATE INDEX source_identity_by_id ON source_identity (table_name, logical_id);",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 1754
+    },
+    {
+      "name": "translation_lookup",
+      "table": "translation",
+      "unique": false,
+      "columns": "scope, scope_id, language, ref_id",
+      "predicate": null,
+      "ddl": "CREATE INDEX translation_lookup ON translation (scope, scope_id, language, ref_id);",
+      "source": "crates/knx-productdb/src/migration.rs",
+      "line": 3026
+    }
+  ],
+  "counts": {
+    "tables": 46,
+    "explicit_indexes": 24,
+    "inferred_autoindexes": 50,
+    "inferred_sqlite_schema_objects": 120,
+    "logical_objects_including_schema_relation": 121
+  },
+  "note": "columns_at_creation excludes later ALTER columns; final_column_names_static applies source-derived ALTERs in migration order. Neither is a runtime schema receipt. Integer PKs keep rowid; no current AUTOINCREMENT/WITHOUT ROWID declarations. No SQL executed.",
+  "contractStatus": "source-derived design fixture seed; runtime admitted introspection and supported migration SQL variants require implementation tests"
+}

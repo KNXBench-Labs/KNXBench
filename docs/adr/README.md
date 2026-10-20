@@ -156,3 +156,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0147](0147-master-identity-provenance.md) | Master declarations have provenance; historical winners are not reconstructed | Accepted | 2026-10-19 |
 | [0148](0148-repair-product-column-promotions.md) | Repair released product-column promotions from retained source facts | Accepted for implementation; runtime acceptance pending | 2026-10-20 |
 | [0149](0149-source-bound-system2-validation.md) | Isolate the source-bound System-2 validation candidate | Accepted for simulator-only validation | 2026-10-20 |
+| [0150](0150-cancellable-catalogue-jobs.md) | Owned cancellable catalogue jobs over the existing installer | Accepted for implementation; runtime acceptance pending | 2026-10-20 |

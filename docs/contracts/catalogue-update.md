@@ -3,6 +3,17 @@
 Status: implemented by [ADR-0117](../adr/0117-previewed-recoverable-catalogue-updates.md); web routes by
 [ADR-0118](../adr/0118-catalogue-updates-through-the-web-server.md).
 
+## Proposed cancellable job successor (WP-04.3)
+
+The [job contract](catalogue-update-jobs.md) has independent design readiness
+and [ADR-0150](../adr/0150-cancellable-catalogue-jobs.md) approval for staged
+implementation, but is not implemented. It specifies an additive controlled
+workflow; it does not change
+any synchronous route, v1 token, source/report semantics or profile limit below.
+[Primary transaction research](../research/2026-10-20-catalogue-job-transactions.md)
+and independent design review close its design dependencies; future product
+tests and delivery must establish the implemented behavior.
+
 ## Source
 
 A `.knxprod` file the user obtained from the manufacturer, or a vendor ZIP that

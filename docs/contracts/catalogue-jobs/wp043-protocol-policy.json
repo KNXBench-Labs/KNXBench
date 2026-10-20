@@ -1,0 +1,590 @@
+{
+  "schemaVersion": 1,
+  "policyVersion": "wp043-v1",
+  "verdict": "scope-ready-design-only",
+  "productionImplementationApproved": false,
+  "acceptedAdr": false,
+  "runtimeAcceptance": false,
+  "caps": {
+    "activeJobs": 1,
+    "queue": 0,
+    "terminalRecords": 8,
+    "tombstones": 8,
+    "sourceBytes": "1000000000",
+    "memberBytes": "1000000000",
+    "standardExpandedBytes": "4294967296",
+    "largeExpandedBytes": "17179869184",
+    "inputCataloguePageBytes": "8589934592",
+    "mainDatabasePageBytes": "68719476736",
+    "retainedArtifactBytesPerJob": "67108864",
+    "logicalRecordsPerJob": 100000,
+    "statusBytes": 16384,
+    "pageBytes": 262144,
+    "pageRecords": 200,
+    "recordBytes": 65536,
+    "sourceNameUtf8Bytes": 512,
+    "metadataRequestBytes": 4096,
+    "controlRequestBytes": 1024,
+    "detailQueryBytes": 512,
+    "ioChunkBytes": 65536,
+    "backupPagesPerStep": 128,
+    "artifactManifestBytes": 16384,
+    "maxJsonDepth": 8,
+    "maxLocalApiConcurrentDetails": 1,
+    "maxLocalApiConcurrentStatus": 1
+  },
+  "durationsSeconds": {
+    "receivingIdle": 60,
+    "receivingOverall": 3600,
+    "ready": 900,
+    "working": 7200,
+    "terminalMax": 3600,
+    "tombstoneMax": 3600,
+    "writerWait": 30,
+    "catalogueDrain": 30,
+    "nativeBusyWaitMillis": 50
+  },
+  "counterPolicy": {
+    "wire": "canonical ASCII decimal string",
+    "maximum": "18446744073709551615",
+    "admissionInitial": "1",
+    "admissionMaximumIsExhaustedSentinel": true,
+    "revisionInitial": "1",
+    "revisionProgressStopReserve": "64",
+    "phaseGenerationChecked": true,
+    "neverWrap": true,
+    "details": "Document P2 is normative for reserved settlement revisions; no saturation or JS Number conversion."
+  },
+  "initialLane": {
+    "os": "linux",
+    "sqliteJournal": "delete",
+    "vfs": "default-local",
+    "lockingMode": "normal",
+    "cache": "private",
+    "schema": "existing-current",
+    "scratchMmapBytes": 0,
+    "scratchTempStore": "FILE",
+    "scratchSynchronous": "FULL",
+    "liveSynchronous": "requireAlreadyFullOrExtraBeforeBegin; no change inside transaction",
+    "aggregateDiskBound": false,
+    "processRssBound": false,
+    "crashDurableJobOutcomes": false
+  },
+  "capabilityTransport": {
+    "header": "X-KNX-Catalogue-Capability",
+    "grammar": "64 lowercase hex characters = 32 CSPRNG bytes",
+    "echo": false,
+    "urlAllowed": false,
+    "diskAllowed": false,
+    "logAllowed": false,
+    "auth": "existing single-operator auth guard; disabled only in existing desktop/test model",
+    "handleHeaders": {
+      "X-KNX-Catalogue-Incarnation": "32 lowercase hex",
+      "X-KNX-Catalogue-Serial": "canonical U64"
+    },
+    "bodyOrigin": "same-origin application/json; no cross-origin CORS grant"
+  },
+  "stateRules": {
+    "receiving": {
+      "sealed": false,
+      "preview": "null",
+      "result": "null",
+      "gate": [
+        "open"
+      ],
+      "apply": "unavailable",
+      "lease": "receiving",
+      "commit": "pending",
+      "backup": [
+        "none"
+      ]
+    },
+    "previewing": {
+      "sealed": true,
+      "preview": "null",
+      "result": "null",
+      "gate": [
+        "open"
+      ],
+      "apply": "unavailable",
+      "lease": "working",
+      "commit": "pending",
+      "backup": [
+        "none"
+      ]
+    },
+    "ready": {
+      "sealed": true,
+      "preview": "required",
+      "result": "null",
+      "gate": [
+        "open"
+      ],
+      "apply": "available",
+      "lease": "ready",
+      "commit": "pending",
+      "backup": [
+        "none"
+      ]
+    },
+    "waitingForWriter": {
+      "sealed": true,
+      "preview": "required",
+      "result": "null",
+      "gate": [
+        "open"
+      ],
+      "apply": "accepted",
+      "lease": "working",
+      "commit": "pending",
+      "backup": [
+        "none"
+      ]
+    },
+    "validating": {
+      "sealed": true,
+      "preview": "required",
+      "result": "null",
+      "gate": [
+        "open"
+      ],
+      "apply": "accepted",
+      "lease": "working",
+      "commit": "pending",
+      "backup": [
+        "none"
+      ]
+    },
+    "backingUp": {
+      "sealed": true,
+      "preview": "required",
+      "result": "null",
+      "gate": [
+        "open"
+      ],
+      "apply": "accepted",
+      "lease": "working",
+      "commit": "pending",
+      "backup": [
+        "none",
+        "staging",
+        "published"
+      ]
+    },
+    "installing": {
+      "sealed": true,
+      "preview": "required",
+      "result": "null",
+      "gate": [
+        "open"
+      ],
+      "apply": "accepted",
+      "lease": "working",
+      "commit": "pending",
+      "backup": [
+        "published"
+      ]
+    },
+    "committing": {
+      "sealed": true,
+      "preview": "required",
+      "result": "null",
+      "gate": [
+        "commitClaimed"
+      ],
+      "apply": "accepted",
+      "lease": "working",
+      "commit": "pending",
+      "backup": [
+        "published"
+      ]
+    },
+    "settling": {
+      "sealed": "either",
+      "preview": "nullable retained",
+      "result": "only committed",
+      "gate": [
+        "open",
+        "cancelAccepted",
+        "commitClaimed"
+      ],
+      "apply": "spent",
+      "lease": "working",
+      "commit": [
+        "pending",
+        "notCommitted",
+        "committed",
+        "unknown"
+      ],
+      "backup": [
+        "none",
+        "staging",
+        "published",
+        "retained",
+        "quarantined"
+      ]
+    },
+    "succeeded": {
+      "sealed": true,
+      "preview": "required",
+      "result": "required",
+      "gate": [
+        "commitClaimed"
+      ],
+      "apply": "spent",
+      "lease": "retention",
+      "commit": "committed",
+      "cleanup": [
+        "complete",
+        "quarantined"
+      ],
+      "backup": [
+        "retained",
+        "quarantined"
+      ],
+      "failure": "null"
+    },
+    "cancelled": {
+      "sealed": "either",
+      "preview": "nullable retained",
+      "result": "null",
+      "gate": [
+        "cancelAccepted"
+      ],
+      "apply": "spent",
+      "lease": "retention",
+      "commit": "notCommitted",
+      "cleanup": [
+        "complete"
+      ],
+      "backup": [
+        "none"
+      ],
+      "failure": [
+        "cancelled",
+        "serverStop"
+      ]
+    },
+    "stale": {
+      "sealed": true,
+      "preview": "required",
+      "result": "null",
+      "gate": [
+        "open"
+      ],
+      "apply": "spent",
+      "lease": "retention",
+      "commit": "notCommitted",
+      "cleanup": [
+        "complete"
+      ],
+      "backup": [
+        "none"
+      ],
+      "failure": [
+        "catalogueUpdateStale"
+      ]
+    },
+    "expired": {
+      "sealed": "either",
+      "preview": "nullable retained",
+      "result": "null",
+      "gate": [
+        "cancelAccepted"
+      ],
+      "apply": "spent",
+      "lease": "retention",
+      "commit": "notCommitted",
+      "cleanup": [
+        "complete"
+      ],
+      "backup": [
+        "none"
+      ],
+      "failure": [
+        "readyExpired",
+        "receivingIdleTimeout",
+        "receivingTimeout",
+        "workingTimeout"
+      ]
+    },
+    "failed": {
+      "sealed": "either",
+      "preview": "nullable retained",
+      "result": "only committed",
+      "gate": [
+        "open",
+        "cancelAccepted",
+        "commitClaimed"
+      ],
+      "apply": "spent",
+      "lease": "retention",
+      "commit": [
+        "notCommitted",
+        "committed",
+        "unknown"
+      ],
+      "cleanup": [
+        "complete",
+        "quarantined"
+      ],
+      "backup": [
+        "none",
+        "retained",
+        "quarantined"
+      ],
+      "failure": "required"
+    }
+  },
+  "crossFieldRules": [
+    "All object keys required, no unexpected or duplicate keys; null is explicit.",
+    "Profile limits must match selected name exactly; LARGE acknowledgement true only for large, false for standard.",
+    "0 <= receivedBytes <= declaredBytes <= source cap; sealed sha implies received=declared and exact EOF.",
+    "Only settling may retain non-open gate before phase advancement; cancellation atomically changes phase to settling.",
+    "Outside settling/terminal failure is null; commit.pending evidence=notAttempted.",
+    "Committed iff commitReturnedOk; unknown evidence is ambiguousCommit/unresolvedRollback/workerLost.",
+    "Terminal cancelled/stale/expired require cleanup complete; any failed cleanup changes these intended outcomes to failed, preserving commit notCommitted.",
+    "Succeeded may have cleanup quarantined; failure remains null and cleanup.failureKind is required then.",
+    "Accepted apply commandId is retained forever within full record even when spent; unavailable/available have null commandId.",
+    "Result and preview public artifact kind/id/digest/counts must bind exact handle and never change; artifact counts are complete, not sample counts.",
+    "Backup published/retained has non-null name+identity and fileAndDirectorySyncAcknowledged; staging has null public name+identity.",
+    "StopCause non-null iff gate cancelAccepted; commitClaimed never becomes cancelAccepted.",
+    "No automatic retry/recreate/reapply after unavailable or unknown; root/UI contract unchanged.",
+    "All x-maxUtf8Bytes/x-maxSerializedUtf8Bytes and decimal maxima are normative parser checks, not JSON Schema extensions evaluated by default.",
+    "Baggage unavailable has null counts and no invented declaration/payload rows; available exact measured rows including zero.",
+    "Baggage resolved iff memberPath non-null; invalid/missing have memberPath null. Nested read has all four exact counts, otherwise all null.",
+    "All source_names aliases from each InstallReport are represented by provenance with packageKey and authoritative raw alias retained."
+  ],
+  "errors": {
+    "invalidRequest": {
+      "httpStatus": 400,
+      "message": "The request is invalid."
+    },
+    "invalidHandle": {
+      "httpStatus": 400,
+      "message": "The job handle is invalid."
+    },
+    "unsupportedMediaType": {
+      "httpStatus": 415,
+      "message": "The request media type is not supported."
+    },
+    "bodyLimit": {
+      "httpStatus": 413,
+      "message": "The request body exceeds the admitted limit."
+    },
+    "unauthenticated": {
+      "httpStatus": 401,
+      "message": "Authentication is required."
+    },
+    "outcomeUnavailable": {
+      "httpStatus": 410,
+      "message": "The retained outcome is unavailable; do not retry installation automatically."
+    },
+    "incarnationChanged": {
+      "httpStatus": 410,
+      "message": "The server lifetime changed; the previous outcome is unavailable."
+    },
+    "staleOffer": {
+      "httpStatus": 409,
+      "message": "The admission offer is no longer current."
+    },
+    "commandConflict": {
+      "httpStatus": 409,
+      "message": "The command conflicts with the retained command."
+    },
+    "jobBusy": {
+      "httpStatus": 409,
+      "message": "Another catalogue job is active."
+    },
+    "invalidPhase": {
+      "httpStatus": 409,
+      "message": "The command is not allowed in this job phase."
+    },
+    "uploadNotReplayable": {
+      "httpStatus": 409,
+      "message": "The upload cannot be resumed or replaced; inspect the same job."
+    },
+    "consentExpired": {
+      "httpStatus": 409,
+      "message": "The preview consent has expired."
+    },
+    "catalogueUpdateStale": {
+      "httpStatus": 409,
+      "message": "The catalogue or bound source changed; installation was not admitted."
+    },
+    "uploadLengthMismatch": {
+      "httpStatus": 400,
+      "message": "The upload length does not match the declared length."
+    },
+    "serverStopping": {
+      "httpStatus": 503,
+      "message": "The server is stopping; no new catalogue operation was admitted."
+    },
+    "counterExhausted": {
+      "httpStatus": 503,
+      "message": "A bounded operation counter is exhausted; admission is closed."
+    },
+    "artifactStoreUnavailable": {
+      "httpStatus": 503,
+      "message": "Private catalogue artifacts are unavailable; admission is closed."
+    },
+    "catalogueUnavailable": {
+      "httpStatus": 503,
+      "message": "The managed catalogue is unavailable."
+    },
+    "catalogueAdmissionLimit": {
+      "httpStatus": 422,
+      "message": "The catalogue exceeds the job input limit."
+    },
+    "catalogueGrowthLimit": {
+      "httpStatus": 422,
+      "message": "The operation exceeds the catalogue main-database growth limit."
+    },
+    "resultLimit": {
+      "httpStatus": 422,
+      "message": "The complete result exceeds the job result policy."
+    },
+    "recordLimit": {
+      "httpStatus": 422,
+      "message": "A required complete evidence record exceeds the job record policy."
+    },
+    "publicProjectionRefused": {
+      "httpStatus": 422,
+      "message": "Required consent evidence cannot be safely projected."
+    },
+    "unsupportedCatalogue": {
+      "httpStatus": 422,
+      "message": "This catalogue configuration is outside the supported job lane."
+    },
+    "legacyProductDatabase": {
+      "httpStatus": 422,
+      "message": "This source requires the separate legacy import workflow."
+    },
+    "packageRefused": {
+      "httpStatus": 422,
+      "message": "The product package was refused."
+    },
+    "writerTimeout": {
+      "httpStatus": 409,
+      "message": "The catalogue writer could not be acquired within the wait policy."
+    },
+    "uploadAborted": {
+      "httpStatus": 400,
+      "message": "The upload ended before sealing."
+    },
+    "ioFailure": {
+      "httpStatus": 500,
+      "message": "An artifact operation failed."
+    },
+    "databaseFailure": {
+      "httpStatus": 500,
+      "message": "A catalogue operation failed."
+    },
+    "workerFailed": {
+      "httpStatus": 500,
+      "message": "The catalogue worker ended unexpectedly."
+    },
+    "reportMismatch": {
+      "httpStatus": 500,
+      "message": "The live install evidence disagreed with the admitted rehearsal."
+    },
+    "cleanupFailed": {
+      "httpStatus": 500,
+      "message": "Owned artifacts could not be completely settled."
+    },
+    "outcomeUnknown": {
+      "httpStatus": 500,
+      "message": "The commit outcome is unknown; automatic retry is forbidden."
+    },
+    "cancelled": {
+      "httpStatus": 409,
+      "message": "Cancellation was accepted."
+    },
+    "receivingIdleTimeout": {
+      "httpStatus": 408,
+      "message": "The upload idle deadline elapsed."
+    },
+    "receivingTimeout": {
+      "httpStatus": 408,
+      "message": "The upload overall deadline elapsed."
+    },
+    "workingTimeout": {
+      "httpStatus": 408,
+      "message": "The working deadline elapsed."
+    },
+    "serverStop": {
+      "httpStatus": 503,
+      "message": "The server requested operation settlement."
+    },
+    "readyExpired": {
+      "httpStatus": 409,
+      "message": "The preview consent deadline elapsed."
+    }
+  },
+  "artifactRecordKinds": [
+    "previewSummary",
+    "program",
+    "installedVersion",
+    "wrapperPackage",
+    "wrapperOtherMember",
+    "packageReport",
+    "member",
+    "installCount",
+    "unknownConstruct",
+    "diagnostic",
+    "idConflict",
+    "provenance",
+    "historyUnavailable",
+    "resultSummary",
+    "baggageSummary",
+    "baggageDeclaration",
+    "baggagePayload"
+  ],
+  "publicWithheldFields": {
+    "program": [
+      "name"
+    ],
+    "unknownConstruct": [
+      "sample"
+    ],
+    "diagnostic": [
+      "detail"
+    ],
+    "provenance": [
+      "alias"
+    ],
+    "baggageDeclaration": [
+      "declarationId",
+      "name",
+      "targetPath",
+      "installOnImport",
+      "timeInfo",
+      "fileVersion",
+      "detail"
+    ]
+  },
+  "ownership": {
+    "privateRootName": ".knxbench-catalogue-jobs",
+    "leaseFile": "lease",
+    "leasePrimitive": "rustix::fs::flock NonBlockingLockExclusive; stable inode never unlink",
+    "publicationPrimitive": "rustix::fs::renameat_with RenameFlags::NOREPLACE; no fallback rename",
+    "rootPermissionsOctal": "0700",
+    "filePermissionsOctal": "0600",
+    "startupReclamation": "under exclusive stable-root lease; known regular files only; unknown/retained/identity mismatch quarantines, closes admission",
+    "quarantineAdmission": "fail closed until explicit owned repair; no automatic byte amnesty",
+    "backupDisposition": "published before live DML, outside volatile root, never startup swept; known notCommitted removes only verified owned target; unknown/committed retain"
+  },
+  "readinessBlockersWithinScope": [],
+  "externalDependency": "Managed binding/witness/owner integration is separately owned; this package does not design or certify it.",
+  "memberRoles": [
+    "Master",
+    "Signature",
+    "Catalog",
+    "Hardware",
+    "ApplicationProgram",
+    "Baggages",
+    "Baggage",
+    "MasterData",
+    "Unrecognized"
+  ]
+}

@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-20 08:16
+- **Completed:** CLAIM (owner request: next open tasks): missing workbench-splitters typecheck coverage on `test/splitter-typecheck-20261020`. Fresh source confirms the existing six-case browser spec is not included by any committed derived tsconfig; maintained runner already discovers every derived config. Scope: one focused config, regression proving maintained discovery/inclusion and compiler negative control; no app UI or behavior change. G16 code/tail delivered (`b13b0ff9`, `248b1f87`), archive164members verified privately; cleanup follows separately.
+- **Pending/Next Steps:** Named RED for missing typecheck admission, smallest config, real compiler inclusion/negative-control proof, independent review, maintained package acceptance and main-first publication/readback. Existing Alpha16 sequence and exact-UP258 owners remain separate.
+- **Notes for Codex oder Claude:** No product source, schema, dependencies, browser policy/budgets/retries, bus/device, desktop, release/tag/deployment/vendor operation. Preserve selected root/prior journal/foreign research. Only the splitter typecheck follow-up is reserved; other future work remains unclaimed.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-20 08:12
 - **Completed:** WP-03 G16 diagnostics DELIVERED on main-first merge `b13b0ff9` (feature `2d094039`); local/tracking/live equality verified. Independent whole-diff correction review ACCEPTED. Maintained merged gate14/14GREEN: 322 registered tool tests (one existing optional skip),2994Rust passed/0failed/144ignored,97/97selected corpus; all stage proofs valid, inputs frozen and user-data guards clear. Focused40tests, three-crate Clippy and seven original-source negative controls precede acceptance. No parser/admission/schema/error-kind/encoding change. G16 claim RELEASED; broader WP-03 legacy binary mapping remains open.
 - **Pending/Next Steps:** Publish this result-only documentation tail after docs checks, preserve evidence and retire owned G16 feature/control resources. Next independent candidate: typecheck inclusion for the existing workbench-splitters browser regression (fresh overlap/source check before claiming). Existing Alpha16 sequence and exact-UP258 owners remain protected.

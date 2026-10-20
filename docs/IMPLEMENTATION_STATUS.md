@@ -12,6 +12,20 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Literal-bracket browser clocks (20 October 2026 source)
+
+The existing browser-lane guard detects unescaped literal `now` calls through
+`Date[...]` and `performance[...]` in code, page function callbacks and existing
+helper propagation. Masking, source positions and prior tests remain unchanged.
+Original-source execution of the final 43 test methods produces 85 intended
+assertion failures in seven methods; the corrected guard passes all 43, and
+its real repository scan reports zero untagged uses in 90 specs. These are
+focused checks, not merged-gate or publication acceptance. Computed/escaped
+properties, aliases/getters and decoded page-code bracket calls remain bounded
+out. No lane selection, retry, budget, application or KNX change.
+[Contract](contracts/web-test-gate.md) ·
+[Evidence](status/2026-10-20-literal-bracket-clocks.md).
+
 ## Project encrypted-directory refusal (20 October 2026)
 
 The shared project-directory check locally refuses ZIP bit-0 directories with

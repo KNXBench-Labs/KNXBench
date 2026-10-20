@@ -288,5 +288,147 @@ class BrowserLaneGuardTests(unittest.TestCase):
         self.assertFalse((ROOT / 'apps/knx-web/browser-lanes.json').exists())
 
 
+class LiteralBracketClockTests(unittest.TestCase):
+    @staticmethod
+    def cases() -> list[tuple[str, str]]:
+        return [(form.format(clock=clock, quote=quote), f'{clock}[{quote}now{quote}]')
+                for clock in ('Date', 'performance') for quote in ('"', "'")
+                for form in ('{clock}[{quote}now{quote}]()',
+                             '{clock} [ {quote}now{quote} ] ( )',
+                             '{clock}\n [\n {quote}now{quote}\n ]\n (\n )')]
+
+    def test_literal_bracket_clocks_refuse_untagged_calls(self) -> None:
+        for expression, primitive in self.cases():
+            with self.subTest(expression=expression):
+                source = 'test("a", async () => {\n  const t = ' + expression + ';\n});\n'
+                self.assertEqual(scan(source), [f'2:{primitive}'])
+
+    def test_literal_bracket_clocks_in_page_function_callbacks_are_refused(self) -> None:
+        for expression, primitive in self.cases():
+            for callback in ('() => ', 'function () { return '):
+                with self.subTest(expression=expression, callback=callback):
+                    body = callback + expression + ('; }' if callback.startswith('function') else '')
+                    source = 'test("a", async ({ page }) => {\n  await page.evaluate(' + body + ');\n});\n'
+                    self.assertEqual(scan(source), [f'2:{primitive}'])
+
+    def test_literal_bracket_clocks_admit_tagged_tests(self) -> None:
+        for expression, _ in self.cases():
+            with self.subTest(expression=expression):
+                self.assertEqual(scan('test("a", { tag: "@exclusive" }, async () => {\n'
+                                      '  const t = ' + expression + ';\n});\n'), [])
+
+    def test_literal_bracket_clocks_admit_enclosing_tagged_describes(self) -> None:
+        for expression, _ in self.cases():
+            with self.subTest(expression=expression):
+                self.assertEqual(scan('test.describe("g", { tag: ["@slow", "@exclusive"] }, () => {\n'
+                                      '  test("a", async ({ page }) => {\n'
+                                      '    await page.evaluate(() => ' + expression + ');\n'
+                                      '  });\n});\n'), [])
+
+    def test_literal_bracket_clocks_taint_transitive_local_helpers(self) -> None:
+        for expression, _ in self.cases():
+            with self.subTest(expression=expression):
+                source = ('function clock() { return ' + expression + '; }\n'
+                          'const measure = () => clock();\n'
+                          'test("tagged", { tag: "@exclusive" }, async () => { measure(); });\n'
+                          'test("untagged", async () => {\n  measure();\n});\n'
+                          'test("unrelated", async () => { Math.abs(-1); });\n')
+                call_line = source.splitlines().index('  measure();') + 1
+                self.assertEqual(scan(source), [f'{call_line}:measure'])
+
+    def test_literal_bracket_clocks_taint_imported_helpers_not_unrelated_callers(self) -> None:
+        for expression, _ in self.cases():
+            with self.subTest(expression=expression):
+                helpers = {
+                    'clock.ts': ('export function clock() { return ' + expression + '; }\n'
+                                 'export function safe() { return 1; }\n'),
+                    'timing.ts': ('import { clock } from "./clock";\n'
+                                  'export const measure = () => clock();\n'
+                                  'export { safe } from "./clock";\n'),
+                }
+                header = 'import { measure as sample, safe } from "./timing";\n'
+                admitted = ('test("tagged", { tag: "@exclusive" }, async () => { sample(); });\n'
+                            'test.describe("g", { tag: "@exclusive" }, () => {\n'
+                            '  test("nested", async () => { sample(); });\n});\n'
+                            'test("unrelated", async () => { safe(); });\n')
+                self.assertEqual(scan(header + admitted, helpers), [])
+                source = header + admitted + 'test("untagged", async () => {\n  sample();\n});\n'
+                self.assertEqual(scan(source, helpers), ['8:sample'])
+
+    def test_literal_bracket_clock_text_is_masked(self) -> None:
+        for clock in ('Date', 'performance'):
+            for quote, outer in (('"', "'"), ("'", '"')):
+                expression = f'{clock}[{quote}now{quote}]()'
+                texts = [f'// {expression}\n', f'/* {expression} */\n',
+                         f'test({outer}{expression}{outer}, async () => {{}});\n',
+                         f'const text = {outer}page.evaluate(() => {expression}){outer};\n',
+                         f'const pattern = /{expression}/;\n',
+                         f'const template = `page.evaluate(() => {expression})`;\n']
+                for text in texts:
+                    with self.subTest(text=text):
+                        self.assertEqual(scan(text + 'test("a", async () => {});\n'), [])
+
+    def test_literal_bracket_clocks_in_template_expressions_are_refused(self) -> None:
+        for expression, primitive in self.cases():
+            with self.subTest(expression=expression):
+                source = ('test("a", async () => {\n'
+                          '  const text = `clock: ${' + expression + '} trailing Date["now"]()`;\n});\n')
+                self.assertEqual(scan(source), [f'2:{primitive}'])
+
+    def test_literal_bracket_clock_diagnostics_preserve_source_lines(self) -> None:
+        source = ('// Date["now"]()\n'
+                  'test("performance[\'now\']()", async ({ page }) => {\n'
+                  '  const text = `Date["now"]()\nmore text`;\n'
+                  '  const a = Date\n [ "now" ]\n ();\n'
+                  '  await page.evaluate(() => performance [ \'now\' ] ());\n'
+                  '  const b = Date . now();\n});\n')
+        with tempfile.TemporaryDirectory() as directory:
+            e2e = Path(directory)
+            (e2e / 'spec.e2e.ts').write_text(source)
+            self.assertEqual([str(f) for f in lanes.check_directory(e2e)], [
+                'spec.e2e.ts:5: Date["now"] measures real time outside an @exclusive scope; '
+                'tag the test or its describe with { tag: "@exclusive" }',
+                "spec.e2e.ts:8: performance['now'] measures real time outside an @exclusive scope; "
+                'tag the test or its describe with { tag: "@exclusive" }',
+                'spec.e2e.ts:9: Date.now measures real time outside an @exclusive scope; '
+                'tag the test or its describe with { tag: "@exclusive" }',
+            ])
+
+    def test_literal_bracket_clock_module_use_is_refused_in_imported_helper(self) -> None:
+        source = 'import { started } from "./clock";\ntest("a", async () => {});\n'
+        for expression, primitive in self.cases():
+            with self.subTest(expression=expression):
+                self.assertEqual(scan(source, {'clock.ts': '\nexport const started = ' + expression + ';\n'}),
+                                 [f'clock.ts:2:{primitive}'])
+
+    def test_literal_bracket_clock_malformed_source_still_fails_closed(self) -> None:
+        cases = [
+            ('test("a", () => { Date["now"(); });', 'unbalanced bracket at offset'),
+            ('test("a", () => { Date["now"]();', 'unclosed bracket at offset'),
+            ('test("a", () => { Date["now\n](); });', 'unterminated string literal'),
+            ('test("a", () => { performance[\'now\n](); });', 'unterminated string literal'),
+            ('test("a", () => { Date["now"](); /*', 'unterminated block comment'),
+            ('test("a", () => { const t = `${Date["now"]()} trailing', 'unterminated template literal'),
+            ('test("a", () => { const r = /Date["now"]()\n', 'unterminated regular expression'),
+        ]
+        for source, message in cases:
+            with self.subTest(source=source), self.assertRaisesRegex(ValueError, message):
+                scan(source)
+
+    def test_computed_and_escaped_bracket_properties_are_not_literal_clocks(self) -> None:
+        source = (r'''test("a", async () => {
+  const a = Date["n\ow"]();
+  const b = performance['n\x6fw']();
+  const c = Date["no" + "w"]();
+  const d = performance[key]();
+  const e = Date[`now`]();
+  const f = Date["now"];
+  const g = otherDate["now"]();
+  const h = $performance['now']();
+});
+''')
+        self.assertEqual(scan(source), [])
+
+
 if __name__ == '__main__':
     unittest.main()

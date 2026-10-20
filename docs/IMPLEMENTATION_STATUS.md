@@ -12,6 +12,25 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Project encrypted-directory refusal (20 October 2026; delivery pending)
+
+The shared project-directory check locally refuses ZIP bit-0 directories with
+an explicit unsupported reason and validated decoded path, after structural
+validation and before raw payload/CRC probing. No cipher support, schema or
+ordinary-file password behavior changes. The original94case matrix is retained;
+fourteen nested acceptance pins and48refusal diagnostics deliberately change.
+Final core tests reproduce72original semantic failures and49controls; candidate
+owning404pass/16ignore and application16new/41owning3ignore pass under parent
+execution (selections overlap), plus both-crate Clippy and header checks.
+Guard removal reproduces72named failures between121-pass baseline/restored runs
+in an isolated snapshot; canonical runtime never mutated. Scoped application
+snapshots/native reopen prove quiescent early refusal, not live WAL/crash/general
+cross-store atomicity. Independent full-diff review accepts with zero
+Critical/Important findings; its minor stale-status wording is corrected.
+Maintained delivery gate pending.
+[Contract](contracts/project-encrypted-directory-admission.md) ·
+[Evidence](research/2026-10-20-directory-encryption-header-validity.md).
+
 ## Catalogue-authoring portability characterization (20 October 2026)
 
 The formerly source-traced KL-183 authoring path is now exercised through real

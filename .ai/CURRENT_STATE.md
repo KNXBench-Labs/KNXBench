@@ -1,4 +1,20 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-20 12:30
+- **Completed:** Reviewed feature committed `14fdd4b2`; main-first merge built over `f6b196a8` with five reviewed Rust/test hashes unchanged. Both complete handover histories and status additions preserved, entries sorted newest-first; upstream HTTP test and documentation retained. Review0Critical/Important, minor wording corrected. Parent candidate2/mutation/final-byteRED evidence unchanged; no runtime delivery yet.
+- **Pending/Next Steps:** Build existing frontend assets required by desktop downstream check, then maintained14-stage scoped gate on frozen committed merge (base f6b196a8,9Rust packages+selected corpus). Conditional publication only after exact ordered stage/proof/freeze/user-data guards, reviewed source identities and clean tree verified, and freshly fetched main unchanged/no release freeze. If upstream moves retain accepted-not-pushed and classify delta before remerge. Then result-only docs and verified owned evidence cleanup. No source edits while gate runs.
+- **Notes for Codex oder Claude:** Integration branch integrate/wp16-directory-crypto-20261020; feature branch research/wp16-directory-crypto-20261020 retained until delivery. Gate receipts `<profile-scratch>/wp16-directory-crypto-20261020/gate1`; expected stage plan merged-gate-plan.txt. Frozen input guard binds committed candidate from receipt, not this self-referential note. Foreign gate-planner owner protected; root stays stale/dirty, no new cipher/private encrypted census/bus/device/release/deployment. Earlier selected/core tests are focused evidence, not maintained acceptance.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-20 12:26
+- **Completed:** Independent full-diff review `deleg_3ee32321` ACCEPTS:0Critical/Important,1minor stale research status corrected. Parent verified15reviewed identities before docs correction; five runtime/test hashes unchanged. Parent candidate2 app16new/41owning3ignore, core404owning16ignore, Clippy/header GREEN; original final-byte72core/8appRED and isolated guard mutation verified. No runtime publication yet.
+- **Pending/Next Steps:** Commit reviewed runtime/tests/docs, main-first integrate newest upstream (docs+one KL183 HTTP test delta; inspect exact diff before merge). Preserve upstream journals/claims and all inherited history; maintained scoped14-stage gate on frozen committed merge. Verify ordered stage/proof inventory, source freeze and clear user-data guards before conditional publication/readback, then docs-only result tail and owned evidence retirement. Any new upstream runtime input must be classified before acceptance.
+- **Notes for Codex oder Claude:** Feature HEAD62a6734e with uncommitted reviewed package; source manifest review-final/manifest.json, reviewer-report.json, controller-review-acceptance.json. Sole minor corrected status, not runtime. Gate prep node modules ready. Upstream handover12:16 owns deleted-web-input planner explanations; Alpha16/UP258/KL183/directory reservations protected. Root stays stale/dirty; no real encrypted-corpus census/cipher expansion/bus/device/release/deployment. Freeze worktree after committed-gate dispatch; receipts outside source tree.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-20 12:16
 - **Completed:** KL-183 characterization fully closed: accepted `0dbef5cf`, result tail `cfb3168a` published/readback equal; scoped13/13 and docs-tail10/10GREEN. Private evidence72files plus manifest verified before owned worktree/two merged branches/rebuildable scratch retirement. WP-13 archive holds87evidence files plus manifest (file counts exclude the manifest). New CLAIM: deleted/missing web-input planner explanations on `fix/deleted-web-reasons-20261020`.
 - **Pending/Next Steps:** Add an explicit repository-relative missing/deleted-input reason to the existing plan without pretending an unresolved spec has a proven exact dependency. Preserve selected suites, graph fallback, retries, budgets and complete-gate admission. Named REDs before implementation; source/tests/docs review, then maintained COMPLETE gate because the planner itself changes, main-first publication/readback and owned retirement.
@@ -7,10 +23,26 @@
 ---
 
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-20 12:13
+- **Completed:** Current mutation/header notifications consumed; two ancient G16 notices already closed and not reopened. Parent verified isolated guard proof121GREEN→72namedRED/49controls→121restoredGREEN, canonical untouched; unsuccessful setup/parser attempts uncredited. Final module-doc separators rechecked originalRED72core/8app, adopted byte-exact. Parent candidate2 COMPLETE/GREEN: app16new/41owning3ignored; core404owning16ignored; both-crateClippy/format/layout/header at unchanged155ceiling. Docs synchronized; runtime hashes stable.
+- **Pending/Next Steps:** Freeze complete owned source/test/docs manifest and dispatch independent whole-diff review, then no edits until verdict. On acceptance commit focused runtime/tests/docs; main-first integrate upstream docs-only93b1a2d (or newer verified delta), preserve foreign journal/claims, run maintained scoped committed-head gate and verify proofs/freeze/user-data guards before conditional publication/readback. No runtime acceptance/publication yet; parent review and gate outstanding.
+- **Notes for Codex oder Claude:** HEAD62a6734e with five runtime/test paths and scoped docs uncommitted. Evidence controller-candidate2/{receipt,counts}.json, controller-mutation-header-acceptance.json, final-header-controls1/receipt.json; mutation1 binds pre-separator tests, final-byte originalRED/candidateGREEN separately proven. Selected root stays stale/dirty. Keep existing InconsistentRecord decoded-path unsupported reason, ordinary-file crypto/product behavior and bit6alone unchanged. No private encrypted-corpus census, new AES, bus/device/release/deployment scope; preserve foreignAlpha16/UP258/KL183.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-20 12:11
 - **Completed:** KL-183 catalogue-authoring characterization DELIVERED on `main` as main-first `0dbef5cf` (feature `4b7b8db0`), local/tracking/live readback equal. Maintained scoped13/13GREEN:1057Rust tests/0failed/53ignored,51/51selected corpus,323registered tools/one existing optional skip; all proofs valid, frozen inputs and clear user-data guard lists. Desired-portability RED retained; final12owningHTTP inventory verified and old11test bodies preserved. Separate self-review, not independent approval. Production unchanged; not a portability repair. Claim RELEASED.
 - **Pending/Next Steps:** Result-only docs tail, verified private evidence archive and owned retirement. Then fresh bounded gate-planner follow-up: name deleted web inputs in conservative selection reasons without changing selected suites or weakening full-gate admission. Read-only source preparation only so far; fresh claim/RED required before edits. KL-183 source-dependency/manifest acquisition contract and actual repair remain separate open work.
 - **Notes for Codex oder Claude:** Evidence `<profile-scratch>/kl183-authoring-characterization-20261020/gate1`, controller acceptance and desiredRED/current-characterization sources retained. No full-workspace/browser/native/release or universal-package claim. Other owners keep Alpha16/exact-UP258/directory encryption. Root stale/dirty and foreign research preserved; no bus/device/desktop/deployment/vendor operation.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-20 12:08
+- **Completed:** Core/app workers `deleg_13f42a18` consumed. Parent candidate1 COMPLETE/GREEN `proc_67cbd0c63ece`: app16new/41owning3ignored, core404owning16ignored, both-crate all-targetsClippy and format/layout. Worker log/source/test hashes verified; core original72semanticRED/49controls, app8semanticRED/8positives. Quiescent migrated-store/source/sidecar/native reopen assertions pass. npm-ci prep `proc_56e94213c742` completed successfully. No runtime publication/acceptance yet.
+- **Pending/Next Steps:** Header lint detects two new modules missing blank //! after sentence (157vs155ceiling); canonical headers NOT YET edited because isolated mutation worker hashes canonical. Final desired header bytes being tested against original62a6734e export `proc_28eb7617f825` at final-header-controls1; require72core/8appsemanticRED. Mutation `deleg_f1d8e94e` running read-only canonical snapshot baseline/guard-off/restoredGREEN. On both completions: verify receipts, then apply ONLY blank //! lines exactly matching final-tests; rerun focused/owning/clippy and header check; update docs, full-diff review, committed maintained gate. Do not invalidate active workers by editing runtime/tests meanwhile.
+- **Notes for Codex oder Claude:** Branch research/wp16-directory-crypto-20261020 HEAD62a6734e, runtime diff+5source/testfiles uncommitted; parent docs changed. Upstream main moved docs-only to93b1a2d (WP13+KL183claim protects directory scope), captured upstream-before-review.txt. Needs main-first integration and fresh top-handover/freeze check before push; root stays stale/dirty. Existing candidate receipt controller-candidate1/receipt.json+counts.json; original baselines immutable. Header-controls source snapshot excludes production guard, final target private. No cipher/bit6alone/product schema/protocol/new support; preserve foreignAlpha16/UP258/KL183.
 
 ---
 
@@ -31,10 +63,34 @@
 ---
 
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-20 11:51
+- **Completed:** Original-runtime encrypted-directory evidence independently ACCEPTED:94unique cases,188fixtures,2774source files/73packages,144tracked runtime identities; parent replay exact, lock-compatible, no source drift. Evidence/explicit refusal contract committed `62a6734e` before production edits; remote claim remains2a4b60b6. Policy bit0directories unsupported,14nested acceptance changes and48diagnostic changes explicitly recorded; no cipher support.
+- **Pending/Next Steps:** Implementation batch `deleg_13f42a18` DISPATCHED: core `sa-0-d67a58a4` owns local_record.rs+decoded_member_names subtree, TDD originalRED/candidateGREEN/Clippy; app `sa-1-5526fd76` owns import_service child encrypted_directory tests, originalRED on isolated immutable62a6734e export only. Parent must verify final test/source hashes and named failures, run app candidate+owning suite after workers stop, isolated guard mutant/restoredGREEN, docs status, independent full-diff review and maintained committed-head gate. No publication/acceptance of runtime yet.
+- **Notes for Codex oder Claude:** Artifacts `<profile-scratch>/wp16-directory-crypto-20261020/{controller-characterization1,core-implementation,app-implementation}` and ACTIVE_IMPLEMENTATION.json. Contract project-encrypted-directory-admission.md fixes existing InconsistentRecord decoded path/reason, preserves ordinary-file cipher/password semantics/product behavior and bit6alone controls. Do not rerun original baseline against changed production and classify deliberate delta as drift. Parent owns docs; no cargo fmt --all writes during sibling edits. Preserve rootdirty/foreignAlpha16+UP258/private identities; no real credential/private encrypted corpus/bus/device/release scope.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-20 11:50
 - **Completed:** WP-13 named remaining prose sweep DELIVERED on `main` as main-first `d4a5c4fc` (feature `c9f021a1`), push/live/tracking equality verified. Maintained scoped gate10/10 GREEN,323 registered tooling tests/one existing optional skip; all proofs valid, inputs frozen and user-data guard lists empty. Separate in-session self-review, not independent approval. Ledger/catalogue and retained dossier blocks unchanged. WP-13 claim RELEASED.
 - **Pending/Next Steps:** Result-only handover/checks, private evidence archival verification and owned retirement. Then fresh bounded KL-183 catalogue-create/Save/empty-product-DB characterization through real HTTP/service paths; source-traced case is not yet runtime-confirmed or repaired. Claim separately after a fresh overlap check.
 - **Notes for Codex oder Claude:** Docs-only acceptance, no fresh application/browser/corpus/native/release claim. Alpha16 successors, exact-UP258 and directory encryption-header owners remain protected. Root intentionally stale/dirty; no bus/device/desktop/deployment/vendor operation. Checker/Python import and missing-gh subprocess setup attempts retained, not credited as product test failures.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-20 11:48
+- **Completed:** Original encrypted-directory characterization ACCEPTED:94unique tests discovered/executed/pass; parent rehashed complete evidence,2774source files/73packages,144tracked Rust/manifests,188fixtures and lock versions/checksums, then independently replayed all94with exact per-case equality. Source/runtime8ccb99b3 unchanged. New explicit admission contract refuses bit0project directories as unsupported before raw-payload probing;14nested acceptance pins deliberately superseded,48old refusals gain explicit diagnostic. No production edits yet.
+- **Pending/Next Steps:** Commit evidence/decision docs before workers. Disjoint core worker owns local_record.rs and decoded_member_names test subtree; app worker owns new import_service child test module only, plus original-sourceRED in isolated export. Require candidateGREEN, guard mutation/restoration, application quiescent refusal/reopen, full-diff review and maintained committed-head gate before delivery. Do not rerun historical characterization after production changes and call changed outcomes source drift; retained baseline stays immutable.
+- **Notes for Codex oder Claude:** Branch research/wp16-directory-crypto-20261020; published claim2a4b60b6. Contract docs/contracts/project-encrypted-directory-admission.md; receipts `<profile-scratch>/wp16-directory-crypto-20261020/controller-characterization1/receipt.json` and policy-delta.json. Keep InconsistentRecord decoded path with explicit unsupported reason, no new error variant/schema/cipher. Bit6alone/AESextra equality remain separate. Ordinary encrypted files and independent product reader unchanged. Preserve rootdirty/foreignAlpha16+UP258; no real credential/private encrypted corpus/bus/device/release scope.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-20 11:41
+- **Completed:** Read-only directory encryption audit `deleg_4b138f0a` consumed; parent verified all12source/test/manifest hashes and audit SHA256. Direct nested project directory skip precedes cipher handling; outer normal open/product independent refusal paths differ. APPNOTE6.3.10/WinZip snapshots reconciled; three cached zip8.6.0 reader files byte-equal to crate archive matching Cargo.lock. Research dossier/index/open-work/KL159/log updated, no production policy change.
+- **Pending/Next Steps:** Scratch-only synthetic characterization `deleg_1ae075bf` dispatched (named outer/direct-inner cases, descriptors, genuine public-fixture ZipCrypto headers, AES/strong flags, dependency decoder controls). Review final source/fixture/dependency manifests and actual named runtime outcomes before any normative decision, repair or publication. Current dossier explicitly source-traced/pending runtime. Keep active-run scratch; no credential or private encrypted-corpus acquisition.
+- **Notes for Codex oder Claude:** Worktree branch `research/wp16-directory-crypto-20261020`, base/runtime unchanged; published claim `2a4b60b6`. Worker writes only `<profile-scratch>/wp16-directory-crypto-20261020/characterization`; parent owns docs. Audit `<profile-scratch>/wp16-directory-crypto-20261020/audit-source/verification.json`; primary binding research/controller-primary-binding.json. No product runtime, cipher authentication, persistence or compatibility claim. Initial local checksum-sidecar probe unavailable; corrected crate comparison verified. Preserve rootdirty/foreignAlpha16+UP258; no bus/device/release scope.
 
 ---
 

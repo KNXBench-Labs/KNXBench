@@ -4,6 +4,8 @@
 //! reach, instead of a public test-only API being added to `knx-etsproj`
 //! for their benefit.
 
+mod encrypted_directory;
+
 use std::path::{Path, PathBuf};
 
 use knx_app::import_ets_project;

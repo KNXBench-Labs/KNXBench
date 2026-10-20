@@ -10,6 +10,8 @@
 // The archives are written by hand below, so names, flags, extra fields and
 // declared sizes can be set independently of each other.
 
+mod encrypted_directories;
+
 use std::io::Write;
 
 use flate2::write::DeflateEncoder;
@@ -1369,7 +1371,7 @@ mod ordinary_file_stream_characterization {
     // Fixture-only cipher, fixed public credential from the existing test helper.
     // Bitwise CRC deliberately does not share knx-secure's table implementation.
     // Every admitted encrypted fixture is also decoded by zip's independent cipher.
-    fn encrypt(m: &mut Member) {
+    pub(super) fn encrypt(m: &mut Member) {
         fn update_crc(mut crc: u32, byte: u8) -> u32 {
             crc ^= u32::from(byte);
             for _ in 0..8 {

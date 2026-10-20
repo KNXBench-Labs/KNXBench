@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-20 06:39
+- **Completed:** CLAIM (owner request: research-backed download corrections, focus System 2). Inspecting the existing offline image/table and selection contracts on `fix/system2-download-integrity-20261020`; two read-only reviews cover object/table mapping and parameter/load semantics. No implementation or acceptance result yet.
+- **Pending/Next Steps:** Implement only independently evidenced generic System-2 correctness/integrity corrections with test-first regressions, independent review and the maintained package gate. Unsupported ETS-specific selection/rounding rules remain explicit boundaries. No new live admission, target operation, migration or schema change.
+- **Notes for Codex oder Claude:** Reserve only generic offline System-2 image/table corrections and their tests/contracts. Exact UP258 source preparation, executable procedure/recovery and live commissioning remain with their existing owner; coordinate rather than changing those surfaces. Alpha 16 successor schema repair and later claimed work stay separate. Selected dirty checkout and foreign research files remain untouched. No bus/device/desktop/release/vendor operation.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-20 06:24
 - **Completed:** Owner's documentation-only limitation corrections accepted on main-first merge `52a42218` from `dc83e939`: eight catalogue summaries, nine dated dossier updates, generated overview, three evidence-only ledger notes, KL-183 manual routes, WP-13 and delivery index. Maintained scoped gate passes 13/13 stages with frozen inputs, 317 tool tests, 103 xtask tests, Clippy, 1,636 anchors/680 Markdown files and all 208 ledger rows; no user data touched or unchecked. Corpus stage is a no-op for the xtask-only selection, not a new corpus run. All 195 catalogue identities, existing anchors, eight retained blocks and formal ledger columns/counts are verified unchanged. Separate in-session self-review; no independent approval claimed.
 - **Pending/Next Steps:** Publication/readback and owned cleanup follow this result-only documentation tail. KL-183's additional catalogue-create/Save/empty-product-DB-reopen case remains source-traced, NOT runtime-reproduced or fixed. Wider WP-13 sweep and all hardware/format/recovery acceptance boundaries remain separate; no implementation or live operation started by this docs package.

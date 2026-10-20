@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-20 11:50
+- **Completed:** WP-13 named remaining prose sweep DELIVERED on `main` as main-first `d4a5c4fc` (feature `c9f021a1`), push/live/tracking equality verified. Maintained scoped gate10/10 GREEN,323 registered tooling tests/one existing optional skip; all proofs valid, inputs frozen and user-data guard lists empty. Separate in-session self-review, not independent approval. Ledger/catalogue and retained dossier blocks unchanged. WP-13 claim RELEASED.
+- **Pending/Next Steps:** Result-only handover/checks, private evidence archival verification and owned retirement. Then fresh bounded KL-183 catalogue-create/Save/empty-product-DB characterization through real HTTP/service paths; source-traced case is not yet runtime-confirmed or repaired. Claim separately after a fresh overlap check.
+- **Notes for Codex oder Claude:** Docs-only acceptance, no fresh application/browser/corpus/native/release claim. Alpha16 successors, exact-UP258 and directory encryption-header owners remain protected. Root intentionally stale/dirty; no bus/device/desktop/deployment/vendor operation. Checker/Python import and missing-gh subprocess setup attempts retained, not credited as product test failures.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-20 11:37
 - **Completed:** CLAIM (owner request: work the next packages): WP-13 remaining documentation sweep on `docs/wp13-sweep-20261020`. Scope is current reader-facing descriptions of rename, product placement, note disposition, Functions, plug-in routes, UI waves and lifecycle/property-planner boundaries; retained historical records and formal ledger dispositions stay unchanged.
 - **Pending/Next Steps:** Trace each current claim to its source/contract and correct only verified contradictions. Run documentation regressions and the maintained scoped package gate, review separately in-session, then main-first delivery/readback and owned cleanup. Subsequent packages require a fresh ownership check.

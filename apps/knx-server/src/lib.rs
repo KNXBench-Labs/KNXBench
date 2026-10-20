@@ -93,6 +93,9 @@ mod note_disposition_routes;
 mod note_routes;
 pub use load_progress::*;
 mod catalogue_update_routes;
+// Intentionally unwired until controlled binding production and job ownership exist.
+#[allow(dead_code)]
+mod catalogue_job_control;
 mod function_routes;
 mod one_shot_activity;
 mod programming_state;

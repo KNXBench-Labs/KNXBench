@@ -12,6 +12,9 @@ remain unexecuted. ProductDB schema and ordinary APIs are unchanged.
 
 - [Job/consent/UI contract](../catalogue-update-jobs.md): R1 Ready/apply/expiry,
   R2 App-owned job lifecycle, R3 bounded replay and M1 growth-cliff policy.
+- [Internal A2 admission decisions](control-admission.md): independently reviewed
+  construction-disabled kernel scope, exact replay/clock/counter choices and
+  future producer/full-Status boundaries; no callable production Ready factory.
 - [Managed binding/transaction supplement](managed-binding.md): concrete owner,
   health/generation/incarnation, every existing server mutator, complete typed
   streamed witness, support refusals and explicit same-W transaction settlement.

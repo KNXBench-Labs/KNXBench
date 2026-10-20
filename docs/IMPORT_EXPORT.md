@@ -18,7 +18,16 @@ or exhaustive real-project compatibility. Full project imports return decoded
 members; selective imports additionally retain an original source archive and
 scoped report. Historical records remain evidence of their original import,
 not a fresh measurement under a later policy. New AES support and directory
-encryption-header validity remain excluded.
+encryption-header validity remain excluded from that delivered package.
+
+The subsequent [encrypted-directory contract](contracts/project-encrypted-directory-admission.md)
+is implemented locally: bit-0 directories refuse with their decoded path and an
+explicit unsupported reason, before raw payload/CRC probing and after structural
+validation. This changes fourteen characterized nested admissions and 48 existing
+refusal diagnostics; it does not add decryption. Review and maintained delivery
+acceptance are pending. Ordinary encrypted files and product-package refusal remain unchanged; no new
+encrypted-project compatibility is claimed. Independent full-diff review accepts
+with zero Critical/Important findings; maintained delivery gate remains pending.
 
 ## Master identity evidence (source builds after Alpha 15)
 

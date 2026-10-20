@@ -178,9 +178,14 @@ content. Public format facts and 94 original-runtime synthetic cases are
 independently verified, including exact controller replay. The
 [admission contract](../contracts/project-encrypted-directory-admission.md)
 chooses explicit bit-0 project-directory refusal, deliberately superseding
-fourteen nested acceptance pins and changing 48 refusal diagnostics. Production
-implementation and delivery checks remain pending. No new encrypted-directory
-support, persistence or real-project compatibility claim. Bit-6-only consistency
+fourteen nested acceptance pins and changing 48 refusal diagnostics. The minimal
+shared guard passes parent core404/16ignored and app16new/41owning3ignored checks,
+both-crate Clippy and header checks. Isolated mutation reproduces72semantic
+failures between121-pass baseline/restored runs. Independent review accepts with
+zero Critical/Important findings; minor stale-status wording is corrected.
+Maintained delivery remains pending. Application snapshots establish only quiescent early refusal,
+not crash/live-WAL/general cross-store atomicity. No new encrypted-directory
+support or real-project compatibility claim. Bit-6-only consistency
 and AES extra-field semantics remain separate questions.
 
 <!-- BEGIN retained catalogue record -->

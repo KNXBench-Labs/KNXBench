@@ -1,5 +1,19 @@
 # Compatibility
 
+## Project encrypted-directory admission (20 October 2026; delivery pending)
+
+The [new refusal contract](contracts/project-encrypted-directory-admission.md)
+explicitly treats bit-0 ZIP directory records as unsupported in outer and direct
+nested project containers. Local implementation no longer skips short-header
+inner directories or interprets directory ciphertext as plaintext DEFLATE.
+Fourteen original nested acceptance cases deliberately become refusals; 48
+already-refused shapes gain an explicit decoded-path diagnostic. This is a
+stricter KNXBench admission policy, not a claim that genuine encrypted empty
+directories are universally invalid ZIPs. No new cipher, real encrypted-project
+compatibility census, product-package support or strong-encryption metadata
+semantics. Local core/application tests and independent full-diff review pass;
+maintained delivery acceptance remains pending.
+
 ## System-2 explicit inactive-policy integrity (20 October 2026 source)
 
 The offline System2 image entry now refuses an explicit

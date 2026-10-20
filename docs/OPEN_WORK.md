@@ -162,7 +162,10 @@ CLI inspection usage names `.vd1`, while import keeps its separate
 admission, error kind or binary-enum mapping changes. Named CLI/library and
 both HTTP install/preview regressions exercise the wording; existing positive,
 nested/broken-package and structural-refusal cases remain in the focused suite.
-Package review/acceptance is recorded in the handover.
+**Delivered 20 October 2026** on main-first merge `b13b0ff9`; independent review
+accepted and maintained scoped gate14/14passed (2994Rust tests,97/97selected
+corpus,322registered tool tests/one existing optional skip), with frozen inputs
+and user-data guards clear. G16 claim released; binary mapping stays open.
 **Done when:** fresh/re-ingested legacy enumerations expose exact binary
 values in the existing column with regression/report tests, or explicitly
 name the remaining mapping blocker. G16 diagnostic handling is described above;

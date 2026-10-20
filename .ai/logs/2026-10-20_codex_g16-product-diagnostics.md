@@ -39,7 +39,10 @@ ACCEPTS with no unresolved findings; all16reviewed file identities verified befo
 handover-only updates. Revised focused40tests and three-crate Clippy pass. Final
 regression bytes produce seven exact named failures against original production
 source, including the directory/AppleDouble/CLI/HTTP variants. Maintained merged
-gate and publication remain pending.
+gate14/14GREEN on `b13b0ff9`:322registered tool tests (one existing optional skip),
+2994Rust passed/0failed/144ignored and97/97selected corpus. All stage proofs valid,
+inputs frozen, both user-data guard lists empty. Published code readback confirms
+local = tracking = live. G16 claim released; broader binary mapping stays open.
 
 Raw results remain private under the active profile. No bus/device, desktop,
 release/tag, deployment, vendor contact or real user-data operation.

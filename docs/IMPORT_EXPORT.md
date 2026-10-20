@@ -1471,7 +1471,9 @@ and existing native/product destinations stay exact; no nested unpack/render/
 execution or App/manifest validity. Parser-only reports and historical persisted
 reports are not silently rewritten. See [ADR-0109](adr/0109-opaque-payload-content-and-candidate-roles.md).
 
-## Authored note boundary, native14 candidate (2026-10-11)
+<a id="authored-note-boundary-native14-candidate-2026-10-11"></a>
+
+## Authored note boundary (current reconciliation, 20 October 2026)
 
 Project notes are native-only typed plain-text authored data, separate from
 retained ETS sources and device instruction overlays. ETS imports create none;
@@ -1480,8 +1482,16 @@ notes/identity/order/inclusion. The independent note allocator is persisted even
 after notes are removed. Any future whole-project converter lacking notes must
 identify unsupported notes before conversion; no inferred external notes mapping.
 The existing selected GA CSV exchange is a group-address subset, not complete
-project conversion. Selective14 import preserves destination notes and explicitly
-refuses source notes pending audited selection/disposition mapping; it never
-claims to preserve them by dropping them. Report exports only opted-in notes.
-Current Foundation admission/publication and service/editor adoption are pending;
-[exact contract](contracts/project-note-admission.md).
+project conversion. Report exports include only opted-in notes.
+
+The foundation, service and web editor are delivered. Deleting an entity with
+notes requires explicit disposition in the web workflow; unsupported delete
+callers refuse with the affected notes instead of stranding them. In the
+normalized selective-import service, destination notes stay intact and source
+notes follow imported/reused targets under fresh note IDs. Notes outside the
+selection require an explicit skip-with-report or attach-to-project choice;
+absence of that choice refuses the merge. The ETS source workflow does not
+invent notes. See the [current selective-import boundary](SELECTIVE_IMPORT.md)
+and [note/disposition contract](contracts/project-note-admission.md#delete-disposition-and-selective-import-notes-17-october-2026-adr-0138).
+The earlier native14-candidate/no-editor wording is superseded, not a new
+runtime or release acceptance claim.

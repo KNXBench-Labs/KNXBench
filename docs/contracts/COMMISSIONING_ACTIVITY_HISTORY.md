@@ -1,5 +1,23 @@
 # Commissioning activity history contract
 
+## Current disposition (20 October 2026 documentation reconciliation)
+
+The bounded backend, shared CLI/server callers and web Live/History adoption
+are delivered, not waiting for publication. The [canonical ledger](../status/LEDGER.md)
+records `AUDIT-01` as DONE and `SAFE-03` as ACCEPTED_BOUNDARY; its owner
+reconciliation supersedes the unfinished-caller wording in the dated snapshots
+below. [Integrated caller evidence](../evidence/commission-integrated-gates-ae567d00-2026-10-05.json)
+and the [web delivery receipt](../evidence/commission-history-web-delivery-offline-2026-10-04.json)
+retain their original source bindings and test counts, not fresh acceptance here.
+
+History remains payload-free operation metadata with partial coverage. A
+finished row is not a read-back proof, complete bus capture or whole-device
+recovery backup. Process-crash/power-loss and universal hardware/ETS guarantees
+are not supplied; runtime backup, consent and fail-closed gates still apply.
+The [user-facing commissioning boundary](../manual/known-issues.md#commissioning-validation-boundary)
+is current. All dated candidate/publication-pending sections below remain as
+historical evidence and must not be read as a second implementation queue.
+
 ## Optional CLI compare history candidate — 2026-10-05
 
 `knx device compare` accepts `--activity-history <path>` in CLI

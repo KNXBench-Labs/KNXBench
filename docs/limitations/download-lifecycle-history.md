@@ -6,6 +6,21 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Current lifecycle disposition (20 October 2026)
+
+The bounded CLI/server lifecycle and web Live/History consumers are delivered.
+The [ledger](../status/LEDGER.md) records `AUDIT-01` as DONE and `SAFE-03` as
+ACCEPTED_BOUNDARY after the owner's 5 October reconciliation; the retained
+record's broader caller/Web-adoption and publication-pending statements are
+historical, not current missing implementations. The
+[current contract](../contracts/COMMISSIONING_ACTIVITY_HISTORY.md#current-disposition-20-october-2026-documentation-reconciliation)
+links their original integrated receipts without relabelling them as new tests.
+
+Partial metadata coverage, prior-incarnation uncertainty and fail-closed history
+admission remain. Neither a completed row nor a saved backup pointer proves
+whole-device restoration or crash/power-loss safety. No formal ledger status,
+hardware admission or retained record is changed by this reconciliation.
+
 <!-- BEGIN retained catalogue record -->
 
 ## Download lifecycle history admission — SAFE-03 / AUDIT-01 evidence boundary

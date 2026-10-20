@@ -6,7 +6,11 @@ halves return DESIGN READY after scoped correction rereviews. Their original
 REVISE verdicts remain retained. This parent approval composes the two reviewed
 halves; no new service, route, parser control, artifact manager, validator or
 desktop hook is implemented by the documents. All proposed production controls
-remain unexecuted. ProductDB schema and ordinary APIs are unchanged.
+remain unexecuted. The private A1 primitive and construction-disabled A2 kernel
+are now delivered with their own focused and maintained gate evidence; this is
+not production job, binding, installer or full Status acceptance. See the
+[A2 delivery record](../../IMPLEMENTATION_STATUS.md#wp-043-a2-admission-kernel--delivered-21-october-2026).
+ProductDB schema and ordinary APIs are unchanged.
 
 ## Normative document set
 

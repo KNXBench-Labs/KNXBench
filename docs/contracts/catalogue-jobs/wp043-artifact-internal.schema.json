@@ -1,0 +1,311 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "wp043-artifact-internal.schema.json",
+  "$defs": {
+    "U64": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,19})$",
+      "x-maximumDecimal": "18446744073709551615"
+    },
+    "Id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{32}$"
+    },
+    "Digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "OwnedIdentity": {
+      "type": "object",
+      "properties": {
+        "device": {
+          "$ref": "#/$defs/U64"
+        },
+        "inode": {
+          "$ref": "#/$defs/U64"
+        },
+        "linkCount": {
+          "const": "1"
+        },
+        "uid": {
+          "$ref": "#/$defs/U64"
+        },
+        "modeOctal": {
+          "const": "0600"
+        },
+        "bytes": {
+          "$ref": "#/$defs/U64"
+        }
+      },
+      "required": [
+        "device",
+        "inode",
+        "linkCount",
+        "uid",
+        "modeOctal",
+        "bytes"
+      ],
+      "additionalProperties": false
+    },
+    "OwnedFile": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "enum": [
+            "source.part",
+            "source.sealed",
+            "rehearsal.sqlite",
+            "rehearsal.sqlite-journal",
+            "rehearsal.sqlite-wal",
+            "rehearsal.sqlite-shm",
+            "recovery.part.sqlite",
+            "recovery.part.sqlite-journal",
+            "recovery.part.sqlite-wal",
+            "recovery.part.sqlite-shm",
+            "preview.raw.part",
+            "preview.public.part",
+            "preview.index.part",
+            "preview.raw",
+            "preview.public",
+            "preview.index",
+            "preview.manifest.part",
+            "preview.manifest",
+            "result.raw.part",
+            "result.public.part",
+            "result.index.part",
+            "result.raw",
+            "result.public",
+            "result.index",
+            "result.manifest.part",
+            "result.manifest"
+          ]
+        },
+        "identity": {
+          "$ref": "#/$defs/OwnedIdentity"
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "source",
+            "rehearsal",
+            "recoveryStaging",
+            "previewRaw",
+            "previewPublic",
+            "previewIndex",
+            "previewManifest",
+            "resultRaw",
+            "resultPublic",
+            "resultIndex",
+            "resultManifest",
+            "sqliteSidecar"
+          ]
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "created",
+            "writing",
+            "sealed",
+            "complete",
+            "removePending",
+            "quarantined"
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "identity",
+        "role",
+        "state"
+      ],
+      "additionalProperties": false
+    },
+    "RecoveryPublication": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "maxLength": 512,
+          "x-maxUtf8Bytes": 512
+        },
+        "device": {
+          "$ref": "#/$defs/U64"
+        },
+        "inode": {
+          "$ref": "#/$defs/U64"
+        },
+        "bytes": {
+          "$ref": "#/$defs/U64"
+        },
+        "identity": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{32}$"
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "published",
+            "retained",
+            "quarantined"
+          ]
+        },
+        "syncAcknowledged": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "device",
+        "inode",
+        "bytes",
+        "identity",
+        "state",
+        "syncAcknowledged"
+      ],
+      "additionalProperties": false
+    },
+    "Inventory": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "policyVersion": {
+          "const": "wp043-v1"
+        },
+        "serverIncarnation": {
+          "$ref": "#/$defs/Id"
+        },
+        "jobId": {
+          "$ref": "#/$defs/Id"
+        },
+        "admissionSerial": {
+          "$ref": "#/$defs/U64"
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/OwnedFile"
+          },
+          "maxItems": 26
+        },
+        "recoveryPublication": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RecoveryPublication"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "health": {
+          "type": "string",
+          "enum": [
+            "healthy",
+            "quarantined"
+          ]
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "policyVersion",
+        "serverIncarnation",
+        "jobId",
+        "admissionSerial",
+        "files",
+        "recoveryPublication",
+        "health"
+      ],
+      "additionalProperties": false
+    },
+    "ArtifactManifest": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "preview",
+            "result"
+          ]
+        },
+        "artifactId": {
+          "$ref": "#/$defs/Id"
+        },
+        "records": {
+          "$ref": "#/$defs/U64"
+        },
+        "rawBytes": {
+          "$ref": "#/$defs/U64"
+        },
+        "publicBytes": {
+          "$ref": "#/$defs/U64"
+        },
+        "indexBytes": {
+          "$ref": "#/$defs/U64"
+        },
+        "rawSha256": {
+          "$ref": "#/$defs/Digest"
+        },
+        "publicSha256": {
+          "$ref": "#/$defs/Digest"
+        },
+        "indexSha256": {
+          "$ref": "#/$defs/Digest"
+        },
+        "withheldFields": {
+          "$ref": "#/$defs/U64"
+        },
+        "withheldRecords": {
+          "$ref": "#/$defs/U64"
+        },
+        "withheldOccurrences": {
+          "$ref": "#/$defs/U64"
+        },
+        "complete": {
+          "const": true
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "kind",
+        "artifactId",
+        "records",
+        "rawBytes",
+        "publicBytes",
+        "indexBytes",
+        "rawSha256",
+        "publicSha256",
+        "indexSha256",
+        "withheldFields",
+        "withheldRecords",
+        "withheldOccurrences",
+        "complete"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/Inventory"
+    },
+    {
+      "$ref": "#/$defs/ArtifactManifest"
+    }
+  ],
+  "x-semanticRules": [
+    "Inventory serial is consumed historical identity, never restart authority.",
+    "Inventory excludes its own two fixed slots inventory.json/inventory.next; never recursively inventory backups.",
+    "At most one entry for each name; role/name allowlist equality required.",
+    "Observed identity refers to same open descriptor; size updated after known writes, no ctime ownership comparison while SQLite writes.",
+    "Published backup strong identity includes fresh size/mtime/ctime after publication; retain internal device/inode for no-follow match.",
+    "Sidecars must be regular owned files; unexpected WAL/SHM means unsupported lane/quarantine.",
+    "Manifests max16384 bytes and charged in total artifact bytes.",
+    "RecoveryPublication is informational recovery retention only, never a commit witness.",
+    "Index exactly 32 bytes per logical record, file offsets/lengths validated against complete raw/public file sizes."
+  ]
+}

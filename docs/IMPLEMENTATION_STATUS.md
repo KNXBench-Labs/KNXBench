@@ -12,6 +12,27 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## WP-04.3 approved architecture; implementation pending (20 October 2026)
+
+The controller authenticated both read-only source inventories: all 110
+file/report hashes match the owned `f255f906` source snapshot. This is static
+identity verification, not product execution. The
+[proposed catalogue-job contract](contracts/catalogue-update-jobs.md) and
+[inspected primary transaction documentation](research/2026-10-20-catalogue-job-transactions.md)
+separate current behavior, candidate policy and unresolved dependencies.
+The scoped revision2 review accepts the Ready/apply, App-root owner and bounded
+replay corrections plus the disclosed 8/64 GiB growth cliff. The
+[consolidated implementation-contract candidate](contracts/catalogue-jobs/design-readiness.md)
+fixes managed state, complete typed witness, resource/artifact rules, exact
+protocol schemas and production drain design. Both final independent halves and
+scoped correction rereviews return DESIGN READY; the parent authenticated their
+17 document, 1,958 source, authority and artifact bindings.
+[ADR-0150](adr/0150-cancellable-catalogue-jobs.md) is accepted for staged A–F
+implementation, with no production route enabled or product test claimed yet.
+The accepted standalone five-case
+SQLite mechanics experiment is explicitly separate from product/runtime proof. No job API, cancellation result, bounded rehearsal, browser,
+shutdown or compatibility acceptance is claimed; WP-04.3 remains open.
+
 <a id="wp-042-resolver-bounds--unchanged-parser-candidate-20-october-2026"></a>
 ## WP-04.2 resolver bounds — unchanged-parser delivery (20 October 2026)
 

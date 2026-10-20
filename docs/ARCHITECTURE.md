@@ -1,5 +1,13 @@
 # Architecture
 
+Only accepted and implemented behavior below is a runtime capability. The
+[WP-04.3 catalogue-job design candidate](contracts/catalogue-update-jobs.md) and
+[transaction research](research/2026-10-20-catalogue-job-transactions.md) retain the original REVISE and scoped correction ACCEPT separately. The
+[complete contract](contracts/catalogue-jobs/design-readiness.md) and
+[accepted-for-implementation ADR-0150](adr/0150-cancellable-catalogue-jobs.md) have
+independent design readiness approval. No cancellable job API, disk rehearsal or lifecycle guarantee is
+implemented by that proposal. The accepted ADR authorizes staged implementation, not runtime acceptance.
+
 <a id="product-column-repair-v28-candidate-after-alpha-15"></a>
 ## Product-column repair (v28 source delivery)
 

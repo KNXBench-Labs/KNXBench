@@ -155,3 +155,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0146](0146-unknown-evidence-rows-have-an-identity.md) | Unknown-evidence rows have an identity; `SuffixText` reaches the parameter row | Accepted | 2026-10-19 |
 | [0147](0147-master-identity-provenance.md) | Master declarations have provenance; historical winners are not reconstructed | Accepted | 2026-10-19 |
 | [0148](0148-repair-product-column-promotions.md) | Repair released product-column promotions from retained source facts | Accepted for implementation; runtime acceptance pending | 2026-10-20 |
+| [0150](0150-cancellable-catalogue-jobs.md) | Owned cancellable catalogue jobs over the existing installer | Accepted for implementation; runtime acceptance pending | 2026-10-20 |

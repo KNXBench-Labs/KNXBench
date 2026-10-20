@@ -39,10 +39,11 @@ catalogue identities and retained historical blocks are unchanged.
 
 ## Verification and remaining work
 
-The maintained scoped package gate, documentation regressions, anchor checks and
-preservation checks are required before delivery. Review is a separate
-in-session self-review, not independent approval. Final gate results belong in
-the delivery handover; this record does not predict their outcome.
+The delivered docs candidate `d4a5c4fc` passed the maintained scoped gate10/10:
+323 registered tooling tests with one existing optional skip, valid proofs,
+frozen inputs and clear user-data guards. Local/tracking/live publication
+readback matched. Review is a separate in-session self-review, not independent
+approval; no application runtime or release acceptance is inferred.
 
 This closes the named remaining WP-13 prose sweep, not every possible future
 documentation discrepancy. The KL-183 authoring-path runtime regression is a

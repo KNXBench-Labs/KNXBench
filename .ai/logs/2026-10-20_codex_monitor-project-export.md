@@ -2,9 +2,30 @@
 
 Date: 2026-10-20
 Agent: codex
-Status: implementation, independent correction rereview and corrected-source
-HTTP/production-browser checks and maintained branch gate complete; main-first
-integrated acceptance and publication remain pending.
+Status: historical implementation checkpoints below; source delivery, integrated
+acceptance and authorised external handoff completed on 2026-10-21.
+
+## Source delivery update (21 October 2026)
+
+Published main-first source `4eee65d8`, preserving the independent catalogue
+admission package and existing journal history. Full branch and first integrated
+maintained gates pass fifteen stages, with 2,056 Rust passes, 867 browser cases
+and 91/91 selected corpus cases. The final input-bound fourteen-stage upstream
+delta passes 1,121 Rust cases and 51/51 selected corpus cases. Unchanged frontend,
+runner, dependency and build inputs carry web execution under its actual earlier
+source identity; the delta is not a fresh full browser run. All ordered proofs,
+source freezes, clear user-data guards and immediate remote readback are verified.
+Counts overlap across these scopes.
+
+Both correction rereviews ACCEPT; actual corrected HTTP and production Chromium
+saved-download checks pass, including independent ZIP/hash/reference readback and
+nine corrupt-artifact refusals. The authorised external integration issue was
+posted only after source publication; exact content, URL and open state were read
+back. No receiving application was executed or claimed compatible. This is source
+delivery, not a new release, engineering roundtrip or bus capability. Result-only
+documentation closure and local evidence/retirement are tracked separately.
+
+## Historical implementation checkpoints
 
 ## Authorised scope
 

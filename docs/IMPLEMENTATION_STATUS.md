@@ -12,7 +12,47 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+<a id="monitoring-snapshot-export--source-delivery"></a>
+## Monitoring snapshot export — source delivery (21 October 2026)
+
+Published on `main` as `4eee65d89fcd55fc1febd5496bd851b7355c9e2c`, with immediate
+local/tracking/live-ref equality and feature/integration ancestry verified.
+Feature `2d258acb` and first main-first integration `d1f32756` each pass all
+fifteen ordered maintained gate stages: 2,056 Rust passes / 119 ignored,
+867 browser cases across 32 web stages and 91/91 selected corpus cases.
+Frozen inputs and empty touched/unchecked user-data lists are authenticated.
+The source result is not a new tagged release.
+
+Upstream added the separate private catalogue-admission kernel while the first
+integrated gate ran. Fresh main-first integration preserves that source and both
+histories. The maintained fourteen-stage delta gate passes on the published
+candidate: 1,121 Rust passes / 53 ignored and 51/51 selected corpus cases.
+Complete frontend, browser-helper, runner/planner, configuration and dependency
+input equality carries the earlier web acceptance under its original execution
+identity; the delta run is not described as a new full browser gate. These
+selections overlap and are not summed into a unique total.
+
+Both independent finding-specific rereviews ACCEPT with all four findings closed.
+Corrected-source HTTP executes ten exact cases; a rebuilt production Chromium
+flow passes twenty assertions through real menu, preview and saved download.
+The actual ZIP equals the real response and reviewed digest; independent parent
+readback accepts it and rejects nine deliberate corruptions. Input/source and
+production asset bindings remain unchanged. No receiving application or hardware
+was executed.
+
+Available source workflows: [UI and scope](manual/user-guide/08-reports-and-diff.md#monitoring-export),
+[CLI and file-input limits](manual/user-guide/10-command-line.md#monitor-export),
+[profile contract](contracts/monitor-project-export.md). Unknown security/flags
+remain unknown; addressless omissions and engineering-only exclusions are explicit.
+This is not a complete external schema, native backup, ETS writer, telegram store,
+engineering roundtrip or verified receiving-tool import. The authorised external
+integration issue was posted after source delivery and its exact body/state read
+back. That communication does not establish receiver support.
+
 ## Monitoring snapshot export candidate (20 October 2026)
+
+**Historical implementation checkpoint.** Current source delivery is recorded
+above; pending statements below describe that earlier checkpoint.
 
 One current normalized installation can be projected into a deterministic local
 ZIP containing `project.json`, its hash-bound `export-report.json` and a scope

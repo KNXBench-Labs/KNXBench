@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-20 10:23
+- **Completed:** Product ordinary-file exact-extent package DELIVERED on `main` as `29b69f36`; local/tracking/live equality verified. Maintained scoped14/14GREEN:3072Rust tests/22binaries (144ignored),97/97selected corpus,323tool tests/one existing optional skip. Valid proofs/frozen inputs/empty user-data guard lists verified. Independent review ACCEPTED0Critical/Important;78focused/25originalRED;13acceptance pins deliberately superseded. Measured1.38–1.84times direct-reader cost disclosed. Product-file claim RELEASED.
+- **Pending/Next Steps:** Publish result-only documentation tail after cheap gates; archive/verify compact private evidence and retire only owned resources. Then fresh bounded claim for project-container ordinary-file trailing-DEFLATE investigation, starting source/contract/synthetic evidence before stricter admission. Product-corpus evidence cannot stand in for private project-format or encrypted payload compatibility. No new go needed; directory encryption-header work stays separate.
+- **Notes for Codex oder Claude:** Runtime gate binds `29b69f36`, not docs-only tail. Evidence `<profile-scratch>/wp16-file-stream-20261020/gate1`; controller-gate-acceptance.json/publication receipt at task root. No full-workspace/browser/release acceptance claimed. Preserve private identities and root stale/dirty files; other owners retain Alpha16/exact-UP258. No live bus/device/desktop/deployment/vendor operation.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-20 10:11
 - **Completed:** Product ordinary-file exact-extent repair independently ACCEPTED:0Critical/Important, verdict and three final source hashes reverified by parent.78focused and all-targetsClippy GREEN; original25intended RED/53passes,13acceptance pins explicitly superseded,48test bodies unchanged.80sample benchmark/source/executable bindings verified and1.38–1.84times synthetic reader cost disclosed. Docs updated to review-accepted/gate-pending; origin/main remains `c7bf2662`.
 - **Pending/Next Steps:** Commit feature now, then maintained14-stage scoped package gate on frozen committed head (`--base c7bf2662`), task-specific Cargo target and existing shared leases. Do not edit source/docs during gate. Frontend prerequisite already built. On real receipt success verify stage inventory/proofs/frozen inputs/user-data guards, publish/readback, docs-only result tail and owned retirement. Owner go remains active; no release or bus work.

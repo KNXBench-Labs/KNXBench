@@ -1,9 +1,12 @@
 # Selective project import
 
-Source implementation against normalized model v12 (completion vocabulary only;
-no added entities or references). The original local package
-was based on `b042048b`; [integration verification](status/2026-10-10-import-expansion-integration.md)
-records the separate combined-source acceptance. This is not a release claim. Architecture: [ADR-0106](adr/0106-selective-project-import.md).
+The current service admits normalized model v16 with an explicitly audited
+reference closure. Destination notes and Functions are preserved; source notes
+follow the mapping/explicit-choice rules below, while source Functions still
+refuse rather than disappear. The original v12 package was based on `b042048b`;
+[its integration verification](status/2026-10-10-import-expansion-integration.md)
+remains historical evidence, not a fresh test run or the current model guard.
+Architecture: [ADR-0106](adr/0106-selective-project-import.md).
 Formal source-ID status belongs to [the ledger](status/LEDGER.md).
 
 ## User workflow
@@ -87,10 +90,17 @@ recomputes the plan. Existing full-project replacement import is unchanged.
 
 - Source input up to the storage ceiling of 1,000,000,000 bytes (ADR-0142;
   formerly 64 MiB), plus the existing container/parser resource ceilings.
-- Native model v12 only. The v11→v12 change extends completion vocabulary,
-  not entity/reference fields; the dependency closure is unchanged. A further
-  model bump must audit new entity/reference fields before widening this explicit
-  guard; do not merge Functions/Sites changes without that audit.
+- Normalized model v16 only (`SELECTIVE_MODEL_VERSION`). The audited closure
+  preserves destination Functions, but refuses any source Functions until their
+  selection/disposition mapping is defined. v16's manufacturer-file storage is
+  file-level evidence, not a new project reference. A later model bump needs a
+  fresh entity/reference audit rather than merely raising the guard.
+- Destination notes are preserved. In note-carrying normalized sources, notes
+  follow imported/reused targets; those outside the selection require an explicit
+  `unselectedNotes` choice (`skip` with a report per note, or `attachToProject`).
+  Missing choices and note-budget failures refuse the whole merge. ETS imports
+  create no native notes; this does not add a native-file source picker or imply
+  that `.knxproj` supplies authored notes. See [ADR-0138](adr/0138-notes-get-an-explicit-decision-before-a-delete.md).
 - Complete-source mapping/validation errors refuse selective import, even if
   the error is outside the selected subset.
 - Native snapshot admission is mandatory; unsupported preservation shapes or
@@ -102,15 +112,19 @@ recomputes the plan. Existing full-project replacement import is unchanged.
 
 ## Regression evidence
 
-Named tests: `crates/knx-app/tests/selective_import.rs` (exact dependency/context,
-conflict/stale/selection/ordered-vector/source-metadata tests),
-`crates/knx-store/tests/history_compare_and_save.rs`,
-`apps/knx-server/tests/http_selective_import.rs`,
-`apps/knx-cli/tests/selective_import_cli.rs` and
-`apps/knx-web/src/SelectiveImportButton.test.tsx`. Fresh selected owning suites and four production-browser language/viewport
-cases are recorded in the [local verification](status/2026-10-10-import-expansion-verification.md)
-and [receipt](evidence/import-expansion-local-2026-10-10.json). Repository closure
-is recorded there separately; this source is not published or released. Self-review only; no independent or real-bus acceptance.
+Named current tests: `crates/knx-app/tests/it/selective_import.rs` (exact
+dependency/context, conflict/stale/selection, model guard, source Functions
+refusal and note-mapping/choice tests),
+`crates/knx-store/tests/it/history_compare_and_save.rs`,
+`apps/knx-server/tests/it/http_selective_import.rs`,
+`apps/knx-cli/tests/it/selective_import_cli.rs` and
+`apps/knx-web/src/SelectiveImportButton.test.tsx`. The original selected owning
+suites and four production-browser language/viewport cases remain recorded in
+the [dated verification](status/2026-10-10-import-expansion-verification.md)
+and [receipt](evidence/import-expansion-local-2026-10-10.json). Their local-only
+wording describes that historical attempt, not the current publication state.
+This 20 October reconciliation is source/documentation checking, not a fresh
+runtime, independent-review, hardware or release acceptance run.
 
 The separate [authorized export harness](AUTHORIZED_RESTORE_EXPORTS.md) does not
 replace unavailable real restore-point exports. Converter-exception observations

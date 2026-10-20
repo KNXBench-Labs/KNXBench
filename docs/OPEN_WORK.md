@@ -84,7 +84,7 @@ Each package needs its own scoped claim, review, tests and delivery evidence.
 | [WP-10](#wp-10--import-and-model-evidence) | P2 | Samples/grammar/authorisation required | Independently verified import/model cases with honest unsupported-data reports. |
 | [WP-11](#wp-11--native-linux-acceptance) | P2 | Separate desktop-control permission | Actual WebKitGTK/Wayland/Orca and AppImage evidence for named workflows. |
 | [WP-12](#wp-12--field-evidence-and-owner-acceptance) | P2 | Outside input or operation-specific consent | Reviewed tester/plug-in/diagnostic evidence, without silently expanding compatibility. |
-| [WP-13](#wp-13--documentation-drift) | P3 | First slice 19 Oct; limitation-summary reconciliation 20 Oct; wider sweep open | Current summaries agree with delivered behaviour; retained history stays intact. |
+| [WP-13](#wp-13--documentation-drift) | P3 | Named remaining prose reconciled 20 Oct; separate KL-183 runtime follow-up open | Current summaries agree with delivered behaviour; retained history stays intact. |
 | [WP-14](#wp-14--complete-offline-family-outcomes) | P1 | Source contracts first; UP258 excluded | Complete real-source System 1/B/300 image → procedure → execution → recovery slices. |
 | [WP-15](#wp-15--complete-module-scope-in-web-consumers) | P1 | Delivered 19 Oct (web adoption); older-server boundary documented | Complete response-local module paths distinguish diagnostics and workspace identities. |
 | [WP-16](#wp-16--empty-directory-zip-integrity) | P1 | Project repair delivered 19 Oct; product repair delivered 20 Oct; file-stream/encryption-header follow-ups open | Empty directories have valid CRC and complete compressed-stream representation. |
@@ -361,6 +361,19 @@ admission, Alpha 12 download availability and manifest-scoped portability.
 The fourth motion category is documented; preserved history and formal ledger
 dispositions are unchanged. The KL-183 manual routes no longer promise that
 every new save is self-contained. Other sweep topics above remain open.
+**Remaining-prose sweep (20 October 2026):** the
+[bounded source/documentation reconciliation](status/2026-10-20-wp13-documentation-sweep.md)
+checks every named topic above. Current selective-import prose now names model
+v16, preserved destination Functions, explicit source-Function refusal and
+source-note mapping/choice; `IMPORT_EXPORT` no longer calls the delivered note
+service/editor pending. Lifecycle contract/dossier prefaces name the published
+caller/Web disposition without rewriting dated evidence. The feature table's
+portability row is narrowed to available manifest-listed files. Rename, modern
+product placement, Functions/plug-in consumers, UI-wave availability and the
+normalized property-planner distinction are verified unchanged, not rebuilt.
+This closes that named prose sweep; it changes no formal ledger disposition or
+runtime admission and claims no fresh application/release acceptance.
+
 **Separate verification follow-up, not an implemented fix:** the KL-183
 catalogue-added-application case is source-traced only; exercise catalogue
 device create → Save → reopen with an empty product database before claiming

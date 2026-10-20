@@ -44,7 +44,12 @@ real sequence reconstruction.
 
 ## Bounds
 
-Per source: UTF-8 XML only, 8 MiB, 200,000 events, depth 64, 65,536 nodes, 256 attributes per element (including namespace declarations), and a 64 MiB conservative retained-tree charge. Expanded namespace/name strings, retained text and attributes are charged cumulatively before storage; the charge is not a measured process-RSS guarantee. Per resolution: 2,048 emitted steps and 1 MiB conservatively charged output; overflow is explicit, never complete. The caller retains the existing 64-program analysis cap and additionally bounds aggregate resolution disclosure. Original bytes stay retained by the existing product storage, not copied into new database tables. No schema migration or production input-limit widening.
+Per source: UTF-8 XML only, 8 MiB, 200,000 event reads (including EOF), depth 64 including the root and Empty leaves, 65,536 Start/Empty nodes, 256 attributes per element (including namespace declarations), and a 64 MiB conservative retained-tree charge. Program and master have independent source/tree counters. Expanded namespace/name strings, retained text and attributes contribute to that policy charge; it is not a measured process-RSS guarantee. Per resolution: 2,048 combined emitted steps and unplaced declaration roots, plus 1 MiB conservatively charged output; overflow is explicit, never complete. Up to 2,048 issues retain their original prefix; further issues increment the omitted count. The probe's reduced 32-code projection is separate. The caller retains the existing 64-program analysis cap and additionally bounds aggregate resolution disclosure. Original bytes stay retained by the existing product storage, not copied into new database tables. No schema migration or production input-limit widening.
+
+The [WP-04.2 bounds inventory and parser disposition](testing/procedure-resolution-bounds.md)
+uses resolver-specific synthetic measurements, not installer RSS, to retain the
+existing parser and limits. Its focused boundary/parity tests and independent
+acceptance are separate from the historical delivery and measurements below.
 
 ## Findings and disclosure
 

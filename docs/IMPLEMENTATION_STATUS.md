@@ -12,6 +12,27 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## WP-04.2 resolver bounds — unchanged-parser candidate (20 October 2026)
+
+The [bounds inventory and disposition](testing/procedure-resolution-bounds.md)
+retains the existing parser, algorithm and limits on resolver-specific measured
+evidence. Tests now isolate inclusive source, node, depth, event, retained-tree,
+combined-root, output-charge and issue-prefix boundaries; the existing five-step
+oracle pins exact order, attributes, source slices/offsets, hashes and origins.
+Production parser prefixes and original XML tests remain byte-exact. These are
+characterization controls for already-correct behavior, not a production bugfix.
+
+Fresh canonical selections pass 15 library, 25 resolver integration and 13 probe
+tests. The complete ProductDB run passes 1226 tests with 31 ignored, including both
+13-test examples and two doc tests; warning-denied all-target Clippy passes.
+Overlapping selections are not added together. Independent whole-change review
+accepts; its minor prose correction is closed. Twelve compiled isolated wrong
+variants fail intended semantic assertions; baseline/restored 15-library and
+25-integration selections pass with frozen tests. Canonical production was never
+mutated. Maintained delivery gates/publication remain pending.
+No parser replacement, schema/profile/budget widening, executable procedure,
+new device/ETS compatibility or WP-04.3/WP-19 completion is implied.
+
 ## WP-04.1 synthetic measurement baseline (20 October 2026)
 
 Opt-in synthetic fixture generation, complete SQLite/source/evidence accounting,

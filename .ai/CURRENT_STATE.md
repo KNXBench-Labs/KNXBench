@@ -1,4 +1,44 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-20 19:14
+- **Completed:** WP-04.2 branch acceptance verified on c633ede8: all 14 maintained stages pass, 3,199 Rust tests (144 ignored), 97/97 selected corpus cases, and 410 registered tool tests with six optional skips. Ordered proofs, frozen inputs and checked user-data guards pass. Independent whole-change review and all 12 compiled discrimination cases are accepted; production parser prefixes, algorithm and limits remain unchanged. Main-first merge onto unchanged 8d720a95 has no conflicts and preserves the complete reviewed branch tree before this handover addition.
+- **Pending/Next Steps:** Commit the main-first integration and run its maintained 14-stage gate. Validate actual merged acceptance before fresh reservation checks, conditional push and remote readback. Result-only documentation, verified evidence archive and owned retirement follow. Continue WP-04.3, then WP-19 without another go; neither is implemented by this slice.
+- **Notes for Codex oder Claude:** Private `<profile-scratch>/wp042-bounds-20261020`: branch-gate1-accepted.json, merge-tree-preservation.json and integration-root-protection.json. Selected root stays stale/dirty; foreign bytes and branch ref are protected. Counts from focused, owning and package selections overlap and are not added. No new benchmark, production bugfix, parser rewrite or compatibility claim. No bus/device, desktop-control, release/tag, deployment or contact operation.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-20 19:02
+- **Completed:** WP-04.2 implementation/review prerequisites accepted. Parent authenticated final mutationhandoff,6919 artifact identities and16decompressed compiled binaryhashes;12intendedsemantic failures,15library+25integrationbaseline/restoredGREEN,1758consumedcanonicalinputs unchanged. Whole-changeACCEPT andminorproseclosure verified. Canonical53focused/1226owning passes/31ignored+alltargetClippy retain frozen test identities. Parser/algorithm/limits unchanged; no originalbugfix/speedup claimed. Publicresultnotes reflect accepted scope and limits.
+- **Pending/Next Steps:** Commit reviewed10path tests/docs/ownedhandover/log scope asKNXBench after staticchecks;startmaintained14stagebranchgate on frozenhead. Thenfreshmainfirstintegration/mergedgate,publish/readback,archivememberverification/ownedretirement. WP04.3thenWP19remainlaterorderedwork,no newgo.
+- **Notes for Codex oder Claude:** Private `<profile-scratch>/wp042-bounds-20261020`: controller-mutation-final-accepted.json,controller-whole-review-accepted.json,controller-review-minor-closed.json,post-review-result-edits.json. Raworiginalmodepreflightfailure keptseparate. Sourcebyte mutant isonetwohunkpolicycase,ordermutantreversalonly;helperproofsnotinstalledendpointproofs. No gate/publicationyet;selectedrootstale/dirty,foreignworkpreserved. No bus/device,desktop-control,release/tag,deployment/contactoperation.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-20 19:00
+- **Completed:** Independent WP-04.2 whole-change review ACCEPT; no blocking/important findings. Parent authenticated eight substantive reviewed inputs, review artifacts and parent raw evidence. Sole minor count-spacing issue closed in three prose passages; reverse-edit hash proof recovers exact reviewed bytes. Documentation/whitespace checks pass; runtime/test files unchanged. Separate mutation runner already has parent-verified12semantic kills,baseline/restoredGREEN,267artifacts and1758unchangedcanonicalinputs.
+- **Pending/Next Steps:** Await finalmutationhandoff deleg_8a623dba/sa-0-42fad883; do not poll or start gate before completion/authentication. Whole-review is closed; final mutationreport/disposition still pending. Then accepted resultnotes/KNXBench commit,maintained14stagebranchgate,mainfirstintegration/mergedgate/publication/readback/archivecleanup. WP04.3then19later,no newgo.
+- **Notes for Codex oder Claude:** Private `<profile-scratch>/wp042-bounds-20261020`: controller-whole-review-accepted.json,controller-review-minor-closed.json,whole-review-minor-doc-check.log,continuation updated. Eight-path review accepted only source/test/doc quality; mutation and delivery verdicts separate. Frozen three Rust files unchanged; only exact minor prose+owned.ai edited. Selectedroot stale/dirty,foreignworkpreserved. No bus/device,desktop-control,release/tag,deployment/contactoperation.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-20 18:56
+- **Completed:** WP-04.2 finalthree testsourcehashes authenticated;productionprefixes andsevenoldXMLtests byte-exact. Parent freshcombinedselection53passes(15lib/25resolverintegration/13probe),compilednames match;owningProductDB1226passes/31ignored,all-targetclippywarning-free. Counts overlap,notadditive. Worker48XML+10helperartifacthashes/sizes andfinalintegrationrawreceipt/log authenticated. Three-root outputfixture isolates1048576/+6 refusalprefix;staticfive-rootproposal correction documented. Desktopignoredwebbuildinputprepared;maintaineddryrun selects14stages,notyetlaunched.
+- **Pending/Next Steps:** ACTIVE isolatedcompiledguarddiscrimination deleg_8a623dba/sa-0-42fad883 andindependentwhole-candidate review deleg_e726f590/sa-0-1ecd782c. Awaitnotifications,no polling. Freeze3testfiles+5revieweddocs;only.ai/privatebookkeeping maychange. Authenticateevidence,closefindings,commitreviewedtests/docs,maintained14stagegate,mainfirstintegration/mergedgate/publication/readback/ownedcleanup. WP-04.3thenWP-19remainlater;no newgo.
+- **Notes for Codex oder Claude:** Private `<profile-scratch>/wp042-bounds-20261020`: continuation.json,controller-final-tests-freeze.json,canonical-focused1/receipt.json,controller-owning-quality-accepted.json,post-implementation-acceptance-plan.md. Expectedmutationhandoffwp042-mutation-review-handoff.md;whole-reviewdirectorywp042-whole-review/. No fabricatedbugfixRED/speedup;characterizationbaselineGREENonunchangedparser. Canonicalnevermutated; selectedrootstale/dirty/foreignhistoriespreserved. No bus/device,desktop-control,release/tag,deployment/contactoperation.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-20 18:42
+- **Completed:** WP-04.2 read-only inventory authenticated: report/inventory digests and21current inspected non-journal paths match. Decision retains existing parser,algorithm and limits; resolver-specific measurements do not justify rewrite. Static inventory42declarations is not runtime acceptance. Old2049attributedcontrol test hits output charge before rootcount; exact-bound tests must isolate guards. Added pending bounds/disposition document and corrected existing contract/queue/goal; no production behavior change authorised.
+- **Pending/Next Steps:** Test-only workers ACTIVE deleg_7049615f: sa-0-f1932d1d XMLG2-G5;sa-1-1b2d589e installedbytes/count/charge+exactsequence;sa-2-34c39d5c helperroot/charge/issues/metadata. Awaitnotifications,no polling;parent avoids these3files. Authenticate finalsource/test/log identities,combinedfocusedtests,isolatedcompiledguarddiscrimination/restoredGREEN,independentwholechange review,maintainedscopegate/mainfirstintegration/publication/readback/cleanup. WP-04.3thenWP-19remainlater;no newgo.
+- **Notes for Codex oder Claude:** Ownedfeat/wp042-bounds-20261020,basepublished8d720a95. Private `<profile-scratch>/wp042-bounds-20261020`: controller-inventory-authenticated.json,continuation.json,post-implementation-acceptance-plan.md,expectedthreeworkerhandoffs. Characterizationbaseline maycorrectlystartGREEN;no inventedproductionRED or speedup. Sourcepolicycharges are notRSS guarantees;helpertestsarenotendtoendproof. Selectedrootstale/dirty/foreignhistoriespreserved. No corpus/vendorlookup,network/bus/device,desktop-control,release/tag,deployment/contact operation.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-20 18:25
 - **Completed:** WP-04.1 fully delivered: runtime/main-first0f44135b, result-only closure3f37520d with maintained10/10docs gate and local/tracking/live equality. Integrated16/16gate passed5498Rust/215ignored and155/155corpus;54-operation study remains bound to9834daff. Compact evidence archive verified15746entries/member hashes; old measurementworktree,two merged branches andowned scratch/buildtrees actually removed. Actual bound release/debug binaries retained in privatearchive, not rebuilt substitutes.
 - **Pending/Next Steps:** CLAIM WP-04.2 resolver-bounds inventory and evidence-based parsing disposition only. Start read-only source/test inventory againstpublished3f37520d and resolver-specific WP-04.1 baseline; identify missing exact-bound/parity cases before changes. A reviewed unchanged-parser decision is valid; no measured basis for speculative streaming rewrite. Separate review/gate/publication follow. WP-04.3 andWP-19 remain later, not newly claimed; no new go needed.

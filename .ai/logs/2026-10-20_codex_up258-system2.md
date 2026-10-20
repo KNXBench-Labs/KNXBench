@@ -109,6 +109,22 @@ identity must exist again after replay; no guessed PID13 write is invented.
 Masked/unwritten full-allocation verification remains mandatory. Hardware
 approval is not a substitute for missing real masked-byte/resource rules.
 
-Final maintained package-gate results, commit/integration/publication and owned
-archive/cleanup are still pending at this checkpoint; do not infer them from
-focused test success or the reviewers' private standalone harnesses.
+## Final combined acceptance
+
+At frozen `1d761840` the entire final chain exits0. Maintained package receipt:
+complete/success/planCompleted/inputsFrozen all true, 10/10 intended stages, each
+exit0 and proofValid; nested full web receipt69/69 with the same complete verdict.
+Private corpus155/155 in9targets. Ordinary Rust summaries5578pass/222ignored;
+these are run summaries, not a deduplicated all-tests count. Explicit exact-source
+App8/8 and experimental-image16/16 include the actual pinned public package with
+zero ignored tests. Rebuilt CLI workflow returned finished/restored, and the
+separate expected physical-refusal exit1 occurs before socket/operation creation.
+All tracked inputs still equal immutable start/end manifests, HEAD unchanged,
+worktree clean; protected user-data touch/unchecked lists empty.
+
+The first complete attempt failed before product execution on an upstream test
+fixture that reacquired the checkout lease. Separate reviewed fixture correction
+`1d761840` and single-reference Clippy correction `1d1bf2fc` precede the successful
+full rerun. Failed and successful receipts remain distinct. No hardware, release,
+deployment or publication is inferred from acceptance. Final result-only docs
+and publication/readback/cleanup are the remaining delivery steps.

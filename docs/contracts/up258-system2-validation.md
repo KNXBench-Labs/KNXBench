@@ -107,6 +107,25 @@ deterministic process-loss boundary simulation, not a real process/device crash.
 Additional App/Net tests cover malformed/rebound/corrupt backups, persistence
 failure, refused confirmation, identity mismatch and interrupted/failed restore.
 
+## Acceptance checkpoint — 20 October 2026
+
+The integrated candidate at `1d761840` passes the maintained 10-stage package
+gate, including the 69-stage full web gate, unchanged generated bindings,
+Clippy and 155/155 explicitly invoked private corpus tests. The ordinary Rust
+run reports 5,578 passes with 222 ignored; it is not presented as all ignored
+hardware/source tests having run. The separate exact-source App selection is
+8/8 and the experimental-image selection is 16/16, both with zero ignored.
+The rebuilt CLI executes this document's workflow against the pinned public
+package: `finished`, then `restored` from the durable operation in a second CLI
+process. The explicit physical refusal test returns the expected nonzero exit
+before any socket or operation directory. Complete receipts and before/after
+input manifests agree; protected user data is unchanged. These are software
+results only, not confirmation of the candidate's real-device hypotheses.
+
+The first complete-gate attempt stopped on an existing test-fixture lease
+collision. The isolated-fixture correction was independently reviewed and the
+entire chain then reran successfully; the first failure remains recorded.
+
 ## Physical validation is NOT enabled
 
 Do not connect a bus or substitute a real device identity in the bundle.

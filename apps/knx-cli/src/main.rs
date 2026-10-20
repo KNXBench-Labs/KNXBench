@@ -19,6 +19,8 @@ mod device_readiness;
 mod device_reset_address;
 mod device_serial;
 mod device_service_control;
+mod device_system2_prepare;
+mod device_system2_validation;
 mod legacy_import;
 mod legacy_inspect;
 mod legacy_password;
@@ -134,6 +136,10 @@ const USAGE: &str = "usage: knx import <file.knxproj> [--store <path.knxdb> [--r
      \x20         every octet run where the device and the project differ. It sends no\n\
      \x20         access key and has no write path; a read-protected device says so.\n\
      \x20         Exit 0: the device holds the plan; 2: it differs; 1: not compared.)\n\
+     \x20     knx device system2-validation --bundle <prepared.json> [--simulate]\n\
+     \x20                  [--operation <new-directory> --confirm <target-plan-phrase> --accept-hypothesis <phrase>]\n\
+     \x20                  [--recover <existing-operation> --confirm-recovery <target-plan-phrase>] [--report <new.json>]\n\
+     \x20         (offline preview by default; explicit simulator only; real source/recovery admission unavailable, no gateway opened)\n\
      \x20     knx device diagnostics --project <path.knxdb> --device-id <id> --gateway <host:port>\n\
      \x20                  [--product-db <path>] --output <new.zip> [--confirm-read]\n\
      \x20     knx device diagnostics --simulate --output <new.zip> [--confirm-read]\n\
@@ -2300,6 +2306,8 @@ fn run_device(args: &[String]) -> ExitCode {
         Some("download") => run_device_download(&args[1..]),
         Some("compare") => run_device_compare(&args[1..]),
         Some("diagnostics") => device_diagnostics::run(&args[1..]),
+        Some("system2-validation") => device_system2_validation::run(&args[1..]),
+        Some("system2-prepare") => device_system2_prepare::run(&args[1..]),
         Some("byte-order-probe") => run_device_byte_order_probe(&args[1..]),
         Some("readiness") => run_device_readiness(&args[1..]),
         Some("program-address") => run_device_program_address(&args[1..]),

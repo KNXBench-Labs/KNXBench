@@ -36,6 +36,9 @@ security, GitHub-issue, hardware or whole-codebase conformance audit.
   recovery work for its named application. The first diagnostic export from
   a real detector has arrived; this does **not** lift download admission.
   Shared probe/commissioning changes require coordination with that owner.
+  The later [complete-defaults simulator candidate](contracts/up258-system2-validation.md)
+  now joins full source preparation and durable recovery; it is strong-hypothesis
+  software evidence only. Real masked-byte/resource recovery still blocks hardware.
 - **Delivered (19 October 2026):** issues #25/#26 are on `main`: the
   topology diagram hides device-empty ranges (display only) and supported
   parameter-section captions resolve through the existing text resolver with

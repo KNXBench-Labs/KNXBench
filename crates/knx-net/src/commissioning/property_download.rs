@@ -1,8 +1,10 @@
-//! Normalized property plans execute only against the concrete offline device simulator.
+//! Normalized property execution reuses one management-session operation loop.
 //!
-//! No generic transport, public command or hardware admission is introduced.
-//! A successful run is a software probe, not a source-translation or recovery
-//! certificate. Failure preserves its source position and never auto-restores.
+//! The concrete simulator entry remains unchanged. Separate experimental entries
+//! require exact operation-bound recovery and explicit same-shape preconditions.
+//! STRONG HYPOTHESIS / SIMULATOR TESTED is not physical-device compatibility,
+//! allocator rollback or verification of every indirect side effect. Failure
+//! preserves its source/operation position and never automatically restores.
 
 use std::fmt;
 
@@ -13,8 +15,12 @@ use knx_core::commissioning::properties::{ObjectIndex, PID_HARDWARE_TYPE};
 use knx_core::commissioning::property_download::{PropertyDownloadPlan, PropertyOperation};
 use knx_core::IndividualAddress;
 
+use super::property_recovery::{
+    self, ExperimentalPropertyPreconditions, PropertyJournalEvent, PropertyRecoverySnapshot,
+};
 use super::simulator::SimulatedDevice;
 use super::{ManagementSession, SessionError, SessionTiming};
+use crate::management::ManagementTransport;
 
 /// One completed normalized operation, including explicit zero-wire metadata.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -57,6 +63,12 @@ pub enum PropertySimulationFailure {
         expected: LoadState,
         found: LoadState,
     },
+    /// Cooperative abort, checked before each normalized operation; no restore.
+    Cancelled,
+    /// A synchronous caller-owned persistence barrier failed.
+    Persistence(String),
+    /// Operation-specific recovery acquisition or binding refused.
+    Recovery(String),
     /// The existing session refused or failed an operation.
     Session(SessionError),
 }
@@ -66,6 +78,8 @@ pub enum PropertySimulationFailure {
 pub struct PropertySimulationError {
     /// None for a pre-connection authorization/target refusal.
     pub source_index: Option<usize>,
+    /// Normalized offset distinguishes data from its same-source allocation.
+    pub operation_index: Option<usize>,
     /// A property/memory write may have occurred, including Verify Mode setup.
     /// Connection authorization can separately change ephemeral access rights.
     pub mutation_may_have_started: bool,
@@ -78,7 +92,7 @@ impl fmt::Display for PropertySimulationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "property simulation stopped at source {:?}: {:?}",
+            "property execution stopped at source {:?}: {:?}",
             self.source_index, self.failure
         )
     }
@@ -121,6 +135,7 @@ pub async fn run_simulated_property_plan(
 ) -> Result<PropertySimulationReport, PropertySimulationError> {
     let early = |failure| PropertySimulationError {
         source_index: None,
+        operation_index: None,
         mutation_may_have_started: false,
         completed: Vec::new(),
         failure,
@@ -137,7 +152,227 @@ pub async fn run_simulated_property_plan(
             found: authorization.target().address(),
         }));
     }
-    let mut session = ManagementSession::authorised(device, key, timing, authorization)
+    let report = run_property_plan_inner(
+        device,
+        plan,
+        authorization,
+        key,
+        timing,
+        None,
+        None,
+        &mut |_| Ok(()),
+        &|| false,
+    )
+    .await?;
+    Ok(report.execution)
+}
+
+/// The shared mutation dispatcher for simulator, experimental execute and restore.
+async fn execute_property_mutation<T: ManagementTransport>(
+    session: &mut ManagementSession<'_, T>,
+    operation: &PropertyOperation,
+) -> Result<usize, PropertySimulationFailure> {
+    match operation {
+        PropertyOperation::LoadControl { object, payload } => {
+            let (found, expected) = match payload.event_octet() {
+                3 => (
+                    session
+                        .write_allocation(ObjectIndex::new(*object), *payload)
+                        .await?,
+                    LoadState::Loading,
+                ),
+                event => {
+                    let (event, expected) = match event {
+                        4 => (LoadEvent::Unload, LoadState::Unloaded),
+                        1 => (LoadEvent::StartLoading, LoadState::Loading),
+                        2 => (LoadEvent::LoadCompleted, LoadState::Loaded),
+                        _ => unreachable!("immutable validated property plan event"),
+                    };
+                    (
+                        session
+                            .write_load_event(ObjectIndex::new(*object), event)
+                            .await?,
+                        expected,
+                    )
+                }
+            };
+            if found != expected {
+                return Err(PropertySimulationFailure::UnexpectedState {
+                    object: *object,
+                    expected,
+                    found,
+                });
+            }
+            let bytes = payload.octets();
+            if bytes[0] == 3 && bytes[1] <= 2 {
+                let expected = u32::from(u16::from_be_bytes([bytes[2], bytes[3]])).to_be_bytes();
+                let found = session
+                    .read_property(
+                        ObjectIndex::new(*object),
+                        knx_core::commissioning::properties::PID_TABLE_REFERENCE,
+                        1,
+                        1,
+                    )
+                    .await?;
+                if found.as_slice() != expected {
+                    return Err(property_recovery::invalid(
+                        "absolute allocation/task pointer did not match source record",
+                    ));
+                }
+            }
+            Ok(0)
+        }
+        PropertyOperation::WriteMemory { address, data, .. } => {
+            let limit = session.write_limit(None).await?;
+            session
+                .write_memory_region(u32::from(*address), data, limit)
+                .await?;
+            Ok(data.len())
+        }
+        _ => unreachable!("only mutating plan operations are dispatched"),
+    }
+}
+
+/// Successful software execution with caller-persisted recovery evidence.
+/// No physical allocator/task side-effect verification is implied.
+#[derive(Debug)]
+pub struct ExperimentalPropertyReport {
+    pub execution: PropertySimulationReport,
+    pub recovery: PropertyRecoverySnapshot,
+}
+
+/// Explicit opt-in experimental execution; all hardware-kind transports refuse.
+///
+/// Ordinary Download authorization or full write coverage never grants physical
+/// source/recovery admission. A future hardware route needs a separate contract.
+///
+/// Requires same exact application/procedure/allocation-shape preconditions,
+/// target-specific Download authorization, synchronous durable journal callbacks,
+/// and cooperative cancellation. A callback's Ok promises durable sync/readback;
+/// Net has no filesystem policy. Dropping this future is NOT explicit abort and
+/// has no asynchronous disconnect/restore guarantee. All returned errors attempt
+/// disconnect; no failure path automatically restores resources.
+#[allow(clippy::too_many_arguments)]
+pub async fn run_experimental_property_plan<T: ManagementTransport>(
+    transport: &T,
+    plan: &PropertyDownloadPlan,
+    authorization: WriteAuthorisation,
+    key: AuthorisationPlan,
+    timing: SessionTiming,
+    preconditions: &ExperimentalPropertyPreconditions,
+    journal: &mut impl FnMut(PropertyJournalEvent<'_>) -> Result<(), String>,
+    abort_requested: &impl Fn() -> bool,
+) -> Result<ExperimentalPropertyReport, PropertySimulationError> {
+    let report = run_property_plan_inner(
+        transport,
+        plan,
+        authorization,
+        key,
+        timing,
+        Some(preconditions),
+        None,
+        journal,
+        abort_requested,
+    )
+    .await?;
+    Ok(report.experimental())
+}
+
+/// Explicit recovery replay: complete original procedure with old memory bytes.
+/// Validates persisted operation coverage before any connection and current exact
+/// identity before setup. Interrupted current load states are not mistaken for old
+/// command records. This remains experimental same-shape reinstallation only.
+#[allow(clippy::too_many_arguments)]
+pub async fn restore_experimental_property_plan<T: ManagementTransport>(
+    transport: &T,
+    original: &PropertyDownloadPlan,
+    snapshot: &PropertyRecoverySnapshot,
+    authorization: WriteAuthorisation,
+    key: AuthorisationPlan,
+    timing: SessionTiming,
+    journal: &mut impl FnMut(PropertyJournalEvent<'_>) -> Result<(), String>,
+    abort_requested: &impl Fn() -> bool,
+) -> Result<ExperimentalPropertyReport, PropertySimulationError> {
+    let plan = snapshot
+        .recovery_plan(original)
+        .map_err(|failure| PropertySimulationError {
+            source_index: None,
+            operation_index: None,
+            mutation_may_have_started: false,
+            completed: Vec::new(),
+            failure,
+        })?;
+    let report = run_property_plan_inner(
+        transport,
+        &plan,
+        authorization,
+        key,
+        timing,
+        Some(&snapshot.preconditions),
+        Some(snapshot),
+        journal,
+        abort_requested,
+    )
+    .await?;
+    Ok(report.experimental())
+}
+
+struct PropertyPlanExecution {
+    execution: PropertySimulationReport,
+    recovery: Option<PropertyRecoverySnapshot>,
+}
+impl PropertyPlanExecution {
+    fn experimental(self) -> ExperimentalPropertyReport {
+        ExperimentalPropertyReport {
+            execution: self.execution,
+            recovery: self
+                .recovery
+                .expect("experimental validated hardware guard captured recovery"),
+        }
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn run_property_plan_inner<T: ManagementTransport>(
+    transport: &T,
+    plan: &PropertyDownloadPlan,
+    authorization: WriteAuthorisation,
+    key: AuthorisationPlan,
+    timing: SessionTiming,
+    preconditions: Option<&ExperimentalPropertyPreconditions>,
+    restore: Option<&PropertyRecoverySnapshot>,
+    journal: &mut impl FnMut(PropertyJournalEvent<'_>) -> Result<(), String>,
+    abort_requested: &impl Fn() -> bool,
+) -> Result<PropertyPlanExecution, PropertySimulationError> {
+    let early = |failure| PropertySimulationError {
+        source_index: None,
+        operation_index: None,
+        mutation_may_have_started: false,
+        completed: Vec::new(),
+        failure,
+    };
+    if let Some(preconditions) = preconditions {
+        preconditions
+            .validate(
+                restore
+                    .map(|snapshot| &snapshot.original_plan)
+                    .unwrap_or(plan),
+            )
+            .map_err(early)?;
+        if transport.target_kind() == knx_core::commissioning::mutation::TargetKind::Hardware {
+            preconditions
+                .require_full_hardware_write_coverage()
+                .map_err(early)?;
+            return Err(early(property_recovery::invalid("physical source/recovery admission is unavailable; a complete-write plan and ordinary Download authorization are not admission")));
+        }
+    }
+    if authorization.target().address() != plan.target() {
+        return Err(early(PropertySimulationFailure::TargetMismatch {
+            expected: plan.target(),
+            found: authorization.target().address(),
+        }));
+    }
+    let mut session = ManagementSession::authorised(transport, key, timing, authorization)
         .map_err(|error| early(error.into()))?;
     session
         .authorise_write(WriteScope::Download)
@@ -146,84 +381,77 @@ pub async fn run_simulated_property_plan(
     let mut completed = Vec::new();
     let mut data_octets = 0;
     let mut mutation_may_have_started = false;
-    for step in plan.steps() {
+    let mut recovery = None;
+    for (operation_index, step) in plan.steps().iter().enumerate() {
         let result: Result<(), PropertySimulationFailure> = async {
+            if abort_requested() {
+                return Err(PropertySimulationFailure::Cancelled);
+            }
+            journal(PropertyJournalEvent::OperationStarting {
+                operation_index,
+                source_index: step.source_index,
+                mutation_may_have_started,
+            })
+            .map_err(PropertySimulationFailure::Persistence)?;
+            if abort_requested() {
+                return Err(PropertySimulationFailure::Cancelled);
+            }
             match &step.operation {
                 PropertyOperation::Connect => {
-                    // The simulator-only entry defers setup writes until the
-                    // descriptor, manufacturer and hardware bytes are checked.
                     session.connect_inner(false).await?;
-                    let found = session.read_mask_version().await?;
-                    if found != plan.mask() {
-                        return Err(PropertySimulationFailure::MaskMismatch {
-                            expected: plan.mask(),
-                            found,
-                        });
-                    }
-                    let found = session.read_manufacturer_id().await?;
-                    if found != plan.manufacturer() {
-                        return Err(PropertySimulationFailure::ManufacturerMismatch {
-                            expected: plan.manufacturer(),
-                            found,
-                        });
-                    }
+                    validate_plan_identity(&mut session, plan).await?;
                 }
                 PropertyOperation::HardwareCheck { expected } => {
-                    let found = session
-                        .read_property(ObjectIndex::DEVICE, PID_HARDWARE_TYPE, 1, 1)
-                        .await?;
-                    if found.as_slice() != expected {
-                        return Err(PropertySimulationFailure::HardwareMismatch {
-                            expected: *expected,
-                            found,
-                        });
-                    }
-                    mutation_may_have_started = true;
-                    session.assert_verify_mode().await?;
-                }
-                PropertyOperation::LoadControl { object, payload } => {
-                    mutation_may_have_started = true;
-                    let (found, expected) = match payload.event_octet() {
-                        3 => (
-                            session
-                                .write_allocation(ObjectIndex::new(*object), *payload)
-                                .await?,
-                            LoadState::Loading,
-                        ),
-                        event => {
-                            let (event, expected) = match event {
-                                4 => (LoadEvent::Unload, LoadState::Unloaded),
-                                1 => (LoadEvent::StartLoading, LoadState::Loading),
-                                2 => (LoadEvent::LoadCompleted, LoadState::Loaded),
-                                _ => unreachable!("immutable validated property plan event"),
-                            };
-                            (
-                                session
-                                    .write_load_event(ObjectIndex::new(*object), event)
-                                    .await?,
-                                expected,
-                            )
+                    validate_hardware(&mut session, *expected).await?;
+                    if let Some(preconditions) = preconditions {
+                        let snapshot = if let Some(snapshot) = restore {
+                            property_recovery::validate_serial(&mut session, preconditions).await?;
+                            snapshot.clone()
+                        } else {
+                            property_recovery::acquire(&mut session, plan, preconditions).await?
+                        };
+                        journal(PropertyJournalEvent::RecoveryAcquired(&snapshot))
+                            .map_err(PropertySimulationFailure::Persistence)?;
+                        if abort_requested() {
+                            return Err(PropertySimulationFailure::Cancelled);
                         }
-                    };
-                    if found != expected {
-                        return Err(PropertySimulationFailure::UnexpectedState {
-                            object: *object,
-                            expected,
-                            found,
-                        });
+                        let setup_control = if restore.is_some() {
+                            session.read_device_control().await?
+                        } else {
+                            snapshot.old_device_control
+                        };
+                        mutation_may_have_started = true;
+                        session
+                            .assert_verify_mode_from(setup_control, WriteScope::Download)
+                            .await?;
+                        recovery = Some(snapshot);
+                    } else {
+                        mutation_may_have_started = true;
+                        session.assert_verify_mode().await?;
                     }
                 }
-                PropertyOperation::WriteMemory { address, data, .. } => {
-                    let limit = session.write_limit(None).await?;
+                PropertyOperation::LoadControl { .. } | PropertyOperation::WriteMemory { .. } => {
                     mutation_may_have_started = true;
-                    session
-                        .write_memory_region(u32::from(*address), data, limit)
-                        .await?;
-                    data_octets += data.len();
+                    data_octets += execute_property_mutation(&mut session, &step.operation).await?;
                 }
                 PropertyOperation::ToolMetadata { .. } => {}
-                PropertyOperation::Disconnect => session.disconnect().await,
+                PropertyOperation::Disconnect => {
+                    if let Some(snapshot) = &recovery {
+                        snapshot.verify_outcome(&mut session, plan).await?;
+                    }
+                    session.disconnect().await;
+                }
             }
+            completed.push(CompletedPropertyOperation {
+                source_index: step.source_index,
+                wire_operation: !matches!(step.operation, PropertyOperation::ToolMetadata { .. }),
+            });
+            journal(PropertyJournalEvent::OperationCompleted {
+                operation_index,
+                source_index: step.source_index,
+                mutation_may_have_started,
+            })
+            .map_err(PropertySimulationFailure::Persistence)?;
             Ok(())
         }
         .await;
@@ -231,18 +459,51 @@ pub async fn run_simulated_property_plan(
             session.disconnect().await;
             return Err(PropertySimulationError {
                 source_index: Some(step.source_index),
+                operation_index: Some(operation_index),
                 mutation_may_have_started,
                 completed,
                 failure,
             });
         }
-        completed.push(CompletedPropertyOperation {
-            source_index: step.source_index,
-            wire_operation: !matches!(step.operation, PropertyOperation::ToolMetadata { .. }),
+    }
+    Ok(PropertyPlanExecution {
+        execution: PropertySimulationReport {
+            completed,
+            data_octets,
+        },
+        recovery,
+    })
+}
+
+async fn validate_plan_identity<T: ManagementTransport>(
+    session: &mut ManagementSession<'_, T>,
+    plan: &PropertyDownloadPlan,
+) -> Result<(), PropertySimulationFailure> {
+    let found = session.read_mask_version().await?;
+    if found != plan.mask() {
+        return Err(PropertySimulationFailure::MaskMismatch {
+            expected: plan.mask(),
+            found,
         });
     }
-    Ok(PropertySimulationReport {
-        completed,
-        data_octets,
-    })
+    let found = session.read_manufacturer_id().await?;
+    if found != plan.manufacturer() {
+        return Err(PropertySimulationFailure::ManufacturerMismatch {
+            expected: plan.manufacturer(),
+            found,
+        });
+    }
+    Ok(())
+}
+async fn validate_hardware<T: ManagementTransport>(
+    session: &mut ManagementSession<'_, T>,
+    expected: [u8; 6],
+) -> Result<(), PropertySimulationFailure> {
+    let found = session
+        .read_property(ObjectIndex::DEVICE, PID_HARDWARE_TYPE, 1, 1)
+        .await?;
+    if found.as_slice() != expected {
+        return Err(PropertySimulationFailure::HardwareMismatch { expected, found });
+    }
+    Ok(())
 }

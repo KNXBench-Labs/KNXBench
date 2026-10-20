@@ -13,6 +13,22 @@ path. Neither an ETS project nor an identity ZIP nor selected memory bytes
 alone establish whole-device recovery. Do not promise that a full ETS download
 can repair every interrupted allocator, access-control or firmware state.
 
+## Bounded simulator candidate (20 October 2026)
+
+The [source-bound defaults-only path](../contracts/up258-system2-validation.md)
+now implements complete image/procedure/execution and durable, explicitly
+confirmed same-shape recovery in software. All source positions and required
+candidate interpretation rules remain visible; ordinary production admission
+still refuses unresolved semantics. The executable offline workflow and opt-in
+same-device fault/cancel/reopening tests are documented there.
+
+Classify this only as **STRONG HYPOTHESIS / SIMULATOR TESTED**. Independent
+historical/version-bound evidence is documented, not copied from supplied
+research. 338 masked allocation bytes, actual pointer behavior and indirect
+firmware recovery remain physical prerequisites. A later separate approval
+cannot by itself authorize the blocked real-device route. The original write
+ladder and its separately consented hardware stages are not completed here.
+
 ## Sequence and acceptance
 
 1. Reuse the existing byte-order probe and diagnostic collector rather than

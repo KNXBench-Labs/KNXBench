@@ -11,4 +11,6 @@ mod live_memory_readonly;
 mod live_programming_mode;
 mod private_telegram_log;
 mod property_download;
+mod property_recovery;
+mod simulator_system2_state;
 mod support_diagnostics;

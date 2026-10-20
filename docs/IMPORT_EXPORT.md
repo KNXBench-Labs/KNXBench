@@ -1,18 +1,23 @@
 # Import and export
 
-## Earlier promotion repair (v28 candidate, after Alpha 15)
+<a id="earlier-promotion-repair-v28-candidate-after-alpha-15"></a>
+## Earlier promotion repair (v28 source delivery)
 
-The v28 candidate repairs derived catalogue metadata affected by the released
+The delivered v28 source migration repairs derived catalogue metadata affected by the released
 v23–v25 column promotions, rather than changing the product import grammar.
 The first declaration of the stored program source supplies object-caption
 references, parameter placements and enumeration presentation fields; unsupported
 constructs outside promoted parser contexts remain reported. Targeted measured
 report evidence may be reconciled, but non-unknown historical outcomes and
 master-provenance snapshots must not be re-invented. Missing or unavailable
-reports remain so. Candidate acceptance is pending; failed source reconstruction
+reports remain so. [Source acceptance and publication](IMPLEMENTATION_STATUS.md#product-column-promotion-repair--source-delivery)
+are recorded for `8fa0d76b9fd41f81c4e135c29e54f2a98d516b38`; failed source reconstruction
 requires preservation and explicit diagnostics, not a guessed partial result.
 No ETS export, native format, device programming or compatibility expansion.
 [Contract](contracts/product-promotion-repair.md).
+
+Product writable opens advance to 28; read-only readers migrate a copy only.
+This does not recover historical encounters or make unavailable reports measured.
 
 ## Stream-integrity source follow-ups (20 October 2026)
 
@@ -57,6 +62,9 @@ and winning-source history remains explicitly unavailable when not observed.
 This is evidence handling, not a new master grammar, ETS schema, native-project
 schema or programming admission. Older builds refuse product27.
 [Contract](adr/0147-master-identity-provenance.md).
+
+The release-boundary sections below retain their original version and evidence scope;
+they do not describe the newer v28 source build.
 
 ## Alpha 15 persistence boundary
 

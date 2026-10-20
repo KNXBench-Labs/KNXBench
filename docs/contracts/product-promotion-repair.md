@@ -1,7 +1,9 @@
 # Product-column promotion repair
 
-Status: proposed successor contract; implementation and runtime acceptance are
-pending. Owner-authorised sequence: [Alpha 16 successor
+Status: implemented and source-delivered as `8fa0d76b9fd41f81c4e135c29e54f2a98d516b38` on
+20 October 2026 after accepted final integration and publication readback.
+[Acceptance record](../IMPLEMENTATION_STATUS.md#product-column-promotion-repair--source-delivery).
+Owner-authorised sequence: [Alpha 16 successor
 work](../goals/alpha16-successor-sequence-2026-10-19.md).
 
 ## Problem and evidence boundary
@@ -128,4 +130,6 @@ WP-17's v27 delivery and reservation release are published at `dc83e939`.
 The successor allocates v28 under
 [ADR-0148](../adr/0148-repair-product-column-promotions.md), preserving WP-17's
 final report-validation/provenance contracts. No other worktree is taken over.
-The first repair's implementation and broader acceptance remain pending.
+The first repair is source-delivered at the scope recorded above; the sequence
+advances only to WP-04.1. No broader historical reconstruction, release or
+WP-04 completion is implied.

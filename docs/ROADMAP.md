@@ -1,5 +1,19 @@
 # Roadmap
 
+## After Alpha 15 — promotion repair source delivered (20 October 2026)
+
+The [earlier promotion repair](contracts/product-promotion-repair.md) is
+delivered as `8fa0d76b9fd41f81c4e135c29e54f2a98d516b38`: product DB v28 corrects the bounded
+v23–v25 derived columns and targeted unsupported evidence after WP-17/v27.
+[Final acceptance and publication](IMPLEMENTATION_STATUS.md#product-column-promotion-repair--source-delivery)
+are source-only, not a new release or Alpha15 artifact change. Authentic
+reconstruction, unavailable historical attribution and conservative resource
+refusals remain explicit; native/model16 and device admission are unchanged.
+The [successor sequence](goals/alpha16-successor-sequence-2026-10-19.md#current-state)
+now proceeds to **WP-04.1 measurement only**. WP-04.2 parsing, WP-04.3 web
+workflow and WP-19 are still separate later packages; WP-04 remains open.
+The release-cutoff sections below retain their original scope.
+
 ## Project encrypted-directory integrity delivered (20 October 2026)
 
 The [WP-16 follow-up](contracts/project-encrypted-directory-admission.md) is

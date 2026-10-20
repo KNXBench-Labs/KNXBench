@@ -197,6 +197,25 @@ class OperationTests(unittest.TestCase):
 
 
 class StudyTests(unittest.TestCase):
+    def setUp(self):
+        # The complete web gate already owns the real checkout's workspace lease.
+        # Synthetic studies still exercise a REAL lease, but in their own repo.
+        directory = TemporaryDirectory(prefix='measurement-checkout-')
+        self.addCleanup(directory.cleanup)
+        checkout = Path(directory.name)
+        subprocess.run(['git', 'init', '--quiet', str(checkout)],
+                       check=True, capture_output=True)
+        root = patch.object(measurement(self), 'ROOT', checkout)
+        root.start()
+        self.addCleanup(root.stop)
+
+    def test_synthetic_study_fixture_has_private_checkout_for_its_lease(self):
+        api = measurement(self)
+        source_checkout = Path(__file__).resolve().parents[2]
+        self.assertNotEqual(api.ROOT.resolve(), source_checkout,
+                            'synthetic studies must not reacquire the outer gate checkout lease')
+        self.assertTrue((api.ROOT / '.git').is_dir())
+
     def observer_inputs(self, root):
         from argparse import Namespace
         inputs = root / 'inputs'

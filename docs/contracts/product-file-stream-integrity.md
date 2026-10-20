@@ -80,5 +80,9 @@ with warmups and alternating order. Candidate/original median ratios range from
 1.38 to 1.84; the extra decode cost is real and disclosed, not an optimization.
 This is a hot-memory direct-reader measurement, not installation latency or
 peak-RSS evidence. Independent source review accepted with zero Critical/Important
-findings and final source hashes verified. Maintained delivery acceptance remains
-pending.
+findings and final source hashes verified. Delivered on `main` as `29b69f36`:
+maintained scoped gate 14/14 passed, including 3,072 Rust tests across 22 binaries
+(144 ignored) and 97/97 selected corpus cases. All stage proofs are valid,
+source inputs frozen and user-data guards clear. Local/tracking/live publication
+readback agreed; product file-stream claim released. No full-workspace, browser,
+hardware or release acceptance is claimed.

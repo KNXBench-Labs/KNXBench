@@ -100,7 +100,7 @@ so that behavior is synthetic-test evidence only. The original ordinary-file
 trailing-input and encryption-header boundaries above remain separate open work.
 [Research, primary sources and evidence boundaries](../research/2026-10-20-product-directory-stream-integrity.md).
 
-## Product ordinary-file follow-up (20 October 2026; delivery pending)
+## Product ordinary-file follow-up (20 October 2026)
 
 The separate product-only investigation is complete. Controller-verified
 characterization demonstrates accepted zero/nonzero trailers and concatenated
@@ -128,9 +128,11 @@ Historical retry and outer/inner wrapper rollback compare closed database bytes.
 The additional direct-reader decode cost is measured at 1.38–1.84 times baseline
 across four synthetic workloads, not end-to-end installation or peak memory.
 Independent full-diff review accepted with zero Critical/Important findings.
-Maintained delivery acceptance is pending. Project-reader ordinary-file and
-encryption-header work remain separate; no full ZIP/ETS
-compatibility is claimed.
+Delivered on `main` as `29b69f36`: maintained scoped gate 14/14 GREEN,
+3,072 Rust tests and 97/97 selected corpus cases, frozen inputs, valid proofs
+and clear user-data guards. Publication readback agreed; the product file-stream
+claim is released. Project-reader ordinary-file and encryption-header work
+remain separate; no full ZIP/ETS compatibility is claimed.
 
 <!-- BEGIN retained catalogue record -->
 

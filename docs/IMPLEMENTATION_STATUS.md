@@ -12,7 +12,7 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
-## Product file-stream extent integrity (20 October 2026; acceptance pending)
+## Product file-stream extent integrity (20 October 2026)
 
 The local product-reader repair checks complete, exact DEFLATE extents for
 ordinary files after the normal bounded CRC/size decoder. It preserves valid
@@ -24,7 +24,11 @@ fresh/populated wrapper rollback have complete closed-database byte assertions.
 The added decoder uses fixed 8 KiB/64 KiB buffers. Direct-reader synthetic costs
 are measured and disclosed (1.38–1.84 times baseline), not an installation-speed
 claim. Independent full-diff review accepted with zero Critical/Important findings;
-source hashes rechecked. Maintained committed-head delivery gate remains pending.
+source hashes rechecked. Delivered on `main` as `29b69f36`: maintained scoped gate
+14/14 GREEN, 3,072 Rust tests across 22 binaries (144 ignored) and 97/97 selected
+corpus cases. All stage proofs valid, inputs frozen and user-data guards clear;
+local/tracking/live publication equality verified. Product file-stream claim
+released; no full-workspace/browser/release acceptance is claimed.
 [Contract](contracts/product-file-stream-integrity.md) ·
 [Evidence and limits](research/2026-10-20-product-file-stream-integrity.md).
 

@@ -54,9 +54,12 @@ median in the four synthetic workloads. This is not installation latency or
 peak-RSS evidence. Initial incomplete historical fixtures and zero-test benchmark
 filter attempts remain retained/uncredited; final source-bound runs correct them.
 
-## Pending
+## Delivery
 
 Independent full-diff review accepted with zero Critical/Important findings;
-parent verified verdict and all three final source hashes. Production/tests stay
-frozen under those hashes. Maintained committed-head delivery gate and publication
-remain pending. No new compatibility/release claim yet.
+parent verified verdict and all three final source hashes. Delivered on `main`
+as `29b69f36`; local/tracking/live readback agreed. Maintained scoped gate
+14/14 GREEN: 3,072 Rust tests across 22 binaries (144 ignored), 97/97 selected
+corpus cases, valid stage proofs, frozen sources and clear user-data guards.
+The product file-stream claim is released. Result-only docs tail and verified
+compact evidence retirement follow; no full-workspace/browser/release claim.

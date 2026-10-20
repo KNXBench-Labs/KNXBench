@@ -143,7 +143,12 @@ Initial historical fixtures lacked member indexes; corrected fixtures were rerun
 against original production before claiming the final 25 semantic failures.
 
 Independent full-diff review accepted with zero Critical/Important findings and
-source bindings rechecked. Maintained committed-head delivery gate remains pending.
+source bindings rechecked. Delivered on `main` as `29b69f36`: maintained
+change-scoped gate 14/14 passed, with 3,072 Rust tests across 22 binaries
+(144 ignored) and 97/97 selected corpus cases. All proofs valid, inputs frozen,
+user-data guards clear, local/tracking/live publication equality verified.
+The product file-stream claim is released; no full-workspace/browser/release
+acceptance is implied.
 Private paths, member identities and content hashes stay local; only aggregate
 technical outcomes are published here. No new codec, ETS, browser, device or
 release compatibility is claimed.

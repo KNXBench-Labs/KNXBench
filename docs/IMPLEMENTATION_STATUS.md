@@ -12,6 +12,20 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Remaining WP-13 documentation reconciliation (20 October 2026)
+
+The named prose sweep now describes the current v16 selective-import guard,
+source-note mapping/choice and source-Function refusal; it no longer calls the
+delivered note service/editor pending. Current lifecycle contract/dossier
+prefaces distinguish published callers/Web adoption from preserved historical
+candidate records. The feature table scopes portable manufacturer data to
+available manifest entries. Rename, modern product placement, Functions and
+plug-in consumers, UI availability and the normalized property simulator were
+source-checked rather than rebuilt. No runtime behavior, formal ledger status
+or retained dossier block changed. This is documentation/source reconciliation,
+not fresh application, hardware, native or release acceptance.
+[Scope and reader routes](status/2026-10-20-wp13-documentation-sweep.md).
+
 ## Project file-stream extent integrity (20 October 2026)
 
 Local project-container reads now enforce one complete DEFLATE extent across

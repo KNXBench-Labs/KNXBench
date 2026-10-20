@@ -626,7 +626,7 @@ crates/
                    No IO, no XML, no SQL, no UI.
   knx-app/         Application services: open/save, commands, undo/redo,
                    search, selection, reports; shared payload-free commissioning
-                   activity lifecycle (ADR-0075 candidate), with no client/transport dependency
+                   activity lifecycle (ADR-0075, delivered; metadata only)
   knx-store/       SQLite project storage, schema migrations, opaque store;
                    separate versioned activity metadata store (ADR-0064),
                    never a project/vendor/recovery database

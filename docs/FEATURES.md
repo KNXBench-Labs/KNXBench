@@ -158,7 +158,7 @@ records the tested commit separately from artifact publication verification.
 | --- | --- | --- |
 | Project wizard | Structured project creation | alpha.6 |
 | Native storage | Open/save `.knxdb`; schema 16 in alpha.12, older readers refuse upgraded files | alpha.6 |
-| Portable product sources | Native saves retain manufacturer bytes; Docker catalogue persists under mounted data; older files need matching sources once | alpha.12 |
+| Portable product sources | Native saves embed available manifest-listed manufacturer bytes; missing blobs or absent manifest entries can still require matching product data on reopen; Docker catalogue persists under mounted data ([boundary](limitations/KL-183-knxdb-manufacturer-files.md)) | alpha.12 |
 | Save As | Independent project copies | alpha.6 |
 | Browser export | Download `.knxdb` | alpha.6 |
 | Autosave | Existing project files | alpha.6 |

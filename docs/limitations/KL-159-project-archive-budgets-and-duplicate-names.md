@@ -13,8 +13,8 @@ these are payload admission limits, not a peak-process-memory guarantee.
 Duplicate/case-colliding names and inconsistent ZIP records remain refused.
 The empty-directory CRC/complete-stream repair described below is delivered;
 its trailing-file-stream and encryption-header follow-ups remain open.
-The product-reader follow-up is implemented locally; delivery acceptance
-is pending as recorded below.
+The product-reader follow-up is delivered on `main` (`9c79634b`), with
+its bounded acceptance recorded below.
 
 Evidence: [shared limits](../../crates/knx-core/src/limits.rs),
 [project container](../../crates/knx-etsproj/src/container.rs),
@@ -74,7 +74,10 @@ What remains (not part of this fix):
 
 ## Product directory follow-up (20 October 2026)
 
-Implemented locally; independent review and maintained delivery gate pending.
+Delivered on `main` as `9c79634b`; independent review accepted and the maintained
+14-stage scoped gate passed (3,034 Rust tests, 97/97 selected corpus cases).
+Sources stayed frozen and user-data guards stayed clear. The product-directory
+claim is released.
 `knx-productdb` now checks exact compressed-stream consumption for empty
 DEFLATE directories after its existing bounded CRC reader. Fixed buffers avoid
 allocating expanded contents for this secondary check. Member-open/read errors
@@ -88,7 +91,8 @@ Tests cover fresh/populated database preservation, earlier-inner-package rollbac
 source-name retry integrity, alternate empty encodings and both descriptor forms.
 Independent source review accepted (zero Critical/Important); two repair-removal
 controls fail eleven and 29 named cases, respectively, then exact restoration
-passes all 40 cases and Clippy again. Maintained merged acceptance is pending.
+passes all 40 cases and Clippy again. Closed SQLite database bytes are compared;
+concurrent WAL behavior is not claimed.
 
 A read-only census found 260 stored empty directory records across 350 readable
 ZIP instances; none would be newly rejected. No real DEFLATE directory occurred,

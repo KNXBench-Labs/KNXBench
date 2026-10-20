@@ -32,7 +32,12 @@ byte-exact; focused tests and Clippy pass again. An initial mutation-accounting
 assertion expected only the original seventeen context failures; the retained
 logs show the additional twelve context-dependent cases, so the corrected
 accounting is explicit rather than a claimed production defect.
-Maintained merged delivery gate and publication remain pending.
+Delivered on `main` as `9c79634b`: maintained change-scoped gate 14/14 GREEN,
+3,034 Rust tests across 22 binaries (144 ignored) and 97/97 selected corpus
+cases. All proofs valid, source inputs frozen and user-data guards clear.
+Local/tracking/live publication equality verified. Product-directory claim
+released; result-only docs tail and owned-resource retirement follow. No browser,
+full-workspace, release or new device-compatibility acceptance is claimed.
 The preceding splitter package is delivered on `73d02240` with result-only tail
 `c375bd65`; its compact evidence archive was member-digest verified before its
 owned worktree, integration branch and rebuildable scratch were retired.

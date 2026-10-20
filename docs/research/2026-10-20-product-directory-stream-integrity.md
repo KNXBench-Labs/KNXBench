@@ -88,8 +88,13 @@ trailing input is explicitly pinned unchanged. No live WAL concurrency proof
 or new codec support is claimed. Independent source review accepted with zero
 Critical/Important findings. Removing exact-consumption enforcement causes eleven
 named failures; removing leaf context causes 29. Production bytes were restored
-exactly, then all 40 focused tests and Clippy passed again. Maintained merged
-delivery acceptance remains pending.
+exactly, then all 40 focused tests and Clippy passed again. Delivered on `main`
+as `9c79634b`: the maintained change-scoped gate passed all 14 stages, with
+3,034 Rust tests across 22 binaries and 97/97 selected corpus cases. It recorded
+144 ignored Rust cases; selected corpus tests ran separately. All stage proofs
+are valid, inputs stayed frozen and user-data guard lists are empty. No browser
+or full-workspace/release acceptance is claimed. Local/tracking/live publication
+readback agreed; the product-directory claim is released.
 A structural census alone will not establish successful product installation,
 lossless normalization or device programmability. Private input names, hashes
 and member details must remain outside the public repository.

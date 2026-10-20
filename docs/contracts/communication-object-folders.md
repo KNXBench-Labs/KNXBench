@@ -1,0 +1,128 @@
+# Communication-object folders: source and identity boundary
+
+## Status and scope
+
+WP-06A is a **retention characterization and source contract**, not folder
+implementation. It changes no production parser, model, storage schema,
+activation, projection, UI, priority or protocol behavior. WP-06's source-backed
+folder display remains open. Assertions below describe inspected KNXBench
+implementation and public synthetic inputs; they do not independently establish
+KNX/ETS schema conformance or manufacturer-folder semantics.
+
+## Three distinct sources
+
+| Source | Current representation | What it does not establish |
+| --- | --- | --- |
+| Saved project `GroupObjectTree` and nested `Node Type="Folder"` | Raw complete tree plus flattened object-reference list, qualified by owning device/source member | A typed folder, current activation, a manufacturer parameter block, a stable UI key or unique product reference |
+| Manufacturer `ParameterBlock` / `ShowInComObjectTree` declarations | Separate product-source investigation; this slice admits no mapping | Equality with saved project Folder `RefId`, folder labels, conflicting ownership or module-instance authority |
+| Evaluated application `Dynamic` channels | Existing `ComObjectNode.channel` from `Channel` / `ChannelIndependentBlock` activation ownership | A reconstruction of the saved folder hierarchy or a folder assignment for inactive/undetermined/unevaluated objects |
+
+### Saved source retention
+
+`SourceDevice.group_object_tree` is the flattened authoritative object-reference
+list; `group_object_tree_raw` carries the complete tree bytes. The installation
+parser unions root and nested `GroupObjectInstances` in encounter order,
+deduplicating references. It does not model `Node/@Type` or `@RefId` as a typed
+folder; their declarations remain inside the raw tree. The domain mapper creates
+objects from the flat references, not from an inferred folder classification.
+
+The importer returns an opaque `RetainedElement` named `GroupObjectTree` with
+its topology source member and owning device's locator. For the schema-23
+synthetic line-device witness the member is `P-0001/0.xml` and the locator is:
+
+```text
+/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance[@Id='P-0001-0_DI-1']/GroupObjectTree
+```
+
+This is an existing source locator, not a new folder identity. The exact retained
+tree includes hierarchy, `Type`, reference attributes when actually declared,
+and their absence when not declared. A missing Folder `RefId` stays absent:
+never fill it from a neighboring channel, another fixture or a product block.
+This test scope does not prove behavior for duplicate device identities or every
+namespace, schema, source spelling or malformed folder declaration.
+
+### Evaluated ownership is not saved membership
+
+The product evaluator's `is_channel` accepts `Channel` and
+`ChannelIndependentBlock`; traversing `ParameterBlock` does not make that node
+a channel owner. The server overlays activation and channel from evaluated hits.
+Its channel key contains the module-node chain and evaluator node ID, not a
+saved Folder `RefId`. The projection keeps evaluated activation separate from
+the project's stored `is_active` claim. Existing table grouping uses evaluated
+channel keys, with inactive/undetermined/unevaluated objects unassigned.
+
+Do not equate these identity domains, infer current activation from saved tree
+membership, declare Folder `RefId` globally unique, derive a label from an ID,
+or invent product/module/UI keys from the retained hierarchy.
+
+## Public evidence and acceptance matrix
+
+| Evidence | What it establishes | Boundary |
+| --- | --- | --- |
+| `schema23_reads_nested_nodes_and_root_objects_in_encounter_order` | Two tracked synthetic trees, both containing a Folder without `RefId`; flat reference order and namespace controls nearby | Existing importer test, not an independently verified vendor export |
+| `schema23_retains_literal_folder_trees_for_each_owning_device` | Exact tree bytes, opaque kind/name/member/device locator, complete cardinality and per-device object order | Characterizes current behavior; no missing-feature RED claimed |
+| `modern_node_and_root_styles_keep_unassigned_configuration_across_resave` | Existing separate native project/opaque persistence witness | Unmodified; no fresh save/reopen acceptance implied by this slice |
+| `saved_oracle_separates_tree_membership_channel_ids_and_explicit_channel_activity` | Separate saved-state oracle declares `PB-TEST` Folder under `CH-TEST` | Its `O-TEST-*` IDs are oracle material, not copied or repaired into an error-free production-import witness |
+
+The new test must use both original importer tree literals unchanged. Their
+Folder `RefId` absence is part of the assertion. It must compare exact counts
+and ownership before constructing maps, so duplicate keys cannot overwrite a
+missing tree. Expected bytes/locators come from the input and literal contract,
+not the production locator or flattening helper. Discrimination controls, when
+executed, belong in the result record and must fail at the named runtime
+assertion; compile/setup failures do not count as killed controls.
+
+## Focused execution (not delivery acceptance)
+
+The named characterization and existing encounter-order/namespace controls
+execute through the compiled owning integration-test binary: three exact tests,
+three passes, zero failures/ignored. Its compiled inventory contains 421 tests.
+The parent reran the same three exact cases with isolated data/config homes and
+network namespace; all pass. Existing test source is byte-preserved as an exact
+prefix; only one test is added, and both input tree literals are unchanged.
+The new test additionally checks the complete matching import-report inventory,
+per-device object ownership and the existing group-address link.
+
+Original production source already passes: this closes a coverage/contract gap,
+not a reproduced production bug. In an authenticated isolated source snapshot,
+the exact test passes before/after two separately compiled production mutations:
+a fixed wrong-owner locator and different well-formed raw tree each fail at the
+intended runtime assertion. Canonical source is never mutated. Independent
+whole-change review accepts with zero findings; its three exact tests pass and
+14 scratch-only post-import corruption controls are rejected. Those 14 are
+assertion calibration, not additional production-source mutants. Initial reviewer
+harness compilation failed before execution and remains separate from passes.
+
+**Witness limit:** the two literal object-reference sequences are also
+lexicographically sorted. They detect reversal but do not distinguish encounter
+order from lexicographic sorting. No broader ordering discrimination is claimed.
+The maintained merged gate/publication remain pending. No new native save/reopen
+or folder-rendering execution is implied.
+
+## Remaining admission requirements
+
+Full folder implementation needs independently admissible project/manufacturer
+identity witnesses, primary format semantics, deterministic conflict rules,
+activation/access behavior, module-instance binding and loss/unsupported-data
+reporting. Synthetic retention alone admits none of these. Existing repository
+schema/private-corpus research remains a historical lead, not fresh primary
+verification in this package. Priority representation remains a separate
+ADR-gated slice. No manufacturer contact or new source acquisition is required
+for this retention-only contract.
+
+## Source anchors
+
+- [Source representation](../../crates/knx-etsproj/src/source.rs),
+  [installation parser](../../crates/knx-etsproj/src/parse/installation_v21.rs),
+  [opaque ownership](../../crates/knx-etsproj/src/lib.rs) and
+  [object mapper](../../crates/knx-etsproj/src/map.rs).
+- [Importer witnesses](../../crates/knx-etsproj/tests/it/import_integrity.rs),
+  [existing native persistence test](../../crates/knx-app/tests/it/import_integrity_roundtrip.rs)
+  and [saved-state oracle](../../apps/knx-server/tests/common/saved_activation.rs).
+- [Dynamic evaluator](../../crates/knx-productdb/src/dynamic/evaluate.rs),
+  [server overlay](../../apps/knx-server/src/com_object_activation.rs),
+  [projection](../../crates/knx-projection/src/lib.rs) and
+  [table contract](../COMMUNICATION_OBJECT_TABLE.md#presentation-and-derived-data).
+- [WP-06](../OPEN_WORK.md#wp-06--communication-object-organisation),
+  [existing gap census](../research/2026-10-17-product-database-gap-census.md) and
+  [source import boundary](IMPORT_BOUNDARY_CONTRACT.md).

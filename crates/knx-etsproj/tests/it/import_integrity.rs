@@ -367,3 +367,114 @@ fn metadata_attributes_have_their_actual_source_file() {
             .any(|e| e.source_path == "P-0001/project.xml"));
     }
 }
+
+#[test]
+fn schema23_retains_literal_folder_trees_for_each_owning_device() {
+    // These are the unchanged trees from the encounter-order witness above.
+    // Folder RefId is absent; retention does not supply folder semantics.
+    let trees = [
+        r#"<GroupObjectTree><Nodes><Node Type="Channel" RefId="CH-1" GroupObjectInstances="O-7_R-1"><Nodes><Node Type="Folder" GroupObjectInstances="O-9_R-1 O-7_R-1"/></Nodes></Node></Nodes></GroupObjectTree>"#,
+        r#"<GroupObjectTree GroupObjectInstances="O-7_R-1 O-7_R-1"><Node Type="Folder" GroupObjectInstances="O-9_R-1"/></GroupObjectTree>"#,
+    ];
+    let devices = format!(
+        "{}{}",
+        device(trees[0]),
+        device(trees[1]).replace("P-0001-0_DI-1", "P-0001-0_DI-2")
+    );
+    let result = import_knxproj_bytes(
+        fixture(23, &topology(&devices), "<ProjectInformation/>"),
+        "synthetic.knxproj",
+    )
+    .unwrap();
+    assert!(
+        result.report.errors.is_empty(),
+        "{:?}",
+        result.report.errors
+    );
+
+    // Compare the full identity inventory, including cardinality, before lookup:
+    // a duplicate owner must not overwrite evidence or conceal a missing tree.
+    let expected_paths = [
+        "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance[@Id='P-0001-0_DI-1']/GroupObjectTree",
+        "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance[@Id='P-0001-0_DI-2']/GroupObjectTree",
+    ];
+    let mut retained: Vec<_> = result
+        .opaque
+        .iter()
+        .filter(|entry| entry.name == "GroupObjectTree")
+        .collect();
+    assert_eq!(retained.len(), 2);
+    retained.sort_by(|a, b| a.xpath.cmp(&b.xpath));
+    assert_eq!(
+        retained
+            .iter()
+            .map(|entry| (entry.source_path.as_str(), entry.xpath.as_str()))
+            .collect::<Vec<_>>(),
+        expected_paths.map(|path| ("P-0001/0.xml", path))
+    );
+    for (entry, tree) in retained.iter().zip(trees) {
+        assert_eq!(entry.kind, knx_etsproj::opaque::OpaqueKind::RetainedElement);
+        assert_eq!(entry.name, "GroupObjectTree");
+        assert_eq!(entry.bytes, tree.as_bytes());
+    }
+    let mut reported: Vec<_> = result
+        .report
+        .opaque
+        .iter()
+        .filter(|entry| entry.name == "GroupObjectTree")
+        .collect();
+    assert_eq!(reported.len(), 2);
+    reported.sort_by(|a, b| a.xpath.cmp(&b.xpath));
+    assert_eq!(
+        reported
+            .iter()
+            .map(|entry| (
+                entry.source_path.as_str(),
+                entry.xpath.as_str(),
+                entry.kind.as_str(),
+                entry.name.as_str(),
+            ))
+            .collect::<Vec<_>>(),
+        expected_paths.map(|path| ("P-0001/0.xml", path, "RetainedElement", "GroupObjectTree"))
+    );
+
+    let mut owners: Vec<_> = result.project.devices.iter().collect();
+    assert_eq!(owners.len(), 2);
+    owners.sort_by(|a, b| a.source.ets_id.cmp(&b.source.ets_id));
+    assert_eq!(
+        owners
+            .iter()
+            .map(|owner| owner.source.ets_id.as_str())
+            .collect::<Vec<_>>(),
+        ["P-0001-0_DI-1", "P-0001-0_DI-2"]
+    );
+    assert_ne!(owners[0].id, owners[1].id);
+    assert_eq!(result.project.devices.com_objects().count(), 4);
+    let addresses = &result.project.installations[0].group_addresses;
+    assert_eq!(addresses.len(), 1);
+    assert_eq!(addresses[0].source.ets_id, "P-0001-0_GA-1");
+    for owner in owners {
+        // The device's list preserves encounter order; the global store is ID-ordered.
+        assert_eq!(owner.com_objects.len(), 2);
+        assert_ne!(owner.com_objects[0], owner.com_objects[1]);
+        let objects: Vec<_> = owner
+            .com_objects
+            .iter()
+            .map(|id| result.project.devices.com_object(*id).unwrap())
+            .collect();
+        assert_eq!(
+            objects
+                .iter()
+                .map(|object| object.source.ets_id.as_str())
+                .collect::<Vec<_>>(),
+            ["O-7_R-1", "O-9_R-1"]
+        );
+        for object in &objects {
+            assert_eq!(object.device, owner.id);
+        }
+        assert_eq!(objects[0].links.len(), 1);
+        assert_eq!(objects[0].links[0].ga, addresses[0].id);
+        assert_eq!(objects[0].links[0].direction, knx_core::Direction::Send);
+        assert!(objects[1].links.is_empty());
+    }
+}

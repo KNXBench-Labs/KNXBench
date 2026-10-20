@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-20 11:23
+- **Completed:** Project ordinary-file stream package DELIVERED on `main` as `8ccb99b3`; local/tracking/live publication equality verified. Maintained scoped14/14GREEN:2500Rust tests/27binaries(175ignored),149/149selected corpus,323tool tests/one existing optional skip. Valid proofs/frozen inputs/empty user-data guard lists verified. Independent review0Critical/Important;153core/26newapp/59owning3ignored and core58/app18originalRED retained. Project-file claim RELEASED.
+- **Pending/Next Steps:** Publish result-only docs tail after cheap checks, archive+verify compact private evidence, retire only owned resources. Then fresh bounded investigation of remaining directory encryption-header validity (format/source/synthetic evidence before policy/production). No new encryption support, credential probing or private encrypted corpus scan follows from general task. Other owners retain Alpha16/exact-UP258.
+- **Notes for Codex oder Claude:** Runtime gate binds `8ccb99b3`, not docs-only tail. Evidence `<profile-scratch>/wp16-project-stream-20261020/gate1` and controller-gate-acceptance.json; all14planned stages valid. No exhaustive real-project extent/encryption census/full-workspace/browser/release claim. Historical earliest harvest manifest gap remains disclosed, final fixture bound. Preserve private identities/rootdirty/foreign claims; no bus/device/desktop/deployment/vendor operation.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-20 11:15
 - **Completed:** Project ordinary-file full-diff review ACCEPTED with0Critical/Important; parent verified seven source/test hashes and unchanged directory checker against verdict. Parent153core/26newapp/59owning3ignored plus both crates all-targetsClippy GREEN.58core/18app original semantic REDs retained. Benchmark320samples/16medians/source/executable/69dependency bindings verified. Historical harvest missing earliest test-source manifest explicitly disclosed; final frozen fixture bound. No real-project extent census claim.
 - **Pending/Next Steps:** Commit reviewed feature then maintained14-stage scoped gate (`--base ebdfac5d`) on frozen committed candidate; downstream9Rust packages+selected existing corpus. Frontend ready; no edits while gate runs. Verify exact receipt/proofs/frozen inputs/user-data guards before publication/readback, docs-only result tail and owned retirement. Owner go remains active; no new release/device scope.

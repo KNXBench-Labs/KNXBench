@@ -340,7 +340,7 @@ The [project-specific integrity contract](../contracts/project-file-stream-integ
 now chooses one complete stream per validated plaintext compressed extent. It
 explicitly preserves encrypted-corruption-to-`WrongPassword`, outer size policy,
 lazy reads, selected-member restoration and historical report evidence. It
-require new-source refusal/reopen tests and direct project-path measurement.
+requires new-source refusal/reopen tests and direct project-path measurement.
 
 Subsequent local implementation now passes 153 owning core cases after58intended
 original-source failures/95passes, with15old acceptance pins explicitly
@@ -357,7 +357,11 @@ extra outer decode cost; nested paths reuse the decoder counter. See the
 for actual timing units and limits. The corrected benchmark keeps all69shared
 dependency versions/checksums aligned with production; earlier regenerated-lock
 results remain uncredited. Independent full-diff review accepted with zero
-Critical/Important findings; maintained delivery gate remains pending. Earliest
+Critical/Important findings. Delivered on `main` as `8ccb99b3`: maintained scoped
+gate 14/14 GREEN, 2,500 Rust tests and 149/149 selected corpus cases, valid proofs,
+frozen inputs and clear user-data guards. Publication readback agrees; project
+ordinary-file claim released. This is not full-workspace/browser/release proof.
+Earliest
 historical harvest receipt lacks a test-source manifest; later frozen runs bind
 the final synthetic fixture. No private project extent census or
 compatibility-safe guarantee.

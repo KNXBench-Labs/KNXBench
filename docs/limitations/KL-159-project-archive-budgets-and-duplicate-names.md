@@ -134,7 +134,7 @@ and clear user-data guards. Publication readback agreed; the product file-stream
 claim is released. Project-reader ordinary-file and encryption-header work
 remain separate; no full ZIP/ETS compatibility is claimed.
 
-## Project ordinary-file policy (20 October 2026; implementation pending)
+## Project ordinary-file policy (20 October 2026)
 
 The separate [source audit](../research/2026-10-20-project-file-stream-boundaries.md)
 identifies normal outer reads, direct nested ZIP acquisition, plain nested files
@@ -162,8 +162,11 @@ and restoration continuation are exercised; no live-WAL/crash/crossDB atomicity
 claim follows. Source-bound synthetic project-path cost is disclosed in the
 [contract](../contracts/project-file-stream-integrity.md#measured-project-path-work).
 Independent full-diff review accepted with zero Critical/Important findings;
-maintained delivery acceptance remains pending. New AES
-support and directory encryption-header validity stay separate.
+delivered on `main` as `8ccb99b3`. Maintained scoped gate 14/14 GREEN,
+2,500 Rust tests and 149/149 selected corpus cases, frozen inputs, valid proofs
+and clear user-data guards; publication readback agrees. Project ordinary-file
+claim released. New AES support and directory encryption-header validity stay
+separate.
 
 <!-- BEGIN retained catalogue record -->
 

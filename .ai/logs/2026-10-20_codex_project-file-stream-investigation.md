@@ -82,5 +82,9 @@ Independent full-diff review accepted with zero Critical/Important findings;
 parent verified all seven source/test hashes and unchanged directory checker.
 Earliest historical harvest receipt lacks a test-source manifest; later frozen
 runs bind the final synthetic fixture, and that provenance limitation is retained.
-Maintained committed-head gate, publication/readback and owned retirement pending.
-No real project extent census or compatibility-safe guarantee.
+Maintained committed-head gate 14/14 GREEN on `8ccb99b3`: 2,500 Rust tests across
+27 binaries (175 ignored), 149/149 selected corpus cases, valid proofs, frozen
+inputs and clear user-data guards. Published to `main`, local/tracking/live
+readback equal. Project ordinary-file claim released. Result-only docs tail and
+compact evidence verification/owned retirement follow. No real project extent
+census, full-workspace/browser/release or compatibility-safe guarantee.

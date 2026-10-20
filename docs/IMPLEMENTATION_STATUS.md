@@ -12,6 +12,17 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Explicit missing web-input plan reasons (20 October 2026)
+
+The gate planner adds an informational, repository-relative reason for deleted
+or missing known web inputs. Existing static-analysis fallback reasons and every
+selection/admission field remain unchanged; unknown inputs still require the
+complete gate. Three original named assertion failures become 32 planner passes;
+22 synthetic original/candidate comparisons preserve selection and prior reasons.
+The planner edit itself requires maintained complete-gate acceptance, separately
+from these focused results. No application or KNX behavior changes.
+[Contract and evidence](status/2026-10-20-deleted-web-input-reasons.md).
+
 ## Catalogue-authoring portability characterization (20 October 2026)
 
 The formerly source-traced KL-183 authoring path is now exercised through real

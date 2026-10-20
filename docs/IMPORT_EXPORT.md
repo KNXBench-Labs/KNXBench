@@ -21,13 +21,15 @@ not a fresh measurement under a later policy. New AES support and directory
 encryption-header validity remain excluded from that delivered package.
 
 The subsequent [encrypted-directory contract](contracts/project-encrypted-directory-admission.md)
-is implemented locally: bit-0 directories refuse with their decoded path and an
-explicit unsupported reason, before raw payload/CRC probing and after structural
-validation. This changes fourteen characterized nested admissions and 48 existing
-refusal diagnostics; it does not add decryption. Review and maintained delivery
-acceptance are pending. Ordinary encrypted files and product-package refusal remain unchanged; no new
-encrypted-project compatibility is claimed. Independent full-diff review accepts
-with zero Critical/Important findings; maintained delivery gate remains pending.
+is delivered on `main` as `cf5b0fb0`: bit-0 directories refuse with their decoded
+path and an explicit unsupported reason, before raw payload/CRC probing and after
+structural validation. This changes fourteen characterized nested admissions
+and 48 existing refusal diagnostics; it does not add decryption. Ordinary encrypted
+files and product-package refusal remain unchanged. Independent review accepted
+with zero Critical/Important findings; maintained scoped gate 14/14 GREEN,
+2,638 Rust passes and 149/149 selected corpus cases, valid proofs, frozen inputs
+and clear user-data guards verified. No real encrypted-project compatibility,
+full-workspace/browser or new release claim.
 
 ## Master identity evidence (source builds after Alpha 15)
 

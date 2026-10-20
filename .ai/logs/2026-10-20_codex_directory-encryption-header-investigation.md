@@ -63,4 +63,15 @@ all-targetsClippy, format/layout/header at unchanged155ceiling. No test logic
 changed, only one blank //! per new module. Independent full-diff review ACCEPTS
 with0Critical/Important and1minor: research intro stale implementation-pending
 sentence. Parent verified15reviewed path identities then corrected only that
-status meaning and result notes. Maintained committed-head gate remains pending.
+status meaning and result notes.
+
+## Maintained delivery accepted
+
+Published main-first `cf5b0fb0` (feature `14fdd4b2`), local/tracking/live readback
+agreed. Maintained scoped gate14/14GREEN:2638Rust passes/27binaries/175ignored,
+149/149selected corpus. Parent rechecked exact ordered proofs, inputStart=inputEnd,
+all complete/success/plan/freeze flags and empty user-data guard lists. Source
+delivery only, not full-workspace/browser/release acceptance. Claim released.
+Result-only docs tail and verified private evidence archival/owned retirement
+follow; no runtime changes in the tail. Bit6alone/AESextra equality remain
+unowned separate questions; other owners' active work remains untouched.

@@ -9,8 +9,8 @@ extent consumption. The latter is delivered under the
 The research itself changes no production admission rule, cipher, dependency,
 credential plumbing or persistence behavior. The subsequent
 [admission contract](../contracts/project-encrypted-directory-admission.md)
-chooses explicit bit-0 directory refusal; local implementation is complete,
-while maintained delivery acceptance remains pending.
+chooses explicit bit-0 directory refusal, delivered on `main` as `cf5b0fb0`.
+The original-runtime table below remains historical evidence, not current admission.
 
 [V] A read-only audit of runtime revision `8ccb99b3` (unchanged through claim
 `2a4b60b6`) was independently checked against twelve source/test/manifest file
@@ -128,8 +128,12 @@ final bytes reproduce the same 72 core/eight app REDs and pass owning suites,
 header gate and both-crate Clippy. Isolated guard removal yields 72 semantic
 failures/49 controls between 121-pass baseline/restored runs; canonical runtime
 was never mutated. Independent review accepted with zero Critical/Important
-findings; its sole minor status-sentence inconsistency is corrected. Maintained
-delivery remains pending. No directory decryption, new AES, private encrypted-corpus acquisition
-or broader strong-encryption metadata policy is included. The earlier maintained
+findings; its sole minor status-sentence inconsistency is corrected. Delivered
+on `main` as `cf5b0fb0`: maintained scoped gate 14/14 GREEN, 2,638 Rust passes
+(175 ignored) and 149/149 selected corpus cases. Valid ordered stage proofs,
+frozen inputs, empty user-data guard lists and publication readback verified.
+Claim released; not full-workspace/browser/release acceptance. No directory
+decryption, new AES, private encrypted-corpus acquisition or broader
+strong-encryption metadata policy is included. The earlier maintained
 product note is
 [product directory stream integrity](2026-10-20-product-directory-stream-integrity.md).

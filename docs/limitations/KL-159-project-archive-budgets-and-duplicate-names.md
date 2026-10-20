@@ -183,8 +183,10 @@ shared guard passes parent core404/16ignored and app16new/41owning3ignored check
 both-crate Clippy and header checks. Isolated mutation reproduces72semantic
 failures between121-pass baseline/restored runs. Independent review accepts with
 zero Critical/Important findings; minor stale-status wording is corrected.
-Maintained delivery remains pending. Application snapshots establish only quiescent early refusal,
-not crash/live-WAL/general cross-store atomicity. No new encrypted-directory
+Delivered on `main` as `cf5b0fb0`: maintained scoped14/14GREEN,2,638Rust passes
+and149/149selected corpus, valid proofs, frozen inputs and clear user-data guards.
+Publication readback agreed; claim released. Application snapshots establish
+only quiescent early refusal, not crash/live-WAL/general cross-store atomicity. No new encrypted-directory
 support or real-project compatibility claim. Bit-6-only consistency
 and AES extra-field semantics remain separate questions.
 

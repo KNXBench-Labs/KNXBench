@@ -1,5 +1,14 @@
 # Roadmap
 
+## Project encrypted-directory integrity delivered (20 October 2026)
+
+The [WP-16 follow-up](contracts/project-encrypted-directory-admission.md) is
+published on `main` as `cf5b0fb0`: bit-0 project directories explicitly refuse as
+unsupported instead of skipping cipher-header checks. Maintained scoped14/14GREEN,
+2,638 Rust passes and149/149selected corpus cases; no new cipher, schema or
+release artifact. The claim is released. Bit-6-only consistency and AES extra-field
+semantic equality remain separate unowned questions, not new encryption support.
+
 ## After Alpha 15 — master provenance delivered (19 October 2026)
 
 [WP-17](OPEN_WORK.md#wp-17--master-identity-provenance) is delivered on `main`

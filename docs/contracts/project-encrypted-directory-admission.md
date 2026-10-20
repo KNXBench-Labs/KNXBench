@@ -1,6 +1,6 @@
 # Project encrypted-directory admission
 
-## Decision — 20 October 2026 (delivery acceptance pending)
+## Decision — 20 October 2026
 
 Refuse a project directory record carrying ZIP general-purpose bit 0, in both
 outer archives and directly opened nested project ZIPs. Report its validated
@@ -117,4 +117,9 @@ candidate GREEN separately bind the header-compliant tests.
 verified. Independent full-diff review accepted with zero Critical/Important
 findings; its sole minor stale implementation-status sentence is corrected.
 The parent verified all fifteen reviewed path identities before the docs-only
-correction. Maintained committed-head delivery acceptance remains pending.
+correction. Delivered on `main` as `cf5b0fb0` (feature `14fdd4b2`): maintained
+scoped gate 14/14 GREEN, 2,638 Rust passes across 27 binaries (175 ignored)
+and 149/149 selected corpus cases. All ordered stage proofs are valid, inputs
+remained frozen and user-data guard lists are empty. Publication readback agrees.
+The encrypted-directory claim is released. This does not certify the whole
+workspace, browser, release artifacts or real encrypted-project compatibility.

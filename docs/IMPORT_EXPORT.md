@@ -1146,7 +1146,11 @@ data (same blocker as schema 23 project data).
   `knx_app::legacy::{open_legacy_file, inspect_legacy_file}` (decrypts with
   the user's password through `knx-secure`) and the CLI command
   `knx products inspect-legacy <file> [--password-stdin | --password-file <path>]`.
-  A password on the command line is refused without echoing it.
+  A password on the command line is refused without echoing it. Source builds
+  after Alpha 15 name `.vd1` in inspection usage (the observed EX-IM 3.19 form,
+  [census G16](research/2026-10-18-product-database-programmability-census.md#g16-diagnostic-follow-up-20-october-2026));
+  this is not VD1 import support. The import command keeps its own `.vd3`–`.vd5`
+  missing-file hint rather than inheriting inspection's formats.
 - **Writes nothing.** Neither a product database nor a file is created
   (asserted by `cli_legacy_inspect.rs`).
 - **Refusals** are typed `LegacyError`s that name the format:

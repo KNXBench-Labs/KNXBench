@@ -154,12 +154,19 @@ in the next schema version, since released databases already passed v23–v25.
 stored since product DB v25 (ADR-0141). Establish the EX-IM field mapping
 against a retained legacy witness and its independent conversion; preserve
 binary lexemes/widths rather than coercing them to integers.
+**G16 diagnostic slice (20 October 2026 source):** the existing `MissingMaster`
+refusal explains that the ZIP is not a standalone product package and names
+the missing master file; it does not deny that an inner package may be present.
+CLI inspection usage names `.vd1`, while import keeps its separate
+`.vd3`–`.vd5` hint and explicitly claims no VD1 import support. No archive
+admission, error kind or binary-enum mapping changes. Named CLI/library and
+both HTTP install/preview regressions exercise the wording; existing positive,
+nested/broken-package and structural-refusal cases remain in the focused suite.
+Package review/acceptance is recorded in the handover.
 **Done when:** fresh/re-ingested legacy enumerations expose exact binary
 values in the existing column with regression/report tests, or explicitly
-name the remaining mapping blocker. Independently runnable G16 follow-up:
-name a ZIP containing no product package accurately, and describe the actual
-`.vd1` inspection scope in CLI usage with regression tests; do not imply VD1
-import support. No live legacy download or PR/VD2 import.
+name the remaining mapping blocker. G16 diagnostic handling is described above;
+no live legacy download or PR/VD2 import.
 [Legacy boundary](limitations/KL-128-legacy-product-import-boundaries.md).
 
 #### WP-04 — Large catalogues: measure, then stream

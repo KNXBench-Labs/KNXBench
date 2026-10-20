@@ -233,6 +233,37 @@ alone is complete (above).
 as "missing knx_master.xml"; "no product package in this ZIP" would be accurate.
 `inspect-legacy` accepts `.vd1` although the usage text does not list it.
 
+## G16 diagnostic follow-up (20 October 2026)
+
+Source builds now explain the existing `MissingMaster` refusal as "ZIP is not
+a standalone product package: missing knx_master.xml file". The typed error
+and all discovery, archive validation and transaction decisions are unchanged;
+a ZIP of installers, manuals or legacy data is not reclassified as an installable
+product. Broken inner packages, nesting and structural errors keep their
+separate refusals. Synthetic no-product and AppleDouble cases pin the text;
+the CLI and both HTTP install/preview entry points expose it. Library and HTTP
+cases also check preservation of existing product data. An empty ZIP keeps its
+earlier structural refusal.
+
+Independent review found that the same `MissingMaster` variant also follows
+an empty directory named `knx_master.xml/`, even with a valid inner `.knxprod`:
+the existing directory name selects the standalone path but yields no master
+file. The first wording, "no product package found", would have denied that
+inner package. A named synthetic RED reproduced it; the final diagnostic names
+the missing standalone master file instead. Both direct and wrapper-aware APIs
+retain this refusal, with seeded package bytes and source counts unchanged.
+No wrapper-discovery or admission repair is included.
+
+The CLI inspection usage names `.vd1` as well as the existing forms. Its
+content-based reader already handled the EX-IM 3.19 witness counted above;
+this package does not introduce a VD1 grammar or claim VD1 import support.
+The shared argument parser now receives each command's own missing-file hint,
+so import still advertises only `.vd3`–`.vd5`. Focused built-CLI regressions
+pin both hints; password handling and actual inspection/import decisions are
+unchanged. The census observations above are historical, not a new real-file
+or private-corpus run for this diagnostic correction. Legacy binary enum
+mapping stays separate WP-03 work. Acceptance is tracked in the handover.
+
 ## Suggested order
 
 1. G11 (honest legacy refusal) and the G10 message: data integrity, both small.

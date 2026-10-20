@@ -18,7 +18,7 @@ pub(crate) fn run(args: &[String]) -> ExitCode {
     };
     let remember = rest.iter().any(|a| a == "--remember");
     let rest: Vec<String> = rest.into_iter().filter(|a| a != "--remember").collect();
-    let args = match parse(&rest) {
+    let args = match parse(&rest, "<file.vd3|file.vd4|file.vd5>") {
         Ok(args) => args,
         Err(e) => {
             eprintln!("{e}\n{}", super::USAGE);

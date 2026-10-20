@@ -288,11 +288,13 @@ Only a valid KNXBench product database is accepted.
 knx products inspect-legacy EIBMARKT.VD3 --password-stdin
 ```
 
-Reads an old ETS3-era product database (`.vd3`, `.vd4`, `.vd5`) or project
+Reads a legacy EX-IM product database (`.vd3`, `.vd4`, `.vd5`) or project
 export (`.pr5`) and shows what is inside: the container, the table list and
 every product with its order number, application program and mask version.
-**It imports nothing** and creates no file; `knx products import-legacy`
-below does.
+Content-based inspection also reads the observed `.vd1` EX-IM form; source
+builds after Alpha 15 name `.vd1` in the CLI usage. This is **inspection only**,
+not a claim of VD1 import support. **It imports nothing** and creates no file;
+`knx products import-legacy` below imports the named `.vd3`–`.vd5` forms.
 
 These files are usually password-protected. Type the password on standard
 input with `--password-stdin`, or name a file whose first line holds it with

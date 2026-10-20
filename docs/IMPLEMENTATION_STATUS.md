@@ -12,6 +12,24 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## WP-04.1 measurement tooling — reviewed candidate (20 October 2026)
+
+Opt-in synthetic fixture generation, complete SQLite/source/evidence accounting,
+strict release-build binding, a thin current-database/AP1 probe and a native
+Linux target observer are implemented and independently reviewed. Test-first
+controls cover the observed parent-memory attribution error, row identity and
+UTF-8 accounting, build-hash drift, interruption/escalation, native wait failure
+and the demonstrated live-helper spawn/checkpoint ownership gap. Raw expected
+refusals remain nonzero; incomplete observations cannot become accepted results.
+[Measurement method](testing/productdb-measurement.md).
+
+These are reviewed tooling and synthetic-control results, not an accepted
+production workload or release-memory baseline. The actual clean-source release
+build, repeated 54-observation study, independent normalized/evidence comparison,
+scoped delivery gates and publication remain pending. WP-04 remains open;
+WP-04.2/.3 and WP-19 are not supplied by this candidate. ProductDB schema,
+production parser budgets and KNX/device compatibility are unchanged.
+
 <a id="product-column-promotion-repair--source-delivery"></a>
 ## Product-column promotion repair — source delivery (20 October 2026)
 

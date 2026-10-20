@@ -2,6 +2,34 @@
 
 [Current summary and ledger status](../KNOWN_LIMITATIONS.md#catalogue-kl-183)
 
+## Manifest-scoped portability (20 October 2026 reconciliation)
+
+"Fixed for new saves" is too broad. Schema v16 embeds available, hash-checked
+files named by the saved manifest; it does not discover every source needed
+by every device just because Save succeeds. A manifest entry whose bytes are
+missing from both the product database and carried fallbacks remains
+unavailable and is logged. The existing
+[`a_save_that_cannot_carry_a_file_says_so` regression](../../apps/knx-server/tests/it/http_knxdb_product_data.rs)
+expects a successful Save with zero carried files. That Rust test was
+source-inspected, not newly executed in the reassessment.
+
+**Additional source-traced case, not runtime-reproduced:** New starts with an
+empty manufacturer manifest; the catalogue-create path changes the project
+and command stack without extending it. The saved snapshot copies that
+manifest, and embedding visits its entries only. A catalogue-added application
+absent from the manifest may therefore still need the external product
+database after a new Save. Before treating this scenario as a runtime-confirmed
+regression or claiming it repaired, exercise **catalogue device create → Save
+→ reopen with an empty product database** through the real service. No missing
+bytes are invented and no source-derived capability is inferred here.
+
+Evidence: [project replacement, catalogue creation and save consumer](../../apps/knx-server/src/domain.rs),
+[native snapshot](../../apps/knx-server/src/project_history.rs),
+[manifest-only embedding and unavailable report](../../crates/knx-app/src/manufacturer_files.rs).
+The original fix and older-file/master/CLI/history restrictions below remain
+valid within that manifest scope. No Docker rebuild or new portability test
+was run for this documentation correction.
+
 ## 183. A `.knxdb` saved before store schema v16 does not carry its application programs
 
 **Reported 2026-10-14 as GitHub issue #21** (thengsty, alpha.11, Docker). After a

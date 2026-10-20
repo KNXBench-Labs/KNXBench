@@ -431,6 +431,13 @@ Verified with a synthetic Info-ZIP fixture
 (`crates/knx-testsupport/fixtures/zipcrypto-minimal.knxproj`), not a real
 ETS4/ETS5 export.
 
+**Current size policy (20 October 2026 reconciliation):** the reader now uses
+1,000,000,000 bytes per member and 4 GiB expanded payload in total (ADR-0142);
+the smaller figures in the dated hardening accounts below are historical.
+Declared-size, cumulative nested-payload and duplicate-name checks remain; none
+of these is a peak-process-memory guarantee.
+[Current archive boundary](limitations/KL-159-project-archive-budgets-and-duplicate-names.md).
+
 **Container entry size guard (Session 3, malformed-input hardening):** an
 entry whose declared uncompressed size exceeds 64 MB is refused before any
 allocation for it, not after. Measured justification: the largest single
@@ -1082,7 +1089,14 @@ re-checked by SHA-256):
 - Save, Save As, the browser download and `knx import --store` fill them in from
   the product database or the project's previous file. A file nobody can supply
   is logged by `source_path`.
-- Every open installs whatever the product database lacks from the carried bytes.
+- Server/desktop open reinstalls missing manifest files from carried bytes;
+  read-only CLI readers do not perform installation.
+- This is manifest-scoped, not a universal self-contained-save guarantee. A Save
+  can succeed while named bytes remain unavailable, with a logged warning.
+  A catalogue-added application absent from that manifest is an additional
+  source-traced portability candidate, not runtime-reproduced: require the
+  catalogue-create → Save → empty-product-DB-reopen regression before confirming
+  that scenario. See [KL-183](limitations/KL-183-knxdb-manufacturer-files.md).
 - A file saved before schema 16 has nothing to install from. Its devices report
   `unresolvedProgram` on the parameter panel, and
   `POST /api/project/manufacturer-files/restore` installs, from the original

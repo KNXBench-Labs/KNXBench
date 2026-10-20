@@ -2,6 +2,30 @@
 
 [Current summary and ledger status](../KNOWN_LIMITATIONS.md#catalogue-kl-003)
 
+## Current caption and unit boundary (20 October 2026)
+
+The older blanket exclusion of parameter-driven captions below is superseded
+for supported positional `ParameterBlock` and active `ParameterSeparator`
+labels, including placed grid separator labels. The server reuses the device
+text resolver and one request-wide budget; the workspace shows the result with
+its template/fallback provenance. Row/column `TextParameterRefId` values remain
+raw metadata: those axis captions are not resolved by this path. `Table` versus
+`Grid` visual variants, collapse rules, in-cell buttons and nested cell blocks
+remain separate boundaries.
+
+`SuffixText` is also no longer a missing column/display feature: product DB
+v26 stores it on the parameter and reference, and the existing row/checked
+editor shows the resolved unit beside, never inside, the value. `Suffix` is a
+separate stored attribute, not a synonym. No repeated-instance authority or
+unsupported value codec is supplied by either change.
+
+Evidence: [caption resolver](../../apps/knx-server/src/parameter_captions.rs),
+[grid projection](../../apps/knx-server/src/parameter_grid.rs),
+[workspace](../../apps/knx-web/src/ParameterWorkspace.tsx),
+[caption regressions](../../apps/knx-server/tests/it/http_parameter_captions.rs),
+[unit contract](../contracts/parameter-workspace.md#unit-suffix-wp-02-19-october-2026).
+This is a source/documentation reconciliation, not new ETS or native acceptance.
+
 This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.

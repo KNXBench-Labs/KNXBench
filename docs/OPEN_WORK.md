@@ -163,8 +163,8 @@ publication readback; [the result record](IMPLEMENTATION_STATUS.md#product-colum
 keeps original and final-delta evidence separate. Missing/unavailable history,
 ambiguous shared member counters and resource/source-refused reconstruction
 remain explicit boundaries; this is not universal historical equality or a release.
-**Current ordered package: WP-04.1 — measure large catalogues.** WP-04.2,
-WP-04.3 and WP-19 remain later slices; WP-04 is not closed.
+**Current ordered package: WP-04.2 — resolver bounds and parsing disposition.**
+WP-04.1 is delivered; WP-04.3 and WP-19 remain later slices. WP-04 is not closed.
 
 #### WP-03 — Legacy binary enumeration values
 
@@ -203,6 +203,15 @@ WP-04.2 bounded parsing and WP-04.3 cancellable web installation remain separate
 deliveries; WP-04 stays open. The repair's fixed evidence allowance is not a
 whole-process memory guarantee. The [delivery record](IMPLEMENTATION_STATUS.md#wp-041-synthetic-measurement-baseline-20-october-2026)
 records passed integration gates and published source separately from study review.
+
+**WP-04.2 in progress:** the [resolver bounds and disposition](testing/procedure-resolution-bounds.md)
+retains the existing parser and limits because the resolver-specific baseline
+neither isolates a parser allocation bottleneck nor demonstrates rewrite benefit.
+The focused 53-test selection and complete ProductDB run (1226 passes, 31 ignored)
+pass on unchanged production; selections overlap. Independent review and twelve
+compiled isolated discrimination cases are accepted, with baseline/restored
+selections green. Maintained gates and delivery remain pending. This does not
+implement the WP-04.3 web workflow.
 
 **Three separate deliveries, in order:**
 

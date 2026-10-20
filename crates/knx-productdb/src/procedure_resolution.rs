@@ -594,3 +594,264 @@ fn emit(
     });
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const NS: &str = "http://knx.org/xml/project/20";
+
+    fn resolution() -> Resolution {
+        let mut r = Resolution::new("P", "MV-07B0", "DefaultProcedure");
+        r.sources.push(Source {
+            source: "program".into(),
+            sha256: "program-hash".into(),
+            namespace: NS.into(),
+        });
+        r
+    }
+
+    fn load() -> Node {
+        Node {
+            namespace: NS.into(),
+            name: "LdCtrlLoad".into(),
+            attributes: BTreeMap::new(),
+            children: vec![],
+            text: String::new(),
+            byte_start: 10,
+            byte_end: 23,
+        }
+    }
+
+    fn step(node: &Node, source: &str, sha: &str, location: &str) -> Step {
+        Step {
+            node: node.clone(),
+            origin: Origin {
+                source: source.into(),
+                sha256: sha.into(),
+                location: location.into(),
+            },
+        }
+    }
+
+    #[test]
+    fn issue_limit_preserves_the_prefix_and_counts_omissions() {
+        assert_eq!(MAX_STEPS, 2048);
+        let mut r = resolution();
+        let expected: Vec<_> = (0..2048)
+            .map(|i| Issue {
+                code: format!("issue-{i}"),
+                location: format!("program/step-{i}"),
+            })
+            .collect();
+        for issue in &expected {
+            r.issue(&issue.code, &issue.location);
+        }
+        assert_eq!(r.issues, expected);
+        assert_eq!(r.omitted_issue_count, 0);
+        assert!(!r.executable);
+        let prefix = r.clone();
+        for omitted in 1..=3 {
+            r.issue("next-issue", &format!("master/omitted-{omitted}"));
+            assert_eq!(r.issues, expected);
+            assert_eq!(r.omitted_issue_count, omitted);
+            let mut unchanged = prefix.clone();
+            unchanged.omitted_issue_count = omitted;
+            assert_eq!(r, unchanged);
+        }
+    }
+
+    #[test]
+    fn steps_and_unplaced_share_the_root_limit_in_both_directions() {
+        assert_eq!(MAX_STEPS, 2048);
+        assert_eq!(MAX_OUTPUT, 1_048_576);
+        let node = load();
+        // 256 + 6 * (29 namespace bytes + 10 name bytes).
+        assert_eq!(node.weight(), 490);
+        for retain_last in [false, true] {
+            let mut r = resolution();
+            let prefix = step(&node, "program", "prefix-hash", "program/prefix");
+            if retain_last {
+                r.steps = vec![prefix.clone(); 2047];
+            } else {
+                r.unplaced_declarations = vec![prefix.clone(); 2047];
+            }
+            let mut output = 1_003_542; // 512 + 2047 * 490: count, not bytes, binds next.
+            assert_eq!(r.steps.len() + r.unplaced_declarations.len(), 2047);
+            assert!(output + 2 * 490 < 1_048_576);
+            assert!(!r.executable);
+            let mut expected = r.clone();
+            let admitted = if retain_last {
+                expected.unplaced_declarations.push(step(
+                    &node,
+                    "program",
+                    "last-hash",
+                    "program/last",
+                ));
+                retain_unplaced(&mut r, &node, "last-hash", "program/last", &mut output)
+            } else {
+                expected
+                    .steps
+                    .push(step(&node, "master", "last-hash", "master/last"));
+                emit(
+                    &mut r,
+                    &node,
+                    "master",
+                    "last-hash",
+                    "master/last",
+                    &mut output,
+                )
+            };
+            assert_eq!(admitted, Ok(()));
+            assert_eq!(r, expected);
+            assert_eq!(r.steps.len() + r.unplaced_declarations.len(), 2048);
+            assert_eq!(output, 1_004_032);
+            let refused = if retain_last {
+                emit(
+                    &mut r,
+                    &node,
+                    "master",
+                    "next-hash",
+                    "master/next",
+                    &mut output,
+                )
+            } else {
+                retain_unplaced(&mut r, &node, "next-hash", "program/next", &mut output)
+            };
+            assert_eq!(refused, Err("resolution-output-limit"));
+            assert_eq!(output, 1_004_032);
+            assert_eq!(r, expected); // Neither append, issue, origin nor charge mutates.
+            assert!(!r.executable);
+        }
+    }
+
+    #[test]
+    fn emit_and_retain_unplaced_enforce_exact_byte_charge_without_failed_mutation() {
+        assert_eq!(MAX_OUTPUT, 1_048_576);
+        let mut node = load();
+        node.attributes.insert("LsmIdx".into(), "é".into());
+        node.text = "\t ".into();
+        // 256 + 6 * (29 + 10 + 2) + 32 + 6 * (6 + 2 UTF-8 bytes).
+        assert_eq!(node.weight(), 582);
+        for unplaced in [false, true] {
+            for (initial, accepted) in [(1_047_994, true), (1_048_000, false)] {
+                let mut r = resolution();
+                r.steps
+                    .push(step(&load(), "master", "prefix-hash", "master/prefix"));
+                let mut expected = r.clone();
+                let mut output = initial;
+                assert_eq!(r.steps.len(), 1);
+                assert!(r.unplaced_declarations.is_empty());
+                assert!(r.issues.is_empty());
+                assert!(!r.executable);
+                let result = if unplaced {
+                    retain_unplaced(&mut r, &node, "node-hash", "program/next", &mut output)
+                } else {
+                    emit(
+                        &mut r,
+                        &node,
+                        "master",
+                        "node-hash",
+                        "master/next",
+                        &mut output,
+                    )
+                };
+                if accepted {
+                    assert_eq!(result, Ok(()));
+                    assert_eq!(output, 1_048_576);
+                    if unplaced {
+                        expected.unplaced_declarations.push(step(
+                            &node,
+                            "program",
+                            "node-hash",
+                            "program/next",
+                        ));
+                    } else {
+                        expected
+                            .steps
+                            .push(step(&node, "master", "node-hash", "master/next"));
+                    }
+                } else {
+                    // The next reachable charge is six bytes over, not an odd charge.
+                    assert_eq!(initial + 582, 1_048_582);
+                    assert_eq!(result, Err("resolution-output-limit"));
+                    assert_eq!(output, initial);
+                }
+                assert_eq!(r, expected);
+                assert!(!r.executable);
+            }
+        }
+    }
+
+    #[test]
+    fn initial_metadata_guard_admits_and_refuses_nearest_reachable_charges() {
+        assert_eq!(MAX_OUTPUT, 1_048_576);
+        let program = format!(
+            r#"<KNX xmlns="{NS}"><ManufacturerData><Manufacturer><ApplicationPrograms><ApplicationProgram Id="P" MaskVersion="MV-07B0" LoadProcedureStyle="DefaultProcedure"/></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#
+        );
+        // The six retained key/value pairs total 97 bytes before Access padding:
+        // 512 + 6 * 97 = 1094; each extra ASCII Access byte adds six.
+        for (padding, charge, accepted) in [(174_580, 1_048_574, true), (174_581, 1_048_580, false)]
+        {
+            let access = "x".repeat(padding);
+            assert_eq!(1094 + 6 * access.len(), charge);
+            let master = format!(
+                r#"<KNX xmlns="{NS}"><MasterData><MaskVersions><MaskVersion Id="MV-07B0"><HawkConfigurationData><Procedures><Procedure ProcedureType="Load" ProcedureSubType="ap1" Access="{access}"/></Procedures></HawkConfigurationData></MaskVersion></MaskVersions></MasterData></KNX>"#
+            );
+            let mut r = Resolution::new("P", "MV-07B0", "DefaultProcedure");
+            let mut expected = r.clone();
+            assert!(r.sources.is_empty());
+            assert!(r.program_attributes.is_empty());
+            assert!(r.template_attributes.is_empty());
+            assert!(!r.executable);
+            let result = expand(
+                &mut r,
+                program.as_bytes(),
+                master.as_bytes(),
+                "p-hash",
+                "m-hash",
+            );
+            expected.sources = vec![
+                Source {
+                    source: "program".into(),
+                    sha256: "p-hash".into(),
+                    namespace: NS.into(),
+                },
+                Source {
+                    source: "master".into(),
+                    sha256: "m-hash".into(),
+                    namespace: NS.into(),
+                },
+            ];
+            if accepted {
+                assert_eq!(result, Ok(()));
+                expected.program_attributes = BTreeMap::from([
+                    ("Id".into(), "P".into()),
+                    ("MaskVersion".into(), "MV-07B0".into()),
+                    ("LoadProcedureStyle".into(), "DefaultProcedure".into()),
+                ]);
+                expected.template_attributes = BTreeMap::from([
+                    ("ProcedureType".into(), "Load".into()),
+                    ("ProcedureSubType".into(), "ap1".into()),
+                    ("Access".into(), access),
+                ]);
+                expected.issues = vec![
+                    Issue {
+                        code: "missing-mandatory-point".into(),
+                        location: "master/merge-2".into(),
+                    },
+                    Issue {
+                        code: "missing-mandatory-point".into(),
+                        location: "master/merge-4".into(),
+                    },
+                ];
+            } else {
+                assert_eq!(result, Err("resolution-output-limit"));
+            }
+            // expand itself does not finalize status or add the caller's source issue.
+            assert_eq!(r.status, "unavailable");
+            assert!(!r.executable);
+            assert_eq!(r, expected);
+        }
+    }
+}

@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-20 08:12
+- **Completed:** WP-03 G16 diagnostics DELIVERED on main-first merge `b13b0ff9` (feature `2d094039`); local/tracking/live equality verified. Independent whole-diff correction review ACCEPTED. Maintained merged gate14/14GREEN: 322 registered tool tests (one existing optional skip),2994Rust passed/0failed/144ignored,97/97selected corpus; all stage proofs valid, inputs frozen and user-data guards clear. Focused40tests, three-crate Clippy and seven original-source negative controls precede acceptance. No parser/admission/schema/error-kind/encoding change. G16 claim RELEASED; broader WP-03 legacy binary mapping remains open.
+- **Pending/Next Steps:** Publish this result-only documentation tail after docs checks, preserve evidence and retire owned G16 feature/control resources. Next independent candidate: typecheck inclusion for the existing workbench-splitters browser regression (fresh overlap/source check before claiming). Existing Alpha16 sequence and exact-UP258 owners remain protected.
+- **Notes for Codex oder Claude:** Retain R1 rejected intermediate wording, R2 evidence correction and earlier expected REDs as historical evidence. Gate binds `b13b0ff9`; result-only docs are not new runtime acceptance. Raw receipts `<profile-scratch>/g16-diagnostics-20261020`; selected root remains deliberately unsynchronised, foreign files unchanged. No bus/device, desktop, release/tag, deployment or vendor operation.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-20 08:01
 - **Completed:** G16 correction/whole-diff independent review ACCEPTS all16changed-file identities with no unresolved findings. R1 counterexample reproduced, final wording true for all MissingMaster origins; R2 evidence statement corrected. Revised focused40tests and three-crate Clippy pass; final test bytes produce seven named failures against original production source. No parser/discovery/variant/schema/codec change. AppImage package already delivered and owned resources retired.
 - **Pending/Next Steps:** Freeze committed main-first candidate, maintained14-stage scoped merged gate, validate stage/proof/input/user-data receipts, conditional publication/readback and owned cleanup. Source review accepted; final package acceptance is still pending. Scope remains only WP-03 G16 diagnostics, not legacy binary-enum mapping or new VD1 import support.

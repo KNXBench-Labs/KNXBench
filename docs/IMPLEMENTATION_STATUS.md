@@ -28,7 +28,9 @@ missing-file hints from the shared argument parser. Two built-CLI regressions
 pin that distinction; password handling and actual format admission are unchanged.
 [Scope and retained source observations](research/2026-10-18-product-database-programmability-census.md#g16-diagnostic-follow-up-20-october-2026).
 Legacy binary enums, new import compatibility and programming remain outside
-this slice.
+this slice. Delivered on main-first merge `b13b0ff9`, independent review accepted;
+maintained scoped gate14/14passed:2994Rust tests,97/97selected corpus and322registered
+tool tests (one existing optional skip). Inputs frozen; user-data guards clear.
 
 ## AppImage frontend native-binding preflight (20 October 2026)
 

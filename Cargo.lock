@@ -2133,6 +2133,7 @@ dependencies = [
  "flate2",
  "knx-core",
  "knx-testsupport",
+ "libc",
  "quick-xml 0.42.0",
  "rusqlite",
  "rustix",

@@ -12,6 +12,28 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## WP-04.1 synthetic measurement baseline (20 October 2026)
+
+Opt-in synthetic fixture generation, complete SQLite/source/evidence accounting,
+strict release-build binding, a thin current-database/AP1 probe and a native
+Linux target observer are implemented and independently reviewed. Test-first
+controls cover the observed parent-memory attribution error, row identity and
+UTF-8 accounting, build-hash drift, interruption/escalation, native wait failure
+and the demonstrated live-helper spawn/checkpoint ownership gap. Raw expected
+refusals remain nonzero; incomplete observations cannot become accepted results.
+[Measurement method](testing/productdb-measurement.md).
+
+The source-bound release study and independent review are accepted: three
+complete repetitions, 54 measured operations, 108 accounting endpoints and
+30 final databases reconcile. Expected raw refusals retain nonzero exits;
+independent DEFAULT XML/SQL comparison verifies preservation and normalized
+semantics. The [measured results and limits](testing/productdb-baseline-2026-10-20.md)
+separate target RSS from wrapper peaks and account for retained bytes, normalized
+data, indexes and free pages. This is a synthetic baseline, not production-scale
+or vendor/ETS compatibility acceptance. Delivery gates and publication remain
+separate; WP-04.2/.3 and WP-19 are not completed. ProductDB schema and production
+parser budgets are unchanged.
+
 ## Project-folder retention characterization (20 October 2026 source)
 
 WP-06A adds one named production-import regression and a source/identity contract.

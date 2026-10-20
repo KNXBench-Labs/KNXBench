@@ -19,6 +19,9 @@ ProductDB schema and ordinary APIs are unchanged.
 - [Internal A2 admission decisions](control-admission.md): independently reviewed
   construction-disabled kernel scope, exact replay/clock/counter choices and
   future producer/full-Status boundaries; no callable production Ready factory.
+- [B1 schema-admission decision](schema-admission.md): fresh-chain runtime oracle,
+  private bounded descriptor admission and explicit unimplemented boundaries;
+  independently accepted for the private incremental-TDD slice only.
 - [Managed binding/transaction supplement](managed-binding.md): concrete owner,
   health/generation/incarnation, every existing server mutator, complete typed
   streamed witness, support refusals and explicit same-W transaction settlement.

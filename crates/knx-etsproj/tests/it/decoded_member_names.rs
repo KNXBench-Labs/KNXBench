@@ -1335,3 +1335,422 @@ fn a_protected_payload_with_a_consistent_unicode_path_opens() {
     let container = Container::open_with_password(bytes, "fictional").unwrap();
     assert!(container.find("P-0001/BinaryData/x.dat").is_some());
 }
+
+// ORIGINAL-production evidence, not the policy for a subsequent repair.
+mod ordinary_file_stream_characterization {
+    use super::*;
+    use knx_etsproj::{import_knxproj_with, ProjectPassword};
+    use knx_testsupport::ZIPCRYPTO_MINIMAL_PASSWORD;
+    use sha2::{Digest, Sha256};
+    use std::io::{Cursor, Read};
+
+    const PATH: &str = "P-0001/BinaryData/extent.dat";
+    // Independent literal fixed-Huffman streams, not a compressor's canonical output.
+    const A: &[u8] = &[0x73, 0x04, 0x00];
+    const B: &[u8] = &[0x73, 0x02, 0x00];
+
+    #[derive(Clone, Copy, Debug)]
+    enum Layer {
+        Outer,
+        Nested,
+        ZipCrypto,
+    }
+
+    fn file(stream: &[u8], plain: &[u8]) -> Member {
+        Member {
+            method: 8,
+            declared: plain.len() as u32,
+            crc: Some(crc32(plain)),
+            ..member(PATH, stream)
+        }
+    }
+
+    // Fixture-only cipher, fixed public credential from the existing test helper.
+    // Bitwise CRC deliberately does not share knx-secure's table implementation.
+    // Every admitted encrypted fixture is also decoded by zip's independent cipher.
+    fn encrypt(m: &mut Member) {
+        fn update_crc(mut crc: u32, byte: u8) -> u32 {
+            crc ^= u32::from(byte);
+            for _ in 0..8 {
+                crc = (crc >> 1) ^ if crc & 1 != 0 { 0xedb8_8320 } else { 0 };
+            }
+            crc
+        }
+        let mut keys = [0x1234_5678u32, 0x2345_6789, 0x3456_7890];
+        let update = |keys: &mut [u32; 3], byte: u8| {
+            keys[0] = update_crc(keys[0], byte);
+            keys[1] = keys[1]
+                .wrapping_add(keys[0] & 0xff)
+                .wrapping_mul(134_775_813)
+                .wrapping_add(1);
+            keys[2] = update_crc(keys[2], (keys[1] >> 24) as u8);
+        };
+        for &byte in ZIPCRYPTO_MINIMAL_PASSWORD.as_bytes() {
+            update(&mut keys, byte);
+        }
+        let mut header = [0x5au8; 12];
+        header[11] = if m.flags & 8 != 0 {
+            0 // The existing hand-written ZIP helper's DOS time is zero.
+        } else {
+            (m.crc.unwrap() >> 24) as u8
+        };
+        let mut encrypted = Vec::with_capacity(header.len() + m.data.len());
+        for byte in header.into_iter().chain(m.data.iter().copied()) {
+            let temp = (keys[2] as u16) | 2;
+            let mask = (temp.wrapping_mul(temp ^ 1) >> 8) as u8;
+            encrypted.push(byte ^ mask);
+            update(&mut keys, byte);
+        }
+        assert_eq!(
+            knx_secure::zipcrypto::decrypt(
+                ZIPCRYPTO_MINIMAL_PASSWORD.as_bytes(),
+                &encrypted,
+                knx_secure::zipcrypto::CheckBytes {
+                    crc32_high_byte: (m.crc.unwrap() >> 24) as u8,
+                    dos_time_high_byte: 0,
+                },
+            )
+            .unwrap(),
+            m.data,
+            "even malformed-stream fixtures must pass the cipher-header check"
+        );
+        m.data = encrypted;
+        m.flags |= 1;
+    }
+
+    fn archive(layer: Layer, mut m: Member) -> Vec<u8> {
+        if matches!(layer, Layer::ZipCrypto) {
+            encrypt(&mut m);
+        }
+        match layer {
+            Layer::Outer => project_with(vec![m]),
+            Layer::Nested | Layer::ZipCrypto => protected_with(vec![m]),
+        }
+    }
+
+    fn open(layer: Layer, source: Vec<u8>) -> Result<Container, ContainerError> {
+        match layer {
+            Layer::Outer => Container::open(source),
+            Layer::Nested | Layer::ZipCrypto => {
+                Container::open_with_password(source, ZIPCRYPTO_MINIMAL_PASSWORD)
+            }
+        }
+    }
+
+    fn digest(bytes: &[u8]) -> String {
+        format!("{:x}", Sha256::digest(bytes))
+    }
+
+    fn accepted(layer: Layer, m: Member, expected: &[u8]) {
+        let raw_stream = m.data.clone();
+        let source = archive(layer, m);
+        let source_hash = digest(&source);
+        if matches!(layer, Layer::ZipCrypto) {
+            let mut outer = zip::ZipArchive::new(Cursor::new(&source)).unwrap();
+            let mut payload = Vec::new();
+            outer
+                .by_name("P-0001.zip")
+                .unwrap()
+                .read_to_end(&mut payload)
+                .unwrap();
+            let mut inner = zip::ZipArchive::new(Cursor::new(payload)).unwrap();
+            let mut encrypted = inner
+                .by_name_decrypt(PATH, ZIPCRYPTO_MINIMAL_PASSWORD.as_bytes())
+                .unwrap();
+            assert!(encrypted.encrypted());
+            assert_eq!(encrypted.compressed_size(), raw_stream.len() as u64 + 12);
+            let mut independently_decoded = Vec::new();
+            encrypted.read_to_end(&mut independently_decoded).unwrap();
+            assert_eq!(
+                independently_decoded, expected,
+                "independent ZipCrypto fixture check"
+            );
+            drop(encrypted);
+            let mut raw = inner.by_index_raw(2).unwrap();
+            assert_eq!(raw.name(), PATH);
+            let check = knx_secure::zipcrypto::CheckBytes {
+                crc32_high_byte: (raw.crc32() >> 24) as u8,
+                dos_time_high_byte: 0,
+            };
+            let mut ciphertext = Vec::new();
+            raw.read_to_end(&mut ciphertext).unwrap();
+            assert_eq!(
+                knx_secure::zipcrypto::decrypt(
+                    ZIPCRYPTO_MINIMAL_PASSWORD.as_bytes(),
+                    &ciphertext,
+                    check,
+                )
+                .unwrap(),
+                raw_stream,
+                "the complete trailer is encrypted inside the declared extent"
+            );
+        }
+        let mut container = open(layer, source.clone()).unwrap();
+        assert_eq!(container.entries().len(), 4);
+        let info = container.find("p-0001/binarydata/EXTENT.dat").unwrap();
+        assert_eq!(info.path, PATH);
+        assert_eq!(info.size, expected.len() as u64);
+        assert_eq!(container.read(PATH).unwrap(), expected);
+        assert_eq!(container.read(PATH).unwrap(), expected, "repeat read");
+        assert!(container.find("P-0001.zip").is_none());
+
+        // Exercise the file entry point too: the caller's original archive stays intact.
+        // This is not an application/SQLite persistence assertion.
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("synthetic.knxproj");
+        std::fs::write(&path, &source).unwrap();
+        let password = ProjectPassword::new(ZIPCRYPTO_MINIMAL_PASSWORD);
+        let outcome = import_knxproj_with(
+            &path,
+            if matches!(layer, Layer::Outer) {
+                None
+            } else {
+                Some(&password)
+            },
+            &(),
+        )
+        .unwrap();
+        let retained = outcome
+            .opaque
+            .iter()
+            .find(|e| e.source_path == PATH && e.xpath.is_empty())
+            .unwrap();
+        assert_eq!(retained.bytes, expected);
+        assert_eq!(retained.sha256, digest(expected));
+        assert_eq!(
+            outcome.opaque.iter().filter(|e| e.xpath.is_empty()).count(),
+            4
+        );
+        assert!(outcome.opaque.iter().all(|e| e.source_path != "P-0001.zip"));
+        assert!(outcome.manufacturer.is_empty());
+        let after = std::fs::read(&path).unwrap();
+        assert_eq!(after, source);
+        assert_eq!(digest(&after), source_hash);
+    }
+
+    fn all_layers(make: impl Fn() -> Member, expected: &[u8]) {
+        for layer in [Layer::Outer, Layer::Nested, Layer::ZipCrypto] {
+            accepted(layer, make(), expected);
+        }
+    }
+
+    fn trailer(layer: Layer, suffix: &[u8]) {
+        accepted(layer, file(&[A, suffix].concat(), b"A"), b"A");
+    }
+
+    #[test]
+    fn outer_currently_accepts_exact_literal_stream() {
+        accepted(Layer::Outer, file(A, b"A"), b"A");
+    }
+    #[test]
+    fn nested_currently_accepts_exact_literal_stream() {
+        accepted(Layer::Nested, file(A, b"A"), b"A");
+    }
+    #[test]
+    fn zipcrypto_currently_accepts_exact_literal_stream() {
+        accepted(Layer::ZipCrypto, file(A, b"A"), b"A");
+    }
+    #[test]
+    fn outer_currently_accepts_zero_trailer() {
+        trailer(Layer::Outer, &[0]);
+    }
+    #[test]
+    fn nested_currently_accepts_zero_trailer() {
+        trailer(Layer::Nested, &[0]);
+    }
+    #[test]
+    fn zipcrypto_currently_accepts_zero_trailer() {
+        trailer(Layer::ZipCrypto, &[0]);
+    }
+    #[test]
+    fn outer_currently_accepts_nonzero_trailer() {
+        trailer(Layer::Outer, &[0xa5]);
+    }
+    #[test]
+    fn nested_currently_accepts_nonzero_trailer() {
+        trailer(Layer::Nested, &[0xa5]);
+    }
+    #[test]
+    fn zipcrypto_currently_accepts_nonzero_trailer() {
+        trailer(Layer::ZipCrypto, &[0xa5]);
+    }
+    #[test]
+    fn outer_currently_accepts_concatenated_second_stream() {
+        trailer(Layer::Outer, B);
+    }
+    #[test]
+    fn nested_currently_accepts_concatenated_second_stream() {
+        trailer(Layer::Nested, B);
+    }
+    #[test]
+    fn zipcrypto_currently_accepts_concatenated_second_stream() {
+        trailer(Layer::ZipCrypto, B);
+    }
+
+    #[test]
+    fn currently_accepts_empty_file_in_all_read_paths() {
+        all_layers(|| file(&EMPTY_DEFLATE, b""), b"");
+    }
+    #[test]
+    fn currently_accepts_empty_file_zero_trailer_in_all_read_paths() {
+        all_layers(
+            || file(&[EMPTY_DEFLATE.as_slice(), &[0]].concat(), b""),
+            b"",
+        );
+    }
+    #[test]
+    fn currently_accepts_empty_file_nonzero_trailer_in_all_read_paths() {
+        all_layers(
+            || file(&[EMPTY_DEFLATE.as_slice(), &[0xa5]].concat(), b""),
+            b"",
+        );
+    }
+    #[test]
+    fn currently_accepts_empty_file_second_stream_in_all_read_paths() {
+        all_layers(|| file(&[EMPTY_DEFLATE.as_slice(), B].concat(), b""), b"");
+    }
+
+    #[test]
+    fn currently_accepts_signed_descriptor_in_all_read_paths() {
+        all_layers(|| with_descriptor(file(A, b"A"), true), b"A");
+    }
+    #[test]
+    fn currently_accepts_unsigned_descriptor_in_all_read_paths() {
+        all_layers(|| with_descriptor(file(A, b"A"), false), b"A");
+    }
+    #[test]
+    fn currently_accepts_trailer_before_signed_descriptor_in_all_read_paths() {
+        all_layers(
+            || with_descriptor(file(&[A, &[0xa5]].concat(), b"A"), true),
+            b"A",
+        );
+    }
+    #[test]
+    fn currently_accepts_trailer_before_unsigned_descriptor_in_all_read_paths() {
+        all_layers(
+            || with_descriptor(file(&[A, &[0]].concat(), b"A"), false),
+            b"A",
+        );
+    }
+
+    fn stored_blocks(plain: &[u8]) -> Vec<u8> {
+        let chunks: Vec<_> = plain.chunks(16384).collect();
+        let mut stream = Vec::new();
+        for (i, chunk) in chunks.iter().enumerate() {
+            stream.push(u8::from(i + 1 == chunks.len()));
+            let len = chunk.len() as u16;
+            stream.extend_from_slice(&len.to_le_bytes());
+            stream.extend_from_slice(&(!len).to_le_bytes());
+            stream.extend_from_slice(chunk);
+        }
+        stream
+    }
+
+    #[test]
+    fn currently_accepts_multiple_stored_blocks_across_input_output_boundaries() {
+        let plain: Vec<_> = (0..150_000).map(|i| (i % 251) as u8).collect();
+        let stream = stored_blocks(&plain);
+        all_layers(|| file(&stream, &plain), &plain);
+    }
+    #[test]
+    fn currently_accepts_alternate_empty_stored_block() {
+        all_layers(|| file(&[1, 0, 0, 255, 255], b""), b"");
+    }
+    #[test]
+    fn currently_accepts_high_ratio_output_across_multiple_buffers() {
+        let plain = vec![b'x'; 200_000];
+        all_layers(|| deflated(PATH, &plain), &plain);
+    }
+    #[test]
+    fn currently_accepts_trailer_after_high_ratio_output() {
+        let plain = vec![b'x'; 200_000];
+        all_layers(
+            || {
+                let mut m = deflated(PATH, &plain);
+                m.data.push(0xa5);
+                m
+            },
+            &plain,
+        );
+    }
+
+    fn refused(layer: Layer, m: Member, crc: bool) {
+        let source = archive(layer, m);
+        let error = match layer {
+            Layer::Outer => {
+                let mut c = open(layer, source.clone()).unwrap();
+                match c.read(PATH) {
+                    Err(e) => e,
+                    Ok(_) => panic!("expected member-read refusal"),
+                }
+            }
+            _ => match open(layer, source.clone()) {
+                Err(e) => e,
+                Ok(_) => panic!("expected nested-open refusal"),
+            },
+        };
+        let password = ProjectPassword::new(ZIPCRYPTO_MINIMAL_PASSWORD);
+        match knx_etsproj::import_knxproj_bytes_with(
+            source,
+            "synthetic.knxproj",
+            if matches!(layer, Layer::Outer) {
+                None
+            } else {
+                Some(&password)
+            },
+            &(),
+        ) {
+            Err(ImportFailure::Container(import_error)) => assert_eq!(import_error, error),
+            Err(other) => panic!("unexpected import error identity: {other:?}"),
+            Ok(_) => panic!("expected whole-import refusal"),
+        }
+        match (layer, error) {
+            (Layer::ZipCrypto, ContainerError::WrongPassword { nested_entry }) => {
+                // Existing false-accept/corruption conflation, even with the correct credential.
+                assert_eq!(nested_entry, "P-0001.zip");
+            }
+            (Layer::Outer | Layer::Nested, ContainerError::Read { path, cause }) => {
+                assert_eq!(path, PATH);
+                if crc {
+                    assert!(
+                        cause.contains("CRC-32") || cause.contains("checksum"),
+                        "{cause}"
+                    );
+                } else {
+                    assert!(cause.to_ascii_lowercase().contains("deflate"), "{cause}");
+                }
+            }
+            (_, other) => panic!("unexpected error identity: {other:?}"),
+        }
+    }
+    fn bad_crc() -> Member {
+        Member {
+            crc: Some(crc32(b"A") ^ 1),
+            ..file(A, b"A")
+        }
+    }
+    #[test]
+    fn outer_currently_refuses_bad_crc_with_leaf_read_error() {
+        refused(Layer::Outer, bad_crc(), true);
+    }
+    #[test]
+    fn nested_currently_refuses_bad_crc_with_leaf_read_error() {
+        refused(Layer::Nested, bad_crc(), true);
+    }
+    #[test]
+    fn zipcrypto_currently_maps_bad_crc_to_wrong_password_context() {
+        refused(Layer::ZipCrypto, bad_crc(), true);
+    }
+    #[test]
+    fn outer_currently_refuses_invalid_block_with_leaf_read_error() {
+        refused(Layer::Outer, file(&[7], b"A"), false);
+    }
+    #[test]
+    fn nested_currently_refuses_invalid_block_with_leaf_read_error() {
+        refused(Layer::Nested, file(&[7], b"A"), false);
+    }
+    #[test]
+    fn zipcrypto_currently_maps_invalid_block_to_wrong_password_context() {
+        refused(Layer::ZipCrypto, file(&[7], b"A"), false);
+    }
+}

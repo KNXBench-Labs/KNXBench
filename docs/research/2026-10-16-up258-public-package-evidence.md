@@ -22,6 +22,45 @@ steps and no unmodelled step, and the `TaskSegment/5` tool-metadata witness
 resolves as in the [prerequisite contract](../contracts/system2-download-prerequisites.md).
 Public admission stays refused (`not-memory-mapped`), unchanged.
 
+## Independent inventory recheck (20 October 2026)
+
+[V] A bounded direct XML/Base64 read independently recounted this exact
+package, selecting only `M-0001/M-0001_A-9205-04-9270.xml`, member SHA-256
+`d06a04eb4434684762f276e6fce61fbae6056f94f9076f5fcf5b7a314bb0a746`.
+The owner-supplied counts match:550parameters,677ParameterRefs,33Unions with
+150direct Parameter members,106definitions referenced more than once,
+51references with explicit Value and six LegacyPatchAlways declarations.
+The100object definitions have exactly the unique numbers0–99.
+
+[V] All six patch declarations have lexical value `true`, direct memory in
+AS-3C00 and BitOffset0. In source order the parameter suffixes/offsets are
+P-786/200, P-785/202, P-784/204, P-783/206, P-782/208 and P-781/211.
+The application declares `DynamicTableManagement="false"`; the Options child
+still declares `DownloadInvisibleParameters="Background"`.
+
+**Length correction:** in these digest-bound source bytes, decoded Data is
+**not shorter** than its reserved Size. Independent Base64 decoding gives:
+
+| Absolute start | Declared Size | Decoded Data bytes | Decoded Mask bytes |
+| --- | ---: | ---: | ---: |
+| `0116h` |330|330|330|
+| `0260h` |416|416|416|
+| `0400h` |512|512|512|
+| `3C00h` |256|256|absent|
+
+No padding was applied. A meaningful prefix, compressed/archive size, actual
+unmasked write count or generated table length is a different measurement;
+this result does not establish those quantities or another package revision.
+It does not justify relaxing the parser's decoded-length check. Static table
+management likewise does not define complete load, pointer or recovery rules.
+
+The recount read one bounded direct ZIP member without extracting files:
+package≤256MiB, members≤32768, XML≤8MiB, ratio≤250; duplicate/unsafe names,
+encryption, DTD and entity declarations refused. Raw rows remain private.
+This was independent source inspection, **not a new importer/device test or
+new executable admission**. The generic System2 integrity follow-up and its
+separate acceptance are documented [here](2026-10-20-system2-download-integrity.md).
+
 ## Measured template behaviour of the parameter segment
 
 [V] Before the [later shared patch-declaration guard](../contracts/offline-explicit-parameter-bits.md),
@@ -98,7 +137,7 @@ then opt in explicitly from the workspace root:
 
 ```sh
 KNXBENCH_PUBLIC_UP258=/path/to/UP258_DB12__920504d_ETS5.knxprod \
-  cargo test -p knx-productdb --test system2_public_package -- --ignored
+  cargo test -p knx-productdb --test it system2_public_package:: -- --ignored
 ```
 
 A missing file or different digest fails, rather than returning an empty pass.

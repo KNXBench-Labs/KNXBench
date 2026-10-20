@@ -245,3 +245,26 @@ that oracle. A transaction borrow limits lifetime but does not prove immutabilit
 against other calls on the same connection; later orchestration still owns the
 transaction and mutation/reservation discipline. No compatibility promise for
 unmeasured historical SQL variants follows from a fresh-chain fixture.
+
+### Actual fresh-chain schema oracle
+
+The finite native probe uses an immutable `c012f714` export and the actual
+unchanged ProductDB opener/migration chain, not extracted CREATE statements or
+Python SQLite. Controller readback verifies 10,992 sealed input identities,
+4,652 output identities and all 3,354 exported Git blobs/modes; all 869 static
+source-inventory comparisons match. Bundled SQLite 3.53.2 / rusqlite 0.40.2
+observes 46 application tables, 24 explicit and 50 automatic indexes (120 stored
+objects), 47 scan relations / 121 logical objects including sqlite_schema.
+RW and independently reopened native RO descriptors are exactly equal, including
+after a write refused with code 8. The actual build and one native probe exit 0.
+A post-run verifier initially dereferenced a documentation symlink; its correction
+validates link bytes without rerunning or relabelling the native probe.
+
+All 70 non-NULL stored SQL strings differ textually from the static statement
+seeds; the exact final migration outputs are retained separately, and descriptor
+comparison finds no shape mismatch. No schema source or migration is repinned.
+The fixture is fresh-chain-only: genuine historical SQL variants remain
+unevidenced/refused. Metadata-before-retention, typed refusal and cancellation
+remain unimplemented B1 requirements in the
+[schema-admission decision](../contracts/catalogue-jobs/schema-admission.md).
+This oracle is neither the production validator nor a full witness/binding.

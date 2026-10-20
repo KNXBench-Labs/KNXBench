@@ -24,6 +24,7 @@ outside preserved historical blocks, or use the next free section number
 
 | Section | Where |
 | --- | --- |
+| [2026-10-20 — Product file-stream extent investigation](research/2026-10-20-product-file-stream-integrity.md) | WP-16 follow-up: primary ZIP/DEFLATE/API facts, retained-archive versus normalized-member boundaries and evidence required before changing ordinary-file admission |
 | [2026-10-20 — Product directory stream integrity](research/2026-10-20-product-directory-stream-integrity.md) | WP-16 product follow-up: verified public ZIP/DEFLATE/API facts, explicit exact-consumption policy and compatibility/acceptance boundaries |
 | [2026-10-20 — System-2 download integrity](research/2026-10-20-system2-download-integrity.md) | Original reference/Union, descriptor/priority and allocation-fill sources; explicit inactive-policy refusal and integrated sparse-index/bit-preservation tests; no new executable admission |
 | [2026-10-19 — Mask version → system family](research/2026-10-19-mask-version-system-family.md) | WP-20: 37 cited rows (Resources Table 7, Profiles Table 1, mask 2705h/27B0h/2920h profiles) behind the Devices *System* column; single-source rows named; `0AFDh`/`0AFEh` stay unknown; declared mask only |

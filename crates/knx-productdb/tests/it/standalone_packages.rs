@@ -1519,6 +1519,204 @@ pub(super) mod wp16 {
             "ordinary-file policy does not rewrite the archive"
         );
     }
+
+    // CHARACTERIZATION of original production, not a promised admission policy.
+    // A later test-first policy change may deliberately replace these successes.
+    pub(crate) mod file_stream_characterization {
+        use super::*;
+        use knx_productdb::{sha256_hex, InstallReport};
+
+        pub(crate) const PATH: &str = "M-0001/Baggages/ordinary.bin";
+        // Independent literal fixed-Huffman streams: one nonempty byte each.
+        pub(crate) const A: &[u8] = b"\x73\x04\x00";
+        pub(crate) const B: &[u8] = b"\x73\x02\x00";
+
+        pub(crate) fn member<'a>(name: &'a [u8], stream: &'a [u8], plain: &[u8]) -> RawMember<'a> {
+            RawMember {
+                method: 8,
+                crc: crc32fast::hash(plain),
+                size: plain.len().try_into().unwrap(),
+                ..RawMember::stored(name, stream)
+            }
+        }
+
+        pub(crate) fn package(stream: &[u8]) -> Vec<u8> {
+            product(member(PATH.as_bytes(), stream, b"A"))
+        }
+
+        pub(crate) fn retained(conn: &Connection, report: &InstallReport, bytes: &[u8]) {
+            assert_eq!(report.sha256, sha256_hex(bytes));
+            let raw: Vec<u8> = conn
+                .query_row(
+                    "SELECT bytes FROM package WHERE sha256 = ?1",
+                    [&report.sha256],
+                    |r| r.get(0),
+                )
+                .unwrap();
+            assert_eq!(
+                raw, bytes,
+                "compressed trailer survives in the original package"
+            );
+            let normalized = report.members.iter().find(|m| m.path == PATH).unwrap();
+            assert_eq!(normalized.size, 1);
+            assert_eq!(normalized.sha256, sha256_hex(b"A"));
+            let (hash, size, plain): (String, i64, Vec<u8>) = conn.query_row(
+                "SELECT m.source_sha256, m.size, s.bytes FROM package_member m JOIN source_file s ON s.sha256 = m.source_sha256 WHERE m.package_sha256 = ?1 AND m.path = ?2",
+                [&report.sha256, PATH], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+            ).unwrap();
+            assert_eq!((hash, size, plain), (sha256_hex(b"A"), 1, b"A".to_vec()));
+            // Neither a trailer nor a concatenated stream is normalized member
+            // output. This is not total archive loss: raw bytes above are exact.
+        }
+
+        pub(crate) fn accepted(bytes: &[u8], install: impl Fn(&Connection) -> InstallReport) {
+            for populated in [false, true] {
+                let (dir, conn) = db();
+                if populated {
+                    seed(&conn);
+                }
+                let original_count: i64 = conn
+                    .query_row("SELECT count(*) FROM package", [], |r| r.get(0))
+                    .unwrap();
+                let report = install(&conn);
+                assert!(!report.skipped);
+                retained(&conn, &report, bytes);
+                assert_eq!(
+                    conn.query_row("SELECT count(*) FROM package", [], |r| r.get::<_, i64>(0))
+                        .unwrap(),
+                    original_count + 1
+                );
+                drop(conn);
+                let before_retry = files(dir.path());
+                let conn = open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+                let retry = install(&conn);
+                assert!(retry.skipped);
+                assert_eq!(retry.members, report.members);
+                retained(&conn, &retry, bytes);
+                drop(conn);
+                assert!(
+                    files(dir.path()) == before_retry,
+                    "same-name retry preserves all DB/sidecar bytes"
+                );
+            }
+        }
+
+        fn accepts(stream: &[u8], signed: Option<bool>) {
+            let bytes = package(stream);
+            let bytes =
+                signed.map_or_else(|| bytes.clone(), |signed| descriptor(bytes.clone(), signed));
+            accepted(&bytes, |conn| {
+                install_package(conn, "characterization.knxprod", &bytes).unwrap()
+            });
+        }
+
+        #[test]
+        fn currently_accepts_nonzero_trailer() {
+            accepts(&[A, b"\xa5"].concat(), None);
+        }
+
+        #[test]
+        fn currently_accepts_zero_trailer() {
+            accepts(&[A, b"\x00"].concat(), None);
+        }
+
+        #[test]
+        fn currently_accepts_concatenated_nonempty_second_stream() {
+            accepts(&[A, B].concat(), None);
+        }
+
+        #[test]
+        fn currently_accepts_nonzero_trailer_with_signed_descriptor() {
+            accepts(&[A, b"\xa5"].concat(), Some(true));
+        }
+
+        #[test]
+        fn currently_accepts_zero_trailer_with_unsigned_descriptor() {
+            accepts(&[A, b"\x00"].concat(), Some(false));
+        }
+
+        #[test]
+        fn valid_signed_descriptor_is_outside_the_compressed_extent() {
+            accepts(A, Some(true));
+        }
+
+        #[test]
+        fn valid_unsigned_descriptor_is_outside_the_compressed_extent() {
+            accepts(A, Some(false));
+        }
+
+        #[test]
+        fn valid_multiple_blocks_cross_the_8192_byte_input_boundary() {
+            let mut stream = b"\x00\x00\x00\xff\xff".repeat(2_000);
+            stream.extend_from_slice(A);
+            assert!(stream.len() > 8192);
+            accepts(&stream, None);
+        }
+
+        #[test]
+        fn currently_accepts_one_trailing_byte_after_multiple_input_blocks() {
+            let mut stream = b"\x00\x00\x00\xff\xff".repeat(2_000);
+            stream.extend_from_slice(A);
+            stream.push(0xa5);
+            accepts(&stream, None);
+        }
+
+        #[test]
+        fn currently_accepts_trailer_larger_than_8192_bytes() {
+            let mut stream = A.to_vec();
+            stream.extend_from_slice(&[0xa5; 8193]);
+            accepts(&stream, None);
+        }
+
+        fn refuses(bytes: &[u8], cause: &[&str]) {
+            for populated in [false, true] {
+                named_invalid(
+                    preserved_refusal(
+                        |conn| {
+                            if populated {
+                                seed(conn);
+                            }
+                        },
+                        |conn| install_package(conn, "refused.knxprod", bytes),
+                    ),
+                    PATH,
+                    cause,
+                );
+            }
+        }
+
+        #[test]
+        fn malformed_stream_still_refuses_without_database_mutation() {
+            refuses(&package(&[0xff]), STREAM_CAUSE);
+        }
+
+        #[test]
+        fn wrong_crc_still_refuses_without_database_mutation() {
+            let bytes = product(RawMember {
+                crc: 0,
+                ..member(PATH.as_bytes(), A, b"A")
+            });
+            refuses(&bytes, CRC_CAUSE);
+        }
+
+        #[test]
+        fn wrong_descriptor_still_refuses_without_database_mutation() {
+            let bytes = add_data_descriptor_to_last_member(package(A), true, true);
+            for populated in [false, true] {
+                let error = preserved_refusal(
+                    |conn| {
+                        if populated {
+                            seed(conn);
+                        }
+                    },
+                    |conn| install_package(conn, "descriptor.knxprod", &bytes),
+                );
+                assert!(
+                    matches!(error, PackageError::InvalidZip { cause } if cause == "data descriptor differs from central directory")
+                );
+            }
+        }
+    }
 }
 
 #[test]

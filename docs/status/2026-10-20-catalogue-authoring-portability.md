@@ -51,6 +51,17 @@ are not summed; the later complete scoped package gate is recorded separately.
   must replace its expected missing-source outcome with a real portability
   assertion, while retaining the imported-project positives and model checks.
 
+## Package acceptance
+
+Delivered on `main` as main-first `0dbef5cf` (feature `4b7b8db0`); immediate
+local/tracking/live readback matched. Maintained scoped gate13/13 passed:
+1,057 Rust tests, zero failures, 53 ignored in the ordinary run; 51/51 selected
+corpus cases separately executed; 323 registered tooling tests with one existing
+optional skip. All proofs valid, source inputs frozen and user-data guards clear.
+Review is a separate in-session self-review, not independent approval. Counts
+from overlapping focused/ordinary/corpus scopes are not added. This accepts the
+characterization package, not a production fix or full-workspace/release gate.
+
 ## Next implementation gate
 
 Define which exact installed source identities/dependencies belong in a project

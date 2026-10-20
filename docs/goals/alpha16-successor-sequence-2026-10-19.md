@@ -91,13 +91,14 @@ refusals remain boundaries under the existing repair contract.
 It is not a storage/parser change, production-scale guarantee or compatibility
 claim. [Source delivery and integrated acceptance](../IMPLEMENTATION_STATUS.md#wp-041-synthetic-measurement-baseline-20-october-2026)
 are separately verified on `0f44135b`; WP-04.1 is delivered.
-Next ordered work is WP-04.2: its [bounds inventory and parser disposition](../testing/procedure-resolution-bounds.md)
+WP-04.2 is delivered: its [bounds inventory and parser disposition](../testing/procedure-resolution-bounds.md)
 retains the existing parser/limits on the resolver-specific evidence and adds
 focused boundary/parity tests. The 53-test selection and complete ProductDB run
 (1226 passes, 31 ignored) pass on unchanged production; selections overlap.
 Independent review and twelve compiled isolated discrimination cases are accepted;
-maintained gates and delivery remain pending.
-WP-04.3 and WP-19 remain later; WP-04 is open. No later package is claimed or
+[integrated acceptance and source publication](../IMPLEMENTATION_STATUS.md#wp-042-resolver-bounds--unchanged-parser-candidate-20-october-2026)
+are verified on `6f68bcdd`. WP-04.3 is next, followed by WP-19; WP-04 is open.
+No later package is claimed or
 completed by the measurement result.
 
 ### Retained pre-delivery checkpoint (20 October 2026)

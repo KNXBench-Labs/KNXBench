@@ -12,7 +12,8 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
-## WP-04.2 resolver bounds — unchanged-parser candidate (20 October 2026)
+<a id="wp-042-resolver-bounds--unchanged-parser-candidate-20-october-2026"></a>
+## WP-04.2 resolver bounds — unchanged-parser delivery (20 October 2026)
 
 The [bounds inventory and disposition](testing/procedure-resolution-bounds.md)
 retains the existing parser, algorithm and limits on resolver-specific measured
@@ -29,7 +30,13 @@ Overlapping selections are not added together. Independent whole-change review
 accepts; its minor prose correction is closed. Twelve compiled isolated wrong
 variants fail intended semantic assertions; baseline/restored 15-library and
 25-integration selections pass with frozen tests. Canonical production was never
-mutated. Maintained delivery gates/publication remain pending.
+mutated. Source is published on main-first
+`6f68bcdd1fc19c54538f68cd48a0b069cc9cfa49`, with local/tracking/live equality
+verified on 20 October 2026. Both branch and integrated maintained gates pass
+14/14 ordered stages, each with 3,199 Rust passes (144 ignored), 97/97 selected
+corpus cases and 410 registered tool tests with six optional skips. Their counts
+are not added. Input identities are frozen and checked user-data guards clear.
+No functional browser or bindings lane was selected.
 No parser replacement, schema/profile/budget widening, executable procedure,
 new device/ETS compatibility or WP-04.3/WP-19 completion is implied.
 
@@ -59,7 +66,8 @@ tests; 410 tool tests are registered with six optional skips. Inputs are frozen
 and user-data guards are clear. The separate branch gate passed 5,497 Rust tests
 and 155/155 corpus cases; those runs are not added together. No functional browser
 suite was selected. Study measurements retain their original `9834daff` binding;
-the integrated gate does not replay them. WP-04.2/.3 and WP-19 remain open.
+the integrated gate does not replay them. WP-04.2 is delivered above; WP-04.3
+and WP-19 remain open.
 ProductDB schema and production parser budgets are unchanged.
 
 ## Project-folder retention characterization (20 October 2026 source)

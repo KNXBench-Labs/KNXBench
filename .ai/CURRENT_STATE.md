@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-20 19:24
+- **Completed:** WP-04.2 SOURCE DELIVERED on main-first 6f68bcdd1fc19c54538f68cd48a0b069cc9cfa49; local/tracking/live equality verified. Branch and integrated maintained gates each pass 14/14, 3,199 Rust tests (144 ignored), 97/97 selected corpus and 410 registered tool tests with six optional skips. Ordered proofs, frozen inputs and checked user-data guards verified. Independent review, exact minor closure and 12 compiled discrimination cases accepted. Parser, algorithm, limits and execution admission unchanged; no bugfix or speedup claimed.
+- **Pending/Next Steps:** Result-only closure documentation gate and publication/readback, compact evidence archive/member verification and owned worktree/two branches/scratch retirement remain. Then continue WP-04.3: architecture/lifecycle/atomic cancellation and bound preview contract before implementation, followed by WP-19. WP-04 overall remains open; no new go needed.
+- **Notes for Codex oder Claude:** Private `<profile-scratch>/wp042-bounds-20261020`: publication.json, integrated-gate1-accepted.json and closure-result-edits.json. Counts overlap and are not added; no functional browser/bindings lane selected. Selected root intentionally remains stale/dirty, foreign bytes and HEAD preserved. No new benchmark, bus/device, desktop-control, release/tag, deployment or contact operation. WP-04.2 source claim released; cleanup remains parent-owned.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-20 19:14
 - **Completed:** WP-04.2 branch acceptance verified on c633ede8: all 14 maintained stages pass, 3,199 Rust tests (144 ignored), 97/97 selected corpus cases, and 410 registered tool tests with six optional skips. Ordered proofs, frozen inputs and checked user-data guards pass. Independent whole-change review and all 12 compiled discrimination cases are accepted; production parser prefixes, algorithm and limits remain unchanged. Main-first merge onto unchanged 8d720a95 has no conflicts and preserves the complete reviewed branch tree before this handover addition.
 - **Pending/Next Steps:** Commit the main-first integration and run its maintained 14-stage gate. Validate actual merged acceptance before fresh reservation checks, conditional push and remote readback. Result-only documentation, verified evidence archive and owned retirement follow. Continue WP-04.3, then WP-19 without another go; neither is implemented by this slice.

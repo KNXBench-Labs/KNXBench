@@ -70,7 +70,9 @@ layers as one policy case; its first failure does not separately exercise the
 master-source row. The order variant proves reversal sensitivity only. All 6919
 private artifact identities and 16 retained compiled binary hashes are verified.
 This is characterization of unchanged production, not a new bugfix or speedup.
-Maintained package gates and publication remain pending.
+The [delivery record](../IMPLEMENTATION_STATUS.md#wp-042-resolver-bounds--unchanged-parser-candidate-20-october-2026)
+records separately passed branch/integrated gates and verified source publication.
+This does not relabel the original measurements or mutation runs.
 
 The executed boundary selection distinguishes these mechanisms:
 

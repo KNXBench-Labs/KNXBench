@@ -12,6 +12,15 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Systems and masks: short manual overview (20 October 2026)
+
+The [products chapter](manual/knx-basics/05-products-and-product-databases.md#systems-and-mask-versions-in-plain-english)
+now explains System 1/2/7/B and mask versions in plain English, with a compact
+family/meaning/example-mask/history table. The manual index and Devices System
+column link to it. Public primary-source provenance and uncertain launch dates
+are recorded in the [existing research note](research/2026-10-19-mask-version-system-family.md#plain-language-manual-overview-20-october-2026).
+Documentation only: no mask mapping, runtime behavior or compatibility scope changed.
+
 ## WP-04.3 A1 publication primitive — local verification (20 October 2026)
 
 `knx_productdb::operation` adds an unwired, non-resettable atomic publication

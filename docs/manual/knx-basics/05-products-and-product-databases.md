@@ -30,6 +30,48 @@ it: that's where its list of communication objects comes from, each with its own
 datapoint type expectations (previous chapter), and where its configurable parameters
 come from.
 
+## Systems and mask versions, in plain English
+
+A **system** is the device's KNX system-software family: the basic rules for
+communicating with and configuring it. Think of it as the device's foundation,
+not its lighting or heating application. System numbers are names, not ETS
+versions or a quality ranking.
+
+| System | What it means | Example mask versions (TP) | When it appeared |
+| --- | --- | --- | --- |
+| **System 1 / BCU1** | The original, simpler EIB device family, with relatively few communication objects. | `0010h`, `0012h`, `0013h` | **1991**, according to KNX training material. |
+| **System 2 / BCU2** | An expanded family with more communication objects and device-management features than BCU1. | `0020h`, `0021h`, `0025h` | A few years after 1991; exact year not verified. |
+| **System 7 / BIM M112** | Another expanded family for devices with more application resources than System 1. | `0700h`, `0701h`, `0705h` | A few years after 1991; exact year not verified. |
+| **System B** | Builds on System 7, allowing much larger sets of communication objects and group-address links. | `07B0h` | Documented by **2007**; this is not a verified launch year. |
+
+These families coexist; a newer family does not make an older device useless.
+**System 300** is a separate profile (for example `0300h`), while *Coupler*,
+*KNXnet/IP router* and *USB interface* describe specialised profiles.
+
+### What does a mask version tell me?
+
+A **mask version** identifies the device's standardised KNX system-software
+profile. It is not its individual address, product number or application version.
+Its value uses four hexadecimal digits: `0701h`, `0x0701` and the product-data
+reference `MV-0701` denote the same value. The `h` means hexadecimal.
+
+For the example **`0701h`**:
+
+- **`0`** at the front means twisted-pair KNX (TP).
+- **`701`** identifies the particular profile and revision; the final **`1`**
+  is the profile revision. The complete value `0701h` is a recognised System 7
+  mask, not “KNX version 7.01”.
+- Other first digits include **`1`** for powerline PL110, **`2`** for radio RF
+  and **`5`** for KNX IP; not every profile exists on every medium.
+
+Use the full, known mask, not a guessed number pattern. Two devices with the
+same mask need not run the same application, and a family label does **not**
+guarantee that KNXBench can program them. In the
+[Devices view](../user-guide/05-devices-and-products.md#system-column-since-alpha-15),
+KNXBench shows the mask declared by the product data, not a live device reading.
+
+[Sources and dating caveats](../../research/2026-10-19-mask-version-system-family.md#plain-language-manual-overview-20-october-2026).
+
 ## Why the catalog matters when you build a project
 
 Without product data, a device you add to a project is a blank slate — you'd have to

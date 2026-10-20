@@ -37,7 +37,9 @@ locally on small screens rather than widening the whole page.
 ### System column (since Alpha 15)
 
 **System** names the KNX system family of each device: *System 1*, *System 2*,
-*System 7* or *System B*. Other profiles keep their own names, for example
+*System 7* or *System B*. For a short explanation, typical masks and historical
+introduction dates, see [Systems and mask versions, in plain English](../knx-basics/05-products-and-product-databases.md#systems-and-mask-versions-in-plain-english).
+Other profiles keep their own names, for example
 *System 300*, *Coupler*, *KNXnet/IP router* or *USB interface*. The value is the
 mask version that the device's application program **declares** in the product
 database; hover a family to see that mask (for example `0701h`). A mask read

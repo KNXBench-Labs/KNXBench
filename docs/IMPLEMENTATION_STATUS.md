@@ -20,7 +20,11 @@ pins discovery, inheritance and the spec root. Real compiler controls prove
 that a deliberate type error in that spec is invisible to the application-only
 config but refused by the new config; the spec is restored byte-exact and the
 new typecheck passes. No UI behavior, browser case, retry, lane policy or
-dependency changes. [Gate contract](contracts/web-test-gate.md).
+dependency changes. Delivered on main-first `73d02240`, independent review
+accepted; maintained scoped gate11/11 and web29/29passed:4136Vitest,863default
+browser cases, all23derived configs and323registered tool tests (one existing
+optional skip). Inputs frozen; user-data guards clear. No Rust/corpus selected.
+[Gate contract](contracts/web-test-gate.md).
 
 ## G16 ZIP and legacy-inspection diagnostics (20 October 2026)
 

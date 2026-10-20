@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-20 08:38
+- **Completed:** Splitter static-typecheck package DELIVERED on main-first `73d02240` (feature `4ca63091`), local/tracking/live readback verified. Independent review ACCEPTED without findings. Maintained scoped gate11/11GREEN, inner web29/29GREEN: all23derived configs,4136Vitest,863default browser cases (798functional+65exclusive),323registered tool tests/one existing optional skip. All proofs valid, source inputs frozen, user-data guard lists empty. No Rust/corpus selected or new UI behavior claimed. Splitter claim RELEASED.
+- **Pending/Next Steps:** Publish result-only docs tail, archive/verify evidence and retire owned resources. Read-only WP16 product-directory integrity plan ready; fresh claim/worktree, source verification, compatibility census and test-first reproduction precede any stricter admission. Other owners retain Alpha16 sequence/exact-UP258.
+- **Notes for Codex oder Claude:** Code gate binds `73d02240`; docs-only tail is not new runtime execution. Raw evidence `<profile-scratch>/splitter-typecheck-20261020`; keep preparation plan when retiring scratch. Selected root intentionally stale/dirty, foreign files preserved. No schema/dependency/bus/device/desktop/release/tag/deployment/vendor operation.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-20 08:22
 - **Completed:** Splitter-spec typecheck implementation independently ACCEPTED with no findings on published claim `e109ba13`. Added only focused derived config, discovery/inclusion regression and docs. Missing-config RED and real compiler negative control observed; application config misses the deliberate spec-local type error, new config catches it, original browser spec restored byte-exact and typecheck GREEN. Focused26tool tests and reviewer compiler pass; all reviewed hashes verified. No app/runtime, browser assertions, dependencies or policy changed.
 - **Pending/Next Steps:** Commit/freeze main-first candidate, maintained11-stage scoped package gate (full Vitest, all typechecks/default browser inventory; no Rust/corpus), verify proofs/frozen inputs/user-data guard, conditional publication/readback and owned cleanup. Fresh main is unchanged; final acceptance still pending.

@@ -2,6 +2,23 @@
 
 [Current summary and ledger status](../KNOWN_LIMITATIONS.md#catalogue-kl-163)
 
+## Admission is scoped to tunnel openers (20 October 2026 reconciliation)
+
+The 13 October update below remains authoritative: stopping rejects routes
+that would open a new tunnel, not every possible bus action. Group writes
+using an existing monitor session and discovery do not pass through that
+admission check. This is an admission-scope distinction, not a promise that
+an existing session stays available throughout shutdown.
+
+The configurable drain waits for running downloads/address programming; it
+does not safely undo device mutations. Its deadline, a second signal or a
+forced kill can still end a write mid-way.
+
+Evidence: [admission and drain](../../apps/knx-server/src/graceful_stop.rs),
+[existing-session write/discovery handlers](../../apps/knx-server/src/bus_routes.rs),
+[tunnel-admission regressions](../../apps/knx-server/tests/it/http_stop_admission.rs).
+No new gateway, device or container stop was performed.
+
 This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.

@@ -1,6 +1,32 @@
-# Diagnostic export reads identity only
+# Diagnostic export profiles and evidence
 
 [Current summary and ledger status](../KNOWN_LIMITATIONS.md#catalogue-kl-184)
+
+## CLI memory profile versus generic identity evidence (20 October 2026 reconciliation)
+
+The blanket "no memory profile" statement below describes the generic profile,
+not the current CLI as a whole.
+[ADR-0143](../adr/0143-declared-segment-memory-evidence-profile.md) and the
+[profile contract](../contracts/device-diagnostic-export.md#profile-system2-declared-segments-v1-format-2)
+define `system2-declared-segments-v1`: CLI-only, derived from the selected
+application's ProductDB declarations, with required identity/PID78 agreement
+before any memory read and a format-2 archive retaining coverage and partial
+results. The generic/Web/HTTP entry still reads descriptor, PID12 and PID78
+only. A zero-element reply remains ambiguous, never proof of absence.
+
+The memory profile has offline/simulator evidence, **no recorded hardware
+run**. Its declared ranges are candidate locations, not proven runtime
+addresses, a backup or a restore basis. It adds no programming, recovery or
+write permission. The 46-device/eight-manufacturer evidence recorded below
+belongs to the generic identity profile only; neither those runs nor the
+owner's normal-operation observation validate the memory profile. A fully
+silent identity-profile target remains unobserved.
+
+Evidence: [CLI profile dispatch](../../apps/knx-cli/src/device_diagnostics.rs),
+[application preparation](../../crates/knx-app/src/device_diagnostics/memory_evidence.rs),
+[identity-gated collector](../../crates/knx-net/src/commissioning/diagnostic_export.rs),
+[CLI regression sources](../../apps/knx-cli/tests/it/device_diagnostics.rs).
+No new device acquisition was performed.
 
 <!-- BEGIN retained catalogue record -->
 

@@ -2,6 +2,25 @@
 
 [Current summary and ledger status](../KNOWN_LIMITATIONS.md#catalogue-installation-node-editing)
 
+## Web installation renames are bound (20 October 2026 reconciliation)
+
+The web half has migrated: both the selected installation's Properties view
+and the project inspector use `RenameNameField`. It sends the captured name,
+snapshot revision and server/project incarnations through `api.renameEntity`
+to `PATCH /api/installations/{id}`. A stale conflict keeps the draft; Refresh
+is a read and a later Apply is an explicit new write, not an automatic retry.
+The 13 October statement below that the web editor is still unbound is
+superseded.
+
+Evidence: [actual inspector consumers](../../apps/knx-web/src/Inspector.tsx),
+[shared editor](../../apps/knx-web/src/RenameNameField.tsx),
+[request serialization](../../apps/knx-web/src/api.ts),
+[exact API regression](../../apps/knx-web/src/api.test.ts),
+[selected-installation regressions](../../apps/knx-web/src/Inspector.test.tsx).
+The server's legacy wholly unbound form remains separately supported; this
+is not general installation create/delete/move management, per-user isolation
+or native screen-reader acceptance.
+
 This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.

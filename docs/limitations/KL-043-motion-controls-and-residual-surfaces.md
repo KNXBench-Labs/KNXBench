@@ -2,6 +2,20 @@
 
 [Current summary and ledger status](../KNOWN_LIMITATIONS.md#catalogue-kl-043)
 
+## Four motion categories (20 October 2026 reconciliation)
+
+The three-category account in the retained record and 14 October update is
+superseded: **Toasts**, **Achievements**, **Flow** and **Structure lines**
+now have independent reduction-only preferences. The fourth is `lines`, stored
+as `motionLines`; it applies to structure-connection feedback. Global Off and
+the operating-system reduced-motion preference still win. Other effects retain
+their documented global controls, and this does not widen the stylesheet
+guard or establish native/accessibility conformance.
+
+Evidence: [category list and reduction rule](../../apps/knx-web/src/motion.ts),
+[settings consumer](../../apps/knx-web/src/MotionCategorySettings.tsx),
+[structure-lines regression](../../apps/knx-web/src/motionCategories.test.ts).
+
 This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.

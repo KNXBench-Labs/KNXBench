@@ -20,6 +20,13 @@ security, GitHub-issue, hardware or whole-codebase conformance audit.
 
 ### Already owned — do not start a duplicate package
 
+- **WP-06A folder retention (codex, 20 October):** tests/contract-only evidence
+  slice: exact public synthetic project-tree retention and device-qualified
+  source identity. Owns importer `tests/it/import_integrity.rs` and focused
+  contract/status prose. No folder DTO/UI, manufacturer derivation, priority,
+  product DB/migration, activation or module-identity implementation. WP-06
+  display acceptance remains open; other owners' WP-04/WP-19 scopes stay reserved.
+
 
 - **WP-17 is delivered** on `main` (`d18ce65e`, 19 October): product DB v27
   master provenance; its parsing/provenance/report/migration claim is released.

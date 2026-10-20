@@ -2,6 +2,20 @@
 
 [Current summary and ledger status](../KNOWN_LIMITATIONS.md#catalogue-kl-065)
 
+## Development stamps versus guarded releases (20 October 2026 reconciliation)
+
+The final AR13 update in the retained record already introduced a separate
+release mode. Development stamping still has no dirty-tree suffix. Setting
+`KNX_REQUIRE_CLEAN_TREE=1` makes the shared build helper re-run and refuse
+when Git cannot confirm the workspace/HEAD, reports modified or non-ignored
+untracked paths, or an explicit `KNX_BUILD_SHA` disagrees with HEAD. Ignored
+files are not a complete build-input attestation; the version string alone
+does not prove the guarded mode was enabled.
+
+Evidence: [build-stamp implementation and tests](../../crates/knx-build-stamp/src/lib.rs),
+[version contract](../adr/0018-program-versions-and-file-headers.md). No new
+build or published-artifact verification is claimed by this documentation fix.
+
 This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.

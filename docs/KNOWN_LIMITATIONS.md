@@ -163,7 +163,7 @@ A second independent schema-23 project meets the original lifting condition. Res
 ### 159. Project archive budgets and duplicate names
 
 **Ledger status:** Not separately tracked.
-Expanded projects are capped at 1024 MiB total/64 MiB per member. Excess inflation and duplicate/case-colliding names are refused.
+Expanded project payloads are capped at 4 GiB total and 1,000,000,000 bytes per member. Excess inflation, duplicate/case-colliding names and inconsistent records are refused; empty directories require CRC 0 and, when compressed, a complete empty stream. These bounds do not cap peak process memory.
 [Details and history](limitations/KL-159-project-archive-budgets-and-duplicate-names.md)
 
 <a id="catalogue-kl-173"></a>
@@ -236,7 +236,7 @@ Adopting a plug-in's stored bytes between two projects of one lineage exists in 
 ### 3. Parameter evaluation and editing boundaries
 
 **Ledger status:** `ACCEPTED_BOUNDARY` ([KL-3](status/LEDGER.md#snapshot-ids)).
-Supported top-level and single-authoritative module fields are editable. Calculations, repeated expansion, unsupported controls and encodings remain separately limited. Declared Table/Grid parameter blocks render as a matrix; their visual variants, collapse rules, parameter-driven captions and in-cell buttons are not reproduced.
+Supported top-level and single-authoritative module fields are editable. Declared Table/Grid blocks render as matrices; supported positional block/separator captions are filled with provenance. Calculations, repeated expansion and unsupported controls/encodings remain limited, as do Table/Grid visual variants, collapse rules, parameter-driven row/column captions and in-cell buttons/nested blocks.
 [Details and history](limitations/KL-003-parameter-evaluation-and-editing-boundaries.md)
 
 <a id="catalogue-kl-006"></a>
@@ -686,7 +686,7 @@ Commands respect installation ownership and refuse ambiguous/cross-installation 
 ### 183. Project files without their manufacturer files
 
 **Ledger status:** `ACCEPTED_BOUNDARY` ([KL-183](status/LEDGER.md#post-snapshot-ids)).
-A .knxdb saved before store schema v16 does not carry its application programs; next to an empty product database its devices show no parameters until restored from the original .knxproj. Fixed for new saves.
+Native saves embed available hash-matched manufacturer files named by the saved manifest, not automatically every referenced application. Missing bytes or manifest entries can leave a newly saved project dependent on external product data; saving alone cannot recover them. Read-only CLI readers do not reinstall files.
 [Details and history](limitations/KL-183-knxdb-manufacturer-files.md)
 
 ## Commissioning and recovery
@@ -964,10 +964,11 @@ Only explicit, uniquely associated MV-07B0 Load/ap1 declarations are reconstruct
 [Details and history](limitations/offline-ap1-sequence-inspection.md)
 
 <a id="catalogue-kl-184"></a>
-### 184. Diagnostic export reads identity only
+<a id="184-diagnostic-export-reads-identity-only"></a>
+### 184. Diagnostic export profiles and evidence
 
 **Ledger status:** `ACCEPTED_BOUNDARY` ([KL-184](status/LEDGER.md#post-snapshot-ids)).
-The read-only diagnostic export reads descriptor, PID12 and PID78 only; no memory profile is admitted, a zero-element reply cannot separate refusal from absence, and 46 physical devices from eight manufacturers (18 October 2026) have been read with it so far, including refusals, a device-ended connection and a rejected connection; the owner reports the house installation working normally afterwards; a fully silent device is unobserved.
+Generic/Web/HTTP diagnostics read identity only (descriptor, PID12, PID78). CLI additionally offers the identity-gated system2-declared-segments-v1 memory profile and format-2 export: candidate source locations, not a backup or restore basis, with no recorded hardware run of this profile. The generic identity profile has evidence from 46 physical devices/eight manufacturers, including refusals and ended/rejected connections; house normal-operation feedback is an operator observation, and a fully silent device remains unobserved.
 [Details and history](limitations/KL-184-device-diagnostic-export.md)
 
 ## Bus diagnostics and DPT
@@ -1339,7 +1340,7 @@ Import links show a capped current-run log, which may hold fewer findings than t
 ### Installation-node editing
 
 **Ledger status:** Not separately tracked.
-Unnamed nodes are readable and renameable; the rename route accepts a revision binding the web editor does not send yet. This is not a general installation-management workflow.
+Unnamed installations are readable and renameable through the snapshot/name-bound web editor. General installation create/delete/move management and native accessibility acceptance remain outside this feature.
 [Details and history](limitations/installation-node-editing.md)
 
 <a id="catalogue-lcars-presentation"></a>
@@ -1405,7 +1406,7 @@ Clients share one project/undo stack. Feature-specific guards are not general co
 ### 65. Version identity and dirty builds
 
 **Ledger status:** `DONE` ([KL-65](status/LEDGER.md#snapshot-ids)).
-Version output identifies the build commit, not uncommitted state. No dirty-tree marker guarantees exact build provenance.
+Development builds name a commit, not uncommitted state, and have no dirty marker. With KNX_REQUIRE_CLEAN_TREE=1, release builds recheck the tree and refuse reported changes or an inconsistent commit stamp; the version string alone does not prove that mode was used.
 [Details and history](limitations/KL-065-version-identity-and-dirty-builds.md)
 
 <a id="catalogue-kl-106"></a>
@@ -1461,7 +1462,7 @@ Alpha.5 changed the identifier without automatic alpha.4 data migration. Copy pr
 ### 163. Server shutdown and active writes
 
 **Ledger status:** Not separately tracked.
-A stop refuses new bus jobs and waits a bounded, configurable time for a running download/address programming; a write still running when that ends, or under SIGKILL, is cut mid-way.
+A stop refuses new tunnel-opening jobs and waits a bounded, configurable time for a running download/address programming. Existing-session group writes and discovery are outside that admission check; a write still running at the limit, a second signal or SIGKILL can be cut mid-way.
 [Details and history](limitations/KL-163-server-shutdown-and-active-writes.md)
 
 <a id="catalogue-kl-168"></a>
@@ -1501,7 +1502,7 @@ AppImages alpha.5 to alpha.11 refuse saving the session log and monitor captures
 ### 182. Desktop silent downloads
 
 **Ledger status:** `DONE` ([KL-182](status/LEDGER.md#post-snapshot-ids)).
-AppImages up to alpha.11 save in-app downloads silently into Downloads, replacing same-named files; fixed in source with a save dialog. Web and Docker unaffected.
+AppImages up to alpha.11 saved in-app downloads silently into Downloads and could replace same-named files. Fixed since alpha.12 with private staging and a native save dialog; a staging failure uses a reported, non-overwriting fallback. Web and Docker are unaffected.
 [Details and history](limitations/KL-182-desktop-silent-downloads.md)
 
 <a id="catalogue-kl-185"></a>

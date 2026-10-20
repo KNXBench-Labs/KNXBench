@@ -528,20 +528,28 @@ The **Parameters** tab says why it cannot show anything:
 
 - **No product database** on this server: nothing can be loaded at all.
 - **This project's product data is not installed** (with the number of missing
-  files): the project was saved by KNXBench alpha.11 or earlier, and the product
-  database it was made with is gone (a rebuilt Docker container, another computer).
+  files): the saved manufacturer manifest names files unavailable in the
+  installed product database. Older files commonly reach this state after a
+  Docker rebuild or a move to another computer, but a newer Save cannot recover
+  source bytes that are already missing.
   **Restore from original .knxproj…** reads the project's original ETS export and
   installs exactly the manufacturer files whose checksum matches. Files that
   differ are listed and not installed. A password-protected export needs no
   password, because its manufacturer files are not encrypted. The project itself
-  does not change. Save it afterwards, and its file carries the programs from then on.
+  does not change. Save it afterwards to embed the restored manifest files.
 - **The application program is not in the product database**: the device comes
   from a product package that was never installed. Install its `.knxprod` from the
   catalogue.
 
-A project saved with a current build carries its application programs itself and
-installs them again when it is opened, so this only affects older files
-([ADR-0128](../../adr/0128-native-project-files-carry-their-manufacturer-files.md)).
+Since store schema 16, Save embeds available, hash-matched manufacturer files
+from the saved manifest, and the server/desktop reinstalls carried files on open.
+This is not a guarantee that every referenced application is carried: absent
+source bytes or manifest entries can still leave a new save dependent on the
+external product database. Keep the original `.knxproj` and matching `.knxprod`
+files as well as independent backups. The catalogue-created-device case is
+currently source-traced, not runtime-confirmed; see
+[the precise portability boundary](../../limitations/KL-183-knxdb-manufacturer-files.md)
+and [ADR-0128](../../adr/0128-native-project-files-carry-their-manufacturer-files.md).
 
 ## The device panel
 

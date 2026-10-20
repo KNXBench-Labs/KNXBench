@@ -153,8 +153,12 @@ Now `./data` on your host is `/data` in the container. Removing the container wi
 (the installed application programs) is `/data/.knxbench-share/knx/products.sqlite`
 in the image, so it survives a rebuild or an image update. Images up to alpha.11
 kept it inside the container, so every rebuild emptied it. Since the same change,
-every saved `.knxdb` also carries its own application programs and installs them
-again when it is opened. A project saved by alpha.11 or earlier cannot do that.
+`.knxdb` saves embed available, hash-matched manufacturer files from their saved
+manifest; the server/desktop reinstalls carried files when opening the project.
+Alpha.11 and earlier did not carry those bytes. A new Save is not automatically
+self-contained either: missing source bytes or manifest entries can still require
+the external product database. Keep original project/product packages and back up
+the mounted data directory independently.
 If its devices say that this project's product data is not installed, open any of
 those devices' **Parameters** tab and choose **Restore from original .knxproj…**
 ([KL-183](../../KNOWN_LIMITATIONS.md#catalogue-kl-183)). Only files that match the

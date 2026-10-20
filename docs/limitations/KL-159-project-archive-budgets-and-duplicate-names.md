@@ -2,6 +2,25 @@
 
 [Current summary and ledger status](../KNOWN_LIMITATIONS.md#catalogue-kl-159)
 
+## Current archive ceilings (20 October 2026 reconciliation)
+
+The retained 1024 MiB total / 64 MiB member figures are historical.
+[ADR-0142](../adr/0142-file-size-limits-follow-the-storage-ceiling.md) raised
+the project reader to **4 GiB expanded payload in total** and
+**1,000,000,000 bytes per member**, following the shared storage ceiling.
+Nested payload accounting and declared-size/inflation checks still apply;
+these are payload admission limits, not a peak-process-memory guarantee.
+Duplicate/case-colliding names and inconsistent ZIP records remain refused.
+The empty-directory CRC/complete-stream repair described below is delivered;
+its trailing-file-stream, product-reader and encryption-header follow-ups
+remain open.
+
+Evidence: [shared limits](../../crates/knx-core/src/limits.rs),
+[project container](../../crates/knx-etsproj/src/container.rs),
+[archive-budget regressions](../../crates/knx-etsproj/tests/it/archive_member_integrity.rs).
+The declaration-budget tests are not evidence of successful arbitrary
+4-GiB imports or bounded peak memory.
+
 This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.

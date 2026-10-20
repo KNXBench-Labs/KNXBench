@@ -79,7 +79,7 @@ Each package needs its own scoped claim, review, tests and delivery evidence.
 | [WP-10](#wp-10--import-and-model-evidence) | P2 | Samples/grammar/authorisation required | Independently verified import/model cases with honest unsupported-data reports. |
 | [WP-11](#wp-11--native-linux-acceptance) | P2 | Separate desktop-control permission | Actual WebKitGTK/Wayland/Orca and AppImage evidence for named workflows. |
 | [WP-12](#wp-12--field-evidence-and-owner-acceptance) | P2 | Outside input or operation-specific consent | Reviewed tester/plug-in/diagnostic evidence, without silently expanding compatibility. |
-| [WP-13](#wp-13--documentation-drift) | P3 | First slice delivered 19 Oct; wider catalogue/manual sweep open | Current summaries agree with delivered behaviour; retained history stays intact. |
+| [WP-13](#wp-13--documentation-drift) | P3 | First slice 19 Oct; limitation-summary reconciliation 20 Oct; wider sweep open | Current summaries agree with delivered behaviour; retained history stays intact. |
 | [WP-14](#wp-14--complete-offline-family-outcomes) | P1 | Source contracts first; UP258 excluded | Complete real-source System 1/B/300 image → procedure → execution → recovery slices. |
 | [WP-15](#wp-15--complete-module-scope-in-web-consumers) | P1 | Delivered 19 Oct (web adoption); older-server boundary documented | Complete response-local module paths distinguish diagnostics and workspace identities. |
 | [WP-16](#wp-16--empty-directory-zip-integrity) | P1 | Delivered 19 Oct; trailing-stream and product-reader follow-ups open | Empty directories have valid CRC and complete compressed-stream representation. |
@@ -331,6 +331,18 @@ released Alpha 15 claim is removed; the intermittent SIGTERM tool test is
 recorded under test gates. The confirmed examples above (rename, `.knxprod`
 placement, note disposition, Functions, plug-in routes, UI waves) and the
 lifecycle/property-planner wording remain this package's open sweep.
+**Limitation-summary reconciliation (20 October 2026):** eight current catalogue
+summaries and their dossiers now distinguish delivered caption/rename/profile
+behavior, guarded release stamping, actual archive ceilings, scoped stop
+admission, Alpha 12 download availability and manifest-scoped portability.
+The fourth motion category is documented; preserved history and formal ledger
+dispositions are unchanged. The KL-183 manual routes no longer promise that
+every new save is self-contained. Other sweep topics above remain open.
+**Separate verification follow-up, not an implemented fix:** the KL-183
+catalogue-added-application case is source-traced only; exercise catalogue
+device create → Save → reopen with an empty product database before claiming
+a runtime-confirmed regression or repair.
+[Reconciliation scope](status/2026-10-20-limitations-reassessment.md) ·
 [Current ledger](status/LEDGER.md) ·
 [delivery index](IMPLEMENTATION_STATUS.md).
 

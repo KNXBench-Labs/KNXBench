@@ -125,6 +125,14 @@ worktree clean; protected user-data touch/unchecked lists empty.
 The first complete attempt failed before product execution on an upstream test
 fixture that reacquired the checkout lease. Separate reviewed fixture correction
 `1d761840` and single-reference Clippy correction `1d1bf2fc` precede the successful
-full rerun. Failed and successful receipts remain distinct. No hardware, release,
-deployment or publication is inferred from acceptance. Final result-only docs
-and publication/readback/cleanup are the remaining delivery steps.
+full rerun. Failed and successful receipts remain distinct.
+
+The delivery `54843a03` was pushed to main and independently read back from the
+live remote ref, matching the clean publication checkout. The issue22 reporter
+was invited to run the exact simulator-only executable workflow in comment
+`6299113198`; posted body and issue-open state were read back and verified.
+The invitation says strong hypothesis/simulator-tested, no real-device command,
+retains private logs/backups locally and requests only reviewed shareable reports.
+No release, tag, deployment or bus/device operation occurred. Final evidence
+archival and owned scratch/worktree retirement are housekeeping, not new runtime
+acceptance or physical readiness.

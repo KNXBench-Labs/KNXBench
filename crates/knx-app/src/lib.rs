@@ -33,6 +33,7 @@ pub mod instructions;
 pub mod legacy;
 pub mod manufacturer_files;
 pub mod modeled_metadata;
+pub mod monitor_export;
 pub mod name_recipe;
 pub mod note_disposition;
 pub mod note_edit;

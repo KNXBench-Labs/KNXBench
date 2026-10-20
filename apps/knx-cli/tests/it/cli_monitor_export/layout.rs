@@ -1,0 +1,394 @@
+//! SQLite layout admission through the actual offline CLI binary.
+use super::*;
+use std::{collections::BTreeMap, path::PathBuf};
+
+struct Fixture {
+    dir: tempfile::TempDir,
+    input: PathBuf,
+    output: PathBuf,
+    catalogue: PathBuf,
+}
+
+impl Fixture {
+    fn new() -> Self {
+        let dir = tempfile::tempdir().unwrap();
+        let input = dir.path().join("project.knxdb");
+        let output = dir.path().join("new.zip");
+        let catalogue = dir.path().join("products.sqlite");
+        save(&input, &project());
+        drop(knx_productdb::open_and_migrate(&catalogue).unwrap());
+        std::fs::create_dir(dir.path().join("home")).unwrap();
+        for path in [&input, &catalogue] {
+            assert_header_versions(path, [1, 1]);
+        }
+        Self {
+            dir,
+            input,
+            output,
+            catalogue,
+        }
+    }
+
+    fn target(&self, catalogue: bool) -> &Path {
+        if catalogue {
+            &self.catalogue
+        } else {
+            &self.input
+        }
+    }
+
+    fn run(&self) -> Output {
+        cli(
+            self.dir.path(),
+            &self.input,
+            &self.output,
+            &["--product-db", self.catalogue.to_str().unwrap()],
+        )
+    }
+
+    fn assert_refusal_preserves_layout(&self, reason: &str) {
+        let before = inventory(self.dir.path());
+        let result = self.run();
+        let after = inventory(self.dir.path());
+        assert!(
+            before == after,
+            "refusal must preserve all entry names, main/sidecar bytes and links"
+        );
+        assert!(
+            !self.output.exists(),
+            "unsupported layout must not publish a ZIP"
+        );
+        assert_refused(&result, reason);
+    }
+}
+
+fn sidecar(path: &Path, suffix: &str) -> PathBuf {
+    let mut name = path.as_os_str().to_os_string();
+    name.push(suffix);
+    PathBuf::from(name)
+}
+
+fn assert_header_versions(path: &Path, expected: [u8; 2]) {
+    let bytes = std::fs::read(path).unwrap();
+    // SQLite's documented signature and file write/read versions, not KNX schema bytes.
+    assert_eq!(&bytes[..16], b"SQLite format 3\0");
+    assert_eq!(&bytes[18..20], &expected);
+}
+
+// Capture all names, file bytes and symlink texts, not just the main database.
+fn inventory(root: &Path) -> BTreeMap<PathBuf, (String, Vec<u8>)> {
+    fn walk(root: &Path, dir: &Path, entries: &mut BTreeMap<PathBuf, (String, Vec<u8>)>) {
+        for entry in std::fs::read_dir(dir).unwrap() {
+            let path = entry.unwrap().path();
+            let metadata = std::fs::symlink_metadata(&path).unwrap();
+            let value = if metadata.file_type().is_symlink() {
+                (
+                    "symlink".into(),
+                    std::fs::read_link(&path)
+                        .unwrap()
+                        .as_os_str()
+                        .as_encoded_bytes()
+                        .to_vec(),
+                )
+            } else if metadata.is_dir() {
+                walk(root, &path, entries);
+                ("directory".into(), vec![])
+            } else {
+                ("file".into(), std::fs::read(&path).unwrap())
+            };
+            entries.insert(path.strip_prefix(root).unwrap().to_path_buf(), value);
+        }
+    }
+    let mut entries = BTreeMap::new();
+    walk(root, root, &mut entries);
+    entries
+}
+
+fn checkpointed_wal_is_refused(catalogue: bool) {
+    let fixture = Fixture::new();
+    let path = fixture.target(catalogue);
+    let conn = knx_store::Connection::open(path).unwrap();
+    let mode: String = conn
+        .query_row("PRAGMA journal_mode=WAL", [], |row| row.get(0))
+        .unwrap();
+    assert_eq!(mode, "wal");
+    conn.execute_batch("PRAGMA wal_checkpoint(TRUNCATE)")
+        .unwrap();
+    drop(conn);
+    assert_header_versions(path, [2, 2]);
+    for suffix in ["-wal", "-shm", "-journal"] {
+        assert!(std::fs::symlink_metadata(sidecar(path, suffix)).is_err());
+    }
+    fixture.assert_refusal_preserves_layout("unsupported input layout");
+}
+
+#[test]
+fn refuses_checkpointed_wal_native_without_sidecars_or_mutation() {
+    checkpointed_wal_is_refused(false);
+}
+
+#[test]
+fn refuses_checkpointed_wal_catalogue_without_sidecars_or_mutation() {
+    checkpointed_wal_is_refused(true);
+}
+
+fn genuine_sidecar(suffix: &str) -> Vec<u8> {
+    let dir = tempfile::tempdir().unwrap();
+    let database = dir.path().join("donor.sqlite");
+    let conn = knx_store::Connection::open(&database).unwrap();
+    let mode = if suffix == "-journal" {
+        "PERSIST"
+    } else {
+        "WAL"
+    };
+    conn.pragma_update(None, "journal_mode", mode).unwrap();
+    conn.execute_batch("CREATE TABLE donor(value); INSERT INTO donor VALUES (randomblob(8192));")
+        .unwrap();
+    let bytes = std::fs::read(sidecar(&database, suffix)).unwrap();
+    assert!(
+        !bytes.is_empty(),
+        "sidecars must be generated by real SQLite"
+    );
+    drop(conn);
+    bytes
+}
+
+fn existing_sidecar_is_refused(catalogue: bool, suffix: &str) {
+    let fixture = Fixture::new();
+    let path = fixture.target(catalogue);
+    // A stale/mismatched sidecar is unsupported regardless of its contents.
+    // Keep the main database's genuine DELETE header to isolate sidecar admission.
+    std::fs::write(sidecar(path, suffix), genuine_sidecar(suffix)).unwrap();
+    assert_header_versions(path, [1, 1]);
+    let kind = if catalogue {
+        "product database"
+    } else {
+        "native project"
+    };
+    fixture.assert_refusal_preserves_layout(&format!(
+        "unsupported input layout for {kind}: existing SQLite {suffix} sidecar"
+    ));
+}
+
+macro_rules! sidecar_refusal_test {
+    ($name:ident, $catalogue:expr, $suffix:expr) => {
+        #[test]
+        fn $name() {
+            existing_sidecar_is_refused($catalogue, $suffix);
+        }
+    };
+}
+
+sidecar_refusal_test!(refuses_existing_native_wal_sidecar, false, "-wal");
+sidecar_refusal_test!(refuses_existing_catalogue_wal_sidecar, true, "-wal");
+sidecar_refusal_test!(refuses_existing_native_shm_sidecar, false, "-shm");
+sidecar_refusal_test!(refuses_existing_catalogue_shm_sidecar, true, "-shm");
+sidecar_refusal_test!(refuses_existing_native_journal_sidecar, false, "-journal");
+sidecar_refusal_test!(refuses_existing_catalogue_journal_sidecar, true, "-journal");
+
+fn active_wal_is_refused(catalogue: bool) {
+    let fixture = Fixture::new();
+    let path = fixture.target(catalogue);
+    let conn = knx_store::Connection::open(path).unwrap();
+    conn.execute_batch(
+        "PRAGMA journal_mode=WAL; PRAGMA wal_autocheckpoint=0;
+         CREATE TABLE monitor_export_wal_marker(value);
+         INSERT INTO monitor_export_wal_marker VALUES ('committed only in WAL');",
+    )
+    .unwrap();
+    assert_header_versions(path, [2, 2]);
+    assert!(std::fs::metadata(sidecar(path, "-wal")).unwrap().len() > 32);
+    assert!(sidecar(path, "-shm").exists());
+    let value: String = conn
+        .query_row("SELECT value FROM monitor_export_wal_marker", [], |row| {
+            row.get(0)
+        })
+        .unwrap();
+    assert_eq!(value, "committed only in WAL");
+    let main_only = tempfile::tempdir().unwrap();
+    let copy = main_only.path().join("main-only.sqlite");
+    std::fs::copy(path, &copy).unwrap();
+    let copied = knx_store::Connection::open(&copy).unwrap();
+    let marker_count: u32 = copied
+        .query_row(
+            "SELECT count(*) FROM sqlite_master WHERE name='monitor_export_wal_marker'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(
+        marker_count, 0,
+        "main-only reads would miss committed WAL state"
+    );
+    drop(copied);
+    fixture.assert_refusal_preserves_layout("unsupported input layout");
+    // Keep the WAL owner alive until every after-byte has been observed.
+    drop(conn);
+}
+
+#[test]
+fn refuses_active_wal_native_preserving_main_wal_and_shm() {
+    active_wal_is_refused(false);
+}
+
+#[test]
+fn refuses_active_wal_catalogue_preserving_main_wal_and_shm() {
+    active_wal_is_refused(true);
+}
+
+fn crash_writer_if_requested() {
+    let Some(path) = std::env::var_os("KNX_MONITOR_EXPORT_CRASH_FIXTURE") else {
+        return;
+    };
+    let conn = knx_store::Connection::open(Path::new(&path)).unwrap();
+    conn.execute_batch(
+        "PRAGMA journal_mode=DELETE; PRAGMA synchronous=FULL; PRAGMA cache_size=5;
+         BEGIN IMMEDIATE; PRAGMA user_version=9999;
+         CREATE TABLE monitor_export_uncommitted(value);",
+    )
+    .unwrap();
+    for _ in 0..64 {
+        conn.execute(
+            "INSERT INTO monitor_export_uncommitted VALUES (randomblob(8192))",
+            [],
+        )
+        .unwrap();
+    }
+    // Deliberately skip SQLite destructors: the parent owns and waits this child.
+    std::process::exit(0);
+}
+
+fn hot_journal_is_refused(catalogue: bool, test_name: &str) {
+    let fixture = Fixture::new();
+    let path = fixture.target(catalogue);
+    let original = std::fs::read(path).unwrap();
+    let original_version = u32::from_be_bytes(original[60..64].try_into().unwrap());
+    let result = Command::new(std::env::current_exe().unwrap())
+        .args(["--exact", test_name, "--nocapture"])
+        .env("KNX_MONITOR_EXPORT_CRASH_FIXTURE", path)
+        .output()
+        .unwrap();
+    assert_success(&result);
+    let journal = sidecar(path, "-journal");
+    let bytes = std::fs::read(&journal).unwrap();
+    assert!(bytes.len() > 512);
+    assert!(
+        bytes[..8].iter().any(|byte| *byte != 0),
+        "SQLite must have flushed a hot journal header"
+    );
+    // Verify real recovery on a disposable copy, never on the measured inputs.
+    let recovery = tempfile::tempdir().unwrap();
+    let copied = recovery.path().join("recover.sqlite");
+    std::fs::copy(path, &copied).unwrap();
+    std::fs::copy(&journal, sidecar(&copied, "-journal")).unwrap();
+    let recovered = knx_store::Connection::open(&copied).unwrap();
+    let count: u32 = recovered
+        .query_row(
+            "SELECT count(*) FROM sqlite_master WHERE name='monitor_export_uncommitted'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(
+        count, 0,
+        "control must roll back the real interrupted transaction"
+    );
+    let recovered_version: u32 = recovered
+        .query_row("PRAGMA user_version", [], |row| row.get(0))
+        .unwrap();
+    assert_eq!(recovered_version, original_version);
+    let integrity: String = recovered
+        .query_row("PRAGMA integrity_check", [], |row| row.get(0))
+        .unwrap();
+    assert_eq!(integrity, "ok");
+    drop(recovered);
+    assert!(!sidecar(&copied, "-journal").exists());
+    // Recovery restores logical state, not necessarily unused freelist bytes.
+    // The actual export below must preserve every measured byte, including those.
+    fixture.assert_refusal_preserves_layout("unsupported input layout");
+}
+
+#[test]
+fn refuses_hot_native_journal_without_recovery_or_mutation() {
+    crash_writer_if_requested();
+    hot_journal_is_refused(
+        false,
+        "cli_monitor_export::layout::refuses_hot_native_journal_without_recovery_or_mutation",
+    );
+}
+
+#[test]
+fn refuses_hot_catalogue_journal_without_recovery_or_mutation() {
+    crash_writer_if_requested();
+    hot_journal_is_refused(
+        true,
+        "cli_monitor_export::layout::refuses_hot_catalogue_journal_without_recovery_or_mutation",
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn refuses_dangling_sidecar_symlinks_without_following_or_replacing() {
+    for catalogue in [false, true] {
+        for suffix in ["-wal", "-shm", "-journal"] {
+            let fixture = Fixture::new();
+            let path = sidecar(fixture.target(catalogue), suffix);
+            std::os::unix::fs::symlink("missing-sidecar-target", path).unwrap();
+            fixture.assert_refusal_preserves_layout("unsupported input layout");
+        }
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn refuses_sidecars_at_live_input_symlink_targets() {
+    for catalogue in [false, true] {
+        let fixture = Fixture::new();
+        let path = fixture.target(catalogue);
+        let target_dir = fixture.dir.path().join("real-input");
+        std::fs::create_dir(&target_dir).unwrap();
+        let target = target_dir.join("store.sqlite");
+        std::fs::rename(path, &target).unwrap();
+        std::os::unix::fs::symlink(&target, path).unwrap();
+        std::fs::write(sidecar(&target, "-journal"), genuine_sidecar("-journal")).unwrap();
+        fixture.assert_refusal_preserves_layout("unsupported input layout");
+    }
+}
+
+#[test]
+fn refuses_default_wal_catalogue_and_missing_catalogue_with_sidecar() {
+    for missing in [false, true] {
+        let fixture = Fixture::new();
+        let default = fixture.dir.path().join("home/data/knx/products.sqlite");
+        std::fs::create_dir_all(default.parent().unwrap()).unwrap();
+        if missing {
+            std::fs::write(sidecar(&default, "-shm"), genuine_sidecar("-shm")).unwrap();
+        } else {
+            std::fs::rename(&fixture.catalogue, &default).unwrap();
+            let conn = knx_store::Connection::open(&default).unwrap();
+            conn.pragma_update(None, "journal_mode", "WAL").unwrap();
+            drop(conn);
+            assert_header_versions(&default, [2, 2]);
+        }
+        let before = inventory(fixture.dir.path());
+        let result = cli(fixture.dir.path(), &fixture.input, &fixture.output, &[]);
+        assert!(inventory(fixture.dir.path()) == before);
+        assert_refused(&result, "unsupported input layout for product database");
+        assert!(!fixture.output.exists());
+    }
+}
+
+#[test]
+fn standalone_delete_native_and_catalogue_still_export_without_input_changes() {
+    let fixture = Fixture::new();
+    let before = inventory(fixture.dir.path());
+    assert_success(&fixture.run());
+    let document: Value = serde_json::from_slice(&member(&fixture.output, "project.json")).unwrap();
+    assert_eq!(document["info"]["name"], "Synthetic monitor project");
+    let mut after = inventory(fixture.dir.path());
+    assert!(after.remove(Path::new("new.zip")).is_some());
+    assert!(
+        before == after,
+        "success may add only the ZIP, not SQLite sidecars"
+    );
+}

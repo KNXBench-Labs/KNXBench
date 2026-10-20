@@ -25,7 +25,14 @@ review accepts with zero findings and three exact passes; two isolated compiled
 wrong-owner/raw-tree mutations fail as intended between baseline/restored passes.
 Fourteen reviewer result-corruption controls calibrate assertions separately.
 The literals do not distinguish encounter order from lexicographic sorting.
-Maintained merged acceptance/publication remain pending.
+Delivered on `main` as main-first `9145b03f` (feature `04754bc3`): maintained
+13/13-stage scoped gate, 579 Rust passes (58 ignored), 55/55 selected corpus
+cases and 340 registered tooling tests (one existing optional skip). Exact
+ordered proofs, frozen inputs, empty user-data guards and publication readback
+verified. Private 275-file archive plus manifest verified; implementation
+worktree, two merged branches and owned scratch retired. Claim released.
+This is source/test/contract delivery, not full-workspace, browser or release
+acceptance; full WP-06 remains open.
 WP-06 folder rendering/manufacturer mapping and priority are not delivered.
 [Folder boundary contract](contracts/communication-object-folders.md).
 

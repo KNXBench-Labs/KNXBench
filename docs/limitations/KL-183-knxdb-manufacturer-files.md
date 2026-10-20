@@ -2,6 +2,31 @@
 
 [Current summary and ledger status](../KNOWN_LIMITATIONS.md#catalogue-kl-183)
 
+## Catalogue-authoring runtime characterization (20 October 2026)
+
+The previously source-traced case below is now reproduced through the real HTTP
+routes with a fictional product package. New → package install → catalogue device
+create resolves the application's parameters. Save As and subsequent Save both
+succeed, but the saved file has no manufacturer manifest entries or carried files
+even though the authoring product database retains the hardware, catalogue and
+program source bytes. Reopening with the original product database resolves the
+program; reopening next to an empty one preserves the complete project model but
+returns `programId: null`.
+
+The unresolved-program response reports `productDatabase: true` and
+`missingFiles: 0`: that zero counts missing **manifest entries**, not every source
+needed by the project's devices. It is not a portability certificate. Installing
+the same fictional package into the empty database makes the program resolve
+again without changing the model or saved file bytes; the manifest remains empty.
+
+The [exact scope and evidence](../status/2026-10-20-catalogue-authoring-portability.md)
+separate the desired-portability assertion's observed failure from the committed
+passing characterization. Twelve owning HTTP tests pass, including existing
+imported-project portability positives. This adds regression evidence, **not a
+production repair**, a complete dependency closure or universal package/recovery
+support. Future manifest acquisition must define exact source/dependency identity,
+transaction/history behavior and unavailable-source reporting before implementation.
+
 ## Manifest-scoped portability (20 October 2026 reconciliation)
 
 "Fixed for new saves" is too broad. Schema v16 embeds available, hash-checked

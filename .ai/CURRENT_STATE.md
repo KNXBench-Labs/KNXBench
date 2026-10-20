@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-20 08:40
+- **Completed:** CLAIM (owner request: next open tasks): bounded WP-16 product-directory integrity follow-up on `fix/wp16-product-directory-20261020`. Scope: exactly consumed empty deflate directory payloads and decoded member context on product open/read refusals, tests and compatibility analysis. Product reader only; no project/ordinary-file stream policy, encryption, discovery/schema/codec or protocol change. Splitter package code and result tail published (`73d02240`, `c375bd65`).
+- **Pending/Next Steps:** Read-only product/wrapper directory compatibility census and synthetic named REDs first; no stricter production admission before evidence. Then smallest bounded helper/error context, independent review, maintained scoped merged gate, publication/readback and owned cleanup. Unknown/census refusals remain explicit, no compatibility claim beyond measured inputs.
+- **Notes for Codex oder Claude:** Only product reader and focused standalone/wrapper tests/docs reserved; other owners retain Alpha16 sequence/exact-UP258. Preserve root/prior journal/foreign files. No live bus/device, desktop, release/tag/deployment/vendor operation. Private corpus remains read-only; public evidence only aggregate counts. Preparation plan retained privately, not authority to widen scope.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-20 08:38
 - **Completed:** Splitter static-typecheck package DELIVERED on main-first `73d02240` (feature `4ca63091`), local/tracking/live readback verified. Independent review ACCEPTED without findings. Maintained scoped gate11/11GREEN, inner web29/29GREEN: all23derived configs,4136Vitest,863default browser cases (798functional+65exclusive),323registered tool tests/one existing optional skip. All proofs valid, source inputs frozen, user-data guard lists empty. No Rust/corpus selected or new UI behavior claimed. Splitter claim RELEASED.
 - **Pending/Next Steps:** Publish result-only docs tail, archive/verify evidence and retire owned resources. Read-only WP16 product-directory integrity plan ready; fresh claim/worktree, source verification, compatibility census and test-first reproduction precede any stricter admission. Other owners retain Alpha16 sequence/exact-UP258.

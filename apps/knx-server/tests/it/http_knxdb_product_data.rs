@@ -1,9 +1,9 @@
-//! A saved `.knxdb` carries its application programs (GitHub #21, ADR-0128).
+//! Exercises native carried sources and the catalogue-authoring portability boundary.
 //!
-//! Every test imports a fictional `.knxproj` whose one device runs a real
-//! (tiny) application program, saves it, and reopens the file in a fresh
-//! server whose product database has never seen that program: the Docker
-//! rebuild and the copied-to-another-computer cases from the issue.
+//! The import tests save a fictional `.knxproj` whose device runs a tiny
+//! application, then reopen it next to an empty product database. The separate
+//! catalogue-authoring case pins the current missing-manifest boundary and
+//! demonstrates reinstallation without changing the saved project or model.
 
 use axum::{
     body::Body,
@@ -27,6 +27,9 @@ const PROGRAM: &[u8] = br#"<KNX xmlns="http://knx.org/xml/project/11"><Manufactu
 
 const HARDWARE_PATH: &str = "M-0001/Hardware.xml";
 const PROGRAM_PATH: &str = "M-0001/M-0001_A-1.xml";
+const CATALOG_ITEM: &str = "M-0001_CI-1";
+const CATALOG_MASTER: &[u8] = br#"<KNX xmlns="http://knx.org/xml/project/11"><MasterData><Manufacturers><Manufacturer Id="M-0001" Name="Fictional"/></Manufacturers></MasterData></KNX>"#;
+const CATALOG_SOURCE: &[u8] = br#"<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-0001"><Catalog><CatalogSection Id="M-0001_CG-1" Name="Fictional devices" Number="1"><CatalogItem Id="M-0001_CI-1" Name="Fictional dimmer" Number="FD-4" ProductRefId="M-0001_H-1_P-1" Hardware2ProgramRefId="M-0001_H-1_HP-1"/></CatalogSection></Catalog></Manufacturer></ManufacturerData></KNX>"#;
 
 fn zip(entries: &[(&str, &[u8])]) -> Vec<u8> {
     let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
@@ -463,6 +466,138 @@ async fn a_downloaded_knxdb_carries_the_manufacturer_files_too() {
     let downloaded = dir.path().join("downloaded.knxdb");
     std::fs::write(&downloaded, &bytes).unwrap();
     assert_eq!(carried_rows(&downloaded), 2);
+}
+
+async fn install_catalogue_fixture(app: &axum::Router) {
+    let package = zip(&[
+        ("knx_master.xml", CATALOG_MASTER),
+        ("M-0001/Catalog.xml", CATALOG_SOURCE),
+        (HARDWARE_PATH, HARDWARE),
+        (PROGRAM_PATH, PROGRAM),
+    ]);
+    let boundary = "fictional-catalogue-portability";
+    let mut body = format!(
+        "--{boundary}\r\nContent-Disposition: form-data; name=\"file\"; filename=\"fictional.knxprod\"\r\n\r\n"
+    )
+    .into_bytes();
+    body.extend_from_slice(&package);
+    body.extend_from_slice(format!("\r\n--{boundary}--\r\n").as_bytes());
+    let response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/catalog/install")
+                .header(
+                    "content-type",
+                    format!("multipart/form-data; boundary={boundary}"),
+                )
+                .body(Body::from(body))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK, "fixture install refused");
+    let bytes = axum::body::to_bytes(response.into_body(), 20 * 1024 * 1024)
+        .await
+        .unwrap();
+    let report: Value = serde_json::from_slice(&bytes).unwrap();
+    assert_eq!(report["skipped"], false);
+}
+
+#[tokio::test]
+async fn a_catalogue_created_device_keeps_its_model_but_needs_products_after_save() {
+    let dir = tempfile::tempdir().unwrap();
+    let state = state_with_products(dir.path(), &dir.path().join("authoring.sqlite"));
+    let app = knx_server::app(state.clone(), None);
+    ok(&app, "/api/project/new", Some(json!({}))).await;
+    install_catalogue_fixture(&app).await;
+    let items = ok(&app, "/api/catalog/items", None).await;
+    assert_eq!(items.as_array().unwrap().len(), 1);
+    assert_eq!(items[0]["id"], CATALOG_ITEM);
+    ok(
+        &app,
+        "/api/devices",
+        Some(json!({ "catalogItemId": CATALOG_ITEM, "name": "Authored dimmer" })),
+    )
+    .await;
+    let device = only_device(&state);
+    assert_eq!(parameter_program(&app, device).await, "M-0001_A-1");
+    let original = state.project.lock().unwrap().clone().unwrap();
+    let native = dir.path().join("authored.knxdb");
+    ok(
+        &app,
+        "/api/project/save-as",
+        Some(json!({ "path": native })),
+    )
+    .await;
+    assert!(
+        native.is_file(),
+        "Save As must persist the authored project"
+    );
+    ok(&app, "/api/project/save", Some(json!({}))).await;
+    {
+        let read = knx_store::open_existing_read_only(&native).unwrap();
+        assert!(knx_store::load_manufacturer_refs(&read.conn)
+            .unwrap()
+            .is_empty());
+        assert_eq!(
+            carried_rows(&native),
+            0,
+            "no manifest means no carried files"
+        );
+        let products = state.product_db.as_ref().unwrap().lock().unwrap();
+        for bytes in [HARDWARE, PROGRAM, CATALOG_SOURCE] {
+            let hash = knx_store::manufacturer_file_hash(bytes);
+            assert!(knx_productdb::has_source_file(&products, &hash).unwrap());
+        }
+    }
+
+    // The saved model and package are valid: the same file resolves while
+    // the original installed product data remain available.
+    let same = state_with_products(dir.path(), &dir.path().join("authoring.sqlite"));
+    let same_app = knx_server::app(same.clone(), None);
+    ok(
+        &same_app,
+        "/api/project/open",
+        Some(json!({ "path": native })),
+    )
+    .await;
+    assert_eq!(same.project.lock().unwrap().as_ref(), Some(&original));
+    assert_eq!(parameter_program(&same_app, device).await, "M-0001_A-1");
+
+    let fresh = state_with_products(dir.path(), &dir.path().join("empty.sqlite"));
+    {
+        let products = fresh.product_db.as_ref().unwrap().lock().unwrap();
+        let count: i64 = products
+            .query_row("SELECT count(*) FROM application_program", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(count, 0, "reopen must start without installed programs");
+    }
+    let reopened = knx_server::app(fresh.clone(), None);
+    ok(
+        &reopened,
+        "/api/project/open",
+        Some(json!({ "path": native })),
+    )
+    .await;
+    assert_eq!(fresh.project.lock().unwrap().as_ref(), Some(&original));
+    let panel = ok(&reopened, &format!("/api/device/{device}/parameters"), None).await;
+    assert_eq!(panel["programId"], Value::Null);
+    assert_eq!(
+        panel["unresolvedProgram"],
+        json!({ "programRef": "M-0001_H-1_HP-1", "productDatabase": true, "missingFiles": 0 }),
+        "zero missing manifest entries is not proof of a self-contained project"
+    );
+
+    // Reinstalling the original synthetic package is a working workaround,
+    // not a repair of the project's absent source manifest.
+    let before_reinstall = std::fs::read(&native).unwrap();
+    install_catalogue_fixture(&reopened).await;
+    assert_eq!(parameter_program(&reopened, device).await, "M-0001_A-1");
+    assert_eq!(fresh.project.lock().unwrap().as_ref(), Some(&original));
+    assert_eq!(std::fs::read(&native).unwrap(), before_reinstall);
+    assert_eq!(carried_rows(&native), 0);
 }
 
 #[tokio::test]

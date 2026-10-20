@@ -122,3 +122,17 @@ nothing mismatched. The largest project's manufacturer members are 185.8 MiB raw
 and 18.0 MiB with zlib at the default level, which is what the file carries.
 The whole probe (import, save, two opens, restore, 228 panel reads) took 230 s;
 the stages were not timed separately.
+
+## Portability scope clarification (20 October 2026)
+
+The earlier consequence about opening next to any product database is conditional
+on the saved manifest actually naming the required sources and those bytes being
+available for embedding. Save itself does not discover every dependency of every
+authoring path. The [catalogue-authoring HTTP characterization](../status/2026-10-20-catalogue-authoring-portability.md)
+now reproduces a new project whose catalogue-created device saves with an empty
+manifest: the model persists, but an empty product database cannot resolve its
+program until matching product data are installed. Existing imported-project
+portability positives remain valid. This adds evidence and narrows the blanket
+wording; it does not change schema v16, the manifest-only embedding decision or
+production behavior. Catalogue source acquisition needs a separate dependency,
+identity and history contract before a repair is admitted.

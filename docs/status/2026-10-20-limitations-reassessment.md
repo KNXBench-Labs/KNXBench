@@ -55,8 +55,13 @@ technical import/export page is clarified without rewriting its dated history.
 The preceding audit actually ran 385 targeted Web unit tests in 12 files on
 `2ff5b370` (296 + 89, both exit 0). That is retained evidence, not a new run on
 this documentation candidate. Its other cited Rust/test paths were inspected,
-not executed. Fresh documentation/generator/preservation/ledger/link checks
-belong to this delivery; their completion is recorded in the handover.
+not executed. Fresh acceptance on main-first merge `52a42218`: all 13 planned
+scoped-gate stages passed with frozen inputs, including 317 tool tests, 103
+xtask tests, Clippy, all 1,636 anchors across 680 Markdown files and 208 ledger
+rows. The separate 14-test catalogue/preservation preflight passed too. The
+xtask-only corpus stage had no selected targets and is not a corpus rerun.
+No real user data was touched or unchecked. Publication is a separate readback
+step; these checks do not establish new application or hardware acceptance.
 
 No source code, schema, programming admission, hardware operation, native
 acceptance, format interpretation or ETS-compatibility claim changes.

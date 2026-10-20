@@ -60,7 +60,11 @@ are implemented.
    proof checks they share (`tools/web_gate_support.py`) selects the complete
    gate. Files that screenshot and load scripts write are not web inputs. The runner refuses an empty change set (it would
    test nothing) and uncommitted bindings when it would regenerate them. The
-   plan and its reasons are part of the receipt.
+   plan and its reasons are part of the receipt. The plan explicitly names
+   changed known web inputs that no longer exist as deleted or missing, using
+   repository-relative paths. This is an additional explanation, not a new
+   selection rule or proof of which unresolved dependency caused each spec's
+   fallback; existing conservative reasons and the complete-gate rule remain.
 2. **Browser cases are parallel unless they measure real time.** Cases whose
    assertions depend on elapsed time or animation frames carry
    `{ tag: "@exclusive" }` on the test or an enclosing `describe` and run

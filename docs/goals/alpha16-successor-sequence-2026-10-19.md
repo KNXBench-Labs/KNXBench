@@ -89,7 +89,8 @@ refusals remain boundaries under the existing repair contract.
 [source-bound baseline](../testing/productdb-baseline-2026-10-20.md) records
 54 operations, complete database/source/evidence growth and native target peaks.
 It is not a storage/parser change, production-scale guarantee or compatibility
-claim. Package gate/integration/publication are separate acceptance boundaries.
+claim. [Source delivery and integrated acceptance](../IMPLEMENTATION_STATUS.md#wp-041-synthetic-measurement-baseline-20-october-2026)
+are separately verified on `0f44135b`; WP-04.1 is delivered.
 Next ordered work is WP-04.2: inventory existing resolver bounds and decide from
 evidence whether parsing needs to change. WP-04.3 and WP-19 remain later; WP-04
 is open. No later package is claimed or completed by the measurement result.

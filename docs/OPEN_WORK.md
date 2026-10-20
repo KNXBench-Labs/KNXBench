@@ -77,7 +77,7 @@ Each package needs its own scoped claim, review, tests and delivery evidence.
 | [WP-01](#wp-01--idempotent-unknown-evidence) | P1 | Delivered 19 October (product DB v26, ADR-0146) | Unknown-evidence rows remain truthful across shared-source re-ingest. |
 | [WP-02](#wp-02--suffixtext-end-to-end) | P2 | Delivered 19 October (product DB v26, ADR-0146) | Source suffix text reaches the existing parameter rows without changing stored values. |
 | [WP-03](#wp-03--legacy-binary-enumeration-values) | P2 | Mapping evidence first | Legacy binary enum values use the existing typed storage or keep an explicit refusal/report. |
-| [WP-04](#wp-04--large-catalogues-measure-then-stream) | P1/P2 | Current ordered slice WP-04.1: measurement; WP-04.2/.3 remain open | Measured database growth, bounded procedure parsing, then a cancellable web large-profile workflow. |
+| [WP-04](#wp-04--large-catalogues-measure-then-stream) | P1/P2 | WP-04.1 delivered; WP-04.2/.3 remain open | Measured database growth, bounded procedure parsing, then a cancellable web large-profile workflow. |
 | [WP-05](#wp-05--parameter-layout-fidelity) | P2 | Evidence/contract gate; coordinate with UI-05 | One evidenced layout feature at a time, never inferred manufacturer behaviour. |
 | [WP-06](#wp-06--communication-object-organisation) | P2 | Folder contract first; priority needs a separate model ADR | Declared object folders and, separately, lossless priority representation. |
 | [WP-07](#wp-07--module-instance-authority) | P1 | Defining mapping evidence required | One independently witnessed instance/repeat/number-offset mapping contract. |
@@ -201,7 +201,8 @@ retained originals/decoded sources, parameter/index growth and free pages;
 This is not a production-scale guarantee or parser-optimisation result.
 WP-04.2 bounded parsing and WP-04.3 cancellable web installation remain separate
 deliveries; WP-04 stays open. The repair's fixed evidence allowance is not a
-whole-process memory guarantee. Package gates/publication are separate checks.
+whole-process memory guarantee. The [delivery record](IMPLEMENTATION_STATUS.md#wp-041-synthetic-measurement-baseline-20-october-2026)
+records passed integration gates and published source separately from study review.
 
 **Three separate deliveries, in order:**
 

@@ -30,9 +30,16 @@ independent DEFAULT XML/SQL comparison verifies preservation and normalized
 semantics. The [measured results and limits](testing/productdb-baseline-2026-10-20.md)
 separate target RSS from wrapper peaks and account for retained bytes, normalized
 data, indexes and free pages. This is a synthetic baseline, not production-scale
-or vendor/ETS compatibility acceptance. Delivery gates and publication remain
-separate; WP-04.2/.3 and WP-19 are not completed. ProductDB schema and production
-parser budgets are unchanged.
+or vendor/ETS compatibility acceptance. Source delivery is published as
+`0f44135b3e593c6d26c3e883695bab50b51b2ae1`, with local/tracking/live readback
+equal on 20 October 2026. Its maintained main-first integration gate passes
+16/16 ordered stages: 5,498 Rust tests, 215 ignored and 155/155 selected corpus
+tests; 410 tool tests are registered with six optional skips. Inputs are frozen
+and user-data guards are clear. The separate branch gate passed 5,497 Rust tests
+and 155/155 corpus cases; those runs are not added together. No functional browser
+suite was selected. Study measurements retain their original `9834daff` binding;
+the integrated gate does not replay them. WP-04.2/.3 and WP-19 remain open.
+ProductDB schema and production parser budgets are unchanged.
 
 ## Project-folder retention characterization (20 October 2026 source)
 

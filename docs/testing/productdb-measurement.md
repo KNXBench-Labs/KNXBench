@@ -2,9 +2,9 @@
 
 Status: the source-bound synthetic release study is independently accepted;
 [results and limits](productdb-baseline-2026-10-20.md) record its install, resolver
-and target-memory baseline. Maintained delivery gates, integration and publication
-are separate checks. This contract is not a new product format, installer or
-production memory guarantee.
+and target-memory baseline. Source delivery and maintained integrated acceptance
+are [recorded separately](../IMPLEMENTATION_STATUS.md#wp-041-synthetic-measurement-baseline-20-october-2026).
+This contract is not a new product format, installer or production memory guarantee.
 [Ordered work](../goals/alpha16-successor-sequence-2026-10-19.md) ·
 [WP-04](../OPEN_WORK.md#wp-04--large-catalogues-measure-then-stream).
 
@@ -71,8 +71,9 @@ This does not claim authentication of pre-exec or already-dead leaders, and
 earlier fully checkpointed timeout passes do not supply that missing evidence.
 All implementation-review blockers are closed. The actual source-bound release
 study is independently accepted; [results and limits](productdb-baseline-2026-10-20.md)
-record its 54 observations. Maintained delivery gates, integration and publication
-remain separate from study acceptance.
+record its 54 observations. Maintained delivery gates and source publication
+are separately recorded in the implementation delivery entry, not inferred from
+study acceptance.
 
 Before accepting target-memory measurements, exercise the exact built helper
 through the maintained adapter and its actual outer interruption path:

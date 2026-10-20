@@ -375,3 +375,38 @@ Result-only closure checks and scoped evidence archival/retirement remain
 separate, pending observations. No source execution is rerun or relabelled by
 this prose update. Managed binding remains the next dependency; no production
 constructor, authentication, SQL installer, route or full settlement is claimed.
+
+## A2 core archival and B1 bounded admission (21 October 2026)
+
+Result-onlyc012f714passes10/10selectedmaintainedstages and is published with
+immediate local/tracking/live equality. Runtime remains bound to9ebb7cc6, not
+relabelled as another execution. Core archive independently verifies7995entries,
+5595files including3491CargoELF; originalmanifest/archive agree, so the unused
+reconciliation helper is not needed. Scoped supplementary archival/retirement
+continues separately; deletion has not been claimed complete.
+
+B1 read-only proposal is authenticated atc012f714:178inputs/174HEADblobs+modes
+and30outputs. One missing behavior is private bounded exact schema28admission,
+not changing quiet openers or delivering the full witness. Parent retrieves and
+inspects actual official SQLite introspection/schema documentation, preserving
+current-document versus locked-runtime distinctions in the research note.
+A finite immutable-export Rust migration/introspection probe is dispatched for
+the real schema oracle. No production implementation is authorized from static
+counts alone; unfamiliar runtime variants must refuse, not silently widen scope.
+
+## A2 owned retirement verified (21 October 2026)
+
+The original core archive7995entries and supplement288new/changedversions cover
+8281currentretainedentries; populations overlap and are not a distinct-file sum.
+Every original CargoELF is retained (3491in core); only rebuildable non-ELF target
+cache is excluded. Independent controller readback rehashes both archives and the
+supplement manifest, verifies current-identity coverage and all91exact rawroots
+absent. B1 inputs, live continuation and successor worktree remain. The original
+core's successful verification stands; the unused speculative reconciliation
+helper was archived, never executed or credited as runtime evidence.
+
+Retirement is now an actual observation, not a pending claim. This docs-only
+closure does not rerun runtime checks. Foreign monitoring publication is active
+on c012f714; closure publication waits for its outcome rather than invalidating
+its fetch-conditional gate. B1 remains a separate finite source-bound oracle
+handoff, not an implemented admission helper.

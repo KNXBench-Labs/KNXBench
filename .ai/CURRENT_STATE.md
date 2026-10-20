@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-20 07:25
+- **Completed:** AppImage native-binding preflight implemented locally on `fix/appimage-native-binding-20261020`. Named missing-step RED; five focused binding regressions and existing AppImage tests pass (31 passed, one existing optional skip), frontend production build passes. Initial independent review approves with one minor test-strength finding, corrected by loading the intact copied library before corruption and checking its canonical path in the refusal cause. Both failure-masking negative controls fail as intended without changing source files.
+- **Pending/Next Steps:** Focused correction review `deleg_7171c36f` is pending; then committed main-first candidate, maintained 13-stage scoped gate, publication/readback and owned cleanup. Next independent candidate is WP-03 G16 ZIP/VD1 diagnostics after a fresh claim/overlap check; not legacy binary encoding.
+- **Notes for Codex oder Claude:** Original npm omission cause remains unknown; local checks are not hosted Node 22 or AppImage acceptance. Raw evidence in `<profile-scratch>/open-tasks-20261020`. Alpha 16 migration repair and its sequence retain their owner; selected dirty root/foreign files preserved. No schema, bus/device, desktop, release/tag, deployment or vendor operation.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-20 07:23
 - **Completed:** CLAIM (owner request: work the next open tasks): bounded AppImage native-binding post-install check on `fix/appimage-native-binding-20261020`. Scope is the Linux AppImage workflow, a small frontend dependency smoke check and missing-binding regressions; original npm omission cause remains unknown.
 - **Pending/Next Steps:** Test-first implementation, independent review, maintained scoped acceptance, main-first integration and publication/readback. After this delivery, claim the independent WP-03 G16 ZIP/VD1 diagnostic follow-up after a fresh overlap check; legacy binary encoding is not included.

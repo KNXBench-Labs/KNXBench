@@ -182,12 +182,73 @@ fn install_package_names_a_wrapper_instead_of_a_missing_master() {
 }
 
 #[test]
-fn a_zip_without_master_or_inner_package_still_misses_its_master() {
+fn a_zip_without_master_or_inner_package_names_the_absent_product_package() {
     let (_dir, conn) = fresh();
-    let bytes = zip_of(&[("Manual.pdf", MANUAL)]);
+    let seed = package(0x10);
+    install_product_file(&conn, "seed.knxprod", &seed, PackageLimits::STANDARD).unwrap();
+    let before = stored_packages(&conn);
+    let sources = count(&conn, "SELECT count(*) FROM source_file");
+    for members in [
+        vec![("Manual.pdf", MANUAL)],
+        vec![("installer.exe", b"MZ synthetic installer".as_slice())],
+        vec![("legacy.vd1", b"not an inner product package".as_slice())],
+        vec![("nested.zip", seed.as_slice())],
+    ] {
+        let bytes = zip_of(&members);
+        let error = match install_product_file(&conn, "vendor.zip", &bytes, PackageLimits::STANDARD)
+        {
+            Err(error) => error,
+            Ok(_) => panic!("a ZIP without a product must refuse"),
+        };
+        assert!(matches!(error, PackageError::MissingMaster), "{error}");
+        assert_eq!(
+            error.to_string(),
+            "ZIP is not a standalone product package: missing knx_master.xml file",
+        );
+        assert_eq!(stored_packages(&conn), before);
+        assert_eq!(count(&conn, "SELECT count(*) FROM source_file"), sources);
+        assert_eq!(count(&conn, "SELECT count(*) FROM application_program"), 1);
+    }
+    // Empty archives keep the structural refusal ahead of content diagnosis.
     let error =
-        install_product_file(&conn, "manual.zip", &bytes, PackageLimits::STANDARD).unwrap_err();
-    assert!(matches!(error, PackageError::MissingMaster), "{error:?}");
+        match install_product_file(&conn, "empty.zip", &zip_of(&[]), PackageLimits::STANDARD) {
+            Err(error) => error,
+            Ok(_) => panic!("empty ZIP must refuse"),
+        };
+    assert!(matches!(error, PackageError::InvalidZip { .. }), "{error}");
+    assert_eq!(stored_packages(&conn), before);
+}
+
+#[test]
+fn a_master_named_directory_does_not_deny_a_present_inner_product() {
+    let (_dir, conn) = fresh();
+    let product = package(0x10);
+    install_product_file(&conn, "seed.knxprod", &product, PackageLimits::STANDARD).unwrap();
+    let before = stored_packages(&conn);
+    let sources = count(&conn, "SELECT count(*) FROM source_file");
+    for members in [
+        vec![
+            ("knx_master.xml/", b"".as_slice()),
+            ("good.knxprod", product.as_slice()),
+        ],
+        vec![("knx_master.xml/", b"".as_slice())],
+    ] {
+        let bytes = zip_of(&members);
+        // Both public APIs retain their existing refusal; finding a package
+        // inside does not make the outer master-named directory a master file.
+        let direct = install_package(&conn, "vendor.zip", &bytes).unwrap_err();
+        let wrapper_aware =
+            install_product_file(&conn, "vendor.zip", &bytes, PackageLimits::STANDARD).unwrap_err();
+        for error in [direct, wrapper_aware] {
+            assert!(matches!(error, PackageError::MissingMaster), "{error}");
+            assert_eq!(
+                error.to_string(),
+                "ZIP is not a standalone product package: missing knx_master.xml file",
+            );
+        }
+        assert_eq!(stored_packages(&conn), before);
+        assert_eq!(count(&conn, "SELECT count(*) FROM source_file"), sources);
+    }
 }
 
 #[test]
@@ -432,5 +493,9 @@ fn appledouble_is_recognised_by_content_not_by_name() {
     let error = install_product_file(&conn, "vendor.zip", &only_metadata, PackageLimits::STANDARD)
         .unwrap_err();
     assert!(matches!(error, PackageError::MissingMaster), "{error:?}");
+    assert_eq!(
+        error.to_string(),
+        "ZIP is not a standalone product package: missing knx_master.xml file",
+    );
     assert_eq!(count(&conn, "SELECT count(*) FROM package"), 0);
 }

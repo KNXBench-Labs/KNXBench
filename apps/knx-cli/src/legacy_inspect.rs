@@ -25,10 +25,10 @@ pub(crate) struct Args {
     pub(crate) password: PasswordSource,
 }
 
-pub(crate) fn parse(args: &[String]) -> Result<Args, String> {
+pub(crate) fn parse(args: &[String], file_hint: &str) -> Result<Args, String> {
     let (file, password) = parse_password_args(args)?;
     Ok(Args {
-        file: file.ok_or("missing <file.vd3|file.vd4|file.vd5|file.pr5>")?,
+        file: file.ok_or_else(|| format!("missing {file_hint}"))?,
         password,
     })
 }
@@ -121,7 +121,7 @@ pub(crate) fn read_bounded(file: &str) -> Result<Vec<u8>, String> {
 }
 
 pub(crate) fn run(args: &[String]) -> ExitCode {
-    let args = match parse(args) {
+    let args = match parse(args, "<file.vd1|file.vd3|file.vd4|file.vd5|file.pr5>") {
         Ok(args) => args,
         Err(e) => {
             eprintln!("{e}\n{}", super::USAGE);

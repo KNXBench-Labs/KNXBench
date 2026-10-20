@@ -62,6 +62,44 @@ fn files_under(dir: &std::path::Path) -> Vec<PathBuf> {
 }
 
 #[test]
+fn inspection_usage_names_vd1_without_advertising_its_import() {
+    let home = tempfile::tempdir().unwrap();
+    let out = run(&["products", "inspect-legacy"], None, home.path());
+    let all = text(&out);
+    assert_eq!(out.status.code(), Some(1), "{all}");
+    assert!(
+        all.contains("missing <file.vd1|file.vd3|file.vd4|file.vd5|file.pr5>"),
+        "{all}"
+    );
+    assert!(
+        all.contains("knx products inspect-legacy <file.vd1|file.vd3|file.vd4|file.vd5|file.pr5>"),
+        "{all}"
+    );
+    assert!(
+        all.contains("VD1 inspection only; no VD1 import support is claimed"),
+        "{all}"
+    );
+    assert!(
+        all.contains("knx products import-legacy <file.vd3|file.vd4|file.vd5>"),
+        "{all}"
+    );
+    assert!(files_under(home.path()).is_empty(), "usage created files");
+}
+
+#[test]
+fn import_usage_does_not_inherit_the_inspection_formats() {
+    let home = tempfile::tempdir().unwrap();
+    let out = run(&["products", "import-legacy"], None, home.path());
+    let all = text(&out);
+    assert_eq!(out.status.code(), Some(1), "{all}");
+    assert!(
+        all.starts_with("missing <file.vd3|file.vd4|file.vd5>\n"),
+        "{all}"
+    );
+    assert!(files_under(home.path()).is_empty(), "usage created files");
+}
+
+#[test]
 fn the_password_on_stdin_opens_the_file_and_prints_its_contents() {
     let home = tempfile::tempdir().unwrap();
     let file = fixture("marvin-encrypted.vd4");

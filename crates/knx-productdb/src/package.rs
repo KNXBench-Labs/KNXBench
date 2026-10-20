@@ -143,7 +143,7 @@ impl fmt::Display for PackageError {
             Self::UnsafeMember { path } => write!(f, "unsafe product ZIP member: {path}"),
             Self::DuplicateMember { path } => write!(f, "duplicate product ZIP member: {path}"),
             Self::SizeLimit { path } => write!(f, "product ZIP size limit exceeded: {path}"),
-            Self::MissingMaster => write!(f, "product ZIP is missing knx_master.xml"),
+            Self::MissingMaster => write!(f, "ZIP is not a standalone product package: missing knx_master.xml file"),
             Self::WrapperArchive { packages } => {
                 const SHOWN: usize = 5;
                 let mut names = packages

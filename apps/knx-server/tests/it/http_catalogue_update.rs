@@ -411,6 +411,29 @@ async fn without_a_startup_reason_the_refusals_keep_their_plain_wording() {
 }
 
 #[tokio::test]
+async fn a_zip_without_a_product_is_named_by_install_and_preview_without_database_changes() {
+    let f = fixture();
+    let before = std::fs::read(f.db()).unwrap();
+    let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
+    zip.start_file("Manual.pdf", SimpleFileOptions::default())
+        .unwrap();
+    zip.write_all(b"%PDF-1.4 synthetic manual").unwrap();
+    let bytes = zip.finish().unwrap().into_inner();
+    for uri in ["/api/catalog/install", "/api/catalog/update/preview"] {
+        let (status, body) = send(&f.app, upload(uri, "manual.zip", &bytes, &[])).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{uri}: {body}");
+        assert_eq!(
+            body,
+            json!({"error": "ZIP is not a standalone product package: missing knx_master.xml file"}),
+            "{uri}"
+        );
+        assert_eq!(std::fs::read(f.db()).unwrap(), before, "{uri}");
+        assert!(backup_names(f.dir.path()).is_empty(), "{uri}");
+        assert_eq!(server_program_ids(&f.state), ["M-0001_A-0001-10-0001"]);
+    }
+}
+
+#[tokio::test]
 async fn preview_reports_the_new_version_and_leaves_the_database_file_unchanged() {
     let f = fixture();
     let before = std::fs::read(f.db()).unwrap();

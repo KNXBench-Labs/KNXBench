@@ -122,7 +122,7 @@ fn a_plain_package_prints_the_line_it_always_did() {
 }
 
 #[test]
-fn a_zip_holding_only_a_manual_still_misses_its_master() {
+fn a_zip_holding_only_a_manual_names_the_absent_product_package() {
     let dir = tempfile::tempdir().unwrap();
     let input = dir.path().join("manual.zip");
     std::fs::write(&input, zip_of(&[("Manual.pdf", b"%PDF-1.4")])).unwrap();
@@ -138,7 +138,7 @@ fn a_zip_holding_only_a_manual_still_misses_its_master() {
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert_eq!(output.status.code(), Some(1), "{stderr}");
     assert!(
-        stderr.contains("product ZIP is missing knx_master.xml"),
+        stderr.contains("ZIP is not a standalone product package: missing knx_master.xml file"),
         "{stderr}"
     );
 }

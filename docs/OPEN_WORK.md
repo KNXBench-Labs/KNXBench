@@ -192,11 +192,16 @@ no live legacy download or PR/VD2 import.
 
 #### WP-04 — Large catalogues: measure, then stream
 
-**Current ordered slice after v28 source delivery: WP-04.1 (measurement).**
-No new growth or peak-memory result is claimed here. WP-04.2 bounded parsing
-and WP-04.3 cancellable web installation remain later, separate deliveries;
-the WP-04 package stays open. The repair's fixed evidence allowance is not
-this measurement baseline or a whole-process memory guarantee.
+**WP-04.1 actual synthetic study accepted (20 October 2026).** Three complete
+repetitions cover 54 operations, with independent native-target, all-object
+accounting, normalized XML/SQL and byte/evidence-preservation review.
+[Measured baseline and limits](testing/productdb-baseline-2026-10-20.md) explain
+retained originals/decoded sources, parameter/index growth and free pages;
+[measurement method](testing/productdb-measurement.md) defines the boundary.
+This is not a production-scale guarantee or parser-optimisation result.
+WP-04.2 bounded parsing and WP-04.3 cancellable web installation remain separate
+deliveries; WP-04 stays open. The repair's fixed evidence allowance is not a
+whole-process memory guarantee. Package gates/publication are separate checks.
 
 **Three separate deliveries, in order:**
 

@@ -85,11 +85,14 @@ Alpha15 release artifact. Authentic-source reconstruction, missing/unavailable
 history, ambiguous member-counter attribution and conservative resource
 refusals remain boundaries under the existing repair contract.
 
-**Current ordered package: WP-04.1 — measure large catalogues.** Its output
-is a disposable-catalogue growth/peak-memory baseline, not a storage or parser
-change. No measurement has been performed by this documentation tail.
-WP-04.2, WP-04.3, WP-19 and WP-05 remain later ordered work. WP-04 is open;
-no later package is claimed or completed by this update.
+**WP-04.1 actual synthetic study is independently accepted.** The
+[source-bound baseline](../testing/productdb-baseline-2026-10-20.md) records
+54 operations, complete database/source/evidence growth and native target peaks.
+It is not a storage/parser change, production-scale guarantee or compatibility
+claim. Package gate/integration/publication are separate acceptance boundaries.
+Next ordered work is WP-04.2: inventory existing resolver bounds and decide from
+evidence whether parsing needs to change. WP-04.3 and WP-19 remain later; WP-04
+is open. No later package is claimed or completed by the measurement result.
 
 ### Retained pre-delivery checkpoint (20 October 2026)
 

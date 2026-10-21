@@ -10,8 +10,9 @@ with the details. You do not need to write code to earn a place here.
 | ---: | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
 | 1 | [@thengsty](https://github.com/thengsty) | Tunnel Trouble Exorcist | 🏅 Golden Bus Probe<br>🏅 Double-Decade Fault Finder<br>🏅 Loose End Lasso<br>🏅 Regression Repair Ribbon<br>🏅 Acknowledgement Ace<br>🏅 Closed-Loop Champion<br>🏅 Patch Pilot<br>🏅 Green Merge Ribbon | **361** | 22 | 16 | 21 | 1 | 0 | 1 | 0 | 110 issue + 16 reply + 210 completion + 25 PR |
 | 2 | [@hagbardZ](https://github.com/hagbardZ) | Bus Bug Scout | — | **18** | 1 | 3 | 1 | 0 | 0 | 0 | 0 | 5 issue + 3 reply + 10 completion + 0 PR |
+| 3 | [@dependabot[bot]](https://github.com/dependabot%5Bbot%5D) | Telegram Trainee | 🏅 Patch Pilot | **5** | 0 | 0 | 0 | 1 | 1 | 0 | 0 | 0 issue + 0 reply + 0 completion + 5 PR |
 
-*Snapshot: 2026-10-21T08:22:16Z.*
+*Snapshot: 2026-10-21T15:13:27Z.*
 
 ## How the points work
 

@@ -247,7 +247,13 @@ coverage. Feature and main-first integrated maintained gates each pass 14/14
 stages (1,111 Rust passes / 53 ignored, 51/51 corpus tests in two targets, 411
 registered tool tests / six optional skips). Immediate remote readback confirms
 publication. This is not a usable job path; managed binding remains the next
-staged dependency.
+staged dependency. The private [B1 schema admission](contracts/catalogue-jobs/schema-admission.md)
+helper is implemented and source-accepted after I1 correction, with 28 focused
+and 504 owning-library parent passes (overlapping), warning-denied all-target
+Clippy and convention checks. Its maintained package/integrated gates and
+publication are pending. Only exact fresh-chain schema variants are admitted;
+full witness, managed owner/binding, copy and transitive installer remain later
+stages. B1 is neither a job endpoint nor a reason to close WP-04.3 or WP-19.
 Existing synchronous behavior and profile limits remain unchanged.
 
 **Three separate deliveries, in order:**

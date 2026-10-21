@@ -12,6 +12,52 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## WP-04.3 B1 schema admission — source accepted (21 October 2026)
+
+A private, unwired ProductDB helper admits exact fresh-chain schema-28 metadata
+from a borrowed transaction or returns a typed complete refusal. It validates
+all stored schema objects, exact final SQL, table/column/PK/index/FK descriptors,
+new-path limits before owned metadata retention and cooperative A1 Stop. It
+preserves actual layout observations without granting transaction ownership,
+full-witness/binding or installation consent. Quiet APIs and schema are unchanged.
+
+The independent fresh-chain Rust oracle (unchanged `c012f714` migration path)
+reconciles 869 source checks, with RW/native-RO descriptor equality. Parent
+readback authenticates 10,992 input and 4,652 output identities. Static seed SQL
+is not a final-SQL allowlist; 70 textual differences remain explained separately.
+Only independently observed fresh-chain variants are initially supported.
+
+Original worker evidence is authenticated: 290 outputs / 30 actual attempts,
+23 retained executed-binary instances, including separately classified setup,
+interface-absence, semantic RED and already-GREEN characterization. Fresh parent
+checks pass the original 24 focused / 500 owning-library tests and all-target
+Clippy/conventions; these overlapping counts remain bound to original bytes.
+Independent source review returns REVISE for B1-I1: pre-admission unqualified
+PRAGMA table-function lookup can evaluate a colliding view before rejection.
+The original review and actual two failing standalone collision assertions remain
+retained, not relabelled a passing run.
+
+The two-file correction uses direct `PRAGMA main.table_list` borrowed enumeration.
+Exact final tests on original production and a private realistic reversion each
+pass 26 and fail the two intended collision assertions; corrected/restored sources
+pass 28. Original 31,424 test bytes remain an exact prefix. Parent authenticates
+3,542 correction outputs, nine retained binary instances and 3,395 unchanged other
+inputs. Fresh corrected-source parent checks pass 28 focused / 504 owning-library
+cases (overlapping), all-target warning-denied Clippy, formatting, headers and
+layout. Narrow independent rereview **ACCEPTS — B1-I1 CLOSED**, no remaining
+findings; 7,138 input bindings and 29 outputs are authenticated.
+
+Original-test compiled controls retain their actual identity: 11 variants,
+nine intended wrong-branch kills, one literal-prefix positive over-rejection,
+and one qualified exploratory key/aux comparator survivor. No independent
+key-only native wrong-admission was established; the correct explicit comparison
+remains. Old controls were not rerun or rebound to corrected test bytes. The
+correction's real old-query reversion supplies its own new discriminator.
+
+Maintained package/integrated gates and publication remain pending. No full
+witness, managed snapshot/binding, native RSS/deadline bound, production A2
+constructor, installer or job route is claimed. WP-04.3 and WP-19 remain open.
+
 <a id="monitoring-snapshot-export--source-delivery"></a>
 ## Monitoring snapshot export — source delivery (21 October 2026)
 

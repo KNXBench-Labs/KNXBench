@@ -5,14 +5,14 @@ Status: **bounded implementation decision independently accepted**
 authentication verifies 54 input bindings and 13 outputs. This authorizes only
 the stated private incremental-TDD slice, not runtime or delivery acceptance. Refines [managed binding section 4](managed-binding.md#4-typed-full-current-schema-streaming-witness-v1)
 and [staged readiness](design-readiness.md#implementation-order-after-independent-readiness-approval).
-The private helper is now implemented and source-reviewed, still unwired.
-Corrected-source independent rereview closes B1-I1 with no remaining findings;
-parent authentication verifies 7,138 input bindings and 29 outputs. Fresh parent
-checks pass 28 focused and 504 owning-library tests (overlapping selections),
-warning-denied all-target Clippy, formatting, headers and layout conventions.
-Maintained package/integrated gates and publication are pending; this is not a
-usable job, full witness or binding. See the
-[implementation record](../../IMPLEMENTATION_STATUS.md#wp-043-b1-schema-admission--source-accepted-21-october-2026).
+The private helper is delivered, still unwired. Corrected-source independent
+rereview closes B1-I1 with no remaining findings; exact source identities,
+maintained branch/integrated gates and live publication readback are accepted.
+See the [definitive delivery record](../../IMPLEMENTATION_STATUS.md#wp-043-b1-schema-admission--source-delivered-21-october-2026)
+for actual counts, separate overlapping scopes and retained original evidence.
+This is not a usable job, full witness or managed binding. Only independently
+observed fresh-chain variants are initially supported; historical layouts are
+not implicitly admitted just because their version field is 28.
 
 ## Evidence and narrow supported lane
 

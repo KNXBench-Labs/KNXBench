@@ -12,7 +12,41 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## WP-04.3 B1 schema admission — source delivered (21 October 2026)
+
+Source merge `2e0302028154` is published with exact live/tracking readback;
+reviewed candidate `cde9e5147271` is its byte-exact tree and second parent.
+Independent corrected-source rereview ACCEPTS with B1-I1 CLOSED/no findings.
+The original REVISE, old-test control qualification and actual corrected-test
+old-query reversion remain historical evidence, not relabelled executions.
+
+| Accepted execution | Stages | Rust passes / target results | Corpus passes / selected / targets | Tooling passed / registered / optional skips |
+| --- | --- | --- | --- | --- |
+| Branch `cde9e5147271` | 14/14 | 3407 / 24 | 97 / 97 / 6 | 405 / 411 / 6 |
+| Integrated `2e0302028154` | 14/14 | 3407 / 24 | 97 / 97 / 6 | 405 / 411 / 6 |
+
+Each Rust run also registers 151 ignored cases; the separate corpus runner
+executes its selected scope rather than crediting default ignored cases. Branch,
+integrated, focused and owning-library populations overlap and must not be added.
+Both maintained gates require exact ordered plans, successful proofs/zero exits,
+frozen tracked/corpus inputs and explicit clear isolated user-data collections.
+The integrated run additionally binds all ignored frontend dependencies and the
+fresh successful production-build prerequisite. The protected shared root remains
+byte/index/status unchanged and deliberately unsynchronized.
+
+Original raw commands, source bindings, retained test programs and acceptance/
+publication receipts remain private evidence, including failed attempts. Local
+archival and cleanup have their own verification and do not extend feature scope.
+
+This delivers **only private, unwired B1 schema admission**, not full Stage B,
+historical-layout support, full witness, managed binding/copy, transitive installer,
+A2 production construction or job endpoints. WP-04.3 and WP-19 remain open.
+See [the contract](contracts/catalogue-jobs/schema-admission.md) for the admitted
+fresh-chain schema-28 variants and explicit conservative refusals.
+
 ## WP-04.3 B1 schema admission — source accepted (21 October 2026)
+
+Historical source-review checkpoint; the current delivery record is above.
 
 A private, unwired ProductDB helper admits exact fresh-chain schema-28 metadata
 from a borrowed transaction or returns a typed complete refusal. It validates

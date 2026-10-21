@@ -305,3 +305,12 @@ Fresh parent corrected-source checks pass 28 focused / 504 owning-library cases
 with no findings; parent verifies 7,138 input bindings and 29 outputs. This
 closes source review only; maintained package/integrated gates and publication
 are pending. Original reviewer and mutation execution identities remain retained.
+
+### B1 source delivery boundary
+
+The preceding pending/review statements are historical checkpoints. Source
+`2e0302028154` is now published after accepted maintained branch and integrated
+gates and exact live/tracking readback. The
+[definitive delivery record](../IMPLEMENTATION_STATUS.md#wp-043-b1-schema-admission--source-delivered-21-october-2026)
+keeps actual populations separate and preserves original RED/reversion/control
+identities. This is private schema admission only, not full witness or a job.

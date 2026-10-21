@@ -8,8 +8,10 @@ halves; no new service, route, parser control, artifact manager, validator or
 desktop hook is implemented by the documents. All proposed production controls
 remain unexecuted. The private A1 primitive and construction-disabled A2 kernel
 are delivered with their own focused and maintained gate evidence. The private
-B1 schema-admission helper is source-reviewed with fresh focused/owning checks;
-its package gates and publication are pending. This is
+B1 schema-admission helper is now delivered with independent I1 closure and
+accepted branch/integrated gates plus publication readback; see the
+[definitive delivery record](../../IMPLEMENTATION_STATUS.md#wp-043-b1-schema-admission--source-delivered-21-october-2026).
+This is
 not production job, binding, installer or full Status acceptance. See the
 [A2 delivery record](../../IMPLEMENTATION_STATUS.md#wp-043-a2-admission-kernel--delivered-21-october-2026).
 ProductDB schema and ordinary APIs are unchanged.

@@ -81,3 +81,18 @@ warning-deniedClippy/format/header/layout checks PASS. OriginalREVISE and older
 own actual26PASS2FAIL to28PASS witness. Current status/contract/research now
 separate source acceptance from still-pending maintained package/integration/
 publication. No production-ready path or fullStageB completion is implied.
+
+## Maintained source delivery
+
+Branchcde9e5147271 and main-first integrated2e0302028154 each accept all14
+selected stages. Raw disjoint scopes per run: 3407Rustpasses/24targetresults,
+97/97corpus/6targets, 405/411tooling with6optionalskips.
+Populations overlap across runs and earlier focused/library checks. Exact plan,
+rawproof, frozen tree/corpus and clear isolated user-data collections accepted;
+integration binds complete ignored npm/dist inputs after fresh successful build.
+Source2e0302028154 published with exact tracking/live readback and unchanged
+foreign root. Current reader routes now distinguish delivered private B1 from
+historical pending/review checkpoints; fullStageB/binding/jobs remain later.
+Original raw commands, source bindings, retained test programs and acceptance/
+publication receipts remain private evidence, including failed attempts. Local
+archival and cleanup have their own verification and do not extend feature scope.

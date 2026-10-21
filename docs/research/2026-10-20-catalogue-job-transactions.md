@@ -245,3 +245,63 @@ that oracle. A transaction borrow limits lifetime but does not prove immutabilit
 against other calls on the same connection; later orchestration still owns the
 transaction and mutation/reservation discipline. No compatibility promise for
 unmeasured historical SQL variants follows from a fresh-chain fixture.
+
+### Actual fresh-chain schema oracle
+
+The finite native probe uses an immutable `c012f714` export and the actual
+unchanged ProductDB opener/migration chain, not extracted CREATE statements or
+Python SQLite. Controller readback verifies 10,992 sealed input identities,
+4,652 output identities and all 3,354 exported Git blobs/modes; all 869 static
+source-inventory comparisons match. Bundled SQLite 3.53.2 / rusqlite 0.40.2
+observes 46 application tables, 24 explicit and 50 automatic indexes (120 stored
+objects), 47 scan relations / 121 logical objects including sqlite_schema.
+RW and independently reopened native RO descriptors are exactly equal, including
+after a write refused with code 8. The actual build and one native probe exit 0.
+A post-run verifier initially dereferenced a documentation symlink; its correction
+validates link bytes without rerunning or relabelling the native probe.
+
+All 70 non-NULL stored SQL strings differ textually from the static statement
+seeds; the exact final migration outputs are retained separately, and descriptor
+comparison finds no shape mismatch. No schema source or migration is repinned.
+The fixture is fresh-chain-only: genuine historical SQL variants remain
+unevidenced/refused. Metadata-before-retention, typed refusal and cancellation
+remain unimplemented B1 requirements in the
+[schema-admission decision](../contracts/catalogue-jobs/schema-admission.md).
+This oracle is neither the production validator nor a full witness/binding.
+
+### B1 review observation: table-valued PRAGMA name collision
+
+A compiled private probe of the original unmodified B1 production prefix shows
+that its unqualified `FROM pragma_table_list` preflight can resolve a main-schema
+view with that name. Adding an otherwise small view whose ncol expression is
+`abs(-9223372036854775808)` produces native `integer overflow` before exact object
+admission. An ordinary colliding table produces a missing-column observation.
+Both are actual failing no-evaluation assertions for one source-review finding,
+B1-I1, not successful admission or demonstrated arbitrary code execution. The
+helper is private/unwired. Original module tests pass; the two appended reviewer
+collision tests fail in the standalone wrapper, not an owning-package gate.
+
+The correction must use direct `PRAGMA main.table_list` borrowed enumeration or
+safe prior identity refusal, never merely qualify the unadmitted colliding view.
+Preserve complete metadata bounds and reject unknown objects without evaluating
+them. This observation does not change SQLite schemas, quiet opener behavior or
+the accepted full-witness design; correction and fresh acceptance remain pending.
+
+### B1-I1 corrected-source closure
+
+The pre-admission aggregate is replaced by direct `PRAGMA main.table_list` with
+borrowed type-checked scalars and checked counting. Pinned implementation source
+review distinguishes native preparation/finalization to derive view column
+metadata from stepping a view result: no promise of zero parsing or native
+materialization is made. The actual overflow-expression tests discriminate
+execution rather than merely searching for a replacement SQL string.
+
+Real owning-Cargo final tests on the original query and a byte-exact private
+reversion each pass 26 / fail the same two collision assertions; corrected and
+restored sources pass 28. Main sibling/TEMP/attached collision sweeps are
+characterization, already green originally, not additional discovered defects.
+Fresh parent corrected-source checks pass 28 focused / 504 owning-library cases
+(overlapping) plus lint/conventions. Independent narrow rereview closes B1-I1
+with no findings; parent verifies 7,138 input bindings and 29 outputs. This
+closes source review only; maintained package/integrated gates and publication
+are pending. Original reviewer and mutation execution identities remain retained.

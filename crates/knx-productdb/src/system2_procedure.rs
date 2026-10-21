@@ -234,9 +234,20 @@ pub fn plan_system2_candidate(
                 })
                 .map_err(|e| failure(Some(source_index), e.to_string()))?;
                 emit(PropertyOperation::LoadControl { object, payload });
+                // A table segment's source mask marks writable *capacity*, not
+                // computed content. Write only the placed table, not the
+                // template's remaining writable span (candidate hypothesis,
+                // profile-bound: the address/association segments are dedicated).
+                let table_span = image
+                    .table_writes
+                    .iter()
+                    .find(|span| span.segment_id == segment.id.as_str());
                 let mut offset = 0;
                 while offset < segment.octets.len() {
-                    let writable = |i: usize| segment.mask.as_ref().is_none_or(|m| m[i] == 0xFF);
+                    let writable = |i: usize| {
+                        segment.mask.as_ref().is_none_or(|m| m[i] == 0xFF)
+                            && table_span.is_none_or(|span| span.start <= i && i < span.end)
+                    };
                     if !writable(offset) {
                         offset += 1;
                         continue;

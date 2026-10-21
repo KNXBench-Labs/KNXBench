@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 use knx_core::commissioning::property_download::PropertyOperation as Op;
 use knx_core::IndividualAddress;
 use knx_productdb::code::{AbsoluteSegment, LoadProcedure, LoadStep, ProgramCode, TablePlacement};
-use knx_productdb::image::{DownloadImage, SegmentImage};
+use knx_productdb::image::{DownloadImage, SegmentImage, TableWrite};
 use knx_productdb::system2_procedure::{plan_system2_candidate, System2ProcedurePolicy};
 
 fn image() -> DownloadImage {
@@ -121,6 +121,7 @@ fn image() -> DownloadImage {
         objects: vec![],
         inferences: vec![],
         parameter_fields: vec![],
+        table_writes: vec![],
     }
 }
 
@@ -185,6 +186,40 @@ fn source_masks_split_writes_without_transmitting_protected_bytes() {
         })
         .collect();
     assert_eq!(writes, vec![(0x0117, vec![1]), (0x0119, vec![1])]);
+}
+
+#[test]
+fn table_segment_writes_only_the_computed_table_not_the_template_capacity() {
+    let mut input = image();
+    // Both table segments ship a computed table far smaller than the four
+    // writable octets of their template; the plan must write only the table.
+    input.table_writes = vec![
+        TableWrite {
+            segment_id: "A".into(),
+            start: 0,
+            end: 1,
+        },
+        TableWrite {
+            segment_id: "B".into(),
+            start: 0,
+            end: 2,
+        },
+    ];
+    let result = plan(&input).unwrap();
+    let writes_for = |index: usize| -> Vec<_> {
+        result
+            .steps()
+            .iter()
+            .filter_map(|s| match &s.operation {
+                Op::WriteMemory { address, data, .. } if s.source_index == index => {
+                    Some((*address, data.clone()))
+                }
+                _ => None,
+            })
+            .collect()
+    };
+    assert_eq!(writes_for(6), vec![(0x0116, vec![1])]);
+    assert_eq!(writes_for(9), vec![(0x0260, vec![2, 2])]);
 }
 
 #[test]

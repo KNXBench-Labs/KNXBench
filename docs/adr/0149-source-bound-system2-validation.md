@@ -46,7 +46,9 @@ is a counter-hypothesis, not undocumented firmware behavior.
 ## Boundaries and consequences
 
 All candidate interpretations remain **STRONG HYPOTHESIS / SIMULATOR TESTED**.
-The exact source reserves 1,514 bytes and writes 1,176, leaving 338 masked bytes.
+The exact source reserves 1,514 bytes and writes 760, leaving 754 bytes
+unwritten: 338 masked (no source write) plus 416 octets of declared
+address/association-table capacity beyond the computed tables.
 Their survival through real Unload/reallocation is unresolved. The CLI has no
 physical transport; even explicit consent plus `--gateway` refuses before a
 socket, activity lease or operation receipt. The generic experimental Net entry

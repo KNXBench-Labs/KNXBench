@@ -202,6 +202,21 @@ pub struct SegmentImage {
     pub mask: Option<Vec<u8>>,
 }
 
+/// The placed extent of one computed group table within its segment.
+///
+/// The source `Mask` marks the table's writable *capacity*, not its computed
+/// content. Recording where the built table actually landed lets the plan
+/// write the table instead of the template's full writable span.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TableWrite {
+    /// The segment the table was placed into.
+    pub segment_id: String,
+    /// Byte offset of the table within the segment.
+    pub start: usize,
+    /// Exclusive end offset of the table within the segment.
+    pub end: usize,
+}
+
 /// One actually written active parameter and its verified image bit placement.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ParameterAttribution {
@@ -245,6 +260,9 @@ pub struct DownloadImage {
     pub inferences: Vec<Inference>,
     /// Exact active parameter writes for read-only comparison; never persisted.
     pub parameter_fields: Vec<ParameterAttribution>,
+    /// Where each computed group table was placed, so the plan writes the
+    /// table content rather than the template's full writable capacity.
+    pub table_writes: Vec<TableWrite>,
 }
 
 impl DownloadImage {
@@ -824,6 +842,7 @@ fn build_image_selected(
 
     // 3. Group addresses.
     let numbers: BTreeSet<u8> = objects.iter().map(|object| object.number).collect();
+    let mut table_writes = Vec::new();
     if let Some(link) = request
         .links
         .iter()
@@ -873,18 +892,18 @@ fn build_image_selected(
                     })?
                 }
             };
-            place(
+            table_writes.push(place(
                 &mut segments,
                 addresses,
                 "AddressTable",
                 &tables.address_table,
-            )?;
-            place(
+            )?);
+            table_writes.push(place(
                 &mut segments,
                 associations,
                 "AssociationTable",
                 &tables.association_table,
-            )?;
+            )?);
         }
         _ if !request.links.is_empty() => {
             return Err(ImageError::Unsupported {
@@ -904,6 +923,7 @@ fn build_image_selected(
         objects,
         inferences,
         parameter_fields,
+        table_writes,
     })
 }
 
@@ -1192,12 +1212,13 @@ fn segment_mut<'a>(
 }
 
 /// Writes a group table at its placement; refuses one that does not fit.
+/// Returns the placed extent so the caller can record what is real content.
 fn place(
     segments: &mut [SegmentImage],
     placement: &TablePlacement,
     table: &str,
     octets: &[u8],
-) -> Result<(), ImageError> {
+) -> Result<TableWrite, ImageError> {
     let unsupported = |why: String| ImageError::Unsupported {
         what: format!("{table}: {why}"),
     };
@@ -1217,7 +1238,11 @@ fn place(
         )));
     }
     image.octets[start..end].copy_from_slice(octets);
-    Ok(())
+    Ok(TableWrite {
+        segment_id: id.to_string(),
+        start,
+        end,
+    })
 }
 
 fn max_entries(placement: &TablePlacement) -> usize {

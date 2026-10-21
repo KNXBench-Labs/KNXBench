@@ -16,10 +16,12 @@ operation. Existing workstream ordering and ownership remain unchanged.
 The [complete-defaults simulator path](contracts/up258-system2-validation.md)
 now joins source image, ordered procedure, existing executor and durable explicit
 same-shape recovery. This narrows the offline goal; it does not complete general
-System-2/ETS compatibility or lift physical admission. Next technical dependency
-is a defining/independently discriminating rule for the 338 masked allocation
-bytes and real resource/pointer behavior, followed by a separately approved
-hardware adapter/validation. No bus access is implied by this roadmap.
+System-2/ETS compatibility or lift physical admission. The remaining open points
+are each recorded in the [dispositions](contracts/up258-system2-validation.md#open-point-dispositions-21-october-2026):
+the 338 masked allocation bytes have no standard-cited survival rule (the
+standard only declares the data invalid on Unload), and the resource/pointer
+XML→wire transforms await the master XML schema. A separately approved hardware
+adapter/validation still follows. No bus access is implied by this roadmap.
 
 ## After Alpha 15 — promotion repair source delivered (20 October 2026)
 

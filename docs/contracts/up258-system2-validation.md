@@ -130,6 +130,26 @@ The first complete-gate attempt stopped on an existing test-fixture lease
 collision. The isolated-fixture correction was independently reviewed and the
 entire chain then reran successfully; the first failure remains recorded.
 
+## Open-point dispositions (21 October 2026)
+
+Each remaining open point is either pinned by a defining source or recorded here
+as still-blocked with the exact missing evidence. The
+[source audit](../research/2026-10-21-up258-masked-byte-and-recovery-rules.md)
+carries the per-clause citations; nothing in this section is private analysis
+data.
+
+| # | Open point | Disposition |
+| --- | --- | --- |
+| 1 | Masked-byte preservation / reconstruction (338 bytes) | **Blocked.** The standard defines only logical invalidation on Unload (Management Procedures `03_05_02` v02.01.02 §3.31.3.1, printed p. 138: all data declared invalid) and clears only the PID 7 pointer (Resources `03_05_01` v01.10.01 §4.2.7, printed p. 31). The only "keep existing memory contents unchanged" clause belongs to the relative data allocation (subtype `0Bh`), which mask `0025h` does not use (Profiles `06` v02.01.01 §A.2.4.1, printed p. 144). No clause states physical byte retention or reconstruction. Missing evidence: a firmware-level or destructive-hardware observation defining whether/how the 338 bytes survive. The offline destructive-Unload test already models loss and asserts refusal, never "restored". |
+| 2 | Pointer/property widths and resource transforms | **Partially established; transform blocked.** `PID_TABLE_REFERENCE` is a four-octet read-only absolute pointer, `PDT_UNSIGNED_LONG` (Resources §4.2.7, printed p. 31) — `[D]`-cited. The master's "PID 7, Length 2, `Ptr_StandardMemory`" and the `SegFlags` / `AllocExtraByte` XML→wire transforms are defined in the master XML schema / Manufacturer Tool documentation, which is not in the authorized corpus. Missing evidence: that defining schema. No truncation, padding or template-matching inference. |
+| 3 | Whole-mutation recovery | **Offline exercised; physical read-back blocked.** PID 5 returns only the current load state (Management Procedures §3.31.3.5, printed p. 142); PID 7 only the pointer (Resources §4.2.7); Verify Mode Control's used-by list omits mask `0025h` (Resources §4.2.14.7, printed pp. 35–36). Success / partial-failure / interrupted cases are already exercised offline. Missing evidence: a standard read-back for the masked bytes and firmware-internal state. |
+| 4 | Parameter-encoding confirmation | **Six hypotheses, all still-unresolved.** Each rests on historical Schema10 prose or a revision-bound namespace-20 mirror, not a defining document for this converted legacy application. Listed as unresolved in the [rule sources](../research/2026-10-20-system2-validation-rules.md). |
+| 5 | Hardware-validation adapter | **Gated on 1–4** (unchanged). Separate approval does not bypass the technical prerequisites. |
+| 6 | Physical validation | **Gated, last** (unchanged). One target, one plan, fresh consent, exclusive gateway, readback plus the operator's functional presence/brightness check. |
+
+The physical-admission refusal remains in force until points 1–4 are resolved and
+a separately approved hardware run actually succeeds.
+
 ## Physical validation is NOT enabled
 
 Do not connect a bus or substitute a real device identity in the bundle.

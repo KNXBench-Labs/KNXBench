@@ -27,3 +27,57 @@ the decision review, not production behavior. Only current acceptance status is
 updated after review; retained original decision bytes and review remain exact.
 The parent releases its review freeze and proceeds into the same five-path TDD
 slice after committing this decision and preserving fresh upstream docs-only work.
+
+## Original source checks, independent review and compiled controls
+
+Worker evidence is authenticated:290outputs/30attempts/23actualretainedbinary
+instances, final24focused and500owninglib passes (overlap). Fresh parent checks
+repeat24focused/500owninglib and warning-denied all-target Clippy, formatting,
+headers and layout on the original frozen bytes. Whole-source review returns
+REVISE for B1-I1: pre-admission unqualified pragma_table_list resolves an added
+main-schema view and evaluates its overflow expression before rejecting it.
+The standalone exact production-prefix probe passes24originaltests and fails
+two collision assertions for this one root cause. Review102outputs and binary
+are independently authenticated; these are not an owning-gate rerun.
+
+Original-test compiled controls are authenticated separately:265outputs and19
+retainedbinaries for11variants;9intendedwrongbranch kills,1literal-prefix positive
+overrejection and1qualified keyflag-only survivor. Pinned admitted native rowid
+index construction couples key/aux roles to other compared metadata; no reachable
+key-only wrong-admission is established. Keep the correct explicit comparator;
+never claim that survivor was killed or every comparison independently tested.
+
+B1-I1 remains IMPORTANT and blocks source acceptance. Correction is restricted
+to direct non-shadowable table-list preflight plus actual collision regressions;
+original tests/fixture/constants/lib remain exact. All original review/mutation
+provenance is retained; fresh corrected checks and finding-specific rereview are
+required before maintained package gates/publication.
+
+## I1 correction authenticated; finding-specific acceptance pending
+
+Only the shadowable preflight is replaced by direct PRAGMA main.table_list with
+borrowed typed observations and checked scalar counting. Original tests remain
+a31424byte exactprefix; four appended tests include actualoverflowview/table
+regressions and bounded main-sibling/TEMP/attached characterization sweeps.
+Controller verifies3542outputs/3395unchangedotherinputs/9retainedbinaryinstances.
+Exactfinaltests on originalproduction and private realisticreversion each yield
+26PASS/two intendedFAIL; corrected/restored production yields28PASS. Finalworker
+28focused/504owninglib(overlap), lint/format/header/layout/whitespace checks pass.
+
+OriginalREVISE and prior11mutants stay bound to originalsource/testidentities;
+no old result is claimed as a fresh corrected execution. Narrow independent
+I1rereview and parentcorrected-source checks remain pending before sourceacceptance
+or maintained packagegates. The manifest's dereferenced documentation-link entry
+was additionally checked against exactGitlinkpayload; retained readercorrections
+do not constitute product failures or a native rerun.
+
+## Source acceptance after I1 rereview
+
+Narrow independent rereview ACCEPTS/I1CLOSED, no findings in correction/joins.
+Parent verifies7138inputbindings/29outputs and exactcorrectedsourceidentities.
+Freshparent corrected-source28focused/504owninglib(overlap), all-target
+warning-deniedClippy/format/header/layout checks PASS. OriginalREVISE and older
+11variantcontrols stay unchanged and source-bound; corrected reversion has its
+own actual26PASS2FAIL to28PASS witness. Current status/contract/research now
+separate source acceptance from still-pending maintained package/integration/
+publication. No production-ready path or fullStageB completion is implied.

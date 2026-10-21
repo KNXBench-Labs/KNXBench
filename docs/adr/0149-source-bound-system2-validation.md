@@ -66,3 +66,16 @@ research is needed or claimed. No new storage/model migration or ETS-equivalence
 claim follows.
 
 See the [behavioral contract and executable validation](../contracts/up258-system2-validation.md).
+
+## Amendment — 21 October 2026: masked-byte rule characterized
+
+The 338 masked bytes have no source-cited survival rule. The standard defines
+logical invalidation on Unload (Management Procedures `03_05_02` v02.01.02
+§3.31.3.1, printed p. 138) and clears only the PID 7 pointer (Resources
+`03_05_01` v01.10.01 §4.2.7, printed p. 31); the sole "keep existing memory
+contents unchanged" clause belongs to the relative data allocation that mask
+`0025h` does not use (Profiles `06` v02.01.01 §A.2.4.1, printed p. 144). See the
+[open-point dispositions](../contracts/up258-system2-validation.md#open-point-dispositions-21-october-2026)
+and the [source audit](../research/2026-10-21-up258-masked-byte-and-recovery-rules.md).
+The refusal stands; the destructive-Unload counter-hypothesis test remains the
+correct behaviour.

@@ -61,8 +61,8 @@ fn exact_public_package_prepares_full_default_candidate_not_a_handcrafted_plan()
         prepare_simulated_candidate(&conn, PROFILE, IndividualAddress::from_raw(0x0119)).unwrap();
     assert_eq!(result.source_positions, 21);
     assert_eq!(result.allocation_octets, 1514);
-    assert_eq!(result.written_octets, 1176);
-    assert_eq!(result.preserved_octets, 338);
+    assert_eq!(result.written_octets, 760);
+    assert_eq!(result.preserved_octets, 754);
     assert!(result.bundle.binding.simulated);
     assert!(result.inferences.iter().all(|s| !s.is_empty()));
     assert_eq!(conn.total_changes(), before);
@@ -228,7 +228,7 @@ async fn exact_public_full_download_and_reopened_recovery_compare_all_modeled_pe
     );
     assert_eq!(
         backup.regions.iter().map(|a| a.data.len()).sum::<usize>(),
-        1176
+        760
     );
     drop(store);
     drop(bundle);

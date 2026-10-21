@@ -562,6 +562,7 @@ mod tests {
             objects: Vec::new(),
             inferences: Vec::new(),
             parameter_fields: Vec::new(),
+            table_writes: Vec::new(),
         }
     }
 

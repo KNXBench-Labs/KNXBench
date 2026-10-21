@@ -28,11 +28,15 @@ lead, not implementation text or defining authority.
    disposition; virtual/inactive alternatives are not silently confused with
    missing data.
 3. Translate all 21 source positions in order, retaining source indices. Four
-   absolute allocations reserve 1,514 bytes; mask-aware writes cover 1,176 bytes,
-   with 338 preserved bytes. The TaskSegment with tool-only LSM5 is retained as
-   metadata, not emitted to a guessed interface object. TaskCtrl2 is not dropped.
-   Declared allocation counts, zero flags/checksum interpretation and table-zero
-   identity are explicit bounded hypotheses, not general XML rules.
+   absolute allocations reserve 1,514 bytes; computed writes cover 760 bytes.
+   The remaining 754 bytes are not written: 338 masked (no source write) plus
+   416 octets of declared address/association-table capacity beyond the computed
+   tables. The address/association segments write only the computed table, not
+   the template's writable capacity. The TaskSegment with tool-only LSM5 is
+   retained as metadata, not emitted to a guessed interface object. TaskCtrl2 is
+   not dropped. Declared allocation counts, zero flags/checksum interpretation,
+   table-zero identity and computed-table-only writes are explicit bounded
+   hypotheses, not general XML rules.
 4. The existing management-session operation loop executes normalized controls
    and verified writes. A complete source plan is bound to target, application,
    profile version/hash and source hash. No resume from a guessed later step.

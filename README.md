@@ -334,10 +334,10 @@ bus probe is shipped — this one is certified for Markdown only.
 <!-- HALL-OF-FAME:START -->
 | Place | Bug hunter | Rank & title | Medal | XP | Issues | Replies | Resolved | PRs | Open PRs | Merged PRs | Closed unmerged | XP sources |
 | ---: | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| 1 | [@thengsty](https://github.com/thengsty) | Tunnel Trouble Exorcist | 🏅 Golden Bus Probe<br>🏅 Double-Decade Fault Finder<br>🏅 Loose End Lasso<br>🏅 Regression Repair Ribbon<br>🏅 Acknowledgement Ace<br>🏅 Closed-Loop Champion<br>🏅 Patch Pilot<br>🏅 Green Merge Ribbon | **360** | 22 | 15 | 21 | 1 | 0 | 1 | 0 | 110 issue + 15 reply + 210 completion + 25 PR |
+| 1 | [@thengsty](https://github.com/thengsty) | Tunnel Trouble Exorcist | 🏅 Golden Bus Probe<br>🏅 Double-Decade Fault Finder<br>🏅 Loose End Lasso<br>🏅 Regression Repair Ribbon<br>🏅 Acknowledgement Ace<br>🏅 Closed-Loop Champion<br>🏅 Patch Pilot<br>🏅 Green Merge Ribbon | **361** | 22 | 16 | 21 | 1 | 0 | 1 | 0 | 110 issue + 16 reply + 210 completion + 25 PR |
 | 2 | [@hagbardZ](https://github.com/hagbardZ) | Bus Bug Scout | — | **18** | 1 | 3 | 1 | 0 | 0 | 0 | 0 | 5 issue + 3 reply + 10 completion + 0 PR |
 
-*Snapshot: 2026-10-19T04:43:10Z. Maintainers and the scoreboard bot sit this one out.*
+*Snapshot: 2026-10-21T08:22:16Z. Maintainers and the scoreboard bot sit this one out.*
 <!-- HALL-OF-FAME:END -->
 
 [All ranks, scoring rules and the full honour roll](docs/community/HALL_OF_FAME.md).

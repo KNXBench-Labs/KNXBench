@@ -9,6 +9,9 @@ pub mod baggage;
 pub mod blob;
 pub mod byte_order_probe;
 mod catalog_details;
+// Private schema admission remains unwired until the managed witness exists.
+#[allow(dead_code)]
+mod catalogue_schema;
 pub mod cleanup;
 pub mod code;
 pub mod declared_segments;

@@ -488,8 +488,7 @@ async fn delete_backup(
                 Err(_) => LegacySettlementHint::PreCommitSemanticRefusal,
             },
         )
-        .map_err(crate::catalogue_owner::owner_error)?
-        .map_err(|error| error)?;
+        .map_err(crate::catalogue_owner::owner_error)??;
     Ok(Json(Deleted {
         deleted: entry.name,
     }))

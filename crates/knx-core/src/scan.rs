@@ -7,7 +7,7 @@
 use std::collections::HashSet;
 use std::fmt;
 
-use crate::address::{AddressError, IndividualAddress};
+use crate::address::{AddressError, IndividualAddress, EXCLUDED_INDIVIDUAL_ADDRESSES};
 
 /// Packs already-validated `area`/`line`/`device` parts into an address.
 /// Used only inside `range()`'s device loop, where `area`/`line` come from
@@ -62,7 +62,9 @@ impl ScanPlan {
         &self.omitted
     }
 
-    /// The configuration-supplied exclusion set this plan was built against.
+    /// The exclusion set this plan was built against: the project exclusion
+    /// list ([`EXCLUDED_INDIVIDUAL_ADDRESSES`]) plus every caller-supplied
+    /// exclusion.
     pub fn excluded(&self) -> &HashSet<IndividualAddress> {
         &self.excluded
     }
@@ -113,11 +115,22 @@ impl ScanPlan {
 /// only route to a `ScanPlan`; there is no constructor that skips applying
 /// `excluded` to the candidate list.
 ///
-/// The builder starts empty. Configuration owners add exclusions through
-/// `exclude`/`exclude_all`; those methods only ever add.
-#[derive(Debug, Clone, Default)]
+/// The builder starts with the project exclusion list
+/// ([`EXCLUDED_INDIVIDUAL_ADDRESSES`]) already excluded, so an address the
+/// installation forbids all bus traffic to can never become a scan
+/// candidate no matter who builds the plan. Configuration owners add more
+/// through `exclude`/`exclude_all`; those methods only ever add.
+#[derive(Debug, Clone)]
 pub struct ScanPlanBuilder {
     excluded: HashSet<IndividualAddress>,
+}
+
+impl Default for ScanPlanBuilder {
+    fn default() -> Self {
+        Self {
+            excluded: EXCLUDED_INDIVIDUAL_ADDRESSES.iter().copied().collect(),
+        }
+    }
 }
 
 impl ScanPlanBuilder {
@@ -266,16 +279,19 @@ mod tests {
 
     #[test]
     fn line_scan_omits_excluded_addresses_and_contains_every_other() {
-        // Both omissions come from the caller's configuration.
-        let caller_excluded = [addr(1, 1, 5), addr(1, 1, 200)];
+        // Both omissions come from the caller's configuration. Line 2.2
+        // deliberately avoids the project-excluded address so this test
+        // stays about caller exclusions alone (that address is covered
+        // separately below).
+        let caller_excluded = [addr(2, 2, 5), addr(2, 2, 200)];
         let plan = ScanPlanBuilder::new()
             .exclude_all(caller_excluded)
-            .line(1, 1)
+            .line(2, 2)
             .unwrap();
 
         assert_eq!(plan.addresses().len(), 255 - 2);
         for device in 1..=255u8 {
-            let candidate = addr(1, 1, device);
+            let candidate = addr(2, 2, device);
             let omitted = caller_excluded.contains(&candidate);
             assert_eq!(
                 plan.addresses().contains(&candidate),
@@ -286,11 +302,33 @@ mod tests {
     }
 
     #[test]
-    fn a_new_scan_builder_has_no_installation_specific_exclusions() {
+    fn a_new_scan_builder_seeds_the_project_exclusion_list() {
         let plan = ScanPlanBuilder::new().line(2, 2).unwrap();
-        assert!(plan.excluded().is_empty());
+        assert_eq!(plan.excluded().len(), EXCLUDED_INDIVIDUAL_ADDRESSES.len());
+        for excluded in EXCLUDED_INDIVIDUAL_ADDRESSES {
+            assert!(plan.excluded().contains(excluded));
+        }
         assert!(plan.omitted().is_empty());
         assert_eq!(plan.addresses().len(), 255);
+    }
+
+    #[test]
+    fn the_project_excluded_address_is_never_a_line_scan_candidate() {
+        let excluded = EXCLUDED_INDIVIDUAL_ADDRESSES[0];
+        let plan = ScanPlan::line(excluded.area(), excluded.line()).unwrap();
+        assert!(!plan.addresses().contains(&excluded));
+        assert_eq!(plan.omitted(), &[excluded]);
+        assert_eq!(plan.addresses().len(), 254);
+        assert_eq!(plan.verify(), Ok(()));
+    }
+
+    #[test]
+    fn the_project_excluded_address_cannot_be_a_single_device_range() {
+        let excluded = EXCLUDED_INDIVIDUAL_ADDRESSES[0];
+        assert_eq!(
+            ScanPlan::range(excluded, excluded),
+            Err(ScanPlanError::EmptyRange)
+        );
     }
 
     #[test]

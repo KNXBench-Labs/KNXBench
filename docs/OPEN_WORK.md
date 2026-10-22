@@ -288,7 +288,12 @@ seventh, the second slice of route wiring — the controlled source + policy
 identity ([`controlled`](contracts/catalogue-jobs/controlled-source-increment.md):
 `ControlledSource::admit` authenticating a sealed source against the P3 name
 grammar and the retained-byte ceiling, plus the immutable `SourceIdentity` and
-`PolicyIdentity` projections) — is delivered with 8 focused tests. Route
+`PolicyIdentity` projections) — is delivered with 8 focused tests. The eighth,
+the preview binding composition
+([`preview_binding`](contracts/catalogue-jobs/preview-binding-increment.md):
+`PreviewBinding` composing the `CatalogueStamp`, `SourceIdentity` and
+`PolicyIdentity` into the exact-equality binding the server retains between
+preview and apply) — is delivered with 6 focused tests. Route
 wiring + worker execution (the Ready/apply installer), the
 `EmbeddedServerHandle` and the desktop exit interception remain the last
 stage-D slices; no job route, Ready/apply or worker execution is wired.

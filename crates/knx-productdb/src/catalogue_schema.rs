@@ -8,6 +8,7 @@ use rusqlite::types::{Value, ValueRef};
 use rusqlite::Transaction;
 
 mod schema28;
+mod witness;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Limit {

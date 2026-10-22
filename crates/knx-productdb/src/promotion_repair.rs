@@ -306,8 +306,18 @@ fn derive(
         copy_budget.row(row)?;
     }
     let mut extended = unknown.clone();
-    crate::parse::scheme_evidence::reconcile_targeted_unknowns(bytes, path, &mut unknown)?;
-    crate::parse::scheme_evidence::reconcile_package_unknowns(bytes, path, &mut extended)?;
+    crate::parse::scheme_evidence::reconcile_targeted_unknowns(
+        bytes,
+        path,
+        &mut unknown,
+        crate::operation::Cancellation::Quiet,
+    )?;
+    crate::parse::scheme_evidence::reconcile_package_unknowns(
+        bytes,
+        path,
+        &mut extended,
+        crate::operation::Cancellation::Quiet,
+    )?;
     unknown.retain(|u| target(&u.xpath, u.kind.as_str(), &u.name));
     extended.retain(|u| target(&u.xpath, u.kind.as_str(), &u.name));
     let extended = (extended != unknown).then_some(extended);

@@ -9,7 +9,8 @@ use rusqlite::{Connection, OptionalExtension};
 
 use crate::blob::{sha256_hex, store_source_file, SourceFile};
 use crate::dynamic;
-use crate::parse::translation::{ingest_translations, TranslationScope};
+use crate::operation::Cancellation;
+use crate::parse::translation::{ingest_translations_controlled, TranslationScope};
 use crate::parse::{catalog, hardware, program};
 use crate::report::{insert_conflicts, insert_unknown, IdConflict, TranslationCounts};
 use crate::ProductDbError;
@@ -67,7 +68,9 @@ pub fn ingest_file(
         return Ok(IngestOutcome::Skipped { sha256 });
     }
     let tx = conn.unchecked_transaction()?;
-    let outcome = ingest_file_in_transaction(&tx, source_path, bytes, false, false)?.outcome;
+    let outcome =
+        ingest_file_in_transaction(&tx, source_path, bytes, false, false, Cancellation::Quiet)?
+            .outcome;
     tx.commit()?;
     Ok(outcome)
 }
@@ -99,7 +102,9 @@ pub(crate) fn ingest_file_in_transaction(
     bytes: &[u8],
     parse_existing: bool,
     package_extended_scheme: bool,
+    cancellation: Cancellation<'_>,
 ) -> Result<DetailedIngestOutcome, ProductDbError> {
+    cancellation.checkpoint()?;
     let sha256 = sha256_hex(bytes);
     let parsed: Option<i64> = conn
         .query_row(
@@ -130,17 +135,30 @@ pub(crate) fn ingest_file_in_transaction(
         },
     )?;
     if stored {
-        crate::identity::record_producer(conn, &sha256, bytes)?;
+        cancellation.checkpoint()?;
+        crate::identity::record_producer(conn, &sha256, bytes, cancellation)?;
     }
 
     let kind = classify(bytes);
     let (mut unknown, conflicts, translations, entities) = match kind {
         FileKind::Catalog => {
-            let out = catalog::ingest_catalog(conn, &sha256, source_path, bytes)?;
+            let out = catalog::ingest_catalog_controlled(
+                conn,
+                &sha256,
+                source_path,
+                bytes,
+                cancellation,
+            )?;
             // A second pass over the same bytes, in the same transaction:
             // `Catalog.xml`'s own `Languages` block is not read by
             // `ingest_catalog` at all.
-            let catalog = ingest_translations(conn, TranslationScope::Catalog, source_path, bytes)?;
+            let catalog = ingest_translations_controlled(
+                conn,
+                TranslationScope::Catalog,
+                source_path,
+                bytes,
+                cancellation,
+            )?;
             (
                 out.unknown,
                 out.conflicts,
@@ -152,12 +170,23 @@ pub(crate) fn ingest_file_in_transaction(
             )
         }
         FileKind::Hardware => {
-            let detailed = hardware::ingest_hardware_detailed(conn, &sha256, source_path, bytes)?;
+            let detailed = hardware::ingest_hardware_detailed(
+                conn,
+                &sha256,
+                source_path,
+                bytes,
+                cancellation,
+            )?;
             let out = detailed.outcome;
             // Same second pass as `Catalog` above, for `Hardware.xml`'s own
             // `Languages` block.
-            let hardware =
-                ingest_translations(conn, TranslationScope::Hardware, source_path, bytes)?;
+            let hardware = ingest_translations_controlled(
+                conn,
+                TranslationScope::Hardware,
+                source_path,
+                bytes,
+                cancellation,
+            )?;
             (
                 out.unknown,
                 out.conflicts,
@@ -170,15 +199,21 @@ pub(crate) fn ingest_file_in_transaction(
         }
         FileKind::ApplicationProgram => {
             crate::xml::validate_complete_document(source_path, bytes)?;
-            let detailed = program::ingest_program_detailed(conn, &sha256, source_path, bytes)?;
+            let detailed =
+                program::ingest_program_detailed(conn, &sha256, source_path, bytes, cancellation)?;
             let out = detailed.outcome;
             // A second pass over the same bytes, in the same transaction:
             // the `Static` pass above still skips `Dynamic` outright (its
             // own doc comment says so); this is what actually reads it.
             // Neither `Dynamic` nor `Languages` block live there, so it
             // contributes no translations of its own.
-            let dyn_detailed =
-                dynamic::parse::parse_dynamic_trees_detailed(conn, &sha256, source_path, bytes)?;
+            let dyn_detailed = dynamic::parse::parse_dynamic_trees_detailed(
+                conn,
+                &sha256,
+                source_path,
+                bytes,
+                cancellation,
+            )?;
             let dyn_out = dyn_detailed.outcome;
             // ADR-0080: a third pass records the declared write authority
             // for the programs this blob owns (`ParameterRef/@Access`,
@@ -189,6 +224,7 @@ pub(crate) fn ingest_file_in_transaction(
                 &sha256,
                 source_path,
                 bytes,
+                cancellation,
             )?;
             let mut unknown = out.unknown;
             unknown.extend(dyn_out.unknown);
@@ -213,7 +249,11 @@ pub(crate) fn ingest_file_in_transaction(
         // failing on it. The refusal is recorded instead of dropped. Inside a
         // package, `package.rs` re-parses the index and refuses the install.
         FileKind::Baggages => {
-            let unknown = match crate::parse::baggage::parse_baggage_index(source_path, bytes) {
+            let unknown = match crate::parse::baggage::parse_baggage_index(
+                source_path,
+                bytes,
+                cancellation,
+            ) {
                 Ok(index) => index.unknown,
                 Err(error @ ProductDbError::Xml { .. }) => {
                     record_unreadable_baggage_index(conn, &sha256, source_path, &error)?;
@@ -248,12 +288,14 @@ pub(crate) fn ingest_file_in_transaction(
             bytes,
             source_path,
             &mut unknown,
+            cancellation,
         )?;
     } else if kind == FileKind::ApplicationProgram {
         crate::parse::scheme_evidence::reconcile_targeted_unknowns(
             bytes,
             source_path,
             &mut unknown,
+            cancellation,
         )?;
     }
 
@@ -261,11 +303,20 @@ pub(crate) fn ingest_file_in_transaction(
         kind,
         FileKind::Catalog | FileKind::Hardware | FileKind::ApplicationProgram
     ) {
+        cancellation.checkpoint()?;
         // ADR-0043 §4: record this blob's candidates once, then check them
         // against what the parser just did. A disagreement fails the ingest
         // and the caller's transaction rolls everything back.
-        crate::identity::record_and_check(conn, &sha256, source_path, bytes, &conflicts)?;
+        crate::identity::record_and_check(
+            conn,
+            &sha256,
+            source_path,
+            bytes,
+            &conflicts,
+            cancellation,
+        )?;
     }
+    cancellation.checkpoint()?;
     insert_unknown(conn, &sha256, &unknown)?;
     insert_conflicts(conn, &conflicts)?;
     conn.execute(

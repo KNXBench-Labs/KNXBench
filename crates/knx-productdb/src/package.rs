@@ -10,6 +10,7 @@ use quick_xml::name::ResolveResult;
 use rusqlite::{params, Connection, OptionalExtension};
 
 use crate::ingest::{classify, ingest_file_in_transaction, DetailedIngestOutcome};
+use crate::operation::Cancellation;
 use crate::report::{insert_unknown, IdConflict, TranslationCounts, UnknownCollector};
 use crate::{sha256_hex, FileKind, IngestOutcome, ProductDbError};
 
@@ -119,6 +120,10 @@ pub enum PackageError {
     },
     ProjectArchive,
     MissingManufacturerData,
+    /// The installer's cancellation control reported a typed stop. Never
+    /// produced by the quiet public path; a controlled install observes it
+    /// exactly like any other refusal and must roll back.
+    Cancelled(crate::operation::Stop),
     Database(ProductDbError),
 }
 
@@ -176,6 +181,7 @@ impl fmt::Display for PackageError {
             Self::MissingManufacturerData => {
                 write!(f, "product ZIP contains no recognized manufacturer data")
             }
+            Self::Cancelled(_) => write!(f, "catalogue install cancelled"),
             Self::Database(error) => write!(f, "{error}"),
         }
     }
@@ -192,13 +198,22 @@ impl std::error::Error for PackageError {
 
 impl From<ProductDbError> for PackageError {
     fn from(error: ProductDbError) -> Self {
-        Self::Database(error)
+        match error {
+            ProductDbError::Cancelled(stop) => Self::Cancelled(stop),
+            other => Self::Database(other),
+        }
     }
 }
 
 impl From<rusqlite::Error> for PackageError {
     fn from(error: rusqlite::Error) -> Self {
         Self::Database(error.into())
+    }
+}
+
+impl From<crate::operation::Stop> for PackageError {
+    fn from(stop: crate::operation::Stop) -> Self {
+        Self::Cancelled(stop)
     }
 }
 
@@ -972,7 +987,10 @@ pub(crate) mod zip_work {
 // Bound metadata allocation before ZipArchive constructs its entry index.
 // ZIP64 is outside this small, corpus-proven package slice. PDB-10 applies
 // the same gate to ZIP payloads nested in baggage (`crate::baggage`).
-pub(crate) fn preflight_zip(bytes: &[u8]) -> Result<ZipDirectory, PackageError> {
+pub(crate) fn preflight_zip(
+    bytes: &[u8],
+    cancellation: Cancellation<'_>,
+) -> Result<ZipDirectory, PackageError> {
     let search_window = 22 + usize::from(u16::MAX);
     let start = bytes.len() - bytes.len().min(search_window);
     let end = bytes
@@ -980,6 +998,7 @@ pub(crate) fn preflight_zip(bytes: &[u8]) -> Result<ZipDirectory, PackageError> 
         .checked_sub(21)
         .ok_or_else(|| zip_error("end-of-directory record is truncated"))?;
     for offset in (start..end).rev() {
+        cancellation.checkpoint()?;
         zip_work::inspected(1);
         if bytes.get(offset..offset + 4) != Some(b"PK\x05\x06") {
             continue;
@@ -1122,6 +1141,7 @@ fn data_descriptor_end(
 fn validate_central_directory(
     archive: &[u8],
     directory: ZipDirectory,
+    cancellation: Cancellation<'_>,
 ) -> Result<ValidatedZipDirectory, PackageError> {
     let mut offset = directory.start;
     let mut paths = HashSet::new();
@@ -1132,6 +1152,7 @@ fn validate_central_directory(
     let mut central_comment_ranges = Vec::new();
     let mut local_metadata_size = 0_usize;
     for _ in 0..directory.count {
+        cancellation.checkpoint()?;
         zip_work::inspected(46);
         if archive.get(offset..offset + 4) != Some(b"PK\x01\x02") {
             return Err(zip_error("truncated central directory"));
@@ -1312,7 +1333,10 @@ pub(crate) struct ZipEntryMeta {
 
 /// The package validator applied to a nested archive, reduced to the
 /// checked central-directory metadata.
-pub(crate) fn validated_zip_metadata(bytes: &[u8]) -> Result<Vec<ZipEntryMeta>, PackageError> {
+pub(crate) fn validated_zip_metadata(
+    bytes: &[u8],
+    cancellation: Cancellation<'_>,
+) -> Result<Vec<ZipEntryMeta>, PackageError> {
     // An empty archive is only its end-of-directory record (no entries, no
     // directory, optional comment). A package cannot be empty; a nested
     // archive can, and is then read as zero entries rather than unreadable.
@@ -1323,12 +1347,13 @@ pub(crate) fn validated_zip_metadata(bytes: &[u8]) -> Result<Vec<ZipEntryMeta>, 
     {
         return Ok(Vec::new());
     }
-    let directory = preflight_zip(bytes)?;
-    let validated = validate_central_directory(bytes, directory)?;
+    let directory = preflight_zip(bytes, cancellation)?;
+    let validated = validate_central_directory(bytes, directory, cancellation)?;
     validated
         .entries
         .iter()
         .map(|entry| {
+            cancellation.checkpoint()?;
             let at = usize::try_from(entry.central_offset).map_err(zip_error)?;
             let header = bytes
                 .get(at..at + 46)
@@ -1370,13 +1395,15 @@ pub(crate) struct RawZipMember {
 /// where the central directory starts.
 pub(crate) fn validated_zip_members(
     bytes: &[u8],
+    cancellation: Cancellation<'_>,
 ) -> Result<(Vec<RawZipMember>, usize), PackageError> {
-    let directory = preflight_zip(bytes)?;
-    let validated = validate_central_directory(bytes, directory)?;
+    let directory = preflight_zip(bytes, cancellation)?;
+    let validated = validate_central_directory(bytes, directory, cancellation)?;
     let members = validated
         .entries
         .iter()
         .map(|entry| {
+            cancellation.checkpoint()?;
             let at = usize::try_from(entry.central_offset).map_err(zip_error)?;
             let header = bytes
                 .get(at..at + 46)
@@ -2530,7 +2557,12 @@ pub(crate) fn is_inner_package_path(path: &str) -> bool {
 /// Name and content admission that precedes any transaction: the raw size
 /// bound, legacy names and legacy containers. Shared by standalone packages
 /// and the inner packages of a vendor wrapper (ADR-0140).
-pub(crate) fn admit_package_bytes(source_name: &str, bytes: &[u8]) -> Result<(), PackageError> {
+pub(crate) fn admit_package_bytes(
+    source_name: &str,
+    bytes: &[u8],
+    cancellation: Cancellation<'_>,
+) -> Result<(), PackageError> {
+    cancellation.checkpoint()?;
     if bytes.len() > MAX_PACKAGE_SIZE {
         return Err(PackageError::SizeLimit {
             path: source_name.into(),
@@ -2560,7 +2592,7 @@ pub(crate) fn admit_package_bytes(source_name: &str, bytes: &[u8]) -> Result<(),
     // Content admission: a legacy EX-IM container under any other name
     // (`renamed.knxprod`) is named, never decrypted and never handed to the
     // XML package parser (ADR-0094). Metadata only.
-    if let Some(legacy) = crate::legacy::detect_legacy_container(bytes) {
+    if let Some(legacy) = crate::legacy::detect_legacy_container_controlled(bytes, cancellation)? {
         return Err(PackageError::LegacyExIm {
             kind: legacy.member_kind,
             sha256: legacy.sha256,
@@ -2580,20 +2612,21 @@ pub(crate) struct CheckedArchive<'a> {
     pub(crate) inner_packages: Vec<String>,
 }
 
-pub(crate) fn open_checked_archive(
-    bytes: &[u8],
+pub(crate) fn open_checked_archive<'a>(
+    bytes: &'a [u8],
     limits: PackageLimits,
-) -> Result<CheckedArchive<'_>, PackageError> {
+    cancellation: Cancellation<'_>,
+) -> Result<CheckedArchive<'a>, PackageError> {
     let PackageLimits {
         max_member_size,
         max_expanded_size,
     } = limits;
-    let directory = preflight_zip(bytes)?;
+    let directory = preflight_zip(bytes, cancellation)?;
     let ValidatedZipDirectory {
         entries: checked_entries,
         neutralized_fields,
         mut parser_comment_ranges,
-    } = validate_central_directory(bytes, directory)?;
+    } = validate_central_directory(bytes, directory, cancellation)?;
     let eocd_comment_start = directory
         .end
         .checked_add(22)
@@ -2664,6 +2697,7 @@ pub(crate) fn open_checked_archive(
         });
     }
     for (index, checked) in checked_entries.iter().enumerate() {
+        cancellation.checkpoint()?;
         let parsed = archive.by_index_raw(index).map_err(zip_error)?;
         let central_header_start = parsed
             .central_header_start()
@@ -2684,6 +2718,7 @@ pub(crate) fn open_checked_archive(
     let mut decoded_path_size = 0_usize;
     let mut total = 0_u64;
     for i in 0..archive.len() {
+        cancellation.checkpoint()?;
         let file = archive.by_index_raw(i).map_err(zip_error)?;
         let path = file.name().to_string();
         let path = path.as_str();
@@ -2749,7 +2784,9 @@ pub(crate) fn read_checked_member(
     archive: &mut zip::ZipArchive<ZipParserReader<'_>>,
     index: usize,
     max_member_size: u64,
+    cancellation: Cancellation<'_>,
 ) -> Result<(String, Option<Vec<u8>>), PackageError> {
+    cancellation.checkpoint()?;
     // Raw metadata is available even when opening the supported-codec view
     // fails. Its decoded name has already passed the archive path checks.
     let path = archive
@@ -2784,8 +2821,12 @@ pub(crate) fn read_checked_member(
         let mut raw = archive
             .by_index_raw(index)
             .map_err(|error| member_error(&error))?;
-        check_deflate_stream(&mut raw, compressed_size, data_len)
-            .map_err(|error| member_error(&error))?;
+        check_deflate_stream(&mut raw, compressed_size, data_len, cancellation).map_err(
+            |error| match error {
+                CheckDeflateError::Stream(message) => member_error(&message),
+                CheckDeflateError::Cancelled(stop) => PackageError::Cancelled(stop),
+            },
+        )?;
     }
     if is_directory {
         return Ok((path, None));
@@ -2796,21 +2837,34 @@ pub(crate) fn read_checked_member(
 /// Recheck DEFLATE extents after the usual CRC and size reader. Fixed buffers
 /// bound staging and output without retaining a second expanded copy. Raw
 /// member reads exclude the already validated data descriptor.
+///
+/// The error is split from [`PackageError`] so the exact deflate refusal
+/// strings survive the `read_checked_member` path-prefix wrapping unchanged,
+/// while a cancellation propagates as a typed [`PackageError::Cancelled`].
+enum CheckDeflateError {
+    Stream(&'static str),
+    Cancelled(crate::operation::Stop),
+}
+
 fn check_deflate_stream(
     raw: &mut impl Read,
     compressed_size: u64,
     expected_size: u64,
-) -> Result<(), &'static str> {
+    cancellation: Cancellation<'_>,
+) -> Result<(), CheckDeflateError> {
     let mut inflater = Decompress::new(false);
     let mut input = [0_u8; 8192];
     let mut output = [0_u8; 65536];
     let mut read = 0;
     let mut offset = 0;
     loop {
+        cancellation
+            .checkpoint()
+            .map_err(CheckDeflateError::Cancelled)?;
         if offset == read {
             read = raw
                 .read(&mut input)
-                .map_err(|_| "deflate stream read failed")?;
+                .map_err(|_| CheckDeflateError::Stream("deflate stream read failed"))?;
             offset = 0;
         }
         // Allow at most one byte beyond the already checked decoded length.
@@ -2825,13 +2879,19 @@ fn check_deflate_stream(
             FlushDecompress::None,
         );
         if inflater.total_out() > expected_size {
-            return Err("deflate stream exceeds checked output size");
+            return Err(CheckDeflateError::Stream(
+                "deflate stream exceeds checked output size",
+            ));
         }
         if matches!(status, Ok(Status::StreamEnd)) {
             return if inflater.total_in() != compressed_size {
-                Err("trailing data after deflate stream")
+                Err(CheckDeflateError::Stream(
+                    "trailing data after deflate stream",
+                ))
             } else if inflater.total_out() != expected_size {
-                Err("deflate stream output size mismatch")
+                Err(CheckDeflateError::Stream(
+                    "deflate stream output size mismatch",
+                ))
             } else {
                 Ok(())
             };
@@ -2839,7 +2899,9 @@ fn check_deflate_stream(
         let consumed = inflater.total_in() - before_in;
         let produced = inflater.total_out() - before_out;
         if status.is_err() || (consumed == 0 && produced == 0) {
-            return Err("incomplete or malformed deflate stream");
+            return Err(CheckDeflateError::Stream(
+                "incomplete or malformed deflate stream",
+            ));
         }
         offset += consumed as usize;
         // Output-only progress is valid, including after raw EOF: drain it
@@ -2868,9 +2930,9 @@ pub fn install_package_with_limits(
     bytes: &[u8],
     limits: PackageLimits,
 ) -> Result<InstallReport, PackageError> {
-    admit_package_bytes(source_name, bytes)?;
+    admit_package_bytes(source_name, bytes, Cancellation::Quiet)?;
     let tx = conn.unchecked_transaction().map_err(ProductDbError::from)?;
-    let report = install_admitted_package(&tx, source_name, bytes, limits)?;
+    let report = install_admitted_package(&tx, source_name, bytes, limits, Cancellation::Quiet)?;
     tx.commit().map_err(ProductDbError::from)?;
     Ok(report)
 }
@@ -2883,7 +2945,9 @@ pub(crate) fn install_admitted_package(
     source_name: &str,
     bytes: &[u8],
     limits: PackageLimits,
+    cancellation: Cancellation<'_>,
 ) -> Result<InstallReport, PackageError> {
+    cancellation.checkpoint()?;
     let max_member_size = limits.max_member_size;
     let sha256 = sha256_hex(bytes);
     let prior_raw: Option<(i64, i64, i64, i64, i64, i64, i64)> = tx
@@ -2930,7 +2994,7 @@ pub(crate) fn install_admitted_package(
         mut archive,
         has_master,
         inner_packages,
-    } = open_checked_archive(bytes, limits)?;
+    } = open_checked_archive(bytes, limits, cancellation)?;
     if !has_master {
         if !inner_packages.is_empty() {
             return Err(PackageError::WrapperArchive {
@@ -2943,7 +3007,8 @@ pub(crate) fn install_admitted_package(
     let mut scheme = None;
     let mut has_manufacturer_data = false;
     for i in 0..archive.len() {
-        let (path, data) = read_checked_member(&mut archive, i, max_member_size)?;
+        cancellation.checkpoint()?;
+        let (path, data) = read_checked_member(&mut archive, i, max_member_size, cancellation)?;
         let Some(data) = data else {
             continue;
         };
@@ -2980,6 +3045,7 @@ pub(crate) fn install_admitted_package(
     // local-name readers would otherwise accept.
     if matches!(scheme, 10 | 21 | 23) {
         for validated in &validated_members {
+            cancellation.checkpoint()?;
             if !matches!(
                 validated.member.role.as_str(),
                 "Master" | "Catalog" | "Hardware" | "ApplicationProgram" | "Baggages"
@@ -3028,6 +3094,7 @@ pub(crate) fn install_admitted_package(
             ));
         }
         let conflicts = package_conflicts(tx, &sha256)?;
+        cancellation.checkpoint()?;
         let facts = load_facts(tx, &sha256)?;
         let baggage = crate::baggage::load_baggage_inventory(tx, &sha256)?;
         // The only write of a retry: the name these bytes arrived under.
@@ -3073,6 +3140,7 @@ pub(crate) fn install_admitted_package(
     let mut baggage_indexes = Vec::new();
     let mut baggage_payloads = Vec::new();
     for (ordinal, validated) in validated_members.into_iter().enumerate() {
+        cancellation.checkpoint()?;
         let PackageMember {
             path,
             role,
@@ -3145,7 +3213,14 @@ pub(crate) fn install_admitted_package(
         ) {
             // A retained raw member is not proof its domain rows were parsed.
             // The package hash, not the blob hash, controls package retries.
-            ingest_file_in_transaction(tx, &path, &data, true, matches!(scheme, 21 | 23))?
+            ingest_file_in_transaction(
+                tx,
+                &path,
+                &data,
+                true,
+                matches!(scheme, 21 | 23),
+                cancellation,
+            )?
         } else {
             let stored = crate::store_source_file(
                 tx,
@@ -3160,7 +3235,7 @@ pub(crate) fn install_admitted_package(
                 },
             )?;
             if stored {
-                crate::identity::record_producer(tx, &member_sha, &data)?;
+                crate::identity::record_producer(tx, &member_sha, &data, cancellation)?;
             }
             DetailedIngestOutcome {
                 outcome: IngestOutcome::Skipped {
@@ -3192,7 +3267,9 @@ pub(crate) fn install_admitted_package(
             add_entities(&mut facts, &entities)?;
         }
         if role == "Master" {
-            let master = crate::parse::master::ingest_master_data_detailed(tx, &data)?;
+            cancellation.checkpoint()?;
+            let master =
+                crate::parse::master::ingest_master_data_detailed(tx, &data, cancellation)?;
             let crate::parse::master::DetailedMasterIngest {
                 outcome: mut master_outcome,
                 entities,
@@ -3206,6 +3283,7 @@ pub(crate) fn install_admitted_package(
                     &data,
                     &path,
                     &mut master_outcome.unknown,
+                    cancellation,
                 )?;
             }
             insert_unknown(tx, &member_sha, &master_outcome.unknown)?;
@@ -3283,11 +3361,12 @@ pub(crate) fn install_admitted_package(
             )?;
             baggage_indexes.push(index);
         } else if role == "Baggage" {
-            baggage_payloads.push(crate::baggage::BaggagePayload::measure(
+            baggage_payloads.push(crate::baggage::BaggagePayload::measure_controlled(
                 path.clone(),
                 member_sha.clone(),
                 &data,
-            ));
+                cancellation,
+            )?);
         } else if role == "Unrecognized" {
             let mut unknown = UnknownCollector::default();
             unknown.element("/Package", &path);
@@ -3310,6 +3389,7 @@ pub(crate) fn install_admitted_package(
     let mut unknowns: BTreeMap<(String, String, String), crate::report::UnknownConstruct> =
         BTreeMap::new();
     for unknown in package_unknowns {
+        cancellation.checkpoint()?;
         let key = (
             unknown.xpath.clone(),
             unknown.kind.as_str().to_string(),
@@ -3325,6 +3405,7 @@ pub(crate) fn install_admitted_package(
         }
     }
     facts.unknown_constructs = unknowns.into_values().collect();
+    cancellation.checkpoint()?;
     let inventory = crate::baggage::BaggageInventory::resolve(baggage_indexes, baggage_payloads);
     crate::baggage::persist(tx, &report.sha256, &inventory)?;
     facts.diagnostics.extend(baggage_diagnostics(&inventory)?);
@@ -3345,6 +3426,7 @@ pub(crate) fn install_admitted_package(
         InstallDisposition::Stored,
         unknown_distinct,
     )?;
+    cancellation.checkpoint()?;
     finalize_facts(&mut facts)?;
     persist_facts(tx, &report.sha256, facts.clone())?;
     report.facts = Some(facts);
@@ -3387,6 +3469,24 @@ pub(crate) fn install_admitted_package(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::open_and_migrate;
+    use crate::operation::{CancelOutcome, Cancellation, PublicationGate};
+    use std::io::Write;
+    use zip::write::SimpleFileOptions;
+
+    const MASTER: &[u8] = br#"<KNX xmlns="http://knx.org/xml/project/11"><MasterData><Manufacturers><Manufacturer Id="M-0001" Name="Example"/></Manufacturers></MasterData></KNX>"#;
+    const HARDWARE: &[u8] = br#"<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-0001"><Hardware><Hardware Id="H-1" Name="Example"/></Hardware></Manufacturer></ManufacturerData></KNX>"#;
+
+    fn archive(entries: &[(&str, &[u8])]) -> Vec<u8> {
+        let mut writer = zip::ZipWriter::new(Cursor::new(Vec::new()));
+        for (path, bytes) in entries {
+            writer
+                .start_file(*path, SimpleFileOptions::default())
+                .unwrap();
+            writer.write_all(bytes).unwrap();
+        }
+        writer.finish().unwrap().into_inner()
+    }
 
     #[test]
     fn parser_overlay_survives_split_reads_and_seeks() {
@@ -3428,5 +3528,67 @@ mod tests {
                 "one-byte reads after seek {start}"
             );
         }
+    }
+
+    #[test]
+    fn a_controlled_install_stops_at_the_gate_without_writing() {
+        let dir = tempfile::tempdir().unwrap();
+        let conn = open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+        let bytes = archive(&[
+            ("knx_master.xml", MASTER),
+            ("M-0001/Hardware.xml", HARDWARE),
+        ]);
+        let tx = conn.unchecked_transaction().unwrap();
+
+        let gate = PublicationGate::new();
+        assert_eq!(gate.try_cancel(), CancelOutcome::Accepted);
+        let result = install_admitted_package(
+            &tx,
+            "cancelled.knxprod",
+            &bytes,
+            PackageLimits::STANDARD,
+            Cancellation::Controlled(&gate),
+        );
+        assert!(matches!(result, Err(PackageError::Cancelled(_))));
+        tx.rollback().unwrap();
+
+        let packages: i64 = conn
+            .query_row("SELECT count(*) FROM package", [], |r| r.get(0))
+            .unwrap();
+        let files: i64 = conn
+            .query_row("SELECT count(*) FROM source_file", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!((packages, files), (0, 0));
+    }
+
+    #[test]
+    fn a_quiet_controlled_install_matches_the_public_installer() {
+        let bytes = archive(&[
+            ("knx_master.xml", MASTER),
+            ("M-0001/Hardware.xml", HARDWARE),
+        ]);
+
+        let public_dir = tempfile::tempdir().unwrap();
+        let public_conn = open_and_migrate(&public_dir.path().join("products.sqlite")).unwrap();
+        let public = install_package(&public_conn, "quiet.knxprod", &bytes).unwrap();
+
+        let controlled_dir = tempfile::tempdir().unwrap();
+        let controlled_conn =
+            open_and_migrate(&controlled_dir.path().join("products.sqlite")).unwrap();
+        let tx = controlled_conn.unchecked_transaction().unwrap();
+        let controlled = install_admitted_package(
+            &tx,
+            "quiet.knxprod",
+            &bytes,
+            PackageLimits::STANDARD,
+            Cancellation::Quiet,
+        )
+        .unwrap();
+        tx.commit().unwrap();
+
+        assert_eq!(controlled.sha256, public.sha256);
+        assert_eq!(controlled.members, public.members);
+        assert_eq!(controlled.skipped, public.skipped);
+        assert_eq!(controlled.unknown, public.unknown);
     }
 }

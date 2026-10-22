@@ -38,6 +38,9 @@ pub enum LegacyError {
     /// The file parsed, but cannot be published (not a product database,
     /// or nothing to identify it by).
     Mapping { reason: String },
+    /// The installer's cancellation control reported a typed stop while
+    /// inspecting the container. Never produced by the quiet public path.
+    Cancelled(crate::operation::Stop),
 }
 
 impl fmt::Display for LegacyError {
@@ -76,8 +79,15 @@ impl fmt::Display for LegacyError {
                 write!(f, "legacy EX-IM text, line {line}: {reason}")
             }
             Self::Mapping { reason } => write!(f, "legacy product database: {reason}"),
+            Self::Cancelled(_) => write!(f, "catalogue install cancelled"),
         }
     }
 }
 
 impl std::error::Error for LegacyError {}
+
+impl From<crate::operation::Stop> for LegacyError {
+    fn from(stop: crate::operation::Stop) -> Self {
+        LegacyError::Cancelled(stop)
+    }
+}

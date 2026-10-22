@@ -23,6 +23,7 @@ use quick_xml::events::Event;
 use quick_xml::Reader;
 use rusqlite::{params, Connection};
 
+use crate::operation::Cancellation;
 use crate::xml::{attrs, local_name};
 use crate::ProductDbError;
 
@@ -41,6 +42,7 @@ pub(crate) fn record_write_authority(
     source_sha256: &str,
     source_path: &str,
     bytes: &[u8],
+    cancellation: Cancellation<'_>,
 ) -> Result<(), ProductDbError> {
     let owned: HashSet<String> = conn
         .prepare("SELECT id FROM application_program WHERE source_sha256 = ?1")?
@@ -57,6 +59,7 @@ pub(crate) fn record_write_authority(
     let mut calculation: Option<String> = None;
     let mut calculations_seen: u64 = 0;
     loop {
+        cancellation.checkpoint()?;
         buf.clear();
         let event = reader
             .read_event_into(&mut buf)

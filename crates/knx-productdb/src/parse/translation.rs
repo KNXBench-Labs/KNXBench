@@ -9,6 +9,7 @@ use quick_xml::events::Event;
 use quick_xml::Reader;
 use rusqlite::Connection;
 
+use crate::operation::Cancellation;
 use crate::xml::{attrs, local_name};
 use crate::ProductDbError;
 
@@ -79,6 +80,18 @@ pub fn ingest_translations(
     source_path: &str,
     bytes: &[u8],
 ) -> Result<usize, ProductDbError> {
+    ingest_translations_controlled(conn, scope, source_path, bytes, Cancellation::Quiet)
+}
+
+/// [`ingest_translations`] on the installer path: the controlled variant
+/// checks the caller's cancellation control at every XML event.
+pub(crate) fn ingest_translations_controlled(
+    conn: &Connection,
+    scope: TranslationScope,
+    source_path: &str,
+    bytes: &[u8],
+    cancellation: Cancellation<'_>,
+) -> Result<usize, ProductDbError> {
     let mut reader = Reader::from_reader(bytes);
     let mut buf = Vec::new();
     let mut scope_id = String::new();
@@ -87,6 +100,7 @@ pub fn ingest_translations(
     let mut count = 0usize;
 
     loop {
+        cancellation.checkpoint()?;
         buf.clear();
         let event = reader
             .read_event_into(&mut buf)

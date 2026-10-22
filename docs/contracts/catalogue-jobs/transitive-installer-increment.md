@@ -39,7 +39,9 @@ or job slot becomes reachable.
     `validated_zip_metadata`, `validated_zip_members`, `validate_central_directory`,
     `preflight_zip` (per entry/record where bounded loops already exist).
   - `ingest.rs`: `ingest_file`, `ingest_file_in_transaction` (hash, skip
-    check, classify, each parser call, report and evidence writes), `classify`.
+    check, classify — checkpoints around the call, `classify` itself stays a
+    bounded root-element predicate — each parser call, report and evidence
+    writes).
   - Parser entry points (`parse/`): `catalog`, `hardware`, `program`,
     `translation`, `baggage`, `master`, `write_authority`, `scheme_evidence`,
     `dynamic` — each checks at least once per file and at its existing

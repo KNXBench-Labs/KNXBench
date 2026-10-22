@@ -9,6 +9,7 @@ use quick_xml::name::ResolveResult;
 use quick_xml::{NsReader, XmlVersion};
 
 use super::scheme_evidence::MAX_EVIDENCE_DEPTH;
+use crate::operation::Cancellation;
 use crate::report::{UnknownCollector, UnknownConstruct};
 use crate::ProductDbError;
 
@@ -69,6 +70,7 @@ fn supported_namespace(namespace: &str) -> bool {
 /// namespace-admission validator and never changes package scheme admission.
 pub(crate) fn master_language_unknowns(
     bytes: &[u8],
+    cancellation: Cancellation<'_>,
 ) -> Result<Vec<UnknownConstruct>, ProductDbError> {
     if bytes.len() > MAX_MASTER_LANGUAGE_BYTES {
         return Err(error("master-language input byte budget exceeded"));
@@ -82,6 +84,7 @@ pub(crate) fn master_language_unknowns(
     let mut evidence_bytes = 0usize;
     let mut skipped_depth = 0usize;
     loop {
+        cancellation.checkpoint()?;
         buffer.clear();
         let (namespace, event) = reader
             .read_resolved_event_into(&mut buffer)

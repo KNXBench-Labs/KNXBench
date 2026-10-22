@@ -21,6 +21,7 @@ use super::master_language::master_language_unknowns;
 use super::report_unknown_attrs;
 use super::translation::{ingest_translations, TranslationScope};
 use crate::master_provenance::{self, MasterDeclaration, MasterDiagnostic, MasterKind};
+use crate::operation::Cancellation;
 use crate::report::{EntityCounts, EntityKind, UnknownCollector, UnknownConstruct};
 use crate::xml::{attrs, local_name};
 use crate::ProductDbError;
@@ -200,18 +201,20 @@ pub(crate) struct DetailedMasterIngest {
 }
 
 pub fn ingest_master_data(conn: &Connection, bytes: &[u8]) -> Result<MasterIngest, ProductDbError> {
-    Ok(ingest_master_data_detailed(conn, bytes)?.outcome)
+    Ok(ingest_master_data_detailed(conn, bytes, Cancellation::Quiet)?.outcome)
 }
 
 pub(crate) fn ingest_master_data_detailed(
     conn: &Connection,
     bytes: &[u8],
+    cancellation: Cancellation<'_>,
 ) -> Result<DetailedMasterIngest, ProductDbError> {
+    cancellation.checkpoint()?;
     master_provenance::atomic(conn, "master_ingest", || {
         let sha = master_provenance::retain(conn, bytes)?;
         crate::xml::validate_complete_document("knx_master.xml", bytes)?;
         let mut budget = master_provenance::budget::EvidenceBudget::default();
-        let mut detailed = parse_master_with_budget(conn, bytes, true, &mut budget)?;
+        let mut detailed = parse_master_with_budget(conn, bytes, true, &mut budget, cancellation)?;
         budget.reserve_validation()?;
         master_provenance::persist(conn, &sha, &detailed.declarations, true)?;
         detailed.outcome.diagnostics =
@@ -225,7 +228,7 @@ pub(crate) fn ingest_master_data_legacy(
     conn: &Connection,
     bytes: &[u8],
 ) -> Result<MasterIngest, ProductDbError> {
-    Ok(parse_master(conn, bytes, true)?.outcome)
+    Ok(parse_master(conn, bytes, true, Cancellation::Quiet)?.outcome)
 }
 
 fn execute(
@@ -245,9 +248,10 @@ pub(crate) fn parse_master(
     conn: &Connection,
     bytes: &[u8],
     writes: bool,
+    cancellation: Cancellation<'_>,
 ) -> Result<DetailedMasterIngest, ProductDbError> {
     let mut budget = master_provenance::budget::EvidenceBudget::default();
-    let parsed = parse_master_with_budget(conn, bytes, writes, &mut budget)?;
+    let parsed = parse_master_with_budget(conn, bytes, writes, &mut budget, cancellation)?;
     budget.reserve_validation()?;
     Ok(parsed)
 }
@@ -257,6 +261,7 @@ pub(crate) fn parse_master_with_budget(
     bytes: &[u8],
     writes: bool,
     budget: &mut master_provenance::budget::EvidenceBudget,
+    cancellation: Cancellation<'_>,
 ) -> Result<DetailedMasterIngest, ProductDbError> {
     let source_path = "knx_master.xml";
     if bytes.len() > master_provenance::MAX_MASTER_BYTES {
@@ -266,7 +271,7 @@ pub(crate) fn parse_master_with_budget(
     let source_sha256 = crate::sha256_hex(bytes);
     let mut declarations = Vec::new();
     let language_unknowns = if writes {
-        master_language_unknowns(bytes)?
+        master_language_unknowns(bytes, cancellation)?
     } else {
         Vec::new()
     };
@@ -282,6 +287,7 @@ pub(crate) fn parse_master_with_budget(
     let mut unsupported_sections = BTreeMap::<String, u64>::new();
 
     loop {
+        cancellation.checkpoint()?;
         buf.clear();
         let byte_start = reader.buffer_position();
         let event = reader
@@ -815,7 +821,12 @@ mod tests {
     </DatapointTypes>
   </MasterData>
 </KNX>"#;
-        let outcome = ingest_master_data_detailed(&conn, xml.as_bytes()).unwrap();
+        let outcome = ingest_master_data_detailed(
+            &conn,
+            xml.as_bytes(),
+            crate::operation::Cancellation::Quiet,
+        )
+        .unwrap();
         let count: i64 = conn
             .query_row(
                 "SELECT count(*) FROM datapoint_type WHERE id = 'DPST-ORPHAN'",

@@ -126,9 +126,14 @@ pub(super) fn master_source_report_with_budget(
     if let Some(bytes) = bytes.filter(|_| status == "complete" || !declarations.is_empty()) {
         // Reuse the authoritative parser, including unusual carried contexts;
         // never trust persisted offsets or introduce another declaration scanner.
-        let mut actual =
-            crate::parse::master::parse_master_with_budget(conn, &bytes, false, budget)?
-                .declarations;
+        let mut actual = crate::parse::master::parse_master_with_budget(
+            conn,
+            &bytes,
+            false,
+            budget,
+            crate::operation::Cancellation::Quiet,
+        )?
+        .declarations;
         if actual.len() != declarations.len()
             || actual
                 .iter_mut()

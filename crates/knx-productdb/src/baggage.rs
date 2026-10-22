@@ -13,6 +13,7 @@ use std::collections::BTreeMap;
 
 use rusqlite::{params, Connection, OptionalExtension};
 
+use crate::operation::Cancellation;
 use crate::parse::baggage::{declared_member_path, BaggageDeclaration};
 use crate::ProductDbError;
 
@@ -147,33 +148,41 @@ pub enum NestedArchive {
     },
 }
 
-fn inspect_nested(class: MediaClass, bytes: &[u8]) -> NestedArchive {
+/// [`inspect_nested_controlled`] with a quiet cancellation control.
+///
+/// The quiet control never reports [`crate::operation::Stop`], so this
+/// collapses any refusal into `Unreadable`, exactly as the pre-cancellation
+/// inspect did.
+fn inspect_nested_controlled(
+    class: MediaClass,
+    bytes: &[u8],
+    cancellation: Cancellation<'_>,
+) -> Result<NestedArchive, crate::package::PackageError> {
     if class != MediaClass::Zip {
-        return NestedArchive::NotArchive;
+        return Ok(NestedArchive::NotArchive);
     }
     // The package validator in full (entry/directory budgets, no ZIP64 or
     // multi-disk, local/central agreement, no overlaps), then only its
     // checked directory metadata: no `ZipArchive`, whose end-of-directory
     // search is superlinear on hostile input, and nothing is decompressed.
-    let Ok(entries) = crate::package::validated_zip_metadata(bytes) else {
-        return NestedArchive::Unreadable;
-    };
+    let entries = crate::package::validated_zip_metadata(bytes, cancellation)?;
     let (mut expanded, mut encrypted, mut archives) = (0u64, 0u64, 0u64);
     for entry in &entries {
+        cancellation.checkpoint()?;
         let Some(sum) = expanded.checked_add(entry.uncompressed_size) else {
-            return NestedArchive::Unreadable;
+            return Ok(NestedArchive::Unreadable);
         };
         expanded = sum;
         // General-purpose flag bit 0: the entry is encrypted.
         encrypted += u64::from(entry.flags & 1);
         archives += u64::from(entry.name.to_ascii_lowercase().ends_with(b".zip"));
     }
-    NestedArchive::Read {
+    Ok(NestedArchive::Read {
         entries: entries.len() as u64,
         declared_expanded_size: expanded,
         encrypted_entries: encrypted,
         archive_named_entries: archives,
-    }
+    })
 }
 
 /// One retained `Baggages/` member.
@@ -190,15 +199,48 @@ pub struct BaggagePayload {
 
 impl BaggagePayload {
     pub fn measure(member_path: String, sha256: String, bytes: &[u8]) -> Self {
+        match BaggagePayload::measure_controlled(
+            member_path.clone(),
+            sha256.clone(),
+            bytes,
+            Cancellation::Quiet,
+        ) {
+            Ok(payload) => payload,
+            Err(_) => {
+                // The quiet path collapses any refusal into `Unreadable`,
+                // exactly as the pre-cancellation measure did, keeping the
+                // member identity and its content class.
+                BaggagePayload {
+                    member_path,
+                    sha256,
+                    size: bytes.len() as u64,
+                    media_class: sniff_media(bytes),
+                    nested: NestedArchive::Unreadable,
+                    declarations: 0,
+                }
+            }
+        }
+    }
+
+    /// [`measure`] on the installer path: a controlled measure propagates a
+    /// typed [`crate::operation::Stop`] rather than collapsing it into
+    /// `Unreadable`, so a cancelled install never silently succeeds.
+    pub(crate) fn measure_controlled(
+        member_path: String,
+        sha256: String,
+        bytes: &[u8],
+        cancellation: Cancellation<'_>,
+    ) -> Result<Self, crate::package::PackageError> {
         let media_class = sniff_media(bytes);
-        Self {
+        let nested = inspect_nested_controlled(media_class, bytes, cancellation)?;
+        Ok(Self {
             member_path,
             sha256,
             size: bytes.len() as u64,
             media_class,
-            nested: inspect_nested(media_class, bytes),
+            nested,
             declarations: 0,
-        }
+        })
     }
 
     /// The member's extension, lower-cased, if its last component has one.
@@ -272,7 +314,7 @@ pub(crate) fn parse_index(
     path: &str,
     bytes: &[u8],
 ) -> Result<(ParsedIndex, Vec<crate::report::UnknownConstruct>), ProductDbError> {
-    let index = crate::parse::baggage::parse_baggage_index(path, bytes)?;
+    let index = crate::parse::baggage::parse_baggage_index(path, bytes, Cancellation::Quiet)?;
     let refused = crate::parse::baggage::manufacturer_mismatch(path, &index);
     Ok((
         (path.to_string(), index.declarations, refused),

@@ -53,6 +53,10 @@ pub mod parameter_layout;
 pub mod parse;
 #[allow(dead_code)]
 mod preview_binding;
+// Private complete-preview-identity codec remains unwired until the
+// preview/apply orchestration exists (WP-04.3 stage D, ADR-0150).
+#[allow(dead_code)]
+mod preview_identity;
 pub mod procedure_resolution;
 mod promotion_repair;
 pub mod query;

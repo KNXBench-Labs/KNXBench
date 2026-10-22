@@ -14,7 +14,7 @@ fn profile_requires_all_explicit_rules_and_rejects_unknown_or_unbounded_configur
     for (old, new) in [
         ("complete-defaults-no-links-v1", "any-project"),
         ("strong-hypothesis-simulator-validation-only", "verified"),
-        ("declared-counts-zero-flags-zero-table-identity-v1", "guess"),
+        ("declared-counts-zero-flags-full-table-identity-v1", "guess"),
     ] {
         let text = String::from_utf8(PROFILE.to_vec())
             .unwrap()
@@ -120,7 +120,7 @@ fn exact_old_device(bundle: &PreparedBundle, mut config: SimulatorConfig) -> Sim
     );
     device.preset_property(0, PID_HARDWARE_TYPE, &[0, 1, 0, 0, 0, 91]);
     device.preset_property(3, PID_PROGRAM_VERSION, &[0, 1, 0x92, 5, 4]);
-    for (owner, extents, pointer, app_identity) in [
+    for (owner, extents, pointer, has_task_control_2) in [
         (
             SimulatedSystem2Object::AddressTable,
             vec![(278, 330)],
@@ -163,11 +163,11 @@ fn exact_old_device(bundle: &PreparedBundle, mut config: SimulatorConfig) -> Sim
                 task_segment: Some(SimulatedTaskSegment {
                     start: pointer as u16,
                     pei_type: 0,
-                    manufacturer: if app_identity { 1 } else { 0 },
-                    application: if app_identity { 0x9205 } else { 0 },
-                    version: if app_identity { 4 } else { 0 },
+                    manufacturer: 1,
+                    application: 0x9205,
+                    version: 4,
                 }),
-                task_control_2: app_identity.then_some(SimulatedTaskControl2 {
+                task_control_2: has_task_control_2.then_some(SimulatedTaskControl2 {
                     callback: 0,
                     communication_objects: 1024,
                     segment_1: 0,

@@ -65,7 +65,7 @@ impl ValidationProfile {
             || result.id.len() > 128
             || result.classification != "strong-hypothesis-simulator-validation-only"
             || result.configuration != "complete-defaults-no-links-v1"
-            || result.procedure_policy != "declared-counts-zero-flags-zero-table-identity-v1"
+            || result.procedure_policy != "declared-counts-zero-flags-full-table-identity-v1"
             || result.mask != 0x0025
             || !hash(&result.source_sha256)
             || !hash(&result.package_sha256)
@@ -129,7 +129,7 @@ pub fn prepare_simulated_candidate(
     let plan = plan_system2_candidate(
         &image,
         target,
-        &System2ProcedurePolicy::declared_counts_zero_flags_zero_table_identity(),
+        &System2ProcedurePolicy::declared_counts_zero_flags_full_table_identity(),
     )
     .map_err(|e| invalid(e.to_string()))?;
     if plan.manufacturer() != profile.manufacturer || plan.mask().0 != profile.mask
@@ -179,7 +179,7 @@ pub fn prepare_simulated_candidate(
         .iter()
         .map(|i| format!("{}: {}", i.rule, i.detail))
         .collect();
-    inferences.push("STRONG HYPOTHESIS: declared allocation counts; zero flags map to disabled checksum; table identities zero; exact tool metadata retained without wire write. Same-application reconstruction and masked-byte survival are simulator assumptions, not physical recovery evidence.".into());
+    inferences.push("STRONG HYPOTHESIS: declared allocation counts; zero flags map to disabled checksum; every task segment carries the full application identity; exact tool metadata retained without wire write. Same-application reconstruction and masked-byte survival are simulator assumptions, not physical recovery evidence.".into());
     Ok(PreparedCandidate {
         bundle: PreparedBundle::new(binding, normalized)?,
         source_positions,

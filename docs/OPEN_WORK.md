@@ -262,10 +262,14 @@ Stage D (owned job/lifetime API) has begun in staged sub-increments. The
 first, the private unwired [job admission/replay kernel](contracts/catalogue-jobs/job-admission-increment.md)
 (`catalogue_jobs`) plus its strict wire primitives (checked decimal `U64`,
 32/64 lowercase-hex identities, a constant-time capability), is delivered
-with 35 focused tests. The wire DTO/serialization layer, upload/spool, status
-snapshots, the ArtifactDir lease/reclamation/fencing and the standalone/desktop
-close/drain lifetime remain later stage-D increments; no job route, Ready/apply
-or worker execution is wired.
+with 35 focused tests. The second, the private unwired strict serde wire DTO
+layer ([`catalogue_jobs::dto`](contracts/catalogue-jobs/dto-layer-increment.md):
+duplicate-key/depth admission, `deny_unknown_fields`, closed-enum DTOs for the
+core protocol objects, the P3 field/null/state contract and the fixed
+error→status/message mapping), is delivered with 39 focused tests. Upload/spool
++ status snapshots, the ArtifactDir lease/reclamation/fencing and the
+standalone/desktop close/drain lifetime remain later stage-D increments; no
+job route, Ready/apply or worker execution is wired.
 
 **Three separate deliveries, in order:**
 

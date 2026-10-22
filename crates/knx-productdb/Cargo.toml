@@ -24,6 +24,8 @@ base64.workspace = true
 # Inflates a legacy EX-IM member (ADR-0094). Decryption is not done here:
 # knx-productdb must not link knx-secure (knx-mcp, ADR-0090).
 flate2.workspace = true
+# Fresh 128-bit catalogue incarnation (WP-04.3 stage B, ADR-0150).
+getrandom.workspace = true
 
 [dev-dependencies]
 # Linux wait4 ABI for the opt-in measurement supervisor; already locked transitively.

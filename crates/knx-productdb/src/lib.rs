@@ -26,6 +26,10 @@ pub mod image_request;
 pub mod inference;
 pub mod ingest;
 pub mod legacy;
+// Managed owner primitive remains unwired until the witness and copy recipe
+// exist (WP-04.3 stage B, ADR-0150).
+#[allow(dead_code)]
+mod managed_catalogue;
 pub mod master_evidence;
 pub mod master_provenance;
 pub mod migration;

@@ -22,8 +22,12 @@
 
 use std::path::{Path, PathBuf};
 
+use crate::catalogue_jobs::ARTIFACT_ROOT_NAME;
 use crate::errors::ApiError;
 use crate::tls_cert::TLS_DIR_NAME;
+
+/// The directory names no route may reach, even by absolute path.
+const RESERVED_DIR_NAMES: [&str; 2] = [TLS_DIR_NAME, ARTIFACT_ROOT_NAME];
 
 /// Resolves `relative` against `data_dir` and confirms the result still
 /// lives under it — the only thing standing between `/api/fs/list` and a
@@ -108,20 +112,21 @@ pub(crate) fn resolve_new_project_path(data_dir: &Path, path: &str) -> Result<Pa
 /// Both the literal and the resolved form of the directory are checked,
 /// so a symlink in its place does not open a side door.
 fn refuse_reserved(canonical_root: &Path, canonical: &Path) -> Result<(), ApiError> {
-    let reserved = canonical_root.join(TLS_DIR_NAME);
-    let resolved = reserved.canonicalize().unwrap_or_else(|_| reserved.clone());
-    if canonical.starts_with(&reserved) || canonical.starts_with(&resolved) {
-        return Err(ApiError::bad_request(
-            "path is reserved for the server's TLS certificate and key",
-        ));
+    for name in RESERVED_DIR_NAMES {
+        let reserved = canonical_root.join(name);
+        let resolved = reserved.canonicalize().unwrap_or_else(|_| reserved.clone());
+        if canonical.starts_with(&reserved) || canonical.starts_with(&resolved) {
+            return Err(ApiError::bad_request("path is reserved"));
+        }
     }
     Ok(())
 }
 
-/// Whether `name`, listed directly in `dir`, is the reserved TLS directory
-/// — for `/api/fs/list` to leave it out of the data directory's listing.
+/// Whether `name`, listed directly in `dir`, is a reserved directory — for
+/// `/api/fs/list` to leave it out of the data directory's listing.
 pub(crate) fn is_reserved_entry(data_dir: &Path, dir: &Path, name: &std::ffi::OsStr) -> bool {
-    name == TLS_DIR_NAME && canonical_root(data_dir).is_ok_and(|root| dir == root)
+    RESERVED_DIR_NAMES.iter().any(|r| name == *r)
+        && canonical_root(data_dir).is_ok_and(|root| dir == root)
 }
 
 fn canonical_root(data_dir: &Path) -> Result<PathBuf, ApiError> {
@@ -133,6 +138,7 @@ fn canonical_root(data_dir: &Path) -> Result<PathBuf, ApiError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::catalogue_jobs::ARTIFACT_ROOT_NAME;
 
     fn data_dir() -> tempfile::TempDir {
         let dir = tempfile::tempdir().unwrap();
@@ -270,6 +276,30 @@ mod tests {
         std::fs::write(dir.path().join(".knxbench-tls-notes.knxdb"), b"x").unwrap();
         assert!(resolve_in_data_dir(dir.path(), ".knxbench-tls-notes.knxdb").is_ok());
         assert!(resolve_new_project_path(dir.path(), "sub/.knxbench-tls").is_ok());
+    }
+
+    #[test]
+    fn the_catalogue_jobs_directory_is_reserved_too() {
+        let dir = data_dir();
+        std::fs::create_dir(dir.path().join(ARTIFACT_ROOT_NAME)).unwrap();
+        std::fs::write(
+            dir.path().join(ARTIFACT_ROOT_NAME).join("inventory.json"),
+            b"[]",
+        )
+        .unwrap();
+        for path in [
+            ARTIFACT_ROOT_NAME,
+            "sub/../.knxbench-catalogue-jobs/inventory.json",
+        ] {
+            assert!(resolve_in_data_dir(dir.path(), path).is_err(), "{path}");
+            assert!(resolve_project_path(dir.path(), path).is_err(), "{path}");
+        }
+        assert!(resolve_new_project_path(dir.path(), ARTIFACT_ROOT_NAME).is_err());
+        // Absolute path into it is refused too.
+        let inner = dir.path().join(ARTIFACT_ROOT_NAME).join("inventory.json");
+        assert!(resolve_project_path(dir.path(), &inner.to_string_lossy()).is_err());
+        // Neighbours stay allowed.
+        assert!(resolve_in_data_dir(dir.path(), "sub/a.knxproj").is_ok());
     }
 
     #[test]

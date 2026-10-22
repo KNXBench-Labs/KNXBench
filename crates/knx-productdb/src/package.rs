@@ -425,6 +425,27 @@ impl InstallDiagnostic {
     }
 }
 
+#[cfg(test)]
+pub(crate) fn install_diagnostic_for_tests(
+    kind: InstallDiagnosticKind,
+    archive_path: String,
+    xml_path: String,
+    detail: String,
+    occurrences: u64,
+) -> InstallDiagnostic {
+    // Test-only constructor: bypasses `new`'s path grammar and positive-count
+    // validation so a sibling module's codec tests can exercise the full
+    // diagnostics encoding without a real install. Not reachable in non-test
+    // builds.
+    InstallDiagnostic {
+        kind,
+        archive_path,
+        xml_path,
+        detail,
+        occurrences,
+    }
+}
+
 impl InstallFacts {
     fn sort(&mut self) -> Result<(), ProductDbError> {
         self.counts

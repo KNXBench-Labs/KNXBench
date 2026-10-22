@@ -4,9 +4,12 @@ mod strict;
 
 pub use strict::{Capability, Incarnation, JobId, U64};
 
+mod artifacts;
 mod dto;
 mod spool;
 mod status;
+
+pub use artifacts::ARTIFACT_ROOT_NAME;
 
 use std::collections::VecDeque;
 

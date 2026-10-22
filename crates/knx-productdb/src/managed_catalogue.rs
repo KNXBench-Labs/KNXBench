@@ -27,7 +27,7 @@ impl CatalogueIncarnation {
 
 /// The single mutable health of one managed handle.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum WriterHealth {
+pub enum WriterHealth {
     Healthy,
     /// Lock is owned; the guard has not yet proved safe settlement.
     Mutating,
@@ -38,14 +38,14 @@ pub(crate) enum WriterHealth {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum RetireReason {
+pub enum RetireReason {
     Close,
     Reopen,
     Restore,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum QuarantineReason {
+pub enum QuarantineReason {
     Panic,
     UncertainSettlement,
     Poisoned,
@@ -87,6 +87,8 @@ pub(crate) struct WriterObservation {
 
 /// The admitted absolute/canonical pathname (privately), parent directory
 /// identity, device/inode/link count and the selected default-VFS choice.
+/// Retained for the later identity/ABA checks; only `canonical` is read today.
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub(crate) struct ManagedFileIdentity {
     canonical: PathBuf,
@@ -116,7 +118,7 @@ impl ManagedFileIdentity {
 
 /// Closed set of legacy server mutators admitted through the managed owner.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum LegacyMutationKind {
+pub enum LegacyMutationKind {
     DirectPackage,
     LegacyPublish,
     PathUpdate,
@@ -127,14 +129,14 @@ pub(crate) enum LegacyMutationKind {
 /// A hint the mutation guard independently checks against native/health state;
 /// never permission to claim a failed COMMIT rolled back.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum LegacySettlementHint {
+pub enum LegacySettlementHint {
     SuccessfulReturn,
     PreCommitSemanticRefusal,
     Uncertain,
 }
 
 #[derive(Debug)]
-pub(crate) enum OwnerError {
+pub enum OwnerError {
     NotHealthy(WriterHealth),
     GenerationOverflow,
     ReadDuringTransaction,
@@ -165,10 +167,10 @@ impl std::fmt::Display for OwnerError {
 impl std::error::Error for OwnerError {}
 
 #[derive(Debug)]
-pub(crate) enum OwnerRestoreError {
+pub enum OwnerRestoreError {
     NotHealthy(WriterHealth),
     GenerationOverflow,
-    Reopen(rusqlite::Error),
+    Restore(String),
     Observation(String),
 }
 
@@ -179,7 +181,7 @@ impl std::fmt::Display for OwnerRestoreError {
                 write!(f, "catalogue owner not healthy: {health:?}")
             }
             OwnerRestoreError::GenerationOverflow => write!(f, "catalogue generation overflow"),
-            OwnerRestoreError::Reopen(e) => write!(f, "catalogue reopen failed: {e}"),
+            OwnerRestoreError::Restore(e) => write!(f, "catalogue restore failed: {e}"),
             OwnerRestoreError::Observation(why) => {
                 write!(f, "catalogue observation failed: {why}")
             }
@@ -219,7 +221,7 @@ impl Drop for MutationGuard<'_> {
 /// One protected managed state. `conn` is `None` while retired/reopening.
 /// Never store a `rusqlite::Transaction` here (it would borrow its own
 /// connection); orchestration borrows the connection disjointly instead.
-pub(crate) struct ManagedCatalogue {
+pub struct ManagedCatalogue {
     conn: Option<Connection>,
     incarnation: CatalogueIncarnation,
     generation: u64,
@@ -232,10 +234,7 @@ pub(crate) struct ManagedCatalogue {
 impl ManagedCatalogue {
     /// Adopts an already-opened, already-migrated connection. Takes a real
     /// main read first so the first observation is a real observation.
-    pub(crate) fn adopt_opened(
-        conn: Connection,
-        configured_path: PathBuf,
-    ) -> Result<Self, OwnerError> {
+    pub fn adopt_opened(conn: Connection, configured_path: PathBuf) -> Result<Self, OwnerError> {
         let observation = Self::observe(&conn, &configured_path)?;
         let identity = ManagedFileIdentity::from_path(&configured_path);
         Ok(Self {
@@ -251,7 +250,7 @@ impl ManagedCatalogue {
     /// A read lease scoped to a lock; `&Connection` never escapes the closure.
     /// Refuses a non-Healthy handle or an active transaction, and never
     /// mutates observation counters.
-    pub(crate) fn with_read<T, E>(
+    pub fn with_read<T, E>(
         &self,
         read: impl FnOnce(&Connection) -> Result<T, E>,
     ) -> Result<Result<T, E>, OwnerError> {
@@ -270,7 +269,7 @@ impl ManagedCatalogue {
     /// increment before the body, `Mutating` set, quarantine-on-unwind; a
     /// clean return refreshes the observation and restores `Healthy`. Failure
     /// never rolls generation back.
-    pub(crate) fn with_legacy_mutation<T, E>(
+    pub fn with_legacy_mutation<T, E>(
         &mut self,
         _kind: LegacyMutationKind,
         work: impl FnOnce(&mut Connection) -> Result<T, E>,
@@ -314,10 +313,14 @@ impl ManagedCatalogue {
     }
 
     /// The dedicated restore adapter: retire and invalidate before touching the
-    /// live handle, then adopt a fresh incarnation and healthy reopened handle
-    /// only on success. Failure leaves the owner quarantined, never silently
-    /// usable.
-    pub(crate) fn restore_legacy(&mut self, listed_backup: &Path) -> Result<(), OwnerRestoreError> {
+    /// live handle, then copy the backup over the live file and reopen it with
+    /// migration and a fresh incarnation only on success. Failure leaves the
+    /// owner quarantined, never silently usable.
+    pub fn restore_legacy(
+        &mut self,
+        live_path: &Path,
+        backup_path: &Path,
+    ) -> Result<(), OwnerRestoreError> {
         if self.health != WriterHealth::Healthy {
             return Err(OwnerRestoreError::NotHealthy(self.health));
         }
@@ -328,7 +331,13 @@ impl ManagedCatalogue {
         self.health = WriterHealth::Retired(RetireReason::Restore);
         self.conn = None;
 
-        match Connection::open(listed_backup) {
+        let reopened = crate::update::restore_product_db_backup(live_path, backup_path)
+            .map_err(|e| OwnerRestoreError::Restore(e.to_string()))
+            .and_then(|()| {
+                crate::migration::open_and_migrate(live_path)
+                    .map_err(|e| OwnerRestoreError::Restore(e.to_string()))
+            });
+        match reopened {
             Ok(conn) => {
                 self.conn = Some(conn);
                 self.incarnation = CatalogueIncarnation::fresh();
@@ -341,7 +350,7 @@ impl ManagedCatalogue {
             }
             Err(e) => {
                 self.health = WriterHealth::Quarantined(QuarantineReason::UncertainSettlement);
-                Err(OwnerRestoreError::Reopen(e))
+                Err(e)
             }
         }
     }
@@ -512,6 +521,7 @@ mod tests {
     #[test]
     fn restore_adopts_a_fresh_incarnation_and_healthy_handle() {
         let (_dir, mut owner) = adopted();
+        let live = _dir.path().join("products.sqlite");
         // Write through the owner so the restored file has the row.
         owner
             .with_legacy_mutation(
@@ -521,9 +531,10 @@ mod tests {
             )
             .unwrap()
             .unwrap();
-        let backup_path = _dir.path().join("products.sqlite");
+        let backup = _dir.path().join("backup.sqlite");
+        std::fs::copy(&live, &backup).unwrap();
         let before = owner.incarnation;
-        owner.restore_legacy(&backup_path).unwrap();
+        owner.restore_legacy(&live, &backup).unwrap();
         assert_eq!(owner.health, WriterHealth::Healthy);
         assert_ne!(owner.incarnation, before);
     }
@@ -531,11 +542,12 @@ mod tests {
     #[test]
     fn a_failed_restore_leaves_the_owner_quarantined() {
         let (dir, mut owner) = adopted();
-        // A directory cannot be opened as a database file.
+        let live = dir.path().join("products.sqlite");
+        // A directory cannot be copied as a database backup.
         let not_a_db = dir.path().join("subdir");
         std::fs::create_dir(&not_a_db).unwrap();
-        let err = owner.restore_legacy(&not_a_db).unwrap_err();
-        assert!(matches!(err, OwnerRestoreError::Reopen(_)));
+        let err = owner.restore_legacy(&live, &not_a_db).unwrap_err();
+        assert!(matches!(err, OwnerRestoreError::Restore(_)));
         assert!(matches!(
             owner.health,
             WriterHealth::Quarantined(QuarantineReason::UncertainSettlement)

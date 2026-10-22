@@ -125,19 +125,27 @@ fn base(
             "support-target-changed",
         ));
     }
-    let db = state
-        .product_db
-        .as_ref()
-        .map(|db| db.lock())
-        .transpose()
-        .map_err(|_| ApiError::internal("catalogue unavailable"))?;
-    let report = build_report(
-        db.as_deref(),
-        project.as_ref(),
-        device_id.map(DeviceId),
-        input,
-        &crate::version_string(),
-    );
+    let report = match state.product_db.as_ref() {
+        None => build_report(
+            None,
+            project.as_ref(),
+            device_id.map(DeviceId),
+            input,
+            &crate::version_string(),
+        ),
+        Some(owner) => owner
+            .with_read(|conn| {
+                Ok::<_, std::convert::Infallible>(build_report(
+                    Some(conn),
+                    project.as_ref(),
+                    device_id.map(DeviceId),
+                    input,
+                    &crate::version_string(),
+                ))
+            })
+            .map_err(|_| ApiError::internal("catalogue unavailable"))?
+            .unwrap(),
+    };
     Ok((
         report,
         selected.and_then(|d| d.address),

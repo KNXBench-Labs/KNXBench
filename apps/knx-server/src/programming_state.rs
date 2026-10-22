@@ -221,10 +221,15 @@ fn after_download(
         let instance = project.devices.get(device)?;
         let label = device_label(instance);
         // Read under the project lock, in the same order `prepare` takes them.
-        let now = state.product_db.as_ref().and_then(|products| {
-            let products = products.lock().expect("state mutex poisoned");
-            knx_productdb::image_request::image_request_for_device(&products, project, device).ok()
-        });
+        let now = match state.product_db.as_ref() {
+            Some(owner) => owner
+                .with_read(|conn| {
+                    knx_productdb::image_request::image_request_for_device(conn, project, device)
+                })
+                .ok()
+                .and_then(|inner| inner.ok()),
+            None => None,
+        };
         let settlement = settle_download(partial, end, written, now.as_ref());
         let subject = match end {
             DownloadEnd::Completed => format!("Download to {label} finished"),

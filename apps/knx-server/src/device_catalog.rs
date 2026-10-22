@@ -185,55 +185,62 @@ pub(crate) async fn get(
         (state.project_revision.load(Ordering::Relaxed), inputs)
     };
     inputs.sort_by_key(|(device, _)| device.id);
-    let mut metadata = HashMap::new();
-    let mut problem = None;
-    let products = state
-        .product_db
-        .as_ref()
-        .map(|mutex| mutex.lock().expect("state mutex poisoned"));
-    let mut devices = Vec::with_capacity(inputs.len());
-    for (device, refs) in inputs {
-        let (product_ref, program_ref) = &refs;
-        if !metadata.contains_key(&refs) {
-            let value = if product_ref.is_empty() {
-                ProductMetadata::unavailable(ProductResolution::NoReference)
-            } else if let Some(products) = &products {
-                // Product identity plus the program's declared mask (WP-20); no
-                // application compatibility or parameter evaluation.
-                match knx_productdb::query::device_product(
-                    products,
-                    product_ref,
-                    program_ref,
-                    query.language.as_deref(),
-                ) {
-                    Ok(Some(row)) => ProductMetadata {
-                        resolution: ProductResolution::Resolved,
-                        system: DeviceSystem::of(&row, program_ref),
-                        manufacturer_id: Some(row.manufacturer_id),
-                        manufacturer_name: row.manufacturer_name,
-                        product_text: row.product_text,
-                        order_number: row.order_number,
-                        product_text_language: row.product_text_language,
-                        product_source_language: row.product_source_language,
-                    },
-                    Ok(None) => ProductMetadata::unavailable(ProductResolution::NotInDatabase),
-                    Err(_) => {
-                        problem = Some("lookupFailed");
-                        ProductMetadata::unavailable(ProductResolution::Unavailable)
+    let compute = |products: Option<&knx_productdb::Connection>,
+                   inputs: Vec<(DeviceNode, (String, String))>|
+     -> Result<(Vec<DeviceCatalogRow>, Option<&'static str>), ApiError> {
+        let mut metadata = HashMap::new();
+        let mut problem = None;
+        let mut devices = Vec::with_capacity(inputs.len());
+        for (device, refs) in inputs {
+            let (product_ref, program_ref) = &refs;
+            if !metadata.contains_key(&refs) {
+                let value = if product_ref.is_empty() {
+                    ProductMetadata::unavailable(ProductResolution::NoReference)
+                } else if let Some(products) = &products {
+                    // Product identity plus the program's declared mask (WP-20); no
+                    // application compatibility or parameter evaluation.
+                    match knx_productdb::query::device_product(
+                        products,
+                        product_ref,
+                        program_ref,
+                        query.language.as_deref(),
+                    ) {
+                        Ok(Some(row)) => ProductMetadata {
+                            resolution: ProductResolution::Resolved,
+                            system: DeviceSystem::of(&row, program_ref),
+                            manufacturer_id: Some(row.manufacturer_id),
+                            manufacturer_name: row.manufacturer_name,
+                            product_text: row.product_text,
+                            order_number: row.order_number,
+                            product_text_language: row.product_text_language,
+                            product_source_language: row.product_source_language,
+                        },
+                        Ok(None) => ProductMetadata::unavailable(ProductResolution::NotInDatabase),
+                        Err(_) => {
+                            problem = Some("lookupFailed");
+                            ProductMetadata::unavailable(ProductResolution::Unavailable)
+                        }
                     }
-                }
-            } else {
-                ProductMetadata::unavailable(ProductResolution::NoDatabase)
-            };
-            metadata.insert(refs.clone(), value);
+                } else {
+                    ProductMetadata::unavailable(ProductResolution::NoDatabase)
+                };
+                metadata.insert(refs.clone(), value);
+            }
+            devices.push(DeviceCatalogRow {
+                id: device.id,
+                device,
+                product: metadata[&refs].clone(),
+                product_ref: (!refs.0.is_empty()).then(|| refs.0.clone()),
+            });
         }
-        devices.push(DeviceCatalogRow {
-            id: device.id,
-            device,
-            product: metadata[&refs].clone(),
-            product_ref: (!refs.0.is_empty()).then(|| refs.0.clone()),
-        });
-    }
+        Ok((devices, problem))
+    };
+    let (devices, problem) = match state.product_db.as_ref() {
+        Some(owner) => owner
+            .with_read(|conn| compute(Some(conn), inputs))
+            .map_err(crate::catalogue_owner::owner_error)??,
+        None => compute(None, inputs)?,
+    };
     Ok(Json(DeviceCatalog {
         schema_version: 1,
         server_incarnation: state.server_incarnation.clone(),

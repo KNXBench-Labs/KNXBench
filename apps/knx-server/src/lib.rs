@@ -93,7 +93,9 @@ mod name_recipe_routes;
 mod note_disposition_routes;
 mod note_routes;
 pub use load_progress::*;
+mod catalogue_owner;
 mod catalogue_update_routes;
+pub use catalogue_owner::CatalogueOwner;
 // Intentionally unwired until controlled binding production and job ownership exist.
 #[allow(dead_code)]
 mod catalogue_job_control;

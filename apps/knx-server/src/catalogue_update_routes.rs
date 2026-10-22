@@ -18,6 +18,7 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
+use knx_productdb::managed_catalogue::{LegacyMutationKind, LegacySettlementHint};
 use knx_productdb::{
     CleanupError, PackageError, PackageLimits, ProductDbError, UpdateError, UpdatePreview,
 };
@@ -26,7 +27,6 @@ use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
-use std::sync::MutexGuard;
 
 /// Same body limit as `/api/catalog/install`: the product database's package
 /// input bound.
@@ -148,24 +148,51 @@ async fn read_upload(mut multipart: Multipart) -> Result<Upload, ApiError> {
     Ok(Upload { name, bytes, token })
 }
 
-type Products<'a> = MutexGuard<'a, knx_productdb::Connection>;
+/// The owner of the shared product catalogue, or a 503 refusal.
+fn owner(state: &SharedState) -> Result<&crate::CatalogueOwner, ApiError> {
+    state.product_db.as_ref().ok_or_else(|| {
+        ApiError::with_status(StatusCode::SERVICE_UNAVAILABLE, state.product_db_missing())
+    })
+}
 
-/// The locked shared connection and its database file.
-fn products(state: &SharedState) -> Result<(Products<'_>, PathBuf), ApiError> {
-    let products = state
-        .product_db
-        .as_ref()
-        .ok_or_else(|| {
-            ApiError::with_status(StatusCode::SERVICE_UNAVAILABLE, state.product_db_missing())
-        })?
-        .lock()
-        .expect("state mutex poisoned");
-    let path = products
-        .path()
+/// The database file path of a managed connection.
+fn db_path(conn: &knx_productdb::Connection) -> Result<PathBuf, ApiError> {
+    conn.path()
         .filter(|path| !path.is_empty())
         .map(PathBuf::from)
-        .ok_or_else(|| ApiError::internal("the product database has no file"))?;
-    Ok((products, path))
+        .ok_or_else(|| ApiError::internal("the product database has no file"))
+}
+
+/// The settlement hint for a path-based update: only refusals proven to
+/// precede any live open (semantic package, stale token, invalid backup)
+/// settle as no-commit; database/io outcomes are uncertain and quarantine.
+fn update_settlement<T>(result: &Result<T, UpdateError>) -> LegacySettlementHint {
+    match result {
+        Ok(_) => LegacySettlementHint::SuccessfulReturn,
+        Err(UpdateError::Package(PackageError::Database(_))) => LegacySettlementHint::Uncertain,
+        Err(UpdateError::Package(_)) => LegacySettlementHint::PreCommitSemanticRefusal,
+        Err(UpdateError::StaleToken | UpdateError::InvalidBackup(_)) => {
+            LegacySettlementHint::PreCommitSemanticRefusal
+        }
+        Err(UpdateError::Database(_) | UpdateError::Io(_)) => LegacySettlementHint::Uncertain,
+    }
+}
+
+/// The settlement hint for a placement cleanup: selection/confirmation/token
+/// refusals precede any live mutation; backup/database/not-file-backed
+/// outcomes are uncertain.
+fn cleanup_settlement<T>(result: &Result<T, CleanupError>) -> LegacySettlementHint {
+    match result {
+        Ok(_) => LegacySettlementHint::SuccessfulReturn,
+        Err(
+            CleanupError::InvalidSelection(_)
+            | CleanupError::ConfirmationRequired
+            | CleanupError::StaleToken,
+        ) => LegacySettlementHint::PreCommitSemanticRefusal,
+        Err(CleanupError::Backup(_) | CleanupError::Database(_) | CleanupError::NotFileBacked) => {
+            LegacySettlementHint::Uncertain
+        }
+    }
 }
 
 fn update_error(error: UpdateError) -> ApiError {
@@ -193,14 +220,19 @@ async fn preview(
     multipart: Multipart,
 ) -> Result<Json<PreviewView>, ApiError> {
     let upload = read_upload(multipart).await?;
-    let (_products, path) = products(&state)?;
-    let preview = knx_productdb::preview_package_update(
-        &path,
-        &upload.name,
-        &upload.bytes,
-        PackageLimits::STANDARD,
-    )
-    .map_err(update_error)?;
+    let owner = owner(&state)?;
+    let preview = owner
+        .with_read(|conn| {
+            let path = db_path(conn)?;
+            knx_productdb::preview_package_update(
+                &path,
+                &upload.name,
+                &upload.bytes,
+                PackageLimits::STANDARD,
+            )
+            .map_err(update_error)
+        })
+        .map_err(crate::catalogue_owner::owner_error)??;
     Ok(Json(PreviewView {
         applied: false,
         preview,
@@ -218,15 +250,26 @@ async fn apply(
         .ok_or_else(|| ApiError::bad_request("a catalogue update needs the preview's token"))?;
     // Held for the whole update: no install or read on the shared
     // connection runs while the file is backed up and changed.
-    let (_products, path) = products(&state)?;
-    let applied = knx_productdb::apply_package_update(
-        &path,
-        &upload.name,
-        &upload.bytes,
-        PackageLimits::STANDARD,
-        &token,
-    )
-    .map_err(update_error)?;
+    let owner = owner(&state)?;
+    let path = owner
+        .with_read(db_path)
+        .map_err(crate::catalogue_owner::owner_error)??;
+    let applied = owner
+        .with_legacy_mutation(
+            LegacyMutationKind::PathUpdate,
+            |_conn| {
+                knx_productdb::apply_package_update(
+                    &path,
+                    &upload.name,
+                    &upload.bytes,
+                    PackageLimits::STANDARD,
+                    &token,
+                )
+            },
+            update_settlement,
+        )
+        .map_err(crate::catalogue_owner::owner_error)?
+        .map_err(update_error)?;
     let backup =
         file_name(&applied.backup).ok_or_else(|| ApiError::internal("backup has no file name"))?;
     Ok(Json(AppliedView {
@@ -348,7 +391,10 @@ fn list_backups(path: &Path) -> Result<Vec<BackupEntry>, ApiError> {
 }
 
 async fn backups(State(state): State<SharedState>) -> Result<Json<BackupList>, ApiError> {
-    let (_products, path) = products(&state)?;
+    let owner = owner(&state)?;
+    let path = owner
+        .with_read(db_path)
+        .map_err(crate::catalogue_owner::owner_error)??;
     Ok(Json(BackupList {
         backups: list_backups(&path)?,
     }))
@@ -358,7 +404,10 @@ async fn restore(
     State(state): State<SharedState>,
     Json(request): Json<RestoreRequest>,
 ) -> Result<Json<Restored>, ApiError> {
-    let (mut products, path) = products(&state)?;
+    let owner = owner(&state)?;
+    let path = owner
+        .with_read(db_path)
+        .map_err(crate::catalogue_owner::owner_error)??;
     // Only a name from a fresh listing: never a client-chosen path.
     let listed = list_backups(&path)?
         .into_iter()
@@ -371,14 +420,9 @@ async fn restore(
         ));
     }
     let backup = path.with_file_name(&request.name);
-    knx_productdb::restore_product_db_backup(&path, &backup).map_err(update_error)?;
-    // A backup may carry an older supported schema: reopen and migrate, and
-    // let every later request use the restored catalogue.
-    *products = knx_productdb::open_and_migrate(&path).map_err(|e| {
-        ApiError::internal(format!(
-            "restored, but the product database could not be reopened: {e}"
-        ))
-    })?;
+    owner
+        .restore_legacy(&path, &backup)
+        .map_err(crate::catalogue_owner::restore_error)?;
     Ok(Json(Restored {
         restored: request.name,
     }))
@@ -396,8 +440,10 @@ async fn delete_backup(
     State(state): State<SharedState>,
     Json(request): Json<DeleteBackupRequest>,
 ) -> Result<Json<Deleted>, ApiError> {
-    // Serialised with apply and restore, which write and read backups.
-    let (_products, path) = products(&state)?;
+    let owner = owner(&state)?;
+    let path = owner
+        .with_read(db_path)
+        .map_err(crate::catalogue_owner::owner_error)??;
     if !request.confirmed {
         return Err(ApiError::with_kind(
             StatusCode::BAD_REQUEST,
@@ -420,13 +466,30 @@ async fn delete_backup(
         return Err(backup_changed());
     }
     let backup = path.with_file_name(&entry.name);
-    // Checked again right before removal, without following a link.
-    let still = std::fs::symlink_metadata(&backup).map_err(|_| backup_changed())?;
-    if !still.file_type().is_file() || file_identity(&still) != request.identity {
-        return Err(backup_changed());
-    }
-    std::fs::remove_file(&backup)
-        .map_err(|error| ApiError::internal(format!("the backup could not be deleted: {error}")))?;
+    // Serialised with apply and restore, which write and read backups.
+    owner
+        .with_legacy_mutation(
+            LegacyMutationKind::BackupDelete,
+            |_conn| {
+                // Checked again right before removal, without following a link.
+                let still = std::fs::symlink_metadata(&backup).map_err(|_| backup_changed())?;
+                if !still.file_type().is_file() || file_identity(&still) != request.identity {
+                    return Err(backup_changed());
+                }
+                std::fs::remove_file(&backup).map_err(|error| {
+                    ApiError::internal(format!("the backup could not be deleted: {error}"))
+                })?;
+                Ok::<_, ApiError>(())
+            },
+            |result| match result {
+                Ok(_) => LegacySettlementHint::SuccessfulReturn,
+                // File removal never mutates the live catalogue: any failure
+                // leaves W unchanged and healthy.
+                Err(_) => LegacySettlementHint::PreCommitSemanticRefusal,
+            },
+        )
+        .map_err(crate::catalogue_owner::owner_error)?
+        .map_err(|error| error)?;
     Ok(Json(Deleted {
         deleted: entry.name,
     }))
@@ -543,8 +606,13 @@ async fn cleanup_preview(
 ) -> Result<Json<CleanupPreviewView>, ApiError> {
     let bindings = open_project_bindings(&state);
     let preview = blocking(move || {
-        let (products, _path) = products(&state)?;
-        knx_productdb::preview_catalog_cleanup(&products, &request.item_ids).map_err(cleanup_error)
+        let owner = owner(&state)?;
+        owner
+            .with_read(|products| {
+                knx_productdb::preview_catalog_cleanup(products, &request.item_ids)
+                    .map_err(cleanup_error)
+            })
+            .map_err(crate::catalogue_owner::owner_error)?
     })
     .await?;
     let items = preview
@@ -581,14 +649,22 @@ async fn cleanup_apply(
     // Held for the whole removal, like a package update: the backup and the
     // deletion see the same catalogue as the token check.
     let applied = blocking(move || {
-        let (mut products, _path) = products(&state)?;
-        knx_productdb::apply_catalog_cleanup(
-            &mut products,
-            &request.item_ids,
-            &request.token,
-            request.confirmed,
-        )
-        .map_err(cleanup_error)
+        let owner = owner(&state)?;
+        owner
+            .with_legacy_mutation(
+                LegacyMutationKind::PlacementCleanup,
+                |conn| {
+                    knx_productdb::apply_catalog_cleanup(
+                        conn,
+                        &request.item_ids,
+                        &request.token,
+                        request.confirmed,
+                    )
+                },
+                cleanup_settlement,
+            )
+            .map_err(crate::catalogue_owner::owner_error)?
+            .map_err(cleanup_error)
     })
     .await?;
     let backup =

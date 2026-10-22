@@ -1,5 +1,5 @@
 //! Read-only, snapshot-labelled storage metrics for the Overview.
-use std::{fs, io, path::Path, sync::TryLockError, time::Duration};
+use std::{fs, io, path::Path, time::Duration};
 
 use axum::{extract::State, Json};
 use serde::Serialize;
@@ -120,41 +120,35 @@ fn current_blocking(state: &crate::AppState) -> Json<StatusMetrics> {
             bytes: None,
             counts: None,
         },
-        Some(db) => {
-            let mut locked = None;
+        Some(owner) => {
+            let mut snapshot = None;
+            let mut poisoned = false;
             for attempt in 0..PRODUCT_DB_LOCK_ATTEMPTS {
-                match db.try_lock() {
-                    Ok(guard) => {
-                        locked = Some(guard);
+                match owner.try_read(|db| {
+                    let measurement = db
+                        .path()
+                        .filter(|path| !path.is_empty())
+                        .and_then(|path| database_bytes(Path::new(path)).ok());
+                    let counts = knx_productdb::query::catalogue_counts(db).ok();
+                    Ok::<_, std::convert::Infallible>((measurement, counts))
+                }) {
+                    Ok(Some(Ok(pair))) => {
+                        snapshot = Some(pair);
                         break;
                     }
-                    Err(TryLockError::WouldBlock) if attempt + 1 < PRODUCT_DB_LOCK_ATTEMPTS => {
+                    Ok(Some(Err(never))) => match never {},
+                    Ok(None) if attempt + 1 < PRODUCT_DB_LOCK_ATTEMPTS => {
                         std::thread::sleep(PRODUCT_DB_LOCK_RETRY_DELAY);
                     }
-                    Err(TryLockError::WouldBlock) => break,
-                    Err(TryLockError::Poisoned(error)) => {
-                        panic!("product DB poisoned: {error}")
+                    Ok(None) => break,
+                    Err(_) => {
+                        poisoned = true;
+                        break;
                     }
                 }
             }
-            let Some(db) = locked else {
-                return Json(StatusMetrics {
-                    server_incarnation: state.server_incarnation.clone(),
-                    project,
-                    catalogue: CatalogueMetric {
-                        state: "busy",
-                        bytes: None,
-                        counts: None,
-                    },
-                });
-            };
-            let measurement = db
-                .path()
-                .filter(|path| !path.is_empty())
-                .and_then(|path| database_bytes(Path::new(path)).ok());
-            let counts = knx_productdb::query::catalogue_counts(&db).ok();
-            match (measurement, counts) {
-                (Some(bytes), Some(counts)) => CatalogueMetric {
+            match snapshot {
+                Some((Some(bytes), Some(counts))) => CatalogueMetric {
                     state: "available",
                     bytes: Some(bytes),
                     counts: Some(CatalogueCounts {
@@ -163,11 +157,27 @@ fn current_blocking(state: &crate::AppState) -> Json<StatusMetrics> {
                         application_programs: counts.application_programs,
                     }),
                 },
-                _ => CatalogueMetric {
+                Some(_) => CatalogueMetric {
                     state: "error",
                     bytes: None,
                     counts: None,
                 },
+                None if poisoned => CatalogueMetric {
+                    state: "error",
+                    bytes: None,
+                    counts: None,
+                },
+                None => {
+                    return Json(StatusMetrics {
+                        server_incarnation: state.server_incarnation.clone(),
+                        project,
+                        catalogue: CatalogueMetric {
+                            state: "busy",
+                            bytes: None,
+                            counts: None,
+                        },
+                    });
+                }
             }
         }
     };

@@ -89,29 +89,36 @@ async fn read(
     }
     let before = identity(&state, device)?;
     // Never hold the project and product database mutexes together.
-    let evidence = if let Some(products) = state.product_db.as_ref() {
-        let products = products.lock().expect("state mutex poisoned");
-        match knx_productdb::query::resolve_program(&products, &before.0)
-            .map_err(|e| ApiError::internal(e.to_string()))?
-        {
-            None => unavailable("missingProgram"),
-            Some(program) => match parameter_editor_evidence(&products, &program, &query.ets_id)
-                .map_err(|e| ApiError::internal(e.to_string()))?
-            {
-                ParameterEditorEvidence::Unavailable(issue) => unavailable(issue_name(issue)),
-                ParameterEditorEvidence::Declared(source) => Evidence::Declared {
-                    source: Source {
-                        source_sha256: source.source_sha256,
-                        program_id: source.program_id,
-                        parameter_type_id: source.parameter_type_id,
-                        schema: source.schema,
-                        child: source.child,
-                        attributes: source.attributes,
-                        parent_attributes: source.parameter_type_attributes,
-                    },
-                },
-            },
-        }
+    let evidence = if let Some(owner) = state.product_db.as_ref() {
+        owner
+            .with_read(|products| -> Result<_, ApiError> {
+                match knx_productdb::query::resolve_program(products, &before.0)
+                    .map_err(|e| ApiError::internal(e.to_string()))?
+                {
+                    None => Ok(unavailable("missingProgram")),
+                    Some(program) => {
+                        match parameter_editor_evidence(products, &program, &query.ets_id)
+                            .map_err(|e| ApiError::internal(e.to_string()))?
+                        {
+                            ParameterEditorEvidence::Unavailable(issue) => {
+                                Ok(unavailable(issue_name(issue)))
+                            }
+                            ParameterEditorEvidence::Declared(source) => Ok(Evidence::Declared {
+                                source: Source {
+                                    source_sha256: source.source_sha256,
+                                    program_id: source.program_id,
+                                    parameter_type_id: source.parameter_type_id,
+                                    schema: source.schema,
+                                    child: source.child,
+                                    attributes: source.attributes,
+                                    parent_attributes: source.parameter_type_attributes,
+                                },
+                            }),
+                        }
+                    }
+                }
+            })
+            .map_err(crate::catalogue_owner::owner_error)??
     } else {
         unavailable("missingProductDatabase")
     };

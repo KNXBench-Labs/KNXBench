@@ -80,6 +80,10 @@ fn verify_package(bytes: &[u8], ordinal: usize) -> Option<String> {
             knx_productdb::PackageError::Database(
                 knx_productdb::ProductDbError::FutureVersion { .. },
             ) => "future database",
+            knx_productdb::PackageError::Database(knx_productdb::ProductDbError::Cancelled(_)) => {
+                "cancelled"
+            }
+            knx_productdb::PackageError::Cancelled(_) => "cancelled",
         };
         panic!("legacy-name corpus package {ordinal} failed as {kind}");
     }

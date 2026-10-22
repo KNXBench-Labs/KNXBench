@@ -31,6 +31,7 @@ use super::comobject::{
 };
 use super::translation::{insert_translations, TranslationScope};
 use super::{bool_flag, first_winner, report_unknown_attrs};
+use crate::operation::Cancellation;
 use crate::report::{EntityCounts, EntityKind, IdConflict, UnknownCollector, UnknownConstruct};
 use crate::xml::{attrs, local_name, skip_subtree, Attrs};
 use crate::ProductDbError;
@@ -262,7 +263,10 @@ pub fn ingest_program(
     source_path: &str,
     bytes: &[u8],
 ) -> Result<ProgramIngest, ProductDbError> {
-    Ok(ingest_program_detailed(conn, source_sha256, source_path, bytes)?.outcome)
+    Ok(
+        ingest_program_detailed(conn, source_sha256, source_path, bytes, Cancellation::Quiet)?
+            .outcome,
+    )
 }
 
 /// Re-derive raw catalogue attributes for v12 rows from their original source.
@@ -376,6 +380,7 @@ pub(crate) fn ingest_program_detailed(
     source_sha256: &str,
     source_path: &str,
     bytes: &[u8],
+    cancellation: Cancellation<'_>,
 ) -> Result<DetailedProgramIngest, ProductDbError> {
     let mut reader = Reader::from_reader(bytes);
     let mut buf = Vec::new();
@@ -404,6 +409,7 @@ pub(crate) fn ingest_program_detailed(
     let mut open_path: Vec<String> = Vec::new();
 
     loop {
+        cancellation.checkpoint()?;
         buf.clear();
         let event = reader
             .read_event_into(&mut buf)
@@ -680,9 +686,19 @@ pub(crate) fn backfill_parameter_attribute_unknowns(
         .map(|u| (u.xpath.clone(), u.kind.as_str().to_string(), u.name.clone()))
         .collect();
     if extended_scheme_package {
-        super::scheme_evidence::reconcile_package_unknowns(bytes, source_path, &mut collected)?;
+        super::scheme_evidence::reconcile_package_unknowns(
+            bytes,
+            source_path,
+            &mut collected,
+            Cancellation::Quiet,
+        )?;
     } else {
-        super::scheme_evidence::reconcile_targeted_unknowns(bytes, source_path, &mut collected)?;
+        super::scheme_evidence::reconcile_targeted_unknowns(
+            bytes,
+            source_path,
+            &mut collected,
+            Cancellation::Quiet,
+        )?;
     }
     let mut missing = Vec::new();
     for u in collected {
@@ -996,9 +1012,19 @@ pub(crate) fn backfill_color_time_kinds(
     }
     let mut collected = unknown.into_vec();
     if scheme21_package {
-        super::scheme_evidence::reconcile_package_unknowns(bytes, source_path, &mut collected)?;
+        super::scheme_evidence::reconcile_package_unknowns(
+            bytes,
+            source_path,
+            &mut collected,
+            Cancellation::Quiet,
+        )?;
     } else {
-        super::scheme_evidence::reconcile_targeted_unknowns(bytes, source_path, &mut collected)?;
+        super::scheme_evidence::reconcile_targeted_unknowns(
+            bytes,
+            source_path,
+            &mut collected,
+            Cancellation::Quiet,
+        )?;
     }
     // Attribute rows under a path a type-deciding child was retired from
     // are rebuilt whole: v14 wrote there only for non-deciding occurrences

@@ -48,6 +48,7 @@ use rusqlite::{params, Connection, OptionalExtension};
 use sha2::{Digest, Sha256};
 
 use crate::ingest::FileKind;
+use crate::operation::Cancellation;
 use crate::report::IdConflict;
 use crate::ProductDbError;
 
@@ -342,6 +343,7 @@ fn dispatch_element(
 pub(crate) fn scan_identities(
     source_path: &str,
     bytes: &[u8],
+    cancellation: Cancellation<'_>,
 ) -> Result<Vec<Candidate>, ProductDbError> {
     let dispatch = match crate::ingest::classify(bytes) {
         FileKind::Catalog => Dispatch::Catalog,
@@ -360,6 +362,7 @@ pub(crate) fn scan_identities(
     let mut state = MirrorState::default();
 
     loop {
+        cancellation.checkpoint()?;
         buf.clear();
         let event = reader
             .read_event_into(&mut buf)
@@ -483,8 +486,9 @@ pub(crate) fn record_scan(
     sha256: &str,
     source_path: &str,
     bytes: &[u8],
+    cancellation: Cancellation<'_>,
 ) -> Result<ScanStatus, ProductDbError> {
-    match scan_identities(source_path, bytes) {
+    match scan_identities(source_path, bytes, cancellation) {
         Ok(candidates) => {
             conn.execute(
                 "INSERT INTO source_identity_scan (source_sha256, status, reason, scanner) VALUES (?1, 'measured', NULL, ?2)",
@@ -495,6 +499,7 @@ pub(crate) fn record_scan(
                  VALUES (?1, ?2, ?3, ?4, ?5)",
             )?;
             for candidate in candidates {
+                cancellation.checkpoint()?;
                 insert.execute(params![
                     sha256,
                     candidate.table.as_table(),
@@ -601,16 +606,35 @@ pub(crate) fn record_and_check(
     source_path: &str,
     bytes: &[u8],
     conflicts: &[IdConflict],
+    cancellation: Cancellation<'_>,
 ) -> Result<(), ProductDbError> {
+    cancellation.checkpoint()?;
     let (status, fresh) = match stored_status(conn, sha256)? {
         Some(status) => (status, false),
-        None => (record_scan(conn, sha256, source_path, bytes)?, true),
+        None => (
+            record_scan(conn, sha256, source_path, bytes, cancellation)?,
+            true,
+        ),
     };
     if status == ScanStatus::Measured {
         let candidates = stored_keys(conn, sha256)?;
-        check_agreement(conn, sha256, source_path, &candidates, conflicts)?;
+        check_agreement(
+            conn,
+            sha256,
+            source_path,
+            &candidates,
+            conflicts,
+            cancellation,
+        )?;
         if fresh {
-            check_exact(conn, sha256, source_path, &candidates, conflicts)?;
+            check_exact(
+                conn,
+                sha256,
+                source_path,
+                &candidates,
+                conflicts,
+                cancellation,
+            )?;
         }
     }
     Ok(())
@@ -632,8 +656,10 @@ pub(crate) fn check_agreement(
     source_path: &str,
     candidates: &HashSet<CandidateKey>,
     conflicts: &[IdConflict],
+    cancellation: Cancellation<'_>,
 ) -> Result<(), ProductDbError> {
     for kind in IdentityKind::ALL {
+        cancellation.checkpoint()?;
         let table = kind.as_table();
         let won = conn
             .prepare(&format!(
@@ -651,6 +677,7 @@ pub(crate) fn check_agreement(
         }
     }
     for conflict in conflicts.iter().filter(|c| c.other_sha256 == sha256) {
+        cancellation.checkpoint()?;
         let kind = IdentityKind::parse(&conflict.table).ok_or_else(|| {
             disagreement(
                 source_path,
@@ -668,6 +695,7 @@ pub(crate) fn check_agreement(
         }
     }
     for (kind, id, _) in candidates.iter().filter(|(_, id, _)| !id.is_empty()) {
+        cancellation.checkpoint()?;
         let table = kind.as_table();
         let present: Option<i64> = conn
             .query_row(&format!("SELECT 1 FROM {table} WHERE id = ?1"), [id], |r| {
@@ -697,9 +725,11 @@ pub(crate) fn check_exact(
     source_path: &str,
     candidates: &HashSet<CandidateKey>,
     conflicts: &[IdConflict],
+    cancellation: Cancellation<'_>,
 ) -> Result<(), ProductDbError> {
     let mut expected: HashSet<CandidateKey> = HashSet::new();
     for kind in IdentityKind::ALL {
+        cancellation.checkpoint()?;
         let table = kind.as_table();
         let won = conn
             .prepare(&format!(
@@ -713,6 +743,7 @@ pub(crate) fn check_exact(
         .iter()
         .filter(|c| c.other_sha256 == sha256 && !c.id.is_empty())
     {
+        cancellation.checkpoint()?;
         if let Some(kind) = IdentityKind::parse(&conflict.table) {
             expected.insert((kind, conflict.id.clone(), conflict.occurrence));
         }
@@ -764,11 +795,18 @@ pub(crate) fn backfill_scan(
     source_path: &str,
     bytes: &[u8],
 ) -> Result<(), ProductDbError> {
-    if record_scan(conn, sha256, source_path, bytes)? != ScanStatus::Measured {
+    if record_scan(conn, sha256, source_path, bytes, Cancellation::Quiet)? != ScanStatus::Measured {
         return Ok(());
     }
     let candidates = stored_keys(conn, sha256)?;
-    match check_agreement(conn, sha256, source_path, &candidates, &[]) {
+    match check_agreement(
+        conn,
+        sha256,
+        source_path,
+        &candidates,
+        &[],
+        Cancellation::Quiet,
+    ) {
         Ok(()) => Ok(()),
         Err(ProductDbError::Sqlite(error)) => Err(ProductDbError::Sqlite(error)),
         Err(error) => {
@@ -797,7 +835,9 @@ pub(crate) fn record_producer(
     conn: &Connection,
     sha256: &str,
     bytes: &[u8],
+    cancellation: Cancellation<'_>,
 ) -> Result<(), ProductDbError> {
+    cancellation.checkpoint()?;
     let Some((namespace, created_by, tool_version)) = producer_facts(bytes) else {
         return Ok(());
     };
@@ -1405,7 +1445,12 @@ mod tests {
     }
 
     fn scan(xml: &str) -> Vec<Candidate> {
-        scan_identities("M-0001/T.xml", xml.as_bytes()).unwrap()
+        scan_identities(
+            "M-0001/T.xml",
+            xml.as_bytes(),
+            crate::operation::Cancellation::Quiet,
+        )
+        .unwrap()
     }
 
     fn digest(xml: &str, kind: IdentityKind, id: &str) -> String {
@@ -1768,7 +1813,13 @@ mod tests {
         assert_eq!(kinds, [IdentityKind::CatalogSection]);
         let master = r#"<KNX><MasterData><Hardware Id="H-1"/></MasterData></KNX>"#;
         assert!(scan(master).is_empty());
-        assert!(scan_identities("x.bin", b"MZ\x90\x00").unwrap().is_empty());
+        assert!(scan_identities(
+            "x.bin",
+            b"MZ\x90\x00",
+            crate::operation::Cancellation::Quiet
+        )
+        .unwrap()
+        .is_empty());
     }
 
     #[test]
@@ -1778,7 +1829,12 @@ mod tests {
             hardware_file(r#"<Hardware Id="H-1">"#).replace("</KNX>", ""),
         ] {
             assert!(
-                scan_identities("M-0001/Hardware.xml", bad.as_bytes()).is_err(),
+                scan_identities(
+                    "M-0001/Hardware.xml",
+                    bad.as_bytes(),
+                    crate::operation::Cancellation::Quiet
+                )
+                .is_err(),
                 "{bad}"
             );
         }
@@ -1827,6 +1883,7 @@ mod tests {
                 "M-0001/Hardware.xml",
                 candidates,
                 &[conflict(sha)],
+                crate::operation::Cancellation::Quiet,
             ) {
                 Ok(()) => String::new(),
                 Err(error) => error.to_string(),
@@ -1873,7 +1930,15 @@ mod tests {
             // Another blob's conflict is not this blob's business.
             let mut foreign = conflict(&sha);
             foreign.other_sha256 = "f".repeat(64);
-            check_agreement(&conn, &sha, "x", &candidates, &[foreign]).unwrap();
+            check_agreement(
+                &conn,
+                &sha,
+                "x",
+                &candidates,
+                &[foreign],
+                crate::operation::Cancellation::Quiet,
+            )
+            .unwrap();
         }
 
         #[test]
@@ -1894,7 +1959,8 @@ mod tests {
                     &sha,
                     "M-0001/Hardware.xml",
                     &candidates,
-                    &[conflict(&sha)]
+                    &[conflict(&sha)],
+                    crate::operation::Cancellation::Quiet,
                 )
                 .map_err(|e| e.to_string()),
                 Ok(())
@@ -1911,6 +1977,7 @@ mod tests {
                 "M-0001/Hardware.xml",
                 &candidates,
                 &[conflict(&sha)],
+                crate::operation::Cancellation::Quiet,
             )
             .unwrap_err()
             .to_string();
@@ -1928,6 +1995,7 @@ mod tests {
                 "M-0001/Hardware.xml",
                 &candidates,
                 &[conflict(&sha)],
+                crate::operation::Cancellation::Quiet,
             )
             .unwrap_err()
             .to_string();

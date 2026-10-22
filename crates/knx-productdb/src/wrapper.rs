@@ -13,6 +13,7 @@
 use rusqlite::Connection;
 use serde::Serialize;
 
+use crate::operation::Cancellation;
 use crate::package::{
     admit_package_bytes, install_admitted_package, is_inner_package_path, open_checked_archive,
     read_checked_member, CheckedArchive,
@@ -84,9 +85,10 @@ pub fn install_product_file(
     bytes: &[u8],
     limits: PackageLimits,
 ) -> Result<ProductFileInstall, PackageError> {
-    admit_package_bytes(source_name, bytes)?;
+    admit_package_bytes(source_name, bytes, Cancellation::Quiet)?;
     let tx = conn.unchecked_transaction().map_err(ProductDbError::from)?;
-    let installed = install_admitted_product_file(&tx, source_name, bytes, limits)?;
+    let installed =
+        install_admitted_product_file(&tx, source_name, bytes, limits, Cancellation::Quiet)?;
     tx.commit().map_err(ProductDbError::from)?;
     Ok(installed)
 }
@@ -98,9 +100,11 @@ pub(crate) fn install_admitted_product_file(
     source_name: &str,
     bytes: &[u8],
     limits: PackageLimits,
+    cancellation: Cancellation<'_>,
 ) -> Result<ProductFileInstall, PackageError> {
+    cancellation.checkpoint()?;
     let sha256 = sha256_hex(bytes);
-    match install_admitted_package(tx, source_name, bytes, limits) {
+    match install_admitted_package(tx, source_name, bytes, limits, cancellation) {
         Ok(report) => Ok(ProductFileInstall {
             sha256,
             wrapper: None,
@@ -108,7 +112,7 @@ pub(crate) fn install_admitted_product_file(
         }),
         // Refused at the master check, before the first write.
         Err(PackageError::WrapperArchive { .. }) => {
-            install_wrapper(tx, source_name, bytes, limits, sha256)
+            install_wrapper(tx, source_name, bytes, limits, sha256, cancellation)
         }
         Err(error) => Err(error),
     }
@@ -120,15 +124,18 @@ fn install_wrapper(
     bytes: &[u8],
     limits: PackageLimits,
     sha256: String,
+    cancellation: Cancellation<'_>,
 ) -> Result<ProductFileInstall, PackageError> {
-    let CheckedArchive { mut archive, .. } = open_checked_archive(bytes, limits)?;
+    let CheckedArchive { mut archive, .. } = open_checked_archive(bytes, limits, cancellation)?;
     // The inner packages share one expansion budget: a wrapper never costs
     // more than one package of the same profile may.
     let mut remaining = limits.max_expanded_size;
     let mut packages = Vec::new();
     let mut other_members = Vec::new();
     for index in 0..archive.len() {
-        let (path, data) = read_checked_member(&mut archive, index, limits.max_member_size)?;
+        cancellation.checkpoint()?;
+        let (path, data) =
+            read_checked_member(&mut archive, index, limits.max_member_size, cancellation)?;
         let Some(data) = data else {
             continue;
         };
@@ -157,9 +164,9 @@ fn install_wrapper(
             path: path.clone(),
             error: Box::new(error),
         };
-        admit_package_bytes(&inner_name, &data).map_err(refused)?;
-        let report =
-            install_admitted_package(tx, &inner_name, &data, inner_limits).map_err(refused)?;
+        admit_package_bytes(&inner_name, &data, cancellation).map_err(refused)?;
+        let report = install_admitted_package(tx, &inner_name, &data, inner_limits, cancellation)
+            .map_err(refused)?;
         let expanded = report
             .members
             .iter()

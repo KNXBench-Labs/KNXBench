@@ -188,7 +188,7 @@ fn rederive(conn: &Connection) -> Result<MasterLanguageEvidenceReport, ProductDb
                 ));
             }
             crate::xml::validate_complete_document("knx_master.xml", &bytes)?;
-            master_language_unknowns(&bytes)
+            master_language_unknowns(&bytes, crate::operation::Cancellation::Quiet)
         })();
         match derived {
             Ok(unknowns) => {

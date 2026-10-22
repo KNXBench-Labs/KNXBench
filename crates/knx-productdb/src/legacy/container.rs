@@ -12,6 +12,7 @@ use std::io::Read;
 use flate2::read::DeflateDecoder;
 
 use super::error::LegacyError;
+use crate::operation::Cancellation;
 use crate::package::{validated_zip_members, RawZipMember};
 
 /// Largest legacy file accepted: the storage ceiling (ADR-0142). The biggest
@@ -107,7 +108,26 @@ impl LegacyPayload {
 /// other members it has. Never decrypts. `None` for everything else,
 /// including oversized input.
 pub fn detect_legacy_container(bytes: &[u8]) -> Option<LegacyContainer> {
-    locate(bytes).ok().map(|located| located.container)
+    detect_legacy_container_controlled(bytes, Cancellation::Quiet)
+        .ok()
+        .flatten()
+}
+
+/// [`detect_legacy_container`] on the installer path: the controlled variant
+/// propagates a typed [`crate::operation::Stop`] as soon as the caller's
+/// cancellation control latches, through `locate` and the checked member view.
+/// A non-legacy or merely unreadable input stays `Ok(None)`, exactly as the
+/// quiet detector collapses it, so cancellation is never mistaken for "not a
+/// legacy container".
+pub(crate) fn detect_legacy_container_controlled(
+    bytes: &[u8],
+    cancellation: Cancellation<'_>,
+) -> Result<Option<LegacyContainer>, crate::operation::Stop> {
+    match locate(bytes, cancellation) {
+        Ok(located) => Ok(Some(located.container)),
+        Err(LegacyError::Cancelled(stop)) => Err(stop),
+        Err(_) => Ok(None),
+    }
 }
 
 /// A legacy member that passed every container check and is ready to be
@@ -125,7 +145,7 @@ pub struct LegacyMember<'a> {
 /// compression method, and the declared payload size. Decrypts and inflates
 /// nothing.
 pub fn read_legacy_member(bytes: &[u8]) -> Result<LegacyMember<'_>, LegacyError> {
-    let located = locate(bytes)?;
+    let located = locate(bytes, Cancellation::Quiet)?;
     let member = &located.member;
     if !records_tile(&located.records, located.directory_start) {
         return Err(LegacyError::InvalidContainer {
@@ -284,7 +304,8 @@ fn records_tile(records: &[(usize, usize)], directory_start: usize) -> bool {
     at == directory_start
 }
 
-fn locate(bytes: &[u8]) -> Result<Located, LegacyError> {
+fn locate(bytes: &[u8], cancellation: Cancellation<'_>) -> Result<Located, LegacyError> {
+    cancellation.checkpoint().map_err(LegacyError::Cancelled)?;
     if bytes.len() > MAX_LEGACY_FILE {
         return Err(LegacyError::SizeLimit {
             what: "file size in bytes",
@@ -292,8 +313,11 @@ fn locate(bytes: &[u8]) -> Result<Located, LegacyError> {
         });
     }
     let (members, directory_start) =
-        validated_zip_members(bytes).map_err(|e| LegacyError::NotLegacyContainer {
-            reason: e.to_string(),
+        validated_zip_members(bytes, cancellation).map_err(|e| match e {
+            crate::package::PackageError::Cancelled(stop) => LegacyError::Cancelled(stop),
+            other => LegacyError::NotLegacyContainer {
+                reason: other.to_string(),
+            },
         })?;
     let records = members
         .iter()

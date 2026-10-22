@@ -264,6 +264,8 @@ fn error_category(error: PackageError) -> &'static str {
         PackageError::Database(ProductDbError::Xml { .. }) => "xml",
         PackageError::Database(ProductDbError::Sqlite(_)) => "sqlite",
         PackageError::Database(ProductDbError::FutureVersion { .. }) => "future_database",
+        PackageError::Database(ProductDbError::Cancelled(_)) => "cancelled",
+        PackageError::Cancelled(_) => "cancelled",
     }
 }
 

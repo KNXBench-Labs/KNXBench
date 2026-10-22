@@ -12,6 +12,7 @@ use quick_xml::Reader;
 use rusqlite::{params, Connection};
 
 use super::{bool_flag, first_winner, report_unknown_attrs};
+use crate::operation::Cancellation;
 use crate::report::{EntityCounts, EntityKind, IdConflict, UnknownCollector, UnknownConstruct};
 use crate::xml::{attrs, local_name};
 use crate::ProductDbError;
@@ -68,7 +69,10 @@ pub fn ingest_hardware(
     source_path: &str,
     bytes: &[u8],
 ) -> Result<HardwareIngest, ProductDbError> {
-    Ok(ingest_hardware_detailed(conn, source_sha256, source_path, bytes)?.outcome)
+    Ok(
+        ingest_hardware_detailed(conn, source_sha256, source_path, bytes, Cancellation::Quiet)?
+            .outcome,
+    )
 }
 
 pub(crate) fn ingest_hardware_detailed(
@@ -76,6 +80,7 @@ pub(crate) fn ingest_hardware_detailed(
     source_sha256: &str,
     source_path: &str,
     bytes: &[u8],
+    cancellation: Cancellation<'_>,
 ) -> Result<DetailedHardwareIngest, ProductDbError> {
     let mut reader = Reader::from_reader(bytes);
     let mut buf = Vec::new();
@@ -92,6 +97,7 @@ pub(crate) fn ingest_hardware_detailed(
     let mut h2p_is_first = false;
 
     loop {
+        cancellation.checkpoint()?;
         buf.clear();
         let event = reader
             .read_event_into(&mut buf)

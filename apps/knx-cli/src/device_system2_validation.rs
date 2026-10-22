@@ -1,28 +1,35 @@
-//! Explicit immutable-bundle property validation: offline preview or simulator.
+//! Consent-gated property validation: preview, simulator, or a real write.
 //!
-//! There is intentionally no gateway client in this module. A JSON bundle and
-//! an acknowledgement cannot supply the missing physical source/recovery contract.
+//! The real-write path (ADR-0152) reads the device serial, rebinds the bundle
+//! and requires the download plus release confirmations before any frame.
 use knx_app::{
+    commissioning_activity::{OneShotLog, WriteOutcome},
     property_validation::{self as service, OperationStore},
     property_validation_bundle::PreparedBundle,
 };
 use knx_core::commissioning::{
+    authorisation::AuthorisationPlan,
     load_state::LoadState,
+    mutation::{required_confirmation_phrase, WriteScope},
     properties::{PID_HARDWARE_TYPE, PID_MANUFACTURER_ID, PID_PROGRAM_VERSION},
     property_download::PropertyOperation,
 };
 use knx_net::commissioning::{
+    hardware_release::required_release_phrase,
     simulator::{SimulatedDevice, SimulatorConfig},
     SessionTiming,
 };
+use knx_net::{BusConnection, KnxNetIpClient, ManagementSession};
 use std::{
     collections::BTreeMap,
+    net::SocketAddrV4,
     path::{Path, PathBuf},
     process::ExitCode,
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc,
     },
+    time::Duration,
 };
 
 pub fn run(args: &[String]) -> ExitCode {
@@ -41,7 +48,7 @@ fn execute(args: &[String]) -> Result<(), String> {
     while index < args.len() {
         match args[index].as_str() {
             "--simulate" if !simulate => simulate = true,
-            flag @ ("--bundle" | "--gateway" | "--operation" | "--confirm" | "--accept-hypothesis" | "--recover" | "--confirm-recovery" | "--report") => {
+            flag @ ("--bundle" | "--gateway" | "--operation" | "--confirm" | "--accept-hypothesis" | "--recover" | "--confirm-recovery" | "--report" | "--download-confirm" | "--release-confirm" | "--activity-history") => {
                 let value = args.get(index + 1).filter(|v| !v.starts_with("--")).ok_or_else(|| format!("{flag} needs a value"))?;
                 if values.insert(flag, value.as_str()).is_some() { return Err(format!("duplicate {flag}")); }
                 index += 1;
@@ -138,11 +145,47 @@ fn execute(args: &[String]) -> Result<(), String> {
         return Err("exact target/plan-bound strong-hypothesis acceptance required".into());
     }
     if !simulate {
-        // Do not acquire gateway/activity leases, construct a client, resolve a
-        // gateway or create a receipt before legitimate upstream admission exists.
-        // A future real adapter must use device_diagnostics::gateway_lease and
-        // normal commissioning activity admission before opening the one client.
-        return Err("physical-source-recovery-contract-unavailable: prepared JSON and consent alone cannot authorize real writes; no socket opened".into());
+        let gateway: SocketAddrV4 = values
+            .get("--gateway")
+            .ok_or("--gateway <ip:port> required for a real write")?
+            .parse()
+            .map_err(|_| "invalid --gateway address")?;
+        let download = values
+            .get("--download-confirm")
+            .ok_or("--download-confirm <phrase> required for a real write")?;
+        let release = values
+            .get("--release-confirm")
+            .ok_or("--release-confirm <phrase> required for a real write")?;
+        let history = values
+            .get("--activity-history")
+            .ok_or("--activity-history <path> required for a real write")?;
+        let target = bundle.plan().map_err(|e| e.to_string())?.target();
+        if *download != required_confirmation_phrase(target, WriteScope::Download) {
+            return Err("exact download confirmation required".into());
+        }
+        if *release != required_release_phrase(target) {
+            return Err("exact best-effort release confirmation required".into());
+        }
+        let operation = PathBuf::from(
+            values
+                .get(if recover { "--recover" } else { "--operation" })
+                .ok_or("--operation <new-directory> required for a real write")?,
+        );
+        let report = values.get("--report").map(PathBuf::from);
+        if report.as_ref().is_some_and(|p| p.exists()) {
+            return Err("report destination already exists; no execution started".into());
+        }
+        return run_hardware(
+            &bundle,
+            gateway,
+            history,
+            operation,
+            report,
+            recover,
+            confirmation.copied().expect("confirmation checked above"),
+            download,
+            release,
+        );
     }
     if !bundle.binding.simulated {
         return Err("--simulate requires a bundle explicitly marked simulated; do not relabel physical evidence".into());
@@ -311,4 +354,115 @@ fn seed_plan_memory(device: &SimulatedDevice, bundle: &PreparedBundle) -> Result
         }
     }
     Ok(())
+}
+#[allow(clippy::too_many_arguments)]
+fn run_hardware(
+    bundle: &PreparedBundle,
+    gateway: SocketAddrV4,
+    history: &str,
+    operation: PathBuf,
+    report: Option<PathBuf>,
+    recover: bool,
+    recovery: &str,
+    download: &str,
+    release: &str,
+) -> Result<(), String> {
+    let target = bundle.plan().map_err(|e| e.to_string())?.target();
+    // One tunnel at a time; a second live client is refused by the gateway.
+    let _lease = knx_app::device_diagnostics::gateway_lease()
+        .map_err(|e| format!("gateway lease unavailable: {e}"))?;
+    let log = Arc::new(OneShotLog::for_run(PathBuf::from(history)).map_err(|e| e.to_string())?);
+    log.ensure_write_available().map_err(|e| e.to_string())?;
+    let guard = log
+        .start_write("system2Validation", Some(target.to_string()))
+        .map_err(|e| e.to_string())?;
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .map_err(|e| e.to_string())?;
+    let executed = runtime.block_on(async {
+        let tunnel = tokio::time::timeout(
+            Duration::from_secs(10),
+            KnxNetIpClient::new().connect_tunnel(gateway),
+        )
+        .await
+        .map_err(|_| "gateway timeout".to_string())?
+        .map_err(|e| format!("gateway refused/unavailable: {e}"))?;
+        // Read the real serial (read-only), then rebind to this physical device.
+        let serial = {
+            let mut session = ManagementSession::read_only(
+                &tunnel,
+                target,
+                AuthorisationPlan::Skip,
+                SessionTiming::default(),
+            )
+            .map_err(|e| format!("read-only session refused: {e}"))?;
+            session
+                .connect()
+                .await
+                .map_err(|e| format!("connect refused: {e}"))?;
+            let read = session
+                .read_serial_number()
+                .await
+                .map_err(|e| format!("serial read refused: {e}"))?;
+            session.disconnect().await;
+            read.octets()
+        };
+        let rebound = bundle.rebind_hardware(serial).map_err(|e| e.to_string())?;
+        let mut store = if recover {
+            OperationStore::open(&operation, &rebound.binding)
+        } else {
+            OperationStore::create(&operation, rebound.binding.clone())
+        }
+        .map_err(|e| e.to_string())?;
+        let cancel = Arc::new(AtomicBool::new(false));
+        let flag = cancel.clone();
+        let signal = tokio::spawn(async move {
+            if tokio::signal::ctrl_c().await.is_ok() {
+                flag.store(true, Ordering::SeqCst);
+            }
+        });
+        guard.mark_send_possible().map_err(|e| e.to_string())?;
+        let result = if recover {
+            service::restore_hardware(
+                &tunnel,
+                &rebound,
+                &mut store,
+                SessionTiming::default(),
+                recovery,
+                download,
+                release,
+                &cancel,
+            )
+            .await
+        } else {
+            service::execute_hardware(
+                &tunnel,
+                &rebound,
+                &mut store,
+                SessionTiming::default(),
+                download,
+                release,
+                &cancel,
+            )
+            .await
+        };
+        signal.abort();
+        let result = result.map_err(|e| e.to_string());
+        if let Some(path) = report.as_ref() {
+            store.write_shareable_report(path).map_err(|e| e.to_string())?;
+        }
+        let _ = tokio::time::timeout(Duration::from_secs(3), tunnel.disconnect()).await;
+        println!(
+            "HARDWARE outcome: {:?}; mutation possible: {}. Private recovery and local protocol retained; no upload occurred.",
+            store.outcome(),
+            store.mutation_possible()
+        );
+        result
+    });
+    guard.finish(match &executed {
+        Ok(()) => WriteOutcome::Verified,
+        Err(_) => WriteOutcome::EffectUnverified,
+    });
+    executed
 }

@@ -144,7 +144,9 @@ const USAGE: &str = "usage: knx import <file.knxproj> [--store <path.knxdb> [--r
      \x20     knx device system2-validation --bundle <prepared.json> [--simulate]\n\
      \x20                  [--operation <new-directory> --confirm <target-plan-phrase> --accept-hypothesis <phrase>]\n\
      \x20                  [--recover <existing-operation> --confirm-recovery <target-plan-phrase>] [--report <new.json>]\n\
-     \x20         (offline preview by default; explicit simulator only; real source/recovery admission unavailable, no gateway opened)\n\
+     \x20         (offline preview by default; --simulate for an isolated synthetic device; or a\n\
+     \x20          consent-gated real write: add --gateway <ip:port> --download-confirm <phrase>\n\
+     \x20          --release-confirm <phrase> --activity-history <path>; best-effort, ADR-0152)\n\
      \x20     knx device diagnostics --project <path.knxdb> --device-id <id> --gateway <host:port>\n\
      \x20                  [--product-db <path>] --output <new.zip> [--confirm-read]\n\
      \x20     knx device diagnostics --simulate --output <new.zip> [--confirm-read]\n\

@@ -666,6 +666,18 @@ The procedure policy and validation profile were renamed to
 `declared-counts-zero-flags-full-table-identity`. The offline candidate and the
 full simulator validation were re-run green (`finished` + `restored`).
 
+On 22 October 2026 the owner released the download as a consent-gated,
+best-effort hardware path ([ADR-0152](adr/0152-gated-hardware-system2-download.md)).
+Increment 1 (knx-net core) is delivered: a typed
+`HardwareRelease` consent (device- and operation-specific phrase, opaque value)
+and `run_experimental_property_plan_on_hardware` /
+`restore_experimental_property_plan_on_hardware` admit a hardware-kind transport
+only with that consent; without it the existing refusal (including the
+full-write-coverage guard) is unchanged. The full knx-net suite is green
+(447 lib + 73 it + 1 doc-test, 0 failed) with new admission/wrong-target tests.
+The App/CLI surface is not yet wired, so no user-facing hardware route exists
+yet; the simulator and non-consented refusal are unchanged.
+
 <a id="wp-042-resolver-bounds--unchanged-parser-candidate-20-october-2026"></a>
 ## WP-04.2 resolver bounds — unchanged-parser delivery (20 October 2026)
 

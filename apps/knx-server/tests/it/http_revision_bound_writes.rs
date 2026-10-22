@@ -8,7 +8,7 @@
 //! any binding keeps the documented legacy behaviour; a partial or misspelled
 //! binding is refused instead of silently becoming unbound.
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
@@ -128,7 +128,8 @@ fn state_in(
     if let Some(dir) = data_dir {
         state.data_dir = dir.to_path_buf();
     }
-    state.product_db = Some(Mutex::new(products));
+    state.product_db =
+        Some(knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap());
     let project = project();
     *state.clean_project.lock().unwrap() = Some(project.clone());
     *state.project.lock().unwrap() = Some(project);

@@ -1,6 +1,6 @@
 //! HTTP tests for the add-device wizard: preview, placement and stale-preview refusal.
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
@@ -67,7 +67,10 @@ async fn project(app: &axum::Router) -> Value {
 async fn app_with_room() -> (tempfile::TempDir, axum::Router, u64, u64) {
     let dir = tempfile::tempdir().unwrap();
     let state = knx_server::AppState {
-        product_db: Some(Mutex::new(products(&dir))),
+        product_db: Some(
+            knx_server::CatalogueOwner::adopt_opened(products(&dir), std::path::PathBuf::new())
+                .unwrap(),
+        ),
         ..Default::default()
     };
     let app = knx_server::app(Arc::new(state), None);

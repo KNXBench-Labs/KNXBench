@@ -15,7 +15,7 @@ use std::net::SocketAddrV4;
 use std::path::PathBuf;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::time::Duration;
 
 use axum::body::Body;
@@ -179,7 +179,9 @@ async fn harness_timed(device: Arc<SimulatedDevice>, timing: SessionTiming) -> H
 
     let calls = Arc::new(AtomicUsize::new(0));
     let state = Arc::new(knx_server::AppState {
-        product_db: Some(Mutex::new(products)),
+        product_db: Some(
+            knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap(),
+        ),
         data_dir: dir.path().to_path_buf(),
         connector: Box::new(SimConnector {
             device: Arc::clone(&device),

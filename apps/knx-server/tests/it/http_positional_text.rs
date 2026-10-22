@@ -2,7 +2,7 @@
 //!
 //! Public synthetic fixture only: no private package, no bus, no vendor code.
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
@@ -153,7 +153,8 @@ fn state(page: Option<&str>) -> (tempfile::TempDir, Arc<knx_server::AppState>) {
             .collect(),
     });
     let mut state = knx_server::AppState::new(dir.path().to_path_buf());
-    state.product_db = Some(Mutex::new(products));
+    state.product_db =
+        Some(knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap());
     *state.project.lock().unwrap() = Some(project);
     (dir, Arc::new(state))
 }
@@ -285,8 +286,12 @@ async fn a_fill_that_would_not_fit_refuses_the_detail_and_shortens_nothing() {
     let products = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
     knx_productdb::ingest_file(&products, "M-1/Hardware.xml", HARDWARE.as_bytes()).unwrap();
     knx_productdb::ingest_file(&products, "M-1/A.xml", program.as_bytes()).unwrap();
-    let (_old, state) = state(None);
-    *state.product_db.as_ref().unwrap().lock().unwrap() = products;
+    let (_old, mut state) = state(None);
+    Arc::get_mut(&mut state)
+        .expect("sole owner of the freshly built state")
+        .product_db = Some(
+        knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap(),
+    );
     // Five names read the quarter-budget icon default: 5/4 of the budget.
     {
         let mut project = state.project.lock().unwrap();

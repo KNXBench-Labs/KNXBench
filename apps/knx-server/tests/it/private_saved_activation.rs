@@ -19,7 +19,7 @@ use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::Read;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use tower::ServiceExt;
 
 // Harness-only compressed-input budget; not the selective-import limit or a
@@ -152,7 +152,9 @@ async fn private_saved_activation_compares_every_imported_tree_object_without_ro
     let products = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite"))
         .unwrap_or_else(|_| panic!("private product database cannot be initialized"));
     let state = Arc::new(knx_server::AppState {
-        product_db: Some(Mutex::new(products)),
+        product_db: Some(
+            knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap(),
+        ),
         ..Default::default()
     });
     let app = knx_server::app(Arc::clone(&state), None);
@@ -306,19 +308,24 @@ async fn private_saved_activation_compares_every_imported_tree_object_without_ro
             .filter(|p| p.device == id)
             .map(|p| (p.source.ets_id.clone(), p.raw.clone()))
             .collect();
-        let products = state
+        let resolved = state
             .product_db
             .as_ref()
             .unwrap_or_else(|| panic!("private products vanished"))
-            .lock()
+            .with_read(|products| {
+                let program = knx_productdb::query::resolve_program(products, &program_ref)
+                    .unwrap_or_else(|_| panic!("private program resolution failed"));
+                Ok::<_, std::convert::Infallible>(program.map(|program| {
+                    let evaluated = knx_productdb::device_evaluation::evaluate_device(
+                        products, &program, stored, &instances,
+                    )
+                    .unwrap_or_else(|_| panic!("private channel evaluation was refused"));
+                    (program, evaluated)
+                }))
+            })
+            .unwrap_or_else(|_| panic!("private product database lock failed"))
             .unwrap_or_else(|_| panic!("private product database lock failed"));
-        let program = knx_productdb::query::resolve_program(&products, &program_ref)
-            .unwrap_or_else(|_| panic!("private program resolution failed"));
-        if let Some(program) = program {
-            let evaluated = knx_productdb::device_evaluation::evaluate_device(
-                &products, &program, stored, &instances,
-            )
-            .unwrap_or_else(|_| panic!("private channel evaluation was refused"));
+        if let Some((program, evaluated)) = resolved {
             if saved.tree_present {
                 let expected_unscoped: BTreeSet<_> = objects
                     .iter()

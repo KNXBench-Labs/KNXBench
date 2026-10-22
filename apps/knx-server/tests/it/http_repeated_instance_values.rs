@@ -1,6 +1,6 @@
 //! The parameter panel exposes stored instance evidence without write authority.
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
@@ -95,7 +95,8 @@ fn state(products: knx_productdb::Connection) -> knx_server::AppState {
     }
     project.ids = knx_core::project::IdAllocators::from_counts(1, 0, 0, 0, 0, 0, 0, 0, 0);
     let mut state = knx_server::AppState::default();
-    state.product_db = Some(Mutex::new(products));
+    state.product_db =
+        Some(knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap());
     *state.project.lock().unwrap() = Some(project);
     state
 }

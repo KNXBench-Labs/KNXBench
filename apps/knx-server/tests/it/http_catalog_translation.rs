@@ -54,7 +54,9 @@ fn temp_product_db() -> (tempfile::TempDir, knx_productdb::Connection) {
 #[allow(clippy::field_reassign_with_default)]
 fn state_with_products(products: knx_productdb::Connection) -> knx_server::AppState {
     let mut state = knx_server::AppState::default();
-    state.product_db = Some(std::sync::Mutex::new(products));
+    state.product_db = Some(
+        knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap(),
+    );
     state
 }
 

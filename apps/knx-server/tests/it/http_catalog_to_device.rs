@@ -93,9 +93,13 @@ async fn a_new_project_takes_a_device_from_a_manufacturer_package_with_no_ets_im
 
     let dir = tempfile::tempdir().unwrap();
     let state = knx_server::AppState {
-        product_db: Some(std::sync::Mutex::new(
-            knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap(),
-        )),
+        product_db: Some(
+            knx_server::CatalogueOwner::adopt_opened(
+                knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap(),
+                std::path::PathBuf::new(),
+            )
+            .unwrap(),
+        ),
         ..Default::default()
     };
     let app = knx_server::app(Arc::new(state), None);
@@ -193,9 +197,13 @@ async fn catalog_quantity_is_one_atomic_creation_with_one_undo_and_no_leaked_ids
     let bytes = std::fs::read(package).unwrap();
     let dir = tempfile::tempdir().unwrap();
     let state = knx_server::AppState {
-        product_db: Some(std::sync::Mutex::new(
-            knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap(),
-        )),
+        product_db: Some(
+            knx_server::CatalogueOwner::adopt_opened(
+                knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap(),
+                std::path::PathBuf::new(),
+            )
+            .unwrap(),
+        ),
         ..Default::default()
     };
     let app = knx_server::app(Arc::new(state), None);

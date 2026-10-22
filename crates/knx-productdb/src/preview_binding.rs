@@ -1,35 +1,39 @@
 //! The immutable binding a future preview/apply compares at apply time.
 //!
-//! A binding composes the catalogue stamp, the source identity and the policy
-//! identity into one exact-equality value the server retains between preview
-//! and apply. Construction-only: no production route is wired here. See
+//! A binding composes the catalogue stamp, the source identity, the policy
+//! identity and the complete preview identity into one exact-equality value
+//! the server retains between preview and apply. Construction-only: no
+//! production route is wired here. See
 //! `docs/contracts/catalogue-jobs/managed-binding.md` §5 and
 //! `preview-binding-increment.md`.
 
 use crate::catalogue_stamp::CatalogueStamp;
 use crate::controlled::{PolicyIdentity, SourceIdentity};
+use crate::preview_identity::PreviewIdentity;
 
 /// Format version of a preview binding. Bumped only when a later version
 /// changes the binding's field set or equality semantics.
-pub(crate) const BINDING_VERSION: u32 = 1;
+pub(crate) const BINDING_VERSION: u32 = 2;
 
-/// One immutable composition of the catalogue stamp, the source identity and
-/// the policy identity.
+/// One immutable composition of the catalogue stamp, the source identity, the
+/// policy identity and the complete preview identity.
 ///
 /// The fields are the already-admitted inputs (`CatalogueStamp` from a
 /// `capture_stamp` reservation, `SourceIdentity` and `PolicyIdentity` from the
-/// `controlled` admission projections); `bind` never re-hashes or re-validates
-/// them. Equality is exact field equality: any committed change to the
-/// catalogue (via `generation`, `data_version` or the full witness inside the
-/// stamp), any difference in source name/length/digest or any different policy
-/// yields a different binding. This is what makes an apply-time comparison
-/// stale — it is not a durable commit history or a partial summary.
+/// `controlled` admission projections, `PreviewIdentity` from a rehearsal
+/// install); `bind` never re-hashes or re-validates them. Equality is exact
+/// field equality: any committed change to the catalogue (via `generation`,
+/// `data_version` or the full witness inside the stamp), any difference in
+/// source name/length/digest, any different policy or any different rehearsal
+/// preview yields a different binding. This is what makes an apply-time
+/// comparison stale — it is not a durable commit history or a partial summary.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct PreviewBinding {
     pub(crate) version: u32,
     pub(crate) catalogue: CatalogueStamp,
     pub(crate) source: SourceIdentity,
     pub(crate) policy: PolicyIdentity,
+    pub(crate) preview: PreviewIdentity,
 }
 
 impl PreviewBinding {
@@ -44,12 +48,14 @@ impl PreviewBinding {
         catalogue: CatalogueStamp,
         source: SourceIdentity,
         policy: PolicyIdentity,
+        preview: PreviewIdentity,
     ) -> Self {
         Self {
             version: BINDING_VERSION,
             catalogue,
             source,
             policy,
+            preview,
         }
     }
 }
@@ -80,25 +86,39 @@ mod tests {
         SourceIdentity::from_source(&source)
     }
 
+    /// A fixed, valid preview identity for the composition-only tests below;
+    /// the orchestration slice computes the real one from a rehearsal install.
+    fn preview() -> PreviewIdentity {
+        PreviewIdentity {
+            version: 1,
+            sha256: [0xAB; 32],
+            package_count: 1,
+            other_member_count: 0,
+            encoded_bytes: 0,
+        }
+    }
+
     #[test]
     fn bind_composes_the_catalogue_source_and_policy_exactly() {
         let (_dir, mut owner) = migrated_owner();
         let catalogue = stamp(&mut owner);
         let source = source_identity("pkg.knxprod", b"bytes");
         let policy = PolicyIdentity::from_policy(ControlledPolicy::Large);
+        let preview = preview();
 
-        let binding = PreviewBinding::bind(catalogue, source.clone(), policy);
+        let binding = PreviewBinding::bind(catalogue, source.clone(), policy, preview);
 
         assert_eq!(binding.version, BINDING_VERSION);
         assert_eq!(binding.catalogue, catalogue);
         assert_eq!(binding.source, source);
         assert_eq!(binding.policy, policy);
+        assert_eq!(binding.preview, preview);
     }
 
     #[test]
     fn the_binding_version_is_pinned() {
         const {
-            assert!(BINDING_VERSION == 1);
+            assert!(BINDING_VERSION == 2);
         }
     }
 
@@ -108,9 +128,10 @@ mod tests {
         let catalogue = stamp(&mut owner);
         let source = source_identity("a.knxprod", b"bytes");
         let policy = PolicyIdentity::from_policy(ControlledPolicy::Standard);
+        let preview = preview();
 
-        let first = PreviewBinding::bind(catalogue, source.clone(), policy);
-        let second = PreviewBinding::bind(catalogue, source, policy);
+        let first = PreviewBinding::bind(catalogue, source.clone(), policy, preview);
+        let second = PreviewBinding::bind(catalogue, source, policy, preview);
 
         assert_eq!(first, second);
     }
@@ -120,16 +141,27 @@ mod tests {
         let (_dir, mut owner) = migrated_owner();
         let catalogue = stamp(&mut owner);
         let policy = PolicyIdentity::from_policy(ControlledPolicy::Standard);
-        let base = PreviewBinding::bind(catalogue, source_identity("a.knxprod", b"bytes"), policy);
+        let preview = preview();
+        let base = PreviewBinding::bind(
+            catalogue,
+            source_identity("a.knxprod", b"bytes"),
+            policy,
+            preview,
+        );
 
-        let other_name =
-            PreviewBinding::bind(catalogue, source_identity("b.knxprod", b"bytes"), policy);
+        let other_name = PreviewBinding::bind(
+            catalogue,
+            source_identity("b.knxprod", b"bytes"),
+            policy,
+            preview,
+        );
         assert_ne!(base, other_name);
 
         let other_bytes = PreviewBinding::bind(
             catalogue,
             source_identity("a.knxprod", b"different"),
             policy,
+            preview,
         );
         assert_ne!(base, other_bytes);
     }
@@ -139,28 +171,49 @@ mod tests {
         let (_dir, mut owner) = migrated_owner();
         let catalogue = stamp(&mut owner);
         let source = source_identity("a.knxprod", b"bytes");
+        let preview = preview();
 
         let standard = PreviewBinding::bind(
             catalogue,
             source.clone(),
             PolicyIdentity::from_policy(ControlledPolicy::Standard),
+            preview,
         );
         let large = PreviewBinding::bind(
             catalogue,
             source,
             PolicyIdentity::from_policy(ControlledPolicy::Large),
+            preview,
         );
 
         assert_ne!(standard, large);
     }
 
     #[test]
+    fn a_different_preview_identity_changes_the_binding() {
+        let (_dir, mut owner) = migrated_owner();
+        let catalogue = stamp(&mut owner);
+        let source = source_identity("a.knxprod", b"bytes");
+        let policy = PolicyIdentity::from_policy(ControlledPolicy::Standard);
+        let preview = preview();
+        let mut other = preview;
+        other.sha256 = [0xCD; 32];
+
+        let base = PreviewBinding::bind(catalogue, source.clone(), policy, preview);
+        let changed = PreviewBinding::bind(catalogue, source, policy, other);
+
+        assert_ne!(base, changed);
+    }
+
+    #[test]
     fn a_committed_catalogue_change_stales_the_binding() {
         let (_dir, mut owner) = migrated_owner();
+        let preview = preview();
         let before = PreviewBinding::bind(
             stamp(&mut owner),
             source_identity("a.knxprod", b"bytes"),
             PolicyIdentity::from_policy(ControlledPolicy::Standard),
+            preview,
         );
 
         // A managed same-W write consumes a generation and changes the witness,
@@ -183,6 +236,7 @@ mod tests {
             stamp(&mut owner),
             source_identity("a.knxprod", b"bytes"),
             PolicyIdentity::from_policy(ControlledPolicy::Standard),
+            preview,
         );
 
         assert_ne!(before, after);

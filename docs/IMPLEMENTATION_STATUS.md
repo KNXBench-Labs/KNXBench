@@ -12,6 +12,26 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## WP-04.3 stage C transitive installer — delivered (22 October 2026)
+
+Source merge `56e00c833` is published with exact live/tracking readback; the
+feature branch `f1ae0a487` is its second parent and byte-exact tree. The
+change-scoped maintained gate passes all 14 ordered stages on the frozen
+merged tree: 3,452 Rust passes across 24 target results (151 ignored), 97/97
+selected corpus tests, the tool test suite, warning-denied Clippy across all
+seven crates and clean fmt/headers/docs/layering/ledger/anchors.
+
+This threads one typed `Cancellation` (`Quiet`/`Controlled(&PublicationGate)`)
+beside the existing `Stop` through the whole product-package installer: both
+ZIP views, the read/hash/decode/classify/skip/identity/report/final-admission
+seams, the wrapper/package/ingest entry points and every parser entry point,
+with `Cancelled(Stop)` variants on `ProductDbError`, `PackageError` and
+`LegacyError`. Quiet public wrappers keep their signatures and pass
+`Cancellation::Quiet`, staying byte-identical; a controlled install reports
+`PackageError::Cancelled(Stop)` and writes nothing. No production Ready/apply
+or job route is wired. WP-04.3 and WP-19 remain open.
+See [the contract](contracts/catalogue-jobs/transitive-installer-increment.md).
+
 ## WP-04.3 stage-B server CatalogueOwner wrapper — delivered (22 October 2026)
 
 Source merge `3d58a7ff8` is published with exact live/tracking readback; the

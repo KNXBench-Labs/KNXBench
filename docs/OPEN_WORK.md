@@ -279,7 +279,12 @@ fifth, the catalogue jobs owner ([`catalogue_jobs::owner`](contracts/catalogue-j
 `CatalogueUpdateJobs` wrapping the admission manager, with an idempotent
 `close_admission_and_request_stop` and a bounded `drain` that joins the worker
 handle and returns the exact `CatalogueDrain`), is delivered with 5 focused
-tests. Route wiring + worker execution (the Ready/apply installer), the
+tests. The sixth, the first slice of route wiring — the managed catalogue
+stamp + witness binding ([`catalogue_stamp`](contracts/catalogue-jobs/stamp-binding-increment.md):
+`CatalogueStamp` binding incarnation/generation/`data_version`/file stamp and
+the full live witness, captured by `ManagedCatalogue::capture_stamp` under one
+read-only W IMMEDIATE reservation) — is delivered with 6 focused tests. Route
+wiring + worker execution (the Ready/apply installer), the
 `EmbeddedServerHandle` and the desktop exit interception remain the last
 stage-D slices; no job route, Ready/apply or worker execution is wired.
 

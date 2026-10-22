@@ -99,6 +99,9 @@ pub use catalogue_owner::CatalogueOwner;
 // Intentionally unwired until controlled binding production and job ownership exist.
 #[allow(dead_code)]
 mod catalogue_job_control;
+// Intentionally unwired until the job protocol DTOs, spool and drain are built.
+#[allow(dead_code)]
+mod catalogue_jobs;
 mod function_routes;
 mod one_shot_activity;
 mod programming_state;

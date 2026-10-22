@@ -266,9 +266,12 @@ with 35 focused tests. The second, the private unwired strict serde wire DTO
 layer ([`catalogue_jobs::dto`](contracts/catalogue-jobs/dto-layer-increment.md):
 duplicate-key/depth admission, `deny_unknown_fields`, closed-enum DTOs for the
 core protocol objects, the P3 field/null/state contract and the fixed
-error→status/message mapping), is delivered with 39 focused tests. Upload/spool
-+ status snapshots, the ArtifactDir lease/reclamation/fencing and the
-standalone/desktop close/drain lifetime remain later stage-D increments; no
+error→status/message mapping), is delivered with 39 focused tests. The third,
+the sealed upload spool ([`catalogue_jobs::spool`](contracts/catalogue-jobs/spool-status-increment.md):
+bounded write, SHA-256, a rustix NOREPLACE seal) plus the checked revision and
+monotonic-deadline status-assembly layer (`catalogue_jobs::status`), is
+delivered with 9 focused tests. The ArtifactDir lease/reclamation/fencing and
+the standalone/desktop close/drain lifetime remain later stage-D increments; no
 job route, Ready/apply or worker execution is wired.
 
 **Three separate deliveries, in order:**

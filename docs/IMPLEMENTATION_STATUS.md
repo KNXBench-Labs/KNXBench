@@ -12,6 +12,20 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Line-scan project exclusions applied (22 October 2026)
+
+`ScanPlanBuilder` now seeds its exclusion set with the project exclusion list
+(`EXCLUDED_INDIVIDUAL_ADDRESSES`), so an address the installation forbids all
+bus traffic to is never generated into a scan candidate list — whoever builds
+the plan, and through every surface (the CLI `--line`/`--range`/`--device` and
+`--exclude`, and the HTTP scan routes). A line sweep omits it (reported via
+`ScanPlan::omitted` and the dry-run/estimate lists); an explicit `--device` or
+range on exactly that address is refused as an empty range, before any frame
+is sent. The change is generic: code and tests reference the existing
+constant, no address is named anywhere new. Tests updated/extended in
+`knx-core` (builder seeding, line-omission, single-range refusal) and
+`knx-cli` (dry-run reporting, `--device` refusal).
+
 ## `knx bus scan --device <area.line.device>` selector (22 October 2026)
 
 `knx bus scan` gains a single-device selector alongside `--line`/`--range`:

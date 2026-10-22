@@ -33,6 +33,10 @@ pub mod managed_catalogue;
 // exists (WP-04.3 stage B, ADR-0150).
 #[allow(dead_code)]
 mod catalogue_copy;
+// Private stamp/binding primitive remains unwired until the preview/apply
+// orchestration exists (WP-04.3 stage D, ADR-0150).
+#[allow(dead_code)]
+mod catalogue_stamp;
 pub mod master_evidence;
 pub mod master_provenance;
 pub mod migration;

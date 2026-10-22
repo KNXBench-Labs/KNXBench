@@ -22,7 +22,13 @@ pub(crate) fn owner_error(error: OwnerError) -> ApiError {
 }
 
 pub(crate) fn restore_error(error: OwnerRestoreError) -> ApiError {
-    ApiError::internal(format!("catalogue owner restore unavailable: {error}"))
+    match error {
+        OwnerRestoreError::InvalidBackup(why) => ApiError::refused(
+            "invalidBackup",
+            format!("not a usable product database backup: {why}"),
+        ),
+        other => ApiError::internal(format!("catalogue owner restore unavailable: {other}")),
+    }
 }
 
 /// The server's protected managed catalogue: one owner, one lock.

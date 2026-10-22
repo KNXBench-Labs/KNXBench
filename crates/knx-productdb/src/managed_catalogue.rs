@@ -170,6 +170,10 @@ impl std::error::Error for OwnerError {}
 pub enum OwnerRestoreError {
     NotHealthy(WriterHealth),
     GenerationOverflow,
+    /// The file offered for a restore is not a usable product database: a
+    /// semantic refusal the caller can surface as `invalidBackup` (422), not
+    /// an internal failure.
+    InvalidBackup(String),
     Restore(String),
     Observation(String),
 }
@@ -181,6 +185,12 @@ impl std::fmt::Display for OwnerRestoreError {
                 write!(f, "catalogue owner not healthy: {health:?}")
             }
             OwnerRestoreError::GenerationOverflow => write!(f, "catalogue generation overflow"),
+            OwnerRestoreError::InvalidBackup(why) => {
+                write!(
+                    f,
+                    "catalogue restore failed: not a usable product database backup: {why}"
+                )
+            }
             OwnerRestoreError::Restore(e) => write!(f, "catalogue restore failed: {e}"),
             OwnerRestoreError::Observation(why) => {
                 write!(f, "catalogue observation failed: {why}")
@@ -312,10 +322,11 @@ impl ManagedCatalogue {
         Ok(outcome)
     }
 
-    /// The dedicated restore adapter: retire and invalidate before touching the
-    /// live handle, then copy the backup over the live file and reopen it with
-    /// migration and a fresh incarnation only on success. Failure leaves the
-    /// owner quarantined, never silently usable.
+    /// The dedicated restore adapter: copy the validated backup over the live
+    /// file while the old connection is still open (quiescent), then retire
+    /// and reopen with migration and a fresh incarnation only on success. A
+    /// validation refusal leaves the old connection healthy; a mid-copy or
+    /// reopen failure quarantines it, never silently usable.
     pub fn restore_legacy(
         &mut self,
         live_path: &Path,
@@ -328,16 +339,27 @@ impl ManagedCatalogue {
             .generation
             .checked_add(1)
             .ok_or(OwnerRestoreError::GenerationOverflow)?;
+
+        // Copy with the old connection still open. An invalid backup is a
+        // semantic refusal that leaves the live file and the old connection
+        // untouched; a mid-copy failure is uncertain and quarantines.
+        if let Err(error) = crate::update::restore_product_db_backup(live_path, backup_path) {
+            return Err(match error {
+                crate::update::UpdateError::InvalidBackup(why) => {
+                    OwnerRestoreError::InvalidBackup(why)
+                }
+                other => {
+                    self.health = WriterHealth::Quarantined(QuarantineReason::UncertainSettlement);
+                    OwnerRestoreError::Restore(other.to_string())
+                }
+            });
+        }
+
+        // The live file is replaced: retire the old connection and reopen with
+        // migration, adopting a fresh incarnation only on success.
         self.health = WriterHealth::Retired(RetireReason::Restore);
         self.conn = None;
-
-        let reopened = crate::update::restore_product_db_backup(live_path, backup_path)
-            .map_err(|e| OwnerRestoreError::Restore(e.to_string()))
-            .and_then(|()| {
-                crate::migration::open_and_migrate(live_path)
-                    .map_err(|e| OwnerRestoreError::Restore(e.to_string()))
-            });
-        match reopened {
+        match crate::migration::open_and_migrate(live_path) {
             Ok(conn) => {
                 self.conn = Some(conn);
                 self.incarnation = CatalogueIncarnation::fresh();
@@ -350,7 +372,7 @@ impl ManagedCatalogue {
             }
             Err(e) => {
                 self.health = WriterHealth::Quarantined(QuarantineReason::UncertainSettlement);
-                Err(e)
+                Err(OwnerRestoreError::Restore(e.to_string()))
             }
         }
     }
@@ -528,17 +550,16 @@ mod tests {
     }
 
     #[test]
-    fn a_failed_restore_leaves_the_owner_quarantined() {
+    fn an_invalid_backup_is_refused_and_the_owner_stays_healthy() {
         let (dir, mut owner) = adopted();
         let live = dir.path().join("products.sqlite");
-        // A directory cannot be copied as a database backup.
+        // A directory cannot be opened as a database backup: the validation
+        // refusal must leave the old connection healthy and usable.
         let not_a_db = dir.path().join("subdir");
         std::fs::create_dir(&not_a_db).unwrap();
         let err = owner.restore_legacy(&live, &not_a_db).unwrap_err();
-        assert!(matches!(err, OwnerRestoreError::Restore(_)));
-        assert!(matches!(
-            owner.health,
-            WriterHealth::Quarantined(QuarantineReason::UncertainSettlement)
-        ));
+        assert!(matches!(err, OwnerRestoreError::InvalidBackup(_)));
+        assert!(matches!(owner.health, WriterHealth::Healthy));
+        assert!(owner.conn.is_some());
     }
 }

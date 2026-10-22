@@ -26,19 +26,23 @@ use crate::system2::{project_tool_metadata, ProjectedStep};
 ///
 /// This policy hypothesizes that the XML count already represents the complete
 /// allocation, zero XML flags map to checksum-disabled property attributes and
-/// table task records use zero identity. MP v02.01.02 defines the wire grammar,
-/// not these XML mappings. A version-bound caller profile must disclose that
-/// difference. See docs/research/2026-10-20-system2-validation-rules.md.
+/// every task segment carries the full application identity. MP v02.01.02
+/// defines the wire grammar, not these XML mappings. A version-bound caller
+/// profile must disclose that difference. See
+/// docs/research/2026-10-20-system2-validation-rules.md and the correction in
+/// docs/research/2026-10-22-system2-ets-download-procedure.md (the observed ETS
+/// download emits the full identity on all three machines, contradicting the
+/// earlier zero-table-identity hypothesis).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct System2ProcedurePolicy {
-    declared_counts_zero_flags_zero_table_identity: (),
+    declared_counts_zero_flags_full_table_identity: (),
 }
 
 impl System2ProcedurePolicy {
     /// Select all three named hypotheses explicitly, never through live admission.
-    pub fn declared_counts_zero_flags_zero_table_identity() -> Self {
+    pub fn declared_counts_zero_flags_full_table_identity() -> Self {
         Self {
-            declared_counts_zero_flags_zero_table_identity: (),
+            declared_counts_zero_flags_full_table_identity: (),
         }
     }
 }
@@ -288,19 +292,12 @@ pub fn plan_system2_candidate(
                         return Err(fail("table task pointer differs from its source resource"));
                     }
                 }
-                let task = if object == 3 {
-                    TaskSegment {
-                        start: *address,
-                        ..application
-                    }
-                } else {
-                    TaskSegment {
-                        start: *address,
-                        pei_type: 0,
-                        manufacturer: 0,
-                        application: 0,
-                        version: 0,
-                    }
+                // The observed ETS download carries the full application
+                // identity on all three machines (address table, association
+                // table and application); only the start address differs.
+                let task = TaskSegment {
+                    start: *address,
+                    ..application
                 };
                 emit(PropertyOperation::LoadControl {
                     object,

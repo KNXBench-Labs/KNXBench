@@ -156,14 +156,13 @@ async fn preview(
     let p = project
         .as_ref()
         .ok_or_else(|| ApiError::bad_request("diagnostics-project-required"))?;
-    let db = state
-        .product_db
-        .as_ref()
-        .map(|d| d.lock())
-        .transpose()
-        .map_err(|_| error("diagnostics-catalogue-unavailable"))?;
-    let plan = service::prepare(p, DeviceId(body.device_id), db.as_deref())
-        .map_err(ApiError::bad_request)?;
+    let plan = match state.product_db.as_ref() {
+        None => service::prepare(p, DeviceId(body.device_id), None),
+        Some(owner) => owner
+            .with_read(|conn| service::prepare(p, DeviceId(body.device_id), Some(conn)))
+            .map_err(|_| error("diagnostics-catalogue-unavailable"))?,
+    }
+    .map_err(ApiError::bad_request)?;
     // The capability token is never the reference written into a shareable ZIP.
     let mut token = [0u8; 32];
     getrandom::fill(&mut token).map_err(|_| error("diagnostics-token-unavailable"))?;

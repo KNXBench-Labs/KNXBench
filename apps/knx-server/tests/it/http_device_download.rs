@@ -390,7 +390,9 @@ async fn harness_timed(device: Arc<SimulatedDevice>, timing: SessionTiming) -> H
     let start_receipts_at_connect = Arc::new(Mutex::new(Vec::new()));
     let refuse_connect = Arc::new(AtomicBool::new(false));
     let state = Arc::new(knx_server::AppState {
-        product_db: Some(Mutex::new(products)),
+        product_db: Some(
+            knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap(),
+        ),
         data_dir: dir.path().to_path_buf(),
         connector: Box::new(SimConnector {
             device: Arc::clone(&device),
@@ -2084,43 +2086,49 @@ async fn an_untested_download_needs_its_acknowledgement_before_any_tunnel() {
         .clone();
     device.id = project.ids.next_device_id().unwrap();
     device.com_objects.clear();
-    {
-        let products = h.state.product_db.as_ref().unwrap().lock().unwrap();
-        let evidence = knx_app::download_support::shipped_evidence().unwrap();
-        let mut statement = products
-            .prepare("SELECT id, application_program_ref FROM hardware2program ORDER BY id")
-            .unwrap();
-        let candidates = statement
-            .query_map([], |row| {
-                Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
-            })
-            .unwrap()
-            .collect::<Result<Vec<_>, _>>()
-            .unwrap();
-        let parts = knx_core::commissioning::partial_memory_download::PartialDownloadParts {
-            parameters: false,
-            group_addresses: true,
-        };
-        let found = candidates.into_iter().any(|(program_ref, program_id)| {
-            if evidence.contains_key(&program_id) {
-                return false;
-            }
-            device.program_ref = program_ref;
-            project.devices.insert(device.clone());
-            knx_app::device_download::prepare_device_download(
-                &products,
-                &project,
-                device.address.unwrap(),
-            )
-            .ok()
-            .and_then(|prepared| prepared.into_partial(parts).ok())
-            .is_some()
-        });
-        assert!(
-            found,
-            "fixture must include an unverified plannable program"
-        );
-    }
+    h.state
+        .product_db
+        .as_ref()
+        .unwrap()
+        .with_read(|products| {
+            let evidence = knx_app::download_support::shipped_evidence().unwrap();
+            let mut statement = products
+                .prepare("SELECT id, application_program_ref FROM hardware2program ORDER BY id")
+                .unwrap();
+            let candidates = statement
+                .query_map([], |row| {
+                    Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+                })
+                .unwrap()
+                .collect::<Result<Vec<_>, _>>()
+                .unwrap();
+            let parts = knx_core::commissioning::partial_memory_download::PartialDownloadParts {
+                parameters: false,
+                group_addresses: true,
+            };
+            let found = candidates.into_iter().any(|(program_ref, program_id)| {
+                if evidence.contains_key(&program_id) {
+                    return false;
+                }
+                device.program_ref = program_ref;
+                project.devices.insert(device.clone());
+                knx_app::device_download::prepare_device_download(
+                    products,
+                    &project,
+                    device.address.unwrap(),
+                )
+                .ok()
+                .and_then(|prepared| prepared.into_partial(parts).ok())
+                .is_some()
+            });
+            assert!(
+                found,
+                "fixture must include an unverified plannable program"
+            );
+            Ok::<(), std::convert::Infallible>(())
+        })
+        .unwrap()
+        .unwrap();
     *h.state.project.lock().unwrap() = Some(project);
     let (status, plan) = send(
         &h.app,

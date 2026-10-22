@@ -5,7 +5,7 @@
 //! server returns the recorded outcome (`replayed: true`) instead of creating
 //! the devices again. A reused ID with different content is refused.
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
@@ -55,7 +55,10 @@ async fn send(app: &axum::Router, uri: &str, body: Value) -> (StatusCode, Value)
 async fn app() -> (tempfile::TempDir, axum::Router) {
     let dir = tempfile::tempdir().unwrap();
     let state = knx_server::AppState {
-        product_db: Some(Mutex::new(products(&dir))),
+        product_db: Some(
+            knx_server::CatalogueOwner::adopt_opened(products(&dir), std::path::PathBuf::new())
+                .unwrap(),
+        ),
         ..Default::default()
     };
     let app = knx_server::app(Arc::new(state), None);

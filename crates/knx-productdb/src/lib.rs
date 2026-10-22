@@ -26,10 +26,9 @@ pub mod image_request;
 pub mod inference;
 pub mod ingest;
 pub mod legacy;
-// Managed owner primitive remains unwired until the witness and copy recipe
-// exist (WP-04.3 stage B, ADR-0150).
-#[allow(dead_code)]
-mod managed_catalogue;
+// Managed owner primitive: wired into the server by the owner-wrapper
+// increment (WP-04.3 stage B, ADR-0150).
+pub mod managed_catalogue;
 // Private bounded copy primitive remains unwired until the W/S/D orchestration
 // exists (WP-04.3 stage B, ADR-0150).
 #[allow(dead_code)]

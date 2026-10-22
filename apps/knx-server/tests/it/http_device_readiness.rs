@@ -7,7 +7,7 @@
 //! the grades themselves are `knx_app::project_readiness`'s, tested there
 //! and against the house corpus.
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
@@ -41,7 +41,11 @@ fn state(project: Option<Project>, products: bool) -> (tempfile::TempDir, knx_se
     let dir = tempfile::tempdir().unwrap();
     let mut state = knx_server::AppState::default();
     state.product_db = products.then(|| {
-        Mutex::new(knx_productdb::open_and_migrate(&dir.path().join("p.sqlite")).unwrap())
+        knx_server::CatalogueOwner::adopt_opened(
+            knx_productdb::open_and_migrate(&dir.path().join("p.sqlite")).unwrap(),
+            std::path::PathBuf::new(),
+        )
+        .unwrap()
     });
     *state.project.lock().unwrap() = project;
     (dir, state)

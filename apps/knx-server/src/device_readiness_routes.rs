@@ -51,7 +51,7 @@ struct ReadinessResponse {
 }
 
 async fn readiness(State(state): State<SharedState>) -> Result<Json<ReadinessResponse>, ApiError> {
-    let Some(products) = state.product_db.as_ref() else {
+    let Some(owner) = state.product_db.as_ref() else {
         return Err(ApiError::with_kind(
             StatusCode::CONFLICT,
             "downloadProductDataMissing",
@@ -71,8 +71,12 @@ async fn readiness(State(state): State<SharedState>) -> Result<Json<ReadinessRes
                 "no project is open",
             ));
         };
-        let products = products.lock().expect("state mutex poisoned");
-        project_readiness(&products, project, &evidence)
+        owner
+            .with_read(|products| {
+                Ok::<_, std::convert::Infallible>(project_readiness(products, project, &evidence))
+            })
+            .map_err(crate::catalogue_owner::owner_error)?
+            .unwrap()
     };
     let counts = ReadinessSummary::of(&rows).by_code;
     let devices = rows

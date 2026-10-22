@@ -4,7 +4,7 @@ use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use knx_core::{DeviceId, DeviceInstance, Language, Project, SourceRef};
 use serde_json::{json, Value};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use tower::ServiceExt;
 
 fn device(program: &str) -> DeviceInstance {
@@ -55,9 +55,13 @@ async fn configuration_and_missing_application_have_distinct_codes_before_any_se
         #[allow(clippy::field_reassign_with_default)]
         let state = {
             let mut state = knx_server::AppState::default();
-            state.product_db = Some(Mutex::new(
-                knx_productdb::open_and_migrate(&dir.path().join("p.sqlite")).unwrap(),
-            ));
+            state.product_db = Some(
+                knx_server::CatalogueOwner::adopt_opened(
+                    knx_productdb::open_and_migrate(&dir.path().join("p.sqlite")).unwrap(),
+                    std::path::PathBuf::new(),
+                )
+                .unwrap(),
+            );
             let mut project = Project::new(Language("en".into()));
             project.devices.insert(device(program));
             *state.project.lock().unwrap() = Some(project);

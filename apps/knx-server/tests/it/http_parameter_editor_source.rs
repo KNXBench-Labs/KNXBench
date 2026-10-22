@@ -9,7 +9,7 @@ use knx_core::{
     Language, Project, SourceRef, Topology,
 };
 use serde_json::{json, Value};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use tower::ServiceExt;
 
 const HARDWARE: &str = r#"<KNX xmlns="http://knx.org/xml/project/20"><ManufacturerData><Manufacturer RefId="M-1"><Hardware><Hardware Id="H-1" Name="Synthetic" SerialNumber="S" VersionNumber="1"><Products><Product Id="M-1_P-1"/></Products><Hardware2Programs><Hardware2Program Id="HP-1" MediumTypes="MT-0"><ApplicationProgramRef RefId="A-1"/></Hardware2Program></Hardware2Programs></Hardware></Hardware></Manufacturer></ManufacturerData></KNX>"#;
@@ -20,7 +20,9 @@ fn fixture() -> (tempfile::TempDir, Arc<knx_server::AppState>, axum::Router) {
     knx_productdb::ingest_file(&products, "M-1/Hardware.xml", HARDWARE.as_bytes()).unwrap();
     knx_productdb::ingest_file(&products, "M-1/Application.xml", PROGRAM.as_bytes()).unwrap();
     let state = knx_server::AppState {
-        product_db: Some(Mutex::new(products)),
+        product_db: Some(
+            knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap(),
+        ),
         ..knx_server::AppState::new(dir.path().into())
     };
     let mut project = Project::new(Language("en".into()));
@@ -101,9 +103,9 @@ async fn exact_device_program_source_is_read_only_and_not_a_write_permit() {
         .product_db
         .as_ref()
         .unwrap()
-        .lock()
+        .with_read(|conn| Ok::<_, std::convert::Infallible>(conn.total_changes()))
         .unwrap()
-        .total_changes();
+        .unwrap();
     let (status, view) = request(
         &app,
         "GET",
@@ -132,9 +134,9 @@ async fn exact_device_program_source_is_read_only_and_not_a_write_permit() {
             .product_db
             .as_ref()
             .unwrap()
-            .lock()
+            .with_read(|conn| Ok::<_, std::convert::Infallible>(conn.total_changes()))
             .unwrap()
-            .total_changes(),
+            .unwrap(),
         changes
     );
 }
@@ -158,9 +160,11 @@ async fn missing_metadata_is_named_and_database_failure_is_not_hidden() {
         .product_db
         .as_ref()
         .unwrap()
-        .lock()
+        .with_read(|conn| {
+            conn.execute_batch("DROP TABLE parameter_ref").unwrap();
+            Ok::<(), std::convert::Infallible>(())
+        })
         .unwrap()
-        .execute_batch("DROP TABLE parameter_ref")
         .unwrap();
     assert_eq!(
         request(
@@ -328,11 +332,22 @@ async fn existing_parameter_validation_undo_and_native_reopen_preserve_exact_val
             .1["undoSteps"],
         history["undoSteps"]
     );
-    let products = state.product_db.as_ref().unwrap().lock().unwrap();
-    assert_eq!(
-        knx_productdb::load_source_file(&products, &knx_productdb::sha256_hex(PROGRAM.as_bytes()))
-            .unwrap()
-            .unwrap(),
-        PROGRAM.as_bytes()
-    );
+    state
+        .product_db
+        .as_ref()
+        .unwrap()
+        .with_read(|conn| {
+            assert_eq!(
+                knx_productdb::load_source_file(
+                    conn,
+                    &knx_productdb::sha256_hex(PROGRAM.as_bytes())
+                )
+                .unwrap()
+                .unwrap(),
+                PROGRAM.as_bytes()
+            );
+            Ok::<(), std::convert::Infallible>(())
+        })
+        .unwrap()
+        .unwrap();
 }

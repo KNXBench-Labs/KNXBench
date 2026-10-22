@@ -21,7 +21,7 @@
 //!   states a list of several with no choice (ISSUE-08 P3, §146).
 
 use std::collections::{BTreeMap, HashSet};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
@@ -40,7 +40,9 @@ async fn counts(path: std::path::PathBuf) -> BTreeMap<&'static str, usize> {
     let dir = tempfile::tempdir().unwrap();
     let products = knx_productdb::open_and_migrate(&dir.path().join("p.sqlite")).unwrap();
     let state = Arc::new(knx_server::AppState {
-        product_db: Some(Mutex::new(products)),
+        product_db: Some(
+            knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap(),
+        ),
         ..Default::default()
     });
     let app = knx_server::app(Arc::clone(&state), None);

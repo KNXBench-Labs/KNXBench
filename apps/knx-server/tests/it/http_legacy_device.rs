@@ -1,6 +1,6 @@
 //! A device from a legacy ETS3 product database is placed, parameterised and linked like any other.
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
@@ -63,7 +63,9 @@ async fn a_legacy_device_is_placed_parameterised_and_linked() {
     let dir = tempfile::tempdir().unwrap();
     let (conn, program, item) = products(&dir);
     let state = knx_server::AppState {
-        product_db: Some(Mutex::new(conn)),
+        product_db: Some(
+            knx_server::CatalogueOwner::adopt_opened(conn, std::path::PathBuf::new()).unwrap(),
+        ),
         ..Default::default()
     };
     let app = knx_server::app(Arc::new(state), None);

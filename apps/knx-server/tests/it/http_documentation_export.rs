@@ -5,7 +5,7 @@
 //! (no ETS-produced sample exists in this repository) — it exports "project
 //! documentation", nothing more, nothing less.
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
@@ -351,7 +351,9 @@ async fn preview_resolves_product_identity_in_the_requested_language_seam() {
          INSERT INTO hardware2program VALUES ('H', 'M', 'HW', 'APP', NULL, NULL, NULL, NULL, NULL, 'x');",
     ).unwrap();
     let mut state = state_with_a_device_in_no_line();
-    state.product_db = Some(Mutex::new(products));
+    state.product_db = Some(
+        knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap(),
+    );
     let app = knx_server::app(Arc::new(state), None);
 
     let response = call(

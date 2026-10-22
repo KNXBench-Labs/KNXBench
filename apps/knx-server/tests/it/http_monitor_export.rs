@@ -23,7 +23,6 @@ const PRODUCT_HARDWARE: &str = r#"<?xml version="1.0" encoding="utf-8"?>
 #[tokio::test]
 async fn catalogue_changes_invalidate_bundle_without_revision_and_export_never_writes_products() {
     use knx_core::{CommissioningState, DeviceId, DeviceInstance, IndividualAddress};
-    use std::sync::Mutex;
     let dir = tempfile::tempdir().unwrap();
     let state = setup(dir.path());
     {
@@ -63,7 +62,9 @@ async fn catalogue_changes_invalidate_bundle_without_revision_and_export_never_w
     products.execute_batch("PRAGMA query_only = ON").unwrap();
     let mut state =
         Arc::try_unwrap(state).unwrap_or_else(|_| panic!("fixture unexpectedly shared"));
-    state.product_db = Some(Mutex::new(products));
+    state.product_db = Some(
+        knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap(),
+    );
     let state = Arc::new(state);
     let before = state.project.lock().unwrap().clone();
     let app = knx_server::app(state.clone(), None);
@@ -73,9 +74,13 @@ async fn catalogue_changes_invalidate_bundle_without_revision_and_export_never_w
             .product_db
             .as_ref()
             .unwrap()
-            .lock()
+            .with_read(|conn| {
+                Ok::<_, std::convert::Infallible>(
+                    conn.query_row("SELECT total_changes()", [], |row| row.get::<_, i64>(0))
+                        .unwrap(),
+                )
+            })
             .unwrap()
-            .query_row("SELECT total_changes()", [], |row| row.get::<_, i64>(0))
             .unwrap()
     };
     let writes_before = changes();
@@ -86,30 +91,36 @@ async fn catalogue_changes_invalidate_bundle_without_revision_and_export_never_w
         StatusCode::OK
     );
     assert_eq!(changes(), writes_before, "export changed catalogue");
-    {
-        let products = state.product_db.as_ref().unwrap().lock().unwrap();
-        products.execute_batch("PRAGMA query_only = OFF").unwrap();
-        // Re-ingest deliberately preserves first-admitted product winners; change
-        // the actual synthetic catalogue row to model a catalogue update instead.
-        assert_eq!(
-            products
-                .execute(
-                    "UPDATE product SET text = ?1 WHERE id = ?2",
-                    ["Updated catalogue name", "M-1_P-1"],
-                )
-                .unwrap(),
-            1
-        );
-        assert_eq!(
-            knx_productdb::query::device_product(&products, "M-1_P-1", "H-1_HP-1", None)
-                .unwrap()
-                .unwrap()
-                .product_text
-                .as_deref(),
-            Some("Updated catalogue name")
-        );
-        products.execute_batch("PRAGMA query_only = ON").unwrap();
-    }
+    state
+        .product_db
+        .as_ref()
+        .unwrap()
+        .with_read(|products| {
+            products.execute_batch("PRAGMA query_only = OFF").unwrap();
+            // Re-ingest deliberately preserves first-admitted product winners; change
+            // the actual synthetic catalogue row to model a catalogue update instead.
+            assert_eq!(
+                products
+                    .execute(
+                        "UPDATE product SET text = ?1 WHERE id = ?2",
+                        ["Updated catalogue name", "M-1_P-1"],
+                    )
+                    .unwrap(),
+                1
+            );
+            assert_eq!(
+                knx_productdb::query::device_product(products, "M-1_P-1", "H-1_HP-1", None)
+                    .unwrap()
+                    .unwrap()
+                    .product_text
+                    .as_deref(),
+                Some("Updated catalogue name")
+            );
+            products.execute_batch("PRAGMA query_only = ON").unwrap();
+            Ok::<(), std::convert::Infallible>(())
+        })
+        .unwrap()
+        .unwrap();
     assert_eq!(binding(&state), input);
     let writes_after_update = changes();
     let changed_preview = preview_ok(&app, &input).await;
@@ -127,18 +138,22 @@ async fn catalogue_changes_invalidate_bundle_without_revision_and_export_never_w
 
 #[tokio::test]
 async fn poisoned_product_lock_is_refused_instead_of_silently_omitting_catalogue() {
-    use std::sync::Mutex;
     let dir = tempfile::tempdir().unwrap();
     let state = setup(dir.path());
     let products = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
     let mut state =
         Arc::try_unwrap(state).unwrap_or_else(|_| panic!("fixture unexpectedly shared"));
-    state.product_db = Some(Mutex::new(products));
+    state.product_db = Some(
+        knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap(),
+    );
     let state = Arc::new(state);
     let poisoner = state.clone();
     assert!(std::thread::spawn(move || {
-        let _guard = poisoner.product_db.as_ref().unwrap().lock().unwrap();
-        panic!("fictional product lock poisoning");
+        let _ = poisoner.product_db.as_ref().unwrap().with_read(
+            |_conn| -> Result<(), std::convert::Infallible> {
+                panic!("fictional product lock poisoning")
+            },
+        );
     })
     .join()
     .is_err());

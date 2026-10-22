@@ -12,6 +12,27 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## WP-04.3 stage D job admission/replay kernel — delivered (22 October 2026)
+
+Source merge `4bca86b2` is published with exact live/tracking readback; the
+feature branch `06542d48a` is its second parent and byte-exact tree. The
+change-scoped maintained gate passes all 14 ordered stages on the frozen
+merged tree: 1,156 Rust passes across 7 binary results (53 ignored), 51/51
+selected corpus tests, the tool test suite, warning-denied Clippy and clean
+fmt/headers/docs/layering/ledger/anchors.
+
+This delivers the first stage-D increment, a private unwired admission/replay
+kernel (`catalogue_jobs`): strict wire primitives (a checked decimal `U64`
+with the `0|[1-9][0-9]{0,19}` grammar, 16/32-byte lowercase-hex identities, a
+constant-time capability with redacted `Debug`) and `CatalogueJobManager` (one
+non-wrapping admission high-water serial with an exhausted sentinel, one
+active slot, 8+8 terminal/tombstone rings, exact create replay/conflict/
+stale-offer/incarnation classification and dispose semantics). 35 focused
+tests cover the admission/replay/eviction/disposal decision table. No
+production route, DTO/serialization, spool, status or drain is wired; WP-04.3
+and WP-19 remain open. See
+[the contract](contracts/catalogue-jobs/job-admission-increment.md).
+
 ## WP-04.3 stage C transitive installer — delivered (22 October 2026)
 
 Source merge `56e00c833` is published with exact live/tracking readback; the

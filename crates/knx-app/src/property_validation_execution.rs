@@ -1,4 +1,8 @@
-//! Concrete offline Net orchestration; physical admission is deliberately absent.
+//! Concrete Net orchestration: simulator entry plus a consent-gated hardware path.
+//!
+//! Physical admission is available only through `execute_hardware` /
+//! `restore_hardware`, which require a device- and operation-specific
+//! [`HardwareRelease`] consent (ADR-0152); the simulator entry is unchanged.
 use crate::{
     property_validation::{Checkpoint, FailureCode, OperationStore},
     property_validation_bundle::{invalid, PreparedBundle, RecoveryRecord},
@@ -9,24 +13,31 @@ use knx_core::commissioning::{
     property_download::PropertyOperation,
 };
 use knx_net::commissioning::{
+    hardware_release::HardwareRelease,
     property_download::{
-        restore_experimental_property_plan, run_experimental_property_plan,
+        restore_experimental_property_plan, restore_experimental_property_plan_on_hardware,
+        run_experimental_property_plan, run_experimental_property_plan_on_hardware,
         PropertySimulationFailure,
     },
     property_recovery::PropertyJournalEvent,
     simulator::SimulatedDevice,
     SessionTiming,
 };
+use knx_net::management::ManagementTransport;
 use std::{
     io,
     sync::atomic::{AtomicBool, Ordering},
 };
 
-fn check_bundle(bundle: &PreparedBundle, store: &OperationStore) -> io::Result<()> {
+fn check_bundle(
+    bundle: &PreparedBundle,
+    store: &OperationStore,
+    simulated: bool,
+) -> io::Result<()> {
     bundle.plan()?;
     bundle.preconditions()?;
-    if !bundle.binding.simulated || store.binding() != &bundle.binding {
-        return Err(invalid("simulator binding differs from operation store"));
+    if bundle.binding.simulated != simulated || store.binding() != &bundle.binding {
+        return Err(invalid("operation-store binding differs from bundle kind"));
     }
     Ok(())
 }
@@ -96,7 +107,7 @@ pub async fn execute_simulated(
     timing: SessionTiming,
     cancel: &AtomicBool,
 ) -> io::Result<()> {
-    check_bundle(bundle, store)?;
+    check_bundle(bundle, store, true)?;
     if cancel.load(Ordering::SeqCst) {
         store.checkpoint(Checkpoint::Cancelled)?;
         return Err(invalid("property validation cancelled before connection"));
@@ -143,7 +154,7 @@ pub async fn restore_simulated(
     cancel: &AtomicBool,
     confirmation: &str,
 ) -> io::Result<()> {
-    check_bundle(bundle, store)?;
+    check_bundle(bundle, store, true)?;
     if confirmation != bundle.restore_phrase() {
         return Err(invalid("exact target/plan recovery confirmation required"));
     }
@@ -162,6 +173,124 @@ pub async fn restore_simulated(
         authorization,
         AuthorisationPlan::Skip,
         timing,
+        &mut |e| event(store, bundle, e, true),
+        &|| cancel.load(Ordering::SeqCst),
+    )
+    .await;
+    match result {
+        Ok(_) => store.checkpoint(Checkpoint::Restored),
+        Err(error) => {
+            store.checkpoint(Checkpoint::RestoreFailed {
+                code: failure_code(&error.failure),
+                local_diagnostic: format!("{error:?}"),
+            })?;
+            Err(invalid(
+                "explicit restore failed; original recovery retained, no automatic retry",
+            ))
+        }
+    }
+}
+/// Consent-gated best-effort execution on a physical device (ADR-0152).
+///
+/// The bundle must be a [`PreparedBundle::rebind_hardware`] result carrying the
+/// real device serial; the caller supplies both typed phrases — the ordinary
+/// download confirmation and the best-effort release consent. The durable
+/// journal and recovery acquisition are identical to the simulator path.
+#[allow(clippy::too_many_arguments)]
+pub async fn execute_hardware<T: ManagementTransport>(
+    transport: &T,
+    bundle: &PreparedBundle,
+    store: &mut OperationStore,
+    timing: SessionTiming,
+    download_confirmation: &str,
+    release_confirmation: &str,
+    cancel: &AtomicBool,
+) -> io::Result<()> {
+    check_bundle(bundle, store, false)?;
+    if cancel.load(Ordering::SeqCst) {
+        store.checkpoint(Checkpoint::Cancelled)?;
+        return Err(invalid("property validation cancelled before connection"));
+    }
+    let plan = bundle.plan()?;
+    let preconditions = bundle.preconditions()?;
+    let authorization = WriteAuthorisation::for_hardware(
+        plan.target(),
+        WriteScope::Download,
+        download_confirmation,
+    )
+    .map_err(|_| invalid("hardware download confirmation refused"))?;
+    let release = HardwareRelease::for_hardware(plan.target(), release_confirmation)
+        .map_err(|_| invalid("hardware best-effort release refused"))?;
+    let result = run_experimental_property_plan_on_hardware(
+        transport,
+        &plan,
+        authorization,
+        AuthorisationPlan::Skip,
+        timing,
+        &preconditions,
+        &release,
+        &mut |e| event(store, bundle, e, false),
+        &|| cancel.load(Ordering::SeqCst),
+    )
+    .await;
+    match result {
+        Ok(_) => store.checkpoint(Checkpoint::Finished),
+        Err(error) => {
+            let checkpoint = if matches!(error.failure, PropertySimulationFailure::Cancelled) {
+                Checkpoint::Cancelled
+            } else {
+                Checkpoint::Failed {
+                    code: failure_code(&error.failure),
+                    local_diagnostic: format!("{error:?}"),
+                }
+            };
+            store.checkpoint(checkpoint)?;
+            Err(io::Error::other(format!(
+                "property validation failed: {error}; private protocol retained, no automatic retry or restore"
+            )))
+        }
+    }
+}
+/// Consent-gated best-effort recovery replay on a physical device (ADR-0152).
+/// The recovery phrase binds the exact target/plan; the download and release
+/// phrases admit the physical write exactly as in `execute_hardware`.
+#[allow(clippy::too_many_arguments)]
+pub async fn restore_hardware<T: ManagementTransport>(
+    transport: &T,
+    bundle: &PreparedBundle,
+    store: &mut OperationStore,
+    timing: SessionTiming,
+    recovery_confirmation: &str,
+    download_confirmation: &str,
+    release_confirmation: &str,
+    cancel: &AtomicBool,
+) -> io::Result<()> {
+    check_bundle(bundle, store, false)?;
+    if recovery_confirmation != bundle.restore_phrase() {
+        return Err(invalid("exact target/plan recovery confirmation required"));
+    }
+    let snapshot = store
+        .recovery()
+        .ok_or_else(|| invalid("no durable prewrite recovery exists"))?
+        .to_snapshot(bundle)?;
+    store.checkpoint(Checkpoint::RestoreStarted)?;
+    let plan = bundle.plan()?;
+    let authorization = WriteAuthorisation::for_hardware(
+        plan.target(),
+        WriteScope::Download,
+        download_confirmation,
+    )
+    .map_err(|_| invalid("hardware download confirmation refused"))?;
+    let release = HardwareRelease::for_hardware(plan.target(), release_confirmation)
+        .map_err(|_| invalid("hardware best-effort release refused"))?;
+    let result = restore_experimental_property_plan_on_hardware(
+        transport,
+        &plan,
+        &snapshot,
+        authorization,
+        AuthorisationPlan::Skip,
+        timing,
+        &release,
         &mut |e| event(store, bundle, e, true),
         &|| cancel.load(Ordering::SeqCst),
     )

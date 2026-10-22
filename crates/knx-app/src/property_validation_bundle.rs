@@ -228,6 +228,20 @@ impl PreparedBundle {
         )
         .map_err(|_| invalid("same-application recovery premise cannot represent this plan"))
     }
+    /// Rebind a simulated-prepared candidate to a physical device identity.
+    ///
+    /// The serial must be read from the real device beforehand (never guessed).
+    /// The result is marked `simulated: false` and revalidated; the plan,
+    /// profile and source hashes are unchanged — only the device binding and
+    /// the recovery premise serial differ. See ADR-0152.
+    pub fn rebind_hardware(&self, serial: [u8; 6]) -> io::Result<PreparedBundle> {
+        let mut bundle = self.clone();
+        bundle.binding.serial = serial;
+        bundle.binding.simulated = false;
+        bundle.plan()?;
+        bundle.preconditions()?;
+        Ok(bundle)
+    }
     pub fn consent_phrase(&self) -> String {
         format!(
             "I confirm property validation to {} plan {}",

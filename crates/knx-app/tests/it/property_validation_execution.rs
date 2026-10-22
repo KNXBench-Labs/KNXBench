@@ -368,3 +368,64 @@ fn property_validation_recovery_record_refuses_partial_regions() {
         })
         .is_err());
 }
+#[test]
+fn property_validation_rebind_hardware_swaps_serial_and_marks_physical() {
+    let (_, bundle) = fixture();
+    assert!(bundle.binding.simulated);
+    let real = [0, 7, 0, 1, 2, 3];
+    let rebound = bundle.rebind_hardware(real).unwrap();
+    assert!(!rebound.binding.simulated);
+    assert_eq!(rebound.binding.serial, real);
+    assert_eq!(rebound.binding.plan_sha256, bundle.binding.plan_sha256);
+    assert_eq!(rebound.binding.source_sha256, bundle.binding.source_sha256);
+    // The plan stays identical; only the recovery premise serial differs.
+    assert_eq!(rebound.plan().unwrap(), bundle.plan().unwrap());
+    assert_ne!(
+        rebound.preconditions().unwrap(),
+        bundle.preconditions().unwrap()
+    );
+}
+#[tokio::test]
+async fn property_validation_execute_hardware_refuses_wrong_phrases_before_any_frame() {
+    let (device, bundle) = fixture();
+    let rebound = bundle.rebind_hardware([0, 7, 0, 1, 2, 3]).unwrap();
+    let target = rebound.plan().unwrap().target();
+    let download = knx_core::commissioning::mutation::required_confirmation_phrase(
+        target,
+        WriteScope::Download,
+    );
+    let release = knx_net::commissioning::hardware_release::required_release_phrase(target);
+    let temp = tempfile::tempdir().unwrap();
+    let path = temp.path().join("op");
+    let mut store = OperationStore::create(&path, rebound.binding.clone()).unwrap();
+    assert!(
+        app::execute_hardware(
+            &device,
+            &rebound,
+            &mut store,
+            timing(),
+            &download,
+            "wrong release",
+            &AtomicBool::new(false),
+        )
+        .await
+        .is_err(),
+        "a wrong best-effort release phrase must refuse before any frame"
+    );
+    assert!(device.seen().is_empty());
+    assert!(
+        app::execute_hardware(
+            &device,
+            &rebound,
+            &mut store,
+            timing(),
+            "wrong download",
+            &release,
+            &AtomicBool::new(false),
+        )
+        .await
+        .is_err(),
+        "a wrong download confirmation must refuse before any frame"
+    );
+    assert!(device.seen().is_empty());
+}

@@ -522,4 +522,6 @@ fn write_new_synced(path: &Path, bytes: &[u8]) -> io::Result<()> {
     Ok(())
 }
 
-pub use crate::property_validation_execution::{execute_simulated, restore_simulated};
+pub use crate::property_validation_execution::{
+    execute_hardware, execute_simulated, restore_hardware, restore_simulated,
+};

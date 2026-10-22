@@ -18,5 +18,5 @@
   "invisible_parameters": "background-parameter-default-union-base-active-overlay-v1",
   "binary_restrictions": "single-octet-enumeration-binary-payload-v1",
   "reference_activation": "schema10-no-dynamic-reference-is-active-v1",
-  "procedure_policy": "declared-counts-zero-flags-zero-table-identity-v1"
+  "procedure_policy": "declared-counts-zero-flags-full-table-identity-v1"
 }

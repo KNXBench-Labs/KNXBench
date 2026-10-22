@@ -656,6 +656,16 @@ gate's pre-existing nested measurement-lease fixture was separately corrected,
 reviewed and retested; its failed receipt is retained, not counted as success.
 No release/tag, deployment, bus or device access occurred.
 
+On 22 October 2026 the "zero table identity" hypothesis was corrected: an
+observed ETS download
+([research](research/2026-10-22-system2-ets-download-procedure.md)) emits the
+full application identity on all three task segments, so
+`plan_system2_candidate` now carries the full identity on the address-table and
+association-table machines (objects 1/2) as well as the application machine.
+The procedure policy and validation profile were renamed to
+`declared-counts-zero-flags-full-table-identity`. The offline candidate and the
+full simulator validation were re-run green (`finished` + `restored`).
+
 <a id="wp-042-resolver-bounds--unchanged-parser-candidate-20-october-2026"></a>
 ## WP-04.2 resolver bounds — unchanged-parser delivery (20 October 2026)
 

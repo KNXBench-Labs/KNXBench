@@ -8001,7 +8001,9 @@ mod tests {
 
         let products = knx_productdb::open_and_migrate(&products_path).unwrap();
         let state = AppState {
-            product_db: Some(Mutex::new(products)),
+            product_db: Some(
+                crate::CatalogueOwner::adopt_opened(products, products_path.clone()).unwrap(),
+            ),
             ..AppState::default()
         };
         open_project(
@@ -8339,8 +8341,8 @@ mod tests {
     fn state_with_product_db() -> (tempfile::TempDir, AppState) {
         let state = state_with_one_installation();
         let dir = tempfile::tempdir().unwrap();
-        let products =
-            knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+        let products_path = dir.path().join("products.sqlite");
+        let products = knx_productdb::open_and_migrate(&products_path).unwrap();
         knx_productdb::parse::hardware::ingest_hardware(
             &products,
             "sha-h",
@@ -8363,7 +8365,8 @@ mod tests {
         )
         .unwrap();
         let mut state = state;
-        state.product_db = Some(Mutex::new(products));
+        state.product_db =
+            Some(crate::CatalogueOwner::adopt_opened(products, products_path).unwrap());
         (dir, state)
     }
 

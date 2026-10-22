@@ -98,14 +98,15 @@ const USAGE: &str = "usage: knx import <file.knxproj> [--store <path.knxdb> [--r
      \x20         (--multicast-group joins that IPv4 multicast address instead of the\n\
      \x20         standard 224.0.23.12, port fixed at 3671 either way — Routing v01.05.02 AS\n\
      \x20         §2.3.1; omitted, both route-monitor and route-send join the standard group)\n\
-     \x20     knx bus scan --gateway <host:port> --line <area.line>\n\
+     \x20     knx bus scan --gateway <host:port> (--line <area.line> | --device <area.line.device>)\n\
      \x20                  [--range <first>-<last>] [--exclude <addr>[,<addr>...]]...\n\
      \x20                  [--timeout-ms <n>] [--pause-ms <n>] [--project <path.knxdb>] [--dry-run]\n\
-     \x20         (--range takes two full area.line.device addresses on the --line given, and\n\
-     \x20         its first device may not be 0, the line coupler's own address; --exclude may\n\
-     \x20         be given more than once and every occurrence accumulates, never probes the\n\
-     \x20         listed addresses, and a malformed one aborts before any frame is sent;\n\
-     \x20         --project prints a comparison, never writes it back; --dry-run prints the\n\
+     \x20         (--line scans a whole line; --device probes exactly one device. --range takes\n\
+     \x20         two full area.line.device addresses on the --line given, and its first device\n\
+     \x20         may not be 0, the line coupler's own address, which --device also refuses;\n\
+     \x20         --exclude may be given more than once and every occurrence accumulates, never\n\
+     \x20         probes the listed addresses, and a malformed one aborts before any frame is\n\
+     \x20         sent; --project prints a comparison, never writes it back; --dry-run prints the\n\
      \x20         candidate count, first/last candidate and excluded list, then exits without\n\
      \x20         opening a connection)\n\
      \x20     knx device download <area.line.device> --project <path.knxdb> [--product-db <path>]\n\
@@ -4557,14 +4558,21 @@ fn run_bus_scan(args: &[String]) -> ExitCode {
     };
     // Plan and policy are fully built — including the malformed-`--exclude`
     // and cross-line `--range` checks — before a socket is ever opened.
-    let (plan, range, excluded) =
-        match scan::build_scan_plan(&parsed.line, parsed.range.as_deref(), &parsed.exclude) {
-            Ok(v) => v,
-            Err(e) => {
-                eprintln!("{e}\n{USAGE}");
-                return ExitCode::FAILURE;
-            }
-        };
+    // `parse_scan_args` already guaranteed exactly one of `--line` and
+    // `--device`; `--device` probes that one address, `--line` sweeps a
+    // line (optionally narrowed by `--range`).
+    let built = match (&parsed.line, &parsed.device) {
+        (Some(line), None) => scan::build_scan_plan(line, parsed.range.as_deref(), &parsed.exclude),
+        (None, Some(device)) => scan::build_single_device_plan(device, &parsed.exclude),
+        _ => unreachable!("parse_scan_args enforces exactly one of --line / --device"),
+    };
+    let (plan, range, excluded) = match built {
+        Ok(v) => v,
+        Err(e) => {
+            eprintln!("{e}\n{USAGE}");
+            return ExitCode::FAILURE;
+        }
+    };
     // `--dry-run` prints the plan's shape and stops here, before a probe
     // policy, a project file or a tokio runtime — let alone a socket —
     // ever exist. Modelled on `knx bus write --dry-run`.

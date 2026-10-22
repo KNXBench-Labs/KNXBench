@@ -12,6 +12,19 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## `knx bus scan --device <area.line.device>` selector (22 October 2026)
+
+`knx bus scan` gains a single-device selector alongside `--line`/`--range`:
+`--device <area.line.device>` probes exactly one address instead of sweeping a
+line. It is mutually exclusive with `--line` (and therefore `--range`),
+refuses device `0` (the line coupler's own address, the same rule `--range`
+applies), and an `--exclude` that names the very device being probed empties
+the plan and is refused. Parsing and plan building live in
+`apps/knx-cli/src/scan.rs` (`parse_device`, `build_single_device_plan`,
+pure and socket-free); the command's USAGE text and the command-line manual
+document the new flag. No core, net, store or product-database change; the
+selector reuses `ScanPlan::range(addr, addr)`.
+
 ## WP-04.3 stage-B copy — source delivered (22 October 2026)
 
 Source merge `9fc0d9e27` is published with exact live/tracking readback; the

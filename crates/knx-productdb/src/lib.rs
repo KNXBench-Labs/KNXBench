@@ -30,6 +30,10 @@ pub mod legacy;
 // exist (WP-04.3 stage B, ADR-0150).
 #[allow(dead_code)]
 mod managed_catalogue;
+// Private bounded copy primitive remains unwired until the W/S/D orchestration
+// exists (WP-04.3 stage B, ADR-0150).
+#[allow(dead_code)]
+mod catalogue_copy;
 pub mod master_evidence;
 pub mod master_provenance;
 pub mod migration;

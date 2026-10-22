@@ -222,3 +222,84 @@ fn cell_length_bound_helper_rejects_oversized_and_negative() {
         Err(WitnessError::CellTooLarge(len)) if len == CELL_BYTE_BOUND + 1
     ));
 }
+
+#[test]
+fn copy_witness_omits_schema_version_while_the_live_witness_tracks_it() {
+    let (_dir, conn) = fresh();
+    conn.execute(
+        "INSERT INTO manufacturer (id, name) VALUES ('m1', 'Example Co')",
+        [],
+    )
+    .unwrap();
+
+    let first = {
+        let tx = conn.unchecked_transaction().unwrap();
+        let live = witness_current(&tx, &PublicationGate::new()).unwrap();
+        let copy = copy_content_witness(&tx, &PublicationGate::new()).unwrap();
+        (live, copy)
+    };
+
+    // A no-op DDL round-trip bumps the schema cookie but leaves the 120
+    // objects and their rowids intact.
+    conn.execute_batch("CREATE TABLE scratch(x); DROP TABLE scratch;")
+        .unwrap();
+
+    let second = {
+        let tx = conn.unchecked_transaction().unwrap();
+        let live = witness_current(&tx, &PublicationGate::new()).unwrap();
+        let copy = copy_content_witness(&tx, &PublicationGate::new()).unwrap();
+        (live, copy)
+    };
+
+    assert_ne!(first.0.sha256, second.0.sha256);
+    assert_eq!(first.1.sha256, second.1.sha256);
+    assert_eq!(first.1.table_count, first.0.table_count);
+    assert_eq!(first.1.schema_object_count, first.0.schema_object_count);
+    assert_eq!(first.1.row_count, first.0.row_count);
+    // The copy witness is a distinct domain from the live witness.
+    assert_ne!(first.1.sha256, first.0.sha256);
+}
+
+#[test]
+fn copied_destination_matches_the_pinned_source_content() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("catalogue.db");
+    let conn = crate::open_and_migrate(&path).unwrap();
+    conn.execute(
+        "INSERT INTO manufacturer (id, name) VALUES ('m1', 'Example Co')",
+        [],
+    )
+    .unwrap();
+    drop(conn);
+
+    let ro = crate::open_read_only(&path).unwrap();
+    let page_size: i64 = ro
+        .conn
+        .query_row("PRAGMA page_size", [], |r| r.get(0))
+        .unwrap();
+    let tx = ro.conn.unchecked_transaction().unwrap();
+    let n: i64 = tx
+        .query_row("SELECT count(*) FROM sqlite_schema", [], |r| r.get(0))
+        .unwrap();
+    assert!(n > 0);
+    let source_witness = copy_content_witness(&tx, &PublicationGate::new()).unwrap();
+
+    let copy_path = dir.path().join("copy.db");
+    let mut dest = rusqlite::Connection::open(&copy_path).unwrap();
+    dest.pragma_update(None, "page_size", page_size).unwrap();
+    crate::catalogue_copy::copy_pinned_current(&ro.conn, &mut dest, &PublicationGate::new())
+        .unwrap();
+    drop(dest);
+
+    let dro = crate::open_read_only(&copy_path).unwrap();
+    let dtx = dro.conn.unchecked_transaction().unwrap();
+    let destination_witness = copy_content_witness(&dtx, &PublicationGate::new()).unwrap();
+
+    assert_eq!(source_witness.sha256, destination_witness.sha256);
+    assert_eq!(source_witness.table_count, destination_witness.table_count);
+    assert_eq!(source_witness.row_count, destination_witness.row_count);
+    assert_eq!(
+        source_witness.schema_object_count,
+        destination_witness.schema_object_count
+    );
+}

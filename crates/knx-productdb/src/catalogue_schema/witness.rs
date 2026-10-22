@@ -3,10 +3,9 @@
 //! Streams a complete, deterministic, lossless digest of one transaction: the
 //! schema relation plus every persisted column and hidden rowid of every
 //! admitted main table, chunked so no TEXT/BLOB cell becomes a whole Rust
-//! `String`/`Vec`. Construction-only — no production route is wired, no copy
-//! witness (§6) is produced, and equality is exact witness equality, never a
-//! commit history. See `docs/contracts/catalogue-jobs/managed-binding.md` §4
-//! and `witness-increment.md`.
+//! `String`/`Vec`. Construction-only — no production route is wired, and
+//! equality is exact witness equality, never a commit history. See
+//! `docs/contracts/catalogue-jobs/managed-binding.md` §4 and `witness-increment.md`.
 
 use sha2::{Digest, Sha256};
 
@@ -16,8 +15,6 @@ use rusqlite::Transaction;
 
 use super::{admit, AdmissionError, Record, Relation};
 
-/// Domain prefix emitted before the encoding-version word.
-const DOMAIN: &[u8] = b"KNXBench/CatalogueWitness/1";
 /// Fixed streamed encoding version.
 const ENCODING_VERSION: u32 = 1;
 /// Maximum admitted byte length of one TEXT/BLOB cell before refusal.
@@ -25,9 +22,44 @@ const CELL_BYTE_BOUND: u64 = 1_000_000_000;
 /// Chunk size for substr-based TEXT/BLOB streaming.
 const CHUNK_SIZE: i64 = 65536;
 
+/// The two witness variants: the live Ready/apply witness and the copy witness.
+/// They share the descriptor/table/cell payload and differ only in the header
+/// domain and whether the live `schema_version` cookie is included.
+#[derive(Clone, Copy)]
+enum WitnessKind {
+    Live,
+    Copy,
+}
+
+impl WitnessKind {
+    fn domain(self) -> &'static [u8] {
+        match self {
+            WitnessKind::Live => b"KNXBench/CatalogueWitness/1",
+            WitnessKind::Copy => b"KNXBench/CopyContentWitness/1",
+        }
+    }
+
+    fn includes_schema_version(self) -> bool {
+        matches!(self, WitnessKind::Live)
+    }
+}
+
 /// One complete catalogue witness: a digest plus exact scan accounting.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct CatalogueWitness {
+    encoding_version: u32,
+    sha256: [u8; 32],
+    table_count: u32,
+    schema_object_count: u32,
+    row_count: u64,
+    encoded_bytes: u64,
+}
+
+/// One completed native copy's content witness. Same scan accounting as the
+/// live witness but a distinct header domain that omits `schema_version`, so a
+/// copy is never accepted as a `CatalogueStamp` or live Ready/apply consent.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct CopyContentWitness {
     encoding_version: u32,
     sha256: [u8; 32],
     table_count: u32,
@@ -228,18 +260,21 @@ fn encode_header(
     writer: &mut Writer,
     tx: &Transaction,
     gate: &PublicationGate,
+    kind: WitnessKind,
 ) -> Result<(), WitnessError> {
     gate.checkpoint()?;
     writer.u8(0x10)?;
-    writer.raw(DOMAIN)?;
+    writer.raw(kind.domain())?;
     writer.u8(0x00)?;
     writer.u32(ENCODING_VERSION)?;
     let user_version: i64 = tx.query_row("PRAGMA main.user_version", [], |r| r.get(0))?;
-    let schema_version: i64 = tx.query_row("PRAGMA main.schema_version", [], |r| r.get(0))?;
     let application_id: i64 = tx.query_row("PRAGMA main.application_id", [], |r| r.get(0))?;
     let encoding: String = tx.query_row("PRAGMA main.encoding", [], |r| r.get(0))?;
     writer.i64(user_version)?;
-    writer.i64(schema_version)?;
+    if kind.includes_schema_version() {
+        let schema_version: i64 = tx.query_row("PRAGMA main.schema_version", [], |r| r.get(0))?;
+        writer.i64(schema_version)?;
+    }
     writer.i64(application_id)?;
     writer.framed(encoding.as_bytes())?;
     gate.checkpoint()?;
@@ -380,17 +415,29 @@ fn admitted_cell_length(len: Option<i64>) -> Result<u64, WitnessError> {
     Ok(len)
 }
 
-/// Produces the complete witness for one transaction. Reuses B1 admission for
-/// shape validation and descriptor retention, then streams schema + data.
-fn witness_current(
+/// The shared stream outcome, independent of the witness variant.
+struct WitnessParts {
+    sha256: [u8; 32],
+    table_count: u32,
+    schema_object_count: u32,
+    row_count: u64,
+    encoded_bytes: u64,
+}
+
+/// Produces the complete witness for one transaction in the given variant.
+/// Reuses B1 admission for shape validation and descriptor retention, then
+/// streams schema + data. The live and copy variants share the payload and
+/// differ only in the header emitted by `encode_header`.
+fn stream_witness(
     tx: &Transaction,
     gate: &PublicationGate,
-) -> Result<CatalogueWitness, WitnessError> {
+    kind: WitnessKind,
+) -> Result<WitnessParts, WitnessError> {
     let admitted = admit(tx, gate)?;
 
     let mut writer = Writer::new();
 
-    encode_header(&mut writer, tx, gate)?;
+    encode_header(&mut writer, tx, gate, kind)?;
 
     let mut table_count: u32 = 0;
     let mut total_rows: u64 = 0;
@@ -415,14 +462,46 @@ fn witness_current(
     let encoded_bytes = writer.bytes;
     let sha256 = writer.finish();
 
-    Ok(CatalogueWitness {
-        encoding_version: ENCODING_VERSION,
+    Ok(WitnessParts {
         sha256,
         table_count,
         schema_object_count: u32::try_from(admitted.objects.len())
             .map_err(|_| WitnessError::Overflow)?,
         row_count: total_rows,
         encoded_bytes,
+    })
+}
+
+/// Produces the live Ready/apply witness for one transaction.
+fn witness_current(
+    tx: &Transaction,
+    gate: &PublicationGate,
+) -> Result<CatalogueWitness, WitnessError> {
+    let parts = stream_witness(tx, gate, WitnessKind::Live)?;
+    Ok(CatalogueWitness {
+        encoding_version: ENCODING_VERSION,
+        sha256: parts.sha256,
+        table_count: parts.table_count,
+        schema_object_count: parts.schema_object_count,
+        row_count: parts.row_count,
+        encoded_bytes: parts.encoded_bytes,
+    })
+}
+
+/// Produces the copy-content witness for one transaction (omits
+/// `schema_version`, so a copied destination's fresh cookie does not affect it).
+fn copy_content_witness(
+    tx: &Transaction,
+    gate: &PublicationGate,
+) -> Result<CopyContentWitness, WitnessError> {
+    let parts = stream_witness(tx, gate, WitnessKind::Copy)?;
+    Ok(CopyContentWitness {
+        encoding_version: ENCODING_VERSION,
+        sha256: parts.sha256,
+        table_count: parts.table_count,
+        schema_object_count: parts.schema_object_count,
+        row_count: parts.row_count,
+        encoded_bytes: parts.encoded_bytes,
     })
 }
 

@@ -12,6 +12,29 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## WP-04.3 stage-B server CatalogueOwner wrapper — delivered (22 October 2026)
+
+Source merge `3d58a7ff8` is published with exact live/tracking readback; the
+feature branch `01ec46d86` is its second parent and byte-exact tree. The
+change-scoped maintained gate passes all 14 ordered stages on the frozen
+merged tree: 3,447 Rust passes across 24 target results (151 ignored), 97/97
+selected corpus tests, 412 registered tool tests with six optional skips,
+warning-denied Clippy and clean fmt/headers/docs/layering/ledger/anchors.
+
+This wires the managed catalogue into the server: `CatalogueOwner` (the
+server-side owner wrapping ProductDB `ManagedCatalogue`) replaces the
+`Option<Mutex<Connection>>` `AppState.product_db` field, and the six legacy
+mutators (install, install-legacy, update/apply, cleanup/apply,
+backups/delete, restore) route through the managed guard with conservative
+settlement classification. Readers use a scoped `with_read` lease. Restore
+copies the validated backup over the live file with the old connection
+quiescent, surfaces an invalid backup as the 422 `invalidBackup` it was
+before, and retires/reopens with migration and a fresh incarnation only on
+success; mid-copy and reopen failures quarantine. All 39 server integration
+tests migrate to the owner. No production Ready/apply job route is wired.
+WP-04.3 and WP-19 remain open.
+See [the contract](contracts/catalogue-jobs/owner-wrapper-increment.md).
+
 ## Line-scan project exclusions applied (22 October 2026)
 
 `ScanPlanBuilder` now seeds its exclusion set with the project exclusion list

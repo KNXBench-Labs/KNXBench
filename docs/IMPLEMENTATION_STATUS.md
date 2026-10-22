@@ -12,6 +12,27 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## WP-04.3 stage D strict wire DTO layer — delivered (22 October 2026)
+
+Source merge `fecee1fd9` is published with exact live/tracking readback; the
+feature branch `ffbd3e923` is its second parent and byte-exact tree. The
+change-scoped maintained gate passes all 14 ordered stages on the frozen
+merged tree: 1,195 Rust passes across 7 binary results (53 ignored), 51/51
+selected corpus tests, the tool test suite, warning-denied Clippy and clean
+fmt/headers/docs/layering/ledger/anchors.
+
+This delivers the second stage-D increment, a private unwired strict serde
+wire-DTO layer (`catalogue_jobs::dto`): duplicate-key/depth admission (rejects
+duplicate object members at every level and nesting beyond eight) plus
+`deny_unknown_fields`, closed-enum DTOs for the core protocol objects
+(`Status`/`Admission`/`Create`/`Error`/commands/replies/`CatalogueDrain` and
+their nested types), canonical decimal-string `U64` and lowercase-hex
+identities on the wire, the complete P3 field/null/state contract (every
+terminal state discriminated) and the fixed error→HTTP-status/message mapping.
+39 focused tests cover admission and the state coupling. No production route,
+upload, spool, status or drain is wired; WP-04.3 and WP-19 remain open. See
+[the contract](contracts/catalogue-jobs/dto-layer-increment.md).
+
 ## WP-04.3 stage D job admission/replay kernel — delivered (22 October 2026)
 
 Source merge `4bca86b2` is published with exact live/tracking readback; the

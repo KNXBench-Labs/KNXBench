@@ -1,6 +1,7 @@
 # WP-04.3 stage B — typed full-current-schema streaming witness (§4)
 
-Claimed 22 October 2026. Second implementation increment of WP-04.3 stage B
+Delivered 22 October 2026 (source merge `9e57258c7`). Second implementation
+increment of WP-04.3 stage B
 under [ADR-0150](../../adr/0150-cancellable-catalogue-jobs.md) and the
 [managed-binding contract](../catalogue-jobs/managed-binding.md) section 4.
 

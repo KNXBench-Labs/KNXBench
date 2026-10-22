@@ -4,6 +4,8 @@ mod strict;
 
 pub use strict::{Capability, Incarnation, JobId, U64};
 
+mod dto;
+
 use std::collections::VecDeque;
 
 /// The broad admission state, mirroring the wire `admission` enum exactly.

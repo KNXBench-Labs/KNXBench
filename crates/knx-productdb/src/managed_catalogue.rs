@@ -384,13 +384,6 @@ impl ManagedCatalogue {
 mod tests {
     use super::*;
 
-    fn in_memory() -> Connection {
-        let conn = Connection::open_in_memory().unwrap();
-        conn.execute_batch("CREATE TABLE t (id INTEGER PRIMARY KEY, v TEXT) STRICT;")
-            .unwrap();
-        conn
-    }
-
     fn adopted() -> (tempfile::TempDir, ManagedCatalogue) {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("products.sqlite");
@@ -520,18 +513,13 @@ mod tests {
 
     #[test]
     fn restore_adopts_a_fresh_incarnation_and_healthy_handle() {
-        let (_dir, mut owner) = adopted();
-        let live = _dir.path().join("products.sqlite");
-        // Write through the owner so the restored file has the row.
-        owner
-            .with_legacy_mutation(
-                LegacyMutationKind::DirectPackage,
-                |conn| conn.execute("INSERT INTO t (id, v) VALUES (1, 'x')", []),
-                |_: &Result<usize, rusqlite::Error>| LegacySettlementHint::SuccessfulReturn,
-            )
-            .unwrap()
-            .unwrap();
-        let backup = _dir.path().join("backup.sqlite");
+        let dir = tempfile::tempdir().unwrap();
+        let live = dir.path().join("products.sqlite");
+        // A real, migrated product DB: restore reopens via `open_and_migrate`,
+        // which refuses the synthetic schema used by `adopted()`.
+        let conn = crate::migration::open_and_migrate(&live).unwrap();
+        let mut owner = ManagedCatalogue::adopt_opened(conn, live.clone()).unwrap();
+        let backup = dir.path().join("backup.sqlite");
         std::fs::copy(&live, &backup).unwrap();
         let before = owner.incarnation;
         owner.restore_legacy(&live, &backup).unwrap();

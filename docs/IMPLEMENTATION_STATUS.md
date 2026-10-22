@@ -12,6 +12,27 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## WP-04.3 stage D upload spool + status snapshots — delivered (22 October 2026)
+
+Source merge `4222b81ce` is published with exact live/tracking readback; the
+feature branch `492f9f470` is its second parent and byte-exact tree. The
+change-scoped maintained gate passes every ordered stage on the frozen merged
+tree (the `rustix` server dependency widened the scope to the full workspace):
+5,876 Rust passes across 56 binary results (222 ignored), 59 bindings passes,
+155/155 selected corpus tests, the tool test suite, warning-denied Clippy and
+clean fmt/headers/docs/layering/ledger/anchors.
+
+This delivers the third stage-D increment: a sealed upload spool
+(`catalogue_jobs::spool`; bounded 64 KiB writes, checked byte counting, SHA-256
+over consumed bytes, exact-EOF sealing via `rustix` `renameat_with` NOREPLACE)
+and the status-snapshot primitives (`catalogue_jobs::status`; a checked
+never-wrapping `Revision`, a checked monotonic `deadline_after`, and
+`assemble_status` which builds, validates and bounds a `Status` against the
+delivered wire DTOs). Manager integration is deferred to the worker increment.
+No production route, upload, spool, status or drain is wired; WP-04.3 and WP-19
+remain open. See
+[the contract](contracts/catalogue-jobs/spool-status-increment.md).
+
 ## WP-04.3 stage D strict wire DTO layer — delivered (22 October 2026)
 
 Source merge `fecee1fd9` is published with exact live/tracking readback; the

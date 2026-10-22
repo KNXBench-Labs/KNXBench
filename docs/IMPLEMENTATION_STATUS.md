@@ -12,6 +12,26 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## WP-04.3 stage D ArtifactDir root + lease + fence — delivered (22 October 2026)
+
+Source merge `985c1b71c` is published with exact live/tracking readback; the
+feature branch `81508d8a` is its second parent and byte-exact tree. The
+change-scoped maintained gate passes all 14 ordered stages on the frozen
+merged tree: 1,210 Rust passes across 7 binary results (53 ignored), 51/51
+selected corpus tests, the tool test suite, warning-denied Clippy and clean
+fmt/headers/docs/layering/ledger/anchors.
+
+This delivers the fourth stage-D increment: the ArtifactDir ownership primitive
+(`catalogue_jobs::artifacts`) — the private `.knxbench-catalogue-jobs` root
+(atomic 0700 mkdir with a no-follow validation of an existing root), a stable
+`lease` locked with `rustix::fs::flock(NonBlockingLockExclusive)` and retained
+for the root's lifetime, 0700 `i-<32hex>`/`j-<32hex>` incarnation and job
+directories, and a bounded 16 384-byte inventory — plus the `paths.rs`
+reserved-name fence extended to the artifact root (relative and absolute
+reads/writes and the listing). No production route, upload, spool, status or
+drain is wired; WP-04.3 and WP-19 remain open. See
+[the contract](contracts/catalogue-jobs/artifact-dir-increment.md).
+
 ## WP-04.3 stage D upload spool + status snapshots — delivered (22 October 2026)
 
 Source merge `4222b81ce` is published with exact live/tracking readback; the

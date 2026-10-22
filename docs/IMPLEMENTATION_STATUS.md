@@ -12,6 +12,27 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## WP-04.3 stage D controlled source + policy identity — delivered (22 October 2026)
+
+Source merge `d0ee6323d` is published with exact live/tracking readback; the
+feature branch `016ef28c` is its second parent and byte-exact tree. The
+change-scoped maintained gate passes all 14 ordered stages on the frozen
+merged tree: 3,560 Rust passes across 24 binary results (151 ignored), 97/97
+selected corpus tests, the tool test suite, warning-denied Clippy and clean
+fmt/headers/docs/layering/ledger/anchors.
+
+This delivers the seventh stage-D increment, the second slice of route wiring:
+the controlled source + policy identity (`controlled`).
+`ControlledSource::admit` authenticates a sealed source against the P3 name
+grammar (1..=512 UTF-8 bytes, basename only) and the retained-byte ceiling,
+computing one SHA-256 over the actual bytes; `SourceIdentity` and
+`PolicyIdentity` are infallible projections of the admitted values, reusing
+the existing `PackageLimits` STANDARD/LARGE. Route wiring + worker execution
+(the Ready/apply installer), the `EmbeddedServerHandle` and the desktop exit
+interception remain the last stage-D slices. No production route is wired;
+WP-04.3 and WP-19 remain open. See
+[the contract](contracts/catalogue-jobs/controlled-source-increment.md).
+
 ## WP-04.3 stage D managed catalogue stamp + witness binding — delivered (22 October 2026)
 
 Source merge `030d53f57` is published with exact live/tracking readback; the

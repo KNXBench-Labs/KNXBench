@@ -37,6 +37,10 @@ mod catalogue_copy;
 // orchestration exists (WP-04.3 stage D, ADR-0150).
 #[allow(dead_code)]
 mod catalogue_stamp;
+// Private controlled source/policy identity remains unwired until the
+// preview/apply orchestration exists (WP-04.3 stage D, ADR-0150).
+#[allow(dead_code)]
+mod controlled;
 pub mod master_evidence;
 pub mod master_provenance;
 pub mod migration;

@@ -12,6 +12,42 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## WP-04.3 stage D — preview/apply orchestration (22 October 2026)
+
+Source `f33478c23` on `feat/wp043-orchestration-20261022`. This is the closing
+stage-D slice under [ADR-0150](adr/0150-cancellable-catalogue-jobs.md) and
+[managed-binding](contracts/catalogue-jobs/managed-binding.md) §5–§7: the two
+`ManagedCatalogue` orchestration entry points the server worker later calls,
+composing the already-delivered primitives.
+
+`preview_current_controlled` is a read-only rehearsal that changes no live
+catalogue bytes: it captures the original stamp, pins a distinct read-only S,
+copies S→D with the bounded `copy_pinned_current`, runs the shared
+`Cancellation`-aware installer on the disposable D, computes the complete
+`PreviewIdentity`, and returns a `ControlledPreview` (the retained
+`PreviewBinding` plus the full immutable `AdmittedPreviewArtifact`).
+`apply_current_controlled` is the live, stale-checked, commit-gated install:
+it re-verifies the source against the shown binding, refuses a changed
+catalogue (`stale`), copies S→D (rehearsal) and S→B (recovery), closes S
+before any live DML, then under one W IMMEDIATE managed mutation guard runs
+the shared installer, requires exact preview/report agreement, and arbitrates
+the one live COMMIT against the persistent gate. It never panics on a business
+refusal; it returns a `ControlledApplySettlement` carrying independent commit
+evidence (`NotCommitted|Committed|Unknown`), rollback disposition, the
+resulting writer health and the owned-artifact disposition. `PreviewBinding`
+gains a `preview: PreviewIdentity` field (`BINDING_VERSION` → 2).
+
+Private and unwired: no server route, worker, job, quiet-API or schema change.
+The reopened-D copy-content witness equality and the live W `max_page_count`
+growth reassertion (protocol-artifacts P5) remain later slices; the concurrent
+commit-gate barrier controls (B10) are separately required.
+
+Verified: 10 focused orchestration tests; the full owning `knx-productdb`
+suite 591 lib + 752 it (31 corpus skips) + 2 doc + 13 examples, 0 failed;
+warning-denied Clippy (`-D warnings`), `cargo fmt` and header checks clean;
+`knx-server`/`knx-app`/`knx-cli` compile unchanged. No bus/device access,
+vendor contact or hardware claim.
+
 ## WP-04.3 stage D complete preview identity — delivered (22 October 2026)
 
 Source merge `78d4be3c0` is published with exact live/tracking readback; the

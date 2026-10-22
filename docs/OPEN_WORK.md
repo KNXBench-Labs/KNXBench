@@ -298,7 +298,13 @@ complete preview identity
 ([`preview_identity`](contracts/catalogue-jobs/preview-identity-increment.md):
 a versioned typed encoding of the complete rehearsal install result — the
 digest the future preview computes and apply compares for exact preview/report
-agreement) — is delivered with 22 focused tests. Route
+agreement) — is delivered with 22 focused tests. The tenth, the preview/apply
+orchestration ([`orchestration`](contracts/catalogue-jobs/orchestration-increment.md):
+`ManagedCatalogue::preview_current_controlled` (read-only rehearsal returning a
+retained `PreviewBinding` + full `AdmittedPreviewArtifact`) and
+`apply_current_controlled` (stale-checked, commit-gated live install returning a
+`ControlledApplySettlement`); `PreviewBinding` gains a `preview: PreviewIdentity`
+field, `BINDING_VERSION` → 2) — is delivered with 10 focused tests. Route
 wiring + worker execution (the Ready/apply installer), the
 `EmbeddedServerHandle` and the desktop exit interception remain the last
 stage-D slices; no job route, Ready/apply or worker execution is wired.

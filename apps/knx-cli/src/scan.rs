@@ -282,10 +282,11 @@ pub fn build_scan_plan(
 /// Turns `--device <area.line.device>` into a single-address [`ScanPlan`],
 /// mirroring [`build_scan_plan`] for the one-device case. The named
 /// address must not be device 0 (the line coupler's own address). A
-/// configured `--exclude` that names exactly this address empties the plan
-/// and is refused with the same `EmptyRange` a fully-excluded span gets —
-/// the only self-consistent answer when the operator both names and
-/// forbids the one address they asked to probe.
+/// configured `--exclude` that names exactly this address — or a
+/// project-excluded address, which the plan builder seeds — empties the
+/// plan and is refused with the same `EmptyRange` a fully-excluded span
+/// gets: the only self-consistent answer when the operator names an
+/// address that must not be probed.
 pub fn build_single_device_plan(
     device_spec: &str,
     exclude_specs: &[String],
@@ -529,6 +530,7 @@ pub fn format_project_comparison(cmp: &ProjectComparison) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use knx_core::EXCLUDED_INDIVIDUAL_ADDRESSES;
 
     fn addr(area: u8, line: u8, device: u8) -> IndividualAddress {
         IndividualAddress::new(area, line, device).unwrap()
@@ -672,9 +674,11 @@ mod tests {
     // --- build_scan_plan ---
 
     #[test]
-    fn full_line_with_no_range_or_exclude_covers_every_device() {
+    fn full_line_omits_the_project_excluded_address() {
+        let project_excluded = EXCLUDED_INDIVIDUAL_ADDRESSES[0];
         let (plan, range, excluded) = build_scan_plan("1.1", None, &[]).unwrap();
-        assert_eq!(plan.addresses().len(), 255);
+        assert_eq!(plan.addresses().len(), 255 - 1);
+        assert!(!plan.addresses().contains(&project_excluded));
         assert_eq!(
             range,
             ScannedRange {
@@ -684,8 +688,8 @@ mod tests {
                 last_device: 255
             }
         );
-        assert!(excluded.is_empty());
-        assert!(plan.omitted().is_empty());
+        assert!(excluded.contains(&project_excluded));
+        assert_eq!(plan.omitted(), &[project_excluded]);
     }
 
     #[test]
@@ -752,6 +756,7 @@ mod tests {
 
     #[test]
     fn single_device_plan_probes_exactly_that_address() {
+        let project_excluded = EXCLUDED_INDIVIDUAL_ADDRESSES[0];
         let (plan, range, excluded) = build_single_device_plan("1.1.5", &[]).unwrap();
         assert_eq!(plan.addresses(), &[addr(1, 1, 5)]);
         assert_eq!(
@@ -763,7 +768,8 @@ mod tests {
                 last_device: 5
             }
         );
-        assert!(excluded.is_empty());
+        assert!(excluded.contains(&project_excluded));
+        assert_eq!(excluded.len(), EXCLUDED_INDIVIDUAL_ADDRESSES.len());
         assert!(plan.omitted().is_empty());
     }
 
@@ -790,6 +796,13 @@ mod tests {
     }
 
     #[test]
+    fn the_project_excluded_address_cannot_be_a_single_device_target() {
+        let project_excluded = EXCLUDED_INDIVIDUAL_ADDRESSES[0];
+        let err = build_single_device_plan(&project_excluded.to_string(), &[]).unwrap_err();
+        assert!(err.contains("empty"), "{err}");
+    }
+
+    #[test]
     fn an_unrelated_exclusion_does_not_touch_a_single_device_plan() {
         let (plan, _, excluded) = build_single_device_plan("1.1.5", &args(&["2.3.40"])).unwrap();
         assert_eq!(plan.addresses(), &[addr(1, 1, 5)]);
@@ -800,26 +813,34 @@ mod tests {
 
     #[test]
     fn dry_run_reports_candidate_count_bounds_and_excluded_list() {
+        let project_excluded = EXCLUDED_INDIVIDUAL_ADDRESSES[0];
         let (plan, _, excluded) =
             build_scan_plan("1.1", Some("1.1.2-1.1.9"), &args(&["1.1.4,1.1.5"])).unwrap();
         let text = format_dry_run(&plan, &excluded);
         assert!(text.contains("6 candidate address(es)"));
         assert!(text.contains("first 1.1.2"));
         assert!(text.contains("last 1.1.9"));
-        // Both explicitly configured exclusions are reported.
-        assert!(text.contains("excluded (2):"), "{text}");
+        // The two configured exclusions plus the project exclusion are all
+        // reported.
+        assert!(text.contains("excluded (3):"), "{text}");
         assert!(text.contains("1.1.4"));
         assert!(text.contains("1.1.5"));
-        // Both fall inside the requested span and are named as omitted.
+        assert!(text.contains(&project_excluded.to_string()));
+        // Only the two that fall inside the span are named as omitted.
         assert!(text.contains("omitted from this span (2):"), "{text}");
     }
 
     #[test]
-    fn dry_run_with_no_exclusions_still_names_the_zero_count() {
+    fn dry_run_with_no_configuration_still_names_the_project_exclusion() {
+        let project_excluded = EXCLUDED_INDIVIDUAL_ADDRESSES[0];
         let (plan, _, excluded) = build_scan_plan("1.1", Some("1.1.2-1.1.3"), &[]).unwrap();
         let text = format_dry_run(&plan, &excluded);
-        // With no configured exclusions, the report says so explicitly.
-        assert!(text.contains("excluded (0):"), "{text}");
+        // With no configured exclusions, the project exclusion is still
+        // reported rather than reading as an empty list.
+        assert!(text.contains("excluded (1):"), "{text}");
+        assert!(text.contains(&project_excluded.to_string()));
+        // It is outside this span, so nothing is omitted from it.
+        assert!(text.contains("omitted from this span (0):"), "{text}");
     }
 
     // --- build_probe_policy ---

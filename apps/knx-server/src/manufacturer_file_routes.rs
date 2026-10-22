@@ -95,18 +95,31 @@ fn restore_blocking(state: &crate::AppState, path: PathBuf) -> Result<RestoreDto
     }
     let bytes = std::fs::read(&path)
         .map_err(|e| ApiError::bad_request(format!("cannot read {}: {e}", path.display())))?;
-    let products = products.lock().expect("state mutex poisoned");
-    let report = knx_app::manufacturer_files::restore_from_knxproj(&products, &refs, bytes)
+    let report = products
+        .with_legacy_mutation(
+            knx_productdb::managed_catalogue::LegacyMutationKind::DirectPackage,
+            |conn| knx_app::manufacturer_files::restore_from_knxproj(conn, &refs, bytes),
+            |result| match result {
+                // Every error path precedes the ingest loop: opening the
+                // archive or the pre-write missing scan.
+                Ok(_) => knx_productdb::managed_catalogue::LegacySettlementHint::SuccessfulReturn,
+                Err(_) => {
+                    knx_productdb::managed_catalogue::LegacySettlementHint::PreCommitSemanticRefusal
+                }
+            },
+        )
+        .map_err(crate::catalogue_owner::owner_error)?
         .map_err(|e| match e {
             knx_app::manufacturer_files::ProductDataError::Archive(e) => {
                 ApiError::refused("notAnArchive", e.to_string())
             }
             e => ApiError::internal(e.to_string()),
         })?;
-    let still_missing = knx_app::manufacturer_files::missing_from_products(&products, &refs)
+    let still_missing = products
+        .with_read(|conn| knx_app::manufacturer_files::missing_from_products(conn, &refs))
+        .map_err(crate::catalogue_owner::owner_error)?
         .map_err(|e| ApiError::internal(e.to_string()))?
         .len();
-    drop(products);
     log_restore(state, &path, &report, still_missing);
     Ok(RestoreDto {
         installed: report.installed,

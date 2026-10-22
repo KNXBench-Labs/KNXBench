@@ -241,7 +241,7 @@ pub(crate) fn prepare(
     target: IndividualAddress,
     partial: Option<PartialDownloadParts>,
 ) -> Result<PreparedDownload, ApiError> {
-    let Some(products) = state.product_db.as_ref() else {
+    let Some(owner) = state.product_db.as_ref() else {
         return Err(ApiError::with_kind(
             StatusCode::CONFLICT,
             "downloadProductDataMissing",
@@ -256,8 +256,9 @@ pub(crate) fn prepare(
             "no project is open",
         ));
     };
-    let products = products.lock().expect("state mutex poisoned");
-    let prepared = prepare_device_download(&products, project, target)
+    let prepared = owner
+        .with_read(|products| prepare_device_download(products, project, target))
+        .map_err(crate::catalogue_owner::owner_error)?
         .map_err(|e| prepare_error(target, &e))?;
     match partial {
         None => Ok(prepared),
@@ -487,19 +488,23 @@ async fn start(
     }
 
     let report = {
-        let Some(products) = state.product_db.as_ref() else {
+        let Some(owner) = state.product_db.as_ref() else {
             return Err(ApiError::with_status(
                 StatusCode::CONFLICT,
                 no_application_program(&state),
             ));
         };
-        let products = products.lock().expect("state mutex poisoned");
-        prepare_report(&products, &prepared, &level, &crate::version_string()).map_err(|e| {
-            ApiError::with_status(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("not sent: the download report could not be prepared: {e}"),
-            )
-        })?
+        owner
+            .with_read(|products| {
+                prepare_report(products, &prepared, &level, &crate::version_string())
+            })
+            .map_err(crate::catalogue_owner::owner_error)?
+            .map_err(|e| {
+                ApiError::with_status(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("not sent: the download report could not be prepared: {e}"),
+                )
+            })?
     };
     let activity = state
         .one_shot_activity

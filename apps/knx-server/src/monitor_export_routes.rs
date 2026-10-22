@@ -138,17 +138,13 @@ fn build(state: &SharedState, request: &PreviewRequest) -> Result<ExportBundle, 
             "product database unavailable; monitoring export refused",
         ));
     }
-    let products = state
-        .product_db
-        .as_ref()
-        .map(|products| {
-            products
-                .lock()
-                .map_err(|_| ApiError::internal("product database lock poisoned"))
-        })
-        .transpose()?;
-    monitor_export::build(&project, products.as_deref(), &options)
-        .map_err(|message| ApiError::with_status(StatusCode::UNPROCESSABLE_ENTITY, message))
+    match state.product_db.as_ref() {
+        None => monitor_export::build(&project, None, &options),
+        Some(owner) => owner
+            .with_read(|products| monitor_export::build(&project, Some(products), &options))
+            .map_err(|_| ApiError::internal("product database lock poisoned"))?,
+    }
+    .map_err(|message| ApiError::with_status(StatusCode::UNPROCESSABLE_ENTITY, message))
 }
 
 fn private_response(mut response: Response) -> Response {

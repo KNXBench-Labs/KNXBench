@@ -12,6 +12,29 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## WP-04.3 stage D managed catalogue stamp + witness binding — delivered (22 October 2026)
+
+Source merge `030d53f57` is published with exact live/tracking readback; the
+feature branch `31525e05` is its second parent and byte-exact tree. The
+change-scoped maintained gate passes all 14 ordered stages on the frozen
+merged tree: 3,552 Rust passes across 24 binary results (151 ignored), 97/97
+selected corpus tests, the tool test suite, warning-denied Clippy and clean
+fmt/headers/docs/layering/ledger/anchors.
+
+This delivers the sixth stage-D increment, the first slice of route wiring:
+the managed catalogue stamp + witness binding (`catalogue_stamp`).
+`CatalogueStamp` binds the incarnation, generation, connection-local
+`data_version`, conservative `total_changes`, the file stamp and the full live
+witness, captured by `ManagedCatalogue::capture_stamp` under one read-only W
+IMMEDIATE reservation with an explicit rollback on every path. The delivered
+live witness (`CatalogueWitness`, `WitnessError`, `witness_current`) is now
+reachable crate-internally; the copy witness stays private for the later
+copy-validation slice. Route wiring + worker execution (the Ready/apply
+installer), the `EmbeddedServerHandle` and the desktop exit interception
+remain the last stage-D slices. No production route is wired; WP-04.3 and
+WP-19 remain open. See
+[the contract](contracts/catalogue-jobs/stamp-binding-increment.md).
+
 ## WP-04.3 stage D catalogue jobs owner + close/drain — delivered (22 October 2026)
 
 Source merge `564da29e2` is published with exact live/tracking readback; the

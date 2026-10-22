@@ -46,13 +46,13 @@ impl WitnessKind {
 
 /// One complete catalogue witness: a digest plus exact scan accounting.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct CatalogueWitness {
-    encoding_version: u32,
-    sha256: [u8; 32],
-    table_count: u32,
-    schema_object_count: u32,
-    row_count: u64,
-    encoded_bytes: u64,
+pub(crate) struct CatalogueWitness {
+    pub(crate) encoding_version: u32,
+    pub(crate) sha256: [u8; 32],
+    pub(crate) table_count: u32,
+    pub(crate) schema_object_count: u32,
+    pub(crate) row_count: u64,
+    pub(crate) encoded_bytes: u64,
 }
 
 /// One completed native copy's content witness. Same scan accounting as the
@@ -69,7 +69,7 @@ struct CopyContentWitness {
 }
 
 #[derive(Debug)]
-enum WitnessError {
+pub(crate) enum WitnessError {
     Admission(AdmissionError),
     Observation(rusqlite::Error),
     Stop(Stop),
@@ -473,7 +473,7 @@ fn stream_witness(
 }
 
 /// Produces the live Ready/apply witness for one transaction.
-fn witness_current(
+pub(crate) fn witness_current(
     tx: &Transaction,
     gate: &PublicationGate,
 ) -> Result<CatalogueWitness, WitnessError> {

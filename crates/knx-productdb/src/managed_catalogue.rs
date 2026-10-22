@@ -8,7 +8,9 @@
 use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 
-use rusqlite::Connection;
+use rusqlite::{Connection, DropBehavior, TransactionBehavior};
+
+use crate::operation::PublicationGate;
 
 /// A fresh, never-reused 128-bit value identifying one adopted managed handle.
 /// Distinct from the server incarnation and any job identity.
@@ -377,6 +379,76 @@ impl ManagedCatalogue {
         }
     }
 
+    /// Captures an immutable catalogue stamp under one read-only W IMMEDIATE
+    /// reservation. Increments no generation and changes no rows: the
+    /// transaction is explicitly rolled back and the connection is verified
+    /// autocommit before the stamp is returned. A change underneath the
+    /// snapshot refuses instead of resetting the baseline.
+    #[allow(dead_code)] // used by the future preview/apply orchestration
+    pub(crate) fn capture_stamp(
+        &mut self,
+        gate: &PublicationGate,
+    ) -> Result<crate::catalogue_stamp::CatalogueStamp, crate::catalogue_stamp::StampError> {
+        use crate::catalogue_stamp::{CatalogueStamp, StampError};
+
+        if self.health != WriterHealth::Healthy {
+            return Err(StampError::NotHealthy(self.health));
+        }
+        let incarnation = self.incarnation;
+        let generation = self.generation;
+        let file = self
+            .identity
+            .as_ref()
+            .and_then(|id| FileStamp::from_path(&id.canonical));
+
+        let conn = self.conn.as_mut().ok_or(StampError::MissingConnection)?;
+        let mut tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
+        tx.set_drop_behavior(DropBehavior::Ignore);
+
+        // Capture the snapshot under the reservation. Any refusal still falls
+        // through to the explicit rollback below, so a typed Stop or witness
+        // error never leaves the connection inside a transaction.
+        let outcome =
+            (|| -> Result<(i64, i64, crate::catalogue_schema::CatalogueWitness), StampError> {
+                // A real main read pins the reservation to an actual snapshot;
+                // BEGIN alone does not.
+                let _: i64 =
+                    tx.query_row("SELECT count(*) FROM sqlite_schema", [], |r| r.get(0))?;
+                let before: i64 = tx.query_row("PRAGMA data_version", [], |r| r.get(0))?;
+                let witness = crate::catalogue_schema::witness_current(&tx, gate)?;
+                let after: i64 = tx.query_row("PRAGMA data_version", [], |r| r.get(0))?;
+                Ok((before, after, witness))
+            })();
+
+        // End the unchanged reservation with one explicit rollback on every
+        // path (success, witness stop and observation error alike).
+        let rollback = tx.execute_batch("ROLLBACK");
+        drop(tx);
+        rollback?;
+
+        let (before, after, witness) = outcome?;
+        if before != after {
+            return Err(StampError::Observation(
+                "data_version changed during the reservation",
+            ));
+        }
+        if !conn.is_autocommit() {
+            return Err(StampError::Observation(
+                "reservation did not roll back to autocommit",
+            ));
+        }
+
+        let total_changes = conn.total_changes();
+        Ok(CatalogueStamp {
+            incarnation,
+            generation,
+            data_version: before,
+            total_changes,
+            file,
+            witness,
+        })
+    }
+
     fn refresh_observation(&mut self) -> Result<(), OwnerError> {
         let conn = self.conn.as_ref().ok_or(OwnerError::MissingConnection)?;
         let path = self.identity.as_ref().map(|id| id.canonical.clone());
@@ -561,5 +633,114 @@ mod tests {
         assert!(matches!(err, OwnerRestoreError::InvalidBackup(_)));
         assert!(matches!(owner.health, WriterHealth::Healthy));
         assert!(owner.conn.is_some());
+    }
+
+    /// A real, migrated schema-28 product DB, since `capture_stamp` runs the
+    /// full witness which admits only the supported schema shape.
+    fn migrated_owner() -> (tempfile::TempDir, PathBuf, ManagedCatalogue) {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("products.sqlite");
+        let conn = crate::open_and_migrate(&path).unwrap();
+        let owner = ManagedCatalogue::adopt_opened(conn, path.clone()).unwrap();
+        (dir, path, owner)
+    }
+
+    #[test]
+    fn a_captured_stamp_binds_the_full_witness_and_identity() {
+        let (_dir, _path, mut owner) = migrated_owner();
+        let gate = PublicationGate::new();
+        let stamp = owner.capture_stamp(&gate).unwrap();
+        assert_eq!(stamp.generation, 0);
+        assert_eq!(stamp.incarnation, owner.incarnation);
+        assert!(stamp.file.is_some());
+        assert_eq!(stamp.witness.table_count, 47);
+        assert_eq!(stamp.witness.schema_object_count, 120);
+        assert_eq!(stamp.witness.row_count, 121);
+        assert_ne!(stamp.witness.sha256, [0u8; 32]);
+    }
+
+    #[test]
+    fn two_consecutive_captures_are_identical_and_leave_the_connection_autocommit() {
+        let (_dir, _path, mut owner) = migrated_owner();
+        let gate = PublicationGate::new();
+        let first = owner.capture_stamp(&gate).unwrap();
+        let second = owner.capture_stamp(&gate).unwrap();
+        assert_eq!(first, second);
+        assert!(owner.conn.as_ref().unwrap().is_autocommit());
+        assert_eq!(owner.generation, 0);
+    }
+
+    #[test]
+    fn an_external_write_changes_data_version_and_the_witness() {
+        let (_dir, path, mut owner) = migrated_owner();
+        let gate = PublicationGate::new();
+        let first = owner.capture_stamp(&gate).unwrap();
+        {
+            let other = Connection::open(&path).unwrap();
+            other
+                .execute(
+                    "INSERT INTO manufacturer (id, name) VALUES ('m1', 'Example Co')",
+                    [],
+                )
+                .unwrap();
+        }
+        let second = owner.capture_stamp(&gate).unwrap();
+        assert_ne!(first.data_version, second.data_version);
+        assert_ne!(first.witness.sha256, second.witness.sha256);
+    }
+
+    #[test]
+    fn a_same_handle_managed_write_consumes_a_generation_not_a_data_version() {
+        let (_dir, _path, mut owner) = migrated_owner();
+        let gate = PublicationGate::new();
+        let first = owner.capture_stamp(&gate).unwrap();
+        owner
+            .with_legacy_mutation(
+                LegacyMutationKind::DirectPackage,
+                |conn| {
+                    conn.execute(
+                        "INSERT INTO manufacturer (id, name) VALUES ('m2', 'Acme')",
+                        [],
+                    )?;
+                    Ok::<_, rusqlite::Error>(())
+                },
+                |_| LegacySettlementHint::SuccessfulReturn,
+            )
+            .unwrap()
+            .unwrap();
+        let second = owner.capture_stamp(&gate).unwrap();
+        assert_eq!(first.generation, 0);
+        assert_eq!(second.generation, 1);
+        // A same-W commit does not move W's own data_version; generation is
+        // the complementary detector (managed-binding §3).
+        assert_eq!(first.data_version, second.data_version);
+        assert_ne!(first.witness.sha256, second.witness.sha256);
+    }
+
+    #[test]
+    fn capture_stamp_refuses_a_non_healthy_owner() {
+        let (_dir, _path, mut owner) = migrated_owner();
+        owner.health = WriterHealth::Quarantined(QuarantineReason::Panic);
+        let err = owner.capture_stamp(&PublicationGate::new()).unwrap_err();
+        assert!(matches!(
+            err,
+            crate::catalogue_stamp::StampError::NotHealthy(_)
+        ));
+    }
+
+    #[test]
+    fn a_precancelled_gate_stops_the_capture_and_still_rolls_back() {
+        let (_dir, _path, mut owner) = migrated_owner();
+        let gate = PublicationGate::new();
+        assert_eq!(gate.try_cancel(), crate::operation::CancelOutcome::Accepted);
+        let err = owner.capture_stamp(&gate).unwrap_err();
+        assert!(matches!(
+            err,
+            crate::catalogue_stamp::StampError::Witness(
+                crate::catalogue_schema::WitnessError::Stop(crate::operation::Stop::CancelAccepted)
+            )
+        ));
+        // The read-only reservation is still rolled back to autocommit.
+        assert!(owner.conn.as_ref().unwrap().is_autocommit());
     }
 }

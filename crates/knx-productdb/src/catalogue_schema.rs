@@ -10,8 +10,10 @@ use rusqlite::Transaction;
 mod schema28;
 mod witness;
 
+pub(crate) use witness::{witness_current, CatalogueWitness, WitnessError};
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Limit {
+pub(crate) enum Limit {
     Objects,
     Tables,
     Columns,
@@ -21,7 +23,7 @@ enum Limit {
 }
 
 #[derive(Debug)]
-enum AdmissionError {
+pub(crate) enum AdmissionError {
     UnsupportedVersion(i64),
     UnsupportedSchemaShape,
     WitnessSchemaAdmissionLimit(Limit),

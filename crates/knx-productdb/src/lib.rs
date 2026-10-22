@@ -57,6 +57,10 @@ mod preview_binding;
 // preview/apply orchestration exists (WP-04.3 stage D, ADR-0150).
 #[allow(dead_code)]
 mod preview_identity;
+// Private preview/apply orchestration types remain unwired until the server
+// worker calls the ManagedCatalogue orchestration methods (WP-04.3 stage D).
+#[allow(dead_code)]
+mod orchestration;
 pub mod procedure_resolution;
 mod promotion_repair;
 pub mod query;

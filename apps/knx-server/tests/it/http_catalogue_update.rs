@@ -645,9 +645,9 @@ async fn restore_by_listed_name_brings_the_old_catalogue_back_to_the_server_conn
         .as_ref()
         .unwrap()
         .with_read(|conn| {
-            Ok::<_, std::convert::Infallible>(
-                conn.execute_batch("CREATE TEMP TABLE old_connection(x)").unwrap(),
-            )
+            conn.execute_batch("CREATE TEMP TABLE old_connection(x)")
+                .unwrap();
+            Ok::<(), std::convert::Infallible>(())
         })
         .unwrap()
         .unwrap();
@@ -1035,7 +1035,7 @@ fn add_twin_placements(f: &Fixture) {
         .as_ref()
         .unwrap()
         .with_read(|conn| {
-            Ok::<_, std::convert::Infallible>(conn.execute_batch(&format!(
+            conn.execute_batch(&format!(
                 "INSERT INTO catalog_item (id, manufacturer_id, section_id, name, product_ref_id,
                      hardware2program_ref_id, source_sha256)
                  SELECT 'CI-A', 'M-0001', 'SECTION', 'Dimmer', '{PRODUCT}', '{BINDING}', source_sha256
@@ -1045,7 +1045,8 @@ fn add_twin_placements(f: &Fixture) {
                  SELECT 'CI-B', 'M-0001', 'SECTION', 'Dimmer', '{PRODUCT}', '{BINDING}', source_sha256
                  FROM application_program;"
             ))
-            .unwrap())
+            .unwrap();
+            Ok::<(), std::convert::Infallible>(())
         })
         .unwrap()
         .unwrap();
@@ -1304,12 +1305,13 @@ async fn cleanup_preview_from_before_a_restore_is_stale_even_for_equal_contents(
             .as_ref()
             .unwrap()
             .with_read(|conn| {
-                Ok::<_, std::convert::Infallible>(conn.execute_batch(
+                conn.execute_batch(
                     "INSERT INTO catalog_item (id, manufacturer_id, section_id, name, source_sha256)
                      SELECT 'CI-TEMP', manufacturer_id, section_id, name, source_sha256
                      FROM catalog_item WHERE id = 'CI-A';",
                 )
-                .unwrap())
+                .unwrap();
+                Ok::<(), std::convert::Infallible>(())
             })
             .unwrap()
             .unwrap();
@@ -1345,9 +1347,9 @@ async fn cleanup_preview_from_before_a_restore_is_stale_even_for_equal_contents(
             .as_ref()
             .unwrap()
             .with_read(|conn| {
-                Ok::<_, std::convert::Infallible>(
-                    conn.execute_batch("DELETE FROM catalog_item WHERE id = 'CI-TEMP'").unwrap(),
-                )
+                conn.execute_batch("DELETE FROM catalog_item WHERE id = 'CI-TEMP'")
+                    .unwrap();
+                Ok::<(), std::convert::Infallible>(())
             })
             .unwrap()
             .unwrap();

@@ -128,8 +128,9 @@ fn state_in(
     if let Some(dir) = data_dir {
         state.data_dir = dir.to_path_buf();
     }
-    state.product_db =
-        Some(knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap());
+    state.product_db = Some(
+        knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap(),
+    );
     let project = project();
     *state.clean_project.lock().unwrap() = Some(project.clone());
     *state.project.lock().unwrap() = Some(project);

@@ -4,10 +4,7 @@ use axum::{
     http::{Request, StatusCode},
 };
 use serde_json::{json, Value};
-use std::{
-    path::Path,
-    sync::Arc,
-};
+use std::{path::Path, sync::Arc};
 use tower::ServiceExt;
 
 async fn post(app: &axum::Router, path: &str, body: Value) -> Vec<u8> {

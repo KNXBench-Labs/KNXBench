@@ -153,8 +153,9 @@ fn state(page: Option<&str>) -> (tempfile::TempDir, Arc<knx_server::AppState>) {
             .collect(),
     });
     let mut state = knx_server::AppState::new(dir.path().to_path_buf());
-    state.product_db =
-        Some(knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap());
+    state.product_db = Some(
+        knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap(),
+    );
     *state.project.lock().unwrap() = Some(project);
     (dir, Arc::new(state))
 }

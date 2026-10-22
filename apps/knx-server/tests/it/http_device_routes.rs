@@ -115,8 +115,9 @@ async fn body_json(response: axum::response::Response) -> Value {
 async fn creating_a_device_from_a_catalog_item_seeds_its_com_objects_then_deletes() {
     let mut state = state_with_one_installation();
     let (_dir, products) = temp_product_db();
-    state.product_db =
-        Some(knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap());
+    state.product_db = Some(
+        knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap(),
+    );
     let state = Arc::new(state);
     let app = knx_server::app(Arc::clone(&state), None);
 
@@ -193,8 +194,9 @@ async fn dangling_com_object_ref_is_rejected_before_the_command_or_undo_state_ch
     products
         .execute("DELETE FROM com_object WHERE id = 'A-1_O-1'", [])
         .unwrap();
-    state.product_db =
-        Some(knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap());
+    state.product_db = Some(
+        knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap(),
+    );
     let state = Arc::new(state);
     let app = knx_server::app(Arc::clone(&state), None);
 
@@ -236,8 +238,9 @@ async fn missing_application_program_is_rejected_before_the_command_or_undo_stat
     products
         .execute("DELETE FROM application_program WHERE id = 'A-1'", [])
         .unwrap();
-    state.product_db =
-        Some(knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap());
+    state.product_db = Some(
+        knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap(),
+    );
     let state = Arc::new(state);
     let app = knx_server::app(Arc::clone(&state), None);
 
@@ -383,8 +386,9 @@ async fn deleting_a_device_with_a_linked_com_object_is_a_400() {
 async fn catalog_routes_list_the_manufacturer_and_item_just_ingested() {
     let mut state = state_with_one_installation();
     let (_dir, products) = temp_product_db();
-    state.product_db =
-        Some(knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap());
+    state.product_db = Some(
+        knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap(),
+    );
     let app = knx_server::app(Arc::new(state), None);
 
     let manufacturers = app
@@ -427,8 +431,9 @@ async fn catalog_item_with_a_missing_hardware_to_program_relation_is_rejected_wi
     products
         .execute("DELETE FROM hardware2program WHERE id = 'H-1_HP-1'", [])
         .unwrap();
-    state.product_db =
-        Some(knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap());
+    state.product_db = Some(
+        knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap(),
+    );
     let state = Arc::new(state);
     let app = knx_server::app(Arc::clone(&state), None);
 
@@ -474,8 +479,9 @@ async fn genuinely_programless_product_succeeds_with_a_visible_diagnostic() {
              UPDATE hardware SET has_application_program = 0 WHERE id = 'H-1'",
         )
         .unwrap();
-    state.product_db =
-        Some(knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap());
+    state.product_db = Some(
+        knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap(),
+    );
     let app = knx_server::app(Arc::new(state), None);
 
     let response = app
@@ -518,8 +524,9 @@ async fn ambiguous_dpt_enrichment_succeeds_and_reports_the_alternatives() {
             [],
         )
         .unwrap();
-    state.product_db =
-        Some(knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap());
+    state.product_db = Some(
+        knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap(),
+    );
     let app = knx_server::app(Arc::new(state), None);
 
     let response = app

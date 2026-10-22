@@ -104,8 +104,9 @@ async fn panel(dynamic: &str) -> Value {
     });
     project.ids = knx_core::project::IdAllocators::from_counts(1, 0, 0, 0, 0, 0, 0, 0, 0);
     let mut state = knx_server::AppState::default();
-    state.product_db =
-        Some(knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap());
+    state.product_db = Some(
+        knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap(),
+    );
     *state.project.lock().unwrap() = Some(project);
     let response = knx_server::app(Arc::new(state), None)
         .oneshot(

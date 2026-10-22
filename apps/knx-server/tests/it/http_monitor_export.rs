@@ -62,8 +62,9 @@ async fn catalogue_changes_invalidate_bundle_without_revision_and_export_never_w
     products.execute_batch("PRAGMA query_only = ON").unwrap();
     let mut state =
         Arc::try_unwrap(state).unwrap_or_else(|_| panic!("fixture unexpectedly shared"));
-    state.product_db =
-        Some(knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap());
+    state.product_db = Some(
+        knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap(),
+    );
     let state = Arc::new(state);
     let before = state.project.lock().unwrap().clone();
     let app = knx_server::app(state.clone(), None);
@@ -142,18 +143,17 @@ async fn poisoned_product_lock_is_refused_instead_of_silently_omitting_catalogue
     let products = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
     let mut state =
         Arc::try_unwrap(state).unwrap_or_else(|_| panic!("fixture unexpectedly shared"));
-    state.product_db =
-        Some(knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap());
+    state.product_db = Some(
+        knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap(),
+    );
     let state = Arc::new(state);
     let poisoner = state.clone();
     assert!(std::thread::spawn(move || {
-        let _ = poisoner
-            .product_db
-            .as_ref()
-            .unwrap()
-            .with_read(|_conn| -> Result<(), std::convert::Infallible> {
+        let _ = poisoner.product_db.as_ref().unwrap().with_read(
+            |_conn| -> Result<(), std::convert::Infallible> {
                 panic!("fictional product lock poisoning")
-            });
+            },
+        );
     })
     .join()
     .is_err());

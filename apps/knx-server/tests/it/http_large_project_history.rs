@@ -8,10 +8,7 @@ use axum::{
 };
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
-use std::{
-    path::Path,
-    sync::Arc,
-};
+use std::{path::Path, sync::Arc};
 use tower::ServiceExt;
 
 async fn request(app: &axum::Router, path: &str, payload: Value) -> Value {

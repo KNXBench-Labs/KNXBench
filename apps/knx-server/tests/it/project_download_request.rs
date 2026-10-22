@@ -232,8 +232,12 @@ async fn a_saved_project_yields_exactly_the_hand_written_option_c_image() {
             .unwrap()
             .with_read(|conn| {
                 Ok::<_, std::convert::Infallible>(
-                    image_request_for_device(conn, project.as_ref().unwrap(), DeviceId(device as u32))
-                        .expect("maps"),
+                    image_request_for_device(
+                        conn,
+                        project.as_ref().unwrap(),
+                        DeviceId(device as u32),
+                    )
+                    .expect("maps"),
                 )
             })
             .unwrap()
@@ -315,9 +319,11 @@ async fn a_saved_project_yields_exactly_the_hand_written_option_c_image() {
             .as_ref()
             .unwrap()
             .with_read(|conn| {
-                Ok::<_, std::convert::Infallible>(
-                    image_request_for_device(conn, project.as_ref().unwrap(), DeviceId(device as u32)),
-                )
+                Ok::<_, std::convert::Infallible>(image_request_for_device(
+                    conn,
+                    project.as_ref().unwrap(),
+                    DeviceId(device as u32),
+                ))
             })
             .unwrap()
             .unwrap();

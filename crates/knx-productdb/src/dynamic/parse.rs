@@ -16,6 +16,7 @@ use quick_xml::events::Event;
 use quick_xml::Reader;
 use rusqlite::{params, Connection, OptionalExtension};
 
+use crate::operation::Cancellation;
 use crate::report::{EntityCounts, EntityKind, UnknownCollector, UnknownConstruct};
 use crate::xml::{attrs, local_name, Attrs};
 use crate::ProductDbError;
@@ -222,7 +223,10 @@ pub fn parse_dynamic_trees(
     source_path: &str,
     bytes: &[u8],
 ) -> Result<DynamicIngest, ProductDbError> {
-    Ok(parse_dynamic_trees_detailed(conn, source_sha256, source_path, bytes)?.outcome)
+    Ok(
+        parse_dynamic_trees_detailed(conn, source_sha256, source_path, bytes, Cancellation::Quiet)?
+            .outcome,
+    )
 }
 
 pub(crate) fn parse_dynamic_trees_detailed(
@@ -230,6 +234,7 @@ pub(crate) fn parse_dynamic_trees_detailed(
     source_sha256: &str,
     source_path: &str,
     bytes: &[u8],
+    cancellation: Cancellation<'_>,
 ) -> Result<DetailedDynamicIngest, ProductDbError> {
     let mut reader = Reader::from_reader(bytes);
     let mut buf = Vec::new();
@@ -257,6 +262,7 @@ pub(crate) fn parse_dynamic_trees_detailed(
     };
 
     loop {
+        cancellation.checkpoint()?;
         buf.clear();
         let event = reader
             .read_event_into(&mut buf)

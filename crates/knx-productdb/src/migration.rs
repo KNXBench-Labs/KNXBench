@@ -21,8 +21,18 @@ pub const CURRENT_PRODUCTDB_VERSION: i64 = 28;
 #[derive(Debug)]
 pub enum ProductDbError {
     Sqlite(rusqlite::Error),
-    Xml { source_path: String, cause: String },
-    FutureVersion { found: i64, supported: i64 },
+    Xml {
+        source_path: String,
+        cause: String,
+    },
+    FutureVersion {
+        found: i64,
+        supported: i64,
+    },
+    /// The installer's cancellation control reported a typed stop. Never
+    /// produced by the quiet public path; only a controlled install can
+    /// observe it, exactly like any other refusal, and must roll back.
+    Cancelled(crate::operation::Stop),
 }
 
 impl std::error::Error for ProductDbError {}
@@ -38,6 +48,7 @@ impl fmt::Display for ProductDbError {
                 f,
                 "product database is version {found}, this build supports up to {supported} — no downgrade path exists"
             ),
+            ProductDbError::Cancelled(_) => write!(f, "catalogue install cancelled"),
         }
     }
 }
@@ -45,6 +56,12 @@ impl fmt::Display for ProductDbError {
 impl From<rusqlite::Error> for ProductDbError {
     fn from(e: rusqlite::Error) -> Self {
         ProductDbError::Sqlite(e)
+    }
+}
+
+impl From<crate::operation::Stop> for ProductDbError {
+    fn from(stop: crate::operation::Stop) -> Self {
+        ProductDbError::Cancelled(stop)
     }
 }
 
@@ -1425,6 +1442,7 @@ fn migrate_v19_to_v20(conn: &Connection) -> Result<(), ProductDbError> {
             &sha256,
             &source_path,
             &bytes,
+            crate::operation::Cancellation::Quiet,
         ) {
             Ok(()) => conn.execute_batch("RELEASE SAVEPOINT v20_write_authority;")?,
             Err(ProductDbError::Sqlite(error)) => return Err(ProductDbError::Sqlite(error)),
@@ -1786,7 +1804,12 @@ fn migrate_v16_to_v17(conn: &Connection) -> Result<(), ProductDbError> {
         };
         let intact = crate::sha256_hex(&bytes) == sha;
         if intact {
-            crate::identity::record_producer(conn, &sha, &bytes)?;
+            crate::identity::record_producer(
+                conn,
+                &sha,
+                &bytes,
+                crate::operation::Cancellation::Quiet,
+            )?;
         }
         if !parsed {
             continue;
@@ -1902,7 +1925,11 @@ fn migrate_v15_to_v16(conn: &Connection) -> Result<(), ProductDbError> {
         if classify(&bytes) != FileKind::Baggages {
             continue;
         }
-        match crate::parse::baggage::parse_baggage_index(&path, &bytes) {
+        match crate::parse::baggage::parse_baggage_index(
+            &path,
+            &bytes,
+            crate::operation::Cancellation::Quiet,
+        ) {
             Ok(index) => insert_unknown(conn, &sha, &index.unknown)?,
             Err(error @ ProductDbError::Xml { .. }) => {
                 crate::ingest::record_unreadable_baggage_index(conn, &sha, &path, &error)?

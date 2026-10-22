@@ -6,6 +6,7 @@ use quick_xml::{NsReader, XmlVersion};
 use std::collections::{HashMap, HashSet};
 use std::io::BufRead;
 
+use crate::operation::Cancellation;
 use crate::report::{UnknownCollector, UnknownConstruct, UnknownKind};
 use crate::xml::local_name;
 use crate::ProductDbError;
@@ -531,16 +532,32 @@ pub(crate) fn reconcile_targeted_unknowns(
     bytes: &[u8],
     source_path: &str,
     unknown: &mut Vec<UnknownConstruct>,
+    cancellation: Cancellation<'_>,
 ) -> Result<(), ProductDbError> {
-    reconcile_unknowns(bytes, source_path, unknown, false, EVIDENCE_BUDGET)
+    reconcile_unknowns(
+        bytes,
+        source_path,
+        unknown,
+        false,
+        EVIDENCE_BUDGET,
+        cancellation,
+    )
 }
 
 pub(crate) fn reconcile_package_unknowns(
     bytes: &[u8],
     source_path: &str,
     unknown: &mut Vec<UnknownConstruct>,
+    cancellation: Cancellation<'_>,
 ) -> Result<(), ProductDbError> {
-    reconcile_unknowns(bytes, source_path, unknown, true, EVIDENCE_BUDGET)
+    reconcile_unknowns(
+        bytes,
+        source_path,
+        unknown,
+        true,
+        EVIDENCE_BUDGET,
+        cancellation,
+    )
 }
 
 fn reconcile_unknowns(
@@ -549,6 +566,7 @@ fn reconcile_unknowns(
     unknown: &mut Vec<UnknownConstruct>,
     accept_extended_schemes: bool,
     budget: EvidenceBudget,
+    cancellation: Cancellation<'_>,
 ) -> Result<(), ProductDbError> {
     let text = bytes.strip_prefix(&[0xEF, 0xBB, 0xBF]).unwrap_or(bytes);
     if text.iter().find(|byte| !byte.is_ascii_whitespace()) != Some(&b'<') {
@@ -564,6 +582,7 @@ fn reconcile_unknowns(
     let mut evidence_bytes = 0;
     let mut project_namespace: Option<String> = None;
     loop {
+        cancellation.checkpoint()?;
         buffer.clear();
         let (namespace, event) = reader
             .read_resolved_event_into(&mut buffer)
@@ -812,10 +831,22 @@ mod tests {
     fn extended_scheme_scanning_is_package_only() {
         let xml = br#"<KNX xmlns="http://knx.org/xml/project/21"><ManufacturerData><Manufacturer><ApplicationPrograms><ApplicationProgram HardwareType="RF"/></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
         let mut generic = Vec::new();
-        reconcile_targeted_unknowns(xml, "application.xml", &mut generic).unwrap();
+        reconcile_targeted_unknowns(
+            xml,
+            "application.xml",
+            &mut generic,
+            crate::operation::Cancellation::Quiet,
+        )
+        .unwrap();
         assert!(generic.is_empty());
         let mut package = Vec::new();
-        reconcile_package_unknowns(xml, "application.xml", &mut package).unwrap();
+        reconcile_package_unknowns(
+            xml,
+            "application.xml",
+            &mut package,
+            crate::operation::Cancellation::Quiet,
+        )
+        .unwrap();
         assert!(package
             .iter()
             .any(|item| item.name == "HardwareType" && item.sample.as_deref() == Some("RF")));
@@ -832,7 +863,13 @@ mod tests {
             sample: Some("2".into()),
         }];
 
-        reconcile_targeted_unknowns(xml, "fixture.xml", &mut unknown).unwrap();
+        reconcile_targeted_unknowns(
+            xml,
+            "fixture.xml",
+            &mut unknown,
+            crate::operation::Cancellation::Quiet,
+        )
+        .unwrap();
 
         let occurrence = unknown
             .iter()
@@ -860,7 +897,13 @@ mod tests {
         };
         let mut unknown = vec![retained.clone()];
 
-        reconcile_targeted_unknowns(xml, "fixture.xml", &mut unknown).unwrap();
+        reconcile_targeted_unknowns(
+            xml,
+            "fixture.xml",
+            &mut unknown,
+            crate::operation::Cancellation::Quiet,
+        )
+        .unwrap();
 
         assert_eq!(unknown, vec![retained]);
     }
@@ -877,7 +920,13 @@ mod tests {
         };
         let mut unknown = vec![alias.clone()];
 
-        reconcile_targeted_unknowns(xml, "fixture.xml", &mut unknown).unwrap();
+        reconcile_targeted_unknowns(
+            xml,
+            "fixture.xml",
+            &mut unknown,
+            crate::operation::Cancellation::Quiet,
+        )
+        .unwrap();
 
         assert!(unknown.contains(&alias));
         assert_eq!(unknown.len(), 3);
@@ -907,6 +956,7 @@ mod tests {
             br#"<KNX xmlns="http://knx.org/xml/project/13"><Property Occurrence="2"/></KNX>"#,
             "fixture.xml",
             &mut other_scheme,
+            crate::operation::Cancellation::Quiet,
         )
         .unwrap();
         assert_eq!(other_scheme, vec![retained.clone()]);
@@ -932,7 +982,7 @@ mod tests {
             br#"<KNX xmlns="http://knx.org/xml/project/12" xmlns:e="urn:example"><ManufacturerData><Manufacturer><ApplicationPrograms><ApplicationProgram><Static><e:Property Occurrence="2"/><e:LdCtrlDeclarePropDesc ObjIdx="1"/></Static><Dynamic><ParameterSeparator e:UIHint="not-knx"/><e:ParameterSeparator UIHint="also-not-knx"/></Dynamic></ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#,
             "fixture.xml",
             &mut extension,
-        )
+        crate::operation::Cancellation::Quiet,)
         .unwrap();
         assert!(extension.contains(&retained));
         for name in [
@@ -984,7 +1034,13 @@ mod tests {
             },
         ];
 
-        reconcile_targeted_unknowns(xml, "fixture.xml", &mut unknown).unwrap();
+        reconcile_targeted_unknowns(
+            xml,
+            "fixture.xml",
+            &mut unknown,
+            crate::operation::Cancellation::Quiet,
+        )
+        .unwrap();
 
         assert!(unknown.iter().any(|item| {
             item.kind == UnknownKind::Element && item.name == "Other" && item.occurrences == 1
@@ -1025,7 +1081,13 @@ mod tests {
             },
         ];
 
-        reconcile_targeted_unknowns(xml, "fixture.xml", &mut unknown).unwrap();
+        reconcile_targeted_unknowns(
+            xml,
+            "fixture.xml",
+            &mut unknown,
+            crate::operation::Cancellation::Quiet,
+        )
+        .unwrap();
 
         assert!(unknown.iter().any(|item| {
             item.xpath == path
@@ -1045,7 +1107,13 @@ mod tests {
         let xml = br#"<KNX xmlns="http://knx.org/xml/project/12" xmlns:p="http://knx.org/xml/project/12"><ManufacturerData><Manufacturer><ApplicationPrograms><ApplicationProgram><Dynamic><p:ParameterBlock><p:ParameterSeparator UIHint="Text"/></p:ParameterBlock></Dynamic></ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
         let mut unknown = Vec::new();
 
-        reconcile_targeted_unknowns(xml, "fixture.xml", &mut unknown).unwrap();
+        reconcile_targeted_unknowns(
+            xml,
+            "fixture.xml",
+            &mut unknown,
+            crate::operation::Cancellation::Quiet,
+        )
+        .unwrap();
 
         let ui_hint = unknown.iter().find(|item| item.name == "UIHint").unwrap();
         assert!(ui_hint
@@ -1114,7 +1182,13 @@ mod tests {
     fn a_placing_property_occurrence_is_stored_not_targeted() {
         let xml = br#"<KNX xmlns="http://knx.org/xml/project/12"><ManufacturerData><Manufacturer><ApplicationPrograms><ApplicationProgram><Static><Parameters><Parameter><Property Occurrence="2"/></Parameter><Union><Property Occurrence="3"/></Union></Parameters><Property Occurrence="4"/></Static></ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
         let mut unknown = Vec::new();
-        reconcile_targeted_unknowns(xml, "fixture.xml", &mut unknown).unwrap();
+        reconcile_targeted_unknowns(
+            xml,
+            "fixture.xml",
+            &mut unknown,
+            crate::operation::Cancellation::Quiet,
+        )
+        .unwrap();
         let occurrences: Vec<&str> = unknown
             .iter()
             .filter(|item| item.name == "Occurrence")
@@ -1260,6 +1334,7 @@ mod tests {
             &mut unknown,
             false,
             KL152_BUDGET,
+            crate::operation::Cancellation::Quiet,
         )
         .expect_err("late item exhaustion must reject the complete scan");
         assert!(error.to_string().contains("evidence exceeds item limit"));
@@ -1294,6 +1369,7 @@ mod tests {
             &mut unknown,
             false,
             KL152_BUDGET,
+            crate::operation::Cancellation::Quiet,
         )
         .expect_err("repeated paths must not bypass the estimated-byte ceiling");
         assert!(error.to_string().contains("evidence exceeds byte limit"));
@@ -1319,8 +1395,13 @@ mod tests {
         };
         let mut unknown = vec![retained.clone()];
 
-        let error = reconcile_targeted_unknowns(xml.as_bytes(), "fixture.xml", &mut unknown)
-            .expect_err("excessive nesting must be rejected");
+        let error = reconcile_targeted_unknowns(
+            xml.as_bytes(),
+            "fixture.xml",
+            &mut unknown,
+            crate::operation::Cancellation::Quiet,
+        )
+        .expect_err("excessive nesting must be rejected");
 
         assert!(error.to_string().contains("nesting exceeds evidence limit"));
         assert_eq!(unknown, vec![retained]);

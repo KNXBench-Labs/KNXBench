@@ -24,6 +24,39 @@ pub enum Stop {
     CancelAccepted,
 }
 
+/// A cancellation check threaded through the installer and its parsers.
+///
+/// The quiet control never reports [`Stop`] and is what every existing
+/// public wrapper passes, so their behaviour is unchanged. The controlled
+/// control forwards to a [`PublicationGate`] and reports
+/// [`Stop::CancelAccepted`] as soon as that gate latched cancellation.
+///
+/// This carries no allocation, callback or SQL; a checkpoint is a single
+/// atomic read. It is not settlement evidence and must not abort the
+/// caller's rollback or cleanup.
+#[derive(Debug, Clone, Copy)]
+pub enum Cancellation<'a> {
+    /// The existing public API path: never cancelled.
+    Quiet,
+    /// A controlled path: stops once the gate accepts cancellation.
+    Controlled(&'a PublicationGate),
+}
+
+impl Cancellation<'_> {
+    /// Reports a typed [`Stop`] after accepted cancellation, else `Ok`.
+    ///
+    /// [`Cancellation::Quiet`] always returns `Ok(())`; a controlled control
+    /// forwards to [`PublicationGate::checkpoint`]. Callers check this at
+    /// every seam and propagate the [`Stop`] exactly like any other error,
+    /// never swallowing it into a string or a partial result.
+    pub fn checkpoint(&self) -> Result<(), Stop> {
+        match self {
+            Cancellation::Quiet => Ok(()),
+            Cancellation::Controlled(gate) => gate.checkpoint(),
+        }
+    }
+}
+
 /// The exact outcome of a cancellation request against the persistent gate.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CancelOutcome {
@@ -133,7 +166,7 @@ impl PublicationGate {
 
 #[cfg(test)]
 mod tests {
-    use super::{CancelOutcome, PublicationGate, PublicationState, Stop};
+    use super::{CancelOutcome, Cancellation, PublicationGate, PublicationState, Stop};
     use std::sync::{Arc, Barrier};
     use std::thread;
 
@@ -325,5 +358,34 @@ mod tests {
 
         assert_eq!(gate.state(), PublicationState::Open);
         assert_eq!(gate.checkpoint(), Ok(()));
+    }
+
+    #[test]
+    fn quiet_cancellation_never_stops() {
+        let quiet = Cancellation::Quiet;
+        for _ in 0..3 {
+            assert_eq!(quiet.checkpoint(), Ok(()));
+        }
+    }
+
+    #[test]
+    fn controlled_cancellation_stops_once_the_gate_accepts() {
+        let gate = PublicationGate::new();
+        let controlled = Cancellation::Controlled(&gate);
+
+        assert_eq!(controlled.checkpoint(), Ok(()));
+        assert_eq!(gate.try_cancel(), CancelOutcome::Accepted);
+        assert_eq!(controlled.checkpoint(), Err(Stop::CancelAccepted));
+        assert_eq!(controlled.checkpoint(), Err(Stop::CancelAccepted));
+    }
+
+    #[test]
+    fn controlled_cancellation_stays_quiet_after_a_commit_claim() {
+        let gate = PublicationGate::new();
+        let controlled = Cancellation::Controlled(&gate);
+
+        assert!(gate.try_claim_commit());
+        // A commit claim does not stop already-admitted precommit work.
+        assert_eq!(controlled.checkpoint(), Ok(()));
     }
 }

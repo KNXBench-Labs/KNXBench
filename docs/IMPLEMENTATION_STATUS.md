@@ -12,6 +12,28 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## WP-04.3 stage D preview binding composition — delivered (22 October 2026)
+
+Source merge `cd959df78` is published with exact live/tracking readback; the
+feature branch `99df706df` is its second parent and byte-exact tree. The
+change-scoped maintained gate passes all 14 ordered stages on the frozen
+merged tree: 3,566 Rust passes across 24 binary results (151 ignored), 97/97
+selected corpus tests, the tool test suite, warning-denied Clippy and clean
+fmt/headers/docs/layering/ledger/anchors.
+
+This delivers the eighth stage-D increment, the preview binding composition
+(`preview_binding`). `PreviewBinding` composes the `CatalogueStamp`,
+`SourceIdentity` and `PolicyIdentity` into the exact-equality binding the
+server retains between preview and apply; its equality is the apply-time
+staleness discriminator (committed catalogue change, different source or
+different policy all yield a different binding). The `preview_current_controlled`
+/ `apply_current_controlled` orchestration (and the `ControlledPreview` /
+`AdmittedPreviewArtifact` / `PreviewIdentity` types it requires) remain the
+next slice. Route wiring + worker execution (the Ready/apply installer), the
+`EmbeddedServerHandle` and the desktop exit interception remain the last
+stage-D slices. No production route is wired; WP-04.3 and WP-19 remain open.
+See [the contract](contracts/catalogue-jobs/preview-binding-increment.md).
+
 ## WP-04.3 stage D controlled source + policy identity — delivered (22 October 2026)
 
 Source merge `d0ee6323d` is published with exact live/tracking readback; the

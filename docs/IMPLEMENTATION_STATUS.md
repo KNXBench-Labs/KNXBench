@@ -12,6 +12,29 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## WP-04.3 stage D complete preview identity — delivered (22 October 2026)
+
+Source merge `78d4be3c0` is published with exact live/tracking readback; the
+feature branch `987a46691` is its second parent and byte-exact tree. The
+change-scoped maintained gate passes all 14 ordered stages on the frozen
+merged tree: 3,588 Rust passes across 24 binary results (151 ignored), 97/97
+selected corpus tests, the tool test suite, warning-denied Clippy and clean
+fmt/headers/docs/layering/ledger/anchors.
+
+This delivers the ninth stage-D increment, the complete preview identity
+(`preview_identity`). `preview_identity` encodes a complete
+`ProductFileInstall` result into a versioned typed SHA-256 identity
+(`PreviewIdentity`) — every admitted field with explicit nulls and
+deterministic ordering — the digest the future `preview_current_controlled`
+computes and `apply_current_controlled` compares for exact preview/report
+agreement. The `preview_current_controlled` / `apply_current_controlled`
+orchestration (and the `ControlledPreview` / `AdmittedPreviewArtifact` types,
+the W/S/D copy composition and the `PreviewBinding.preview` field) remain the
+next slice. Route wiring + worker execution (the Ready/apply installer), the
+`EmbeddedServerHandle` and the desktop exit interception remain the last
+stage-D slices. No production route is wired; WP-04.3 and WP-19 remain open.
+See [the contract](contracts/catalogue-jobs/preview-identity-increment.md).
+
 ## WP-04.3 stage D preview binding composition — delivered (22 October 2026)
 
 Source merge `cd959df78` is published with exact live/tracking readback; the

@@ -12,6 +12,15 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Dependabot excluded from the Hall of Fame (22 October 2026)
+
+The scoreboard policy now excludes the automated dependency bot
+`dependabot[bot]`; its pull request no longer earns XP, medals or a board row.
+The README block, `docs/community/HALL_OF_FAME.md` and the JSON snapshot are
+regenerated without it. 82 community tests pass. Repository tooling only; the
+orphaned PR credit comment on the bot's open PR is left as-is (see the
+community-recognition contract).
+
 ## WP-04.3 B1 schema admission — source delivered (21 October 2026)
 
 Source merge `2e0302028154` is published with exact live/tracking readback;

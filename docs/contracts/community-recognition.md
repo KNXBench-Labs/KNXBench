@@ -227,6 +227,21 @@ reviews or labels. PR review/discussion participation and retained PR awards
 remain unsupported. The board is a paginated live observation, not an immutable
 or transactional history; account-renaming limitations above remain.
 
+## Dependabot exclusion (owner amendment, 22 October 2026)
+
+The owner excluded the automated dependency bot `dependabot[bot]` from the
+scoreboard. It is added to `excluded_logins` in the policy, so its pull requests
+no longer earn XP, medals or a board row; the README block, the Hall of Fame page
+and the JSON snapshot are regenerated without it. This is a policy-data change
+only: no scoring rule, threshold, rank, schema or rendering logic changed.
+External human and AI-agent contributors remain eligible; only this named
+maintenance bot is excluded.
+
+The bot already posted one PR credit comment on dependabot's open PR before the
+exclusion (`knxbench-pr-credit:27`, comment id `6319447480`). Because excluded
+authors are skipped entirely, the next refresh will neither update nor remove
+that comment; it is left as-is and may be deleted manually by a maintainer.
+
 ## Acceptance
 
 The original thirty-two unit tests covered counting, reply-only contributors,
@@ -273,3 +288,10 @@ attribution, two completions in one refresh, report medals kept to the board,
 first merged PR naming both tracks, merge-time ordering across authors and a
 posted PR comment without a medal line. The live workflow run is not part of
 this local acceptance.
+
+Dependabot exclusion (22 October 2026): 82 community tests pass, including a
+regression test asserting the production policy excludes `dependabot[bot]` and
+the committed board no longer lists it. The board, README block and JSON
+snapshot are regenerated without dependabot. Repository-tooling-only change;
+no application build, Rust workspace, private-corpus, hardware or release gate
+is claimed.

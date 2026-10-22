@@ -1,5 +1,5 @@
 {
-  "excluded_logins": ["KNXBench-Labs", "Andre1Becker"],
+  "excluded_logins": ["KNXBench-Labs", "Andre1Becker", "dependabot[bot]"],
   "trusted_notice_logins": ["KNXBench-Labs", "Andre1Becker"],
   "issue_xp": 5,
   "reply_xp": 1,

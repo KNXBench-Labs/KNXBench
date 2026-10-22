@@ -12,6 +12,26 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## WP-04.3 stage-B witness — source delivered (22 October 2026)
+
+Source merge `9e57258c7` is published with exact live/tracking readback; the
+feature branch `efb8426f7` is its second parent and byte-exact tree. The
+change-scoped maintained gate passes all 14 ordered stages on the frozen
+candidate: 3,428 Rust passes across 24 target results (151 ignored), 97/97
+selected corpus tests, 412 registered tool tests with six optional skips,
+warning-denied Clippy and clean fmt/headers/docs/layering/ledger/anchors.
+
+This delivers only the private, unwired typed full-current-schema witness
+(`CatalogueWitness/1`, managed-binding §4): a deterministic, lossless SHA-256
+stream over the schema relation and every persisted column and hidden rowid,
+chunked via `substr` so no TEXT/BLOB cell materializes whole in Rust, with
+checked arithmetic, typed errors, cooperative Stop and a 1,000,000,000-byte
+per-cell admission bound. It reuses the B1 admission for shape validation and
+descriptor retention. No W/S/D copy, server `CatalogueOwner` wrapper, route
+adapter, production route, quiet-API or schema change is included.
+WP-04.3 and WP-19 remain open.
+See [the contract](contracts/catalogue-jobs/witness-increment.md).
+
 ## Dependabot excluded from the Hall of Fame (22 October 2026)
 
 The scoreboard policy now excludes the automated dependency bot

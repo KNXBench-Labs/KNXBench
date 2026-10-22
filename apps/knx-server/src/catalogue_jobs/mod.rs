@@ -5,6 +5,8 @@ mod strict;
 pub use strict::{Capability, Incarnation, JobId, U64};
 
 mod dto;
+mod spool;
+mod status;
 
 use std::collections::VecDeque;
 

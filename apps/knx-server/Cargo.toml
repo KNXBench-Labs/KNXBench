@@ -45,6 +45,9 @@ base64.workspace = true
 # the resolved graph via `tempfile`; naming it directly buys a documented
 # source of randomness instead of a hand-rolled one.
 getrandom.workspace = true
+# No-replace rename and flock for the sealed spool and (P8) the artifact-root
+# lease. Already a workspace dependency with the `fs` feature; no new crate.
+rustix.workspace = true
 # HTTPS on the server's own port, with a self-signed certificate as the
 # zero-configuration default (ADR-0088). `ring` only; see the workspace
 # manifest for why.

@@ -293,7 +293,12 @@ the preview binding composition
 ([`preview_binding`](contracts/catalogue-jobs/preview-binding-increment.md):
 `PreviewBinding` composing the `CatalogueStamp`, `SourceIdentity` and
 `PolicyIdentity` into the exact-equality binding the server retains between
-preview and apply) — is delivered with 6 focused tests. Route
+preview and apply) — is delivered with 6 focused tests. The ninth, the
+complete preview identity
+([`preview_identity`](contracts/catalogue-jobs/preview-identity-increment.md):
+a versioned typed encoding of the complete rehearsal install result — the
+digest the future preview computes and apply compares for exact preview/report
+agreement) — is delivered with 22 focused tests. Route
 wiring + worker execution (the Ready/apply installer), the
 `EmbeddedServerHandle` and the desktop exit interception remain the last
 stage-D slices; no job route, Ready/apply or worker execution is wired.

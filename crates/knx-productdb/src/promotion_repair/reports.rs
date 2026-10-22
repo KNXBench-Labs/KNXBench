@@ -272,12 +272,20 @@ fn verified_nonprogram_rows(
                 &bytes,
                 &member.path,
                 &mut unknown,
+                crate::operation::Cancellation::Quiet,
             )?;
         }
         unknown
     } else {
-        crate::ingest::ingest_file_in_transaction(&scratch, &member.path, &bytes, true, extended)?
-            .unknown_constructs
+        crate::ingest::ingest_file_in_transaction(
+            &scratch,
+            &member.path,
+            &bytes,
+            true,
+            extended,
+            crate::operation::Cancellation::Quiet,
+        )?
+        .unknown_constructs
     };
     rows.retain(|r| affected.iter().any(|k| matches_key(r, k)));
     let mut original = source_targets(conn, &member.sha)?;

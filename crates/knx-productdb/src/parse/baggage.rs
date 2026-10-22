@@ -12,6 +12,7 @@ use std::collections::BTreeMap;
 use quick_xml::events::{BytesStart, Event};
 use quick_xml::Reader;
 
+use crate::operation::Cancellation;
 use crate::report::{UnknownCollector, UnknownConstruct};
 use crate::xml::{attrs, local_name};
 use crate::ProductDbError;
@@ -86,6 +87,7 @@ fn take_attrs(
 pub(crate) fn parse_baggage_index(
     source_path: &str,
     bytes: &[u8],
+    cancellation: Cancellation<'_>,
 ) -> Result<BaggageIndexIngest, ProductDbError> {
     let mut reader = Reader::from_reader(bytes);
     let mut buf = Vec::new();
@@ -101,6 +103,7 @@ pub(crate) fn parse_baggage_index(
     let mut text_seen = Vec::<bool>::new();
 
     loop {
+        cancellation.checkpoint()?;
         buf.clear();
         let event = reader
             .read_event_into(&mut buf)
@@ -306,7 +309,7 @@ mod tests {
 <Baggage Id="M-0001_BG-a" Name="a.png" TargetPath="Img" InstallOnImport="0" Extra="x"><FileInfo TimeInfo="2020-01-01T00:00:00Z" Version="7" Odd="y"><Deep/></FileInfo><FileInfo/><Stray/></Baggage>
 <Baggage Id="M-0001_BG-b" Name="b.bin" TargetPath=""/>
 </Baggages><Surprise/></Manufacturer></ManufacturerData></KNX>"#;
-        let index = parse_baggage_index(INDEX, xml).unwrap();
+        let index = parse_baggage_index(INDEX, xml, crate::operation::Cancellation::Quiet).unwrap();
         assert_eq!(index.declarations.len(), 2);
         let a = &index.declarations[0];
         assert_eq!(a.id.as_deref(), Some("M-0001_BG-a"));
@@ -350,7 +353,7 @@ mod tests {
         let xml = br#"<KNX xmlns="http://knx.org/xml/project/20" CreatedBy="t" ToolVersion="1" Extra="e"><ManufacturerData Odd="o"><Manufacturer RefId="M-0001" Also="a"><Baggages Odd="o">
 <Baggage Id="i" Name="a.png" TargetPath="">loose<![CDATA[x]]></Baggage>
 </Baggages></Manufacturer></ManufacturerData></KNX>"#;
-        let index = parse_baggage_index(INDEX, xml).unwrap();
+        let index = parse_baggage_index(INDEX, xml, crate::operation::Cancellation::Quiet).unwrap();
         assert_eq!(
             (index.manufacturers, index.manufacturer_ref.as_deref()),
             (1, Some("M-0001"))
@@ -392,7 +395,7 @@ mod tests {
             br#"<KNX xmlns:x="urn:x"><ManufacturerData><Manufacturer x:RefId="M-0001"><Baggages>
 <Baggage x:Name="a.bin" TargetPath=""/>
 </Baggages></Manufacturer></ManufacturerData></KNX>"#;
-        let index = parse_baggage_index(INDEX, xml).unwrap();
+        let index = parse_baggage_index(INDEX, xml, crate::operation::Cancellation::Quiet).unwrap();
         assert_eq!(index.manufacturer_ref, None);
         assert_eq!(index.declarations[0].name, None);
         assert!(manufacturer_mismatch(INDEX, &index).is_some());
@@ -413,7 +416,7 @@ mod tests {
 <Baggage Name="e" TargetPath="">
 </Baggage>
 </Baggages></Manufacturer></ManufacturerData></KNX>"#;
-        let index = parse_baggage_index(INDEX, xml).unwrap();
+        let index = parse_baggage_index(INDEX, xml, crate::operation::Cancellation::Quiet).unwrap();
         let text: Vec<_> = index
             .unknown
             .iter()
@@ -427,7 +430,8 @@ mod tests {
     fn an_index_is_bound_only_to_the_manufacturer_it_sits_under() {
         let index = |manufacturers: &str| {
             let xml = format!(r#"<KNX><ManufacturerData>{manufacturers}</ManufacturerData></KNX>"#);
-            parse_baggage_index(INDEX, xml.as_bytes()).unwrap()
+            parse_baggage_index(INDEX, xml.as_bytes(), crate::operation::Cancellation::Quiet)
+                .unwrap()
         };
         let one = |r: &str| format!(r#"<Manufacturer {r}><Baggages/></Manufacturer>"#);
         assert_eq!(

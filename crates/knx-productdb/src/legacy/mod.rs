@@ -30,6 +30,7 @@ mod secrets;
 mod text;
 
 pub use code::{legacy_program_code, load_legacy_program_code, LegacyCodeError, LegacyProgramCode};
+pub(crate) use container::detect_legacy_container_controlled;
 pub use container::{
     detect_legacy_container, read_legacy_member, LegacyCheckBytes, LegacyContainer, LegacyMember,
     LegacyMemberKind, LegacyOtherMember, LegacyPayload, MAX_LEGACY_FILE, MAX_LEGACY_PAYLOAD,

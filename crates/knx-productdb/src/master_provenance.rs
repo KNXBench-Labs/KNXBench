@@ -401,8 +401,15 @@ fn replay(conn: &Connection) -> Result<MasterReplayReport, ProductDbError> {
             continue;
         }
         report.master_sources += 1;
-        let derived = crate::xml::validate_complete_document("knx_master.xml", &bytes)
-            .and_then(|()| crate::parse::master::parse_master(conn, &bytes, false));
+        let derived =
+            crate::xml::validate_complete_document("knx_master.xml", &bytes).and_then(|()| {
+                crate::parse::master::parse_master(
+                    conn,
+                    &bytes,
+                    false,
+                    crate::operation::Cancellation::Quiet,
+                )
+            });
         match derived {
             Ok(derived) => {
                 report.declarations = report

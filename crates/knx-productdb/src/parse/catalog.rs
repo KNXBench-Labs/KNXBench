@@ -12,6 +12,7 @@ use quick_xml::Reader;
 use rusqlite::{params, Connection};
 
 use super::{first_winner, report_unknown_attrs};
+use crate::operation::Cancellation;
 use crate::report::{IdConflict, UnknownCollector, UnknownConstruct};
 use crate::xml::{attrs, local_name, Attrs};
 use crate::ProductDbError;
@@ -48,6 +49,18 @@ pub fn ingest_catalog(
     source_path: &str,
     bytes: &[u8],
 ) -> Result<CatalogIngest, ProductDbError> {
+    ingest_catalog_controlled(conn, source_sha256, source_path, bytes, Cancellation::Quiet)
+}
+
+/// [`ingest_catalog`] on the installer path: the controlled variant checks
+/// the caller's cancellation control at every XML event.
+pub(crate) fn ingest_catalog_controlled(
+    conn: &Connection,
+    source_sha256: &str,
+    source_path: &str,
+    bytes: &[u8],
+    cancellation: Cancellation<'_>,
+) -> Result<CatalogIngest, ProductDbError> {
     let mut reader = Reader::from_reader(bytes);
     let mut buf = Vec::new();
     let mut unknown = UnknownCollector::default();
@@ -60,6 +73,7 @@ pub fn ingest_catalog(
     let mut section_stack: Vec<String> = Vec::new();
 
     loop {
+        cancellation.checkpoint()?;
         buf.clear();
         let event = reader
             .read_event_into(&mut buf)

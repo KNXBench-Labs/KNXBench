@@ -12,6 +12,26 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## WP-04.3 stage-B copy — source delivered (22 October 2026)
+
+Source merge `9fc0d9e27` is published with exact live/tracking readback; the
+feature branch `da006cff7` is its second parent and byte-exact tree. The
+change-scoped maintained gate passes all 14 ordered stages on the frozen
+candidate: 3,437 Rust passes across 24 target results (151 ignored), 97/97
+selected corpus tests, 412 registered tool tests with six optional skips,
+warning-denied Clippy and clean fmt/headers/docs/layering/ledger/anchors.
+
+This delivers the disk-copy capability and the copy witness, both private and
+unwired: `CopyContentWitness/1` (the witness codec with a distinct domain that
+omits `schema_version`) and `copy_pinned_current` (a bounded 128-page-step
+backup from a read-only pinned S into a fresh D, with a 30 s busy budget and
+the pinned fresh-zero destination-cookie rule `0 -> 1`). Content equality
+between the pinned source and the reopened copy is proved through the copy
+witness; the live witness still tracks the cookie. No production route, quiet
+API, schema, `user_version` or legacy-policy change is included.
+WP-04.3 and WP-19 remain open.
+See [the contract](contracts/catalogue-jobs/copy-increment.md).
+
 ## WP-04.3 stage-B witness — source delivered (22 October 2026)
 
 Source merge `9e57258c7` is published with exact live/tracking readback; the

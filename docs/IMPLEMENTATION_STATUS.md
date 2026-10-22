@@ -675,8 +675,13 @@ and `run_experimental_property_plan_on_hardware` /
 only with that consent; without it the existing refusal (including the
 full-write-coverage guard) is unchanged. The full knx-net suite is green
 (447 lib + 73 it + 1 doc-test, 0 failed) with new admission/wrong-target tests.
-The App/CLI surface is not yet wired, so no user-facing hardware route exists
-yet; the simulator and non-consented refusal are unchanged.
+Increment 2 (App layer) added `PreparedBundle::rebind_hardware(serial)` and the
+generic `execute_hardware` / `restore_hardware` orchestration; increment 3 wired
+the CLI: `knx device system2-validation --gateway` now reads the real serial
+read-only, rebinds the bundle, and runs the gated write under the one-tunnel
+lease plus an `--activity-history` journal, with the download and best-effort
+release phrases as separate consents checked before any frame. The simulator and
+the non-consented refusal are unchanged.
 
 <a id="wp-042-resolver-bounds--unchanged-parser-candidate-20-october-2026"></a>
 ## WP-04.2 resolver bounds — unchanged-parser delivery (20 October 2026)

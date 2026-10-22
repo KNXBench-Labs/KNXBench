@@ -41,6 +41,8 @@ mod catalogue_stamp;
 // preview/apply orchestration exists (WP-04.3 stage D, ADR-0150).
 #[allow(dead_code)]
 mod controlled;
+// Private preview binding composition remains unwired until the preview/apply
+// orchestration exists (WP-04.3 stage D, ADR-0150).
 pub mod master_evidence;
 pub mod master_provenance;
 pub mod migration;
@@ -49,6 +51,8 @@ pub mod package;
 pub mod parameter_editor;
 pub mod parameter_layout;
 pub mod parse;
+#[allow(dead_code)]
+mod preview_binding;
 pub mod procedure_resolution;
 mod promotion_repair;
 pub mod query;

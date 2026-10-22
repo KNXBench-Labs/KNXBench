@@ -163,6 +163,14 @@ NEW completion and attempted recovery then fail full-allocation verification,
 never claiming restored. Hardware absence is not the software development
 blocker; the missing physical preservation/reconstruction rule is.
 
+On 22 October 2026 the owner released a consent-gated, best-effort hardware
+path, defined in [ADR-0152](../adr/0152-gated-hardware-system2-download.md).
+It does **not** resolve open points 1–4 and does **not** change the simulator or
+the non-consented refusal: a real write is admitted only by a typed, device- and
+operation-specific [`HardwareRelease`](../../crates/knx-net/src/commissioning/hardware_release.rs),
+the pre-dump still captures the full allocation, and recovery remains best-effort
+(`RestoreFailed`, never `Restored`, when full verification does not hold).
+
 A separately approved future hardware-validation adapter must first resolve
 that rule and actual pointer/property widths, acquire observed target binding,
 join existing activity/gateway admission, and persist operation-specific evidence

@@ -14,8 +14,10 @@ use knx_core::commissioning::property_download::{
 use knx_core::IndividualAddress;
 use knx_net::cemi::{ApplicationService, Destination, Tpci};
 use knx_net::client::{BusError, TunnelEvent};
+use knx_net::commissioning::hardware_release::{required_release_phrase, HardwareRelease};
 use knx_net::commissioning::property_download::{
-    run_experimental_property_plan, PropertySimulationFailure,
+    run_experimental_property_plan, run_experimental_property_plan_on_hardware,
+    PropertySimulationFailure,
 };
 use knx_net::commissioning::property_recovery::{
     ExperimentalPropertyPreconditions, PropertyJournalEvent,
@@ -587,6 +589,112 @@ async fn generic_hardware_kind_path_refuses_unwritten_allocation_bytes_before_co
     ));
     assert!(!error.mutation_may_have_started);
     assert_eq!(error.operation_index, None);
+}
+
+#[tokio::test]
+async fn hardware_release_admits_a_best_effort_plan_with_unwritten_masked_bytes() {
+    let (device, original, _) = fixture();
+    // Same unwritten-half allocation as the refused case, but a valid release
+    // admits the hardware-kind transport; the simulator preserves the unwritten
+    // bytes so the full plan succeeds and verifies them.
+    let mut steps = original.steps().to_vec();
+    steps[4].operation = Op::LoadControl {
+        object: 3,
+        payload: absolute_data(AbsolutePropertySegment {
+            start: 0x3C00,
+            length: 8,
+            access: 0xFF,
+            memory_type: SegmentMemoryType::Eeprom,
+            checksum_disabled: true,
+        })
+        .unwrap(),
+    };
+    let plan = PropertyDownloadPlan::new(
+        original.target(),
+        original.mask(),
+        original.manufacturer(),
+        steps,
+    )
+    .unwrap();
+    let preconditions =
+        ExperimentalPropertyPreconditions::same_application_reinstallation(&plan, SERIAL, VERSION)
+            .unwrap();
+    establish_shape(&device, &plan).await;
+    device.preset_memory(0x3C00, &[9, 8, 7, 6, 5, 4, 3, 2]);
+    let transport = Forward {
+        device: &device,
+        kind: TargetKind::Hardware,
+        discard_allocation: false,
+        short_read: false,
+    };
+    let release =
+        HardwareRelease::for_hardware(device.address(), &required_release_phrase(device.address()))
+            .unwrap();
+    let report = run_experimental_property_plan_on_hardware(
+        &transport,
+        &plan,
+        hardware_auth(&device),
+        AuthorisationPlan::Skip,
+        timing(),
+        &preconditions,
+        &release,
+        &mut |_| Ok(()),
+        &|| false,
+    )
+    .await
+    .unwrap();
+    assert_eq!(report.execution.data_octets, 4);
+    assert_eq!(
+        device.memory(0x3C00, 8),
+        [
+            Some(1),
+            Some(2),
+            Some(3),
+            Some(4),
+            Some(5),
+            Some(4),
+            Some(3),
+            Some(2)
+        ]
+    );
+}
+
+#[tokio::test]
+async fn hardware_release_for_a_different_target_is_refused_before_connect() {
+    let (device, original, _) = fixture();
+    let preconditions = ExperimentalPropertyPreconditions::same_application_reinstallation(
+        &original, SERIAL, VERSION,
+    )
+    .unwrap();
+    let transport = Forward {
+        device: &device,
+        kind: TargetKind::Hardware,
+        discard_allocation: false,
+        short_read: false,
+    };
+    let other = IndividualAddress::from_raw(0x011A);
+    let release = HardwareRelease::for_hardware(other, &required_release_phrase(other)).unwrap();
+    let error = run_experimental_property_plan_on_hardware(
+        &transport,
+        &original,
+        hardware_auth(&device),
+        AuthorisationPlan::Skip,
+        timing(),
+        &preconditions,
+        &release,
+        &mut |_| Ok(()),
+        &|| false,
+    )
+    .await
+    .unwrap_err();
+    assert!(
+        device.seen().is_empty(),
+        "a release for another device must refuse before connecting"
+    );
+    assert!(matches!(
+        error.failure,
+        PropertySimulationFailure::TargetMismatch { .. }
+    ));
 }
 
 #[tokio::test]

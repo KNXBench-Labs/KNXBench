@@ -79,3 +79,13 @@ contents unchanged" clause belongs to the relative data allocation that mask
 and the [source audit](../research/2026-10-21-up258-masked-byte-and-recovery-rules.md).
 The refusal stands; the destructive-Unload counter-hypothesis test remains the
 correct behaviour.
+
+## Amendment — 22 October 2026: gated hardware release
+
+The owner released the System-2 download as a consent-gated, best-effort path.
+See [ADR-0152](0152-gated-hardware-system2-download.md): the unconditional
+hardware refusal is replaced by an admission that only a typed, device- and
+operation-specific [`HardwareRelease`](../../crates/knx-net/src/commissioning/hardware_release.rs)
+value can grant, and unwritten (masked) bytes are permitted only under that
+consent. The simulator path and the non-consented hardware refusal are
+unchanged; open points 1–4 remain blocked.

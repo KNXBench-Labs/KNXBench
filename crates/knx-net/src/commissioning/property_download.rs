@@ -15,6 +15,7 @@ use knx_core::commissioning::properties::{ObjectIndex, PID_HARDWARE_TYPE};
 use knx_core::commissioning::property_download::{PropertyDownloadPlan, PropertyOperation};
 use knx_core::IndividualAddress;
 
+use super::hardware_release::HardwareRelease;
 use super::property_recovery::{
     self, ExperimentalPropertyPreconditions, PropertyJournalEvent, PropertyRecoverySnapshot,
 };
@@ -160,6 +161,7 @@ pub async fn run_simulated_property_plan(
         timing,
         None,
         None,
+        None,
         &mut |_| Ok(()),
         &|| false,
     )
@@ -271,6 +273,41 @@ pub async fn run_experimental_property_plan<T: ManagementTransport>(
         timing,
         Some(preconditions),
         None,
+        None,
+        journal,
+        abort_requested,
+    )
+    .await?;
+    Ok(report.experimental())
+}
+
+/// Explicit opt-in experimental execution on a physical device, released by a
+/// typed best-effort consent ([`HardwareRelease`]). Unwritten (masked)
+/// allocation bytes are left untouched and recovery is best-effort; see
+/// ADR-0152. All other requirements — same-shape preconditions, target-specific
+/// Download authorization, durable journal, cooperative cancellation — are
+/// identical to [`run_experimental_property_plan`], which stays simulator-only.
+#[allow(clippy::too_many_arguments)]
+pub async fn run_experimental_property_plan_on_hardware<T: ManagementTransport>(
+    transport: &T,
+    plan: &PropertyDownloadPlan,
+    authorization: WriteAuthorisation,
+    key: AuthorisationPlan,
+    timing: SessionTiming,
+    preconditions: &ExperimentalPropertyPreconditions,
+    release: &HardwareRelease,
+    journal: &mut impl FnMut(PropertyJournalEvent<'_>) -> Result<(), String>,
+    abort_requested: &impl Fn() -> bool,
+) -> Result<ExperimentalPropertyReport, PropertySimulationError> {
+    let report = run_property_plan_inner(
+        transport,
+        plan,
+        authorization,
+        key,
+        timing,
+        Some(preconditions),
+        None,
+        Some(release),
         journal,
         abort_requested,
     )
@@ -310,6 +347,49 @@ pub async fn restore_experimental_property_plan<T: ManagementTransport>(
         timing,
         Some(&snapshot.preconditions),
         Some(snapshot),
+        None,
+        journal,
+        abort_requested,
+    )
+    .await?;
+    Ok(report.experimental())
+}
+
+/// Explicit recovery replay on a physical device, released by a typed
+/// best-effort consent ([`HardwareRelease`]). Identical to
+/// [`restore_experimental_property_plan`] except that the hardware transport is
+/// admitted; unwritten (masked) bytes still rely on the captured pre-dump and
+/// best-effort recovery (ADR-0152).
+#[allow(clippy::too_many_arguments)]
+pub async fn restore_experimental_property_plan_on_hardware<T: ManagementTransport>(
+    transport: &T,
+    original: &PropertyDownloadPlan,
+    snapshot: &PropertyRecoverySnapshot,
+    authorization: WriteAuthorisation,
+    key: AuthorisationPlan,
+    timing: SessionTiming,
+    release: &HardwareRelease,
+    journal: &mut impl FnMut(PropertyJournalEvent<'_>) -> Result<(), String>,
+    abort_requested: &impl Fn() -> bool,
+) -> Result<ExperimentalPropertyReport, PropertySimulationError> {
+    let plan = snapshot
+        .recovery_plan(original)
+        .map_err(|failure| PropertySimulationError {
+            source_index: None,
+            operation_index: None,
+            mutation_may_have_started: false,
+            completed: Vec::new(),
+            failure,
+        })?;
+    let report = run_property_plan_inner(
+        transport,
+        &plan,
+        authorization,
+        key,
+        timing,
+        Some(&snapshot.preconditions),
+        Some(snapshot),
+        Some(release),
         journal,
         abort_requested,
     )
@@ -341,6 +421,7 @@ async fn run_property_plan_inner<T: ManagementTransport>(
     timing: SessionTiming,
     preconditions: Option<&ExperimentalPropertyPreconditions>,
     restore: Option<&PropertyRecoverySnapshot>,
+    release: Option<&HardwareRelease>,
     journal: &mut impl FnMut(PropertyJournalEvent<'_>) -> Result<(), String>,
     abort_requested: &impl Fn() -> bool,
 ) -> Result<PropertyPlanExecution, PropertySimulationError> {
@@ -360,10 +441,18 @@ async fn run_property_plan_inner<T: ManagementTransport>(
             )
             .map_err(early)?;
         if transport.target_kind() == knx_core::commissioning::mutation::TargetKind::Hardware {
-            preconditions
-                .require_full_hardware_write_coverage()
-                .map_err(early)?;
-            return Err(early(property_recovery::invalid("physical source/recovery admission is unavailable; a complete-write plan and ordinary Download authorization are not admission")));
+            let Some(release) = release else {
+                preconditions
+                    .require_full_hardware_write_coverage()
+                    .map_err(early)?;
+                return Err(early(property_recovery::invalid("physical source/recovery admission is unavailable; a complete-write plan and ordinary Download authorization are not admission")));
+            };
+            if release.target().address() != plan.target() {
+                return Err(early(PropertySimulationFailure::TargetMismatch {
+                    expected: plan.target(),
+                    found: release.target().address(),
+                }));
+            }
         }
     }
     if authorization.target().address() != plan.target() {

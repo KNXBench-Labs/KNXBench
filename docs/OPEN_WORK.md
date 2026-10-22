@@ -258,6 +258,15 @@ delivered on source merge `56e00c833` (`Cancellation` threaded through both
 ZIP views and every installer/parser seam, quiet wrappers byte-identical). B1 is neither a job endpoint nor a reason to close WP-04.3 or WP-19.
 Existing synchronous behavior and profile limits remain unchanged.
 
+Stage D (owned job/lifetime API) has begun in staged sub-increments. The
+first, the private unwired [job admission/replay kernel](contracts/catalogue-jobs/job-admission-increment.md)
+(`catalogue_jobs`) plus its strict wire primitives (checked decimal `U64`,
+32/64 lowercase-hex identities, a constant-time capability), is delivered
+with 35 focused tests. The wire DTO/serialization layer, upload/spool, status
+snapshots, the ArtifactDir lease/reclamation/fencing and the standalone/desktop
+close/drain lifetime remain later stage-D increments; no job route, Ready/apply
+or worker execution is wired.
+
 **Three separate deliveries, in order:**
 
 1. Measure per-table/index/source-byte growth and peak memory on a disposable

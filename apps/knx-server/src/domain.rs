@@ -36,6 +36,7 @@ use crate::bus::{BusSession, GatewayConnector, RealConnector};
 use crate::bus_scan::LineScanSession;
 use crate::load_progress::{LoadHandle, LoadOperations, LoadPhase};
 use crate::session_log::{self, LogEntry, SessionLog, Severity};
+use crate::CatalogueOwner;
 
 pub struct AppState {
     pub project: Mutex<Option<knx_core::Project>>,
@@ -105,10 +106,10 @@ pub struct AppState {
     /// (ADR-0012: the server runs without products), but never silent
     /// either: [`Self::product_db_unavailable`] keeps the reason. A file
     /// that does not exist yet is created, so it never lands here.
-    /// `Mutex`, not `RwLock`: every access here
-    /// is a handful of `SELECT`s or one `enrich()` pass, never held long
-    /// enough for reader/writer contention to matter.
-    pub product_db: Option<Mutex<knx_productdb::Connection>>,
+    /// The managed owner wraps the connection in one mutex and tracks its
+    /// generation/health; reads go through a scoped lease, mutations through
+    /// the managed guard (WP-04.3 stage B, ADR-0150).
+    pub product_db: Option<CatalogueOwner>,
     /// Why the user's product database is not open, when
     /// [`Self::with_user_product_db`] tried and failed (a newer schema
     /// than this build reads, an unreadable file, no location). `None`
@@ -265,9 +266,26 @@ impl AppState {
                 "no product database location: neither XDG_DATA_HOME nor HOME is set".to_string(),
             ),
         };
-        let (product_db, unavailable) = match opened {
-            Ok(products) => (Some(Mutex::new(products)), None),
-            Err(reason) => (None, Some(reason)),
+        let (product_db, unavailable) = match (opened, path.clone()) {
+            (Ok(products), Some(configured)) => {
+                match CatalogueOwner::adopt_opened(products, configured) {
+                    Ok(owner) => (Some(owner), None),
+                    Err(error) => (
+                        None,
+                        Some(format!(
+                            "the product database could not be adopted: {error}"
+                        )),
+                    ),
+                }
+            }
+            (Ok(_), None) => (
+                None,
+                Some(
+                    "no product database location: neither XDG_DATA_HOME nor HOME is set"
+                        .to_string(),
+                ),
+            ),
+            (Err(reason), _) => (None, Some(reason)),
         };
         let mut state = Self::with_product_db(data_dir, product_db);
         if let Some(reason) = &unavailable {
@@ -324,10 +342,7 @@ impl AppState {
 
     /// [`Self::new`] with the product database given rather than opened
     /// from the user's default location.
-    fn with_product_db(
-        data_dir: PathBuf,
-        product_db: Option<Mutex<knx_productdb::Connection>>,
-    ) -> Self {
+    fn with_product_db(data_dir: PathBuf, product_db: Option<CatalogueOwner>) -> Self {
         let server_incarnation = new_server_incarnation();
         Self {
             project: Mutex::new(None),
@@ -658,16 +673,19 @@ pub fn open_project_with_password(
     if !discard_changes && has_unsaved_changes(state) {
         return Err(unsaved_changes_refusal(state, "import"));
     }
-    let guard = state
-        .product_db
-        .as_ref()
-        .map(|m| m.lock().expect("state mutex poisoned"));
-    let imported =
-        import_and_project(path, guard.as_deref(), password, progress).map_err(|e| LoadFailure {
-            message: e.to_string(),
-            kind: load_failure_kind(&e),
-        });
-    drop(guard);
+    let imported = match state.product_db.as_ref() {
+        Some(owner) => owner
+            .with_read(|conn| import_and_project(path, Some(conn), password, progress))
+            .map_err(|e| LoadFailure {
+                message: format!("the product database is unavailable: {e}"),
+                kind: None,
+            })?,
+        None => import_and_project(path, None, password, progress),
+    }
+    .map_err(|e| LoadFailure {
+        message: e.to_string(),
+        kind: load_failure_kind(&e),
+    });
     let (tree, project, (opaque, manufacturer_refs), report) = match imported {
         Ok(v) => v,
         Err(failure) => {
@@ -1265,12 +1283,17 @@ pub(crate) fn carry_manufacturer_files(
             .and_then(|earlier| knx_store::open_existing_read_only(earlier).ok());
         let fallbacks: Vec<&knx_store::Connection> =
             earlier.iter().map(|earlier| &earlier.conn).collect();
-        let products = state
-            .product_db
-            .as_ref()
-            .map(|m| m.lock().expect("state mutex poisoned"));
-        knx_app::manufacturer_files::embed_into(&target, products.as_deref(), &fallbacks)
-            .map_err(|e| e.to_string())
+        let embedded = match state.product_db.as_ref() {
+            Some(owner) => owner
+                .with_read(|conn| {
+                    knx_app::manufacturer_files::embed_into(&target, Some(conn), &fallbacks)
+                        .map_err(|e| e.to_string())
+                })
+                .map_err(|e| format!("the product database is unavailable: {e}"))?,
+            None => knx_app::manufacturer_files::embed_into(&target, None, &fallbacks)
+                .map_err(|e| e.to_string()),
+        };
+        embedded
     })();
     let entry = match outcome {
         Ok(report) if report.unavailable.is_empty() => {
@@ -1353,25 +1376,12 @@ fn reinstall_manufacturer_files(
         .lock()
         .expect("state mutex poisoned")
         .clone();
-    let Some(products) = state.product_db.as_ref() else {
+    let Some(owner) = state.product_db.as_ref() else {
         return Vec::new();
     };
     if refs.is_empty() {
         return Vec::new();
     }
-    let products = products.lock().expect("state mutex poisoned");
-    let missing = match knx_app::manufacturer_files::missing_from_products(&products, &refs) {
-        Ok(missing) if missing.is_empty() => return Vec::new(),
-        Ok(missing) => missing,
-        Err(e) => {
-            return vec![entry(
-                Severity::Warning,
-                "could not check the product database for this project's manufacturer files"
-                    .to_string(),
-                Some(e.to_string()),
-            )]
-        }
-    };
     let carrier = match knx_store::open_existing_read_only(path) {
         Ok(carrier) => carrier,
         Err(e) => {
@@ -1382,55 +1392,82 @@ fn reinstall_manufacturer_files(
             )]
         }
     };
-    let report = knx_app::manufacturer_files::reinstall_from_file(
-        &products,
-        &carrier.conn,
-        &missing,
-        progress,
-    );
-    let mut entries = Vec::new();
-    if !report.installed.is_empty() {
-        entries.push(entry(
-            Severity::Info,
-            format!(
-                "installed {} manufacturer file(s) this project file carries into the \
-                 product database",
-                report.installed.len()
-            ),
-            Some(report.installed.join("\n")),
-        ));
-    }
-    if !report.unavailable.is_empty() {
-        entries.push(entry(
-            Severity::Warning,
-            format!(
-                "{} manufacturer file(s) of this project are neither in the product database \
-                 nor in the project file (saved by an older KNXBench); devices using them \
-                 cannot show parameters until you restore them from the original .knxproj \
-                 (a device's Parameters tab)",
-                report.unavailable.len()
-            ),
-            Some(
-                report
-                    .unavailable
-                    .iter()
-                    .map(|r| r.source_path.as_str())
-                    .collect::<Vec<_>>()
-                    .join("\n"),
-            ),
-        ));
-    }
-    for (r, reason) in &report.failed {
-        entries.push(entry(
-            Severity::Warning,
-            format!(
-                "the carried manufacturer file {} could not be installed",
-                r.source_path
-            ),
-            Some(reason.clone()),
-        ));
-    }
-    entries
+    owner
+        .with_legacy_mutation(
+            knx_productdb::managed_catalogue::LegacyMutationKind::DirectPackage,
+            |conn| -> Result<Vec<LogEntry>, std::convert::Infallible> {
+                let missing = match knx_app::manufacturer_files::missing_from_products(conn, &refs) {
+                    Ok(missing) if missing.is_empty() => return Ok(Vec::new()),
+                    Ok(missing) => missing,
+                    Err(e) => {
+                        return Ok(vec![entry(
+                            Severity::Warning,
+                            "could not check the product database for this project's manufacturer files"
+                                .to_string(),
+                            Some(e.to_string()),
+                        )])
+                    }
+                };
+                let report = knx_app::manufacturer_files::reinstall_from_file(
+                    conn,
+                    &carrier.conn,
+                    &missing,
+                    progress,
+                );
+                let mut entries = Vec::new();
+                if !report.installed.is_empty() {
+                    entries.push(entry(
+                        Severity::Info,
+                        format!(
+                            "installed {} manufacturer file(s) this project file carries into the \
+                             product database",
+                            report.installed.len()
+                        ),
+                        Some(report.installed.join("\n")),
+                    ));
+                }
+                if !report.unavailable.is_empty() {
+                    entries.push(entry(
+                        Severity::Warning,
+                        format!(
+                            "{} manufacturer file(s) of this project are neither in the product database \
+                             nor in the project file (saved by an older KNXBench); devices using them \
+                             cannot show parameters until you restore them from the original .knxproj \
+                             (a device's Parameters tab)",
+                            report.unavailable.len()
+                        ),
+                        Some(
+                            report
+                                .unavailable
+                                .iter()
+                                .map(|r| r.source_path.as_str())
+                                .collect::<Vec<_>>()
+                                .join("\n"),
+                        ),
+                    ));
+                }
+                for (r, reason) in &report.failed {
+                    entries.push(entry(
+                        Severity::Warning,
+                        format!(
+                            "the carried manufacturer file {} could not be installed",
+                            r.source_path
+                        ),
+                        Some(reason.clone()),
+                    ));
+                }
+                Ok(entries)
+            },
+            |result| match result {
+                Ok(_) => knx_productdb::managed_catalogue::LegacySettlementHint::SuccessfulReturn,
+                Err(_) => unreachable!("Infallible work cannot fail"),
+            },
+        )
+        .map(|result| match result {
+            Ok(entries) => entries,
+            Err(never) => match never {},
+        })
+        .unwrap_or_default()
 }
 
 fn save_editor_state(
@@ -1624,17 +1661,32 @@ fn documentation_options(
     language: knx_report::ReportLanguage,
     sections: std::collections::BTreeSet<knx_report::ReportSection>,
 ) -> knx_report::ReportOptions {
-    let products = state
-        .product_db
-        .as_ref()
-        .map(|products| products.lock().expect("state mutex poisoned"));
-    knx_app::documentation::report_options(
-        project,
-        products.as_deref(),
-        generated_at,
-        language,
-        sections,
-    )
+    let sections_for_absent = sections.clone();
+    match state.product_db.as_ref() {
+        Some(owner) => owner
+            .with_read(|conn| {
+                Ok::<_, std::convert::Infallible>(knx_app::documentation::report_options(
+                    project,
+                    Some(conn),
+                    generated_at,
+                    language,
+                    sections,
+                ))
+            })
+            .unwrap_or_else(|_| {
+                Ok(knx_app::documentation::report_options(
+                    project,
+                    None,
+                    generated_at,
+                    language,
+                    sections_for_absent,
+                ))
+            })
+            .unwrap(),
+        None => {
+            knx_app::documentation::report_options(project, None, generated_at, language, sections)
+        }
+    }
 }
 
 pub fn preview_documentation_impl(
@@ -2301,7 +2353,7 @@ pub fn device_detail(
         return Ok(detail);
     }
 
-    let Some(products_mutex) = state.product_db.as_ref() else {
+    let Some(owner) = state.product_db.as_ref() else {
         if needs_product_lookup {
             detail.product.resolution = knx_projection::ProductResolution::NoDatabase;
         }
@@ -2311,80 +2363,88 @@ pub fn device_detail(
     // Step 2: lock only `product_db` (`project`'s lock above is already
     // dropped — the two mutexes are never held at once). Shared by both
     // overlays below rather than locked twice.
-    let products = products_mutex.lock().expect("state mutex poisoned");
-
-    if needs_product_lookup {
-        let product_ref = detail.product.product_ref.as_deref().unwrap_or_default();
-        let program_ref = detail.product.program_ref.as_deref().unwrap_or_default();
-        match knx_productdb::query::device_product(&products, product_ref, program_ref, language)
-            .map_err(|e| e.to_string())?
-        {
-            Some(row) => {
-                detail.product.resolution = knx_projection::ProductResolution::Resolved;
-                detail.product.catalog = Some(knx_projection::DeviceProductCatalog {
-                    manufacturer_id: row.manufacturer_id,
-                    manufacturer_name: row.manufacturer_name,
-                    product_text: row.product_text,
-                    order_number: row.order_number,
-                    hardware_name: row.hardware_name,
-                    hardware_version: row.hardware_version,
-                    hardware_serial_number: row.hardware_serial_number,
-                    catalog_item_name: row.catalog_item_name,
-                    catalog_item_number: row.catalog_item_number,
-                    application_program_id: row.application_program_id,
-                    application_name: row.application_name,
-                    application_number: row.application_number,
-                    application_version: row.application_version,
-                    mask_version: row.mask_version,
-                    product_text_language: row.product_text_language,
-                    catalog_item_name_language: row.catalog_item_name_language,
-                    application_name_language: row.application_name_language,
-                    product_source_language: row.product_source_language,
-                    catalog_item_source_language: row.catalog_item_source_language,
-                    application_source_language: row.application_source_language,
-                });
+    owner
+        .with_read(|products| -> Result<knx_projection::DeviceDetail, String> {
+            if needs_product_lookup {
+                let product_ref = detail.product.product_ref.as_deref().unwrap_or_default();
+                let program_ref = detail.product.program_ref.as_deref().unwrap_or_default();
+                match knx_productdb::query::device_product(
+                    products,
+                    product_ref,
+                    program_ref,
+                    language,
+                )
+                .map_err(|e| e.to_string())?
+                {
+                    Some(row) => {
+                        detail.product.resolution = knx_projection::ProductResolution::Resolved;
+                        detail.product.catalog = Some(knx_projection::DeviceProductCatalog {
+                            manufacturer_id: row.manufacturer_id,
+                            manufacturer_name: row.manufacturer_name,
+                            product_text: row.product_text,
+                            order_number: row.order_number,
+                            hardware_name: row.hardware_name,
+                            hardware_version: row.hardware_version,
+                            hardware_serial_number: row.hardware_serial_number,
+                            catalog_item_name: row.catalog_item_name,
+                            catalog_item_number: row.catalog_item_number,
+                            application_program_id: row.application_program_id,
+                            application_name: row.application_name,
+                            application_number: row.application_number,
+                            application_version: row.application_version,
+                            mask_version: row.mask_version,
+                            product_text_language: row.product_text_language,
+                            catalog_item_name_language: row.catalog_item_name_language,
+                            application_name_language: row.application_name_language,
+                            product_source_language: row.product_source_language,
+                            catalog_item_source_language: row.catalog_item_source_language,
+                            application_source_language: row.application_source_language,
+                        });
+                    }
+                    None => {
+                        detail.product.resolution =
+                            knx_projection::ProductResolution::NotInDatabase;
+                        detail.product.catalog = None;
+                    }
+                }
             }
-            None => {
-                detail.product.resolution = knx_projection::ProductResolution::NotInDatabase;
-                detail.product.catalog = None;
-            }
-        }
-    }
 
-    apply_dpt_texts(&products, &mut detail, language)?;
-    let evaluated = match activation_input {
-        Some(input) => apply_com_object_activation(&products, &mut detail, input, language)?,
-        None => None,
-    };
-
-    if let (Some(lang), Some(overlay_input)) = (language, overlay_input) {
-        // T33/§37: the shared rule — product-layer text only, and only where a
-        // translation answered; see `knx_app::com_object_language`.
-        let translated = knx_app::com_object_language::translate_com_object_texts(
-            &products,
-            &overlay_input,
-            lang,
-        )
-        .map_err(|e| e.to_string())?;
-        for com in &mut detail.com_objects {
-            let Some(text) = translated.get(&knx_core::ComObjectInstanceId(com.id)) else {
-                continue;
+            apply_dpt_texts(products, &mut detail, language)?;
+            let evaluated = match activation_input {
+                Some(input) => apply_com_object_activation(products, &mut detail, input, language)?,
+                None => None,
             };
-            if let Some(name) = &text.name {
-                com.name = Some(name.clone());
-            }
-            if let Some(description) = &text.description {
-                com.description = Some(description.clone());
-            }
-        }
-    }
 
-    // ADR-0126: the name as shown, translated or not, gets its `{{0}}` filled.
-    if let (Some(evaluated), Some(name_input)) = (evaluated, name_input) {
-        apply_name_fill(&mut detail, &evaluated, &name_input)?;
-    }
+            if let (Some(lang), Some(overlay_input)) = (language, overlay_input) {
+                // T33/§37: the shared rule — product-layer text only, and only where a
+                // translation answered; see `knx_app::com_object_language`.
+                let translated = knx_app::com_object_language::translate_com_object_texts(
+                    products,
+                    &overlay_input,
+                    lang,
+                )
+                .map_err(|e| e.to_string())?;
+                for com in &mut detail.com_objects {
+                    let Some(text) = translated.get(&knx_core::ComObjectInstanceId(com.id)) else {
+                        continue;
+                    };
+                    if let Some(name) = &text.name {
+                        com.name = Some(name.clone());
+                    }
+                    if let Some(description) = &text.description {
+                        com.description = Some(description.clone());
+                    }
+                }
+            }
 
-    Ok(detail)
+            // ADR-0126: the name as shown, translated or not, gets its `{{0}}` filled.
+            if let (Some(evaluated), Some(name_input)) = (evaluated, name_input) {
+                apply_name_fill(&mut detail, &evaluated, &name_input)?;
+            }
+
+            Ok(detail)
+        })
+        .map_err(|e| format!("catalogue owner unavailable: {e}"))?
 }
 
 /// Rebuilds `tree` from `project` and overlays the counts/undo-redo state
@@ -3117,12 +3177,15 @@ fn coupler_evidence(
             None => return Ok(None),
         }
     };
-    let Some(products) = state.product_db.as_ref() else {
-        return Ok(None);
+    let is_coupler = match state.product_db.as_ref() {
+        Some(owner) => owner
+            .with_read(|products| {
+                knx_productdb::query::product_hardware_is_coupler(products, &product_ref)
+                    .map_err(|e| e.to_string())
+            })
+            .map_err(|e| format!("the product database is unavailable: {e}"))??,
+        None => return Ok(None),
     };
-    let products = products.lock().expect("state mutex poisoned");
-    let is_coupler = knx_productdb::query::product_hardware_is_coupler(&products, &product_ref)
-        .map_err(|e| e.to_string())?;
     Ok((is_coupler == Some(true)).then_some(knx_core::CouplerEvidence { product_ref }))
 }
 
@@ -3804,10 +3867,11 @@ pub fn catalog_manufacturers_impl(
     let products = state
         .product_db
         .as_ref()
-        .ok_or_else(|| state.product_db_missing())?
-        .lock()
-        .expect("state mutex poisoned");
-    knx_productdb::query::manufacturers(&products).map_err(|e| e.to_string())
+        .ok_or_else(|| state.product_db_missing())?;
+    products
+        .with_read(knx_productdb::query::manufacturers)
+        .map_err(|e| format!("the product database is unavailable: {e}"))?
+        .map_err(|e| e.to_string())
 }
 
 pub fn catalog_items_impl(
@@ -3819,16 +3883,18 @@ pub fn catalog_items_impl(
     let products = state
         .product_db
         .as_ref()
-        .ok_or_else(|| state.product_db_missing())?
-        .lock()
-        .expect("state mutex poisoned");
-    knx_productdb::query::catalog_items(
-        &products,
-        manufacturer.as_deref(),
-        search.as_deref(),
-        language.as_deref(),
-    )
-    .map_err(|e| e.to_string())
+        .ok_or_else(|| state.product_db_missing())?;
+    products
+        .with_read(|conn| {
+            knx_productdb::query::catalog_items(
+                conn,
+                manufacturer.as_deref(),
+                search.as_deref(),
+                language.as_deref(),
+            )
+        })
+        .map_err(|e| format!("the product database is unavailable: {e}"))?
+        .map_err(|e| e.to_string())
 }
 
 /// Every language identifier the installed product database has any
@@ -3841,11 +3907,14 @@ pub fn catalog_items_impl(
 pub fn product_languages_impl(
     state: &AppState,
 ) -> Result<Vec<knx_productdb::query::TranslationLanguage>, String> {
-    let Some(products_mutex) = state.product_db.as_ref() else {
-        return Ok(Vec::new());
-    };
-    let products = products_mutex.lock().expect("state mutex poisoned");
-    knx_productdb::query::translation_languages(&products).map_err(|e| e.to_string())
+    let products_mutex = state.product_db.as_ref();
+    match products_mutex {
+        None => Ok(Vec::new()),
+        Some(owner) => owner
+            .with_read(knx_productdb::query::translation_languages)
+            .map_err(|e| format!("the product database is unavailable: {e}"))?
+            .map_err(|e| e.to_string()),
+    }
 }
 
 /// Installs one standalone manufacturer package into the shared catalog.
@@ -3870,19 +3939,35 @@ pub fn install_catalog_package_impl(
     source_name: &str,
     bytes: &[u8],
 ) -> Result<knx_productdb::InstallReport, CatalogInstallError> {
-    let products = state
+    let owner = state
         .product_db
         .as_ref()
-        .ok_or_else(|| CatalogInstallError::Internal(state.product_db_missing()))?
-        .lock()
-        .expect("state mutex poisoned");
-    knx_productdb::install_package(&products, source_name, bytes).map_err(|error| match &error {
-        knx_productdb::PackageError::Database(
-            knx_productdb::ProductDbError::Sqlite(_)
-            | knx_productdb::ProductDbError::FutureVersion { .. },
-        ) => CatalogInstallError::Internal(error.to_string()),
-        _ => CatalogInstallError::BadRequest(error),
-    })
+        .ok_or_else(|| CatalogInstallError::Internal(state.product_db_missing()))?;
+    owner
+        .with_legacy_mutation(
+            knx_productdb::managed_catalogue::LegacyMutationKind::DirectPackage,
+            |conn| knx_productdb::install_package(conn, source_name, bytes),
+            |result| match result {
+                Ok(_) => knx_productdb::managed_catalogue::LegacySettlementHint::SuccessfulReturn,
+                Err(knx_productdb::PackageError::Database(
+                    knx_productdb::ProductDbError::Sqlite(_)
+                    | knx_productdb::ProductDbError::FutureVersion { .. },
+                )) => knx_productdb::managed_catalogue::LegacySettlementHint::Uncertain,
+                Err(_) => {
+                    knx_productdb::managed_catalogue::LegacySettlementHint::PreCommitSemanticRefusal
+                }
+            },
+        )
+        .map_err(|error| {
+            CatalogInstallError::Internal(format!("catalogue owner unavailable: {error}"))
+        })?
+        .map_err(|error| match &error {
+            knx_productdb::PackageError::Database(
+                knx_productdb::ProductDbError::Sqlite(_)
+                | knx_productdb::ProductDbError::FutureVersion { .. },
+            ) => CatalogInstallError::Internal(error.to_string()),
+            _ => CatalogInstallError::BadRequest(error),
+        })
 }
 
 /// Why a legacy product database upload was not imported (ADR-0094, L3).
@@ -3945,18 +4030,33 @@ pub fn install_legacy_impl(
                 }
             })?;
     let report = {
-        let products = state
+        let owner = state
             .product_db
             .as_ref()
-            .ok_or_else(|| LegacyInstallError::Internal(state.product_db_missing()))?
-            .lock()
-            .expect("state mutex poisoned");
-        knx_productdb::legacy::publish_legacy(&products, source_name, bytes, &payload).map_err(
-            |error| match error {
+            .ok_or_else(|| LegacyInstallError::Internal(state.product_db_missing()))?;
+        owner
+            .with_legacy_mutation(
+                knx_productdb::managed_catalogue::LegacyMutationKind::LegacyPublish,
+                |conn| knx_productdb::legacy::publish_legacy(conn, source_name, bytes, &payload),
+                |result| match result {
+                    Ok(_) => {
+                        knx_productdb::managed_catalogue::LegacySettlementHint::SuccessfulReturn
+                    }
+                    Err(LegacyPublishError::Legacy(_)) => {
+                        knx_productdb::managed_catalogue::LegacySettlementHint::PreCommitSemanticRefusal
+                    }
+                    Err(LegacyPublishError::Store(_)) => {
+                        knx_productdb::managed_catalogue::LegacySettlementHint::Uncertain
+                    }
+                },
+            )
+            .map_err(|error| {
+                LegacyInstallError::Internal(format!("catalogue owner unavailable: {error}"))
+            })?
+            .map_err(|error| match error {
                 LegacyPublishError::Legacy(e) => LegacyInstallError::BadRequest(e.to_string()),
                 LegacyPublishError::Store(e) => LegacyInstallError::Internal(e.to_string()),
-            },
-        )?
+            })?
     };
     let (remembered, remember_problem) = match (remember, used) {
         (true, PasswordUsed::Given) => match (password.as_ref(), state.legacy_password.as_ref()) {
@@ -4493,57 +4593,65 @@ fn read_catalog_product(
     if request.name.trim().is_empty() {
         return Err("device name must not be blank".into());
     }
-    let products = state
+    let owner = state
         .product_db
         .as_ref()
-        .ok_or_else(|| state.product_db_missing())?
-        .lock()
-        .expect("state mutex poisoned");
-    let item = knx_productdb::query::catalog_item(&products, &request.catalog_item_id)
-        .map_err(|e| e.to_string())?
-        .ok_or("catalog item not found")?;
-    let mut seeds: Vec<(String, knx_productdb::query::ComObjectView)> = Vec::new();
-    let mut diagnostics = Vec::new();
-    let (product_ref, program_ref) =
-        match knx_productdb::query::resolve_catalog_item_program(&products, &item)
-            .map_err(|error| error.to_string())?
-        {
-            knx_productdb::query::CatalogItemProgram::Program {
-                product_ref_id,
-                hardware2program_ref_id,
-                program_id,
-            } => {
-                for ref_id in knx_productdb::query::com_object_ref_ids(&products, &program_id)
-                    .map_err(|e| e.to_string())?
+        .ok_or_else(|| state.product_db_missing())?;
+    owner
+        .with_read(|products| -> Result<CatalogProduct, CatalogCreateError> {
+            let item = knx_productdb::query::catalog_item(products, &request.catalog_item_id)
+                .map_err(|e| e.to_string())?
+                .ok_or("catalog item not found")?;
+            let mut seeds: Vec<(String, knx_productdb::query::ComObjectView)> = Vec::new();
+            let mut diagnostics = Vec::new();
+            let (product_ref, program_ref) =
+                match knx_productdb::query::resolve_catalog_item_program(products, &item)
+                    .map_err(|error| error.to_string())?
                 {
-                    let view = knx_productdb::query::com_object_view(
-                        &products,
-                        &program_id,
-                        &ref_id,
-                        None,
-                    )
-                    .map_err(|e| e.to_string())?
-                    .ok_or_else(|| {
-                        format!("catalog communication-object reference is missing: {ref_id}")
-                    })?;
-                    seeds.push((ref_id, view));
-                }
-                diagnostics.push(CreationDiagnostic::DynamicOrModuleNotEvaluated { program_id });
-                (product_ref_id, hardware2program_ref_id)
-            }
-            knx_productdb::query::CatalogItemProgram::Programless { product_ref_id } => {
-                diagnostics.push(CreationDiagnostic::ProgramlessProduct {
-                    catalog_item_id: item.id,
-                });
-                (product_ref_id, String::new())
-            }
-        };
-    Ok(CatalogProduct {
-        product_ref,
-        program_ref,
-        seeds,
-        base_diagnostics: diagnostics,
-    })
+                    knx_productdb::query::CatalogItemProgram::Program {
+                        product_ref_id,
+                        hardware2program_ref_id,
+                        program_id,
+                    } => {
+                        for ref_id in
+                            knx_productdb::query::com_object_ref_ids(products, &program_id)
+                                .map_err(|e| e.to_string())?
+                        {
+                            let view = knx_productdb::query::com_object_view(
+                                products,
+                                &program_id,
+                                &ref_id,
+                                None,
+                            )
+                            .map_err(|e| e.to_string())?
+                            .ok_or_else(|| {
+                                format!(
+                                    "catalog communication-object reference is missing: {ref_id}"
+                                )
+                            })?;
+                            seeds.push((ref_id, view));
+                        }
+                        diagnostics
+                            .push(CreationDiagnostic::DynamicOrModuleNotEvaluated { program_id });
+                        (product_ref_id, hardware2program_ref_id)
+                    }
+                    knx_productdb::query::CatalogItemProgram::Programless { product_ref_id } => {
+                        diagnostics.push(CreationDiagnostic::ProgramlessProduct {
+                            catalog_item_id: item.id,
+                        });
+                        (product_ref_id, String::new())
+                    }
+                };
+            Ok(CatalogProduct {
+                product_ref,
+                program_ref,
+                seeds,
+                base_diagnostics: diagnostics,
+            })
+        })
+        .map_err(|e| {
+            CatalogCreateError::from(format!("the product database is unavailable: {e}"))
+        })?
 }
 
 struct PlannedCatalogDevice {
@@ -5709,7 +5817,7 @@ fn assemble_parameter_panel_for_project(
         )
     };
 
-    let Some(products_mutex) = state.product_db.as_ref() else {
+    let Some(owner) = state.product_db.as_ref() else {
         return Ok(unresolved_assembly(stored, &program_ref, false, 0));
     };
     // ADR-0128: the manifest, cloned before `product_db` is taken, so an
@@ -5722,20 +5830,21 @@ fn assemble_parameter_panel_for_project(
 
     // Step 2: lock only `product_db` (`project`'s lock above is already
     // dropped — the two mutexes are never held at once).
-    let products = products_mutex.lock().expect("state mutex poisoned");
-    let program_id = knx_productdb::query::resolve_program(&products, &program_ref)
-        .map_err(|e| e.to_string())?;
-    let Some(program_id) = program_id else {
-        let missing =
-            knx_app::manufacturer_files::missing_from_products(&products, &manufacturer_refs)
+    owner
+        .with_read(|products| -> Result<PanelAssembly, String> {
+            let program_id = knx_productdb::query::resolve_program(products, &program_ref)
                 .map_err(|e| e.to_string())?;
-        return Ok(unresolved_assembly(
-            stored,
-            &program_ref,
-            true,
-            missing.len(),
-        ));
-    };
+            let Some(program_id) = program_id else {
+                let missing =
+                    knx_app::manufacturer_files::missing_from_products(products, &manufacturer_refs)
+                        .map_err(|e| e.to_string())?;
+                return Ok(unresolved_assembly(
+                    stored,
+                    &program_ref,
+                    true,
+                    missing.len(),
+                ));
+            };
 
     let DeviceEvaluation {
         mut caption_fills,
@@ -5747,7 +5856,7 @@ fn assemble_parameter_panel_for_project(
         diagnostics: evaluation_diagnostics,
         values,
         activation,
-    } = evaluate_device(&products, &program_id, stored, &module_instances)?;
+    } = evaluate_device(products, &program_id, stored, &module_instances)?;
     // ADR-0062: a truncated traversal cannot rule out unseen duplicate
     // module authority. Preserve its prefix for inspection, never for writes.
     let resource_limited = activation.diagnostics.iter().any(|scoped| {
@@ -5759,19 +5868,19 @@ fn assemble_parameter_panel_for_project(
     });
     // `language` is the request-supplied display language (T26 Task 2);
     // `None` keeps today's untranslated behaviour exactly as Task 1 left it.
-    let views = knx_productdb::query::parameter_views(&products, &program_id, language)
+    let views = knx_productdb::query::parameter_views(products, &program_id, language)
         .map_err(|e| e.to_string())?;
     // AR10: the declared language of the untranslated texts, so a field
     // whose `textLanguage` is `null` says what it fell back to.
-    let source_language = knx_productdb::query::program_default_language(&products, &program_id)
+    let source_language = knx_productdb::query::program_default_language(products, &program_id)
         .map_err(|e| e.to_string())?;
     let object_control_ids =
-        crate::parameter_objects::unscoped_object_ids(&products, &program_id, &object_metadata)?;
+        crate::parameter_objects::unscoped_object_ids(products, &program_id, &object_metadata)?;
     let views_by_id: HashMap<String, knx_productdb::query::ParameterView> =
         views.iter().cloned().map(|v| (v.id.clone(), v)).collect();
     // ADR-0080: the declared write authority beyond the parameter types.
     let authority =
-        knx_productdb::query::write_authority(&products, &program_id).map_err(|e| e.to_string())?;
+        knx_productdb::query::write_authority(products, &program_id).map_err(|e| e.to_string())?;
 
     // Coordinator addition: `parameter_views`' inner joins silently drop
     // a row whose `parameter`/`parameter_type` does not resolve — name
@@ -5779,7 +5888,7 @@ fn assemble_parameter_panel_for_project(
     // on the current corpus, so this is not expected to fire on real
     // data; it is here for the day a package does not join cleanly).
     let mut diagnostics = crate::parameter_objects::object_metadata_diagnostics(
-        &products,
+        products,
         &program_id,
         &object_metadata,
     )?;
@@ -5888,7 +5997,7 @@ fn assemble_parameter_panel_for_project(
         });
 
     let layout =
-        knx_productdb::parameter_layout::load(&products, &program_id).map_err(|e| e.to_string())?;
+        knx_productdb::parameter_layout::load(products, &program_id).map_err(|e| e.to_string())?;
     let mut sections = Vec::with_capacity(section_order.len());
     for key in section_order {
         let section = sections_by_key.remove(&key).expect("just inserted above");
@@ -6224,6 +6333,8 @@ fn assemble_parameter_panel_for_project(
         views_by_id,
         ref_ids,
     })
+        })
+        .map_err(|e| format!("the product database is unavailable: {e}"))?
 }
 
 /// ADR-0080: why a field is not writable beyond the evaluation's own
@@ -6787,21 +6898,25 @@ pub(crate) fn set_parameter_value_impl(
     };
     let cmd_name = command_name(&parameter);
     let (cmd, object_diagnostics) = {
-        let products = state
+        let owner = state
             .product_db
             .as_ref()
-            .ok_or_else(|| ParameterWriteError::Refused(state.product_db_missing()))?
-            .lock()
-            .expect("state mutex poisoned");
-        crate::parameter_objects::include_missing(
-            &products,
-            &base,
-            device,
-            parameter,
-            ids,
-            &program_id,
-        )
-        .map_err(ParameterWriteError::Refused)?
+            .ok_or_else(|| ParameterWriteError::Refused(state.product_db_missing()))?;
+        owner
+            .with_read(|products| {
+                crate::parameter_objects::include_missing(
+                    products,
+                    &base,
+                    device,
+                    parameter,
+                    ids,
+                    &program_id,
+                )
+                .map_err(ParameterWriteError::Refused)
+            })
+            .map_err(|e| {
+                ParameterWriteError::Refused(format!("catalogue owner unavailable: {e}"))
+            })??
     };
     // Exercise the exact reconciled command through the existing stack, not a
     // second value-mutation route. A refused projection must precede persistence.
@@ -7886,7 +8001,9 @@ mod tests {
 
         let products = knx_productdb::open_and_migrate(&products_path).unwrap();
         let state = AppState {
-            product_db: Some(Mutex::new(products)),
+            product_db: Some(
+                crate::CatalogueOwner::adopt_opened(products, products_path.clone()).unwrap(),
+            ),
             ..AppState::default()
         };
         open_project(
@@ -8224,8 +8341,8 @@ mod tests {
     fn state_with_product_db() -> (tempfile::TempDir, AppState) {
         let state = state_with_one_installation();
         let dir = tempfile::tempdir().unwrap();
-        let products =
-            knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+        let products_path = dir.path().join("products.sqlite");
+        let products = knx_productdb::open_and_migrate(&products_path).unwrap();
         knx_productdb::parse::hardware::ingest_hardware(
             &products,
             "sha-h",
@@ -8248,7 +8365,8 @@ mod tests {
         )
         .unwrap();
         let mut state = state;
-        state.product_db = Some(Mutex::new(products));
+        state.product_db =
+            Some(crate::CatalogueOwner::adopt_opened(products, products_path).unwrap());
         (dir, state)
     }
 

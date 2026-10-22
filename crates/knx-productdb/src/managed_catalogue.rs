@@ -27,7 +27,7 @@ impl CatalogueIncarnation {
 
 /// The single mutable health of one managed handle.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum WriterHealth {
+pub enum WriterHealth {
     Healthy,
     /// Lock is owned; the guard has not yet proved safe settlement.
     Mutating,
@@ -38,14 +38,14 @@ pub(crate) enum WriterHealth {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum RetireReason {
+pub enum RetireReason {
     Close,
     Reopen,
     Restore,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum QuarantineReason {
+pub enum QuarantineReason {
     Panic,
     UncertainSettlement,
     Poisoned,
@@ -87,6 +87,8 @@ pub(crate) struct WriterObservation {
 
 /// The admitted absolute/canonical pathname (privately), parent directory
 /// identity, device/inode/link count and the selected default-VFS choice.
+/// Retained for the later identity/ABA checks; only `canonical` is read today.
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub(crate) struct ManagedFileIdentity {
     canonical: PathBuf,
@@ -116,7 +118,7 @@ impl ManagedFileIdentity {
 
 /// Closed set of legacy server mutators admitted through the managed owner.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum LegacyMutationKind {
+pub enum LegacyMutationKind {
     DirectPackage,
     LegacyPublish,
     PathUpdate,
@@ -127,14 +129,14 @@ pub(crate) enum LegacyMutationKind {
 /// A hint the mutation guard independently checks against native/health state;
 /// never permission to claim a failed COMMIT rolled back.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum LegacySettlementHint {
+pub enum LegacySettlementHint {
     SuccessfulReturn,
     PreCommitSemanticRefusal,
     Uncertain,
 }
 
 #[derive(Debug)]
-pub(crate) enum OwnerError {
+pub enum OwnerError {
     NotHealthy(WriterHealth),
     GenerationOverflow,
     ReadDuringTransaction,
@@ -165,10 +167,14 @@ impl std::fmt::Display for OwnerError {
 impl std::error::Error for OwnerError {}
 
 #[derive(Debug)]
-pub(crate) enum OwnerRestoreError {
+pub enum OwnerRestoreError {
     NotHealthy(WriterHealth),
     GenerationOverflow,
-    Reopen(rusqlite::Error),
+    /// The file offered for a restore is not a usable product database: a
+    /// semantic refusal the caller can surface as `invalidBackup` (422), not
+    /// an internal failure.
+    InvalidBackup(String),
+    Restore(String),
     Observation(String),
 }
 
@@ -179,7 +185,13 @@ impl std::fmt::Display for OwnerRestoreError {
                 write!(f, "catalogue owner not healthy: {health:?}")
             }
             OwnerRestoreError::GenerationOverflow => write!(f, "catalogue generation overflow"),
-            OwnerRestoreError::Reopen(e) => write!(f, "catalogue reopen failed: {e}"),
+            OwnerRestoreError::InvalidBackup(why) => {
+                write!(
+                    f,
+                    "catalogue restore failed: not a usable product database backup: {why}"
+                )
+            }
+            OwnerRestoreError::Restore(e) => write!(f, "catalogue restore failed: {e}"),
             OwnerRestoreError::Observation(why) => {
                 write!(f, "catalogue observation failed: {why}")
             }
@@ -219,7 +231,7 @@ impl Drop for MutationGuard<'_> {
 /// One protected managed state. `conn` is `None` while retired/reopening.
 /// Never store a `rusqlite::Transaction` here (it would borrow its own
 /// connection); orchestration borrows the connection disjointly instead.
-pub(crate) struct ManagedCatalogue {
+pub struct ManagedCatalogue {
     conn: Option<Connection>,
     incarnation: CatalogueIncarnation,
     generation: u64,
@@ -232,10 +244,7 @@ pub(crate) struct ManagedCatalogue {
 impl ManagedCatalogue {
     /// Adopts an already-opened, already-migrated connection. Takes a real
     /// main read first so the first observation is a real observation.
-    pub(crate) fn adopt_opened(
-        conn: Connection,
-        configured_path: PathBuf,
-    ) -> Result<Self, OwnerError> {
+    pub fn adopt_opened(conn: Connection, configured_path: PathBuf) -> Result<Self, OwnerError> {
         let observation = Self::observe(&conn, &configured_path)?;
         let identity = ManagedFileIdentity::from_path(&configured_path);
         Ok(Self {
@@ -251,7 +260,7 @@ impl ManagedCatalogue {
     /// A read lease scoped to a lock; `&Connection` never escapes the closure.
     /// Refuses a non-Healthy handle or an active transaction, and never
     /// mutates observation counters.
-    pub(crate) fn with_read<T, E>(
+    pub fn with_read<T, E>(
         &self,
         read: impl FnOnce(&Connection) -> Result<T, E>,
     ) -> Result<Result<T, E>, OwnerError> {
@@ -270,7 +279,7 @@ impl ManagedCatalogue {
     /// increment before the body, `Mutating` set, quarantine-on-unwind; a
     /// clean return refreshes the observation and restores `Healthy`. Failure
     /// never rolls generation back.
-    pub(crate) fn with_legacy_mutation<T, E>(
+    pub fn with_legacy_mutation<T, E>(
         &mut self,
         _kind: LegacyMutationKind,
         work: impl FnOnce(&mut Connection) -> Result<T, E>,
@@ -313,11 +322,16 @@ impl ManagedCatalogue {
         Ok(outcome)
     }
 
-    /// The dedicated restore adapter: retire and invalidate before touching the
-    /// live handle, then adopt a fresh incarnation and healthy reopened handle
-    /// only on success. Failure leaves the owner quarantined, never silently
-    /// usable.
-    pub(crate) fn restore_legacy(&mut self, listed_backup: &Path) -> Result<(), OwnerRestoreError> {
+    /// The dedicated restore adapter: copy the validated backup over the live
+    /// file while the old connection is still open (quiescent), then retire
+    /// and reopen with migration and a fresh incarnation only on success. A
+    /// validation refusal leaves the old connection healthy; a mid-copy or
+    /// reopen failure quarantines it, never silently usable.
+    pub fn restore_legacy(
+        &mut self,
+        live_path: &Path,
+        backup_path: &Path,
+    ) -> Result<(), OwnerRestoreError> {
         if self.health != WriterHealth::Healthy {
             return Err(OwnerRestoreError::NotHealthy(self.health));
         }
@@ -325,10 +339,27 @@ impl ManagedCatalogue {
             .generation
             .checked_add(1)
             .ok_or(OwnerRestoreError::GenerationOverflow)?;
+
+        // Copy with the old connection still open. An invalid backup is a
+        // semantic refusal that leaves the live file and the old connection
+        // untouched; a mid-copy failure is uncertain and quarantines.
+        if let Err(error) = crate::update::restore_product_db_backup(live_path, backup_path) {
+            return Err(match error {
+                crate::update::UpdateError::InvalidBackup(why) => {
+                    OwnerRestoreError::InvalidBackup(why)
+                }
+                other => {
+                    self.health = WriterHealth::Quarantined(QuarantineReason::UncertainSettlement);
+                    OwnerRestoreError::Restore(other.to_string())
+                }
+            });
+        }
+
+        // The live file is replaced: retire the old connection and reopen with
+        // migration, adopting a fresh incarnation only on success.
         self.health = WriterHealth::Retired(RetireReason::Restore);
         self.conn = None;
-
-        match Connection::open(listed_backup) {
+        match crate::migration::open_and_migrate(live_path) {
             Ok(conn) => {
                 self.conn = Some(conn);
                 self.incarnation = CatalogueIncarnation::fresh();
@@ -341,7 +372,7 @@ impl ManagedCatalogue {
             }
             Err(e) => {
                 self.health = WriterHealth::Quarantined(QuarantineReason::UncertainSettlement);
-                Err(OwnerRestoreError::Reopen(e))
+                Err(OwnerRestoreError::Restore(e.to_string()))
             }
         }
     }
@@ -374,13 +405,6 @@ impl ManagedCatalogue {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn in_memory() -> Connection {
-        let conn = Connection::open_in_memory().unwrap();
-        conn.execute_batch("CREATE TABLE t (id INTEGER PRIMARY KEY, v TEXT) STRICT;")
-            .unwrap();
-        conn
-    }
 
     fn adopted() -> (tempfile::TempDir, ManagedCatalogue) {
         let dir = tempfile::tempdir().unwrap();
@@ -511,34 +535,31 @@ mod tests {
 
     #[test]
     fn restore_adopts_a_fresh_incarnation_and_healthy_handle() {
-        let (_dir, mut owner) = adopted();
-        // Write through the owner so the restored file has the row.
-        owner
-            .with_legacy_mutation(
-                LegacyMutationKind::DirectPackage,
-                |conn| conn.execute("INSERT INTO t (id, v) VALUES (1, 'x')", []),
-                |_: &Result<usize, rusqlite::Error>| LegacySettlementHint::SuccessfulReturn,
-            )
-            .unwrap()
-            .unwrap();
-        let backup_path = _dir.path().join("products.sqlite");
+        let dir = tempfile::tempdir().unwrap();
+        let live = dir.path().join("products.sqlite");
+        // A real, migrated product DB: restore reopens via `open_and_migrate`,
+        // which refuses the synthetic schema used by `adopted()`.
+        let conn = crate::migration::open_and_migrate(&live).unwrap();
+        let mut owner = ManagedCatalogue::adopt_opened(conn, live.clone()).unwrap();
+        let backup = dir.path().join("backup.sqlite");
+        std::fs::copy(&live, &backup).unwrap();
         let before = owner.incarnation;
-        owner.restore_legacy(&backup_path).unwrap();
+        owner.restore_legacy(&live, &backup).unwrap();
         assert_eq!(owner.health, WriterHealth::Healthy);
         assert_ne!(owner.incarnation, before);
     }
 
     #[test]
-    fn a_failed_restore_leaves_the_owner_quarantined() {
+    fn an_invalid_backup_is_refused_and_the_owner_stays_healthy() {
         let (dir, mut owner) = adopted();
-        // A directory cannot be opened as a database file.
+        let live = dir.path().join("products.sqlite");
+        // A directory cannot be opened as a database backup: the validation
+        // refusal must leave the old connection healthy and usable.
         let not_a_db = dir.path().join("subdir");
         std::fs::create_dir(&not_a_db).unwrap();
-        let err = owner.restore_legacy(&not_a_db).unwrap_err();
-        assert!(matches!(err, OwnerRestoreError::Reopen(_)));
-        assert!(matches!(
-            owner.health,
-            WriterHealth::Quarantined(QuarantineReason::UncertainSettlement)
-        ));
+        let err = owner.restore_legacy(&live, &not_a_db).unwrap_err();
+        assert!(matches!(err, OwnerRestoreError::InvalidBackup(_)));
+        assert!(matches!(owner.health, WriterHealth::Healthy));
+        assert!(owner.conn.is_some());
     }
 }

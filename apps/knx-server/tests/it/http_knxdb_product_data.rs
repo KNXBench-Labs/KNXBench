@@ -13,7 +13,7 @@ use serde_json::{json, Value};
 use std::{
     io::{Cursor, Write},
     path::Path,
-    sync::{Arc, Mutex},
+    sync::Arc,
 };
 use tower::ServiceExt;
 
@@ -53,9 +53,13 @@ fn knxproj() -> Vec<u8> {
 
 fn state_with_products(data_dir: &Path, products: &Path) -> Arc<knx_server::AppState> {
     Arc::new(knx_server::AppState {
-        product_db: Some(Mutex::new(
-            knx_productdb::open_and_migrate(products).unwrap(),
-        )),
+        product_db: Some(
+            knx_server::CatalogueOwner::adopt_opened(
+                knx_productdb::open_and_migrate(products).unwrap(),
+                std::path::PathBuf::new(),
+            )
+            .unwrap(),
+        ),
         ..knx_server::AppState::new(data_dir.into())
     })
 }
@@ -546,11 +550,19 @@ async fn a_catalogue_created_device_keeps_its_model_but_needs_products_after_sav
             0,
             "no manifest means no carried files"
         );
-        let products = state.product_db.as_ref().unwrap().lock().unwrap();
-        for bytes in [HARDWARE, PROGRAM, CATALOG_SOURCE] {
-            let hash = knx_store::manufacturer_file_hash(bytes);
-            assert!(knx_productdb::has_source_file(&products, &hash).unwrap());
-        }
+        state
+            .product_db
+            .as_ref()
+            .unwrap()
+            .with_read(|products| {
+                for bytes in [HARDWARE, PROGRAM, CATALOG_SOURCE] {
+                    let hash = knx_store::manufacturer_file_hash(bytes);
+                    assert!(knx_productdb::has_source_file(products, &hash).unwrap());
+                }
+                Ok::<(), std::convert::Infallible>(())
+            })
+            .unwrap()
+            .unwrap();
     }
 
     // The saved model and package are valid: the same file resolves while
@@ -568,9 +580,18 @@ async fn a_catalogue_created_device_keeps_its_model_but_needs_products_after_sav
 
     let fresh = state_with_products(dir.path(), &dir.path().join("empty.sqlite"));
     {
-        let products = fresh.product_db.as_ref().unwrap().lock().unwrap();
-        let count: i64 = products
-            .query_row("SELECT count(*) FROM application_program", [], |r| r.get(0))
+        let count: i64 = fresh
+            .product_db
+            .as_ref()
+            .unwrap()
+            .with_read(|products| {
+                Ok::<_, std::convert::Infallible>(
+                    products
+                        .query_row("SELECT count(*) FROM application_program", [], |r| r.get(0))
+                        .unwrap(),
+                )
+            })
+            .unwrap()
             .unwrap();
         assert_eq!(count, 0, "reopen must start without installed programs");
     }

@@ -1,6 +1,6 @@
 //! Parameter captions use exact positional references without changing project data.
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
@@ -89,7 +89,9 @@ fn state(products: knx_productdb::Connection) -> knx_server::AppState {
     });
     project.ids = knx_core::project::IdAllocators::from_counts(1, 0, 0, 0, 0, 0, 0, 0, 0);
     let mut state = knx_server::AppState::default();
-    state.product_db = Some(Mutex::new(products));
+    state.product_db = Some(
+        knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap(),
+    );
     *state.project.lock().unwrap() = Some(project);
     state
 }
@@ -129,9 +131,22 @@ async fn block_and_separator_captions_read_exact_text_reference_without_writes()
     assert_eq!(group["label"], "Functions: Ref default");
     assert_eq!(group["labelFill"]["template"], "Functions: {{0}}");
     assert_eq!(group["labelFill"]["source"], "ProductDefault");
-    let stored_caption: (String, String) = state.product_db.as_ref().unwrap().lock().unwrap()
-        .query_row("SELECT text, text_parameter_ref_id FROM dynamic_node WHERE program_id = 'A-1' AND element_id = 'PB-1'",
-            [], |row| Ok((row.get(0)?, row.get(1)?))).unwrap();
+    let stored_caption: (String, String) = state
+        .product_db
+        .as_ref()
+        .unwrap()
+        .with_read(|conn| {
+            Ok::<_, std::convert::Infallible>(
+                conn.query_row(
+                    "SELECT text, text_parameter_ref_id FROM dynamic_node WHERE program_id = 'A-1' AND element_id = 'PB-1'",
+                    [],
+                    |row| Ok((row.get(0)?, row.get(1)?)),
+                )
+                .unwrap(),
+            )
+        })
+        .unwrap()
+        .unwrap();
     assert_eq!(stored_caption, ("Functions: {{0}}".into(), "R-T".into()));
     assert_eq!(
         dto["sections"][0]["separators"][0]["text"],

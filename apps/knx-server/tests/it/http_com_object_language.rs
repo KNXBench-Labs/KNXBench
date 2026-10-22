@@ -8,7 +8,7 @@
 //! on the real corpus, that is where communication-object translations
 //! point, never at the `ComObjectRef`.
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
@@ -165,7 +165,8 @@ fn state_with_com_object(
         parameters: vec![],
     });
     let mut state = knx_server::AppState::default();
-    state.product_db = products.map(Mutex::new);
+    state.product_db = products
+        .map(|c| knx_server::CatalogueOwner::adopt_opened(c, std::path::PathBuf::new()).unwrap());
     *state.project.lock().unwrap() = Some(project);
     state
 }

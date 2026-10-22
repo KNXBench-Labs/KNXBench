@@ -5,7 +5,7 @@
 //! `crates/knx-productdb/src/query.rs`'s own `PARAMETER_PROGRAM_TRANSLATED`
 //! fixture for that shape.
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
@@ -143,7 +143,9 @@ fn state_with_device(
             .collect(),
     });
     let mut state = knx_server::AppState::default();
-    state.product_db = Some(Mutex::new(products));
+    state.product_db = Some(
+        knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap(),
+    );
     *state.project.lock().unwrap() = Some(project);
     state
 }

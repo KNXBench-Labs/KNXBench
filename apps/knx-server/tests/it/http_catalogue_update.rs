@@ -2,7 +2,7 @@
 
 use std::io::{Cursor, Write};
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
@@ -58,7 +58,9 @@ fn fixture() -> Fixture {
     let products = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
     knx_productdb::install_package(&products, "dimmer-v16.knxprod", &package(0x10)).unwrap();
     let state = Arc::new(knx_server::AppState {
-        product_db: Some(Mutex::new(products)),
+        product_db: Some(
+            knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap(),
+        ),
         ..knx_server::AppState::new(dir.path().join("data"))
     });
     let app = knx_server::app(state.clone(), None);
@@ -121,16 +123,24 @@ async fn send(app: &axum::Router, request: Request<Body>) -> (StatusCode, Value)
 
 /// Program IDs as the server's own shared connection sees them.
 fn server_program_ids(state: &knx_server::AppState) -> Vec<String> {
-    let conn = state.product_db.as_ref().unwrap().lock().unwrap();
-    let mut statement = conn
-        .prepare("SELECT id FROM application_program ORDER BY id")
-        .unwrap();
-    let ids = statement
-        .query_map([], |row| row.get(0))
+    state
+        .product_db
+        .as_ref()
         .unwrap()
-        .collect::<Result<Vec<String>, _>>()
-        .unwrap();
-    ids
+        .with_read(|conn| {
+            let mut statement = conn
+                .prepare("SELECT id FROM application_program ORDER BY id")
+                .unwrap();
+            Ok::<_, std::convert::Infallible>(
+                statement
+                    .query_map([], |row| row.get(0))
+                    .unwrap()
+                    .collect::<Result<Vec<String>, _>>()
+                    .unwrap(),
+            )
+        })
+        .unwrap()
+        .unwrap()
 }
 
 async fn preview(f: &Fixture, version: u8) -> Value {
@@ -634,9 +644,12 @@ async fn restore_by_listed_name_brings_the_old_catalogue_back_to_the_server_conn
         .product_db
         .as_ref()
         .unwrap()
-        .lock()
+        .with_read(|conn| {
+            conn.execute_batch("CREATE TEMP TABLE old_connection(x)")
+                .unwrap();
+            Ok::<(), std::convert::Infallible>(())
+        })
         .unwrap()
-        .execute_batch("CREATE TEMP TABLE old_connection(x)")
         .unwrap();
     let (status, body) = send(
         &f.app,
@@ -651,13 +664,17 @@ async fn restore_by_listed_name_brings_the_old_catalogue_back_to_the_server_conn
         .product_db
         .as_ref()
         .unwrap()
-        .lock()
+        .with_read(|conn| {
+            Ok::<_, std::convert::Infallible>(
+                conn.query_row(
+                    "SELECT count(*) FROM temp.sqlite_master WHERE name = 'old_connection'",
+                    [],
+                    |row| row.get(0),
+                )
+                .unwrap(),
+            )
+        })
         .unwrap()
-        .query_row(
-            "SELECT count(*) FROM temp.sqlite_master WHERE name = 'old_connection'",
-            [],
-            |row| row.get(0),
-        )
         .unwrap();
     assert_eq!(
         reopened, 0,
@@ -1013,31 +1030,47 @@ const BINDING: &str = "M-0001_H-1_HP-0001-10-0001";
 
 /// Two placements of the same product + application pair.
 fn add_twin_placements(f: &Fixture) {
-    let conn = f.state.product_db.as_ref().unwrap().lock().unwrap();
-    conn.execute_batch(&format!(
-        "INSERT INTO catalog_item (id, manufacturer_id, section_id, name, product_ref_id,
-             hardware2program_ref_id, source_sha256)
-         SELECT 'CI-A', 'M-0001', 'SECTION', 'Dimmer', '{PRODUCT}', '{BINDING}', source_sha256
-         FROM application_program;
-         INSERT INTO catalog_item (id, manufacturer_id, section_id, name, product_ref_id,
-             hardware2program_ref_id, source_sha256)
-         SELECT 'CI-B', 'M-0001', 'SECTION', 'Dimmer', '{PRODUCT}', '{BINDING}', source_sha256
-         FROM application_program;"
-    ))
-    .unwrap();
+    f.state
+        .product_db
+        .as_ref()
+        .unwrap()
+        .with_read(|conn| {
+            conn.execute_batch(&format!(
+                "INSERT INTO catalog_item (id, manufacturer_id, section_id, name, product_ref_id,
+                     hardware2program_ref_id, source_sha256)
+                 SELECT 'CI-A', 'M-0001', 'SECTION', 'Dimmer', '{PRODUCT}', '{BINDING}', source_sha256
+                 FROM application_program;
+                 INSERT INTO catalog_item (id, manufacturer_id, section_id, name, product_ref_id,
+                     hardware2program_ref_id, source_sha256)
+                 SELECT 'CI-B', 'M-0001', 'SECTION', 'Dimmer', '{PRODUCT}', '{BINDING}', source_sha256
+                 FROM application_program;"
+            ))
+            .unwrap();
+            Ok::<(), std::convert::Infallible>(())
+        })
+        .unwrap()
+        .unwrap();
 }
 
 fn placement_ids(state: &knx_server::AppState) -> Vec<String> {
-    let conn = state.product_db.as_ref().unwrap().lock().unwrap();
-    let mut statement = conn
-        .prepare("SELECT id FROM catalog_item ORDER BY id")
-        .unwrap();
-    let ids = statement
-        .query_map([], |row| row.get(0))
+    state
+        .product_db
+        .as_ref()
         .unwrap()
-        .collect::<Result<Vec<String>, _>>()
-        .unwrap();
-    ids
+        .with_read(|conn| {
+            let mut statement = conn
+                .prepare("SELECT id FROM catalog_item ORDER BY id")
+                .unwrap();
+            Ok::<_, std::convert::Infallible>(
+                statement
+                    .query_map([], |row| row.get(0))
+                    .unwrap()
+                    .collect::<Result<Vec<String>, _>>()
+                    .unwrap(),
+            )
+        })
+        .unwrap()
+        .unwrap()
 }
 
 fn open_project_using_the_binding(f: &Fixture, devices: u32) {
@@ -1267,13 +1300,21 @@ async fn cleanup_preview_from_before_a_restore_is_stale_even_for_equal_contents(
     // A backup of exactly this state: remove nothing real (a third placement)
     // and restore the backup taken right before.
     {
-        let conn = f.state.product_db.as_ref().unwrap().lock().unwrap();
-        conn.execute_batch(
-            "INSERT INTO catalog_item (id, manufacturer_id, section_id, name, source_sha256)
-             SELECT 'CI-TEMP', manufacturer_id, section_id, name, source_sha256
-             FROM catalog_item WHERE id = 'CI-A';",
-        )
-        .unwrap();
+        f.state
+            .product_db
+            .as_ref()
+            .unwrap()
+            .with_read(|conn| {
+                conn.execute_batch(
+                    "INSERT INTO catalog_item (id, manufacturer_id, section_id, name, source_sha256)
+                     SELECT 'CI-TEMP', manufacturer_id, section_id, name, source_sha256
+                     FROM catalog_item WHERE id = 'CI-A';",
+                )
+                .unwrap();
+                Ok::<(), std::convert::Infallible>(())
+            })
+            .unwrap()
+            .unwrap();
     }
     let (_, temp) = cleanup_preview(&f, &["CI-TEMP"]).await;
     let (status, removed) = send(
@@ -1301,8 +1342,16 @@ async fn cleanup_preview_from_before_a_restore_is_stale_even_for_equal_contents(
     .await;
     assert_eq!(status, StatusCode::OK, "{body}");
     {
-        let conn = f.state.product_db.as_ref().unwrap().lock().unwrap();
-        conn.execute_batch("DELETE FROM catalog_item WHERE id = 'CI-TEMP'")
+        f.state
+            .product_db
+            .as_ref()
+            .unwrap()
+            .with_read(|conn| {
+                conn.execute_batch("DELETE FROM catalog_item WHERE id = 'CI-TEMP'")
+                    .unwrap();
+                Ok::<(), std::convert::Infallible>(())
+            })
+            .unwrap()
             .unwrap();
     }
     assert_eq!(placement_ids(&f.state), ["CI-A", "CI-B"]);

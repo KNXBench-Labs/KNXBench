@@ -5,7 +5,7 @@
 // `Hardware2Program` pair, plus an `ApplicationProgram.xml` for the program
 // side of the chain.
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
@@ -64,7 +64,8 @@ fn state_with_device(
         binary_data: vec![],
     });
     let mut state = knx_server::AppState::default();
-    state.product_db = products.map(Mutex::new);
+    state.product_db = products
+        .map(|c| knx_server::CatalogueOwner::adopt_opened(c, std::path::PathBuf::new()).unwrap());
     *state.project.lock().unwrap() = Some(project);
     state
 }

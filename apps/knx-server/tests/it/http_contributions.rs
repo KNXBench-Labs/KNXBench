@@ -72,7 +72,9 @@ async fn ap1_local_resolution_and_reduced_preview_keep_user_state_unchanged() {
     assert!(!seed.installations.is_empty());
     let state = Arc::new(knx_server::AppState {
         project: std::sync::Mutex::new(Some(seed.clone())),
-        product_db: Some(std::sync::Mutex::new(products)),
+        product_db: Some(
+            knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap(),
+        ),
         ..Default::default()
     });
     let app = knx_server::app(state.clone(), None);
@@ -120,9 +122,9 @@ async fn ap1_local_resolution_and_reduced_preview_keep_user_state_unchanged() {
             .product_db
             .as_ref()
             .unwrap()
-            .lock()
+            .with_read(|conn| Ok::<_, std::convert::Infallible>(conn.total_changes()))
             .unwrap()
-            .total_changes(),
+            .unwrap(),
         before
     );
     assert_eq!(*state.project.lock().unwrap(), Some(seed));
@@ -142,7 +144,9 @@ async fn analysis_exposes_real_parser_gap_without_installing_the_package() {
         .unwrap();
     let state = Arc::new(knx_server::AppState {
         project: std::sync::Mutex::new(Some(seed.clone())),
-        product_db: Some(std::sync::Mutex::new(products)),
+        product_db: Some(
+            knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap(),
+        ),
         ..Default::default()
     });
     let response = knx_server::app(state.clone(), None)
@@ -170,9 +174,17 @@ async fn analysis_exposes_real_parser_gap_without_installing_the_package() {
     assert_eq!(gap["category"], "unknown");
     assert_eq!(gap["occurrences"], 1);
     assert_eq!(gap["sample"], "private-value");
-    let products = state.product_db.as_ref().unwrap().lock().unwrap();
-    let after: i64 = products
-        .query_row("SELECT COUNT(*) FROM source_file", [], |r| r.get(0))
+    let after: i64 = state
+        .product_db
+        .as_ref()
+        .unwrap()
+        .with_read(|conn| {
+            Ok::<_, std::convert::Infallible>(
+                conn.query_row("SELECT COUNT(*) FROM source_file", [], |r| r.get(0))
+                    .unwrap(),
+            )
+        })
+        .unwrap()
         .unwrap();
     assert_eq!(after, before);
     assert_eq!(*state.project.lock().unwrap(), Some(seed));

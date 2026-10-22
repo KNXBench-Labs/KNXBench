@@ -3,7 +3,7 @@
 //! the design doc's own numbered list (`docs/superpowers/specs/
 //! 2026-09-11-parameter-editor-design.md`, "Acceptance criteria").
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
@@ -440,7 +440,9 @@ fn state_with_device(
     project.ids =
         knx_core::project::IdAllocators::from_counts(1, 0, 0, 0, 0, 0, 0, parameter_count, 0);
     let mut state = knx_server::AppState::default();
-    state.product_db = Some(Mutex::new(products));
+    state.product_db = Some(
+        knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap(),
+    );
     *state.project.lock().unwrap() = Some(project);
     state
 }
@@ -1264,22 +1266,30 @@ async fn nameless_nested_module_scopes_keep_distinct_wire_identities() {
     assert_eq!(state.project.lock().unwrap().as_ref().unwrap(), &before);
     let (_, after) = get_panel(app, 1).await;
     assert_eq!(after, dto);
-    let products = state.product_db.as_ref().unwrap().lock().unwrap();
-    let source: Vec<u8> = products
-        .query_row(
-            "SELECT bytes FROM source_file WHERE source_path = 'M-1/A.xml'",
-            [],
-            |row| row.get(0),
-        )
+    state
+        .product_db
+        .as_ref()
+        .unwrap()
+        .with_read(|products| {
+            let source: Vec<u8> = products
+                .query_row(
+                    "SELECT bytes FROM source_file WHERE source_path = 'M-1/A.xml'",
+                    [],
+                    |row| row.get(0),
+                )
+                .unwrap();
+            assert_eq!(source, program.as_bytes());
+            assert_eq!(
+                knx_productdb::dynamic::evaluate(
+                    &knx_productdb::dynamic::load_program_trees(products, "A-1").unwrap(),
+                    &Default::default()
+                ),
+                activation
+            );
+            Ok::<(), std::convert::Infallible>(())
+        })
+        .unwrap()
         .unwrap();
-    assert_eq!(source, program.as_bytes());
-    assert_eq!(
-        knx_productdb::dynamic::evaluate(
-            &knx_productdb::dynamic::load_program_trees(&products, "A-1").unwrap(),
-            &Default::default()
-        ),
-        activation
-    );
 }
 
 #[tokio::test]
@@ -1334,15 +1344,23 @@ async fn duplicate_nested_module_ids_keep_distinct_scopes_and_refuse_writes() {
     assert_eq!(state.project.lock().unwrap().as_ref().unwrap(), &before);
     let (_, after) = get_panel(app, 1).await;
     assert_eq!(after, dto);
-    let products = state.product_db.as_ref().unwrap().lock().unwrap();
-    let source: Vec<u8> = products
-        .query_row(
-            "SELECT bytes FROM source_file WHERE source_path = 'M-1/A.xml'",
-            [],
-            |row| row.get(0),
-        )
+    state
+        .product_db
+        .as_ref()
+        .unwrap()
+        .with_read(|products| {
+            let source: Vec<u8> = products
+                .query_row(
+                    "SELECT bytes FROM source_file WHERE source_path = 'M-1/A.xml'",
+                    [],
+                    |row| row.get(0),
+                )
+                .unwrap();
+            assert_eq!(source, program.as_bytes());
+            Ok::<(), std::convert::Infallible>(())
+        })
+        .unwrap()
         .unwrap();
-    assert_eq!(source, program.as_bytes());
 }
 
 #[tokio::test]
@@ -1703,16 +1721,22 @@ async fn non_finite_float_bounds_refuse_http_writes_without_changing_project_or_
                 .unwrap()
                 .contains(&format!("non-finite {role}")));
             assert_eq!(*state.project.lock().unwrap(), before);
-            {
-                let products = state.product_db.as_ref().unwrap().lock().unwrap();
-                let retained = knx_productdb::load_source_file(
-                    &products,
-                    &knx_productdb::sha256_hex(source.as_bytes()),
-                )
+            state
+                .product_db
+                .as_ref()
+                .unwrap()
+                .with_read(|products| {
+                    let retained = knx_productdb::load_source_file(
+                        products,
+                        &knx_productdb::sha256_hex(source.as_bytes()),
+                    )
+                    .unwrap()
+                    .unwrap();
+                    assert_eq!(retained, source.as_bytes());
+                    Ok::<(), std::convert::Infallible>(())
+                })
                 .unwrap()
                 .unwrap();
-                assert_eq!(retained, source.as_bytes());
-            }
 
             let (status, panel) = post_panel(app, 1, "P-Text_R-1", "up").await;
             assert_eq!(status, StatusCode::OK);
@@ -1833,12 +1857,22 @@ async fn assert_resource_limited_prefix_is_read_only(source: String) {
         assert!(field.get("writeEtsId").is_some());
         assert!(field["writeEtsId"].is_null());
     }
-    let products = state.product_db.as_ref().unwrap().lock().unwrap();
-    let retained =
-        knx_productdb::load_source_file(&products, &knx_productdb::sha256_hex(source.as_bytes()))
+    state
+        .product_db
+        .as_ref()
+        .unwrap()
+        .with_read(|products| {
+            let retained = knx_productdb::load_source_file(
+                products,
+                &knx_productdb::sha256_hex(source.as_bytes()),
+            )
             .unwrap()
             .unwrap();
-    assert_eq!(retained, source.as_bytes());
+            assert_eq!(retained, source.as_bytes());
+            Ok::<(), std::convert::Infallible>(())
+        })
+        .unwrap()
+        .unwrap();
 }
 
 // AR07: a known unsupported controller is not a missing declaration or a

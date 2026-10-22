@@ -3,7 +3,7 @@ use std::{
     io::Cursor,
     sync::{
         atomic::{AtomicBool, Ordering},
-        Arc, Mutex,
+        Arc,
     },
     time::Duration,
 };
@@ -63,7 +63,9 @@ async fn status_metrics_bind_saved_file_and_catalogue_to_their_own_resources() {
         INSERT INTO product (id, manufacturer_id, hardware_id, source_sha256) VALUES ('P-1','M-1','H-1','a');
         INSERT INTO application_program (id, manufacturer_id, source_sha256) VALUES ('A-1','M-1','a');").unwrap();
     let state = Arc::new(knx_server::AppState {
-        product_db: Some(Mutex::new(db)),
+        product_db: Some(
+            knx_server::CatalogueOwner::adopt_opened(db, std::path::PathBuf::new()).unwrap(),
+        ),
         ..Default::default()
     });
     let app = knx_server::app(state, None);
@@ -177,7 +179,9 @@ async fn installing_catalogue_changes_only_catalogue_metrics() {
     let db_path = dir.path().join("products.sqlite");
     let db = knx_productdb::open_and_migrate(&db_path).unwrap();
     let state = Arc::new(knx_server::AppState {
-        product_db: Some(Mutex::new(db)),
+        product_db: Some(
+            knx_server::CatalogueOwner::adopt_opened(db, std::path::PathBuf::new()).unwrap(),
+        ),
         ..Default::default()
     });
     let app = knx_server::app(state, None);
@@ -251,7 +255,9 @@ async fn status_metrics_distinguish_unavailable_database_from_empty_catalogue() 
     let db = knx_productdb::open_and_migrate(&db_path).unwrap();
     let present = knx_server::app(
         Arc::new(knx_server::AppState {
-            product_db: Some(Mutex::new(db)),
+            product_db: Some(
+            knx_server::CatalogueOwner::adopt_opened(db, std::path::PathBuf::new()).unwrap(),
+        ),
             ..Default::default()
         }),
         None,
@@ -309,7 +315,9 @@ async fn count_query_failure_with_database_file_present_is_error() {
     db.execute_batch("DROP TABLE product").unwrap();
     let app = knx_server::app(
         Arc::new(knx_server::AppState {
-            product_db: Some(Mutex::new(db)),
+            product_db: Some(
+            knx_server::CatalogueOwner::adopt_opened(db, std::path::PathBuf::new()).unwrap(),
+        ),
             ..Default::default()
         }),
         None,
@@ -326,7 +334,9 @@ async fn status_metrics_wait_for_product_db_does_not_block_the_async_worker() {
     let dir = tempfile::tempdir().unwrap();
     let db = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
     let state = Arc::new(knx_server::AppState {
-        product_db: Some(Mutex::new(db)),
+        product_db: Some(
+            knx_server::CatalogueOwner::adopt_opened(db, std::path::PathBuf::new()).unwrap(),
+        ),
         ..Default::default()
     });
     let app = knx_server::app(state.clone(), None);
@@ -337,10 +347,15 @@ async fn status_metrics_wait_for_product_db_does_not_block_the_async_worker() {
     let worker_state = state.clone();
     let worker_released = released.clone();
     let holder = std::thread::spawn(move || {
-        let guard = worker_state.product_db.as_ref().unwrap().lock().unwrap();
-        ready_tx.send(()).unwrap();
-        let _ = release_rx.recv_timeout(Duration::from_secs(2));
-        drop(guard);
+        let _ = worker_state
+            .product_db
+            .as_ref()
+            .unwrap()
+            .with_read(|_conn| {
+                ready_tx.send(()).unwrap();
+                let _ = release_rx.recv_timeout(Duration::from_secs(2));
+                Ok::<(), std::convert::Infallible>(())
+            });
         worker_released.store(true, Ordering::SeqCst);
     });
     ready_rx.recv_timeout(Duration::from_secs(2)).unwrap();
@@ -365,7 +380,9 @@ async fn status_metrics_report_busy_catalogue_without_hiding_project_metrics() {
     let project_path = dir.path().join("project.knxdb");
     let db = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
     let state = Arc::new(knx_server::AppState {
-        product_db: Some(Mutex::new(db)),
+        product_db: Some(
+            knx_server::CatalogueOwner::adopt_opened(db, std::path::PathBuf::new()).unwrap(),
+        ),
         ..Default::default()
     });
     let app = knx_server::app(state.clone(), None);
@@ -381,9 +398,15 @@ async fn status_metrics_report_busy_catalogue_without_hiding_project_metrics() {
     let (release_tx, release_rx) = std::sync::mpsc::channel();
     let worker_state = state.clone();
     let holder = std::thread::spawn(move || {
-        let _guard = worker_state.product_db.as_ref().unwrap().lock().unwrap();
-        ready_tx.send(()).unwrap();
-        let _ = release_rx.recv_timeout(Duration::from_secs(5));
+        let _ = worker_state
+            .product_db
+            .as_ref()
+            .unwrap()
+            .with_read(|_conn| {
+                ready_tx.send(()).unwrap();
+                let _ = release_rx.recv_timeout(Duration::from_secs(5));
+                Ok::<(), std::convert::Infallible>(())
+            });
     });
     ready_rx.recv_timeout(Duration::from_secs(2)).unwrap();
 
@@ -402,7 +425,9 @@ async fn status_metrics_report_missing_files_as_errors_without_paths() {
     let db_path = dir.path().join("products.sqlite");
     let db = knx_productdb::open_and_migrate(&db_path).unwrap();
     let state = Arc::new(knx_server::AppState {
-        product_db: Some(Mutex::new(db)),
+        product_db: Some(
+            knx_server::CatalogueOwner::adopt_opened(db, std::path::PathBuf::new()).unwrap(),
+        ),
         ..Default::default()
     });
     let app = knx_server::app(state, None);

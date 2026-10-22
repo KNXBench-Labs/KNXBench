@@ -1,6 +1,6 @@
 //! Uploading a legacy ETS3 product database: password dialog flow and the one remembered password.
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
@@ -76,9 +76,13 @@ fn get(uri: &str, method: &str) -> Request<Body> {
 fn app(remember: bool) -> (tempfile::TempDir, axum::Router) {
     let dir = tempfile::tempdir().unwrap();
     let state = knx_server::AppState {
-        product_db: Some(Mutex::new(
-            knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap(),
-        )),
+        product_db: Some(
+            knx_server::CatalogueOwner::adopt_opened(
+                knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap(),
+                std::path::PathBuf::new(),
+            )
+            .unwrap(),
+        ),
         legacy_password: remember.then(|| {
             knx_app::legacy::RememberedPassword::at(
                 dir.path().join("config/knx/legacy-vd-password"),

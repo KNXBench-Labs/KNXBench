@@ -6,7 +6,7 @@
 //! free device octet (1–255) not used anywhere in the project, in the same
 //! undo step. With `uniqueNames` generated names skip names already in use.
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
@@ -56,7 +56,10 @@ async fn send(app: &axum::Router, uri: &str, body: Value) -> (StatusCode, Value)
 async fn app_with_line() -> (tempfile::TempDir, axum::Router, u64) {
     let dir = tempfile::tempdir().unwrap();
     let state = knx_server::AppState {
-        product_db: Some(Mutex::new(products(&dir))),
+        product_db: Some(
+            knx_server::CatalogueOwner::adopt_opened(products(&dir), std::path::PathBuf::new())
+                .unwrap(),
+        ),
         ..Default::default()
     };
     let app = knx_server::app(Arc::new(state), None);

@@ -59,9 +59,13 @@ async fn json(response: axum::response::Response) -> Value {
 fn state() -> (tempfile::TempDir, knx_server::AppState) {
     let dir = tempfile::tempdir().unwrap();
     let state = knx_server::AppState {
-        product_db: Some(std::sync::Mutex::new(
-            knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap(),
-        )),
+        product_db: Some(
+            knx_server::CatalogueOwner::adopt_opened(
+                knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap(),
+                std::path::PathBuf::new(),
+            )
+            .unwrap(),
+        ),
         ..Default::default()
     };
     (dir, state)
@@ -120,21 +124,27 @@ async fn scheme23_http_projects_measured_opaque_evidence_and_replays_exact_archi
     assert!(!encoded.contains("private-name-23.knxprod"));
     assert!(!encoded.contains("sourceName"));
     assert!(!encoded.contains("source_name"));
-    {
-        let connection = state.product_db.as_ref().unwrap().lock().unwrap();
-        let retained: Vec<u8> = connection
-            .query_row("SELECT bytes FROM package", [], |row| row.get(0))
-            .unwrap();
-        assert!(retained == bytes, "HTTP retained archive bytes changed");
-        let retained: Vec<u8> = connection
-            .query_row(
-                "SELECT bytes FROM source_file WHERE source_path='M-0001/Catalog.xml'",
-                [],
-                |row| row.get(0),
-            )
-            .unwrap();
-        assert_eq!(retained, catalog.as_bytes());
-    }
+    state
+        .product_db
+        .as_ref()
+        .unwrap()
+        .with_read(|connection| {
+            let retained: Vec<u8> = connection
+                .query_row("SELECT bytes FROM package", [], |row| row.get(0))
+                .unwrap();
+            assert!(retained == bytes, "HTTP retained archive bytes changed");
+            let retained: Vec<u8> = connection
+                .query_row(
+                    "SELECT bytes FROM source_file WHERE source_path='M-0001/Catalog.xml'",
+                    [],
+                    |row| row.get(0),
+                )
+                .unwrap();
+            assert_eq!(retained, catalog.as_bytes());
+            Ok::<(), std::convert::Infallible>(())
+        })
+        .unwrap()
+        .unwrap();
     let replay = app
         .clone()
         .oneshot(multipart("renamed-23.knxprod", &bytes))
@@ -282,27 +292,33 @@ async fn retry_projects_an_explicit_unavailable_marker_as_null_facts() {
     let sha256 = first["sha256"].as_str().unwrap().to_owned();
     assert!(first["facts"].is_object());
 
-    {
-        let connection = state.product_db.as_ref().unwrap().lock().unwrap();
-        for table in [
-            "package_install_count",
-            "package_install_unknown",
-            "package_install_diagnostic",
-        ] {
+    state
+        .product_db
+        .as_ref()
+        .unwrap()
+        .with_read(|connection| {
+            for table in [
+                "package_install_count",
+                "package_install_unknown",
+                "package_install_diagnostic",
+            ] {
+                connection
+                    .execute(
+                        &format!("DELETE FROM {table} WHERE package_sha256 = ?1"),
+                        [&sha256],
+                    )
+                    .unwrap();
+            }
             connection
                 .execute(
-                    &format!("DELETE FROM {table} WHERE package_sha256 = ?1"),
+                    "UPDATE package_install_report SET status = 'unavailable', unknown_distinct = 0, unknown_occurrences = 0 WHERE package_sha256 = ?1",
                     [&sha256],
                 )
                 .unwrap();
-        }
-        connection
-            .execute(
-                "UPDATE package_install_report SET status = 'unavailable', unknown_distinct = 0, unknown_occurrences = 0 WHERE package_sha256 = ?1",
-                [&sha256],
-            )
-            .unwrap();
-    }
+            Ok::<(), std::convert::Infallible>(())
+        })
+        .unwrap()
+        .unwrap();
 
     let retry = app
         .oneshot(multipart("renamed.knxprod", &bytes))
@@ -404,9 +420,12 @@ async fn installing_into_a_readonly_catalog_database_is_an_internal_error() {
         .product_db
         .as_ref()
         .unwrap()
-        .lock()
+        .with_read(|conn| {
+            Ok::<_, std::convert::Infallible>(
+                conn.execute_batch("PRAGMA query_only = ON").unwrap(),
+            )
+        })
         .unwrap()
-        .execute_batch("PRAGMA query_only = ON")
         .unwrap();
     let app = knx_server::app(Arc::new(state), None);
 

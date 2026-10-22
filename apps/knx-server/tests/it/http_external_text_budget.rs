@@ -4,7 +4,7 @@
 //! The RED runner isolates XDG_DATA_HOME; the response is not printed.
 //!
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
@@ -117,7 +117,8 @@ fn state_with_translation(
         parameters: vec![],
     });
     let mut state = knx_server::AppState::new(dir.path().to_path_buf());
-    state.product_db = Some(Mutex::new(products));
+    state.product_db =
+        Some(knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap());
     *state.project.lock().unwrap() = Some(project);
     (dir, Arc::new(state), path)
 }

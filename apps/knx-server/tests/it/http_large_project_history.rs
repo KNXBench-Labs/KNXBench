@@ -10,7 +10,7 @@ use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::{
     path::Path,
-    sync::{Arc, Mutex},
+    sync::Arc,
 };
 use tower::ServiceExt;
 
@@ -63,7 +63,9 @@ async fn request(app: &axum::Router, path: &str, payload: Value) -> Value {
 fn state(dir: &Path) -> Arc<knx_server::AppState> {
     let products = knx_productdb::open_and_migrate(&dir.join("products.sqlite")).unwrap();
     Arc::new(knx_server::AppState {
-        product_db: Some(Mutex::new(products)),
+        product_db: Some(
+            knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap(),
+        ),
         ..knx_server::AppState::new(dir.to_path_buf())
     })
 }

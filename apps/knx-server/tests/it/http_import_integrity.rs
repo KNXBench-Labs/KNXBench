@@ -6,7 +6,7 @@ use axum::{
 use serde_json::{json, Value};
 use std::{
     path::Path,
-    sync::{Arc, Mutex},
+    sync::Arc,
 };
 use tower::ServiceExt;
 
@@ -48,9 +48,13 @@ async fn import_transports_source_observations_and_manufacturer_findings_to_sess
     )
     .unwrap();
     let state = Arc::new(knx_server::AppState {
-        product_db: Some(Mutex::new(
-            knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap(),
-        )),
+        product_db: Some(
+            knx_server::CatalogueOwner::adopt_opened(
+                knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap(),
+                std::path::PathBuf::new(),
+            )
+            .unwrap(),
+        ),
         data_dir: dir.path().to_path_buf(),
         ..Default::default()
     });

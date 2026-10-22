@@ -5,7 +5,6 @@
 //! (`Hardware/@IsCoupler`, RESEARCH §25). The server reads that flag from the
 //! product database; without it the core keeps refusing a *new* `.0`.
 
-use std::sync::Mutex;
 
 use knx_core::{
     Area, AreaId, CommissioningState, CompletionStatus, DeviceId, DeviceInstance,
@@ -118,7 +117,10 @@ fn products(dir: &tempfile::TempDir) -> knx_productdb::Connection {
 fn state(with_products: bool) -> (tempfile::TempDir, AppState) {
     let dir = tempfile::tempdir().unwrap();
     let state = AppState {
-        product_db: with_products.then(|| Mutex::new(products(&dir))),
+        product_db: with_products.then(|| {
+            knx_server::CatalogueOwner::adopt_opened(products(&dir), std::path::PathBuf::new())
+                .unwrap()
+        }),
         ..AppState::default()
     };
     *state.project.lock().unwrap() = Some(project());

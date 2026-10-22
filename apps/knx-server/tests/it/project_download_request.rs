@@ -161,9 +161,13 @@ async fn a_saved_project_yields_exactly_the_hand_written_option_c_image() {
 
     let dir = tempfile::tempdir().unwrap();
     let state = Arc::new(knx_server::AppState {
-        product_db: Some(std::sync::Mutex::new(
-            knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap(),
-        )),
+        product_db: Some(
+            knx_server::CatalogueOwner::adopt_opened(
+                knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap(),
+                std::path::PathBuf::new(),
+            )
+            .unwrap(),
+        ),
         data_dir: dir.path().to_path_buf(),
         ..Default::default()
     });
@@ -222,10 +226,18 @@ async fn a_saved_project_yields_exactly_the_hand_written_option_c_image() {
     // values, and nothing is filled in.
     {
         let project = state.project.lock().unwrap();
-        let conn = state.product_db.as_ref().unwrap().lock().unwrap();
-        let request =
-            image_request_for_device(&conn, project.as_ref().unwrap(), DeviceId(device as u32))
-                .expect("maps");
+        let request = state
+            .product_db
+            .as_ref()
+            .unwrap()
+            .with_read(|conn| {
+                Ok::<_, std::convert::Infallible>(
+                    image_request_for_device(conn, project.as_ref().unwrap(), DeviceId(device as u32))
+                        .expect("maps"),
+                )
+            })
+            .unwrap()
+            .unwrap();
         assert!(request.values.is_empty(), "{:?}", request.values);
         assert!(request.links.is_empty());
     }
@@ -239,10 +251,20 @@ async fn a_saved_project_yields_exactly_the_hand_written_option_c_image() {
     let com_object = {
         let project = state.project.lock().unwrap();
         let project = project.as_ref().unwrap();
-        let conn = state.product_db.as_ref().unwrap().lock().unwrap();
         let supplied = hand_written().values.into_iter().collect();
-        let values = resolve_values(&conn, PROGRAM, &supplied).unwrap();
-        let activation = evaluate(&load_program_trees(&conn, PROGRAM).unwrap(), &values);
+        let activation = state
+            .product_db
+            .as_ref()
+            .unwrap()
+            .with_read(|conn| {
+                let values = resolve_values(conn, PROGRAM, &supplied).unwrap();
+                Ok::<_, std::convert::Infallible>(evaluate(
+                    &load_program_trees(conn, PROGRAM).unwrap(),
+                    &values,
+                ))
+            })
+            .unwrap()
+            .unwrap();
         let active: Vec<&str> = activation
             .com_object_refs
             .iter()
@@ -288,9 +310,17 @@ async fn a_saved_project_yields_exactly_the_hand_written_option_c_image() {
     .await;
     {
         let project = state.project.lock().unwrap();
-        let conn = state.product_db.as_ref().unwrap().lock().unwrap();
-        let refused =
-            image_request_for_device(&conn, project.as_ref().unwrap(), DeviceId(device as u32));
+        let refused = state
+            .product_db
+            .as_ref()
+            .unwrap()
+            .with_read(|conn| {
+                Ok::<_, std::convert::Infallible>(
+                    image_request_for_device(conn, project.as_ref().unwrap(), DeviceId(device as u32)),
+                )
+            })
+            .unwrap()
+            .unwrap();
         assert!(
             matches!(
                 refused,
@@ -335,13 +365,20 @@ async fn a_saved_project_yields_exactly_the_hand_written_option_c_image() {
     let loaded = knx_store::load_project(&knx_store::open_and_migrate(&saved).unwrap())
         .expect("the saved project loads");
 
-    let conn = state.product_db.as_ref().unwrap().lock().unwrap();
-    let from_project =
-        image_request_for_device(&conn, &loaded, DeviceId(device as u32)).expect("maps");
+    let (from_project, project_image, hand_image) = state
+        .product_db
+        .as_ref()
+        .unwrap()
+        .with_read(|conn| {
+            let from_project =
+                image_request_for_device(conn, &loaded, DeviceId(device as u32)).expect("maps");
+            let project_image = build_download_image(conn, &from_project).expect("builds");
+            let hand_image = build_download_image(conn, &hand_written()).expect("builds");
+            Ok::<_, std::convert::Infallible>((from_project, project_image, hand_image))
+        })
+        .unwrap()
+        .unwrap();
     assert_eq!(from_project, hand_written());
-
-    let project_image = build_download_image(&conn, &from_project).expect("builds");
-    let hand_image = build_download_image(&conn, &hand_written()).expect("builds");
     assert_eq!(project_image.segments.len(), hand_image.segments.len());
     let differing: usize = project_image
         .segments

@@ -12,6 +12,26 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## WP-04.3 stage D catalogue jobs owner + close/drain — delivered (22 October 2026)
+
+Source merge `564da29e2` is published with exact live/tracking readback; the
+feature branch `8095de7a` is its second parent and byte-exact tree. The
+change-scoped maintained gate passes all 14 ordered stages on the frozen
+merged tree: 1,215 Rust passes across 7 binary results (53 ignored), 51/51
+selected corpus tests, the tool test suite, warning-denied Clippy and clean
+fmt/headers/docs/layering/ledger/anchors.
+
+This delivers the fifth (last) stage-D increment: the catalogue jobs owner
+(`catalogue_jobs::owner`), `CatalogueUpdateJobs` — the server-side owner
+wrapping the admission/replay manager under one short lock and the worker
+handle under a separate short lock, with an idempotent
+`close_admission_and_request_stop` and a bounded `drain(limit, second_signal)`
+that joins the worker handle, retains it on timeout/second signal, and returns
+the exact `CatalogueDrain`. Route wiring + worker execution (the Ready/apply
+installer), the `EmbeddedServerHandle` and the desktop exit interception remain
+the last stage-D slices. No production route is wired; WP-04.3 and WP-19 remain
+open. See [the contract](contracts/catalogue-jobs/owner-close-drain-increment.md).
+
 ## WP-04.3 stage D ArtifactDir root + lease + fence — delivered (22 October 2026)
 
 Source merge `985c1b71c` is published with exact live/tracking readback; the

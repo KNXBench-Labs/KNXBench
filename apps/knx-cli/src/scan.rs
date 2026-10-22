@@ -24,7 +24,13 @@ use knx_net::{ProbeOutcome, ProbePolicy};
 #[derive(Debug)]
 pub struct ScanArgs {
     pub gateway: String,
-    pub line: String,
+    /// `--line <area.line>`: which line to scan. Exactly one of `line` and
+    /// `device` is set — `parse_scan_args` enforces it, so a later
+    /// consumer can match on them without a third "neither" case.
+    pub line: Option<String>,
+    /// `--device <area.line.device>`: probe exactly this one device instead
+    /// of a line. Mutually exclusive with `line` (and therefore `range`).
+    pub device: Option<String>,
     pub range: Option<String>,
     /// One entry per `--exclude` occurrence, each itself possibly a
     /// comma-separated list. Deliberately not "last one wins" like every
@@ -37,13 +43,14 @@ pub struct ScanArgs {
     pub dry_run: bool,
 }
 
-/// Parses `knx bus scan`'s flags. Unknown flags and a missing
-/// `--gateway`/`--line` are errors; everything else is deferred to
-/// [`build_scan_plan`]/[`build_probe_policy`], which do the actual
-/// validation.
+/// Parses `knx bus scan`'s flags. Unknown flags, a missing `--gateway`,
+/// and giving neither or both of `--line`/`--device` are errors; everything
+/// else is deferred to [`build_scan_plan`]/[`build_single_device_plan`]/
+/// [`build_probe_policy`], which do the actual validation.
 pub fn parse_scan_args(args: &[String]) -> Result<ScanArgs, String> {
     let mut gateway = None;
     let mut line = None;
+    let mut device = None;
     let mut range = None;
     let mut exclude = Vec::new();
     let mut timeout_ms = None;
@@ -59,6 +66,10 @@ pub fn parse_scan_args(args: &[String]) -> Result<ScanArgs, String> {
             }
             "--line" => {
                 line = Some(crate::take_value(args, i + 1, "--line")?);
+                i += 2;
+            }
+            "--device" => {
+                device = Some(crate::take_value(args, i + 1, "--device")?);
                 i += 2;
             }
             "--range" => {
@@ -96,9 +107,28 @@ pub fn parse_scan_args(args: &[String]) -> Result<ScanArgs, String> {
             other => return Err(format!("unrecognized argument: {other}")),
         }
     }
+    // Exactly one of `--line` / `--device` names the scan's target, and
+    // `--range` only narrows a `--line` (it names two endpoints *on that
+    // line*). Enforcing this here, before any plan is built, keeps a
+    // `--device` from silently turning into a line sweep or vice versa.
+    match (&line, &device) {
+        (Some(_), Some(_)) => {
+            return Err("--line and --device are alternatives: give exactly one".to_string())
+        }
+        (None, None) => {
+            return Err("give either --line <area.line> or --device <area.line.device>".to_string())
+        }
+        _ => {}
+    }
+    if device.is_some() && range.is_some() {
+        return Err(
+            "--range selects a span on --line and cannot be combined with --device".to_string(),
+        );
+    }
     Ok(ScanArgs {
         gateway: gateway.ok_or_else(|| "--gateway is required".to_string())?,
-        line: line.ok_or_else(|| "--line is required".to_string())?,
+        line,
+        device,
         range,
         exclude,
         timeout_ms,
@@ -123,6 +153,21 @@ fn parse_line(spec: &str) -> Result<(u8, u8), String> {
         .parse()
         .map_err(|_| format!("--line line is not a number: {spec:?}"))?;
     Ok((area, line))
+}
+
+/// Parses `--device <area.line.device>`, for example `1.1.5`. Device 0 is
+/// the line coupler's own address, not a device to probe, so it is refused
+/// here — the same rule `parse_range` applies to a span's first address.
+fn parse_device(spec: &str) -> Result<IndividualAddress, String> {
+    let address: IndividualAddress = spec.trim().parse().map_err(|e| {
+        format!("--device must be area.line.device, e.g. 1.1.5 (got {spec:?}): {e}")
+    })?;
+    if address.device() == 0 {
+        return Err(format!(
+            "--device {spec} is device 0, the line coupler's own address, not a device to probe"
+        ));
+    }
+    Ok(address)
 }
 
 /// Parses every `--exclude <addr>[,<addr>...]` occurrence into one union
@@ -230,6 +275,33 @@ pub fn build_scan_plan(
     // operator typed: `--dry-run` and the summary must show the project
     // exclusions of `EXCLUDED_INDIVIDUAL_ADDRESSES` as well, or a scan of
     // line 1.1 silently comes back one address short (spec §2.1).
+    let excluded = plan.excluded().clone();
+    Ok((plan, range, excluded))
+}
+
+/// Turns `--device <area.line.device>` into a single-address [`ScanPlan`],
+/// mirroring [`build_scan_plan`] for the one-device case. The named
+/// address must not be device 0 (the line coupler's own address). A
+/// configured `--exclude` that names exactly this address empties the plan
+/// and is refused with the same `EmptyRange` a fully-excluded span gets —
+/// the only self-consistent answer when the operator both names and
+/// forbids the one address they asked to probe.
+pub fn build_single_device_plan(
+    device_spec: &str,
+    exclude_specs: &[String],
+) -> Result<(ScanPlan, ScannedRange, HashSet<IndividualAddress>), String> {
+    let address = parse_device(device_spec)?;
+    let excluded = parse_exclusions(exclude_specs)?;
+    let plan = ScanPlanBuilder::new()
+        .exclude_all(excluded.iter().copied())
+        .range(address, address)
+        .map_err(|e| format!("could not build scan plan: {e}"))?;
+    let range = ScannedRange {
+        area: address.area(),
+        line: address.line(),
+        first_device: address.device(),
+        last_device: address.device(),
+    };
     let excluded = plan.excluded().clone();
     Ok((plan, range, excluded))
 }
@@ -489,13 +561,63 @@ mod tests {
         ]))
         .unwrap();
         assert_eq!(parsed.gateway, "192.0.2.1:3671");
-        assert_eq!(parsed.line, "1.1");
+        assert_eq!(parsed.line.as_deref(), Some("1.1"));
+        assert_eq!(parsed.device, None);
         assert_eq!(parsed.range.as_deref(), Some("1.1.2-1.1.9"));
         assert_eq!(parsed.exclude, vec!["2.3.40".to_string()]);
         assert_eq!(parsed.timeout_ms.as_deref(), Some("500"));
         assert_eq!(parsed.pause_ms.as_deref(), Some("50"));
         assert_eq!(parsed.project.as_deref(), Some("proj.knxdb"));
         assert!(parsed.dry_run);
+    }
+
+    #[test]
+    fn parses_device_as_an_alternative_to_line() {
+        let parsed = parse_scan_args(&args(&[
+            "--gateway",
+            "192.0.2.1:3671",
+            "--device",
+            "1.1.5",
+            "--dry-run",
+        ]))
+        .unwrap();
+        assert_eq!(parsed.device.as_deref(), Some("1.1.5"));
+        assert_eq!(parsed.line, None);
+        assert!(parsed.dry_run);
+    }
+
+    #[test]
+    fn line_and_device_are_mutually_exclusive() {
+        let err = parse_scan_args(&args(&[
+            "--gateway",
+            "192.0.2.1:3671",
+            "--line",
+            "1.1",
+            "--device",
+            "1.1.5",
+        ]))
+        .unwrap_err();
+        assert!(err.contains("alternatives"), "{err}");
+    }
+
+    #[test]
+    fn neither_line_nor_device_is_an_error() {
+        let err = parse_scan_args(&args(&["--gateway", "192.0.2.1:3671"])).unwrap_err();
+        assert!(err.contains("--device"), "{err}");
+    }
+
+    #[test]
+    fn range_cannot_combine_with_device() {
+        let err = parse_scan_args(&args(&[
+            "--gateway",
+            "192.0.2.1:3671",
+            "--device",
+            "1.1.5",
+            "--range",
+            "1.1.2-1.1.9",
+        ]))
+        .unwrap_err();
+        assert!(err.contains("--range"), "{err}");
     }
 
     #[test]
@@ -624,6 +746,54 @@ mod tests {
     #[test]
     fn invalid_line_is_rejected() {
         assert!(build_scan_plan("16.1", None, &[]).is_err());
+    }
+
+    // --- build_single_device_plan ---
+
+    #[test]
+    fn single_device_plan_probes_exactly_that_address() {
+        let (plan, range, excluded) = build_single_device_plan("1.1.5", &[]).unwrap();
+        assert_eq!(plan.addresses(), &[addr(1, 1, 5)]);
+        assert_eq!(
+            range,
+            ScannedRange {
+                area: 1,
+                line: 1,
+                first_device: 5,
+                last_device: 5
+            }
+        );
+        assert!(excluded.is_empty());
+        assert!(plan.omitted().is_empty());
+    }
+
+    #[test]
+    fn device_zero_is_refused_as_the_coupler_address() {
+        let err = build_single_device_plan("1.1.0", &[]).unwrap_err();
+        assert!(
+            err.contains("coupler"),
+            "error should name the reason: {err}"
+        );
+    }
+
+    #[test]
+    fn malformed_device_is_refused() {
+        assert!(build_single_device_plan("1.1", &[]).is_err());
+        assert!(build_single_device_plan("not-an-address", &[]).is_err());
+        assert!(build_single_device_plan("16.1.5", &[]).is_err());
+    }
+
+    #[test]
+    fn excluding_the_single_device_empties_the_plan_and_is_refused() {
+        let err = build_single_device_plan("1.1.5", &args(&["1.1.5"])).unwrap_err();
+        assert!(err.contains("empty"), "{err}");
+    }
+
+    #[test]
+    fn an_unrelated_exclusion_does_not_touch_a_single_device_plan() {
+        let (plan, _, excluded) = build_single_device_plan("1.1.5", &args(&["2.3.40"])).unwrap();
+        assert_eq!(plan.addresses(), &[addr(1, 1, 5)]);
+        assert!(excluded.contains(&addr(2, 3, 40)));
     }
 
     // --- format_dry_run ---

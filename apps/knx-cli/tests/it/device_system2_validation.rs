@@ -94,32 +94,69 @@ fn system2_validation_cli_preview_is_offline_and_creates_no_protocol() {
     assert_eq!(fs::read_dir(dir.path()).unwrap().count(), 1);
 }
 #[test]
-fn system2_validation_cli_real_transport_fails_closed_even_with_exact_consent() {
+fn system2_validation_cli_gateway_requires_exact_download_and_release_confirmations() {
     let dir = tempfile::tempdir().unwrap();
     let (path, b) = bundle(dir.path());
     let socket = UdpSocket::bind("127.0.0.1:0").unwrap();
     socket
         .set_read_timeout(Some(Duration::from_millis(100)))
         .unwrap();
+    let gateway = socket.local_addr().unwrap().to_string();
+    let target: knx_core::IndividualAddress = "1.1.25".parse().unwrap();
+    let download = knx_core::commissioning::mutation::required_confirmation_phrase(
+        target,
+        knx_core::commissioning::mutation::WriteScope::Download,
+    );
     let operation = dir.path().join("operation");
+    let history = dir.path().join("activity.jsonl");
+    // A missing release confirmation must refuse before any frame.
     let out = cli()
         .args([
             "--bundle",
             path.to_str().unwrap(),
             "--gateway",
-            &socket.local_addr().unwrap().to_string(),
+            &gateway,
             "--operation",
             operation.to_str().unwrap(),
             "--confirm",
             &b.consent_phrase(),
             "--accept-hypothesis",
             &b.acceptance_phrase(),
+            "--download-confirm",
+            &download,
+            "--activity-history",
+            history.to_str().unwrap(),
         ])
         .output()
         .unwrap();
     assert!(!out.status.success());
-    assert!(String::from_utf8_lossy(&out.stderr)
-        .contains("physical-source-recovery-contract-unavailable"));
+    assert!(String::from_utf8_lossy(&out.stderr).contains("--release-confirm"));
+    assert!(!operation.exists());
+    assert!(socket.recv(&mut [0; 1024]).is_err());
+    // A wrong release phrase must refuse before any frame.
+    let out = cli()
+        .args([
+            "--bundle",
+            path.to_str().unwrap(),
+            "--gateway",
+            &gateway,
+            "--operation",
+            operation.to_str().unwrap(),
+            "--confirm",
+            &b.consent_phrase(),
+            "--accept-hypothesis",
+            &b.acceptance_phrase(),
+            "--download-confirm",
+            &download,
+            "--release-confirm",
+            "wrong release",
+            "--activity-history",
+            history.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(!out.status.success());
+    assert!(String::from_utf8_lossy(&out.stderr).contains("best-effort release confirmation"));
     assert!(!operation.exists());
     assert!(socket.recv(&mut [0; 1024]).is_err());
 }

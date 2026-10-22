@@ -6,6 +6,7 @@ pub use strict::{Capability, Incarnation, JobId, U64};
 
 mod artifacts;
 mod dto;
+mod owner;
 mod spool;
 mod status;
 

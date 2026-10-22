@@ -253,8 +253,10 @@ maintained gates; [the definitive delivery record](IMPLEMENTATION_STATUS.md#wp-0
 keeps actual scopes and overlapping test populations separate. Only exact
 fresh-chain schema variants are admitted; the managed owner, full typed
 witness, W/S/D copy, the server `CatalogueOwner` wrapper and its route
-adapters are delivered, while the transitive installer remains a later
-stage. B1 is neither a job endpoint nor a reason to close WP-04.3 or WP-19.
+adapters are delivered, while the transitive installer (stage C) is
+implemented on `feat/wp043-stagec-transitive-installer-20261022`
+(`Cancellation` threaded through both ZIP views and every installer/parser
+seam, quiet wrappers byte-identical; gate/merge pending). B1 is neither a job endpoint nor a reason to close WP-04.3 or WP-19.
 Existing synchronous behavior and profile limits remain unchanged.
 
 **Three separate deliveries, in order:**

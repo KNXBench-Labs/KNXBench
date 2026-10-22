@@ -251,8 +251,8 @@ staged dependency. The private [B1 schema admission](contracts/catalogue-jobs/sc
 helper is delivered after independent I1 closure and accepted branch/integrated
 maintained gates; [the definitive delivery record](IMPLEMENTATION_STATUS.md#wp-043-b1-schema-admission--source-delivered-21-october-2026)
 keeps actual scopes and overlapping test populations separate. Only exact
-fresh-chain schema variants are admitted; the managed owner and full typed
-witness are delivered, while W/S/D copy, the server `CatalogueOwner` wrapper,
+fresh-chain schema variants are admitted; the managed owner, full typed
+witness and W/S/D copy are delivered, while the server `CatalogueOwner` wrapper,
 route adapters and the transitive installer remain later
 stages. B1 is neither a job endpoint nor a reason to close WP-04.3 or WP-19.
 Existing synchronous behavior and profile limits remain unchanged.

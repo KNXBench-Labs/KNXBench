@@ -1,6 +1,7 @@
 # WP-04.3 stage B — W/S/D copy recipe (§6) and copy witness (§4)
 
-Claimed 22 October 2026. Third implementation increment of WP-04.3 stage B
+Delivered 22 October 2026 (source merge `9fc0d9e27`). Third implementation
+increment of WP-04.3 stage B
 under [ADR-0150](../../adr/0150-cancellable-catalogue-jobs.md) and the
 [managed-binding contract](../catalogue-jobs/managed-binding.md) sections 4
 (copy validation) and 6 (W/S/D recipes). It delivers the disk-copy capability

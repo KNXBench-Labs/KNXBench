@@ -35,8 +35,11 @@ lead, not implementation text or defining authority.
    the template's writable capacity. The TaskSegment with tool-only LSM5 is
    retained as metadata, not emitted to a guessed interface object. TaskCtrl2 is
    not dropped. Declared allocation counts, zero flags/checksum interpretation,
-   table-zero identity and computed-table-only writes are explicit bounded
-   hypotheses, not general XML rules.
+   full table identity and computed-table-only writes are explicit bounded
+   hypotheses, not general XML rules. The full-table-identity reading replaces
+   the earlier "table-zero identity" hypothesis after an observed ETS download
+   emitted the full application identity on all three task segments (see
+   docs/research/2026-10-22-system2-ets-download-procedure.md).
 4. The existing management-session operation loop executes normalized controls
    and verified writes. A complete source plan is bound to target, application,
    profile version/hash and source hash. No resume from a guessed later step.

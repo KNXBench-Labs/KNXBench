@@ -134,7 +134,7 @@ fn plan(
     plan_system2_candidate(
         image,
         IndividualAddress::from_raw(0x0119),
-        &System2ProcedurePolicy::declared_counts_zero_flags_zero_table_identity(),
+        &System2ProcedurePolicy::declared_counts_zero_flags_full_table_identity(),
     )
 }
 
@@ -151,8 +151,8 @@ fn complete_source_sequence_expands_allocations_without_losing_positions() {
             _ => None,
         })
         .collect();
-    assert!(controls.contains(&(1, [3, 2, 1, 0x16, 0, 0, 0, 0, 0, 0])));
-    assert!(controls.contains(&(2, [3, 2, 2, 0x60, 0, 0, 0, 0, 0, 0])));
+    assert!(controls.contains(&(1, [3, 2, 1, 0x16, 7, 0x12, 0x34, 0x56, 0x78, 9])));
+    assert!(controls.contains(&(2, [3, 2, 2, 0x60, 7, 0x12, 0x34, 0x56, 0x78, 9])));
     assert!(controls.contains(&(3, [3, 2, 0, 0, 7, 0x12, 0x34, 0x56, 0x78, 9])));
     assert!(controls.contains(&(3, [3, 5, 0x12, 0x34, 4, 0, 0x34, 0x56, 0x78, 0x9A])));
     assert_eq!(

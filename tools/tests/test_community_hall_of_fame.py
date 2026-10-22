@@ -291,6 +291,16 @@ class CountingTests(unittest.TestCase):
                      [reply(login="Andre1Becker"), reply(2, login="helper")])["contributors"]
         self.assertEqual({row["login"] for row in rows}, {"tester", "helper"})
 
+    def test_dependabot_is_excluded_and_absent_from_the_committed_board(self):
+        root = Path(__file__).resolve().parents[2]
+        policy = json.loads((root / "docs/community/hall-of-fame-policy.json").read_text())
+        self.assertIn("dependabot[bot]", policy["excluded_logins"])
+        snapshot = json.loads((root / "docs/community/hall-of-fame.json").read_text())
+        logins = [row["login"].casefold() for row in snapshot["contributors"]]
+        self.assertNotIn("dependabot[bot]", logins)
+        page = (root / "docs/community/HALL_OF_FAME.md").read_text()
+        self.assertNotIn("dependabot", page)
+
     def test_external_agents_count_but_the_scoreboard_bot_and_prs_do_not(self):
         pr = issue(2, "pr-author", pull_request={"url": "example"})
         bot = issue(3, "robot"); bot["user"]["type"] = "Bot"

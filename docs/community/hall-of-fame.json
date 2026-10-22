@@ -1,11 +1,12 @@
 {
   "schema_version": 2,
   "repository": "KNXBench-Labs/KNXBench",
-  "generated_at": "2026-10-21T15:13:27Z",
+  "generated_at": "2026-10-22T04:19:07Z",
   "policy": {
     "excluded_logins": [
       "KNXBench-Labs",
-      "Andre1Becker"
+      "Andre1Becker",
+      "dependabot[bot]"
     ],
     "trusted_notice_logins": [
       "KNXBench-Labs",
@@ -296,31 +297,6 @@
       },
       "medals": [],
       "position": 2
-    },
-    {
-      "login": "dependabot[bot]",
-      "issues": 0,
-      "replies": 0,
-      "resolutions": 0,
-      "pull_requests": 1,
-      "pull_requests_open": 1,
-      "pull_requests_closed": 0,
-      "pull_requests_merged": 0,
-      "xp_breakdown": {
-        "issues": 0,
-        "replies": 0,
-        "resolutions": 0,
-        "pull_requests": 5
-      },
-      "xp": 5,
-      "rank": {
-        "minimum_xp": 0,
-        "title": "Telegram Trainee"
-      },
-      "medals": [
-        "Patch Pilot"
-      ],
-      "position": 3
     }
   ]
 }

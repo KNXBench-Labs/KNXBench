@@ -283,7 +283,12 @@ tests. The sixth, the first slice of route wiring — the managed catalogue
 stamp + witness binding ([`catalogue_stamp`](contracts/catalogue-jobs/stamp-binding-increment.md):
 `CatalogueStamp` binding incarnation/generation/`data_version`/file stamp and
 the full live witness, captured by `ManagedCatalogue::capture_stamp` under one
-read-only W IMMEDIATE reservation) — is delivered with 6 focused tests. Route
+read-only W IMMEDIATE reservation) — is delivered with 6 focused tests. The
+seventh, the second slice of route wiring — the controlled source + policy
+identity ([`controlled`](contracts/catalogue-jobs/controlled-source-increment.md):
+`ControlledSource::admit` authenticating a sealed source against the P3 name
+grammar and the retained-byte ceiling, plus the immutable `SourceIdentity` and
+`PolicyIdentity` projections) — is delivered with 8 focused tests. Route
 wiring + worker execution (the Ready/apply installer), the
 `EmbeddedServerHandle` and the desktop exit interception remain the last
 stage-D slices; no job route, Ready/apply or worker execution is wired.

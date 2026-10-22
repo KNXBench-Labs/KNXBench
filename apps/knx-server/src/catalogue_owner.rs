@@ -1,7 +1,8 @@
-//! Server-side owner of the managed product catalogue: one mutex around the
-//! ProductDB [`ManagedCatalogue`] plus the route adapters. A poisoned mutex is
-//! a typed refusal, never an `expect`-panic. Construction is the only path
-//! into a mutation; no production Ready/apply route is wired here.
+//! Server-side owner of the managed product catalogue for the HTTP routes.
+//!
+//! One mutex around the ProductDB [`ManagedCatalogue`]; a poisoned mutex is a
+//! typed refusal, never an `expect`-panic. Construction is the only path into
+//! a mutation; no production Ready/apply route is wired here.
 
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;

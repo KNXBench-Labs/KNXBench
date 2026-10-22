@@ -64,8 +64,8 @@ fn state_with_device(
         binary_data: vec![],
     });
     let mut state = knx_server::AppState::default();
-    state.product_db =
-        products.map(|c| knx_server::CatalogueOwner::adopt_opened(c, std::path::PathBuf::new()).unwrap());
+    state.product_db = products
+        .map(|c| knx_server::CatalogueOwner::adopt_opened(c, std::path::PathBuf::new()).unwrap());
     *state.project.lock().unwrap() = Some(project);
     state
 }

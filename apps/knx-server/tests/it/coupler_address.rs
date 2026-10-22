@@ -5,7 +5,6 @@
 //! (`Hardware/@IsCoupler`, RESEARCH §25). The server reads that flag from the
 //! product database; without it the core keeps refusing a *new* `.0`.
 
-
 use knx_core::{
     Area, AreaId, CommissioningState, CompletionStatus, DeviceId, DeviceInstance,
     IndividualAddress, Installation, InstallationId, Language, Line, LineId, Project, SourceRef,

@@ -161,9 +161,8 @@ async fn missing_metadata_is_named_and_database_failure_is_not_hidden() {
         .as_ref()
         .unwrap()
         .with_read(|conn| {
-            Ok::<_, std::convert::Infallible>(
-                conn.execute_batch("DROP TABLE parameter_ref").unwrap(),
-            )
+            conn.execute_batch("DROP TABLE parameter_ref").unwrap();
+            Ok::<(), std::convert::Infallible>(())
         })
         .unwrap()
         .unwrap();
@@ -339,9 +338,12 @@ async fn existing_parameter_validation_undo_and_native_reopen_preserve_exact_val
         .unwrap()
         .with_read(|conn| {
             assert_eq!(
-                knx_productdb::load_source_file(conn, &knx_productdb::sha256_hex(PROGRAM.as_bytes()))
-                    .unwrap()
-                    .unwrap(),
+                knx_productdb::load_source_file(
+                    conn,
+                    &knx_productdb::sha256_hex(PROGRAM.as_bytes())
+                )
+                .unwrap()
+                .unwrap(),
                 PROGRAM.as_bytes()
             );
             Ok::<(), std::convert::Infallible>(())

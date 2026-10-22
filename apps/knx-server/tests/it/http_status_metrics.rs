@@ -256,8 +256,8 @@ async fn status_metrics_distinguish_unavailable_database_from_empty_catalogue() 
     let present = knx_server::app(
         Arc::new(knx_server::AppState {
             product_db: Some(
-            knx_server::CatalogueOwner::adopt_opened(db, std::path::PathBuf::new()).unwrap(),
-        ),
+                knx_server::CatalogueOwner::adopt_opened(db, std::path::PathBuf::new()).unwrap(),
+            ),
             ..Default::default()
         }),
         None,
@@ -316,8 +316,8 @@ async fn count_query_failure_with_database_file_present_is_error() {
     let app = knx_server::app(
         Arc::new(knx_server::AppState {
             product_db: Some(
-            knx_server::CatalogueOwner::adopt_opened(db, std::path::PathBuf::new()).unwrap(),
-        ),
+                knx_server::CatalogueOwner::adopt_opened(db, std::path::PathBuf::new()).unwrap(),
+            ),
             ..Default::default()
         }),
         None,

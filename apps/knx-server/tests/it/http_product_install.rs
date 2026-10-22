@@ -421,9 +421,8 @@ async fn installing_into_a_readonly_catalog_database_is_an_internal_error() {
         .as_ref()
         .unwrap()
         .with_read(|conn| {
-            Ok::<_, std::convert::Infallible>(
-                conn.execute_batch("PRAGMA query_only = ON").unwrap(),
-            )
+            conn.execute_batch("PRAGMA query_only = ON").unwrap();
+            Ok::<(), std::convert::Infallible>(())
         })
         .unwrap()
         .unwrap();

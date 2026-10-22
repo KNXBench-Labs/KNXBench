@@ -542,21 +542,24 @@ takes the same `--multicast-group` flag as `route-monitor`, and the value is raw
 
 ### `knx bus scan` — find which addresses are occupied
 
-**This sends management frames to every address in the range.**
+**This sends management frames.** A line scan probes every candidate address in
+the range you give it; `--device` probes exactly one.
 
 ```bash
 knx bus scan --gateway 192.0.2.1:3671 --line 1.1 --dry-run
+knx bus scan --gateway 192.0.2.1:3671 --device 1.1.5 --dry-run
 ```
 
-Probes each candidate address on one line and reports what answered. Start with
-`--dry-run`, which prints the candidate count, the first and last candidate and the
-excluded list, then exits without opening a connection.
+Probes each candidate address and reports what answered. Start with `--dry-run`,
+which prints the candidate count, the first and last candidate and the excluded
+list, then exits without opening a connection.
 
 | Flag | Effect |
 | --- | --- |
 | `--gateway <host:port>` | The interface to connect through |
-| `--line <area.line>` | Which line to scan |
-| `--range <first>-<last>` | Two full addresses on that line; the first may not be device `0`, the line coupler's own address |
+| `--line <area.line>` | Which line to scan. Give either this or `--device`, never both |
+| `--device <area.line.device>` | Probe exactly this one device. Device `0` is refused — it is the line coupler's own address |
+| `--range <first>-<last>` | Two full addresses on the `--line` given; the first may not be device `0` |
 | `--exclude <addr>[,<addr>...]` | Never probe these. May be given repeatedly; every occurrence accumulates |
 | `--timeout-ms <n>` | How long to wait for an answer per address |
 | `--pause-ms <n>` | How long to wait between probes |

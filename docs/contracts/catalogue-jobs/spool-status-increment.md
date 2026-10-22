@@ -31,10 +31,11 @@ New private modules under `catalogue_jobs` (declared from the existing
   1 h) and the 16 384-byte serialization bound. Building a snapshot reuses the
   delivered `dto` layer and emits only a contract-valid `Status`.
 
-- **Manager integration**: `CatalogueJobManager` records spool progress
-  (received bytes, sealed digest) and produces status snapshots through the
-  status builder; no SQL, filesystem, await or parser work runs under the
-  manager's short ownership domain.
+- **Manager integration (deferred)**: `CatalogueJobManager` records spool
+  progress (received bytes, sealed digest) and produces status snapshots once
+  it holds the full job state in the worker/route increment. The spool and
+  status-assembly primitives delivered here touch no SQL, filesystem, await or
+  parser work under the manager's short ownership domain.
 
 ## Explicitly out of scope (later stage-D increments)
 

@@ -270,8 +270,12 @@ error→status/message mapping), is delivered with 39 focused tests. The third,
 the sealed upload spool ([`catalogue_jobs::spool`](contracts/catalogue-jobs/spool-status-increment.md):
 bounded write, SHA-256, a rustix NOREPLACE seal) plus the checked revision and
 monotonic-deadline status-assembly layer (`catalogue_jobs::status`), is
-delivered with 9 focused tests. The ArtifactDir lease/reclamation/fencing and
-the standalone/desktop close/drain lifetime remain later stage-D increments; no
+delivered with 9 focused tests. The fourth, the ArtifactDir ownership primitive
+([`catalogue_jobs::artifacts`](contracts/catalogue-jobs/artifact-dir-increment.md):
+the private `.knxbench-catalogue-jobs` root + stable rustix flock lease + 0700
+incarnation/job dirs + a bounded inventory, with the `paths.rs` reserved-name
+fence extended to the artifact root), is delivered with 6 focused tests. The
+standalone/desktop close/drain lifetime remains the last stage-D increment; no
 job route, Ready/apply or worker execution is wired.
 
 **Three separate deliveries, in order:**

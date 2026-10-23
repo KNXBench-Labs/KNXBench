@@ -67,7 +67,7 @@ pub(crate) enum OrchestrationError {
     NotHealthy(WriterHealth),
     /// The connection is absent (retired/reopening).
     MissingConnection,
-    /// The admitted source limits disagree with the operation policy limits.
+    /// The admitted source, operation or retained binding policies disagree.
     PolicyMismatch,
     /// The admitted source name/length/digest differs from the shown binding.
     SourceMismatch,

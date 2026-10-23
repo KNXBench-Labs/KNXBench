@@ -54,7 +54,7 @@ keeps issue #22 programming refused: multibyte source encoding, XML SegFlags/
 AllocExtraByte/resource transforms and reconstructible complete prior allocator/
 property/task state are unresolved. Published `6d26a1e3` corrects the pure property
 checksum-disable polarity (bit7=0), not these mappings. The [prepared reporter
-request](../support/issue-22-up258-evidence-request.md) is not a sent request or
+request](../history/REMOVED_DOCS.md#reporter-request-removal-23-october-2026) is not a sent request or
 permission for any device operation. No new complete image, recovery or device
 support is claimed.
 

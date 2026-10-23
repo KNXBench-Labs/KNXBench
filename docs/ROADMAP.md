@@ -89,7 +89,7 @@ Alpha 13 is published at immutable `6105976f`, covering delivered source through
 For issue #22, complete `M-0001_A-9205-04-9270` image → all 21 source
 positions → production execution → whole-mutation recovery before unrelated
 family expansion. Current [No-Go decision](research/2026-10-16-up258-production-decision.md)
-names external source contracts still needed; one [prepared request](support/issue-22-up258-evidence-request.md)
+names external source contracts still needed; one [prepared request](history/REMOVED_DOCS.md#reporter-request-removal-23-october-2026)
 separates firmware, bounded comparison, each device operation and publication.
 No physical operation, new supported mask or successful programming is claimed.
 

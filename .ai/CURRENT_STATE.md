@@ -1,4 +1,68 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-23 14:50
+- **Completed:** Reopened-copy source accepted after destination ACCEPT and ORCH-1 rereview ACCEPT/CLOSED; parent verifies exact corrected-source hashes. Native original probes now pass, preserved destination logic is header-only changed, and all 198 runtime/build inputs reconciled by reviewer. Corrected owning evidence remains 682 unit/752 integration/two doctests/two 13-test examples, overlapping focus not added. Final source-status docs updated; no package/publication acceptance yet.
+- **Pending/Next Steps:** Freeze explicit owned candidate and commit with KNXBench identity; maintained scoped branch gate then fresh main-first merged gate, conditional push/readback. Preserve reviewed source; no new Go needed. Remaining second rehearsal/growth/B10/production routes/lifecycle/UI stay open, WP-19 subsequent.
+- **Notes for Codex oder Claude:** Evidence <profile-scratch>/wp043-reopened-copy-20261023/orch1-rereview/ and controller-source-accepted.json. Own branch feat/wp043-reopened-copy-20261023 still based on2f14f5741 before candidate commit; selected root foreign edits/history preserved and unsynchronized. No bus/device, release or compatibility expansion.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-23 14:41
+- **Completed:** ORCH-1 correction handoff inspected: preparation returns closed ValidatedDestination, D RW opens only after inspected S/W settlement; late close/Stop paths preserved. Two native regressions observed semantic original RED then corrected GREEN. Parent read actual source and verifies all 195 ProductDB source-manifest inputs match final handoff. Worker recorded 682 unit/752 integration/two doctest/two 13-test example passes, Clippy/fmt/header green; focused counts overlap owning. No overall source or delivery acceptance yet.
+- **Pending/Next Steps:** Narrow independent rereview deleg_a573c406 / sa-0-312c2edc active on frozen runtime/tests; require explicit ORCH-1 closure before final documentation, dependent scoped/package/main-first gates and conditional publication. Parent may edit docs/continuity only. No new Go needed.
+- **Notes for Codex oder Claude:** Evidence <profile-scratch>/wp043-reopened-copy-20261023/orch1-correction/ and rereview target orch1-rereview/. Destination implementation after header remains accepted original bytes; ceiling unchanged. Branch feat/wp043-reopened-copy-20261023 HEAD2f14f5741 with uncommitted code. Root foreign source/history preserved; deferred second rehearsal/growth/B10/routes and bus/device/release boundaries unchanged.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-23 14:28
+- **Completed:** Consumed independent whole-slice reviews. Destination lifecycle ACCEPT, no integrity findings; 16 semantic RED/GREEN pairs and owning evidence authenticated, 72 focused cases independently re-executed. Orchestration REVISE ORCH-1: preview opens D RW before S/W settlement and loses its close receipt on cleanup failure; two native independent probes reproduce stranded RW state while positive passes. Parent read actual report and implicated source; no overall source acceptance or gate yet.
+- **Pending/Next Steps:** Strict TDD ORCH-1 correction deleg_253df07d / sa-0-600dbe31 active. Preferred fix defers D RW open until inspected S/W settlement succeeds; add native refusal regressions and preserve late close/Stop outcomes. Worker also owns destination header-only convention fix, no ceiling increase. Then narrow independent rereview, final docs and maintained package/main-first gates/publication.
+- **Notes for Codex oder Claude:** Evidence <profile-scratch>/wp043-reopened-copy-20261023/code-review-destination/ and code-review-orchestration/; new correction orch1-correction/. Other destination runtime stays frozen except its header. Source remains uncommitted on2f14f5741; selected root foreign history retained. No second rehearsal/growth/B10/routes, bus/device, release or compatibility expansion.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-23 14:16
+- **Completed:** Full reopened-copy lifecycle handoff received and inspected; parent compared final source manifest with current files and found no content mismatch. Worker records actual preview D/apply D/B validation, 72 focused passes, owning ProductDB 680 unit/752 integration plus two 13-test examples; focused/owning populations overlap. No independent runtime acceptance yet. Parent header check fails at 156 absent/155 ceiling; new destination module header needs a scoped correction after review freeze, never a ceiling increase.
+- **Pending/Next Steps:** Independent whole-slice review deleg_74bd7b59 active: destination sa-0-19cb9d2d, orchestration/settlement sa-1-24f3ad41. Freeze source/tests while reviewers run; inspect actual verdicts and close concrete findings/header before dependent and maintained package/merged gates. No source commit/push for this increment yet.
+- **Notes for Codex oder Claude:** Exact worker handoff <profile-scratch>/wp043-reopened-copy-20261023/lifecycle-implementation/HANDOFF.md; prior partial evidence remains separate. Branch feat/wp043-reopened-copy-20261023, HEAD2f14f5741. Parent owns docs/continuity, reviewers are read-only. Root foreign work/history preserved; no second rehearsal/growth/B10/routes, bus/device or release acceptance.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-23 13:14
+- **Completed:** First reopened-copy implementation handoff is explicitly PARTIAL: guarded preview reservation, strict S opener, exact W/S witness comparison and independent source/rollback settlement are implemented. Parent read detailed handoff and verifies its four current source hashes. Worker records six semantic RED/GREEN cycles, eight focused passes and owning ProductDB 616 unit/752 integration plus example lanes; not yet independent implementation acceptance. D/B destination validation is still missing, not hidden behind those totals.
+- **Pending/Next Steps:** Continuation worker deleg_5c314568 / sa-0-7e966c48 active on remaining owned disk lifecycle/inventory, real D/B close/reopen validation and preview/apply integration. Preserve prior evidence; no parent edits of worker paths or competing gates. Require completed behavior and exact tests before independent whole-slice review/gates/publication.
+- **Notes for Codex oder Claude:** Previous handoff <profile-scratch>/wp043-reopened-copy-20261023/implementation/HANDOFF.md; new lifecycle evidence in lifecycle-implementation/. Existing source2f14f5741 still HEAD; new code uncommitted. No second rehearsal/growth/B10/routes/quiet/schema changes claimed. Root remains stale/foreign and preserved; no bus/device or release action.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-23 12:51
+- **Completed:** Reopened-copy design rereview IMPLEMENTATION READY closes R1–R3. Parent verifies exact 17 input hashes and report identities before accepting bounded implementation; normative spec unchanged except opening status. Implementation worker deleg_1140b6be / sa-0-e71a3754 dispatched on ProductDB-only scope with vertical TDD, retained executed binaries and unchanged quiet/schema/production boundaries. No runtime result yet.
+- **Pending/Next Steps:** Await implementation handoff notification; do not poll/edit worker-owned ProductDB paths or run competing gates. Parent may maintain docs/continuity only. Inspect exact RED/GREEN/source/binary evidence and owning checks, then independent whole-slice review and maintained package/merged gates. No new Go required for this admitted offline scope.
+- **Notes for Codex oder Claude:** Worker evidence <profile-scratch>/wp043-reopened-copy-20261023/implementation/; accepted design/controller receipt alongside. Active worktree feat/wp043-reopened-copy-20261023 deliberately retains prior build cache; no cleanup of active successor. Root source/index/HEAD stays stale/foreign. Deferred second rehearsal/growth/B10/routes/lifecycle/UI remain open; WP-19 subsequent. No bus/device, release or persistent Ollama configuration change.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-23 12:49
+- **Completed:** Initial reopened-copy design review REVISE named three concrete gaps; parent closed them explicitly in reopened-copy-increment.md: create-new owned construction and fixed D/B inventory before fallible initialization, anchored post-copy identity/content-stamp transitions and strict RO/RW configuration readback, one inspected preview cleanup preserving primary/cleanup errors and failed handles. Runtime remains unchanged. Fresh docs/local-info checks pass. Correction archives confirmed verified: 48 executable streams and 1719 evidence files; active successor resources intentionally retained.
+- **Pending/Next Steps:** Targeted R1–R3 design rereview deleg_6439544f / sa-0-3c0205bb active. Freeze candidate and runtime; on IMPLEMENTATION READY, launch strict vertical TDD for bounded reopened-copy gate without new user Go. Do not prematurely claim growth/B10/second-rehearsal/routes or full WP-04.3 completion.
+- **Notes for Codex oder Claude:** Original REVISE and corrected design are separately retained under <profile-scratch>/wp043-reopened-copy-20261023/. Branch feat/wp043-reopened-copy-20261023; selected root remains stale/foreign, no synchronization. No code edit, bus/device, release or permanent model setting change in this design revision.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-23 12:39
+- **Completed:** Consumed next-copy static admission report and verified actual copy/preview/contract seams. Adopted a bounded private owned disk-destination lifecycle plus preview W-reservation composition as a decision candidate in reopened-copy-increment.md; no runtime implementation started. New successor branch feat/wp043-reopened-copy-20261023 on published 2f14f5741 reuses the owned worktree/build inputs intentionally, not an abandoned cleanup target.
+- **Pending/Next Steps:** Independent design readiness review deleg_595a40ab / sa-0-0cce26f9 active; close concrete lifecycle/settlement decisions, then strict TDD implementation of this one copy-validation behavior, preserving prior reservation/policy/recovery regressions. Correction evidence snapshot proc_1ec0837e25d2 still expected via notification. Preserve active successor resources; archive/retire only completed, fully retained correction artifacts.
+- **Notes for Codex oder Claude:** Decision candidate excludes second apply rehearsal, comprehensive VFS admission, production artifact durability, live growth/B10 and routes/lifecycle/UI; none is silently accepted. Next source evidence belongs in <profile-scratch>/wp043-reopened-copy-20261023/, older correction evidence remains separately bound. Root remains unsynchronized/foreign. No bus/device, release or permanent Ollama change.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-23 12:31
 - **Completed:** Catalogue integrity source 46d9a3b0f delivered on main-first 846793334; immediate local/tracking/live equality verified. ProductDB and corrected server independent reviews ACCEPT/CLOSED; R1–R6 bounded corrections complete. Maintained branch and integrated gates each 14/14: 3668 Rust passes/151 ignored across 24 binary results, 97/97 selected corpus; exact stages/proofs/frozen inputs and empty touched/unchecked data guards validated. No production job or hardware capability is implied.
 - **Pending/Next Steps:** Gate/publish result-only documentation, verify archive and retire owned correction scratch after preserving executed evidence. Continue next admitted WP-04.3 copy-content validation/growth/commit-barrier dependencies before route/lifecycle/UI wiring, then WP-19. Root source/index/HEAD remains intentionally unsynchronized.

@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-23 20:59
+- **Completed:** Fixed actual-W SQL-safety source7decb65ce published on main-first9d4014638; immediate local/tracking/live equality verified. Independent ACCEPT and branch/integrated14/14 each3883 Rust passes/151ignored/24binary results,97/97corpus; exact stage/proof/freeze/data guards verified. Result-only docs updated, not yet gated/published.
+- **Pending/Next Steps:** Gate/publish result documentation, verify/archive task evidence before owned scratch retirement; preserve active worktree/cache. Then bounded next B08/B10 prerequisite admission. Full variable configuration receipt/sticky unwind witness/composed same-gate B10/artifacts/routes/lifecycle/UI and WP-19 remain open. No new Go needed.
+- **Notes for Codex oder Claude:** No Ollama use/downloads. Evidence <profile-scratch>/wp043-writer-configuration-20261023/publication-verified.json and continuation.json. Actual-W fixed flag admission delivered, no silent repairs. Root foreign source/index/HEAD preserved; no bus/device/release/schema/quiet API or compatibility expansion.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-23 20:39
 - **Completed:** Fixed actual-W SQL-safety independent review deleg_7ae7929b ACCEPT without blockers; four runtime/test hashes rechecked.23 focused methods/60refusal scenarios/11compiled mutants authenticated; parent retained-binary replay23/23 green. Independent pinned-native probe confirms defer_foreign_keys oracle ordering. Contract/status/log synchronized; source not yet delivered.
 - **Pending/Next Steps:** Commit exact owned slice, maintained dependent branch gate, main-first integration/gate, fresh reservation check and publication/readback. Full B08/config receipt, sticky unwind-safe commit witness/composed same-gate B10, artifacts/routes/lifecycle/UI and WP-19 remain open. Preserve active evidence/cache; older retirement still pending.

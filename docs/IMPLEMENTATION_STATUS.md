@@ -12,7 +12,7 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
-## WP-04.3 fixed writer SQL safety — source accepted, delivery pending (23 October 2026)
+## WP-04.3 fixed writer SQL safety — delivered (23 October 2026)
 
 The [bounded writer-configuration increment](contracts/catalogue-jobs/writer-configuration-increment.md)
 observes five fixed safety settings on actual W before BEGIN and independently
@@ -27,8 +27,11 @@ A separate pinned-native probe verifies observation ordering around the deferred
 foreign-key flag. Owning evidence: 731 unit and 772 integration passes/31 ignored,
 two 13-test examples and two doctests; one separate opt-in measurement ignored.
 Parent independently re-executes the 23 focused methods on the retained owning
-binary; this is not fresh compilation or additional unique coverage. Maintained
-branch/integrated gates and publication remain pending. Full B08/configuration
+binary; this is not fresh compilation or additional unique coverage. Source
+`7decb65ce` published on main-first `9d4014638`, with immediate local/tracking/live
+equality verified. Maintained branch and integrated gates each pass 14/14,
+3883 Rust passes/151 ignored across 24 binary results, 97/97 selected corpus;
+ordered proofs, frozen inputs and empty data guards verified. Full B08/configuration
 receipt, sticky unwind-safe commit witness/composed same-gate B10, artifacts,
 routes/lifecycle/UI, real large-database/aggregate quotas and WP-19 stay open.
 

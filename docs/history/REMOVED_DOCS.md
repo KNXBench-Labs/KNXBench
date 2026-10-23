@@ -25,6 +25,24 @@ Web: `https://github.com/KNXBench-Labs/KNXBench/tree/6222e17754f3/<path>`.
 | `KNX ETS Alternative – Claude Code Development Strategy.md` (root) | 1 | The original development-strategy prompt |
 | `IDEA.md` (root) | 1 | The one-line original idea |
 
+## Reporter-request removal, 23 October 2026
+
+`docs/support/issue-22-up258-evidence-request.md` was deliberately removed in
+`e6369faa5085013c7ce5411c9d525c4a673fd4cf`. Historical references now point here
+rather than restoring the removed request or leaving broken local links.
+The exact last version remains in its parent `aa2cda95c`:
+
+```sh
+git show aa2cda95c:docs/support/issue-22-up258-evidence-request.md
+```
+
+It held the 16 October draft (not posted) and a later Stage 0 read-only request,
+whose own dated section records its 19 October posting. Historical “not posted”
+statements refer to the original draft, not that later request. This locator is
+provenance, not a current request, device-operation approval or compatibility
+claim. Current scope and evidence gates remain in the
+[System-2 validation contract](../contracts/up258-system2-validation.md).
+
 ## What still names them
 
 - **Source comments and tests** (about 40 files) cite `docs/superpowers/…` specs

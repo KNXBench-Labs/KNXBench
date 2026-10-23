@@ -12,6 +12,38 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Catalogue-job integrity corrections — candidate (23 October 2026)
+
+The [23 October review](status/2026-10-23-deepseek-review.md) reproduced five
+unwired code defects and a separately introduced broken-documentation gate.
+The correction candidate retains one W IMMEDIATE reservation across shown-stamp
+validation, copies and live settlement; checks retained policy/version before
+work; and independently reports failed rollback, quarantine and recovery
+retention. ProductDB independent review accepts R1/R2/R4 within this scope.
+
+Server drain retains authoritative worker ownership across dropped/overlapping
+waiters, returns registration ownership on refusal and reports poisoned metadata
+as unresolved rather than clean absence. Status assembly validates nested
+preview/result, required nullable keys and existing phase/committed-state rules.
+Initial independent server review required poison and committed-state follow-ups;
+those are corrected and independently ACCEPT/CLOSED on narrow rereview. The
+reviewer re-executed the original refusal controls and schema-valid positives;
+this is unwired-source approval, not production lifecycle acceptance.
+
+Recorded candidate owning executions: ProductDB 608 library + 752 integration
+passes (31 integration ignores; example/doc lanes separate); corrected server
+1241 passed / 53 ignored. Focused results overlap these populations. Maintained
+package and merged-result gates and publication remain pending. Historical RED
+logs do not establish final-expanded-test or missing historical binary identity.
+No production route, schema, compatibility or hardware capability is enabled.
+Copy-content witness, live growth, concurrent commit-barrier and later lifecycle/
+UI integration gates remain open; WP-04.3 and WP-19 are not closed.
+
+The deliberately deleted reporter request stays deleted. Six callers now use
+[its exact historical Git locator](history/REMOVED_DOCS.md#reporter-request-removal-23-october-2026)
+instead of broken paths. Current documentation checks do not approve a device
+operation or resurrect the old draft as a current request.
+
 ## WP-04.3 stage D — preview/apply orchestration (22 October 2026)
 
 Source `f33478c23` on `feat/wp043-orchestration-20261022`. This is the closing
@@ -2288,7 +2320,7 @@ See [the editing contract](contracts/parameter-object-refresh.md).
   The separate private evaluator experiment passes for both proposed values;
   no full workspace/web/private-corpus/hardware run is claimed. [Production decision](research/2026-10-16-up258-production-decision.md)
   inventories all 21 positions and concrete missing encoding/XML/resource/recovery
-  rules. One [English reporter request](support/issue-22-up258-evidence-request.md)
+  rules. One [English reporter request](history/REMOVED_DOCS.md#reporter-request-removal-23-october-2026)
   is prepared, not posted. This is not a complete image, production download or
   physical validation; issue #22 remains open.
 

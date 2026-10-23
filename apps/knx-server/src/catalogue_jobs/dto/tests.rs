@@ -1,5 +1,9 @@
 //! Tests for the strict serde wire DTO layer (P2/P3).
 
+mod null_rules;
+mod review_regressions;
+mod state_rules;
+
 use super::*;
 
 fn u64(v: u64) -> U64 {
@@ -59,6 +63,8 @@ fn no_backup() -> Backup {
 }
 
 fn base_status() -> Status {
+    let mut source = std_source();
+    source.sha256 = None; // Receiving has not observed exact EOF yet.
     Status {
         schema_version: SCHEMA_VERSION,
         policy_version: POLICY_VERSION.to_string(),
@@ -68,7 +74,7 @@ fn base_status() -> Status {
             job_id: id(0x02),
         },
         revision: u64(1),
-        source: std_source(),
+        source,
         profile: std_profile(),
         state: JobState::Running,
         phase: Some(Phase::Receiving),
@@ -534,6 +540,7 @@ fn valid_result() -> JobResult {
 
 fn terminal_status() -> Status {
     let mut status = base_status();
+    status.source = std_source();
     status.phase = None;
     status.progress = None;
     status.lease.kind = LeaseKind::Retention;

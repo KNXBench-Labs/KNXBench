@@ -158,7 +158,7 @@ remain in force.
 ## One prepared reporter request
 
 The copy-ready English request is maintained in
-[the reporter message](../support/issue-22-up258-evidence-request.md).
+[the reporter message](../history/REMOVED_DOCS.md#reporter-request-removal-23-october-2026).
 It separates offline ETS edits, separately approved device operations and optional
 publication. It asks for firmware first, then one fixed direct-field comparison
 and, only if already available or separately agreed, narrowly filtered load controls.

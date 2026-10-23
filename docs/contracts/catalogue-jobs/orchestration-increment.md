@@ -70,25 +70,31 @@ No W row changes; no generation increment; no live DML.
 
 `apply_current_controlled(source, shown, op, artifacts)`:
 
-1. Re-verify the source: exact name bytes, length and digest against
-   `shown.source`, and `source.limits` against `op.policy.limits()`. Any
-   difference is a refusal (no live writes).
-2. `capture_stamp` and compare the **unchanged original** incarnation/
-   generation/data_version/total_changes/file/witness against `shown.catalogue`
-   under the reservation. A difference is `stale` — no recovery backup, no
-   live install.
-3. Open S, allocate fresh D and B, copy both from the unchanged S (observed
-   Done + cookie rule each), close S before any W DML.
-4. Open one W IMMEDIATE transaction (managed mutation guard: checked
-   generation increment, `Mutating`, quarantine-on-unwind), run the shared
-   noncommitting installer on W, compute `preview_identity` of the live result
-   and require exact agreement with `shown.preview`.
+1. Re-verify the retained binding version and complete effective policy against
+   the current operation, then the source's exact name bytes, length and digest
+   against `shown.source`, and `source.limits` against `op.policy.limits()`.
+   Any difference is a refusal before copy or live work.
+2. Acquire one W IMMEDIATE reservation and capture the **unchanged original**
+   incarnation/generation/data_version/total_changes/file/witness under it.
+   Compare against `shown.catalogue`; a difference is `stale` — no recovery
+   backup, no live install. Retain this same reservation through copying,
+   live DML and settlement; the standalone `capture_stamp` helper's released
+   reservation cannot serve as apply admission.
+3. With W still reserved, open S, allocate fresh D and B, copy both from the
+   unchanged S (observed Done + cookie rule each), close S before any W DML.
+4. Under the retained W IMMEDIATE transaction, arm the managed mutation guard
+   (checked generation increment, `Mutating`, quarantine-on-unwind), run the
+   shared noncommitting installer on W, compute `preview_identity` of the live
+   result and require exact agreement with `shown.preview`.
 5. Commit gate: `try_claim_commit` wins → one live `COMMIT`; a latched
    cancellation wins → explicit `ROLLBACK`. No second retry, no reopen-to-decide.
 6. Classify settlement from the complete trace: `Committed` only for a
-   successful COMMIT with autocommit=true; `NotCommitted` for a proved rollback
-   or no-live-mutation; `Unknown` for any ambiguous COMMIT/rollback outcome,
-   which also quarantines the writer.
+   successful COMMIT with autocommit=true; `NotCommitted` for no issued COMMIT
+   or a proved noncommitting settlement; `Unknown` for ambiguous COMMIT
+   outcomes. Rollback disposition is independent: no issued COMMIT does not
+   prove successful rollback. Failed/unresolved rollback quarantines W and
+   retains any recovery artifact even when commit evidence is `NotCommitted`.
+   Never report `Explicit` or authorize disposal from an unchecked rollback.
 
 `apply_current_controlled` returns a `ControlledApplySettlement` (it never
 panics on a business refusal); the caller inspects the settlement to decide

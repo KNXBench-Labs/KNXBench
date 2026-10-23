@@ -148,7 +148,7 @@ in the acceptance table remains **unimplemented/unproven for this product**.
   These are retrieval limits, not inspected defining documents or proof of absence.
 
 Original packages, extracted passages, rendered pages and raw receipts remain
-local; no private source is redistributed. The [prepared reporter request](../support/issue-22-up258-evidence-request.md)
+local; no private source is redistributed. The [prepared reporter request](../history/REMOVED_DOCS.md#reporter-request-removal-23-october-2026)
 was reviewed, **not posted**. Its P903 comparison can address selected 16-bit
 encoding but cannot by itself settle LegacyPatchAlways, all Union semantics or
 recovery. Seek the defining patch rule first; do not demand a fresh bus attempt

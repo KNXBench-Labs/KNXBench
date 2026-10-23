@@ -10,7 +10,8 @@ export interface System2Preview {
 export const SYSTEM2_STATES = ["running", "finished", "cancelled", "failed", "interrupted", "restoring", "restored", "restoreFailed"] as const;
 export interface System2Status {
   schemaVersion: 1; operationId: string; binding: System2Binding; address: string; deviceName: string; state: typeof SYSTEM2_STATES[number];
-  completedSteps: number; totalSteps: number | null; backupAvailable: boolean; recoveryPhrase: string | null; message: string | null;
+  completedSteps: number; totalSteps: number | null; backupAvailable: boolean; recoveryPhrase: string | null;
+  downloadPhrase: string | null; releasePhrase: string | null; message: string | null;
 }
 export type RecoveryTrack = "knxbenchBestEffort" | "externalETS";
 export interface System2Start {
@@ -39,7 +40,8 @@ const previewCheck = object({ ...shared, preparationId: id, programId: nonempty,
   steps: strings, dataOctets: count, allocationOctets: count, notWrittenOctets: count, warnings: strings,
   confirmationPhrase: nonempty, hypothesisPhrase: nonempty, downloadPhrase: nonempty, releasePhrase: nonempty });
 const statusCheck = object({ ...shared, operationId: id, state: (v) => SYSTEM2_STATES.some((state) => state === v),
-  completedSteps: count, totalSteps: nullable(count), backupAvailable: (v) => typeof v === "boolean", recoveryPhrase: nullable(nonempty), message: nullable(text) });
+  completedSteps: count, totalSteps: nullable(count), backupAvailable: (v) => typeof v === "boolean", recoveryPhrase: nullable(nonempty),
+  downloadPhrase: nullable(nonempty), releasePhrase: nullable(nonempty), message: nullable(text) });
 function checked<T>(value: unknown, check: Check): T {
   if (!check(value)) throw new Error("Invalid System-2 response; operation outcome is not confirmed.");
   return value as T;
@@ -47,6 +49,9 @@ function checked<T>(value: unknown, check: Check): T {
 function checkedStatus(value: unknown): System2Status {
   const row = checked<System2Status>(value, statusCheck);
   if (row.totalSteps !== null && row.completedSteps > row.totalSteps) throw new Error("Invalid System-2 checkpoint counts.");
+  if (row.recoveryPhrase === null ? row.downloadPhrase !== null || row.releasePhrase !== null : row.downloadPhrase === null || row.releasePhrase === null) {
+    throw new Error("Invalid System-2 original-operation recovery acknowledgements.");
+  }
   return row;
 }
 const post = (action: string, body: unknown) => request<unknown>(`/api/device-system2/${action}`, { method: "POST", body: JSON.stringify(body) });

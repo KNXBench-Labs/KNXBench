@@ -28,12 +28,11 @@ export default function System2DownloadPanel({ project, deviceId, gateway, enabl
   const [phrases, setPhrases] = useState<Phrases>(EMPTY);
   const [track, setTrack] = useState<api.RecoveryTrack | "">("");
   const [recovery, setRecovery] = useState({ recoveryConfirmation: "", downloadConfirmation: "", releaseConfirmation: "" });
-  // Recovery phrases belong to the original operation, not a later project's preview.
-  const [terms, setTerms] = useState<{ operationId: string; download: string; release: string } | null>(null);
+
   const [checking, setChecking] = useState(true); const [unavailable, setUnavailable] = useState(false);
   const [pending, setPending] = useState(false); const action = useRef(false);
   const [preparing, setPreparing] = useState(false);
-  const [error, setError] = useState(false); const [unknown, setUnknown] = useState(false);
+  const [error, setError] = useState(false); const [unknown, setUnknown] = useState<"start" | "cancel" | "recover" | null>(null);
   const mounted = useRef(false); const generation = useRef(0); const reads = useRef(0); const pollInFlight = useRef(false);
   const context = useRef({ project, deviceId, gateway, enabled }); context.current = { project, deviceId, gateway, enabled };
 
@@ -44,7 +43,8 @@ export default function System2DownloadPanel({ project, deviceId, gateway, enabl
   function accept(next: api.System2Status) {
     const prior = statusRef.current;
     if (active(prior) && prior?.operationId !== next.operationId) { setUnavailable(true); return; }
-    if (prior?.operationId !== next.operationId || prior?.state !== next.state || prior?.recoveryPhrase !== next.recoveryPhrase) {
+    if (prior?.operationId !== next.operationId || prior?.state !== next.state || prior?.recoveryPhrase !== next.recoveryPhrase ||
+      prior?.downloadPhrase !== next.downloadPhrase || prior?.releasePhrase !== next.releasePhrase) {
       setRecovery({ recoveryConfirmation: "", downloadConfirmation: "", releaseConfirmation: "" });
     }
     statusRef.current = next; setStatus(next); setUnavailable(false); setChecking(false);
@@ -68,10 +68,10 @@ export default function System2DownloadPanel({ project, deviceId, gateway, enabl
     const timer = window.setInterval(() => void poll(), 1000);
     return () => { mounted.current = false; generation.current += 1; reads.current += 1; window.clearInterval(timer); };
   }, []);
-  const busy = pending || active(status) || checking || unavailable || unknown;
+  const busy = pending || active(status) || checking || unavailable || unknown !== null;
   // Preserve ordinary-download availability when this optional endpoint is unavailable.
   // Both write routes still require the server’s shared admission guard.
-  const ordinaryBlocked = pending || active(status) || unknown;
+  const ordinaryBlocked = pending || active(status) || unknown !== null;
   useEffect(() => { onBusyChange?.(ordinaryBlocked); }, [ordinaryBlocked, onBusyChange]);
 
   async function prepare() {
@@ -87,7 +87,7 @@ export default function System2DownloadPanel({ project, deviceId, gateway, enabl
         (project.project_incarnation !== undefined && next.binding.projectIncarnation !== String(project.project_incarnation))) {
         setError(true); return;
       }
-      setPreview(next); setUnknown(false);
+      setPreview(next); setUnknown(null);
     } catch { if (mounted.current && ticket === generation.current) setError(true); }
     finally { if (mounted.current && ticket === generation.current) setPreparing(false); }
   }
@@ -108,13 +108,13 @@ export default function System2DownloadPanel({ project, deviceId, gateway, enabl
       if (!mounted.current || ticket !== generation.current || context.current.project !== original.project || context.current.deviceId !== original.deviceId || context.current.gateway !== original.gateway || !context.current.enabled) return;
       // Drop local execution capability before sending, even when its response is lost.
       setPreview(null); setPhrases(EMPTY); setTrack("");
+      // A previous settled operation cannot stand in for status of this new start.
+      statusRef.current = null; setStatus(null);
       try {
         const next = await api.startSystem2(body);
         if (!sameTarget(next, shown)) throw new Error("Mismatched System-2 start response");
-        if (mounted.current) {
-          accept(next); setTerms({ operationId: next.operationId, download: shown.downloadPhrase, release: shown.releasePhrase });
-        }
-      } catch { if (mounted.current) setUnknown(true); }
+        if (mounted.current) accept(next);
+      } catch { if (mounted.current) setUnknown("start"); }
     } finally {
       action.current = false; reads.current += 1;
       if (mounted.current) { setPending(false); void poll(); }
@@ -125,13 +125,18 @@ export default function System2DownloadPanel({ project, deviceId, gateway, enabl
     if (!active(original) || original === null || action.current) return;
     action.current = true; setPending(true); reads.current += 1;
     try { const next = await api.cancelSystem2(original.operationId); requireOriginal(next, original); if (mounted.current) accept(next); }
-    catch { if (mounted.current) setUnknown(true); }
+    catch { if (mounted.current) setUnknown("cancel"); }
     finally { action.current = false; reads.current += 1; if (mounted.current) { setPending(false); void poll(); } }
   }
-  const originalTerms = terms !== null && terms.operationId === status?.operationId ? terms : null;
+  // Only the server's original-operation status can supply recovery terms, including
+  // after reattachment or a lost start response. A later preview is never a fallback.
+  const originalTerms = status !== null && status.downloadPhrase !== null && status.releasePhrase !== null ?
+    { download: status.downloadPhrase, release: status.releasePhrase } : null;
+  // A lost start is never resent. A subsequent read-only attachment may offer a
+  // separately acknowledged backup recovery; a lost recovery/cancel stays blocked.
   const canRecover = status !== null && !active(status) && status.backupAvailable && status.recoveryPhrase !== null && originalTerms !== null &&
     recovery.recoveryConfirmation === status.recoveryPhrase && recovery.downloadConfirmation === originalTerms.download && recovery.releaseConfirmation === originalTerms.release &&
-    gateway.trim() !== "" && !pending && !checking && !unavailable && !ordinaryBusy && !unknown;
+    gateway.trim() !== "" && !pending && !checking && !unavailable && !ordinaryBusy && (unknown === null || unknown === "start");
   async function recover() {
     if (!canRecover || status === null || action.current) return;
     const original = status; const originalGateway = gateway; const ticket = generation.current;
@@ -142,7 +147,7 @@ export default function System2DownloadPanel({ project, deviceId, gateway, enabl
       if (!mounted.current || generation.current !== ticket || context.current.gateway !== originalGateway || statusRef.current !== original) return;
       setRecovery({ recoveryConfirmation: "", downloadConfirmation: "", releaseConfirmation: "" });
       try { const next = await api.recoverSystem2(body); requireOriginal(next, original); if (mounted.current) accept(next); }
-      catch { if (mounted.current) setUnknown(true); }
+      catch { if (mounted.current) setUnknown("recover"); }
     } finally { action.current = false; reads.current += 1; if (mounted.current) { setPending(false); void poll(); } }
   }
   // Keep polling while the ordinary mode is selected, without adding a second
@@ -202,7 +207,7 @@ export default function System2DownloadPanel({ project, deviceId, gateway, enabl
         {originalTerms === null ? <p className="form-warning">{t("system2.recoveryTermsUnavailable")}</p> : status.recoveryPhrase !== null && <>
           {Object.entries({ recoveryConfirmation: status.recoveryPhrase, downloadConfirmation: originalTerms.download, releaseConfirmation: originalTerms.release }).map(([key, phrase]) => <label key={key} className="device-download-acknowledgement">
             {t(key === "recoveryConfirmation" ? "system2.phrase.recoveryConfirmation" : key === "downloadConfirmation" ? "system2.phrase.downloadConfirmation" : "system2.phrase.releaseConfirmation")} <code>{phrase}</code>
-            <input data-system2-recovery={key} autoComplete="off" spellCheck={false} disabled={pending || unknown} value={recovery[key as keyof typeof recovery]} onChange={(e) => setRecovery((p) => ({ ...p, [key]: e.target.value }))} />
+            <input data-system2-recovery={key} autoComplete="off" spellCheck={false} disabled={pending || (unknown !== null && unknown !== "start")} value={recovery[key as keyof typeof recovery]} onChange={(e) => setRecovery((p) => ({ ...p, [key]: e.target.value }))} />
           </label>)}
           <button type="button" data-system2-recover disabled={!canRecover} onClick={() => void recover()}>{t("system2.recover")}</button>
         </>}

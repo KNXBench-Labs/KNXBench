@@ -1,7 +1,7 @@
 /** Intercepted real-app wiring evidence, not backend or hardware acceptance. */
 import { expect, test } from "@playwright/test";
 import { openNavigationSections } from "./disclosure-fixture";
-import { preview, status } from "../src/system2DownloadTestFixtures";
+import { preview, status, recoveryStatus } from "../src/system2DownloadTestFixtures";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
 import type { System2Status } from "../src/system2DownloadApi";
 import { messages as en } from "../src/messages/en";
@@ -31,7 +31,7 @@ test("Download mode → configured preview → ordinary consent → status/cance
       commands.push({ path, body: request.postDataJSON() });
       if (path.endsWith("/prepare")) return json(preview);
       if (path.endsWith("/start")) { operation = { ...status, backupAvailable: true }; return json(operation); }
-      if (path.endsWith("/cancel")) { operation = { ...status, state: "cancelled", backupAvailable: true, recoveryPhrase: "Recover original actual state" }; return json(operation); }
+      if (path.endsWith("/cancel")) { operation = { ...recoveryStatus, state: "cancelled" }; return json(operation); }
       if (path.endsWith("/recover")) { operation = { ...status, state: "restored", completedSteps: 2, totalSteps: 2, backupAvailable: true }; return json(operation); }
     }
     if (method === "GET" && ["/api/recent-projects", "/api/catalog", "/api/manufacturers", "/api/product-databases", "/api/notes", "/api/library", "/api/project/sources"].includes(path)) return json([]);

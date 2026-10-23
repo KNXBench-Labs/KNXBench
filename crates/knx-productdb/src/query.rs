@@ -11,6 +11,9 @@ use rusqlite::{Connection, OptionalExtension};
 
 use crate::ProductDbError;
 
+mod caption_templates;
+pub use caption_templates::{parameter_caption_templates, CaptionTemplateError};
+
 /// Canonical catalogue rows in the active product database. These are not
 /// project device instances or catalogue placements (`catalog_item`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

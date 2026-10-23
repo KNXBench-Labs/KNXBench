@@ -120,6 +120,69 @@ async fn get_panel(app: axum::Router) -> Value {
 }
 
 #[tokio::test]
+async fn requested_language_overlays_caption_templates_before_positional_fill() {
+    let (_dir, products) = products();
+    products
+        .execute_batch(
+            "INSERT INTO translation (scope,scope_id,language,ref_id,attribute_name,text) VALUES
+         ('Program','A-1','de-DE','PB-1','Text','Funktionen: {{0}}'),
+         ('Program','A-1','de-DE','PS-1','Text','Hinweis: {{0}}'),
+         ('Program','A-1','de-DE','PS-3','Text','Informationen'),
+         ('Program','A-1','de-DE','R-T','Value','Must never become a parameter value');",
+        )
+        .unwrap();
+    let state = Arc::new(state(products));
+    let before = state.project.lock().unwrap().clone();
+    let app = knx_server::app(state.clone(), None);
+    for language in ["de-DE", "de"] {
+        let request = Request::builder()
+            .uri(format!("/api/device/1/parameters?language={language}"))
+            .body(Body::empty())
+            .unwrap();
+        let (status, dto) = call(app.clone(), request).await;
+        assert_eq!(status, StatusCode::OK);
+        let group = &dto["sections"][0]["fields"][0]["group"];
+        assert_eq!(group["label"], "Funktionen: Ref default");
+        assert_eq!(group["labelFill"]["template"], "Funktionen: {{0}}");
+        assert_eq!(group["labelFill"]["source"], "ProductDefault");
+        assert_eq!(
+            dto["sections"][0]["separators"][0]["text"],
+            "Hinweis: Ref default"
+        );
+        let plain = dto["sections"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .flat_map(|section| section["separators"].as_array().unwrap())
+            .find(|separator| separator["text"] == "Informationen");
+        assert!(
+            plain.is_some(),
+            "translate captions without positional placeholders too"
+        );
+    }
+    assert_eq!(*state.project.lock().unwrap(), before);
+    let source: String = state
+        .product_db
+        .as_ref()
+        .unwrap()
+        .with_read(|db| {
+            db.query_row(
+                "SELECT text FROM dynamic_node WHERE program_id='A-1' AND element_id='PB-1'",
+                [],
+                |r| r.get(0),
+            )
+        })
+        .unwrap()
+        .unwrap();
+    assert_eq!(source, "Functions: {{0}}");
+    let fallback = get_panel(app).await;
+    assert_eq!(
+        fallback["sections"][0]["fields"][0]["group"]["label"],
+        "Functions: Ref default"
+    );
+}
+
+#[tokio::test]
 async fn block_and_separator_captions_read_exact_text_reference_without_writes() {
     let (_dir, products) = products();
     let state = Arc::new(state(products));

@@ -338,6 +338,15 @@ exact consent checkbox descendant and unique region count; preserves report,
 consent, no-write and layout assertions. No runtime code or first/nth fallback.
 No extra test run; original gate5 immutable, successor whole gate6 required.
 
+## Gate6 locator lifetime correction
+
+All13 gate6 failure blocks show consent-filtered job root disappears after Ready.
+Previous parent correction was incomplete: checkbox is intentionally phase-local.
+Inspected actual CatalogueJobPanel persistent section; fixture now intersects its
+existing catalogue-job class with exact accessible region name and keeps unique
+count. No production change, first/nth or weakened assertion. Launcher exited;
+failed receipt retained. No focused rerun; next whole candidate gate7 required.
+
 ## Next
 
 Consume exact worker handoffs on completion; do not poll

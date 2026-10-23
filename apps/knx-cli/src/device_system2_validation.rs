@@ -48,7 +48,7 @@ fn execute(args: &[String]) -> Result<(), String> {
     while index < args.len() {
         match args[index].as_str() {
             "--simulate" if !simulate => simulate = true,
-            flag @ ("--bundle" | "--gateway" | "--operation" | "--confirm" | "--accept-hypothesis" | "--recover" | "--confirm-recovery" | "--report" | "--download-confirm" | "--release-confirm" | "--activity-history") => {
+            flag @ ("--bundle" | "--gateway" | "--operation" | "--confirm" | "--accept-hypothesis" | "--recover" | "--confirm-recovery" | "--report" | "--download-confirm" | "--release-confirm" | "--activity-history" | "--project" | "--device-id" | "--product-db") => {
                 let value = args.get(index + 1).filter(|v| !v.starts_with("--")).ok_or_else(|| format!("{flag} needs a value"))?;
                 if values.insert(flag, value.as_str()).is_some() { return Err(format!("duplicate {flag}")); }
                 index += 1;
@@ -96,8 +96,35 @@ fn execute(args: &[String]) -> Result<(), String> {
             .ok_or("--bundle <immutable prepared.json> required")?,
     );
     let bundle = service::read_bundle(bundle_path).map_err(|e| e.to_string())?;
-    println!("STRONG HYPOTHESIS SIMULATOR TESTED — not physical compatibility.\nTarget {} plan {}\nProfile {} version {}\nSource {}\n{} ordered operations.",
-        bundle.binding.target, bundle.binding.plan_sha256, bundle.binding.profile_id, bundle.binding.profile_version, bundle.binding.source_sha256, bundle.normalized_plan.steps.len());
+    if bundle.format != 3
+        && ["--project", "--device-id", "--product-db"]
+            .iter()
+            .any(|key| values.contains_key(key))
+    {
+        return Err("project configuration arguments require a separately prepared configured hardware bundle; defaults are never substituted".into());
+    }
+    let support = if bundle.binding.simulated {
+        "STRONG HYPOTHESIS — synthetic simulator candidate"
+    } else {
+        "EXPERIMENTAL BEST-EFFORT — hardware compatibility and physical recovery unverified"
+    };
+    println!(
+        "{support}.\nTarget {} plan {}\nProfile {} version {}\nSource {}\n{} ordered operations.",
+        bundle.binding.target,
+        bundle.binding.plan_sha256,
+        bundle.binding.profile_id,
+        bundle.binding.profile_version,
+        bundle.binding.source_sha256,
+        bundle.normalized_plan.steps.len()
+    );
+    if bundle.format == 3 {
+        let preview = knx_app::system2_validation_preparation::configured_hardware_preview(&bundle)
+            .map_err(|e| e.to_string())?;
+        println!("Configured request: {} parameter values, {} group links, {} flag override rows; {} allocation octets, {} written, {} NOT written.", preview.parameter_values, preview.group_links, preview.flag_overrides, preview.allocation_octets, preview.data_octets, preview.not_written_octets);
+        for warning in preview.warnings {
+            println!("WARNING: {warning}");
+        }
+    }
     for (i, step) in bundle.normalized_plan.steps.iter().enumerate() {
         // Show the complete procedure locally, without echoing image/parameter octets.
         let kind = match step.operation {
@@ -135,7 +162,8 @@ fn execute(args: &[String]) -> Result<(), String> {
         bundle.consent_phrase()
     };
     if confirmation.is_none() {
-        println!("Preview only; no connection or writes.\nConfirmation: {expected}\nHypothesis acceptance: {}\nRecovery is same-application/procedure/allocation-shape reinstallation, not raw allocator rollback.\nUse --simulate for an isolated synthetic device; no real transport is enabled.", bundle.acceptance_phrase());
+        let target = bundle.plan().map_err(|e| e.to_string())?.target();
+        println!("Preview only; no connection or writes.\nConfirmation: {expected}\nHypothesis acceptance: {}\nOrdinary download: {}\nBest-effort release: {}\nRecovery is experimental same-application/source-shape replay, NOT raw allocator rollback or guaranteed restoration.\n--simulate is synthetic only. --gateway admits an explicitly consented best-effort physical operation; configured bundles additionally require fresh --project --device-id --product-db on execute.", bundle.acceptance_phrase(), required_confirmation_phrase(target, WriteScope::Download), required_release_phrase(target));
         return Ok(());
     }
     if confirmation.copied() != Some(expected.as_str()) {
@@ -145,6 +173,9 @@ fn execute(args: &[String]) -> Result<(), String> {
         return Err("exact target/plan-bound strong-hypothesis acceptance required".into());
     }
     if !simulate {
+        if bundle.format == 2 {
+            return Err("project-v2 bundles are intrinsically simulator-only; prepare a separate configured hardware operation with system2-project".into());
+        }
         let gateway: SocketAddrV4 = values
             .get("--gateway")
             .ok_or("--gateway <ip:port> required for a real write")?
@@ -175,6 +206,60 @@ fn execute(args: &[String]) -> Result<(), String> {
         if report.as_ref().is_some_and(|p| p.exists()) {
             return Err("report destination already exists; no execution started".into());
         }
+        let current = if bundle.format == 3 && !recover {
+            let project_conn = crate::open_native_for_reading(Path::new(
+                values
+                    .get("--project")
+                    .ok_or("configured execution requires --project")?,
+            ))
+            .map_err(|e| e.to_string())?;
+            let project = knx_store::load_project(&project_conn).map_err(|e| e.to_string())?;
+            let device = values
+                .get("--device-id")
+                .ok_or("configured execution requires --device-id")?
+                .parse::<u32>()
+                .map_err(|_| "invalid device id")?;
+            let products = knx_productdb::open_read_only(Path::new(
+                values
+                    .get("--product-db")
+                    .ok_or("configured execution requires --product-db")?,
+            ))
+            .map_err(|e| e.to_string())?;
+            Some(
+                knx_app::system2_validation_preparation::admit_current_project_hardware(
+                    &products.conn,
+                    &project,
+                    knx_core::DeviceId(device),
+                    &bundle,
+                )
+                .map_err(|e| e.to_string())?,
+            )
+        } else {
+            None
+        };
+        let configured_store = if bundle.format == 3 {
+            let store = if recover {
+                OperationStore::open(&operation, &bundle.binding)
+            } else {
+                OperationStore::create(&operation, bundle.binding.clone())
+            }
+            .map_err(|e| e.to_string())?;
+            if recover {
+                knx_app::system2_validation_preparation::validate_project_hardware_recovery(
+                    &bundle,
+                    &store,
+                    &knx_app::system2_validation_preparation::HardwareRecoveryConfirmations {
+                        recovery: confirmation.copied().expect("confirmation checked"),
+                        download,
+                        risk: release,
+                    },
+                )
+                .map_err(|e| e.to_string())?;
+            }
+            Some(store)
+        } else {
+            None
+        };
         return run_hardware(
             &bundle,
             gateway,
@@ -185,6 +270,8 @@ fn execute(args: &[String]) -> Result<(), String> {
             confirmation.copied().expect("confirmation checked above"),
             download,
             release,
+            current,
+            configured_store,
         );
     }
     if !bundle.binding.simulated {
@@ -366,6 +453,8 @@ fn run_hardware(
     recovery: &str,
     download: &str,
     release: &str,
+    current: Option<knx_app::system2_validation_preparation::CurrentProjectHardware>,
+    configured_store: Option<OperationStore>,
 ) -> Result<(), String> {
     let target = bundle.plan().map_err(|e| e.to_string())?.target();
     // One tunnel at a time; a second live client is refused by the gateway.
@@ -388,28 +477,30 @@ fn run_hardware(
         .await
         .map_err(|_| "gateway timeout".to_string())?
         .map_err(|e| format!("gateway refused/unavailable: {e}"))?;
-        // Read the real serial (read-only), then rebind to this physical device.
-        let serial = {
-            let mut session = ManagementSession::read_only(
-                &tunnel,
-                target,
-                AuthorisationPlan::Skip,
-                SessionTiming::default(),
-            )
-            .map_err(|e| format!("read-only session refused: {e}"))?;
-            session
-                .connect()
-                .await
-                .map_err(|e| format!("connect refused: {e}"))?;
-            let read = session
-                .read_serial_number()
-                .await
-                .map_err(|e| format!("serial read refused: {e}"))?;
-            session.disconnect().await;
-            read.octets()
+        // Configured preparation already binds an observed serial. NEVER rebind
+        // it at execute/recovery; the executor checks that original identity.
+        let rebound = if bundle.format == 3 {
+            bundle.clone()
+        } else {
+            let serial = {
+                let mut session = ManagementSession::read_only(
+                    &tunnel,
+                    target,
+                    AuthorisationPlan::Skip,
+                    SessionTiming::default(),
+                )
+                .map_err(|e| format!("read-only session refused: {e}"))?;
+                session.connect().await.map_err(|e| format!("connect refused: {e}"))?;
+                let read = session.read_serial_number().await
+                    .map_err(|e| format!("serial read refused: {e}"))?;
+                session.disconnect().await;
+                read.octets()
+            };
+            bundle.rebind_hardware(serial).map_err(|e| e.to_string())?
         };
-        let rebound = bundle.rebind_hardware(serial).map_err(|e| e.to_string())?;
-        let mut store = if recover {
+        let mut store = if let Some(store) = configured_store {
+            Ok(store)
+        } else if recover {
             OperationStore::open(&operation, &rebound.binding)
         } else {
             OperationStore::create(&operation, rebound.binding.clone())
@@ -423,7 +514,29 @@ fn run_hardware(
             }
         });
         guard.mark_send_possible().map_err(|e| e.to_string())?;
-        let result = if recover {
+        let result = if rebound.format == 3 {
+            use knx_app::system2_validation_preparation as configured;
+            if recover {
+                configured::restore_project_hardware(
+                    &tunnel, &rebound, &mut store, SessionTiming::default(),
+                    &configured::HardwareRecoveryConfirmations {
+                        recovery, download, risk: release,
+                    },
+                    &cancel,
+                ).await
+            } else {
+                configured::execute_project_hardware(
+                    &tunnel,
+                    current.as_ref().ok_or("fresh configured admission missing")?,
+                    &mut store, SessionTiming::default(),
+                    &configured::HardwareConfirmations {
+                        operation: recovery, hypothesis: &rebound.acceptance_phrase(),
+                        download, risk: release,
+                    },
+                    &cancel,
+                ).await
+            }
+        } else if recover {
             service::restore_hardware(
                 &tunnel,
                 &rebound,

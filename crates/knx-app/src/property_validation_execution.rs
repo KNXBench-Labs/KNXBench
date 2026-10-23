@@ -206,7 +206,34 @@ pub async fn execute_hardware<T: ManagementTransport>(
     release_confirmation: &str,
     cancel: &AtomicBool,
 ) -> io::Result<()> {
+    if bundle.hardware_preparation.is_some() {
+        return Err(invalid(
+            "configured preparation requires execute_project_hardware with fresh project admission",
+        ));
+    }
+    execute_hardware_inner(
+        transport,
+        bundle,
+        store,
+        timing,
+        download_confirmation,
+        release_confirmation,
+        cancel,
+    )
+    .await
+}
+#[allow(clippy::too_many_arguments)]
+pub(crate) async fn execute_hardware_inner<T: ManagementTransport>(
+    transport: &T,
+    bundle: &PreparedBundle,
+    store: &mut OperationStore,
+    timing: SessionTiming,
+    download_confirmation: &str,
+    release_confirmation: &str,
+    cancel: &AtomicBool,
+) -> io::Result<()> {
     check_bundle(bundle, store, false)?;
+    store.require_fresh_execution()?;
     if cancel.load(Ordering::SeqCst) {
         store.checkpoint(Checkpoint::Cancelled)?;
         return Err(invalid("property validation cancelled before connection"));
@@ -265,6 +292,34 @@ pub async fn restore_hardware<T: ManagementTransport>(
     release_confirmation: &str,
     cancel: &AtomicBool,
 ) -> io::Result<()> {
+    if bundle.hardware_preparation.is_some() {
+        return Err(invalid(
+            "configured preparation requires restore_project_hardware",
+        ));
+    }
+    restore_hardware_inner(
+        transport,
+        bundle,
+        store,
+        timing,
+        recovery_confirmation,
+        download_confirmation,
+        release_confirmation,
+        cancel,
+    )
+    .await
+}
+#[allow(clippy::too_many_arguments)]
+pub(crate) async fn restore_hardware_inner<T: ManagementTransport>(
+    transport: &T,
+    bundle: &PreparedBundle,
+    store: &mut OperationStore,
+    timing: SessionTiming,
+    recovery_confirmation: &str,
+    download_confirmation: &str,
+    release_confirmation: &str,
+    cancel: &AtomicBool,
+) -> io::Result<()> {
     check_bundle(bundle, store, false)?;
     if recovery_confirmation != bundle.restore_phrase() {
         return Err(invalid("exact target/plan recovery confirmation required"));
@@ -273,7 +328,6 @@ pub async fn restore_hardware<T: ManagementTransport>(
         .recovery()
         .ok_or_else(|| invalid("no durable prewrite recovery exists"))?
         .to_snapshot(bundle)?;
-    store.checkpoint(Checkpoint::RestoreStarted)?;
     let plan = bundle.plan()?;
     let authorization = WriteAuthorisation::for_hardware(
         plan.target(),
@@ -283,6 +337,10 @@ pub async fn restore_hardware<T: ManagementTransport>(
     .map_err(|_| invalid("hardware download confirmation refused"))?;
     let release = HardwareRelease::for_hardware(plan.target(), release_confirmation)
         .map_err(|_| invalid("hardware best-effort release refused"))?;
+    if cancel.load(Ordering::SeqCst) {
+        return Err(invalid("hardware recovery cancelled before connection"));
+    }
+    store.checkpoint(Checkpoint::RestoreStarted)?;
     let result = restore_experimental_property_plan_on_hardware(
         transport,
         &plan,

@@ -1,5 +1,6 @@
 //! Source-bound preparation keeps experimental defaults distinct from physical admission.
 
+mod configured_hardware;
 mod source_closure;
 
 use knx_app::system2_validation_preparation::{prepare_simulated_candidate, ValidationProfile};
@@ -1480,6 +1481,7 @@ fn project_profile_in_direct_legacy_struct_refuses_plan_and_hardware_rebind() {
         binding,
         normalized_plan: project.normalized_plan,
         project_preparation: None,
+        hardware_preparation: None,
     };
     assert!(
         direct.plan().is_err(),

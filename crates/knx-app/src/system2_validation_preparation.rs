@@ -1,6 +1,16 @@
-//! Source/profile-bound experimental preparation produces simulator bundles without device access.
+//! Source/profile-bound experimental preparation, with separate observed-target hardware admission.
 
+mod configured_hardware_preview;
+mod hardware;
 mod project;
+pub use configured_hardware_preview::{configured_hardware_preview, ConfiguredHardwarePreview};
+pub use hardware::{
+    admit_current_project_hardware, execute_project_hardware, observe_project_hardware,
+    prepare_project_hardware_source, prepare_retained_project_hardware_source,
+    restore_project_hardware, validate_project_hardware_recovery, CurrentProjectHardware,
+    HardwareConfirmations, HardwareObservation, HardwareRecoveryConfirmations,
+    ProjectHardwareRecord, ProjectHardwareSource, RecoveryTrack,
+};
 pub(crate) use project::check_budget;
 pub use project::{
     describe_project_source_closure, prepare_project_simulated_candidate,

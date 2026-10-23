@@ -302,6 +302,7 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
   }, [running, status?.downloadId]);
 
   async function preparePlan() {
+    if (project === null || selectedDevice === null) return;
     setError(null);
     setRefusal(null);
     setPlan(null);
@@ -327,7 +328,7 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
   }
 
   async function start() {
-    if (plan === null) return;
+    if (project === null || selectedDevice === null || plan === null) return;
     const shown = plan;
     const context = { project, deviceId, scope };
     if (shown.untestedAcknowledgement !== null && untestedAcknowledgement !== shown.untestedAcknowledgement) return;
@@ -417,10 +418,9 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
         </section>
       )}
 
-      {project === null ? (
-        <p>{t("deviceDownload.projectRequired")}</p>
-      ) : (
-        <form className="device-download-config" onSubmit={(event) => event.preventDefault()}>
+      {project === null && <p>{t("deviceDownload.projectRequired")}</p>}
+      <form className="device-download-config" onSubmit={(event) => event.preventDefault()}>
+          {project !== null && <>
           <label className="device-download-device">
             {t("deviceDownload.device")}
             <select data-download-device value={deviceId ?? ""} disabled={locked}
@@ -467,6 +467,8 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
                   : t(`deviceDownload.handoff.${handoffOutcome.kind}` as const)}
             </p>
           )}
+          </>}
+          {/* Original-operation recovery needs an explicit gateway even without a project. */}
           <fieldset className="device-download-gateway">
             <legend>{t("deviceDownload.gatewayLegend")}</legend>
             <p className="device-download-gateway-status" role="status" aria-live="polite">
@@ -503,6 +505,7 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
               {t("deviceDownload.gatewaySearchAgain")}
             </button>
           </fieldset>
+          {project !== null && <>
           <label className="device-download-device">
             {t("system2.mode")}
             <select data-download-mode value={mode} disabled={locked}
@@ -529,8 +532,8 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
             <span className="device-download-actions-note">{t("deviceDownload.preparePlanNote")}</span>
           </div>
           </>}
-        </form>
-      )}
+          </>}
+      </form>
 
       <System2DownloadPanel project={project} deviceId={deviceId} gateway={gateway}
         enabled={mode === "system2"} ordinaryBusy={locked} onBusyChange={setSystem2Busy} />
@@ -540,7 +543,7 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
       {programmingRefreshError && <p className="form-warning" role="alert" data-programming-refresh>
         {t("programming.refreshFailed", { reason: programmingRefreshError })}</p>}
 
-      {mode === "memory" && plan && (
+      {project !== null && mode === "memory" && plan && (
         <section className="device-download-plan" aria-label={t("deviceDownload.planTitle")}>
           <h3>{t("deviceDownload.planTitle")}</h3>
           <p>{t("deviceDownload.planNothingSent")}</p>

@@ -5,9 +5,11 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 const mock = vi.hoisted(() => ({ prepareSystem2: vi.fn(), getSystem2Status: vi.fn(), startSystem2: vi.fn(), cancelSystem2: vi.fn(), recoverSystem2: vi.fn() }));
 const consent = vi.hoisted(() => ({ request: vi.fn() }));
+const ordinary = vi.hoisted(() => ({ discoverBusInterfaces: vi.fn(), planDeviceDownload: vi.fn(), startDeviceDownload: vi.fn() }));
 vi.mock("./system2DownloadApi", () => mock);
 vi.mock("./useProgrammingConsent", () => ({ useProgrammingConsent: () => ({ request: consent.request, dialog: null }) }));
 vi.mock("./api", () => ({
+  ...ordinary,
   pollDeviceDownload: vi.fn().mockRejectedValue({ status: 404 }), getDeviceReadiness: vi.fn().mockResolvedValue({ devices: [] }),
   busActivity: vi.fn().mockResolvedValue({ sessions: [], busyLocks: [], untracked: [], oneShot: [] }),
   errorMessage: (e: unknown) => e instanceof Error ? e.message : String(e), errorStatus: (e: {status?: number}) => e.status,
@@ -16,6 +18,7 @@ import DeviceDownloadPanel from "./DeviceDownloadPanel";
 import System2DownloadPanel from "./System2DownloadPanel";
 import { preview, status, recoveryStatus } from "./system2DownloadTestFixtures";
 import type { ProjectTree } from "./bindings/ProjectTree";
+import type { BusDiscoveredInterface } from "./api";
 import { resetBusDiscoveryForTests } from "./busDiscovery";
 import { resetSettingsForTests } from "./settingsStore";
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -41,6 +44,7 @@ beforeEach(() => {
   vi.clearAllMocks(); window.localStorage.clear(); resetSettingsForTests(); resetBusDiscoveryForTests();
   mock.getSystem2Status.mockResolvedValue(null); mock.prepareSystem2.mockResolvedValue(preview); mock.startSystem2.mockResolvedValue(status);
   mock.cancelSystem2.mockResolvedValue({ ...status, state: "cancelled" }); consent.request.mockResolvedValue(true);
+  ordinary.discoverBusInterfaces.mockResolvedValue({ interfaces: [] });
   host = document.createElement("div"); document.body.append(host); root = createRoot(host);
 });
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.useRealTimers(); });
@@ -58,6 +62,54 @@ it("offers System-2 in the existing device download while preserving the ordinar
   await act(async () => { mode!.value = "system2"; mode!.dispatchEvent(new Event("change", {bubbles:true})); }); await flush();
   expect(host.querySelector("[data-system2-prepare]")).not.toBeNull(); expect(mock.prepareSystem2).not.toHaveBeenCalled();
   expect(host.querySelector(".device-download-scope")).toBeNull();
+});
+it.each([0, 2])("recovers the original without a project or saved gateway after %i discovery results, only with explicit gateway and fresh consent", async (count: number) => {
+  const interfaces: BusDiscoveredInterface[] = Array.from({ length: count }, (_, index) => ({
+    controlEndpoint: `192.0.2.${index + 1}:3671`, individualAddress: `1.1.${index + 1}`,
+    friendlyName: `Fixture gateway ${index + 1}`, supportsTunnelling: true,
+  }));
+  ordinary.discoverBusInterfaces.mockResolvedValue({ interfaces });
+  mock.getSystem2Status.mockResolvedValue(recoveryStatus);
+  await act(async () => root.render(<DeviceDownloadPanel project={null} />)); await flush();
+  const gateway = host.querySelector<HTMLInputElement>("[data-download-gateway]");
+  expect(gateway).not.toBeNull(); expect(gateway!.disabled).toBe(false); expect(gateway!.value).toBe("");
+  expect(host.querySelector("[data-download-device]")).toBeNull();
+  expect(host.querySelector("[data-download-mode]")).toBeNull();
+  expect(host.querySelector(".device-download-scope")).toBeNull();
+  expect(host.querySelector(".device-download-actions")).toBeNull();
+  expect(host.querySelector("[data-system2-prepare]")).toBeNull();
+  expect(host.querySelector("[data-system2-status]")!.textContent).toContain(recoveryStatus.operationId);
+  expect(host.querySelector("[data-system2-status]")!.textContent).toContain(`${recoveryStatus.address} — ${recoveryStatus.deviceName}`);
+  expect(ordinary.discoverBusInterfaces).not.toHaveBeenCalled();
+  expect(consent.request).not.toHaveBeenCalled(); expect(mock.recoverSystem2).not.toHaveBeenCalled();
+  const search = host.querySelector<HTMLButtonElement>(".device-download-search"); expect(search).not.toBeNull();
+  await act(async () => search!.click()); await flush();
+  expect(ordinary.discoverBusInterfaces).toHaveBeenCalledOnce(); expect(gateway!.value).toBe("");
+  expect(host.querySelectorAll("[data-system2-recovery]")).toHaveLength(3);
+  for (const node of host.querySelectorAll<HTMLInputElement>("[data-system2-recovery]")) expect(node.value).toBe("");
+  for (const [key, value] of Object.entries({ recoveryConfirmation: recoveryStatus.recoveryPhrase!, downloadConfirmation: recoveryStatus.downloadPhrase!, releaseConfirmation: recoveryStatus.releasePhrase! })) await input(`[data-system2-recovery='${key}']`, value);
+  expect(host.querySelector<HTMLButtonElement>("[data-system2-recover]")!.disabled).toBe(true);
+  if (count > 0) {
+    const found = host.querySelector<HTMLSelectElement>("[data-download-gateway-found]"); expect(found).not.toBeNull();
+    await act(async () => { found!.value = interfaces[1].controlEndpoint; found!.dispatchEvent(new Event("change", { bubbles: true })); });
+    expect(gateway!.value).toBe(interfaces[1].controlEndpoint);
+  }
+  await input("[data-download-gateway]", "203.0.113.250:3671");
+  expect(host.querySelector<HTMLButtonElement>("[data-system2-recover]")!.disabled).toBe(false);
+  expect(mock.recoverSystem2).not.toHaveBeenCalled(); expect(consent.request).not.toHaveBeenCalled();
+  consent.request.mockResolvedValueOnce(false); await click("[data-system2-recover]");
+  expect(mock.recoverSystem2).not.toHaveBeenCalled();
+  let allow!: (value: boolean) => void;
+  consent.request.mockReturnValueOnce(new Promise<boolean>((resolve) => { allow = resolve; }));
+  mock.recoverSystem2.mockResolvedValue({ ...status, state: "restoring" });
+  await click("[data-system2-recover]");
+  expect(consent.request).toHaveBeenCalledTimes(2);
+  expect(consent.request).toHaveBeenLastCalledWith(`${recoveryStatus.address} — ${recoveryStatus.deviceName}`);
+  expect(mock.recoverSystem2).not.toHaveBeenCalled();
+  await act(async () => allow(true)); await flush();
+  expect(mock.recoverSystem2).toHaveBeenCalledExactlyOnceWith({ operationId: recoveryStatus.operationId, gateway: "203.0.113.250:3671", recoveryConfirmation: recoveryStatus.recoveryPhrase, downloadConfirmation: recoveryStatus.downloadPhrase, releaseConfirmation: recoveryStatus.releasePhrase });
+  expect(mock.prepareSystem2).not.toHaveBeenCalled(); expect(mock.startSystem2).not.toHaveBeenCalled(); expect(mock.cancelSystem2).not.toHaveBeenCalled();
+  expect(ordinary.planDeviceDownload).not.toHaveBeenCalled(); expect(ordinary.startDeviceDownload).not.toHaveBeenCalled();
 });
 it("mounts read-only, prepares actual retained sources and requires every exact phrase and track before ordinary consent", async () => {
   await render(); expect(mock.getSystem2Status).toHaveBeenCalledOnce(); expect(mock.prepareSystem2).not.toHaveBeenCalled(); expect(mock.startSystem2).not.toHaveBeenCalled();

@@ -17,11 +17,12 @@ use axum::http::{Request, StatusCode};
 use serde_json::{json, Value};
 use tower::ServiceExt;
 
-fn state() -> Arc<knx_server::AppState> {
+fn state() -> (Arc<knx_server::AppState>, tempfile::TempDir) {
     // Progress transport does not need a product database or a real connector.
     // Do not call AppState::new/Default and then override product_db: opening
     // and migrating the default database has already happened by that point.
-    Arc::new(knx_server::AppState {
+    let dir = tempfile::tempdir().unwrap();
+    let state = knx_server::AppState {
         project: Default::default(),
         clean_project: Default::default(),
         last_saved_at: Default::default(),
@@ -52,6 +53,7 @@ fn state() -> Arc<knx_server::AppState> {
         device_download_plan: Default::default(),
         plugin_data_plan: Default::default(),
         device_download: Default::default(),
+        device_system2: Arc::new(knx_server::System2Service::new(dir.path())),
         next_device_download_id: Default::default(),
         device_download_timing: Default::default(),
         diagnostic_lease_dir: None,
@@ -61,18 +63,19 @@ fn state() -> Arc<knx_server::AppState> {
         address_programming_timing: Default::default(),
         address_programming_pause: Default::default(),
         load_operations: Default::default(),
-        data_dir: std::env::temp_dir(),
+        data_dir: dir.path().to_path_buf(),
         settings_lock: Default::default(),
         achievements_lock: Default::default(),
         catalog_requests: Default::default(),
         legacy_password: None,
         stop_admission: Default::default(),
-    })
+    };
+    (Arc::new(state), dir)
 }
 
 #[test]
 fn progress_fixture_does_not_open_an_unrelated_default_product_database() {
-    let state = state();
+    let (state, _data_dir) = state();
     assert!(
         state.product_db.is_none(),
         "progress transport fixtures must not open or migrate the default product database"
@@ -114,7 +117,7 @@ async fn progress(state: &Arc<knx_server::AppState>) -> Value {
 
 #[tokio::test]
 async fn a_server_that_has_loaded_nothing_reports_null_rather_than_an_idle_operation() {
-    let state = state();
+    let (state, _data_dir) = state();
 
     assert_eq!(
         progress(&state).await,
@@ -128,7 +131,7 @@ async fn a_server_that_has_loaded_nothing_reports_null_rather_than_an_idle_opera
 async fn a_finished_import_leaves_a_succeeded_snapshot_naming_its_source() {
     let dir = tempfile::tempdir().unwrap();
     let path = knx_testsupport::write_minimal_knxproj(dir.path());
-    let state = state();
+    let (state, _data_dir) = state();
 
     let response = knx_server::app(state.clone(), None)
         .oneshot(post(
@@ -165,7 +168,7 @@ async fn a_finished_import_leaves_a_succeeded_snapshot_naming_its_source() {
 async fn a_client_token_sent_on_import_is_echoed_in_every_snapshot() {
     let dir = tempfile::tempdir().unwrap();
     let path = knx_testsupport::write_minimal_knxproj(dir.path());
-    let state = state();
+    let (state, _data_dir) = state();
 
     let response = knx_server::app(state.clone(), None)
         .oneshot(post(
@@ -201,7 +204,7 @@ async fn a_client_token_sent_on_import_is_echoed_in_every_snapshot() {
 async fn a_client_token_sent_on_the_native_open_is_echoed_in_every_snapshot() {
     let dir = tempfile::tempdir().unwrap();
     let db_path = dir.path().join("villa.knxdb");
-    let state = state();
+    let (state, _data_dir) = state();
 
     let created = knx_server::app(state.clone(), None)
         .oneshot(post("/api/project/new", json!({})))
@@ -243,7 +246,7 @@ async fn a_client_token_sent_on_the_native_open_is_echoed_in_every_snapshot() {
 // the one moment the token is doing real work.
 #[tokio::test]
 async fn a_failed_load_still_echoes_the_token_that_started_it() {
-    let state = state();
+    let (state, _data_dir) = state();
 
     let response = knx_server::app(state.clone(), None)
         .oneshot(post(
@@ -269,7 +272,7 @@ async fn a_failed_load_still_echoes_the_token_that_started_it() {
 async fn a_load_started_with_no_client_token_names_its_owner_as_null() {
     let dir = tempfile::tempdir().unwrap();
     let path = knx_testsupport::write_minimal_knxproj(dir.path());
-    let state = state();
+    let (state, _data_dir) = state();
 
     let response = knx_server::app(state.clone(), None)
         .oneshot(post(
@@ -296,7 +299,7 @@ async fn a_load_started_with_no_client_token_names_its_owner_as_null() {
 
 #[tokio::test]
 async fn a_failed_import_is_reported_as_failed_and_leaves_the_open_project_alone() {
-    let state = state();
+    let (state, _data_dir) = state();
     let app = knx_server::app(state.clone(), None);
     let created = app
         .oneshot(post(
@@ -346,7 +349,7 @@ async fn a_failed_import_is_reported_as_failed_and_leaves_the_open_project_alone
 async fn a_second_load_while_one_is_running_is_refused_with_409() {
     let dir = tempfile::tempdir().unwrap();
     let path = knx_testsupport::write_minimal_knxproj(dir.path());
-    let state = state();
+    let (state, _data_dir) = state();
     // Claiming the slot directly is how a test holds an operation "in
     // flight" without a sleep: the handle lives until this scope ends, so
     // the route below meets exactly the state a slow import would leave.

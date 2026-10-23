@@ -12,6 +12,29 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## WP-04.3 reopened-copy validation — source accepted, delivery pending (23 October 2026)
+
+The [bounded increment](contracts/catalogue-jobs/reopened-copy-increment.md)
+adds private owned D/B allocation inventory and actual writer close → native
+read-only disk reopen → complete copy-witness/header/page/cookie validation.
+Validated rehearsal D reopens existing-only RW with checked configuration and
+file continuity; failed native handles remain owned. Preview retains its original
+W reservation through validation and settles S/W before opening rehearsal RW.
+Apply validates both D and B before live DML and accounts for allocated recovery
+even when initialization fails. Quiet APIs, schema and witness encoding stay unchanged.
+
+Independent destination review ACCEPT and corrected orchestration rereview
+ACCEPT/CLOSED resolve ORCH-1. Its original native S-close/W-rollback refusal
+failures and corrected passes remain separately retained. Recorded corrected
+owning execution: 682 unit, 752 integration, two doctests and two 13-test examples;
+32 opt-in tests ignored. Focused and reviewer selections overlap these counts.
+Maintained branch/merged gates and publication remain pending, not inferred from
+source review. No production route or whole-WP completion is claimed.
+
+Second apply rehearsal/result agreement, live growth/max_page_count, concurrent
+B10, production artifact durability/sidecars and route/lifecycle/UI wiring remain
+separate required gates. No bus/device or ETS-compatibility acceptance.
+
 ## Catalogue-job integrity corrections — delivered (23 October 2026)
 
 The [23 October review](status/2026-10-23-deepseek-review.md) reproduced five

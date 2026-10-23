@@ -8,7 +8,7 @@
 //! `docs/contracts/catalogue-jobs/orchestration-increment.md` and
 //! `managed-binding.md` §5–§7.
 
-use crate::catalogue_copy::CopyError;
+use crate::catalogue_copy::{ArtifactInventory, CopyError, FreshDestination};
 use crate::catalogue_stamp::StampError;
 use crate::controlled::ControlledPolicy;
 use crate::managed_catalogue::WriterHealth;
@@ -30,16 +30,31 @@ pub(crate) struct OperationContext<'a> {
 
 /// The minimal seam through which the orchestrator allocates fresh, disposable
 /// destinations. The server's `ArtifactRoot` implements it later; this trait
-/// only defines what the orchestrator needs: a fresh, equal-page-size,
-/// empty-schema connection for the rehearsal and for the recovery backup.
+/// returns role-bound Fresh receipts, never bare connections. Its fixed D/B
+/// inventory owns every create-new allocation, including failed initialization;
+/// validation and consuming errors never become the only owner of a handle.
 pub(crate) trait CatalogueArtifacts {
-    /// A fresh rehearsal destination with the given page size. Must be a
-    /// fresh (empty-schema, schema-cookie 0) connection or the copy refuses it.
-    fn fresh_rehearsal(&mut self, page_size: i64) -> Result<crate::Connection, OrchestrationError>;
+    fn inventory(&mut self) -> &mut ArtifactInventory;
+    /// Synthetic native-fault seam; never part of production construction.
+    #[cfg(test)]
+    fn before_source_open(&mut self, _path: &std::path::Path) {}
+
+    #[cfg(test)]
+    fn inspect_pinned_source(&mut self, _source: &crate::Connection) {}
+
+    #[cfg(test)]
+    fn after_copy(&mut self, _recovery: bool, _path: &std::path::Path) {}
+
+    #[cfg(test)]
+    fn before_rehearsal(&mut self, _receipt: &crate::catalogue_copy::RehearsalDestination) {}
+
+    /// Construct D through the retained inventory's create-new constructor.
+    /// Backup independently enforces empty schema, cookie zero and autocommit.
+    fn fresh_rehearsal(&mut self, page_size: i64) -> Result<FreshDestination, OrchestrationError>;
 
     /// A fresh recovery destination with the given page size. Same freshness
     /// contract as [`CatalogueArtifacts::fresh_rehearsal`].
-    fn fresh_recovery(&mut self, page_size: i64) -> Result<crate::Connection, OrchestrationError>;
+    fn fresh_recovery(&mut self, page_size: i64) -> Result<FreshDestination, OrchestrationError>;
 }
 
 /// One completed controlled preview: the binding the server retains plus the
@@ -59,10 +74,30 @@ pub(crate) struct AdmittedPreviewArtifact {
     pub(crate) install: ProductFileInstall,
 }
 
+/// Inspected cleanup failures are independent of the original preview refusal.
+#[derive(Debug)]
+pub(crate) enum PreviewCleanupError {
+    WriterBaseline,
+    WriterObservation(rusqlite::Error),
+    WriterRollback(rusqlite::Error),
+    WriterNotAutocommit,
+    SourceEnd(rusqlite::Error),
+    SourceClose(rusqlite::Error),
+    RehearsalClose(CopyError),
+}
+
+#[derive(Debug)]
+pub(crate) struct PreviewFailure {
+    pub(crate) primary: Option<OrchestrationError>,
+    pub(crate) cleanup: Vec<PreviewCleanupError>,
+}
+
 /// Typed failures of the controlled preview/apply orchestration. Never a
 /// string and never a partial digest.
 #[derive(Debug)]
 pub(crate) enum OrchestrationError {
+    PreviewSettlement(Box<PreviewFailure>),
+    SourceSettlement(Box<PreviewFailure>),
     /// The managed handle is not healthy enough for a controlled operation.
     NotHealthy(WriterHealth),
     /// The connection is absent (retired/reopening).
@@ -136,6 +171,12 @@ impl From<Stop> for OrchestrationError {
 impl std::fmt::Display for OrchestrationError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            OrchestrationError::SourceSettlement(failure) => {
+                write!(f, "catalogue source settlement failed: {failure:?}")
+            }
+            OrchestrationError::PreviewSettlement(failure) => {
+                write!(f, "catalogue preview settlement failed: {failure:?}")
+            }
             OrchestrationError::NotHealthy(health) => {
                 write!(
                     f,
@@ -227,6 +268,7 @@ pub(crate) enum ArtifactDisposition {
 #[derive(Debug)]
 pub(crate) struct ControlledApplySettlement {
     pub(crate) failure: Option<OrchestrationError>,
+    pub(crate) cleanup: Vec<PreviewCleanupError>,
     pub(crate) commit: CommitEvidence,
     pub(crate) rollback: RollbackDisposition,
     pub(crate) health: WriterHealth,
@@ -238,12 +280,39 @@ impl ControlledApplySettlement {
     pub(crate) fn refused(failure: OrchestrationError, health: WriterHealth) -> Self {
         Self {
             failure: Some(failure),
+            cleanup: Vec::new(),
             commit: CommitEvidence::NotCommitted,
             rollback: RollbackDisposition::NotApplicable,
             health,
             artifacts: ArtifactDisposition::None,
         }
     }
+}
+
+/// One copy, explicit writer close and read-only reopened admission before use.
+pub(crate) fn validate_copy(
+    artifacts: &mut dyn CatalogueArtifacts,
+    fresh: FreshDestination,
+    source: &rusqlite::Transaction<'_>,
+    gate: &PublicationGate,
+    recovery: bool,
+) -> Result<crate::catalogue_copy::ValidatedDestination, OrchestrationError> {
+    let closed = artifacts.inventory().copy_and_close(
+        fresh,
+        if recovery {
+            crate::catalogue_copy::DestinationRole::Recovery
+        } else {
+            crate::catalogue_copy::DestinationRole::Rehearsal
+        },
+        source,
+        gate,
+    )?;
+    #[cfg(test)]
+    {
+        let path = artifacts.inventory().closed_path(&closed).to_path_buf();
+        artifacts.after_copy(recovery, &path);
+    }
+    Ok(artifacts.inventory().validate(closed, gate)?)
 }
 
 #[cfg(test)]

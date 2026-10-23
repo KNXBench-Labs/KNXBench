@@ -35,6 +35,7 @@ pub(crate) struct CopyDone {
 
 #[derive(Debug)]
 pub(crate) enum CopyError {
+    Destination(Box<destination::DestinationFailure>),
     NotReadOnly,
     NoActiveSnapshot,
     UnsupportedPageSize(i64),
@@ -65,6 +66,7 @@ impl From<Stop> for CopyError {
 impl std::fmt::Display for CopyError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            CopyError::Destination(error) => write!(f, "disk destination refused: {error:?}"),
             CopyError::NotReadOnly => write!(f, "copy source is not read-only"),
             CopyError::NoActiveSnapshot => write!(f, "copy source has no active read snapshot"),
             CopyError::UnsupportedPageSize(size) => {
@@ -199,6 +201,15 @@ pub(crate) fn copy_pinned_current(
         cookie_after,
     })
 }
+
+mod destination;
+pub(crate) use destination::{
+    ArtifactInventory, CopyFacts, DestinationRole, FreshDestination, ValidatedDestination,
+};
+#[cfg(test)]
+pub(crate) use destination::{
+    DestinationCleanup, DestinationError, DestinationStage, RehearsalDestination,
+};
 
 #[cfg(test)]
 mod tests;

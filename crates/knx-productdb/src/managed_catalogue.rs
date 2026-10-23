@@ -95,12 +95,33 @@ pub(crate) struct WriterObservation {
 pub(crate) struct ManagedFileIdentity {
     canonical: PathBuf,
     parent: PathBuf,
+    parent_dev: u64,
+    parent_ino: u64,
     dev: u64,
     ino: u64,
     nlink: u64,
 }
 
 impl ManagedFileIdentity {
+    fn is_current(&self) -> bool {
+        let Ok(main) = std::fs::symlink_metadata(&self.canonical) else {
+            return false;
+        };
+        let Ok(parent) = std::fs::symlink_metadata(&self.parent) else {
+            return false;
+        };
+        main.is_file()
+            && !main.file_type().is_symlink()
+            && main.dev() == self.dev
+            && main.ino() == self.ino
+            && main.nlink() == 1
+            && self.nlink == 1
+            && parent.is_dir()
+            && !parent.file_type().is_symlink()
+            && parent.dev() == self.parent_dev
+            && parent.ino() == self.parent_ino
+    }
+
     fn from_path(path: &Path) -> Option<Self> {
         let canonical = std::fs::canonicalize(path).ok()?;
         let parent = canonical
@@ -108,9 +129,12 @@ impl ManagedFileIdentity {
             .map(Path::to_path_buf)
             .unwrap_or_default();
         let meta = std::fs::metadata(&canonical).ok()?;
+        let parent_meta = std::fs::metadata(&parent).ok()?;
         Some(Self {
             canonical,
             parent,
+            parent_dev: parent_meta.dev(),
+            parent_ino: parent_meta.ino(),
             dev: meta.dev(),
             ino: meta.ino(),
             nlink: meta.nlink(),
@@ -230,6 +254,15 @@ impl Drop for MutationGuard<'_> {
     }
 }
 
+/// A failed explicit close is not disposal: the known source handle and its
+/// original W acquisition receipt stay together on the managed owner.
+struct UnresolvedPreviewSource {
+    #[allow(dead_code)] // ownership is retained until a later explicit close/quarantine
+    connection: Connection,
+    #[allow(dead_code)] // immutable receipt, not a fresh replacement baseline
+    stamp: crate::catalogue_stamp::CatalogueStamp,
+}
+
 /// One protected managed state. `conn` is `None` while retired/reopening.
 /// Never store a `rusqlite::Transaction` here (it would borrow its own
 /// connection); orchestration borrows the connection disjointly instead.
@@ -241,6 +274,9 @@ pub struct ManagedCatalogue {
     #[allow(dead_code)] // retained for the later identity/ABA checks
     identity: Option<ManagedFileIdentity>,
     observation: Option<WriterObservation>,
+    // A failed explicit S close returns a live handle. Keep it on the managed
+    // owner rather than allowing a temporary error to silently dispose it.
+    unresolved_preview_source: Option<UnresolvedPreviewSource>,
 }
 
 impl ManagedCatalogue {
@@ -256,6 +292,7 @@ impl ManagedCatalogue {
             health: WriterHealth::Healthy,
             identity,
             observation: Some(observation),
+            unresolved_preview_source: None,
         })
     }
 
@@ -488,7 +525,8 @@ impl ManagedCatalogue {
     ) -> Result<crate::orchestration::ControlledPreview, crate::orchestration::OrchestrationError>
     {
         use crate::orchestration::{
-            AdmittedPreviewArtifact, ControlledPreview, OrchestrationError,
+            AdmittedPreviewArtifact, ControlledPreview, OrchestrationError, PreviewCleanupError,
+            PreviewFailure,
         };
 
         if self.health != WriterHealth::Healthy {
@@ -499,44 +537,154 @@ impl ManagedCatalogue {
             return Err(OrchestrationError::PolicyMismatch);
         }
 
-        // The original acquisition stamp (read-only W reservation + rollback).
-        let stamp = self.capture_stamp(op.gate)?;
-
-        // A distinct read-only source pinned by a real main read.
-        let path = self
+        // Retain one unchanged W reservation through stamp acquisition and S→D.
+        // Every post-BEGIN result converges on the inspected rollback below.
+        let identity = self
             .identity
             .as_ref()
-            .map(|id| id.canonical.clone())
             .ok_or(OrchestrationError::MissingConnection)?;
-        let source_ro = crate::migration::open_read_only(&path)?;
-        source_ro.conn.execute_batch("BEGIN")?;
-        let _: i64 = source_ro
+        if !identity.is_current() {
+            self.health = WriterHealth::Quarantined(QuarantineReason::IdentityMismatch);
+            return Err(OrchestrationError::Stale);
+        }
+        let path = identity.canonical.clone();
+        let file = FileStamp::from_path(&path);
+        let conn = self
             .conn
-            .query_row("SELECT count(*) FROM sqlite_schema", [], |r| r.get(0))?;
+            .as_mut()
+            .ok_or(OrchestrationError::MissingConnection)?;
+        self.health = WriterHealth::Mutating;
+        let guard = MutationGuard {
+            health: &mut self.health,
+            armed: true,
+        };
+        let mut tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
+        tx.set_drop_behavior(DropBehavior::Ignore);
+        let total_changes = tx.total_changes();
+        let mut data_version = None;
+        let mut cleanup = Vec::new();
+        let preparation = (|| -> Result<_, OrchestrationError> {
+            let _: i64 = tx.query_row("SELECT count(*) FROM sqlite_schema", [], |r| r.get(0))?;
+            let before: i64 = tx.query_row("PRAGMA data_version", [], |r| r.get(0))?;
+            data_version = Some(before);
+            let witness = crate::catalogue_schema::witness_current(&tx, op.gate)
+                .map_err(crate::catalogue_stamp::StampError::from)?;
+            let stamp = crate::catalogue_stamp::CatalogueStamp {
+                incarnation: self.incarnation,
+                generation: self.generation,
+                data_version: before,
+                total_changes,
+                file,
+                witness,
+            };
+            #[cfg(test)]
+            artifacts.before_source_open(&path);
+            let source_ro = Connection::open_with_flags(
+                &path,
+                rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY
+                    | rusqlite::OpenFlags::SQLITE_OPEN_PRIVATE_CACHE
+                    | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX,
+            )?;
+            let copy = (|| -> Result<_, OrchestrationError> {
+                if !source_ro.is_readonly("main")? {
+                    return Err(crate::catalogue_copy::CopyError::NotReadOnly.into());
+                }
+                source_ro.pragma_update(None, "query_only", true)?;
+                source_ro.busy_timeout(crate::migration::READ_ONLY_BUSY_TIMEOUT)?;
+                let mut source_tx = source_ro.unchecked_transaction()?;
+                source_tx.set_drop_behavior(DropBehavior::Ignore);
+                let _: i64 =
+                    source_tx.query_row("SELECT count(*) FROM sqlite_schema", [], |r| r.get(0))?;
+                #[cfg(test)]
+                artifacts.inspect_pinned_source(&source_tx);
+                let source_witness = crate::catalogue_schema::witness_current(&source_tx, op.gate)
+                    .map_err(crate::catalogue_stamp::StampError::from)?;
+                if source_witness != stamp.witness {
+                    return Err(OrchestrationError::Stale);
+                }
+                if crate::catalogue_copy::CopyFacts::read(&source_tx)?
+                    != crate::catalogue_copy::CopyFacts::read(&tx)?
+                {
+                    return Err(OrchestrationError::Stale);
+                }
+                let page_size: i64 = source_tx.query_row("PRAGMA page_size", [], |r| r.get(0))?;
+                let fresh = artifacts.fresh_rehearsal(page_size)?;
+                let validated = crate::orchestration::validate_copy(
+                    artifacts, fresh, &source_tx, op.gate, false,
+                )?;
+                Ok(validated)
+            })();
+            if !source_ro.is_autocommit() {
+                if let Err(error) = source_ro.execute_batch("ROLLBACK") {
+                    cleanup.push(PreviewCleanupError::SourceEnd(error));
+                }
+            }
+            if let Err((connection, error)) = source_ro.close() {
+                self.unresolved_preview_source =
+                    Some(UnresolvedPreviewSource { connection, stamp });
+                cleanup.push(PreviewCleanupError::SourceClose(error));
+            }
+            let validated = copy?;
+            Ok((stamp, validated))
+        })();
+        // Baseline/identity inspection and rollback are deliberately not gated
+        // by Stop: cancellation cannot skip settlement of an owned reservation.
+        let baseline = check_reserved_writer(&tx, identity, file, total_changes, data_version);
+        if let Err(error) = baseline {
+            cleanup.push(error);
+        }
+        if let Err(error) = tx.execute_batch("ROLLBACK") {
+            cleanup.push(PreviewCleanupError::WriterRollback(error));
+        }
+        if !tx.is_autocommit() {
+            cleanup.push(PreviewCleanupError::WriterNotAutocommit);
+        }
+        drop(tx);
+        if cleanup.is_empty() {
+            guard.disarm();
+        } else {
+            drop(guard);
+            return Err(OrchestrationError::PreviewSettlement(Box::new(
+                PreviewFailure {
+                    primary: preparation.err(),
+                    cleanup,
+                },
+            )));
+        }
+        let (stamp, validated) = preparation?;
 
-        // Fresh equal-page-size rehearsal destination copied from S.
-        let page_size: i64 = source_ro
-            .conn
-            .query_row("PRAGMA page_size", [], |r| r.get(0))?;
-        let mut rehearsal = artifacts.fresh_rehearsal(page_size)?;
-        let copy =
-            crate::catalogue_copy::copy_pinned_current(&source_ro.conn, &mut rehearsal, op.gate);
-
-        // End S's read transaction and close it regardless of the copy outcome.
-        let _ = source_ro.conn.execute_batch("ROLLBACK");
-        drop(source_ro);
-        copy?;
-
-        // Rehearsal install + complete preview identity on the disposable D.
-        let install = crate::wrapper::install_admitted_product_file(
-            &rehearsal,
-            source.name,
-            source.bytes,
-            source.limits,
-            Cancellation::Controlled(op.gate),
-        )?;
+        // Keep D closed until inspected S/W settlement succeeds. A cleanup
+        // refusal must not discard the only receipt for an open RW handle.
+        // Preserve the direct Stop cause if cleanup latched cancellation.
+        op.gate.checkpoint()?;
+        let rehearsal = artifacts.inventory().open_rehearsal(validated, op.gate)?;
+        let install = (|| -> Result<_, OrchestrationError> {
+            op.gate.checkpoint()?;
+            #[cfg(test)]
+            artifacts.before_rehearsal(&rehearsal);
+            Ok(crate::wrapper::install_admitted_product_file(
+                artifacts.inventory().rehearsal(&rehearsal)?,
+                source.name,
+                source.bytes,
+                source.limits,
+                Cancellation::Controlled(op.gate),
+            )?)
+        })();
+        let close = artifacts.inventory().close_rehearsal(rehearsal);
+        let install = match (install, close) {
+            (Err(primary), Err(close)) => {
+                return Err(OrchestrationError::PreviewSettlement(Box::new(
+                    PreviewFailure {
+                        primary: Some(primary),
+                        cleanup: vec![PreviewCleanupError::RehearsalClose(close)],
+                    },
+                )))
+            }
+            (Err(primary), Ok(())) => return Err(primary),
+            (Ok(_), Err(close)) => return Err(close.into()),
+            (Ok(install), Ok(())) => install,
+        };
         let identity = crate::preview_identity::preview_identity(&install)?;
-        drop(rehearsal);
 
         let binding = crate::preview_binding::PreviewBinding::bind(
             stamp,
@@ -606,6 +754,11 @@ impl ManagedCatalogue {
                 )
             }
         };
+        let identity = self.identity.as_ref().unwrap();
+        if !identity.is_current() {
+            self.health = WriterHealth::Quarantined(QuarantineReason::IdentityMismatch);
+            return ControlledApplySettlement::refused(OrchestrationError::Stale, self.health);
+        }
         let next_generation = match self.generation.checked_add(1) {
             Some(next) => next,
             None => {
@@ -638,7 +791,12 @@ impl ManagedCatalogue {
             }
         };
         tx.set_drop_behavior(DropBehavior::Ignore);
-        let mut recovery_exists = false;
+        let mut source_unresolved = false;
+        let baseline_file = FileStamp::from_path(&path);
+        let baseline_changes = tx.total_changes();
+        let mut baseline_version = None;
+        let mut live_started = false;
+        let mut cleanup = Vec::new();
 
         // Every preclaim failure shares one inspected rollback path. In
         // particular, no copy/installer/identity branch can invent a successful
@@ -646,6 +804,7 @@ impl ManagedCatalogue {
         let body = (|| -> Result<(), OrchestrationError> {
             let _: i64 = tx.query_row("SELECT count(*) FROM sqlite_schema", [], |r| r.get(0))?;
             let before: i64 = tx.query_row("PRAGMA data_version", [], |r| r.get(0))?;
+            baseline_version = Some(before);
             let witness = crate::catalogue_schema::witness_current(&tx, op.gate)
                 .map_err(crate::catalogue_stamp::StampError::from)?;
             let after: i64 = tx.query_row("PRAGMA data_version", [], |r| r.get(0))?;
@@ -664,38 +823,80 @@ impl ManagedCatalogue {
             // full stamp matches. Admission advances generation before copies.
             self.generation = next_generation;
 
-            let source_ro = crate::migration::open_read_only(&path)?;
-            source_ro.conn.execute_batch("BEGIN")?;
+            #[cfg(test)]
+            artifacts.before_source_open(&path);
+            let source_ro = Connection::open_with_flags(
+                &path,
+                rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY
+                    | rusqlite::OpenFlags::SQLITE_OPEN_PRIVATE_CACHE
+                    | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX,
+            )?;
             let copies = (|| -> Result<(), OrchestrationError> {
+                if !source_ro.is_readonly("main")? {
+                    return Err(crate::catalogue_copy::CopyError::NotReadOnly.into());
+                }
+                source_ro.pragma_update(None, "query_only", true)?;
+                source_ro.busy_timeout(crate::migration::READ_ONLY_BUSY_TIMEOUT)?;
+                let mut source_tx = source_ro.unchecked_transaction()?;
+                source_tx.set_drop_behavior(DropBehavior::Ignore);
                 let _: i64 =
-                    source_ro
-                        .conn
-                        .query_row("SELECT count(*) FROM sqlite_schema", [], |r| r.get(0))?;
-                let page_size: i64 = source_ro
-                    .conn
-                    .query_row("PRAGMA page_size", [], |r| r.get(0))?;
-                let mut rehearsal = artifacts.fresh_rehearsal(page_size)?;
-                crate::catalogue_copy::copy_pinned_current(
-                    &source_ro.conn,
-                    &mut rehearsal,
-                    op.gate,
+                    source_tx.query_row("SELECT count(*) FROM sqlite_schema", [], |r| r.get(0))?;
+                #[cfg(test)]
+                artifacts.inspect_pinned_source(&source_tx);
+                let source_witness = crate::catalogue_schema::witness_current(&source_tx, op.gate)
+                    .map_err(crate::catalogue_stamp::StampError::from)?;
+                if source_witness != fresh_stamp.witness
+                    || crate::catalogue_copy::CopyFacts::read(&source_tx)?
+                        != crate::catalogue_copy::CopyFacts::read(&tx)?
+                {
+                    return Err(OrchestrationError::Stale);
+                }
+                let page_size: i64 = source_tx.query_row("PRAGMA page_size", [], |r| r.get(0))?;
+                let rehearsal = artifacts.fresh_rehearsal(page_size)?;
+                crate::orchestration::validate_copy(
+                    artifacts, rehearsal, &source_tx, op.gate, false,
                 )?;
-                drop(rehearsal);
-                let mut recovery = artifacts.fresh_recovery(page_size)?;
-                recovery_exists = true;
-                crate::catalogue_copy::copy_pinned_current(
-                    &source_ro.conn,
-                    &mut recovery,
-                    op.gate,
+                let recovery = artifacts.fresh_recovery(page_size)?;
+                crate::orchestration::validate_copy(
+                    artifacts, recovery, &source_tx, op.gate, true,
                 )?;
                 Ok(())
             })();
-            // S must be explicitly ended and closed before W DML/COMMIT,
-            // including copy refusals. W's reservation is never released here.
-            let source_rollback = source_ro.conn.execute_batch("ROLLBACK");
-            drop(source_ro);
+            // Cleanup is uncancellable, including a primary copy/witness Stop.
+            let mut cleanup = Vec::new();
+            if !source_ro.is_autocommit() {
+                if let Err(error) = source_ro.execute_batch("ROLLBACK") {
+                    cleanup.push(crate::orchestration::PreviewCleanupError::SourceEnd(error));
+                }
+            }
+            if let Err((connection, error)) = source_ro.close() {
+                self.unresolved_preview_source = Some(UnresolvedPreviewSource {
+                    connection,
+                    stamp: fresh_stamp,
+                });
+                cleanup.push(crate::orchestration::PreviewCleanupError::SourceClose(
+                    error,
+                ));
+            }
+            if !cleanup.is_empty() {
+                source_unresolved = true;
+                return Err(OrchestrationError::SourceSettlement(Box::new(
+                    crate::orchestration::PreviewFailure {
+                        primary: copies.err(),
+                        cleanup,
+                    },
+                )));
+            }
             copies?;
-            source_rollback?;
+            check_reserved_writer(
+                &tx,
+                identity,
+                baseline_file,
+                baseline_changes,
+                baseline_version,
+            )
+            .map_err(|_| OrchestrationError::Stale)?;
+            live_started = true;
 
             let install = crate::wrapper::install_admitted_product_file(
                 &tx,
@@ -711,8 +912,19 @@ impl ManagedCatalogue {
             Ok(())
         })();
 
+        if !live_started {
+            if let Err(error) = check_reserved_writer(
+                &tx,
+                identity,
+                baseline_file,
+                baseline_changes,
+                baseline_version,
+            ) {
+                cleanup.push(error);
+            }
+        }
         let (commit, rollback, failure) = if let Err(error) = body {
-            let rollback = rollback_and_check(&tx);
+            let rollback = rollback_and_record(&tx, &mut cleanup);
             (CommitEvidence::NotCommitted, rollback, Some(error))
         } else if op.gate.try_claim_commit() {
             // One live COMMIT, never retried. Retain the original COMMIT error
@@ -725,11 +937,11 @@ impl ManagedCatalogue {
                 ),
                 Ok(()) => (
                     CommitEvidence::Unknown,
-                    rollback_and_check(&tx),
+                    rollback_and_record(&tx, &mut cleanup),
                     Some(OrchestrationError::CommitNotAutocommit),
                 ),
                 Err(error) => {
-                    let rollback = rollback_and_check(&tx);
+                    let rollback = rollback_and_record(&tx, &mut cleanup);
                     let commit = if is_busy(&error) && rollback == RollbackDisposition::Explicit {
                         CommitEvidence::NotCommitted
                     } else {
@@ -741,11 +953,17 @@ impl ManagedCatalogue {
         } else {
             // Cancellation won; no COMMIT was issued, regardless of whether
             // the independent rollback operation succeeds.
-            (CommitEvidence::NotCommitted, rollback_and_check(&tx), None)
+            (
+                CommitEvidence::NotCommitted,
+                rollback_and_record(&tx, &mut cleanup),
+                None,
+            )
         };
         drop(tx);
-        let clean =
-            commit != CommitEvidence::Unknown && rollback != RollbackDisposition::Unresolved;
+        let clean = !source_unresolved
+            && cleanup.is_empty()
+            && commit != CommitEvidence::Unknown
+            && rollback != RollbackDisposition::Unresolved;
         if clean {
             guard.disarm();
         } else {
@@ -754,6 +972,9 @@ impl ManagedCatalogue {
         if clean && self.refresh_observation().is_err() {
             self.health = WriterHealth::Quarantined(QuarantineReason::UncertainSettlement);
         }
+        let recovery_exists = artifacts
+            .inventory()
+            .allocated(crate::catalogue_copy::DestinationRole::Recovery);
         let artifacts = if !recovery_exists {
             ArtifactDisposition::None
         } else if commit == CommitEvidence::NotCommitted
@@ -766,6 +987,7 @@ impl ManagedCatalogue {
         };
         ControlledApplySettlement {
             failure,
+            cleanup,
             commit,
             rollback,
             health: self.health,
@@ -774,20 +996,56 @@ impl ManagedCatalogue {
     }
 }
 
+/// Unchanged W reservation checks are not cancellable cleanup work.
+fn check_reserved_writer(
+    conn: &Connection,
+    identity: &ManagedFileIdentity,
+    file: Option<FileStamp>,
+    changes: u64,
+    version: Option<i64>,
+) -> Result<(), crate::orchestration::PreviewCleanupError> {
+    use crate::orchestration::PreviewCleanupError;
+    let current: i64 = conn
+        .query_row("PRAGMA data_version", [], |r| r.get(0))
+        .map_err(PreviewCleanupError::WriterObservation)?;
+    if version.is_some_and(|v| v != current)
+        || conn.total_changes() != changes
+        || file.is_none()
+        || !identity.is_current()
+        || FileStamp::from_path(&identity.canonical) != file
+    {
+        return Err(PreviewCleanupError::WriterBaseline);
+    }
+    Ok(())
+}
+
 /// Settles a preclaim transaction, distinguishing an already automatic end
 /// from a successful explicit rollback and an unresolved native state.
-fn rollback_and_check(tx: &rusqlite::Transaction<'_>) -> crate::orchestration::RollbackDisposition {
-    use crate::orchestration::RollbackDisposition;
-    // SQLite may already have automatically ended a failed preclaim body. Do
-    // not issue a doomed ROLLBACK and then label its error an explicit success.
+fn rollback_and_record(
+    tx: &rusqlite::Transaction<'_>,
+    cleanup: &mut Vec<crate::orchestration::PreviewCleanupError>,
+) -> crate::orchestration::RollbackDisposition {
+    use crate::orchestration::{PreviewCleanupError, RollbackDisposition};
     if tx.is_autocommit() {
         return RollbackDisposition::Automatic;
     }
-    if tx.execute_batch("ROLLBACK").is_ok() && tx.is_autocommit() {
-        RollbackDisposition::Explicit
-    } else {
-        RollbackDisposition::Unresolved
+    let rollback = tx.execute_batch("ROLLBACK");
+    let failed = rollback.is_err();
+    if let Err(error) = rollback {
+        cleanup.push(PreviewCleanupError::WriterRollback(error));
     }
+    if !tx.is_autocommit() {
+        cleanup.push(PreviewCleanupError::WriterNotAutocommit);
+    }
+    if failed || !tx.is_autocommit() {
+        RollbackDisposition::Unresolved
+    } else {
+        RollbackDisposition::Explicit
+    }
+}
+#[cfg(test)]
+fn rollback_and_check(tx: &rusqlite::Transaction<'_>) -> crate::orchestration::RollbackDisposition {
+    rollback_and_record(tx, &mut Vec::new())
 }
 
 /// True only for the demonstrated `SQLITE_BUSY` commit failure, which the
@@ -805,6 +1063,9 @@ fn is_busy(error: &rusqlite::Error) -> bool {
         )
     )
 }
+
+#[cfg(test)]
+mod reopened_preview_tests;
 
 #[cfg(test)]
 mod tests {

@@ -831,37 +831,41 @@ impl ManagedCatalogue {
                     | rusqlite::OpenFlags::SQLITE_OPEN_PRIVATE_CACHE
                     | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX,
             )?;
-            let copies = (|| -> Result<(), OrchestrationError> {
-                if !source_ro.is_readonly("main")? {
-                    return Err(crate::catalogue_copy::CopyError::NotReadOnly.into());
-                }
-                source_ro.pragma_update(None, "query_only", true)?;
-                source_ro.busy_timeout(crate::migration::READ_ONLY_BUSY_TIMEOUT)?;
-                let mut source_tx = source_ro.unchecked_transaction()?;
-                source_tx.set_drop_behavior(DropBehavior::Ignore);
-                let _: i64 =
-                    source_tx.query_row("SELECT count(*) FROM sqlite_schema", [], |r| r.get(0))?;
-                #[cfg(test)]
-                artifacts.inspect_pinned_source(&source_tx);
-                let source_witness = crate::catalogue_schema::witness_current(&source_tx, op.gate)
-                    .map_err(crate::catalogue_stamp::StampError::from)?;
-                if source_witness != fresh_stamp.witness
-                    || crate::catalogue_copy::CopyFacts::read(&source_tx)?
-                        != crate::catalogue_copy::CopyFacts::read(&tx)?
-                {
-                    return Err(OrchestrationError::Stale);
-                }
-                let page_size: i64 = source_tx.query_row("PRAGMA page_size", [], |r| r.get(0))?;
-                let rehearsal = artifacts.fresh_rehearsal(page_size)?;
-                crate::orchestration::validate_copy(
-                    artifacts, rehearsal, &source_tx, op.gate, false,
-                )?;
-                let recovery = artifacts.fresh_recovery(page_size)?;
-                crate::orchestration::validate_copy(
-                    artifacts, recovery, &source_tx, op.gate, true,
-                )?;
-                Ok(())
-            })();
+            let copies =
+                (|| -> Result<crate::catalogue_copy::ValidatedDestination, OrchestrationError> {
+                    if !source_ro.is_readonly("main")? {
+                        return Err(crate::catalogue_copy::CopyError::NotReadOnly.into());
+                    }
+                    source_ro.pragma_update(None, "query_only", true)?;
+                    source_ro.busy_timeout(crate::migration::READ_ONLY_BUSY_TIMEOUT)?;
+                    let mut source_tx = source_ro.unchecked_transaction()?;
+                    source_tx.set_drop_behavior(DropBehavior::Ignore);
+                    let _: i64 =
+                        source_tx
+                            .query_row("SELECT count(*) FROM sqlite_schema", [], |r| r.get(0))?;
+                    #[cfg(test)]
+                    artifacts.inspect_pinned_source(&source_tx);
+                    let source_witness =
+                        crate::catalogue_schema::witness_current(&source_tx, op.gate)
+                            .map_err(crate::catalogue_stamp::StampError::from)?;
+                    if source_witness != fresh_stamp.witness
+                        || crate::catalogue_copy::CopyFacts::read(&source_tx)?
+                            != crate::catalogue_copy::CopyFacts::read(&tx)?
+                    {
+                        return Err(OrchestrationError::Stale);
+                    }
+                    let page_size: i64 =
+                        source_tx.query_row("PRAGMA page_size", [], |r| r.get(0))?;
+                    let rehearsal = artifacts.fresh_rehearsal(page_size)?;
+                    let validated_d = crate::orchestration::validate_copy(
+                        artifacts, rehearsal, &source_tx, op.gate, false,
+                    )?;
+                    let recovery = artifacts.fresh_recovery(page_size)?;
+                    crate::orchestration::validate_copy(
+                        artifacts, recovery, &source_tx, op.gate, true,
+                    )?;
+                    Ok(validated_d)
+                })();
             // Cleanup is uncancellable, including a primary copy/witness Stop.
             let mut cleanup = Vec::new();
             if !source_ro.is_autocommit() {
@@ -887,7 +891,45 @@ impl ManagedCatalogue {
                     },
                 )));
             }
-            copies?;
+            let validated_d = copies?;
+            // D stays closed until B validation and inspected S settlement.
+            // Its disposable work never claims the live publication gate.
+            op.gate.checkpoint()?;
+            let rehearsal = artifacts.inventory().open_rehearsal(validated_d, op.gate)?;
+            let rehearse = (|| -> Result<(), OrchestrationError> {
+                op.gate.checkpoint()?;
+                #[cfg(test)]
+                artifacts.before_rehearsal(&rehearsal);
+                let install = crate::wrapper::install_admitted_product_file(
+                    artifacts.inventory().rehearsal(&rehearsal)?,
+                    source.name,
+                    source.bytes,
+                    source.limits,
+                    Cancellation::Controlled(op.gate),
+                )?;
+                let identity = crate::preview_identity::preview_identity(&install)?;
+                if identity != shown.preview {
+                    return Err(OrchestrationError::Stale);
+                }
+                Ok(())
+            })();
+            let close = artifacts.inventory().close_rehearsal(rehearsal);
+            match (rehearse, close) {
+                (Err(primary), Err(close)) => {
+                    return Err(OrchestrationError::PreviewSettlement(Box::new(
+                        crate::orchestration::PreviewFailure {
+                            primary: Some(primary),
+                            cleanup: vec![
+                                crate::orchestration::PreviewCleanupError::RehearsalClose(close),
+                            ],
+                        },
+                    )))
+                }
+                (Err(primary), Ok(())) => return Err(primary),
+                (Ok(()), Err(close)) => return Err(close.into()),
+                (Ok(()), Ok(())) => {}
+            }
+            op.gate.checkpoint()?;
             check_reserved_writer(
                 &tx,
                 identity,

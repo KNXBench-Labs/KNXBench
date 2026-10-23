@@ -6,16 +6,18 @@ use std::time::Duration;
 
 use tokio::task::JoinHandle;
 
-use super::dto::{CatalogueDrain, DrainCleanup, DrainCommit, DrainEnd, SCHEMA_VERSION};
+use super::dto::SCHEMA_VERSION;
 use super::strict::Incarnation;
 use super::{AdmissionState, CatalogueJobManager};
+use super::{CatalogueDrain, DrainCleanup, DrainCommit, DrainEnd};
 
 /// The server-side catalogue jobs owner. The admission/replay manager lives
 /// under one short standard lock; the worker/cleanup handles live under a
 /// separate short standard lock. An async permit serializes join waiters;
 /// neither standard lock is held across an await.
 pub struct CatalogueUpdateJobs {
-    manager: Mutex<CatalogueJobManager>,
+    pub(super) manager: Mutex<CatalogueJobManager>,
+    pub(super) runtime: Mutex<Option<std::sync::Weak<super::runtime::CatalogueRuntime>>>,
     handles: Mutex<Handles>,
     /// Only one waiter polls the join handle; waiting for this permit counts
     /// against each drain's own deadline and second-signal escape.
@@ -32,6 +34,7 @@ impl CatalogueUpdateJobs {
     pub fn new(incarnation: Incarnation) -> Self {
         Self {
             manager: Mutex::new(CatalogueJobManager::new(incarnation)),
+            runtime: Mutex::new(None),
             handles: Mutex::new(Handles::default()),
             draining: tokio::sync::Mutex::new(()),
         }
@@ -41,6 +44,12 @@ impl CatalogueUpdateJobs {
     pub fn close_admission_and_request_stop(&self) {
         if let Ok(mut manager) = self.manager.lock() {
             manager.close_admission();
+        }
+        // No manager/control lock crosses the runtime callback.
+        if let Ok(runtime) = self.runtime.lock() {
+            if let Some(runtime) = runtime.as_ref().and_then(std::sync::Weak::upgrade) {
+                runtime.request_close();
+            }
         }
     }
 
@@ -63,6 +72,59 @@ impl CatalogueUpdateJobs {
         }
         handles.worker = Some(handle);
         Ok(())
+    }
+
+    /// Metadata-only status sampling after the join decision. No SQL, IO,
+    /// control transition or changed drain/cancellation ordering.
+    fn job_drain_facts(&self) -> (DrainCleanup, DrainCommit) {
+        use super::dto::{CleanupDisposition, CommitOutcome};
+        let (record, unavailable) = match self.manager.lock() {
+            Ok(manager) => (
+                manager
+                    .state
+                    .active
+                    .as_ref()
+                    .and_then(|a| a.runtime.clone())
+                    .or_else(|| {
+                        manager
+                            .state
+                            .terminals
+                            .back()
+                            .and_then(|t| t.runtime.clone())
+                    }),
+                manager.state.admission == AdmissionState::ArtifactStoreUnavailable,
+            ),
+            Err(_) => return (DrainCleanup::Quarantined, DrainCommit::Unknown),
+        };
+        let Some(record) = record else {
+            return (
+                if unavailable {
+                    DrainCleanup::Quarantined
+                } else {
+                    DrainCleanup::Complete
+                },
+                DrainCommit::NotApplicable,
+            );
+        };
+        let Ok(status) = record.status.snapshot() else {
+            return (DrainCleanup::Quarantined, DrainCommit::Unknown);
+        };
+        let cleanup = if unavailable {
+            DrainCleanup::Quarantined
+        } else {
+            match status.cleanup.disposition {
+                CleanupDisposition::Complete => DrainCleanup::Complete,
+                CleanupDisposition::Pending => DrainCleanup::Pending,
+                CleanupDisposition::Quarantined => DrainCleanup::Quarantined,
+            }
+        };
+        let commit = match status.commit.outcome {
+            CommitOutcome::Pending => DrainCommit::Pending,
+            CommitOutcome::Committed => DrainCommit::Committed,
+            CommitOutcome::NotCommitted => DrainCommit::NotCommitted,
+            CommitOutcome::Unknown => DrainCommit::Unknown,
+        };
+        (cleanup, commit)
     }
 
     /// Joins the registered worker/cleanup handles with a bounded wait racing
@@ -117,6 +179,7 @@ impl CatalogueUpdateJobs {
             _ = second_signal => DrainEnd::SecondSignal,
         };
 
+        let (job_cleanup, job_commit) = self.job_drain_facts();
         CatalogueDrain {
             schema_version: SCHEMA_VERSION,
             end,
@@ -124,12 +187,12 @@ impl CatalogueUpdateJobs {
             cleanup: if self.handles.is_poisoned() {
                 DrainCleanup::Quarantined
             } else {
-                DrainCleanup::Complete
+                job_cleanup
             },
-            commit: if self.handles.is_poisoned() {
+            commit: if self.handles.is_poisoned() && job_commit != DrainCommit::Committed {
                 DrainCommit::Unknown
             } else {
-                DrainCommit::NotApplicable
+                job_commit
             },
         }
     }

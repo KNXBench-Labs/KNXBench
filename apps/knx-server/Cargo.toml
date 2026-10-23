@@ -47,7 +47,7 @@ base64.workspace = true
 getrandom.workspace = true
 # No-replace rename and flock for the sealed spool and (P8) the artifact-root
 # lease. Already a workspace dependency with the `fs` feature; no new crate.
-rustix.workspace = true
+rustix = { workspace = true, features = ["process"] }
 # HTTPS on the server's own port, with a self-signed certificate as the
 # zero-configuration default (ADR-0088). `ring` only; see the workspace
 # manifest for why.

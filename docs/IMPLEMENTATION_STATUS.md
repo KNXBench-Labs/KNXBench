@@ -12,7 +12,7 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
-## Project-configured System-2 offline preparation — candidate (23 October 2026)
+## Project-configured System-2 offline preparation — delivered offline scope (23 October 2026)
 
 A separate experimental App entry accepts a domain Project and selected DeviceId,
 including newly created unsaved projects. ProductDB owns the explicit source-template
@@ -25,8 +25,10 @@ package versus retained-source closure selection, bounded compact v2 evidence,
 XML admission, simulator-only execution and actual-state backup requirements.
 Synthetic tests exercise refusal, byte retention, replay and independent simulated
 pre-state recovery. Existing defaults-only preparation and hardware guards remain
-separate. Package/integrated delivery acceptance is pending; this is not ETS
-compatibility, physical restoration certification or hardware-download admission.
+separate. Source `224a500ef` was published on main-first merge `25b5b6a88`. Maintained
+branch and integrated gates accepted the scoped package, with ordered stages,
+frozen inputs and user-data guards verified. This is not ETS compatibility,
+physical restoration certification or hardware-download admission.
 
 ## WP-04.3 reopened-copy validation — delivered (23 October 2026)
 

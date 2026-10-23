@@ -1,6 +1,6 @@
 # Project-bound experimental System-2 offline preparation
 
-Status: implementation candidate; runtime and delivery acceptance pending.
+Status: scoped source delivered on main-first merge `25b5b6a88`; maintained branch and integrated gates accepted. This is offline preparation only, not hardware or general ETS compatibility acceptance.
 
 ## Scope
 

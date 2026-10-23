@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-23 17:42
+- **Completed:** Published the scoped isolated candidate on main-first merge 25b5b6a88 after maintained branch and integrated acceptance. Immediate local, tracking and live remote readback agree.
+- **Pending/Next Steps:** Complete neutral result documentation and retain verification evidence before retiring owned scratch. Selected checkout remains intentionally unsynchronized; concurrent ownership is unchanged.
+- **Notes for Codex oder Claude:** Neutral continuity only. No input details, findings or measurements are recorded here. No device operation or root synchronization was performed.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-23 16:54
 - **Completed:** Completed scoped implementation and independent follow-up. Candidate prepared in an isolated checkout; overall delivery acceptance remains pending.
 - **Pending/Next Steps:** Run maintained branch and integrated gates before conditional publication. Preserve concurrent ownership and the selected checkout's unrelated work.

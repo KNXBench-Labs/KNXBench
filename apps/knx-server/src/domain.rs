@@ -5669,6 +5669,7 @@ fn evaluate_device(
     program_id: &str,
     stored: Vec<(String, String)>,
     module_instances: &[knx_core::ModuleInstance],
+    language: Option<&str>,
 ) -> Result<DeviceEvaluation, String> {
     let mut evaluation = knx_productdb::device_evaluation::evaluate_device(
         products,
@@ -5677,8 +5678,13 @@ fn evaluate_device(
         module_instances,
     )
     .map_err(|e| e.to_string())?;
-    let caption_fills =
-        crate::parameter_captions::apply(products, program_id, &mut evaluation, module_instances)?;
+    let caption_fills = crate::parameter_captions::apply(
+        products,
+        program_id,
+        &mut evaluation,
+        module_instances,
+        language,
+    )?;
     let mut instance_values: Vec<_> = evaluation
         .instance_scoped_ids
         .iter()
@@ -5856,7 +5862,7 @@ fn assemble_parameter_panel_for_project(
         diagnostics: evaluation_diagnostics,
         values,
         activation,
-    } = evaluate_device(products, &program_id, stored, &module_instances)?;
+    } = evaluate_device(products, &program_id, stored, &module_instances, language)?;
     // ADR-0062: a truncated traversal cannot rule out unseen duplicate
     // module authority. Preserve its prefix for inspection, never for writes.
     let resource_limited = activation.diagnostics.iter().any(|scoped| {

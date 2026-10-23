@@ -19,8 +19,11 @@ decision: [ADR-0126](../adr/0126-positional-text-placeholders.md).
   helper applies the rule; object names go through one `knx-app` function shared
   by the device detail and the report. For object names and channel headings,
   resolution runs after the translation overlay, on the translated template.
-  Block and separator captions use untranslated program text; the requested
-  product language does not apply a caption translation overlay.
+  Block and separator captions now apply the requested product-language `Text`
+  overlay by exact defining-tree/node identity before module-argument and
+  positional substitution. The existing exact/prefix language rule and original
+  source fallback are reused. Translation is presentation-only: `Value` is never
+  overlaid and original product templates/project values remain unchanged.
 - **Only product texts.** An object name at the `Program`/`ProgramRef` layer is
   resolved; a name the project owns (`Instance`, `UserEdit`, `Inferred`) is
   shown exactly as stored, braces included.

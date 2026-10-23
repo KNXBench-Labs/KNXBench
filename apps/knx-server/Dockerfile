@@ -7,6 +7,8 @@ WORKDIR /src/apps/knx-web
 COPY apps/knx-web/package.json apps/knx-web/package-lock.json ./
 RUN npm ci
 COPY tools/browser_tmp.cjs tools/browser_tmp.d.cts /src/tools/
+# The strict catalogue client imports the authoritative protocol as build input.
+COPY docs/contracts/catalogue-jobs/wp043-protocol.schema.json docs/contracts/catalogue-jobs/wp043-artifact-records.schema.json docs/contracts/catalogue-jobs/wp043-protocol-policy.json /src/docs/contracts/catalogue-jobs/
 COPY apps/knx-web/ ./
 RUN npm run build
 

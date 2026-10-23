@@ -123,15 +123,58 @@ impl ReservationArtifacts {
 }
 
 impl CatalogueArtifacts for ReservationArtifacts {
-    fn fresh_rehearsal(&mut self, size: i64) -> Result<crate::Connection, OrchestrationError> {
+    fn inventory(&mut self) -> &mut ArtifactInventory {
+        self.inner.inventory()
+    }
+    fn fresh_rehearsal(&mut self, size: i64) -> Result<FreshDestination, OrchestrationError> {
         self.observe_reservation();
         self.inner.fresh_rehearsal(size)
     }
 
-    fn fresh_recovery(&mut self, size: i64) -> Result<crate::Connection, OrchestrationError> {
+    fn fresh_recovery(&mut self, size: i64) -> Result<FreshDestination, OrchestrationError> {
         self.observe_reservation();
         self.inner.fresh_recovery(size)
     }
+}
+
+#[test]
+fn reopened_preview_retains_writer_reservation_through_copy_allocation() {
+    let (dir, mut owner) = migrated_owner();
+    let before = owner.capture_stamp(&PublicationGate::new()).unwrap();
+    let bytes = valid_package();
+    let contender = crate::Connection::open(dir.path().join("products.sqlite")).unwrap();
+    contender.busy_timeout(std::time::Duration::ZERO).unwrap();
+    let mut artifacts = ReservationArtifacts {
+        inner: TestArtifacts::new(),
+        contender,
+        blocked: Vec::new(),
+    };
+    let gate = PublicationGate::new();
+    let result = owner
+        .preview_current_controlled(
+            admit("review.knxprod", &bytes),
+            &OperationContext {
+                gate: &gate,
+                policy: ControlledPolicy::Standard,
+            },
+            &mut artifacts,
+        )
+        .unwrap();
+    artifacts
+        .contender
+        .execute_batch("BEGIN IMMEDIATE; ROLLBACK")
+        .unwrap();
+    assert_eq!(
+        artifacts.blocked,
+        [true],
+        "preview must not release W before copying S"
+    );
+    assert_eq!(result.binding.catalogue, before);
+    assert_eq!(
+        owner.capture_stamp(&PublicationGate::new()).unwrap(),
+        before
+    );
+    assert_eq!(package_count(&owner), 0);
 }
 
 #[test]
@@ -200,6 +243,134 @@ fn review_apply_refuses_an_external_commit_before_reservation() {
     assert_eq!(settlement.commit, CommitEvidence::NotCommitted);
     assert_eq!(artifacts.counter, 0);
     assert_eq!(package_count(&owner), 0);
+}
+
+struct PreviewStopArtifacts<'a> {
+    inner: FaultArtifacts,
+    gate: &'a PublicationGate,
+}
+
+impl CatalogueArtifacts for PreviewStopArtifacts<'_> {
+    fn inventory(&mut self) -> &mut ArtifactInventory {
+        self.inner.inventory()
+    }
+    fn fresh_rehearsal(&mut self, size: i64) -> Result<FreshDestination, OrchestrationError> {
+        assert_eq!(
+            self.gate.try_cancel(),
+            crate::operation::CancelOutcome::Accepted
+        );
+        self.inner.fresh_rehearsal(size)
+    }
+    fn fresh_recovery(&mut self, size: i64) -> Result<FreshDestination, OrchestrationError> {
+        self.inner.fresh_recovery(size)
+    }
+}
+
+#[test]
+fn reopened_preview_stop_rolls_back_once_without_advancing_generation() {
+    let (_dir, mut owner) = migrated_owner();
+    let before = owner.capture_stamp(&PublicationGate::new()).unwrap();
+    let bytes = valid_package();
+    let gate = PublicationGate::new();
+    let mut artifacts = PreviewStopArtifacts {
+        inner: FaultArtifacts::new(&owner, false, false),
+        gate: &gate,
+    };
+    artifacts.inner.attach();
+    let result = owner.preview_current_controlled(
+        admit("review.knxprod", &bytes),
+        &OperationContext {
+            gate: &gate,
+            policy: ControlledPolicy::Standard,
+        },
+        &mut artifacts,
+    );
+    assert!(matches!(
+        result,
+        Err(OrchestrationError::Copy(
+            crate::catalogue_copy::CopyError::Stop(_)
+        ))
+    ));
+    assert_eq!(artifacts.inner.fault.transactions, ["BEGIN", "ROLLBACK"]);
+    assert_eq!(artifacts.inner.fault.rollback_attempts, 1);
+    assert!(!artifacts.inner.active());
+    assert_eq!(
+        owner.capture_stamp(&PublicationGate::new()).unwrap(),
+        before
+    );
+    assert_eq!(package_count(&owner), 0);
+}
+
+#[test]
+fn reopened_preview_refuses_replaced_writer_before_copy() {
+    let (dir, mut owner) = migrated_owner();
+    let path = dir.path().join("products.sqlite");
+    let replacement = dir.path().join("identical.sqlite");
+    std::fs::copy(&path, &replacement).unwrap();
+    std::fs::rename(&path, dir.path().join("original.sqlite")).unwrap();
+    std::fs::rename(&replacement, &path).unwrap();
+    let bytes = valid_package();
+    let gate = PublicationGate::new();
+    let mut artifacts = TestArtifacts::new();
+    let result = owner.preview_current_controlled(
+        admit("review.knxprod", &bytes),
+        &OperationContext {
+            gate: &gate,
+            policy: ControlledPolicy::Standard,
+        },
+        &mut artifacts,
+    );
+    assert!(
+        matches!(result, Err(OrchestrationError::Stale)),
+        "identical content cannot repair a replaced W identity"
+    );
+    assert_eq!(artifacts.counter, 0);
+    assert!(owner.with_read(|_| Ok::<_, rusqlite::Error>(())).is_err());
+}
+
+#[test]
+fn reopened_preview_preserves_stop_and_failed_rollback_independently() {
+    let (_dir, mut owner) = migrated_owner();
+    let bytes = valid_package();
+    let gate = PublicationGate::new();
+    let mut artifacts = PreviewStopArtifacts {
+        inner: FaultArtifacts::new(&owner, false, true),
+        gate: &gate,
+    };
+    artifacts.inner.attach();
+    let result = owner.preview_current_controlled(
+        admit("review.knxprod", &bytes),
+        &OperationContext {
+            gate: &gate,
+            policy: ControlledPolicy::Standard,
+        },
+        &mut artifacts,
+    );
+    assert!(
+        artifacts.inner.active(),
+        "denied rollback must leave native W active"
+    );
+    assert_eq!(artifacts.inner.fault.transactions, ["BEGIN", "ROLLBACK"]);
+    assert_eq!(artifacts.inner.fault.rollback_attempts, 1);
+    assert!(owner.with_read(|_| Ok::<_, rusqlite::Error>(())).is_err());
+    let failure = match result {
+        Err(OrchestrationError::PreviewSettlement(failure)) => failure,
+        _ => panic!("preview must retain primary Stop independently of rollback failure"),
+    };
+    assert!(matches!(
+        failure.primary,
+        Some(OrchestrationError::Copy(
+            crate::catalogue_copy::CopyError::Stop(_)
+        ))
+    ));
+    assert!(failure
+        .cleanup
+        .iter()
+        .any(|error| matches!(error, PreviewCleanupError::WriterRollback(_))));
+    assert!(failure
+        .cleanup
+        .iter()
+        .any(|error| matches!(error, PreviewCleanupError::WriterNotAutocommit)));
 }
 
 struct NativeFault {
@@ -323,18 +494,130 @@ impl Drop for FaultArtifacts {
 }
 
 impl CatalogueArtifacts for FaultArtifacts {
-    fn fresh_rehearsal(&mut self, size: i64) -> Result<crate::Connection, OrchestrationError> {
+    fn inventory(&mut self) -> &mut ArtifactInventory {
+        self.inner.inventory()
+    }
+    fn fresh_rehearsal(&mut self, size: i64) -> Result<FreshDestination, OrchestrationError> {
         self.inner.fresh_rehearsal(size)
     }
 
-    fn fresh_recovery(&mut self, size: i64) -> Result<crate::Connection, OrchestrationError> {
+    fn fresh_recovery(&mut self, size: i64) -> Result<FreshDestination, OrchestrationError> {
         self.attach();
         let conn = self.inner.fresh_recovery(size)?;
         if self.invalid_recovery {
-            conn.execute_batch("CREATE TABLE invalid(id INTEGER)")?;
+            self.inventory()
+                .test_writer(&conn)
+                .execute_batch("CREATE TABLE invalid(id INTEGER)")?;
         }
         Ok(conn)
     }
+}
+
+struct InitializationFaultArtifacts {
+    inner: FaultArtifacts,
+}
+impl CatalogueArtifacts for InitializationFaultArtifacts {
+    fn inventory(&mut self) -> &mut ArtifactInventory {
+        self.inner.inventory()
+    }
+    fn fresh_rehearsal(&mut self, size: i64) -> Result<FreshDestination, OrchestrationError> {
+        self.inner.fresh_rehearsal(size)
+    }
+    fn fresh_recovery(&mut self, size: i64) -> Result<FreshDestination, OrchestrationError> {
+        self.inner.attach();
+        self.inventory().set_hook(
+            DestinationRole::Recovery,
+            Box::new(|stage, path, _| {
+                if stage == crate::catalogue_copy::DestinationStage::Allocated {
+                    std::fs::hard_link(path, path.with_extension("retained")).unwrap();
+                }
+            }),
+        );
+        self.inner.inner.fresh_recovery(size)
+    }
+}
+fn initialization_refusal(deny_rollback: bool) {
+    use crate::catalogue_copy::{CopyError, DestinationError};
+    let (_dir, mut owner) = migrated_owner();
+    let bytes = valid_package();
+    let shown = preview(&mut owner, &bytes, ControlledPolicy::Standard);
+    let mut artifacts = InitializationFaultArtifacts {
+        inner: FaultArtifacts::new(&owner, false, deny_rollback),
+    };
+    let gate = PublicationGate::new();
+    let result = owner.apply_current_controlled(
+        admit("review.knxprod", &bytes),
+        &shown,
+        &OperationContext {
+            gate: &gate,
+            policy: ControlledPolicy::Standard,
+        },
+        &mut artifacts,
+    );
+    assert!(
+        matches!(result.failure,Some(OrchestrationError::Copy(CopyError::Destination(ref e))) if matches!(e.primary,Some(DestinationError::Identity)))
+    );
+    assert_eq!(result.commit, CommitEvidence::NotCommitted);
+    assert_eq!(
+        result.rollback,
+        if deny_rollback {
+            RollbackDisposition::Unresolved
+        } else {
+            RollbackDisposition::Explicit
+        }
+    );
+    assert_eq!(
+        result.artifacts,
+        if deny_rollback {
+            ArtifactDisposition::Retain
+        } else {
+            ArtifactDisposition::Dispose
+        },
+        "allocated B counts even when identity/open initialization fails"
+    );
+    assert!(artifacts.inventory().allocated(DestinationRole::Recovery));
+    assert!(
+        artifacts
+            .inventory()
+            .retained_connection(DestinationRole::Recovery)
+            .is_none(),
+        "failure precedes native SQLite open"
+    );
+    assert_eq!(artifacts.inner.inner.counter, 2);
+    let path = artifacts.inner.inner.dir.path().join("dest-1.sqlite");
+    assert!(path.is_file());
+    assert!(path.with_extension("retained").is_file());
+    assert_eq!(
+        std::os::unix::fs::MetadataExt::nlink(&std::fs::metadata(path).unwrap()),
+        2,
+        "uncertain B is never deleted"
+    );
+    assert_eq!(artifacts.inner.fault.rollback_attempts, 1);
+    assert_eq!(artifacts.inner.active(), deny_rollback);
+    assert_eq!(result.health == WriterHealth::Healthy, !deny_rollback);
+    if deny_rollback {
+        assert!(
+            result
+                .cleanup
+                .iter()
+                .any(|e| matches!(e, PreviewCleanupError::WriterRollback(_))),
+            "native rollback error must survive separately from the initialization refusal"
+        );
+        assert!(result
+            .cleanup
+            .iter()
+            .any(|e| matches!(e, PreviewCleanupError::WriterNotAutocommit)));
+    } else {
+        assert!(result.cleanup.is_empty());
+    }
+}
+#[test]
+fn reopened_allocated_b_initialization_failure_is_disposable_after_checked_rollback() {
+    initialization_refusal(false);
+}
+#[test]
+fn reopened_allocated_b_initialization_failure_is_retained_after_failed_rollback() {
+    initialization_refusal(true);
 }
 
 fn failed_rollback(deny_insert: bool, mismatch: bool, invalid_recovery: bool) {

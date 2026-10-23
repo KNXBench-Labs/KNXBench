@@ -59,7 +59,7 @@ pub(crate) struct CatalogueWitness {
 /// live witness but a distinct header domain that omits `schema_version`, so a
 /// copy is never accepted as a `CatalogueStamp` or live Ready/apply consent.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct CopyContentWitness {
+pub(crate) struct CopyContentWitness {
     encoding_version: u32,
     sha256: [u8; 32],
     table_count: u32,
@@ -490,7 +490,7 @@ pub(crate) fn witness_current(
 
 /// Produces the copy-content witness for one transaction (omits
 /// `schema_version`, so a copied destination's fresh cookie does not affect it).
-fn copy_content_witness(
+pub(crate) fn copy_content_witness(
     tx: &Transaction,
     gate: &PublicationGate,
 ) -> Result<CopyContentWitness, WitnessError> {

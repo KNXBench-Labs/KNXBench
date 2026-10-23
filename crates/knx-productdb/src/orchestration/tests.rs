@@ -1,11 +1,15 @@
 //! Tests of the preview/apply orchestration against schema-28 synthetic data.
 
 use super::*;
+use crate::catalogue_copy::{ArtifactInventory, DestinationRole, FreshDestination};
 use crate::controlled::{ControlledPolicy, ControlledSource};
 use crate::managed_catalogue::{LegacyMutationKind, LegacySettlementHint, ManagedCatalogue};
 use crate::operation::PublicationGate;
 use std::io::Write;
 
+mod reopened_copy;
+mod reopened_copy_controls;
+mod reopened_copy_matrix;
 mod review_regressions;
 
 const MASTER: &[u8] = br#"<KNX xmlns="http://knx.org/xml/project/11"><MasterData><Manufacturers><Manufacturer Id="M-0001" Name="Example"/></Manufacturers></MasterData></KNX>"#;
@@ -43,6 +47,7 @@ fn migrated_owner() -> (tempfile::TempDir, ManagedCatalogue) {
 struct TestArtifacts {
     dir: tempfile::TempDir,
     counter: usize,
+    inventory: ArtifactInventory,
 }
 
 impl TestArtifacts {
@@ -50,28 +55,34 @@ impl TestArtifacts {
         Self {
             dir: tempfile::tempdir().unwrap(),
             counter: 0,
+            inventory: ArtifactInventory::default(),
         }
     }
 
-    fn fresh(&mut self, page_size: i64) -> crate::Connection {
+    fn fresh(
+        &mut self,
+        page_size: i64,
+        role: DestinationRole,
+    ) -> Result<FreshDestination, OrchestrationError> {
         let path = self
             .dir
             .path()
             .join(format!("dest-{}.sqlite", self.counter));
         self.counter += 1;
-        let conn = crate::Connection::open(&path).unwrap();
-        conn.pragma_update(None, "page_size", page_size).unwrap();
-        conn
+        Ok(self.inventory.create_new(role, path, page_size)?)
     }
 }
 
 impl CatalogueArtifacts for TestArtifacts {
-    fn fresh_rehearsal(&mut self, page_size: i64) -> Result<crate::Connection, OrchestrationError> {
-        Ok(self.fresh(page_size))
+    fn inventory(&mut self) -> &mut ArtifactInventory {
+        &mut self.inventory
+    }
+    fn fresh_rehearsal(&mut self, page_size: i64) -> Result<FreshDestination, OrchestrationError> {
+        self.fresh(page_size, DestinationRole::Rehearsal)
     }
 
-    fn fresh_recovery(&mut self, page_size: i64) -> Result<crate::Connection, OrchestrationError> {
-        Ok(self.fresh(page_size))
+    fn fresh_recovery(&mut self, page_size: i64) -> Result<FreshDestination, OrchestrationError> {
+        self.fresh(page_size, DestinationRole::Recovery)
     }
 }
 

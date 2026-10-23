@@ -10,7 +10,9 @@ use rusqlite::Transaction;
 mod schema28;
 mod witness;
 
-pub(crate) use witness::{witness_current, CatalogueWitness, WitnessError};
+pub(crate) use witness::{
+    copy_content_witness, witness_current, CatalogueWitness, CopyContentWitness, WitnessError,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Limit {

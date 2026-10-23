@@ -257,6 +257,16 @@ Explicit rustfmt correction b5569936 changes four lines for one, no semantics.
 Original failed receipt/log remain final-candidate-gate-1; successor must bind
 corrected committed source and is not a relabelled passing attempt.
 
+## Gate2 Docker build-context refusal
+
+Full gate2 stopped in tooling after fmt/documentation success. Actual 412-method
+tooling result has one failure/six skipped: Docker frontend omitted new catalogue
+client JSON schema/policy imports. Read exact retained assertion, import sites,
+Dockerfile and dockerignore. Added precisely three public JSON COPY inputs at
+matching repository-relative location. No scanner weakening or private context
+expansion. No product suites ran; original failed receipts retained. No extra
+focused test dispatched; correction belongs to successor whole-candidate gate.
+
 ## Next
 
 Consume exact worker handoffs on completion; do not poll

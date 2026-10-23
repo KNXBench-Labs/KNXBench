@@ -61,6 +61,7 @@ export default function CatalogBrowser(props: {
   const [name, setName] = useState("");
   const [quantity, setQuantity] = useState("1");
   const [error, setError] = useState<string | null>(null);
+  const [catalogueReadError, setCatalogueReadError] = useState<string | null>(null);
   const [diagnostics, setDiagnostics] = useState<CreationDiagnostic[]>([]);
   const [createdItems, setCreatedItems] = useState<CreatedCatalogDevice[]>([]);
   const [creating, setCreating] = useState(false);
@@ -91,7 +92,7 @@ export default function CatalogBrowser(props: {
 
   useEffect(() => {
     let current = true;
-    api.catalogManufacturers().then(rows => { if (current) setManufacturers(rows); }).catch((e) => { if (current) setError(api.errorMessage(e)); });
+    api.catalogManufacturers().then(rows => { if (current) setManufacturers(rows); }).catch((e) => { if (current) setCatalogueReadError(api.errorMessage(e)); });
     return () => { current = false; };
   }, [catalogueRevision]);
 
@@ -114,7 +115,7 @@ export default function CatalogBrowser(props: {
         })
         .catch((e) => {
           if (requestId !== requestIdRef.current) return;
-          setError(api.errorMessage(e));
+          setCatalogueReadError(api.errorMessage(e));
         });
     }, 200);
     return () => { clearTimeout(handle); requestIdRef.current++; };
@@ -166,9 +167,9 @@ export default function CatalogBrowser(props: {
   }
 
   async function reloadAfterInstall() {
+    const requestId = ++requestIdRef.current;
     try {
       const filters = filtersRef.current;
-      const requestId = ++requestIdRef.current;
       const [manufacturers, items] = await Promise.all([
         api.catalogManufacturers(),
         api.catalogItems(
@@ -181,8 +182,9 @@ export default function CatalogBrowser(props: {
       setManufacturers(manufacturers);
       setItems(items);
       setItemsLoaded(true);
+      setCatalogueReadError(null);
     } catch (e) {
-      setError(api.errorMessage(e));
+      if (requestId === requestIdRef.current) setCatalogueReadError(api.errorMessage(e));
     }
   }
 
@@ -420,7 +422,8 @@ export default function CatalogBrowser(props: {
           <button onClick={onClose}>{t("catalog.done")}</button>
         </div>
       )}
-      {error && <span className="field-error" role="alert">{error} {catalogueRevision > 0n && <>{t("catalogJob.refreshDirty")} <button type="button" onClick={() => { setError(null); void reloadAfterInstall(); }}>{t("catalogJob.retryRefresh")}</button></>}</span>}
+      {error && <span className="field-error" role="alert">{error}</span>}
+      {catalogueReadError && <span className="field-error" role="alert">{catalogueReadError} {catalogueRevision > 0n && t("catalogJob.refreshDirty")} <button type="button" onClick={() => { setCatalogueReadError(null); void reloadAfterInstall(); }}>{t("catalogJob.retryRefresh")}</button></span>}
       {retry === "available" && <p className="catalog-retry-hint">{t("catalog.retryHint")}</p>}
     </section>
   );

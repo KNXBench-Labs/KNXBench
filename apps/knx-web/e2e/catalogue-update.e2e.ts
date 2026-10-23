@@ -233,9 +233,11 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     const winner = "b".repeat(64);
     const detail = `function_type FT-1; candidate ${source}#4; winner ${winner}#1`;
     const malformed = "FunctionPoint at declaration 8: missing parent; <source-text>";
+    // Preserve real producer addresses: terminal generated ordinal, one occurrence
+    // per declaration. Raw free text remains a synthetic privacy sentinel.
     f.report.facts = { counts: [], unknownConstructs: [], unknownOccurrences: 0, diagnostics: [
-      { kind: "master-identity-collision", archivePath: "knx_master.xml", xmlPath: "/KNX/MasterData/FunctionTypes/FunctionType", detail, occurrences: 2 },
-      { kind: "malformed-master-declaration", archivePath: "knx_master.xml", xmlPath: "/KNX/MasterData/FunctionTypes/FunctionPoint", detail: malformed, occurrences: 1 },
+      { kind: "master-identity-collision", archivePath: "knx_master.xml", xmlPath: "/KNX/MasterData/FunctionTypes/FunctionType[@master-ordinal=4]", detail, occurrences: 1 },
+      { kind: "malformed-master-declaration", archivePath: "knx_master.xml", xmlPath: "/KNX/MasterData/FunctionTypes/FunctionPoint[@master-ordinal=8]", detail: malformed, occurrences: 1 },
     ] };
     const catalogue = await openCatalogue(page, m);
     const job = await choosePackage(catalogue, m, f);

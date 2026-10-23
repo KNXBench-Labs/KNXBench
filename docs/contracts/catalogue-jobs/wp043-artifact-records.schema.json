@@ -1232,8 +1232,9 @@
         },
         "xmlPath": {
           "type": "string",
-          "maxLength": 65536,
-          "x-maxUtf8Bytes": 65536
+          "maxLength": 8192,
+          "x-maxUtf8Bytes": 8192,
+          "x-pathPolicy": "Structural XML path; only master-identity-collision/malformed-master-declaration require the terminal generated selector defined by wp043-protocol-policy.json masterDeclarationIdentity. Semantic validation required."
         },
         "detail": {
           "const": null

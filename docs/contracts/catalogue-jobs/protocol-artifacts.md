@@ -152,10 +152,44 @@ programKey/packageKey/sourceKey are artifact-local canonical U64 indices, not du
 | baggageDeclaration declarationId/name/targetPath/installOnImport/timeInfo/fileVersion/detail | All seven public fields always null; a withheld entry for each raw nonnull lexeme, even empty. Raw lexemes retained unchanged. Structured indexPath/declarationOrdinal/resolution/memberPath remain visible; no untrusted TargetPath mistaken for a host-safe path. baggageSummary/payload/nested measured facts remain exact. |
 | program/installedVersion IDs, manufacturerId, applicationNumber/version | Must satisfy <=512-byte ASCII safe-id grammar `[A-Za-z0-9_][A-Za-z0-9_.-]*`; optional raw null remains null. If required identity cannot meet it, refuse publicProjectionRefused before publication, do not replace by a lossy hash or hide consent identity. |
 | wrapper/member/diagnostic archive paths | Exact validated archive-relative path <=8192 UTF-8 bytes, `/` separators, no empty/`.`/`..` component, leading slash, drive colon, backslash, Cc/Cf; trailing slash only if original row explicitly denotes directory. Refuse before publication when unsafe/overlong; do not transform raw path to a host basename. |
-| unknown xpath, diagnostic xmlPath, unknown name | Structural XML path/name, <=8192 bytes/path and512/name, no predicates/attribute values/controls; names must satisfy existing XML-name parser then public ASCII safe XML-name grammar `[A-Za-z_][A-Za-z0-9_.:-]*`; path `/` or slash-separated structural names. Unprojectable required structured fact refuses, not withheld wholesale. |
+| unknown xpath, diagnostic xmlPath, unknown name | Structural XML path/name, <=8192 bytes/path (including any generated selector) and512/name, no arbitrary predicates/attribute values/controls; names must satisfy existing XML-name parser then public ASCII safe XML-name grammar `[A-Za-z_][A-Za-z0-9_.:-]*`; path `/` or slash-separated structural names. The sole typed generated-selector exception for declaration diagnostics is specified below. Unprojectable required structured fact refuses, not withheld wholesale. |
 | idConflict.table/id | Table must be an actual admitted current-schema table identifier, <=512 safe-id; id <=512 safe-id. Refuse if required conflict identity cannot be projected. Kept/other hashes+occurrence remain exact. |
 | member.role | Exact core tokens `Master`, `Signature`, `Catalog`, `Hardware`, `ApplicationProgram`, `Baggages`, `Baggage`, `MasterData`, `Unrecognized`, from package.rs:1491–1503 and ingest.rs:18–26. `Signature` means stored **not verified**; UI must label that explicitly, not imply cryptographic verification. Do not use legacy display_role's expanded presentation string as raw transport role. Unknown stored role refuses unsupportedCatalogue, never passes arbitrary SQL text. |
 | scalar counts, booleans, scheme, validated SHA | Exact typed values, never redacted. Newly admitted source basename is the one intentional caller-chosen display name, not a historical alias. |
+
+**Generated master declaration identity (Alpha16 source correction):** the
+producer `master_provenance::diagnostics` appends `[@master-ordinal=N]` to the
+parser-observed structural path. `parse::master` numbers the five declaration
+elements (`DatapointType`, `DatapointSubtype`, `FunctionType`, `FunctionPoint`,
+`SpaceUsage`) in encounter order, starting at 1, capped by
+`MAX_MASTER_DECLARATIONS=1000000`. This is KNXBench's generated internal identity,
+not a statement about external XML/XPath semantics or an attribute read from XML.
+The package validator binds it to the retained source's declaration and kind
+before the adapter forwards it unchanged.
+
+Choose **tightly typed generated-selector support**, not stripping the selector
+or adding a second identity field: existing raw evidence already contains the
+complete address and requires no persisted/schema-shape migration. Both public
+writer and client must require exactly one terminal `[@master-ordinal=N]` for
+`master-identity-collision` and `malformed-master-declaration`, with canonical
+ASCII decimal N in 1..1000000, one of the five exact terminal element names and
+`occurrences="1"`. Every preceding path component retains the strict structural
+name/byte rules. No assumption about parent hierarchy is added: the parser
+records actual ancestry, including malformed/orphan placements. Other diagnostic
+kinds and unknown paths/names continue to forbid all selectors. Reject missing,
+zero, signed, leading-zero, overflow/out-of-range, Unicode/whitespace/control,
+quoted, repeated or nonterminal selectors and arbitrary predicates. Never
+evaluate this string as XPath. `masterDeclarationIdentity` in policy and the
+public diagnostic schema annotation identify these semantic checks; ordinary
+schema validation alone is insufficient.
+
+The raw path and raw detail remain byte-for-byte unchanged. Public path retains
+the same declaration identity; detail remains null with exact withheld byte
+metadata. `packageKey + archivePath + xmlPath` disambiguates declarations within
+an artifact, not a new cross-source durable ID or write authority. Native
+package/adapter/writer assertions and the faithful intercepted browser fixtures
+are reserved for final-candidate execution; this correction is source-traced,
+not a claimed runtime reproduction or release acceptance.
 
 Each PublicRecord has `withheld` array (max seven for baggageDeclaration, one for the four single-field variants; zero otherwise), exact `{field,reason:"untrustedFreeText",rawUtf8Bytes}` entries in schema field order. Raw null => public null with **no** withheld entry; raw present-but-empty =>withheld with bytes0. No duplicate field entry. `withheldFields=sum(entries)`, `withheldRecords=count(rows with entries)`, `withheldOccurrences=sum(record occurrences or1 when no occurrence counter)` over rows with withholding (count each row once, not once/field). These exact descriptor counts disclose redaction; all counts themselves are checked U64. This projection emits every logical row; public completeness means complete **redacted projection**, not raw byte completeness or zero omissions. The UI labels withheld details/provenance before consent and on result. If structured identity/status/conflict/growth facts needed for consent cannot be shown, refuse the operation; names/free-text examples are not required consent facts in this v1 policy.
 

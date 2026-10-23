@@ -1,0 +1,131 @@
+/** The actual Download entry and experimental controller, with intercepted API only. */
+// @vitest-environment happy-dom
+import { act } from "react";
+import { createRoot, type Root } from "react-dom/client";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
+const mock = vi.hoisted(() => ({ prepareSystem2: vi.fn(), getSystem2Status: vi.fn(), startSystem2: vi.fn(), cancelSystem2: vi.fn(), recoverSystem2: vi.fn() }));
+const consent = vi.hoisted(() => ({ request: vi.fn() }));
+vi.mock("./system2DownloadApi", () => mock);
+vi.mock("./useProgrammingConsent", () => ({ useProgrammingConsent: () => ({ request: consent.request, dialog: null }) }));
+vi.mock("./api", () => ({
+  pollDeviceDownload: vi.fn().mockRejectedValue({ status: 404 }), getDeviceReadiness: vi.fn().mockResolvedValue({ devices: [] }),
+  busActivity: vi.fn().mockResolvedValue({ sessions: [], busyLocks: [], untracked: [], oneShot: [] }),
+  errorMessage: (e: unknown) => e instanceof Error ? e.message : String(e), errorStatus: (e: {status?: number}) => e.status,
+}));
+import DeviceDownloadPanel from "./DeviceDownloadPanel";
+import System2DownloadPanel from "./System2DownloadPanel";
+import { preview, status } from "./system2DownloadTestFixtures";
+import type { ProjectTree } from "./bindings/ProjectTree";
+import { resetBusDiscoveryForTests } from "./busDiscovery";
+import { resetSettingsForTests } from "./settingsStore";
+(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+const project: ProjectTree = { schema_version: 1, errors: 0, warnings: 0, can_undo: false, can_redo: false, is_modified: false, group_address_style: "ThreeLevel", server_incarnation: "server", project_incarnation: 1,
+  installations: [{ id: 0, name: "Test", buildings: [], group_addresses: [], group_ranges: [], unassigned: [], topology: [{ id: 1, name: "Area", address: 1, lines: [{ id: 2, name: "Line", address: 1, devices: [{id: 10, name: "Configured button", address: "1.1.67", description: null, com_object_count: 0 }] }] }] }] };
+let host: HTMLDivElement; let root: Root;
+const flush = async () => { await act(async () => { for (let i=0;i<10;i++) await Promise.resolve(); }); };
+const click = async (selector: string) => { const node = host.querySelector<HTMLButtonElement>(selector); expect(node).not.toBeNull(); await act(async () => node!.click()); await flush(); };
+async function input(selector: string, value: string) {
+  const node = host.querySelector<HTMLInputElement>(selector)!; expect(node).not.toBeNull();
+  await act(async () => { Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")!.set!.call(node, value); node.dispatchEvent(new Event("input", {bubbles:true})); });
+}
+async function render(deviceId = 10, tree = project) {
+  await act(async () => root.render(<System2DownloadPanel project={tree} deviceId={deviceId} gateway="192.0.2.1:3671" enabled ordinaryBusy={false} />)); await flush();
+}
+async function prepare() { await click("[data-system2-prepare]"); }
+async function confirmations() {
+  for (const [key, value] of Object.entries({ confirmation: preview.confirmationPhrase, hypothesisConfirmation: preview.hypothesisPhrase, downloadConfirmation: preview.downloadPhrase, releaseConfirmation: preview.releasePhrase })) await input(`[data-system2-phrase='${key}']`, value);
+  const select = host.querySelector<HTMLSelectElement>("[data-system2-track]")!;
+  await act(async () => { select.value = "knxbenchBestEffort"; select.dispatchEvent(new Event("change", {bubbles:true})); });
+}
+beforeEach(() => {
+  vi.clearAllMocks(); window.localStorage.clear(); resetSettingsForTests(); resetBusDiscoveryForTests();
+  mock.getSystem2Status.mockResolvedValue(null); mock.prepareSystem2.mockResolvedValue(preview); mock.startSystem2.mockResolvedValue(status);
+  mock.cancelSystem2.mockResolvedValue({ ...status, state: "cancelled" }); consent.request.mockResolvedValue(true);
+  host = document.createElement("div"); document.body.append(host); root = createRoot(host);
+});
+afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.useRealTimers(); });
+it("reattaches a server-owned System-2 operation when returning to ordinary Download without reselecting the mode", async () => {
+  mock.getSystem2Status.mockResolvedValue(status);
+  await act(async () => root.render(<DeviceDownloadPanel project={project} />)); await flush();
+  expect(mock.getSystem2Status).toHaveBeenCalledOnce();
+  expect(host.querySelector("[data-system2-status]")!.textContent).toContain(status.operationId);
+  expect(mock.startSystem2).not.toHaveBeenCalled(); expect(mock.recoverSystem2).not.toHaveBeenCalled();
+});
+it("offers System-2 in the existing device download while preserving the ordinary scope", async () => {
+  await act(async () => root.render(<DeviceDownloadPanel project={project} />)); await flush();
+  expect(host.querySelector(".device-download-scope")).not.toBeNull();
+  const mode = host.querySelector<HTMLSelectElement>("[data-download-mode]"); expect(mode).not.toBeNull();
+  await act(async () => { mode!.value = "system2"; mode!.dispatchEvent(new Event("change", {bubbles:true})); }); await flush();
+  expect(host.querySelector("[data-system2-prepare]")).not.toBeNull(); expect(mock.prepareSystem2).not.toHaveBeenCalled();
+  expect(host.querySelector(".device-download-scope")).toBeNull();
+});
+it("mounts read-only, prepares actual retained sources and requires every exact phrase and track before ordinary consent", async () => {
+  await render(); expect(mock.getSystem2Status).toHaveBeenCalledOnce(); expect(mock.prepareSystem2).not.toHaveBeenCalled(); expect(mock.startSystem2).not.toHaveBeenCalled();
+  await prepare(); expect(mock.prepareSystem2).toHaveBeenCalledWith(10); expect(host.textContent).toContain(preview.configurationSha256);
+  expect(host.textContent).toContain(preview.warnings[0]); expect(host.querySelector<HTMLButtonElement>("[data-system2-start]")!.disabled).toBe(true);
+  await confirmations(); await input("[data-system2-phrase='confirmation']", preview.confirmationPhrase + " ");
+  expect(host.querySelector<HTMLButtonElement>("[data-system2-start]")!.disabled).toBe(true); expect(consent.request).not.toHaveBeenCalled();
+  await input("[data-system2-phrase='confirmation']", preview.confirmationPhrase); await click("[data-system2-start]");
+  expect(consent.request).toHaveBeenCalledWith("1.1.67 — Configured button");
+  expect(mock.startSystem2).toHaveBeenCalledWith({ preparationId: preview.preparationId, gateway: "192.0.2.1:3671", confirmation: preview.confirmationPhrase, hypothesisConfirmation: preview.hypothesisPhrase, downloadConfirmation: preview.downloadPhrase, releaseConfirmation: preview.releasePhrase, recoveryTrack: "knxbenchBestEffort" });
+});
+it("drops a late preparation after target or project change", async () => {
+  let resolve!: (value: typeof preview) => void; mock.prepareSystem2.mockReturnValueOnce(new Promise((r) => {resolve=r;}));
+  await render(); await prepare(); await render(11); await act(async () => resolve(preview)); await flush();
+  expect(host.querySelector("[data-system2-preview]")).toBeNull();
+});
+it("retains original operation identity across selection and never cancels on unmount", async () => {
+  mock.getSystem2Status.mockResolvedValue(status); await render(); await render(11);
+  expect(host.querySelector("[data-system2-status]")!.textContent).toContain("1.1.67");
+  expect(host.querySelector("[data-system2-status]")!.textContent).toContain(status.operationId);
+  expect(host.querySelector("progress")).toBeNull(); await click("[data-system2-cancel]"); expect(mock.cancelSystem2).toHaveBeenCalledWith(status.operationId);
+  await act(async () => root.unmount()); root = createRoot(host); expect(mock.cancelSystem2).toHaveBeenCalledTimes(1);
+});
+it("a lost start response polls only, consumes the local preview and never resends", async () => {
+  await render(); await prepare(); await confirmations(); mock.startSystem2.mockRejectedValueOnce(new Error("response lost"));
+  mock.getSystem2Status.mockResolvedValue(status); await click("[data-system2-start]");
+  expect(mock.startSystem2).toHaveBeenCalledOnce(); expect(mock.getSystem2Status.mock.calls.length).toBeGreaterThan(1);
+  expect(host.querySelector("[data-system2-preview]")).toBeNull(); expect(host.querySelector("[data-system2-unknown]")).not.toBeNull();
+});
+it("never binds recovery phrases to a start response for another target", async () => {
+  await render(); await prepare(); await confirmations();
+  mock.startSystem2.mockResolvedValueOnce({ ...status, binding: { ...status.binding, deviceId: 11 }, address: "1.1.68" });
+  await click("[data-system2-start]");
+  expect(host.querySelector("[data-system2-unknown]")).not.toBeNull();
+  expect(host.querySelector("[data-system2-status]")).toBeNull();
+});
+it("blocks stale project consent before sending any start", async () => {
+  let allow!: (v: boolean) => void; consent.request.mockReturnValueOnce(new Promise((r) => { allow = r; }));
+  await render(); await prepare(); await confirmations(); await click("[data-system2-start]");
+  await render(10, { ...project, snapshot_revision: 3 }); await act(async () => allow(true)); await flush();
+  expect(mock.startSystem2).not.toHaveBeenCalled();
+});
+it("attaches a retained operation read-only and refuses to guess missing recovery acknowledgements", async () => {
+  mock.getSystem2Status.mockResolvedValue({ ...status, state: "interrupted", backupAvailable: true, recoveryPhrase: "Recover original actual state" });
+  await render(); expect(host.textContent).toContain("unavailable in the current transport status");
+  expect(host.querySelector("[data-system2-recover]")).toBeNull(); expect(mock.recoverSystem2).not.toHaveBeenCalled();
+});
+it("a refused preparation leaves no start capability or defaults fallback", async () => {
+  mock.prepareSystem2.mockRejectedValueOnce(new Error("private debug output must not be displayed"));
+  await render(); await prepare(); expect(host.textContent).toContain("Configured preparation was refused");
+  expect(host.textContent).not.toContain("private debug"); expect(host.querySelector("[data-system2-start]")).toBeNull(); expect(mock.startSystem2).not.toHaveBeenCalled();
+});
+it("a lost recovery response is never automatically resent and retains the original operation", async () => {
+  await render(); await prepare(); await confirmations(); await click("[data-system2-start]");
+  mock.getSystem2Status.mockResolvedValue({ ...status, state: "failed", backupAvailable: true, recoveryPhrase: "Recover original actual state" });
+  await click("[data-system2-refresh]");
+  for (const [key, value] of Object.entries({ recoveryConfirmation: "Recover original actual state", downloadConfirmation: preview.downloadPhrase, releaseConfirmation: preview.releasePhrase })) await input(`[data-system2-recovery='${key}']`, value);
+  mock.recoverSystem2.mockRejectedValueOnce(new Error("lost response")); await click("[data-system2-recover]");
+  await click("[data-system2-refresh]"); expect(mock.recoverSystem2).toHaveBeenCalledOnce();
+  expect(host.querySelector("[data-system2-unknown]")).not.toBeNull(); expect(host.querySelector("[data-system2-status]")!.textContent).toContain(status.operationId);
+  expect(host.querySelector<HTMLButtonElement>("[data-system2-recover]")!.disabled).toBe(true);
+});
+it("requires explicit recovery of the original backup with fresh ordinary consent", async () => {
+  await render(); await prepare(); await confirmations(); await click("[data-system2-start]");
+  mock.getSystem2Status.mockResolvedValue({ ...status, state: "failed", backupAvailable: true, recoveryPhrase: "Recover original actual state" });
+  await click("[data-system2-refresh]");
+  expect(mock.recoverSystem2).not.toHaveBeenCalled();
+  for (const [key, value] of Object.entries({ recoveryConfirmation: "Recover original actual state", downloadConfirmation: preview.downloadPhrase, releaseConfirmation: preview.releasePhrase })) await input(`[data-system2-recovery='${key}']`, value);
+  mock.recoverSystem2.mockResolvedValue({ ...status, state: "restoring" }); await click("[data-system2-recover]");
+  expect(consent.request).toHaveBeenCalledTimes(2); expect(mock.recoverSystem2).toHaveBeenCalledWith({ operationId: status.operationId, gateway: "192.0.2.1:3671", recoveryConfirmation: "Recover original actual state", downloadConfirmation: preview.downloadPhrase, releaseConfirmation: preview.releasePhrase });
+});

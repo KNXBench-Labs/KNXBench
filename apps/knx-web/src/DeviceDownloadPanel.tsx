@@ -7,6 +7,7 @@
 // the device has read it back unchanged, with its address and octets.
 
 import ResizableTable from "./ResizableTable";
+import System2DownloadPanel from "./System2DownloadPanel";
 import { downloadEndChangesProject } from "./programmingState";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as api from "./api";
@@ -97,6 +98,8 @@ interface DeviceDownloadPanelProps {
 export default function DeviceDownloadPanel({ project, handoff = null, onHandoffHandled, onProjectChanged }: DeviceDownloadPanelProps) {
   const t = useTranslate();
   const consent = useProgrammingConsent();
+  const [mode, setMode] = useState<"memory" | "system2">("memory");
+  const [system2Busy, setSystem2Busy] = useState(false);
   const devices = useMemo(
     () =>
       project === null
@@ -389,7 +392,7 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
         <p>{t("deviceDownload.explainer")}</p>
       </header>
 
-      {project !== null && (
+      {project !== null && mode === "memory" && (
         <section className="device-download-guide" aria-label={t("deviceDownload.guide.title")}>
           <h3>{t("deviceDownload.guide.title")}
             <HelpTip labelKey="help.tip.deviceDownload.label" textKey="help.tip.deviceDownload.text" topicId="limits" /></h3>
@@ -500,6 +503,15 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
               {t("deviceDownload.gatewaySearchAgain")}
             </button>
           </fieldset>
+          <label className="device-download-device">
+            {t("system2.mode")}
+            <select data-download-mode value={mode} disabled={locked}
+              onChange={(event) => { setMode(event.target.value as "memory" | "system2");  dropPlan(); }}>
+              <option value="memory">{t("system2.mode.memory")}</option>
+              <option value="system2">{t("system2.title")}</option>
+            </select>
+          </label>
+          {mode === "memory" && <>
           <fieldset className="device-download-scope">
             <legend>{t("deviceDownload.scope.legend")}</legend>
             {SCOPES.map((option) => (
@@ -511,20 +523,24 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
             ))}
           </fieldset>
           <div className="device-download-actions">
-            <button type="button" disabled={locked || address === ""} onClick={() => void preparePlan()}>
+            <button type="button" disabled={locked || system2Busy || address === ""} onClick={() => void preparePlan()}>
               {t("deviceDownload.preparePlan")}
             </button>
             <span className="device-download-actions-note">{t("deviceDownload.preparePlanNote")}</span>
           </div>
+          </>}
         </form>
       )}
+
+      <System2DownloadPanel project={project} deviceId={deviceId} gateway={gateway}
+        enabled={mode === "system2"} ordinaryBusy={locked} onBusyChange={setSystem2Busy} />
 
       {selectedDevice && <p><DeviceLink deviceId={selectedDevice.id}>{t("devices.openEditor")}</DeviceLink></p>}
       {error && <p className="form-error" role="alert">{error}</p>}
       {programmingRefreshError && <p className="form-warning" role="alert" data-programming-refresh>
         {t("programming.refreshFailed", { reason: programmingRefreshError })}</p>}
 
-      {plan && (
+      {mode === "memory" && plan && (
         <section className="device-download-plan" aria-label={t("deviceDownload.planTitle")}>
           <h3>{t("deviceDownload.planTitle")}</h3>
           <p>{t("deviceDownload.planNothingSent")}</p>
@@ -622,7 +638,7 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
                 onChange={(event) => setUntestedAcknowledgement(event.target.value)} disabled={locked} />
             </label>
           )}
-          <button className="primary-action" disabled={locked || gateway.trim() === "" ||
+          <button className="primary-action" disabled={locked || system2Busy || gateway.trim() === "" ||
             (plan.untestedAcknowledgement !== null && untestedAcknowledgement !== plan.untestedAcknowledgement)} onClick={() => void start()}>
             {t("deviceDownload.start", { address: plan.address })}
           </button>

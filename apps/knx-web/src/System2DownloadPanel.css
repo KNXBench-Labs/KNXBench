@@ -1,0 +1,26 @@
+/** Local layout only: never alter the ordinary download or consent overlay. */
+.system2-download-panel fieldset {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+}
+.system2-download-panel .device-download-acknowledgement,
+.system2-download-panel fieldset > label {
+  display: grid;
+  gap: 0.4rem;
+  min-width: 0;
+}
+.system2-download-panel input[data-system2-phrase],
+.system2-download-panel input[data-system2-recovery],
+.system2-download-panel select[data-system2-track] {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.system2-download-panel code {
+  overflow-wrap: anywhere;
+}
+.system2-download-panel button {
+  justify-self: start;
+}

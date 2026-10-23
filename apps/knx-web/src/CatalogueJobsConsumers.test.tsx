@@ -50,8 +50,11 @@ it("keeps actual wizard origin across product-step detachment, dismissal, and co
  await click(wizard.querySelector<HTMLInputElement>('.catalogue-job-check input')!);await click(button("Back up and install",wizard));
  await click(button("Next",wizard));expect(wizard.querySelector('input[type="file"]')).toBeNull();
  const before=old.catalogManufacturers.mock.calls.length;
+ old.catalogManufacturers.mockRejectedValueOnce(new Error("read failed"));
  await act(async()=>{api.status.mockResolvedValue(committed(commandId));await c.refresh();});
  expect(old.catalogBackups).toHaveBeenCalledTimes(2);expect(old.catalogManufacturers).toHaveBeenCalledTimes(before+1);
+ expect(host.querySelector('.catalog-workspace')!.textContent).toContain("The catalogue changed, but this list could not refresh");
+ await click(button("Retry reading catalogue",host.querySelector('.catalog-workspace')!));expect(c.getSnapshot().status?.state).toBe("succeeded");
  expect(c.getSnapshot().catalogueRevision).toBe(1n);expect(c.getSnapshot().committedOrigin).toBe(origin);
  await click(button("Cancel",wizard));expect(wizard.textContent).toContain("stays in the product database");
  await act(async()=>render(false));expect(host.querySelector('.catalogue-job-root')?.textContent).toContain("The catalogue changed");

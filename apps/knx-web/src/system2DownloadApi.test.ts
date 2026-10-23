@@ -3,7 +3,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import * as system2 from "./system2DownloadApi";
 import { subscribeSessionExpired } from "./session";
 
-import { preview, status } from "./system2DownloadTestFixtures";
+import { preview, status, recoveryStatus } from "./system2DownloadTestFixtures";
 function reply(value: unknown, code = 200) {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(value), { status: code })));
 }
@@ -21,11 +21,20 @@ it.each([
 ])("refuses invalid preview %#", async (value) => {
   reply(value); await expect(system2.prepareSystem2(10)).rejects.toThrow("System-2");
 });
-it.each([{ ...status, state: "success" }, { ...status, completedSteps: 3, totalSteps: 2 }, { ...status, totalSteps: undefined }, { ...status, memory: [] }])("refuses invalid status %#", async (value) => {
+it.each([
+  { ...status, state: "success" }, { ...status, completedSteps: 3, totalSteps: 2 }, { ...status, totalSteps: undefined }, { ...status, memory: [] },
+  { ...status, downloadPhrase: undefined }, { ...status, releasePhrase: undefined },
+  { ...recoveryStatus, downloadPhrase: null }, { ...recoveryStatus, releasePhrase: null },
+  { ...recoveryStatus, downloadPhrase: "" }, { ...recoveryStatus, releasePhrase: 42 },
+  { ...recoveryStatus, recoveryPhrase: null },
+  { ...status, downloadPhrase: preview.downloadPhrase }, { ...status, releasePhrase: preview.releasePhrase },
+])("refuses invalid status %#", async (value) => {
   reply(value); await expect(system2.getSystem2Status()).rejects.toThrow("System-2");
 });
 it("preserves null status and all explicit mutation fields with no retries", async () => {
   reply(null); expect(await system2.getSystem2Status()).toBeNull();
+  reply(status); expect(await system2.getSystem2Status()).toEqual(status);
+  reply(recoveryStatus); expect(await system2.getSystem2Status()).toEqual(recoveryStatus);
   const start = { preparationId: preview.preparationId, gateway: "192.0.2.1:3671", confirmation: "a", hypothesisConfirmation: "b", downloadConfirmation: "c", releaseConfirmation: "d", recoveryTrack: "externalETS" as const };
   reply(status); await system2.startSystem2(start);
   expect(fetch).toHaveBeenCalledWith("/api/device-system2/start", expect.objectContaining({ body: JSON.stringify(start) }));

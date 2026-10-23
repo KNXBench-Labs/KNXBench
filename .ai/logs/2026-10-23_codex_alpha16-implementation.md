@@ -188,6 +188,65 @@ unmounted trait layer. No new test campaigns authorised; minimal new assertions
 await final integrated candidate. Parent owns additive merges, independent review,
 release docs/version alignment, single final gate and artifacts. No publication.
 
+## Actual mounted integration — 24 October 2026
+
+All three production-mount handoffs were read. Imported catalogue d1456693,
+System2 3b672b5f and comparison 060ee1bf/0bf1acc7 onto integration; resulting
+source 5dc47aeced255a9d3d10e787dd7940082cb0cad1 recorded clean in private
+mounted-source-receipt.json. Resolved only duplicate module declarations and
+additive static/path fencing: both private-root protections remain active.
+No parent tests/builds/gates executed. Read-only blocking reviews dispatched
+as deleg_c66d4268, System2 sa-0-190bc029 and catalogue/comparison sa-1-5cbe9bf3;
+runtime source frozen until their handoffs, release docs only may change.
+Worker compile-only evidence remains scoped; new runtime assertions unexecuted.
+No publication/hardware acceptance. Dedicated historical selection is HTTP-only;
+current durable-selected original is the UI restart recovery path.
+
+## Blocking integrated reviews — 24 October 2026
+
+Read both final independent source reports; no execution claimed. CAT1 can
+lose published B by ignoring native Retain after unhealthy NotCommitted
+settlement; CAT2 collapses ambiguous COMMIT into unresolved rollback. System2
+F1 requires isolated service initialization in four exhaustive test literals;
+F2 requires editable gateway controls for original recovery without a project.
+Corrections dispatched as deleg_4a71ec94 in two isolated fix worktrees, catalogue
+sa-0-ad10cac0 and System2 sa-1-4b6602ae. No test campaign authorised; new assertions
+await final combined candidate. Docs worker deleg_5b6beed3 owns only four named
+release/manual files in integration, no index/commit/runtime permission. Parent
+retains runtime source freeze until corrections arrive. Four findings remain open.
+
+## Release/manual draft received
+
+Read docs worker HANDOFF and the source-bound Alpha16 scope draft. Four allowed
+release/manual paths changed; no worker staging/commit or runtime mutation.
+Draft explicitly unreleased/unaccepted; versions and acceptance wording remain
+pending. Native/model16 and product28 source boundaries, new CataloguePackage
+older-reader uncertainty, exact System2 scope and best-effort physical limits
+are documented. Parent has not independently rerun worker link/whitespace scan.
+Correction workers still own CAT1/CAT2/F1/F2; no finding closed by documentation.
+No new test/build/gate run.
+
+## Four-finding corrections merged; narrow rereview
+
+Read both correction handoffs, inspected exact parents and imported3233e32d
+and43777402 to merged32534f70171049d7b673ff8134600c0be074858f. No runtime
+execution claimed. Narrow independent rereview deleg_73830aee covers CAT1/CAT2
+and F1/F2 only; new native/UI assertions remain uncompiled/unrun. Integration
+had no node_modules or dist; launched task-local npm ci prerequisite as
+proc_6f1dc75c8939, log integration-npm-ci.log. This is not a test gate. Runtime
+inputs frozen for rereview; local release/manual draft preserved. Version helper
+scripts/bump-version.sh absent, so no guessed invocation/version write made.
+
+## Source review closure and candidate version alignment
+
+Both correction rereviews ACCEPT source-level findings; parent read exact closure
+reports. Runtime regression definitions remain unexecuted. Integration npm ci
+exit0. Aligned four application manifests/web anchors to alpha.16, offline lock
+update proved only four workspace package version changes. Repository doc and
+whitespace checks exit0. No new runtime test campaign run. Preparing one committed
+full integrated candidate with existing release/manual draft; full package gate
+and release-only opt-ins/artifacts remain required. No publication or hardware Go.
+
 ## Next
 
 Consume exact worker handoffs on completion; do not poll

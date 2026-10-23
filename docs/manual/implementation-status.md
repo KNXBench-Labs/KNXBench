@@ -2,6 +2,40 @@
 
 # Implementation status
 
+## Alpha 16 preparation — integrated source, not accepted or released
+
+**Alpha 15 remains the latest released version.** The following describes source
+at `5dc47aeced255a9d3d10e787dd7940082cb0cad1`; blocking review corrections and
+combined candidate acceptance are still pending. It is not a claim that these
+workflows passed together, that artifacts are available, or that Alpha 16 is
+ready to tag. [Unreleased scope draft](../releases/alpha16.md).
+
+| Source capability | Current boundary |
+| --- | --- |
+| Configured experimental System-2 download in the existing device UI, HTTP and shared App/CLI | Exact UP 258D12 application `M-0001_A-9205-04-9270` only; actual project parameters/links/flags, retained-source refusal rather than defaults. Ordinary programming consent plus four exact typed phrases. Fresh actual affected prestate must be persisted/read back before setup or data writes. Experimental, software-tested scope only; integrated acceptance pending and hardware outcome unverified. |
+| Original-operation status and explicit System-2 recovery | Durable selected-original reattachment; historical inventory/selection over authenticated HTTP, no historical dropdown. Original backup/target and separate acknowledgements, never current defaults; no automatic retry/resume/restore. Affected-region backup and source-shape replay are best-effort, not a whole-device/allocator image or proven physical recovery. |
+| Process-owned catalogue update jobs and App-root UI | Mounted managed installer, bounded upload/preview/apply and complete paged reports, cooperative cancellation and close/drain ownership. COMMIT evidence, uncertainty, cleanup and backup retention are independent facts; blocking review corrections/combined acceptance remain open. Named bounds are not aggregate RSS/disk quotas, hard latency or power-loss guarantees. |
+| Device → project comparison adoption | Separately previewed/confirmed named parameters with exact typed source attribution only; one atomic undoable edit. Stale/ambiguous or unsupported mixed selections refuse. Raw/unknown/masked rows, tables, individual addresses, GA and associations cannot be adopted. Project → device uses the existing validated download review, not a second write path. |
+| Catalogue-authored Save/Save As source acquisition | Unique measured winning sources and recorded package ownership acquire the complete exact original `CataloguePackage` plus required members. Server/desktop reopen uses the normal installer, including with an empty catalogue. Missing/corrupt/ambiguous new dependencies refuse; old missing sources are not invented. Older-reader compatibility is untested despite no schema bump. |
+| Parameter block/separator caption language | Selected product-language `Text` overlays precede existing placeholder resolution. Explicit empty translations remain empty; row/column text-parameter references and broader layout semantics are not newly admitted. |
+
+Source constants remain **native/store 16 and model 16**, with the separate
+**product database at 28**. Writable catalogue open migrates product26 → 27 → 28,
+including master provenance and promotion repair; Alpha 15 refuses product28.
+Historical provenance that was never measured stays unavailable. Keep independent
+closed-catalogue and project backups before upgrading; no older-reader promise
+follows from unchanged native/model numbers.
+
+[System-2 mount](../contracts/alpha16-system2-http-mount.md) ·
+[Catalogue runtime](../contracts/catalogue-jobs/alpha16-runtime.md) ·
+[Comparison adoption](../contracts/alpha16-comparison-adoption.md) ·
+[Source portability](../contracts/alpha16-catalogue-portability.md) ·
+[Caption-language scope](../contracts/alpha16-parameter-layout.md).
+
+The dated Alpha-15 and older sections below retain their historical evidence;
+this current-source section supersedes their old System-2, migration and
+catalogue-authored portability boundaries, not their release availability.
+
 ## Alpha 15 workbench and data boundary
 
 Since Alpha 15, the File menu has keyboard/focus-aware submenus and viewport/zoom
@@ -688,7 +722,7 @@ Main source delivery is [verified](../status/2026-10-09-offline-ap1-verification
 | Capability | Status | Notes |
 | --- | --- | --- |
 | Product data ingested from inside a `.knxproj` | ✅ Implemented | The reference project's 4 manufacturers and 12 application programs ingest completely |
-| A `.knxdb` carries available manifest manufacturer files (store schema 16) | ✅ Included in Alpha 12 | Save, Save As and browser export embed available hash-matched files from the saved manifest; server/desktop open reinstalls carried files. Missing bytes or manifest entries can leave even a new save dependent on the external product database. Restore matching originals where available; this is not universal self-contained portability — issue #21, [ADR-0128](../adr/0128-native-project-files-carry-their-manufacturer-files.md), [KL-183](../KNOWN_LIMITATIONS.md#catalogue-kl-183) |
+| A `.knxdb` carries available manifest manufacturer files (store schema 16) | ✅ Included in Alpha 12; bounded unreleased extension | Existing manifest-backed files remain carried. Unreleased Alpha-16 Save/Save As also acquires complete exact `CataloguePackage` originals for uniquely measured catalogue dependencies; absent/corrupt/ambiguous new ownership refuses. Missing historical sources remain explicit, and older-reader compatibility is untested despite schema16 — [current contract](../contracts/alpha16-catalogue-portability.md), [ADR-0128](../adr/0128-native-project-files-carry-their-manufacturer-files.md) |
 | Standalone `.knxprod` at master data scheme 11 or 20 | ✅ Implemented | Four real files, content-addressed, idempotent re-install — [Devices and products](user-guide/05-devices-and-products.md) |
 | Legacy ETS3 `.vd3`/`.vd4`/`.vd5` product databases, offline use (web, CLI) | 🟡 Partial or experimental | The real `.vd3` and `.vd4` import completely; the real Siemens `.vd5` (88 programs) imports except its `string`/`long enum` parameters; password dialog and one remembered password; download plans from the file's own load procedure (untested: never run on a device); no DPTs yet — [Devices and products](user-guide/05-devices-and-products.md#old-ets3-product-databases-vd3-vd4-vd5), [ADR-0094](../adr/0094-legacy-exim-product-files.md) |
 | Standalone `.knxprod` at schemes 12, 13, 14 and exact-namespace 21 | 🟡 Partial or experimental | Synthetic tests and the passing read-only corpus matrix verify parser/persistence behavior, not full manufacturer semantics |
@@ -813,6 +847,13 @@ source-bound browser/unit/build evidence; this does not expand KNX compatibility
 | USB and other non-IP interfaces | ❌ Not implemented | KNXnet/IP only |
 
 ## Commissioning and device download
+
+The historical hardware results below do not verify the unreleased configured
+System-2 path. That separate UI/HTTP/App/CLI implementation is restricted to
+UP 258D12 `M-0001_A-9205-04-9270`, with actual-project preparation, normal consent
+plus four phrases and backup-before-setup. Blocking corrections/combined acceptance
+are pending; hardware outcome and physical best-effort recovery remain unverified.
+[Current source scope](../contracts/alpha16-system2-http-mount.md).
 
 | Capability | Status | Notes |
 | --- | --- | --- |

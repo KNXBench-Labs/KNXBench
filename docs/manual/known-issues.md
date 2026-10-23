@@ -22,13 +22,91 @@ sidecars to bypass the refusal; see [CLI input handling](user-guide/10-command-l
 Source delivery and internal runtime checks are complete on `4eee65d8`; a new
 release is not implied. No receiver/bus compatibility is claimed.
 
-## UP258 System-2 candidate (source, 20 October 2026)
+<a id="up258-system-2-candidate-source-20-october-2026"></a>
 
-The [complete-defaults validation workflow](../contracts/up258-system2-validation.md)
-is simulator-only and must be labeled **strong hypothesis, simulator-tested**.
-It does not program a real detector. A saved memory image cannot prove allocator,
-task-state or masked-byte recovery; real-device download remains refused until
-those technical rules are established, in addition to separate user approval.
+## Alpha 16 preparation — source limits, acceptance still pending
+
+**Alpha 15 remains the latest released version.** These updates describe
+integrated source `5dc47aeced255a9d3d10e787dd7940082cb0cad1`, not a published or
+accepted Alpha-16 candidate. Blocking review corrections, combined workflow
+acceptance and artifacts remain pending. The older dated inventory below is not
+a new audit of every limitation. [Unreleased scope draft](../releases/alpha16.md).
+
+### Exact experimental System-2 path, not general device support
+
+The separate [complete-defaults validation workflow](../contracts/up258-system2-validation.md)
+remains simulator-only. Current source also mounts a distinct **configured**
+UI/HTTP/App/CLI path for UP 258D12 application `M-0001_A-9205-04-9270` only.
+It uses actual project parameters, group links and flags; missing retained sources
+refuse rather than substitute defaults. Ordinary consent plus four exact typed
+phrases are required. This is **experimental, software-tested scope only;
+hardware outcome unverified**, not all-System-2 support or ETS certification.
+
+Fresh actual affected prestate must be persisted/read back before setup and every
+later mutation. It is not a whole-device/allocator backup: historical allocator
+commands, masked/unused-byte survival and indirect firmware effects remain
+unresolved. Original-state recovery is explicit, once-only and best-effort;
+`Restored` needs full required verification, not merely transport success.
+Cancellation or HTTP loss does not mean nothing was written. Retain original
+private journals/bundles; do not automatically retry, resume or restore.
+
+The UI reattaches the durable selected original and uses its original recovery
+acknowledgements, not the current project. Historical inventory/selection is
+available through authenticated HTTP, **not a historical UI dropdown**. Missing
+or corrupt selection/evidence refuses; a backup-available label does not promise
+physical restorability. Combined UI/server acceptance remains outstanding.
+[Exact service and recovery limits](../contracts/alpha16-system2-configured-download.md),
+[restart selection](../contracts/alpha16-system2-http-mount.md).
+
+### Catalogue jobs: finite resources and uncertain outcomes
+
+The integrated picker/wizard uses the process-owned job service and App-root
+tracking, not a component-owned synchronous install. Leaving a view does not
+cancel the worker; cancellation is cooperative and may wait on native/XML or
+filesystem spans. A lost reply or forgotten/expired handle does not prove rollback.
+Witnessed COMMIT, unknown settlement, cleanup/quarantine and backup retention
+must remain separate; blocking review corrections and combined acceptance are
+still open. Report disposal is not recovery-backup deletion. Preserve retained
+committed/uncertain backups for inspection rather than assuming cleanup recovered
+the catalogue.
+
+Standard/large expansion remains 4/16 GiB with explicit large opt-in; source and
+member bytes are each bounded at 1,000,000,000. The existing-catalogue copy bound
+is 8 GiB of page bytes, separate from the 64 GiB working-main limit. A successful
+update can grow beyond the next job's input bound. These are not aggregate RSS,
+disk, hard cancellation-latency, throughput or power-loss guarantees. Browser
+handles/report retention are finite and do not provide durable outcome history.
+[Runtime boundaries](../contracts/catalogue-jobs/alpha16-runtime.md).
+
+### Comparison adoption is named-parameter-only
+
+Only a current, application-checked full observation with exact typed attribution
+can supply a separately previewed and confirmed project edit. Tables, individual
+addresses, GA/associations, raw, masked, unknown and unread rows cannot be adopted;
+a mixed unsupported selection refuses as a whole. Partial comparisons and
+System-2 raw-only results do not grant adoption authority. One changed edit is
+undoable as a whole; it neither sets Synced nor programs the device. Lost apply
+responses require project/history inspection, not automatic reapply.
+[Adoption scope](../contracts/alpha16-comparison-adoption.md).
+
+### Catalogue-authored portability is conditional, not universal
+
+Save/Save As now acquire new dependencies only from measured winning sources
+with one recorded owning package. The **complete exact original
+`CataloguePackage`** is carried with required members, including opaque content,
+not a newly reconstructed export. Server/desktop open replays originals through
+the normal installer before individual sources. Missing/corrupt/ambiguous new
+ownership refuses before publication; existing legacy manifests are preserved
+with explicit unavailable-source diagnostics. Missing historical originals cannot
+be invented. Keep matching original packages and independent backups. **Older
+readers are untested despite unchanged native/model schema 16.**
+[Portability boundary](../contracts/alpha16-catalogue-portability.md).
+
+Current product schema is **28**: writable opens migrate Alpha 15's product26
+through v27/v28 provenance/promotion repair. The old v23–v25 promotion-residue note
+below describes the Alpha-15 baseline, not the current repair boundary. Historical
+winning/install authority that was never recorded remains unavailable. Alpha 15
+refuses product28; preserve a separate closed-catalogue backup before upgrade.
 
 ## Parameter layout (Alpha 14)
 
@@ -47,7 +125,7 @@ Inline sections and object folders are not shown yet. Alpha 13 and older binarie
 | --- | --- | --- |
 | Import is one-way | Keep the original ETS archive; your edited working copy is `.knxdb`, not an ETS export | [Projects](user-guide/02-projects.md#there-is-no-knxproj-export) |
 | Native history is not an independent disaster backup | Current releases keep versions inside the same file; alpha.6 had no persistent history. Keep independent copies | [Project history](user-guide/02-projects.md#project-history-restart-safe-undo-and-versions) |
-| A new save is not automatically self-contained | Only available manufacturer files in the saved manifest are carried. A catalogue-created device can still need matching product data after Save; keep original packages and independent backups | [Manufacturer-file scope](../limitations/KL-183-knxdb-manufacturer-files.md) |
+| A new save is not automatically self-contained | Unreleased Alpha-16 Save/Save As acquires complete exact original packages only for uniquely measured catalogue dependencies. Missing/corrupt/ambiguous new ownership refuses; historical missing bytes are not invented. Older readers remain untested despite schema16; keep originals and independent backups | [Current source ownership](../contracts/alpha16-catalogue-portability.md) |
 | Browser files live on the server | Save is not a download; Export project gives you a local copy | [Web and desktop differences](user-guide/11-web-and-docker.md#web-build-versus-desktop-build) |
 | Shared server, shared project | One password and one undo stack are not collaborative editing | [Deployment](user-guide/11-web-and-docker.md#authentication) |
 | Programming marks are project belief (P3, Alpha 12) | Adr/App/Par/GA track edits and server writes, not a live comparison. Recovered snapshot undo after a later write can conservatively show additional pending parts. Reconcile external/CLI programming manually; resolve refresh/storage warnings before trusting flags | [Programming marks](user-guide/05-devices-and-products.md#programming-marks-p3-since-alpha-12) |
@@ -65,8 +143,8 @@ only a maintainer would care about, and ones about the reasoning behind a
 design decision rather than about a defect. Where an entry below has a
 counterpart there, the **Details** line links straight to it.
 
-[Alpha 15](../releases/alpha15.md) is the prepared source scope; release acceptance
-and public artifact verification remain separate. It fixes captions and empty
+The following is the **Alpha-15 historical baseline**, not the current Alpha-16
+source boundary described above. [Alpha 15](../releases/alpha15.md) fixes captions and empty
 topology cards, explains unavailable catalogues and adds previewed placement
 cleanup, byte-level comparison marks and product-declared System labels, without
 expanding programming admission. Historical measurements below retain their

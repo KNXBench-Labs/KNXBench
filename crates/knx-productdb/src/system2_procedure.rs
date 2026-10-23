@@ -36,13 +36,22 @@ use crate::system2::{project_tool_metadata, ProjectedStep};
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct System2ProcedurePolicy {
     declared_counts_zero_flags_full_table_identity: (),
+    preserve_independent_data: bool,
 }
 
 impl System2ProcedurePolicy {
+    /// Opt into source-reservation bounds while retaining independent data.
+    pub fn source_capacity_preserving_independent_data() -> Self {
+        Self {
+            preserve_independent_data: true,
+            ..Self::declared_counts_zero_flags_full_table_identity()
+        }
+    }
     /// Select all three named hypotheses explicitly, never through live admission.
     pub fn declared_counts_zero_flags_full_table_identity() -> Self {
         Self {
             declared_counts_zero_flags_full_table_identity: (),
+            preserve_independent_data: false,
         }
     }
 }
@@ -93,7 +102,7 @@ fn attribute<T: std::str::FromStr>(
 pub fn plan_system2_candidate(
     image: &DownloadImage,
     target: IndividualAddress,
-    _policy: &System2ProcedurePolicy,
+    policy: &System2ProcedurePolicy,
 ) -> Result<PropertyDownloadPlan, System2ProcedureError> {
     let code = &image.code;
     if code.has_fixup_list || !code.relative_segments.is_empty() {
@@ -158,6 +167,35 @@ pub fn plan_system2_candidate(
             return Err(failure(
                 None,
                 "source segments must have unique complete images",
+            ));
+        }
+    }
+    let reservations = if policy.preserve_independent_data {
+        Some(
+            crate::image::system2_group_reservations(code)
+                .map_err(|e| failure(None, e.to_string()))?,
+        )
+    } else {
+        None
+    };
+    if let Some(reservations) = &reservations {
+        // Bind every computed record to one declared placement, not merely its
+        // segment. Public image metadata is not a permission to widen writes.
+        if image.table_writes.len() != reservations.len()
+            || reservations.iter().any(|(id, start, reserved_end)| {
+                let mut matching = image
+                    .table_writes
+                    .iter()
+                    .filter(|span| span.segment_id == *id && span.start == *start);
+                matching
+                    .next()
+                    .is_none_or(|span| span.end <= span.start || span.end > *reserved_end)
+                    || matching.next().is_some()
+            })
+        {
+            return Err(failure(
+                None,
+                "computed table metadata must uniquely match every declared reservation",
             ));
         }
     }
@@ -250,7 +288,15 @@ pub fn plan_system2_candidate(
                 while offset < segment.octets.len() {
                     let writable = |i: usize| {
                         segment.mask.as_ref().is_none_or(|m| m[i] == 0xFF)
-                            && table_span.is_none_or(|span| span.start <= i && i < span.end)
+                            && if let Some(reservations) = &reservations {
+                                !reservations.iter().any(|(id, start, end)| {
+                                    id == &segment.id && *start <= i && i < *end
+                                }) || image.table_writes.iter().any(|span| {
+                                    span.segment_id == segment.id && span.start <= i && i < span.end
+                                })
+                            } else {
+                                table_span.is_none_or(|span| span.start <= i && i < span.end)
+                            }
                     };
                     if !writable(offset) {
                         offset += 1;

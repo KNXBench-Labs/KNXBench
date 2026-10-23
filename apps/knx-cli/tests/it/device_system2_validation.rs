@@ -64,6 +64,7 @@ fn bundle(dir: &std::path::Path) -> (std::path::PathBuf, PreparedBundle) {
         source_sha256: "b".repeat(64),
         plan_sha256: record.sha256().unwrap(),
         simulated: true,
+        project_preparation_sha256: None,
     };
     let bundle = PreparedBundle::new(binding, record).unwrap();
     let file = dir.join("bundle.json");

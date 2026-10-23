@@ -16,6 +16,7 @@ fn binding() -> Binding {
         source_sha256: "b".repeat(64),
         plan_sha256: "c".repeat(64),
         simulated: true,
+        project_preparation_sha256: None,
     }
 }
 #[test]

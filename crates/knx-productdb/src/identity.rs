@@ -890,6 +890,95 @@ fn producer_facts(bytes: &[u8]) -> Option<ProducerFacts> {
     }
 }
 
+/// Unique measured declaration of the selected current winning source.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OwnedSourceIdentity {
+    pub occurrence: u32,
+    pub digest: String,
+}
+
+/// Read only: never scans or repairs missing provenance.
+pub fn owned_source_identity(
+    conn: &Connection,
+    kind: IdentityKind,
+    logical_id: &str,
+    expected_source_sha256: &str,
+) -> Result<OwnedSourceIdentity, ProductDbError> {
+    checked_digest(expected_source_sha256.to_owned())?;
+    if winner_of(conn, kind, logical_id)?.as_deref() != Some(expected_source_sha256)
+        || stored_status(conn, expected_source_sha256)? != Some(ScanStatus::Measured)
+        || !conn.query_row(
+            "SELECT EXISTS(SELECT 1 FROM source_parse_evidence AS p JOIN source_file AS f ON f.sha256=p.sha256 WHERE p.sha256=?1)",
+            [expected_source_sha256],
+            |r| r.get::<_, bool>(0),
+        )?
+    {
+        return Err(corrupt(
+            "owner witness requires current measured parsed winning source",
+        ));
+    }
+    let rows = conn.prepare("SELECT occurrence, digest FROM source_identity WHERE source_sha256=?1 AND table_name=?2 AND logical_id=?3 ORDER BY occurrence LIMIT 2")?
+        .query_map(params![expected_source_sha256, kind.as_table(), logical_id], |r| Ok((r.get::<_, i64>(0)?, r.get::<_, String>(1)?)))?
+        .collect::<Result<Vec<_>, _>>()?;
+    if rows.len() != 1 || checked_occurrence(rows[0].0)? != 1 {
+        return Err(corrupt(
+            "owner witness requires exactly one first occurrence",
+        ));
+    }
+    Ok(OwnedSourceIdentity {
+        occurrence: 1,
+        digest: checked_digest(rows[0].1.clone())?,
+    })
+}
+
+#[cfg(test)]
+mod owner_witness_tests {
+    use super::*;
+    #[test]
+    fn owned_source_witness_refuses_losers_and_missing_stale_unavailable_or_repeated_scans() {
+        for corruption in [
+            "DELETE FROM source_file",
+            "DELETE FROM source_parse_evidence",
+            "DELETE FROM source_identity_scan",
+            "UPDATE source_identity_scan SET scanner=scanner+1",
+            "UPDATE source_identity_scan SET status='unavailable',reason='synthetic'",
+            "DELETE FROM source_identity",
+            "INSERT INTO source_identity SELECT source_sha256,table_name,logical_id,2,digest FROM source_identity",
+            "UPDATE source_identity SET occurrence=2",
+        ] {
+            let dir = tempfile::tempdir().unwrap();
+            let conn = crate::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+            let bytes = br#"<KNX xmlns="http://knx.org/xml/project/20"><ManufacturerData><Manufacturer RefId="M-0000"><ApplicationPrograms><ApplicationProgram Id="AP" Name="Winner"/></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
+            crate::ingest_file(&conn,"M-0000/Application.xml",bytes).unwrap();
+            let loser = String::from_utf8(bytes.to_vec()).unwrap().replace("Winner","Loser").into_bytes();
+            crate::ingest_file(&conn,"M-0000/Loser.xml",&loser).unwrap();
+            assert!(owned_source_identity(&conn,IdentityKind::ApplicationProgram,"AP",&crate::sha256_hex(&loser)).is_err());
+            assert!(owned_source_identity(&conn,IdentityKind::ApplicationProgram,"missing",&crate::sha256_hex(bytes)).is_err());
+            conn.execute_batch("PRAGMA foreign_keys=OFF").unwrap();
+            conn.execute_batch(corruption).unwrap();
+            let changes=conn.total_changes();
+            assert!(owned_source_identity(&conn,IdentityKind::ApplicationProgram,"AP",&crate::sha256_hex(bytes)).is_err(),"{corruption}");
+            assert_eq!(conn.total_changes(),changes);
+        }
+    }
+    #[test]
+    fn owned_source_witness_requires_real_unique_current_winner() {
+        let dir = tempfile::tempdir().unwrap();
+        let conn = crate::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+        let bytes = br#"<KNX xmlns="http://knx.org/xml/project/20"><ManufacturerData><Manufacturer RefId="M-0000"><Hardware><Hardware Id="H"><Hardware2Programs><Hardware2Program Id="HP"><ApplicationProgramRef RefId="AP"/></Hardware2Program></Hardware2Programs></Hardware></Hardware></Manufacturer></ManufacturerData></KNX>"#;
+        crate::ingest_file(&conn, "M-0000/Hardware.xml", bytes).unwrap();
+        let sha = crate::sha256_hex(bytes);
+        let changes = conn.total_changes();
+        let witness = owned_source_identity(&conn, IdentityKind::Hardware2Program, "HP", &sha);
+        assert!(
+            witness.is_ok(),
+            "real unique current winning source must have a witness"
+        );
+        assert_eq!(witness.unwrap().occurrence, 1);
+        assert_eq!(conn.total_changes(), changes);
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Queries
 // ---------------------------------------------------------------------------

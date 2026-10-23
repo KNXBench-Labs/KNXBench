@@ -41,6 +41,8 @@ pub struct ExperimentalSystem2Image {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ExperimentalParameterDisposition {
     Virtual,
+    /// No inactive default was written: the source segment remains the base.
+    RetainedSourceTemplate,
     BackgroundDefault,
     LegacyPatchDefaultReference,
     DefaultUnionBase,
@@ -73,7 +75,7 @@ pub fn build_experimental_system2_image(
     request: &ImageRequest,
     policy: &ExperimentalSystem2ImagePolicy,
 ) -> Result<ExperimentalSystem2Image, ImageError> {
-    let prepared = Prepared::load(conn, request, policy)?;
+    let prepared = Prepared::load(conn, request, policy, false)?;
     let mut image =
         super::build_image_selected(conn, request, ImageLayout::System2, Some(&prepared))?;
     image.inferences.push(Inference {
@@ -110,7 +112,27 @@ pub fn build_experimental_system2_image(
     Ok(ExperimentalSystem2Image { image, coverage })
 }
 
+/// Build a project-configured source-preserving candidate under revision 2.
+/// This is an explicit hypothesis, not ordinary image or hardware admission.
+pub fn build_project_experimental_system2_image(
+    conn: &Connection,
+    request: &ImageRequest,
+    policy: &ExperimentalSystem2ImagePolicy,
+) -> Result<ExperimentalSystem2Image, ImageError> {
+    let prepared = Prepared::load(conn, request, policy, true)?;
+    let mut image =
+        super::build_image_selected(conn, request, ImageLayout::System2, Some(&prepared))?;
+    image.inferences.push(Inference {
+        rule: "experimental-system2-source-template-project-overlay",
+        detail: "STRONG HYPOTHESIS revision 2: retain source template, validate inactive alternatives without writing ordinary or union defaults; write inactive explicit LegacyPatchAlways reference consensus and overlay active project references. Numeric, binary, union-offset and reference-activation rules are caller-selected hypotheses, not normative precedence or hardware support.".into(),
+        reference: "caller-pinned schema20 or schema23 source; explicit revision2 policy",
+    });
+    let coverage = prepared.coverage(conn, &image)?;
+    Ok(ExperimentalSystem2Image { image, coverage })
+}
+
 pub(super) struct Prepared {
+    source_template: bool,
     parameters: BTreeMap<String, ParameterPolicy>,
     binary_values: BTreeMap<(String, u64), u8>,
     source_refs: BTreeMap<String, String>,
@@ -298,6 +320,75 @@ fn unsupported(what: impl Into<String>) -> ImageError {
 }
 
 impl Prepared {
+    pub(super) fn retains_source_template(&self) -> bool {
+        self.source_template
+    }
+
+    pub(super) fn validate_requested_value(
+        &self,
+        code: &ProgramCode,
+        types: &ParameterTypes,
+        reference: &str,
+        raw: &str,
+    ) -> Result<(), ImageError> {
+        let value = self.value(types, reference, raw)?;
+        let parameter = types.parameter_of(reference)?;
+        if let Some(placement) = code.parameters.get(parameter) {
+            let (segment, field) = field_of(parameter, placement, types.size(reference)?)?;
+            let source = code
+                .segment(segment)
+                .ok_or_else(|| unsupported("unknown requested segment"))?;
+            let mut probe = ParameterImage::new(
+                source
+                    .data
+                    .clone()
+                    .ok_or_else(|| unsupported("requested field has no source data"))?,
+            );
+            match value {
+                Encoded::Number(n) => probe.write(field, n),
+                Encoded::Text { octets, .. } => probe.write_octets(field, &octets),
+            }
+            .map_err(|error| ImageError::Parameter {
+                parameter_ref: reference.into(),
+                error,
+            })?;
+            check_masks(
+                code,
+                &[SegmentImage {
+                    id: segment.into(),
+                    address: source.address,
+                    octets: probe.into_octets(),
+                    mask: source.mask.clone(),
+                }],
+            )?;
+        }
+        Ok(())
+    }
+
+    pub(super) fn validate_flag_overrides(
+        &self,
+        request: &ImageRequest,
+        activation: &Activation,
+    ) -> Result<(), ImageError> {
+        if self.source_template {
+            for (reference, flags) in &request.flag_overrides {
+                if !flags.is_empty()
+                    && activation
+                        .com_object_refs
+                        .iter()
+                        .filter(|r| r.scope.is_none() && r.ref_id == *reference)
+                        .count()
+                        != 1
+                {
+                    return Err(unsupported(format!(
+                        "{reference}: flag override requires one exact active unscoped reference"
+                    )));
+                }
+            }
+        }
+        Ok(())
+    }
+
     pub(super) fn extend_activation(
         &self,
         activation: &mut Activation,
@@ -375,6 +466,12 @@ impl Prepared {
                     let (segment, field) = field_of(parameter, placement, types.size(reference)?)?;
                     let disposition = if active_reference.is_some() {
                         ExperimentalParameterDisposition::ActiveOverlay
+                    } else if self.source_template {
+                        if policy.legacy_patch {
+                            ExperimentalParameterDisposition::LegacyPatchDefaultReference
+                        } else {
+                            ExperimentalParameterDisposition::RetainedSourceTemplate
+                        }
                     } else if matches!(placement, ParameterPlacement::UnionMember { .. }) {
                         if policy.default_union {
                             ExperimentalParameterDisposition::DefaultUnionBase
@@ -599,7 +696,25 @@ impl Prepared {
                 parameter_ref: reference.into(),
                 error,
             })?;
-            if union_id.is_some() && !policy.default_union {
+            if self.source_template {
+                let source = code
+                    .segment(segment)
+                    .ok_or_else(|| unsupported("unknown segment"))?;
+                check_masks(
+                    code,
+                    &[SegmentImage {
+                        id: segment.into(),
+                        address: source.address,
+                        octets: probe.into_octets(),
+                        mask: source.mask.clone(),
+                    }],
+                )?;
+            }
+            if self.source_template {
+                if !policy.legacy_patch || active_parameters.contains(parameter.as_str()) {
+                    continue;
+                }
+            } else if union_id.is_some() && !policy.default_union {
                 continue;
             }
             match value {
@@ -624,6 +739,7 @@ impl Prepared {
         conn: &Connection,
         request: &ImageRequest,
         policy: &ExperimentalSystem2ImagePolicy,
+        source_template: bool,
     ) -> Result<Self, ImageError> {
         for (name, actual, expected) in [
             (
@@ -654,7 +770,11 @@ impl Prepared {
             (
                 "invisible_parameters",
                 &policy.invisible_parameters,
-                "background-parameter-default-union-base-active-overlay-v1",
+                if source_template {
+                    "source-template-inactive-legacy-patch-active-overlay-v1"
+                } else {
+                    "background-parameter-default-union-base-active-overlay-v1"
+                },
             ),
         ] {
             if actual != expected {
@@ -663,15 +783,16 @@ impl Prepared {
                 )));
             }
         }
-        if policy.revision != 1 {
+        if policy.revision != if source_template { 2 } else { 1 } {
             return Err(unsupported("unrecognized policy revision"));
         }
         if request.program_id != policy.binding.program_id {
             return Err(unsupported("application binding mismatch"));
         }
-        if !request.values.is_empty()
-            || !request.links.is_empty()
-            || !request.flag_overrides.is_empty()
+        if !source_template
+            && (!request.values.is_empty()
+                || !request.links.is_empty()
+                || !request.flag_overrides.is_empty())
         {
             return Err(unsupported("only complete default configuration without project overrides or links is supported"));
         }
@@ -715,7 +836,10 @@ impl Prepared {
                     }
                     let attributes = crate::xml::attrs(&element, "experimental source")?;
                     if attributes.get("xmlns") != Some(policy.binding.schema_namespace.as_str())
-                        || policy.binding.schema_namespace != "http://knx.org/xml/project/20"
+                        || !(policy.binding.schema_namespace == "http://knx.org/xml/project/20"
+                            || (source_template
+                                && policy.binding.schema_namespace
+                                    == "http://knx.org/xml/project/23"))
                     {
                         return Err(unsupported("schema binding mismatch"));
                     }
@@ -757,6 +881,7 @@ impl Prepared {
         }
         let source = parameter_policies(&bytes, &request.program_id)?;
         Ok(Self {
+            source_template,
             parameters: source.parameters,
             binary_values,
             source_refs: source.references,

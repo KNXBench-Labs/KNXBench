@@ -235,6 +235,9 @@ pub struct AppState {
     /// Closed by the first stop signal: from then on no route opens a new
     /// tunnel (Goal A3, KL-163). See `graceful_stop`.
     pub stop_admission: crate::StopAdmission,
+    /// One process-owned job service, shared by routes, runtime workers and
+    /// standalone/embedded shutdown. Never construct a second runtime owner.
+    pub catalogue_jobs: std::sync::Arc<crate::catalogue_jobs::CatalogueUpdateJobs>,
 }
 
 impl AppState {
@@ -393,6 +396,9 @@ impl AppState {
             catalog_requests: Mutex::new(Default::default()),
             legacy_password: None,
             stop_admission: Default::default(),
+            catalogue_jobs: std::sync::Arc::new(crate::catalogue_jobs::CatalogueUpdateJobs::new(
+                crate::catalogue_jobs::Incarnation::mint(),
+            )),
         }
     }
 }

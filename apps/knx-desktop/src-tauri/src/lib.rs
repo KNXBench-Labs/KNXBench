@@ -22,6 +22,7 @@
 
 use std::net::TcpListener;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
@@ -142,17 +143,83 @@ fn spawn_server(
     listener: TcpListener,
     state: Arc<knx_server::AppState>,
     static_dir: Option<PathBuf>,
-) {
+) -> knx_server::EmbeddedServerHandle {
     listener
         .set_nonblocking(true)
         .expect("failed to set listener non-blocking");
-    tauri::async_runtime::spawn(async move {
+    tauri::async_runtime::block_on(async move {
         let listener =
             tokio::net::TcpListener::from_std(listener).expect("listener conversion failed");
-        axum::serve(listener, knx_server::app(state, static_dir))
-            .await
-            .expect("knx-server exited unexpectedly");
+        knx_server::EmbeddedServerHandle::spawn(listener, state, static_dir)
+    })
+}
+
+type SharedShutdown = Arc<DesktopShutdown>;
+
+/// Native notifications coalesce; neither their count nor their exit code is
+/// authority to force a device/catalogue wait. No desktop force UI is exposed.
+struct DesktopShutdown {
+    server: knx_server::EmbeddedServerHandle,
+    closing: AtomicBool,
+    exit_authorized: AtomicBool,
+    task: Mutex<Option<tauri::async_runtime::JoinHandle<()>>>,
+}
+
+impl DesktopShutdown {
+    fn new(server: knx_server::EmbeddedServerHandle) -> Self {
+        Self {
+            server,
+            closing: AtomicBool::new(false),
+            exit_authorized: AtomicBool::new(false),
+            task: Mutex::new(None),
+        }
+    }
+
+    fn begin_once(&self) -> bool {
+        self.closing
+            .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+            .is_ok()
+    }
+
+    fn exit_is_authorized(&self) -> bool {
+        self.exit_authorized.load(Ordering::SeqCst)
+    }
+}
+
+fn begin_close<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
+    let Some(shutdown) = app.try_state::<SharedShutdown>() else {
+        return;
+    };
+    if !shutdown.begin_once() {
+        return;
+    }
+    shutdown.server.request_close();
+    let lifetime = Arc::clone(&shutdown);
+    let app = app.clone();
+    let task = tauri::async_runtime::spawn(async move {
+        // Ordinary close has no second-stop future. In particular Destroyed,
+        // ExitRequested(None) and a queued Some(0) cannot shorten this drain.
+        let result = lifetime.server.drain_close(std::future::pending()).await;
+        eprintln!("knx-desktop: shutdown {result:?}");
+        if result.catalogue.work_outstanding {
+            eprintln!("knx-desktop: catalogue work remains; process exit can leave its outcome unavailable/possibly committed; retained backup may need inspection");
+        }
+        if matches!(
+            result.writes.end,
+            knx_server::WriteWaitEnd::TimedOut | knx_server::WriteWaitEnd::SecondSignal
+        ) {
+            eprintln!("knx-desktop: device work still running ends with the process; the device may be partly written, check it before relying on it");
+        }
+        // Publish before the sole final exit request can reenter the callback.
+        lifetime.exit_authorized.store(true, Ordering::SeqCst);
+        if result.requires_process_exit() {
+            // Returning through runtime Drop could wait forever on blocking
+            // work. Explicit exit is an escape, never cleanup evidence.
+            std::process::exit(0);
+        }
+        app.exit(0);
     });
+    *shutdown.task.lock().unwrap_or_else(|p| p.into_inner()) = Some(task);
 }
 
 /// The app's own IPC commands, shared by `run` and the ACL regression test.
@@ -171,28 +238,14 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(app_command_handler!())
-        // The only window this app ever builds is "main" (see `setup` below).
-        // Destroying it must end the process, not just hide it: a File > Quit
-        // that leaves the binary running is a bug, and a user closing the
-        // last window expects the app gone. `exit(0)` needs no plugin;
-        // `AppHandle::exit` and `WindowEvent::Destroyed` are both already in
-        // the pinned `tauri` crate. `CloseRequested` needs no clause here:
-        // the frontend listens for `tauri://close-requested` (`quit.ts`
-        // `onWindowCloseRequested`), and while a JS listener exists `tauri`
-        // itself calls `prevent_close()` and leaves the decision — the same
-        // unsaved-changes check as File > Quit — to it (§132).
-        //
-        // The one exception is a frontend that is provably dead (§133): its
-        // web process terminated and reloading it kept failing, so nothing
-        // is left that could ever answer. Then the shell answers the user's
-        // explicit close itself, asking natively first if the server still
-        // holds unsaved edits. A busy or hung page is never treated as dead.
+        // Keep the frontend/dead-frontend unsaved checks. Accepted window
+        // destruction begins owned drain, never an early AppHandle::exit.
         .on_window_event(|window, event| {
             if window.label() != "main" {
                 return;
             }
             match event {
-                tauri::WindowEvent::Destroyed => window.app_handle().exit(0),
+                tauri::WindowEvent::Destroyed => begin_close(window.app_handle()),
                 tauri::WindowEvent::CloseRequested { .. } => close_after_dead_frontend(window),
                 _ => {}
             }
@@ -207,11 +260,11 @@ pub fn run() {
             let state = Arc::new(knx_server::AppState::with_user_product_db(data_dir));
             app.manage(Arc::clone(&state));
 
-            let window_url = if cfg!(debug_assertions) {
+            let (window_url, server) = if cfg!(debug_assertions) {
                 let listener = TcpListener::bind(("127.0.0.1", knx_server::DEV_PORT))
                     .expect("dev port already in use — is another `cargo tauri dev` running?");
-                spawn_server(listener, state, None);
-                "http://localhost:1420".to_string()
+                let server = spawn_server(listener, state, None);
+                ("http://localhost:1420".to_string(), server)
             } else {
                 let listener =
                     TcpListener::bind(("127.0.0.1", 0)).expect("failed to bind an ephemeral port");
@@ -220,9 +273,10 @@ pub fn run() {
                     .path()
                     .resolve("frontend", tauri::path::BaseDirectory::Resource)
                     .expect("bundled frontend missing");
-                spawn_server(listener, state, Some(static_dir));
-                format!("http://127.0.0.1:{port}")
+                let server = spawn_server(listener, state, Some(static_dir));
+                (format!("http://127.0.0.1:{port}"), server)
             };
+            app.manage(Arc::new(DesktopShutdown::new(server)));
 
             // In-app downloads go through a native save dialog instead of
             // landing silently in ~/Downloads (KL-182). All windows share one
@@ -251,8 +305,113 @@ pub fn run() {
             let _ = (window, supervisor);
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("error while running knx-desktop");
+        .build(tauri::generate_context!())
+        .expect("error while building knx-desktop")
+        .run(|app, event| {
+            if let tauri::RunEvent::ExitRequested { api, .. } = event {
+                let authorized = app
+                    .try_state::<SharedShutdown>()
+                    .is_some_and(|shutdown| shutdown.exit_is_authorized());
+                if !authorized {
+                    api.prevent_exit();
+                    begin_close(app);
+                }
+            }
+        });
+}
+
+#[cfg(test)]
+mod shutdown_policy_tests {
+    use super::*;
+
+    #[test]
+    fn close_request_ipc_is_admitted_only_for_the_existing_main_origins() {
+        use tauri::ipc::{CallbackFn, InvokeBody};
+        use tauri::test::{get_ipc_response, mock_builder, INVOKE_KEY};
+        use tauri::webview::InvokeRequest;
+
+        let app = mock_builder()
+            .build(tauri::generate_context!(test = true))
+            .unwrap();
+        let main = WebviewWindowBuilder::new(
+            &app,
+            "main",
+            WebviewUrl::External("http://127.0.0.1:41234/".parse().unwrap()),
+        )
+        .build()
+        .unwrap();
+        for (origin, admitted) in [
+            ("http://127.0.0.1:41234/", true),
+            ("http://localhost:1420/", true),
+            ("https://example.invalid/", false),
+        ] {
+            let response = get_ipc_response(
+                &main,
+                InvokeRequest {
+                    cmd: "plugin:window|close".into(),
+                    callback: CallbackFn(0),
+                    error: CallbackFn(1),
+                    url: origin.parse().unwrap(),
+                    // Invalid argument proves command admission without actually
+                    // closing even the mock window or running a native callback.
+                    body: InvokeBody::Json(serde_json::json!({"label": 123})),
+                    headers: Default::default(),
+                    invoke_key: INVOKE_KEY.into(),
+                },
+            );
+            let error = match response {
+                Err(error) => error.to_string(),
+                Ok(_) => panic!("malformed close request must not execute"),
+            };
+            assert_eq!(
+                !error.contains("not allowed"),
+                admitted,
+                "{origin}: {error}"
+            );
+            if admitted {
+                assert!(error.contains("label"), "{error}");
+            }
+        }
+    }
+
+    /// Headless notification-policy control, not a native event-loop smoke.
+    /// The production callbacks use these same once/authorization methods.
+    #[tokio::test]
+    async fn ordinary_native_notifications_coalesce_without_force_authority() {
+        for notifications in [
+            ["destroyed", "implicit", "queued-code-zero"],
+            ["implicit", "queued-code-zero", "destroyed"],
+            ["queued-code-zero", "destroyed", "implicit"],
+        ] {
+            let directory = tempfile::tempdir().unwrap();
+            let state = Arc::new(knx_server::AppState::new(directory.path().to_path_buf()));
+            let listener = tokio::net::TcpListener::bind(("127.0.0.1", 0))
+                .await
+                .unwrap();
+            let shutdown = DesktopShutdown::new(knx_server::EmbeddedServerHandle::spawn(
+                listener, state, None,
+            ));
+            let mut begins = 0;
+            for event in notifications.into_iter().cycle().take(9) {
+                assert!(
+                    !shutdown.exit_is_authorized(),
+                    "{event} must still be prevented"
+                );
+                if shutdown.begin_once() {
+                    begins += 1;
+                }
+            }
+            assert_eq!(begins, 1);
+            let result = shutdown.server.drain_close(std::future::pending()).await;
+            assert!(!result.requires_process_exit());
+            shutdown.exit_authorized.store(true, Ordering::SeqCst);
+            assert!(shutdown.exit_is_authorized(), "final reentry may proceed");
+            assert!(
+                !shutdown.begin_once(),
+                "authorized reentry cannot start another drain"
+            );
+        }
+    }
 }
 
 #[cfg(test)]

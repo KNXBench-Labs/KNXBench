@@ -162,9 +162,9 @@ vi.mock("./features/notes/client", async (importOriginal) => ({
 const tauriWindowMock = vi.hoisted(() => {
   const mock = {
     destroy: vi.fn().mockResolvedValue(undefined),
-    // Never called: `close()` would re-emit close-requested and reopen the
-    // dialog "discard" just dismissed (§132), so `quitApp()` uses `destroy()`.
-    close: vi.fn().mockResolvedValue(undefined),
+    // Approved Quit still traverses native close-requested. Its one-shot
+    // approval must avoid reopening the just-dismissed unsaved dialog.
+    close: vi.fn(async () => { mock.closeHandler?.({ preventDefault: () => {} }); }),
     closeHandler: null as null | ((event: { preventDefault: () => void }) => void),
     onCloseRequested: vi.fn(async (handler: (event: { preventDefault: () => void }) => void) => {
       mock.closeHandler = handler;
@@ -3139,7 +3139,7 @@ describe("App — the File menu's manners, the stacked splitters, Quit and About
       host!.querySelector(".quit-confirm-discard")!
         .dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
-    expect(tauriWindowMock.destroy).toHaveBeenCalledTimes(1);
+    expect(tauriWindowMock.close).toHaveBeenCalledTimes(1);
 
     await act(async () => root.unmount());
     filePickerMock.isTauri.mockReturnValue(false);
@@ -3165,8 +3165,8 @@ describe("App — the File menu's manners, the stacked splitters, Quit and About
       host!.querySelector(".quit-confirm-discard")!
         .dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
-    expect(tauriWindowMock.destroy).toHaveBeenCalledTimes(1);
-    expect(tauriWindowMock.close).not.toHaveBeenCalled();
+    expect(tauriWindowMock.close).toHaveBeenCalledTimes(1);
+    expect(tauriWindowMock.destroy).not.toHaveBeenCalled();
 
     await act(async () => root.unmount());
     expect(tauriWindowMock.closeHandler).toBeNull();
@@ -3209,7 +3209,7 @@ describe("App — the File menu's manners, the stacked splitters, Quit and About
       findButton(enMessages["toolbar.quit"]).dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
     expect(host!.querySelector(".quit-confirm")).toBeNull();
-    expect(tauriWindowMock.destroy).toHaveBeenCalledTimes(1);
+    expect(tauriWindowMock.close).toHaveBeenCalledTimes(1);
 
     await act(async () => root.unmount());
     filePickerMock.isTauri.mockReturnValue(false);
@@ -3238,7 +3238,7 @@ describe("App — the File menu's manners, the stacked splitters, Quit and About
     });
     expect(apiMock.saveProject).toHaveBeenCalledTimes(1);
     expect(apiMock.currentProject).toHaveBeenCalledTimes(1);
-    expect(tauriWindowMock.destroy).toHaveBeenCalledTimes(1);
+    expect(tauriWindowMock.close).toHaveBeenCalledTimes(1);
 
     await act(async () => root.unmount());
     filePickerMock.isTauri.mockReturnValue(false);
@@ -3371,7 +3371,7 @@ describe("App — the File menu's manners, the stacked splitters, Quit and About
         .dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
     expect(host!.querySelector(".quit-confirm")).toBeNull();
-    expect(tauriWindowMock.destroy).toHaveBeenCalledTimes(1);
+    expect(tauriWindowMock.close).toHaveBeenCalledTimes(1);
 
     await act(async () => root.unmount());
     filePickerMock.isTauri.mockReturnValue(false);
@@ -3404,7 +3404,7 @@ describe("App — the File menu's manners, the stacked splitters, Quit and About
         .dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
     expect(host!.querySelector(".quit-confirm")).toBeNull();
-    expect(tauriWindowMock.destroy).toHaveBeenCalledTimes(1);
+    expect(tauriWindowMock.close).toHaveBeenCalledTimes(1);
 
     await act(async () => root.unmount());
     filePickerMock.isTauri.mockReturnValue(false);
@@ -3551,7 +3551,7 @@ describe("App — the File menu's manners, the stacked splitters, Quit and About
         .dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
     expect(host!.querySelector(".quit-confirm")).toBeNull();
-    expect(tauriWindowMock.destroy).toHaveBeenCalledTimes(1);
+    expect(tauriWindowMock.close).toHaveBeenCalledTimes(1);
 
     await act(async () => root.unmount());
     filePickerMock.isTauri.mockReturnValue(false);
@@ -4571,7 +4571,7 @@ describe("App — project notes workspace", () => {
     expect(tauriWindowMock.destroy).not.toHaveBeenCalled();
     await act(async () => findButton(enMessages["draftGuard.discard"]).click());
     await act(async () => {});
-    expect(tauriWindowMock.destroy).toHaveBeenCalledTimes(1);
+    expect(tauriWindowMock.close).toHaveBeenCalledTimes(1);
     await act(async () => root.unmount());
     filePickerMock.isTauri.mockReturnValue(false);
   });

@@ -112,7 +112,7 @@ async fn main() {
         let requested = stop.requested();
         tokio::spawn(async move {
             requested.await;
-            state.stop_admission.close();
+            knx_server::close_process_admission(&state);
         });
     }
     let app = knx_server::app_with_auth(Arc::clone(&state), static_dir, auth_config);
@@ -137,18 +137,20 @@ async fn main() {
             let server = axum::serve(listener, app).with_graceful_shutdown(stop.requested());
             stop.serve(server).await
         }
-    }
-    .expect("server error");
+    };
+    // HTTP error/normal termination must not bypass either owner drain.
+    knx_server::close_process_admission(&state);
 
     match end {
-        knx_server::ServeEnd::Drained => {}
-        knx_server::ServeEnd::Forced(knx_server::ForceReason::GraceExpired) => eprintln!(
+        Ok(knx_server::ServeEnd::Drained) => {}
+        Ok(knx_server::ServeEnd::Forced(knx_server::ForceReason::GraceExpired)) => eprintln!(
             "knx-server: requests still open after {}s are cut off",
             knx_server::STOP_GRACE.as_secs()
         ),
-        knx_server::ServeEnd::Forced(knx_server::ForceReason::SecondSignal) => {
+        Ok(knx_server::ServeEnd::Forced(knx_server::ForceReason::SecondSignal)) => {
             eprintln!("knx-server: second signal, open requests are cut off")
         }
+        Err(ref error) => eprintln!("knx-server: HTTP server failed: {error}; draining owned work"),
     }
     let release = knx_server::release_bus(&state, knx_server::BUS_RELEASE_TIMEOUT).await;
     if release.monitor_stopped {
@@ -164,20 +166,46 @@ async fn main() {
             knx_server::BUS_RELEASE_TIMEOUT.as_secs()
         );
     }
-    let drain = knx_server::drain_device_writes(&state, write_wait, stop.second_signal()).await;
+    let (drain, catalogue) = tokio::join!(
+        knx_server::drain_device_writes(&state, write_wait, stop.second_signal()),
+        knx_server::drain_catalogue_jobs(
+            &state,
+            knx_server::CATALOGUE_DRAIN_TIMEOUT,
+            stop.second_signal()
+        ),
+    );
     report_write_drain(&drain, write_wait);
+    report_catalogue_drain(&catalogue);
     let write_cut_short = matches!(
         drain.end,
         knx_server::WriteWaitEnd::TimedOut | knx_server::WriteWaitEnd::SecondSignal
     );
     eprintln!("knx-server: stopped");
-    if end != knx_server::ServeEnd::Drained || write_cut_short {
+    if !matches!(end, Ok(knx_server::ServeEnd::Drained))
+        || write_cut_short
+        || catalogue.work_outstanding
+    {
         // Something is still running. Returning from `main` would drop the
         // Tokio runtime, and that waits for every `spawn_blocking` task
         // without a limit, which is exactly the hang this path exists to
         // avoid.
         std::process::exit(0);
     }
+}
+
+fn report_catalogue_drain(drain: &knx_server::CatalogueDrain) {
+    if drain.work_outstanding {
+        eprintln!("knx-server: catalogue work remains; process exit can leave its outcome unavailable/possibly committed; retained backup may need inspection");
+    }
+    if drain.cleanup == knx_server::DrainCleanup::Quarantined {
+        eprintln!(
+            "knx-server: catalogue cleanup is quarantined; retained artifacts need inspection"
+        );
+    }
+    eprintln!(
+        "knx-server: catalogue drain {:?}; commit {:?}; cleanup {:?}",
+        drain.end, drain.commit, drain.cleanup
+    );
 }
 
 /// Says what the stop did about device writes. A write that is cut short is

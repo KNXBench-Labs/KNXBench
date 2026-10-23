@@ -18,7 +18,11 @@
 //!    writing, up to `KNX_STOP_WRITE_WAIT_SECS` ([`DEFAULT_WRITE_WAIT`]);
 //!    an address programming still waiting for its button is asked to stop
 //!    through its own defined stop. A second signal ends this wait too,
-//! 4. exit.
+//!    In parallel, join the catalogue owner's cooperatively stopped work
+//!    for at most [`CATALOGUE_DRAIN_TIMEOUT`]. Catalogue stop was requested
+//!    with admission closure, not delayed until a device wait ends.
+//! 4. return only after owned work drained; otherwise explicitly exit with
+//!    truthful outstanding-work diagnostics rather than blocking-runtime Drop.
 //!
 //! Steps 1 and 2 stay below Docker's default 10-second stop timeout; step 3
 //! only waits while a device write is actually running, and Docker's own
@@ -40,6 +44,8 @@ use crate::AppState;
 pub const STOP_GRACE: Duration = Duration::from_secs(5);
 /// How long releasing the bus may take after the HTTP side has stopped.
 pub const BUS_RELEASE_TIMEOUT: Duration = Duration::from_secs(2);
+/// Catalogue work has its own bound, independent of the device safety wait.
+pub const CATALOGUE_DRAIN_TIMEOUT: Duration = Duration::from_secs(30);
 /// How long a stop waits for a device write already running, unless
 /// `KNX_STOP_WRITE_WAIT_SECS` says otherwise.
 pub const DEFAULT_WRITE_WAIT: Duration = Duration::from_secs(120);
@@ -67,6 +73,23 @@ pub fn write_wait_from_env(value: Option<&str>) -> Result<Duration, String> {
         ));
     }
     Ok(wait)
+}
+
+/// First-stop ordering shared by signals, HTTP termination and embedders.
+/// Catalogue stop is cooperative; this does not cancel device writes.
+pub fn close_process_admission(state: &AppState) {
+    state.stop_admission.close();
+    state.catalogue_jobs.close_admission_and_request_stop();
+}
+
+/// Borrow the application's actual worker owner. Timeout/second stop retains
+/// its handles and independent commit/cleanup facts, not a cancellation claim.
+pub async fn drain_catalogue_jobs(
+    state: &AppState,
+    limit: Duration,
+    second_signal: impl Future<Output = ()>,
+) -> crate::CatalogueDrain {
+    state.catalogue_jobs.drain(limit, second_signal).await
 }
 
 /// Whether new bus jobs may still start. Closed by the first stop signal;

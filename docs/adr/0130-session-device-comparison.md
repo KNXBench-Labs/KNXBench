@@ -95,4 +95,19 @@ hides a differing or unread byte. This changes the display only: the response,
 the tags and Synced are unchanged, and the UI still has no KNX codec
 ([result display](../contracts/device-comparison.md#result-display-wp-18-owner-amendment-19-october-2026)).
 
+## Alpha 16 adoption amendment (23 October 2026)
+
+WP-19 adds a separate confirmed device → project operation under the
+[atomic adoption contract](../contracts/alpha16-comparison-adoption.md).
+Comparison remains read-only and session-only. An opaque App observation is
+created only by its actual identity-checked read, never from response JSON or
+client values. Exact attributed named parameters may be selected; raw/unknown
+rows and table rows without stable project identity/direction mapping are
+explicitly refused rather than guessed or silently omitted. The original
+incarnations, P3 revision, source-derived request/image/plan, complete native
+snapshot and full command stack bind preview/apply. One existing atomic Batch
+and normal command-stack rules provide undo/redo, pending marks and monotone
+allocator reservations. Native/history preflight and durable publication remain
+mandatory. No new device writer or format interpretation is introduced.
+
 [Behavioural contract](../contracts/device-comparison.md).

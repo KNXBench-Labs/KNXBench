@@ -14,6 +14,7 @@ pub mod com_object_language;
 pub mod com_object_text_fill;
 pub mod commissioning_activity;
 pub mod comparison;
+pub mod comparison_adoption;
 pub mod contribution;
 pub mod contribution_bundle;
 mod contribution_structure;

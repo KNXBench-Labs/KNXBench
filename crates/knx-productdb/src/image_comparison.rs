@@ -15,6 +15,9 @@ pub struct ComparisonRow {
     pub project: Option<String>,
     pub device: Option<String>,
     pub reason: Option<String>,
+    /// Exact captured field identity; never reconstructed from the label.
+    /// Present even for an unknown parameter row, which remains non-adoptable.
+    pub parameter: Option<crate::image::ParameterAttribution>,
 }
 
 /// Decode only the table format the image writer already verifies.
@@ -164,6 +167,7 @@ fn row(
         project,
         device,
         reason,
+        parameter: None,
     }
 }
 

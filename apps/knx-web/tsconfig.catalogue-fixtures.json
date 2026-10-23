@@ -1,5 +1,5 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": { "types": ["node"] },
-  "include": ["src", "e2e/catalogue-update.e2e.ts", "e2e/achievements-fixture.ts", "playwright.catalogue.config.ts"]
+  "include": ["src", "e2e/catalogue-update.e2e.ts", "e2e/catalogue-jobs-fixture.ts", "e2e/legacy-install.e2e.ts", "e2e/achievements-fixture.ts", "playwright.catalogue.config.ts"]
 }

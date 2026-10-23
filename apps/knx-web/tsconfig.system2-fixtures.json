@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "noEmit": true, "types": ["node"] },
+  "include": ["src", "e2e/system2-download.e2e.ts", "e2e/disclosure-fixture.ts"]
+}

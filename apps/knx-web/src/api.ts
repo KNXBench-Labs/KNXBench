@@ -178,7 +178,7 @@ export function clearProjectUndo(view: ProjectHistory, confirmed: boolean): Prom
   return historyAction("/api/project/history/clear-undo", view, true);
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
     headers: init?.body ? { "Content-Type": "application/json" } : undefined,
     ...init,

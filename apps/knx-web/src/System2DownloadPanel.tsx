@@ -1,0 +1,213 @@
+/** Server-owned experimental download. Mounting/polling is read-only; cleanup never cancels. */
+import { useEffect, useRef, useState } from "react";
+import type { ProjectTree } from "./bindings/ProjectTree";
+import * as api from "./system2DownloadApi";
+import { useTranslate } from "./i18n";
+import { useProgrammingConsent } from "./useProgrammingConsent";
+import "./System2DownloadPanel.css";
+
+interface Props {
+  project: ProjectTree | null; deviceId: number | null; gateway: string; enabled: boolean; ordinaryBusy: boolean;
+  onBusyChange?: (busy: boolean) => void;
+}
+type Phrases = { confirmation: string; hypothesisConfirmation: string; downloadConfirmation: string; releaseConfirmation: string };
+const EMPTY: Phrases = { confirmation: "", hypothesisConfirmation: "", downloadConfirmation: "", releaseConfirmation: "" };
+const active = (s: api.System2Status | null) => s?.state === "running" || s?.state === "restoring";
+function sameTarget(a: { binding: api.System2Binding; address: string }, b: { binding: api.System2Binding; address: string }) {
+  return a.address === b.address && a.binding.serverIncarnation === b.binding.serverIncarnation &&
+    a.binding.projectIncarnation === b.binding.projectIncarnation && a.binding.projectRevision === b.binding.projectRevision && a.binding.deviceId === b.binding.deviceId;
+}
+function requireOriginal(next: api.System2Status, original: api.System2Status) {
+  if (next.operationId !== original.operationId || !sameTarget(next, original)) throw new Error("Mismatched System-2 operation response");
+}
+export default function System2DownloadPanel({ project, deviceId, gateway, enabled, ordinaryBusy, onBusyChange }: Props) {
+  const t = useTranslate(); const consent = useProgrammingConsent();
+  const [preview, setPreview] = useState<api.System2Preview | null>(null);
+  const [status, setStatus] = useState<api.System2Status | null>(null);
+  const statusRef = useRef<api.System2Status | null>(null);
+  const [phrases, setPhrases] = useState<Phrases>(EMPTY);
+  const [track, setTrack] = useState<api.RecoveryTrack | "">("");
+  const [recovery, setRecovery] = useState({ recoveryConfirmation: "", downloadConfirmation: "", releaseConfirmation: "" });
+  // Recovery phrases belong to the original operation, not a later project's preview.
+  const [terms, setTerms] = useState<{ operationId: string; download: string; release: string } | null>(null);
+  const [checking, setChecking] = useState(true); const [unavailable, setUnavailable] = useState(false);
+  const [pending, setPending] = useState(false); const action = useRef(false);
+  const [preparing, setPreparing] = useState(false);
+  const [error, setError] = useState(false); const [unknown, setUnknown] = useState(false);
+  const mounted = useRef(false); const generation = useRef(0); const reads = useRef(0); const pollInFlight = useRef(false);
+  const context = useRef({ project, deviceId, gateway, enabled }); context.current = { project, deviceId, gateway, enabled };
+
+  useEffect(() => {
+    generation.current += 1; setPreview(null); setPhrases(EMPTY); setTrack(""); setPreparing(false); setError(false);
+  }, [project, deviceId, gateway, enabled]);
+
+  function accept(next: api.System2Status) {
+    const prior = statusRef.current;
+    if (active(prior) && prior?.operationId !== next.operationId) { setUnavailable(true); return; }
+    if (prior?.operationId !== next.operationId || prior?.state !== next.state || prior?.recoveryPhrase !== next.recoveryPhrase) {
+      setRecovery({ recoveryConfirmation: "", downloadConfirmation: "", releaseConfirmation: "" });
+    }
+    statusRef.current = next; setStatus(next); setUnavailable(false); setChecking(false);
+  }
+  async function poll() {
+    if (pollInFlight.current || action.current) return;
+    pollInFlight.current = true; const read = ++reads.current;
+    try {
+      const next = await api.getSystem2Status();
+      if (!mounted.current || read !== reads.current) return;
+      if (next === null) {
+        // A disappeared record is not proof of rollback or permission to resend.
+        setUnavailable(statusRef.current !== null); setChecking(false);
+      } else accept(next);
+    } catch {
+      if (mounted.current && read === reads.current) { setUnavailable(true); setChecking(false); }
+    } finally { pollInFlight.current = false; }
+  }
+  useEffect(() => {
+    mounted.current = true; void poll();
+    const timer = window.setInterval(() => void poll(), 1000);
+    return () => { mounted.current = false; generation.current += 1; reads.current += 1; window.clearInterval(timer); };
+  }, []);
+  const busy = pending || active(status) || checking || unavailable || unknown;
+  // Preserve ordinary-download availability when this optional endpoint is unavailable.
+  // Both write routes still require the server’s shared admission guard.
+  const ordinaryBlocked = pending || active(status) || unknown;
+  useEffect(() => { onBusyChange?.(ordinaryBlocked); }, [ordinaryBlocked, onBusyChange]);
+
+  async function prepare() {
+    if (deviceId === null || project === null || active(status) || action.current || checking || unavailable || ordinaryBusy) return;
+    const original = context.current; const ticket = ++generation.current;
+    setPreparing(true); setPreview(null); setPhrases(EMPTY); setTrack(""); setError(false);
+    try {
+      const next = await api.prepareSystem2(deviceId);
+      if (!mounted.current || ticket !== generation.current || context.current.project !== original.project || context.current.deviceId !== original.deviceId || !context.current.enabled) return;
+      // Stable selection is checked locally too; revision/source authority remains server-side.
+      if (next.binding.deviceId !== original.deviceId ||
+        (project.server_incarnation !== undefined && next.binding.serverIncarnation !== project.server_incarnation) ||
+        (project.project_incarnation !== undefined && next.binding.projectIncarnation !== String(project.project_incarnation))) {
+        setError(true); return;
+      }
+      setPreview(next); setUnknown(false);
+    } catch { if (mounted.current && ticket === generation.current) setError(true); }
+    finally { if (mounted.current && ticket === generation.current) setPreparing(false); }
+  }
+  const expected: Phrases | null = preview === null ? null : {
+    confirmation: preview.confirmationPhrase, hypothesisConfirmation: preview.hypothesisPhrase,
+    downloadConfirmation: preview.downloadPhrase, releaseConfirmation: preview.releasePhrase,
+  };
+  const exact = expected !== null && Object.keys(expected).every((key) => phrases[key as keyof Phrases] === expected[key as keyof Phrases]);
+  const canStart = enabled && exact && track !== "" && gateway.trim() !== "" && !busy && !ordinaryBusy && !preparing;
+
+  async function start() {
+    if (!canStart || preview === null || action.current) return;
+    const shown = preview; const original = context.current; const ticket = generation.current;
+    const body: api.System2Start = { preparationId: shown.preparationId, gateway: gateway.trim(), ...phrases, recoveryTrack: track };
+    action.current = true; setPending(true); setError(false); reads.current += 1;
+    try {
+      if (!(await consent.request(`${shown.address} — ${shown.deviceName}`))) return;
+      if (!mounted.current || ticket !== generation.current || context.current.project !== original.project || context.current.deviceId !== original.deviceId || context.current.gateway !== original.gateway || !context.current.enabled) return;
+      // Drop local execution capability before sending, even when its response is lost.
+      setPreview(null); setPhrases(EMPTY); setTrack("");
+      try {
+        const next = await api.startSystem2(body);
+        if (!sameTarget(next, shown)) throw new Error("Mismatched System-2 start response");
+        if (mounted.current) {
+          accept(next); setTerms({ operationId: next.operationId, download: shown.downloadPhrase, release: shown.releasePhrase });
+        }
+      } catch { if (mounted.current) setUnknown(true); }
+    } finally {
+      action.current = false; reads.current += 1;
+      if (mounted.current) { setPending(false); void poll(); }
+    }
+  }
+  async function cancel() {
+    const original = statusRef.current;
+    if (!active(original) || original === null || action.current) return;
+    action.current = true; setPending(true); reads.current += 1;
+    try { const next = await api.cancelSystem2(original.operationId); requireOriginal(next, original); if (mounted.current) accept(next); }
+    catch { if (mounted.current) setUnknown(true); }
+    finally { action.current = false; reads.current += 1; if (mounted.current) { setPending(false); void poll(); } }
+  }
+  const originalTerms = terms !== null && terms.operationId === status?.operationId ? terms : null;
+  const canRecover = status !== null && !active(status) && status.backupAvailable && status.recoveryPhrase !== null && originalTerms !== null &&
+    recovery.recoveryConfirmation === status.recoveryPhrase && recovery.downloadConfirmation === originalTerms.download && recovery.releaseConfirmation === originalTerms.release &&
+    gateway.trim() !== "" && !pending && !checking && !unavailable && !ordinaryBusy && !unknown;
+  async function recover() {
+    if (!canRecover || status === null || action.current) return;
+    const original = status; const originalGateway = gateway; const ticket = generation.current;
+    const body: api.System2Recovery = { operationId: original.operationId, gateway: gateway.trim(), ...recovery };
+    action.current = true; setPending(true); reads.current += 1;
+    try {
+      if (!(await consent.request(`${original.address} — ${original.deviceName}`))) return;
+      if (!mounted.current || generation.current !== ticket || context.current.gateway !== originalGateway || statusRef.current !== original) return;
+      setRecovery({ recoveryConfirmation: "", downloadConfirmation: "", releaseConfirmation: "" });
+      try { const next = await api.recoverSystem2(body); requireOriginal(next, original); if (mounted.current) accept(next); }
+      catch { if (mounted.current) setUnknown(true); }
+    } finally { action.current = false; reads.current += 1; if (mounted.current) { setPending(false); void poll(); } }
+  }
+  // Keep polling while the ordinary mode is selected, without adding a second
+  // download-plan surface until an actual operation exists (or consent is pending).
+  if (!enabled && status === null && !pending) return null;
+  return <section className="system2-download-panel device-download-plan" aria-label={t("system2.title")}>
+    <h3>{t("system2.title")}</h3>
+    <p className="form-warning">{t("system2.risk")}</p>
+    <p>{t("system2.lifetime")}</p>
+    {checking && <p role="status">{t("system2.checking")}</p>}
+    {unavailable && <p role="alert" className="form-warning">{t("system2.statusUnavailable")}</p>}
+    {unknown && <p data-system2-unknown role="alert" className="form-warning">{t("system2.unknown")}</p>}
+    {error && <p role="alert" className="form-error">{t("system2.prepareFailed")}</p>}
+    <button type="button" data-system2-refresh disabled={pending} onClick={() => void poll()}>{t("system2.refresh")}</button>
+    {enabled && <>
+      <p>{t("system2.configured")}</p>
+      <button type="button" data-system2-prepare disabled={project === null || deviceId === null || pending || active(status) || checking || unavailable || ordinaryBusy || preparing} onClick={() => void prepare()}>{t("system2.prepare")}</button>
+      {preparing && <p role="status">{t("system2.preparing")}</p>}
+    </>}
+    {enabled && preview && expected && <section data-system2-preview aria-label={t("system2.preview")}>
+      <h4>{t("system2.preview")}</h4><p>{t("system2.offline")}</p>
+      <dl>
+        <dt>{t("deviceDownload.target")}</dt><dd>{preview.address} — {preview.deviceName}</dd>
+        <dt>{t("deviceDownload.program")}</dt><dd>{preview.programId}</dd>
+        <dt>{t("system2.profile")}</dt><dd>{preview.profileId}</dd>
+        <dt>{t("system2.configuration")}</dt><dd style={{ overflowWrap: "anywhere" }}><code>{preview.configurationSha256}</code></dd>
+        <dt>{t("system2.plan")}</dt><dd style={{ overflowWrap: "anywhere" }}><code>{preview.planSha256}</code></dd>
+        <dt>{t("system2.counts")}</dt><dd>{t("system2.countsValue", { parameters: preview.parameterValues, links: preview.groupLinks, flags: preview.flagOverrides })}</dd>
+        <dt>{t("system2.ranges")}</dt><dd>{t("system2.rangesValue", { data: preview.dataOctets, allocation: preview.allocationOctets, notWritten: preview.notWrittenOctets })}</dd>
+      </dl>
+      <h4>{t("system2.steps")}</h4><ol>{preview.steps.map((step, i) => <li key={i}>{step}</li>)}</ol>
+      <h4>{t("deviceDownload.warnings.title")}</h4><ul>{preview.warnings.map((warning, i) => <li key={i}>{warning}</li>)}</ul>
+      <p>{t("system2.backup")}</p>
+      <fieldset data-system2-consent>
+      <legend>{t("system2.track")}</legend>
+      <label>{t("system2.track")}<select data-system2-track value={track} disabled={pending} onChange={(e) => setTrack(e.target.value as api.RecoveryTrack | "")}>
+        <option value="">{t("system2.chooseTrack")}</option><option value="knxbenchBestEffort">{t("system2.track.knxbenchBestEffort")}</option><option value="externalETS">{t("system2.track.externalETS")}</option>
+      </select></label><p>{t("system2.trackDetails")}</p>
+      {Object.entries(expected).map(([key, phrase]) => <label className="device-download-acknowledgement" key={key}>
+        {t(`system2.phrase.${key as keyof Phrases}`)} <code style={{ overflowWrap: "anywhere" }}>{phrase}</code>
+        <input data-system2-phrase={key} autoComplete="off" spellCheck={false} disabled={pending} value={phrases[key as keyof Phrases]} onChange={(e) => setPhrases((p) => ({ ...p, [key]: e.target.value }))} />
+      </label>)}
+      <button type="button" data-system2-start disabled={!canStart} onClick={() => void start()}>{t("system2.start")}</button>
+      </fieldset>
+    </section>}
+    {status && <section data-system2-status aria-live="polite">
+      <h4>{t("system2.operation")}: {status.address} — {status.deviceName}</h4>
+      <p style={{ overflowWrap: "anywhere" }}><code>{status.operationId}</code> · {t(`system2.state.${status.state}`)}</p>
+      <p>{status.totalSteps === null ? t("system2.checkpointsUnknown", { done: status.completedSteps }) : t("system2.checkpoints", { done: status.completedSteps, total: status.totalSteps })}</p>
+      {status.totalSteps !== null && status.totalSteps > 0 && <progress aria-label={t("system2.steps")} value={status.completedSteps} max={status.totalSteps} />}
+      {status.message && <p>{status.message}</p>}
+      <p>{t(status.backupAvailable ? "system2.backupAvailable" : "system2.backupUnavailable")}</p>
+      {active(status) && <button type="button" data-system2-cancel disabled={pending} onClick={() => void cancel()}>{t("system2.cancel")}</button>}
+      <p>{t("system2.cancelNote")}</p>
+      {!active(status) && status.backupAvailable && <section aria-label={t("system2.recovery")}>
+        <h4>{t("system2.recovery")}</h4><p>{t("system2.recoveryNote")}</p>
+        {originalTerms === null ? <p className="form-warning">{t("system2.recoveryTermsUnavailable")}</p> : status.recoveryPhrase !== null && <>
+          {Object.entries({ recoveryConfirmation: status.recoveryPhrase, downloadConfirmation: originalTerms.download, releaseConfirmation: originalTerms.release }).map(([key, phrase]) => <label key={key} className="device-download-acknowledgement">
+            {t(key === "recoveryConfirmation" ? "system2.phrase.recoveryConfirmation" : key === "downloadConfirmation" ? "system2.phrase.downloadConfirmation" : "system2.phrase.releaseConfirmation")} <code>{phrase}</code>
+            <input data-system2-recovery={key} autoComplete="off" spellCheck={false} disabled={pending || unknown} value={recovery[key as keyof typeof recovery]} onChange={(e) => setRecovery((p) => ({ ...p, [key]: e.target.value }))} />
+          </label>)}
+          <button type="button" data-system2-recover disabled={!canRecover} onClick={() => void recover()}>{t("system2.recover")}</button>
+        </>}
+      </section>}
+    </section>}
+    {consent.dialog}
+  </section>;
+}

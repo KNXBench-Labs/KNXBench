@@ -1,52 +1,45 @@
-/** Whether a Quit item means anything on this platform, and what it does when it does. */
-// F4. A browser tab cannot close itself — `window.close()` is refused for
-// any document the script did not open — so outside the Tauri shell a Quit
-// item would be a control that does nothing, which is worse than no
-// control. The detection is `filePicker.ts`'s `isTauri`, reused rather
-// than written a second time: two answers to "are we in the shell?" is one
-// answer too many.
+/** Platform-aware Quit and the desktop's unsaved-changes close check. */
 import { isTauri } from "./filePicker";
 
-/** Whether the File menu should carry a Quit item at all. */
+/** A browser cannot close a tab it did not open. */
 export function canQuit(): boolean {
   return isTauri();
 }
 
+// File > Quit and the discard dialog already obtained approval. Consume it
+// on exactly one close-requested event, rather than bypassing native close.
+let approvedClose = false;
+
 /**
- * Ends the application without asking again: callers have already run the
- * unsaved-changes check (File › Quit on a clean project, or the quit-confirm
- * dialog's "discard"). `destroy()`, not `close()`: `close()` emits
- * `tauri://close-requested`, which `onWindowCloseRequested` below answers
- * with the very check that just passed — for a modified project that would
- * reopen the dialog the user has just dismissed. Needs
- * `core:window:allow-destroy` in `capabilities/default.json`. Ending the
- * process is the other half, and it lives in Rust —
- * `apps/knx-desktop/src-tauri/src/lib.rs`'s `on_window_event` clause turns
- * the main window's destruction into `AppHandle::exit(0)`.
- *
- * The import is dynamic for the same reason `diagnosticsWindow.ts`'s is:
- * the module must not be pulled into the browser bundle's startup path,
- * where there is no Tauri to talk to.
+ * Request native close after the caller's unsaved-changes check. The close
+ * event still runs; its one-shot approval avoids reopening the same dialog.
+ * Rust's Destroyed/ExitRequested hooks own process shutdown and server drain.
+ * The dynamic import keeps Tauri out of the browser startup path.
  */
 export async function quitApp(): Promise<void> {
   const { getCurrentWindow } = await import("@tauri-apps/api/window");
-  await getCurrentWindow().destroy();
+  approvedClose = true;
+  try {
+    await getCurrentWindow().close();
+  } catch (error) {
+    approvedClose = false;
+    throw error;
+  }
 }
 
 /**
- * Routes the window manager's close (title-bar ×, Alt+F4, a compositor
- * keybinding) through `shouldClose` — KNOWN_LIMITATIONS §132. While a JS
- * listener for `tauri://close-requested` exists, the pinned `tauri` crate
- * calls `prevent_close()` itself (`manager/window.rs`, `on_window_event`),
- * and `@tauri-apps/api`'s `onCloseRequested` destroys the window after the
- * handler unless it called `preventDefault()`. So `shouldClose` returning
- * `false` keeps the window, and `true` closes it exactly as before.
- *
- * Returns the unlisten function; call it on unmount.
+ * Route the window manager's close through the same unsaved-changes check.
+ * Tauri prevents native close while this listener exists, then destroys the
+ * window after the callback unless preventDefault() was called. That accepted
+ * destruction is intercepted by Rust before process exit, not a drain bypass.
  */
 export async function onWindowCloseRequested(shouldClose: () => boolean): Promise<() => void> {
   const { getCurrentWindow } = await import("@tauri-apps/api/window");
   return getCurrentWindow().onCloseRequested((event) => {
-    if (!shouldClose()) event.preventDefault();
+    if (approvedClose) {
+      approvedClose = false;
+    } else if (!shouldClose()) {
+      event.preventDefault();
+    }
   });
 }

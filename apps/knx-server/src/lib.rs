@@ -24,10 +24,13 @@ mod tls_cert;
 pub use tls_cert::{SubjectName, RENEW_WITHIN_DAYS, SELF_SIGNED_VALIDITY_DAYS, TLS_DIR_NAME};
 mod tls_listener;
 pub use tls_listener::{TlsListener, HANDSHAKE_TIMEOUT};
+mod embedded_server;
+pub use embedded_server::{EmbeddedClose, EmbeddedServerHandle};
 mod graceful_stop;
 pub use graceful_stop::{
-    drain_device_writes, release_bus, write_wait_from_env, BusRelease, ForceReason, GracefulStop,
-    ServeEnd, StopAdmission, WriteDrain, WriteWaitEnd, BUS_RELEASE_TIMEOUT, DEFAULT_WRITE_WAIT,
+    close_process_admission, drain_catalogue_jobs, drain_device_writes, release_bus,
+    write_wait_from_env, BusRelease, ForceReason, GracefulStop, ServeEnd, StopAdmission,
+    WriteDrain, WriteWaitEnd, BUS_RELEASE_TIMEOUT, CATALOGUE_DRAIN_TIMEOUT, DEFAULT_WRITE_WAIT,
     MAX_WRITE_WAIT, STOP_GRACE,
 };
 
@@ -102,6 +105,7 @@ mod catalogue_job_control;
 // Intentionally unwired until the job protocol DTOs, spool and drain are built.
 #[allow(dead_code)]
 mod catalogue_jobs;
+pub use catalogue_jobs::{CatalogueDrain, DrainCleanup, DrainCommit, DrainEnd};
 mod function_routes;
 mod one_shot_activity;
 mod programming_state;

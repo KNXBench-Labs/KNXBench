@@ -18,6 +18,8 @@ mod spool;
 mod status;
 
 pub use artifacts::{ArtifactError, ArtifactRoot, ARTIFACT_ROOT_NAME};
+pub use dto::{CatalogueDrain, DrainCleanup, DrainCommit, DrainEnd};
+pub use owner::CatalogueUpdateJobs;
 
 use std::collections::VecDeque;
 

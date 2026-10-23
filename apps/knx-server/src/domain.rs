@@ -1480,7 +1480,47 @@ fn save_editor_state(
     state: &AppState,
     destination: Option<(&Path, bool)>,
 ) -> Result<(), SaveAsError> {
+    if destination.is_some_and(|(path, overwrite)| !overwrite && path.symlink_metadata().is_ok()) {
+        return Err(SaveAsError::Exists);
+    }
+    // Never hold the product owner and project locks together. Acquire exact
+    // sources from a frozen input, then refuse a changed revision before writing.
+    let (source_devices, source_refs, source_revision) = {
+        let project = state.project.lock().expect("state mutex poisoned");
+        let project = project
+            .as_ref()
+            .ok_or_else(|| SaveAsError::Failed("no project open".into()))?;
+        (
+            knx_app::catalogue_sources::device_dependencies(project),
+            state
+                .manufacturer_refs
+                .lock()
+                .expect("state mutex poisoned")
+                .clone(),
+            state.project_revision.load(Ordering::SeqCst),
+        )
+    };
+    let acquired = match state.product_db.as_ref() {
+        Some(owner) => owner
+            .with_read(|conn| {
+                knx_app::catalogue_sources::acquire_for_save(
+                    &source_devices,
+                    &source_refs,
+                    Some(conn),
+                )
+            })
+            .map_err(|e| {
+                SaveAsError::Failed(format!("the product database is unavailable: {e}"))
+            })?,
+        None => knx_app::catalogue_sources::acquire_for_save(&source_devices, &source_refs, None),
+    }
+    .map_err(SaveAsError::Failed)?;
     let project = state.project.lock().expect("state mutex poisoned");
+    if state.project_revision.load(Ordering::SeqCst) != source_revision {
+        return Err(SaveAsError::Failed(
+            "project changed while acquiring catalogue sources; save again".into(),
+        ));
+    }
     let project = project
         .as_ref()
         .ok_or_else(|| SaveAsError::Failed("no project open".to_string()))?;
@@ -1495,26 +1535,31 @@ fn save_editor_state(
     let snapshot = knx_store::project_history::NativeSnapshot {
         project: project.clone(),
         opaque: state.opaque.lock().expect("state mutex poisoned").clone(),
-        manufacturer_refs: state
-            .manufacturer_refs
-            .lock()
-            .expect("state mutex poisoned")
-            .clone(),
+        manufacturer_refs: acquired.refs.clone(),
     };
     let new_generation = match destination {
-        Some((path, overwrite)) => {
-            knx_app::project_history::save_as_with(path, &snapshot, &stack, overwrite)?
-        }
-        None => knx_app::project_history::save(
+        Some((path, overwrite)) => knx_app::project_history::save_as_with_sources(
+            path,
+            &snapshot,
+            &stack,
+            overwrite,
+            &acquired.files,
+        )?,
+        None => knx_app::project_history::save_with_sources(
             store_path.as_deref().ok_or_else(|| {
                 SaveAsError::Failed("no save location yet — use Save As".to_string())
             })?,
             &snapshot,
             &stack,
             *generation,
+            &acquired.files,
         )
         .map_err(SaveAsError::Failed)?,
     };
+    *state
+        .manufacturer_refs
+        .lock()
+        .expect("state mutex poisoned") = acquired.refs;
     if let Some((path, _)) = destination {
         *store_path = Some(path.to_path_buf());
         *state.view_path_key.lock().expect("state mutex poisoned") = Some(view_key_of_path(path));
@@ -1523,6 +1568,21 @@ fn save_editor_state(
     *clean_project = Some(project.clone());
     *last_saved_at = Some(session_log::now());
     next_project_revision(state);
+    for message in acquired.warnings {
+        state
+            .session_log
+            .lock()
+            .expect("state mutex poisoned")
+            .push(LogEntry {
+                timestamp: session_log::now(),
+                severity: Severity::Warning,
+                source: "save".into(),
+                message,
+                location: None,
+                diagnostic: None,
+                detail: None,
+            });
+    }
     Ok(())
 }
 

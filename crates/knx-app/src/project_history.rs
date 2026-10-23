@@ -24,8 +24,20 @@ pub fn save(
     stack: &CommandStack,
     generation: i64,
 ) -> Result<i64, String> {
+    save_with_sources(path, snapshot, stack, generation, &[])
+}
+
+/// Explicit save plus newly acquired file-owned manufacturer payloads.
+pub fn save_with_sources(
+    path: &Path,
+    snapshot: &NativeSnapshot,
+    stack: &CommandStack,
+    generation: i64,
+    sources: &[knx_store::CarriedManufacturerFile],
+) -> Result<i64, String> {
     let conn = history::open_editor_store(path, false).map_err(|e| e.to_string())?;
-    history::save_editor(&conn, snapshot, stack, Some(generation), true).map_err(|e| e.to_string())
+    history::save_editor_with_sources(&conn, snapshot, stack, Some(generation), sources)
+        .map_err(|e| e.to_string())
 }
 
 /// Why a Save As wrote nothing.
@@ -77,17 +89,29 @@ pub fn save_as_with(
     stack: &CommandStack,
     overwrite: bool,
 ) -> Result<i64, SaveAsError> {
+    save_as_with_sources(path, snapshot, stack, overwrite, &[])
+}
+
+/// Save As with source payloads in the unpublished candidate / save transaction.
+pub fn save_as_with_sources(
+    path: &Path,
+    snapshot: &NativeSnapshot,
+    stack: &CommandStack,
+    overwrite: bool,
+    sources: &[knx_store::CarriedManufacturerFile],
+) -> Result<i64, SaveAsError> {
     let failed = |e: &dyn fmt::Display| SaveAsError::Failed(e.to_string());
     // Any directory entry counts, a dangling symlink included.
     if !overwrite && path.symlink_metadata().is_ok() {
         return Err(SaveAsError::Exists);
     }
     let candidate = knx_store::open_and_migrate_in_memory().map_err(|e| failed(&e))?;
-    let generation =
-        history::save_editor(&candidate, snapshot, stack, None, true).map_err(|e| failed(&e))?;
+    let generation = history::save_editor_with_sources(&candidate, snapshot, stack, None, sources)
+        .map_err(|e| failed(&e))?;
     if overwrite && path.exists() {
         let conn = history::open_editor_store(path, true).map_err(|e| failed(&e))?;
-        return history::save_editor(&conn, snapshot, stack, None, true).map_err(|e| failed(&e));
+        return history::save_editor_with_sources(&conn, snapshot, stack, None, sources)
+            .map_err(|e| failed(&e));
     }
     let parent = path
         .parent()

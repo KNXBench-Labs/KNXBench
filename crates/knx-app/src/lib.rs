@@ -9,6 +9,7 @@
 
 pub mod access_key;
 mod backup_directory;
+pub mod catalogue_sources;
 pub mod com_object_language;
 pub mod com_object_text_fill;
 pub mod commissioning_activity;

@@ -86,7 +86,12 @@ pub fn missing_from_products(
 ) -> Result<Vec<ManufacturerRef>, ProductDbError> {
     let mut missing = Vec::new();
     for r in distinct(refs) {
-        if !knx_productdb::has_source_file(products, &r.sha256)? {
+        let present = if r.kind == "CataloguePackage" {
+            knx_productdb::catalogue_sources::has_catalogue_original(products, &r.sha256)?
+        } else {
+            knx_productdb::has_source_file(products, &r.sha256)?
+        };
+        if !present {
             missing.push(r.clone());
         }
     }
@@ -125,7 +130,7 @@ pub fn embed_into(
             report.carried += 1;
             continue;
         }
-        match supply(&r.sha256, products, fallbacks)? {
+        match supply(r, products, fallbacks)? {
             Some(bytes) => {
                 knx_store::store_manufacturer_file(&tx, &r.source_path, &bytes)?;
                 report.stored += 1;
@@ -143,12 +148,22 @@ pub fn embed_into(
 /// A damaged fallback copy is skipped, not fatal: another source may hold
 /// the file, and the report names it unavailable otherwise.
 fn supply(
-    sha256: &str,
+    source: &ManufacturerRef,
     products: Option<&knx_productdb::Connection>,
     fallbacks: &[&Connection],
 ) -> Result<Option<Vec<u8>>, ProductDataError> {
+    let sha256 = source.sha256.as_str();
     if let Some(products) = products {
-        if let Some(bytes) = knx_productdb::load_source_file(products, sha256)? {
+        let bytes = if source.kind == "CataloguePackage" {
+            knx_productdb::catalogue_sources::load_catalogue_original(
+                products,
+                sha256,
+                knx_store::manufacturer_files::MAX_MANUFACTURER_FILE_BYTES,
+            )?
+        } else {
+            knx_productdb::load_source_file(products, sha256)?
+        };
+        if let Some(bytes) = bytes {
             if knx_store::manufacturer_file_hash(&bytes) == sha256 {
                 return Ok(Some(bytes));
             }
@@ -187,12 +202,26 @@ pub fn reinstall_from_file(
     }
     observer.stage(LoadStage::IngestManufacturerData);
     let total = missing.len() as u64;
-    for (index, r) in missing.iter().enumerate() {
+    let ordered: Vec<_> = missing
+        .iter()
+        .filter(|r| r.kind == "CataloguePackage")
+        .chain(missing.iter().filter(|r| r.kind != "CataloguePackage"))
+        .collect();
+    for (index, r) in ordered.into_iter().enumerate() {
         match knx_store::load_manufacturer_file(carrier, &r.sha256) {
             Ok(Some(file)) => {
-                match knx_productdb::ingest_file(products, &r.source_path, &file.bytes) {
-                    Ok(_) => report.installed.push(r.source_path.clone()),
-                    Err(e) => report.failed.push((r.clone(), e.to_string())),
+                let installed = if r.kind == "CataloguePackage" {
+                    knx_productdb::install_package(products, &r.source_path, &file.bytes)
+                        .map(|_| ())
+                        .map_err(|e| e.to_string())
+                } else {
+                    knx_productdb::ingest_file(products, &r.source_path, &file.bytes)
+                        .map(|_| ())
+                        .map_err(|e| e.to_string())
+                };
+                match installed {
+                    Ok(()) => report.installed.push(r.source_path.clone()),
+                    Err(e) => report.failed.push((r.clone(), e)),
                 }
             }
             Ok(None) => report.unavailable.push(r.clone()),

@@ -124,6 +124,7 @@ pub(crate) enum DestinationStage {
     ReadEnd,
     WriteOpen,
     WriteReady,
+    RehearsalClose,
 }
 #[cfg(test)]
 type Hook = Box<dyn FnMut(DestinationStage, &Path, Option<&Connection>)>;
@@ -505,6 +506,8 @@ impl ArtifactInventory {
         receipt: RehearsalDestination,
     ) -> Result<(), CopyError> {
         let slot = self.slot(DestinationRole::Rehearsal, receipt.id, State::Rehearsal)?;
+        #[cfg(test)]
+        slot.seam(DestinationStage::RehearsalClose);
         slot.state = State::Incomplete;
         if let Err((conn, error)) = slot.connection.take().unwrap().close() {
             slot.connection = Some(conn);

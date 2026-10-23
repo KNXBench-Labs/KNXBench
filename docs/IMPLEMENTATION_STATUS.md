@@ -12,6 +12,22 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## WP-04.3 second apply rehearsal — source accepted, delivery pending (23 October 2026)
+
+The [bounded second-rehearsal increment](contracts/catalogue-jobs/second-rehearsal-increment.md)
+executes the shared controlled installer on validated D under the original W
+reservation, compares complete retained preview identity, and explicitly closes
+D before any W DML. Primary refusal/Stop and native close failure remain distinct;
+W baseline, live result agreement, gate and allocated-B accounting are unchanged.
+
+Independent source review ACCEPT has no findings. Six final-test original-runtime
+failures and eight compiled wrong variants were independently reproduced, with
+partial parameter-row discrimination documented rather than overstated.
+Recorded owning evidence:688 unit,752 integration, two 13-test examples and two
+doctests pass;32 opt-in cases ignored. Focused selections overlap owning counts.
+Maintained branch/merged gates and publication remain pending. Quiet APIs,
+schema, growth/B10 and production routes/lifecycle/UI are unchanged.
+
 ## WP-04.3 reopened-copy validation — delivered (23 October 2026)
 
 The [bounded increment](contracts/catalogue-jobs/reopened-copy-increment.md)

@@ -778,6 +778,12 @@ impl ManagedCatalogue {
                 )
             }
         };
+        if let Err(error) = crate::catalogue_growth::require_synchronous(conn) {
+            return ControlledApplySettlement::refused(
+                OrchestrationError::Growth(error),
+                self.health,
+            );
+        }
         self.health = WriterHealth::Mutating;
         let guard = MutationGuard {
             health: &mut self.health,
@@ -796,6 +802,7 @@ impl ManagedCatalogue {
         let baseline_changes = tx.total_changes();
         let mut baseline_version = None;
         let mut live_started = false;
+        let mut prior_growth_cap = None;
         let mut cleanup = Vec::new();
 
         // Every preclaim failure shares one inspected rollback path. In
@@ -819,6 +826,12 @@ impl ManagedCatalogue {
             if before != after || fresh_stamp != shown.catalogue {
                 return Err(OrchestrationError::Stale);
             }
+            let growth = crate::catalogue_growth::WriterGrowth::admit(&tx)
+                .map_err(OrchestrationError::Growth)?;
+            // Record the old connection-local cap before attempting a setter;
+            // even a partial setter/readback failure must take inspected cleanup.
+            prior_growth_cap = Some(growth.prior());
+            growth.enforce(&tx).map_err(OrchestrationError::Growth)?;
             // The unchanged reservation is not a managed mutation until the
             // full stamp matches. Admission advances generation before copies.
             self.generation = next_generation;
@@ -939,6 +952,8 @@ impl ManagedCatalogue {
             )
             .map_err(|_| OrchestrationError::Stale)?;
             live_started = true;
+            #[cfg(test)]
+            artifacts.before_live_install(&tx);
 
             let install = crate::wrapper::install_admitted_product_file(
                 &tx,
@@ -1002,6 +1017,13 @@ impl ManagedCatalogue {
             )
         };
         drop(tx);
+        if let Some(prior) = prior_growth_cap {
+            if let Err(error) = crate::catalogue_growth::restore(conn, prior) {
+                cleanup.push(crate::orchestration::PreviewCleanupError::GrowthRestore(
+                    error,
+                ));
+            }
+        }
         let clean = !source_unresolved
             && cleanup.is_empty()
             && commit != CommitEvidence::Unknown

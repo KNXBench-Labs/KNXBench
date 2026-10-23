@@ -7,6 +7,7 @@ use crate::managed_catalogue::{LegacyMutationKind, LegacySettlementHint, Managed
 use crate::operation::PublicationGate;
 use std::io::Write;
 
+mod live_growth;
 mod reopened_copy;
 mod reopened_copy_controls;
 mod reopened_copy_matrix;

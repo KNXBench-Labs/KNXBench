@@ -3,7 +3,7 @@ import type { DeviceCompareResponse } from "./api";
 
 export type ComparisonTag = "synced" | "different" | "outdated" | "wrongApplication" | "noAnswer" | "notComparable";
 export interface ComparisonBinding { serverIncarnation: string; projectIncarnation: number; deviceId: number; comparisonRevision: number }
-export interface DecodedComparisonRow { kind: string; label: string; address: number; project: string | null; device: string | null; reason: string | null }
+export interface DecodedComparisonRow { index?: number; adoptable?: boolean; kind: string; label: string; address: number; project: string | null; device: string | null; reason: string | null }
 export type BoundDeviceComparison = DeviceCompareResponse & ComparisonBinding & { decoded: DecodedComparisonRow[]; outdated: boolean };
 export interface ComparisonTarget { id: number; name: string; address: string | null; revision: number | undefined }
 export interface ComparisonEntry { tag: ComparisonTag; revision: number | undefined; reason: string | null; result: BoundDeviceComparison | null }

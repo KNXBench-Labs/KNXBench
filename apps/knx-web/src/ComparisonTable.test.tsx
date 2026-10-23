@@ -15,11 +15,12 @@ it.each(["en", "de"] as const)("%s shows exact named values and explains nondeco
   await act(async () => setSetting("uiLanguage", language));
   const host = document.createElement("div");document.body.append(host);const root = createRoot(host);
   dispose = () => {root.unmount();host.remove();};
+  const selected: number[] = [];
   await act(async () => root.render(<ComparisonTable rows={[
-    { kind: "parameter", label: "Delay · R-1 · bit 5 / 9", address: 0x4400, project: "235", device: "345", reason: null },
+    { index: 0, adoptable: true, kind: "parameter", label: "Delay · R-1 · bit 5 / 9", address: 0x4400, project: "235", device: "345", reason: null },
     { kind: "parameter", label: "Text · R-2 · bit 0 / 48", address: 0x4410, project: "5 € ok", device: null, reason: "parameterNotDecoded" },
     { kind: "raw", label: "", address: 0x4400, project: "AB AC", device: "FD 64", reason: null },
-  ]} />));
+  ]} selection={{ indices: [], disabled: false, toggle: (index) => selected.push(index) }} />));
   const rows=host.querySelectorAll("tbody tr");expect(rows).toHaveLength(3);
   expect(rows[0].querySelectorAll("td")[0].textContent).toBe("235");
   expect(rows[0].querySelectorAll("td")[1].textContent).toBe("345");
@@ -28,6 +29,11 @@ it.each(["en", "de"] as const)("%s shows exact named values and explains nondeco
   expect(rows[1].querySelector(".comparison-reason")?.textContent).toContain(language === "de" ? "Rohbytes" : "raw bytes");
   expect(rows[1].textContent).toContain((language === "de" ? de : en)["compare.unknown"]);
   expect(rows[2].textContent).toContain("FD 64");expect(rows[2].closest("details")).toBeNull();
+  const choices = host.querySelectorAll<HTMLInputElement>("tbody input[type=checkbox]");
+  expect(choices).toHaveLength(1); // raw and undecoded rows never acquire selectors
+  expect(choices[0].getAttribute("aria-label")).toContain("Delay · R-1");
+  await act(async () => choices[0].click());
+  expect(selected).toEqual([0]); // retained row index, never a value or display address
 });
 
 async function mount(rows: Parameters<typeof ComparisonTable>[0]["rows"], changes?: Parameters<typeof ComparisonTable>[0]["changes"]) {

@@ -25,7 +25,8 @@ function Bytes({ bytes, t }: { bytes: MarkedByte[] | null; t: Translate }) {
 }
 
 /** The response is never changed: the view only chooses which original rows to show. */
-export default function ComparisonTable({ rows, changes = [] }: { rows: readonly DecodedComparisonRow[]; changes?: readonly ComparisonChange[] }) {
+export default function ComparisonTable({ rows, changes = [], selection }: { rows: readonly DecodedComparisonRow[]; changes?: readonly ComparisonChange[];
+  selection?: { indices: readonly number[]; disabled: boolean; toggle: (index: number) => void } }) {
   const t = useTranslate();
   const [showAll, setShowAll] = useState(false);
   const view = comparisonRowView(rows, changes, showAll);
@@ -44,7 +45,10 @@ export default function ComparisonTable({ rows, changes = [] }: { rows: readonly
         const different = marks ? marks.different > 0 : row.project !== null && row.device !== null && row.project !== row.device;
         return <tr key={index} className={marks ? "comparison-raw" : undefined}
           data-different={different || undefined} data-unknown={(marks !== null && marks.unknown > 0) || undefined}>
-          <th scope="row">{labels[row.kind] ? t(labels[row.kind]) : row.kind}{row.label && ` · ${row.label}`}
+          <th scope="row">{selection && row.adoptable === true && row.index === index && <input type="checkbox"
+            aria-label={t("compare.adoption.select", { field: row.label })} checked={selection.indices.includes(index)}
+            disabled={selection.disabled} onChange={() => selection.toggle(index)} />}
+            {labels[row.kind] ? t(labels[row.kind]) : row.kind}{row.label && ` · ${row.label}`}
             {row.reason && <small className="comparison-reason">{row.reason === "parameterNotDecoded" ? t("compare.parameterNotDecoded") : row.reason}</small>}
             {marks && marks.different > 0 && <small className="comparison-byte-count">{t("compare.bytesDifferent", { count: marks.different })}</small>}
             {marks && marks.unknown > 0 && <small className="comparison-byte-count">{t("compare.bytesUnknown", { count: marks.unknown })}</small>}</th>

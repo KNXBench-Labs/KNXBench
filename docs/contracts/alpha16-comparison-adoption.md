@@ -1,7 +1,7 @@
 # Alpha 16 device → project comparison adoption
 
-Status: admitted offline implementation contract (WP-19, 23 October 2026).
-Mounted API/UI and integrated release acceptance belong to the release integrator.
+Status: App primitives and mounted production API/UI implemented (WP-19,
+23 October 2026). Integrated execution/release acceptance remains pending.
 
 ## Authority and scope
 
@@ -127,7 +127,71 @@ boolean that could turn comparison into a device write. The separate project →
 device button invokes the existing download review with the current stable ID;
 it must not submit comparison bytes as a new write plan.
 
-## Acceptance boundary
+## Mounted API and UI
+
+The existing `device_compare_routes` router mounts the following endpoints;
+the standalone and embedded compositions already share this router:
+
+- `POST /api/device-compare` keeps the existing address/gateway/optional expected
+  binding request. Full comparisons now prepare and observe through the opaque
+  App service under the existing stop, gateway, activity and disconnect guards.
+  No project lock crosses the read await. `observationToken` is returned only
+  for a genuine full read still current at publication. Late results are outdated
+  and have no adoption handle. The response's `decoded` rows add original `index`
+  and an `adoptable` presentation hint, not mutation authority. Existing partial
+  read-only comparisons remain supported, but have no adoption token; their
+  legacy transport result is never promoted into App observation evidence.
+- `POST /api/device-compare/preview` accepts only
+  `{ observationToken, selected: [originalRowIndex, ...] }`.
+  It resolves retained opaque evidence and revalidates source and selection in
+  App; it returns `{ previewToken, selected, changed, rows, expiresInSeconds }`.
+  All original rows remain in the response, including unknown/raw/table rows.
+- `POST /api/device-compare/apply` accepts only
+  `{ previewToken, confirmation: "AdoptDeviceComparison" }`.
+  The selected values, project/native target, scope, revision and command stack
+  are never client inputs. A separate explicit confirmation is mandatory. Under
+  the project/context/stack and catalogue-read ownership, App checks the exact
+  native snapshot and both history directions, persists saved-native working
+  state transactionally before publication, and returns `{ changed, tree }`.
+  The server publishes the returned native generation and logs exactly one
+  `AdoptDeviceComparison` action for a changed edit. No second save runs. No-op
+  previews produce no edit/history action. Native refusal publishes nothing and
+  leaves the retained preview available until expiry/eviction for explicit retry.
+
+Both handles use independent OS-random 256-bit entropy. Router-owned transient
+storage binds them to the authoritative server/project scope and an HttpOnly,
+SameSite=Strict, server-issued browser-session cookie scoped to these endpoints.
+That cookie is not project/native authority or a substitute for deployment
+authentication; existing authentication/same-origin policy still protects the
+routes. All responses are `no-store`; strict DTOs reject extra fields, values,
+paths, candidates and authority payloads. Request bodies are capped at 16 KiB.
+
+Observation handles are valid at most ten minutes (32 retained globally);
+preview handles at most two minutes (16 globally). Admission samples monotonic expiry while holding the
+retention lock, not an eventual timer. Oldest entries can be evicted earlier;
+these are upper limits on handle authority, not guaranteed replay windows. Expired
+entries are pruned at the next comparison/preview/apply admission or router
+disposal; retained memory is additionally bounded by the global counts. Project replacement
+invalidates by scope; an edit invalidates currency, and successful adoption
+clears retained handles. Server restart/router disposal forgets all handles.
+Unknown/expired/foreign handles fail closed with `deviceComparisonExpired`;
+stale scope/history/source uses `deviceCompareStale`, selection refusal uses
+`deviceAdoptionRefused`, native failure uses `deviceAdoptionPersistenceFailed`.
+A lost apply response never proves rollback and must not trigger automatic
+reapply. The UI instructs a project/history refresh before a new attempt.
+
+The existing Devices comparison dialog shows selection controls only for
+server-hinted named rows. Filtering preserves original row indices. It requests
+a preview, displays exactly its retained selection and old/device values, then
+requires a separate checkbox and apply gesture. Project snapshot changes
+discard local previews; the server remains the final stale/history authority.
+Acknowledged edits flow through the workbench's normal tree update, including
+undo/redo/programming revision projections. Copy is provided in EN and DE.
+Project → device passes only the current stable device ID through
+`OpenDownloadButton` into the existing download review. It never passes
+comparison bytes, values or plans and never starts a download itself.
+
+## Integrated acceptance boundary
 
 Minimal focused offline RED/GREEN tests cover atomic rollback, whole-edit undo
 and redo, exact scope/source and stack refusal, unsupported mixed selections,

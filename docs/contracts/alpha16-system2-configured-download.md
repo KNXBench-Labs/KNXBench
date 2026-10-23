@@ -175,6 +175,53 @@ and exposes interrupted status instead of inventing completion. Reopening an
 unfinished durable journal is interrupted, never automatic resume. Restart
 selection, server task retention and public HTTP DTO state are adapter duties.
 
+## Standalone/embedded close and drain
+
+`knx_app::property_validation` exports the shared, cloneable
+`System2OperationControl`, not a second transport/executor:
+
+```rust
+impl System2OperationControl {
+    fn new() -> Self;
+    fn try_admit(&self, operation: &str) -> Result<System2OperationLease, System2ControlError>;
+    fn close_admission(&self) -> System2ControlSnapshot;
+    fn request_cancel(&self, operation: &str) -> Result<System2ControlSnapshot, System2ControlError>;
+    fn snapshot(&self) -> System2ControlSnapshot;
+    fn subscribe(&self) -> watch::Receiver<System2ControlSnapshot>;
+    async fn drain(&self, timeout: Duration) -> System2DrainOutcome;
+}
+impl System2OperationLease {
+    fn cancel_token(&self) -> Arc<AtomicBool>;
+    fn settle(self, outcome: LocalOutcome) -> Result<System2ControlSnapshot, System2ControlError>;
+}
+```
+
+`System2ControlSnapshot` contains `accepting`, `cancellation_requested`, `settlement`.
+`System2Settlement` is `Idle`, `Running { operation }`,
+`Settled { operation, outcome }`, or `Uncertain { operation }`.
+`System2DrainOutcome` distinguishes `Settled(snapshot)`, `TimedOut(snapshot)`,
+`Uncertain(snapshot)`; it never treats process exit as a completed download.
+`System2ControlError` distinguishes `Closed`, `Busy`, `InvalidOperation`,
+`WrongOperation`, `InvalidSettlement`.
+
+Admission/close share one mutex, so close cannot miss a concurrently admitted
+task. Move the opaque lease into the actual owned operation task and pass its
+cancel token to App execution. The adapter retains the REAL JoinHandle, original
+bundle, OperationStore and bus guards through disconnect; this coordinator never
+takes or discards those resources. Close all admission before concurrently
+waiting for System-2, catalogue and ordinary-device drains. System-2 drain asks
+for cooperative cancellation and waits only on a watch receiver. Timeout leaves
+the original task/backup owned and active, for the forced-exit decision; it does
+not abort, detach, erase evidence or imply rollback.
+
+Call `lease.settle(final_store_outcome)` only after actual task and transport
+ownership settle. Running/Restoring are refused as terminal outcomes. Settled
+Cancelled/Failed/Interrupted still is not recovery proof. Dropping a lease without
+explicit settlement quarantines the control as Uncertain and closes admission,
+never falsely successful drain. Closed admission is not silently reopened.
+Restart recovery selection still requires the original durable operation; an
+in-memory control is not a restart journal or a whole-device backup.
+
 ## Actual-state backup and recovery limits
 
 The existing Net executor rechecks observed serial, mask, manufacturer, hardware

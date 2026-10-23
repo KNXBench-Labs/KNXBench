@@ -1125,3 +1125,17 @@ fn ready_entry_replaces_working_lease_with_exact_consent_and_counters() {
     assert_eq!(control.snapshot(), Ok(expected));
     assert_eq!(control.state.lock().unwrap().ready, Some(evidence()));
 }
+
+#[test]
+fn b10_claim_refuses_elapsed_working_deadline_without_reaper() {
+    let (control, clock) = ready_fixture();
+    control.apply(identity(), command()).unwrap();
+    clock.set(Duration::from_secs(7200));
+    assert!(
+        !control.claim_test().unwrap(),
+        "elapsed working deadline must exclude native COMMIT claim"
+    );
+    let view = control.snapshot().unwrap();
+    assert_eq!(view.gate, PublicationState::CancelAccepted);
+    assert_eq!(view.stop_cause, Some(Cause::WorkingTimeout));
+}

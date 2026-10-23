@@ -19,7 +19,7 @@ const POLICY_VERSION: u32 = 1;
 
 /// The two effective limit profiles a controlled job may select.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum ControlledPolicy {
+pub enum ControlledPolicy {
     Standard,
     Large,
 }
@@ -113,7 +113,7 @@ impl PolicyIdentity {
 
 /// Typed failures of controlled source admission; never a truncated prefix.
 #[derive(Debug, PartialEq, Eq)]
-pub(crate) enum ControlledError {
+pub enum ControlledError {
     /// The source name violated one exact P3 grammar rule.
     InvalidName(NameRule),
     /// The actual source bytes exceed the retained-byte ceiling.
@@ -122,7 +122,7 @@ pub(crate) enum ControlledError {
 
 /// The exact P3 name-grammar rule a source name violated.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum NameRule {
+pub enum NameRule {
     Empty,
     TooLong,
     DotOrDotDot,

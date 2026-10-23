@@ -82,6 +82,32 @@ pub struct PublicationGate {
     state: AtomicU8,
 }
 
+/// A unique successful CAS, not a COMMIT result. No public constructor or Clone.
+/// A claim for another gate cannot authorize this operation's native COMMIT.
+pub struct CommitClaim<'a> {
+    gate: &'a PublicationGate,
+}
+impl CommitClaim<'_> {
+    pub(crate) fn belongs_to(self, gate: &PublicationGate) -> bool {
+        std::ptr::eq(self.gate, gate)
+    }
+}
+
+/// Control-only seam: no connection, transaction, source or SQL callback.
+/// The server samples deadlines and claims the same gate under its short lock.
+pub trait CommitArbitration {
+    fn gate(&self) -> &PublicationGate;
+    fn claim_commit(&self) -> Option<CommitClaim<'_>>;
+}
+impl CommitArbitration for PublicationGate {
+    fn gate(&self) -> &PublicationGate {
+        self
+    }
+    fn claim_commit(&self) -> Option<CommitClaim<'_>> {
+        self.claim()
+    }
+}
+
 impl Default for PublicationGate {
     fn default() -> Self {
         Self::new()
@@ -89,6 +115,11 @@ impl Default for PublicationGate {
 }
 
 impl PublicationGate {
+    /// Mint a gate-bound token from the unique winning CAS.
+    pub fn claim(&self) -> Option<CommitClaim<'_>> {
+        self.try_claim_commit()
+            .then_some(CommitClaim { gate: self })
+    }
     /// Creates a fresh Open gate for a distinct operation.
     pub fn new() -> Self {
         Self {

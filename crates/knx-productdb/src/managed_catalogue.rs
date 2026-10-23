@@ -277,6 +277,8 @@ pub struct ManagedCatalogue {
     // A failed explicit S close returns a live handle. Keep it on the managed
     // owner rather than allowing a temporary error to silently dispose it.
     unresolved_preview_source: Option<UnresolvedPreviewSource>,
+    apply_attempt_serial: u64,
+    retained_apply_witness: Option<crate::orchestration::RetainedApplyWitness>,
 }
 
 impl ManagedCatalogue {
@@ -293,7 +295,42 @@ impl ManagedCatalogue {
             identity,
             observation: Some(observation),
             unresolved_preview_source: None,
+            apply_attempt_serial: 0,
+            retained_apply_witness: None,
         })
+    }
+
+    /// Metadata only; never repairs health or borrows SQLite.
+    pub fn health_snapshot(&self) -> WriterHealth {
+        self.health
+    }
+
+    /// Metadata only: available even while Mutating/Quarantined; no SQL or repair.
+    #[allow(dead_code)] // consumed by the future private worker integration
+    pub(crate) fn retained_apply_witness(
+        &self,
+    ) -> Option<crate::orchestration::RetainedApplyWitness> {
+        self.retained_apply_witness
+    }
+
+    /// Explicit keyed ownership transfer, independent of settlement/health.
+    #[allow(dead_code)]
+    pub(crate) fn take_apply_witness(
+        &mut self,
+        key: crate::orchestration::ApplyAttemptKey,
+    ) -> Result<
+        crate::orchestration::RetainedApplyWitness,
+        crate::orchestration::ApplyWitnessTransferError,
+    > {
+        use crate::orchestration::ApplyWitnessTransferError;
+        match self.retained_apply_witness {
+            None => Err(ApplyWitnessTransferError::Absent),
+            Some(record) if record.key != key => Err(ApplyWitnessTransferError::KeyMismatch),
+            Some(record) => {
+                self.retained_apply_witness = None;
+                Ok(record)
+            }
+        }
     }
 
     /// A read lease scoped to a lock; `&Connection` never escapes the closure.
@@ -483,6 +520,7 @@ impl ManagedCatalogue {
             total_changes,
             file,
             witness,
+            configuration: crate::catalogue_stamp::WriterConfigurationReceipt::read(conn)?,
         })
     }
 
@@ -554,6 +592,7 @@ impl ManagedCatalogue {
             .as_mut()
             .ok_or(OrchestrationError::MissingConnection)?;
         require_writer_configuration(conn)?;
+        let configuration = crate::catalogue_stamp::WriterConfigurationReceipt::read(conn)?;
         self.health = WriterHealth::Mutating;
         let guard = MutationGuard {
             health: &mut self.health,
@@ -566,6 +605,9 @@ impl ManagedCatalogue {
         let mut cleanup = Vec::new();
         let preparation = (|| -> Result<_, OrchestrationError> {
             require_writer_configuration(&tx)?;
+            if crate::catalogue_stamp::WriterConfigurationReceipt::read(&tx)? != configuration {
+                return Err(OrchestrationError::Stale);
+            }
             let _: i64 = tx.query_row("SELECT count(*) FROM sqlite_schema", [], |r| r.get(0))?;
             let before: i64 = tx.query_row("PRAGMA data_version", [], |r| r.get(0))?;
             data_version = Some(before);
@@ -578,6 +620,7 @@ impl ManagedCatalogue {
                 total_changes,
                 file,
                 witness,
+                configuration,
             };
             #[cfg(test)]
             artifacts.before_source_open(&path);
@@ -680,7 +723,7 @@ impl ManagedCatalogue {
                         primary: Some(primary),
                         cleanup: vec![PreviewCleanupError::RehearsalClose(close)],
                     },
-                )))
+                )));
             }
             (Err(primary), Ok(())) => return Err(primary),
             (Ok(_), Err(close)) => return Err(close.into()),
@@ -712,6 +755,17 @@ impl ManagedCatalogue {
         op: &crate::orchestration::OperationContext<'_>,
         artifacts: &mut dyn crate::orchestration::CatalogueArtifacts,
     ) -> crate::orchestration::ControlledApplySettlement {
+        self.apply_current_controlled_with_claim(source, shown, op, artifacts, op.gate)
+    }
+
+    pub(crate) fn apply_current_controlled_with_claim(
+        &mut self,
+        source: crate::controlled::ControlledSource<'_>,
+        shown: &crate::preview_binding::PreviewBinding,
+        op: &crate::orchestration::OperationContext<'_>,
+        artifacts: &mut dyn crate::orchestration::CatalogueArtifacts,
+        control: &dyn crate::operation::CommitArbitration,
+    ) -> crate::orchestration::ControlledApplySettlement {
         use crate::orchestration::{
             ArtifactDisposition, CommitEvidence, ControlledApplySettlement, OrchestrationError,
             RollbackDisposition,
@@ -724,6 +778,29 @@ impl ManagedCatalogue {
                 self.health,
             );
         }
+        if self.retained_apply_witness.is_some() {
+            return ControlledApplySettlement::refused(
+                OrchestrationError::ApplyWitnessPending,
+                self.health,
+            );
+        }
+        let Some(serial) = self.apply_attempt_serial.checked_add(1) else {
+            return ControlledApplySettlement::refused(
+                OrchestrationError::ApplyAttemptExhausted,
+                self.health,
+            );
+        };
+        self.apply_attempt_serial = serial;
+        self.retained_apply_witness = Some(crate::orchestration::RetainedApplyWitness {
+            key: crate::orchestration::ApplyAttemptKey {
+                incarnation: self.incarnation,
+                serial,
+            },
+            shown_generation: shown.catalogue.generation,
+            source_length: source.bytes.len() as u64,
+            source_sha256: source.sha256,
+            trace: crate::orchestration::LiveCommitTrace::NoLiveCommitInvocation,
+        });
         if let Err(stop) = op.gate.checkpoint() {
             return ControlledApplySettlement::refused(OrchestrationError::Stop(stop), self.health);
         }
@@ -753,7 +830,7 @@ impl ManagedCatalogue {
                 return ControlledApplySettlement::refused(
                     OrchestrationError::MissingConnection,
                     self.health,
-                )
+                );
             }
         };
         let identity = self.identity.as_ref().unwrap();
@@ -777,11 +854,18 @@ impl ManagedCatalogue {
                 return ControlledApplySettlement::refused(
                     OrchestrationError::MissingConnection,
                     self.health,
-                )
+                );
             }
         };
         if let Err(error) = require_writer_configuration(conn) {
             return ControlledApplySettlement::refused(error, self.health);
+        }
+        match crate::catalogue_stamp::WriterConfigurationReceipt::read(conn) {
+            Ok(configuration) if configuration == shown.catalogue.configuration => {}
+            Ok(_) => {
+                return ControlledApplySettlement::refused(OrchestrationError::Stale, self.health);
+            }
+            Err(error) => return ControlledApplySettlement::refused(error.into(), self.health),
         }
         if let Err(error) = crate::catalogue_growth::require_synchronous(conn) {
             return ControlledApplySettlement::refused(
@@ -828,6 +912,7 @@ impl ManagedCatalogue {
                 total_changes: tx.total_changes(),
                 file: FileStamp::from_path(&path),
                 witness,
+                configuration: crate::catalogue_stamp::WriterConfigurationReceipt::read(&tx)?,
             };
             if before != after || fresh_stamp != shown.catalogue {
                 return Err(OrchestrationError::Stale);
@@ -942,7 +1027,7 @@ impl ManagedCatalogue {
                                 crate::orchestration::PreviewCleanupError::RehearsalClose(close),
                             ],
                         },
-                    )))
+                    )));
                 }
                 (Err(primary), Ok(())) => return Err(primary),
                 (Ok(()), Err(close)) => return Err(close.into()),
@@ -986,23 +1071,43 @@ impl ManagedCatalogue {
                 cleanup.push(error);
             }
         }
+        // The slot was installed before fallible work; borrow it BEFORE COMMIT.
+        // Recording native OK must not allocate, look up, lock or call user code.
+        let retained = self
+            .retained_apply_witness
+            .as_mut()
+            .expect("admitted apply receipt");
         let (commit, rollback, failure) = if let Err(error) = body {
             let rollback = rollback_and_record(&tx, &mut cleanup);
             (CommitEvidence::NotCommitted, rollback, Some(error))
-        } else if op.gate.try_claim_commit() {
+        } else if control
+            .claim_commit()
+            .is_some_and(|claim| claim.belongs_to(op.gate))
+        {
             // One live COMMIT, never retried. Retain the original COMMIT error
             // independently of the observed rollback disposition.
+            retained.trace = crate::orchestration::LiveCommitTrace::LiveCommitInvoked;
             match tx.execute_batch("COMMIT") {
-                Ok(()) if tx.is_autocommit() => (
-                    CommitEvidence::Committed,
-                    RollbackDisposition::NotApplicable,
-                    None,
-                ),
-                Ok(()) => (
-                    CommitEvidence::Unknown,
-                    rollback_and_record(&tx, &mut cleanup),
-                    Some(OrchestrationError::CommitNotAutocommit),
-                ),
+                Ok(()) => {
+                    let autocommit = tx.is_autocommit();
+                    retained.trace =
+                        crate::orchestration::LiveCommitTrace::LiveCommitReturnedOk { autocommit };
+                    if !autocommit {
+                        (
+                            CommitEvidence::Unknown,
+                            rollback_and_record(&tx, &mut cleanup),
+                            Some(OrchestrationError::CommitNotAutocommit),
+                        )
+                    } else {
+                        #[cfg(test)]
+                        artifacts.after_live_commit(&tx);
+                        (
+                            CommitEvidence::Committed,
+                            RollbackDisposition::NotApplicable,
+                            None,
+                        )
+                    }
+                }
                 Err(error) => {
                     let rollback = rollback_and_record(&tx, &mut cleanup);
                     let commit = if is_busy(&error) && rollback == RollbackDisposition::Explicit {
@@ -1019,7 +1124,11 @@ impl ManagedCatalogue {
             (
                 CommitEvidence::NotCommitted,
                 rollback_and_record(&tx, &mut cleanup),
-                None,
+                if op.gate.state() == crate::operation::PublicationState::CancelAccepted {
+                    None
+                } else {
+                    Some(OrchestrationError::CommitClaimRefused)
+                },
             )
         };
         drop(tx);
@@ -1030,17 +1139,15 @@ impl ManagedCatalogue {
                 ));
             }
         }
-        let clean = !source_unresolved
+        let mut clean = !source_unresolved
             && cleanup.is_empty()
             && commit != CommitEvidence::Unknown
             && rollback != RollbackDisposition::Unresolved;
         if clean {
-            guard.disarm();
-        } else {
-            drop(guard);
-        }
-        if clean && self.refresh_observation().is_err() {
-            self.health = WriterHealth::Quarantined(QuarantineReason::UncertainSettlement);
+            match Self::observe(conn, &path) {
+                Ok(observation) => self.observation = Some(observation),
+                Err(_) => clean = false,
+            }
         }
         let recovery_exists = artifacts
             .inventory()
@@ -1049,12 +1156,19 @@ impl ManagedCatalogue {
             ArtifactDisposition::None
         } else if commit == CommitEvidence::NotCommitted
             && rollback != RollbackDisposition::Unresolved
-            && self.health == WriterHealth::Healthy
+            && clean
         {
             ArtifactDisposition::Dispose
         } else {
             ArtifactDisposition::Retain
         };
+        // No trait/fallible call follows clean disarm. Tail projection panics
+        // therefore quarantine exactly like immediate post-COMMIT panics.
+        if clean {
+            guard.disarm();
+        } else {
+            drop(guard);
+        }
         ControlledApplySettlement {
             failure,
             cleanup,
@@ -1457,6 +1571,89 @@ mod tests {
             err,
             crate::catalogue_stamp::StampError::NotHealthy(_)
         ));
+    }
+
+    #[test]
+    fn apply_attempt_exhaustion_refuses_without_native_work_or_artifacts() {
+        use crate::controlled::{
+            ControlledPolicy, ControlledSource, PolicyIdentity, SourceIdentity,
+        };
+        use crate::orchestration::{
+            ArtifactDisposition, CatalogueArtifacts, CommitEvidence, OperationContext,
+            OrchestrationError,
+        };
+        struct NoArtifacts;
+        impl CatalogueArtifacts for NoArtifacts {
+            fn inventory(&mut self) -> &mut crate::catalogue_copy::ArtifactInventory {
+                panic!("exhausted attempt cannot access inventory")
+            }
+            fn fresh_rehearsal(
+                &mut self,
+                _: i64,
+            ) -> Result<crate::catalogue_copy::FreshDestination, OrchestrationError> {
+                panic!("exhausted attempt cannot allocate D")
+            }
+            fn fresh_recovery(
+                &mut self,
+                _: i64,
+            ) -> Result<crate::catalogue_copy::FreshDestination, OrchestrationError> {
+                panic!("exhausted attempt cannot allocate B")
+            }
+        }
+        let (_dir, _path, mut owner) = migrated_owner();
+        let gate = PublicationGate::new();
+        let policy = ControlledPolicy::Standard;
+        let source = ControlledSource::admit("counter.knxprod", b"not-an-archive", policy).unwrap();
+        // Deliberately synthetic: only the pre-native exhaustion boundary is tested.
+        let shown = crate::preview_binding::PreviewBinding::bind(
+            owner.capture_stamp(&gate).unwrap(),
+            SourceIdentity::from_source(&source),
+            PolicyIdentity::from_policy(policy),
+            crate::preview_identity::PreviewIdentity {
+                version: 1,
+                sha256: [0; 32],
+                package_count: 0,
+                other_member_count: 0,
+                encoded_bytes: 0,
+            },
+        );
+        owner.apply_attempt_serial = u64::MAX;
+        unsafe extern "C" fn deny(
+            _: *mut std::ffi::c_void,
+            _: i32,
+            _: *const std::ffi::c_char,
+            _: *const std::ffi::c_char,
+            _: *const std::ffi::c_char,
+            _: *const std::ffi::c_char,
+        ) -> i32 {
+            rusqlite::ffi::SQLITE_DENY
+        }
+        let db = unsafe { owner.conn.as_ref().unwrap().handle() };
+        unsafe {
+            rusqlite::ffi::sqlite3_set_authorizer(db, Some(deny), std::ptr::null_mut());
+        }
+        let result = owner.apply_current_controlled(
+            source,
+            &shown,
+            &OperationContext {
+                gate: &gate,
+                policy,
+            },
+            &mut NoArtifacts,
+        );
+        unsafe {
+            rusqlite::ffi::sqlite3_set_authorizer(db, None, std::ptr::null_mut());
+        }
+        assert!(matches!(
+            result.failure,
+            Some(OrchestrationError::ApplyAttemptExhausted)
+        ));
+        assert_eq!(result.commit, CommitEvidence::NotCommitted);
+        assert_eq!(result.artifacts, ArtifactDisposition::None);
+        assert_eq!(owner.apply_attempt_serial, u64::MAX);
+        assert!(owner.retained_apply_witness().is_none());
+        assert_eq!(owner.generation, 0);
+        assert_eq!(owner.health, WriterHealth::Healthy);
     }
 
     #[test]

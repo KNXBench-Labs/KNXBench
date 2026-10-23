@@ -7,12 +7,14 @@ use crate::managed_catalogue::{LegacyMutationKind, LegacySettlementHint, Managed
 use crate::operation::PublicationGate;
 use std::io::Write;
 
+mod commit_witness;
 mod live_growth;
 mod reopened_copy;
 mod reopened_copy_controls;
 mod reopened_copy_matrix;
 mod review_regressions;
 mod second_rehearsal;
+mod variable_configuration;
 mod writer_configuration;
 
 const MASTER: &[u8] = br#"<KNX xmlns="http://knx.org/xml/project/11"><MasterData><Manufacturers><Manufacturer Id="M-0001" Name="Example"/></Manufacturers></MasterData></KNX>"#;

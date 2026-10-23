@@ -28,6 +28,7 @@ pub mod ingest;
 pub mod legacy;
 // Managed owner primitive: wired into the server by the owner-wrapper
 // increment (WP-04.3 stage B, ADR-0150).
+pub mod managed_apply;
 pub mod managed_catalogue;
 // Private bounded copy primitive remains unwired until the W/S/D orchestration
 // exists (WP-04.3 stage B, ADR-0150).

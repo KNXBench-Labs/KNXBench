@@ -152,7 +152,7 @@ unsafe extern "C" fn authorize(
                     (1, Fault::IgnoreSet) => return rusqlite::ffi::SQLITE_IGNORE,
                     (1, Fault::DenySet) => return rusqlite::ffi::SQLITE_DENY,
                     (2.., Fault::DenyRestoreSet | Fault::DenyReadRestoreSet) => {
-                        return rusqlite::ffi::SQLITE_DENY
+                        return rusqlite::ffi::SQLITE_DENY;
                     }
                     (2.., Fault::IgnoreRestoreSet) => return rusqlite::ffi::SQLITE_IGNORE,
                     _ => {}
@@ -765,6 +765,15 @@ fn restoration_failure_preserves_committed_or_primary_refusal_and_retains_b() {
                     CommitEvidence::NotCommitted
                 },
                 "cleanup must never overwrite witnessed commit"
+            );
+            assert_eq!(
+                owner.retained_apply_witness().unwrap().trace,
+                if committed {
+                    LiveCommitTrace::LiveCommitReturnedOk { autocommit: true }
+                } else {
+                    LiveCommitTrace::NoLiveCommitInvocation
+                },
+                "restoration failure cannot rewrite the native trace"
             );
             assert_eq!(
                 result.rollback,

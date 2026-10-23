@@ -1,14 +1,16 @@
 //! Unwired catalogue admission kernel; no production construction or job execution.
 
-use knx_productdb::operation::{CancelOutcome, PublicationGate, PublicationState, Stop};
-use std::sync::{Mutex, MutexGuard};
+use knx_productdb::operation::{
+    CancelOutcome, CommitArbitration, CommitClaim, PublicationGate, PublicationState, Stop,
+};
+use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::{Duration, Instant};
 
-trait Clock {
+pub(crate) trait Clock {
     fn sample(&self) -> Result<Duration, ()>;
 }
-struct MonotonicClock {
-    origin: Instant,
+pub(crate) struct MonotonicClock {
+    pub(crate) origin: Instant,
 }
 impl Clock for MonotonicClock {
     fn sample(&self) -> Result<Duration, ()> {
@@ -16,13 +18,13 @@ impl Clock for MonotonicClock {
     }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct Identity {
-    incarnation: [u8; 16],
-    serial: u64,
-    job: [u8; 16],
+pub(crate) struct Identity {
+    pub(crate) incarnation: [u8; 16],
+    pub(crate) serial: u64,
+    pub(crate) job: [u8; 16],
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Phase {
+pub(crate) enum Phase {
     Previewing,
     Ready,
     WaitingForWriter,
@@ -30,46 +32,46 @@ enum Phase {
     Committing,
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct ReadyEvidence {
-    consent: [u8; 16],
-    artifact: [u8; 16],
-    digest: [u8; 32],
+pub(crate) struct ReadyEvidence {
+    pub(crate) consent: [u8; 16],
+    pub(crate) artifact: [u8; 16],
+    pub(crate) digest: [u8; 32],
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct Ticket {
-    identity: Identity,
-    phase: Phase,
-    generation: u64,
-    kind: LeaseKind,
-    deadline: Duration,
+pub(crate) struct Ticket {
+    pub(crate) identity: Identity,
+    pub(crate) phase: Phase,
+    pub(crate) generation: u64,
+    pub(crate) kind: LeaseKind,
+    pub(crate) deadline: Duration,
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum LeaseKind {
+pub(crate) enum LeaseKind {
     Working,
     Ready,
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct Lease {
-    kind: LeaseKind,
-    deadline: Duration,
-    deadline_tick_ms: u64,
+pub(crate) struct Lease {
+    pub(crate) kind: LeaseKind,
+    pub(crate) deadline: Duration,
+    pub(crate) deadline_tick_ms: u64,
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Consent {
+pub(crate) enum Consent {
     Unavailable,
     Available,
     Spent,
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct Command {
-    command: [u8; 16],
-    consent: [u8; 16],
-    artifact: [u8; 16],
-    digest: [u8; 32],
-    confirmed: bool,
+pub(crate) struct Command {
+    pub(crate) command: [u8; 16],
+    pub(crate) consent: [u8; 16],
+    pub(crate) artifact: [u8; 16],
+    pub(crate) digest: [u8; 32],
+    pub(crate) confirmed: bool,
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Cause {
+pub(crate) enum Cause {
     UserCancel,
     ServerStop,
     ReadyExpired,
@@ -77,20 +79,20 @@ enum Cause {
     CounterExhausted,
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct Snapshot {
-    identity: Identity,
-    phase: Phase,
-    revision: u64,
-    generation: u64,
-    lease: Lease,
-    consent: Consent,
-    accepted: Option<Command>,
-    stop_cause: Option<Cause>,
-    admission_closed: bool,
-    gate: PublicationState,
+pub(crate) struct Snapshot {
+    pub(crate) identity: Identity,
+    pub(crate) phase: Phase,
+    pub(crate) revision: u64,
+    pub(crate) generation: u64,
+    pub(crate) lease: Lease,
+    pub(crate) consent: Consent,
+    pub(crate) accepted: Option<Command>,
+    pub(crate) stop_cause: Option<Cause>,
+    pub(crate) admission_closed: bool,
+    pub(crate) gate: PublicationState,
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Error {
+pub(crate) enum Error {
     Unavailable,
     InvalidHandle,
     InvalidPhase,
@@ -102,32 +104,33 @@ enum Error {
     CatalogueUpdateStale,
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Apply {
+pub(crate) enum Apply {
     AcceptedOnce(Snapshot),
     Replay(Snapshot),
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Expiry {
+pub(crate) enum Expiry {
     Inert(Snapshot),
     Stop(CancelOutcome, Snapshot),
 }
 struct State {
     view: Snapshot,
-    gate: PublicationGate,
+    gate: Arc<PublicationGate>,
     last_sample: Duration,
     unavailable: bool,
     ready: Option<ReadyEvidence>,
 }
 // Immutable opaque evidence never enters the mutable mutex or a transition callback.
-struct Control<B, C> {
+pub(crate) struct Control<B, C> {
     identity: Identity,
     binding: B,
     clock: C,
     state: Mutex<State>,
+    // Same allocation as State::gate, never a second publication gate.
+    gate: Arc<PublicationGate>,
 }
 impl<B, C: Clock> Control<B, C> {
-    #[cfg(test)]
-    fn new_test(identity: Identity, binding: B, clock: C) -> Result<Self, Error> {
+    pub(crate) fn new(identity: Identity, binding: B, clock: C) -> Result<Self, Error> {
         if identity.serial == 0 || identity.serial == u64::MAX {
             return Err(Error::InvalidHandle);
         }
@@ -145,18 +148,27 @@ impl<B, C: Clock> Control<B, C> {
             admission_closed: false,
             gate: PublicationState::Open,
         };
+        let gate = Arc::new(PublicationGate::new());
         Ok(Self {
             identity,
             binding,
             clock,
             state: Mutex::new(State {
                 view,
-                gate: PublicationGate::new(),
+                gate: Arc::clone(&gate),
                 last_sample: now,
                 unavailable: false,
                 ready: None,
             }),
+            gate,
         })
+    }
+    #[cfg(test)]
+    fn new_test(identity: Identity, binding: B, clock: C) -> Result<Self, Error> {
+        Self::new(identity, binding, clock)
+    }
+    pub(crate) fn binding(&self) -> &B {
+        &self.binding
     }
     fn lock(&self) -> Result<MutexGuard<'_, State>, Error> {
         let state = self.state.lock().map_err(|_| Error::Unavailable)?;
@@ -165,31 +177,46 @@ impl<B, C: Clock> Control<B, C> {
         }
         Ok(state)
     }
-    // Fixture only: not a worker precommit claim or COMMIT authorization API.
-    #[cfg(test)]
-    fn claim_test(&self) -> Result<bool, Error> {
+    // Deadline, stop and COMMIT arbitrate under this short mutex. No SQL.
+    fn claim_live_commit(&self) -> Result<Option<CommitClaim<'_>>, Error> {
         let mut s = self.lock()?;
         if s.gate.state() != PublicationState::Open {
-            return Ok(false);
+            return Ok(None);
+        }
+        if s.view.phase != Phase::WaitingForWriter || s.view.accepted.is_none() {
+            return Err(Error::InvalidPhase);
+        }
+        let now = self.observe(&mut s)?;
+        if now >= s.view.lease.deadline {
+            Self::stop(&mut s, Cause::WorkingTimeout)?;
+            return Ok(None);
         }
         let (revision, generation) = Self::ordinary_counters(&mut s)?;
-        if !s.gate.try_claim_commit() {
-            return Ok(false);
-        }
+        let Some(claim) = self.gate.claim() else {
+            return Ok(None);
+        };
         s.view.phase = Phase::Committing;
         s.view.gate = s.gate.state();
         s.view.revision = revision;
         s.view.generation = generation;
-        Ok(true)
+        Ok(Some(claim))
     }
-    fn request_stop(&self, identity: Identity, cause: Cause) -> Result<CancelOutcome, Error> {
+    #[cfg(test)]
+    fn claim_test(&self) -> Result<bool, Error> {
+        self.claim_live_commit().map(|claim| claim.is_some())
+    }
+    pub(crate) fn request_stop(
+        &self,
+        identity: Identity,
+        cause: Cause,
+    ) -> Result<CancelOutcome, Error> {
         let mut s = self.lock()?;
         if identity != self.identity {
             return Err(Error::InvalidHandle);
         }
         Self::stop(&mut s, cause)
     }
-    fn checkpoint(&self) -> Result<Result<(), Stop>, Error> {
+    pub(crate) fn checkpoint(&self) -> Result<Result<(), Stop>, Error> {
         Ok(self.lock()?.gate.checkpoint())
     }
     fn lease(now: Duration, kind: LeaseKind) -> Option<Lease> {
@@ -264,7 +291,7 @@ impl<B, C: Clock> Control<B, C> {
         s.view.gate = s.gate.state();
         Ok(result)
     }
-    fn expire(&self, ticket: Ticket) -> Result<Expiry, Error> {
+    pub(crate) fn expire(&self, ticket: Ticket) -> Result<Expiry, Error> {
         let mut s = self.lock()?;
         if ticket != Self::state_ticket(&s) || s.view.admission_closed {
             return Ok(Expiry::Inert(s.view));
@@ -280,7 +307,7 @@ impl<B, C: Clock> Control<B, C> {
         let result = Self::stop(&mut s, cause)?;
         Ok(Expiry::Stop(result, s.view))
     }
-    fn apply(&self, identity: Identity, command: Command) -> Result<Apply, Error> {
+    pub(crate) fn apply(&self, identity: Identity, command: Command) -> Result<Apply, Error> {
         let mut s = self.lock()?;
         if identity != self.identity {
             return Err(Error::InvalidHandle);
@@ -331,10 +358,10 @@ impl<B, C: Clock> Control<B, C> {
         s.view.accepted = Some(command);
         Ok(Apply::AcceptedOnce(s.view))
     }
-    fn snapshot(&self) -> Result<Snapshot, Error> {
+    pub(crate) fn snapshot(&self) -> Result<Snapshot, Error> {
         Ok(self.lock()?.view)
     }
-    fn ticket(&self) -> Result<Ticket, Error> {
+    pub(crate) fn ticket(&self) -> Result<Ticket, Error> {
         let s = self.lock()?;
         Ok(Self::state_ticket(&s))
     }
@@ -348,7 +375,11 @@ impl<B, C: Clock> Control<B, C> {
             deadline: v.lease.deadline,
         }
     }
-    fn enter_ready(&self, expected: Ticket, evidence: ReadyEvidence) -> Result<Snapshot, Error> {
+    pub(crate) fn enter_ready(
+        &self,
+        expected: Ticket,
+        evidence: ReadyEvidence,
+    ) -> Result<Snapshot, Error> {
         let mut s = self.lock()?;
         if s.view.phase != Phase::Previewing
             || expected != Self::state_ticket(&s)
@@ -373,6 +404,18 @@ impl<B, C: Clock> Control<B, C> {
         Ok(s.view)
     }
 }
+
+impl<B, C: Clock> CommitArbitration for Control<B, C> {
+    fn gate(&self) -> &PublicationGate {
+        &self.gate
+    }
+    fn claim_commit(&self) -> Option<CommitClaim<'_>> {
+        self.claim_live_commit().ok().flatten()
+    }
+}
+
+#[path = "catalogue_jobs/controlled_apply.rs"]
+pub(crate) mod controlled_apply;
 
 #[cfg(test)]
 #[path = "catalogue_job_control/tests.rs"]

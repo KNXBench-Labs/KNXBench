@@ -137,6 +137,7 @@ async function fixture(page: Page, options: Options): Promise<Fixture> {
       return ok(tree());
     }
     if (path === "/api/undo" && method === "POST") { f.undo += 1; links = history.pop() ?? links; revision += 1; return ok(tree()); }
+    if (path === "/api/device-system2/status" && method === "GET") return ok(null);
     if (path === "/api/device-download/status" && method === "GET") {
       return (options.statusGate ?? Promise.resolve()).then(() => options.running ? ok(RUNNING) : ok({ error: "no download" }, 404));
     }

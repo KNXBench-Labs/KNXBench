@@ -5,6 +5,8 @@ import { expect, test, type Page } from "@playwright/test";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
 import { achievementsFixtureAnswer } from "./achievements-fixture";
 import { statusMetricsFixtureBody } from "./status-metrics-fixture";
+import { catalogueJobsFixture } from "./catalogue-jobs-fixture";
+import { messages as en } from "../src/messages/en";
 
 const labels = {
   en: {
@@ -31,7 +33,7 @@ const report = {
 /** A stand-in server: an encrypted .vd4 asks for a password, then imports with it. */
 async function interceptApi(page: Page, settings: Record<string, unknown>) {
   const state = {
-    unexpected: [] as string[], packagePreviews: 0, installs: [] as { password: boolean; remember: boolean }[],
+    unexpected: [] as string[], jobs: catalogueJobsFixture({ legacy: true }), installs: [] as { password: boolean; remember: boolean }[],
   };
   const current = {
     schema_version: 11, errors: 0, warnings: 0, can_undo: false, can_redo: false, is_modified: true,
@@ -47,6 +49,8 @@ async function interceptApi(page: Page, settings: Record<string, unknown>) {
   await page.route("**/api/**", (route) => {
     const path = new URL(route.request().url()).pathname;
     const method = route.request().method();
+    const jobReply = state.jobs.answer(route);
+    if (jobReply) return jobReply;
     let body: unknown;
     let status = 200;
     if (path === "/api/auth/status" && method === "GET") {
@@ -65,11 +69,6 @@ async function interceptApi(page: Page, settings: Record<string, unknown>) {
       body = { interfaces: [] };
     } else if (method === "GET" && ["/api/product-languages", "/api/catalog/manufacturers", "/api/catalog/items"].includes(path)) {
       body = [];
-    } else if (path === "/api/catalog/update/preview" && method === "POST") {
-      // The package preview recognises a renamed legacy database by content.
-      state.packagePreviews += 1;
-      status = 422;
-      body = { error: "legacy ETS3 product database (EX-IM) is not a .knxprod package", kind: "legacyProductDatabase" };
     } else if (path === "/api/catalog/install-legacy" && method === "POST") {
       const form = route.request().postDataBuffer()?.toString("latin1") ?? "";
       const install = { password: form.includes('name="password"'), remember: form.includes('name="remember"') };
@@ -143,18 +142,29 @@ test("en 1440px: the catalog sends a renamed legacy database on to the legacy in
   await expect(wizard).toHaveCount(0);
   await page.getByRole("button", { name: l.catalog, exact: true }).first().click();
   const catalog = page.getByRole("region", { name: l.catalogTitle });
-  // One product picker (Goal B5): a package is previewed first, and the preview
-  // route names a renamed legacy database, which then goes to the legacy installer.
+  // The shared App job identifies the renamed database; legacy import is a separate,
+  // explicit handoff only after the failed job has proved no mutation and settled.
   await catalog.locator('input[type="file"][accept*=".vd3"]').setInputFiles({
     name: "renamed.knxprod", mimeType: "application/zip", buffer: Buffer.from("PK\u0003\u0004fixture"),
   });
+  await expect(catalog.getByRole("combobox", { name: en["catalogJob.profile"] })).toHaveValue("standard");
+  expect(state.jobs.creates).toEqual([]);
+  expect(state.installs).toEqual([]);
+  await catalog.getByRole("button", { name: en["catalogJob.start"], exact: true }).click();
+  await expect(catalog.getByRole("alert")).toContainText(en["catalogJob.error.legacyProductDatabase"]);
+  expect(state.jobs.status()?.commit).toEqual({ outcome: "notCommitted", evidence: "noLiveMutation" });
+  expect(state.jobs.status()?.cleanup.disposition).toBe("complete");
+  expect(state.installs).toEqual([]);
+  await catalog.getByRole("button", { name: en["catalogJob.legacyHandoff"], exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Password for renamed.knxprod" });
   await expect(dialog).toBeVisible();
   await dialog.getByLabel(l.field, { exact: true }).fill("fixture-password");
   await dialog.getByRole("button", { name: l.import, exact: true }).click();
   await expect(catalog).toContainText(l.imported);
-  // The package route is asked once; the password retry goes to the legacy installer only.
-  expect(state.packagePreviews).toBe(1);
+  // Upload is one-shot; the password retry goes to the legacy installer only.
+  expect(state.jobs.creates).toHaveLength(1);
+  expect(state.jobs.uploads).toHaveLength(1);
+  expect(state.jobs.applies).toEqual([]);
   expect(state.installs).toEqual([{ password: false, remember: false }, { password: true, remember: false }]);
   expect(state.unexpected).toEqual([]);
 });

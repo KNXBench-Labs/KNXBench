@@ -58,6 +58,7 @@ pub enum HistoryError {
     Limit(&'static str),
     /// Image-admission budget refusal; deleting history is not assumed to repair it.
     ImageLimit(&'static str),
+    Carried(crate::ManufacturerFileError),
     Stale,
 }
 
@@ -76,6 +77,7 @@ impl fmt::Display for HistoryError {
                 "project history limit: {reason}; explicitly delete versions or clear undo history before retrying"
             ),
             Self::ImageLimit(reason) => write!(f, "project history image limit: {reason}; project data was not discarded; this context requires a supported image budget"),
+            Self::Carried(error) => write!(f, "project retained source: {error}"),
             Self::Stale => write!(
                 f,
                 "project history changed in another editor; reopen before editing or restoring"
@@ -424,7 +426,35 @@ pub fn save_editor(
     expected_generation: Option<i64>,
     save_root: bool,
 ) -> Result<i64, HistoryError> {
-    save_editor_inner(conn, working, stack, expected_generation, save_root, None)
+    save_editor_inner(
+        conn,
+        working,
+        stack,
+        expected_generation,
+        save_root,
+        None,
+        &[],
+    )
+}
+
+/// Saves the explicit root and its newly acquired retained sources atomically.
+/// Payloads are file-owned and never enter editor history images.
+pub fn save_editor_with_sources(
+    conn: &Connection,
+    working: &NativeSnapshot,
+    stack: &CommandStack,
+    expected_generation: Option<i64>,
+    sources: &[crate::CarriedManufacturerFile],
+) -> Result<i64, HistoryError> {
+    save_editor_inner(
+        conn,
+        working,
+        stack,
+        expected_generation,
+        true,
+        None,
+        sources,
+    )
 }
 
 /// Compare the reviewed working snapshot under the same write lock as all writes.
@@ -444,6 +474,7 @@ pub fn save_editor_if_unchanged(
         Some(expected_generation),
         save_root,
         Some(expected_working_hash),
+        &[],
     )
 }
 
@@ -454,6 +485,7 @@ fn save_editor_inner(
     expected_generation: Option<i64>,
     save_root: bool,
     expected_working_hash: Option<&str>,
+    sources: &[crate::CarriedManufacturerFile],
 ) -> Result<i64, HistoryError> {
     let (undo_steps, redo_steps) = stack.history_lengths();
     if undo_steps.saturating_add(redo_steps) > MAX_STACK_STATES {
@@ -505,6 +537,21 @@ fn save_editor_inner(
         ))?
     };
     write_workspace(&tx, baseline, working, stack, generation)?;
+    for source in sources {
+        let sha = crate::manufacturer_file_hash(&source.bytes);
+        if !working.manufacturer_refs.iter().any(|r| {
+            r.sha256 == sha
+                && r.len == source.bytes.len() as i64
+                && r.source_path == source.source_path
+        }) {
+            return Err(HistoryError::Invalid(
+                "acquired source is absent from the saved manifest",
+            ));
+        }
+        crate::store_manufacturer_file(&tx, &source.source_path, &source.bytes)
+            .map_err(HistoryError::Carried)?;
+        crate::load_manufacturer_file(&tx, &sha).map_err(HistoryError::Carried)?;
+    }
     tx.commit()?;
     Ok(generation)
 }

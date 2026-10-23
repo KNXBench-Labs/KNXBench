@@ -1,4 +1,28 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-23 20:39
+- **Completed:** Fixed actual-W SQL-safety independent review deleg_7ae7929b ACCEPT without blockers; four runtime/test hashes rechecked.23 focused methods/60refusal scenarios/11compiled mutants authenticated; parent retained-binary replay23/23 green. Independent pinned-native probe confirms defer_foreign_keys oracle ordering. Contract/status/log synchronized; source not yet delivered.
+- **Pending/Next Steps:** Commit exact owned slice, maintained dependent branch gate, main-first integration/gate, fresh reservation check and publication/readback. Full B08/config receipt, sticky unwind-safe commit witness/composed same-gate B10, artifacts/routes/lifecycle/UI and WP-19 remain open. Preserve active evidence/cache; older retirement still pending.
+- **Notes for Codex oder Claude:** No Ollama use/downloads. Evidence <profile-scratch>/wp043-writer-configuration-20261023/; review/HANDOFF.md and review-accepted.json bind four source files. Branch feat/wp043-writer-configuration-20261023 base171b0f981. No repair/schema/quiet-API/bus/device/release or compatibility expansion; selected-root foreign state preserved.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-23 20:30
+- **Completed:** Actual-W fixed SQL-safety four-file implementation handoff received, still uncommitted. Parent verifies4 source hashes and5 retained owning binaries, independently re-executes23 exact focused methods GREEN on retained library binary; source diff inspected. Maintained header and4 layout checks pass. Claimed60 native scenarios/11mutants pending independent evidence review.
+- **Pending/Next Steps:** Independent review deleg_7ae7929b / sa-0-afd3da8b active against frozen runtime/tests; parent owns docs/.ai only. Consume authenticated verdict then fix blockers if any, dependent branch/integrated gates and publication. Full B08/configuration receipt, sticky unwind-safe witness/composed same-gate B10, artifacts/routes/lifecycle/UI and WP-19 remain open. Older evidence retirement deferred while successor active.
+- **Notes for Codex oder Claude:** No Ollama use/downloads. Evidence <profile-scratch>/wp043-writer-configuration-20261023/implementation/HANDOFF.md and parent-verification/receipt.json; review/HANDOFF.md when delivered. Branch feat/wp043-writer-configuration-20261023 base171b0f981. Native max_page_count read resets defer_foreign_keys in fixture: check flag observation order carefully; no production repair. Root foreign state preserved; no bus/device/release/schema/quiet API or compatibility expansion.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-23 20:08
+- **Completed:** Read full successor admission and canonical managed-binding §3. Previous runtime/result documentation published through171b0f981; docs freeze released. Created feat/wp043-writer-configuration-20261023 from clean current upstream. Dispatched actual-W fixed SQL-safety implementation deleg_ec22bdd1 / sa-0-c1ac3c23; no new implementation acceptance yet.
+- **Pending/Next Steps:** Await authenticated four-file implementation handoff, independently review/test observer before BEGIN and under original reservation on preview/apply; then maintained branch/integrated gates/publication. Parent owns docs/.ai. Full managed configuration/B08, sticky unwind-safe commit evidence/composed same-gate B10, artifacts/routes/lifecycle/UI and WP-19 remain separate. Retain/verify older evidence before cleanup; preserve active successor/cache.
+- **Notes for Codex oder Claude:** No Ollama use/downloads. Admission <profile-scratch>/wp043-next-20261023/admission.md; implementation <profile-scratch>/wp043-writer-configuration-20261023/implementation/HANDOFF.md. Required actual flags foreign_keys1/ignore_check_constraints0/writable_schema0/defer_foreign_keys0/query_only0: observe/refuse, never repair. No schema/codec/quiet-API/bus/device/release or compatibility expansion. Root foreign state preserved.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-23 20:00
 - **Completed:** Live-growth source f1365471d published on main-first937aa60d6; immediate local/tracking/live equality verified. Independent ACCEPT without blockers, branch/integrated14/14 each3860 Rust passes/151ignored/24binary results and97/97corpus; stage/proof/freeze/data guards verified. Result docs updated, not yet gated/published.
 - **Pending/Next Steps:** Gate/publish result-only docs, retain/verify evidence before owned scratch retirement. Admit bounded B10/remaining managed-configuration prerequisites before artifact routes/lifecycle/UI; WP-19 subsequent. No new Go needed. Real large-database/aggregate quotas/full WP043 remain open.

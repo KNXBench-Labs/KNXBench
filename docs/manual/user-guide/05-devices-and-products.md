@@ -19,6 +19,13 @@ manufacturer publishes, not something KNXBench invents. See
 This chapter covers the catalog, adding a device, and the device panel's objects,
 parameters, product data, diagnostics and inspection-only manufacturer fields.
 
+> **Alpha 16 source preparation, not release availability.** Alpha 15 remains
+> the latest released version. Sections marked **unreleased Alpha-16 source**
+> describe integrated source `5dc47aeced255a9d3d10e787dd7940082cb0cad1`;
+> blocking review corrections and combined acceptance are still pending. They
+> are not a claim of accepted workflows or available Alpha-16 artifacts.
+> [Scope draft](../../releases/alpha16.md).
+
 ## The Devices view
 
 Open **Devices** in the left navigation, run **Devices** from the command
@@ -168,6 +175,90 @@ changes only what is shown, not the comparison result, its tag or Synced.
 [Exact scope and limits](../../contracts/device-comparison.md),
 [device checks](07-bus-and-interfaces.md#device-checks-offline-readiness-then-an-optional-read-only-comparison).
 
+### Adopt device values into the project (unreleased Alpha-16 source)
+
+A successful **full** comparison can offer selection controls on supported named
+parameter rows. Select the values to adopt, request a preview, review its exact
+selection and project/device values, then separately confirm and apply. The
+server retains the actual observation; editing response data or selecting a raw
+row cannot supply values. Preview changes nothing.
+
+A changed selection applies as **one atomic project edit**; one Undo restores the
+prior user state, and Redo reapplies it. For a saved native project, the working
+state is persisted before the edit is published. Stale project/source/history,
+wrong application or ambiguous decoding refuses the entire selection. Unknown,
+masked, unread and raw rows stay visible but are not adoptable; address tables,
+individual addresses, GA and associations are unsupported for adoption. Partial
+comparisons and System-2 raw-only rows do not offer adoption authority.
+
+The observation/preview is temporary and may expire or be evicted; preview again
+from a fresh comparison when required. A lost apply reply is not proof of rollback:
+refresh project/history before another action, never automatically reapply.
+Adoption does not set Synced, send a bus write or reverse an earlier device write.
+**Project → device** opens the existing download review with the selected device;
+it never submits comparison bytes as a write plan.
+[Exact scope](../../contracts/alpha16-comparison-adoption.md).
+
+## Experimental configured System-2 download (unreleased Alpha-16 source)
+
+**Exact scope:** UP 258D12 application `M-0001_A-9205-04-9270` only.
+**Experimental, software-tested scope only; hardware outcome unverified.**
+Blocking review corrections and combined UI/server acceptance are still pending.
+This is not all-System-2 support, ETS equivalence, firmware certification or a
+physical recovery guarantee. The ordinary memory-download path is unchanged.
+
+In the device's existing **Download to device** tab, choose **Download mode →
+System-2 — experimental configured download**. The source workflow is:
+
+1. Use **Prepare configured System-2 preview** for the selected device. It uses
+   the actual open project's parameters, group links and flag overrides, including
+   an unsaved project. It requires retained original sources; missing, unsupported
+   or ambiguous sources refuse, with no package/defaults fallback. Preparation
+   and status reads are offline; opening the view does not connect to a bus.
+2. Review the exact application/profile, target, configuration and plan hashes,
+   input/range counts, ordered steps and warnings. Partial System-2 download is
+   not offered. Choose your recovery track explicitly: KNXBench best-effort or
+   external ETS under your own responsibility. KNXBench neither invokes ETS nor
+   certifies that alternative.
+3. Choose the gateway and type all **four exact phrases** displayed for this
+   preparation: target/plan, experimental hypothesis, ordinary download and
+   best-effort release risk. Starting also requires the normal programming-consent
+   dialog; a remembered general consent does not replace the four phrases.
+4. The server performs fresh target/application admission. Before **any setup,
+   load control or data mutation**, it must capture, persist and read back fresh
+   actual affected prestate in private recovery storage. A product-default image
+   or earlier identity read is not this backup. A different/absent installed
+   application, non-Loaded resource or unsupported target refuses.
+5. Inspect durable checkpoint progress and the result. **Request cooperative
+   cancellation** asks the server to stop safely; it does not undo earlier writes.
+   Navigation/reload does not cancel the task. A lost start/recovery reply means
+   unknown-to-client: refresh status, do not resend automatically.
+
+### Original-state recovery, not a second download
+
+Status reattaches the durable **selected original operation**, including after a
+server restart; unfinished evidence is interrupted, never automatically resumed.
+When offered, **Explicit original-state recovery** uses that operation's original
+backup and target, not the current project's desired values. Type its separate
+original recovery, ordinary-download and risk acknowledgements, then pass the
+normal programming consent. Missing terms/evidence refuse rather than borrowing
+phrases from a later preview. At most one recovery command is admitted per
+operation; a failed connection or lost reply does not reset it.
+
+Historical operations can be inventoried/selected through authenticated HTTP;
+there is **no historical-operation dropdown** in the current UI. Selected-original
+reattachment is independent of the currently open project. Complete no-project
+recovery usability remains part of the pending combined UI/server acceptance.
+Keep the original private journals and bundles; do not post them in a public issue.
+
+The backup covers declared affected regions, **not a whole-device/allocator image**.
+Recovery is best-effort source-shape replay: historical allocator commands,
+masked/unused-byte survival and indirect firmware effects remain unresolved.
+Only complete required verification can produce `Restored`; transport success or
+`backupAvailable` is not proof of physical restorability or correct function.
+[Service/recovery limits](../../contracts/alpha16-system2-configured-download.md),
+[HTTP selection and lifetime](../../contracts/alpha16-system2-http-mount.md).
+
 <a id="programming-marks-p3-source-build-after-alpha-11"></a>
 
 ## Programming marks (P3, since Alpha 12)
@@ -268,15 +359,20 @@ package was new or already installed, which scheme it used, and how many members
 unknown entries and conflicts it contained. The catalog list refreshes immediately
 afterwards.
 
-**Since Alpha 15:** if the product database cannot be opened (including a future
-schema), the session log and affected operations name the actual reason instead
-of treating it as an absent catalogue. Native/model16 stays, but writable
-application opens migrate the separate product database 24 → 26. Older builds
-refuse product26 by their source version check; opening new project saves in
-Alpha 14 is not verified. Back up both stores independently before upgrading.
-V23–v25 promotion residues remain open; typed property placements and
+**Alpha-15 baseline:** if the product database cannot be opened (including a
+future schema), the session log and affected operations name the actual reason
+instead of treating it as absent. Native/model16 stays; Alpha 15 migrated product
+24 → 26 and still had v23–v25 promotion residues. Typed property placements and
 `BinaryValue` columns do not enable their execution.
-[Upgrade boundary](../../releases/alpha15.md#upgrade-independent-backups-first).
+
+**Unreleased Alpha-16 source:** the separate product database is **28**, with
+writable migration product26 → 27 → 28 for master provenance and promotion repair.
+Native/store and model remain **16**. Alpha 15 refuses product28; older-reader
+handling of newly saved native files is untested. Close all catalogue users and
+keep independent project and closed-catalogue backups before upgrade. Read-only
+CLI catalogue readers do not migrate the on-disk database. In-file history is
+not a substitute for those backups.
+[Upgrade/source boundary](../../releases/alpha16.md#upgrade-and-remaining-acceptance).
 
 ### Updating with a preview (since Alpha 10)
 
@@ -312,6 +408,45 @@ the list is read again. It never deletes backups on its own. (Alpha 10 and 11 ca
 delete backups, and their plain **Install product database** picker installs
 directly, without a preview or backup.)
 
+### Cancellable catalogue jobs (unreleased Alpha-16 source)
+
+The production catalogue and device-wizard picker now use one App-root tracker
+and the process-owned managed catalogue job service. Choose **Standard · 4 GiB
+expanded** or explicitly opt into **Large · 16 GiB expanded** for that particular
+file. A newly selected file needs its own large-profile acknowledgement, even if
+its name and size match the previous file. **Upload once and prepare preview**
+does not install; inspect the bound preview and complete paged report before
+confirming apply. Missing/unavailable job service refuses; it does not silently
+switch to a direct installer, smaller profile or different source.
+
+The root notice/report stays reachable when you leave the catalogue or the
+wizard's product step. Closing the whole wizard offers continuing in background
+or requesting cancellation and leaving. Cancelling the wizard does not uninstall
+a package. A catalogue commit and a failed list refresh are separate outcomes:
+refresh the view rather than repeat an installation to fix a display warning.
+
+Cancellation is a **request**, not proof of rollback. Native COMMIT evidence,
+settlement, cleanup/quarantine and retained backup disposition are shown
+separately. A committed install can still need cleanup; an unknown outcome must
+not be treated as cancelled. Lost replies cause status inspection, not automatic
+upload/apply retry. Browser/server handles and report retention are finite, not
+permanent job history; on unavailable history inspect the catalogue and backups
+before explicitly starting a new selection. Report disposal does not delete a
+user-managed recovery backup. Retain uncertain/committed backups for inspection.
+Blocking review corrections and combined acceptance remain open for this source.
+
+**Resource boundary:** source/member bytes are each limited to 1,000,000,000;
+existing-catalogue copy admission is 8 GiB of page bytes, and working main databases
+have a separate 64 GiB cap. An update can grow beyond the next job's 8 GiB input
+bound. Reports/pages have their own caps; the visible page is not the whole report.
+These limits are not total process RSS, aggregate disk quotas, hard cancellation
+latency or universal large-catalogue throughput. XML/native/filesystem spans can
+temporarily delay cooperative cancellation. Normal process close requests stop
+and drains owned work with bounded waits; kill/power loss is not settlement,
+rollback or recovery proof.
+[Runtime](../../contracts/catalogue-jobs/alpha16-runtime.md),
+[root-owned UI](../../contracts/catalogue-jobs/alpha16-web-controller.md).
+
 ### Master-data diagnostics (source builds after Alpha 15)
 
 A product file can restate standard DPT, function or space definitions already
@@ -322,11 +457,12 @@ parent. Original source bytes remain retained in either case.
 
 Expand **Technical source details** for the source hash, declaration position
 and reason. These technical details are source evidence, not translated product
-text. Older catalogues gain byte-derived declarations on upgrade to product
-DB **27**, but previously unrecorded winning-source and installation history
-stays explicitly unavailable. Existing historical install reports are not
-rewritten to appear newly measured. Alpha 15 itself supports product26 and
-cannot open product27: keep an independent pre-upgrade catalogue backup.
+text. Product DB **27** introduced byte-derived declarations on upgrade; current
+unreleased source migrates through **28** for promotion repair. Previously
+unrecorded winning-source and installation history stays explicitly unavailable;
+existing historical install reports are not rewritten to appear newly measured.
+Alpha 15 supports product26 and cannot open product28: keep an independent
+closed-catalogue pre-upgrade backup.
 
 <a id="cleaning-up-the-catalogue-source-builds-after-alpha-14"></a>
 
@@ -545,13 +681,30 @@ The **Parameters** tab says why it cannot show anything:
 
 Since store schema 16, Save embeds available, hash-matched manufacturer files
 from the saved manifest, and the server/desktop reinstalls carried files on open.
-This is not a guarantee that every referenced application is carried: absent
-source bytes or manifest entries can still leave a new save dependent on the
-external product database. Keep the original `.knxproj` and matching `.knxprod`
-files as well as independent backups. The catalogue-created-device case is
-currently source-traced, not runtime-confirmed; see
-[the precise portability boundary](../../limitations/KL-183-knxdb-manufacturer-files.md)
-and [ADR-0128](../../adr/0128-native-project-files-carry-their-manufacturer-files.md).
+
+**Unreleased Alpha-16 source:** Save and Save As also acquire newly required
+catalogue-authored dependencies when measured winning source hashes and one
+recorded owning package establish their identity. The file carries the **complete
+exact original `CataloguePackage`**, plus required direct/master/catalogue members.
+This preserves opaque baggage, signatures and unknown content without pretending
+to understand or rebuild it; the original may also contain other products. On
+server/desktop reopen, originals pass through the normal validated installer
+before individual source replay, including against an empty product database.
+
+New acquisition refuses missing/corrupt originals or members, ambiguous ownership
+or inconsistent mappings before destination publication or clean-state changes.
+Existing imported manifests and opaque entries stay intact; unresolved historical
+sources are preserved with explicit diagnostics, not assigned guessed packages.
+Without a product database, existing carried sources can be preserved but new
+ones cannot be acquired. A newer Save cannot invent an old missing original.
+
+This is not universal self-contained portability or an ETS/product exporter.
+**Older-reader compatibility remains untested despite no native/model schema bump.**
+Keep original `.knxproj`/`.knxprod` files and independent project/catalogue backups.
+Combined candidate acceptance remains pending.
+[Exact source ownership and limits](../../contracts/alpha16-catalogue-portability.md),
+[historical portability boundary](../../limitations/KL-183-knxdb-manufacturer-files.md),
+[ADR-0128](../../adr/0128-native-project-files-carry-their-manufacturer-files.md).
 
 ## The device panel
 
@@ -813,6 +966,15 @@ template remain searchable; separator text is hidden during search and is not
 part of the search index.
 This changes display only, not your settings or the product data.
 
+**Unreleased Alpha-16 source:** supported parameter-block and separator `Text`
+translations follow the selected product language **before** existing module and
+positional-placeholder filling. An explicit empty translation stays empty rather
+than reviving the source caption. Row/column `TextParameterRefId` is still an
+unsupported fallback; no neighbouring parameter is borrowed to fill it. This does
+not add general inline/nested/CollapseIfEmpty behaviour or in-cell buttons, and it
+does not change parameter values, activation, access checks or write authority.
+[Caption-language scope](../../contracts/alpha16-parameter-layout.md).
+
 Focus a parameter or use its **Information** button to inspect its original ID,
 type, accepted-value origin, access and declared numeric limits. An accepted
 value is not an unsaved draft, a device readback or an inferred factory default.
@@ -834,7 +996,9 @@ works exactly as in the row view, and switching areas keeps your drafts. Areas
 without a declared grid stay in rows with a short note saying so; an unknown or
 unreadable layout description also falls back to rows and names the reason.
 Search results are always rows. Wide grids scroll sideways inside the area on
-narrow windows. Captions appear in the program's own language.
+narrow windows. Row/column captions retain their declared text; the unreleased
+block/separator language overlay above does not add row/column text-parameter
+resolution.
 See the [workspace contract](../../contracts/parameter-workspace.md).
 
 *(Since Alpha 14:)* rows the product data declares as indented (for example a

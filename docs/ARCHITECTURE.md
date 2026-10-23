@@ -28,7 +28,7 @@ source interpretation and table-capacity selection; App owns retained input and
 operation binding. Core gains no UI/format dependency, and no new Net/hardware
 route is introduced. The defaults-only profile remains separate. See the
 [bounded contract](contracts/project-system2-offline-preparation.md) for the
-implementation-candidate status, required acceptance and explicit limits.
+delivered offline scope, acceptance boundary and explicit limits.
 
 ## Source-bound System-2 simulator validation (20 October 2026)
 

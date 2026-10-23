@@ -553,6 +553,7 @@ impl ManagedCatalogue {
             .conn
             .as_mut()
             .ok_or(OrchestrationError::MissingConnection)?;
+        require_writer_configuration(conn)?;
         self.health = WriterHealth::Mutating;
         let guard = MutationGuard {
             health: &mut self.health,
@@ -564,6 +565,7 @@ impl ManagedCatalogue {
         let mut data_version = None;
         let mut cleanup = Vec::new();
         let preparation = (|| -> Result<_, OrchestrationError> {
+            require_writer_configuration(&tx)?;
             let _: i64 = tx.query_row("SELECT count(*) FROM sqlite_schema", [], |r| r.get(0))?;
             let before: i64 = tx.query_row("PRAGMA data_version", [], |r| r.get(0))?;
             data_version = Some(before);
@@ -778,6 +780,9 @@ impl ManagedCatalogue {
                 )
             }
         };
+        if let Err(error) = require_writer_configuration(conn) {
+            return ControlledApplySettlement::refused(error, self.health);
+        }
         if let Err(error) = crate::catalogue_growth::require_synchronous(conn) {
             return ControlledApplySettlement::refused(
                 OrchestrationError::Growth(error),
@@ -809,6 +814,7 @@ impl ManagedCatalogue {
         // particular, no copy/installer/identity branch can invent a successful
         // rollback or independently authorize recovery disposal.
         let body = (|| -> Result<(), OrchestrationError> {
+            require_writer_configuration(&tx)?;
             let _: i64 = tx.query_row("SELECT count(*) FROM sqlite_schema", [], |r| r.get(0))?;
             let before: i64 = tx.query_row("PRAGMA data_version", [], |r| r.get(0))?;
             baseline_version = Some(before);
@@ -1058,6 +1064,48 @@ impl ManagedCatalogue {
             artifacts,
         }
     }
+}
+
+/// Observe only fixed, trusted native scalar pragmas. Both admission passes
+/// use the actual W; no migration, defaulting or configuration repair occurs.
+fn require_writer_configuration(
+    conn: &Connection,
+) -> Result<(), crate::orchestration::OrchestrationError> {
+    use crate::orchestration::{OrchestrationError, WriterConfigurationError, WriterSetting};
+    for (setting, sql, expected) in [
+        (WriterSetting::ForeignKeys, "PRAGMA foreign_keys", 1),
+        (
+            WriterSetting::IgnoreCheckConstraints,
+            "PRAGMA ignore_check_constraints",
+            0,
+        ),
+        (WriterSetting::WritableSchema, "PRAGMA writable_schema", 0),
+        (
+            WriterSetting::DeferForeignKeys,
+            "PRAGMA defer_foreign_keys",
+            0,
+        ),
+        (WriterSetting::QueryOnly, "PRAGMA query_only", 0),
+    ] {
+        let observed: i64 = conn
+            .query_row(sql, [], |row| row.get(0))
+            .map_err(|source| {
+                OrchestrationError::WriterConfiguration(WriterConfigurationError::Read {
+                    setting,
+                    source,
+                })
+            })?;
+        if observed != expected {
+            return Err(OrchestrationError::WriterConfiguration(
+                WriterConfigurationError::Value {
+                    setting,
+                    expected,
+                    observed,
+                },
+            ));
+        }
+    }
+    Ok(())
 }
 
 /// Unchanged W reservation checks are not cancellable cleanup work.

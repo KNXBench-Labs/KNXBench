@@ -12,6 +12,26 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## WP-04.3 fixed writer SQL safety — source accepted, delivery pending (23 October 2026)
+
+The [bounded writer-configuration increment](contracts/catalogue-jobs/writer-configuration-increment.md)
+observes five fixed safety settings on actual W before BEGIN and independently
+inside the original IMMEDIATE reservation, for preview and apply. Unsupported
+values/read failures refuse without repair. Existing inspected rollback preserves
+independent primary/cleanup/quarantine/no-B facts; quiet APIs and preview NORMAL
+synchronous policy are unchanged.
+
+Independent source/evidence review ACCEPT authenticates four source files,
+23 focused methods, 60 native refusal scenarios and 11 compiled wrong variants.
+A separate pinned-native probe verifies observation ordering around the deferred
+foreign-key flag. Owning evidence: 731 unit and 772 integration passes/31 ignored,
+two 13-test examples and two doctests; one separate opt-in measurement ignored.
+Parent independently re-executes the 23 focused methods on the retained owning
+binary; this is not fresh compilation or additional unique coverage. Maintained
+branch/integrated gates and publication remain pending. Full B08/configuration
+receipt, sticky unwind-safe commit witness/composed same-gate B10, artifacts,
+routes/lifecycle/UI, real large-database/aggregate quotas and WP-19 stay open.
+
 ## WP-04.3 actual-connection main growth — delivered (23 October 2026)
 
 The [bounded main-growth increment](contracts/catalogue-jobs/live-growth-increment.md)

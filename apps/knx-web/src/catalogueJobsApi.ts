@@ -1,6 +1,6 @@
 /** Strict catalogue-specific transport; raw bytes are required before JSON.parse. */
 import { noteRefusal } from "./api";
-import policy from "../../../docs/contracts/catalogue-jobs/wp043-protocol-policy.json";
+import policy from "../../../docs/contracts/catalogue-jobs/wp043-protocol-policy.json" with { type: "json" };
 import { bindPage, CatalogueProtocolError, parseCatalogueMessage, u64 } from "./catalogueJobsProtocol";
 import type { Admission, ApplyCommand, Artifact, CancelCommand, CancelReply, Create, DisposeReply, Handle, Page, Status } from "./catalogueJobsTypes";
 export type Owner = { handle: Handle; capability: string; signal?: AbortSignal };

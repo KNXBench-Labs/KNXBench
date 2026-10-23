@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-24 01:27
+- **Completed:** Gate4 on cea1eacf stopped in tool-tests: 412 methods, two failures/six skipped. Exact retained errors show native Node ESM JSON imports require type=json attributes when Playwright lists new catalogue fixtures. No browser/product runtime cases ran. Inspected loader diagnostics, four actual JSON imports and ESNext/bundler config; added explicit JSON import attributes only in catalogueJobsProtocol.ts/catalogueJobsApi.ts. Paths, schema bytes and validation unchanged. Gate launcher confirmed exited; original failed receipt retained.
+- **Pending/Next Steps:** Commit narrow JSON-loader correction/checkpoint and start successor whole-candidate gate5, same isolated-store/owned-target configuration. No focused tests/browser/build campaigns. Validate actual full ordered receipt, native/HTTP/UI assertions and release opt-ins/artifacts; no publication/hardware approval. Never treat earlier source reviews as runtime passes or stale gates as active.
+- **Notes for Codex oder Claude:** Gate4 logs under <profile-scratch>/alpha16-execution-20261023/final-candidate-gate-4; gate4-diagnosis.txt and gate4-tool-errors.txt retain projected diagnostics. Failure is missing import attribute, not temp-path permissions despite failing test names. No temporary-root or timeout/checker change. Preserve selected dirty root/paused sources, no Ollama/vendor/bus/push.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-24 01:25
 - **Completed:** Read independent rereview-master-report-path REPORT: ACCEPT source-only F1 closure at9ed42dda63c6e9ecd113c2b6340a69d2ab79b1cf. Exact generated identity preserved through producer/package/adapter/writer/client; bounded selector grammar/privacy and faithful native/browser assertion definitions accepted. No tests/builds/browser execution by reviewer or parent; prior gate3 remains failed immutable evidence.
 - **Pending/Next Steps:** Checkpoint corrected whole candidate and launch full package gate attempt4, isolated stores and existing owned Cargo target, receipt final-candidate-gate-4. No additional per-slice campaigns. Runtime/native/browser/opt-in/package/artifact acceptance remains pending; no release tag/upload/container publication or real-device permission. Freeze source throughout gate; classify failures from exact retained outputs.

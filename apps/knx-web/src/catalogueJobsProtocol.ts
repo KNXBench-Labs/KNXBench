@@ -1,7 +1,7 @@
 /** Bounded, duplicate-aware WP04.3 parsing against the exact checked-in schemas. */
-import wire from "../../../docs/contracts/catalogue-jobs/wp043-protocol.schema.json";
-import records from "../../../docs/contracts/catalogue-jobs/wp043-artifact-records.schema.json";
-import policy from "../../../docs/contracts/catalogue-jobs/wp043-protocol-policy.json";
+import wire from "../../../docs/contracts/catalogue-jobs/wp043-protocol.schema.json" with { type: "json" };
+import records from "../../../docs/contracts/catalogue-jobs/wp043-artifact-records.schema.json" with { type: "json" };
+import policy from "../../../docs/contracts/catalogue-jobs/wp043-protocol-policy.json" with { type: "json" };
 import type * as T from "./catalogueJobsTypes";
 
 export class CatalogueProtocolError extends Error {

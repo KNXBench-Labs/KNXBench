@@ -48,6 +48,9 @@ pub(crate) trait CatalogueArtifacts {
     #[cfg(test)]
     fn before_rehearsal(&mut self, _receipt: &crate::catalogue_copy::RehearsalDestination) {}
 
+    #[cfg(test)]
+    fn before_live_install(&mut self, _writer: &crate::Connection) {}
+
     /// Construct D through the retained inventory's create-new constructor.
     /// Backup independently enforces empty schema, cookie zero and autocommit.
     fn fresh_rehearsal(&mut self, page_size: i64) -> Result<FreshDestination, OrchestrationError>;
@@ -77,6 +80,7 @@ pub(crate) struct AdmittedPreviewArtifact {
 /// Inspected cleanup failures are independent of the original preview refusal.
 #[derive(Debug)]
 pub(crate) enum PreviewCleanupError {
+    GrowthRestore(crate::catalogue_growth::GrowthError),
     WriterBaseline,
     WriterObservation(rusqlite::Error),
     WriterRollback(rusqlite::Error),
@@ -96,6 +100,7 @@ pub(crate) struct PreviewFailure {
 /// string and never a partial digest.
 #[derive(Debug)]
 pub(crate) enum OrchestrationError {
+    Growth(crate::catalogue_growth::GrowthError),
     PreviewSettlement(Box<PreviewFailure>),
     SourceSettlement(Box<PreviewFailure>),
     /// The managed handle is not healthy enough for a controlled operation.
@@ -171,6 +176,9 @@ impl From<Stop> for OrchestrationError {
 impl std::fmt::Display for OrchestrationError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            OrchestrationError::Growth(error) => {
+                write!(f, "catalogue main-growth admission failed: {error:?}")
+            }
             OrchestrationError::SourceSettlement(failure) => {
                 write!(f, "catalogue source settlement failed: {failure:?}")
             }

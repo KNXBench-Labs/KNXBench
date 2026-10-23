@@ -15,9 +15,13 @@ use crate::orchestration::{
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::path::PathBuf;
 pub(crate) mod publication;
+pub(crate) mod report;
 pub use publication::{
     PublishedRecovery, RecoveryPublicationError, RecoveryPublisher, ValidatedRecovery,
 };
+pub use report::{ControlledReport, PackageProgram};
+/// Actual next-operation copy admission ceiling; not the live growth ceiling.
+pub const CATALOGUE_INPUT_BYTE_LIMIT: u64 = crate::catalogue_copy::COPY_PAGE_BYTE_BOUND;
 
 pub use crate::controlled::{ControlledError, ControlledPolicy, NameRule};
 pub use crate::orchestration::{
@@ -48,6 +52,9 @@ impl<'a> AdmittedSource<'a> {
 #[derive(Debug)]
 pub struct PreparedPreview(ControlledPreview);
 impl PreparedPreview {
+    pub fn report(&self) -> &ControlledReport {
+        &self.0.report
+    }
     /// Complete immutable raw result, never an authority-bearing connection.
     /// Public artifact projection/admission remains the server's responsibility.
     pub fn install(&self) -> &crate::ProductFileInstall {
@@ -65,6 +72,7 @@ pub enum ControlledFailureKind {
     ClaimRefused,
     Configuration,
     Growth,
+    AdmissionLimit,
     Cleanup,
     Unavailable,
     PolicyMismatch,
@@ -73,6 +81,7 @@ pub enum ControlledFailureKind {
     Stamp,
     Copy,
     Install,
+    LegacyProductDatabase,
     PreviewIdentity,
     Native,
     CommitNotAutocommit,
@@ -96,8 +105,15 @@ fn failure_kind(error: &OrchestrationError) -> ControlledFailureKind {
         E::SourceMismatch => K::SourceMismatch,
         E::Stale => K::Stale,
         E::Stamp(_) => K::Stamp,
+        E::Copy(crate::catalogue_copy::CopyError::PageCountOverflow) => K::AdmissionLimit,
+        E::Copy(crate::catalogue_copy::CopyError::Stop(_)) => K::Stopped,
         E::Copy(_) => K::Copy,
         E::Install(crate::PackageError::Cancelled(_)) | E::Stop(_) => K::Stopped,
+        E::Install(
+            crate::PackageError::LegacyVd2 { .. }
+            | crate::PackageError::LegacyExIm { .. }
+            | crate::PackageError::UnsupportedLegacyFormat { .. },
+        ) => K::LegacyProductDatabase,
         E::Install(_) => K::Install,
         E::PreviewIdentity(_) => K::PreviewIdentity,
         E::Open(_) | E::Sqlite(_) => K::Native,
@@ -107,8 +123,12 @@ fn failure_kind(error: &OrchestrationError) -> ControlledFailureKind {
 
 /// Exact internal cause retained without expanding quiet error enums.
 #[derive(Debug)]
-pub struct PreviewError(OrchestrationError);
+pub struct PreviewError(OrchestrationError, bool);
 impl PreviewError {
+    /// Captured under the actual managed owner before releasing its mutex.
+    pub fn native_settled(&self) -> bool {
+        self.1
+    }
     pub fn kind(&self) -> ControlledFailureKind {
         failure_kind(&self.0)
     }
@@ -246,12 +266,17 @@ pub enum ApplyBridgeError {
 /// fixed outcome projection. Panic does not become clean cancellation.
 #[derive(Debug)]
 pub struct ApplyExecution {
+    native_settled: bool,
     settlement: Option<ControlledApplySettlement>,
     health: WriterHealth,
     commit: CommitEvidence,
     artifacts: ArtifactDisposition,
 }
 impl ApplyExecution {
+    /// Per-attempt inspected W/S disposition, independent of later owner users.
+    pub fn native_settled(&self) -> bool {
+        self.native_settled
+    }
     pub fn failure_kind(&self) -> Option<ControlledFailureKind> {
         match &self.settlement {
             None => Some(ControlledFailureKind::Panicked),
@@ -288,6 +313,10 @@ impl ApplyExecution {
 }
 
 impl ManagedCatalogue {
+    /// Inspect retained native source/W disposition without repairing health.
+    pub fn controlled_native_settled(&self) -> bool {
+        self.unresolved_preview_source_is_absent()
+    }
     pub fn prepare_controlled(
         &mut self,
         source: AdmittedSource<'_>,
@@ -303,7 +332,7 @@ impl ManagedCatalogue {
             workspace,
         )
         .map(PreparedPreview)
-        .map_err(PreviewError)
+        .map_err(|error| PreviewError(error, self.controlled_native_settled()))
     }
     pub fn prepare_controlled_owned(
         &mut self,
@@ -325,7 +354,7 @@ impl ManagedCatalogue {
             &mut observed,
         )
         .map(PreparedPreview)
-        .map_err(PreviewError)
+        .map_err(|error| PreviewError(error, self.controlled_native_settled()))
     }
 
     /// Catch while the managed owner is still exclusively borrowed, then move
@@ -389,6 +418,7 @@ impl ManagedCatalogue {
             |settlement| settlement.artifacts,
         );
         Ok(ApplyExecution {
+            native_settled: self.controlled_native_settled(),
             settlement,
             health,
             commit,

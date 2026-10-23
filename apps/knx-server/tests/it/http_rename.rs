@@ -28,6 +28,9 @@ fn fixture() -> (Arc<knx_server::AppState>, tempfile::TempDir) {
         project_revision: Default::default(),
         project_incarnation: Default::default(),
         product_db: None,
+        catalogue_jobs: Arc::new(knx_server::CatalogueUpdateJobs::new(
+            knx_server::CatalogueJobIncarnation::from_bytes([1; 16]),
+        )),
         product_db_unavailable: None,
         session_log: Default::default(),
         connector: Box::new(knx_server::fake::FakeConnector::discovering(Vec::new())),

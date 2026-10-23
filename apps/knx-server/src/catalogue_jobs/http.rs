@@ -19,6 +19,15 @@ use super::{Capability, Handle, JobId, Sha256, U64};
 
 pub const PREFIX: &str = "/api/catalog/update/jobs";
 
+/// A failed safe startup leaves the lane explicitly unavailable, never falling
+/// through to the synchronous importer or exposing a private startup error.
+pub(crate) fn unavailable_router(kind: FailureKind) -> Router {
+    let route = axum::routing::any(move || async move { respond(Err(kind)) });
+    Router::new()
+        .route(PREFIX, route.clone())
+        .route("/api/catalog/update/jobs/{*rest}", route)
+}
+
 /// State-bound router, mergeable with the parent's AppState router. Existing
 /// authentication MUST wrap this router before any bounded body is consumed.
 pub fn router(runtime: Arc<CatalogueRuntime>) -> Router {

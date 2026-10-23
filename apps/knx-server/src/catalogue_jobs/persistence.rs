@@ -370,6 +370,11 @@ impl JobWorkspace {
     pub fn directory(&self) -> &Path {
         &self.directory
     }
+    pub(crate) fn owns_database(&self, name: &str) -> bool {
+        self.files
+            .get(name)
+            .is_some_and(|f| matches!(f.role.as_str(), "rehearsal" | "recoveryStaging"))
+    }
     pub fn handle(&self) -> Handle {
         self.handle
     }

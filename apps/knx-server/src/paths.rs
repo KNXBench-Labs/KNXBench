@@ -53,6 +53,7 @@ pub(crate) fn resolve_in_data_dir(data_dir: &Path, relative: &str) -> Result<Pat
 /// dialog); relative ones are confined to `data_dir` exactly like
 /// `/api/fs/*` is.
 pub(crate) fn resolve_project_path(data_dir: &Path, path: &str) -> Result<PathBuf, ApiError> {
+    refuse_private_target(&data_dir.join(path))?;
     if Path::new(path).is_absolute() {
         // Unconfined by design, except for the one directory no route may
         // touch. A path that does not exist cannot be inside it.
@@ -70,6 +71,7 @@ pub(crate) fn resolve_project_path(data_dir: &Path, path: &str) -> Result<PathBu
 /// parent directory — which must exist and must stay under `data_dir` —
 /// and the file name is joined back on afterwards.
 pub(crate) fn resolve_new_project_path(data_dir: &Path, path: &str) -> Result<PathBuf, ApiError> {
+    refuse_private_target(&data_dir.join(path))?;
     if Path::new(path).is_absolute() {
         let target = Path::new(path);
         if let (Ok(root), Some(parent), Some(name)) =
@@ -112,6 +114,11 @@ pub(crate) fn resolve_new_project_path(data_dir: &Path, path: &str) -> Result<Pa
 /// Both the literal and the resolved form of the directory are checked,
 /// so a symlink in its place does not open a side door.
 fn refuse_reserved(canonical_root: &Path, canonical: &Path) -> Result<(), ApiError> {
+    // The catalogue may be outside data_dir. No route may reach a private
+    // artifact root by absolute path, a nested root or a symlink alias.
+    if contains_private_component(canonical) {
+        return Err(ApiError::bad_request("path is reserved"));
+    }
     for name in RESERVED_DIR_NAMES {
         let reserved = canonical_root.join(name);
         let resolved = reserved.canonicalize().unwrap_or_else(|_| reserved.clone());
@@ -125,8 +132,91 @@ fn refuse_reserved(canonical_root: &Path, canonical: &Path) -> Result<(), ApiErr
 /// Whether `name`, listed directly in `dir`, is a reserved directory — for
 /// `/api/fs/list` to leave it out of the data directory's listing.
 pub(crate) fn is_reserved_entry(data_dir: &Path, dir: &Path, name: &std::ffi::OsStr) -> bool {
-    RESERVED_DIR_NAMES.iter().any(|r| name == *r)
-        && canonical_root(data_dir).is_ok_and(|root| dir == root)
+    (name == ARTIFACT_ROOT_NAME)
+        || dir
+            .join(name)
+            .canonicalize()
+            .is_ok_and(|p| contains_private_component(&p))
+        || (RESERVED_DIR_NAMES.iter().any(|r| name == *r)
+            && canonical_root(data_dir).is_ok_and(|root| dir == root))
+}
+
+fn contains_private_component(path: &Path) -> bool {
+    path.components()
+        .any(|c| c.as_os_str() == ARTIFACT_ROOT_NAME)
+}
+pub(crate) fn refuse_private_target(path: &Path) -> Result<(), ApiError> {
+    refuse_private_target_inner(path, 0)
+}
+fn refuse_private_target_inner(path: &Path, links: u8) -> Result<(), ApiError> {
+    if contains_private_component(path)
+        || path.ancestors().any(|p| {
+            p.canonicalize()
+                .is_ok_and(|p| contains_private_component(&p))
+        })
+    {
+        return Err(ApiError::bad_request("path is reserved"));
+    }
+    // A dangling final symlink can still create a new file in its target's
+    // private parent. Resolve that case independently of data_dir existence.
+    if let Ok(target) = std::fs::read_link(path) {
+        if links >= 16 {
+            return Err(ApiError::bad_request("path is reserved"));
+        }
+        let target = path.parent().unwrap_or_else(|| Path::new(".")).join(target);
+        return refuse_private_target_inner(&target, links + 1);
+    }
+    Ok(())
+}
+
+/// ServeDir follows symlinks. Fence the resolved static target too, rather
+/// than only checking URL spelling or assuming static_dir != catalogue_parent.
+pub(crate) async fn fence_static(
+    axum::extract::State(dir): axum::extract::State<PathBuf>,
+    request: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> axum::response::Response {
+    let encoded = request.uri().path().as_bytes();
+    let mut decoded = Vec::with_capacity(encoded.len());
+    let mut i = 0;
+    while i < encoded.len() {
+        if encoded[i] == b'%' {
+            let Some(pair) = encoded.get(i + 1..i + 3) else {
+                return static_not_found();
+            };
+            let Ok(hex) = std::str::from_utf8(pair) else {
+                return static_not_found();
+            };
+            let Ok(byte) = u8::from_str_radix(hex, 16) else {
+                return static_not_found();
+            };
+            decoded.push(byte);
+            i += 3;
+        } else {
+            decoded.push(encoded[i]);
+            i += 1;
+        }
+    }
+    let Ok(path) = std::str::from_utf8(&decoded) else {
+        return static_not_found();
+    };
+    if path.contains(['\\', '\0']) || path.split('/').any(|p| p == "..") {
+        return static_not_found();
+    }
+    let target = dir.join(path.trim_start_matches('/'));
+    if contains_private_component(&target)
+        || [&target, &target.join("index.html")].iter().any(|p| {
+            p.canonicalize()
+                .is_ok_and(|p| contains_private_component(&p))
+        })
+    {
+        return static_not_found();
+    }
+    next.run(request).await
+}
+fn static_not_found() -> axum::response::Response {
+    use axum::response::IntoResponse;
+    axum::http::StatusCode::NOT_FOUND.into_response()
 }
 
 fn canonical_root(data_dir: &Path) -> Result<PathBuf, ApiError> {
@@ -281,6 +371,33 @@ mod tests {
     #[test]
     fn the_catalogue_jobs_directory_is_reserved_too() {
         let dir = data_dir();
+        let external = data_dir();
+        let private = external.path().join(ARTIFACT_ROOT_NAME);
+        std::fs::create_dir(&private).unwrap();
+        std::fs::write(private.join("raw"), b"private report").unwrap();
+        std::os::unix::fs::symlink(&private, dir.path().join("sub/external")).unwrap();
+        std::os::unix::fs::symlink(private.join("raw"), dir.path().join("sub/raw-alias")).unwrap();
+        let dangling = dir.path().join("sub/dangling");
+        std::os::unix::fs::symlink(private.join("new.knxdb"), &dangling).unwrap();
+        assert!(resolve_new_project_path(
+            &dir.path().join("missing-data-root"),
+            &dangling.to_string_lossy()
+        )
+        .is_err());
+        for path in [
+            private.join("raw"),
+            private.join("new.knxdb"),
+            dir.path().join("sub/external/raw"),
+            dir.path().join("sub/raw-alias"),
+        ] {
+            assert!(resolve_project_path(dir.path(), &path.to_string_lossy()).is_err());
+            assert!(resolve_new_project_path(dir.path(), &path.to_string_lossy()).is_err());
+        }
+        assert!(is_reserved_entry(
+            dir.path(),
+            &dir.path().join("sub"),
+            std::ffi::OsStr::new("external")
+        ));
         std::fs::create_dir(dir.path().join(ARTIFACT_ROOT_NAME)).unwrap();
         std::fs::write(
             dir.path().join(ARTIFACT_ROOT_NAME).join("inventory.json"),

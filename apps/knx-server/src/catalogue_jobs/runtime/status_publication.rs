@@ -33,7 +33,18 @@ impl JobStatus {
     /// New snapshots must be complete and bounded. Terminal snapshots are held
     /// pending until the persistent supervisor JOINED the actual worker and
     /// checked native ownership, never exposed merely because a worker returned.
-    pub fn publish(&self, mut next: Status) -> Result<(), FailureKind> {
+    pub fn publish(&self, next: Status) -> Result<(), FailureKind> {
+        let cell = self
+            .current
+            .lock()
+            .map_err(|_| FailureKind::CatalogueUnavailable)?;
+        self.publish_locked(next, cell)
+    }
+    fn publish_locked(
+        &self,
+        mut next: Status,
+        mut cell: std::sync::MutexGuard<'_, StatusCell>,
+    ) -> Result<(), FailureKind> {
         if next.state == JobState::Running
             && next.phase != Some(Phase::Settling)
             && next.revision.get() >= u64::MAX - crate::catalogue_jobs::status::SETTLEMENT_RESERVE
@@ -42,10 +53,6 @@ impl JobStatus {
         }
         next.validate().map_err(|_| FailureKind::ReportMismatch)?;
         bounded_json(&next, crate::catalogue_jobs::status::STATUS_BYTES)?;
-        let mut cell = self
-            .current
-            .lock()
-            .map_err(|_| FailureKind::CatalogueUnavailable)?;
         let old = &cell.visible;
         if next.handle != old.handle
             || next.profile != old.profile
@@ -142,14 +149,21 @@ impl JobStatus {
         admitted[index] = Some(artifact.clone());
         Ok(())
     }
-    pub(super) fn update(&self, change: impl FnOnce(&mut Status)) -> Result<(), FailureKind> {
-        let mut next = self.snapshot()?;
+    pub(in crate::catalogue_jobs) fn update(
+        &self,
+        change: impl FnOnce(&mut Status),
+    ) -> Result<(), FailureKind> {
+        let cell = self
+            .current
+            .lock()
+            .map_err(|_| FailureKind::CatalogueUnavailable)?;
+        let mut next = cell.visible.clone();
         next.revision = next
             .revision
             .checked_add(U64(1))
             .ok_or(FailureKind::CounterExhausted)?;
         change(&mut next);
-        self.publish(next)
+        self.publish_locked(next, cell)
     }
     pub(super) fn finish_joined(&self) -> Result<bool, FailureKind> {
         let mut cell = self

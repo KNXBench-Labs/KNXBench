@@ -95,6 +95,7 @@ impl CatalogueRuntime {
     }
     async fn settle_record(&self, record: &Arc<JobRecord>) {
         if !record.execution().is_ok_and(|e| e.handles_closed()) {
+            self.quarantine(record);
             return;
         }
         let terminal = record

@@ -80,6 +80,7 @@ pub(crate) trait CatalogueArtifacts {
 /// full immutable raw rehearsal result and its exact identity.
 #[derive(Debug)]
 pub(crate) struct ControlledPreview {
+    pub(crate) report: crate::managed_apply::ControlledReport,
     pub(crate) preview: AdmittedPreviewArtifact,
     pub(crate) binding: PreviewBinding,
 }

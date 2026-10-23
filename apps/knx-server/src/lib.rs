@@ -105,7 +105,10 @@ mod catalogue_job_control;
 // Intentionally unwired until the job protocol DTOs, spool and drain are built.
 #[allow(dead_code)]
 mod catalogue_jobs;
-pub use catalogue_jobs::{CatalogueDrain, DrainCleanup, DrainCommit, DrainEnd};
+pub use catalogue_jobs::{
+    CatalogueDrain, CatalogueUpdateJobs, DrainCleanup, DrainCommit, DrainEnd,
+    Incarnation as CatalogueJobIncarnation,
+};
 mod function_routes;
 mod one_shot_activity;
 mod programming_state;
@@ -217,6 +220,7 @@ pub fn app(state: SharedState, static_dir: Option<PathBuf>) -> Router {
 /// frontend knows not to show a login screen at all.
 pub fn app_with_auth(state: SharedState, static_dir: Option<PathBuf>, auth: AuthConfig) -> Router {
     let auth = std::sync::Arc::new(auth::AuthState::new(auth));
+    let catalogue_jobs = catalogue_jobs::managed_bridge::mount(&state);
 
     let guarded = Router::new()
         .merge(routes::project_routes())
@@ -227,6 +231,7 @@ pub fn app_with_auth(state: SharedState, static_dir: Option<PathBuf>, auth: Auth
         .merge(programming_state::router())
         .merge(parameter_editor_routes::router())
         .merge(catalogue_update_routes::router())
+        .merge(catalogue_jobs.with_state(()))
         .merge(stored_bus_access_routes::router())
         .merge(manufacturer_file_routes::router())
         .merge(fs_routes::fs_routes())
@@ -272,7 +277,14 @@ pub fn app_with_auth(state: SharedState, static_dir: Option<PathBuf>, auth: Auth
         .merge(auth_routes::auth_routes().with_state(auth));
 
     match static_dir {
-        Some(dir) => api.fallback_service(ServeDir::new(dir)),
+        Some(dir) => api.fallback_service(
+            Router::new()
+                .fallback_service(ServeDir::new(dir.clone()))
+                .layer(axum::middleware::from_fn_with_state(
+                    dir,
+                    paths::fence_static,
+                )),
+        ),
         None => api,
     }
 }

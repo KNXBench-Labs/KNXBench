@@ -9,6 +9,12 @@ use std::path::{Path, PathBuf};
 /// its descriptor outside the worker unwind boundary before returning Ok.
 /// There is deliberately no default/quiet result sink in production.
 pub trait JobResultAdmission {
+    fn recovery_published(
+        &mut self,
+        _workspace: &JobWorkspace,
+    ) -> Result<(), RecoveryPublicationError> {
+        Ok(())
+    }
     fn admit_result(
         &mut self,
         install: &knx_productdb::ProductFileInstall,
@@ -123,6 +129,7 @@ impl RecoveryPublisher for JobRecoveryPublisher<'_> {
                         self.workspace.quarantine();
                         return Err(E::Io);
                     }
+                    self.result.recovery_published(self.workspace)?;
                     return Ok(receipt);
                 }
                 Err(E::AlreadyExists) => continue,

@@ -1,6 +1,7 @@
-//! Service/HTTP tests with an explicitly pre-native refusing bridge. This
-//! fixture cannot claim COMMIT, produce Ready or install anything; B10 combined
-//! execution belongs to the parent integration, not this transport test.
+//! Transport and production-mount assertions for bounded catalogue jobs.
+//!
+//! The refusing fixtures do not install. The production-mount candidate below
+//! uses the real managed catalogue and is reserved for combined acceptance.
 
 use super::*;
 use crate::catalogue_jobs::{dto, http, Incarnation, JobId};
@@ -8,6 +9,320 @@ use axum::http::{Request, StatusCode};
 use http_body_util::BodyExt;
 use std::sync::mpsc as sync;
 use tower::ServiceExt;
+
+// Compiled/executed with the final integrated candidate, not a separate branch
+// campaign. Unlike the refusing fixtures below, this uses the actual app mount,
+// managed catalogue, B10, durable publisher and complete report adapter.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn production_mount_installs_with_complete_artifacts_and_a_real_retained_backup() {
+    use std::io::Write;
+    let tmp = tempfile::tempdir().unwrap();
+    let path = tmp.path().join("catalogue.sqlite");
+    let state = Arc::new(crate::AppState::with_product_db_at(
+        tmp.path().to_path_buf(),
+        Some(path.clone()),
+    ));
+    let guarded = crate::app_with_auth(
+        Arc::clone(&state),
+        None,
+        crate::AuthConfig::from_plaintext_password("catalogue-test-password").unwrap(),
+    );
+    let response = guarded
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri(http::PREFIX)
+                .body(Body::new(UnreadBody))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(
+        response.status(),
+        StatusCode::UNAUTHORIZED,
+        "auth must reject before reading the job body"
+    );
+    let router = crate::app(Arc::clone(&state), Some(tmp.path().to_path_buf()));
+    let runtime = state.catalogue_jobs.attached_runtime().unwrap();
+    assert!(Arc::ptr_eq(runtime.owner(), &state.catalogue_jobs));
+    let incarnation = runtime.admission().unwrap().server_incarnation;
+    let mut zip = zip::ZipWriter::new(std::io::Cursor::new(Vec::new()));
+    for (name, bytes) in [
+        ("knx_master.xml", br#"<KNX xmlns="http://knx.org/xml/project/20"><MasterData><Manufacturers><Manufacturer Id="M-0001" Name="Example"/></Manufacturers></MasterData></KNX>"#.as_slice()),
+        ("M-0001/Hardware.xml", br#"<KNX xmlns="http://knx.org/xml/project/20"><ManufacturerData><Manufacturer RefId="M-0001"><Hardware><Hardware Id="H-1" Name="Example"/></Hardware></Manufacturer></ManufacturerData></KNX>"#.as_slice()),
+        ("M-0001/M-0001_A-0001.xml", br#"<KNX xmlns="http://knx.org/xml/project/20"><ManufacturerData><Manufacturer RefId="M-0001"><ApplicationPrograms><ApplicationProgram Id="M-0001_A-0001-01-0001" Name="Private caption" ApplicationNumber="1" ApplicationVersion="1" ProgramType="ApplicationProgram" MaskVersion="MV-07B0" PeiType="0" LoadProcedureStyle="MergedProcedure" DefaultLanguage="en-US"><Static/></ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#.as_slice()),
+        ("M-0001/Baggages.xml", br#"<KNX xmlns="http://knx.org/xml/project/20"><ManufacturerData><Manufacturer RefId="M-0001"><Baggages><Baggage Id="B-1" Name="payload.bin" TargetPath=".." InstallOnImport="false" Extra="opaque"><FileInfo TimeInfo="" Version="1"/></Baggage><Baggage Id="B-2" Name="payload.bin" TargetPath=""/></Baggages></Manufacturer></ManufacturerData></KNX>"#.as_slice()),
+        ("M-0001/Baggages/payload.bin", b"payload bytes".as_slice()),
+    ] {
+        zip.start_file(name, zip::write::SimpleFileOptions::default()).unwrap();
+        zip.write_all(bytes).unwrap();
+    }
+    let source = zip.finish().unwrap().into_inner();
+    let create = Create {
+        schema_version: 1,
+        policy_version: POLICY_VERSION.into(),
+        server_incarnation: incarnation,
+        admission_serial: U64(1),
+        source_name: "actual.knxprod".into(),
+        declared_bytes: U64(source.len() as u64),
+        profile: ProfileName::Standard,
+        allow_large_package: false,
+    };
+    let mut req = request(
+        "POST",
+        http::PREFIX,
+        incarnation,
+        None,
+        Body::from(serde_json::to_vec(&create).unwrap()),
+    );
+    req.headers_mut()
+        .insert("content-type", "application/json".parse().unwrap());
+    let response = router.clone().oneshot(req).await.unwrap();
+    assert_eq!(response.status(), StatusCode::CREATED);
+    let created: Status =
+        serde_json::from_slice(&response.into_body().collect().await.unwrap().to_bytes()).unwrap();
+    assert_eq!(created.phase, Some(Phase::Receiving));
+    assert_eq!(created.lease.kind, LeaseKind::Receiving);
+    let base = format!("{}/{}", http::PREFIX, created.handle.job_id);
+    let mut upload = request(
+        "PUT",
+        &format!("{base}/upload"),
+        incarnation,
+        Some(created.handle.job_id),
+        Body::from(source),
+    );
+    upload
+        .headers_mut()
+        .insert("content-type", "application/octet-stream".parse().unwrap());
+    assert_eq!(
+        router.clone().oneshot(upload).await.unwrap().status(),
+        StatusCode::ACCEPTED
+    );
+    let capability = Capability::from_bytes([1; 32]);
+    let handle = internal_handle(&created.handle);
+    let ready = tokio::time::timeout(Duration::from_secs(20), async {
+        loop {
+            let s = runtime.status(handle, &capability).unwrap();
+            s.validate().unwrap();
+            assert_eq!(
+                s.state,
+                JobState::Running,
+                "preview failed: {:?}",
+                s.failure
+            );
+            if s.phase == Some(Phase::Ready) {
+                break s;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .unwrap();
+    assert_eq!(ready.lease.kind, LeaseKind::Ready);
+    assert!(ready.result.is_none());
+    let preview = ready.preview.unwrap();
+    assert_eq!(preview.programs, U64(1));
+    let page = runtime
+        .details(
+            handle,
+            &capability,
+            preview.artifact.artifact_id,
+            preview.artifact.public_sha256,
+            U64(0),
+            200,
+        )
+        .await
+        .unwrap();
+    let page: serde_json::Value = serde_json::from_slice(&page).unwrap();
+    let rows = page["records"].as_array().unwrap();
+    assert_eq!(rows.len() as u64, preview.artifact.records.get());
+    assert_eq!(rows.iter().filter(|r| r["kind"] == "program").count(), 1);
+    let program = rows.iter().find(|r| r["kind"] == "program").unwrap();
+    assert_eq!(program["id"], "M-0001_A-0001-01-0001");
+    assert!(program["name"].is_null());
+    assert_eq!(program["withheld"][0]["rawUtf8Bytes"], "15");
+    assert_eq!(
+        rows.iter().filter(|r| r["kind"] == "packageReport").count(),
+        1
+    );
+    assert_eq!(rows.iter().filter(|r| r["kind"] == "member").count(), 5);
+    assert_eq!(rows.iter().filter(|r| r["kind"] == "provenance").count(), 1);
+    let baggage = rows.iter().find(|r| r["kind"] == "baggageSummary").unwrap();
+    assert_eq!(baggage["declarations"], "2");
+    assert_eq!(baggage["payloads"], "1");
+    let declarations: Vec<_> = rows
+        .iter()
+        .filter(|r| r["kind"] == "baggageDeclaration")
+        .collect();
+    assert_eq!(declarations.len(), 2);
+    assert_eq!(declarations[0]["resolution"], "invalid");
+    assert_eq!(declarations[0]["withheld"].as_array().unwrap().len(), 7);
+    assert_eq!(declarations[1]["resolution"], "resolved");
+    let payload = rows.iter().find(|r| r["kind"] == "baggagePayload").unwrap();
+    assert_eq!(payload["memberPath"], "M-0001/Baggages/payload.bin");
+    assert_eq!(payload["declarations"], "1");
+    assert!(rows.iter().any(|r| r["kind"] == "diagnostic"
+        && r["diagnosticKind"] == "unresolved-baggage-declaration"
+        && r["detail"].is_null()));
+    assert!(rows
+        .iter()
+        .any(|r| r["kind"] == "unknownConstruct" && r["name"] == "Extra" && r["sample"].is_null()));
+    let command = ApplyCommand {
+        schema_version: 1,
+        command_id: JobId::from_bytes([3; 16]),
+        consent_id: preview.consent_id,
+        preview_artifact_id: preview.artifact.artifact_id,
+        preview_public_sha256: preview.artifact.public_sha256,
+        confirmed: true,
+    };
+    let mut req = request(
+        "POST",
+        &format!("{base}/apply"),
+        incarnation,
+        Some(handle.job),
+        Body::from(serde_json::to_vec(&command).unwrap()),
+    );
+    req.headers_mut()
+        .insert("content-type", "application/json".parse().unwrap());
+    assert_eq!(
+        router.clone().oneshot(req).await.unwrap().status(),
+        StatusCode::ACCEPTED
+    );
+    let done = tokio::time::timeout(Duration::from_secs(20), async {
+        loop {
+            let s = runtime.status(handle, &capability).unwrap();
+            s.validate().unwrap();
+            if s.state != JobState::Running {
+                break s;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .unwrap();
+    assert_eq!(
+        done.state,
+        JobState::Succeeded,
+        "apply failed: {:?}",
+        done.failure
+    );
+    assert_eq!(
+        done.commit,
+        Commit {
+            outcome: CommitOutcome::Committed,
+            evidence: CommitEvidence::CommitReturnedOk
+        }
+    );
+    assert_eq!(done.cleanup.disposition, CleanupDisposition::Complete);
+    assert_eq!(done.backup.state, BackupState::Retained);
+    assert_eq!(
+        done.backup.publication,
+        BackupPublication::FileAndDirectorySyncAcknowledged
+    );
+    assert!(
+        !runtime.apply(handle, &capability, &command).unwrap().0,
+        "exact command is a replay after settlement"
+    );
+    let result = done.result.unwrap();
+    let page = runtime
+        .details(
+            handle,
+            &capability,
+            result.artifact.artifact_id,
+            result.artifact.public_sha256,
+            U64(0),
+            200,
+        )
+        .await
+        .unwrap();
+    let page: serde_json::Value = serde_json::from_slice(&page).unwrap();
+    assert_eq!(
+        page["records"].as_array().unwrap().len() as u64,
+        result.artifact.records.get()
+    );
+    assert_eq!(page["records"][0]["kind"], "resultSummary");
+    assert_eq!(
+        page["records"][0]["cataloguePageBytes"],
+        result.catalogue_page_bytes.to_string()
+    );
+    let backup = path.parent().unwrap().join(done.backup.name.unwrap());
+    let before = knx_productdb::open_and_migrate(&backup).unwrap();
+    let old_count: i64 = before
+        .query_row("SELECT count(*) FROM application_program", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(
+        old_count, 0,
+        "published backup must contain the pre-live state"
+    );
+    let new_count = state
+        .product_db
+        .as_ref()
+        .unwrap()
+        .with_read(|conn| {
+            conn.query_row("SELECT count(*) FROM application_program", [], |r| {
+                r.get::<_, i64>(0)
+            })
+        })
+        .unwrap()
+        .unwrap();
+    assert_eq!(new_count, 1);
+    let workspace = runtime
+        .lookup(handle, &capability)
+        .unwrap()
+        .workspace()
+        .unwrap();
+    let job_dir = workspace.lock().unwrap().directory().to_path_buf();
+    let raw = job_dir.join("preview.raw");
+    assert!(raw.is_file());
+    // Every literal/encoded/private alias is denied by the real static mount.
+    std::os::unix::fs::symlink(&job_dir, tmp.path().join("alias")).unwrap();
+    std::os::unix::fs::symlink(&job_dir, tmp.path().join("uploads")).unwrap();
+    let upload = router
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/fs/upload")
+                .header("content-type", "multipart/form-data; boundary=fixture")
+                .body(Body::new(UnreadBody))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(
+        upload.status(),
+        StatusCode::BAD_REQUEST,
+        "generic upload must refuse a private alias before staging/body reads"
+    );
+    let actual = format!("/{}", raw.strip_prefix(tmp.path()).unwrap().display());
+    let encoded = actual.replace(".knxbench-catalogue-jobs", "%2eknxbench-catalogue-jobs");
+    for suffix in [actual, encoded, "/alias/preview.raw".into()] {
+        assert_eq!(
+            router
+                .clone()
+                .oneshot(Request::builder().uri(suffix).body(Body::empty()).unwrap())
+                .await
+                .unwrap()
+                .status(),
+            StatusCode::NOT_FOUND
+        );
+    }
+
+    runtime.dispose(handle, &capability).await.unwrap();
+    assert!(
+        backup.exists(),
+        "report disposal must not remove a committed user backup"
+    );
+    state.catalogue_jobs.close_admission_and_request_stop();
+    assert_eq!(
+        state
+            .catalogue_jobs
+            .drain(Duration::from_secs(5), std::future::pending())
+            .await
+            .end,
+        DrainEnd::Finished
+    );
+}
 
 #[test]
 fn disposed_tombstone_expires_without_reconstructing_a_successful_delete() {

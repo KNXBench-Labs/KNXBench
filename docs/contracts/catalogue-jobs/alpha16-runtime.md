@@ -2,10 +2,12 @@
 
 This lane supplies the supervised HTTP/upload/artifact service; it does not
 invent another importer, managed SQL owner or publication gate. Production
-construction **requires** an implementation of `runtime::CatalogueJobBridge`
-and its per-job `CatalogueJobExecution` over the existing B10/A2 control. There
-is no quiet/no-op/default executor. Parent owns route mounting and path/static
-exclusion, the B10 adapter, and application/desktop integration.
+construction uses `managed_bridge::ManagedBridge` and its retained per-job
+`Session`, implementing `runtime::CatalogueJobBridge` / `CatalogueJobExecution`
+over the existing B10/A2 control. There is no quiet/no-op/default executor.
+`app_with_auth` mounts this lane in the existing guarded API group; standalone
+and embedded/desktop servers reach the same mount through their existing app
+construction. Combined candidate execution remains a separate acceptance step.
 
 ## Composition
 
@@ -149,28 +151,62 @@ downgraded by poisoned handle bookkeeping. No lifecycle mounting files were edit
 The existing rustix dependency enables `process` only to validate actual euid
 ownership; no dependency/version or lockfile addition was needed.
 
-## Remaining parent integration / acceptance
+## Production composition and remaining acceptance
 
-The service and native publication barrier are callable, but no production
-`CatalogueJobBridge`/`CatalogueJobExecution` implementation or HTTP mount is
-provided by this lane. Parent must compose the actual B10 control, owner,
-receipt, prepared preview and full Status/record producer with these interfaces.
-There is no production fallback or fake executor. In particular, the session
-must implement Receiving/idle/working/Ready expiry on the advertised monotonic
-origin (including a Receiving job whose upload never starts), exact-command
-replay, same-gate cancellation/COMMIT and failure/poison metadata handoff. The
-source receive task itself enforces actual EOF, 60-second idle and one-hour
-overall upload bounds. The bare B10 constructor's working lease must not silently
-replace the Receiving lease or shorten the new working lease after upload.
+The production session retains the real control/prepared binding, native
+workspace, outer COMMIT receipt, complete-result descriptor and typed reporting
+refusal. It uses the existing AppState catalogue owner and SAME catalogue-jobs
+Arc. Native work and filesystem/report work never hold the short transition
+mutex. Stop, apply, Ready and native claim publish status while that transition
+is still serialized. Source progress uses atomic status read/modify/publication.
 
-The full record producer must flatten every real current/historical report,
-version, conflict, provenance and baggage row into the accepted schema, validate
-cross-row parent/count completeness, and use the shared artifact budget and
-comparator. It must implement the mandatory precommit result callback; the
-native barrier tests do not certify report completeness. Initial-preview and
-apply native owners must remain retained until explicit close/release succeeds.
+Receiving starts with the advertised one-hour absolute deadline on the runtime's
+monotonic origin, including jobs whose upload never begins. Only an actual sealed
+upload starts the distinct two-hour worker lease; Ready starts its own 15-minute
+lease. Exact accepted apply replay precedes expiry/phase/queue checks. A fresh
+command reserves its supervisor handoff before consuming consent. The receive
+task independently enforces actual EOF, 60-second idle and overall upload bounds.
 
-Parent also owns authentication/path/static exclusion before mounting, AppState
-attachment, desktop/standalone lifetime mounting, UI integration, combined source
-review and the single final release-candidate gate. No aggregate RSS/disk,
-power-loss, large-database throughput or full WP-04.3 completion is claimed here.
+`report_adapter` emits every actual current/historical package, member, install
+count, unknown, diagnostic, conflict, source alias and baggage row without a
+first-N view. Program/version facts are captured from the actual controlled D
+rehearsal before explicit close, not from a second importer or a later W query.
+Program keys identify each package/program association in package order and
+program-id order; installed versions retain their source order. Package/report
+parentage, unknown occurrence ledgers, baggage member/link coverage and an
+independently computed complete row total are checked before manifest sealing.
+Unavailable historical evidence gets explicit rows. Each emitted row borrows
+the original report strings and uses the shared preview/result artifact budget.
+The live callback seals/adopts the ACTUAL full live install before claim, while
+the public result stays null until the retained COMMIT-return witness exists.
+
+Native W/S settlement facts are sampled under the actual managed owner and
+retained in the returned preview error/apply execution. Later unrelated readers
+cannot turn a settled attempt into a spurious Busy quarantine. Those facts are
+combined with the retained D/B native inventory; failed closes/poison remain
+owned, never released to reuse a filename. Committed/unknown backups are retained;
+only proved notCommitted settlement can remove its exact published backup.
+
+The shared path resolver now fences private-root components and resolved aliases
+even when the catalogue lies outside data_dir. Directory listings hide those
+roots/aliases. Generic uploads fence their staging directory and destination
+before body reads and cannot stage through a private-root alias. The static fallback checks decoded literal and resolved targets
+(including index aliases) before ServeDir. All job operations remain behind the
+existing authentication layer, before body reads. A missing managed catalogue,
+unsupported runtime or failed root lease/startup produces a typed unavailable
+lane, never a quiet installer fallback. No additional auth/CORS/compression model
+is introduced.
+
+A configured filename alias whose canonical target has a different basename
+is outside this job lane: startup refuses rather than publishing a backup name
+the existing configured-basename listing would not recognize. Use the actual
+catalogue filename; this does not change the quiet APIs' path contract.
+
+This integration adds final-candidate assertions for the real app mount,
+authentication-before-body, preview/result paging, committed receipt, reopened
+before-state backup, exact replay, retention/disposal, private static aliases,
+and distinct Receiving/working tickets. This slice performs compile-only checks;
+these new assertions and the existing matrices are reserved for the ONE combined
+candidate execution. Browser/packaging/lifecycle acceptance and full WP-04.3
+closure are not claimed by source wiring or compilation. No aggregate RSS/disk,
+power-loss or large-database throughput guarantee is added.

@@ -457,16 +457,28 @@ impl CatalogueRuntime {
             .validate()
             .map_err(|_| FailureKind::InvalidRequest)?;
         let record = self.lookup(handle, capability)?;
-        let fresh = record.execution()?.accept_apply(command)?;
-        if fresh
-            && self
-                .commands
-                .try_send(Command::Apply(Arc::clone(&record)))
-                .is_err()
+        // Retained command replay/conflict precedes queue admission too. A new
+        // acceptance reserves its supervisor handoff BEFORE consuming consent;
+        // a full/disconnected queue can never strand an accepted operation.
+        let fresh = if record
+            .status
+            .snapshot()?
+            .apply
+            .accepted_command_id
+            .is_some()
         {
-            self.quarantine(&record);
-            return Err(FailureKind::WorkerFailed);
-        }
+            record.execution()?.accept_apply(command)?
+        } else {
+            let permit = self
+                .commands
+                .try_reserve()
+                .map_err(|_| FailureKind::JobBusy)?;
+            let fresh = record.execution()?.accept_apply(command)?;
+            if fresh {
+                permit.send(Command::Apply(Arc::clone(&record)));
+            }
+            fresh
+        };
         Ok((fresh, record.status.snapshot()?))
     }
     pub fn cancel(

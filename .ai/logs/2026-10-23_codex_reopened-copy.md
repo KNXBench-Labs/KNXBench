@@ -24,8 +24,12 @@ owning results are 682 unit, 752 integration, two doctests and two 13-test examp
 lanes; focused populations overlap. Header grammar now passes without changing
 the ceiling. Narrow independent rereview ACCEPT/CLOSED verifies ORCH-1, including original
 private probes on corrected source and preserved destination implementation.
-Parent verifies the reviewed source hashes. Dependent/package/merged gates and
-delivery remain pending; the original REVISE stays historical evidence.
+Parent verifies the reviewed source hashes. Source `d2f5b57a5` is published on
+main-first `d736dbee0`; local/tracking/live readback verified. Maintained branch
+and integrated gates each pass 14/14 stages, 3742 Rust passes/151 ignored across
+24 binary results and 97/97 selected corpus, frozen inputs and empty data guards.
+Counts overlap across runs and are not added. The original REVISE stays historical
+evidence; this delivers the bounded copy gate, not the deferred parent feature.
 
 Previous correction source `846793334` and result docs `2f14f5741` remain
 published. Their separately verified evidence snapshot contains 1719 files;

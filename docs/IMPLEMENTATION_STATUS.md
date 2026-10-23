@@ -12,7 +12,7 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
-## WP-04.3 reopened-copy validation — source accepted, delivery pending (23 October 2026)
+## WP-04.3 reopened-copy validation — delivered (23 October 2026)
 
 The [bounded increment](contracts/catalogue-jobs/reopened-copy-increment.md)
 adds private owned D/B allocation inventory and actual writer close → native
@@ -28,8 +28,12 @@ ACCEPT/CLOSED resolve ORCH-1. Its original native S-close/W-rollback refusal
 failures and corrected passes remain separately retained. Recorded corrected
 owning execution: 682 unit, 752 integration, two doctests and two 13-test examples;
 32 opt-in tests ignored. Focused and reviewer selections overlap these counts.
-Maintained branch/merged gates and publication remain pending, not inferred from
-source review. No production route or whole-WP completion is claimed.
+Published source `d2f5b57a5` on main-first merge `d736dbee0`, with immediate
+local/tracking/live equality verified. Maintained branch and integrated gates
+each pass all 14 ordered stages: 3742 Rust passes / 151 ignored across 24 binary
+results and 97/97 selected corpus tests, frozen inputs and empty touched/unchecked
+user-data guards. These are scoped source gates, not release or whole-WP acceptance.
+No production route or whole-WP completion is claimed.
 
 Second apply rehearsal/result agreement, live growth/max_page_count, concurrent
 B10, production artifact durability/sidecars and route/lifecycle/UI wiring remain

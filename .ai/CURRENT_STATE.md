@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-23 15:10
+- **Completed:** Bounded reopened-copy source d2f5b57a5 delivered on main-first d736dbee0; immediate local/tracking/live equality verified. Independent destination ACCEPT and ORCH-1 CLOSED retained. Maintained branch and integrated gates each14/14:3742 Rust passes/151 ignored across24 binary results,97/97 selected corpus; exact stage/proof/input freeze and empty touched/unchecked data guards verified. No production job or whole-WP completion claim.
+- **Pending/Next Steps:** Gate/publish result-only documentation, retain/verify exact runtime evidence and retire only owned completed artifacts. Next bounded WP-04.3 prerequisite: second apply rehearsal/result agreement, then live growth and B10 before production routes/lifecycle/UI. Inspect actual current contract/source before admission; WP-19 remains subsequent. No new Go required.
+- **Notes for Codex oder Claude:** Successor receipts/reviews <profile-scratch>/wp043-reopened-copy-20261023/. Selected root source/index/HEAD remains foreign/stale and unsynchronized. Source is published, not merely green locally. No bus/device, release/tag or compatibility expansion.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-23 14:50
 - **Completed:** Reopened-copy source accepted after destination ACCEPT and ORCH-1 rereview ACCEPT/CLOSED; parent verifies exact corrected-source hashes. Native original probes now pass, preserved destination logic is header-only changed, and all 198 runtime/build inputs reconciled by reviewer. Corrected owning evidence remains 682 unit/752 integration/two doctests/two 13-test examples, overlapping focus not added. Final source-status docs updated; no package/publication acceptance yet.
 - **Pending/Next Steps:** Freeze explicit owned candidate and commit with KNXBench identity; maintained scoped branch gate then fresh main-first merged gate, conditional push/readback. Preserve reviewed source; no new Go needed. Remaining second rehearsal/growth/B10/production routes/lifecycle/UI stay open, WP-19 subsequent.

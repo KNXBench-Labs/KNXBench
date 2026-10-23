@@ -54,6 +54,8 @@ mod device_catalog;
 mod device_compare_routes;
 mod device_diagnostics_routes;
 mod device_download;
+mod device_system2;
+pub use device_system2::{drain_device_system2, System2Drain, System2Service};
 mod parameter_captions;
 mod parameter_grid;
 mod parameter_objects;
@@ -239,6 +241,7 @@ pub fn app_with_auth(state: SharedState, static_dir: Option<PathBuf>, auth: Auth
         .merge(bus_routes::bus_routes())
         .merge(bus_activity_routes::bus_activity_routes())
         .merge(device_download_routes::device_download_routes())
+        .merge(device_system2::routes())
         .merge(device_readiness_routes::device_readiness_routes())
         .merge(device_compare_routes::device_compare_routes())
         .merge(support_routes::support_routes())
@@ -270,21 +273,28 @@ pub fn app_with_auth(state: SharedState, static_dir: Option<PathBuf>, auth: Auth
             auth.clone(),
             auth::require_session,
         ))
-        .with_state(state);
+        .with_state(state.clone());
 
+    let system2_data_dir = state.data_dir.clone();
     let api = guarded
         .route("/healthz", get(|| async { "ok" }))
         .merge(auth_routes::auth_routes().with_state(auth));
 
     match static_dir {
-        Some(dir) => api.fallback_service(
-            Router::new()
+        Some(dir) => {
+            let static_dir = dir.clone();
+            let files = Router::new()
                 .fallback_service(ServeDir::new(dir.clone()))
-                .layer(axum::middleware::from_fn_with_state(
-                    dir,
-                    paths::fence_static,
-                )),
-        ),
+                .layer(axum::middleware::from_fn_with_state(dir, paths::fence_static))
+                .layer(axum::middleware::from_fn(move |request, next| {
+                    let data = system2_data_dir.clone();
+                    let static_dir = static_dir.clone();
+                    async move {
+                        device_system2::static_files::guard(&data, &static_dir, request, next).await
+                    }
+                }));
+            api.fallback_service(files)
+        }
         None => api,
     }
 }

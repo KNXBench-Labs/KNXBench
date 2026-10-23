@@ -27,7 +27,11 @@ use crate::errors::ApiError;
 use crate::tls_cert::TLS_DIR_NAME;
 
 /// The directory names no route may reach, even by absolute path.
-const RESERVED_DIR_NAMES: [&str; 2] = [TLS_DIR_NAME, ARTIFACT_ROOT_NAME];
+const RESERVED_DIR_NAMES: [&str; 3] = [
+    TLS_DIR_NAME,
+    ARTIFACT_ROOT_NAME,
+    crate::device_system2::ROOT_NAME,
+];
 
 /// Resolves `relative` against `data_dir` and confirms the result still
 /// lives under it — the only thing standing between `/api/fs/list` and a
@@ -113,7 +117,7 @@ pub(crate) fn resolve_new_project_path(data_dir: &Path, path: &str) -> Result<Pa
 /// next restart into a new certificate the operator never asked for.
 /// Both the literal and the resolved form of the directory are checked,
 /// so a symlink in its place does not open a side door.
-fn refuse_reserved(canonical_root: &Path, canonical: &Path) -> Result<(), ApiError> {
+pub(crate) fn refuse_reserved(canonical_root: &Path, canonical: &Path) -> Result<(), ApiError> {
     // The catalogue may be outside data_dir. No route may reach a private
     // artifact root by absolute path, a nested root or a symlink alias.
     if contains_private_component(canonical) {

@@ -10,7 +10,7 @@ use std::time::Duration;
 use tokio::sync::watch;
 use tokio::task::JoinHandle;
 
-use crate::{AppState, BusRelease, CatalogueDrain, ServeEnd, WriteDrain};
+use crate::{AppState, BusRelease, CatalogueDrain, ServeEnd, System2Drain, WriteDrain};
 
 /// Independent shutdown facts; a timeout is not worker completion or rollback.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -19,6 +19,7 @@ pub struct EmbeddedClose {
     pub bus: BusRelease,
     pub writes: WriteDrain,
     pub catalogue: CatalogueDrain,
+    pub system2: System2Drain,
 }
 
 impl EmbeddedClose {
@@ -31,6 +32,7 @@ impl EmbeddedClose {
                 crate::WriteWaitEnd::TimedOut | crate::WriteWaitEnd::SecondSignal
             )
             || self.catalogue.work_outstanding
+            || self.system2.work_outstanding
     }
 }
 
@@ -215,22 +217,24 @@ async fn run_close(inner: &Inner) -> EmbeddedClose {
         () = tokio::time::sleep(crate::STOP_GRACE) => Ok(ServeEnd::Forced(crate::ForceReason::GraceExpired)),
     };
     let bus = crate::release_bus(&inner.state, crate::BUS_RELEASE_TIMEOUT).await;
-    let (writes, catalogue) = drain_owned_work(&inner.state, &inner.second_stop).await;
+    let (writes, catalogue, system2) = drain_owned_work(&inner.state, &inner.second_stop).await;
     EmbeddedClose {
         http,
         bus,
         writes,
         catalogue,
+        system2,
     }
 }
 
 async fn drain_owned_work(
     state: &AppState,
     second: &watch::Sender<bool>,
-) -> (WriteDrain, CatalogueDrain) {
+) -> (WriteDrain, CatalogueDrain, System2Drain) {
     tokio::join!(
         crate::drain_device_writes(state, crate::DEFAULT_WRITE_WAIT, second_stop(second)),
         crate::drain_catalogue_jobs(state, crate::CATALOGUE_DRAIN_TIMEOUT, second_stop(second)),
+        crate::drain_device_system2(state, crate::DEFAULT_WRITE_WAIT, second_stop(second)),
     )
 }
 
@@ -362,7 +366,8 @@ mod tests {
             ));
         let (force, _) = watch::channel(false);
         let start = tokio::time::Instant::now();
-        let (writes, catalogue) = drain_owned_work(&state, &force).await;
+        let (writes, catalogue, system2) = drain_owned_work(&state, &force).await;
+        assert!(!system2.work_outstanding);
         let elapsed = start.elapsed();
         release_device.notify_one();
         release_catalogue.notify_one();

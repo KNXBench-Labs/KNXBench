@@ -1478,7 +1478,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
         onWizard={tree ? (item) => setDeviceWizard({ target: { lineId: catalogTarget.lineId }, product: item }) : undefined} />}
       {tree && <div hidden={logOpen || monitorOpen || view !== "devices"}>
         <DevicesWorkspace key={loadKey} tree={tree} active={!logOpen && !monitorOpen && view === "devices"}
-          selection={selection} multiSelection={multiSelection} onItemClick={onItemClick} onCatalogue={setNavigationCatalogue} />
+          selection={selection} multiSelection={multiSelection} onItemClick={onItemClick} onCatalogue={setNavigationCatalogue} onTreeUpdate={handleTreeUpdate} />
       </div>}
       {tree && notesIdentity !== null && (view === "notes" || notesMountedFor === notesIdentity) && (
         <NotesWorkspace key={notesIdentity} tree={tree} active={!logOpen && !monitorOpen && view === "notes"}

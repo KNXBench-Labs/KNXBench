@@ -2121,6 +2121,8 @@ export function getDeviceReadiness(): Promise<DeviceReadinessResponse> {
 // POST /api/device-compare (device_compare_routes.rs): read-only management
 // tunnel. This UI requests the complete plan, without optional `partial`.
 export interface DeviceCompareResponse {
+  observationToken?: string | null;
+  observationExpiresInSeconds?: number | null;
   decoded?: import("./deviceComparisons").DecodedComparisonRow[];
   address: string;
   deviceName: string;

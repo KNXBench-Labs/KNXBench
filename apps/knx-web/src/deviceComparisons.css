@@ -44,6 +44,10 @@
 .comparison-byte[data-mark="unknown"] { font-style: italic; text-decoration: underline dotted 1px; text-underline-offset: 3px; color: var(--knx-muted); }
 .comparison-byte-count { display: block; font-weight: normal; font-size: 0.85rem; }
 .comparison-decoded tr[data-unknown]:not([data-different]) { box-shadow: inset 3px 0 var(--knx-muted); }
+.comparison-adoption-review { border: 1px solid var(--knx-border); padding: 16px; margin-block: 16px; }
+.comparison-adoption-review label { display: flex; align-items: flex-start; gap: 8px; margin-block: 12px; }
+.comparison-decoded th input[type="checkbox"] { margin-inline-end: 8px; }
+.comparison-download-handoff { border-top: 1px solid var(--knx-border); margin-block: 16px; padding-top: 8px; }
 @media (max-width: 600px) {
   .search-panel.device-comparison-dialog { padding: 16px; }
   .device-comparison-dialog .dialog-actions { display: flex; flex-wrap: wrap; gap: 8px; }

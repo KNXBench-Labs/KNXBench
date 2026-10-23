@@ -548,6 +548,16 @@ wire_hex_serde!(Sha256);
 // Wire DTOs
 // ---------------------------------------------------------------------------
 
+/// Nullable does not mean optional: serde's ordinary `Option` default would
+/// otherwise silently admit a missing key in this all-keys-required protocol.
+fn required_nullable<'de, D, T>(d: D) -> Result<Option<T>, D::Error>
+where
+    D: Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    Option::<T>::deserialize(d)
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Handle {
@@ -570,6 +580,7 @@ pub struct Source {
     pub name: String,
     pub declared_bytes: U64,
     pub received_bytes: U64,
+    #[serde(deserialize_with = "required_nullable")]
     pub sha256: Option<Sha256>,
 }
 
@@ -580,6 +591,7 @@ pub struct Progress {
     pub pass: U64,
     pub unit: ProgressUnit,
     pub completed: U64,
+    #[serde(deserialize_with = "required_nullable")]
     pub total: Option<U64>,
 }
 
@@ -595,6 +607,7 @@ pub struct Lease {
 pub struct Failure {
     pub kind: FailureKind,
     /// Always null in v1; `Option<()>` enforces a required explicit `null`.
+    #[serde(deserialize_with = "required_nullable")]
     pub context: Option<()>,
 }
 
@@ -609,6 +622,7 @@ pub struct Commit {
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Cleanup {
     pub disposition: CleanupDisposition,
+    #[serde(deserialize_with = "required_nullable")]
     pub failure_kind: Option<CleanupFailureKind>,
 }
 
@@ -616,7 +630,9 @@ pub struct Cleanup {
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Backup {
     pub state: BackupState,
+    #[serde(deserialize_with = "required_nullable")]
     pub name: Option<String>,
+    #[serde(deserialize_with = "required_nullable")]
     pub identity: Option<String>,
     pub publication: BackupPublication,
 }
@@ -662,6 +678,7 @@ pub struct JobResult {
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Apply {
     pub state: ApplyState,
+    #[serde(deserialize_with = "required_nullable")]
     pub accepted_command_id: Option<JobId>,
 }
 
@@ -675,14 +692,20 @@ pub struct Status {
     pub source: Source,
     pub profile: Profile,
     pub state: JobState,
+    #[serde(deserialize_with = "required_nullable")]
     pub phase: Option<Phase>,
     pub gate: Gate,
+    #[serde(deserialize_with = "required_nullable")]
     pub stop_cause: Option<StopCause>,
+    #[serde(deserialize_with = "required_nullable")]
     pub progress: Option<Progress>,
     pub lease: Lease,
     pub apply: Apply,
+    #[serde(deserialize_with = "required_nullable")]
     pub preview: Option<Preview>,
+    #[serde(deserialize_with = "required_nullable")]
     pub result: Option<JobResult>,
+    #[serde(deserialize_with = "required_nullable")]
     pub failure: Option<Failure>,
     pub commit: Commit,
     pub cleanup: Cleanup,
@@ -753,6 +776,7 @@ pub struct DisposeReply {
 pub struct Error {
     pub schema_version: u32,
     pub kind: FailureKind,
+    #[serde(deserialize_with = "required_nullable")]
     pub context: Option<()>,
 }
 
@@ -1039,6 +1063,19 @@ impl Status {
         self.cleanup.validate()?;
         self.backup.validate()?;
         self.apply.validate()?;
+        if let Some(preview) = &self.preview {
+            preview.validate()?;
+        }
+        if let Some(result) = &self.result {
+            result.validate()?;
+        }
+        if self
+            .failure
+            .as_ref()
+            .is_some_and(|failure| failure.context.is_some())
+        {
+            return Err(WireError::Const);
+        }
 
         // stopCause non-null iff gate == cancelAccepted.
         match self.gate {
@@ -1052,6 +1089,18 @@ impl Status {
                     return Err(WireError::State);
                 }
             }
+        }
+
+        // Schema-wide committed implications must precede phase/terminal
+        // dispatch: settling and failed may also retain a witnessed commit.
+        if self.commit.outcome == CommitOutcome::Committed
+            && (self.gate != Gate::CommitClaimed
+                || self.apply.accepted_command_id.is_none()
+                || self.source.sha256.is_none()
+                || self.preview.is_none()
+                || self.result.is_none())
+        {
+            return Err(WireError::State);
         }
 
         match self.state {
@@ -1069,12 +1118,94 @@ impl Status {
         if self.cleanup.disposition != CleanupDisposition::Pending {
             return Err(WireError::State);
         }
-        if self.failure.is_some() {
+        if phase == Phase::Settling {
+            // Settlement may already have a failure or a witnessed commit;
+            // neither means that worker/cleanup ownership has ended.
+            if self.lease.kind != LeaseKind::Working
+                || self.apply.state != ApplyState::Spent
+                || (self.result.is_some() && self.commit.outcome != CommitOutcome::Committed)
+            {
+                return Err(WireError::State);
+            }
+            return Ok(());
+        }
+        if self.failure.is_some()
+            || self.result.is_some()
+            || self.commit.outcome != CommitOutcome::Pending
+        {
             return Err(WireError::State);
         }
-        let _ = phase;
-        // A phase-specific lease is expected, but the exact mapping is enforced
-        // by the server constructor rather than re-derived here.
+        let (sealed, preview, apply, lease, gate, backup_ok) = match phase {
+            Phase::Receiving => (
+                false,
+                false,
+                ApplyState::Unavailable,
+                LeaseKind::Receiving,
+                Gate::Open,
+                self.backup.state == BackupState::None,
+            ),
+            Phase::Previewing => (
+                true,
+                false,
+                ApplyState::Unavailable,
+                LeaseKind::Working,
+                Gate::Open,
+                self.backup.state == BackupState::None,
+            ),
+            Phase::Ready => (
+                true,
+                true,
+                ApplyState::Available,
+                LeaseKind::Ready,
+                Gate::Open,
+                self.backup.state == BackupState::None,
+            ),
+            Phase::WaitingForWriter | Phase::Validating => (
+                true,
+                true,
+                ApplyState::Accepted,
+                LeaseKind::Working,
+                Gate::Open,
+                self.backup.state == BackupState::None,
+            ),
+            Phase::BackingUp => (
+                true,
+                true,
+                ApplyState::Accepted,
+                LeaseKind::Working,
+                Gate::Open,
+                matches!(
+                    self.backup.state,
+                    BackupState::None | BackupState::Staging | BackupState::Published
+                ),
+            ),
+            Phase::Installing => (
+                true,
+                true,
+                ApplyState::Accepted,
+                LeaseKind::Working,
+                Gate::Open,
+                self.backup.state == BackupState::Published,
+            ),
+            Phase::Committing => (
+                true,
+                true,
+                ApplyState::Accepted,
+                LeaseKind::Working,
+                Gate::CommitClaimed,
+                self.backup.state == BackupState::Published,
+            ),
+            Phase::Settling => unreachable!(),
+        };
+        if self.source.sha256.is_some() != sealed
+            || self.preview.is_some() != preview
+            || self.apply.state != apply
+            || self.lease.kind != lease
+            || self.gate != gate
+            || !backup_ok
+        {
+            return Err(WireError::State);
+        }
         Ok(())
     }
 
@@ -1082,7 +1213,7 @@ impl Status {
         if self.phase.is_some() || self.progress.is_some() {
             return Err(WireError::State);
         }
-        if self.lease.kind != LeaseKind::Retention {
+        if self.lease.kind != LeaseKind::Retention || self.apply.state != ApplyState::Spent {
             return Err(WireError::State);
         }
         if self.cleanup.disposition == CleanupDisposition::Pending {
@@ -1099,7 +1230,12 @@ impl Status {
         if self.gate != Gate::CommitClaimed {
             return Err(WireError::State);
         }
-        if self.failure.is_some() || self.result.is_none() || self.preview.is_none() {
+        if self.failure.is_some()
+            || self.result.is_none()
+            || self.preview.is_none()
+            || self.source.sha256.is_none()
+            || self.apply.accepted_command_id.is_none()
+        {
             return Err(WireError::State);
         }
         if self.commit.outcome != CommitOutcome::Committed {
@@ -1131,8 +1267,9 @@ impl Status {
         if self.backup.state != BackupState::None {
             return Err(WireError::State);
         }
-        match self.failure.as_ref().map(|f| f.kind) {
-            Some(FailureKind::Cancelled) | Some(FailureKind::ServerStop) => Ok(()),
+        match (self.stop_cause, self.failure.as_ref().map(|f| f.kind)) {
+            (Some(StopCause::UserCancel), Some(FailureKind::Cancelled))
+            | (Some(StopCause::ServerStop), Some(FailureKind::ServerStop)) => Ok(()),
             _ => Err(WireError::State),
         }
     }
@@ -1142,7 +1279,7 @@ impl Status {
         if self.gate != Gate::Open || self.stop_cause.is_some() {
             return Err(WireError::State);
         }
-        if self.result.is_some() || self.preview.is_none() {
+        if self.result.is_some() || self.preview.is_none() || self.source.sha256.is_none() {
             return Err(WireError::State);
         }
         if self.commit.outcome != CommitOutcome::NotCommitted {
@@ -1177,11 +1314,11 @@ impl Status {
         if self.backup.state != BackupState::None {
             return Err(WireError::State);
         }
-        match self.failure.as_ref().map(|f| f.kind) {
-            Some(FailureKind::ReadyExpired)
-            | Some(FailureKind::ReceivingIdleTimeout)
-            | Some(FailureKind::ReceivingTimeout)
-            | Some(FailureKind::WorkingTimeout) => Ok(()),
+        match (self.stop_cause, self.failure.as_ref().map(|f| f.kind)) {
+            (Some(StopCause::ReadyExpired), Some(FailureKind::ReadyExpired))
+            | (Some(StopCause::ReceivingIdleTimeout), Some(FailureKind::ReceivingIdleTimeout))
+            | (Some(StopCause::ReceivingTimeout), Some(FailureKind::ReceivingTimeout))
+            | (Some(StopCause::WorkingTimeout), Some(FailureKind::WorkingTimeout)) => Ok(()),
             _ => Err(WireError::State),
         }
     }

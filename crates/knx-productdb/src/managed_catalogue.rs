@@ -577,7 +577,12 @@ impl ManagedCatalogue {
         if let Err(stop) = op.gate.checkpoint() {
             return ControlledApplySettlement::refused(OrchestrationError::Stop(stop), self.health);
         }
-        if source.limits != op.policy.limits() {
+        if shown.version != crate::preview_binding::BINDING_VERSION {
+            return ControlledApplySettlement::refused(OrchestrationError::Stale, self.health);
+        }
+        if source.limits != op.policy.limits()
+            || shown.policy != crate::controlled::PolicyIdentity::from_policy(op.policy)
+        {
             return ControlledApplySettlement::refused(
                 OrchestrationError::PolicyMismatch,
                 self.health,
@@ -590,300 +595,174 @@ impl ManagedCatalogue {
             );
         }
 
-        // ---- Phase 2: stale check (no live write) ----
-        let fresh_stamp = match self.capture_stamp(op.gate) {
-            Ok(stamp) => stamp,
-            Err(error) => {
-                return ControlledApplySettlement::refused(error.into(), self.health);
-            }
-        };
-        if fresh_stamp != shown.catalogue {
-            return ControlledApplySettlement::refused(OrchestrationError::Stale, self.health);
-        }
-
-        // ---- Phase 3: open S, copy D and B (still no live write) ----
+        // Reserve W once, before comparing the original stamp, and retain this
+        // same transaction through S→D/B, live DML and explicit settlement.
         let path = match self.identity.as_ref() {
             Some(id) => id.canonical.clone(),
             None => {
                 return ControlledApplySettlement::refused(
                     OrchestrationError::MissingConnection,
                     self.health,
-                );
+                )
             }
         };
-        let source_ro = match crate::migration::open_read_only(&path) {
-            Ok(source_ro) => source_ro,
-            Err(error) => {
-                return ControlledApplySettlement::refused(error.into(), self.health);
-            }
-        };
-        if let Err(error) = source_ro.conn.execute_batch("BEGIN") {
-            drop(source_ro);
-            return ControlledApplySettlement::refused(error.into(), self.health);
-        }
-        if let Err(error) =
-            source_ro
-                .conn
-                .query_row("SELECT count(*) FROM sqlite_schema", [], |r| {
-                    r.get::<_, i64>(0)
-                })
-        {
-            drop(source_ro);
-            return ControlledApplySettlement::refused(
-                OrchestrationError::Sqlite(error),
-                self.health,
-            );
-        }
-        let page_size: i64 = match source_ro
-            .conn
-            .query_row("PRAGMA page_size", [], |r| r.get(0))
-        {
-            Ok(value) => value,
-            Err(error) => {
-                drop(source_ro);
+        let next_generation = match self.generation.checked_add(1) {
+            Some(next) => next,
+            None => {
+                self.health = WriterHealth::Quarantined(QuarantineReason::UncertainSettlement);
                 return ControlledApplySettlement::refused(
-                    OrchestrationError::Sqlite(error),
+                    OrchestrationError::NotHealthy(self.health),
                     self.health,
                 );
             }
         };
-
-        let mut rehearsal = match artifacts.fresh_rehearsal(page_size) {
-            Ok(destination) => destination,
-            Err(error) => {
-                drop(source_ro);
-                return ControlledApplySettlement::refused(error, self.health);
-            }
-        };
-        if let Err(error) =
-            crate::catalogue_copy::copy_pinned_current(&source_ro.conn, &mut rehearsal, op.gate)
-        {
-            drop(rehearsal);
-            drop(source_ro);
-            return ControlledApplySettlement::refused(error.into(), self.health);
-        }
-        drop(rehearsal);
-        let mut recovery = match artifacts.fresh_recovery(page_size) {
-            Ok(destination) => destination,
-            Err(error) => {
-                drop(source_ro);
-                return ControlledApplySettlement::refused(error, self.health);
-            }
-        };
-        let recovery_copy =
-            crate::catalogue_copy::copy_pinned_current(&source_ro.conn, &mut recovery, op.gate);
-        // Close S before any W DML: S's shared read lock must be released
-        // before the W IMMEDIATE reservation below.
-        drop(source_ro);
-        drop(recovery);
-        if let Err(error) = recovery_copy {
-            // The recovery copy did not complete: no published backup exists
-            // and we refuse before any live write.
-            return ControlledApplySettlement::refused(error.into(), self.health);
-        }
-
-        // ---- Phase 4: live W mutation under the managed guard ----
-        // Checked generation increment before any live write; overflow closes
-        // admission rather than wrapping.
-        match self.generation.checked_add(1) {
-            Some(next) => self.generation = next,
+        let conn = match self.conn.as_mut() {
+            Some(conn) => conn,
             None => {
-                self.health = WriterHealth::Quarantined(QuarantineReason::UncertainSettlement);
-                return ControlledApplySettlement {
-                    failure: Some(OrchestrationError::NotHealthy(self.health)),
-                    commit: CommitEvidence::Unknown,
-                    rollback: RollbackDisposition::NotApplicable,
-                    health: self.health,
-                    artifacts: ArtifactDisposition::Retain,
-                };
+                return ControlledApplySettlement::refused(
+                    OrchestrationError::MissingConnection,
+                    self.health,
+                )
             }
-        }
+        };
         self.health = WriterHealth::Mutating;
+        let guard = MutationGuard {
+            health: &mut self.health,
+            armed: true,
+        };
+        let mut tx = match conn.transaction_with_behavior(TransactionBehavior::Immediate) {
+            Ok(tx) => tx,
+            Err(error) => {
+                drop(guard);
+                return ControlledApplySettlement::refused(error.into(), self.health);
+            }
+        };
+        tx.set_drop_behavior(DropBehavior::Ignore);
+        let mut recovery_exists = false;
 
-        let (commit, rollback, failure, clean) = {
-            let conn = match self.conn.as_mut() {
-                Some(conn) => conn,
-                None => {
-                    return ControlledApplySettlement {
-                        failure: Some(OrchestrationError::MissingConnection),
-                        commit: CommitEvidence::Unknown,
-                        rollback: RollbackDisposition::NotApplicable,
-                        health: self.health,
-                        artifacts: ArtifactDisposition::Retain,
-                    };
-                }
+        // Every preclaim failure shares one inspected rollback path. In
+        // particular, no copy/installer/identity branch can invent a successful
+        // rollback or independently authorize recovery disposal.
+        let body = (|| -> Result<(), OrchestrationError> {
+            let _: i64 = tx.query_row("SELECT count(*) FROM sqlite_schema", [], |r| r.get(0))?;
+            let before: i64 = tx.query_row("PRAGMA data_version", [], |r| r.get(0))?;
+            let witness = crate::catalogue_schema::witness_current(&tx, op.gate)
+                .map_err(crate::catalogue_stamp::StampError::from)?;
+            let after: i64 = tx.query_row("PRAGMA data_version", [], |r| r.get(0))?;
+            let fresh_stamp = crate::catalogue_stamp::CatalogueStamp {
+                incarnation: self.incarnation,
+                generation: self.generation,
+                data_version: before,
+                total_changes: tx.total_changes(),
+                file: FileStamp::from_path(&path),
+                witness,
             };
-            let guard = MutationGuard {
-                health: &mut self.health,
-                armed: true,
-            };
-            let mut tx = match conn.transaction_with_behavior(TransactionBehavior::Immediate) {
-                Ok(tx) => tx,
-                Err(error) => {
-                    drop(guard);
-                    return ControlledApplySettlement {
-                        failure: Some(OrchestrationError::Sqlite(error)),
-                        commit: CommitEvidence::Unknown,
-                        rollback: RollbackDisposition::NotApplicable,
-                        health: self.health,
-                        artifacts: ArtifactDisposition::Retain,
-                    };
-                }
-            };
-            tx.set_drop_behavior(DropBehavior::Ignore);
+            if before != after || fresh_stamp != shown.catalogue {
+                return Err(OrchestrationError::Stale);
+            }
+            // The unchanged reservation is not a managed mutation until the
+            // full stamp matches. Admission advances generation before copies.
+            self.generation = next_generation;
 
-            let identity = match crate::wrapper::install_admitted_product_file(
+            let source_ro = crate::migration::open_read_only(&path)?;
+            source_ro.conn.execute_batch("BEGIN")?;
+            let copies = (|| -> Result<(), OrchestrationError> {
+                let _: i64 =
+                    source_ro
+                        .conn
+                        .query_row("SELECT count(*) FROM sqlite_schema", [], |r| r.get(0))?;
+                let page_size: i64 = source_ro
+                    .conn
+                    .query_row("PRAGMA page_size", [], |r| r.get(0))?;
+                let mut rehearsal = artifacts.fresh_rehearsal(page_size)?;
+                crate::catalogue_copy::copy_pinned_current(
+                    &source_ro.conn,
+                    &mut rehearsal,
+                    op.gate,
+                )?;
+                drop(rehearsal);
+                let mut recovery = artifacts.fresh_recovery(page_size)?;
+                recovery_exists = true;
+                crate::catalogue_copy::copy_pinned_current(
+                    &source_ro.conn,
+                    &mut recovery,
+                    op.gate,
+                )?;
+                Ok(())
+            })();
+            // S must be explicitly ended and closed before W DML/COMMIT,
+            // including copy refusals. W's reservation is never released here.
+            let source_rollback = source_ro.conn.execute_batch("ROLLBACK");
+            drop(source_ro);
+            copies?;
+            source_rollback?;
+
+            let install = crate::wrapper::install_admitted_product_file(
                 &tx,
                 source.name,
                 source.bytes,
                 source.limits,
                 Cancellation::Controlled(op.gate),
-            ) {
-                Ok(install) => match crate::preview_identity::preview_identity(&install) {
-                    Ok(identity) => identity,
-                    Err(error) => {
-                        let clean = rollback_and_check(&tx);
-                        drop(tx);
-                        if clean {
-                            guard.disarm();
-                        } else {
-                            drop(guard);
-                        }
-                        return ControlledApplySettlement {
-                            failure: Some(OrchestrationError::PreviewIdentity(error)),
-                            commit: CommitEvidence::NotCommitted,
-                            rollback: RollbackDisposition::Explicit,
-                            health: self.health,
-                            artifacts: ArtifactDisposition::Dispose,
-                        };
-                    }
-                },
-                Err(error) => {
-                    let clean = rollback_and_check(&tx);
-                    drop(tx);
-                    if clean {
-                        guard.disarm();
-                    } else {
-                        drop(guard);
-                    }
-                    return ControlledApplySettlement {
-                        failure: Some(OrchestrationError::Install(error)),
-                        commit: CommitEvidence::NotCommitted,
-                        rollback: RollbackDisposition::Explicit,
-                        health: self.health,
-                        artifacts: ArtifactDisposition::Dispose,
-                    };
-                }
-            };
-
-            // A preview/report disagreement is a refusal: roll back, never live
-            // commit (the rehearsal preview no longer matches the live install).
+            )?;
+            let identity = crate::preview_identity::preview_identity(&install)?;
             if identity != shown.preview {
-                let clean = rollback_and_check(&tx);
-                drop(tx);
-                if clean {
-                    guard.disarm();
-                } else {
-                    drop(guard);
-                }
-                return ControlledApplySettlement {
-                    failure: Some(OrchestrationError::Stale),
-                    commit: CommitEvidence::NotCommitted,
-                    rollback: RollbackDisposition::Explicit,
-                    health: self.health,
-                    artifacts: ArtifactDisposition::Dispose,
-                };
+                return Err(OrchestrationError::Stale);
             }
+            Ok(())
+        })();
 
-            // The one commit gate.
-            if op.gate.try_claim_commit() {
-                match tx.execute_batch("COMMIT") {
-                    Ok(()) => {
-                        if tx.is_autocommit() {
-                            drop(tx);
-                            guard.disarm();
-                            (
-                                CommitEvidence::Committed,
-                                RollbackDisposition::NotApplicable,
-                                None,
-                                true,
-                            )
-                        } else {
-                            let _ = tx.execute_batch("ROLLBACK");
-                            drop(tx);
-                            drop(guard);
-                            (
-                                CommitEvidence::Unknown,
-                                RollbackDisposition::Unresolved,
-                                Some(OrchestrationError::CommitNotAutocommit),
-                                false,
-                            )
-                        }
-                    }
-                    Err(error) => {
-                        let busy = is_busy(&error);
-                        let rollback = tx.execute_batch("ROLLBACK");
-                        let autocommit = tx.is_autocommit();
-                        drop(tx);
-                        if rollback.is_ok() && autocommit && busy {
-                            guard.disarm();
-                            (
-                                CommitEvidence::NotCommitted,
-                                RollbackDisposition::Explicit,
-                                Some(OrchestrationError::Sqlite(error)),
-                                true,
-                            )
-                        } else if rollback.is_ok() && autocommit {
-                            drop(guard);
-                            (
-                                CommitEvidence::Unknown,
-                                RollbackDisposition::Explicit,
-                                Some(OrchestrationError::Sqlite(error)),
-                                false,
-                            )
-                        } else {
-                            drop(guard);
-                            (
-                                CommitEvidence::Unknown,
-                                RollbackDisposition::Unresolved,
-                                Some(OrchestrationError::Sqlite(error)),
-                                false,
-                            )
-                        }
-                    }
-                }
-            } else {
-                // Cancellation won the gate: roll back, never commit.
-                let rollback = tx.execute_batch("ROLLBACK");
-                let autocommit = tx.is_autocommit();
-                drop(tx);
-                if rollback.is_ok() && autocommit {
-                    guard.disarm();
-                    (
-                        CommitEvidence::NotCommitted,
-                        RollbackDisposition::Explicit,
-                        None,
-                        true,
-                    )
-                } else {
-                    drop(guard);
-                    (
-                        CommitEvidence::Unknown,
-                        RollbackDisposition::Unresolved,
-                        rollback.err().map(OrchestrationError::Sqlite),
-                        false,
-                    )
+        let (commit, rollback, failure) = if let Err(error) = body {
+            let rollback = rollback_and_check(&tx);
+            (CommitEvidence::NotCommitted, rollback, Some(error))
+        } else if op.gate.try_claim_commit() {
+            // One live COMMIT, never retried. Retain the original COMMIT error
+            // independently of the observed rollback disposition.
+            match tx.execute_batch("COMMIT") {
+                Ok(()) if tx.is_autocommit() => (
+                    CommitEvidence::Committed,
+                    RollbackDisposition::NotApplicable,
+                    None,
+                ),
+                Ok(()) => (
+                    CommitEvidence::Unknown,
+                    rollback_and_check(&tx),
+                    Some(OrchestrationError::CommitNotAutocommit),
+                ),
+                Err(error) => {
+                    let rollback = rollback_and_check(&tx);
+                    let commit = if is_busy(&error) && rollback == RollbackDisposition::Explicit {
+                        CommitEvidence::NotCommitted
+                    } else {
+                        CommitEvidence::Unknown
+                    };
+                    (commit, rollback, Some(OrchestrationError::Sqlite(error)))
                 }
             }
+        } else {
+            // Cancellation won; no COMMIT was issued, regardless of whether
+            // the independent rollback operation succeeds.
+            (CommitEvidence::NotCommitted, rollback_and_check(&tx), None)
         };
-
+        drop(tx);
+        let clean =
+            commit != CommitEvidence::Unknown && rollback != RollbackDisposition::Unresolved;
+        if clean {
+            guard.disarm();
+        } else {
+            drop(guard);
+        }
         if clean && self.refresh_observation().is_err() {
             self.health = WriterHealth::Quarantined(QuarantineReason::UncertainSettlement);
         }
-
-        let artifacts = match commit {
-            CommitEvidence::Committed | CommitEvidence::Unknown => ArtifactDisposition::Retain,
-            CommitEvidence::NotCommitted => ArtifactDisposition::Dispose,
+        let artifacts = if !recovery_exists {
+            ArtifactDisposition::None
+        } else if commit == CommitEvidence::NotCommitted
+            && rollback != RollbackDisposition::Unresolved
+            && self.health == WriterHealth::Healthy
+        {
+            ArtifactDisposition::Dispose
+        } else {
+            ArtifactDisposition::Retain
         };
         ControlledApplySettlement {
             failure,
@@ -895,11 +774,20 @@ impl ManagedCatalogue {
     }
 }
 
-/// Ends an active transaction with one explicit rollback and reports whether
-/// the connection returned to autocommit.
-fn rollback_and_check(tx: &rusqlite::Transaction<'_>) -> bool {
-    let _ = tx.execute_batch("ROLLBACK");
-    tx.is_autocommit()
+/// Settles a preclaim transaction, distinguishing an already automatic end
+/// from a successful explicit rollback and an unresolved native state.
+fn rollback_and_check(tx: &rusqlite::Transaction<'_>) -> crate::orchestration::RollbackDisposition {
+    use crate::orchestration::RollbackDisposition;
+    // SQLite may already have automatically ended a failed preclaim body. Do
+    // not issue a doomed ROLLBACK and then label its error an explicit success.
+    if tx.is_autocommit() {
+        return RollbackDisposition::Automatic;
+    }
+    if tx.execute_batch("ROLLBACK").is_ok() && tx.is_autocommit() {
+        RollbackDisposition::Explicit
+    } else {
+        RollbackDisposition::Unresolved
+    }
 }
 
 /// True only for the demonstrated `SQLITE_BUSY` commit failure, which the
@@ -930,6 +818,32 @@ mod tests {
             .unwrap();
         let owner = ManagedCatalogue::adopt_opened(conn, path).unwrap();
         (dir, owner)
+    }
+
+    #[test]
+    fn preclaim_native_automatic_rollback_is_not_reported_as_explicit() {
+        use crate::orchestration::RollbackDisposition;
+        let mut conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch("CREATE TABLE t(id INTEGER PRIMARY KEY); INSERT INTO t VALUES(1)")
+            .unwrap();
+        let mut tx = conn
+            .transaction_with_behavior(TransactionBehavior::Immediate)
+            .unwrap();
+        tx.set_drop_behavior(DropBehavior::Ignore);
+        tx.execute("INSERT INTO t VALUES(2)", []).unwrap();
+        assert!(tx
+            .execute("INSERT OR ROLLBACK INTO t VALUES(1)", [])
+            .is_err());
+        assert!(
+            tx.is_autocommit(),
+            "SQLite must actually roll the transaction back"
+        );
+        assert_eq!(rollback_and_check(&tx), RollbackDisposition::Automatic);
+        assert_eq!(
+            tx.query_row("SELECT count(*) FROM t", [], |r| r.get::<_, i64>(0))
+                .unwrap(),
+            1
+        );
     }
 
     #[test]

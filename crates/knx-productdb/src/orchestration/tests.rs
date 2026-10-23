@@ -6,6 +6,8 @@ use crate::managed_catalogue::{LegacyMutationKind, LegacySettlementHint, Managed
 use crate::operation::PublicationGate;
 use std::io::Write;
 
+mod review_regressions;
+
 const MASTER: &[u8] = br#"<KNX xmlns="http://knx.org/xml/project/11"><MasterData><Manufacturers><Manufacturer Id="M-0001" Name="Example"/></Manufacturers></MasterData></KNX>"#;
 const HARDWARE: &[u8] = br#"<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-0001"><Hardware><Hardware Id="H-1" Name="Example"/></Hardware></Manufacturer></ManufacturerData></KNX>"#;
 

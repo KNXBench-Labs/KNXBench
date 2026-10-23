@@ -12,6 +12,23 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Alpha 16 source integration — acceptance pending (23 October 2026)
+
+The adopted [release plan](goals/alpha16-release-plan-2026-10-23.md) now has one
+local integrated source containing the bounded caption-language slice, native
+COMMIT retention/shared arbitration, mandatory durable backup/result-admission
+barriers, catalogue runtime/artifacts and root UI, process lifecycle, exact
+catalogue-source portability, configured System-2 App/CLI/UI and source-bound
+comparison adoption. Additive exports and EN/DE namespaces are reconciled.
+
+This is **not complete user-facing feature or release acceptance**. Actual
+catalogue session/full-record production adapters and authenticated mounting,
+System-2 HTTP/restart selection/dedicated drain composition, and comparison
+observation/adoption API/UI remain active integration work. Individual worker
+checks retain their own exact source boundaries; no combined-candidate gate or
+artifact acceptance is claimed. New runtime assertions are reserved for the one
+final integrated Alpha 16 campaign, not repeated per-worktree gates.
+
 ## Alpha 16 caption language slice — local implementation (23 October 2026)
 
 The [bounded WP-05 contract](contracts/alpha16-parameter-layout.md) adds requested

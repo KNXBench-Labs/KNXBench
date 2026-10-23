@@ -238,6 +238,8 @@ pub struct AppState {
     /// One process-owned job service, shared by routes, runtime workers and
     /// standalone/embedded shutdown. Never construct a second runtime owner.
     pub catalogue_jobs: std::sync::Arc<crate::catalogue_jobs::CatalogueUpdateJobs>,
+    /// Actual configured System-2 task, preparation, status and durable recovery owner.
+    pub device_system2: std::sync::Arc<crate::System2Service>,
 }
 
 impl AppState {
@@ -347,7 +349,9 @@ impl AppState {
     /// from the user's default location.
     fn with_product_db(data_dir: PathBuf, product_db: Option<CatalogueOwner>) -> Self {
         let server_incarnation = new_server_incarnation();
+        let device_system2 = std::sync::Arc::new(crate::System2Service::new(&data_dir));
         Self {
+            device_system2,
             project: Mutex::new(None),
             clean_project: Mutex::new(None),
             last_saved_at: Mutex::new(None),

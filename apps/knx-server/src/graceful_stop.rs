@@ -80,6 +80,7 @@ pub fn write_wait_from_env(value: Option<&str>) -> Result<Duration, String> {
 pub fn close_process_admission(state: &AppState) {
     state.stop_admission.close();
     state.catalogue_jobs.close_admission_and_request_stop();
+    state.device_system2.control.close_admission();
 }
 
 /// Borrow the application's actual worker owner. Timeout/second stop retains
@@ -341,28 +342,32 @@ pub async fn drain_device_writes(
         programming_writing: None,
         end: WriteWaitEnd::NothingRunning,
     };
-    if let Some(programming) = state.address_programming.lock().await.as_ref() {
-        if programming.is_active() {
-            match programming.request_stop() {
-                crate::address_programming::StopOutcome::WillStop => {
-                    drain.programming_wait_stopped = true;
-                }
-                crate::address_programming::StopOutcome::TooLate => {
-                    drain.programming_writing = Some(programming.new_address());
+    if let Ok(programming_guard) = state.address_programming.try_lock() {
+        if let Some(programming) = programming_guard.as_ref() {
+            if programming.is_active() {
+                match programming.request_stop() {
+                    crate::address_programming::StopOutcome::WillStop => {
+                        drain.programming_wait_stopped = true;
+                    }
+                    crate::address_programming::StopOutcome::TooLate => {
+                        drain.programming_writing = Some(programming.new_address());
+                    }
                 }
             }
         }
     }
-    if let Some(download) = state.device_download.lock().await.as_ref() {
-        if download.is_running() {
-            drain.download = Some(download.target());
+    if let Ok(download_guard) = state.device_download.try_lock() {
+        if let Some(download) = download_guard.as_ref() {
+            if download.is_running() {
+                drain.download = Some(download.target());
+            }
         }
     }
-    if !device_writes_active(state).await {
+    if !device_writes_active(state) {
         return drain;
     }
     let settled = async {
-        while device_writes_active(state).await {
+        while device_writes_active(state) {
             tokio::time::sleep(WRITE_POLL).await;
         }
     };
@@ -374,19 +379,26 @@ pub async fn drain_device_writes(
     drain
 }
 
-async fn device_writes_active(state: &AppState) -> bool {
+fn device_writes_active(state: &AppState) -> bool {
+    // System-2 holds these same admission locks through disconnect. Inspectors
+    // must not wait outside the timer/second-signal boundary. A busy lock is
+    // unknown active work, never proof that an ordinary write has ended.
     let download = state
         .device_download
-        .lock()
-        .await
-        .as_ref()
-        .is_some_and(crate::DeviceDownloadSession::is_running);
+        .try_lock()
+        .map(|s| {
+            s.as_ref()
+                .is_some_and(crate::DeviceDownloadSession::is_running)
+        })
+        .unwrap_or(true);
     let programming = state
         .address_programming
-        .lock()
-        .await
-        .as_ref()
-        .is_some_and(crate::AddressProgrammingSession::is_active);
+        .try_lock()
+        .map(|s| {
+            s.as_ref()
+                .is_some_and(crate::AddressProgrammingSession::is_active)
+        })
+        .unwrap_or(true);
     download || programming
 }
 

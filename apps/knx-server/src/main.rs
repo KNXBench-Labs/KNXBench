@@ -166,16 +166,20 @@ async fn main() {
             knx_server::BUS_RELEASE_TIMEOUT.as_secs()
         );
     }
-    let (drain, catalogue) = tokio::join!(
+    let (drain, catalogue, system2) = tokio::join!(
         knx_server::drain_device_writes(&state, write_wait, stop.second_signal()),
         knx_server::drain_catalogue_jobs(
             &state,
             knx_server::CATALOGUE_DRAIN_TIMEOUT,
             stop.second_signal()
         ),
+        knx_server::drain_device_system2(&state, write_wait, stop.second_signal()),
     );
     report_write_drain(&drain, write_wait);
     report_catalogue_drain(&catalogue);
+    if system2.work_outstanding {
+        eprintln!("knx-server: System-2 work remains uncertain; the device may be partly written; original durable recovery evidence is retained, not automatically resumed");
+    }
     let write_cut_short = matches!(
         drain.end,
         knx_server::WriteWaitEnd::TimedOut | knx_server::WriteWaitEnd::SecondSignal
@@ -184,6 +188,7 @@ async fn main() {
     if !matches!(end, Ok(knx_server::ServeEnd::Drained))
         || write_cut_short
         || catalogue.work_outstanding
+        || system2.work_outstanding
     {
         // Something is still running. Returning from `main` would drop the
         // Tokio runtime, and that waits for every `spawn_blocking` task

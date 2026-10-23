@@ -1,8 +1,8 @@
 //! Sealed upload spool: bounded write, SHA-256 hashing and a no-replace seal.
 
 use std::fs::{DirBuilder, File, OpenOptions};
-use std::io::Write;
-use std::os::unix::fs::DirBuilderExt;
+use std::io::{Read, Write};
+use std::os::unix::fs::{DirBuilderExt, MetadataExt, OpenOptionsExt};
 use std::path::{Path, PathBuf};
 
 use rustix::cstr;
@@ -42,6 +42,8 @@ pub struct Spool {
     file: File,
     job_dir: PathBuf,
     sealed: bool,
+    file_identity: (u64, u64),
+    directory_identity: (u64, u64),
 }
 
 impl Spool {
@@ -54,11 +56,25 @@ impl Spool {
             .map_err(|_| SpoolError::Io)?;
         let part = job_dir.join("source.part");
         let file = OpenOptions::new()
+            .read(true)
+            .mode(0o600)
             .write(true)
             .create_new(true)
             .open(&part)
             .map_err(|_| SpoolError::Io)?;
+        Self::from_owned(job_dir, declared, file)
+    }
+
+    pub(crate) fn from_owned(
+        job_dir: &Path,
+        declared: u64,
+        file: File,
+    ) -> Result<Self, SpoolError> {
+        let meta = file.metadata().map_err(|_| SpoolError::Io)?;
+        let directory = std::fs::symlink_metadata(job_dir).map_err(|_| SpoolError::Io)?;
         Ok(Spool {
+            file_identity: (meta.dev(), meta.ino()),
+            directory_identity: (directory.dev(), directory.ino()),
             declared,
             written: 0,
             hasher: Sha256::new(),
@@ -97,6 +113,43 @@ impl Spool {
         }
         self.file.flush().map_err(|_| SpoolError::Io)?;
         self.file.sync_all().map_err(|_| SpoolError::Io)?;
+        let meta = self.file.metadata().map_err(|_| SpoolError::Io)?;
+        let path = std::fs::symlink_metadata(self.job_dir.join("source.part"))
+            .map_err(|_| SpoolError::Io)?;
+        let directory = std::fs::symlink_metadata(&self.job_dir).map_err(|_| SpoolError::Io)?;
+        if !path.is_file()
+            || path.file_type().is_symlink()
+            || path.nlink() != 1
+            || path.mode() & 0o777 != 0o600
+            || (path.dev(), path.ino()) != self.file_identity
+            || (meta.dev(), meta.ino()) != self.file_identity
+            || path.len() != self.written
+            || !directory.is_dir()
+            || directory.file_type().is_symlink()
+            || (directory.dev(), directory.ino()) != self.directory_identity
+        {
+            return Err(SpoolError::Io);
+        }
+        let mut readback =
+            File::open(self.job_dir.join("source.part")).map_err(|_| SpoolError::Io)?;
+        let mut hash = Sha256::new();
+        let mut buffer = [0u8; IO_CHUNK_BYTES];
+        let mut observed = 0u64;
+        loop {
+            let n = readback.read(&mut buffer).map_err(|_| SpoolError::Io)?;
+            if n == 0 {
+                break;
+            }
+            observed = observed.checked_add(n as u64).ok_or(SpoolError::Oversize)?;
+            if observed > self.declared {
+                return Err(SpoolError::Oversize);
+            }
+            hash.update(&buffer[..n]);
+        }
+        if observed != self.written || hash.finalize()[..] != self.hasher.clone().finalize()[..] {
+            return Err(SpoolError::Io);
+        }
+        drop(readback);
         drop(self.file);
 
         let dir = File::open(&self.job_dir).map_err(|_| SpoolError::Io)?;
@@ -115,6 +168,7 @@ impl Spool {
             }
         })?;
 
+        dir.sync_all().map_err(|_| SpoolError::Io)?;
         let digest = self.hasher.finalize();
         Ok(SpoolSealed {
             sha256: WireSha256::from_bytes(digest.into()),

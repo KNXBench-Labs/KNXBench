@@ -42,6 +42,12 @@ impl ArtifactRoot {
     pub fn acquire(catalogue_parent: &Path) -> Result<Self, ArtifactError> {
         let root = catalogue_parent.join(ARTIFACT_ROOT_NAME);
         create_or_validate_root(&root)?;
+        let root_meta = std::fs::symlink_metadata(&root).map_err(|_| ArtifactError::Io)?;
+        if root_meta.uid() != rustix::process::geteuid().as_raw()
+            || root_meta.mode() & 0o777 != 0o700
+        {
+            return Err(ArtifactError::RootInvalid);
+        }
         let lease = acquire_lease(&root)?;
         Ok(ArtifactRoot {
             root,
@@ -120,6 +126,7 @@ fn acquire_lease(root: &Path) -> Result<File, ArtifactError> {
         }
         Err(_) => return Err(ArtifactError::Io),
     };
+    verify_lease(&lease_path, &owned)?;
     let file = File::from(owned);
     flock(&file, FlockOperation::NonBlockingLockExclusive).map_err(|_| ArtifactError::Locked)?;
     Ok(file)
@@ -134,7 +141,10 @@ fn verify_lease(path: &Path, fd: &std::os::fd::OwnedFd) -> Result<(), ArtifactEr
     if !fd_meta.is_file() || fd_meta.nlink() != 1 {
         return Err(ArtifactError::RootInvalid);
     }
-    if fd_meta.mode() & 0o077 != 0 {
+    let root_uid = std::fs::symlink_metadata(path.parent().ok_or(ArtifactError::RootInvalid)?)
+        .map_err(|_| ArtifactError::RootInvalid)?
+        .uid();
+    if fd_meta.mode() & 0o777 != 0o600 || fd_meta.uid() != root_uid {
         return Err(ArtifactError::RootInvalid);
     }
     if fd_meta.dev() != path_meta.dev() || fd_meta.ino() != path_meta.ino() {

@@ -2,10 +2,16 @@
 
 mod strict;
 
-pub use strict::{Capability, Incarnation, JobId, U64};
+pub use strict::{Capability, Incarnation, JobId, Sha256, U64};
 
 mod artifacts;
-mod dto;
+pub mod http;
+pub mod persistence;
+pub mod records;
+pub mod runtime;
+pub use dto::{CatalogueDrain, DrainCleanup, DrainCommit, DrainEnd};
+pub use owner::CatalogueUpdateJobs;
+pub mod dto;
 mod owner;
 mod spool;
 mod status;
@@ -64,6 +70,8 @@ pub struct Admission {
 pub enum CreateOutcome {
     /// A fresh job id was reserved (HTTP 201).
     Fresh(JobId),
+    /// OS entropy unavailable; no serial was consumed.
+    EntropyUnavailable,
     /// A retained exact replay returned the same job id (HTTP 200).
     Replay(JobId),
     /// Conflicting metadata for a retained handle (HTTP 409).
@@ -113,10 +121,12 @@ struct RecordMeta {
 
 struct ActiveJob {
     meta: RecordMeta,
+    runtime: Option<std::sync::Arc<runtime::JobRecord>>,
 }
 
 struct TerminalRecord {
     meta: RecordMeta,
+    runtime: Option<std::sync::Arc<runtime::JobRecord>>,
     /// False while owned reclamation still needs filesystem I/O; eviction then
     /// refuses admission (`JobBusy`) instead of dropping the record.
     cleanup_complete: bool,
@@ -242,12 +252,15 @@ impl CatalogueJobManager {
             self.state.admission = AdmissionState::Exhausted;
             return CreateOutcome::Exhausted;
         }
+        let Ok(job) = JobId::try_mint() else {
+            return CreateOutcome::EntropyUnavailable;
+        };
         let serial = self.state.next_serial;
         self.state.next_serial = serial
             .checked_add(U64::ONE)
             .expect("next serial is below the exhausted sentinel");
-        let job = JobId::mint();
         self.state.active = Some(ActiveJob {
+            runtime: None,
             meta: RecordMeta {
                 handle: Handle {
                     incarnation: self.state.incarnation,
@@ -364,7 +377,6 @@ impl CatalogueJobManager {
     }
 }
 
-#[cfg(test)]
 impl CatalogueJobManager {
     /// Moves the active job to a terminal record with the chosen cleanup state.
     fn finish_active(&mut self, cleanup_complete: bool) -> Option<Handle> {
@@ -372,11 +384,15 @@ impl CatalogueJobManager {
         let handle = active.meta.handle;
         self.state.terminals.push_back(TerminalRecord {
             meta: active.meta,
+            runtime: active.runtime,
             cleanup_complete,
         });
         Some(handle)
     }
+}
 
+#[cfg(test)]
+impl CatalogueJobManager {
     fn set_next_serial(&mut self, serial: U64) {
         self.state.next_serial = serial;
     }

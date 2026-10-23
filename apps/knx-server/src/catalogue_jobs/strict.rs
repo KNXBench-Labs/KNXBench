@@ -99,6 +99,12 @@ fn parse_u64(s: &str) -> Option<u64> {
 }
 
 impl JobId {
+    pub fn try_mint() -> Result<Self, getrandom::Error> {
+        let mut bytes = [0_u8; 16];
+        getrandom::fill(&mut bytes)?;
+        Ok(Self(bytes))
+    }
+
     pub fn mint() -> Self {
         let mut bytes = [0_u8; 16];
         getrandom::fill(&mut bytes).expect("CSPRNG unavailable for job identity");

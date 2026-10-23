@@ -813,6 +813,11 @@ fn check_policy_version(v: &str) -> Result<(), WireError> {
 /// Validates the P3 display-source-name grammar: 1..=512 UTF-8 bytes, basename
 /// only, no path separators, drive colon, NUL, controls, `.`/`..`, or leading/
 /// trailing ASCII whitespace.
+pub(crate) fn is_forbidden_control(c: char) -> bool {
+    c.is_control()
+        || matches!(c, '\u{ad}' | '\u{600}'..='\u{605}' | '\u{61c}' | '\u{6dd}' | '\u{70f}' | '\u{890}'..='\u{891}' | '\u{8e2}' | '\u{180e}' | '\u{200b}'..='\u{200f}' | '\u{202a}'..='\u{202e}' | '\u{2060}'..='\u{2064}' | '\u{2066}'..='\u{206f}' | '\u{feff}' | '\u{fff9}'..='\u{fffb}' | '\u{110bd}' | '\u{110cd}' | '\u{13430}'..='\u{1343f}' | '\u{1bca0}'..='\u{1bca3}' | '\u{1d173}'..='\u{1d17a}' | '\u{e0001}' | '\u{e0020}'..='\u{e007f}')
+}
+
 fn check_source_name(name: &str) -> Result<(), WireError> {
     if name.is_empty() || name.len() > MAX_SOURCE_NAME_BYTES {
         return Err(WireError::SourceName);
@@ -826,7 +831,7 @@ fn check_source_name(name: &str) -> Result<(), WireError> {
     if name.contains(['/', '\\', ':', '\0']) {
         return Err(WireError::SourceName);
     }
-    if name.chars().any(char::is_control) {
+    if name.chars().any(is_forbidden_control) {
         return Err(WireError::SourceName);
     }
     Ok(())

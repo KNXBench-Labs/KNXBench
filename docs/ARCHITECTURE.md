@@ -1,5 +1,21 @@
 # Architecture
 
+## Alpha 16 System-2 boundary reconciliation — 23 October 2026
+
+[ADR-0152](adr/0152-gated-hardware-system2-download.md) already has a separate
+consent-gated App/Net hardware path and CLI adapter. Older simulator-only and
+blanket-refusal descriptions below are dated checkpoints, not a claim that no
+hardware entry exists. Project-configured preparation remains a distinct offline
+service; it must not gain physical authority through a changed `simulated` flag.
+
+The adopted [Alpha 16 plan](goals/alpha16-release-plan-2026-10-23.md) requires shared
+App-owned configured admission/execution/recovery with thin server/CLI adapters
+and a mandatory [device UI workflow](contracts/alpha16-system2-ui.md). The server
+owns asynchronous task/cancellation/status independently of the UI lifetime.
+This paragraph records the admitted architecture, not an implemented/accepted UI
+or firmware-compatibility result. Exact target/source binding, actual prestate
+backup before setup and explicit best-effort reporting remain indispensable.
+
 ## Monitoring export decision (source delivered, 21 October 2026)
 
 [ADR-0151](adr/0151-monitoring-export-is-a-sparse-snapshot.md) admits a separate

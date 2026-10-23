@@ -1,5 +1,23 @@
 # Compatibility
 
+## Current System-2 admission boundary — 23 October 2026
+
+[ADR-0152](adr/0152-gated-hardware-system2-download.md) supersedes older blanket
+hardware-refusal summaries for the separate experimental path. Existing source
+contains consent-gated App/Net execution and explicit recovery plus a CLI gateway
+adapter. That path requires its target-specific ordinary and best-effort risk
+confirmations; it does not broaden the ordinary memory planner or prove firmware
+compatibility, ETS equivalence or complete physical rollback. Masked/unwritten
+regions and indirect effects remain disclosed risks, not resolved by consent.
+
+[Project-configured preparation](contracts/project-system2-offline-preparation.md)
+is separately delivered as offline/simulator-only. The adopted Alpha 16 plan now
+requires a separate configured hardware admission and an actual
+[UI workflow](contracts/alpha16-system2-ui.md). They are implementation work, not
+accepted capability or grounds to relabel simulator bundles. No new hardware
+trial was performed for this reconciliation. Earlier dated sections below retain
+the scope and evidence available at their checkpoint.
+
 ## Monitoring snapshot profile (source delivered, 21 October 2026)
 
 The [monitoring export contract](contracts/monitor-project-export.md) defines an

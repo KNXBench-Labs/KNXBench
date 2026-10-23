@@ -1,5 +1,16 @@
 # Roadmap
 
+## Alpha 16 implementation authorised — 23 October 2026
+
+The owner adopted the [finite release plan](goals/alpha16-release-plan-2026-10-23.md)
+and authorised necessary B10 takeover. The required usable outcomes are configured
+experimental System-2 download through the UI, complete catalogue jobs, comparison
+adoption, catalogue-created project source portability and source-backed layout
+slices. Final review and one integrated candidate acceptance follow implementation;
+this is not a release or hardware compatibility claim. Conditional evidence-gated
+work and explicit exclusions remain in the plan. Earlier dated next-step prose
+below records its checkpoint rather than restarting WP-04.1/.2.
+
 ## Offline monitoring handoff (source delivered, 21 October 2026)
 
 The owner authorised a bounded [monitoring snapshot export](contracts/monitor-project-export.md):

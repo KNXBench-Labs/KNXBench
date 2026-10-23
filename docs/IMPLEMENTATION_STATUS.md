@@ -12,6 +12,22 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Alpha 16 caption language slice — local implementation (23 October 2026)
+
+The [bounded WP-05 contract](contracts/alpha16-parameter-layout.md) adds requested
+product-language `Text` overlays to block/separator captions before existing
+module/positional substitution. It reuses exact defining-tree/node identity,
+existing language selection and one sticky text projection budget. Original
+source/project values and write authority are unchanged; no `Value` translation
+or grid-axis reference semantics are introduced.
+
+The original HTTP regression fails on its intended untranslated-label assertion.
+The corrected local HTTP caption selection passes16/16, zero failed/ignored,
+including existing stored/default/module/write-undo and budget-refusal controls.
+This is source-local focused evidence, not whole-server/browser/release acceptance.
+The adopted [Alpha 16 plan](goals/alpha16-release-plan-2026-10-23.md) owns final
+combined review and acceptance; no source publication claimed for this slice.
+
 ## WP-04.3 fixed writer SQL safety — delivered (23 October 2026)
 
 The [bounded writer-configuration increment](contracts/catalogue-jobs/writer-configuration-increment.md)

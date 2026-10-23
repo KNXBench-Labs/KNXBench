@@ -1,5 +1,18 @@
 # Open work after the 0.1 alpha
 
+## Alpha 16 owner-authorised implementation — 23 October 2026
+
+The [adopted Alpha 16 release plan](goals/alpha16-release-plan-2026-10-23.md)
+now owns the current implementation order and consolidated acceptance cadence.
+The owner lifted the previous pause and authorised necessary B10 takeover.
+Configured experimental System-2 download **through the UI** is mandatory;
+CLI-only or simulator-only preparation is not release completion. The plan routes
+existing WPs as delivered, required, conditional or outside this release; the
+dated queue below remains evidence, not authority to duplicate delivered work.
+One final integrated candidate campaign replaces repeated per-foundation full
+gates. Necessary focused regressions remain mandatory. Tag/release/container
+publication and live-device operations still need separate explicit owner Go.
+
 ## Reconciled work packages — 18 October 2026
 
 This is the **current planning entry point**. The dated sections below retain

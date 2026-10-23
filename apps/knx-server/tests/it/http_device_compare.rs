@@ -251,6 +251,38 @@ async fn compare(app: &axum::Router, body: Value) -> (StatusCode, Value) {
     send(app, post("/api/device-compare", body)).await
 }
 
+async fn compare_session(app: &axum::Router) -> (String, Value) {
+    let response = app
+        .clone()
+        .oneshot(post(
+            "/api/device-compare",
+            json!({ "address": "1.1.67", "gateway": GATEWAY }),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(response.headers()["cache-control"], "no-store");
+    let cookie = response.headers()["set-cookie"]
+        .to_str()
+        .unwrap()
+        .split(';')
+        .next()
+        .unwrap()
+        .to_owned();
+    let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    (cookie, serde_json::from_slice(&bytes).unwrap())
+}
+
+fn browser_post(uri: &str, body: Value, cookie: &str) -> Request<Body> {
+    let mut request = post(uri, body);
+    request
+        .headers_mut()
+        .insert("cookie", cookie.parse().unwrap());
+    request
+}
+
 fn no_writes(device: &SimulatedDevice) -> bool {
     !device.seen().into_iter().any(|seen| {
         matches!(
@@ -334,9 +366,7 @@ async fn named_parameters_are_project_and_device_values_not_swapped_raw_octets()
     let label = row["label"].clone();
     let expected_project = row["project"].clone();
     h.device.preset_memory(address, &[37]);
-    let (status, changed) =
-        compare(&h.app, json!({ "address": "1.1.67", "gateway": GATEWAY })).await;
-    assert_eq!(status, StatusCode::OK);
+    let (cookie, changed) = compare_session(&h.app).await;
     let row = changed["decoded"]
         .as_array()
         .unwrap()
@@ -349,6 +379,54 @@ async fn named_parameters_are_project_and_device_values_not_swapped_raw_octets()
         "the value actually preset in simulator memory"
     );
     assert_eq!(row["reason"], Value::Null);
+    assert_eq!(row["adoptable"], true);
+    let selected = row["index"].as_u64().unwrap();
+    let token = changed["observationToken"].as_str().unwrap();
+    assert_eq!(token.len(), 64);
+    let raw = changed["decoded"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|r| r["kind"] == "raw")
+        .unwrap();
+    assert_eq!(raw["adoptable"], false);
+    let (_, before) = send(&h.app, get("/api/project")).await;
+    // JSON can select retained rows only, and cannot lend another browser authority.
+    let (status, _) = send(
+        &h.app,
+        post(
+            "/api/device-compare/preview",
+            json!({ "observationToken": token, "selected": [selected] }),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CONFLICT);
+    let (status, body) = send(
+        &h.app,
+        browser_post(
+            "/api/device-compare/preview",
+            json!({ "observationToken": token, "selected": [selected, raw["index"]] }),
+            &cookie,
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+    assert_eq!(body["kind"], "deviceAdoptionRefused");
+    let (status, _) = send(
+        &h.app,
+        browser_post(
+            "/api/device-compare/preview",
+            json!({ "observationToken": token, "selected": [selected], "values": ["37"] }),
+            &cookie,
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+    let (_, after) = send(&h.app, get("/api/project")).await;
+    assert_eq!(
+        before, after,
+        "mixed/foreign/client-value selections change neither project nor undo state"
+    );
     assert!(changed["decoded"]
         .as_array()
         .unwrap()

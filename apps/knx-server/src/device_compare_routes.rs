@@ -20,25 +20,44 @@
 
 use std::net::SocketAddrV4;
 use std::sync::atomic::Ordering;
+use std::sync::{Arc, Mutex};
 
-use axum::extract::State;
-use axum::http::StatusCode;
+use axum::extract::{DefaultBodyLimit, Extension, State};
+use axum::http::{header, HeaderMap, HeaderValue, StatusCode};
+use axum::response::{IntoResponse, Response};
 use axum::routing::post;
 use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
 
 use knx_core::commissioning::partial_memory_download::PartialDownloadParts;
-use knx_core::ContactableAddress;
-use knx_net::commissioning::memory_download::{compare_with_plan, CompareError, ReadBackError};
+use knx_net::commissioning::memory_download::{CompareError, ReadBackError};
 use knx_net::SessionError;
 
 use crate::device_download::TunnelTransport;
-use crate::device_download_routes::{parse_target, prepare, PartialDto};
+use crate::device_download_routes::{parse_target, PartialDto};
 use crate::errors::ApiError;
 use crate::SharedState;
 
+mod adoption;
+mod read;
+
 pub fn device_compare_routes() -> Router<SharedState> {
-    Router::new().route("/api/device-compare", post(compare))
+    Router::new()
+        .route("/api/device-compare", post(compare))
+        .route("/api/device-compare/preview", post(adoption::preview))
+        .route("/api/device-compare/apply", post(adoption::apply))
+        .layer(DefaultBodyLimit::max(16 * 1024))
+        .layer(Extension(Arc::new(Mutex::new(
+            adoption::Retained::default(),
+        ))))
+        .layer(axum::middleware::map_response(
+            |mut response: Response| async move {
+                response
+                    .headers_mut()
+                    .insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
+                response
+            },
+        ))
 }
 
 #[derive(Deserialize)]
@@ -80,12 +99,35 @@ fn binding_at(
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct DecodedDto {
+    index: usize,
+    /// Presentation hint only; App validates the entire selection again.
+    adoptable: bool,
     kind: &'static str,
     label: String,
     address: u32,
     project: Option<String>,
     device: Option<String>,
     reason: Option<String>,
+}
+
+fn decoded(rows: &[knx_productdb::image_comparison::ComparisonRow]) -> Vec<DecodedDto> {
+    rows.iter()
+        .enumerate()
+        .map(|(index, row)| DecodedDto {
+            index,
+            adoptable: row.kind == "parameter"
+                && row.parameter.is_some()
+                && row.reason.is_none()
+                && row.project.is_some()
+                && row.device.is_some(),
+            kind: row.kind,
+            label: row.label.clone(),
+            address: row.address,
+            project: row.project.clone(),
+            device: row.device.clone(),
+            reason: row.reason.clone(),
+        })
+        .collect()
 }
 
 #[derive(Serialize)]
@@ -133,12 +175,16 @@ struct CompareResponse {
     /// Content changed during the read: do not present an old plan as current.
     outdated: bool,
     decoded: Vec<DecodedDto>,
+    observation_token: Option<String>,
+    observation_expires_in_seconds: Option<u64>,
 }
 
 async fn compare(
     State(state): State<SharedState>,
+    Extension(sessions): Extension<adoption::Sessions>,
+    headers: HeaderMap,
     Json(body): Json<CompareRequest>,
-) -> Result<Json<CompareResponse>, ApiError> {
+) -> Result<Response, ApiError> {
     // Goal A3: no new tunnel once a stop has begun (KL-163).
     state.stop_admission.admit()?;
     let gateway: SocketAddrV4 = body
@@ -146,28 +192,11 @@ async fn compare(
         .parse()
         .map_err(|_| ApiError::bad_request("gateway is not a host:port IPv4 address"))?;
     let target = parse_target(&body.address)?;
-    let contactable =
-        ContactableAddress::new(target).map_err(|e| ApiError::bad_request(e.to_string()))?;
     let partial = body.partial.map(PartialDownloadParts::from);
-    // Bind both sides of preparation, so a concurrent edit/reload cannot lend
-    // a stale plan a fresh content revision. No project lock crosses an await.
-    let before = binding_at(&state, target);
-    let prepared = prepare(&state, target, partial)?;
-    let binding = binding_at(&state, target)
-        .filter(|binding| {
-            before.as_ref() == Some(binding)
-                && binding.device_id == prepared.device.0
-                && body
-                    .binding
-                    .as_ref()
-                    .is_none_or(|expected| expected == binding)
-        })
-        .ok_or_else(|| {
-            ApiError::conflict(
-                "deviceCompareStale",
-                "The project/device changed; refresh and compare again. No tunnel was opened.",
-            )
-        })?;
+    let prepared = read::Read::prepare(&state, target, partial, body.binding.as_ref())?;
+    let binding = prepared.binding.clone();
+    let device_name = prepared.name.clone();
+    let (browser, cookie) = adoption::browser(&headers)?;
 
     let Ok(programming) = state.address_programming.try_lock() else {
         return Err(crate::tunnel_holder::gateway_busy(
@@ -207,6 +236,9 @@ async fn compare(
         ));
     }
 
+    if !prepared.is_current(&state) {
+        return Err(read::stale());
+    }
     // Register only after validation and gateway-conflict checks. A dropped
     // request leaves `unknown`, never a fabricated successful comparison.
     let activity = state
@@ -219,13 +251,12 @@ async fn compare(
             return Err(crate::tunnel_holder::gateway_connect_failed(gateway, &e));
         }
     };
-    let compared = compare_with_plan(
-        &TunnelTransport(tunnel.as_ref()),
-        contactable,
-        state.device_download_timing,
-        &prepared.plan,
-    )
-    .await;
+    let compared = prepared
+        .observe(
+            &TunnelTransport(tunnel.as_ref()),
+            state.device_download_timing,
+        )
+        .await;
     let _ = tunnel.disconnect().await;
     activity.finish(if compared.is_ok() {
         "finished"
@@ -235,22 +266,11 @@ async fn compare(
     drop(scan);
     drop(monitor);
     drop(programming);
-    let compared = compared.map_err(compare_error)?;
-    let outdated = binding_at(&state, target).as_ref() != Some(&binding);
-    let decoded =
-        knx_productdb::image_comparison::decode(&prepared.image, &compared.held, &prepared.plan)
-            .into_iter()
-            .map(|row| DecodedDto {
-                kind: row.kind,
-                label: row.label,
-                address: row.address,
-                project: row.project,
-                device: row.device,
-                reason: row.reason,
-            })
-            .collect();
-
-    let segments = &prepared.image.segments;
+    let observed = compared?;
+    let outdated = !observed.is_current(&state, target, &binding);
+    let decoded = decoded(observed.rows());
+    let segments = &observed.image().segments;
+    let compared = observed.comparison();
     let changes = compared
         .changes
         .iter()
@@ -268,12 +288,12 @@ async fn compare(
             project: change.planned.clone(),
         })
         .collect();
-    Ok(Json(CompareResponse {
+    let mut response = CompareResponse {
         address: target.to_string(),
-        device_name: prepared.device_name.clone(),
-        program_id: prepared.request.program_id.clone(),
+        device_name,
+        program_id: observed.program_id().to_owned(),
         written: false,
-        partial: prepared.partial.is_some(),
+        partial: matches!(&observed, read::Observation::Partial { .. }),
         mask: compared.held.mask.0,
         manufacturer: compared.held.manufacturer,
         load_states: compared
@@ -292,7 +312,34 @@ async fn compare(
         binding,
         outdated,
         decoded,
-    }))
+        observation_token: None,
+        observation_expires_in_seconds: None,
+    };
+    // Retain only genuine full reads, under current project ownership. A late
+    // result cannot evict the new project's evidence or acquire a fresh token.
+    if let read::Observation::Full(observation) = observed {
+        let project = state.project.lock().expect("state mutex poisoned");
+        let stack = state.command_stack.lock().expect("state mutex poisoned");
+        if project
+            .as_ref()
+            .is_some_and(|p| observation.is_current(p, &stack, &adoption::scope(&state)))
+        {
+            response.observation_token = Some(
+                sessions
+                    .lock()
+                    .expect("comparison mutex poisoned")
+                    .observe(browser, *observation)?,
+            );
+            response.observation_expires_in_seconds = Some(600);
+        } else {
+            response.outdated = true;
+        }
+    }
+    let mut response = Json(response).into_response();
+    if let Some(cookie) = cookie {
+        response.headers_mut().insert(header::SET_COOKIE, cookie);
+    }
+    Ok(response)
 }
 
 fn compare_error(error: CompareError) -> ApiError {

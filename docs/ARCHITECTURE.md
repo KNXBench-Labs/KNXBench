@@ -20,6 +20,16 @@ Only accepted and implemented behavior below is a runtime capability. The
 independent design readiness approval. No cancellable job API, disk rehearsal or lifecycle guarantee is
 implemented by that proposal. The accepted ADR authorizes staged implementation, not runtime acceptance.
 
+## Project-configured System-2 offline preparation
+
+A separate experimental App entry prepares a desired device configuration from a
+supplied Project and DeviceId, including a new unsaved project. ProductDB owns
+source interpretation and table-capacity selection; App owns retained input and
+operation binding. Core gains no UI/format dependency, and no new Net/hardware
+route is introduced. The defaults-only profile remains separate. See the
+[bounded contract](contracts/project-system2-offline-preparation.md) for the
+implementation-candidate status, required acceptance and explicit limits.
+
 ## Source-bound System-2 simulator validation (20 October 2026)
 
 A separate experimental ProductDB image entry and complete source-procedure

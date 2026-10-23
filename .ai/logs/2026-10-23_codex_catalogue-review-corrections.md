@@ -61,4 +61,14 @@ refusal controls and six canonical schema fixtures pass, reviewed source is
 unchanged, and retained owning evidence authenticates 1241 passes/53 ignored.
 Full package/merged acceptance and publication remain pending.
 
-Final correction, gate and publication outcomes are recorded only after execution.
+## Verified source delivery
+
+Source `46d9a3b0f` and main-first merge `846793334` are published; immediate
+local/tracking/live equality was verified. Branch and merged maintained gates
+each pass all 14 ordered stages with frozen inputs and empty touched/unchecked
+user-data guards: 3668 Rust passes / 151 ignored across 24 binary results,
+97/97 selected corpus, tooling, Clippy, formatting and documentation checks.
+These overlapping populations are not summed across runs. This closes review
+R1–R6 in the bounded correction scope, not WP-04.3 or production job wiring.
+Result-documentation checks and evidence retirement are separate follow-up
+steps; no cleanup is claimed before it occurs.

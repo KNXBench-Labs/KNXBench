@@ -1,4 +1,28 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-23 15:57
+- **Completed:** Second apply rehearsal independent review ACCEPT/no findings; parent verifies all four current source hashes plus report/manifest hashes. Reviewer independently reran6focused/99orchestration/7preview tests and reproduced6original semantic failures/8compiled variant kills; overlapping populations not summed. Recorded owning688unit/752integration plus examples/doctests retained. Source accepted only, no package or publication acceptance.
+- **Pending/Next Steps:** Freeze/commit exact owned source/docs, maintained14-stage scoped branch gate, fresh main-first integrated gate, conditional push/live readback. Do not conflate source review with delivery. Growth/B10/routes/lifecycle/UI remain separate, WP-19 subsequent; no new Go required.
+- **Notes for Codex oder Claude:** Evidence <profile-scratch>/wp043-second-rehearsal-20261023/code-review/ and controller-review-accepted.json. Base4c4bf12af on feat/wp043-second-rehearsal-20261023; root foreign source/index preserved. No bus/device, release or compatibility expansion.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-23 15:46
+- **Completed:** Second apply rehearsal implementation handoff inspected; parent confirms four owned source hashes match recorded final bytes and reads actual apply D/B/S→D rehearsal→full identity→explicit close→W ordering. Worker evidence records six final-byte semantic original failures, eight compiled wrong variants,688 unit/752 integration plus examples/doctests green; focus counts overlap. Fixture/cache attempts remain explicitly uncredited. No independent source/package acceptance yet.
+- **Pending/Next Steps:** Independent whole-feature review deleg_bb5d4fac / sa-0-dcb33493 active on frozen four-path source/tests. Require actual verdict/evidence authentication, close concrete findings if any, then docs and maintained branch/main-first gates/publication. Parent owns docs/continuity only while review runs; no competing builds.
+- **Notes for Codex oder Claude:** Evidence <profile-scratch>/wp043-second-rehearsal-20261023/implementation/HANDOFF.md and verified-handoff.json; code-review/ is expected review output. Branch feat/wp043-second-rehearsal-20261023 based4c4bf12af, uncommitted runtime. Shared root foreign history/source/index preserved. Growth/B10/routes/lifecycle/UI, bus/device and release remain excluded.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-23 15:21
+- **Completed:** Consumed finite second-rehearsal admission; parent inspected current apply code and adopted the existing §6 behavior without a new architecture cycle. Source indeed discards validated D before W install; scoped implementation now dispatched on successor feat/wp043-second-rehearsal-20261023 from published4c4bf12af. Reopened-copy archive receipt confirms10536 verified entries; no cleanup of active successor resources.
+- **Pending/Next Steps:** TDD worker deleg_c6fb69af / sa-0-caf19b22 active: actual D shared installer/full preview comparison/explicit close before W DML, six native boundary witnesses and bounded controls. Await handoff; do not edit worker paths/run competing gates. Then independent code review and maintained branch/main-first delivery gates. Live growth/B10/routes remain subsequent; WP-19 follows.
+- **Notes for Codex oder Claude:** Evidence <profile-scratch>/wp043-second-rehearsal-20261023/implementation/; parent-owned contract second-rehearsal-increment.md records admitted scope. Original source/quiet/lifecycle assertions must remain. Root foreign source/index/HEAD and other sessions' histories preserved; no bus/device, release or compatibility expansion.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-23 15:10
 - **Completed:** Bounded reopened-copy source d2f5b57a5 delivered on main-first d736dbee0; immediate local/tracking/live equality verified. Independent destination ACCEPT and ORCH-1 CLOSED retained. Maintained branch and integrated gates each14/14:3742 Rust passes/151 ignored across24 binary results,97/97 selected corpus; exact stage/proof/input freeze and empty touched/unchecked data guards verified. No production job or whole-WP completion claim.
 - **Pending/Next Steps:** Gate/publish result-only documentation, retain/verify exact runtime evidence and retire only owned completed artifacts. Next bounded WP-04.3 prerequisite: second apply rehearsal/result agreement, then live growth and B10 before production routes/lifecycle/UI. Inspect actual current contract/source before admission; WP-19 remains subsequent. No new Go required.

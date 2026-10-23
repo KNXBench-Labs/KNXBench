@@ -247,6 +247,16 @@ whitespace checks exit0. No new runtime test campaign run. Preparing one committ
 full integrated candidate with existing release/manual draft; full package gate
 and release-only opt-ins/artifacts remain required. No publication or hardware Go.
 
+## First candidate gate format refusal
+
+Candidate acf35385 full gate proc_77dc884f7237 stopped at fmt before any
+product tests. Final failed receipt retains complete=false, success=false,
+planCompleted=false and inputsFrozen=true; launcher confirmed exited. The only
+fmt diagnostic was the merged static-fence middleware call wrapping in lib.rs.
+Explicit rustfmt correction b5569936 changes four lines for one, no semantics.
+Original failed receipt/log remain final-candidate-gate-1; successor must bind
+corrected committed source and is not a relabelled passing attempt.
+
 ## Next
 
 Consume exact worker handoffs on completion; do not poll

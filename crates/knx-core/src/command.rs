@@ -3,6 +3,9 @@
 //! §6). Validation lives here, not in the UI and not in storage. Any command
 //! that changes a `Resolved<T>` sets its layer to `Layer::UserEdit`.
 
+pub mod comparison_adoption;
+#[cfg(test)]
+mod comparison_adoption_tests;
 mod function_commands;
 mod object_commands;
 mod programming_commands;
@@ -3884,7 +3887,7 @@ pub enum HistorySide {
 
 /// A live inverse or a validated normalized state recovered by the application.
 /// Storage codecs and version admission deliberately remain outside the core.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 enum HistoryEntry {
     Inverse(Box<Command>),
     Snapshot(Box<Project>),
@@ -3907,7 +3910,7 @@ impl HistoryEntry {
 
 /// Undo/redo stacks of applied inverses or recovered snapshots. A failed
 /// command, undo or redo leaves both stacks untouched.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct CommandStack {
     undo: Vec<HistoryEntry>,
     redo: Vec<HistoryEntry>,

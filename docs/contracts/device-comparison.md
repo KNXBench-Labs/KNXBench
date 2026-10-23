@@ -120,6 +120,16 @@ filter never edits or reorders the response rows.
   shape, so it passes the same byte-level `changes` and follows the same
   differences-only rule. Its separate *Differing ranges* table is unchanged.
 
+## Device → project adoption (Alpha 16 amendment, 23 October 2026)
+
+The separate [atomic adoption contract](alpha16-comparison-adoption.md) admits
+only service-held, identity-checked observations and exact attributed named
+parameters in this increment. Requested unsupported/raw/unknown/table rows
+refuse the whole selection; unselected unknown rows remain visible and intact.
+Incarnation, P3 revision, complete project/history and rebuilt source authority
+are checked again before one undoable edit. Comparison itself still cannot
+write, and project → device reuses the existing validated download workflow.
+
 ## Required evidence
 
 Named RED/GREEN for identity, P3 revisions, raw/decoded tables, server binding,

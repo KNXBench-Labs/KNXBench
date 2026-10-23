@@ -16,6 +16,10 @@ stops at named first failing parameter rows and is not exhaustive row coverage.
 Owning evidence records 688 unit/752 integration, two 13-test examples and two
 doctests;32 opt-in ignored. Focused and review executions overlap these counts.
 
-Maintained package/integrated gates and publication are pending. No growth/B10,
+Source6670514e published on main-first bd8191f20 with live-ref readback.
+Branch14/14:3748 Rust passes/151 ignored,97/97 corpus. Fresh combined-main
+integrated14/14:3842 Rust passes/151 ignored across24 binary results,97/97 corpus;
+source freeze and data guards verified. Older merge evidence remains bound to
+its historical tree. No growth/B10,
 production artifact/routes/lifecycle/UI, schema/quiet API, bus/device, release or
 external compatibility acceptance follows from this bounded source approval.

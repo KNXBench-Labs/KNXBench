@@ -329,6 +329,15 @@ import attributes in two client modules, unchanged paths/schema/validation.
 Launcher exited before edit. No focused test/typecheck/browser rerun. Checkpoint
 and successor whole gate5 required; failed gate4 remains immutable.
 
+## Gate5 shared locator ambiguity
+
+Gate5 passed tooling/build/typechecks/Vitest then failed13 catalogue browser
+cases. Parsed all13 retained numbered failure blocks: each names two regions
+with same accessible name (job and backups). Scoped helper now requires the
+exact consent checkbox descendant and unique region count; preserves report,
+consent, no-write and layout assertions. No runtime code or first/nth fallback.
+No extra test run; original gate5 immutable, successor whole gate6 required.
+
 ## Next
 
 Consume exact worker handoffs on completion; do not poll

@@ -193,6 +193,9 @@ pub struct PreparedBundle {
     pub format: u16,
     pub binding: Binding,
     pub normalized_plan: PlanRecord,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub project_preparation:
+        Option<Box<crate::system2_validation_preparation::ProjectPreparationRecord>>,
 }
 impl PreparedBundle {
     pub fn new(binding: Binding, normalized_plan: PlanRecord) -> io::Result<Self> {
@@ -200,14 +203,44 @@ impl PreparedBundle {
             format: 1,
             binding,
             normalized_plan,
+            project_preparation: None,
+        };
+        bundle.plan()?;
+        Ok(bundle)
+    }
+    pub(crate) fn new_project(
+        binding: Binding,
+        normalized_plan: PlanRecord,
+        record: crate::system2_validation_preparation::ProjectPreparationRecord,
+    ) -> io::Result<Self> {
+        let bundle = Self {
+            format: 2,
+            binding,
+            normalized_plan,
+            project_preparation: Some(Box::new(record)),
         };
         bundle.plan()?;
         Ok(bundle)
     }
     pub fn plan(&self) -> io::Result<PropertyDownloadPlan> {
         self.binding.validate()?;
-        if self.format != 1
-            || self.normalized_plan.sha256()? != self.binding.plan_sha256
+        match (
+            self.format,
+            &self.project_preparation,
+            &self.binding.project_preparation_sha256,
+        ) {
+            (1, None, None) => {
+                if self.binding.profile_version != 1 {
+                    return Err(invalid("unsupported legacy validation profile version"));
+                }
+            }
+            (2, Some(record), Some(_)) => {
+                crate::system2_validation_preparation::check_budget(self)?;
+                record.validate(&self.binding, &self.normalized_plan)?;
+            }
+            _ => return Err(invalid("bundle format/project preparation mixing")),
+        }
+        if self.normalized_plan.sha256()? != self.binding.plan_sha256
             || self.normalized_plan.target != self.binding.target
             || self.normalized_plan.mask != self.binding.mask
             || self.normalized_plan.manufacturer != self.binding.manufacturer
@@ -235,6 +268,14 @@ impl PreparedBundle {
     /// profile and source hashes are unchanged — only the device binding and
     /// the recovery premise serial differ. See ADR-0152.
     pub fn rebind_hardware(&self, serial: [u8; 6]) -> io::Result<PreparedBundle> {
+        if self.format != 1
+            || self.project_preparation.is_some()
+            || self.binding.project_preparation_sha256.is_some()
+        {
+            return Err(invalid(
+                "project preparation is intrinsically simulator-only",
+            ));
+        }
         let mut bundle = self.clone();
         bundle.binding.serial = serial;
         bundle.binding.simulated = false;

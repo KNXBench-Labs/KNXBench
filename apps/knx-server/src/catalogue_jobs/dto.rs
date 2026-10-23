@@ -1,6 +1,6 @@
 //! Strict serde wire DTOs for the catalogue job protocol (P2/P3 field/null/state contract).
 //!
-//! Private and unwired: no route, upload, spool or drain consumes these types yet.
+//! Shared by the supervised HTTP runtime and retained lifecycle owner.
 
 use serde::de::{self, DeserializeSeed, MapAccess, SeqAccess, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};

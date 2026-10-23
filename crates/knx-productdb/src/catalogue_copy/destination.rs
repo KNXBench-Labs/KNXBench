@@ -4,9 +4,10 @@
 //! the inventory retains it, including failed native close.
 
 use std::fs::{File, OpenOptions};
-use std::os::unix::fs::MetadataExt;
-#[cfg(test)]
+use std::os::unix::fs::{MetadataExt, OpenOptionsExt};
 use std::path::Path;
+mod publication;
+pub use publication::{PublishedRecovery, RecoveryPublicationError, ValidatedRecovery};
 use std::path::PathBuf;
 
 use rusqlite::{Connection, DropBehavior, OpenFlags, Transaction};
@@ -64,6 +65,7 @@ pub(crate) enum DestinationError {
     Io(std::io::Error),
     Witness(WitnessError),
     Stop(Stop),
+    Publication(RecoveryPublicationError),
 }
 #[derive(Debug)]
 pub(crate) enum DestinationCleanup {
@@ -114,6 +116,8 @@ enum State {
     Closed,
     Validated,
     Rehearsal,
+    Published,
+    PublicationUncertain,
 }
 #[cfg(test)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -258,6 +262,16 @@ impl ArtifactInventory {
         path: PathBuf,
         page_size: i64,
     ) -> Result<FreshDestination, CopyError> {
+        self.create_new_observed(role, path, page_size, &mut |_, _| Ok(()))
+    }
+
+    pub(crate) fn create_new_observed(
+        &mut self,
+        role: DestinationRole,
+        path: PathBuf,
+        page_size: i64,
+        observer: &mut dyn FnMut(&Path, &File) -> Result<(), RecoveryPublicationError>,
+    ) -> Result<FreshDestination, CopyError> {
         if self.allocated(role) {
             return Err(DestinationError::Occupied.into());
         }
@@ -267,6 +281,7 @@ impl ArtifactInventory {
             .read(true)
             .write(true)
             .create_new(true)
+            .mode(0o600)
             .open(&path)
             .map_err(DestinationError::from)?;
         // Register immediately, before metadata, SQLite open or configuration.
@@ -292,6 +307,7 @@ impl ArtifactInventory {
                 .map_err(DestinationError::from)?;
         slot.parent_identity = Some((parent.dev(), parent.ino()));
         slot.check_identity()?;
+        observer(&slot.path, &slot.anchor).map_err(DestinationError::Publication)?;
         slot.connection = Some(
             Connection::open_with_flags(&slot.path, rw_flags()).map_err(DestinationError::from)?,
         );

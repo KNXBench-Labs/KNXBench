@@ -1,8 +1,9 @@
 //! Explicit controlled ProductDB bridge; no arbitrary SQL or installer callback.
 //!
 //! The caller owns the workspace and receipt outside worker/response unwind.
-//! This process-local bridge is not artifact publication, durability or HTTP
-//! authorization. Quiet APIs are unchanged.
+//! The public apply requires durable recovery publication and complete-result
+//! admission before COMMIT claim. Outcomes remain process-local, not a durable
+//! job ledger or HTTP authorization. Quiet APIs are unchanged.
 use crate::catalogue_copy::{ArtifactInventory, DestinationRole, FreshDestination};
 use crate::controlled::ControlledSource;
 use crate::managed_catalogue::{ManagedCatalogue, WriterHealth};
@@ -13,6 +14,10 @@ use crate::orchestration::{
 };
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::path::PathBuf;
+pub(crate) mod publication;
+pub use publication::{
+    PublishedRecovery, RecoveryPublicationError, RecoveryPublisher, ValidatedRecovery,
+};
 
 pub use crate::controlled::{ControlledError, ControlledPolicy, NameRule};
 pub use crate::orchestration::{
@@ -54,6 +59,8 @@ impl PreparedPreview {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ControlledFailureKind {
     ReceiptPending,
+    ResultAdmission,
+    RecoveryPublication,
     CounterExhausted,
     ClaimRefused,
     Configuration,
@@ -79,6 +86,8 @@ fn failure_kind(error: &OrchestrationError) -> ControlledFailureKind {
         E::ApplyWitnessPending => K::ReceiptPending,
         E::ApplyAttemptExhausted => K::CounterExhausted,
         E::CommitClaimRefused => K::ClaimRefused,
+        E::RecoveryPublication(_) => K::RecoveryPublication,
+        E::ResultAdmission(_) => K::ResultAdmission,
         E::WriterConfiguration(_) => K::Configuration,
         E::Growth(_) => K::Growth,
         E::PreviewSettlement(_) | E::SourceSettlement(_) => K::Cleanup,
@@ -132,6 +141,34 @@ impl ApplyWorkspace {
             panic_after_commit: false,
         })
     }
+    /// Adopts an already leased private job directory; allocation remains
+    /// create-new and the supplied publisher observes its actual returned FD.
+    pub fn in_owned_directory(directory: PathBuf) -> std::io::Result<Self> {
+        use std::os::unix::fs::MetadataExt;
+        let m = std::fs::symlink_metadata(&directory)?;
+        if !m.is_dir() || m.file_type().is_symlink() || m.mode() & 0o777 != 0o700 {
+            return Err(std::io::Error::other("private catalogue directory refused"));
+        }
+        Ok(Self {
+            directory,
+            inventory: ArtifactInventory::default(),
+            #[cfg(test)]
+            panic_after_commit: false,
+        })
+    }
+    pub fn native_handles_closed(&self) -> bool {
+        self.inventory.native_handles_closed()
+    }
+    /// Refuses failed native closes. Only after this inspected check may the
+    /// outer durable inventory release/remove primary files and exact sidecars.
+    pub fn release_closed_ownership(&mut self) -> Result<(), RecoveryPublicationError> {
+        if !self.native_handles_closed() {
+            return Err(RecoveryPublicationError::Refused);
+        }
+        self.inventory = ArtifactInventory::default();
+        Ok(())
+    }
+
     pub fn has_recovery(&self) -> bool {
         self.inventory.allocated(DestinationRole::Recovery)
     }
@@ -268,6 +305,29 @@ impl ManagedCatalogue {
         .map(PreparedPreview)
         .map_err(PreviewError)
     }
+    pub fn prepare_controlled_owned(
+        &mut self,
+        source: AdmittedSource<'_>,
+        gate: &PublicationGate,
+        workspace: &mut ApplyWorkspace,
+        publisher: &mut dyn RecoveryPublisher,
+    ) -> Result<PreparedPreview, PreviewError> {
+        let mut observed = publication::ObservedWorkspace {
+            workspace,
+            publisher,
+        };
+        self.preview_current_controlled(
+            source.0,
+            &OperationContext {
+                gate,
+                policy: source.policy(),
+            },
+            &mut observed,
+        )
+        .map(PreparedPreview)
+        .map_err(PreviewError)
+    }
+
     /// Catch while the managed owner is still exclusively borrowed, then move
     /// the exact keyed trace outside the caller's mutex before any projection.
     /// No poison recovery, SQLite read or health repair is used for handoff.
@@ -278,11 +338,16 @@ impl ManagedCatalogue {
         control: &dyn CommitArbitration,
         workspace: &mut ApplyWorkspace,
         receipt: &mut ApplyReceipt,
+        publisher: &mut dyn RecoveryPublisher,
     ) -> Result<ApplyExecution, ApplyBridgeError> {
         if receipt.witness.is_some() || self.retained_apply_witness().is_some() {
             return Err(ApplyBridgeError::ReceiptPending);
         }
         let outcome = catch_unwind(AssertUnwindSafe(|| {
+            let mut observed = publication::ObservedWorkspace {
+                workspace,
+                publisher,
+            };
             self.apply_current_controlled_with_claim(
                 source.0,
                 &shown.0.binding,
@@ -290,7 +355,7 @@ impl ManagedCatalogue {
                     gate: control.gate(),
                     policy: source.policy(),
                 },
-                workspace,
+                &mut observed,
                 control,
             )
         }));

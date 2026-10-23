@@ -9,6 +9,7 @@ use std::io::Write;
 
 mod commit_witness;
 mod live_growth;
+mod publication;
 mod reopened_copy;
 mod reopened_copy_controls;
 mod reopened_copy_matrix;

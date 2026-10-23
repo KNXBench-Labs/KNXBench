@@ -41,6 +41,29 @@ pub(crate) fn prepare<C: Clock>(
         .map_err(|_| BridgeError::PreviewAlreadyBound)
 }
 
+pub(crate) fn prepare_owned<C: Clock>(
+    owner: &CatalogueOwner,
+    source: AdmittedSource<'_>,
+    control: &ManagedApplyControl<C>,
+    workspace: &mut ApplyWorkspace,
+    publisher: &mut dyn knx_productdb::managed_apply::RecoveryPublisher,
+) -> Result<(), BridgeError> {
+    let view = control.snapshot().map_err(BridgeError::Control)?;
+    if view.phase != Phase::Previewing {
+        return Err(BridgeError::Control(Error::InvalidPhase));
+    }
+    if control.binding().get().is_some() {
+        return Err(BridgeError::PreviewAlreadyBound);
+    }
+    let preview = owner
+        .try_prepare_controlled_owned(source, control.gate(), workspace, publisher)
+        .map_err(BridgeError::Owner)?;
+    control
+        .binding()
+        .set(preview)
+        .map_err(|_| BridgeError::PreviewAlreadyBound)
+}
+
 /// Called only after the exact command has consumed Ready. Busy means no owner
 /// was acquired: the supervisor may wait with cancellation/deadline checkpoints,
 /// without holding the short control mutex. No detached retry or task is spawned.
@@ -50,6 +73,7 @@ pub(crate) fn apply<C: Clock>(
     control: &ManagedApplyControl<C>,
     workspace: &mut ApplyWorkspace,
     receipt: &mut ApplyReceipt,
+    publisher: &mut dyn knx_productdb::managed_apply::RecoveryPublisher,
 ) -> Result<ApplyExecution, BridgeError> {
     let view = control.snapshot().map_err(BridgeError::Control)?;
     if view.phase != Phase::WaitingForWriter || view.accepted.is_none() {
@@ -57,7 +81,7 @@ pub(crate) fn apply<C: Clock>(
     }
     let preview = control.binding().get().ok_or(BridgeError::PreviewPending)?;
     owner
-        .try_apply_controlled(source, preview, control, workspace, receipt)
+        .try_apply_controlled(source, preview, control, workspace, receipt, publisher)
         .map_err(BridgeError::Owner)
 }
 
@@ -72,6 +96,34 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::{mpsc, Arc, Mutex};
     use std::time::Duration;
+
+    struct TestPublisher;
+    impl knx_productdb::managed_apply::RecoveryPublisher for TestPublisher {
+        fn admit_result(
+            &mut self,
+            _: &knx_productdb::ProductFileInstall,
+            _: u64,
+        ) -> Result<(), knx_productdb::managed_apply::RecoveryPublicationError> {
+            Ok(())
+        }
+        fn allocated(
+            &mut self,
+            _: &std::path::Path,
+            _: &std::fs::File,
+        ) -> Result<(), knx_productdb::managed_apply::RecoveryPublicationError> {
+            Ok(())
+        }
+        fn publish(
+            &mut self,
+            mut copy: knx_productdb::managed_apply::ValidatedRecovery<'_>,
+        ) -> Result<
+            knx_productdb::managed_apply::PublishedRecovery,
+            knx_productdb::managed_apply::RecoveryPublicationError,
+        > {
+            let parent = copy.path().parent().unwrap().to_path_buf();
+            copy.publish_to(&parent, "published-recovery.sqlite")
+        }
+    }
 
     #[derive(Clone)]
     struct ManualClock(Arc<Mutex<Duration>>);
@@ -252,6 +304,7 @@ mod tests {
                             &fence,
                             workspace,
                             receipt,
+                            &mut TestPublisher,
                         )
                         .unwrap()
                 });
@@ -330,6 +383,102 @@ mod tests {
         }
     }
 
+    struct NativeResultObservation(usize);
+    impl crate::catalogue_jobs::publication::JobResultAdmission for NativeResultObservation {
+        fn admit_result(
+            &mut self,
+            _: &knx_productdb::ProductFileInstall,
+            bytes: u64,
+            _: &mut crate::catalogue_jobs::persistence::JobWorkspace,
+        ) -> Result<(), knx_productdb::managed_apply::RecoveryPublicationError> {
+            assert!(bytes > 0);
+            self.0 += 1;
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn b10_actual_job_artifact_publisher_acknowledges_listed_backup_before_live_dml() {
+        use crate::catalogue_jobs::{
+            persistence::JobWorkspace, publication::JobRecoveryPublisher, ArtifactRoot, Handle,
+            Incarnation, JobId, Sha256 as WireSha, U64,
+        };
+        use sha2::{Digest, Sha256};
+        let dir = tempfile::tempdir().unwrap();
+        let (owner, control, _clock, bytes, probe) = fixture(dir.path());
+        let root = Arc::new(ArtifactRoot::acquire(dir.path()).unwrap());
+        let incarnation = Incarnation::from_bytes([1; 16]);
+        let incdir = root.create_incarnation_dir(&incarnation).unwrap();
+        let mut job = JobWorkspace::create(
+            root,
+            &incdir,
+            Handle {
+                incarnation,
+                serial: U64(1),
+                job: JobId::from_bytes([2; 16]),
+            },
+        )
+        .unwrap();
+        let mut workspace =
+            ApplyWorkspace::in_owned_directory(job.directory().to_path_buf()).unwrap();
+        let mut receipt = ApplyReceipt::default();
+        let digest = WireSha::from_bytes(Sha256::digest(&bytes).into());
+        let mut result_observation = NativeResultObservation(0);
+        let result = {
+            let mut publisher = JobRecoveryPublisher::new(
+                &mut job,
+                &dir.path().join("catalogue.sqlite"),
+                digest,
+                &mut result_observation,
+            );
+            apply(
+                &owner,
+                source(&bytes),
+                &control,
+                &mut workspace,
+                &mut receipt,
+                &mut publisher,
+            )
+            .unwrap()
+        };
+        assert_eq!(result.commit(), CommitEvidence::Committed);
+        assert_eq!(result_observation.0, 1);
+        assert_eq!(probe.native.commits.load(Ordering::SeqCst), 1);
+        assert_eq!(probe.native.rollbacks.load(Ordering::SeqCst), 0);
+        let publication = job.recovery_publication().unwrap();
+        assert!(publication.sync_acknowledged);
+        let backup = dir.path().join(&publication.name);
+        assert!(backup.is_file());
+        assert!(publication.name.starts_with("catalogue.sqlite.backup-"));
+        let before = rusqlite::Connection::open_with_flags(
+            &backup,
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        )
+        .unwrap();
+        assert_eq!(
+            before
+                .query_row("SELECT count(*) FROM package", [], |r| r.get::<_, i64>(0))
+                .unwrap(),
+            0
+        );
+        before.close().unwrap();
+        assert_eq!(
+            owner
+                .with_read(
+                    |c| c.query_row("SELECT count(*) FROM package", [], |r| r.get::<_, i64>(0))
+                )
+                .unwrap()
+                .unwrap(),
+            1
+        );
+        assert!(workspace.native_handles_closed());
+        workspace.release_closed_ownership().unwrap();
+        job.cleanup_transients().unwrap();
+        job.retain_recovery().unwrap();
+        job.dispose().unwrap();
+        assert!(backup.is_file());
+    }
+
     #[test]
     fn b10_outer_receipt_and_recovery_survive_server_projection_panic_and_poison() {
         let dir = tempfile::tempdir().unwrap();
@@ -344,6 +493,7 @@ mod tests {
                 &control,
                 &mut workspace,
                 &mut receipt,
+                &mut TestPublisher,
             )
         }));
         let panic = unwind.expect_err("server result projection must unwind");

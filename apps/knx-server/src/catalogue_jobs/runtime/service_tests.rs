@@ -9,6 +9,35 @@ use http_body_util::BodyExt;
 use std::sync::mpsc as sync;
 use tower::ServiceExt;
 
+#[test]
+fn disposed_tombstone_expires_without_reconstructing_a_successful_delete() {
+    let incarnation = Incarnation::from_bytes([7; 16]);
+    let capability = Capability::from_bytes([1; 32]);
+    let mut manager = crate::catalogue_jobs::CatalogueJobManager::new(incarnation);
+    manager.create(
+        &capability,
+        CreateBody {
+            incarnation,
+            serial: U64(1),
+            source_name: "sample.knxprod".into(),
+            declared_bytes: U64(0),
+            profile: crate::catalogue_jobs::Profile::Standard,
+            allow_large_package: false,
+        },
+    );
+    let handle = manager.finish_active(true).unwrap();
+    assert_eq!(
+        manager.dispose(&handle, &capability),
+        DisposeOutcome::Disposed
+    );
+    manager.state.tombstones.back_mut().unwrap().expires_at = Instant::now();
+    assert_eq!(
+        manager.dispose(&handle, &capability),
+        DisposeOutcome::OutcomeUnavailable,
+        "expired tombstone must not pretend a new DELETE succeeded"
+    );
+}
+
 struct UnavailableBridge;
 impl CatalogueJobBridge for UnavailableBridge {
     fn new_job(&self, _: Arc<JobStatus>) -> Result<Arc<dyn CatalogueJobExecution>, FailureKind> {

@@ -26,11 +26,12 @@ base64.workspace = true
 flate2.workspace = true
 # Fresh 128-bit catalogue incarnation (WP-04.3 stage B, ADR-0150).
 getrandom.workspace = true
+# Typed no-clobber recovery publication; already locked in this workspace.
+rustix.workspace = true
 
 [dev-dependencies]
 # Linux wait4 ABI for the opt-in measurement supervisor; already locked transitively.
 libc = "=0.2.189"
-rustix.workspace = true
 serde_json.workspace = true
 tempfile.workspace = true
 knx-testsupport.workspace = true

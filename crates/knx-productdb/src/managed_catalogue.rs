@@ -1042,6 +1042,11 @@ impl ManagedCatalogue {
                 baseline_version,
             )
             .map_err(|_| OrchestrationError::Stale)?;
+            // The actual validated/closed B must be no-replace published and
+            // file+both-directory sync acknowledged BEFORE the first W DML.
+            // The public facade consumes an opaque receipt for this exact B.
+            artifacts.publish_recovery()?;
+            op.gate.checkpoint()?;
             live_started = true;
             #[cfg(test)]
             artifacts.before_live_install(&tx);
@@ -1057,6 +1062,15 @@ impl ManagedCatalogue {
             if identity != shown.preview {
                 return Err(OrchestrationError::Stale);
             }
+            let page_count: i64 = tx.query_row("PRAGMA main.page_count", [], |r| r.get(0))?;
+            let page_size: i64 = tx.query_row("PRAGMA main.page_size", [], |r| r.get(0))?;
+            let page_bytes = u64::try_from(page_count)
+                .ok()
+                .and_then(|n| u64::try_from(page_size).ok().and_then(|s| n.checked_mul(s)))
+                .ok_or(OrchestrationError::ResultAdmission(
+                    crate::managed_apply::RecoveryPublicationError::Refused,
+                ))?;
+            artifacts.admit_result(&install, page_bytes)?;
             Ok(())
         })();
 

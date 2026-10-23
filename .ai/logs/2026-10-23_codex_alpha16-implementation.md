@@ -319,6 +319,16 @@ not relabelled. Preparing checkpoint and whole-candidate attempt4, isolated
 stores/owned Cargo target, no separate focused tests. All remaining runtime and
 artifact/opt-in acceptance still required; no publication or hardware action.
 
+## Gate4 native Node JSON-import refusal
+
+Gate4 stopped tool-tests with two failures among412 methods (six skipped).
+Both retained Playwright list outputs explicitly require type=json for imported
+protocol JSON. This is loader setup, not temp-root damage or product execution.
+Inspected exact imports and ESNext/bundler config; added only four explicit JSON
+import attributes in two client modules, unchanged paths/schema/validation.
+Launcher exited before edit. No focused test/typecheck/browser rerun. Checkpoint
+and successor whole gate5 required; failed gate4 remains immutable.
+
 ## Next
 
 Consume exact worker handoffs on completion; do not poll

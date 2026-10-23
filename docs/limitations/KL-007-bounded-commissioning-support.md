@@ -6,6 +6,23 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Current experimental System-2 boundary — 23 October 2026
+
+The separate consent-gated App/Net/CLI route defined by
+[ADR-0152](../adr/0152-gated-hardware-system2-download.md) supersedes historical
+blanket-refusal descriptions for that exact experimental workflow only. Ordinary
+memory-download admission remains unchanged. Physical effects/recovery and full
+ETS compatibility are not verified; target-specific confirmation acknowledges
+best-effort risk, not missing semantic evidence as fact.
+
+Project-configured source preparation is independently delivered offline and
+cannot be admitted to hardware by editing its simulator marker. The adopted
+[Alpha 16 plan](../goals/alpha16-release-plan-2026-10-23.md) requires a separate
+configured hardware service and actual UI integration; these remain implementation
+work until combined acceptance. No new device operation or support certification
+is implied by this prose reconciliation. Earlier dated evidence below remains
+historical rather than a duplicate implementation queue.
+
 ## System-2 inactive-policy follow-up (20 October 2026 source)
 
 An explicit `DownloadInvisibleParameters` option now refuses offline System2

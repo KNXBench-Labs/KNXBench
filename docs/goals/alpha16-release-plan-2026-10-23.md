@@ -29,6 +29,15 @@ their scope. On implementation Go, this plan's bundled Alpha-16 acceptance caden
 replaces repeated per-increment package gates for this release; it does not waive
 data-integrity assertions, tests or review.
 
+## Mandatory UI clarification (owner, 23 October 2026)
+
+System-2 download must be executable from the existing device UI. A CLI-only
+route, a terminal-command handoff or a simulator-only UI does not satisfy A16-03.
+The selected project's actual configuration must flow through the shared App
+service into preview, fresh backup, confirmations, execution/status/cancellation
+and explicit recovery. API/CLI reuse that service; UI is not postponed beyond
+Alpha 16. Parent owns server/UI integration after the backend handoff.
+
 ## Verified starting point — do not implement twice
 
 - Product DB v28 promotion repair, WP-04.1 measurement and WP-04.2 bounds work

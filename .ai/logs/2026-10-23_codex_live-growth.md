@@ -24,8 +24,11 @@ and exclusions: [live growth](../../docs/contracts/catalogue-jobs/live-growth-in
 ## Pending acceptance
 
 Independent source/evidence review ACCEPT has no blockers; all seven runtime/test
-files match the reviewed hashes. Maintained branch/integrated gates remain pending.
-No publication or whole-WP completion is claimed. B10, real large-database
+files match the reviewed hashes. Source `f1365471d` published on main-first
+merge `937aa60d6`, with immediate local/tracking/live equality verified. Branch
+and integrated gates each pass 14/14, 3860 Rust passes/151 ignored across
+24 binary results, 97/97 selected corpus; exact proofs/input freeze/data guards
+verified. No whole-WP completion is claimed. B10, real large-database
 acceptance, artifact lifecycle, production routes/UI and WP-19 remain separate.
 Private evidence lives under `<profile-scratch>/wp043-live-growth-20261023/`;
 no raw machine details or private corpus contents are committed here.

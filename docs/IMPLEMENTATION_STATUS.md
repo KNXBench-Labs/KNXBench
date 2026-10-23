@@ -12,7 +12,7 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
-## WP-04.3 actual-connection main growth — source accepted, delivery pending (23 October 2026)
+## WP-04.3 actual-connection main growth — delivered (23 October 2026)
 
 The [bounded main-growth increment](contracts/catalogue-jobs/live-growth-increment.md)
 sets and independently reads back the fixed 64 GiB total-main cap on actual
@@ -31,8 +31,12 @@ the 18 exact focused tests on the retained library binary; this is not a fresh
 compile or additional unique coverage. Header and test-layout checks pass.
 Independent source/evidence review ACCEPT has no blockers and verifies the exact
 seven-file source binding, original-runtime semantic failures and nine compiled
-wrong variants. Maintained branch/integrated gates and publication remain
-pending. Real 8–64 GiB acceptance, B10, artifact/lifecycle/routes/UI and WP-19
+wrong variants. Source `f1365471d` is published on main-first merge `937aa60d6`;
+immediate local/tracking/live equality verified. Both maintained branch and
+integrated gates pass all 14 ordered stages, each with 3860 Rust passes,
+151 ignored across 24 binary results and 97/97 selected corpus tests. Stage
+proofs, frozen inputs and empty touched/unchecked data guards verified.
+Real 8–64 GiB acceptance, B10, artifact/lifecycle/routes/UI and WP-19
 remain separate; no bus/device or compatibility expansion.
 
 ## Project-configured System-2 offline preparation — delivered offline scope (23 October 2026)

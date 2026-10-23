@@ -83,10 +83,20 @@ mod experimental;
 mod legacy_source;
 mod system1;
 
+/// Validated GA/association reservations; the object span is not capacity padding.
+pub(crate) fn system2_group_reservations(
+    code: &ProgramCode,
+) -> Result<Vec<(String, usize, usize)>, ImageError> {
+    Ok(legacy_source::table_spans(code, ImageLayout::System2)?
+        .into_iter()
+        .skip(1)
+        .collect())
+}
+
 pub use experimental::{
-    build_experimental_system2_image, ExperimentalParameterCoverage,
-    ExperimentalParameterDisposition, ExperimentalSystem2Image, ExperimentalSystem2ImagePolicy,
-    ExperimentalSystem2SourceBinding,
+    build_experimental_system2_image, build_project_experimental_system2_image,
+    ExperimentalParameterCoverage, ExperimentalParameterDisposition, ExperimentalSystem2Image,
+    ExperimentalSystem2ImagePolicy, ExperimentalSystem2SourceBinding,
 };
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -573,11 +583,16 @@ fn build_image_selected(
     // Every chosen value is checked before evaluation, so that a value the
     // type does not allow is reported as such, not as an undecided branch.
     for (parameter_ref, value) in &request.values {
-        types.value(parameter_ref, value)?;
+        if let Some(policy) = experimental.filter(|p| p.retains_source_template()) {
+            policy.validate_requested_value(&code, &types, parameter_ref, value)?;
+        } else {
+            types.value(parameter_ref, value)?;
+        }
     }
     let (values, mut activation) = activate(conn, request, &types)?;
     if let Some(policy) = experimental {
         policy.extend_activation(&mut activation, &types)?;
+        policy.validate_flag_overrides(request, &activation)?;
     }
 
     let experimental_base = experimental

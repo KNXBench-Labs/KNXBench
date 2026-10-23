@@ -29,6 +29,8 @@ pub struct Binding {
     pub source_sha256: String,
     pub plan_sha256: String,
     pub simulated: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub project_preparation_sha256: Option<String>,
 }
 impl Binding {
     pub(crate) fn validate(&self) -> io::Result<()> {
@@ -54,6 +56,10 @@ impl Binding {
             || !hash(&self.profile_sha256)
             || !hash(&self.source_sha256)
             || !hash(&self.plan_sha256)
+            || self
+                .project_preparation_sha256
+                .as_ref()
+                .is_some_and(|s| !hash(s))
         {
             return Err(invalid(
                 "invalid recovery identity/profile/source/plan binding",

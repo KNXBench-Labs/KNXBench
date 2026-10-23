@@ -66,6 +66,14 @@ promise recovery of a different application/allocation history. Same-shape
 preconditions are a declared simulator premise. Complete physical rollback of
 indirect firmware effects remains unresolved.
 
+## Separate project-configured offline path
+
+The [project-specific preparation contract](project-system2-offline-preparation.md)
+describes a separate experimental entry for a desired device configuration in an
+existing or newly created domain project. It does not replace this defaults-only
+profile or expand its admission. Implementation and integrated acceptance of that
+separate entry are tracked independently; neither path implies ETS equivalence.
+
 ## Executable offline validation
 
 Build from the checkout, obtain the public `UP258_DB12__920504d_ETS5.knxprod`

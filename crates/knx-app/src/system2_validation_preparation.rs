@@ -1,5 +1,15 @@
 //! Source/profile-bound experimental preparation produces simulator bundles without device access.
 
+mod project;
+pub(crate) use project::check_budget;
+pub use project::{
+    describe_project_source_closure, prepare_project_simulated_candidate,
+    replay_project_simulated_candidate, CoverageRecord, FlagsRecord, LinkRecord,
+    ProjectPreparationRecord, ProjectProductInput, ProjectProductSelector,
+    ProjectValidationProfile, RequestRecord, SourceClosureDescriptor, SourceMemberDescriptor,
+    SourceMemberRole, SourceOwnerDescriptor,
+};
+
 use std::collections::BTreeMap;
 use std::io;
 
@@ -77,6 +87,30 @@ impl ValidationProfile {
     }
 }
 
+fn check_identity(
+    plan: &knx_core::commissioning::property_download::PropertyDownloadPlan,
+    profile: &ValidationProfile,
+) -> io::Result<()> {
+    if plan.manufacturer() != profile.manufacturer || plan.mask().0 != profile.mask
+        || !plan.steps().iter().any(|s| matches!(s.operation, PropertyOperation::HardwareCheck {expected} if expected == profile.hardware)) {
+        return Err(invalid("candidate profile identity differs from translated source"));
+    }
+    let task = plan.steps().iter().find_map(|s| match &s.operation {
+        PropertyOperation::LoadControl { object: 3, payload }
+            if payload.octets()[..2] == [3, 2] =>
+        {
+            Some(&payload.octets()[5..])
+        }
+        _ => None,
+    });
+    if task != Some(profile.application.as_slice()) {
+        return Err(invalid(
+            "candidate application identity differs from translated source",
+        ));
+    }
+    Ok(())
+}
+
 /// Complete candidate preparation, with explicit software-only evidence dimensions.
 #[derive(Debug)]
 pub struct PreparedCandidate {
@@ -112,16 +146,16 @@ pub fn prepare_simulated_candidate(
         revision: 1,
         binding: ExperimentalSystem2SourceBinding {
             program_id: profile.program_id.clone(),
-            schema_namespace: profile.schema_namespace,
+            schema_namespace: profile.schema_namespace.clone(),
             source_sha256: profile.source_sha256.clone(),
-            package_sha256: Some(profile.package_sha256),
+            package_sha256: Some(profile.package_sha256.clone()),
         },
-        numeric_order: profile.numeric_order,
-        bit_union_offsets: profile.bit_union_offsets,
-        legacy_patch_always: profile.legacy_patch_always,
-        invisible_parameters: profile.invisible_parameters,
-        binary_restrictions: profile.binary_restrictions,
-        reference_activation: profile.reference_activation,
+        numeric_order: profile.numeric_order.clone(),
+        bit_union_offsets: profile.bit_union_offsets.clone(),
+        legacy_patch_always: profile.legacy_patch_always.clone(),
+        invisible_parameters: profile.invisible_parameters.clone(),
+        binary_restrictions: profile.binary_restrictions.clone(),
+        reference_activation: profile.reference_activation.clone(),
     };
     let image = build_experimental_system2_image(conn, &request, &policy)
         .map_err(|e| invalid(e.to_string()))?
@@ -132,23 +166,7 @@ pub fn prepare_simulated_candidate(
         &System2ProcedurePolicy::declared_counts_zero_flags_full_table_identity(),
     )
     .map_err(|e| invalid(e.to_string()))?;
-    if plan.manufacturer() != profile.manufacturer || plan.mask().0 != profile.mask
-        || !plan.steps().iter().any(|s| matches!(s.operation, PropertyOperation::HardwareCheck {expected} if expected == profile.hardware)) {
-        return Err(invalid("candidate profile identity differs from translated source"));
-    }
-    let task = plan.steps().iter().find_map(|s| match &s.operation {
-        PropertyOperation::LoadControl { object: 3, payload }
-            if payload.octets()[..2] == [3, 2] =>
-        {
-            Some(&payload.octets()[5..])
-        }
-        _ => None,
-    });
-    if task != Some(profile.application.as_slice()) {
-        return Err(invalid(
-            "candidate application identity differs from translated source",
-        ));
-    }
+    check_identity(&plan, &profile)?;
     let normalized = PlanRecord::from_plan(&plan);
     let binding = Binding {
         target: target.to_string(),
@@ -163,6 +181,7 @@ pub fn prepare_simulated_candidate(
         source_sha256: profile.source_sha256,
         plan_sha256: normalized.sha256()?,
         simulated: true,
+        project_preparation_sha256: None,
     };
     let allocation_octets: usize = image.segments.iter().map(|s| s.octets.len()).sum();
     let written_octets: usize = plan

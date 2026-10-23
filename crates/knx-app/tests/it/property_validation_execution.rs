@@ -83,6 +83,7 @@ fn fixture() -> (SimulatedDevice, PreparedBundle) {
         source_sha256: "b".repeat(64),
         plan_sha256: record.sha256().unwrap(),
         simulated: true,
+        project_preparation_sha256: None,
     };
     let bundle = PreparedBundle::new(binding, record).unwrap();
     (device, bundle)

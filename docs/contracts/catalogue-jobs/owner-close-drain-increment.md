@@ -22,12 +22,19 @@ A new private module `catalogue_jobs::owner`:
   admission through the manager's existing `close_admission` (retained replay
   and dispose stay available). No SQL, filesystem, await or parser work.
 
-- **`drain(limit, second_signal)`** — async: takes the worker/cleanup handles
-  outside the short lock and joins them with a bounded wait racing the limit
-  and `second_signal`, returning the exact `dto::CatalogueDrain`
-  (`nothingRunning` with no registered work, `finished` when all joined,
-  `timedOut`/`secondSignal` with `workOutstanding = true`). A timeout or second
-  signal is never a cancellation witness.
+- **`drain(limit, second_signal)`** — async: joins registered work with a
+  bounded wait racing the limit and `second_signal`, including contention with
+  another drain, returning the exact `dto::CatalogueDrain` (`nothingRunning`
+  only with no registered or draining work, `finished` when all joined,
+  `timedOut`/`secondSignal` with `workOutstanding = true`). Authoritative
+  worker ownership remains cancellation-safe: dropping a drain future cannot
+  detach the worker or make a concurrent/later drain report no work. A timeout
+  or second  signal is never a cancellation witness. Poisoned ownership stays unresolved:
+  known handles are joined where possible, but an empty poisoned slot cannot
+  certify no work; bounded escape reports outstanding work, quarantined cleanup
+  and unknown commit. Registration refusal returns the exact submitted handle
+  so the caller remains responsible for joining it; it never silently detaches
+  or overwrites a worker.
 
 ## Explicitly out of scope (later increments)
 
@@ -43,8 +50,9 @@ A new private module `catalogue_jobs::owner`:
 - Close is idempotent and leaves retained replay/dispose reachable.
 - Drain reports `nothingRunning` with no registered work, `finished` when a
   registered worker ends, and `timedOut`/`secondSignal` truthfully when work
-  remains; the worker/cleanup handle is always joined or dropped after the
-  drain, never left for a later owner to double-join.
+  remains; outstanding worker ownership is retained across timeout, second
+  signal and drain-future cancellation. Overlapping drains never double-join
+  or misreport a transferred handle as absent.
 - Focused tests and the owning `knx-server` suite pass; warning-denied Clippy,
   `cargo fmt` and header checks are clean; no production route becomes
   reachable and no quiet API, schema or response shape changes.

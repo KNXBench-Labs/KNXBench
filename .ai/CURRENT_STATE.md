@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-23 21:35
+- **Completed:** Alpha 16 implementation Go received, including B10 takeover if needed; prior pause lifted for the adopted release plan. Reconciled current upstream and preserved paused partial source in its original owner tree; copied only the four runtime/test paths into an owned B10 branch, not accepted as complete. No runtime test or product acceptance yet.
+- **Pending/Next Steps:** Alpha16 implementation taken by session 9f4c63ce9ae9: bounded System-2 configured execution, B10/remaining WP-04.3, comparison, portability and evidenced layout under docs/goals/alpha16-release-plan-2026-10-23.md. Minimise focused test execution and run one consolidated final-candidate gate, not repeated branch/merge full gates. Source work remains local until combined review/acceptance; tag/release/container publication and real-device trials need separate explicit owner Go.
+- **Notes for Codex oder Claude:** Isolated alpha16-integration/system2/b10/portability branches own this work; selected stale root and original paused work/evidence are preserved. System-2 worker must not convert offline bundles by flag; B10 includes same-gate and retained commit evidence, not just private bookkeeping. No Ollama, vendor contact or bus/device action. Claim is implementation ownership, not release freeze or acceptance.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-23 20:59
 - **Completed:** Fixed actual-W SQL-safety source7decb65ce published on main-first9d4014638; immediate local/tracking/live equality verified. Independent ACCEPT and branch/integrated14/14 each3883 Rust passes/151ignored/24binary results,97/97corpus; exact stage/proof/freeze/data guards verified. Result-only docs updated, not yet gated/published.
 - **Pending/Next Steps:** Gate/publish result documentation, verify/archive task evidence before owned scratch retirement; preserve active worktree/cache. Then bounded next B08/B10 prerequisite admission. Full variable configuration receipt/sticky unwind witness/composed same-gate B10/artifacts/routes/lifecycle/UI and WP-19 remain open. No new Go needed.

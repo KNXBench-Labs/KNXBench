@@ -18,6 +18,7 @@ import { describeCreationDiagnostic, newRequestId } from "./CatalogInstallReport
 import CatalogUpdatePanel from "./CatalogUpdatePanel";
 import ProductInstallControl from "./ProductInstallControl";
 import CatalogItemIdentity from "./CatalogItemIdentity";
+import { useOptionalCatalogueJobs } from "./CatalogueJobsContext";
 import CatalogCleanupDialog, { type CatalogCleanupResult } from "./CatalogCleanupDialog";
 
 // T2 (GAP_ANALYSIS_ETS.md) — the device-from-catalog workspace. Feeds T1's
@@ -44,6 +45,8 @@ export default function CatalogBrowser(props: {
 }) {
   const { lineId, active = true, onCreated, onClose, serverIncarnation, onWizard } = props;
   const t = useTranslate();
+  const jobs = useOptionalCatalogueJobs();
+  const catalogueRevision = jobs?.state.catalogueRevision ?? 0n;
   const [language] = useProductLanguage();
   const [manufacturers, setManufacturers] = useState<CatalogManufacturer[]>([]);
   const [manufacturer, setManufacturer] = useState("");
@@ -87,8 +90,10 @@ export default function CatalogBrowser(props: {
   }, [active]);
 
   useEffect(() => {
-    api.catalogManufacturers().then(setManufacturers).catch((e) => setError(api.errorMessage(e)));
-  }, []);
+    let current = true;
+    api.catalogManufacturers().then(rows => { if (current) setManufacturers(rows); }).catch((e) => { if (current) setError(api.errorMessage(e)); });
+    return () => { current = false; };
+  }, [catalogueRevision]);
 
   useEffect(() => {
     setHighlight(0);
@@ -112,8 +117,8 @@ export default function CatalogBrowser(props: {
           setError(api.errorMessage(e));
         });
     }, 200);
-    return () => clearTimeout(handle);
-  }, [manufacturer, search, language]);
+    return () => { clearTimeout(handle); requestIdRef.current++; };
+  }, [manufacturer, search, language, catalogueRevision]);
 
   function pick(item: CatalogItem) {
     if (batchOutcomeUnconfirmed) return; // Inspect/reload the project before another request.
@@ -154,6 +159,7 @@ export default function CatalogBrowser(props: {
   /** A package or legacy database was installed: reload with the latest filters. */
   // An install adds a catalogue backup; the backups panel reads an open list again.
   const [installRevision, setInstallRevision] = useState(0);
+  useEffect(() => { if (catalogueRevision > 0n) setInstallRevision(n => n + 1); },[catalogueRevision]);
   async function reloadAfterProductInstall() {
     setInstallRevision((n) => n + 1);
     await reloadAfterInstall();
@@ -414,7 +420,7 @@ export default function CatalogBrowser(props: {
           <button onClick={onClose}>{t("catalog.done")}</button>
         </div>
       )}
-      {error && <span className="field-error">{error}</span>}
+      {error && <span className="field-error" role="alert">{error} {catalogueRevision > 0n && <>{t("catalogJob.refreshDirty")} <button type="button" onClick={() => { setError(null); void reloadAfterInstall(); }}>{t("catalogJob.retryRefresh")}</button></>}</span>}
       {retry === "available" && <p className="catalog-retry-hint">{t("catalog.retryHint")}</p>}
     </section>
   );

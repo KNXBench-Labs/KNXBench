@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import * as api from "./api";
 import type { CatalogItem, CatalogManufacturer } from "./api";
 import ProductInstallControl from "./ProductInstallControl";
+import { useOptionalCatalogueJobs } from "./CatalogueJobsContext";
 import type { Translate } from "./i18n";
 import { LanguageFallbackBadge, fellBack } from "./languageFallback";
 import { useProductLanguage } from "./productLanguage";
@@ -18,6 +19,8 @@ export default function DeviceWizardProduct(props: {
   t: Translate;
 }) {
   const { selected, onSelect, onInstalled, t } = props;
+  const jobs = useOptionalCatalogueJobs();
+  const catalogueRevision = jobs?.state.catalogueRevision ?? 0n;
   const [language] = useProductLanguage();
   const [manufacturers, setManufacturers] = useState<CatalogManufacturer[]>([]);
   const [manufacturer, setManufacturer] = useState("");
@@ -34,8 +37,10 @@ export default function DeviceWizardProduct(props: {
   }, []);
 
   useEffect(() => {
-    api.catalogManufacturers().then(setManufacturers).catch((e) => setError(api.errorMessage(e)));
-  }, [reload]);
+    let current = true;
+    api.catalogManufacturers().then(rows => { if (current) setManufacturers(rows); }).catch((e) => { if (current) setError(api.errorMessage(e)); });
+    return () => { current = false; };
+  }, [reload, catalogueRevision]);
 
   useEffect(() => {
     const handle = setTimeout(() => {
@@ -50,8 +55,8 @@ export default function DeviceWizardProduct(props: {
           if (id === requestRef.current) setError(api.errorMessage(e));
         });
     }, SEARCH_DEBOUNCE_MS);
-    return () => clearTimeout(handle);
-  }, [manufacturer, search, language, reload]);
+    return () => { clearTimeout(handle); requestRef.current++; };
+  }, [manufacturer, search, language, reload, catalogueRevision]);
 
   return (
     <div className="device-wizard-step">
@@ -89,7 +94,7 @@ export default function DeviceWizardProduct(props: {
           onInstalled();
           setReload((n) => n + 1);
         }} />
-      {error && <p className="field-error" role="alert">{error}</p>}
+      {error && <p className="field-error" role="alert">{error} {catalogueRevision > 0n && t("catalogJob.refreshDirty")} <button type="button" onClick={() => { setError(null); setReload(n => n + 1); }}>{t("catalogJob.retryRefresh")}</button></p>}
     </div>
   );
 }

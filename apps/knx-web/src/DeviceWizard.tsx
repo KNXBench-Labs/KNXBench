@@ -5,6 +5,8 @@ import type { CatalogItem, CatalogPreview, CreatedCatalogDevice, CreationDiagnos
 import type { ProjectTree } from "./bindings/ProjectTree";
 import { describeCreationDiagnostic, newRequestId } from "./CatalogInstallReport";
 import DeviceWizardProduct from "./DeviceWizardProduct";
+import { CatalogueWizardOrigin, useOptionalCatalogueJobs } from "./CatalogueJobsContext";
+import { catalogueRandomId } from "./catalogueJobsController";
 import {
   buildingPartChoices,
   initialPlacement,
@@ -52,6 +54,10 @@ export default function DeviceWizard(props: {
 }) {
   const { tree, target, onCreated, onOpenDevice, onClose } = props;
   const t = useTranslate();
+  const jobs = useOptionalCatalogueJobs();
+  const [wizardRunId] = useState(() => catalogueRandomId());
+  const [confirmJobClose, setConfirmJobClose] = useState(false);
+  const ownsActiveJob = jobs?.state.origin === wizardRunId && (jobs.state.selecting || jobs.state.status?.state === "running" || jobs.state.uncertain);
   const [step, setStep] = useState<Step>(props.product ? "placement" : "product");
   const [product, setProduct] = useState<CatalogItem | null>(props.product ?? null);
   const [placement, setPlacement] = useState<Placement>(() => initialPlacement(tree, target));
@@ -69,6 +75,9 @@ export default function DeviceWizard(props: {
   // request id is safe only while the same server process holds it (ADR-0069).
   const [unconfirmed, setUnconfirmed] = useState<{ requestId: string; incarnation: string | undefined } | null>(null);
   const [installedPackage, setInstalledPackage] = useState(false);
+  useEffect(() => {
+    if (jobs?.state.committedOrigin === wizardRunId) { setInstalledPackage(true); setTouched(true); }
+  },[jobs?.state.catalogueRevision, jobs?.state.committedOrigin, wizardRunId]);
   const [touched, setTouched] = useState(Boolean(props.product));
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const previewRequestRef = useRef(0);
@@ -117,12 +126,14 @@ export default function DeviceWizard(props: {
   }
 
   function close() {
+    if (ownsActiveJob) { setConfirmJobClose(true); return; }
     onClose();
   }
 
   // Escape or backdrop: ask first once something was chosen; a second Escape
   // keeps editing. After a create there is nothing left to lose.
   function dismiss() {
+    if (ownsActiveJob) { setConfirmJobClose(true); return; }
     if (created || unconfirmed || !touched) close();
     else setConfirmDiscard((showing) => !showing);
   }
@@ -183,6 +194,7 @@ export default function DeviceWizard(props: {
   const partLabel = parts.find((p) => p.id === placement.buildingPartId)?.label;
 
   return (
+    <CatalogueWizardOrigin.Provider value={wizardRunId}>
     <Overlay labelledBy="device-wizard-title" className="new-project-panel project-wizard device-wizard" onClose={dismiss}
       initialFocusRef={headingRef}>
       <h2 className="settings-panel-title" id="device-wizard-title">{t("deviceWizard.title")}</h2>
@@ -330,6 +342,15 @@ export default function DeviceWizard(props: {
         </div>
       )}
 
+      {confirmJobClose && <section className="project-wizard-discard" role="alert">
+        <p>{t("catalogJob.wizardClose")}</p>
+        <div className="new-project-actions">
+          <button type="button" onClick={() => setConfirmJobClose(false)}>{t("projectWizard.discard.keep")}</button>
+          <button type="button" onClick={onClose}>{t("catalogJob.background")}</button>
+          <button type="button" onClick={() => { void jobs?.controller.cancel(); onClose(); }}>{t("catalogJob.cancelAndClose")}</button>
+        </div>
+      </section>}
+
       {confirmDiscard && (
         <section className="project-wizard-discard" role="alert">
           <p><strong>{t("projectWizard.discard.title")}</strong> {t("deviceWizard.discard.body")}</p>
@@ -361,7 +382,7 @@ export default function DeviceWizard(props: {
           </>
         ) : (
           <>
-            <button type="button" onClick={() => (touched ? setConfirmDiscard(true) : close())}>{t("newProject.cancel")}</button>
+            <button type="button" onClick={dismiss}>{t("newProject.cancel")}</button>
             <button type="button" disabled={stepIndex === 0} onClick={() => setStep(STEPS[stepIndex - 1])}>
               {t("projectWizard.back")}
             </button>
@@ -380,5 +401,6 @@ export default function DeviceWizard(props: {
         )}
       </div>
     </Overlay>
+    </CatalogueWizardOrigin.Provider>
   );
 }

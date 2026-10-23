@@ -1,0 +1,18 @@
+/** Catalogue jobs reuse the importer/report shells with bounded local scrolling. */
+.catalogue-job-root { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; padding: .35rem .75rem; border: 1px solid var(--knx-border); border-radius: var(--knx-radius-input); }
+.catalogue-job-root button { max-width: 100%; white-space: normal; }
+.catalogue-job-dialog { width: min(52rem, calc(100vw / var(--app-ui-scale, 1) - 2rem)); max-height: calc(100dvh / var(--app-ui-scale, 1) - 2rem); overflow-y: auto; }
+.catalogue-job { min-width: 0; overflow-wrap: anywhere; }
+.catalogue-job code { white-space: pre-wrap; overflow-wrap: anywhere; }
+.catalogue-job dl > div { display: grid; grid-template-columns: minmax(7rem, 1fr) minmax(0, 3fr); gap: .5rem; padding-block: .15rem; }
+.catalogue-job dd { margin: 0; min-width: 0; }
+.catalogue-job-check, .catalogue-job-selection label { display: flex; align-items: start; gap: .5rem; }
+.catalogue-job-check input, .catalogue-job-selection input[type="checkbox"] { width: auto; flex: 0 0 auto; }
+.catalogue-job-selection { display: grid; gap: .5rem; }
+.catalogue-job-report { max-height: 32rem; overflow: auto; position: relative; }
+.catalogue-job-report > ol > li { display: block; }
+.catalogue-job .catalog-update-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+@media (max-width: 40rem) {
+ .catalogue-job dl > div { grid-template-columns: minmax(0, 1fr); gap: .15rem; }
+ .catalogue-job-report { max-height: none; overflow: visible; }
+}

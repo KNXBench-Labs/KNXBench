@@ -6,7 +6,13 @@
 //! Hash chaining and a synced atomic HEAD detect corruption and missing tails,
 //! not malicious rewriting; an unfinished operation is never harmless.
 use crate::property_validation_bundle::{digest, invalid, PreparedBundle, RecoveryRecord};
+#[path = "property_validation_lifecycle.rs"]
+mod lifecycle;
 use knx_core::{ContactableAddress, IndividualAddress};
+pub use lifecycle::{
+    System2ControlError, System2ControlSnapshot, System2DrainOutcome, System2OperationControl,
+    System2OperationLease, System2Settlement,
+};
 use serde::{Deserialize, Serialize};
 use std::{
     fs::{self, File, OpenOptions},

@@ -1,7 +1,10 @@
 /** Product file picker for catalogue and device wizard: packages previewed, legacy imported. */
-import { useState } from "react";
+import { useContext, useState } from "react";
 import * as api from "./api";
 import type { LegacyInstallReport } from "./api";
+import { CatalogueWizardOrigin, useOptionalCatalogueJobs } from "./CatalogueJobsContext";
+import CatalogueJobSelection from "./CatalogueJobSelection";
+import CatalogueJobPanel from "./CatalogueJobPanel";
 import CatalogPackageUpdate from "./CatalogPackageUpdate";
 import { LegacyInstallReportView } from "./LegacyInstallReport";
 import LegacyPasswordDialog from "./LegacyPasswordDialog";
@@ -19,6 +22,8 @@ export default function ProductInstallControl(props: {
 }) {
   const { label, className, onInstalled } = props;
   const t = useTranslate();
+  const jobs = useOptionalCatalogueJobs();
+  const origin = useContext(CatalogueWizardOrigin);
   const [installing, setInstalling] = useState(false);
   const [outcome, setOutcome] = useState<LegacyInstallReport | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -26,12 +31,14 @@ export default function ProductInstallControl(props: {
   // Goal B5: a package is previewed and installed only after confirmation; the
   // direct `/api/catalog/install` is no longer used by the web.
   const [pkg, setPkg] = useState<File | null>(null);
+  const [pkgGeneration, setPkgGeneration] = useState(0);
   const [pkgBusy, setPkgBusy] = useState(false);
 
   function choose(file: File) {
     setError(null);
     setOutcome(null);
     setPrompt(null);
+    setPkgGeneration(n => n + 1);
     if (isLegacyProductFileName(file.name)) void installLegacy(file);
     else setPkg(file);
   }
@@ -58,14 +65,17 @@ export default function ProductInstallControl(props: {
     <>
       <label className={className}>
         {installing ? t("catalog.installing") : label}
-        <input type="file" accept={PRODUCT_FILE_ACCEPT} disabled={installing || pkgBusy}
+        <input type="file" accept={PRODUCT_FILE_ACCEPT} disabled={installing || pkgBusy || Boolean(jobs && (jobs.state.pending || jobs.state.status || jobs.state.uncertain))}
           onChange={(e) => {
             const file = e.target.files?.[0];
             if (file) choose(file);
             e.currentTarget.value = "";
           }} />
       </label>
-      {pkg !== null && <CatalogPackageUpdate key={`${pkg.name}:${pkg.size}:${pkg.lastModified}`} file={pkg}
+      {pkg !== null && jobs && <CatalogueJobSelection key={pkgGeneration} file={pkg} onDone={() => setPkg(null)} />}
+      {jobs && pkg === null && (jobs.state.status || jobs.state.uncertain || jobs.state.error) && <CatalogueJobPanel />}
+      {jobs?.state.legacyAvailable && jobs.state.origin === origin && <button type="button" disabled={installing} onClick={() => { const file = jobs.controller.takeLegacyFile(origin); if (file) void installLegacy(file); }}>{t("catalogJob.legacyHandoff")}</button>}
+      {pkg !== null && !jobs && <CatalogPackageUpdate key={pkgGeneration} file={pkg}
         onInstalled={onInstalled} onDone={() => setPkg(null)} onLegacy={(file) => { void installLegacy(file); }}
         onBusyChange={setPkgBusy} />}
       {outcome && <LegacyInstallReportView report={outcome} />}

@@ -22,6 +22,7 @@ import PaneSplitter from "./PaneSplitter";
 import WorkbenchIcon from "./WorkbenchIcon";
 import StructureWorkspace, { type StructureView } from "./StructureWorkspace";
 import CatalogBrowser from "./CatalogBrowser";
+import { CatalogueJobsProvider, CatalogueJobsRootNotice, useCatalogueJobs } from "./CatalogueJobsContext";
 import NewProjectDialog from "./NewProjectDialog";
 import DeviceWizard from "./DeviceWizard";
 import { wizardTargetFor, type DeviceWizardTarget } from "./deviceWizardPlacement";
@@ -191,7 +192,12 @@ function acceptedSnapshotLifetime(
   return { initialized: true, serverIncarnation, revision, retiredServerIncarnations };
 }
 
-function App({ manifestVersion = packageVersion, session, editorReturn = false }: AppProps) {
+function App(props: AppProps) {
+  return <CatalogueJobsProvider><AppBody {...props} /></CatalogueJobsProvider>;
+}
+
+function AppBody({ manifestVersion = packageVersion, session, editorReturn = false }: AppProps) {
+  const {state: catalogueJobs} = useCatalogueJobs();
   // Called unconditionally on every render (not just from `SettingsPanel`,
   // which only mounts once Settings is opened) so `useUiLanguage()`'s own
   // effect — setting `document.documentElement.lang` — runs for the whole
@@ -437,13 +443,17 @@ function App({ manifestVersion = packageVersion, session, editorReturn = false }
   // product database installed"), so a failed fetch needs no separate
   // error toast here.
   const [productLanguages, setProductLanguages] = useState<ProductLanguage[]>([]);
+  const [catalogueRefreshFailed, setCatalogueRefreshFailed] = useState(false);
+  const [catalogueReadAttempt, setCatalogueReadAttempt] = useState(0);
 
   useEffect(() => {
+    let current = true;
     api
       .productLanguages()
-      .then(setProductLanguages)
-      .catch(() => setProductLanguages([]));
-  }, []);
+      .then(rows => { if (current) { setProductLanguages(rows); setCatalogueRefreshFailed(false); } })
+      .catch(() => { if (current && catalogueJobs.catalogueRevision > 0n) setCatalogueRefreshFailed(true); });
+    return () => { current = false; };
+  }, [catalogueJobs.catalogueRevision, catalogueReadAttempt]);
   // Mirrors `selection` synchronously so in-flight device_detail responses
   // can tell, once they land, whether the selection has since moved on —
   // state updates alone are too late to check inside the same async
@@ -1483,6 +1493,8 @@ function App({ manifestVersion = packageVersion, session, editorReturn = false }
     <DownloadNavigationProvider onOpen={openDownload}>
     <main ref={workbenchRef} className={`workbench${stackInspector ? " workbench--stacked-inspector" : ""}${welcomeVisible ? " workbench--welcome" : ""}`}>
       <header className="workbench-toolbar">
+        <CatalogueJobsRootNotice />
+        {catalogueRefreshFailed && <span role="alert">{t("catalogJob.refreshDirty")} <button type="button" onClick={() => setCatalogueReadAttempt(n => n + 1)}>{t("catalogJob.retryRefresh")}</button></span>}
         <a className="workbench-brand" href="#" onClick={(e) => { e.preventDefault(); setView("overview"); setLogOpen(false); setMonitorOpen(false); }}><img className="workbench-logo" src={brandMark} width="44" height="34" alt="" draggable={false} /><strong>KNXBench</strong></a>
         <details ref={fileMenuRef} className="file-menu" onKeyDown={(e) => { if (e.key === "Escape") { e.currentTarget.open = false; e.currentTarget.querySelector("summary")?.focus(); } }}>
           <FileMenuSummary>{t("workbench.file")} <span aria-hidden="true">⌄</span></FileMenuSummary>

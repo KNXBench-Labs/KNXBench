@@ -267,6 +267,58 @@ matching repository-relative location. No scanner weakening or private context
 expansion. No product suites ran; original failed receipts retained. No extra
 focused test dispatched; correction belongs to successor whole-candidate gate.
 
+## Gate3 browser integration failure
+
+Source58eb748ac gate3 passed fmt, docs, tool-tests, lanes, build, all fixture
+typechecks, Vitest, browser setup/inventory then failed browser-functional.
+Read exact receipt and retained browser failures. Ordinary-download fixture
+rejects new read-only System2 status; catalogue fixture expects replaced sync
+apply. Full distinct failure inventory/correction delegated deleg_868839a3 to
+isolated browser-fix branch before drawing complete cause claims. No blanket
+unknown-route allowance, skipped tests or widened timeouts authorised; no extra
+test campaign. Remaining full gate/backend/native/artifact stages unexecuted.
+
+## Browser fixture correction integrated
+
+Read complete browser-fixture-fix handoff and inspected9078162f; imported as
+41b7212ff. Seven fixture/config paths, no production runtime changes. Worker
+reconciles all54 failed identities/13 source groups and reports typecheck-only
+checks. Preserves strict unknown requests, explicit idle System2 read, consent,
+program statuses and legacy handoff; public redaction replaces obsolete mounted
+raw-detail expectations while legacy component assertions remain. Independent
+source-only review deleg_0650bb78 dispatched before next whole gate. No new
+parent tests/builds/browser execution or acceptance claims. Original gate3 intact.
+
+## Browser fixture review reveals real producer/report mismatch
+
+Read independent review REPORT: BLOCK F1. Master provenance produces generated
+master-ordinal XML selector; actual package/report adapter retains it while
+server/client public path grammar rejects it. New successful fixture stripped
+identity and concealed the real join defect; raw-detail withholding alone is
+valid but does not close this mismatch. No runtime reproduction claimed.
+Cross-layer correction delegated5b1dc9ee/sa-0-f1cd8221 in isolated master-report
+branch. Must preserve declaration identity, exact raw originals, strict bounded
+public grammar/privacy, faithful fixture and final-candidate assertions. No new
+test/build/browser campaign. Original failed gate/review evidence retained.
+
+## Master declaration identity correction imported
+
+Read full correction handoff561a23b9 and inspected11-path scope; imported9ed42dda6.
+Narrow generated terminal ordinal selector admitted for exact kinds/elements/cap,
+raw originals unchanged and public detail withheld. Faithful fixture restored;
+native writer/preview/result/privacy regressions added, uncompiled/unexecuted.
+Independent source rereview deleg_87bc1cba started before next whole gate; no
+runtime execution or F1 closure claimed. Original reports/failed gates intact.
+
+## Master diagnostic F1 source closure
+
+Read independent rereview REPORT accepting exact generated declaration identity,
+closed writer/client selector grammar and privacy, faithful native/browser
+assertion definitions at9ed42dda6. No runtime execution; original F1/failed gate3
+not relabelled. Preparing checkpoint and whole-candidate attempt4, isolated
+stores/owned Cargo target, no separate focused tests. All remaining runtime and
+artifact/opt-in acceptance still required; no publication or hardware action.
+
 ## Next
 
 Consume exact worker handoffs on completion; do not poll

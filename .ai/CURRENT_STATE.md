@@ -1,4 +1,44 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-24 01:25
+- **Completed:** Read independent rereview-master-report-path REPORT: ACCEPT source-only F1 closure at9ed42dda63c6e9ecd113c2b6340a69d2ab79b1cf. Exact generated identity preserved through producer/package/adapter/writer/client; bounded selector grammar/privacy and faithful native/browser assertion definitions accepted. No tests/builds/browser execution by reviewer or parent; prior gate3 remains failed immutable evidence.
+- **Pending/Next Steps:** Checkpoint corrected whole candidate and launch full package gate attempt4, isolated stores and existing owned Cargo target, receipt final-candidate-gate-4. No additional per-slice campaigns. Runtime/native/browser/opt-in/package/artifact acceptance remains pending; no release tag/upload/container publication or real-device permission. Freeze source throughout gate; classify failures from exact retained outputs.
+- **Notes for Codex oder Claude:** All original reviews/corrections/failed receipts remain <profile-scratch>/alpha16-execution-20261023/. Narrow source review closure is not runtime acceptance. Corrected tests/fixtures still require actual final-candidate execution. Preserve selected dirty root and paused sources; no Ollama/vendor/live bus/push.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-24 01:21
+- **Completed:** Read master-report-path correction HANDOFF, inspected exact source scope/identity and imported561a23b9 as9ed42dda6. Cross-layer writer/client now admit bounded generated terminal master-ordinal identity for two exact diagnostic kinds; raw evidence unchanged/public detail redacted; fixture restores actual ordinal/occurrence identity. Native producer-to-preview/result and privacy assertions added but uncompiled/unexecuted. No runtime acceptance or F1 closure inferred from delivery.
+- **Pending/Next Steps:** Source-only narrow rereview deleg_87bc1cba/sa-0-a7095e2e running on merged frozen runtime. Verify exact producer grammar/cap/kind/occurrence and privacy refusal across writer/client; then close concrete findings and next whole-candidate gate. Metadata only may change while review runs. No tests/build/browser/gate campaign started, no release/hardware approval. Native/opt-in/artifact acceptance remains pending.
+- **Notes for Codex oder Claude:** Evidence master-report-path-fix and original review-browser-fixture-fix under <profile-scratch>/alpha16-execution-20261023/ retained unchanged. This fixes actual producer/public contract, not simply permissive mock path rewriting. Existing raw evidence and strict unknown requests/consent remain. Preserve selected root/paused source; no push/Ollama/vendor/live bus.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-24 01:10
+- **Completed:** Read independent browser fixture review REPORT: BLOCK F1. Actual master producer appends declaration-specific master-ordinal selector, report adapter retains it, server/public client reject it; fixture substituted unindexed path and masked real producer/public-contract mismatch. This is source-traced, not runtime reproduction. Other reviewed GET/null, strict unknown routes, consent/status/legacy joins had no additional blockers. Gate3 failure accounting independently reconciled, not corrected-source acceptance.
+- **Pending/Next Steps:** Cross-layer correction running deleg_5b1dc9ee/sa-0-f1cd8221 in fix/alpha16-master-report-paths-20261024 from41b7212ff. Must preserve exact declaration identity/raw originals, strict privacy and closed bounded path grammar; repair actual report projection/client contract and faithful fixture plus final-candidate assertions. No tests/browser/build/gate campaigns authorised. Consume committed fix, narrow rereview, then next whole-candidate gate; artifact/opt-in/native acceptance remains pending.
+- **Notes for Codex oder Claude:** Exact blocker <profile-scratch>/alpha16-execution-20261023/review-browser-fixture-fix/REPORT.md; original reports immutable. Do not classify all54 prior failures as fixture-only: new review exposed underlying real producer/report join defect. No release/hardware claim, pushes/Ollama/vendor/live bus. Preserve selected dirty root and paused source.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-24 01:03
+- **Completed:** Read browser fixture correction HANDOFF and inspected seven-file commit9078162f, imported as41b7212ff. Worker reconciles original gate3 54 failures/13 groups into missing explicit idle System2 read (40), obsolete catalogue flow (13), renamed legacy handoff (1). Exact GET/null responses and strict job-protocol fixtures added, production runtime untouched. Typecheck-only worker evidence, no passing browser claim or new parent tests.
+- **Pending/Next Steps:** Independent narrow fixture review deleg_0650bb78/sa-0-93fe5103 running on merged source; source frozen, metadata-only parent updates. Check assertion preservation/protocol/redaction and close concrete findings before launching next whole candidate gate. Original gate3 remains failed; native/backend/package/artifact acceptance pending. No separate test/browser campaigns, no release/hardware approval.
+- **Notes for Codex oder Claude:** Evidence <profile-scratch>/alpha16-execution-20261023/browser-fixture-fix includes exact reconciliation and immutable RAW/JSON bindings; source-only review output goes review-browser-fixture-fix. Existing raw diagnostic assertions remain legacy component scope, actual mounted public report is explicitly redacted. Preserve strict unknown-request assertions, exact program statuses, consent and no-auto legacy fallback. No pushes/Ollama/vendor/live bus; selected dirty root preserved.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-24 00:47
+- **Completed:** Full gate3 on58eb748ac ended red in browser-functional. fmt/documentation/tool-tests/browser-lanes/build/all fixture typechecks/Vitest/browser-start/inventory passed; remaining stages unexecuted, no full acceptance. Retained browser diagnostics show obsolete ordinary-download fixture rejects new read-only System2 status, and catalogue fixture waits on replaced synchronous apply. Complete failure inventory delegated before corrections; no blanket unknown-request allowance or scope waiver.
+- **Pending/Next Steps:** Browser correction deleg_868839a3/sa-0-4dea9841 owns isolated fix/alpha16-browser-fixtures-20261024; must classify ALL actual failure groups from retained full reports, preserve assertions, no browser/test/build/gate reruns. Parent consumes exact correction, reviews changed joins and starts corrected whole-candidate successor. No additional slice campaigns. Packaging/opt-ins/artifact acceptance still pending; no release/hardware approval.
+- **Notes for Codex oder Claude:** Original gate3 receipt/logs under <profile-scratch>/alpha16-execution-20261023/final-candidate-gate-3 remain immutable, frozen input proof true. gate3-diagnosis.txt summarises stage exits. Product backend/native tests not reached. Corrected source must not inherit earlier execution claims. Preserve selected root/paused files, no Ollama/vendor/live bus/push.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-24 00:35
 - **Completed:** Combined gate2 on4b4f6218 failed tool-tests after fmt/documentation passed: 412 tooling methods, one failure, six skipped; no product suites reached. Exact test_docker_frontend_context assertion showed three new catalogue schema/policy imports absent from Docker frontend context. Inspected client imports, Dockerfile, scanner and dockerignore; added exact three public JSON COPY inputs, no wildcard/private data or checker weakening. Failed receipt/logs preserved in final-candidate-gate-2.
 - **Pending/Next Steps:** Commit bounded Docker build-context correction and checkpoint then launch successor full combined candidate campaign (no separate focused tests). Validate full ordered receipt, all required assertions and opt-ins; packaging/artifact smokes still pending. Do not call gate2 green or infer product runtime success. No tag/upload/container publication or real hardware permission.

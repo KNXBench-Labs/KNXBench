@@ -57,6 +57,7 @@ pub(crate) enum DestinationError {
     ContentMismatch,
     Identity,
     ContentChanged,
+    Growth(crate::catalogue_growth::GrowthError),
     HeaderFacts,
     Copy(Box<CopyError>),
     Sqlite(rusqlite::Error),
@@ -123,6 +124,7 @@ pub(crate) enum DestinationStage {
     ReadOpened,
     ReadEnd,
     WriteOpen,
+    WriteOpened,
     WriteReady,
     RehearsalClose,
 }
@@ -460,6 +462,8 @@ impl ArtifactInventory {
         slot.connection = Some(
             Connection::open_with_flags(&slot.path, rw_flags()).map_err(DestinationError::from)?,
         );
+        #[cfg(test)]
+        slot.seam(DestinationStage::WriteOpened);
         slot.check_frozen()?;
         let conn = slot.connection.as_ref().unwrap();
         if conn.is_readonly("main").map_err(DestinationError::from)? {
@@ -486,6 +490,7 @@ impl ArtifactInventory {
                 return Err(DestinationError::InvalidReceipt.into());
             }
         }
+        crate::catalogue_growth::enforce(conn).map_err(DestinationError::Growth)?;
         #[cfg(test)]
         slot.seam(DestinationStage::WriteReady);
         gate.checkpoint().map_err(DestinationError::from)?;

@@ -12,6 +12,29 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## WP-04.3 actual-connection main growth — source accepted, delivery pending (23 October 2026)
+
+The [bounded main-growth increment](contracts/catalogue-jobs/live-growth-increment.md)
+sets and independently reads back the fixed 64 GiB total-main cap on actual
+reopened D and reserved W. W requires observed FULL/EXTRA before BEGIN and
+restores its exact prior connection-local cap after transaction settlement.
+Restoration uncertainty quarantines W and retains allocated B without rewriting
+a witnessed commit or independent primary refusal. The 8 GiB copy admission,
+quiet API, schema, binding version and production routes remain unchanged.
+
+Recorded implementation evidence: 18 focused tests; 708 unit and 772 integration
+passes, 31 integration cases and one separate large-member measurement ignored;
+two 13-test examples and two doctests pass. Nine compiled wrong variants fail
+intended assertions, with exact source restoration. Parent independently verifies
+all seven source hashes, five retained owning binaries and directly re-executes
+the 18 exact focused tests on the retained library binary; this is not a fresh
+compile or additional unique coverage. Header and test-layout checks pass.
+Independent source/evidence review ACCEPT has no blockers and verifies the exact
+seven-file source binding, original-runtime semantic failures and nine compiled
+wrong variants. Maintained branch/integrated gates and publication remain
+pending. Real 8–64 GiB acceptance, B10, artifact/lifecycle/routes/UI and WP-19
+remain separate; no bus/device or compatibility expansion.
+
 ## Project-configured System-2 offline preparation — delivered offline scope (23 October 2026)
 
 A separate experimental App entry accepts a domain Project and selected DeviceId,

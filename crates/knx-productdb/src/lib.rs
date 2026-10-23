@@ -33,6 +33,9 @@ pub mod managed_catalogue;
 // exists (WP-04.3 stage B, ADR-0150).
 #[allow(dead_code)]
 mod catalogue_copy;
+// Private actual-allocator growth admission; controlled job routes remain unwired.
+#[allow(dead_code)]
+mod catalogue_growth;
 // Private stamp/binding primitive remains unwired until the preview/apply
 // orchestration exists (WP-04.3 stage D, ADR-0150).
 #[allow(dead_code)]

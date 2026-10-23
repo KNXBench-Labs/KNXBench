@@ -196,6 +196,9 @@ pub struct PreparedBundle {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub project_preparation:
         Option<Box<crate::system2_validation_preparation::ProjectPreparationRecord>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hardware_preparation:
+        Option<Box<crate::system2_validation_preparation::ProjectHardwareRecord>>,
 }
 impl PreparedBundle {
     pub fn new(binding: Binding, normalized_plan: PlanRecord) -> io::Result<Self> {
@@ -204,6 +207,7 @@ impl PreparedBundle {
             binding,
             normalized_plan,
             project_preparation: None,
+            hardware_preparation: None,
         };
         bundle.plan()?;
         Ok(bundle)
@@ -218,6 +222,7 @@ impl PreparedBundle {
             binding,
             normalized_plan,
             project_preparation: Some(Box::new(record)),
+            hardware_preparation: None,
         };
         bundle.plan()?;
         Ok(bundle)
@@ -228,15 +233,20 @@ impl PreparedBundle {
             self.format,
             &self.project_preparation,
             &self.binding.project_preparation_sha256,
+            &self.hardware_preparation,
         ) {
-            (1, None, None) => {
+            (1, None, None, None) => {
                 if self.binding.profile_version != 1 {
                     return Err(invalid("unsupported legacy validation profile version"));
                 }
             }
-            (2, Some(record), Some(_)) => {
+            (2, Some(record), Some(_), None) => {
                 crate::system2_validation_preparation::check_budget(self)?;
                 record.validate(&self.binding, &self.normalized_plan)?;
+            }
+            (3, Some(record), Some(_), Some(hardware)) => {
+                crate::system2_validation_preparation::check_budget(self)?;
+                hardware.validate(&self.binding, &self.normalized_plan, record)?;
             }
             _ => return Err(invalid("bundle format/project preparation mixing")),
         }
@@ -284,6 +294,12 @@ impl PreparedBundle {
         Ok(bundle)
     }
     pub fn consent_phrase(&self) -> String {
+        if let Some(hardware) = &self.hardware_preparation {
+            return format!(
+                "I confirm configured System-2 {} to {} preparation {}",
+                hardware.operation, self.binding.target, hardware.source_preparation_sha256
+            );
+        }
         format!(
             "I confirm property validation to {} plan {}",
             self.binding.target, self.binding.plan_sha256
@@ -296,6 +312,17 @@ impl PreparedBundle {
         )
     }
     pub fn restore_phrase(&self) -> String {
+        if let Some(hardware) = &self.hardware_preparation {
+            return format!(
+                "I confirm configured System-2 recovery {} to {} preparation {}",
+                hardware.operation,
+                self.binding.target,
+                self.binding
+                    .project_preparation_sha256
+                    .as_deref()
+                    .unwrap_or("INVALID")
+            );
+        }
         format!(
             "I confirm property recovery to {} plan {}",
             self.binding.target, self.binding.plan_sha256

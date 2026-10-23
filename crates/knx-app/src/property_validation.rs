@@ -269,6 +269,25 @@ pub struct OperationStore {
     previous: String,
     reopened: bool,
     poisoned: bool,
+    progress: Option<tokio::sync::watch::Sender<OperationProgress>>,
+}
+/// Local status derived only from durable checkpoints, never synthetic progress.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct OperationProgress {
+    pub outcome: LocalOutcome,
+    pub completed_steps: usize,
+    pub total_steps: Option<usize>,
+    pub backup_available: bool,
+    pub restore_available: bool,
+    pub mutation_possible: bool,
+    pub recovery_phrases: Option<OperationRecoveryPhrases>,
+}
+/// Exact acknowledgements from the ORIGINAL retained operation, never current preparation.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct OperationRecoveryPhrases {
+    pub recovery_phrase: String,
+    pub download_phrase: String,
+    pub release_phrase: String,
 }
 impl OperationStore {
     pub fn create(directory: &Path, binding: Binding) -> io::Result<Self> {
@@ -301,6 +320,7 @@ impl OperationStore {
             previous: digest(&bytes),
             reopened: false,
             poisoned: false,
+            progress: None,
         })
     }
     pub fn open(directory: &Path, expected: &Binding) -> io::Result<Self> {
@@ -369,6 +389,7 @@ impl OperationStore {
             previous,
             reopened: true,
             poisoned: false,
+            progress: None,
         })
     }
     pub fn checkpoint(&mut self, checkpoint: Checkpoint) -> io::Result<()> {
@@ -397,15 +418,96 @@ impl OperationStore {
         })?;
         if let Err(error) = persist(&self.directory, self.next, &bytes) {
             self.poisoned = true;
+            if let Some(progress) = &self.progress {
+                progress.send_replace(self.progress());
+            }
             return Err(error);
         }
         self.state = next_state;
         self.next += 1;
         self.previous = digest(&bytes);
+        if let Some(progress) = &self.progress {
+            progress.send_replace(self.progress());
+        }
         Ok(())
+    }
+    pub fn progress(&self) -> OperationProgress {
+        OperationProgress {
+            outcome: self.outcome(),
+            completed_steps: self.state.completed,
+            total_steps: self
+                .state
+                .recovery
+                .as_ref()
+                .map(|r| r.original_bundle.normalized_plan.steps.len()),
+            backup_available: self.state.recovery.is_some(),
+            restore_available: self.state.recovery.is_some()
+                && !self.state.restore_attempted
+                && !matches!(
+                    self.outcome(),
+                    LocalOutcome::Running | LocalOutcome::Restoring
+                ),
+            mutation_possible: self.state.mutation,
+            recovery_phrases: self.recovery_phrases(),
+        }
+    }
+    /// Pure in-memory projection suitable for status after navigation/restart.
+    /// Null while running/restoring or after the once-only attempt is consumed.
+    pub fn recovery_phrases(&self) -> Option<OperationRecoveryPhrases> {
+        if self.state.restore_attempted
+            || matches!(
+                self.outcome(),
+                LocalOutcome::Running | LocalOutcome::Restoring
+            )
+        {
+            return None;
+        }
+        let original = &self.state.recovery.as_ref()?.original_bundle;
+        if original.format != 3 {
+            return None;
+        }
+        let target = original.binding.target.parse::<IndividualAddress>().ok()?;
+        Some(OperationRecoveryPhrases {
+            recovery_phrase: original.restore_phrase(),
+            download_phrase: knx_core::commissioning::mutation::required_confirmation_phrase(
+                target,
+                knx_core::commissioning::mutation::WriteScope::Download,
+            ),
+            release_phrase: knx_net::commissioning::hardware_release::required_release_phrase(
+                target,
+            ),
+        })
+    }
+    /// Subscribe before moving the store into the executor. Channel polling does
+    /// no filesystem, SQL or bus work and needs no long-running operation lock.
+    pub fn subscribe_progress(&mut self) -> tokio::sync::watch::Receiver<OperationProgress> {
+        if let Some(progress) = &self.progress {
+            return progress.subscribe();
+        }
+        let (sender, receiver) = tokio::sync::watch::channel(self.progress());
+        self.progress = Some(sender);
+        receiver
     }
     pub fn binding(&self) -> &Binding {
         &self.state.binding
+    }
+    pub(crate) fn require_fresh_execution(&self) -> io::Result<()> {
+        if self.reopened || self.poisoned || self.next != 1 {
+            return Err(invalid(
+                "hardware execution requires a new unused operation; no resume or retry",
+            ));
+        }
+        Ok(())
+    }
+    pub(crate) fn require_restore_available(&self) -> io::Result<()> {
+        if !self.reopened
+            || self.poisoned
+            || self.state.recovery.is_none()
+            || self.state.restore_attempted
+        {
+            return Err(invalid("recovery requires a freshly reopened intact operation and no previous restore attempt"));
+        }
+        Ok(())
     }
     pub fn recovery(&self) -> Option<&RecoveryRecord> {
         self.state.recovery.as_ref()
@@ -414,7 +516,7 @@ impl OperationStore {
         self.state.mutation
     }
     pub fn outcome(&self) -> LocalOutcome {
-        if self.reopened
+        if (self.reopened || self.poisoned)
             && matches!(
                 self.state.outcome,
                 LocalOutcome::Running | LocalOutcome::Restoring
@@ -429,7 +531,11 @@ impl OperationStore {
         ShareableReport {
             format: 1,
             kind: "knxbench-property-validation-summary",
-            support: "STRONG HYPOTHESIS SIMULATOR TESTED",
+            support: if self.state.binding.simulated {
+                "STRONG HYPOTHESIS SIMULATOR TESTED"
+            } else {
+                "EXPERIMENTAL BEST-EFFORT; HARDWARE COMPATIBILITY AND RECOVERY UNVERIFIED"
+            },
             simulated: self.state.binding.simulated,
             outcome: self.outcome(),
             mutation_possible: self.state.mutation,
@@ -476,6 +582,12 @@ fn regular_private(path: &Path) -> io::Result<()> {
         }
     }
     Ok(())
+}
+/// Owner-only create-new prepared evidence with file/ancestor sync and byte readback.
+pub fn write_prepared_bundle(path: &Path, bundle: &PreparedBundle) -> io::Result<()> {
+    bundle.plan()?;
+    bundle.preconditions()?;
+    write_new_synced(path, &encode(bundle)?)
 }
 pub fn read_bundle(path: &Path) -> io::Result<PreparedBundle> {
     let bundle: PreparedBundle = serde_json::from_slice(&bounded_read(path)?)

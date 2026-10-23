@@ -20,6 +20,7 @@ mod device_reset_address;
 mod device_serial;
 mod device_service_control;
 mod device_system2_prepare;
+mod device_system2_project;
 mod device_system2_validation;
 mod legacy_import;
 mod legacy_inspect;
@@ -147,6 +148,23 @@ const USAGE: &str = "usage: knx import <file.knxproj> [--store <path.knxdb> [--r
      \x20         (offline preview by default; --simulate for an isolated synthetic device; or a\n\
      \x20          consent-gated real write: add --gateway <ip:port> --download-confirm <phrase>\n\
      \x20          --release-confirm <phrase> --activity-history <path>; best-effort, ADR-0152)\n\
+     \x20     knx device system2-project --project <path.knxdb> --device-id <id> --product-db <path>\n\
+     \x20                  --operation-id <id> --source-mode retained-sources\n\
+     \x20                  [--recovery-track knxbench-best-effort|external-ets]\n\
+     \x20                  [--gateway <host:port> --observe-confirm <phrase> --output <new-private.json>]\n\
+     \x20         (offline configured UP258 preview by default; explicit read-only observation\n\
+     \x20         creates separate physical preparation. --source-mode profile --profile <v2.json>\n\
+     \x20         permits an explicitly selected standalone package; never defaults substitution.)\n\
+     \x20     knx device system2-validation --bundle <prepared.json>\n\
+     \x20                  [--gateway <host:port> --operation <new-dir> --confirm <phrase>\n\
+     \x20                   --accept-hypothesis <phrase> --download-confirm <phrase>\n\
+     \x20                   --release-confirm <phrase> --activity-history <path>\n\
+     \x20                   --project <path.knxdb> --device-id <id> --product-db <path>]\n\
+     \x20                  [--recover <existing-dir> --confirm-recovery <phrase>] [--report <new.json>]\n\
+     \x20         (experimental best-effort; previews print exact phrases, no connection by default.\n\
+     \x20         Configured execution rebuilds current project/source; recovery uses the original\n\
+     \x20         backup, not project defaults. No automatic retry/restore or recovery guarantee.\n\
+     \x20         --simulate is synthetic only; v2 simulator bundles cannot gain hardware admission.)\n\
      \x20     knx device diagnostics --project <path.knxdb> --device-id <id> --gateway <host:port>\n\
      \x20                  [--product-db <path>] --output <new.zip> [--confirm-read]\n\
      \x20     knx device diagnostics --simulate --output <new.zip> [--confirm-read]\n\
@@ -2316,6 +2334,7 @@ fn run_device(args: &[String]) -> ExitCode {
         Some("diagnostics") => device_diagnostics::run(&args[1..]),
         Some("system2-validation") => device_system2_validation::run(&args[1..]),
         Some("system2-prepare") => device_system2_prepare::run(&args[1..]),
+        Some("system2-project") => device_system2_project::run(&args[1..]),
         Some("byte-order-probe") => run_device_byte_order_probe(&args[1..]),
         Some("readiness") => run_device_readiness(&args[1..]),
         Some("program-address") => run_device_program_address(&args[1..]),

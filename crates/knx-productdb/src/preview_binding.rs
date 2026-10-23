@@ -13,7 +13,7 @@ use crate::preview_identity::PreviewIdentity;
 
 /// Format version of a preview binding. Bumped only when a later version
 /// changes the binding's field set or equality semantics.
-pub(crate) const BINDING_VERSION: u32 = 2;
+pub(crate) const BINDING_VERSION: u32 = 3;
 
 /// One immutable composition of the catalogue stamp, the source identity, the
 /// policy identity and the complete preview identity.
@@ -118,7 +118,7 @@ mod tests {
     #[test]
     fn the_binding_version_is_pinned() {
         const {
-            assert!(BINDING_VERSION == 2);
+            assert!(BINDING_VERSION == 3);
         }
     }
 

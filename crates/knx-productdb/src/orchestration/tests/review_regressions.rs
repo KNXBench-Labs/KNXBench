@@ -899,6 +899,11 @@ fn commit_failure(busy: bool, deny_rollback: bool) {
     );
     assert_eq!(artifacts.active(), deny_rollback);
     assert_eq!(artifacts.fault.transactions, ["COMMIT", "ROLLBACK"]);
+    assert_eq!(
+        owner.retained_apply_witness().unwrap().trace,
+        LiveCommitTrace::LiveCommitInvoked,
+        "failed native COMMIT cannot become positive through rollback/autocommit"
+    );
 }
 
 #[test]

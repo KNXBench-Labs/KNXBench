@@ -34,6 +34,28 @@ pub(crate) fn restore_error(error: OwnerRestoreError) -> ApiError {
 /// The server's protected managed catalogue: one owner, one lock.
 pub struct CatalogueOwner {
     state: Mutex<ManagedCatalogue>,
+    #[cfg(test)]
+    panic_after_handoff: std::sync::atomic::AtomicBool,
+}
+
+#[derive(Debug)]
+pub(crate) enum ControlledOwnerError {
+    Busy,
+    Stopped,
+    Owner(OwnerError),
+    Preview(knx_productdb::managed_apply::PreviewError),
+    Bridge(knx_productdb::managed_apply::ApplyBridgeError),
+}
+impl std::fmt::Display for ControlledOwnerError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Busy => f.write_str("catalogue writer busy"),
+            Self::Stopped => f.write_str("catalogue operation stopped"),
+            Self::Owner(error) => write!(f, "catalogue owner unavailable: {error}"),
+            Self::Preview(error) => write!(f, "catalogue preview refused: {error}"),
+            Self::Bridge(error) => write!(f, "catalogue receipt handoff refused: {error:?}"),
+        }
+    }
 }
 
 /// A poisoned owner mutex is reported as a quarantined, unusable owner.
@@ -52,7 +74,67 @@ impl CatalogueOwner {
         let managed = ManagedCatalogue::adopt_opened(conn, configured_path)?;
         Ok(Self {
             state: Mutex::new(managed),
+            #[cfg(test)]
+            panic_after_handoff: std::sync::atomic::AtomicBool::new(false),
         })
+    }
+
+    pub(crate) fn try_prepare_controlled(
+        &self,
+        source: knx_productdb::managed_apply::AdmittedSource<'_>,
+        gate: &knx_productdb::operation::PublicationGate,
+        workspace: &mut knx_productdb::managed_apply::ApplyWorkspace,
+    ) -> Result<knx_productdb::managed_apply::PreparedPreview, ControlledOwnerError> {
+        gate.checkpoint()
+            .map_err(|_| ControlledOwnerError::Stopped)?;
+        let mut managed = match self.state.try_lock() {
+            Ok(managed) => managed,
+            Err(std::sync::TryLockError::WouldBlock) => return Err(ControlledOwnerError::Busy),
+            Err(std::sync::TryLockError::Poisoned(_)) => {
+                return Err(ControlledOwnerError::Owner(poisoned()));
+            }
+        };
+        managed
+            .prepare_controlled(source, gate, workspace)
+            .map_err(ControlledOwnerError::Preview)
+    }
+
+    pub(crate) fn try_apply_controlled(
+        &self,
+        source: knx_productdb::managed_apply::AdmittedSource<'_>,
+        shown: &knx_productdb::managed_apply::PreparedPreview,
+        control: &dyn knx_productdb::operation::CommitArbitration,
+        workspace: &mut knx_productdb::managed_apply::ApplyWorkspace,
+        receipt: &mut knx_productdb::managed_apply::ApplyReceipt,
+    ) -> Result<knx_productdb::managed_apply::ApplyExecution, ControlledOwnerError> {
+        control
+            .gate()
+            .checkpoint()
+            .map_err(|_| ControlledOwnerError::Stopped)?;
+        let mut managed = match self.state.try_lock() {
+            Ok(managed) => managed,
+            Err(std::sync::TryLockError::WouldBlock) => return Err(ControlledOwnerError::Busy),
+            Err(std::sync::TryLockError::Poisoned(_)) => {
+                return Err(ControlledOwnerError::Owner(poisoned()));
+            }
+        };
+        let execution = managed
+            .execute_controlled(source, shown, control, workspace, receipt)
+            .map_err(ControlledOwnerError::Bridge)?;
+        #[cfg(test)]
+        if self
+            .panic_after_handoff
+            .load(std::sync::atomic::Ordering::SeqCst)
+        {
+            panic!("server-post-handoff-panic");
+        }
+        Ok(execution)
+    }
+
+    #[cfg(test)]
+    pub(crate) fn panic_after_handoff_for_test(&self) {
+        self.panic_after_handoff
+            .store(true, std::sync::atomic::Ordering::SeqCst);
     }
 
     /// A read lease: the `&Connection` never escapes the closure. A poisoned

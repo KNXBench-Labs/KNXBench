@@ -1,0 +1,333 @@
+//! Explicit controlled ProductDB bridge; no arbitrary SQL or installer callback.
+//!
+//! The caller owns the workspace and receipt outside worker/response unwind.
+//! This process-local bridge is not artifact publication, durability or HTTP
+//! authorization. Quiet APIs are unchanged.
+use crate::catalogue_copy::{ArtifactInventory, DestinationRole, FreshDestination};
+use crate::controlled::ControlledSource;
+use crate::managed_catalogue::{ManagedCatalogue, WriterHealth};
+use crate::operation::{CommitArbitration, PublicationGate};
+use crate::orchestration::{
+    CatalogueArtifacts, ControlledApplySettlement, ControlledPreview, OperationContext,
+    OrchestrationError,
+};
+use std::panic::{catch_unwind, AssertUnwindSafe};
+use std::path::PathBuf;
+
+pub use crate::controlled::{ControlledError, ControlledPolicy, NameRule};
+pub use crate::orchestration::{
+    ApplyAttemptKey, ApplyWitnessTransferError, ArtifactDisposition, CommitEvidence,
+    LiveCommitTrace, RetainedApplyWitness, RollbackDisposition,
+};
+
+/// An admitted immutable borrow; no caller-supplied digest or connection.
+#[derive(Clone, Copy)]
+pub struct AdmittedSource<'a>(ControlledSource<'a>);
+impl<'a> AdmittedSource<'a> {
+    pub fn admit(
+        name: &'a str,
+        bytes: &'a [u8],
+        policy: ControlledPolicy,
+    ) -> Result<Self, ControlledError> {
+        ControlledSource::admit(name, bytes, policy).map(Self)
+    }
+    fn policy(self) -> ControlledPolicy {
+        if self.0.limits == ControlledPolicy::Large.limits() {
+            ControlledPolicy::Large
+        } else {
+            ControlledPolicy::Standard
+        }
+    }
+}
+/// Only actual controlled rehearsal constructs this immutable binding.
+#[derive(Debug)]
+pub struct PreparedPreview(ControlledPreview);
+impl PreparedPreview {
+    /// Complete immutable raw result, never an authority-bearing connection.
+    /// Public artifact projection/admission remains the server's responsibility.
+    pub fn install(&self) -> &crate::ProductFileInstall {
+        &self.0.preview.install
+    }
+}
+
+/// Controlled-only diagnostic category; not an HTTP error or quiet API change.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ControlledFailureKind {
+    ReceiptPending,
+    CounterExhausted,
+    ClaimRefused,
+    Configuration,
+    Growth,
+    Cleanup,
+    Unavailable,
+    PolicyMismatch,
+    SourceMismatch,
+    Stale,
+    Stamp,
+    Copy,
+    Install,
+    PreviewIdentity,
+    Native,
+    CommitNotAutocommit,
+    Stopped,
+    Panicked,
+}
+fn failure_kind(error: &OrchestrationError) -> ControlledFailureKind {
+    use ControlledFailureKind as K;
+    use OrchestrationError as E;
+    match error {
+        E::ApplyWitnessPending => K::ReceiptPending,
+        E::ApplyAttemptExhausted => K::CounterExhausted,
+        E::CommitClaimRefused => K::ClaimRefused,
+        E::WriterConfiguration(_) => K::Configuration,
+        E::Growth(_) => K::Growth,
+        E::PreviewSettlement(_) | E::SourceSettlement(_) => K::Cleanup,
+        E::NotHealthy(_) | E::MissingConnection => K::Unavailable,
+        E::PolicyMismatch => K::PolicyMismatch,
+        E::SourceMismatch => K::SourceMismatch,
+        E::Stale => K::Stale,
+        E::Stamp(_) => K::Stamp,
+        E::Copy(_) => K::Copy,
+        E::Install(crate::PackageError::Cancelled(_)) | E::Stop(_) => K::Stopped,
+        E::Install(_) => K::Install,
+        E::PreviewIdentity(_) => K::PreviewIdentity,
+        E::Open(_) | E::Sqlite(_) => K::Native,
+        E::CommitNotAutocommit => K::CommitNotAutocommit,
+    }
+}
+
+/// Exact internal cause retained without expanding quiet error enums.
+#[derive(Debug)]
+pub struct PreviewError(OrchestrationError);
+impl PreviewError {
+    pub fn kind(&self) -> ControlledFailureKind {
+        failure_kind(&self.0)
+    }
+}
+impl std::fmt::Display for PreviewError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+impl std::error::Error for PreviewError {}
+
+/// Fixed D/B ownership. No destructor unlinks recovery files. The caller must
+/// retain this owner across unwind; durable inventory/publication is separate.
+pub struct ApplyWorkspace {
+    directory: PathBuf,
+    inventory: ArtifactInventory,
+    #[cfg(test)]
+    panic_after_commit: bool,
+}
+impl ApplyWorkspace {
+    /// Exclusively create a private directory beneath the caller's owned root.
+    /// Existing directories are refused, never adopted or repaired.
+    pub fn create(directory: PathBuf) -> std::io::Result<Self> {
+        use std::os::unix::fs::DirBuilderExt;
+        std::fs::DirBuilder::new().mode(0o700).create(&directory)?;
+        Ok(Self {
+            directory,
+            inventory: ArtifactInventory::default(),
+            #[cfg(test)]
+            panic_after_commit: false,
+        })
+    }
+    pub fn has_recovery(&self) -> bool {
+        self.inventory.allocated(DestinationRole::Recovery)
+    }
+    #[cfg(test)]
+    pub(crate) fn panic_after_commit_for_test(&mut self) {
+        self.panic_after_commit = true;
+    }
+}
+impl CatalogueArtifacts for ApplyWorkspace {
+    #[cfg(test)]
+    fn after_live_commit(&mut self, _writer: &crate::Connection) {
+        if self.panic_after_commit {
+            panic!("workspace-post-commit-panic");
+        }
+    }
+    fn inventory(&mut self) -> &mut ArtifactInventory {
+        &mut self.inventory
+    }
+    fn fresh_rehearsal(&mut self, page_size: i64) -> Result<FreshDestination, OrchestrationError> {
+        Ok(self.inventory.create_new(
+            DestinationRole::Rehearsal,
+            self.directory.join("rehearsal.sqlite"),
+            page_size,
+        )?)
+    }
+    fn fresh_recovery(&mut self, page_size: i64) -> Result<FreshDestination, OrchestrationError> {
+        Ok(self.inventory.create_new(
+            DestinationRole::Recovery,
+            self.directory.join("recovery.part.sqlite"),
+            page_size,
+        )?)
+    }
+}
+
+/// One caller-owned pending handoff, deliberately not Clone. Returning/dropping
+/// a result does not consume it; only exact-key transfer moves the evidence.
+#[derive(Debug, Default)]
+pub struct ApplyReceipt {
+    witness: Option<RetainedApplyWitness>,
+}
+impl ApplyReceipt {
+    pub fn witness(&self) -> Option<RetainedApplyWitness> {
+        self.witness
+    }
+    pub fn take(
+        &mut self,
+        key: ApplyAttemptKey,
+    ) -> Result<RetainedApplyWitness, ApplyWitnessTransferError> {
+        match self.witness {
+            None => Err(ApplyWitnessTransferError::Absent),
+            Some(w) if w.key != key => Err(ApplyWitnessTransferError::KeyMismatch),
+            Some(w) => {
+                self.witness = None;
+                Ok(w)
+            }
+        }
+    }
+}
+impl RetainedApplyWitness {
+    pub fn key(&self) -> ApplyAttemptKey {
+        self.key
+    }
+    pub fn trace(&self) -> LiveCommitTrace {
+        self.trace
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ApplyBridgeError {
+    ReceiptPending,
+    WitnessHandoff,
+}
+
+/// Original ordinary failure/cleanup remain retained, independently of the
+/// fixed outcome projection. Panic does not become clean cancellation.
+#[derive(Debug)]
+pub struct ApplyExecution {
+    settlement: Option<ControlledApplySettlement>,
+    health: WriterHealth,
+    commit: CommitEvidence,
+    artifacts: ArtifactDisposition,
+}
+impl ApplyExecution {
+    pub fn failure_kind(&self) -> Option<ControlledFailureKind> {
+        match &self.settlement {
+            None => Some(ControlledFailureKind::Panicked),
+            Some(settlement) => settlement.failure.as_ref().map(failure_kind),
+        }
+    }
+    pub fn panicked(&self) -> bool {
+        self.settlement.is_none()
+    }
+    pub fn commit(&self) -> CommitEvidence {
+        self.commit
+    }
+    pub fn health(&self) -> WriterHealth {
+        self.health
+    }
+    pub fn failed(&self) -> bool {
+        self.settlement.as_ref().is_none_or(|s| s.failure.is_some())
+    }
+    pub fn cleanup_failed(&self) -> bool {
+        self.health != WriterHealth::Healthy
+            || self
+                .settlement
+                .as_ref()
+                .is_none_or(|s| !s.cleanup.is_empty())
+    }
+    pub fn rollback(&self) -> RollbackDisposition {
+        self.settlement
+            .as_ref()
+            .map_or(RollbackDisposition::Unresolved, |s| s.rollback)
+    }
+    pub fn artifacts(&self) -> ArtifactDisposition {
+        self.artifacts
+    }
+}
+
+impl ManagedCatalogue {
+    pub fn prepare_controlled(
+        &mut self,
+        source: AdmittedSource<'_>,
+        gate: &PublicationGate,
+        workspace: &mut ApplyWorkspace,
+    ) -> Result<PreparedPreview, PreviewError> {
+        self.preview_current_controlled(
+            source.0,
+            &OperationContext {
+                gate,
+                policy: source.policy(),
+            },
+            workspace,
+        )
+        .map(PreparedPreview)
+        .map_err(PreviewError)
+    }
+    /// Catch while the managed owner is still exclusively borrowed, then move
+    /// the exact keyed trace outside the caller's mutex before any projection.
+    /// No poison recovery, SQLite read or health repair is used for handoff.
+    pub fn execute_controlled(
+        &mut self,
+        source: AdmittedSource<'_>,
+        shown: &PreparedPreview,
+        control: &dyn CommitArbitration,
+        workspace: &mut ApplyWorkspace,
+        receipt: &mut ApplyReceipt,
+    ) -> Result<ApplyExecution, ApplyBridgeError> {
+        if receipt.witness.is_some() || self.retained_apply_witness().is_some() {
+            return Err(ApplyBridgeError::ReceiptPending);
+        }
+        let outcome = catch_unwind(AssertUnwindSafe(|| {
+            self.apply_current_controlled_with_claim(
+                source.0,
+                &shown.0.binding,
+                &OperationContext {
+                    gate: control.gate(),
+                    policy: source.policy(),
+                },
+                workspace,
+                control,
+            )
+        }));
+        if let Some(witness) = self.retained_apply_witness() {
+            // Exact key from this admitted attempt, never a prior/rejected call.
+            receipt.witness = Some(
+                self.take_apply_witness(witness.key)
+                    .map_err(|_| ApplyBridgeError::WitnessHandoff)?,
+            );
+        }
+        let settlement = outcome.ok();
+        let health = self.health_snapshot();
+        let commit = if receipt
+            .witness
+            .is_some_and(|w| w.trace == LiveCommitTrace::LiveCommitReturnedOk { autocommit: true })
+        {
+            CommitEvidence::Committed
+        } else {
+            settlement
+                .as_ref()
+                .map_or(CommitEvidence::Unknown, |s| s.commit)
+        };
+        let artifacts = settlement.as_ref().map_or_else(
+            || {
+                if workspace.has_recovery() {
+                    ArtifactDisposition::Retain
+                } else {
+                    ArtifactDisposition::None
+                }
+            },
+            |settlement| settlement.artifacts,
+        );
+        Ok(ApplyExecution {
+            settlement,
+            health,
+            commit,
+            artifacts,
+        })
+    }
+}

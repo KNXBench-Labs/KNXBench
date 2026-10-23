@@ -51,6 +51,10 @@ pub(crate) trait CatalogueArtifacts {
     #[cfg(test)]
     fn before_live_install(&mut self, _writer: &crate::Connection) {}
 
+    /// Rust-only fault seam, after actual live COMMIT OK and retained recording.
+    #[cfg(test)]
+    fn after_live_commit(&mut self, _writer: &crate::Connection) {}
+
     /// Construct D through the retained inventory's create-new constructor.
     /// Backup independently enforces empty schema, cookie zero and autocommit.
     fn fresh_rehearsal(&mut self, page_size: i64) -> Result<FreshDestination, OrchestrationError>;
@@ -121,10 +125,46 @@ pub(crate) enum WriterConfigurationError {
     },
 }
 
+/// Immutable process-local association, not authorization or a durable ID.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ApplyAttemptKey {
+    pub(crate) incarnation: crate::managed_catalogue::CatalogueIncarnation,
+    pub(crate) serial: u64,
+}
+
+/// Native trace only; absence of a positive fact is not a rollback classifier.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LiveCommitTrace {
+    NoLiveCommitInvocation,
+    LiveCommitInvoked,
+    LiveCommitReturnedOk { autocommit: bool },
+}
+
+/// One fixed-size outstanding receipt. Full source/binding identity is NOT
+/// represented here: the association omits the source name and cannot admit work.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RetainedApplyWitness {
+    pub(crate) key: ApplyAttemptKey,
+    pub(crate) shown_generation: u64,
+    pub(crate) source_length: u64,
+    pub(crate) source_sha256: [u8; 32],
+    pub(crate) trace: LiveCommitTrace,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ApplyWitnessTransferError {
+    Absent,
+    KeyMismatch,
+}
+
 /// Typed failures of the controlled preview/apply orchestration. Never a
 /// string and never a partial digest.
 #[derive(Debug)]
 pub(crate) enum OrchestrationError {
+    ApplyWitnessPending,
+    ApplyAttemptExhausted,
+    /// Control refused or supplied a claim for another operation's gate.
+    CommitClaimRefused,
     WriterConfiguration(WriterConfigurationError),
     Growth(crate::catalogue_growth::GrowthError),
     PreviewSettlement(Box<PreviewFailure>),
@@ -202,6 +242,15 @@ impl From<Stop> for OrchestrationError {
 impl std::fmt::Display for OrchestrationError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            OrchestrationError::ApplyWitnessPending => {
+                write!(f, "catalogue apply witness pending handoff")
+            }
+            OrchestrationError::ApplyAttemptExhausted => {
+                write!(f, "catalogue apply attempt serial exhausted")
+            }
+            OrchestrationError::CommitClaimRefused => {
+                write!(f, "catalogue live commit claim refused")
+            }
             OrchestrationError::WriterConfiguration(error) => match error {
                 WriterConfigurationError::Read { setting, .. } => {
                     write!(f, "catalogue writer configuration unreadable: {setting:?}")
@@ -211,7 +260,10 @@ impl std::fmt::Display for OrchestrationError {
                     expected,
                     observed,
                 } => {
-                    write!(f, "catalogue writer configuration refused: {setting:?} expected {expected}, observed {observed}")
+                    write!(
+                        f,
+                        "catalogue writer configuration refused: {setting:?} expected {expected}, observed {observed}"
+                    )
                 }
             },
             OrchestrationError::Growth(error) => {
@@ -272,7 +324,7 @@ impl std::error::Error for OrchestrationError {}
 /// autocommit=true witnesses `Committed`; every other classification is
 /// conservative.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum CommitEvidence {
+pub enum CommitEvidence {
     /// No live COMMIT was issued, or a proved rollback ended the transaction.
     NotCommitted,
     /// The one live COMMIT returned success and the connection is autocommit.
@@ -283,7 +335,7 @@ pub(crate) enum CommitEvidence {
 
 /// How the live transaction ended before/after the commit claim.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum RollbackDisposition {
+pub enum RollbackDisposition {
     /// No live transaction was ever opened.
     NotApplicable,
     /// An explicit ROLLBACK was issued and succeeded (autocommit=true).
@@ -297,7 +349,7 @@ pub(crate) enum RollbackDisposition {
 
 /// What the caller should do with the owned recovery backup.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum ArtifactDisposition {
+pub enum ArtifactDisposition {
     /// No recovery backup was created (refusal before copy).
     None,
     /// A recovery backup exists and must be retained (committed/unknown).

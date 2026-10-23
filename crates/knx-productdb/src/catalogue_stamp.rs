@@ -25,6 +25,29 @@ pub(crate) struct CatalogueStamp {
     pub(crate) total_changes: u64,
     pub(crate) file: Option<FileStamp>,
     pub(crate) witness: CatalogueWitness,
+    pub(crate) configuration: WriterConfigurationReceipt,
+}
+
+/// Actual connection-local variable settings, bound rather than repaired.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct WriterConfigurationReceipt {
+    trusted_schema: bool,
+    recursive_triggers: bool,
+}
+impl WriterConfigurationReceipt {
+    pub(crate) fn read(conn: &crate::Connection) -> rusqlite::Result<Self> {
+        fn boolean(conn: &crate::Connection, sql: &str) -> rusqlite::Result<bool> {
+            match conn.query_row(sql, [], |row| row.get::<_, i64>(0))? {
+                0 => Ok(false),
+                1 => Ok(true),
+                _ => Err(rusqlite::Error::InvalidQuery),
+            }
+        }
+        Ok(Self {
+            trusted_schema: boolean(conn, "PRAGMA trusted_schema")?,
+            recursive_triggers: boolean(conn, "PRAGMA recursive_triggers")?,
+        })
+    }
 }
 
 /// Typed failures of a stamp acquisition; never a string and never a partial

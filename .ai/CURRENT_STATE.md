@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-23 18:44
+- **Completed:** Second apply rehearsal source6670514e published on fresh main-first bd8191f20 including upstream offline preparation; immediate local/tracking/live equality verified. Fresh combined-source14/14 gate passes3842 Rust/151ignored across24binary results,97/97corpus, exact stage/proof/freeze and empty data guards. Prior branch3748passes and historical old-merge proofs remain separately source-bound. Independent source ACCEPT retained.
+- **Pending/Next Steps:** Gate/publish result-only docs, verified evidence retention and owned cleanup, then admit live-growth/B10 prerequisites before production routes/lifecycle/UI. WP-19 remains subsequent. No new Go needed; selected root remains unsynchronized.
+- **Notes for Codex oder Claude:** Receipts/publication proof <profile-scratch>/wp043-second-rehearsal-20261023/. Fresh integrated runtime source published, not merely locally green. Preserve separate workstreams and root foreign source/index; no bus/device, release or compatibility expansion.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-23 17:42
 - **Completed:** Published the scoped isolated candidate on main-first merge 25b5b6a88 after maintained branch and integrated acceptance. Immediate local, tracking and live remote readback agree.
 - **Pending/Next Steps:** Complete neutral result documentation and retain verification evidence before retiring owned scratch. Selected checkout remains intentionally unsynchronized; concurrent ownership is unchanged.

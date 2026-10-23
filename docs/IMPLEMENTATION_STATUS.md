@@ -29,7 +29,7 @@ separate. Source `224a500ef` was published on main-first merge `25b5b6a88`. Main
 branch and integrated gates accepted the scoped package, with ordered stages,
 frozen inputs and user-data guards verified. This is not ETS compatibility,
 physical restoration certification or hardware-download admission.
-## WP-04.3 second apply rehearsal — source accepted, delivery pending (23 October 2026)
+## WP-04.3 second apply rehearsal — delivered (23 October 2026)
 
 The [bounded second-rehearsal increment](contracts/catalogue-jobs/second-rehearsal-increment.md)
 executes the shared controlled installer on validated D under the original W
@@ -42,8 +42,15 @@ failures and eight compiled wrong variants were independently reproduced, with
 partial parameter-row discrimination documented rather than overstated.
 Recorded owning evidence:688 unit,752 integration, two 13-test examples and two
 doctests pass;32 opt-in cases ignored. Focused selections overlap owning counts.
-Maintained branch/merged gates and publication remain pending. Quiet APIs,
-schema, growth/B10 and production routes/lifecycle/UI are unchanged.
+Source `6670514e` is published on main-first merge `bd8191f20`, incorporating
+the separate offline-preparation delivery without changing its source. Immediate
+local/tracking/live equality verified. The original branch gate passes14/14
+(3748 Rust passes/151 ignored,97/97 corpus); fresh integrated acceptance on the
+combined source passes14/14 (3842 Rust passes/151 ignored across24 binary
+results,97/97 selected corpus). Exact stage proofs, frozen inputs and empty
+touched/unchecked user-data guards verified. Earlier merged acceptance stays
+bound to its older source, not relabelled as the new merge. Quiet APIs, schema,
+growth/B10 and production routes/lifecycle/UI are unchanged.
 
 ## WP-04.3 reopened-copy validation — delivered (23 October 2026)
 

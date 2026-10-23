@@ -96,10 +96,36 @@ pub(crate) struct PreviewFailure {
     pub(crate) cleanup: Vec<PreviewCleanupError>,
 }
 
+/// Fixed SQL-safety facts required on the actual managed writer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum WriterSetting {
+    ForeignKeys,
+    IgnoreCheckConstraints,
+    WritableSchema,
+    DeferForeignKeys,
+    QueryOnly,
+}
+
+/// Observation failures include missing rows and wrong native scalar types;
+/// none can become an implicit default or authorize a corrective setter.
+#[derive(Debug)]
+pub(crate) enum WriterConfigurationError {
+    Read {
+        setting: WriterSetting,
+        source: rusqlite::Error,
+    },
+    Value {
+        setting: WriterSetting,
+        expected: i64,
+        observed: i64,
+    },
+}
+
 /// Typed failures of the controlled preview/apply orchestration. Never a
 /// string and never a partial digest.
 #[derive(Debug)]
 pub(crate) enum OrchestrationError {
+    WriterConfiguration(WriterConfigurationError),
     Growth(crate::catalogue_growth::GrowthError),
     PreviewSettlement(Box<PreviewFailure>),
     SourceSettlement(Box<PreviewFailure>),
@@ -176,6 +202,18 @@ impl From<Stop> for OrchestrationError {
 impl std::fmt::Display for OrchestrationError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            OrchestrationError::WriterConfiguration(error) => match error {
+                WriterConfigurationError::Read { setting, .. } => {
+                    write!(f, "catalogue writer configuration unreadable: {setting:?}")
+                }
+                WriterConfigurationError::Value {
+                    setting,
+                    expected,
+                    observed,
+                } => {
+                    write!(f, "catalogue writer configuration refused: {setting:?} expected {expected}, observed {observed}")
+                }
+            },
             OrchestrationError::Growth(error) => {
                 write!(f, "catalogue main-growth admission failed: {error:?}")
             }

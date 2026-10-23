@@ -25,6 +25,7 @@ pub(crate) struct Identity {
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Phase {
+    Receiving,
     Previewing,
     Ready,
     WaitingForWriter,
@@ -47,6 +48,7 @@ pub(crate) struct Ticket {
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum LeaseKind {
+    Receiving,
     Working,
     Ready,
 }
@@ -72,6 +74,8 @@ pub(crate) struct Command {
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Cause {
+    ReceivingTimeout,
+    ReceivingIdleTimeout,
     UserCancel,
     ServerStop,
     ReadyExpired,
@@ -130,6 +134,45 @@ pub(crate) struct Control<B, C> {
     gate: Arc<PublicationGate>,
 }
 impl<B, C: Clock> Control<B, C> {
+    pub(crate) fn new_receiving(
+        identity: Identity,
+        binding: B,
+        clock: C,
+        deadline_tick_ms: u64,
+    ) -> Result<Self, Error> {
+        let control = Self::new(identity, binding, clock)?;
+        {
+            let mut s = control.lock()?;
+            s.view.phase = Phase::Receiving;
+            s.view.lease = Lease {
+                kind: LeaseKind::Receiving,
+                deadline: Duration::from_millis(deadline_tick_ms),
+                deadline_tick_ms,
+            };
+        }
+        Ok(control)
+    }
+    pub(crate) fn begin_preview(&self, deadline_tick_ms: u64) -> Result<Snapshot, Error> {
+        let mut s = self.lock()?;
+        let now = self.observe(&mut s)?;
+        if s.view.phase != Phase::Receiving || s.view.admission_closed {
+            return Err(Error::InvalidPhase);
+        }
+        if now >= s.view.lease.deadline {
+            Self::stop(&mut s, Cause::ReceivingTimeout)?;
+            return Err(Error::InvalidPhase);
+        }
+        let (revision, generation) = Self::ordinary_counters(&mut s)?;
+        s.view.phase = Phase::Previewing;
+        s.view.lease = Lease {
+            kind: LeaseKind::Working,
+            deadline: Duration::from_millis(deadline_tick_ms),
+            deadline_tick_ms,
+        };
+        s.view.revision = revision;
+        s.view.generation = generation;
+        Ok(s.view)
+    }
     pub(crate) fn new(identity: Identity, binding: B, clock: C) -> Result<Self, Error> {
         if identity.serial == 0 || identity.serial == u64::MAX {
             return Err(Error::InvalidHandle);
@@ -221,6 +264,7 @@ impl<B, C: Clock> Control<B, C> {
     }
     fn lease(now: Duration, kind: LeaseKind) -> Option<Lease> {
         let seconds = match kind {
+            LeaseKind::Receiving => 3600,
             LeaseKind::Ready => 900,
             LeaseKind::Working => 7200,
         };
@@ -301,6 +345,7 @@ impl<B, C: Clock> Control<B, C> {
             return Ok(Expiry::Inert(s.view));
         }
         let cause = match s.view.lease.kind {
+            LeaseKind::Receiving => Cause::ReceivingTimeout,
             LeaseKind::Ready => Cause::ReadyExpired,
             LeaseKind::Working => Cause::WorkingTimeout,
         };

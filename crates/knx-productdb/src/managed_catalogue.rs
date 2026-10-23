@@ -304,6 +304,10 @@ impl ManagedCatalogue {
     pub fn health_snapshot(&self) -> WriterHealth {
         self.health
     }
+    pub(crate) fn unresolved_preview_source_is_absent(&self) -> bool {
+        self.unresolved_preview_source.is_none()
+            && self.conn.as_ref().is_some_and(Connection::is_autocommit)
+    }
 
     /// Metadata only: available even while Mutating/Quarantined; no SQL or repair.
     #[allow(dead_code)] // consumed by the future private worker integration
@@ -707,16 +711,20 @@ impl ManagedCatalogue {
             op.gate.checkpoint()?;
             #[cfg(test)]
             artifacts.before_rehearsal(&rehearsal);
-            Ok(crate::wrapper::install_admitted_product_file(
-                artifacts.inventory().rehearsal(&rehearsal)?,
+            let conn = artifacts.inventory().rehearsal(&rehearsal)?;
+            let before = crate::managed_apply::report::Before::read(conn)?;
+            let install = crate::wrapper::install_admitted_product_file(
+                conn,
                 source.name,
                 source.bytes,
                 source.limits,
                 Cancellation::Controlled(op.gate),
-            )?)
+            )?;
+            let report = before.finish(conn, &install)?;
+            Ok((install, report))
         })();
         let close = artifacts.inventory().close_rehearsal(rehearsal);
-        let install = match (install, close) {
+        let (install, report) = match (install, close) {
             (Err(primary), Err(close)) => {
                 return Err(OrchestrationError::PreviewSettlement(Box::new(
                     PreviewFailure {
@@ -739,6 +747,7 @@ impl ManagedCatalogue {
         );
 
         Ok(ControlledPreview {
+            report,
             preview: AdmittedPreviewArtifact { identity, install },
             binding,
         })

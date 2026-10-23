@@ -109,7 +109,9 @@ async fn upload(
     mut multipart: Multipart,
 ) -> Result<Json<UploadResponse>, ApiError> {
     let uploads_dir = state.data_dir.join("uploads");
+    crate::paths::refuse_private_target(&uploads_dir)?;
     std::fs::create_dir_all(&uploads_dir).map_err(|e| ApiError::internal(e.to_string()))?;
+    let uploads_dir = resolve_in_data_dir(&state.data_dir, "uploads")?;
 
     while let Some(mut field) = multipart.next_field().await.map_err(multipart_error)? {
         let Some(filename) = field.file_name().map(str::to_owned) else {
@@ -122,6 +124,7 @@ async fn upload(
             .file_name()
             .ok_or_else(|| ApiError::bad_request("empty filename"))?;
         let dest = uploads_dir.join(safe_name);
+        crate::paths::refuse_private_target(&dest)?;
         // Stream into an unpublished file. Any limit/read/write failure drops
         // the staging file; an existing destination remains untouched.
         let mut staged = tempfile::NamedTempFile::new_in(&uploads_dir)
@@ -147,7 +150,7 @@ async fn upload(
                 ApiError::internal(e.to_string())
             }
         })?;
-        let relative = dest.strip_prefix(&state.data_dir).unwrap_or(&dest);
+        let relative = Path::new("uploads").join(safe_name);
         return Ok(Json(UploadResponse {
             path: relative.to_string_lossy().into_owned(),
         }));

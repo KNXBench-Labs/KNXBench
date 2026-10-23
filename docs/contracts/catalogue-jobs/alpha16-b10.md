@@ -132,9 +132,11 @@ inventory acknowledgement; it publishes in the existing listed-backup grammar.
 `controlled_apply::prepare_owned` connect that same leased job workspace to
 initial-preview allocation. `native_handles_closed` and
 `release_closed_ownership` permit release only after inspected native close;
-failed handles remain retained. Quiet APIs are unchanged. The final runtime
-session/status/full-record adapter, authenticated route/path fencing and UI
-mounting remain parent-owned integration, not completion established here.
+failed handles remain retained. Quiet APIs are unchanged. The subsequent
+production composition in `alpha16-runtime.md` now supplies the retained
+session/status/full-record adapter and authenticated, path-fenced common app
+mount. Its source wiring and compile checks are not combined runtime/UI
+acceptance and do not retroactively widen the focused B10 evidence below.
 
 No durable outcome database, generic task registry, automatic restore/retry,
 process-loss/power-loss/panic-abort/double-panic guarantee or global quota claim

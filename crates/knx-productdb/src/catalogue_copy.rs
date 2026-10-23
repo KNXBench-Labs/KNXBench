@@ -20,7 +20,7 @@ const COPY_BUSY_PAUSE: Duration = Duration::from_millis(50);
 /// Total busy/locked retry budget.
 const COPY_BUSY_BUDGET: Duration = Duration::from_secs(30);
 /// Maximum admitted source extent: `page_count * page_size`.
-const COPY_PAGE_BYTE_BOUND: u64 = 8 * 1024 * 1024 * 1024;
+pub(crate) const COPY_PAGE_BYTE_BOUND: u64 = 8 * 1024 * 1024 * 1024;
 
 /// One observed completed copy: extent, step accounting and the destination
 /// cookie receipt (`0` before, `1` after the pinned fresh-zero rule).

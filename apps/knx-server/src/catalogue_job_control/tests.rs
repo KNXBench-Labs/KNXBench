@@ -3,6 +3,39 @@
 use super::*;
 
 #[test]
+fn receiving_expiry_and_upload_working_origin_use_distinct_exact_tickets() {
+    let clock = ManualClock::new(Duration::ZERO);
+    let abandoned =
+        Control::new_receiving(identity(), binding(), clock.clone(), 3_600_000).unwrap();
+    assert_eq!(abandoned.snapshot().unwrap().phase, Phase::Receiving);
+    clock.set(Duration::from_millis(3_600_000));
+    assert!(matches!(
+        abandoned.expire(abandoned.ticket().unwrap()),
+        Ok(Expiry::Stop(CancelOutcome::Accepted, _))
+    ));
+    assert_eq!(
+        abandoned.snapshot().unwrap().stop_cause,
+        Some(Cause::ReceivingTimeout)
+    );
+    assert_eq!(abandoned.checkpoint(), Ok(Err(Stop::CancelAccepted)));
+
+    let clock = ManualClock::new(Duration::ZERO);
+    let uploaded = Control::new_receiving(identity(), binding(), clock.clone(), 3_600_000).unwrap();
+    let receiving = uploaded.ticket().unwrap();
+    clock.set(Duration::from_millis(3_599_999));
+    let deadline = 3_599_999u64.checked_add(7_200_000).unwrap();
+    let working = uploaded.begin_preview(deadline).unwrap();
+    assert_eq!(working.lease.kind, LeaseKind::Working);
+    assert_eq!(working.lease.deadline_tick_ms, deadline);
+    clock.set(Duration::from_millis(3_600_000));
+    assert_eq!(
+        uploaded.expire(receiving),
+        Ok(Expiry::Inert(working)),
+        "delayed Receiving timer must not expire the new worker"
+    );
+}
+
+#[test]
 fn joint_start_repeated_apply_and_stop_contenders_have_only_serial_outcomes() {
     let (control, _) = ready_fixture();
     let before = control.snapshot().unwrap();

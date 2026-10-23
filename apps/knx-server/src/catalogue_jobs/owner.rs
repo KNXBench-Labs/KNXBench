@@ -31,6 +31,11 @@ struct Handles {
 }
 
 impl CatalogueUpdateJobs {
+    pub(crate) fn attached_runtime(
+        &self,
+    ) -> Option<std::sync::Arc<super::runtime::CatalogueRuntime>> {
+        self.runtime.lock().ok()?.as_ref()?.upgrade()
+    }
     pub fn new(incarnation: Incarnation) -> Self {
         Self {
             manager: Mutex::new(CatalogueJobManager::new(incarnation)),

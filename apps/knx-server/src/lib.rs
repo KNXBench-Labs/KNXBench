@@ -285,7 +285,10 @@ pub fn app_with_auth(state: SharedState, static_dir: Option<PathBuf>, auth: Auth
             let static_dir = dir.clone();
             let files = Router::new()
                 .fallback_service(ServeDir::new(dir.clone()))
-                .layer(axum::middleware::from_fn_with_state(dir, paths::fence_static))
+                .layer(axum::middleware::from_fn_with_state(
+                    dir,
+                    paths::fence_static,
+                ))
                 .layer(axum::middleware::from_fn(move |request, next| {
                     let data = system2_data_dir.clone();
                     let static_dir = static_dir.clone();

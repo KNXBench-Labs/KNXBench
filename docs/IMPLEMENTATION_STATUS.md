@@ -12,7 +12,7 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
-## Catalogue-job integrity corrections — candidate (23 October 2026)
+## Catalogue-job integrity corrections — delivered (23 October 2026)
 
 The [23 October review](status/2026-10-23-deepseek-review.md) reproduced five
 unwired code defects and a separately introduced broken-documentation gate.
@@ -32,8 +32,12 @@ this is unwired-source approval, not production lifecycle acceptance.
 
 Recorded candidate owning executions: ProductDB 608 library + 752 integration
 passes (31 integration ignores; example/doc lanes separate); corrected server
-1241 passed / 53 ignored. Focused results overlap these populations. Maintained
-package and merged-result gates and publication remain pending. Historical RED
+1241 passed / 53 ignored. Focused results overlap these populations. Published
+main-first merge `846793334` contains source `46d9a3b0f`. Maintained branch and
+merged-result gates each pass all 14 ordered stages on frozen inputs, with
+3668 Rust passes / 151 ignored across 24 binary results and 97/97 selected
+corpus tests; touched/unchecked user-data guards are empty. Live remote readback
+verified publication. These are scoped gates, not a full release gate. Historical RED
 logs do not establish final-expanded-test or missing historical binary identity.
 No production route, schema, compatibility or hardware capability is enabled.
 Copy-content witness, live growth, concurrent commit-barrier and later lifecycle/

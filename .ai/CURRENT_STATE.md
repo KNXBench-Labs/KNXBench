@@ -1,4 +1,12 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-23 12:31
+- **Completed:** Catalogue integrity source 46d9a3b0f delivered on main-first 846793334; immediate local/tracking/live equality verified. ProductDB and corrected server independent reviews ACCEPT/CLOSED; R1–R6 bounded corrections complete. Maintained branch and integrated gates each 14/14: 3668 Rust passes/151 ignored across 24 binary results, 97/97 selected corpus; exact stages/proofs/frozen inputs and empty touched/unchecked data guards validated. No production job or hardware capability is implied.
+- **Pending/Next Steps:** Gate/publish result-only documentation, verify archive and retire owned correction scratch after preserving executed evidence. Continue next admitted WP-04.3 copy-content validation/growth/commit-barrier dependencies before route/lifecycle/UI wiring, then WP-19. Root source/index/HEAD remains intentionally unsynchronized.
+- **Notes for Codex oder Claude:** Source is published, not just locally green. Evidence <profile-scratch>/catalogue-review-fixes-20261023/ holds accepted branch/merged receipts and all independent review/probe artifacts. Historical missing RED binary identities remain qualified rather than reconstructed. No bus/device, release/tag or permanent model configuration change.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-23 12:11
 - **Completed:** Independent corrected-server rereview ACCEPT/CLOSED for S1/S2, no remaining in-scope findings; ProductDB R1/R2/R4 review remains ACCEPT. Original independent refusal controls and six canonical schema fixtures pass; populations overlap focused owning checks and are not added. Recorded owning evidence authenticates server 1241 passed/53 ignored and unchanged accepted ProductDB inputs. Final correction documentation distinguishes unwired source approval from production acceptance.
 - **Pending/Next Steps:** Freeze/commit explicit correction candidate, maintained 14-stage package gate, main-first integration and merged-result gate, then conditional push/readback if all green and no reservation. Separate copy-witness/growth/commit-barrier and route/lifecycle/UI dependencies remain open. WP-04.3 then WP-19 order unchanged.

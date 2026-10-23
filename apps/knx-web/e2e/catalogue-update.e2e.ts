@@ -195,7 +195,9 @@ async function choosePackage(catalogue: ReturnType<Page["locator"]>, m: Catalogu
   await expect(selection.getByRole("combobox", { name: m["catalogJob.profile"] })).toHaveValue("standard");
   expect(f.jobs.creates).toHaveLength(before); // Picking a file is not upload consent.
   await selection.getByRole("button", { name: m["catalogJob.start"], exact: true }).click();
-  const shown = catalogue.getByRole("region", { name: m["catalogJob.title"], exact: true });
+  const shown = catalogue.getByRole("region", { name: m["catalogJob.title"], exact: true })
+    .filter({ has: catalogue.page().getByRole("checkbox", { name: m["catalogJob.confirm"], exact: true }) });
+  await expect(shown).toHaveCount(1);
   await expect(shown).toContainText(m["catalogUpdate.nothingYet"]);
   expect(f.jobs.creates).toHaveLength(before + 1);
   expect(f.jobs.creates.at(-1)).toMatchObject({ sourceName: preview.sourceName, profile: "standard", allowLargePackage: false });

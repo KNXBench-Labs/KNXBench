@@ -40,6 +40,35 @@ describe("catalogue job protocol", () => {
     const baggage={ordinal:"0",kind:"baggageDeclaration",packageKey:"0",indexPath:"M-1/Baggages.xml",declarationOrdinal:"0",declarationId:null,name:null,targetPath:null,installOnImport:null,timeInfo:null,fileVersion:null,detail:null,resolution:"missing",memberPath:"payload.bin",withheld:[]};
     expect(() => parseCatalogueMessage("Page",JSON.stringify({...data,records:[baggage]}))).toThrow();
   });
+  it("admits only bounded generated master declaration selectors and keeps redaction strict", () => {
+    const s = status("ready", "2"); const a = s.preview!.artifact;
+    const row = {ordinal:"0",kind:"diagnostic",packageKey:"0",diagnosticKind:"master-identity-collision",archivePath:"knx_master.xml",xmlPath:"/KNX/MasterData/FunctionType[@master-ordinal=1]",detail:null,occurrences:"1",withheld:[{field:"detail",reason:"untrustedFreeText",rawUtf8Bytes:"7"}]};
+    const parse = (record: unknown) => parseCatalogueMessage("Page", JSON.stringify({schemaVersion:1,handle:s.handle,artifactId:a.artifactId,publicSha256:a.publicSha256,offset:"0",totalRecords:"1",records:[record],nextOffset:null}));
+    for (const element of ["DatapointType", "DatapointSubtype", "FunctionType", "FunctionPoint", "SpaceUsage"]) {
+      for (const diagnosticKind of ["master-identity-collision", "malformed-master-declaration"]) {
+        for (const ordinal of ["1", "1000000"]) {
+          const record = {...row, diagnosticKind, xmlPath:`/KNX/MasterData/${element}[@master-ordinal=${ordinal}]`};
+          expect(parse(record).records).toEqual([record]);
+        }
+      }
+    }
+    // Same structural path must retain two distinct declaration addresses.
+    expect(parse(row).records[0]).not.toEqual(parse({...row,xmlPath:"/KNX/MasterData/FunctionType[@master-ordinal=2]"}).records[0]);
+    const base = "/KNX/MasterData/FunctionType";
+    const paths = [base, `${base}[1]`, `${base}[@Id='private']`, `${row.xmlPath}/FunctionPoint`, `${row.xmlPath}[@master-ordinal=2]`, `${row.xmlPath}\n`, `/${"Name/".repeat(1700)}FunctionType[@master-ordinal=1]`, "/KNX/Other[@master-ordinal=1]", "/KNX/../FunctionType[@master-ordinal=1]", "/KNX//FunctionType[@master-ordinal=1]", "/KNX\n/FunctionType[@master-ordinal=1]", "/KNX/FunctionType\u200b[@master-ordinal=1]", `/${"A".repeat(513)}/FunctionType[@master-ordinal=1]`];
+    for (const ordinal of ["0", "01", "+1", "-1", " 1", "1 ", "1\n", "１", "1.0", "1e1", "'1'", "1000001", "18446744073709551616", "1][@Id=private"]) paths.push(`${base}[@master-ordinal=${ordinal}]`);
+    for (const diagnosticKind of ["master-identity-collision", "malformed-master-declaration"]) {
+      for (const xmlPath of paths) expect(() => parse({...row, diagnosticKind, xmlPath})).toThrow();
+    }
+    for (const diagnosticKind of ["unsupported-master-section", "unsupported-master-subtree", "unresolved-baggage-declaration", "undeclared-baggage-payload"]) expect(() => parse({...row, diagnosticKind})).toThrow();
+    for (const occurrences of ["0", "2"]) expect(() => parse({...row, occurrences})).toThrow();
+    for (const archivePath of ["/home/alice/private", "../knx_master.xml", "C:\\private", "knx_master.xml\u200b"]) expect(() => parse({...row, archivePath})).toThrow();
+    expect(() => parse({...row, detail:"private"})).toThrow();
+    expect(() => parse({...row, withheld:[]})).toThrow();
+    expect(() => parse({...row, withheld:[row.withheld[0], row.withheld[0]]})).toThrow();
+    expect(() => parse({ordinal:"0",kind:"unknownConstruct",packageKey:"0",xpath:row.xmlPath,unknownKind:"Element",name:"FunctionType",occurrences:"1",sample:null,withheld:[]})).toThrow();
+    expect(() => parse({...row,diagnosticKind:"unsupported-master-section",xmlPath:"/KNX/MasterData/Future\n"})).toThrow();
+  });
   it("enforces numeric bounds rather than accepting shape-compatible DTOs", () => {
     expect(() => parseCatalogueMessage("DetailQuery", JSON.stringify({ artifactId: "b".repeat(32), publicSha256: "c".repeat(64), offset: "0", limit: 201 }))).toThrow();
     expect(() => parseCatalogueMessage("Create", JSON.stringify({ schemaVersion: 1, policyVersion: "wp043-v1", serverIncarnation: "a".repeat(32), admissionSerial: "1", sourceName: "../x.knxprod", declaredBytes: "1", profile: "large", allowLargePackage: false }))).toThrow();

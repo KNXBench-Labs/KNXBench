@@ -209,6 +209,9 @@ pub(super) fn write(
                 row!(writer, ordinal, "unknownConstruct", {package_key:n(key), xpath:&u.xpath, unknown_kind:u.kind.as_str(), name:&u.name, occurrences:U64(u64::from(u.occurrences)), sample:&u.sample});
             }
             for d in &f.diagnostics {
+                // Preserve the generated terminal master-ordinal selector too:
+                // it is declaration identity, not detail to redact. ArtifactWriter
+                // admits only the bounded typed selector, never arbitrary XPath.
                 row!(writer, ordinal, "diagnostic", {package_key:n(key), diagnostic_kind:d.kind().as_str(), archive_path:d.archive_path(), xml_path:d.xml_path(), detail:d.detail(), occurrences:U64(d.occurrences())});
             }
         } else {

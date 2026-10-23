@@ -148,11 +148,29 @@ export function validateStatus(s: T.Status): void {
 function archivePath(value: string): boolean {
   return utf8Bytes(value) <= 8192 && value.length > 0 && !/[\\:\p{Cc}\p{Cf}]/u.test(value) && value.split("/").every(part => part !== "" && part !== "." && part !== "..");
 }
+function publicXmlName(value: string): boolean {
+  return utf8Bytes(value) <= 512 && /^[A-Za-z_]/.test(value) && !/[^A-Za-z0-9_.:-]/.test(value);
+}
+function publicXmlPath(path: string, masterDeclaration: boolean): boolean {
+  if (utf8Bytes(path) > 8192) return false;
+  let structural = path;
+  if (masterDeclaration) {
+    const identity = policy.masterDeclarationIdentity;
+    const at = path.lastIndexOf(identity.selectorPrefix);
+    if (at < 0 || !path.endsWith("]")) return false;
+    structural = path.slice(0, at);
+    const ordinal = path.slice(at + identity.selectorPrefix.length, -1);
+    if (!/^[1-9]/.test(ordinal) || /[^0-9]/.test(ordinal) || ordinal.length > 7 || BigInt(ordinal) > BigInt(identity.maximumOrdinal) || !identity.elements.includes(structural.slice(structural.lastIndexOf("/") + 1))) return false;
+  }
+  return structural === "/" || structural.startsWith("/") && structural.slice(1).split("/").every(publicXmlName);
+}
 function publicRecord(r: T.PublicRecord): void {
   const obj = r as unknown as Record<string, unknown>;
   for (const key of ["path", "archivePath", "indexPath", "memberPath"]) if (typeof obj[key] === "string" && !archivePath(obj[key])) fail();
-  const xmlName = (value: string) => utf8Bytes(value) <= 512 && /^[A-Za-z_][A-Za-z0-9_.:-]*$/.test(value);
-  for (const key of ["xmlPath", "xpath"]) if (typeof obj[key] === "string" && (utf8Bytes(obj[key]) > 8192 || obj[key] !== "/" && (!(obj[key] as string).startsWith("/") || !(obj[key] as string).slice(1).split("/").every(xmlName)))) fail();
+  const xmlName = publicXmlName;
+  const masterDeclaration = r.kind === "diagnostic" && policy.masterDeclarationIdentity.diagnosticKinds.includes(r.diagnosticKind);
+  if (masterDeclaration && obj.occurrences !== "1") fail();
+  for (const key of ["xmlPath", "xpath"]) if (typeof obj[key] === "string" && !publicXmlPath(obj[key], masterDeclaration && key === "xmlPath")) fail();
   if (r.kind === "unknownConstruct" && !xmlName(r.name)) fail();
   if (r.kind === "idConflict" && (![r.table, r.id].every(v => utf8Bytes(v) <= 512 && /^[A-Za-z0-9_][A-Za-z0-9_.-]*$/.test(v)) || u64(r.occurrence) === 0n)) fail();
   const fields: Partial<Record<T.PublicRecord["kind"], string[]>> = { program: ["name"], unknownConstruct: ["sample"], diagnostic: ["detail"], provenance: ["alias"], baggageDeclaration: ["declarationId", "name", "targetPath", "installOnImport", "timeInfo", "fileVersion", "detail"] };

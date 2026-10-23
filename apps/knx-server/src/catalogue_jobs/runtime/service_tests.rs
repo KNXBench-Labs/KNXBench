@@ -11,6 +11,7 @@ use std::sync::mpsc as sync;
 use tower::ServiceExt;
 
 mod managed_failures;
+mod master_diagnostics;
 
 // Compiled/executed with the final integrated candidate, not a separate branch
 // campaign. Unlike the refusing fixtures below, this uses the actual app mount,
@@ -50,7 +51,7 @@ async fn production_mount_installs_with_complete_artifacts_and_a_real_retained_b
     let incarnation = runtime.admission().unwrap().server_incarnation;
     let mut zip = zip::ZipWriter::new(std::io::Cursor::new(Vec::new()));
     for (name, bytes) in [
-        ("knx_master.xml", br#"<KNX xmlns="http://knx.org/xml/project/20"><MasterData><Manufacturers><Manufacturer Id="M-0001" Name="Example"/></Manufacturers></MasterData></KNX>"#.as_slice()),
+        ("knx_master.xml", master_diagnostics::MASTER),
         ("M-0001/Hardware.xml", br#"<KNX xmlns="http://knx.org/xml/project/20"><ManufacturerData><Manufacturer RefId="M-0001"><Hardware><Hardware Id="H-1" Name="Example"/></Hardware></Manufacturer></ManufacturerData></KNX>"#.as_slice()),
         ("M-0001/M-0001_A-0001.xml", br#"<KNX xmlns="http://knx.org/xml/project/20"><ManufacturerData><Manufacturer RefId="M-0001"><ApplicationPrograms><ApplicationProgram Id="M-0001_A-0001-01-0001" Name="Private caption" ApplicationNumber="1" ApplicationVersion="1" ProgramType="ApplicationProgram" MaskVersion="MV-07B0" PeiType="0" LoadProcedureStyle="MergedProcedure" DefaultLanguage="en-US"><Static/></ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#.as_slice()),
         ("M-0001/Baggages.xml", br#"<KNX xmlns="http://knx.org/xml/project/20"><ManufacturerData><Manufacturer RefId="M-0001"><Baggages><Baggage Id="B-1" Name="payload.bin" TargetPath=".." InstallOnImport="false" Extra="opaque"><FileInfo TimeInfo="" Version="1"/></Baggage><Baggage Id="B-2" Name="payload.bin" TargetPath=""/></Baggages></Manufacturer></ManufacturerData></KNX>"#.as_slice()),
@@ -138,9 +139,11 @@ async fn production_mount_installs_with_complete_artifacts_and_a_real_retained_b
     let page: serde_json::Value = serde_json::from_slice(&page).unwrap();
     let rows = page["records"].as_array().unwrap();
     assert_eq!(rows.len() as u64, preview.artifact.records.get());
+    master_diagnostics::assert_public(rows);
     assert_eq!(rows.iter().filter(|r| r["kind"] == "program").count(), 1);
     let program = rows.iter().find(|r| r["kind"] == "program").unwrap();
     assert_eq!(program["id"], "M-0001_A-0001-01-0001");
+    assert_eq!(program["status"], "new");
     assert!(program["name"].is_null());
     assert_eq!(program["withheld"][0]["rawUtf8Bytes"], "15");
     assert_eq!(
@@ -242,6 +245,7 @@ async fn production_mount_installs_with_complete_artifacts_and_a_real_retained_b
         page["records"].as_array().unwrap().len() as u64,
         result.artifact.records.get()
     );
+    master_diagnostics::assert_public(page["records"].as_array().unwrap());
     assert_eq!(page["records"][0]["kind"], "resultSummary");
     assert_eq!(
         page["records"][0]["cataloguePageBytes"],
@@ -274,6 +278,21 @@ async fn production_mount_installs_with_complete_artifacts_and_a_real_retained_b
         .workspace()
         .unwrap();
     let job_dir = workspace.lock().unwrap().directory().to_path_buf();
+    master_diagnostics::assert_raw_unchanged(&job_dir);
+    let retained: Vec<u8> = state
+        .product_db
+        .as_ref()
+        .unwrap()
+        .with_read(|conn| {
+            conn.query_row(
+                "SELECT bytes FROM source_file WHERE source_path='knx_master.xml'",
+                [],
+                |row| row.get(0),
+            )
+        })
+        .unwrap()
+        .unwrap();
+    assert_eq!(retained, master_diagnostics::MASTER);
     let raw = job_dir.join("preview.raw");
     assert!(raw.is_file());
     // Every literal/encoded/private alias is denied by the real static mount.

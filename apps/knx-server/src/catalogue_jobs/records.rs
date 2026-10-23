@@ -570,6 +570,50 @@ fn xml_name(s: &str) -> bool {
         .is_some_and(|b| b.is_ascii_alphabetic() || b == b'_')
         && bytes.all(|b| b.is_ascii_alphanumeric() || matches!(b, b'_' | b'.' | b'-' | b':'))
 }
+// This is a generated declaration address, never an XPath evaluator. Preserve
+// the producer's complete identity; only its terminal canonical ordinal is
+// admitted, for the two declaration diagnostic kinds and five producer elements.
+fn public_xml_path(path: &str, master_declaration: bool) -> bool {
+    if path.len() > 8192 {
+        return false;
+    }
+    let structural = if master_declaration {
+        let Some((structural, ordinal)) = path
+            .strip_suffix(']')
+            .and_then(|p| p.rsplit_once("[@master-ordinal="))
+        else {
+            return false;
+        };
+        if ordinal.is_empty()
+            || ordinal.starts_with('0')
+            || !ordinal.bytes().all(|b| b.is_ascii_digit())
+            || ordinal
+                .parse::<usize>()
+                .ok()
+                .is_none_or(|n| n > knx_productdb::master_provenance::MAX_MASTER_DECLARATIONS)
+            || !matches!(
+                structural.rsplit('/').next(),
+                Some(
+                    "DatapointType"
+                        | "DatapointSubtype"
+                        | "FunctionType"
+                        | "FunctionPoint"
+                        | "SpaceUsage"
+                )
+            )
+        {
+            return false;
+        }
+        structural
+    } else {
+        path
+    };
+    structural == "/"
+        || (structural.starts_with('/')
+            && structural[1..]
+                .split('/')
+                .all(|part| part.len() <= 512 && xml_name(part)))
+}
 fn validate_public_paths(row: &Value) -> Result<(), FailureKind> {
     let bad = FailureKind::PublicProjectionRefused;
     let kind = row["kind"].as_str().ok_or(bad)?;
@@ -587,11 +631,17 @@ fn validate_public_paths(row: &Value) -> Result<(), FailureKind> {
             }
         }
     }
+    let master_declaration = kind == "diagnostic"
+        && matches!(
+            row["diagnosticKind"].as_str(),
+            Some("master-identity-collision" | "malformed-master-declaration")
+        );
+    if master_declaration && (row["occurrences"] != "1" || !row["xmlPath"].is_string()) {
+        return Err(bad);
+    }
     for key in ["xpath", "xmlPath"] {
         if let Some(path) = row.get(key).and_then(Value::as_str) {
-            if path.len() > 8192
-                || (path != "/" && (!path.starts_with('/') || !path[1..].split('/').all(xml_name)))
-            {
+            if !public_xml_path(path, master_declaration && key == "xmlPath") {
                 return Err(bad);
             }
         }

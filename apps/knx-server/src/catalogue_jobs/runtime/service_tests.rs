@@ -10,6 +10,8 @@ use http_body_util::BodyExt;
 use std::sync::mpsc as sync;
 use tower::ServiceExt;
 
+mod managed_failures;
+
 // Compiled/executed with the final integrated candidate, not a separate branch
 // campaign. Unlike the refusing fixtures below, this uses the actual app mount,
 // managed catalogue, B10, durable publisher and complete report adapter.

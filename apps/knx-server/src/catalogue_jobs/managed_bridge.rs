@@ -361,6 +361,17 @@ impl Session {
                 outcome: CommitOutcome::Unknown,
                 evidence: if failure == Some(FailureKind::WorkerFailed) {
                     CommitEvidence::WorkerLost
+                } else if matches!(
+                    witness,
+                    Some(
+                        db::LiveCommitTrace::LiveCommitInvoked
+                            | db::LiveCommitTrace::LiveCommitReturnedOk { autocommit: false }
+                    )
+                ) {
+                    // An ordinary ambiguous COMMIT stays ambiguous even when
+                    // its subsequent rollback settled. Only a precommit trace
+                    // can describe this Unknown as unresolved rollback.
+                    CommitEvidence::AmbiguousCommit
                 } else {
                     CommitEvidence::UnresolvedRollback
                 },
@@ -493,13 +504,15 @@ impl Session {
                     .map_err(|_| FailureKind::CleanupFailed)?;
             }
         }
-        if let Some(w) = native.workspace.as_mut() {
-            w.release_closed_ownership()
-                .map_err(|_| FailureKind::CleanupFailed)?;
-        }
+        // Persist the native retention veto in the durable owner before the
+        // closed native inventory hands off its recovery-file ownership.
         if retain && workspace.recovery_publication().is_some() {
             workspace
                 .retain_recovery()
+                .map_err(|_| FailureKind::CleanupFailed)?;
+        }
+        if let Some(w) = native.workspace.as_mut() {
+            w.release_closed_ownership()
                 .map_err(|_| FailureKind::CleanupFailed)?;
         }
         if !retain {

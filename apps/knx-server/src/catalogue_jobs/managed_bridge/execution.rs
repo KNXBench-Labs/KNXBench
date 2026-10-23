@@ -383,10 +383,15 @@ impl CatalogueJobExecution for Session {
         let retain = matches!(
             native.receipt.witness().map(|w| w.trace()),
             Some(db::LiveCommitTrace::LiveCommitReturnedOk { autocommit: true })
-        ) || native
-            .execution
-            .as_ref()
-            .is_none_or(|e| e.commit() != db::CommitEvidence::NotCommitted);
+        ) || native.execution.as_ref().is_none_or(|e| {
+            // NotCommitted alone is not disposal authority: restoration can
+            // fail after a successful rollback and require native Retain.
+            e.artifacts() != db::ArtifactDisposition::Dispose
+                || e.commit() != db::CommitEvidence::NotCommitted
+                || e.rollback() == db::RollbackDisposition::Unresolved
+                || e.cleanup_failed()
+                || !e.native_settled()
+        });
         let cleanup = self.settle_workspace(&mut native, workspace, retain);
         if cleanup.is_err() {
             workspace.quarantine();

@@ -14,8 +14,11 @@ observation-order pitfall; the bounded contract records its pinned-runtime scope
 
 Owning retained evidence: 731 library passes, 772 integration passes/31 ignored,
 two 13-test examples, two doctests and a separate ignored opt-in measurement.
-Headers/layout/lint/privacy checks pass. Maintained dependent branch/integrated
-gates and publication remain pending. Full B08/configuration receipt, sticky
+Headers/layout/lint/privacy checks pass. Source `7decb65ce` published on
+main-first `9d4014638`; immediate local/tracking/live equality verified. Maintained
+branch and integrated gates each pass 14/14, 3883 Rust passes/151 ignored across
+24 binary results and 97/97 selected corpus, with exact stage/proof/freeze/data
+guards checked. Full B08/configuration receipt, sticky
 unwind witness/composed same-gate B10, durable artifacts/routes/lifecycle/UI,
 real large-database/aggregate quotas and WP-19 remain separate.
 

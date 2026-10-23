@@ -178,7 +178,7 @@ impl<'a> ArtifactWriter<'a> {
             return Err(FailureKind::ResultLimit);
         }
         let mut index = [0u8; 32];
-        for (slot, n) in index.chunks_exact_mut(8).zip([
+        for (slot, n) in index.as_chunks_mut::<8>().0.iter_mut().zip([
             self.lengths[0],
             raw.len() as u64,
             self.lengths[1],

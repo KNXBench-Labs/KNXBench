@@ -99,6 +99,27 @@ impl CatalogueOwner {
             .map_err(ControlledOwnerError::Preview)
     }
 
+    pub(crate) fn try_prepare_controlled_owned(
+        &self,
+        source: knx_productdb::managed_apply::AdmittedSource<'_>,
+        gate: &knx_productdb::operation::PublicationGate,
+        workspace: &mut knx_productdb::managed_apply::ApplyWorkspace,
+        publisher: &mut dyn knx_productdb::managed_apply::RecoveryPublisher,
+    ) -> Result<knx_productdb::managed_apply::PreparedPreview, ControlledOwnerError> {
+        gate.checkpoint()
+            .map_err(|_| ControlledOwnerError::Stopped)?;
+        let mut managed = match self.state.try_lock() {
+            Ok(m) => m,
+            Err(std::sync::TryLockError::WouldBlock) => return Err(ControlledOwnerError::Busy),
+            Err(std::sync::TryLockError::Poisoned(_)) => {
+                return Err(ControlledOwnerError::Owner(poisoned()))
+            }
+        };
+        managed
+            .prepare_controlled_owned(source, gate, workspace, publisher)
+            .map_err(ControlledOwnerError::Preview)
+    }
+
     pub(crate) fn try_apply_controlled(
         &self,
         source: knx_productdb::managed_apply::AdmittedSource<'_>,
@@ -106,6 +127,7 @@ impl CatalogueOwner {
         control: &dyn knx_productdb::operation::CommitArbitration,
         workspace: &mut knx_productdb::managed_apply::ApplyWorkspace,
         receipt: &mut knx_productdb::managed_apply::ApplyReceipt,
+        publisher: &mut dyn knx_productdb::managed_apply::RecoveryPublisher,
     ) -> Result<knx_productdb::managed_apply::ApplyExecution, ControlledOwnerError> {
         control
             .gate()
@@ -119,7 +141,7 @@ impl CatalogueOwner {
             }
         };
         let execution = managed
-            .execute_controlled(source, shown, control, workspace, receipt)
+            .execute_controlled(source, shown, control, workspace, receipt, publisher)
             .map_err(ControlledOwnerError::Bridge)?;
         #[cfg(test)]
         if self

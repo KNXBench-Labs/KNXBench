@@ -222,7 +222,14 @@ fn public_bridge_retains_native_success_outside_its_caught_unwind() {
     workspace.panic_after_commit_for_test();
     let mut receipt = ApplyReceipt::default();
     let result = owner
-        .execute_controlled(source, &shown, &gate, &mut workspace, &mut receipt)
+        .execute_controlled(
+            source,
+            &shown,
+            &gate,
+            &mut workspace,
+            &mut receipt,
+            &mut crate::managed_apply::publication::NativeTestPublisher,
+        )
         .unwrap();
     assert!(result.panicked());
     assert_eq!(result.failure_kind(), Some(ControlledFailureKind::Panicked));

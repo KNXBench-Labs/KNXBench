@@ -214,6 +214,9 @@ impl CatalogueRuntime {
         Ok(())
     }
     async fn expire_terminals(&self) {
+        if let Ok(mut manager) = self.owner.manager.lock() {
+            manager.expire_tombstones();
+        }
         let expired = self
             .owner
             .manager
@@ -232,10 +235,9 @@ impl CatalogueRuntime {
                 && self.reclaim_record(&record).await.is_ok()
             {
                 if let Ok(mut manager) = self.owner.manager.lock() {
-                    if manager.state.terminals.front().is_some_and(|t| {
+                    if let Some(old) = manager.state.terminals.pop_front_if(|t| {
                         t.runtime.as_ref().is_some_and(|r| Arc::ptr_eq(r, &record))
                     }) {
-                        let old = manager.state.terminals.pop_front().unwrap();
                         manager.push_tombstone(old.meta, false);
                     }
                 }
@@ -309,7 +311,9 @@ fn receive_and_preview(
                         return Err(FailureKind::Cancelled);
                     }
                     spool.write(chunk).map_err(|e| match e {
-                        crate::catalogue_jobs::spool::SpoolError::Oversize => FailureKind::UploadLengthMismatch,
+                        crate::catalogue_jobs::spool::SpoolError::Oversize => {
+                            FailureKind::UploadLengthMismatch
+                        }
                         _ => FailureKind::IoFailure,
                     })?;
                 }

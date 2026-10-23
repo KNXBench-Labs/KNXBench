@@ -102,6 +102,7 @@ fn recovery_publication_never_clobbers_and_workspace_disposal_keeps_final_backup
 #[test]
 fn native_sidecars_require_explicit_closed_journal_reconciliation() {
     let (_tmp, mut workspace) = workspace();
+    drop(workspace.create_file("source.part").unwrap());
     drop(workspace.create_file("rehearsal.sqlite").unwrap());
     workspace
         .admit_database_interval("rehearsal.sqlite")
@@ -120,7 +121,11 @@ fn native_sidecars_require_explicit_closed_journal_reconciliation() {
     workspace
         .reconcile_closed_database("rehearsal.sqlite", true)
         .unwrap();
-    workspace.cleanup_transients().unwrap();
+    workspace.cleanup_rehearsal().unwrap();
+    assert!(
+        workspace.directory().join("source.part").is_file(),
+        "closing preview D must preserve the sealed-source role for apply"
+    );
     assert!(!workspace
         .directory()
         .join("rehearsal.sqlite-journal")

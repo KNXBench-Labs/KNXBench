@@ -11,9 +11,10 @@ use rustix::fs::{openat, renameat_with, Mode, OFlags, RenameFlags, CWD};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-use super::artifacts::{ArtifactError, ArtifactRoot, INVENTORY_BYTES};
+use super::artifacts::INVENTORY_BYTES;
 use super::dto::{self, FailureKind};
 use super::strict::Sha256 as WireSha256;
+use super::{ArtifactError, ArtifactRoot};
 use super::{Handle, U64};
 
 const MAX_FILES: usize = 26;
@@ -166,10 +167,19 @@ impl JobWorkspace {
 
     /// Actual native handles must already be closed. Exact known transient
     /// files only; report mirrors/manifests and final user backups are retained.
+    pub fn cleanup_rehearsal(&mut self) -> Result<(), ArtifactError> {
+        self.cleanup_selected_transients(true)
+    }
+
     pub fn cleanup_transients(&mut self) -> Result<(), ArtifactError> {
+        self.cleanup_selected_transients(false)
+    }
+
+    fn cleanup_selected_transients(&mut self, rehearsal_only: bool) -> Result<(), ArtifactError> {
         let names: Vec<_> = self
             .files
             .keys()
+            .filter(|n| !rehearsal_only || n.starts_with("rehearsal.sqlite"))
             .filter(|n| {
                 role(n).is_some_and(|r| {
                     matches!(
@@ -353,12 +363,59 @@ impl JobWorkspace {
             .map_err(|_| ArtifactError::Io)
     }
 
+    pub(super) fn catalogue_parent(&self) -> Option<&Path> {
+        self._root.root().parent()
+    }
+
     pub fn directory(&self) -> &Path {
         &self.directory
     }
     pub fn handle(&self) -> Handle {
         self.handle
     }
+    pub(super) fn record_native_publication(
+        &mut self,
+        name: &str,
+        file: &File,
+        synced: bool,
+    ) -> Result<RecoveryPublication, ArtifactError> {
+        if name.is_empty() || name.len() > 512 || name.contains(['/', '\\', ':']) {
+            return Err(ArtifactError::RootInvalid);
+        }
+        let expected = self
+            .files
+            .get("recovery.part.sqlite")
+            .ok_or(ArtifactError::RootInvalid)?;
+        let identity = OwnedIdentity::read(file, self.uid)?;
+        let target = self
+            ._root
+            .root()
+            .parent()
+            .ok_or(ArtifactError::RootInvalid)?
+            .join(name);
+        let actual = OwnedIdentity::read(&open_read(&target)?, self.uid)?;
+        if !expected.identity.same_inode(&identity) || !identity.same_inode(&actual) {
+            return Err(ArtifactError::RootInvalid);
+        }
+        let meta = file.metadata().map_err(|_| ArtifactError::Io)?;
+        let publication = RecoveryPublication {
+            name: name.into(),
+            device: identity.device,
+            inode: identity.inode,
+            bytes: identity.bytes,
+            identity: metadata_identity(&meta),
+            state: if synced { "published" } else { "quarantined" }.into(),
+            sync_acknowledged: synced,
+        };
+        self.files.remove("recovery.part.sqlite");
+        self.recovery = Some(publication.clone());
+        if !synced {
+            self.quarantined = true;
+        }
+        self.persist()?;
+        Ok(publication)
+    }
+
     pub fn recovery_publication(&self) -> Option<&RecoveryPublication> {
         self.recovery.as_ref()
     }
@@ -614,7 +671,8 @@ impl JobWorkspace {
     /// Publishes only a closed, fully validated B10 recovery destination. The
     /// caller's validation receipt must precede this call; publication itself
     /// never treats SQLite Done or a pathname as a validation witness.
-    pub fn publish_recovery(
+    #[cfg(test)]
+    fn publish_recovery(
         &mut self,
         catalogue: &Path,
         seconds: u64,

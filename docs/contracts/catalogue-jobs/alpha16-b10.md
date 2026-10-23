@@ -22,7 +22,7 @@ ManagedCatalogue::prepare_controlled(
 ManagedCatalogue::execute_controlled(
     &mut self, source: AdmittedSource<'_>, shown: &PreparedPreview,
     control: &dyn CommitArbitration, workspace: &mut ApplyWorkspace,
-    receipt: &mut ApplyReceipt,
+    receipt: &mut ApplyReceipt, publisher: &mut dyn RecoveryPublisher,
 ) -> Result<ApplyExecution, ApplyBridgeError>;
 ```
 
@@ -61,7 +61,7 @@ controlled_apply::prepare<C: Clock>(
 controlled_apply::apply<C: Clock>(
     owner: &CatalogueOwner, source: AdmittedSource<'_>,
     control: &ManagedApplyControl<C>, workspace: &mut ApplyWorkspace,
-    receipt: &mut ApplyReceipt,
+    receipt: &mut ApplyReceipt, publisher: &mut dyn RecoveryPublisher,
 ) -> Result<ApplyExecution, BridgeError>;
 ```
 
@@ -110,12 +110,31 @@ already handed out. Metadata handoff does not repair health or permit retry.
 This slice supplies actual managed apply, native evidence and server same-gate
 commit arbitration. It does **not** implement HTTP authentication/DTO assembly,
 spool/result caps, durable artifact/sidecar inventory, recovery publication,
-reclamation, worker/join/drain ownership, UI or shutdown. In particular the
-minimal workspace retains a validated **private** B; it does not yet acknowledge
-P8 file-and-directory-synced listed backup publication before W DML. Production
-route enablement must compose that separate runtime/artifact requirement rather
-than relabel this private backup as published. The runtime owner must coordinate
-any required typed publication seam with ProductDB before enabling the route.
+reclamation, worker/join/drain ownership, UI or shutdown. The original B10-only commit retained a private B and lacked the P8 pre-live
+barrier. The subsequent runtime extension closes THAT dependency, not all WP-04.3:
+`execute_controlled` and the server apply bridge now require a `RecoveryPublisher`.
+Its allocated-FD callback runs before SQLite opens D/B. After actual copy
+validation, inspected S settlement and D rehearsal close, orchestration invokes
+publication before its first W DML. `ValidatedRecovery::publish_to` performs
+no-replace rename and file+both-directory sync; it alone constructs the opaque
+non-Clone `PublishedRecovery` receipt checked against the exact destination id.
+A backup-publication refusal explicitly rolls back the unchanged reservation.
+The same required publisher also receives the complete actual live install and
+checked actual W page-byte extent through `admit_result`, before COMMIT claim.
+A report-admission refusal takes inspected rollback; it cannot commit without
+its complete admitted report. The server adapter requires an explicit
+`JobResultAdmission` implementation, not a default no-op report sink. A moved copy with a
+failed acknowledgement remains in its native owner with its actual new path.
+
+`JobRecoveryPublisher` supplies the real server adapter and bounded durable
+inventory acknowledgement; it publishes in the existing listed-backup grammar.
+`ApplyWorkspace::in_owned_directory` and `prepare_controlled_owned` /
+`controlled_apply::prepare_owned` connect that same leased job workspace to
+initial-preview allocation. `native_handles_closed` and
+`release_closed_ownership` permit release only after inspected native close;
+failed handles remain retained. Quiet APIs are unchanged. The final runtime
+session/status/full-record adapter, authenticated route/path fencing and UI
+mounting remain parent-owned integration, not completion established here.
 
 No durable outcome database, generic task registry, automatic restore/retry,
 process-loss/power-loss/panic-abort/double-panic guarantee or global quota claim

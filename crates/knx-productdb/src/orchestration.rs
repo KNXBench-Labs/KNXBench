@@ -29,12 +29,24 @@ pub(crate) struct OperationContext<'a> {
 }
 
 /// The minimal seam through which the orchestrator allocates fresh, disposable
-/// destinations. The server's `ArtifactRoot` implements it later; this trait
+/// destinations. The public controlled facade adds its required server publisher; this trait
 /// returns role-bound Fresh receipts, never bare connections. Its fixed D/B
 /// inventory owns every create-new allocation, including failed initialization;
 /// validation and consuming errors never become the only owner of a handle.
 pub(crate) trait CatalogueArtifacts {
     fn inventory(&mut self) -> &mut ArtifactInventory;
+    fn admit_result(
+        &mut self,
+        _: &crate::ProductFileInstall,
+        _: u64,
+    ) -> Result<(), OrchestrationError> {
+        Ok(())
+    }
+    /// Mandatory on the public controlled facade; old private test adapters do
+    /// not publish and are not a production construction route.
+    fn publish_recovery(&mut self) -> Result<(), OrchestrationError> {
+        Ok(())
+    }
     /// Synthetic native-fault seam; never part of production construction.
     #[cfg(test)]
     fn before_source_open(&mut self, _path: &std::path::Path) {}
@@ -165,6 +177,8 @@ pub(crate) enum OrchestrationError {
     ApplyAttemptExhausted,
     /// Control refused or supplied a claim for another operation's gate.
     CommitClaimRefused,
+    RecoveryPublication(crate::managed_apply::RecoveryPublicationError),
+    ResultAdmission(crate::managed_apply::RecoveryPublicationError),
     WriterConfiguration(WriterConfigurationError),
     Growth(crate::catalogue_growth::GrowthError),
     PreviewSettlement(Box<PreviewFailure>),
@@ -247,6 +261,12 @@ impl std::fmt::Display for OrchestrationError {
             }
             OrchestrationError::ApplyAttemptExhausted => {
                 write!(f, "catalogue apply attempt serial exhausted")
+            }
+            OrchestrationError::ResultAdmission(_) => {
+                write!(f, "complete result artifact admission refused")
+            }
+            OrchestrationError::RecoveryPublication(_) => {
+                write!(f, "durable recovery publication refused")
             }
             OrchestrationError::CommitClaimRefused => {
                 write!(f, "catalogue live commit claim refused")

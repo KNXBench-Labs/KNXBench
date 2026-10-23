@@ -1,4 +1,4 @@
-//! Unwired catalogue job admission/replay manager; no production route, spool or worker execution.
+//! Bounded catalogue job ownership, supervised service and artifact protocol.
 
 mod strict;
 
@@ -7,6 +7,7 @@ pub use strict::{Capability, Incarnation, JobId, Sha256, U64};
 mod artifacts;
 pub mod http;
 pub mod persistence;
+pub mod publication;
 pub mod records;
 pub mod runtime;
 pub use dto::{CatalogueDrain, DrainCleanup, DrainCommit, DrainEnd};
@@ -16,7 +17,7 @@ mod owner;
 mod spool;
 mod status;
 
-pub use artifacts::ARTIFACT_ROOT_NAME;
+pub use artifacts::{ArtifactError, ArtifactRoot, ARTIFACT_ROOT_NAME};
 
 use std::collections::VecDeque;
 
@@ -134,6 +135,7 @@ struct TerminalRecord {
 
 struct Tombstone {
     meta: RecordMeta,
+    expires_at: std::time::Instant,
     /// True when created by an explicit dispose; false when created by count
     /// eviction (an evicted outcome never pretends DELETE succeeded).
     disposed: bool,
@@ -183,6 +185,7 @@ impl CatalogueJobManager {
 
     /// Admits or replays a create request, classifying in contract order.
     pub fn create(&mut self, capability: &Capability, body: CreateBody) -> CreateOutcome {
+        self.expire_tombstones();
         if body.incarnation != self.state.incarnation {
             return CreateOutcome::IncarnationChanged;
         }
@@ -279,6 +282,7 @@ impl CatalogueJobManager {
 
     /// Disposes a terminal or tombstoned job; active jobs are never disposed.
     pub fn dispose(&mut self, handle: &Handle, capability: &Capability) -> DisposeOutcome {
+        self.expire_tombstones();
         if self.state.admission == AdmissionState::ArtifactStoreUnavailable {
             return DisposeOutcome::ArtifactStoreUnavailable;
         }
@@ -347,13 +351,26 @@ impl CatalogueJobManager {
         self.state.admission = AdmissionState::ArtifactStoreUnavailable;
     }
 
+    fn expire_tombstones(&mut self) {
+        let now = std::time::Instant::now();
+        self.state.tombstones.retain(|t| t.expires_at > now);
+    }
+
     fn push_tombstone(&mut self, meta: RecordMeta, disposed: bool) {
+        let Some(expires_at) =
+            std::time::Instant::now().checked_add(std::time::Duration::from_secs(3600))
+        else {
+            self.exhaust();
+            return;
+        };
         if self.state.tombstones.len() >= MAX_TOMBSTONES {
             self.state.tombstones.pop_front();
         }
-        self.state
-            .tombstones
-            .push_back(Tombstone { meta, disposed });
+        self.state.tombstones.push_back(Tombstone {
+            meta,
+            disposed,
+            expires_at,
+        });
     }
 
     /// Classifies a retained create against exact capability then metadata.

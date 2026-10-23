@@ -57,12 +57,45 @@ native connection remains owned by B10 even on close/initialization failure.
 `admit_database_interval` checks exact sidecar absence. After explicit native
 close, `reconcile_closed_database` records an actual surviving non-hot journal
 only when B10 has proved that disposition; WAL/SHM refuse. Never register a
-source/W sidecar. `publish_recovery` consumes only a completed, closed, validated
-recovery destination and publishes by no-replace rename and file/two-directory
-sync acknowledgement, before live DML. Published user backups are excluded from
-workspace disposal. B10 needs a narrow create-new-descriptor registration seam
-if its current destination allocator does not expose one; no second copy engine
-is authorised.
+source/W sidecar. `publication::JobRecoveryPublisher::new(&mut JobWorkspace, catalogue_path,
+upload_sha, &mut dyn JobResultAdmission)` implements the actual ProductDB `RecoveryPublisher`. Its
+`allocated` callback registers the real create-new FD and checks exact sidecar
+absence before SQLite opens D/B. Its publication callback uses the opaque
+`ValidatedRecovery::publish_to` primitive, records the actual final identity,
+and acknowledges the bounded inventory. Only that primitive can mint
+`PublishedRecovery`; no caller boolean or no-op executor can satisfy the B10
+barrier. A moved copy whose sync/inventory acknowledgement fails stays owned
+and quarantined, and the callback refuses before live DML.
+
+Use `ApplyWorkspace::in_owned_directory(job.directory().to_path_buf())`, not a
+second private subdirectory. `controlled_apply::prepare_owned` provides the
+initial descriptor-registration seam; `controlled_apply::apply` now REQUIRES
+`&mut dyn RecoveryPublisher` after the outer receipt argument. The public
+`ManagedCatalogue::execute_controlled` also requires it. The actual orchestration
+calls it after validated copies, explicit source settlement and D rehearsal
+close, before setting `live_started` or issuing any W DML. It consumes/checks the
+opaque receipt against the exact B destination id and frozen identity. There
+is no default production publication acknowledgement.
+
+After inspected native close, call `ApplyWorkspace::release_closed_ownership`;
+it refuses any retained native connection instead of dropping a failed close.
+The durable job inventory then owns file cleanup. Initial-preview D must be
+explicitly closed/released and removed with `JobWorkspace::cleanup_rehearsal`
+(which preserves the source role) before the apply workspace can create a
+fresh D at the same fixed basename. Never drop a failed native workspace just
+to free that name. Published committed/unknown backups remain outside retention
+disposal. `retain_recovery` persists that disposition; only a proved notCommitted
+running-job path may use the exact-identity removal method.
+
+The required result-admission callback receives the ACTUAL complete live
+`ProductFileInstall` and checked W page-byte extent before the commit claim.
+Implement `JobResultAdmission` with the full ordered record producer, seal through
+`ArtifactWriter`, and call `JobStatus::admit_artifact` before returning success.
+Retain the descriptor, measured extent and typed refusal outside worker unwind.
+That makes post-COMMIT status construction metadata-only. The callback must not
+publish a nonnull public result until real `commitReturnedOk` evidence exists.
+The supplied native-publication test uses an explicitly report-unverified native
+observer; it is NOT a full-report adapter or a production default.
 
 ## Artifact sink
 
@@ -86,8 +119,58 @@ The source remains a whole bounded raw Vec for the existing importer. These are
 named upload/report/paging bounds, not aggregate process-RSS, native SQL cache,
 filesystem quota, hard cancellation-latency or power-loss guarantees.
 
-## Integration status
+## Exact HTTP and lifetime entry points
 
-This document is updated with exact callable handler names and verified focused
-checks in the final handoff. The final combined B10 caller, parent auth/path
-mounting and UI/lifecycle acceptance remain parent-owned until integrated.
+`http::router(Arc<CatalogueRuntime>) -> axum::Router` mounts only these operations:
+
+| Method | Path below `/api/catalog/update/jobs` | Handler |
+| --- | --- | --- |
+| GET | `/admission` | `http::admission` |
+| POST | empty | `http::create` |
+| PUT | `/{id}/upload` | `http::upload` |
+| GET | `/{id}` | `http::status` |
+| GET | `/{id}/details` | `http::details` |
+| POST | `/{id}/apply` | `http::apply` |
+| POST | `/{id}/cancel` | `http::cancel` |
+| DELETE | `/{id}` | `http::dispose` |
+
+Handlers require exact single capability/handle headers, bounded strict JSON,
+media/encoding/length admission and the exact canonical detail query. Responses
+are JSON/no-store; parent middleware must not compress this lane. Raw NDJSON has
+no route. Upload/body ownership transfers to the registered supervisor before
+awaiting its response; disconnect does not abort the worker. DELETE tombstoning
+also completes in that supervisor, not in the now-disposable HTTP waiter.
+
+The lifetime owner keeps its original join/deadline/second-signal semantics.
+Its additive weak runtime attachment forwards close to the actual session and
+wakes the supervisor. Drain now samples real job commit/cleanup metadata instead
+of always saying `notApplicable/complete`; a retained committed witness is never
+downgraded by poisoned handle bookkeeping. No lifecycle mounting files were edited.
+The existing rustix dependency enables `process` only to validate actual euid
+ownership; no dependency/version or lockfile addition was needed.
+
+## Remaining parent integration / acceptance
+
+The service and native publication barrier are callable, but no production
+`CatalogueJobBridge`/`CatalogueJobExecution` implementation or HTTP mount is
+provided by this lane. Parent must compose the actual B10 control, owner,
+receipt, prepared preview and full Status/record producer with these interfaces.
+There is no production fallback or fake executor. In particular, the session
+must implement Receiving/idle/working/Ready expiry on the advertised monotonic
+origin (including a Receiving job whose upload never starts), exact-command
+replay, same-gate cancellation/COMMIT and failure/poison metadata handoff. The
+source receive task itself enforces actual EOF, 60-second idle and one-hour
+overall upload bounds. The bare B10 constructor's working lease must not silently
+replace the Receiving lease or shorten the new working lease after upload.
+
+The full record producer must flatten every real current/historical report,
+version, conflict, provenance and baggage row into the accepted schema, validate
+cross-row parent/count completeness, and use the shared artifact budget and
+comparator. It must implement the mandatory precommit result callback; the
+native barrier tests do not certify report completeness. Initial-preview and
+apply native owners must remain retained until explicit close/release succeeds.
+
+Parent also owns authentication/path/static exclusion before mounting, AppState
+attachment, desktop/standalone lifetime mounting, UI integration, combined source
+review and the single final release-candidate gate. No aggregate RSS/disk,
+power-loss, large-database throughput or full WP-04.3 completion is claimed here.

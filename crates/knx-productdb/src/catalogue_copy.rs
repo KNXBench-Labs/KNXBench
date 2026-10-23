@@ -210,6 +210,7 @@ pub(crate) use destination::{
 pub(crate) use destination::{
     DestinationCleanup, DestinationError, DestinationStage, RehearsalDestination,
 };
+pub use destination::{PublishedRecovery, RecoveryPublicationError, ValidatedRecovery};
 
 #[cfg(test)]
 mod tests;

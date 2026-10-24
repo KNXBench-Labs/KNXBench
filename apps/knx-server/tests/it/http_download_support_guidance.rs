@@ -117,3 +117,106 @@ async fn missing_database_is_not_an_unsupported_device() {
     assert_eq!(status, StatusCode::CONFLICT);
     assert_eq!(body["kind"], "downloadProductDataMissing");
 }
+
+async fn get(app: axum::Router, uri: &str) -> (StatusCode, Value) {
+    let response = app
+        .oneshot(Request::builder().uri(uri).body(Body::empty()).unwrap())
+        .await
+        .unwrap();
+    let status = response.status();
+    let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    (status, serde_json::from_slice(&bytes).unwrap())
+}
+
+/// The synthetic KL-006 witness of `knx_testsupport`, with or without its
+/// `EtsDownloadPlugin` declaration, behind a server.
+#[allow(clippy::field_reassign_with_default)]
+fn plugin_app(dir: &std::path::Path, plugin: bool) -> axum::Router {
+    use knx_testsupport::vendor_plugin as fixture;
+    let products = knx_productdb::open_and_migrate(&dir.join("p.sqlite")).unwrap();
+    let extension = if plugin {
+        fixture::declaration()
+    } else {
+        String::new()
+    };
+    knx_productdb::ingest_file(
+        &products,
+        "M-FFF6/A.xml",
+        fixture::program_xml(&extension).as_bytes(),
+    )
+    .unwrap();
+    knx_productdb::ingest_file(
+        &products,
+        "M-FFF6/Hardware.xml",
+        fixture::HARDWARE_XML.as_bytes(),
+    )
+    .unwrap();
+    let mut state = knx_server::AppState::default();
+    state.product_db = Some(
+        knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap(),
+    );
+    let mut project = Project::new(Language("en".into()));
+    project.devices.insert(DeviceInstance {
+        address: Some(fixture::TARGET.parse().unwrap()),
+        product_ref: fixture::PRODUCT_REF.into(),
+        program_ref: fixture::HARDWARE2PROGRAM_REF.into(),
+        ..device("")
+    });
+    *state.project.lock().unwrap() = Some(project);
+    knx_server::app(Arc::new(state), None)
+}
+
+/// KL-006: plan refuses every scope, the group-address-only partial
+/// included, with the shared category; readiness agrees.
+#[tokio::test]
+async fn a_declared_download_plugin_is_refused_for_every_scope_and_readiness_agrees() {
+    use knx_testsupport::vendor_plugin as fixture;
+    let dir = tempfile::tempdir().unwrap();
+    let app = plugin_app(dir.path(), true);
+    for partial in [
+        None,
+        Some(json!({"parameters": true, "groupAddresses": false})),
+        Some(json!({"parameters": false, "groupAddresses": true})),
+        Some(json!({"parameters": true, "groupAddresses": true})),
+    ] {
+        let mut request = json!({"address": fixture::TARGET});
+        if let Some(partial) = &partial {
+            request["partial"] = partial.clone();
+        }
+        let (status, body) = post(app.clone(), "/api/device-download/plan", request).await;
+        assert_eq!(
+            status,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "{partial:?}: {body}"
+        );
+        assert_eq!(body["kind"], "downloadPreparationRefused", "{body}");
+        assert_eq!(body["category"], "vendor-download-plugin", "{body}");
+        let error = body["error"].as_str().unwrap();
+        assert!(
+            error.contains("KL-006") && error.contains(fixture::PLUGIN_GUID),
+            "{error}"
+        );
+    }
+    let (status, body) = get(app, "/api/device-readiness").await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let row = &body["devices"][0];
+    assert_eq!(row["readiness"], "unsupported", "{body}");
+    assert_eq!(row["category"], "vendor-download-plugin", "{body}");
+    assert!(row["detail"].as_str().unwrap().contains("KL-006"), "{body}");
+
+    // Without the declaration the same program plans, and grades, as before.
+    let dir = tempfile::tempdir().unwrap();
+    let app = plugin_app(dir.path(), false);
+    let (status, body) = post(
+        app.clone(),
+        "/api/device-download/plan",
+        json!({"address": fixture::TARGET, "partial": {"parameters": false, "groupAddresses": true}}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["support"]["level"], "untested", "{body}");
+    let (_, body) = get(app, "/api/device-readiness").await;
+    assert_eq!(body["devices"][0]["readiness"], "untested", "{body}");
+}

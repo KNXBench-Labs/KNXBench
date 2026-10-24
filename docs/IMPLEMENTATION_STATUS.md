@@ -12,6 +12,30 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Declared ETS download plug-ins refuse every download scope — delivered (24 October 2026)
+
+A read-only comparison against a real ETS-programmed device showed that a
+program declaring an ETS download plug-in (`Static/Extension/@EtsDownloadPlugin`)
+does not hold its product's base data, yet readiness graded it `untested`. The
+pre-write backup stopped complete and parameter downloads, but a
+group-address-only partial download would have written. Such a program is now
+refused for every download scope (complete, parameters, group addresses, both,
+and a backup restore) with the new category `vendor-download-plugin`, whose
+detail names KL-006 and the declared GUID. A mask or procedure-style refusal
+keeps precedence, deterministically. CLI download/readiness/coverage,
+`/api/device-download/plan`, `/api/device-readiness` and the web download tab
+share one rule (`knx_productdb::download_plan::check_download_plugin`, asked by
+`prepare_device_download` and the offline planner). Read-only comparison and
+comparison adoption use `prepare_device_download_for_reading`; the byte-order
+probe uses `prepare_byte_order_probe`; diagnostics retain their independent
+identity/memory-evidence service. These read-only paths are unaffected and are
+not coupled to one another. The declaration is read from the retained source
+XML; no product-database schema change. EX-IM legacy plug-in rows remain unmapped
+([KL-006](limitations/KL-006-devices-dependent-on-vendor-plug-ins.md)).
+Synthetic regressions exercise the public restore and comparison-adoption
+preparations directly; CLI restore refuses before loopback gateway traffic, and
+the full HTTP comparison succeeds through an in-memory read-only simulator.
+
 ## Desktop save dialogs no longer open inside the AppImage mount (24 October 2026)
 
 Found by a native WP-11 run of the published `v0.1.0-alpha.16` AppImage: all
@@ -28,6 +52,7 @@ symlinked alias of the mount, the home fallback and the empty case. A native
 re-run of a fixed build is still pending. Details:
 [AppImage launcher contract](APPIMAGE_LAUNCHER.md#save-dialog-start-folder-24-october-2026),
 [KL-182](limitations/KL-182-desktop-silent-downloads.md).
+
 
 ## Alpha 16 published pre-release — public artifacts and website verified (24 October 2026)
 

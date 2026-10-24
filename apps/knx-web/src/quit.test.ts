@@ -1,3 +1,4 @@
+/** Verify explicit native close approval without bypassing unsaved-change checks. */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const native = vi.hoisted(() => ({

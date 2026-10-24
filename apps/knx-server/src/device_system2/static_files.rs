@@ -1,4 +1,5 @@
-//! Static fallback must not publish private recovery through an overlapping
+//! Static fallback guards private recovery evidence against overlapping roots.
+//!
 //! root or symlink. Local-owner filesystem replacement races are not a sandbox.
 use axum::{
     extract::Request,

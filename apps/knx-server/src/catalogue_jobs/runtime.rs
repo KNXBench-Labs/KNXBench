@@ -1,4 +1,4 @@
-//! Supervised bounded catalogue service. A real B10 bridge is mandatory.
+//! Supervised bounded catalogue jobs retain their worker and artifact ownership.
 
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::atomic::{AtomicBool, Ordering};

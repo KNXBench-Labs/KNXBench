@@ -1,4 +1,5 @@
-//! Strict bounded HTTP adapter. Mount ONLY inside the existing authenticated,
+//! Strict bounded catalogue HTTP handlers use the existing authenticated router.
+//!
 //! path-fenced router; this module deliberately does not invent auth or CORS.
 
 use axum::body::Body;

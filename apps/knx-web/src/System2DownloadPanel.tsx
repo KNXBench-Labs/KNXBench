@@ -1,4 +1,4 @@
-/** Server-owned experimental download. Mounting/polling is read-only; cleanup never cancels. */
+/** Present server-owned experimental downloads and explicit original-state recovery. */
 import { useEffect, useRef, useState } from "react";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import * as api from "./system2DownloadApi";

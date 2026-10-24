@@ -312,6 +312,16 @@ enum DefaultProducts {
 #[test]
 fn product_database_readers_leave_the_default_product_database_untouched() {
     let case = Case::new(SAVED);
+    // A loaded backup of an application no catalogue holds: `device restore`
+    // reads it and then plans against the product database, sending nothing.
+    let backup_dir = tempfile::tempdir().unwrap();
+    let backup = backup_dir.path().join("restore.backup.json");
+    std::fs::write(
+        &backup,
+        r#"{"format":1,"kind":"knxbench-device-backup","taken":"2026-10-24T00:00:00Z","device":"1.1.1","mask":"0701","manufacturer":"0083","application":"M-0083_A-0000-00-0000","partial":null,"plan_steps":[],"load_states":[{"machine":"application-program","state":"Loaded"}],"regions":[]}"#,
+    )
+    .unwrap();
+    let backup = backup.to_str().unwrap();
     // Each command with the exit code and a line it prints for an empty
     // catalogue, so a usage error, a panic or a refused `query_only` write
     // cannot pass for a read.
@@ -347,6 +357,44 @@ fn product_database_readers_leave_the_default_product_database_untouched() {
             vec!["device", "readiness", "--project", case.project()],
             0,
             "download readiness per project device",
+        ),
+        // The device commands plan from the catalogue before any bus
+        // contact; address 1.1.1 is not in the project, so each stops at
+        // that plan (the documentation gateway is never reached).
+        (
+            vec!["device", "download", "1.1.1", "--project", case.project()],
+            1,
+            "no device in the project has address 1.1.1",
+        ),
+        (
+            vec![
+                "device",
+                "compare",
+                "1.1.1",
+                "--project",
+                case.project(),
+                "--gateway",
+                "203.0.113.250:3671",
+            ],
+            1,
+            "nothing to compare for device 1.1.1",
+        ),
+        (
+            vec![
+                "device",
+                "byte-order-probe",
+                "1.1.1",
+                "--project",
+                case.project(),
+                "--preview",
+            ],
+            1,
+            "nothing to probe for device 1.1.1",
+        ),
+        (
+            vec!["device", "restore", backup],
+            1,
+            "M-0083_A-0000-00-0000: not in the product database",
         ),
     ];
     for (args, code, line) in &commands {

@@ -101,7 +101,7 @@ fn execute(args: &[String]) -> Result<(), String> {
         (p, DeviceId(id))
     };
     let products = if let Some(path) = values.get("--product-db") {
-        Some(crate::open_products_db(Some(path))?)
+        Some(crate::open_products_db_for_reading(Some(path))?)
     } else {
         None
     };

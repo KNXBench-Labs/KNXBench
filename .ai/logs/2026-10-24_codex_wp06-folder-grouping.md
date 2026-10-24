@@ -48,8 +48,13 @@ behavior is unchanged. Parent independently verifies byte identities; the review
 performed text-based source review, not hash computation.
 The maintained plan selects the web gate including its affected default browser
 closure and communication/table-columns production configurations, not Rust or
-private corpus stages. No final gate, integration, publication or cleanup claimed.
-The parent owns handover and delivery; source remains frozen pending review.
+private corpus stages. Integrated source `e6f227c4` passes the maintained11/11
+package stages and35/35web stages: 4,285 Vitest tests,805functional/63exclusive
+browser cases,68communication/150table-column production cases. Ordered proofs,
+frozen inputs and clear touched/unchecked user-data guards verified; exact live
+main readback confirms publication. These overlapping suites are not summed.
+No Rust/corpus lane, native GUI, hardware or new release-artifact claim.
+The grouping claim is released; compact evidence preservation/cleanup follows.
 
 ## Safety and hygiene
 

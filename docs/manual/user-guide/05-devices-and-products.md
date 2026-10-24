@@ -855,8 +855,8 @@ immediately: clicking a filter from a dirty field can trigger that existing blur
 save, but filtering adds no write of its own. Pending edits prevent duplicate
 starts; a delayed result cannot republish into a removed editor/another device.
 
-**By saved project folder** *(implemented, review pending; not in a release
-yet)* is a third view next to By channel and All objects. It groups objects by
+**By saved project folder** *(source delivered on 24 October 2026; not in a
+published release artifact yet)* is a third view next to By channel and All objects. It groups objects by
 the folder saved in the imported project. Each heading shows the folder ids and
 the full saved path, so two folders with the same id under different channels
 stay apart. Objects without a usable saved folder share one last group,

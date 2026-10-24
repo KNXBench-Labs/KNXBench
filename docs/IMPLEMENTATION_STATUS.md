@@ -36,7 +36,7 @@ chain and says why a folder is withheld (ambiguous, unidentified node,
 unresolved tree, module object, inactive). Projection-only: no domain, storage
 schema, import or command change; placements survive native save/reopen and
 undo because the retained row does. No product label is looked up.
-**Folder grouping view: IMPLEMENTED, REVIEW/GATE PENDING, not delivered.** The
+**Folder grouping view delivered on `main` as `e6f227c4` (24 October).** The
 table offers *By saved project folder* next to By channel (default) and All
 objects; groups join on the opaque key, the rest falls into one fallback group,
 and each heading shows the full saved path

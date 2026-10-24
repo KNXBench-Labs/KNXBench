@@ -211,8 +211,15 @@ The other items in this paragraph stay open.
 
 ## Saved project folder grouping (24 October 2026)
 
-**Status: IMPLEMENTED, REVIEW/GATE PENDING, not delivered.** Independent
-review, the maintained package gate and publication are still open.
+**Delivered on `main` as `e6f227c4` (24 October 2026).** Independent Claude
+whole-feature review and focused correction review accept with zero
+Critical/Important findings. The integrated maintained gate passes 11/11 stages,
+including the 35-stage web gate: 4,285 Vitest tests, 805 functional and 63
+exclusive selected browser cases, plus 68 communication and 150 table-column
+production cases. These suites overlap; their totals are not added as unique
+coverage. Ordered proofs, frozen inputs, clear user-data guards and exact live
+main readback are verified. No Rust/corpus lane was selected for this web-only
+change. Source delivery, not an updated Alpha 16 artifact or native/Orca proof.
 
 **Bounded contract amendment, recorded before implementation.** The table gets
 a third, read-only view over the existing `project_folder` projection. Nothing

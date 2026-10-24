@@ -24,7 +24,7 @@ release is not implied. No receiver/bus compatibility is claimed.
 
 <a id="up258-system-2-candidate-source-20-october-2026"></a>
 
-## Alpha 16 — published software scope, remaining website and evidence limits
+## Alpha 16 — published software scope and remaining evidence limits
 
 **24 October 2026 snapshot:** bounded software outcomes and four final local amd64
 artifacts have parent acceptance at frozen runtime/test source
@@ -57,8 +57,9 @@ publication and public asset/checksum/digest/revision readback are complete,
 including native Docker amd64/arm64 revisions. This is not a public-container
 runtime, ARM64 functional or AppImage GUI/FUSE probe.
 [Public verification record](../evidence/release-alpha16-2026-10-24.json). Final
-Pages deployment and live website verification of this docs/site successor remain
-pending. The older dated inventory below is not a new audit or
+Pages deployment and live HTTP byte verification passed at docs/site revision
+`83376509`: 40/40 files and 4/4 aliases matched, with no exclusions. This is not
+independent browser-rendering acceptance. The older dated inventory below is not a new audit or
 closure of every limitation.
 [Source-bound evidence matrix](../goals/alpha16-release-plan-2026-10-23.md#current-acceptance-disposition--24-october-2026),
 [published scope and separate public/local artifact identities](../releases/alpha16.md).

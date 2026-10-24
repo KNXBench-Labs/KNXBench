@@ -10,7 +10,9 @@
 > `86b4a7fc68b3d3206c00511b14f41e025e33de4d`; their hashes are not CI-built
 > download hashes. Extra local ARM64 preacceptance remains deferred. This is a
 > pre-release, not a stability or physical-device certification.
-> **Final Pages/live website verification of the docs/site successor is pending.**
+> **Final Pages/live website verification passed** at docs/site revision
+> `83376509e05269fcae8c09e17a49fcf586eed693` (run `40086558178`): all
+> 40 deployed files and four aliases matched live HTTP bytes, with no exclusions.
 
 The Alpha 16 scope connects experimental configured System-2 download,
 cancellable catalogue updates, comparison adoption and catalogue-authored native

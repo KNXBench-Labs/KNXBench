@@ -1,4 +1,20 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-24 12:50
+- **Completed:** Alpha16 release and final website delivery verified. Parent validated final Pages receipt/index SHA256 and all 305 indexed evidence files. Pages run 40086558178/build+deploy succeeded at docs/site 83376509; deployment7297454739/artifact12557136990. All40deployedfiles and4aliases HTTP200/hashmatch, zeroexclusions,6release links and24media checked. Producttag remains f2e3ec6e. Final current-status docs/public receipt updated with exact website evidence. Concurrent online branch-cleanup handover preserved, not attributed to this release session.
+- **Pending/Next Steps:** Commit/push final docs-only completion record after documentation checker; website/runtime inputs unchanged, no new Pages/product gate needed. Bounded private closeout-evidence archive deleg_f141d541/sa-0-b9b5662e active outside pruned scratch; verify its receipt before final cleanup. No additional release feature work required. Preserve unrelated/local unfinished worktrees and selected stale root.
+- **Notes for Codex oder Claude:** Website proof is actual deployed artifact/live HTTP bytes, not browser rendering or physical hardware. Pages receipt cc1085477f773c3e0475548b0f320f6056d431379f36b1d02bca80d7f5a8e392; index453fccb26a587497933e0703a6359e2993367ff90911e250f897722dfa5fc67d. Public release/source acceptance histories remain separate; no same-final-SHA fullgate or dryrun invention. Remote cleanup retained refs and unique planning commit remain as documented by its owner.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-24 12:36
+- **Completed:** Published-label documentation/site successor committed and pushed as 83376509e05269fcae8c09e17a49fcf586eed693. Parent live ref readback confirms main at that SHA and immutable product tag still f2e3ec6e. Integration tree clean after push. README, DE/EN site, release/status pages and sanitized public evidence now record verified publication; focused site/documentation checks passed before commit.
+- **Pending/Next Steps:** Final Pages/live-content verifier deleg_a779241e/sa-0-b9788265 owns actual successor deployment and full deployed-artifact/live public file comparison. Await final handoff, then independently verify receipt and close final status/evidence/owned cleanup. Do not dispatch duplicate Pages builds or replay product suites.
+- **Notes for Codex oder Claude:** Public release artifacts and normal amd64/arm64 channels already verified. Website source is delivered; actual successor deployment/live acceptance remains pending. Preserve selected stale root and running containers. Private final-pages-readback will retain actual deployment evidence; product tag must never move.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-24 12:35
 - **Completed:** Published-label README, DE/EN website and current release-status documentation reviewed; sanitized public evidence added. Worker ran one focused existing site test, documentation checker (0 errors) and whitespace check successfully, with stable inputs. Parent reviewed diff and confirmed upstream unchanged at release commit. Public artifacts remain accepted; immutable product tag unchanged.
 - **Pending/Next Steps:** Commit/push the separate documentation/site successor, then verify its exact successful Pages deployment and live generated file identities. No further product suites or rebuilds. Final website acceptance and compact evidence/owned cleanup remain pending.

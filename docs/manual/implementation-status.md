@@ -36,8 +36,9 @@ no remote dry run is claimed. Both normal publication workflows and public
 artifact/checksum/digest/revision readback are complete, including exact native
 amd64/arm64 OCI revisions and version/`latest` index equality at readback.
 [Public verification record](../evidence/release-alpha16-2026-10-24.json). Final
-Pages deployment/live website verification of this docs/site successor remains
-pending; public artifact acceptance does not establish website completion.
+Pages run `40086558178` deployed docs/site revision `83376509`; 40/40 files and
+4/4 aliases matched live HTTP bytes, with no exclusions. This is deployment and
+HTTP byte verification, not independent browser-rendering acceptance.
 [Current evidence matrix](../goals/alpha16-release-plan-2026-10-23.md#current-acceptance-disposition--24-october-2026)
 and [published release scope](../releases/alpha16.md).
 

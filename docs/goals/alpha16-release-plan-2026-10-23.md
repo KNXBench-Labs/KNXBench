@@ -46,7 +46,8 @@ Alpha 16. Parent owns server/UI integration after the backend handoff.
 `f2e3ec6e4b227b49dc74fdba4cdadc3ab91e7c3d`. Bundled local amd64 acceptance,
 parent documentation review, both normal publication workflows and public
 artifact/checksum/digest/revision readback are complete. Final Pages deployment
-and live generated-content verification of the docs/site successor remain pending.**
+and live generated-content verification passed at docs/site revision `83376509`:
+40/40 files and 4/4 aliases matched, with no exclusions.**
 [Public verification record](../evidence/release-alpha16-2026-10-24.json).
 Runtime/tests are frozen at `86b4a7fc68b3d3206c00511b14f41e025e33de4d`.
 Application versions are aligned to `0.1.0-alpha.16`; inspected source constants
@@ -86,7 +87,8 @@ public-artifact criterion, not final website/handover/owned-cleanup acceptance.
 Parent review of the bounded release/manual/roadmap/contract-status reconciliation
 is complete for A16-08. The parent confirmed publication preflight and exercised
 the conditional owner Go; actual publication and public artifact readback are
-complete. Final website acceptance remains pending. The original A16-09
+complete. Final website acceptance also passed; the public record identifies its
+exact deployment and byte/hash scope. The original A16-09
 row, acceptance body and exit checklist below remain visible as historical
 criteria, with their current disposition explicitly amended here rather than
 silently checked or rewritten.

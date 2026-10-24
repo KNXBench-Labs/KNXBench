@@ -32,9 +32,11 @@ mod bus_monitor_export;
 mod download_delivery;
 mod download_handler;
 mod native_json_export;
+mod save_directory;
 mod session_log_export;
 mod web_process;
 use bus_monitor_export::write_bus_capture;
+use save_directory::with_default_directory;
 use session_log_export::write_session_log;
 use web_process::{CloseDecision, SharedSupervisor, WebProcessSupervisor};
 
@@ -95,9 +97,7 @@ async fn save_session_log<R: tauri::Runtime>(
     contents: String,
 ) -> Result<bool, String> {
     tauri::async_runtime::spawn_blocking(move || {
-        let destination = app
-            .dialog()
-            .file()
+        let destination = with_default_directory(app.dialog().file())
             .add_filter("JSON", &["json"])
             .set_file_name("session-log.json")
             .blocking_save_file();
@@ -120,9 +120,7 @@ async fn save_bus_monitor_capture<R: tauri::Runtime>(
     contents: String,
 ) -> Result<bool, String> {
     tauri::async_runtime::spawn_blocking(move || {
-        let destination = app
-            .dialog()
-            .file()
+        let destination = with_default_directory(app.dialog().file())
             .add_filter("JSON", &["json"])
             .set_file_name("bus-monitor-capture.json")
             .blocking_save_file();

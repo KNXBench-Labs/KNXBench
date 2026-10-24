@@ -142,6 +142,48 @@ upstream changes, update revision and digest together, re-run the mutation and
 launcher tests, rebuild and smoke-test both backends. A Tauri CLI upgrade must
 also re-verify the before-bundle hook and local-tool reuse mechanism.
 
+## Save dialog start folder (24 October 2026)
+
+**Finding (found by a native WP-11 run of the published `v0.1.0-alpha.16`
+AppImage on a Wayland session with the in-process GTK 3 file chooser).** Every
+native save dialog (project Save As and other in-app downloads, session log,
+bus monitor capture) opened inside the image's read-only mount
+(`/tmp/.mount_<id>/usr`). None of the three `tauri-plugin-dialog` save dialogs
+set a folder, so GTK used the process working directory, which was
+`$APPDIR/usr`. Tauri's bundler copies a prebuilt `apprun-old` `AppRun` into the
+AppDir ([bundler source](https://github.com/tauri-apps/tauri/blob/tauri-cli-v2.11.4/crates/tauri-bundler/src/bundle/linux/appimage/linuxdeploy.rs));
+the observed directory matches AppImageKit's `AppRun.c`, which changes into
+`$APPDIR/usr` before executing the application. That the prebuilt binary is
+built from exactly this source was not separately verified.
+
+**Fix.** `apps/knx-desktop/src-tauri/src/save_directory.rs` chooses the start
+folder for all three dialogs (`set_directory` only when a folder is found):
+
+1. `OWD`, the launcher's original working directory, when `APPDIR` is set;
+2. otherwise the current directory;
+3. otherwise the home directory;
+4. otherwise nothing, leaving GTK's default.
+
+Each candidate must be an existing absolute directory and, after resolving
+symbolic links, must not lie inside `APPDIR`. A launch from the image's own
+mount therefore falls back to the home directory instead of reopening the mount.
+Unit tests in that module cover these cases with temporary directories.
+
+**What the runtime exports (verified in source, not guessed).** The type-2
+runtime's `src/runtime/runtime.c` (AppImage/type2-runtime `main`, commit
+`fedfad51`) exports `APPIMAGE`, `ARGV0` and `APPDIR` (the mount directory) on
+the normal FUSE path. It then sets `OWD` from `getcwd()` when that call
+succeeds (1024-byte buffer) and executes `$APPDIR/AppRun`. The
+`--appimage-extract-and-run` path sets `APPIMAGE`, `ARGV0` and `APPDIR` (the
+extraction directory) but **not** `OWD`. AppImageKit's older `runtime.c`
+behaves the same way. `OWD` is therefore optional, and in extract-and-run mode
+the policy falls through to the home directory: the working directory there is
+also `$APPDIR/usr` and is rejected. Outside an AppImage (`APPDIR` unset) an
+inherited `OWD` belongs to another program's launch and is ignored.
+
+This change is unit-tested and gated. A native re-run of a fixed AppImage has
+not been recorded here yet.
+
 ## Verification
 
 Focused automated checks:
@@ -251,6 +293,9 @@ unchanged. Evidence and the source/artifact manifest are kept locally as
 store; the implementation is not yet committed, merged or published.
 
 ## Primary-source findings (2026-10-07)
+
+- [type2-runtime `runtime.c` at `fedfad51`](https://github.com/AppImage/type2-runtime/blob/fedfad51acc2860b2916a1eef32ba4a500ff31ef/src/runtime/runtime.c): `APPIMAGE`/`ARGV0`/`APPDIR` on both launch paths, `OWD` only on the mounted path (added 2026-10-24).
+- [AppImageKit `AppRun.c`](https://github.com/AppImage/AppImageKit/blob/939ff4d4c033caa0170d0cac643098b5b5664528/src/AppRun.c): changes into `$APPDIR/usr` before executing the application (added 2026-10-24).
 
 - [Tauri CLI 2.11.4 bundle hook](https://github.com/tauri-apps/tauri/blob/tauri-cli-v2.11.4/crates/tauri-cli/src/bundle.rs): the hook runs before bundler settings/tool preparation.
 - [Tauri local-tool selection](https://github.com/tauri-apps/tauri/blob/tauri-cli-v2.11.4/crates/tauri-cli/src/interface/mod.rs) and [Cargo metadata invocation](https://github.com/tauri-apps/tauri/blob/tauri-cli-v2.11.4/crates/tauri-cli/src/interface/rust.rs): selected target directory, not a guessed `target/release`.

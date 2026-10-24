@@ -15,6 +15,18 @@ The fallback when private staging fails remains reported and non-overwriting.
 The recorded X11 check is not new Wayland, failure-dialog or companion-window
 acceptance. Evidence: [download handler](../../apps/knx-desktop/src-tauri/src/download_handler.rs).
 
+## Save dialog start folder (24 October 2026)
+
+Found by a native WP-11 run of the published `v0.1.0-alpha.16` AppImage: the
+native save dialog for downloads (and the session-log and bus-monitor save
+dialogs) opened inside the read-only image mount (`/tmp/.mount_<id>/usr`),
+because no dialog set a folder and the AppImage's working directory is
+`$APPDIR/usr`. The dialogs now start in the AppImage's original working
+directory (`OWD`), the current directory or the home directory, never inside
+`APPDIR`; details and runtime sources are in the
+[AppImage launcher contract](../APPIMAGE_LAUNCHER.md#save-dialog-start-folder-24-october-2026).
+Unit-tested and gated; a native re-run of a fixed build is not recorded yet.
+
 This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.

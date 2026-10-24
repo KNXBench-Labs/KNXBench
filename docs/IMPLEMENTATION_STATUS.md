@@ -12,6 +12,23 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Desktop save dialogs no longer open inside the AppImage mount (24 October 2026)
+
+Found by a native WP-11 run of the published `v0.1.0-alpha.16` AppImage: all
+three native save dialogs (downloads/project Save As, session log, bus monitor
+capture) opened in the read-only `/tmp/.mount_<id>/usr`, the process working
+directory set by the AppImage's `AppRun`. A new pure helper in
+`apps/knx-desktop/src-tauri/src/save_directory.rs` now gives each dialog a start
+folder: the runtime's `OWD` (only with `APPDIR` set), else the current
+directory, else home, each only if it is an existing directory outside `APPDIR`;
+otherwise GTK's default stays. `OWD` export was verified in the type-2 runtime
+source (mounted path only, not `--appimage-extract-and-run`). Unit tests cover
+valid/missing/non-directory `OWD`, the rejected in-image working directory, a
+symlinked alias of the mount, the home fallback and the empty case. A native
+re-run of a fixed build is still pending. Details:
+[AppImage launcher contract](APPIMAGE_LAUNCHER.md#save-dialog-start-folder-24-october-2026),
+[KL-182](limitations/KL-182-desktop-silent-downloads.md).
+
 ## Alpha 16 published pre-release — public artifacts and website verified (24 October 2026)
 
 Runtime/test source is frozen at `86b4a7fc68b3d3206c00511b14f41e025e33de4d`.

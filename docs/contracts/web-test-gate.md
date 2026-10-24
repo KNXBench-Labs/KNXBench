@@ -175,13 +175,66 @@ metadata is never classified as a failed command.
 
 Peak RSS is the Linux wait4 high-water accounting for the waited subprocess tree,
 not the sum of concurrently resident Chromium workers; do not use it to claim total
-suite memory consumption. Installed dependency versions are bound, not every
+suite memory consumption. CPU/RSS include the target's same-PID Python exec
+trampoline, not just the requested executable; supervisor CPU is not included.
+Wall time also includes supervisor startup and cleanup. These figures are not
+directly comparable with old direct-exec runner receipts. A three-run diagnostic
+`/bin/true` probe recorded about 0.029–0.030 CPU seconds through the trampoline
+versus 0.0004–0.0006 directly; this demonstrates startup overhead, not a broad
+application or browser benchmark. Re-establish baselines with the same runner.
+Installed dependency versions are bound, not every
 byte of node_modules or a maliciously modified system tool. No universal machine
 attestation is claimed. Host load is recorded; performance remains host-dependent.
 
-SIGTERM/keyboard interruption terminates only the owned child process group,
+SIGTERM/keyboard interruption terminates only the owned stage process tree,
 keeps a failed checkpoint, releases held leases and cleans the owned short temp
-directory. SIGKILL/host failure can leave an incomplete receipt; it is never green.
+directory. The measured runner requires Linux child-subreaper and pidfd support
+before creating an attempt, including a real self-pidfd signal-zero probe. Each
+stage command runs below a dedicated child-subreaper supervisor. That process
+has no unrelated children, so every direct child it adopts remains stage-owned
+even after clearing its environment or becoming a zombie. The outer runner uses
+an inherited unguessable owner token to cover interruption while the supervisor
+itself is being spawned. Both layers bind every owned PID to `/proc` start time,
+follow kernel ancestry, signal only exact identities through pidfds with bounded
+TERM/KILL escalation and reap them. The same cleanup handles unexpected
+leftovers after a normal stage exit; Playwright normally stops its `webServer`
+itself, so there is then nothing to signal.
+
+Handled interruption signals are deferred across process creation/identity
+registration and every cleanup pass in both layers. A same-PID exec trampoline
+restores the caller's signal mask before the supervisor or stage command runs.
+Normal-completion cleanup stays inside the exception guard and may be retried
+idempotently; pending cancellation is delivered after TERM/KILL/reap, before a
+successful stage can be recorded. A target wait report is accepted only when
+its supervisor also exits zero.
+
+**Forcible supervisor death is not recoverable in general.** SIGKILL cannot be
+handled or deferred. If the exclusive supervisor is forcibly killed, an outer
+non-atomic `/proc` scan can miss the ancestry of a detached child whose environment
+was scrubbed, or of an already-zombie child. Such children can survive or remain
+unreaped; no complete cleanup guarantee applies after supervisor SIGKILL or host
+failure. The receipt remains unsuccessful. The runner must not claim all adopted
+children as a fallback, because some belong to unrelated concurrent work.
+
+**Detached Playwright server cleanup (25 October 2026).** Killing only the stage
+leader's process group left `npm exec vite --config vite.fixtures.config.ts`
+and its `node` child alive when Playwright placed the server in another session.
+`test_sigterm_cleans_descendant_in_a_new_session` creates that boundary with a
+SIGTERM-ignoring grandchild, interrupts the stage and requires the adopted child
+to be absent rather than zombie. Further regressions cover an already-zombie
+descendant and a detached child that clears its environment. Pre-existing
+runner children and children started independently after stage attachment sit
+outside the supervisor boundary; signal-waiting regressions prove neither
+receives even SIGTERM. Interruption during `Popen` discovery is also covered
+before the receipt PID exists, including an already-exited supervisor whose
+environment can no longer identify it. Late normal-completion regressions send
+real SIGTERM/SIGINT to the outer runner after arranging a valid non-atomic scan
+that misses the detached, environment-scrubbed child's ancestry. They require the
+supervisor to finish TERM/KILL/reap despite forwarded cancellation, verify the
+child is absent (not zombie), leave an unrelated signal waiter untouched and
+keep the receipt unsuccessful. Repeated-signal variants also interrupt outer
+cleanup; cancellation is deferred rather than abandoning the ownership boundary.
+No process is selected by command text.
 
 **Interrupt at the PID checkpoint (17 October 2026).** A stage records its
 child's PID in the receipt before waiting. That checkpoint used to sit *before*

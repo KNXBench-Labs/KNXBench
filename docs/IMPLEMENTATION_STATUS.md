@@ -12,6 +12,26 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Diagnostic selector ambiguity remediation (25 October 2026)
+
+Corrected the CLI refusal and usage text: a diagnostic target's individual
+address must uniquely identify one device across the entire project, including
+separate installations. Candidate ids/names identify conflicts; `--device-id`
+does not bypass the unchanged application guard. The built-CLI regression
+follows the address refusal with each listed id, for both diagnostic profiles,
+and checks refusal without UDP traffic, preview output or an archive.
+
+## `knx device diagnostics --device <area.line.device>` selector (24 October 2026)
+
+`knx device diagnostics` selects its device by individual address as an
+alternative to the internal `--device-id`, for the identity and the
+`system2-declared-segments-v1` profiles. Exactly one of the two is required.
+An address no project device has is refused; one several devices share is
+refused with the candidates' ids and names, never picked; a device without an
+address never matches; a malformed address is refused before the project is
+opened. `--simulate` rules are unchanged. CLI only (`apps/knx-cli/src/device_selector.rs`);
+unit tests and binary tests with a silent loopback peer that receives nothing.
+
 ## ZIP bit-6-only flag consistency — source implementation (24 October 2026)
 
 Project and product ZIP admission now refuses bit 6 without bit 0 with a named

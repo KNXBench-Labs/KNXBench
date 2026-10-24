@@ -130,7 +130,7 @@ Each package needs its own scoped claim, review, tests and delivery evidence.
 | [WP-16](#wp-16--empty-directory-zip-integrity) | P1 | Project/product directory and file-stream repairs delivered; encrypted-directory refusal delivered 20 Oct; separate bit-6/AES metadata questions remain conditional after Alpha 16 ([A16 disposition](goals/alpha16-release-plan-2026-10-23.md#remaining-queue-finish-only-admitted-meaningful-slices)) | Empty directories have valid CRC and complete compressed-stream representation. |
 | [WP-17](#wp-17--master-identity-provenance) | P1 | Delivered 19 Oct; product DB v27, ADR-0147, `d18ce65e` | Master identity winners, collisions and malformed declarations have truthful provenance. |
 | [WP-18](#wp-18--device-comparison-shows-what-differs) | P2 | Delivered 19 Oct; no live-device acceptance | Differing bytes are marked in the raw hex rows; the comparison result shows only differences by default, with a toggle for all rows. |
-| [WP-19](#wp-19--sync-from-a-device-comparison) | P2 | Device → project delivered in Alpha 16 as A16-05 (`e4b7b90ec`, `9806f06dd`, `5dc47aece`) for exactly attributed named parameters; group-address/association adoption not admitted; project → device hands over to the existing download; no live-device acceptance ([release note](releases/alpha16.md#device--project-adoption-not-another-download-route)) | A comparison result offers *project → device* (the existing download) or *device → project* (adopt verified values, one undo step). |
+| [WP-19](#wp-19--sync-from-a-device-comparison) | P2 | Device → project delivered in Alpha 16 as A16-05 (`e4b7b90ec`, `9806f06dd`, `5dc47aece`) for exactly attributed named parameters; association-row link adoption added 24 Oct, address/count rows stay unadoptable; project → device hands over to the existing download; no live-device acceptance ([release note](releases/alpha16.md#device--project-adoption-not-another-download-route)) | A comparison result offers *project → device* (the existing download) or *device → project* (adopt verified values, one undo step). |
 | [WP-20](#wp-20--system-family-in-the-device-list) | P2 | Delivered 19 Oct; a mask read from a device stays a separate session fact | The device list shows each device's system family (System 1, 2, 7 or B) from its mask version. |
 
 #### WP-01 — Idempotent unknown evidence
@@ -868,6 +868,22 @@ Project → device opens the existing validated download review; no second write
 route exists. There is no live-device acceptance
 ([exact contract](contracts/alpha16-comparison-adoption.md),
 [release note](releases/alpha16.md#device--project-adoption-not-another-download-route)).
+
+**Association links (24 October 2026):** the owner
+authorised lifting the association block where it is honest. Mask-`0701h`
+association rows now carry typed per-side attribution, and a selection of
+them adopts object ↔ group-address links in the same one undoable edit. It
+needs the complete device association table decoded, every differing row of
+a touched object selected, exactly one existing project group address per raw
+address, exactly one active non-module project object per number (activation
+under the candidate parameters), and the rebuilt association order equal to
+the device's with retained sending flags unchanged. Any unknown, ambiguous or
+missing item refuses the whole adoption; no group address, object or
+individual address is created or changed. Simulator tests cover App, the
+mounted routes and the EN/DE preview. Remaining: address/count rows, System
+1/2/B tables, partial comparisons, module-based objects and group addresses
+duplicated across installations stay unadoptable; no live-device acceptance
+([contract amendment](contracts/alpha16-comparison-adoption.md#association-link-adoption-wp-19-amendment-24-october-2026)).
 
 #### WP-20 — System family in the device list
 

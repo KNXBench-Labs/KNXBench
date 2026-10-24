@@ -4,8 +4,10 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+import signal
 import subprocess
 import sys
+import time
 import unittest
 
 from tools import browser_tmp
@@ -13,6 +15,62 @@ from tools.tests.browser_tmp_fixtures import deep_below_scratch, short_workspace
 
 ROOT = Path(__file__).resolve().parents[2]
 APP = ROOT / 'apps/knx-web'
+STATUS_FIELDS = ('State', 'PPid', 'NSpgid', 'NSsid', 'Threads', 'SigPnd', 'ShdPnd', 'SigBlk', 'SigIgn',
+                 'SigCgt')
+
+
+def process_state(pid: int) -> str:
+    """Kernel view of one process: run state, wait channel and signal masks."""
+    proc = Path('/proc') / str(pid)
+    try:
+        status = dict(line.split(':\t', 1) for line in (proc / 'status').read_text().splitlines()
+                      if ':\t' in line)
+        wchan = (proc / 'wchan').read_text()
+    except OSError as error:
+        return f'{pid}: gone ({error.strerror})'
+    fields = ' '.join(f'{key}={status.get(key, "?").strip()}' for key in STATUS_FIELDS)
+    return f'{pid}: {fields} wchan={wchan or "-"}'
+
+
+def diagnose_stuck_wrapper(wrapper: subprocess.Popen, directory: Path) -> str:
+    """Describe a wrapper that did not finish after SIGTERM, then end it.
+
+    Records the wrapper and every process carrying its temp directory (the
+    child group), aborts them so PYTHONFAULTHANDLER prints their Python
+    stacks, and returns all of it as the failure message.
+    """
+    marker = f'KNXBENCH_BROWSER_TMP_DIR={directory}'.encode()
+    group = []
+    for entry in Path('/proc').iterdir():
+        try:
+            if entry.name.isdigit() and marker in (entry / 'environ').read_bytes().split(b'\0'):
+                group.append(int(entry.name))
+        except OSError:
+            continue
+    states = [f'load={os.getloadavg()}', f'wrapper exit={wrapper.poll()}',
+              process_state(wrapper.pid), *(process_state(pid) for pid in group)]
+    # One at a time, so the stacks do not interleave on the shared stderr pipe.
+    for pid in (wrapper.pid, *group):
+        try:
+            os.kill(pid, signal.SIGABRT)
+        except ProcessLookupError:
+            continue
+        for _ in range(100):
+            if process_state(pid).split(' ', 2)[1] in ('gone', 'State=Z', 'State=X'):
+                break
+            time.sleep(0.03)
+    try:
+        _, stderr = wrapper.communicate(timeout=10)
+    except subprocess.TimeoutExpired:
+        for pid in (wrapper.pid, *group):
+            try:
+                os.kill(pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+        _, stderr = wrapper.communicate(timeout=10)
+    stacks = [line for line in stderr.splitlines() if not line.lstrip().startswith('Binary file')]
+    return ('wrapper pipes still open 10 s after SIGTERM\n' + '\n'.join(states) + '\n'
+            + '\n'.join(stacks)[-6000:])
 
 
 class BrowserTempLaunch(unittest.TestCase):
@@ -159,22 +217,32 @@ class BrowserTempLaunch(unittest.TestCase):
 
     def test_cli_sigterm_waits_for_child_shutdown_before_cleanup(self) -> None:
         import select
-        import signal
         with self.workspace() as tmp:
             work = Path(tmp)
-            program = ('import os,signal,time;'
-                       'signal.signal(signal.SIGTERM,lambda *args:exit(0));'
-                       'print(os.environ["TMPDIR"],flush=True);time.sleep(60)')
+            # The child blocks SIGTERM before it announces itself and then takes
+            # it synchronously. A handler followed by time.sleep lost the signal
+            # when it landed while print() returned: CPython 3.14 runs no pending
+            # handler after a keyword call, so the sleep blocked for a minute.
+            program = ('import os,signal,sys;'
+                       'signal.pthread_sigmask(signal.SIG_BLOCK,{signal.SIGTERM});'
+                       'print(os.environ["TMPDIR"],flush=True);'
+                       'sys.exit(0 if signal.sigtimedwait({signal.SIGTERM},60) else 1)')
+            # PYTHONFAULTHANDLER only acts on fatal signals: on a timeout the
+            # diagnosis aborts both processes and gets their Python stacks.
             child = subprocess.Popen(
                 [sys.executable, str(ROOT / 'tools/browser_tmp.py'), '--base', str(work),
-                 '--run', sys.executable, '-c', program], env=self.clean_environment(),
+                 '--run', sys.executable, '-c', program],
+                env={**self.clean_environment(), 'PYTHONFAULTHANDLER': '1'},
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             try:
                 self.assertTrue(select.select([child.stdout], [], [], 10)[0], 'child did not start')
                 directory = Path(child.stdout.readline().strip())
                 self.assertTrue(directory.is_dir())
                 child.send_signal(signal.SIGTERM)
-                stdout, stderr = child.communicate(timeout=10)
+                try:
+                    stdout, stderr = child.communicate(timeout=10)
+                except subprocess.TimeoutExpired:
+                    self.fail(diagnose_stuck_wrapper(child, directory))
                 self.assertEqual(child.returncode, 0, stderr)
                 self.assertFalse(directory.exists())
                 self.assertTrue(work.exists())

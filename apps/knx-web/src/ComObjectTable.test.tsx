@@ -240,7 +240,149 @@ it("WP-06a: shows a saved project folder by its declared ids and says why anothe
   await v.cleanup();
 });
 
+// WP-06 folder grouping: a third, read-only view keyed by the opaque saved-folder key.
+type Folder = NonNullable<ComObjectNode["project_folder"]>;
+const pb3 = (ch: string): Folder => ({ status: "Assigned", key: `Channel:4:${ch}/Folder:4:PB-3`,
+  path: [{ kind: "Channel", ref_id: ch }, { kind: "Folder", ref_id: "PB-3" }] });
+const VIEWS = ["By channel", "By saved project folder", "All objects"];
+async function show(v: Awaited<ReturnType<typeof render>>, name: string) {
+  const button = v.button(name);
+  expect(button, `view button ${name}`).toBeDefined();
+  await v.click(button);
+}
+const groupHeader = (host: HTMLElement, key: string) => host.querySelector<HTMLTableRowElement>(`tr.com-object-channel[data-group-key="${key}"]`);
+const groupButton = (host: HTMLElement, key: string) => groupHeader(host, key)?.querySelector<HTMLButtonElement>(".com-object-channel-summary") ?? null;
+const F1 = "folder:Channel:4:CH-1/Folder:4:PB-3", F2 = "folder:Channel:4:CH-2/Folder:4:PB-3";
+it("WP-06 folder view: three exclusive views, six columns, disambiguated headings and group keys", async () => {
+  const c = { key: "c-1", kind: "Channel" as const, text: "Kitchen", name: null, number: null, order: 0 };
+  const v = await render([object(1, { activation: "Active", channel: c, project_folder: pb3("CH-1") }),
+    object(2, { project_folder: pb3("CH-2") }), object(3, { project_folder: { status: "ModuleObject", key: null, path: [] } }), object(4)]);
+  // Channel view: unchanged default, its headers name their group key too.
+  expect(VIEWS.map(name => v.button(name)?.getAttribute("aria-pressed"))).toEqual(["true", "false", "false"]);
+  expect([...v.host.querySelectorAll<HTMLElement>("tr.com-object-channel")].map(r => [r.dataset.groupKey, r.dataset.channelKey]))
+    .toEqual([["channel:c-1", "channel:c-1"], ["unassigned", "unassigned"]]);
+  expect(summaryRow(v.host, 1).dataset.groupKey).toBe("channel:c-1");
+  expect(v.host.querySelector(".com-folder-view-note")).toBeNull();
+  await show(v, "By saved project folder");
+  expect(VIEWS.map(name => v.button(name)?.getAttribute("aria-pressed"))).toEqual(["false", "true", "false"]);
+  expect([...v.host.querySelectorAll("thead th")].map(n => n.textContent)).toEqual(["No.", "Name", "Function", "DPT", "Group addresses", "Status"]);
+  const headers = [...v.host.querySelectorAll<HTMLElement>("tr.com-object-channel")];
+  expect(headers.map(r => r.dataset.groupKey)).toEqual([F1, F2, "folder-none"]);
+  // Folder headings never pretend to be evaluated channels.
+  expect(headers.map(r => r.hasAttribute("data-channel-key"))).toEqual([false, false, false]);
+  expect(headers.map(r => r.querySelector("strong")?.textContent)).toEqual(["PB-3", "PB-3", "Without saved project folder"]);
+  // Equal Folder ids stay distinguishable by the always-visible full path.
+  expect(headers.map(r => r.querySelector(".com-object-folder-path")?.textContent ?? null))
+    .toEqual(["Saved path: CH-1 › PB-3", "Saved path: CH-2 › PB-3", null]);
+  expect(headers.map(r => r.querySelector(".com-object-channel-count")?.textContent)).toEqual(["1 / 1 objects", "1 / 1 objects", "2 / 2 objects"]);
+  expect([1, 2, 3, 4].map(id => summaryRow(v.host, id).dataset.groupKey)).toEqual([F1, F2, "folder-none", "folder-none"]);
+  // The row keeps its evaluated channel as a separate fact, and its refusal note.
+  expect(summaryRow(v.host, 1).dataset.channelKey).toBe("channel:c-1");
+  expect(summaryRow(v.host, 3).querySelector(".com-object-project-folder")?.textContent).toBe("No project folder: folders of module objects are not supported yet");
+  expect(v.host.querySelector(".com-folder-view-note")?.textContent).toBe(
+    "Folders as saved in the project at import; later parameter changes are not reflected and the product's folder names are not looked up.");
+  await show(v, "All objects");
+  expect(VIEWS.map(name => v.button(name)?.getAttribute("aria-pressed"))).toEqual(["false", "false", "true"]);
+  expect(v.host.querySelectorAll("tr.com-object-channel")).toHaveLength(0);
+  expect(summaryRow(v.host, 1).hasAttribute("data-group-key")).toBe(false);
+  expect(v.host.querySelector(".com-folder-view-note")).toBeNull();
+  expect(api.setComObjectDpt).not.toHaveBeenCalled();
+  await v.cleanup();
+});
+it("WP-06 folder view: channel and folder collapse states are independent and visibility follows the current view", async () => {
+  // Both objects are unevaluated, so the channel view has only `unassigned`.
+  const v = await render([object(1, { project_folder: pb3("CH-1") }), object(2)]);
+  await v.click(channelButton(v.host));
+  expect(channelButton(v.host).getAttribute("aria-expanded")).toBe("true");
+  await show(v, "By saved project folder");
+  expect(groupButton(v.host, F1)?.getAttribute("aria-expanded")).toBe("false");
+  expect(groupButton(v.host, "folder-none")?.getAttribute("aria-expanded")).toBe("false");
+  for (const id of [1, 2]) expect(summaryRow(v.host, id).hidden, `summary ${id}`).toBe(true);
+  await v.click(groupButton(v.host, F1)!);
+  expect(summaryRow(v.host, 1).hidden).toBe(false);
+  expect(summaryRow(v.host, 2).hidden).toBe(true);
+  await show(v, "By channel");
+  expect(channelButton(v.host).getAttribute("aria-expanded")).toBe("true");
+  for (const id of [1, 2]) expect(summaryRow(v.host, id).hidden, `summary ${id}`).toBe(false);
+  await show(v, "By saved project folder");
+  expect(groupButton(v.host, F1)?.getAttribute("aria-expanded")).toBe("true");
+  expect(groupButton(v.host, "folder-none")?.getAttribute("aria-expanded")).toBe("false");
+  await v.cleanup();
+});
+it("WP-06 folder view: filters reveal and hide folder groups per view and reset restores folder expansion", async () => {
+  const v = await render([object(1, { project_folder: pb3("CH-1") }), object(2, { project_folder: pb3("CH-2") }), object(3)]);
+  await show(v, "By saved project folder");
+  await v.click(groupButton(v.host, F1)!);
+  await v.set(v.input("Search communication objects"), "Object 1");
+  expect(v.host.querySelector(".com-table-count")?.textContent).toBe("1 / 3 objects");
+  expect(groupButton(v.host, F1)?.getAttribute("aria-expanded")).toBe("true");
+  expect(groupHeader(v.host, F2)?.hidden).toBe(true);
+  expect(groupHeader(v.host, "folder-none")?.hidden).toBe(true);
+  await v.click(groupButton(v.host, F1)!);
+  expect(groupButton(v.host, F1)?.getAttribute("aria-expanded")).toBe("false");
+  expect(summaryRow(v.host, 1).hidden).toBe(true);
+  // The same object's channel group is not collapsed by the folder collapse.
+  await show(v, "By channel");
+  expect(channelButton(v.host).getAttribute("aria-expanded")).toBe("true");
+  expect(summaryRow(v.host, 1).hidden).toBe(false);
+  await show(v, "By saved project folder");
+  expect(groupButton(v.host, F1)?.getAttribute("aria-expanded")).toBe("false");
+  await v.click(v.button("Reset filters"));
+  expect(groupButton(v.host, F1)?.getAttribute("aria-expanded")).toBe("true");
+  expect(groupButton(v.host, F2)?.getAttribute("aria-expanded")).toBe("false");
+  expect(groupHeader(v.host, F2)?.hidden).toBe(false);
+  await v.cleanup();
+});
+it("WP-06 folder view: the same editor DOM and draft survive all three views and a folder collapse", async () => {
+  const v = await render([object(1, { dpt: "DPST-1-1", project_folder: pb3("CH-1") }), object(2)]);
+  await openGrouped(v, [1]);
+  const draft = editorRow(v.host, 1).querySelector<HTMLSelectElement>(".dpt-field select")!;
+  await v.set(draft, "DPST-9-2");
+  await show(v, "By saved project folder");
+  expect(editorRow(v.host, 1).hidden).toBe(true);
+  expect(editorRow(v.host, 1).querySelector(".dpt-field select")).toBe(draft);
+  await v.click(groupButton(v.host, F1)!);
+  expect(editorRow(v.host, 1).hidden).toBe(false);
+  expect(editorRow(v.host, 1).querySelector(".dpt-field select")).toBe(draft);
+  await show(v, "All objects");
+  expect(editorRow(v.host, 1).hidden).toBe(false);
+  expect(editorRow(v.host, 1).querySelector(".dpt-field select")).toBe(draft);
+  await show(v, "By saved project folder");
+  await v.click(groupButton(v.host, F1)!);
+  expect(editorRow(v.host, 1).hidden).toBe(true);
+  expect(editorRow(v.host, 1).querySelector(".dpt-field select")).toBe(draft);
+  expect(draft.value).toBe("DPST-9-2");
+  expect(api.setComObjectDpt).not.toHaveBeenCalled();
+  await v.cleanup();
+});
+it.each(["succeeds", "is refused"])("WP-06 folder view: a request that %s while its folder is collapsed runs once and shows its outcome", async (outcome) => {
+  let settle!: (value: unknown) => void;
+  api.setComObjectDpt.mockImplementationOnce(() => new Promise((resolve, reject) => { settle = outcome === "succeeds" ? resolve : () => reject(new Error("refused by server")); }));
+  const v = await render([object(1, { project_folder: pb3("CH-1") })]);
+  await show(v, "By saved project folder");
+  await v.click(groupButton(v.host, F1)!);
+  await v.click(summaryRow(v.host, 1).querySelector<HTMLElement>("summary")!);
+  const editor = editorRow(v.host, 1).querySelector<HTMLSelectElement>(".dpt-field select")!;
+  await v.set(editor, "DPST-1-1");
+  await act(async () => editor.dispatchEvent(new FocusEvent("focusout", { bubbles: true })));
+  await v.click(groupButton(v.host, F1)!);
+  expect(editorRow(v.host, 1).hidden).toBe(true);
+  await act(async () => settle({ ...tree, is_modified: true }));
+  await show(v, "By channel"); await show(v, "By saved project folder");
+  await v.click(groupButton(v.host, F1)!);
+  expect(editorRow(v.host, 1).hidden).toBe(false);
+  expect(editorRow(v.host, 1).querySelector(".dpt-field select")).toBe(editor);
+  expect(api.setComObjectDpt).toHaveBeenCalledTimes(1);
+  if (outcome === "succeeds") expect(v.applied).toHaveBeenCalledTimes(1);
+  else { expect(editorRow(v.host, 1).textContent).toContain("refused by server"); expect(v.applied).not.toHaveBeenCalled(); }
+  await v.cleanup();
+});
+
 tableColumnSmoke([["communication-objects", 6]], async () => { const v = await render([object(1)]); return v; });
+
+tableColumnSmoke([["communication-objects", 6]], async () => {
+  const v = await render([object(1, { project_folder: pb3("CH-1") })]); await show(v, "By saved project folder"); return v;
+});
 
 tableColumnSmoke([["communication-objects", 7]], async () => {
   const v = await render([object(1)]); await v.click(v.button("All objects")); return v;

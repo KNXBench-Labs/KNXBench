@@ -152,13 +152,14 @@ async function start() {
 }
 
 const departures = ["device change", "project change", "project close", "unmount"] as const;
+function renderDeparture(reason: typeof departures[number]) {
+  if (reason === "device change") root.render(<DeviceDiagnosticsEntry project={project} deviceId={10} />);
+  else if (reason === "project change") root.render(<DeviceDiagnosticsEntry project={{ ...project, project_incarnation: 2 }} deviceId={9} />);
+  else if (reason === "project close") root.render(<DeviceDiagnosticsEntry project={null} deviceId={9} />);
+  else root.render(null);
+}
 async function leaveAnalysis(reason: typeof departures[number]) {
-  await act(async () => {
-    if (reason === "device change") root.render(<DeviceDiagnosticsEntry project={project} deviceId={10} />);
-    else if (reason === "project change") root.render(<DeviceDiagnosticsEntry project={{ ...project, project_incarnation: 2 }} deviceId={9} />);
-    else if (reason === "project close") root.render(<DeviceDiagnosticsEntry project={null} deviceId={9} />);
-    else root.render(null);
-  });
+  await act(async () => renderDeparture(reason));
   expect(diagnosticDialog()).toBeNull();
 }
 
@@ -180,18 +181,101 @@ it.each(departures)("cancels a late running start after %s closes the analysis",
   expect(diagnosticDialog()).toBeNull();
 });
 
-it.each(departures)("cancels the current running job exactly once on %s", async (reason) => {
+it.each(departures.flatMap((reason) => ["before commit", "after commit"].map((timing) => ({ reason, timing }))))(
+  "cancels the successful running start exactly once on $reason $timing", async ({ reason, timing }) => {
   vi.useFakeTimers();
-  diagnostics.startDiagnostics.mockResolvedValue(running);
-  diagnostics.cancelDiagnostics.mockResolvedValue({ ...running, cancelRequested: true });
+  const pending = deferred<DiagnosticView>();
+  const ownedRunning = { ...running, token: "c".repeat(64) };
+  diagnostics.startDiagnostics.mockReturnValueOnce(pending.promise);
+  diagnostics.cancelDiagnostics.mockResolvedValue({ ...ownedRunning, cancelRequested: true });
   await act(async () => root.render(<DeviceDiagnosticsEntry project={project} deviceId={9} />));
   await openPreview();
   await start();
-  expect(document.querySelector("[data-diagnostics-cancel]")).not.toBeNull();
-  await leaveAnalysis(reason);
+  if (timing === "before commit") {
+    await act(async () => {
+      pending.resolve(ownedRunning);
+      // Run Start's continuation without letting React commit its queued running view.
+      await Promise.resolve();
+      expect(document.querySelector("[data-diagnostics-start]")).not.toBeNull();
+      expect(document.querySelector("[data-diagnostics-cancel]")).toBeNull();
+      renderDeparture(reason);
+    });
+  } else {
+    await act(async () => pending.resolve(ownedRunning));
+    expect(document.querySelector("[data-diagnostics-cancel]")).not.toBeNull();
+    await leaveAnalysis(reason);
+  }
+  expect(diagnosticDialog()).toBeNull();
   await act(async () => vi.advanceTimersByTimeAsync(1000));
-  expect(diagnostics.cancelDiagnostics).toHaveBeenCalledExactlyOnceWith(preview.token);
+  expect(diagnostics.cancelDiagnostics).toHaveBeenCalledExactlyOnceWith(ownedRunning.token);
   expect(diagnostics.pollDiagnostics).not.toHaveBeenCalled();
+});
+
+it.each(["project close", "unmount"] as const)(
+  "a rejected commit-boundary cleanup after %s cannot affect the newer job", async (reason) => {
+  vi.useFakeTimers();
+  const pending = deferred<DiagnosticView>();
+  const cleanup = deferred<DiagnosticView>();
+  const ownedRunning: DiagnosticView = { ...running, token: "c".repeat(64) };
+  const newerPreview: DiagnosticView = { ...preview, token: "b".repeat(64), target: "1.1.10" };
+  const newerRunning: DiagnosticView = { ...newerPreview, phase: "running" };
+  diagnostics.startDiagnostics.mockReturnValueOnce(pending.promise).mockResolvedValueOnce(newerRunning);
+  diagnostics.pollDiagnostics.mockResolvedValue(newerRunning);
+  diagnostics.cancelDiagnostics.mockReturnValueOnce(cleanup.promise).mockResolvedValueOnce({ ...newerRunning, cancelRequested: true });
+  await act(async () => root.render(<DeviceDiagnosticsEntry project={project} deviceId={9} />));
+  await openPreview();
+  await start();
+  await act(async () => {
+    pending.resolve(ownedRunning);
+    await Promise.resolve();
+    expect(document.querySelector("[data-diagnostics-cancel]")).toBeNull();
+    renderDeparture(reason);
+  });
+  expect(diagnosticDialog()).toBeNull();
+  expect(diagnostics.cancelDiagnostics).toHaveBeenCalledExactlyOnceWith(ownedRunning.token);
+  await act(async () => root.render(<DeviceDiagnosticsEntry project={project} deviceId={10} />));
+  await openPreview(newerPreview);
+  await start();
+  const newerDialog = diagnosticDialog();
+  expect(newerDialog).not.toBeNull();
+  await act(async () => cleanup.reject(new Error("cancel refused after replacement")));
+  await act(async () => vi.advanceTimersByTimeAsync(250));
+  expect(diagnostics.cancelDiagnostics).toHaveBeenCalledExactlyOnceWith(ownedRunning.token);
+  expect(diagnostics.pollDiagnostics).toHaveBeenCalledExactlyOnceWith(newerPreview.token);
+  expect(diagnosticDialog()).toBe(newerDialog);
+  expect(newerDialog!.querySelector("[role=alert]")).toBeNull();
+  expect(newerDialog!.querySelector<HTMLButtonElement>("[data-diagnostics-cancel]")!.disabled).toBe(false);
+  await act(async () => root.render(null));
+  expect(diagnostics.cancelDiagnostics.mock.calls).toEqual([[ownedRunning.token], [newerPreview.token]]);
+});
+
+it.each(["start", "poll", "stop"] as const)(
+  "a completed %s response releases ownership before the terminal view commits", async (source) => {
+  vi.useFakeTimers();
+  const pending = deferred<DiagnosticView>();
+  diagnostics.startDiagnostics.mockResolvedValue(running);
+  diagnostics.cancelDiagnostics.mockResolvedValue({ ...running, cancelRequested: true });
+  if (source === "start") diagnostics.startDiagnostics.mockReturnValueOnce(pending.promise);
+  else if (source === "poll") diagnostics.pollDiagnostics.mockReturnValueOnce(pending.promise);
+  else diagnostics.cancelDiagnostics.mockReturnValueOnce(pending.promise);
+  await act(async () => root.render(<DeviceDiagnosticsEntry project={project} deviceId={9} />));
+  await openPreview();
+  await start();
+  if (source === "poll") {
+    await act(async () => vi.advanceTimersByTimeAsync(250));
+    expect(diagnostics.pollDiagnostics).toHaveBeenCalledExactlyOnceWith(running.token);
+  } else if (source === "stop") await click("[data-diagnostics-cancel]");
+  await act(async () => {
+    pending.resolve({ ...running, phase: "complete", report: { ...running.report, complete: true } });
+    await Promise.resolve();
+    expect(document.querySelector("[data-diagnostics-result]")).toBeNull();
+    expect(document.querySelector(source === "start" ? "[data-diagnostics-start]" : "[data-diagnostics-cancel]")).not.toBeNull();
+    renderDeparture("unmount");
+  });
+  expect(diagnosticDialog()).toBeNull();
+  expect(diagnostics.cancelDiagnostics.mock.calls).toEqual(source === "stop" ? [[running.token]] : []);
+  await act(async () => vi.advanceTimersByTimeAsync(1000));
+  expect(diagnostics.pollDiagnostics).toHaveBeenCalledTimes(source === "poll" ? 1 : 0);
 });
 
 it.each(["running", "complete", "rejected"] as const)("a late %s start never changes or cancels the newer job", async (outcome) => {

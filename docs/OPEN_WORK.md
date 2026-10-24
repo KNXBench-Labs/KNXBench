@@ -974,8 +974,12 @@ Open, each small and none blocking:
 - **Closed in the gate (19 October 2026):** the package gate's test stages run
   with scratch `XDG_DATA_HOME`/`XDG_CONFIG_HOME` and the gate fails when the
   real `knx` directories change. Still open: a **direct** `cargo test` inherits
-  the real homes, and spawned binaries outside `knx-cli` (server, desktop, MCP)
-  were not swept. The four test comments that claimed `AppState::default()` looks up
+  the real homes. Spawned binaries outside `knx-cli` were swept on 24 October
+  2026 (source reading at `142d06b7e`): every `knx-mcp` session in
+  `stdio.rs`/`name_recipe_writer.rs` passes `--no-product-db` (the remaining
+  invocations are `--help` and a usage error), `signal_stop.rs` sets scratch
+  `KNX_DATA_DIR`/`XDG_DATA_HOME`, `bin_version.rs` only runs `--version`, and
+  `knx-desktop` has no spawned-binary test; none reaches the real `knx` data. The four test comments that claimed `AppState::default()` looks up
   `default_path()` were corrected on 24 October 2026; it opens none (AR18 M8)
   ([pitfall](DEVELOPER_PITFALLS.md#gates)).
 - `tools.tests.test_browser_tmp_launch`'s

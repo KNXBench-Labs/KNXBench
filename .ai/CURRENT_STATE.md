@@ -1,4 +1,12 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-10-24 13:24
+- **Completed:** Spawned-binary user-data sweep (server, desktop, MCP) audited by source reading: all knx-mcp test sessions use `--no-product-db`, server signal test isolates `KNX_DATA_DIR`/`XDG_DATA_HOME`, `bin_version` only `--version`, no desktop spawn test; nothing reaches real `knx` data. OPEN_WORK test-gate note updated (docs-only).
+- **Pending/Next Steps:** Unchanged from the 13:20 entry: remaining work needs owner evidence, input or consent. Small open test-gate items: direct `cargo test` inherits real XDG homes (needs a policy choice, not a quiet cargo-config change), intermittent browser_tmp SIGTERM test (reproduce in gate shape first).
+- **Notes for Codex oder Claude:** Selected root checkout remains deliberately stale. No bus/device, Ollama or vendor contact.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-10-24 13:20
 - **Completed:** 142d06b7e on main (fast-forward from 1ce8ead83, live equal): four stale test comments (domain.rs, http_device_routes, http_product_language, http_catalog_translation) no longer claim `AppState::default()` runs `default_path()`; the explicit `product_db = None` guards stay. OPEN_WORK test-gate note updated. Change-scoped gate 14/14: 1311 Rust passes/56 ignored in 7 binaries, corpus 51/51, inputs frozen.
 - **Pending/Next Steps:** No ungated package remains. Next needs an owner decision: evidence/input for WP-03/06/07/08/09/10/14/16, consent for WP-11 (desktop control) or WP-12 (device operations), admission rules for WP-19 group-address/association adoption, or #22/#7 reporter results. Still open small test-gate items: direct `cargo test` inherits real XDG homes; spawned server/desktop/MCP binaries not swept; intermittent browser_tmp SIGTERM test.

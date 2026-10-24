@@ -12,6 +12,43 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## WP-06a saved project folders in the object table (24 October 2026)
+
+The device detail now carries `project_folder` per communication object, read
+from the device's retained `GroupObjectTree` row (Project Schema 23
+§1.2.5.21–23). The object table names a saved folder by its declared `RefId`
+chain and says why a folder is withheld (ambiguous, unidentified node,
+unresolved tree, module object, inactive). Projection-only: no domain, storage
+schema, import or command change; placements survive native save/reopen and
+undo because the retained row does. No product label is looked up.
+[Contract](contracts/communication-object-folders.md#saved-project-folder-display-24-october-2026) ·
+[WP-06](OPEN_WORK.md#wp-06--communication-object-organisation).
+
+## Declared ETS download plug-ins refuse every download scope — delivered (24 October 2026)
+
+A read-only comparison against a real ETS-programmed device showed that a
+program declaring an ETS download plug-in (`Static/Extension/@EtsDownloadPlugin`)
+does not hold its product's base data, yet readiness graded it `untested`. The
+pre-write backup stopped complete and parameter downloads, but a
+group-address-only partial download would have written. Such a program is now
+refused for every download scope (complete, parameters, group addresses, both,
+and a backup restore) with the new category `vendor-download-plugin`, whose
+detail names KL-006 and the declared GUID. A mask or procedure-style refusal
+keeps precedence, deterministically. CLI download/readiness/coverage,
+`/api/device-download/plan`, `/api/device-readiness` and the web download tab
+share one rule (`knx_productdb::download_plan::check_download_plugin`, asked by
+`prepare_device_download` and the offline planner). Read-only comparison and
+comparison adoption use `prepare_device_download_for_reading`; the byte-order
+probe uses `prepare_byte_order_probe`; diagnostics retain their independent
+identity/memory-evidence service. These read-only paths are unaffected and are
+not coupled to one another. The declaration is read from the retained source
+XML; no product-database schema change. EX-IM legacy plug-in rows remain unmapped
+([KL-006](limitations/KL-006-devices-dependent-on-vendor-plug-ins.md)).
+Synthetic regressions exercise the public restore and comparison-adoption
+preparations directly; CLI restore refuses before loopback gateway traffic, and
+the full HTTP comparison succeeds through an in-memory read-only simulator.
+
+
 ## Desktop save dialogs no longer open inside the AppImage mount (24 October 2026)
 
 Found by a native WP-11 run of the published `v0.1.0-alpha.16` AppImage: all
@@ -25,10 +62,45 @@ otherwise GTK's default stays. `OWD` export was verified in the type-2 runtime
 source (mounted path only, not `--appimage-extract-and-run`). Unit tests cover
 valid/missing/non-directory `OWD`, the rejected in-image working directory, a
 symlinked alias of the mount, the home fallback and the empty case. A native
-re-run of a fixed build is still pending. Details:
+re-run of that build verified the session-log dialog opening in the launch
+directory, but showed project Save As still in the mount: it, Open and the web
+UI's other file pickers (CSV, debug report, documentation, …) are opened from
+JavaScript by the dialog plugin in `apps/knx-web/src/filePicker.ts`, which the
+Rust helper never reached. A follow-up adds the app command
+`default_dialog_directory` (same helper, main window only); `filePicker.ts`
+now starts Save in that folder joined with the default name and Open in the
+folder, and keeps the previous arguments when the command reports none or
+fails. Vitest and Rust ACL/unit tests cover it. Native Wayland/WebKitGTK
+re-run on 24 October at integration source `6f06d7e1a` verified frontend Save
+As/Open and Rust session-log export starting in the launch directory; the saved
+native project passed SQLite integrity, and dialog cancellation worked. This
+is not every-picker, Orca or release acceptance. Details:
 [AppImage launcher contract](APPIMAGE_LAUNCHER.md#save-dialog-start-folder-24-october-2026),
 [KL-182](limitations/KL-182-desktop-silent-downloads.md).
 
+## WP-19 association link adoption (24 October 2026)
+
+Device → project adoption now also admits mask-`0701h` **association rows**
+as object ↔ group-address link edits, under the
+[contract amendment](contracts/alpha16-comparison-adoption.md#association-link-adoption-wp-19-amendment-24-october-2026).
+The comparison decoder gives association rows typed per-side attribution
+(TSAP, object number, group address, or *beyond* the side's count). App
+admission requires the whole device association table decoded, every
+differing row of a touched object selected, exactly one existing project
+group address per raw address and exactly one active non-module project
+object per number (evaluated with the candidate parameters). Retained
+sending flags are kept; an object without retained links takes the device's
+first entry as its sending link; any order the table cannot prove refuses.
+Link edits and selected parameters form one `Batch`, one undo step. The
+preview route adds `linkChanges`; the web review lists them in English and
+German and offers selection only for server-hinted parameter and association
+rows. Address/count rows, module objects, other masks and partial comparisons
+stay unadoptable; nothing is created; simulator only, no live device.
+Tests: Core link batch/undo/refusals, decoder attribution, App simulator
+adopt/undo/re-compare-equal plus stale, mixed-unknown, object-granularity,
+missing/ambiguous GA and object, inactive-object and sending refusals, a
+corpus-free mounted server scenario, Vitest panel/admission and a Playwright
+EN/DE preview.
 ## Alpha 16 published pre-release — public artifacts and website verified (24 October 2026)
 
 Runtime/test source is frozen at `86b4a7fc68b3d3206c00511b14f41e025e33de4d`.

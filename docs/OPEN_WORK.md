@@ -117,7 +117,7 @@ Each package needs its own scoped claim, review, tests and delivery evidence.
 | [WP-03](#wp-03--legacy-binary-enumeration-values) | P2 | Mapping evidence first; Alpha 16 left it conditional and shipped no mapping ([A16 disposition](goals/alpha16-release-plan-2026-10-23.md#remaining-queue-finish-only-admitted-meaningful-slices)) | Legacy binary enum values use the existing typed storage or keep an explicit refusal/report. |
 | [WP-04](#wp-04--large-catalogues-measure-then-stream) | P1/P2 | Delivered: WP-04.1/.2 (20 Oct); WP-04.3 in Alpha 16 as A16-04 (e.g. `e287f2050`, `98f644da4`, `5dde9da9a`); no >4 GiB, aggregate-quota or universal-throughput result ([release note](releases/alpha16.md#catalogue-updates-owned-beyond-the-picker)) | Measured database growth, bounded procedure parsing, then a cancellable web large-profile workflow. |
 | [WP-05](#wp-05--parameter-layout-fidelity) | P2 | Caption-language slice delivered in Alpha 16 as A16-07 (`cde8d89a3`); row/column `TextParameterRefId`, inline/nested/`CollapseIfEmpty` and in-cell buttons stay evidence-gated exclusions ([layout contract](contracts/alpha16-parameter-layout.md)) | One evidenced layout feature at a time, never inferred manufacturer behaviour. |
-| [WP-06](#wp-06--communication-object-organisation) | P2 | Folder contract first; priority needs a separate model ADR; conditional and not implemented in Alpha 16 ([A16 disposition](goals/alpha16-release-plan-2026-10-23.md#remaining-queue-finish-only-admitted-meaningful-slices)) | Declared object folders and, separately, lossless priority representation. |
+| [WP-06](#wp-06--communication-object-organisation) | P2 | Saved project folders displayed by declared id (WP-06a); captions, module objects and priority (separate model ADR) open; not in Alpha 16 ([A16 disposition](goals/alpha16-release-plan-2026-10-23.md#remaining-queue-finish-only-admitted-meaningful-slices)) | Declared object folders and, separately, lossless priority representation. |
 | [WP-07](#wp-07--module-instance-authority) | P1 | Defining mapping evidence required; still evidence-blocked after Alpha 16 ([A16 disposition](goals/alpha16-release-plan-2026-10-23.md#remaining-queue-finish-only-admitted-meaningful-slices)) | One independently witnessed instance/repeat/number-offset mapping contract. |
 | [WP-08](#wp-08--parameter-value-codecs) | P2 | Per-type encoding evidence required; conditional, none admitted in Alpha 16 ([A16 disposition](goals/alpha16-release-plan-2026-10-23.md#remaining-queue-finish-only-admitted-meaningful-slices)) | A separately admitted codec/editor per TypeDate, Colour or Picture form. |
 | [WP-09](#wp-09--offline-image-evidence-gates) | P1 | Research-bound; Alpha 16 scoped only rules established for the exact UP258 path, undefined rules stay refused ([A16 disposition](goals/alpha16-release-plan-2026-10-23.md#remaining-queue-finish-only-admitted-meaningful-slices)) | Discriminating encoding/fill/placement evidence, not another permissive image builder. |
@@ -130,7 +130,7 @@ Each package needs its own scoped claim, review, tests and delivery evidence.
 | [WP-16](#wp-16--empty-directory-zip-integrity) | P1 | Project/product directory and file-stream repairs delivered; encrypted-directory refusal delivered 20 Oct; separate bit-6/AES metadata questions remain conditional after Alpha 16 ([A16 disposition](goals/alpha16-release-plan-2026-10-23.md#remaining-queue-finish-only-admitted-meaningful-slices)) | Empty directories have valid CRC and complete compressed-stream representation. |
 | [WP-17](#wp-17--master-identity-provenance) | P1 | Delivered 19 Oct; product DB v27, ADR-0147, `d18ce65e` | Master identity winners, collisions and malformed declarations have truthful provenance. |
 | [WP-18](#wp-18--device-comparison-shows-what-differs) | P2 | Delivered 19 Oct; no live-device acceptance | Differing bytes are marked in the raw hex rows; the comparison result shows only differences by default, with a toggle for all rows. |
-| [WP-19](#wp-19--sync-from-a-device-comparison) | P2 | Device → project delivered in Alpha 16 as A16-05 (`e4b7b90ec`, `9806f06dd`, `5dc47aece`) for exactly attributed named parameters; group-address/association adoption not admitted; project → device hands over to the existing download; no live-device acceptance ([release note](releases/alpha16.md#device--project-adoption-not-another-download-route)) | A comparison result offers *project → device* (the existing download) or *device → project* (adopt verified values, one undo step). |
+| [WP-19](#wp-19--sync-from-a-device-comparison) | P2 | Device → project delivered in Alpha 16 as A16-05 (`e4b7b90ec`, `9806f06dd`, `5dc47aece`) for exactly attributed named parameters; association-row link adoption added 24 Oct, address/count rows stay unadoptable; project → device hands over to the existing download; no live-device acceptance ([release note](releases/alpha16.md#device--project-adoption-not-another-download-route)) | A comparison result offers *project → device* (the existing download) or *device → project* (adopt verified values, one undo step). |
 | [WP-20](#wp-20--system-family-in-the-device-list) | P2 | Delivered 19 Oct; a mask read from a device stays a separate session fact | The device list shows each device's system family (System 1, 2, 7 or B) from its mask version. |
 
 #### WP-01 — Idempotent unknown evidence
@@ -426,6 +426,18 @@ Independent review accepted with no findings; maintained 13/13-stage gate passed
 579 Rust tests and 55 selected corpus cases. Exact source/report ownership and
 raw-byte discrimination are verified; this does not independently establish
 encounter order versus lexicographic sorting. Claim released.
+**WP-06a saved-folder display (24 October):**
+projection-only, no schema change. The device detail reads each device's
+retained `GroupObjectTree` (Project Schema 23 §1.2.5.21–23: required
+`Type`/`RefId`) and the object table shows a saved folder by its declared
+`RefId` chain, searchable. Ambiguous, unidentified-node, unresolved-tree,
+module and stored/evaluated-inactive objects are refused with a stated reason;
+both public WP-06A trees yield no folder. Import, native save/reopen and
+an edit+undo keep identical placements (synthetic route test).
+**Still open:** folder captions from product `ParameterBlock`s (manufacturer
+mapping, not guessed), grouping by folder, module objects (WP-07), schema-20
+`Node/@Text`, saved-tree staleness after edits, real-export witness, priority
+([contract](contracts/communication-object-folders.md#saved-project-folder-display-24-october-2026)).
 [Object table contract](COMMUNICATION_OBJECT_TABLE.md) ·
 [KL-003 census follow-up](limitations/KL-003-parameter-evaluation-and-editing-boundaries.md).
 
@@ -857,6 +869,22 @@ route exists. There is no live-device acceptance
 ([exact contract](contracts/alpha16-comparison-adoption.md),
 [release note](releases/alpha16.md#device--project-adoption-not-another-download-route)).
 
+**Association links (24 October 2026):** the owner
+authorised lifting the association block where it is honest. Mask-`0701h`
+association rows now carry typed per-side attribution, and a selection of
+them adopts object ↔ group-address links in the same one undoable edit. It
+needs the complete device association table decoded, every differing row of
+a touched object selected, exactly one existing project group address per raw
+address, exactly one active non-module project object per number (activation
+under the candidate parameters), and the rebuilt association order equal to
+the device's with retained sending flags unchanged. Any unknown, ambiguous or
+missing item refuses the whole adoption; no group address, object or
+individual address is created or changed. Simulator tests cover App, the
+mounted routes and the EN/DE preview. Remaining: address/count rows, System
+1/2/B tables, partial comparisons, module-based objects and group addresses
+duplicated across installations stay unadoptable; no live-device acceptance
+([contract amendment](contracts/alpha16-comparison-adoption.md#association-link-adoption-wp-19-amendment-24-october-2026)).
+
 #### WP-20 — System family in the device list
 
 **Scope:** owner request 3. The Devices list gets a sortable, filterable
@@ -991,13 +1019,26 @@ Open, each small and none blocking:
   `default_path()` were corrected on 24 October 2026; it opens none (AR18 M8)
   ([pitfall](DEVELOPER_PITFALLS.md#gates)).
 - `tools.tests.test_browser_tmp_launch`'s
-  `test_cli_sigterm_waits_for_child_shutdown_before_cleanup` intermittently
-  times out (`child.communicate(timeout=10)`) inside gate `tool-tests` runs
-  under load (four gates on 19 October 2026; 60/60 green alone). A real
-  forwarder-after-spawn race exists and has a RED test on the parked branch
-  `fix/browser-tmp-signal-race-20261019`, but that fix's own gate still hit the
-  timeout, so the observed failure is not explained yet; reproduce it in the
-  gate's exact shape before shipping a fix.
+  `test_cli_sigterm_waits_for_child_shutdown_before_cleanup` timed out
+  (`child.communicate(timeout=10)`) in gate `tool-tests` runs under load (four
+  gates on 19 October 2026). **Closed (24 October 2026):** reproduced in the
+  gate's shape (the whole `discover` suite, four in parallel beside busy loops,
+  load average 35–60) in 14 of 54 runs, and in none of 55 narrower runs (the
+  file alone, imports only, the 89 preceding tests). The timeout's new
+  diagnosis showed the wrapper alive and its `killpg` successful, and the test's
+  own child asleep with the SIGTERM consumed but its handler not run: CPython
+  3.14 runs no pending handler after a keyword call, so a SIGTERM landing while
+  `print(..., flush=True)` returned waited out `time.sleep(60)`
+  ([pitfall](DEVELOPER_PITFALLS.md#gates)). The child now blocks SIGTERM and
+  takes it with `sigtimedwait`: 0 of 51 gate-shaped runs failed. A timeout
+  now reports both processes' state and Python stacks. The parked
+  `fix/browser-tmp-signal-race-20261019` (forwarders before the spawn) is a
+  separate, real race that none of these runs showed; it stays parked.
+- `tools.tests.test_web_gate`'s
+  `test_sigterm_also_cleans_descendants_that_ignore_termination` read an empty
+  descendant PID once in 51 loaded suite runs (24 October 2026): the
+  descendant's `write_text` creates the marker before writing it, and the test
+  polls only for existence.
 - A package gate stopped with SIGTERM during its browser stages leaves the
   fixture Vite server (`npm exec vite --config vite.fixtures.config.ts` and its
   `node` child) running, reparented to the user's systemd (seen three times on

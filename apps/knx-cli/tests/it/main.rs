@@ -26,6 +26,7 @@ mod cli_product_extension_case;
 mod cli_product_identity;
 mod cli_project_diff;
 mod cli_read_activity;
+mod cli_vendor_download_plugin;
 mod cli_vendor_zip;
 mod cli_version;
 mod contribution;

@@ -139,6 +139,16 @@ already found lying in the grass.
   supervisor may act on the receipt the moment the PID appears; a signal in the
   gap between writing it and entering `try` orphans the child's whole session
   (`web_gate_support.MeasuredRun.step`, fixed 17 October 2026).
+- **A Python test child that waits for a signal must block it and take it
+  with `sigtimedwait`.** On CPython 3.14.7 a pending handler does not run when
+  a keyword call returns: in `os.system(command=f'kill -TERM {os.getpid()}')`
+  followed by `time.sleep(3)` the handler runs after three seconds, while the
+  positional call takes 0.06 s. A child with a SIGTERM handler that announced
+  itself with `print(..., flush=True)` and then slept lost the signal whenever
+  it landed while `print` returned, which the reader's own wake-up makes
+  likely under load; `test_cli_sigterm_waits_for_child_shutdown_before_cleanup`
+  timed out in 14 of 54 loaded gate-shaped suite runs for this reason
+  (24 October 2026).
 - **Prove a work bound by counting, not by the clock.** A loaded host can stall
   a thread for seconds inside a window that costs microseconds:
   `hostile_nested_zips_are_refused_in_linear_time` failed at 3.2 s against a

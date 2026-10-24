@@ -10,7 +10,8 @@ import { useProductLanguage } from "./productLanguage";
 import { LanguageFallbackBadge, fellBack } from "./languageFallback";
 import { formatGroupAddress } from "./gaNotation";
 import { ACTIVATION_ORDER, DEFAULT_FILTERS, channelKey, deriveComObjectView, dptOptions, evaluatedChannel,
-  effectiveDpt, hasFilters, type ComFilters, type ComSort, type ComSortColumn } from "./comObjectView";
+  effectiveDpt, hasFilters, projectFolderIds, projectFolderRefusal, type ComFilters, type ComSort, type ComSortColumn,
+  type RefusedProjectFolder } from "./comObjectView";
 import ComMutationBoundary from "./ComMutationBoundary";
 import { dptDisplay } from "./dptLabels";
 const COLUMNS: { column: ComSortColumn; label: MessageKey }[] = [
@@ -40,6 +41,20 @@ function ChannelText({ channel }: { channel: ComObjectChannel | null }) {
     {channel?.kind === "Channel" && channel.text && channel.name && <span className="com-object-channel-name">{t("inspector.channelName", { value: channel.name })}</span>}
     {channel?.kind === "Channel" && channel.number && <span className="com-object-channel-number">{t("inspector.channelNumber", { value: channel.number })}</span>}</>;
 }
+const FOLDER_REFUSAL_KEYS: Record<RefusedProjectFolder, MessageKey> = {
+  Ambiguous: "comTable.projectFolderRefused.Ambiguous", UnidentifiedNode: "comTable.projectFolderRefused.UnidentifiedNode",
+  TreeUnresolved: "comTable.projectFolderRefused.TreeUnresolved", ModuleObject: "comTable.projectFolderRefused.ModuleObject",
+  Inactive: "comTable.projectFolderRefused.Inactive" };
+/** WP-06a: the saved project folder by its declared ids, or why the tree's folder is withheld. */
+function ProjectFolderNote({ com }: { com: ComObjectNode }) {
+  const t = useTranslate();
+  const ids = projectFolderIds(com), refusal = projectFolderRefusal(com);
+  if (ids !== null) return <small className="com-object-project-folder" data-folder-status="Assigned"
+    title={t("comTable.projectFolderTitle", { value: com.project_folder!.path.map(n => n.ref_id).join(" › ") })}>
+    {t("comTable.projectFolder", { value: ids.join(" › ") })}</small>;
+  return refusal === null ? null
+    : <small className="com-object-project-folder" data-folder-status={refusal}>{t(FOLDER_REFUSAL_KEYS[refusal])}</small>;
+}
 interface RowProps { com: ComObjectNode; flat: boolean; hidden: boolean; matches: boolean; open: boolean;
   descriptionMatch: boolean; editor: (com: ComObjectNode) => ReactNode; onOpen: (id: number, open: boolean) => void }
 function ObjectRow({ com, flat, hidden, matches, open, descriptionMatch, editor, onOpen }: RowProps) {
@@ -57,6 +72,7 @@ function ObjectRow({ com, flat, hidden, matches, open, descriptionMatch, editor,
         if (next !== open) onOpen(com.id, next);
       }}><summary aria-label={t("comTable.edit", { number: com.number })}>{com.number}</summary></details></td>
       <td><strong className="com-object-name" {...fillProps(com.name === null ? undefined : com.name_fill, t)}>{com.name ?? t("inspector.unnamed")}</strong>
+        <ProjectFolderNote com={com} />
         {descriptionMatch && <small className="com-description-match">{t("comTable.descriptionMatch", { value: com.description ?? "" })}</small>}
         {!matches && open && <small className="com-edit-exception">{t("comTable.editException")}</small>}</td>
       <td>{com.function_text || "—"}</td>

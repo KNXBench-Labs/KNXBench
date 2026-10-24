@@ -436,7 +436,10 @@ pub(crate) fn validate(report: &Report, m: &MemoryEvidence) -> Result<(), String
         return invalid();
     };
     let admitted = identity_admits(report, &hardware_type);
-    if (memory_entered && !admitted) || !sequence_ok(report, &m.chunks, admitted) {
+    if (memory_entered && !admitted)
+        || (!memory_entered && !super::identity_stop_reason_matches(report, Some(admitted)))
+        || !sequence_ok(report, &m.chunks, admitted)
+    {
         return invalid();
     }
     Ok(())

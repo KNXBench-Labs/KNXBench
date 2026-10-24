@@ -10,7 +10,7 @@ import { useTranslate } from "./i18n";
 import WorkbenchIcon from "./WorkbenchIcon";
 import GroupAddressTable from "./GroupAddressTable";
 import { GROUP_ADDRESSES_COLUMNS } from "./GroupAddressTreeTable";
-import { MATRIX_COLUMNS } from "./GroupAddressMatrix";
+import { MATRIX_RESET_COLUMNS } from "./GroupAddressMatrix";
 import { useGroupAddressView } from "./groupAddressViewPreference";
 import { rangePath } from "./groupAddressView";
 import { findBuildingPart, flattenBuildingParts } from "./treeUtils";
@@ -121,7 +121,7 @@ export default function StructureWorkspace(props: {
     {tree.installations.length === 0 && <p role="status">{t("workbench.emptyStructure")}</p>}
     {sharedAddressReset && addressView !== "atlas" && <TableColumnReset
       tableId={addressView === "matrix" ? "group-address-matrix" : "group-addresses"}
-      columns={addressView === "matrix" ? MATRIX_COLUMNS : GROUP_ADDRESSES_COLUMNS} />}
+      columns={addressView === "matrix" ? MATRIX_RESET_COLUMNS : GROUP_ADDRESSES_COLUMNS} />}
     {tree.installations.filter((installation) => !focusedBuilding || flattenBuildingParts(installation.buildings, []).some(({node}) => node.id === focusedBuilding.node.id)).map((installation) => <section key={installation.id} className="installation-diagram" aria-label={installation.name}>
       {view === "topology" && <>
         {installation.topology.every((area) => area.lines.every((line) => line.devices.length === 0)) && installation.unassigned.length === 0 && <p role="status">{t("workbench.emptyTopology")}</p>}

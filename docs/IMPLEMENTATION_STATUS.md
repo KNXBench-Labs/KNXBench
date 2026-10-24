@@ -2145,7 +2145,8 @@ device-editor layout spec checks intact DPT/master-text words at 360 px.
 Local-only presentation change: one width hook and accessible header separator,
 UI-02 paint, validated versioned localStorage, pointer/keyboard resizing and
 column/table reset. All 18 native table surfaces use the adapter; the matrix's
-select/address/name columns resize while its per-object columns remain fixed.
+select/address/name columns resize; since 25 October 2026 its per-object columns share one
+resizable width under a fixed `object-column` preference entry.
 Review fixes restore container-filling defaults, retain view-specific keys,
 coalesce drag previews with one final write, and improve accessible names/help. [Contract and complete coverage](contracts/table-column-widths.md).
 Focused hook/component/production tests and browser proof cover sortable devices,

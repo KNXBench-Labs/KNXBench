@@ -13,7 +13,7 @@ use std::time::Duration;
 
 use knx_testsupport::vendor_plugin::{
     declaration, program_xml, HARDWARE2PROGRAM_REF, HARDWARE_XML, PLUGIN_GUID as PLUGIN,
-    PRODUCT_REF, TARGET,
+    PRODUCT_REF, PROGRAM_ID, TARGET,
 };
 
 /// `(project.knxdb, products.sqlite)` with one device at `1.1.7`.
@@ -70,6 +70,41 @@ fn inputs(dir: &Path, plugin: bool) -> (PathBuf, PathBuf) {
     (path, products)
 }
 
+fn stored_backup(dir: &Path) -> knx_app::device_backup::StoredBackup {
+    use knx_core::commissioning::device_backup::{written_regions, BackupRegion, DeviceBackup};
+    use knx_core::commissioning::load_state::LoadState;
+    use knx_core::commissioning::memory_download::machines;
+
+    let products = knx_productdb::open_and_migrate(&dir.join("backup-source.sqlite")).unwrap();
+    knx_productdb::ingest_file(&products, "M-FFF6/A.xml", program_xml("").as_bytes()).unwrap();
+    let plan = knx_app::download_support::offline_plan(&products, PROGRAM_ID).unwrap();
+    let stored = knx_app::device_backup::StoredBackup {
+        backup: DeviceBackup {
+            target: TARGET.parse().unwrap(),
+            mask: plan.mask,
+            manufacturer: plan.manufacturer,
+            load_states: machines(&plan)
+                .into_iter()
+                .map(|machine| (machine, LoadState::Loaded))
+                .collect(),
+            regions: written_regions(&plan)
+                .into_iter()
+                .map(|(address, length)| BackupRegion {
+                    address,
+                    octets: vec![0xA5; length],
+                })
+                .collect(),
+        },
+        application: PROGRAM_ID.into(),
+        partial: None,
+        taken: "2026-10-24T12:00:00Z".into(),
+        plan_steps: plan.steps.iter().map(ToString::to_string).collect(),
+    };
+    knx_app::device_backup::prepare_restore(&products, &stored)
+        .expect("the synthetic backup fits the same program without the declaration");
+    stored
+}
+
 fn knx(args: &[&str], project: &Path, products: &Path) -> Output {
     Command::new(env!("CARGO_BIN_EXE_knx"))
         .args(args)
@@ -90,10 +125,16 @@ fn text(output: &Output) -> String {
     )
 }
 
+fn assert_kl_006_detail(shown: &str) {
+    assert!(shown.contains("KL-006"), "{shown}");
+    assert!(shown.contains("ETS download plug-in"), "{shown}");
+    assert!(shown.contains(PLUGIN), "{shown}");
+    assert!(shown.contains("no download scope is offered"), "{shown}");
+}
+
 fn assert_kl_006(shown: &str) {
     assert!(shown.contains("vendor-download-plugin"), "{shown}");
-    assert!(shown.contains("KL-006"), "{shown}");
-    assert!(shown.contains(PLUGIN), "{shown}");
+    assert_kl_006_detail(shown);
 }
 
 #[test]
@@ -174,6 +215,46 @@ fn a_confirmed_group_address_download_never_reaches_the_connector() {
     );
     assert!(!output.status.success(), "{shown}");
     assert_kl_006(&shown);
+}
+
+#[test]
+fn a_confirmed_restore_is_refused_before_any_gateway_traffic() {
+    let dir = tempfile::tempdir().unwrap();
+    let (_, products) = inputs(dir.path(), true);
+    let backup = knx_app::device_backup::write_backup(
+        &dir.path().join("restore-input"),
+        &stored_backup(dir.path()),
+    )
+    .unwrap();
+    let peer = UdpSocket::bind("127.0.0.1:0").unwrap();
+    peer.set_read_timeout(Some(Duration::from_millis(250)))
+        .unwrap();
+    let gateway = peer.local_addr().unwrap().to_string();
+    let output = Command::new(env!("CARGO_BIN_EXE_knx"))
+        .args(["device", "restore"])
+        .arg(&backup)
+        .arg("--product-db")
+        .arg(&products)
+        .args(["--gateway", &gateway])
+        .arg("--activity-history")
+        .arg(dir.path().join("history.sqlite"))
+        .arg("--backup-dir")
+        .arg(dir.path().join("pre-restore-backups"))
+        .args(["--confirm", &format!("I confirm download to {TARGET}")])
+        .args([
+            "--accept-untested",
+            &format!("I accept an untested download to {TARGET}"),
+        ])
+        .stdin(Stdio::null())
+        .output()
+        .unwrap();
+    let shown = text(&output);
+    assert!(!output.status.success(), "{shown}");
+    assert_kl_006_detail(&shown);
+    assert!(
+        peer.recv_from(&mut [0; 2048]).is_err(),
+        "a plug-in program's restore reached the connector: {shown}"
+    );
 }
 
 #[test]

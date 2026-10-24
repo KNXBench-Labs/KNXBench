@@ -10,13 +10,18 @@
 
 use std::collections::BTreeMap;
 
+use knx_app::comparison_adoption::{prepare_comparison, ComparisonScope};
+use knx_app::device_backup::{prepare_restore, RestorePrepareError, StoredBackup};
 use knx_app::device_download::{prepare_device_download, prepare_device_download_for_reading};
 use knx_app::download_support::{coverage, offline_plan, SupportLevel};
 use knx_app::project_readiness::{prepare_category, project_readiness, DeviceReadiness};
+use knx_core::commissioning::device_backup::{written_regions, BackupRegion, DeviceBackup};
+use knx_core::commissioning::load_state::LoadState;
+use knx_core::commissioning::memory_download::{machines, MemoryDownloadPlan};
 use knx_core::commissioning::partial_memory_download::PartialDownloadParts;
 use knx_core::{
-    CompletionStatus, DeviceId, DeviceInstance, Installation, InstallationId, Language, Project,
-    SourceRef, Topology,
+    CommandStack, CompletionStatus, DeviceId, DeviceInstance, Installation, InstallationId,
+    Language, Project, SourceRef, Topology,
 };
 
 use knx_testsupport::vendor_plugin::{
@@ -92,11 +97,44 @@ const SCOPES: [PartialDownloadParts; 3] = [
     },
 ];
 
-fn assert_kl_006(category: &str, detail: &str) {
-    assert_eq!(category, CATEGORY, "{detail}");
+fn assert_kl_006_detail(detail: &str) {
     assert!(detail.contains("KL-006"), "{detail}");
     assert!(detail.contains("ETS download plug-in"), "{detail}");
     assert!(detail.contains(PLUGIN), "{detail}");
+    assert!(detail.contains("no download scope is offered"), "{detail}");
+}
+
+fn assert_kl_006(category: &str, detail: &str) {
+    assert_eq!(category, CATEGORY, "{detail}");
+    assert_kl_006_detail(detail);
+}
+
+/// A structurally valid backup for the synthetic program. Its shape comes
+/// from the same program without the declaration; KL-006 is the only reason
+/// the declaring program cannot prepare it for restoration.
+fn stored_backup(plan: &MemoryDownloadPlan) -> StoredBackup {
+    StoredBackup {
+        backup: DeviceBackup {
+            target: target(),
+            mask: plan.mask,
+            manufacturer: plan.manufacturer,
+            load_states: machines(plan)
+                .into_iter()
+                .map(|machine| (machine, LoadState::Loaded))
+                .collect(),
+            regions: written_regions(plan)
+                .into_iter()
+                .map(|(address, length)| BackupRegion {
+                    address,
+                    octets: vec![0xA5; length],
+                })
+                .collect(),
+        },
+        application: PROGRAM_ID.into(),
+        partial: None,
+        taken: "2026-10-24T12:00:00Z".into(),
+        plan_steps: plan.steps.iter().map(ToString::to_string).collect(),
+    }
 }
 
 #[test]
@@ -136,7 +174,7 @@ fn every_download_scope_is_refused_including_group_addresses_only() {
 }
 
 #[test]
-fn product_coverage_and_the_restore_planner_refuse_it_too() {
+fn product_coverage_and_the_offline_planner_refuse_it_too() {
     let dir = tempfile::tempdir().unwrap();
     let (products, _) = installed(dir.path(), &declaration());
     let rows = coverage(&products, None, &BTreeMap::new()).unwrap();
@@ -148,6 +186,23 @@ fn product_coverage_and_the_restore_planner_refuse_it_too() {
     // A backup restore plans from the product offline; it is a download too.
     let (category, detail) = offline_plan(&products, PROGRAM_ID).unwrap_err();
     assert_kl_006(category.code(), &detail);
+}
+
+#[test]
+fn public_restore_preparation_refuses_a_declared_download_plugin() {
+    let plain_dir = tempfile::tempdir().unwrap();
+    let (plain_products, _) = installed(plain_dir.path(), "");
+    let plain_plan = offline_plan(&plain_products, PROGRAM_ID).unwrap();
+    let stored = stored_backup(&plain_plan);
+    prepare_restore(&plain_products, &stored)
+        .expect("the synthetic backup must fit the same program without the declaration");
+
+    let plugin_dir = tempfile::tempdir().unwrap();
+    let (plugin_products, _) = installed(plugin_dir.path(), &declaration());
+    match prepare_restore(&plugin_products, &stored) {
+        Err(RestorePrepareError::Plan(detail)) => assert_kl_006_detail(&detail),
+        other => panic!("a plug-in restore must be refused as a plan: {other:?}"),
+    }
 }
 
 #[test]
@@ -184,6 +239,32 @@ fn reading_the_device_stays_possible_with_the_same_plan() {
     let plain = prepare_device_download(&plain_products, &plain_project, target()).unwrap();
     assert_eq!(read.plan, plain.plan);
     assert_eq!(read.image.segments, plain.image.segments);
+}
+
+#[test]
+fn comparison_adoption_preparation_stays_read_only_for_a_declared_plugin() {
+    let dir = tempfile::tempdir().unwrap();
+    let (products, project) = installed(dir.path(), &declaration());
+    let scope = ComparisonScope {
+        server_incarnation: "synthetic-plugin-test".into(),
+        project_incarnation: 1,
+    };
+    let prepared = prepare_comparison(
+        &products,
+        &project,
+        &CommandStack::new(),
+        &scope,
+        DeviceId(1),
+    )
+    .expect("comparison preparation reads a plug-in program; it does not download it");
+
+    let plain_dir = tempfile::tempdir().unwrap();
+    let (plain_products, plain_project) = installed(plain_dir.path(), "");
+    let plain = prepare_device_download(&plain_products, &plain_project, target()).unwrap();
+    assert_eq!(prepared.target(), target());
+    assert_eq!(prepared.program_id(), PROGRAM_ID);
+    assert_eq!(prepared.plan(), &plain.plan);
+    assert_eq!(prepared.image().segments, plain.image.segments);
 }
 
 /// Precedence is deterministic: when a program is also of a kind no

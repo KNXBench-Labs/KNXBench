@@ -43,11 +43,13 @@ are refused with `vendor-download-plugin`. The pinned coverage test there
 105 packages / 467 programs; it fails on its package count before this rule
 and was not re-pinned here.
 
-**Still allowed.** Read-only `knx device compare` (CLI and server), comparison
-adoption into the project, the byte-order probe and other diagnostics prepare
-the same plan through the read-only preparation
-(`prepare_device_download_for_reading`) and are not refused: reading the device
-is how the mismatch was found.
+**Still allowed.** Read-only `knx device compare` (CLI and server) and
+comparison adoption into the project use
+`prepare_device_download_for_reading`. The byte-order probe separately uses
+`prepare_byte_order_probe`. Device diagnostics remain their independent
+identity/memory-evidence service (`device_diagnostics::prepare` and
+`prepare_memory`). All three read-only paths are unaffected: reading the device
+is how the mismatch was found. They are not coupled to one preparation service.
 
 **Not covered.** Programs imported from a legacy EX-IM product database
 (ADR-0094) carry plug-in data in a `program_plugin` table that KNXBench does

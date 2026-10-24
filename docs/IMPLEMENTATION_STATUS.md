@@ -25,11 +25,16 @@ detail names KL-006 and the declared GUID. A mask or procedure-style refusal
 keeps precedence, deterministically. CLI download/readiness/coverage,
 `/api/device-download/plan`, `/api/device-readiness` and the web download tab
 share one rule (`knx_productdb::download_plan::check_download_plugin`, asked by
-`prepare_device_download` and the offline planner). Read-only compare,
-comparison adoption and diagnostics use `prepare_device_download_for_reading`
-and are unaffected. The declaration is read from the retained source XML; no
-product-database schema change. EX-IM legacy plug-in rows remain unmapped
+`prepare_device_download` and the offline planner). Read-only comparison and
+comparison adoption use `prepare_device_download_for_reading`; the byte-order
+probe uses `prepare_byte_order_probe`; diagnostics retain their independent
+identity/memory-evidence service. These read-only paths are unaffected and are
+not coupled to one another. The declaration is read from the retained source
+XML; no product-database schema change. EX-IM legacy plug-in rows remain unmapped
 ([KL-006](limitations/KL-006-devices-dependent-on-vendor-plug-ins.md)).
+Synthetic regressions exercise the public restore and comparison-adoption
+preparations directly; CLI restore refuses before loopback gateway traffic, and
+the full HTTP comparison succeeds through an in-memory read-only simulator.
 
 ## Alpha 16 published pre-release — public artifacts and website verified (24 October 2026)
 

@@ -143,10 +143,11 @@ pub fn prepare_device_download(
 }
 
 /// The same plan as [`prepare_device_download`], to *read* the device it
-/// describes: `knx device compare`, comparison adoption and diagnostics.
-/// Nothing prepared here may be written: it skips the download refusals that
-/// do not concern reading (KL-006), so a plug-in program's device can still
-/// be compared.
+/// describes: `knx device compare` and comparison adoption. The byte-order
+/// probe and device diagnostics have their own preparation services. Nothing
+/// prepared here may be written: it skips the download refusals that do not
+/// concern reading (KL-006), so a plug-in program's device can still be
+/// compared.
 pub fn prepare_device_download_for_reading(
     conn: &Connection,
     project: &Project,

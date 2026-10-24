@@ -37,6 +37,7 @@ const PACKAGE: &str = "MDT_KP_BE_01_Push_Button_V15a.knxprod";
 const PROJECT: &str = "KNXBench 1.1.67 option C.knxdb";
 const GATEWAY: &str = "192.0.2.10:3671";
 
+mod link_adoption;
 mod mounted_adoption;
 
 fn original_data() -> PathBuf {

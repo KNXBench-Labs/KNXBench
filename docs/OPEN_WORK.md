@@ -973,8 +973,16 @@ Open, each small and none blocking:
   reruns).
 - **Closed in the gate (19 October 2026):** the package gate's test stages run
   with scratch `XDG_DATA_HOME`/`XDG_CONFIG_HOME` and the gate fails when the
-  real `knx` directories change. Still open: a **direct** `cargo test` inherits
-  the real homes. Spawned binaries outside `knx-cli` were swept on 24 October
+  real `knx` directories change. **Closed for a direct `cargo test` (24 October
+  2026):** when Cargo is invoked from the checkout or a descendant,
+  `.cargo/config.toml` forces scratch homes below `target/dev-home/` (also for
+  `cargo run`), and `knx-cli`'s `cargo_dev_homes` tests guard it. Cargo invoked
+  from elsewhere does not discover that config merely because
+  `--manifest-path` points into the checkout; callers must start inside the
+  checkout or supply synthetic XDG homes. Explicit `force=false` overrides
+  intentionally accept the caller's exported paths, whose safety is then the
+  caller's responsibility; the gate supplies its own scratch paths.
+  Spawned binaries outside `knx-cli` were swept on 24 October
   2026 (source reading at `142d06b7e`): every `knx-mcp` session in
   `stdio.rs`/`name_recipe_writer.rs` passes `--no-product-db` (the remaining
   invocations are `--help` and a usage error), `signal_stop.rs` sets scratch

@@ -29,8 +29,8 @@ import time
 if __package__ in (None, ''):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from tools import gate_scope
-from tools.user_data_guard import (USER_HOMES, isolated_environment, record_user_data, user_data_snapshot,
-                                   user_knx_dirs)
+from tools.user_data_guard import (CARGO_KEEPS_EXPORTED_HOMES, USER_HOMES, isolated_environment, record_user_data,
+                                   user_data_snapshot, user_knx_dirs)
 from tools.web_gate_support import MeasuredRun, source_fingerprint
 
 WORKSPACE_LOCK = 'knx-workspace-gates.lock'
@@ -181,6 +181,9 @@ class StageEnvironments:
 
 def check(run: MeasuredRun, name: str, command: list[str], cwd: Path, envs: StageEnvironments,
           verify=None, extra: dict[str, str] | None = None) -> dict:
+    if name in ISOLATED_STAGES and command[:1] == ['cargo']:
+        # Otherwise `.cargo/config.toml` replaces the stage's scratch homes.
+        command = ['cargo', *CARGO_KEEPS_EXPORTED_HOMES, *command[1:]]
     stage = run.step(name, command, cwd, {**envs.for_stage(name), **(extra or {})}, verify)
     detail = f', {stage["evidence"]}' if stage.get('evidence') not in (None, 0) else ''
     print(f'{name}: exit={stage["exit"]}, proof={stage["proofValid"]}, '

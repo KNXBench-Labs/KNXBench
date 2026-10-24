@@ -1,5 +1,6 @@
 //! knx-cli integration tests in one binary: one link, one test pool (ADR-0144).
 
+mod cargo_dev_homes;
 mod catalog_metadata;
 mod catalog_update_cli;
 mod cli_activity_history;

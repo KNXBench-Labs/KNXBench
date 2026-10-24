@@ -7,14 +7,15 @@ import os
 from pathlib import Path
 import subprocess
 import tempfile
+import tomllib
 import unittest
 
 from tools import gate_scope
 from tools import run_web_gate
 from tools.run_package_gate import ISOLATED_STAGES, StageEnvironments, check, preflight, stage_plan
 from tools import user_data_guard
-from tools.user_data_guard import (Snapshot, isolated_environment, record_user_data, touched_user_data,
-                                   user_data_snapshot, user_knx_dirs)
+from tools.user_data_guard import (CARGO_KEEPS_EXPORTED_HOMES, USER_HOMES, Snapshot, isolated_environment,
+                                   record_user_data, touched_user_data, user_data_snapshot, user_knx_dirs)
 
 # Independent of the production set: dropping a stage from it must fail a test.
 REQUIRED_ISOLATED = ('tool-tests', 'rust-tests', 'bindings', 'corpus', 'website-tests', 'story-tests')
@@ -70,9 +71,11 @@ class RecordingRun:
 
     def __init__(self) -> None:
         self.envs: dict[str, dict[str, str]] = {}
+        self.commands: dict[str, list[str]] = {}
 
     def step(self, name, command, cwd, env, verify=None) -> dict:
         self.envs[name] = env
+        self.commands[name] = command
         return {'exit': 0, 'wallSeconds': 0.0, 'proofValid': True}
 
 
@@ -115,6 +118,32 @@ class UserDataIsolation(unittest.TestCase):
             self.assertEqual(run.envs[stage], self.plain, stage)
         self.assertEqual(run.envs['bindings']['TS_RS_EXPORT_DIR'], 'out')
         self.assert_scratch(run.envs['bindings'], self.root / 'homes', 'bindings + extra')
+
+    def test_a_plain_cargo_run_gets_forced_scratch_homes_below_target(self) -> None:
+        # Sessions and CI images export the real homes, so `force = false`
+        # would leave a plain `cargo test` on them.
+        config = tomllib.loads((Path(__file__).resolve().parents[2] / '.cargo/config.toml').read_text())
+        for variable, _ in USER_HOMES:
+            entry = config['env'][variable]
+            self.assertEqual((entry['relative'], entry['force']), (True, True), variable)
+            self.assertTrue(entry['value'].startswith('target/dev-home/'), entry)
+        self.assertEqual(len({config['env'][v]['value'] for v, _ in USER_HOMES}), len(USER_HOMES))
+
+    def test_isolated_cargo_stages_keep_their_scratch_homes_over_the_cargo_default(self) -> None:
+        envs = StageEnvironments(self.plain, isolated_environment(self.plain, self.root / 'homes'))
+        run = RecordingRun()
+        with redirect_stdout(io.StringIO()):
+            check(run, 'rust-tests', ['cargo', 'test', '--locked'], self.root, envs)
+            check(run, 'bindings', ['cargo', 'test', '-p', 'knx-projection'], self.root, envs)
+            check(run, 'tool-tests', ['python3', '-m', 'unittest'], self.root, envs)
+            check(run, 'clippy', ['cargo', 'clippy'], self.root, envs)
+        self.assertEqual(CARGO_KEEPS_EXPORTED_HOMES,
+                         ('--config', 'env.XDG_DATA_HOME.force=false', '--config', 'env.XDG_CONFIG_HOME.force=false'))
+        self.assertEqual(run.commands['rust-tests'], ['cargo', *CARGO_KEEPS_EXPORTED_HOMES, 'test', '--locked'])
+        self.assertEqual(run.commands['bindings'][-3:], ['test', '-p', 'knx-projection'])
+        self.assertEqual(run.commands['bindings'][1:5], list(CARGO_KEEPS_EXPORTED_HOMES))
+        self.assertEqual(run.commands['tool-tests'], ['python3', '-m', 'unittest'])
+        self.assertEqual(run.commands['clippy'], ['cargo', 'clippy'])
 
     def test_the_complete_web_profile_runs_its_tool_tests_with_scratch_homes(self) -> None:
         run = RecordingRun()

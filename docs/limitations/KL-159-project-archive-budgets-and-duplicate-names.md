@@ -11,8 +11,10 @@ the project reader to **4 GiB expanded payload in total** and
 Nested payload accounting and declared-size/inflation checks still apply;
 these are payload admission limits, not a peak-process-memory guarantee.
 Duplicate/case-colliding names and inconsistent ZIP records remain refused.
-The empty-directory CRC/complete-stream repair described below is delivered;
-its trailing-file-stream and encryption-header follow-ups remain open.
+The empty-directory CRC/complete-stream, ordinary-file exact-stream and bit-0
+encrypted-directory repairs described below are delivered. The 24 October
+bit-6-only consistency amendment is implemented with focused evidence; independent
+review and package acceptance are pending. Other cipher metadata remains bounded.
 The product-reader follow-up is delivered on `main` (`9c79634b`), with
 its bounded acceptance recorded below.
 
@@ -189,6 +191,18 @@ Publication readback agreed; claim released. Application snapshots establish
 only quiescent early refusal, not crash/live-WAL/general cross-store atomicity. No new encrypted-directory
 support or real-project compatibility claim. Bit-6-only consistency
 and AES extra-field semantics remain separate questions.
+
+## Bit-6-only consistency amendment (24 October 2026)
+
+The [source-bound amendment](../research/2026-10-24-zip-bit6-flag-consistency.md)
+refuses bit 6 without bit 0 at the project/product archive admission boundaries,
+including files, directories and directly nested/wrapper consumers. This deliberately
+supersedes four historical project-directory positives. Focused original-source
+RED and corrected GREEN plus populated-store preservation are verified; independent
+review accepts with zero Critical/Important findings; package acceptance is pending.
+Existing bit-0-plus-6 unsupported behavior
+is unchanged; AES equality, extraction-version checks and new cipher support are
+not included. Earlier dated open statements remain historical, not duplicate jobs.
 
 <!-- BEGIN retained catalogue record -->
 

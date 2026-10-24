@@ -32,9 +32,11 @@ minimum-length heuristic that cannot establish header/password validity.
   missing/wrong-password and named AES refusal conventions.
 - The independent product reader's existing encrypted-member refusal is unchanged.
   Product installation/wrapper rollback is not proved by project-container tests.
-- Bit 6 without bit 0, AES extra-field semantic equality and encryption metadata
-  on ordinary files are separate scope. Retained positive controls for bit-6-only
-  empty directories do not endorse valid strong encryption.
+- The original bit-6-only directory positives below are historical and do not
+  endorse valid strong encryption. The [24 October consistency amendment](../research/2026-10-24-zip-bit6-flag-consistency.md)
+  deliberately supersedes four such positives with early named refusals for
+  bit 6 without bit 0, on both files and directories. AES extra-field semantic
+  equality and other encryption metadata on ordinary files stay separate scope.
 - No private encrypted-corpus census or real encrypted-directory compatibility
   claim. Source-bound synthetic refusal proves the declared boundary only.
 

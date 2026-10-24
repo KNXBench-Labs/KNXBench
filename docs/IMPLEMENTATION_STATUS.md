@@ -12,6 +12,19 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## ZIP bit-6-only flag consistency — source implementation (24 October 2026)
+
+Project and product ZIP admission now refuses bit 6 without bit 0 with a named
+member diagnostic, for files/directories and outer/nested/wrapper consumers.
+Existing plain, ZipCrypto and bit-0-plus-6 policies remain unchanged; this adds no
+cipher support or AES metadata validation. Four former directory positives are
+deliberately superseded. Final test bytes reproduce 33 semantic failures against
+original production; corrected selected suites pass 367 tests with populated-store
+preservation and native reopen. Three affected crates pass all-targets Clippy.
+Independent review accepts with zero Critical/Important findings; maintained package
+acceptance is pending. Source-only, not
+an Alpha 16 artifact update. [Contract, evidence and exclusions](research/2026-10-24-zip-bit6-flag-consistency.md).
+
 ## WP-06a saved project folders in the object table (24 October 2026)
 
 The device detail now carries `project_folder` per communication object, read

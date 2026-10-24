@@ -1,4 +1,4 @@
-//! Synthetic application admission regressions for bit-0 project directories.
+//! Synthetic application admission regressions for contradictory or encrypted directories.
 //!
 //! Closed DELETE-mode snapshots prove this pre-persistence refusal boundary,
 //! not general cross-store atomicity, live-WAL behavior or crash recovery.
@@ -32,7 +32,7 @@ fn new_manufacturer() -> Vec<u8> {
     stream::manufacturer("directory-policy-new")
 }
 
-fn with_directory(members: &[stream::Member], shape: Shape, encrypted: bool) -> Vec<u8> {
+fn with_directory(members: &[stream::Member], shape: Shape, added_flags: u16) -> Vec<u8> {
     let payload: &[u8] = match shape {
         Shape::StoredAbsentHeader => b"",
         Shape::Raw0300ShortHeader => &[0x03, 0x00],
@@ -60,7 +60,7 @@ fn with_directory(members: &[stream::Member], shape: Shape, encrypted: bool) -> 
         );
         assert_eq!(flags & 1, 0);
         bytes[offset + flags_at..offset + flags_at + 2]
-            .copy_from_slice(&(flags | u16::from(encrypted)).to_le_bytes());
+            .copy_from_slice(&(flags | added_flags).to_le_bytes());
         let method: u16 = match shape {
             Shape::StoredAbsentHeader => 0,
             Shape::Raw0300ShortHeader => 8,
@@ -72,7 +72,7 @@ fn with_directory(members: &[stream::Member], shape: Shape, encrypted: bool) -> 
     bytes
 }
 
-fn project(layer: Layer, shape: Shape, encrypted: bool) -> Vec<u8> {
+fn project(layer: Layer, shape: Shape, flags: u16) -> Vec<u8> {
     let mut template =
         zip::ZipArchive::new(Cursor::new(knx_testsupport::minimal_knxproj_bytes())).unwrap();
     let mut outer = Vec::new();
@@ -101,14 +101,14 @@ fn project(layer: Layer, shape: Shape, encrypted: bool) -> Vec<u8> {
         Layer::Outer => {
             outer.push(stream::stored(WITNESS_PATH, WITNESS));
             outer.push(stream::stored(DIRECTORY, payload));
-            with_directory(&outer, shape, encrypted)
+            with_directory(&outer, shape, flags)
         }
         Layer::DirectInner => {
             inner.push(stream::stored(WITNESS_PATH, WITNESS));
             inner.push(stream::stored(DIRECTORY, payload));
             outer.push(stream::stored(
                 "P-0001.zip",
-                &with_directory(&inner, shape, encrypted),
+                &with_directory(&inner, shape, flags),
             ));
             stream::archive(&outer)
         }
@@ -116,6 +116,11 @@ fn project(layer: Layer, shape: Shape, encrypted: bool) -> Vec<u8> {
 }
 
 fn application_case(layer: Layer, shape: Shape, populated: bool, encrypted: bool) {
+    application_case_flags(layer, shape, populated, u16::from(encrypted));
+}
+
+fn application_case_flags(layer: Layer, shape: Shape, populated: bool, flags: u16) {
+    let encrypted = flags != 0;
     let dir = tempfile::tempdir().unwrap();
     let native_path = dir.path().join("project.knxdb");
     let products_path = dir.path().join("products.sqlite");
@@ -167,7 +172,7 @@ fn application_case(layer: Layer, shape: Shape, populated: bool, encrypted: bool
         .unwrap()
         .iter()
         .any(|entry| entry.source_path.ends_with(WITNESS_PATH)));
-    let source = project(layer, shape, encrypted);
+    let source = project(layer, shape, flags);
     let source_path = dir.path().join("directory-policy.knxproj");
     std::fs::write(&source_path, &source).unwrap();
     drop(store);
@@ -198,7 +203,12 @@ fn application_case(layer: Layer, shape: Shape, populated: bool, encrypted: bool
                 knx_etsproj::ContainerError::InconsistentRecord { path, reason },
             ))) => {
                 assert_eq!(path, DIRECTORY, "refusal must name the decoded directory");
-                assert_eq!(reason, REASON, "refusal must state the unsupported policy");
+                let expected = if flags == 64 {
+                    "strong-encryption flag (bit 6) requires encryption flag (bit 0)"
+                } else {
+                    REASON
+                };
+                assert_eq!(reason, expected, "refusal must state the flag policy");
             }
             Err(other) => {
                 panic!("expected explicit encrypted-directory InconsistentRecord, got {other}")
@@ -304,6 +314,26 @@ fn application_case(layer: Layer, shape: Shape, populated: bool, encrypted: bool
         stream::disk_snapshot(dir.path()) == after,
         "native reopen changed the closed-file snapshot"
     );
+}
+
+#[test]
+fn bit6_only_outer_stored_preserves_populated_stores() {
+    application_case_flags(Layer::Outer, Shape::StoredAbsentHeader, true, 64);
+}
+
+#[test]
+fn bit6_only_outer_deflated_preserves_populated_stores() {
+    application_case_flags(Layer::Outer, Shape::Raw0300ShortHeader, true, 64);
+}
+
+#[test]
+fn bit6_only_nested_stored_preserves_populated_stores() {
+    application_case_flags(Layer::DirectInner, Shape::StoredAbsentHeader, true, 64);
+}
+
+#[test]
+fn bit6_only_nested_deflated_preserves_populated_stores() {
+    application_case_flags(Layer::DirectInner, Shape::Raw0300ShortHeader, true, 64);
 }
 
 #[test]

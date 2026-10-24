@@ -857,6 +857,7 @@ pub(crate) struct ZipDirectory {
 struct CheckedZipEntry {
     central_offset: u64,
     local_offset: u64,
+    flags: u16,
     crc32: u32,
     compressed_size: u64,
     uncompressed_size: u64,
@@ -1317,6 +1318,7 @@ fn validate_central_directory(
         checked_entries.push(CheckedZipEntry {
             central_offset: usize_to_u64(offset, "central-directory offset")?,
             local_offset: usize_to_u64(local_offset, "local-header offset")?,
+            flags,
             crc32,
             compressed_size: u64::from(compressed_size),
             uncompressed_size: u64::from(uncompressed_size),
@@ -2738,7 +2740,7 @@ pub(crate) fn open_checked_archive<'a>(
     let mut inner_packages = Vec::new();
     let mut decoded_path_size = 0_usize;
     let mut total = 0_u64;
-    for i in 0..archive.len() {
+    for (i, checked) in checked_entries.iter().enumerate() {
         cancellation.checkpoint()?;
         let file = archive.by_index_raw(i).map_err(zip_error)?;
         let path = file.name().to_string();
@@ -2770,6 +2772,14 @@ pub(crate) fn open_checked_archive<'a>(
                     path: "decoded path component budget".into(),
                 });
             }
+        }
+        // APPNOTE 4.4.4: bit 6 requires bit 0. Use the structurally checked
+        // flags and validated decoded path, before opening any member codec.
+        // Legacy EX-IM selected-member admission remains a separate policy.
+        if checked.flags & 0x0041 == 0x0040 {
+            return Err(zip_error(format!(
+                "{path}: strong-encryption flag (bit 6) requires encryption flag (bit 0)"
+            )));
         }
         has_master |= normalized == "knx_master.xml";
         if !is_directory && is_inner_package_path(normalized) {

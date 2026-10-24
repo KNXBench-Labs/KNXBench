@@ -151,6 +151,15 @@ already found lying in the grass.
   identities retained by pidfds, then reap them after bounded TERM/KILL
   escalation; never replace that ownership proof with `pkill -f` or command
   substring matching.
+- **Cleanup must not itself be cancellable.** Defer handled signals across
+  TERM/KILL/reap on both runner and supervisor, including normal-completion
+  leftovers; restore the caller's mask afterwards so interruption still fails
+  the attempt. Keep normal cleanup inside the exception guard so interruption
+  at entry/exit can safely retry it. An exclusive subreaper killed mid-cleanup
+  loses ownership of detached, environment-scrubbed children; a non-atomic outer
+  `/proc` scan cannot reliably recover that ownership. SIGKILL cannot be
+  deferred: forcible supervisor death remains a cleanup limitation, not merely
+  an incomplete-receipt case. Do not compensate by claiming unrelated children.
 - **A Python test child that waits for a signal must block it and take it
   with `sigtimedwait`.** On CPython 3.14.7 a pending handler does not run when
   a keyword call returns: in `os.system(command=f'kill -TERM {os.getpid()}')`

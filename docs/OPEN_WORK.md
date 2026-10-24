@@ -1068,7 +1068,13 @@ Open, each small and none blocking:
   validates PID/start-time identities, signals through pidfds and applies
   bounded TERM/KILL escalation. Normal stage completion also removes an
   unexpected leftover; Playwright's ordinary `webServer` shutdown remains the
-  no-cleanup path. Reading `products` commands and
+  no-cleanup path. A same-day late-cancellation correction defers handled signals
+  during cleanup in both layers, including the normal-completion path; real
+  SIGTERM/SIGINT and repeated-signal regressions cover detached children with
+  scrubbed environments and non-atomic process enumeration. Forcibly killing
+  the supervisor with SIGKILL can still orphan such children; see the
+  [cleanup and accounting boundaries](contracts/web-test-gate.md#receipt).
+  Reading `products` commands and
   `device readiness` open the default product database read-only now. **Closed
   (24 October 2026):** `device download/compare/restore/byte-order-probe` and
   `device diagnostics --product-db` only plan from the catalogue, so they use

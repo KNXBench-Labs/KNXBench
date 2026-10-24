@@ -4,6 +4,8 @@ mod routes;
 pub(crate) mod static_files;
 mod storage;
 #[cfg(test)]
+mod test_observation;
+#[cfg(test)]
 mod tests;
 mod worker;
 pub(crate) use routes::routes;
@@ -119,6 +121,8 @@ struct Inner {
 }
 /// The one actual task, local status and private durable evidence owner.
 pub struct System2Service {
+    #[cfg(test)]
+    observation: Option<Arc<test_observation::Observation>>,
     pub control: System2OperationControl,
     command: tokio::sync::Mutex<()>,
     inner: Mutex<Inner>,
@@ -147,6 +151,8 @@ impl System2Service {
             }
         }
         Self {
+            #[cfg(test)]
+            observation: None,
             control: System2OperationControl::new(),
             command: tokio::sync::Mutex::new(()),
             inner: Mutex::new(inner),

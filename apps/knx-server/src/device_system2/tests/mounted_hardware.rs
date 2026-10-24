@@ -157,6 +157,8 @@ fn old_device() -> Arc<SimulatedDevice> {
 }
 
 struct TestHardware {
+    observation: Arc<super::super::test_observation::Observation>,
+    transport_observation: Mutex<TransportObservation>,
     device: Arc<SimulatedDevice>,
     old: SimulatedSystem2Snapshot,
     data: PathBuf,
@@ -174,6 +176,8 @@ impl TestHardware {
     fn new(data: &Path) -> Arc<Self> {
         let device = old_device();
         Arc::new(Self {
+            observation: Arc::new(Default::default()),
+            transport_observation: Mutex::new(Default::default()),
             old: device.system2_snapshot(),
             device,
             data: data.into(),
@@ -320,6 +324,90 @@ impl TestHardware {
 // Ordinary simulated connector provenance is neither changed nor admitted.
 struct TestHardwareConnector(Arc<TestHardware>);
 struct TestHardwareTunnel(Arc<TestHardware>);
+#[derive(Default)]
+struct TransportObservation {
+    entered: usize,
+    device_completed: usize,
+    device_errors: usize,
+    adapter_returned: usize,
+    notified: bool,
+    last: Option<Value>,
+}
+impl TestHardware {
+    fn transport_entered(
+        &self,
+        destination: Destination,
+        transport: Tpci,
+        service: &ApplicationService,
+    ) {
+        if let Ok(mut observation) = self.transport_observation.try_lock() {
+            observation.entered += 1;
+            observation.last = Some(json!({
+                "connectionOrdinal":self.connects.load(Ordering::SeqCst),
+                "targetMatches":matches!(destination, Destination::Individual(address) if address == TARGET.parse::<IndividualAddress>().unwrap()),
+                "service":match service {
+                    ApplicationService::NoApplicationPdu => "no-application-pdu",
+                    ApplicationService::MemoryRead { .. } => "memory-read",
+                    ApplicationService::UserMemoryRead { .. } => "user-memory-read",
+                    ApplicationService::PropertyValueRead { .. } => "property-read",
+                    ApplicationService::DeviceDescriptorRead { .. } => "descriptor-read",
+                    ApplicationService::MemoryWrite { .. } => "memory-write",
+                    ApplicationService::UserMemoryWrite { .. } => "user-memory-write",
+                    ApplicationService::PropertyValueWrite { .. } => "property-write",
+                    _ => "other",
+                },
+                "tpci":match transport {
+                    Tpci::UnnumberedData => "unnumbered-data",
+                    Tpci::NumberedData { .. } => "numbered-data",
+                    Tpci::Connect => "connect", Tpci::Disconnect => "disconnect",
+                    Tpci::Ack { .. } => "ack", Tpci::Nak { .. } => "nak", Tpci::Unknown(_) => "unknown",
+                },
+                "sendEntered":true,"deviceSendReturned":false,"deviceSendSucceeded":false,"adapterReturned":false,"errorClass":Value::Null,
+            }));
+        }
+    }
+    fn transport_result(&self, result: &Result<(), BusError>) {
+        if let Ok(mut observation) = self.transport_observation.try_lock() {
+            if result.is_ok() {
+                observation.device_completed += 1;
+            } else {
+                observation.device_errors += 1;
+                observation.adapter_returned += 1;
+            }
+            if let Some(last) = observation.last.as_mut() {
+                last["deviceSendReturned"] = true.into();
+                last["deviceSendSucceeded"] = result.is_ok().into();
+                last["adapterReturned"] = result.is_err().into();
+                last["ioKind"] = match result {
+                    Err(BusError::Io(error)) => json!(format!("{:?}", error.kind())),
+                    _ => Value::Null,
+                };
+                last["errorClass"] = match result {
+                    Ok(()) => Value::Null,
+                    Err(error) => json!(match error {
+                        BusError::Io(_) => "io",
+                        BusError::Timeout => "timeout",
+                        BusError::ConnectionRefused(_) => "connection-refused",
+                        BusError::NotImplemented => "not-implemented",
+                        BusError::Protocol(_) => "protocol",
+                        BusError::NotMulticast(_) => "not-multicast",
+                    }),
+                };
+            }
+        }
+    }
+    fn transport_snapshot(&self) -> Value {
+        match self.transport_observation.try_lock() {
+            Ok(o) => {
+                json!({"entered":o.entered,"deviceSucceeded":o.device_completed,"deviceErrors":o.device_errors,
+                "adapterReturned":o.adapter_returned,"dataNotificationReached":o.notified,"last":o.last,
+                "connects":self.connects.load(Ordering::SeqCst),"disconnects":self.disconnects.load(Ordering::SeqCst),
+                "mutations":self.writes.load(Ordering::SeqCst),"durableBackupChecks":self.backup_checks.load(Ordering::SeqCst)})
+            }
+            Err(_) => json!({"unavailable":"transport-observation-lock-busy-or-poisoned"}),
+        }
+    }
+}
 impl crate::GatewayConnector for TestHardwareConnector {
     #[allow(clippy::type_complexity)]
     fn connect_tunnel(
@@ -375,6 +463,7 @@ impl crate::BusTunnel for TestHardwareTunnel {
         service: ApplicationService,
     ) -> Pin<Box<dyn Future<Output = Result<(), BusError>> + Send + '_>> {
         Box::pin(async move {
+            self.0.transport_entered(destination, transport, &service);
             let mutation = matches!(
                 &service,
                 ApplicationService::MemoryWrite { .. }
@@ -394,16 +483,27 @@ impl crate::BusTunnel for TestHardwareTunnel {
                 &service,
                 ApplicationService::MemoryWrite { .. } | ApplicationService::UserMemoryWrite { .. }
             );
-            ManagementTransport::send_frame(
+            let result = ManagementTransport::send_frame(
                 self.0.device.as_ref(),
                 destination,
                 transport,
                 service,
             )
-            .await?;
+            .await;
+            self.0.transport_result(&result);
+            result?;
             if data_write && self.0.pause_data_write.swap(false, Ordering::SeqCst) {
+                if let Ok(mut observation) = self.0.transport_observation.try_lock() {
+                    observation.notified = true;
+                }
                 self.0.data_written.notify_one();
                 self.0.release_write.notified().await;
+            }
+            if let Ok(mut observation) = self.0.transport_observation.try_lock() {
+                observation.adapter_returned += 1;
+                if let Some(last) = observation.last.as_mut() {
+                    last["adapterReturned"] = true.into();
+                }
             }
             Ok(())
         })
@@ -498,6 +598,9 @@ fn state(
     hardware: &Arc<TestHardware>,
 ) -> crate::SharedState {
     let mut state = crate::AppState::with_product_db_at(data.into(), products);
+    Arc::get_mut(&mut state.device_system2)
+        .expect("new fixture exclusively owns its System-2 service")
+        .observation = Some(hardware.observation.clone());
     state.connector = Box::new(TestHardwareConnector(hardware.clone()));
     let leases = data.join("gateway-leases");
     std::fs::create_dir_all(&leases).unwrap();
@@ -716,9 +819,21 @@ async fn pinned_public_http_worker_cancellation_reopens_original_once_only_recov
     let operation_id = accepted["operationId"].as_str().unwrap().to_owned();
     assert_eq!(operation_id, preview["preparationId"]);
     assert_eq!(accepted["state"], "running");
-    tokio::time::timeout(Duration::from_secs(10), hardware.data_written.notified())
-        .await
-        .expect("worker must reach an actual data write after durable backup");
+    let data_written =
+        tokio::time::timeout(Duration::from_secs(10), hardware.data_written.notified()).await;
+    if data_written.is_err() {
+        // Retain actual worker/transport/committed evidence BEFORE panic/TempDir
+        // teardown. Do not await the worker, release the pause or extend its budget.
+        super::super::test_observation::retain_timeout(
+            &state,
+            &hardware.observation,
+            directory.path(),
+            &operation_id,
+            &preview,
+            hardware.transport_snapshot(),
+        );
+    }
+    data_written.expect("worker must reach an actual data write after durable backup");
     let running = http(&router, "/api/device-system2/status", None, 200).await;
     assert_eq!(running["operationId"], operation_id);
     assert_eq!(running["state"], "running");

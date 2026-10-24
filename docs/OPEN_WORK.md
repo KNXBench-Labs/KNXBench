@@ -124,7 +124,7 @@ Each package needs its own scoped claim, review, tests and delivery evidence.
 | [WP-10](#wp-10--import-and-model-evidence) | P2 | Samples/grammar/authorisation required; unchanged by Alpha 16; #7 reporter acceptance open ([A16 disposition](goals/alpha16-release-plan-2026-10-23.md#remaining-queue-finish-only-admitted-meaningful-slices)) | Independently verified import/model cases with honest unsupported-data reports. |
 | [WP-11](#wp-11--native-linux-acceptance) | P2 | Separate desktop-control permission; Alpha 16 ran only minimal isolated artifact smokes, no native desktop-control or GUI evidence ([A16 disposition](goals/alpha16-release-plan-2026-10-23.md#remaining-queue-finish-only-admitted-meaningful-slices)) | Actual WebKitGTK/Wayland/Orca and AppImage evidence for named workflows. |
 | [WP-12](#wp-12--field-evidence-and-owner-acceptance) | P2 | Outside input or operation-specific consent; unchanged by Alpha 16; #22 hardware outcome unverified ([A16 disposition](goals/alpha16-release-plan-2026-10-23.md#remaining-queue-finish-only-admitted-meaningful-slices)) | Reviewed tester/plug-in/diagnostic evidence, without silently expanding compatibility. |
-| [WP-13](#wp-13--documentation-drift) | P3 | Named remaining prose reconciled 20 Oct; KL-183 runtime repair delivered as A16-06 (`b1703d61d`), but its ledger row and dossier are not yet updated for it ([A16 disposition](goals/alpha16-release-plan-2026-10-23.md#remaining-queue-finish-only-admitted-meaningful-slices)) | Current summaries agree with delivered behaviour; retained history stays intact. |
+| [WP-13](#wp-13--documentation-drift) | P3 | Named remaining prose reconciled 20 Oct; KL-183 runtime repair delivered as A16-06 (`b1703d61d`); its summary, dossier and ledger evidence follow it since 24 Oct, status stays `ACCEPTED_BOUNDARY` ([A16 disposition](goals/alpha16-release-plan-2026-10-23.md#remaining-queue-finish-only-admitted-meaningful-slices)) | Current summaries agree with delivered behaviour; retained history stays intact. |
 | [WP-14](#wp-14--complete-offline-family-outcomes) | P1 | Source contracts first; UP258 excluded; outside Alpha 16 ([A16 disposition](goals/alpha16-release-plan-2026-10-23.md#remaining-queue-finish-only-admitted-meaningful-slices)) | Complete real-source System 1/B/300 image → procedure → execution → recovery slices. |
 | [WP-15](#wp-15--complete-module-scope-in-web-consumers) | P1 | Delivered 19 Oct (web adoption); older-server boundary documented | Complete response-local module paths distinguish diagnostics and workspace identities. |
 | [WP-16](#wp-16--empty-directory-zip-integrity) | P1 | Project/product directory and file-stream repairs delivered; encrypted-directory refusal delivered 20 Oct; separate bit-6/AES metadata questions remain conditional after Alpha 16 ([A16 disposition](goals/alpha16-release-plan-2026-10-23.md#remaining-queue-finish-only-admitted-meaningful-slices)) | Empty directories have valid CRC and complete compressed-stream representation. |
@@ -593,8 +593,9 @@ and its required members, and refuse missing, corrupt or ambiguous sources
 ([portability contract](contracts/alpha16-catalogue-portability.md),
 [release note](releases/alpha16.md#catalogue-authored-native-source-retention)).
 Older readers of such saves are unverified and historical missing sources stay
-unrecoverable. The KL-183 ledger row and dossier still carry the pre-Alpha-16
-text; reconciling them is remaining WP-13 work, not a closure of KL-183.
+unrecoverable. The KL-183 catalogue summary, dossier and ledger evidence were
+reconciled with this on 24 October 2026; the remaining pre-v16, unbacked and
+ambiguous-ownership boundaries keep KL-183 `ACCEPTED_BOUNDARY`.
 [Reconciliation scope](status/2026-10-20-limitations-reassessment.md) ·
 [Current ledger](status/LEDGER.md) ·
 [delivery index](IMPLEMENTATION_STATUS.md).

@@ -686,7 +686,7 @@ Commands respect installation ownership and refuse ambiguous/cross-installation 
 ### 183. Project files without their manufacturer files
 
 **Ledger status:** `ACCEPTED_BOUNDARY` ([KL-183](status/LEDGER.md#post-snapshot-ids)).
-Native saves embed available hash-matched manufacturer files named by the saved manifest, not automatically every referenced application. Missing bytes or manifest entries can leave a newly saved project dependent on external product data; saving alone cannot recover them. Read-only CLI readers do not reinstall files.
+Since Alpha 16, Save/Save As also acquire catalogue-added devices' sources from the installed winning hashes and one recorded original package, and reopen into an empty product database. Older files without originals, missing source bytes, ambiguous or unrecorded package ownership and saves without a product database still cannot become portable by saving alone; read-only CLI readers do not reinstall files.
 [Details and history](limitations/KL-183-knxdb-manufacturer-files.md)
 
 ## Commissioning and recovery

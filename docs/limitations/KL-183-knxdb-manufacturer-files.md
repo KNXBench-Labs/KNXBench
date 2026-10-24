@@ -2,6 +2,30 @@
 
 [Current summary and ledger status](../KNOWN_LIMITATIONS.md#catalogue-kl-183)
 
+## Catalogue-authored saves become portable (Alpha 16, 24 October 2026)
+
+The catalogue-authoring gap characterised below is repaired as Alpha 16 row
+A16-06 (`b1703d61d`, follow-up `5763745fa`), per the
+[portability contract](../contracts/alpha16-catalogue-portability.md) and the
+[release note](../releases/alpha16.md). Save and Save As acquire a
+catalogue-added device's product, hardware and application sources from the
+installed **winning source hashes** and exactly one recorded installed package,
+and carry that package's exact original bytes as a `CataloguePackage` entry.
+On open, the existing validated installer replays it, also into an empty
+product database. The owning HTTP regression
+`a_catalogue_created_device_reopens_without_external_products_after_save`
+replaces the earlier characterization's empty-manifest expectation; refusal,
+plain-Save, unresolved-import and offline-fallback cases sit beside it in
+[`http_knxdb_product_data.rs`](../../apps/knx-server/tests/it/http_knxdb_product_data.rs).
+
+**Still bounded, so the ledger stays `ACCEPTED_BOUNDARY`:** files saved before
+store schema v16 or without a carried original, missing or corrupt source bytes,
+ambiguous or unrecorded package membership, legacy/unmeasured ownership and
+saves without a product database cannot acquire new sources; they are refused or
+reported, never invented. Older readers' handling of the new carried originals
+is unverified. Hash equality is not manufacturer authenticity. The dated
+sections below remain the historical record of the earlier state.
+
 ## Catalogue-authoring runtime characterization (20 October 2026)
 
 The previously source-traced case below is now reproduced through the real HTTP

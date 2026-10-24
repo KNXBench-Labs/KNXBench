@@ -36,10 +36,34 @@ pub const CONNECTION_TIMEOUT: Duration = Duration::from_secs(6);
 /// How many times a frame is repeated before the connection is given up on.
 pub const MAX_REP_COUNT: u8 = 3;
 
+/// One actual memory-read exchange boundary, without payload or device identity.
+///
+/// Hidden diagnostic seam for a caller-owned, bounded recorder. Tags are fixed
+/// by the session; offsets are only retained when that caller opts in.
+#[doc(hidden)]
+#[derive(Clone, Copy)]
+pub struct MemoryReadObservation {
+    /// Monotonic entry sample, evaluated only by an opted-in observer.
+    pub entered_at: std::time::Instant,
+    pub offset: u32,
+    pub count: u8,
+    pub request_seq: u8,
+    pub expected_receive_seq: u8,
+    pub received_seq: Option<u8>,
+    pub attempts: u8,
+    pub answer_slices: u8,
+    pub acknowledged: bool,
+    pub awaiting: &'static str,
+    pub disposition: &'static str,
+    /// Sampled at this boundary, not a fresh timeout-time timer observation.
+    pub response_slice_remaining: Option<Duration>,
+}
+
 /// What a management procedure needs from its transport.
 ///
-/// Identical in shape to [`ScanTransport`], and blanket-implemented for
+/// Same bus capabilities as [`ScanTransport`], and blanket-implemented for
 /// every implementor of it, so a fake written for one serves the other.
+/// Memory-read observation is separately optional and defaults to inert.
 #[allow(async_fn_in_trait)]
 pub trait ManagementTransport {
     /// The individual address the gateway assigned this connection. A
@@ -52,6 +76,12 @@ pub trait ManagementTransport {
     /// Subscribe *before* sending, always: the answer to a management
     /// request can arrive before the send call has returned.
     fn subscribe(&self) -> broadcast::Receiver<TunnelEvent>;
+
+    /// Optional per-session memory-read observation. The default does not even
+    /// evaluate the snapshot closure: no clock, allocation, lock or recorder.
+    /// An override must remain nonblocking and must not affect the exchange.
+    #[doc(hidden)]
+    fn observe_memory_read(&self, _snapshot: impl FnOnce() -> MemoryReadObservation) {}
 
     /// Sends one `L_Data.req` with the given TPCI and application service.
     async fn send_frame(

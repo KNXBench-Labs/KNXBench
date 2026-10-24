@@ -250,3 +250,94 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     expect(state.unexpected).toEqual([]);
   });
 }
+
+// WP-06 folder grouping: groups by the opaque saved-folder key; equal ids under
+// different keys stay apart and say so visibly; everything else is the fallback.
+const F1 = "folder:Channel:4:CH-1/Folder:4:PB-3", F2 = "folder:Channel:4:CH-2/Folder:4:PB-3";
+for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
+  test(`${language} ${width}px: grouping by saved project folder keeps colliding ids apart and stays view-only`, async ({ page }) => {
+    const m = language === "en" ? en : de;
+    await page.setViewportSize({ width, height: 900 });
+    const state = await intercept(page, language, 8);
+    const pb3 = (ch: string) => ({ status: "Assigned" as const, key: `Channel:4:${ch}/Folder:4:PB-3`,
+      path: [{ kind: "Channel", ref_id: ch }, { kind: "Folder", ref_id: "PB-3" }] });
+    state.objects[0] = { ...state.objects[0], project_folder: pb3("CH-1") };
+    state.objects[1] = { ...state.objects[1], project_folder: pb3("CH-2") };
+    state.objects[2] = { ...state.objects[2], project_folder: { status: "Ambiguous", key: null, path: [] } };
+    state.objects[3] = { ...state.objects[3], project_folder: { status: "NoFolder", key: null, path: [] } };
+    state.objects[4] = { ...state.objects[4], project_folder: pb3("CH-1") };
+    await openProject(page, language); await openList(page, language);
+    await page.locator(".devices-table tbody td:nth-child(3) button").first().click();
+    const panel = page.locator(".com-table-panel");
+    const before = JSON.stringify(state.tree), requestStart = state.requests.length;
+    const views = panel.locator(".com-table-views button");
+    await expect(views).toHaveText([m["comTable.grouped"], m["comTable.byFolder"], m["comTable.flat"]]);
+    await panel.getByRole("button", { name: m["comTable.byFolder"], exact: true }).click();
+    await expect(views.nth(0)).toHaveAttribute("aria-pressed", "false");
+    await expect(views.nth(1)).toHaveAttribute("aria-pressed", "true");
+    await expect(views.nth(2)).toHaveAttribute("aria-pressed", "false");
+    await expect(panel.locator("thead th")).toHaveCount(6);
+    await expect(panel.locator(".com-folder-view-note")).toHaveText(m["comTable.folderViewNote"]);
+    const headers = panel.locator("tr.com-object-channel");
+    expect(await headers.evaluateAll(rows => rows.map(r => [r.getAttribute("data-group-key"), r.hasAttribute("data-channel-key")])))
+      .toEqual([[F1, false], [F2, false], ["folder-none", false]]);
+    const header = (key: string) => panel.locator(`tr.com-object-channel[data-group-key="${key}"] .com-object-channel-summary`);
+    for (const key of [F1, F2, "folder-none"]) await expect(header(key)).toHaveAttribute("aria-expanded", "false");
+    // Same Folder id, different saved paths: visibly distinct without a tooltip.
+    await expect(header(F1).locator("strong")).toHaveText("PB-3");
+    await expect(header(F2).locator("strong")).toHaveText("PB-3");
+    await expect(header(F1).locator(".com-object-folder-path")).toBeVisible();
+    await expect(header(F1).locator(".com-object-folder-path")).toHaveText(m["comTable.folderPath"].replace("{value}", "CH-1 › PB-3"));
+    await expect(header(F2).locator(".com-object-folder-path")).toHaveText(m["comTable.folderPath"].replace("{value}", "CH-2 › PB-3"));
+    await expect(header("folder-none").locator("strong")).toHaveText(m["comTable.noFolderGroup"]);
+    await expect(panel.locator("tr.com-object-summary:visible")).toHaveCount(0);
+    await header(F1).click(); await header("folder-none").click();
+    expect(await panel.locator("tr.com-object-summary:visible").evaluateAll(rows => rows.map(r => r.getAttribute("data-object-id"))))
+      .toEqual(["1", "5", "3", "4", "6", "7", "8"]);
+    await expect(panel.locator('tr[data-object-id="1"]')).toHaveAttribute("data-group-key", F1);
+    await expect(panel.locator('tr[data-object-id="1"]')).toHaveAttribute("data-channel-key", "channel:channel-0");
+    await expect(panel.locator('tr[data-object-id="3"] .com-object-project-folder')).toHaveText(m["comTable.projectFolderRefused.Ambiguous"]);
+    if (process.env.KNX_CO_CAPTURE_DIR) await page.screenshot({ path: join(process.env.KNX_CO_CAPTURE_DIR, `co-folder-groups-${language}-${width}.png`) });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+    await header("folder-none").click();
+    await panel.getByRole("searchbox", { name: m["comTable.search"] }).fill("PB-3");
+    await expect(header(F2)).toHaveAttribute("aria-expanded", "true");
+    await expect(panel.locator('tr.com-object-channel[data-group-key="folder-none"]')).toBeHidden();
+    expect(await panel.locator("tr.com-object-summary:visible").evaluateAll(rows => rows.map(r => r.getAttribute("data-object-id"))))
+      .toEqual(["1", "5", "2"]);
+    if (process.env.KNX_CO_CAPTURE_DIR) await page.screenshot({ path: join(process.env.KNX_CO_CAPTURE_DIR, `co-folder-search-${language}-${width}.png`) });
+    await panel.getByRole("button", { name: m["comTable.resetFilters"], exact: true }).click();
+    await expect(header(F1)).toHaveAttribute("aria-expanded", "true");
+    await expect(header(F2)).toHaveAttribute("aria-expanded", "false");
+    await expect(header("folder-none")).toHaveAttribute("aria-expanded", "false");
+    // The channel view keeps its own collapse state.
+    await panel.getByRole("button", { name: m["comTable.grouped"], exact: true }).click();
+    await expect(panel.locator(".com-object-channel-summary").first()).toHaveAttribute("aria-expanded", "false");
+    await expect(panel.locator(".com-folder-view-note")).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+    expect(JSON.stringify(state.tree)).toBe(before);
+    expect(state.requests.slice(requestStart).filter(r => !r.startsWith("GET ") && r !== "POST /api/achievements/record")).toEqual([]);
+    expect(state.unexpected).toEqual([]);
+  });
+}
+test("a refused editor survives switching through the folder view with exactly one save", async ({ page }) => {
+  const state = await intercept(page, "en"); await openProject(page, "en"); await openList(page, "en");
+  await page.locator(".devices-table tbody td:nth-child(3) button").first().click();
+  const panel = page.locator(".com-table-panel");
+  await panel.getByRole("button", { name: en["comTable.flat"], exact: true }).click();
+  await panel.locator('[data-object-id="1"] summary').click();
+  const editor = panel.locator('[data-editor-id="1"] .dpt-field select');
+  const before = JSON.stringify(state.tree); state.refuseDpt = true;
+  await editor.focus(); await editor.selectOption("DPST-9-2");
+  const handle = await editor.elementHandle();
+  // Focusing the search field triggers the existing input blur-save gesture.
+  await panel.getByRole("searchbox").fill("Object 2");
+  await expect(panel.locator('[data-editor-id="1"] .field-error')).toHaveText("Fictional refusal");
+  for (const view of ["comTable.byFolder", "comTable.grouped", "comTable.byFolder"] as const) {
+    await panel.getByRole("button", { name: en[view], exact: true }).click();
+    await expect(panel.locator('[data-editor-id="1"] .field-error')).toHaveText("Fictional refusal");
+    expect(await editor.evaluate((node, kept) => node === kept, handle), "the same editor stays mounted").toBe(true);
+  }
+  expect(state.requests.filter(r => r === "POST /api/com-object-dpt")).toHaveLength(1);
+  expect(JSON.stringify(state.tree)).toBe(before); expect(state.unexpected).toEqual([]);
+});

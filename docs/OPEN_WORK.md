@@ -36,7 +36,8 @@ caption-language slice (A16-07), each as software-tested bounded outcomes.
 The remaining family/format/hardware boundaries stay evidence-, consent- or
 input-gated. The owner subsequently lifted the stop and admitted the bounded
 bit-6-only repair (delivered 24 October) and saved-project-folder grouping using
-already projected identities; grouping still needs its scoped contract and tests.
+already projected identities; grouping is IMPLEMENTED, REVIEW/GATE PENDING
+(contract amended, not delivered).
 Issues #22 (hardware outcome of the experimental System-2 download, unverified)
 and #7 (reporter acceptance) remain open; Alpha 16 changed no ledger row.
 
@@ -119,7 +120,7 @@ Each package needs its own scoped claim, review, tests and delivery evidence.
 | [WP-03](#wp-03--legacy-binary-enumeration-values) | P2 | Mapping evidence first; Alpha 16 left it conditional and shipped no mapping ([A16 disposition](goals/alpha16-release-plan-2026-10-23.md#remaining-queue-finish-only-admitted-meaningful-slices)) | Legacy binary enum values use the existing typed storage or keep an explicit refusal/report. |
 | [WP-04](#wp-04--large-catalogues-measure-then-stream) | P1/P2 | Delivered: WP-04.1/.2 (20 Oct); WP-04.3 in Alpha 16 as A16-04 (e.g. `e287f2050`, `98f644da4`, `5dde9da9a`); no >4 GiB, aggregate-quota or universal-throughput result ([release note](releases/alpha16.md#catalogue-updates-owned-beyond-the-picker)) | Measured database growth, bounded procedure parsing, then a cancellable web large-profile workflow. |
 | [WP-05](#wp-05--parameter-layout-fidelity) | P2 | Caption-language slice delivered in Alpha 16 as A16-07 (`cde8d89a3`); row/column `TextParameterRefId`, inline/nested/`CollapseIfEmpty` and in-cell buttons stay evidence-gated exclusions ([layout contract](contracts/alpha16-parameter-layout.md)) | One evidenced layout feature at a time, never inferred manufacturer behaviour. |
-| [WP-06](#wp-06--communication-object-organisation) | P2 | Saved project folders displayed by declared id (WP-06a); captions, module objects and priority (separate model ADR) open; not in Alpha 16 ([A16 disposition](goals/alpha16-release-plan-2026-10-23.md#remaining-queue-finish-only-admitted-meaningful-slices)) | Declared object folders and, separately, lossless priority representation. |
+| [WP-06](#wp-06--communication-object-organisation) | P2 | Saved project folders displayed by declared id (WP-06a); folder grouping view implemented, review/gate pending; captions, module objects and priority (separate model ADR) open; not in Alpha 16 ([A16 disposition](goals/alpha16-release-plan-2026-10-23.md#remaining-queue-finish-only-admitted-meaningful-slices)) | Declared object folders and, separately, lossless priority representation. |
 | [WP-07](#wp-07--module-instance-authority) | P1 | Defining mapping evidence required; still evidence-blocked after Alpha 16 ([A16 disposition](goals/alpha16-release-plan-2026-10-23.md#remaining-queue-finish-only-admitted-meaningful-slices)) | One independently witnessed instance/repeat/number-offset mapping contract. |
 | [WP-08](#wp-08--parameter-value-codecs) | P2 | Per-type encoding evidence required; conditional, none admitted in Alpha 16 ([A16 disposition](goals/alpha16-release-plan-2026-10-23.md#remaining-queue-finish-only-admitted-meaningful-slices)) | A separately admitted codec/editor per TypeDate, Colour or Picture form. |
 | [WP-09](#wp-09--offline-image-evidence-gates) | P1 | Research-bound; Alpha 16 scoped only rules established for the exact UP258 path, undefined rules stay refused ([A16 disposition](goals/alpha16-release-plan-2026-10-23.md#remaining-queue-finish-only-admitted-meaningful-slices)) | Discriminating encoding/fill/placement evidence, not another permissive image builder. |
@@ -436,8 +437,14 @@ retained `GroupObjectTree` (Project Schema 23 §1.2.5.21–23: required
 module and stored/evaluated-inactive objects are refused with a stated reason;
 both public WP-06A trees yield no folder. Import, native save/reopen and
 an edit+undo keep identical placements (synthetic route test).
+**WP-06 folder grouping (24 October): IMPLEMENTED, REVIEW/GATE PENDING, not
+delivered.** A third table view, *By saved project folder*, groups by the opaque
+saved-folder key with a fallback group, visible full paths and an import-time
+snapshot note; By channel stays the default
+([grouping contract](contracts/communication-object-folders.md#saved-project-folder-grouping-24-october-2026)).
+Independent review, the maintained package gate and publication are still open.
 **Still open:** folder captions from product `ParameterBlock`s (manufacturer
-mapping, not guessed), grouping by folder, module objects (WP-07), schema-20
+mapping, not guessed), module objects (WP-07), schema-20
 `Node/@Text`, saved-tree staleness after edits, real-export witness, priority
 ([contract](contracts/communication-object-folders.md#saved-project-folder-display-24-october-2026)).
 [Object table contract](COMMUNICATION_OBJECT_TABLE.md) ·

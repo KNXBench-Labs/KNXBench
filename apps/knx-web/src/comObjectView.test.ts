@@ -91,3 +91,70 @@ it("WP-06a: shows only assigned saved folders, names refusals and searches decla
   // The channel id of the saved path is not a folder and is not searchable as one.
   expect(view(objects, { ...DEFAULT_FILTERS, query: "CH-1" }).objects).toEqual([]);
 });
+
+// WP-06 folder grouping: groups by the opaque saved-folder key, never by labels.
+type Folder = NonNullable<ComObjectNode["project_folder"]>;
+const saved = (key: string | null, path: [string, string][], status = "Assigned"): Folder =>
+  ({ status: status as Folder["status"], key, path: path.map(([kind, ref_id]) => ({ kind, ref_id })) });
+const pb3 = (ch: string) => saved(`Channel:4:${ch}/Folder:4:PB-3`, [["Channel", ch], ["Folder", "PB-3"]]);
+const byFolder = (objects: ComObjectNode[], filters = DEFAULT_FILTERS, column: ComSortColumn | null = null, descending = false) =>
+  deriveComObjectView(objects, filters, { column, descending }, "en", true, "folder");
+it("folder grouping joins exact opaque keys and keeps equal visible ids under different keys apart", () => {
+  const objects = [object(1, { project_folder: pb3("CH-1") }), object(2, { project_folder: pb3("CH-2") }),
+    // Same key, different declared path: the key alone decides membership.
+    object(3, { project_folder: { ...pb3("CH-1"), path: [{ kind: "Folder", ref_id: "PB-3" }] } })];
+  const groups = byFolder(objects).groups;
+  expect(groups.map(g => g.key)).toEqual(["folder:Channel:4:CH-1/Folder:4:PB-3", "folder:Channel:4:CH-2/Folder:4:PB-3"]);
+  expect(groups.map(g => g.objects.map(o => o.id))).toEqual([[1, 3], [2]]);
+  expect(groups.map(g => g.folder?.key)).toEqual(["Channel:4:CH-1/Folder:4:PB-3", "Channel:4:CH-2/Folder:4:PB-3"]);
+  expect(groups.map(g => g.channel)).toEqual([null, null]);
+});
+it("folder grouping puts every unadmitted object into one last fallback group", () => {
+  const fallback = [object(1), object(2, { project_folder: saved(null, [], "NoFolder") }),
+    object(3, { project_folder: saved(null, [], "NotInSavedTree") }),
+    ...["Ambiguous", "UnidentifiedNode", "TreeUnresolved", "ModuleObject", "Inactive", "Future"]
+      .map((status, i) => object(4 + i, { project_folder: saved(null, [], status) })),
+    object(10, { project_folder: saved(null, [["Channel", "CH-1"], ["Folder", "PB-3"]]) }),
+    object(11, { project_folder: saved("", [["Channel", "CH-1"], ["Folder", "PB-3"]]) }),
+    object(12, { project_folder: saved("Channel:4:CH-9", [["Channel", "CH-9"]]) }),
+    // A key and plausible path never override an explicit refusal status.
+    object(14, { project_folder: saved("refused-key", [["Folder", "PB-3"]], "Ambiguous") })];
+  const objects = [...fallback, object(13, { project_folder: pb3("CH-1") })];
+  const groups = byFolder(objects).groups;
+  expect(groups.map(g => g.key)).toEqual(["folder:Channel:4:CH-1/Folder:4:PB-3", "folder-none"]);
+  expect(groups[1].objects.map(o => o.id)).toEqual(fallback.map(o => o.id));
+  expect(groups[1].folder).toBeNull();
+  expect(groups[1].total).toBe(fallback.length);
+  // Without fallback members there is no fallback group.
+  expect(byFolder([object(13, { project_folder: pb3("CH-1") })]).groups.map(g => g.key)).toEqual(["folder:Channel:4:CH-1/Folder:4:PB-3"]);
+});
+it("folder groups follow first unfiltered encounter despite opposing channel order, filters and sorting", () => {
+  const a = saved("Folder:1:A", [["Folder", "A"]]), b = saved("Folder:1:B", [["Folder", "B"]]);
+  const objects = [object(1, { activation: "Active", channel: channel("z", 9), project_folder: b }),
+    object(2, { activation: "Active", channel: channel("y", 0), project_folder: a, function_text: "keep" }),
+    object(3, { project_folder: b, function_text: "keep" })];
+  // The channel view orders by program order; the folder view ignores it.
+  expect(view(objects, DEFAULT_FILTERS, null, false, true).groups[0].key).toBe("channel:y");
+  expect(byFolder(objects).groups.map(g => g.key)).toEqual(["folder:Folder:1:B", "folder:Folder:1:A"]);
+  expect(byFolder(objects).objects.map(o => o.id)).toEqual([1, 3, 2]);
+  // Filtering out B's first member does not reorder the groups.
+  const filtered = byFolder(objects, { ...DEFAULT_FILTERS, query: "keep" });
+  expect(filtered.groups.map(g => [g.key, g.objects.map(o => o.id)])).toEqual([["folder:Folder:1:B", [3]], ["folder:Folder:1:A", [2]]]);
+  expect(byFolder(objects, DEFAULT_FILTERS, "number", true).groups.map(g => g.objects.map(o => o.id))).toEqual([[3, 1], [2]]);
+});
+it("folder grouping counts totals unfiltered, keeps zero-match groups and leaves input untouched", () => {
+  const objects = [object(1, { project_folder: pb3("CH-1") }), object(2, { project_folder: pb3("CH-1") }),
+    object(3, { project_folder: pb3("CH-2") }), object(4)];
+  const before = JSON.stringify(objects);
+  const result = byFolder(objects, { ...DEFAULT_FILTERS, query: "Object 2" });
+  expect(result.groups.map(g => [g.key, g.objects.length, g.total])).toEqual([
+    ["folder:Channel:4:CH-1/Folder:4:PB-3", 1, 2], ["folder:Channel:4:CH-2/Folder:4:PB-3", 0, 1], ["folder-none", 0, 1]]);
+  expect(result.objects.map(o => o.id)).toEqual([2]);
+  expect(JSON.stringify(objects)).toBe(before);
+});
+it("an explicit channel grouping equals the default grouping", () => {
+  const objects = [object(1, { activation: "Active", channel: channel("b", 2), project_folder: pb3("CH-1") }), object(2)];
+  const explicit = deriveComObjectView(objects, DEFAULT_FILTERS, { column: null, descending: false }, "en", true, "channel");
+  expect(explicit.groups.map(g => g.key)).toEqual(["channel:b", "unassigned"]);
+  expect(explicit).toEqual(view(objects, DEFAULT_FILTERS, null, false, true));
+});

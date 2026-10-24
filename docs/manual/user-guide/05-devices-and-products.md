@@ -855,6 +855,18 @@ immediately: clicking a filter from a dirty field can trigger that existing blur
 save, but filtering adds no write of its own. Pending edits prevent duplicate
 starts; a delayed result cannot republish into a removed editor/another device.
 
+**By saved project folder** *(implemented, review pending; not in a release
+yet)* is a third view next to By channel and All objects. It groups objects by
+the folder saved in the imported project. Each heading shows the folder ids and
+the full saved path, so two folders with the same id under different channels
+stay apart. Objects without a usable saved folder share one last group,
+**Without saved project folder**; their rows still say why. The folders are
+the ones saved at import, not where the product would place an object after
+later parameter changes. Expanding, collapsing and filtering work as in the
+channel view, and each view keeps its own expansion. Switching views adds no
+write, but moving focus from a dirty field to a view button can trigger the
+existing blur-save described above.
+
 The table scrolls locally, keeping all columns reachable on narrow displays.
 [Full contract and evidence](../../COMMUNICATION_OBJECT_TABLE.md). The
 [earlier source screenshot](../../evidence/communication-objects/real-demo-editor.png)

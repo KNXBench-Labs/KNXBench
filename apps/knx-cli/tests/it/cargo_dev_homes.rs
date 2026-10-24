@@ -1,13 +1,16 @@
-//! A plain `cargo test` runs with scratch knx homes, never the developer's real ones.
+//! Cargo invoked inside the checkout runs with scratch knx homes by default.
 //!
 //! `.cargo/config.toml` forces `XDG_DATA_HOME`/`XDG_CONFIG_HOME` below
 //! `target/dev-home/`, because desktop sessions and CI runner images export
 //! the real homes. Only an explicit `--config env.<VAR>.force=false` lets an
 //! exported value through (the package gate does so for its empty scratch
-//! homes). Either way the homes a test, and every binary it spawns, sees must
-//! not be the real `~/.local/share` or `~/.config`: a spawned `knx` once
-//! migrated the owner's product database.
+//! homes). That opt-out makes the exported locations the caller's
+//! responsibility. Cargo discovers the config from its invocation directory,
+//! not from `--manifest-path`, so a command started outside the checkout also
+//! remains the caller's responsibility. A spawned `knx` once migrated the
+//! owner's product database.
 
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -45,6 +48,77 @@ fn same_directory(a: &Path, b: &Path) -> bool {
         )
 }
 
+fn cargo() -> PathBuf {
+    std::env::var_os("CARGO")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("cargo"))
+}
+
+fn write_environment_probe(root: &Path) -> PathBuf {
+    let package = root.join("probe");
+    fs::create_dir_all(package.join("src")).unwrap();
+    fs::write(
+        package.join("Cargo.toml"),
+        "[package]\nname = \"cargo-dev-home-probe\"\nversion = \"0.0.0\"\nedition = \"2021\"\n\n[workspace]\n",
+    )
+    .unwrap();
+    fs::write(
+        package.join("src/lib.rs"),
+        r#"#[test]
+fn cargo_passes_the_expected_homes() {
+    for variable in ["XDG_DATA_HOME", "XDG_CONFIG_HOME"] {
+        let actual = std::env::var_os(variable).expect("XDG home is set");
+        let expected = std::env::var_os(format!("EXPECTED_{variable}"))
+            .expect("expected XDG sentinel is set");
+        assert_eq!(actual, expected, "unexpected {variable}");
+    }
+}
+"#,
+    )
+    .unwrap();
+    package.join("Cargo.toml")
+}
+
+fn checkout_probe() -> tempfile::TempDir {
+    let target = workspace_root().join("target");
+    fs::create_dir_all(&target).unwrap();
+    tempfile::Builder::new()
+        .prefix("cargo-dev-home-probe-")
+        .tempdir_in(target)
+        .unwrap()
+}
+
+fn run_environment_probe(
+    cwd: &Path,
+    manifest: &Path,
+    scratch: &Path,
+    data_home: &Path,
+    config_home: &Path,
+    cargo_arguments: &[&str],
+) {
+    let home = scratch.join("home");
+    fs::create_dir_all(&home).unwrap();
+    let output = Command::new(cargo())
+        .args(cargo_arguments)
+        .args(["test", "--offline", "--manifest-path"])
+        .arg(manifest)
+        .current_dir(cwd)
+        .env("HOME", home)
+        .env("XDG_DATA_HOME", data_home)
+        .env("XDG_CONFIG_HOME", config_home)
+        .env("EXPECTED_XDG_DATA_HOME", data_home)
+        .env("EXPECTED_XDG_CONFIG_HOME", config_home)
+        .env("CARGO_TARGET_DIR", scratch.join("target"))
+        .output()
+        .expect("failed to run the Cargo environment probe");
+    assert!(
+        output.status.success(),
+        "Cargo environment probe failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
 #[test]
 fn cargo_test_runs_with_scratch_knx_homes() {
     let real_home = std::env::var_os("HOME").map(PathBuf::from);
@@ -65,11 +139,55 @@ fn cargo_test_runs_with_scratch_knx_homes() {
         }
         let default = workspace_root().join("target").join("dev-home").join(leaf);
         if !same_directory(&value, &default) {
-            // Let through on purpose (`--config env.<VAR>.force=false`), and
-            // still not the real home.
+            // Let through on purpose (`--config env.<VAR>.force=false`). The
+            // caller remains responsible for choosing an isolated location.
             eprintln!("{variable} chosen by the caller: {}", value.display());
         }
     }
+}
+
+#[test]
+fn manifest_path_from_external_cwd_bypasses_checkout_config() {
+    let probe = checkout_probe();
+    let scratch = tempfile::tempdir().unwrap();
+    let manifest = write_environment_probe(probe.path());
+    let external_cwd = scratch.path().join("external-cwd");
+    let data_home = scratch.path().join("exported-data");
+    let config_home = scratch.path().join("exported-config");
+    fs::create_dir_all(&external_cwd).unwrap();
+
+    run_environment_probe(
+        &external_cwd,
+        &manifest,
+        scratch.path(),
+        &data_home,
+        &config_home,
+        &[],
+    );
+}
+
+#[test]
+fn force_false_accepts_caller_supplied_scratch_homes() {
+    let probe = checkout_probe();
+    let scratch = tempfile::tempdir().unwrap();
+    let manifest = write_environment_probe(probe.path());
+    let data_home = scratch.path().join("exported-data");
+    let config_home = scratch.path().join("exported-config");
+    let cargo_arguments = [
+        "--config",
+        "env.XDG_DATA_HOME.force=false",
+        "--config",
+        "env.XDG_CONFIG_HOME.force=false",
+    ];
+
+    run_environment_probe(
+        workspace_root(),
+        &manifest,
+        scratch.path(),
+        &data_home,
+        &config_home,
+        &cargo_arguments,
+    );
 }
 
 #[test]

@@ -1,11 +1,13 @@
 # Scratch knx homes for everything Cargo runs (`cargo test`, `cargo run`,
-# build scripts): a test or a dev build must never read, migrate or write the
-# developer's real `~/.local/share/knx` and `~/.config/knx`. `force = true`
-# because desktop sessions and CI runner images export the real homes, which
-# would otherwise win. Opt out per command with
-# `--config env.XDG_DATA_HOME.force=false` (the exported value applies again;
-# the package gate does this for its own scratch homes). Release artifacts
-# never read this file. See docs/DEVELOPER_PITFALLS.md#gates.
+# build scripts) when Cargo is invoked from this checkout or a descendant.
+# Cargo discovers config from its invocation directory and ancestors, not from
+# `--manifest-path`; an invocation from elsewhere does not get this protection.
+# `force = true` because desktop sessions and CI runner images export the real
+# homes, which would otherwise win. Opt out per command with
+# `--config env.XDG_DATA_HOME.force=false` (the exported value applies again
+# and is then the caller's responsibility; the package gate supplies scratch
+# exports). Release artifacts never read this file. See
+# docs/DEVELOPER_PITFALLS.md#gates.
 [env]
 XDG_DATA_HOME = { value = "target/dev-home/data", relative = true, force = true }
 XDG_CONFIG_HOME = { value = "target/dev-home/config", relative = true, force = true }

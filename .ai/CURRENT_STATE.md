@@ -1,11 +1,17 @@
 # Restart snapshot
 
-Updated: 2026-10-24 23:35 CEST. Operational snapshot, not an append-only journal.
+Updated: 2026-10-24. Operational snapshot, not an append-only journal.
 
 ## Current assignment and authority
 
-- Owner authorised compact-handover integration, commit and push; no product implementation is started by this task.
-- The earlier general stop was lifted by the owner (latest upstream record, 23:20); historical STOP entries are not current authority.
+- Gate-hygiene work owns `fix/gate-hygiene-20261024` in
+  `<sources>/knxbench-gate-hygiene-20261024`; commit locally only, with no push,
+  merge, rebase or full package gate.
+- Task A makes the descendant PID marker regression wait for complete content;
+  Task B must add Linux subreaper cleanup for detached stage descendants, with
+  RED/GREEN tool-test evidence and two focused commits total.
+- Task A RED reproduced an empty marker parse; its focused GREEN passes. Task B
+  is not started. Next: commit Task A, then write the detached-session RED.
 - No real bus/device operations, vendor contact, Ollama/model downloads, Fable/Astra or release/deployment authorised. The globally excluded device remains completely off-limits.
 - Prefer Claude delegation to spare Codex budget; no forced model alternation.
 

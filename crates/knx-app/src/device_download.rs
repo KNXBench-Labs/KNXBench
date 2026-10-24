@@ -21,7 +21,8 @@ use knx_productdb::byte_order_probe::{
 };
 use knx_productdb::code::load_program_code;
 use knx_productdb::download_plan::{
-    check_program_kind, plan_memory_download_with_inferences, DownloadPlanError,
+    check_download_plugin, check_program_kind, plan_memory_download_with_inferences,
+    DownloadPlanError,
 };
 use knx_productdb::image::{build_download_image, DownloadImage, ImageError, ImageRequest};
 use knx_productdb::image_request::{image_request_for_device, DeviceRequestError};
@@ -128,21 +129,59 @@ impl fmt::Display for PrepareError {
     }
 }
 
-/// Prepares the download to the one project device at `target`.
+/// Prepares the download to the one project device at `target`, to write
+/// it: every download scope (complete or partial) and readiness start
+/// here. A program that declares an ETS download plug-in is refused
+/// (KL-006, [`check_download_plugin`]) right after the kind check, before
+/// any image is built.
 pub fn prepare_device_download(
     conn: &Connection,
     project: &Project,
     target: IndividualAddress,
 ) -> Result<PreparedDownload, PrepareError> {
+    prepare(conn, project, target, Purpose::Download)
+}
+
+/// The same plan as [`prepare_device_download`], to *read* the device it
+/// describes: `knx device compare`, comparison adoption and diagnostics.
+/// Nothing prepared here may be written: it skips the download refusals that
+/// do not concern reading (KL-006), so a plug-in program's device can still
+/// be compared.
+pub fn prepare_device_download_for_reading(
+    conn: &Connection,
+    project: &Project,
+    target: IndividualAddress,
+) -> Result<PreparedDownload, PrepareError> {
+    prepare(conn, project, target, Purpose::Reading)
+}
+
+/// What a preparation is for.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Purpose {
+    Download,
+    Reading,
+}
+
+fn prepare(
+    conn: &Connection,
+    project: &Project,
+    target: IndividualAddress,
+    purpose: Purpose,
+) -> Result<PreparedDownload, PrepareError> {
     let device = device_at(project, target)?;
     let request =
         image_request_for_device(conn, project, device.id).map_err(PrepareError::Request)?;
     // A program no download translates is refused for that reason, not for
-    // whatever its image build would trip over first.
+    // whatever its image build would trip over first. Precedence is fixed:
+    // the kind (mask, then procedure style) is the more fundamental refusal
+    // and comes first; a declared plug-in (KL-006) refuses what remains.
     if let Some(code) = load_program_code(conn, &request.program_id)
         .map_err(|e| PrepareError::Image(ImageError::Code(e)))?
     {
         check_program_kind(&code).map_err(PrepareError::Plan)?;
+        if purpose == Purpose::Download {
+            check_download_plugin(&code).map_err(PrepareError::Plan)?;
+        }
     }
     let image = build_download_image(conn, &request).map_err(PrepareError::Image)?;
     let (plan, inferences) =

@@ -151,10 +151,44 @@ it.each(["ArrowLeft", "ArrowRight", "Home", "End", "Enter"])("ignores %s during 
   expect(write).toHaveBeenCalledTimes(1); expect(width()).toBe(220);
 });
 it("uses the caller's trailing width without fitting its fixed columns", async () => {
-  const trailing = { fixedTrailingColumns: 1, fixedTrailingWidth: 96 };
+  const trailing = { trailing: { count: 1, column: { id: "shared", width: 96, min: 64 } } };
   await act(async () => root.render(<ResizableTable tableId="trailing" columns={columns} {...trailing}><thead><tr><th>Name</th><th>Address</th><th>Fixed</th></tr></thead></ResizableTable>));
   expect(host.querySelector("col:last-child")?.getAttribute("style")).toContain("width: 96px");
   expect(host.querySelector("table")?.style.width).toBe("416px");
+});
+it("gives every trailing heading one shared, persisted width with keyboard, pointer and reset", async () => {
+  const shared = { id: "shared", width: 96, min: 64, max: 200 };
+  const render = () => root.render(<ResizableTable tableId="shared-trailing" columns={columns} trailing={{ count: 2, column: shared }}>
+    <thead><tr><th>Name</th><th>Address</th><th>Object A</th><th>Object B</th></tr></thead>
+    <tbody><tr><td>Alpha</td><td>1.1.1</td><td>S</td><td>R</td></tr></tbody></ResizableTable>);
+  await act(async () => render());
+  const separators = () => [...host.querySelectorAll<HTMLElement>('[role="separator"]')];
+  const trailingCols = () => [...host.querySelectorAll("col")].slice(2).map(col => col.style.width);
+  expect(separators()).toHaveLength(4);
+  const [a, b] = separators().slice(2);
+  expect(document.getElementById(a.getAttribute("aria-labelledby")!)?.textContent).toBe("Object A");
+  expect(document.getElementById(b.getAttribute("aria-labelledby")!)?.textContent).toBe("Object B");
+  expect([a.getAttribute("aria-valuemin"), a.getAttribute("aria-valuemax"), a.getAttribute("aria-valuenow")]).toEqual(["64", "200", "96"]);
+  await act(async () => b.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true, cancelable: true })));
+  expect(trailingCols()).toEqual(["104px", "104px"]);
+  expect(separators().slice(2).map(separator => separator.getAttribute("aria-valuenow"))).toEqual(["104", "104"]);
+  expect(host.querySelector("table")!.style.width).toBe(`${180 + 140 + 2 * 104}px`);
+  const stored = () => JSON.parse(window.localStorage.getItem("knxbench:table-column-widths:v1:shared-trailing")!);
+  expect(stored()).toEqual({ name: 180, address: 140, shared: 104 });
+  a.setPointerCapture = vi.fn(); a.releasePointerCapture = vi.fn();
+  const drag = async (type: string, x: number) => {
+    await act(async () => a.dispatchEvent(new PointerEvent(type, { clientX: x, pointerId: 3, button: 0, bubbles: true, cancelable: true })));
+    if (type === "pointermove") await act(async () => { await new Promise<void>(resolve => requestAnimationFrame(() => resolve())); });
+  };
+  await drag("pointerdown", 300); await drag("pointermove", 1000); await drag("pointerup", 1000);
+  expect(trailingCols()).toEqual(["200px", "200px"]); expect(stored().shared).toBe(200);
+  await act(async () => a.dispatchEvent(new KeyboardEvent("keydown", { key: "Home", bubbles: true, cancelable: true })));
+  expect(trailingCols()).toEqual(["64px", "64px"]);
+  await act(async () => root.render(null)); await act(async () => render());
+  expect(trailingCols(), "remount restores the shared width").toEqual(["64px", "64px"]);
+  await act(async () => host.querySelector<HTMLButtonElement>(".table-column-reset")!.click());
+  expect(trailingCols()).toEqual(["96px", "96px"]); expect(stored()).toEqual({ name: 180, address: 140, shared: 96 });
+  expect(sort).not.toHaveBeenCalled(); expect(select).not.toHaveBeenCalled();
 });
 
 it("fits to the widest header or cell token, including its padding and computed font", async () => {

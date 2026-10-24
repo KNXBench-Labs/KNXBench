@@ -16,7 +16,7 @@ No table below has draggable headers or rows (explorer trees own drag/drop).
 | Devices — `DevicesWorkspace.tsx` | no | yes | no | converted |
 | Communication objects — `ComObjectTable.tsx` | no | yes | no | converted |
 | Address flat/tree table — `GroupAddressTreeTable.tsx` | no; bounded window | no | no | converted |
-| Address object matrix — `GroupAddressMatrix.tsx` | no; bounded window | no | no | fixed select/address/name columns converted; per-object columns stay fixed, see boundary below |
+| Address object matrix — `GroupAddressMatrix.tsx` | no; bounded window | no | no | converted: select/address/name columns plus one common object-column width (25 October 2026) |
 | Address members — `GroupAddressLinks.tsx` | no | no | no | converted |
 | Building device list — `StructureWorkspace.tsx` | no | no | no | converted |
 | Monitor telegrams — `BusMonitorPanel.tsx` | no; bounded capture | no | no | converted |
@@ -264,13 +264,35 @@ the captured chain, root appearance changes and font-load completion are covered
 
 All 18 native table surfaces use the adapter. The address/object matrix's three
 fixed columns (select, address, name) have stable presentation IDs and persist
-widths. The matrix passes its 180 px object width into the adapter; fitting is
-disabled when fixed trailing columns are present. Its per-object columns retain 180 px preferred widths
-without resize controls and do not produce preference keys. Their selectable project device/object keys cannot become
-browser preference IDs; ordinal persistence would follow a different object
-after selection changes. A future matrix-specific policy (for example, one
-common object-column width) remains open in OPEN_WORK. Complete per-column
-coverage is not claimed.
+widths. Its per-object columns share one common width (next section); they
+never get individual widths. Complete per-column coverage is not claimed.
+
+## Common matrix object-column width (25 October 2026)
+
+Every per-object column of the address/object matrix follows one width. The
+matrix declares it as a shared trailing column of the same adapter
+(`ResizableTable` `trailing={{ count, column }}`), so there is no second width
+system:
+
+- Preference: one fixed entry, `object-column`, in the matrix record
+  `knxbench:table-column-widths:v1:group-address-matrix`, next to `select`,
+  `address` and `name`. Selectable project device/object keys and ordinals never
+  become preference IDs; changing the object selection keeps the one width.
+- Bounds: default 180 px, minimum 128 px (the existing `8rem` matrix heading
+  floor), maximum 480 px. Fitting stays off while object columns are shown; no
+  measured word floor applies to them (as before), and the existing
+  `overflow-wrap: anywhere` heading rule still wraps a long device name or key.
+  The fixed columns keep their measured floors and widths.
+- Interaction: every object heading carries a separator named by that heading,
+  with the same pointer (visual pixels divided by `appUiScale()`), keyboard
+  (ArrowLeft/ArrowRight 8 px, Shift 40 px, Home/End, Enter), double-click and
+  focus-visible semantics as other columns. Any of them moves all object columns.
+- Reset: the matrix's table reset, and the owner reset shared by several
+  installations, restore 180 px together with the fixed columns. Enter or a
+  double-click on an object separator resets only the common width.
+
+Not part of this: per-object widths, automatic fitting of object columns and
+measured word floors for object headings.
 
 The read-only flow flag property tables now have column headings (Flag/Value)
 so their two resize handles have accessible names; captions and flag values
@@ -294,7 +316,10 @@ are preserved. No manufacturer parameter-grid code is changed.
 | DE `Beleuchtungsstärke (9.004)` and decoded value intact at 400 px, actual local scrolling and no page overflow | `e2e/group-address-views.e2e.ts`: German address tree preserves the long DPT label; `e2e/monitor-control.e2e.ts`: German monitor decoded DPT words stay intact |
 | EN/DE DPT/master-text words remain on one line per token at 360/1440 px; document overflow remains bounded | Unchanged `e2e/device-editor-layout.e2e.ts`: evaluated channel evidence stays keyboard-accessible |
 | Measured ARIA pixels, keyboard/Shift/bounds, pointer capture and IDs, no sorting/drag/selection, cancel/capture loss, unmount commit, keys ignored during pointer drag, caller-defined trailing widths, double-click and table reset | `src/ResizableTable.test.tsx` |
-| Every converted surface (including both object views and three fixed matrix columns) mounts with separators aligned to the declared columns and each column shrinks with ArrowLeft | Parameterized `column smoke: <table-id> exposes <count> resize separators` tests using `tableColumnSmoke.fixture.ts` |
+| Every converted surface (including both object views, the three fixed matrix columns and one matrix object column) mounts with separators aligned to the declared columns and each column shrinks with ArrowLeft | Parameterized `column smoke: <table-id> exposes <count> resize separators` tests using `tableColumnSmoke.fixture.ts` |
+| Shared trailing width: separators named per heading, keyboard/pointer/Home bounds move every trailing column, one persisted entry, remount, table reset | `src/ResizableTable.test.tsx`: `gives every trailing heading one shared, persisted width with keyboard, pointer and reset` |
+| Matrix object-column preference is the fixed `object-column` entry, no device/object key in storage; owner reset across installations restores 180 px | `src/GroupAddressWorkspace.test.tsx`: `selects a matrix relationship …`; `src/StructureWorkspace.test.tsx`: `matrix address tables across installations have one owner reset` |
+| Built app, EN graphite compact at 100% and DE porcelain comfortable at 150%: 60 visual px drag, Tab focus-visible, ArrowLeft, all object columns equal, fixed columns unchanged, selection change and remount keep the width, reset, no project writes | `e2e/group-address-views.e2e.ts`: `matrix object columns share one resizable width` |
 | Actual production comparison exposes operable separators | `src/ComparisonTable.test.tsx`: offers keyboard resizing and reset on the production comparison table |
 | Real device and comparison drag/keyboard, sort isolation, reset, reload, local narrow overflow, sticky headers, header/row alignment, measured fit or local scroll in EN/DE at 1440/1920, 24 px targets, zero API writes; shrinking/redistribution with local scroll at 1440, isolated headers under overlays, narrow German sort indicator and measured announcements | `e2e/table-column-widths.e2e.ts`: five EN/DE theme/width cases plus focused regression cases |
 | Nested virtual history tables share widths, retain alignment at end of window, remount/reload/reset, bounded DOM and narrow scrolling | `e2e/table-column-widths.e2e.ts`: virtualised history field tables share widths, align through remounts and persist |

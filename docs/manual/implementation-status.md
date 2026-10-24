@@ -995,7 +995,8 @@ monitor decoded text; wide fitting proof covers demo/fixture content. Resize han
 width in layout pixels, and header sort indicators stay visible beside clamped labels.
 Application scaling keeps saved widths and keyboard steps in those same units;
 pointer drags follow visual movement at 80–150%. The matrix's
-select/address/name columns resize; its per-object columns remain fixed; lists, trees and manufacturer parameter
+select/address/name columns resize; since 25 October 2026 its per-object columns share one
+resizable width (no per-object widths); lists, trees and manufacturer parameter
 grids are outside scope. See the [coverage checklist](../contracts/table-column-widths.md).
 
 [Manual index](README.md) · Next: [Ideas and roadmap](ideas-and-roadmap.md) →

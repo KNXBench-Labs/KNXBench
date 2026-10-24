@@ -49,8 +49,15 @@ it.each(["tree", "columns", "matrix"])("%s address tables across installations h
     const handles = tables.map(table => table.querySelectorAll<HTMLElement>('[role="separator"]')[1]);
     await act(async () => handles[0].dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })));
     expect(handles.map(handle => handle.getAttribute("aria-valuenow"))).toEqual(["148", "148"]);
+    const stored = () => JSON.parse(window.localStorage.getItem(`knxbench:table-column-widths:v1:${view === "matrix" ? "group-address-matrix" : "group-addresses"}`)!);
+    if (view === "matrix") {
+      window.localStorage.setItem("knxbench:table-column-widths:v1:group-address-matrix", JSON.stringify({ ...stored(), "object-column": 260 }));
+      window.dispatchEvent(new StorageEvent("storage", { key: null }));
+    }
     await act(async () => host.querySelector<HTMLButtonElement>(".table-column-reset")!.click());
     expect(handles.map(handle => handle.getAttribute("aria-valuenow"))).toEqual(["140", "140"]);
+    // The owner reset also restores the matrix's common object-column width.
+    if (view === "matrix") expect(stored()["object-column"]).toBe(180);
     await act(async () => setSetting("groupAddressView", "atlas"));
     expect(host.querySelectorAll('[data-table-id], .table-column-reset')).toHaveLength(0);
     await act(async () => setSetting("groupAddressView", view));

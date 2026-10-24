@@ -1111,8 +1111,10 @@ models are in the
 [goal file](goals/ui-feedback-2026-10-18.md#owner-go-and-decisions-18-october-2026-later-the-same-day).
 
 UI-05: all 18 native table surfaces use the width adapter. The
-address/object matrix's select/address/name columns resize; only its per-object
-columns still need a width policy that avoids project content in preference keys. [Coverage and boundary](contracts/table-column-widths.md).
+address/object matrix's select/address/name columns resize. **Delivered
+(25 October 2026, branch `feat/matrix-object-width-20261024`):** its per-object
+columns share one resizable width under the fixed `object-column` preference
+entry, reset with the table; per-object widths stay out of scope. [Coverage and boundary](contracts/table-column-widths.md#common-matrix-object-column-width-25-october-2026).
 
 **Both follow-ups delivered (19 October 2026, WP-15 branch):** pane and
 block drags normalise by `appUiScale()`; one table case runs through the stored

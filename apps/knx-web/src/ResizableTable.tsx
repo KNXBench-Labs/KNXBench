@@ -86,11 +86,14 @@ export function TableColumnReset({ tableId, columns }: { tableId: string; column
   return <button type="button" className="quiet-action table-column-reset" aria-label={label} onClick={state.reset}>{label}</button>;
 }
 
+/** `count` trailing headings after `columns` share one stable width preference: never per-heading keys. */
+export interface SharedTrailingColumns { count: number; column: TableColumnWidth }
+
 /** Only decorates native thead/tr/th children; body editors and row ownership stay untouched. */
 export default function ResizableTable({
-  tableId, columns, children, className = "", style, scrollClassName = "", scrollLabel, showReset = true, fixedTrailingColumns = 0, fixedTrailingWidth = 0, ...props
+  tableId, columns, children, className = "", style, scrollClassName = "", scrollLabel, showReset = true, trailing, ...props
 }: {
-  tableId: string; columns: readonly TableColumnWidth[]; scrollClassName?: string; scrollLabel?: string; showReset?: boolean; fixedTrailingColumns?: number; fixedTrailingWidth?: number;
+  tableId: string; columns: readonly TableColumnWidth[]; scrollClassName?: string; scrollLabel?: string; showReset?: boolean; trailing?: SharedTrailingColumns;
 } & HTMLAttributes<HTMLTableElement>) {
   const t = useTranslate(); const id = useId();
   const viewport = useRef<HTMLDivElement>(null);
@@ -102,7 +105,8 @@ export default function ResizableTable({
   const wordsDirty = useRef(true);
   const measureWords = useRef(() => {});
   const measureGeometry = useRef(() => {});
-  const state = useTableColumnWidths(tableId, columns, () => {
+  const trailingCount = trailing?.count ?? 0;
+  const state = useTableColumnWidths(tableId, trailing ? [...columns, trailing.column] : columns, () => {
     wordMeasurements.current.clear(); setWordFloors([]); measureWords.current();
   });
   const columnCount = columns.length;
@@ -180,13 +184,15 @@ export default function ResizableTable({
       if (!isValidElement<{ children?: ReactNode; className?: string; style?: HTMLAttributes<HTMLTableCellElement>["style"] }>(node)) return node;
       if (node.type === "caption") return null;
       if (node.type === "th") {
-        const column = columns[position++];
+        const index = position++;
+        const shared = index >= columns.length;
+        const column = shared ? (index < columns.length + trailingCount ? trailing?.column : undefined) : columns[index];
         if (!column) return node;
-        const labelId = `${id}-${column.id}`;
+        const labelId = shared ? `${id}-${column.id}-${index}` : `${id}-${column.id}`;
         return cloneElement(node as ReactElement<HTMLAttributes<HTMLTableCellElement>>, {
           className: `${node.props.className ?? ""} resizable-table-heading`,
-          style: { ...node.props.style, zIndex: columns.length + fixedTrailingColumns - position + 1 },
-        }, <span id={labelId} title={headingText(node.props.children)}>{node.props.children}</span>, <ColumnResizeHandle column={column} state={state} labelId={labelId} helpId={`${id}-help`} renderedWidth={measuredWidths[position - 1] || fittedWidths[position - 1]} />);
+          style: { ...node.props.style, zIndex: columns.length + trailingCount - position + 1 },
+        }, <span id={labelId} title={headingText(node.props.children)}>{node.props.children}</span>, <ColumnResizeHandle column={column} state={state} labelId={labelId} helpId={`${id}-help`} renderedWidth={measuredWidths[index] || (shared ? trailingWidth : fittedWidths[index])} />);
       }
       if (node.type === "thead" || node.type === "tr" || node.type === Fragment) return cloneElement(node, {}, headers(node.props.children));
       return node;
@@ -194,24 +200,26 @@ export default function ResizableTable({
   }
   // Fit defaults to the actual pane, including navigation/inspector space.
   // User adjustments are pixel deltas on that baseline; only their surplus
-  // creates overflow. Fitting is off when callers supply fixed trailing columns.
+  // creates overflow. Fitting is off when callers supply shared trailing columns.
   // Two adjacent 24 px pointer targets must not cover a header's sort button.
   const floors = columns.map((column, index) => Math.max(Math.min(48, column.min), wordFloors[index] ?? 0));
   const baselines = columns.map((column, index) => Math.max(column.width, floors[index]));
   const defaultWidth = baselines.reduce((sum, width) => sum + width, 0);
   const minimumWidth = floors.reduce((sum, width) => sum + width, 0);
-  const fitBudget = availableWidth > 0 && fixedTrailingColumns === 0
+  const fitBudget = availableWidth > 0 && trailingCount === 0
     ? Math.max(minimumWidth, Math.min(defaultWidth, availableWidth)) : defaultWidth;
   const scale = defaultWidth > minimumWidth ? (fitBudget - minimumWidth) / (defaultWidth - minimumWidth) : 1;
   const fittedWidths = columns.map((column, index) => Math.max(Math.min(48, column.min),
     floors[index] + Math.floor((baselines[index] - floors[index]) * scale)
       + state.widths[column.id] - column.width));
-  const totalWidth = fittedWidths.reduce((sum, width) => sum + width, 0) + fixedTrailingColumns * fixedTrailingWidth;
+  // Shared trailing columns have no measured word floor; their own min/max bound them.
+  const trailingWidth = trailing ? state.widths[trailing.column.id] : 0;
+  const totalWidth = fittedWidths.reduce((sum, width) => sum + width, 0) + trailingCount * trailingWidth;
   const decorated = headers(children);
   useEffect(() => {
-    if (import.meta.env.DEV && position !== columns.length + fixedTrailingColumns)
-      console.warn(`ResizableTable ${tableId}: heading/column count mismatch`, position, columns.length + fixedTrailingColumns);
-  }, [position, columns.length, fixedTrailingColumns, tableId]);
+    if (import.meta.env.DEV && position !== columns.length + trailingCount)
+      console.warn(`ResizableTable ${tableId}: heading/column count mismatch`, position, columns.length + trailingCount);
+  }, [position, columns.length, trailingCount, tableId]);
   const caption = Children.toArray(children).find(child => isValidElement(child) && child.type === "caption");
   const captionText = isValidElement<{ children?: ReactNode }>(caption) && typeof caption.props.children === "string" ? caption.props.children : undefined;
   const tableName = scrollLabel ?? captionText ?? t(`tableColumns.name.${tableId}` as Parameters<typeof t>[0]);
@@ -221,7 +229,7 @@ export default function ResizableTable({
     <div ref={viewport} className={`resizable-table-scroll ${scrollClassName}`} tabIndex={scrollLabel || overflowing ? 0 : undefined} role={scrollLabel || overflowing ? "region" : undefined} aria-label={scrollLabel || overflowing ? tableName : undefined}>
       <table {...props} className={`${className} resizable-data-table`} style={{ ...style, width: totalWidth }}>
         {Children.map(children, child => isValidElement(child) && child.type === "caption" ? child : null)}
-        <colgroup>{columns.map((column, index) => <col key={column.id} style={{ width: fittedWidths[index] }} />)}{Array.from({ length: fixedTrailingColumns }, (_, index) => <col key={`fixed-${index}`} style={{ width: fixedTrailingWidth }} />)}</colgroup>
+        <colgroup>{columns.map((column, index) => <col key={column.id} style={{ width: fittedWidths[index] }} />)}{Array.from({ length: trailingCount }, (_, index) => <col key={`shared-${index}`} style={{ width: trailingWidth }} />)}</colgroup>
         {decorated}
       </table>
     </div>

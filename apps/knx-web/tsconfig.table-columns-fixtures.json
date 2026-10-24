@@ -3,6 +3,7 @@
   "include": [
     "src",
     "e2e/table-column-widths.e2e.ts",
+    "e2e/group-address-views.e2e.ts",
     "e2e/table-columns-fixture.tsx",
     "e2e/table-intrinsic-oracle.ts",
     "e2e/table-word-assertions.ts",

@@ -17,6 +17,67 @@ ROOT = Path(__file__).resolve().parents[2]
 APP = ROOT / 'apps/knx-web'
 STATUS_FIELDS = ('State', 'PPid', 'NSpgid', 'NSsid', 'Threads', 'SigPnd', 'ShdPnd', 'SigBlk', 'SigIgn',
                  'SigCgt')
+SIGTERM_CHILD = '''
+import json
+import os
+from pathlib import Path
+import signal
+import sys
+import time
+
+directory = Path(os.environ["TMPDIR"])
+receipt = Path(os.environ["KNXBENCH_SIGTERM_RECEIPT"])
+release = Path(os.environ["KNXBENCH_SIGTERM_RELEASE"])
+signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGTERM})
+print(directory, flush=True)
+if signal.sigtimedwait({signal.SIGTERM}, 60) is None:
+    sys.exit(2)
+if not directory.is_dir():
+    sys.exit(3)
+staging = receipt.with_suffix(".tmp")
+staging.write_text(json.dumps({"pid": os.getpid(), "directory": str(directory)}))
+os.replace(staging, receipt)
+deadline = time.monotonic() + 60
+while not release.exists():
+    if time.monotonic() >= deadline:
+        sys.exit(4)
+    time.sleep(0.01)
+'''
+PREMATURE_CLEANUP_MUTANT = '''
+import json
+import os
+from pathlib import Path
+import shutil
+import signal
+import subprocess
+import sys
+import tempfile
+import time
+
+base = Path(sys.argv[1])
+mutated = Path(os.environ["KNXBENCH_SIGTERM_MUTATED"])
+receipt = Path(os.environ["KNXBENCH_SIGTERM_RECEIPT"])
+directory = Path(tempfile.mkdtemp(prefix="mutant-", dir=base))
+env = {**os.environ, "TMPDIR": str(directory), "KNXBENCH_BROWSER_TMP_DIR": str(directory)}
+signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGTERM})
+child = subprocess.Popen(sys.argv[2:], env=env, start_new_session=True)
+
+def forward(signum, frame):
+    os.killpg(child.pid, signum)
+    deadline = time.monotonic() + 10
+    while not receipt.exists():
+        if time.monotonic() >= deadline:
+            os._exit(5)
+        time.sleep(0.01)
+    shutil.rmtree(directory)
+    mutated.write_text(json.dumps({"child": child.pid, "directory": str(directory)}))
+    os._exit(0)
+
+signal.signal(signal.SIGTERM, forward)
+signal.pthread_sigmask(signal.SIG_UNBLOCK, {signal.SIGTERM})
+status = child.wait()
+sys.exit(status if status >= 0 else 128 - status)
+'''
 
 
 def process_state(pid: int) -> str:
@@ -71,6 +132,112 @@ def diagnose_stuck_wrapper(wrapper: subprocess.Popen, directory: Path) -> str:
     stacks = [line for line in stderr.splitlines() if not line.lstrip().startswith('Binary file')]
     return ('wrapper pipes still open 10 s after SIGTERM\n' + '\n'.join(states) + '\n'
             + '\n'.join(stacks)[-6000:])
+
+
+def wait_for_path(path: Path, wrapper: subprocess.Popen, directory: Path,
+                  description: str, timeout: float = 10) -> None:
+    """Wait for a fixture receipt, using time only as a bounded failure backstop."""
+    deadline = time.monotonic() + timeout
+    while not path.exists():
+        status = wrapper.poll()
+        if status is not None:
+            raise AssertionError(
+                f'wrapper exited with {status} before {description}; '
+                f'directory exists={directory.exists()}; {process_state(wrapper.pid)}')
+        if time.monotonic() >= deadline:
+            raise AssertionError(
+                f'timed out waiting for {description}; directory exists={directory.exists()}; '
+                f'{process_state(wrapper.pid)}')
+        time.sleep(0.01)
+
+
+def wait_for_wrapper_exit(wrapper: subprocess.Popen, directory: Path, timeout: float = 10) -> int:
+    """Return the wrapper's actual status, bounded by a diagnostic timeout."""
+    deadline = time.monotonic() + timeout
+    while True:
+        status = wrapper.poll()
+        if status is not None:
+            return status
+        if time.monotonic() >= deadline:
+            raise AssertionError(
+                f'timed out waiting for synthetic wrapper exit; directory exists={directory.exists()}; '
+                f'{process_state(wrapper.pid)}')
+        time.sleep(0.01)
+
+
+def assert_sigterm_child_held(test: unittest.TestCase, wrapper: subprocess.Popen,
+                              directory: Path, child_pid: int) -> None:
+    """Assert the state a correct wrapper must hold until the child is released."""
+    problems = []
+    if not directory.is_dir():
+        problems.append('temporary directory removed before child release')
+    status = wrapper.poll()
+    if status is not None:
+        problems.append(f'wrapper exited before child release (status {status})')
+    if not (Path('/proc') / str(child_pid)).exists():
+        problems.append(f'child {child_pid} disappeared before release')
+    if problems:
+        test.fail('; '.join(problems))
+
+
+def fixture_processes(directory: Path) -> list[int]:
+    """Return live processes carrying this fixture's unique temp-directory marker."""
+    marker = f'KNXBENCH_BROWSER_TMP_DIR={directory}'.encode()
+    processes = []
+    for entry in Path('/proc').iterdir():
+        try:
+            if entry.name.isdigit() and marker in (entry / 'environ').read_bytes().split(b'\0'):
+                processes.append(int(entry.name))
+        except OSError:
+            continue
+    return processes
+
+
+def handshake_processes(release: Path) -> list[int]:
+    """Return every process owned by this fixture's unique external handshake."""
+    marker = f'KNXBENCH_SIGTERM_RELEASE={release}'.encode()
+    processes = []
+    for entry in Path('/proc').iterdir():
+        try:
+            if entry.name.isdigit() and marker in (entry / 'environ').read_bytes().split(b'\0'):
+                processes.append(int(entry.name))
+        except OSError:
+            continue
+    return processes
+
+
+def cleanup_sigterm_fixture(wrapper: subprocess.Popen, release: Path) -> None:
+    """Release or kill every process owned by one SIGTERM fixture."""
+    release.touch(exist_ok=True)
+    try:
+        wrapper.communicate(timeout=3)
+    except subprocess.TimeoutExpired:
+        if wrapper.poll() is None:
+            wrapper.send_signal(signal.SIGTERM)
+        try:
+            wrapper.communicate(timeout=3)
+        except subprocess.TimeoutExpired:
+            for pid in handshake_processes(release):
+                try:
+                    os.kill(pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+            if wrapper.poll() is None:
+                wrapper.kill()
+            wrapper.communicate(timeout=10)
+    deadline = time.monotonic() + 10
+    remaining = handshake_processes(release)
+    while remaining and time.monotonic() < deadline:
+        for pid in remaining:
+            try:
+                os.kill(pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+        time.sleep(0.01)
+        remaining = handshake_processes(release)
+    if remaining:
+        states = ', '.join(process_state(pid) for pid in remaining)
+        raise AssertionError(f'fixture-owned processes survived cleanup: {states}')
 
 
 class BrowserTempLaunch(unittest.TestCase):
@@ -223,33 +390,76 @@ class BrowserTempLaunch(unittest.TestCase):
             # it synchronously. A handler followed by time.sleep lost the signal
             # when it landed while print() returned: CPython 3.14 runs no pending
             # handler after a keyword call, so the sleep blocked for a minute.
-            program = ('import os,signal,sys;'
-                       'signal.pthread_sigmask(signal.SIG_BLOCK,{signal.SIGTERM});'
-                       'print(os.environ["TMPDIR"],flush=True);'
-                       'sys.exit(0 if signal.sigtimedwait({signal.SIGTERM},60) else 1)')
+            receipt = work / 'signal-received.json'
+            release = work / 'release-child'
             # PYTHONFAULTHANDLER only acts on fatal signals: on a timeout the
             # diagnosis aborts both processes and gets their Python stacks.
             child = subprocess.Popen(
                 [sys.executable, str(ROOT / 'tools/browser_tmp.py'), '--base', str(work),
-                 '--run', sys.executable, '-c', program],
-                env={**self.clean_environment(), 'PYTHONFAULTHANDLER': '1'},
+                 '--run', sys.executable, '-c', SIGTERM_CHILD],
+                env={**self.clean_environment(), 'PYTHONFAULTHANDLER': '1',
+                     'KNXBENCH_SIGTERM_RECEIPT': str(receipt),
+                     'KNXBENCH_SIGTERM_RELEASE': str(release)},
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            directory = None
+            child_pid = None
             try:
                 self.assertTrue(select.select([child.stdout], [], [], 10)[0], 'child did not start')
                 directory = Path(child.stdout.readline().strip())
                 self.assertTrue(directory.is_dir())
+                self.assertNotIn(directory, receipt.parents)
+                self.assertNotIn(directory, release.parents)
                 child.send_signal(signal.SIGTERM)
+                wait_for_path(receipt, child, directory, 'child signal receipt')
+                observed = json.loads(receipt.read_text())
+                child_pid = observed['pid']
+                self.assertEqual(observed['directory'], str(directory))
+                assert_sigterm_child_held(self, child, directory, child_pid)
+                release.touch()
                 try:
                     stdout, stderr = child.communicate(timeout=10)
                 except subprocess.TimeoutExpired:
                     self.fail(diagnose_stuck_wrapper(child, directory))
                 self.assertEqual(child.returncode, 0, stderr)
                 self.assertFalse(directory.exists())
+                self.assertFalse((Path('/proc') / str(child_pid)).exists(),
+                                 'wrapper returned without reaping its child')
                 self.assertTrue(work.exists())
             finally:
-                if child.poll() is None:
-                    child.kill()
-                    child.communicate(timeout=10)
+                cleanup_sigterm_fixture(child, release)
+
+    def test_sigterm_contract_rejects_missing_wait_and_premature_cleanup_mutant(self) -> None:
+        import select
+        with self.workspace() as tmp:
+            work = Path(tmp)
+            receipt = work / 'signal-received.json'
+            release = work / 'release-child'
+            mutated = work / 'mutated.json'
+            env = {**self.clean_environment(), 'KNXBENCH_SIGTERM_RECEIPT': str(receipt),
+                   'KNXBENCH_SIGTERM_RELEASE': str(release),
+                   'KNXBENCH_SIGTERM_MUTATED': str(mutated)}
+            wrapper = subprocess.Popen(
+                [sys.executable, '-c', PREMATURE_CLEANUP_MUTANT, str(work),
+                 sys.executable, '-c', SIGTERM_CHILD],
+                env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            directory = None
+            try:
+                self.assertTrue(select.select([wrapper.stdout], [], [], 10)[0],
+                                'synthetic child did not start')
+                directory = Path(wrapper.stdout.readline().strip())
+                self.assertTrue(directory.is_dir())
+                wrapper.send_signal(signal.SIGTERM)
+                wait_for_path(receipt, wrapper, directory, 'synthetic child signal receipt')
+                observed = json.loads(receipt.read_text())
+                wait_for_path(mutated, wrapper, directory, 'synthetic premature cleanup')
+                self.assertEqual(wait_for_wrapper_exit(wrapper, directory), 0)
+                self.assertFalse(directory.exists(), 'synthetic mutant did not clean prematurely')
+                with self.assertRaisesRegex(
+                        AssertionError,
+                        'temporary directory removed before child release.*wrapper exited before child release'):
+                    assert_sigterm_child_held(self, wrapper, directory, observed['pid'])
+            finally:
+                cleanup_sigterm_fixture(wrapper, release)
 
     def test_multibyte_and_whitespace_paths_use_byte_budget_and_json(self) -> None:
         with self.workspace() as tmp:

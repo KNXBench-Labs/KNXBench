@@ -12,6 +12,9 @@ dated queue below remains evidence, not authority to duplicate delivered work.
 One final integrated candidate campaign replaces repeated per-foundation full
 gates. Necessary focused regressions remain mandatory. Tag/release/container
 publication and live-device operations still need separate explicit owner Go.
+**24 October 2026:** that plan is delivered and published as
+`v0.1.0-alpha.16`; see the post-Alpha-16 reconciliation below. Live-device
+operations still need operation-specific owner consent.
 
 ## Reconciled work packages — 18 October 2026
 
@@ -19,6 +22,21 @@ This is the **current planning entry point**. The dated sections below retain
 context and delivery history; they are not additional jobs to execute. Planning
 here neither reopens an accepted limitation nor authorises implementation,
 bus access, desktop control, deployment, a release or third-party contact.
+
+**Post-Alpha-16 reconciliation (24 October 2026):** the queue table and the
+superseding notes below reflect Alpha 16, published as pre-release
+`v0.1.0-alpha.16` at `f2e3ec6e`
+([release note](releases/alpha16.md), [release-plan disposition](goals/alpha16-release-plan-2026-10-23.md#remaining-queue-finish-only-admitted-meaningful-slices),
+[delivery record](IMPLEMENTATION_STATUS.md#alpha-16-published-pre-release--public-artifacts-and-website-verified-24-october-2026)).
+The queue-status evidence cutoff moves to `1690cef81` on `main`; the
+18 October inventory counts and audit routing below were not re-audited.
+Alpha 16 delivered WP-04.3 (A16-04), WP-19 device → project adoption (A16-05),
+the KL-183 catalogue-portability repair (A16-06) and the bounded WP-05
+caption-language slice (A16-07), each as software-tested bounded outcomes.
+Everything that remains is evidence-, consent- or input-gated; no package is a
+ready coding job without its named evidence, consent or supplied input.
+Issues #22 (hardware outcome of the experimental System-2 download, unverified)
+and #7 (reporter acceptance) remain open; Alpha 16 changed no ledger row.
 
 **Evidence cutoff:** `961502d6` on `main`, fetched on 18 October 2026.
 The audit inventories all **195 catalogue entries** (including unnumbered
@@ -52,6 +70,10 @@ security, GitHub-issue, hardware or whole-codebase conformance audit.
   The later [complete-defaults simulator candidate](contracts/up258-system2-validation.md)
   now joins full source preparation and durable recovery; it is strong-hypothesis
   software evidence only. Real masked-byte/resource recovery still blocks hardware.
+  **24 October 2026:** Alpha 16 ships the consent-gated experimental configured
+  download for this exact application through the device UI (A16-01–03,
+  [release note](releases/alpha16.md#experimental-configured-system-2-download)):
+  software-tested only, hardware outcome unverified; issue #22 stays open.
 - **Delivered (19 October 2026):** issues #25/#26 are on `main`: the
   topology diagram hides device-empty ranges (display only) and supported
   parameter-section captions resolve through the existing text resolver with
@@ -92,23 +114,23 @@ Each package needs its own scoped claim, review, tests and delivery evidence.
 | --- | --- | --- | --- |
 | [WP-01](#wp-01--idempotent-unknown-evidence) | P1 | Delivered 19 October (product DB v26, ADR-0146) | Unknown-evidence rows remain truthful across shared-source re-ingest. |
 | [WP-02](#wp-02--suffixtext-end-to-end) | P2 | Delivered 19 October (product DB v26, ADR-0146) | Source suffix text reaches the existing parameter rows without changing stored values. |
-| [WP-03](#wp-03--legacy-binary-enumeration-values) | P2 | Mapping evidence first | Legacy binary enum values use the existing typed storage or keep an explicit refusal/report. |
-| [WP-04](#wp-04--large-catalogues-measure-then-stream) | P1/P2 | WP-04.1/.2 delivered; WP-04.3 remains open | Measured database growth, bounded procedure parsing, then a cancellable web large-profile workflow. |
-| [WP-05](#wp-05--parameter-layout-fidelity) | P2 | Evidence/contract gate; coordinate with UI-05 | One evidenced layout feature at a time, never inferred manufacturer behaviour. |
-| [WP-06](#wp-06--communication-object-organisation) | P2 | Folder contract first; priority needs a separate model ADR | Declared object folders and, separately, lossless priority representation. |
-| [WP-07](#wp-07--module-instance-authority) | P1 | Defining mapping evidence required | One independently witnessed instance/repeat/number-offset mapping contract. |
-| [WP-08](#wp-08--parameter-value-codecs) | P2 | Per-type encoding evidence required | A separately admitted codec/editor per TypeDate, Colour or Picture form. |
-| [WP-09](#wp-09--offline-image-evidence-gates) | P1 | Research-bound; exact UP258 remains owned | Discriminating encoding/fill/placement evidence, not another permissive image builder. |
-| [WP-10](#wp-10--import-and-model-evidence) | P2 | Samples/grammar/authorisation required | Independently verified import/model cases with honest unsupported-data reports. |
-| [WP-11](#wp-11--native-linux-acceptance) | P2 | Separate desktop-control permission | Actual WebKitGTK/Wayland/Orca and AppImage evidence for named workflows. |
-| [WP-12](#wp-12--field-evidence-and-owner-acceptance) | P2 | Outside input or operation-specific consent | Reviewed tester/plug-in/diagnostic evidence, without silently expanding compatibility. |
-| [WP-13](#wp-13--documentation-drift) | P3 | Named remaining prose reconciled 20 Oct; separate KL-183 runtime follow-up open | Current summaries agree with delivered behaviour; retained history stays intact. |
-| [WP-14](#wp-14--complete-offline-family-outcomes) | P1 | Source contracts first; UP258 excluded | Complete real-source System 1/B/300 image → procedure → execution → recovery slices. |
+| [WP-03](#wp-03--legacy-binary-enumeration-values) | P2 | Mapping evidence first; Alpha 16 left it conditional and shipped no mapping ([A16 disposition](goals/alpha16-release-plan-2026-10-23.md#remaining-queue-finish-only-admitted-meaningful-slices)) | Legacy binary enum values use the existing typed storage or keep an explicit refusal/report. |
+| [WP-04](#wp-04--large-catalogues-measure-then-stream) | P1/P2 | Delivered: WP-04.1/.2 (20 Oct); WP-04.3 in Alpha 16 as A16-04 (e.g. `e287f2050`, `98f644da4`, `5dde9da9a`); no >4 GiB, aggregate-quota or universal-throughput result ([release note](releases/alpha16.md#catalogue-updates-owned-beyond-the-picker)) | Measured database growth, bounded procedure parsing, then a cancellable web large-profile workflow. |
+| [WP-05](#wp-05--parameter-layout-fidelity) | P2 | Caption-language slice delivered in Alpha 16 as A16-07 (`cde8d89a3`); row/column `TextParameterRefId`, inline/nested/`CollapseIfEmpty` and in-cell buttons stay evidence-gated exclusions ([layout contract](contracts/alpha16-parameter-layout.md)) | One evidenced layout feature at a time, never inferred manufacturer behaviour. |
+| [WP-06](#wp-06--communication-object-organisation) | P2 | Folder contract first; priority needs a separate model ADR; conditional and not implemented in Alpha 16 ([A16 disposition](goals/alpha16-release-plan-2026-10-23.md#remaining-queue-finish-only-admitted-meaningful-slices)) | Declared object folders and, separately, lossless priority representation. |
+| [WP-07](#wp-07--module-instance-authority) | P1 | Defining mapping evidence required; still evidence-blocked after Alpha 16 ([A16 disposition](goals/alpha16-release-plan-2026-10-23.md#remaining-queue-finish-only-admitted-meaningful-slices)) | One independently witnessed instance/repeat/number-offset mapping contract. |
+| [WP-08](#wp-08--parameter-value-codecs) | P2 | Per-type encoding evidence required; conditional, none admitted in Alpha 16 ([A16 disposition](goals/alpha16-release-plan-2026-10-23.md#remaining-queue-finish-only-admitted-meaningful-slices)) | A separately admitted codec/editor per TypeDate, Colour or Picture form. |
+| [WP-09](#wp-09--offline-image-evidence-gates) | P1 | Research-bound; Alpha 16 scoped only rules established for the exact UP258 path, undefined rules stay refused ([A16 disposition](goals/alpha16-release-plan-2026-10-23.md#remaining-queue-finish-only-admitted-meaningful-slices)) | Discriminating encoding/fill/placement evidence, not another permissive image builder. |
+| [WP-10](#wp-10--import-and-model-evidence) | P2 | Samples/grammar/authorisation required; unchanged by Alpha 16; #7 reporter acceptance open ([A16 disposition](goals/alpha16-release-plan-2026-10-23.md#remaining-queue-finish-only-admitted-meaningful-slices)) | Independently verified import/model cases with honest unsupported-data reports. |
+| [WP-11](#wp-11--native-linux-acceptance) | P2 | Separate desktop-control permission; Alpha 16 ran only minimal isolated artifact smokes, no native desktop-control or GUI evidence ([A16 disposition](goals/alpha16-release-plan-2026-10-23.md#remaining-queue-finish-only-admitted-meaningful-slices)) | Actual WebKitGTK/Wayland/Orca and AppImage evidence for named workflows. |
+| [WP-12](#wp-12--field-evidence-and-owner-acceptance) | P2 | Outside input or operation-specific consent; unchanged by Alpha 16; #22 hardware outcome unverified ([A16 disposition](goals/alpha16-release-plan-2026-10-23.md#remaining-queue-finish-only-admitted-meaningful-slices)) | Reviewed tester/plug-in/diagnostic evidence, without silently expanding compatibility. |
+| [WP-13](#wp-13--documentation-drift) | P3 | Named remaining prose reconciled 20 Oct; KL-183 runtime repair delivered as A16-06 (`b1703d61d`), but its ledger row and dossier are not yet updated for it ([A16 disposition](goals/alpha16-release-plan-2026-10-23.md#remaining-queue-finish-only-admitted-meaningful-slices)) | Current summaries agree with delivered behaviour; retained history stays intact. |
+| [WP-14](#wp-14--complete-offline-family-outcomes) | P1 | Source contracts first; UP258 excluded; outside Alpha 16 ([A16 disposition](goals/alpha16-release-plan-2026-10-23.md#remaining-queue-finish-only-admitted-meaningful-slices)) | Complete real-source System 1/B/300 image → procedure → execution → recovery slices. |
 | [WP-15](#wp-15--complete-module-scope-in-web-consumers) | P1 | Delivered 19 Oct (web adoption); older-server boundary documented | Complete response-local module paths distinguish diagnostics and workspace identities. |
-| [WP-16](#wp-16--empty-directory-zip-integrity) | P1 | Project/product directory and file-stream repairs delivered; encrypted-directory refusal delivered 20 Oct; separate metadata questions remain | Empty directories have valid CRC and complete compressed-stream representation. |
+| [WP-16](#wp-16--empty-directory-zip-integrity) | P1 | Project/product directory and file-stream repairs delivered; encrypted-directory refusal delivered 20 Oct; separate bit-6/AES metadata questions remain conditional after Alpha 16 ([A16 disposition](goals/alpha16-release-plan-2026-10-23.md#remaining-queue-finish-only-admitted-meaningful-slices)) | Empty directories have valid CRC and complete compressed-stream representation. |
 | [WP-17](#wp-17--master-identity-provenance) | P1 | Delivered 19 Oct; product DB v27, ADR-0147, `d18ce65e` | Master identity winners, collisions and malformed declarations have truthful provenance. |
 | [WP-18](#wp-18--device-comparison-shows-what-differs) | P2 | Delivered 19 Oct; no live-device acceptance | Differing bytes are marked in the raw hex rows; the comparison result shows only differences by default, with a toggle for all rows. |
-| [WP-19](#wp-19--sync-from-a-device-comparison) | P2 | Contract first; project → device needs bus-write consent (owner request, 19 Oct) | A comparison result offers *project → device* (the existing download) or *device → project* (adopt verified values, one undo step). |
+| [WP-19](#wp-19--sync-from-a-device-comparison) | P2 | Device → project delivered in Alpha 16 as A16-05 (`e4b7b90ec`, `9806f06dd`, `5dc47aece`) for exactly attributed named parameters; group-address/association adoption not admitted; project → device hands over to the existing download; no live-device acceptance ([release note](releases/alpha16.md#device--project-adoption-not-another-download-route)) | A comparison result offers *project → device* (the existing download) or *device → project* (adopt verified values, one undo step). |
 | [WP-20](#wp-20--system-family-in-the-device-list) | P2 | Delivered 19 Oct; a mask read from a device stays a separate session fact | The device list shows each device's system family (System 1, 2, 7 or B) from its mask version. |
 
 #### WP-01 — Idempotent unknown evidence
@@ -181,6 +203,10 @@ ambiguous shared member counters and resource/source-refused reconstruction
 remain explicit boundaries; this is not universal historical equality or a release.
 **WP-04.1 and WP-04.2 are delivered.** WP-04.3 is the next ordered slice,
 followed by WP-19. WP-04 overall is not closed.
+**Superseded 24 October 2026:** that order is historical. Alpha 16 delivered
+WP-04.3 (A16-04) and WP-19 device → project adoption (A16-05); see the
+[WP-04](#wp-04--large-catalogues-measure-then-stream) and
+[WP-19](#wp-19--sync-from-a-device-comparison) delivery notes.
 
 #### WP-03 — Legacy binary enumeration values
 
@@ -230,7 +256,20 @@ selections green. The [delivery record](IMPLEMENTATION_STATUS.md#wp-042-resolver
 records passed maintained integration and published source `6f68bcdd`. This does
 not implement the WP-04.3 web workflow.
 
-**WP-04.3 implementation in progress (20 October 2026):** both source inventories are
+**Delivered in Alpha 16 (24 October 2026):** WP-04.3 shipped as A16-04, the
+production catalogue job path (upload → preview → confirmation → atomic apply,
+cooperative cancellation, App-root UI, close/drain), for example `e287f2050`,
+`98f644da4` and `5dde9da9a`. One mounted Large-profile install passed; its input
+did not exceed the Standard 4 GiB decoded ceiling, so no >4 GiB, aggregate-quota,
+hard-cancellation-latency or universal-throughput result follows. With WP-04.1/.2,
+all three WP-04 slices are delivered within those bounds
+([release note](releases/alpha16.md#catalogue-updates-owned-beyond-the-picker),
+[evidence matrix](goals/alpha16-release-plan-2026-10-23.md#source-bound-evidence-matrix)).
+The two paragraphs below are the retained 20–22 October implementation
+checkpoint; their “in progress”, “remain unimplemented” and “no job route”
+statements describe that time, not the current state.
+
+**WP-04.3 implementation in progress (20 October 2026; historical checkpoint):** both source inventories are
 identity-verified (110 file/report entries, no mismatch). The
 [catalogue-job contract candidate](contracts/catalogue-update-jobs.md) proposes
 shared controlled installation, disk rehearsal, atomic cancel/commit arbitration,
@@ -356,6 +395,13 @@ cover search, drafts, restricted rows, narrow layout and grid/row variants.
 Undefined hints stay visible as unsupported rather than guessed. Coordinate
 shared styles/table behaviour with the existing UI-05 owner before editing.
 The delivered #26 section-caption resolver is the base for this work; reuse it rather than adding a second one.
+**Alpha 16 slice delivered (24 October 2026):** A16-07 (`cde8d89a3`) applies
+supported block/separator `Text` language overlays before module/positional
+resolution. Row/column `TextParameterRefId`, inline/nested/`CollapseIfEmpty`
+rules, in-cell buttons and further Table/Grid behaviour remain evidence-gated
+exclusions; WP-05 stays open for them
+([layout contract](contracts/alpha16-parameter-layout.md),
+[release note](releases/alpha16.md#other-post-alpha-15-source-changes)).
 [Grid ADR](adr/0137-declared-parameter-grids-reach-the-workspace.md) ·
 [gap census](research/2026-10-17-product-database-gap-census.md).
 
@@ -541,6 +587,14 @@ portability. Reinstallation of the exact synthetic package resolves the program
 without changing the model or saved bytes. [Evidence and remaining contract](status/2026-10-20-catalogue-authoring-portability.md).
 A separate source-dependency/manifest acquisition contract and repair remain
 open; this characterization neither changes production nor closes KL-183.
+**Superseded 24 October 2026:** Alpha 16 delivered that contract and repair as
+A16-06 (`b1703d61d`): Save/Save As carry the exact original catalogue package
+and its required members, and refuse missing, corrupt or ambiguous sources
+([portability contract](contracts/alpha16-catalogue-portability.md),
+[release note](releases/alpha16.md#catalogue-authored-native-source-retention)).
+Older readers of such saves are unverified and historical missing sources stay
+unrecoverable. The KL-183 ledger row and dossier still carry the pre-Alpha-16
+text; reconciling them is remaining WP-13 work, not a closure of KL-183.
 [Reconciliation scope](status/2026-10-20-limitations-reassessment.md) ·
 [Current ledger](status/LEDGER.md) ·
 [delivery index](IMPLEMENTATION_STATUS.md).
@@ -791,6 +845,17 @@ acknowledgement](contracts/device-programming-support-guidance.md), and is
 accepted on real hardware only with operation-specific consent. Depends on
 WP-18 for a readable preview.
 
+**Delivered in Alpha 16 (24 October 2026):** A16-05 (`e4b7b90ec`, `9806f06dd`,
+`5dc47aece`) adopts only named parameters with exact typed source attribution
+and unambiguous decoding, as one atomic undoable edit; a mounted
+comparison → apply → undo → re-comparison scenario passed. Raw, masked, unread
+and unknown rows, address/count tables and group-address/association rows are
+not adoptable, so the association/address part of (b) is not delivered.
+Project → device opens the existing validated download review; no second write
+route exists. There is no live-device acceptance
+([exact contract](contracts/alpha16-comparison-adoption.md),
+[release note](releases/alpha16.md#device--project-adoption-not-another-download-route)).
+
 #### WP-20 — System family in the device list
 
 **Scope:** owner request 3. The Devices list gets a sortable, filterable
@@ -846,7 +911,7 @@ into a second status ledger. All 195 catalogue keys have a package/exclusion
 route, including resolved and historical entries; a route is not a claim that
 the entry is fully fixed.
 
-**Suggested order:** WP-16 and WP-01 first; WP-17 next, then WP-02/WP-03
+**Suggested order (18 October 2026; historical):** WP-16 and WP-01 first; WP-17 next, then WP-02/WP-03
 (serialize shared product-DB migrations). WP-15 can proceed after the UI-owner
 handover. WP-04 starts with measurement, then its parser/web slices. Prepare WP-05/06
 contracts independently; implement shared UI changes only after UI-05's
@@ -858,8 +923,18 @@ independent offline UI packages; WP-19 follows WP-18 and starts with its
 contract.
 
 For the owner-authorised Alpha 16 successor, the
-[active sequence](goals/alpha16-successor-sequence-2026-10-19.md#current-state)
-now advances only to WP-04.1 after the v28 repair's delivery.
+[successor sequence](goals/alpha16-successor-sequence-2026-10-19.md#current-state)
+advanced only to WP-04.1 after the v28 repair's delivery (20 October 2026).
+The [Alpha 16 release plan](goals/alpha16-release-plan-2026-10-23.md) superseded
+it on 23 October and was published on 24 October; neither is an active queue.
+
+**Post-Alpha-16 order (24 October 2026):** the suggested order above names
+delivered work (WP-01, WP-02, WP-04, WP-15, WP-16 repairs, WP-17–WP-20) and is
+retained as history. No remaining package is ready without its gate: WP-03,
+WP-05 exclusions, WP-06–WP-09 and WP-14 need source evidence; WP-11 needs
+desktop-control permission; WP-12 and hardware acceptance of WP-19 project →
+device or issue #22 need operation-specific consent; WP-10 and issue #7 need
+supplied inputs or reporter acceptance; WP-13 has the KL-183 record update.
 
 ## Test gates: change-scoped by default (19 October 2026)
 
@@ -916,9 +991,12 @@ Open, each small and none blocking:
   `node` child) running, reparented to the user's systemd (seen three times on
   19 October 2026). It holds its port for the next run; end it by PID until
   `run_web_gate.py`'s cleanup reaches Playwright's `webServer` group. Reading `products` commands and
-  `device readiness` open the default product database read-only now; `device
-  download/compare/restore/byte-order-probe` still use the migrating opener
-  (whether they write the catalogue was not audited).
+  `device readiness` open the default product database read-only now. **Closed
+  (24 October 2026):** `device download/compare/restore/byte-order-probe` and
+  `device diagnostics --product-db` only plan from the catalogue, so they use
+  the same read-only opener; before, `device download` rewrote an older
+  default file in place (RED in the extended reader regression). Catalogue
+  writers (`products ingest`, legacy import) keep the migrating opener.
 
 ## Prior dated detail — background, not a second queue
 

@@ -12,6 +12,18 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## WP-06a saved project folders in the object table (24 October 2026)
+
+The device detail now carries `project_folder` per communication object, read
+from the device's retained `GroupObjectTree` row (Project Schema 23
+§1.2.5.21–23). The object table names a saved folder by its declared `RefId`
+chain and says why a folder is withheld (ambiguous, unidentified node,
+unresolved tree, module object, inactive). Projection-only: no domain, storage
+schema, import or command change; placements survive native save/reopen and
+undo because the retained row does. No product label is looked up.
+[Contract](contracts/communication-object-folders.md#saved-project-folder-display-24-october-2026) ·
+[WP-06](OPEN_WORK.md#wp-06--communication-object-organisation).
+
 ## Desktop save dialogs no longer open inside the AppImage mount (24 October 2026)
 
 Found by a native WP-11 run of the published `v0.1.0-alpha.16` AppImage: all

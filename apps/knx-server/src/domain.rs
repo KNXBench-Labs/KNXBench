@@ -2391,17 +2391,50 @@ fn apply_dpt_texts(
 ///
 /// `language: None` with no product ref stated, or no product database
 /// open, issues no product-database query at all and returns
-/// byte-identical to `device_detail_impl` alone (Global Constraint 3).
+/// `device_detail_impl` with only the saved project folders added.
+///
+/// 3. **Saved project folders (WP-06a)**, last and without the product
+///    database: read from the device's retained `GroupObjectTree` under the
+///    same project lock as the detail, applied after the activation overlay
+///    so an evaluated-inactive object gets no folder.
 pub fn device_detail(
     state: &AppState,
     device_id: u32,
     language: Option<&str>,
 ) -> Result<knx_projection::DeviceDetail, String> {
-    // Step 1: lock only `project`.
+    let mut folders = None;
+    let mut detail = device_detail_with_product_data(state, device_id, language, &mut folders)?;
+    if let Some(folders) = folders {
+        crate::com_object_folders::apply_project_folders(&mut detail, &folders);
+    }
+    Ok(detail)
+}
+
+fn device_detail_with_product_data(
+    state: &AppState,
+    device_id: u32,
+    language: Option<&str>,
+    folders: &mut Option<
+        std::collections::BTreeMap<
+            knx_core::ComObjectInstanceId,
+            knx_app::com_object_folders::SavedFolder,
+        >,
+    >,
+) -> Result<knx_projection::DeviceDetail, String> {
+    // Step 1: lock `project` (and, in the established order, `opaque` for the
+    // retained object tree); never `product_db` at the same time.
     let (mut detail, overlay_input, activation_input, name_input) = {
         let project = state.project.lock().expect("state mutex poisoned");
         let project = project.as_ref().ok_or("no project open")?;
         let detail = device_detail_impl(project, device_id)?;
+        *folders = knx_app::com_object_folders::FolderInput::collect(
+            project,
+            knx_core::DeviceId(device_id),
+        )
+        .map(|input| {
+            let opaque = state.opaque.lock().expect("state mutex poisoned");
+            knx_app::com_object_folders::saved_folders(&input, &opaque)
+        });
         let activation_input = activation_input(project, knx_core::DeviceId(device_id));
         let name_input = knx_app::com_object_text_fill::NameFillInput::collect(
             project,

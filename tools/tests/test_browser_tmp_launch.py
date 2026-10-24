@@ -600,7 +600,11 @@ class BrowserTempLaunch(unittest.TestCase):
                     scanned_pidfds.append(pidfd)
                     return pidfd
 
-                with mock.patch.object(os, 'pidfd_open', side_effect=mismatched_pidfd_open):
+                def reused_wrapper_signal(signum: int) -> None:
+                    signal.pidfd_send_signal(sentinel_identity.pidfd, signum)
+
+                with mock.patch.object(os, 'pidfd_open', side_effect=mismatched_pidfd_open), \
+                        mock.patch.object(fixture, 'send_signal', side_effect=reused_wrapper_signal):
                     cleanup_sigterm_fixture(fixture, release)
                 self.assertEqual(running_owned_processes([sentinel_identity]), [sentinel_identity],
                                  'cleanup signalled an unrelated process through a mismatched pidfd')

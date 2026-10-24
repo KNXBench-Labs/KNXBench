@@ -40,15 +40,18 @@ before any plan or report exists. See
 
 **A maintainer asked me for diagnostic data from a device. How do I send it?**
 
-Use **File → Export diagnostic data**: pick the device and the interface, preview,
-read, save the ZIP and email it to `issue@knxbench.com`. The export only reads.
+Use **File → Export diagnostic data** (source builds after Alpha 16 also offer
+**Analyse device** on the device's *Diagnostics* tab): pick the device and the
+interface, preview, read, save the ZIP and email it to `issue@knxbench.com`. The
+export only reads.
 The [step-by-step guide](../user-guide/08-reports-and-diff.md#send-diagnostic-data)
 has screenshots and says which builds contain it.
 
 **How can I report an unknown device before a download plan exists?**
 
 Since Alpha 12, use **File → Device support report**, or the same
-action in the device download panel. An offline report needs no project, installed
+action in the device download panel (source builds after Alpha 16: **Send report**
+on the device's *Diagnostics* tab). An offline report needs no project, installed
 product package or gateway. Optional live diagnostics show a fixed read list and
 require separate consent; they never write, restart or enable programming.
 Review the JSON and summary, give separate disclosure consent, save the ZIP and

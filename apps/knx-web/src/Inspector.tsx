@@ -63,6 +63,7 @@ import {
 } from "./treeUtils";
 import { snapshotContextFromTree } from "./snapshotIdentity";
 import { PluginDataButton } from "./PluginDataDialog";
+import DeviceDiagnosticsEntry from "./DeviceDiagnosticsEntry";
 
 // `BuildingNode.kind` is the raw `BuildingPartType` discriminant from the
 // server ("Building", "Floor", … — see `bindings/BuildingNode.ts`'s own
@@ -958,6 +959,7 @@ export function DeviceWorkspace(props: {
       <DeviceIdentity product={detail.product} />
     </div>
     <div role="tabpanel" id={`device-panel-${detail.id}-3`} aria-labelledby={`device-tab-${detail.id}-3`} hidden={tab !== 3} tabIndex={0}>
+      <DeviceDiagnosticsEntry project={tree} deviceId={detail.id} />
       <ParameterPanelContent deviceId={detail.id} state={parameterState} view="diagnostics" onValueApplied={onApplied} />
     </div>
     <div role="tabpanel" id={`device-panel-${detail.id}-4`} aria-labelledby={`device-tab-${detail.id}-4`} hidden={tab !== 4} tabIndex={0}>

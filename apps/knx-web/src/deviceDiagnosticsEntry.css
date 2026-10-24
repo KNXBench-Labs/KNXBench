@@ -1,0 +1,6 @@
+/* Diagnostics-tab entry: wrapping action buttons; the parameter panel below draws the rule. */
+.device-diagnostics-entry { margin: 0; min-width: 0; }
+.device-diagnostics-entry h3 { margin-top: 0; }
+.device-diagnostics-entry-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.device-diagnostics-entry-actions button { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.device-diagnostics-entry .inspector-description { max-width: 78ch; overflow-wrap: anywhere; }

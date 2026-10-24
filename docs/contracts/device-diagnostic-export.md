@@ -153,11 +153,22 @@ is claimed.
 
 ## Entry points (one application service)
 
-- Web: **File → Export diagnostic data** (also beside *Device support report*).
+- Web: **File → Export diagnostic data** (also beside *Device support report*),
+  and since 24 October 2026 (source builds after Alpha 16) **Analyse device** on
+  a device's *Diagnostics* tab, which opens the same dialog with that device
+  preselected (no new route, consent or gateway handling).
   Preview (no bus traffic) → explicit read consent → progress, *Stop* (keeps
   partial data, still disconnects) → content preview → explicit save consent →
   local download. Nothing uploads; the user sends the ZIP to
   `issue@knxbench.com` or shares a private link.
+  The device-tab entry closes analysis on a device/project change, project close
+  or entry unmount. Each successful running Start response is owned immediately,
+  independently of whether React has committed its progress view; dismissal
+  cooperatively cancels that exact token once. A Start arriving after dismissal
+  is cancelled by its own token too, never a replacement dialog's job. Cleanup
+  rejection is best effort and cannot update the replacement dialog. A revision-
+  only refresh keeps the analysis, its stale review and any running acquisition;
+  Stop still retains partial results for separately consented export.
 - HTTP: `POST /api/device-diagnostics/preview {deviceId,gateway,context}`,
   `POST …/start {token,consent:true}` (202), `GET …/{token}`,
   `POST …/{token}/cancel`, `POST …/export {token,consent:true}`. Stale

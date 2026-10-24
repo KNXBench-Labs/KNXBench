@@ -128,6 +128,19 @@ impl ManagementTransport for Transport<'_> {
     fn subscribe(&self) -> tokio::sync::broadcast::Receiver<knx_net::TunnelEvent> {
         self.tunnel.subscribe()
     }
+    #[cfg(test)]
+    fn observe_memory_read(
+        &self,
+        snapshot: impl FnOnce() -> knx_net::management::MemoryReadObservation,
+    ) {
+        // Only the actual download executor bridge opts in. Read-only identity
+        // observation and original recovery use the default inert path.
+        if self.writes.is_some() {
+            if let Some(observer) = self.observation {
+                observer.memory_read(snapshot());
+            }
+        }
+    }
     fn target_kind(&self) -> knx_core::commissioning::mutation::TargetKind {
         if self.tunnel.diagnostics_are_simulated() {
             knx_core::commissioning::mutation::TargetKind::Simulator

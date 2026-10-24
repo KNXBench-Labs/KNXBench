@@ -1281,7 +1281,49 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
         let mut acknowledged = false;
         // Wait slices spent on an acknowledged request, see below.
         let mut answer_slices = 0u8;
+        let read = match &service {
+            ApplicationService::MemoryRead { address, number } => {
+                Some((u32::from(*address), *number))
+            }
+            ApplicationService::UserMemoryRead { address, number } => Some((*address, *number)),
+            _ => None,
+        };
+        let mut disposition = "not-received";
+        let mut received_seq = None;
+        let mut read_entered_at = None;
+        // This observes THIS receiver/matcher, not a parallel subscription.
+        // Only an opted-in transport evaluates the snapshot (including clock).
+        macro_rules! observe_read {
+            ($awaiting:literal, $deadline:expr) => {
+                if let Some((offset, count)) = read {
+                    self.transport.observe_memory_read(|| {
+                        crate::management::MemoryReadObservation {
+                            entered_at: *read_entered_at
+                                .get_or_insert_with(std::time::Instant::now),
+                            offset,
+                            count,
+                            request_seq: seq,
+                            expected_receive_seq: self.recv_seq,
+                            received_seq,
+                            attempts: attempts + u8::from($awaiting == "send"),
+                            answer_slices,
+                            acknowledged,
+                            awaiting: $awaiting,
+                            disposition,
+                            response_slice_remaining: {
+                                let deadline: Option<tokio::time::Instant> = $deadline;
+                                deadline.map(|d| {
+                                    d.saturating_duration_since(tokio::time::Instant::now())
+                                })
+                            },
+                        }
+                    });
+                }
+            };
+        }
+        observe_read!("read-entry", None);
         let mut events = self.transport.subscribe();
+        observe_read!("send", None);
         self.send(Tpci::NumberedData { seq }, service.clone())
             .await?;
         attempts += 1;
@@ -1293,57 +1335,97 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
                 if remaining.is_zero() {
                     break;
                 }
+                observe_read!("receive", Some(deadline));
                 match tokio::time::timeout(remaining, events.recv()).await {
                     Ok(Ok(TunnelEvent::Telegram(frame))) => {
+                        received_seq = match frame.transport {
+                            Tpci::Ack { seq } | Tpci::Nak { seq } | Tpci::NumberedData { seq } => {
+                                Some(seq)
+                            }
+                            _ => None,
+                        };
                         if frame.kind != LDataMessageKind::Indication
                             || frame.source != self.target.address()
                         {
+                            disposition = if frame.kind != LDataMessageKind::Indication {
+                                "indication-filtered"
+                            } else {
+                                "source-filtered"
+                            };
                             continue;
                         }
                         match frame.transport {
                             Tpci::Ack { seq: acked } if acked == seq => {
                                 acknowledged = true;
+                                disposition = "ack-matched";
                                 if ack_is_enough == AckIsEnough::Yes {
                                     return Ok(Exchanged::Acknowledged { attempts });
                                 }
                                 continue;
                             }
                             Tpci::Disconnect => {
+                                disposition = "disconnected";
+                                observe_read!("exchange-return", Some(deadline));
                                 self.connection = None;
                                 return Err(SessionError::ConnectionLost {
                                     during: waiting_for,
                                 });
                             }
                             Tpci::NumberedData { seq: received } => {
+                                disposition = if received == self.recv_seq {
+                                    "response-new"
+                                } else if received == (self.recv_seq.wrapping_sub(1) & 0x0F) {
+                                    "response-repeated"
+                                } else {
+                                    "response-out-of-sequence"
+                                };
+                                // receive_numbered sends the response ACK/NAK
+                                // before returning to this application matcher.
+                                observe_read!("response-ack-or-nak-send", Some(deadline));
                                 match self.receive_numbered(received).await {
                                     Received::New => {
                                         if let Some(answer) = matcher(&frame.service) {
+                                            disposition = "application-address-matched";
+                                            observe_read!("matched-read-return", Some(deadline));
                                             return Ok(Exchanged::Answer(answer));
                                         }
+                                        disposition = "application-address-rejected";
                                     }
                                     Received::Repetition | Received::OutOfSequence => {}
                                 }
                                 continue;
                             }
-                            _ => continue,
+                            _ => {
+                                disposition = "transport-filtered";
+                                continue;
+                            }
                         }
                     }
                     Ok(Ok(TunnelEvent::Closed)) => {
+                        disposition = "tunnel-closed";
+                        observe_read!("exchange-return", Some(deadline));
                         self.connection = None;
                         return Err(SessionError::ConnectionLost {
                             during: waiting_for,
                         });
                     }
                     Ok(Err(broadcast::error::RecvError::Lagged(_))) => {
+                        disposition = "receiver-lagged";
+                        observe_read!("exchange-return", Some(deadline));
                         return Err(SessionError::Lagged { waiting_for });
                     }
                     Ok(Err(broadcast::error::RecvError::Closed)) => {
+                        disposition = "receiver-closed";
+                        observe_read!("exchange-return", Some(deadline));
                         self.connection = None;
                         return Err(SessionError::ConnectionLost {
                             during: waiting_for,
                         });
                     }
-                    Err(_) => break,
+                    Err(_) => {
+                        disposition = "receive-timeout";
+                        break;
+                    }
                 }
             }
 
@@ -1373,6 +1455,7 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
                 // the unacknowledged answer, then every 3 s — outside one
                 // acknowledge time-out, inside the ladder.
                 answer_slices += 1;
+                observe_read!("answer-slice-ended", Some(deadline));
                 if self.answer_wait == AnswerWait::RepetitionLadder
                     && answer_slices < MAX_TRANSMISSIONS
                 {
@@ -1399,6 +1482,7 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
                 // `T_DISCONNECT_REQ_PDU` and the local state change — and
                 // is best-effort by the same clause that makes A6's send
                 // unconfirmed.
+                observe_read!("connection-release", None);
                 self.disconnect().await;
                 return Err(SessionError::ConnectionReleased {
                     waiting_for,
@@ -1406,6 +1490,7 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
                     attempts,
                 });
             }
+            observe_read!("send", None);
             self.send(Tpci::NumberedData { seq }, service.clone())
                 .await?;
             attempts += 1;

@@ -9,6 +9,11 @@ use std::{io, io::Read, path::PathBuf};
 pub(super) struct Observation(Mutex<Snapshot>);
 #[derive(Default)]
 struct Snapshot {
+    started: Option<std::time::Instant>,
+    executor_entry: Option<std::time::Duration>,
+    first_memory_read_entry: Option<std::time::Duration>,
+    current_read: Option<knx_net::management::MemoryReadObservation>,
+    read_observed: Option<std::time::Duration>,
     phase: Option<&'static str>,
     failure: Option<(&'static str, &'static str, Option<io::ErrorKind>)>,
     preparation: Option<Value>,
@@ -24,6 +29,7 @@ impl Observation {
         }
     }
     pub(super) fn begin(&self, preparation: &Preparation, request_id: &str) {
+        let started = std::time::Instant::now();
         let bundle = preparation.source.preview();
         let configuration = bundle.project_preparation.as_ref().map(|p| p.sha256());
         // Canonical JSON Value ordering matches the final HTTP preview projection.
@@ -40,6 +46,7 @@ impl Observation {
         });
         self.update(|s| {
             *s = Snapshot {
+                started: Some(started),
                 phase: Some("worker-entered"),
                 preparation: Some(value),
                 ..Default::default()
@@ -47,7 +54,22 @@ impl Observation {
         });
     }
     pub(super) fn phase(&self, phase: &'static str) {
-        self.update(|s| s.phase = Some(phase));
+        self.update(|s| {
+            s.phase = Some(phase);
+            if phase == "executor" {
+                s.executor_entry = s.started.map(|start| start.elapsed());
+            }
+        });
+    }
+    pub(super) fn memory_read(&self, marker: knx_net::management::MemoryReadObservation) {
+        let now = std::time::Instant::now();
+        self.update(|s| {
+            let Some(start) = s.started else { return };
+            let entry = marker.entered_at.saturating_duration_since(start);
+            s.first_memory_read_entry.get_or_insert(entry);
+            s.current_read = Some(marker);
+            s.read_observed = Some(now.saturating_duration_since(start));
+        });
     }
     pub(super) fn failure(
         &self,
@@ -96,6 +118,23 @@ impl Observation {
                 "workerPreparation": s.preparation,
                 "preparationMatchesFinalOperation": s.preparation.as_ref().map(|p| p["operationSha256"] == knx_productdb::sha256_hex(operation.as_bytes())),
                 "lastSendBoundaryProgress": s.progress,
+                "readTiming": {
+                    "elapsedSinceWorkerEntryMicros": s.started.map(|start| start.elapsed().as_micros()),
+                    "executorEntryElapsedMicros": s.executor_entry.map(|d| d.as_micros()),
+                    "firstObservedMemoryReadEntryElapsedMicros": s.first_memory_read_entry.map(|d| d.as_micros()),
+                    "currentReadEntryElapsedMicros": s.current_read.and_then(|r| s.started.map(|start| r.entered_at.saturating_duration_since(start).as_micros())),
+                    "elapsedSinceCurrentReadEntryMicros": s.current_read.map(|r| r.entered_at.elapsed().as_micros()),
+                    "lastBoundaryElapsedMicros": s.read_observed.map(|d| d.as_micros()),
+                    "currentRead": s.current_read.map(|r| json!({
+                        "testOffset": r.offset, "count": r.count,
+                        "requestSequence": r.request_seq, "expectedReceiveSequence": r.expected_receive_seq,
+                        "lastReceivedSequence": r.received_seq, "attempts": r.attempts,
+                        "answerSlices": r.answer_slices, "ackSeen": r.acknowledged,
+                        "awaiting": r.awaiting, "disposition": r.disposition,
+                        "responseSliceRemainingAtBoundaryMicros": r.response_slice_remaining.map(|d| d.as_micros()),
+                    })),
+                    "bestEffortNonAtomicObservation": true,
+                },
                 "terminal":s.terminal.map(|(outcome, clean)| json!({"outcome":outcome,"disconnectClean":clean})),
                 "missingFieldsMeanUnavailable": true,
             }),

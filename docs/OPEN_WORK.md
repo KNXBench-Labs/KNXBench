@@ -975,9 +975,8 @@ Open, each small and none blocking:
   with scratch `XDG_DATA_HOME`/`XDG_CONFIG_HOME` and the gate fails when the
   real `knx` directories change. Still open: a **direct** `cargo test` inherits
   the real homes, and spawned binaries outside `knx-cli` (server, desktop, MCP)
-  were not swept. Four test comments still claim `AppState::default()` looks up
-  `default_path()` (`http_device_routes.rs`, `http_product_language.rs`,
-  `http_catalog_translation.rs`, a `domain.rs` test); it opens none (AR18 M8)
+  were not swept. The four test comments that claimed `AppState::default()` looks up
+  `default_path()` were corrected on 24 October 2026; it opens none (AR18 M8)
   ([pitfall](DEVELOPER_PITFALLS.md#gates)).
 - `tools.tests.test_browser_tmp_launch`'s
   `test_cli_sigterm_waits_for_child_shutdown_before_cleanup` intermittently

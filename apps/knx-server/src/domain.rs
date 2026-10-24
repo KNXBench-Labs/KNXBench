@@ -8133,14 +8133,11 @@ mod tests {
             parameters: vec![],
         });
         let mut state = AppState::default();
-        // `AppState::default()` now runs the real `default_path()` lookup
-        // (Task 3) — on a machine that already has a product database at
-        // e.g. `~/.local/share/knx/products.sqlite`, `default_path()`
-        // would pick it up here, making
-        // `creating_a_device_without_a_product_database_is_an_error`
-        // depend on the environment. Force `None` explicitly so this
-        // helper's guarantee ("no product database configured") holds
-        // everywhere, not just on a machine without one.
+        // `AppState::default()` opens no product database (AR18 M8), so
+        // the user's own catalogue cannot leak in. Set `None` explicitly
+        // anyway: `creating_a_device_without_a_product_database_is_an_error`
+        // must keep its "no product database configured" guarantee even if
+        // the default changes.
         state.product_db = None;
         *state.project.lock().unwrap() = Some(project);
         state

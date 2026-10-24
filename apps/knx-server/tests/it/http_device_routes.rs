@@ -35,11 +35,9 @@ fn state_with_one_installation() -> knx_server::AppState {
         parameters: vec![],
     });
     let mut state = knx_server::AppState::default();
-    // `AppState::default()` runs the real `default_path()` lookup (Task
-    // 3) — on a machine that already has a product database at e.g.
-    // `~/.local/share/knx/products.sqlite`, `default_path()` would pick
-    // it up here, making `creating_a_device_without_a_product_database_
-    // is_a_400` depend on the environment. Force `None` explicitly.
+    // `AppState::default()` opens no product database (AR18 M8). Set
+    // `None` explicitly anyway so `creating_a_device_without_a_product_
+    // database_is_a_400` keeps its precondition if the default changes.
     state.product_db = None;
     *state.project.lock().unwrap() = Some(project);
     state

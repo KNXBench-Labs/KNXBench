@@ -36,6 +36,11 @@ chain and says why a folder is withheld (ambiguous, unidentified node,
 unresolved tree, module object, inactive). Projection-only: no domain, storage
 schema, import or command change; placements survive native save/reopen and
 undo because the retained row does. No product label is looked up.
+**Folder grouping view: IMPLEMENTED, REVIEW/GATE PENDING, not delivered.** The
+table offers *By saved project folder* next to By channel (default) and All
+objects; groups join on the opaque key, the rest falls into one fallback group,
+and each heading shows the full saved path
+([grouping contract](contracts/communication-object-folders.md#saved-project-folder-grouping-24-october-2026)).
 [Contract](contracts/communication-object-folders.md#saved-project-folder-display-24-october-2026) ·
 [WP-06](OPEN_WORK.md#wp-06--communication-object-organisation).
 

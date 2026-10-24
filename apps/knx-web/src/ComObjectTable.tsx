@@ -3,6 +3,7 @@ import ResizableTable from "./ResizableTable";
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { ComObjectNode } from "./bindings/ComObjectNode";
 import type { ComObjectChannel } from "./bindings/ComObjectChannel";
+import type { ComObjectProjectFolder } from "./bindings/ComObjectProjectFolder";
 import type { TextFill } from "./bindings/TextFill";
 import { useTranslate, type MessageKey, type Translate } from "./i18n";
 import { useUiLanguage } from "./uiLanguage";
@@ -10,7 +11,7 @@ import { useProductLanguage } from "./productLanguage";
 import { LanguageFallbackBadge, fellBack } from "./languageFallback";
 import { formatGroupAddress } from "./gaNotation";
 import { ACTIVATION_ORDER, DEFAULT_FILTERS, channelKey, deriveComObjectView, dptOptions, evaluatedChannel,
-  effectiveDpt, hasFilters, projectFolderIds, projectFolderRefusal, type ComFilters, type ComSort, type ComSortColumn,
+  effectiveDpt, hasFilters, projectFolderIds, projectFolderRefusal, type ComFilters, type ComGrouping, type ComSort, type ComSortColumn,
   type RefusedProjectFolder } from "./comObjectView";
 import ComMutationBoundary from "./ComMutationBoundary";
 import { dptDisplay } from "./dptLabels";
@@ -41,6 +42,14 @@ function ChannelText({ channel }: { channel: ComObjectChannel | null }) {
     {channel?.kind === "Channel" && channel.text && channel.name && <span className="com-object-channel-name">{t("inspector.channelName", { value: channel.name })}</span>}
     {channel?.kind === "Channel" && channel.number && <span className="com-object-channel-number">{t("inspector.channelNumber", { value: channel.number })}</span>}</>;
 }
+/** WP-06: a folder group's declared Folder ids and, always visible, its complete saved path. */
+function FolderText({ folder }: { folder: ComObjectProjectFolder | null }) {
+  const t = useTranslate();
+  if (folder === null) return <strong>{t("comTable.noFolderGroup")}</strong>;
+  const path = folder.path.map(n => n.ref_id).join(" › ");
+  return <><strong title={t("comTable.projectFolderTitle", { value: path })}>{folder.path.filter(n => n.kind === "Folder").map(n => n.ref_id).join(" › ")}</strong>
+    <span className="com-object-folder-path">{t("comTable.folderPath", { value: path })}</span></>;
+}
 const FOLDER_REFUSAL_KEYS: Record<RefusedProjectFolder, MessageKey> = {
   Ambiguous: "comTable.projectFolderRefused.Ambiguous", UnidentifiedNode: "comTable.projectFolderRefused.UnidentifiedNode",
   TreeUnresolved: "comTable.projectFolderRefused.TreeUnresolved", ModuleObject: "comTable.projectFolderRefused.ModuleObject",
@@ -55,16 +64,16 @@ function ProjectFolderNote({ com }: { com: ComObjectNode }) {
   return refusal === null ? null
     : <small className="com-object-project-folder" data-folder-status={refusal}>{t(FOLDER_REFUSAL_KEYS[refusal])}</small>;
 }
-interface RowProps { com: ComObjectNode; flat: boolean; hidden: boolean; matches: boolean; open: boolean;
+interface RowProps { com: ComObjectNode; flat: boolean; groupKey: string | null; hidden: boolean; matches: boolean; open: boolean;
   descriptionMatch: boolean; editor: (com: ComObjectNode) => ReactNode; onOpen: (id: number, open: boolean) => void }
-function ObjectRow({ com, flat, hidden, matches, open, descriptionMatch, editor, onOpen }: RowProps) {
+function ObjectRow({ com, flat, groupKey, hidden, matches, open, descriptionMatch, editor, onOpen }: RowProps) {
   const t = useTranslate(); const [productLanguage] = useProductLanguage();
   const [language] = useUiLanguage();
   const [visited, setVisited] = useState(false), [busy, setBusy] = useState(false);
   const details = useRef<HTMLDetailsElement>(null);
   const dpt = effectiveDpt(com);
   return <Fragment>
-    <tr className={flat ? "com-object-summary" : "com-object-summary com-object-summary--grouped"} data-object-id={com.id} data-channel-key={channelKey(com)} data-activation={com.activation} hidden={hidden}>
+    <tr className={flat ? "com-object-summary" : "com-object-summary com-object-summary--grouped"} data-object-id={com.id} data-channel-key={channelKey(com)} data-group-key={groupKey ?? undefined} data-activation={com.activation} hidden={hidden}>
       <td className="mono"><details className="com-object-detail" ref={details} open={open} onToggle={event => {
         const next = event.currentTarget.open;
         if (!next && busy) { event.currentTarget.open = true; return; }
@@ -91,7 +100,7 @@ function ObjectRow({ com, flat, hidden, matches, open, descriptionMatch, editor,
     <tr className="com-object-editor-row" data-editor-id={com.id} hidden={hidden || !open}><td colSpan={flat ? 7 : 6}>
       {/* Once opened, keep this subtree mounted even when closed. Row keys are
           direct siblings under one tbody in every view: keys cannot preserve
-          state if a channel/flat switch reparents a component. */}
+          state if a channel/folder/flat switch reparents a component. */}
       {(visited || open) && <ComMutationBoundary onBusy={setBusy}>{editor(com)}</ComMutationBoundary>}
     </td></tr>
   </Fragment>;
@@ -100,7 +109,9 @@ export default function ComObjectTable({ objects, editor }: { objects: ComObject
   const t = useTranslate(); const [language] = useUiLanguage();
   const [filters, setFilters] = useState<ComFilters>({ ...DEFAULT_FILTERS });
   const [sort, setSort] = useState<ComSort>({ column: null, descending: false });
-  const [flat, setFlat] = useState(false), [openObjects, setOpenObjects] = useState(new Set<number>());
+  // Channel and folder groups use disjoint key namespaces, so one expansion set serves both.
+  const [mode, setMode] = useState<ComGrouping | "flat">("channel"), [openObjects, setOpenObjects] = useState(new Set<number>());
+  const flat = mode === "flat", by: ComGrouping = mode === "folder" ? "folder" : "channel";
   const [expanded, setExpanded] = useState(new Set<string>());
   const [removed, setRemoved] = useState(0);
   // Filter-collapse overrides belong to the exact filter signature, not the
@@ -108,8 +119,8 @@ export default function ComObjectTable({ objects, editor }: { objects: ComObject
   const signature = JSON.stringify(filters);
   const [filteredCollapse, setFilteredCollapse] = useState<{ signature: string; keys: Set<string> }>({ signature: "", keys: new Set() });
   const filtered = hasFilters(filters);
-  const view = useMemo(() => deriveComObjectView(objects, filters, sort, language, !flat), [objects, filters, sort, language, flat]);
-  const all = useMemo(() => deriveComObjectView(objects, DEFAULT_FILTERS, sort, language, !flat), [objects, sort, language, flat]);
+  const view = useMemo(() => deriveComObjectView(objects, filters, sort, language, !flat, by), [objects, filters, sort, language, flat, by]);
+  const all = useMemo(() => deriveComObjectView(objects, DEFAULT_FILTERS, sort, language, !flat, by), [objects, sort, language, flat, by]);
   const matchedIds = new Set(view.objects.map(o => o.id));
   const groupMatches = new Map(view.groups.map(g => [g.key, g.objects.length]));
   const options = dptOptions(objects);
@@ -139,23 +150,25 @@ export default function ComObjectTable({ objects, editor }: { objects: ComObject
     const keys = new Set(previous); if (open) keys.add(id); else keys.delete(id); return keys;
   });
   const rows: ReactNode[] = [];
-  const orderedGroups = flat ? [{ key: "flat", channel: null, objects: all.objects, total: objects.length }] : all.groups;
+  const orderedGroups = flat ? [{ key: "flat", channel: null, folder: null, objects: all.objects, total: objects.length }] : all.groups;
   for (const group of orderedGroups) {
     const count = groupMatches.get(group.key) ?? 0;
     const hasEditor = group.objects.some(o => openObjects.has(o.id));
     const groupVisible = flat || !filtered || count > 0 || hasEditor;
-    if (!flat) rows.push(<tr className="com-object-channel" key={`group:${group.key}`} data-channel-key={group.key} hidden={!groupVisible}>
+    if (!flat) rows.push(<tr className="com-object-channel" key={`group:${group.key}`} data-group-key={group.key}
+      data-channel-key={by === "channel" ? group.key : undefined} hidden={!groupVisible}>
       <th colSpan={6} scope="row"><button type="button" className="com-object-channel-summary" aria-expanded={isExpanded(group.key)} onClick={() => toggle(group.key)}>
-        <span aria-hidden="true">{isExpanded(group.key) ? "▾" : "▸"}</span><ChannelText channel={group.channel} />
+        <span aria-hidden="true">{isExpanded(group.key) ? "▾" : "▸"}</span>
+        {by === "folder" ? <FolderText folder={group.folder} /> : <ChannelText channel={group.channel} />}
         <span aria-hidden="true" className="com-object-channel-separator">·</span><span className="com-object-channel-count">{t("comTable.count", { shown: count, total: group.total })}</span>
       </button></th></tr>);
     for (const com of group.objects) {
       const open = openObjects.has(com.id), matches = matchedIds.has(com.id);
-      // Issue #16: a collapsed channel hides every child, open editors included.
-      // Inside an expanded channel (and in the flat view) an open editor stays
+      // Issue #16: a collapsed group hides every child, open editors included.
+      // Inside an expanded group (and in the flat view) an open editor stays
       // visible even outside the filter. Hidden rows keep their editors mounted.
-      const visible = (open || matches) && (flat || groupVisible && isExpanded(channelKey(com)));
-      rows.push(<ObjectRow key={`object:${com.id}`} com={com} flat={flat} hidden={!visible} matches={matches} open={open}
+      const visible = (open || matches) && (flat || groupVisible && isExpanded(group.key));
+      rows.push(<ObjectRow key={`object:${com.id}`} com={com} flat={flat} groupKey={flat ? null : group.key} hidden={!visible} matches={matches} open={open}
         descriptionMatch={view.descriptionMatches.has(com.id)} editor={editor} onOpen={onOpen} />);
     }
   }
@@ -174,12 +187,14 @@ export default function ComObjectTable({ objects, editor }: { objects: ComObject
       <button type="button" onClick={() => { resetCollapse(); setFilters({ ...DEFAULT_FILTERS }); }}>{t("comTable.resetFilters")}</button>
       <button type="button" onClick={() => setSort({ column: null, descending: false })}>{t("comTable.originalOrder")}</button>
       <div className="com-table-views" role="group" aria-label={t("comTable.view")}>
-        <button type="button" aria-pressed={!flat} onClick={() => setFlat(false)}>{t("comTable.grouped")}</button>
-        <button type="button" aria-pressed={flat} onClick={() => setFlat(true)}>{t("comTable.flat")}</button>
+        <button type="button" aria-pressed={mode === "channel"} onClick={() => setMode("channel")}>{t("comTable.grouped")}</button>
+        <button type="button" aria-pressed={mode === "folder"} onClick={() => setMode("folder")}>{t("comTable.byFolder")}</button>
+        <button type="button" aria-pressed={flat} onClick={() => setMode("flat")}>{t("comTable.flat")}</button>
       </div>
     </div>
     {removed > 0 && <p className="com-object-removal" role="status">{t("comTable.removed", { count: removed })}</p>}
     <p className="com-table-count" role="status">{t("comTable.count", { shown: view.objects.length, total: objects.length })}</p>
+    {mode === "folder" && <p className="com-folder-view-note">{t("comTable.folderViewNote")}</p>}
       <ResizableTable scrollClassName="workspace-table-wrap com-table-scroll" scrollLabel={t("comTable.table")} tableId="communication-objects"
         columns={columns.map(c => ({ id: c.column, width: c.column === "number" ? 120 : (flat ? 114 : 136), min: c.column === "number" ? 64 : 100 }))} className="workspace-table com-table"><thead><tr>{columns.map(c => <th scope="col" key={c.column} data-column={c.column}
         aria-sort={sort.column === c.column ? sort.descending ? "descending" : "ascending" : "none"}>

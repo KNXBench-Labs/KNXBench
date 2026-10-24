@@ -392,8 +392,34 @@ pub(crate) fn validate(report: &Report, m: &MemoryEvidence) -> Result<(), String
             "read" => bytes.len() == requested && chunk.error.is_none(),
             // The session turns an empty answer into a refusal, so a
             // partial answer always holds at least one octet.
-            "partial" => !bytes.is_empty() && bytes.len() != requested && chunk.error.is_some(),
-            "refused-ambiguous" | "error" => bytes.is_empty() && chunk.error.is_some(),
+            "partial" => {
+                !bytes.is_empty()
+                    && bytes.len() != requested
+                    && chunk.error.as_deref() == Some("unexpected-length")
+            }
+            "refused-ambiguous" => {
+                bytes.is_empty()
+                    && chunk.error.as_deref() == Some("access-denied-or-memory-unavailable")
+            }
+            "error" => {
+                // memory_reads: bounded supplies cancellation/deadline; an
+                // established session's read_memory supplies only exchange
+                // failures. Setup/identity failures cannot originate here,
+                // and MemoryRefused becomes the range-ending status above.
+                bytes.is_empty()
+                    && matches!(
+                        chunk.error.as_deref(),
+                        Some(
+                            "cancelled"
+                                | "deadline"
+                                | "timeout"
+                                | "connection-released"
+                                | "connection-lost"
+                                | "event-loss"
+                                | "transport-error"
+                        )
+                    )
+            }
             // Never attempted, or (observer snapshot only) in flight.
             "not-read" => {
                 bytes.is_empty()
@@ -436,7 +462,10 @@ pub(crate) fn validate(report: &Report, m: &MemoryEvidence) -> Result<(), String
         return invalid();
     };
     let admitted = identity_admits(report, &hardware_type);
-    if (memory_entered && !admitted) || !sequence_ok(report, &m.chunks, admitted) {
+    if (memory_entered && !admitted)
+        || (!memory_entered && !super::identity_stop_reason_matches(report, Some(admitted)))
+        || !sequence_ok(report, &m.chunks, admitted)
+    {
         return invalid();
     }
     Ok(())

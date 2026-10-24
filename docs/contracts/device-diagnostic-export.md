@@ -153,7 +153,10 @@ is claimed.
 
 ## Entry points (one application service)
 
-- Web: **File → Export diagnostic data** (also beside *Device support report*).
+- Web: **File → Export diagnostic data** (also beside *Device support report*),
+  and since 24 October 2026 (source builds after Alpha 16) **Analyse device** on
+  a device's *Diagnostics* tab, which opens the same dialog with that device
+  preselected (no new route, consent or gateway handling).
   Preview (no bus traffic) → explicit read consent → progress, *Stop* (keeps
   partial data, still disconnects) → content preview → explicit save consent →
   local download. Nothing uploads; the user sends the ZIP to

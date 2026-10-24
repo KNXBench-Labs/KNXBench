@@ -1127,6 +1127,27 @@ to copy all records in that group. Product-language fallback summaries and
 **Stale values** (stored values with no matching parameter in the current
 program) also live here. Those values are preserved, never silently dropped.
 
+<a id="device-analysis-and-support"></a>
+
+**Device analysis and support (amendment of 24 October 2026, source builds after
+Alpha 16).** Above the parameter diagnostics, the tab offers two buttons for the
+shown device:
+
+- **Analyse device** (*Gerät analysieren*) opens the existing **Export diagnostic
+  data** dialog ([guide](08-reports-and-diff.md#send-diagnostic-data)).
+- **Send report** (*Bericht senden*) opens the existing **Device support report**
+  dialog ([guide](08-reports-and-diff.md#universal-device-support-reporting)).
+
+Both open with this device already selected; you can still pick another one in
+the dialog. Nothing else changes: the dialogs keep their preview, their separate
+read and save confirmations and their manual hand-off. Opening either one sends
+nothing to the bus and uploads nothing, and **Send report** saves a file for you
+to send yourself. The buttons are disabled without an open project. Selecting
+another device closes an open dialog; a new project revision closes the support
+report as before, while the diagnostic export keeps its own outdated-review
+warning. The analysis offers the generic identity reads only; the System-2
+memory profile stays command-line only.
+
 ### Manufacturer fields
 
 **Manufacturer fields** lists evaluated fields that the manufacturer explicitly

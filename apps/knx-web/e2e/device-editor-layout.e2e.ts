@@ -1,5 +1,8 @@
 /** Checks the real device editor at narrow and wide widths using only a local mocked API. */
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
+import { join } from "node:path";
+import { messages as en } from "../src/messages/en";
+import { messages as de } from "../src/messages/de";
 
 const translations = {
   en: ["Read", "Write", "Transmit", "Update", "Communication", "Read on init"],
@@ -138,6 +141,92 @@ for (const language of ["en", "de"] as const) {
       await expect(page.locator("tr[data-object-id][data-activation='NotEvaluated']:visible")).toHaveCount(1);
       const widthState = await page.evaluate(() => ({ viewport: innerWidth, document: document.documentElement.scrollWidth }));
       expect(widthState.document, JSON.stringify(widthState)).toBeLessThanOrEqual(widthState.viewport);
+    });
+  }
+}
+
+// Diagnostics-tab entry (24 October 2026): plain buttons that open the existing dialogs with
+// this device preselected. Strict routing: opening either dialog must request nothing new.
+async function strictParameterRoutes(page: Page): Promise<string[]> {
+  const unexpected: string[] = [];
+  await page.route("**/api/**", (route) => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname;
+    if (request.method() === "GET" && path === "/api/device/42/parameters") {
+      return route.fulfill({ contentType: "application/json", body: JSON.stringify({ programId: null, sections: [], stale: [], diagnostics: [] }) });
+    }
+    unexpected.push(`${request.method()} ${path}`);
+    return route.fulfill({ status: 404, contentType: "application/json", body: JSON.stringify({ error: "strict diagnostics-entry fixture" }) });
+  });
+  return unexpected;
+}
+
+for (const language of ["en", "de"] as const) {
+  for (const [width, theme] of [[360, "graphite"], [1440, "porcelain"]] as const) {
+    test(`${language} diagnostics tab opens analysis and report for this device at ${width}px (${theme})`, async ({ page }) => {
+      const m = language === "de" ? de : en;
+      await page.setViewportSize({ width, height: 800 });
+      const unexpected = await strictParameterRoutes(page);
+      await page.goto(`/e2e/device-editor-fixture.html?lang=${language}&theme=${theme}`);
+      await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+      await page.getByRole("tab", { name: m["parameters.diagnosticsTab"], exact: true }).click();
+      const panel = page.locator("#device-panel-42-3");
+      const analyse = panel.getByRole("button", { name: m["deviceDiagnostics.analyse"], exact: true });
+      const report = panel.getByRole("button", { name: m["deviceDiagnostics.report"], exact: true });
+      await expect(analyse).toBeEnabled();
+      await expect(report).toBeEnabled();
+      // Outside the File menu: no menu roles, no menu-entry marker.
+      await expect(panel.locator("[role=menuitem], [data-file-menu-item]")).toHaveCount(0);
+      for (const button of [analyse, report]) {
+        const box = (await button.boundingBox())!;
+        expect(box.x).toBeGreaterThanOrEqual(0);
+        expect(box.x + box.width).toBeLessThanOrEqual(width + 1);
+      }
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+      const capture = process.env.KNX_DIAGNOSTICS_ENTRY_CAPTURE_DIR;
+      if (capture) await panel.screenshot({ path: join(capture, `entry-${language}-${width}-${theme}.png`) });
+
+      // Real keyboard path, not programmatic focus(): Chromium shows :focus-visible for a
+      // script focus only when the last interaction was a key press, and the tab was clicked.
+      // From the selected tab, Tab reaches the focusable tab panel, then the first entry button.
+      const focused = () => page.evaluate(() => {
+        const active = document.activeElement as HTMLElement | null;
+        const style = active ? getComputedStyle(active) : null;
+        return { id: active?.id ?? "", analyse: active?.hasAttribute("data-device-analyse") ?? false,
+          report: active?.hasAttribute("data-device-report") ?? false, visible: active?.matches(":focus-visible") ?? false,
+          outline: style ? `${style.outlineStyle} ${style.outlineWidth}` : "" };
+      });
+      await page.keyboard.press("Tab");
+      expect((await focused()).id).toBe("device-panel-42-3");
+      await page.keyboard.press("Tab");
+      const onAnalyse = await focused();
+      expect(onAnalyse).toMatchObject({ analyse: true, visible: true });
+      expect(onAnalyse.outline).not.toMatch(/^none|\b0px$/);
+      if (capture) await panel.screenshot({ path: join(capture, `entry-focus-${language}-${width}-${theme}.png`) });
+      await page.keyboard.press("Enter");
+      const analysis = page.getByRole("dialog", { name: m["diagnostics.title"], exact: true });
+      await expect(analysis).toBeVisible();
+      await expect(analysis.locator("[data-diagnostics-device]")).toHaveValue("42");
+      const dialogBox = (await analysis.boundingBox())!;
+      expect(dialogBox.x).toBeGreaterThanOrEqual(0);
+      expect(dialogBox.x + dialogBox.width).toBeLessThanOrEqual(width + 1);
+      if (capture) await page.screenshot({ path: join(capture, `analysis-${language}-${width}-${theme}.png`) });
+      await page.keyboard.press("Escape");
+      await expect(analysis).toHaveCount(0);
+      expect(await focused()).toMatchObject({ analyse: true, visible: true });
+
+      await page.keyboard.press("Tab");
+      const onReport = await focused();
+      expect(onReport).toMatchObject({ report: true, visible: true });
+      expect(onReport.outline).not.toMatch(/^none|\b0px$/);
+      await page.keyboard.press("Space");
+      const support = page.getByRole("dialog", { name: m["support.title"], exact: true });
+      await expect(support).toBeVisible();
+      await expect(support.locator("[data-support-device]")).toHaveValue("42");
+      if (capture) await page.screenshot({ path: join(capture, `report-${language}-${width}-${theme}.png`) });
+      await support.getByRole("button", { name: m["support.close"], exact: true }).click();
+      await expect(support).toHaveCount(0);
+      expect(unexpected).toEqual([]);
     });
   }
 }

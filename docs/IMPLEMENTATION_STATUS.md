@@ -12,6 +12,20 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Device Diagnostics-tab entry for analysis and support (24 October 2026)
+
+Owner decision: a device's existing **Diagnostics** tab now offers **Analyse
+device** and **Send report**, which open the existing diagnostic export and
+support report dialogs with that device preselected
+([manual](manual/user-guide/05-devices-and-products.md#device-analysis-and-support)).
+No new route, write path, consent, gateway handling or memory profile; plain
+buttons outside the File menu, disabled without a project. Device change closes
+either dialog; a new revision closes the report, while the analysis keeps its
+stale-review state. Web only: 6 new component tests (RED first; five mutants
+caught), full Vitest 296 files / 4,293 tests, 26 TypeScript configs, production
+build, `device-editor-layout` 14/14 (EN/DE, 360/1440 px, dark/light, real Tab
+focus) and `playwright.support` 4/4. No package gate, no hardware.
+
 ## ZIP bit-6-only flag consistency — source implementation (24 October 2026)
 
 Project and product ZIP admission now refuses bit 6 without bit 0 with a named

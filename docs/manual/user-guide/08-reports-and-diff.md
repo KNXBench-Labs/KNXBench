@@ -86,6 +86,11 @@ data**. In the German interface this is **Datei → Hilfe & Diagnose →
 Diagnosedaten exportieren**. (The screenshot below predates the submenus and shows
 the entry in the older grouped list; the entry is the same.)
 
+In source builds after Alpha 16 (24 October 2026) you can also select the device
+and press **Analyse device** on its **Diagnostics** tab: the same dialog opens
+with that device already chosen
+([device panel](05-devices-and-products.md#device-analysis-and-support)).
+
 ![The File menu with the Export diagnostic data entry in the Help & diagnostics group](../../assets/screenshots/porcelain-diagnostic-export-1-file-menu.png)
 
 ### Step 2: choose the device and the interface
@@ -177,7 +182,8 @@ limits are in the [contract](../../contracts/device-diagnostic-export.md).
 ## Universal device-support reporting
 
 This separate workflow needs **no open project**. Open **File → Device support report**, or use the same action in a device's download panel. Available since
-Alpha 12.
+Alpha 12. In source builds after Alpha 16, **Send report** on a device's
+**Diagnostics** tab opens the same dialog with that device selected.
 
 1. Select a project device, or keep manual identity and optionally enter its local
    individual address. Enter an application ID, mask or firmware only if known;

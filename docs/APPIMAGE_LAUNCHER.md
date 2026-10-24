@@ -208,8 +208,12 @@ unchanged. Vitest covers the joined Save path, the Open folder, the `null` and
 rejected-command fallbacks, a failed join and the untouched web build; Rust
 tests cover the command's ACL grant (and its refusal for companion windows),
 the `core:default` grant of `join`, and the UTF-8 conversion. This frontend
-change is unit-tested and gated; a native re-run of an AppImage containing it
-has not been recorded here yet.
+change is unit-tested and gated. A native Wayland/WebKitGTK re-run on 24 October
+2026 of integration source `6f06d7e1a` verified frontend Save As and Open, and
+Rust-side session-log export, all starting in the dedicated launch directory.
+Save As produced a native project whose SQLite integrity check returned `ok`;
+Open and log-export cancellation closed their dialogs. This is named native
+workflow evidence, not Orca acceptance, every-picker coverage or a new release.
 
 ## Verification
 

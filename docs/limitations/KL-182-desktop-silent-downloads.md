@@ -34,8 +34,12 @@ the web UI (CSV, debug report, documentation and so on) are opened from
 JavaScript through the dialog plugin, not by the Rust code above. A follow-up
 gives them the same start folder through the app command
 `default_dialog_directory`; when it reports none or fails, they keep their
-previous behaviour. That follow-up is unit-tested and gated; a native re-run
-of a build containing it is not recorded yet.
+previous behaviour. That follow-up is unit-tested and gated. A native
+Wayland/WebKitGTK re-run on 24 October at integration source `6f06d7e1a`
+verified Save As/Open and Rust session-log export starting in the launch
+directory. Save As produced a native project with SQLite integrity `ok`;
+Open/log-export cancellation worked. This does not establish every-picker
+or Orca acceptance, and it does not publish a new AppImage release.
 
 This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later

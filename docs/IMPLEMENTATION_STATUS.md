@@ -33,8 +33,11 @@ Rust helper never reached. A follow-up adds the app command
 `default_dialog_directory` (same helper, main window only); `filePicker.ts`
 now starts Save in that folder joined with the default name and Open in the
 folder, and keeps the previous arguments when the command reports none or
-fails. Vitest and Rust ACL/unit tests cover it; a native re-run of a build with
-the follow-up is still pending. Details:
+fails. Vitest and Rust ACL/unit tests cover it. Native Wayland/WebKitGTK
+re-run on 24 October at integration source `6f06d7e1a` verified frontend Save
+As/Open and Rust session-log export starting in the launch directory; the saved
+native project passed SQLite integrity, and dialog cancellation worked. This
+is not every-picker, Orca or release acceptance. Details:
 [AppImage launcher contract](APPIMAGE_LAUNCHER.md#save-dialog-start-folder-24-october-2026),
 [KL-182](limitations/KL-182-desktop-silent-downloads.md).
 

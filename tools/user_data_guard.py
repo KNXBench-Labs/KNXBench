@@ -21,6 +21,12 @@ import os
 from pathlib import Path
 
 USER_HOMES = (('XDG_DATA_HOME', '.local/share'), ('XDG_CONFIG_HOME', '.config'))
+# `.cargo/config.toml` forces scratch homes below `target/dev-home/` on
+# everything Cargo runs, since sessions and CI images export the real ones.
+# A runner that gives a cargo command its own scratch homes passes these
+# arguments, so its exported values win again.
+CARGO_KEEPS_EXPORTED_HOMES = tuple(arg for variable, _ in USER_HOMES
+                                   for arg in ('--config', f'env.{variable}.force=false'))
 # The knx directories hold a product database with its WAL/SHM, a remembered
 # password and a few settings; thousands of entries mean a link led elsewhere.
 MAX_ENTRIES = 5_000

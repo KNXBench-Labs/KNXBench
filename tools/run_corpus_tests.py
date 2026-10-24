@@ -12,8 +12,9 @@ the one command that runs them all:
 
 It refuses without OriginalData/ instead of passing with nothing run. The
 tests run with every `KNX_*` variable removed (no hardware is addressed)
-and with `XDG_DATA_HOME` pointing to a fresh temporary directory, so the
-developer's own product database is neither read nor changed (review M8).
+and with `XDG_DATA_HOME`/`XDG_CONFIG_HOME` in a fresh temporary directory
+(winning over `.cargo/config.toml`'s default), so the developer's own
+product database is neither read nor changed (review M8).
 Network isolation is the caller's job: wrap the command in
 `unshare --user --map-root-user --net` as docs/TESTING.md shows.
 Only aggregate counts and test names are printed, never corpus content.
@@ -28,6 +29,10 @@ import sys
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
+
+if __package__ in (None, ''):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from tools.user_data_guard import CARGO_KEEPS_EXPORTED_HOMES
 
 IGNORE = re.compile(r'#\[ignore\s*=\s*"([^"]*)"\]')
 FN = re.compile(r'^\s*(?:pub(?:\([^)]*\))?\s+)?(?:async\s+)?fn\s+([A-Za-z0-9_]+)')
@@ -137,6 +142,7 @@ def workspace_packages(root: Path) -> set[str]:
 def scrubbed_environment(data_home: str) -> dict[str, str]:
     env = {k: v for k, v in os.environ.items() if not k.startswith('KNX_')}
     env['XDG_DATA_HOME'] = data_home
+    env['XDG_CONFIG_HOME'] = str(Path(data_home) / 'config')
     return env
 
 
@@ -146,7 +152,7 @@ def run(root: Path, targets: list[Target], cargo_args: list[str]) -> int:
     with tempfile.TemporaryDirectory(prefix='knx-corpus-xdg-') as data_home:
         env = scrubbed_environment(data_home)
         for target in targets:
-            command = ['cargo', 'test', *cargo_args, '-p', target.package, *target.flags,
+            command = ['cargo', *CARGO_KEEPS_EXPORTED_HOMES, 'test', *cargo_args, '-p', target.package, *target.flags,
                        '--', '--ignored', *(['--exact'] if target.exact else []), *target.names]
             done = subprocess.run(command, cwd=root, env=env, capture_output=True, text=True)
             passed = bad = 0

@@ -123,6 +123,23 @@ class CorpusSelection(unittest.TestCase):
             del os.environ['KNX_GATEWAY']
         self.assertNotIn('KNX_GATEWAY', env)
         self.assertEqual(env['XDG_DATA_HOME'], '/tmp/isolated')
+        self.assertEqual(env['XDG_CONFIG_HOME'], '/tmp/isolated/config')
+
+    def test_cargo_keeps_the_scratch_homes_over_its_forced_default(self) -> None:
+        import contextlib
+        import io
+        import subprocess
+        from unittest import mock
+        from tools import run_corpus_tests
+        from tools.user_data_guard import CARGO_KEEPS_EXPORTED_HOMES
+        target = run_corpus_tests.Target('knx-a', ('--lib',), ['t'])
+        done = subprocess.CompletedProcess([], 0, 'test result: ok. 1 passed; 0 failed', '')
+        with mock.patch.object(run_corpus_tests.subprocess, 'run', return_value=done) as spawn, \
+                contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(run_corpus_tests.run(Path('.'), [target], ['--offline']), 0)
+        command, env = spawn.call_args.args[0], spawn.call_args.kwargs['env']
+        self.assertEqual(command[:6], ['cargo', *CARGO_KEEPS_EXPORTED_HOMES, 'test'])
+        self.assertTrue(env['XDG_CONFIG_HOME'].startswith(env['XDG_DATA_HOME']))
 
 
 if __name__ == '__main__':

@@ -11,6 +11,7 @@ import sys
 import time
 from typing import NamedTuple
 import unittest
+from unittest import mock
 
 from tools import browser_tmp
 from tools.tests.browser_tmp_fixtures import deep_below_scratch, short_workspace
@@ -63,23 +64,37 @@ directory = Path(tempfile.mkdtemp(prefix="mutant-", dir=base))
 env = {**os.environ, "TMPDIR": str(directory), "KNXBENCH_BROWSER_TMP_DIR": str(directory)}
 signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGTERM})
 child = subprocess.Popen(sys.argv[2:], env=env, start_new_session=True)
+child_pidfd = os.pidfd_open(child.pid)
 
 def forward(signum, frame):
-    os.killpg(child.pid, signum)
+    try:
+        signal.pidfd_send_signal(child_pidfd, signum)
+    except ProcessLookupError:
+        pass
     deadline = time.monotonic() + 10
     while not receipt.exists():
         if time.monotonic() >= deadline:
+            os.close(child_pidfd)
             os._exit(5)
         time.sleep(0.01)
     shutil.rmtree(directory)
     mutated.write_text(json.dumps({"child": child.pid, "directory": str(directory)}))
+    os.close(child_pidfd)
     os._exit(0)
 
 signal.signal(signal.SIGTERM, forward)
 signal.pthread_sigmask(signal.SIG_UNBLOCK, {signal.SIGTERM})
 status = child.wait()
+os.close(child_pidfd)
 sys.exit(status if status >= 0 else 128 - status)
 '''
+
+
+class OwnedProcessIdentity(NamedTuple):
+    """A fixture process pinned to the kernel identity observed during validation."""
+
+    pid: int
+    pidfd: int
 
 
 def process_state(pid: int) -> str:
@@ -95,45 +110,40 @@ def process_state(pid: int) -> str:
     return f'{pid}: {fields} wchan={wchan or "-"}'
 
 
-def diagnose_stuck_wrapper(wrapper: subprocess.Popen, directory: Path) -> str:
+def diagnose_stuck_wrapper(
+        wrapper: subprocess.Popen, directory: Path,
+        wrapper_identity: OwnedProcessIdentity | None = None) -> str:
     """Describe a wrapper that did not finish after SIGTERM, then end it.
 
     Records the wrapper and every process carrying its temp directory (the
     child group), aborts them so PYTHONFAULTHANDLER prints their Python
     stacks, and returns all of it as the failure message.
     """
-    marker = f'KNXBENCH_BROWSER_TMP_DIR={directory}'.encode()
-    group = []
-    for entry in Path('/proc').iterdir():
-        try:
-            if entry.name.isdigit() and marker in (entry / 'environ').read_bytes().split(b'\0'):
-                group.append(int(entry.name))
-        except OSError:
-            continue
-    states = [f'load={os.getloadavg()}', f'wrapper exit={wrapper.poll()}',
-              process_state(wrapper.pid), *(process_state(pid) for pid in group)]
-    # One at a time, so the stacks do not interleave on the shared stderr pipe.
-    for pid in (wrapper.pid, *group):
-        try:
-            os.kill(pid, signal.SIGABRT)
-        except ProcessLookupError:
-            continue
-        for _ in range(100):
-            if process_state(pid).split(' ', 2)[1] in ('gone', 'State=Z', 'State=X'):
-                break
-            time.sleep(0.03)
+    group = fixture_processes(directory)
     try:
-        _, stderr = wrapper.communicate(timeout=10)
-    except subprocess.TimeoutExpired:
-        for pid in (wrapper.pid, *group):
-            try:
-                os.kill(pid, signal.SIGKILL)
-            except ProcessLookupError:
-                pass
-        _, stderr = wrapper.communicate(timeout=10)
-    stacks = [line for line in stderr.splitlines() if not line.lstrip().startswith('Binary file')]
-    return ('wrapper pipes still open 10 s after SIGTERM\n' + '\n'.join(states) + '\n'
-            + '\n'.join(stacks)[-6000:])
+        diagnostic_processes = ([] if wrapper_identity is None else [wrapper_identity])
+        diagnostic_processes.extend(
+            process for process in group
+            if wrapper_identity is None or process.pid != wrapper_identity.pid)
+        states = [f'load={os.getloadavg()}', f'wrapper exit={wrapper.returncode}',
+                  process_state(wrapper.pid),
+                  *(process_state(process.pid) for process in group)]
+        # One at a time, so the stacks do not interleave on the shared stderr pipe.
+        for process in running_owned_processes(diagnostic_processes):
+            signal_owned_processes([process], signal.SIGABRT)
+            select.select([process.pidfd], [], [], 3)
+        try:
+            _, stderr = wrapper.communicate(timeout=10)
+        except subprocess.TimeoutExpired:
+            remaining = running_owned_processes(diagnostic_processes)
+            signal_owned_processes(remaining, signal.SIGKILL)
+            _, stderr = wrapper.communicate(timeout=10)
+        stacks = [line for line in stderr.splitlines()
+                  if not line.lstrip().startswith('Binary file')]
+        return ('wrapper pipes still open 10 s after SIGTERM\n' + '\n'.join(states) + '\n'
+                + '\n'.join(stacks)[-6000:])
+    finally:
+        close_owned_processes(group)
 
 
 def wait_for_path(path: Path, wrapper: subprocess.Popen, directory: Path,
@@ -182,24 +192,58 @@ def assert_sigterm_child_held(test: unittest.TestCase, wrapper: subprocess.Popen
         test.fail('; '.join(problems))
 
 
-def fixture_processes(directory: Path) -> list[int]:
-    """Return live processes carrying this fixture's unique temp-directory marker."""
-    marker = f'KNXBENCH_BROWSER_TMP_DIR={directory}'.encode()
+def pidfd_process_id(pidfd: int) -> int | None:
+    """Return the live process ID retained by a pidfd, or None after its exit."""
+    try:
+        lines = (Path('/proc/self/fdinfo') / str(pidfd)).read_text().splitlines()
+        value = next(line.split(':', 1)[1].strip() for line in lines if line.startswith('Pid:'))
+        pid = int(value)
+        return pid if pid >= 0 else None
+    except (OSError, StopIteration, ValueError):
+        return None
+
+
+def open_owned_process(pid: int, marker: bytes) -> OwnedProcessIdentity | None:
+    """Pin and revalidate one marker-owned process without trusting its numeric PID."""
+    pidfd = None
+    proc = Path('/proc') / str(pid)
+    try:
+        if marker not in (proc / 'environ').read_bytes().split(b'\0'):
+            return None
+        pidfd = os.pidfd_open(pid)
+        if pidfd_process_id(pidfd) != pid:
+            return None
+        if marker not in (proc / 'environ').read_bytes().split(b'\0'):
+            return None
+        identity = OwnedProcessIdentity(pid=pid, pidfd=pidfd)
+        pidfd = None
+        return identity
+    except OSError:
+        return None
+    finally:
+        if pidfd is not None:
+            os.close(pidfd)
+
+
+def marked_processes(marker: bytes) -> list[OwnedProcessIdentity]:
+    """Pin every process that retains one exact fixture ownership marker."""
     processes = []
-    for entry in Path('/proc').iterdir():
-        try:
-            if entry.name.isdigit() and marker in (entry / 'environ').read_bytes().split(b'\0'):
-                processes.append(int(entry.name))
-        except OSError:
-            continue
-    return processes
+    try:
+        for entry in Path('/proc').iterdir():
+            if not entry.name.isdigit():
+                continue
+            process = open_owned_process(int(entry.name), marker)
+            if process is not None:
+                processes.append(process)
+        return processes
+    except BaseException:
+        close_owned_processes(processes)
+        raise
 
 
-class OwnedProcessIdentity(NamedTuple):
-    """A fixture process pinned to the kernel identity observed during validation."""
-
-    pid: int
-    pidfd: int
+def fixture_processes(directory: Path) -> list[OwnedProcessIdentity]:
+    """Pin live processes carrying this fixture's unique temp-directory marker."""
+    return marked_processes(f'KNXBENCH_BROWSER_TMP_DIR={directory}'.encode())
 
 
 def require_pidfd_cleanup(test: unittest.TestCase) -> None:
@@ -209,6 +253,8 @@ def require_pidfd_cleanup(test: unittest.TestCase) -> None:
     try:
         pidfd = os.pidfd_open(os.getpid())
         try:
+            if pidfd_process_id(pidfd) != os.getpid():
+                test.skipTest('Linux pidfds cannot be revalidated through /proc fdinfo')
             signal.pidfd_send_signal(pidfd, 0)
         finally:
             os.close(pidfd)
@@ -220,27 +266,7 @@ def handshake_processes(release: Path) -> list[OwnedProcessIdentity]:
     """Pin every process validated against this fixture's unique handshake."""
     if not hasattr(os, 'pidfd_open'):
         raise RuntimeError('pidfd support must be checked before launching a SIGTERM fixture')
-    marker = f'KNXBENCH_SIGTERM_RELEASE={release}'.encode()
-    processes = []
-    for entry in Path('/proc').iterdir():
-        pidfd = None
-        try:
-            if not entry.name.isdigit():
-                continue
-            if marker not in (entry / 'environ').read_bytes().split(b'\0'):
-                continue
-            pid = int(entry.name)
-            pidfd = os.pidfd_open(pid)
-            if marker not in (entry / 'environ').read_bytes().split(b'\0'):
-                continue
-            processes.append(OwnedProcessIdentity(pid=pid, pidfd=pidfd))
-            pidfd = None
-        except OSError:
-            continue
-        finally:
-            if pidfd is not None:
-                os.close(pidfd)
-    return processes
+    return marked_processes(f'KNXBENCH_SIGTERM_RELEASE={release}'.encode())
 
 
 def signal_owned_processes(processes: list[OwnedProcessIdentity], signum: signal.Signals) -> None:
@@ -250,6 +276,12 @@ def signal_owned_processes(processes: list[OwnedProcessIdentity], signum: signal
             signal.pidfd_send_signal(process.pidfd, signum)
         except ProcessLookupError:
             pass
+
+
+def close_owned_processes(processes: list[OwnedProcessIdentity]) -> None:
+    """Close retained process identities after all possible signals."""
+    for process in processes:
+        os.close(process.pidfd)
 
 
 def running_owned_processes(
@@ -276,29 +308,37 @@ def wait_for_owned_processes(
         remaining = [process for process in remaining if process.pidfd not in exited]
 
 
-def cleanup_sigterm_fixture(wrapper: subprocess.Popen, release: Path) -> None:
-    """Release or kill every process owned by one SIGTERM fixture."""
-    owned = handshake_processes(release)
+def cleanup_sigterm_fixture(
+        wrapper: subprocess.Popen, release: Path,
+        wrapper_identity: OwnedProcessIdentity | None = None) -> None:
+    """Release or kill every process owned by one SIGTERM fixture.
+
+    A supplied wrapper identity is consumed and closed by this function.
+    """
+    owned = ([] if wrapper_identity is None else [wrapper_identity])
     try:
+        discovered = handshake_processes(release)
+        for process in discovered:
+            if wrapper_identity is not None and process.pid == wrapper_identity.pid:
+                os.close(process.pidfd)
+            else:
+                owned.append(process)
+        wrapper_processes = [process for process in owned if process.pid == wrapper.pid]
         release.touch(exist_ok=True)
         try:
             wrapper.communicate(timeout=3)
         except subprocess.TimeoutExpired:
-            if wrapper.poll() is None:
-                wrapper.send_signal(signal.SIGTERM)
+            signal_owned_processes(running_owned_processes(wrapper_processes), signal.SIGTERM)
             try:
                 wrapper.communicate(timeout=3)
             except subprocess.TimeoutExpired:
-                signal_owned_processes(owned, signal.SIGKILL)
-                if wrapper.poll() is None:
-                    wrapper.kill()
+                signal_owned_processes(running_owned_processes(owned), signal.SIGKILL)
                 wrapper.communicate(timeout=10)
         remaining = running_owned_processes(owned)
         signal_owned_processes(remaining, signal.SIGKILL)
         wait_for_owned_processes(remaining)
     finally:
-        for process in owned:
-            os.close(process.pidfd)
+        close_owned_processes(owned)
 
 
 class BrowserTempLaunch(unittest.TestCase):
@@ -464,13 +504,18 @@ class BrowserTempLaunch(unittest.TestCase):
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             directory = None
             child_pid = None
+            wrapper_identity = None
             try:
                 self.assertTrue(select.select([child.stdout], [], [], 10)[0], 'child did not start')
                 directory = Path(child.stdout.readline().strip())
                 self.assertTrue(directory.is_dir())
                 self.assertNotIn(directory, receipt.parents)
                 self.assertNotIn(directory, release.parents)
-                child.send_signal(signal.SIGTERM)
+                marker = f'KNXBENCH_SIGTERM_RELEASE={release}'.encode()
+                wrapper_identity = open_owned_process(child.pid, marker)
+                if wrapper_identity is None:
+                    self.fail('wrapper identity changed before SIGTERM')
+                signal_owned_processes([wrapper_identity], signal.SIGTERM)
                 wait_for_path(receipt, child, directory, 'child signal receipt')
                 observed = json.loads(receipt.read_text())
                 child_pid = observed['pid']
@@ -480,14 +525,14 @@ class BrowserTempLaunch(unittest.TestCase):
                 try:
                     stdout, stderr = child.communicate(timeout=10)
                 except subprocess.TimeoutExpired:
-                    self.fail(diagnose_stuck_wrapper(child, directory))
+                    self.fail(diagnose_stuck_wrapper(child, directory, wrapper_identity))
                 self.assertEqual(child.returncode, 0, stderr)
                 self.assertFalse(directory.exists())
                 self.assertFalse((Path('/proc') / str(child_pid)).exists(),
                                  'wrapper returned without reaping its child')
                 self.assertTrue(work.exists())
             finally:
-                cleanup_sigterm_fixture(child, release)
+                cleanup_sigterm_fixture(child, release, wrapper_identity)
 
     def test_sigterm_contract_rejects_missing_wait_and_premature_cleanup_mutant(self) -> None:
         require_pidfd_cleanup(self)
@@ -504,12 +549,17 @@ class BrowserTempLaunch(unittest.TestCase):
                  sys.executable, '-c', SIGTERM_CHILD],
                 env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             directory = None
+            wrapper_identity = None
             try:
                 self.assertTrue(select.select([wrapper.stdout], [], [], 10)[0],
                                 'synthetic child did not start')
                 directory = Path(wrapper.stdout.readline().strip())
                 self.assertTrue(directory.is_dir())
-                wrapper.send_signal(signal.SIGTERM)
+                marker = f'KNXBENCH_SIGTERM_RELEASE={release}'.encode()
+                wrapper_identity = open_owned_process(wrapper.pid, marker)
+                if wrapper_identity is None:
+                    self.fail('synthetic wrapper identity changed before SIGTERM')
+                signal_owned_processes([wrapper_identity], signal.SIGTERM)
                 wait_for_path(receipt, wrapper, directory, 'synthetic child signal receipt')
                 observed = json.loads(receipt.read_text())
                 wait_for_path(mutated, wrapper, directory, 'synthetic premature cleanup')
@@ -520,41 +570,121 @@ class BrowserTempLaunch(unittest.TestCase):
                         'temporary directory removed before child release.*wrapper exited before child release'):
                     assert_sigterm_child_held(self, wrapper, directory, observed['pid'])
             finally:
-                cleanup_sigterm_fixture(wrapper, release)
+                cleanup_sigterm_fixture(wrapper, release, wrapper_identity)
 
-    def test_sigterm_fixture_cleanup_signals_stable_owned_identity(self) -> None:
+    def test_sigterm_fixture_cleanup_rejects_mismatched_pidfd_identity(self) -> None:
         require_pidfd_cleanup(self)
         with self.workspace() as tmp:
             release = Path(tmp) / 'owned-release'
             env = {**self.clean_environment(), 'KNXBENCH_SIGTERM_RELEASE': str(release)}
-            fixture = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(60)'], env=env)
-            identities = []
+            fixture = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(4)'], env=env)
+            sentinel_marker = f'KNXBENCH_SIGTERM_SENTINEL={release}'.encode()
+            real_pidfd_open = os.pidfd_open
             sentinel = None
+            fixture_identity = None
+            sentinel_identity = None
+            scanned_pidfds = []
             try:
-                deadline = time.monotonic() + 10
-                while not identities:
-                    identities = handshake_processes(release)
-                    if time.monotonic() >= deadline:
-                        self.fail('fixture process was not discovered before cleanup regression')
-                    if not identities:
-                        time.sleep(0.01)
-                self.assertEqual([identity.pid for identity in identities], [fixture.pid])
-                fixture.terminate()
-                fixture.wait(timeout=10)
                 sentinel = subprocess.Popen(
-                    [sys.executable, '-c', 'import time; time.sleep(60)'])
-                reused = OwnedProcessIdentity(pid=sentinel.pid, pidfd=identities[0].pidfd)
-                signal_owned_processes([reused], signal.SIGKILL)
-                self.assertIsNone(sentinel.poll(), 'stale numeric PID killed an unrelated process')
+                    [sys.executable, '-c', 'import time; time.sleep(8)'],
+                    env={**self.clean_environment(), 'KNXBENCH_SIGTERM_SENTINEL': str(release)})
+                fixture_identity = open_owned_process(
+                    fixture.pid, f'KNXBENCH_SIGTERM_RELEASE={release}'.encode())
+                sentinel_identity = open_owned_process(sentinel.pid, sentinel_marker)
+                if fixture_identity is None or sentinel_identity is None:
+                    self.fail('cleanup regression identities changed before pidfd retention')
+
+                def mismatched_pidfd_open(pid: int, flags: int = 0) -> int:
+                    target = sentinel.pid if pid == fixture.pid else pid
+                    pidfd = real_pidfd_open(target, flags)
+                    scanned_pidfds.append(pidfd)
+                    return pidfd
+
+                with mock.patch.object(os, 'pidfd_open', side_effect=mismatched_pidfd_open):
+                    cleanup_sigterm_fixture(fixture, release)
+                self.assertEqual(running_owned_processes([sentinel_identity]), [sentinel_identity],
+                                 'cleanup signalled an unrelated process through a mismatched pidfd')
+                self.assertTrue(scanned_pidfds, 'cleanup did not inspect the mismatched identity')
+                for pidfd in scanned_pidfds:
+                    with self.assertRaises(OSError, msg='cleanup leaked a scanned pidfd'):
+                        os.fstat(pidfd)
             finally:
-                if fixture.poll() is None:
-                    fixture.kill()
-                    fixture.wait(timeout=10)
-                if sentinel is not None and sentinel.poll() is None:
-                    sentinel.kill()
+                identities = [identity for identity in (fixture_identity, sentinel_identity)
+                              if identity is not None]
+                signal_owned_processes(running_owned_processes(identities), signal.SIGKILL)
+                wait_for_owned_processes(identities)
+                fixture.wait(timeout=10)
+                if sentinel is not None:
                     sentinel.wait(timeout=10)
-                for identity in identities:
-                    os.close(identity.pidfd)
+                close_owned_processes(identities)
+
+    def test_sigterm_diagnostics_reject_mismatched_scanned_identity(self) -> None:
+        require_pidfd_cleanup(self)
+        with self.workspace() as tmp:
+            directory = Path(tmp) / 'diagnostic-directory'
+            marker = str(directory)
+            program = (
+                'import os,subprocess,sys,time;'
+                'child=subprocess.Popen([sys.executable,"-c","import time;time.sleep(4)"],'
+                'env=os.environ.copy());'
+                'print(child.pid,flush=True);'
+                'time.sleep(8)')
+            env = {**self.clean_environment(), 'PYTHONFAULTHANDLER': '1',
+                   'KNXBENCH_BROWSER_TMP_DIR': marker}
+            wrapper = subprocess.Popen(
+                [sys.executable, '-c', program], env=env,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            real_pidfd_open = os.pidfd_open
+            sentinel = None
+            wrapper_identity = None
+            child_identity = None
+            sentinel_identity = None
+            scanned_pidfds = []
+            try:
+                self.assertTrue(select.select([wrapper.stdout], [], [], 10)[0],
+                                'diagnostic fixture child did not start')
+                child_pid = int(wrapper.stdout.readline())
+                sentinel_marker = f'KNXBENCH_SIGTERM_SENTINEL={directory}'.encode()
+                sentinel = subprocess.Popen(
+                    [sys.executable, '-c', 'import time; time.sleep(8)'],
+                    env={**self.clean_environment(), 'KNXBENCH_SIGTERM_SENTINEL': marker})
+                fixture_marker = f'KNXBENCH_BROWSER_TMP_DIR={directory}'.encode()
+                wrapper_identity = open_owned_process(wrapper.pid, fixture_marker)
+                child_identity = open_owned_process(child_pid, fixture_marker)
+                sentinel_identity = open_owned_process(sentinel.pid, sentinel_marker)
+                if wrapper_identity is None or child_identity is None or sentinel_identity is None:
+                    self.fail('diagnostic regression identities changed before pidfd retention')
+
+                def mismatched_pidfd_open(pid: int, flags: int = 0) -> int:
+                    target = sentinel.pid if pid == child_pid else pid
+                    pidfd = real_pidfd_open(target, flags)
+                    scanned_pidfds.append(pidfd)
+                    return pidfd
+
+                def reused_pid_kill(pid: int, signum: int) -> None:
+                    identity = sentinel_identity if pid == child_pid else wrapper_identity
+                    signal.pidfd_send_signal(identity.pidfd, signum)
+
+                with mock.patch.object(os, 'pidfd_open', side_effect=mismatched_pidfd_open), \
+                        mock.patch.object(os, 'kill', side_effect=reused_pid_kill):
+                    diagnosis = diagnose_stuck_wrapper(wrapper, directory)
+                self.assertIn('wrapper pipes still open 10 s after SIGTERM', diagnosis)
+                self.assertEqual(running_owned_processes([sentinel_identity]), [sentinel_identity],
+                                 'diagnostics signalled an unrelated process after PID reuse')
+                self.assertGreaterEqual(len(scanned_pidfds), 2,
+                                        'diagnostics did not inspect wrapper and child identities')
+                for pidfd in scanned_pidfds:
+                    with self.assertRaises(OSError, msg='diagnostics leaked a scanned pidfd'):
+                        os.fstat(pidfd)
+            finally:
+                identities = [identity for identity in (
+                    wrapper_identity, child_identity, sentinel_identity) if identity is not None]
+                signal_owned_processes(running_owned_processes(identities), signal.SIGKILL)
+                wait_for_owned_processes(identities)
+                wrapper.wait(timeout=10)
+                if sentinel is not None:
+                    sentinel.wait(timeout=10)
+                close_owned_processes(identities)
 
     def test_multibyte_and_whitespace_paths_use_byte_budget_and_json(self) -> None:
         with self.workspace() as tmp:

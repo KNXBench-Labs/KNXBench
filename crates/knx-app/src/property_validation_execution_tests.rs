@@ -109,6 +109,7 @@ fn hardware_execution_context_bounds_retained_reconstruction_and_preserves_barri
                     source_index: step.source_index,
                     mutation_may_have_started: false,
                 },
+                false,
             )
             .unwrap();
             hardware_event(
@@ -120,6 +121,7 @@ fn hardware_execution_context_bounds_retained_reconstruction_and_preserves_barri
                     source_index: step.source_index,
                     mutation_may_have_started: false,
                 },
+                false,
             )
             .unwrap();
         }
@@ -146,6 +148,7 @@ fn hardware_execution_context_bounds_retained_reconstruction_and_preserves_barri
                     source_index,
                     mutation_may_have_started: false,
                 },
+                false,
             )
             .is_err());
             assert_eq!(std::fs::read(path.join("HEAD")).unwrap(), before);
@@ -245,4 +248,299 @@ fn hardware_execution_context_refuses_rebound_source_plan_and_other_operation() 
         assert!(!store.mutation_possible());
         assert!(store.recovery().is_none());
     }
+}
+
+// Synthetic old bytes over the existing retained-source fixture's exact shape.
+// This is callback/state-machine coverage, not an observed device backup.
+fn recovery_store(path: &std::path::Path, bundle: &PreparedBundle) -> OperationStore {
+    use crate::property_validation_bundle::{RegionRecord, ResourceRecord};
+    let plan = bundle.plan().unwrap();
+    let preconditions = bundle.preconditions().unwrap();
+    let recovery = RecoveryRecord {
+        version: 1,
+        original_bundle: bundle.clone(),
+        old_device_control: 0,
+        resources: preconditions
+            .source_pointers
+            .iter()
+            .map(|p| ResourceRecord {
+                object: p.object,
+                state: knx_core::commissioning::load_state::LoadState::Loaded.octet(),
+                pointer: p.value,
+            })
+            .collect(),
+        allocations: plan
+            .steps()
+            .iter()
+            .enumerate()
+            .filter_map(|(operation_index, step)| {
+                let PropertyOperation::LoadControl { object, payload } = &step.operation else {
+                    return None;
+                };
+                let bytes = payload.octets();
+                if bytes[0] != 3 || bytes[1] > 1 {
+                    return None;
+                }
+                Some(RegionRecord {
+                    operation_index,
+                    source_index: step.source_index,
+                    object: *object,
+                    address: u16::from_be_bytes([bytes[2], bytes[3]]),
+                    data: vec![0x5a; usize::from(u16::from_be_bytes([bytes[4], bytes[5]]))],
+                })
+            })
+            .collect(),
+        regions: plan
+            .steps()
+            .iter()
+            .enumerate()
+            .filter_map(|(operation_index, step)| {
+                let PropertyOperation::WriteMemory {
+                    object,
+                    address,
+                    data,
+                } = &step.operation
+                else {
+                    return None;
+                };
+                Some(RegionRecord {
+                    operation_index,
+                    source_index: step.source_index,
+                    object: *object,
+                    address: *address,
+                    data: vec![0x5a; data.len()],
+                })
+            })
+            .collect(),
+    };
+    let mut store = OperationStore::create(path, bundle.binding.clone()).unwrap();
+    store
+        .checkpoint(Checkpoint::RecoveryAcquired { recovery })
+        .unwrap();
+    store.checkpoint(Checkpoint::Cancelled).unwrap();
+    drop(store);
+    OperationStore::open(path, &bundle.binding).unwrap()
+}
+
+fn journal_bytes(path: &std::path::Path) -> Vec<(std::ffi::OsString, Vec<u8>)> {
+    let mut files: Vec<_> = std::fs::read_dir(path)
+        .unwrap()
+        .map(|entry| {
+            let entry = entry.unwrap();
+            (entry.file_name(), std::fs::read(entry.path()).unwrap())
+        })
+        .collect();
+    files.sort_by(|a, b| a.0.cmp(&b.0));
+    files
+}
+
+#[test]
+fn hardware_recovery_callbacks_reuse_original_plan_and_preserve_original_barrier() {
+    let bundle = bundle();
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("operation");
+    let mut store = recovery_store(&path, &bundle);
+    check_bundle(&bundle, &store, false).unwrap();
+    store.require_restore_available().unwrap();
+    let snapshot = store.recovery().unwrap().to_snapshot(&bundle).unwrap();
+    let (plan, count) = count_reconstructions(|| bundle.plan().unwrap());
+    assert_eq!(count, 1, "fully reconstruct the original plan before reuse");
+    assert_ne!(snapshot.recovery_plan(&plan).unwrap(), plan);
+    store.checkpoint(Checkpoint::RestoreStarted).unwrap();
+
+    let before = journal_bytes(&path);
+    let progress = store.progress();
+    // Wrong in-range order, wrong source position and out-of-range position.
+    for (index, source, reason) in [
+        (
+            1,
+            plan.steps()[1].source_index,
+            "step start is out of order or operation already ended",
+        ),
+        (0, usize::MAX, "journal source position differs"),
+        (
+            usize::MAX,
+            usize::MAX,
+            "journal operation is outside exact plan",
+        ),
+    ] {
+        let (result, count) = count_reconstructions(|| {
+            hardware_event(
+                &mut store,
+                &bundle,
+                &plan,
+                PropertyJournalEvent::OperationStarting {
+                    operation_index: index,
+                    source_index: source,
+                    mutation_may_have_started: false,
+                },
+                true,
+            )
+        });
+        assert_eq!(result, Err(reason.into()));
+        assert_eq!(count, 0);
+        assert_eq!(journal_bytes(&path), before);
+        assert_eq!(store.progress(), progress);
+    }
+
+    for (index, step) in plan.steps().iter().enumerate() {
+        // All original operation classes, including writes and Disconnect, use
+        // the actual restoring callback. No counter scope crosses an await.
+        let previous_mutation = matches!(step.operation, PropertyOperation::ToolMetadata { .. });
+        let (_, count) = count_reconstructions(|| {
+            hardware_event(
+                &mut store,
+                &bundle,
+                &plan,
+                PropertyJournalEvent::OperationStarting {
+                    operation_index: index,
+                    source_index: step.source_index,
+                    mutation_may_have_started: previous_mutation,
+                },
+                true,
+            )
+            .unwrap()
+        });
+        assert_eq!(
+            count, 0,
+            "operation-start must not reconstruct retained sources"
+        );
+        let head: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(path.join("HEAD")).unwrap()).unwrap();
+        let sequence = head["sequence"].as_u64().unwrap();
+        let checkpoint: serde_json::Value = serde_json::from_slice(
+            &std::fs::read(path.join(format!("checkpoint-{sequence:08}.json"))).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            checkpoint["checkpoint"],
+            serde_json::json!({
+                "event": "step_started",
+                "index": index,
+                "mutation": previous_mutation || matches!(step.operation,
+                    PropertyOperation::LoadControl { .. }
+                    | PropertyOperation::WriteMemory { .. }
+                    | PropertyOperation::Disconnect),
+            })
+        );
+        if matches!(step.operation, PropertyOperation::HardwareCheck { .. }) {
+            let before = journal_bytes(&path);
+            let progress = store.progress();
+            let mut other = snapshot.clone();
+            other.old_device_control ^= 1;
+            // Structurally valid evidence is still NOT the durable original.
+            RecoveryRecord::from_snapshot(&other, &bundle).unwrap();
+            let (result, count) = count_reconstructions(|| {
+                hardware_event(
+                    &mut store,
+                    &bundle,
+                    &plan,
+                    PropertyJournalEvent::RecoveryAcquired(&other),
+                    true,
+                )
+            });
+            assert_eq!(
+                result,
+                Err("restore snapshot differs from durable original".into())
+            );
+            assert_eq!(count, 4, "original snapshot validation stays independent");
+            assert_eq!(journal_bytes(&path), before);
+            assert_eq!(store.progress(), progress);
+            let (_, count) = count_reconstructions(|| {
+                hardware_event(
+                    &mut store,
+                    &bundle,
+                    &plan,
+                    PropertyJournalEvent::RecoveryAcquired(&snapshot),
+                    true,
+                )
+                .unwrap()
+            });
+            assert_eq!(count, 4);
+            assert_eq!(
+                journal_bytes(&path),
+                before,
+                "restore compares, never appends a new backup"
+            );
+        }
+        hardware_event(
+            &mut store,
+            &bundle,
+            &plan,
+            PropertyJournalEvent::OperationCompleted {
+                operation_index: index,
+                source_index: step.source_index,
+                mutation_may_have_started: false,
+            },
+            true,
+        )
+        .unwrap();
+    }
+    assert_eq!(store.progress().completed_steps, plan.steps().len());
+    assert_eq!(
+        store.recovery().unwrap().to_snapshot(&bundle).unwrap(),
+        snapshot
+    );
+    // These are synthetic journal transitions only, never a device verdict.
+    store.checkpoint(Checkpoint::Restored).unwrap();
+    drop(store);
+    let mut store = OperationStore::open(&path, &bundle.binding).unwrap();
+    let before = journal_bytes(&path);
+    assert!(store.require_restore_available().is_err());
+    assert!(store.checkpoint(Checkpoint::RestoreStarted).is_err());
+    assert_eq!(journal_bytes(&path), before);
+}
+
+#[test]
+fn hardware_recovery_reuse_keeps_independent_original_store_binding_admission() {
+    let bundle = bundle();
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("operation");
+    let store = recovery_store(&path, &bundle);
+    let mut other = bundle.clone();
+    other
+        .hardware_preparation
+        .as_mut()
+        .unwrap()
+        .operation
+        .push_str("-other");
+    rebind_records(&mut other);
+    let plan = other.plan().unwrap();
+    let recovery = other.restore_phrase();
+    let download = knx_core::commissioning::mutation::required_confirmation_phrase(
+        plan.target(),
+        WriteScope::Download,
+    );
+    let risk = knx_net::commissioning::hardware_release::required_release_phrase(plan.target());
+    let confirmations = crate::system2_validation_preparation::HardwareRecoveryConfirmations {
+        recovery: &recovery,
+        download: &download,
+        risk: &risk,
+    };
+    let before = journal_bytes(&path);
+    let progress = store.progress();
+    let (result, count) = count_reconstructions(|| check_bundle(&other, &store, false));
+    assert_eq!(
+        result.unwrap_err().to_string(),
+        "operation-store binding differs from bundle kind"
+    );
+    assert_eq!(
+        count, 2,
+        "inner recovery source validation stays independent"
+    );
+    let (result, count) = count_reconstructions(|| {
+        crate::system2_validation_preparation::validate_project_hardware_recovery(
+            &other,
+            &store,
+            &confirmations,
+        )
+    });
+    assert_eq!(
+        result.unwrap_err().to_string(),
+        "separate configured hardware preparation and matching operation required"
+    );
+    assert_eq!(count, 1);
+    assert_eq!(journal_bytes(&path), before);
+    assert_eq!(store.progress(), progress);
+    store.require_restore_available().unwrap();
 }

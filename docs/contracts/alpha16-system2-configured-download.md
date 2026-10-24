@@ -251,8 +251,31 @@ mutation, including VerifyMode. Disk grammar/hash chaining, reopening, original
 backup retention and once-only explicit recovery are unchanged; restore does not
 use the fresh-execution witness.
 
-Source-only regression additions count actual retained-source reconstruction
-entries in a test-local synchronous scope covering context construction,
+Hardware recovery reuses only its already fully validated **original** plan for
+operation-start step/source/mutation classification, in a restoring-aware version
+of the same internal callback. The shared original bundle borrow, local owned plan
+and exclusive original store borrow remain scoped to that single restore call;
+there is no recovery cache or new persistent witness. Net still constructs its
+old-byte replay independently. Replay changes only write payloads, so the original
+step indices, source positions and mutation classes remain applicable. All
+pre-restore route/App/store/source/confirmation validation, snapshot reconstruction,
+`RestoreStarted` once-only admission and actual transport checks remain independent.
+At `RecoveryAcquired`, the callback still reconstructs/validates the supplied
+snapshot and compares the complete record to the durable original; it must never
+append a new backup during restore. Existing durable pre-mutation checks and
+original retention are unchanged.
+
+Source-only recovery regressions reuse the existing retained-source fixture and
+count the actual reconstruction seam: plan acquisition remains fully validating,
+while operation-start callbacks perform no reconstruction. Independent snapshot
+validation is counted separately. Wrong step/order/source, another correctly
+rebound operation/store and a structurally valid but different original snapshot
+must refuse without changing journal bytes or progress/mutation state. Synthetic
+callback transitions also retain once-only admission after reopen; they are not
+device execution or recovery-success evidence. These additions are unexecuted.
+
+Source-only fresh-execution regression additions count actual retained-source
+reconstruction entries in a test-local synchronous scope covering context construction,
 confirmations and the first two journal steps, and check rebound source/plan and
 other-operation refusals without a checkpoint change. They are not executed by
 this change. The counter does not cover current admission, complete execution or

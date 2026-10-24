@@ -195,7 +195,11 @@ class BuildTests(unittest.TestCase):
         self.assertTrue(evidence["prerelease"])
         self.assertFalse(evidence["draft"])
         self.assertEqual(evidence["public_artifact_verification"], "PASS")
-        self.assertEqual(evidence["website"]["status"], "pending")
+        website = evidence["website"]
+        self.assertEqual(website["status"], "PASS")
+        self.assertEqual(website["excluded_files"], [])
+        self.assertGreater(website["artifact_files_http_200_and_hash_match"], 0)
+        self.assertRegex(website["artifact_sha256"], r"^[0-9a-f]{64}$")
         self.assertEqual({w["run_id"] for w in evidence["workflows"]}, {40084841192, 40084841249})
         for workflow in evidence["workflows"]:
             self.assertEqual(workflow["head_sha"], evidence["candidate"])

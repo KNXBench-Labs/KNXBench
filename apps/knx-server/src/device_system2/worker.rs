@@ -10,6 +10,17 @@ use knx_app::{
 use knx_net::{ApplicationService, BusError, Destination, ManagementTransport, Tpci};
 use std::{net::SocketAddrV4, sync::atomic::Ordering};
 
+// Only the owning mounted fixture installs this observer. No global state,
+// production observer, error text, changed error propagation or extra timeout.
+macro_rules! observe {
+    ($state:expr, $method:ident($($arg:expr),* $(,)?)) => {
+        #[cfg(test)]
+        if let Some(observer) = &$state.device_system2.observation {
+            observer.$method($($arg),*);
+        }
+    };
+}
+
 pub(super) fn gateway(text: &str) -> Result<SocketAddrV4, ApiError> {
     let g: SocketAddrV4 = text
         .parse()
@@ -107,6 +118,8 @@ fn admit(
 struct Transport<'a> {
     tunnel: &'a dyn crate::BusTunnel,
     writes: Option<(&'a Activity, watch::Receiver<OperationProgress>)>,
+    #[cfg(test)]
+    observation: Option<&'a test_observation::Observation>,
 }
 impl ManagementTransport for Transport<'_> {
     fn assigned_address(&self) -> knx_core::IndividualAddress {
@@ -128,6 +141,10 @@ impl ManagementTransport for Transport<'_> {
         t: Tpci,
         s: ApplicationService,
     ) -> Result<(), BusError> {
+        #[cfg(test)]
+        if let (Some(observer), Some((_, updates))) = (self.observation, &self.writes) {
+            observer.progress(&updates.borrow());
+        }
         match &s {
             ApplicationService::MemoryWrite { .. }
             | ApplicationService::UserMemoryWrite { .. }
@@ -250,6 +267,7 @@ pub(super) async fn download(
 ) {
     let id = preparation.metadata.operation_id.clone();
     let cancel = lease.cancel_token();
+    observe!(state, begin(&preparation, &body.preparation_id));
     let result = download_inner(&state, root, preparation, body, gateway, &cancel).await;
     let (outcome, clean) = match result {
         Ok(value) => value,
@@ -275,6 +293,7 @@ pub(super) async fn download(
     if clean {
         let _ = lease.settle(outcome);
     }
+    observe!(state, terminal(outcome, clean));
 }
 async fn download_inner(
     state: &SharedState,
@@ -284,30 +303,61 @@ async fn download_inner(
     gateway: SocketAddrV4,
     cancel: &std::sync::atomic::AtomicBool,
 ) -> Result<(LocalOutcome, bool), ApiError> {
-    let _guards = reserve(state)?;
-    let _cross_process = cross_process(state)?;
-    let activity = activity(state, &preparation.metadata.address)?;
+    observe!(state, phase("reservation"));
+    let _guards = reserve(state).inspect_err(|_| {
+        observe!(state, failure("reservation", "reservation-refused", None));
+    })?;
+    observe!(state, phase("cross-process-lease"));
+    let _cross_process = cross_process(state).inspect_err(|_| {
+        observe!(state, failure("cross-process-lease", "lease-refused", None));
+    })?;
+    observe!(state, phase("activity"));
+    let activity = activity(state, &preparation.metadata.address).inspect_err(|_| {
+        observe!(state, failure("activity", "activity-refused", None));
+    })?;
     let copy = state.clone();
     let checked = preparation.clone();
     let storage = root.clone();
+    #[cfg(test)]
+    let observation = state.device_system2.observation.clone();
+    observe!(state, phase("source-and-create"));
     if let Err(error) = blocking(move || {
-        check_source(&copy, &checked)?;
-        storage
-            .create(&checked.metadata)
-            .map_err(|_| refuse("system2EvidenceUnavailable"))
+        observe!(copy, phase("source-recheck"));
+        check_source(&copy, &checked).inspect_err(|_| {
+            observe!(copy, failure("source-recheck", "source-refused", None));
+        })?;
+        observe!(copy, phase("evidence-create"));
+        storage.create(&checked.metadata).map_err(|_error| {
+            observe!(copy, failure("evidence-create", "io", Some(_error.kind())));
+            refuse("system2EvidenceUnavailable")
+        })
     })
     .await
     {
+        observe!(
+            state,
+            failure(
+                "source-and-create",
+                "blocking-or-source-evidence-refused",
+                None
+            )
+        );
         finish_activity(activity, false, false);
         return Err(error);
     }
     if cancel.load(Ordering::SeqCst) || state.stop_admission.admit().is_err() {
+        observe!(
+            state,
+            failure("admission", "cancelled-or-admission-refused", None)
+        );
         finish_activity(activity, false, false);
         return Err(refuse("system2Cancelled"));
     }
+    observe!(state, phase("connector"));
     let tunnel = match state.connector.connect_tunnel(gateway).await {
         Ok(t) => t,
-        Err(_) => {
+        Err(_error) => {
+            observe!(state, session_failure("connector", &_error));
             finish_activity(activity, false, false);
             return Err(refuse("system2ConnectFailed"));
         }
@@ -315,51 +365,94 @@ async fn download_inner(
     let mut retained_store = None;
     let mut retained_admission = None;
     let result = async {
+        observe!(state, phase("observe-hardware"));
         let observed = app::observe_project_hardware(
             &Transport {
                 tunnel: tunnel.as_ref(),
                 writes: None,
+                #[cfg(test)]
+                observation: observation.as_deref(),
             },
             preparation.source,
             state.device_download_timing,
             cancel,
         )
         .await
-        .map_err(|_| refuse("system2ObservationRefused"))?;
+        .map_err(|_error| {
+            observe!(
+                state,
+                failure("observe-hardware", "io", Some(_error.kind()))
+            );
+            refuse("system2ObservationRefused")
+        })?;
         let copy = state.clone();
         let metadata = preparation.metadata.clone();
         let storage = root.clone();
+        observe!(state, phase("observed-evidence-and-admission"));
         let (admission, store) = blocking(move || {
+            observe!(copy, phase("observed-evidence"));
             let store = storage
                 .observed(&metadata.operation_id, &observed)
-                .map_err(|_| refuse("system2EvidenceUnavailable"))?;
+                .map_err(|_error| {
+                    observe!(
+                        copy,
+                        failure("observed-evidence", "io", Some(_error.kind()))
+                    );
+                    refuse("system2EvidenceUnavailable")
+                })?;
             // Evidence fsync/readback may take time. Rebuild the opaque current
             // project/source witness AFTER that disk work, immediately before
             // handing execution back to the async owner.
-            let admission = admit(&copy, &metadata, &observed)?;
+            observe!(copy, phase("current-admission"));
+            let admission = admit(&copy, &metadata, &observed).inspect_err(|_| {
+                observe!(
+                    copy,
+                    failure("current-admission", "admission-refused", None)
+                );
+            })?;
             Ok((admission, store))
         })
-        .await?;
+        .await
+        .inspect_err(|_| {
+            observe!(
+                state,
+                failure(
+                    "observed-evidence-and-admission",
+                    "blocking-or-evidence-admission-refused",
+                    None
+                )
+            );
+        })?;
         retained_store = Some(store);
         retained_admission = Some(admission);
         let store = retained_store.as_mut().unwrap();
         let admission = retained_admission.as_ref().unwrap();
         let updates = store.subscribe_progress();
+        observe!(state, progress(&updates.borrow()));
         state
             .device_system2
             .publish_progress(&preparation.metadata.operation_id, updates.clone());
         {
-            let project = state
-                .project
-                .lock()
-                .map_err(|_| refuse("system2Unavailable"))?;
-            check_binding(state, &preparation.metadata.binding)?;
+            observe!(state, phase("binding-recheck"));
+            let project = state.project.lock().map_err(|_| {
+                observe!(
+                    state,
+                    failure("binding-recheck", "project-lock-unavailable", None)
+                );
+                refuse("system2Unavailable")
+            })?;
+            check_binding(state, &preparation.metadata.binding).inspect_err(|_| {
+                observe!(state, failure("binding-recheck", "binding-stale", None));
+            })?;
             drop(project);
         }
+        observe!(state, phase("executor"));
         let result = app::execute_project_hardware(
             &Transport {
                 tunnel: tunnel.as_ref(),
                 writes: Some((&activity, updates)),
+                #[cfg(test)]
+                observation: observation.as_deref(),
             },
             admission,
             store,
@@ -368,12 +461,27 @@ async fn download_inner(
             cancel,
         )
         .await;
+        #[cfg(test)]
+        if let Err(error) = &result {
+            observe!(state, failure("executor", "io", Some(error.kind())));
+        }
         Ok::<_, ApiError>(result.is_ok())
     }
     .await;
     // No select/timeout can drop this disconnect or its guards. The Net client's
     // own protocol timeout bounds teardown; an error quarantines the coordinator.
-    let clean = tunnel.disconnect().await.is_ok();
+    observe!(state, phase("disconnect"));
+    let clean = tunnel
+        .disconnect()
+        .await
+        .inspect_err(|_error| {
+            observe!(state, session_failure("disconnect", _error));
+        })
+        .is_ok();
+    #[cfg(test)]
+    if result.is_err() {
+        observe!(state, failure("worker-result", "api-refused", None));
+    }
     let verified = result.unwrap_or(false);
     let outcome = retained_store.as_ref().map(terminal).unwrap_or_else(|| {
         if cancel.load(Ordering::SeqCst) {
@@ -440,6 +548,8 @@ pub(super) async fn recover(
                 &Transport {
                     tunnel: tunnel.as_ref(),
                     writes: Some((&activity, updates)),
+                    #[cfg(test)]
+                    observation: None,
                 },
                 &bundle,
                 &mut store,

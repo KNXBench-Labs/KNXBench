@@ -58,14 +58,34 @@ The source hashes identify bytes, not manufacturer authenticity or signatures.
 ## Explicit compatibility boundary
 
 Already manifest-backed imported projects retain their previous save/open
-behavior, including named missing-file warnings. Historical unresolved devices
-with existing legacy manifests are not assigned guessed packages: Save preserves
-them and logs the unavailable ownership / unestablished portability explicitly.
+behavior, including named missing-file warnings. Unresolved historical devices
+can also have an **empty** manifest: the importer retains their declared product
+and program references even when the archive contains no manufacturer data.
+Save preserves those references and all retained opaque entries, and reports
+unavailable ownership / unestablished portability; it does not invent a package
+or treat an empty manifest as complete coverage. The same per-device rule applies
+when another device has acquired a `CataloguePackage` in a mixed project.
+
+Native catalogue creation records the paired source path and ETS ID
+`KB-DEV-<canonical nonzero u32>`. That positive authored identity survives local
+ID remapping; an imported ETS ID alone is not that identity (the import mapper
+keeps the project XML member as its source path). Authored devices still require
+their mapping even when an unrelated legacy manifest exists. For **resolvable**
+dependencies, either the manifest already covers their winning hashes or all new
+acquisition checks above apply, regardless of source identity. Parameter fixtures
+that only ingested loose XML therefore need real installed synthetic originals,
+not an exception to package ownership validation.
+
 Already-covered historical hashes need not acquire new identity evidence. New
 acquisitions support measured modern XML `.knxprod` sources; legacy or incomplete
 ownership is not inferred from filenames. With no
 product database, Save/Save As preserve the existing manifest and use carried
-fallbacks; they cannot acquire a new catalogue source. An unbacked authored
+fallbacks; they cannot acquire a new catalogue source, and explicitly report that
+ownership was not checked. Native-authored dependencies can use this offline
+fallback only when the same native dependency was in the explicit saved baseline
+and its manifest contains a previously acquired `CataloguePackage`. A recovered
+unsaved working device is not part of that baseline; another saved package is
+not authority for its new dependency. An unbacked authored
 project without resolvable sources is refused. Old files with no original or
 missing source bytes cannot be made portable by this feature alone; restore or
 reinstall matching originals first. CLI read-only consumers do not auto-install.

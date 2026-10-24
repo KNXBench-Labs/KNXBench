@@ -12,13 +12,17 @@ use serde_json::{json, Value};
 use std::sync::Arc;
 use tower::ServiceExt;
 
-const HARDWARE: &str = r#"<KNX xmlns="http://knx.org/xml/project/20"><ManufacturerData><Manufacturer RefId="M-1"><Hardware><Hardware Id="H-1" Name="Synthetic" SerialNumber="S" VersionNumber="1"><Products><Product Id="M-1_P-1"/></Products><Hardware2Programs><Hardware2Program Id="HP-1" MediumTypes="MT-0"><ApplicationProgramRef RefId="A-1"/></Hardware2Program></Hardware2Programs></Hardware></Hardware></Manufacturer></ManufacturerData></KNX>"#;
-const PROGRAM: &str = r#"<KNX xmlns="http://knx.org/xml/project/20"><ManufacturerData><Manufacturer RefId="M-1"><ApplicationPrograms><ApplicationProgram Id="A-1" Name="Synthetic" ApplicationVersion="1" MaskVersion="MV-0701"><Static><ParameterTypes><ParameterType Id="PT" Name="Time"><TypeTime SizeInBit="16" minInclusive="0" maxInclusive="3600" Unit="Seconds"/></ParameterType></ParameterTypes><Parameters><Parameter Id="P" Name="Delay" Text="Delay" Access="ReadWrite" ParameterType="PT" Value="0010"/></Parameters><ParameterRefs><ParameterRef Id="PR" RefId="P"/></ParameterRefs></Static><Dynamic><ParameterRefRef RefId="PR"/></Dynamic></ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
+const HARDWARE: &str = r#"<KNX xmlns="http://knx.org/xml/project/20"><ManufacturerData><Manufacturer RefId="M-0001"><Hardware><Hardware Id="H-1" Name="Synthetic" SerialNumber="S" VersionNumber="1"><Products><Product Id="M-0001_P-1"/></Products><Hardware2Programs><Hardware2Program Id="HP-1" MediumTypes="MT-0"><ApplicationProgramRef RefId="A-1"/></Hardware2Program></Hardware2Programs></Hardware></Hardware></Manufacturer></ManufacturerData></KNX>"#;
+const PROGRAM: &str = r#"<KNX xmlns="http://knx.org/xml/project/20"><ManufacturerData><Manufacturer RefId="M-0001"><ApplicationPrograms><ApplicationProgram Id="A-1" Name="Synthetic" ApplicationVersion="1" MaskVersion="MV-0701"><Static><ParameterTypes><ParameterType Id="PT" Name="Time"><TypeTime SizeInBit="16" minInclusive="0" maxInclusive="3600" Unit="Seconds"/></ParameterType></ParameterTypes><Parameters><Parameter Id="P" Name="Delay" Text="Delay" Access="ReadWrite" ParameterType="PT" Value="0010"/></Parameters><ParameterRefs><ParameterRef Id="PR" RefId="P"/></ParameterRefs></Static><Dynamic><ParameterRefRef RefId="PR"/></Dynamic></ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
 fn fixture() -> (tempfile::TempDir, Arc<knx_server::AppState>, axum::Router) {
     let dir = tempfile::tempdir().unwrap();
     let products = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
-    knx_productdb::ingest_file(&products, "M-1/Hardware.xml", HARDWARE.as_bytes()).unwrap();
-    knx_productdb::ingest_file(&products, "M-1/Application.xml", PROGRAM.as_bytes()).unwrap();
+    super::native_source_fixture::install(
+        &products,
+        20,
+        ("M-0001/Hardware.xml", HARDWARE.as_bytes()),
+        ("M-0001/Application.xml", PROGRAM.as_bytes()),
+    );
     let state = knx_server::AppState {
         product_db: Some(
             knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap(),
@@ -35,7 +39,7 @@ fn fixture() -> (tempfile::TempDir, Arc<knx_server::AppState>, axum::Router) {
         name: "Synthetic".into(),
         description: None,
         address: None,
-        product_ref: "M-1_P-1".into(),
+        product_ref: "M-0001_P-1".into(),
         program_ref: "HP-1".into(),
         commissioning: CommissioningState::default(),
         visibility_calculated: true,
@@ -232,6 +236,7 @@ async fn existing_parameter_validation_undo_and_native_reopen_preserve_exact_val
             .0,
         StatusCode::OK
     );
+    super::native_source_fixture::assert_carried(&state, &native);
     let source = request(
         &app,
         "GET",

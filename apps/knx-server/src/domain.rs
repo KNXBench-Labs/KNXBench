@@ -1495,7 +1495,14 @@ fn save_editor_state(
             .as_ref()
             .ok_or_else(|| SaveAsError::Failed("no project open".into()))?;
         (
-            knx_app::catalogue_sources::device_dependencies(project),
+            knx_app::catalogue_sources::device_dependencies(
+                project,
+                state
+                    .clean_project
+                    .lock()
+                    .expect("state mutex poisoned")
+                    .as_ref(),
+            ),
             state
                 .manufacturer_refs
                 .lock()

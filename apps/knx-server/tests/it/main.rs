@@ -99,6 +99,7 @@ mod http_validation_errors;
 mod http_version_route;
 mod https_listener;
 mod multi_installation_routes;
+mod native_source_fixture;
 mod open_reference_project;
 mod private_saved_activation;
 mod project_download_request;

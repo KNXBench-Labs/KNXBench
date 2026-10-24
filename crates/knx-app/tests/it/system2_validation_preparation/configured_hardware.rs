@@ -204,62 +204,7 @@ async fn configured_hardware_executes_and_reopened_recovery_restores_independent
     assert_eq!(device.system2_snapshot(), old);
 }
 
-const PROGRAM: &str = "M-0001_A-9205-04-9270";
-fn inputs() -> (
-    tempfile::TempDir,
-    knx_productdb::Connection,
-    knx_core::Project,
-    Vec<u8>,
-) {
-    use std::io::{Cursor, Read, Write};
-    let (old_package, _) = synthetic_package(20);
-    let mut zip = zip::ZipArchive::new(Cursor::new(old_package)).unwrap();
-    let mut out = zip::ZipWriter::new(Cursor::new(Vec::new()));
-    let convert = |s: &str| {
-        s.replace(SYN_ID, PROGRAM)
-            .replace("M-0000", "M-0001")
-            .replace("ApplicationNumber=\"1\"", "ApplicationNumber=\"37381\"")
-            .replace("ApplicationVersion=\"1\"", "ApplicationVersion=\"4\"")
-            .replace("F00000000001", "00010000005B")
-    };
-    let mut source = Vec::new();
-    for i in 0..zip.len() {
-        let mut member = zip.by_index(i).unwrap();
-        let name = convert(member.name());
-        let mut text = String::new();
-        member.read_to_string(&mut text).unwrap();
-        let bytes = convert(&text).into_bytes();
-        if name.ends_with("Application.xml") {
-            source = bytes.clone();
-        }
-        out.start_file(name, zip::write::SimpleFileOptions::default())
-            .unwrap();
-        out.write_all(&bytes).unwrap();
-    }
-    let package = out.finish().unwrap().into_inner();
-    let mut profile: serde_json::Value =
-        serde_json::from_slice(&synthetic_profile(20, &package, &source)).unwrap();
-    profile["program_id"] = PROGRAM.into();
-    profile["manufacturer"] = 1.into();
-    profile["hardware"] = serde_json::json!([0, 1, 0, 0, 0, 91]);
-    profile["application"] = serde_json::json!([0, 1, 146, 5, 4]);
-    let mut project = synthetic_project();
-    let device = project.devices.get_mut(knx_core::DeviceId(1)).unwrap();
-    device.product_ref = convert(&device.product_ref);
-    device.program_ref = convert(&device.program_ref);
-    let objects = device.com_objects.clone();
-    for id in objects {
-        let object = project.devices.com_object_mut(id).unwrap();
-        object.source.ets_id = convert(&object.source.ets_id);
-    }
-    for parameter in &mut project.installations[0].parameters {
-        parameter.source.ets_id = convert(&parameter.source.ets_id);
-    }
-    let dir = tempfile::tempdir().unwrap();
-    let conn = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
-    knx_productdb::install_package(&conn, "synthetic-exact-identity.knxprod", &package).unwrap();
-    (dir, conn, project, serde_json::to_vec(&profile).unwrap())
-}
+use super::fixture::configured_inputs as inputs;
 
 #[test]
 fn configured_hardware_source_accepts_selected_nondefault_configuration() {

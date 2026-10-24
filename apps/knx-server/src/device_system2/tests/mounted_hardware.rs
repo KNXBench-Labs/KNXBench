@@ -1,5 +1,5 @@
-// apps/knx-server/src/device_system2/tests/mounted_hardware.rs
-
+//! Mounted System-2 cancellation and original recovery over persistent test hardware.
+//!
 //! Opt-in mounted worker proof. Test hardware provenance, independent persistent
 //! software state, no socket/bus/device and no simulator-bundle promotion.
 use axum::{body::Body, http::Request, Router};
@@ -397,7 +397,7 @@ fn state(
     hardware: &Arc<TestHardware>,
 ) -> crate::SharedState {
     let mut state = crate::AppState::with_product_db_at(data.into(), products);
-    state.connector = Arc::new(TestHardwareConnector(hardware.clone()));
+    state.connector = Box::new(TestHardwareConnector(hardware.clone()));
     let leases = data.join("gateway-leases");
     std::fs::create_dir_all(&leases).unwrap();
     state.diagnostic_lease_dir = Some(leases);
@@ -605,6 +605,15 @@ async fn pinned_public_http_worker_cancellation_reopens_original_once_only_recov
     assert_eq!(reopened.outcome(), LocalOutcome::Cancelled);
     assert_eq!(reopened.recovery(), Some(&original));
     drop(reopened);
+    state.catalogue_jobs.close_admission_and_request_stop();
+    assert_eq!(
+        state
+            .catalogue_jobs
+            .drain(Duration::from_secs(5), std::future::pending())
+            .await
+            .end,
+        crate::catalogue_jobs::DrainEnd::Finished
+    );
     drop(router);
     drop(state);
 

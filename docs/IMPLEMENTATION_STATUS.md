@@ -49,7 +49,19 @@ otherwise GTK's default stays. `OWD` export was verified in the type-2 runtime
 source (mounted path only, not `--appimage-extract-and-run`). Unit tests cover
 valid/missing/non-directory `OWD`, the rejected in-image working directory, a
 symlinked alias of the mount, the home fallback and the empty case. A native
-re-run of a fixed build is still pending. Details:
+re-run of that build verified the session-log dialog opening in the launch
+directory, but showed project Save As still in the mount: it, Open and the web
+UI's other file pickers (CSV, debug report, documentation, …) are opened from
+JavaScript by the dialog plugin in `apps/knx-web/src/filePicker.ts`, which the
+Rust helper never reached. A follow-up adds the app command
+`default_dialog_directory` (same helper, main window only); `filePicker.ts`
+now starts Save in that folder joined with the default name and Open in the
+folder, and keeps the previous arguments when the command reports none or
+fails. Vitest and Rust ACL/unit tests cover it. Native Wayland/WebKitGTK
+re-run on 24 October at integration source `6f06d7e1a` verified frontend Save
+As/Open and Rust session-log export starting in the launch directory; the saved
+native project passed SQLite integrity, and dialog cancellation worked. This
+is not every-picker, Orca or release acceptance. Details:
 [AppImage launcher contract](APPIMAGE_LAUNCHER.md#save-dialog-start-folder-24-october-2026),
 [KL-182](limitations/KL-182-desktop-silent-downloads.md).
 

@@ -25,7 +25,21 @@ because no dialog set a folder and the AppImage's working directory is
 directory (`OWD`), the current directory or the home directory, never inside
 `APPDIR`; details and runtime sources are in the
 [AppImage launcher contract](../APPIMAGE_LAUNCHER.md#save-dialog-start-folder-24-october-2026).
-Unit-tested and gated; a native re-run of a fixed build is not recorded yet.
+Unit-tested and gated.
+
+A native re-run of an AppImage with that fix verified the Rust-side session-log
+dialog opening in the launch directory, and found that the project Save As
+dialog still opened in the mount: Save As, Open and the other file pickers of
+the web UI (CSV, debug report, documentation and so on) are opened from
+JavaScript through the dialog plugin, not by the Rust code above. A follow-up
+gives them the same start folder through the app command
+`default_dialog_directory`; when it reports none or fails, they keep their
+previous behaviour. That follow-up is unit-tested and gated. A native
+Wayland/WebKitGTK re-run on 24 October at integration source `6f06d7e1a`
+verified Save As/Open and Rust session-log export starting in the launch
+directory. Save As produced a native project with SQLite integrity `ok`;
+Open/log-export cancellation worked. This does not establish every-picker
+or Orca acceptance, and it does not publish a new AppImage release.
 
 This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later

@@ -13,20 +13,34 @@ use std::path::{Path, PathBuf};
 use tauri::Runtime;
 use tauri_plugin_dialog::FileDialogBuilder;
 
-/// Starts `dialog` in [`default_save_directory`] for this process, if any;
-/// otherwise leaves the toolkit's own default.
+/// Starts `dialog` in [`process_default_directory`], if any; otherwise leaves
+/// the toolkit's own default.
 pub(crate) fn with_default_directory<R: Runtime>(
     dialog: FileDialogBuilder<R>,
 ) -> FileDialogBuilder<R> {
-    match default_save_directory(
+    match process_default_directory() {
+        Some(directory) => dialog.set_directory(directory),
+        None => dialog,
+    }
+}
+
+/// [`default_save_directory`] for this process's environment. The Rust-side
+/// dialogs and the frontend's plugin dialogs (through the
+/// `default_dialog_directory` command) share this one policy.
+pub(crate) fn process_default_directory() -> Option<PathBuf> {
+    default_save_directory(
         std::env::var_os("OWD"),
         std::env::home_dir(),
         std::env::current_dir().ok(),
         std::env::var_os("APPDIR"),
-    ) {
-        Some(directory) => dialog.set_directory(directory),
-        None => dialog,
-    }
+    )
+}
+
+/// `directory` as the string the dialog plugin's `defaultPath` takes. A path
+/// that is not valid UTF-8 cannot travel to JavaScript intact, so it yields
+/// `None` and the frontend keeps the toolkit default.
+pub(crate) fn dialog_directory_string(directory: Option<PathBuf>) -> Option<String> {
+    directory?.into_os_string().into_string().ok()
 }
 
 /// The first usable folder of: the AppImage's original working directory
@@ -208,5 +222,22 @@ mod tests {
             None
         );
         assert_eq!(default_save_directory(None, None, None, None), None);
+    }
+
+    #[test]
+    fn the_dialog_string_is_the_directory_or_none() {
+        assert_eq!(
+            dialog_directory_string(Some(PathBuf::from("/home/alice/projects"))),
+            Some("/home/alice/projects".to_string())
+        );
+        assert_eq!(dialog_directory_string(None), None);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_non_utf8_directory_is_not_sent_to_the_frontend() {
+        use std::os::unix::ffi::OsStringExt;
+        let directory = PathBuf::from(OsString::from_vec(b"/home/alice/\xff".to_vec()));
+        assert_eq!(dialog_directory_string(Some(directory)), None);
     }
 }

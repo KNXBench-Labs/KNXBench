@@ -19,6 +19,13 @@ describe("support guidance", () => {
     }
   });
 
+  it("sends a declared vendor download plug-in (KL-006) to ETS, never to a support request", () => {
+    expect(guidanceForMark({ kind: "unsupported", category: "vendor-download-plugin" }).action).toBe("useVendorTool");
+    expect(guidanceForError(error(422, { kind: "downloadPreparationRefused", category: "vendor-download-plugin" }))).toMatchObject({
+      kind: "unsupported", category: "vendor-download-plugin", code: "downloadPreparationRefused", action: "useVendorTool",
+    });
+  });
+
   it("retains unknown and missing categories and full local detail", () => {
     for (const category of [null, "warp-drive", "__proto__"]) {
       const guidance = guidanceForMark({ kind: "unsupported", category, detail: "PRIVATE" });

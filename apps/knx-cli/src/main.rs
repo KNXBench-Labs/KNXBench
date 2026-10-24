@@ -2460,7 +2460,12 @@ fn run_device_download(args: &[String]) -> ExitCode {
     ) {
         Ok(prepared) => prepared,
         Err(e) => {
-            eprintln!("no download to device {} prepared: {e}", target.address());
+            eprintln!(
+                "no download to device {} prepared (unsupported: {}): {e}",
+                target.address(),
+                knx_app::project_readiness::prepare_category(&e)
+            );
+            println!("written to the device: no");
             return ExitCode::FAILURE;
         }
     };
@@ -2887,7 +2892,9 @@ fn run_device_compare(args: &[String]) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    let prepared = match knx_app::device_download::prepare_device_download(
+    // Read only: a program refused for every download (KL-006) is still
+    // compared.
+    let prepared = match knx_app::device_download::prepare_device_download_for_reading(
         &products,
         &project,
         target.address(),

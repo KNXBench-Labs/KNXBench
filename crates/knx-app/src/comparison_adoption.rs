@@ -3,7 +3,7 @@
 //! No deserializable evidence or value-accepting constructor is exposed. Retain
 //! these transient objects in the caller; request payloads may select row indices
 //! only. See `docs/contracts/alpha16-comparison-adoption.md` for trust/locking rules.
-use crate::device_download::prepare_device_download;
+use crate::device_download::prepare_device_download_for_reading;
 use knx_core::command::comparison_adoption::{
     AdoptionCommandError, LinkAdoption, ParameterAdoption, PreparedComparisonAdoption,
 };
@@ -194,7 +194,8 @@ fn source(
     let transaction = conn
         .unchecked_transaction()
         .map_err(|e| AdoptionError::Preparation(e.to_string()))?;
-    let prepared = prepare_device_download(&transaction, project, target)
+    // Reads the device and edits the project; the device is never written.
+    let prepared = prepare_device_download_for_reading(&transaction, project, target)
         .map_err(|e| AdoptionError::Preparation(e.to_string()))?;
     transaction
         .commit()

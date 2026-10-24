@@ -1,7 +1,7 @@
 /** Communication-object filtering and stable sorting contracts. */
 import { expect, it } from "vitest";
 import type { ComObjectNode } from "./bindings/ComObjectNode";
-import { deriveComObjectView, dptOptions, DEFAULT_FILTERS, type ComSortColumn } from "./comObjectView";
+import { deriveComObjectView, dptOptions, DEFAULT_FILTERS, projectFolderIds, projectFolderRefusal, type ComSortColumn } from "./comObjectView";
 export function object(id: number, overrides: Partial<ComObjectNode> = {}): ComObjectNode {
   return { id, number: id, name: `Object ${id}`, function_text: null, description: null,
     description_layer: null, dpt: null, dpt_layer: null, program_dpt: null, dpt_text: null,
@@ -69,4 +69,25 @@ it("searches localized catalogue names and dotted DPT numbers without rewriting 
       .objects.map(o => o.id)).toEqual([expected]);
   }
   expect(JSON.stringify(objects)).toBe(before);
+});
+it("WP-06a: shows only assigned saved folders, names refusals and searches declared folder ids", () => {
+  const assigned = object(1, { project_folder: { status: "Assigned", key: "Channel:4:CH-1/Folder:4:PB-3/Folder:4:PB-4",
+    path: [{ kind: "Channel", ref_id: "CH-1" }, { kind: "Folder", ref_id: "PB-3" }, { kind: "Folder", ref_id: "PB-4" }] } });
+  const refused = (id: number, status: string) => object(id, { project_folder: {
+    status: status as NonNullable<ComObjectNode["project_folder"]>["status"], key: null, path: [] } });
+  expect(projectFolderIds(assigned)).toEqual(["PB-3", "PB-4"]);
+  expect(projectFolderRefusal(assigned)).toBeNull();
+  for (const status of ["Ambiguous", "UnidentifiedNode", "TreeUnresolved", "ModuleObject", "Inactive"]) {
+    expect(projectFolderIds(refused(2, status))).toBeNull();
+    expect(projectFolderRefusal(refused(2, status))).toBe(status);
+  }
+  // No folder, not in the tree, not read, or a future status: nothing to show or refuse.
+  for (const o of [refused(3, "NoFolder"), refused(4, "NotInSavedTree"), object(5), refused(6, "Future")]) {
+    expect(projectFolderIds(o)).toBeNull();
+    expect(projectFolderRefusal(o)).toBeNull();
+  }
+  const objects = [assigned, refused(2, "Ambiguous"), object(3)];
+  expect(view(objects, { ...DEFAULT_FILTERS, query: "pb-4" }).objects.map(o => o.id)).toEqual([1]);
+  // The channel id of the saved path is not a folder and is not searchable as one.
+  expect(view(objects, { ...DEFAULT_FILTERS, query: "CH-1" }).objects).toEqual([]);
 });

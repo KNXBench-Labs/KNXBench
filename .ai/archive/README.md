@@ -2,17 +2,29 @@
 
 [Current per-track state](../CURRENT_STATE.md).
 
-The current file contains active/waiting/parked tracks, decisions and coordination,
-not the entire delivery journal. Older next-step instructions and locks are
-historical; do not execute or re-acquire them automatically.
+The current file is a compact, overwrite-in-place restart snapshot (target at most
+50 lines), not the entire delivery journal. Keep current assignments, explicit
+stop/go per track, ownership, unfinished work, gate/evidence pointers, blockers
+and next steps. The checkpoint and concurrent-edit rules live in `AGENTS.md`.
+Older next-step instructions and locks are historical; do not execute or
+re-acquire them automatically.
+
+- [Final pre-compaction journal, 24 October 2026](CURRENT_STATE_2026-10-24_final-pre-compact.md):
+  byte-exact from `da36b77b9`, including the delivered WP-06 grouping and lifted
+  owner stop. Relative links retain their original `.ai/CURRENT_STATE.md` context.
+- [Earlier pre-compaction journal, 24 October 2026](CURRENT_STATE_2026-10-24_pre-compact.md):
+  byte-exact journal from `57bdb354c01d0dd225408cd4f46f0cece59ff3cd`; relative
+  links retain their original `.ai/CURRENT_STATE.md` context. Resolve historical
+  links at that source revision rather than treating them as current instructions.
 
 - [Published snapshot, 13 October 2026](CURRENT_STATE_main_2026-10-13.md): full
   journal from main `4c0bea47`, with only reversible link-destination relocation.
 - Existing earlier archives stay at their own paths and are not duplicated.
 
-At the next authorized checkpoint capture the complete original, archive it
-before shortening anything, and reconcile current tracks against the latest
-owner records. Never discard active work solely because its timestamp is old.
+When archiving another legacy journal, capture the complete original and archive
+it before shortening anything; reconcile tracks against the latest owner records.
+Routine snapshot updates replace current state and do not create another archive.
+Never discard active work solely because its timestamp is old.
 Preserve unknown and parked decisions instead of interpreting them as permission.
 Keep source offsets/digests and check original-source reconstruction; a historical
 byte-exact suffix need not remain in the short main file if it is preserved in the

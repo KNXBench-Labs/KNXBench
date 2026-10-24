@@ -11,6 +11,7 @@ use tauri::{AppHandle, Runtime};
 use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
 
 use crate::download_delivery::{self, Delivered, Finish, Staging};
+use crate::save_directory::with_default_directory;
 
 /// `WebviewWindowBuilder::on_download` for every KNXBench window: stage on
 /// request, ask where to save once finished. Always lets WebKit proceed; if
@@ -38,9 +39,7 @@ pub(crate) fn handle_download<R: Runtime>(
                 Finish::Deliver { staged, file_name } => {
                     let app = app.clone();
                     tauri::async_runtime::spawn_blocking(move || {
-                        let chosen = app
-                            .dialog()
-                            .file()
+                        let chosen = with_default_directory(app.dialog().file())
                             .set_file_name(&file_name)
                             .blocking_save_file()
                             .map(|file| file.into_path());

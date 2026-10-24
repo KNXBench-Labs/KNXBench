@@ -24,13 +24,18 @@ release is not implied. No receiver/bus compatibility is claimed.
 
 <a id="up258-system-2-candidate-source-20-october-2026"></a>
 
-## Alpha 16 preparation — source limits, acceptance still pending
+## Alpha 16 — accepted software scope, remaining release and evidence limits
 
-**Alpha 15 remains the latest released version.** These updates describe
-integrated source `5dc47aeced255a9d3d10e787dd7940082cb0cad1`, not a published or
-accepted Alpha-16 candidate. Blocking review corrections, combined workflow
-acceptance and artifacts remain pending. The older dated inventory below is not
-a new audit of every limitation. [Unreleased scope draft](../releases/alpha16.md).
+**24 October 2026 snapshot:** bounded software outcomes and four final local amd64
+artifacts have parent acceptance at frozen runtime/test source
+`86b4a7fc68b3d3206c00511b14f41e025e33de4d`; the overall release remains unaccepted
+and unpublished. Two pinned-composition checks are blocked, not waived; no-copy,
+no-restoration and no-repin boundaries remain. ARM64 is unverified and no owner
+platform-scope decision is recorded. Parent final documentation review, publication
+approval and public readback remain open. The older dated inventory below is not
+a new audit or closure of every limitation.
+[Source-bound evidence matrix](../goals/alpha16-release-plan-2026-10-23.md#current-acceptance-disposition--24-october-2026),
+[unreleased scope and local artifact identities](../releases/alpha16.md).
 
 ### Exact experimental System-2 path, not general device support
 
@@ -54,7 +59,12 @@ The UI reattaches the durable selected original and uses its original recovery
 acknowledgements, not the current project. Historical inventory/selection is
 available through authenticated HTTP, **not a historical UI dropdown**. Missing
 or corrupt selection/evidence refuses; a backup-available label does not promise
-physical restorability. Combined UI/server acceptance remains outstanding.
+physical restorability. The final mounted HTTP/worker/store scenario reaches all
+105 assertions, including exact original TestHardware state, reopened `Restored`
+journal and immediate/second-restart once-only refusal without further
+connection/mutation. UI fixture evidence is separate; neither is physical recovery
+or ETS parity. Operation-local plan reuse preserves independent admission,
+backup/readback and recovery-integrity barriers; no general speedup is established.
 [Exact service and recovery limits](../contracts/alpha16-system2-configured-download.md),
 [restart selection](../contracts/alpha16-system2-http-mount.md).
 
@@ -65,8 +75,9 @@ tracking, not a component-owned synchronous install. Leaving a view does not
 cancel the worker; cancellation is cooperative and may wait on native/XML or
 filesystem spans. A lost reply or forgotten/expired handle does not prove rollback.
 Witnessed COMMIT, unknown settlement, cleanup/quarantine and backup retention
-must remain separate; blocking review corrections and combined acceptance are
-still open. Report disposal is not recovery-backup deletion. Preserve retained
+must remain separate. Blocking corrections and one actual mounted Large-profile
+outcome have source-bound software acceptance; the measured input did not exceed
+Standard's 4 GiB decoded ceiling. Report disposal is not recovery-backup deletion. Preserve retained
 committed/uncertain backups for inspection rather than assuming cleanup recovered
 the catalogue.
 

@@ -1,8 +1,12 @@
 # Alpha 16 System-2 UI transport contract
 
-Status: implementation contract, not yet a mounted/accepted HTTP capability.
-The shared App backend and this adapter must be integrated before claiming A16-03
-complete. Ordinary device-download endpoints retain their current semantics.
+Status, 24 October 2026: shared App backend and UI adapter are mounted, with
+bounded A16-03 software acceptance in the
+[current release matrix](../goals/alpha16-release-plan-2026-10-23.md#current-acceptance-disposition--24-october-2026).
+This supersedes earlier unmounted/backend-pending wording below. UI fixture
+evidence remains separate from the final mounted HTTP/worker TestHardware proof;
+neither verifies physical recovery or ETS parity. Overall release remains pending.
+Ordinary device-download endpoints retain their current semantics.
 
 ## Required user workflow
 

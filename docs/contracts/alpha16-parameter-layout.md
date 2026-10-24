@@ -2,9 +2,13 @@
 
 ## Scope and status
 
-Implemented locally, focused HTTP verification complete; integrated Alpha 16
-review/release acceptance remains pending. This is the bounded WP-05/A16-07
-caption-language feature, not complete manufacturer layout support.
+Status, 24 October 2026: the bounded WP-05/A16-07 caption-language outcome has
+source-bound software acceptance in the
+[current release matrix](../goals/alpha16-release-plan-2026-10-23.md#current-acceptance-disposition--24-october-2026).
+That disposition supersedes prospective candidate-verification wording below;
+the original 16-case focused evidence retains its scope. Overall release remains
+pending. This is not complete manufacturer layout support; excluded subfeatures
+and resource/integrity limits below are unchanged.
 
 ## Feature/evidence disposition
 

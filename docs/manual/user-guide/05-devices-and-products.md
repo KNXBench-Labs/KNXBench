@@ -19,12 +19,15 @@ manufacturer publishes, not something KNXBench invents. See
 This chapter covers the catalog, adding a device, and the device panel's objects,
 parameters, product data, diagnostics and inspection-only manufacturer fields.
 
-> **Alpha 16 source preparation, not release availability.** Alpha 15 remains
-> the latest released version. Sections marked **unreleased Alpha-16 source**
-> describe integrated source `5dc47aeced255a9d3d10e787dd7940082cb0cad1`;
-> blocking review corrections and combined acceptance are still pending. They
-> are not a claim of accepted workflows or available Alpha-16 artifacts.
-> [Scope draft](../../releases/alpha16.md).
+> **24 October 2026: unreleased Alpha-16 snapshot.** Sections marked
+> **unreleased Alpha-16 source** describe frozen runtime/test source
+> `86b4a7fc68b3d3206c00511b14f41e025e33de4d`. Bounded software outcomes and four
+> final local amd64 artifacts have parent acceptance, not overall release approval
+> or public availability. Two pinned-input checks remain blocked under no-copy;
+> ARM64 is unverified without an owner platform-scope decision. Parent final
+> documentation review, publication approval and public readback remain open.
+> [Scope and artifact limits](../../releases/alpha16.md),
+> [source-bound evidence matrix](../../goals/alpha16-release-plan-2026-10-23.md#current-acceptance-disposition--24-october-2026).
 
 ## The Devices view
 
@@ -203,7 +206,7 @@ it never submits comparison bytes as a write plan.
 
 **Exact scope:** UP 258D12 application `M-0001_A-9205-04-9270` only.
 **Experimental, software-tested scope only; hardware outcome unverified.**
-Blocking review corrections and combined UI/server acceptance are still pending.
+Bounded software acceptance is recorded in the source-bound evidence matrix.
 This is not all-System-2 support, ETS equivalence, firmware certification or a
 physical recovery guarantee. The ordinary memory-download path is unchanged.
 
@@ -247,8 +250,11 @@ operation; a failed connection or lost reply does not reset it.
 
 Historical operations can be inventoried/selected through authenticated HTTP;
 there is **no historical-operation dropdown** in the current UI. Selected-original
-reattachment is independent of the currently open project. Complete no-project
-recovery usability remains part of the pending combined UI/server acceptance.
+reattachment is independent of the currently open project. The final mounted
+HTTP/worker/store recovery scenario reaches all 105 assertions: exact original
+TestHardware state, reopened `Restored` journal and immediate/second-restart
+once-only refusal without further connection/mutation. UI fixture evidence remains
+separate; this is not a general no-project UI usability or physical recovery claim.
 Keep the original private journals and bundles; do not post them in a public issue.
 
 The backup covers declared affected regions, **not a whole-device/allocator image**.
@@ -433,7 +439,9 @@ upload/apply retry. Browser/server handles and report retention are finite, not
 permanent job history; on unavailable history inspect the catalogue and backups
 before explicitly starting a new selection. Report disposal does not delete a
 user-managed recovery backup. Retain uncertain/committed backups for inspection.
-Blocking review corrections and combined acceptance remain open for this source.
+Blocking corrections and one actual mounted Large-profile install have
+source-bound software acceptance. That measured input did not exceed Standard's
+4 GiB decoded ceiling; no >4 GiB or universal performance result follows.
 
 **Resource boundary:** source/member bytes are each limited to 1,000,000,000;
 existing-catalogue copy admission is 8 GiB of page bytes, and working main databases
@@ -701,7 +709,8 @@ ones cannot be acquired. A newer Save cannot invent an old missing original.
 This is not universal self-contained portability or an ETS/product exporter.
 **Older-reader compatibility remains untested despite no native/model schema bump.**
 Keep original `.knxproj`/`.knxprod` files and independent project/catalogue backups.
-Combined candidate acceptance remains pending.
+The admitted save/reopen-against-empty-catalogue outcome has historical full-gate
+evidence in the source-bound matrix; the broader limitation is not closed.
 [Exact source ownership and limits](../../contracts/alpha16-catalogue-portability.md),
 [historical portability boundary](../../limitations/KL-183-knxdb-manufacturer-files.md),
 [ADR-0128](../../adr/0128-native-project-files-carry-their-manufacturer-files.md).

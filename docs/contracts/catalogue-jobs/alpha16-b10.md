@@ -1,9 +1,11 @@
 # Alpha16 B10 managed-apply bridge
 
-Status: implemented controlled slice, focused runtime checks pass; independent
-review and combined production acceptance remain separate. This document is the
-callable cross-crate contract, not a
-claim that all WP-04.3 or B08/B10 acceptance is complete.
+Status, 24 October 2026: implemented controlled slice; blocking corrections and
+bounded production catalogue outcomes have source-bound software acceptance in
+the [current release matrix](../../goals/alpha16-release-plan-2026-10-23.md#current-acceptance-disposition--24-october-2026).
+This supersedes prospective combined-acceptance wording below, without widening
+the original focused B10 evidence. This callable cross-crate contract is not a
+claim that every B08/B10 criterion, hardware outcome or overall release is accepted.
 
 ## ProductDB controlled API
 

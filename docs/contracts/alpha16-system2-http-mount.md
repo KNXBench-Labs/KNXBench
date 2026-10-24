@@ -1,9 +1,13 @@
 # Alpha 16 configured System-2 HTTP mount
 
-Status: production router/lifecycle implementation. The scoped production Rust
-check is recorded in the implementation handoff; regression assertions are
-reserved for the single final combined candidate. This is not an executed
-hardware, browser, packaging or release-acceptance claim.
+Status, 24 October 2026: production router/lifecycle implemented; final mounted
+HTTP/worker/store recovery reaches all 105 original assertions, including exact
+original TestHardware state, reopened `Restored` journal and immediate/restart
+once-only refusal without further connection/mutation. The
+[current release matrix](../goals/alpha16-release-plan-2026-10-23.md#current-acceptance-disposition--24-october-2026)
+supersedes prospective combined-execution wording below; dated checks retain
+their original scope. Overall release remains pending. TestHardware is not
+physical-device, ETS-parity or UI-usability certification.
 
 This mounts the [UI transport](alpha16-system2-ui.md) over the
 [shared configured App service](alpha16-system2-configured-download.md), rather

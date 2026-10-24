@@ -79,7 +79,7 @@ fn cli() -> Command {
 #[test]
 fn system2_validation_cli_preview_is_offline_and_creates_no_protocol() {
     let dir = tempfile::tempdir().unwrap();
-    let (path, _) = bundle(dir.path());
+    let (path, b) = bundle(dir.path());
     let out = cli()
         .args(["--bundle", path.to_str().unwrap()])
         .output()
@@ -90,8 +90,11 @@ fn system2_validation_cli_preview_is_offline_and_creates_no_protocol() {
         String::from_utf8_lossy(&out.stderr)
     );
     let text = String::from_utf8(out.stdout).unwrap();
-    assert!(text.contains("Preview only"));
-    assert!(text.contains("STRONG HYPOTHESIS SIMULATOR TESTED"));
+    assert!(text.contains("Preview only; no connection or writes."));
+    assert!(text.contains("STRONG HYPOTHESIS — synthetic simulator candidate"));
+    assert!(text.contains(&format!("Confirmation: {}", b.consent_phrase())));
+    assert!(text.contains(&format!("Hypothesis acceptance: {}", b.acceptance_phrase())));
+    assert!(text.contains("NOT raw allocator rollback or guaranteed restoration"));
     assert_eq!(fs::read_dir(dir.path()).unwrap().count(), 1);
 }
 #[test]

@@ -18,6 +18,7 @@ use serde_json::{json, Value};
 
 struct Desktop {
     port: u16,
+    server: knx_server::EmbeddedServerHandle,
     _data: tempfile::TempDir,
 }
 
@@ -30,8 +31,14 @@ impl Desktop {
         let state = Arc::new(knx_server::AppState::new(data.path().join("projects")));
         let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
         let port = listener.local_addr().unwrap().port();
-        crate::spawn_server(listener, state, None);
-        Self { port, _data: data }
+        // Retain the lifetime owner as the native shell does. Dropping it
+        // closes the stop channel and ends HTTP before the first request.
+        let server = crate::spawn_server(listener, state, None);
+        Self {
+            port,
+            server,
+            _data: data,
+        }
     }
 
     /// One HTTP/1.1 request; answers status and JSON body. A chunked or
@@ -77,6 +84,19 @@ impl Desktop {
         let (status, value) = self.call(method, path, body);
         assert_eq!(status, 200, "{method} {path}: {value}");
         value
+    }
+}
+
+impl Drop for Desktop {
+    fn drop(&mut self) {
+        // Join the actual HTTP and worker shutdown before removing its files,
+        // including when a surface assertion unwinds. Never force the drain.
+        let result =
+            tauri::async_runtime::block_on(self.server.drain_close(std::future::pending()));
+        if !std::thread::panicking() {
+            assert_eq!(result.http, Ok(knx_server::ServeEnd::Drained));
+            assert!(!result.requires_process_exit(), "{result:?}");
+        }
     }
 }
 

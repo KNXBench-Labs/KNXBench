@@ -14,9 +14,10 @@ import "./diagnosticExport.css";
 
 export default function DiagnosticExportButton({project,deviceId=null}:{project:ProjectTree|null;deviceId?:number|null}){
  const t=useTranslate();const entry=useFileMenuItemProps();const [open,setOpen]=useState(false);
- return <><button type="button" {...entry} data-diagnostics-open disabled={!project} onClick={()=>setOpen(true)}>{t("diagnostics.title")}</button>{open&&createPortal(<Dialog project={project!} initialDevice={deviceId} close={()=>setOpen(false)}/>,document.body)}</>;
+ return <><button type="button" {...entry} data-diagnostics-open disabled={!project} onClick={()=>setOpen(true)}>{t("diagnostics.title")}</button>{open&&createPortal(<DiagnosticExportDialog project={project!} initialDevice={deviceId} close={()=>setOpen(false)}/>,document.body)}</>;
 }
-function Dialog({project,initialDevice,close}:{project:ProjectTree;initialDevice:number|null;close:()=>void}){
+/** The reviewed export dialog itself; the Diagnostics tab opens it for its device too. */
+export function DiagnosticExportDialog({project,initialDevice,close}:{project:ProjectTree;initialDevice:number|null;close:()=>void}){
  const t=useTranslate();const devices=[...collectDevices(project).values()];
  const [device,setDevice]=useState<number|null>(initialDevice);const [gateway,setGateway]=useState(loadPreferredGateway);
  const [view,setView]=useState<api.DiagnosticView|null>(null);const [readConsent,setReadConsent]=useState(false);const [shareConsent,setShareConsent]=useState(false);

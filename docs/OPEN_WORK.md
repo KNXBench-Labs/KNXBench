@@ -1271,6 +1271,11 @@ request uses a `sqlite3` query instead), and one MINOR reader gap: the identity 
 a deliberately rewritten and rehashed archive could carry a wrong reason. It
 does not change recorded bytes, coverage or what the collector sends;
 checksums never claimed to detect deliberate rewriting.
+The *web entry* above means the memory profile in the web UI and stays open.
+The 24 October 2026 **Analyse device** button on a device's Diagnostics tab
+(beside **Send report**) only opens the existing diagnostic export dialog with
+that device preselected; that dialog offers `generic-identity-v1` only, so the
+button does not bring `system2-declared-segments-v1` to the web.
 
 ## System 2 / System B download outcome (17 October 2026)
 

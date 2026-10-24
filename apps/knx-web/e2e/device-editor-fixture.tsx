@@ -9,7 +9,7 @@ import "../src/styles.css";
 
 const language = new URLSearchParams(location.search).get("lang") === "de" ? "de" : "en";
 const withChannels = new URLSearchParams(location.search).get("channels") === "1";
-document.documentElement.dataset.theme = "porcelain";
+document.documentElement.dataset.theme = new URLSearchParams(location.search).get("theme") === "graphite" ? "graphite" : "porcelain";
 setSetting(UI_LANGUAGE_STORAGE_KEY, language);
 
 const longName = "Main corridor switching actuator channel with a very long manufacturer-specific designation";

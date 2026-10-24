@@ -1151,6 +1151,11 @@ export const messages = {
   "support.failed": "Support evidence could not be completed. Review the target or prepare a fresh offline preview; no download was requested.",
   "support.saved": "File download requested. Attach it manually after checking it.",
   "support.close": "Close",
+  // Diagnostics-tab entry (24 October 2026): opens the two dialogs above for the shown device.
+  "deviceDiagnostics.heading": "Device analysis and support",
+  "deviceDiagnostics.analyse": "Analyse device",
+  "deviceDiagnostics.report": "Send report",
+  "deviceDiagnostics.hint": "Opens “{analysis}” or “{report}” with this device selected. Both only read from the device, show a preview first and ask for your consent before reading the bus or saving a file; nothing is uploaded.",
   "contribution.button": "Analyze support gaps…",
   "contribution.procedures.title": "Offline procedure sequences",
   "contribution.procedures.boundary": "Not a download plan. This only reconstructs declarative order; values, tables and device semantics are not materialized. No new bus execution or hardware verification is enabled.",

@@ -536,6 +536,33 @@ fn plan_links(
             chosen
         };
         let wanted_addresses: Vec<GroupAddress> = wanted.iter().map(|(ga, _)| *ga).collect();
+        let mut resolved_addresses = BTreeMap::new();
+        for &(group_address, row) in &wanted {
+            if resolved_addresses.contains_key(&group_address) {
+                continue;
+            }
+            let ids: Vec<GroupAddressId> = addresses
+                .iter()
+                .filter(|(_, address)| *address == group_address)
+                .map(|(id, _)| *id)
+                .collect();
+            let ga = match ids.as_slice() {
+                [] => {
+                    return Err(AdoptionError::GroupAddressNotInProject {
+                        index: row,
+                        group_address,
+                    })
+                }
+                [one] => *one,
+                _ => {
+                    return Err(AdoptionError::AmbiguousGroupAddress {
+                        index: row,
+                        group_address,
+                    })
+                }
+            };
+            resolved_addresses.insert(group_address, ga);
+        }
         let mut retained = Vec::new();
         for link in &chosen.links {
             let address = addresses
@@ -564,30 +591,11 @@ fn plan_links(
         }
         let fresh = retained.is_empty();
         let mut added = BTreeSet::new();
-        for (position, &(group_address, row)) in wanted.iter().enumerate() {
+        for (position, &(group_address, _)) in wanted.iter().enumerate() {
             if retained.contains(&group_address) || !added.insert(group_address) {
                 continue;
             }
-            let ids: Vec<GroupAddressId> = addresses
-                .iter()
-                .filter(|(_, address)| *address == group_address)
-                .map(|(id, _)| *id)
-                .collect();
-            let ga = match ids.as_slice() {
-                [] => {
-                    return Err(AdoptionError::GroupAddressNotInProject {
-                        index: row,
-                        group_address,
-                    })
-                }
-                [one] => *one,
-                _ => {
-                    return Err(AdoptionError::AmbiguousGroupAddress {
-                        index: row,
-                        group_address,
-                    })
-                }
-            };
+            let ga = resolved_addresses[&group_address];
             // Only an object without retained links takes the device's first
             // entry as its sending link; retained flags are never changed.
             let sending = fresh && position == 0;

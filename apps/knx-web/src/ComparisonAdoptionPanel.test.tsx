@@ -39,10 +39,35 @@ it("admits only server-hinted parameter and association rows at their original i
   expect(offersAdoption({ ...decoded[1], adoptable: undefined }, 1)).toBe(false);
 });
 
-it("refuses a preview whose link list is malformed instead of showing part of it", () => {
-  expect(parseAdoptionPreview({ ...preview, linkChanges: undefined } as unknown as ComparisonAdoptionPreview).linkChanges).toEqual([]);
-  expect(() => parseAdoptionPreview({ ...preview, linkChanges: [{ add: "yes" }] } as unknown as ComparisonAdoptionPreview)).toThrow();
-  expect(() => parseAdoptionPreview({ ...preview, linkChanges: {} } as unknown as ComparisonAdoptionPreview)).toThrow();
+it.each([undefined, null, {}, "hidden", [{ add: "yes" }]])("refuses a preview whose linkChanges value is missing or malformed: %s", (linkChanges) => {
+  expect(() => parseAdoptionPreview({ ...preview, linkChanges } as unknown as ComparisonAdoptionPreview)).toThrow();
+});
+
+it("keeps parameter-only preview compatibility through an explicit empty linkChanges array", () => {
+  const parameterPreview: ComparisonAdoptionPreview = {
+    ...preview,
+    selected: [0],
+    rows: [{ index: 0, adoptable: true, kind: "parameter", label: "P", address: 0x440f, project: "0", device: "1", reason: null }],
+    linkChanges: [],
+  };
+  expect(parseAdoptionPreview(parameterPreview).linkChanges).toEqual([]);
+});
+
+it("does not offer Apply when an association preview omits linkChanges", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  vi.stubGlobal("fetch", vi.fn(async () => {
+    const { linkChanges: _, ...malformed } = preview;
+    return new Response(JSON.stringify(malformed), { status: 200, headers: { "Content-Type": "application/json" } });
+  }));
+  const host = document.createElement("div"); document.body.append(host); const root = createRoot(host);
+  dispose = () => { root.unmount(); host.remove(); };
+  await act(async () => root.render(<ComparisonAdoptionPanel result={result} disabled={false} onBusy={() => {}} onApplied={() => {}} />));
+  const choice = host.querySelector<HTMLInputElement>("tbody input[type=checkbox]")!;
+  await act(async () => choice.click());
+  const review = [...host.querySelectorAll("button")].find((button) => button.textContent === en["compare.adoption.preview"])!;
+  await act(async () => review.click());
+  expect(host.querySelector("[role=alert]")).not.toBeNull();
+  expect([...host.querySelectorAll("button")].some((button) => button.textContent === en["compare.adoption.apply"])).toBe(false);
 });
 
 it.each(["en", "de"] as const)("%s previews association rows with their link changes before confirmation", async (language) => {

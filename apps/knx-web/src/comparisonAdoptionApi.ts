@@ -33,7 +33,9 @@ function isLinkChange(value: unknown): value is ComparisonLinkChange {
 }
 /** A preview whose link list is malformed is refused, never shown partly. */
 export function parseAdoptionPreview(value: ComparisonAdoptionPreview): ComparisonAdoptionPreview {
-  const links: unknown = (value as { linkChanges?: unknown }).linkChanges ?? [];
+  // Parameter-only previews remain compatible through the server's explicit
+  // `linkChanges: []`; an absent field is malformed or version-skewed.
+  const links: unknown = (value as { linkChanges?: unknown }).linkChanges;
   if (!Array.isArray(links) || !links.every(isLinkChange)) throw new Error("malformed adoption preview: link changes");
   return { ...value, linkChanges: links };
 }

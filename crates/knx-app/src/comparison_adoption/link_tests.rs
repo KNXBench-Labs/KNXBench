@@ -437,6 +437,63 @@ async fn missing_or_ambiguous_group_addresses_and_objects_refuse() {
 }
 
 #[tokio::test]
+async fn retained_device_group_address_still_requires_unique_project_identity() {
+    // Object 0 keeps 1/0/1 and adds 1/0/2. This is valid while every raw
+    // device address has one project identity.
+    let f = fixture();
+    f.sim.preset_memory(0x4100, &[2, 1, 0, 2, 0, 0, 0, 0, 0]);
+    let observed = f.observe().await;
+    let selected: Vec<_> = rows_of(&observed, "association")
+        .into_iter()
+        .filter(|&index| observed.rows()[index].project != observed.rows()[index].device)
+        .collect();
+    assert_eq!(selected.len(), 1);
+    let preview = f.preview(&observed, &selected).unwrap();
+    assert_eq!(preview.link_changes().len(), 1);
+    assert_eq!(preview.link_changes()[0].group_address, ga(GA_2));
+
+    // A second project identity for retained 1/0/1, in another installation,
+    // makes the same device edit ambiguous even though 1/0/1 needs no relink.
+    let mut f = fixture();
+    f.sim.preset_memory(0x4100, &[2, 1, 0, 2, 0, 0, 0, 0, 0]);
+    let mut duplicate = f.snapshot.project.installations[0]
+        .group_addresses
+        .iter()
+        .find(|entry| entry.address == ga(GA_1))
+        .unwrap()
+        .clone();
+    duplicate.id = f.snapshot.project.ids.next_group_address_id().unwrap();
+    duplicate.source.ets_id = "GA-retained-duplicate".into();
+    f.snapshot.project.installations.push(Installation {
+        id: InstallationId(1),
+        name: "II".into(),
+        default_line: None,
+        multicast_address: None,
+        completion: CompletionStatus::FinishedDesign,
+        topology: Topology {
+            areas: vec![],
+            lines: vec![],
+            unassigned: vec![],
+        },
+        buildings: vec![],
+        group_ranges: vec![],
+        group_addresses: vec![duplicate],
+        parameters: vec![],
+    });
+    let observed = f.observe().await;
+    let selected: Vec<_> = rows_of(&observed, "association")
+        .into_iter()
+        .filter(|&index| observed.rows()[index].project != observed.rows()[index].device)
+        .collect();
+    assert_eq!(selected.len(), 1);
+    assert!(matches!(
+        f.preview(&observed, &selected),
+        Err(AdoptionError::AmbiguousGroupAddress { group_address, .. })
+            if group_address == ga(GA_1)
+    ));
+}
+
+#[tokio::test]
 async fn inactive_objects_need_the_activating_parameter_in_the_same_adoption() {
     let mut f = fixture();
     // Object 2 instead of 1 for 1/0/3, and the device's parameter activates it.

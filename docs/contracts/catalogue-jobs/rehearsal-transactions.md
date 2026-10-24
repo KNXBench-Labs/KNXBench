@@ -15,11 +15,25 @@ An already-automatic transaction end is observed, not called explicit rollback.
 A rollback error, non-autocommit state and native close error remain independent
 cleanup facts; successful close does not erase a failed rollback observation.
 Failed native close retains the connection in the existing artifact inventory.
+The same inventory retains the exact typed cleanup failure independently of
+returned errors and opaque panic payloads, including after successful native
+close. The workspace owns that inventory outside both apply's public facade
+catch and preview's mounted worker catch. Dropping either catch's projection
+cannot erase those facts; closed-ownership release refuses their removal.
 Primary install/identity/Stop errors survive alongside cleanup errors. Unwind
 continues with the original opaque panic payload after clean D settlement; if D
-settlement also fails, an opaque pair retains both payload and typed cleanup
-error. Panic text is not projected into public diagnostics. The existing W
-unwind/quarantine policy is unchanged; D cleanup never proves W rollback.
+settlement also fails, the opaque pair also carries the typed cleanup error, but
+is not its sole owner. Panic text is not projected into public diagnostics.
+The facade's cleanup-failure signal and mounted workspace settlement/terminal
+classification include this independent D observation, even with no retained
+handle and a healthy W after explicit W rollback. Accepted cancellation remains
+the primary stop cause, but cannot turn failed D cleanup into clean Cancelled or
+cleanupComplete. When the nested rehearsal settlement has an installer refusal
+or Stop, the facade retains that primary failure category separately from its
+cleanup-failure signal. No W commit/rollback uncertainty is invented from a D
+failure.
+The existing W unwind/quarantine policy is unchanged; D cleanup never proves W
+rollback.
 
 No change is made to W's transaction, source admission, selected policy/profile,
 publication gate, recovery-backup barrier, growth limits or durability settings.
@@ -34,6 +48,16 @@ failure/cancellation and native-close ownership. D's installed rows are no longe
 expected at the pre-close observation: immutable reports were extracted before
 rollback. Actual write observations remain required; empty rows alone cannot
 prove that rehearsal executed or that W was untouched.
+
+Public `execute_controlled` controls cover D panic with clean settlement, native
+Busy close and denied rollback followed by successful close, then drop the
+returned execution and recheck the actual workspace facts/handle ownership.
+Preview controls discard the outer facade unwind payload with the workspace
+retained, matching the mounted catch's owner lifetime. Separate cancelled and
+noncancelled installer-refusal controls deny D rollback without forcing Busy;
+they require exact primary/cleanup facts, true cleanup-failure classification,
+closed D handles, healthy/proved-not-committed W and no W DML. These are source
+definitions, not claims of execution or mounted runtime acceptance.
 
 The private Large mounted acceptance test retains a separate create-new 0600
 `*.diagnostic.json` next to its configured evidence JSON, outside its owned

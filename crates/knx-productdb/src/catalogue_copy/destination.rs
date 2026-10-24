@@ -9,6 +9,7 @@ use std::path::Path;
 mod publication;
 pub use publication::{PublishedRecovery, RecoveryPublicationError, ValidatedRecovery};
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use rusqlite::{Connection, DropBehavior, OpenFlags, Transaction};
 
@@ -84,7 +85,7 @@ pub(crate) struct DestinationFailure {
 }
 impl From<DestinationError> for CopyError {
     fn from(primary: DestinationError) -> Self {
-        Self::Destination(Box::new(DestinationFailure {
+        Self::Destination(Arc::new(DestinationFailure {
             primary: Some(primary),
             cleanup: Vec::new(),
         }))
@@ -199,6 +200,9 @@ struct Destination {
     configuration: Option<(i64, i64)>,
     facts: Option<CopyFacts>,
     state: State,
+    // Independent native facts survive caught/discarded errors and panic
+    // payloads, even if native close succeeded and no handle remains.
+    rehearsal_cleanup: Option<Arc<DestinationFailure>>,
     #[cfg(test)]
     hook: Option<Hook>,
 }
@@ -264,6 +268,13 @@ impl ArtifactInventory {
         self.slots[role.index()].is_some()
     }
 
+    pub(crate) fn rehearsal_cleanup_failure(&self) -> Option<&Arc<DestinationFailure>> {
+        self.slots[DestinationRole::Rehearsal.index()]
+            .as_ref()?
+            .rehearsal_cleanup
+            .as_ref()
+    }
+
     pub(crate) fn create_new(
         &mut self,
         role: DestinationRole,
@@ -304,6 +315,7 @@ impl ArtifactInventory {
             configuration: None,
             facts: None,
             state: State::Incomplete,
+            rehearsal_cleanup: None,
             #[cfg(test)]
             hook: self.hooks[role.index()].take(),
         });
@@ -381,7 +393,7 @@ impl ArtifactInventory {
             cleanup.push(DestinationCleanup::WriterClose(error));
         }
         if primary.is_some() || !cleanup.is_empty() {
-            return Err(CopyError::Destination(Box::new(DestinationFailure {
+            return Err(CopyError::Destination(Arc::new(DestinationFailure {
                 primary,
                 cleanup,
             })));
@@ -456,7 +468,7 @@ impl ArtifactInventory {
             cleanup.push(DestinationCleanup::ReadClose(error));
         }
         if result.is_err() || !cleanup.is_empty() {
-            return Err(CopyError::Destination(Box::new(DestinationFailure {
+            return Err(CopyError::Destination(Arc::new(DestinationFailure {
                 primary: result.err(),
                 cleanup,
             })));
@@ -563,10 +575,12 @@ impl ArtifactInventory {
             cleanup.push(DestinationCleanup::RehearsalClose(error));
         }
         if !cleanup.is_empty() {
-            return Err(CopyError::Destination(Box::new(DestinationFailure {
+            let failure = Arc::new(DestinationFailure {
                 primary: None,
                 cleanup,
-            })));
+            });
+            slot.rehearsal_cleanup = Some(Arc::clone(&failure));
+            return Err(CopyError::Destination(failure));
         }
         Ok(())
     }

@@ -396,6 +396,10 @@ impl Session {
         });
         let quarantined = native.quarantined
             || !native.closed
+            || native
+                .workspace
+                .as_ref()
+                .is_some_and(|w| w.cleanup_failed())
             || execution.is_some_and(|e| e.cleanup_failed())
             || s.commit.outcome == CommitOutcome::Unknown
             || s.backup.state == BackupState::Quarantined;
@@ -492,7 +496,15 @@ impl Session {
             .as_ref()
             .is_none_or(|w| w.native_handles_closed())
             && native.managed_settled;
-        if !native.closed {
+        // Closed handles do not erase a failed explicit D rollback. In preview
+        // this workspace also survives the outer catch without an execution.
+        // Refuse before reconciliation/release can discard the typed owner.
+        if !native.closed
+            || native
+                .workspace
+                .as_ref()
+                .is_some_and(|w| w.cleanup_failed())
+        {
             workspace.quarantine();
             native.backup = Some(backup(workspace, true));
             return Err(FailureKind::CleanupFailed);

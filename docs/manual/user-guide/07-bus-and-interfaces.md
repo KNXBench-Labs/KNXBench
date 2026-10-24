@@ -503,7 +503,10 @@ supported plan has no matching hardware evidence; it is not **unsupported**.
 Before starting it, enter the plan's extra exact target-bound acknowledgement,
 then confirm in the ordinary programming dialog. Identity, key, freshness,
 backup/readback and gateway guards still apply. No acknowledgement unlocks an
-unsupported plan. Required executable-extension behavior is not assessed by this
+unsupported plan. An application program that declares an ETS download plug-in
+is never untested: it is **unsupported** (`vendor-download-plugin`, KL-006) for
+every download scope, because the plug-in writes data KNXBench cannot
+reproduce. Other required executable-extension behavior is not assessed by this
 status: this workflow is initially for applications without unresolved required
 executable extensions. You can help with a supported device as follows:
 

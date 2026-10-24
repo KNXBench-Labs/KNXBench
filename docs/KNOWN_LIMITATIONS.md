@@ -244,7 +244,7 @@ Supported top-level and single-authoritative module fields are editable. Declare
 ### 6. Devices dependent on vendor plug-ins
 
 **Ledger status:** `ACCEPTED_BOUNDARY` ([KL-6](status/LEDGER.md#snapshot-ids)).
-Vendor-dependent devices remain preservation-only where configuration requires a plug-in. Project app/add-in payloads are retained, not executed by the product.
+Vendor-dependent devices remain preservation-only where configuration requires a plug-in. A declared ETS download plug-in refuses every download scope; app/add-in payloads are retained, not executed.
 [Details and history](limitations/KL-006-devices-dependent-on-vendor-plug-ins.md)
 
 <a id="catalogue-kl-011"></a>

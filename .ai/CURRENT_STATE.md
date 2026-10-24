@@ -1,33 +1,37 @@
 # Restart snapshot
 
-Updated: 2026-10-24 23:35 CEST. Operational snapshot, not an append-only journal.
+Updated: 2026-10-25 00:22 CEST. Operational snapshot, not an append-only journal.
 
 ## Current assignment and authority
 
-- Owner authorised compact-handover integration, commit and push; no product implementation is started by this task.
-- The earlier general stop was lifted by the owner (latest upstream record, 23:20); historical STOP entries are not current authority.
+- Diagnostic stop-reason package is implemented and independently reviewed with no findings on `fix/diag-stop-reason-20261024`.
+- Both archive profiles now cross-check identity stop reasons, exact item shapes and phase-specific failures against real collector behavior.
+- RED evidence captured for contradictory rehashed reasons, missing assertions after reads and impossible property shapes.
+- GREEN: `knx-app` 662 passed/45 ignored; diagnostic collector 20 passed; server diagnostics 5 passed; clippy, fmt, headers, layering, anchors, docs, local-info and diff checks passed.
+- Package commit created. Owner prohibited push, merge, rebase, real bus/device access and the package gate. Next: hand off for coordinator gate/integration.
 - No real bus/device operations, vendor contact, Ollama/model downloads, Fable/Astra or release/deployment authorised. The globally excluded device remains completely off-limits.
-- Prefer Claude delegation to spare Codex budget; no forced model alternation.
+
+## Other claimed packages (preserved from upstream coordination)
+
+| Package | Branch / worktree `<sources>/knxbench-<name>` | Worker |
+| --- | --- | --- |
+| Gate hygiene: `test_web_gate` marker race + surviving Playwright `webServer` after SIGTERM | `fix/gate-hygiene-20261024` / `gate-hygiene-20261024` | Codex |
+| CLI `device diagnostics --device <area.line.device>` | `feat/diag-device-address-20261024` / `diag-device-address-20261024` | Claude |
+| Matrix: one common, persisted object-column width (UI-05 follow-up) | `feat/matrix-object-width-20261024` / `matrix-object-width-20261024` | Claude |
+| Inspector Diagnostics tab: *Analyse device* + *Send report* | `feat/device-diagnostics-entry-20261024` / `device-diagnostics-entry-20261024` | Claude |
 
 ## Saved-project-folder grouping: delivered, closeout owned separately
 
 - Source delivered on main as `e6f227c4`; delivery record `da36b77b9` and [owner log](logs/2026-10-24_codex_wp06-folder-grouping.md).
-- Latest owner record reports integrated package 11/11 and web 35/35 accepted; no Rust/corpus lane selected and no native/Orca/hardware claim. This housekeeping task does not replay or recertify those tests.
-- WP-06 grouping claim released. Owner still owns result-only documentation acceptance and compact evidence/cleanup; completion of that closeout has not been independently established here.
-- Branch/worktree previously used: `integrate/wp06-folder-grouping-20261024`, `<sources>/knxbench-wp06-folder-grouping-20261024`; verify current existence/ownership before touching it.
-- Receipt: `<profile-scratch>/wp06-folder-claude-20261024/integration/gate/receipt.json`; resolve preserved evidence through the owner if retired.
-- Next: reconcile the owner's closeout, without product-test replay or reopening delivered folder grouping.
+- WP-06 grouping claim released. Owner still owns result-only documentation acceptance and compact evidence/cleanup; do not reopen delivered folder grouping.
 
 ## Remaining boundaries and preservation
 
 - Family mapping, codecs, manufacturer folders/modules, import witnesses, priority schema and native/hardware acceptance retain their named prerequisites in maintained docs.
-- WinZip AES source is already documented in the 20 October research; do not claim blanket source absence. Source availability is not verified AES support.
-- Preserve selected-root private/untracked files, the separate Alpha 16 release worktree and all other owners' active evidence. Root synchronization is not part of this task.
-- Detailed old post-16 closeout: [owner log](logs/2026-10-24_codex_post16-closeout.md); private evidence `<profile>/release-evidence/post16-20261024`.
+- WinZip AES source is already documented in the 20 October research; source availability is not verified AES support.
+- Preserve selected-root private/untracked files, the separate Alpha 16 release worktree and all other owners' active evidence.
 
 ## Handover policy and evidence
 
-- Read/update checkpoint rules: `AGENTS.md`. Replace relevant state, preserve other tracks, aim for at most 50 lines; no update for unchanged trivial inquiries.
-- Complete latest pre-compaction journal: [archive](archive/CURRENT_STATE_2026-10-24_final-pre-compact.md), byte-exact from `da36b77b9`. Earlier archive remains preserved.
-- [Transition notice](logs/2026-10-24_handover-notice.md) was prepared for manual forwarding; no recipient acknowledgement is claimed.
-- Repo docs own project status; external vault holds durable knowledge; Hermes sessions hold conversation history. Historical instructions are not execution authority.
+- Read/update checkpoint rules: `AGENTS.md`. Replace relevant state, preserve other tracks, aim for at most 50 lines.
+- Repo docs own project status; external vault holds durable knowledge; Hermes sessions hold conversation history.

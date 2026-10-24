@@ -196,7 +196,7 @@ fn cross_process(state: &crate::AppState) -> Result<std::fs::File, ApiError> {
     .map_err(|_error| {
         observe!(
             state,
-            failure("cross-process-lease", "io", Some(_error.kind()))
+            failure("cross-process-lease", "lease-refused", None)
         );
         refuse("gatewayBusy")
     })

@@ -1279,6 +1279,11 @@ identification only. Both selectors require the address to identify exactly one
 device across the entire project, including separate installations;
 `--device-id` does not bypass this requirement. Resolve duplicate project address
 assignments before retrying.
+The *web entry* above means the memory profile in the web UI and stays open.
+The 24 October 2026 **Analyse device** button on a device's Diagnostics tab
+(beside **Send report**) only opens the existing diagnostic export dialog with
+that device preselected; that dialog offers `generic-identity-v1` only, so the
+button does not bring `system2-declared-segments-v1` to the web.
 
 ## System 2 / System B download outcome (17 October 2026)
 

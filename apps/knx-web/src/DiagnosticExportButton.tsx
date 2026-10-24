@@ -14,27 +14,29 @@ import "./diagnosticExport.css";
 
 export default function DiagnosticExportButton({project,deviceId=null}:{project:ProjectTree|null;deviceId?:number|null}){
  const t=useTranslate();const entry=useFileMenuItemProps();const [open,setOpen]=useState(false);
- return <><button type="button" {...entry} data-diagnostics-open disabled={!project} onClick={()=>setOpen(true)}>{t("diagnostics.title")}</button>{open&&createPortal(<Dialog project={project!} initialDevice={deviceId} close={()=>setOpen(false)}/>,document.body)}</>;
+ return <><button type="button" {...entry} data-diagnostics-open disabled={!project} onClick={()=>setOpen(true)}>{t("diagnostics.title")}</button>{open&&createPortal(<DiagnosticExportDialog project={project!} initialDevice={deviceId} close={()=>setOpen(false)}/>,document.body)}</>;
 }
-function Dialog({project,initialDevice,close}:{project:ProjectTree;initialDevice:number|null;close:()=>void}){
+/** The reviewed export dialog itself; the Diagnostics tab opens it for its device too. */
+export function DiagnosticExportDialog({project,initialDevice,close}:{project:ProjectTree;initialDevice:number|null;close:()=>void}){
  const t=useTranslate();const devices=[...collectDevices(project).values()];
  const [device,setDevice]=useState<number|null>(initialDevice);const [gateway,setGateway]=useState(loadPreferredGateway);
  const [view,setView]=useState<api.DiagnosticView|null>(null);const [readConsent,setReadConsent]=useState(false);const [shareConsent,setShareConsent]=useState(false);
  const [busy,setBusy]=useState(false);const [error,setError]=useState(false);const [saved,setSaved]=useState(false);
  const epoch=useRef(0);const running=useRef<string|null>(null);const mounted=useRef(true);
- running.current=view?.phase==="running"?view.token:null;
+ // Own response tokens synchronously: unmount may precede the queued view's React commit.
+ function updateView(next:api.DiagnosticView|null){running.current=next?.phase==="running"?next.token:null;setView(next);}
  const contextKey=`${projectContextKey(project)}/${project.snapshot_revision??"unbound"}`;
  const [reviewContext,setReviewContext]=useState<string|null>(null);
  const stale=reviewContext!==null&&reviewContext!==contextKey;
- useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;++epoch.current;if(running.current)void api.cancelDiagnostics(running.current).catch(()=>{});};},[]);
+ useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;++epoch.current;const token=running.current;running.current=null;if(token)void api.cancelDiagnostics(token).catch(()=>{});};},[]);
  useEffect(()=>{
   if(view?.phase!=="running")return;
   let active=true;let timer:ReturnType<typeof setTimeout>;const token=view.token;
-  const poll=async()=>{try{const next=await api.pollDiagnostics(token);if(active){setView(next);if(next.phase==="complete")return;}}catch{if(active)setError(true);}if(active)timer=setTimeout(()=>void poll(),250);};
+  const poll=async()=>{try{const next=await api.pollDiagnostics(token);if(active){updateView(next);if(next.phase==="complete")return;}}catch{if(active)setError(true);}if(active)timer=setTimeout(()=>void poll(),250);};
   timer=setTimeout(()=>void poll(),250);return()=>{active=false;clearTimeout(timer);};
  },[view?.token,view?.phase]);
  const acquiring=view?.phase==="running";
- function invalidate(){++epoch.current;setView(null);setReadConsent(false);setShareConsent(false);setError(false);setSaved(false);setReviewContext(null);}
+ function invalidate(){++epoch.current;updateView(null);setReadConsent(false);setShareConsent(false);setError(false);setSaved(false);setReviewContext(null);}
  async function perform(kind:"preview"|"start"|"cancel"|"save"){
   if(busy)return;const version=++epoch.current;setBusy(true);setError(false);
   try{
@@ -42,11 +44,14 @@ function Dialog({project,initialDevice,close}:{project:ProjectTree;initialDevice
     if(device===null||project.server_incarnation===undefined||project.project_incarnation===undefined||project.snapshot_revision===undefined)throw new Error("unbound project");
     const checked=validateGatewayFields(splitGatewayEndpoint(gateway));if(!checked.ok)throw new Error("invalid gateway");
     const next=await api.previewDiagnostics(device,checked.endpoint,{serverIncarnation:project.server_incarnation,projectIncarnation:project.project_incarnation,revision:project.snapshot_revision});
-    if(mounted.current&&epoch.current===version){setView(next);setReviewContext(contextKey);setReadConsent(false);setShareConsent(false);setSaved(false);}
+    if(mounted.current&&epoch.current===version){updateView(next);setReviewContext(contextKey);setReadConsent(false);setShareConsent(false);setSaved(false);}
    }else if(kind==="start"){
-    if(!view||!readConsent||stale)return;const next=await api.startDiagnostics(view.token);if(mounted.current&&epoch.current===version){setView(next);setReadConsent(false);setShareConsent(false);}
+    if(!view||!readConsent||stale)return;const next=await api.startDiagnostics(view.token);
+    if(mounted.current&&epoch.current===version){updateView(next);setReadConsent(false);setShareConsent(false);}
+    // Cleanup may run before Start returns, while the displayed view is still a preview.
+    else if(next.phase==="running")void api.cancelDiagnostics(next.token).catch(()=>{});
    }else if(kind==="cancel"){
-    if(!view)return;const next=await api.cancelDiagnostics(view.token);if(mounted.current&&epoch.current===version)setView(next);
+    if(!view)return;const next=await api.cancelDiagnostics(view.token);if(mounted.current&&epoch.current===version)updateView(next);
    }else{
     if(!view||!shareConsent||view.phase!=="complete")return;await api.saveDiagnostics(view.token);if(mounted.current&&epoch.current===version)setSaved(true);
    }

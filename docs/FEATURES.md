@@ -59,6 +59,7 @@ builds refuse product26; opening new project saves in Alpha 14 is unverified.
 | Feature | Scope | Availability |
 | --- | --- | --- |
 | [Master identity provenance](adr/0147-master-identity-provenance.md) | Product DB v27: retained-source positions for all four master families and both DPT forms, same/cross-file collisions and malformed declarations; historical winner/encounter facts remain unavailable, normalized values unchanged; readable EN/DE catalogue diagnostics | Main-only; `d18ce65e` |
+| [Device diagnostics entry](manual/user-guide/05-devices-and-products.md#device-analysis-and-support) | *Analyse device* and *Send report* on a device's Diagnostics tab open the existing export and support dialogs with that device preselected; same consents and routes, generic identity profile only, no memory profile in the web | Main-only (24 October 2026) |
 
 ## Data-table columns
 

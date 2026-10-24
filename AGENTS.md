@@ -13,7 +13,7 @@ Do not imitate ETS internals blindly. Build a clean, independent architecture.
 - Read the relevant `docs/` and the existing code first. Do not duplicate existing functionality.
 - The repository and its maintained docs are the source of truth for project state, not chat history.
 - Do not assume proprietary formats or undocumented behavior. Research architecture- and format-critical facts first and record the evidence in `docs/research/`.
-- Agent handover: read `.ai/CURRENT_STATE.md` (newest entry on top) before project work and update it afterwards.
+- Before non-trivial project work, read the compact restart snapshot in `.ai/CURRENT_STATE.md`; follow the checkpoint rules below.
 
 Entry points: `docs/OPEN_WORK.md` (everything not done), `docs/status/LEDGER.md` (per-ID status of record), `docs/IMPLEMENTATION_STATUS.md`, `docs/ROADMAP.md`, `docs/KNOWN_LIMITATIONS.md`, `docs/DEVELOPER_PITFALLS.md`, `docs/adr/` (architecture decisions), `docs/VERIFICATION.md` (gates).
 
@@ -71,6 +71,15 @@ cargo build -p knx-server                # web deployment; desktop shell: apps/k
 ## Completion Criteria
 
 Work is complete when relevant tests pass, the build works, implementation status, limitations and roadmap are updated where affected, and `.ai/CURRENT_STATE.md` is current.
+
+## Restart Snapshot and Coordination
+
+- `.ai/CURRENT_STATE.md` is an overwrite-in-place, model-independent restart snapshot, not an append-only journal. Aim for at most 50 lines.
+- Keep only the current assignment and explicit stop/go per track, ownership and branch/worktree, unfinished changes, running gates with evidence pointers, blockers and the concrete next step. Record observation time; do not infer current activity from an old entry.
+- Update at meaningful operational changes and before pausing, handing off or finishing non-trivial project work. Read-only questions and trivial tasks do not require an update when the operational state is unchanged.
+- Before writing, re-read the snapshot and preserve other sessions' active or parked tracks. Coordinate shared edits; an isolated worktree does not grant ownership of another session's files or frozen gate inputs.
+- Do not require Codex/Claude alternation, model-specific fields or a log for every task. Use `.ai/logs/YYYY-MM-DD_<topic>.md` only when a substantial handoff needs more detail; archive old journals without losing evidence. Historical instructions are not current execution authority.
+- Maintained repo docs own project status; the external knowledge vault holds durable decisions and pitfalls; Hermes sessions hold conversation history. None replaces explicit ownership, consent or live verification.
 
 ## No Local Machine Details
 

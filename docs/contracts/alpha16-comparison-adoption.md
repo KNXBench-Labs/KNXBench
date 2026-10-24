@@ -9,6 +9,8 @@ both formerly blocked pinned-input passes; extra local ARM64 preacceptance is
 explicitly deferred and unverified, without changing the normal amd64+arm64
 publication workflow. Publication Go is conditional on final readiness; parent closeout and
 public readback remain pending. No physical-device or broader adoption authority follows.
+The [association link amendment](#association-link-adoption-wp-19-amendment-24-october-2026)
+(24 October 2026) is implemented with simulator software tests only.
 
 ## Authority and scope
 

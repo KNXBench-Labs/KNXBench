@@ -58,15 +58,18 @@ pub enum SavedFolder {
     /// Listed exactly once, at the root or directly in a `Channel` node.
     NoFolder,
     /// Not listed: the device has no retained tree (not imported, schema 11,
-    /// created in KNXBench) or the object is not in it.
+    /// created in KNXBench), the object has no source identity, or the object
+    /// is not in the tree.
     NotInSavedTree,
     /// Listed more than once in the device's tree.
     Ambiguous,
     /// Listed in, or below, a node without a `Type` of `Channel`/`Folder`,
     /// without a `RefId`, or with the same declared path as another node.
     UnidentifiedNode,
-    /// The tree cannot be attributed to exactly this device (several devices
-    /// share its source identity, or several trees match) or cannot be read.
+    /// The tree or object cannot be attributed exactly (several devices or
+    /// objects share a source identity, the object names another owner/source
+    /// member, or several trees match), or the retained hash/bytes cannot be
+    /// verified and read.
     TreeUnresolved,
     /// A module-instance object that the tree places in a folder: binding a
     /// folder through a module instance is not admitted (WP-07).
@@ -78,7 +81,9 @@ pub enum SavedFolder {
 
 #[derive(Debug, Clone)]
 struct ObjectSource {
-    ets_id: String,
+    source: SourceRef,
+    owner: DeviceId,
+    unique_source: bool,
     module: bool,
     stored_active: bool,
 }
@@ -86,6 +91,7 @@ struct ObjectSource {
 /// What placing one device's objects needs from the project.
 #[derive(Debug, Clone)]
 pub struct FolderInput {
+    device: DeviceId,
     source: SourceRef,
     /// Another device states the same source identity.
     shared_source: bool,
@@ -96,6 +102,12 @@ impl FolderInput {
     /// `None` when the device does not exist.
     pub fn collect(project: &Project, device: DeviceId) -> Option<Self> {
         let dev = project.devices.get(device)?;
+        let mut object_source_counts = HashMap::new();
+        for object in project.devices.com_objects() {
+            *object_source_counts
+                .entry((object.source.path.as_str(), object.source.ets_id.as_str()))
+                .or_insert(0usize) += 1;
+        }
         let shared_source = project
             .devices
             .iter()
@@ -108,7 +120,11 @@ impl FolderInput {
                 (
                     com.id,
                     ObjectSource {
-                        ets_id: com.source.ets_id.clone(),
+                        source: com.source.clone(),
+                        owner: com.device,
+                        unique_source: object_source_counts
+                            .get(&(com.source.path.as_str(), com.source.ets_id.as_str()))
+                            == Some(&1),
                         module: com.module_instance.is_some()
                             || com.source.ets_id.starts_with("MD-"),
                         stored_active: com.is_active,
@@ -117,6 +133,7 @@ impl FolderInput {
             })
             .collect();
         Some(Self {
+            device,
             source: dev.source.clone(),
             shared_source,
             objects,
@@ -136,7 +153,7 @@ pub fn saved_folders(
             .map(|(id, _)| (*id, folder.clone()))
             .collect()
     };
-    if input.source.ets_id.is_empty() {
+    if input.source.path.is_empty() || input.source.ets_id.is_empty() {
         return everyone(SavedFolder::NotInSavedTree);
     }
     let suffix = format!("/DeviceInstance[@Id='{}']/{TREE_NAME}", input.source.ets_id);
@@ -152,13 +169,28 @@ pub fn saved_folders(
     if trees.next().is_some() || input.shared_source {
         return everyone(SavedFolder::TreeUnresolved);
     }
+    if knx_store::manufacturer_file_hash(&tree.bytes) != tree.sha256 {
+        return everyone(SavedFolder::TreeUnresolved);
+    }
     let Ok(listed) = read_tree(&tree.bytes) else {
         return everyone(SavedFolder::TreeUnresolved);
     };
     input
         .objects
         .iter()
-        .map(|(id, object)| (*id, place(object, listed.get(object.ets_id.as_str()))))
+        .map(|(id, object)| {
+            let placement = if object.source.path.is_empty() || object.source.ets_id.is_empty() {
+                SavedFolder::NotInSavedTree
+            } else if object.owner != input.device
+                || object.source.path != input.source.path
+                || !object.unique_source
+            {
+                SavedFolder::TreeUnresolved
+            } else {
+                place(object, listed.get(object.source.ets_id.as_str()))
+            };
+            (*id, placement)
+        })
         .collect()
 }
 
@@ -208,9 +240,11 @@ enum Frame {
 /// Strict on structure: the root must be `GroupObjectTree` and every element
 /// below it a `Nodes` or `Node` in the project namespace, in the positions
 /// §1.2.5.21–23 gives them. An unprefixed element without a namespace
-/// declaration inside the fragment inherits the namespace the importer
-/// accepted the tree in. Anything else (a foreign element, an unbound prefix,
-/// a DTD, malformed XML) refuses the whole tree rather than reading around it.
+/// declaration inside a wholly unbound fragment inherits the namespace the
+/// importer accepted the tree in. An explicitly namespaced fragment must use
+/// the same namespace on every structural element. Anything else (a mixed or
+/// foreign namespace, an unbound prefix, a DTD, malformed XML) refuses the
+/// whole tree rather than reading around it.
 fn read_tree(bytes: &[u8]) -> Result<HashMap<String, Vec<Placement>>, TreeUnreadable> {
     if bytes.len() > MAX_TREE_BYTES {
         return Err(TreeUnreadable);
@@ -219,6 +253,7 @@ fn read_tree(bytes: &[u8]) -> Result<HashMap<String, Vec<Placement>>, TreeUnread
     let mut stack: Vec<Frame> = Vec::new();
     let mut listed: HashMap<String, Vec<Placement>> = HashMap::new();
     let mut node_paths: BTreeMap<Vec<TreeNodeRef>, usize> = BTreeMap::new();
+    let mut tree_namespace = None;
     let mut root_seen = false;
     let mut events = 0usize;
     loop {
@@ -238,9 +273,14 @@ fn read_tree(bytes: &[u8]) -> Result<HashMap<String, Vec<Placement>>, TreeUnread
             Event::Eof => break,
             _ => continue,
         };
-        if !project_namespace(&ns) {
+        let namespace = project_namespace(&ns).ok_or(TreeUnreadable)?;
+        if tree_namespace
+            .as_ref()
+            .is_some_and(|expected| expected != &namespace)
+        {
             return Err(TreeUnreadable);
         }
+        tree_namespace.get_or_insert(namespace);
         let local = element.local_name();
         let frame = match (stack.last(), local.as_ref()) {
             (None, "GroupObjectTree") if !root_seen => {
@@ -282,17 +322,28 @@ fn read_tree(bytes: &[u8]) -> Result<HashMap<String, Vec<Placement>>, TreeUnread
     Ok(listed)
 }
 
-/// Unprefixed (inherited) or any `http://knx.org/xml/project/<n>` namespace.
-fn project_namespace(ns: &ResolveResult) -> bool {
+/// The retained fragment either omits one inherited project namespace on
+/// every element, or explicitly resolves every element to one project
+/// namespace URI. The two modes must never be mixed.
+#[derive(Debug, PartialEq, Eq)]
+enum ProjectNamespace {
+    InheritedOmitted,
+    Explicit(String),
+}
+
+fn project_namespace(ns: &ResolveResult) -> Option<ProjectNamespace> {
     match ns {
-        ResolveResult::Unbound => true,
-        ResolveResult::Bound(bound) => bound
-            .as_ref()
-            .strip_prefix("http://knx.org/xml/project/")
-            .is_some_and(|version| {
-                !version.is_empty() && version.bytes().all(|b| b.is_ascii_digit())
-            }),
-        ResolveResult::Unknown(_) => false,
+        ResolveResult::Unbound => Some(ProjectNamespace::InheritedOmitted),
+        ResolveResult::Bound(bound) => {
+            let namespace = bound.as_ref();
+            namespace
+                .strip_prefix("http://knx.org/xml/project/")
+                .filter(|version| {
+                    !version.is_empty() && version.bytes().all(|byte| byte.is_ascii_digit())
+                })
+                .map(|_| ProjectNamespace::Explicit(namespace.to_owned()))
+        }
+        ResolveResult::Unknown(_) => None,
     }
 }
 
@@ -365,6 +416,9 @@ fn attribute(element: &BytesStart, name: &str) -> Result<Option<String>, TreeUnr
 #[cfg(test)]
 mod tests {
     use super::*;
+    use knx_core::{
+        ComObjectInstance, CommissioningState, DeviceInstance, Language, Override, ResolvedFlags,
+    };
 
     fn folder(path: &[(TreeNodeKind, &str)]) -> SavedFolder {
         SavedFolder::Folder {
@@ -380,6 +434,7 @@ mod tests {
 
     fn input(objects: &[(&str, bool, bool)]) -> FolderInput {
         FolderInput {
+            device: DeviceId(1),
             source: SourceRef {
                 path: "P-0001/0.xml".into(),
                 ets_id: "P-0001-0_DI-1".into(),
@@ -392,7 +447,12 @@ mod tests {
                     (
                         ComObjectInstanceId(index as u32 + 1),
                         ObjectSource {
-                            ets_id: (*ets_id).to_owned(),
+                            source: SourceRef {
+                                path: "P-0001/0.xml".into(),
+                                ets_id: (*ets_id).to_owned(),
+                            },
+                            owner: DeviceId(1),
+                            unique_source: true,
                             module: *module,
                             stored_active: *stored_active,
                         },
@@ -411,7 +471,7 @@ mod tests {
             kind: RETAINED_ELEMENT_KIND.into(),
             name: TREE_NAME.into(),
             bytes: bytes.as_bytes().to_vec(),
-            sha256: String::new(),
+            sha256: knx_store::manufacturer_file_hash(bytes.as_bytes()),
         }
     }
 
@@ -422,6 +482,132 @@ mod tests {
     }
 
     const DECLARED: &str = r#"<GroupObjectTree GroupObjectInstances="O-1_R-1"><Nodes><Node Type="Channel" RefId="CH-1" GroupObjectInstances="O-2_R-1"><Nodes><Node Type="Folder" RefId="PB-3" GroupObjectInstances="O-3_R-1 O-4_R-1"><Nodes><Node Type="Folder" RefId="PB-4" GroupObjectInstances="O-5_R-1"/></Nodes></Node></Nodes></Node><Node Type="Folder" RefId="PB-9" GroupObjectInstances="O-6_R-1"/></Nodes></GroupObjectTree>"#;
+
+    fn project_with_object(source: SourceRef, owner: DeviceId) -> Project {
+        let mut project = Project::new(Language("en".into()));
+        project.devices.insert(DeviceInstance {
+            id: DeviceId(1),
+            source: SourceRef {
+                path: "P-0001/0.xml".into(),
+                ets_id: "P-0001-0_DI-1".into(),
+            },
+            name: "Device".into(),
+            description: None,
+            address: None,
+            product_ref: String::new(),
+            program_ref: String::new(),
+            commissioning: CommissioningState::default(),
+            visibility_calculated: true,
+            com_objects: vec![ComObjectInstanceId(1)],
+            binary_data: vec![],
+        });
+        project.devices.insert_com_object(ComObjectInstance {
+            id: ComObjectInstanceId(1),
+            source,
+            device: owner,
+            number: 1,
+            text: Override::Absent,
+            description: Override::Absent,
+            dpt: Override::Absent,
+            flags: ResolvedFlags::none(),
+            size: None,
+            is_active: true,
+            links: vec![],
+            module_instance: None,
+        });
+        project
+    }
+
+    fn project_placement(project: &Project) -> SavedFolder {
+        let input = FolderInput::collect(project, DeviceId(1)).unwrap();
+        let rows = [tree_row(
+            "P-0001/0.xml",
+            "P-0001-0_DI-1",
+            r#"<GroupObjectTree><Node Type="Folder" RefId="PB-1" GroupObjectInstances="O-1_R-1"/></GroupObjectTree>"#,
+        )];
+        saved_folders(&input, &rows)[&ComObjectInstanceId(1)].clone()
+    }
+
+    #[test]
+    fn object_source_must_uniquely_belong_to_the_device_and_source_member() {
+        let source = |path: &str| SourceRef {
+            path: path.into(),
+            ets_id: "O-1_R-1".into(),
+        };
+        let expected_folder = folder(&[(TreeNodeKind::Folder, "PB-1")]);
+
+        let valid = project_with_object(source("P-0001/0.xml"), DeviceId(1));
+        let foreign_owner = project_with_object(source("P-0001/0.xml"), DeviceId(2));
+        let other_member = project_with_object(source("P-0002/0.xml"), DeviceId(1));
+        let missing_member = project_with_object(source(""), DeviceId(1));
+
+        let mut duplicate = project_with_object(source("P-0001/0.xml"), DeviceId(1));
+        let mut duplicate_object = duplicate
+            .devices
+            .com_object(ComObjectInstanceId(1))
+            .unwrap()
+            .clone();
+        duplicate_object.id = ComObjectInstanceId(2);
+        duplicate.devices.insert_com_object(duplicate_object);
+
+        let mut same_id_other_member = project_with_object(source("P-0001/0.xml"), DeviceId(1));
+        let mut other_object = same_id_other_member
+            .devices
+            .com_object(ComObjectInstanceId(1))
+            .unwrap()
+            .clone();
+        other_object.id = ComObjectInstanceId(2);
+        other_object.source.path = "P-0002/0.xml".into();
+        same_id_other_member.devices.insert_com_object(other_object);
+
+        assert_eq!(
+            [
+                project_placement(&valid),
+                project_placement(&foreign_owner),
+                project_placement(&other_member),
+                project_placement(&missing_member),
+                project_placement(&duplicate),
+                project_placement(&same_id_other_member),
+            ],
+            [
+                expected_folder.clone(),
+                SavedFolder::TreeUnresolved,
+                SavedFolder::TreeUnresolved,
+                SavedFolder::NotInSavedTree,
+                SavedFolder::TreeUnresolved,
+                expected_folder,
+            ]
+        );
+    }
+
+    #[test]
+    fn retained_tree_bytes_must_match_their_stored_hash() {
+        let original = r#"<GroupObjectTree><Node Type="Folder" RefId="PB-1" GroupObjectInstances="O-1_R-1"/></GroupObjectTree>"#;
+        let mut row = tree_row("P-0001/0.xml", "P-0001-0_DI-1", original);
+        row.bytes = r#"<GroupObjectTree><Node Type="Folder" RefId="PB-2" GroupObjectInstances="O-1_R-1"/></GroupObjectTree>"#
+            .as_bytes()
+            .to_vec();
+
+        assert_eq!(
+            saved_folders(&input(&[("O-1_R-1", false, true)]), &[row])
+                .into_values()
+                .collect::<Vec<_>>(),
+            [SavedFolder::TreeUnresolved]
+        );
+    }
+
+    #[test]
+    fn explicit_project_namespace_rejects_unbound_structural_children() {
+        let objects = [("O-1_R-1", false, true)];
+        let mixed = r#"<k:GroupObjectTree xmlns:k="http://knx.org/xml/project/23"><Node Type="Folder" RefId="PB-1" GroupObjectInstances="O-1_R-1"/></k:GroupObjectTree>"#;
+        assert_eq!(placed(&objects, mixed), [SavedFolder::TreeUnresolved]);
+
+        let inherited_fragment = r#"<GroupObjectTree><Node Type="Folder" RefId="PB-1" GroupObjectInstances="O-1_R-1"/></GroupObjectTree>"#;
+        assert_eq!(
+            placed(&objects, inherited_fragment),
+            [folder(&[(TreeNodeKind::Folder, "PB-1")])]
+        );
+    }
 
     #[test]
     fn declared_folders_place_objects_by_their_ref_id_chain() {

@@ -159,7 +159,10 @@ folder's caption lives only in product data.
 undo as an opaque per-device row, so this slice is **projection-only**: no
 domain, storage-schema, import or command change. `knx-app`'s
 `com_object_folders` reads the device's retained row (matched by exact device
-`SourceRef` path plus `DeviceInstance[@Id]` locator) and the server adds
+`SourceRef` path plus `DeviceInstance[@Id]` locator) and admits an object only
+when its full `SourceRef` belongs uniquely to that device and source member.
+Before parsing, the reader verifies the retained bytes against the row's
+SHA-256. The server adds
 `ComObjectNode.project_folder` to the device detail. A folder's identity is the
 declared `Type`/`RefId` chain from the root, per device; the key is opaque and
 length-prefixed. The table shows the chain's `Folder` ids verbatim
@@ -173,19 +176,21 @@ manufacturer label is shown or guessed.
 | --- | --- |
 | `Ambiguous` | the object is listed more than once in the device's tree (also twice in one list) |
 | `UnidentifiedNode` | its node or an ancestor lacks `Type` `Channel`/`Folder` or a nonempty `RefId`, or repeats another node's declared path |
-| `TreeUnresolved` | several trees match, another device shares the source identity, or the tree is malformed, foreign, has an unbound prefix, a DTD, an element outside `Nodes`/`Node` positions, or exceeds the read bounds |
+| `TreeUnresolved` | several trees match; another device shares the source identity; an object has a foreign owner, another source member or a project-duplicate full source identity; retained bytes fail their SHA-256; or the tree is malformed, foreign, mixes explicit and unbound project elements, has an unbound prefix, a DTD, an element outside `Nodes`/`Node` positions, or exceeds the read bounds |
 | `ModuleObject` | a module-instance object the tree places in a folder (WP-07 binding not admitted) |
 | `Inactive` | a stored-inactive object, or one the current evaluation reports `Inactive`, that the tree places in a folder |
 
 `NoFolder` (root or directly in a `Channel`) and `NotInSavedTree` (no retained
-tree, schema 11, KNXBench-created device or object, unlisted object) show
+tree, schema 11, KNXBench-created/source-less device or object, unlisted object) show
 nothing. Both unchanged public importer trees above therefore yield no folder
 (`Ambiguous`, `UnidentifiedNode`), as they must.
 
 **Evidence.** `knx-app` unit tests: declared single/nested folders, root and
 channel objects, module/inactive refusal, both unchanged WP-06A trees,
-unidentified/duplicate paths, seven unreadable/foreign trees, a declared
-project prefix and exact device/source matching. `knx-server`: overlay key and
+unidentified/duplicate paths, seven malformed/foreign tree cases, explicit
+project namespaces, wholly unbound inherited fragments, mixed-namespace
+refusal, retained-hash mutation, and exact device/object source ownership
+including project-wide duplicate identities. `knx-server`: overlay key and
 refusal mapping, evaluated-inactive downgrade, and a route test that imports a
 synthetic schema-23 project and gets identical placements after import, native
 save-as/reopen and an undoable object edit plus its undo (no product database). Vitest covers

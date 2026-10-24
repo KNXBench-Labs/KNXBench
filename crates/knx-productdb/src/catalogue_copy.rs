@@ -206,12 +206,12 @@ pub(crate) fn copy_pinned_current(
 
 mod destination;
 pub(crate) use destination::{
-    ArtifactInventory, CopyFacts, DestinationRole, FreshDestination, ValidatedDestination,
+    ArtifactInventory, CopyFacts, DestinationRole, FreshDestination, RehearsalDestination,
+    ValidatedDestination,
 };
 #[cfg(test)]
 pub(crate) use destination::{
     DestinationCleanup, DestinationError, DestinationFailure, DestinationStage,
-    RehearsalDestination,
 };
 pub use destination::{PublishedRecovery, RecoveryPublicationError, ValidatedRecovery};
 

@@ -36,7 +36,7 @@ mod save_directory;
 mod session_log_export;
 mod web_process;
 use bus_monitor_export::write_bus_capture;
-use save_directory::with_default_directory;
+use save_directory::{dialog_directory_string, process_default_directory, with_default_directory};
 use session_log_export::write_session_log;
 use web_process::{CloseDecision, SharedSupervisor, WebProcessSupervisor};
 
@@ -89,6 +89,16 @@ fn destroy<R: tauri::Runtime>(window: &tauri::Window<R>) {
     if let Err(error) = window.destroy() {
         eprintln!("knx-desktop: could not close the window: {error}");
     }
+}
+
+/// The folder the frontend's plugin dialogs (`apps/knx-web/src/filePicker.ts`:
+/// project Save As/Open, CSV, debug report, …) start in: the same
+/// [`process_default_directory`] the Rust-side dialogs use, so none opens in
+/// the read-only AppImage mount. `None` keeps the toolkit default. Async so
+/// the filesystem checks stay off the main thread.
+#[tauri::command]
+async fn default_dialog_directory() -> Option<String> {
+    dialog_directory_string(process_default_directory())
 }
 
 #[tauri::command]
@@ -227,7 +237,11 @@ fn begin_close<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
 /// `capabilities/default.json` (issue #7).
 macro_rules! app_command_handler {
     () => {
-        tauri::generate_handler![crate::save_session_log, crate::save_bus_monitor_capture]
+        tauri::generate_handler![
+            crate::save_session_log,
+            crate::save_bus_monitor_capture,
+            crate::default_dialog_directory
+        ]
     };
 }
 

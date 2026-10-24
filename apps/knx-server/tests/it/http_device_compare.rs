@@ -22,7 +22,7 @@ use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use knx_core::commissioning::load_state::LoadState;
 use knx_core::commissioning::properties::{ObjectIndex, PID_HARDWARE_TYPE, PID_MANUFACTURER_ID};
-use knx_core::IndividualAddress;
+use knx_core::{DeviceId, DeviceInstance, IndividualAddress, Language, Project, SourceRef};
 use knx_net::commissioning::simulator::{Seen, SimulatedDevice, SimulatorConfig};
 use knx_net::{
     ApplicationService, BusError, Destination, DiscoveredGateway, ManagementTransport,
@@ -37,6 +37,7 @@ const PACKAGE: &str = "MDT_KP_BE_01_Push_Button_V15a.knxprod";
 const PROJECT: &str = "KNXBench 1.1.67 option C.knxdb";
 const GATEWAY: &str = "192.0.2.10:3671";
 
+mod link_adoption;
 mod mounted_adoption;
 
 fn original_data() -> PathBuf {
@@ -212,6 +213,85 @@ async fn harness_timed(device: Arc<SimulatedDevice>, timing: SessionTiming) -> H
     }
 }
 
+/// The corpus-free KL-006 fixture behind the production HTTP comparison
+/// route. Its connector is the in-memory simulator above; no socket exists.
+fn plugin_harness() -> Harness {
+    use knx_testsupport::vendor_plugin as fixture;
+
+    let dir = tempfile::tempdir().unwrap();
+    let products = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+    knx_productdb::ingest_file(
+        &products,
+        "M-FFF6/A.xml",
+        fixture::program_xml(&fixture::declaration()).as_bytes(),
+    )
+    .unwrap();
+    knx_productdb::ingest_file(
+        &products,
+        "M-FFF6/Hardware.xml",
+        fixture::HARDWARE_XML.as_bytes(),
+    )
+    .unwrap();
+
+    let device = Arc::new(SimulatedDevice::with_config_at(
+        fixture::TARGET.parse().unwrap(),
+        SimulatorConfig {
+            mask_version: 0x0701,
+            ..Default::default()
+        },
+    ));
+    device.preset_property(0, PID_MANUFACTURER_ID, &[0xFF, 0xF6]);
+    device.preset_property(
+        3,
+        knx_core::commissioning::properties::PID_PROGRAM_VERSION,
+        &[0xFF, 0xF6, 0x00, 0x01, 0x01],
+    );
+    device.preset_memory(0x4000, &[0; 8]);
+    device.preset_memory(0x4400, &[1, 2, 3, 4]);
+    for machine in [1, 3] {
+        device.preset_load_state(ObjectIndex::new(machine), LoadState::Loaded);
+    }
+
+    let calls = Arc::new(AtomicUsize::new(0));
+    let state = Arc::new(knx_server::AppState {
+        product_db: Some(
+            knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap(),
+        ),
+        connector: Box::new(SimConnector {
+            device: Arc::clone(&device),
+            calls: Arc::clone(&calls),
+        }),
+        device_download_timing: fast(),
+        ..knx_server::AppState::new(dir.path().to_path_buf())
+    });
+    let mut project = Project::new(Language("en".into()));
+    project.devices.insert(DeviceInstance {
+        id: DeviceId(1),
+        source: SourceRef {
+            path: "synthetic".into(),
+            ets_id: "DEV-1".into(),
+        },
+        name: "Synthetic plug-in witness".into(),
+        description: None,
+        address: Some(fixture::TARGET.parse().unwrap()),
+        product_ref: fixture::PRODUCT_REF.into(),
+        program_ref: fixture::HARDWARE2PROGRAM_REF.into(),
+        commissioning: Default::default(),
+        visibility_calculated: true,
+        com_objects: vec![],
+        binary_data: vec![],
+    });
+    *state.project.lock().unwrap() = Some(project);
+    let app = knx_server::app(Arc::clone(&state), None);
+    Harness {
+        _dir: dir,
+        app,
+        state,
+        device,
+        calls,
+    }
+}
+
 fn post(uri: &str, body: Value) -> Request<Body> {
     Request::builder()
         .method("POST")
@@ -294,6 +374,25 @@ fn no_writes(device: &SimulatedDevice) -> bool {
             Seen::MemoryWrite { .. } | Seen::PropertyWrite { .. } | Seen::Restart { .. }
         )
     })
+}
+
+#[tokio::test]
+async fn declared_download_plugin_remains_comparable_through_http() {
+    use knx_testsupport::vendor_plugin as fixture;
+
+    let h = plugin_harness();
+    let (status, body) = compare(
+        &h.app,
+        json!({ "address": fixture::TARGET, "gateway": GATEWAY }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["programId"], fixture::PROGRAM_ID);
+    assert_eq!(body["written"], false);
+    assert_eq!(body["partial"], false);
+    assert!(body["observationToken"].is_string(), "{body}");
+    assert_eq!(h.calls.load(Ordering::SeqCst), 1);
+    assert!(no_writes(&h.device));
 }
 
 #[tokio::test]

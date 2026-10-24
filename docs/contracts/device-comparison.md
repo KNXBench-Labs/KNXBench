@@ -129,6 +129,10 @@ refuse the whole selection; unselected unknown rows remain visible and intact.
 Incarnation, P3 revision, complete project/history and rebuilt source authority
 are checked again before one undoable edit. Comparison itself still cannot
 write, and project → device reuses the existing validated download workflow.
+Its [association amendment](alpha16-comparison-adoption.md#association-link-adoption-wp-19-amendment-24-october-2026)
+(24 October 2026) adds object ↔ group-address link adoption from fully decoded
+`0701h` association tables with unambiguous project GA/object mapping; address
+and count rows stay unsupported and nothing is created.
 
 ## Required evidence
 

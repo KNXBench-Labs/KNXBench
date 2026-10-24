@@ -115,11 +115,7 @@ fn decoded(rows: &[knx_productdb::image_comparison::ComparisonRow]) -> Vec<Decod
         .enumerate()
         .map(|(index, row)| DecodedDto {
             index,
-            adoptable: row.kind == "parameter"
-                && row.parameter.is_some()
-                && row.reason.is_none()
-                && row.project.is_some()
-                && row.device.is_some(),
+            adoptable: knx_app::comparison_adoption::adoption_hint(row),
             kind: row.kind,
             label: row.label.clone(),
             address: row.address,

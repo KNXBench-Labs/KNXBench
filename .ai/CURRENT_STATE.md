@@ -1,6 +1,6 @@
 # Restart snapshot
 
-Updated: 2026-10-24 23:35 CEST. Operational snapshot, not an append-only journal.
+Updated: 2026-10-25 00:20 CEST. Operational snapshot, not an append-only journal.
 
 ## Current assignment and authority
 
@@ -17,6 +17,13 @@ Updated: 2026-10-24 23:35 CEST. Operational snapshot, not an append-only journal
 - Branch/worktree previously used: `integrate/wp06-folder-grouping-20261024`, `<sources>/knxbench-wp06-folder-grouping-20261024`; verify current existence/ownership before touching it.
 - Receipt: `<profile-scratch>/wp06-folder-claude-20261024/integration/gate/receipt.json`; resolve preserved evidence through the owner if retired.
 - Next: reconcile the owner's closeout, without product-test replay or reopening delivered folder grouping.
+
+## Diagnostic CLI selector review correction
+
+- Scoped correction verified in `feat/diag-device-address-20261024`, `<sources>/knxbench-diag-device-address-20261024`; CLI/docs only. The app diagnostic reader remains separately owned.
+- Refusals/help/docs require project-wide address uniqueness; candidate ids/names identify conflicts, not a bypass. The app guard is unchanged.
+- Final test bytes failed on the old misleading advice, then passed: 144 CLI unit + 225 integration, 21 ignored. Binary regression tries address then both ids across separate installations for both profiles, with no UDP, preview output or archive.
+- Scoped Clippy, fmt, docs and local-info checks passed. Next: owner integration/review of the focused commit; no push, merge, hardware or full gate. Evidence: `<profile-scratch>/diag-selector-remediation/{red-final,green}/receipt.json` and `verification.json`.
 
 ## Remaining boundaries and preservation
 

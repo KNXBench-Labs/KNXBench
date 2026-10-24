@@ -6,6 +6,8 @@
 //! and a device without an assigned address is never selected by address.
 use knx_core::{DeviceId, IndividualAddress, Project};
 
+pub const ADDRESS_UNIQUENESS_REQUIRED: &str = "individual address must uniquely identify one device across the project; --device-id does not bypass this requirement; resolve duplicate project address assignments before retrying";
+
 /// The device a command was told to work on, before the project is opened.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DeviceSelector {
@@ -53,7 +55,7 @@ impl DeviceSelector {
             )),
             [one] => Ok(one.id),
             several => Err(format!(
-                "{} project devices share individual address {address}; choose one with --device-id <id>: {}",
+                "{} project devices share individual address {address}; {ADDRESS_UNIQUENESS_REQUIRED}. Candidates (internal ids and names, for identification only): {}",
                 several.len(),
                 several
                     .iter()
@@ -179,7 +181,14 @@ mod tests {
         ]);
         let error = address("1.1.67").resolve(&p).unwrap_err();
         assert!(error.contains("1.1.67"), "{error}");
-        assert!(error.contains("--device-id"), "{error}");
+        assert!(
+            error.contains(
+                "individual address must uniquely identify one device across the project"
+            ),
+            "{error}"
+        );
+        assert!(error.contains("--device-id does not bypass"), "{error}");
+        assert!(!error.contains("choose one with"), "{error}");
         let first = error.find("3 \"First actuator\"").expect(&error);
         let second = error.find("7 \"Second actuator\"").expect(&error);
         assert!(first < second, "candidates in id order: {error}");

@@ -1,4 +1,4 @@
-//! Real built CLI, using only its explicit synthetic transport.
+//! Exercises the built diagnostics CLI with synthetic fixtures and silent loopback peers.
 use std::net::UdpSocket;
 use std::process::Command;
 use std::time::Duration;
@@ -461,6 +461,94 @@ fn ambiguous_unknown_malformed_or_conflicting_selectors_refuse_before_any_contac
     }
     assert!(!output.exists());
     assert_nothing_received(&peer);
+}
+
+#[test]
+fn duplicate_addresses_across_installations_refuse_address_then_each_internal_id() {
+    let dir = tempfile::tempdir().unwrap();
+    let (project, products) = fixture_with(dir.path(), &[(2, "Duplicate", Some("1.1.67"))]);
+    let conn = knx_store::open_and_migrate(&project).unwrap();
+    let mut p = knx_store::load_project(&conn).unwrap();
+    let mut second = p.installations[0].clone();
+    second.id = InstallationId(1);
+    second.name = "Second installation".into();
+    second.topology.unassigned = vec![DeviceId(2)];
+    p.installations[0].topology.unassigned = vec![DeviceId(1)];
+    p.installations.push(second);
+    knx_store::save_project(&conn, &p).unwrap();
+    drop(conn);
+
+    let peer = silent_peer();
+    let gateway = peer.local_addr().unwrap().to_string();
+    for profile in ["generic-identity-v1", MEMORY_PROFILE] {
+        let output = dir.path().join(format!("{profile}.zip"));
+        let common = [
+            "--profile",
+            profile,
+            "--project",
+            project.to_str().unwrap(),
+            "--product-db",
+            products.to_str().unwrap(),
+            "--gateway",
+            &gateway,
+            "--output",
+            output.to_str().unwrap(),
+            "--confirm-read",
+        ];
+        let address = diagnostics(&[&common[..], &["--device", "1.1.67"]].concat());
+        assert!(!address.status.success());
+        assert!(address.stdout.is_empty());
+        assert!(!output.exists());
+        assert_nothing_received(&peer);
+        let stderr = String::from_utf8_lossy(&address.stderr);
+        // Keep the identification list, then try every listed internal id.
+        let candidates = [("1", "Synthetic"), ("2", "Duplicate")];
+        let mut id_errors = Vec::new();
+        for (id, name) in candidates {
+            assert!(stderr.contains(&format!("{id} {name:?}")), "{stderr}");
+            let by_id = diagnostics(&[&common[..], &["--device-id", id]].concat());
+            assert!(!by_id.status.success(), "{profile}: id {id} accepted");
+            assert!(by_id.stdout.is_empty());
+            assert!(!output.exists());
+            assert_nothing_received(&peer);
+            let id_error = String::from_utf8_lossy(&by_id.stderr);
+            assert!(
+                id_error.contains("diagnostics-address-ambiguous"),
+                "{id_error}"
+            );
+            id_errors.push(id_error.into_owned());
+        }
+        assert!(
+            stderr.contains(
+                "individual address must uniquely identify one device across the project"
+            ),
+            "{stderr}"
+        );
+        assert!(stderr.contains("--device-id does not bypass"), "{stderr}");
+        assert!(!stderr.contains("choose one with"), "{stderr}");
+        for id_error in id_errors {
+            assert!(
+                id_error.contains(
+                    "individual address must uniquely identify one device across the project"
+                ),
+                "{id_error}"
+            );
+            assert!(
+                id_error.contains("--device-id does not bypass"),
+                "{id_error}"
+            );
+        }
+    }
+}
+
+#[test]
+fn diagnostics_help_requires_project_wide_unique_addresses_for_both_selectors() {
+    let result = Command::new(env!("CARGO_BIN_EXE_knx")).output().unwrap();
+    assert!(!result.status.success());
+    let stderr = String::from_utf8_lossy(&result.stderr);
+    assert!(stderr.contains("uniquely identify one device across the project"));
+    assert!(stderr.contains("--device-id does not bypass"));
+    assert!(!stderr.contains("internal --device-id the refusal lists"));
 }
 
 #[test]

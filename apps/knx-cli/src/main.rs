@@ -172,8 +172,9 @@ const USAGE: &str = "usage: knx import <file.knxproj> [--store <path.knxdb> [--r
      \x20     knx device diagnostics --simulate --output <new.zip> [--confirm-read]\n\
      \x20         (READ ONLY generic identity export; preview without --confirm-read. No memory\n\
      \x20         profile, keys or download admission required. --simulate never opens a gateway.\n\
-     \x20         --device refuses an address no device or several devices have; then use the\n\
-     \x20         internal --device-id the refusal lists.)\n\
+     \x20         Both selectors require the address to uniquely identify one device across the project.\n\
+     \x20         Duplicates list ids/names for identification; resolve the project address assignments.\n\
+     \x20         --device-id does not bypass this requirement, even across installations.)\n\
      \x20     knx device diagnostics --profile system2-declared-segments-v1 --project <path.knxdb>\n\
      \x20                  (--device <area.line.device> | --device-id <id>) --product-db <path>\n\
      \x20                  (--gateway <host:port> | --simulate) --output <new.zip> [--confirm-read]\n\

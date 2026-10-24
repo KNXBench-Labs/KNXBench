@@ -45,6 +45,34 @@ existing matching unchanged.
 - Bounds: 3 logical reads, 30 s acquisition deadline (checked before every
   read), 10 s gateway connect, 3 s cleanups, 512 retained octets per reply.
 
+### Identity stop-reason contract
+
+As of **25 October 2026**, the archive reader enforces the same identity-item
+state/reason mapping for both profiles. The identity-only profile had the same
+gap as format 2; both are fixed.
+
+| Collector identity state | Reachable reason |
+| --- | --- |
+| Format 2 lacks a recorded mask or manufacturer assertion; no item attempted | `identity-assertion-missing` (format 2 only, before any frame) |
+| No item attempted with the required assertions present | `cancelled`, `deadline`, `timeout`, `connect-rejected`, `self-addressed`, `connection-lost`, `event-loss` or `transport-error`; format 1 may instead carry `gateway-busy`, `context-changed-before-connect`, `server-stopping`, `gateway-connect-failed` or `gateway-timeout` from its caller |
+| An attempted item is `error` | Exactly that item's `cancelled`, `deadline`, `timeout`, `connection-released`, `connection-lost`, `event-loss`, `transport-error` or `response-size-limit-raw-not-retained` token |
+| Descriptor has a non-error, non-exact response (`partial`) | `descriptor-unverified` |
+| A read descriptor or PID 12 contradicts its recorded assertion | `identity-mismatch` |
+| A non-stopping completed prefix is followed by an untouched item | `cancelled` |
+| All three items complete without an earlier stop, but at least one is not `read` | `identity-unverified` in format 2; no identity stop in format 1 |
+| All three are exactly read; format-2 PID 78 does not `property_matches` its comparison | `identity-mismatch` in format 2; format 1 makes no PID 78 assertion |
+| Identity is admitted | No identity stop; format 2 proceeds to memory and format 1 completes |
+
+For the lower-layer format-2 collector, an empty PID 78 comparison also takes
+the pre-frame `identity-assertion-missing` branch; ProductDB derivation refuses
+such a plan, so the archive profile has no corresponding valid plan. A caller's
+`tunnel-disconnect-unconfirmed` can replace only an otherwise absent final stop
+reason. Rewritten archives whose reason contradicts these states are refused
+even when every member length and SHA-256 value has been recomputed.
+The reader also checks the collector's per-query response shapes: a descriptor
+has no returned-element count, a property has one (zero means an ambiguous
+refusal), and status-specific errors and retained-byte counts are fixed.
+
 ## Profile `system2-declared-segments-v1` (format 2)
 
 [ADR-0143](../adr/0143-declared-segment-memory-evidence-profile.md); offline
@@ -105,8 +133,17 @@ ETS-programmed state offline with KNXBench's source interpretation.
   refusal) ends its range, an error ends the run and is the stop reason, an
   unread chunk outside an ended range means `cancelled`, and a complete run
   with nothing ended has no stop reason except the caller's
-  `tunnel-disconnect-unconfirmed`. Not yet checked: whether an *identity*
-  stop reason matches the identity items (open work, MINOR). `read_bundle` refuses format 2 rather than
+  `tunnel-disconnect-unconfirmed`. Chunk error tokens also follow
+  `memory_reads`: `partial` requires `unexpected-length`, `refused-ambiguous`
+  requires `access-denied-or-memory-unavailable`, and `error` admits only
+  `cancelled`, `deadline`, `timeout`, `connection-released`, `connection-lost`,
+  `event-loss` or `transport-error`. These are the bounded wait's outcomes and
+  the established session's memory-exchange failures, not every token in the
+  collector's shared `failure` mapping: setup/identity reasons and the caller's
+  tunnel-teardown reason cannot be chunk errors, even in observer snapshots.
+  **25 October 2026:** the reader also
+  cross-checks every identity-phase stop reason against the identity items and
+  assertions, for both formats. `read_bundle` refuses format 2 rather than
   dropping its memory. Unread octets are never zero-filled. Same create-only
   `0600` writer with reread. The acquisition plan is opaque: only
   `prepare_memory` (ProductDB derivation) builds it, `acquire_memory` takes
@@ -232,12 +269,18 @@ separation); `knx-cli`
 with a silent loopback gateway, `--simulate` end to end, refusals); memory
 profile also `knx-core` `declared_memory` (5), `knx-productdb`
 `system2_declared_segments` (5) and the ignored exact public-package test,
-`knx-app` `device_diagnostics_memory` (20: derivation, format-2 roundtrip,
+`knx-app` `device_diagnostics_memory` (31: derivation, format-2 roundtrip,
 0600/no overwrite, strict refusals, format 1 unchanged, size ceiling, identity
 admission, chunk order, real fault roundtrips, duplicate and competing-end-record
 ZIPs for both formats, ZIP comment, every observer snapshot exportable,
-in-flight chunk shape, impossible identity sequences in each format, every
-snapshot of refused-PID12 and mismatch runs, the 64/65-octet PID 78 bound)
+in-flight chunk shape, impossible identity sequences and identity stop reasons
+in each format, real collector stop outcomes through both profiles and reader
+APIs, every
+snapshot of refused-PID12 and mismatch runs, the real deadline and missing-
+assertion outcomes, the 64/65-octet PID 78 bound, rehashed phase-inappropriate
+chunk errors in complete reports and snapshots, exact partial/refusal error
+labels, real memory-exchange failures and their snapshots, cancellation before
+and during a chunk, and unfinished device teardown)
 and the raw central-directory unit tests (4); web
 component/client tests; built shell in
 Chromium against the real HTTP handlers and the regular simulator (EN/DE,

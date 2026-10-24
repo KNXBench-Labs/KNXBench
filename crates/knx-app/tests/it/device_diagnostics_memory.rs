@@ -1,9 +1,10 @@
 //! Format-2 diagnostic archives: declared memory evidence, strict reader, format 1 intact.
 use knx_app::device_diagnostics::{
-    acquire, acquire_memory, bundle, bundle_export, pending, prepare, prepare_memory, read_bundle,
-    read_export, write_new_export, Export, MEMORY_PROFILE,
+    acquire, acquire_memory, bundle, bundle_export, pending, pending_memory, prepare,
+    prepare_memory, read_bundle, read_export, write_new_export, Export, MEMORY_PROFILE,
 };
 use knx_core::{DeviceId, DeviceInstance, Language, Project, SourceRef};
+use knx_net::commissioning::diagnostic_export::{collect_declared_memory, Identity, MemoryRequest};
 use knx_net::commissioning::simulator::{SimulatedDevice, SimulatorConfig};
 use std::io::{Cursor, Read, Write};
 use std::sync::atomic::AtomicBool;
@@ -548,14 +549,113 @@ async fn chunk_sequences_the_collector_cannot_produce_are_refused() {
     read_export(&unconfirmed).expect("an unconfirmed tunnel teardown is no contradiction");
 }
 
+#[tokio::test]
+async fn memory_chunk_errors_must_originate_in_the_memory_phase() {
+    let original = bundle_export(&export().await).unwrap();
+    read_export(&rehashed(&original, |_, _| {})).expect("re-encoding alone is accepted");
+    let mut accepted = vec![];
+    for reason in [
+        "identity-mismatch",
+        "identity-unverified",
+        "descriptor-unverified",
+        "identity-assertion-missing",
+        "connect-rejected",
+        "self-addressed",
+        "tunnel-disconnect-unconfirmed",
+        "excluded",
+        "not-connected",
+        "management-error",
+        "memory-refused",
+        "response-size-limit-raw-not-retained",
+        "invented-error",
+    ] {
+        // No identity contradiction, sequence defect, coverage or checksum
+        // mismatch can mask the error-token rule, including in snapshots.
+        for complete in [false, true] {
+            let forged = rehashed(&original, |r, m| {
+                unread_from(m, 1);
+                set_chunk(m, 0, "error", "", Some(reason));
+                r["complete"] = complete.into();
+                r["stopReason"] = if complete {
+                    reason.into()
+                } else {
+                    serde_json::Value::Null
+                };
+            });
+            match read_export(&forged) {
+                Ok(_) => accepted.push((reason, complete)),
+                Err(error) => assert_eq!(error, "diagnostics-invalid-memory"),
+            }
+        }
+    }
+    assert!(
+        accepted.is_empty(),
+        "phase-inappropriate chunk errors accepted: {accepted:?}"
+    );
+}
+
+#[tokio::test]
+async fn memory_range_end_errors_must_match_the_collector_outcome() {
+    let original = bundle_export(&export().await).unwrap();
+    let mut accepted = vec![];
+    for (status, bytes) in [("partial", "01"), ("refused-ambiguous", "")] {
+        for reason in [
+            "identity-mismatch",
+            "timeout",
+            "memory-refused",
+            "invented-error",
+        ] {
+            let forged = rehashed(&original, |_, m| {
+                set_chunk(m, 0, status, bytes, Some(reason));
+                set_chunk(m, 1, "not-read", "", None);
+                set_chunk(m, 2, "not-read", "", None);
+            });
+            match read_export(&forged) {
+                Ok(_) => accepted.push((status, reason)),
+                Err(error) => assert_eq!(error, "diagnostics-invalid-memory"),
+            }
+        }
+    }
+    assert!(
+        accepted.is_empty(),
+        "incorrect range-end errors accepted: {accepted:?}"
+    );
+}
+
 /// Test-only memory faults, injected between the simulator and the client.
 #[derive(Clone, Copy)]
 enum Fault {
     None,
+    /// Report this transport's own address as the selected device.
+    SelfAddressed,
+    /// Fail the connection send in the transport adapter.
+    TransportConnect,
+    /// Fail the selected property read in the transport adapter.
+    TransportProperty(u8),
+    /// Overflow the event receiver during connection setup.
+    EventLossConnect,
+    /// Overflow the event receiver during the selected property read.
+    EventLossProperty(u8),
+    /// Answer the descriptor one octet short.
+    ShortDescriptor,
     /// Answer one octet short at this address.
     ShortAt(u16),
-    /// Drop the answer at this address.
+    /// Drop the answer at this address, retaining its transport acknowledgement.
     SilentAt(u16),
+    /// Drop all events at this address, exhausting the transport ladder.
+    UnacknowledgedAt(u16),
+    /// Fail this memory request in the adapter (including an adapter timeout).
+    TransportAt(u16, bool),
+    /// Overflow the memory request's event receiver.
+    EventLossAt(u16),
+    /// End the memory request by a device disconnect or tunnel closure.
+    DisconnectAt(u16, bool),
+    /// Never finish the device-side disconnect send.
+    StallDisconnect,
+    /// Drop the answer for this Device Object property.
+    SilentProperty(u8),
+    /// Answer this Device Object property above the retention ceiling.
+    OversizeProperty(u8),
     /// Answer this Device Object property with `nr_of_elem = 0`.
     RefuseProperty(u8),
 }
@@ -575,7 +675,11 @@ impl Faulty {
 }
 impl knx_net::ManagementTransport for Faulty {
     fn assigned_address(&self) -> knx_core::IndividualAddress {
-        self.device.assigned_address()
+        if matches!(self.fault, Fault::SelfAddressed) {
+            "1.1.25".parse().unwrap()
+        } else {
+            self.device.assigned_address()
+        }
     }
     fn subscribe(&self) -> tokio::sync::broadcast::Receiver<knx_net::TunnelEvent> {
         self.tx.subscribe()
@@ -589,11 +693,79 @@ impl knx_net::ManagementTransport for Faulty {
         tpci: knx_net::Tpci,
         service: knx_net::ApplicationService,
     ) -> Result<(), knx_net::BusError> {
+        if matches!(self.fault, Fault::StallDisconnect) && tpci == knx_net::Tpci::Disconnect {
+            return std::future::pending().await;
+        }
+        if let knx_net::ApplicationService::MemoryRead { address, .. } = &service {
+            match self.fault {
+                Fault::TransportAt(at, timeout) if *address == at => {
+                    return Err(if timeout {
+                        knx_net::BusError::Timeout
+                    } else {
+                        knx_net::BusError::NotImplemented
+                    });
+                }
+                Fault::UnacknowledgedAt(at) if *address == at => return Ok(()),
+                Fault::DisconnectAt(at, true) if *address == at => {
+                    let _ = self.tx.send(knx_net::TunnelEvent::Closed);
+                    return Ok(());
+                }
+                _ => {}
+            }
+        }
+        if matches!(self.fault, Fault::TransportConnect) && tpci == knx_net::Tpci::Connect
+            || matches!(
+                (&service, self.fault),
+                (
+                    knx_net::ApplicationService::PropertyValueRead { property_id, .. },
+                    Fault::TransportProperty(failed)
+                ) if *property_id == failed
+            )
+        {
+            return Err(knx_net::BusError::NotImplemented);
+        }
+        let overflow = matches!(self.fault, Fault::EventLossConnect)
+            && tpci == knx_net::Tpci::Connect
+            || matches!(
+                (&service, self.fault),
+                (
+                    knx_net::ApplicationService::PropertyValueRead { property_id, .. },
+                    Fault::EventLossProperty(failed)
+                ) if *property_id == failed
+            )
+            || matches!(
+                (&service, self.fault),
+                (knx_net::ApplicationService::MemoryRead { address, .. }, Fault::EventLossAt(at))
+                    if *address == at
+            );
         let mut rx = self.device.subscribe();
         self.device.send_frame(destination, tpci, service).await?;
-        while let Ok(mut event) = rx.try_recv() {
+        let mut events = Vec::new();
+        while let Ok(event) = rx.try_recv() {
+            events.push(event);
+        }
+        if overflow {
+            let seed = events.first().expect("simulator answered").clone();
+            for _ in 0..300 {
+                let _ = self.tx.send(seed.clone());
+            }
+            return Ok(());
+        }
+        for mut event in events {
             if let knx_net::TunnelEvent::Telegram(ref mut frame) = event {
                 match (&mut frame.service, self.fault) {
+                    (
+                        knx_net::ApplicationService::MemoryResponse { address, .. },
+                        Fault::DisconnectAt(at, false),
+                    ) if *address == at => {
+                        frame.transport = knx_net::Tpci::Disconnect;
+                    }
+                    (
+                        knx_net::ApplicationService::DeviceDescriptorResponse { data, .. },
+                        Fault::ShortDescriptor,
+                    ) => {
+                        data.pop();
+                    }
                     (
                         knx_net::ApplicationService::MemoryResponse { address, .. },
                         Fault::SilentAt(at),
@@ -616,6 +788,24 @@ impl knx_net::ManagementTransport for Faulty {
                     ) if *property_id == refused => {
                         *nr_of_elem = 0;
                         data.clear();
+                    }
+                    (
+                        knx_net::ApplicationService::PropertyValueResponse { property_id, .. },
+                        Fault::SilentProperty(silent),
+                    ) if *property_id == silent => continue,
+                    (
+                        knx_net::ApplicationService::PropertyValueResponse {
+                            property_id,
+                            data,
+                            ..
+                        },
+                        Fault::OversizeProperty(oversize),
+                    ) if *property_id == oversize => {
+                        *data = vec![
+                            0xAA;
+                            knx_net::commissioning::diagnostic_export::MAX_RESPONSE_BYTES
+                                + 1
+                        ];
                     }
                     _ => {}
                 }
@@ -661,6 +851,14 @@ fn statuses(export: &Export) -> Vec<&str> {
     chunks.iter().map(|c| c.status.as_str()).collect()
 }
 
+fn archive_roundtrips(export: &Export) {
+    let bytes = bundle_export(export).expect("collector output bundles");
+    assert_eq!(read_export(&bytes).unwrap(), *export);
+    if export.memory.is_none() {
+        assert_eq!(read_bundle(&bytes).unwrap(), export.report);
+    }
+}
+
 #[tokio::test]
 async fn real_refused_partial_interrupted_and_mismatched_acquisitions_round_trip() {
     let refusing = SimulatedDevice::with_config(SimulatorConfig {
@@ -697,6 +895,118 @@ async fn real_refused_partial_interrupted_and_mismatched_acquisitions_round_trip
     let e = written_and_reread(&Faulty::new(other, Fault::None), false).await;
     assert_eq!(statuses(&e), ["not-read"; 4]);
     assert_eq!(e.report.stop_reason.as_deref(), Some("identity-mismatch"));
+}
+
+#[tokio::test(start_paused = true)]
+async fn real_memory_chunk_failures_and_their_observer_snapshots_roundtrip() {
+    let (_dir, db) = products(PROGRAM);
+    let plan = prepare_memory(&project(), DeviceId(7), &db).unwrap();
+    for (index, address) in [(1, 0x0122), (3, 0x3C00)] {
+        for (fault, reason, deadline) in [
+            (Fault::SilentAt(address), "timeout", false),
+            (Fault::SilentAt(address), "deadline", true),
+            (
+                Fault::UnacknowledgedAt(address),
+                "connection-released",
+                false,
+            ),
+            (
+                Fault::DisconnectAt(address, false),
+                "connection-lost",
+                false,
+            ),
+            (Fault::DisconnectAt(address, true), "connection-lost", false),
+            (Fault::EventLossAt(address), "event-loss", false),
+            (Fault::TransportAt(address, false), "transport-error", false),
+            // BusError::Timeout is a transport failure, not SessionError::NoAnswer.
+            (Fault::TransportAt(address, true), "transport-error", false),
+        ] {
+            let wire = Faulty::new(device(), fault);
+            let mut snapshots = 0;
+            let export = acquire_memory(
+                &wire,
+                &plan,
+                knx_net::SessionTiming {
+                    response_timeout: if deadline {
+                        knx_net::commissioning::diagnostic_export::MEMORY_DEADLINE * 2
+                    } else {
+                        std::time::Duration::from_millis(10)
+                    },
+                    ..Default::default()
+                },
+                "synthetic-test",
+                &AtomicBool::new(false),
+                |snapshot| {
+                    archive_roundtrips(snapshot);
+                    snapshots += 1;
+                },
+            )
+            .await;
+            assert!(snapshots > 0);
+            assert_eq!(export.report.stop_reason.as_deref(), Some(reason));
+            let chunks = &export.memory.as_ref().unwrap().chunks;
+            assert!(chunks[..index].iter().all(|c| c.status == "read"));
+            assert_eq!(chunks[index].status, "error");
+            assert_eq!(chunks[index].error.as_deref(), Some(reason));
+            assert!(chunks[index + 1..].iter().all(|c| c.status == "not-read"));
+            archive_roundtrips(&export);
+        }
+    }
+}
+
+#[tokio::test(start_paused = true)]
+async fn real_memory_cancellation_and_unfinished_teardown_roundtrip() {
+    let (_dir, db) = products(PROGRAM);
+    let plan = prepare_memory(&project(), DeviceId(7), &db).unwrap();
+    for during_request in [false, true] {
+        let cancel = AtomicBool::new(false);
+        let export = acquire_memory(
+            &device(),
+            &plan,
+            Default::default(),
+            "synthetic-test",
+            &cancel,
+            |snapshot| {
+                archive_roundtrips(snapshot);
+                let chunks = &snapshot.memory.as_ref().unwrap().chunks;
+                let stop = if during_request {
+                    chunks[1].attempted_at.is_some() && chunks[1].completed_at.is_none()
+                } else {
+                    chunks[0].completed_at.is_some()
+                };
+                if stop {
+                    cancel.store(true, std::sync::atomic::Ordering::SeqCst);
+                }
+            },
+        )
+        .await;
+        assert_eq!(export.report.stop_reason.as_deref(), Some("cancelled"));
+        let chunks = &export.memory.as_ref().unwrap().chunks;
+        assert_eq!(chunks[0].status, "read");
+        if during_request {
+            assert_eq!(chunks[1].status, "error");
+            assert_eq!(chunks[1].error.as_deref(), Some("cancelled"));
+        } else {
+            assert_eq!(chunks[1].status, "not-read");
+        }
+        assert!(chunks[2..].iter().all(|c| c.status == "not-read"));
+        assert!(export.report.disconnect_attempt_completed);
+        archive_roundtrips(&export);
+    }
+    let wire = Faulty::new(device(), Fault::StallDisconnect);
+    let export = acquire_memory(
+        &wire,
+        &plan,
+        Default::default(),
+        "synthetic-test",
+        &AtomicBool::new(false),
+        archive_roundtrips,
+    )
+    .await;
+    assert_eq!(statuses(&export), ["read"; 4]);
+    assert_eq!(export.report.stop_reason, None);
+    assert!(!export.report.disconnect_attempt_completed);
+    archive_roundtrips(&export);
 }
 
 /// Puts a `decoy` member with other content before every genuine member,
@@ -1064,6 +1374,20 @@ fn identity_stopped(r: &mut serde_json::Value, m: &mut serde_json::Value, reason
 /// Identity sequences `identity_reads` cannot produce; every case is a
 /// rehashed archive so only the reader's semantic checks can refuse it.
 const IMPOSSIBLE_IDENTITY: &[(&str, Edit)] = &[
+    (
+        "a partial property response with zero returned elements",
+        |r, m| {
+            let item = &mut r["items"][1];
+            item["status"] = "partial".into();
+            item["bytes"] = serde_json::json!([0]);
+            item["receivedBytes"] = 1.into();
+            item["returnedElements"] = 0.into();
+            item["error"] = "unexpected-length".into();
+            if !m.is_null() {
+                identity_stopped(r, m, "identity-unverified");
+            }
+        },
+    ),
     ("PID12 in flight with an untouched descriptor", |r, m| {
         identity_snapshot(r, m);
         untouched(r, 0);
@@ -1130,6 +1454,75 @@ const IMPOSSIBLE_IDENTITY: &[(&str, Edit)] = &[
     }),
 ];
 
+/// Identity stop reasons that contradict otherwise collector-shaped items.
+/// Every case is rehashed so only the reader's semantic checks can refuse it.
+const IMPOSSIBLE_IDENTITY_STOP_REASON: &[(&str, Edit)] = &[
+    ("identity mismatch with the hardware item unread", |r, m| {
+        identity_stopped(r, m, "identity-mismatch");
+        untouched(r, 2);
+    }),
+    ("identity mismatch after three matching reads", |r, m| {
+        identity_stopped(r, m, "identity-mismatch");
+    }),
+    (
+        "identity unverified after three exact matching reads",
+        |r, m| {
+            identity_stopped(r, m, "identity-unverified");
+        },
+    ),
+    ("identity unverified after a descriptor mismatch", |r, m| {
+        identity_stopped(r, m, "identity-unverified");
+        r["items"][0]["bytes"] = serde_json::json!([7, 5]);
+        untouched(r, 1);
+        untouched(r, 2);
+    }),
+    ("missing assertion with assertions recorded", |r, m| {
+        identity_stopped(r, m, "identity-assertion-missing");
+        untouched(r, 0);
+        untouched(r, 1);
+        untouched(r, 2);
+    }),
+    ("descriptor unverified after an exact descriptor", |r, m| {
+        identity_stopped(r, m, "descriptor-unverified");
+        untouched(r, 1);
+        untouched(r, 2);
+    }),
+    ("stop reason differs from the item's error", |r, m| {
+        identity_stopped(r, m, "connection-lost");
+        errored(r, 2);
+    }),
+    ("an error item and report both omit the reason", |r, m| {
+        identity_stopped(r, m, "timeout");
+        errored(r, 2);
+        r["items"][2]["error"] = serde_json::Value::Null;
+        r["stopReason"] = serde_json::Value::Null;
+    }),
+    ("a connection-phase memory error", |r, m| {
+        identity_stopped(r, m, "memory-refused");
+        untouched(r, 0);
+        untouched(r, 1);
+        untouched(r, 2);
+    }),
+    ("an arbitrary identity item error token", |r, m| {
+        identity_stopped(r, m, "invented-error");
+        errored(r, 0);
+        r["items"][0]["error"] = "invented-error".into();
+        untouched(r, 1);
+        untouched(r, 2);
+    }),
+    ("a refused descriptor response", |r, m| {
+        identity_stopped(r, m, "descriptor-unverified");
+        let item = &mut r["items"][0];
+        item["status"] = "refused-ambiguous".into();
+        item["bytes"] = serde_json::json!([]);
+        item["receivedBytes"] = 0.into();
+        item["returnedElements"] = serde_json::Value::Null;
+        item["error"] = "access-denied-or-property-unsupported".into();
+        untouched(r, 1);
+        untouched(r, 2);
+    }),
+];
+
 #[tokio::test]
 async fn format_1_refuses_identity_sequences_the_collector_cannot_produce() {
     let original = identity_archive().await;
@@ -1140,6 +1533,71 @@ async fn format_1_refuses_identity_sequences_the_collector_cannot_produce() {
 async fn format_2_refuses_identity_sequences_the_collector_cannot_produce() {
     let original = bundle_export(&export().await).unwrap();
     assert_eq!(accepted(&original, IMPOSSIBLE_IDENTITY), Vec::<&str>::new());
+}
+
+#[tokio::test]
+async fn format_1_refuses_identity_stop_reasons_the_collector_cannot_produce() {
+    let original = identity_archive().await;
+    assert_eq!(
+        accepted(&original, IMPOSSIBLE_IDENTITY_STOP_REASON),
+        Vec::<&str>::new()
+    );
+}
+
+#[tokio::test]
+async fn format_2_refuses_identity_stop_reasons_the_collector_cannot_produce() {
+    let original = bundle_export(&export().await).unwrap();
+    assert_eq!(
+        accepted(&original, IMPOSSIBLE_IDENTITY_STOP_REASON),
+        Vec::<&str>::new()
+    );
+    let cancelled_missing_assertion = rehashed(&original, |r, m| {
+        r["assertedMask"] = serde_json::Value::Null;
+        identity_stopped(r, m, "cancelled");
+        untouched(r, 0);
+        untouched(r, 1);
+        untouched(r, 2);
+    });
+    read_export(&cancelled_missing_assertion)
+        .expect_err("accepted cancellation before the missing-assertion check");
+    let application_reason = rehashed(&original, |r, m| {
+        identity_stopped(r, m, "gateway-busy");
+        untouched(r, 0);
+        untouched(r, 1);
+        untouched(r, 2);
+    });
+    read_export(&application_reason)
+        .expect_err("accepted an identity-only application reason in format 2");
+}
+
+#[tokio::test]
+async fn format_2_refuses_identity_reads_after_a_required_assertion_was_absent() {
+    let original = bundle_export(&export().await).unwrap();
+    for assertion in ["assertedMask", "assertedManufacturer"] {
+        let rewritten = rehashed(&original, |r, m| {
+            r[assertion] = serde_json::Value::Null;
+            identity_stopped(r, m, "identity-mismatch");
+        });
+        read_export(&rewritten)
+            .expect_err("accepted identity reads after a required assertion was absent");
+
+        let incomplete = rehashed(&original, |r, m| {
+            r[assertion] = serde_json::Value::Null;
+            identity_snapshot(r, m);
+        });
+        read_export(&incomplete)
+            .expect_err("accepted an incomplete snapshot with reads after a missing assertion");
+    }
+}
+
+#[tokio::test]
+async fn format_2_refuses_a_read_property_with_two_returned_elements() {
+    let original = bundle_export(&export().await).unwrap();
+    let rewritten = rehashed(&original, |r, m| {
+        r["items"][2]["returnedElements"] = 2.into();
+        identity_stopped(r, m, "identity-mismatch");
+    });
+    read_export(&rewritten).expect_err("accepted a read property with two returned elements");
 }
 
 /// A refused PID12 does not stop `identity_reads`: PID78 is still read.
@@ -1232,6 +1690,456 @@ async fn every_snapshot_of_a_continued_or_stopped_identity_run_roundtrips() {
         assert_eq!(statuses(&export), ["not-read"; 4], "{name}");
     }
     assert!(failures.is_empty(), "not exportable: {failures:?}");
+}
+
+#[tokio::test]
+async fn real_collector_identity_stop_outcomes_roundtrip_through_both_profiles() {
+    let (_dir, db) = products(PROGRAM);
+    let identity = prepare(&project(), DeviceId(7), Some(&db)).unwrap();
+    let memory = prepare_memory(&project(), DeviceId(7), &db).unwrap();
+    let timing = knx_net::SessionTiming {
+        response_timeout: std::time::Duration::from_millis(10),
+        connection_timeout: std::time::Duration::from_millis(10),
+        ..Default::default()
+    };
+
+    for fault in [Fault::ShortDescriptor, Fault::SilentProperty(78)] {
+        let wire = Faulty::new(device(), fault);
+        let report = acquire(
+            &wire,
+            &identity,
+            timing,
+            "synthetic-test",
+            &AtomicBool::new(false),
+            |_| {},
+        )
+        .await;
+        archive_roundtrips(&Export {
+            report: report.clone(),
+            memory: None,
+        });
+        let expected = match fault {
+            Fault::ShortDescriptor => "descriptor-unverified",
+            Fault::SilentProperty(_) => "timeout",
+            _ => unreachable!(),
+        };
+        assert_eq!(report.stop_reason.as_deref(), Some(expected));
+
+        let export = acquire_memory(
+            &wire,
+            &memory,
+            timing,
+            "synthetic-test",
+            &AtomicBool::new(false),
+            |_| {},
+        )
+        .await;
+        assert_eq!(export.report.stop_reason.as_deref(), Some(expected));
+        archive_roundtrips(&export);
+    }
+
+    for case in 0..5 {
+        for memory_profile in [false, true] {
+            let (wire, expected, item) = match case {
+                0 => (
+                    Faulty::new(device(), Fault::OversizeProperty(78)),
+                    "response-size-limit-raw-not-retained",
+                    2,
+                ),
+                1 => (
+                    Faulty::new(device(), Fault::TransportProperty(78)),
+                    "transport-error",
+                    2,
+                ),
+                2 => (
+                    Faulty::new(
+                        SimulatedDevice::with_config(SimulatorConfig {
+                            mask_version: 0x0025,
+                            device_descriptor_read_gets_disconnect: true,
+                            ..Default::default()
+                        }),
+                        Fault::None,
+                    ),
+                    "connection-lost",
+                    0,
+                ),
+                3 => (
+                    Faulty::new(
+                        SimulatedDevice::with_config(SimulatorConfig {
+                            mask_version: 0x0025,
+                            silent: true,
+                            ..Default::default()
+                        }),
+                        Fault::None,
+                    ),
+                    "connection-released",
+                    0,
+                ),
+                4 => (
+                    Faulty::new(device(), Fault::EventLossProperty(78)),
+                    "event-loss",
+                    2,
+                ),
+                _ => unreachable!(),
+            };
+            let export = if memory_profile {
+                acquire_memory(
+                    &wire,
+                    &memory,
+                    timing,
+                    "synthetic-test",
+                    &AtomicBool::new(false),
+                    |_| {},
+                )
+                .await
+            } else {
+                Export {
+                    report: acquire(
+                        &wire,
+                        &identity,
+                        timing,
+                        "synthetic-test",
+                        &AtomicBool::new(false),
+                        |_| {},
+                    )
+                    .await,
+                    memory: None,
+                }
+            };
+            assert_eq!(export.report.stop_reason.as_deref(), Some(expected));
+            assert_eq!(export.report.items[item].error.as_deref(), Some(expected));
+            archive_roundtrips(&export);
+        }
+    }
+
+    let wire = Faulty::new(device(), Fault::RefuseProperty(12));
+    let report = acquire(
+        &wire,
+        &identity,
+        timing,
+        "synthetic-test",
+        &AtomicBool::new(false),
+        |_| {},
+    )
+    .await;
+    assert_eq!(report.stop_reason, None);
+    archive_roundtrips(&Export {
+        report,
+        memory: None,
+    });
+    let export = acquire_memory(
+        &wire,
+        &memory,
+        timing,
+        "synthetic-test",
+        &AtomicBool::new(false),
+        |_| {},
+    )
+    .await;
+    assert_eq!(
+        export.report.stop_reason.as_deref(),
+        Some("identity-unverified")
+    );
+    archive_roundtrips(&export);
+
+    let other_hardware = device();
+    other_hardware.preset_property(0, 78, &[0, 1, 0, 0, 0, 0x5C]);
+    let export = acquire_memory(
+        &Faulty::new(other_hardware, Fault::None),
+        &memory,
+        timing,
+        "synthetic-test",
+        &AtomicBool::new(false),
+        |_| {},
+    )
+    .await;
+    assert_eq!(
+        export.report.stop_reason.as_deref(),
+        Some("identity-mismatch")
+    );
+    archive_roundtrips(&export);
+
+    for memory_profile in [false, true] {
+        let cancel = AtomicBool::new(true);
+        let export = if memory_profile {
+            acquire_memory(
+                &device(),
+                &memory,
+                timing,
+                "synthetic-test",
+                &cancel,
+                |_| {},
+            )
+            .await
+        } else {
+            Export {
+                report: acquire(
+                    &device(),
+                    &identity,
+                    timing,
+                    "synthetic-test",
+                    &cancel,
+                    |_| {},
+                )
+                .await,
+                memory: None,
+            }
+        };
+        assert_eq!(export.report.stop_reason.as_deref(), Some("cancelled"));
+        assert!(export
+            .report
+            .items
+            .iter()
+            .all(|item| item.status == "not-read"));
+        archive_roundtrips(&export);
+    }
+
+    for memory_profile in [false, true] {
+        let cancel = AtomicBool::new(false);
+        let export = if memory_profile {
+            acquire_memory(
+                &device(),
+                &memory,
+                timing,
+                "synthetic-test",
+                &cancel,
+                |snapshot| {
+                    if snapshot.report.items[0].status == "read"
+                        && snapshot.report.items[1].status == "not-read"
+                    {
+                        cancel.store(true, std::sync::atomic::Ordering::SeqCst);
+                    }
+                },
+            )
+            .await
+        } else {
+            Export {
+                report: acquire(
+                    &device(),
+                    &identity,
+                    timing,
+                    "synthetic-test",
+                    &cancel,
+                    |snapshot| {
+                        if snapshot.items[0].status == "read"
+                            && snapshot.items[1].status == "not-read"
+                        {
+                            cancel.store(true, std::sync::atomic::Ordering::SeqCst);
+                        }
+                    },
+                )
+                .await,
+                memory: None,
+            }
+        };
+        assert_eq!(export.report.stop_reason.as_deref(), Some("cancelled"));
+        assert_eq!(export.report.items[0].status, "read");
+        assert_eq!(export.report.items[1].status, "not-read");
+        assert_eq!(export.report.items[2].status, "not-read");
+        archive_roundtrips(&export);
+    }
+
+    for memory_profile in [false, true] {
+        let cancel = AtomicBool::new(false);
+        let wire = Faulty::new(device(), Fault::SilentProperty(78));
+        let export = if memory_profile {
+            acquire_memory(
+                &wire,
+                &memory,
+                timing,
+                "synthetic-test",
+                &cancel,
+                |snapshot| {
+                    if snapshot.report.items[2].attempted_at.is_some()
+                        && snapshot.report.items[2].status == "not-read"
+                    {
+                        cancel.store(true, std::sync::atomic::Ordering::SeqCst);
+                    }
+                },
+            )
+            .await
+        } else {
+            Export {
+                report: acquire(
+                    &wire,
+                    &identity,
+                    timing,
+                    "synthetic-test",
+                    &cancel,
+                    |snapshot| {
+                        if snapshot.items[2].attempted_at.is_some()
+                            && snapshot.items[2].status == "not-read"
+                        {
+                            cancel.store(true, std::sync::atomic::Ordering::SeqCst);
+                        }
+                    },
+                )
+                .await,
+                memory: None,
+            }
+        };
+        assert_eq!(export.report.stop_reason.as_deref(), Some("cancelled"));
+        assert_eq!(export.report.items[2].status, "error");
+        assert_eq!(export.report.items[2].error.as_deref(), Some("cancelled"));
+        archive_roundtrips(&export);
+    }
+
+    let rejected = SimulatedDevice::with_config(SimulatorConfig {
+        rejected_connects: Some(1..100),
+        ..Default::default()
+    });
+    let wire = Faulty::new(rejected, Fault::None);
+    for memory_profile in [false, true] {
+        let export = if memory_profile {
+            acquire_memory(
+                &wire,
+                &memory,
+                timing,
+                "synthetic-test",
+                &AtomicBool::new(false),
+                |_| {},
+            )
+            .await
+        } else {
+            Export {
+                report: acquire(
+                    &wire,
+                    &identity,
+                    timing,
+                    "synthetic-test",
+                    &AtomicBool::new(false),
+                    |_| {},
+                )
+                .await,
+                memory: None,
+            }
+        };
+        assert_eq!(
+            export.report.stop_reason.as_deref(),
+            Some("connect-rejected")
+        );
+        assert!(export
+            .report
+            .items
+            .iter()
+            .all(|item| item.status == "not-read"));
+        archive_roundtrips(&export);
+    }
+
+    for case in 0..4 {
+        for memory_profile in [false, true] {
+            let (wire, expected) = match case {
+                0 => (
+                    Faulty::new(device(), Fault::TransportConnect),
+                    "transport-error",
+                ),
+                1 => (
+                    Faulty::new(device(), Fault::SelfAddressed),
+                    "self-addressed",
+                ),
+                2 => (
+                    Faulty::new(
+                        SimulatedDevice::with_config(SimulatorConfig {
+                            mask_version: 0x0025,
+                            unanswered_connects: Some(1..100),
+                            ..Default::default()
+                        }),
+                        Fault::None,
+                    ),
+                    "timeout",
+                ),
+                3 => (Faulty::new(device(), Fault::EventLossConnect), "event-loss"),
+                _ => unreachable!(),
+            };
+            let export = if memory_profile {
+                acquire_memory(
+                    &wire,
+                    &memory,
+                    timing,
+                    "synthetic-test",
+                    &AtomicBool::new(false),
+                    |_| {},
+                )
+                .await
+            } else {
+                Export {
+                    report: acquire(
+                        &wire,
+                        &identity,
+                        timing,
+                        "synthetic-test",
+                        &AtomicBool::new(false),
+                        |_| {},
+                    )
+                    .await,
+                    memory: None,
+                }
+            };
+            assert_eq!(export.report.stop_reason.as_deref(), Some(expected));
+            assert!(export
+                .report
+                .items
+                .iter()
+                .all(|item| item.status == "not-read"));
+            archive_roundtrips(&export);
+        }
+    }
+}
+
+#[tokio::test(start_paused = true)]
+async fn a_real_identity_deadline_roundtrips_through_the_memory_reader() {
+    let (_dir, db) = products(PROGRAM);
+    let memory = prepare_memory(&project(), DeviceId(7), &db).unwrap();
+    let wire = Faulty::new(device(), Fault::SilentProperty(78));
+    let export = acquire_memory(
+        &wire,
+        &memory,
+        knx_net::SessionTiming {
+            response_timeout: knx_net::commissioning::diagnostic_export::MEMORY_DEADLINE * 2,
+            ..Default::default()
+        },
+        "synthetic-test",
+        &AtomicBool::new(false),
+        |_| {},
+    )
+    .await;
+    assert_eq!(export.report.stop_reason.as_deref(), Some("deadline"));
+    assert_eq!(export.report.items[2].error.as_deref(), Some("deadline"));
+    archive_roundtrips(&export);
+}
+
+#[tokio::test]
+async fn the_collectors_missing_assertion_outcome_roundtrips_when_the_assertion_is_absent() {
+    let (_dir, db) = products(PROGRAM);
+    let plan = prepare_memory(&project(), DeviceId(7), &db).unwrap();
+    let wire = Faulty::new(device(), Fault::None);
+    let collected = collect_declared_memory(
+        &wire,
+        plan.base().target,
+        Default::default(),
+        MemoryRequest {
+            expected: Identity {
+                mask: None,
+                manufacturer: plan.base().expected.manufacturer,
+            },
+            hardware_type: plan.profile().hardware_type(),
+            ranges: plan.profile().ranges(),
+        },
+        &AtomicBool::new(false),
+        |_, _| {},
+    )
+    .await;
+    assert_eq!(
+        collected.acquisition.stop_reason,
+        Some("identity-assertion-missing")
+    );
+    assert!(wire.device.seen().is_empty());
+
+    let mut export = pending_memory(&plan, "synthetic-test", true);
+    export.report.asserted_mask = None;
+    export.report.complete = true;
+    export.report.stop_reason = collected.acquisition.stop_reason.map(str::to_string);
+    archive_roundtrips(&export);
 }
 
 /// [`PROGRAM`] with a PID78 comparison of `octets`: the six the device

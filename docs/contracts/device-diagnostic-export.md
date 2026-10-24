@@ -165,9 +165,14 @@ is claimed.
   target, non-IPv4 endpoint and unknown fields refuse before any tunnel.
   The acquisition runs as a server-owned task, so a closed browser cannot cut
   cleanup short.
-- CLI: `knx device diagnostics --project p.knxdb --device-id N --gateway
-  host:port --output new.zip [--product-db db] [--confirm-read]`; without
-  `--confirm-read` it only previews. `--simulate` uses the built-in simulator
+- CLI: `knx device diagnostics --project p.knxdb (--device 1.1.5 | --device-id
+  N) --gateway host:port --output new.zip [--product-db db] [--confirm-read]`;
+  without `--confirm-read` it only previews. Exactly one selector is required.
+  `--device <area.line.device>` must belong to exactly one project device: an
+  unknown address is refused, and an address several devices share (for
+  example in two installations) is refused listing their internal ids for
+  `--device-id`; a device without an address is never selected by address.
+  These refusals, like a malformed address, happen before any tunnel. `--simulate` uses the built-in simulator
   and never constructs a network client. Ctrl-C stops cooperatively and saves
   the partial result. Write/key/memory flags are refused. `--profile
   system2-declared-segments-v1` selects the memory profile above.

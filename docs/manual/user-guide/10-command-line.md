@@ -700,7 +700,7 @@ rules (plan first, a device-specific phrase, a backup before any write):
 | --- | --- |
 | `knx device readiness` | Offline: for every project device, whether a download is verified, untested, unsupported, excluded or has no address. Sends nothing |
 | `knx device compare` | Read only: reads what a download would write and lists every difference from the project |
-| `knx device diagnostics` | Read only: exports descriptor, manufacturer ID and hardware type of one project device (`--device-id`) to a new local ZIP; previews unless `--confirm-read`; `--simulate` needs no interface; `--profile system2-declared-segments-v1` adds the memory ranges the application declares (see below; [contract](../../contracts/device-diagnostic-export.md)) |
+| `knx device diagnostics` | Read only: exports descriptor, manufacturer ID and hardware type of one project device (`--device <area.line.device>`, or the internal `--device-id`) to a new local ZIP; previews unless `--confirm-read`; `--simulate` needs no interface; `--profile system2-declared-segments-v1` adds the memory ranges the application declares (see below; [contract](../../contracts/device-diagnostic-export.md)) |
 | `knx device byte-order-probe` | Read only: for a device ETS programmed, says whether it holds its multi-octet parameter values high or low octet first (see below) |
 | `knx device restore` | Writes a backup file back through the same load procedure, after backing up the current state |
 | `knx device find-serial` | Read only: which address has a serial number, or which serial number a device has |
@@ -711,8 +711,13 @@ rules (plan first, a device-specific phrase, a backup before any write):
 
 ```bash
 knx device diagnostics --profile system2-declared-segments-v1 --project house.knxdb \
-  --device-id 12 --product-db products.sqlite --gateway 192.0.2.1:3671 --output up258.zip
+  --device 1.1.67 --product-db products.sqlite --gateway 192.0.2.1:3671 --output up258.zip
 ```
+
+`--device` takes the device's individual address. If no project device or
+more than one has that address (for example the same address in two
+installations), the command stops; for several it lists their internal ids,
+and `--device-id <id>` then picks one. Nothing is read in either case.
 
 For a System-2 device (today: an application with exactly one product load
 procedure, such as the Siemens UP 258D12) this reads the memory ranges the

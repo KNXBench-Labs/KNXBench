@@ -204,15 +204,22 @@ class _StageProcessTree:
 
     def terminate(self, child: subprocess.Popen | None, await_owner: bool = False,
                   term_grace: float = TERM_GRACE_SECONDS) -> None:
-        """Apply bounded TERM/KILL and reap all stage-owned descendants."""
-        grace = term_grace + (SPAWN_SETTLE_SECONDS if await_owner else 0.0)
-        if self._wait(child, time.monotonic() + grace, signal.SIGTERM, await_owner):
-            return
-        if self._wait(child, time.monotonic() + KILL_WAIT_SECONDS, signal.SIGKILL):
-            return
-        survivors = ', '.join(f'{identity.pid}/{identity.start_ticks}'
-                              for identity in self._discover())
-        raise RuntimeError(f'gate stage process cleanup incomplete: {survivors}')
+        """Defer cancellation through bounded TERM/KILL/reap, including normal exit."""
+        previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, HANDLED_SIGNALS)
+        try:
+            grace = term_grace + (SPAWN_SETTLE_SECONDS if await_owner else 0.0)
+            if self._wait(child, time.monotonic() + grace, signal.SIGTERM, await_owner):
+                return
+            if self._wait(child, time.monotonic() + KILL_WAIT_SECONDS, signal.SIGKILL):
+                return
+            survivors = ', '.join(f'{identity.pid}/{identity.start_ticks}'
+                                  for identity in self._discover())
+            raise RuntimeError(f'gate stage process cleanup incomplete: {survivors}')
+        finally:
+            # Deliver pending cancellation only after ownership is drained. In
+            # particular, normal-completion cleanup must not lose its exclusive
+            # subreaper to a forwarded signal before killing/reaping adoptees.
+            signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)
 
 
 def _supervise_stage(report_fd: int, command: list[str]) -> int:
@@ -231,11 +238,11 @@ def _supervise_stage(report_fd: int, command: list[str]) -> int:
             child = _spawn_owned(processes, command, start_new_session=True)
             _, status, usage = os.wait4(child.pid, 0)
             child.returncode = os.waitstatus_to_exitcode(status)
+            processes.terminate(child)
         except BaseException as error:
             if child is not None or isinstance(error, (KeyboardInterrupt, SystemExit)):
                 processes.terminate(child, await_owner=child is None)
             raise
-        processes.terminate(child)
         result = {'format': 1, 'exit': child.returncode,
                   'cpuSeconds': usage.ru_utime + usage.ru_stime,
                   'peakRssKiB': usage.ru_maxrss}

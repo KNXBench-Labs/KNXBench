@@ -233,6 +233,63 @@ class MeasuredRun(unittest.TestCase):
                     except ChildProcessError:
                         pass
 
+    def test_cleanup_is_idempotent_and_restores_the_callers_signal_mask(self) -> None:
+        import signal
+        from unittest.mock import patch
+        previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGUSR1})
+        expected = previous_mask | {signal.SIGUSR1}
+        processes = support._StageProcessTree()
+
+        def cleanup_pass(*_args):
+            current = signal.pthread_sigmask(signal.SIG_BLOCK, [])
+            self.assertEqual(current, expected | set(support.HANDLED_SIGNALS))
+            return True
+
+        try:
+            with patch.object(processes, '_wait', side_effect=cleanup_pass):
+                processes.terminate(None)
+                processes.terminate(None)
+            self.assertEqual(signal.pthread_sigmask(signal.SIG_BLOCK, []), expected)
+            with (patch.object(processes, '_wait', return_value=False),
+                  patch.object(processes, '_discover', return_value={})):
+                with self.assertRaisesRegex(RuntimeError, 'cleanup incomplete'):
+                    processes.terminate(None)
+            self.assertEqual(signal.pthread_sigmask(signal.SIG_BLOCK, []), expected)
+        finally:
+            signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)
+
+    def test_late_signal_cannot_interrupt_supervisor_normal_completion_cleanup(self) -> None:
+        import signal
+        self._assert_late_cleanup_signal(signal.SIGTERM, repeated=False)
+        self._assert_late_cleanup_signal(signal.SIGINT, repeated=False)
+
+    def test_repeated_signals_cannot_interrupt_in_progress_cleanup(self) -> None:
+        import signal
+        self._assert_late_cleanup_signal(signal.SIGTERM, repeated=True)
+        self._assert_late_cleanup_signal(signal.SIGINT, repeated=True)
+
+    def _assert_late_cleanup_signal(self, signum: int, *, repeated: bool) -> None:
+        with self.subTest(signum=signum, repeated=repeated), TemporaryDirectory() as tmp:
+            result = subprocess.run(
+                [sys.executable, '-m', 'tools.tests.fixtures.gate_cleanup_race', tmp,
+                 str(int(signum)), 'repeat' if repeated else 'single'],
+                cwd=Path(__file__).resolve().parents[2], capture_output=True, text=True, timeout=40)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            data = json.loads(result.stdout)
+            self.assertEqual(data['error'], 'KeyboardInterrupt', data)
+            self.assertEqual(len(data['observations']), 1, data)
+            self.assertNotEqual(data['observations'][0]['oldParent'],
+                                data['observations'][0]['liveParent'], data)
+            self.assertEqual(data['forwarded'], [15], data)
+            self.assertFalse(data['descendantPresent'],
+                             f"late cancellation left scrubbed detached child: {data}")
+            self.assertFalse(data['supervisorPresent'], data)
+            self.assertTrue(data['unrelatedAlive'], data)
+            self.assertFalse(data['unrelatedSignalled'], data)
+            self.assertFalse(data['receipt']['success'], data)
+            self.assertFalse(data['receipt']['complete'], data)
+            self.assertIsNone(data['receipt']['stages'][0]['exit'], data)
+
     def test_nonzero_supervisor_exit_cannot_accept_a_valid_target_report(self) -> None:
         from unittest.mock import patch
         original = support.os.wait4

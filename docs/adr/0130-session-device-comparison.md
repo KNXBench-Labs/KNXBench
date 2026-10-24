@@ -110,4 +110,14 @@ and normal command-stack rules provide undo/redo, pending marks and monotone
 allocator reservations. Native/history preflight and durable publication remain
 mandatory. No new device writer or format interpretation is introduced.
 
+**Association links (24 October 2026).** Mask-`0701h` association entries now
+carry typed per-side attribution, and a selection of them adopts object ↔
+group-address links into the same single Batch when the mapping is provable:
+the whole device association table decoded, every differing row of a touched
+object selected, exactly one existing project group address per raw address,
+exactly one active non-module project object per number, retained sending
+flags kept and the rebuilt order equal to the device's. Anything else refuses
+the whole edit. No group address, object or individual address is created or
+changed ([amendment](../contracts/alpha16-comparison-adoption.md#association-link-adoption-wp-19-amendment-24-october-2026)).
+
 [Behavioural contract](../contracts/device-comparison.md).

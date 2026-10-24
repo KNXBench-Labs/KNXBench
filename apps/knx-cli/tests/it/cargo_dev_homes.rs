@@ -19,6 +19,7 @@ const HOMES: [(&str, &str, &str); 2] = [
     ("XDG_DATA_HOME", ".local/share", "data"),
     ("XDG_CONFIG_HOME", ".config", "config"),
 ];
+const UNSET_TOOL_HOMES_PROBE: &str = "KNXBENCH_UNSET_TOOL_HOMES_PROBE";
 
 fn workspace_root() -> &'static Path {
     Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -66,10 +67,15 @@ fn write_environment_probe(root: &Path) -> PathBuf {
         package.join("src/lib.rs"),
         r#"#[test]
 fn cargo_passes_the_expected_homes() {
-    for variable in ["XDG_DATA_HOME", "XDG_CONFIG_HOME"] {
-        let actual = std::env::var_os(variable).expect("XDG home is set");
+    for variable in [
+        "XDG_DATA_HOME",
+        "XDG_CONFIG_HOME",
+        "CARGO_HOME",
+        "RUSTUP_HOME",
+    ] {
+        let actual = std::env::var_os(variable).expect("probed home is set");
         let expected = std::env::var_os(format!("EXPECTED_{variable}"))
-            .expect("expected XDG sentinel is set");
+            .expect("expected home sentinel is set");
         assert_eq!(actual, expected, "unexpected {variable}");
     }
 }
@@ -88,6 +94,13 @@ fn checkout_probe() -> tempfile::TempDir {
         .unwrap()
 }
 
+fn original_tool_home(variable: &str, original_home: &Path, fallback: &str) -> PathBuf {
+    std::env::var_os(variable)
+        .filter(|value| !value.is_empty())
+        .map(PathBuf::from)
+        .unwrap_or_else(|| original_home.join(fallback))
+}
+
 fn run_environment_probe(
     cwd: &Path,
     manifest: &Path,
@@ -96,6 +109,12 @@ fn run_environment_probe(
     config_home: &Path,
     cargo_arguments: &[&str],
 ) {
+    let original_home = std::env::var_os("HOME")
+        .filter(|value| !value.is_empty())
+        .map(PathBuf::from)
+        .expect("HOME is set for the Cargo environment probe");
+    let cargo_home = original_tool_home("CARGO_HOME", &original_home, ".cargo");
+    let rustup_home = original_tool_home("RUSTUP_HOME", &original_home, ".rustup");
     let home = scratch.join("home");
     fs::create_dir_all(&home).unwrap();
     let output = Command::new(cargo())
@@ -104,10 +123,14 @@ fn run_environment_probe(
         .arg(manifest)
         .current_dir(cwd)
         .env("HOME", home)
+        .env("CARGO_HOME", &cargo_home)
+        .env("RUSTUP_HOME", &rustup_home)
         .env("XDG_DATA_HOME", data_home)
         .env("XDG_CONFIG_HOME", config_home)
         .env("EXPECTED_XDG_DATA_HOME", data_home)
         .env("EXPECTED_XDG_CONFIG_HOME", config_home)
+        .env("EXPECTED_CARGO_HOME", cargo_home)
+        .env("EXPECTED_RUSTUP_HOME", rustup_home)
         .env("CARGO_TARGET_DIR", scratch.join("target"))
         .output()
         .expect("failed to run the Cargo environment probe");
@@ -187,6 +210,46 @@ fn force_false_accepts_caller_supplied_scratch_homes() {
         &data_home,
         &config_home,
         &cargo_arguments,
+    );
+}
+
+#[test]
+fn nested_cargo_uses_original_tool_homes_when_parent_vars_are_unset() {
+    if std::env::var_os(UNSET_TOOL_HOMES_PROBE).is_some() {
+        let probe = checkout_probe();
+        let scratch = tempfile::tempdir().unwrap();
+        let manifest = write_environment_probe(probe.path());
+        let external_cwd = scratch.path().join("external-cwd");
+        let data_home = scratch.path().join("exported-data");
+        let config_home = scratch.path().join("exported-config");
+        fs::create_dir_all(&external_cwd).unwrap();
+        run_environment_probe(
+            &external_cwd,
+            &manifest,
+            scratch.path(),
+            &data_home,
+            &config_home,
+            &[],
+        );
+        return;
+    }
+
+    let output = Command::new(std::env::current_exe().unwrap())
+        .args([
+            "--exact",
+            "cargo_dev_homes::nested_cargo_uses_original_tool_homes_when_parent_vars_are_unset",
+            "--nocapture",
+        ])
+        .env(UNSET_TOOL_HOMES_PROBE, "1")
+        .env_remove("CARGO_HOME")
+        .env_remove("RUSTUP_HOME")
+        .output()
+        .expect("failed to run the unset-tool-homes probe");
+    assert!(
+        output.status.success(),
+        "unset-tool-homes probe failed\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
     );
 }
 

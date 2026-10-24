@@ -2446,7 +2446,7 @@ fn run_device_download(args: &[String]) -> ExitCode {
         },
     };
     let (key, source) = knx_app::access_key::choose_key(operator_key, project_key);
-    let products = match open_products_db(parsed.product_db.as_deref()) {
+    let products = match open_products_db_for_reading(parsed.product_db.as_deref()) {
         Ok(conn) => conn,
         Err(e) => {
             eprintln!("{e}");
@@ -2726,7 +2726,7 @@ fn run_device_byte_order_probe(args: &[String]) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    let products = match open_products_db(parsed.product_db.as_deref()) {
+    let products = match open_products_db_for_reading(parsed.product_db.as_deref()) {
         Ok(conn) => conn,
         Err(e) => {
             eprintln!("{e}");
@@ -2880,7 +2880,7 @@ fn run_device_compare(args: &[String]) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    let products = match open_products_db(parsed.product_db.as_deref()) {
+    let products = match open_products_db_for_reading(parsed.product_db.as_deref()) {
         Ok(conn) => conn,
         Err(e) => {
             eprintln!("{e}");
@@ -3099,7 +3099,7 @@ fn run_device_restore(args: &[String]) -> ExitCode {
             return ExitCode::FAILURE;
         }
     }
-    let products = match open_products_db(product_db.as_deref()) {
+    let products = match open_products_db_for_reading(product_db.as_deref()) {
         Ok(conn) => conn,
         Err(e) => {
             eprintln!("{e}");

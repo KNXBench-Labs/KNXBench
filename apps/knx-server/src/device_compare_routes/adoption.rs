@@ -139,7 +139,32 @@ pub(super) struct PreviewResponse {
     selected: Vec<usize>,
     changed: bool,
     rows: Vec<DecodedDto>,
+    /// Object ↔ group-address links the edit would add or remove.
+    link_changes: Vec<LinkChangeDto>,
     expires_in_seconds: u64,
+}
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct LinkChangeDto {
+    add: bool,
+    object: u8,
+    com_object_id: u32,
+    group_address: String,
+    group_address_id: u32,
+    sending: bool,
+}
+impl From<&service::LinkChange> for LinkChangeDto {
+    fn from(change: &service::LinkChange) -> Self {
+        let raw = change.group_address.raw();
+        Self {
+            add: change.add,
+            object: change.object,
+            com_object_id: change.com_object.0,
+            group_address: format!("{}/{}/{}", raw >> 11, (raw >> 8) & 7, raw & 255),
+            group_address_id: change.group_address_id.0,
+            sending: change.sending,
+        }
+    }
 }
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -203,6 +228,7 @@ pub(super) async fn preview(
         selected: preview.selected().to_vec(),
         changed: preview.changed(),
         rows: super::decoded(preview.rows()),
+        link_changes: preview.link_changes().iter().map(Into::into).collect(),
         expires_in_seconds: PREVIEW_TTL.as_secs(),
     };
     while sessions.previews.len() >= MAX_PREVIEWS {
@@ -280,7 +306,7 @@ pub(super) async fn apply(
         crate::domain::next_project_revision(&state);
         state.session_log.lock().expect("state mutex poisoned").push(crate::session_log::LogEntry {
             timestamp: crate::session_log::now(), severity: crate::session_log::Severity::Info,
-            source: "AdoptDeviceComparison".into(), message: "Adopted observed named parameters into the project (one undoable edit; no device write)".into(), location: None, detail: None, diagnostic: None,
+            source: "AdoptDeviceComparison".into(), message: "Adopted observed device values (named parameters and/or object links) into the project (one undoable edit; no device write)".into(), location: None, detail: None, diagnostic: None,
         });
     }
     // Consume only after success. A failed native write leaves preview retryable.

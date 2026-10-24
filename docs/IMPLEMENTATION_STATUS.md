@@ -29,6 +29,29 @@ re-run of a fixed build is still pending. Details:
 [AppImage launcher contract](APPIMAGE_LAUNCHER.md#save-dialog-start-folder-24-october-2026),
 [KL-182](limitations/KL-182-desktop-silent-downloads.md).
 
+## WP-19 association link adoption (24 October 2026)
+
+Device → project adoption now also admits mask-`0701h` **association rows**
+as object ↔ group-address link edits, under the
+[contract amendment](contracts/alpha16-comparison-adoption.md#association-link-adoption-wp-19-amendment-24-october-2026).
+The comparison decoder gives association rows typed per-side attribution
+(TSAP, object number, group address, or *beyond* the side's count). App
+admission requires the whole device association table decoded, every
+differing row of a touched object selected, exactly one existing project
+group address per raw address and exactly one active non-module project
+object per number (evaluated with the candidate parameters). Retained
+sending flags are kept; an object without retained links takes the device's
+first entry as its sending link; any order the table cannot prove refuses.
+Link edits and selected parameters form one `Batch`, one undo step. The
+preview route adds `linkChanges`; the web review lists them in English and
+German and offers selection only for server-hinted parameter and association
+rows. Address/count rows, module objects, other masks and partial comparisons
+stay unadoptable; nothing is created; simulator only, no live device.
+Tests: Core link batch/undo/refusals, decoder attribution, App simulator
+adopt/undo/re-compare-equal plus stale, mixed-unknown, object-granularity,
+missing/ambiguous GA and object, inactive-object and sending refusals, a
+corpus-free mounted server scenario, Vitest panel/admission and a Playwright
+EN/DE preview.
 ## Alpha 16 published pre-release — public artifacts and website verified (24 October 2026)
 
 Runtime/test source is frozen at `86b4a7fc68b3d3206c00511b14f41e025e33de4d`.

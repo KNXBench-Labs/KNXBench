@@ -22,11 +22,18 @@ fn expected(address: &str) -> (&'static str, Option<(UnsupportedCategory, &'stat
             "unsupported",
             Some((UnsupportedCategory::NotMemoryMapped, "")),
         ),
+        // Its program declares an ETS download plug-in: refused for every
+        // scope since 2026-10-24 (KL-006, RESEARCH §19.12 note). 22 and 23
+        // declare one too, but their mask refusal comes first.
+        24 => (
+            "unsupported",
+            Some((UnsupportedCategory::VendorDownloadPlugin, "KL-006")),
+        ),
         220 => ("excluded", None),
         // 1-9: the machine-5 task segment is AbsCObjSeg, not sent
-        // (Cookbook 02_03_01 §2.3). 11-13 and 24/250/253 rest on
+        // (Cookbook 02_03_01 §2.3). 11-13 and 250/253 rest on
         // inferences (ADR-0086, RESEARCH §19.12), checked below.
-        1..=21 | 24..=32 | 250 | 253 => ("untested", None),
+        1..=21 | 25..=32 | 250 | 253 => ("untested", None),
         _ => panic!("{address} is not in RESEARCH §19.12"),
     }
 }
@@ -94,7 +101,7 @@ fn the_house_plans_as_research_19_12_says() {
         };
         let expected_inferences: Vec<String> = match address.as_str() {
             "1.1.11" | "1.1.12" | "1.1.13" => vec![UNION_13.to_string()],
-            "1.1.24" | "1.1.250" | "1.1.253" => vec![MACHINE_5.to_string()],
+            "1.1.250" | "1.1.253" => vec![MACHINE_5.to_string()],
             _ => Vec::new(),
         };
         if !fits || inferences != expected_inferences {
@@ -107,7 +114,7 @@ fn the_house_plans_as_research_19_12_says() {
         wrong.join("\n")
     );
     let summary = ReadinessSummary::of(&rows);
-    assert_eq!(summary.by_code.get("untested"), Some(&32));
-    assert_eq!(summary.by_code.get("unsupported"), Some(&2));
+    assert_eq!(summary.by_code.get("untested"), Some(&31));
+    assert_eq!(summary.by_code.get("unsupported"), Some(&3));
     assert_eq!(summary.by_code.get("excluded"), Some(&1));
 }

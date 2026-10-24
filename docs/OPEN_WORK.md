@@ -1264,13 +1264,15 @@ derived `system2-declared-segments-v1` diagnostic profile
 ([ADR-0143](adr/0143-declared-segment-memory-evidence-profile.md), CLI only,
 simulator-tested; four independent reviews, the last accepting). Open: the
 reporter's consented run on the device, the offline comparison of its result,
-a web entry (UI owner), a `--device <area.line.device>` selector for the CLI
-(today only the internal `--device-id`, which no surface displays; the issue #22
-request uses a `sqlite3` query instead), and one MINOR reader gap: the identity stop reason
+a web entry (UI owner), and one MINOR reader gap: the identity stop reason
 (e.g. `identity-mismatch`) is not cross-checked against the identity items, so
 a deliberately rewritten and rehashed archive could carry a wrong reason. It
 does not change recorded bytes, coverage or what the collector sends;
-checksums never claimed to detect deliberate rewriting.
+checksums never claimed to detect deliberate rewriting. Delivered on 24 October
+2026: `knx device diagnostics --device <area.line.device>` selects the device by
+its individual address for both profiles, so the issue #22 request no longer
+needs a `sqlite3` query for the internal `--device-id`; an address no device or
+several devices have is refused, the latter listing the candidates' ids.
 
 ## System 2 / System B download outcome (17 October 2026)
 

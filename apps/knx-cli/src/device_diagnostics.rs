@@ -2,8 +2,10 @@
 //!
 //! `knx device diagnostics`: preview or export one selected device's generic
 //! identity recipe, or with `--profile system2-declared-segments-v1` its
-//! ProductDB-declared memory ranges (ADR-0143). `--simulate` never constructs
-//! a network client; without `--confirm-read` nothing is acquired.
+//! ProductDB-declared memory ranges (ADR-0143). The device is chosen with
+//! `--device <area.line.device>` or `--device-id <id>`. `--simulate` never
+//! constructs a network client; without `--confirm-read` nothing is acquired.
+use crate::device_selector::DeviceSelector;
 use knx_app::device_diagnostics as service;
 use knx_core::{DeviceId, DeviceInstance, Language, Project, SourceRef};
 use std::{
@@ -35,8 +37,8 @@ fn execute(args: &[String]) -> Result<(), String> {
         match args[i].as_str() {
             "--simulate" if !simulate => simulate = true,
             "--confirm-read" if !confirm => confirm = true,
-            flag @ ("--project" | "--device-id" | "--product-db" | "--gateway" | "--output"
-            | "--profile") => {
+            flag @ ("--project" | "--device-id" | "--device" | "--product-db" | "--gateway"
+            | "--output" | "--profile") => {
                 let value = args
                     .get(i + 1)
                     .filter(|v| !v.starts_with("--"))
@@ -90,15 +92,15 @@ fn execute(args: &[String]) -> Result<(), String> {
     } else if simulate && values.contains_key("--gateway") {
         return Err("--simulate cannot be combined with --gateway".into());
     } else {
+        let selector = DeviceSelector::parse(
+            values.get("--device-id").map(String::as_str),
+            values.get("--device").map(String::as_str),
+        )?;
         let path = Path::new(values.get("--project").ok_or("--project required")?);
         let conn = crate::open_native_for_reading(path).map_err(|e| e.to_string())?;
         let p = knx_store::load_project(&conn).map_err(|e| e.to_string())?;
-        let id = values
-            .get("--device-id")
-            .ok_or("--device-id required")?
-            .parse::<u32>()
-            .map_err(|_| "invalid device ID")?;
-        (p, DeviceId(id))
+        let device = selector.resolve(&p)?;
+        (p, device)
     };
     let products = if let Some(path) = values.get("--product-db") {
         Some(crate::open_products_db_for_reading(Some(path))?)
@@ -304,4 +306,62 @@ fn synthetic_project() -> Project {
         binary_data: vec![],
     });
     p
+}
+
+#[cfg(test)]
+mod tests {
+    use super::execute;
+
+    /// Runs `execute` against a project path that does not exist, so any
+    /// refusal seen here happened before a project was opened.
+    fn refusal(selector: &[&str]) -> String {
+        refusal_in(tempfile::tempdir().unwrap().path(), selector)
+    }
+
+    fn refusal_in(dir: &std::path::Path, selector: &[&str]) -> String {
+        let output = dir.join("diagnostic.zip");
+        let missing = dir.join("missing.knxdb");
+        let mut args: Vec<String> = selector.iter().map(|s| s.to_string()).collect();
+        for value in [
+            "--project",
+            missing.to_str().unwrap(),
+            "--gateway",
+            "203.0.113.250:3671",
+            "--output",
+            output.to_str().unwrap(),
+        ] {
+            args.push(value.into());
+        }
+        let error = execute(&args).unwrap_err();
+        assert!(!output.exists());
+        error
+    }
+
+    #[test]
+    fn selector_errors_come_before_the_project_is_opened() {
+        assert!(refusal(&["--device", "1.1"]).contains("area.line.device"));
+        assert!(refusal(&["--device", "16.0.1"]).contains("area.line.device"));
+        assert!(refusal(&["--device", "1.1.x"]).contains("area.line.device"));
+        assert!(refusal(&["--device", "1.1.5", "--device-id", "1"]).contains("not both"));
+        let neither = refusal(&[]);
+        assert!(neither.contains("--device <area.line.device>"), "{neither}");
+        assert!(neither.contains("--device-id <id>"), "{neither}");
+    }
+
+    #[test]
+    fn a_well_formed_address_reaches_the_project_like_an_id() {
+        let dir = tempfile::tempdir().unwrap();
+        let by_address = refusal_in(dir.path(), &["--device", "1.1.5"]);
+        assert_eq!(by_address, refusal_in(dir.path(), &["--device-id", "1"]));
+    }
+
+    #[test]
+    fn the_device_flag_needs_a_value_and_appears_once() {
+        let error = execute(&["--device".into()]).unwrap_err();
+        assert!(error.contains("--device needs a value"), "{error}");
+        let args: Vec<String> = ["--device", "1.1.5", "--device", "1.1.6"]
+            .map(String::from)
+            .to_vec();
+        assert!(execute(&args).unwrap_err().contains("duplicate --device"));
+    }
 }

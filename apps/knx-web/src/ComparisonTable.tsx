@@ -2,6 +2,7 @@
 import { Fragment, useState } from "react";
 import ResizableTable from "./ResizableTable";
 import type { DecodedComparisonRow } from "./deviceComparisons";
+import { offersAdoption } from "./comparisonAdoptionApi";
 import { comparisonRowView, markRawBytes, type ComparisonChange, type MarkedByte } from "./comparisonDiff";
 import { useTranslate, type MessageKey, type Translate } from "./i18n";
 
@@ -45,8 +46,8 @@ export default function ComparisonTable({ rows, changes = [], selection }: { row
         const different = marks ? marks.different > 0 : row.project !== null && row.device !== null && row.project !== row.device;
         return <tr key={index} className={marks ? "comparison-raw" : undefined}
           data-different={different || undefined} data-unknown={(marks !== null && marks.unknown > 0) || undefined}>
-          <th scope="row">{selection && row.adoptable === true && row.index === index && <input type="checkbox"
-            aria-label={t("compare.adoption.select", { field: row.label })} checked={selection.indices.includes(index)}
+          <th scope="row">{selection && offersAdoption(row, index) && <input type="checkbox"
+            aria-label={t("compare.adoption.select", { field: row.kind === "parameter" ? row.label : `${labels[row.kind] ? t(labels[row.kind]) : row.kind} · ${row.label}` })} checked={selection.indices.includes(index)}
             disabled={selection.disabled} onChange={() => selection.toggle(index)} />}
             {labels[row.kind] ? t(labels[row.kind]) : row.kind}{row.label && ` · ${row.label}`}
             {row.reason && <small className="comparison-reason">{row.reason === "parameterNotDecoded" ? t("compare.parameterNotDecoded") : row.reason}</small>}

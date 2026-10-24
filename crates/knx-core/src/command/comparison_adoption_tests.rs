@@ -1,6 +1,6 @@
 //! Atomic adoption uses the normal stack, including P3 pending and full-history binding.
 use super::comparison_adoption::{
-    AdoptionCommandError, ParameterAdoption, PreparedComparisonAdoption,
+    AdoptionCommandError, LinkAdoption, ParameterAdoption, PreparedComparisonAdoption,
 };
 use super::*;
 use crate::{CommissioningState, CompletionStatus, Language};
@@ -126,4 +126,150 @@ fn adoption_refuses_duplicate_mapping_and_late_command_failure_atomically() {
     ));
     assert_eq!(malformed, before);
     assert_eq!(stack.history_lengths(), (0, 0));
+}
+
+fn linked_fixture() -> Project {
+    let mut project = fixture();
+    let source = || SourceRef {
+        path: "fixture".into(),
+        ets_id: "O".into(),
+    };
+    for (id, raw) in [(1, 0x0801), (2, 0x0802)] {
+        project.installations[0]
+            .group_addresses
+            .push(GroupAddressEntry {
+                id: GroupAddressId(id),
+                source: source(),
+                name: format!("GA {id}"),
+                address: GroupAddress::from_raw(raw),
+                central: false,
+                unfiltered: false,
+                range: None,
+                declared_dpt: Default::default(),
+            });
+    }
+    for (id, device) in [(1, DeviceId(1)), (2, DeviceId(2))] {
+        project.devices.insert_com_object(ComObjectInstance {
+            id: ComObjectInstanceId(id),
+            source: source(),
+            device,
+            number: 0,
+            text: Override::Absent,
+            description: Override::Absent,
+            dpt: Override::Absent,
+            flags: crate::flags::ResolvedFlags::none(),
+            size: None,
+            is_active: true,
+            links: if id == 1 {
+                vec![GroupLink {
+                    ga: GroupAddressId(1),
+                    direction: Direction::Send,
+                }]
+            } else {
+                vec![]
+            },
+            module_instance: None,
+        });
+    }
+    project
+        .devices
+        .get_mut(DeviceId(1))
+        .unwrap()
+        .com_objects
+        .push(ComObjectInstanceId(1));
+    project
+}
+fn link(add: bool, com_object: u32, ga: u32, direction: Direction) -> LinkAdoption {
+    LinkAdoption {
+        add,
+        com_object: ComObjectInstanceId(com_object),
+        ga: GroupAddressId(ga),
+        direction,
+    }
+}
+#[test]
+fn link_adoption_with_parameters_is_one_undo_step_restoring_link_positions() {
+    let mut project = linked_fixture();
+    let before = project.clone();
+    let mut stack = CommandStack::new();
+    let prepared = PreparedComparisonAdoption::prepare_with_links(
+        &project,
+        &stack,
+        DeviceId(1),
+        0,
+        changes(),
+        vec![
+            link(true, 1, 2, Direction::Send),
+            link(false, 1, 1, Direction::Send),
+        ],
+    )
+    .unwrap();
+    assert!(prepared.changed());
+    prepared.apply(&mut project, &mut stack).unwrap();
+    assert_eq!(stack.history_lengths(), (1, 0));
+    let links = &project
+        .devices
+        .com_object(ComObjectInstanceId(1))
+        .unwrap()
+        .links;
+    assert_eq!(
+        links,
+        &vec![GroupLink {
+            ga: GroupAddressId(2),
+            direction: Direction::Send
+        }]
+    );
+    assert_eq!(project.installations[0].parameters.len(), 2);
+    stack.undo(&mut project).unwrap();
+    assert!(project.same_user_content_as(&before));
+    assert_eq!(
+        project
+            .devices
+            .com_object(ComObjectInstanceId(1))
+            .unwrap()
+            .links,
+        before
+            .devices
+            .com_object(ComObjectInstanceId(1))
+            .unwrap()
+            .links
+    );
+}
+#[test]
+fn link_adoption_refuses_foreign_duplicate_and_missing_links_without_effect() {
+    let project = linked_fixture();
+    let stack = CommandStack::new();
+    let prepare = |links| {
+        PreparedComparisonAdoption::prepare_with_links(
+            &project,
+            &stack,
+            DeviceId(1),
+            0,
+            vec![],
+            links,
+        )
+    };
+    assert!(matches!(
+        prepare(vec![link(true, 2, 2, Direction::Receive)]),
+        Err(AdoptionCommandError::ForeignComObject(ComObjectInstanceId(
+            2
+        )))
+    ));
+    assert!(matches!(
+        prepare(vec![
+            link(true, 1, 2, Direction::Receive),
+            link(true, 1, 2, Direction::Receive)
+        ]),
+        Err(AdoptionCommandError::DuplicateLink(..))
+    ));
+    assert!(matches!(
+        prepare(vec![link(false, 1, 2, Direction::Receive)]),
+        Err(AdoptionCommandError::Command(_))
+    ));
+    let no_op = prepare(vec![]).unwrap();
+    assert!(!no_op.changed());
+    assert!(matches!(
+        PreparedComparisonAdoption::prepare(&project, &stack, DeviceId(1), 0, vec![]),
+        Err(AdoptionCommandError::EmptySelection)
+    ));
 }

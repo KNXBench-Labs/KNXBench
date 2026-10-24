@@ -5,6 +5,18 @@
 This is a preserved research dossier, not fresh protocol or hardware acceptance.
 Original dates, assumptions, corrections and numbered sections stay in force.
 
+## Dated note: declared ETS download plug-ins (2026-10-24)
+
+The preserved table below is unchanged. Since KL-006's 2026-10-24 boundary
+([dossier](../../limitations/KL-006-devices-dependent-on-vendor-plug-ins.md)),
+a program declaring `Static/Extension/@EtsDownloadPlugin` is refused for every
+download scope. In this house that moves the **1.1.24** row from *plan³* to
+*refused: `vendor-download-plugin`*. The **1.1.22–23** rows declare a plug-in
+too but keep their grade and reason (*refused: not memory-mapped*): the kind
+check comes first, by fixed precedence. Readiness now reads 31 untested,
+3 unsupported and 1 excluded of 35 devices
+(`crates/knx-app/tests/it/house_readiness.rs`).
+
 <a id="1912-the-maintainers-own-house-device-by-device-2026-09-29"></a>
 <!-- BEGIN preserved record-2-021 -->
 ### 19.12 The maintainer's own house, device by device (2026-09-29)

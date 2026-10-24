@@ -47,6 +47,7 @@ mod bus_routes;
 mod bus_scan;
 mod catalog_requests;
 mod com_object_activation;
+mod com_object_folders;
 mod contribution_routes;
 mod data_file;
 mod debug_report;

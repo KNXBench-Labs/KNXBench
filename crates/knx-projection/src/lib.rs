@@ -858,6 +858,60 @@ pub struct ComObjectNode {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub name_fill: Option<TextFill>,
+    /// WP-06a: where the imported project's saved `GroupObjectTree` places
+    /// the object, or why it shows no folder. Read from the retained source
+    /// tree, never from product data. Server-only, like `dpt_text`:
+    /// [`build_device_detail`] leaves it absent.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub project_folder: Option<ComObjectProjectFolder>,
+}
+
+/// [`ComObjectNode::project_folder`]: the saved project folder of one object.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[ts(export)]
+pub struct ComObjectProjectFolder {
+    pub status: ProjectFolderStatus,
+    /// Stable within one device detail: two objects share a folder exactly
+    /// when their keys are equal. Opaque; do not parse. Present exactly when
+    /// `status` is `Assigned`.
+    pub key: Option<String>,
+    /// The saved tree's declared nodes from the root to the folder holding
+    /// the object, `RefId`s verbatim. Empty unless `status` is `Assigned`.
+    /// No `RefId` is resolved to a product label here.
+    pub path: Vec<ProjectTreeNode>,
+}
+
+/// One declared `GroupObjectTree/…/Node` on a [`ComObjectProjectFolder::path`].
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[ts(export)]
+pub struct ProjectTreeNode {
+    /// `Channel` or `Folder` (`Node/@Type`).
+    pub kind: String,
+    /// `Node/@RefId`, the shortened channel or parameter-block id.
+    pub ref_id: String,
+}
+
+/// [`ComObjectProjectFolder::status`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
+#[ts(export)]
+pub enum ProjectFolderStatus {
+    /// The saved tree lists the object once, in a declared `Folder` node.
+    Assigned,
+    /// Listed once, at the tree root or directly in a `Channel` node.
+    NoFolder,
+    /// The device has no retained tree, or the tree does not list the object.
+    NotInSavedTree,
+    /// Listed more than once in the device's saved tree.
+    Ambiguous,
+    /// Listed in or below a node without a unique declared `Type`/`RefId`.
+    UnidentifiedNode,
+    /// The tree cannot be read or attributed to exactly this device.
+    TreeUnresolved,
+    /// A module-instance object in a saved folder: not admitted (WP-07).
+    ModuleObject,
+    /// In a saved folder, but stored or evaluated as inactive.
+    Inactive,
 }
 
 /// ADR-0126: a product text whose positional `{{0}}` was filled, or could not be.
@@ -1053,6 +1107,7 @@ fn build_com_object_node(com: &knx_core::ComObjectInstance, project: &Project) -
         size: com.size.as_ref().map(|size| object_size_text(size.value)),
         function_text: None,
         name_fill: None,
+        project_folder: None,
     }
 }
 

@@ -12,6 +12,19 @@ export const ACTIVATION_ORDER = ["Active", "Inactive", "Undetermined", "NotEvalu
 export const effectiveDpt = (o: ComObjectNode): string | null => o.dpt ?? o.program_dpt;
 export const evaluatedChannel = (o: ComObjectNode): ComObjectChannel | null => o.activation === "Active" ? o.channel ?? null : null;
 export const channelKey = (o: ComObjectNode): string => evaluatedChannel(o) ? `channel:${evaluatedChannel(o)!.key}` : "unassigned";
+/** WP-06a: saved-folder statuses that refuse a folder the tree would otherwise give. */
+export const REFUSED_PROJECT_FOLDERS = ["Ambiguous", "UnidentifiedNode", "TreeUnresolved", "ModuleObject", "Inactive"] as const;
+export type RefusedProjectFolder = typeof REFUSED_PROJECT_FOLDERS[number];
+/** Declared `Folder` RefIds of an assigned saved project folder, outermost first; `null` otherwise. */
+export function projectFolderIds(o: ComObjectNode): string[] | null {
+  const folder = o.project_folder;
+  return folder?.status === "Assigned" ? folder.path.filter(n => n.kind === "Folder").map(n => n.ref_id) : null;
+}
+/** Why the saved tree's folder is withheld; `null` for no folder, an assigned one or an unknown status. */
+export function projectFolderRefusal(o: ComObjectNode): RefusedProjectFolder | null {
+  const status = o.project_folder?.status;
+  return REFUSED_PROJECT_FOLDERS.find(s => s === status) ?? null;
+}
 export const hasFilters = (f: ComFilters): boolean => !!f.query.trim() || f.status !== "all" || f.link !== "all" || f.dpt !== "all";
 /** `[main]` for `DPT-n`, `[main, sub]` for `DPST-n-m`, `null` for anything else. */
 export function dptParts(value: string | null): number[] | null {
@@ -50,7 +63,7 @@ export function deriveComObjectView(objects: ComObjectNode[], filters: ComFilter
     const channel = evaluatedChannel(o);
     const fields = [String(o.number), o.name, o.function_text, effectiveDpt(o), o.dpt_text,
       effectiveDpt(o) === null ? null : dptDisplay(effectiveDpt(o), language),
-      channel?.text, channel?.name, channel?.number, ...o.links.flatMap(l => [l.name, ...(l.address === null ? [] : groupAddressSpellings(l.address))])];
+      channel?.text, channel?.name, channel?.number, ...(projectFolderIds(o) ?? []), ...o.links.flatMap(l => [l.name, ...(l.address === null ? [] : groupAddressSpellings(l.address))])];
     const descriptionMatch = !!needle && contains(o.description) && !fields.some(contains);
     if (descriptionMatch) descriptionMatches.add(o.id);
     const state = ACTIVATION_ORDER.includes(o.activation) ? o.activation : "unknown";

@@ -18,6 +18,35 @@ pub struct ComparisonRow {
     /// Exact captured field identity; never reconstructed from the label.
     /// Present even for an unknown parameter row, which remains non-adoptable.
     pub parameter: Option<crate::image::ParameterAttribution>,
+    /// Typed per-side association entry; present on every `association` row.
+    pub association: Option<AssociationAttribution>,
+}
+
+/// One association-table entry, resolved through its own side's address table.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct AssociationEntry {
+    /// 1-based position in that side's address table (§4.16.3.3.2).
+    pub tsap: u8,
+    /// The group object number, the ASAP.
+    pub object: u8,
+    /// The group address the TSAP selects in that side's address table.
+    pub group_address: knx_core::GroupAddress,
+}
+
+/// What one side holds at an association slot.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AssociationSlot {
+    /// A completely decoded entry.
+    Entry(AssociationEntry),
+    /// The slot lies past this side's verified Current Size: no entry.
+    Beyond,
+}
+
+/// Both sides of one association slot. `None` is unknown, never empty.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct AssociationAttribution {
+    pub project: Option<AssociationSlot>,
+    pub device: Option<AssociationSlot>,
 }
 
 /// Decode only the table format the image writer already verifies.
@@ -105,26 +134,48 @@ pub fn decode(
             ));
             for i in 0..pn.unwrap_or(0).max(dn.unwrap_or(0)) {
                 let at = start + 1 + i * 2;
-                let value = |data: &std::collections::BTreeMap<u32, u8>, n: Option<u32>| {
+                let slot = |data: &std::collections::BTreeMap<u32, u8>, n: Option<u32>| {
                     if i >= n? {
-                        return None;
+                        return Some(AssociationSlot::Beyond);
                     }
-                    let tsap = u32::from(*data.get(&at)?);
-                    let object = data.get(&(at + 1))?;
+                    let tsap = *data.get(&at)?;
+                    let object = *data.get(&(at + 1))?;
                     let addresses = address?;
-                    if tsap == 0 || tsap >= count(data, addresses)? || at + 1 >= table.end {
+                    if tsap == 0
+                        || u32::from(tsap) >= count(data, addresses)?
+                        || at + 1 >= table.end
+                    {
                         return None;
                     }
-                    let ga = group_address(word(data, addresses, addresses.start + 1 + tsap * 2)?);
-                    Some(format!("TSAP {tsap} → {ga} · object {object}"))
+                    let raw = word(data, addresses, addresses.start + 1 + u32::from(tsap) * 2)?;
+                    Some(AssociationSlot::Entry(AssociationEntry {
+                        tsap,
+                        object,
+                        group_address: knx_core::GroupAddress::from_raw(raw),
+                    }))
                 };
-                rows.push(row(
+                let text = |slot: Option<AssociationSlot>| match slot? {
+                    AssociationSlot::Entry(entry) => Some(format!(
+                        "TSAP {} → {} · object {}",
+                        entry.tsap,
+                        group_address(entry.group_address.raw()),
+                        entry.object
+                    )),
+                    AssociationSlot::Beyond => None,
+                };
+                let attribution = AssociationAttribution {
+                    project: slot(&project, pn),
+                    device: slot(&device, dn),
+                };
+                let mut entry = row(
                     "association",
                     i.to_string(),
                     at,
-                    value(&project, pn),
-                    value(&device, dn),
-                ));
+                    text(attribution.project),
+                    text(attribution.device),
+                );
+                entry.association = Some(attribution);
+                rows.push(entry);
             }
         }
     }
@@ -168,6 +219,7 @@ fn row(
         device,
         reason,
         parameter: None,
+        association: None,
     }
 }
 

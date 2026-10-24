@@ -12,7 +12,7 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
-## Alpha 16 published pre-release — public artifacts verified, website pending (24 October 2026)
+## Alpha 16 published pre-release — public artifacts and website verified (24 October 2026)
 
 Runtime/test source is frozen at `86b4a7fc68b3d3206c00511b14f41e025e33de4d`.
 The [release-plan evidence matrix](goals/alpha16-release-plan-2026-10-23.md#current-acceptance-disposition--24-october-2026)
@@ -75,7 +75,8 @@ public artifact/checksum/digest/revision readback are complete: AppImage workflo
 and native amd64/arm64 OCI revisions match the immutable tag.
 [Public verification record](evidence/release-alpha16-2026-10-24.json). Local
 artifact hashes remain distinct from CI-built public downloads. Final Pages
-deployment/live website verification of the docs/site successor remains pending;
+run `40086558178` deployed docs/site revision `83376509`; all 40 deployed files
+and four aliases matched live HTTP bytes with no exclusions;
 no runtime/artifact identity is relabelled to a documentation SHA.
 Application versions are `0.1.0-alpha.16`; native/store and core
 model remain 16, product database 28, with closed-catalogue backup/downgrade limits

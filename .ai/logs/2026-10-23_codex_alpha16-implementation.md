@@ -901,6 +901,16 @@ and stable version/latest index match the release. No source suite replay or
 container mutation. Separate docs/site synchronization 0236db15 is active; final
 Pages/live-content verification and compact evidence cleanup remain pending.
 
+## Final website acceptance
+
+Actual final Pages build/deploy succeeded at docs/site 83376509. Parent verified
+receipt/index hashes and all 305 evidence files. All 40 artifact files and four
+aliases match live HTTP bytes, zero exclusions; six release links and 24 media
+assets verified. This is not independent browser or hardware certification.
+Current docs/public receipt now record completion; runtime and website source
+inputs remain unchanged. Bounded compact evidence retention runs separately;
+unrelated unfinished worktrees and concurrent cleanup reservations are preserved.
+
 ## Next
 
 Consume exact worker handoffs on completion; do not poll

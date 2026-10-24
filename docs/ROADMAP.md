@@ -1,6 +1,6 @@
 # Roadmap
 
-## Alpha 16 published pre-release — public artifacts verified, website pending (24 October 2026)
+## Alpha 16 published pre-release — public artifacts and website verified (24 October 2026)
 
 The [current source-bound evidence matrix](goals/alpha16-release-plan-2026-10-23.md#current-acceptance-disposition--24-october-2026)
 records accepted bounded configured System-2 UI/HTTP/App/CLI, catalogue jobs,
@@ -39,8 +39,9 @@ final-tag publication and public artifact/checksum/digest/revision readback are 
 complete ([public verification record](evidence/release-alpha16-2026-10-24.json)).
 CI-built downloads and Docker amd64/arm64 revisions match the tag; earlier local
 artifact hashes retain their own runtime identity. Final Pages deployment/live
-website verification of this docs/site successor, handover and owned cleanup
-remain separate pending work. The bounded documentation reconciliation closes no ledger
+website verification passed at docs/site revision `83376509`: all 40 deployed
+files and four aliases matched with no exclusions. Handover and evidence
+retention are tracked separately. The bounded documentation reconciliation closes no ledger
 row or limitation. General performance and >4 GiB
 Large-boundary verification are not claimed. Dated roadmap checkpoints below
 retain their original scope; this snapshot supersedes their then-open Alpha-16

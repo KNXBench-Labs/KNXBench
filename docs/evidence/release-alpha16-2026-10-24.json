@@ -120,13 +120,24 @@
   },
   "public_artifact_verification": "PASS",
   "website": {
-    "status": "pending",
-    "scope": "Final documentation/site successor Pages deployment and live generated-content verification remain pending; no website acceptance is inferred from public artifacts."
+    "status": "PASS",
+    "source_revision": "83376509e05269fcae8c09e17a49fcf586eed693",
+    "run_id": 40086558178,
+    "deployment_id": 7297454739,
+    "artifact_id": 12557136990,
+    "artifact_sha256": "1097c2ed0e04572f33bb1e4f75c5bfbb0a43dd57737834e284c45cecb88ba260",
+    "inventory_sha256": "83853fbbe1462237f1a6d7fb2893c0426281aac2140c5ebe809a2c12110a7bc7",
+    "artifact_files_http_200_and_hash_match": 40,
+    "aliases_http_200_and_hash_match": 4,
+    "release_links_http_200": 6,
+    "media_assets_hash_match": 24,
+    "excluded_files": [],
+    "scope": "Actual successful final Pages build/deployment and complete live HTTP file/path/hash readback; not independent browser-rendering or hardware acceptance."
   },
   "boundaries": [
     "No new product suites, builds, AppImage GUI/extraction or Docker runtime probes in this public readback.",
     "Experimental configured System-2 scope remains UP 258D12 application M-0001_A-9205-04-9270 only; software/TestHardware evidence is not physical-device or recovery certification, general System-2 support or ETS parity.",
     "Native/store and model schema 16; product database 28. Back up closed catalogues, projects and deployment data before upgrading; no catalogue downgrade path or older-reader promise.",
-    "Alpha 14 media remains historical; no new Alpha 16 capture or deployed website verification is claimed."
+    "Alpha 14 media remains historical; no new Alpha 16 capture, independent browser-rendering acceptance or physical-device certification is claimed."
   ]
 }

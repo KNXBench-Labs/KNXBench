@@ -12,6 +12,21 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Diagnostic job ownership across the React commit boundary (25 October 2026)
+
+The export dialog owns each successful running Start token synchronously, before
+queuing its progress view. Project close or entry removal before that view commits
+now cooperatively cancels the exact response token once; terminal Start/poll/Stop
+responses release ownership before their view commits too. Late Start cleanup and
+rejected cleanup remain isolated from replacement jobs. Revision-only refreshes
+still retain stale review, acquisition and separately consented partial export
+([contract](contracts/device-diagnostic-export.md#entry-points-one-application-service)).
+Deterministic RED on the original source, including the unchanged eight-case
+independent entry/overlay probe; corrected-source focused coverage 38/38 (30 owning
+tests plus that probe). Full Vitest 4,315/4,315 across 296 files, production build,
+26 TypeScript configs and `device-editor-layout` 14/14 passed. Targeted web checks
+only; no complete package gate, backend change or real-bus operation.
+
 ## Device Diagnostics-tab entry for analysis and support (24 October 2026)
 
 Owner decision: a device's existing **Diagnostics** tab now offers **Analyse

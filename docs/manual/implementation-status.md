@@ -476,6 +476,10 @@ memory reads and no hardware compatibility claim yet
 ([contract](../contracts/device-diagnostic-export.md)). Since 24 October 2026
 (source builds after Alpha 16) a device's Diagnostics tab opens this dialog and
 the support report with that device preselected; the dialogs are unchanged.
+The 25 October 2026 lifecycle correction owns a running Start response before its
+progress view commits, so project close or entry removal cannot strand that job.
+Revision-only refreshes still retain analysis and separately consented partial
+export; stale replies and cleanup failures cannot affect a replacement job.
 
 <a id="alpha-12-release-candidate-boundary-15-october-2026"></a>
 

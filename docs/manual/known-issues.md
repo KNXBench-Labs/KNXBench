@@ -370,7 +370,10 @@ is the remaining copy defect.
 - **Limitation:** KNXBench has no plug-in host and will not grow one —
   there is no plug-in API at all, by decision.
 - **Consequence:** such a device can be imported, viewed and addressed, but
-  its application-specific settings are opaque.
+  its application-specific settings are opaque. When its application program
+  declares an ETS download plug-in, every download scope is refused
+  (`vendor-download-plugin`): complete, parameters and group addresses alike.
+  Read-only comparison still works.
 - **Workaround:** none. Use ETS for those devices.
 - **Details:** [§6 devices behind vendor plug-in DLLs](../KNOWN_LIMITATIONS.md#6-devices-behind-vendor-plug-in-dlls),
   [§107 there is no plugin API](../KNOWN_LIMITATIONS.md#107-there-is-no-plugin-api--a-third-party-cannot-add-a-format-a-protocol-a-report-template-or-a-ui-panel-without-forking)

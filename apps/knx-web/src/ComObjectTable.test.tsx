@@ -220,6 +220,26 @@ it("names the object size the product data resolves, and nothing when it is unkn
   await v.cleanup();
 });
 
+it("WP-06a: shows a saved project folder by its declared ids and says why another is withheld", async () => {
+  const v = await render([
+    object(1, { project_folder: { status: "Assigned", key: "Channel:4:CH-1/Folder:4:PB-3",
+      path: [{ kind: "Channel", ref_id: "CH-1" }, { kind: "Folder", ref_id: "PB-3" }] } }),
+    object(2, { project_folder: { status: "ModuleObject", key: null, path: [] } }),
+    object(3, { project_folder: { status: "NoFolder", key: null, path: [] } }),
+    object(4)]);
+  const note = (id: number) => v.host.querySelector<HTMLElement>(`tr[data-object-id="${id}"] .com-object-project-folder`);
+  expect(note(1)?.textContent).toBe("Project folder: PB-3");
+  expect(note(1)?.dataset.folderStatus).toBe("Assigned");
+  expect(note(1)?.title).toBe("Saved project tree: CH-1 › PB-3. Ids as stored in the project; the product's folder names are not looked up.");
+  expect(note(2)?.textContent).toBe("No project folder: folders of module objects are not supported yet");
+  expect(note(3)).toBeNull();
+  expect(note(4)).toBeNull();
+  await v.set(v.input("Search communication objects"), "PB-3");
+  const visible = [...v.host.querySelectorAll<HTMLElement>("tr.com-object-summary")].filter(r => !r.hidden).map(r => r.dataset.objectId);
+  expect(visible).toEqual(["1"]);
+  await v.cleanup();
+});
+
 tableColumnSmoke([["communication-objects", 6]], async () => { const v = await render([object(1)]); return v; });
 
 tableColumnSmoke([["communication-objects", 7]], async () => {

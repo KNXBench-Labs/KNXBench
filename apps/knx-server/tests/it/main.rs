@@ -23,6 +23,7 @@ mod http_bus_write;
 mod http_catalog_to_device;
 mod http_catalog_translation;
 mod http_catalogue_update;
+mod http_com_object_folders;
 mod http_com_object_language;
 mod http_contributions;
 mod http_debug_report;

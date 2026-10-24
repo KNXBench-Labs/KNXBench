@@ -43,9 +43,18 @@ function result(binding: ComparisonBinding, address: string): BoundDeviceCompari
       ] : [],
     ] };
 }
-async function intercept(page: Page, language: "en" | "de", mode: "normal" | "busy" | "held" = "normal") {
+/** Association adoption: server hints, an observation token and a retained preview with link changes. */
+function adoptable(value: BoundDeviceComparison): BoundDeviceComparison {
+  return { ...value, observationToken: "o".repeat(64), observationExpiresInSeconds: 600,
+    decoded: value.decoded.map((row, index) => ({ ...row, index, adoptable: row.kind === "association" || (row.kind === "groupAddress" && index === 0) })) } as BoundDeviceComparison;
+}
+const linkPreview = (rows: unknown) => ({ previewToken: "p".repeat(64), selected: [1], changed: true, rows, expiresInSeconds: 120, linkChanges: [
+  { add: false, object: 7, comObjectId: 70, groupAddress: "2/2/3", groupAddressId: 3, sending: true },
+  { add: true, object: 7, comObjectId: 70, groupAddress: "2/2/4", groupAddressId: 4, sending: true },
+] });
+async function intercept(page: Page, language: "en" | "de", mode: "normal" | "busy" | "held" | "adopt" = "normal") {
   const state = { tree: tree(), unexpected: [] as string[], requests: [] as { address: string; gateway: string; binding: ComparisonBinding }[],
-    release: () => {} };
+    previews: [] as unknown[], release: () => {} };
   let opened = false;
   await page.route("**/api/**", async (route) => {
     const path = new URL(route.request().url()).pathname; const method = route.request().method();
@@ -71,7 +80,10 @@ async function intercept(page: Page, language: "en" | "de", mode: "normal" | "bu
         holder: { kind: "busMonitor", sessionId: 1, gateway, state: "active" } }; }
       else if (request.binding.deviceId >= 3) { status = 502; body = { error: "Fictional device diagnostic", kind:
         request.binding.deviceId === 3 ? "deviceCompareWrongApplication" : request.binding.deviceId === 4 ? "deviceCompareNoAnswer" : "deviceCompareNotComparable" }; }
-      else body = result(request.binding, request.address);
+      else body = mode === "adopt" ? adoptable(result(request.binding, request.address)) : result(request.binding, request.address);
+    } else if (path === "/api/device-compare/preview" && method === "POST" && mode === "adopt") {
+      state.previews.push(route.request().postDataJSON());
+      body = linkPreview(adoptable(result(state.requests.at(-1)!.binding, state.requests.at(-1)!.address)).decoded);
     } else if (achievementsFixtureAnswer(method, path) !== undefined) body = achievementsFixtureAnswer(method, path);
     else { state.unexpected.push(`${method} ${path}`); status = 404; body = { error: "strict comparison fixture" }; }
     return route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
@@ -214,3 +226,33 @@ test("a busy bus monitor refuses the run clearly without marking any device", as
   await expect(dialog.locator(".comparison-results li").filter({ hasText: "Fictional device 1" }).locator(".comparison-tag")).toHaveCount(0);
   expect(state.requests).toHaveLength(1); expect(state.unexpected).toEqual([]);
 });
+
+for (const language of ["en", "de"] as const) {
+  const m = language === "en" ? en : de;
+  test(`${language} association rows preview their link changes and still need a separate confirmation`, async ({ page }) => {
+    const state = await intercept(page, language, "adopt"); await open(page, language);
+    await page.getByRole("searchbox", { name: m["devices.filter"], exact: true }).fill("Fictional device 2");
+    await page.getByRole("button", { name: m["compare.all"], exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: m["compare.title"], exact: true });
+    await dialog.locator(".comparison-gateway").fill(gateway);
+    await dialog.getByRole("button", { name: m["compare.confirm"], exact: true }).click();
+    await expect(dialog.getByRole("button", { name: m["compare.close"], exact: true })).toBeVisible();
+    await dialog.locator(".comparison-results li").filter({ hasText: "Fictional device 2" }).locator("button").first().click();
+    const panel = dialog.getByRole("region", { name: m["compare.adoption.title"], exact: true });
+    // The server hint on a group-address row is not enough: only the association row is offered.
+    const choices = panel.locator(".comparison-decoded tbody input[type=checkbox]");
+    await expect(choices).toHaveCount(1);
+    await choices.first().check();
+    await panel.getByRole("button", { name: m["compare.adoption.preview"], exact: true }).click();
+    expect(state.previews).toEqual([{ observationToken: "o".repeat(64), selected: [1] }]);
+    const links = panel.locator(".comparison-adoption-links li");
+    await expect(links).toHaveCount(2);
+    await expect(links.nth(0)).toContainText(m["compare.adoption.linkRemove"].replace("{object}", "7").replace("{address}", "2/2/3"));
+    await expect(links.nth(1)).toContainText(m["compare.adoption.linkAdd"].replace("{object}", "7").replace("{address}", "2/2/4"));
+    await expect(links.nth(1)).toContainText(m["compare.adoption.linkSending"]);
+    await expect(panel.getByRole("button", { name: m["compare.adoption.apply"], exact: true })).toBeDisabled();
+    await panel.locator(".comparison-adoption-review").scrollIntoViewIfNeeded();
+    await capture(page, `association-preview-${language}`);
+    expect(state.unexpected).toEqual([]);
+  });
+}

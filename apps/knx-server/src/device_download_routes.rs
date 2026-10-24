@@ -22,7 +22,9 @@ use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
 
 use knx_app::access_key::{choose_key, download_keying, project_access_key, DownloadKeying};
-use knx_app::device_download::{prepare_device_download, PrepareError, PreparedDownload};
+use knx_app::device_download::{
+    prepare_device_download, prepare_device_download_for_reading, PrepareError, PreparedDownload,
+};
 use knx_app::download_report::{prepare_report, DownloadReport};
 use knx_app::download_support::{
     download_level, shipped_evidence, untested_acknowledgement, SupportLevel,
@@ -234,12 +236,38 @@ pub(crate) fn no_application_program(state: &crate::AppState) -> String {
     )
 }
 
-/// Prepares from the project as it is now. Both locks are released before
-/// this returns; they are never held together.
+/// Prepares a download from the project as it is now. Both locks are
+/// released before this returns; they are never held together. Refuses what
+/// no download may write (KL-006), as the CLI and readiness do.
 pub(crate) fn prepare(
     state: &SharedState,
     target: IndividualAddress,
     partial: Option<PartialDownloadParts>,
+) -> Result<PreparedDownload, ApiError> {
+    prepare_with(state, target, partial, prepare_device_download)
+}
+
+/// [`prepare`]'s plan, to read the device only (`/api/device-compare`):
+/// a program refused for every download (KL-006) is still compared.
+pub(crate) fn prepare_for_reading(
+    state: &SharedState,
+    target: IndividualAddress,
+    partial: Option<PartialDownloadParts>,
+) -> Result<PreparedDownload, ApiError> {
+    prepare_with(state, target, partial, prepare_device_download_for_reading)
+}
+
+type Preparation = fn(
+    &knx_productdb::Connection,
+    &knx_core::Project,
+    IndividualAddress,
+) -> Result<PreparedDownload, PrepareError>;
+
+fn prepare_with(
+    state: &SharedState,
+    target: IndividualAddress,
+    partial: Option<PartialDownloadParts>,
+    preparation: Preparation,
 ) -> Result<PreparedDownload, ApiError> {
     let Some(owner) = state.product_db.as_ref() else {
         return Err(ApiError::with_kind(
@@ -257,7 +285,7 @@ pub(crate) fn prepare(
         ));
     };
     let prepared = owner
-        .with_read(|products| prepare_device_download(products, project, target))
+        .with_read(|products| preparation(products, project, target))
         .map_err(crate::catalogue_owner::owner_error)?
         .map_err(|e| prepare_error(target, &e))?;
     match partial {
@@ -731,6 +759,14 @@ mod prepare_error_tests {
                     what: "parameter in a module instance".into(),
                 }),
                 "modules",
+            ),
+            (
+                PrepareError::Plan(
+                    knx_productdb::download_plan::DownloadPlanError::VendorDownloadPlugin(
+                        "{G}".into(),
+                    ),
+                ),
+                "vendor-download-plugin",
             ),
         ] {
             let expected_detail = format!("no download to device {target} prepared: {error}");

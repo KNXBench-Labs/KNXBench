@@ -246,6 +246,12 @@ pub struct ProgramCode {
     /// Presence of unqualified `LegacyPatchAlways` on a Static parameter or
     /// Union member, regardless of activation/value. Original XML is retained.
     pub has_legacy_patch_always: bool,
+    /// `Static/Extension/@EtsDownloadPlugin`, the GUID of the vendor
+    /// plug-in ETS runs for a download, when the program declares one. An
+    /// empty attribute names no plug-in and stays `None`. KNXBench never
+    /// runs it and cannot reproduce what it writes, so no download of such a
+    /// program is offered (KL-006, [`crate::download_plan::check_download_plugin`]).
+    pub download_plugin: Option<String>,
     /// `Static/Parameters` placements by parameter id. A parameter with
     /// no placement (it lives nowhere in memory) has no entry.
     pub parameters: BTreeMap<String, ParameterPlacement>,
@@ -508,6 +514,17 @@ impl<'a> Parser<'a> {
                 }
                 "FixupList" => {
                     code.has_fixup_list = true;
+                    self.skip(&child)?;
+                }
+                "Extension" => {
+                    let declared = child
+                        .attributes
+                        .get("EtsDownloadPlugin")
+                        .map(str::trim)
+                        .filter(|plugin| !plugin.is_empty());
+                    if code.download_plugin.is_none() {
+                        code.download_plugin = declared.map(str::to_string);
+                    }
                     self.skip(&child)?;
                 }
                 "LoadProcedures" if !child.empty => self.read_procedures(code)?,
@@ -1076,6 +1093,42 @@ mod tests {
                 .map(String::as_str),
             Some("true")
         );
+    }
+
+    #[test]
+    fn a_declared_download_plugin_is_read_from_static_extension() {
+        let code = parsed(
+            r#"<Extension EtsDownloadPlugin="{0000-F006}" RequiresExternalSoftware="0">
+                 <Baggage RefId="M-0001_BG-plugin.dll" />
+               </Extension>
+               <Options />"#,
+        );
+        assert_eq!(code.download_plugin.as_deref(), Some("{0000-F006}"));
+        // The children are skipped, not mistaken for the rest of Static.
+        assert_eq!(code.options, BTreeMap::new());
+    }
+
+    #[test]
+    fn no_or_an_empty_plugin_declaration_names_no_plugin() {
+        for body in [
+            "",
+            r#"<Extension RequiresExternalSoftware="1" />"#,
+            r#"<Extension EtsDownloadPlugin="  " />"#,
+        ] {
+            assert_eq!(parsed(body).download_plugin, None, "{body}");
+        }
+    }
+
+    #[test]
+    fn a_module_defs_extension_is_not_the_programs() {
+        let xml = program("").replace(
+            "</ApplicationProgram>",
+            r#"<ModuleDefs><ModuleDef Id="MD"><Static><Extension EtsDownloadPlugin="{X}" /></Static></ModuleDef></ModuleDefs></ApplicationProgram>"#,
+        );
+        let code = parse_program_code("t.xml", xml.as_bytes(), ID)
+            .unwrap()
+            .unwrap();
+        assert_eq!(code.download_plugin, None);
     }
 
     #[test]

@@ -59,8 +59,16 @@ export default function ComparisonAdoptionPanel({ result, disabled, onBusy, onAp
       <h4>{t("compare.adoption.review")}</h4>
       <p>{t(preview.changed ? "compare.adoption.reviewHint" : "compare.adoption.noChange", { count: preview.selected.length, seconds: preview.expiresInSeconds })}</p>
       <ul>{preview.selected.map((index) => { const row = preview.rows[index]; return row && <li key={index}>
-        <strong>{row.label}</strong>: {row.project ?? t("compare.unknown")} → {row.device ?? t("compare.unknown")}
+        <strong>{row.kind === "association" ? `${t("compare.kind.association")} · ${row.label}` : row.label}</strong>: {row.project ?? t("compare.unknown")} → {row.device ?? t("compare.unknown")}
       </li>; })}</ul>
+      {preview.linkChanges.length > 0 && <>
+        <h5>{t("compare.adoption.links")}</h5>
+        <ul className="comparison-adoption-links">{preview.linkChanges.map((change) => <li key={`${change.add ? "+" : "-"}${change.comObjectId}:${change.groupAddressId}`}
+          data-change={change.add ? "add" : "remove"}>
+          {t(change.add ? "compare.adoption.linkAdd" : "compare.adoption.linkRemove", { object: change.object, address: change.groupAddress })}
+          {" "}({t(change.sending ? "compare.adoption.linkSending" : "compare.adoption.linkReceiving")})
+        </li>)}</ul>
+      </>}
       {preview.changed && <>
         <label><input type="checkbox" checked={confirmed} disabled={busy} onChange={(event) => setConfirmed(event.target.checked)} />{t("compare.adoption.confirm")}</label>
         <button type="button" className="primary-action" disabled={busy || !confirmed || !available} onClick={() => void adopt()}>{t("compare.adoption.apply")}</button>

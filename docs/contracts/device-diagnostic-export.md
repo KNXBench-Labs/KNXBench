@@ -133,7 +133,15 @@ ETS-programmed state offline with KNXBench's source interpretation.
   refusal) ends its range, an error ends the run and is the stop reason, an
   unread chunk outside an ended range means `cancelled`, and a complete run
   with nothing ended has no stop reason except the caller's
-  `tunnel-disconnect-unconfirmed`. **25 October 2026:** the reader also
+  `tunnel-disconnect-unconfirmed`. Chunk error tokens also follow
+  `memory_reads`: `partial` requires `unexpected-length`, `refused-ambiguous`
+  requires `access-denied-or-memory-unavailable`, and `error` admits only
+  `cancelled`, `deadline`, `timeout`, `connection-released`, `connection-lost`,
+  `event-loss` or `transport-error`. These are the bounded wait's outcomes and
+  the established session's memory-exchange failures, not every token in the
+  collector's shared `failure` mapping: setup/identity reasons and the caller's
+  tunnel-teardown reason cannot be chunk errors, even in observer snapshots.
+  **25 October 2026:** the reader also
   cross-checks every identity-phase stop reason against the identity items and
   assertions, for both formats. `read_bundle` refuses format 2 rather than
   dropping its memory. Unread octets are never zero-filled. Same create-only
@@ -241,7 +249,7 @@ separation); `knx-cli`
 with a silent loopback gateway, `--simulate` end to end, refusals); memory
 profile also `knx-core` `declared_memory` (5), `knx-productdb`
 `system2_declared_segments` (5) and the ignored exact public-package test,
-`knx-app` `device_diagnostics_memory` (27: derivation, format-2 roundtrip,
+`knx-app` `device_diagnostics_memory` (31: derivation, format-2 roundtrip,
 0600/no overwrite, strict refusals, format 1 unchanged, size ceiling, identity
 admission, chunk order, real fault roundtrips, duplicate and competing-end-record
 ZIPs for both formats, ZIP comment, every observer snapshot exportable,
@@ -249,7 +257,10 @@ in-flight chunk shape, impossible identity sequences and identity stop reasons
 in each format, real collector stop outcomes through both profiles and reader
 APIs, every
 snapshot of refused-PID12 and mismatch runs, the real deadline and missing-
-assertion outcomes, and the 64/65-octet PID 78 bound)
+assertion outcomes, the 64/65-octet PID 78 bound, rehashed phase-inappropriate
+chunk errors in complete reports and snapshots, exact partial/refusal error
+labels, real memory-exchange failures and their snapshots, cancellation before
+and during a chunk, and unfinished device teardown)
 and the raw central-directory unit tests (4); web
 component/client tests; built shell in
 Chromium against the real HTTP handlers and the regular simulator (EN/DE,

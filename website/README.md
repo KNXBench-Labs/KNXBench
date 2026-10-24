@@ -97,16 +97,21 @@ Imprint acceptance recipe: `tests/verify-imprint.js`.
 ## Alpha 16 release content
 
 `content/de.json` and `content/en.json` hold the release copy; `page.html` holds
-the intended `v0.1.0-alpha.16` release and download targets. There is no separate
+the published `v0.1.0-alpha.16` release and download targets. There is no separate
 release-data updater in the maintained site sources: update both locales and
 the template together, without changing the normal release workflows.
 
-This refresh is a **prepared pre-release**, not a publication receipt. Local
-package acceptance covers amd64; the normal Docker pipeline still targets
-amd64 and arm64. The intended GitHub assets follow the Alpha 15 channel:
-x86-64 AppImage, `knx-mcp-x86_64-linux` and `SHA256SUMS`. Docker uses the version
-tag and `latest` after publication; `latest` includes alphas and does not mean
-stable. No standalone-server or local container-archive download is promised.
+**Alpha 16 is a published pre-release**, not a stable release. The
+[public verification record](../docs/evidence/release-alpha16-2026-10-24.json)
+records both successful publication workflows, downloaded GitHub asset sizes and
+SHA-256/provider digests, and exact Docker amd64/arm64 revision identities.
+The GitHub assets follow the Alpha 15 channel: x86-64 AppImage,
+`knx-mcp-x86_64-linux` and `SHA256SUMS`. The version and `latest` Docker tags had
+the same verified multiarch index at readback; `latest` includes alphas and does
+not mean stable. Local preacceptance remains amd64; remote arm64 publication is
+not an extra local ARM64 runtime test. No standalone-server or local container-archive
+download is promised. Final Pages deployment and live website verification of
+this successor remain **pending**; public artifact acceptance is not site acceptance.
 
 The smallest offline release-content check is:
 
@@ -114,13 +119,14 @@ The smallest offline release-content check is:
 PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s website/tests -p test_build.py -k test_alpha16_release_copy_links_history_and_upgrade_boundaries -v
 ```
 
-It builds a private static preview and checks localized copy, intended links,
-upgrade bounds and retained media labels. It does not fetch GitHub/Docker Hub,
+It builds a private static preview and checks localized published copy, release links,
+public verification identities, upgrade bounds and retained media labels. It does not fetch GitHub/Docker Hub,
 verify public assets/manifests or run a browser. The separate browser recipe
 `tests/verify-release-features.js` is updated for this content, not newly run.
-After publication, read back release assets/checksums and both Docker platform
-manifests/digests before replacing candidate/pending/intended labels in the
-README and both site locales. Then verify the deployed website separately.
+Public asset/checksum and Docker platform manifest/digest readback is complete.
+The parent must review and publish this documentation/site successor, then verify
+its exact Pages deployment and live generated content separately. Neither this
+offline check nor the publication record claims that final website verification.
 
 Alpha 15 remains linked as release history. Alpha 14 media retains its original
 release labels and has its own historical section; none is relabelled Alpha 16.

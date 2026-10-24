@@ -882,6 +882,25 @@ same-final-SHA full-gate or remote dry-run claim. Focused documentation closeout
 commit is prepared; read-only publication preflight remains the external-write
 prerequisite. Conditional owner Go does not replace actual CI/public readback.
 
+## Actual normal publication started
+
+Preflight and cheap final checks passed. Parent atomically pushed main and the
+annotated v0.1.0-alpha.16 tag at f2e3ec6e, created the non-draft prerelease and
+verified exact main/peeled-tag and public notes readback. Actual CI publication
+and public artifacts remain pending; abfd0fd5 observes those outcomes without
+redispatch or old local uploads. Post-publication docs/site synchronization will
+be a separate successor; product tag remains immutable. No complete-release
+claim before actual workflow, download/checksum and native OCI readbacks.
+
+## Public artifact acceptance
+
+Both actual release workflows succeeded at the immutable tag revision. Parent
+verified the receipt/index hashes, all 146 indexed evidence files and all three
+public downloaded asset sizes and provider digests. Both native OCI revisions
+and stable version/latest index match the release. No source suite replay or
+container mutation. Separate docs/site synchronization 0236db15 is active; final
+Pages/live-content verification and compact evidence cleanup remain pending.
+
 ## Next
 
 Consume exact worker handoffs on completion; do not poll

@@ -1,0 +1,132 @@
+{
+  "schema": "knxbench-release-publication/1",
+  "tag": "v0.1.0-alpha.16",
+  "candidate": "f2e3ec6e4b227b49dc74fdba4cdadc3ab91e7c3d",
+  "published_date": "2026-10-24",
+  "observed_at": "2026-10-24T10:22:05.152721+00:00",
+  "release_url": "https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.16",
+  "prerelease": true,
+  "draft": false,
+  "source_acceptance": "../goals/alpha16-release-plan-2026-10-23.md#current-acceptance-disposition--24-october-2026",
+  "acceptance_boundary": {
+    "runtime_revision": "86b4a7fc68b3d3206c00511b14f41e025e33de4d",
+    "amendment_date": "2026-10-24",
+    "method": "Historical Gate9 plus reviewed affected-successor checks and owning builds, with final local amd64 artifact smokes; not a full gate on the final publication revision.",
+    "remote_dry_run": "Not performed or credited; superseded by required actual normal final-tag publication and public readback.",
+    "local_artifacts": "Earlier local artifact hashes remain bound to runtime revision 86b4a7fc; they are not CI-built public download hashes.",
+    "local_arm64_preacceptance": "Deferred; successful normal remote arm64 publication is recorded separately."
+  },
+  "workflows": [
+    {
+      "workflow": "Linux AppImage",
+      "run_id": 40084841192,
+      "head_sha": "f2e3ec6e4b227b49dc74fdba4cdadc3ab91e7c3d",
+      "status": "completed",
+      "conclusion": "success",
+      "publication_success": true,
+      "jobs": [
+        {
+          "name": "Build AppImage",
+          "conclusion": "success"
+        },
+        {
+          "name": "Publish tag release",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "workflow": "Docker release",
+      "run_id": 40084841249,
+      "head_sha": "f2e3ec6e4b227b49dc74fdba4cdadc3ab91e7c3d",
+      "status": "completed",
+      "conclusion": "success",
+      "publication_success": true,
+      "jobs": [
+        {
+          "name": "Build linux/arm64",
+          "conclusion": "success"
+        },
+        {
+          "name": "Build linux/amd64",
+          "conclusion": "success"
+        },
+        {
+          "name": "Publish multi-arch image",
+          "conclusion": "success"
+        }
+      ]
+    }
+  ],
+  "assets": [
+    {
+      "name": "KNXBench_0.1.0-alpha.16_amd64.AppImage",
+      "bytes": 91716088,
+      "sha256": "c3c1f26b4e0ab774e060184ee1398f4ce42d656ee4ed42233e9cd73041fe4ea1",
+      "provider_digest": "sha256:c3c1f26b4e0ab774e060184ee1398f4ce42d656ee4ed42233e9cd73041fe4ea1",
+      "download_url": "https://github.com/KNXBench-Labs/KNXBench/releases/download/v0.1.0-alpha.16/KNXBench_0.1.0-alpha.16_amd64.AppImage"
+    },
+    {
+      "name": "SHA256SUMS",
+      "bytes": 194,
+      "sha256": "c970f6b62bf704b2e26a5b4ffcc6e180ef53a97955fe3fff3f49bc25eedfa456",
+      "provider_digest": "sha256:c970f6b62bf704b2e26a5b4ffcc6e180ef53a97955fe3fff3f49bc25eedfa456",
+      "download_url": "https://github.com/KNXBench-Labs/KNXBench/releases/download/v0.1.0-alpha.16/SHA256SUMS"
+    },
+    {
+      "name": "knx-mcp-x86_64-linux",
+      "bytes": 13347680,
+      "sha256": "d83a2e3ac3c6af8bbe245709ecc09e592cf0dc41fa3674788a5ac9d8a5d3b88e",
+      "provider_digest": "sha256:d83a2e3ac3c6af8bbe245709ecc09e592cf0dc41fa3674788a5ac9d8a5d3b88e",
+      "download_url": "https://github.com/KNXBench-Labs/KNXBench/releases/download/v0.1.0-alpha.16/knx-mcp-x86_64-linux"
+    }
+  ],
+  "sha256sums_check": "Public downloads match SHA256SUMS and provider metadata; all three asset sizes and SHA-256 digests were verified.",
+  "mcp_version": "knx-mcp 0.1.0-alpha.16+gf2e3ec6",
+  "mcp_build_suffix_is_tag_prefix": true,
+  "mcp_probe": {
+    "executions": 1,
+    "scope": "Version command in network-isolated state without production HOME; not MCP functional or GUI acceptance."
+  },
+  "docker": {
+    "image": "docker.io/knxbench/knxbench-server:0.1.0-alpha.16",
+    "index_digest": "sha256:911a71cfae935d0a03a02c593c664b5818820684837102705015ef95009a9bfb",
+    "latest_index_digest_equal": true,
+    "platforms": [
+      "linux/amd64",
+      "linux/arm64"
+    ],
+    "native_images": [
+      {
+        "platform": "linux/amd64",
+        "manifest_digest": "sha256:e259152860dd5bde54ad5ffdf7aefa524d31114dba277fd4cef75f69e057ab8d",
+        "config_digest": "sha256:bc161450a77b3cf5533615e29f4ecd05f5d0c82b09687300eabd20708b5f82d7",
+        "config_size": 3148,
+        "config_hash_verified": true,
+        "revision": "f2e3ec6e4b227b49dc74fdba4cdadc3ab91e7c3d",
+        "version": "v0.1.0-alpha.16"
+      },
+      {
+        "platform": "linux/arm64",
+        "manifest_digest": "sha256:75c33bdfdb7f0469dac50b3e8e41b273165a543ce2539e152cf25462ee1f5362",
+        "config_digest": "sha256:576ec303c1816c7a2d29af46745251d016b0449e05674a26c726a7e6ef2bb322",
+        "config_size": 3139,
+        "config_hash_verified": true,
+        "revision": "f2e3ec6e4b227b49dc74fdba4cdadc3ab91e7c3d",
+        "version": "v0.1.0-alpha.16"
+      }
+    ],
+    "verification_scope": "Remote indexes, native manifests and config blobs only; sizes and digests validated. No image layers pulled or containers started for this readback."
+  },
+  "public_artifact_verification": "PASS",
+  "website": {
+    "status": "pending",
+    "scope": "Final documentation/site successor Pages deployment and live generated-content verification remain pending; no website acceptance is inferred from public artifacts."
+  },
+  "boundaries": [
+    "No new product suites, builds, AppImage GUI/extraction or Docker runtime probes in this public readback.",
+    "Experimental configured System-2 scope remains UP 258D12 application M-0001_A-9205-04-9270 only; software/TestHardware evidence is not physical-device or recovery certification, general System-2 support or ETS parity.",
+    "Native/store and model schema 16; product database 28. Back up closed catalogues, projects and deployment data before upgrading; no catalogue downgrade path or older-reader promise.",
+    "Alpha 14 media remains historical; no new Alpha 16 capture or deployed website verification is claimed."
+  ]
+}

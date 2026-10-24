@@ -1,6 +1,6 @@
 # Roadmap
 
-## Alpha 16 bounded acceptance — release pending (24 October 2026)
+## Alpha 16 published pre-release — public artifacts verified, website pending (24 October 2026)
 
 The [current source-bound evidence matrix](goals/alpha16-release-plan-2026-10-23.md#current-acceptance-disposition--24-october-2026)
 records accepted bounded configured System-2 UI/HTTP/App/CLI, catalogue jobs,
@@ -14,7 +14,8 @@ focused successors are not relabelled or summed into one full-gate result.
 All four final local amd64 artifacts and minimal isolated smokes have parent
 acceptance, with independent hash/size readback; [identities and smoke limits](releases/alpha16.md#parent-verified-local-amd64-artifact-identities)
 are recorded separately from source acceptance. **Local amd64 software/package
-acceptance is complete; the candidate remains unreleased.** Both formerly blocked
+acceptance is complete; Alpha 16 is published at immutable
+`f2e3ec6e4b227b49dc74fdba4cdadc3ab91e7c3d`.** Both formerly blocked
 pinned-input criteria passed (`ok`/exit 0) at documentation HEAD `a9295a52` using
 the owning release-mode integration build after explicitly authorized exact
 historical restoration: 111 files (one non-package), 115 instances / 113 unique
@@ -22,8 +23,8 @@ payloads, unchanged mapping and original/input/archive/source/user/history guard
 The historical 24/26 receipt stays historical; no overlapping total is created.
 The owner explicitly limits local preacceptance to amd64; extra local ARM64
 preacceptance is deferred and unverified, not a current blocker. Normal release
-channels and the standard amd64+arm64 container workflow remain unchanged; remote
-results need separate verification. The final standalone artifact now passes the
+channels and the standard amd64+arm64 container workflow remain unchanged; both
+remote workflows now succeed, with public asset/OCI identities separately verified. The final standalone artifact now passes the
 named public synthetic ETS import/save/switch/reopen and authentic committed
 native13 upgrade/save16/switch/reopen routes: 23 checks in one attempt, preserved
 topology/retained XML, matching common-column rows across 14 predecessor tables,
@@ -33,10 +34,13 @@ Parent documentation review is complete. The explicit 24 October bundled
 amendment accepts historical Gate9 plus reviewed affected-successor checks/owning
 builds and final artifact smokes instead of a same-final-SHA full-gate replay.
 It supersedes the remote dry-run criterion with required actual normal final-tag
-publication and public verification; no dry run is claimed. Conditional Go permits
-starting normal publication once parent read-only preflight confirms prerequisites.
-A16-09 actual remote publication and public artifact/checksum/digest/revision
-readback remain pending. The bounded documentation reconciliation closes no ledger
+publication and public verification; no dry run is claimed. Actual owner-authorized
+final-tag publication and public artifact/checksum/digest/revision readback are now
+complete ([public verification record](evidence/release-alpha16-2026-10-24.json)).
+CI-built downloads and Docker amd64/arm64 revisions match the tag; earlier local
+artifact hashes retain their own runtime identity. Final Pages deployment/live
+website verification of this docs/site successor, handover and owned cleanup
+remain separate pending work. The bounded documentation reconciliation closes no ledger
 row or limitation. General performance and >4 GiB
 Large-boundary verification are not claimed. Dated roadmap checkpoints below
 retain their original scope; this snapshot supersedes their then-open Alpha-16

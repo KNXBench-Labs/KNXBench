@@ -2,12 +2,14 @@
 
 # Implementation status
 
-## Alpha 16 — bounded software and local amd64 artifacts accepted, unreleased
+## Alpha 16 — published pre-release, public artifacts verified
 
 **Snapshot: 24 October 2026**, frozen runtime/test source
 `86b4a7fc68b3d3206c00511b14f41e025e33de4d`. Bounded software outcomes and all four
 final local amd64 artifacts have parent acceptance; **local amd64 software/package
-acceptance is complete**, not publication approval. Both formerly blocked
+acceptance is complete**. Alpha 16 is published at immutable
+`f2e3ec6e4b227b49dc74fdba4cdadc3ab91e7c3d`; CI-built public assets retain that
+separate identity. Both formerly blocked
 pinned-input criteria passed at documentation HEAD `a9295a52` with the owning
 release-mode integration build after owner-authorized exact historical restoration
 of 111 files (one non-package), 115 instances / 113 unique payloads. Parent verified
@@ -15,7 +17,8 @@ the results and preserved mapping/original/input/archive/source/user/history gua
 No further materialization or repinning is authorized. The owner explicitly limits
 local preacceptance to amd64; extra local ARM64 preacceptance is deferred and
 unverified, not a blocker. Normal release channels and the standard amd64+arm64
-container workflow remain unchanged, with remote verification still required.
+container workflow remain unchanged; both remote workflows and public asset/OCI
+identities are now separately verified.
 The named final standalone artifact smoke now passes public synthetic ETS
 import/save/switch/reopen and authentic committed native13 upgrade to native16,
 save, switch and reopen: 23 checks in one attempt, preserved topology/retained XML, matching
@@ -23,16 +26,20 @@ common-column rows across 14 predecessor tables and SQLite integrity OK in both
 stores. Originals/protected data remain unchanged; processes end and leases
 release. This is not undo/redo operation proof, per-package replay, browser,
 hardware or ARM64 acceptance.
-Parent documentation review is complete. Publication Go is conditional on
-readiness; normal publication may start once parent read-only preflight confirms
-prerequisites. The explicit 24 October bundled amendment accepts historical Gate9
+Parent documentation review is complete and the parent exercised conditional
+publication Go after readiness/preflight confirmation. The explicit 24 October
+bundled amendment accepts historical Gate9
 plus reviewed affected-successor checks/owning builds and final artifact smokes,
 not one full gate at this SHA or summed coverage. The remote dry-run criterion is
 superseded by required actual normal final-tag publication and public verification;
-no remote dry run is claimed. A16-09 actual publication and public artifact,
-checksum, digest and revision readback remain pending.
+no remote dry run is claimed. Both normal publication workflows and public
+artifact/checksum/digest/revision readback are complete, including exact native
+amd64/arm64 OCI revisions and version/`latest` index equality at readback.
+[Public verification record](../evidence/release-alpha16-2026-10-24.json). Final
+Pages deployment/live website verification of this docs/site successor remains
+pending; public artifact acceptance does not establish website completion.
 [Current evidence matrix](../goals/alpha16-release-plan-2026-10-23.md#current-acceptance-disposition--24-october-2026)
-and [unreleased scope](../releases/alpha16.md).
+and [published release scope](../releases/alpha16.md).
 
 | Source capability | Current boundary |
 | --- | --- |
@@ -63,7 +70,9 @@ not a physical-device result, ETS parity or whole-device recovery certification.
 Operation-local fresh/recovery plan reuse retains independent integrity barriers;
 no universal performance or >4 GiB Large-boundary result is claimed. Local amd64
 artifact identities and minimal-smoke exclusions are in the release note, not
-evidence of ARM64 or public availability. No ledger/limitation closure follows.
+evidence of ARM64 runtime acceptance or CI-built public download identity. The
+separate public record does not add public-container runtime or AppImage GUI
+acceptance. No ledger/limitation closure follows.
 
 The dated Alpha-15 and older sections below retain their historical evidence;
 this current-source section supersedes their old System-2, migration and

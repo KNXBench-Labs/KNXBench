@@ -1,18 +1,16 @@
-# Alpha 16 — unreleased candidate, local amd64 software package ready
+# Alpha 16 — published pre-release
 
-> **Unreleased acceptance snapshot — 24 October 2026, not a release announcement.**
-> Runtime/test source is frozen at
-> `86b4a7fc68b3d3206c00511b14f41e025e33de4d`, compared locally with the Alpha-15
-> baseline. **Local amd64 software/package acceptance is complete** with
-> source-bound receipts, including the two formerly blocked pinned-input checks
-> and the named final standalone artifact import/upgrade smoke.
-> Local preacceptance is explicitly amd64; extra ARM64 preacceptance is deferred,
-> not a current blocker. Normal Alpha-15-style release channels remain unchanged.
-> Parent documentation review is complete. The owner granted publication Go
-> conditional on readiness: normal publication may start once parent read-only
-> preflight confirms its prerequisites. Actual publication and public readback
-> remain pending.
-> Nothing here claims a tag, publication or a live check of the latest remote release.
+> **Published 24 October 2026** as `v0.1.0-alpha.16` at immutable
+> `f2e3ec6e4b227b49dc74fdba4cdadc3ab91e7c3d`. The normal AppImage/MCP/checksum
+> and amd64+arm64 Docker publication workflows succeeded. Downloaded public
+> asset sizes/SHA-256/provider digests and both native OCI revisions are verified
+> against this tag; version/`latest` shared the verified index at readback.
+> [Public verification record](../evidence/release-alpha16-2026-10-24.json).
+> Runtime/test acceptance and earlier **local** amd64 packages remain bound to
+> `86b4a7fc68b3d3206c00511b14f41e025e33de4d`; their hashes are not CI-built
+> download hashes. Extra local ARM64 preacceptance remains deferred. This is a
+> pre-release, not a stability or physical-device certification.
+> **Final Pages/live website verification of the docs/site successor is pending.**
 
 The Alpha 16 scope connects experimental configured System-2 download,
 cancellable catalogue updates, comparison adoption and catalogue-authored native
@@ -209,7 +207,7 @@ at `14c9214b68cbe10186c0b7e8b1112c810ce5cff1` passed; later corrections and
 mounted System-2/comparison/Large outcomes retain their own focused acceptance
 identities in the release plan. There is no aggregate total of overlapping runs.
 
-Remaining package boundaries:
+Accepted package boundaries and remaining delivery scope:
 
 - **Two formerly blocked opt-ins passed:** parent-verified legacy-member-name and
   isolated/shared-order product-matrix checks each returned `ok`/exit 0 at
@@ -231,8 +229,9 @@ Remaining package boundaries:
   preacceptance is deferred and unverified, not a current local blocker. The owner
   requests normal Alpha-15-style publication, not an architecture-special release:
   AppImage/MCP/checksums and the unchanged standard amd64+arm64 container workflow.
-  Its remote builds/publication must be verified separately; no ARM64 lane is
-  disabled and local amd64 evidence is not multi-architecture acceptance.
+  Both remote native build lanes and publication now succeed; exact public
+  revisions are verified separately below. Local amd64 evidence is not ARM64
+  runtime acceptance, and no ARM64 lane is disabled.
 - **Final artifact import/upgrade criterion satisfied:** the final standalone
   amd64 server passed the bounded import/save/switch/reopen and native13 upgrade
   routes described below. This is one artifact route, not a source-suite replay
@@ -240,15 +239,40 @@ Remaining package boundaries:
 - **Final delivery:** parent review of the bounded manual/roadmap/contract-status
   reconciliation is complete. The dated bundled amendment retains original
   criteria as history without inventing a same-final-SHA full gate or remote dry
-  run. Conditional Go permits starting normal publication after parent read-only
-  preflight confirmation. A16-09 actual normal final-tag publication and public
-  artifact/checksum/digest/revision verification remain pending. There is no tag
-  or publication claim in this snapshot.
+  run. The owner-authorized normal final-tag publication and public artifact,
+  checksum, digest and revision criterion is complete. Final Pages deployment
+  and live generated-content verification of this docs/site successor, parent
+  handover and owned cleanup remain separate; website completion is not claimed.
+
+### Verified public release artifacts
+
+The published [GitHub pre-release](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.16)
+contains the following **CI-built public assets**, independently downloaded and
+checked against SHA256SUMS and provider digests. AppImage workflow **40084841192**
+and Docker workflow **40084841249** both completed successfully at publication
+revision `f2e3ec6e4b227b49dc74fdba4cdadc3ab91e7c3d`.
+
+| Public asset | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `KNXBench_0.1.0-alpha.16_amd64.AppImage` | 91716088 | `c3c1f26b4e0ab774e060184ee1398f4ce42d656ee4ed42233e9cd73041fe4ea1` |
+| `SHA256SUMS` | 194 | `c970f6b62bf704b2e26a5b4ffcc6e180ef53a97955fe3fff3f49bc25eedfa456` |
+| `knx-mcp-x86_64-linux` | 13347680 | `d83a2e3ac3c6af8bbe245709ecc09e592cf0dc41fa3674788a5ac9d8a5d3b88e` |
+
+Docker `0.1.0-alpha.16` and `latest` shared index
+`sha256:911a71cfae935d0a03a02c593c664b5818820684837102705015ef95009a9bfb`
+at readback. Both linux/amd64 and linux/arm64 native configs carry exact revision
+`f2e3ec6e4b227b49dc74fdba4cdadc3ab91e7c3d` and version `v0.1.0-alpha.16`.
+This is remote manifest/config identity verification, not a public-image runtime,
+ARM64 functional or AppImage GUI/FUSE smoke. The downloaded MCP version was
+`knx-mcp 0.1.0-alpha.16+gf2e3ec6`, run once in isolated state. Exact native manifest
+and config digests and remaining probe limits are in the
+[public verification record](../evidence/release-alpha16-2026-10-24.json).
 
 ### Parent-verified local amd64 artifact identities
 
-These are local packaging results for `0.1.0-alpha.16` at the frozen runtime SHA,
-not published download links or ARM64 evidence.
+These are **LOCAL** packaging results for `0.1.0-alpha.16` at runtime
+`86b4a7fc68b3d3206c00511b14f41e025e33de4d`, **not CI/public download hashes**
+or ARM64 evidence. They remain distinct from the published assets above.
 
 | Artifact | Bytes | SHA-256 |
 | --- | ---: | --- |
@@ -284,9 +308,9 @@ is complete/success for the same final standalone server identity above, with
 This closes the named artifact import/upgrade criterion under the bundled
 amendment. It is not a per-AppImage/container replay, browser/native-GUI/FUSE,
 physical KNX, network-peer, ETS-parity or ARM64 result. It changes neither the
-four artifact identities nor the requirement to verify actual normal public
-release outputs separately.
+four local artifact identities nor the separate public release verification
+identities above.
 
-This documentation-only refresh runs no tests, builds or smokes. No real-device
+This documentation/site successor adds no product tests, builds or smokes. No real-device
 trial, ETS/recovery certification, general throughput claim or ledger/issue closure
 follows from these software receipts.

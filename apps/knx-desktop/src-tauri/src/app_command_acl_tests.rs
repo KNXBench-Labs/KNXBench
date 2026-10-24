@@ -8,9 +8,10 @@
 //! `Command … not allowed by ACL`.
 //!
 //! The requests carry no arguments on purpose. Tauri checks the ACL first,
-//! then deserializes arguments, so an allowed command answers with a
+//! then deserializes arguments, so an allowed save command answers with a
 //! missing-argument error, a refused one with the ACL error, and neither
-//! opens a native dialog. A refusal reads `Command … not allowed by ACL` in a
+//! opens a native dialog. `default_dialog_directory` takes no argument and
+//! opens nothing, so an allowed call simply answers. A refusal reads `Command … not allowed by ACL` in a
 //! release build and a longer `… not allowed …` diagnosis in a debug build
 //! (same branch, `tauri::webview` `on_message`); the tests match both.
 
@@ -19,8 +20,13 @@ use tauri::test::{get_ipc_response, mock_builder, INVOKE_KEY};
 use tauri::webview::InvokeRequest;
 use tauri::{App, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
 
-/// Every command `app_command_handler!` registers.
-const APP_COMMANDS: [&str; 2] = ["save_session_log", "save_bus_monitor_capture"];
+/// Every command `app_command_handler!` registers, with the argument it
+/// requires (`None`: it takes none and answers a bare call).
+const APP_COMMANDS: [(&str, Option<&str>); 3] = [
+    ("save_session_log", Some("contents")),
+    ("save_bus_monitor_capture", Some("contents")),
+    ("default_dialog_directory", None),
+];
 
 /// The origin a release build loads (any port: it is ephemeral).
 const RELEASE_ORIGIN: &str = "http://127.0.0.1:41234/";
@@ -48,29 +54,37 @@ fn window(
     .expect("mock window")
 }
 
-/// The error text of `command`, invoked without arguments from `origin`.
-/// Tauri decides on the request's URL, so one window serves every origin.
-fn refusal(
+/// The answer to `command`, invoked without arguments from `origin`, with an
+/// error as its text. Tauri decides on the request's URL, so one window
+/// serves every origin.
+fn call(
     window: &WebviewWindow<tauri::test::MockRuntime>,
     origin: &str,
     command: &str,
-) -> String {
-    let response = get_ipc_response(
+) -> Result<(), String> {
+    call_with(window, origin, command, InvokeBody::default())
+}
+
+fn call_with(
+    window: &WebviewWindow<tauri::test::MockRuntime>,
+    origin: &str,
+    command: &str,
+    body: InvokeBody,
+) -> Result<(), String> {
+    get_ipc_response(
         window,
         InvokeRequest {
             cmd: command.into(),
             callback: CallbackFn(0),
             error: CallbackFn(1),
             url: origin.parse().unwrap(),
-            body: InvokeBody::default(),
+            body,
             headers: Default::default(),
             invoke_key: INVOKE_KEY.to_string(),
         },
-    );
-    match response {
-        Ok(_) => panic!("{command} without arguments must not succeed"),
-        Err(error) => error.to_string(),
-    }
+    )
+    .map(|_| ())
+    .map_err(|error| error.to_string())
 }
 
 #[test]
@@ -78,16 +92,26 @@ fn main_window_reaches_every_app_command_from_the_release_and_dev_origins() {
     let app = app();
     let main = window(&app, "main");
     for origin in [RELEASE_ORIGIN, DEV_ORIGIN] {
-        for command in APP_COMMANDS {
-            let error = refusal(&main, origin, command);
-            assert!(
-                !error.contains("not allowed"),
-                "{command} from {origin} must pass the ACL, got: {error}"
-            );
-            assert!(
-                error.contains("contents"),
-                "{command} from {origin} must reach the command and miss its argument, got: {error}"
-            );
+        for (command, argument) in APP_COMMANDS {
+            let response = call(&main, origin, command);
+            match argument {
+                None => assert!(
+                    response.is_ok(),
+                    "{command} from {origin} must pass the ACL and answer, got: {response:?}"
+                ),
+                Some(argument) => {
+                    let error =
+                        response.expect_err("a save command without arguments must not succeed");
+                    assert!(
+                        !error.contains("not allowed"),
+                        "{command} from {origin} must pass the ACL, got: {error}"
+                    );
+                    assert!(
+                        error.contains(argument),
+                        "{command} from {origin} must reach the command and miss its argument, got: {error}"
+                    );
+                }
+            }
         }
     }
 }
@@ -95,16 +119,38 @@ fn main_window_reaches_every_app_command_from_the_release_and_dev_origins() {
 #[test]
 fn read_only_companion_windows_stay_refused() {
     // The grant is for the main window only: the diagnostics companion and
-    // Flow windows are read-only and must not open a file-save dialog.
+    // Flow windows are read-only and must not open a file-save dialog or ask
+    // where one would start.
     let app = app();
     for label in ["diagnostics", "flow-1"] {
         let companion = window(&app, label);
-        for command in APP_COMMANDS {
-            let error = refusal(&companion, RELEASE_ORIGIN, command);
+        for (command, _) in APP_COMMANDS {
+            let error = call(&companion, RELEASE_ORIGIN, command)
+                .expect_err("a companion window must not reach an app command");
             assert!(
                 error.contains("not allowed"),
                 "{command} from window {label} must be refused, got: {error}"
             );
         }
+    }
+}
+
+#[test]
+fn main_window_may_join_paths_for_the_frontend_dialogs() {
+    // `filePicker.ts` joins the start folder and the file name with
+    // `@tauri-apps/api/path`'s `join`, which `core:default` must grant.
+    let app = app();
+    let main = window(&app, "main");
+    for origin in [RELEASE_ORIGIN, DEV_ORIGIN] {
+        let response = call_with(
+            &main,
+            origin,
+            "plugin:path|join",
+            InvokeBody::Json(serde_json::json!({ "paths": ["/home/alice", "project.knxproj"] })),
+        );
+        assert!(
+            response.is_ok(),
+            "path join from {origin} must pass the ACL and answer, got: {response:?}"
+        );
     }
 }

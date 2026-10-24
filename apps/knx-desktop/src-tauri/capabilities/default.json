@@ -1,12 +1,13 @@
 {
   "identifier": "default",
-  "description": "Capabilities for the main window: file dialogs, saving the session log and bus monitor captures through native save dialogs (issue #7), opening and focusing the diagnostics companion, and requesting close once the unsaved-changes check has passed (File > Quit, window-manager close); native process exit drains owned server work",
+  "description": "Capabilities for the main window: file dialogs, saving the session log and bus monitor captures through native save dialogs (issue #7), the start folder of the frontend's file dialogs, opening and focusing the diagnostics companion, and requesting close once the unsaved-changes check has passed (File > Quit, window-manager close); native process exit drains owned server work",
   "windows": ["main"],
   "permissions": [
     "core:default",
     "dialog:default",
     "allow-save-session-log",
     "allow-save-bus-monitor-capture",
+    "allow-default-dialog-directory",
     "core:webview:allow-create-webview-window",
     "core:window:allow-set-focus",
     "core:window:allow-close",

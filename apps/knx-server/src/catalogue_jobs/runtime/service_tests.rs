@@ -20,9 +20,16 @@ mod master_diagnostics;
 async fn production_mount_installs_with_complete_artifacts_and_a_real_retained_backup() {
     use std::io::Write;
     let tmp = tempfile::tempdir().unwrap();
-    let path = tmp.path().join("catalogue.sqlite");
+    // Exercise a logical configured root even when TMPDIR has no symlink.
+    // The managed mount owns artifacts under the canonical catalogue parent.
+    let data = tmp.path().join("data");
+    std::fs::create_dir(&data).unwrap();
+    let root = tmp.path().join("configured-data");
+    std::os::unix::fs::symlink(&data, &root).unwrap();
+    let canonical_root = root.canonicalize().unwrap();
+    let path = root.join("catalogue.sqlite");
     let state = Arc::new(crate::AppState::with_product_db_at(
-        tmp.path().to_path_buf(),
+        root.clone(),
         Some(path.clone()),
     ));
     let guarded = crate::app_with_auth(
@@ -45,7 +52,7 @@ async fn production_mount_installs_with_complete_artifacts_and_a_real_retained_b
         StatusCode::UNAUTHORIZED,
         "auth must reject before reading the job body"
     );
-    let router = crate::app(Arc::clone(&state), Some(tmp.path().to_path_buf()));
+    let router = crate::app(Arc::clone(&state), Some(root.clone()));
     let runtime = state.catalogue_jobs.attached_runtime().unwrap();
     assert!(Arc::ptr_eq(runtime.owner(), &state.catalogue_jobs));
     let incarnation = runtime.admission().unwrap().server_incarnation;
@@ -296,8 +303,8 @@ async fn production_mount_installs_with_complete_artifacts_and_a_real_retained_b
     let raw = job_dir.join("preview.raw");
     assert!(raw.is_file());
     // Every literal/encoded/private alias is denied by the real static mount.
-    std::os::unix::fs::symlink(&job_dir, tmp.path().join("alias")).unwrap();
-    std::os::unix::fs::symlink(&job_dir, tmp.path().join("uploads")).unwrap();
+    std::os::unix::fs::symlink(&job_dir, root.join("alias")).unwrap();
+    std::os::unix::fs::symlink(&job_dir, root.join("uploads")).unwrap();
     let upload = router
         .clone()
         .oneshot(
@@ -315,7 +322,10 @@ async fn production_mount_installs_with_complete_artifacts_and_a_real_retained_b
         StatusCode::BAD_REQUEST,
         "generic upload must refuse a private alias before staging/body reads"
     );
-    let actual = format!("/{}", raw.strip_prefix(tmp.path()).unwrap().display());
+    let relative = raw.strip_prefix(&canonical_root).unwrap();
+    assert!(relative.starts_with(".knxbench-catalogue-jobs"));
+    assert_eq!(root.join(relative).canonicalize().unwrap(), raw);
+    let actual = format!("/{}", relative.display());
     let encoded = actual.replace(".knxbench-catalogue-jobs", "%2eknxbench-catalogue-jobs");
     for suffix in [actual, encoded, "/alias/preview.raw".into()] {
         assert_eq!(

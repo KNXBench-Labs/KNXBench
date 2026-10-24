@@ -549,6 +549,79 @@ async fn chunk_sequences_the_collector_cannot_produce_are_refused() {
     read_export(&unconfirmed).expect("an unconfirmed tunnel teardown is no contradiction");
 }
 
+#[tokio::test]
+async fn memory_chunk_errors_must_originate_in_the_memory_phase() {
+    let original = bundle_export(&export().await).unwrap();
+    read_export(&rehashed(&original, |_, _| {})).expect("re-encoding alone is accepted");
+    let mut accepted = vec![];
+    for reason in [
+        "identity-mismatch",
+        "identity-unverified",
+        "descriptor-unverified",
+        "identity-assertion-missing",
+        "connect-rejected",
+        "self-addressed",
+        "tunnel-disconnect-unconfirmed",
+        "excluded",
+        "not-connected",
+        "management-error",
+        "memory-refused",
+        "response-size-limit-raw-not-retained",
+        "invented-error",
+    ] {
+        // No identity contradiction, sequence defect, coverage or checksum
+        // mismatch can mask the error-token rule, including in snapshots.
+        for complete in [false, true] {
+            let forged = rehashed(&original, |r, m| {
+                unread_from(m, 1);
+                set_chunk(m, 0, "error", "", Some(reason));
+                r["complete"] = complete.into();
+                r["stopReason"] = if complete {
+                    reason.into()
+                } else {
+                    serde_json::Value::Null
+                };
+            });
+            match read_export(&forged) {
+                Ok(_) => accepted.push((reason, complete)),
+                Err(error) => assert_eq!(error, "diagnostics-invalid-memory"),
+            }
+        }
+    }
+    assert!(
+        accepted.is_empty(),
+        "phase-inappropriate chunk errors accepted: {accepted:?}"
+    );
+}
+
+#[tokio::test]
+async fn memory_range_end_errors_must_match_the_collector_outcome() {
+    let original = bundle_export(&export().await).unwrap();
+    let mut accepted = vec![];
+    for (status, bytes) in [("partial", "01"), ("refused-ambiguous", "")] {
+        for reason in [
+            "identity-mismatch",
+            "timeout",
+            "memory-refused",
+            "invented-error",
+        ] {
+            let forged = rehashed(&original, |_, m| {
+                set_chunk(m, 0, status, bytes, Some(reason));
+                set_chunk(m, 1, "not-read", "", None);
+                set_chunk(m, 2, "not-read", "", None);
+            });
+            match read_export(&forged) {
+                Ok(_) => accepted.push((status, reason)),
+                Err(error) => assert_eq!(error, "diagnostics-invalid-memory"),
+            }
+        }
+    }
+    assert!(
+        accepted.is_empty(),
+        "incorrect range-end errors accepted: {accepted:?}"
+    );
+}
+
 /// Test-only memory faults, injected between the simulator and the client.
 #[derive(Clone, Copy)]
 enum Fault {
@@ -567,8 +640,18 @@ enum Fault {
     ShortDescriptor,
     /// Answer one octet short at this address.
     ShortAt(u16),
-    /// Drop the answer at this address.
+    /// Drop the answer at this address, retaining its transport acknowledgement.
     SilentAt(u16),
+    /// Drop all events at this address, exhausting the transport ladder.
+    UnacknowledgedAt(u16),
+    /// Fail this memory request in the adapter (including an adapter timeout).
+    TransportAt(u16, bool),
+    /// Overflow the memory request's event receiver.
+    EventLossAt(u16),
+    /// End the memory request by a device disconnect or tunnel closure.
+    DisconnectAt(u16, bool),
+    /// Never finish the device-side disconnect send.
+    StallDisconnect,
     /// Drop the answer for this Device Object property.
     SilentProperty(u8),
     /// Answer this Device Object property above the retention ceiling.
@@ -610,6 +693,26 @@ impl knx_net::ManagementTransport for Faulty {
         tpci: knx_net::Tpci,
         service: knx_net::ApplicationService,
     ) -> Result<(), knx_net::BusError> {
+        if matches!(self.fault, Fault::StallDisconnect) && tpci == knx_net::Tpci::Disconnect {
+            return std::future::pending().await;
+        }
+        if let knx_net::ApplicationService::MemoryRead { address, .. } = &service {
+            match self.fault {
+                Fault::TransportAt(at, timeout) if *address == at => {
+                    return Err(if timeout {
+                        knx_net::BusError::Timeout
+                    } else {
+                        knx_net::BusError::NotImplemented
+                    });
+                }
+                Fault::UnacknowledgedAt(at) if *address == at => return Ok(()),
+                Fault::DisconnectAt(at, true) if *address == at => {
+                    let _ = self.tx.send(knx_net::TunnelEvent::Closed);
+                    return Ok(());
+                }
+                _ => {}
+            }
+        }
         if matches!(self.fault, Fault::TransportConnect) && tpci == knx_net::Tpci::Connect
             || matches!(
                 (&service, self.fault),
@@ -629,6 +732,11 @@ impl knx_net::ManagementTransport for Faulty {
                     knx_net::ApplicationService::PropertyValueRead { property_id, .. },
                     Fault::EventLossProperty(failed)
                 ) if *property_id == failed
+            )
+            || matches!(
+                (&service, self.fault),
+                (knx_net::ApplicationService::MemoryRead { address, .. }, Fault::EventLossAt(at))
+                    if *address == at
             );
         let mut rx = self.device.subscribe();
         self.device.send_frame(destination, tpci, service).await?;
@@ -646,6 +754,12 @@ impl knx_net::ManagementTransport for Faulty {
         for mut event in events {
             if let knx_net::TunnelEvent::Telegram(ref mut frame) = event {
                 match (&mut frame.service, self.fault) {
+                    (
+                        knx_net::ApplicationService::MemoryResponse { address, .. },
+                        Fault::DisconnectAt(at, false),
+                    ) if *address == at => {
+                        frame.transport = knx_net::Tpci::Disconnect;
+                    }
                     (
                         knx_net::ApplicationService::DeviceDescriptorResponse { data, .. },
                         Fault::ShortDescriptor,
@@ -781,6 +895,118 @@ async fn real_refused_partial_interrupted_and_mismatched_acquisitions_round_trip
     let e = written_and_reread(&Faulty::new(other, Fault::None), false).await;
     assert_eq!(statuses(&e), ["not-read"; 4]);
     assert_eq!(e.report.stop_reason.as_deref(), Some("identity-mismatch"));
+}
+
+#[tokio::test(start_paused = true)]
+async fn real_memory_chunk_failures_and_their_observer_snapshots_roundtrip() {
+    let (_dir, db) = products(PROGRAM);
+    let plan = prepare_memory(&project(), DeviceId(7), &db).unwrap();
+    for (index, address) in [(1, 0x0122), (3, 0x3C00)] {
+        for (fault, reason, deadline) in [
+            (Fault::SilentAt(address), "timeout", false),
+            (Fault::SilentAt(address), "deadline", true),
+            (
+                Fault::UnacknowledgedAt(address),
+                "connection-released",
+                false,
+            ),
+            (
+                Fault::DisconnectAt(address, false),
+                "connection-lost",
+                false,
+            ),
+            (Fault::DisconnectAt(address, true), "connection-lost", false),
+            (Fault::EventLossAt(address), "event-loss", false),
+            (Fault::TransportAt(address, false), "transport-error", false),
+            // BusError::Timeout is a transport failure, not SessionError::NoAnswer.
+            (Fault::TransportAt(address, true), "transport-error", false),
+        ] {
+            let wire = Faulty::new(device(), fault);
+            let mut snapshots = 0;
+            let export = acquire_memory(
+                &wire,
+                &plan,
+                knx_net::SessionTiming {
+                    response_timeout: if deadline {
+                        knx_net::commissioning::diagnostic_export::MEMORY_DEADLINE * 2
+                    } else {
+                        std::time::Duration::from_millis(10)
+                    },
+                    ..Default::default()
+                },
+                "synthetic-test",
+                &AtomicBool::new(false),
+                |snapshot| {
+                    archive_roundtrips(snapshot);
+                    snapshots += 1;
+                },
+            )
+            .await;
+            assert!(snapshots > 0);
+            assert_eq!(export.report.stop_reason.as_deref(), Some(reason));
+            let chunks = &export.memory.as_ref().unwrap().chunks;
+            assert!(chunks[..index].iter().all(|c| c.status == "read"));
+            assert_eq!(chunks[index].status, "error");
+            assert_eq!(chunks[index].error.as_deref(), Some(reason));
+            assert!(chunks[index + 1..].iter().all(|c| c.status == "not-read"));
+            archive_roundtrips(&export);
+        }
+    }
+}
+
+#[tokio::test(start_paused = true)]
+async fn real_memory_cancellation_and_unfinished_teardown_roundtrip() {
+    let (_dir, db) = products(PROGRAM);
+    let plan = prepare_memory(&project(), DeviceId(7), &db).unwrap();
+    for during_request in [false, true] {
+        let cancel = AtomicBool::new(false);
+        let export = acquire_memory(
+            &device(),
+            &plan,
+            Default::default(),
+            "synthetic-test",
+            &cancel,
+            |snapshot| {
+                archive_roundtrips(snapshot);
+                let chunks = &snapshot.memory.as_ref().unwrap().chunks;
+                let stop = if during_request {
+                    chunks[1].attempted_at.is_some() && chunks[1].completed_at.is_none()
+                } else {
+                    chunks[0].completed_at.is_some()
+                };
+                if stop {
+                    cancel.store(true, std::sync::atomic::Ordering::SeqCst);
+                }
+            },
+        )
+        .await;
+        assert_eq!(export.report.stop_reason.as_deref(), Some("cancelled"));
+        let chunks = &export.memory.as_ref().unwrap().chunks;
+        assert_eq!(chunks[0].status, "read");
+        if during_request {
+            assert_eq!(chunks[1].status, "error");
+            assert_eq!(chunks[1].error.as_deref(), Some("cancelled"));
+        } else {
+            assert_eq!(chunks[1].status, "not-read");
+        }
+        assert!(chunks[2..].iter().all(|c| c.status == "not-read"));
+        assert!(export.report.disconnect_attempt_completed);
+        archive_roundtrips(&export);
+    }
+    let wire = Faulty::new(device(), Fault::StallDisconnect);
+    let export = acquire_memory(
+        &wire,
+        &plan,
+        Default::default(),
+        "synthetic-test",
+        &AtomicBool::new(false),
+        archive_roundtrips,
+    )
+    .await;
+    assert_eq!(statuses(&export), ["read"; 4]);
+    assert_eq!(export.report.stop_reason, None);
+    assert!(!export.report.disconnect_attempt_completed);
+    archive_roundtrips(&export);
 }
 
 /// Puts a `decoy` member with other content before every genuine member,

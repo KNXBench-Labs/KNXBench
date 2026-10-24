@@ -205,6 +205,64 @@ object to another folder is not reflected. Folder captions (product
 `Node/@Text`, the selective-import source path and priority remain open. No real
 vendor export with folder `RefId`s is in the public repository; acceptance is
 synthetic and spec-derived, not an ETS compatibility claim.
+**Amended 24 October 2026:** grouping the table by saved folder is now a
+bounded view; see [Saved project folder grouping](#saved-project-folder-grouping-24-october-2026).
+The other items in this paragraph stay open.
+
+## Saved project folder grouping (24 October 2026)
+
+**Status: IMPLEMENTED, REVIEW/GATE PENDING, not delivered.** Independent
+review, the maintained package gate and publication are still open.
+
+**Bounded contract amendment, recorded before implementation.** The table gets
+a third, read-only view over the existing `project_folder` projection. Nothing
+in the server, storage, API, bindings or write path changes.
+
+- **Views.** Three exclusive buttons: *By channel* (default, unchanged),
+  *By saved project folder* (new) and *All objects* (unchanged). The folder view
+  keeps the six grouped columns; the Channel column stays exclusive to the flat
+  view.
+- **Admission.** An object joins a folder group only when its status is
+  `Assigned`, its opaque `key` is nonempty and its path holds at least one
+  `Folder` node. Groups join on exact `key` equality. The key is never parsed,
+  and identity is never derived from visible labels: two keys whose Folder ids
+  read the same (for example `PB-3` under `CH-1` and under `CH-2`) stay two
+  groups.
+- **Fallback.** Everything else goes to one fallback group: no `project_folder`,
+  `NoFolder`, `NotInSavedTree`, the five refusals, unknown future statuses,
+  `Assigned` without a key, and `Assigned` without a Folder node. It is labelled
+  "Without saved project folder", never with a folder name, and is not an
+  invented folder. Each row's existing refusal note stays.
+- **Keys.** Folder groups use `folder:<opaque key>`, the fallback uses
+  `folder-none`. Channel keys (`channel:<key>`, `unassigned`) are unchanged, so
+  one shared expansion set and the filter-collapse record cannot conflate the
+  two views.
+- **Order.** Folder groups in order of first encounter in the unfiltered input;
+  evaluated channel order is ignored. The fallback comes last and only appears
+  when it has members. Rows inside a group use the existing comparator;
+  *Original order* restores source order. Totals come from the unfiltered input,
+  shown counts from the filtered one; both derivations receive the view.
+- **Expansion and filters.** New groups start collapsed. Filter reveal, manual
+  collapse under a filter and reset work exactly as in the channel view, per
+  namespaced key. A changed key after a refresh simply starts collapsed; no
+  state is pruned.
+- **Visibility and lifetime.** A row's visibility uses its group key in the
+  current view. Every view keeps the same keyed object components as direct
+  siblings in one `tbody`, so drafts, refusals and pending requests survive
+  view switches; a collapsed folder hides rows and editors without unmounting
+  them.
+- **Markup.** Group header rows and object summary rows carry
+  `data-group-key` in both grouped views. Object rows keep `data-channel-key`
+  as the evaluated-channel fact; folder headers do not carry it and do not
+  claim to be evaluated channels.
+- **Headings.** A folder heading shows its Folder ids and, always visible, the
+  complete saved path, so two groups with the same Folder ids are told apart
+  without a tooltip. The view shows a one-line note: folders as saved in the
+  project at import, not the current manufacturer placement after later
+  parameter changes.
+- **Unchanged.** Search covers Folder ids, not Channel ids. View controls send
+  no command; the existing dirty-field blur-save can still fire when focus moves
+  to a view button, as it does for filters.
 
 ## Source anchors
 

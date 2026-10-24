@@ -1,12 +1,15 @@
 /** Pure communication-object view derivation, independent of writes and UI state. */
 import type { ComObjectNode } from "./bindings/ComObjectNode";
 import type { ComObjectChannel } from "./bindings/ComObjectChannel";
+import type { ComObjectProjectFolder } from "./bindings/ComObjectProjectFolder";
 import { groupAddressSpellings } from "./gaNotation";
 import { dptDisplay } from "./dptLabels";
 export type ComSortColumn = "number" | "name" | "function" | "dpt" | "addresses" | "status" | "channel";
 export interface ComFilters { query: string; status: string; link: "all" | "linked" | "unlinked"; dpt: string }
 export interface ComSort { column: ComSortColumn | null; descending: boolean }
-export interface ComGroup { key: string; channel: ComObjectChannel | null; objects: ComObjectNode[]; total: number }
+/** WP-06: what the grouped table groups by; the flat view is separate. */
+export type ComGrouping = "channel" | "folder";
+export interface ComGroup { key: string; channel: ComObjectChannel | null; folder: ComObjectProjectFolder | null; objects: ComObjectNode[]; total: number }
 export const DEFAULT_FILTERS: ComFilters = { query: "", status: "all", link: "all", dpt: "all" };
 export const ACTIVATION_ORDER = ["Active", "Inactive", "Undetermined", "NotEvaluated"];
 export const effectiveDpt = (o: ComObjectNode): string | null => o.dpt ?? o.program_dpt;
@@ -25,6 +28,14 @@ export function projectFolderRefusal(o: ComObjectNode): RefusedProjectFolder | n
   const status = o.project_folder?.status;
   return REFUSED_PROJECT_FOLDERS.find(s => s === status) ?? null;
 }
+/** WP-06: the saved folder an object is grouped under: assigned, keyed and holding a Folder node. */
+export function groupingFolder(o: ComObjectNode): ComObjectProjectFolder | null {
+  const folder = o.project_folder;
+  return folder?.status === "Assigned" && folder.key && folder.path.some(n => n.kind === "Folder") ? folder : null;
+}
+/** Folder groups join on the exact opaque key; everything else shares one fallback. */
+export const folderKey = (o: ComObjectNode): string => { const f = groupingFolder(o); return f ? `folder:${f.key}` : "folder-none"; };
+export const groupKey = (o: ComObjectNode, by: ComGrouping): string => by === "folder" ? folderKey(o) : channelKey(o);
 export const hasFilters = (f: ComFilters): boolean => !!f.query.trim() || f.status !== "all" || f.link !== "all" || f.dpt !== "all";
 /** `[main]` for `DPT-n`, `[main, sub]` for `DPST-n-m`, `null` for anything else. */
 export function dptParts(value: string | null): number[] | null {
@@ -52,7 +63,7 @@ function matchesDpt(o: ComObjectNode, filter: string): boolean {
   if (filter.startsWith("exact:")) return dpt === filter.slice(6);
   return filter.startsWith("family:") && dptParts(dpt)?.[0] === Number(filter.slice(7));
 }
-export function deriveComObjectView(objects: ComObjectNode[], filters: ComFilters, sort: ComSort, language: string, grouped: boolean): {
+export function deriveComObjectView(objects: ComObjectNode[], filters: ComFilters, sort: ComSort, language: string, grouped: boolean, by: ComGrouping = "channel"): {
   objects: ComObjectNode[]; groups: ComGroup[]; descriptionMatches: Set<number>;
 } {
   const collator = new Intl.Collator(language, { numeric: true, sensitivity: "base" });
@@ -100,12 +111,18 @@ export function deriveComObjectView(objects: ComObjectNode[], filters: ComFilter
   };
   const groups = new Map<string, ComGroup & { order: number; first: number }>();
   objects.forEach((o, i) => {
-    const key = channelKey(o), channel = evaluatedChannel(o);
-    const group = groups.get(key);
+    const key = groupKey(o, by), group = groups.get(key);
     if (group) group.total++;
-    else groups.set(key, { key, channel, total: 1, objects: [], order: channel?.order ?? Number.MAX_SAFE_INTEGER, first: i });
+    else if (by === "folder") {
+      // First encounter decides folder order; the fallback always comes last.
+      const folder = groupingFolder(o);
+      groups.set(key, { key, channel: null, folder, total: 1, objects: [], order: folder ? 0 : 1, first: i });
+    } else {
+      const channel = evaluatedChannel(o);
+      groups.set(key, { key, channel, folder: null, total: 1, objects: [], order: channel?.order ?? Number.MAX_SAFE_INTEGER, first: i });
+    }
   });
-  for (const o of filtered) groups.get(channelKey(o))!.objects.push(o);
+  for (const o of filtered) groups.get(groupKey(o, by))!.objects.push(o);
   const ordered = [...groups.values()].sort((a, b) => a.order - b.order || a.first - b.first);
   ordered.forEach(g => g.objects.sort(compare));
   return { objects: grouped ? ordered.flatMap(g => g.objects) : [...filtered].sort(compare), groups: ordered, descriptionMatches };

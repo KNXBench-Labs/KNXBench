@@ -40,6 +40,14 @@ Missing-target links are visible by ID and count as links, not as unlinked objec
 shows its saved `GroupObjectTree` folder by declared `RefId`s, or why it is
 withheld; folder ids are searchable. No product caption is looked up
 ([folder contract](contracts/communication-object-folders.md#saved-project-folder-display-24-october-2026)).
+**Folder grouping amendment (24 October 2026):** a third view, *By saved
+project folder*, groups by the opaque saved-folder key (`folder:<key>`, fallback
+`folder-none` last), in first-encounter order, with six columns, the full saved
+path visible in each heading and an import-time snapshot note. By channel stays
+the default and All objects is unchanged. Filter, expansion, editor-lifetime and
+blur-save rules below apply per namespaced group key. Status: implemented,
+review/gate pending, not delivered
+([folder grouping contract](contracts/communication-object-folders.md#saved-project-folder-grouping-24-october-2026)).
 
 ## Sorting and filters
 

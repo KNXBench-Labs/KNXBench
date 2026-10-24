@@ -1,4 +1,4 @@
-/** Shared, bounded view of retained catalogue progress, bound consent and complete paged reports. */
+/** Present retained catalogue progress, consent and paged public reports. */
 import { useEffect, useId, useState } from "react";
 import { useCatalogueJobs } from "./CatalogueJobsContext";
 import { useTranslate } from "./i18n";

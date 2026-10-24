@@ -1,4 +1,5 @@
-//! Same-gate managed apply bridge. The job supervisor owns the receipt and
+//! The same-gate managed apply bridge preserves supervisor-owned receipts.
+//!
 //! workspace outside worker/response unwind; this module does not publish HTTP.
 use super::{Clock, Control, Error, Phase};
 use crate::catalogue_owner::{CatalogueOwner, ControlledOwnerError};

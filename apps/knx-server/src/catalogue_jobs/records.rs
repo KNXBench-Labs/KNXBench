@@ -1,4 +1,4 @@
-//! Complete raw/public NDJSON publication. Raw bytes are never an HTTP resource.
+//! Complete raw and public NDJSON reports retain bounded publication evidence.
 
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom, Write};

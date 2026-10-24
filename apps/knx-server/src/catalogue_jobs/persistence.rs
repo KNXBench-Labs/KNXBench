@@ -1,4 +1,4 @@
-//! Identity-bound private workspaces. No recursive deletion or guessed ownership.
+//! Identity-bound private workspaces preserve durable catalogue ownership.
 
 use std::collections::BTreeMap;
 use std::fs::File;

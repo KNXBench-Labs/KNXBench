@@ -1,4 +1,4 @@
-/** Selection-only transport: project values, commands and native paths never cross this boundary. */
+/** Request selection-only comparison previews and explicitly confirmed adoption. */
 import { request } from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { DecodedComparisonRow } from "./deviceComparisons";

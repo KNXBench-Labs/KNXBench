@@ -347,6 +347,16 @@ existing catalogue-job class with exact accessible region name and keeps unique
 count. No production change, first/nth or weakened assertion. Launcher exited;
 failed receipt retained. No focused rerun; next whole candidate gate7 required.
 
+## Gate7 browser success and header refusal
+
+Gate7 passed functional/exclusive and all configured production browser suites,
+then check-headers refused six malformed owned headers and six newly absent
+headers above unchanged155 ceiling. Inspected scanner and base/new-file identity,
+fixed12 owned headers only. Static maintained header check now1597 valid/155 absent,
+28 generated; fmt/whitespace pass. No extra product tests; source-only comment
+correction does not make gate7 successful. Rust/native/corpus stages unreached.
+Next full corrected candidate gate8 remains necessary; original receipts intact.
+
 ## Next
 
 Consume exact worker handoffs on completion; do not poll

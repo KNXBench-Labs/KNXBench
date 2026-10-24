@@ -1,3 +1,4 @@
+//! Ownership regressions cover durable private catalogue workspaces.
 use super::*;
 use crate::catalogue_jobs::{Incarnation, JobId};
 

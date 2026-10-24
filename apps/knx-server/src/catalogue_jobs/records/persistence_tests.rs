@@ -1,3 +1,4 @@
+//! Report persistence regressions cover identity, privacy and bounded publication.
 use super::*;
 use crate::catalogue_jobs::{artifacts::ArtifactRoot, Handle, Incarnation};
 use std::sync::Arc;

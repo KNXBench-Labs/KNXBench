@@ -1,4 +1,6 @@
 //! Regression assertions reserved for the single final integrated candidate.
+mod mounted_hardware;
+
 use super::dto::*;
 
 #[test]

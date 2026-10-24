@@ -72,7 +72,8 @@ impl<'a> ValidatedHardwareExecution<'a> {
     }
 }
 
-/// Only the fresh hardware owner supplies these jointly borrowed context parts.
+/// Hardware executors supply the exact bundle/store and its validated original
+/// plan, borrowed together for this invocation only (never the old-byte replay).
 /// Everything except step classification follows the original callback,
 /// including independent recovery validation and the durable pre-mutation barrier.
 fn hardware_event(
@@ -80,6 +81,7 @@ fn hardware_event(
     bundle: &PreparedBundle,
     plan: &PropertyDownloadPlan,
     journal_event: PropertyJournalEvent<'_>,
+    restoring: bool,
 ) -> Result<(), String> {
     if let PropertyJournalEvent::OperationStarting {
         operation_index,
@@ -111,7 +113,7 @@ fn hardware_event(
             })
             .map_err(|e| e.to_string())
     } else {
-        event(store, bundle, journal_event, false)
+        event(store, bundle, journal_event, restoring)
     }
 }
 
@@ -342,7 +344,7 @@ pub(crate) async fn execute_hardware_inner<T: ManagementTransport>(
         timing,
         &preconditions,
         &release,
-        &mut |e| hardware_event(store, bundle, &plan, e),
+        &mut |e| hardware_event(store, bundle, &plan, e, false),
         &|| cancel.load(Ordering::SeqCst),
     )
     .await;
@@ -435,7 +437,11 @@ pub(crate) async fn restore_hardware_inner<T: ManagementTransport>(
         AuthorisationPlan::Skip,
         timing,
         &release,
-        &mut |e| event(store, bundle, e, true),
+        // The original bundle is shared immutably and this exact store is
+        // exclusively borrowed throughout restore. Its already validated plan
+        // suffices for step/source/mutation classification; snapshot validation
+        // and comparison against the durable original still use event(..., true).
+        &mut |e| hardware_event(store, bundle, &plan, e, true),
         &|| cancel.load(Ordering::SeqCst),
     )
     .await;

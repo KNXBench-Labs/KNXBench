@@ -983,13 +983,26 @@ Open, each small and none blocking:
   `default_path()` were corrected on 24 October 2026; it opens none (AR18 M8)
   ([pitfall](DEVELOPER_PITFALLS.md#gates)).
 - `tools.tests.test_browser_tmp_launch`'s
-  `test_cli_sigterm_waits_for_child_shutdown_before_cleanup` intermittently
-  times out (`child.communicate(timeout=10)`) inside gate `tool-tests` runs
-  under load (four gates on 19 October 2026; 60/60 green alone). A real
-  forwarder-after-spawn race exists and has a RED test on the parked branch
-  `fix/browser-tmp-signal-race-20261019`, but that fix's own gate still hit the
-  timeout, so the observed failure is not explained yet; reproduce it in the
-  gate's exact shape before shipping a fix.
+  `test_cli_sigterm_waits_for_child_shutdown_before_cleanup` timed out
+  (`child.communicate(timeout=10)`) in gate `tool-tests` runs under load (four
+  gates on 19 October 2026). **Closed (24 October 2026):** reproduced in the
+  gate's shape (the whole `discover` suite, four in parallel beside busy loops,
+  load average 35–60) in 14 of 54 runs, and in none of 55 narrower runs (the
+  file alone, imports only, the 89 preceding tests). The timeout's new
+  diagnosis showed the wrapper alive and its `killpg` successful, and the test's
+  own child asleep with the SIGTERM consumed but its handler not run: CPython
+  3.14 runs no pending handler after a keyword call, so a SIGTERM landing while
+  `print(..., flush=True)` returned waited out `time.sleep(60)`
+  ([pitfall](DEVELOPER_PITFALLS.md#gates)). The child now blocks SIGTERM and
+  takes it with `sigtimedwait`: 0 of 51 gate-shaped runs failed. A timeout
+  now reports both processes' state and Python stacks. The parked
+  `fix/browser-tmp-signal-race-20261019` (forwarders before the spawn) is a
+  separate, real race that none of these runs showed; it stays parked.
+- `tools.tests.test_web_gate`'s
+  `test_sigterm_also_cleans_descendants_that_ignore_termination` read an empty
+  descendant PID once in 51 loaded suite runs (24 October 2026): the
+  descendant's `write_text` creates the marker before writing it, and the test
+  polls only for existence.
 - A package gate stopped with SIGTERM during its browser stages leaves the
   fixture Vite server (`npm exec vite --config vite.fixtures.config.ts` and its
   `node` child) running, reparented to the user's systemd (seen three times on

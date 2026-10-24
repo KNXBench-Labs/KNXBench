@@ -5,7 +5,7 @@
 use axum::{body::Body, http::Request, Router};
 use knx_app::{
     property_validation::{read_bundle, Checkpoint, LocalOutcome, OperationStore},
-    property_validation_bundle::RecoveryRecord,
+    property_validation_bundle::{OperationRecord, RecoveryRecord},
 };
 use knx_core::{commissioning::load_state::LoadState, DeviceId, IndividualAddress};
 use knx_net::{
@@ -41,6 +41,40 @@ const GATEWAY: &str = "203.0.113.250:3671";
 const TARGET: &str = "1.1.25";
 const SERIAL: [u8; 6] = [0, 1, 2, 3, 4, 5];
 const EXTENTS: [(u16, u16); 4] = [(278, 330), (608, 416), (1024, 512), (15360, 256)];
+const PIR_REFERENCE: &str = "M-0001_A-9205-04-9270_P-900_R-900";
+const PIR_RAW: &str = "4";
+const PIR_ADDRESS: u16 = 15610; // Source segment 15360 + offset 250, bit 0 / 8.
+
+// Opt-in private evidence only: no tokens, names, complete panels or snapshots.
+// The caller supplies an existing private directory; never overwrite evidence.
+fn private_diagnostic(name: &str, value: Value) {
+    let Some(directory) = std::env::var_os("KNXBENCH_MOUNTED_ACCEPTANCE_DIAGNOSTICS") else {
+        return;
+    };
+    let bytes = serde_json::to_vec_pretty(&value).unwrap();
+    assert!(bytes.len() <= 16 * 1024, "bounded private diagnostic");
+    let mut options = std::fs::OpenOptions::new();
+    options.write(true).create_new(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    let mut file = options
+        .open(PathBuf::from(directory).join(name))
+        .expect("create private diagnostic without overwriting prior evidence");
+    std::io::Write::write_all(&mut file, &bytes).unwrap();
+}
+
+fn pir_fields(panel: &Value) -> Vec<&Value> {
+    panel["sections"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .flat_map(|section| section["fields"].as_array().unwrap())
+        .filter(|field| field["etsId"] == PIR_REFERENCE)
+        .collect()
+}
 
 // OLD is never constructed by executing NEW, nor inferred from its resulting
 // memory. These source-shape extents match the existing pinned public App proof.
@@ -167,6 +201,66 @@ impl TestHardware {
         assert_eq!(bundle.binding.serial, SERIAL);
         assert_eq!(bundle.binding.target, TARGET);
         assert_eq!(bundle.hardware_preparation.as_ref().unwrap().operation, id);
+        let source = bundle.project_preparation.as_ref().unwrap();
+        assert_eq!(source.request.program_id, "M-0001_A-9205-04-9270");
+        assert_eq!(
+            source.request.values.get(PIR_REFERENCE).map(String::as_str),
+            Some(PIR_RAW)
+        );
+        let fields: Vec<_> = source
+            .coverage
+            .iter()
+            .filter(|field| {
+                field.parameter_id == "M-0001_A-9205-04-9270_P-900"
+                    && field.active_reference.as_deref() == Some(PIR_REFERENCE)
+            })
+            .collect();
+        assert_eq!(fields.len(), 1, "one exact retained configured field");
+        assert_eq!(
+            fields[0].segment.as_deref(),
+            Some("M-0001_A-9205-04-9270_AS-3C00")
+        );
+        assert_eq!(fields[0].field, Some([250, 0, 8]));
+        assert_eq!(fields[0].source_default, "3");
+        assert_eq!(fields[0].disposition, "active-overlay");
+        let planned: Vec<_> = bundle
+            .normalized_plan
+            .steps
+            .iter()
+            .filter_map(|step| {
+                if let OperationRecord::WriteMemory { address, data, .. } = &step.operation {
+                    PIR_ADDRESS
+                        .checked_sub(*address)
+                        .and_then(|offset| data.get(usize::from(offset)))
+                        .copied()
+                } else {
+                    None
+                }
+            })
+            .collect();
+        // This is the retained NEW plan, not a claim that cancellation reaches
+        // this byte: the worker deliberately pauses at its first data write.
+        assert_eq!(
+            planned,
+            [4],
+            "exact source-admitted nondefault byte in retained plan"
+        );
+        if self.first_backup.lock().unwrap().is_none() {
+            private_diagnostic(
+                "r1-retained-request.json",
+                json!({
+                    "programId": source.request.program_id,
+                    "configurationSha256": source.sha256().unwrap(),
+                    "planSha256": bundle.binding.plan_sha256,
+                    "parameterValues": source.request.values.len(),
+                    "reference": PIR_REFERENCE,
+                    "raw": source.request.values.get(PIR_REFERENCE),
+                    "field": fields[0].field,
+                    "address": PIR_ADDRESS,
+                    "planned": planned
+                }),
+            );
+        }
         let journal = operation.join("journal");
         let head: Value =
             serde_json::from_slice(&std::fs::read(journal.join("HEAD")).unwrap()).unwrap();
@@ -340,8 +434,15 @@ async fn http(router: &Router, path: &str, body: Option<Value>, expected: u16) -
         .await
         .unwrap();
     assert_eq!(response.status().as_u16(), expected, "{path}");
+    // The newly exercised parameter API returns a full source panel, not the
+    // small System-2 summary. Keep the existing summary limit unchanged.
+    let body_limit = if path.ends_with("/parameters") {
+        4 * 1024 * 1024
+    } else {
+        128 * 1024
+    };
     serde_json::from_slice(
-        &axum::body::to_bytes(response.into_body(), 128 * 1024)
+        &axum::body::to_bytes(response.into_body(), body_limit)
             .await
             .unwrap(),
     )
@@ -451,7 +552,68 @@ async fn pinned_public_http_worker_cancellation_reopens_original_once_only_recov
         project.devices.get_mut(ids[0]).unwrap().address = Some(TARGET.parse().unwrap());
         ids[0]
     };
+    // A newly created catalogue device has no explicit project parameters.
+    // Configure the public source's nondefault PIR sensitivity through the real
+    // panel write authority; a refusal here must remain a refusal, not a model edit.
+    let path = format!("/api/device/{}/parameters", device.0);
+    let panel = http(&router, &path, None, 200).await;
+    assert_eq!(panel["programId"], "M-0001_A-9205-04-9270");
+    let fields = pir_fields(&panel);
+    assert_eq!(fields.len(), 1, "one active source PIR field");
+    let field = fields[0];
+    assert_eq!(field["value"], "3");
+    assert_eq!(field["editable"], true);
+    assert_eq!(field["writeEtsId"], PIR_REFERENCE);
+    assert!(field["enumOptions"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|option| option["value"] == PIR_RAW));
+    let tree = http(&router, "/api/project", None, 200).await;
+    assert!(tree["server_incarnation"].is_string());
+    assert!(tree["project_incarnation"].is_u64());
+    assert!(tree["snapshot_revision"].is_u64());
+    let edited = http(
+        &router,
+        &path,
+        Some(json!({
+            "etsId": field["writeEtsId"],
+            "raw": PIR_RAW,
+            "serverIncarnation": tree["server_incarnation"],
+            "projectIncarnation": tree["project_incarnation"],
+            "snapshotRevision": tree["snapshot_revision"],
+            "expectedValue": field["value"]
+        })),
+        200,
+    )
+    .await;
+    let fields = pir_fields(&edited);
+    assert_eq!(fields.len(), 1);
+    assert_eq!(fields[0]["value"], PIR_RAW);
+    let stored = {
+        let project = state.project.lock().unwrap();
+        project
+            .as_ref()
+            .unwrap()
+            .installations
+            .iter()
+            .flat_map(|installation| &installation.parameters)
+            .filter(|parameter| parameter.device == device)
+            .map(|parameter| (parameter.source.ets_id.clone(), parameter.raw.clone()))
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(stored, [(PIR_REFERENCE.to_string(), PIR_RAW.to_string())]);
     let preview = prepare(&router, device).await;
+    private_diagnostic(
+        "r1-preparation.json",
+        json!({
+            "programId": preview["programId"],
+            "configurationSha256": preview["configurationSha256"],
+            "planSha256": preview["planSha256"],
+            "parameterValues": preview["parameterValues"],
+            "stored": stored
+        }),
+    );
     assert_eq!(preview["address"], TARGET);
     assert_eq!(preview["programId"], "M-0001_A-9205-04-9270");
     assert!(preview["parameterValues"].as_u64().unwrap() > 0);

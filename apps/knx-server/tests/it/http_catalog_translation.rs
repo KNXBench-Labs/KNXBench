@@ -47,10 +47,9 @@ fn temp_product_db() -> (tempfile::TempDir, knx_productdb::Connection) {
     (dir, conn)
 }
 
-/// `AppState::default()` runs the real `default_path()` lookup — force
-/// `product_db` explicitly rather than let a locally installed database
-/// leak into this test (`http_product_language.rs`'s own
-/// `state_without_product_db` carries this exact reasoning).
+/// `AppState::default()` opens no product database (AR18 M8); this test
+/// installs its own catalogue explicitly so the result never depends on a
+/// default.
 #[allow(clippy::field_reassign_with_default)]
 fn state_with_products(products: knx_productdb::Connection) -> knx_server::AppState {
     let mut state = knx_server::AppState::default();

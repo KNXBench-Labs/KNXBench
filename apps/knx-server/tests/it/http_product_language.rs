@@ -150,11 +150,9 @@ fn state_with_device(
     state
 }
 
-/// `AppState::default()` runs the real `default_path()` lookup — on a
-/// machine that already has a product database installed, that would make
-/// "no product database configured" tests depend on the environment. Force
-/// `None` explicitly, same reasoning `http_device_routes.rs`'s own
-/// `state_with_one_installation` carries.
+/// `AppState::default()` opens no product database (AR18 M8). Set `None`
+/// explicitly anyway so the "no product database configured" tests keep
+/// their precondition if the default changes.
 #[allow(clippy::field_reassign_with_default)]
 fn state_without_product_db() -> knx_server::AppState {
     let mut state = knx_server::AppState::default();

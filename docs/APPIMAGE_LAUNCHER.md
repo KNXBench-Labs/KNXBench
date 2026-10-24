@@ -181,8 +181,39 @@ the policy falls through to the home directory: the working directory there is
 also `$APPDIR/usr` and is rejected. Outside an AppImage (`APPDIR` unset) an
 inherited `OWD` belongs to another program's launch and is ignored.
 
-This change is unit-tested and gated. A native re-run of a fixed AppImage has
-not been recorded here yet.
+This change is unit-tested and gated.
+
+**Native re-run and the frontend dialogs (24 October 2026).** A native re-run
+of an AppImage built with this fix verified that the Rust-side session-log save
+dialog now opens in the launch directory (`OWD`). The same run found that the
+project **Save As** dialog still opened in `/tmp/.mount_<id>/usr`. That dialog,
+like project Open and the other file pickers of the web UI (CSV import and
+export, debug report, documentation, plugin data, project diff, selective
+import, unresolved-program notice), is opened from JavaScript through
+`@tauri-apps/plugin-dialog` in `apps/knx-web/src/filePicker.ts`, not in Rust,
+so the fix above never reached it: it passed only a bare file name (Save) or no
+folder at all (Open). The Finding's list above named project Save As among the
+Rust-side dialogs; only the in-app download dialog in `download_handler.rs` is.
+
+**Frontend fix.** The desktop shell now exposes the same policy as the app
+command `default_dialog_directory` (main window only, permission
+`allow-default-dialog-directory`), which returns the folder from
+`save_directory.rs` or `null`; a folder that is not valid UTF-8 is reported as
+`null`. `filePicker.ts` asks for it before each native dialog: Save receives
+`defaultPath` = that folder joined with the default file name (`join` from
+`@tauri-apps/api/path`), Open receives the folder as `defaultPath`. When the
+command answers `null`, fails or the join fails, the dialog gets exactly the
+arguments it had before. The plain web build's server-mount picker is
+unchanged. Vitest covers the joined Save path, the Open folder, the `null` and
+rejected-command fallbacks, a failed join and the untouched web build; Rust
+tests cover the command's ACL grant (and its refusal for companion windows),
+the `core:default` grant of `join`, and the UTF-8 conversion. This frontend
+change is unit-tested and gated. A native Wayland/WebKitGTK re-run on 24 October
+2026 of integration source `6f06d7e1a` verified frontend Save As and Open, and
+Rust-side session-log export, all starting in the dedicated launch directory.
+Save As produced a native project whose SQLite integrity check returned `ok`;
+Open and log-export cancellation closed their dialogs. This is named native
+workflow evidence, not Orca acceptance, every-picker coverage or a new release.
 
 ## Verification
 

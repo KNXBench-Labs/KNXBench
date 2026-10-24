@@ -12,6 +12,15 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Diagnostic selector ambiguity remediation (25 October 2026)
+
+Corrected the CLI refusal and usage text: a diagnostic target's individual
+address must uniquely identify one device across the entire project, including
+separate installations. Candidate ids/names identify conflicts; `--device-id`
+does not bypass the unchanged application guard. The built-CLI regression
+follows the address refusal with each listed id, for both diagnostic profiles,
+and checks refusal without UDP traffic, preview output or an archive.
+
 ## `knx device diagnostics --device <area.line.device>` selector (24 October 2026)
 
 `knx device diagnostics` selects its device by individual address as an

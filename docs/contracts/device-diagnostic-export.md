@@ -169,11 +169,15 @@ is claimed.
   N) --gateway host:port --output new.zip [--product-db db] [--confirm-read]`;
   without `--confirm-read` it only previews. Exactly one selector is required.
   `--device <area.line.device>` must belong to exactly one project device: an
-  unknown address is refused, and an address several devices share (for
-  example in two installations) is refused listing their internal ids for
-  `--device-id`; a device without an address is never selected by address.
-  These refusals, like a malformed address, happen before any tunnel. `--simulate` uses the built-in simulator
-  and never constructs a network client. Ctrl-C stops cooperatively and saves
+  unknown address is refused, and an address several devices share (even
+  across installations) is refused listing their internal ids and names for
+  identification only. With **either** selector, the individual address must
+  uniquely identify one device across the whole project; `--device-id` does
+  not bypass this requirement. Resolve duplicate project address assignments
+  before retrying. A device without an address is never selected by address.
+  These refusals, like a malformed address, happen before any tunnel or archive
+  creation. `--simulate` uses the built-in simulator and never constructs a
+  network client. Ctrl-C stops cooperatively and saves
   the partial result. Write/key/memory flags are refused. `--profile
   system2-declared-segments-v1` selects the memory profile above.
 

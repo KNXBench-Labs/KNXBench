@@ -5,7 +5,7 @@
 //! ProductDB-declared memory ranges (ADR-0143). The device is chosen with
 //! `--device <area.line.device>` or `--device-id <id>`. `--simulate` never
 //! constructs a network client; without `--confirm-read` nothing is acquired.
-use crate::device_selector::DeviceSelector;
+use crate::device_selector::{DeviceSelector, ADDRESS_UNIQUENESS_REQUIRED};
 use knx_app::device_diagnostics as service;
 use knx_core::{DeviceId, DeviceInstance, Language, Project, SourceRef};
 use std::{
@@ -108,9 +108,18 @@ fn execute(args: &[String]) -> Result<(), String> {
         None
     };
     let plan = match products.as_ref() {
-        Some(db) if memory_profile => Plan::Memory(service::prepare_memory(&project, device, db)?),
-        _ => Plan::Identity(service::prepare(&project, device, products.as_ref())?),
-    };
+        Some(db) if memory_profile => {
+            service::prepare_memory(&project, device, db).map(Plan::Memory)
+        }
+        _ => service::prepare(&project, device, products.as_ref()).map(Plan::Identity),
+    }
+    .map_err(|error| {
+        if error == "diagnostics-address-ambiguous" {
+            format!("{error}: {ADDRESS_UNIQUENESS_REQUIRED}")
+        } else {
+            error
+        }
+    })?;
     let gateway = if simulate {
         None
     } else {

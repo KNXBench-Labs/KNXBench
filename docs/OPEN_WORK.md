@@ -1272,7 +1272,11 @@ checksums never claimed to detect deliberate rewriting. Delivered on 24 October
 2026: `knx device diagnostics --device <area.line.device>` selects the device by
 its individual address for both profiles, so the issue #22 request no longer
 needs a `sqlite3` query for the internal `--device-id`; an address no device or
-several devices have is refused, the latter listing the candidates' ids.
+several devices have is refused, the latter listing the candidates' ids for
+identification only. Both selectors require the address to identify exactly one
+device across the entire project, including separate installations;
+`--device-id` does not bypass this requirement. Resolve duplicate project address
+assignments before retrying.
 
 ## System 2 / System B download outcome (17 October 2026)
 

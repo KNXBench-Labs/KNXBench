@@ -714,10 +714,13 @@ knx device diagnostics --profile system2-declared-segments-v1 --project house.kn
   --device 1.1.67 --product-db products.sqlite --gateway 192.0.2.1:3671 --output up258.zip
 ```
 
-`--device` takes the device's individual address. If no project device or
-more than one has that address (for example the same address in two
-installations), the command stops; for several it lists their internal ids,
-and `--device-id <id>` then picks one. Nothing is read in either case.
+`--device` takes the device's individual address. With either selector, the
+address must uniquely identify one device across the whole project, including
+all installations. If no device has the requested address, or several share
+it, diagnostics stops before any network contact or archive creation. For
+duplicates it lists internal ids and names only to identify the conflicting
+project devices: `--device-id <id>` does **not** bypass the uniqueness requirement.
+Resolve the duplicate project address assignments before retrying.
 
 For a System-2 device (today: an application with exactly one product load
 procedure, such as the Siemens UP 258D12) this reads the memory ranges the

@@ -194,10 +194,7 @@ fn cross_process(state: &crate::AppState) -> Result<std::fs::File, ApiError> {
         None => knx_app::device_diagnostics::gateway_lease(),
     }
     .map_err(|_error| {
-        observe!(
-            state,
-            failure("cross-process-lease", "lease-refused", None)
-        );
+        observe!(state, failure("cross-process-lease", "lease-refused", None));
         refuse("gatewayBusy")
     })
 }

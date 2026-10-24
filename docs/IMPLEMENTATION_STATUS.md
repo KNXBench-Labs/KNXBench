@@ -22,7 +22,9 @@ deliberately superseded. Final test bytes reproduce 33 semantic failures against
 original production; corrected selected suites pass 367 tests with populated-store
 preservation and native reopen. Three affected crates pass all-targets Clippy.
 Independent review accepts with zero Critical/Important findings; maintained package
-acceptance is pending. Source-only, not
+acceptance passes all 14 integrated stages on `daef61b74`: 4,732 Rust passes
+(216 ignored), 155/155 selected corpus, frozen inputs and clear user-data guards.
+Exact live publication readback verified; claim released. Source-only, not
 an Alpha 16 artifact update. [Contract, evidence and exclusions](research/2026-10-24-zip-bit6-flag-consistency.md).
 
 ## WP-06a saved project folders in the object table (24 October 2026)

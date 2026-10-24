@@ -105,7 +105,8 @@ release artifact. The bit-0 claim is released. The
 [24 October bit-6-only consistency amendment](research/2026-10-24-zip-bit6-flag-consistency.md)
 is implemented with original-source regressions and focused corrected tests;
 independent review accepts with zero Critical/Important findings; package acceptance
-remains pending. AES extra-field semantic
+is delivered on `main` as `daef61b74` with the verified integrated 14-stage gate
+and exact live publication readback. The claim is released. AES extra-field semantic
 equality and other unsupported cipher metadata remain separate questions, not new
 encryption support.
 

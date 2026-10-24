@@ -87,5 +87,9 @@ used isolated homes and a loopback-only network namespace; no hardware was used.
 
 Independent read-only whole-feature review accepts with zero Critical/Important findings;
 the controller verified the review artifacts and unchanged source/test identities.
-The maintained committed-input package gate is pending.
+Delivered on `main` as `daef61b74` (feature `9c7d0c122`). The maintained integrated
+14-stage change-scoped gate passes: 4,732 Rust tests across 33 binaries (216
+ignored), 155/155 selected corpus cases, complete ordered proofs, frozen inputs
+and empty touched/unchecked user-data lists. Exact live remote readback agrees.
+The claim is released; these are integrated source results, not release artifacts.
 Focused tests are not final integrated, release or real encrypted-corpus acceptance.

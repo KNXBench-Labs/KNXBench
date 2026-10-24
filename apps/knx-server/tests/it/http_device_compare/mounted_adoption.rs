@@ -268,4 +268,13 @@ async fn mounted_observation_adopts_one_row_persists_undo_and_refuses_foreign_co
     .await;
     assert!(no_writes(&h.device));
     assert!(!h.device.memory_was_written());
+    h.state.catalogue_jobs.close_admission_and_request_stop();
+    assert_eq!(
+        h.state
+            .catalogue_jobs
+            .drain(Duration::from_secs(5), std::future::pending())
+            .await
+            .end,
+        knx_server::DrainEnd::Finished
+    );
 }

@@ -50,12 +50,27 @@ already found lying in the grass.
   It also fails when it cannot check them (`userDataUnchecked`: a directory it
   may not list or reach, a symlink to an ancestor or to `$HOME`, which it does not walk,
   or more than 5,000 entries). Rebase before gating, so
-  the branch carries this runner. A **direct** `cargo test` still inherits the
-  real homes: export scratch values first, e.g.
-  `XDG_DATA_HOME=$(mktemp -d) XDG_CONFIG_HOME=$(mktemp -d) cargo test …`.
-  The web gate keeps the real values on purpose (fontconfig reads fonts and
-  configuration through them, and browser specs pin pixel widths).
+  the branch carries this runner. The web gate's browser steps keep the real
+  values on purpose (fontconfig reads fonts and configuration through them,
+  and browser specs pin pixel widths).
   `AppState::default()` itself opens no product database (AR18 M8).
+- **Everything Cargo runs gets scratch homes.** `.cargo/config.toml` sets
+  `XDG_DATA_HOME`/`XDG_CONFIG_HOME` to `target/dev-home/{data,config}` for
+  `cargo test`, `cargo run` and build scripts (24 October 2026). It uses
+  `force = true` because desktop sessions (via the systemd user environment)
+  and GitHub's Ubuntu images export the *real* homes, which `force = false`
+  would let win. Consequences: a `cargo run` of the server or desktop shell
+  starts with an empty catalogue, without your user fonts and fontconfig
+  settings, and build scripts' `git` calls skip `~/.config/git`; the
+  directory survives between runs (delete `target/dev-home` for a clean
+  slate). To use real data, run the built binary directly
+  (`target/debug/knx-server`), or let the exported value win with
+  `cargo run --config env.XDG_DATA_HOME.force=false --config env.XDG_CONFIG_HOME.force=false …`.
+  The package gate and `tools/run_corpus_tests.py` pass exactly these
+  arguments to keep their own scratch homes (`CARGO_KEEPS_EXPORTED_HOMES`).
+  Nothing is baked in: a binary started outside Cargo (release artifacts,
+  the AppImage) sees only its own environment. `knx-cli`'s `cargo_dev_homes`
+  tests fail when a test, or a `knx` it spawns, sees an unset or real home.
 - **CI runs exactly these checks** (`.github/workflows/`): `cargo fmt --all --check`,
   `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`,
   `npm ci`, `npm test` and `npm run build` in `apps/knx-web`, the ts-rs bindings

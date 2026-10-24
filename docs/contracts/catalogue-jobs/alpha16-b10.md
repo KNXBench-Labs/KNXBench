@@ -5,7 +5,11 @@ bounded production catalogue outcomes have source-bound software acceptance in
 the [current release matrix](../../goals/alpha16-release-plan-2026-10-23.md#current-acceptance-disposition--24-october-2026).
 This supersedes prospective combined-acceptance wording below, without widening
 the original focused B10 evidence. This callable cross-crate contract is not a
-claim that every B08/B10 criterion, hardware outcome or overall release is accepted.
+claim that every B08/B10 criterion or hardware outcome is accepted. Local amd64
+software/package acceptance is complete, including both formerly blocked pinned
+criteria; extra local ARM64 preacceptance is explicitly deferred and unverified,
+without changing the normal amd64+arm64 publication workflow. Publication Go is
+conditional on final readiness; parent closeout and public readback remain pending.
 
 ## ProductDB controlled API
 

@@ -34,21 +34,43 @@ Historical full gate `14c9214b68cbe10186c0b7e8b1112c810ce5cff1` remains accepted
 at that source. Later focused receipts separately accept affected catalogue
 regressions, fresh-execution reuse, mounted comparison adoption/native undo and
 one measured real Large-profile catalogue outcome. The latter does not exceed
-the Standard 4 GiB decoded ceiling. Release residue accepts 24/26 opt-ins, both
-distinct browser configurations and all four maintained native invocations; two
-pinned-composition checks remain blocked, not passed or failed. Overlapping runs
-are not summed. Catalogue-authored save/reopen against an empty product database
+the Standard 4 GiB decoded ceiling. Historical release residue accepts 24/26
+opt-ins, both distinct browser configurations and all four maintained native
+invocations; its two then-blocked pinned-composition criteria now separately pass
+(`ok`/exit 0) at documentation HEAD `a9295a52`, using the owning release-mode
+integration build. Parent verified exact authorized archive restoration of
+111 files (one non-package), 115 package instances / 113 unique payloads with
+historical mapping and unchanged original/input/archive/source/user/history
+guards. Different-filesystem output, ended consumers and released leases are
+verified. The old receipt remains historical; overlapping runs are not summed.
+Catalogue-authored save/reopen against an empty product database
 already has historical gate evidence and is not reopened as missing work.
 
-**Overall package remains unaccepted and unpublished:** the historical pinned
-materialized directory copy is absent and restoration/repinning remains prohibited;
-ARM64 remains unverified pending evidence or an explicit platform-scope decision.
+**Local amd64 software/package acceptance is complete; the candidate is unreleased.**
+The owner explicitly authorized only the exact historical restoration and limited
+local preacceptance to amd64. No further materialization or repinning is authorized;
+extra local ARM64 preacceptance is deferred and unverified, not a current blocker.
+Normal Alpha-15-style release channels and the standard amd64+arm64 container
+workflow remain unchanged; remote results must be separately verified.
 All four final local amd64 artifacts (AppImage, MCP, standalone server and maintained
 container archive) now have parent-independent hash/size readback and accepted
 minimal isolated packaging-smoke/final-preservation receipts for the frozen SHA.
-This is neither ARM64 nor remote workflow/publication acceptance. The bounded
-manual/roadmap/contract-status reconciliation is recorded in the plan; parent final
-documentation review, publication approval and public readback remain separate.
+The additional final standalone artifact import/upgrade receipt is complete/success:
+23 checks in one attempt cover public synthetic ETS import/save/switch/reopen with
+topology and exact retained XML bytes preserved, plus authentic committed native13
+upgrade/save16/switch/reopen with matching common-column rows across 14 tables.
+Both stores have SQLite integrity OK; originals and protected inputs/data remain
+unchanged, server exits 0 and processes/leases are released. History counters are
+not undo/redo-operation proof; no per-package/browser/hardware/ARM64 claim follows.
+Parent review of the bounded manual/roadmap/contract-status reconciliation is
+complete. The plan's explicit 24 October bundled amendment accepts historical
+Gate9 plus reviewed affected-successor checks/owning builds and final artifact
+smokes, not a same-final-SHA full gate. The remote dry-run criterion is superseded
+by required actual normal publication on the final tag and public verification;
+no remote dry run is claimed. Conditional Go permits starting normal publication
+once parent read-only preflight confirms prerequisites. A16-09 actual remote
+publication and public artifact/checksum/digest/revision readback remain pending;
+no runtime/artifact identity is relabelled to a documentation SHA.
 Application versions are `0.1.0-alpha.16`; native/store and core
 model remain 16, product database 28, with closed-catalogue backup/downgrade limits
 in the [release note](releases/alpha16.md). This documentation-only refresh executes

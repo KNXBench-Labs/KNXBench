@@ -4,8 +4,11 @@ Status, 24 October 2026: App primitives and mounted production API/UI implemente
 (WP-19); actual mounted comparison/adoption/native persistence/undo has bounded
 software acceptance in the [current release matrix](../goals/alpha16-release-plan-2026-10-23.md#current-acceptance-disposition--24-october-2026).
 Earlier slice evidence below retains its source identity, not a full gate at the
-final successor. Overall release remains pending; no physical-device or broader
-adoption authority follows.
+final successor. Local amd64 software/package acceptance is complete, including
+both formerly blocked pinned-input passes; extra local ARM64 preacceptance is
+explicitly deferred and unverified, without changing the normal amd64+arm64
+publication workflow. Publication Go is conditional on final readiness; parent closeout and
+public readback remain pending. No physical-device or broader adoption authority follows.
 
 ## Authority and scope
 

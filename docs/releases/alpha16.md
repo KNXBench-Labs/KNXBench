@@ -1,12 +1,17 @@
-# Alpha 16 — unreleased scope draft
+# Alpha 16 — unreleased candidate, local amd64 software package ready
 
 > **Unreleased acceptance snapshot — 24 October 2026, not a release announcement.**
 > Runtime/test source is frozen at
 > `86b4a7fc68b3d3206c00511b14f41e025e33de4d`, compared locally with the Alpha-15
-> baseline. Bounded software outcomes have source-bound acceptance receipts;
-> **the overall release package is not accepted**. Two pinned-input checks,
-> an ARM64/platform decision and final delivery approval remain open. Final local
-> amd64 artifacts and their minimal isolated smokes have parent acceptance.
+> baseline. **Local amd64 software/package acceptance is complete** with
+> source-bound receipts, including the two formerly blocked pinned-input checks
+> and the named final standalone artifact import/upgrade smoke.
+> Local preacceptance is explicitly amd64; extra ARM64 preacceptance is deferred,
+> not a current blocker. Normal Alpha-15-style release channels remain unchanged.
+> Parent documentation review is complete. The owner granted publication Go
+> conditional on readiness: normal publication may start once parent read-only
+> preflight confirms its prerequisites. Actual publication and public readback
+> remain pending.
 > Nothing here claims a tag, publication or a live check of the latest remote release.
 
 The Alpha 16 scope connects experimental configured System-2 download,
@@ -14,6 +19,11 @@ cancellable catalogue updates, comparison adoption and catalogue-authored native
 source retention. The [release plan and evidence matrix](../goals/alpha16-release-plan-2026-10-23.md#current-acceptance-disposition--24-october-2026)
 remain the acceptance authority. Historical full-gate and later focused receipts
 retain their actual revisions; no full-gate result is relabelled as this successor.
+The explicit **24 October 2026 bundled acceptance amendment** accepts historical
+Gate9 plus reviewed affected-successor checks/owning builds and final artifact
+smokes instead of a same-final-SHA full-gate replay. It supersedes the remote
+packaging dry-run criterion with **required actual normal publication on the
+final tag and public verification**; no remote dry run is claimed.
 
 ## Experimental configured System-2 download
 
@@ -201,22 +211,39 @@ identities in the release plan. There is no aggregate total of overlapping runs.
 
 Remaining package boundaries:
 
-- **Two opt-ins blocked, not failed or passed:** the legacy-member-name and
-  isolated/shared-order product-matrix checks require the authenticated historical
-  pinned composition as materialized directories. The copy is absent; archived
-  payloads do not satisfy the reader. The no-copy boundary remains in force:
-  no restoration, repin or file-list substitution was performed. The matrix output
-  filesystem prerequisite is resolved; it is not the remaining blocker.
+- **Two formerly blocked opt-ins passed:** parent-verified legacy-member-name and
+  isolated/shared-order product-matrix checks each returned `ok`/exit 0 at
+  documentation HEAD `a9295a52c08fa642c55d33294b5c043bdd98a0b0`, using the owning
+  release-mode integration build. The owner authorized restoration of only the
+  authenticated historical selection: **111 files** (one non-package file),
+  **115 package instances / 113 unique payloads**. Exact archived bytes and mapping
+  were preserved; originals, source, user data and historical evidence remained
+  unchanged. This limited authorization is not permission for further copies,
+  repinning or substitution. The matrix used the required different output
+  filesystem; consumers ended and leases were released. The historical 24/26
+  receipt remains historical; its remaining two criteria passed separately,
+  without an overlapping aggregate total or a new full-gate claim.
 - **Local amd64 artifacts accepted:** the parent independently read back all four
   final artifact hashes/sizes for the frozen runtime above and accepted the
   complete/success packaging-verification and final-preservation receipts.
   Earlier packages retain their original revisions; they are not relabelled.
-- **ARM64:** unverified. A platform-scope decision or actual ARM64 acceptance is
-  still required; amd64 evidence is not multi-architecture acceptance.
-- **Final delivery:** the bounded manual/roadmap/contract-status reconciliation is
-  recorded in the release plan; parent final documentation review, explicit owner
-  publication approval and public artifact/checksum/digest verification remain
-  separate. There is no tag or publication claim in this snapshot.
+- **Platform decision:** local preacceptance is explicitly **amd64**; extra ARM64
+  preacceptance is deferred and unverified, not a current local blocker. The owner
+  requests normal Alpha-15-style publication, not an architecture-special release:
+  AppImage/MCP/checksums and the unchanged standard amd64+arm64 container workflow.
+  Its remote builds/publication must be verified separately; no ARM64 lane is
+  disabled and local amd64 evidence is not multi-architecture acceptance.
+- **Final artifact import/upgrade criterion satisfied:** the final standalone
+  amd64 server passed the bounded import/save/switch/reopen and native13 upgrade
+  routes described below. This is one artifact route, not a source-suite replay
+  or certification of every package/architecture.
+- **Final delivery:** parent review of the bounded manual/roadmap/contract-status
+  reconciliation is complete. The dated bundled amendment retains original
+  criteria as history without inventing a same-final-SHA full gate or remote dry
+  run. Conditional Go permits starting normal publication after parent read-only
+  preflight confirmation. A16-09 actual normal final-tag publication and public
+  artifact/checksum/digest/revision verification remain pending. There is no tag
+  or publication claim in this snapshot.
 
 ### Parent-verified local amd64 artifact identities
 
@@ -238,6 +265,27 @@ graceful stops passed. The parent read these smoke receipts, not a second run.
 AppImage extraction/Broadway startup does not verify FUSE, native Wayland/EGL or
 visual desktop behaviour. Local container archive/config verification is not a
 registry push or public digest readback.
+
+The additional logical receipt **Final-artifact import/upgrade / final-receipt**
+is complete/success for the same final standalone server identity above, with
+**23 checks in one attempt**. Through its isolated authenticated API:
+
+- The committed public synthetic ETS fixture is imported, saved as native16,
+  switched away from and reopened. Topology/readback and exact retained fixture
+  XML bytes are preserved; this is not broad ETS compatibility.
+- An authentic committed native13 predecessor fixture is opened, saved as
+  native16, switched away from and reopened. Compared common-column rows match
+  across all 14 inspected tables; history counters are observed, not undo/redo
+  operation or both-stack working-state proof.
+- Both saved stores report SQLite integrity OK. Original/copied fixtures,
+  source/runtime inputs, prior artifact evidence, user data and user container
+  are unchanged; server exit is 0, owned processes end and leases are released.
+
+This closes the named artifact import/upgrade criterion under the bundled
+amendment. It is not a per-AppImage/container replay, browser/native-GUI/FUSE,
+physical KNX, network-peer, ETS-parity or ARM64 result. It changes neither the
+four artifact identities nor the requirement to verify actual normal public
+release outputs separately.
 
 This documentation-only refresh runs no tests, builds or smokes. No real-device
 trial, ETS/recovery certification, general throughput claim or ledger/issue closure

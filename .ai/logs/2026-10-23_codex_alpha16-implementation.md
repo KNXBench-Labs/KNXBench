@@ -819,6 +819,69 @@ recovery/onceonly accepted on TestHardware. Focused docs/handover checkpoint nex
 Pinnedcomposition restoration/no-copy decision, ARM64scope/acceptance and explicit
 publication/publicreadback remain unresolved; no release/tag/upload claim.
 
+## User authorises exact pinned restoration and defers ARM64
+
+Explicit owner decision: restore only exact authenticated historical pinned copy
+into separate private directory; ARM64 moves to backlog, current package scope
+amd64.976e1db2 owns safeallowlisted restoration/hashmapping then only two remaining
+opt-ins on current-source bound binaries with maintained isolation/differentfs.
+No source edits, oldpassing-scope replay, full gate or publication. Update release
+status after actual final outcomes; platform deferral is not ARM64 acceptance.
+
+## Exact pinned criteria closed by parent readback
+
+Parent authenticatesfinalreceipt2of2pass,111files115instances113unique and exact
+compiledbinaryhash; safety/source/input/user/history/process/leaseguardsclosed.
+No repeated extraction/test, nonpackageverifierrefusal preserved. DOC-only2af262e7
+closes stale pinned/platformblockers under explicit userAMD64scope. Parent final
+documentation/anchor check and focusedcommit after handoff, no producttestrun.
+Publicationapproval/publicreadback remains separate and absent.
+
+## Conditional publication Go and normal Alpha15 distribution confirmed
+
+User explicitly authorises publication after greencloseout and requestsREADME/
+website refresh. Clarifies normalAlpha15distribution, not architecture-special.
+ActualAlpha15GitHubassetreadback and maintainedpipelines inspected; localARM64
+extra checks deferred, standardDockeramd64+arm64workflow remains unchanged.
+DisjointREADME/websiteab6682ab andDOCcloseout2af262e7 active. Parent finalchecks/
+commit then normalpublication+publicreadback; no fabricatedreleasedclaim or
+sourcegate replay. ConditionalGo does not bypass failedreleasejob/assetverification.
+
+## Final named readiness residue explicitly scoped
+
+Finaldocs retain historicalfullgate and exact affectedchecks, not finalSHAgate.
+Parent existingxtask anchor command exits0. Missingartifactimport/upgrade path
+10e12b61 uses only verifiedfinalartifact/existingfixtures, no sourcecampaign or
+rebuild. Normalremote releaseworkflows/publicoutputs still actualfutureevidence.
+README/website active. ConditionalGo preserved; need finalscopeamendment under
+userminimaltestingdirection, never silently check nonexistent sameSHAfullgate.
+
+## README/website handoff reviewed and publication preflight scoped
+
+Parentdiffreview confirms7contentfiles/focusedstaticcheck and no workflowchanges.
+Documentationchecker0errors/whitespaceclean after edits. Fetch:originmain no
+exclusivecommits,50localcommitsahead. Read-only8a5b13f4 checks normalpublication
+requirements/refs/secretNAMES only, no writes. Missingartifactimportupgrade active;
+finalscopeamendment/doccommit before normalpush/tagCI/publicreadback. Conditional
+Go does not authorize nonexistentresults; localartifacthashes notCIhashclaims.
+
+## Final artifact import/upgrade receipt independently verified
+
+Both actual missingpaths passed on final standaloneamd64artifact: committedpublic
+syntheticETSimport-save-switch-reopen and authenticnative13fixture-save16-switch-
+reopen with14tablepreservation. Parentverifiedreceipt/indexhashes,63/63records,
+artifacthash,23checks/schema16/integrityok/cleanup/availableleases. No stackoperation,
+perpackage or hardware inference. Finaldocs6295deaf records explicit bundled
+acceptance amendment; publicationpreflight8a5b13f4 stillread-only. No publicationyet.
+
+## Parent final documentation acceptance
+
+Final readiness amendment and README/website reconciliation reviewed. Retained
+final documentation checker exits 0. Runtime remains frozen at 86b4a7fc; no
+same-final-SHA full-gate or remote dry-run claim. Focused documentation closeout
+commit is prepared; read-only publication preflight remains the external-write
+prerequisite. Conditional owner Go does not replace actual CI/public readback.
+
 ## Next
 
 Consume exact worker handoffs on completion; do not poll

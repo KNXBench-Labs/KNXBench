@@ -6,12 +6,31 @@
 
 **Snapshot: 24 October 2026**, frozen runtime/test source
 `86b4a7fc68b3d3206c00511b14f41e025e33de4d`. Bounded software outcomes and all four
-final local amd64 artifacts have parent acceptance; the overall release remains
-unaccepted and unpublished. Two pinned-input checks remain blocked under the
-no-copy boundary; ARM64 is unverified without an owner platform-scope decision.
-Parent final documentation review, publication approval and public readback remain
-open. Historical full-gate and focused successor results retain their own source
-identities; they are not one full gate at this SHA or summed coverage.
+final local amd64 artifacts have parent acceptance; **local amd64 software/package
+acceptance is complete**, not publication approval. Both formerly blocked
+pinned-input criteria passed at documentation HEAD `a9295a52` with the owning
+release-mode integration build after owner-authorized exact historical restoration
+of 111 files (one non-package), 115 instances / 113 unique payloads. Parent verified
+the results and preserved mapping/original/input/archive/source/user/history guards.
+No further materialization or repinning is authorized. The owner explicitly limits
+local preacceptance to amd64; extra local ARM64 preacceptance is deferred and
+unverified, not a blocker. Normal release channels and the standard amd64+arm64
+container workflow remain unchanged, with remote verification still required.
+The named final standalone artifact smoke now passes public synthetic ETS
+import/save/switch/reopen and authentic committed native13 upgrade to native16,
+save, switch and reopen: 23 checks in one attempt, preserved topology/retained XML, matching
+common-column rows across 14 predecessor tables and SQLite integrity OK in both
+stores. Originals/protected data remain unchanged; processes end and leases
+release. This is not undo/redo operation proof, per-package replay, browser,
+hardware or ARM64 acceptance.
+Parent documentation review is complete. Publication Go is conditional on
+readiness; normal publication may start once parent read-only preflight confirms
+prerequisites. The explicit 24 October bundled amendment accepts historical Gate9
+plus reviewed affected-successor checks/owning builds and final artifact smokes,
+not one full gate at this SHA or summed coverage. The remote dry-run criterion is
+superseded by required actual normal final-tag publication and public verification;
+no remote dry run is claimed. A16-09 actual publication and public artifact,
+checksum, digest and revision readback remain pending.
 [Current evidence matrix](../goals/alpha16-release-plan-2026-10-23.md#current-acceptance-disposition--24-october-2026)
 and [unreleased scope](../releases/alpha16.md).
 

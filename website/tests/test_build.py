@@ -185,25 +185,45 @@ class BuildTests(unittest.TestCase):
             self.assertIn("noindex", html)
             self.assertIn('class="preview-note"', html)
 
-    def test_alpha14_features_use_current_screenshots_and_upgrade_boundaries(self):
+    def test_alpha16_release_copy_links_history_and_upgrade_boundaries(self):
         self.require_build()
+        release = "https://github.com/KNXBench-Labs/KNXBench/releases/"
         for lang in ("de", "en"):
             page = (self.out / lang / "index.html").read_text()
             doc = Document(page)
+            for section in ("release-features", "release-history"):
+                self.assertTrue(any(attrs.get("id") == section for _, attrs in doc.elements), (lang, section))
             for asset in ("alpha14-parameters.webp", "alpha14-vendor-zip.webp",
                           "alpha14-notes.webp", "alpha14-diagnostics.webp"):
                 self.assertTrue(any(tag == "img" and attrs.get("src", "").endswith("/" + asset)
                                     and attrs.get("alt") for tag, attrs in doc.elements), (lang, asset))
             self.assertNotIn("alpha12-", page)
             text = json.loads((WEBSITE / "content" / f"{lang}.json").read_text())
-            for key in ("release_title", "release_parameters_body", "release_vendor_body",
+            for key in ("release_title", "release_catalogue_body", "release_adoption_body",
+                        "release_portability_body", "release_system2_body", "release_layout_note",
+                        "history_title", "history_intro", "release_parameters_body", "release_vendor_body",
                         "release_notes_body", "release_diagnostics_body", "upgrade_note", "release_scope_note"):
                 self.assertIn(text[key], page)
-            self.assertIn("Alpha 14", page)
+            self.assertIn("Alpha 16", text["release_title"])
+            self.assertIn("Alpha 14", text["history_title"])
+            self.assertIn("Alpha 14", text["release_caption"])
             self.assertIn("16", text["upgrade_note"])
-            self.assertIn("24", text["upgrade_note"])
-            self.assertIn("Alpha 13", text["upgrade_note"])
-            self.assertIn("v0.1.0-alpha.14", page)
+            self.assertIn("26 → 27 → 28", text["upgrade_note"])
+            self.assertIn("Alpha 15", text["upgrade_note"])
+            self.assertIn("M-0001_A-9205-04-9270", text["release_system2_body"])
+            self.assertIn("TestHardware", text["release_system2_body"])
+            self.assertIn("105", text["release_system2_body"])
+            for arch in ("amd64", "arm64"):
+                self.assertIn(arch, text["release_scope_note"])
+            for tag in ("v0.1.0-alpha.14", "v0.1.0-alpha.15", "v0.1.0-alpha.16"):
+                self.assertEqual(sum(tag_name == "a" and attrs.get("href") == release + "tag/" + tag
+                                     for tag_name, attrs in doc.elements), 1, (lang, tag))
+            for asset in ("KNXBench_0.1.0-alpha.16_amd64.AppImage", "knx-mcp-x86_64-linux", "SHA256SUMS"):
+                self.assertEqual(sum(tag_name == "a" and attrs.get("href") ==
+                                     release + "download/v0.1.0-alpha.16/" + asset
+                                     for tag_name, attrs in doc.elements), 1, (lang, asset))
+            for key in ("real_app", "project_caption", "flow_caption", "details_caption"):
+                self.assertIn("Alpha 14", text[key], (lang, key))
             self.assertNotIn("v0.1.0-alpha.12", page)
 
     def test_site_copy_and_captions_carry_no_negative_disclaimer_tags(self):

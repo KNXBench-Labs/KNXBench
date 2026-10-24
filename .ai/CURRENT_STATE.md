@@ -1,4 +1,60 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-24 12:07
+- **Completed:** Final readiness documentation diff reviewed and accepted; named artifact import/upgrade evidence independently verified. Explicit bundled acceptance amendment preserves original Gate9 identity and reviewed successor checks; no same-final-SHA full-gate or remote dry-run claim. Final documentation checker exit 0 retained in parent-final-doc-review; README/website changes reviewed. Preparing focused documentation closeout commit; runtime inputs remain frozen at 86b4a7fc.
+- **Pending/Next Steps:** Await read-only publication preflight deleg_8a5b13f4/sa-0-4604563b before external writes. Conditional owner Go permits normal Alpha-15-style publication when prerequisites confirmed. Actual final-tag CI, GitHub asset checksums, Docker amd64/arm64 revision/digest readback and deployed website verification remain required. No publication yet.
+- **Notes for Codex oder Claude:** No additional product suites or rebuilds for documentation-only successor. Preserve original receipts and historical acceptance identities. Normal workflows unchanged; extra local ARM64 acceptance deferred only. Private evidence under <profile-scratch>/alpha16-execution-20261023/. No live bus, Ollama or vendor contact.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-24 12:01
+- **Completed:** Final artifact import/upgrade worker delivered PASS; parent verified both declared receipt/index SHA256, all63indexedfiles size/hash and exactartifacthash, complete/23checks/bothsavedstore schema16 SQLiteok/endedprocesses/releasedavailableleases. Actual publicsyntheticETSimport-save-switch-reopen and authenticnative13fixture-save16-switch-reopen14tablepreservation. No fullsuite/rebuild/repeat. Not undo/redo-stackoperation or physicalhardware proof.
+- **Pending/Next Steps:** Read-onlypublicationpreflight8a5b13f4/sa-0-4604563b active. Finalreadinessdocs6295deaf/sa-0-6d15d90a explicitlyrecords userminimalbundledacceptance amendment historicalGate9+reviewedaffectedchecks+artifacts (not samefinalSHAgate), closesartifactroute, requiresactualnormalCI/publicreadback rather thaninventeddryrun. Parent finaldocgate/diffcommit thenstandardmain/tagpublication whenpreflightready; postpublicationREADMEsite sync. No publicationyet.
+- **Notes for Codex oder Claude:** Runtime86b4a7fc stillbound, docsHEADa9295a52 dirtyallowedcontentonly. Newreceipt9db5004ba4ad29fa14d34307c3f4aac2447a7d1999b58a1c025c0447a6d100b8; index0498750aad66a7961f7e3a32c664310ec4fecc3e422250b9eabe3242cd211cd1. Private final-artifact-import-upgrade/ under <profile-scratch>/alpha16-execution-20261023/. ConditionalGo valid; normalAlpha15amd64+arm64workflows unchanged; no livebus/Ollama/vendor.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-24 11:53
+- **Completed:** README/DE-ENwebsite7filehandoff read and parentdiff reviewed; focusedsitestaticcheck passed once perworker, no browserclaim. Parentdocumentationchecker0errors againafterallcontentedits, whitespacclean. Remoteoriginmain2a9f43173,0left50right atfetch, no rebase/unrelatedruntimeincoming. No publicationyet, candidate/intendedlabels remaintruthful.
+- **Pending/Next Steps:** Artifactimportupgrade10e12b61 stillactive. Read-onlypublicationpreflight8a5b13f4/sa-0-4604563b checksnormalpipeline/refs/requiredsecretnames/versioncondition, NO writes. Parent readyscopeamendment+finaldoccommit thenmainfastforward/tag+normalCI ifallnamedgapsclosed. StandardCIGitHubassets/multiarchDockeractualresults and publicchecksums/revisionreadback mandatory; postpublicationsyncREADME/site/Pages separately. UserGo conditional valid, no sourcefullgatereplay.
+- **Notes for Codex oder Claude:** Private readme-website-alpha16/HANDOFF.md and publication-preflight under <profile-scratch>/alpha16-execution-20261023/. Runtime86b4a7fc localartifacthashes not automaticallyCIrebuilthashes. NormalworkflowARM64kept; localpreacceptancedeferredonly. No livebus/Ollama/vendor.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-24 11:48
+- **Completed:** Final15DOC handoff reviewed; retains actual historicalfullgate+affected-successor evidence, no invented same-finalSHAfullgate. Parent invoked existingxtask check-anchors successfully (commandexit0). README/website worker remainsactive. UserconditionalpublicationGo valid; normalAlpha15workflows unchanged.
+- **Pending/Next Steps:** Missing named artifactimport/upgrade smoke delegated10e12b61/sa-0-4e99a173 ONLYoneverifiedfinalartifact/existingvalidfixtures/realisolatedAPI, no rebuild/sourcecampaign. Need explicit readiness amendment: historicalfullgate plus exact reviewedaffectedchecks per userminimaltestdirection, not finalSHAfullgate claim; standardremote workflows must be verified actual before completepublication. WaitREADME/website+missingartifacthandoffs, finaldoccheck/diff/commit and normalreleasepush/tag/readback. Stop onrealblocker.
+- **Notes for Codex oder Claude:** Source/runtime86b4a7fc/artifacthashes remainbinding; docHEADa9295a52. Private final-amd64-acceptance-docs report names remainingcriterion precisely. No extra sourcefullgate/repeatpasses, no livebus/Ollama/vendor. PublicationGo conditionalnotreleasedclaim; actualremoteoutputsrequired.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-24 11:43
+- **Completed:** User grants publication WHEN fullAlpha16closeoutgreen and adds README+website update. Clarifies normal distribution likeAlpha15, NOT architecture-special release. ActualAlpha15GitHub readback:prereleaseamd64AppImage/x86_64MCP/SHA256SUMS; maintainedDockerpipeline buildsamd64+arm64 and publishestags/latest. LocalARM64extra acceptance deferred, standardworkflow must NOT be crippled; remoteARMoutcome requires actualreadback. No publication started.
+- **Pending/Next Steps:** ExistingDOCcloseout2af262e7 plus disjointREADME/websiteab6682ab active, steerednormalchannelinterpretation. Parent finaldoc/anchor/staticwebsitechecks+focusedcommit, verifyupstream/mergecandidatedelta, then normaltagreleasepipeline/publicassetchecksums/registryrevisionreadback. No productfullgate replay; stoppublicationonrealblocker. Sourceartifact86b4a7fc historicalidentity remains despite docscommits.
+- **Notes for Codex oder Claude:** ConditionalGo is explicit, no additionalapproval needed once criterionclosed. Do notclaimreleased until actualtag/GitHubassets/standardDocker/website readbackverified. Source/runtime usertree preserve; no livebus/Ollama/vendor. Private evidence remains under <profile-scratch>/alpha16-execution-20261023/.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-24 11:39
+- **Completed:** Final2pinnedcriteria handoff accepted by parent receipt/code-independentreadback:exact2ok/exit0,111files115instances113unique/explicitexclusion, originalarchives/source/user/historypreserved, differentfs/confinement verified, leasesreleased. ActualcompiledbinarySHA verified againstfinalreceipt. Privateverifiernonpackage refusal preserved; no extraction/testrepeat. ARM64ownerdeferral remains currentamd64scope.
+- **Pending/Next Steps:** DOC-only finalcloseoutdeleg_2af262e7/sa-0-85483931 closes stale input/platformblockers in existingrelease/status/manual/contractheaders. Parent finaldocumentation+anchorintegrity check/focusedcommit afterwards; no producttest/buildrepeat. ExplicitpublicationGo/publicreadback still outstanding; no tag/upload/push. Runtime/artifacts86b4a7fc unchanged, latestdocHEADa9295a52.
+- **Notes for Codex oder Claude:** Private historical-pinned-restoration/final-receipt.json and final-amd64-acceptance-docs under <profile-scratch>/alpha16-execution-20261023/. Preserveauthenticmaterialization/historycompiled evidence; cleanupownedshorttemp alreadydone. Physicalhardware/ETSparity/ARM64unverified; no livebus/Ollama/vendor.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-24 11:25
+- **Completed:** User explicitly authorises exact historical pinned archive restoration into separate private testdirectory and defers ARM64. Alpha16 current acceptance scope is amd64; ARM64 unverified/backlog, no longer a current release prerequisite. Integrationclean a9295a52 confirmed, runtime/artifacts86b4a7fc unchanged. No publicationapproval inferred.
+- **Pending/Next Steps:** Delegation976e1db2/sa-0-9032bbaa restores ONLY authenticated111container/115instance/113unique historicalselection with strict safeextraction/hashmapping, then runs ONLY2remaining exact optins under current-source owningbuild/maintainedisolation/differentfilesystemoutput. No oldpasses/fullgate/System2/browser replay. Initial restorationrunner exited1 with stagesempty/0executed; parent read receipt, no productfailure inferred. Owner instructed preserve exactfailure/classify actualtraceback and only correct private projection if authentication/safetyunchanged; actualhash/safety mismatch must STOP, never repin/relaxguard or repeat completed work. Continuationlauncher now reports complete/success2of2outcomes passed. Parent read summary only; final exact historicalcomposition/input/outputdifferentfs/source/user/processguard closure pending ownerhandoff. No repeats/additionalruns. Runtime/tests/source frozen; parentmetadataupdatesonly while consumersactive. After finalreceipt update sourcebound release/docs ARM64decision/pinnedcriteria results, finalcloseout/publicationapproval still separate.
+- **Notes for Codex oder Claude:** Private historical-pinned-restoration under <profile-scratch>/alpha16-execution-20261023/. No-copyboundary lifted ONLYexact archivedselection by user, never repin/download/modifyOriginalData. Exactcomposition/excludedcontainer/authenticatedmanifest mandatory. Preserve oldevidence/userdata, no livebus/Ollama/vendor/ARM64build/tag/upload/push.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-24 11:07
 - **Completed:** Final15-document reconciliation handoff read; parent reviewed scoped diff and ran one documentation integrity check:749markdown/6664localtargets/63images/33chapters,0errors. gitdiffcheck clean. No producttests repeated. Allfour finalamd64 artifacts already parenthash/sizeverified at runtime86b4a7fc; final mountedTestHardware originalrestore/journal/onceonly proof accepted. Documentation records historicalfullgate separately from focusedsuccessors, no aggregate/passinflation.
 - **Pending/Next Steps:** Focused documentation/handover commit now; A16-08 remains bounded parentcloseout/anchor review not blanket alldocs certification. Two pinned-composition criteria need explicit exactarchive restoration authorization or authenticatedmaterializeddirectory; no-copyboundary not waived. ARM64unverified requires buildacceptance or explicitamd64scope. Publicationapproval/publicreadback outstanding. No furtherproducttest/build/publish until prerequisite decisions resolved.

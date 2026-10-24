@@ -5,7 +5,11 @@ bounded A16-03 software acceptance in the
 [current release matrix](../goals/alpha16-release-plan-2026-10-23.md#current-acceptance-disposition--24-october-2026).
 This supersedes earlier unmounted/backend-pending wording below. UI fixture
 evidence remains separate from the final mounted HTTP/worker TestHardware proof;
-neither verifies physical recovery or ETS parity. Overall release remains pending.
+neither verifies physical recovery or ETS parity. Local amd64 software/package
+acceptance is complete, including both formerly blocked pinned-input passes;
+extra local ARM64 preacceptance is explicitly deferred and unverified, without
+changing the normal amd64+arm64 publication workflow. Publication Go is conditional on
+final readiness; parent closeout and public readback remain pending.
 Ordinary device-download endpoints retain their current semantics.
 
 ## Required user workflow

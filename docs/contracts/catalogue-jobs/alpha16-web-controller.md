@@ -6,7 +6,11 @@ catalogue software outcomes recorded in the
 This supersedes earlier candidate-pending wording below. Original mocked
 transport/component evidence stays separate from actual mounted server outcomes;
 it is not retroactively runtime proof. No universal rollback, performance,
-physical-device or overall release acceptance is claimed.
+physical-device or publication acceptance is claimed. Local amd64 software/package
+acceptance is complete, including both formerly blocked pinned-input passes;
+extra local ARM64 preacceptance is explicitly deferred and unverified, without
+changing the normal amd64+arm64 publication workflow. Publication Go is conditional on
+final readiness; parent closeout and public readback remain pending.
 
 ## Actual ownership and consumers
 

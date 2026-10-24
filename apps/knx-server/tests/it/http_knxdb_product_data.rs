@@ -487,13 +487,16 @@ fn catalogue_fixture_package() -> Vec<u8> {
 }
 
 async fn install_catalogue_fixture(app: &axum::Router) {
-    let package = catalogue_fixture_package();
+    install_catalogue_bytes(app, &catalogue_fixture_package()).await;
+}
+
+async fn install_catalogue_bytes(app: &axum::Router, package: &[u8]) {
     let boundary = "fictional-catalogue-portability";
     let mut body = format!(
         "--{boundary}\r\nContent-Disposition: form-data; name=\"file\"; filename=\"fictional.knxprod\"\r\n\r\n"
     )
     .into_bytes();
-    body.extend_from_slice(&package);
+    body.extend_from_slice(package);
     body.extend_from_slice(format!("\r\n--{boundary}--\r\n").as_bytes());
     let response = app
         .clone()
@@ -817,6 +820,10 @@ async fn catalogue_source_refusals_preserve_save_and_save_as_state() {
         ),
         ("missing-mapping", "mapping is unavailable"),
         (
+            "missing-mapping-with-legacy-manifest",
+            "mapping is unavailable",
+        ),
+        (
             "corrupt-membership",
             "required member is absent from the original package",
         ),
@@ -885,8 +892,22 @@ async fn catalogue_source_refusals_preserve_save_and_save_as_state() {
                 knx_productdb::ingest_file(&conn, "M-0001/Divergent.xml", other.as_bytes())
                     .unwrap();
             }
-            "missing-mapping" => {
+            "missing-mapping" | "missing-mapping-with-legacy-manifest" => {
                 conn.execute("DELETE FROM hardware2program", []).unwrap();
+                if control == "missing-mapping-with-legacy-manifest" {
+                    // A real retained Hardware member is not evidence that this
+                    // newly authored device's missing application mapping exists.
+                    state
+                        .manufacturer_refs
+                        .lock()
+                        .unwrap()
+                        .push(knx_store::ManufacturerRef {
+                            source_path: HARDWARE_PATH.into(),
+                            sha256: knx_store::manufacturer_file_hash(HARDWARE),
+                            len: HARDWARE.len() as i64,
+                            kind: "Hardware".into(),
+                        });
+                }
             }
             _ => unreachable!(),
         }
@@ -923,6 +944,248 @@ async fn catalogue_source_refusals_preserve_save_and_save_as_state() {
             assert_eq!(*state.last_saved_at.lock().unwrap(), saved_at);
             assert_eq!(
                 state.store_path.lock().unwrap().as_deref(),
+                Some(native.as_path())
+            );
+        }
+    }
+}
+
+#[tokio::test]
+async fn unresolved_imports_without_a_manifest_preserve_model_and_opaque_bytes_on_save() {
+    for with_products in [false, true] {
+        let dir = tempfile::tempdir().unwrap();
+        let source = dir.path().join("unresolved.knxproj");
+        std::fs::write(
+            &source,
+            knx_testsupport::PluginFixture::default().knxproj_bytes(),
+        )
+        .unwrap();
+        let state = if with_products {
+            state_with_products(dir.path(), &dir.path().join("empty.sqlite"))
+        } else {
+            Arc::new(knx_server::AppState::new(dir.path().into()))
+        };
+        let app = knx_server::app(state.clone(), None);
+        ok(&app, "/api/project/import", Some(json!({"path":source}))).await;
+        let model = state.project.lock().unwrap().clone();
+        let opaque = state.opaque.lock().unwrap().clone();
+        assert!(!opaque.is_empty());
+        assert!(state.manufacturer_refs.lock().unwrap().is_empty());
+        let native = dir.path().join("unresolved.knxdb");
+        ok(&app, "/api/project/save-as", Some(json!({"path":native}))).await;
+        ok(&app, "/api/project/save", Some(json!({}))).await;
+        assert_eq!(*state.project.lock().unwrap(), model);
+        assert_eq!(*state.opaque.lock().unwrap(), opaque);
+        assert!(state.manufacturer_refs.lock().unwrap().is_empty());
+        assert_eq!(carried_rows(&native), 0, "do not invent ownership");
+        assert!(log_messages(&state).iter().any(|message| {
+            message.contains("source ownership is unavailable")
+                && message.contains("portability is not established")
+        }));
+        ok(&app, "/api/project/open", Some(json!({"path":native}))).await;
+        assert_eq!(*state.project.lock().unwrap(), model);
+        assert_eq!(*state.opaque.lock().unwrap(), opaque);
+        let copy = dir.path().join("unresolved-copy.knxdb");
+        ok(&app, "/api/project/save-as", Some(json!({"path":copy}))).await;
+        let read = knx_store::open_existing_read_only(&copy).unwrap();
+        let snapshot = knx_store::project_history::NativeSnapshot::read(&read.conn).unwrap();
+        assert_eq!(Some(snapshot.project), model);
+        assert_eq!(snapshot.opaque, opaque);
+        assert!(snapshot.manufacturer_refs.is_empty());
+        assert_eq!(carried_rows(&copy), 0);
+    }
+}
+
+#[tokio::test]
+async fn unresolved_imports_remain_unknown_beside_acquired_catalogue_packages() {
+    let dir = tempfile::tempdir().unwrap();
+    let source = dir.path().join("unresolved.knxproj");
+    let imported = knx_testsupport::PluginFixture {
+        product: "Unknown imported product",
+        program: "Unknown imported program",
+        ..Default::default()
+    };
+    std::fs::write(&source, imported.knxproj_bytes()).unwrap();
+    let state = state_with_products(dir.path(), &dir.path().join("products.sqlite"));
+    let app = knx_server::app(state.clone(), None);
+    ok(&app, "/api/project/import", Some(json!({"path":source}))).await;
+
+    let opaque = state.opaque.lock().unwrap().clone();
+    install_catalogue_fixture(&app).await;
+    ok(
+        &app,
+        "/api/devices",
+        Some(json!({"catalogItemId":CATALOG_ITEM,"name":"New catalogue device"})),
+    )
+    .await;
+    let model = state.project.lock().unwrap().clone();
+    let native = dir.path().join("mixed.knxdb");
+    ok(&app, "/api/project/save-as", Some(json!({"path":native}))).await;
+    ok(&app, "/api/project/save", Some(json!({}))).await;
+    assert_eq!(carried_rows(&native), 5);
+    assert_eq!(*state.project.lock().unwrap(), model);
+    assert_eq!(*state.opaque.lock().unwrap(), opaque);
+    assert!(log_messages(&state).iter().any(|message| {
+        message.contains("Unknown imported product")
+            && message.contains("portability is not established")
+    }));
+    let fresh = state_with_products(dir.path(), &dir.path().join("fresh.sqlite"));
+    let reopened = knx_server::app(fresh.clone(), None);
+    ok(&reopened, "/api/project/open", Some(json!({"path":native}))).await;
+    ok(&reopened, "/api/project/save", Some(json!({}))).await;
+    assert_eq!(*fresh.project.lock().unwrap(), model);
+    assert_eq!(*fresh.opaque.lock().unwrap(), opaque);
+    assert_eq!(carried_rows(&native), 5);
+}
+
+#[tokio::test]
+async fn a_resolvable_import_still_requires_recorded_package_ownership_for_new_acquisition() {
+    use std::sync::atomic::Ordering;
+    let dir = tempfile::tempdir().unwrap();
+    let source = dir.path().join("unresolved.knxproj");
+    std::fs::write(
+        &source,
+        knx_testsupport::PluginFixture::default().knxproj_bytes(),
+    )
+    .unwrap();
+    let products = dir.path().join("products.sqlite");
+    let state = state_with_products(dir.path(), &products);
+    let app = knx_server::app(state.clone(), None);
+    ok(&app, "/api/project/import", Some(json!({"path":source}))).await;
+    let native = dir.path().join("baseline.knxdb");
+    ok(&app, "/api/project/save-as", Some(json!({"path":native}))).await;
+    assert!(state.manufacturer_refs.lock().unwrap().is_empty());
+    install_catalogue_fixture(&app).await;
+    let conn = rusqlite::Connection::open(&products).unwrap();
+    conn.execute("DELETE FROM package_member", []).unwrap();
+    drop(conn);
+    let model = state.project.lock().unwrap().clone();
+    let opaque = state.opaque.lock().unwrap().clone();
+    let clean = state.clean_project.lock().unwrap().clone();
+    let generation = *state.history_generation.lock().unwrap();
+    let revision = state.project_revision.load(Ordering::SeqCst);
+    let saved_at = state.last_saved_at.lock().unwrap().clone();
+    let history = format!("{:?}", state.command_stack.lock().unwrap());
+    let bytes = std::fs::read(&native).unwrap();
+    let copy = dir.path().join("refused.knxdb");
+    for (route, data) in [
+        ("/api/project/save", json!({})),
+        ("/api/project/save-as", json!({"path":copy})),
+    ] {
+        let (status, body) = response(&app, route, Some(data)).await;
+        assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
+        assert!(body
+            .to_string()
+            .contains("package ownership is unavailable or ambiguous"));
+        assert_eq!(std::fs::read(&native).unwrap(), bytes);
+        assert!(!copy.exists());
+        assert_eq!(*state.project.lock().unwrap(), model);
+        assert_eq!(*state.opaque.lock().unwrap(), opaque);
+        assert_eq!(*state.clean_project.lock().unwrap(), clean);
+        assert!(state.manufacturer_refs.lock().unwrap().is_empty());
+        assert_eq!(*state.history_generation.lock().unwrap(), generation);
+        assert_eq!(state.project_revision.load(Ordering::SeqCst), revision);
+        assert_eq!(*state.last_saved_at.lock().unwrap(), saved_at);
+        assert_eq!(
+            format!("{:?}", state.command_stack.lock().unwrap()),
+            history
+        );
+        assert_eq!(
+            state.store_path.lock().unwrap().as_deref(),
+            Some(native.as_path())
+        );
+    }
+}
+
+#[tokio::test]
+async fn an_unbacked_authored_working_device_refuses_offline_save_and_save_as() {
+    use std::sync::atomic::Ordering;
+    for saved_other in [false, true] {
+        let dir = tempfile::tempdir().unwrap();
+        let state = state_with_products(dir.path(), &dir.path().join("products.sqlite"));
+        let app = knx_server::app(state.clone(), None);
+        ok(&app, "/api/project/new", Some(json!({}))).await;
+        let native = dir.path().join("working.knxdb");
+        ok(&app, "/api/project/save-as", Some(json!({"path":native}))).await;
+        let item = if saved_other {
+            install_catalogue_fixture(&app).await;
+            ok(
+                &app,
+                "/api/devices",
+                Some(json!({"catalogItemId":CATALOG_ITEM,"name":"Saved device"})),
+            )
+            .await;
+            ok(&app, "/api/project/save", Some(json!({}))).await;
+            let members = [CATALOG_MASTER, CATALOG_SOURCE, HARDWARE, PROGRAM].map(|bytes| {
+                String::from_utf8(bytes.to_vec())
+                    .unwrap()
+                    .replace("M-0001", "M-0002")
+            });
+            let other = zip(&[
+                ("knx_master.xml", members[0].as_bytes()),
+                ("M-0002/Catalog.xml", members[1].as_bytes()),
+                ("M-0002/Hardware.xml", members[2].as_bytes()),
+                ("M-0002/M-0002_A-1.xml", members[3].as_bytes()),
+            ]);
+            install_catalogue_bytes(&app, &other).await;
+            "M-0002_CI-1"
+        } else {
+            install_catalogue_fixture(&app).await;
+            CATALOG_ITEM
+        };
+        ok(
+            &app,
+            "/api/devices",
+            Some(json!({"catalogItemId":item,"name":"Unbacked working device"})),
+        )
+        .await;
+        let offline = Arc::new(knx_server::AppState::new(dir.path().into()));
+        let offline_app = knx_server::app(offline.clone(), None);
+        ok(
+            &offline_app,
+            "/api/project/open",
+            Some(json!({"path":native})),
+        )
+        .await;
+        assert_eq!(
+            *offline.project.lock().unwrap(),
+            *state.project.lock().unwrap()
+        );
+        let refs = offline.manufacturer_refs.lock().unwrap().clone();
+        assert_eq!(refs.len(), if saved_other { 5 } else { 0 });
+        let model = offline.project.lock().unwrap().clone();
+        let opaque = offline.opaque.lock().unwrap().clone();
+        let clean = offline.clean_project.lock().unwrap().clone();
+        let generation = *offline.history_generation.lock().unwrap();
+        let revision = offline.project_revision.load(Ordering::SeqCst);
+        let saved_at = offline.last_saved_at.lock().unwrap().clone();
+        let history = format!("{:?}", offline.command_stack.lock().unwrap());
+        let bytes = std::fs::read(&native).unwrap();
+        let copy = dir.path().join("refused.knxdb");
+        for (route, data) in [
+            ("/api/project/save", json!({})),
+            ("/api/project/save-as", json!({"path":copy})),
+        ] {
+            let (status, body) = response(&offline_app, route, Some(data)).await;
+            assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
+            assert!(body
+                .to_string()
+                .contains("required sources are unavailable"));
+            assert_eq!(std::fs::read(&native).unwrap(), bytes);
+            assert!(!copy.exists());
+            assert_eq!(*offline.project.lock().unwrap(), model);
+            assert_eq!(*offline.opaque.lock().unwrap(), opaque);
+            assert_eq!(*offline.clean_project.lock().unwrap(), clean);
+            assert_eq!(*offline.manufacturer_refs.lock().unwrap(), refs);
+            assert_eq!(*offline.history_generation.lock().unwrap(), generation);
+            assert_eq!(offline.project_revision.load(Ordering::SeqCst), revision);
+            assert_eq!(*offline.last_saved_at.lock().unwrap(), saved_at);
+            assert_eq!(
+                format!("{:?}", offline.command_stack.lock().unwrap()),
+                history
+            );
+            assert_eq!(
+                offline.store_path.lock().unwrap().as_deref(),
                 Some(native.as_path())
             );
         }

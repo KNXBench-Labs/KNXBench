@@ -20,15 +20,15 @@ use serde_json::{json, Value};
 use tower::ServiceExt;
 
 const HARDWARE: &str = r#"<?xml version="1.0" encoding="utf-8"?>
-<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-1">
+<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-0001">
 <Hardware><Hardware Id="H-1" Name="X" SerialNumber="S" VersionNumber="1">
-<Products><Product Id="M-1_P-1" /></Products>
+<Products><Product Id="M-0001_P-1" /></Products>
 <Hardware2Programs><Hardware2Program Id="H-1_HP-1" MediumTypes="MT-0">
 <ApplicationProgramRef RefId="A-1" /></Hardware2Program></Hardware2Programs>
 </Hardware></Hardware></Manufacturer></ManufacturerData></KNX>"#;
 
 const PROGRAM: &str = r#"<?xml version="1.0" encoding="utf-8"?>
-<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-1">
+<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-0001">
 <ApplicationPrograms><ApplicationProgram Id="A-1" Name="P" ApplicationVersion="1" MaskVersion="MV-0701">
 <Static>
 <ParameterTypes>
@@ -52,8 +52,12 @@ const PROGRAM: &str = r#"<?xml version="1.0" encoding="utf-8"?>
 fn products() -> (tempfile::TempDir, knx_productdb::Connection) {
     let dir = tempfile::tempdir().unwrap();
     let conn = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
-    knx_productdb::ingest_file(&conn, "M-1/Hardware.xml", HARDWARE.as_bytes()).unwrap();
-    knx_productdb::ingest_file(&conn, "M-1/A.xml", PROGRAM.as_bytes()).unwrap();
+    super::native_source_fixture::install(
+        &conn,
+        11,
+        ("M-0001/Hardware.xml", HARDWARE.as_bytes()),
+        ("M-0001/A.xml", PROGRAM.as_bytes()),
+    );
     (dir, conn)
 }
 
@@ -90,7 +94,7 @@ fn project() -> Project {
         name: "Device 1".into(),
         description: None,
         address: None,
-        product_ref: "M-1_P-1".into(),
+        product_ref: "M-0001_P-1".into(),
         program_ref: "H-1_HP-1".into(),
         commissioning: CommissioningState::default(),
         visibility_calculated: true,
@@ -423,6 +427,7 @@ async fn a_failed_persistence_leaves_model_history_revision_and_file_unchanged()
     )
     .await;
     assert_eq!(status, StatusCode::OK, "{saved}");
+    super::native_source_fixture::assert_carried(&state, &path);
     let ctx = context(&state).await;
     // A second native writer moves the file's working-history generation, so
     // this server's next persistence is refused (stale generation).

@@ -12,15 +12,15 @@ use serde_json::{json, Value};
 use tower::ServiceExt;
 
 const HARDWARE: &str = r#"<?xml version="1.0" encoding="utf-8"?>
-<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-1">
+<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-0001">
 <Hardware><Hardware Id="H-1" Name="X" SerialNumber="S" VersionNumber="1">
-<Products><Product Id="M-1_P-1" /></Products>
+<Products><Product Id="M-0001_P-1" /></Products>
 <Hardware2Programs><Hardware2Program Id="H-1_HP-1" MediumTypes="MT-0">
 <ApplicationProgramRef RefId="A-1" /></Hardware2Program></Hardware2Programs>
 </Hardware></Hardware></Manufacturer></ManufacturerData></KNX>"#;
 
 const PROGRAM: &str = r##"<?xml version="1.0" encoding="utf-8"?>
-<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-1">
+<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-0001">
 <ApplicationPrograms><ApplicationProgram Id="A-1" Name="Fictional" ApplicationVersion="1" MaskVersion="MV-0701">
 <Static><ParameterTypes>
 <ParameterType Id="PT-T" Name="Text"><TypeText SizeInBit="160" /></ParameterType>
@@ -47,8 +47,12 @@ fn products() -> (tempfile::TempDir, knx_productdb::Connection) {
 fn products_from(source: &str) -> (tempfile::TempDir, knx_productdb::Connection) {
     let dir = tempfile::tempdir().unwrap();
     let conn = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
-    knx_productdb::ingest_file(&conn, "M-1/Hardware.xml", HARDWARE.as_bytes()).unwrap();
-    knx_productdb::ingest_file(&conn, "M-1/A.xml", source.as_bytes()).unwrap();
+    super::native_source_fixture::install(
+        &conn,
+        11,
+        ("M-0001/Hardware.xml", HARDWARE.as_bytes()),
+        ("M-0001/A.xml", source.as_bytes()),
+    );
     (dir, conn)
 }
 
@@ -64,7 +68,7 @@ fn state(products: knx_productdb::Connection) -> knx_server::AppState {
         name: "Device 1".into(),
         description: None,
         address: None,
-        product_ref: "M-1_P-1".into(),
+        product_ref: "M-0001_P-1".into(),
         program_ref: "H-1_HP-1".into(),
         commissioning: CommissioningState::default(),
         visibility_calculated: true,
@@ -384,6 +388,7 @@ async fn activation_over_budget_post_preserves_project_revision_history_and_nati
         .unwrap();
     assert_eq!(call(app.clone(), save).await.0, StatusCode::OK);
     let path = state.store_path.lock().unwrap().clone().unwrap();
+    super::native_source_fixture::assert_carried(&state, &path);
     let bytes = std::fs::read(&path).unwrap();
     let before = state.project.lock().unwrap().clone();
     let revision = state

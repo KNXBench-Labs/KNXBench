@@ -13,12 +13,31 @@ focused successors are not relabelled or summed into one full-gate result.
 
 All four final local amd64 artifacts and minimal isolated smokes have parent
 acceptance, with independent hash/size readback; [identities and smoke limits](releases/alpha16.md#parent-verified-local-amd64-artifact-identities)
-are recorded separately from source acceptance. **Overall release remains
-unaccepted and unpublished:** two pinned-input checks are blocked, not waived,
-under the no-copy boundary; ARM64 remains unverified without an owner platform
-decision. Parent final documentation review, publication approval and public
-artifact/checksum/digest readback remain open. The bounded documentation
-reconciliation closes no ledger row or limitation. General performance and >4 GiB
+are recorded separately from source acceptance. **Local amd64 software/package
+acceptance is complete; the candidate remains unreleased.** Both formerly blocked
+pinned-input criteria passed (`ok`/exit 0) at documentation HEAD `a9295a52` using
+the owning release-mode integration build after explicitly authorized exact
+historical restoration: 111 files (one non-package), 115 instances / 113 unique
+payloads, unchanged mapping and original/input/archive/source/user/history guards.
+The historical 24/26 receipt stays historical; no overlapping total is created.
+The owner explicitly limits local preacceptance to amd64; extra local ARM64
+preacceptance is deferred and unverified, not a current blocker. Normal release
+channels and the standard amd64+arm64 container workflow remain unchanged; remote
+results need separate verification. The final standalone artifact now passes the
+named public synthetic ETS import/save/switch/reopen and authentic committed
+native13 upgrade/save16/switch/reopen routes: 23 checks in one attempt, preserved
+topology/retained XML, matching common-column rows across 14 predecessor tables,
+SQLite integrity OK and unchanged originals/protected data. This is not undo/redo
+operation proof or per-package/browser/hardware/ARM64 acceptance.
+Parent documentation review is complete. The explicit 24 October bundled
+amendment accepts historical Gate9 plus reviewed affected-successor checks/owning
+builds and final artifact smokes instead of a same-final-SHA full-gate replay.
+It supersedes the remote dry-run criterion with required actual normal final-tag
+publication and public verification; no dry run is claimed. Conditional Go permits
+starting normal publication once parent read-only preflight confirms prerequisites.
+A16-09 actual remote publication and public artifact/checksum/digest/revision
+readback remain pending. The bounded documentation reconciliation closes no ledger
+row or limitation. General performance and >4 GiB
 Large-boundary verification are not claimed. Dated roadmap checkpoints below
 retain their original scope; this snapshot supersedes their then-open Alpha-16
 integration status without restarting delivered work.

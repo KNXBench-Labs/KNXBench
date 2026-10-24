@@ -22,10 +22,20 @@ parameters, product data, diagnostics and inspection-only manufacturer fields.
 > **24 October 2026: unreleased Alpha-16 snapshot.** Sections marked
 > **unreleased Alpha-16 source** describe frozen runtime/test source
 > `86b4a7fc68b3d3206c00511b14f41e025e33de4d`. Bounded software outcomes and four
-> final local amd64 artifacts have parent acceptance, not overall release approval
-> or public availability. Two pinned-input checks remain blocked under no-copy;
-> ARM64 is unverified without an owner platform-scope decision. Parent final
-> documentation review, publication approval and public readback remain open.
+> final local amd64 artifacts have parent acceptance; local amd64 software/package
+> acceptance is complete, not publication approval or public availability. Both
+> formerly blocked pinned-input criteria separately passed at documentation HEAD
+> `a9295a52` using the owning release-mode integration build after owner-authorized
+> exact historical restoration: 111 files (one non-package), 115 instances /
+> 113 unique payloads. Parent verified mapping and preservation guards; originals
+> remain untouched, and no further materialization or repinning is authorized.
+> The owner explicitly limits local preacceptance to amd64; extra local ARM64
+> preacceptance is deferred and unverified, not a blocker. Normal release channels
+> and the standard amd64+arm64 container workflow remain unchanged; remote results
+> need separate verification. Publication Go is granted conditional on readiness.
+> Parent final documentation review, actual publication and public readback remain
+> open; original full-gate/remote-workflow/artifact
+> import-upgrade-smoke evidence limits are explicit in the plan.
 > [Scope and artifact limits](../../releases/alpha16.md),
 > [source-bound evidence matrix](../../goals/alpha16-release-plan-2026-10-23.md#current-acceptance-disposition--24-october-2026).
 

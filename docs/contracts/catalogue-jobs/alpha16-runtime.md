@@ -14,8 +14,12 @@ upload/preview/apply/commit outcome have source-bound software acceptance in the
 [current release matrix](../../goals/alpha16-release-plan-2026-10-23.md#current-acceptance-disposition--24-october-2026).
 This supersedes prospective combined-execution wording below; original focused
 evidence keeps its scope. The measured input did not exceed Standard's 4 GiB
-decoded ceiling. No >4 GiB, universal performance, aggregate-quota or overall
-release acceptance follows; resource and recovery limits remain unchanged.
+decoded ceiling. No >4 GiB, universal performance or aggregate-quota acceptance
+follows; resource and recovery limits remain unchanged. Local amd64 software/package
+acceptance is complete, including both formerly blocked pinned-input passes;
+extra local ARM64 preacceptance is explicitly deferred and unverified, without
+changing the normal amd64+arm64 publication workflow. Publication Go is conditional on
+final readiness; parent closeout and public readback remain pending.
 
 ## Composition
 

@@ -6,7 +6,11 @@ original TestHardware state, reopened `Restored` journal and immediate/restart
 once-only refusal without further connection/mutation. The
 [current release matrix](../goals/alpha16-release-plan-2026-10-23.md#current-acceptance-disposition--24-october-2026)
 supersedes prospective combined-execution wording below; dated checks retain
-their original scope. Overall release remains pending. TestHardware is not
+their original scope. Local amd64 software/package acceptance is complete, including
+both formerly blocked pinned-input passes; extra local ARM64 preacceptance is
+explicitly deferred and unverified, without changing the normal amd64+arm64
+publication workflow. Publication Go is conditional on final readiness; parent closeout and
+public readback remain pending. TestHardware is not
 physical-device, ETS-parity or UI-usability certification.
 
 This mounts the [UI transport](alpha16-system2-ui.md) over the

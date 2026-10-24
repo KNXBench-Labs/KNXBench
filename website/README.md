@@ -94,9 +94,40 @@ documented IP logging; the preview keeps the pending note. This is **not** a leg
 identity, phone, tax number or retention policy was invented.
 Imprint acceptance recipe: `tests/verify-imprint.js`.
 
+## Alpha 16 release content
+
+`content/de.json` and `content/en.json` hold the release copy; `page.html` holds
+the intended `v0.1.0-alpha.16` release and download targets. There is no separate
+release-data updater in the maintained site sources: update both locales and
+the template together, without changing the normal release workflows.
+
+This refresh is a **prepared pre-release**, not a publication receipt. Local
+package acceptance covers amd64; the normal Docker pipeline still targets
+amd64 and arm64. The intended GitHub assets follow the Alpha 15 channel:
+x86-64 AppImage, `knx-mcp-x86_64-linux` and `SHA256SUMS`. Docker uses the version
+tag and `latest` after publication; `latest` includes alphas and does not mean
+stable. No standalone-server or local container-archive download is promised.
+
+The smallest offline release-content check is:
+
+```sh
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s website/tests -p test_build.py -k test_alpha16_release_copy_links_history_and_upgrade_boundaries -v
+```
+
+It builds a private static preview and checks localized copy, intended links,
+upgrade bounds and retained media labels. It does not fetch GitHub/Docker Hub,
+verify public assets/manifests or run a browser. The separate browser recipe
+`tests/verify-release-features.js` is updated for this content, not newly run.
+After publication, read back release assets/checksums and both Docker platform
+manifests/digests before replacing candidate/pending/intended labels in the
+README and both site locales. Then verify the deployed website separately.
+
+Alpha 15 remains linked as release history. Alpha 14 media retains its original
+release labels and has its own historical section; none is relabelled Alpha 16.
+
 ## Media
 
-Everything on the page shows **Alpha 14** (`v0.1.0-alpha.14`, commit `8d104e2f`):
+All retained application media shows **Alpha 14** (`v0.1.0-alpha.14`, commit `8d104e2f`):
 the hero, the CRT/LCARS gallery, four feature stills and all three videos. Stills
 and the group-details clip come from the real server and production frontend of
 the tagged source with the fictional Sample house, in a loopback-only namespace.

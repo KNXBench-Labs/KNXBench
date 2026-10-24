@@ -1,4 +1,4 @@
-//! Real built CLI, using only its explicit synthetic transport.
+//! Exercises the built diagnostics CLI with synthetic fixtures and silent loopback peers.
 use std::net::UdpSocket;
 use std::process::Command;
 use std::time::Duration;
@@ -25,6 +25,14 @@ ApplicationVersion="1" MaskVersion="MV-0025" LoadProcedureStyle="ProductProcedur
 </Static></ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
 
 fn fixture(dir: &std::path::Path) -> (std::path::PathBuf, std::path::PathBuf) {
+    fixture_with(dir, &[])
+}
+
+/// The synthetic device 1 at 1.1.67 plus `extra` devices (id, name, address).
+fn fixture_with(
+    dir: &std::path::Path,
+    extra: &[(u32, &str, Option<&str>)],
+) -> (std::path::PathBuf, std::path::PathBuf) {
     let products = dir.join("products.sqlite");
     let db = knx_productdb::open_and_migrate(&products).unwrap();
     knx_productdb::ingest_file(&db, "synthetic.xml", PROGRAM.as_bytes()).unwrap();
@@ -44,7 +52,10 @@ fn fixture(dir: &std::path::Path) -> (std::path::PathBuf, std::path::PathBuf) {
         topology: Topology {
             areas: vec![],
             lines: vec![],
-            unassigned: vec![DeviceId(1)],
+            unassigned: std::iter::once(1)
+                .chain(extra.iter().map(|(id, _, _)| *id))
+                .map(DeviceId)
+                .collect(),
         },
         buildings: vec![],
         group_ranges: vec![],
@@ -67,6 +78,24 @@ fn fixture(dir: &std::path::Path) -> (std::path::PathBuf, std::path::PathBuf) {
         com_objects: vec![],
         binary_data: vec![],
     });
+    for (id, name, address) in extra {
+        project.devices.insert(DeviceInstance {
+            id: DeviceId(*id),
+            source: SourceRef {
+                path: "synthetic".into(),
+                ets_id: format!("DEV-{id}"),
+            },
+            name: (*name).into(),
+            description: None,
+            address: address.map(|a| a.parse().unwrap()),
+            product_ref: "M-0001_H-1_P-1".into(),
+            program_ref: "H_HP".into(),
+            commissioning: Default::default(),
+            visibility_calculated: true,
+            com_objects: vec![],
+            binary_data: vec![],
+        });
+    }
     let path = dir.join("project.knxdb");
     let conn = knx_store::open_and_migrate(&path).unwrap();
     knx_store::save_project(&conn, &project).unwrap();
@@ -286,4 +315,258 @@ fn memory_profile_refuses_without_product_data_and_refuses_write_flags() {
     assert!(!unknown.status.success());
     assert!(!output.exists());
     assert_nothing_received(&peer);
+}
+
+fn diagnostics(args: &[&str]) -> std::process::Output {
+    Command::new(env!("CARGO_BIN_EXE_knx"))
+        .args(["device", "diagnostics"])
+        .args(args)
+        .output()
+        .unwrap()
+}
+
+#[test]
+fn device_address_selects_the_device_for_both_profile_previews_without_contact() {
+    let dir = tempfile::tempdir().unwrap();
+    let (project, products) = fixture_with(dir.path(), &[(2, "Unaddressed", None)]);
+    let (project, products) = (project.to_str().unwrap(), products.to_str().unwrap());
+    let output = dir.path().join("diagnostic.zip");
+    let peer = silent_peer();
+    let gateway = peer.local_addr().unwrap().to_string();
+    let common = [
+        "--project",
+        project,
+        "--device",
+        "1.1.67",
+        "--product-db",
+        products,
+        "--gateway",
+        &gateway,
+        "--output",
+        output.to_str().unwrap(),
+    ];
+    let identity = diagnostics(&common);
+    let stdout = String::from_utf8_lossy(&identity.stdout);
+    assert!(
+        identity.status.success(),
+        "{}",
+        String::from_utf8_lossy(&identity.stderr)
+    );
+    assert!(stdout.contains("Device 1.1.67 via"), "{stdout}");
+    assert!(stdout.contains("Preview only"), "{stdout}");
+    let memory = diagnostics(&[&["--profile", MEMORY_PROFILE][..], &common].concat());
+    let stdout = String::from_utf8_lossy(&memory.stdout);
+    assert!(
+        memory.status.success(),
+        "{}",
+        String::from_utf8_lossy(&memory.stderr)
+    );
+    assert!(
+        stdout.contains(&format!("Profile {MEMORY_PROFILE} for device 1.1.67")),
+        "{stdout}"
+    );
+    assert!(stdout.contains("Preview only"), "{stdout}");
+    assert!(!output.exists());
+    assert_nothing_received(&peer);
+}
+
+#[test]
+fn device_address_drives_a_simulated_memory_export() {
+    let dir = tempfile::tempdir().unwrap();
+    let (project, products) = fixture(dir.path());
+    let output = dir.path().join("memory.zip");
+    let result = diagnostics(&[
+        "--simulate",
+        "--profile",
+        MEMORY_PROFILE,
+        "--project",
+        project.to_str().unwrap(),
+        "--device",
+        "1.1.67",
+        "--product-db",
+        products.to_str().unwrap(),
+        "--output",
+        output.to_str().unwrap(),
+        "--confirm-read",
+    ]);
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    let export =
+        knx_app::device_diagnostics::read_export(&std::fs::read(&output).unwrap()).unwrap();
+    assert!(export.report.simulated);
+    assert_eq!(export.memory.unwrap().chunks.len(), 4);
+}
+
+#[test]
+fn ambiguous_unknown_malformed_or_conflicting_selectors_refuse_before_any_contact() {
+    let dir = tempfile::tempdir().unwrap();
+    let (project, products) = fixture_with(
+        dir.path(),
+        &[(2, "Duplicate", Some("1.1.67")), (3, "Unaddressed", None)],
+    );
+    let (project, products) = (project.to_str().unwrap(), products.to_str().unwrap());
+    let output = dir.path().join("diagnostic.zip");
+    let peer = silent_peer();
+    let gateway = peer.local_addr().unwrap().to_string();
+    let cases: [(&[&str], &[&str]); 6] = [
+        (
+            &["--device", "1.1.67"],
+            &[
+                "1.1.67",
+                "1 \"Synthetic\"",
+                "2 \"Duplicate\"",
+                "--device-id",
+            ],
+        ),
+        (
+            &["--profile", MEMORY_PROFILE, "--device", "1.1.67"],
+            &["1 \"Synthetic\"", "2 \"Duplicate\""],
+        ),
+        (&["--device", "1.1.99"], &["1.1.99", "no project device"]),
+        (
+            &["--device", "1.1.256"],
+            &["area.line.device", "\"1.1.256\""],
+        ),
+        (&["--device", "1.1.67", "--device-id", "1"], &["not both"]),
+        (&[], &["--device <area.line.device>", "--device-id <id>"]),
+    ];
+    for (selector, expected) in cases {
+        let args = [
+            selector,
+            &[
+                "--project",
+                project,
+                "--product-db",
+                products,
+                "--gateway",
+                &gateway,
+                "--output",
+                output.to_str().unwrap(),
+                "--confirm-read",
+            ],
+        ]
+        .concat();
+        let result = diagnostics(&args);
+        let stderr = String::from_utf8_lossy(&result.stderr);
+        assert!(!result.status.success(), "{selector:?} accepted");
+        for text in expected {
+            assert!(
+                stderr.contains(text),
+                "{selector:?}: missing {text}: {stderr}"
+            );
+        }
+    }
+    assert!(!output.exists());
+    assert_nothing_received(&peer);
+}
+
+#[test]
+fn duplicate_addresses_across_installations_refuse_address_then_each_internal_id() {
+    let dir = tempfile::tempdir().unwrap();
+    let (project, products) = fixture_with(dir.path(), &[(2, "Duplicate", Some("1.1.67"))]);
+    let conn = knx_store::open_and_migrate(&project).unwrap();
+    let mut p = knx_store::load_project(&conn).unwrap();
+    let mut second = p.installations[0].clone();
+    second.id = InstallationId(1);
+    second.name = "Second installation".into();
+    second.topology.unassigned = vec![DeviceId(2)];
+    p.installations[0].topology.unassigned = vec![DeviceId(1)];
+    p.installations.push(second);
+    knx_store::save_project(&conn, &p).unwrap();
+    drop(conn);
+
+    let peer = silent_peer();
+    let gateway = peer.local_addr().unwrap().to_string();
+    for profile in ["generic-identity-v1", MEMORY_PROFILE] {
+        let output = dir.path().join(format!("{profile}.zip"));
+        let common = [
+            "--profile",
+            profile,
+            "--project",
+            project.to_str().unwrap(),
+            "--product-db",
+            products.to_str().unwrap(),
+            "--gateway",
+            &gateway,
+            "--output",
+            output.to_str().unwrap(),
+            "--confirm-read",
+        ];
+        let address = diagnostics(&[&common[..], &["--device", "1.1.67"]].concat());
+        assert!(!address.status.success());
+        assert!(address.stdout.is_empty());
+        assert!(!output.exists());
+        assert_nothing_received(&peer);
+        let stderr = String::from_utf8_lossy(&address.stderr);
+        // Keep the identification list, then try every listed internal id.
+        let candidates = [("1", "Synthetic"), ("2", "Duplicate")];
+        let mut id_errors = Vec::new();
+        for (id, name) in candidates {
+            assert!(stderr.contains(&format!("{id} {name:?}")), "{stderr}");
+            let by_id = diagnostics(&[&common[..], &["--device-id", id]].concat());
+            assert!(!by_id.status.success(), "{profile}: id {id} accepted");
+            assert!(by_id.stdout.is_empty());
+            assert!(!output.exists());
+            assert_nothing_received(&peer);
+            let id_error = String::from_utf8_lossy(&by_id.stderr);
+            assert!(
+                id_error.contains("diagnostics-address-ambiguous"),
+                "{id_error}"
+            );
+            id_errors.push(id_error.into_owned());
+        }
+        assert!(
+            stderr.contains(
+                "individual address must uniquely identify one device across the project"
+            ),
+            "{stderr}"
+        );
+        assert!(stderr.contains("--device-id does not bypass"), "{stderr}");
+        assert!(!stderr.contains("choose one with"), "{stderr}");
+        for id_error in id_errors {
+            assert!(
+                id_error.contains(
+                    "individual address must uniquely identify one device across the project"
+                ),
+                "{id_error}"
+            );
+            assert!(
+                id_error.contains("--device-id does not bypass"),
+                "{id_error}"
+            );
+        }
+    }
+}
+
+#[test]
+fn diagnostics_help_requires_project_wide_unique_addresses_for_both_selectors() {
+    let result = Command::new(env!("CARGO_BIN_EXE_knx")).output().unwrap();
+    assert!(!result.status.success());
+    let stderr = String::from_utf8_lossy(&result.stderr);
+    assert!(stderr.contains("uniquely identify one device across the project"));
+    assert!(stderr.contains("--device-id does not bypass"));
+    assert!(!stderr.contains("internal --device-id the refusal lists"));
+}
+
+#[test]
+fn simulated_identity_still_refuses_a_device_selector() {
+    let dir = tempfile::tempdir().unwrap();
+    let output = dir.path().join("diagnostic.zip");
+    let result = diagnostics(&[
+        "--simulate",
+        "--device",
+        "1.1.25",
+        "--output",
+        output.to_str().unwrap(),
+    ]);
+    assert!(!result.status.success());
+    assert!(
+        String::from_utf8_lossy(&result.stderr).contains("--simulate cannot be combined"),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    assert!(!output.exists());
 }

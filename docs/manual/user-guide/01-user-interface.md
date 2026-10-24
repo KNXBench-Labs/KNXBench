@@ -445,8 +445,10 @@ fixtures fit at 1920 pixels. The tested flow inspector fits with its specialized
 padding; other content can still need local scrolling in its narrower pane.
 Labels and meaningful fields remain available.
 
-The address/object matrix's select, address and name columns resize; its
-per-object columns keep 180 pixel preferred widths without resize controls. The
+The address/object matrix's select, address and name columns resize. Its
+per-object columns share one width: drag or use the arrow keys on any object
+heading's edge and every object column follows; Reset restores 180 pixels
+(source builds from 25 October 2026). The
 [coverage checklist](../../contracts/table-column-widths.md) lists all 18
 surfaces and this remaining boundary. Manufacturer parameter grids,
 explorer trees and catalogue/history lists retain their own layouts.

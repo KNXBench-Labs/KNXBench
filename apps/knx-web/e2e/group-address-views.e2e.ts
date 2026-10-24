@@ -331,6 +331,70 @@ for (const [style, shown] of [["Free", "2049"], ["TwoLevel", "1/1"]] as const) {
   });
 }
 
+// UI-05 follow-up: every object column follows one common width, persisted under a fixed
+// project-free key; pointer moves in visual pixels, keyboard in layout pixels, reset restores 180.
+for (const [language, theme, density, uiScale] of [["en", "graphite", "compact", 1], ["de", "porcelain", "comfortable", 1.5]] as const) {
+  test(`${language} matrix object columns share one resizable width at scale ${uiScale} (${theme}, ${density})`, async ({ page }) => {
+    const m = language === "en" ? en : de;
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    const state = await intercept(page, language, theme, standardTree());
+    Object.assign(state.settings, { uiScale, density });
+    await openAddresses(page, language);
+    await expect.poll(() => page.evaluate(() => document.documentElement.style.getPropertyValue("--app-ui-scale"))).toBe(String(uiScale));
+    expect(await page.evaluate(() => document.documentElement.getAttribute("data-theme"))).toBe(theme);
+    await chooseView(page, "matrix");
+    const table = page.locator('[data-table-id="group-address-matrix"]');
+    const objectHeadings = table.locator("thead th").filter({ has: page.locator("small") });
+    await expect(objectHeadings).toHaveCount(5);
+    const separators = objectHeadings.getByRole("separator");
+    await expect(separators).toHaveCount(5);
+    await expect(separators.first()).toHaveAccessibleName(/Fictional device 1/);
+    await expect(separators.first()).toHaveAccessibleDescription(m["tableColumns.help"]);
+    const widths = () => objectHeadings.evaluateAll((headings, scale) =>
+      headings.map(heading => Math.round(heading.getBoundingClientRect().width / scale)), uiScale);
+    const fixed = () => table.locator("thead th").evaluateAll((headings, scale) =>
+      headings.slice(0, 3).map(heading => Math.round(heading.getBoundingClientRect().width / scale)), uiScale);
+    const stored = () => page.evaluate(() => JSON.parse(localStorage.getItem("knxbench:table-column-widths:v1:group-address-matrix") ?? "{}"));
+    const common = async (width: number) => expect.poll(widths).toEqual(Array(5).fill(width));
+    await common(180);
+    const before = await fixed();
+    // A real 60 visual-pixel drag on the second object heading moves every object column.
+    const handle = separators.nth(1); await handle.scrollIntoViewIfNeeded(); const box = (await handle.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down(); await page.mouse.move(box.x + box.width / 2 + 60, box.y + box.height / 2, { steps: 5 }); await page.mouse.up();
+    const dragged = Math.round(180 + 60 / uiScale);
+    await common(dragged);
+    await expect.poll(async () => (await stored())["object-column"]).toBe(dragged);
+    expect(await fixed(), "select/address/name keep their widths").toEqual(before);
+    await capture(page, `matrix-object-width-${language}-${uiScale}`);
+    // Keyboard: focus moves visibly between object separators; ArrowLeft shrinks all of them.
+    await separators.first().focus(); await page.keyboard.press("Tab");
+    await expect(separators.nth(1)).toBeFocused();
+    expect(await separators.nth(1).evaluate(element => element.matches(":focus-visible") && getComputedStyle(element).outlineStyle !== "none")).toBe(true);
+    await page.keyboard.press("ArrowLeft");
+    await common(dragged - 8);
+    await expect(separators.nth(4)).toHaveAttribute("aria-valuenow", String(dragged - 8));
+    const keys = Object.keys(await stored());
+    expect(keys).toEqual(["select", "address", "name", "object-column"]);
+    expect(await page.evaluate(() => Object.keys(localStorage).filter(key => /device:|object:\d/.test(key + (localStorage.getItem(key) ?? ""))))).toEqual([]);
+    // Changing the object selection keeps the one width; a remount restores it.
+    await workspace(page).locator(".ga-column-picker > summary").click();
+    await workspace(page).locator('[data-ga-column="device:3:object:13"]').uncheck();
+    await expect(objectHeadings).toHaveCount(4);
+    await expect.poll(widths).toEqual(Array(4).fill(dragged - 8));
+    await chooseView(page, "tree"); await chooseView(page, "matrix");
+    await expect.poll(widths).toEqual(Array(4).fill(dragged - 8));
+    // The matrix's reset restores the common width with the fixed columns.
+    await table.locator(".table-column-reset").click();
+    await expect.poll(widths).toEqual(Array(4).fill(180));
+    expect((await stored())["object-column"]).toBe(180);
+    await noPageOverflow(page);
+    expect(state.requests.filter(r => r.startsWith("POST /api/project") && r !== "POST /api/project/new")).toEqual([]);
+    expect(state.unexpected).toEqual([]);
+  });
+}
+const workspace = (page: Page) => page.locator(".ga-workspace");
+
 test("large synthetic project switches all four views within measured bounds", { tag: "@exclusive" }, async ({ page }) => {
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1440, height: 1000 });

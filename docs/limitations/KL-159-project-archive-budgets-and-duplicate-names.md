@@ -13,8 +13,8 @@ these are payload admission limits, not a peak-process-memory guarantee.
 Duplicate/case-colliding names and inconsistent ZIP records remain refused.
 The empty-directory CRC/complete-stream, ordinary-file exact-stream and bit-0
 encrypted-directory repairs described below are delivered. The 24 October
-bit-6-only consistency amendment is implemented with focused evidence; independent
-review and package acceptance are pending. Other cipher metadata remains bounded.
+bit-6-only consistency amendment is delivered as `daef61b74`, independently reviewed
+and accepted by the integrated package gate. Other cipher metadata remains bounded.
 The product-reader follow-up is delivered on `main` (`9c79634b`), with
 its bounded acceptance recorded below.
 
@@ -199,7 +199,10 @@ refuses bit 6 without bit 0 at the project/product archive admission boundaries,
 including files, directories and directly nested/wrapper consumers. This deliberately
 supersedes four historical project-directory positives. Focused original-source
 RED and corrected GREEN plus populated-store preservation are verified; independent
-review accepts with zero Critical/Important findings; package acceptance is pending.
+review accepts with zero Critical/Important findings. Delivered as `daef61b74`:
+integrated 14-stage gate, 4,732 Rust passes (216 ignored), 155/155 selected corpus,
+frozen inputs, clear user-data guards and exact live publication readback. Claim
+released; overlapping focused suites are not added to integrated totals.
 Existing bit-0-plus-6 unsupported behavior
 is unchanged; AES equality, extraction-version checks and new cipher support are
 not included. Earlier dated open statements remain historical, not duplicate jobs.

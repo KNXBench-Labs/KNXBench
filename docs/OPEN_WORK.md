@@ -33,8 +33,10 @@ The queue-status evidence cutoff moves to `1690cef81` on `main`; the
 Alpha 16 delivered WP-04.3 (A16-04), WP-19 device → project adoption (A16-05),
 the KL-183 catalogue-portability repair (A16-06) and the bounded WP-05
 caption-language slice (A16-07), each as software-tested bounded outcomes.
-Everything that remains is evidence-, consent- or input-gated; no package is a
-ready coding job without its named evidence, consent or supplied input.
+The remaining family/format/hardware boundaries stay evidence-, consent- or
+input-gated. The owner subsequently lifted the stop and admitted the bounded
+bit-6-only repair (delivered 24 October) and saved-project-folder grouping using
+already projected identities; grouping still needs its scoped contract and tests.
 Issues #22 (hardware outcome of the experimental System-2 download, unverified)
 and #7 (reporter acceptance) remain open; Alpha 16 changed no ledger row.
 
@@ -127,7 +129,7 @@ Each package needs its own scoped claim, review, tests and delivery evidence.
 | [WP-13](#wp-13--documentation-drift) | P3 | Named remaining prose reconciled 20 Oct; KL-183 runtime repair delivered as A16-06 (`b1703d61d`); its summary, dossier and ledger evidence follow it since 24 Oct, status stays `ACCEPTED_BOUNDARY` ([A16 disposition](goals/alpha16-release-plan-2026-10-23.md#remaining-queue-finish-only-admitted-meaningful-slices)) | Current summaries agree with delivered behaviour; retained history stays intact. |
 | [WP-14](#wp-14--complete-offline-family-outcomes) | P1 | Source contracts first; UP258 excluded; outside Alpha 16 ([A16 disposition](goals/alpha16-release-plan-2026-10-23.md#remaining-queue-finish-only-admitted-meaningful-slices)) | Complete real-source System 1/B/300 image → procedure → execution → recovery slices. |
 | [WP-15](#wp-15--complete-module-scope-in-web-consumers) | P1 | Delivered 19 Oct (web adoption); older-server boundary documented | Complete response-local module paths distinguish diagnostics and workspace identities. |
-| [WP-16](#wp-16--empty-directory-zip-integrity) | P1 | Project/product directory and file-stream repairs delivered; encrypted-directory refusal delivered 20 Oct; separate bit-6/AES metadata questions remain conditional after Alpha 16 ([A16 disposition](goals/alpha16-release-plan-2026-10-23.md#remaining-queue-finish-only-admitted-meaningful-slices)) | Empty directories have valid CRC and complete compressed-stream representation. |
+| [WP-16](#wp-16--empty-directory-zip-integrity) | P1 | Project/product directory and file-stream repairs delivered; encrypted-directory refusal delivered 20 Oct; bit-6-only consistency delivered 24 Oct (`daef61b74`); AES metadata equality remains open ([A16 disposition](goals/alpha16-release-plan-2026-10-23.md#remaining-queue-finish-only-admitted-meaningful-slices)) | Empty directories have valid CRC and complete compressed-stream representation. |
 | [WP-17](#wp-17--master-identity-provenance) | P1 | Delivered 19 Oct; product DB v27, ADR-0147, `d18ce65e` | Master identity winners, collisions and malformed declarations have truthful provenance. |
 | [WP-18](#wp-18--device-comparison-shows-what-differs) | P2 | Delivered 19 Oct; no live-device acceptance | Differing bytes are marked in the raw hex rows; the comparison result shows only differences by default, with a toggle for all rows. |
 | [WP-19](#wp-19--sync-from-a-device-comparison) | P2 | Device → project delivered in Alpha 16 as A16-05 (`e4b7b90ec`, `9806f06dd`, `5dc47aece`) for exactly attributed named parameters; association-row link adoption added 24 Oct, address/count rows stay unadoptable; project → device hands over to the existing download; no live-device acceptance ([release note](releases/alpha16.md#device--project-adoption-not-another-download-route)) | A comparison result offers *project → device* (the existing download) or *device → project* (adopt verified values, one undo step). |
@@ -728,7 +730,8 @@ No new cipher support, password guessing or real encrypted-corpus acquisition.
 contradictory bit-6-without-bit-0 records in project and product ZIP admission,
 including nested/wrapper consumers. Original-source regressions, focused corrected
 suites and populated-store preservation are verified; independent review accepts
-with zero Critical/Important findings. The maintained package gate remains pending.
+with zero Critical/Important findings. Delivered on `main` as `daef61b74`: integrated 14/14-stage gate, frozen inputs,
+clear user-data guards and exact live publication readback. Claim released.
 [Contract and evidence](research/2026-10-24-zip-bit6-flag-consistency.md).
 **Remaining, unowned:** AES extra-field semantic equality and other unsupported
 encryption metadata remain separate questions, not verified strong-encryption support.

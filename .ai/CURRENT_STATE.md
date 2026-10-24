@@ -1,4 +1,28 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-24 04:35
+- **Completed:** Read and imported source-only mounted proof commits6ab11df6/63eba2fb: one System2 HTTP worker cancellation/original recovery, one comparison native apply/undo, one measured real Large job; six test/harness files only, no production changes. Cases remain uncompiled/unexecuted. Existing public System2 digest pinned; parent read-only ZIP metadata/hash admits one existing private real Large input (large-input-admission.json), no package rewrite/install or corpus modification. Narrow Docker ignore correction still pending package execution.
+- **Pending/Next Steps:** Independent source review deleg_78b07913/sa-0-d8c3a63e running over three mounted scenarios and Docker input allowlist. Freeze test/runtime source; only metadata updates meanwhile. Execute only uncovered criteria after closure; rebuild maintained Docker context, finish finite opt-ins/native/browser/architecture packaging and final docs. Gate9 full-pass stays historical, not proof of new assertions or release readiness. No publication/hardware approval.
+- **Notes for Codex oder Claude:** Exact handoffs system2-mounted-proof and workflow-proofs under <profile-scratch>/alpha16-execution-20261023/. Public source digest retained there; private Large path/hash only in private admission receipt. No private inputs copied into tracked files. Preserve original failures/artifacts and selected dirty root; no Ollama/vendor/live bus/push.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-24 04:21
+- **Completed:** Artifact handoffs read; parent independently verified all four artifact hashes/sizes at14c9214b, not smoke reexecution. Maintained Docker build remains blocked by excluded tracked System2 profile; narrow exact-profile dockerignore correction prepared, not yet rebuilt. Audit found three actual mounted acceptance gaps; source-only scenarios dispatched deleg_620bcc83 (System2 sa-0-a855de94, comparison/Large catalogue sa-1-06cbceb3), no worker tests/builds. Finite opt-ins/native/browser and arm64/packaging remain pending; no publication/hardware claim. Evidence artifact-preparation, final-acceptance-gaps and parent-artifact-verification.json under <profile-scratch>/alpha16-execution-20261023/.
+- **Pending/Next Steps:** Consume missing-scenario handoffs and review, execute only uncovered acceptance checks, rebuild maintained Docker context; final artifact/release decision pending.
+- **Notes for Codex oder Claude:** Keep accepted gate9 historical evidence immutable and do not repeat passed tests; no bus/Ollama/vendor/publication. Matrix output needs different filesystem.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-24 04:03
+- **Completed:** Parent programmatically verified successful full gate9 at frozen candidate14c9214b68cbe10186c0b7e8b1112c810ce5cff1: all10 exact ordered stages exit0/proofValid, requestedFull/complete/success/planCompleted/inputsFrozen true, inputStart=inputEnd, userDataTouched/userDataUnchecked empty. Nested web71 stages accepted, Rust6309 passed/0 failed/222 ignored across56 result groups; corpus155/155. This is combined source-package acceptance, not release/artifact/hardware certification. No passed tests repeated.
+- **Pending/Next Steps:** Artifact preparation and finite release-gap audit dispatched deleg_31ee976e: local nonpublishing artifacts/smokes sa-0-b81ecdba, read-only exact remaining acceptance gaps sa-1-fb64be85. Keep HEAD14c9214b unchanged while builds bind it; metadata notes may remain uncommitted. Need verified actual artifacts and only genuinely missing release checks, then final release-facing docs/status reconciliation and explicit publication decision. No tags/uploads/registry pushes/workflow or branch publication authorised in these tasks; no live-device permission.
+- **Notes for Codex oder Claude:** Private gate9-verified.json and gate9-verification-input.json bind acceptance under <profile-scratch>/alpha16-execution-20261023/. Original failed attempts retained unchanged. Artifact paths/manifests require parent readback before claims. Full gate pass does not execute ignored criteria automatically or establish physical System2 recovery. Preserve dirty selected root/paused source; no Ollama/vendor/live bus. Source remains local.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-24 03:22
 - **Completed:** Read independent review-gate8-fixes REPORT: ACCEPT source-only at20306635e62257303fcd349f8b52fc779ee2e2cc. Save correction preserves unresolved imports/warnings, strict resolvable ownership guards and saved-baseline offline restrictions; three fixture fixes preserve safety/native assertions. Twelve corrected paths verified by reviewer unchanged. No runtime passes inferred; original25 failures remain historical.
 - **Pending/Next Steps:** Commit checkpoint and launch ONE whole-candidate successor gate9 on corrected source, isolated homes/owned Cargo target; no separate test campaigns. Need actual Rust/native/HTTP assertions, bindings/corpus/release opt-ins and artifact acceptance before readiness. Freeze candidate until gate exits. No release tag/upload/container publication or real-device approval.

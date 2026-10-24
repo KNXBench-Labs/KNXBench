@@ -101,6 +101,9 @@ pub enum DownloadPlanError {
     NeverWritten(String),
     /// A segment the procedure allocates twice.
     AllocatedTwice(u16),
+    /// The program declares an ETS download plug-in (its GUID): the vendor
+    /// code writes what the product data does not describe (KL-006).
+    VendorDownloadPlugin(String),
 }
 
 impl std::error::Error for DownloadPlanError {}
@@ -151,6 +154,13 @@ impl fmt::Display for DownloadPlanError {
             DownloadPlanError::AllocatedTwice(address) => {
                 write!(f, "the segment at {address:04X}h is allocated twice")
             }
+            DownloadPlanError::VendorDownloadPlugin(plugin) => write!(
+                f,
+                "the application program declares the ETS download plug-in {plugin}, which writes \
+                 data the product file does not describe; KNXBench does not run vendor plug-ins, \
+                 so no download scope is offered (KNOWN_LIMITATIONS KL-006). Read-only compare \
+                 and diagnostics stay available"
+            ),
         }
     }
 }
@@ -185,6 +195,25 @@ pub fn check_program_kind(code: &ProgramCode) -> Result<MaskVersion, DownloadPla
         ));
     }
     Ok(mask)
+}
+
+/// Refuses a program that declares an ETS download plug-in
+/// (`Static/Extension/@EtsDownloadPlugin`, KL-006), for every download
+/// scope. The rule is the declaration, whoever the manufacturer is.
+///
+/// `[V]` A real ETS-programmed device of such a program did not hold its
+/// product's base data: one planned segment was not readable at all, and
+/// the readable part differed in octets no parameter owns. A plan built from
+/// the product file alone would write something other than what ETS wrote.
+///
+/// Not part of [`check_program_kind`] or the plan translation: a read-only
+/// comparison prepares the same plan to know what to read, and must stay
+/// possible. Every caller that writes to a device asks this first.
+pub fn check_download_plugin(code: &ProgramCode) -> Result<(), DownloadPlanError> {
+    match &code.download_plugin {
+        Some(plugin) => Err(DownloadPlanError::VendorDownloadPlugin(plugin.clone())),
+        None => Ok(()),
+    }
 }
 
 /// Builds the plan for `image`.
@@ -488,6 +517,24 @@ mod tests {
     }
 
     /// A two-table program in the shape of `A-0027-15-0BAC`'s procedure.
+    /// KL-006: the declaration refuses; it does not touch the kind check or
+    /// the plan translation, which a read-only comparison still uses.
+    #[test]
+    fn a_declared_download_plugin_is_refused_by_its_own_check_only() {
+        let mut image = image();
+        assert_eq!(check_download_plugin(&image.code), Ok(()));
+        image.code.download_plugin = Some("{G}".into());
+        let refused = check_download_plugin(&image.code).unwrap_err();
+        assert_eq!(
+            refused,
+            DownloadPlanError::VendorDownloadPlugin("{G}".into())
+        );
+        let shown = refused.to_string();
+        assert!(shown.contains("{G}") && shown.contains("KL-006"), "{shown}");
+        assert!(check_program_kind(&image.code).is_ok());
+        assert!(plan_memory_download(&image).is_ok());
+    }
+
     fn image() -> DownloadImage {
         let attributes = [
             ("PeiType", "1"),

@@ -36,6 +36,10 @@ states are explicitly unknown, never treated as inactive. Stored `is_active`
 and evaluated activation remain distinct. Effective DPT is `dpt ?? program_dpt`;
 program defaults, translated text/fallback and source provenance stay disclosed.
 Missing-target links are visible by ID and count as links, not as unlinked objects.
+**Saved project folder (24 October 2026):** below the name, an imported object
+shows its saved `GroupObjectTree` folder by declared `RefId`s, or why it is
+withheld; folder ids are searchable. No product caption is looked up
+([folder contract](contracts/communication-object-folders.md#saved-project-folder-display-24-october-2026)).
 
 ## Sorting and filters
 

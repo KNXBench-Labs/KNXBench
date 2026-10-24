@@ -51,6 +51,7 @@ pub(crate) fn rows(
             Some(ComparisonRow {
                 kind: "parameter",
                 parameter: Some(parameter.clone()),
+                association: None,
                 label: format!(
                     "{} · {} · bit {} / {}",
                     parameter.name,

@@ -9,6 +9,8 @@ both formerly blocked pinned-input passes; extra local ARM64 preacceptance is
 explicitly deferred and unverified, without changing the normal amd64+arm64
 publication workflow. Publication Go is conditional on final readiness; parent closeout and
 public readback remain pending. No physical-device or broader adoption authority follows.
+The [association link amendment](#association-link-adoption-wp-19-amendment-24-october-2026)
+(24 October 2026) is implemented with simulator software tests only.
 
 ## Authority and scope
 
@@ -50,6 +52,10 @@ current incarnation; incarnation values must never be copied from a request.
   and direction attribution. No identity is inferred from captions, TSAP order,
   object-number order, or a coincidentally equal address. No GA/object is created.
   A future table-adoption increment requires typed unambiguous source mapping.
+  *Amended 24 October 2026 for association entries only:* see
+  [Association link adoption](#association-link-adoption-wp-19-amendment-24-october-2026).
+  Address counts, individual-address, group-address and association-count rows
+  remain unsupported.
 - Wrong application, malformed identity, failed comparison, changed source,
   stale project/revision/incarnation, duplicate parameter attribution/placement,
   unavailable parameter mapping, invalid final image, and native/history
@@ -197,6 +203,84 @@ undo/redo/programming revision projections. Copy is provided in EN and DE.
 Project → device passes only the current stable device ID through
 `OpenDownloadButton` into the existing download review. It never passes
 comparison bytes, values or plans and never starts a download itself.
+
+## Association link adoption (WP-19 amendment, 24 October 2026)
+
+The owner lifted the association-row block where it can be done honestly. This
+section adds object ↔ group-address **link** adoption from mask-`0701h`
+association entries. Everything above still applies: the same opaque
+observation, scope, P3 revision, complete history, rebuilt source identity,
+native preflight/persistence and one-undo rules. Adoption still never writes to a
+device, never creates a group address or communication object, and never
+changes the individual address. Address counts, individual-address,
+group-address and association-count rows stay unsupported: the address table
+follows from the links, so it is checked, not adopted.
+
+**Typed attribution.** The decoder already resolves each association entry
+through *its own side's* verified address table (§4.16.3.3.2 TSAP, §4.17.9
+ASAP). Each association row now also carries a typed attribution per side: the
+entry `(TSAP, object number, group address)`, or *beyond* when the slot lies past
+that side's verified Current Size, or unknown. Captions are display only and are
+never parsed. Unknown sides stay unknown; the decoder adds no new codec.
+
+**Admission.** Every rule must hold, otherwise the **whole** selection, including
+selected parameters, is refused with a typed reason (`deviceAdoptionRefused`):
+
+1. Each selected association row is known on both sides.
+2. The complete device association table is decoded: the association count and
+   every association row's device side are known. A removal would otherwise rest
+   on an unknown device link set.
+3. Granularity is the object. The touched objects are the object numbers named by
+   either side of a selected row. Every differing association row that names a
+   touched object must be selected too; the refusal names the missing row. A
+   touched object's project links become exactly the device's links for that
+   number; there is no partial merge inside one object.
+4. Each device group address of a touched object resolves to exactly one existing
+   project group address with that raw address across all installations. None
+   refuses (adoption creates none); several refuse as ambiguous.
+5. Each touched object number with device links resolves to exactly one project
+   communication object of the compared device whose `ComObjectRef` the
+   program's `Dynamic` tree activates outside modules. Activation is evaluated
+   with the candidate parameter values (current values plus parameters selected
+   in the same adoption). Zero active instances, several, any module-based
+   instance with that number, or links currently held by another instance with
+   that number refuse. A touched object whose device side has no links resolves
+   to the single project instance currently holding its links.
+6. **Sending links.** Retained links keep their direction; removed links are
+   removed with theirs. An added link receives, except on an object with no
+   retained link, where the device's first listed entry for that object becomes
+   the sending link. This is the order the encoder writes (§4.17.9.5, sending
+   association first) and the established first-listed-sends reading of link
+   lists without directions. The rebuilt order must then match the device; if it
+   could only match by flipping a retained flag, the adoption refuses
+   (`sending link undetermined`) instead of guessing. Where the device's first
+   entry is also its lowest address, the device table cannot say whether that
+   link sends; the project's retained flag decides and is not changed.
+7. **Candidate recheck.** The candidate is rebuilt through the normal image
+   request, `Dynamic` evaluation, image builder and plan. For every touched
+   object the rebuilt association entries, in table order, must equal the
+   device's entries. Any other difference, capacity refusal or activation
+   refusal refuses the whole edit.
+
+**Edit and history.** Unlinks, then links in device order, then any parameter
+edits form the existing `ReserveIds`/`Batch` command through the real
+`CommandStack`: one undo step restores links (at their original list positions)
+and parameters; redo reapplies the whole edit. Association rows that already
+match produce no change; an all-no-op selection is a no-op preview without an
+undo step.
+
+**Preview and UI.** The App preview exposes `link_changes()`: add/remove, object
+number, project communication object, group address and whether the link sends.
+The preview response adds `linkChanges` in that shape. The comparison DTO marks
+an association row `adoptable` only as a presentation hint (typed attribution,
+both sides known, differing). The web client admits selection only for
+`parameter` and `association` rows the server marked adoptable, and shows the
+link changes in the existing review in English and German. The server remains
+the only admission authority.
+
+**Boundaries.** No System 1/2/B tables, partial comparisons or module-based
+objects; a group address that exists in several installations is ambiguous. No
+live-device acceptance; tests use the simulator only.
 
 ## Integrated acceptance boundary
 

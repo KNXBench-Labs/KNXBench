@@ -66,3 +66,4 @@ mod stored_bus_access;
 mod support_guidance_offline_audit;
 mod support_report;
 mod system2_validation_preparation;
+mod vendor_download_plugin;

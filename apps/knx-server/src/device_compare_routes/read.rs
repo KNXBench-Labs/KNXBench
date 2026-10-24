@@ -41,7 +41,8 @@ impl Read {
     ) -> Result<Self, ApiError> {
         if let Some(parts) = partial {
             let before = binding_at(state, target);
-            let prepared = crate::device_download_routes::prepare(state, target, Some(parts))?;
+            let prepared =
+                crate::device_download_routes::prepare_for_reading(state, target, Some(parts))?;
             let binding = binding_at(state, target)
                 .filter(|b| {
                     before.as_ref() == Some(b)

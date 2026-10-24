@@ -298,15 +298,7 @@ fn check_linked_objects_are_active(
         .devices
         .get(device)
         .ok_or(ProjectRequestError::UnknownDevice(device))?;
-    let supplied = request.values.clone().into_iter().collect();
-    let values = resolve_values(conn, program_id, &supplied)?;
-    let activation = evaluate(&load_program_trees(conn, program_id)?, &values);
-    let active: BTreeSet<&str> = activation
-        .com_object_refs
-        .iter()
-        .filter(|active| active.scope.is_none())
-        .map(|active| active.ref_id.as_str())
-        .collect();
+    let active = active_unscoped_com_object_refs(conn, program_id, &request.values)?;
     for id in &instance.com_objects {
         let Some(object) = project.devices.com_object(*id) else {
             continue;
@@ -328,6 +320,26 @@ fn check_linked_objects_are_active(
         }
     }
     Ok(())
+}
+
+/// The `ComObjectRef` ids the program's `Dynamic` tree activates outside
+/// modules for `values` (by `ParameterRef` id; absent ones take their
+/// defaults). Compare with [`com_object_lookup_id`] of an instance. The same
+/// evaluation decides which linked instances a download admits.
+pub fn active_unscoped_com_object_refs(
+    conn: &Connection,
+    program_id: &str,
+    values: &BTreeMap<String, String>,
+) -> Result<BTreeSet<String>, DeviceRequestError> {
+    let supplied = values.clone().into_iter().collect();
+    let values = resolve_values(conn, program_id, &supplied)?;
+    let activation = evaluate(&load_program_trees(conn, program_id)?, &values);
+    Ok(activation
+        .com_object_refs
+        .iter()
+        .filter(|active| active.scope.is_none())
+        .map(|active| active.ref_id.clone())
+        .collect())
 }
 
 /// The request for `device`, built for `program_id`. Pure: reads `project`

@@ -99,14 +99,15 @@ Retained bytes are not a promise of complete ETS semantics.
   command line for the scriptable bits.
 
 > [!NOTE]
-> **Alpha 16 candidate:** cancellable catalogue updates, confirmed comparison-to-project
+> **Alpha 16 is published:** cancellable catalogue updates, confirmed comparison-to-project
 > edits with native persistence and undo, and original product packages carried with
 > catalogue-authored project saves. Supported block/separator captions use the selected
 > product language; this is not complete ETS layout support.
 > [Release scope](docs/releases/alpha16.md) also documents the experimental, exact-application
-> System-2 path: software-tested on TestHardware, not physically certified. Local amd64
-> packages are accepted; public downloads and Docker platforms still need release-pipeline
-> readback. Native/model **16** stays; the product database moves **26 → 28**.
+> System-2 path: software-tested on TestHardware, not physically certified.
+> [Public verification](docs/evidence/release-alpha16-2026-10-24.json) confirms the
+> GitHub downloads/checksums and Docker amd64/arm64 revision identities at the immutable
+> tag. This remains a pre-release. Native/model **16** stays; the product database moves **26 → 28**.
 
 ## See it in action
 
@@ -172,11 +173,12 @@ docker run -d --name knxbench --network host \
 Open <https://127.0.0.1:8484>, sign in with that password, and choose **New project…** or
 import a `.knxproj`. Your projects live in `data/` and survive restarts.
 
-The standard release pipeline builds images for **x86-64 (`amd64`) and 64-bit Arm
-(`arm64`)**. Alpha 16's local acceptance covers amd64; its public multi-architecture
-image still needs pipeline verification. `latest` follows published releases,
-including alphas, not the newest source or a promise of stability. To stay on a
-specific release, use a version tag in both commands (`0.1.0-alpha.16` once published)
+The published Alpha 16 image supports **x86-64 (`amd64`) and 64-bit Arm
+(`arm64`)**; both platform revisions and the version/`latest` index were verified
+against the immutable release tag. This is registry identity evidence, not an
+extra local ARM64 runtime test. `latest` follows published releases, including
+alphas, not the newest source or a promise of stability. To stay on a specific
+release, use a version tag in both commands (`0.1.0-alpha.16`)
 ([tags and details](docs/manual/user-guide/11-web-and-docker.md#ready-made-image-from-docker-hub)).
 
 Want changes newer than the release? [Build the container from source](docs/manual/getting-started/04-installation.md#build-the-container-from-source).
@@ -198,9 +200,8 @@ and may enter shell history.
 
 ### Linux desktop, via AppImage
 
-The following is the intended **Alpha 16** download recipe. Use it after the release
-assets and checksums are published; until then, choose an available version on the
-[release page](https://github.com/KNXBench-Labs/KNXBench/releases).
+Download the published **Alpha 16 pre-release** AppImage and verify its checksum
+from the [release page](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.16):
 
 ```bash
 REL=https://github.com/KNXBench-Labs/KNXBench/releases/download/v0.1.0-alpha.16
@@ -211,8 +212,9 @@ chmod +x KNXBench_0.1.0-alpha.16_amd64.AppImage
 ./KNXBench_0.1.0-alpha.16_amd64.AppImage
 ```
 
-The intended `v0.1.0-alpha.16` AppImage is x86-64 only. A local package is verified;
-the normal release workflow builds and publishes release assets separately.
+The published `v0.1.0-alpha.16` AppImage is x86-64 only. Its public download size,
+SHA-256 and provider digest match the release verification record; these CI-built
+assets are distinct from the earlier local acceptance packages.
 `--ignore-missing` skips the `knx-mcp` binary listed in the same checksum file.
 Source changes after this tag still need a
 [source build](docs/manual/getting-started/04-installation.md#c-from-source). The

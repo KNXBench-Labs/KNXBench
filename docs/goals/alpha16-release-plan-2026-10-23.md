@@ -42,15 +42,18 @@ Alpha 16. Parent owns server/UI integration after the backend handoff.
 
 ## Current acceptance disposition — 24 October 2026
 
-**Bundled local amd64 acceptance and parent documentation review are complete;
-the candidate remains unreleased. Conditional publication Go is ready to be used
-to start normal publication once the parent's read-only preflight confirms its
-prerequisites. Actual publication and public readback remain pending.**
+**Alpha 16 is published as `v0.1.0-alpha.16` at immutable
+`f2e3ec6e4b227b49dc74fdba4cdadc3ab91e7c3d`. Bundled local amd64 acceptance,
+parent documentation review, both normal publication workflows and public
+artifact/checksum/digest/revision readback are complete. Final Pages deployment
+and live generated-content verification of the docs/site successor remain pending.**
+[Public verification record](../evidence/release-alpha16-2026-10-24.json).
 Runtime/tests are frozen at `86b4a7fc68b3d3206c00511b14f41e025e33de4d`.
 Application versions are aligned to `0.1.0-alpha.16`; inspected source constants
 remain native/store **16**, core model **16** and product database **28**.
-This refresh reads retained receipts only: no new tests, builds, browser runs or
-publication. The original work/acceptance contract below is retained as history;
+This documentation/site successor reads retained acceptance/publication receipts:
+no new product tests, builds, browser runs or publication. The original work/acceptance
+contract below is retained as history;
 the explicit amendment below governs current readiness without claiming that
 the latest tree ran the old gate.
 
@@ -76,12 +79,14 @@ actual execution of the normal publication pipeline on the final tag and public
 verification**. No remote dry run was performed or is credited. Normal
 Alpha-15-style AppImage/MCP/checksums and unchanged amd64+arm64 multiarch/latest
 container publication remain required; extra local ARM64 preacceptance alone is
-deferred. A16-09 remote delivery stays pending until those actual results and
-public asset/checksum/digest/revision readbacks are verified.
+deferred. Both actual normal workflows and public asset/checksum/digest/revision
+readbacks are now verified at the immutable final tag; this satisfies the amended
+public-artifact criterion, not final website/handover/owned-cleanup acceptance.
 
 Parent review of the bounded release/manual/roadmap/contract-status reconciliation
-is complete for A16-08. Read-only publication preflight remains the parent's start
-condition; publication and public readback are not complete. The original A16-09
+is complete for A16-08. The parent confirmed publication preflight and exercised
+the conditional owner Go; actual publication and public artifact readback are
+complete. Final website acceptance remains pending. The original A16-09
 row, acceptance body and exit checklist below remain visible as historical
 criteria, with their current disposition explicitly amended here rather than
 silently checked or rewritten.
@@ -103,6 +108,18 @@ earlier coverage and must not be summed into a unique-test total.
 | **Final exact pinned-input criteria — both passed, parent verified** | Documentation HEAD `a9295a52c08fa642c55d33294b5c043bdd98a0b0`; newly compiled owning release-mode integration test build; runtime/artifacts remain `86b4a7fc68b3d3206c00511b14f41e025e33de4d` | Legacy-member-name and isolated/shared-order product-matrix criteria each `ok`/exit 0. Explicitly authorized exact archive restoration preserved 111 files (one non-package), 115 package instances / 113 unique payloads and historical mapping. Input/archive/source/user/history guards passed; different-filesystem matrix output, ended consumers and released leases verified. No repin, substitution, original modification or new full-gate/aggregate-total claim. |
 | **Final local amd64 artifacts — parent accepted** | `86b4a7fc68b3d3206c00511b14f41e025e33de4d` | All four newly produced artifacts: AppImage, MCP, standalone server and maintained linux/amd64 container archive. Parent independently read back every hash/size and accepted complete/success verification and final-preservation receipts plus the retained minimal isolated smokes. Exact identities and smoke limits are in the [release note](../releases/alpha16.md#parent-verified-local-amd64-artifact-identities). Earlier artifacts retain their own revisions. ARM64 and actual remote publication are not inferred; no remote dry run is claimed. |
 | **Final artifact import/upgrade — named criterion satisfied** | Same final standalone linux/amd64 server at `86b4a7fc68b3d3206c00511b14f41e025e33de4d`; logical receipt **Final-artifact import/upgrade / final-receipt** | Complete/success, 23 checks in one attempt: committed public synthetic ETS import → Save As → switch → reopen preserves topology/readback and exact retained fixture XML bytes; authentic committed native13 predecessor → Save As schema16 → switch → reopen preserves all compared common-column rows across 14 tables. Both saved stores have SQLite integrity OK. Originals, source/runtime inputs, prior artifact evidence, user data and user container remain unchanged; server exits 0, owned processes end and leases release. History counters were observed, but no undo/redo operation or both-stack working-state proof; no per-package replay, browser/GUI, hardware, ETS-parity or ARM64 claim. |
+
+**Public artifact verification — complete:** AppImage workflow **40084841192**
+(build and publish) and Docker workflow **40084841249** (native amd64, native
+arm64 and multiarch publication) succeed at immutable release revision
+`f2e3ec6e4b227b49dc74fdba4cdadc3ab91e7c3d`. All three public GitHub assets
+have verified sizes, SHA-256 and provider digests; the downloaded MCP version
+is `knx-mcp 0.1.0-alpha.16+gf2e3ec6`. Version/`latest` shared OCI index
+`sha256:911a71cfae935d0a03a02c593c664b5818820684837102705015ef95009a9bfb`;
+both native configs carry the full release revision and exact tag. Verification
+was remote manifest/config readback, not a container/runtime/ARM64 functional
+probe or AppImage GUI run. CI/public hashes are separate from the local
+`86b4a7fc` artifacts; no source gate or remote dry run is relabelled.
 
 The final logical receipt is **Recovery-plan reuse / authenticated renewed review /
 execution-first-builds / final-receipt**: complete/success and terminal original
@@ -151,27 +168,29 @@ within the declared software scope, not complete-device preservation or ETS pari
   blocker. This is not an architecture-special release. Normal Alpha-15-style
   publication remains required: AppImage/MCP/checksums and the unchanged standard
   amd64+arm64 container release workflow, including multiarch/latest publication.
-  No normal ARM64 lane is disabled. Any remote ARM64 build, image and public
-  digest/revision must be separately verified; none is inferred from local receipts.
+  No normal ARM64 lane is disabled. Remote ARM64 build/publication and exact
+  native digest/revision identity are now separately verified; this is not
+  inferred from local receipts or an extra local ARM64 runtime test.
 - **A16-08/final delivery:** bounded reconciliation now covers the release note,
   delivery index, manual implementation status/known issues/devices guide, ROADMAP
   and contradictory Alpha-16 contract status headers. Dated evidence/architecture
   and unsupported-feature boundaries remain intact. Parent documentation review
   is complete within this bounded scope; this does not edit the canonical ledger,
   close limitations/issues or certify every documentation page as synchronized.
-- **Publication:** the owner granted publication Go **conditional on final
-  readiness**, with normal Alpha-15-style channels. Bundled local acceptance and
-  parent documentation review are complete; normal publication may start once
-  parent read-only preflight confirms its prerequisites. Actual publication and
-  public asset/revision/checksum/digest readback remain separate, unperformed requirements. No tag,
-  upload, registry publication or live remote-latest claim is made here.
+- **Publication:** after readiness and read-only preflight confirmation, the parent
+  exercised the conditional owner Go for normal Alpha-15-style channels. The
+  immutable tag/GitHub pre-release, AppImage/MCP/checksums and standard amd64+arm64
+  multiarch/latest publication are complete, with separate public readback above.
+  Final Pages deployment and live generated-content verification of this docs/site
+  successor, final handover and owned cleanup remain pending; public artifact
+  acceptance alone is not whole-delivery or website completion.
 - **Original A16-09 criteria and explicit amended disposition:** no full gate is
   claimed at final runtime SHA `86b4a7fc` or documentation HEAD `a9295a52`; the
   owner accepts historical Gate9 plus reviewed affected-successor checks/owning
   builds and final artifact smokes instead. The final standalone receipt now
   satisfies the named import/upgrade route. No remote packaging dry run was
   performed: that criterion is superseded by mandatory actual normal publication
-  on the final tag and public verification, which remain pending. The preserved
+  on the final tag and public verification, which are now complete. The preserved
   original checklist is historical, not an instruction for more local campaigns.
 
 The exact experimental target and software-only boundary remain unchanged. Full

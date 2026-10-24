@@ -24,12 +24,14 @@ release is not implied. No receiver/bus compatibility is claimed.
 
 <a id="up258-system-2-candidate-source-20-october-2026"></a>
 
-## Alpha 16 — accepted software scope, remaining release and evidence limits
+## Alpha 16 — published software scope, remaining website and evidence limits
 
 **24 October 2026 snapshot:** bounded software outcomes and four final local amd64
 artifacts have parent acceptance at frozen runtime/test source
 `86b4a7fc68b3d3206c00511b14f41e025e33de4d`; local amd64 software/package acceptance
-is complete, but the candidate remains unreleased. Both formerly blocked pinned
+is complete. Alpha 16 is published at immutable
+`f2e3ec6e4b227b49dc74fdba4cdadc3ab91e7c3d`; CI-built public download hashes
+remain distinct from the earlier local artifacts. Both formerly blocked pinned
 criteria passed at documentation HEAD `a9295a52` using the owning release-mode
 integration build. The owner authorized only exact historical restoration of
 111 files (one non-package), 115 instances / 113 unique payloads; parent verified
@@ -37,7 +39,8 @@ results, mapping and unchanged original/input/archive/source/user/history guards
 No further materialization or repinning is authorized. The owner explicitly limits
 local preacceptance to amd64; extra local ARM64 preacceptance is deferred and
 unverified, not a blocker. Normal release channels and the standard amd64+arm64
-container workflow remain unchanged; remote results need separate verification.
+container workflow remain unchanged; both actual remote workflows now succeed
+and public asset/OCI identities are separately verified.
 The named final standalone artifact import/upgrade smoke now passes: public
 synthetic ETS import/save/switch/reopen preserves topology and retained XML bytes;
 authentic committed native13 upgrade/save16/switch/reopen preserves compared
@@ -49,13 +52,16 @@ Parent documentation review is complete. The explicit 24 October bundled
 amendment accepts historical Gate9 plus reviewed affected-successor checks/owning
 builds and final artifact smokes, not a same-final-SHA full gate. It supersedes
 the remote dry-run criterion with required actual normal final-tag publication
-and public verification; no remote dry run is claimed. Conditional publication
-Go permits starting normal publication once parent read-only preflight confirms
-prerequisites. A16-09 actual publication and public asset/checksum/digest/revision
-readback remain pending. The older dated inventory below is not a new audit or
+and public verification; no remote dry run is claimed. Owner-authorized final-tag
+publication and public asset/checksum/digest/revision readback are complete,
+including native Docker amd64/arm64 revisions. This is not a public-container
+runtime, ARM64 functional or AppImage GUI/FUSE probe.
+[Public verification record](../evidence/release-alpha16-2026-10-24.json). Final
+Pages deployment and live website verification of this docs/site successor remain
+pending. The older dated inventory below is not a new audit or
 closure of every limitation.
 [Source-bound evidence matrix](../goals/alpha16-release-plan-2026-10-23.md#current-acceptance-disposition--24-october-2026),
-[unreleased scope and local artifact identities](../releases/alpha16.md).
+[published scope and separate public/local artifact identities](../releases/alpha16.md).
 
 ### Exact experimental System-2 path, not general device support
 

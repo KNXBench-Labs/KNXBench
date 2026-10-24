@@ -12,7 +12,7 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
-## Alpha 16 bounded software and local amd64 artifact acceptance — release pending (24 October 2026)
+## Alpha 16 published pre-release — public artifacts verified, website pending (24 October 2026)
 
 Runtime/test source is frozen at `86b4a7fc68b3d3206c00511b14f41e025e33de4d`.
 The [release-plan evidence matrix](goals/alpha16-release-plan-2026-10-23.md#current-acceptance-disposition--24-october-2026)
@@ -46,12 +46,14 @@ verified. The old receipt remains historical; overlapping runs are not summed.
 Catalogue-authored save/reopen against an empty product database
 already has historical gate evidence and is not reopened as missing work.
 
-**Local amd64 software/package acceptance is complete; the candidate is unreleased.**
+**Alpha 16 is published at immutable `f2e3ec6e4b227b49dc74fdba4cdadc3ab91e7c3d`;
+local amd64 software/package acceptance remains bound to runtime `86b4a7fc`.**
 The owner explicitly authorized only the exact historical restoration and limited
 local preacceptance to amd64. No further materialization or repinning is authorized;
 extra local ARM64 preacceptance is deferred and unverified, not a current blocker.
 Normal Alpha-15-style release channels and the standard amd64+arm64 container
-workflow remain unchanged; remote results must be separately verified.
+workflow remain unchanged; both actual remote workflows now succeed and public
+asset/OCI identities are separately verified.
 All four final local amd64 artifacts (AppImage, MCP, standalone server and maintained
 container archive) now have parent-independent hash/size readback and accepted
 minimal isolated packaging-smoke/final-preservation receipts for the frozen SHA.
@@ -67,14 +69,18 @@ complete. The plan's explicit 24 October bundled amendment accepts historical
 Gate9 plus reviewed affected-successor checks/owning builds and final artifact
 smokes, not a same-final-SHA full gate. The remote dry-run criterion is superseded
 by required actual normal publication on the final tag and public verification;
-no remote dry run is claimed. Conditional Go permits starting normal publication
-once parent read-only preflight confirms prerequisites. A16-09 actual remote
-publication and public artifact/checksum/digest/revision readback remain pending;
+no remote dry run is claimed. Owner-authorized actual final-tag publication and
+public artifact/checksum/digest/revision readback are complete: AppImage workflow
+40084841192 and Docker workflow 40084841249 both succeed; public GitHub assets
+and native amd64/arm64 OCI revisions match the immutable tag.
+[Public verification record](evidence/release-alpha16-2026-10-24.json). Local
+artifact hashes remain distinct from CI-built public downloads. Final Pages
+deployment/live website verification of the docs/site successor remains pending;
 no runtime/artifact identity is relabelled to a documentation SHA.
 Application versions are `0.1.0-alpha.16`; native/store and core
 model remain 16, product database 28, with closed-catalogue backup/downgrade limits
-in the [release note](releases/alpha16.md). This documentation-only refresh executes
-no tests/builds or publication and closes no ledger row, limitation or issue.
+in the [release note](releases/alpha16.md). This documentation/site successor adds
+no product tests/builds or publication and closes no ledger row, limitation or issue.
 
 ## Alpha 16 source integration — acceptance pending (23 October 2026)
 

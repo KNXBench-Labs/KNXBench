@@ -1,4 +1,52 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-24 12:35
+- **Completed:** Published-label README, DE/EN website and current release-status documentation reviewed; sanitized public evidence added. Worker ran one focused existing site test, documentation checker (0 errors) and whitespace check successfully, with stable inputs. Parent reviewed diff and confirmed upstream unchanged at release commit. Public artifacts remain accepted; immutable product tag unchanged.
+- **Pending/Next Steps:** Commit/push the separate documentation/site successor, then verify its exact successful Pages deployment and live generated file identities. No further product suites or rebuilds. Final website acceptance and compact evidence/owned cleanup remain pending.
+- **Notes for Codex oder Claude:** Work only in the explicitly owned integration checkout; preserve selected stale root and its non-metadata state. Published-docs-site private handoff retains exact file hashes and check receipts. Product release is v0.1.0-alpha.16 at f2e3ec6e. No live bus, container mutation, Ollama or vendor contact.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-24 12:25
+- **Completed:** Published release body now records actual successful workflows/public downloads/native OCI verification; parent read back exact updated body and prerelease state, without moving tag. Docs/site worker 0236db15 stopped without edits because it misinterpreted selected-root default as forbidding the already owned integration worktree; no release failure or source change occurred.
+- **Pending/Next Steps:** Replacement deleg_854e77c6/sa-0-f863f70f explicitly authorized to edit the existing integration worktree only, preserving selected stale root. It owns published-label docs/site changes, sanitized public receipt and minimal focused checks. Parent review/commit/push then exact final Pages and live content verification remain. Public artifact acceptance is complete; website completion is not.
+- **Notes for Codex oder Claude:** Immutable tag v0.1.0-alpha.16 stays f2e3ec6e. Use named owned integration worktree for successor; do not reset or synchronize selected root. Release-body updated readbacks retained in publication-final-f2e3ec6e. No duplicate source gates or product rebuilds, container mutation, live bus, Ollama or vendor contact.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-24 12:24
+- **Completed:** Public artifact verification accepted for v0.1.0-alpha.16 at f2e3ec6e4b227b49dc74fdba4cdadc3ab91e7c3d. Parent independently verified final receipt/index hashes, all 146 indexed evidence files and all three downloaded asset sizes/SHA256/provider digests; inspected successful workflow and both native OCI identities. MCP ran once in isolation at 0.1.0-alpha.16+gf2e3ec6. Version/latest index sha256:911a71cfae935d0a03a02c593c664b5818820684837102705015ef95009a9bfb; amd64/arm64 carry exact release revision. No product suites replayed.
+- **Pending/Next Steps:** Docs/site publication-label synchronization deleg_0236db15/sa-0-2023b3b4 active in integration checkout, including sanitized public receipt and focused existing documentation/site checks. Parent must review/commit/push separate successor, verify exact final Pages deployment and live generated content, finalize release body verification wording and retain compact evidence before owned cleanup. Immutable product tag must not move. Website completion not yet claimed.
+- **Notes for Codex oder Claude:** Public evidence receipt SHA256 8c3b58eeb61b3724a4614cf72081d58b3fcd7930aa10c768757e480161fb4537 under <profile-scratch>/alpha16-execution-20261023/public-artifacts-readback/. Preserve corrected parser refusal; no MCP rerun. No KNXBench container observed; unrelated container lacked full-run initial fingerprint, so do not claim a proven whole-run unchanged-container baseline. Selected-root non-metadata content unchanged. No live bus, Ollama, vendor contact or container mutation.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-24 12:17
+- **Completed:** Parent directly read AppImage run 40084841192: completed/success at f2e3ec6e4b227b49dc74fdba4cdadc3ab91e7c3d; Build AppImage and Publish tag release both succeed. Together with Docker run 40084841249, both normal publication workflows are successful at the immutable release commit. This is workflow acceptance, not yet final public download/registry readback acceptance.
+- **Pending/Next Steps:** Existing publication observer deleg_abfd0fd5/sa-0-e42e87e6 remains active for downloaded assets/checksums/MCP and native OCI revision/index verification. Await its final handoff; do not redispatch or duplicate its checks. Then perform separate docs/site published-label successor and verify final Pages/live content. Product tag unchanged; overall delivery not complete yet.
+- **Notes for Codex oder Claude:** proc_175ddd1e061e is the inner AppImage watcher completion, not the enclosing observer. No product-suite replay, live bus, Ollama, user-container upgrade or selected-root synchronization.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-24 12:15
+- **Completed:** Parent directly read GitHub run 40084841249: completed/success at f2e3ec6e4b227b49dc74fdba4cdadc3ab91e7c3d; native linux/arm64, native linux/amd64 and Publish multi-arch image all succeed. This closes actual Docker workflow execution only, not final public digest/download acceptance.
+- **Pending/Next Steps:** Publication observer deleg_abfd0fd5/sa-0-e42e87e6 remains active for AppImage workflow and downloaded asset/checksum/MCP plus registry revision/digest verification. Await authenticated final handoff without duplicate checks/build dispatch. Then docs/site published-label successor and final Pages/live content verification. Product tag unchanged; overall public delivery not yet accepted.
+- **Notes for Codex oder Claude:** Treat proc_1523affb2639 completion as inner Docker watcher only, not whole delegation completion. Actual source is immutable v0.1.0-alpha.16 at f2e3ec6e. No new product tests, live bus, Ollama or user-container changes.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-24 12:11
+- **Completed:** Read-only preflight found no publication blocker. Focused documentation commit f2e3ec6e4b227b49dc74fdba4cdadc3ab91e7c3d is clean and cheap final checks passed, including unchanged runtime inputs versus 86b4a7fc. Exercised conditional owner Go: atomic push of main and annotated v0.1.0-alpha.16, then created non-draft GitHub prerelease with verified handwritten public notes. Parent readback confirms main/peeled tag equal final SHA and exact release body. Initial assets empty: publication is in progress, not complete.
+- **Pending/Next Steps:** Actual publication observer deleg_abfd0fd5/sa-0-e42e87e6 owns tag-workflow success and public assets/checksums/MCP/OCI revisions readback. Do not dispatch duplicate builds or upload old local artifacts. Once real publication verification passes, synchronize README/site/release-status labels in separate docs-only successor, run affected docs/site checks and verify exact final Pages deployment/live content. Preserve tag unchanged.
+- **Notes for Codex oder Claude:** Private publication-final-f2e3ec6e contains external write logs, exact refs and release readbacks. Normal AppImage/MCP/checksum and amd64+arm64 Docker channels remain unchanged. Selected root and user container not upgraded. No product-suite replay, live bus, Ollama or vendor contact. Existing preflight handoff accidentally describes 63 evidence records as import assertions; actual parent proof is 63 indexed evidence files and 23 runtime checks, not 63 import assertions.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-24 12:07
 - **Completed:** Final readiness documentation diff reviewed and accepted; named artifact import/upgrade evidence independently verified. Explicit bundled acceptance amendment preserves original Gate9 identity and reviewed successor checks; no same-final-SHA full-gate or remote dry-run claim. Final documentation checker exit 0 retained in parent-final-doc-review; README/website changes reviewed. Preparing focused documentation closeout commit; runtime inputs remain frozen at 86b4a7fc.
 - **Pending/Next Steps:** Await read-only publication preflight deleg_8a5b13f4/sa-0-4604563b before external writes. Conditional owner Go permits normal Alpha-15-style publication when prerequisites confirmed. Actual final-tag CI, GitHub asset checksums, Docker amd64/arm64 revision/digest readback and deployed website verification remain required. No publication yet.

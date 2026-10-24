@@ -1,4 +1,12 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-10-24 13:20
+- **Completed:** 142d06b7e on main (fast-forward from 1ce8ead83, live equal): four stale test comments (domain.rs, http_device_routes, http_product_language, http_catalog_translation) no longer claim `AppState::default()` runs `default_path()`; the explicit `product_db = None` guards stay. OPEN_WORK test-gate note updated. Change-scoped gate 14/14: 1311 Rust passes/56 ignored in 7 binaries, corpus 51/51, inputs frozen.
+- **Pending/Next Steps:** No ungated package remains. Next needs an owner decision: evidence/input for WP-03/06/07/08/09/10/14/16, consent for WP-11 (desktop control) or WP-12 (device operations), admission rules for WP-19 group-address/association adoption, or #22/#7 reporter results. Still open small test-gate items: direct `cargo test` inherits real XDG homes; spawned server/desktop/MCP binaries not swept; intermittent browser_tmp SIGTERM test.
+- **Notes for Codex oder Claude:** Selected root checkout remains deliberately stale; use fresh worktrees from origin/main. Alpha 16 integration worktree belongs to its release owner. No bus/device, Ollama or vendor contact.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-10-24 13:12
 - **Completed:** WP-13 KL-183 follow-up published on main as 5e593df1b (fast-forward from d7c75cd6d; local/live equal). Catalogue summary (overview regenerated), dated dossier section and ledger evidence now record Alpha 16 A16-06 (catalogue-authored Save/Save As carry the exact original package, empty-product-database reopen; `b1703d61d`, `5763745fa`); status stays ACCEPTED_BOUNDARY for pre-v16/unbacked/ambiguous/no-product-database cases. OPEN_WORK WP-13 row/prose updated. Change-scoped gate 13/13 + empty corpus selection: 103 xtask passes, docs/anchors/ledger/limitations tests green, inputs frozen.
 - **Pending/Next Steps:** Per reconciled OPEN_WORK, no package is ready without evidence, consent or supplied input (WP-03/06/07/08/09/10/14/16 evidence-gated; WP-11/12 consent; WP-19 group-address/association adoption not admitted; #22 hardware outcome, #7 reporter acceptance). Next owner decision needed to pick a gated package or grant consent.

@@ -1266,11 +1266,15 @@ derived `system2-declared-segments-v1` diagnostic profile
 ([ADR-0143](adr/0143-declared-segment-memory-evidence-profile.md), CLI only,
 simulator-tested; four independent reviews, the last accepting). Open: the
 reporter's consented run on the device, the offline comparison of its result,
-a web entry (UI owner), and one MINOR reader gap: the identity stop reason
-(e.g. `identity-mismatch`) is not cross-checked against the identity items, so
-a deliberately rewritten and rehashed archive could carry a wrong reason. It
-does not change recorded bytes, coverage or what the collector sends;
-checksums never claimed to detect deliberate rewriting. Delivered on 24 October
+and a web entry (UI owner). **25 October 2026:** the former MINOR
+reader gap is closed for both diagnostic profiles: identity stop reasons are
+cross-checked against the recorded identity-item state and assertions, with
+real collector outcomes round-tripped through the readers. This changes no
+collector request, recorded reply bytes, coverage or archive version;
+checksums still detect corruption and never claim tamper-proofing against a
+deliberately rewritten and rehashed archive.
+
+Delivered on 24 October
 2026: `knx device diagnostics --device <area.line.device>` selects the device by
 its individual address for both profiles, so the issue #22 request no longer
 needs a `sqlite3` query for the internal `--device-id`; an address no device or

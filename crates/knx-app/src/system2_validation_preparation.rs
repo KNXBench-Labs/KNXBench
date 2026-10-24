@@ -12,6 +12,8 @@ pub use hardware::{
     ProjectHardwareRecord, ProjectHardwareSource, RecoveryTrack,
 };
 pub(crate) use project::check_budget;
+#[cfg(test)]
+pub(crate) use project::count_reconstructions;
 pub use project::{
     describe_project_source_closure, prepare_project_simulated_candidate,
     replay_project_simulated_candidate, CoverageRecord, FlagsRecord, LinkRecord,

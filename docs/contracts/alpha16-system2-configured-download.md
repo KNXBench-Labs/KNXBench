@@ -222,6 +222,44 @@ never falsely successful drain. Closed admission is not silently reopened.
 Restart recovery selection still requires the original durable operation; an
 in-memory control is not a restart journal or a whole-device backup.
 
+## Operation-local validation reuse
+
+Configured fresh hardware execution creates one private `ValidatedHardwareExecution` after
+current-project admission. It owns the fully validated plan and its derived
+same-application preconditions, holds a shared borrow of the exact prepared bundle
+and an exclusive borrow of the matching unused `OperationStore`, and is consumed
+by the internal executor. The bundle cannot be mutated through that borrow; the
+store cannot be swapped, resumed or shared with another execution. No witness is
+serialized, cloned, stored on a mutable source, or reused across operations.
+
+Construction still calls the complete `PreparedBundle::plan` validator, including
+format grammar, retained-source reconstruction and request/plan/coverage
+comparison. Preconditions are derived from that same validated plan. Configured
+confirmations and fresh-execution step/source/mutation classification reuse this
+immutable result instead of reconstructing the retained sources again. Public
+`plan` and `preconditions` calls retain their independent validation behavior.
+Format-2 candidates remain simulator-only; the format-3 hardware record and exact
+operation-store binding are still required for configured hardware execution.
+
+This witness is **not** current-project/source admission, provenance, consent or
+a device backup. Current live winners/project checks, adapter binding rechecks,
+all exact confirmations, transport provenance, actual target/identity/prestate
+reads, cancellation and Net precondition validation remain independent. Recovery
+acquisition still passes through the original `RecoveryRecord` validators and
+`OperationStore` checkpoint validation, sync and byte readback before **any**
+mutation, including VerifyMode. Disk grammar/hash chaining, reopening, original
+backup retention and once-only explicit recovery are unchanged; restore does not
+use the fresh-execution witness.
+
+Source-only regression additions count actual retained-source reconstruction
+entries in a test-local synchronous scope covering context construction,
+confirmations and the first two journal steps, and check rebound source/plan and
+other-operation refusals without a checkpoint change. They are not executed by
+this change. The counter does not cover current admission, complete execution or
+the intentionally independent recovery validators. This is duplicate-work
+reduction, not a measured speedup, established timeout cause, acceptance result or
+new hardware/recovery guarantee. No timing budget or protocol policy changes.
+
 ## Actual-state backup and recovery limits
 
 The existing Net executor rechecks observed serial, mask, manufacturer, hardware

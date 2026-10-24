@@ -395,6 +395,29 @@ fn build(
             .collect(),
     })
 }
+// Test-local, synchronous scopes only: count entry at the actual reconstruction
+// seam, not plan accessors or a predicted journal/telegram count. No production
+// counter/cache, and no scope or thread-local borrow crosses an await.
+#[cfg(test)]
+thread_local! {
+    static RECONSTRUCTIONS: std::cell::Cell<Option<usize>> = const { std::cell::Cell::new(None) };
+}
+#[cfg(test)]
+pub(crate) fn count_reconstructions<R>(f: impl FnOnce() -> R) -> (R, usize) {
+    struct Reset(Option<usize>);
+    impl Drop for Reset {
+        fn drop(&mut self) {
+            RECONSTRUCTIONS.set(self.0);
+        }
+    }
+    let _reset = Reset(RECONSTRUCTIONS.replace(Some(0)));
+    let result = f();
+    (
+        result,
+        RECONSTRUCTIONS.get().expect("active reconstruction count"),
+    )
+}
+
 /// Nonrecursive authority for initial preparation, record admission and explicit replay.
 fn reconstruct(
     input: &ProjectProductInput,
@@ -402,6 +425,8 @@ fn reconstruct(
     device: DeviceId,
     profile: &ProjectValidationProfile,
 ) -> io::Result<Reconstruction> {
+    #[cfg(test)]
+    RECONSTRUCTIONS.set(RECONSTRUCTIONS.get().map(|count| count + 1));
     let scratch = tempfile::tempdir()?;
     let conn = knx_productdb::open_and_migrate(&scratch.path().join("products.sqlite"))
         .map_err(io::Error::other)?;

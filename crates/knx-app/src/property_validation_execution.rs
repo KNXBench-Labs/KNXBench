@@ -10,7 +10,7 @@ use crate::{
 use knx_core::commissioning::{
     authorisation::AuthorisationPlan,
     mutation::{WriteAuthorisation, WriteScope},
-    property_download::PropertyOperation,
+    property_download::{PropertyDownloadPlan, PropertyOperation},
 };
 use knx_net::commissioning::{
     hardware_release::HardwareRelease,
@@ -19,7 +19,7 @@ use knx_net::commissioning::{
         run_experimental_property_plan, run_experimental_property_plan_on_hardware,
         PropertySimulationFailure,
     },
-    property_recovery::PropertyJournalEvent,
+    property_recovery::{ExperimentalPropertyPreconditions, PropertyJournalEvent},
     simulator::SimulatedDevice,
     SessionTiming,
 };
@@ -28,6 +28,92 @@ use std::{
     io,
     sync::atomic::{AtomicBool, Ordering},
 };
+
+/// Fresh-execution-only ownership: the shared bundle borrow forbids mutation,
+/// and the exclusive store borrow binds reuse to this exact unused operation.
+/// Never persisted, cloned, or used instead of current-project admission.
+/// Recovery serialization and replay retain their independent validators.
+pub(crate) struct ValidatedHardwareExecution<'a> {
+    bundle: &'a PreparedBundle,
+    store: &'a mut OperationStore,
+    plan: PropertyDownloadPlan,
+    preconditions: ExperimentalPropertyPreconditions,
+}
+impl<'a> ValidatedHardwareExecution<'a> {
+    pub(crate) fn new(
+        bundle: &'a PreparedBundle,
+        store: &'a mut OperationStore,
+    ) -> io::Result<Self> {
+        // This remains the full retained-source reconstruction/equivalence
+        // validator, not a hash-only or normalized-plan-only admission.
+        let plan = bundle.plan()?;
+        let preconditions = ExperimentalPropertyPreconditions::same_application_reinstallation(
+            &plan,
+            bundle.binding.serial,
+            bundle.binding.application,
+        )
+        .map_err(|_| invalid("same-application recovery premise cannot represent this plan"))?;
+        if bundle.binding.simulated || store.binding() != &bundle.binding {
+            return Err(invalid("operation-store binding differs from bundle kind"));
+        }
+        store.require_fresh_execution()?;
+        Ok(Self {
+            bundle,
+            store,
+            plan,
+            preconditions,
+        })
+    }
+    pub(crate) fn bundle(&self) -> &PreparedBundle {
+        self.bundle
+    }
+    pub(crate) fn plan(&self) -> &PropertyDownloadPlan {
+        &self.plan
+    }
+}
+
+/// Only the fresh hardware owner supplies these jointly borrowed context parts.
+/// Everything except step classification follows the original callback,
+/// including independent recovery validation and the durable pre-mutation barrier.
+fn hardware_event(
+    store: &mut OperationStore,
+    bundle: &PreparedBundle,
+    plan: &PropertyDownloadPlan,
+    journal_event: PropertyJournalEvent<'_>,
+) -> Result<(), String> {
+    if let PropertyJournalEvent::OperationStarting {
+        operation_index,
+        source_index,
+        mutation_may_have_started,
+    } = journal_event
+    {
+        let step = plan
+            .steps()
+            .get(operation_index)
+            .ok_or("journal operation is outside exact plan")?;
+        if step.source_index != source_index {
+            return Err("journal source position differs".into());
+        }
+        // HardwareCheck's RecoveryAcquired barrier precedes VerifyMode. For
+        // later operations record the *upcoming* possibility, not merely a
+        // previous operation's result; loss of response is never harmless.
+        let mutation = mutation_may_have_started
+            || matches!(
+                step.operation,
+                PropertyOperation::LoadControl { .. }
+                    | PropertyOperation::WriteMemory { .. }
+                    | PropertyOperation::Disconnect
+            );
+        store
+            .checkpoint(Checkpoint::StepStarted {
+                index: operation_index,
+                mutation,
+            })
+            .map_err(|e| e.to_string())
+    } else {
+        event(store, bundle, journal_event, false)
+    }
+}
 
 fn check_bundle(
     bundle: &PreparedBundle,
@@ -211,10 +297,10 @@ pub async fn execute_hardware<T: ManagementTransport>(
             "configured preparation requires execute_project_hardware with fresh project admission",
         ));
     }
+    let execution = ValidatedHardwareExecution::new(bundle, store)?;
     execute_hardware_inner(
         transport,
-        bundle,
-        store,
+        execution,
         timing,
         download_confirmation,
         release_confirmation,
@@ -222,24 +308,24 @@ pub async fn execute_hardware<T: ManagementTransport>(
     )
     .await
 }
-#[allow(clippy::too_many_arguments)]
 pub(crate) async fn execute_hardware_inner<T: ManagementTransport>(
     transport: &T,
-    bundle: &PreparedBundle,
-    store: &mut OperationStore,
+    execution: ValidatedHardwareExecution<'_>,
     timing: SessionTiming,
     download_confirmation: &str,
     release_confirmation: &str,
     cancel: &AtomicBool,
 ) -> io::Result<()> {
-    check_bundle(bundle, store, false)?;
-    store.require_fresh_execution()?;
+    let ValidatedHardwareExecution {
+        bundle,
+        store,
+        plan,
+        preconditions,
+    } = execution;
     if cancel.load(Ordering::SeqCst) {
         store.checkpoint(Checkpoint::Cancelled)?;
         return Err(invalid("property validation cancelled before connection"));
     }
-    let plan = bundle.plan()?;
-    let preconditions = bundle.preconditions()?;
     let authorization = WriteAuthorisation::for_hardware(
         plan.target(),
         WriteScope::Download,
@@ -256,7 +342,7 @@ pub(crate) async fn execute_hardware_inner<T: ManagementTransport>(
         timing,
         &preconditions,
         &release,
-        &mut |e| event(store, bundle, e, false),
+        &mut |e| hardware_event(store, bundle, &plan, e),
         &|| cancel.load(Ordering::SeqCst),
     )
     .await;
@@ -374,3 +460,7 @@ fn failure_code(error: &PropertySimulationFailure) -> FailureCode {
         _ => FailureCode::Executor,
     }
 }
+
+#[cfg(test)]
+#[path = "property_validation_execution_tests.rs"]
+mod tests;

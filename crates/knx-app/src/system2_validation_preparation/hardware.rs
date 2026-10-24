@@ -397,12 +397,14 @@ pub async fn execute_project_hardware<T: ManagementTransport>(
     confirmations: &HardwareConfirmations<'_>,
     cancel: &AtomicBool,
 ) -> io::Result<()> {
-    let bundle = &admission.bundle;
-    check_confirmations(bundle, confirmations)?;
+    let execution = crate::property_validation_execution::ValidatedHardwareExecution::new(
+        &admission.bundle,
+        store,
+    )?;
+    execution.check_confirmations(confirmations)?;
     crate::property_validation_execution::execute_hardware_inner(
         transport,
-        bundle,
-        store,
+        execution,
         timing,
         confirmations.download,
         confirmations.risk,
@@ -466,27 +468,30 @@ pub fn validate_project_hardware_recovery(
     }
     Ok(())
 }
-fn check_confirmations(
-    bundle: &PreparedBundle,
-    confirmations: &HardwareConfirmations<'_>,
-) -> io::Result<()> {
-    let plan = bundle.plan()?;
-    if bundle.format != 3 || bundle.hardware_preparation.is_none() {
-        return Err(invalid("separate configured hardware preparation required"));
+impl crate::property_validation_execution::ValidatedHardwareExecution<'_> {
+    pub(crate) fn check_confirmations(
+        &self,
+        confirmations: &HardwareConfirmations<'_>,
+    ) -> io::Result<()> {
+        let bundle = self.bundle();
+        let plan = self.plan();
+        if bundle.format != 3 || bundle.hardware_preparation.is_none() {
+            return Err(invalid("separate configured hardware preparation required"));
+        }
+        if confirmations.operation != bundle.consent_phrase()
+            || confirmations.hypothesis != bundle.acceptance_phrase()
+            || confirmations.download
+                != knx_core::commissioning::mutation::required_confirmation_phrase(
+                    plan.target(),
+                    knx_core::commissioning::mutation::WriteScope::Download,
+                )
+            || confirmations.risk
+                != knx_net::commissioning::hardware_release::required_release_phrase(plan.target())
+        {
+            return Err(invalid("exact operation/preparation, ordinary download and best-effort risk confirmations required"));
+        }
+        Ok(())
     }
-    if confirmations.operation != bundle.consent_phrase()
-        || confirmations.hypothesis != bundle.acceptance_phrase()
-        || confirmations.download
-            != knx_core::commissioning::mutation::required_confirmation_phrase(
-                plan.target(),
-                knx_core::commissioning::mutation::WriteScope::Download,
-            )
-        || confirmations.risk
-            != knx_net::commissioning::hardware_release::required_release_phrase(plan.target())
-    {
-        return Err(invalid("exact operation/preparation, ordinary download and best-effort risk confirmations required"));
-    }
-    Ok(())
 }
 
 /// Rebuild with current winners immediately before start; never compare only plan hashes.

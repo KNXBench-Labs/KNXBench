@@ -1,4 +1,28 @@
 - **Last Agent:** codex
+- **Timestamp:** 2026-10-24 03:22
+- **Completed:** Read independent review-gate8-fixes REPORT: ACCEPT source-only at20306635e62257303fcd349f8b52fc779ee2e2cc. Save correction preserves unresolved imports/warnings, strict resolvable ownership guards and saved-baseline offline restrictions; three fixture fixes preserve safety/native assertions. Twelve corrected paths verified by reviewer unchanged. No runtime passes inferred; original25 failures remain historical.
+- **Pending/Next Steps:** Commit checkpoint and launch ONE whole-candidate successor gate9 on corrected source, isolated homes/owned Cargo target; no separate test campaigns. Need actual Rust/native/HTTP assertions, bindings/corpus/release opt-ins and artifact acceptance before readiness. Freeze candidate until gate exits. No release tag/upload/container publication or real-device approval.
+- **Notes for Codex oder Claude:** Exact source review and manifest <profile-scratch>/alpha16-execution-20261023/review-gate8-fixes/. Prior successful web/Clippy remains partial old-source evidence only. Corrected tests uncompiled/unexecuted until gate9. Preserve selected root/paused evidence; no push/Ollama/vendor/live bus.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-24 03:15
+- **Completed:** Read both gate8 correction handoffs and imported322c4396 native-save correction plus c966e6ca three test-only fixes. Worker inventories reconcile25 original failures:22 save (19 overbroad unresolved-import admission,3 loose-source fixtures) plus CLI wording, desktop discarded lifetime handle and canonical-path assertion. Source acquisition now distinguishes unresolved historical refs from positive native-authored refs; strict resolvable acquisition/no-DB saved-dependency checks remain required. These are delivered source corrections, not passing runtime evidence.
+- **Pending/Next Steps:** Independent narrow source review deleg_88d8907d/sa-0-8989941c running on merged frozen runtime, covering save integrity and three fixture fixes. No tests/builds/browser campaigns rerun. Consume exact review, close actual blockers then checkpoint next whole integrated gate9; native/corpus/opt-in/artifact acceptance still pending. No release or real-device approval.
+- **Notes for Codex oder Claude:** Exact handoffs/inventories/manifests under <profile-scratch>/alpha16-execution-20261023/native-save-fix and runtime-test-fix; review output review-gate8-fixes. Original gate8 failed logs immutable; successful earlier web/Clippy not whole acceptance. Keep selected dirty root and paused evidence; no push/Ollama/vendor/live bus.
+
+---
+
+- **Last Agent:** codex
+- **Timestamp:** 2026-10-24 02:56
+- **Completed:** Gate8 on d3da7b52 reached Rust execution: full web-gate, clean-desktop and all-target Clippy passed, rust-tests exited101 with frozen inputs. Read retained stage receipts and actual panic diagnostics. Failures include native save/source-portability refusals, CLI stale preview wording, desktop embedded-server connection refusal and catalogue mount StripPrefixError. No complete source/fixture-only classification yet; bindings/corpus/artifacts not reached. Original logs immutable.
+- **Pending/Next Steps:** Correction delegation deleg_51ff8622 running in isolated branches: native save/portability sa-0-61f32daf, CLI/desktop/catalogue-path sa-1-77dc0e63. Both must inventory full no-fail-fast diagnostics, trace actual producer/lifetime/source cause and preserve integrity, not loosen checks/timeouts. No tests/builds/browser/gates reruns authorised; add final-suite assertions. Parent consumes exact handoffs/reviews then next whole candidate. Release/native/corpus/opt-in/artifact acceptance still pending.
+- **Notes for Codex oder Claude:** Evidence <profile-scratch>/alpha16-execution-20261023/final-candidate-gate-8/rust-tests.log, gate8-diagnosis.txt and gate8-panics.txt. Successful web/Clippy stages remain source-bound partial evidence, not overall readiness. Do not bypass source acquisition or invent package membership to cure save failures. No push/hardware/Ollama/vendor; selected dirty root and paused sources preserved.
+
+---
+
+- **Last Agent:** codex
 - **Timestamp:** 2026-10-24 02:20
 - **Completed:** Gate7 on97c10c7d passed full functional/exclusive browser lanes and all configured production browser suites, then failed check-headers. Tooling/build/typechecks/Vitest/layering also passed; native/Rust/corpus stages not reached. Actual scanner reports six malformed owned headers and six new absent headers above ceiling. Corrected only those12 first-line headers and paragraph separation; ceiling unchanged. Maintained static header check now1597 valid/155 absent/28 generated, fmt and whitespace pass. No new product tests run.
 - **Pending/Next Steps:** Commit header-only correction and checkpoint then launch next complete integrated candidate gate8. Original gate7 remains failed; browser successes belong its source, not whole release acceptance. Complete remaining Rust/native/corpus/opt-in/artifact acceptance before readiness. No release/hardware approval; no test assertion or ratchet weakening.

@@ -218,3 +218,35 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     expect(state.unexpected).toEqual([]);
   });
 }
+
+// WP-06a: a saved project folder shows by its declared ids; a withheld one says why.
+for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
+  test(`${language} ${width}px: a saved project folder and a withheld one are named`, async ({ page }) => {
+    const m = language === "en" ? en : de;
+    await page.setViewportSize({ width, height: 900 });
+    const state = await intercept(page, language, 8);
+    state.objects[0] = { ...state.objects[0], project_folder: { status: "Assigned", key: "Channel:4:CH-1/Folder:4:PB-3",
+      path: [{ kind: "Channel", ref_id: "CH-1" }, { kind: "Folder", ref_id: "PB-3" }] } };
+    state.objects[1] = { ...state.objects[1], project_folder: { status: "Ambiguous", key: null, path: [] } };
+    state.objects[2] = { ...state.objects[2], project_folder: { status: "NoFolder", key: null, path: [] } };
+    await openProject(page, language); await openList(page, language);
+    await page.locator(".devices-table tbody td:nth-child(3) button").first().click();
+    const panel = page.locator(".com-table-panel");
+    const requestStart = state.requests.length;
+    await panel.getByRole("button", { name: m["comTable.flat"], exact: true }).click();
+    const note = (id: number) => panel.locator(`tr[data-object-id="${id}"] .com-object-project-folder`);
+    await expect(note(1)).toHaveText(m["comTable.projectFolder"].replace("{value}", "PB-3"));
+    await expect(note(1)).toHaveAttribute("title", m["comTable.projectFolderTitle"].replace("{value}", "CH-1 › PB-3"));
+    await expect(note(2)).toHaveText(m["comTable.projectFolderRefused.Ambiguous"]);
+    await expect(note(3)).toHaveCount(0);
+    await expect(note(4)).toHaveCount(0);
+    await panel.getByRole("searchbox", { name: m["comTable.search"] }).fill("PB-3");
+    await expect(panel.locator("tr.com-object-summary:visible")).toHaveCount(1);
+    await expect(panel.locator('tr.com-object-summary[data-object-id="1"]')).toBeVisible();
+    if (process.env.KNX_CO_CAPTURE_DIR) await page.screenshot({ path: join(process.env.KNX_CO_CAPTURE_DIR, `co-project-folder-${language}-${width}.png`) });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+    // Showing and searching folders is view-only: no write reaches the server.
+    expect(state.requests.slice(requestStart).filter(r => !r.startsWith("GET ") && r !== "POST /api/achievements/record")).toEqual([]);
+    expect(state.unexpected).toEqual([]);
+  });
+}

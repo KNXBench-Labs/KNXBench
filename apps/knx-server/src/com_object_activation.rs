@@ -387,6 +387,7 @@ mod tests {
             size: None,
             function_text: None,
             name_fill: None,
+            project_folder: None,
         }
     }
 

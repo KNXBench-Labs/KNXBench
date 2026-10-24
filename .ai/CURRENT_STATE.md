@@ -1,6 +1,6 @@
 # Restart snapshot
 
-Updated: 2026-10-24. Operational snapshot, not an append-only journal.
+Updated: 2026-10-25. Operational snapshot, not an append-only journal.
 
 ## Current assignment and authority
 
@@ -10,8 +10,17 @@ Updated: 2026-10-24. Operational snapshot, not an append-only journal.
 - Task A makes the descendant PID marker regression wait for complete content;
   Task B must add Linux subreaper cleanup for detached stage descendants, with
   RED/GREEN tool-test evidence and two focused commits total.
-- Task A RED reproduced an empty marker parse; its focused GREEN passes. Task B
-  is not started. Next: commit Task A, then write the detached-session RED.
+- Task A is committed as `68cfb707`; RED reproduced the empty marker parse and
+  its module GREEN passed 26/26.
+- Task B RED left the new-session descendant sleeping, showed subreaper
+  unavailability was not fail-closed and exposed ownership gaps around unrelated,
+  detached, environment-clearing and already-zombie children. The shared runner
+  now gives each stage an exclusive subreaper supervisor, PID/start-time/pidfd
+  signaling and bounded TERM/KILL/reap cleanup; handled signals cannot land in
+  the spawn/identity gap and unrelated protected children remain untouched.
+- Post-review GREEN: `test_web_gate` 36/36 and exact tool discovery 428/428 with
+  6 skips; documentation, anchors, headers, local-info, syntax and diff checks
+  pass on the final tree. Next: inspect and make commit two.
 - No real bus/device operations, vendor contact, Ollama/model downloads, Fable/Astra or release/deployment authorised. The globally excluded device remains completely off-limits.
 - Prefer Claude delegation to spare Codex budget; no forced model alternation.
 

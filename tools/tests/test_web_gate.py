@@ -98,6 +98,26 @@ class LanePolicy(unittest.TestCase):
 
 
 class MeasuredRun(unittest.TestCase):
+    def test_unavailable_child_subreaper_fails_before_creating_an_attempt(self) -> None:
+        from unittest.mock import patch
+        with patch.object(support.sys, 'platform', 'unsupported'):
+            with self.assertRaisesRegex(RuntimeError, 'subreaper'):
+                support.enable_child_subreaper()
+        with patch.object(support.os, 'pidfd_open', side_effect=OSError(38, 'not implemented')):
+            with self.assertRaisesRegex(RuntimeError, 'pidfd'):
+                support.enable_child_subreaper()
+        with patch.object(support.signal, 'pidfd_send_signal', side_effect=OSError(1, 'denied')):
+            with self.assertRaisesRegex(RuntimeError, 'pidfd'):
+                support.enable_child_subreaper()
+        with TemporaryDirectory() as tmp:
+            output = Path(tmp) / 'attempt'
+            with patch.object(support, 'enable_child_subreaper',
+                              side_effect=RuntimeError('Linux child subreaper unavailable'),
+                              create=True):
+                with self.assertRaisesRegex(RuntimeError, 'subreaper'):
+                    support.MeasuredRun(output)
+            self.assertFalse(output.exists())
+
     def test_real_process_exit_time_and_failure_survive_in_receipt(self) -> None:
         self.assertTrue(hasattr(support, 'MeasuredRun'), 'Measured process receipts are missing')
         with TemporaryDirectory() as tmp:
@@ -131,6 +151,101 @@ class MeasuredRun(unittest.TestCase):
             self.assertFalse(run.finish('before', 'after'))
             with self.assertRaises(ValueError):
                 run.step('first', [sys.executable, '-c', 'pass'], Path(tmp))
+
+    def test_interrupt_during_popen_still_cleans_the_spawned_child(self) -> None:
+        import time
+        from unittest.mock import patch
+        spawned = []
+        original = subprocess.Popen
+
+        def interrupt_after_spawn(*args, **kwargs):
+            child = original(*args, **kwargs)
+            spawned.append(child)
+            raise KeyboardInterrupt
+
+        with TemporaryDirectory() as tmp:
+            run = support.MeasuredRun(Path(tmp) / 'attempt')
+            try:
+                with patch.object(support.subprocess, 'Popen', interrupt_after_spawn):
+                    with self.assertRaises(KeyboardInterrupt):
+                        run.step('spawn', [sys.executable, '-c', 'import time;time.sleep(60)'], Path.cwd())
+                self.assertEqual(len(spawned), 1)
+                deadline = time.monotonic() + 2
+                while spawned[0].poll() is None and time.monotonic() < deadline:
+                    time.sleep(.01)
+                self.assertIsNotNone(spawned[0].returncode,
+                                     'child survived interruption before Popen returned')
+            finally:
+                for child in spawned:
+                    if child.poll() is None:
+                        child.kill()
+                    try:
+                        child.wait(timeout=5)
+                    except ChildProcessError:
+                        pass
+
+    def test_handled_signal_waits_until_a_fast_supervisor_identity_is_attached(self) -> None:
+        import os
+        import signal
+        import time
+        from unittest.mock import patch
+        spawned = []
+        original = subprocess.Popen
+
+        def signal_after_supervisor_exits(*args, **kwargs):
+            child = original(*args, **kwargs)
+            spawned.append(child)
+            deadline = time.monotonic() + 5
+            while time.monotonic() < deadline:
+                info = support._process_info(child.pid)
+                if info is not None and info.state == 'Z':
+                    break
+                time.sleep(.01)
+            os.kill(os.getpid(), signal.SIGTERM)
+            return child
+
+        def interrupted(_signum, _frame):
+            raise KeyboardInterrupt
+
+        previous = signal.signal(signal.SIGTERM, interrupted)
+        try:
+            with TemporaryDirectory() as tmp:
+                run = support.MeasuredRun(Path(tmp) / 'attempt')
+                with (patch.object(support.subprocess, 'Popen', signal_after_supervisor_exits),
+                      patch.object(support, 'SPAWN_SETTLE_SECONDS', .05),
+                      patch.object(support, 'SUPERVISOR_CLEANUP_SECONDS', .05),
+                      patch.object(support, 'KILL_WAIT_SECONDS', .05)):
+                    with self.assertRaises(KeyboardInterrupt):
+                        run.step('fast', [sys.executable, '-c', 'pass'], Path.cwd())
+                self.assertEqual(len(spawned), 1)
+                self.assertIsNone(support._process_info(spawned[0].pid),
+                                  'already-exited supervisor was not reaped')
+        finally:
+            signal.signal(signal.SIGTERM, previous)
+            for child in spawned:
+                child.poll()
+                info = support._process_info(child.pid)
+                if info is not None:
+                    if info.state != 'Z':
+                        child.kill()
+                    try:
+                        child.wait(timeout=5)
+                    except ChildProcessError:
+                        pass
+
+    def test_nonzero_supervisor_exit_cannot_accept_a_valid_target_report(self) -> None:
+        from unittest.mock import patch
+        original = support.os.wait4
+
+        def failed_supervisor(pid, options):
+            waited_pid, _status, usage = original(pid, options)
+            return waited_pid, 1 << 8, usage
+
+        with TemporaryDirectory() as tmp:
+            run = support.MeasuredRun(Path(tmp) / 'attempt')
+            with patch.object(support.os, 'wait4', failed_supervisor):
+                with self.assertRaisesRegex(RuntimeError, 'supervisor'):
+                    run.step('failed-supervisor', [sys.executable, '-c', 'pass'], Path.cwd())
 
     def test_source_fingerprint_covers_untracked_bytes_and_ignores_output(self) -> None:
         self.assertTrue(hasattr(support, 'source_fingerprint'), 'Source-bound acceptance is missing')
@@ -306,6 +421,244 @@ class GatePlan(unittest.TestCase):
                 os.killpg(child, 9)
                 self.fail('child group survived an interrupt at the PID checkpoint')
 
+    def test_interrupt_does_not_signal_a_preexisting_child(self) -> None:
+        import os
+        import signal
+        import time
+
+        class Interrupting(support.MeasuredRun):
+            def save(self) -> None:
+                super().save()
+                if self.receipt['stages'] and self.receipt['stages'][-1].get('pid'):
+                    raise KeyboardInterrupt
+
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            signal_marker = root / 'preexisting.signal'
+            signal_ready = root / 'preexisting.ready'
+            unrelated_program = f'''import ctypes
+import signal
+from pathlib import Path
+signal.pthread_sigmask(signal.SIG_BLOCK, {{signal.SIGTERM}})
+if ctypes.CDLL(None).prctl(4, 0, 0, 0, 0) != 0:
+    raise OSError("PR_SET_DUMPABLE failed")
+Path({str(signal_ready)!r}).touch()
+while True:
+    if signal.sigtimedwait({{signal.SIGTERM}}, .1) is not None:
+        Path({str(signal_marker)!r}).write_text("SIGTERM")
+'''
+            unrelated = subprocess.Popen(
+                [sys.executable, '-c', unrelated_program], start_new_session=True)
+            try:
+                deadline = time.monotonic() + 5
+                while not signal_ready.exists() and time.monotonic() < deadline:
+                    time.sleep(.01)
+                self.assertTrue(signal_ready.exists(), 'pre-existing child did not arm its signal wait')
+                fields = Path(f'/proc/{unrelated.pid}/stat').read_text().rsplit(')', 1)[1].split()
+                identity = unrelated.pid, int(fields[19])
+                run = Interrupting(Path(tmp) / 'attempt')
+                with self.assertRaises(KeyboardInterrupt):
+                    run.step('sleep', [sys.executable, '-c', 'import time;time.sleep(60)'], Path.cwd())
+                self.assertIsNone(unrelated.poll(), 'stage cleanup claimed an unrelated child')
+                self.assertFalse(signal_marker.exists(), 'stage cleanup signalled an unrelated child')
+                fields = Path(f'/proc/{unrelated.pid}/stat').read_text().rsplit(')', 1)[1].split()
+                self.assertEqual((unrelated.pid, int(fields[19])), identity)
+            finally:
+                if unrelated.poll() is None:
+                    os.killpg(unrelated.pid, signal.SIGKILL)
+                unrelated.wait()
+
+    def test_normal_exit_cleans_detached_leftover_beside_a_preexisting_child(self) -> None:
+        import os
+        import signal
+        import time
+        unrelated = subprocess.Popen(
+            [sys.executable, '-c',
+             'import signal,time;signal.signal(signal.SIGTERM,signal.SIG_IGN);time.sleep(60)'],
+            start_new_session=True)
+        identity = None
+        try:
+            with TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                marker = root / 'leftover.pid'
+                temporary = root / 'leftover.tmp'
+                descendant = (
+                    'import os,signal,time;from pathlib import Path;'
+                    'signal.signal(signal.SIGTERM,signal.SIG_IGN);'
+                    "fields=Path('/proc/self/stat').read_text().rsplit(')',1)[1].split();"
+                    f'tmp=Path({str(temporary)!r});tmp.write_text(f"{{os.getpid()}} {{fields[19]}} ");'
+                    f'os.replace(tmp,Path({str(marker)!r}));time.sleep(60)')
+                child = ('import subprocess,sys,time;from pathlib import Path;'
+                         f'subprocess.Popen([sys.executable,"-c",{descendant!r}],start_new_session=True);'
+                         f'marker=Path({str(marker)!r});'
+                         'deadline=time.monotonic()+5;'
+                         'exec("while not marker.exists() and time.monotonic()<deadline:\\n time.sleep(.01)")')
+                run = support.MeasuredRun(root / 'attempt')
+                run.step('normal', [sys.executable, '-c', child], Path.cwd())
+                identity = tuple(int(value) for value in marker.read_text().split())
+                descendant_pid, start_ticks = identity
+                try:
+                    fields = Path(f'/proc/{descendant_pid}/stat').read_text().rsplit(')', 1)[1].split()
+                except FileNotFoundError:
+                    fields = None
+                self.assertTrue(fields is None or int(fields[19]) != start_ticks,
+                                'normal stage exit left its detached descendant alive')
+                self.assertIsNone(unrelated.poll(), 'cleanup signalled the pre-existing child')
+        finally:
+            if unrelated.poll() is None:
+                os.killpg(unrelated.pid, signal.SIGKILL)
+            unrelated.wait()
+            if identity is not None:
+                descendant_pid, start_ticks = identity
+                try:
+                    fields = Path(f'/proc/{descendant_pid}/stat').read_text().rsplit(')', 1)[1].split()
+                    if int(fields[19]) == start_ticks:
+                        os.kill(descendant_pid, signal.SIGKILL)
+                except (FileNotFoundError, ProcessLookupError):
+                    pass
+
+    def test_normal_exit_reaps_a_descendant_that_already_became_a_zombie(self) -> None:
+        import os
+        import time
+        identity = None
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            marker = root / 'zombie.pid'
+            temporary = root / 'zombie.tmp'
+            descendant = (
+                'import os;from pathlib import Path;'
+                "fields=Path('/proc/self/stat').read_text().rsplit(')',1)[1].split();"
+                f'tmp=Path({str(temporary)!r});tmp.write_text(f"{{os.getpid()}} {{fields[19]}}");'
+                f'os.replace(tmp,Path({str(marker)!r}))')
+            child = (
+                'import os,subprocess,sys,time;from pathlib import Path;'
+                f'p=subprocess.Popen([sys.executable,"-c",{descendant!r}],start_new_session=True);'
+                f'marker=Path({str(marker)!r});deadline=time.monotonic()+5;'
+                'exec("while (not marker.exists() or '
+                "Path(f'/proc/{p.pid}/stat').read_text().rsplit(')',1)[1].split()[0] != 'Z') "
+                'and time.monotonic()<deadline:\\n time.sleep(.01)");os._exit(0)')
+            try:
+                run = support.MeasuredRun(root / 'attempt')
+                run.step('normal', [sys.executable, '-c', child], Path.cwd())
+                identity = tuple(int(value) for value in marker.read_text().split())
+                pid, start_ticks = identity
+                info = support._process_info(pid)
+                self.assertTrue(info is None or info.identity.start_ticks != start_ticks,
+                                'stage cleanup left an owned zombie unreaped')
+            finally:
+                if identity is not None:
+                    pid, start_ticks = identity
+                    info = support._process_info(pid)
+                    if info is not None and info.identity.start_ticks == start_ticks:
+                        try:
+                            os.waitpid(pid, os.WNOHANG)
+                        except ChildProcessError:
+                            pass
+
+    def test_normal_exit_cleans_a_detached_descendant_with_a_scrubbed_environment(self) -> None:
+        import os
+        import signal
+        identity = None
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            marker = root / 'scrubbed.pid'
+            temporary = root / 'scrubbed.tmp'
+            descendant = (
+                'import os,signal,time;from pathlib import Path;'
+                'signal.signal(signal.SIGTERM,signal.SIG_IGN);'
+                "fields=Path('/proc/self/stat').read_text().rsplit(')',1)[1].split();"
+                f'tmp=Path({str(temporary)!r});tmp.write_text(f"{{os.getpid()}} {{fields[19]}}");'
+                f'os.replace(tmp,Path({str(marker)!r}));time.sleep(60)')
+            child = (
+                'import subprocess,sys,time;from pathlib import Path;'
+                f'subprocess.Popen([sys.executable,"-c",{descendant!r}],env={{}},start_new_session=True);'
+                f'marker=Path({str(marker)!r});deadline=time.monotonic()+5;'
+                'exec("while not marker.exists() and time.monotonic()<deadline:\\n time.sleep(.01)")')
+            try:
+                run = support.MeasuredRun(root / 'attempt')
+                run.step('normal', [sys.executable, '-c', child], Path.cwd())
+                identity = tuple(int(value) for value in marker.read_text().split())
+                pid, start_ticks = identity
+                info = support._process_info(pid)
+                self.assertTrue(info is None or info.identity.start_ticks != start_ticks,
+                                'stage cleanup left an environment-scrubbed descendant alive')
+            finally:
+                if identity is not None:
+                    pid, start_ticks = identity
+                    info = support._process_info(pid)
+                    if info is not None and info.identity.start_ticks == start_ticks:
+                        try:
+                            os.kill(pid, signal.SIGKILL)
+                        except ProcessLookupError:
+                            pass
+
+    def test_normal_exit_does_not_claim_a_new_unrelated_child(self) -> None:
+        import os
+        import signal
+        import threading
+        import time
+        errors = []
+        unrelated = None
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            signal_marker = root / 'unrelated.signal'
+            signal_ready = root / 'unrelated.ready'
+            stage_release = root / 'stage.release'
+            run = support.MeasuredRun(root / 'attempt')
+
+            def stage() -> None:
+                try:
+                    stage_program = ('import time;from pathlib import Path;'
+                                     f'p=Path({str(stage_release)!r});deadline=time.monotonic()+5;'
+                                     'exec("while not p.exists() and time.monotonic()<deadline:\\n time.sleep(.01)")')
+                    run.step('normal', [sys.executable, '-c', stage_program], Path.cwd())
+                except BaseException as error:
+                    errors.append(error)
+
+            worker = threading.Thread(target=stage)
+            worker.start()
+            try:
+                deadline = time.monotonic() + 5
+                while time.monotonic() < deadline:
+                    try:
+                        data = json.loads((root / 'attempt/receipt.json').read_text())
+                        if data['stages'] and data['stages'][0].get('pid'):
+                            break
+                    except (OSError, ValueError):
+                        pass
+                    time.sleep(.01)
+                else:
+                    self.fail('stage did not publish its PID')
+                unrelated_program = f'''import signal
+from pathlib import Path
+signal.pthread_sigmask(signal.SIG_BLOCK, {{signal.SIGTERM}})
+Path({str(signal_ready)!r}).touch()
+while True:
+    if signal.sigtimedwait({{signal.SIGTERM}}, .1) is not None:
+        Path({str(signal_marker)!r}).write_text("SIGTERM")
+'''
+                unrelated = subprocess.Popen(
+                    [sys.executable, '-c', unrelated_program],
+                    start_new_session=True)
+                deadline = time.monotonic() + 5
+                while not signal_ready.exists() and time.monotonic() < deadline:
+                    time.sleep(.01)
+                self.assertTrue(signal_ready.exists(), 'unrelated child did not arm its signal wait')
+                stage_release.touch()
+                worker.join(timeout=10)
+                self.assertFalse(worker.is_alive(), 'stage cleanup did not finish')
+                if errors:
+                    raise errors[0]
+                self.assertIsNone(unrelated.poll(), 'stage cleanup claimed a new unrelated child')
+                self.assertFalse(signal_marker.exists(), 'stage cleanup signalled a new unrelated child')
+            finally:
+                if worker.is_alive():
+                    worker.join(timeout=5)
+                if unrelated is not None:
+                    if unrelated.poll() is None:
+                        os.killpg(unrelated.pid, signal.SIGKILL)
+                    unrelated.wait()
+
     def test_sigterm_terminates_the_owned_child_group(self) -> None:
         import os
         import signal
@@ -430,6 +783,71 @@ class GatePlan(unittest.TestCase):
                     try:
                         os.kill(grandchild, signal.SIGKILL)
                     except ProcessLookupError:
+                        pass
+
+    def test_sigterm_cleans_descendant_in_a_new_session(self) -> None:
+        import os
+        import signal
+        import time
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            output = root / 'attempt'
+            marker = root / 'detached.pid'
+            temporary = root / 'detached.tmp'
+            descendant = (
+                'import os,signal,time;from pathlib import Path;'
+                'signal.signal(signal.SIGTERM,signal.SIG_IGN);'
+                "fields=Path('/proc/self/stat').read_text().rsplit(')',1)[1].split();"
+                f'tmp=Path({str(temporary)!r});tmp.write_text(f"{{os.getpid()}} {{fields[19]}}");'
+                f'os.replace(tmp,Path({str(marker)!r}));time.sleep(60)')
+            child = ('import subprocess,sys,time;'
+                     f'subprocess.Popen([sys.executable,"-c",{descendant!r}],start_new_session=True);'
+                     'time.sleep(60)')
+            program = ('import signal,sys;from pathlib import Path;'
+                       'from tools.run_web_gate import interrupted;'
+                       'from tools.web_gate_support import MeasuredRun;'
+                       'signal.signal(signal.SIGTERM,interrupted);'
+                       f'r=MeasuredRun(Path({str(output)!r}));'
+                       f'r.step("sleep",[sys.executable,"-c",{child!r}],Path.cwd())')
+            parent = subprocess.Popen([sys.executable, '-c', program],
+                                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            identity = None
+            try:
+                deadline = time.monotonic() + 5
+                while time.monotonic() < deadline:
+                    try:
+                        identity = tuple(int(value) for value in marker.read_text().split())
+                        if len(identity) == 2:
+                            break
+                    except (OSError, ValueError):
+                        pass
+                    time.sleep(0.01)
+                self.assertIsNotNone(identity, 'detached descendant did not publish its identity')
+                descendant_pid, start_ticks = identity
+                parent.send_signal(signal.SIGTERM)
+                parent.wait(timeout=10)
+                deadline = time.monotonic() + 2
+                while time.monotonic() < deadline:
+                    try:
+                        fields = Path(f'/proc/{descendant_pid}/stat').read_text().rsplit(')', 1)[1].split()
+                    except FileNotFoundError:
+                        break
+                    if int(fields[19]) != start_ticks:
+                        break
+                    time.sleep(0.01)
+                else:
+                    self.fail(f'detached descendant survived cleanup in state {fields[0]}')
+            finally:
+                if parent.poll() is None:
+                    parent.kill()
+                    parent.wait()
+                if identity is not None:
+                    descendant_pid, start_ticks = identity
+                    try:
+                        fields = Path(f'/proc/{descendant_pid}/stat').read_text().rsplit(')', 1)[1].split()
+                        if int(fields[19]) == start_ticks:
+                            os.kill(descendant_pid, signal.SIGKILL)
+                    except (FileNotFoundError, ProcessLookupError):
                         pass
 
 

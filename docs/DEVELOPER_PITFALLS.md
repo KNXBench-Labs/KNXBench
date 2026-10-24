@@ -143,6 +143,14 @@ already found lying in the grass.
   `Path.write_text` creates the file before writing its content. Publish with a
   same-directory temporary plus `os.replace`, or make the bounded reader retry
   both the read and parse before it acts on the marker.
+- **A process group is not a stage's process tree.** Playwright's `webServer`
+  may start a new session, outside the stage leader's group, and an environment
+  marker disappears when a child clears its environment or becomes a zombie.
+  Gate stages therefore run below a dedicated Linux child subreaper whose
+  direct children are exclusively stage-owned. Signal only PID/start-time
+  identities retained by pidfds, then reap them after bounded TERM/KILL
+  escalation; never replace that ownership proof with `pkill -f` or command
+  substring matching.
 - **A Python test child that waits for a signal must block it and take it
   with `sigtimedwait`.** On CPython 3.14.7 a pending handler does not run when
   a keyword call returns: in `os.system(command=f'kill -TERM {os.getpid()}')`

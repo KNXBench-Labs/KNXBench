@@ -179,9 +179,38 @@ suite memory consumption. Installed dependency versions are bound, not every
 byte of node_modules or a maliciously modified system tool. No universal machine
 attestation is claimed. Host load is recorded; performance remains host-dependent.
 
-SIGTERM/keyboard interruption terminates only the owned child process group,
+SIGTERM/keyboard interruption terminates only the owned stage process tree,
 keeps a failed checkpoint, releases held leases and cleans the owned short temp
-directory. SIGKILL/host failure can leave an incomplete receipt; it is never green.
+directory. The measured runner requires Linux child-subreaper and pidfd support
+before creating an attempt, including a real self-pidfd signal-zero probe. Each
+stage command runs below a dedicated child-subreaper supervisor. That process
+has no unrelated children, so every direct child it adopts remains stage-owned
+even after clearing its environment or becoming a zombie. The outer runner uses
+an inherited unguessable owner token to cover interruption while the supervisor
+itself is being spawned. Both layers bind every owned PID to `/proc` start time,
+follow kernel ancestry, signal only exact identities through pidfds with bounded
+TERM/KILL escalation and reap them. The same cleanup handles unexpected
+leftovers after a normal stage exit; Playwright normally stops its `webServer`
+itself, so there is then nothing to signal. SIGKILL/host failure can leave an
+incomplete receipt; it is never green.
+
+Handled interruption signals are deferred only across process creation and
+identity registration; a same-PID exec trampoline restores the caller's signal
+mask before the supervisor or stage command runs. A target wait report is
+accepted only when its supervisor also exits zero.
+
+**Detached Playwright server cleanup (25 October 2026).** Killing only the stage
+leader's process group left `npm exec vite --config vite.fixtures.config.ts`
+and its `node` child alive when Playwright placed the server in another session.
+`test_sigterm_cleans_descendant_in_a_new_session` creates that boundary with a
+SIGTERM-ignoring grandchild, interrupts the stage and requires the adopted child
+to be absent rather than zombie. Further regressions cover an already-zombie
+descendant and a detached child that clears its environment. Pre-existing
+runner children and children started independently after stage attachment sit
+outside the supervisor boundary; signal-waiting regressions prove neither
+receives even SIGTERM. Interruption during `Popen` discovery is also covered
+before the receipt PID exists, including an already-exited supervisor whose
+environment can no longer identify it. No process is selected by command text.
 
 **Interrupt at the PID checkpoint (17 October 2026).** A stage records its
 child's PID in the receipt before waiting. That checkpoint used to sit *before*

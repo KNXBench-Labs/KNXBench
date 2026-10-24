@@ -168,6 +168,25 @@ fn tables_use_placements_big_endian_and_each_sides_own_tsap() {
         association.device.as_deref(),
         Some("TSAP 2 → 5/1/6 · object 9")
     );
+    // Typed attribution carries the same facts; the caption is never parsed.
+    let entry = |tsap, object, raw| {
+        Some(AssociationSlot::Entry(AssociationEntry {
+            tsap,
+            object,
+            group_address: knx_core::GroupAddress::from_raw(raw),
+        }))
+    };
+    assert_eq!(
+        association.association,
+        Some(AssociationAttribution {
+            project: entry(1, 7, 0x1203),
+            device: entry(2, 9, 0x2906),
+        })
+    );
+    assert!(rows
+        .iter()
+        .filter(|r| r.kind != "association")
+        .all(|r| r.association.is_none()));
     let raw: Vec<_> = rows.iter().filter(|r| r.kind == "raw").collect();
     assert_eq!(
         raw.len(),
@@ -198,6 +217,9 @@ fn partial_and_malformed_table_data_are_unknown_not_empty_or_fabricated() {
         association.reason.is_some(),
         "TSAP zero is not a group address"
     );
+    let attribution = association.association.unwrap();
+    assert!(attribution.project.is_some());
+    assert_eq!(attribution.device, None, "unknown, not beyond or empty");
     assert!(rows
         .iter()
         .any(|r| r.kind == "raw" && r.device.as_deref() == Some("BE 03 11 44")));
@@ -235,4 +257,22 @@ fn unverified_mask_decodes_no_tables_but_keeps_all_raw_bytes() {
     let rows = decode(&image, &held, &plan);
     assert_eq!(rows.len(), 2);
     assert!(rows.iter().all(|r| r.kind == "raw"));
+}
+
+#[test]
+fn a_slot_past_one_sides_count_is_beyond_not_unknown() {
+    let (image, mut held, plan) = fixture();
+    held.regions[1].octets[1] = 1;
+    let rows = decode(&image, &held, &plan);
+    let second = rows
+        .iter()
+        .find(|r| r.kind == "association" && r.label == "1")
+        .unwrap();
+    assert_eq!(second.device, None, "display stays unchanged");
+    let attribution = second.association.unwrap();
+    assert_eq!(attribution.device, Some(AssociationSlot::Beyond));
+    assert!(matches!(
+        attribution.project,
+        Some(AssociationSlot::Entry(_))
+    ));
 }

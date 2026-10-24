@@ -10,6 +10,8 @@ use http_body_util::BodyExt;
 use std::sync::mpsc as sync;
 use tower::ServiceExt;
 
+#[cfg(target_os = "linux")]
+mod large_acceptance;
 mod managed_failures;
 mod master_diagnostics;
 

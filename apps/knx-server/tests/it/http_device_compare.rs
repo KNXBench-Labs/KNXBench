@@ -37,6 +37,8 @@ const PACKAGE: &str = "MDT_KP_BE_01_Push_Button_V15a.knxprod";
 const PROJECT: &str = "KNXBench 1.1.67 option C.knxdb";
 const GATEWAY: &str = "192.0.2.10:3671";
 
+mod mounted_adoption;
+
 fn original_data() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../OriginalData")
 }
@@ -146,6 +148,7 @@ fn fast() -> SessionTiming {
 struct Harness {
     _dir: tempfile::TempDir,
     app: axum::Router,
+    state: Arc<knx_server::AppState>,
     device: Arc<SimulatedDevice>,
     calls: Arc<AtomicUsize>,
 }
@@ -203,6 +206,7 @@ async fn harness_timed(device: Arc<SimulatedDevice>, timing: SessionTiming) -> H
     Harness {
         _dir: dir,
         app,
+        state,
         device,
         calls,
     }

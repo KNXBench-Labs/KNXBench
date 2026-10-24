@@ -1268,11 +1268,13 @@ simulator-tested; four independent reviews, the last accepting). Open: the
 reporter's consented run on the device, the offline comparison of its result,
 a web entry (UI owner), a `--device <area.line.device>` selector for the CLI
 (today only the internal `--device-id`, which no surface displays; the issue #22
-request uses a `sqlite3` query instead), and one MINOR reader gap: the identity stop reason
-(e.g. `identity-mismatch`) is not cross-checked against the identity items, so
-a deliberately rewritten and rehashed archive could carry a wrong reason. It
-does not change recorded bytes, coverage or what the collector sends;
-checksums never claimed to detect deliberate rewriting.
+request uses a `sqlite3` query instead). **25 October 2026:** the former MINOR
+reader gap is closed for both diagnostic profiles: identity stop reasons are
+cross-checked against the recorded identity-item state and assertions, with
+real collector outcomes round-tripped through the readers. This changes no
+collector request, recorded reply bytes, coverage or archive version;
+checksums still detect corruption and never claim tamper-proofing against a
+deliberately rewritten and rehashed archive.
 
 ## System 2 / System B download outcome (17 October 2026)
 

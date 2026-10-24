@@ -274,8 +274,6 @@ fn format_matches(r: &Report) -> bool {
             r.profile == MEMORY_PROFILE
                 && r.memory_status == "requested"
                 && r.memory_reason == memory_evidence::MEMORY_REASON
-                && r.asserted_mask.is_some()
-                && r.asserted_manufacturer.is_some()
         }
         _ => false,
     }
@@ -328,6 +326,9 @@ fn validate(r: &Report) -> Result<(), String> {
         {
             return Err("diagnostics-invalid-coverage".into());
         }
+        if !identity_item_shape(item, query) {
+            return Err("diagnostics-invalid-reading".into());
+        }
         if item.received_bytes != item.bytes.len()
             && item.error.as_deref() != Some("response-size-limit-raw-not-retained")
         {
@@ -342,7 +343,65 @@ fn validate(r: &Report) -> Result<(), String> {
             }
         }
     }
-    identity_sequence(r)
+    identity_sequence(r)?;
+    if r.format == 1 && !identity_stop_reason_matches(r, None) {
+        return Err("diagnostics-invalid-stop-reason".into());
+    }
+    Ok(())
+}
+
+/// Exact response shapes constructed by `diagnostic_export::identity_reads`.
+fn identity_item_shape(item: &Reading, query: Query) -> bool {
+    let property = query.property().is_some();
+    match item.status.as_str() {
+        "read" => {
+            item.bytes.len() == query.expected_bytes()
+                && item.received_bytes == item.bytes.len()
+                && item.returned_elements == property.then_some(1)
+                && item.error.is_none()
+        }
+        "partial" => {
+            item.received_bytes == item.bytes.len()
+                && item.returned_elements.is_some() == property
+                && (!property || item.returned_elements.is_some_and(|elements| elements != 0))
+                && item.error.as_deref() == Some("unexpected-length")
+                && (item.bytes.len() != query.expected_bytes()
+                    || item.returned_elements.is_some_and(|elements| elements != 1))
+        }
+        "refused-ambiguous" => {
+            property
+                && item.returned_elements == Some(0)
+                && item.received_bytes == item.bytes.len()
+                && item.error.as_deref() == Some("access-denied-or-property-unsupported")
+        }
+        "error" if item.error.as_deref() == Some("response-size-limit-raw-not-retained") => {
+            item.bytes.is_empty()
+                && item.received_bytes > net::MAX_RESPONSE_BYTES
+                && item.returned_elements.is_some() == property
+        }
+        "error" => {
+            item.bytes.is_empty()
+                && item.received_bytes == 0
+                && item.returned_elements.is_none()
+                && item.error.as_deref().is_some_and(identity_read_failure)
+        }
+        "not-read" => true,
+        _ => false,
+    }
+}
+
+/// Failures reachable while one descriptor/property exchange is in flight.
+fn identity_read_failure(reason: &str) -> bool {
+    matches!(
+        reason,
+        "cancelled"
+            | "deadline"
+            | "timeout"
+            | "connection-released"
+            | "connection-lost"
+            | "event-loss"
+            | "transport-error"
+    )
 }
 /// `identity_reads` of `knx_net::commissioning::diagnostic_export`, re-checked
 /// from the archive (both formats). The collector attempts the items in
@@ -385,6 +444,112 @@ fn identity_sequence(r: &Report) -> Result<(), String> {
         open = continues(r, item, query);
     }
     Ok(())
+}
+
+/// Checks the collector's identity-item state against its final stop reason.
+///
+/// | Identity state | Reachable stop reason |
+/// | --- | --- |
+/// | No item attempted | `cancelled`, `deadline`, `timeout`, `connect-rejected`, `self-addressed`, `connection-lost`, `event-loss` or `transport-error`; format 1 also has its five caller setup reasons; format 2 instead admits `identity-assertion-missing` exactly when a recorded assertion is absent |
+/// | An attempted item is `error` | exactly that item's identity-read failure (`cancelled`, `deadline`, `timeout`, `connection-released`, `connection-lost`, `event-loss` or `transport-error`), or the response-size limit |
+/// | Descriptor has a non-error, non-exact response (`partial`) | `descriptor-unverified` |
+/// | Read descriptor or PID 12 contradicts its assertion | `identity-mismatch` |
+/// | A continuing prefix is followed by an untouched item | `cancelled` |
+/// | All three completed in format 1 | none (or unconfirmed caller tunnel teardown) |
+/// | All three completed in format 2, some not `read` | `identity-unverified` |
+/// | All three are `read`, but format-2 identity is not admitted | `identity-mismatch` |
+///
+/// `memory_identity_admitted` is `None` for format 1. For format 2 it is
+/// `Some` only while memory is still untouched; chunk-phase stop reasons are
+/// checked separately by `memory_evidence::sequence_ok`.
+pub(crate) fn identity_stop_reason_matches(
+    report: &Report,
+    memory_identity_admitted: Option<bool>,
+) -> bool {
+    let stop = report.stop_reason.as_deref();
+    let attempted = report
+        .items
+        .iter()
+        .take_while(|item| item.status != "not-read")
+        .count();
+    let assertion_missing = memory_identity_admitted.is_some()
+        && (report.asserted_mask.is_none() || report.asserted_manufacturer.is_none());
+    if !report.complete {
+        return stop.is_none()
+            && (!assertion_missing || report.items.iter().all(|item| item.attempted_at.is_none()));
+    }
+    if assertion_missing {
+        return report.items.iter().all(|item| item.attempted_at.is_none())
+            && stop == Some("identity-assertion-missing");
+    }
+    if attempted == 0 {
+        return stop.is_some_and(|reason| {
+            let collector_reason = matches!(
+                reason,
+                "cancelled"
+                    | "deadline"
+                    | "timeout"
+                    | "connection-lost"
+                    | "connect-rejected"
+                    | "self-addressed"
+                    | "event-loss"
+                    | "transport-error"
+            );
+            let identity_application_reason = memory_identity_admitted.is_none()
+                && matches!(
+                    reason,
+                    "gateway-busy"
+                        | "context-changed-before-connect"
+                        | "server-stopping"
+                        | "gateway-connect-failed"
+                        | "gateway-timeout"
+                );
+            collector_reason || identity_application_reason
+        });
+    }
+    for (item, query) in report.items[..attempted].iter().zip([
+        Query::Descriptor,
+        Query::Manufacturer,
+        Query::HardwareType,
+    ]) {
+        if item.status == "error" {
+            return item.error.as_deref().is_some_and(|reason| {
+                (identity_read_failure(reason) || reason == "response-size-limit-raw-not-retained")
+                    && stop == Some(reason)
+            });
+        }
+        if query == Query::Descriptor && item.status != "read" {
+            return stop == Some("descriptor-unverified");
+        }
+        let asserted = match query {
+            Query::Descriptor => report.asserted_mask,
+            Query::Manufacturer => report.asserted_manufacturer,
+            Query::HardwareType => None,
+        };
+        if item.status == "read"
+            && item
+                .bytes
+                .as_slice()
+                .try_into()
+                .ok()
+                .map(u16::from_be_bytes)
+                != asserted
+            && asserted.is_some()
+        {
+            return stop == Some("identity-mismatch");
+        }
+    }
+    if attempted != report.items.len() {
+        return stop == Some("cancelled");
+    }
+    match memory_identity_admitted {
+        Some(false) if report.items.iter().any(|item| item.status != "read") => {
+            stop == Some("identity-unverified")
+        }
+        Some(false) => stop == Some("identity-mismatch"),
+        Some(true) => stop == Some("cancelled"),
+        None => stop.is_none_or(|reason| reason == TUNNEL_DISCONNECT_UNCONFIRMED),
+    }
 }
 /// Whether `identity_reads` goes on after this completed item: never after
 /// an error or a read contradicting its assertion, and after the descriptor

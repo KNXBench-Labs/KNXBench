@@ -1,10 +1,14 @@
 # Restart snapshot
 
-Updated: 2026-10-24 23:35 CEST. Operational snapshot, not an append-only journal.
+Updated: 2026-10-25 00:30 CEST. Operational snapshot, not an append-only journal.
 
 ## Current assignment and authority
 
-- Owner authorised compact-handover integration, commit and push; no product implementation is started by this task.
+- Diagnostics-tab P2 pending-start cleanup corrected on `feat/device-diagnostics-entry-20261024`: late running starts cancel their own token; newer jobs, revision retention and partial export are covered. No push/merge or full package gate authorised.
+- Original-source RED: late running Start was not cancelled after device change (6 passed, 1 failed). GREEN: 21 focused tests; full Vitest 4306/4306 across 296 files; build and all fixture typechecks passed; targeted device-editor browser 14/14 (no exclusive cases).
+- Docs/local-info/headers and whitespace checks passed; runtime inputs frozen in the targeted receipt. Next: parent rereview and package integration; no independent-review approval claimed here.
+- Evidence: `<profile-scratch>/diagnostics-p2-correction-20261025/`; no consent, backend or real-bus changes.
+- Earlier compact-handover integration authority is historical; its saved-project closeout remains separately owned.
 - The earlier general stop was lifted by the owner (latest upstream record, 23:20); historical STOP entries are not current authority.
 - No real bus/device operations, vendor contact, Ollama/model downloads, Fable/Astra or release/deployment authorised. The globally excluded device remains completely off-limits.
 - Prefer Claude delegation to spare Codex budget; no forced model alternation.

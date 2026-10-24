@@ -45,7 +45,10 @@ export function DiagnosticExportDialog({project,initialDevice,close}:{project:Pr
     const next=await api.previewDiagnostics(device,checked.endpoint,{serverIncarnation:project.server_incarnation,projectIncarnation:project.project_incarnation,revision:project.snapshot_revision});
     if(mounted.current&&epoch.current===version){setView(next);setReviewContext(contextKey);setReadConsent(false);setShareConsent(false);setSaved(false);}
    }else if(kind==="start"){
-    if(!view||!readConsent||stale)return;const next=await api.startDiagnostics(view.token);if(mounted.current&&epoch.current===version){setView(next);setReadConsent(false);setShareConsent(false);}
+    if(!view||!readConsent||stale)return;const next=await api.startDiagnostics(view.token);
+    if(mounted.current&&epoch.current===version){setView(next);setReadConsent(false);setShareConsent(false);}
+    // Cleanup may run before Start returns, while the displayed view is still a preview.
+    else if(next.phase==="running")void api.cancelDiagnostics(next.token).catch(()=>{});
    }else if(kind==="cancel"){
     if(!view)return;const next=await api.cancelDiagnostics(view.token);if(mounted.current&&epoch.current===version)setView(next);
    }else{

@@ -389,6 +389,7 @@ class GatePlan(unittest.TestCase):
             marker = root / 'descendant.pid'
             descendant = (f'import os,signal,time;from pathlib import Path;'
                           f'signal.signal(signal.SIGTERM,signal.SIG_IGN);'
+                          f'Path({str(marker)!r}).touch();time.sleep(0.25);'
                           f'Path({str(marker)!r}).write_text(str(os.getpid()));time.sleep(60)')
             child = f'import subprocess,sys,time;subprocess.Popen([sys.executable,"-c",{descendant!r}]);time.sleep(60)'
             program = ('import signal,sys;from pathlib import Path;'
@@ -402,10 +403,15 @@ class GatePlan(unittest.TestCase):
             grandchild = None
             try:
                 deadline = time.monotonic() + 5
-                while not marker.exists() and time.monotonic() < deadline:
+                while time.monotonic() < deadline:
+                    try:
+                        grandchild = int(marker.read_text())
+                        break
+                    except (OSError, ValueError):
+                        pass
                     time.sleep(0.01)
-                self.assertTrue(marker.exists())
-                grandchild = int(marker.read_text())
+                self.assertIsNotNone(grandchild, 'descendant did not publish a complete PID')
+                self.assertGreater(grandchild, 1)
                 parent.send_signal(signal.SIGTERM)
                 parent.wait(timeout=5)
                 deadline = time.monotonic() + 2

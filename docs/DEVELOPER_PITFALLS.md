@@ -139,6 +139,10 @@ already found lying in the grass.
   supervisor may act on the receipt the moment the PID appears; a signal in the
   gap between writing it and entering `try` orphans the child's whole session
   (`web_gate_support.MeasuredRun.step`, fixed 17 October 2026).
+- **File existence does not mean a child-written marker is complete.**
+  `Path.write_text` creates the file before writing its content. Publish with a
+  same-directory temporary plus `os.replace`, or make the bounded reader retry
+  both the read and parse before it acts on the marker.
 - **A Python test child that waits for a signal must block it and take it
   with `sigtimedwait`.** On CPython 3.14.7 a pending handler does not run when
   a keyword call returns: in `os.system(command=f'kill -TERM {os.getpid()}')`

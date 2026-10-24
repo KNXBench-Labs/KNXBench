@@ -1053,7 +1053,9 @@ Open, each small and none blocking:
   `test_sigterm_also_cleans_descendants_that_ignore_termination` read an empty
   descendant PID once in 51 loaded suite runs (24 October 2026): the
   descendant's `write_text` creates the marker before writing it, and the test
-  polls only for existence.
+  polls only for existence. **Closed (24 October 2026):** the regression now
+  creates the empty-file window deliberately and waits for a complete,
+  parseable PID before interrupting the gate runner.
 - A package gate stopped with SIGTERM during its browser stages leaves the
   fixture Vite server (`npm exec vite --config vite.fixtures.config.ts` and its
   `node` child) running, reparented to the user's systemd (seen three times on

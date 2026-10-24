@@ -9,6 +9,7 @@ use std::{io, io::Read, path::PathBuf};
 pub(super) struct Observation(Mutex<Snapshot>);
 #[derive(Default)]
 struct Snapshot {
+    kind: Option<&'static str>,
     started: Option<std::time::Instant>,
     executor_entry: Option<std::time::Duration>,
     first_memory_read_entry: Option<std::time::Duration>,
@@ -46,9 +47,36 @@ impl Observation {
         });
         self.update(|s| {
             *s = Snapshot {
+                kind: Some("download"),
                 started: Some(started),
                 phase: Some("worker-entered"),
                 preparation: Some(value),
+                ..Default::default()
+            }
+        });
+    }
+    pub(super) fn begin_recovery(
+        &self,
+        bundle: &knx_app::property_validation_bundle::PreparedBundle,
+        store: &knx_app::property_validation::OperationStore,
+        operation: &str,
+        incarnation: &str,
+    ) {
+        let started = std::time::Instant::now();
+        let mut binding = recovery_binding(bundle, operation);
+        binding["storeBindingMatchesOriginal"] = (store.binding() == &bundle.binding).into();
+        binding["storeRecoveryBundleMatchesOriginal"] =
+            json!(store.recovery().map(|r| r.original_bundle == *bundle));
+        binding["serverIncarnationSha256"] =
+            knx_productdb::sha256_hex(incarnation.as_bytes()).into();
+        // Same operation ID as download, but a different actual worker. Reset
+        // every cached phase/error/progress/read/terminal clock at its entry.
+        self.update(|s| {
+            *s = Snapshot {
+                kind: Some("recovery"),
+                started: Some(started),
+                phase: Some("worker-entered"),
+                preparation: Some(binding),
                 ..Default::default()
             }
         });
@@ -110,23 +138,26 @@ impl Observation {
         };
         self.failure(phase, class, kind);
     }
-    fn snapshot(&self, operation: &str) -> Value {
+    fn snapshot(&self, operation: &str, include_test_offset: bool) -> Value {
         match self.0.try_lock() {
             Ok(s) => json!({
+                "workerKind": s.kind,
                 "phase": s.phase,
                 "firstFailure": s.failure.map(|(phase, class, kind)| json!({"phase":phase,"class":class,"ioKind":kind.map(|k| format!("{k:?}"))})),
-                "workerPreparation": s.preparation,
-                "preparationMatchesFinalOperation": s.preparation.as_ref().map(|p| p["operationSha256"] == knx_productdb::sha256_hex(operation.as_bytes())),
+                "workerPreparation": s.preparation.as_ref().filter(|_| s.kind == Some("download")),
+                "workerRecovery": s.preparation.as_ref().filter(|_| s.kind == Some("recovery")),
+                "preparationMatchesFinalOperation": s.preparation.as_ref().filter(|_| s.kind == Some("download")).map(|p| p["operationSha256"] == knx_productdb::sha256_hex(operation.as_bytes())),
                 "lastSendBoundaryProgress": s.progress,
                 "readTiming": {
                     "elapsedSinceWorkerEntryMicros": s.started.map(|start| start.elapsed().as_micros()),
                     "executorEntryElapsedMicros": s.executor_entry.map(|d| d.as_micros()),
+                    "elapsedSinceExecutorEntryMicros": s.executor_entry.and_then(|entry| s.started.map(|start| start.elapsed().saturating_sub(entry).as_micros())),
                     "firstObservedMemoryReadEntryElapsedMicros": s.first_memory_read_entry.map(|d| d.as_micros()),
                     "currentReadEntryElapsedMicros": s.current_read.and_then(|r| s.started.map(|start| r.entered_at.saturating_duration_since(start).as_micros())),
                     "elapsedSinceCurrentReadEntryMicros": s.current_read.map(|r| r.entered_at.elapsed().as_micros()),
                     "lastBoundaryElapsedMicros": s.read_observed.map(|d| d.as_micros()),
                     "currentRead": s.current_read.map(|r| json!({
-                        "testOffset": r.offset, "count": r.count,
+                        "testOffset": if include_test_offset { Some(r.offset) } else { None }, "count": r.count,
                         "requestSequence": r.request_seq, "expectedReceiveSequence": r.expected_receive_seq,
                         "lastReceivedSequence": r.received_seq, "attempts": r.attempts,
                         "answerSlices": r.answer_slices, "ackSeen": r.acknowledged,
@@ -146,6 +177,30 @@ fn progress_view(p: &OperationProgress) -> Value {
     json!({"outcome":p.outcome,"completedSteps":p.completed_steps,"totalSteps":p.total_steps,
         "backupAvailable":p.backup_available,"restoreAvailable":p.restore_available,"mutationPossible":p.mutation_possible})
 }
+fn json_sha256(value: &impl serde::Serialize) -> Option<String> {
+    serde_json::to_value(value)
+        .and_then(|v| serde_json::to_vec(&v))
+        .ok()
+        .map(|bytes| knx_productdb::sha256_hex(&bytes))
+}
+fn recovery_binding(
+    bundle: &knx_app::property_validation_bundle::PreparedBundle,
+    operation: &str,
+) -> Value {
+    // Project only already-validated original identities; no plan/preconditions,
+    // source reconstruction, or serialization of payloads into the artifact.
+    json!({
+        "operationSha256":knx_productdb::sha256_hex(operation.as_bytes()),
+        "originalBindingSha256":json_sha256(&bundle.binding),
+        "planSha256":bundle.binding.plan_sha256,
+        "hardwarePreparationSha256":bundle.binding.project_preparation_sha256,
+        "configurationSha256":bundle.hardware_preparation.as_ref().map(|p| &p.source_preparation_sha256),
+        "sourceOperationMatches":bundle.hardware_preparation.as_ref().map(|p| p.operation == operation),
+        "requestSha256":bundle.project_preparation.as_ref().and_then(|p| json_sha256(&p.request)),
+        "sourceBindingMatches":bundle.project_preparation.as_ref().map(|p| p.source_sha256 == bundle.binding.source_sha256 && p.plan_sha256 == bundle.binding.plan_sha256),
+        "originalFormat":bundle.format,"originalHardwareBinding":!bundle.binding.simulated,
+    })
+}
 fn service_view(state: &SharedState, operation: &str) -> Value {
     let Ok(inner) = state.device_system2.inner.try_lock() else {
         return json!({"unavailable":"service-lock-busy-or-poisoned"});
@@ -158,6 +213,7 @@ fn service_view(state: &SharedState, operation: &str) -> Value {
     // the attached stream's latest value is explicitly unavailable here.
     json!({
         "operationMatches": record.metadata.operation_id == operation,
+        "recoveryControlMatches": record.control_id == format!("{operation}-restore"),
         "taskPresent":record.task.is_some(),
         "taskFinished":record.task.as_ref().map(JoinHandle::is_finished),
         "progressAttached":record.updates.is_some(),
@@ -290,7 +346,7 @@ fn journal_view(operation: &Path, expected: &JournalBinding) -> io::Result<Value
     }
     let current_head = bounded_read(&directory.join("HEAD"), 4096)?;
     Ok(
-        json!({"committedSequence":head.sequence,"grammarAndHashChainVerified":true,
+        json!({"committedSequence":head.sequence,"committedSha256":head.sha256,"grammarAndHashChainVerified":true,
         "fullProtocolReplayPerformed":false,"headChangedDuringRead":current_head != bytes,
         "lastCheckpoint":last_kind,"lastStepIndex":last_index,"terminalFailureCode":failure,
         "recoveryAcquiredCount":recovery_count,"committedRecoveryAcquired":recovery_count == 1}),
@@ -360,7 +416,7 @@ pub(super) fn retain_timeout(
             "finalPreparation":{"operationMatches":final_preview["preparationId"].as_str() == Some(operation),
                 "bindingSha256":knx_productdb::sha256_hex(&binding),
                 "configurationSha256":final_preview["configurationSha256"],"planSha256":final_preview["planSha256"]},
-            "worker":owner.snapshot(operation),"service":service_view(state,operation),"transport":transport,"evidence":evidence_view(data,operation)});
+            "worker":owner.snapshot(operation, true),"service":service_view(state,operation),"transport":transport,"evidence":evidence_view(data,operation)});
         let bytes = serde_json::to_vec_pretty(&value).map_err(io::Error::other)?;
         if bytes.len() > 16 * 1024 {
             return Err(invalid());
@@ -379,5 +435,91 @@ pub(super) fn retain_timeout(
     // Never replace the original timeout panic, even if evidence is unavailable.
     if let Err(error) = result {
         eprintln!("R1 timeout snapshot unavailable: {:?}", error.kind());
+    }
+}
+
+pub(super) fn retain_recovery_timeout(
+    state: &SharedState,
+    owner: &Observation,
+    data: &Path,
+    operation: &str,
+    original: &knx_app::property_validation_bundle::PreparedBundle,
+    admission: (&Value, &Value),
+    transport: Value,
+) {
+    let Some(directory) = std::env::var_os("KNXBENCH_MOUNTED_ACCEPTANCE_DIAGNOSTICS") else {
+        return;
+    };
+    let result = (|| -> io::Result<()> {
+        let canonical = PathBuf::from(directory).canonicalize()?;
+        if canonical.starts_with(data.canonicalize()?)
+            || !canonical.is_dir()
+            || !dto::valid_id(operation)
+        {
+            return Err(invalid());
+        }
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            if canonical.metadata()?.permissions().mode() & 0o077 != 0 {
+                return Err(invalid());
+            }
+        }
+        // Suppress memory offsets even if a missed best-effort reset leaves a
+        // stale DOWNLOAD snapshot. Its kind/incarnation mismatches stay visible.
+        let worker = owner.snapshot(operation, false);
+        let original_binding = recovery_binding(original, operation);
+        let (before, accepted) = admission;
+        let root = data.join(storage::ROOT_NAME);
+        let selected = bounded_read(&root.join("selected"), 32);
+        // The fixture already read/validated this exact ORIGINAL at reopen. Pin
+        // its committed journal prefix without reopening a writer or bundle.
+        let journal = journal_view(&root.join(operation), &original.binding);
+        let value = json!({
+            "schemaVersion":1,"trigger":"accepted-original-recovery-worker-timeout","budgetSeconds":10,
+            "original":original_binding,
+            "admission":{
+                "preRecoveryOperationMatches":before["operationId"].as_str() == Some(operation),
+                "acceptedOperationMatches":accepted["operationId"].as_str() == Some(operation),
+                "preRecoveryBindingSha256":json_sha256(&before["binding"]),
+                "acceptedBindingSha256":json_sha256(&accepted["binding"]),
+                "acceptedBindingMatchesPreRecovery":accepted["binding"] == before["binding"],
+                "acceptedRestoring":accepted["state"] == "restoring",
+            },
+            "observerMatchesFreshService":state.device_system2.observation.as_deref().is_some_and(|o| std::ptr::eq(o, owner)),
+            "workerKindMatchesRecovery":worker["workerKind"] == "recovery",
+            "workerOperationMatches":worker["workerRecovery"]["operationSha256"] == knx_productdb::sha256_hex(operation.as_bytes()),
+            "workerOriginalBindingMatches":worker["workerRecovery"]["originalBindingSha256"] == original_binding["originalBindingSha256"],
+            "workerRequestMatchesOriginal":original_binding["requestSha256"].as_str().is_some_and(|hash| worker["workerRecovery"]["requestSha256"].as_str() == Some(hash)),
+            "workerConfigurationMatchesOriginal":original_binding["configurationSha256"].as_str().is_some_and(|hash| worker["workerRecovery"]["configurationSha256"].as_str() == Some(hash)),
+            "workerMatchesFreshIncarnation":worker["workerRecovery"]["serverIncarnationSha256"] == knx_productdb::sha256_hex(state.server_incarnation.as_bytes()),
+            "worker":worker,"service":service_view(state,operation),"transport":transport,
+            "progressSampling":"cached-at-send-boundaries; latest-stream-unavailable-without-blocking-borrow",
+            "evidence":{
+                "selection":outcome(&selected),"selectedOperationMatches":selected.as_ref().ok().map(|b| b == operation.as_bytes()),
+                "journal":match journal { Ok(v) => v, Err(e) => outcome::<()>(&Err(e)) },
+                "originalBindingSource":"fixture-pre-recovery-validated-bundle; no-bundle-reopen-or-semantic-replay",
+            },
+        });
+        let bytes = serde_json::to_vec_pretty(&value).map_err(io::Error::other)?;
+        if bytes.len() > 16 * 1024 {
+            return Err(invalid());
+        }
+        let mut options = std::fs::OpenOptions::new();
+        options.write(true).create_new(true);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            options.mode(0o600);
+        }
+        let mut file = options.open(canonical.join("r1-recovery-worker-timeout.json"))?;
+        std::io::Write::write_all(&mut file, &bytes)?;
+        Ok(())
+    })();
+    if let Err(error) = result {
+        eprintln!(
+            "R1 recovery timeout snapshot unavailable: {:?}",
+            error.kind()
+        );
     }
 }

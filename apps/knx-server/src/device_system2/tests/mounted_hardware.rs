@@ -568,7 +568,15 @@ fn start(preview: &Value) -> Value {
     })
 }
 async fn settled(state: &crate::SharedState, router: &Router, outcome: &str) -> Value {
-    tokio::time::timeout(Duration::from_secs(10), async {
+    settled_with_timeout(state, router, outcome, || {}).await
+}
+async fn settled_with_timeout(
+    state: &crate::SharedState,
+    router: &Router,
+    outcome: &str,
+    on_timeout: impl FnOnce(),
+) -> Value {
+    let result = tokio::time::timeout(Duration::from_secs(10), async {
         loop {
             let finished = state
                 .device_system2
@@ -585,8 +593,11 @@ async fn settled(state: &crate::SharedState, router: &Router, outcome: &str) -> 
             tokio::task::yield_now().await;
         }
     })
-    .await
-    .expect("actual mounted worker must finish and disconnect");
+    .await;
+    if result.is_err() {
+        on_timeout();
+    }
+    result.expect("actual mounted worker must finish and disconnect");
     state.device_system2.join_finished().await;
     let status = http(router, "/api/device-system2/status", None, 200).await;
     assert_eq!(status["state"], outcome);
@@ -937,6 +948,9 @@ async fn pinned_public_http_worker_cancellation_reopens_original_once_only_recov
     );
     assert_eq!(hardware.connects.load(Ordering::SeqCst), 2);
     assert_eq!(hardware.device.system2_snapshot(), interrupted);
+    // Fixture-wide counters include the wrong-identity control and download.
+    // Keep their pre-correct-recovery baseline, never label them recovery-only.
+    let recovery_transport_baseline = hardware.transport_snapshot();
     let restoring = http(
         &router,
         "/api/device-system2/recover",
@@ -945,7 +959,25 @@ async fn pinned_public_http_worker_cancellation_reopens_original_once_only_recov
     )
     .await;
     assert_eq!(restoring["operationId"], operation_id);
-    let restored = settled(&fresh, &router, "restored").await;
+    let restored = settled_with_timeout(&fresh, &router, "restored", || {
+        super::super::test_observation::retain_recovery_timeout(
+            &fresh,
+            &hardware.observation,
+            directory.path(),
+            &operation_id,
+            &bundle,
+            (&status, &restoring),
+            json!({
+                "counterScope":"cumulative-fixture; not-recovery-only",
+                "baselineBoundary":"before-correct-recovery-http-admission",
+                "baseline":recovery_transport_baseline,
+                "atTimeout":hardware.transport_snapshot(),
+                "firstDataWritePauseArmed":hardware.pause_data_write.load(Ordering::SeqCst),
+                "bestEffortNonAtomicObservation":true,
+            }),
+        );
+    })
+    .await;
     assert_eq!(restored["backupAvailable"], true);
     assert!(restored["recoveryPhrase"].is_null());
     assert_eq!(hardware.device.system2_snapshot(), hardware.old);

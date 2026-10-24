@@ -133,8 +133,8 @@ impl ManagementTransport for Transport<'_> {
         &self,
         snapshot: impl FnOnce() -> knx_net::management::MemoryReadObservation,
     ) {
-        // Only the actual download executor bridge opts in. Read-only identity
-        // observation and original recovery use the default inert path.
+        // Only the actual download/recovery executor bridge opts in. Read-only
+        // initial identity observation remains inert.
         if self.writes.is_some() {
             if let Some(observer) = self.observation {
                 observer.memory_read(snapshot());
@@ -193,7 +193,13 @@ fn cross_process(state: &crate::AppState) -> Result<std::fs::File, ApiError> {
         Some(dir) => knx_app::device_diagnostics::lease_in(dir),
         None => knx_app::device_diagnostics::gateway_lease(),
     }
-    .map_err(|_| refuse("gatewayBusy"))
+    .map_err(|_error| {
+        observe!(
+            state,
+            failure("cross-process-lease", "io", Some(_error.kind()))
+        );
+        refuse("gatewayBusy")
+    })
 }
 struct Activity {
     guard: Mutex<Option<DownloadGuard>>,
@@ -519,40 +525,82 @@ pub(super) async fn recover(
     lease: System2OperationLease,
 ) {
     let id = body.operation_id.clone();
+    observe!(
+        state,
+        begin_recovery(&bundle, &store, &id, &state.server_incarnation)
+    );
+    #[cfg(test)]
+    let observation = state.device_system2.observation.clone();
     let cancel = lease.cancel_token();
     let result = async {
-        let _guards = reserve(&state)?;
-        let _cross_process = cross_process(&state)?;
-        let activity = activity(&state, &bundle.binding.target)?;
+        observe!(state, phase("reservation"));
+        let _guards = reserve(&state).inspect_err(|_| {
+            observe!(state, failure("reservation", "reservation-refused", None));
+        })?;
+        observe!(state, phase("cross-process-lease"));
+        let _cross_process = cross_process(&state).inspect_err(|_| {
+            observe!(state, failure("cross-process-lease", "lease-refused", None));
+        })?;
+        observe!(state, phase("activity"));
+        let activity = activity(&state, &bundle.binding.target).inspect_err(|_| {
+            observe!(state, failure("activity", "activity-refused", None));
+        })?;
         let storage = root.clone();
         let selected = id.clone();
+        #[cfg(test)]
+        let copy = state.clone();
+        observe!(state, phase("select-and-claim"));
         if let Err(e) = blocking(move || {
-            storage
-                .select(&selected)
-                .map_err(|_| refuse("system2EvidenceUnavailable"))?;
-            storage
-                .claim_recovery(&selected)
-                .map_err(|_| refuse("system2RecoveryConsumed"))
+            observe!(copy, phase("select-original"));
+            storage.select(&selected).map_err(|_error| {
+                observe!(copy, failure("select-original", "io", Some(_error.kind())));
+                refuse("system2EvidenceUnavailable")
+            })?;
+            observe!(copy, phase("claim-recovery"));
+            storage.claim_recovery(&selected).map_err(|_error| {
+                observe!(copy, failure("claim-recovery", "io", Some(_error.kind())));
+                refuse("system2RecoveryConsumed")
+            })
         })
         .await
         {
+            observe!(
+                state,
+                failure("select-and-claim", "blocking-or-evidence-refused", None)
+            );
+            observe!(state, phase("activity-finish"));
             finish_activity(activity, false, false);
             return Err(e);
         }
+        observe!(state, phase("admission-recheck"));
         if cancel.load(Ordering::SeqCst) || state.stop_admission.admit().is_err() {
+            observe!(
+                state,
+                failure("admission-recheck", "cancelled-or-admission-closed", None)
+            );
+            observe!(state, phase("activity-finish"));
             finish_activity(activity, false, false);
             return Err(refuse("system2Cancelled"));
         }
+        observe!(state, phase("connector"));
         let tunnel = match state.connector.connect_tunnel(gateway).await {
             Ok(t) => t,
-            Err(_) => {
+            Err(_error) => {
+                observe!(state, session_failure("connector", &_error));
+                observe!(state, phase("activity-finish"));
                 finish_activity(activity, false, false);
                 return Err(refuse("system2ConnectFailed"));
             }
         };
+        observe!(state, phase("progress-attachment"));
         let updates = store.subscribe_progress();
         state.device_system2.publish_progress(&id, updates.clone());
+        observe!(state, phase("executor"));
         let result = if tunnel.diagnostics_are_simulated() {
+            observe!(
+                state,
+                failure("executor", "simulated-transport-refused", None)
+            );
             Err(std::io::Error::other(
                 "physical recovery requires an actual hardware transport",
             ))
@@ -562,7 +610,7 @@ pub(super) async fn recover(
                     tunnel: tunnel.as_ref(),
                     writes: Some((&activity, updates)),
                     #[cfg(test)]
-                    observation: None,
+                    observation: observation.as_deref(),
                 },
                 &bundle,
                 &mut store,
@@ -572,20 +620,45 @@ pub(super) async fn recover(
             )
             .await
         };
-        let clean = tunnel.disconnect().await.is_ok();
+        #[cfg(test)]
+        if let Err(error) = &result {
+            observe!(state, failure("executor", "io", Some(error.kind())));
+        }
+        observe!(state, phase("disconnect"));
+        let clean = tunnel
+            .disconnect()
+            .await
+            .inspect_err(|_error| {
+                observe!(state, session_failure("disconnect", _error));
+            })
+            .is_ok();
+        observe!(state, phase("activity-finish"));
         finish_activity(activity, result.is_ok(), clean);
         Ok::<_, ApiError>(clean)
     }
     .await;
+    #[cfg(test)]
+    if result.is_err() {
+        observe!(state, failure("worker-result", "api-refused", None));
+    }
+    observe!(state, phase("end-publication"));
     let outcome = terminal(&store);
     state.device_system2.publish_end(&id, outcome, if matches!(result, Ok(true)) { None } else { Some("Recovery did not complete with confirmed teardown; inspect the original retained operation. No automatic retry.") });
     // Release original store/bundle ownership only AFTER actual IP teardown.
     // Immutable evidence stays on disk; no timeout/HTTP/component can erase it.
+    observe!(state, phase("release-original-ownership"));
     drop(store);
     drop(bundle);
     drop(root);
     // The store's original durable outcome, not an inferred rollback, settles.
+    observe!(state, phase("settlement"));
     if !matches!(result, Ok(false)) {
-        let _ = lease.settle(outcome);
+        let _ = lease.settle(outcome).inspect_err(|_| {
+            observe!(
+                state,
+                failure("settlement", "lease-settlement-refused", None)
+            );
+        });
     }
+    observe!(state, terminal(outcome, matches!(result, Ok(true))));
 }

@@ -1,8 +1,11 @@
 # Alpha 16: configured experimental System-2 download
 
-Status: shared App/CLI implementation; final integrated acceptance belongs to the
-Alpha 16 candidate. UI/server adapters are separate consumers, not implemented by
-this contract. **Experimental, software-tested; hardware outcome unverified.**
+Status, 24 October 2026: shared App/CLI implementation and separate mounted UI/HTTP
+consumers have bounded software acceptance in the
+[current release matrix](../goals/alpha16-release-plan-2026-10-23.md#current-acceptance-disposition--24-october-2026),
+including final original-state TestHardware recovery/once-only/restart assertions.
+Dated slice evidence below retains its original scope; overall release remains
+pending. **Experimental, software-tested; hardware outcome unverified.**
 No live-device compatibility, ETS equivalence or physical recovery guarantee.
 
 ## Admission and source boundary

@@ -420,6 +420,405 @@ satisfies stated size/member limits; no install/resource outcome inferred.
 Private path/hash retained only in large-input-admission.json. No test campaign
 or publication; execute only missing proofs after source closure.
 
+## Successor packaging and finite existing residue launched
+
+Committed3e0271c3 contains exact Docker allowlist and handover checkpoint after
+new test-only additions. Production runtime unchanged from accepted14c9214b.
+Delegation29b4805d now owns corrected maintained container build/smoke and only
+already-defined audited R4-R6 residue. No full gate/AppImage/MCP/default browser
+or155-case corpus repeats. New R1-R3 await source review78b07913. All workers bind
+same frozen HEAD, metadata-only notes allowed. Matrix/pinned-input blockers must
+remain explicit rather than weaken isolation/pins. No publication/hardware.
+
+## Independent mounted-proof review blockers
+
+Review78b07913 binds3e0271c3 and reports three source-level blockers, not runtime
+failures: wrong Arc owner where connector requires Box, missing explicit bounded
+catalogue owner drain in System2/recomparison harnesses, and missing line-one
+System2 module header. Other source-path fidelity and exact Docker exception
+accepted source-only. Isolated correction90e535a owns the two test files, no
+execution. Active integration source remains frozen for packaging/residue;
+residue worker steered away from known failing test-target compilation until
+corrected successor. No production change or historical gate9 invalidation
+claimed; new assertions still uncompiled/unrun.
+
+## Corrected mounted proofs admitted to narrow execution
+
+Parent read82b625dd actual two-file diff and source handoff: exact F1-F3 closure,
+no production changes or assertion weakening. Integration remains3e0271c3 for
+frozen residue consumers. Three new scenarios dispatched0afbf06a in corrected
+isolated worktree with separate target and pinned input prerequisites; no broad
+suite replay authorised. Residue owner informed corrected worktree may supply
+remaining opt-in compilation under separate target, never duplicate R1-R3. New
+runtime outcomes remain pending; no source-only result called a passing test.
+
+## Residue launcher notification triaged
+
+Original launcher exit1 is an exact discovered-name-set assertion in private
+runner before the corresponding test invocation, not a demonstrated product
+assertion. Current partial progress reports first three Rust lanes accepted
+(6+3+1 cases) and dynamic-tree active; final result/guards not yet closed.
+Owning worker remains active, informed to retain original launcher/discovery
+failure and reconcile exact expected/discovered identities, never replay passing
+lanes. Parent starts no competing runner. Mounted R1-R3 remains separate active
+ownership; no full-gate rerun or new source edits.
+
+## Mounted runtime failures, wrapper success not acceptance
+
+Parent read exact R1/R2 failure JSON and R3 stdout/stderr after launcher exit0.
+R1 fails positive prepared parameter-value count before execution/recovery; R2
+fails real independently readable byte-row selection before adoption/undo; R3
+hits finite1800-second watchdog. All three new scenarios remain unsuccessful;
+no fixture-only or production-only root cause asserted. Owner directed to retain
+all outputs, close source/input/user-data guards and capture existing disk state
+without reruns, timeout increases, invented responses or source changes. Final
+handoff pending. Historical gate9 is not substituted for these failed criteria.
+
+## Residue resume notification remains partial
+
+Resume wrapper exited0 with empty log; partial progress lists five accepted Rust
+lanes (6+3+1+6+1 cases), completefalse and waiting lease. Parent read projection,
+not final validation; owning worker continues finite missing lanes and guards.
+No repeats of17 passing cases or competing runner. New mounted R1-R3 failures
+remain independent blockers, never substituted by passing older opt-ins.
+
+## Final mounted failure closure and source-only diagnosis
+
+Final owning handoff: compile succeeded once; exactly three cases ran once,
+all failed101. Source/input and user-data guards closed unchanged. No Large
+last DTO available, success-only measurement absent; instantaneous disk samples
+not interpreted as phase or peaks. Read-only diagnosis delegatedfdce3ba9 split
+R1/R2 configured source/predicate contracts from R3 Ready/supervisor chain.
+No execution, timeout increase, source edit or failure waiver authorised.
+Historical gate9 remains separate and release stays blocked.
+
+## Maintained container and residue closed; correction imported
+
+Parent verifies maintained amd64 tar exact hash/size and reads final receipts.
+Docker packaging blocker closed for amd64 only; original removal-message wrapper
+refusal retained/reconciled without smoke repeat. Residue reports24/26 opt-ins,
+support4, diagnostics5 and native24 passed; two pinned directory-input cases
+blocked by no-copy boundary. Consumers finished; reviewed82b625dd test-only fix
+imported. Three new mounted failures still block acceptance; source diagnosis
+active. ARM64/multiarch absent, no publication or hardware claim. Exact artifact
+build revisions retained; no relabel of old binaries as latest successor.
+
+## Diagnosed setup contradictions and disposable transaction defect
+
+R1 exact preview count is explicit request values; newly created test project
+never configured one. R2 declaration address was correct but inactive under
+actual option-C selector; correction must preserve configured intent and use
+active admitted selection/stimulus. R3 definite D transaction-only caller defect
+in both rehearsals; live W transaction is distinct. Whole timeout causality not
+proved by retained evidence. Source corrections delegated183eeb18 in separate
+worktrees from288efd3c, no worker executions. Preserve source access distinction,
+unchanged watchdog, actual acceptance assertions and explicit D settlement/live
+W integrity. Review first, then only missing owning acceptance checks; historical
+passing artifacts remain source-bound, not successor acceptance.
+
+## Configured scenarios and D transaction corrections integrated for review
+
+Imported299eda23 and6b5f7f19 as separate focused changes. Both source-only;
+no compile/runtime outcome for successor. Independent reviewb32ac07c splits
+configured API/source/predicate corrections from production D transaction,
+settlement/unwind ownership and bounded Large diagnostics. Source frozen during
+review. Original failed criteria immutable; no timeout increase or speed claim.
+After closure only affected native regressions and three missing mounted proofs,
+not full green gate replay. Production correction means old built artifacts are
+historical, not relabelled successor artifacts. Two pinned-input/ARM64 gaps remain.
+
+## Review result: configured cases accepted; cleanup projection blocked
+
+Independent configured review accepts R1/R2 source corrections, not runtime.
+Transaction review identifies TX1 lost typed cleanup facts at production unwind
+catches and TX2 nested rollback failure ignored when native close succeeds.
+Actual D BEGIN/report ordering and diagnostics accepted statically. Focused
+correction85365a0a isolated from80a1ee05; no execution or broad redesign authorised.
+Retained owner must survive catches/projection drop, and cleanup signal must not
+be erased by successful close or primary cancellation. W/gate/backup semantics
+unchanged. Original failures/artifacts remain historical; release still blocked.
+
+## Cleanup owner/projection correction imported for rereview
+
+Imported059c1d60 at3bf1ab60, seven focused paths. Inventory now independently
+retains typed cleanup facts; facade/mounted classification sees closed-handle
+rollback failure without inventing W uncertainty. Three public-boundary methods
+cover eight source-declared scenarios, uncompiled/unrun. Rereview6994ece9 binds
+frozen source and exact TX1/TX2 closure before any execution. Original failure
+receipts/artifact identities remain immutable, no timeout/speedup claim. Selected
+root had a newer planning-only handover; preserved beneath this owner checkpoint.
+
+## Independent cleanup rereview accepted; minimal execution launched
+
+Rereview6994ece9 closes TX1/TX2 at source level on3bf1ab60. No runtime or speedup
+claim. Consolidated execution550a101f authorised for only owning rehearsal
+regressions and corrected R1/R2/R3 mounted cases on frozen successor, fresh target
+and diagnostic outputs. No full gate/R4-R6/default corpus/browser replay, retries,
+source changes or timeout increases. Actual pinned input and user-data/network
+read-only guards mandatory; final receipt distinguishes wrapper from acceptance.
+Artifact refresh waits for source/acceptance closure. Historical failures retained.
+
+## Successor campaign: native passes, production dependency compile blocked
+
+Terminal projection and raw native logs show13/13 selected ProductDB methods
+passed once. Server owning build fails101 in normal non-test ProductDB dependency
+(two compiler diagnostics in Cargo JSON stdout). New mounted R1/R2/R3 unexecuted,
+not failed runtime cases on this successor. Owner closing exact diagnostics and
+guards, no edits/retries or repeat native passes. Runtime source stays frozen
+pending handoff; no passing result substituted for mounted acceptance.
+
+## Ordinary dependency visibility fixed; mounted-only continuation
+
+Final campaign identifies twoE0425: production helper uses receipt reexport
+incorrectly cfg(test)-gated. Parent inspected and moved only RehearsalDestination
+to unconditional crate-private reexport, commita07c48ca; other test-only names
+remain gated, no logic/assertion changes.13 native passes preserved, not replayed.
+Continuation86bbcc86 owns real server build then only three previously unexecuted
+mounted scenarios under pinned inputs/guards/fresh diagnostics. No full gate,
+retry, timeout change or new packaging. Source frozen during continuation.
+
+## Mounted continuation: comparison and Large pass, System2 checkpoint fails
+
+Actual logs show R2 comparison/native undo passed and R3 Large passed in907.93s.
+R1 times out at first real data-write checkpoint, line721; no downstream recovery
+acceptance inferred. Overall continuation unsuccessful, final owner guard/handoff
+closure pending. No repeats of two passes or13 native regressions; remaining R1
+needs diagnosis from actual retained evidence after owner finishes. Old timeout
+causality/general capacity not established by one Large pass. No new execution,
+source change, artifact relabel or publication.
+
+## Final mounted closure and remaining System2 source diagnosis
+
+Final continuation confirms normal build and R2/R3 passes, R1 checkpoint timeout.
+All guard/process closure complete per owning receipt, no backup observation
+for R1 invented. Read-only diagnosise3f79c6e targets worker/prestate/transport/
+notification chain only, preserving actual checkpoint/recovery assertions. No
+runtime or source changes authorised; R2/R3 and13 native passes never replayed.
+Final scoped Large success does not imply universal capacity/performance.
+
+## R1 cause unresolved; bounded actual timeout observation authorised
+
+Source diagnosis finds no proved protocol/notification error and no retained final
+worker status/journal. Initial preparation hash is not final accepted operation
+identity. No semantic correction justified. Source-only observation47bb1302 adds
+fixed worker failure/phase and restricted final operation/transport/journal facts
+before timeout teardown, bounded private0600 output. Preserve10sec watchdog and
+all actual prestate/backup/cancel/recovery semantics. Review before single missing
+R1 replay; R2/R3/native passes untouched. No new execution or cause claim.
+
+## Bounded R1 observation imported; independent conditional execution
+
+Imported46ed0f9a as7ec42f21, four source paths. Source-only observation, no
+semantic/timing correction. Independent worker10c904b0 reviews safety/privacy/
+actual capture/API first; BLOCK stops, ACCEPT permits only owning lib build and
+single exact R1 under previous pinned input/isolation with fresh diagnostics.
+No other passing cases/full gate, retries or source edits. Root cause remains
+unproved until actual snapshot; stale/cached progress and journal-prefix limits
+must stay explicit. Original failures and historical artifact identities preserved.
+
+## Actual R1 snapshot narrows prestate-read investigation
+
+Independent instrumentation review accepted, owning lib built and single R1 failed.
+Actual snapshot shows unfinished executor, matching final bindings, last successful
+memory-read send, no mutations and no committed RecoveryAcquired in prefix seq3.
+No response/ack completion or root cause inferred. Source-only diagnosisc82a1225
+traces prestate extent/chunk/pacing and receive/ack/subscription chain; no new
+runtime/source edit. Existing R2/R3/native passes not replayed. Final guard closure
+retained with actual snapshot; historical failures remain immutable.
+
+## Prestate timing remains unknown; minimal actual-session marker scoped
+
+Source diagnosis derives1514 bytes/128 reads and finds seven synchronous plan
+reconstructions before first memory read, without measured contribution. No
+protocol/notification defect proved. Marker work5f02aa9e must reuse a narrow
+per-session/default-inert hook or stop rather than introduce broad diagnostics.
+Only actual exchange/await and executor/read timing in existing bounded snapshot;
+no tests/builds/semantic fix/timeout change. Original passes/failures preserved.
+
+## Actual-session marker integrated for independent conditional R1 run
+
+Importedb7192eaa as5eb544a0, four source paths/default-lazy transport hook. Whole
+fixture unchanged per source handoff; no compiler/runtime proof or cause claim.
+Independentb27fd7ee first reviews exact receiver/matcher/inertness/API/privacy;
+BLOCK stops, ACCEPT permits only lib build and exact R1once with fresh private
+snapshot and successor-bound verifier. No old verifier rewrite/other tests/
+retry/timeout increase. Historical outcomes/binaries retained before target reuse.
+
+## R1 actual timing distinguishes fresh read from exhausted earlier window
+
+Runner reports review ACCEPT/build PASS/single R1 FAIL. Actual read-marker
+snapshot places first memory read12.701s after worker entry, executor entry8.193s,
+latest read age98us. Current receive is fresh, not observed10second protocol stall.
+Owner directed to bind clock origin/waiter start/scheduling and compute deltas,
+close guards, no retry/source or timeout change. No claim of individual validation
+cost or final cause beyond observed boundaries; historical outcomes preserved.
+
+## Safe operation-local validated plan reuse scoped
+
+Final timing/guards accepted as evidence, R1 still failed. No measured protocol
+stall or individual validator attribution. Source-only workf0521dcd may remove
+repeated immutable plan reconstruction through exact operation-owned validated
+context, only while independent current-source/admission/consent and durable
+backup/recovery remain intact. No global cache or testbudget change; stop if
+ownership cannot support narrow reuse. Minimal source regressions/contract then
+independent review before any execution. Existing passes/failures immutable.
+
+## Operation-local plan reuse integrated for integrity review
+
+Imported64eccf0b as eb70833f; ninepaths including minimal unit regressions and
+mechanically shared synthetic fixture. Source-only, no compilation/runtime or
+speedup claim. Independent145babab reviews full validation equivalence, exact
+immutable bundle/exclusive fresh store, admission/consent and independent durable
+backup/recovery boundaries before any owning execution. Runtime/test frozen;
+no timeout changes/retries/previous passing-scope replay. Historical failures and
+artifact identities remain authoritative at their original revisions.
+
+## Operation-local reuse accepted; four owning checks launched
+
+Independent145babab source ACCEPT on eb70833f, no blockers. Full validator,
+immutable binding, fresh store, independent admission and durable recovery remain.
+Minimal executiondeb82974 authorised exactly two new unit regressions, affected
+configured-hardware integration and original R1 once. Frozen source/pinned input/
+maintained isolation and fresh diagnostics. No full gate/accepted R2R3/native13
+replay, retry or timeout increase. No performance/runtime claim before outcomes.
+
+## Four-check run advances R1 but fails later worker settlement
+
+Launcher reports3/4pass. Actual R1 stderr now helper589 called948, waiting actual
+worker finish/disconnect in later recovery flow, not previous data-write wait.
+Retained-request exists and timeout snapshot absent; stronger reached-state claims
+await final owner source/receipt/guard reconciliation. HOME/XDG warning requires
+exact test-env explanation, no assumption about user exposure. No retries/replay
+or competing diagnosis; all old failures preserved with distinct phase identity.
+
+## Exact-four final closure and recovery-only source diagnosis
+
+Final handoff confirms3passes and advanced R1: backup/readback, write, cancel,
+disconnect/reopen and accepted original recovery reached; worker finish timed out.
+Final restoration/onceonly unexecuted, no final recovery DTO captured. HOME/XDG
+warning is productsNone source wording, not actual missing-env evidence. Guards
+closed unchanged. Source-only diagnosis0675657d traces remaining recovery path,
+no new execution/edits/timing change, existing passes never replayed.
+
+## Recovery source diagnosis and bounded observer wiring
+
+Exact recovery phase/cause still unknown. Source proves repeated retained-source
+validation before connect/per-step, not its timeout contribution. No lock/Notify
+cycle established. Source-onlyba61bc1c wires existing fixture observer/reset kind
+into actual recovery and one bounded snapshot before unchanged settlement timeout.
+Capture avoids read_bundle/reconstruction/second writer/live watch. No semantic
+change, new tests/builds or timeout increase authorised; review first. Original
+passes/failures and backup/onceonly semantics preserved.
+
+## Recovery observation integrated for independent conditional single run
+
+Importedb5eb039c as f3acce743, threefiles. Source-only actual recovery reset/binding
+and prepanic bounded snapshot, no semantic/cause claim. Independentb50d8ea1
+reviews first; BLOCK stops, ACCEPT permits only owning lib compilation/exactR1
+once with fresh diagnostics/source-bound verifier and maintained isolation.
+No other passes/retries/timeoutraise or historical evidence rewrite. Await actual
+recovery phase before correction; all original safety assertions remain required.
+
+## Recovery observation launcher provenance-path failure
+
+Runner fails before any product launch on missing assumed prior binary identity
+filename. Actual zero executions, not R1/runtime failure. Owner informed to retain
+initialfailure, discover actual prior receipt binding schema and safely continue
+only authorised first build/single R1 without relaxing guards or fabricating file.
+No repository changes/competing run/old evidence rewrite; final closure pending.
+
+## Continuation build-provenance refusal before test execution
+
+Continuation still zeroexecutions: runner lacks fresh=false owning rebuild proof.
+Owner must retain exact Cargo/identity evidence and close guards; no forced source
+touch/rebuild or relaxed provenance. Cached same-source vs stale artifact requires
+actual records. User reports Claude available; keep active ownership to prevent
+duplicate work, consider Claude for next independent review. No product result
+or recovery snapshot inferred from launcher refusal.
+
+## Compiler diagnosis corrected; exact String observation fix
+
+Final owner provesE0599 String.kind, not cached artifact refusal. Zero tests ran;
+source-only priorACCEPT superseded. Parent inspected actual helper signatures and
+replaced only observer diagnostic with lease-refused/None, commit2efe40fa. No
+invented native ErrorKind or runtime/helper semantics change. User-requested
+available Claude review578b6eba now inspects actual source contracts independently,
+no product execution. SingleR1 awaits closure; old failures/passes immutable.
+
+## Actual Claude source acceptance; corrected single R1 launched
+
+Claude Code accepts corrected2efe40fa source-only. Exact source hashes unchanged;
+final broad metadata guard refusal retained rather than relabelled. Single owning
+build/R1d773dd0c now authorised with maintained isolation/fresh diagnostics, actual
+prior receipt schema and explicit parent metadata exclusions. No other tests,
+retry/timeoutraise/source edits or artifactbuilds. Original E0599/preflight failures
+remain immutable, no runtime recovery acceptance assumed from static verdict.
+
+## Actual recovery progress captured; narrow restoring plan reuse scoped
+
+Corrected build passes, single R1 fails with fresh recovery snapshot: executor
+running19.522s, journalstep15/26 sequence50, originalRecoveryAcquired retained,
+mutations and backupchecks advanced. No finalrestore/onceonly acceptance or exact
+cost claim. Source-only1397e6d0 removes proven per-step immutable reconstruction
+with restoring-aware callback, preserving independent validation/original-snapshot
+equality/durable barriers. No Net/timing/assertion changes or worker tests.
+Independent Claude review before minimal later execution; prior failures retained.
+
+## Restoring callback reuse integrated; Claude-first minimal checks scoped
+
+Importedcd27f3c5 as86b4a7fc,3files. Source-only restoring-aware immutableoriginalplan
+callback removes repeated per-step reconstruction, independent original validation/
+snapshotcomparison remains. No timingcause/speedup/pass claim. ActualClaude
+review6e1eb496 first; BLOCKstops, ACCEPTauthorises only2newAppregressions+exactR1
+once with maintainedisolation/freshdiagnostics.105assertions/10sec unchanged;
+oldpasses/binaries/failures preserved, no broadcampaign or artifactbuild.
+
+## Claude review blocked by actual OAuth expiration
+
+Actual CLI exits1 with OAuth expired/cannot refresh, not source verdict. Result
+subtype success is not ACCEPT. Owner told stop before all conditional product
+builds/tests, no auth/config edits/retries/provider fallback. User session renewal
+needed; exact failed receipt preserved and guard closure pending. Source86b4a7fc
+unchanged; no acceptance inference or passing-scope replay.
+
+## User-renewed Claude authentication; review resumed in fresh attempt
+
+User explicitly restored auth. Frozen86b4a7fc/no live workers verified; resumed
+900c859b uses new evidence directory without rewriting original authfailure.
+Actual authenticated Claude sourceACCEPT required before only two new recovery
+unit regressions and single R1. No oldpass replay/retry/timeoutincrease/sourceedit.
+Maintained isolation/input/binary/source guards; final recovery/onceonly acceptance
+not presumed. Artifact and remaining release gaps unchanged.
+
+## Final System2 proof closed; artifact and release-doc refresh launched
+
+AuthenticatedClaudeACCEPT and3of3passes at86b4a7fc sealed, R1 allfinal OLDstate/
+Restoredjournal/onceonly/restart/noadditionmutation reached overTestHardware.
+All source/input/user/history/binary guards closed and leasesreleased. Delegation
+c9ed7a12 refreshes localamd64 artifacts/minimalsmokes and scoped stale release/
+status/plan docs concurrently, runtimefrozen/docschangestracked. No sourcetest/
+fullgate replay. Parent artifacthash/docreview pending;2pinnedinputcriteria and
+ARM64platformdecision unresolved, no publication or physicalverificationclaim.
+
+## Parent independent final artifact byte verification completed
+
+Allfour amd64 artifacts independently hash/size matched sealed manifest at86b4a7fc;
+manifesthash also exact. Final smoke/guard receipts accepted by readback, no replay.
+Localpackage boundary closed, no overall release/publication claim. DOC-only
+bfae4c38 reconciles scoped manuals/ROADMAP/Alpha16 contract status plus prior3docs.
+Runtime/tests frozen; parent finaldoccheck/diff/commit after handoff. Two pinned
+inputchecks/no-copy and ARM64/platform/publication decisions remain explicit.
+
+## Final bounded documentation review and integrity check
+
+Parent reviewed15-document reconciliation and ran single documentation checker:
+749Markdown/6664localtargets/63images/33chapters,0errors; whitespace clean.
+No product test/gate replay. ExternalURLs/headinganchors not checked by this tool.
+Finalamd64 artifacts independently hash/sizeverified; softwareSystem2 original
+recovery/onceonly accepted on TestHardware. Focused docs/handover checkpoint next.
+Pinnedcomposition restoration/no-copy decision, ARM64scope/acceptance and explicit
+publication/publicreadback remain unresolved; no release/tag/upload claim.
+
 ## Next
 
 Consume exact worker handoffs on completion; do not poll

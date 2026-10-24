@@ -2,19 +2,24 @@
 
 # Implementation status
 
-## Alpha 16 preparation — integrated source, not accepted or released
+## Alpha 16 — bounded software and local amd64 artifacts accepted, unreleased
 
-**Alpha 15 remains the latest released version.** The following describes source
-at `5dc47aeced255a9d3d10e787dd7940082cb0cad1`; blocking review corrections and
-combined candidate acceptance are still pending. It is not a claim that these
-workflows passed together, that artifacts are available, or that Alpha 16 is
-ready to tag. [Unreleased scope draft](../releases/alpha16.md).
+**Snapshot: 24 October 2026**, frozen runtime/test source
+`86b4a7fc68b3d3206c00511b14f41e025e33de4d`. Bounded software outcomes and all four
+final local amd64 artifacts have parent acceptance; the overall release remains
+unaccepted and unpublished. Two pinned-input checks remain blocked under the
+no-copy boundary; ARM64 is unverified without an owner platform-scope decision.
+Parent final documentation review, publication approval and public readback remain
+open. Historical full-gate and focused successor results retain their own source
+identities; they are not one full gate at this SHA or summed coverage.
+[Current evidence matrix](../goals/alpha16-release-plan-2026-10-23.md#current-acceptance-disposition--24-october-2026)
+and [unreleased scope](../releases/alpha16.md).
 
 | Source capability | Current boundary |
 | --- | --- |
-| Configured experimental System-2 download in the existing device UI, HTTP and shared App/CLI | Exact UP 258D12 application `M-0001_A-9205-04-9270` only; actual project parameters/links/flags, retained-source refusal rather than defaults. Ordinary programming consent plus four exact typed phrases. Fresh actual affected prestate must be persisted/read back before setup or data writes. Experimental, software-tested scope only; integrated acceptance pending and hardware outcome unverified. |
+| Configured experimental System-2 download in the existing device UI, HTTP and shared App/CLI | Exact UP 258D12 application `M-0001_A-9205-04-9270` only; actual project parameters/links/flags, retained-source refusal rather than defaults. Ordinary programming consent plus four exact typed phrases. Fresh actual affected prestate must be persisted/read back before setup or data writes. Bounded software acceptance recorded; hardware outcome unverified. |
 | Original-operation status and explicit System-2 recovery | Durable selected-original reattachment; historical inventory/selection over authenticated HTTP, no historical dropdown. Original backup/target and separate acknowledgements, never current defaults; no automatic retry/resume/restore. Affected-region backup and source-shape replay are best-effort, not a whole-device/allocator image or proven physical recovery. |
-| Process-owned catalogue update jobs and App-root UI | Mounted managed installer, bounded upload/preview/apply and complete paged reports, cooperative cancellation and close/drain ownership. COMMIT evidence, uncertainty, cleanup and backup retention are independent facts; blocking review corrections/combined acceptance remain open. Named bounds are not aggregate RSS/disk quotas, hard latency or power-loss guarantees. |
+| Process-owned catalogue update jobs and App-root UI | Mounted managed installer, bounded upload/preview/apply and complete paged reports, cooperative cancellation and close/drain ownership. Blocking corrections and one actual mounted Large-profile outcome have source-bound acceptance. COMMIT evidence, uncertainty, cleanup and backup retention remain independent facts. Named bounds are not aggregate RSS/disk quotas, hard latency or power-loss guarantees; the measured input did not exceed Standard's 4 GiB decoded ceiling. |
 | Device → project comparison adoption | Separately previewed/confirmed named parameters with exact typed source attribution only; one atomic undoable edit. Stale/ambiguous or unsupported mixed selections refuse. Raw/unknown/masked rows, tables, individual addresses, GA and associations cannot be adopted. Project → device uses the existing validated download review, not a second write path. |
 | Catalogue-authored Save/Save As source acquisition | Unique measured winning sources and recorded package ownership acquire the complete exact original `CataloguePackage` plus required members. Server/desktop reopen uses the normal installer, including with an empty catalogue. Missing/corrupt/ambiguous new dependencies refuse; old missing sources are not invented. Older-reader compatibility is untested despite no schema bump. |
 | Parameter block/separator caption language | Selected product-language `Text` overlays precede existing placeholder resolution. Explicit empty translations remain empty; row/column text-parameter references and broader layout semantics are not newly admitted. |
@@ -31,6 +36,15 @@ follows from unchanged native/model numbers.
 [Comparison adoption](../contracts/alpha16-comparison-adoption.md) ·
 [Source portability](../contracts/alpha16-catalogue-portability.md) ·
 [Caption-language scope](../contracts/alpha16-parameter-layout.md).
+
+The final mounted HTTP/worker/store recovery scenario reaches all 105 assertions:
+exact original TestHardware state, reopened `Restored` journal, immediate once-only
+refusal and second-restart refusal without further connection/mutation. This is
+not a physical-device result, ETS parity or whole-device recovery certification.
+Operation-local fresh/recovery plan reuse retains independent integrity barriers;
+no universal performance or >4 GiB Large-boundary result is claimed. Local amd64
+artifact identities and minimal-smoke exclusions are in the release note, not
+evidence of ARM64 or public availability. No ledger/limitation closure follows.
 
 The dated Alpha-15 and older sections below retain their historical evidence;
 this current-source section supersedes their old System-2, migration and

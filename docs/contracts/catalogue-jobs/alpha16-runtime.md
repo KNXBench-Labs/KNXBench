@@ -7,7 +7,15 @@ construction uses `managed_bridge::ManagedBridge` and its retained per-job
 over the existing B10/A2 control. There is no quiet/no-op/default executor.
 `app_with_auth` mounts this lane in the existing guarded API group; standalone
 and embedded/desktop servers reach the same mount through their existing app
-construction. Combined candidate execution remains a separate acceptance step.
+construction.
+
+Status, 24 October 2026: blocking corrections and one actual mounted Large-profile
+upload/preview/apply/commit outcome have source-bound software acceptance in the
+[current release matrix](../../goals/alpha16-release-plan-2026-10-23.md#current-acceptance-disposition--24-october-2026).
+This supersedes prospective combined-execution wording below; original focused
+evidence keeps its scope. The measured input did not exceed Standard's 4 GiB
+decoded ceiling. No >4 GiB, universal performance, aggregate-quota or overall
+release acceptance follows; resource and recovery limits remain unchanged.
 
 ## Composition
 

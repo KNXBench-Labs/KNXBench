@@ -1,9 +1,12 @@
 # Alpha16 WP04.3 web controller
 
-Status: implemented frontend/client slice. Focused mocked transport/component
-checks and a frontend build are separate from integrated server acceptance.
-This document does not claim that production job routes, artifact durability,
-server shutdown, cancellation arbitration or rollback have passed acceptance.
+Status, 24 October 2026: implemented frontend/client slice, with bounded production
+catalogue software outcomes recorded in the
+[current release matrix](../../goals/alpha16-release-plan-2026-10-23.md#current-acceptance-disposition--24-october-2026).
+This supersedes earlier candidate-pending wording below. Original mocked
+transport/component evidence stays separate from actual mounted server outcomes;
+it is not retroactively runtime proof. No universal rollback, performance,
+physical-device or overall release acceptance is claimed.
 
 ## Actual ownership and consumers
 

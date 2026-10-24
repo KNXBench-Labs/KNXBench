@@ -1,15 +1,19 @@
 # Alpha 16 — unreleased scope draft
 
-> **Preparation, not a release announcement.** This note describes integrated
-> source at `5dc47aeced255a9d3d10e787dd7940082cb0cad1`, compared locally with
-> `v0.1.0-alpha.15`. Alpha 15 remains the latest released version. Blocking review
-> corrections, frozen-candidate acceptance, version alignment, packaging and
-> artifact smokes are still pending. Nothing here claims publication or tag readiness.
+> **Unreleased acceptance snapshot — 24 October 2026, not a release announcement.**
+> Runtime/test source is frozen at
+> `86b4a7fc68b3d3206c00511b14f41e025e33de4d`, compared locally with the Alpha-15
+> baseline. Bounded software outcomes have source-bound acceptance receipts;
+> **the overall release package is not accepted**. Two pinned-input checks,
+> an ARM64/platform decision and final delivery approval remain open. Final local
+> amd64 artifacts and their minimal isolated smokes have parent acceptance.
+> Nothing here claims a tag, publication or a live check of the latest remote release.
 
-The proposed Alpha 16 scope connects experimental configured System-2 download,
+The Alpha 16 scope connects experimental configured System-2 download,
 cancellable catalogue updates, comparison adoption and catalogue-authored native
-source retention. The [release plan](../goals/alpha16-release-plan-2026-10-23.md)
-remains the acceptance authority; source integration is not feature acceptance.
+source retention. The [release plan and evidence matrix](../goals/alpha16-release-plan-2026-10-23.md#current-acceptance-disposition--24-october-2026)
+remain the acceptance authority. Historical full-gate and later focused receipts
+retain their actual revisions; no full-gate result is relabelled as this successor.
 
 ## Experimental configured System-2 download
 
@@ -46,8 +50,21 @@ all `MV-0025` applications, another firmware variant or ETS-equivalent commissio
   command; a lost reply is not permission to repeat it.
 
 **Evidence boundary: experimental, software-tested scope only; hardware outcome
-unverified.** Earlier focused software evidence does not establish acceptance of
-this integrated UI/server candidate. The backup covers declared affected regions,
+unverified.** The final authenticated source review accepts the operation-local
+recovery-plan reuse correction. Its two new App regressions and the original
+exact mounted HTTP/worker recovery scenario pass at the frozen revision above.
+The unchanged scenario reaches all 105 assertions: exact original TestHardware
+state, reopened `Restored` journal, immediate once-only refusal and refusal after
+a second server restart without further connection or mutation. TestHardware is
+not a physical KNX device; UI fixture evidence is separate from this mounted proof.
+
+Fresh execution and recovery reuse fully validated immutable plans only within
+the original operation. Independent current-source/project admission, exact
+consent, target/provenance checks, durable actual-state backup/readback, original
+recovery binding and once-only barriers remain intact. This removes duplicate
+reconstruction, not a measured general speedup or proof of earlier timeout cause.
+
+The backup covers declared affected regions,
 not a whole-device/allocator image. Source-shape replay is best-effort: historical
 allocator/task commands, masked/unused-byte survival and indirect firmware effects
 remain unresolved. Only full required verification can report `Restored`; even
@@ -71,9 +88,12 @@ settlement, cleanup/quarantine and recovery-backup retention. A witnessed succes
 COMMIT must not become “cancelled” or “rolled back” because later cleanup fails;
 an unknown settlement must retain uncertainty and recovery evidence. The source
 includes pre-live durable backup publication, full live-result admission before
-COMMIT claim, and standalone/embedded/desktop close-and-drain composition. Blocking
-review corrections and combined execution are still pending: these mechanisms
-are not an accepted crash-recovery or rollback guarantee.
+COMMIT claim, and standalone/embedded/desktop close-and-drain composition.
+Blocking software corrections have source review and affected regression evidence.
+One actual mounted Large-profile install also passes preview/apply/commit,
+retained-backup disposal/drain checks and scoped resource observation. That input
+does **not** exceed the Standard 4 GiB decoded ceiling; this is not a >4 GiB
+boundary result, general throughput claim, crash-recovery or rollback guarantee.
 
 - Standard expansion remains **4 GiB**; explicit large-profile opt-in permits
   **16 GiB**. Source/member bytes remain bounded at **1,000,000,000** each.
@@ -174,9 +194,51 @@ projects, the **closed product catalogue** and persistent deployment data. Keep
 matching original `.knxproj`/`.knxprod` files. In-file history and catalogue update
 backups do not replace pre-upgrade disaster backups; rollback uses those copies.
 
-Before final release wording, the candidate still needs closed blocking review
-findings, a frozen source/version identity, the planned combined software
-acceptance, required workflow/opt-in coverage, packaging dry runs and isolated
-artifact smokes. This documentation pass runs none of them. Publication requires
-separate explicit approval and public artifact verification. No real-device trial,
-ETS/recovery certification or issue closure follows from this draft.
+Application versions are aligned to **0.1.0-alpha.16**. The historical full gate
+at `14c9214b68cbe10186c0b7e8b1112c810ce5cff1` passed; later corrections and
+mounted System-2/comparison/Large outcomes retain their own focused acceptance
+identities in the release plan. There is no aggregate total of overlapping runs.
+
+Remaining package boundaries:
+
+- **Two opt-ins blocked, not failed or passed:** the legacy-member-name and
+  isolated/shared-order product-matrix checks require the authenticated historical
+  pinned composition as materialized directories. The copy is absent; archived
+  payloads do not satisfy the reader. The no-copy boundary remains in force:
+  no restoration, repin or file-list substitution was performed. The matrix output
+  filesystem prerequisite is resolved; it is not the remaining blocker.
+- **Local amd64 artifacts accepted:** the parent independently read back all four
+  final artifact hashes/sizes for the frozen runtime above and accepted the
+  complete/success packaging-verification and final-preservation receipts.
+  Earlier packages retain their original revisions; they are not relabelled.
+- **ARM64:** unverified. A platform-scope decision or actual ARM64 acceptance is
+  still required; amd64 evidence is not multi-architecture acceptance.
+- **Final delivery:** the bounded manual/roadmap/contract-status reconciliation is
+  recorded in the release plan; parent final documentation review, explicit owner
+  publication approval and public artifact/checksum/digest verification remain
+  separate. There is no tag or publication claim in this snapshot.
+
+### Parent-verified local amd64 artifact identities
+
+These are local packaging results for `0.1.0-alpha.16` at the frozen runtime SHA,
+not published download links or ARM64 evidence.
+
+| Artifact | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `KNXBench_0.1.0-alpha.16_amd64.AppImage` | 118675960 | `4df7a14a7294a93451ae38f057d78322247003ac9be1460ec551862e771cd000` |
+| `knx-mcp-x86_64-linux` | 14008472 | `00ebf81e016d7b17227c6051cd2479080d8efbb8ca0dedabe9059458c615dad8` |
+| `knx-server-x86_64-linux` | 34531216 | `6cbfcfe28c180172eb361c1fbb9904221965ba8cd012e14c0cf7f5f1aaf651cc` |
+| Maintained linux/amd64 container archive | 45217280 | `b3ef1b66a004c4d353f81c6f85df335b485e155715e636c8fbadf284261d9b2c` |
+
+The retained minimal smokes cover MCP version/help; extracted AppImage startup,
+version API and frontend response; and standalone/container isolated authenticated
+health/version plus synthetic project create/save/replacement/reopen. Both saved
+stores read back as schema16 with SQLite integrity OK; standalone/container
+graceful stops passed. The parent read these smoke receipts, not a second run.
+AppImage extraction/Broadway startup does not verify FUSE, native Wayland/EGL or
+visual desktop behaviour. Local container archive/config verification is not a
+registry push or public digest readback.
+
+This documentation-only refresh runs no tests, builds or smokes. No real-device
+trial, ETS/recovery certification, general throughput claim or ledger/issue closure
+follows from these software receipts.

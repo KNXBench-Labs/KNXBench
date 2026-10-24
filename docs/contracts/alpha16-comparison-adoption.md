@@ -1,7 +1,11 @@
 # Alpha 16 device → project comparison adoption
 
-Status: App primitives and mounted production API/UI implemented (WP-19,
-23 October 2026). Integrated execution/release acceptance remains pending.
+Status, 24 October 2026: App primitives and mounted production API/UI implemented
+(WP-19); actual mounted comparison/adoption/native persistence/undo has bounded
+software acceptance in the [current release matrix](../goals/alpha16-release-plan-2026-10-23.md#current-acceptance-disposition--24-october-2026).
+Earlier slice evidence below retains its source identity, not a full gate at the
+final successor. Overall release remains pending; no physical-device or broader
+adoption authority follows.
 
 ## Authority and scope
 

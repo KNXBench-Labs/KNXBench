@@ -1,5 +1,28 @@
 # Roadmap
 
+## Alpha 16 bounded acceptance — release pending (24 October 2026)
+
+The [current source-bound evidence matrix](goals/alpha16-release-plan-2026-10-23.md#current-acceptance-disposition--24-october-2026)
+records accepted bounded configured System-2 UI/HTTP/App/CLI, catalogue jobs,
+comparison adoption, catalogue-authored source portability and caption-language
+outcomes. Runtime/tests are frozen at `86b4a7fc68b3d3206c00511b14f41e025e33de4d`.
+The final mounted recovery reaches all 105 assertions, including exact original
+TestHardware state and once-only refusal across restart; no physical recovery or
+ETS parity is established. Historical full gate9 remains bound to `14c9214b`;
+focused successors are not relabelled or summed into one full-gate result.
+
+All four final local amd64 artifacts and minimal isolated smokes have parent
+acceptance, with independent hash/size readback; [identities and smoke limits](releases/alpha16.md#parent-verified-local-amd64-artifact-identities)
+are recorded separately from source acceptance. **Overall release remains
+unaccepted and unpublished:** two pinned-input checks are blocked, not waived,
+under the no-copy boundary; ARM64 remains unverified without an owner platform
+decision. Parent final documentation review, publication approval and public
+artifact/checksum/digest readback remain open. The bounded documentation
+reconciliation closes no ledger row or limitation. General performance and >4 GiB
+Large-boundary verification are not claimed. Dated roadmap checkpoints below
+retain their original scope; this snapshot supersedes their then-open Alpha-16
+integration status without restarting delivered work.
+
 ## Alpha 16 implementation authorised — 23 October 2026
 
 The owner adopted the [finite release plan](goals/alpha16-release-plan-2026-10-23.md)

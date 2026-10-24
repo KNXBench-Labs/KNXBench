@@ -10,10 +10,12 @@ This authorises implementation and consolidated software acceptance, not release
 publication, deployment, desktop control or bus/device operations. No target
 release date is promised before the blocking work has been reconciled.
 
-Inspected published source: `f2ee6df3d50c211ecc79c6d7e5d28c7256a3a694`.
-Latest published release at inspection: `v0.1.0-alpha.15`, 19 October 2026.
-Alpha 16 was not tagged. GitHub had open issues #22 and #7 and no open PRs.
-An open issue is not proof that its original code change is still missing.
+Historical planning inspection on 23 October 2026: published source
+`f2ee6df3d50c211ecc79c6d7e5d28c7256a3a694`; latest published release at that
+inspection was `v0.1.0-alpha.15`, dated 19 October 2026. Alpha 16 was not tagged;
+GitHub then had open issues #22 and #7 and no open PRs. These are dated inspection
+facts, not a live remote-status claim. An open issue is not proof that its
+original code change is still missing.
 
 Release outcome: a usable, bounded **experimental System-2 download** for the
 exact UP 258D12 application `M-0001_A-9205-04-9270`, using the selected project's
@@ -38,7 +40,95 @@ service into preview, fresh backup, confirmations, execution/status/cancellation
 and explicit recovery. API/CLI reuse that service; UI is not postponed beyond
 Alpha 16. Parent owns server/UI integration after the backend handoff.
 
+## Current acceptance disposition — 24 October 2026
+
+**Bounded software and final local amd64 artifacts accepted; overall release still pending.**
+Runtime/tests are frozen at `86b4a7fc68b3d3206c00511b14f41e025e33de4d`.
+Application versions are aligned to `0.1.0-alpha.16`; inspected source constants
+remain native/store **16**, core model **16** and product database **28**.
+This refresh reads retained receipts only: no new tests, builds, browser runs or
+publication. The original work/acceptance contract below is retained, not replaced
+by a new full-gate requirement or a claim that the latest tree ran the old gate.
+
+### Source-bound evidence matrix
+
+Logical evidence names identify private receipts without exposing private inputs
+or machine paths. Each row retains its actual revision; focused selections overlap
+earlier coverage and must not be summed into a unique-test total.
+
+| Evidence / outcome | Source identity | Accepted boundary and remaining limit |
+| --- | --- | --- |
+| **Gate9 — accepted historical full gate** | `14c9214b68cbe10186c0b7e8b1112c810ce5cff1` | All 10 ordered stages and 71 nested web stages passed; 6,309 Rust passes, 222 ignored, and 155/155 selected corpus cases. Frozen-input/proof/user-data guards verified. This is not a full gate at the final successor. |
+| **Successor affected native regressions — 13 passed** | `3bf1ab60d8f8d0b7f6cade34e94aebe176ff0c94` | Exact preview positive and 12 second-rehearsal methods, including three new public-boundary methods. The ordinary-dependency compile failure from that attempt remains historical; the subsequent server build at the next row resolves that build boundary without replaying the 13 passes. |
+| **Mounted continuation R2/R3 — both passed** | `a07c48ca29e36473cc085b0947ce4a59cacf02d3` | Actual comparison observation → preview/apply → native persistence/history → undo/re-comparison and foreign/consumed/stale refusal; actual Large-selected catalogue upload/preview/apply/commit, retained backup after disposal/drain and scoped resources. R1 failed in this attempt and is accepted only by its final row below. Large input did not exceed the Standard 4 GiB decoded ceiling; no >4 GiB, aggregate-quota or general throughput proof. |
+| **Operation-plan reuse execution — three focused passes** | `eb70833f0281896ab29ced2c985cec7cc1137b88` | Two new fresh-execution App regressions plus the configured execute/reopened-recovery integration positive passed. Its R1 recovery wait failed; that original failure remains unchanged, not reclassified. |
+| **Final recovery-plan reuse — authenticated source ACCEPT; three exact passes** | `86b4a7fc68b3d3206c00511b14f41e025e33de4d` (imports `cd27f3c570fe779654a7fead2659ca90568c3994`) | Two new exact recovery App regressions and the original exact mounted R1 each pass once after authenticated Claude source ACCEPT and owning builds. All 105 R1 assertions are reached: exact original TestHardware state, reopened `Restored` journal, immediate consumed-once refusal and second-restart refusal without additional connection/mutation. TestHardware is not a physical device. |
+| **Release residue R4–R6 — finite accepted subset** | Execution `3e0271c33a104d0d3b00acb9211748f9aa37ef22`; retained App/ProductDB/server build identity `14c9214b68cbe10186c0b7e8b1112c810ce5cff1` | Unchanged relevant inputs authenticated; 24/26 exact opt-ins passed, two blocked/not executed. Distinct production support 4/4 and diagnostic-simulator 5/5 passed; four maintained native invocations passed all 24 named cases. These browser/native cases are separate from the 13 native methods above; none is a physical-device trial. |
+| **Final local amd64 artifacts — parent accepted** | `86b4a7fc68b3d3206c00511b14f41e025e33de4d` | All four newly produced artifacts: AppImage, MCP, standalone server and maintained linux/amd64 container archive. Parent independently read back every hash/size and accepted complete/success verification and final-preservation receipts plus the retained minimal isolated smokes. Exact identities and smoke limits are in the [release note](../releases/alpha16.md#parent-verified-local-amd64-artifact-identities). Earlier artifacts retain their own revisions. ARM64, remote workflow dry-run and publication are not inferred. |
+
+The final logical receipt is **Recovery-plan reuse / authenticated renewed review /
+execution-first-builds / final-receipt**: complete/success and terminal original
+restore/journal/once-only/restart checks are true. The parent attempt's preserved
+zero-launch provenance refusal is not this successful execution. Earlier auth,
+compiler and runtime failures remain their original observations; the final pass
+does not establish the exact cause of earlier timeouts.
+
+Fresh execution reuses an operation-local fully validated immutable plan and
+preconditions; recovery classifies steps from its already validated original plan.
+There is no cross-operation cache or broader admission. Independent current
+project/source checks, exact consent, transport provenance/target/prestate,
+durable backup/checkpoint sync/readback, original recovery binding and once-only
+admission remain required. See the
+[configured-download contract](../contracts/alpha16-system2-configured-download.md#operation-local-validation-reuse),
+[production mount](../contracts/alpha16-system2-http-mount.md) and
+[UI contract](../contracts/alpha16-system2-ui.md). UI fixture passes are not the
+mounted worker proof; neither constitutes physical recovery certification.
+
+The original input identities/content, protected user data, retained historical
+evidence and source/build bindings passed the owning receipt guards. No original
+source/backup was replaced to obtain these outcomes. This is integrity evidence
+within the declared software scope, not complete-device preservation or ETS parity.
+
+### Exact input, artifact and delivery disposition
+
+- **R4 pinned composition: blocked, not failed/passed.** The legacy-member-name
+  and isolated/shared-order product-matrix opt-ins require the authenticated
+  historical **115-instance / 113-unique-package** composition as materialized
+  directory scopes. The old directory copy is absent; archived
+  payloads and an exact file list are not an equivalent input. No restoration,
+  repin or guard workaround is authorized by this refresh. An already-materialized
+  authenticated pinned copy, or explicit authorization to restore the exact
+  existing archive, is required before those two checks can execute. A suitable
+  different-filesystem matrix output parent is already verified; output placement
+  is no longer the blocker.
+- **A16-09 local amd64 artifacts: accepted.** Parent-independent hash/size
+  readback matches all four final artifacts; owning packaging-verification and
+  final-preservation receipts are complete/success at the frozen runtime SHA.
+  Minimal isolated artifact smokes are accepted by receipt inspection, not replay.
+  This local-only acceptance does not supply ARM64, remote workflow dry-run or
+  publication acceptance by inference.
+- **ARM64/platform scope:** obtain actual ARM64 acceptance or an explicit owner
+  platform-scope decision; no platform exclusion has been silently adopted.
+- **A16-08/final delivery:** bounded reconciliation now covers the release note,
+  delivery index, manual implementation status/known issues/devices guide, ROADMAP
+  and contradictory Alpha-16 contract status headers. Dated evidence/architecture
+  and unsupported-feature boundaries remain intact. Parent final documentation
+  review remains open; this does not edit the canonical ledger, close
+  limitations/issues or certify every documentation page as synchronized.
+- **Publication:** explicit owner publication Go and public asset/revision,
+  checksum/digest readback remain separate, unperformed requirements. No tag,
+  upload, registry publication or live remote-latest claim is made here.
+
+The exact experimental target and software-only boundary remain unchanged. Full
+ETS compatibility, physical restoration/functional verification, wider System-2
+families, universal throughput and >4 GiB Large-boundary coverage are not claimed.
+The [canonical ledger](../status/LEDGER.md) remains the per-ID status of record;
+contracts define behaviour, and this matrix records release-specific evidence.
+
 ## Verified starting point — do not implement twice
+
+Historical planning snapshot: the current disposition above supersedes its
+then-open integration gaps without changing the original release contract.
 
 - Product DB v28 promotion repair, WP-04.1 measurement and WP-04.2 bounds work
   are delivered. They need release inclusion, not another implementation.
@@ -154,9 +244,11 @@ this plan.
 
 ## Minimal, consolidated acceptance
 
-**No tests or build gates are run to produce this plan.** This is not an accepted
-release candidate. During implementation, add the necessary focused regressions
-with each change; keep core tests mandatory and small, but collect their execution
+**No tests or build gates were run to produce the original plan or this status
+refresh.** Retained execution results are recorded in the current disposition
+above; the overall package is not yet accepted. During implementation, add the
+necessary focused regressions with each change; keep core tests mandatory and
+small, but collect their execution
 in the final integrated package rather than repeatedly running complete suites
 for every foundation, documentation edit, feature branch and merge.
 
@@ -194,12 +286,19 @@ crediting old results to new bytes.
 
 ## Release exit checklist
 
-- [ ] A16-01–03 provide the complete bounded experimental System-2 workflow.
-- [ ] A16-04–06 provide atomic catalogue, comparison and source-portability outcomes.
-- [ ] A16-07 has an explicit implemented/excluded disposition for each admitted slice.
+Software checkmarks below refer to the source-bound matrix, not physical-device,
+whole-package or publication approval. Historical starting-point gaps above do
+not reopen these accepted bounded outcomes.
+
+- [x] A16-01–03 provide the bounded experimental System-2 software workflow; final mounted recovery passes, physical outcome remains unverified.
+- [x] A16-04–06 have accepted bounded catalogue, comparison and source-portability software outcomes; the separate pinned-composition checks remain blocked under A16-09.
+- [x] A16-07 has the bounded caption-language implementation and explicit excluded layout subfeatures in its [contract](../contracts/alpha16-parameter-layout.md).
 - [ ] A16-08 removes contradictory claims and documents actual upgrades/limitations.
 - [ ] A16-09 has one complete, valid candidate acceptance and actual artifact evidence.
 - [ ] Explicit owner publication Go precedes any tag/release/container publication.
 - [ ] Public readback, checksums/digests, handover and owned cleanup are complete.
 
-No checkbox is completed by creating this plan. Fewer gate laps, same brakes.
+No checkbox is completed merely by writing documentation. Parent final review
+keeps A16-08 open. The two input-dependent checks and ARM64/platform decision keep
+A16-09 open despite accepted final local amd64 artifacts. Publication approval and
+public readback are still separate. Fewer gate laps, same brakes.

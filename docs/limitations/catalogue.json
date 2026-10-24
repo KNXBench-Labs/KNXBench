@@ -353,7 +353,7 @@
       "number": 6,
       "title": "Devices dependent on vendor plug-ins",
       "topic": "Manufacturer data and parameters",
-      "summary": "Vendor-dependent devices remain preservation-only where configuration requires a plug-in. Project app/add-in payloads are retained, not executed by the product.",
+      "summary": "Vendor-dependent devices remain preservation-only where configuration requires a plug-in. A declared ETS download plug-in refuses every download scope; app/add-in payloads are retained, not executed.",
       "file": "KL-006-devices-dependent-on-vendor-plug-ins.md",
       "ledger_ids": [
         "KL-6"

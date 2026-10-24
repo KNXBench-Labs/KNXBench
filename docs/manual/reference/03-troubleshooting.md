@@ -19,6 +19,14 @@ or request support for an unsupported encoder/procedure. Missing hardware eviden
 alone is **untested**, not a technical refusal; an untested supported plan still
 requires its extra exact acknowledgement and ordinary confirmation.
 
+A device whose application program declares a manufacturer **ETS download
+plug-in** is refused with the reason `vendor-download-plugin`, for the complete
+download and for every partial one (parameters, group addresses or both). The
+plug-in writes data KNXBench cannot reproduce from the product file, so no
+acknowledgement unlocks it: download such a device with ETS. Reading and
+comparing it (`knx device compare`) stay available. See
+[§6 in the known limitations](../../KNOWN_LIMITATIONS.md#catalogue-kl-006).
+
 The **Instructions**, **Report support gap** and **Email draft** links are deliberate
 handoffs, not uploads. Review technical details before sharing them. Neither link
 needs an attachment or invents a post-run report. See

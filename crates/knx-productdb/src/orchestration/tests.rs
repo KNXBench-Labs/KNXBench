@@ -118,10 +118,41 @@ fn preview_rehearses_without_mutating_the_live_catalogue() {
         policy: ControlledPolicy::Standard,
     };
     let mut artifacts = TestArtifacts::new();
+    let entries = std::rc::Rc::new(std::cell::Cell::new(0));
+    let seen = entries.clone();
+    artifacts.inventory.set_hook(
+        DestinationRole::Rehearsal,
+        Box::new(move |stage, _, conn| {
+            if stage == crate::catalogue_copy::DestinationStage::RehearsalInstall {
+                assert!(
+                    !conn.unwrap().is_autocommit(),
+                    "preview installer requires D-owned transaction"
+                );
+                seen.set(seen.get() + 1);
+            }
+            if stage == crate::catalogue_copy::DestinationStage::RehearsalClose {
+                let conn = conn.unwrap();
+                assert!(conn.is_autocommit(), "D rollback precedes explicit close");
+                if seen.get() > 0 {
+                    assert!(conn.total_changes() > 0, "actual rehearsal writes occurred");
+                }
+                assert_eq!(
+                    conn.query_row("SELECT count(*) FROM package", [], |r| r.get::<_, i64>(0))
+                        .unwrap(),
+                    0
+                );
+            }
+        }),
+    );
     let result = owner
         .preview_current_controlled(source, &op, &mut artifacts)
         .unwrap();
 
+    assert_eq!(entries.get(), 1, "observe actual preview installer entry");
+    assert!(artifacts
+        .inventory
+        .retained_connection(DestinationRole::Rehearsal)
+        .is_none());
     // The rehearsal never touches W: generation, data_version and the full
     // witness are unchanged, and the owner stays healthy (proved by the
     // `with_read` in `package_count`).

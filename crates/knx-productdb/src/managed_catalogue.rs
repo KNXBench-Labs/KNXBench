@@ -707,36 +707,29 @@ impl ManagedCatalogue {
         // Preserve the direct Stop cause if cleanup latched cancellation.
         op.gate.checkpoint()?;
         let rehearsal = artifacts.inventory().open_rehearsal(validated, op.gate)?;
-        let install = (|| -> Result<_, OrchestrationError> {
-            op.gate.checkpoint()?;
-            #[cfg(test)]
-            artifacts.before_rehearsal(&rehearsal);
-            let conn = artifacts.inventory().rehearsal(&rehearsal)?;
-            let before = crate::managed_apply::report::Before::read(conn)?;
-            let install = crate::wrapper::install_admitted_product_file(
-                conn,
-                source.name,
-                source.bytes,
-                source.limits,
-                Cancellation::Controlled(op.gate),
-            )?;
-            let report = before.finish(conn, &install)?;
-            Ok((install, report))
-        })();
-        let close = artifacts.inventory().close_rehearsal(rehearsal);
-        let (install, report) = match (install, close) {
-            (Err(primary), Err(close)) => {
-                return Err(OrchestrationError::PreviewSettlement(Box::new(
-                    PreviewFailure {
-                        primary: Some(primary),
-                        cleanup: vec![PreviewCleanupError::RehearsalClose(close)],
-                    },
-                )));
-            }
-            (Err(primary), Ok(())) => return Err(primary),
-            (Ok(_), Err(close)) => return Err(close.into()),
-            (Ok(install), Ok(())) => install,
-        };
+        let (install, report) =
+            rehearse_disposable(artifacts, rehearsal, |artifacts, rehearsal| {
+                op.gate.checkpoint()?;
+                #[cfg(test)]
+                artifacts.before_rehearsal(rehearsal);
+                let before = {
+                    let conn = artifacts.inventory().rehearsal(rehearsal)?;
+                    conn.execute_batch("BEGIN")?;
+                    crate::managed_apply::report::Before::read(conn)?
+                };
+                #[cfg(test)]
+                artifacts.inventory().inspect_rehearsal_installer(rehearsal);
+                let conn = artifacts.inventory().rehearsal(rehearsal)?;
+                let install = crate::wrapper::install_admitted_product_file(
+                    conn,
+                    source.name,
+                    source.bytes,
+                    source.limits,
+                    Cancellation::Controlled(op.gate),
+                )?;
+                let report = before.finish(conn, &install)?;
+                Ok((install, report))
+            })?;
         let identity = crate::preview_identity::preview_identity(&install)?;
 
         let binding = crate::preview_binding::PreviewBinding::bind(
@@ -1009,12 +1002,18 @@ impl ManagedCatalogue {
             // Its disposable work never claims the live publication gate.
             op.gate.checkpoint()?;
             let rehearsal = artifacts.inventory().open_rehearsal(validated_d, op.gate)?;
-            let rehearse = (|| -> Result<(), OrchestrationError> {
+            rehearse_disposable(artifacts, rehearsal, |artifacts, rehearsal| {
                 op.gate.checkpoint()?;
                 #[cfg(test)]
-                artifacts.before_rehearsal(&rehearsal);
+                artifacts.before_rehearsal(rehearsal);
+                artifacts
+                    .inventory()
+                    .rehearsal(rehearsal)?
+                    .execute_batch("BEGIN")?;
+                #[cfg(test)]
+                artifacts.inventory().inspect_rehearsal_installer(rehearsal);
                 let install = crate::wrapper::install_admitted_product_file(
-                    artifacts.inventory().rehearsal(&rehearsal)?,
+                    artifacts.inventory().rehearsal(rehearsal)?,
                     source.name,
                     source.bytes,
                     source.limits,
@@ -1025,23 +1024,7 @@ impl ManagedCatalogue {
                     return Err(OrchestrationError::Stale);
                 }
                 Ok(())
-            })();
-            let close = artifacts.inventory().close_rehearsal(rehearsal);
-            match (rehearse, close) {
-                (Err(primary), Err(close)) => {
-                    return Err(OrchestrationError::PreviewSettlement(Box::new(
-                        crate::orchestration::PreviewFailure {
-                            primary: Some(primary),
-                            cleanup: vec![
-                                crate::orchestration::PreviewCleanupError::RehearsalClose(close),
-                            ],
-                        },
-                    )));
-                }
-                (Err(primary), Ok(())) => return Err(primary),
-                (Ok(()), Err(close)) => return Err(close.into()),
-                (Ok(()), Ok(())) => {}
-            }
+            })?;
             op.gate.checkpoint()?;
             check_reserved_writer(
                 &tx,
@@ -1200,6 +1183,37 @@ impl ManagedCatalogue {
             health: self.health,
             artifacts,
         }
+    }
+}
+
+/// Converge every obtained D receipt on inspected rollback and native close,
+/// including unwinding work. No live-W settlement or publication claim here.
+fn rehearse_disposable<T>(
+    artifacts: &mut dyn crate::orchestration::CatalogueArtifacts,
+    rehearsal: crate::catalogue_copy::RehearsalDestination,
+    work: impl FnOnce(
+        &mut dyn crate::orchestration::CatalogueArtifacts,
+        &crate::catalogue_copy::RehearsalDestination,
+    ) -> Result<T, crate::orchestration::OrchestrationError>,
+) -> Result<T, crate::orchestration::OrchestrationError> {
+    use crate::orchestration::{OrchestrationError, PreviewCleanupError, PreviewFailure};
+    let result =
+        std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| work(artifacts, &rehearsal)));
+    let close = artifacts.inventory().close_rehearsal(rehearsal);
+    match (result, close) {
+        (Ok(Ok(value)), Ok(())) => Ok(value),
+        (Ok(Err(primary)), Ok(())) => Err(primary),
+        (Ok(Ok(_)), Err(close)) => Err(close.into()),
+        (Ok(Err(primary)), Err(close)) => Err(OrchestrationError::PreviewSettlement(Box::new(
+            PreviewFailure {
+                primary: Some(primary),
+                cleanup: vec![PreviewCleanupError::RehearsalClose(close)],
+            },
+        ))),
+        (Err(primary), Ok(())) => std::panic::resume_unwind(primary),
+        // Preserve the original opaque panic and independent settlement error;
+        // never stringify a panic payload (it may contain private source data).
+        (Err(primary), Err(close)) => std::panic::resume_unwind(Box::new((primary, close))),
     }
 }
 

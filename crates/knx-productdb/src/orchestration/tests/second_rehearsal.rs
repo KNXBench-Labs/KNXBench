@@ -15,6 +15,7 @@ struct Native {
     transactions: RefCell<Vec<String>>,
     dml: Cell<usize>,
     package_inserts: Cell<usize>,
+    installer_entries: Cell<usize>,
     deny_package: bool,
     denials: Cell<usize>,
     deny_rollback: Cell<bool>,
@@ -30,6 +31,7 @@ impl Native {
             transactions: RefCell::new(Vec::new()),
             dml: Cell::new(0),
             package_inserts: Cell::new(0),
+            installer_entries: Cell::new(0),
             deny_package: deny,
             denials: Cell::new(0),
             cancel_gate: RefCell::new(None),
@@ -91,8 +93,12 @@ unsafe extern "C" fn authorize(
             .transactions
             .borrow_mut()
             .push(String::from_utf8_lossy(first).into_owned());
-        if state.role == "W" && first == b"ROLLBACK" {
-            state.events.borrow_mut().push("W-rollback");
+        if first == b"ROLLBACK" {
+            state.events.borrow_mut().push(if state.role == "W" {
+                "W-rollback"
+            } else {
+                "D-rollback"
+            });
             if state.deny_rollback.get() {
                 return rusqlite::ffi::SQLITE_DENY;
             }
@@ -140,6 +146,7 @@ struct Probe {
     prelive: Rc<RefCell<Vec<PreliveObservation>>>,
     before: u64,
     busy_close: Rc<Cell<bool>>,
+    panic_install: Rc<Cell<bool>>,
     statement: Rc<Cell<*mut rusqlite::ffi::sqlite3_stmt>>,
 }
 impl Probe {
@@ -165,6 +172,8 @@ impl Probe {
         let prelive = Rc::new(RefCell::new(Vec::new()));
         let mut inner = TestArtifacts::new();
         let busy_close = Rc::new(Cell::new(false));
+        let panic_install = Rc::new(Cell::new(false));
+        let panic_at_entry = panic_install.clone();
         let statement = Rc::new(Cell::new(std::ptr::null_mut()));
         let (busy, stmt) = (busy_close.clone(), statement.clone());
         let d_context = (&*d) as *const Native;
@@ -174,8 +183,20 @@ impl Probe {
             // callback detachment; moving Probe never moves this allocation.
             let dd = unsafe { &*d_context };
             if stage == DestinationStage::WriteReady { dd.attach(unsafe { conn.unwrap().handle() }); }
+            if stage == DestinationStage::RehearsalInstall {
+                assert!(!conn.unwrap().is_autocommit(), "apply installer requires D-owned transaction");
+                dd.installer_entries.set(dd.installer_entries.get() + 1);
+                if panic_at_entry.get() {
+                    conn.unwrap().execute("INSERT INTO manufacturer(id,name) VALUES('unwind','Synthetic')", []).unwrap();
+                    std::panic::panic_any("synthetic D unwind");
+                }
+            }
             if stage == DestinationStage::RehearsalClose {
                 let conn = conn.unwrap();
+                assert_eq!(conn.is_autocommit(), !dd.deny_rollback.get(), "inspect actual D settlement before close");
+                if panic_at_entry.get() {
+                    assert_eq!(conn.query_row("SELECT count(*) FROM manufacturer WHERE id='unwind'", [], |r| r.get::<_, i64>(0)).unwrap(), 0, "actual pre-unwind D write was rolled back");
+                }
                 cc.set(cc.get()+1);
                 rr.borrow_mut().push((
                     conn.query_row("SELECT count(*) FROM package", [], |r| r.get(0)).unwrap(),
@@ -202,6 +223,7 @@ impl Probe {
             prelive,
             before,
             busy_close,
+            panic_install,
             statement,
         }
     }
@@ -219,6 +241,13 @@ impl Probe {
         assert!(!self.w.events.borrow().contains(&"W"));
     }
     fn assert_closed(&mut self) {
+        assert_eq!(self.d.installer_entries.get(), 1);
+        assert_eq!(&*self.d.transactions.borrow(), &["BEGIN", "ROLLBACK"]);
+        assert_eq!(
+            &*self.close_rows.borrow(),
+            &[(0, 0)],
+            "D writes rolled back before close"
+        );
         assert_eq!(
             self.closes.get(),
             1,
@@ -325,7 +354,7 @@ fn second_rehearsal_executes_shared_body_before_live_dml() {
         1,
         "apply must execute actual D installer before W"
     );
-    assert_eq!(&*probe.close_rows.borrow(), &[(1, 1)]);
+    assert_eq!(&*probe.close_rows.borrow(), &[(0, 0)]);
     assert_eq!(
         &*probe.prelive.borrow(),
         &[(probe.before, true, PublicationState::Open, true)]
@@ -514,6 +543,173 @@ fn second_rehearsal_cancel_during_d_install_closes_before_rollback() {
     assert_eq!(package_count(&owner), 0);
 }
 
+#[test]
+fn preview_d_failure_cancel_and_unwind_settle_and_close_without_w_mutation() {
+    for cause in ["failure", "cancel", "unwind"] {
+        let (dir, mut owner) = migrated_owner();
+        let before = owner.capture_stamp(&PublicationGate::new()).unwrap();
+        let gate = Arc::new(PublicationGate::new());
+        let mut probe = Probe::new(
+            &owner,
+            &dir.path().join("products.sqlite"),
+            gate.clone(),
+            cause == "failure",
+        );
+        if cause == "cancel" {
+            *probe.d.cancel_gate.borrow_mut() = Some(gate.clone());
+        }
+        probe.panic_install.set(cause == "unwind");
+        let bytes = valid_package();
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            owner.preview_current_controlled(
+                admit("second.knxprod", &bytes),
+                &OperationContext {
+                    gate: &gate,
+                    policy: ControlledPolicy::Standard,
+                },
+                &mut probe,
+            )
+        }));
+        match (cause, result) {
+            ("unwind", Err(panic)) => {
+                assert_eq!(panic.downcast_ref::<&str>(), Some(&"synthetic D unwind"))
+            }
+            ("failure", Ok(Err(OrchestrationError::Install(crate::PackageError::Database(_))))) => {
+                assert_eq!(probe.d.denials.get(), 1)
+            }
+            ("cancel", Ok(Err(OrchestrationError::Install(crate::PackageError::Cancelled(_))))) => {
+                assert_eq!(probe.d.package_inserts.get(), 1)
+            }
+            _ => panic!("expected exact preview D refusal or original unwind"),
+        }
+        assert_eq!(probe.d.installer_entries.get(), 1);
+        assert_eq!(&*probe.d.transactions.borrow(), &["BEGIN", "ROLLBACK"]);
+        assert_eq!(probe.closes.get(), 1);
+        assert_eq!(&*probe.close_rows.borrow(), &[(0, 0)]);
+        assert!(probe
+            .inner
+            .inventory
+            .retained_connection(DestinationRole::Rehearsal)
+            .is_none());
+        probe.assert_no_w_dml();
+        assert_eq!(
+            owner.capture_stamp(&PublicationGate::new()).unwrap(),
+            before
+        );
+        assert_eq!(package_count(&owner), 0);
+    }
+}
+
+#[test]
+fn second_rehearsal_unwind_settles_d_and_preserves_independent_close_failure() {
+    for busy in [false, true] {
+        let (dir, mut owner) = migrated_owner();
+        let bytes = valid_package();
+        let shown = shown(&mut owner, &bytes);
+        let gate = Arc::new(PublicationGate::new());
+        let mut probe = Probe::new(
+            &owner,
+            &dir.path().join("products.sqlite"),
+            gate.clone(),
+            false,
+        );
+        probe.panic_install.set(true);
+        probe.busy_close.set(busy);
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            apply(&mut owner, &bytes, &shown.binding, &gate, &mut probe)
+        }));
+        let panic = match result {
+            Err(panic) => panic,
+            Ok(_) => panic!("D unwind must propagate"),
+        };
+        if busy {
+            let combined = match panic.downcast::<(
+                Box<dyn std::any::Any + Send>,
+                crate::catalogue_copy::CopyError,
+            )>() {
+                Ok(combined) => combined,
+                Err(_) => panic!("original panic plus independent D close error"),
+            };
+            assert_eq!(
+                combined.0.downcast_ref::<&str>(),
+                Some(&"synthetic D unwind")
+            );
+            assert_native_busy(&combined.1);
+            assert!(probe
+                .inner
+                .inventory
+                .retained_connection(DestinationRole::Rehearsal)
+                .unwrap()
+                .is_autocommit());
+        } else {
+            assert_eq!(panic.downcast_ref::<&str>(), Some(&"synthetic D unwind"));
+            probe.assert_closed();
+        }
+        assert_eq!(&*probe.d.transactions.borrow(), &["BEGIN", "ROLLBACK"]);
+        assert_eq!(probe.closes.get(), 1);
+        probe.assert_no_w_dml();
+        assert_eq!(gate.state(), PublicationState::Open);
+        // Preserve the existing W unwind policy, rather than inventing a clean
+        // live rollback from D's successful settlement.
+        assert!(matches!(
+            owner.health_snapshot(),
+            WriterHealth::Quarantined(_)
+        ));
+    }
+}
+
+#[test]
+fn second_rehearsal_failed_d_rollback_preserves_cancel_and_close_uncertainty() {
+    let (dir, mut owner) = migrated_owner();
+    let bytes = valid_package();
+    let shown = shown(&mut owner, &bytes);
+    let gate = Arc::new(PublicationGate::new());
+    let mut probe = Probe::new(
+        &owner,
+        &dir.path().join("products.sqlite"),
+        gate.clone(),
+        false,
+    );
+    *probe.d.cancel_gate.borrow_mut() = Some(gate.clone());
+    probe.d.deny_rollback.set(true);
+    probe.busy_close.set(true);
+    let result = apply(&mut owner, &bytes, &shown.binding, &gate, &mut probe);
+    let Some(OrchestrationError::PreviewSettlement(failure)) = &result.failure else {
+        panic!("retain primary and D settlement failure")
+    };
+    assert!(matches!(
+        failure.primary,
+        Some(OrchestrationError::Install(crate::PackageError::Cancelled(
+            _
+        )))
+    ));
+    let [PreviewCleanupError::RehearsalClose(crate::catalogue_copy::CopyError::Destination(close))] =
+        &failure.cleanup[..]
+    else {
+        panic!("retain typed D settlement details")
+    };
+    use crate::catalogue_copy::DestinationCleanup;
+    assert!(
+        matches!(&close.cleanup[..], [DestinationCleanup::RehearsalRollback(rusqlite::Error::SqliteFailure(e, _)), DestinationCleanup::RehearsalNotAutocommit, DestinationCleanup::RehearsalClose(rusqlite::Error::SqliteFailure(busy, _))] if e.code == rusqlite::ErrorCode::AuthorizationForStatementDenied && busy.code == rusqlite::ErrorCode::DatabaseBusy)
+    );
+    probe.assert_no_w_dml();
+    assert_eq!(result.commit, CommitEvidence::NotCommitted);
+    assert_eq!(result.rollback, RollbackDisposition::Explicit);
+    assert_eq!(probe.closes.get(), 1);
+    let retained = probe
+        .inner
+        .inventory
+        .retained_connection(DestinationRole::Rehearsal)
+        .unwrap();
+    assert!(
+        !retained.is_autocommit(),
+        "failed D settlement is not clean rollback"
+    );
+    // The close observer detached the authorizer; release this test's retained
+    // transaction explicitly without discarding its recorded failure.
+    retained.execute_batch("ROLLBACK").unwrap();
+}
+
 fn assert_native_busy(error: &crate::catalogue_copy::CopyError) {
     let crate::catalogue_copy::CopyError::Destination(failure) = error else {
         panic!("native destination close required")
@@ -590,7 +786,7 @@ fn second_rehearsal_native_close_failure_preserves_primary() {
             retained
                 .query_row("SELECT count(*) FROM package", [], |r| r.get::<_, i64>(0))
                 .unwrap(),
-            1
+            0
         );
         assert_eq!(&*probe.w.transactions.borrow(), &["BEGIN", "ROLLBACK"]);
         assert_eq!(

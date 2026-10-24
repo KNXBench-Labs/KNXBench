@@ -77,13 +77,9 @@ impl Samples {
             worker: Some(worker),
         }
     }
-    fn finish(mut self) -> (u64, u64, u64, u64) {
+    fn finish_checked(&mut self) -> std::thread::Result<(u64, u64, u64, u64)> {
         let _ = self.stop.take().unwrap().send(());
-        self.worker
-            .take()
-            .unwrap()
-            .join()
-            .expect("resource sampler")
+        self.worker.take().unwrap().join()
     }
 }
 impl Drop for Samples {
@@ -95,16 +91,123 @@ impl Drop for Samples {
     }
 }
 
-async fn status(router: &axum::Router, base: &str, incarnation: Incarnation, job: JobId) -> Status {
+// Test-private, fixed-size history: only the last completed status GET and last
+// validated public DTO, plus the current request milestone. Never copy SQLite
+// or inspect a worker-held workspace/native/SQL mutex during failure capture.
+struct Evidence {
+    file: std::fs::File,
+    samples: Option<Samples>,
+    started: Instant,
+    rss_before: u64,
+    hwm_before: u64,
+    polls: u64,
+    wait_target: &'static str,
+    milestone: &'static str,
+    milestone_seconds: f64,
+    request_started_seconds: Option<f64>,
+    last_get: Option<serde_json::Value>,
+    last_validated: Option<serde_json::Value>,
+    failure: Option<&'static str>,
+    success: bool,
+    peaks: Option<(u64, u64, u64, u64)>,
+    sampler_panicked: bool,
+}
+impl Evidence {
+    fn mark(&mut self, milestone: &'static str) {
+        self.milestone = milestone;
+        self.milestone_seconds = self.started.elapsed().as_secs_f64();
+    }
+    fn finish_samples(&mut self) -> (u64, u64, u64, u64) {
+        let mut samples = self.samples.take().unwrap();
+        let peaks = match samples.finish_checked() {
+            Ok(peaks) => peaks,
+            Err(_) => {
+                self.sampler_panicked = true;
+                panic!("resource sampler");
+            }
+        };
+        self.peaks = Some(peaks);
+        peaks
+    }
+}
+impl Drop for Evidence {
+    fn drop(&mut self) {
+        // Join only our sampler, never the native worker. Capture before TempDir
+        // teardown, including assertion/GET-validation panics, not just timeout.
+        if let Some(mut samples) = self.samples.take() {
+            match samples.finish_checked() {
+                Ok(peaks) => self.peaks = Some(peaks),
+                Err(_) => self.sampler_panicked = true,
+            }
+        }
+        let report = serde_json::json!({
+            "schemaVersion": 1, "success": self.success, "resourceAcceptance": false,
+            "failure": self.failure, "unwinding": std::thread::panicking(),
+            "waitTarget": self.wait_target, "watchdogSeconds": 1800,
+            "pollCount": self.polls, "milestone": self.milestone,
+            "milestoneElapsedSeconds": self.milestone_seconds,
+            "requestStartedElapsedSeconds": self.request_started_seconds,
+            "requestInFlight": matches!(self.milestone, "statusRequestStarted" | "statusResponseHeadersReceived"),
+            "lastCompletedGet": self.last_get, "lastValidatedDto": self.last_validated,
+            "observedWindowSeconds": self.started.elapsed().as_secs_f64(),
+            "rssBeforeBytes": self.rss_before, "processLifetimeHwmBeforeBytes": self.hwm_before,
+            "sampledPeakProcessRssBytes": self.peaks.map(|p| p.0),
+            "sampledPeakOwnedApparentBytes": self.peaks.map(|p| p.1),
+            "sampledPeakOwnedAllocatedBytes": self.peaks.map(|p| p.2),
+            "sampleCount": self.peaks.map(|p| p.3),
+            "samplerPanicked": self.sampler_panicked, "samplingIntervalMillis": 10,
+            "failureNativeSettlement": "not observed; no native-worker join, disposal or drain attempted by this diagnostic",
+            "scope": "Test-owned root metadata samples and process RSS only; last actual bounded public status GET/DTO. No active SQLite copy, source payload, native stack, importer substage or sync count. This diagnostic alone is not resource acceptance or timeout attribution."
+        });
+        // Do not replace a primary panic with a diagnostic-write panic.
+        let write = (|| -> std::io::Result<()> {
+            serde_json::to_writer_pretty(&mut self.file, &report)?;
+            self.file.write_all(b"\n")?;
+            self.file.sync_all()
+        })();
+        if write.is_err() {
+            eprintln!("Large private failure diagnostic write failed");
+        }
+    }
+}
+
+async fn status(
+    router: &axum::Router,
+    base: &str,
+    incarnation: Incarnation,
+    job: JobId,
+    evidence: &mut Evidence,
+) -> Status {
+    evidence.polls += 1;
+    evidence.request_started_seconds = Some(evidence.started.elapsed().as_secs_f64());
+    evidence.mark("statusRequestStarted");
     let response = router
         .clone()
         .oneshot(request("GET", base, incarnation, Some(job), Body::empty()))
         .await
         .unwrap();
-    assert_eq!(response.status(), StatusCode::OK);
-    let status: Status =
-        serde_json::from_slice(&response.into_body().collect().await.unwrap().to_bytes()).unwrap();
+    let code = response.status();
+    evidence.mark("statusResponseHeadersReceived");
+    // Independent test evidence cap, not a public service/schema change.
+    let bytes = axum::body::to_bytes(response.into_body(), 64 * 1024)
+        .await
+        .unwrap();
+    evidence.mark("statusResponseBodyComplete");
+    evidence.last_get = Some(serde_json::json!({
+        "poll": evidence.polls, "httpStatus": code.as_u16(),
+        "requestStartedElapsedSeconds": evidence.request_started_seconds,
+        "completedElapsedSeconds": evidence.milestone_seconds,
+        "responseBodyBytes": bytes.as_ref()
+    }));
+    assert_eq!(code, StatusCode::OK);
+    let status: Status = serde_json::from_slice(&bytes).unwrap();
+    evidence.mark("statusDtoParsed");
     status.validate().unwrap();
+    evidence.mark("statusDtoValidated");
+    evidence.last_validated = Some(serde_json::json!({
+        "poll": evidence.polls, "validatedElapsedSeconds": evidence.milestone_seconds,
+        "dto": &status
+    }));
     status
 }
 
@@ -114,12 +217,14 @@ async fn wait(
     incarnation: Incarnation,
     job: JobId,
     ready: bool,
+    evidence: &mut Evidence,
 ) -> Status {
     // A finite acceptance watchdog, not a service latency guarantee. The Large
     // profile's native deadlines remain authoritative and are not extended here.
-    tokio::time::timeout(Duration::from_secs(1800), async {
+    evidence.wait_target = if ready { "ready" } else { "terminal" };
+    let result = tokio::time::timeout(Duration::from_secs(1800), async {
         loop {
-            let current = status(router, base, incarnation, job).await;
+            let current = status(router, base, incarnation, job, evidence).await;
             if current.state != JobState::Running || (ready && current.phase == Some(Phase::Ready))
             {
                 return current;
@@ -127,8 +232,14 @@ async fn wait(
             tokio::time::sleep(Duration::from_millis(25)).await;
         }
     })
-    .await
-    .expect("finite Large acceptance watchdog")
+    .await;
+    match result {
+        Ok(status) => status,
+        Err(_) => {
+            evidence.failure = Some("finite Large acceptance watchdog");
+            panic!("finite Large acceptance watchdog");
+        }
+    }
 }
 
 async fn details(
@@ -182,7 +293,32 @@ async fn production_mount_large_private_package_commits_retains_backup_and_recor
     let started = Instant::now();
     let rss_before = proc_kib("VmRSS:");
     let hwm_before = proc_kib("VmHWM:");
-    let samples = Samples::start(tmp.path().to_path_buf());
+    let diagnostic = output.with_extension("diagnostic.json");
+    assert_ne!(diagnostic, output);
+    assert!(!diagnostic.starts_with(tmp.path()));
+    let mut evidence = Evidence {
+        file: std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .mode(0o600)
+            .open(diagnostic)
+            .expect("new private diagnostic outside owned TempDir"),
+        samples: Some(Samples::start(tmp.path().to_path_buf())),
+        started,
+        rss_before,
+        hwm_before,
+        polls: 0,
+        wait_target: "notStarted",
+        milestone: "setup",
+        milestone_seconds: 0.0,
+        request_started_seconds: None,
+        last_get: None,
+        last_validated: None,
+        failure: None,
+        success: false,
+        peaks: None,
+        sampler_panicked: false,
+    };
     let source = std::fs::read(&input).expect("read private input");
     assert_eq!(
         format!("{:x}", Hasher::digest(&source)),
@@ -251,7 +387,7 @@ async fn production_mount_large_private_package_commits_retains_backup_and_recor
         router.clone().oneshot(req).await.unwrap().status(),
         StatusCode::ACCEPTED
     );
-    let ready = wait(&router, &base, incarnation, job, true).await;
+    let ready = wait(&router, &base, incarnation, job, true, &mut evidence).await;
     assert_eq!(ready.state, JobState::Running, "Large preview must succeed");
     assert_eq!(ready.phase, Some(Phase::Ready));
     assert_eq!(ready.commit.outcome, CommitOutcome::Pending);
@@ -293,7 +429,7 @@ async fn production_mount_large_private_package_commits_retains_backup_and_recor
         router.clone().oneshot(req).await.unwrap().status(),
         StatusCode::ACCEPTED
     );
-    let done = wait(&router, &base, incarnation, job, false).await;
+    let done = wait(&router, &base, incarnation, job, false, &mut evidence).await;
     assert_eq!(
         done.state,
         JobState::Succeeded,
@@ -369,7 +505,7 @@ async fn production_mount_large_private_package_commits_retains_backup_and_recor
             .end,
         DrainEnd::Finished
     );
-    let peaks = samples.finish();
+    let peaks = evidence.finish_samples();
     let report = serde_json::json!({
         "schemaVersion": 1, "success": true, "profile": "large", "allowLargePackage": true,
         "inputSha256": expected, "inputBytes": source_len, "declaredDecodedBytes": expanded,
@@ -395,4 +531,6 @@ async fn production_mount_large_private_package_commits_retains_backup_and_recor
     serde_json::to_writer_pretty(&mut file, &report).unwrap();
     file.write_all(b"\n").unwrap();
     file.sync_all().unwrap();
+    evidence.success = true;
+    evidence.mark("acceptanceReportSynced");
 }

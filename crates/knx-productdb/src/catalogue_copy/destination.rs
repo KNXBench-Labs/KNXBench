@@ -73,6 +73,8 @@ pub(crate) enum DestinationCleanup {
     ReadEnd(rusqlite::Error),
     ReadNotAutocommit,
     ReadClose(rusqlite::Error),
+    RehearsalRollback(rusqlite::Error),
+    RehearsalNotAutocommit,
     RehearsalClose(rusqlite::Error),
 }
 #[derive(Debug)]
@@ -130,6 +132,7 @@ pub(crate) enum DestinationStage {
     WriteOpen,
     WriteOpened,
     WriteReady,
+    RehearsalInstall,
     RehearsalClose,
 }
 #[cfg(test)]
@@ -237,8 +240,13 @@ impl Destination {
     #[cfg(test)]
     fn seam(&mut self, stage: DestinationStage) {
         if let Some(mut hook) = self.hook.take() {
-            hook(stage, &self.path, self.connection.as_ref());
+            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                hook(stage, &self.path, self.connection.as_ref());
+            }));
             self.hook = Some(hook);
+            if let Err(panic) = result {
+                std::panic::resume_unwind(panic);
+            }
         }
     }
 }
@@ -522,19 +530,42 @@ impl ArtifactInventory {
         slot.check_frozen()?;
         Ok(slot.connection.as_ref().unwrap())
     }
+    #[cfg(test)]
+    pub(crate) fn inspect_rehearsal_installer(&mut self, receipt: &RehearsalDestination) {
+        self.slot(DestinationRole::Rehearsal, receipt.id, State::Rehearsal)
+            .unwrap()
+            .seam(DestinationStage::RehearsalInstall);
+    }
+
     pub(crate) fn close_rehearsal(
         &mut self,
         receipt: RehearsalDestination,
     ) -> Result<(), CopyError> {
         let slot = self.slot(DestinationRole::Rehearsal, receipt.id, State::Rehearsal)?;
+        // Disposable D owns its own transaction; W's reservation cannot cover
+        // this connection. Settlement is uncancellable and never commits D.
+        // Do not recheck the frozen pre-install content after intentional writes.
+        let conn = slot.connection.as_ref().unwrap();
+        let mut cleanup = Vec::new();
+        if !conn.is_autocommit() {
+            if let Err(error) = conn.execute_batch("ROLLBACK") {
+                cleanup.push(DestinationCleanup::RehearsalRollback(error));
+            }
+        }
+        if !conn.is_autocommit() {
+            cleanup.push(DestinationCleanup::RehearsalNotAutocommit);
+        }
         #[cfg(test)]
         slot.seam(DestinationStage::RehearsalClose);
         slot.state = State::Incomplete;
         if let Err((conn, error)) = slot.connection.take().unwrap().close() {
             slot.connection = Some(conn);
+            cleanup.push(DestinationCleanup::RehearsalClose(error));
+        }
+        if !cleanup.is_empty() {
             return Err(CopyError::Destination(Box::new(DestinationFailure {
                 primary: None,
-                cleanup: vec![DestinationCleanup::RehearsalClose(error)],
+                cleanup,
             })));
         }
         Ok(())

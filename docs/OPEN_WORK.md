@@ -724,8 +724,14 @@ scoped14/14GREEN,2,638Rust passes/149selected corpus, frozen inputs, valid proof
 clear user-data guards and publication readback verified. Claim released.
 No new cipher support, password guessing or real encrypted-corpus acquisition.
 
-**Remaining, unowned:** bit-6-only flag consistency and AES extra-field semantic
-equality are separate questions, not verified strong-encryption support.
+**Bit-6-only follow-up (24 October 2026):** source implementation now refuses
+contradictory bit-6-without-bit-0 records in project and product ZIP admission,
+including nested/wrapper consumers. Original-source regressions, focused corrected
+suites and populated-store preservation are verified; independent review accepts
+with zero Critical/Important findings. The maintained package gate remains pending.
+[Contract and evidence](research/2026-10-24-zip-bit6-flag-consistency.md).
+**Remaining, unowned:** AES extra-field semantic equality and other unsupported
+encryption metadata remain separate questions, not verified strong-encryption support.
 Standalone and inner product archives previously retained the accepted trailers, while their
 normalized outputs and wrapper-only reports did not represent them; do not
 conflate that boundary with total archive data loss.

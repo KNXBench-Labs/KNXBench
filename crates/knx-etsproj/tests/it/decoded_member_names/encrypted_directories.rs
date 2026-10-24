@@ -321,10 +321,27 @@ plaintext_cases! {
     nested_plain_deflate_signed_truthful: Nested, 8, &[3, 0], SignedTruthful, 0;
     outer_plain_deflate_unsigned_truthful: Outer, 8, &[3, 0], UnsignedTruthful, 0;
     nested_plain_deflate_unsigned_truthful: Nested, 8, &[3, 0], UnsignedTruthful, 0;
-    outer_bit6_only_stored: Outer, 0, b"", None, 64;
-    nested_bit6_only_stored: Nested, 0, b"", None, 64;
-    outer_bit6_only_deflate: Outer, 8, &[3, 0], None, 64;
-    nested_bit6_only_deflate: Nested, 8, &[3, 0], None, 64;
+}
+
+// The historical acceptance pins are superseded by the bit-6/bit-0 contract.
+macro_rules! bit6_only_cases {
+    ($($name:ident: $layer:ident, $method:literal, $payload:expr;)*) => {
+        $(#[test]
+        fn $name() {
+            let mut m = directory(DIR, $method, $payload, 0);
+            m.flags |= 64;
+            refused_member(Layer::$layer, m, DIR,
+                "strong-encryption flag (bit 6) requires encryption flag (bit 0)",
+                ZIPCRYPTO_MINIMAL_PASSWORD);
+        })*
+    };
+}
+
+bit6_only_cases! {
+    outer_bit6_only_stored: Outer, 0, b"";
+    nested_bit6_only_stored: Nested, 0, b"";
+    outer_bit6_only_deflate: Outer, 8, &[3, 0];
+    nested_bit6_only_deflate: Nested, 8, &[3, 0];
 }
 
 macro_rules! plain_refusal_cases {

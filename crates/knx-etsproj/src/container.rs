@@ -965,6 +965,14 @@ fn check_decoded_names<R: Read + std::io::Seek>(
         let start = usize::try_from(entry.header_start()).unwrap_or(usize::MAX);
         let local = local_record::check(bytes, start, &central)
             .map_err(|reason| inconsistent(&name, reason))?;
+        // APPNOTE 4.4.4: bit 6 requires bit 0, for files and directories alike.
+        // This checks flag consistency, not cipher support or validity.
+        if record.flags & 0x0041 == 0x0040 {
+            return Err(inconsistent(
+                &name,
+                "strong-encryption flag (bit 6) requires encryption flag (bit 0)",
+            ));
+        }
         extents.push((local.record, name.clone()));
         if entry.is_dir() {
             directories.push((name, central, local.data));

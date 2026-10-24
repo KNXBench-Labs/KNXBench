@@ -101,8 +101,13 @@ The [WP-16 follow-up](contracts/project-encrypted-directory-admission.md) is
 published on `main` as `cf5b0fb0`: bit-0 project directories explicitly refuse as
 unsupported instead of skipping cipher-header checks. Maintained scoped14/14GREEN,
 2,638 Rust passes and149/149selected corpus cases; no new cipher, schema or
-release artifact. The claim is released. Bit-6-only consistency and AES extra-field
-semantic equality remain separate unowned questions, not new encryption support.
+release artifact. The bit-0 claim is released. The
+[24 October bit-6-only consistency amendment](research/2026-10-24-zip-bit6-flag-consistency.md)
+is implemented with original-source regressions and focused corrected tests;
+independent review accepts with zero Critical/Important findings; package acceptance
+remains pending. AES extra-field semantic
+equality and other unsupported cipher metadata remain separate questions, not new
+encryption support.
 
 ## After Alpha 15 — master provenance delivered (19 October 2026)
 

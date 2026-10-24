@@ -35,7 +35,9 @@ pub(crate) struct CopyDone {
 
 #[derive(Debug)]
 pub(crate) enum CopyError {
-    Destination(Box<destination::DestinationFailure>),
+    // Share the existing typed error with its inventory owner; cloning or
+    // consuming a projection must not discard independent native D facts.
+    Destination(std::sync::Arc<destination::DestinationFailure>),
     NotReadOnly,
     NoActiveSnapshot,
     UnsupportedPageSize(i64),
@@ -208,7 +210,8 @@ pub(crate) use destination::{
 };
 #[cfg(test)]
 pub(crate) use destination::{
-    DestinationCleanup, DestinationError, DestinationStage, RehearsalDestination,
+    DestinationCleanup, DestinationError, DestinationFailure, DestinationStage,
+    RehearsalDestination,
 };
 pub use destination::{PublishedRecovery, RecoveryPublicationError, ValidatedRecovery};
 

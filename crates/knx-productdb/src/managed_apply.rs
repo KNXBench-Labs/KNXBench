@@ -99,6 +99,18 @@ fn failure_kind(error: &OrchestrationError) -> ControlledFailureKind {
         E::ResultAdmission(_) => K::ResultAdmission,
         E::WriterConfiguration(_) => K::Configuration,
         E::Growth(_) => K::Growth,
+        E::PreviewSettlement(failure)
+            if failure.cleanup.iter().any(|error| {
+                matches!(
+                    error,
+                    crate::orchestration::PreviewCleanupError::RehearsalClose(_)
+                )
+            }) =>
+        {
+            // D cleanup has its own retained signal. Do not replace the
+            // independent installer refusal/Stop with a cleanup-only kind.
+            failure.primary.as_ref().map_or(K::Cleanup, failure_kind)
+        }
         E::PreviewSettlement(_) | E::SourceSettlement(_) => K::Cleanup,
         E::NotHealthy(_) | E::MissingConnection => K::Unavailable,
         E::PolicyMismatch => K::PolicyMismatch,
@@ -179,10 +191,16 @@ impl ApplyWorkspace {
     pub fn native_handles_closed(&self) -> bool {
         self.inventory.native_handles_closed()
     }
-    /// Refuses failed native closes. Only after this inspected check may the
-    /// outer durable inventory release/remove primary files and exact sidecars.
+    /// Independent D settlement failure, including failed explicit rollback
+    /// followed by successful native close. Raw native facts stay owner-held.
+    pub fn cleanup_failed(&self) -> bool {
+        self.inventory.rehearsal_cleanup_failure().is_some()
+    }
+    /// Refuses failed native closes or observed D cleanup failures. Only after
+    /// this inspected check may the outer durable inventory release/remove
+    /// primary files and exact sidecars.
     pub fn release_closed_ownership(&mut self) -> Result<(), RecoveryPublicationError> {
-        if !self.native_handles_closed() {
+        if !self.native_handles_closed() || self.cleanup_failed() {
             return Err(RecoveryPublicationError::Refused);
         }
         self.inventory = ArtifactInventory::default();
@@ -267,6 +285,7 @@ pub enum ApplyBridgeError {
 #[derive(Debug)]
 pub struct ApplyExecution {
     native_settled: bool,
+    rehearsal_cleanup_failed: bool,
     settlement: Option<ControlledApplySettlement>,
     health: WriterHealth,
     commit: CommitEvidence,
@@ -296,7 +315,8 @@ impl ApplyExecution {
         self.settlement.as_ref().is_none_or(|s| s.failure.is_some())
     }
     pub fn cleanup_failed(&self) -> bool {
-        self.health != WriterHealth::Healthy
+        self.rehearsal_cleanup_failed
+            || self.health != WriterHealth::Healthy
             || self
                 .settlement
                 .as_ref()
@@ -309,6 +329,10 @@ impl ApplyExecution {
     }
     pub fn artifacts(&self) -> ArtifactDisposition {
         self.artifacts
+    }
+    #[cfg(test)]
+    pub(crate) fn failure_for_test(&self) -> Option<&OrchestrationError> {
+        self.settlement.as_ref()?.failure.as_ref()
     }
 }
 
@@ -419,6 +443,7 @@ impl ManagedCatalogue {
         );
         Ok(ApplyExecution {
             native_settled: self.controlled_native_settled(),
+            rehearsal_cleanup_failed: workspace.cleanup_failed(),
             settlement,
             health,
             commit,

@@ -8,6 +8,8 @@ use std::ffi::{c_char, c_int, c_void, CStr};
 use std::rc::Rc;
 use std::sync::Arc;
 
+mod public_boundary;
+
 struct Native {
     db: Cell<*mut rusqlite::ffi::sqlite3>,
     role: &'static str,
@@ -195,7 +197,7 @@ impl Probe {
                 let conn = conn.unwrap();
                 assert_eq!(conn.is_autocommit(), !dd.deny_rollback.get(), "inspect actual D settlement before close");
                 if panic_at_entry.get() {
-                    assert_eq!(conn.query_row("SELECT count(*) FROM manufacturer WHERE id='unwind'", [], |r| r.get::<_, i64>(0)).unwrap(), 0, "actual pre-unwind D write was rolled back");
+                    assert_eq!(conn.query_row("SELECT count(*) FROM manufacturer WHERE id='unwind'", [], |r| r.get::<_, i64>(0)).unwrap(), i64::from(dd.deny_rollback.get()), "observe whether actual pre-unwind D write rolled back");
                 }
                 cc.set(cc.get()+1);
                 rr.borrow_mut().push((

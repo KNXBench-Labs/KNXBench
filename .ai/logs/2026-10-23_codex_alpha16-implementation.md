@@ -387,6 +387,39 @@ preserve assertions. Source-only acceptance, no compilation/runtime reexecution.
 Checkpoint then whole successor gate9, isolated stores/owned Cargo target; no
 separate focused test campaigns. Original25 failed cases remain historical.
 
+## Combined candidate gate9 accepted
+
+Parent checked exact ordered10 stages and every exit/proof, requestedFull,
+complete/success/planCompleted/freeze flags, unchanged input fingerprints,
+candidate14c9214b and empty touched/unchecked user-data lists. Nested web71
+stages green. Rust6309 passed/0 failed/222 ignored (56 result groups), corpus155/155.
+Retained gate9-verified.json. No prior failures relabelled, no tests repeated.
+Nonpublishing artifact build/smoke and read-only finite missing-criteria audit
+started deleg_31ee976e. HEAD must remain fixed for artifact identity; metadata
+updates uncommitted until build handoff. No release/hardware certification.
+
+## Artifact handoff and missing integrated proofs
+
+Parent read handoffs and independently verified four artifact hashes/sizes.
+Maintained Docker context excludes tracked compile-time System2 profile; exact
+allowlist correction prepared, alternative override image not accepted as release
+build. Audit identifies missing mounted System2 worker/recovery, comparison native
+apply/undo and measured Large catalogue scenario. Source additions dispatched
+620bcc83, no tests/builds authorised. Execute only uncovered criteria after review;
+passed gate9 stays historical, not new-source acceptance. Matrix output needs a
+different filesystem. Arm64/remote artifacts absent; no publication/hardware claim.
+
+## Mounted acceptance source additions integrated
+
+Read/imported6ab11df6 and63eba2fb, six test/harness paths only. Three owning
+scenarios remain uncompiled/unexecuted. Source review deleg_78b07913 covers
+fidelity, teardown/identity and exact Docker context allowlist. Existing public
+UP258 input digest bound; parent selects one unchanged private Large package by
+file-size inventory then reads only its ZIP directory/hash. Admission metadata
+satisfies stated size/member limits; no install/resource outcome inferred.
+Private path/hash retained only in large-input-admission.json. No test campaign
+or publication; execute only missing proofs after source closure.
+
 ## Next
 
 Consume exact worker handoffs on completion; do not poll

@@ -6,7 +6,11 @@ node_modules/
 # Local and private data the image never needs. `data/` is also the usual
 # bind mount of a running container: it holds user projects and the
 # root-owned TLS key directory, which `docker build` cannot even read.
-data/
+# Admit only the tracked compile-time System-2 profile, never runtime data.
+data/*
+!data/system2-validation/
+data/system2-validation/*
+!data/system2-validation/up258d12-920504-v1.json
 Backup/
 OriginalData/
 .private/

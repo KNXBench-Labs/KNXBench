@@ -64,7 +64,7 @@ builds refuse product26; opening new project saves in Alpha 14 is unverified.
 
 | Feature | Scope | Availability |
 | --- | --- | --- |
-| Resizable data-table columns | Pointer/keyboard resizing below defaults, density/theme-aware cached header/cell word floors capped at 320 px, stable mounted maxima and local scrolling, measured-width announcements, per-column/table reset, validated browser-local preferences; narrow object/address/monitor and EN/DE 1440/1920 fit budgets verified (local scroll where floors exceed the pane); 18 HTML table surfaces, matrix select/address/name included; per-object columns stay fixed — [coverage and limits](contracts/table-column-widths.md) | alpha.15 |
+| Resizable data-table columns | Pointer/keyboard resizing below defaults, density/theme-aware cached header/cell word floors capped at 320 px, stable mounted maxima and local scrolling, measured-width announcements, per-column/table reset, validated browser-local preferences; narrow object/address/monitor and EN/DE 1440/1920 fit budgets verified (local scroll where floors exceed the pane); 18 HTML table surfaces, matrix select/address/name included; per-object columns share one resizable width (Main-only, 25 October 2026) — [coverage and limits](contracts/table-column-widths.md) | alpha.15 |
 
 ## Topology range visibility
 

@@ -131,10 +131,15 @@ it("selects a matrix relationship with separate projected directions and explici
   await chooseView("matrix");
   expect(host.querySelector("[data-ga-matrix]"), "matrix must be mounted in the production workspace").not.toBeNull();
   const handles = host.querySelectorAll<HTMLElement>('[data-table-id="group-address-matrix"] [role="separator"]');
-  expect(handles).toHaveLength(3);
+  expect(handles).toHaveLength(4);
   await act(async () => handles[2].dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })));
+  await act(async () => handles[3].dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })));
   const preferences = JSON.parse(window.localStorage.getItem("knxbench:table-column-widths:v1:group-address-matrix")!);
-  expect(Object.keys(preferences)).toEqual(["select", "address", "name"]);
+  // One common object width: no device/object identity or ordinal ever becomes a key.
+  expect(Object.keys(preferences)).toEqual(["select", "address", "name", "object-column"]);
+  expect(preferences["object-column"]).toBe(188);
+  expect(Object.keys(window.localStorage).filter(key => key.includes("device:") || key.includes("object:"))).toEqual([]);
+  expect(host.querySelector<HTMLElement>(".ga-matrix-table colgroup col:last-child")!.style.width).toBe("188px");
   const cell = host.querySelector<HTMLButtonElement>('[data-ga-cell="address:30:0|device:1:object:10"]')!;
   expect(cell.title).toContain("Send"); expect(cell.title).toContain("Receive"); expect(cell.title).toContain("Future");
   expect(cell.textContent).toContain("S"); expect(cell.textContent).toContain("R"); expect(cell.textContent).toContain("?");
@@ -199,12 +204,16 @@ it("drops deleted ranges and addresses on update instead of keeping stale scope 
   expect(host.querySelector('[data-ga-select="30"]')).not.toBeNull();
 });
 
-tableColumnSmoke([["group-addresses", 6], ["group-address-matrix", 3], ["group-address-members", 4]], async id => {
+tableColumnSmoke([["group-addresses", 6], ["group-address-matrix", 4], ["group-address-members", 4]], async id => {
   if (id === "group-address-members") {
     const ga = { ...installation.group_addresses[0], links: [{ device_id: 1, device_name: "Switch", device_address: "1.1.1", com_object_id: 10, com_object_name: "Switch", com_object_number: 0, direction: "Send" }] };
     await act(async () => root.render(<GroupAddressLinks ga={ga} tree={{ installations: [installation] } as ProjectTree} onTreeUpdate={() => {}} />));
   } else {
-    await act(async () => root.render(<Harness />));
+    // One linked object gives the matrix a shared object column with its own separator.
+    const linked: InstallationNode = { ...installation, group_addresses: [{ ...installation.group_addresses[0], links: [{ device_id: 1,
+      device_name: "Sensor", device_address: "1.1.1", com_object_id: 10, com_object_name: "Switch", com_object_number: 0, direction: "Send" }] },
+      ...installation.group_addresses.slice(1)] };
+    await act(async () => root.render(<Harness input={id === "group-address-matrix" ? linked : undefined} />));
     await chooseView(id === "group-address-matrix" ? "matrix" : "tree");
   }
   return { host };

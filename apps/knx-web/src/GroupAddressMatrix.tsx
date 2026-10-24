@@ -1,4 +1,4 @@
-/** Read-only projected link matrix with explicit bounded object-column choice. */
+/** Read-only projected link matrix with bounded object columns sharing one width. */
 import ResizableTable from "./ResizableTable";
 import type { GroupAddressWorkspaceViewProps } from "./groupAddressWorkspaceView";
 import type { GroupAddressMatrixColumn, GroupAddressMatrixIndex } from "./groupAddressMatrix";
@@ -8,12 +8,15 @@ import { useGroupAddressFormat } from "./gaNotation";
 import GroupAddressWindowNotice from "./GroupAddressWindowNotice";
 import GroupAddressObjectInventoryList from "./GroupAddressObjectInventoryList";
 
-const OBJECT_COLUMN_WIDTH = 180;
 export const MATRIX_COLUMNS = [
   { id: "select", width: 48, min: 32 },
   { id: "address", width: 140, min: 100 },
   { id: "name", width: 240, min: 120 },
 ];
+// One width for every object column under a fixed id: device/object keys or
+// ordinals must never become browser preference keys (they follow selection).
+export const MATRIX_OBJECT_COLUMN = { id: "object-column", width: 180, min: 128, max: 480 };
+export const MATRIX_RESET_COLUMNS = [...MATRIX_COLUMNS, MATRIX_OBJECT_COLUMN];
 const MAX_COLUMNS = 12;
 const DEFAULT_COLUMNS = 6;
 export default function GroupAddressMatrix(props: GroupAddressWorkspaceViewProps & {
@@ -50,7 +53,7 @@ export default function GroupAddressMatrix(props: GroupAddressWorkspaceViewProps
       </label>)}</div>
       <GroupAddressObjectInventoryList inventory={props.inventory} query={needle} />
     </details>
-    <ResizableTable tableId="group-address-matrix" columns={MATRIX_COLUMNS} showReset={props.showColumnReset} fixedTrailingColumns={columns.length} fixedTrailingWidth={OBJECT_COLUMN_WIDTH} scrollClassName="workspace-table-wrap" className="workspace-table ga-matrix-table">
+    <ResizableTable tableId="group-address-matrix" columns={MATRIX_COLUMNS} showReset={props.showColumnReset} trailing={{ count: columns.length, column: MATRIX_OBJECT_COLUMN }} scrollClassName="workspace-table-wrap" className="workspace-table ga-matrix-table">
       <thead><tr><th>{t("addressTable.selectColumn")}</th><th>{t("workbench.address")}</th><th>{t("workbench.name")}</th>
         {columns.map(column => <th key={column.key} scope="col">
           <span>{deviceLabel(column)}</span>

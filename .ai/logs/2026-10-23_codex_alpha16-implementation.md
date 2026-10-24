@@ -357,6 +357,36 @@ fixed12 owned headers only. Static maintained header check now1597 valid/155 abs
 correction does not make gate7 successful. Rust/native/corpus stages unreached.
 Next full corrected candidate gate8 remains necessary; original receipts intact.
 
+## Gate8 reaches Rust and exposes native joins
+
+Complete web gate and all-target Clippy passed; Rust no-fail-fast execution
+failed. Exact panic diagnostics include source portability/save refusals, stale
+CLI preview wording, desktop server connection refusal and catalogue mount
+StripPrefixError. No blanket fixture-only cause inferred. Two isolated correction
+workers deleg_51ff8622 inventory complete retained logs and trace causes; no new
+tests/builds/browser campaigns authorised. Bindings/corpus/artifacts not reached.
+Original receipt and successful partial scopes remain bound to d3da7b52.
+
+## Gate8 native-save and fixture corrections integrated
+
+Read both complete handoffs and imported322c4396/c966e6ca. Worker inventories
+reconcile25 failed cases:19 unresolved-source admission,3 loose-source fixtures,
+plus CLI wording/desktop discarded owner/canonical artifact path. Save correction
+preserves unresolved imports with explicit warning and keeps strict measured
+acquisition and same-saved-dependency offline checks. Genuine package fixtures
+replace unowned loose sources; no runtime passes inferred. Independent narrow
+review deleg_88d8907d dispatched; runtime frozen, metadata only. No extra tests,
+builds/browser/gates executed. Original gate8 remains failed and immutable.
+
+## Gate8 correction source review accepted
+
+Read independent report accepting twelve-file correction at20306635. Unresolved
+imports retain opaque content/warnings, measured ownership guards and explicit
+saved-baseline offline rules remain; native package and lifecycle/path fixtures
+preserve assertions. Source-only acceptance, no compilation/runtime reexecution.
+Checkpoint then whole successor gate9, isolated stores/owned Cargo target; no
+separate focused test campaigns. Original25 failed cases remain historical.
+
 ## Next
 
 Consume exact worker handoffs on completion; do not poll

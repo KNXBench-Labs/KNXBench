@@ -4,10 +4,12 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+import select
 import signal
 import subprocess
 import sys
 import time
+from typing import NamedTuple
 import unittest
 
 from tools import browser_tmp
@@ -193,51 +195,110 @@ def fixture_processes(directory: Path) -> list[int]:
     return processes
 
 
-def handshake_processes(release: Path) -> list[int]:
-    """Return every process owned by this fixture's unique external handshake."""
+class OwnedProcessIdentity(NamedTuple):
+    """A fixture process pinned to the kernel identity observed during validation."""
+
+    pid: int
+    pidfd: int
+
+
+def require_pidfd_cleanup(test: unittest.TestCase) -> None:
+    """Skip before fixture launch when ownership-safe cleanup is unavailable."""
+    if not hasattr(os, 'pidfd_open') or not hasattr(signal, 'pidfd_send_signal'):
+        test.skipTest('Linux pidfds are required for ownership-safe fixture cleanup')
+    try:
+        pidfd = os.pidfd_open(os.getpid())
+        try:
+            signal.pidfd_send_signal(pidfd, 0)
+        finally:
+            os.close(pidfd)
+    except OSError as error:
+        test.skipTest(f'Linux pidfds are unavailable for ownership-safe fixture cleanup: {error}')
+
+
+def handshake_processes(release: Path) -> list[OwnedProcessIdentity]:
+    """Pin every process validated against this fixture's unique handshake."""
+    if not hasattr(os, 'pidfd_open'):
+        raise RuntimeError('pidfd support must be checked before launching a SIGTERM fixture')
     marker = f'KNXBENCH_SIGTERM_RELEASE={release}'.encode()
     processes = []
     for entry in Path('/proc').iterdir():
+        pidfd = None
         try:
-            if entry.name.isdigit() and marker in (entry / 'environ').read_bytes().split(b'\0'):
-                processes.append(int(entry.name))
+            if not entry.name.isdigit():
+                continue
+            if marker not in (entry / 'environ').read_bytes().split(b'\0'):
+                continue
+            pid = int(entry.name)
+            pidfd = os.pidfd_open(pid)
+            if marker not in (entry / 'environ').read_bytes().split(b'\0'):
+                continue
+            processes.append(OwnedProcessIdentity(pid=pid, pidfd=pidfd))
+            pidfd = None
         except OSError:
             continue
+        finally:
+            if pidfd is not None:
+                os.close(pidfd)
     return processes
+
+
+def signal_owned_processes(processes: list[OwnedProcessIdentity], signum: signal.Signals) -> None:
+    """Signal only the kernel identities retained while fixture ownership was proven."""
+    for process in processes:
+        try:
+            signal.pidfd_send_signal(process.pidfd, signum)
+        except ProcessLookupError:
+            pass
+
+
+def running_owned_processes(
+        processes: list[OwnedProcessIdentity]) -> list[OwnedProcessIdentity]:
+    """Return retained identities whose original processes have not exited."""
+    if not processes:
+        return []
+    exited, _, _ = select.select([process.pidfd for process in processes], [], [], 0)
+    return [process for process in processes if process.pidfd not in exited]
+
+
+def wait_for_owned_processes(
+        processes: list[OwnedProcessIdentity], timeout: float = 10) -> None:
+    """Wait boundedly for retained fixture identities to report process exit."""
+    remaining = running_owned_processes(processes)
+    deadline = time.monotonic() + timeout
+    while remaining:
+        wait = deadline - time.monotonic()
+        if wait <= 0:
+            states = ', '.join(process_state(process.pid) for process in remaining)
+            raise AssertionError(f'fixture-owned processes survived cleanup: {states}')
+        exited, _, _ = select.select([process.pidfd for process in remaining], [], [], wait)
+        exited = set(exited)
+        remaining = [process for process in remaining if process.pidfd not in exited]
 
 
 def cleanup_sigterm_fixture(wrapper: subprocess.Popen, release: Path) -> None:
     """Release or kill every process owned by one SIGTERM fixture."""
-    release.touch(exist_ok=True)
+    owned = handshake_processes(release)
     try:
-        wrapper.communicate(timeout=3)
-    except subprocess.TimeoutExpired:
-        if wrapper.poll() is None:
-            wrapper.send_signal(signal.SIGTERM)
+        release.touch(exist_ok=True)
         try:
             wrapper.communicate(timeout=3)
         except subprocess.TimeoutExpired:
-            for pid in handshake_processes(release):
-                try:
-                    os.kill(pid, signal.SIGKILL)
-                except ProcessLookupError:
-                    pass
             if wrapper.poll() is None:
-                wrapper.kill()
-            wrapper.communicate(timeout=10)
-    deadline = time.monotonic() + 10
-    remaining = handshake_processes(release)
-    while remaining and time.monotonic() < deadline:
-        for pid in remaining:
+                wrapper.send_signal(signal.SIGTERM)
             try:
-                os.kill(pid, signal.SIGKILL)
-            except ProcessLookupError:
-                pass
-        time.sleep(0.01)
-        remaining = handshake_processes(release)
-    if remaining:
-        states = ', '.join(process_state(pid) for pid in remaining)
-        raise AssertionError(f'fixture-owned processes survived cleanup: {states}')
+                wrapper.communicate(timeout=3)
+            except subprocess.TimeoutExpired:
+                signal_owned_processes(owned, signal.SIGKILL)
+                if wrapper.poll() is None:
+                    wrapper.kill()
+                wrapper.communicate(timeout=10)
+        remaining = running_owned_processes(owned)
+        signal_owned_processes(remaining, signal.SIGKILL)
+        wait_for_owned_processes(remaining)
+    finally:
+        for process in owned:
+            os.close(process.pidfd)
 
 
 class BrowserTempLaunch(unittest.TestCase):
@@ -383,7 +444,7 @@ class BrowserTempLaunch(unittest.TestCase):
             self.assertTrue(deep.exists())
 
     def test_cli_sigterm_waits_for_child_shutdown_before_cleanup(self) -> None:
-        import select
+        require_pidfd_cleanup(self)
         with self.workspace() as tmp:
             work = Path(tmp)
             # The child blocks SIGTERM before it announces itself and then takes
@@ -429,7 +490,7 @@ class BrowserTempLaunch(unittest.TestCase):
                 cleanup_sigterm_fixture(child, release)
 
     def test_sigterm_contract_rejects_missing_wait_and_premature_cleanup_mutant(self) -> None:
-        import select
+        require_pidfd_cleanup(self)
         with self.workspace() as tmp:
             work = Path(tmp)
             receipt = work / 'signal-received.json'
@@ -460,6 +521,40 @@ class BrowserTempLaunch(unittest.TestCase):
                     assert_sigterm_child_held(self, wrapper, directory, observed['pid'])
             finally:
                 cleanup_sigterm_fixture(wrapper, release)
+
+    def test_sigterm_fixture_cleanup_signals_stable_owned_identity(self) -> None:
+        require_pidfd_cleanup(self)
+        with self.workspace() as tmp:
+            release = Path(tmp) / 'owned-release'
+            env = {**self.clean_environment(), 'KNXBENCH_SIGTERM_RELEASE': str(release)}
+            fixture = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(60)'], env=env)
+            identities = []
+            sentinel = None
+            try:
+                deadline = time.monotonic() + 10
+                while not identities:
+                    identities = handshake_processes(release)
+                    if time.monotonic() >= deadline:
+                        self.fail('fixture process was not discovered before cleanup regression')
+                    if not identities:
+                        time.sleep(0.01)
+                self.assertEqual([identity.pid for identity in identities], [fixture.pid])
+                fixture.terminate()
+                fixture.wait(timeout=10)
+                sentinel = subprocess.Popen(
+                    [sys.executable, '-c', 'import time; time.sleep(60)'])
+                reused = OwnedProcessIdentity(pid=sentinel.pid, pidfd=identities[0].pidfd)
+                signal_owned_processes([reused], signal.SIGKILL)
+                self.assertIsNone(sentinel.poll(), 'stale numeric PID killed an unrelated process')
+            finally:
+                if fixture.poll() is None:
+                    fixture.kill()
+                    fixture.wait(timeout=10)
+                if sentinel is not None and sentinel.poll() is None:
+                    sentinel.kill()
+                    sentinel.wait(timeout=10)
+                for identity in identities:
+                    os.close(identity.pidfd)
 
     def test_multibyte_and_whitespace_paths_use_byte_budget_and_json(self) -> None:
         with self.workspace() as tmp:

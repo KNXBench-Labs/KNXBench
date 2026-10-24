@@ -37,6 +37,7 @@ semantics.
 | configuration | Select an application, correct address/duplicate assignments or conflicting links/values as named by the detail |
 | parameter-value / parameter-evaluation | Inspect values and application version; report an unresolved encoder/evaluation gap, never guess replacements |
 | byte-order / modules / image-structure / procedure categories / not-memory-mapped | Request support with the stable code and permitted source evidence; no bypass |
+| vendor-download-plugin | The program declares an ETS download plug-in (KL-006): use ETS for the download; every scope stays refused, read-only compare remains available |
 | excluded | Respect the exclusion; do not use an acknowledgement to override policy |
 | transport/server failure | Check server availability and retry deliberately; no compatibility downgrade |
 | unknown/null category | Retain code/detail; request clarification without assuming a device family |

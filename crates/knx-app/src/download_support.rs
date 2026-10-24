@@ -29,7 +29,8 @@ use knx_core::commissioning::partial_memory_download::PartialDownloadParts;
 use knx_core::IndividualAddress;
 use knx_productdb::code::load_program_code;
 use knx_productdb::download_plan::{
-    check_program_kind, plan_memory_download_with_inferences, DownloadPlanError,
+    check_download_plugin, check_program_kind, plan_memory_download_with_inferences,
+    DownloadPlanError,
 };
 use knx_productdb::image::{build_download_image, ImageError, ImageRequest};
 use knx_productdb::inference::Inference;
@@ -154,6 +155,10 @@ pub enum UnsupportedCategory {
     /// project device has one; the product-default coverage never reports
     /// it.
     Configuration,
+    /// The program declares an ETS download plug-in
+    /// (`Static/Extension/@EtsDownloadPlugin`): vendor code writes what the
+    /// product data does not describe, so no scope is downloaded (KL-006).
+    VendorDownloadPlugin,
 }
 
 impl UnsupportedCategory {
@@ -172,6 +177,7 @@ impl UnsupportedCategory {
             Self::ByteOrder => "byte-order",
             Self::ProductData => "product-data",
             Self::Configuration => "configuration",
+            Self::VendorDownloadPlugin => "vendor-download-plugin",
         }
     }
 }
@@ -312,6 +318,7 @@ pub fn plan_category(error: &DownloadPlanError) -> UnsupportedCategory {
         DownloadPlanError::ProcedureCount(_) | DownloadPlanError::DoesNotConnectFirst => {
             UnsupportedCategory::ProcedureShape
         }
+        DownloadPlanError::VendorDownloadPlugin(_) => UnsupportedCategory::VendorDownloadPlugin,
         _ => UnsupportedCategory::ProcedureContents,
     }
 }
@@ -345,16 +352,22 @@ pub fn offline_download(
         .map_err(|e| (plan_category(&e), format!("load procedure: {e}")))
 }
 
-/// Refuses a program of a kind no download translates, before its image is
-/// built ([`check_program_kind`]). A program the database lacks passes: its
-/// image build names that.
+/// Refuses a program no download writes, before its image is built: one of
+/// a kind no download translates ([`check_program_kind`]: mask, then
+/// procedure style), then one that declares an ETS download plug-in
+/// ([`check_download_plugin`], KL-006). The order is the same as
+/// [`crate::device_download::prepare_device_download`]'s: the more
+/// fundamental refusal is the one reported. A program the database lacks
+/// passes: its image build names that. Used by every offline plan
+/// (coverage, backup restore), which are downloads, never by a read-only
+/// comparison.
 pub fn check_kind(
     conn: &Connection,
     program_id: &str,
 ) -> Result<(), (UnsupportedCategory, String)> {
     match load_program_code(conn, program_id) {
         Ok(Some(code)) => check_program_kind(&code)
-            .map(|_| ())
+            .and_then(|_| check_download_plugin(&code))
             .map_err(|e| (plan_category(&e), format!("load procedure: {e}"))),
         Ok(None) => Ok(()),
         Err(e) => Err((
@@ -509,6 +522,20 @@ mod tests {
         };
         assert_eq!(image_category(&error), UnsupportedCategory::ByteOrder);
         assert_eq!(UnsupportedCategory::ByteOrder.code(), "byte-order");
+    }
+
+    /// KL-006: a declared ETS download plug-in has a category of its own.
+    #[test]
+    fn a_declared_download_plugin_refusal_has_its_own_category() {
+        let error = DownloadPlanError::VendorDownloadPlugin("{G}".into());
+        assert_eq!(
+            plan_category(&error),
+            UnsupportedCategory::VendorDownloadPlugin
+        );
+        assert_eq!(
+            UnsupportedCategory::VendorDownloadPlugin.code(),
+            "vendor-download-plugin"
+        );
     }
     fn evidence(id: &str) -> VerifiedEvidence {
         VerifiedEvidence {

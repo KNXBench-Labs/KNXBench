@@ -3,7 +3,7 @@ import type { DownloadReadinessMark } from "./downloadReadiness";
 
 export type SupportAction = "installData" | "fixConfiguration" | "respectExclusion" | "requestSupport"
   | "checkParameters" | "reportUnknown" | "retryService" | "openProject"
-  | "fixGateway" | "prepareAgain" | "confirmRequest" | "checkKey" | "releaseResource";
+  | "fixGateway" | "prepareAgain" | "confirmRequest" | "checkKey" | "releaseResource" | "useVendorTool";
 export interface SupportGuidance {
   kind: "unsupported" | "excluded" | "transient" | "unknown";
   category: string | null;
@@ -19,6 +19,7 @@ const ACTIONS: Readonly<Record<string, SupportAction>> = {
   "unmodelled-step": "requestSupport", "procedure-shape": "requestSupport",
   "procedure-contents": "requestSupport", modules: "requestSupport",
   "image-structure": "requestSupport", "byte-order": "requestSupport",
+  "vendor-download-plugin": "useVendorTool",
 };
 
 export function guidanceForMark(mark: DownloadReadinessMark & { detail?: string | null }): SupportGuidance {

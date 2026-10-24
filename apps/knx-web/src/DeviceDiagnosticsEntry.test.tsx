@@ -5,6 +5,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { DeviceDetail } from "./bindings/DeviceDetail";
 import type { ProjectTree } from "./bindings/ProjectTree";
+import type { DiagnosticView } from "./diagnosticApi";
 import { messages as en } from "./messages/en";
 const api = vi.hoisted(() => ({ deviceParameters: vi.fn().mockResolvedValue({ programId: null, sections: [], stale: [], diagnostics: [] }) }));
 vi.mock("./api", () => ({ ...api, errorMessage: String }));
@@ -31,8 +32,11 @@ const detail: DeviceDetail = { id: 9, name: "Synthetic device 9", address: "1.1.
   product: { product_ref: null, program_ref: null, catalog: null, resolution: "NoReference" } };
 
 let host: HTMLDivElement; let root: Root;
-beforeEach(() => { host = document.createElement("div"); document.body.append(host); root = createRoot(host); });
-afterEach(async () => { await act(async () => root.unmount()); host.remove(); document.body.innerHTML = ""; vi.clearAllMocks(); });
+beforeEach(() => {
+  host = document.createElement("div"); document.body.append(host); root = createRoot(host);
+  for (const mock of Object.values(diagnostics)) mock.mockReset();
+});
+afterEach(async () => { await act(async () => root.unmount()); host.remove(); document.body.innerHTML = ""; vi.clearAllMocks(); vi.useRealTimers(); });
 const analyse = () => host.querySelector<HTMLButtonElement>("[data-device-analyse]");
 const report = () => host.querySelector<HTMLButtonElement>("[data-device-report]");
 const diagnosticDialog = () => document.querySelector<HTMLElement>(".diagnostic-export");
@@ -106,6 +110,158 @@ it("a device change or another project closes the analysis; a revision keeps its
   await act(async () => analyse()!.click());
   await act(async () => root.render(<DeviceDiagnosticsEntry project={{ ...project, project_incarnation: 2 }} deviceId={10} />));
   expect(diagnosticDialog()).toBeNull();
+});
+
+const preview: DiagnosticView = {
+  token: "a".repeat(64), target: "1.1.9", gateway: "192.0.2.10:3671", phase: "preview", cancelRequested: false,
+  report: {
+    kind: "knxbench-device-diagnostics", format: 1, build: "synthetic", collectedAt: "2026-10-24T00:00:00Z",
+    device: "device-1", projectReference: "a".repeat(64), profile: "generic-identity-v1", assertedMask: null,
+    assertedManufacturer: null, simulated: true, written: false, complete: false, stopReason: null,
+    memoryStatus: "not-requested", memoryReason: "No safe memory profile", disconnectAttemptCompleted: false,
+    items: ["descriptor-type-0", "manufacturer-id", "hardware-type"].map((query, index) => ({
+      order: index + 1, query, objectIndex: index === 0 ? null : 0, propertyId: index === 0 ? null : index === 1 ? 12 : 78,
+      startIndex: index === 0 ? null : 1, requestedElements: index === 0 ? null : 1, expectedBytes: index === 2 ? 6 : 2,
+      status: "not-read", receivedBytes: 0, returnedElements: null, bytes: [], attemptedAt: null, completedAt: null, error: null,
+    })),
+  },
+};
+const running: DiagnosticView = { ...preview, phase: "running" };
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason: Error) => void;
+  const promise = new Promise<T>((ok, fail) => { resolve = ok; reject = fail; });
+  return { promise, resolve, reject };
+}
+async function click(selector: string) {
+  await act(async () => document.querySelector<HTMLButtonElement>(selector)!.click());
+}
+async function openPreview(value: DiagnosticView = preview) {
+  diagnostics.previewDiagnostics.mockResolvedValue(value);
+  await click("[data-device-analyse]");
+  const input = document.querySelector<HTMLInputElement>("[data-diagnostics-gateway]")!;
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, value.gateway);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  await click("[data-diagnostics-preview]");
+}
+async function start() {
+  await click("[data-diagnostics-read-consent]");
+  await click("[data-diagnostics-start]");
+}
+
+const departures = ["device change", "project change", "project close", "unmount"] as const;
+async function leaveAnalysis(reason: typeof departures[number]) {
+  await act(async () => {
+    if (reason === "device change") root.render(<DeviceDiagnosticsEntry project={project} deviceId={10} />);
+    else if (reason === "project change") root.render(<DeviceDiagnosticsEntry project={{ ...project, project_incarnation: 2 }} deviceId={9} />);
+    else if (reason === "project close") root.render(<DeviceDiagnosticsEntry project={null} deviceId={9} />);
+    else root.render(null);
+  });
+  expect(diagnosticDialog()).toBeNull();
+}
+
+it.each(departures)("cancels a late running start after %s closes the analysis", async (reason) => {
+  vi.useFakeTimers();
+  const pending = deferred<DiagnosticView>();
+  diagnostics.startDiagnostics.mockReturnValueOnce(pending.promise);
+  diagnostics.cancelDiagnostics.mockResolvedValue({ ...running, cancelRequested: true });
+  await act(async () => root.render(<DeviceDiagnosticsEntry project={project} deviceId={9} />));
+  await openPreview();
+  await start();
+  expect(diagnostics.startDiagnostics).toHaveBeenCalledExactlyOnceWith(preview.token);
+  await leaveAnalysis(reason);
+  expect(diagnostics.cancelDiagnostics).not.toHaveBeenCalled();
+  await act(async () => pending.resolve(running));
+  expect(diagnostics.cancelDiagnostics).toHaveBeenCalledExactlyOnceWith(preview.token);
+  await act(async () => vi.advanceTimersByTimeAsync(1000));
+  expect(diagnostics.pollDiagnostics).not.toHaveBeenCalled();
+  expect(diagnosticDialog()).toBeNull();
+});
+
+it.each(departures)("cancels the current running job exactly once on %s", async (reason) => {
+  vi.useFakeTimers();
+  diagnostics.startDiagnostics.mockResolvedValue(running);
+  diagnostics.cancelDiagnostics.mockResolvedValue({ ...running, cancelRequested: true });
+  await act(async () => root.render(<DeviceDiagnosticsEntry project={project} deviceId={9} />));
+  await openPreview();
+  await start();
+  expect(document.querySelector("[data-diagnostics-cancel]")).not.toBeNull();
+  await leaveAnalysis(reason);
+  await act(async () => vi.advanceTimersByTimeAsync(1000));
+  expect(diagnostics.cancelDiagnostics).toHaveBeenCalledExactlyOnceWith(preview.token);
+  expect(diagnostics.pollDiagnostics).not.toHaveBeenCalled();
+});
+
+it.each(["running", "complete", "rejected"] as const)("a late %s start never changes or cancels the newer job", async (outcome) => {
+  vi.useFakeTimers();
+  const pending = deferred<DiagnosticView>();
+  const newerPreview: DiagnosticView = { ...preview, token: "b".repeat(64), target: "1.1.10" };
+  const newerRunning: DiagnosticView = { ...newerPreview, phase: "running" };
+  diagnostics.startDiagnostics.mockReturnValueOnce(pending.promise).mockResolvedValueOnce(newerRunning);
+  diagnostics.pollDiagnostics.mockResolvedValue(newerRunning);
+  // Cleanup failure is best effort; it must not leak into the newer dialog or reject unhandled.
+  diagnostics.cancelDiagnostics.mockRejectedValue(new Error("cancel refused"));
+  await act(async () => root.render(<DeviceDiagnosticsEntry project={project} deviceId={9} />));
+  await openPreview();
+  await start();
+  await leaveAnalysis("device change");
+  await openPreview(newerPreview);
+  await start();
+  const newerDialog = diagnosticDialog();
+  expect(newerDialog).not.toBeNull();
+  expect(diagnostics.startDiagnostics.mock.calls).toEqual([[preview.token], [newerPreview.token]]);
+  await act(async () => {
+    if (outcome === "rejected") pending.reject(new Error("start refused"));
+    else pending.resolve({ ...running, phase: outcome });
+  });
+  expect(diagnostics.cancelDiagnostics.mock.calls).toEqual(outcome === "running" ? [[preview.token]] : []);
+  await act(async () => vi.advanceTimersByTimeAsync(250));
+  expect(diagnostics.pollDiagnostics).toHaveBeenCalledExactlyOnceWith(newerPreview.token);
+  expect(diagnosticDialog()).toBe(newerDialog);
+  expect(newerDialog!.querySelector("[role=alert]")).toBeNull();
+  expect(newerDialog!.querySelector<HTMLButtonElement>("[data-diagnostics-cancel]")!.disabled).toBe(false);
+  await act(async () => root.render(null));
+  expect(diagnostics.cancelDiagnostics.mock.calls).toEqual(outcome === "running" ? [[preview.token], [newerPreview.token]] : [[newerPreview.token]]);
+});
+
+it.each(["pending", "running"] as const)("a revision keeps the %s start and preserves stopped partial results for consented export", async (phase) => {
+  vi.useFakeTimers();
+  const pending = deferred<DiagnosticView>();
+  const partial: DiagnosticView = {
+    ...running, phase: "complete", cancelRequested: true,
+    report: { ...running.report, complete: true, stopReason: "cancelled", disconnectAttemptCompleted: true,
+      items: running.report.items.map((item, index) => index === 0 ? {
+        ...item, status: "read", bytes: [7, 1], receivedBytes: 2,
+        attemptedAt: "2026-10-24T00:00:00Z", completedAt: "2026-10-24T00:00:01Z",
+      } : item),
+    },
+  };
+  diagnostics.startDiagnostics.mockReturnValueOnce(pending.promise);
+  diagnostics.cancelDiagnostics.mockResolvedValue(partial);
+  await act(async () => root.render(<DeviceDiagnosticsEntry project={project} deviceId={9} />));
+  await openPreview();
+  await start();
+  if (phase === "running") await act(async () => pending.resolve(running));
+  const dialog = diagnosticDialog();
+  expect(dialog).not.toBeNull();
+  await act(async () => root.render(<DeviceDiagnosticsEntry project={{ ...project, snapshot_revision: 2 }} deviceId={9} />));
+  if (phase === "pending") await act(async () => pending.resolve(running));
+  expect(diagnosticDialog()).toBe(dialog);
+  expect(diagnostics.cancelDiagnostics).not.toHaveBeenCalled();
+  expect(dialog!.textContent).toContain(en["diagnostics.stale"]);
+  await click("[data-diagnostics-cancel]");
+  expect(diagnostics.cancelDiagnostics).toHaveBeenCalledExactlyOnceWith(preview.token);
+  expect(document.querySelector("[data-diagnostics-result]")!.textContent).toContain("cancelled");
+  expect(JSON.parse(document.querySelector('[aria-label="report.json"]')!.textContent!).items[0].bytes).toEqual([7, 1]);
+  expect(document.querySelector<HTMLButtonElement>("[data-diagnostics-save]")!.disabled).toBe(true);
+  expect(diagnostics.saveDiagnostics).not.toHaveBeenCalled();
+  await click("[data-diagnostics-share-consent]");
+  await click("[data-diagnostics-save]");
+  expect(diagnostics.saveDiagnostics).toHaveBeenCalledExactlyOnceWith(preview.token);
+  await act(async () => root.render(null));
+  expect(diagnostics.cancelDiagnostics).toHaveBeenCalledTimes(1);
 });
 
 it("both entries are disabled without a project and open nothing", async () => {

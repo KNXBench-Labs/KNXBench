@@ -12,9 +12,9 @@ type OpenDialog = "analyse" | "report" | null;
 
 /**
  * Plain buttons, never File-menu entries: the dialogs keep their own consent and review flows.
- * Each dialog closes on the same changes as at its File-menu entry plus a change of device: the
- * report on any new project revision, the analysis only on another project, because a revision
- * change there is the dialog's own stale-review state and must not cut a running read short.
+ * This tab closes both dialogs on a device or project change, and the report on any revision.
+ * The File-menu analysis entry has no such close-on-project-change binding. Here, a revision
+ * keeps the analysis dialog's own stale-review state and must not cut a running read short.
  */
 export default function DeviceDiagnosticsEntry({ project, deviceId }: { project: ProjectTree | null; deviceId: number }) {
   const t = useTranslate();

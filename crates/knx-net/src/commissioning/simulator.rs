@@ -115,6 +115,22 @@ fn numbered_read_in(
     is_wanted_read && window.contains(&number)
 }
 
+/// What the answer to a `PID_LOAD_STATE_CONTROL` write carries.
+///
+/// A fixture choice for the one octet RES §4.23.2.3.2 and MP §3.31.3 put in
+/// that answer; the load state itself is not changed by it.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub enum LoadControlResponse {
+    /// The state the event left the part in; the answer of a plain device.
+    #[default]
+    ResultingState,
+    /// `LoadCompleting` while a preset [`SimulatorConfig::load_completing_polls`]
+    /// count is still pending, without spending one of those polls.
+    CompletingWhilePending,
+    /// These octets, whatever they are: a device answering wrongly.
+    Octets(Vec<u8>),
+}
+
 /// How the simulated device is to misbehave.
 ///
 /// [`Default`] is a device that works: everything else in this struct is a
@@ -161,6 +177,8 @@ pub struct SimulatorConfig {
     pub error_code: u8,
     /// How many reads answer `LoadCompleting` before the state settles.
     pub load_completing_polls: u8,
+    /// What the answer to a load-control write carries.
+    pub load_control_response: LoadControlResponse,
     /// Answer nothing while in `LoadCompleting`, which RES Table 94's
     /// footnote permits and design spec §5.5 requires the client to tolerate.
     ///
@@ -636,6 +654,7 @@ impl Default for SimulatorConfig {
             fail_on_event: None,
             error_code: 2,
             load_completing_polls: 0,
+            load_control_response: LoadControlResponse::ResultingState,
             silent_in_load_completing: false,
             unanswered_load_state_reads: None,
             unacknowledged_load_state_reads: None,
@@ -2636,9 +2655,19 @@ impl SimulatedDevice {
                 // write of a PDT_CONTROL property is a read of it, and a
                 // read of this one is the resulting state — never the ten
                 // octets sent.
-                Some(vec![self
-                    .load_state(ObjectIndex::new(object_index))
-                    .octet()])
+                let resulting = self.load_state(ObjectIndex::new(object_index));
+                match &self.config.load_control_response {
+                    LoadControlResponse::ResultingState => Some(vec![resulting.octet()]),
+                    LoadControlResponse::CompletingWhilePending => {
+                        let pending = self.lock().completing.get(&object_index).copied();
+                        let state = match pending {
+                            Some(left) if left > 0 => LoadState::LoadCompleting,
+                            _ => resulting,
+                        };
+                        Some(vec![state.octet()])
+                    }
+                    LoadControlResponse::Octets(octets) => Some(octets.clone()),
+                }
             }
             PID_DEVICE_CONTROL => {
                 let wanted = *data.first()?;

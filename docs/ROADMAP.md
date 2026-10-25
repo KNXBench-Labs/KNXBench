@@ -51,6 +51,13 @@ passed; published as `a4a4ebcf1`
 ([acceptance](status/2026-10-25-memory-region-reads.md)). This does not add interface
 or coupler budget discovery, device-family admission or hardware evidence.
 
+The [load-control response correction](contracts/load-control-response-state.md)
+uses a state actually reported before an offline completion interval rather than
+forgetting that observation. Independent review and focused regressions passed;
+integrated acceptance and publication are pending. The existing profile-specific
+wait/reconnect and three-read memory mechanisms are not replaced by a common
+timeout policy; no hardware acceptance or family promotion follows.
+
 ## Alpha 16 published pre-release — public artifacts and website verified (24 October 2026)
 
 The [current source-bound evidence matrix](goals/alpha16-release-plan-2026-10-23.md#current-acceptance-disposition--24-october-2026)

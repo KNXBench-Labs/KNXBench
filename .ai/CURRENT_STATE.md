@@ -2,6 +2,13 @@
 
 Updated: 2026-10-25 02:22 CEST. Operational snapshot, not an append-only journal.
 
+## Issue #30 delivered (2026-10-25)
+
+- System-2 mode selector/readiness scoping merged `946871e8b` (feature `501f59793`).
+- Opus review REQUEST CHANGES closed, re-review APPROVE; change-scoped gate 11/11 incl. web 32
+  stages/897 browser cases; on merge docs/xtask/local-info re-run (upstream delta Rust/docs only).
+- Hardware outcome of System-2 stays unverified (#22/WP-12); issue #30 answered, see its thread.
+
 ## Current assignment and authority
 
 - Owner's six-task batch is delivered in five packages; all claims released. No new feature assignment is started by closeout.

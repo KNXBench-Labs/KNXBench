@@ -434,6 +434,29 @@ async fn each_identity_mismatch_sends_no_memory_read() {
     }
 }
 #[tokio::test]
+async fn a_hardware_type_of_another_width_reads_no_memory() {
+    // Seven to ten octets are all prefixes of the zero-padded comparison
+    // value; PID78 is one six-octet value, so none of them is a match.
+    for width in (0..6).chain(7..=HARDWARE_TYPE.len()) {
+        let w = Wire::system2(|_| {}, MemoryFault::None);
+        w.device.preset_property(0, 78, &HARDWARE_TYPE[..width]);
+        let r = run_memory(&w, asserted(), timing()).await;
+        let item = &r.acquisition.items[2];
+        assert_eq!(item.bytes, HARDWARE_TYPE[..width], "{width} octets");
+        assert_ne!(item.status, Status::Read, "{width} octets");
+        assert!(
+            matches!(
+                r.acquisition.stop_reason,
+                Some("identity-unverified" | "identity-mismatch")
+            ),
+            "{width} octets: {:?}",
+            r.acquisition.stop_reason
+        );
+        assert!(w.memory_reads().is_empty(), "{width} octets");
+        w.memory_safety();
+    }
+}
+#[tokio::test]
 async fn an_identity_property_that_is_not_exactly_read_reads_no_memory() {
     // PID78 answered with a different element count: partial, not a match.
     let w = Wire {

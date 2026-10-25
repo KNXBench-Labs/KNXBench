@@ -12,6 +12,22 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Read-only check after a regular download (25 October 2026 source, unpublished)
+
+After a successful regular memory download (complete or partial, restart
+acknowledged, not in plan or unconfirmed) the CLI and the server worker run one
+read-only check on the same tunnel: fresh connection, no key, no write or
+restart, no second attempt. Reach, identity and each load state (expected next to observed) are
+recorded in one payload-free record shared by CLI output, server status, the
+tester's report (additive, format 1) and the activity history; absent means
+not checked, runtime is always unknown ([contract](contracts/post-download-check.md)).
+Simulator parent-path regressions only (CLI runner and exit composition,
+server worker); the HTTP route assertions sit in `#[ignore]`d corpus tests and
+are pending until the corpus gate runs them. An older format-2 reader refuses a
+history holding a check (safe refusal, nothing lost). Source APPROVED after
+re-review of the corrections; not delivered: integration acceptance (corpus,
+package gate, browser) and hardware acceptance pending. Restore is unchanged.
+
 ## Download scope from programming marks (25 October 2026)
 
 A download can now ask for "what the project marks pending" instead of a fixed

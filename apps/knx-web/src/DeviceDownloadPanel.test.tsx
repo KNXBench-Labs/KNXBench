@@ -31,6 +31,7 @@ import DeviceDownloadPanel from "./DeviceDownloadPanel";
 import { messages as en } from "./messages/en";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { DeviceDownloadStatusResponse } from "./api";
+import checkFixtures from "./postDownloadCheck.fixtures.json";
 import { subscribeAchievementEvents, type AchievementEvent } from "./achievementEvents";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -405,6 +406,50 @@ it("says loudly when the restart was not confirmed", async () => {
   expect(host!.textContent).toContain("Restart: NOT confirmed.");
   expect(host!.textContent).toContain("no T_ACK for A_Restart");
   expect(host!.textContent).not.toContain(en["deviceDownload.restartAcknowledged"]);
+});
+
+it("shows the read-only check apart from the transfer and restart, with a mismatch warning and no resend", async () => {
+  apiMock.pollDeviceDownload.mockReset().mockResolvedValue(
+    response(
+      { state: "finished", written: "yes", restart: "unconfirmed", restartNote: "no T_ACK for A_Restart",
+        postDownloadCheck: checkFixtures.identityMismatch },
+      [{ kind: "postDownloadCheckStarted" }],
+      1,
+    ),
+  );
+  await render();
+  const text = host!.textContent!;
+  const written = text.indexOf("Written to the device: yes");
+  const restart = text.indexOf("Restart: NOT confirmed.");
+  const check = text.indexOf(en["postDownloadCheck.title"]);
+  expect(written).toBeGreaterThanOrEqual(0);
+  expect(restart).toBeGreaterThan(written);
+  expect(check).toBeGreaterThan(restart);
+  expect(text).toContain(en["postDownloadCheck.identity.mismatch.application"]);
+  expect(text).toContain(en["postDownloadCheck.runtimeUnknown"]);
+  const section = host!.querySelector<HTMLElement>(".post-download-check")!;
+  expect(section.dataset.reach).toBe("reached");
+  expect(section.querySelector("button")).toBeNull();
+  expect([...host!.querySelectorAll("button")].some((b) => /resend|download again|repair|retry/i.test(b.textContent ?? ""))).toBe(false);
+});
+
+it("shows a legacy server's finished download as not checked", async () => {
+  apiMock.pollDeviceDownload.mockReset().mockResolvedValue(
+    response({ state: "finished", written: "yes", restart: "acknowledged", restartNote: null }, [], 0),
+  );
+  await render();
+  expect(host!.querySelector<HTMLElement>(".post-download-check")!.dataset.check).toBe("notChecked");
+  expect(host!.textContent).toContain(en["postDownloadCheck.notChecked"]);
+  expect(host!.textContent).not.toContain(en["postDownloadCheck.identity.match"]);
+});
+
+it("says the device is being checked read-only while the check still runs", async () => {
+  apiMock.pollDeviceDownload.mockReset().mockResolvedValue(
+    response({ state: "running" }, [{ kind: "stepStarted", number: 3, of: 3, step: "disconnect" }, { kind: "postDownloadCheckStarted" }], 2),
+  );
+  await render();
+  expect(host!.textContent).toContain(en["postDownloadCheck.running"]);
+  expect(host!.querySelector(".post-download-check")).toBeNull();
 });
 
 it("says partially and where it stopped when a download fails midway", async () => {

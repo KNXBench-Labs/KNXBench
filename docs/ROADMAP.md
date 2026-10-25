@@ -20,6 +20,11 @@ integrated package gate passed; published as `07fe2e67f`
 complete effects/recovery remain separate work; no broader hardware support is
 inferred.
 
+The [read-only check after a regular download](contracts/post-download-check.md)
+is implemented on its branch with simulator regressions; review, integrated gate
+and publication are pending. It reports reach, identity and load states, never
+a running application or a physical-exemplar match.
+
 ## Alpha 16 published pre-release — public artifacts and website verified (24 October 2026)
 
 The [current source-bound evidence matrix](goals/alpha16-release-plan-2026-10-23.md#current-acceptance-disposition--24-october-2026)

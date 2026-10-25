@@ -12,6 +12,7 @@ fn finished(written: Written, restart: Restart) -> DownloadStatus {
         written,
         restart,
         restart_note: None,
+        post_download_check: knx_app::post_download_check::PostDownloadCheck::not_checked(),
     }
 }
 

@@ -8,6 +8,7 @@ Moved here from `docs/` on 2026-10-08 (relative links adjusted by script).
 | --- | --- |
 | [communication-object-folders](communication-object-folders.md) | WP-06A saved project-tree retention and device identity versus evaluated Dynamic channels; no folder implementation |
 | [parameter-workspace](parameter-workspace.md) | Source-group navigation, compact rows, retained editors, search and metadata; no inferred channel/grid mapping |
+| [post-download-check](post-download-check.md) | Read-only check after a successful regular memory download: shared record for CLI, server status, report and history; absent means not checked |
 | [hardware-identity-comparison](hardware-identity-comparison.md) | Exact hardware-type response width before regular download/restore mutation; padded product comparisons retained |
 | [partial-identity-comparison](partial-identity-comparison.md) | Exact five-octet application identity (object 3, PID 13) before partial-download mutation; other objects generic |
 | [device-comparison](device-comparison.md) | P4 bound read-only comparison, volatile tags, decoder/raw integrity and staged parameter scope |

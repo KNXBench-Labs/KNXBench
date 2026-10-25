@@ -1,0 +1,188 @@
+{
+  "notChecked": {
+    "observation": {
+      "status": "notChecked"
+    },
+    "runtime": "unknown"
+  },
+  "unsupported": {
+    "observation": {
+      "status": "unsupported",
+      "reason": "applicationUnknown"
+    },
+    "runtime": "unknown"
+  },
+  "notPerformed": {
+    "observation": {
+      "status": "notPerformed"
+    },
+    "runtime": "unknown"
+  },
+  "interrupted": {
+    "observation": {
+      "status": "interrupted"
+    },
+    "runtime": "unknown"
+  },
+  "notReached": {
+    "observation": {
+      "status": "attempted",
+      "reach": {
+        "result": "notReached"
+      }
+    },
+    "runtime": "unknown"
+  },
+  "reachUnknown": {
+    "observation": {
+      "status": "attempted",
+      "reach": {
+        "result": "unknown"
+      }
+    },
+    "runtime": "unknown"
+  },
+  "identityUnavailable": {
+    "observation": {
+      "status": "attempted",
+      "reach": {
+        "result": "reached",
+        "identity": {
+          "result": "unavailable",
+          "part": {
+            "kind": "property",
+            "objectIndex": 0,
+            "propertyId": 78
+          }
+        }
+      }
+    },
+    "runtime": "unknown"
+  },
+  "identityMismatch": {
+    "observation": {
+      "status": "attempted",
+      "reach": {
+        "result": "reached",
+        "identity": {
+          "result": "mismatch",
+          "part": {
+            "kind": "application"
+          },
+          "kind": "differs"
+        }
+      }
+    },
+    "runtime": "unknown"
+  },
+  "matched": {
+    "observation": {
+      "status": "attempted",
+      "reach": {
+        "result": "reached",
+        "identity": {
+          "result": "match",
+          "exemplar": "notVerified",
+          "loadStates": [
+            {
+              "machine": "addressTable",
+              "expected": "loaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "loaded"
+              }
+            },
+            {
+              "machine": "associationTable",
+              "expected": "unloaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "unloaded"
+              }
+            },
+            {
+              "machine": "applicationProgram",
+              "expected": "loaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "loaded"
+              }
+            }
+          ],
+          "planLoadVerdict": "matchesPlan"
+        }
+      }
+    },
+    "runtime": "unknown"
+  },
+  "partialReading": {
+    "observation": {
+      "status": "attempted",
+      "reach": {
+        "result": "reached",
+        "identity": {
+          "result": "match",
+          "exemplar": "notVerified",
+          "loadStates": [
+            {
+              "machine": "addressTable",
+              "expected": "loaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "loaded"
+              }
+            },
+            {
+              "machine": "associationTable",
+              "expected": "unloaded",
+              "observed": {
+                "result": "unavailable"
+              }
+            },
+            {
+              "machine": "applicationProgram",
+              "expected": "loaded",
+              "observed": {
+                "result": "notRead"
+              }
+            }
+          ],
+          "planLoadVerdict": "unknown"
+        }
+      }
+    },
+    "runtime": "unknown"
+  },
+  "differsFromPlan": {
+    "observation": {
+      "status": "attempted",
+      "reach": {
+        "result": "reached",
+        "identity": {
+          "result": "match",
+          "exemplar": "notVerified",
+          "loadStates": [
+            {
+              "machine": "addressTable",
+              "expected": "loaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "loaded"
+              }
+            },
+            {
+              "machine": "applicationProgram",
+              "expected": "loaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "error"
+              }
+            }
+          ],
+          "planLoadVerdict": "differsFromPlan"
+        }
+      }
+    },
+    "runtime": "unknown"
+  }
+}

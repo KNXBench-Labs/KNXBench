@@ -22,10 +22,13 @@ use serde::Serialize;
 use crate::commissioning_activity::{Restart, Written};
 use crate::device_download::PreparedDownload;
 use crate::download_support::{scope_code, SupportLevel};
+use crate::post_download_check::{IdentityCheck, PostDownloadCheck};
 
 /// What a report file says it is.
 pub const REPORT_KIND: &str = "knxbench-download-report";
-/// The report format; raised when a field changes meaning.
+/// The report format; raised when a field changes meaning. An added,
+/// optional field (`postDownloadCheck`) changes no existing meaning, so a
+/// reader of format 1 that lacks it reads the run as not checked.
 pub const REPORT_FORMAT: u32 = 1;
 /// Where reports may be mailed instead of posted publicly.
 pub const REPORT_MAILBOX: &str = "issue@knxbench.com";
@@ -59,6 +62,10 @@ pub struct DownloadReport {
     pub plan: ReportedPlan,
     /// How the run ended; `None` while it has not.
     pub outcome: Option<ReportedOutcome>,
+    /// The read-only check after the transfer, once the run has ended;
+    /// omitted while it runs. Absent in an older report: not checked.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub post_download_check: Option<PostDownloadCheck>,
     /// The project's values by `ParameterRef` id; absent ones took their
     /// product default.
     pub parameter_values: BTreeMap<String, String>,
@@ -192,6 +199,7 @@ pub fn prepare_report(
             group_links: prepared.request.links.len(),
         },
         outcome: None,
+        post_download_check: None,
         parameter_values: prepared.request.values.clone(),
     })
 }
@@ -200,6 +208,13 @@ impl DownloadReport {
     /// The report with its run's outcome.
     pub fn with_outcome(mut self, outcome: ReportedOutcome) -> Self {
         self.outcome = Some(outcome);
+        self
+    }
+
+    /// The report with the read-only check that followed its run; a run
+    /// that failed or was never checked carries `notChecked`.
+    pub fn with_check(mut self, check: PostDownloadCheck) -> Self {
+        self.post_download_check = Some(check);
         self
     }
 
@@ -261,6 +276,17 @@ impl DownloadReport {
             self.program.mask, self.program.manufacturer, self.scope, self.support
         );
         let _ = writeln!(out, "Outcome: {}", self.outcome_line());
+        if let Some(check) = &self.post_download_check {
+            let exemplar = match check.identity() {
+                Some(IdentityCheck::Match(_)) => "; not proven the same physical device",
+                _ => "",
+            };
+            let _ = writeln!(
+                out,
+                "Read-only check after the download: {}{exemplar}; application running: unknown",
+                check.line()
+            );
+        }
         let _ = writeln!(out, "KNXBench: {}", self.knxbench_version);
         for warning in &self.warnings {
             let rule = warning.split(':').next().unwrap_or(warning);
@@ -348,6 +374,7 @@ mod tests {
                 group_links: 3,
             },
             outcome: None,
+            post_download_check: None,
             parameter_values: [("P-1_R-1".to_string(), "300".to_string())].into(),
         }
     }
@@ -472,6 +499,30 @@ mod tests {
             report.file_name(),
             "knxbench-download-report-M-0001____x_y.json"
         );
+    }
+
+    /// The public summary keeps the exemplar caveat a matching identity needs.
+    #[test]
+    fn a_matching_check_in_the_summary_does_not_claim_the_same_device() {
+        let fixtures: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../apps/knx-web/src/postDownloadCheck.fixtures.json"
+        ))
+        .unwrap();
+        let check = |name: &str| -> PostDownloadCheck {
+            serde_json::from_value(fixtures[name].clone()).unwrap()
+        };
+        let summary = report().with_check(check("matched")).summary();
+        assert!(
+            summary.contains(
+                "Read-only check after the download: reached; identity matches the plan; \
+                 load states match the plan; not proven the same physical device; \
+                 application running: unknown"
+            ),
+            "{summary}"
+        );
+        let unreached = report().with_check(check("notReached")).summary();
+        assert!(!unreached.contains("physical device"), "{unreached}");
+        assert!(unreached.contains("application running: unknown"));
     }
 
     /// The link fills the issue form's fields by id: the form must have them.

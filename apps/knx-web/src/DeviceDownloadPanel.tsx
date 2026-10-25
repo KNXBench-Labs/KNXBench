@@ -23,6 +23,7 @@ import {
 } from "./downloadGateway";
 import { resolveHandoff, type DownloadActivity, type DownloadHandoff, type HandoffOutcome } from "./downloadHandoff";
 import DownloadVerification from "./DownloadVerification";
+import PostDownloadCheckView from "./PostDownloadCheckView";
 import DownloadSupportNotice from "./DownloadSupportNotice";
 import DownloadScopeAdvice from "./DownloadScopeAdvice";
 import { changesPlanProblem, isScopeAdvice, nothingPendingAdvice } from "./downloadScopeAdvice";
@@ -402,6 +403,7 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
   const note = gatewayNote(gatewayChoice, discovery);
 
   const stepsStarted = events.filter((event) => event.kind === "stepStarted").length;
+  const checking = events.some((event) => event.kind === "postDownloadCheckStarted");
   const blocks = events.filter(
     (event): event is Extract<api.DeviceDownloadEvent, { kind: "dataWritten" }> => event.kind === "dataWritten",
   );
@@ -698,7 +700,8 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
           <h3>{t("deviceDownload.progressTitle", { address: status.address, device: status.deviceName })}</h3>
           <p data-download-state={status.status.state}>
             <span className={status.status.state === "running" ? "task-status-text" : undefined}>{status.status.state === "running"
-              ? t("deviceDownload.running", { step: stepsStarted, of: status.steps, name: stepNames.get(stepsStarted) ?? "" })
+              ? checking ? t("postDownloadCheck.running")
+                : t("deviceDownload.running", { step: stepsStarted, of: status.steps, name: stepNames.get(stepsStarted) ?? "" })
               : status.status.state === "finished"
                 ? t("deviceDownload.finished")
                 : t("deviceDownload.failed", { step: status.status.stoppedInStep ?? "—" })}</span>
@@ -724,6 +727,7 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
           {status.status.state === "finished" && status.status.restart === "acknowledged" && (
             <p>{t("deviceDownload.restartAcknowledged")}</p>
           )}
+          {status.status.state === "finished" && <PostDownloadCheckView value={status.status.postDownloadCheck} />}
           {status.status.state === "failed" && <p className="form-error">{status.status.error}</p>}
           {status.backupFile && (
             <p>{t("deviceDownload.backupKept", { file: status.backupFile })}</p>

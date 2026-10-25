@@ -27,6 +27,7 @@ use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
 
 use knx_app::access_key::{choose_key, download_keying, project_access_key, DownloadKeying};
+use knx_app::commissioning_activity::DownloadPreparation;
 use knx_app::device_download::{
     prepare_device_download, prepare_device_download_for_reading, PrepareError, PreparedDownload,
 };
@@ -725,15 +726,22 @@ async fn start(
                 )
             })?
     };
-    let activity = state
-        .one_shot_activity
-        .start_download(body.plan_id, target)
-        .map_err(|_| {
-            ApiError::with_status(
-                StatusCode::SERVICE_UNAVAILABLE,
-                "activity history unavailable; not sent",
-            )
-        })?;
+    // The receipt's preparation comes from the `prepared` that will run, read
+    // in the catalogue lease that built it. A plan without a scope has none.
+    let started = match DownloadPreparation::from_prepared(&prepared) {
+        Some(preparation) => {
+            state
+                .one_shot_activity
+                .start_download_prepared(body.plan_id, target, preparation)
+        }
+        None => state.one_shot_activity.start_download(body.plan_id, target),
+    };
+    let activity = started.map_err(|_| {
+        ApiError::with_status(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "activity history unavailable; not sent",
+        )
+    })?;
     let tunnel = match state.connector.connect_tunnel(gateway).await {
         Ok(tunnel) => tunnel,
         Err(e) => {
@@ -750,8 +758,9 @@ async fn start(
         dir: state.data_dir.join(BACKUP_DIR),
         taken: chrono::Local::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, false),
     };
-    let settler = crate::programming_state::download_settler(&state, incarnation, &prepared);
-    *download = Some(DeviceDownloadSession::start_with_stop(
+    let (settler, settlement) =
+        crate::programming_state::download_settler_receipted(&state, incarnation, &prepared);
+    *download = Some(DeviceDownloadSession::start_with_stop_receipted(
         id,
         tunnel,
         authorisation,
@@ -762,6 +771,7 @@ async fn start(
         activity,
         report,
         settler,
+        settlement,
         stop,
     ));
     drop(scan);

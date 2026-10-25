@@ -2895,9 +2895,19 @@ fn persist_native_working(
     project: &knx_core::Project,
     stack: &knx_core::CommandStack,
 ) -> Result<(), String> {
+    persist_native_working_reported(state, project, stack).map(|_| ())
+}
+
+/// [`persist_native_working`] that also says whether a file was written:
+/// `false` is a project without a store path, which has nothing to persist.
+fn persist_native_working_reported(
+    state: &AppState,
+    project: &knx_core::Project,
+    stack: &knx_core::CommandStack,
+) -> Result<bool, String> {
     let path = state.store_path.lock().expect("state mutex poisoned");
     let Some(path) = path.as_deref() else {
-        return Ok(());
+        return Ok(false);
     };
     let mut generation = state
         .history_generation
@@ -2913,7 +2923,7 @@ fn persist_native_working(
             .clone(),
     };
     *generation = knx_app::project_history::persist_working(path, &snapshot, stack, *generation)?;
-    Ok(())
+    Ok(true)
 }
 
 fn durable_mutation<T>(
@@ -2939,6 +2949,26 @@ pub(crate) struct Settled {
     pub changed: bool,
 }
 
+/// What `settle_programming` did, as it happened. Callers that only want the
+/// effect on the project ignore it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum SettleOutcome {
+    /// No project was open.
+    NoProject,
+    /// Another project was opened, created or imported since the write began.
+    OtherProject,
+    /// The settler found nothing to settle (for example the device is gone).
+    Declined,
+    /// The settler only logged; the project did not change.
+    LoggedOnly,
+    /// Applied and written to the project file.
+    Persisted,
+    /// Applied in memory; the project has no file to write.
+    SessionOnly,
+    /// Not applied: the project file could not be written.
+    PersistFailed,
+}
+
 /// Applies a bus write's effect on the programming belief (ADR-0129). A
 /// write is not an edit: no undo step, but the change is persisted like one
 /// and published as a new revision. Skipped, and logged, when another
@@ -2948,10 +2978,10 @@ pub(crate) fn settle_programming(
     incarnation: u64,
     source: &str,
     settle: impl FnOnce(&mut knx_core::Project, &mut knx_core::CommandStack) -> Option<Settled>,
-) {
+) -> SettleOutcome {
     let mut lock = state.project.lock().expect("state mutex poisoned");
     let Some(project) = lock.as_mut() else {
-        return;
+        return SettleOutcome::NoProject;
     };
     if state.project_incarnation.load(Ordering::Relaxed) != incarnation {
         log_outcome::<()>(
@@ -2961,24 +2991,34 @@ pub(crate) fn settle_programming(
             None,
             &Ok(()),
         );
-        return;
+        return SettleOutcome::OtherProject;
     }
     let mut stack = state.command_stack.lock().expect("state mutex poisoned");
     let mut candidate = project.clone();
     let mut candidate_stack = stack.clone();
     let Some(settled) = settle(&mut candidate, &mut candidate_stack) else {
-        return;
+        return SettleOutcome::Declined;
     };
-    let result = if settled.changed {
-        persist_native_working(state, &candidate, &candidate_stack).map(|()| {
-            *project = candidate;
-            *stack = candidate_stack;
-            next_project_revision(state);
-        })
+    let (outcome, result) = if settled.changed {
+        match persist_native_working_reported(state, &candidate, &candidate_stack) {
+            Ok(written) => {
+                *project = candidate;
+                *stack = candidate_stack;
+                next_project_revision(state);
+                let outcome = if written {
+                    SettleOutcome::Persisted
+                } else {
+                    SettleOutcome::SessionOnly
+                };
+                (outcome, Ok(()))
+            }
+            Err(error) => (SettleOutcome::PersistFailed, Err(error)),
+        }
     } else {
-        Ok(())
+        (SettleOutcome::LoggedOnly, Ok(()))
     };
     log_outcome(state, source, settled.message, None, &result);
+    outcome
 }
 
 fn apply(state: &AppState, cmd: knx_core::Command) -> Result<knx_projection::ProjectTree, String> {

@@ -395,7 +395,10 @@ one direction only: this reader reads older rows, but the published format-2
 reader (`07fe2e67f`) refuses a row carrying it, fails that whole page, then
 reads the history as `unavailable` and refuses writes for the rest of its
 process. Nothing is rewritten or lost; read such a history with this or a newer
-version. Unknown enums/fields and
+version. A regular download row may also carry the optional, additive run receipt
+`preparation` and `settlement` ([contract](download-settlement-receipt.md)), each
+with its own `format: 1` inside outer format 2 and the same one-directional
+downgrade behaviour. Unknown enums/fields and
 inconsistent evidence are refused, not skipped. A prior-incarnation pending
 cleanup sets `interrupted: true`; an already witnessed device result and its
 timestamp remain intact. The four-kind baseline coverage declaration deliberately continues to list

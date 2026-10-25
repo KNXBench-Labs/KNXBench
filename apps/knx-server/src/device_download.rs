@@ -32,6 +32,7 @@ use serde::Serialize;
 use tokio::task::JoinHandle;
 
 use crate::bus::{BusTunnel, TunnelEvent};
+use crate::programming_state::SettlementSlot;
 
 /// One line of the progress log, in the order it happened.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -167,6 +168,7 @@ impl DeviceDownloadSession {
     /// from here, so a stop requested before the task first runs is not lost.
     // Keep authorisation, recovery and lifecycle capabilities explicit at admission.
     #[allow(clippy::too_many_arguments)]
+    #[cfg(test)]
     pub(crate) fn start_with_stop(
         id: u64,
         tunnel: Box<dyn BusTunnel>,
@@ -178,6 +180,68 @@ impl DeviceDownloadSession {
         activity: crate::one_shot_activity::DownloadGuard,
         report: DownloadReport,
         on_end: OnDownloadEnd,
+        stop: Arc<DownloadStop>,
+    ) -> Self {
+        Self::start_inner(
+            id,
+            tunnel,
+            authorisation,
+            keying,
+            timing,
+            prepared,
+            backups,
+            activity,
+            report,
+            (on_end, None),
+            stop,
+        )
+    }
+
+    /// [`Self::start_with_stop`] for a receipted run: once `on_end` (the
+    /// settler that fills `settlement`) has run, the worker records what it
+    /// left there, before the check and the cleanup.
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn start_with_stop_receipted(
+        id: u64,
+        tunnel: Box<dyn BusTunnel>,
+        authorisation: WriteAuthorisation,
+        keying: DownloadKeying,
+        timing: knx_net::SessionTiming,
+        prepared: PreparedDownload,
+        backups: BackupDestination,
+        activity: crate::one_shot_activity::DownloadGuard,
+        report: DownloadReport,
+        on_end: OnDownloadEnd,
+        settlement: SettlementSlot,
+        stop: Arc<DownloadStop>,
+    ) -> Self {
+        Self::start_inner(
+            id,
+            tunnel,
+            authorisation,
+            keying,
+            timing,
+            prepared,
+            backups,
+            activity,
+            report,
+            (on_end, Some(settlement)),
+            stop,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn start_inner(
+        id: u64,
+        tunnel: Box<dyn BusTunnel>,
+        authorisation: WriteAuthorisation,
+        keying: DownloadKeying,
+        timing: knx_net::SessionTiming,
+        prepared: PreparedDownload,
+        backups: BackupDestination,
+        activity: crate::one_shot_activity::DownloadGuard,
+        report: DownloadReport,
+        (on_end, settlement): (OnDownloadEnd, Option<SettlementSlot>),
         stop: Arc<DownloadStop>,
     ) -> Self {
         let shared = Arc::new(Shared {
@@ -216,6 +280,7 @@ impl DeviceDownloadSession {
             backups,
             shared,
             activity,
+            settlement,
         ));
         Self {
             task: Some(task),
@@ -410,6 +475,7 @@ async fn run(
     backups: BackupDestination,
     shared: Arc<Shared>,
     mut activity: crate::one_shot_activity::DownloadGuard,
+    settlement: Option<SettlementSlot>,
 ) {
     let target = authorisation.target();
     let status = {
@@ -525,6 +591,14 @@ async fn run(
         .take()
     {
         on_end(&status);
+    }
+    // The settler's receipt is recorded once, next to the transfer result and
+    // before the check; a recording failure changes nothing else.
+    let receipt = settlement
+        .as_ref()
+        .and_then(|slot| slot.lock().ok()?.take());
+    if let Some(receipt) = receipt {
+        let _ = activity.record_settlement(&receipt);
     }
     // The transfer is recorded and its session is gone (its plan ends with
     // `Disconnect`, after the restart wait). One read-only check follows on

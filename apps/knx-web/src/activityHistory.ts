@@ -1,4 +1,5 @@
 /** Strict, payload-free format-2 history admission; this module never contacts the bus. */
+import { admitReceipts, type DownloadPreparation, type DownloadSettlement } from "./downloadReceipt";
 import { admitPostDownloadCheck, type PostDownloadCheck } from "./postDownloadCheck";
 
 export const HISTORY_KINDS = ["deviceCompare", "serviceControlRead", "serviceControlWrite", "serialLookup", "deviceDownload", "deviceDiagnostics"] as const;
@@ -24,6 +25,10 @@ export interface HistoryEntry {
     cleanup: "pending" | "returnedOk" | "returnedError" | "unknown";
     /** Absent: not checked (older records, failed transfers). */
     postDownloadCheck?: PostDownloadCheck;
+    /** Absent: no receipt recorded by this history, which says nothing about the run. */
+    preparation?: DownloadPreparation;
+    /** Absent: not recorded, never "no change". Needs its preparation. */
+    settlement?: DownloadSettlement;
   };
 }
 export interface HistoryPage {
@@ -111,7 +116,11 @@ export function admitHistoryPage(value: unknown, after = 0, limit = 50): History
       if (entry.state === "noChange" || entry.state === "notSent") requireHistory(!evidence.sendPossible);
       continue;
     }
-    const download = record(entry.downloadEvidence, ["sessionId", "written", "restart", "cleanup"], ["postDownloadCheck"]);
+    const download = record(entry.downloadEvidence, ["sessionId", "written", "restart", "cleanup"], ["postDownloadCheck", "preparation", "settlement"]);
+    requireHistory(admitReceipts(
+      entry.state as string, download.written as "yes" | "no" | "partially" | null,
+      download.preparation, download.settlement, Object.hasOwn(download, "preparation"), Object.hasOwn(download, "settlement"),
+    ) !== null);
     if (Object.hasOwn(download, "postDownloadCheck")) {
       // Only a written, finished transfer is checked; absence alone means not checked.
       const check = admitPostDownloadCheck(download.postDownloadCheck);

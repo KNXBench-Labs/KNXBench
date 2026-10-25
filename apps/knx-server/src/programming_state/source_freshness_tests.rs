@@ -492,6 +492,7 @@ mod admission;
 mod owner_health;
 mod persistence;
 mod project_edits;
+mod receipt;
 
 #[test]
 fn the_memory_constant_matches_the_parts_a_full_run_writes() {

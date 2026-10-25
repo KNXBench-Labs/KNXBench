@@ -1,0 +1,911 @@
+{
+  "accepted": [
+    {
+      "name": "fixture legacy",
+      "fixture": "legacy",
+      "set": [],
+      "remove": []
+    },
+    {
+      "name": "fixture preparationOnlyRunning",
+      "fixture": "preparationOnlyRunning",
+      "set": [],
+      "remove": []
+    },
+    {
+      "name": "fixture preparationOnlyFinished",
+      "fixture": "preparationOnlyFinished",
+      "set": [],
+      "remove": []
+    },
+    {
+      "name": "fixture preparationOnlyUnknown",
+      "fixture": "preparationOnlyUnknown",
+      "set": [],
+      "remove": []
+    },
+    {
+      "name": "fixture unavailablePreparation",
+      "fixture": "unavailablePreparation",
+      "set": [],
+      "remove": []
+    },
+    {
+      "name": "fixture noApplicationVersion",
+      "fixture": "noApplicationVersion",
+      "set": [],
+      "remove": []
+    },
+    {
+      "name": "fixture programUnavailable",
+      "fixture": "programUnavailable",
+      "set": [],
+      "remove": []
+    },
+    {
+      "name": "fixture completeSessionOnly",
+      "fixture": "completeSessionOnly",
+      "set": [],
+      "remove": []
+    },
+    {
+      "name": "fixture completePersisted",
+      "fixture": "completePersisted",
+      "set": [],
+      "remove": []
+    },
+    {
+      "name": "fixture changedSource",
+      "fixture": "changedSource",
+      "set": [],
+      "remove": []
+    },
+    {
+      "name": "fixture requestUnavailable",
+      "fixture": "requestUnavailable",
+      "set": [],
+      "remove": []
+    },
+    {
+      "name": "fixture partialParameters",
+      "fixture": "partialParameters",
+      "set": [],
+      "remove": []
+    },
+    {
+      "name": "fixture partialPending",
+      "fixture": "partialPending",
+      "set": [],
+      "remove": []
+    },
+    {
+      "name": "fixture persistenceFailed",
+      "fixture": "persistenceFailed",
+      "set": [],
+      "remove": []
+    },
+    {
+      "name": "fixture appliedWithInterruptedCheck",
+      "fixture": "appliedWithInterruptedCheck",
+      "set": [],
+      "remove": []
+    },
+    {
+      "name": "fixture interruptedPartially",
+      "fixture": "interruptedPartially",
+      "set": [],
+      "remove": []
+    },
+    {
+      "name": "fixture interruptedAfterWrite",
+      "fixture": "interruptedAfterWrite",
+      "set": [],
+      "remove": []
+    },
+    {
+      "name": "fixture interruptedNothingTouched",
+      "fixture": "interruptedNothingTouched",
+      "set": [],
+      "remove": []
+    },
+    {
+      "name": "fixture notAttempted",
+      "fixture": "notAttempted",
+      "set": [],
+      "remove": []
+    },
+    {
+      "name": "fixture noProject",
+      "fixture": "noProject",
+      "set": [],
+      "remove": []
+    },
+    {
+      "name": "fixture otherProject",
+      "fixture": "otherProject",
+      "set": [],
+      "remove": []
+    },
+    {
+      "name": "fixture deviceMissing",
+      "fixture": "deviceMissing",
+      "set": [],
+      "remove": []
+    },
+    {
+      "name": "fixture settlementUnavailable",
+      "fixture": "settlementUnavailable",
+      "set": [],
+      "remove": []
+    }
+  ],
+  "refused": [
+    {
+      "name": "preparation format 2",
+      "fixture": "completeSessionOnly",
+      "set": [
+        [
+          "/downloadEvidence/preparation/format",
+          2
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "preparation format as string",
+      "fixture": "completeSessionOnly",
+      "set": [
+        [
+          "/downloadEvidence/preparation/format",
+          "1"
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "preparation format as boolean",
+      "fixture": "completeSessionOnly",
+      "set": [
+        [
+          "/downloadEvidence/preparation/format",
+          true
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "preparation format missing",
+      "fixture": "completeSessionOnly",
+      "set": [],
+      "remove": [
+        "/downloadEvidence/preparation/format"
+      ]
+    },
+    {
+      "name": "settlement format 2",
+      "fixture": "completeSessionOnly",
+      "set": [
+        [
+          "/downloadEvidence/settlement/format",
+          2
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "settlement format missing",
+      "fixture": "completeSessionOnly",
+      "set": [],
+      "remove": [
+        "/downloadEvidence/settlement/format"
+      ]
+    },
+    {
+      "name": "preparation null",
+      "fixture": "completeSessionOnly",
+      "set": [
+        [
+          "/downloadEvidence/preparation",
+          null
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "settlement null",
+      "fixture": "completeSessionOnly",
+      "set": [
+        [
+          "/downloadEvidence/settlement",
+          null
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "preparation extra key",
+      "fixture": "completeSessionOnly",
+      "set": [
+        [
+          "/downloadEvidence/preparation/path",
+          "x"
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "settlement extra key",
+      "fixture": "completeSessionOnly",
+      "set": [
+        [
+          "/downloadEvidence/settlement/note",
+          "x"
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "program extra key",
+      "fixture": "completeSessionOnly",
+      "set": [
+        [
+          "/downloadEvidence/preparation/program/name",
+          "x"
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "parts extra key",
+      "fixture": "completeSessionOnly",
+      "set": [
+        [
+          "/downloadEvidence/settlement/applied/touched/x",
+          true
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "parts missing key",
+      "fixture": "completeSessionOnly",
+      "set": [],
+      "remove": [
+        "/downloadEvidence/settlement/applied/touched/address"
+      ]
+    },
+    {
+      "name": "parts not boolean",
+      "fixture": "completeSessionOnly",
+      "set": [
+        [
+          "/downloadEvidence/settlement/applied/touched/address",
+          1
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "version missing instead of null",
+      "fixture": "noApplicationVersion",
+      "set": [],
+      "remove": [
+        "/downloadEvidence/preparation/program/applicationVersion"
+      ]
+    },
+    {
+      "name": "scope unknown",
+      "fixture": "completeSessionOnly",
+      "set": [
+        [
+          "/downloadEvidence/preparation/scope",
+          "both"
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "preparation state unknown",
+      "fixture": "completeSessionOnly",
+      "set": [
+        [
+          "/downloadEvidence/preparation/state",
+          "partial"
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "program state unknown",
+      "fixture": "completeSessionOnly",
+      "set": [
+        [
+          "/downloadEvidence/preparation/program/state",
+          "guess"
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "project unknown",
+      "fixture": "completeSessionOnly",
+      "set": [
+        [
+          "/downloadEvidence/settlement/project",
+          "imported"
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "source unknown",
+      "fixture": "completeSessionOnly",
+      "set": [
+        [
+          "/downloadEvidence/settlement/source",
+          "same"
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "request unknown",
+      "fixture": "completeSessionOnly",
+      "set": [
+        [
+          "/downloadEvidence/settlement/currentRequest",
+          "stale"
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "programmed and pending overlap",
+      "fixture": "completeSessionOnly",
+      "set": [
+        [
+          "/downloadEvidence/settlement/applied/pending/address",
+          true
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "touched smaller than the union",
+      "fixture": "completeSessionOnly",
+      "set": [
+        [
+          "/downloadEvidence/settlement/applied/touched/address",
+          false
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "programmed outside touched",
+      "fixture": "interruptedPartially",
+      "set": [
+        [
+          "/downloadEvidence/settlement/applied/programmed/application",
+          true
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "time without milliseconds",
+      "fixture": "completeSessionOnly",
+      "set": [
+        [
+          "/downloadEvidence/settlement/settledAt",
+          "2026-10-25T07:08:09Z"
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "time with an offset",
+      "fixture": "completeSessionOnly",
+      "set": [
+        [
+          "/downloadEvidence/settlement/settledAt",
+          "2026-10-25T08:08:09.123+01:00"
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "time lowercase",
+      "fixture": "completeSessionOnly",
+      "set": [
+        [
+          "/downloadEvidence/settlement/settledAt",
+          "2026-10-25t07:08:09.123z"
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "time leap second",
+      "fixture": "completeSessionOnly",
+      "set": [
+        [
+          "/downloadEvidence/settlement/settledAt",
+          "2026-10-25T07:08:60.123Z"
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "time impossible date",
+      "fixture": "completeSessionOnly",
+      "set": [
+        [
+          "/downloadEvidence/settlement/settledAt",
+          "2026-02-30T07:08:09.123Z"
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "time not a string",
+      "fixture": "completeSessionOnly",
+      "set": [
+        [
+          "/downloadEvidence/settlement/settledAt",
+          1
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "time missing",
+      "fixture": "completeSessionOnly",
+      "set": [],
+      "remove": [
+        "/downloadEvidence/settlement/settledAt"
+      ]
+    },
+    {
+      "name": "persistence failure with a time",
+      "fixture": "persistenceFailed",
+      "set": [
+        [
+          "/downloadEvidence/settlement/settledAt",
+          "2026-10-25T07:08:09.123Z"
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "persisted without a time",
+      "fixture": "completePersisted",
+      "set": [],
+      "remove": [
+        "/downloadEvidence/settlement/settledAt"
+      ]
+    },
+    {
+      "name": "hash uppercase",
+      "fixture": "completeSessionOnly",
+      "set": [
+        [
+          "/downloadEvidence/preparation/program/sourceSha256",
+          "0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF"
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "hash short",
+      "fixture": "completeSessionOnly",
+      "set": [
+        [
+          "/downloadEvidence/preparation/program/sourceSha256",
+          "123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "id with a quote",
+      "fixture": "completeSessionOnly",
+      "set": [
+        [
+          "/downloadEvidence/preparation/program/id",
+          "a\"b"
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "id with a backslash",
+      "fixture": "completeSessionOnly",
+      "set": [
+        [
+          "/downloadEvidence/preparation/program/id",
+          "a\\b"
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "id longer than 128",
+      "fixture": "completeSessionOnly",
+      "set": [
+        [
+          "/downloadEvidence/preparation/program/id",
+          "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "id empty",
+      "fixture": "completeSessionOnly",
+      "set": [
+        [
+          "/downloadEvidence/preparation/program/id",
+          ""
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "id not ASCII",
+      "fixture": "completeSessionOnly",
+      "set": [
+        [
+          "/downloadEvidence/preparation/program/id",
+          "Ä"
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "id with a space",
+      "fixture": "completeSessionOnly",
+      "set": [
+        [
+          "/downloadEvidence/preparation/program/id",
+          "a b"
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "version longer than 32",
+      "fixture": "completeSessionOnly",
+      "set": [
+        [
+          "/downloadEvidence/preparation/program/applicationVersion",
+          "vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv"
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "version empty",
+      "fixture": "completeSessionOnly",
+      "set": [
+        [
+          "/downloadEvidence/preparation/program/applicationVersion",
+          ""
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "mask lowercase",
+      "fixture": "completeSessionOnly",
+      "set": [
+        [
+          "/downloadEvidence/preparation/plannedMask",
+          "ffff"
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "manufacturer too long",
+      "fixture": "completeSessionOnly",
+      "set": [
+        [
+          "/downloadEvidence/preparation/plannedManufacturer",
+          "00001"
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "steps negative",
+      "fixture": "completeSessionOnly",
+      "set": [
+        [
+          "/downloadEvidence/preparation/steps",
+          -1
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "steps above u32",
+      "fixture": "completeSessionOnly",
+      "set": [
+        [
+          "/downloadEvidence/preparation/steps",
+          4294967296
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "scope missing",
+      "fixture": "completeSessionOnly",
+      "set": [],
+      "remove": [
+        "/downloadEvidence/preparation/scope"
+      ]
+    },
+    {
+      "name": "settlement without preparation",
+      "fixture": "completeSessionOnly",
+      "set": [],
+      "remove": [
+        "/downloadEvidence/preparation"
+      ]
+    },
+    {
+      "name": "settlement on a running row",
+      "fixture": "preparationOnlyRunning",
+      "set": [
+        [
+          "/downloadEvidence/settlement",
+          {
+            "project": "noProject",
+            "format": 1
+          }
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "settlement on an unknown row",
+      "fixture": "preparationOnlyUnknown",
+      "set": [
+        [
+          "/downloadEvidence/settlement",
+          {
+            "project": "noProject",
+            "format": 1
+          }
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "receipts on a non-download row",
+      "fixture": "completeSessionOnly",
+      "set": [
+        [
+          "/kind",
+          "deviceCompare"
+        ]
+      ],
+      "remove": [
+        "/writeEvidence"
+      ]
+    },
+    {
+      "name": "notAttempted on a written row",
+      "fixture": "completeSessionOnly",
+      "set": [
+        [
+          "/downloadEvidence/settlement",
+          {
+            "project": "notAttempted",
+            "format": 1
+          }
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "noProject on a row that wrote nothing",
+      "fixture": "notAttempted",
+      "set": [
+        [
+          "/downloadEvidence/settlement",
+          {
+            "project": "noProject",
+            "format": 1
+          }
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "applied on a row that wrote nothing",
+      "fixture": "notAttempted",
+      "set": [
+        [
+          "/downloadEvidence/settlement",
+          {
+            "project": "persisted",
+            "format": 1,
+            "source": "notChecked",
+            "currentRequest": "readable",
+            "applied": {
+              "programmed": {
+                "address": false,
+                "application": false,
+                "parameters": false,
+                "groupAddresses": false
+              },
+              "pending": {
+                "address": false,
+                "application": false,
+                "parameters": false,
+                "groupAddresses": false
+              },
+              "touched": {
+                "address": false,
+                "application": false,
+                "parameters": false,
+                "groupAddresses": false
+              }
+            },
+            "settledAt": "2026-10-25T07:08:09.123Z"
+          }
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "unchanged on an interrupted row",
+      "fixture": "interruptedPartially",
+      "set": [
+        [
+          "/downloadEvidence/settlement/source",
+          "unchanged"
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "notChecked on a completed row",
+      "fixture": "completeSessionOnly",
+      "set": [
+        [
+          "/downloadEvidence/settlement/source",
+          "notChecked"
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "changedOrUnknown with a memory credit",
+      "fixture": "completeSessionOnly",
+      "set": [
+        [
+          "/downloadEvidence/settlement/source",
+          "changedOrUnknown"
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "unavailable request with a credit",
+      "fixture": "completeSessionOnly",
+      "set": [
+        [
+          "/downloadEvidence/settlement/currentRequest",
+          "unavailable"
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "complete scope not touching the address",
+      "fixture": "completeSessionOnly",
+      "set": [
+        [
+          "/downloadEvidence/settlement/applied/touched/address",
+          false
+        ],
+        [
+          "/downloadEvidence/settlement/applied/programmed/address",
+          false
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "partial scope touching the address",
+      "fixture": "partialParameters",
+      "set": [
+        [
+          "/downloadEvidence/settlement/applied/touched/address",
+          true
+        ],
+        [
+          "/downloadEvidence/settlement/applied/pending/address",
+          true
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "partial scope touching the other part",
+      "fixture": "partialParameters",
+      "set": [
+        [
+          "/downloadEvidence/settlement/applied/touched/groupAddresses",
+          true
+        ],
+        [
+          "/downloadEvidence/settlement/applied/pending/groupAddresses",
+          true
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "a credit after an interruption",
+      "fixture": "interruptedPartially",
+      "set": [
+        [
+          "/downloadEvidence/settlement/applied/programmed/parameters",
+          true
+        ],
+        [
+          "/downloadEvidence/settlement/applied/pending/parameters",
+          false
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "interrupted run touching the address",
+      "fixture": "interruptedAfterWrite",
+      "set": [
+        [
+          "/downloadEvidence/settlement/applied/touched/address",
+          true
+        ],
+        [
+          "/downloadEvidence/settlement/applied/pending/address",
+          true
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "parts on a project that is not there",
+      "fixture": "noProject",
+      "set": [
+        [
+          "/downloadEvidence/settlement/applied",
+          {}
+        ]
+      ],
+      "remove": []
+    },
+    {
+      "name": "settlement and check on a non-finished row",
+      "fixture": "interruptedPartially",
+      "set": [
+        [
+          "/downloadEvidence/postDownloadCheck",
+          {
+            "observation": {
+              "status": "interrupted"
+            },
+            "runtime": "unknown"
+          }
+        ]
+      ],
+      "remove": []
+    }
+  ]
+}

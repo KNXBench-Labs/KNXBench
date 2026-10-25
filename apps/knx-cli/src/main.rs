@@ -114,7 +114,7 @@ const USAGE: &str = "usage: knx import <file.knxproj> [--store <path.knxdb> [--r
      \x20     knx device download <area.line.device> --project <path.knxdb> [--product-db <path>]\n\
      \x20                  [--activity-history <path>]\n\
      \x20         (activity history: required for confirmed writes; metadata, not recovery)\n\
-     \x20                  [--key-file <path>] [--partial parameters|group-addresses|both]\n\
+     \x20                  [--key-file <path>] [--partial parameters|group-addresses|both | --changes]\n\
      \x20                  [--gateway <host:port> --confirm \"I confirm download to <address>\"]\n\
      \x20         (a download TO the device over the bus; without --confirm it prints the\n\
      \x20         plan (segments, octets, steps) and opens no connection. The phrase must\n\
@@ -124,6 +124,10 @@ const USAGE: &str = "usage: knx import <file.knxproj> [--store <path.knxdb> [--r
      \x20         never guessed. --partial derives CP §3.9.2.4's partial download from the\n\
      \x20         complete one: no unload of the application, and it first checks that the\n\
      \x20         device carries this application with every part loaded.\n\
+     \x20         --changes plans only the scope the project's programming flags mark\n\
+     \x20         pending (flags, not device evidence) and prints the --partial to write it\n\
+     \x20         with; it never writes. A pending address or medium configuration is\n\
+     \x20         shown separately: no download writes either.\n\
      \x20         Before the first write it reads what the plan overwrites into a backup\n\
      \x20         file (--backup-dir, default <project>.backups/); no backup, no write.\n\
      \x20         An application nobody has downloaded this way on hardware is UNTESTED\n\
@@ -2451,6 +2455,36 @@ fn run_device_download(args: &[String]) -> ExitCode {
         },
     };
     let (key, source) = knx_app::access_key::choose_key(operator_key, project_key);
+    use knx_app::download_scope::{ScopeRequest, ScopedPrepareError};
+    let request = match (parsed.changes, parsed.partial) {
+        (true, _) => ScopeRequest::Changes,
+        (false, Some(parts)) => ScopeRequest::Partial(parts),
+        (false, None) => ScopeRequest::Complete,
+    };
+    let refused = |e: &knx_app::device_download::PrepareError| {
+        eprintln!(
+            "no download to device {} prepared (unsupported: {}): {e}",
+            target.address(),
+            knx_app::project_readiness::prepare_category(e)
+        );
+        println!("written to the device: no");
+        ExitCode::FAILURE
+    };
+    // Resolved from the project alone first: nothing pending needs no
+    // product database and opens none.
+    match knx_app::download_scope::resolve_scope(&project, target.address(), request) {
+        Ok(resolved) if resolved.resolved.is_none() => {
+            print!("{}", device_download::format_advice(&resolved.advice));
+            println!(
+                "nothing to download: the project marks no application, parameter or group \
+                 address part pending; no plan was built"
+            );
+            println!("written to the device: no");
+            return ExitCode::SUCCESS;
+        }
+        Ok(_) => {}
+        Err(e) => return refused(&e),
+    }
     let products = match open_products_db_for_reading(parsed.product_db.as_deref()) {
         Ok(conn) => conn,
         Err(e) => {
@@ -2458,34 +2492,29 @@ fn run_device_download(args: &[String]) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    let prepared = match knx_app::device_download::prepare_device_download(
+    let scoped = match knx_app::download_scope::prepare_scoped_download(
         &products,
         &project,
         target.address(),
+        request,
     ) {
-        Ok(prepared) => prepared,
-        Err(e) => {
+        Ok(scoped) => scoped,
+        Err(ScopedPrepareError::Prepare(e)) => return refused(&e),
+        Err(ScopedPrepareError::Partial(e)) => {
             eprintln!(
-                "no download to device {} prepared (unsupported: {}): {e}",
-                target.address(),
-                knx_app::project_readiness::prepare_category(&e)
+                "no partial download to device {} prepared: {e}",
+                target.address()
             );
-            println!("written to the device: no");
             return ExitCode::FAILURE;
         }
     };
-    let prepared = match parsed.partial {
-        None => prepared,
-        Some(parts) => match prepared.into_partial(parts) {
-            Ok(partial) => partial,
-            Err(e) => {
-                eprintln!(
-                    "no partial download to device {} prepared: {e}",
-                    target.address()
-                );
-                return ExitCode::FAILURE;
-            }
-        },
+    print!("{}", device_download::format_advice(&scoped.advice));
+    let Some(prepared) = scoped.prepared else {
+        // Resolved above from the same project, so not expected; still no
+        // write and no plan in its place.
+        eprintln!("no download to device {} prepared", target.address());
+        println!("written to the device: no");
+        return ExitCode::FAILURE;
     };
     let keying = knx_app::access_key::download_keying(prepared.plan.mask, key, source);
     print!("{}", device_download::format_plan(&prepared, &keying));
@@ -2510,6 +2539,25 @@ fn run_device_download(args: &[String]) -> ExitCode {
     );
 
     let (gateway, confirmation) = match mode {
+        device_download::Mode::Plan if parsed.changes => {
+            // `--confirm` is refused beside `--changes`: the write is the
+            // explicit command for the concrete scope just printed.
+            println!(
+                "--changes resolved to {}; to write exactly this plan, {}run:",
+                device_download::rerun_scope(partial_parts),
+                if device_download::rerun_needs_filling(&parsed) {
+                    "fill in each '<...>' placeholder and "
+                } else {
+                    ""
+                }
+            );
+            println!(
+                "  {}",
+                device_download::rerun_command(&parsed, target.address(), partial_parts, &level)
+            );
+            println!("written to the device: no (plan only)");
+            return ExitCode::SUCCESS;
+        }
         device_download::Mode::Plan => {
             println!(
                 "written to the device: no (plan only; add --gateway and --confirm {:?} to write)",

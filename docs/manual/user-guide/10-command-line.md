@@ -633,6 +633,24 @@ written to the device: no (plan only; add --gateway and --confirm "I confirm dow
 | `--gateway <host:port>` | The KNXnet/IP interface to write through |
 | `--confirm "<phrase>"` | Write. The phrase must read exactly `I confirm download to <address>` |
 | `--report <file>` | With a write: save a tester's report of the run there (see below) |
+| `--changes` | Plan only the scope the project marks pending (see below); never writes |
+
+Every plan also prints what the device's programming flags advise. Those flags are
+the project's belief (imported from ETS or set by earlier KNXBench writes and marks),
+not something read from the device. `--changes` plans exactly that scope: the complete
+download when the application program is marked pending, otherwise a partial download
+of the pending parameters and/or group addresses, otherwise nothing at all (no plan is
+built, and the product database is not opened). It then prints the explicit command
+that writes the same plan, as one POSIX shell command line with paths and other
+user-provided values in single quotes: the same `--project`, `--product-db`, `--key-file`,
+`--activity-history`, `--backup-dir` and `--gateway` you gave, the `--partial` value
+if the plan is partial, the `--confirm` phrase and, for an untested application,
+`--accept-untested`. A gateway or activity history you did not give appears as a
+quoted placeholder (`'<gateway host:port>'`, `'<activity history file>'`); replace
+it before running the command. The quoting is for POSIX shells, not for Windows.
+`--changes` itself refuses `--confirm`, so a write always names a scope you have read.
+A pending individual address or medium
+configuration is listed on its own line: no download writes either.
 
 The checks run in this order, and each stops the command before the next: the address
 is parsed and checked against the list of addresses KNXBench never contacts; the phrase

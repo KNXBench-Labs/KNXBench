@@ -24,6 +24,8 @@ import {
 import { resolveHandoff, type DownloadActivity, type DownloadHandoff, type HandoffOutcome } from "./downloadHandoff";
 import DownloadVerification from "./DownloadVerification";
 import DownloadSupportNotice from "./DownloadSupportNotice";
+import DownloadScopeAdvice from "./DownloadScopeAdvice";
+import { changesPlanProblem, isScopeAdvice, nothingPendingAdvice } from "./downloadScopeAdvice";
 import { guidanceForError, guidanceForMark, type SupportGuidance } from "./downloadSupportGuidance";
 import { planWarnings } from "./downloadVerification";
 import { currentGuideStep, downloadGuide, type GuideMissing, type GuideStepId } from "./downloadGuide";
@@ -54,14 +56,22 @@ const POLL_INTERVAL_MS = 500;
 
 /** What the plan writes (KL-142): the complete download, or a CP §3.9.2.4
  * partial download of the chosen parts. The server derives the partial plan
- * and refuses a scope it cannot; this panel only asks. */
-type DownloadScope = "complete" | "parameters" | "groupAddresses" | "both";
-const SCOPES: readonly DownloadScope[] = ["complete", "parameters", "groupAddresses", "both"];
-const SCOPE_PARTS: Record<Exclude<DownloadScope, "complete">, api.DeviceDownloadParts> = {
+ * and refuses a scope it cannot; this panel only asks. `changes` lets the
+ * server resolve the scope from the project's programming flags; the plan it
+ * returns is bound to that concrete scope. */
+type DownloadScope = "complete" | "parameters" | "groupAddresses" | "both" | "changes";
+const SCOPES: readonly DownloadScope[] = ["complete", "parameters", "groupAddresses", "both", "changes"];
+const SCOPE_PARTS: Record<Exclude<DownloadScope, "complete" | "changes">, api.DeviceDownloadParts> = {
   parameters: { parameters: true, groupAddresses: false },
   groupAddresses: { parameters: false, groupAddresses: true },
   both: { parameters: true, groupAddresses: true },
 };
+
+/** The partial-scope text key: the radio asked, or for `changes` what the server resolved. */
+function partialScopeOf(asked: DownloadScope, resolved: api.DeviceDownloadScopeCode | undefined): "parameters" | "groupAddresses" | "both" {
+  const scope = asked === "changes" ? resolved : asked;
+  return scope === "parameters" || scope === "groupAddresses" ? scope : "both";
+}
 
 function hex(value: number, digits: number): string {
   return value.toString(16).toUpperCase().padStart(digits, "0");
@@ -141,6 +151,11 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
   const latestContext = useRef({ project, deviceId, scope });
   latestContext.current = { project, deviceId, scope };
   const [refusal, setRefusal] = useState<{ project: ProjectTree | null; deviceId: number | null; scope: DownloadScope; guidance: SupportGuidance } | null>(null);
+  // A `changes` request that found nothing pending: no plan exists, only the advice.
+  const [nothingPending, setNothingPending] = useState<api.DeviceDownloadScopeAdvice | null>(null);
+  // A `changes` answer that is not that request's plan (an older server, or a
+  // malformed resolution): never shown.
+  const [changesRefused, setChangesRefused] = useState<"unsupported" | "malformed" | null>(null);
 
   // A plan belongs to the project it was prepared from; any edit makes it
   // stale, and the server would refuse it anyway (ADR-0045 §3).
@@ -181,6 +196,8 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
 
   function dropPlan() {
     setPlan(null);
+    setNothingPending(null);
+    setChangesRefused(null);
     setUntestedAcknowledgement("");
     setRefusal(null);
     setError(null);
@@ -306,6 +323,8 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
     setError(null);
     setRefusal(null);
     setPlan(null);
+    setNothingPending(null);
+    setChangesRefused(null);
     setUntestedAcknowledgement("");
     setPlanning(true);
     const context = { project, deviceId, scope };
@@ -318,10 +337,21 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
       const asked = scope;
       const next = asked === "complete"
         ? await api.planDeviceDownload(target)
-        : await api.planDeviceDownload(target, SCOPE_PARTS[asked]);
-      if (current()) { setPlan(next); setPlanScope(asked); }
+        : asked === "changes"
+          ? await api.planDeviceDownload(target, "changes")
+          : await api.planDeviceDownload(target, SCOPE_PARTS[asked]);
+      if (!current()) return;
+      // Only a plan the server says it resolved from `changes`, to a known
+      // scope with matching advice, is that request's plan.
+      const problem = asked === "changes" ? changesPlanProblem(next) : null;
+      if (problem !== null) setChangesRefused(problem);
+      else { setPlan(next); setPlanScope(asked); }
     } catch (reason) {
-      if (current()) setRefusal({ ...context, guidance: guidanceForError(reason) });
+      if (!current()) return;
+      // Nothing pending is an answer, not a refusal: no plan, no support guidance.
+      const advice = context.scope === "changes" ? nothingPendingAdvice(reason) : null;
+      if (advice !== null) setNothingPending(advice);
+      else setRefusal({ ...context, guidance: guidanceForError(reason) });
     } finally {
       if (request === planningRequest.current) setPlanning(false);
     }
@@ -543,6 +573,18 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
       {programmingRefreshError && <p className="form-warning" role="alert" data-programming-refresh>
         {t("programming.refreshFailed", { reason: programmingRefreshError })}</p>}
 
+      {project !== null && mode === "memory" && changesRefused && (
+        <p className="form-warning" role="alert" data-scope-unsupported={changesRefused}>
+          {t(`deviceDownload.scopeAdvice.${changesRefused}` as const)}</p>
+      )}
+
+      {project !== null && mode === "memory" && nothingPending && (
+        <section className="device-download-nothing" data-scope-nothing role="status">
+          <p>{t("deviceDownload.scopeAdvice.nothing")}</p>
+          <DownloadScopeAdvice advice={nothingPending} />
+        </section>
+      )}
+
       {project !== null && mode === "memory" && plan && (
         <section className="device-download-plan" aria-label={t("deviceDownload.planTitle")}>
           <h3>{t("deviceDownload.planTitle")}</h3>
@@ -591,9 +633,12 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
               <ul>{plan.support.inferences.map((text, index) => <li key={index}><code>{text}</code></li>)}</ul>
             </section>
           )}
+          {isScopeAdvice(plan.scopeAdvice) && (
+            <DownloadScopeAdvice advice={plan.scopeAdvice} resolved={plan.scopeFromChanges ? plan.scope : undefined} />
+          )}
           {plan.partial && (
             <section className="device-download-not-written">
-              <p><strong>{t(`deviceDownload.partialScope.${planScope === "complete" ? "both" : planScope}` as const)}</strong></p>
+              <p><strong>{t(`deviceDownload.partialScope.${partialScopeOf(planScope, plan.scope)}` as const)}</strong></p>
               <p>{t("deviceDownload.partialCheck")}</p>
               {plan.notWritten.length === 0 ? (
                 <p>{t("deviceDownload.notWrittenNone")}</p>

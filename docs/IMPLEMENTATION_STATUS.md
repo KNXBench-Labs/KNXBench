@@ -12,6 +12,27 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Download scope from programming marks (25 October 2026)
+
+A download can now ask for "what the project marks pending" instead of a fixed
+scope: `scope: "changes"` on `POST /api/device-download/plan`, `knx device
+download --changes`, and *Only what the project marks pending* in the Download to
+device tab. One pure rule (`knx_core::commissioning::scope_advice`) reads the
+existing loaded flags: application pending gives the complete download, otherwise
+pending parameters and/or group addresses give that partial download, otherwise
+nothing is prepared. Address pending/missing and medium configuration pending are
+reported separately and never change the write. The server shows the resolved
+concrete plan. At `start` it reads the flags again in the same project snapshot it
+re-prepares the plan from, and refuses if they now advise another scope or nothing.
+It answers a no-op with `downloadNothingPending` and no plan, without needing
+product data. The CLI's `--changes` only plans and prints the explicit command that
+writes the same plan.
+Explicit scopes are unchanged and every plan also reports the advice. The flags
+are the project's belief, not device evidence ([KL-142](limitations/KL-142-partial-download-evidence.md)).
+Synthetic offline tests only: all 32 flag patterns with and without an address
+(core), and all 32 through the app service, HTTP route and built CLI; no bus, no
+hardware.
+
 ## Diagnostic selector ambiguity remediation (25 October 2026)
 
 Corrected the CLI refusal and usage text: a diagnostic target's individual

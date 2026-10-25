@@ -449,7 +449,18 @@ changes, the project does not. Saving or exporting a project file is something e
    device already carries this application with every part loaded, and otherwise stops
    without writing. If the server cannot derive the chosen partial download, it says why
    and shows no plan; follow the specific refusal rather than forcing another scope. Changing the choice discards a
-   shown plan. The plan
+   shown plan. **Only what the project marks pending** lets the server choose the
+   scope from the device's programming marks: the complete download if the
+   application is marked pending, otherwise the pending parameters and/or group
+   addresses, otherwise nothing (no plan is built). The plan then says which scope it
+   resolved to, and starting it writes exactly that scope. On **Download** the server
+   reads the marks again in the same project snapshot it prepares the plan from, and
+   refuses and asks for a new plan if they now advise another scope or nothing. A mark
+   changed after that snapshot is not detected; the write is still exactly the scope
+   you confirmed. The marks are the project's belief, not read from the device. A
+   pending individual address or medium configuration is shown separately: no
+   download writes either. Every plan, including an explicitly chosen scope, also
+   says what the marks advise. "Nothing pending" needs no product data. The plan
    names the application program, the mask and manufacturer the device must report
    before the first write, the parameter values and group links taken from the project,
    every memory segment with the octets written, and every step. Nothing has been sent.

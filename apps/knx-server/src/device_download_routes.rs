@@ -11,6 +11,11 @@
 //!    download is running, and the project still yields the identical plan.
 //! 3. `status` returns what the run reported since `since`. There is no
 //!    cancel (ADR-0045 §5).
+//!
+//! `plan` with `scope: "changes"` resolves the scope from the device's
+//! programming flags ([`knx_app::download_scope`]) and shows the plan of that
+//! concrete scope. `start` reads the flags again in the project snapshot it
+//! prepares the plan from, and refuses once they advise another scope.
 
 use std::net::SocketAddrV4;
 use std::sync::atomic::Ordering;
@@ -26,11 +31,15 @@ use knx_app::device_download::{
     prepare_device_download, prepare_device_download_for_reading, PrepareError, PreparedDownload,
 };
 use knx_app::download_report::{prepare_report, DownloadReport};
+use knx_app::download_scope::{
+    prepare_scoped_download, resolve_scope, ScopeRequest, ScopedDownload, ScopedPrepareError,
+};
 use knx_app::download_support::{
     download_level, shipped_evidence, untested_acknowledgement, SupportLevel,
 };
 use knx_core::commissioning::mutation::{required_confirmation_phrase, WriteAuthorisation};
-use knx_core::commissioning::partial_memory_download::PartialDownloadParts;
+use knx_core::commissioning::partial_memory_download::{PartialDownloadParts, PartialPlanError};
+use knx_core::commissioning::scope_advice::{AdvisedWrite, ScopeAdvice};
 use knx_core::{ContactableAddress, IndividualAddress, WriteScope};
 use knx_productdb::image::ImageError;
 
@@ -60,6 +69,10 @@ pub struct ShownPlan {
     /// The partial download the plan was derived as, if any: `start`
     /// derives it again and must arrive at the same steps.
     pub partial: Option<PartialDownloadParts>,
+    /// `true` when `partial` was resolved from `scope: "changes"`: `start`
+    /// also refuses unless the flags, read in the snapshot it prepares from,
+    /// still advise this scope.
+    pub changes: bool,
 }
 
 /// CP §3.9.2.4's *"Partial Download Type (Parameters and/or Group
@@ -86,6 +99,50 @@ struct PlanRequest {
     address: String,
     #[serde(default)]
     partial: Option<PartialDto>,
+    /// `"changes"`: the scope the device's programming flags advise.
+    /// Absent: `partial` decides, as before.
+    #[serde(default)]
+    scope: Option<ScopeDto>,
+}
+
+#[derive(Debug, Clone, Copy, Deserialize)]
+#[serde(rename_all = "camelCase")]
+enum ScopeDto {
+    Changes,
+}
+
+/// [`ScopeAdvice`] on the wire: the project's flags, never device evidence.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ScopeAdviceDto {
+    /// Always `projectFlags`.
+    basis: &'static str,
+    /// `complete`, `parameters`, `groupAddresses`, `both` or `nothing`.
+    write: &'static str,
+    /// `current`, `pending` or `missing`; no memory download writes it.
+    address: &'static str,
+    /// No KNXBench download writes the medium configuration.
+    medium_pending: bool,
+    fully_programmed: bool,
+}
+
+impl From<&ScopeAdvice> for ScopeAdviceDto {
+    fn from(advice: &ScopeAdvice) -> Self {
+        Self {
+            basis: "projectFlags",
+            write: advice.write.code(),
+            address: advice.address.code(),
+            medium_pending: advice.medium_pending,
+            fully_programmed: advice.fully_programmed(),
+        }
+    }
+}
+
+/// The scope `partial` writes, by the advice's names.
+fn scope_code(partial: Option<PartialDownloadParts>) -> &'static str {
+    partial
+        .map_or(AdvisedWrite::Complete, AdvisedWrite::Partial)
+        .code()
 }
 
 #[derive(Serialize)]
@@ -132,6 +189,13 @@ struct PlanResponse {
     /// write (ADR-0120), each as `rule: detail (reference)`; empty when
     /// there is nothing.
     warnings: Vec<String>,
+    /// The concrete scope this plan writes: `complete`, `parameters`,
+    /// `groupAddresses` or `both`.
+    scope: &'static str,
+    /// `true` when the request asked for `scope: "changes"`.
+    scope_from_changes: bool,
+    /// What the device's programming flags advise, for every request.
+    scope_advice: ScopeAdviceDto,
 }
 
 #[derive(Serialize)]
@@ -290,13 +354,106 @@ fn prepare_with(
         .map_err(|e| prepare_error(target, &e))?;
     match partial {
         None => Ok(prepared),
-        Some(parts) => prepared.into_partial(parts).map_err(|e| {
-            ApiError::with_kind(
-                StatusCode::UNPROCESSABLE_ENTITY,
-                "downloadPartialRefused",
-                format!("no partial download to device {target} prepared: {e}"),
-            )
-        }),
+        Some(parts) => prepared
+            .into_partial(parts)
+            .map_err(|e| partial_refused(target, &e)),
+    }
+}
+
+fn partial_refused(target: IndividualAddress, error: &PartialPlanError) -> ApiError {
+    ApiError::with_kind(
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "downloadPartialRefused",
+        format!("no partial download to device {target} prepared: {error}"),
+    )
+}
+
+/// [`prepare`] for a [`ScopeRequest`]: resolved and prepared under one
+/// project lock, so the advice and the plan come from one project state.
+/// Nothing to write needs no product data, and opens none.
+fn prepare_scoped(
+    state: &SharedState,
+    target: IndividualAddress,
+    request: ScopeRequest,
+) -> Result<ScopedDownload, ApiError> {
+    let products_missing = || {
+        ApiError::with_kind(
+            StatusCode::CONFLICT,
+            "downloadProductDataMissing",
+            no_application_program(state),
+        )
+    };
+    let project_guard = state.project.lock().expect("state mutex poisoned");
+    let Some(project) = project_guard.as_ref() else {
+        // Missing product data still answers first, as in `prepare`.
+        return Err(match state.product_db {
+            None => products_missing(),
+            Some(_) => project_missing(),
+        });
+    };
+    let resolved =
+        resolve_scope(project, target, request).map_err(|e| prepare_error(target, &e))?;
+    if resolved.resolved.is_none() {
+        return Ok(ScopedDownload {
+            advice: resolved.advice,
+            resolved: None,
+            prepared: None,
+        });
+    }
+    let Some(owner) = state.product_db.as_ref() else {
+        return Err(products_missing());
+    };
+    owner
+        .with_read(|products| prepare_scoped_download(products, project, target, request))
+        .map_err(crate::catalogue_owner::owner_error)?
+        .map_err(|error| match error {
+            ScopedPrepareError::Prepare(e) => prepare_error(target, &e),
+            ScopedPrepareError::Partial(e) => partial_refused(target, &e),
+        })
+}
+
+/// The download a shown plan writes, prepared again for `start`. A plan from
+/// `scope: "changes"` is resolved again and prepared under one project lock,
+/// so the flags read are those of the plan prepared; nothing pending, or
+/// another scope, is a stale plan and no write at all.
+fn prepare_shown(
+    state: &SharedState,
+    target: IndividualAddress,
+    partial: Option<PartialDownloadParts>,
+    changes: bool,
+) -> Result<PreparedDownload, ApiError> {
+    if !changes {
+        return prepare(state, target, partial);
+    }
+    let scoped = prepare_scoped(state, target, ScopeRequest::Changes)?;
+    match scoped.prepared {
+        Some(prepared) if scoped.resolved == Some(partial) => Ok(prepared),
+        _ => Err(conflict(
+            "the pending parts changed since the plan was shown; nothing was sent, ask for the \
+             plan again",
+        )),
+    }
+}
+
+fn project_missing() -> ApiError {
+    ApiError::with_kind(
+        StatusCode::CONFLICT,
+        "downloadProjectMissing",
+        "no project is open",
+    )
+}
+
+/// The request's scope; `changes` beside an explicit `partial` is refused.
+fn scope_request(body: &PlanRequest) -> Result<ScopeRequest, ApiError> {
+    match (body.scope, body.partial) {
+        (Some(ScopeDto::Changes), Some(_)) => Err(ApiError::with_kind(
+            StatusCode::BAD_REQUEST,
+            "downloadScopeConflict",
+            "scope \"changes\" and an explicit partial exclude each other; send one",
+        )),
+        (Some(ScopeDto::Changes), None) => Ok(ScopeRequest::Changes),
+        (None, Some(parts)) => Ok(ScopeRequest::Partial(parts.into())),
+        (None, None) => Ok(ScopeRequest::Complete),
     }
 }
 
@@ -305,8 +462,33 @@ async fn plan(
     Json(body): Json<PlanRequest>,
 ) -> Result<Json<PlanResponse>, ApiError> {
     let target = parse_target(&body.address)?;
-    let partial = body.partial.map(PartialDownloadParts::from);
-    let prepared = prepare(&state, target, partial)?;
+    let request = scope_request(&body)?;
+    let scoped = prepare_scoped(&state, target, request)?;
+    let advice = ScopeAdviceDto::from(&scoped.advice);
+    let Some(prepared) = scoped.prepared else {
+        // No plan is the shown plan now: one shown earlier cannot be
+        // started after this answer.
+        *state
+            .device_download_plan
+            .lock()
+            .expect("state mutex poisoned") = None;
+        let mut details = serde_json::Map::new();
+        details.insert(
+            "scopeAdvice".into(),
+            serde_json::to_value(&advice).expect("advice serialises"),
+        );
+        return Err(ApiError::with_details(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "downloadNothingPending",
+            format!(
+                "nothing to download to device {target}: the project marks no application, \
+                 parameter or group address part pending; no plan was built"
+            ),
+            details,
+        ));
+    };
+    let partial = prepared.partial.as_ref().map(|(parts, _)| *parts);
+    let changes = request == ScopeRequest::Changes;
     let keying = keying(&state, &prepared)?;
     let level = support_of(&prepared)?;
     let id = state.next_device_download_id.fetch_add(1, Ordering::SeqCst);
@@ -365,6 +547,9 @@ async fn plan(
             .needs_acknowledgement()
             .then(|| untested_acknowledgement(target)),
         warnings: prepared.warnings.iter().map(ToString::to_string).collect(),
+        scope: scope_code(partial),
+        scope_from_changes: changes,
+        scope_advice: advice,
     };
     *state
         .device_download_plan
@@ -374,6 +559,7 @@ async fn plan(
         target,
         plan: prepared.plan,
         partial,
+        changes,
     });
     Ok(Json(response))
 }
@@ -412,13 +598,13 @@ async fn start(
             "gateway is not a host:port IPv4 address",
         )
     })?;
-    let (target, partial) = {
+    let (target, partial, changes) = {
         let shown = state
             .device_download_plan
             .lock()
             .expect("state mutex poisoned");
         match shown.as_ref() {
-            Some(shown) if shown.id == body.plan_id => (shown.target, shown.partial),
+            Some(shown) if shown.id == body.plan_id => (shown.target, shown.partial, shown.changes),
             _ => {
                 return Err(conflict(
                     "that plan is no longer the one shown; ask for the plan again",
@@ -482,7 +668,7 @@ async fn start(
     // Before `prepare`: a project opened after this read can only make the
     // settlement skip, never land on the wrong project (ADR-0129).
     let incarnation = crate::programming_state::incarnation(&state);
-    let prepared = prepare(&state, target, partial)?;
+    let prepared = prepare_shown(&state, target, partial, changes)?;
     let keying = keying(&state, &prepared)?;
     // Recomputed from the plan that will run, not trusted from the shown
     // one: the evidence is the build's, the plan is checked equal below.

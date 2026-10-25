@@ -11,6 +11,12 @@ Last updated: 2026-10-19 (Alpha 15 baseline; WP-17 on main)
 | Scope | Listed boundaries; not universal compatibility |
 | Later scope | No delivery dates promised |
 
+## Source candidate: System-2 refusal diagnostics
+
+| Feature | Scope | Availability |
+| --- | --- | --- |
+| Own-run gateway hint and refusal reason | System-2's shared locks are not announced as a foreign holder; current worker/start refusals show a code. Volatile diagnostics only, actual issue #30 failure unresolved. [Workflow](manual/user-guide/05-devices-and-products.md#a-busy-hint-is-not-the-system-2-failure-reason-unreleased-source) | Local-only candidate; review/acceptance pending |
+
 ## New in Alpha 15
 
 The [release scope](releases/alpha15.md) covers changes after Alpha 14 up to

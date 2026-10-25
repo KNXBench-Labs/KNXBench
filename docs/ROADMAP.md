@@ -5,8 +5,10 @@ published as `5f1ad454e` after review and integrated acceptance
 ([record](status/2026-10-25-system2-pid7-diagnostic.md)), but the width model and safe recovery
 admission need real response evidence.
 The wrong-width refusal is retained, not replaced by an observation. Structured status/report
-projection remains open. [S2-02](open-work/S2-02-gateway-busy-after-failed-runs.md) remains a
-separate P1 investigation; neither package establishes hardware support.
+projection remains open. [S2-02](open-work/S2-02-gateway-busy-after-failed-runs.md) now
+has an own-run gateway-hint/refusal-reason diagnostic slice in progress. The actual
+reporter-side start failure remains a separate P1 investigation; neither package
+establishes hardware support.
 
 Run-scoped [download receipts](contracts/download-settlement-receipt.md) distinguish
 preparation, applied or computed settlement, and the separate post-download check.

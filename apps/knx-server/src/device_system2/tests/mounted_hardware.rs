@@ -1023,3 +1023,220 @@ async fn pinned_public_http_worker_cancellation_reopens_original_once_only_recov
     assert_eq!(hardware.writes.load(Ordering::SeqCst), writes);
     assert_eq!(hardware.device.system2_snapshot(), hardware.old);
 }
+
+// Issue #30: the REAL owning download worker, called with the refusals that end it
+// before any journal or tunnel exists. Opt-in public package, no network or hardware.
+fn evidence_tree(data: &Path) -> Vec<(String, String)> {
+    fn walk(base: &Path, dir: &Path, out: &mut Vec<(String, String)>) {
+        for entry in std::fs::read_dir(dir).unwrap() {
+            let path = entry.unwrap().path();
+            let relative = path.strip_prefix(base).unwrap().display().to_string();
+            if path.is_dir() {
+                out.push((relative, "dir".into()));
+                walk(base, &path, out);
+            } else {
+                out.push((
+                    relative,
+                    knx_productdb::sha256_hex(&std::fs::read(&path).unwrap()),
+                ));
+            }
+        }
+    }
+    let mut out = Vec::new();
+    walk(data, &data.join(super::super::ROOT_NAME), &mut out);
+    out.sort();
+    out
+}
+struct Refusal {
+    _directory: tempfile::TempDir,
+    data: PathBuf,
+    state: crate::SharedState,
+    router: Router,
+    hardware: Arc<TestHardware>,
+    device: DeviceId,
+    start: super::super::dto::Start,
+}
+async fn refusal_fixture(activity_unavailable: bool) -> Refusal {
+    let package = std::fs::read(
+        std::env::var_os("KNXBENCH_PUBLIC_UP258")
+            .expect("set KNXBENCH_PUBLIC_UP258 to the existing read-only public fixture"),
+    )
+    .unwrap();
+    assert_eq!(knx_productdb::sha256_hex(&package), PACKAGE_SHA256);
+    let directory = tempfile::tempdir().unwrap();
+    let products = directory.path().join("products.sqlite");
+    let conn = knx_productdb::open_and_migrate(&products).unwrap();
+    knx_productdb::install_package_with_limits(
+        &conn,
+        "public-up258.knxprod",
+        &package,
+        knx_productdb::PackageLimits::LARGE,
+    )
+    .unwrap();
+    drop(conn);
+    let hardware = TestHardware::new(directory.path());
+    let mut state = state(directory.path(), Some(products), &hardware);
+    if activity_unavailable {
+        // No history path: the log refuses write admission, as a failed store does.
+        Arc::get_mut(&mut state).unwrap().one_shot_activity = Arc::default();
+    }
+    let router = crate::app(state.clone(), None);
+    http(&router, "/api/project/new", Some(json!({})), 200).await;
+    http(
+        &router,
+        "/api/devices",
+        Some(json!({"catalogItemId":CATALOG_ITEM,"name":"Refusal selected device"})),
+        200,
+    )
+    .await;
+    let device = {
+        let mut project = state.project.lock().unwrap();
+        let project = project.as_mut().unwrap();
+        let id = project.devices.iter().map(|d| d.id).next().unwrap();
+        project.devices.get_mut(id).unwrap().address = Some(TARGET.parse().unwrap());
+        id
+    };
+    let preview = prepare(&router, device).await;
+    let start = super::super::dto::decode(&serde_json::to_vec(&start(&preview)).unwrap()).unwrap();
+    // A different, older operation stands in for retained original evidence.
+    let root = state.device_system2.root(&state).unwrap();
+    root.create(&super::metadata()).unwrap();
+    Refusal {
+        data: directory.path().into(),
+        _directory: directory,
+        state,
+        router,
+        hardware,
+        device,
+        start,
+    }
+}
+impl Refusal {
+    /// Mirrors the start route after admission, then awaits the real worker.
+    async fn run(&self) -> Value {
+        let preparation = self
+            .state
+            .device_system2
+            .inner
+            .lock()
+            .unwrap()
+            .preparation
+            .clone()
+            .unwrap();
+        let meta = preparation.metadata.clone();
+        let lease = self
+            .state
+            .device_system2
+            .control
+            .try_admit(&meta.operation_id)
+            .unwrap();
+        self.state.device_system2.inner.lock().unwrap().current = Some(super::super::Record {
+            metadata: meta.clone(),
+            progress: super::super::initial(LocalOutcome::Running),
+            updates: None,
+            task: None,
+            control_id: meta.operation_id.clone(),
+            message: None,
+            refusal: None,
+        });
+        let root = self.state.device_system2.root(&self.state).unwrap();
+        let body = super::super::dto::decode(
+            &serde_json::to_vec(&json!({
+                "preparationId": self.start.preparation_id,
+                "gateway": GATEWAY,
+                "confirmation": self.start.confirmation,
+                "hypothesisConfirmation": self.start.hypothesis_confirmation,
+                "downloadConfirmation": self.start.download_confirmation,
+                "releaseConfirmation": self.start.release_confirmation,
+                "recoveryTrack": "knxbenchBestEffort"
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        super::super::worker::download(
+            self.state.clone(),
+            root,
+            preparation,
+            body,
+            GATEWAY.parse().unwrap(),
+            lease,
+        )
+        .await;
+        http(&self.router, "/api/device-system2/status", None, 200).await
+    }
+    async fn refused_without_effect(&self, kind: &str) {
+        let before = evidence_tree(&self.data);
+        let status = self.run().await;
+        assert_eq!(status["state"], "failed", "{kind}");
+        assert_eq!(status["refusal"], kind);
+        assert_eq!(status["mutationMayHaveStarted"], false);
+        assert_eq!(status["backupAvailable"], false);
+        assert_eq!(self.hardware.connects.load(Ordering::SeqCst), 0, "{kind}");
+        assert_eq!(self.hardware.writes.load(Ordering::SeqCst), 0, "{kind}");
+        assert_eq!(self.hardware.transport_snapshot()["entered"], 0, "{kind}");
+        assert_eq!(
+            evidence_tree(&self.data),
+            before,
+            "{kind}: evidence changed"
+        );
+        assert_eq!(self.hardware.device.system2_snapshot(), self.hardware.old);
+        assert!(matches!(
+            self.state.device_system2.control.snapshot().settlement,
+            knx_app::property_validation::System2Settlement::Settled {
+                outcome: LocalOutcome::Failed,
+                ..
+            }
+        ));
+    }
+}
+
+// One fixture per case: a settled operation id is never admitted twice.
+#[tokio::test]
+#[ignore = "requires digest-pinned public package; set KNXBENCH_PUBLIC_UP258; no network or hardware"]
+async fn worker_shared_lock_refusal_reaches_status_without_touching_the_bus() {
+    let fixture = refusal_fixture(false).await;
+    // Another route holds a shared tunnel lock when the worker reserves.
+    let _held = fixture.state.device_download.lock().await;
+    fixture.refused_without_effect("gatewayBusy").await;
+}
+
+#[tokio::test]
+#[ignore = "requires digest-pinned public package; set KNXBENCH_PUBLIC_UP258; no network or hardware"]
+async fn worker_gateway_lease_refusal_reaches_status_without_touching_the_bus() {
+    let fixture = refusal_fixture(false).await;
+    // A different holder owns the cross-process gateway lease.
+    let directory = fixture.state.diagnostic_lease_dir.clone().unwrap();
+    let _foreign = knx_app::device_diagnostics::lease_in(&directory).unwrap();
+    fixture.refused_without_effect("gatewayBusy").await;
+}
+
+#[tokio::test]
+#[ignore = "requires digest-pinned public package; set KNXBENCH_PUBLIC_UP258; no network or hardware"]
+async fn worker_source_recheck_refusal_reaches_status_without_touching_the_bus() {
+    let fixture = refusal_fixture(false).await;
+    // The source drifts after the route's own check; the worker rechecks it.
+    fixture
+        .state
+        .project
+        .lock()
+        .unwrap()
+        .as_mut()
+        .unwrap()
+        .devices
+        .get_mut(fixture.device)
+        .unwrap()
+        .name
+        .push_str(" changed");
+    fixture
+        .refused_without_effect("system2PreparationStale")
+        .await;
+}
+
+#[tokio::test]
+#[ignore = "requires digest-pinned public package; set KNXBENCH_PUBLIC_UP258; no network or hardware"]
+async fn worker_activity_refusal_reaches_status_without_touching_the_bus() {
+    refusal_fixture(true)
+        .await
+        .refused_without_effect("system2ActivityUnavailable")
+        .await;
+}

@@ -148,6 +148,23 @@ describe("holderFromActivity", () => {
     ], ["deviceDownload"]))).toBeNull();
   });
 
+  it("never names the locks a running System-2 operation holds itself as a foreign holder (issue #30)", () => {
+    expect(holderFromActivity(snapshot([], ["system2Operation", "deviceDownload", "managementOperation",
+      "busMonitorOrGroupWrite", "lineScan"]))).toBeNull();
+    expect(holderFromActivity(snapshot([], ["system2Operation"]))).toBeNull();
+    expect(holderFromActivity(snapshot([
+      { kind: "busMonitor", id: 6, gateway: "192.0.2.10:3671", state: "active" },
+    ], ["system2Operation", "managementOperation"]))).toBeNull();
+  });
+
+  it("words a System-2 operation where it is named as the holder", () => {
+    const holder = { kind: "connecting", session: "system2Operation" } as const;
+    expect(describeHolder(holder, en))
+      .toBe("The gateway is busy: an experimental System-2 operation is running. Try again when it has ended.");
+    expect(describeHolder(holder, de))
+      .toBe("Das Gateway ist belegt: Ein experimenteller System-2-Vorgang läuft. Versuch es erneut, wenn er beendet ist.");
+  });
+
   it("words a monitor from an older server, which does not name its gateway", () => {
     const holder = holderFromActivity(snapshot([{ kind: "busMonitor", id: 6, state: "active" }]))!;
     expect(describeHolder(holder, en)).toBe("The gateway is busy: a bus monitor session is open. Stop the bus monitor first.");

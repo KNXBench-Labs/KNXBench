@@ -1,37 +1,63 @@
-# S2-02 — System-2: "gateway busy" after two failed operations
+# S2-02 — System-2: misleading busy hint and missing refusal reason
 
-**Priority:** P1. **Status:** Planned (scheduled by the owner, 25 October 2026); investigation first.
-Listed in [OPEN_WORK](../OPEN_WORK.md). Origin: GitHub issue #30. After two operations that
-failed at the pre-mutation recovery acquisition, every recovery track answered "Gateway belegt"
-while the bus monitor still connected, and no new operation journal was created.
+**Priority:** P1. **Status:** In progress: own-run hint/refusal diagnostic slice;
+actual reporter-side start failure remains unresolved.
+Listed in [OPEN_WORK](../OPEN_WORK.md). Origin: GitHub issue #30.
 
-## Facts and unknowns
+## Facts and unknowns (25 October 2026)
 
-- Verified from code: a refusal before an operation exists comes from the in-server reservation
-  (`worker::reserve`, `gatewayBusy`), the cross-process lease file, or the System-2 coordinator
-  (`system2Busy` while a settlement is `Running`/`Uncertain`).
-- A failed teardown deliberately leaves the coordinator uncertain ("an error quarantines the
-  coordinator"); a confirmed teardown settles it.
-- Not known: which of these produced the reporter's message, whether either failed run left a
-  session, lease or unconfirmed teardown behind, and the exact message text and panel.
-- Possibly relevant, unverified: the System-2 refusal `gatewayBusy` carries no `holder`, while
-  the web layer's structured-refusal admission requires one, so the ordinary holder wording would
-  not appear for it.
+The reporter supplied the exact `gatewayRefusal.busy.connecting.managementOperation`
+text, an empty activity snapshot before/after the attempt, and the previous failed
+selected operation after a server restart. The banner also occurs after restart;
+that observation does not identify a leaked session or lease.
 
-## Deliverables
+Source tracing shows that the gateway hint mistakes the System-2 worker's own
+address-programming reservation for a foreign management operation. The worker
+reserves download, programming, monitor and scan together. The hint previously
+excluded only the ordinary download lock. The banner itself does not stop a start
+and is not the original failure reason.
 
-1. **Reproduce offline** with the simulator: run a System-2 start that fails at the recovery
-   acquisition (also with the new wrong-width answer from [S2-01](S2-01-pid7-raw-response.md)),
-   then check reservation, lease, coordinator settlement and the activity/status endpoints.
-2. **Fix a real leak** if found (teardown, lease or settlement not released on that failure path),
-   with a regression test. If none is found, record that and which paths were checked.
-3. **Say which holder is busy.** A System-2 busy refusal names its cause (in-server holder,
-   lease, uncertain teardown), reusing the existing holder wording; no generic "busy".
-4. **Document the recovery route** for a stuck state (what the activity and status endpoints
-   show, when a server restart is the only route) without inventing a clear-state control.
+Before creating a new operation journal, the worker can refuse shared reservation,
+the process-wide gateway lease, activity recording, source recheck or journal
+creation. Previously the worker discarded the `ApiError` kind. The old selected
+operation after restart therefore does not identify which early step refused.
+The reported short HTTP stall and the actual refused step remain unresolved.
 
-## Boundaries
+## Diagnostic slice
 
-No live-bus operation and no force-disconnect of a tunnel; external clients are not visible to the
-in-server checks. Needs the reporter's exact message and the read-only endpoint outputs from #30
-to close the "which path" question. Shared code: coordinate with [PRG-01](PRG-01-programming-gaps.md).
+- `GET /api/bus/activity` names an admitted running coordinator as
+  `system2Operation` before the existing busy locks. The individual lock/session
+  evidence remains present. The snapshot stays partial and non-atomic.
+- The download hint treats those shared locks as this page's own System-2 run,
+  rather than announcing a foreign management operation. A real foreign holder
+  without that marker is still shown. Other clients' gateway occupancy remains
+  outside this endpoint's coverage.
+- System-2 status exposes nullable `refusal`: only the stable API error kind that
+  ended this in-process attempt, never a message, path or raw exception. It is
+  volatile: selecting/reloading historical evidence does not invent a reason.
+- The panel shows that reason and a structured `4xx` start refusal's kind.
+  Transport loss, malformed replies and server errors retain unknown-outcome
+  handling. No automatic retry, force-disconnect or clear-state control is added.
+
+Acceptance is pending. See the source/HTTP contract in
+[alpha16-system2-http-mount](../contracts/alpha16-system2-http-mount.md).
+
+## Remaining investigation and closure
+
+1. Review and exercise this diagnostic slice with synthetic software/loopback
+   fixtures, including zero device access for pre-connect refusals.
+2. Publish the accepted source revision before requesting a new reporter attempt.
+   A prior build cannot expose the newly retained reason. Preserve the original
+   private journals; do not post them publicly.
+3. Use the new reason to investigate the actual start failure. Shared-lock
+   conflicts and failure to acquire the process lease currently share
+   `gatewayBusy`, including lease-file/runtime I/O errors; the token alone does
+   not distinguish these mechanisms or prove contention or a leak.
+4. Fix a real leak only if reproduced, with its own regression. An uncertain
+   coordinator after unconfirmed teardown is a deliberate safety boundary, not
+   permission to clear evidence. Confirmed teardown settles it; restart does not
+   prove device recovery or undo writes.
+
+No live-bus access, forced tunnel release, firmware/protocol relaxation or vendor
+contact is authorized. Coordinate shared source with
+[PRG-01](PRG-01-programming-gaps.md). This diagnostic slice does not close issue #30.

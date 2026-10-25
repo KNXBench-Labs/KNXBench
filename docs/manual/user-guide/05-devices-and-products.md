@@ -289,10 +289,31 @@ The source workflow is:
    cancellation** asks the server to stop safely; it does not undo earlier writes.
    Navigation/reload does not cancel the task. A lost start/recovery reply means
    unknown-to-client: refresh status, do not resend automatically.
-   When the server's durable journal shows that the operation stopped before its
-   first write, the status reads **Refused before any write — nothing was
+   When the server confirms that the operation stopped before its
+   first write (including a refusal before connection/journal creation), the status reads **Refused before any write — nothing was
    written**. Only then; every other failure keeps the cautious "device state may
    have changed" wording.
+
+### A busy hint is not the System-2 failure reason (unreleased source)
+
+The gateway hint no longer labels a running System-2 attempt's own locks as a
+foreign address/management operation. Without that marker, an observed competing
+holder is still shown; the brief admit-to-reserve window can suppress the hint
+before a conflicting worker refuses. An empty activity snapshot does **not**
+prove the gateway is free.
+
+When the server refuses an attempt before it can create a journal or connect,
+status now shows **Reason reported by the server**, followed by its diagnostic
+code (for example `system2ActivityUnavailable`). A refused start request shows
+its code too. Keep that one line when reporting a failure; do not upload private
+journals or memory. The reason is retained only for this server lifetime, not
+reconstructed from an earlier operation after restart. `gatewayBusy` still
+covers shared-holder conflicts and failure to acquire the process-wide lease,
+including lease-file/runtime I/O failures; it alone does
+not identify which mechanism refused. Lost replies remain unknown: refresh status,
+do not automatically repeat a start. No safety check or recovery admission is
+relaxed. These changes require an unreleased source build, not an older binary.
+The actual reporter-side failure in issue #30 remains under investigation.
 
 ### Original-state recovery, not a second download
 

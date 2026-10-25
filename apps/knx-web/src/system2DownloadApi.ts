@@ -12,7 +12,9 @@ export interface System2Status {
   schemaVersion: 1; operationId: string; binding: System2Binding; address: string; deviceName: string; state: typeof SYSTEM2_STATES[number];
   completedSteps: number; totalSteps: number | null; backupAvailable: boolean; recoveryPhrase: string | null;
   downloadPhrase: string | null; releasePhrase: string | null; message: string | null;
-  /** False only when the server's durable journal proves nothing could have been written. */
+  /** Stable kind of the server refusal that ended this run, if any (issue #30); not persisted. */
+  refusal: string | null;
+  /** False only when the server confirms no write could have been sent, including pre-connect refusals. */
   mutationMayHaveStarted: boolean;
   /** The device prestate differed from the source shape or application; recovery is unavailable. */
   prestateDiffers: boolean; pointerObservations: System2PointerObservation[];
@@ -53,6 +55,7 @@ const previewCheck = object({ ...shared, preparationId: id, programId: nonempty,
 const hex8: Check = (v) => typeof v === "string" && /^[0-9a-f]{8}$/.test(v);
 const hexBytes: Check = (v) => typeof v === "string" && /^([0-9a-f]{2}){0,64}$/.test(v);
 const flag: Check = (v) => typeof v === "boolean";
+const token: Check = (v) => typeof v === "string" && /^[A-Za-z0-9]{1,64}$/.test(v);
 const observation = object({ run: (v) => v === "download" || v === "restore", phase: (v) => v === "prestate" || v === "inProcedure" || v === "final", object: (v) => count(v) && (v as number) <= 255,
   operationIndex: nullable(count), expected: hex8, observed: (v) => v === "refused" || hex8(v), loadState: nonempty });
 const observations: Check = (v) => Array.isArray(v) && v.length <= 256 && v.every(observation) &&
@@ -62,7 +65,7 @@ const unreadable = object({ object: (v) => count(v) && (v as number) <= 255, add
 const unreadables: Check = (v) => Array.isArray(v) && v.length <= 256 && v.every(unreadable);
 const statusCheck = object({ ...shared, operationId: id, state: (v) => SYSTEM2_STATES.some((state) => state === v),
   completedSteps: count, totalSteps: nullable(count), backupAvailable: (v) => typeof v === "boolean", recoveryPhrase: nullable(nonempty),
-  downloadPhrase: nullable(nonempty), releasePhrase: nullable(nonempty), message: nullable(text),
+  downloadPhrase: nullable(nonempty), releasePhrase: nullable(nonempty), message: nullable(text), refusal: nullable(token),
   mutationMayHaveStarted: flag, prestateDiffers: flag, pointerObservations: observations,
   programVersionObservation: nullable(object({ expected: hexBytes, observed: hexBytes })),
   prestateUnreadableAllocations: unreadables });
@@ -84,6 +87,16 @@ function checkedStatus(value: unknown): System2Status {
     throw new Error("Invalid System-2 prestate observations.");
   }
   return row;
+}
+/**
+ * The stable `kind` of a definitive server refusal (`4xx`) thrown by `request()`,
+ * or `null` (lost response, server error, malformed body). Display only: the
+ * outcome stays unknown to the client, and nothing is ever resent.
+ */
+export function refusalKind(error: unknown): string | null {
+  const { status, body } = (error ?? {}) as { status?: unknown; body?: { kind?: unknown } | null };
+  const kind = body?.kind;
+  return typeof status === "number" && status >= 400 && status < 500 && token(kind) ? kind as string : null;
 }
 const post = (action: string, body: unknown) => request<unknown>(`/api/device-system2/${action}`, { method: "POST", body: JSON.stringify(body) });
 export async function prepareSystem2(deviceId: number): Promise<System2Preview> {

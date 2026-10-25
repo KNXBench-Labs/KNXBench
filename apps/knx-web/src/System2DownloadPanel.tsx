@@ -13,7 +13,7 @@ interface Props {
 type Phrases = { confirmation: string; hypothesisConfirmation: string; downloadConfirmation: string; releaseConfirmation: string };
 const EMPTY: Phrases = { confirmation: "", hypothesisConfirmation: "", downloadConfirmation: "", releaseConfirmation: "" };
 const active = (s: api.System2Status | null) => s?.state === "running" || s?.state === "restoring";
-// Only the server's durable "no mutation could have started" earns the nothing-written text.
+// Only the server's confirmed "no mutation could have started" earns the nothing-written text.
 const nothingWritten = (s: api.System2Status) => (s.state === "failed" || s.state === "cancelled") && !s.mutationMayHaveStarted;
 function sameTarget(a: { binding: api.System2Binding; address: string }, b: { binding: api.System2Binding; address: string }) {
   return a.address === b.address && a.binding.serverIncarnation === b.binding.serverIncarnation &&
@@ -35,6 +35,7 @@ export default function System2DownloadPanel({ project, deviceId, gateway, enabl
   const [pending, setPending] = useState(false); const action = useRef(false);
   const [preparing, setPreparing] = useState(false);
   const [error, setError] = useState(false); const [unknown, setUnknown] = useState<"start" | "cancel" | "recover" | null>(null);
+  const [startRefusal, setStartRefusal] = useState<string | null>(null);
   const mounted = useRef(false); const generation = useRef(0); const reads = useRef(0); const pollInFlight = useRef(false);
   const context = useRef({ project, deviceId, gateway, enabled }); context.current = { project, deviceId, gateway, enabled };
 
@@ -104,7 +105,7 @@ export default function System2DownloadPanel({ project, deviceId, gateway, enabl
     if (!canStart || preview === null || action.current) return;
     const shown = preview; const original = context.current; const ticket = generation.current;
     const body: api.System2Start = { preparationId: shown.preparationId, gateway: gateway.trim(), ...phrases, recoveryTrack: track };
-    action.current = true; setPending(true); setError(false); reads.current += 1;
+    action.current = true; setPending(true); setError(false); setStartRefusal(null); reads.current += 1;
     try {
       if (!(await consent.request(`${shown.address} — ${shown.deviceName}`))) return;
       if (!mounted.current || ticket !== generation.current || context.current.project !== original.project || context.current.deviceId !== original.deviceId || context.current.gateway !== original.gateway || !context.current.enabled) return;
@@ -116,7 +117,10 @@ export default function System2DownloadPanel({ project, deviceId, gateway, enabl
         const next = await api.startSystem2(body);
         if (!sameTarget(next, shown)) throw new Error("Mismatched System-2 start response");
         if (mounted.current) accept(next);
-      } catch { if (mounted.current) setUnknown("start"); }
+      } catch (reason) {
+        // A named refusal is shown, but the outcome stays unknown: never resent.
+        if (mounted.current) { setUnknown("start"); setStartRefusal(api.refusalKind(reason)); }
+      }
     } finally {
       action.current = false; reads.current += 1;
       if (mounted.current) { setPending(false); void poll(); }
@@ -162,6 +166,7 @@ export default function System2DownloadPanel({ project, deviceId, gateway, enabl
     {checking && <p role="status">{t("system2.checking")}</p>}
     {unavailable && <p role="alert" className="form-warning">{t("system2.statusUnavailable")}</p>}
     {unknown && <p data-system2-unknown role="alert" className="form-warning">{t("system2.unknown")}</p>}
+    {unknown === "start" && startRefusal && <p data-system2-start-refusal>{t("system2.startRefused", { reason: startRefusal })}</p>}
     {error && <p role="alert" className="form-error">{t("system2.prepareFailed")}</p>}
     <button type="button" data-system2-refresh disabled={pending} onClick={() => void poll()}>{t("system2.refresh")}</button>
     {enabled && <>
@@ -202,6 +207,7 @@ export default function System2DownloadPanel({ project, deviceId, gateway, enabl
       <p>{status.totalSteps === null ? t("system2.checkpointsUnknown", { done: status.completedSteps }) : t("system2.checkpoints", { done: status.completedSteps, total: status.totalSteps })}</p>
       {status.totalSteps !== null && status.totalSteps > 0 && <progress aria-label={t("system2.steps")} value={status.completedSteps} max={status.totalSteps} />}
       {status.message && <p>{status.message}</p>}
+      {status.refusal && <p data-system2-refusal>{t("system2.refusal", { reason: status.refusal })}</p>}
       {status.prestateUnreadableAllocations.length > 0 ? <p data-system2-prestate-unreadable className="form-warning">
         {t("system2.prestateUnreadable", { allocations: status.prestateUnreadableAllocations.map((a) => t("system2.prestateUnreadableAllocation", { object: a.object, address: a.address, length: a.length })).join("; ") })}
       </p> : <p>{t(status.backupAvailable ? "system2.backupAvailable" : "system2.backupUnavailable")}</p>}

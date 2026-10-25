@@ -23,7 +23,9 @@ for (const language of ["en", "de"] as const) {
         await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
         const group = panel.getByRole("group", { name: messages["deviceDownload.scope.legend"] });
         const radios = group.getByRole("radio");
-        await expect(radios).toHaveCount(4);
+        await expect(radios).toHaveCount(5);
+        expect(await radios.evaluateAll((nodes) => nodes.map((node) => (node as HTMLInputElement).value)))
+          .toEqual(["complete", "parameters", "groupAddresses", "both", "changes"]);
         if (process.env.KNX_DOWNLOAD_CAPTURE_DIR) {
           await panel.screenshot({ path: join(process.env.KNX_DOWNLOAD_CAPTURE_DIR, `${language}-${width}-${theme}.png`) });
         }
@@ -72,6 +74,10 @@ for (const language of ["en", "de"] as const) {
         await expect(group.locator('input[value="complete"]')).not.toBeChecked();
         await group.locator('label:has(input[value="both"])').click();
         await expect(group.locator('input[value="both"]')).toBeChecked();
+        await group.locator('input[value="changes"]').focus();
+        await page.keyboard.press("Space");
+        await expect(group.locator('input[value="changes"]')).toBeChecked();
+        await expect(group.locator('input[value="both"]')).not.toBeChecked();
         expect(state.requests.filter((request) => request.startsWith("POST /api/device-download/"))).toEqual([]);
         expect(state.unexpected).toEqual([]);
       });

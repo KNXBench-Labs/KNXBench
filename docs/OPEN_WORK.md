@@ -10,7 +10,7 @@ the former dated sections are in the [archive](history/OPEN_WORK_2026-10-25.md).
 | WP-22 | Project change timeline inspired by Fusion 360 | Planned: awaiting implementation Go | [WP-22](open-work/WP-22-project-change-timeline.md) |
 | WP-23 | Show group-address names in Flow | Planned: awaiting implementation Go | [WP-23](open-work/WP-23-flow-group-address-names.md) |
 | WP-24 | Product catalogue as a table with sortable headers | Planned: awaiting implementation Go | [WP-24](open-work/WP-24-product-catalogue-sortable-table.md) |
-| S2-01 | System-2: keep the raw PID 7 answer, model its width before relaxing the refusal (#30) | Planned: P1 | [S2-01](open-work/S2-01-pid7-raw-response.md) |
+| S2-01 | System-2: keep the raw PID 7 answer, model its width before relaxing the refusal (#30) | In progress: P1 | [S2-01](open-work/S2-01-pid7-raw-response.md) |
 | S2-02 | System-2: "gateway busy" after two failed operations (#30) | Planned: P1, investigation first | [S2-02](open-work/S2-02-gateway-busy-after-failed-runs.md) |
 | PRG-01 | Close non-Secure programming gaps | In progress | [PRG-01](open-work/PRG-01-programming-gaps.md) |
 | WP-03 | Legacy binary enumeration values | Blocked: evidence | [WP-03](open-work/WP-03-legacy-binary-enumerations.md) |

@@ -1,6 +1,8 @@
 # S2-01 — System-2: keep the raw PID 7 answer and model its width
 
-**Priority:** P1. **Status:** Planned (scheduled by the owner, 25 October 2026); no implementation started.
+**Priority:** P1. **Status:** In progress. Deliverable 1 is implemented on a branch (the refusal names object, element
+count, octet count and the first 16 raw octets, simulator-tested); deliverables 2 (width model) and 3
+(research record) wait for a real observed answer.
 Listed in [OPEN_WORK](../OPEN_WORK.md). Origin: GitHub issue #30, field report of a
 refusal `resource pointer response is not four octets` on a real UP 258D12 (two operations,
 `mutation_may_have_started: false`).
@@ -21,9 +23,10 @@ explanation given in #30 is withdrawn until raw bytes exist.
 
 ## Deliverables
 
-1. **Raw observation.** Read PID 7 with the loss-aware `read_property_raw` and record element
-   count and raw bytes (no device configuration) in the journal, status, report and CLI/web
-   observation list. A width other than four is an observation with its true bytes, never padded
+1. **Raw observation (done in source).** `read_pointer` reads with `read_property_counted` (same
+   start-index matching as before) and the refusal carries element count and raw bytes (no device
+   configuration), so the failure text in journal and status shows them. A structured CLI/web
+   field is not added: the failure text is the only carrier today. A width other than four is an observation with its true bytes, never padded
    or truncated, and never labelled as a pointer value.
 2. **Wrong-width rule: the refusal stays until the width is understood.** An observation-only
    rule is rejected for now, because a backup cannot cover this case: the recovery snapshot holds

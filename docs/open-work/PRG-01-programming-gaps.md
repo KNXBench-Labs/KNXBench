@@ -18,11 +18,19 @@ bus or device operations.
   response octets before backup and mutation, published as `07fe2e67f`
   ([delivery](../status/2026-10-25-hardware-identity-width.md),
   [contract](../contracts/hardware-identity-comparison.md)).
+- Partial-application identity response width: the existing object 3/PID 13
+  precondition requires exactly five response octets before backup and mutation,
+  published as `02c437110` ([contract](../contracts/partial-identity-comparison.md)).
+- Scope advice across core, app, CLI, HTTP and web chooses the concrete pending
+  scope or prepares nothing, published as `78fd9d780`
+  ([contract](../contracts/device-programming-support-guidance.md)).
+
+[Integrated acceptance and publication](../status/2026-10-25-programming-scope-and-identity.md)
+record the boundaries separately; these increments do not close PRG-01.
 
 ## Open
 
-- Partial-application identity width, scope advice and post-download
-  observation, including their CLI, server, web and history consumers.
+- Post-download observation, including its CLI, server, web and history consumers.
 - Parameter policies: the defining inactive, `Union` and customer-write rules
   are unresolved.
 - Complete mutation effects and whole-mutation recovery contracts.

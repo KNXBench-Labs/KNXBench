@@ -11,8 +11,9 @@ updates supersede them; they are not new work assignments.
 The existing partial-download object 3/PID 13 precondition now requires exactly
 five response octets, before backup or mutation; product comparison padding does
 not define response width. Complete downloads gain no unsolicited identity check
-([contract](../contracts/partial-identity-comparison.md)). Independent review and
-focused simulator regressions passed; integrated acceptance remains pending.
+([contract](../contracts/partial-identity-comparison.md)). Independent review,
+focused simulator regressions and integrated acceptance passed; published as
+`02c437110` ([acceptance](../status/2026-10-25-programming-scope-and-identity.md)).
 Other object indices retain their generic comparison rule; this does not close
 general target identity, family support or hardware acceptance.
 

@@ -31,7 +31,9 @@ Explicit scopes are unchanged and every plan also reports the advice. The flags
 are the project's belief, not device evidence ([KL-142](limitations/KL-142-partial-download-evidence.md)).
 Synthetic offline tests only: all 32 flag patterns with and without an address
 (core), and all 32 through the app service, HTTP route and built CLI; no bus, no
-hardware.
+hardware. Published as `78fd9d780` after independent review and the maintained
+17-stage integrated package gate
+([acceptance](status/2026-10-25-programming-scope-and-identity.md)).
 
 ## Partial-download application identity width (25 October 2026 source)
 
@@ -39,9 +41,11 @@ The existing partial-download identity precondition now requires exactly five
 response octets for object 3, PID 13. A shortened zero-tailed prefix can no longer
 pass the padded-product comparison, and refusal precedes backup and mutation.
 Complete plans gain no unsolicited application-identity precondition
-([contract](contracts/partial-identity-comparison.md)). Independent review and
-focused simulator regressions passed; integrated acceptance is pending. This
-neither broadens device-family admission nor proves physical exemplar identity.
+([contract](contracts/partial-identity-comparison.md)). Independent review,
+focused simulator regressions, integrated acceptance and publication as
+`02c437110` are complete
+([acceptance](status/2026-10-25-programming-scope-and-identity.md)). This neither
+broadens device-family admission nor proves physical exemplar identity.
 
 ## Hardware identity response width (25 October 2026 source)
 

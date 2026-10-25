@@ -595,22 +595,49 @@ pub(crate) async fn read_region<T: ManagementTransport>(
     Ok(bytes)
 }
 
+/// Longest answer shown byte for byte in a width refusal; the true length is always stated.
+const WIDTH_REFUSAL_SHOWN_OCTETS: usize = 16;
+
+/// The refusal for a PID 7 answer that is not four octets: the observed object, element
+/// count and raw bytes, so the field fact (issue #30) survives into the journal.
+fn pointer_width_refusal(object: ObjectIndex, elements: u8, data: &[u8]) -> String {
+    let shown = if data.is_empty() {
+        "(none)".into()
+    } else {
+        data.iter()
+            .take(WIDTH_REFUSAL_SHOWN_OCTETS)
+            .map(|octet| format!("{octet:02x}"))
+            .collect::<String>()
+    };
+    let more = if data.len() > WIDTH_REFUSAL_SHOWN_OCTETS {
+        "..."
+    } else {
+        ""
+    };
+    format!(
+        "resource pointer response is not four octets: object {}, {elements} element{}, {} octet{}, {shown}{more}",
+        object.octet(),
+        if elements == 1 { "" } else { "s" },
+        data.len(),
+        if data.len() == 1 { "" } else { "s" },
+    )
+}
+
 /// `Ok(None)` for a zero-element refusal, an observation; transport errors,
-/// timeouts and malformed lengths stay errors.
+/// timeouts and malformed lengths stay errors. A malformed length keeps its element
+/// count and bytes in the refusal; it is never padded, truncated or read as a pointer.
 pub(crate) async fn read_pointer<T: ManagementTransport>(
     session: &mut ManagementSession<'_, T>,
     object: ObjectIndex,
 ) -> Result<Option<[u8; 4]>, PropertySimulationFailure> {
     match session
-        .read_property(object, PID_TABLE_REFERENCE, 1, 1)
+        .read_property_counted(object, PID_TABLE_REFERENCE, 1, 1)
         .await
     {
-        Ok(bytes) => bytes
-            .as_slice()
-            .try_into()
+        Ok((0, _)) => Ok(None),
+        Ok((elements, bytes)) => <[u8; 4]>::try_from(bytes.as_slice())
             .map(Some)
-            .map_err(|_| invalid("resource pointer response is not four octets")),
-        Err(SessionError::PropertyRefused { .. }) => Ok(None),
+            .map_err(|_| invalid(&pointer_width_refusal(object, elements, &bytes))),
         Err(error) => Err(error.into()),
     }
 }
@@ -735,4 +762,39 @@ fn allocation_slice(
             allocation.data.get(offset..offset + length)
         })
         .ok_or_else(|| invalid("write prestate is outside full captured allocation"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn width_refusal_names_object_elements_octets_and_bytes() {
+        let reason = pointer_width_refusal(ObjectIndex::new(3), 2, &[0x3C, 0x00]);
+        assert_eq!(
+            reason,
+            "resource pointer response is not four octets: object 3, 2 elements, 2 octets, 3c00"
+        );
+        let one = pointer_width_refusal(ObjectIndex::new(1), 1, &[0xAB]);
+        assert!(one.ends_with("object 1, 1 element, 1 octet, ab"), "{one}");
+    }
+
+    #[test]
+    fn width_refusal_has_an_exact_hex_prefix_boundary() {
+        let exact = pointer_width_refusal(ObjectIndex::new(3), 1, &[0x11; 16]);
+        assert!(exact.ends_with(&"11".repeat(16)));
+        assert!(!exact.contains("..."));
+        let longer = pointer_width_refusal(ObjectIndex::new(3), 1, &[0x11; 17]);
+        assert!(longer.contains("17 octets"));
+        assert!(longer.ends_with(&format!("{}...", "11".repeat(16))));
+    }
+
+    #[test]
+    fn width_refusal_bounds_a_long_answer_and_keeps_its_true_length() {
+        let reason = pointer_width_refusal(ObjectIndex::new(3), 1, &[0x11; 40]);
+        assert!(reason.contains("40 octets"), "{reason}");
+        assert!(reason.contains(&"11".repeat(16)), "{reason}");
+        assert!(!reason.contains(&"11".repeat(17)), "{reason}");
+        assert!(reason.ends_with("..."), "{reason}");
+    }
 }

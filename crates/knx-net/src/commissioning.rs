@@ -2060,6 +2060,21 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
         Ok(data)
     }
 
+    /// `A_PropertyValue_Read` that keeps the answered element count next to the
+    /// bytes, including a zero-element refusal. Unlike [`Self::read_property_raw`]
+    /// it does not require the start index to be echoed, so a caller of the
+    /// established `read_property` path keeps its hardware-exercised matching.
+    pub async fn read_property_counted(
+        &mut self,
+        object_index: ObjectIndex,
+        property_id: u8,
+        nr_of_elem: u8,
+        start_index: u16,
+    ) -> Result<(u8, Vec<u8>), SessionError> {
+        self.read_property_matching(object_index, property_id, nr_of_elem, start_index, false)
+            .await
+    }
+
     /// Loss-aware read for diagnosis: retain the returned element count and bytes,
     /// including a zero-element refusal. No length inference or access escalation.
     /// A response must also echo the requested start index, so a stale answer

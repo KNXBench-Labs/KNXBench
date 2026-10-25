@@ -1124,6 +1124,7 @@ struct FinalReference<'a> {
     device: &'a SimulatedDevice,
     armed: std::sync::Arc<std::sync::atomic::AtomicBool>,
     property: u8,
+    elements: u8,
     /// `None` answers with zero elements, the AL refusal.
     replacement: Option<Vec<u8>>,
     /// First PID 5 octet that arms the rewrite (2 LoadCompleted, 3 allocation).
@@ -1137,7 +1138,8 @@ impl ManagementTransport for FinalReference<'_> {
         let mut upstream = ManagementTransport::subscribe(self.device);
         let (sender, receiver) = broadcast::channel(256);
         let armed = self.armed.clone();
-        let (property, replacement) = (self.property, self.replacement.clone());
+        let (property, elements, replacement) =
+            (self.property, self.elements, self.replacement.clone());
         tokio::spawn(async move {
             loop {
                 match upstream.recv().await {
@@ -1153,7 +1155,10 @@ impl ManagementTransport for FinalReference<'_> {
                             {
                                 if *property_id == property {
                                     match &replacement {
-                                        Some(bytes) => *data = bytes.clone(),
+                                        Some(bytes) => {
+                                            *nr_of_elem = elements;
+                                            *data = bytes.clone();
+                                        }
                                         None => {
                                             *nr_of_elem = 0;
                                             data.clear();
@@ -1307,6 +1312,7 @@ async fn final_pointer_difference_after_verified_download_is_an_observation() {
         device: &device,
         armed: Default::default(),
         property: 7,
+        elements: 1,
         replacement: Some(vec![0, 0, 0x3D, 0]),
         arm_on: 2,
     };
@@ -1527,6 +1533,7 @@ async fn final_program_version_mismatch_still_fails_verification() {
         device: &device,
         armed: Default::default(),
         property: PID_PROGRAM_VERSION,
+        elements: 1,
         replacement: Some(vec![0, 2, 0x12, 0x34, 9]),
         arm_on: 2,
     };
@@ -1564,6 +1571,7 @@ async fn in_procedure_pointer_difference_after_allocation_is_an_observation() {
         device: &device,
         armed: Default::default(),
         property: 7,
+        elements: 1,
         replacement: Some(vec![0, 0, 0x3D, 0]),
         arm_on: 3,
     };
@@ -1608,6 +1616,7 @@ async fn refused_pointer_reads_are_observations_in_every_phase() {
         device: &device,
         armed: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true)),
         property: 7,
+        elements: 1,
         replacement: None,
         arm_on: 0xFF,
     };
@@ -1639,6 +1648,65 @@ async fn refused_pointer_reads_are_observations_in_every_phase() {
     );
     assert_eq!(report.final_pointer_observations[0].observed, None);
     assert!(reason.contains("observed refused"), "{reason}");
+}
+
+#[tokio::test]
+async fn pid7_answer_of_another_width_is_refused_before_any_write_with_the_raw_bytes() {
+    // Issue #30: a real device answered PID 7 with a width other than four octets.
+    // The refusal before the first write stays; it now carries what was observed.
+    for (elements, answer) in [
+        (1, vec![]),
+        (1, vec![0x3C]),
+        (1, vec![0x3C, 0x00]),
+        (2, vec![0x3C, 0x00]),
+        (1, vec![0x00, 0x3C, 0x00]),
+        (1, vec![0x00, 0x00, 0x3C, 0x00, 0x01]),
+    ] {
+        let (device, plan, preconditions) = fixture();
+        establish_shape(&device, &plan).await;
+        let transport = FinalReference {
+            device: &device,
+            armed: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true)),
+            property: 7,
+            elements,
+            replacement: Some(answer.clone()),
+            arm_on: 0xFF,
+        };
+        let before = device.seen().len();
+        let error = run_experimental_property_plan(
+            &transport,
+            &plan,
+            auth(&device),
+            AuthorisationPlan::Skip,
+            timing(),
+            &preconditions,
+            &mut |_| Ok(()),
+            &|| false,
+        )
+        .await
+        .unwrap_err();
+        assert!(!error.mutation_may_have_started, "{answer:?}");
+        let PropertySimulationFailure::Recovery(reason) = &error.failure else {
+            panic!("expected a recovery refusal, got {:?}", error.failure);
+        };
+        let hex: String = answer.iter().map(|o| format!("{o:02x}")).collect();
+        assert!(reason.contains("not four octets"), "{reason}");
+        assert!(reason.contains("object 3"), "{reason}");
+        assert!(reason.contains(&format!("{elements} element")), "{reason}");
+        assert!(
+            reason.contains(&format!("{} octet", answer.len())),
+            "{reason}"
+        );
+        if answer.is_empty() {
+            assert!(reason.ends_with("(none)"), "{reason}");
+        } else {
+            assert!(reason.contains(&hex), "{reason}");
+        }
+        assert!(device.seen()[before..]
+            .iter()
+            .all(|seen| !matches!(seen, Seen::MemoryWrite { .. } | Seen::PropertyWrite { .. })));
+        assert!(matches!(device.seen().last(), Some(Seen::Disconnect)));
+    }
 }
 
 #[tokio::test]
@@ -1678,6 +1746,7 @@ async fn final_pointer_observations_are_durable_before_the_verify_mode_restore_w
         device: &device,
         armed: Default::default(),
         property: 7,
+        elements: 1,
         replacement: Some(vec![0, 0, 0x3D, 0]),
         arm_on: 2,
     };

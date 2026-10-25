@@ -2,6 +2,7 @@
 use super::*;
 mod admission;
 mod failures;
+mod pid7_width;
 use knx_app::system2_validation_preparation::{
     admit_current_project_hardware, execute_project_hardware, observe_project_hardware,
     restore_project_hardware, HardwareConfirmations, HardwareRecoveryConfirmations,

@@ -21,7 +21,10 @@ generic comparison rule. The diagnostic collector/archive retain their prior
 exact-length guards and use the shared resource comparison too
 ([contract](contracts/hardware-identity-comparison.md)). Independent source review
 approved the bounded correction; focused simulator regressions and owning-crate
-Clippy passed. Integrated package acceptance is pending. No hardware acceptance,
+Clippy passed. Published as `07fe2e67f` after the maintained 16-stage integrated
+package gate: 6,433 Rust tests passed (225 ignored), 62 binding tests and 155/155
+selected corpus tests; frozen inputs and user-data guards clear
+([delivery](status/2026-10-25-hardware-identity-width.md)). No hardware acceptance,
 new family admission or general target/exemplar identity claim.
 
 ## Diagnostic selector ambiguity remediation (25 October 2026)

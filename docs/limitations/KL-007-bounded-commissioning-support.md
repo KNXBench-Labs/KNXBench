@@ -13,7 +13,8 @@ length is not six octets, before backup acquisition/persistence or mutation.
 Valid padded product comparison declarations remain supported; diagnostic
 collector/archive exact-length guards remain in place
 ([contract](../contracts/hardware-identity-comparison.md)). Focused simulator
-regressions pass; integrated acceptance is pending. This neither resolves general
+regressions and the maintained integrated package gate passed; source published
+as `07fe2e67f` ([delivery](../status/2026-10-25-hardware-identity-width.md)). This neither resolves general
 serial/exemplar identity nor changes device-family admission or this ledger row.
 
 ## Current experimental System-2 boundary — 23 October 2026

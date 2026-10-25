@@ -56,7 +56,9 @@
 //!   ASCII, whose octets every declared encoding shares, is written.
 //!   `TypeFloat` is refused: 48 `DPT 9` fields match that encoding only at
 //!   zero, and the 15 non-zero ones contradict it. Every other type is
-//!   refused by name.
+//!   refused by name. A `TypeNumber` bound that is declared but not an integer
+//!   (empty, decimal, scientific, out of range) refuses the value by name; an
+//!   absent bound constrains nothing (docs/contracts/parameter-number-bound-admission.md).
 //! - **Byte order.** A program whose `Options/@ParameterByteOrder` is
 //!   anything but `BigEndian` is refused: numbers are written high octet
 //!   first (`knx_core::commissioning::parameter_image`). Corpus evidence
@@ -1513,6 +1515,31 @@ pub(crate) fn decode_parameter_text(encoding: Option<&str>, bytes: &[u8]) -> Opt
         .collect()
 }
 
+/// A `TypeNumber` bound as the integer type this builder reads: `None` when the
+/// attribute is absent, a refusal when it is declared but unreadable (empty, decimal,
+/// scientific, negative for an unsigned type, out of range), so a bound never vanishes
+/// quietly. Callers read the minimum first.
+fn declared_bound<T: std::str::FromStr>(
+    parameter_ref: &str,
+    attribute: &str,
+    number_type: &str,
+    text: &Option<String>,
+) -> Result<Option<T>, ImageError> {
+    let Some(raw) = text.as_deref() else {
+        return Ok(None);
+    };
+    raw.trim()
+        .parse()
+        .ok()
+        .map(Some)
+        .ok_or_else(|| ImageError::Value {
+            parameter_ref: parameter_ref.to_string(),
+            cause: format!(
+                "{attribute} {raw:?} is not a {number_type} bound this builder reads (unsupported bound)"
+            ),
+        })
+}
+
 impl ParameterTypes {
     pub(crate) fn load(
         conn: &Connection,
@@ -1631,12 +1658,10 @@ impl ParameterTypes {
             }
             (Some("Number"), _, Some("unsignedInt")) => {
                 let value = unsigned()?;
-                let bound = |text: &Option<String>| {
-                    text.as_deref().and_then(|t| t.trim().parse::<u64>().ok())
-                };
-                if bound(&found.min).is_some_and(|min| value < min)
-                    || bound(&found.max).is_some_and(|max| value > max)
-                {
+                let min = declared_bound(parameter_ref, "minInclusive", "unsignedInt", &found.min);
+                let max = declared_bound(parameter_ref, "maxInclusive", "unsignedInt", &found.max);
+                let (min, max) = (min?, max?);
+                if min.is_some_and(|min| value < min) || max.is_some_and(|max| value > max) {
                     return Err(invalid(format!(
                         "{value} is outside {:?}..={:?}",
                         found.min, found.max
@@ -1649,12 +1674,10 @@ impl ParameterTypes {
                     .trim()
                     .parse()
                     .map_err(|_| invalid(format!("{raw:?} is not an integer")))?;
-                let bound = |text: &Option<String>| {
-                    text.as_deref().and_then(|t| t.trim().parse::<i64>().ok())
-                };
-                if bound(&found.min).is_some_and(|min| value < min)
-                    || bound(&found.max).is_some_and(|max| value > max)
-                {
+                let min = declared_bound(parameter_ref, "minInclusive", "signedInt", &found.min);
+                let max = declared_bound(parameter_ref, "maxInclusive", "signedInt", &found.max);
+                let (min, max) = (min?, max?);
+                if min.is_some_and(|min| value < min) || max.is_some_and(|max| value > max) {
                     return Err(invalid(format!(
                         "{value} is outside {:?}..={:?}",
                         found.min, found.max
@@ -1749,6 +1772,8 @@ mod tests {
     use super::*;
     use crate::code::load_program_code;
     use knx_core::GroupAddress;
+
+    mod number_bounds;
 
     const ID: &str = "M-0001_A-0001-01-0000";
 

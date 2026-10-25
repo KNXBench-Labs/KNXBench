@@ -2675,6 +2675,8 @@ mod tests {
                     octets: s.octets.clone(),
                 })
                 .collect(),
+            prior_application:
+                knx_core::commissioning::device_backup::PriorApplication::NotRecorded,
         };
         let device_values = held
             .regions

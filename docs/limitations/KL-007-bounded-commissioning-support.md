@@ -29,6 +29,17 @@ focused simulator regressions and integrated acceptance passed; published as
 Other object indices retain their generic comparison rule; this does not close
 general target identity, family support or hardware acceptance.
 
+## Backup prior-application identity — 25 October 2026 source
+
+A backed-up download records the application (object 3/PID 13, five octets) the device answered
+before the first write; backup format 2 stores it, format 1 reads as not recorded. A restore is
+derived only when that evidence equals the plan's single application identity, or, for a legacy
+partial backup, behind the plan's own executed identity precondition
+([contract](../contracts/backup-application-identity.md)). Older complete backups no longer
+restore, and format 1-only builds cannot read format 2. This is a necessary guard only: it does
+not prove allocation compatibility, the physical exemplar, the final identity or whole-device
+recovery, and it changes no admission.
+
 ## Hardware identity width follow-up — 25 October 2026 source
 
 The regular memory executor now refuses Device Object PID 78 responses whose

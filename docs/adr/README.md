@@ -158,3 +158,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0149](0149-source-bound-system2-validation.md) | Isolate the source-bound System-2 validation candidate | Accepted for simulator-only validation | 2026-10-20 |
 | [0150](0150-cancellable-catalogue-jobs.md) | Owned cancellable catalogue jobs over the existing installer | Accepted for implementation; runtime acceptance pending | 2026-10-20 |
 | [0151](0151-monitoring-export-is-a-sparse-snapshot.md) | Monitoring export is a sparse snapshot with a bound loss report | Accepted for implementation; runtime acceptance pending | 2026-10-20 |
+| [0153](0153-regular-download-stop-ends-at-first-change.md) | A regular download may be stopped until its first change, and not after | Accepted for implementation; runtime acceptance pending | 2026-10-25 |

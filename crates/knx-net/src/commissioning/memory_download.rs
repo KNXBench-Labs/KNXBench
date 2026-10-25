@@ -48,7 +48,7 @@ use knx_core::commissioning::device_backup::{
     download_changes, written_regions, BackupRegion, DeviceBackup, OctetChange, PriorApplication,
     RestoreError,
 };
-use knx_core::commissioning::load_control_memory::MemoryLoadStateMachine;
+use knx_core::commissioning::load_control_memory::{loads_through_memory, MemoryLoadStateMachine};
 use knx_core::commissioning::load_state::{LoadEvent, LoadState, MaskVersion};
 use knx_core::commissioning::memory::{
     service_for, MemoryService, WriteLimit, USER_MEMORY_MAX_OCTETS,
@@ -63,6 +63,11 @@ use knx_core::ContactableAddress;
 
 use super::{ManagementSession, SessionError, SessionTiming};
 use crate::management::ManagementTransport;
+
+mod download_stop;
+
+use download_stop::Claim;
+pub use download_stop::{DownloadStop, StopRequest};
 
 /// One step that ran, as the report tells it.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -339,6 +344,34 @@ pub enum MemoryDownloadError {
     },
     /// The caller could not keep the backup. Nothing was written.
     BackupNotKept(String),
+    /// A stop was accepted before the first change, so the run ended on
+    /// request. No memory write, user-memory write, load record, property
+    /// write or restart was sent by this run. Connect, key, read and
+    /// disconnect frames may have been.
+    Stopped {
+        /// The step (0-based) the run would have started next.
+        before_step: usize,
+        /// The caller's keeper accepted this run's backup before the stop.
+        /// Only the server keeper also persists its `sendPossible` record.
+        intent_recorded: bool,
+    },
+    /// A stoppable run was refused before any frame, and before anything
+    /// else it would have done, such as closing a connection.
+    StopRefused(StopRefusal),
+}
+
+/// Why a stoppable run was refused up front.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StopRefusal {
+    /// The plan's mask does not load through memory (not `070nh`), so
+    /// Verify Mode could be set.
+    NotMemoryMapped,
+    /// The session is not authorised for [`WriteScope::Download`].
+    NotDownloadScope,
+    /// The session already holds a management connection.
+    AlreadyConnected,
+    /// The token was claimed by a run before.
+    TokenUsed,
 }
 
 impl std::error::Error for MemoryDownloadError {}
@@ -412,6 +445,32 @@ impl fmt::Display for MemoryDownloadError {
                 f,
                 "the backup could not be kept ({why}); nothing was written"
             ),
+            MemoryDownloadError::Stopped {
+                before_step,
+                intent_recorded,
+            } => {
+                write!(
+                    f,
+                    "stopped on request before step {before_step}, before anything that \
+                     changes the device; nothing was written"
+                )?;
+                if *intent_recorded {
+                    f.write_str(" (the backup of this run was kept)")?;
+                }
+                Ok(())
+            }
+            MemoryDownloadError::StopRefused(why) => f.write_str(match why {
+                StopRefusal::NotMemoryMapped => {
+                    "not sent: a stoppable download needs a memory-mapped (070nh) mask"
+                }
+                StopRefusal::NotDownloadScope => {
+                    "not sent: a stoppable download needs a session authorised for Download"
+                }
+                StopRefusal::AlreadyConnected => {
+                    "not sent: the session already holds a management connection"
+                }
+                StopRefusal::TokenUsed => "not sent: that stop token belongs to another run",
+            }),
         }
     }
 }
@@ -529,6 +588,59 @@ pub async fn run_memory_download_with_backup<T: ManagementTransport>(
     keep: impl FnMut(&DeviceBackup) -> Result<(), String>,
 ) -> Result<MemoryDownloadReport, MemoryDownloadError> {
     run(session, plan, observe, Some(keep)).await
+}
+
+/// [`run_memory_download_with_backup`], stoppable until its first change.
+///
+/// `stop` belongs to this one run: it is claimed here, atomically, and never
+/// again (a second run, or a second claim at the same time, is refused with
+/// [`StopRefusal::TokenUsed`]). Before any frame, or any cleanup, the shape
+/// of the plan, a memory-mapped (`070nh`) mask, a session authorised for
+/// [`WriteScope::Download`] and no management connection already held are
+/// required; otherwise [`MemoryDownloadError::StopRefused`] comes back and
+/// the caller's session is untouched. That composition is what keeps this
+/// run free of Verify Mode, property and key writes; it is not a device
+/// admission.
+///
+/// A stop is acted on only between complete exchanges: before Connect,
+/// after each read-only step, between the backup's reads, before `keep` and
+/// after `keep` returned `Ok`, synchronously before the first changing step
+/// starts (the commit). A stop accepted before the commit ends the run as
+/// [`MemoryDownloadError::Stopped`]; an error met first stays the error.
+/// After the commit nothing is checked any more: the run is the unstoppable
+/// one, with no resend, restore or rollback.
+pub async fn run_memory_download_with_backup_stoppable<T: ManagementTransport>(
+    session: &mut ManagementSession<'_, T>,
+    plan: &MemoryDownloadPlan,
+    observe: impl FnMut(Progress),
+    keep: impl FnMut(&DeviceBackup) -> Result<(), String>,
+    stop: &DownloadStop,
+) -> Result<MemoryDownloadReport, MemoryDownloadError> {
+    check_shape(plan)?;
+    if !loads_through_memory(plan.mask) {
+        return Err(MemoryDownloadError::StopRefused(
+            StopRefusal::NotMemoryMapped,
+        ));
+    }
+    if session.session_scope() != Some(WriteScope::Download) {
+        return Err(MemoryDownloadError::StopRefused(
+            StopRefusal::NotDownloadScope,
+        ));
+    }
+    if session.connection().is_some() {
+        return Err(MemoryDownloadError::StopRefused(
+            StopRefusal::AlreadyConnected,
+        ));
+    }
+    let claim = stop
+        .claim()
+        .ok_or(MemoryDownloadError::StopRefused(StopRefusal::TokenUsed))?;
+    let result = run_steps(session, plan, observe, Some(keep), Some(&claim)).await;
+    if result.is_err() && session.connection().is_some() {
+        // As `run`: best effort, original error kept, never a recovery.
+        session.disconnect().await;
+    }
+    result
 }
 
 /// Why [`read_what_the_plan_overwrites`] could not read.
@@ -751,7 +863,7 @@ async fn read_after_identity<T: ManagementTransport>(
         .write_limit(None)
         .await
         .map_err(ReadBackError::Session)?;
-    take_backup(session, plan, limit, 0, false)
+    take_backup(session, plan, limit, 0, false, None)
         .await
         .map_err(|error| match error {
             MemoryDownloadError::BackupRead { error, .. } => ReadBackError::Session(error),
@@ -812,6 +924,21 @@ async fn read_region<T: ManagementTransport>(
     length: usize,
     limit: WriteLimit,
 ) -> Result<Vec<u8>, ReadBackError> {
+    match read_region_until(session, address, length, limit, || false).await? {
+        Some(octets) => Ok(octets),
+        None => unreachable!("a halt that never halts"),
+    }
+}
+
+/// [`read_region`], asking `halt` before every read: `Ok(None)` when it
+/// said stop, between two complete reads.
+async fn read_region_until<T: ManagementTransport>(
+    session: &mut ManagementSession<'_, T>,
+    address: u32,
+    length: usize,
+    limit: WriteLimit,
+    halt: impl Fn() -> bool,
+) -> Result<Option<Vec<u8>>, ReadBackError> {
     let service = service_for(address, u32::try_from(length).unwrap_or(u32::MAX));
     let step = match service {
         MemoryService::Memory => limit.max_octets(),
@@ -819,6 +946,9 @@ async fn read_region<T: ManagementTransport>(
     };
     let mut octets = Vec::with_capacity(length);
     while octets.len() < length {
+        if halt() {
+            return Ok(None);
+        }
         let from = address + octets.len() as u32;
         let asked = usize::from(step).min(length - octets.len()) as u8;
         let got = session
@@ -834,7 +964,7 @@ async fn read_region<T: ManagementTransport>(
         }
         octets.extend_from_slice(&got);
     }
-    Ok(octets)
+    Ok(Some(octets))
 }
 
 /// Reads the memory `runs` (address, length) of `target`, and nothing else,
@@ -889,8 +1019,17 @@ async fn take_backup<T: ManagementTransport>(
     limit: WriteLimit,
     index: usize,
     record_prior: bool,
+    claim: Option<&Claim<'_>>,
 ) -> Result<DeviceBackup, MemoryDownloadError> {
     let at = |error| MemoryDownloadError::BackupRead { index, error };
+    let halt = || claim.is_some_and(Claim::stop_requested);
+    let stopped = || MemoryDownloadError::Stopped {
+        before_step: index,
+        intent_recorded: false,
+    };
+    if halt() {
+        return Err(stopped());
+    }
     let prior_application = if record_prior {
         read_prior_application(session).await.map_err(at)?
     } else {
@@ -898,12 +1037,15 @@ async fn take_backup<T: ManagementTransport>(
     };
     let mut load_states = Vec::new();
     for machine in machines(plan) {
+        if halt() {
+            return Err(stopped());
+        }
         let state = session.read_memory_load_state(machine).await.map_err(at)?;
         load_states.push((machine, state));
     }
     let mut regions = Vec::new();
     for (address, length) in written_regions(plan) {
-        let octets = read_region(session, u32::from(address), length, limit)
+        let octets = read_region_until(session, u32::from(address), length, limit, halt)
             .await
             .map_err(|error| match error {
                 ReadBackError::Session(error) => at(error),
@@ -917,7 +1059,8 @@ async fn take_backup<T: ManagementTransport>(
                     got,
                 },
                 other => unreachable!("read_region returns only read errors, not {other}"),
-            })?;
+            })?
+            .ok_or_else(stopped)?;
         regions.push(BackupRegion { address, octets });
     }
     Ok(DeviceBackup {
@@ -970,7 +1113,7 @@ async fn run<T: ManagementTransport, K: FnMut(&DeviceBackup) -> Result<(), Strin
 ) -> Result<MemoryDownloadReport, MemoryDownloadError> {
     // An invalid offline plan must not produce a cleanup telegram either.
     check_shape(plan)?;
-    let result = run_steps(session, plan, observe, keep).await;
+    let result = run_steps(session, plan, observe, keep, None).await;
     if result.is_err() && session.connection().is_some() {
         // Closing KNXnet/IP alone does not close the device's management
         // connection. Best effort only: preserve the original failure and
@@ -985,6 +1128,7 @@ async fn run_steps<T: ManagementTransport, K: FnMut(&DeviceBackup) -> Result<(),
     plan: &MemoryDownloadPlan,
     mut observe: impl FnMut(Progress),
     mut keep: Option<K>,
+    claim: Option<&Claim<'_>>,
 ) -> Result<MemoryDownloadReport, MemoryDownloadError> {
     let of = plan.steps.len();
     let total_octets = plan.data_octets();
@@ -1006,17 +1150,34 @@ async fn run_steps<T: ManagementTransport, K: FnMut(&DeviceBackup) -> Result<(),
         backup: None,
     };
     let mut limit = None;
+    let mut committed = false;
     for (index, step) in plan.steps.iter().enumerate() {
-        if step.changes_device() {
+        // Stop points before the commit sit between complete exchanges: here
+        // (before Connect and after every read-only step), between the
+        // backup's reads, and before `keep`. An error found first has
+        // already returned.
+        if !committed && claim.is_some_and(Claim::stop_requested) {
+            return Err(MemoryDownloadError::Stopped {
+                before_step: index,
+                intent_recorded: report.backup.is_some(),
+            });
+        }
+        if step.changes_device() && !committed {
             if let Some(mut keep) = keep.take() {
                 let limit = limit.expect("check_shape puts Connect first");
-                let backup = match take_backup(session, plan, limit, index, true).await {
+                let backup = match take_backup(session, plan, limit, index, true, claim).await {
                     Ok(backup) => backup,
                     Err(error) => {
                         session.disconnect().await;
                         return Err(error);
                     }
                 };
+                if claim.is_some_and(Claim::stop_requested) {
+                    return Err(MemoryDownloadError::Stopped {
+                        before_step: index,
+                        intent_recorded: false,
+                    });
+                }
                 if let Err(why) = keep(&backup) {
                     session.disconnect().await;
                     return Err(MemoryDownloadError::BackupNotKept(why));
@@ -1027,6 +1188,17 @@ async fn run_steps<T: ManagementTransport, K: FnMut(&DeviceBackup) -> Result<(),
                 });
                 report.backup = Some(backup);
             }
+            // The commitment point: synchronous, after the durable backup
+            // and before the first changing `StepStarted`.
+            if let Some(claim) = claim {
+                if !claim.commit() {
+                    return Err(MemoryDownloadError::Stopped {
+                        before_step: index,
+                        intent_recorded: report.backup.is_some(),
+                    });
+                }
+            }
+            committed = true;
         }
         let at = |error| MemoryDownloadError::Session {
             index: Some(index),
@@ -3441,4 +3613,5 @@ mod tests {
 
     mod backup_identity;
     mod region_reads;
+    mod stop;
 }

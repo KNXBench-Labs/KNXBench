@@ -636,6 +636,11 @@ async fn start(
             ));
         }
     }
+    // Registered while the reservation is held and before anything else is
+    // acquired or started: a stop that begins from here on requests this
+    // very token, whatever the async locks are doing (ADR-0153). Refused
+    // with 503 once a stop has begun, with nothing started or sent.
+    let stop = state.stop_admission.register_download()?;
     // Held until the download is registered, in the order download →
     // address programming → monitor → scan. The others take their own lock
     // first and then only `try_lock` this one, so none can start between
@@ -746,7 +751,7 @@ async fn start(
         taken: chrono::Local::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, false),
     };
     let settler = crate::programming_state::download_settler(&state, incarnation, &prepared);
-    *download = Some(DeviceDownloadSession::start(
+    *download = Some(DeviceDownloadSession::start_with_stop(
         id,
         tunnel,
         authorisation,
@@ -757,6 +762,7 @@ async fn start(
         activity,
         report,
         settler,
+        stop,
     ));
     drop(scan);
     drop(monitor);

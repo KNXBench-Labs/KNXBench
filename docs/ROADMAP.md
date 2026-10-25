@@ -40,8 +40,8 @@ The [source-freshness settlement guard](contracts/download-settlement-source-fre
 prevents a successful old plan from crediting current memory after product-source
 replacement. It reuses original-request preparation and exact selected-plan
 comparison, preserving project-edit settlement and journal recovery. Independent
-source review and focused tests passed; integrated acceptance and publication
-are pending. This snapshot does not monitor later source changes or validate the
+source review and all 14 maintained integrated package stages passed; published
+as `fa4c18213` ([acceptance](status/2026-10-25-download-source-freshness.md)). This snapshot does not monitor later source changes or validate the
 device's bytes, unselected parts, runtime or complete recovery.
 
 ## Alpha 16 published pre-release — public artifacts and website verified (24 October 2026)

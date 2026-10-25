@@ -15,7 +15,8 @@ claims ([contract](../contracts/download-settlement-source-freshness.md)).
 The guard observes settlement only: subsequent catalogue changes and flags for
 parts the run did not write are not monitored. It is not device-byte, runtime,
 exemplar or recovery evidence. Independent reviews and focused software tests
-passed; integrated acceptance and publication are pending. KL-007 stays open.
+passed. Published as `fa4c18213` after all 14 selected integrated package stages
+([acceptance](../status/2026-10-25-download-source-freshness.md)). KL-007 stays open.
 
 ## Post-download check — 25 October 2026 source
 

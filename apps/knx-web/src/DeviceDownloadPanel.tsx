@@ -190,7 +190,13 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
   }, [project, readinessAttempt]);
   const selectedMark = address === "" ? undefined : marks.get(address);
   const selectedRefusal = refusal?.project === project && refusal.deviceId === deviceId && refusal.scope === scope ? refusal.guidance : null;
-  const shownGuidance = selectedRefusal ?? currentReadiness?.error ?? (selectedMark ? guidanceForMark(selectedMark) : null);
+  // Readiness, its failures and plan refusals are about the ordinary memory
+  // route; System-2 keeps only a mark that is meaningful for every route (an
+  // exclusion), and the server's own preview check stays authoritative.
+  const ordinaryMode = mode === "memory";
+  const shownGuidance = ordinaryMode
+    ? selectedRefusal ?? currentReadiness?.error ?? (selectedMark ? guidanceForMark(selectedMark) : null)
+    : selectedMark?.kind === "excluded" ? guidanceForMark(selectedMark) : null;
 
   const running = status?.status.state === "running";
   const locked = planning || starting || running;
@@ -460,7 +466,7 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
               <option value="">{t("deviceDownload.chooseDevice")}</option>
               {devices.map((device) => {
                 const mark = device.address === null ? undefined : marks.get(device.address);
-                const suffix = mark === undefined ? ""
+                const suffix = mark === undefined || (!ordinaryMode && mark.kind !== "excluded") ? ""
                   : ` (${t(mark.kind === "excluded" ? "deviceDownload.readiness.optionMarkExcluded" : "deviceDownload.readiness.optionMark")})`;
                 return (
                   <option key={device.id} value={device.id}>
@@ -470,6 +476,17 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
               })}
             </select>
           </label>
+          <label className="device-download-device">
+            {t("system2.mode")}
+            <select data-download-mode value={mode} disabled={locked}
+              onChange={(event) => { setMode(event.target.value as "memory" | "system2"); dropPlan(); }}>
+              <option value="memory">{t("system2.mode.memory")}</option>
+              <option value="system2">{t("system2.title")}</option>
+            </select>
+          </label>
+          {ordinaryMode && selectedMark?.kind === "unsupported" && selectedMark.category === "not-memory-mapped" && (
+            <p className="device-download-system2-hint" data-system2-hint>{t("deviceDownload.system2Hint")}</p>
+          )}
           {pendingRequest && (
             <p className="device-download-handoff" role="status" data-handoff="pending">
               <span className={statusCheck === "checking" || currentReadiness?.checking ? "task-status-text" : undefined}>{requested ? t("deviceDownload.handoff.pending", requested) : t("deviceDownload.handoff.pendingUnknown")}</span>
@@ -482,12 +499,12 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
                 {t("deviceDownload.status.retry")}</button></>}
             </p>
           )}
-          {currentReadiness?.checking && <p className="device-download-readiness-loading" role="status" data-readiness-loading>
+          {ordinaryMode && currentReadiness?.checking && <p className="device-download-readiness-loading" role="status" data-readiness-loading>
             <span className="task-status-text">{t("deviceDownload.readiness.loading")}</span></p>}
           {shownGuidance && <DownloadSupportNotice key={`${deviceId}-${scope}-${shownGuidance.code}-${shownGuidance.detail}`}
             guidance={shownGuidance} failedRequest={selectedRefusal !== null} />}
           <UniversalSupportButton project={project} deviceId={deviceId} downloadId={status && (status.status.state === "failed" || status.status.state === "finished") ? status.downloadId : undefined} />
-          {currentReadiness?.error && !currentReadiness.checking && <button type="button" data-readiness-retry
+          {ordinaryMode && currentReadiness?.error && !currentReadiness.checking && <button type="button" data-readiness-retry
             onClick={() => setReadinessAttempt((n) => n + 1)}>{t("deviceDownload.readiness.retry")}</button>}
           {handoffOutcome && (
             <p className={handoffOutcome.kind === "selected" ? "device-download-handoff" : "device-download-handoff form-warning"}
@@ -538,14 +555,6 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
             </button>
           </fieldset>
           {project !== null && <>
-          <label className="device-download-device">
-            {t("system2.mode")}
-            <select data-download-mode value={mode} disabled={locked}
-              onChange={(event) => { setMode(event.target.value as "memory" | "system2");  dropPlan(); }}>
-              <option value="memory">{t("system2.mode.memory")}</option>
-              <option value="system2">{t("system2.title")}</option>
-            </select>
-          </label>
           {mode === "memory" && <>
           <fieldset className="device-download-scope">
             <legend>{t("deviceDownload.scope.legend")}</legend>

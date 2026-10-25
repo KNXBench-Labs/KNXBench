@@ -212,7 +212,9 @@ Adoption does not set Synced, send a bus write or reverse an earlier device writ
 it never submits comparison bytes as a write plan.
 [Exact scope](../../contracts/alpha16-comparison-adoption.md).
 
-## Experimental configured System-2 download (unreleased Alpha-16 source)
+<a id="experimental-system2-download-since-alpha-16"></a>
+
+## Experimental configured System-2 download (since Alpha 16)
 
 **Exact scope:** UP 258D12 application `M-0001_A-9205-04-9270` only.
 **Experimental, software-tested scope only; hardware outcome unverified.**
@@ -220,14 +222,35 @@ Bounded software acceptance is recorded in the source-bound evidence matrix.
 This is not all-System-2 support, ETS equivalence, firmware certification or a
 physical recovery guarantee. The ordinary memory-download path is unchanged.
 
-In the device's existing **Download to device** tab, choose **Download mode →
-System-2 — experimental configured download**. The source workflow is:
+**Finding it.** In the device's **Download to device** tab, the **Download mode**
+selector sits directly below the device selector (Alpha 16: below the gateway
+box and the support notice). Choose **System-2 — experimental configured
+download**. Choosing the mode only switches the view: nothing is prepared,
+connected or started, and KNXBench never switches the mode for you.
+
+**Alpha 16 and the ordinary warning.** The memory mode marks a System-2 device
+*(cannot be programmed yet)* and says its type is not loaded through memory
+writes. That is only about the ordinary memory route. In Alpha 16 the warning
+stays on screen after switching to System-2 mode, but it does not veto the
+System-2 preview. Later source builds scope the mark and notice to memory mode
+and say so; an *excluded* device stays marked in both modes. The mark is not a
+statement that System-2 works for the device, and the server decides.
+
+**What preparation needs.** The exact application above, and the project's
+retained original sources, complete, unambiguous and of a supported schema
+(currently namespaces 20 and 23). They need not equal the bytes of any public
+validation package. Missing, unsupported or ambiguous sources refuse; there is
+no package or product-default substitute, and a refused preparation changes
+nothing. See [Service/recovery limits](../../contracts/alpha16-system2-configured-download.md).
+Recovery is not a separate way into a new download: it only reattaches an
+earlier operation (below).
+
+The source workflow is:
 
 1. Use **Prepare configured System-2 preview** for the selected device. It uses
    the actual open project's parameters, group links and flag overrides, including
-   an unsaved project. It requires retained original sources; missing, unsupported
-   or ambiguous sources refuse, with no package/defaults fallback. Preparation
-   and status reads are offline; opening the view does not connect to a bus.
+   an unsaved project. Preparation and status reads are offline; opening the view
+   does not connect to a bus. Starting is a separate, later step.
 2. Review the exact application/profile, target, configuration and plan hashes,
    input/range counts, ordered steps and warnings. Partial System-2 download is
    not offered. Choose your recovery track explicitly: KNXBench best-effort or

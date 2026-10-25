@@ -424,8 +424,9 @@ changes, the project does not. Saving or exporting a project file is something e
    touches the bus.
 2. Choose the device, **What to write** and the gateway, then **Prepare download**
    (German: **Download vorbereiten**; nothing is written yet). Since the fix for issue
-   #10 (current source), a device KNXBench cannot program yet is marked
-   *(cannot be programmed yet)* in the list, and choosing it shows the reason in plain
+   #10, a device the ordinary memory download cannot program yet is marked
+   *(not supported by ordinary memory download yet)* in the list (Alpha 16 and
+   earlier: *(cannot be programmed yet)*), and choosing it shows the reason in plain
    words before anything is prepared — for example an application program that stores
    values little-endian. If the bus monitor, a line scan or an address programming
    already holds the gateway's one tunnel, the gateway box says so up front, with a

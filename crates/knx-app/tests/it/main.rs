@@ -61,6 +61,7 @@ mod project_stream_fixture;
 mod property_validation;
 mod property_validation_execution;
 mod raw_rtf_evidence;
+mod regular_merge_fragment_offline;
 mod secure_capable_not_activated;
 mod selective_import;
 mod source_import_reports;

@@ -315,9 +315,9 @@ pub fn plan_category(error: &DownloadPlanError) -> UnsupportedCategory {
         DownloadPlanError::NotMemoryMapped(_) => UnsupportedCategory::NotMemoryMapped,
         DownloadPlanError::NotAProductProcedure(_) => UnsupportedCategory::ProcedureStyle,
         DownloadPlanError::Unmodelled(_) => UnsupportedCategory::UnmodelledStep,
-        DownloadPlanError::ProcedureCount(_) | DownloadPlanError::DoesNotConnectFirst => {
-            UnsupportedCategory::ProcedureShape
-        }
+        DownloadPlanError::ProcedureCount(_)
+        | DownloadPlanError::MergeFragment { .. }
+        | DownloadPlanError::DoesNotConnectFirst => UnsupportedCategory::ProcedureShape,
         DownloadPlanError::VendorDownloadPlugin(_) => UnsupportedCategory::VendorDownloadPlugin,
         _ => UnsupportedCategory::ProcedureContents,
     }
@@ -688,6 +688,13 @@ mod tests {
         );
         assert_eq!(
             plan_category(&DownloadPlanError::ProcedureCount(2)),
+            UnsupportedCategory::ProcedureShape
+        );
+        assert_eq!(
+            plan_category(&DownloadPlanError::MergeFragment {
+                position: 2,
+                merge_id: String::new()
+            }),
             UnsupportedCategory::ProcedureShape
         );
         assert_eq!(

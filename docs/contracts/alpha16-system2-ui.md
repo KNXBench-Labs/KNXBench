@@ -73,7 +73,13 @@ application; the server then offers no recovery phrases and the panel shows
 loadState}` with eight lower-case hex digits per pointer; `observed` may be
 `"refused"`, and `operationIndex` is a number exactly for `inProcedure` entries
 and null otherwise. `programVersionObservation` is `{expected, observed}` (hex, `observed`
-empty when the read was refused) or null. The client refuses a status that has
+empty when the read was refused) or null. `prestateUnreadableAllocations` is an
+array (at most 256) of `{object, address, length}` with a four lower-case hex
+digit start address, naming declared allocations whose prior memory read was
+refused or short. Their stored bytes are zero placeholders: the panel then
+replaces the "backup evidence is retained" line with "Prior memory could not be
+read — no backup" and lists them. A non-empty array implies `prestateDiffers`
+and no recovery phrases; the client refuses anything else. The client refuses a status that has
 prestate evidence without `prestateDiffers`, or that offers recovery phrases
 together with `prestateDiffers`. `prestateDiffers` may be true without evidence
 in the DTO: a captured all-zero/all-FF serial, which the DTO never carries, also

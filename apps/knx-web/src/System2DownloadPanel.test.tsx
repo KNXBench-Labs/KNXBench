@@ -238,3 +238,15 @@ it("labels in-procedure and refused pointer observations", async () => {
   expect(text).toContain("not reported (read refused)");
   expect(text).toContain("Recovery run:");
 });
+it("never calls zero placeholders a backup when prior memory was unreadable", async () => {
+  const { unreadableStatus } = await import("./system2DownloadTestFixtures");
+  mock.getSystem2Status.mockResolvedValue(unreadableStatus);
+  await render();
+  expect(host.textContent).not.toContain("Actual-prestate backup evidence is retained");
+  const line = host.querySelector("[data-system2-prestate-unreadable]");
+  expect(line).not.toBeNull();
+  expect(line!.textContent).toContain("Prior memory could not be read — no backup");
+  expect(line!.textContent).toContain("3c00");
+  expect(host.querySelector("[data-system2-recovery-unavailable]")!.textContent).toContain("memory");
+  expect(host.querySelector("[data-system2-recover]")).toBeNull();
+});

@@ -862,3 +862,31 @@ async fn property_validation_download_and_restore_observations_are_both_kept() {
     let reopened = OperationStore::open(&path, &bundle.binding).unwrap();
     assert_eq!(reopened.progress().pointer_observations.len(), 2);
 }
+#[tokio::test]
+async fn property_validation_unreadable_prestate_is_listed_and_never_a_restorable_backup() {
+    let (bundle, record) = executed_record().await;
+    let mut snapshot = record.to_snapshot(&bundle).unwrap();
+    snapshot.allocations[0].data.fill(0);
+    snapshot.regions[0].data.fill(0);
+    snapshot.unreadable_allocations = vec![0];
+    let record = RecoveryRecord::from_snapshot(&snapshot, &bundle).unwrap();
+    assert_eq!(record.prestate_unreadable_allocations, [0]);
+    let temp = tempfile::tempdir().unwrap();
+    let mut store =
+        OperationStore::create(&temp.path().join("op"), bundle.binding.clone()).unwrap();
+    store
+        .checkpoint(Checkpoint::RecoveryAcquired { recovery: record })
+        .unwrap();
+    let progress = store.progress();
+    assert_eq!(
+        progress.prestate_unreadable_allocations,
+        [app::UnreadableAllocation {
+            object: 3,
+            address: 0x3c00,
+            length: 4,
+        }]
+    );
+    assert!(progress.prestate_differs);
+    assert!(!progress.restore_available);
+    assert!(progress.recovery_phrases.is_none());
+}

@@ -81,9 +81,11 @@ export const messages: Record<MessageKey, string> = {
   "system2.observationsNote": "Abweichungen zwischen Projekt-/Quellmodell und den Angaben des Geräts. Sie sind aufgezeichnete Belege, keine Ablehnungen und kein Fehlernachweis.",
   "system2.observation.prestate": "Vor dem Download, Objekt {object}: erwarteter Zeiger {expected}, Gerät meldete {observed} (Ladezustand {state}).",
   "system2.observation.final": "Nach dem Download, Objekt {object}: erwarteter Zeiger {expected}, Gerät meldete {observed}. Speicher, Ladezustand und Programmversion wurden verifiziert.",
+  "system2.prestateUnreadable": "Vorheriger Speicher nicht lesbar — keine Sicherung. Das Gerät hat das Lesen vor dem Download abgelehnt oder unvollständig beantwortet; für Folgendes wurde nichts Wiederherstellbares erfasst: {allocations}.",
+  "system2.prestateUnreadableAllocation": "Objekt {object} bei {address} ({length} Oktette)",
+  "system2.recoveryUnavailablePrestate": "Für diesen Vorgang ist keine Wiederherstellung des Originalzustands verfügbar: Der vorherige Gerätezustand wich von Zuordnungsform oder Applikation des Projekts ab, der vorherige Speicher war nicht lesbar, oder die Seriennummer kann eine Wiederherstellung nicht an ein einzelnes Gerät binden. Die erfassten Bytes sind nur Beleg und können ihn nicht wiederherstellen. KNXBench erfindet nie eine Sicherung. Nutze einen anderen Wiederherstellungsweg, etwa einen neuen Download.",
   "system2.observation.restoreRun": "Wiederherstellungslauf:",
   "system2.observation.inProcedure": "Während des Downloads (Schritt {step}), Objekt {object}: erwarteter Zeiger {expected} nach der Zuordnung, Gerät meldete {observed} (Ladezustand {state}). Der Speicher wird am Ende verifiziert.",
-  "system2.recoveryUnavailablePrestate": "Für diesen Vorgang ist keine Wiederherstellung des Originalzustands verfügbar: Der vorherige Gerätezustand wich von Zuordnungsform oder Applikation des Projekts ab, oder die Seriennummer kann eine Wiederherstellung nicht an ein einzelnes Gerät binden. Die erfassten Bytes sind nur Beleg und können ihn nicht wiederherstellen. KNXBench erfindet nie eine Sicherung. Nutze einen anderen Wiederherstellungsweg, etwa einen neuen Download.",
   "system2.observation.programVersion": "Vor dem Download meldete das Gerät die Programmversion {observed}; der Plan schreibt {expected}.",
   "system2.observation.refused": "nicht gemeldet (Lesen abgelehnt)",
   // Alpha16 WP04.3 shared catalogue jobs.

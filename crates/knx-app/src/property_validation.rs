@@ -182,9 +182,7 @@ impl State {
             in_procedure_observations: Vec::new(),
         }
     }
-    /// Captured prestate does not describe the source shape or application, or
-    /// carries a placeholder serial that cannot bind a replay to one device:
-    /// evidence only, original-state recovery unavailable.
+    /// The run an observation belongs to: an explicit restore or the download.
     fn run(&self) -> PointerObservationRun {
         if self.outcome == LocalOutcome::Restoring {
             PointerObservationRun::Restore
@@ -192,6 +190,9 @@ impl State {
             PointerObservationRun::Download
         }
     }
+    /// Captured prestate does not describe the source shape or application, or
+    /// carries a placeholder serial that cannot bind a replay to one device:
+    /// evidence only, original-state recovery unavailable.
     fn prestate_differs(&self) -> bool {
         self.recovery.as_ref().is_some_and(|r| {
             let serial = r
@@ -391,6 +392,16 @@ pub struct OperationProgress {
     /// Plan application versus the device's prior PID_PROGRAM_VERSION (empty:
     /// refused), when they differed.
     pub program_version_observation: Option<([u8; 5], Vec<u8>)>,
+    /// Allocations whose prestate read was refused or short. Their captured
+    /// bytes are zero placeholders, never a backup.
+    pub prestate_unreadable_allocations: Vec<UnreadableAllocation>,
+}
+/// One declared allocation whose prior memory could not be read.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct UnreadableAllocation {
+    pub object: u8,
+    pub address: u16,
+    pub length: usize,
 }
 /// Where a pointer observation was made.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -585,6 +596,21 @@ impl OperationStore {
             mutation_possible: self.state.mutation,
             recovery_phrases: self.recovery_phrases(),
             prestate_differs: self.state.prestate_differs(),
+            prestate_unreadable_allocations: self
+                .state
+                .recovery
+                .iter()
+                .flat_map(|r| {
+                    r.prestate_unreadable_allocations
+                        .iter()
+                        .filter_map(|&index| r.allocations.get(index))
+                })
+                .map(|a| UnreadableAllocation {
+                    object: a.object,
+                    address: a.address,
+                    length: a.data.len(),
+                })
+                .collect(),
             program_version_observation: self.state.recovery.as_ref().and_then(|r| {
                 r.observed_program_version
                     .clone()

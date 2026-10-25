@@ -480,7 +480,7 @@ it("marks a device KNXBench cannot program yet, with the reason, before anything
   ] });
   await render();
   const labels = [...deviceSelect().options].map((option) => option.textContent);
-  expect(labels).toContain("1.1.67 — Push button 2-fold (not supported by ordinary memory download yet)");
+  expect(labels).toContain("1.1.67 — Push button 2-fold (memory download: not supported yet)");
   expect(labels).toContain("1.1.3 — Actuator");
   await setSelect(deviceSelect(), "10");
   expect(text("[data-support-guidance=unsupported]")).toContain(en["deviceDownload.readiness.reason.byteOrder"]);

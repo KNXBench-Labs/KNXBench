@@ -425,7 +425,7 @@ changes, the project does not. Saving or exporting a project file is something e
 2. Choose the device, **What to write** and the gateway, then **Prepare download**
    (German: **Download vorbereiten**; nothing is written yet). Since the fix for issue
    #10, a device the ordinary memory download cannot program yet is marked
-   *(not supported by ordinary memory download yet)* in the list (Alpha 16 and
+   *(memory download: not supported yet)* in the list (Alpha 16 and
    earlier: *(cannot be programmed yet)*), and choosing it shows the reason in plain
    words before anything is prepared — for example an application program that stores
    values little-endian. If the bus monitor, a line scan or an address programming

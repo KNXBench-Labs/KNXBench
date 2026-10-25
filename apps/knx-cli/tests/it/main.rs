@@ -10,6 +10,7 @@ mod cli_bus_address_style;
 mod cli_bus_dpt;
 mod cli_compare_activity;
 mod cli_documentation_export;
+mod cli_download_scope;
 mod cli_ga_csv_installations;
 mod cli_group_address_csv;
 mod cli_import;

@@ -72,7 +72,7 @@ async function open(page: Page) {
 test("a parameters-only scope is sent as such and the plan names what it leaves out, before any consent", async ({ page }) => {
   const { planBodies, writes } = await open(page);
   const scope = page.getByRole("group", { name: "What to write" });
-  await expect(scope.getByRole("radio")).toHaveCount(4);
+  await expect(scope.getByRole("radio")).toHaveCount(5);
   await expect(scope.getByRole("radio", { name: "Complete download" })).toBeChecked();
   await scope.getByRole("radio", { name: "Parameters only" }).check();
   await page.getByRole("button", { name: "Prepare download" }).click();

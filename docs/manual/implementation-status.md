@@ -308,6 +308,15 @@ P4 live-device comparison; CLI/external work needs manual reconciliation.
 [Use and limits](user-guide/05-devices-and-products.md#programming-marks-p3-since-alpha-12),
 [ADR-0129](../adr/0129-per-part-pending-programming.md).
 
+A download can use these marks to choose its scope (source after Alpha 16):
+*Only what the project marks pending* in the Download to device tab and
+`knx device download --changes` plan the complete, partial or no download the
+marks advise, show the resolved scope, and list a pending address or medium
+configuration separately. The marks stay hints; the partial download still
+checks the device before it writes. Synthetic offline tests only.
+[Download tab](user-guide/07-bus-and-interfaces.md#downloading-to-a-device),
+[CLI](user-guide/10-command-line.md#knx-device-download--download-a-project-devices-configuration-to-the-device).
+
 <a id="community-hall-of-fame-link-14-october-2026-source-main-only"></a>
 
 ## Community Hall of Fame link (Alpha 12)

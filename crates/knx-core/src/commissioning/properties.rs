@@ -129,6 +129,13 @@ pub const PID_MAX_APDU_LENGTH: u8 = 56;
 /// phase 2 only reads it.
 pub const PID_HARDWARE_TYPE: u8 = 78;
 
+/// The octets of one `PID_HARDWARE_TYPE` value.
+///
+/// `[D]` *Resources* (`03_05_01` v01.10.01) §4.3.28, printed pp. 78-79:
+/// `PDT_GENERIC_06`, one value and no array, a format octet followed by
+/// five octets.
+pub const HARDWARE_TYPE_OCTETS: usize = 6;
+
 /// Bit 2 of `PID_DEVICE_CONTROL`: *Verify Mode On*.
 ///
 /// `[D]` RES §4.2.14.2, Table 11.

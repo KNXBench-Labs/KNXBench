@@ -7,8 +7,8 @@ use chrono::{DateTime, Utc};
 use knx_core::commissioning::declared_memory::{
     DeclaredRange, DeclaredRanges, MAX_COMPARISON_OCTETS, STANDARD_FRAME_CHUNK_OCTETS,
 };
-use knx_core::commissioning::memory_download::property_matches;
-use knx_core::commissioning::properties::PID_HARDWARE_TYPE;
+use knx_core::commissioning::memory_download::resource_matches;
+use knx_core::commissioning::properties::{ObjectIndex, PID_HARDWARE_TYPE};
 use knx_core::{DeviceId, Project};
 use knx_net::commissioning::diagnostic_export::{self as net, MemoryItem, MemoryRequest, Status};
 use knx_net::{ManagementTransport, SessionTiming};
@@ -528,7 +528,7 @@ fn attempted_then_completed(chunk: &ChunkReading) -> bool {
 /// The collector's own admission, re-checked from the archive: all three
 /// identity items exactly read (one element for each property, none for the
 /// descriptor), the descriptor equal to the asserted mask, PID12 equal to the
-/// asserted manufacturer and PID78 `property_matches` the recorded comparison.
+/// asserted manufacturer and PID78 `resource_matches` the recorded comparison.
 fn identity_admits(report: &Report, hardware_type: &[u8]) -> bool {
     let [descriptor, manufacturer, hardware] = &report.items[..] else {
         return false;
@@ -550,5 +550,10 @@ fn identity_admits(report: &Report, hardware_type: &[u8]) -> bool {
         && word(descriptor) == report.asserted_mask
         && report.asserted_manufacturer.is_some()
         && word(manufacturer) == report.asserted_manufacturer
-        && property_matches(&hardware.bytes, hardware_type)
+        && resource_matches(
+            ObjectIndex::DEVICE.octet(),
+            PID_HARDWARE_TYPE,
+            &hardware.bytes,
+            hardware_type,
+        )
 }

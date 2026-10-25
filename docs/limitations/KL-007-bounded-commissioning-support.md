@@ -6,6 +6,16 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Property load-control response — 25 October 2026 source
+
+The state in a property load-control write response is validated before polling;
+observed LoadCompleting seeds the existing conditional wait during device silence
+([contract](../contracts/load-control-response-state.md)). Invalid responses fail
+before a later poll can hide them. No mutation is re-sent, deadlines and profile
+restrictions remain, and the separate memory-mapped mechanism is unchanged.
+Independent review and focused simulator tests passed; integrated acceptance and
+publication are pending. KL-007 and hardware acceptance remain open.
+
 ## Region-bound memory reads — 25 October 2026 source
 
 Backup, comparison and probe reads retain one service per region; user-memory

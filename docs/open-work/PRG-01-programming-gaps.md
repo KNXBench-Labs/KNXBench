@@ -57,6 +57,12 @@ record the boundaries separately; these increments do not close PRG-01.
   ([acceptance](../status/2026-10-25-memory-region-reads.md)).
   This adds no hardware or interface/coupler budget claim.
 
+- Property load-control response-state handling preserves an actual LoadCompleting
+  observation and rejects invalid responses before polling
+  ([contract](../contracts/load-control-response-state.md)). Independent review
+  and focused simulator tests passed; integrated acceptance/publication pending.
+  No inferred silent state, new retry, common timeout or hardware support.
+
 ## Open
 
 - Broader target/exemplar identity and independently verified runtime-state

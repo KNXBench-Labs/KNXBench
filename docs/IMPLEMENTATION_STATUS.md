@@ -12,6 +12,18 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Load-control write response state (25 October 2026 source)
+
+Property-based load control now validates the actual state in the write response
+before polling. An observed LoadCompleting licenses the existing conditional
+silence/reconnect wait immediately; no state is inferred from a missing answer.
+Malformed, unknown and forbidden changed responses cannot be hidden by a later
+poll. Existing deadlines, verification polling, public APIs and the memory-mapped
+three-read mechanism remain unchanged
+([contract](contracts/load-control-response-state.md)). Independent source review
+and focused simulator regressions passed; integrated acceptance and publication
+remain pending. No additional device or hardware support is claimed.
+
 ## Memory-region read service and count (25 October 2026 source)
 
 Backup, comparison and byte-order-probe reads now keep the selected memory

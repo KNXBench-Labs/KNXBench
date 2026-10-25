@@ -52,6 +52,8 @@ web UI (`/api/device-download/*`). Verified state on 2026-09-28:
    device partially loaded. This slice offers no stop button; the run ends
    by itself (success, refusal, or the executor's own time-outs), and the
    result says `yes`, `no` or `partially` exactly as the CLI does.
+   *Narrowed by [ADR-0153](0153-regular-download-stop-ends-at-first-change.md): a graceful
+   server stop can prevent a download before its first change; after it, this section stands.*
 
 ## Alternatives considered
 

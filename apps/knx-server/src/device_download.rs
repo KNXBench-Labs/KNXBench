@@ -6,8 +6,9 @@
 //! [`WriteAuthorisation`]. From here on nothing is decided: the executor
 //! (`knx_net::commissioning::memory_download`) runs the plan, and every
 //! [`Progress`] it reports is appended to a log the UI polls. The log only
-//! watches: it cannot change, skip or stop a step (ADR-0045 §5: there is
-//! no cancel).
+//! watches: it cannot change or skip a step (ADR-0045 §5: there is no
+//! cancel). The one stop there is lands before the first change only
+//! (ADR-0153): a [`DownloadStop`] the worker owns from birth.
 
 use std::sync::{Arc, Mutex};
 
@@ -22,7 +23,8 @@ use knx_core::commissioning::memory_download::MemoryDownloadStep;
 use knx_core::commissioning::mutation::WriteAuthorisation;
 use knx_core::IndividualAddress;
 use knx_net::commissioning::memory_download::{
-    locked_device_hint, run_memory_download_with_backup, Progress, RestartOutcome,
+    locked_device_hint, run_memory_download_with_backup_stoppable, DownloadStop,
+    MemoryDownloadError, Progress, RestartOutcome, StopRequest,
 };
 use knx_net::commissioning::post_download::observe_after_download;
 use knx_net::{ApplicationService, BusError, Destination, ManagementSession, ScanTransport, Tpci};
@@ -122,6 +124,11 @@ pub enum DownloadStatus {
 }
 
 struct Shared {
+    /// This run's one stop token, owned from before the worker spawns.
+    stop: Arc<DownloadStop>,
+    /// Test-only: runs once when the backup is durable, before the commit.
+    #[cfg(test)]
+    after_keep: Mutex<Option<Box<dyn FnOnce() + Send>>>,
     status: Mutex<DownloadStatus>,
     /// The witnessed transfer while its read-only check runs: an abrupt end
     /// then keeps it, with the check interrupted, instead of a failure.
@@ -154,10 +161,13 @@ pub struct DeviceDownloadSession {
 
 impl DeviceDownloadSession {
     /// Starts the run on `tunnel`. The caller has already checked the
-    /// authorisation, the plan and that no other bus session runs.
+    /// authorisation, the plan and that no other bus session runs. `stop`
+    /// is the token the process stop already knows
+    /// ([`crate::StopAdmission::register_download`]); the worker owns it
+    /// from here, so a stop requested before the task first runs is not lost.
     // Keep authorisation, recovery and lifecycle capabilities explicit at admission.
     #[allow(clippy::too_many_arguments)]
-    pub(crate) fn start(
+    pub(crate) fn start_with_stop(
         id: u64,
         tunnel: Box<dyn BusTunnel>,
         authorisation: WriteAuthorisation,
@@ -168,8 +178,12 @@ impl DeviceDownloadSession {
         activity: crate::one_shot_activity::DownloadGuard,
         report: DownloadReport,
         on_end: OnDownloadEnd,
+        stop: Arc<DownloadStop>,
     ) -> Self {
         let shared = Arc::new(Shared {
+            stop,
+            #[cfg(test)]
+            after_keep: Mutex::new(None),
             status: Mutex::new(DownloadStatus::Running),
             transfer: Mutex::new(None),
             events: Mutex::new(Vec::new()),
@@ -264,6 +278,12 @@ impl DeviceDownloadSession {
             ),
         };
         Some(self.report.clone().with_outcome(outcome).with_check(check))
+    }
+
+    /// Asks the run to stop before its first change; see [`StopRequest`].
+    /// Never waits and never cancels the task.
+    pub(crate) fn request_stop(&self) -> StopRequest {
+        self.shared.stop.request()
     }
 
     pub fn is_running(&self) -> bool {
@@ -426,13 +446,18 @@ async fn run(
                     let path = write_backup(&backups.dir, &stored).map_err(|e| e.to_string())?;
                     *keeper.backup_file.lock().expect("download backup poisoned") = Some(path);
                     activity.mark_send_possible().map_err(|e| e.to_string())?;
+                    #[cfg(test)]
+                    if let Some(hook) = keeper.after_keep.lock().expect("hook poisoned").take() {
+                        hook();
+                    }
                     Ok(())
                 };
-                let result = run_memory_download_with_backup(
+                let result = run_memory_download_with_backup_stoppable(
                     &mut session,
                     &prepared.plan,
                     move |progress| record(&observer, progress),
                     &mut keep,
+                    &shared.stop,
                 )
                 .await;
                 match result {
@@ -457,8 +482,15 @@ async fn run(
                             .lock()
                             .expect("download progress poisoned");
                         let granted = *shared.granted.lock().expect("download progress poisoned");
+                        // A stop lands before the first change, whatever
+                        // step the read-only part had reached.
+                        let written = if matches!(e, MemoryDownloadError::Stopped { .. }) {
+                            Written::No
+                        } else {
+                            written_so_far(&shared)
+                        };
                         DownloadStatus::Failed {
-                            written: written_so_far(&shared),
+                            written,
                             stopped_in_step: stopped.map(|index| index + 1),
                             error: e.to_string(),
                             hint: locked_device_hint(
@@ -612,6 +644,10 @@ impl DeviceDownloadSession {
             steps: 3,
             data_octets: 1,
             shared: Arc::new(Shared {
+                // The stand-in's write is under way: committed, so a stop is
+                // too late, as for a real run past its first change.
+                stop: Arc::new(DownloadStop::already_committed()),
+                after_keep: Mutex::new(None),
                 status: Mutex::new(DownloadStatus::Running),
                 transfer: Mutex::new(None),
                 events: Mutex::new(Vec::new()),

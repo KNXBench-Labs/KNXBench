@@ -180,6 +180,50 @@ struct SimTunnel {
     restart_requests: Arc<std::sync::atomic::AtomicUsize>,
     check_connected: std::sync::atomic::AtomicBool,
     hung: Arc<tokio::sync::Notify>,
+    /// Test-only: holds one frame of the run until the test releases it.
+    gate: Option<Arc<Gate>>,
+}
+
+/// Where a [`Gate`] holds the run.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum GateAt {
+    /// The run's first `T_Connect`, before it reaches the device.
+    FirstConnect,
+    /// The first memory write of the run (the first load record), before it
+    /// reaches the device.
+    FirstMemoryWrite,
+}
+
+/// A one-shot hold on one frame: `entered` fires when the frame arrives,
+/// the frame goes on once `release` is notified.
+struct Gate {
+    at: GateAt,
+    armed: std::sync::atomic::AtomicBool,
+    entered: tokio::sync::Notify,
+    release: tokio::sync::Notify,
+}
+
+impl Gate {
+    fn at(at: GateAt) -> Arc<Self> {
+        Arc::new(Self {
+            at,
+            armed: std::sync::atomic::AtomicBool::new(true),
+            entered: tokio::sync::Notify::new(),
+            release: tokio::sync::Notify::new(),
+        })
+    }
+
+    async fn hold(&self, transport: Tpci, service: &ApplicationService) {
+        use std::sync::atomic::Ordering;
+        let matches = match self.at {
+            GateAt::FirstConnect => transport == Tpci::Connect,
+            GateAt::FirstMemoryWrite => matches!(service, ApplicationService::MemoryWrite { .. }),
+        };
+        if matches && self.armed.swap(false, Ordering::SeqCst) {
+            self.entered.notify_one();
+            self.release.notified().await;
+        }
+    }
 }
 
 impl BusTunnel for SimTunnel {
@@ -207,6 +251,9 @@ impl BusTunnel for SimTunnel {
     ) -> Pin<Box<dyn Future<Output = Result<(), BusError>> + Send + '_>> {
         use std::sync::atomic::Ordering;
         Box::pin(async move {
+            if let Some(gate) = &self.gate {
+                gate.hold(transport, &service).await;
+            }
             if self.restarted.load(Ordering::SeqCst) && transport == Tpci::Connect {
                 self.check_connected.store(true, Ordering::SeqCst);
                 match self.mode {
@@ -255,6 +302,35 @@ struct Started {
 }
 
 fn start(device: &Arc<SimulatedDevice>, plan: MemoryDownloadPlan, mode: AfterRestart) -> Started {
+    start_gated(device, plan, mode, None)
+}
+
+fn start_gated(
+    device: &Arc<SimulatedDevice>,
+    plan: MemoryDownloadPlan,
+    mode: AfterRestart,
+    gate: Option<Arc<Gate>>,
+) -> Started {
+    start_registered(
+        device,
+        plan,
+        mode,
+        gate,
+        Arc::new(DownloadStop::new()),
+        |_| {},
+    )
+}
+
+/// [`start_gated`] with the token the process stop knows, and `after_keep`
+/// run when the backup is durable, before the commit.
+fn start_registered(
+    device: &Arc<SimulatedDevice>,
+    plan: MemoryDownloadPlan,
+    mode: AfterRestart,
+    gate: Option<Arc<Gate>>,
+    stop: Arc<DownloadStop>,
+    after_keep: impl FnOnce(&DownloadStop) + Send + 'static,
+) -> Started {
     let dir = tempfile::tempdir().unwrap();
     let history = dir.path().join("history.sqlite");
     let log = Arc::new(OneShotLog::for_run(history.clone()).unwrap());
@@ -265,7 +341,8 @@ fn start(device: &Arc<SimulatedDevice>, plan: MemoryDownloadPlan, mode: AfterRes
     let hung = Arc::new(tokio::sync::Notify::new());
     let restart_requests = Arc::new(std::sync::atomic::AtomicUsize::new(0));
     let mask = plan.mask;
-    let session = DeviceDownloadSession::start(
+    let token = Arc::clone(&stop);
+    let session = DeviceDownloadSession::start_with_stop(
         7,
         Box::new(SimTunnel {
             device: Arc::clone(device),
@@ -274,6 +351,7 @@ fn start(device: &Arc<SimulatedDevice>, plan: MemoryDownloadPlan, mode: AfterRes
             restart_requests: Arc::clone(&restart_requests),
             check_connected: Default::default(),
             hung: Arc::clone(&hung),
+            gate,
         }),
         // The server's tunnel adapter is hardware-kind, as in the HTTP
         // tests: a simulator authorisation is refused there by design.
@@ -296,7 +374,9 @@ fn start(device: &Arc<SimulatedDevice>, plan: MemoryDownloadPlan, mode: AfterRes
         activity,
         task_tests::synthetic_report(),
         Box::new(move |status| settled_by_end.lock().unwrap().push(status.clone())),
+        stop,
     );
+    *session.shared.after_keep.lock().unwrap() = Some(Box::new(move || after_keep(&token)));
     Started {
         session,
         history,
@@ -576,4 +656,357 @@ fn the_read_only_allowlist_refuses_every_other_service() {
     ] {
         assert!(!read_only_frame(&seen), "{seen:?}");
     }
+}
+
+/// The old bytes of everything [`plan`] writes, and every machine's state.
+fn snapshot(device: &SimulatedDevice) -> (Vec<Vec<Option<u8>>>, Vec<LoadState>) {
+    (
+        [(0x4000, 4), (0x4400, 8)]
+            .iter()
+            .map(|&(base, length)| device.memory(base, length))
+            .collect(),
+        MemoryLoadStateMachine::ALL
+            .iter()
+            .map(|machine| device.load_state(ObjectIndex::new(machine.type_number())))
+            .collect(),
+    )
+}
+
+fn mutating(seen: &Seen) -> bool {
+    matches!(
+        seen,
+        Seen::MemoryWrite { .. } | Seen::PropertyWrite { .. } | Seen::Restart { .. }
+    )
+}
+
+/// Installs `started`'s session as the server's download, as the route does.
+async fn install(state: &crate::AppState, started: &mut Started) {
+    let placeholder =
+        DeviceDownloadSession::synthetic_running(started.session.target(), tokio::spawn(async {}));
+    let session = std::mem::replace(&mut started.session, placeholder);
+    *state.device_download.lock().await = Some(session);
+}
+
+/// Shuts the process down while the run is held at `gate`, then lets it go.
+/// The release is polled after the drain's synchronous prefix.
+async fn shutdown_at(state: &crate::AppState, gate: &Gate) -> crate::graceful_stop::WriteDrain {
+    tokio::time::timeout(Duration::from_secs(5), gate.entered.notified())
+        .await
+        .expect("the run reached the gate");
+    crate::graceful_stop::close_process_admission(state);
+    let (drain, ()) = tokio::join!(
+        crate::graceful_stop::drain_device_writes(
+            state,
+            Duration::from_secs(30),
+            std::future::pending()
+        ),
+        async { gate.release.notify_one() }
+    );
+    drain
+}
+
+async fn final_session_status(state: &crate::AppState) -> DownloadStatus {
+    state
+        .device_download
+        .lock()
+        .await
+        .as_ref()
+        .expect("installed")
+        .status()
+}
+
+#[tokio::test]
+async fn a_shutdown_while_connecting_prevents_every_write() {
+    let device = device(APPLICATION, SimulatorConfig::default());
+    let old = snapshot(&device);
+    let state = crate::AppState::new(std::env::temp_dir());
+    let gate = Gate::at(GateAt::FirstConnect);
+    let mut started = start_gated(&device, plan(), AfterRestart::Pass, Some(gate.clone()));
+    install(&state, &mut started).await;
+
+    let drain = shutdown_at(&state, &gate).await;
+    assert_ne!(drain.end, crate::graceful_stop::WriteWaitEnd::TimedOut);
+    assert_eq!(drain.download_stop, Some(StopRequest::WillStop));
+
+    let seen = device.seen();
+    let writes: Vec<&Seen> = seen.iter().filter(|seen| mutating(seen)).collect();
+    assert_eq!(writes, Vec::<&Seen>::new(), "no write may reach the device");
+    assert_eq!(
+        snapshot(&device),
+        old,
+        "the old memory and load states stay"
+    );
+    assert!(matches!(
+        final_session_status(&state).await,
+        DownloadStatus::Failed {
+            written: Written::No,
+            ..
+        }
+    ));
+    let row = reopened(&started.history);
+    assert_eq!(row["state"], "failed");
+    assert_eq!(row["downloadEvidence"]["written"], "no");
+}
+
+#[tokio::test]
+async fn a_shutdown_after_the_first_load_write_goes_on_to_the_full_schedule() {
+    let reference = device(APPLICATION, SimulatorConfig::default());
+    let mut ungated = start(&reference, plan(), AfterRestart::Pass);
+    ungated.session.join().await;
+
+    let device = device(APPLICATION, SimulatorConfig::default());
+    let state = crate::AppState::new(std::env::temp_dir());
+    let gate = Gate::at(GateAt::FirstMemoryWrite);
+    let mut started = start_gated(&device, plan(), AfterRestart::Pass, Some(gate.clone()));
+    install(&state, &mut started).await;
+    let drain = shutdown_at(&state, &gate).await;
+    assert_eq!(drain.download_stop, Some(StopRequest::TooLate));
+
+    assert_eq!(device.seen(), reference.seen(), "same schedule as ungated");
+    let status = final_session_status(&state).await;
+    assert!(
+        matches!(
+            status,
+            DownloadStatus::Finished {
+                written: Written::Yes,
+                ..
+            }
+        ),
+        "{status:?}"
+    );
+    assert_eq!(snapshot(&device), snapshot(&reference));
+}
+
+#[tokio::test]
+async fn a_shutdown_does_not_change_a_manufacturer_mismatch() {
+    let device = device(APPLICATION, SimulatorConfig::default());
+    let state = crate::AppState::new(std::env::temp_dir());
+    let gate = Gate::at(GateAt::FirstConnect);
+    let mut wrong = plan();
+    wrong.manufacturer = 0x0084;
+    let mut started = start_gated(&device, wrong, AfterRestart::Pass, Some(gate.clone()));
+    install(&state, &mut started).await;
+    shutdown_at(&state, &gate).await;
+
+    match final_session_status(&state).await {
+        DownloadStatus::Failed {
+            written: Written::No,
+            error,
+            ..
+        } => assert!(error.contains("manufacturer"), "{error}"),
+        other => panic!("{other:?}"),
+    }
+}
+
+#[tokio::test]
+async fn a_new_run_on_the_same_device_after_a_shutdown_stop_succeeds() {
+    let device = device(APPLICATION, SimulatorConfig::default());
+    let old = snapshot(&device);
+    let state = crate::AppState::new(std::env::temp_dir());
+    let gate = Gate::at(GateAt::FirstConnect);
+    let mut stopped = start_gated(&device, plan(), AfterRestart::Pass, Some(gate.clone()));
+    install(&state, &mut stopped).await;
+    shutdown_at(&state, &gate).await;
+    assert_eq!(snapshot(&device), old);
+
+    let mut next = start(&device, plan(), AfterRestart::Pass);
+    next.session.join().await;
+    assert!(matches!(
+        next.session.status(),
+        DownloadStatus::Finished {
+            written: Written::Yes,
+            ..
+        }
+    ));
+}
+
+fn assert_stopped_before_any_change(status: &DownloadStatus) {
+    match status {
+        DownloadStatus::Failed {
+            written: Written::No,
+            error,
+            hint: None,
+            ..
+        } => assert!(error.contains("stopped on request"), "{error}"),
+        other => panic!("{other:?}"),
+    }
+}
+
+#[tokio::test]
+async fn a_close_before_the_session_is_installed_stops_the_registered_worker() {
+    // The route registers while it holds the reservation and while the
+    // tunnel is still being acquired; the close lands before `*download =
+    // Some(..)`. The worker owns the very token the close requested.
+    let device = device(APPLICATION, SimulatorConfig::default());
+    let old = snapshot(&device);
+    let state = crate::AppState::new(std::env::temp_dir());
+    let reservation = state.device_download.lock().await;
+    let stop = state.stop_admission.register_download().expect("open");
+    assert_eq!(
+        state.stop_admission.close_and_request_download_stop(),
+        Some(StopRequest::WillStop),
+        "the close needs no async lock"
+    );
+    assert!(stop.stop_pending());
+    drop(reservation);
+
+    let mut started = start_registered(&device, plan(), AfterRestart::Pass, None, stop, |_| {});
+    started.session.join().await;
+    assert_eq!(device.seen(), vec![], "S0: not a single frame");
+    assert_eq!(snapshot(&device), old);
+    assert_stopped_before_any_change(&started.session.status());
+    let row = reopened(&started.history);
+    assert_eq!(row["state"], "failed");
+    assert_eq!(row["downloadEvidence"]["written"], "no");
+    assert_eq!(row["writeEvidence"]["sendPossible"], false);
+}
+
+#[tokio::test]
+async fn a_close_while_the_worker_connects_stops_it_without_the_drain() {
+    let device = device(APPLICATION, SimulatorConfig::default());
+    let old = snapshot(&device);
+    let state = crate::AppState::new(std::env::temp_dir());
+    let stop = state.stop_admission.register_download().expect("open");
+    let gate = Gate::at(GateAt::FirstConnect);
+    let mut started = start_registered(
+        &device,
+        plan(),
+        AfterRestart::Pass,
+        Some(gate.clone()),
+        stop,
+        |_| {},
+    );
+    tokio::time::timeout(Duration::from_secs(5), gate.entered.notified())
+        .await
+        .expect("connecting");
+    crate::graceful_stop::close_process_admission(&state);
+    gate.release.notify_one();
+    started.session.join().await;
+
+    assert_eq!(mutating_frames(&device), 0);
+    assert_eq!(snapshot(&device), old);
+    assert_stopped_before_any_change(&started.session.status());
+    assert_eq!(started.session.request_stop(), StopRequest::Ended);
+}
+
+fn mutating_frames(device: &SimulatedDevice) -> usize {
+    device.seen().iter().filter(|seen| mutating(seen)).count()
+}
+
+#[tokio::test]
+async fn a_close_after_the_first_change_committed_is_too_late_and_the_run_is_unchanged() {
+    let reference = device(APPLICATION, SimulatorConfig::default());
+    let mut ungated = start(&reference, plan(), AfterRestart::Pass);
+    ungated.session.join().await;
+
+    let device = device(APPLICATION, SimulatorConfig::default());
+    let state = crate::AppState::new(std::env::temp_dir());
+    let stop = state.stop_admission.register_download().expect("open");
+    let gate = Gate::at(GateAt::FirstMemoryWrite);
+    let mut started = start_registered(
+        &device,
+        plan(),
+        AfterRestart::Pass,
+        Some(gate.clone()),
+        stop,
+        |_| {},
+    );
+    tokio::time::timeout(Duration::from_secs(5), gate.entered.notified())
+        .await
+        .expect("writing");
+    assert_eq!(
+        state.stop_admission.close_and_request_download_stop(),
+        Some(StopRequest::TooLate)
+    );
+    gate.release.notify_one();
+    started.session.join().await;
+
+    assert_eq!(device.seen(), reference.seen());
+    assert!(matches!(
+        started.session.status(),
+        DownloadStatus::Finished {
+            written: Written::Yes,
+            ..
+        }
+    ));
+}
+
+#[tokio::test]
+async fn a_stop_after_the_backup_is_durable_is_stored_as_failed_no_with_send_possible() {
+    let device = device(APPLICATION, SimulatorConfig::default());
+    let old = snapshot(&device);
+    let mut started = start_registered(
+        &device,
+        plan(),
+        AfterRestart::Pass,
+        None,
+        Arc::new(DownloadStop::new()),
+        |stop| {
+            assert_eq!(stop.request(), StopRequest::WillStop);
+        },
+    );
+    started.session.join().await;
+
+    assert_eq!(mutating_frames(&device), 0);
+    assert_eq!(snapshot(&device), old);
+    assert_stopped_before_any_change(&started.session.status());
+    assert!(started.session.backup_file().is_some(), "this run's backup");
+    let row = reopened(&started.history);
+    assert_eq!(row["state"], "failed", "{row}");
+    assert_eq!(row["downloadEvidence"]["written"], "no");
+    assert_eq!(row["writeEvidence"]["sendPossible"], true);
+    assert_eq!(row["writeEvidence"]["backupRecorded"], true);
+    assert_eq!(row["interrupted"], false);
+}
+
+#[tokio::test]
+async fn a_run_dropped_without_a_result_still_reads_unknown_after_a_late_stop() {
+    let device = device(APPLICATION, SimulatorConfig::default());
+    let gate = Gate::at(GateAt::FirstMemoryWrite);
+    let mut started = start_registered(
+        &device,
+        plan(),
+        AfterRestart::Pass,
+        Some(gate.clone()),
+        Arc::new(DownloadStop::new()),
+        |_| {},
+    );
+    tokio::time::timeout(Duration::from_secs(5), gate.entered.notified())
+        .await
+        .expect("writing");
+    assert_eq!(started.session.request_stop(), StopRequest::TooLate);
+    started.session.task.as_ref().unwrap().abort();
+    started.session.join().await;
+    assert!(matches!(
+        started.session.status(),
+        DownloadStatus::Failed {
+            written: Written::Partially,
+            ..
+        }
+    ));
+    let row = reopened(&started.history);
+    assert!(
+        row["downloadEvidence"]["written"].is_null(),
+        "an unwitnessed outcome stays unwitnessed: {row}"
+    );
+    assert_eq!(row["downloadEvidence"]["cleanup"], "unknown");
+}
+
+#[tokio::test]
+async fn a_registered_token_is_held_by_the_session_through_its_whole_life() {
+    let device = device(APPLICATION, SimulatorConfig::default());
+    let state = crate::AppState::new(std::env::temp_dir());
+    let stop = state.stop_admission.register_download().expect("open");
+    let mut started = start_registered(&device, plan(), AfterRestart::Pass, None, stop, |_| {});
+    started.session.join().await;
+    // The run is over and the session is kept readable: a late close
+    // reaches an ended token, harmlessly.
+    assert_eq!(
+        state.stop_admission.close_and_request_download_stop(),
+        Some(StopRequest::Ended)
+    );
+    assert!(matches!(
+        started.session.status(),
+        DownloadStatus::Finished { .. }
+    ));
 }

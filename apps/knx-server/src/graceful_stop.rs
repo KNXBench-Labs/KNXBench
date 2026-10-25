@@ -17,7 +17,11 @@
 //! 3. wait for a device download or address programming that is already
 //!    writing, up to `KNX_STOP_WRITE_WAIT_SECS` ([`DEFAULT_WRITE_WAIT`]);
 //!    an address programming still waiting for its button is asked to stop
-//!    through its own defined stop. A second signal ends this wait too,
+//!    through its own defined stop, and a regular download is stopped only
+//!    while it has not committed its first change (ADR-0153; the stop is
+//!    requested at step 1 already, by [`StopAdmission::close`]). A download
+//!    past that point is waited for, never cancelled. A second signal ends
+//!    this wait too,
 //!    In parallel, join the catalogue owner's cooperatively stopped work
 //!    for at most [`CATALOGUE_DRAIN_TIMEOUT`]. Catalogue stop was requested
 //!    with admission closure, not delayed until a device wait ends.
@@ -34,6 +38,9 @@ use std::io;
 use std::time::Duration;
 
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex, PoisonError, Weak};
+
+use knx_net::commissioning::memory_download::{DownloadStop, StopRequest};
 
 use tokio::sync::{mpsc, watch};
 
@@ -98,11 +105,44 @@ pub async fn drain_catalogue_jobs(
 #[derive(Debug, Default)]
 pub struct StopAdmission {
     closed: AtomicBool,
+    /// The regular download registered last. Closing and registering take
+    /// this one short synchronous lock (never held across an `await`), so
+    /// every registration is either refused or seen by the close.
+    download: Mutex<Weak<DownloadStop>>,
 }
 
 impl StopAdmission {
+    /// Closes admission and, in the same critical section, asks the
+    /// registered regular download (if any is still alive) to stop before
+    /// its first change. See [`close_and_request_download_stop`](Self::close_and_request_download_stop).
     pub fn close(&self) {
+        self.close_and_request_download_stop();
+    }
+
+    /// [`close`](Self::close), returning what the registered download's
+    /// token answered. The request is made before this returns, without the
+    /// async download reservation lock: `WillStop` means the run will send
+    /// no memory write, load record, property write or restart (it may
+    /// still fail with its own error first); `TooLate` means its first
+    /// change was already committed and it goes on unchanged; `Ended` means
+    /// its run is over. `None`: no download was registered.
+    pub(crate) fn close_and_request_download_stop(&self) -> Option<StopRequest> {
+        let slot = self.download.lock().unwrap_or_else(PoisonError::into_inner);
         self.closed.store(true, Ordering::SeqCst);
+        slot.upgrade().map(|stop| stop.request())
+    }
+
+    /// Registers the stop token of a regular download that is about to
+    /// start: `503 serverStopping` once closed (nothing is started), else a
+    /// fresh token that a later [`close`](Self::close) will request. Called
+    /// while the route holds the download reservation, after its busy
+    /// check, so the previous registration belongs to a run that has ended.
+    pub(crate) fn register_download(&self) -> Result<Arc<DownloadStop>, ApiError> {
+        let mut slot = self.download.lock().unwrap_or_else(PoisonError::into_inner);
+        self.admit()?;
+        let stop = Arc::new(DownloadStop::new());
+        *slot = Arc::downgrade(&stop);
+        Ok(stop)
     }
 
     pub fn is_closed(&self) -> bool {
@@ -323,14 +363,19 @@ pub struct WriteDrain {
     pub programming_wait_stopped: bool,
     /// An address programming had already begun writing (MP §2.3).
     pub programming_writing: Option<knx_core::IndividualAddress>,
+    /// What a repeated stop request to that download answered. A second
+    /// request is a diagnostic, not the guarantee: the first one was made
+    /// by [`StopAdmission::close`].
+    pub download_stop: Option<StopRequest>,
     pub end: WriteWaitEnd,
 }
 
 /// Step 3 of a stop: waits up to `limit` for a device download or address
 /// programming that is already running, so a stop does not cut a device
 /// write short when it does not have to. Only an address programming that
-/// is still waiting for its button is stopped (its own defined stop); a
-/// running write is never cancelled here. `second_signal` ends the wait.
+/// is still waiting for its button is stopped (its own defined stop), and a
+/// regular download is asked once more to stop before its first change;
+/// a running write is never cancelled here. `second_signal` ends the wait.
 pub async fn drain_device_writes(
     state: &AppState,
     limit: Duration,
@@ -340,6 +385,7 @@ pub async fn drain_device_writes(
         download: None,
         programming_wait_stopped: false,
         programming_writing: None,
+        download_stop: None,
         end: WriteWaitEnd::NothingRunning,
     };
     if let Ok(programming_guard) = state.address_programming.try_lock() {
@@ -360,6 +406,7 @@ pub async fn drain_device_writes(
         if let Some(download) = download_guard.as_ref() {
             if download.is_running() {
                 drain.download = Some(download.target());
+                drain.download_stop = Some(download.request_stop());
             }
         }
     }
@@ -708,6 +755,98 @@ mod tests {
         let drain =
             drain_device_writes(&state, Duration::from_secs(5), std::future::pending()).await;
         assert_eq!(drain.end, WriteWaitEnd::NothingRunning);
+    }
+
+    #[test]
+    fn registering_after_the_close_is_refused_and_starts_nothing() {
+        let admission = StopAdmission::default();
+        assert_eq!(admission.close_and_request_download_stop(), None);
+        let refused = admission.register_download().unwrap_err();
+        assert!(format!("{refused:?}").contains("serverStopping"));
+    }
+
+    #[test]
+    fn registering_before_the_close_gets_that_exact_token_requested() {
+        let admission = StopAdmission::default();
+        let token = admission.register_download().expect("open");
+        assert!(!token.stop_pending());
+        assert_eq!(
+            admission.close_and_request_download_stop(),
+            Some(StopRequest::WillStop)
+        );
+        assert!(token.stop_pending());
+        assert!(admission.is_closed());
+    }
+
+    #[test]
+    fn a_dropped_registration_is_not_requested_by_a_later_close() {
+        let admission = StopAdmission::default();
+        drop(admission.register_download().expect("open"));
+        assert_eq!(admission.close_and_request_download_stop(), None);
+    }
+
+    #[test]
+    fn a_new_registration_replaces_the_previous_slot_and_only_it_is_requested() {
+        let admission = StopAdmission::default();
+        let first = admission.register_download().expect("open");
+        let second = admission.register_download().expect("open");
+        assert_eq!(
+            admission.close_and_request_download_stop(),
+            Some(StopRequest::WillStop)
+        );
+        assert!(second.stop_pending());
+        assert!(
+            !first.stop_pending(),
+            "the earlier run's token is untouched"
+        );
+    }
+
+    #[test]
+    fn every_racing_registration_is_either_refused_or_requested_by_the_close() {
+        for _ in 0..500 {
+            let admission = std::sync::Arc::new(StopAdmission::default());
+            let registering = {
+                let admission = std::sync::Arc::clone(&admission);
+                std::thread::spawn(move || admission.register_download())
+            };
+            let closing = {
+                let admission = std::sync::Arc::clone(&admission);
+                std::thread::spawn(move || admission.close_and_request_download_stop())
+            };
+            let registered = registering.join().unwrap();
+            closing.join().unwrap();
+            match registered {
+                Ok(token) => assert!(token.stop_pending(), "the close missed a registration"),
+                Err(refused) => assert!(format!("{refused:?}").contains("serverStopping")),
+            }
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_download_past_its_first_change_answers_too_late_and_keeps_running() {
+        let state = AppState::new(std::env::temp_dir());
+        let release = std::sync::Arc::new(tokio::sync::Notify::new());
+        *state.device_download.lock().await = Some(blocked_download(release.clone()));
+        let drain =
+            drain_device_writes(&state, Duration::from_secs(5), std::future::pending()).await;
+        assert_eq!(drain.download_stop, Some(StopRequest::TooLate));
+        assert_eq!(drain.end, WriteWaitEnd::TimedOut);
+        assert!(state
+            .device_download
+            .lock()
+            .await
+            .as_ref()
+            .unwrap()
+            .is_running());
+        release.notify_one();
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn no_download_means_no_download_stop_answer() {
+        let state = AppState::new(std::env::temp_dir());
+        let drain =
+            drain_device_writes(&state, Duration::from_secs(5), std::future::pending()).await;
+        assert_eq!(drain.download_stop, None);
     }
 
     #[tokio::test]

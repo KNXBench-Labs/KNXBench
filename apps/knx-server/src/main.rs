@@ -224,21 +224,35 @@ fn report_write_drain(drain: &knx_server::WriteDrain, limit: std::time::Duration
     }
     let mut running = Vec::new();
     if let Some(device) = drain.download {
-        running.push(format!("the download to {device}"));
+        if drain.download_stop
+            == Some(knx_net::commissioning::memory_download::StopRequest::WillStop)
+        {
+            // Accepted before its first change: it sends no memory write,
+            // load record, property write or restart, so it cannot leave
+            // the device partly written.
+            eprintln!(
+                "knx-server: the download to {device} had not changed the device yet; \
+                 asked it to stop, it writes nothing"
+            );
+        } else {
+            running.push(format!("the download to {device}"));
+        }
     }
     if let Some(device) = drain.programming_writing {
         running.push(format!("the address programming of {device}"));
     }
     if running.is_empty() {
-        if drain.programming_wait_stopped
+        if (drain.programming_wait_stopped
+            || drain.download_stop
+                == Some(knx_net::commissioning::memory_download::StopRequest::WillStop))
             && matches!(
                 drain.end,
                 knx_server::WriteWaitEnd::TimedOut | knx_server::WriteWaitEnd::SecondSignal
             )
         {
             eprintln!(
-                "knx-server: the stopped address programming had not ended yet; \
-                 it had written nothing"
+                "knx-server: the stopped write had not ended yet; \
+                 it had not changed the device"
             );
         }
         return;

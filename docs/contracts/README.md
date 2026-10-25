@@ -13,6 +13,7 @@ Moved here from `docs/` on 2026-10-08 (relative links adjusted by script).
 | [hardware-identity-comparison](hardware-identity-comparison.md) | Exact hardware-type response width before regular download/restore mutation; padded product comparisons retained |
 | [partial-identity-comparison](partial-identity-comparison.md) | Exact five-octet application identity (object 3, PID 13) before partial-download mutation; other objects generic |
 | [backup-application-identity](backup-application-identity.md) | Captured pre-write application identity and restore refusal; strict backup format 2 with read-only format-1 compatibility and explicit downgrade limits |
+| [regular-download-prewrite-stop](regular-download-prewrite-stop.md) | A graceful stop prevents a regular download before its first change; after it the run is unchanged |
 | [memory-region-read-service](memory-region-read-service.md) | Region-bound memory read service and user-memory count limit for backup, comparison and probes |
 | [memory-response-service-pairing](memory-response-service-pairing.md) | A memory read or active-Verify write is answered only by a response of its own service at its address; other-service response is no answer (synthetic nonconforming peer) |
 | [duplicate-image-segment-start](duplicate-image-segment-start.md) | A download plan refuses an allocation where two segments with Data share the start, naming the address and both ids; no-payload allocations unchanged; not schema invalidity |

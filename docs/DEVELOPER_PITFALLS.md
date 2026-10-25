@@ -139,6 +139,27 @@ already found lying in the grass.
   supervisor may act on the receipt the moment the PID appears; a signal in the
   gap between writing it and entering `try` orphans the child's whole session
   (`web_gate_support.MeasuredRun.step`, fixed 17 October 2026).
+- **File existence does not mean a child-written marker is complete.**
+  `Path.write_text` creates the file before writing its content. Publish with a
+  same-directory temporary plus `os.replace`, or make the bounded reader retry
+  both the read and parse before it acts on the marker.
+- **A process group is not a stage's process tree.** Playwright's `webServer`
+  may start a new session, outside the stage leader's group, and an environment
+  marker disappears when a child clears its environment or becomes a zombie.
+  Gate stages therefore run below a dedicated Linux child subreaper whose
+  direct children are exclusively stage-owned. Signal only PID/start-time
+  identities retained by pidfds, then reap them after bounded TERM/KILL
+  escalation; never replace that ownership proof with `pkill -f` or command
+  substring matching.
+- **Cleanup must not itself be cancellable.** Defer handled signals across
+  TERM/KILL/reap on both runner and supervisor, including normal-completion
+  leftovers; restore the caller's mask afterwards so interruption still fails
+  the attempt. Keep normal cleanup inside the exception guard so interruption
+  at entry/exit can safely retry it. An exclusive subreaper killed mid-cleanup
+  loses ownership of detached, environment-scrubbed children; a non-atomic outer
+  `/proc` scan cannot reliably recover that ownership. SIGKILL cannot be
+  deferred: forcible supervisor death remains a cleanup limitation, not merely
+  an incomplete-receipt case. Do not compensate by claiming unrelated children.
 - **A Python test child that waits for a signal must block it and take it
   with `sigtimedwait`.** On CPython 3.14.7 a pending handler does not run when
   a keyword call returns: in `os.system(command=f'kill -TERM {os.getpid()}')`

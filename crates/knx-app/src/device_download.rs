@@ -279,7 +279,7 @@ pub fn byte_order_warnings_for(order: Result<BaseImageOrder, ProbeError>) -> Vec
 }
 
 /// The one project device at `target`; none and several are refused.
-fn device_at(
+pub(crate) fn device_at(
     project: &Project,
     target: IndividualAddress,
 ) -> Result<&knx_core::DeviceInstance, PrepareError> {

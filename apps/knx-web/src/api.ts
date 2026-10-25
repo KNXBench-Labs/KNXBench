@@ -2046,6 +2046,26 @@ export interface DeviceDownloadPlan {
   partial: boolean;
   /** Application writes the partial download does not make, as `[address, octets]`. */
   notWritten: [number, number][];
+  /** The scope this plan writes; absent from an older server. */
+  scope?: DeviceDownloadScopeCode;
+  /** `true` when the request asked for `scope: "changes"` and this is what it resolved to. */
+  scopeFromChanges?: boolean;
+  /** What the device's programming flags advise; absent from an older server. */
+  scopeAdvice?: DeviceDownloadScopeAdvice;
+}
+
+export type DeviceDownloadScopeCode = "complete" | "parameters" | "groupAddresses" | "both";
+
+/** The smallest download the project's programming flags advise: hints, never device evidence. */
+export interface DeviceDownloadScopeAdvice {
+  basis: "projectFlags";
+  write: DeviceDownloadScopeCode | "nothing";
+  /** No memory download writes the individual address. */
+  address: "current" | "pending" | "missing";
+  /** No KNXBench download writes the medium configuration. */
+  mediumPending: boolean;
+  /** Every part marked programmed and an address present; still the project's belief. */
+  fullyProgrammed: boolean;
 }
 
 /** The parts of a partial download; absent from the request means complete. */
@@ -2173,10 +2193,12 @@ export function writeServiceControl(
   });
 }
 
-export function planDeviceDownload(address: string, partial?: DeviceDownloadParts): Promise<DeviceDownloadPlan> {
+/** `"changes"`: the server resolves the scope from the device's programming flags. */
+export function planDeviceDownload(address: string, scope?: DeviceDownloadParts | "changes"): Promise<DeviceDownloadPlan> {
   return request("/api/device-download/plan", {
     method: "POST",
-    body: JSON.stringify(partial === undefined ? { address } : { address, partial }),
+    body: JSON.stringify(scope === undefined ? { address }
+      : scope === "changes" ? { address, scope: "changes" } : { address, partial: scope }),
   });
 }
 

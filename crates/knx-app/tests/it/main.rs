@@ -14,6 +14,7 @@ mod diff_correlation_measurement;
 mod documentation_composition;
 mod documentation_export;
 mod download_coverage_corpus;
+mod download_scope;
 mod enrichment_gap_measurement;
 mod ets6_device_local_enrichment;
 mod ets6_plugin_data_pair;

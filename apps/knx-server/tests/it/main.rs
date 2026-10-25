@@ -36,6 +36,7 @@ mod http_device_readiness;
 mod http_device_routes;
 mod http_device_wizard;
 mod http_documentation_export;
+mod http_download_scope;
 mod http_download_support_guidance;
 mod http_durable_import_evidence;
 mod http_edit_routes;

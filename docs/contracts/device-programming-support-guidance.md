@@ -47,6 +47,50 @@ locally is not permission to publish it. Readiness is scoped to the displayed
 project snapshot; ambiguous duplicate addresses get no inferred row association.
 The server's freshly prepared plan remains authoritative.
 
+## Scope advised by programming marks (`scope: "changes"`)
+
+The plan request body is `{ "address", "partial"?, "scope"? }`. `partial` is the
+explicit CP §3.9.2.4 partial download `{ "parameters", "groupAddresses" }`; both
+absent is the complete download. `scope` accepts only `"changes"`: the server
+resolves the scope from the device's loaded flags
+(`knx_core::commissioning::scope_advice`) to the complete download, one partial
+download, or nothing. `scope` and `partial` together are refused with 400
+`downloadScopeConflict`; any other `scope` value is a request-body client error.
+Nothing is planned in either case.
+
+Every successful plan adds three fields, also for an explicit scope:
+
+- `scope`: the concrete scope written, one of `complete`, `parameters`,
+  `groupAddresses`, `both`. Never `changes`.
+- `scopeFromChanges`: `true` only when the request was `scope: "changes"`.
+- `scopeAdvice`: `{ basis: "projectFlags", write, address, mediumPending,
+  fullyProgrammed }`. `write` is a scope code or `nothing`; `address` is `current`,
+  `pending` or `missing`. `fullyProgrammed` is `true` only with `write: nothing`,
+  `address: current` and `mediumPending: false`. The address and the medium
+  configuration never change `write`: no download writes either.
+
+With nothing pending, `scope: "changes"` answers 422 `downloadNothingPending` with
+`scopeAdvice` in the error envelope. No image or plan is built, no plan id is
+consumed, and a plan shown earlier can no longer be started. This answer needs no
+product data. Something pending, or an explicit scope, still needs the product
+data and keeps `downloadProductDataMissing`. A partial the program cannot derive
+stays `downloadPartialRefused` and is never widened to the complete download.
+
+`start` keeps its request, phrase, acknowledgement and exclusivity rules. A plan
+from `scope: "changes"` is prepared again under one project lock, and the flags are
+read in that same snapshot. The start is refused with 409 `downloadPlanStale`
+before any tunnel or history entry unless the flags still resolve to the plan's
+scope and the plan is still equal to the one shown. A flag edit after that snapshot
+is not detected; the write is still exactly the concrete scope that was shown and
+confirmed. A plan for an explicit scope is not bound to the flags.
+
+The web client shows a `changes` plan only if `scopeFromChanges` is `true`, `scope`
+is a known code consistent with `partial`, and `scopeAdvice` is well-formed with
+`write` equal to `scope`. Otherwise it shows no plan: an older server that ignores
+`scope` gets the unsupported warning, and any other answer gets the malformed
+warning. Advice that fails the shape check beside an explicit plan is not shown.
+Malformed advice is never read as "both" or as fully programmed.
+
 ## Point-of-failure UI and reporting (S2/S3)
 
 `DownloadSupportNotice` shows the reason and category-appropriate action before

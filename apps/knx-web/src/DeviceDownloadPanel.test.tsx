@@ -532,12 +532,12 @@ async function pickScope(label: string) {
   await act(async () => scopeRadio(label).click());
 }
 
-it("offers the four download scopes before a plan, complete by default", async () => {
+it("offers the four download scopes and the pending-only choice before a plan, complete by default", async () => {
   await render();
   const labels = [...host!.querySelectorAll(".device-download-scope label")].map((label) => label.textContent);
   expect(labels).toEqual([
     en["deviceDownload.scope.complete"], en["deviceDownload.scope.parameters"],
-    en["deviceDownload.scope.groupAddresses"], en["deviceDownload.scope.both"],
+    en["deviceDownload.scope.groupAddresses"], en["deviceDownload.scope.both"], en["deviceDownload.scope.changes"],
   ]);
   expect(scopeRadio(en["deviceDownload.scope.complete"]).checked).toBe(true);
   expect(host!.querySelector(".device-download-scope legend")?.textContent).toBe(en["deviceDownload.scope.legend"]);

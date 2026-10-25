@@ -76,6 +76,14 @@ describe("api", () => {
     expect(JSON.parse(init.body as string)).toEqual({ address: "1.1.67", partial: { parameters: false, groupAddresses: true } });
   });
 
+  it("asks for the pending scope with scope: changes and no partial member", async () => {
+    mockFetchOnce({ planId: 3 });
+    await api.planDeviceDownload("1.1.67", "changes");
+    const [url, init] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/api/device-download/plan");
+    expect(JSON.parse(init.body as string)).toEqual({ address: "1.1.67", scope: "changes" });
+  });
+
   it("uses the existing project restyle route and returns its authoritative snapshot", async () => {
     const tree = { group_address_style: "TwoLevel", can_undo: true, is_modified: true, installations: [] };
     mockFetchOnce(tree);

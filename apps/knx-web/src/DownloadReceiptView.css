@@ -1,0 +1,14 @@
+/* Run receipt in a history row: theme tokens only; ids wrap, table words stay whole and scroll locally. */
+.download-receipt { min-width: 0; margin-top: 0.75rem; padding: 0.5rem 0.75rem; border: 1px solid var(--knx-border); border-radius: 0.5rem; overflow-wrap: anywhere; }
+.download-receipt h4, .download-receipt h5 { margin: 0.25rem 0; }
+.download-receipt dl { display: grid; grid-template-columns: minmax(8rem, max-content) minmax(0, 1fr); gap: 0.15rem 0.75rem; margin: 0.25rem 0; }
+.download-receipt dd { margin: 0; min-width: 0; }
+.download-receipt code { overflow-wrap: anywhere; word-break: break-all; }
+.download-receipt-settlement, .download-receipt-preparation { min-width: 0; }
+.download-receipt-parts-scroll { max-width: 100%; overflow-x: auto; overflow-wrap: normal; word-break: normal; }
+.download-receipt-parts { min-width: 100%; overflow-wrap: normal; word-break: normal; }
+.download-receipt-parts th, .download-receipt-parts td { padding: 0.15rem 0.5rem; text-align: left; border-bottom: 1px solid var(--knx-border); }
+@media (max-width: 480px) {
+  .download-receipt dl { grid-template-columns: minmax(0, 1fr); }
+  .download-receipt dt { color: var(--knx-muted); }
+}

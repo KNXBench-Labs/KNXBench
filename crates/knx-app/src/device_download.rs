@@ -54,6 +54,9 @@ pub struct PreparedDownload {
     /// with a partial one: the parts, and the application writes CP
     /// §3.9.2.4 rule 3 ignores, as `(address, octets)`.
     pub partial: Option<(PartialDownloadParts, Vec<(u16, usize)>)>,
+    /// The program's catalogue identity, read in the lease that built the
+    /// request, image and plan. `None` when unreadable or not installed.
+    pub program: Option<knx_productdb::query::ProgramIdentity>,
 }
 
 impl PreparedDownload {
@@ -174,6 +177,9 @@ fn prepare(
         image_request_for_device(conn, project, device.id).map_err(PrepareError::Request)?;
     let (image, plan, inferences) = plan_request(conn, &request, purpose)?;
     let warnings = byte_order_warnings(conn, &request);
+    let program = knx_productdb::query::program_identity(conn, &request.program_id)
+        .ok()
+        .flatten();
     Ok(PreparedDownload {
         device: device.id,
         device_name: device.name.clone(),
@@ -184,6 +190,7 @@ fn prepare(
         inferences,
         warnings,
         partial: None,
+        program,
     })
 }
 

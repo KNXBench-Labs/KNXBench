@@ -302,11 +302,12 @@ describe("one editing workspace", () => {
     expect(apiCallsIn(projectHistoryGraph)).toEqual([]);
     expect(mutatingFetchesIn(projectHistoryGraph)).toEqual([]);
     expect(projectHistoryGraph.get("projectHistory.ts")).not.toMatch(/\b(?:fetch|XMLHttpRequest|WebSocket|EventSource)\s*\(/);
+    // The run-scoped download receipt adds `downloadReceipt.ts`: pure strict admission, no API.
     // The post-download check adds `postDownloadCheck.ts` to the history
     // admission: pure validation of a stored read-only result, type-only
     // import of the message keys, no API call and no project state.
     const historyGraph = valueImportGraph("activityHistory.ts");
-    expect([...historyGraph.keys()].sort()).toEqual(["activityHistory.ts", "postDownloadCheck.ts"]);
+    expect([...historyGraph.keys()].sort()).toEqual(["activityHistory.ts", "downloadReceipt.ts", "postDownloadCheck.ts"]);
     expect(apiCallsIn(historyGraph)).toEqual([]);
     expect(historyGraph.get("activityHistory.ts")).not.toMatch(/\b(?:fetch|XMLHttpRequest|WebSocket|EventSource)\s*\(/);
     // UI-04 adds `liveActivity.ts` through the shared API: pure admission of
@@ -314,7 +315,7 @@ describe("one editing workspace", () => {
     // admission (its one value import), calls no API and mutates nothing; the
     // companion does not call the new live reader.
     const liveGraph = valueImportGraph("liveActivity.ts");
-    expect([...liveGraph.keys()].sort()).toEqual(["activityHistory.ts", "liveActivity.ts", "postDownloadCheck.ts"]);
+    expect([...liveGraph.keys()].sort()).toEqual(["activityHistory.ts", "downloadReceipt.ts", "liveActivity.ts", "postDownloadCheck.ts"]);
     //
     // ADR-0089 adds `achievementEvents.ts`, reached from `BusMonitorPanel`
     // (session started, minutes open, capture saved, flow watched). It
@@ -412,6 +413,7 @@ describe("one editing workspace", () => {
       "deviceList.ts",
       "deviceSystem.ts",
       "diagnosticsWindow.ts",
+      "downloadReceipt.ts",
       "dptLabels.ts",
       "filePicker.ts",
       "flowAnimator.ts",

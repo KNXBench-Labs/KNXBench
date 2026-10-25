@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import * as api from "./api";
 import { appendHistoryPage, HistoryContractError, type HistoryEntry, type UntrackedKind } from "./activityHistory";
 import { useTranslate } from "./i18n";
+import DownloadReceiptView from "./DownloadReceiptView";
 import PostDownloadCheckView from "./PostDownloadCheckView";
 import { useUiLanguage } from "./uiLanguage";
 
@@ -106,6 +107,9 @@ export default function BusActivityHistory() {
                 <dt>{t("activityHistory.cleanup")}</dt><dd>{t(`activityHistory.cleanup.${entry.downloadEvidence.cleanup}`)}</dd>
               </>}
             </dl>
+            {entry.downloadEvidence && (
+              <DownloadReceiptView preparation={entry.downloadEvidence.preparation} settlement={entry.downloadEvidence.settlement} language={language} />
+            )}
             {entry.kind === "deviceDownload" && entry.state === "finished" && entry.downloadEvidence?.written === "yes" && (
               <PostDownloadCheckView value={entry.downloadEvidence.postDownloadCheck} />
             )}

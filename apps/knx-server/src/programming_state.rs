@@ -8,11 +8,14 @@
 //! the project sees the settled belief.
 
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use axum::extract::{Path, State};
 use axum::routing::post;
 use axum::{Json, Router};
+use knx_app::commissioning_activity::{
+    CurrentRequest, DownloadSettlement, Format1, ProjectOutcome, SourceVerdict,
+};
 use knx_app::device_download::{source_still_plans, PreparedDownload};
 use knx_app::programming_state::{
     apply_settlement, attempted_parts, settle_address, settle_download, sole_device_at, AddressEnd,
@@ -27,7 +30,7 @@ use serde::Deserialize;
 
 use crate::address_programming::{AddressProgrammingStatus, AddressWritten, OnProgrammingEnd};
 use crate::device_download::{DownloadStatus, OnDownloadEnd, Written};
-use crate::domain::{self, BoundCommandError, Settled, SnapshotBinding};
+use crate::domain::{self, BoundCommandError, SettleOutcome, Settled, SnapshotBinding};
 use crate::errors::ApiError;
 use crate::log_text::{device_label, parts_text};
 use crate::{AppState, SharedState};
@@ -164,102 +167,162 @@ fn sentence(subject: &str, settlement: &Settlement) -> String {
     format!("{subject}: {}", parts.join("; "))
 }
 
-/// The settler for one download, prepared from `prepared` at `incarnation`.
+/// Where a receipted settler leaves the run's settlement receipt for the
+/// worker to record. Empty means no receipt: the settler never ran to the end.
+pub(crate) type SettlementSlot = Arc<Mutex<Option<DownloadSettlement>>>;
+
+/// The settler for one download, prepared from `prepared` at `incarnation`,
+/// without a receipt.
+#[cfg(test)]
 pub(crate) fn download_settler(
     state: &SharedState,
     incarnation: u64,
     prepared: &PreparedDownload,
 ) -> OnDownloadEnd {
+    download_settler_receipted(state, incarnation, prepared).0
+}
+
+/// [`download_settler`] and the slot it fills, on every path that settles,
+/// with what it did: the same computation, never a second one.
+pub(crate) fn download_settler_receipted(
+    state: &SharedState,
+    incarnation: u64,
+    prepared: &PreparedDownload,
+) -> (OnDownloadEnd, SettlementSlot) {
     let state = Arc::downgrade(state);
     let device = prepared.device;
     let target = prepared.target;
     let partial = prepared.partial.as_ref().map(|(parts, _)| *parts);
     let written = prepared.request.clone();
     let plan = prepared.plan.clone();
-    Box::new(move |status| {
-        let Some(state) = state.upgrade() else {
+    let slot = SettlementSlot::default();
+    let filled = Arc::clone(&slot);
+    let settler: OnDownloadEnd = Box::new(move |status| {
+        let through = match status {
+            DownloadStatus::Failed {
+                stopped_in_step, ..
+            } => *stopped_in_step,
+            _ => Some(plan.steps.len()),
+        };
+        let attempted = attempted_parts(&plan, partial, through);
+        let Some(end) = download_end(status, attempted) else {
             return;
         };
-        after_download(
-            &state,
-            incarnation,
-            device,
-            target,
-            partial,
-            &written,
-            &plan,
-            status,
-        )
-    })
+        let receipt = if end == DownloadEnd::NothingWritten {
+            DownloadSettlement::NotAttempted { format: Format1 }
+        } else if let Some(state) = state.upgrade() {
+            after_download(
+                &state,
+                incarnation,
+                (device, target),
+                partial,
+                (&written, &plan),
+                end,
+            )
+        } else {
+            DownloadSettlement::Unavailable { format: Format1 }
+        };
+        if let Ok(mut slot) = filled.lock() {
+            *slot = Some(receipt);
+        }
+    });
+    (settler, slot)
 }
 
-#[allow(clippy::too_many_arguments)]
+/// Settles a run that may have written, and says what happened.
 fn after_download(
     state: &AppState,
     incarnation: u64,
-    device: DeviceId,
-    target: IndividualAddress,
+    (device, target): (DeviceId, IndividualAddress),
     partial: Option<PartialDownloadParts>,
-    written: &ImageRequest,
-    plan: &knx_core::commissioning::memory_download::MemoryDownloadPlan,
-    status: &DownloadStatus,
-) {
-    let through = match status {
-        DownloadStatus::Failed {
-            stopped_in_step, ..
-        } => *stopped_in_step,
-        _ => Some(plan.steps.len()),
+    (written, plan): (
+        &ImageRequest,
+        &knx_core::commissioning::memory_download::MemoryDownloadPlan,
+    ),
+    end: DownloadEnd,
+) -> DownloadSettlement {
+    // What the closure computed and applied, for the receipt.
+    let mut computed = None;
+    let outcome =
+        domain::settle_programming(state, incarnation, "DeviceDownload", |project, stack| {
+            let instance = project.devices.get(device)?;
+            let label = device_label(instance);
+            // Read under the project lock, in the same order `prepare` takes them.
+            // One catalogue lease answers both questions, so the request and the
+            // source it is checked against cannot come from different moments.
+            let (now, source) = match state.product_db.as_ref() {
+                Some(owner) => owner
+                    .with_read(|conn| {
+                        let now = knx_productdb::image_request::image_request_for_device(
+                            conn, project, device,
+                        )
+                        .ok();
+                        let source = if end == DownloadEnd::Completed
+                            && source_still_plans(conn, written, partial, plan)
+                        {
+                            SourcePlan::Unchanged
+                        } else {
+                            SourcePlan::ChangedOrUnknown
+                        };
+                        Ok::<_, std::convert::Infallible>((now, source))
+                    })
+                    .ok()
+                    .and_then(Result::ok)
+                    .unwrap_or((None, SourcePlan::ChangedOrUnknown)),
+                None => (None, SourcePlan::ChangedOrUnknown),
+            };
+            let settlement = settle_download(partial, end, written, now.as_ref(), source);
+            let subject = match end {
+                DownloadEnd::Completed => format!("Download to {label} finished"),
+                DownloadEnd::Interrupted(_) => {
+                    format!("Download to {target} stopped partway ({label})")
+                }
+                DownloadEnd::NothingWritten => unreachable!("handled before settling"),
+            };
+            let at = chrono::Utc::now();
+            apply_settlement(project, stack, device, &settlement, Some(at));
+            // A source is only checked for a run that completed.
+            let verdict = match (end, source) {
+                (DownloadEnd::Completed, SourcePlan::Unchanged) => SourceVerdict::Unchanged,
+                (DownloadEnd::Completed, SourcePlan::ChangedOrUnknown) => {
+                    SourceVerdict::ChangedOrUnknown
+                }
+                _ => SourceVerdict::NotChecked,
+            };
+            let request = if now.is_some() {
+                CurrentRequest::Readable
+            } else {
+                CurrentRequest::Unavailable
+            };
+            computed = Some((settlement, verdict, request, at));
+            Some(Settled {
+                message: sentence(&subject, &settlement),
+                // The history changed even where the flags did not.
+                changed: true,
+            })
+        });
+    let project_outcome = match outcome {
+        SettleOutcome::NoProject => {
+            return DownloadSettlement::NoProject { format: Format1 };
+        }
+        SettleOutcome::OtherProject => {
+            return DownloadSettlement::OtherProject { format: Format1 };
+        }
+        SettleOutcome::Declined => {
+            return DownloadSettlement::DeviceMissing { format: Format1 };
+        }
+        SettleOutcome::Persisted => ProjectOutcome::Persisted,
+        SettleOutcome::SessionOnly => ProjectOutcome::SessionOnly,
+        SettleOutcome::PersistFailed => ProjectOutcome::PersistenceFailed,
+        // A download settlement always changes the history: never reached.
+        SettleOutcome::LoggedOnly => return DownloadSettlement::Unavailable { format: Format1 },
     };
-    let attempted = attempted_parts(plan, partial, through);
-    let Some(end) = download_end(status, attempted) else {
-        return;
-    };
-    if end == DownloadEnd::NothingWritten {
-        return;
+    match computed {
+        Some((settlement, verdict, request, at)) => {
+            DownloadSettlement::computed(project_outcome, verdict, request, &settlement, at)
+        }
+        None => DownloadSettlement::Unavailable { format: Format1 },
     }
-    domain::settle_programming(state, incarnation, "DeviceDownload", |project, stack| {
-        let instance = project.devices.get(device)?;
-        let label = device_label(instance);
-        // Read under the project lock, in the same order `prepare` takes them.
-        // One catalogue lease answers both questions, so the request and the
-        // source it is checked against cannot come from different moments.
-        let (now, source) = match state.product_db.as_ref() {
-            Some(owner) => owner
-                .with_read(|conn| {
-                    let now = knx_productdb::image_request::image_request_for_device(
-                        conn, project, device,
-                    )
-                    .ok();
-                    let source = if end == DownloadEnd::Completed
-                        && source_still_plans(conn, written, partial, plan)
-                    {
-                        SourcePlan::Unchanged
-                    } else {
-                        SourcePlan::ChangedOrUnknown
-                    };
-                    Ok::<_, std::convert::Infallible>((now, source))
-                })
-                .ok()
-                .and_then(Result::ok)
-                .unwrap_or((None, SourcePlan::ChangedOrUnknown)),
-            None => (None, SourcePlan::ChangedOrUnknown),
-        };
-        let settlement = settle_download(partial, end, written, now.as_ref(), source);
-        let subject = match end {
-            DownloadEnd::Completed => format!("Download to {label} finished"),
-            DownloadEnd::Interrupted(_) => {
-                format!("Download to {target} stopped partway ({label})")
-            }
-            DownloadEnd::NothingWritten => unreachable!("returned above"),
-        };
-        let at = chrono::Utc::now();
-        apply_settlement(project, stack, device, &settlement, Some(at));
-        Some(Settled {
-            message: sentence(&subject, &settlement),
-            // The history changed even where the flags did not.
-            changed: true,
-        })
-    });
 }
 
 /// The settler for one individual-address programming to `address`.

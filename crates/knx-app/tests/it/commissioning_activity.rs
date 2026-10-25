@@ -136,3 +136,5 @@ fn download_result_restart_and_cleanup_remain_distinct() {
     assert_eq!(value["downloadEvidence"]["cleanup"], "returnedError");
     assert_eq!(value["downloadEvidence"]["sessionId"], 7);
 }
+
+mod receipt;

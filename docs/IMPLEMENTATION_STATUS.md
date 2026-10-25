@@ -12,6 +12,18 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Memory response service pairing (25 October 2026 source)
+
+Memory reads and active-Verify writes now require the requested response service
+as well as its address. Wrong-service answers cannot confirm the operation or
+become its refusal; the unchanged answer ladder and one-mutation rule remain.
+Read-back without active Verify inherits the same guard
+([contract](contracts/memory-response-service-pairing.md)). Independent review
+and narrow re-review approved; all 14 integrated package stages passed.
+Published as `53400189e` ([acceptance](status/2026-10-25-memory-response-pairing.md)).
+This is synthetic nonconforming-response robustness, not observed device failure
+or new hardware compatibility.
+
 ## Load-control write response state (25 October 2026 source)
 
 Property-based load control now validates the actual state in the write response

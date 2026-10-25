@@ -34,6 +34,17 @@ and restore observations are kept separately. The status DTO reports whether a
 failed operation could have written anything. Software and simulator tests only; whether the
 relaxed admission downloads the reporter's device correctly is unverified.
 
+## Memory response service pairing — 25 October 2026 source
+
+A response must match both the requested memory service and address before it
+can confirm a read or active-Verify write; a wrong-service empty response cannot
+become the requested service's refusal. Read-back without active Verify inherits
+the rule ([contract](../contracts/memory-response-service-pairing.md)). Independent
+reviews and all 14 integrated package stages passed; published as `53400189e`
+([acceptance](../status/2026-10-25-memory-response-pairing.md)). Synthetic
+nonconforming-peer coverage does not prove real-device faults, aliasing or hardware
+compatibility. Retry and admission policies are unchanged; KL-007 remains open.
+
 ## Property load-control response — 25 October 2026 source
 
 The state in a property load-control write response is validated before polling;

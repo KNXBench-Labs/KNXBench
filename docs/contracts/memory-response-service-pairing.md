@@ -41,6 +41,9 @@ followed by one read-back without active Verify Mode. Both standard and user mem
 They establish neither hardware nor interface-coupler compatibility, nor any recovery behaviour
 beyond the `NoAnswer` the unchanged ladder gives.
 
+Published as `53400189e` after independent reviews and all 14 selected integrated
+package stages ([acceptance](../status/2026-10-25-memory-response-pairing.md)).
+
 ## Harness limits
 
 The wrapper remaps the sequence of a transport acknowledgement it swallows or forwards. It does

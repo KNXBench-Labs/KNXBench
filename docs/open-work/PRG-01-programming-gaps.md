@@ -64,6 +64,13 @@ record the boundaries separately; these increments do not close PRG-01.
   ([acceptance](../status/2026-10-25-load-control-response.md)).
   No inferred silent state, new retry, common timeout or hardware support.
 
+- Memory request/response service pairing now requires the requested service as
+  well as its address, without changing the answer ladder or retry policy
+  ([contract](../contracts/memory-response-service-pairing.md)). Independent reviews
+  and all 14 integrated package stages passed; published as `53400189e`
+  ([acceptance](../status/2026-10-25-memory-response-pairing.md)). Synthetic
+  nonconforming-peer evidence is not hardware acceptance.
+
 ## Open
 
 - Broader target/exemplar identity and independently verified runtime-state

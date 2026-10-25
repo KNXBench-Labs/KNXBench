@@ -6,6 +6,24 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Scope advised by programming marks (25 October 2026, source)
+
+`scope: "changes"` on the plan route, `--changes` on the CLI and the tab's *Only
+what the project marks pending* choose complete, partial or no download from the
+project's loaded flags (`knx_core::commissioning::scope_advice`). The flags are
+hints, not device evidence: the partial plan's own device checks below still
+decide before the first write, and a refused partial is never widened to the
+complete download. The address and medium configuration are reported as separate
+unmet needs. Tests are synthetic and offline; this adds no hardware evidence for
+any scope.
+
+Remaining limits: the server's start check reads the flags in the snapshot it
+prepares the plan from, so a flag edit after that snapshot is not detected (the
+write is still the confirmed concrete scope). The "address missing" advice is
+reachable only through the core and app layers. HTTP and the CLI select a device
+by its address, and the tab lists only addressed devices. Readiness and the device
+comparison carry no advice.
+
 <!-- BEGIN retained catalogue record -->
 
 <a id="142-the-mask-070nh-partial-download-is-tested-in-the-simulator-only"></a>

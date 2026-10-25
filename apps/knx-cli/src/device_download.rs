@@ -10,6 +10,10 @@
 //!
 //! Everything here but [`execute`]'s transport is socket-free, so the whole
 //! path runs against the simulator in the tests below.
+//!
+//! `--changes` plans the scope the device's programming flags advise and
+//! prints the explicit command that writes it; it never writes itself, so
+//! the phrase is always given for a scope the operator has read.
 
 use std::fmt::Write as _;
 use std::io::Write;
@@ -25,6 +29,7 @@ use knx_core::commissioning::mutation::{
     required_confirmation_phrase, WriteAuthorisation, WriteScope,
 };
 use knx_core::commissioning::partial_memory_download::PartialDownloadParts;
+use knx_core::commissioning::scope_advice::{AddressNeed, AdvisedWrite, ScopeAdvice};
 use knx_core::{ContactableAddress, IndividualAddress};
 use knx_net::commissioning::memory_download::{
     locked_device_hint, run_memory_download_with_backup, MemoryDownloadReport, Progress,
@@ -46,6 +51,8 @@ pub struct DownloadArgs {
     /// `--partial`: CP §3.9.2.4's partial download instead of the complete
     /// one.
     pub partial: Option<PartialDownloadParts>,
+    /// `--changes`: plan the scope the programming flags advise; plan only.
+    pub changes: bool,
     /// `--backup-dir`: where the backup taken before the first write goes.
     /// Default: `<project>.backups/` beside the project.
     pub backup_dir: Option<String>,
@@ -84,6 +91,7 @@ pub fn parse_download_args(args: &[String]) -> Result<DownloadArgs, String> {
     let mut confirm = None;
     let mut key_file = None;
     let mut partial = None;
+    let mut changes = false;
     let mut backup_dir = None;
     let mut accept_untested = None;
     let mut activity_history = None;
@@ -122,6 +130,7 @@ pub fn parse_download_args(args: &[String]) -> Result<DownloadArgs, String> {
                 )?)?);
                 i += 1;
             }
+            "--changes" => changes = true,
             "--backup-dir" => {
                 backup_dir = Some(crate::take_value(args, i + 1, "--backup-dir")?);
                 i += 1;
@@ -149,6 +158,16 @@ pub fn parse_download_args(args: &[String]) -> Result<DownloadArgs, String> {
     }
     let target = target.ok_or("missing the device address, e.g. 1.1.67")?;
     let project = project.ok_or("--project <path.knxdb> is required")?;
+    if changes && partial.is_some() {
+        return Err("--changes and --partial exclude each other; give one".to_string());
+    }
+    if changes && confirm.is_some() {
+        return Err(
+            "--changes only plans; write with the concrete scope it prints (--partial <scope> \
+             or none) and --gateway/--confirm"
+                .to_string(),
+        );
+    }
     if confirm.is_some() && gateway.is_none() {
         return Err("--confirm writes to a device and needs --gateway <host:port>".to_string());
     }
@@ -167,6 +186,7 @@ pub fn parse_download_args(args: &[String]) -> Result<DownloadArgs, String> {
         confirm,
         key_file,
         partial,
+        changes,
         backup_dir,
         accept_untested,
         activity_history,
@@ -289,6 +309,144 @@ pub fn check_target(args: &DownloadArgs) -> Result<(ContactableAddress, Mode), S
     Ok((target, mode))
 }
 
+/// What the device's programming flags advise, printed beside every plan.
+/// The flags are the project's belief; nothing here was read from a device.
+pub fn format_advice(advice: &ScopeAdvice) -> String {
+    let mut out = String::new();
+    let _ = writeln!(
+        out,
+        "programming flags (the project's belief, not read from the device):"
+    );
+    let _ = writeln!(out, "  advised download: {}", advised_text(advice.write));
+    let _ = writeln!(
+        out,
+        "  individual address: {}",
+        match advice.address {
+            AddressNeed::Current => "programmed",
+            AddressNeed::Pending =>
+                "pending; no download writes it, program it with `knx device program-address`",
+            AddressNeed::Missing => "missing; the device has no individual address in the project",
+        }
+    );
+    let _ = writeln!(
+        out,
+        "  medium configuration: {}",
+        if advice.medium_pending {
+            "pending; no KNXBench download writes it, so the device is not fully programmed"
+        } else {
+            "programmed"
+        }
+    );
+    if advice.fully_programmed() {
+        let _ = writeln!(out, "  the project marks every part programmed");
+    }
+    out
+}
+
+fn advised_text(write: AdvisedWrite) -> &'static str {
+    match write {
+        AdvisedWrite::Complete => "complete download",
+        AdvisedWrite::Partial(parts) => partial_text(parts),
+        AdvisedWrite::Nothing => "nothing",
+    }
+}
+
+fn partial_text(parts: PartialDownloadParts) -> &'static str {
+    match (parts.parameters, parts.group_addresses) {
+        (true, true) => "parameters and group addresses",
+        (true, false) => "parameters only",
+        _ => "group addresses only",
+    }
+}
+
+/// The `--partial` value that writes `scope` again, for the `--changes` hint.
+pub fn rerun_scope(scope: Option<PartialDownloadParts>) -> &'static str {
+    match scope.map(|parts| (parts.parameters, parts.group_addresses)) {
+        None => "the complete download (no --partial)",
+        Some((true, true)) => "--partial both",
+        Some((true, false)) => "--partial parameters",
+        Some(_) => "--partial group-addresses",
+    }
+}
+
+/// Placeholders [`rerun_command`] prints for a value the `--changes` run did
+/// not give; each is quoted, so a shell never reads it as a redirection.
+pub const GATEWAY_PLACEHOLDER: &str = "<gateway host:port>";
+pub const HISTORY_PLACEHOLDER: &str = "<activity history file>";
+
+/// `value` as one POSIX shell word: single quotes, inside which only `'`
+/// itself needs escaping (`'\''`). Not a Windows command-line quoting.
+pub fn shell_word(value: &str) -> String {
+    format!("'{}'", value.replace('\'', "'\\''"))
+}
+
+/// Whether [`rerun_command`] prints a placeholder to fill in before running.
+pub fn rerun_needs_filling(args: &DownloadArgs) -> bool {
+    args.gateway.is_none() || args.activity_history.is_none()
+}
+
+/// The POSIX shell command that writes the plan `--changes` resolved to: the
+/// same inputs, history and backup directory, the concrete scope, the given
+/// gateway, and the exact phrases. A value not given is a quoted placeholder.
+pub fn rerun_command(
+    args: &DownloadArgs,
+    target: IndividualAddress,
+    scope: Option<PartialDownloadParts>,
+    level: &SupportLevel,
+) -> String {
+    let mut command = format!(
+        "knx device download {} --project {}",
+        shell_word(&target.to_string()),
+        shell_word(&args.project)
+    );
+    let flag = |command: &mut String, name: &str, value: &str| {
+        let _ = write!(command, " {name} {}", shell_word(value));
+    };
+    if let Some(value) = &args.product_db {
+        flag(&mut command, "--product-db", value);
+    }
+    if let Some(value) = &args.key_file {
+        flag(&mut command, "--key-file", value);
+    }
+    if let Some(parts) = scope {
+        let value = match (parts.parameters, parts.group_addresses) {
+            (true, true) => "both",
+            (true, false) => "parameters",
+            _ => "group-addresses",
+        };
+        // A fixed word of the CLI's own vocabulary: nothing to quote.
+        let _ = write!(command, " --partial {value}");
+    }
+    flag(
+        &mut command,
+        "--activity-history",
+        args.activity_history
+            .as_deref()
+            .unwrap_or(HISTORY_PLACEHOLDER),
+    );
+    if let Some(value) = &args.backup_dir {
+        flag(&mut command, "--backup-dir", value);
+    }
+    flag(
+        &mut command,
+        "--gateway",
+        args.gateway.as_deref().unwrap_or(GATEWAY_PLACEHOLDER),
+    );
+    flag(
+        &mut command,
+        "--confirm",
+        &required_confirmation_phrase(target, WriteScope::Download),
+    );
+    if level.needs_acknowledgement() {
+        flag(
+            &mut command,
+            "--accept-untested",
+            &untested_acknowledgement(target),
+        );
+    }
+    command
+}
+
 /// The plan, as printed before anything is sent (and as all a dry run
 /// prints).
 pub fn format_plan(prepared: &PreparedDownload, keying: &DownloadKeying) -> String {
@@ -337,11 +495,7 @@ pub fn format_plan(prepared: &PreparedDownload, keying: &DownloadKeying) -> Stri
             out,
             "partial download (CP §3.9.2.4): {}; the device must already carry this \
              application with every part loaded",
-            match (parts.parameters, parts.group_addresses) {
-                (true, true) => "parameters and group addresses",
-                (true, false) => "parameters only",
-                _ => "group addresses only",
-            }
+            partial_text(*parts)
         );
         for (address, octets) in ignored {
             let _ = writeln!(

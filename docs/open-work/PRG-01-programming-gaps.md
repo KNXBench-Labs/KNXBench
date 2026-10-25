@@ -37,8 +37,10 @@ record the boundaries separately; these increments do not close PRG-01.
 - Backup prior-application identity: a backed-up run records the pre-write object 3/PID 13
   answer (backup format 2) and `restore_plan` refuses a plan of another or unrecorded
   application; legacy partial backups keep their precondition route
-  ([contract](../contracts/backup-application-identity.md)). Source change on a feature branch,
-  awaiting independent review and the integrated gate; it does not prove whole-device recovery.
+  ([contract](../contracts/backup-application-identity.md)). Published as `08db292f3`
+  after independent reviews and the maintained 16-stage integrated package gate
+  ([acceptance](../status/2026-10-25-backup-application-identity.md)); it does not
+  prove whole-device recovery.
 
 ## Open
 

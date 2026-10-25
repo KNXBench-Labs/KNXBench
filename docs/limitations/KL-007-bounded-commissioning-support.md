@@ -38,7 +38,10 @@ partial backup, behind the plan's own executed identity precondition
 ([contract](../contracts/backup-application-identity.md)). Older complete backups no longer
 restore, and format 1-only builds cannot read format 2. This is a necessary guard only: it does
 not prove allocation compatibility, the physical exemplar, the final identity or whole-device
-recovery, and it changes no admission.
+recovery, and it changes no admission. Published as `08db292f3` after independent
+reviews and all 16 selected integrated package stages
+([software acceptance](../status/2026-10-25-backup-application-identity.md));
+this limitation and hardware acceptance remain open.
 
 ## Hardware identity width follow-up — 25 October 2026 source
 

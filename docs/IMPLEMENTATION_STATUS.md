@@ -21,8 +21,10 @@ Backup format 2 is strict and explicitly records unavailable evidence; format 1
 remains readable without rewriting, but complete backups without evidence no
 longer prepare a restore. Old format-1-only builds refuse format 2. The
 [contract](contracts/backup-application-identity.md) defines the bounded guard
-and downgrade limits. Independent persistence review and focused source
-corrections are complete; integrated acceptance and publication remain pending.
+and downgrade limits. Independent persistence, corrected core and integration
+reviews approved the source. Published as `08db292f3` after all 16 selected
+integrated package stages passed, including 155/155 corpus cases
+([acceptance](status/2026-10-25-backup-application-identity.md)).
 No whole-device recovery, final restored identity or hardware acceptance is
 inferred.
 

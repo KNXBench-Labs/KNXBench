@@ -46,8 +46,9 @@ device's bytes, unselected parts, runtime or complete recovery.
 
 The [memory-region reader correction](contracts/memory-region-read-service.md)
 keeps backup/comparison/probe chunks in the region's selected service and within
-its wire count limit. Independent review and focused regressions passed;
-integrated acceptance and publication are pending. This does not add interface
+its wire count limit. Independent review and all 14 integrated package stages
+passed; published as `a4a4ebcf1`
+([acceptance](status/2026-10-25-memory-region-reads.md)). This does not add interface
 or coupler budget discovery, device-family admission or hardware evidence.
 
 ## Alpha 16 published pre-release — public artifacts and website verified (24 October 2026)

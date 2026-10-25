@@ -19,8 +19,9 @@ service across a whole region and cap user-memory requests at 15 octets even
 when the negotiated APDU budget permits 63. This closes a wire-encoding failure
 and a per-chunk service mismatch without changing writes, device admission or
 backup persistence ([contract](contracts/memory-region-read-service.md)).
-Independent review and focused real-codec/simulator regressions passed;
-integrated acceptance and publication remain pending. No hardware claim is made.
+Independent review and all 14 selected integrated package stages passed;
+published as `a4a4ebcf1` ([acceptance](status/2026-10-25-memory-region-reads.md)).
+No hardware claim is made.
 
 ## Source-bound programming marks after download (25 October 2026 source)
 

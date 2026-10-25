@@ -53,7 +53,8 @@ record the boundaries separately; these increments do not close PRG-01.
 - Region-bound memory reads use one selected service and respect the user-memory
   count limit for backup, comparison and byte-order probes
   ([contract](../contracts/memory-region-read-service.md)). Independent review and
-  focused tests passed; integrated acceptance and publication are pending.
+  all 14 integrated package stages passed; published as `a4a4ebcf1`
+  ([acceptance](../status/2026-10-25-memory-region-reads.md)).
   This adds no hardware or interface/coupler budget claim.
 
 ## Open

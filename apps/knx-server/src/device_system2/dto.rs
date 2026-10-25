@@ -60,6 +60,35 @@ pub(super) struct Status {
     pub download_phrase: Option<String>,
     pub release_phrase: Option<String>,
     pub message: Option<&'static str>,
+    /// False only when the durable journal proves no write could have been sent.
+    pub mutation_may_have_started: bool,
+    /// Captured prestate differed from the source shape or application:
+    /// original-state recovery is unavailable for this operation.
+    pub prestate_differs: bool,
+    pub pointer_observations: Vec<PointerObservation>,
+    pub program_version_observation: Option<ProgramVersionObservation>,
+}
+/// Source-model pointer versus device read, as lower-case hex or "refused".
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct PointerObservation {
+    pub phase: &'static str,
+    pub object: u8,
+    /// Plan operation of an in-procedure read-back; null otherwise.
+    pub operation_index: Option<usize>,
+    pub expected: String,
+    pub observed: String,
+    pub load_state: String,
+}
+/// Plan application versus the device's prior program version (empty: refused).
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct ProgramVersionObservation {
+    pub expected: String,
+    pub observed: String,
+}
+pub(super) fn hex(bytes: &[u8]) -> String {
+    bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]

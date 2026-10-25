@@ -174,10 +174,12 @@ async fn wrong_phrases_and_identity_refuse_without_mutation_or_retry() {
         download: &download,
         risk: &risk,
     };
+    // Serial and program version are observations now (owner rulings
+    // 2026-10-25); a different device TYPE still refuses before any write.
     device.preset_property(
         0,
-        knx_core::commissioning::properties::PID_SERIAL_NUMBER,
-        &[0, 1, 9, 9, 9, 9],
+        knx_core::commissioning::properties::PID_HARDWARE_TYPE,
+        &[0, 1, 0, 0, 0, 92],
     );
     let before = device.system2_snapshot();
     assert!(execute_project_hardware(
@@ -205,4 +207,37 @@ async fn wrong_phrases_and_identity_refuse_without_mutation_or_retry() {
     .await
     .is_err());
     assert_eq!(device.seen().len(), frames, "same operation must not retry");
+}
+
+#[tokio::test]
+async fn placeholder_serials_are_observed_not_refused() {
+    // Amendment 3: the serial is no admission check, even all-zero or all-FF.
+    for serial in [[0; 6], [0xFF; 6]] {
+        let (_dir, conn, project, profile) = inputs();
+        let device = old_device(&conn, &project, &profile);
+        device.preset_property(
+            0,
+            knx_core::commissioning::properties::PID_SERIAL_NUMBER,
+            &serial,
+        );
+        let source = prepare_project_hardware_source(
+            &conn,
+            &project,
+            knx_core::DeviceId(1),
+            &profile,
+            "placeholder-serial",
+            RecoveryTrack::KnxBenchBestEffort,
+        )
+        .unwrap();
+        let bundle = observe_project_hardware(
+            &Hardware(&device),
+            source,
+            integrated_timing(),
+            &AtomicBool::new(false),
+        )
+        .await
+        .expect("placeholder serial is recorded, not refused");
+        assert_eq!(bundle.binding.serial, serial);
+        admit_current_project_hardware(&conn, &project, knx_core::DeviceId(1), &bundle).unwrap();
+    }
 }

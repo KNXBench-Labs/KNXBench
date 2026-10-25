@@ -12,6 +12,15 @@ export interface System2Status {
   schemaVersion: 1; operationId: string; binding: System2Binding; address: string; deviceName: string; state: typeof SYSTEM2_STATES[number];
   completedSteps: number; totalSteps: number | null; backupAvailable: boolean; recoveryPhrase: string | null;
   downloadPhrase: string | null; releasePhrase: string | null; message: string | null;
+  /** False only when the server's durable journal proves nothing could have been written. */
+  mutationMayHaveStarted: boolean;
+  /** The device prestate differed from the source shape or application; recovery is unavailable. */
+  prestateDiffers: boolean; pointerObservations: System2PointerObservation[];
+  programVersionObservation: { expected: string; observed: string } | null;
+}
+/** `observed` is eight hex digits or "refused"; `operationIndex` is set only for in-procedure read-backs. */
+export interface System2PointerObservation {
+  phase: "prestate" | "inProcedure" | "final"; object: number; operationIndex: number | null; expected: string; observed: string; loadState: string;
 }
 export type RecoveryTrack = "knxbenchBestEffort" | "externalETS";
 export interface System2Start {
@@ -39,9 +48,18 @@ const previewCheck = object({ ...shared, preparationId: id, programId: nonempty,
   configurationSha256: digest, planSha256: digest, parameterValues: count, groupLinks: count, flagOverrides: count,
   steps: strings, dataOctets: count, allocationOctets: count, notWrittenOctets: count, warnings: strings,
   confirmationPhrase: nonempty, hypothesisPhrase: nonempty, downloadPhrase: nonempty, releasePhrase: nonempty });
+const hex8: Check = (v) => typeof v === "string" && /^[0-9a-f]{8}$/.test(v);
+const hexBytes: Check = (v) => typeof v === "string" && /^([0-9a-f]{2}){0,64}$/.test(v);
+const flag: Check = (v) => typeof v === "boolean";
+const observation = object({ phase: (v) => v === "prestate" || v === "inProcedure" || v === "final", object: (v) => count(v) && (v as number) <= 255,
+  operationIndex: nullable(count), expected: hex8, observed: (v) => v === "refused" || hex8(v), loadState: nonempty });
+const observations: Check = (v) => Array.isArray(v) && v.length <= 256 && v.every(observation) &&
+  v.every((o: { phase: string; operationIndex: number | null }) => (o.phase === "inProcedure") === (o.operationIndex !== null));
 const statusCheck = object({ ...shared, operationId: id, state: (v) => SYSTEM2_STATES.some((state) => state === v),
   completedSteps: count, totalSteps: nullable(count), backupAvailable: (v) => typeof v === "boolean", recoveryPhrase: nullable(nonempty),
-  downloadPhrase: nullable(nonempty), releasePhrase: nullable(nonempty), message: nullable(text) });
+  downloadPhrase: nullable(nonempty), releasePhrase: nullable(nonempty), message: nullable(text),
+  mutationMayHaveStarted: flag, prestateDiffers: flag, pointerObservations: observations,
+  programVersionObservation: nullable(object({ expected: hexBytes, observed: hexBytes })) });
 function checked<T>(value: unknown, check: Check): T {
   if (!check(value)) throw new Error("Invalid System-2 response; operation outcome is not confirmed.");
   return value as T;
@@ -51,6 +69,12 @@ function checkedStatus(value: unknown): System2Status {
   if (row.totalSteps !== null && row.completedSteps > row.totalSteps) throw new Error("Invalid System-2 checkpoint counts.");
   if (row.recoveryPhrase === null ? row.downloadPhrase !== null || row.releasePhrase !== null : row.downloadPhrase === null || row.releasePhrase === null) {
     throw new Error("Invalid System-2 original-operation recovery acknowledgements.");
+  }
+  // A differing prestate is never a recovery source. Evidence implies the flag; the
+  // flag alone may also stand for a placeholder serial, which the DTO never carries.
+  const differs = row.pointerObservations.some((o) => o.phase === "prestate") || row.programVersionObservation !== null;
+  if ((differs && !row.prestateDiffers) || (row.prestateDiffers && row.recoveryPhrase !== null)) {
+    throw new Error("Invalid System-2 prestate observations.");
   }
   return row;
 }

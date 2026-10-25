@@ -225,3 +225,83 @@ async fn recovery_evidence_is_fenced_from_file_routes_and_static_symlink_aliases
     }
     assert!(crate::paths::resolve_in_data_dir(directory.path(), super::ROOT_NAME).is_err());
 }
+
+fn settled_status(progress: knx_app::property_validation::OperationProgress) -> serde_json::Value {
+    let meta = metadata();
+    let record = super::Record {
+        metadata: meta.clone(),
+        progress,
+        updates: None,
+        task: None,
+        control_id: meta.operation_id,
+        message: None,
+    };
+    serde_json::to_value(record.view()).unwrap()
+}
+#[test]
+fn status_reports_whether_mutation_may_have_started_for_failed_operations() {
+    use knx_app::property_validation::LocalOutcome;
+    // Issue #30: a refusal before the durable backup barrier wrote nothing.
+    let refused = settled_status(super::initial(LocalOutcome::Failed));
+    assert_eq!(refused["state"], "failed");
+    assert_eq!(refused["mutationMayHaveStarted"], false);
+    // A mid-write failure keeps the conservative flag.
+    let mut progress = super::initial(LocalOutcome::Failed);
+    progress.mutation_possible = true;
+    progress.backup_available = true;
+    let mid_write = settled_status(progress);
+    assert_eq!(mid_write["mutationMayHaveStarted"], true);
+    let mut progress = super::initial(LocalOutcome::Cancelled);
+    progress.mutation_possible = true;
+    assert_eq!(settled_status(progress)["mutationMayHaveStarted"], true);
+}
+#[test]
+fn status_carries_prestate_observations_and_offers_no_recovery_after_a_difference() {
+    use knx_app::property_validation::{
+        LocalOutcome, PointerObservationPhase, PointerObservationProgress,
+    };
+    use knx_app::property_validation_bundle::PointerObservationRecord;
+    let mut progress = super::initial(LocalOutcome::Finished);
+    progress.backup_available = true;
+    progress.mutation_possible = true;
+    progress.prestate_differs = true;
+    progress.pointer_observations = vec![
+        PointerObservationProgress {
+            phase: PointerObservationPhase::Prestate,
+            operation_index: None,
+            record: PointerObservationRecord {
+                object: 3,
+                expected: [0, 0, 0x3c, 0],
+                observed: Some([0; 4]),
+                state: 1,
+            },
+        },
+        PointerObservationProgress {
+            phase: PointerObservationPhase::InProcedure,
+            operation_index: Some(4),
+            record: PointerObservationRecord {
+                object: 3,
+                expected: [0, 0, 0x3c, 0],
+                observed: None,
+                state: 2,
+            },
+        },
+    ];
+    progress.program_version_observation = Some(([0, 1, 0x92, 5, 4], Vec::new()));
+    let status = settled_status(progress);
+    assert_eq!(status["prestateDiffers"], true);
+    assert_eq!(
+        status["pointerObservations"],
+        serde_json::json!([
+            {"phase": "prestate", "object": 3, "operationIndex": null, "expected": "00003c00",
+                "observed": "00000000", "loadState": "Loaded"},
+            {"phase": "inProcedure", "object": 3, "operationIndex": 4, "expected": "00003c00",
+                "observed": "refused", "loadState": "Loading"}
+        ])
+    );
+    assert_eq!(
+        status["programVersionObservation"],
+        serde_json::json!({"expected": "0001920504", "observed": ""})
+    );
+    assert!(status["recoveryPhrase"].is_null());
+}

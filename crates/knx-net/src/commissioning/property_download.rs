@@ -17,7 +17,8 @@ use knx_core::IndividualAddress;
 
 use super::hardware_release::HardwareRelease;
 use super::property_recovery::{
-    self, ExperimentalPropertyPreconditions, PropertyJournalEvent, PropertyRecoverySnapshot,
+    self, ExperimentalPropertyPreconditions, PropertyInProcedurePointerObservation,
+    PropertyJournalEvent, PropertyPointerObservation, PropertyRecoverySnapshot,
 };
 use super::simulator::SimulatedDevice;
 use super::{ManagementSession, SessionError, SessionTiming};
@@ -170,10 +171,12 @@ pub async fn run_simulated_property_plan(
 }
 
 /// The shared mutation dispatcher for simulator, experimental execute and restore.
+/// Returns written data octets and, for an allocation/task record whose pointer
+/// read-back differs, that observation. The load-state result stays hard.
 async fn execute_property_mutation<T: ManagementTransport>(
     session: &mut ManagementSession<'_, T>,
     operation: &PropertyOperation,
-) -> Result<usize, PropertySimulationFailure> {
+) -> Result<(usize, Option<PropertyPointerObservation>), PropertySimulationFailure> {
     match operation {
         PropertyOperation::LoadControl { object, payload } => {
             let (found, expected) = match payload.event_octet() {
@@ -207,29 +210,32 @@ async fn execute_property_mutation<T: ManagementTransport>(
             }
             let bytes = payload.octets();
             if bytes[0] == 3 && bytes[1] <= 2 {
+                // An observation (owner amendment 3): ETS-programmed devices report
+                // pointers the source model does not predict. Writes use the plan's
+                // absolute addresses and the complete allocations are verified at the end.
                 let expected = u32::from(u16::from_be_bytes([bytes[2], bytes[3]])).to_be_bytes();
-                let found = session
-                    .read_property(
-                        ObjectIndex::new(*object),
-                        knx_core::commissioning::properties::PID_TABLE_REFERENCE,
-                        1,
-                        1,
-                    )
-                    .await?;
-                if found.as_slice() != expected {
-                    return Err(property_recovery::invalid(
-                        "absolute allocation/task pointer did not match source record",
+                let observed =
+                    property_recovery::read_pointer(session, ObjectIndex::new(*object)).await?;
+                if observed != Some(expected) {
+                    return Ok((
+                        0,
+                        Some(PropertyPointerObservation {
+                            object: *object,
+                            expected,
+                            observed,
+                            state: found,
+                        }),
                     ));
                 }
             }
-            Ok(0)
+            Ok((0, None))
         }
         PropertyOperation::WriteMemory { address, data, .. } => {
             let limit = session.write_limit(None).await?;
             session
                 .write_memory_region(u32::from(*address), data, limit)
                 .await?;
-            Ok(data.len())
+            Ok((data.len(), None))
         }
         _ => unreachable!("only mutating plan operations are dispatched"),
     }
@@ -241,6 +247,10 @@ async fn execute_property_mutation<T: ManagementTransport>(
 pub struct ExperimentalPropertyReport {
     pub execution: PropertySimulationReport,
     pub recovery: PropertyRecoverySnapshot,
+    /// Final pointer reads that differed from the source model; observations only.
+    pub final_pointer_observations: Vec<PropertyPointerObservation>,
+    /// Allocation/task pointer read-backs that differed from their record.
+    pub in_procedure_pointer_observations: Vec<PropertyInProcedurePointerObservation>,
 }
 
 /// Explicit opt-in experimental execution; all hardware-kind transports refuse.
@@ -400,6 +410,8 @@ pub async fn restore_experimental_property_plan_on_hardware<T: ManagementTranspo
 struct PropertyPlanExecution {
     execution: PropertySimulationReport,
     recovery: Option<PropertyRecoverySnapshot>,
+    final_pointer_observations: Vec<PropertyPointerObservation>,
+    in_procedure_pointer_observations: Vec<PropertyInProcedurePointerObservation>,
 }
 impl PropertyPlanExecution {
     fn experimental(self) -> ExperimentalPropertyReport {
@@ -408,6 +420,8 @@ impl PropertyPlanExecution {
             recovery: self
                 .recovery
                 .expect("experimental validated hardware guard captured recovery"),
+            final_pointer_observations: self.final_pointer_observations,
+            in_procedure_pointer_observations: self.in_procedure_pointer_observations,
         }
     }
 }
@@ -471,6 +485,8 @@ async fn run_property_plan_inner<T: ManagementTransport>(
     let mut data_octets = 0;
     let mut mutation_may_have_started = false;
     let mut recovery = None;
+    let mut final_pointer_observations = Vec::new();
+    let mut in_procedure_pointer_observations = Vec::new();
     for (operation_index, step) in plan.steps().iter().enumerate() {
         let result: Result<(), PropertySimulationFailure> = async {
             if abort_requested() {
@@ -494,7 +510,8 @@ async fn run_property_plan_inner<T: ManagementTransport>(
                     validate_hardware(&mut session, *expected).await?;
                     if let Some(preconditions) = preconditions {
                         let snapshot = if let Some(snapshot) = restore {
-                            property_recovery::validate_serial(&mut session, preconditions).await?;
+                            property_recovery::validate_recovery_serial(&mut session, snapshot)
+                                .await?;
                             snapshot.clone()
                         } else {
                             property_recovery::acquire(&mut session, plan, preconditions).await?
@@ -521,12 +538,32 @@ async fn run_property_plan_inner<T: ManagementTransport>(
                 }
                 PropertyOperation::LoadControl { .. } | PropertyOperation::WriteMemory { .. } => {
                     mutation_may_have_started = true;
-                    data_octets += execute_property_mutation(&mut session, &step.operation).await?;
+                    let (octets, observation) =
+                        execute_property_mutation(&mut session, &step.operation).await?;
+                    data_octets += octets;
+                    if let Some(observation) = observation {
+                        let observation = PropertyInProcedurePointerObservation {
+                            operation_index,
+                            observation,
+                        };
+                        journal(PropertyJournalEvent::InProcedurePointerObservation(
+                            &observation,
+                        ))
+                        .map_err(PropertySimulationFailure::Persistence)?;
+                        in_procedure_pointer_observations.push(observation);
+                    }
                 }
                 PropertyOperation::ToolMetadata { .. } => {}
                 PropertyOperation::Disconnect => {
                     if let Some(snapshot) = &recovery {
-                        snapshot.verify_outcome(&mut session, plan).await?;
+                        final_pointer_observations =
+                            snapshot.verify_outcome(&mut session, plan).await?;
+                        if !final_pointer_observations.is_empty() {
+                            journal(PropertyJournalEvent::FinalPointerObservations(
+                                &final_pointer_observations,
+                            ))
+                            .map_err(PropertySimulationFailure::Persistence)?;
+                        }
                     }
                     session.disconnect().await;
                 }
@@ -561,6 +598,8 @@ async fn run_property_plan_inner<T: ManagementTransport>(
             data_octets,
         },
         recovery,
+        final_pointer_observations,
+        in_procedure_pointer_observations,
     })
 }
 

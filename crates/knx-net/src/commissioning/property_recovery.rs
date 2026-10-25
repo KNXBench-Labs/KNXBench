@@ -37,6 +37,8 @@ pub struct ExperimentalPropertyPreconditions {
     pub original_plan: PropertyDownloadPlan,
     pub serial: [u8; 6],
     pub program_version: [u8; 5],
+    /// Serial from preparation. An expectation, not download admission: acquisition
+    /// records a different device serial as an observation (owner ruling 2026-10-25).
     /// Experimental last absolute/task-segment reference model, four octets
     /// only. This explicit source expectation is not a physical profile proof.
     pub source_pointers: Vec<PropertyResourcePointer>,
@@ -139,12 +141,85 @@ pub struct PropertyRecoveryRegion {
     pub address: u16,
     pub data: Vec<u8>,
 }
-/// An observed stable Loaded state and exact source-applicable pointer.
+/// The stable load state and four-octet PID_TABLE_REFERENCE actually read before
+/// any write (`None`: the device refused the read). Equal to the source
+/// expectation unless a prestate difference was observed.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PropertyRecoveryResource {
     pub object: u8,
     pub state: LoadState,
-    pub pointer: [u8; 4],
+    pub pointer: Option<[u8; 4]>,
+}
+/// Device serial read before any write that differs from the prepared one.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PropertySerialObservation {
+    pub expected: [u8; 6],
+    pub observed: [u8; 6],
+}
+impl std::fmt::Display for PropertySerialObservation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let hex = |b: &[u8; 6]| b.iter().map(|o| format!("{o:02x}")).collect::<String>();
+        write!(
+            f,
+            "serial number: expected {}, observed {}",
+            hex(&self.expected),
+            hex(&self.observed)
+        )
+    }
+}
+/// Object 3 PID_PROGRAM_VERSION read before any write that differs from the plan's.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PropertyProgramVersionObservation {
+    pub expected: [u8; 5],
+    /// Empty when the device refused the read.
+    pub observed: Vec<u8>,
+}
+impl std::fmt::Display for PropertyProgramVersionObservation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let hex = |b: &[u8]| b.iter().map(|o| format!("{o:02x}")).collect::<String>();
+        let observed = if self.observed.is_empty() {
+            "refused".to_string()
+        } else {
+            hex(&self.observed)
+        };
+        write!(
+            f,
+            "program version: expected {}, observed {observed}",
+            hex(&self.expected)
+        )
+    }
+}
+/// A per-object difference between the source pointer model and a device read.
+/// An observation, never proof: the source model itself is not physically verified.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PropertyPointerObservation {
+    pub object: u8,
+    pub expected: [u8; 4],
+    /// `None` when the device refused the read with zero elements.
+    pub observed: Option<[u8; 4]>,
+    pub state: LoadState,
+}
+impl std::fmt::Display for PropertyPointerObservation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let observed = self.observed.map_or_else(
+            || "refused".to_string(),
+            |o| format!("{:08x}", u32::from_be_bytes(o)),
+        );
+        write!(
+            f,
+            "object {}: expected PID_TABLE_REFERENCE {:08x}, observed {observed}, load state {}",
+            self.object,
+            u32::from_be_bytes(self.expected),
+            self.state
+        )
+    }
+}
+/// A PID_TABLE_REFERENCE read-back right after an allocation/task record that
+/// differs from that record. Observation only (owner amendment 3, 2026-10-25).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PropertyInProcedurePointerObservation {
+    pub operation_index: usize,
+    pub observation: PropertyPointerObservation,
 }
 /// Versioned operation-specific recovery, not a raw persistent-device backup.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -152,6 +227,12 @@ pub struct PropertyRecoverySnapshot {
     pub version: u16,
     pub original_plan: PropertyDownloadPlan,
     pub preconditions: ExperimentalPropertyPreconditions,
+    /// Serial actually read before any write. Recovery replay is bound to it,
+    /// because the captured bytes belong to that one physical device.
+    pub observed_serial: [u8; 6],
+    /// PID_PROGRAM_VERSION of object 3 read before any write; empty when the
+    /// device refused the read. Observation only; the download writes the identity.
+    pub observed_program_version: Vec<u8>,
     pub old_device_control: u8,
     pub resources: Vec<PropertyRecoveryResource>,
     /// Full declared absolute allocation intervals, including unwritten/masked bytes.
@@ -160,9 +241,83 @@ pub struct PropertyRecoverySnapshot {
     pub regions: Vec<PropertyRecoveryRegion>,
 }
 impl PropertyRecoverySnapshot {
+    /// The device serial differed from the preparation's; observation only.
+    pub fn serial_observation(&self) -> Option<PropertySerialObservation> {
+        (self.observed_serial != self.preconditions.serial).then_some(PropertySerialObservation {
+            expected: self.preconditions.serial,
+            observed: self.observed_serial,
+        })
+    }
+
+    /// The prior application identity differed from the plan's; observation only.
+    pub fn program_version_observation(&self) -> Option<PropertyProgramVersionObservation> {
+        (self.observed_program_version != self.preconditions.program_version).then(|| {
+            PropertyProgramVersionObservation {
+                expected: self.preconditions.program_version,
+                observed: self.observed_program_version.clone(),
+            }
+        })
+    }
+
+    /// Objects whose captured prestate was not Loaded at the source pointer.
+    /// Empty for every snapshot that matches the source allocation shape.
+    pub fn prestate_observations(&self) -> Vec<PropertyPointerObservation> {
+        self.resources
+            .iter()
+            .zip(&self.preconditions.source_pointers)
+            .filter(|(resource, expected)| {
+                resource.state != LoadState::Loaded || resource.pointer != Some(expected.value)
+            })
+            .map(|(resource, expected)| PropertyPointerObservation {
+                object: resource.object,
+                expected: expected.value,
+                observed: resource.pointer,
+                state: resource.state,
+            })
+            .collect()
+    }
+
     /// Rebind persisted evidence to the complete exact original operation list.
     /// Only old WriteMemory data may differ; no commands are recovered from PID5.
+    /// Refused after a prestate difference: the captured bytes then do not
+    /// describe the device's actual allocation, so no backup is fabricated.
     pub fn recovery_plan(
+        &self,
+        original: &PropertyDownloadPlan,
+    ) -> Result<PropertyDownloadPlan, PropertySimulationFailure> {
+        let plan = self.checked_plan(original)?;
+        if let Some(observation) = self.program_version_observation() {
+            return Err(PropertySimulationFailure::Recovery(format!(
+                "original-state recovery unavailable: captured prestate belongs to a different application ({observation})"
+            )));
+        }
+        if self.observed_serial == [0; 6] || self.observed_serial == [0xFF; 6] {
+            return Err(PropertySimulationFailure::Recovery(format!(
+                "original-state recovery unavailable: captured serial number {} cannot bind replay to one physical device",
+                self.observed_serial.iter().map(|o| format!("{o:02x}")).collect::<String>()
+            )));
+        }
+        let observations = self.prestate_observations();
+        if !observations.is_empty() {
+            let details: Vec<String> = observations.iter().map(ToString::to_string).collect();
+            return Err(PropertySimulationFailure::Recovery(format!(
+                "original-state recovery unavailable: device prestate differed from source allocation shape ({})",
+                details.join("; ")
+            )));
+        }
+        Ok(plan)
+    }
+
+    /// Check persisted evidence binding and coverage without requiring that the
+    /// prestate matched the source shape. Loading evidence is not recovery admission.
+    pub fn validate_evidence(
+        &self,
+        original: &PropertyDownloadPlan,
+    ) -> Result<(), PropertySimulationFailure> {
+        self.checked_plan(original).map(|_| ())
+    }
+
+    fn checked_plan(
         &self,
         original: &PropertyDownloadPlan,
     ) -> Result<PropertyDownloadPlan, PropertySimulationFailure> {
@@ -177,11 +332,7 @@ impl PropertyRecoverySnapshot {
                 .resources
                 .iter()
                 .zip(&self.preconditions.source_pointers)
-                .any(|(resource, expected)| {
-                    resource.object != expected.object
-                        || resource.state != LoadState::Loaded
-                        || resource.pointer != expected.value
-                })
+                .any(|(resource, expected)| resource.object != expected.object)
         {
             return Err(invalid(
                 "snapshot resource coverage differs from original source shape",
@@ -238,11 +389,14 @@ impl PropertyRecoverySnapshot {
             .map_err(|_| invalid("old memory payloads change procedure shape"))
     }
 
+    /// Memory, final Loaded state and program version are verification; a final
+    /// PID_TABLE_REFERENCE that differs from the source model is returned as an
+    /// observation, because that model is itself unverified.
     pub(crate) async fn verify_outcome<T: ManagementTransport>(
         &self,
         session: &mut ManagementSession<'_, T>,
         executed_plan: &PropertyDownloadPlan,
-    ) -> Result<(), PropertySimulationFailure> {
+    ) -> Result<Vec<PropertyPointerObservation>, PropertySimulationFailure> {
         let limit = session.write_limit(None).await?;
         for allocation in &self.allocations {
             let mut expected = allocation.data.clone();
@@ -267,22 +421,20 @@ impl PropertyRecoverySnapshot {
                 ));
             }
         }
-        for resource in &self.resources {
-            let object = ObjectIndex::new(resource.object);
-            if session.read_load_state(object).await? != resource.state {
-                return Err(invalid(
-                    "final resource state differs from captured Loaded state",
-                ));
+        let mut observations = Vec::new();
+        for expected in &self.preconditions.source_pointers {
+            let object = ObjectIndex::new(expected.object);
+            if session.read_load_state(object).await? != LoadState::Loaded {
+                return Err(invalid("final resource state is not Loaded"));
             }
-            if session
-                .read_property(object, PID_TABLE_REFERENCE, 1, 1)
-                .await?
-                .as_slice()
-                != resource.pointer
-            {
-                return Err(invalid(
-                    "final resource pointer differs from captured source shape",
-                ));
+            let observed = read_pointer(session, object).await?;
+            if observed != Some(expected.value) {
+                observations.push(PropertyPointerObservation {
+                    object: expected.object,
+                    expected: expected.value,
+                    observed,
+                    state: LoadState::Loaded,
+                });
             }
         }
         // Interrupted current application identity may be absent at recovery start,
@@ -314,7 +466,7 @@ impl PropertyRecoverySnapshot {
         if session.read_device_control().await? != wanted {
             return Err(invalid("prior VerifyMode bit did not restore"));
         }
-        Ok(())
+        Ok(observations)
     }
 }
 
@@ -333,39 +485,50 @@ pub enum PropertyJournalEvent<'a> {
         source_index: usize,
         mutation_may_have_started: bool,
     },
+    /// Final PID_TABLE_REFERENCE values that differ from the source model after
+    /// an otherwise verified outcome. Sent only when non-empty, before disconnect.
+    FinalPointerObservations(&'a [PropertyPointerObservation]),
+    /// An allocation/task read-back that differed from its record; sent before
+    /// this operation completes, so before the next mutation.
+    InProcedurePointerObservation(&'a PropertyInProcedurePointerObservation),
 }
 
 pub(crate) fn invalid(reason: &str) -> PropertySimulationFailure {
     PropertySimulationFailure::Recovery(reason.to_string())
 }
 
-pub(crate) async fn validate_serial<T: ManagementTransport>(
+/// Recovery only: captured bytes belong to the device read at acquisition, so
+/// replaying them onto another serial would write foreign memory. Not download admission.
+pub(crate) async fn validate_recovery_serial<T: ManagementTransport>(
     session: &mut ManagementSession<'_, T>,
-    preconditions: &ExperimentalPropertyPreconditions,
+    snapshot: &PropertyRecoverySnapshot,
 ) -> Result<(), PropertySimulationFailure> {
     let serial = session.read_serial_number().await?;
-    if serial.octets() != preconditions.serial {
+    if serial.octets() != snapshot.observed_serial {
         return Err(invalid(
-            "serial number differs from exact expected identity",
+            "recovery refused: device serial number differs from the device whose prestate was captured",
         ));
     }
     Ok(())
 }
 
-pub(crate) async fn validate_identity<T: ManagementTransport>(
+/// Serial and current program version are read for the snapshot and never
+/// compared: the download itself writes the application identity (owner rulings
+/// 2026-10-25). Hardware type, mask and manufacturer remain the hard pre-write checks.
+pub(crate) async fn read_identity<T: ManagementTransport>(
     session: &mut ManagementSession<'_, T>,
-    preconditions: &ExperimentalPropertyPreconditions,
-) -> Result<(), PropertySimulationFailure> {
-    validate_serial(session, preconditions).await?;
-    let version = session
+) -> Result<([u8; 6], Vec<u8>), PropertySimulationFailure> {
+    let serial = session.read_serial_number().await?.octets();
+    let version = match session
         .read_property(ObjectIndex::APPLICATION_PROGRAM, PID_PROGRAM_VERSION, 1, 1)
-        .await?;
-    if version.as_slice() != preconditions.program_version {
-        return Err(invalid(
-            "program version differs from same-application precondition",
-        ));
-    }
-    Ok(())
+        .await
+    {
+        Ok(version) => version,
+        // An unloaded device may refuse the read; that is an observation too.
+        Err(SessionError::PropertyRefused { .. }) => Vec::new(),
+        Err(error) => return Err(error.into()),
+    };
+    Ok((serial, version))
 }
 
 pub(crate) async fn read_region<T: ManagementTransport>(
@@ -389,33 +552,43 @@ pub(crate) async fn read_region<T: ManagementTransport>(
     Ok(bytes)
 }
 
+/// `Ok(None)` for a zero-element refusal, an observation; transport errors,
+/// timeouts and malformed lengths stay errors.
+pub(crate) async fn read_pointer<T: ManagementTransport>(
+    session: &mut ManagementSession<'_, T>,
+    object: ObjectIndex,
+) -> Result<Option<[u8; 4]>, PropertySimulationFailure> {
+    match session
+        .read_property(object, PID_TABLE_REFERENCE, 1, 1)
+        .await
+    {
+        Ok(bytes) => bytes
+            .as_slice()
+            .try_into()
+            .map(Some)
+            .map_err(|_| invalid("resource pointer response is not four octets")),
+        Err(SessionError::PropertyRefused { .. }) => Ok(None),
+        Err(error) => Err(error.into()),
+    }
+}
+
 pub(crate) async fn acquire<T: ManagementTransport>(
     session: &mut ManagementSession<'_, T>,
     plan: &PropertyDownloadPlan,
     preconditions: &ExperimentalPropertyPreconditions,
 ) -> Result<PropertyRecoverySnapshot, PropertySimulationFailure> {
-    validate_identity(session, preconditions).await?;
+    let (observed_serial, observed_program_version) = read_identity(session).await?;
+    // A prestate that differs from the source shape is recorded, not refused
+    // (issue #30); recovery_plan() then refuses original-state recovery.
     let mut resources = Vec::new();
     for expected in &preconditions.source_pointers {
         let object = ObjectIndex::new(expected.object);
         let state = session.read_load_state(object).await?;
-        if state != LoadState::Loaded {
-            return Err(invalid(
-                "recovery acquisition requires every touched resource Loaded",
-            ));
-        }
-        let pointer = session
-            .read_property(object, PID_TABLE_REFERENCE, 1, 1)
-            .await?;
-        if pointer.as_slice() != expected.value {
-            return Err(invalid(
-                "current resource pointer differs from original source allocation shape",
-            ));
-        }
+        let pointer = read_pointer(session, object).await?;
         resources.push(PropertyRecoveryResource {
             object: expected.object,
             state,
-            pointer: expected.value,
+            pointer,
         });
     }
     let limit = session.write_limit(None).await?;
@@ -447,10 +620,10 @@ pub(crate) async fn acquire<T: ManagementTransport>(
         if session
             .read_load_state(ObjectIndex::new(resource.object))
             .await?
-            != LoadState::Loaded
+            != resource.state
         {
             return Err(invalid(
-                "resource ceased to be Loaded during recovery acquisition",
+                "resource load state changed during recovery acquisition",
             ));
         }
     }
@@ -458,6 +631,8 @@ pub(crate) async fn acquire<T: ManagementTransport>(
         version: 1,
         original_plan: plan.clone(),
         preconditions: preconditions.clone(),
+        observed_serial,
+        observed_program_version,
         old_device_control,
         resources,
         allocations,

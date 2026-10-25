@@ -42,6 +42,8 @@ pub struct ProjectHardwareSource {
 }
 
 /// Identity observed through a read-only management session. Not a pre-write backup.
+/// Mask, manufacturer and hardware type must match the source; serial and current
+/// program version are observations only (owner rulings 2026-10-25).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct HardwareObservation {
@@ -50,7 +52,12 @@ pub struct HardwareObservation {
     pub mask: u16,
     pub manufacturer: u16,
     pub hardware: [u8; 6],
+    /// The plan's application identity, which the download writes.
     pub application: [u8; 5],
+    /// The device's current PID_PROGRAM_VERSION when it differed from
+    /// `application` (empty: read refused); absent when equal (Alpha 16 grammar).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub observed_application: Option<Vec<u8>>,
 }
 
 /// Separate versioned hardware admission evidence; v2 project candidates remain unchanged.
@@ -84,9 +91,18 @@ impl ProjectHardwareRecord {
             || binding.simulated
             || self.source_preparation_sha256 != source.sha256()?
             || binding.project_preparation_sha256.as_ref() != Some(&self.sha256()?)
-            || self.observation != observation_for(binding)
-            || self.observation.serial == [0; 6]
-            || self.observation.serial == [0xff; 6]
+            || self.observation
+                != observation_for(binding, self.observation.observed_application.clone())
+            || self
+                .observation
+                .observed_application
+                .as_ref()
+                .is_some_and(|observed| {
+                    observed.as_slice() == binding.application || observed.len() > 64
+                })
+            // Only the synthetic marker guards against a simulator preparation
+            // posing as real. Zero/all-FF serials are observations (amendment 3);
+            // recovery is unavailable for them, not the download.
             || self.observation.serial == [0x53, 0x49, 0x4d, 0, 0, 1]
         {
             return Err(invalid(
@@ -102,7 +118,10 @@ impl ProjectHardwareRecord {
         source.validate(&source_binding, plan)
     }
 }
-fn observation_for(binding: &Binding) -> HardwareObservation {
+fn observation_for(
+    binding: &Binding,
+    observed_application: Option<Vec<u8>>,
+) -> HardwareObservation {
     HardwareObservation {
         target: binding.target.clone(),
         serial: binding.serial,
@@ -110,6 +129,7 @@ fn observation_for(binding: &Binding) -> HardwareObservation {
         manufacturer: binding.manufacturer,
         hardware: binding.hardware,
         application: binding.application,
+        observed_application,
     }
 }
 fn valid_operation(operation: &str) -> io::Result<()> {
@@ -325,34 +345,44 @@ pub async fn observe_project_hardware<T: ManagementTransport>(
             .read_property(ObjectIndex::DEVICE, PID_HARDWARE_TYPE, 1, 1)
             .await
             .map_err(io::Error::other)?;
-        let application = session
+        // An unloaded device may refuse the read; that is an observation too.
+        let application = match session
             .read_property(ObjectIndex::APPLICATION_PROGRAM, PID_PROGRAM_VERSION, 1, 1)
             .await
-            .map_err(io::Error::other)?;
+        {
+            Ok(application) => application,
+            Err(knx_net::commissioning::SessionError::PropertyRefused { .. }) => Vec::new(),
+            Err(error) => return Err(io::Error::other(error)),
+        };
         if mask != bundle.binding.mask
             || manufacturer != bundle.binding.manufacturer
             || hardware.as_slice() != bundle.binding.hardware
-            || application.as_slice() != bundle.binding.application
         {
             return Err(invalid(
-                "observed hardware/mask/manufacturer/application differs from configured source",
+                "observed hardware/mask/manufacturer differs from configured source",
             ));
         }
         if cancel.load(Ordering::SeqCst) {
             return Err(invalid("hardware preparation cancelled"));
         }
-        Ok(serial)
+        Ok((serial, application))
     }
     .await;
     session.disconnect().await;
-    bundle.binding.serial = observed?;
+    let (serial, application) = observed?;
+    bundle.binding.serial = serial;
+    if application.len() > 64 {
+        return Err(invalid("program version response exceeds its bound"));
+    }
+    let observed_application =
+        (application.as_slice() != bundle.binding.application).then_some(application);
     bundle.binding.simulated = false;
     let record = ProjectHardwareRecord {
         revision: 1,
         operation: source.operation,
         recovery_track: source.recovery,
         recovery_basis: BASIS.into(),
-        observation: observation_for(&bundle.binding),
+        observation: observation_for(&bundle.binding, observed_application),
         source_preparation_sha256: bundle
             .project_preparation
             .as_ref()
@@ -449,10 +479,11 @@ pub fn validate_project_hardware_recovery(
         ));
     }
     store.require_restore_available()?;
-    store
+    let snapshot = store
         .recovery()
         .ok_or_else(|| invalid("original actual prestate unavailable"))?
         .to_snapshot(bundle)?;
+    crate::property_validation_execution::refuse_unavailable_recovery(&snapshot, bundle)?;
     if confirmations.recovery != bundle.restore_phrase()
         || confirmations.download
             != knx_core::commissioning::mutation::required_confirmation_phrase(

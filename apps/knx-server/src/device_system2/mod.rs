@@ -15,11 +15,12 @@ use crate::{errors::ApiError, SharedState};
 use dto::{refuse, Binding, Metadata, Status};
 use knx_app::{
     property_validation::{
-        LocalOutcome, OperationProgress, System2DrainOutcome, System2OperationControl,
-        System2Settlement,
+        LocalOutcome, OperationProgress, PointerObservationPhase, System2DrainOutcome,
+        System2OperationControl, System2Settlement,
     },
     system2_validation_preparation::ProjectHardwareSource,
 };
+use knx_core::commissioning::load_state::LoadState;
 use std::{
     path::Path,
     sync::{Arc, Mutex},
@@ -50,6 +51,9 @@ fn initial(outcome: LocalOutcome) -> OperationProgress {
         restore_available: false,
         mutation_possible: false,
         recovery_phrases: None,
+        prestate_differs: false,
+        pointer_observations: Vec::new(),
+        program_version_observation: None,
     }
 }
 impl Record {
@@ -111,6 +115,35 @@ impl Record {
             download_phrase: phrases.as_ref().map(|p| p.download_phrase.clone()),
             release_phrase: phrases.map(|p| p.release_phrase),
             message: self.message,
+            mutation_may_have_started: p.mutation_possible,
+            prestate_differs: p.prestate_differs,
+            pointer_observations: p
+                .pointer_observations
+                .iter()
+                .map(|o| dto::PointerObservation {
+                    phase: match o.phase {
+                        PointerObservationPhase::Prestate => "prestate",
+                        PointerObservationPhase::InProcedure => "inProcedure",
+                        PointerObservationPhase::Final => "final",
+                    },
+                    object: o.record.object,
+                    operation_index: o.operation_index,
+                    expected: dto::hex(&o.record.expected),
+                    observed: o
+                        .record
+                        .observed
+                        .map_or_else(|| "refused".into(), |p| dto::hex(&p)),
+                    load_state: LoadState::from_octet(o.record.state)
+                        .map(|s| s.to_string())
+                        .unwrap_or_else(|_| "Unknown".into()),
+                })
+                .collect(),
+            program_version_observation: p.program_version_observation.as_ref().map(
+                |(expected, observed)| dto::ProgramVersionObservation {
+                    expected: dto::hex(expected),
+                    observed: dto::hex(observed),
+                },
+            ),
         }
     }
 }

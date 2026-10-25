@@ -347,12 +347,14 @@ fn property_validation_recovery_record_refuses_partial_regions() {
             &plan, SERIAL, VERSION,
         )
         .unwrap(),
+        observed_serial: SERIAL,
+        observed_program_version: VERSION.to_vec(),
         old_device_control: 0,
         resources: vec![
             knx_net::commissioning::property_recovery::PropertyRecoveryResource {
                 object: 3,
                 state: LoadState::Loaded,
-                pointer: [0, 0, 0x3c, 0],
+                pointer: Some([0, 0, 0x3c, 0]),
             },
         ],
         regions: vec![],
@@ -429,4 +431,304 @@ async fn property_validation_execute_hardware_refuses_wrong_phrases_before_any_f
         "a wrong download confirmation must refuse before any frame"
     );
     assert!(device.seen().is_empty());
+}
+fn checkpoint_text(path: &std::path::Path) -> String {
+    let mut files: Vec<_> = std::fs::read_dir(path)
+        .unwrap()
+        .map(|e| e.unwrap())
+        .filter(|e| e.file_name().to_string_lossy().starts_with("checkpoint-"))
+        .collect();
+    files.sort_by_key(|e| e.file_name());
+    files
+        .iter()
+        .map(|e| std::fs::read_to_string(e.path()).unwrap())
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+#[tokio::test]
+async fn property_validation_prestate_pointer_mismatch_finishes_and_blocks_original_state_recovery()
+{
+    // Issue #30: no shape-establishing run; the device answers PID 7 = 0 while
+    // the source record says 3C00h. The owner ruling allows the download.
+    let (device, bundle) = fixture();
+    device.preset_memory(0x3c00, &[9, 8, 7, 6]);
+    let temp = tempfile::tempdir().unwrap();
+    let path = temp.path().join("op");
+    let mut store = OperationStore::create(&path, bundle.binding.clone()).unwrap();
+    app::execute_simulated(
+        &device,
+        &bundle,
+        &mut store,
+        timing(),
+        &AtomicBool::new(false),
+    )
+    .await
+    .expect("prestate pointer mismatch is an observation, not a refusal");
+    assert_eq!(store.outcome(), LocalOutcome::Finished);
+    assert_eq!(
+        device.memory(0x3c00, 4),
+        [Some(1), Some(2), Some(3), Some(4)]
+    );
+    let recovery = store.recovery().unwrap();
+    assert_eq!(recovery.resources[0].pointer, [0; 4]);
+    let journal = checkpoint_text(&path);
+    assert!(journal.contains("prestate_observations"), "{journal}");
+    drop(store);
+    let mut fresh = OperationStore::open(&path, &bundle.binding).unwrap();
+    assert!(!fresh.progress().restore_available);
+    assert!(fresh.progress().backup_available);
+    let before = checkpoint_text(&path);
+    let error = app::restore_simulated(
+        &device,
+        &bundle,
+        &mut fresh,
+        timing(),
+        &AtomicBool::new(false),
+        &bundle.restore_phrase(),
+    )
+    .await
+    .unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .contains("original-state recovery unavailable"),
+        "{error}"
+    );
+    assert_eq!(checkpoint_text(&path), before, "refusal appends nothing");
+    assert_eq!(
+        device.memory(0x3c00, 4),
+        [Some(1), Some(2), Some(3), Some(4)]
+    );
+}
+#[tokio::test]
+async fn property_validation_alpha16_recovery_record_without_observations_still_loads() {
+    let (device, bundle) = fixture();
+    establish(&device, &bundle).await;
+    let temp = tempfile::tempdir().unwrap();
+    let path = temp.path().join("op");
+    let mut store = OperationStore::create(&path, bundle.binding.clone()).unwrap();
+    app::execute_simulated(
+        &device,
+        &bundle,
+        &mut store,
+        timing(),
+        &AtomicBool::new(false),
+    )
+    .await
+    .unwrap();
+    // The Alpha 16 RecoveryRecord grammar: exactly these keys, nothing else.
+    let value = serde_json::to_value(store.recovery().unwrap()).unwrap();
+    let mut keys: Vec<_> = value.as_object().unwrap().keys().cloned().collect();
+    keys.sort();
+    assert_eq!(
+        keys,
+        [
+            "allocations",
+            "old_device_control",
+            "original_bundle",
+            "regions",
+            "resources",
+            "version"
+        ]
+    );
+    let old: RecoveryRecord = serde_json::from_value(value).unwrap();
+    let snapshot = old.to_snapshot(&bundle).unwrap();
+    assert!(snapshot.recovery_plan(&bundle.plan().unwrap()).is_ok());
+    drop(store);
+    let fresh = OperationStore::open(&path, &bundle.binding).unwrap();
+    assert!(fresh.progress().restore_available);
+}
+#[tokio::test]
+async fn property_validation_differing_serial_is_recorded_and_recovery_stays_bound_to_it() {
+    let (device, bundle) = fixture();
+    establish(&device, &bundle).await;
+    let observed = [0, 2, 9, 9, 9, 9];
+    device.preset_property(0, 11, &observed);
+    let temp = tempfile::tempdir().unwrap();
+    let path = temp.path().join("op");
+    let mut store = OperationStore::create(&path, bundle.binding.clone()).unwrap();
+    app::execute_simulated(
+        &device,
+        &bundle,
+        &mut store,
+        timing(),
+        &AtomicBool::new(false),
+    )
+    .await
+    .expect("serial is an observation, not download admission");
+    assert_eq!(store.outcome(), LocalOutcome::Finished);
+    assert_eq!(store.recovery().unwrap().observed_serial, Some(observed));
+    assert!(checkpoint_text(&path).contains("observed_serial"));
+    drop(store);
+    // A third device of the same type now answers: the captured bytes are foreign to it.
+    device.preset_property(0, 11, &[0, 2, 7, 7, 7, 7]);
+    let mut fresh = OperationStore::open(&path, &bundle.binding).unwrap();
+    assert!(fresh.progress().restore_available);
+    let error = app::restore_simulated(
+        &device,
+        &bundle,
+        &mut fresh,
+        timing(),
+        &AtomicBool::new(false),
+        &bundle.restore_phrase(),
+    )
+    .await
+    .unwrap_err();
+    assert!(
+        error.to_string().contains("explicit restore failed"),
+        "{error}"
+    );
+    let journal = checkpoint_text(&path);
+    assert!(journal.contains("serial number differs"), "{journal}");
+    assert_eq!(fresh.outcome(), LocalOutcome::RestoreFailed);
+    assert_eq!(
+        device.memory(0x3c00, 4),
+        [Some(1), Some(2), Some(3), Some(4)]
+    );
+}
+#[tokio::test]
+async fn property_validation_different_prior_program_version_record_blocks_original_state_recovery()
+{
+    // The simulator plan writes no identity record, so build the evidence from a
+    // matching acquisition and mark the prior application as different.
+    let (device, bundle) = fixture();
+    establish(&device, &bundle).await;
+    let temp = tempfile::tempdir().unwrap();
+    let path = temp.path().join("op");
+    let mut store = OperationStore::create(&path, bundle.binding.clone()).unwrap();
+    app::execute_simulated(
+        &device,
+        &bundle,
+        &mut store,
+        timing(),
+        &AtomicBool::new(false),
+    )
+    .await
+    .unwrap();
+    let mut record = store.recovery().unwrap().clone();
+    drop(store);
+    record.observed_program_version = Some(vec![0, 2, 0x12, 0x34, 9]);
+    let snapshot = record.to_snapshot(&bundle).expect("evidence still loads");
+    assert_eq!(
+        snapshot.observed_program_version,
+        [0, 2, 0x12, 0x34, 9].to_vec()
+    );
+    let reason = match snapshot.recovery_plan(&bundle.plan().unwrap()) {
+        Err(failure) => format!("{failure:?}"),
+        Ok(_) => panic!("recovery must be unavailable"),
+    };
+    assert!(reason.contains("different application"), "{reason}");
+    // Equal values are never recorded twice (one canonical Alpha 16 encoding).
+    record.observed_program_version = Some(VERSION.to_vec());
+    assert!(record.to_snapshot(&bundle).is_err());
+    let path = temp.path().join("op2");
+    let mut store = OperationStore::create(&path, bundle.binding.clone()).unwrap();
+    record.observed_program_version = Some(Vec::new());
+    store
+        .checkpoint(Checkpoint::RecoveryAcquired { recovery: record })
+        .unwrap();
+    store
+        .checkpoint(Checkpoint::Failed {
+            code: app::FailureCode::Executor,
+            local_diagnostic: "synthetic".into(),
+        })
+        .unwrap();
+    drop(store);
+    let fresh = OperationStore::open(&path, &bundle.binding).unwrap();
+    let progress = fresh.progress();
+    assert!(progress.prestate_differs);
+    assert!(!progress.restore_available);
+    assert_eq!(
+        progress.program_version_observation,
+        Some((VERSION, Vec::new()))
+    );
+}
+#[tokio::test]
+async fn property_validation_refused_pointer_and_in_procedure_observations_persist() {
+    use knx_app::property_validation::PointerObservationPhase;
+    use knx_app::property_validation_bundle::PointerObservationRecord;
+    let (device, bundle) = fixture();
+    establish(&device, &bundle).await;
+    let temp = tempfile::tempdir().unwrap();
+    let mut store =
+        OperationStore::create(&temp.path().join("op"), bundle.binding.clone()).unwrap();
+    app::execute_simulated(
+        &device,
+        &bundle,
+        &mut store,
+        timing(),
+        &AtomicBool::new(false),
+    )
+    .await
+    .unwrap();
+    let alpha16 = store.recovery().unwrap().clone();
+    // Alpha 16 resource grammar: exactly object, pointer, state.
+    let value = serde_json::to_value(&alpha16.resources[0]).unwrap();
+    let mut keys: Vec<_> = value.as_object().unwrap().keys().cloned().collect();
+    keys.sort();
+    assert_eq!(keys, ["object", "pointer", "state"]);
+    // A refused PID 7 read is persisted explicitly and blocks recovery.
+    let mut snapshot = alpha16.to_snapshot(&bundle).unwrap();
+    snapshot.resources[0].pointer = None;
+    let record = RecoveryRecord::from_snapshot(&snapshot, &bundle).unwrap();
+    let json = serde_json::to_string(&record).unwrap();
+    assert!(json.contains("\"pointer_refused\":true"), "{json}");
+    assert!(json.contains("\"observed\":null"), "{json}");
+    assert_eq!(record.to_snapshot(&bundle).unwrap(), snapshot);
+    let reason = format!("{:?}", snapshot.recovery_plan(&bundle.plan().unwrap()));
+    assert!(reason.contains("observed refused"), "{reason}");
+    let mut forged = record.clone();
+    forged.resources[0].pointer = [0, 0, 0x3c, 0];
+    assert!(
+        forged.to_snapshot(&bundle).is_err(),
+        "refused carries no value"
+    );
+    // In-procedure observations are a durable checkpoint bound to the active step.
+    let path = temp.path().join("op2");
+    let mut store = OperationStore::create(&path, bundle.binding.clone()).unwrap();
+    let observation = PointerObservationRecord {
+        object: 3,
+        expected: [0, 0, 0x3c, 0],
+        observed: Some([0, 0, 0x3d, 0]),
+        state: LoadState::Loading.octet(),
+    };
+    assert!(store
+        .checkpoint(Checkpoint::InProcedurePointerObservation {
+            operation_index: 0,
+            observation: observation.clone(),
+        })
+        .is_err());
+    store
+        .checkpoint(Checkpoint::RecoveryAcquired { recovery: alpha16 })
+        .unwrap();
+    store
+        .checkpoint(Checkpoint::StepStarted {
+            index: 0,
+            mutation: true,
+        })
+        .unwrap();
+    assert!(store
+        .checkpoint(Checkpoint::InProcedurePointerObservation {
+            operation_index: 1,
+            observation: observation.clone(),
+        })
+        .is_err());
+    store
+        .checkpoint(Checkpoint::InProcedurePointerObservation {
+            operation_index: 0,
+            observation: observation.clone(),
+        })
+        .unwrap();
+    drop(store);
+    let fresh = OperationStore::open(&path, &bundle.binding).unwrap();
+    let progress = fresh.progress();
+    assert_eq!(progress.pointer_observations.len(), 1);
+    assert_eq!(
+        progress.pointer_observations[0].phase,
+        PointerObservationPhase::InProcedure
+    );
+    assert_eq!(progress.pointer_observations[0].operation_index, Some(0));
+    assert_eq!(progress.pointer_observations[0].record, observation);
+    // An in-procedure difference alone leaves the original prestate usable.
+    assert!(!progress.prestate_differs);
 }

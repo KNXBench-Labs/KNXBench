@@ -33,6 +33,20 @@ paths, serial numbers, raw memory or caller-supplied bundles in these DTOs.
 `Status` additionally carries `mutationMayHaveStarted`, `prestateDiffers`,
 `pointerObservations` and `programVersionObservation` (2026-10-25, see the
 [UI contract](alpha16-system2-ui.md)).
+
+The issue #30 diagnostic follow-up adds required nullable `refusal` to the status
+shape: a stable API error-kind token (ASCII alphanumeric, 1–64 characters), or
+`null`. A worker refusal before a journal exists is no longer reduced to bare
+`failed`. This reason is a volatile record of the current in-process attempt;
+new runs, recovery attempts and historical selection/reload clear it. No durable
+metadata or journal version changes, and no historical cause is inferred after
+restart. The client shows it as diagnostic text, not as execution authority.
+A structured `4xx` start refusal is shown alongside existing unknown-outcome
+handling; malformed/network/server-error replies do not acquire a refusal claim.
+The download hint separately recognizes `system2Operation` in the partial
+activity snapshot so the worker's own shared guards are not foreign holders
+([ADR-0055](../adr/0055-bus-activity-snapshot-is-partial-session-evidence.md)).
+
 JSON bodies are limited to 16 KiB; struct deserialization refuses duplicate and
 unknown fields. Source/recovery enums accept string tokens only. IDs are exactly
 32 lowercase hexadecimal characters, never normalized. Preview output including

@@ -6,7 +6,9 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 const mock = vi.hoisted(() => ({ prepareSystem2: vi.fn(), getSystem2Status: vi.fn(), startSystem2: vi.fn(), cancelSystem2: vi.fn(), recoverSystem2: vi.fn() }));
 const consent = vi.hoisted(() => ({ request: vi.fn() }));
 const ordinary = vi.hoisted(() => ({ discoverBusInterfaces: vi.fn(), planDeviceDownload: vi.fn(), startDeviceDownload: vi.fn() }));
-vi.mock("./system2DownloadApi", () => mock);
+vi.mock("./system2DownloadApi", async (importOriginal) => ({
+  ...await importOriginal<typeof import("./system2DownloadApi")>(), ...mock,
+}));
 vi.mock("./useProgrammingConsent", () => ({ useProgrammingConsent: () => ({ request: consent.request, dialog: null }) }));
 vi.mock("./api", () => ({
   ...ordinary,
@@ -145,6 +147,27 @@ it("a lost start response polls only, consumes the local preview and never resen
   mock.recoverSystem2.mockResolvedValue({ ...status, state: "restoring" }); await click("[data-system2-recover]");
   expect(consent.request).toHaveBeenCalledTimes(2); expect(mock.startSystem2).toHaveBeenCalledOnce();
   expect(mock.recoverSystem2).toHaveBeenCalledWith({ operationId: status.operationId, gateway: "192.0.2.1:3671", recoveryConfirmation: recoveryStatus.recoveryPhrase, downloadConfirmation: recoveryStatus.downloadPhrase, releaseConfirmation: recoveryStatus.releasePhrase });
+});
+it("shows a refused start's reason while keeping the outcome unknown and never resending (issue #30)", async () => {
+  await render(); await prepare(); await confirmations();
+  mock.startSystem2.mockRejectedValueOnce(Object.assign(new Error("system2Busy"), { status: 409, body: { error: "system2Busy", kind: "system2Busy" } }));
+  await click("[data-system2-start]");
+  expect(host.querySelector("[data-system2-unknown]")).not.toBeNull();
+  expect(host.querySelector("[data-system2-start-refusal]")!.textContent).toBe("The server refused this start request: system2Busy.");
+  expect(mock.startSystem2).toHaveBeenCalledOnce();
+});
+it("shows no reason for a lost start response", async () => {
+  await render(); await prepare(); await confirmations();
+  mock.startSystem2.mockRejectedValueOnce(new Error("response lost")); await click("[data-system2-start]");
+  expect(host.querySelector("[data-system2-unknown]")).not.toBeNull();
+  expect(host.querySelector("[data-system2-start-refusal]")).toBeNull();
+});
+it("shows the server's reason for a run that ended before writing (issue #30)", async () => {
+  mock.getSystem2Status.mockResolvedValue({ ...status, state: "failed", refusal: "gatewayBusy" }); await render();
+  expect(host.querySelector("[data-system2-refusal]")!.textContent).toBe("Reason reported by the server: gatewayBusy.");
+  expect(host.querySelector("[data-system2-nothing-written]")).not.toBeNull();
+  mock.getSystem2Status.mockResolvedValue({ ...status, state: "failed" }); await click("[data-system2-refresh]");
+  expect(host.querySelector("[data-system2-refusal]")).toBeNull();
 });
 it("never binds recovery phrases to a start response for another target", async () => {
   await render(); await prepare(); await confirmations();

@@ -2,6 +2,17 @@
 
 # Implementation status
 
+## Unreleased source: System-2 refusal diagnostics
+
+A running System-2 attempt is no longer named as a foreign management holder in
+the download gateway hint. Status and the panel show the current attempt's early
+refusal code; a structured start-request refusal is shown too. This is volatile
+server-lifetime evidence, not a durable historical reason or a new recovery route.
+The original issue #30 start failure remains under investigation; source review
+and integrated acceptance of this slice are pending.
+[Practical workflow](user-guide/05-devices-and-products.md#a-busy-hint-is-not-the-system-2-failure-reason-unreleased-source) ·
+[S2-02](../open-work/S2-02-gateway-busy-after-failed-runs.md).
+
 ## Alpha 16 — published pre-release, public artifacts verified
 
 **Snapshot: 24 October 2026**, frozen runtime/test source

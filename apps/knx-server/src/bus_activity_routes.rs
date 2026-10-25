@@ -7,6 +7,7 @@
 use axum::extract::{Query, State};
 use axum::routing::get;
 use axum::{Json, Router};
+use knx_app::property_validation::System2Settlement;
 use serde::{Deserialize, Serialize};
 
 use crate::bus::SessionStatus;
@@ -152,6 +153,14 @@ async fn snapshot(State(state): State<SharedState>) -> Json<ActivitySnapshot> {
     // holder is reported as unknown/busy rather than silently treated as idle.
     let mut sessions = Vec::new();
     let mut busy_locks = Vec::new();
+    // An admitted System-2 operation holds the shared tunnel locks itself. Name
+    // it first so a client can tell its own run from a foreign lock holder.
+    if matches!(
+        state.device_system2.control.snapshot().settlement,
+        System2Settlement::Running { .. }
+    ) {
+        busy_locks.push("system2Operation");
+    }
     match state.device_download.try_lock() {
         Ok(guard) => {
             if let Some(session) = guard.as_ref() {

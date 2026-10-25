@@ -60,7 +60,11 @@ pub(super) struct Status {
     pub download_phrase: Option<String>,
     pub release_phrase: Option<String>,
     pub message: Option<&'static str>,
-    /// False only when the durable journal proves no write could have been sent.
+    /// Stable kind of this worker's refusal; not persisted. Reload and a new
+    /// recovery attempt start at null rather than inheriting an old reason.
+    pub refusal: Option<&'static str>,
+    /// False only when the server confirms no write could have been sent,
+    /// including refusals before connection or journal creation.
     pub mutation_may_have_started: bool,
     /// Captured prestate differed from the source shape or application:
     /// original-state recovery is unavailable for this operation.

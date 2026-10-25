@@ -77,6 +77,49 @@ async fn a_locked_route_is_reported_without_waiting_or_claiming_idle() {
     assert_eq!(body["busyLocks"], json!(["lineScan"]));
 }
 
+/// Issue #30: an admitted System-2 operation holds the shared tunnel locks
+/// itself. It is named first, so a client never reports its own run as a
+/// foreign address or management operation.
+#[tokio::test]
+async fn a_running_system2_operation_is_named_before_the_locks_it_holds() {
+    let (_dir, state) = state();
+    let lease = state
+        .device_system2
+        .control
+        .try_admit("0123456789abcdef0123456789abcdef")
+        .unwrap();
+    let (status, body) = snapshot(Arc::clone(&state)).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["busyLocks"], json!(["system2Operation"]));
+    let programming = state.address_programming.lock().await;
+    let (_, body) = snapshot(Arc::clone(&state)).await;
+    assert_eq!(
+        body["busyLocks"],
+        json!(["system2Operation", "managementOperation"])
+    );
+    assert_eq!(body["sessions"], json!([]));
+    drop(programming);
+    lease
+        .settle(knx_app::property_validation::LocalOutcome::Failed)
+        .unwrap();
+    let (_, body) = snapshot(Arc::clone(&state)).await;
+    assert_eq!(body["busyLocks"], json!([]));
+    // Dropping an unsettled owner quarantines the coordinator; do not call
+    // that uncertain state a running operation or invent a live holder.
+    let uncertain = state
+        .device_system2
+        .control
+        .try_admit("fedcba9876543210fedcba9876543210")
+        .unwrap();
+    drop(uncertain);
+    assert!(matches!(
+        state.device_system2.control.snapshot().settlement,
+        knx_app::property_validation::System2Settlement::Uncertain { .. }
+    ));
+    let (_, body) = snapshot(Arc::clone(&state)).await;
+    assert_eq!(body["busyLocks"], json!([]));
+}
+
 #[tokio::test]
 async fn activity_does_not_accept_a_write_method() {
     let (_dir, state) = state();

@@ -115,6 +115,7 @@ const REFUSAL_REASON: Readonly<Record<string, TranslatableKey>> = {
 };
 
 const CONNECTING: Readonly<Record<BusyLock, TranslatableKey>> = {
+  system2Operation: "gatewayRefusal.busy.connecting.system2Operation",
   deviceDownload: "gatewayRefusal.busy.connecting.deviceDownload",
   managementOperation: "gatewayRefusal.busy.connecting.managementOperation",
   busMonitorOrGroupWrite: "gatewayRefusal.busy.connecting.busMonitorOrGroupWrite",
@@ -128,9 +129,11 @@ const hex = (status: number) => `0x${status.toString(16).toUpperCase().padStart(
  * download page can say so before anything is prepared. The page's own
  * download (and its lock) is not a foreign holder; a finished scan or
  * programming holds nothing. A held lock without a session is named by its
- * lock only.
+ * lock only. A running System-2 operation is this page's own run too, and it
+ * holds every other lock itself (issue #30), so none of them is foreign.
  */
 export function holderFromActivity(snapshot: ActivitySnapshot): TunnelHolder | null {
+  if (snapshot.busyLocks.includes("system2Operation")) return null;
   for (const session of snapshot.sessions) {
     if (session.kind === "busMonitor") {
       return session.gateway === undefined

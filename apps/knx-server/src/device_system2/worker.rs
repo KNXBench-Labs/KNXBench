@@ -285,15 +285,18 @@ pub(super) async fn download(
     let cancel = lease.cancel_token();
     observe!(state, begin(&preparation, &body.preparation_id));
     let result = download_inner(&state, root, preparation, body, gateway, &cancel).await;
-    let (outcome, clean) = match result {
-        Ok(value) => value,
-        Err(_) => (
+    // The refusal kind is a stable token already on the error; keep it for the
+    // volatile status, never the message. Journal and settlement are untouched.
+    let (outcome, clean, refusal) = match result {
+        Ok((outcome, clean)) => (outcome, clean, None),
+        Err(error) => (
             if cancel.load(Ordering::SeqCst) {
                 LocalOutcome::Cancelled
             } else {
                 LocalOutcome::Failed
             },
             true,
+            error.kind(),
         ),
     };
     state.device_system2.publish_end(
@@ -304,6 +307,7 @@ pub(super) async fn download(
         } else {
             Some("Tunnel disconnect unconfirmed; outcome remains uncertain. No automatic retry.")
         },
+        refusal,
     );
     // A failed teardown/panic never certifies settled transport ownership.
     if clean {
@@ -640,7 +644,8 @@ pub(super) async fn recover(
     }
     observe!(state, phase("end-publication"));
     let outcome = terminal(&store);
-    state.device_system2.publish_end(&id, outcome, if matches!(result, Ok(true)) { None } else { Some("Recovery did not complete with confirmed teardown; inspect the original retained operation. No automatic retry.") });
+    let refusal = result.as_ref().err().and_then(ApiError::kind);
+    state.device_system2.publish_end(&id, outcome, if matches!(result, Ok(true)) { None } else { Some("Recovery did not complete with confirmed teardown; inspect the original retained operation. No automatic retry.") }, refusal);
     // Release original store/bundle ownership only AFTER actual IP teardown.
     // Immutable evidence stays on disk; no timeout/HTTP/component can erase it.
     observe!(state, phase("release-original-ownership"));

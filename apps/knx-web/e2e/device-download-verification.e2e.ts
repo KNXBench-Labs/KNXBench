@@ -265,7 +265,18 @@ for (const { fixture, restart, lines } of CHECKS) {
         const verify = panel.getByRole("region", { name: m["deviceDownload.verify.title"] });
         await expect(verify.locator(".device-download-verify-steps li")).toHaveCount(5);
         await verify.getByRole("button", { name: m["deviceDownload.verify.create"], exact: true }).click();
-        await expect(verify.locator("[data-check]")).toHaveCount(4);
+        const expectedChecks = [
+          ...(restart === "unconfirmed" ? ["restart"] : []),
+          "groupAddresses", "status", "parameters", "multiOctet",
+        ];
+        const checklist = verify.locator(".device-download-verify-checklist");
+        await expect(checklist.locator("[data-check]")).toHaveCount(expectedChecks.length);
+        expect(await checklist.locator("[data-check]").evaluateAll((nodes) =>
+          nodes.map((node) => node.getAttribute("data-check")))).toEqual(expectedChecks);
+        for (const id of expectedChecks) {
+          await expect(checklist.locator(`[data-check="${id}"]`))
+            .toHaveText(m[`deviceDownload.verify.check.${id}` as keyof Messages]);
+        }
         const download = page.waitForEvent("download");
         await verify.getByRole("button", { name: m["deviceDownload.verify.save"], exact: true }).click();
         const text = await readFile(await (await download).path(), "utf8");

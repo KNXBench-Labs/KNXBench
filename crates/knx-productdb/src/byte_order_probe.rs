@@ -809,6 +809,25 @@ mod tests {
     }
 
     #[test]
+    fn an_unreadable_number_bound_skips_that_parameter_instead_of_failing_the_probe() {
+        // `65535.0` is declared but not an integer: the 16-bit fields lose their candidacy.
+        let xml = little_endian().replace(r#"maxInclusive="65535""#, r#"maxInclusive="65535.0""#);
+        let (_dir, conn) = db(&xml);
+        let plan = plan_probe(&conn, &request(&[])).expect("the probe still plans");
+        assert!(plan.fields.iter().all(|f| f.parameter_ref != "P-W16_R-1"));
+        assert!(
+            matches!(
+                reason(&plan, "P-W16_R-1")[..],
+                [SkipReason::Refused(why)] if why.contains("maxInclusive") && why.contains("65535.0")
+            ),
+            "{:?}",
+            reason(&plan, "P-W16_R-1")
+        );
+        // A parameter of an untouched type is still a candidate.
+        assert!(plan.fields.iter().any(|f| f.parameter_ref == "P-W32_R-1"));
+    }
+
+    #[test]
     fn every_parameter_left_out_is_named_with_its_reason() {
         let plan = planned();
         assert_eq!(reason(&plan, "P-Z16_R-1"), [&SkipReason::EitherOrder]);

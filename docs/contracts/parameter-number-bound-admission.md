@@ -41,10 +41,12 @@ a leading `+` and leading zeros are admitted. That is implementation behaviour (
 this change, and as in the experimental source check), not a normative XML lexicon, and it
 is not tightened here.
 
-Compatibility question left open for **both** a negative `minInclusive` and a negative
-`maxInclusive` on unsigned types: whether real products declare them is unchecked here
-(no private corpus read). Such an image used to build and now refuses; the maintained
-corpus gate is where that would show. They are not labelled schema-invalid.
+Compatibility remains open for **both** a negative `minInclusive` and a negative
+`maxInclusive` on unsigned types: an image that silently ignored such a bound now refuses.
+The selected integrated corpus regression passed 97/97, but is not an exhaustive census
+of these attributes or all affected products. They are not labelled schema-invalid.
+[Integrated acceptance](../status/2026-10-25-parameter-number-bounds.md) records the
+published source, review, separate RED revisions and remaining limits.
 
 Tests: `image::tests::number_bounds` (unit, public `build_download_image`) and the
 `system1_image` / `system2_image` integration tests.

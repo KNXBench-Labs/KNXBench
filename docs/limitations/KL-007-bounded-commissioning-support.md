@@ -34,6 +34,18 @@ and restore observations are kept separately. The status DTO reports whether a
 failed operation could have written anything. Software and simulator tests only; whether the
 relaxed admission downloads the reporter's device correctly is unverified.
 
+## Parameter number-bound admission — 25 October 2026 source
+
+Declared TypeNumber bounds must be readable by the existing integer parser before
+an image can be built; unreadable bounds no longer disappear. Unsigned negative
+bounds are refused, not converted to zero. Raw source, encoding and experimental
+retained-source admission are unchanged
+([contract](../contracts/parameter-number-bound-admission.md)). Published as
+`87d71d4aa` after independent review, correction re-review and all 14 integrated
+stages ([acceptance](../status/2026-10-25-parameter-number-bounds.md)). The selected
+97-case corpus regression is not an exhaustive bound census; other real-product
+spellings and hardware remain unverified. KL-007 stays open.
+
 ## Memory response service pairing — 25 October 2026 source
 
 A response must match both the requested memory service and address before it

@@ -1,5 +1,12 @@
 # Roadmap
 
+
+TypeNumber declared-bound admission is fail-closed in image construction, with
+unchanged raw source and integer encoding. Published as `87d71d4aa` after review,
+correction re-review and all 14 integrated package stages
+([acceptance](status/2026-10-25-parameter-number-bounds.md)). No wider numeric
+lexicon, Float support or inactive/Union/customer-write policy is established.
+
 ## Regular programming correctness — 25 October 2026 source
 
 The [partial application identity correction](contracts/partial-identity-comparison.md)

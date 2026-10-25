@@ -6,6 +6,16 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Hardware identity width follow-up — 25 October 2026 source
+
+The regular memory executor now refuses Device Object PID 78 responses whose
+length is not six octets, before backup acquisition/persistence or mutation.
+Valid padded product comparison declarations remain supported; diagnostic
+collector/archive exact-length guards remain in place
+([contract](../contracts/hardware-identity-comparison.md)). Focused simulator
+regressions pass; integrated acceptance is pending. This neither resolves general
+serial/exemplar identity nor changes device-family admission or this ledger row.
+
 ## Current experimental System-2 boundary — 23 October 2026
 
 The separate consent-gated App/Net/CLI route defined by

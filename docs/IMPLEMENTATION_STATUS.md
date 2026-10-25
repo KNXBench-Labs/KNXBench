@@ -12,6 +12,18 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Hardware identity response width (25 October 2026 source)
+
+Regular memory download and restore now require exactly six response octets for
+Device Object PID 78 before backup acquisition/persistence and mutation. Product
+`InlineData` may remain zero-padded; unknown resource widths retain the existing
+generic comparison rule. The diagnostic collector/archive retain their prior
+exact-length guards and use the shared resource comparison too
+([contract](contracts/hardware-identity-comparison.md)). Independent source review
+approved the bounded correction; focused simulator regressions and owning-crate
+Clippy passed. Integrated package acceptance is pending. No hardware acceptance,
+new family admission or general target/exemplar identity claim.
+
 ## Diagnostic selector ambiguity remediation (25 October 2026)
 
 Corrected the CLI refusal and usage text: a diagnostic target's individual

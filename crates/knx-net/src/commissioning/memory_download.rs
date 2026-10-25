@@ -51,7 +51,7 @@ use knx_core::commissioning::load_control_memory::MemoryLoadStateMachine;
 use knx_core::commissioning::load_state::{LoadEvent, LoadState, MaskVersion};
 use knx_core::commissioning::memory::WriteLimit;
 use knx_core::commissioning::memory_download::{
-    machines, property_matches, MemoryDownloadPlan, MemoryDownloadStep,
+    machines, resource_matches, MemoryDownloadPlan, MemoryDownloadStep,
 };
 use knx_core::commissioning::mutation::WriteScope;
 use knx_core::commissioning::properties::ObjectIndex;
@@ -1029,7 +1029,7 @@ async fn run_steps<T: ManagementTransport, K: FnMut(&DeviceBackup) -> Result<(),
                     .read_property(ObjectIndex::new(*object_index), *property_id, 1, 1)
                     .await
                     .map_err(at)?;
-                if !property_matches(&found, inline_data) {
+                if !resource_matches(*object_index, *property_id, &found, inline_data) {
                     session.disconnect().await;
                     return Err(MemoryDownloadError::PropertyMismatch {
                         index,
@@ -1344,6 +1344,87 @@ mod tests {
             "{error}"
         );
         assert!(!device.memory_was_written());
+    }
+
+    /// A hardware type ending in zeros: a truncated answer is then a prefix
+    /// of the plan's zero-padded `InlineData`, and a longer one adds zeros.
+    const ZERO_TAIL: [u8; 6] = [0, 0, 0x83, 0x12, 0, 0];
+
+    fn zero_tail_plan() -> MemoryDownloadPlan {
+        let mut plan = plan();
+        plan.steps[1] = MemoryDownloadStep::CompareProperty {
+            object_index: 0,
+            property_id: PID_HARDWARE_TYPE,
+            inline_data: [&ZERO_TAIL[..], &[0, 0, 0, 0]].concat(),
+        };
+        plan
+    }
+
+    #[tokio::test]
+    async fn a_hardware_type_of_the_wrong_width_stops_the_run_before_the_backup() {
+        let padded = [&ZERO_TAIL[..], &[0, 0, 0, 0]].concat();
+        for width in (0..6).chain(7..=padded.len()) {
+            let answer = &padded[..width];
+            let device = device(SimulatorConfig::default());
+            device.preset_property(0, PID_HARDWARE_TYPE, answer);
+            let mut session = session(&device, WriteScope::Download);
+            let mut backup_called = false;
+
+            let error = run_memory_download_with_backup(
+                &mut session,
+                &zero_tail_plan(),
+                |_| {},
+                |_| {
+                    backup_called = true;
+                    Ok(())
+                },
+            )
+            .await
+            .expect_err("a hardware type of the wrong width is refused");
+
+            // `found` is what the executor received, octet for octet.
+            assert!(
+                matches!(
+                    error,
+                    MemoryDownloadError::PropertyMismatch { index: 1, ref found, .. }
+                        if found == answer
+                ),
+                "{width} octets: {error}"
+            );
+            assert!(!backup_called, "{width} octets: no backup is kept");
+            assert!(memory_writes(&device).is_empty(), "{width} octets");
+            assert!(!device.memory_was_written(), "{width} octets");
+            assert!(
+                device.seen().iter().all(|seen| !matches!(
+                    seen,
+                    Seen::MemoryRead { .. } | Seen::MemoryWrite { .. } | Seen::PropertyWrite { .. }
+                )),
+                "{width} octets: identity reads only"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn six_octets_against_padded_inline_data_still_download() {
+        let device = device(SimulatorConfig::default());
+        device.preset_property(0, PID_HARDWARE_TYPE, &ZERO_TAIL);
+        let mut session = session(&device, WriteScope::Download);
+        let mut kept = 0;
+
+        run_memory_download_with_backup(
+            &mut session,
+            &zero_tail_plan(),
+            |_| {},
+            |_| {
+                kept += 1;
+                Ok(())
+            },
+        )
+        .await
+        .expect("the download runs");
+
+        assert_eq!(kept, 1);
+        assert!(device.memory_was_written());
     }
 
     #[tokio::test]
@@ -2483,6 +2564,49 @@ mod tests {
             .expect("the restore runs");
         assert_eq!(device.memory(0x4000, 30), before);
         assert_eq!(device.load_state(ObjectIndex::new(1)), LoadState::Loaded);
+    }
+
+    #[tokio::test]
+    async fn a_restore_checks_the_hardware_type_width_too() {
+        use knx_core::commissioning::device_backup::restore_plan;
+        let device = old_device();
+        device.preset_property(0, PID_HARDWARE_TYPE, &ZERO_TAIL);
+        let mut kept = None;
+        run_memory_download_with_backup(
+            &mut session(&device, WriteScope::Download),
+            &zero_tail_plan(),
+            |_| {},
+            &mut |backup: &DeviceBackup| {
+                kept = Some(backup.clone());
+                Ok(())
+            },
+        )
+        .await
+        .expect("the download runs");
+        let after = device.memory(0x4000, 30);
+        let writes = memory_writes(&device).len();
+
+        let truncated = &ZERO_TAIL[..4];
+        device.preset_property(0, PID_HARDWARE_TYPE, truncated);
+        let restore = restore_plan(&zero_tail_plan(), device.address(), &kept.unwrap()).unwrap();
+        let error = run_memory_download(&mut session(&device, WriteScope::Download), &restore)
+            .await
+            .expect_err("a truncated hardware type is refused");
+
+        assert!(
+            matches!(
+                error,
+                MemoryDownloadError::PropertyMismatch { index: 1, ref found, .. }
+                    if found == truncated
+            ),
+            "{error}"
+        );
+        assert_eq!(
+            memory_writes(&device).len(),
+            writes,
+            "the restore wrote nothing"
+        );
+        assert_eq!(device.memory(0x4000, 30), after);
     }
 
     #[tokio::test]

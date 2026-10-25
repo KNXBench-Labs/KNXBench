@@ -60,7 +60,7 @@ gap as format 2; both are fixed.
 | A read descriptor or PID 12 contradicts its recorded assertion | `identity-mismatch` |
 | A non-stopping completed prefix is followed by an untouched item | `cancelled` |
 | All three items complete without an earlier stop, but at least one is not `read` | `identity-unverified` in format 2; no identity stop in format 1 |
-| All three are exactly read; format-2 PID 78 does not `property_matches` its comparison | `identity-mismatch` in format 2; format 1 makes no PID 78 assertion |
+| All three are exactly read; format-2 PID 78 does not `resource_matches` its comparison | `identity-mismatch` in format 2; format 1 makes no PID 78 assertion |
 | Identity is admitted | No identity stop; format 2 proceeds to memory and format 1 completes |
 
 For the lower-layer format-2 collector, an empty PID 78 comparison also takes
@@ -95,7 +95,7 @@ ETS-programmed state offline with KNXBench's source interpretation.
   Mask and manufacturer assertions are required (else
   `identity-assertion-missing` before any frame). Memory is read only if all
   three items are `read`, descriptor and PID 12 equal the assertions and
-  PID 78 `property_matches` the comparison; otherwise `identity-mismatch` or
+  PID 78 `resource_matches` the comparison; otherwise `identity-mismatch` or
   `identity-unverified` and no `A_Memory_Read` is sent.
 - **Memory.** `A_Memory_Read` of 12 octets (standard frame), one item per
   chunk with address, requested length, status, bytes, times and error token.
@@ -116,7 +116,7 @@ ETS-programmed state offline with KNXBench's source interpretation.
   re-checks the identity admission from the archive: all three items `read`
   at their exact lengths (one element for PID 12 and PID 78, none for the
   descriptor), descriptor = asserted mask, PID 12 = asserted manufacturer,
-  PID 78 `property_matches` the recorded `inlineData`. Every chunk with an
+  PID 78 `resource_matches` the recorded `inlineData`. Every chunk with an
   outcome carries attempt and completion times in that order; an unread one
   carries neither, except in an observer snapshot (`complete: false`): there
   one chunk may be in flight (attempted, not completed, no bytes, no error),

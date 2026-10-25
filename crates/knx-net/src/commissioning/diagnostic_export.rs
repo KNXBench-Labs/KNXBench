@@ -11,8 +11,10 @@ use std::time::{Duration, SystemTime};
 use crate::{ManagementSession, ManagementTransport, SessionError, SessionTiming};
 use knx_core::commissioning::authorisation::AuthorisationPlan;
 use knx_core::commissioning::declared_memory::{Chunk, DeclaredRanges};
-use knx_core::commissioning::memory_download::property_matches;
-use knx_core::commissioning::properties::{ObjectIndex, PID_HARDWARE_TYPE, PID_MANUFACTURER_ID};
+use knx_core::commissioning::memory_download::resource_matches;
+use knx_core::commissioning::properties::{
+    ObjectIndex, HARDWARE_TYPE_OCTETS, PID_HARDWARE_TYPE, PID_MANUFACTURER_ID,
+};
 use knx_core::ContactableAddress;
 
 pub const DEADLINE: Duration = Duration::from_secs(30);
@@ -41,7 +43,7 @@ impl Query {
     pub fn expected_bytes(self) -> usize {
         match self {
             Self::Descriptor | Self::Manufacturer => 2,
-            Self::HardwareType => 6,
+            Self::HardwareType => HARDWARE_TYPE_OCTETS,
         }
     }
     pub fn property(self) -> Option<u8> {
@@ -306,7 +308,7 @@ async fn identity_reads<T: ManagementTransport>(
 pub struct MemoryRequest<'a> {
     /// Both values are required; a missing one refuses before connecting.
     pub expected: Identity,
-    /// The source's `PID_HARDWARE_TYPE` comparison value (`property_matches`).
+    /// The source's `PID_HARDWARE_TYPE` comparison value (`resource_matches`).
     pub hardware_type: &'a [u8],
     /// Validated, source-declared candidate ranges.
     pub ranges: &'a DeclaredRanges,
@@ -350,7 +352,7 @@ pub struct MemoryAcquisition {
 ///
 /// Memory is read only if all three identity items are exactly read, the
 /// descriptor and PID12 equal the asserted values and PID78
-/// `property_matches` the source comparison; otherwise the stop reason is
+/// `resource_matches` the source comparison; otherwise the stop reason is
 /// `identity-mismatch` or `identity-unverified` and no `A_Memory_Read` is
 /// sent. A refused chunk (`refused-ambiguous`) or an answer of another
 /// length (`partial`, bytes kept) ends its own range only. Timeout,
@@ -415,7 +417,12 @@ pub async fn collect_declared_memory<T: ManagementTransport>(
             if out.acquisition.stop_reason.is_none() {
                 if items.iter().any(|item| item.status != Status::Read) {
                     out.acquisition.stop_reason = Some("identity-unverified");
-                } else if !property_matches(&items[2].bytes, request.hardware_type) {
+                } else if !resource_matches(
+                    ObjectIndex::DEVICE.octet(),
+                    PID_HARDWARE_TYPE,
+                    &items[2].bytes,
+                    request.hardware_type,
+                ) {
                     out.acquisition.stop_reason = Some("identity-mismatch");
                 }
             }

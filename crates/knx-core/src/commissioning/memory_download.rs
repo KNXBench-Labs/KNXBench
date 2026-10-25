@@ -20,7 +20,8 @@
 //!   Code, Hardware Type)`; [`MemoryDownloadStep::Connect`] carries the
 //!   manufacturer half, the product's `LdCtrlCompareProp` the hardware half.
 //! - `[A]` How a property is compared with a longer `InlineData`:
-//!   [`property_matches`].
+//!   [`property_matches`]; a resource of known width must also answer
+//!   exactly that many octets: [`resource_matches`].
 //! - `[A]` Octets whose product `Mask` octet is not `FFh` are not written:
 //!   [`unmasked_runs`].
 
@@ -28,6 +29,7 @@ use std::fmt;
 
 use super::load_control_memory::{MemoryLoadRecord, MemoryLoadStateMachine};
 use super::load_state::{LoadEvent, MaskVersion};
+use super::properties::{ObjectIndex, HARDWARE_TYPE_OCTETS, PID_HARDWARE_TYPE};
 
 /// One step of a memory-mapped download.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -36,7 +38,7 @@ pub enum MemoryDownloadStep {
     /// manufacturer are the plan's.
     Connect,
     /// `LdCtrlCompareProp`: read one property and compare it with the
-    /// product's `InlineData` ([`property_matches`]).
+    /// product's `InlineData` ([`resource_matches`]).
     CompareProperty {
         /// `ObjIdx`.
         object_index: u8,
@@ -118,6 +120,31 @@ pub fn property_matches(device: &[u8], inline_data: &[u8]) -> bool {
         && device.len() <= inline_data.len()
         && inline_data[..device.len()] == *device
         && inline_data[device.len()..].iter().all(|&octet| octet == 0)
+}
+
+/// How many octets a property's answer must hold, where the resource is
+/// known to be one value of fixed width; `None` for every other property.
+///
+/// `[D]` Only `PID_HARDWARE_TYPE` in the Device Object is listed: one
+/// six-octet value ([`HARDWARE_TYPE_OCTETS`]). No width is guessed for any
+/// other resource.
+pub fn expected_response_octets(object_index: u8, property_id: u8) -> Option<usize> {
+    (object_index == ObjectIndex::DEVICE.octet() && property_id == PID_HARDWARE_TYPE)
+        .then_some(HARDWARE_TYPE_OCTETS)
+}
+
+/// Whether the answer to `object_index`/`property_id` matches a product's
+/// `InlineData`: exactly [`expected_response_octets`] octets where that is
+/// known, then [`property_matches`]. The `InlineData` may still be longer
+/// and zero-padded; its length says nothing about the answer's.
+pub fn resource_matches(
+    object_index: u8,
+    property_id: u8,
+    device: &[u8],
+    inline_data: &[u8],
+) -> bool {
+    expected_response_octets(object_index, property_id).is_none_or(|octets| device.len() == octets)
+        && property_matches(device, inline_data)
 }
 
 /// The runs of a segment the product lets the tool write, as `(offset,
@@ -260,6 +287,75 @@ mod tests {
         assert!(!property_matches(&[0x01, 0x27, 0x00], &[0x01, 0x27]));
         assert!(!property_matches(&[], &[0x00, 0x00]));
         assert!(!property_matches(&[], &[]));
+    }
+
+    /// A hardware type whose last octets are zero, so that a truncated
+    /// answer is a prefix of the padded `InlineData`.
+    const ZERO_TAIL: [u8; 6] = [0, 0, 0x83, 0x12, 0, 0];
+
+    #[test]
+    fn the_device_hardware_type_must_answer_exactly_six_octets() {
+        let device = ObjectIndex::DEVICE.octet();
+        let padded = [&ZERO_TAIL[..], &[0; 4]].concat();
+        for inline in [&ZERO_TAIL[..], &padded[..]] {
+            assert!(resource_matches(
+                device,
+                PID_HARDWARE_TYPE,
+                &ZERO_TAIL,
+                inline
+            ));
+            for width in (0..6).chain(7..=inline.len()) {
+                let answer = &padded[..width];
+                assert!(
+                    !resource_matches(device, PID_HARDWARE_TYPE, answer, inline),
+                    "{width} octets against {} must not match",
+                    inline.len()
+                );
+            }
+        }
+        // The generic rule alone admits the truncated and the long answers.
+        assert!(property_matches(&ZERO_TAIL[..4], &padded));
+        assert!(property_matches(&padded[..7], &padded));
+    }
+
+    #[test]
+    fn a_64_octet_padded_inline_data_still_matches_six_octets() {
+        let inline = [&ZERO_TAIL[..], &[0; 58]].concat();
+        assert!(resource_matches(0, PID_HARDWARE_TYPE, &ZERO_TAIL, &inline));
+        assert!(!resource_matches(
+            0,
+            PID_HARDWARE_TYPE,
+            &inline[..8],
+            &inline
+        ));
+    }
+
+    #[test]
+    fn another_value_of_the_right_width_still_does_not_match() {
+        let inline = [&ZERO_TAIL[..], &[0; 4]].concat();
+        assert!(!resource_matches(
+            0,
+            PID_HARDWARE_TYPE,
+            &[0, 0, 0x83, 0x13, 0, 0],
+            &inline
+        ));
+    }
+
+    #[test]
+    fn other_resources_keep_the_generic_rule() {
+        let inline = [0x01, 0x27, 0, 0];
+        assert_eq!(expected_response_octets(3, PID_HARDWARE_TYPE), None);
+        assert_eq!(expected_response_octets(0, 12), None);
+        for (object, property) in [(3, PID_HARDWARE_TYPE), (0, 12), (3, 13), (0, 0xFF)] {
+            for width in 1..=inline.len() {
+                assert_eq!(
+                    resource_matches(object, property, &inline[..width], &inline),
+                    property_matches(&inline[..width], &inline),
+                    "{object}/{property}, {width} octets"
+                );
+            }
+            assert!(!resource_matches(object, property, &[], &inline));
+        }
     }
 
     #[test]

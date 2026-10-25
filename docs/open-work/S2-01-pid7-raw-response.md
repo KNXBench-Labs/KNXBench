@@ -1,6 +1,9 @@
 # S2-01 — System-2: keep the raw PID 7 answer and model its width
 
-**Priority:** P1. **Status:** Planned (scheduled by the owner, 25 October 2026); no implementation started.
+**Priority:** P1. **Status:** Partially implemented; diagnostic subdelivery under acceptance.
+The private failure journal retains object, element count, actual octet count and up to 16 raw
+octets. HTTP status and the shareable report do not expose these details. The width model and
+research record remain blocked on real response evidence; no supported width is inferred.
 Listed in [OPEN_WORK](../OPEN_WORK.md). Origin: GitHub issue #30, field report of a
 refusal `resource pointer response is not four octets` on a real UP 258D12 (two operations,
 `mutation_may_have_started: false`).
@@ -9,9 +12,9 @@ refusal `resource pointer response is not four octets` on a real UP 258D12 (two 
 
 The pre-write recovery acquisition reads `PID_TABLE_REFERENCE` (PID 7) per resource and
 requires exactly four octets (`read_pointer` in `crates/knx-net/src/commissioning/property_recovery.rs`).
-Any other length aborts the run before the first write and discards the answer. The report
-therefore proves only "not four octets": the observed element count and bytes are lost, and the
-open wire-width question ([up258 validation, row 2](../contracts/up258-system2-validation.md))
+In the reporter's build, any other length aborted the run before the first write and discarded
+the answer. The field report therefore proves only "not four octets": its element count and bytes
+are unknown, and the open wire-width question ([up258 validation, row 2](../contracts/up258-system2-validation.md))
 stays open although a real device has now answered it with a different width.
 
 The earlier Alpha 16 refusal ("current resource pointer differs from original source allocation
@@ -21,10 +24,14 @@ explanation given in #30 is withdrawn until raw bytes exist.
 
 ## Deliverables
 
-1. **Raw observation.** Read PID 7 with the loss-aware `read_property_raw` and record element
-   count and raw bytes (no device configuration) in the journal, status, report and CLI/web
-   observation list. A width other than four is an observation with its true bytes, never padded
-   or truncated, and never labelled as a pointer value.
+1. **Private raw diagnostic (implemented).** `read_pointer` uses `read_property_counted` with
+   unchanged start-index matching. A wrong-width answer remains a failure, not a non-blocking
+   observation. Its element count, actual byte count and first 16 raw octets (or `(none)`) survive
+   in the private journal's `Failed.local_diagnostic` and in the CLI error result. The bytes are
+   never padded or decoded as a pointer. Longer payloads are explicitly abbreviated with `...`;
+   this is a diagnostic prefix, not a complete capture. HTTP status and the shareable report
+   continue to omit the runtime failure text. A structured status/report/UI projection is still
+   open; this subdelivery does not implement it.
 2. **Wrong-width rule: the refusal stays until the width is understood.** An observation-only
    rule is rejected for now, because a backup cannot cover this case: the recovery snapshot holds
    a four-octet pointer per resource, and `recovery_plan` already refuses original-state recovery
@@ -32,9 +39,9 @@ explanation given in #30 is withdrawn until raw bytes exist.
    answer would therefore have no original-state recovery, only a fresh ETS download as the way
    back. Independently, the masked 338 bytes cannot be shown to survive Unload
    ([up258 validation, row 1](../contracts/up258-system2-validation.md)), so even a clean backup
-   would not prove a way back. Writes use the plan's absolute addresses, not the read pointer, but
-   a device that answers PID 7 in another width shows that the firmware's resource model differs
-   from ours in a way we cannot yet quantify.
+   would not prove a way back. Writes use the plan's absolute addresses, not the read pointer.
+   A wrong-width reply alone does not identify its cause or establish the firmware's resource
+   representation. Do not infer either merely from a byte count.
    The fix is to model the width once the raw bytes are known: a width-aware pointer in the
    snapshot and a recovery path for it, admitted only with evidence for that firmware, so that a
    usable backup exists. Until then the refusal before the first write stays, now carrying the
@@ -46,7 +53,10 @@ explanation given in #30 is withdrawn until raw bytes exist.
 ## Boundaries
 
 No live-bus operation, no retry on the reporter's device, no vendor contact. Simulator and
-software tests only; add tests for 0, 1, 2, 3, 5 octet answers and a mismatched element count.
+software tests only. Coverage includes positive-element answers of 0, 1, 2, 3 and 5 octets,
+zero-element refusal, true element-count retention, and exact 16/17-byte display boundaries.
+A mismatched element count with exactly four bytes remains existing behaviour, not newly approved
+wire semantics; decide its admission with the evidence-backed width model.
 Does not claim hardware support or recovery. Shared commissioning code: read the restart snapshot
 and coordinate with [PRG-01](PRG-01-programming-gaps.md) before editing.
 

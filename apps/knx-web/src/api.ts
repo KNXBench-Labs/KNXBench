@@ -2065,7 +2065,9 @@ export type DeviceDownloadEvent =
       written: number;
       of: number;
     }
-  | { kind: "stepDone"; number: number; observed: string | null };
+  | { kind: "stepDone"; number: number; observed: string | null }
+  /** The transfer finished written; the read-only check starts. */
+  | { kind: "postDownloadCheckStarted" };
 
 export type DeviceDownloadWritten = "yes" | "no" | "partially";
 
@@ -2076,6 +2078,9 @@ export type DeviceDownloadStatus =
       written: DeviceDownloadWritten;
       restart: "acknowledged" | "notInPlan" | "unconfirmed";
       restartNote: string | null;
+      /** The read-only check after the transfer; absent from an older
+       * server, which reads as not checked (`postDownloadCheck.ts`). */
+      postDownloadCheck?: unknown;
     }
   | {
       state: "failed";
@@ -2225,6 +2230,8 @@ export interface DeviceDownloadReport {
     restart: "acknowledged" | "notInPlan" | "unconfirmed" | null;
     stoppedInStep: number | null;
   } | null;
+  /** Additive in format 1; absent in an older report: not checked. */
+  postDownloadCheck?: unknown;
   parameterValues: Record<string, string>;
 }
 

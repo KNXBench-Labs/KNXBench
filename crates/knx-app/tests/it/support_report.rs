@@ -32,6 +32,7 @@ fn a_prior_partial_run_keeps_its_scope_but_never_parameters_or_free_text() {
             Written::Yes,
             Restart::Acknowledged,
         )),
+        post_download_check: None,
         parameter_values: std::collections::BTreeMap::from([(
             "PRIVATE_REF".into(),
             "PRIVATE_VALUE".into(),

@@ -1,8 +1,8 @@
 //! Observes, read-only, what a completed mask-`070nh` memory download left in the device.
 //!
-//! **Not yet wired.** Phase 1 of the post-download observation: the
-//! function and its result exist, no CLI, server or web download calls them
-//! yet. Nothing here claims the feature is delivered.
+//! **Consumers.** The CLI's regular download and the server's download
+//! worker call it after a successful transfer; `knx_app::post_download_check`
+//! turns its result into the shared, payload-free record.
 //!
 //! **When.** A caller runs [`observe_after_download`] only after
 //! [`run_memory_download`](super::memory_download::run_memory_download) (or

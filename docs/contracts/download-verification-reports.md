@@ -19,6 +19,7 @@ completed with the run's outcome. JSON, `camelCase`:
 | `inferences`, `warnings` | The plan's, each `rule: detail (reference)` |
 | `plan` | `steps`, `dataOctets`, `groupLinks` |
 | `outcome` | `completed`, `written` (`yes`/`no`/`partially`), `restart` (`acknowledged`/`notInPlan`/`unconfirmed`, completed runs only), `stoppedInStep` |
+| `postDownloadCheck` | Optional, additive in format 1: the read-only check after the transfer ([contract](post-download-check.md)); `notChecked` for a failed run, absent in older reports (read as not checked) |
 | `parameterValues` | The project's values by `ParameterRef` id; absent ones took their product default |
 
 **Never in a report:** project name, device name, individual address,

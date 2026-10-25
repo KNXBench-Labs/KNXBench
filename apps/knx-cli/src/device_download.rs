@@ -18,6 +18,7 @@ use knx_app::access_key::DownloadKeying;
 use knx_app::device_backup::{write_backup, StoredBackup};
 use knx_app::device_download::PreparedDownload;
 use knx_app::download_support::{untested_acknowledgement, SupportLevel};
+use knx_app::post_download_check::PostDownloadCheck;
 use knx_core::commissioning::authorisation::Authorisation;
 use knx_core::commissioning::device_backup::DeviceBackup;
 use knx_core::commissioning::memory_download::{MemoryDownloadPlan, MemoryDownloadStep};
@@ -30,6 +31,7 @@ use knx_net::commissioning::memory_download::{
     locked_device_hint, run_memory_download_with_backup, MemoryDownloadReport, Progress,
     RestartOutcome,
 };
+use knx_net::commissioning::post_download::observe_after_download;
 use knx_net::{ManagementSession, ManagementTransport, SessionTiming};
 
 /// Raw `knx device download` arguments.
@@ -526,6 +528,131 @@ pub async fn execute_with_history<T: ManagementTransport>(
         out,
     )
     .await
+}
+
+/// A regular download's witnessed transfer and the read-only check after it.
+pub struct RegularDownload {
+    /// The transfer's own result, never changed by the check.
+    pub result: DownloadResult,
+    /// Whether the history recorded that result.
+    pub recorded: bool,
+    /// The check; `notChecked` unless the transfer finished written.
+    pub check: PostDownloadCheck,
+    /// Whether the history recorded the check (`true` when none ran).
+    pub check_recorded: bool,
+}
+
+/// The regular `knx device download` run: the transfer, its durable record,
+/// then, only after a finished and written transfer, one read-only check on
+/// the same transport (`observe_after_download`). The transfer already
+/// waited out its restart and closed its own connection (its plan ends with
+/// `Disconnect`); nothing here restarts, retries, authorises or writes, and
+/// the check's outcome never changes the transfer's.
+pub async fn execute_regular_download<T: ManagementTransport>(
+    transport: &T,
+    authorisation: WriteAuthorisation,
+    keying: DownloadKeying,
+    timing: SessionTiming,
+    run: DownloadRun<'_>,
+    activity: &mut DownloadGuard,
+    out: &mut impl Write,
+) -> RegularDownload {
+    let target = authorisation.target();
+    let plan = run.plan;
+    let result =
+        execute_with_history(transport, authorisation, keying, timing, run, activity, out).await;
+    let recorded = activity.record_result(&result).map_err(|error| {
+        eprintln!("device outcome is witnessed, but activity history could not record it: {error}; do not retry automatically");
+    }).is_ok();
+    let DownloadResult::Finished {
+        written: Written::Yes,
+        ..
+    } = result
+    else {
+        return RegularDownload {
+            result,
+            recorded,
+            check: PostDownloadCheck::not_checked(),
+            check_recorded: true,
+        };
+    };
+    let _ = writeln!(
+        out,
+        "== read-only check of device {}: fresh connection, no key, nothing written ==",
+        target.address()
+    );
+    // A history that refuses the check keeps the transfer's record as is;
+    // the read-only check still informs the operator.
+    let began = activity.begin_check();
+    let observation = observe_after_download(transport, target, timing, plan).await;
+    let check = PostDownloadCheck::from_observation(&observation);
+    for line in check.lines() {
+        let _ = writeln!(out, "{line}");
+    }
+    let _ = writeln!(out, "detail: {observation}");
+    let check_recorded = began.and_then(|()| activity.record_check(&check)).map_err(|error| {
+        eprintln!("activity history could not record the read-only check: {error}; the download result is unchanged");
+    }).is_ok();
+    RegularDownload {
+        result,
+        recorded,
+        check,
+        check_recorded,
+    }
+}
+
+/// `knx device download` after the tunnel closed: record the cleanup, write
+/// the optional report with the transfer's outcome and the check, and decide
+/// the exit. Success needs a finished, written transfer, every history record
+/// (the check's included) and the report; the check's own result never counts.
+pub fn finish_regular_download(
+    run: &RegularDownload,
+    cleanup_ok: bool,
+    activity: DownloadGuard,
+    report: Option<(&std::path::Path, &knx_app::download_report::DownloadReport)>,
+    out: &mut impl Write,
+) -> std::process::ExitCode {
+    let cleanup_recorded = activity
+        .record_cleanup(cleanup_ok)
+        .map_err(|error| {
+            eprintln!(
+                "activity history could not record cleanup: {error}; device outcome is unchanged"
+            );
+        })
+        .is_ok();
+    let reported = match (report, reported_outcome(&run.result)) {
+        (Some((path, report)), Some(outcome)) => {
+            let report = report
+                .clone()
+                .with_outcome(outcome)
+                .with_check(run.check.clone());
+            match write_report(path, &report) {
+                // Unprinted, the file's location is unknown to the operator.
+                Ok(text) => out.write_all(text.as_bytes()).is_ok(),
+                Err(error) => {
+                    eprintln!("{error}; device outcome is unchanged");
+                    false
+                }
+            }
+        }
+        _ => true,
+    };
+    if matches!(
+        run.result,
+        DownloadResult::Finished {
+            written: Written::Yes,
+            ..
+        }
+    ) && run.recorded
+        && run.check_recorded
+        && cleanup_ok
+        && cleanup_recorded
+        && reported
+    {
+        std::process::ExitCode::SUCCESS
+    } else {
+        std::process::ExitCode::FAILURE
+    }
 }
 
 async fn execute_inner<T: ManagementTransport>(
@@ -1634,6 +1761,7 @@ mod tests {
                 group_links: 0,
             },
             outcome: None,
+            post_download_check: None,
             parameter_values: [("P-1_R-1".to_string(), "5".to_string())].into(),
         };
         let dir = tempfile::tempdir().unwrap();
@@ -1654,3 +1782,7 @@ mod tests {
             .contains("could not be written"));
     }
 }
+
+#[cfg(test)]
+#[path = "device_download_check_tests.rs"]
+mod check_tests;

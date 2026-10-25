@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import * as api from "./api";
 import { appendHistoryPage, HistoryContractError, type HistoryEntry, type UntrackedKind } from "./activityHistory";
 import { useTranslate } from "./i18n";
+import PostDownloadCheckView from "./PostDownloadCheckView";
 import { useUiLanguage } from "./uiLanguage";
 
 /** UI-04: how often a first window that shows a running operation reloads itself. */
@@ -105,6 +106,9 @@ export default function BusActivityHistory() {
                 <dt>{t("activityHistory.cleanup")}</dt><dd>{t(`activityHistory.cleanup.${entry.downloadEvidence.cleanup}`)}</dd>
               </>}
             </dl>
+            {entry.kind === "deviceDownload" && entry.state === "finished" && entry.downloadEvidence?.written === "yes" && (
+              <PostDownloadCheckView value={entry.downloadEvidence.postDownloadCheck} />
+            )}
           </li>)}
         </ol>
       </>}

@@ -1,4 +1,6 @@
 /** Strict, payload-free format-2 history admission; this module never contacts the bus. */
+import { admitPostDownloadCheck, type PostDownloadCheck } from "./postDownloadCheck";
+
 export const HISTORY_KINDS = ["deviceCompare", "serviceControlRead", "serviceControlWrite", "serialLookup", "deviceDownload", "deviceDiagnostics"] as const;
 export const UNTRACKED_KINDS = ["deviceIdentify", "groupWrite", "serialAddress", "deviceDownload", "addressProgramming", "busMonitor", "lineScan"] as const;
 export type HistoryKind = typeof HISTORY_KINDS[number];
@@ -20,6 +22,8 @@ export interface HistoryEntry {
     written: "yes" | "no" | "partially" | null;
     restart: "acknowledged" | "notInPlan" | "unconfirmed" | null;
     cleanup: "pending" | "returnedOk" | "returnedError" | "unknown";
+    /** Absent: not checked (older records, failed transfers). */
+    postDownloadCheck?: PostDownloadCheck;
   };
 }
 export interface HistoryPage {
@@ -107,7 +111,13 @@ export function admitHistoryPage(value: unknown, after = 0, limit = 50): History
       if (entry.state === "noChange" || entry.state === "notSent") requireHistory(!evidence.sendPossible);
       continue;
     }
-    const download = record(entry.downloadEvidence, ["sessionId", "written", "restart", "cleanup"]);
+    const download = record(entry.downloadEvidence, ["sessionId", "written", "restart", "cleanup"], ["postDownloadCheck"]);
+    if (Object.hasOwn(download, "postDownloadCheck")) {
+      // Only a written, finished transfer is checked; absence alone means not checked.
+      const check = admitPostDownloadCheck(download.postDownloadCheck);
+      requireHistory(check !== null && check.observation.status !== "notChecked");
+      requireHistory(entry.state === "finished" && download.written === "yes");
+    }
     requireHistory(integer(download.sessionId, 1));
     requireHistory([null, "yes", "no", "partially"].includes(download.written as string | null));
     requireHistory([null, "acknowledged", "notInPlan", "unconfirmed"].includes(download.restart as string | null));

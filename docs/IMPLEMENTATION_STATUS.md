@@ -21,8 +21,8 @@ Malformed, unknown and forbidden changed responses cannot be hidden by a later
 poll. Existing deadlines, verification polling, public APIs and the memory-mapped
 three-read mechanism remain unchanged
 ([contract](contracts/load-control-response-state.md)). Independent source review
-and focused simulator regressions passed; integrated acceptance and publication
-remain pending. No additional device or hardware support is claimed.
+and all 14 maintained integrated package stages passed; published as `e4f5e7c6f`
+([acceptance](status/2026-10-25-load-control-response.md)). No additional device or hardware support is claimed.
 
 ## Memory-region read service and count (25 October 2026 source)
 

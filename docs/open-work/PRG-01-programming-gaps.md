@@ -60,7 +60,8 @@ record the boundaries separately; these increments do not close PRG-01.
 - Property load-control response-state handling preserves an actual LoadCompleting
   observation and rejects invalid responses before polling
   ([contract](../contracts/load-control-response-state.md)). Independent review
-  and focused simulator tests passed; integrated acceptance/publication pending.
+  and all 14 integrated package stages passed; published as `e4f5e7c6f`
+  ([acceptance](../status/2026-10-25-load-control-response.md)).
   No inferred silent state, new retry, common timeout or hardware support.
 
 ## Open

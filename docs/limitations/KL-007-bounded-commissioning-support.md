@@ -13,8 +13,8 @@ observed LoadCompleting seeds the existing conditional wait during device silenc
 ([contract](../contracts/load-control-response-state.md)). Invalid responses fail
 before a later poll can hide them. No mutation is re-sent, deadlines and profile
 restrictions remain, and the separate memory-mapped mechanism is unchanged.
-Independent review and focused simulator tests passed; integrated acceptance and
-publication are pending. KL-007 and hardware acceptance remain open.
+Independent review and all 14 integrated package stages passed; published as
+`e4f5e7c6f` ([acceptance](../status/2026-10-25-load-control-response.md)). KL-007 and hardware acceptance remain open.
 
 ## Region-bound memory reads — 25 October 2026 source
 

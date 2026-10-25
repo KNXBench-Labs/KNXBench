@@ -53,8 +53,9 @@ or coupler budget discovery, device-family admission or hardware evidence.
 
 The [load-control response correction](contracts/load-control-response-state.md)
 uses a state actually reported before an offline completion interval rather than
-forgetting that observation. Independent review and focused regressions passed;
-integrated acceptance and publication are pending. The existing profile-specific
+forgetting that observation. Independent review and all 14 integrated package
+stages passed; published as `e4f5e7c6f`
+([acceptance](status/2026-10-25-load-control-response.md)). The existing profile-specific
 wait/reconnect and three-read memory mechanisms are not replaced by a common
 timeout policy; no hardware acceptance or family promotion follows.
 

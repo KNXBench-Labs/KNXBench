@@ -1,6 +1,8 @@
 # Load-control write answers are observations
 
-Status: implemented in `knx-net` commissioning internals; simulator-tested only, no hardware run.
+Published source: `e4f5e7c6f` after independent review and the maintained integrated
+package gate ([acceptance](../status/2026-10-25-load-control-response.md)).
+Simulator/software acceptance only; no hardware run.
 
 ## Rule
 

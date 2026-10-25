@@ -46,6 +46,24 @@ it("preserves null status and all explicit mutation fields with no retries", asy
   vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("lost")));
   await expect(system2.startSystem2(start)).rejects.toThrow("lost"); expect(fetch).toHaveBeenCalledTimes(1);
 });
+it("admits the refusal kind that ended a run, strictly (issue #30)", async () => {
+  const failed = { ...status, state: "failed", refusal: "gatewayBusy" };
+  reply(failed); expect(await system2.getSystem2Status()).toEqual(failed);
+  for (const refusal of ["", "gateway busy", "a".repeat(65), 42]) {
+    reply({ ...status, refusal }); await expect(system2.getSystem2Status()).rejects.toThrow("System-2");
+  }
+  const { refusal: _omitted, ...missing } = status;
+  reply(missing); await expect(system2.getSystem2Status()).rejects.toThrow("System-2");
+});
+it("reads only a definitive refusal's kind, never a lost or failed response", () => {
+  const thrown = (status: unknown, body: unknown) => Object.assign(new Error("x"), { status, body });
+  expect(system2.refusalKind(thrown(409, { error: "x", kind: "system2Busy" }))).toBe("system2Busy");
+  expect(system2.refusalKind(thrown(502, { error: "x", kind: "gatewayTimeout" }))).toBeNull();
+  expect(system2.refusalKind(thrown(409, { error: "x" }))).toBeNull();
+  expect(system2.refusalKind(thrown(409, { error: "x", kind: "not a token" }))).toBeNull();
+  expect(system2.refusalKind(new Error("response lost"))).toBeNull();
+  expect(system2.refusalKind(undefined)).toBeNull();
+});
 it("uses the existing session-expiry and typed HTTP error handling", async () => {
   const expired = vi.fn(); const stop = subscribeSessionExpired(expired);
   try { reply({ error: "Session required" }, 401); await expect(system2.getSystem2Status()).rejects.toMatchObject({ status: 401 }); expect(expired).toHaveBeenCalledOnce(); }

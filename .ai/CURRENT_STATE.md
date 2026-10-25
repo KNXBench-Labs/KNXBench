@@ -50,6 +50,15 @@ Updated: 2026-10-25 20:16 CET. Operational snapshot, not an append-only journal.
 - Raw prefix private journal only; wrong-width refusal retained. No hardware/recovery claim.
 - Width model blocked on real bytes; structured projection open; S2-02 planned P1.
 - [Acceptance](../docs/status/2026-10-25-system2-pid7-diagnostic.md) owns diagnostic scope.
+## Issue30 S2-02 follow-up (observed 2026-10-25 22:51 CET, implementation GO)
+- Own `fix/issue30-system2-busy-reason-20261025`, `<sources>/knxbench-issue30-busy-20261025`.
+- Reporter answered (comment 6403377674); own-run hint and volatile refusal implemented.
+- Opus APPROVE + correction APPROVE; focused worker4/activity4/web4398/browser5 green.
+- Supplemental module13/1fail: old opt-in recovery timeout also occurs on original base;
+  phases vary, cause unresolved. Not a recovery or hardware claim; no real bus access.
+- Integrated package gate/publication PENDING. [Record](../docs/status/2026-10-25-system2-busy-refusal.md).
+- Evidence `<profile-scratch>/issue30-busy-20261025/`; next: committed main-first candidate gate.
+- Preserve all other owner/parked tracks above; selected root remains intentionally dirty.
 ## Retained boundaries
 - Family/format prerequisites retained; System2 diagnostics CLI-only, SIGKILL cleanup limited.
 - No vendor contact/Ollama/downloads/excluded models; excluded device off-limits.

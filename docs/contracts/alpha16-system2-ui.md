@@ -57,12 +57,25 @@ public response; it never truncates required plan/risk information.
 `Status`:
 `{schemaVersion, operationId, binding, address, deviceName, state,
 completedSteps, totalSteps, backupAvailable, recoveryPhrase, downloadPhrase,
-releasePhrase, message, mutationMayHaveStarted, prestateDiffers,
+releasePhrase, message, refusal, mutationMayHaveStarted, prestateDiffers,
 pointerObservations, programVersionObservation}`.
 
+Issue #30 own-run diagnostic follow-up (unreleased source): `refusal` is a
+required nullable stable error-kind token, ASCII alphanumeric with 1–64 characters
+when present. It records only a refusal from the current in-process worker and
+is cleared on a new attempt or historical reattachment; it is not persisted or
+inferred from an old selected journal. The panel shows this reason separately
+from conservative write/recovery evidence. A named `4xx` start refusal is also
+shown without automatic resend; missing/malformed/network/server-error responses
+retain unknown-outcome handling. The gateway hint recognizes the admitted
+`system2Operation` owner in the partial activity snapshot rather than blaming
+its own shared programming lock. No safety admission or bus behavior changes.
+
 Additive fields, 2026-10-25 (GitHub issue #30). `mutationMayHaveStarted` is the
-durable journal's conservative flag: `false` only when no write could have been
-sent (no recovery checkpoint and no mutating step). The panel shows "Refused
+server's conservative flag: `false` only when no write could have been
+sent (including a refusal before connection/journal creation, or no recovery
+checkpoint and no mutating step). It is not a fabricated journal for a refused
+pre-connect attempt. The panel shows "Refused
 before any write — nothing was written" for `failed`/`cancelled` only when it is
 `false`; otherwise the conservative state text stays. `prestateDiffers` is true
 when the captured prestate differed from the source allocation shape or

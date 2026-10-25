@@ -210,6 +210,7 @@ async fn start(
         task: None,
         control_id: meta.operation_id.clone(),
         message: Some("Experimental configured download; cancellation is not rollback."),
+        refusal: None,
     });
     drop(reservation);
     let copy = state.clone();
@@ -305,6 +306,7 @@ async fn recover(
             task: None,
             control_id: format!("{id}-restore"),
             message: None,
+            refusal: None,
         };
         Ok((root, record, bundle, store))
     })

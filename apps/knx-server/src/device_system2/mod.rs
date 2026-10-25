@@ -41,6 +41,8 @@ struct Record {
     task: Option<JoinHandle<()>>,
     control_id: String,
     message: Option<&'static str>,
+    /// Volatile worker refusal kind; deliberately absent from durable evidence.
+    refusal: Option<&'static str>,
 }
 fn initial(outcome: LocalOutcome) -> OperationProgress {
     OperationProgress {
@@ -116,6 +118,7 @@ impl Record {
             download_phrase: phrases.as_ref().map(|p| p.download_phrase.clone()),
             release_phrase: phrases.map(|p| p.release_phrase),
             message: self.message,
+            refusal: self.refusal,
             mutation_may_have_started: p.mutation_possible,
             prestate_differs: p.prestate_differs,
             prestate_unreadable_allocations: p
@@ -269,7 +272,13 @@ impl System2Service {
             record.updates = Some(receiver);
         }
     }
-    fn publish_end(&self, id: &str, fallback: LocalOutcome, message: Option<&'static str>) {
+    fn publish_end(
+        &self,
+        id: &str,
+        fallback: LocalOutcome,
+        message: Option<&'static str>,
+        refusal: Option<&'static str>,
+    ) {
         let mut inner = self.inner.lock().expect("System-2 status poisoned");
         if let Some(record) = inner
             .current
@@ -280,6 +289,7 @@ impl System2Service {
                 record.progress.outcome = fallback;
             }
             record.message = message;
+            record.refusal = refusal;
         }
     }
     async fn wait_task(&self) {
@@ -342,7 +352,7 @@ impl System2Service {
     }
 }
 fn load_record(root: &storage::Storage, id: &str) -> std::io::Result<Record> {
-    Ok(Record { metadata: root.metadata(id)?, progress: root.progress(id)?.unwrap_or_else(|| initial(LocalOutcome::Interrupted)), updates: None, task: None, control_id: id.into(), message: Some("Original retained operation; no automatic resume or retry. Recovery remains experimental best-effort.") })
+    Ok(Record { metadata: root.metadata(id)?, progress: root.progress(id)?.unwrap_or_else(|| initial(LocalOutcome::Interrupted)), updates: None, task: None, control_id: id.into(), message: Some("Original retained operation; no automatic resume or retry. Recovery remains experimental best-effort."), refusal: None })
 }
 fn binding(state: &crate::AppState, device: u32) -> Binding {
     use std::sync::atomic::Ordering;

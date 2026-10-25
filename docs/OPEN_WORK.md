@@ -1053,12 +1053,28 @@ Open, each small and none blocking:
   `test_sigterm_also_cleans_descendants_that_ignore_termination` read an empty
   descendant PID once in 51 loaded suite runs (24 October 2026): the
   descendant's `write_text` creates the marker before writing it, and the test
-  polls only for existence.
+  polls only for existence. **Closed (24 October 2026):** the regression now
+  creates the empty-file window deliberately and waits for a complete,
+  parseable PID before interrupting the gate runner.
 - A package gate stopped with SIGTERM during its browser stages leaves the
   fixture Vite server (`npm exec vite --config vite.fixtures.config.ts` and its
   `node` child) running, reparented to the user's systemd (seen three times on
   19 October 2026). It holds its port for the next run; end it by PID until
-  `run_web_gate.py`'s cleanup reaches Playwright's `webServer` group. Reading `products` commands and
+  `run_web_gate.py`'s cleanup reaches Playwright's `webServer` group. **Closed
+  (25 October 2026):** the shared measured-stage runner launches each command
+  under its own Linux child-subreaper supervisor. That exclusive boundary owns
+  and reaps every adopted descendant, including new-session children, children
+  that clear their environment and children already reduced to zombies. Cleanup
+  validates PID/start-time identities, signals through pidfds and applies
+  bounded TERM/KILL escalation. Normal stage completion also removes an
+  unexpected leftover; Playwright's ordinary `webServer` shutdown remains the
+  no-cleanup path. A same-day late-cancellation correction defers handled signals
+  during cleanup in both layers, including the normal-completion path; real
+  SIGTERM/SIGINT and repeated-signal regressions cover detached children with
+  scrubbed environments and non-atomic process enumeration. Forcibly killing
+  the supervisor with SIGKILL can still orphan such children; see the
+  [cleanup and accounting boundaries](contracts/web-test-gate.md#receipt).
+  Reading `products` commands and
   `device readiness` open the default product database read-only now. **Closed
   (24 October 2026):** `device download/compare/restore/byte-order-probe` and
   `device diagnostics --product-db` only plan from the catalogue, so they use

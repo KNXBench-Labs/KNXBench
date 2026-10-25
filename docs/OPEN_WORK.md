@@ -6,6 +6,10 @@ the former dated sections are in the [archive](history/OPEN_WORK_2026-10-25.md).
 
 | ID | Task | Status | Details |
 | --- | --- | --- | --- |
+| WP-21 | Selective live-typing headlines on the website | Planned: awaiting implementation Go | [WP-21](open-work/WP-21-website-headline-typing.md) |
+| WP-22 | Project change timeline inspired by Fusion 360 | Planned: awaiting implementation Go | [WP-22](open-work/WP-22-project-change-timeline.md) |
+| WP-23 | Show group-address names in Flow | Planned: awaiting implementation Go | [WP-23](open-work/WP-23-flow-group-address-names.md) |
+| WP-24 | Product catalogue as a table with sortable headers | Planned: awaiting implementation Go | [WP-24](open-work/WP-24-product-catalogue-sortable-table.md) |
 | PRG-01 | Close non-Secure programming gaps | In progress | [PRG-01](open-work/PRG-01-programming-gaps.md) |
 | WP-03 | Legacy binary enumeration values | Blocked: evidence | [WP-03](open-work/WP-03-legacy-binary-enumerations.md) |
 | WP-05 | Parameter layout fidelity: remaining features | Blocked: evidence | [WP-05](open-work/WP-05-parameter-layout-fidelity.md) |

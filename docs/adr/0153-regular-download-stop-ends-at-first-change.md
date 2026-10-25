@@ -1,7 +1,9 @@
 # ADR 0153: A regular download may be stopped until its first change, and not after
 
 Date: 2026-10-25
-Status: Accepted for implementation; runtime acceptance pending
+Status: Accepted; bounded software acceptance published `6c9ca2d7d`.
+Hardware outcomes, actual HTTP-start execution and mid-procedure stop remain unverified.
+[Acceptance](../status/2026-10-25-regular-prewrite-stop.md) records the exact scope.
 Session: 7 (integration/hardening)
 
 ## Context

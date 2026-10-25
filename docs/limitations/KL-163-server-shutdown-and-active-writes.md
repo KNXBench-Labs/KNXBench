@@ -2,6 +2,26 @@
 
 [Current summary and ledger status](../KNOWN_LIMITATIONS.md#catalogue-kl-163)
 
+## Regular prewrite stop — 25 October 2026 source update
+
+The regular `070nh` download now registers its stop handle before tunnel acquisition
+and worker spawn. Process closure requests it synchronously, even while an async
+start reservation is held. If stop wins the first-mutation commitment, the run
+sends no memory/load/configuration/restart writes; complete read exchanges and
+cleanup still settle. Connection, authorization and read traffic may already have
+occurred. A genuine failure is not rewritten as a successful stop.
+
+If commitment wins, the download continues unchanged and the existing bounded
+drain only waits. Address-programming and System-2 policies are unchanged. A second
+signal, forced exit or expired wait can still interrupt a committed write; there is
+no automatic restore, retry or reset. The historical “every download is only waited
+for” statement below is superseded only for the prewrite boundary.
+
+Published `6c9ca2d7d` after independent reviews and all 14 integrated stages
+([acceptance](../status/2026-10-25-regular-prewrite-stop.md),
+[contract](../contracts/regular-download-prewrite-stop.md)). Simulator/loopback
+software evidence only; no real server/container/device shutdown was performed.
+
 ## Admission is scoped to tunnel openers (20 October 2026 reconciliation)
 
 The 13 October update below remains authoritative: stopping rejects routes

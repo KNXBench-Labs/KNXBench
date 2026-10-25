@@ -1,7 +1,7 @@
 //! System-2 source images use their own descriptor and indexed-association grammars.
 
 use knx_core::{GroupAddress, IndividualAddress};
-use knx_productdb::image::{build_system2_image, ImageRequest, Link};
+use knx_productdb::image::{build_system2_image, ImageError, ImageRequest, Link};
 
 const PROGRAM: &str = r#"<KNX xmlns="http://knx.org/xml/project/20"><ManufacturerData><Manufacturer RefId="M-0000">
 <ApplicationPrograms><ApplicationProgram Id="M-0000_A-0001-01-0000" Name="Synthetic" ApplicationNumber="1"
@@ -436,5 +436,41 @@ fn malformed_placements_segments_and_reserved_table_overlaps_fail_closed() {
         }));
         assert!(result.is_ok(), "bounded malformed source must not panic");
         assert!(result.unwrap().is_err());
+    }
+}
+
+#[test]
+fn an_unreadable_number_bound_refuses_the_system2_image_instead_of_vanishing() {
+    for (bound, replacement, attribute, raw) in [
+        (
+            r#"maxInclusive="255""#,
+            r#"maxInclusive="255.0""#,
+            "maxInclusive",
+            "255.0",
+        ),
+        (
+            r#"minInclusive="0""#,
+            r#"minInclusive="""#,
+            "minInclusive",
+            "",
+        ),
+    ] {
+        let xml = PROGRAM.replace(bound, replacement);
+        assert_ne!(xml, PROGRAM, "fixture must change the bound");
+        let (_dir, conn, request) = fixture(&xml);
+        match build_system2_image(&conn, &request) {
+            Err(ImageError::Value {
+                parameter_ref,
+                cause,
+            }) => {
+                assert_eq!(parameter_ref, "P_R");
+                assert!(
+                    cause.contains(attribute) && cause.contains(&format!("{raw:?}")),
+                    "{cause}"
+                );
+            }
+            Ok(image) => panic!("{replacement} admitted: {:?}", image.parameter_fields.len()),
+            Err(other) => panic!("{replacement}: wrong refusal: {other}"),
+        }
     }
 }

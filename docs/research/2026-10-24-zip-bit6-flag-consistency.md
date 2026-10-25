@@ -2,7 +2,7 @@
 
 ## Evidence and bounded decision
 
-The remaining [WP-16](../OPEN_WORK.md#wp-16--empty-directory-zip-integrity)
+The remaining [WP-16](../history/OPEN_WORK_2026-10-25.md#wp-16--empty-directory-zip-integrity)
 question is contradictory ZIP encryption flags, not implementing strong encryption.
 The previous [directory investigation](2026-10-20-directory-encryption-header-validity.md)
 records bit-6-only project directories as accepted. The

@@ -122,7 +122,7 @@ encryption support.
 
 ## After Alpha 15 — master provenance delivered (19 October 2026)
 
-[WP-17](OPEN_WORK.md#wp-17--master-identity-provenance) is delivered on `main`
+[WP-17](history/OPEN_WORK_2026-10-25.md#wp-17--master-identity-provenance) is delivered on `main`
 as `d18ce65e`: product DB v27 master declarations and source-addressable
 winners/losers, with unchanged normalized rules and explicitly unavailable
 historical encounter facts. Core review, final 11/11 corpus matrix, full-value

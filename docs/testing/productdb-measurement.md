@@ -6,7 +6,7 @@ and target-memory baseline. Source delivery and maintained integrated acceptance
 are [recorded separately](../IMPLEMENTATION_STATUS.md#wp-041-synthetic-measurement-baseline-20-october-2026).
 This contract is not a new product format, installer or production memory guarantee.
 [Ordered work](../goals/alpha16-successor-sequence-2026-10-19.md) ·
-[WP-04](../OPEN_WORK.md#wp-04--large-catalogues-measure-then-stream).
+[WP-04](../history/OPEN_WORK_2026-10-25.md#wp-04--large-catalogues-measure-then-stream).
 
 ## Scope and commands
 

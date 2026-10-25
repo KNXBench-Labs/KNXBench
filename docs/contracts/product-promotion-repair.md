@@ -8,7 +8,7 @@ work](../goals/alpha16-successor-sequence-2026-10-19.md).
 
 ## Problem and evidence boundary
 
-The [WP-02 follow-up](../OPEN_WORK.md#wp-02--suffixtext-end-to-end) records two
+The [WP-02 follow-up](../history/OPEN_WORK_2026-10-25.md#wp-02--suffixtext-end-to-end) records two
 classes of discrepancies introduced by the product database's v23–v25 column
 promotions: a later declaration of one program id can overwrite values from the
 winning first declaration, and overly broad host-name retirement can remove

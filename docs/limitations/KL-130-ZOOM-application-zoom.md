@@ -46,7 +46,7 @@ column fitting, pointer drag distance and announced widths at 80% and 150%.
 **Known open defect (not part of the table fix).** Navigation and inspector
 pane drags still add the raw pointer delta to a layout-pixel width, so at 150%
 the pane edge moves 1.5 times the pointer distance (0.8 times at 80%). Tracked
-in [open work](../OPEN_WORK.md#ui-feedback-packages-18-october-2026).
+in [open work](../history/OPEN_WORK_2026-10-25.md#ui-feedback-packages-18-october-2026).
 
 ## Update 19 October 2026: the File menu under application zoom
 

@@ -288,6 +288,6 @@ in the server, storage, API, bindings or write path changes.
   [server overlay](../../apps/knx-server/src/com_object_activation.rs),
   [projection](../../crates/knx-projection/src/lib.rs) and
   [table contract](../COMMUNICATION_OBJECT_TABLE.md#presentation-and-derived-data).
-- [WP-06](../OPEN_WORK.md#wp-06--communication-object-organisation),
+- [WP-06](../open-work/WP-06-communication-object-organisation.md),
   [existing gap census](../research/2026-10-17-product-database-gap-census.md) and
   [source import boundary](IMPORT_BOUNDARY_CONTRACT.md).

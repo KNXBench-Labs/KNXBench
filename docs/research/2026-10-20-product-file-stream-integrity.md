@@ -10,7 +10,7 @@ investigation established the explicit
 before implementation. Project-container file streams and encrypted-header
 semantics remain outside this claim.
 
-Read the current [WP-16 scope](../OPEN_WORK.md#wp-16--empty-directory-zip-integrity)
+Read the current [WP-16 scope](../history/OPEN_WORK_2026-10-25.md#wp-16--empty-directory-zip-integrity)
 and [KL-159](../limitations/KL-159-project-archive-budgets-and-duplicate-names.md)
 before treating this record as an implementation instruction.
 

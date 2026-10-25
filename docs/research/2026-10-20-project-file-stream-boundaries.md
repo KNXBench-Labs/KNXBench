@@ -9,7 +9,7 @@ Existing test bodies were inspected, not run. Concurrent characterization work
 is not evidence in this note; test references below describe the baseline.
 
 This is the project-container follow-up in
-[WP-16](../OPEN_WORK.md#wp-16--empty-directory-zip-integrity), not an extension
+[WP-16](../history/OPEN_WORK_2026-10-25.md#wp-16--empty-directory-zip-integrity), not an extension
 of the delivered [product-file policy](../contracts/product-file-stream-integrity.md).
 AES remains refused. Directory encryption-header validity is separate open work.
 No ZIP-wide or ETS-wide compatibility claim follows.

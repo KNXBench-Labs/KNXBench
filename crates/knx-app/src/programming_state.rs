@@ -133,15 +133,30 @@ pub fn still_current(written: &ImageRequest, now: &ImageRequest) -> ProgrammingP
     }
 }
 
+/// Whether the product source, read when a run ends, still plans exactly the
+/// plan that ran. It decides only the memory parts; the address is the
+/// project's own.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SourcePlan {
+    /// Planning the written request again yields the plan that ran.
+    Unchanged,
+    /// The plan differs, or the source is gone, unreadable or refuses.
+    ChangedOrUnknown,
+}
+
 /// The settlement for a download. `now` is the request the project yields
 /// when the run ends (`None` if it yields none any more); only a completed
 /// run makes anything programmed, and only what is still current. A
 /// complete download also confirms the address it reached the device at.
+/// A `source` that is not [`SourcePlan::Unchanged`] leaves the memory parts
+/// the run wrote pending: the run's bytes are not what the product data
+/// says now.
 pub fn settle_download(
     partial: Option<PartialDownloadParts>,
     end: DownloadEnd,
     written: &ImageRequest,
     now: Option<&ImageRequest>,
+    source: SourcePlan,
 ) -> Settlement {
     let memory = written_parts(partial);
     match end {
@@ -160,6 +175,13 @@ pub fn settle_download(
                 memory
             };
             let current = now.map_or(ProgrammingParts::NONE, |now| still_current(written, now));
+            let current = match source {
+                SourcePlan::Unchanged => current,
+                SourcePlan::ChangedOrUnknown => ProgrammingParts {
+                    address: current.address,
+                    ..ProgrammingParts::NONE
+                },
+            };
             let programmed = confirmed.intersection(current);
             Settlement {
                 programmed,

@@ -32,4 +32,5 @@ Moved here from `docs/` on 2026-10-08 (relative links adjusted by script).
 | [revision-bound-writes](revision-bound-writes.md) | Parameter writes and installation renames bound to the caller's server/project/snapshot and expected value; typed conflicts, legacy unbound form (Goal A2) |
 | [device-diagnostic-export](device-diagnostic-export.md) | One-device read-only generic identity export (descriptor, PID12, PID78), loss-aware results, verified create-only ZIP; no memory, no programming unlock (ADR-0134) |
 | [universal-device-support](universal-device-support.md) | Unknown/unresolved/unsupported device evidence, fixed read-only profiles, disclosure/IP consent and local ZIP; no programming unlock |
+| [download-settlement-source-freshness](download-settlement-source-freshness.md) | A finished download makes memory parts programmed only while the product source still plans the same bytes; a source-bound snapshot at settlement (ADR-0129) |
 | [download-verification-reports](download-verification-reports.md) | Tester download reports (format 1), what they never contain, and the maintainer review that ends in `verified_downloads.json` (ADR-0121) |

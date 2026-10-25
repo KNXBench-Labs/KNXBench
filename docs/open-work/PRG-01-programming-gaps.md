@@ -42,6 +42,13 @@ record the boundaries separately; these increments do not close PRG-01.
   ([acceptance](../status/2026-10-25-backup-application-identity.md)); it does not
   prove whole-device recovery.
 
+- Source-bound programming settlement replans the original request at completion
+  and withholds written-memory credit after a selected-plan source change
+  ([contract](../contracts/download-settlement-source-freshness.md)). Source
+  reviews and focused persistence/undo-redo tests passed; integrated acceptance
+  and publication are pending. Other parts and later catalogue edits are not
+  monitored; this does not close PRG-01.
+
 ## Open
 
 - Broader target/exemplar identity and independently verified runtime-state

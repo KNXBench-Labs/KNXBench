@@ -212,7 +212,13 @@ fn each_change_takes_its_part_and_what_depends_on_it() {
 
 #[test]
 fn a_completed_complete_download_programs_all_four_and_touches_all_four() {
-    let s = settle_download(None, DownloadEnd::Completed, &request(), Some(&request()));
+    let s = settle_download(
+        None,
+        DownloadEnd::Completed,
+        &request(),
+        Some(&request()),
+        SourcePlan::Unchanged,
+    );
     assert_eq!(s.programmed, ProgrammingParts::ALL);
     assert_eq!(s.pending, ProgrammingParts::NONE);
     assert_eq!(s.touched, ProgrammingParts::ALL);
@@ -229,6 +235,7 @@ fn a_completed_partial_download_programs_only_what_it_wrote() {
         DownloadEnd::Completed,
         &request(),
         Some(&request()),
+        SourcePlan::Unchanged,
     );
     let only = parts(|p| p.parameters = true);
     assert_eq!(s.programmed, only);
@@ -240,7 +247,13 @@ fn a_completed_partial_download_programs_only_what_it_wrote() {
 fn a_part_edited_during_the_run_stays_pending() {
     let mut now = request();
     now.values.insert("P-1".into(), "2".into());
-    let s = settle_download(None, DownloadEnd::Completed, &request(), Some(&now));
+    let s = settle_download(
+        None,
+        DownloadEnd::Completed,
+        &request(),
+        Some(&now),
+        SourcePlan::Unchanged,
+    );
     assert_eq!(
         s.programmed,
         parts(|p| {
@@ -260,7 +273,13 @@ fn a_part_edited_during_the_run_stays_pending() {
 
 #[test]
 fn a_device_the_project_no_longer_describes_is_programmed_in_nothing() {
-    let s = settle_download(None, DownloadEnd::Completed, &request(), None);
+    let s = settle_download(
+        None,
+        DownloadEnd::Completed,
+        &request(),
+        None,
+        SourcePlan::Unchanged,
+    );
     assert_eq!(s.programmed, ProgrammingParts::NONE);
     assert_eq!(s.pending, ProgrammingParts::ALL);
 }
@@ -272,6 +291,7 @@ fn an_interrupted_download_marks_what_it_touched_even_if_it_was_clean() {
         DownloadEnd::Interrupted(MEMORY),
         &request(),
         Some(&request()),
+        SourcePlan::Unchanged,
     );
     assert_eq!(s.programmed, ProgrammingParts::NONE);
     assert_eq!(s.pending, MEMORY, "the address was not written");
@@ -285,6 +305,7 @@ fn an_interrupted_download_marks_what_it_touched_even_if_it_was_clean() {
         DownloadEnd::Interrupted(MEMORY),
         &request(),
         Some(&request()),
+        SourcePlan::Unchanged,
     );
     assert_eq!(s.pending, parts(|p| p.group_addresses = true));
 }
@@ -297,10 +318,102 @@ fn interruption_never_marks_parts_the_plan_has_not_reached() {
         DownloadEnd::Interrupted(only_tables),
         &request(),
         Some(&request()),
+        SourcePlan::Unchanged,
     );
     assert_eq!(s.pending, only_tables);
     assert_eq!(s.touched, only_tables);
     assert_eq!(s.programmed, ProgrammingParts::NONE);
+}
+
+#[test]
+fn a_changed_source_leaves_a_complete_downloads_memory_pending_but_keeps_its_address() {
+    let s = settle_download(
+        None,
+        DownloadEnd::Completed,
+        &request(),
+        Some(&request()),
+        SourcePlan::ChangedOrUnknown,
+    );
+    assert_eq!(s.programmed, parts(|p| p.address = true));
+    assert_eq!(s.pending, MEMORY);
+    assert_eq!(
+        s.touched,
+        ProgrammingParts::ALL,
+        "undo may not resurrect old claims"
+    );
+}
+
+#[test]
+fn a_changed_source_never_programs_a_partial_download() {
+    let partial = PartialDownloadParts {
+        parameters: true,
+        group_addresses: true,
+    };
+    let s = settle_download(
+        Some(partial),
+        DownloadEnd::Completed,
+        &request(),
+        Some(&request()),
+        SourcePlan::ChangedOrUnknown,
+    );
+    assert_eq!(s.programmed, ProgrammingParts::NONE);
+    assert_eq!(
+        s.pending,
+        parts(|p| {
+            p.parameters = true;
+            p.group_addresses = true;
+        })
+    );
+    assert_eq!(s.touched, s.pending);
+}
+
+#[test]
+fn a_changed_source_and_an_edited_address_credit_nothing() {
+    let mut now = request();
+    now.individual_address = ia(6);
+    let s = settle_download(
+        None,
+        DownloadEnd::Completed,
+        &request(),
+        Some(&now),
+        SourcePlan::ChangedOrUnknown,
+    );
+    assert_eq!(s.programmed, ProgrammingParts::NONE);
+    assert_eq!(s.pending, ProgrammingParts::ALL);
+}
+
+#[test]
+fn a_changed_source_settlement_still_forgets_older_programmed_claims() {
+    let mut p = project();
+    let mut programmed = CommissioningState::default();
+    ProgrammingChange::mark(ProgrammingParts::ALL, true).apply_to(&mut programmed);
+    p.devices.get_mut(DeviceId(1)).unwrap().commissioning = programmed;
+    let mut stack = CommandStack::new();
+    stack
+        .do_command(
+            &mut p,
+            Command::SetParameterValue {
+                id: ParameterInstanceId(1),
+                device: DeviceId(1),
+                ets_id: "P-1".into(),
+                raw: "2".into(),
+            },
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+    let s = settle_download(
+        None,
+        DownloadEnd::Completed,
+        &request(),
+        Some(&request()),
+        SourcePlan::ChangedOrUnknown,
+    );
+    apply_settlement(&mut p, &mut stack, DeviceId(1), &s, None);
+    stack.undo(&mut p).unwrap();
+    let device = p.devices.get(DeviceId(1)).unwrap();
+    assert_eq!(
+        device.commissioning.pending_parts(),
+        MEMORY.union(parts(|p| p.parameters = true))
+    );
 }
 
 #[test]
@@ -310,7 +423,8 @@ fn a_download_that_wrote_nothing_changes_nothing() {
             None,
             DownloadEnd::NothingWritten,
             &request(),
-            Some(&request())
+            Some(&request()),
+            SourcePlan::Unchanged
         ),
         Settlement::default()
     );
@@ -435,7 +549,13 @@ fn applying_a_settlement_sets_belief_and_download_time() {
 fn applying_a_settlement_without_programmed_parts_keeps_the_download_time() {
     let mut p = project();
     let mut stack = CommandStack::new();
-    let s = settle_download(None, DownloadEnd::Interrupted(MEMORY), &request(), None);
+    let s = settle_download(
+        None,
+        DownloadEnd::Interrupted(MEMORY),
+        &request(),
+        None,
+        SourcePlan::Unchanged,
+    );
     let at = Utc::now();
     assert!(
         !apply_settlement(&mut p, &mut stack, DeviceId(1), &s, Some(at)),
@@ -473,7 +593,13 @@ fn applying_a_settlement_forgets_older_programmed_claims() {
             },
         )
         .unwrap_or_else(|e| panic!("{e}"));
-    let s = settle_download(None, DownloadEnd::Completed, &request(), Some(&request()));
+    let s = settle_download(
+        None,
+        DownloadEnd::Completed,
+        &request(),
+        Some(&request()),
+        SourcePlan::Unchanged,
+    );
     apply_settlement(&mut p, &mut stack, DeviceId(1), &s, None);
     stack.undo(&mut p).unwrap();
     assert_eq!(

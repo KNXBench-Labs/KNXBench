@@ -6,7 +6,7 @@
 //! Hash chaining and a synced atomic HEAD detect corruption and missing tails,
 //! not malicious rewriting; an unfinished operation is never harmless.
 use crate::property_validation_bundle::{
-    digest, invalid, PointerObservationRecord, PreparedBundle, RecoveryRecord,
+    digest, invalid, OperationRecord, PointerObservationRecord, PreparedBundle, RecoveryRecord,
 };
 #[path = "property_validation_lifecycle.rs"]
 mod lifecycle;
@@ -165,8 +165,8 @@ struct State {
     mutation: bool,
     outcome: LocalOutcome,
     restore_attempted: bool,
-    final_observations: Vec<PointerObservationRecord>,
-    in_procedure_observations: Vec<(usize, PointerObservationRecord)>,
+    final_observations: Vec<(PointerObservationRun, PointerObservationRecord)>,
+    in_procedure_observations: Vec<(PointerObservationRun, usize, PointerObservationRecord)>,
 }
 impl State {
     fn new(binding: Binding) -> Self {
@@ -185,6 +185,13 @@ impl State {
     /// Captured prestate does not describe the source shape or application, or
     /// carries a placeholder serial that cannot bind a replay to one device:
     /// evidence only, original-state recovery unavailable.
+    fn run(&self) -> PointerObservationRun {
+        if self.outcome == LocalOutcome::Restoring {
+            PointerObservationRun::Restore
+        } else {
+            PointerObservationRun::Download
+        }
+    }
     fn prestate_differs(&self) -> bool {
         self.recovery.as_ref().is_some_and(|r| {
             let serial = r
@@ -192,6 +199,7 @@ impl State {
                 .unwrap_or(r.original_bundle.binding.serial);
             !r.prestate_observations.is_empty()
                 || r.observed_program_version.is_some()
+                || !r.prestate_unreadable_allocations.is_empty()
                 || serial == [0; 6]
                 || serial == [0xFF; 6]
         })
@@ -255,7 +263,9 @@ impl State {
                 for observation in observations {
                     observation.to_observation()?;
                 }
-                self.final_observations = observations.clone();
+                let run = self.run();
+                self.final_observations
+                    .extend(observations.iter().map(|o| (run, o.clone())));
             }
             Checkpoint::InProcedurePointerObservation {
                 operation_index,
@@ -270,9 +280,30 @@ impl State {
                 {
                     return Err(invalid("pointer observation outside its active step"));
                 }
+                // Only an allocation/task record (03 00/01/02) reads a pointer back,
+                // and only for its own object and source address.
+                let step = self.recovery.as_ref().and_then(|r| {
+                    r.original_bundle
+                        .normalized_plan
+                        .steps
+                        .get(*operation_index)
+                });
+                match step.map(|s| &s.operation) {
+                    Some(OperationRecord::LoadControl { object, octets })
+                        if octets[0] == 3
+                            && octets[1] <= 2
+                            && *object == observation.object
+                            && observation.expected == [0, 0, octets[2], octets[3]] => {}
+                    _ => {
+                        return Err(invalid(
+                            "pointer observation does not match the active allocation record",
+                        ))
+                    }
+                }
                 observation.to_observation()?;
+                let run = self.run();
                 self.in_procedure_observations
-                    .push((*operation_index, observation.clone()));
+                    .push((run, *operation_index, observation.clone()));
             }
             Checkpoint::Finished => {
                 if self.outcome != LocalOutcome::Running
@@ -369,9 +400,17 @@ pub enum PointerObservationPhase {
     InProcedure,
     Final,
 }
+/// Which run of the durable operation made an observation; both are kept.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PointerObservationRun {
+    Download,
+    Restore,
+}
 /// One recorded source-versus-device pointer difference, for status display.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct PointerObservationProgress {
+    pub run: PointerObservationRun,
     pub phase: PointerObservationPhase,
     /// Plan operation of an in-procedure read-back; `None` otherwise.
     pub operation_index: Option<usize>,
@@ -556,23 +595,36 @@ impl OperationStore {
                 .recovery
                 .iter()
                 .flat_map(|r| &r.prestate_observations)
-                .map(|record| (PointerObservationPhase::Prestate, None, record))
+                .map(|record| {
+                    (
+                        PointerObservationRun::Download,
+                        PointerObservationPhase::Prestate,
+                        None,
+                        record,
+                    )
+                })
                 .chain(
                     self.state
                         .in_procedure_observations
                         .iter()
-                        .map(|(index, record)| {
-                            (PointerObservationPhase::InProcedure, Some(*index), record)
+                        .map(|(run, index, record)| {
+                            (
+                                *run,
+                                PointerObservationPhase::InProcedure,
+                                Some(*index),
+                                record,
+                            )
                         }),
                 )
                 .chain(
                     self.state
                         .final_observations
                         .iter()
-                        .map(|record| (PointerObservationPhase::Final, None, record)),
+                        .map(|(run, record)| (*run, PointerObservationPhase::Final, None, record)),
                 )
                 .map(
-                    |(phase, operation_index, record)| PointerObservationProgress {
+                    |(run, phase, operation_index, record)| PointerObservationProgress {
+                        run,
                         phase,
                         operation_index,
                         record: record.clone(),

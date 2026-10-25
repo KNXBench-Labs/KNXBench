@@ -258,7 +258,7 @@ fn status_reports_whether_mutation_may_have_started_for_failed_operations() {
 #[test]
 fn status_carries_prestate_observations_and_offers_no_recovery_after_a_difference() {
     use knx_app::property_validation::{
-        LocalOutcome, PointerObservationPhase, PointerObservationProgress,
+        LocalOutcome, PointerObservationPhase, PointerObservationProgress, PointerObservationRun,
     };
     use knx_app::property_validation_bundle::PointerObservationRecord;
     let mut progress = super::initial(LocalOutcome::Finished);
@@ -267,6 +267,7 @@ fn status_carries_prestate_observations_and_offers_no_recovery_after_a_differenc
     progress.prestate_differs = true;
     progress.pointer_observations = vec![
         PointerObservationProgress {
+            run: PointerObservationRun::Download,
             phase: PointerObservationPhase::Prestate,
             operation_index: None,
             record: PointerObservationRecord {
@@ -277,6 +278,7 @@ fn status_carries_prestate_observations_and_offers_no_recovery_after_a_differenc
             },
         },
         PointerObservationProgress {
+            run: PointerObservationRun::Restore,
             phase: PointerObservationPhase::InProcedure,
             operation_index: Some(4),
             record: PointerObservationRecord {
@@ -293,9 +295,9 @@ fn status_carries_prestate_observations_and_offers_no_recovery_after_a_differenc
     assert_eq!(
         status["pointerObservations"],
         serde_json::json!([
-            {"phase": "prestate", "object": 3, "operationIndex": null, "expected": "00003c00",
+            {"run": "download", "phase": "prestate", "object": 3, "operationIndex": null, "expected": "00003c00",
                 "observed": "00000000", "loadState": "Loaded"},
-            {"phase": "inProcedure", "object": 3, "operationIndex": 4, "expected": "00003c00",
+            {"run": "restore", "phase": "inProcedure", "object": 3, "operationIndex": 4, "expected": "00003c00",
                 "observed": "refused", "loadState": "Loading"}
         ])
     );

@@ -15,8 +15,8 @@ use crate::{errors::ApiError, SharedState};
 use dto::{refuse, Binding, Metadata, Status};
 use knx_app::{
     property_validation::{
-        LocalOutcome, OperationProgress, PointerObservationPhase, System2DrainOutcome,
-        System2OperationControl, System2Settlement,
+        LocalOutcome, OperationProgress, PointerObservationPhase, PointerObservationRun,
+        System2DrainOutcome, System2OperationControl, System2Settlement,
     },
     system2_validation_preparation::ProjectHardwareSource,
 };
@@ -121,6 +121,10 @@ impl Record {
                 .pointer_observations
                 .iter()
                 .map(|o| dto::PointerObservation {
+                    run: match o.run {
+                        PointerObservationRun::Download => "download",
+                        PointerObservationRun::Restore => "restore",
+                    },
                     phase: match o.phase {
                         PointerObservationPhase::Prestate => "prestate",
                         PointerObservationPhase::InProcedure => "inProcedure",

@@ -403,6 +403,10 @@ pub struct RecoveryRecord {
     /// the plan's application (empty: refused); absent when equal (Alpha 16 grammar).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub observed_program_version: Option<Vec<u8>>,
+    /// Allocation indices whose prestate read was refused or short; their data
+    /// are zero placeholders. Absent (Alpha 16 grammar) when every read succeeded.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub prestate_unreadable_allocations: Vec<usize>,
 }
 impl RecoveryRecord {
     pub fn from_snapshot(
@@ -459,6 +463,7 @@ impl RecoveryRecord {
                 .collect(),
             observed_serial: snapshot.serial_observation().map(|o| o.observed),
             observed_program_version: snapshot.program_version_observation().map(|o| o.observed),
+            prestate_unreadable_allocations: snapshot.unreadable_allocations.clone(),
         };
         record.to_snapshot(bundle)?;
         Ok(record)
@@ -534,6 +539,7 @@ impl RecoveryRecord {
                 .unwrap_or_else(|| preconditions.program_version.to_vec()),
             preconditions,
             old_device_control: self.old_device_control,
+            unreadable_allocations: self.prestate_unreadable_allocations.clone(),
             resources: self
                 .resources
                 .iter()

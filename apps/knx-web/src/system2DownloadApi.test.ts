@@ -80,5 +80,7 @@ it("admits in-procedure and refused pointer observations, strictly", async () =>
     { ...inProcedureStatus, pointerObservations: [{ ...during, operationIndex: undefined }] },
     { ...inProcedureStatus, pointerObservations: [{ ...during, observed: "denied" }] },
     { ...inProcedureStatus, pointerObservations: [{ ...during, expected: "refused" }] },
+    { ...inProcedureStatus, pointerObservations: [{ ...during, run: "retry" }] },
+    { ...inProcedureStatus, pointerObservations: [{ ...during, run: undefined }] },
   ]) { reply(value); await expect(system2.getSystem2Status()).rejects.toThrow("System-2"); }
 });

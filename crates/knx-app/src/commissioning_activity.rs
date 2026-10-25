@@ -13,6 +13,12 @@ use serde::{Deserialize, Serialize};
 
 use crate::post_download_check::PostDownloadCheck;
 
+mod receipt;
+pub use receipt::{
+    canonical_time, CurrentRequest, DownloadPreparation, DownloadSettlement, Format1, PartBits,
+    ProgramReceipt, ProjectOutcome, Scope, SettledParts, SourceVerdict,
+};
+
 /// Witnessed device-write classification, independent of transport and UI.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -69,6 +75,33 @@ struct DownloadEvidence {
         deserialize_with = "present_check"
     )]
     post_download_check: Option<PostDownloadCheck>,
+    /// What this run was planned to do. Additive and optional like the check:
+    /// absent is "no receipt recorded", and an explicit `null` is refused.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "present_preparation"
+    )]
+    preparation: Option<DownloadPreparation>,
+    /// How the project belief was settled; needs the preparation it settles.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "present_settlement"
+    )]
+    settlement: Option<DownloadSettlement>,
+}
+
+fn present_preparation<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> Result<Option<DownloadPreparation>, D::Error> {
+    DownloadPreparation::deserialize(deserializer).map(Some)
+}
+
+fn present_settlement<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> Result<Option<DownloadSettlement>, D::Error> {
+    DownloadSettlement::deserialize(deserializer).map(Some)
 }
 
 /// Only reached for a present field (`default` covers absence), so `null` errs.
@@ -157,6 +190,12 @@ impl OneShotActivity {
                             }
                             _ => false,
                         }
+                        && receipt::valid_receipts(
+                            &self.state,
+                            evidence.written,
+                            evidence.preparation.as_ref(),
+                            evidence.settlement.as_ref(),
+                        )
                         && evidence.post_download_check.as_ref().is_none_or(|check| {
                             // Only a written, finished transfer is checked,
                             // and absence alone says "not checked".
@@ -397,6 +436,26 @@ impl OneShotLog {
         session_id: u64,
         address: knx_core::IndividualAddress,
     ) -> io::Result<DownloadGuard> {
+        self.start_download_with(session_id, address, None)
+    }
+
+    /// [`Self::start_download`] whose first row already carries the run's
+    /// preparation receipt, so a run dropped later still reads as prepared.
+    pub fn start_download_prepared(
+        self: &Arc<Self>,
+        session_id: u64,
+        address: knx_core::IndividualAddress,
+        preparation: DownloadPreparation,
+    ) -> io::Result<DownloadGuard> {
+        self.start_download_with(session_id, address, Some(preparation))
+    }
+
+    fn start_download_with(
+        self: &Arc<Self>,
+        session_id: u64,
+        address: knx_core::IndividualAddress,
+        preparation: Option<DownloadPreparation>,
+    ) -> io::Result<DownloadGuard> {
         self.ensure_write_available()?;
         let id = {
             let mut inner = self.inner.lock().expect("activity log poisoned");
@@ -424,6 +483,8 @@ impl OneShotLog {
                 restart: None,
                 cleanup: DownloadCleanup::Pending,
                 post_download_check: None,
+                preparation,
+                settlement: None,
             }),
         };
         self.persist_download(&entry)?;
@@ -641,6 +702,35 @@ impl DownloadGuard {
             .expect("download evidence");
         evidence.written = Some(written);
         evidence.restart = restart;
+        self.log.persist_download(&self.entry)
+    }
+
+    /// Record how the project belief was settled for this run, next to the
+    /// transfer result it follows. Refused while running, without a
+    /// preparation, twice, or when it contradicts the row; the row is then
+    /// unchanged. Kept in memory even if durable recording fails, and after
+    /// a latched history failure nothing is rewritten.
+    pub fn record_settlement(&mut self, settlement: &DownloadSettlement) -> io::Result<()> {
+        let evidence = self
+            .entry
+            .download_evidence
+            .as_ref()
+            .expect("download evidence");
+        if evidence.settlement.is_some()
+            || !receipt::valid_receipts(
+                &self.entry.state,
+                evidence.written,
+                evidence.preparation.as_ref(),
+                Some(settlement),
+            )
+        {
+            return Err(io::Error::other("download settlement receipt refused"));
+        }
+        self.entry
+            .download_evidence
+            .as_mut()
+            .expect("download evidence")
+            .settlement = Some(settlement.clone());
         self.log.persist_download(&self.entry)
     }
 

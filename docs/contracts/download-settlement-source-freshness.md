@@ -73,3 +73,6 @@ admission). The source is replaced through the owner's public backup restore.
   source credits the address only.
 - **Admission.** A changed mask check, task segment or load control, a newly
   declared download plug-in and an absent program are each not the same plan.
+
+The outcome of this settlement is recorded per regular-download run as display
+evidence in the history (`settlement`, [receipt contract](download-settlement-receipt.md)); the rule above is unchanged by it.

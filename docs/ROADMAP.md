@@ -30,9 +30,11 @@ match. Hardware acceptance and the broader programming gaps remain open.
 The [backup application guard](contracts/backup-application-identity.md) records
 pre-write evidence and refuses a restore under another application's procedure.
 Strict format-2 backups retain unavailable evidence explicitly; legacy complete
-backups without it remain readable but do not restore. Source review is complete;
-integrated acceptance and publication are pending. This necessary guard does not
-close complete mutation effects or whole-device recovery.
+backups without it remain readable but require an exact executable identity
+precondition or refuse restore. Independent reviews and all 16 selected
+integrated package stages passed; published as `08db292f3`
+([acceptance](status/2026-10-25-backup-application-identity.md)). This necessary
+guard does not close complete mutation effects or whole-device recovery.
 
 ## Alpha 16 published pre-release — public artifacts and website verified (24 October 2026)
 

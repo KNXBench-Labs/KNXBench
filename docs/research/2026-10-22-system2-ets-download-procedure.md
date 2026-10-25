@@ -23,13 +23,17 @@ observed on the wire match the existing codecs byte for byte.
 | `03 00 <addr:2> <len:2> <access> <mem_type> <cksum_flag> 00` (AllocAbsDataSeg) | `absolute_load_control::absolute_data` |
 | `03 02 <start:2> <pei> <mfr:2> <app:2> <ver>` (AllocAbsTaskSeg) | `absolute_load_control::task_segment` |
 | `03 05 <callback:2> <objects:2> <seg1:2> <seg2:2>` (TaskCtrl2) | `load_control::task_control_2` |
-| `A_Memory_Write` with `FEh` = masked ("keep unchanged") octets | `WriteMemory` + segment mask |
+| `A_Memory_Write` with literal data octets, including `FEh` | `WriteMemory`; omitted source bytes are a separate segment-mask concern |
 
 The observed absolute-data allocation used access `33h` (read 3 / write 3),
 memory type `03h` (EEPROM) and a checksum-disabled flag octet — the exact
-`absolute_data` layout with `checksum_disabled: true`. Large writes travelled as
-extended (long) frames with `FEh` masked octets, matching the candidate's
-"write only the computed table, never the masked capacity" rule.
+`absolute_data` layout with `checksum_disabled: true`. Memory-write payload
+values are literal, even in extended frames: `FEh` is not an in-band
+"keep unchanged" marker. Application Layer `03_03_07` v02.01.01 §3.5.4,
+printed pp111–113, defines data octets to be written without a special value
+escape. Segment masks belong to source/image construction; they do not
+change the meaning of bytes present in an `A_Memory_Write` payload. This
+corrects the earlier conflation of source masking with the wire data value.
 
 ## Correction: task segments carry the full application identity on all three machines
 

@@ -46,7 +46,8 @@ Updated: 2026-10-25 20:05 CET. Operational snapshot, not an append-only journal.
   no comparison policy implemented; inactive/Union/customer-write rules unresolved.
 ## S2-01 diagnostic subdelivery
 - Own branch `fix/system2-pid7-raw-response`; no bus/release authority.
-- Initial gate14 green on `a2d04899e`; review fixes and journal regression under re-review.
+- Initial gate14 green on `a2d04899e`; review corrections APPROVED on `28148aaed`.
+- Integrated acceptance pending; journal-reopen and focused edge-case tests passed.
 - Wrong-width refusal stays; raw prefix private only, not HTTP/shareable report.
 - Width/recovery model blocked on real bytes; structured projection open, S2-02 planned P1.
 ## Retained boundaries

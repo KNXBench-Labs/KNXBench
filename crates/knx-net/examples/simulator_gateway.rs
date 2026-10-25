@@ -1,5 +1,6 @@
 //! Serves one simulated device as a KNXnet/IP tunnelling gateway and records every frame.
 
+use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::Write;
 use std::net::{Ipv4Addr, SocketAddrV4};
@@ -28,6 +29,29 @@ fn hex(text: &str, octets: usize) -> Result<Vec<u8>, String> {
     (0..octets)
         .map(|i| u8::from_str_radix(&text[i * 2..i * 2 + 2], 16).map_err(|e| e.to_string()))
         .collect()
+}
+
+/// Object type, instance and property id, as `GatewayConfig::properties` keys them.
+type PropertyKey = (u16, u8, u8);
+
+/// One `--gateway-property OBJTYPE:INSTANCE:PID=HEX`; odd-length or non-ASCII hex is refused.
+fn gateway_property(spec: &str) -> Result<(PropertyKey, Vec<u8>), String> {
+    let (key, data) = spec.split_once('=').ok_or(USAGE)?;
+    let parts: Vec<&str> = key.split(':').collect();
+    let [object, instance, pid] = parts[..] else {
+        return Err(USAGE.into());
+    };
+    if data.len() % 2 != 0 {
+        return Err(format!(
+            "--gateway-property: {data:?} has an odd number of hex digits"
+        ));
+    }
+    let key = (
+        u16::from_str_radix(object, 16).map_err(|e| e.to_string())?,
+        instance.parse().map_err(|_| USAGE)?,
+        pid.parse().map_err(|_| USAGE)?,
+    );
+    Ok((key, hex(data, data.len() / 2)?))
 }
 
 fn dump(bytes: &[u8]) -> String {
@@ -75,6 +99,10 @@ fn run() -> Result<(), String> {
         )
     };
     let address: IndividualAddress = device.ok_or(USAGE)?.parse().map_err(|e| format!("{e:?}"))?;
+    let gateway_properties = gateway_properties
+        .iter()
+        .map(|spec| gateway_property(spec))
+        .collect::<Result<BTreeMap<_, _>, _>>()?;
 
     let simulated = SimulatedDevice::with_config_at(
         address,
@@ -150,24 +178,7 @@ fn run() -> Result<(), String> {
             advertised,
             IndividualAddress::new(0, 0, 250).expect("valid"),
         );
-        for spec in &gateway_properties {
-            let (key, data) = spec.split_once('=').ok_or(USAGE)?;
-            let parts: Vec<&str> = key.split(':').collect();
-            let [object, instance, pid] = parts[..] else {
-                return Err(USAGE.into());
-            };
-            let bytes = (0..data.len() / 2)
-                .map(|i| u8::from_str_radix(&data[i * 2..i * 2 + 2], 16).map_err(|e| e.to_string()))
-                .collect::<Result<Vec<u8>, String>>()?;
-            config.properties.insert(
-                (
-                    u16::from_str_radix(object, 16).map_err(|e| e.to_string())?,
-                    instance.parse().map_err(|_| USAGE)?,
-                    pid.parse().map_err(|_| USAGE)?,
-                ),
-                bytes,
-            );
-        }
+        config.properties = gateway_properties;
         config.observer = Some(observer);
         eprintln!("serving {address} on {advertised}; mask {mask:04x}; max APDU {max_apdu:?}");
         serve(device, socket, config)
@@ -181,6 +192,29 @@ fn direction(from_tool: bool) -> &'static str {
         "TOOL->"
     } else {
         "->TOOL"
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::gateway_property;
+
+    #[test]
+    fn a_gateway_property_parses_into_key_and_octets() {
+        assert_eq!(
+            gateway_property("B:0:52=12ab"),
+            Ok(((0x000B, 0, 52), vec![0x12, 0xAB]))
+        );
+        assert_eq!(gateway_property("B:0:52="), Ok(((0x000B, 0, 52), vec![])));
+    }
+
+    #[test]
+    fn odd_or_non_ascii_hex_is_refused_not_cut_short() {
+        assert!(gateway_property("B:0:52=ABC").is_err());
+        // Four octets, so the length check passes; the old slicing split `é` and panicked.
+        assert!(gateway_property("B:0:52=aéb").is_err());
+        assert!(gateway_property("B:0:52=zz").is_err());
+        assert!(gateway_property("B:0=12").is_err());
     }
 }
 

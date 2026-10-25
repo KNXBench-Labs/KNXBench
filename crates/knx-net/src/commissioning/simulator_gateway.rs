@@ -10,7 +10,8 @@
 //! properties the configuration lists and reports every other one as void.
 //! Every datagram and every decoded frame goes to an observer so a session can
 //! be recorded; a request the codec cannot decode is reported as such and
-//! never answered.
+//! never answered. A reply that cannot be sent is reported and dropped, so one
+//! unreachable address in a tool's HPAI cannot stop the front-end.
 
 use std::collections::{BTreeMap, VecDeque};
 use std::io;
@@ -28,9 +29,9 @@ use crate::cemi::{decode_l_data, encode_l_data, LDataFrame, LDataMessageKind, Tp
 use crate::client::TunnelEvent;
 use crate::core::hpai::{Hpai, HPAI_LEN};
 use crate::core::services::{
-    CONNECTIONSTATE_REQUEST, CONNECTIONSTATE_RESPONSE, CONNECT_REQUEST, CONNECT_RESPONSE,
-    DISCONNECT_REQUEST, DISCONNECT_RESPONSE, E_CONNECTION_TYPE, E_NO_ERROR, SEARCH_REQUEST,
-    SEARCH_RESPONSE,
+    encode_disconnect_request, CONNECTIONSTATE_REQUEST, CONNECTIONSTATE_RESPONSE, CONNECT_REQUEST,
+    CONNECT_RESPONSE, DISCONNECT_REQUEST, DISCONNECT_RESPONSE, E_CONNECTION_TYPE, E_NO_ERROR,
+    SEARCH_REQUEST, SEARCH_RESPONSE,
 };
 use crate::frame::{decode_frame, encode_frame};
 use crate::management::ManagementTransport;
@@ -65,8 +66,10 @@ const DIB_DEVICE_INFO: u8 = 0x01;
 const DIB_SUPP_SVC_FAMILIES: u8 = 0x02;
 const MEDIUM_TP1: u8 = 0x02;
 const FAMILY_CORE: u8 = 0x02;
+const FAMILY_DEVICE_MANAGEMENT: u8 = 0x03;
 const FAMILY_TUNNELLING: u8 = 0x04;
-/// Tunnelling v01.07.01 AS §2.6: the sender waits one second for an ACK, repeats once, then ends.
+/// Tunnelling v01.07.01 AS §2.6.1: the sender waits one second for an ACK, repeats once, then
+/// sends a `DISCONNECT_REQUEST`. The management connection reuses this rule (see ARCHITECTURE).
 const ACK_TIMEOUT: Duration = Duration::from_secs(1);
 
 /// What the observer is told about; borrowed so recording costs nothing when ignored.
@@ -141,6 +144,13 @@ enum Kind {
 impl Kind {
     const ALL: [Kind; 2] = [Kind::Tunnel, Kind::Management];
 
+    fn other(self) -> Kind {
+        match self {
+            Kind::Tunnel => Kind::Management,
+            Kind::Management => Kind::Tunnel,
+        }
+    }
+
     fn request_service(self) -> u16 {
         match self {
             Kind::Tunnel => TUNNELLING_REQUEST,
@@ -185,8 +195,9 @@ struct Gateway<'a> {
     last_channel: u8,
 }
 
-/// Serves `device` on `socket` until the socket fails. Each datagram is handled to completion,
-/// so no ordering between a request and the answers it provokes can be lost.
+/// Serves `device` on `socket` until the socket fails to receive. Each datagram is handled to
+/// completion, so no ordering between a request and the answers it provokes can be lost. A
+/// failed send is reported to the observer and never ends the loop.
 pub async fn serve(
     device: Arc<SimulatedDevice>,
     socket: UdpSocket,
@@ -207,17 +218,17 @@ pub async fn serve(
         tokio::select! {
             received = socket.recv_from(&mut buffer) => {
                 let (length, from) = received?;
-                gateway.on_datagram(&buffer[..length], from).await?;
+                gateway.on_datagram(&buffer[..length], from).await;
             }
             event = events.recv() => match event {
-                Ok(TunnelEvent::Telegram(frame)) => gateway.on_device_frame(&frame).await?,
+                Ok(TunnelEvent::Telegram(frame)) => gateway.on_device_frame(&frame).await,
                 Ok(TunnelEvent::Closed) => {}
                 Err(RecvError::Lagged(missed)) => {
                     gateway.note(format!("device events lost: {missed}"));
                 }
                 Err(RecvError::Closed) => return Ok(()),
             },
-            () = sleep_until(deadline), if deadline.is_some() => gateway.on_timer().await?,
+            () = sleep_until(deadline), if deadline.is_some() => gateway.on_timer().await,
         }
     }
 }
@@ -264,36 +275,44 @@ impl Gateway<'_> {
         Kind::ALL
             .into_iter()
             .filter_map(|kind| self.connection(kind))
-            .map(|connection| {
-                let heartbeat = connection.last_heard + self.config.heartbeat_timeout;
-                match &connection.in_flight {
-                    Some(flight) => heartbeat.min(flight.deadline),
-                    None => heartbeat,
-                }
+            .filter_map(|connection| {
+                // A heartbeat timeout too large to add to an instant never expires.
+                let heartbeat = connection
+                    .last_heard
+                    .checked_add(self.config.heartbeat_timeout);
+                let flight = connection.in_flight.as_ref().map(|flight| flight.deadline);
+                heartbeat.into_iter().chain(flight).min()
             })
             .min()
     }
 
-    async fn send(&self, to: SocketAddrV4, service: u16, body: &[u8]) -> io::Result<()> {
-        let datagram = encode_frame(service, body);
+    /// Sends one datagram. A failure (for example an HPAI naming a broadcast or unreachable
+    /// address) is reported and the datagram dropped; it never stops the front-end.
+    async fn transmit(&self, datagram: &[u8], to: SocketAddrV4) {
         self.observe(GatewayEvent::Datagram {
             from_tool: false,
-            bytes: &datagram,
+            bytes: datagram,
         });
-        self.socket.send_to(&datagram, to).await.map(|_| ())
+        if let Err(error) = self.socket.send_to(datagram, to).await {
+            self.note(format!("sending to {to} failed, datagram dropped: {error}"));
+        }
     }
 
-    async fn on_datagram(&mut self, bytes: &[u8], from: SocketAddr) -> io::Result<()> {
+    async fn send(&self, to: SocketAddrV4, service: u16, body: &[u8]) {
+        self.transmit(&encode_frame(service, body), to).await;
+    }
+
+    async fn on_datagram(&mut self, bytes: &[u8], from: SocketAddr) {
         self.observe(GatewayEvent::Datagram {
             from_tool: true,
             bytes,
         });
         let SocketAddr::V4(from) = from else {
-            return Ok(());
+            return;
         };
         let Ok((header, body)) = decode_frame(bytes) else {
             self.note(format!("malformed datagram from {from} ignored"));
-            return Ok(());
+            return;
         };
         match header.service_type {
             SEARCH_REQUEST => self.on_search(body, from).await,
@@ -301,51 +320,49 @@ impl Gateway<'_> {
             CONNECT_REQUEST => self.on_connect(body, from).await,
             CONNECTIONSTATE_REQUEST => self.on_connectionstate(body, from).await,
             DISCONNECT_REQUEST => self.on_disconnect(body, from).await,
-            DISCONNECT_RESPONSE => {
-                if let Some(&channel) = body.first() {
-                    if let Some(kind) = self.kind_of_channel(channel) {
-                        *self.slot(kind) = None;
-                    }
-                }
-                Ok(())
-            }
+            // The front-end forgets a connection as soon as it sends its own DISCONNECT_REQUEST,
+            // so a response never closes anything; a stray one cannot clear a live channel.
+            DISCONNECT_RESPONSE => self.note(format!(
+                "DISCONNECT_RESPONSE from {from} for channel {:?} ignored",
+                body.first()
+            )),
             TUNNELLING_REQUEST => self.on_request(Kind::Tunnel, body).await,
             DEVICE_CONFIGURATION_REQUEST => self.on_request(Kind::Management, body).await,
-            TUNNELLING_ACK | DEVICE_CONFIGURATION_ACK => self.on_ack(body).await,
-            other => {
-                self.note(format!("service {other:#06x} is not implemented; ignored"));
-                Ok(())
-            }
+            TUNNELLING_ACK => self.on_ack(Kind::Tunnel, body).await,
+            DEVICE_CONFIGURATION_ACK => self.on_ack(Kind::Management, body).await,
+            other => self.note(format!("service {other:#06x} is not implemented; ignored")),
         }
     }
 
-    async fn on_search(&mut self, body: &[u8], from: SocketAddrV4) -> io::Result<()> {
+    async fn on_search(&mut self, body: &[u8], from: SocketAddrV4) {
         let Ok((endpoint, _)) = Hpai::decode(body) else {
-            return Ok(());
+            return;
         };
         let mut answer = hpai_of(self.config.advertised).to_vec();
         answer.extend(self.device_info_dib());
         answer.extend(supported_families_dib());
         self.send(resolve(endpoint, from), SEARCH_RESPONSE, &answer)
-            .await
+            .await;
     }
 
-    async fn on_description(&mut self, body: &[u8], from: SocketAddrV4) -> io::Result<()> {
+    async fn on_description(&mut self, body: &[u8], from: SocketAddrV4) {
         let Ok((endpoint, _)) = Hpai::decode(body) else {
-            return Ok(());
+            return;
         };
         let mut answer = self.device_info_dib();
         answer.extend(supported_families_dib());
         self.send(resolve(endpoint, from), DESCRIPTION_RESPONSE, &answer)
-            .await
+            .await;
     }
 
-    async fn on_connect(&mut self, body: &[u8], from: SocketAddrV4) -> io::Result<()> {
+    async fn on_connect(&mut self, body: &[u8], from: SocketAddrV4) {
         let parsed = Hpai::decode(body)
             .and_then(|(control, rest)| Hpai::decode(rest).map(|(data, cri)| (control, data, cri)));
+        // A TCP HPAI on UDP is dropped without an answer: Core v01.06.02 AS §8.6.2.1 discards a
+        // non-Route-Back TCP HPAI, Device Management v01.07.03 AS §2.3.2 ignores any TCP HPAI.
         let Ok((control, data, cri)) = parsed else {
             self.note("CONNECT_REQUEST with unreadable HPAI ignored".into());
-            return Ok(());
+            return;
         };
         let reply_to = resolve(control, from);
         let kind = match cri.get(1).copied() {
@@ -382,8 +399,7 @@ impl Gateway<'_> {
                 existing.channel
             ));
         }
-        self.last_channel = self.last_channel.wrapping_add(1).max(1);
-        let channel = self.last_channel;
+        let channel = self.next_channel(kind);
         *self.slot(kind) = Some(Connection {
             channel,
             control: reply_to,
@@ -410,12 +426,24 @@ impl Gateway<'_> {
                 answer.extend([0x02, DEVICE_MGMT_CONNECTION]);
             }
         }
-        self.send(reply_to, CONNECT_RESPONSE, &answer).await
+        self.send(reply_to, CONNECT_RESPONSE, &answer).await;
     }
 
-    async fn on_connectionstate(&mut self, body: &[u8], from: SocketAddrV4) -> io::Result<()> {
+    /// The next channel ID after the last one handed out, skipping 0 and the channel the
+    /// other connection still holds (the slot of `kind` itself is being replaced).
+    fn next_channel(&mut self, kind: Kind) -> u8 {
+        let taken = self.connection(kind.other()).map(|c| c.channel);
+        loop {
+            self.last_channel = self.last_channel.wrapping_add(1).max(1);
+            if Some(self.last_channel) != taken {
+                return self.last_channel;
+            }
+        }
+    }
+
+    async fn on_connectionstate(&mut self, body: &[u8], from: SocketAddrV4) {
         let Some(&channel) = body.first() else {
-            return Ok(());
+            return;
         };
         let kind = self.kind_of_channel(channel);
         let status = if kind.is_some() {
@@ -431,12 +459,12 @@ impl Gateway<'_> {
             .and_then(|rest| Hpai::decode(rest).ok())
             .map_or(from, |(hpai, _)| resolve(hpai, from));
         self.send(reply_to, CONNECTIONSTATE_RESPONSE, &[channel, status])
-            .await
+            .await;
     }
 
-    async fn on_disconnect(&mut self, body: &[u8], from: SocketAddrV4) -> io::Result<()> {
+    async fn on_disconnect(&mut self, body: &[u8], from: SocketAddrV4) {
         let Some(&channel) = body.first() else {
-            return Ok(());
+            return;
         };
         let kind = self.kind_of_channel(channel);
         let status = if kind.is_some() {
@@ -453,22 +481,45 @@ impl Gateway<'_> {
             self.note(format!("{} {channel} closed by the tool", kind.name()));
         }
         self.send(reply_to, DISCONNECT_RESPONSE, &[channel, status])
-            .await
+            .await;
+    }
+
+    /// Ends a connection from the server side: Core v01.06.02 AS §5.4 (no heartbeat) and
+    /// Tunnelling v01.07.01 AS §2.6.1 (no good ACK after one repeat) both require a
+    /// `DISCONNECT_REQUEST` to the client's control endpoint. The slot is freed at once; the
+    /// client's `DISCONNECT_RESPONSE` is not awaited.
+    async fn terminate(&mut self, kind: Kind, reason: &str) {
+        let Some(connection) = self.slot(kind).take() else {
+            return;
+        };
+        self.note(format!(
+            "{} {} dropped: {reason}",
+            kind.name(),
+            connection.channel
+        ));
+        let body = encode_disconnect_request(
+            connection.channel,
+            Hpai {
+                addr: *self.config.advertised.ip(),
+                port: self.config.advertised.port(),
+            },
+        );
+        self.send(connection.control, DISCONNECT_REQUEST, &body)
+            .await;
     }
 
     /// A `TUNNELLING_REQUEST` or `DEVICE_CONFIGURATION_REQUEST`: same connection header and
     /// sequence rules (Tunnelling §2.6, Device Management §2.3), different payload.
-    async fn on_request(&mut self, kind: Kind, body: &[u8]) -> io::Result<()> {
+    async fn on_request(&mut self, kind: Kind, body: &[u8]) {
         let Ok(request) = decode_tunnelling_request(body) else {
-            return Ok(());
+            return;
         };
         let Some(connection) = self.slot(kind).as_mut() else {
-            return Ok(());
+            return;
         };
         if request.channel_id != connection.channel {
-            return Ok(());
+            return;
         }
-        connection.last_heard = Instant::now();
         let expected = connection.receive_sequence;
         let duplicate = request.sequence_counter == expected.wrapping_sub(1);
         if request.sequence_counter != expected && !duplicate {
@@ -477,13 +528,15 @@ impl Gateway<'_> {
                 kind.name(),
                 request.sequence_counter
             ));
-            return Ok(());
+            return;
         }
+        // Core v01.06.02 AS §5.4, p14: rejected sequence numbers do not retrigger heartbeat.
+        connection.last_heard = Instant::now();
         let data = connection.data;
         let ack = encode_tunnelling_ack(request.channel_id, request.sequence_counter, E_NO_ERROR);
-        self.send(data, kind.ack_service(), &ack).await?;
+        self.send(data, kind.ack_service(), &ack).await;
         if duplicate {
-            return Ok(());
+            return;
         }
         if let Some(connection) = self.slot(kind).as_mut() {
             connection.receive_sequence = expected.wrapping_add(1);
@@ -494,7 +547,7 @@ impl Gateway<'_> {
         }
     }
 
-    async fn on_tool_frame(&mut self, cemi: &[u8]) -> io::Result<()> {
+    async fn on_tool_frame(&mut self, cemi: &[u8]) {
         let frame = match decode_l_data(cemi) {
             Ok(frame) => frame,
             Err(error) => {
@@ -502,7 +555,7 @@ impl Gateway<'_> {
                     cemi,
                     reason: format!("{error:?}"),
                 });
-                return Ok(());
+                return;
             }
         };
         self.observe(GatewayEvent::Frame {
@@ -511,7 +564,7 @@ impl Gateway<'_> {
             frame: &frame,
         });
         if frame.kind != LDataMessageKind::Request {
-            return Ok(());
+            return;
         }
         // The simulator confirms a T_Connect itself; every other request is
         // confirmed here, before the device's answer can be queued behind it.
@@ -524,7 +577,7 @@ impl Gateway<'_> {
                 service: frame.service.clone(),
                 control: frame.control,
             };
-            self.enqueue(Kind::Tunnel, &confirmation).await?;
+            self.enqueue(Kind::Tunnel, &confirmation).await;
         }
         if let Err(error) = self
             .device
@@ -533,12 +586,13 @@ impl Gateway<'_> {
         {
             self.note(format!("device refused the frame: {error:?}"));
         }
-        Ok(())
     }
 
     /// `M_PropRead.req` is answered from the configured properties, anything else listed as
     /// unanswered; every message is recorded so a session shows what the tool asked for.
-    async fn on_management(&mut self, cemi: &[u8]) -> io::Result<()> {
+    /// A negative `.con` carries NoE 0 and the request's full 12-bit start index
+    /// (EMI_IMI v01.04.02 AS §4.1.7.3.3 and §4.1.7.3.5).
+    async fn on_management(&mut self, cemi: &[u8]) {
         let summary = describe_management(cemi);
         self.observe(GatewayEvent::Management {
             from_tool: true,
@@ -549,28 +603,31 @@ impl Gateway<'_> {
             [M_PROP_READ_REQ, ot_hi, ot_lo, instance, pid, count_start, start_lo] => {
                 let key = (u16::from_be_bytes([*ot_hi, *ot_lo]), *instance, *pid);
                 let wanted = count_start >> 4;
+                let start_hi = count_start & 0x0F;
                 let mut out = vec![M_PROP_READ_CON, *ot_hi, *ot_lo, *instance, *pid];
                 match self.config.properties.get(&key) {
                     Some(value) => {
-                        out.extend([(wanted.max(1) << 4) | (count_start & 0x0F), *start_lo]);
+                        out.extend([(wanted.max(1) << 4) | start_hi, *start_lo]);
                         out.extend(value);
                     }
                     None => {
-                        out.extend([0x00, *start_lo, PROP_ERROR_VOID]);
+                        out.extend([start_hi, *start_lo, PROP_ERROR_VOID]);
                     }
                 }
                 Some(out)
             }
-            [M_PROP_WRITE_REQ, ot_hi, ot_lo, instance, pid, _, start_lo, ..] => Some(vec![
-                M_PROP_WRITE_CON,
-                *ot_hi,
-                *ot_lo,
-                *instance,
-                *pid,
-                0x00,
-                *start_lo,
-                PROP_ERROR_READ_ONLY,
-            ]),
+            [M_PROP_WRITE_REQ, ot_hi, ot_lo, instance, pid, count_start, start_lo, ..] => {
+                Some(vec![
+                    M_PROP_WRITE_CON,
+                    *ot_hi,
+                    *ot_lo,
+                    *instance,
+                    *pid,
+                    count_start & 0x0F,
+                    *start_lo,
+                    PROP_ERROR_READ_ONLY,
+                ])
+            }
             _ => None,
         };
         if let Some(answer) = answer {
@@ -579,24 +636,23 @@ impl Gateway<'_> {
                 cemi: &answer,
                 summary: describe_management(&answer),
             });
-            self.enqueue_raw(Kind::Management, answer).await?;
+            self.enqueue_raw(Kind::Management, answer).await;
         }
-        Ok(())
     }
 
-    async fn on_device_frame(&mut self, frame: &LDataFrame) -> io::Result<()> {
+    async fn on_device_frame(&mut self, frame: &LDataFrame) {
         if self.tunnel.is_none() {
-            return Ok(());
+            return;
         }
-        self.enqueue(Kind::Tunnel, frame).await
+        self.enqueue(Kind::Tunnel, frame).await;
     }
 
-    async fn enqueue(&mut self, kind: Kind, frame: &LDataFrame) -> io::Result<()> {
+    async fn enqueue(&mut self, kind: Kind, frame: &LDataFrame) {
         let cemi = match encode_l_data(frame) {
             Ok(cemi) => cemi,
             Err(error) => {
                 self.note(format!("frame cannot be encoded: {error:?}"));
-                return Ok(());
+                return;
             }
         };
         self.observe(GatewayEvent::Frame {
@@ -604,26 +660,26 @@ impl Gateway<'_> {
             cemi: &cemi,
             frame,
         });
-        self.enqueue_raw(kind, cemi).await
+        self.enqueue_raw(kind, cemi).await;
     }
 
-    async fn enqueue_raw(&mut self, kind: Kind, cemi: Vec<u8>) -> io::Result<()> {
+    async fn enqueue_raw(&mut self, kind: Kind, cemi: Vec<u8>) {
         if let Some(connection) = self.slot(kind).as_mut() {
             connection.queue.push_back(cemi);
         }
-        self.pump(kind).await
+        self.pump(kind).await;
     }
 
     /// Sends the next queued frame when none is waiting for its ACK.
-    async fn pump(&mut self, kind: Kind) -> io::Result<()> {
+    async fn pump(&mut self, kind: Kind) {
         let Some(connection) = self.slot(kind).as_mut() else {
-            return Ok(());
+            return;
         };
         if connection.in_flight.is_some() {
-            return Ok(());
+            return;
         }
         let Some(cemi) = connection.queue.pop_front() else {
-            return Ok(());
+            return;
         };
         let sequence = connection.send_sequence;
         connection.send_sequence = sequence.wrapping_add(1);
@@ -636,69 +692,87 @@ impl Gateway<'_> {
             deadline: Instant::now() + ACK_TIMEOUT,
             repeated: false,
         });
-        self.observe(GatewayEvent::Datagram {
-            from_tool: false,
-            bytes: &datagram,
-        });
-        self.socket.send_to(&datagram, data).await.map(|_| ())
+        self.transmit(&datagram, data).await;
     }
 
-    async fn on_ack(&mut self, body: &[u8]) -> io::Result<()> {
+    /// An ACK counts only on a connection of its own kind (a `TUNNELLING_ACK` never settles a
+    /// management frame) and only with status `E_NO_ERROR`; an error status is treated like a
+    /// missing ACK (Tunnelling v01.07.01 AS §2.6.1).
+    async fn on_ack(&mut self, kind: Kind, body: &[u8]) {
         let Ok(ack) = decode_tunnelling_ack(body) else {
-            return Ok(());
-        };
-        let Some(kind) = self.kind_of_channel(ack.channel_id) else {
-            return Ok(());
+            return;
         };
         let Some(connection) = self.slot(kind).as_mut() else {
-            return Ok(());
+            return;
         };
-        connection.last_heard = Instant::now();
+        if connection.channel != ack.channel_id {
+            return;
+        }
         let matches = connection
             .in_flight
             .as_ref()
             .is_some_and(|flight| flight.sequence == ack.sequence_counter);
-        if matches {
-            connection.in_flight = None;
-            return self.pump(kind).await;
+        if !matches {
+            return;
         }
-        Ok(())
+        if ack.status == E_NO_ERROR {
+            connection.last_heard = Instant::now();
+            connection.in_flight = None;
+            self.pump(kind).await;
+        } else {
+            self.note(format!(
+                "{} {} ACK status {:#04x}",
+                kind.name(),
+                ack.channel_id,
+                ack.status
+            ));
+            self.repeat_or_terminate(kind).await;
+        }
     }
 
-    async fn on_timer(&mut self) -> io::Result<()> {
+    /// The frame in flight was not acknowledged: repeat it once, and end the connection
+    /// if it already was repeated (Tunnelling v01.07.01 AS §2.6.1).
+    async fn repeat_or_terminate(&mut self, kind: Kind) {
+        let Some(connection) = self.slot(kind).as_mut() else {
+            return;
+        };
+        let data = connection.data;
+        let Some(flight) = connection.in_flight.as_mut() else {
+            return;
+        };
+        if flight.repeated {
+            self.terminate(kind, "no ACK after one repeat").await;
+            return;
+        }
+        flight.repeated = true;
+        flight.deadline = Instant::now() + ACK_TIMEOUT;
+        let datagram = flight.datagram.clone();
+        self.transmit(&datagram, data).await;
+    }
+
+    async fn on_timer(&mut self) {
         let now = Instant::now();
         for kind in Kind::ALL {
             let heartbeat_timeout = self.config.heartbeat_timeout;
-            let Some(connection) = self.slot(kind).as_mut() else {
+            let Some(connection) = self.connection(kind) else {
                 continue;
             };
-            let channel = connection.channel;
-            if now >= connection.last_heard + heartbeat_timeout {
-                *self.slot(kind) = None;
-                self.note(format!("{} {channel} dropped: no heartbeat", kind.name()));
+            let silent = connection
+                .last_heard
+                .checked_add(heartbeat_timeout)
+                .is_some_and(|deadline| now >= deadline);
+            if silent {
+                self.terminate(kind, "no heartbeat").await;
                 continue;
             }
-            let Some(flight) = connection.in_flight.as_mut().filter(|f| now >= f.deadline) else {
-                continue;
-            };
-            if flight.repeated {
-                *self.slot(kind) = None;
-                self.note(format!(
-                    "{} {channel} dropped: no ACK after one repeat",
-                    kind.name()
-                ));
-                continue;
+            if connection
+                .in_flight
+                .as_ref()
+                .is_some_and(|flight| now >= flight.deadline)
+            {
+                self.repeat_or_terminate(kind).await;
             }
-            flight.repeated = true;
-            flight.deadline = now + ACK_TIMEOUT;
-            let (datagram, data) = (flight.datagram.clone(), connection.data);
-            self.observe(GatewayEvent::Datagram {
-                from_tool: false,
-                bytes: &datagram,
-            });
-            self.socket.send_to(&datagram, data).await?;
         }
-        Ok(())
     }
 
     /// Core v01.06.02 AS §7.5.4.2: the 54-octet device-information DIB.
@@ -749,12 +823,15 @@ fn describe_management(cemi: &[u8]) -> String {
     }
 }
 
-/// Core v01.06.02 AS §7.5.4.3: the services this front-end really serves.
+/// Core v01.06.02 AS §7.5.4.3: the services this front-end really serves. Device Management
+/// (03h) is allowed in a SEARCH_RESPONSE and DESCRIPTION_RESPONSE (Table 3) and is served.
 fn supported_families_dib() -> Vec<u8> {
     vec![
-        6,
+        8,
         DIB_SUPP_SVC_FAMILIES,
         FAMILY_CORE,
+        1,
+        FAMILY_DEVICE_MANAGEMENT,
         1,
         FAMILY_TUNNELLING,
         1,

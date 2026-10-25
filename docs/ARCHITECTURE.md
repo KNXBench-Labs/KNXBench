@@ -259,10 +259,41 @@ as a KNXnet/IP gateway (search, description, one tunnel, one device-management
 connection answering `M_PropRead` from configured properties) so an unmodified
 engineering tool can talk to it. It exercises the cEMI codec in both directions,
 which the in-process simulator does not, and reports every datagram and frame to
-an observer. Limits: UDP only, no routing, no secure sessions, standard frames
-only, no model of timing or of a real gateway's limits. A test double: it is not
-bus access, it proves nothing about real devices, and it changes no admission.
-The `simulator_gateway` example wires it to a configurable device identity.
+an observer. Standard and extended (`L > 15`) `L_Data` frames are both confirmed
+with the matching frame type. A reply that cannot be sent (for example to a
+broadcast or unreachable HPAI) is reported to the observer and dropped; only a
+receive failure ends `serve`. The search and description DIB lists Core, Device
+Management and Tunnelling. The server side ends a connection with a
+`DISCONNECT_REQUEST` to the tool's control endpoint after a heartbeat timeout
+(Core v01.06.02 AS §5.4) and after a frame got no good ACK even once repeated;
+an ACK with an error status, or of the other connection's service type, does not
+count (Tunnelling v01.07.01 AS §2.6.1). Channel IDs skip the one still in use.
+
+Simulator limitations, kept on purpose:
+
+- UDP only, no routing, no secure sessions, no model of timing or of a real
+  gateway's limits.
+- A server-sent `DISCONNECT_REQUEST` frees the slot at once; the tool's
+  `DISCONNECT_RESPONSE` is neither awaited nor needed, and a response never
+  closes a connection.
+- The device-management connection repeats its own `DEVICE_CONFIGURATION_REQUEST`
+  with the tunnelling rule (one second, one repeat). Device Management
+  v01.07.03 AS §2.3.2 specifies only the client's retry rule.
+- `M_PropRead` returns the configured octets whatever the requested element
+  count and start index. Start index 0 (current number of elements, EMI_IMI
+  v01.04.02 AS §4.1.7.3.3) is not modelled, because a configured value carries no
+  element size. Negative answers carry NoE 0 and the request's full start index.
+  `M_PropWrite` is always refused as read-only.
+- A `CONNECT_REQUEST` with a TCP HPAI gets no answer. Core v01.06.02 AS §8.6.2.1
+  discards a non-Route-Back TCP HPAI and Device Management §2.3.2 tells a server
+  on UDP to ignore any TCP HPAI; no clause found requires `E_HOST_PROTOCOL_TYPE`
+  in a `CONNECT_RESPONSE`.
+- Unexpected request/ACK sequence numbers do not restart the heartbeat timer
+  (Core §5.4); rejected traffic cannot keep a silent connection alive.
+
+A test double: it is not bus access, it proves nothing about real devices, and it
+changes no admission. The `simulator_gateway` example wires it to a configurable
+device identity.
 
 ## Offline System-2 source images (15 October 2026 source)
 

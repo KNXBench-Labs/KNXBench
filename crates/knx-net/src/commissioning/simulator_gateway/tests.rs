@@ -164,6 +164,11 @@ impl Tool {
 
     /// The next frame the gateway tunnels to the tool, acknowledged like a real client would.
     async fn next_frame(&self) -> Option<LDataFrame> {
+        Some(decode_l_data(&self.next_cemi().await?).unwrap())
+    }
+
+    /// The same as [`Self::next_frame`], as the cEMI octets that crossed the socket.
+    async fn next_cemi(&self) -> Option<Vec<u8>> {
         loop {
             let (service, body) = self.receive().await?;
             if service != TUNNELLING_REQUEST {
@@ -172,7 +177,7 @@ impl Tool {
             let request = decode_tunnelling_request(&body).unwrap();
             let ack = encode_tunnelling_ack(request.channel_id, request.sequence_counter, 0);
             self.send(TUNNELLING_ACK, &ack).await;
-            return Some(decode_l_data(request.cemi).unwrap());
+            return Some(request.cemi.to_vec());
         }
     }
 }
@@ -328,6 +333,51 @@ async fn a_repeated_sequence_is_acknowledged_but_reaches_the_device_once() {
     assert_eq!(acks, 2);
     assert_eq!(harness.from_tool.load(Ordering::SeqCst), 1);
     assert_eq!(harness.device.seen(), vec![Seen::Connect]);
+}
+
+/// A tool that negotiated a long APDU sends an extended frame (FT = 0, Ctrl1 `30h`); the
+/// confirmation names the same frame type (EMI_IMI v01.04.02 AS §4.1.5.3.4) and the device
+/// receives every octet.
+#[tokio::test]
+async fn an_extended_request_is_confirmed_as_an_extended_frame() {
+    let harness = start().await;
+    let mut tool = Tool::new(&harness, "127.0.0.1:0").await;
+    assert_eq!(tool.connect().await, E_NO_ERROR);
+    let connect = request(
+        &harness,
+        Tpci::Connect,
+        ApplicationService::NoApplicationPdu,
+    );
+    assert_eq!(tool.request(&connect).await, E_NO_ERROR);
+    tool.next_frame().await.expect("the T_Connect confirmation");
+
+    let data: Vec<u8> = (0..52).map(|i| i ^ 0x5A).collect();
+    let destination = harness.device.address().raw().to_be_bytes();
+    let mut cemi = vec![
+        0x11,
+        0x00,
+        0x30,
+        0x60,
+        0x00,
+        0x00,
+        destination[0],
+        destination[1],
+    ];
+    cemi.extend([0x37, 0x42, 0xB4, 0x01, 0x16]);
+    cemi.extend(&data);
+    tool.send_cemi(&cemi).await;
+    let (service, _) = tool.receive().await.expect("a TUNNELLING_ACK");
+    assert_eq!(service, TUNNELLING_ACK);
+
+    let confirmation = tool.next_cemi().await.expect("the request confirmation");
+    assert_eq!(confirmation[0], 0x2E);
+    assert_eq!(confirmation[2] & 0x80, 0x00, "FT must say extended frame");
+    assert_eq!(confirmation[8], 55);
+    assert_eq!(confirmation[9..], cemi[9..]);
+    assert!(harness.device.seen().iter().any(|seen| matches!(
+        seen,
+        Seen::MemoryWrite { address: 0x0116, data: written, .. } if *written == data
+    )));
 }
 
 #[tokio::test]

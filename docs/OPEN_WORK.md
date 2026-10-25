@@ -11,7 +11,7 @@ the former dated sections are in the [archive](history/OPEN_WORK_2026-10-25.md).
 | WP-23 | Show group-address names in Flow | Planned: awaiting implementation Go | [WP-23](open-work/WP-23-flow-group-address-names.md) |
 | WP-24 | Product catalogue as a table with sortable headers | Planned: awaiting implementation Go | [WP-24](open-work/WP-24-product-catalogue-sortable-table.md) |
 | S2-01 | System-2: keep the raw PID 7 answer, model its width before relaxing the refusal (#30) | P1: diagnostic delivered; width model blocked, projection open | [S2-01](open-work/S2-01-pid7-raw-response.md) |
-| S2-02 | System-2: own-run busy hint and missing refusal reason (#30) | P1: diagnostic slice in progress; actual failure unresolved | [S2-02](open-work/S2-02-gateway-busy-after-failed-runs.md) |
+| S2-02 | System-2: own-run busy hint and missing refusal reason (#30) | P1: diagnostic delivered; actual failure unresolved | [S2-02](open-work/S2-02-gateway-busy-after-failed-runs.md) |
 | PRG-01 | Close non-Secure programming gaps | In progress | [PRG-01](open-work/PRG-01-programming-gaps.md) |
 | WP-03 | Legacy binary enumeration values | Blocked: evidence | [WP-03](open-work/WP-03-legacy-binary-enumerations.md) |
 | WP-05 | Parameter layout fidelity: remaining features | Blocked: evidence | [WP-05](open-work/WP-05-parameter-layout-fidelity.md) |

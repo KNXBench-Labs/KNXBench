@@ -6,7 +6,7 @@ published as `5f1ad454e` after review and integrated acceptance
 admission need real response evidence.
 The wrong-width refusal is retained, not replaced by an observation. Structured status/report
 projection remains open. [S2-02](open-work/S2-02-gateway-busy-after-failed-runs.md) now
-has an own-run gateway-hint/refusal-reason diagnostic slice in progress. The actual
+has a delivered own-run gateway-hint/refusal-reason diagnostic slice (`aa2f39f1b`). The actual
 reporter-side start failure remains a separate P1 investigation; neither package
 establishes hardware support.
 

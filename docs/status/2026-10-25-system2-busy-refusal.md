@@ -1,6 +1,6 @@
 # System-2 own-run hint and refusal reasons — 25 October 2026
 
-Status: implementation/review candidate; integrated acceptance and publication pending.
+Status: delivered in `aa2f39f1b` (main `a15b8f0eb`); unreleased, reporter re-test pending.
 Base: `866cb5ca6`. This diagnostic slice follows GitHub issue #30; it does not
 close [S2-02](../open-work/S2-02-gateway-busy-after-failed-runs.md).
 
@@ -25,8 +25,9 @@ close [S2-02](../open-work/S2-02-gateway-busy-after-failed-runs.md).
 ## Review and focused evidence
 
 Independent Opus source/text review approved with no in-scope blockers. Its three
-low-severity comment/documentation findings are corrected; confirmation and final
-package gate are pending. Review was read-only, not independent test execution.
+low-severity comment/documentation findings are corrected and confirmed. The
+integrated change-scoped package gate passed 15/15 stages with frozen inputs
+(1,412 Rust tests, 51 corpus tests, web gate incl. final browser captures). Review was read-only, not independent test execution.
 
 Preflight evidence (private receipts, logs, source snapshots and retained binaries
 under `<profile-scratch>/issue30-busy-20261025/`):
@@ -36,7 +37,7 @@ under `<profile-scratch>/issue30-busy-20261025/`):
   the corrected source; later comment/coverage edits do not rewrite that RED.
 - Full web unit preflight: 4,398 passed across 301 files. Browser preflight: five
   intercepted real-app cases, including EN/DE at 400/1440 pixels. Those captures
-  precede the final no-journal copy correction; final captures remain pending.
+  precede the final no-journal copy correction; the package gate re-captured them.
 - Four opt-in, digest-pinned public-fixture worker regressions passed: shared lock,
   process lease, unavailable activity and stale source. They assert the reason,
   no connector/transport/write call, unchanged device/evidence tree and settled

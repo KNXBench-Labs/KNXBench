@@ -23,7 +23,8 @@ No error message/path/raw exception is retained, no reason is reconstructed afte
 restart, and no safety admission or automatic retry changes.
 The [S2-02 record](open-work/S2-02-gateway-busy-after-failed-runs.md) remains P1:
 this is diagnostics, not a reproduced fix for the reporter's actual start failure.
-Independent review and integrated package acceptance are pending.
+Delivered in `aa2f39f1b` (main `a15b8f0eb`): independent review APPROVE, change-scoped
+package gate 15/15 green. Unreleased; reporter re-test pending.
 
 ## System-2 PID 7 wrong-width diagnostics (25 October 2026 source)
 

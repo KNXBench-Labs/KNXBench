@@ -308,12 +308,24 @@ async fn a_repeated_sequence_is_acknowledged_but_reaches_the_device_once() {
     let cemi = encode_l_data(&connect).unwrap();
     tool.send_cemi(&cemi).await;
     tool.send_cemi(&cemi).await;
-    for _ in 0..2 {
-        let (service, body) = tool.receive().await.unwrap();
-        assert_eq!(service, TUNNELLING_ACK);
-        assert_eq!(decode_tunnelling_ack(&body).unwrap().status, E_NO_ERROR);
+    // The gateway may tunnel the confirmation before it acknowledges the repeat; the
+    // order of its own requests and its ACKs is not fixed, so both are taken as they come.
+    let mut acks = 0;
+    while let Some((service, body)) = tool.receive().await {
+        match service {
+            TUNNELLING_ACK => {
+                assert_eq!(decode_tunnelling_ack(&body).unwrap().status, E_NO_ERROR);
+                acks += 1;
+            }
+            TUNNELLING_REQUEST => {
+                let request = decode_tunnelling_request(&body).unwrap();
+                let ack = encode_tunnelling_ack(request.channel_id, request.sequence_counter, 0);
+                tool.send(TUNNELLING_ACK, &ack).await;
+            }
+            _ => {}
+        }
     }
-    while tool.next_frame().await.is_some() {}
+    assert_eq!(acks, 2);
     assert_eq!(harness.from_tool.load(Ordering::SeqCst), 1);
     assert_eq!(harness.device.seen(), vec![Seen::Connect]);
 }

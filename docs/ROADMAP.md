@@ -39,6 +39,14 @@ existing bounded drain. Per-step effects, mid-procedure stop and recovery remain
 
 ## Regular programming correctness — 25 October 2026 source
 
+The [regular fragment-admission contract](contracts/regular-merge-fragment-admission.md)
+conservatively refuses an untranslated declared shape without inventing merge
+semantics. Focused semantic regressions and independent code review passed;
+maintained integrated acceptance/publication are pending
+([acceptance](status/2026-10-25-regular-merge-fragment-admission.md)). Parameter
+policies, device baselines and complete mutation/recovery contracts remain
+separate; no new family is admitted.
+
 The [partial application identity correction](contracts/partial-identity-comparison.md)
 requires the existing object 3/PID 13 precondition to answer exactly five octets
 before backup or mutation. Complete downloads acquire no extra precondition.

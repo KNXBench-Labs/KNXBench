@@ -46,6 +46,7 @@ mod promotion_repair;
 mod promotion_repair_review;
 mod public_api_compat;
 mod read_only_open;
+mod regular_merge_fragment;
 mod relative_program_code;
 mod relative_source_corpus;
 mod repeated_instance_values;

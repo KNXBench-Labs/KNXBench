@@ -50,3 +50,7 @@ are not part of this contract. Tested against the simulator only; no bus access.
 The actual HTTP start route's registration order was source-reviewed and compiled, not exercised
 through HTTP by the focused synthetic tests. Those tests use the real worker and a preregistered
 handle, including a held async reservation and close before session installation.
+
+Published source `6c9ca2d7d` passed all fourteen selected integrated stages;
+[acceptance and remaining limits](../status/2026-10-25-regular-prewrite-stop.md)
+separate original RED, final focused tests, selected corpus and hardware boundaries.

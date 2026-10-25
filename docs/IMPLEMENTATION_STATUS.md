@@ -13,6 +13,16 @@ archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
 
+## Regular download prewrite stop (25 October 2026 source)
+
+Server graceful shutdown can stop an existing regular download before its first
+mutation, with run registration before tunnel/spawn and atomic stop/commit ordering
+([contract](contracts/regular-download-prewrite-stop.md)). After commitment the
+existing download continues unchanged. Independent implementation and amendment
+reviews approved; all 14 integrated stages passed, published as `6c9ca2d7d`
+([acceptance](status/2026-10-25-regular-prewrite-stop.md)). No public stop button,
+CLI interrupt, mid-procedure cancellation or whole-device recovery is admitted.
+
 ## Duplicate image-start admission (25 October 2026 source)
 
 The regular memory planner refuses multiple data-bearing segments at an allocated

@@ -84,6 +84,13 @@ record the boundaries separately; these increments do not close PRG-01.
   ([acceptance](../status/2026-10-25-duplicate-segment-start.md)). Payload-free
   allocations remain valid; no real-product fault or new family support is claimed.
 
+- Server shutdown can prevent a regular download's first mutation through early
+  run registration and atomic stop/commit ordering
+  ([contract](../contracts/regular-download-prewrite-stop.md)). Published as
+  `6c9ca2d7d` after independent reviews and all 14 integrated stages
+  ([acceptance](../status/2026-10-25-regular-prewrite-stop.md)). After commitment,
+  the run continues unchanged; no mid-procedure stop or full recovery is admitted.
+
 ## Open
 
 - Broader target/exemplar identity and independently verified runtime-state

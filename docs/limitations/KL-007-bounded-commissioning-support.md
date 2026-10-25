@@ -34,6 +34,18 @@ and restore observations are kept separately. The status DTO reports whether a
 failed operation could have written anything. Software and simulator tests only; whether the
 relaxed admission downloads the reporter's device correctly is unverified.
 
+## Regular download prewrite stop — 25 October 2026 source
+
+Server shutdown requests a run-bound stop before tunnel/spawn; accepted stop and
+first mutation commitment are atomically ordered. Before commitment no mutation
+is sent; afterwards execution and cleanup continue unchanged
+([contract](../contracts/regular-download-prewrite-stop.md)). Independent reviews
+and all 14 integrated stages passed; published as `6c9ca2d7d`
+([acceptance](../status/2026-10-25-regular-prewrite-stop.md)). No public stop route,
+UI/CLI interrupt, System-2 stop, effect journal or whole-device recovery is added.
+Actual HTTP-start execution and physical device outcomes remain unverified. KL-007
+and the forced-exit shutdown boundary remain open.
+
 ## Duplicate image-start admission — 25 October 2026 source
 
 The regular planner refuses two data-bearing image segments at an allocated start,

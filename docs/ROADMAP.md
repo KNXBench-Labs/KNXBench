@@ -14,6 +14,12 @@ all 14 integrated package stages
 ([acceptance](status/2026-10-25-duplicate-segment-start.md)). Payload-free
 allocations remain valid; different-start overlaps and broader families are not admitted.
 
+The [regular prewrite-stop contract](contracts/regular-download-prewrite-stop.md)
+is published as `6c9ca2d7d` after independent reviews and all 14 integrated stages
+([acceptance](status/2026-10-25-regular-prewrite-stop.md)). Server shutdown can
+prevent the first mutation; a committed download still runs unchanged within the
+existing bounded drain. Per-step effects, mid-procedure stop and recovery remain open.
+
 ## Regular programming correctness — 25 October 2026 source
 
 The [partial application identity correction](contracts/partial-identity-comparison.md)

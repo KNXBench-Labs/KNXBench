@@ -18,6 +18,16 @@ accepted capability or grounds to relabel simulator bundles. No new hardware
 trial was performed for this reconciliation. Earlier dated sections below retain
 the scope and evidence available at their checkpoint.
 
+## Regular-planner MergeId fragments (source delivered, 25 October 2026)
+
+The [admission contract](contracts/regular-merge-fragment-admission.md) makes the
+existing regular `ProductProcedure` planner refuse a program that declares any
+`MergeId` load procedure beside its one regular procedure. This is a conservative
+narrowing of an unsupported shape, not a format prohibition and not proof of a
+wrong device effect. The meaning under `ProductProcedure` is unestablished and not invented; the
+source file keeps every fragment. No hardware trial or device compatibility is
+added.
+
 ## Monitoring snapshot profile (source delivered, 21 October 2026)
 
 The [monitoring export contract](contracts/monitor-project-export.md) defines an

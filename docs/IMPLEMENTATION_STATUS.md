@@ -13,6 +13,19 @@ archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
 
+## Conservative regular procedure admission (25 October 2026 source)
+
+The regular planner refuses declared `MergeId` fragments beside its one main
+procedure instead of omitting them. Both planner entry points preserve identity
+and procedure-count priority; actual offline application preparation reports
+`procedure-shape` ([contract](contracts/regular-merge-fragment-admission.md)).
+Original semantic RED, final focused GREEN and independent code review are
+complete; maintained integrated acceptance and publication remain pending
+([acceptance](status/2026-10-25-regular-merge-fragment-admission.md)). Raw source
+retention and the fragment-free literal plan are regression-tested. No new
+fragment semantics, family, device operation or recovery authority is added;
+[PRG-01](open-work/PRG-01-programming-gaps.md) remains open.
+
 ## System-2 PID 7 wrong-width diagnostics (25 October 2026 source)
 
 Published as `5f1ad454e` after independent APPROVE and all 14 integrated stages

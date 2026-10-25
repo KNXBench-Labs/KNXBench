@@ -553,6 +553,52 @@ async fn rejected_sequence_numbers_do_not_refresh_the_heartbeat() {
         .on_ack(Kind::Tunnel, &encode_tunnelling_ack(1, 5, E_NO_ERROR))
         .await;
     assert_eq!(gateway.tunnel.as_ref().unwrap().last_heard, old);
+    assert_eq!(
+        socket.try_recv(&mut [0; 2048]).unwrap_err().kind(),
+        std::io::ErrorKind::WouldBlock
+    );
+    gateway
+        .on_request(Kind::Tunnel, &encode_tunnelling_request(1, 0, &[]))
+        .await;
+    assert!(gateway.tunnel.as_ref().unwrap().last_heard > old);
+    gateway.tunnel.as_mut().unwrap().last_heard = old;
+    gateway
+        .on_ack(Kind::Tunnel, &encode_tunnelling_ack(1, 0, E_NO_ERROR))
+        .await;
+    assert!(gateway.tunnel.as_ref().unwrap().last_heard > old);
+    assert!(gateway.tunnel.as_ref().unwrap().in_flight.is_none());
+}
+
+#[tokio::test]
+async fn an_explicit_hpai_receives_the_reply_instead_of_the_sender() {
+    let harness = start().await;
+    let tool = Tool::new(&harness, "127.0.0.1:0").await;
+    let receiver = UdpSocket::bind("127.0.0.1:0").await.unwrap();
+    let SocketAddr::V4(endpoint) = receiver.local_addr().unwrap() else {
+        unreachable!("IPv4 fixture");
+    };
+    tool.send(
+        SEARCH_REQUEST,
+        &Hpai {
+            addr: *endpoint.ip(),
+            port: endpoint.port(),
+        }
+        .encode(),
+    )
+    .await;
+    let mut buffer = [0; 2048];
+    let length = timeout(WAIT, receiver.recv(&mut buffer))
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        decode_frame(&buffer[..length]).unwrap().0.service_type,
+        SEARCH_RESPONSE
+    );
+    assert_eq!(
+        tool.socket.try_recv(&mut buffer).unwrap_err().kind(),
+        std::io::ErrorKind::WouldBlock
+    );
 }
 
 /// Waits for a `DISCONNECT_REQUEST` naming `channel`, skipping anything else the gateway sends.

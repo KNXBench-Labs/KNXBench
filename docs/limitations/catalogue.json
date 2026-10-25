@@ -1567,6 +1567,16 @@
       ]
     },
     {
+      "key": "extended-frame-transmission",
+      "number": null,
+      "title": "Extended-frame transmission",
+      "topic": "Commissioning and recovery",
+      "summary": "Frames with `L` above 15 are now encoded as extended frames. No interface or device has received one from KNXBench yet; received FT is not kept.",
+      "file": "extended-frame-transmission.md",
+      "ledger_ids": [],
+      "anchors": []
+    },
+    {
       "key": "offline-ap1-sequence-inspection",
       "number": null,
       "title": "Offline AP1 sequence inspection",

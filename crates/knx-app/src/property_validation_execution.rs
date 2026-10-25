@@ -5,7 +5,9 @@
 //! [`HardwareRelease`] consent (ADR-0152); the simulator entry is unchanged.
 use crate::{
     property_validation::{Checkpoint, FailureCode, OperationStore},
-    property_validation_bundle::{invalid, PreparedBundle, RecoveryRecord},
+    property_validation_bundle::{
+        invalid, PointerObservationRecord, PreparedBundle, RecoveryRecord,
+    },
 };
 use knx_core::commissioning::{
     authorisation::AuthorisationPlan,
@@ -117,6 +119,19 @@ fn hardware_event(
     }
 }
 
+/// Refuse before RestoreStarted, so an unavailable recovery appends nothing.
+pub(crate) fn refuse_unavailable_recovery(
+    snapshot: &knx_net::commissioning::property_recovery::PropertyRecoverySnapshot,
+    bundle: &PreparedBundle,
+) -> io::Result<()> {
+    match snapshot.recovery_plan(&bundle.plan()?) {
+        Ok(_) => Ok(()),
+        Err(PropertySimulationFailure::Recovery(reason)) => {
+            Err(io::Error::new(io::ErrorKind::InvalidData, reason))
+        }
+        Err(_) => Err(invalid("original-state recovery evidence is unusable")),
+    }
+}
 fn check_bundle(
     bundle: &PreparedBundle,
     store: &OperationStore,
@@ -182,6 +197,20 @@ fn event(
         } => store.checkpoint(Checkpoint::StepFinished {
             index: operation_index,
         }),
+        PropertyJournalEvent::InProcedurePointerObservation(observed) => {
+            store.checkpoint(Checkpoint::InProcedurePointerObservation {
+                operation_index: observed.operation_index,
+                observation: PointerObservationRecord::from_observation(&observed.observation),
+            })
+        }
+        PropertyJournalEvent::FinalPointerObservations(observations) => {
+            store.checkpoint(Checkpoint::FinalPointerObservations {
+                observations: observations
+                    .iter()
+                    .map(PointerObservationRecord::from_observation)
+                    .collect(),
+            })
+        }
     };
     result.map_err(|e| e.to_string())
 }
@@ -250,6 +279,7 @@ pub async fn restore_simulated(
         .recovery()
         .ok_or_else(|| invalid("no durable prewrite recovery exists"))?
         .to_snapshot(bundle)?;
+    refuse_unavailable_recovery(&snapshot, bundle)?;
     store.checkpoint(Checkpoint::RestoreStarted)?;
     let plan = bundle.plan()?;
     let authorization = WriteAuthorisation::for_simulator(plan.target(), WriteScope::Download)
@@ -416,6 +446,7 @@ pub(crate) async fn restore_hardware_inner<T: ManagementTransport>(
         .recovery()
         .ok_or_else(|| invalid("no durable prewrite recovery exists"))?
         .to_snapshot(bundle)?;
+    refuse_unavailable_recovery(&snapshot, bundle)?;
     let plan = bundle.plan()?;
     let authorization = WriteAuthorisation::for_hardware(
         plan.target(),

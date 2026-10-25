@@ -944,7 +944,8 @@ async fn project_precancel_and_backup_persistence_refusal_precede_even_setup_mut
     }
 }
 #[tokio::test]
-async fn project_unknown_old_hardware_state_is_not_replaced_by_catalogue_defaults() {
+async fn project_unloaded_device_downloads_without_original_recovery_and_final_identity_stays_hard()
+{
     let bundle = project_bundle(20);
     let device = SimulatedDevice::with_config_at(
         IndividualAddress::from_raw(0x1234),
@@ -960,27 +961,37 @@ async fn project_unknown_old_hardware_state_is_not_replaced_by_catalogue_default
         &[0, 0],
     );
     device.preset_property(0, PID_HARDWARE_TYPE, &[240, 0, 0, 0, 0, 1]);
-    let old = device.system2_snapshot();
     let dir = tempfile::tempdir().unwrap();
     let mut store =
         OperationStore::create(&dir.path().join("operation"), bundle.binding.clone()).unwrap();
-    assert!(app::execute_simulated(
+    // Owner rulings 2026-10-25: an unloaded device of the right type is
+    // downloadable; its prestate is evidence only, never a recovery source.
+    let error = app::execute_simulated(
         &device,
         &bundle,
         &mut store,
         integrated_timing(),
-        &AtomicBool::new(false)
+        &AtomicBool::new(false),
     )
     .await
-    .is_err());
-    assert!(store.recovery().is_none());
-    assert!(!store.mutation_possible());
-    assert_eq!(device.system2_snapshot(), old);
-    use knx_net::commissioning::simulator::Seen;
-    assert!(!device
-        .seen()
-        .iter()
-        .any(|s| matches!(s, Seen::MemoryWrite { .. } | Seen::PropertyWrite { .. })));
+    .unwrap_err();
+    // This simulator derives no PID 13 from the 03 02 identity record, so the
+    // HARD final program-version verification fails: it is not softened.
+    assert!(error.to_string().contains("property_id: 13"), "{error}");
+    let progress = store.progress();
+    assert_eq!(progress.outcome, LocalOutcome::Failed);
+    assert!(progress.mutation_possible);
+    assert!(progress.backup_available);
+    assert!(progress.prestate_differs);
+    assert!(!progress.restore_available);
+    assert!(progress.recovery_phrases.is_none());
+    assert_eq!(
+        progress.program_version_observation,
+        Some((bundle.binding.application, Vec::new()))
+    );
+    assert!(progress.pointer_observations.iter().all(
+        |o| o.record.state == knx_core::commissioning::load_state::LoadState::Unloaded.octet()
+    ));
 }
 #[tokio::test]
 async fn project_destructive_unload_and_cancelled_restore_are_durable_restore_failed() {
@@ -1090,6 +1101,8 @@ async fn project_cancellation_and_crash_checkpoint_boundaries_restore_from_disk(
                         }
                         Ok(())
                     }
+                    PropertyJournalEvent::FinalPointerObservations(_) => Err(std::io::Error::other("unexpected final pointer observation")),
+                    PropertyJournalEvent::InProcedurePointerObservation(_) => Err(std::io::Error::other("unexpected in-procedure pointer observation")),
                 }.map_err(|e|e.to_string())
             },&||cancel.load(Ordering::SeqCst)).await;
         assert!(result.is_err(), "source {cut_source} must stop");
@@ -1745,6 +1758,8 @@ async fn exact_public_cancellation_and_crash_checkpoint_boundaries_restore_from_
                         }
                         Ok(())
                     }
+                    PropertyJournalEvent::FinalPointerObservations(_) => Err(std::io::Error::other("unexpected final pointer observation")),
+                    PropertyJournalEvent::InProcedurePointerObservation(_) => Err(std::io::Error::other("unexpected in-procedure pointer observation")),
                 }.map_err(|e|e.to_string())
             },&||cancel.load(Ordering::SeqCst)).await;
         assert!(result.is_err(), "source {cut_source} must stop");

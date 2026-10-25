@@ -326,6 +326,8 @@ fn journal_view(operation: &Path, expected: &JournalBinding) -> io::Result<Value
                 last_index = Some(index);
                 "step-finished"
             }
+            Checkpoint::FinalPointerObservations { .. } => "final-pointer-observations",
+            Checkpoint::InProcedurePointerObservation { .. } => "in-procedure-pointer-observation",
             Checkpoint::Failed { code, .. } => {
                 failure = Some(code);
                 "failed"

@@ -30,6 +30,9 @@ The existing UI's prepare/start/status/cancel/recover endpoints have exactly the
 required camelCase schema-version-1 public responses, including the three
 required nullable ORIGINAL recovery acknowledgement fields. There are no server
 paths, serial numbers, raw memory or caller-supplied bundles in these DTOs.
+`Status` additionally carries `mutationMayHaveStarted`, `prestateDiffers`,
+`pointerObservations` and `programVersionObservation` (2026-10-25, see the
+[UI contract](alpha16-system2-ui.md)).
 JSON bodies are limited to 16 KiB; struct deserialization refuses duplicate and
 unknown fields. Source/recovery enums accept string tokens only. IDs are exactly
 32 lowercase hexadecimal characters, never normalized. Preview output including

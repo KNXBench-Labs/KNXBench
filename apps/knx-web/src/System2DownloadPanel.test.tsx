@@ -208,3 +208,32 @@ it("requires explicit recovery of the original backup with fresh ordinary consen
   mock.recoverSystem2.mockResolvedValue({ ...status, state: "restoring" }); await click("[data-system2-recover]");
   expect(consent.request).toHaveBeenCalledTimes(2); expect(mock.recoverSystem2).toHaveBeenCalledWith({ operationId: status.operationId, gateway: "192.0.2.1:3671", recoveryConfirmation: "Recover original actual state", downloadConfirmation: preview.downloadPhrase, releaseConfirmation: preview.releasePhrase });
 });
+it("says nothing was written only when the server reports no mutation could have started", async () => {
+  mock.getSystem2Status.mockResolvedValue({ ...status, state: "failed", mutationMayHaveStarted: false });
+  await render();
+  expect(host.querySelector("[data-system2-nothing-written]")).not.toBeNull();
+  expect(host.textContent).toContain("nothing was written");
+  expect(host.textContent).not.toContain("device state may have changed");
+  mock.getSystem2Status.mockResolvedValue({ ...status, state: "failed", mutationMayHaveStarted: true });
+  await click("[data-system2-refresh]");
+  expect(host.querySelector("[data-system2-nothing-written]")).toBeNull();
+  expect(host.textContent).toContain("device state may have changed");
+});
+it("lists pointer observations and offers no original-state recovery after a differing prestate", async () => {
+  const { prestateStatus } = await import("./system2DownloadTestFixtures");
+  mock.getSystem2Status.mockResolvedValue(prestateStatus);
+  await render();
+  const observations = host.querySelector("[data-system2-observations]");
+  expect(observations).not.toBeNull();
+  expect(observations!.textContent).toContain("00003c00"); expect(observations!.textContent).toContain("00000000");
+  expect(host.querySelector("[data-system2-recovery-unavailable]")).not.toBeNull();
+  expect(host.querySelector("[data-system2-recovery]")).toBeNull(); expect(host.querySelector("[data-system2-recover]")).toBeNull();
+});
+it("labels in-procedure and refused pointer observations", async () => {
+  const { inProcedureStatus } = await import("./system2DownloadTestFixtures");
+  mock.getSystem2Status.mockResolvedValue(inProcedureStatus);
+  await render();
+  const text = host.querySelector("[data-system2-observations]")!.textContent!;
+  expect(text).toContain("During the download"); expect(text).toContain("step 4"); expect(text).toContain("00003d00");
+  expect(text).toContain("not reported (read refused)");
+});

@@ -34,6 +34,18 @@ and restore observations are kept separately. The status DTO reports whether a
 failed operation could have written anything. Software and simulator tests only; whether the
 relaxed admission downloads the reporter's device correctly is unverified.
 
+## Regular download receipts — 25 October 2026 source
+
+Run-scoped preparation and settlement receipts are display evidence in regular
+history ([contract](../contracts/download-settlement-receipt.md)). Applied parts,
+computed-but-not-applied parts and the later read-only check remain distinct.
+Independent reviews and all 15 integrated stages passed on `3431aabbc`
+([acceptance](../status/2026-10-25-download-settlement-receipt.md)); final documentation
+integration preserves runtime bytes. A missing receipt is not evidence of unchanged
+project state; project and history persistence are not atomic. CLI/System-2,
+physical-exemplar identity, device baselines and whole-device recovery remain outside
+this increment. KL-007 stays open.
+
 ## Regular download prewrite stop — 25 October 2026 source
 
 Server shutdown requests a run-bound stop before tunnel/spawn; accepted stop and

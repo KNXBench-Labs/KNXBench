@@ -2,9 +2,9 @@
 
 Run-scoped display evidence inside the durable commissioning activity history
 ([history contract](COMMISSIONING_ACTIVITY_HISTORY.md)). Change this file in the
-same commit as the behaviour it describes. Status: implemented in the working
-tree, not yet accepted as a whole feature; closeout belongs to the parent
-status documents.
+same commit as the behaviour it describes. Implementation and bounded source
+reviews passed the integrated software gate; the [acceptance record](../status/2026-10-25-download-settlement-receipt.md)
+distinguishes runtime acceptance, final documentation integration and remaining limits.
 
 ## What it is, and what it is not
 

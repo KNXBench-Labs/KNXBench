@@ -15,6 +15,8 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## System-2 PID 7 wrong-width diagnostics (25 October 2026 source)
 
+Published as `5f1ad454e` after independent APPROVE and all 14 integrated stages
+([acceptance](status/2026-10-25-system2-pid7-diagnostic.md)).
 A wrong-width resource-pointer answer still stops before the first write. Its refusal now names
 object, element count, actual byte count and a bounded hex prefix in the private journal and CLI
 error result. HTTP status and the shareable report remain redacted. Simulator tests cover empty

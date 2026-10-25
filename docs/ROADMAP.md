@@ -1,5 +1,11 @@
 # Roadmap
 
+System-2 [S2-01](open-work/S2-01-pid7-raw-response.md) is P1: the private diagnostic prefix is
+implemented, but the width model and safe recovery admission need real response evidence.
+The wrong-width refusal is retained, not replaced by an observation. Structured status/report
+projection remains open. [S2-02](open-work/S2-02-gateway-busy-after-failed-runs.md) remains a
+separate P1 investigation; neither package establishes hardware support.
+
 Run-scoped [download receipts](contracts/download-settlement-receipt.md) distinguish
 preparation, applied or computed settlement, and the separate post-download check.
 Independent reviews and the 15-stage integrated gate passed on `3431aabbc`

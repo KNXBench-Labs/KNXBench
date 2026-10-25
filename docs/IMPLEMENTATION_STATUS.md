@@ -13,6 +13,15 @@ archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
 
+## System-2 PID 7 wrong-width diagnostics (25 October 2026 source)
+
+A wrong-width resource-pointer answer still stops before the first write. Its refusal now names
+object, element count, actual byte count and a bounded hex prefix in the private journal and CLI
+error result. HTTP status and the shareable report remain redacted. Simulator tests cover empty
+and short replies, count retention, no mutation and journal reopening; hardware width and recovery
+remain unverified. [S2-01](open-work/S2-01-pid7-raw-response.md) remains P1 and partially implemented;
+[S2-02](open-work/S2-02-gateway-busy-after-failed-runs.md) is a separate planned investigation.
+
 ## Run-scoped download receipts (25 October 2026 source)
 
 Regular-download history records bounded preparation and settlement display evidence

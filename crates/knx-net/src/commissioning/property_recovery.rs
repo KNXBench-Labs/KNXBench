@@ -601,11 +601,14 @@ const WIDTH_REFUSAL_SHOWN_OCTETS: usize = 16;
 /// The refusal for a PID 7 answer that is not four octets: the observed object, element
 /// count and raw bytes, so the field fact (issue #30) survives into the journal.
 fn pointer_width_refusal(object: ObjectIndex, elements: u8, data: &[u8]) -> String {
-    let shown: String = data
-        .iter()
-        .take(WIDTH_REFUSAL_SHOWN_OCTETS)
-        .map(|octet| format!("{octet:02x}"))
-        .collect();
+    let shown = if data.is_empty() {
+        "(none)".into()
+    } else {
+        data.iter()
+            .take(WIDTH_REFUSAL_SHOWN_OCTETS)
+            .map(|octet| format!("{octet:02x}"))
+            .collect::<String>()
+    };
     let more = if data.len() > WIDTH_REFUSAL_SHOWN_OCTETS {
         "..."
     } else {
@@ -774,6 +777,16 @@ mod tests {
         );
         let one = pointer_width_refusal(ObjectIndex::new(1), 1, &[0xAB]);
         assert!(one.ends_with("object 1, 1 element, 1 octet, ab"), "{one}");
+    }
+
+    #[test]
+    fn width_refusal_has_an_exact_hex_prefix_boundary() {
+        let exact = pointer_width_refusal(ObjectIndex::new(3), 1, &[0x11; 16]);
+        assert!(exact.ends_with(&"11".repeat(16)));
+        assert!(!exact.contains("..."));
+        let longer = pointer_width_refusal(ObjectIndex::new(3), 1, &[0x11; 17]);
+        assert!(longer.contains("17 octets"));
+        assert!(longer.ends_with(&format!("{}...", "11".repeat(16))));
     }
 
     #[test]

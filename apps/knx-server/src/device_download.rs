@@ -15,6 +15,7 @@ use knx_app::access_key::DownloadKeying;
 use knx_app::device_backup::{write_backup, StoredBackup};
 use knx_app::device_download::PreparedDownload;
 use knx_app::download_report::{DownloadReport, ReportedOutcome};
+use knx_app::post_download_check::PostDownloadCheck;
 use knx_core::commissioning::authorisation::Authorisation;
 use knx_core::commissioning::device_backup::DeviceBackup;
 use knx_core::commissioning::memory_download::MemoryDownloadStep;
@@ -23,6 +24,7 @@ use knx_core::IndividualAddress;
 use knx_net::commissioning::memory_download::{
     locked_device_hint, run_memory_download_with_backup, Progress, RestartOutcome,
 };
+use knx_net::commissioning::post_download::observe_after_download;
 use knx_net::{ApplicationService, BusError, Destination, ManagementSession, ScanTransport, Tpci};
 use serde::Serialize;
 use tokio::task::JoinHandle;
@@ -69,6 +71,9 @@ pub enum ProgressEvent {
     },
     /// What the plan overwrites was read and kept before the first write.
     BackupTaken { regions: usize, octets: usize },
+    /// The transfer finished written and its restart wait is over; the
+    /// read-only check on a fresh connection starts now.
+    PostDownloadCheckStarted,
 }
 
 /// Where the backup before the first write goes.
@@ -101,6 +106,9 @@ pub enum DownloadStatus {
         restart: Restart,
         /// The restart's own explanation when it is unconfirmed.
         restart_note: Option<String>,
+        /// The read-only check after the transfer; never changes the two
+        /// fields above.
+        post_download_check: PostDownloadCheck,
     },
     Failed {
         written: Written,
@@ -115,6 +123,9 @@ pub enum DownloadStatus {
 
 struct Shared {
     status: Mutex<DownloadStatus>,
+    /// The witnessed transfer while its read-only check runs: an abrupt end
+    /// then keeps it, with the check interrupted, instead of a failure.
+    transfer: Mutex<Option<DownloadStatus>>,
     events: Mutex<Vec<ProgressEvent>>,
     /// First step from which a mutation may be attempted, not send proof.
     first_mutation_step: Option<usize>,
@@ -160,6 +171,7 @@ impl DeviceDownloadSession {
     ) -> Self {
         let shared = Arc::new(Shared {
             status: Mutex::new(DownloadStatus::Running),
+            transfer: Mutex::new(None),
             events: Mutex::new(Vec::new()),
             first_mutation_step: prepared
                 .plan
@@ -231,18 +243,27 @@ impl DeviceDownloadSession {
         if self.is_running() {
             return None;
         }
-        let outcome = match self.status() {
+        let (outcome, check) = match self.status() {
             DownloadStatus::Running => return None,
             DownloadStatus::Finished {
-                written, restart, ..
-            } => ReportedOutcome::completed(written, restart),
+                written,
+                restart,
+                post_download_check,
+                ..
+            } => (
+                ReportedOutcome::completed(written, restart),
+                post_download_check,
+            ),
             DownloadStatus::Failed {
                 written,
                 stopped_in_step,
                 ..
-            } => ReportedOutcome::stopped(written, stopped_in_step),
+            } => (
+                ReportedOutcome::stopped(written, stopped_in_step),
+                PostDownloadCheck::not_checked(),
+            ),
         };
-        Some(self.report.clone().with_outcome(outcome))
+        Some(self.report.clone().with_outcome(outcome).with_check(check))
     }
 
     pub fn is_running(&self) -> bool {
@@ -269,6 +290,18 @@ impl DeviceDownloadSession {
         let mut status = self.shared.status.lock().expect("download status poisoned");
         // Do not erase an already witnessed result if cleanup later panics.
         if matches!(*status, DownloadStatus::Running) {
+            let transfer = self
+                .shared
+                .transfer
+                .lock()
+                .expect("download transfer poisoned")
+                .clone();
+            if let Some(transfer) = transfer {
+                // The transfer was witnessed and settled; only its check
+                // did not finish.
+                *status = with_check(transfer, PostDownloadCheck::interrupted());
+                return;
+            }
             let written = written_so_far(&self.shared);
             let stopped = *self
                 .shared
@@ -358,6 +391,7 @@ async fn run(
     shared: Arc<Shared>,
     mut activity: crate::one_shot_activity::DownloadGuard,
 ) {
+    let target = authorisation.target();
     let status = {
         let transport = TunnelTransport(tunnel.as_ref());
         match ManagementSession::authorised(&transport, keying.plan, timing, authorisation) {
@@ -414,6 +448,7 @@ async fn run(
                             written: Written::Yes,
                             restart,
                             restart_note,
+                            post_download_check: PostDownloadCheck::not_checked(),
                         }
                     }
                     Err(e) => {
@@ -459,9 +494,59 @@ async fn run(
     {
         on_end(&status);
     }
+    // The transfer is recorded and its session is gone (its plan ends with
+    // `Disconnect`, after the restart wait). One read-only check follows on
+    // the same tunnel, still reserved by this task: no restart, key, write or
+    // second observation attempt (Transport Layer repetitions are
+    // independent), and its outcome never changes the transfer's.
+    let status = if matches!(
+        status,
+        DownloadStatus::Finished {
+            written: Written::Yes,
+            ..
+        }
+    ) {
+        *shared.transfer.lock().expect("download transfer poisoned") = Some(status.clone());
+        shared
+            .events
+            .lock()
+            .expect("download events poisoned")
+            .push(ProgressEvent::PostDownloadCheckStarted);
+        let began = activity.begin_check();
+        let observation = observe_after_download(
+            &TunnelTransport(tunnel.as_ref()),
+            target,
+            timing,
+            &prepared.plan,
+        )
+        .await;
+        let check = PostDownloadCheck::from_observation(&observation);
+        let _ = began.and_then(|()| activity.record_check(&check));
+        with_check(status, check)
+    } else {
+        status
+    };
     *shared.status.lock().expect("download status poisoned") = status;
     let cleanup = tunnel.disconnect().await;
     let _ = activity.record_cleanup(cleanup.is_ok());
+}
+
+/// `status` with its check; any other state is returned as it is.
+fn with_check(status: DownloadStatus, check: PostDownloadCheck) -> DownloadStatus {
+    match status {
+        DownloadStatus::Finished {
+            written,
+            restart,
+            restart_note,
+            ..
+        } => DownloadStatus::Finished {
+            written,
+            restart,
+            restart_note,
+            post_download_check: check,
+        },
+        other => other,
+    }
 }
 
 fn record(shared: &Shared, progress: Progress) {
@@ -528,6 +613,7 @@ impl DeviceDownloadSession {
             data_octets: 1,
             shared: Arc::new(Shared {
                 status: Mutex::new(DownloadStatus::Running),
+                transfer: Mutex::new(None),
                 events: Mutex::new(Vec::new()),
                 first_mutation_step: Some(2),
                 last_started: Mutex::new(None),
@@ -544,3 +630,7 @@ impl DeviceDownloadSession {
 #[cfg(test)]
 #[path = "device_download_task_tests.rs"]
 mod task_tests;
+
+#[cfg(test)]
+#[path = "device_download_check_tests.rs"]
+mod check_tests;

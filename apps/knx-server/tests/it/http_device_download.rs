@@ -630,7 +630,17 @@ async fn download_terminal_receipt_survives_worker_completion() {
         .keys()
         .all(|key| keys.contains(&key.as_str())));
     assert!(entry["writeEvidence"].as_object().unwrap().len() == 2);
-    assert!(entry["downloadEvidence"].as_object().unwrap().len() == 4);
+    // The read-only check after the written transfer is the fifth field.
+    // This fixture presets no application identity, so it is whatever the
+    // simulator answers; only its presence and its runtime claim are fixed.
+    assert!(entry["downloadEvidence"].as_object().unwrap().len() == 5);
+    assert!(entry["downloadEvidence"]["postDownloadCheck"]["runtime"] == "unknown");
+    let (status, route) = send(&h.app, get("/api/device-download/status?since=0")).await;
+    assert_eq!(status, StatusCode::OK, "{route}");
+    assert_eq!(
+        route["status"]["postDownloadCheck"], entry["downloadEvidence"]["postDownloadCheck"],
+        "the route's status and the history carry the same check"
+    );
     assert_eq!(h.calls.load(Ordering::SeqCst), contacts);
     assert_eq!(h.device.seen().len(), frames);
 }
@@ -2031,6 +2041,17 @@ async fn a_verified_download_says_so_and_keeps_a_backup_first() {
         plan["parameterValues"].as_u64().unwrap() as usize
     );
     assert!(report["program"]["sourceSha256"].as_str().unwrap().len() == 64);
+    // The read-only check: on the route's status, announced after every
+    // transfer step, and in the report, one and the same record.
+    let check = &end["postDownloadCheck"];
+    assert_eq!(check["runtime"], "unknown", "{end}");
+    assert_ne!(check["observation"]["status"], "notChecked", "{end}");
+    assert_eq!(
+        events.last().unwrap()["kind"],
+        "postDownloadCheckStarted",
+        "{events:?}"
+    );
+    assert_eq!(&report["postDownloadCheck"], check);
     let text = body.to_string();
     assert!(!text.contains("1.1.67"), "no address anywhere: {text}");
     assert!(

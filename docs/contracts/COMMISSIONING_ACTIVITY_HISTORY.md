@@ -387,7 +387,15 @@ The candidate reader also recognizes `kind: "deviceDownload"` with optional
 `downloadEvidence` at the DTO level and mandatory evidence for that kind.
 It contains a positive `sessionId`, nullable `written` (`yes`, `no`, `partially`),
 nullable `restart` (`acknowledged`, `notInPlan`, `unconfirmed`) and `cleanup`
-(`pending`, `returnedOk`, `returnedError`, `unknown`). Unknown enums/fields and
+(`pending`, `returnedOk`, `returnedError`, `unknown`), plus the optional, additive
+`postDownloadCheck` ([contract](post-download-check.md)): only on `finished`
+with `written: yes`, never `notChecked` and never an explicit `null`; absent
+reads as not checked. The storage format stays 2 and the field is additive in
+one direction only: this reader reads older rows, but the published format-2
+reader (`07fe2e67f`) refuses a row carrying it, fails that whole page, then
+reads the history as `unavailable` and refuses writes for the rest of its
+process. Nothing is rewritten or lost; read such a history with this or a newer
+version. Unknown enums/fields and
 inconsistent evidence are refused, not skipped. A prior-incarnation pending
 cleanup sets `interrupted: true`; an already witnessed device result and its
 timestamp remain intact. The four-kind baseline coverage declaration deliberately continues to list

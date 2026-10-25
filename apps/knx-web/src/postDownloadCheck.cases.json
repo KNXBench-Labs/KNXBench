@@ -1,0 +1,585 @@
+{
+  "accepted": [
+    {
+      "name": "emptyUnknown",
+      "fixture": "matched",
+      "set": [
+        [
+          "/observation/reach/identity/loadStates",
+          []
+        ],
+        [
+          "/observation/reach/identity/planLoadVerdict",
+          "unknown"
+        ]
+      ]
+    },
+    {
+      "name": "peiProgramNotSettled",
+      "fixture": "matched",
+      "set": [
+        [
+          "/observation/reach/identity/loadStates",
+          [
+            {
+              "machine": "addressTable",
+              "expected": "loaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "loaded"
+              }
+            },
+            {
+              "machine": "peiProgram",
+              "expected": null,
+              "observed": {
+                "result": "observed",
+                "loadState": "loaded"
+              }
+            }
+          ]
+        ],
+        [
+          "/observation/reach/identity/planLoadVerdict",
+          "unknown"
+        ]
+      ]
+    },
+    {
+      "name": "highestOctet",
+      "fixture": "identityUnavailable",
+      "set": [
+        [
+          "/observation/reach/identity/part/objectIndex",
+          255
+        ],
+        [
+          "/observation/reach/identity/part/propertyId",
+          255
+        ]
+      ]
+    },
+    {
+      "name": "malformedMismatch",
+      "fixture": "identityMismatch",
+      "set": [
+        [
+          "/observation/reach/identity/kind",
+          "malformed"
+        ]
+      ]
+    },
+    {
+      "name": "unsupportedMask",
+      "fixture": "unsupported",
+      "set": [
+        [
+          "/observation/reason",
+          "unsupportedMask"
+        ]
+      ]
+    }
+  ],
+  "refused": [
+    {
+      "name": "emptyMatchesPlan",
+      "fixture": "matched",
+      "set": [
+        [
+          "/observation/reach/identity/loadStates",
+          []
+        ]
+      ]
+    },
+    {
+      "name": "duplicateMachine",
+      "fixture": "matched",
+      "set": [
+        [
+          "/observation/reach/identity/loadStates",
+          [
+            {
+              "machine": "addressTable",
+              "expected": "loaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "loaded"
+              }
+            },
+            {
+              "machine": "addressTable",
+              "expected": "loaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "loaded"
+              }
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "outOfOrderMachine",
+      "fixture": "matched",
+      "set": [
+        [
+          "/observation/reach/identity/loadStates",
+          [
+            {
+              "machine": "applicationProgram",
+              "expected": "loaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "loaded"
+              }
+            },
+            {
+              "machine": "addressTable",
+              "expected": "loaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "loaded"
+              }
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "secondUnavailable",
+      "fixture": "partialReading",
+      "set": [
+        [
+          "/observation/reach/identity/loadStates/2/observed",
+          {
+            "result": "unavailable"
+          }
+        ]
+      ]
+    },
+    {
+      "name": "notReadBeforeFailure",
+      "fixture": "partialReading",
+      "set": [
+        [
+          "/observation/reach/identity/loadStates/0/observed",
+          {
+            "result": "notRead"
+          }
+        ]
+      ]
+    },
+    {
+      "name": "readAfterFailure",
+      "fixture": "partialReading",
+      "set": [
+        [
+          "/observation/reach/identity/loadStates/2/observed",
+          {
+            "result": "observed",
+            "loadState": "loaded"
+          }
+        ]
+      ]
+    },
+    {
+      "name": "extraTop",
+      "fixture": "matched",
+      "set": [
+        [
+          "/extra",
+          1
+        ]
+      ]
+    },
+    {
+      "name": "extraAttempted",
+      "fixture": "matched",
+      "set": [
+        [
+          "/observation/extra",
+          1
+        ]
+      ]
+    },
+    {
+      "name": "extraNotChecked",
+      "fixture": "notChecked",
+      "set": [
+        [
+          "/observation/extra",
+          1
+        ]
+      ]
+    },
+    {
+      "name": "extraUnsupported",
+      "fixture": "unsupported",
+      "set": [
+        [
+          "/observation/extra",
+          1
+        ]
+      ]
+    },
+    {
+      "name": "extraNotPerformed",
+      "fixture": "notPerformed",
+      "set": [
+        [
+          "/observation/extra",
+          1
+        ]
+      ]
+    },
+    {
+      "name": "extraInterrupted",
+      "fixture": "interrupted",
+      "set": [
+        [
+          "/observation/extra",
+          1
+        ]
+      ]
+    },
+    {
+      "name": "extraNotReached",
+      "fixture": "notReached",
+      "set": [
+        [
+          "/observation/reach/extra",
+          1
+        ]
+      ]
+    },
+    {
+      "name": "extraReachUnknown",
+      "fixture": "reachUnknown",
+      "set": [
+        [
+          "/observation/reach/extra",
+          1
+        ]
+      ]
+    },
+    {
+      "name": "extraReached",
+      "fixture": "matched",
+      "set": [
+        [
+          "/observation/reach/extra",
+          1
+        ]
+      ]
+    },
+    {
+      "name": "extraUnavailable",
+      "fixture": "identityUnavailable",
+      "set": [
+        [
+          "/observation/reach/identity/extra",
+          1
+        ]
+      ]
+    },
+    {
+      "name": "extraMismatch",
+      "fixture": "identityMismatch",
+      "set": [
+        [
+          "/observation/reach/identity/extra",
+          1
+        ]
+      ]
+    },
+    {
+      "name": "extraMatch",
+      "fixture": "matched",
+      "set": [
+        [
+          "/observation/reach/identity/application",
+          "0083002715"
+        ]
+      ]
+    },
+    {
+      "name": "extraPropertyPart",
+      "fixture": "identityUnavailable",
+      "set": [
+        [
+          "/observation/reach/identity/part/extra",
+          1
+        ]
+      ]
+    },
+    {
+      "name": "extraApplicationPart",
+      "fixture": "identityMismatch",
+      "set": [
+        [
+          "/observation/reach/identity/part/extra",
+          1
+        ]
+      ]
+    },
+    {
+      "name": "extraReading",
+      "fixture": "matched",
+      "set": [
+        [
+          "/observation/reach/identity/loadStates/0/extra",
+          1
+        ]
+      ]
+    },
+    {
+      "name": "extraObserved",
+      "fixture": "matched",
+      "set": [
+        [
+          "/observation/reach/identity/loadStates/0/observed/extra",
+          1
+        ]
+      ]
+    },
+    {
+      "name": "extraObservedUnavailable",
+      "fixture": "partialReading",
+      "set": [
+        [
+          "/observation/reach/identity/loadStates/1/observed/extra",
+          1
+        ]
+      ]
+    },
+    {
+      "name": "extraObservedNotRead",
+      "fixture": "partialReading",
+      "set": [
+        [
+          "/observation/reach/identity/loadStates/2/observed/extra",
+          1
+        ]
+      ]
+    },
+    {
+      "name": "octetTooHigh",
+      "fixture": "identityUnavailable",
+      "set": [
+        [
+          "/observation/reach/identity/part/objectIndex",
+          256
+        ]
+      ]
+    },
+    {
+      "name": "octetNegative",
+      "fixture": "identityUnavailable",
+      "set": [
+        [
+          "/observation/reach/identity/part/propertyId",
+          -1
+        ]
+      ]
+    },
+    {
+      "name": "octetFraction",
+      "fixture": "identityUnavailable",
+      "set": [
+        [
+          "/observation/reach/identity/part/objectIndex",
+          1.5
+        ]
+      ]
+    },
+    {
+      "name": "octetText",
+      "fixture": "identityUnavailable",
+      "set": [
+        [
+          "/observation/reach/identity/part/propertyId",
+          "78"
+        ]
+      ]
+    },
+    {
+      "name": "unknownPart",
+      "fixture": "identityUnavailable",
+      "set": [
+        [
+          "/observation/reach/identity/part",
+          {
+            "kind": "serialNumber"
+          }
+        ]
+      ]
+    },
+    {
+      "name": "unknownMismatchKind",
+      "fixture": "identityMismatch",
+      "set": [
+        [
+          "/observation/reach/identity/kind",
+          "unknown"
+        ]
+      ]
+    },
+    {
+      "name": "unknownReason",
+      "fixture": "unsupported",
+      "set": [
+        [
+          "/observation/reason",
+          "other"
+        ]
+      ]
+    },
+    {
+      "name": "verifiedExemplar",
+      "fixture": "matched",
+      "set": [
+        [
+          "/observation/reach/identity/exemplar",
+          "verified"
+        ]
+      ]
+    },
+    {
+      "name": "unknownMachine",
+      "fixture": "matched",
+      "set": [
+        [
+          "/observation/reach/identity/loadStates/0/machine",
+          "groupObjectTable"
+        ]
+      ]
+    },
+    {
+      "name": "unknownExpected",
+      "fixture": "matched",
+      "set": [
+        [
+          "/observation/reach/identity/loadStates/0/expected",
+          "running"
+        ]
+      ]
+    },
+    {
+      "name": "unknownLoadState",
+      "fixture": "matched",
+      "set": [
+        [
+          "/observation/reach/identity/loadStates/0/observed/loadState",
+          "running"
+        ]
+      ]
+    },
+    {
+      "name": "unknownObserved",
+      "fixture": "matched",
+      "set": [
+        [
+          "/observation/reach/identity/loadStates/0/observed",
+          {
+            "result": "guessed"
+          }
+        ]
+      ]
+    },
+    {
+      "name": "unknownVerdict",
+      "fixture": "matched",
+      "set": [
+        [
+          "/observation/reach/identity/planLoadVerdict",
+          "probably"
+        ]
+      ]
+    },
+    {
+      "name": "unknownIdentity",
+      "fixture": "matched",
+      "set": [
+        [
+          "/observation/reach/identity/result",
+          "matched"
+        ]
+      ]
+    },
+    {
+      "name": "unknownReach",
+      "fixture": "notReached",
+      "set": [
+        [
+          "/observation/reach/result",
+          "maybe"
+        ]
+      ]
+    },
+    {
+      "name": "unknownStatus",
+      "fixture": "notChecked",
+      "set": [
+        [
+          "/observation/status",
+          "matched"
+        ]
+      ]
+    },
+    {
+      "name": "runningRuntime",
+      "fixture": "matched",
+      "set": [
+        [
+          "/runtime",
+          "running"
+        ]
+      ]
+    },
+    {
+      "name": "nullRuntime",
+      "fixture": "notChecked",
+      "set": [
+        [
+          "/runtime",
+          null
+        ]
+      ]
+    },
+    {
+      "name": "nullReach",
+      "fixture": "notReached",
+      "set": [
+        [
+          "/observation/reach",
+          null
+        ]
+      ]
+    },
+    {
+      "name": "nullPart",
+      "fixture": "identityUnavailable",
+      "set": [
+        [
+          "/observation/reach/identity/part",
+          null
+        ]
+      ]
+    },
+    {
+      "name": "identityWithoutReach",
+      "fixture": "notReached",
+      "set": [
+        [
+          "/observation/reach/identity",
+          {
+            "result": "unavailable",
+            "part": {
+              "kind": "mask"
+            }
+          }
+        ]
+      ]
+    }
+  ]
+}

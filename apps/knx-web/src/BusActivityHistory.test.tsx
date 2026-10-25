@@ -12,6 +12,7 @@ vi.mock("./ServiceControlPanel", () => ({ default: () => <p>Service stub</p> }))
 import BusDiagnosticsPanel from "./BusDiagnosticsPanel";
 import { RUNNING_REFRESH_MS } from "./BusActivityHistory";
 import { messages as en } from "./messages/en";
+import checkFixtures from "./postDownloadCheck.fixtures.json";
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 let host: HTMLDivElement; let root: Root;
 function page(sequence = 1, incarnation = "synthetic-server") {
@@ -185,4 +186,21 @@ it("after paging further, asks for a refresh instead of collapsing the loaded wi
     expect(host.querySelectorAll(".activity-history-entry")).toHaveLength(2);
     expect(host.querySelector(".activity-history-running-paged")!.textContent).toBe(en["activityHistory.runningPaged"]);
   } finally { vi.useRealTimers(); }
+});
+
+it("shows a stored read-only check beside the written transfer, and a legacy record as not checked", async () => {
+  const checked = page();
+  Object.assign(checked.entries[0].downloadEvidence, { postDownloadCheck: checkFixtures.partialReading });
+  const legacy = page(2);
+  legacy.entries[0].id = 2;
+  checked.entries.push(legacy.entries[0]);
+  checked.nextCursor = 2;
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response(checked)));
+  await open();
+  const checks = [...host.querySelectorAll<HTMLElement>(".post-download-check")];
+  expect(checks.map((node) => node.dataset.check)).toEqual(["attempted", "notChecked"]);
+  expect(checks[0].textContent).toContain(en["postDownloadCheck.observed.unavailable"]);
+  expect(checks[0].textContent).toContain(en["postDownloadCheck.runtimeUnknown"]);
+  expect(host.textContent).toContain(en["activityHistory.written.yes"]);
+  expect(checks[1].textContent).toContain(en["postDownloadCheck.notChecked"]);
 });

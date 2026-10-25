@@ -43,6 +43,7 @@ pub mod note_disposition;
 pub mod note_edit;
 pub mod note_targets;
 pub mod plugin_data;
+pub mod post_download_check;
 pub mod programming_state;
 pub mod progress;
 pub mod project_history;

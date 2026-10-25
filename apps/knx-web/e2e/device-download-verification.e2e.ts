@@ -1,9 +1,12 @@
-/** ADR-0121 in a browser: plan warnings, then a finished download's report and its hand-over. */
+/** ADR-0121 in a browser: plan warnings, then a finished download's check, report and hand-over. */
 import { expect, test, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { messages as en } from "../src/messages/en";
 import { messages as de } from "../src/messages/de";
+// Hand-written check records the Rust serializer admits and re-emits unchanged
+// (`the_web_fixtures_are_the_serializer_vocabulary`); synthetic, not live evidence.
+import checkFixtures from "../src/postDownloadCheck.fixtures.json" with { type: "json" };
 
 const device = (id: number, address: string, name: string) => ({ id, name, address, description: null, com_object_count: 0 });
 const tree = {
@@ -49,9 +52,12 @@ const report = {
   mailto: "mailto:issue@knxbench.com?subject=KNXBench%20download%20report%3A%20M-0002_A-A060-14-0000&body=KNXBench",
 };
 
-async function open(page: Page, language: "en" | "de") {
+/** What the intercepted server answers once the download ran; the default is an older server's. */
+interface Served { status: unknown; report: unknown }
+
+async function open(page: Page, language: "en" | "de", served: Served = { status: finished, report }) {
   const m = language === "en" ? en : de;
-  const state = { started: false, writes: [] as string[], reportReads: 0 };
+  const state = { started: false, starts: 0, writes: [] as string[], reportReads: 0 };
   // Like the real server: no project until the test creates one (ADR-0127).
   let projectOpen = false;
   await page.route("**/api/**", (route) => {
@@ -71,14 +77,15 @@ async function open(page: Page, language: "en" | "de") {
       const body = request.postDataJSON() as { acceptUntested?: string };
       if (body.acceptUntested !== plan.untestedAcknowledgement) return json({ error: "acknowledgement" }, 400);
       state.started = true;
+      state.starts += 1;
       return json({ downloadId: 7 });
     }
     if (path === "/api/device-download/status" && method === "GET") {
-      return state.started ? json(finished) : json({ error: "no download to a device yet" }, 404);
+      return state.started ? json(served.status) : json({ error: "no download to a device yet" }, 404);
     }
     if (path === "/api/device-download/report" && method === "GET") {
       state.reportReads += 1;
-      return json(report);
+      return json(served.report);
     }
     if (method === "GET") return json([]);
     state.writes.push(`${method} ${path}`);
@@ -135,6 +142,10 @@ for (const language of ["en", "de"] as const) {
       const verify = panel.getByRole("region", { name: m["deviceDownload.verify.title"] });
       await expect(verify).toContainText(m["deviceDownload.verify.intro.untested"]);
       await expect(verify.locator(".device-download-verify-steps li")).toHaveCount(5);
+      // An older server's status has no check: it reads as not checked.
+      const legacyCheck = panel.locator(".post-download-check");
+      await expect(legacyCheck).toHaveAttribute("data-check", "notChecked");
+      await expect(legacyCheck).toContainText(m["postDownloadCheck.notChecked"]);
       expect(state.reportReads, "the report is created on request only").toBe(0);
       await verify.getByRole("button", { name: m["deviceDownload.verify.create"], exact: true }).click();
       await expect(verify.locator("[data-check]")).toHaveCount(4);
@@ -168,5 +179,119 @@ for (const language of ["en", "de"] as const) {
       expect(geometry.overflow, "no horizontal scrolling").toBeLessThanOrEqual(1);
       expect(state.writes, "only the start was sent").toEqual([]);
     });
+  }
+}
+
+type CheckFixture = keyof typeof checkFixtures;
+type Messages = typeof en;
+type Reading = { machine: string; expected: string | null; observed: { result: string; loadState?: string } };
+/** A finished download whose status carries the check, with the restart it reports. */
+const CHECKS: { fixture: CheckFixture; restart: "acknowledged" | "unconfirmed"; lines: (keyof Messages)[] }[] = [
+  { fixture: "matched", restart: "acknowledged",
+    lines: ["postDownloadCheck.reach.reached", "postDownloadCheck.identity.match", "postDownloadCheck.verdict.matchesPlan"] },
+  { fixture: "partialReading", restart: "acknowledged",
+    lines: ["postDownloadCheck.reach.reached", "postDownloadCheck.identity.match", "postDownloadCheck.verdict.unknown"] },
+  { fixture: "identityMismatch", restart: "unconfirmed",
+    lines: ["postDownloadCheck.reach.reached", "postDownloadCheck.identity.mismatch.application"] },
+];
+
+function readingsOf(check: unknown): Reading[] {
+  const reach = (check as { observation: { reach?: { identity?: { loadStates?: Reading[] } } } }).observation.reach;
+  return reach?.identity?.loadStates ?? [];
+}
+
+for (const { fixture, restart, lines } of CHECKS) {
+  const check = checkFixtures[fixture];
+  const status = {
+    ...finished,
+    status: { state: "finished", written: "yes", restart,
+      restartNote: restart === "unconfirmed" ? "no T_ACK for A_Restart" : null, postDownloadCheck: check },
+    events: [...finished.events, { kind: "postDownloadCheckStarted" }],
+    nextSince: finished.events.length + 1,
+  };
+  // The report field order the Rust serializer writes: the check after the outcome.
+  const { parameterValues, ...head } = report.report;
+  const checked = { ...report, report: { ...head, outcome: { ...head.outcome, restart }, postDownloadCheck: check, parameterValues } };
+  for (const language of ["en", "de"] as const) {
+    for (const width of [1440, 400]) {
+      test(`${language} ${width}: the ${fixture} check stands apart from the transfer and travels in the report`, async ({ page }) => {
+        const m = language === "en" ? en : de;
+        expect(checked.report.outcome.restart, "status and saved report describe the same restart").toBe(status.status.restart);
+        await page.setViewportSize({ width, height: 900 });
+        const state = await open(page, language, { status, report: checked });
+        const panel = page.locator(".device-download-panel");
+        await panel.locator("select[data-download-device]").selectOption({ label: "1.1.67 — Fictional actuator" });
+        await panel.locator("input[data-download-gateway]").fill("192.0.2.10:3671");
+        await panel.getByRole("button", { name: m["deviceDownload.preparePlan"], exact: true }).click();
+        const shown = panel.getByRole("region", { name: m["deviceDownload.planTitle"] });
+        await shown.locator("input[data-untested-acknowledgement]").fill(plan.untestedAcknowledgement);
+        await shown.getByRole("button", { name: m["deviceDownload.start"].replace("{address}", "1.1.67"), exact: true }).click();
+        await page.locator(".programming-consent-dialog").getByRole("button", { name: m["programmingConsent.confirm"], exact: true }).click();
+
+        // The transfer and its restart, each its own line outside the check.
+        const progress = panel.locator(".device-download-progress");
+        const section = progress.locator(".post-download-check");
+        await expect(section).toHaveAttribute("data-check", "attempted");
+        await expect(section).toHaveAttribute("data-reach", "reached");
+        const writtenLine = m["deviceDownload.written.yes"].replace("{count}", "32");
+        const restartLine = restart === "acknowledged" ? m["deviceDownload.restartAcknowledged"] : m["deviceDownload.restartUnconfirmed"];
+        await expect(progress.locator(":scope > p", { hasText: writtenLine })).toHaveCount(1);
+        await expect(progress.locator(":scope > p", { hasText: restartLine })).toHaveCount(1);
+        await expect(section).not.toContainText(writtenLine);
+        await expect(section).not.toContainText(restartLine);
+
+        // The check: its own facts, runtime unknown, no proof of the exemplar.
+        await expect(section.getByRole("heading", { name: m["postDownloadCheck.title"], exact: true })).toBeVisible();
+        for (const key of lines) await expect(section).toContainText(m[key]);
+        await expect(section).not.toContainText(m["postDownloadCheck.notChecked"]);
+        await expect(section.locator("p", { hasText: m["postDownloadCheck.runtimeUnknown"] })).toHaveCount(1);
+        const readings = readingsOf(check);
+        await expect(section.locator("p", { hasText: m["postDownloadCheck.exemplar"] })).toHaveCount(readings.length > 0 ? 1 : 0);
+        const rows = section.locator("tbody tr");
+        await expect(rows).toHaveCount(readings.length);
+        for (const [index, reading] of readings.entries()) {
+          const row = rows.nth(index);
+          await expect(row).toHaveAttribute("data-machine", reading.machine);
+          const expected = reading.expected === null ? m["postDownloadCheck.expected.unresolved"]
+            : m[`postDownloadCheck.state.${reading.expected}` as keyof Messages];
+          const observed = reading.observed.result === "observed"
+            ? m[`postDownloadCheck.state.${reading.observed.loadState}` as keyof Messages]
+            : m[`postDownloadCheck.observed.${reading.observed.result}` as keyof Messages];
+          await expect(row.locator("td")).toHaveText([m[`postDownloadCheck.machine.${reading.machine}` as keyof Messages], expected, observed]);
+        }
+        await expect(section.locator("button, a, input")).toHaveCount(0);
+
+        // The manual checklist stays; the saved report carries the very check the server gave.
+        const verify = panel.getByRole("region", { name: m["deviceDownload.verify.title"] });
+        await expect(verify.locator(".device-download-verify-steps li")).toHaveCount(5);
+        await verify.getByRole("button", { name: m["deviceDownload.verify.create"], exact: true }).click();
+        await expect(verify.locator("[data-check]")).toHaveCount(4);
+        const download = page.waitForEvent("download");
+        await verify.getByRole("button", { name: m["deviceDownload.verify.save"], exact: true }).click();
+        const text = await readFile(await (await download).path(), "utf8");
+        expect(text).toBe(`${JSON.stringify(checked.report, null, 2)}\n`);
+        expect(JSON.stringify(JSON.parse(text).postDownloadCheck)).toBe(JSON.stringify(check));
+
+        await section.scrollIntoViewIfNeeded();
+        if (process.env.KNX_VERIFY_CAPTURE_DIR) {
+          await section.screenshot({ path: join(process.env.KNX_VERIFY_CAPTURE_DIR, `${language}-${width}-check-${fixture}.png`) });
+        }
+        const geometry = await section.evaluate((element) => {
+          const box = element.getBoundingClientRect();
+          const children = [...element.querySelectorAll("p, table, h4")].map((node) => node.getBoundingClientRect());
+          return {
+            left: box.left, right: box.right,
+            inside: children.every((child) => child.left >= box.left - 1 && child.right <= box.right + 1),
+            overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+          };
+        });
+        expect(geometry.left).toBeGreaterThanOrEqual(0);
+        expect(geometry.right).toBeLessThanOrEqual(width);
+        expect(geometry.inside, "the check stays inside its section").toBe(true);
+        expect(geometry.overflow, "no horizontal scrolling").toBeLessThanOrEqual(1);
+        expect(state.starts, "one start, no second download").toBe(1);
+        expect(state.writes, "only the start was sent").toEqual([]);
+      });
+    }
   }
 }

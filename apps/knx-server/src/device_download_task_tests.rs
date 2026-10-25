@@ -17,6 +17,7 @@ fn session(
         data_octets: 1,
         shared: Arc::new(Shared {
             status: Mutex::new(status),
+            transfer: Mutex::new(None),
             events: Mutex::new(Vec::new()),
             first_mutation_step: Some(2),
             last_started: Mutex::new(last),
@@ -53,6 +54,7 @@ pub(super) fn synthetic_report() -> DownloadReport {
             group_links: 0,
         },
         outcome: None,
+        post_download_check: None,
         parameter_values: Default::default(),
     }
 }
@@ -72,6 +74,7 @@ fn finished() -> DownloadStatus {
         written: Written::Yes,
         restart: Restart::Unconfirmed,
         restart_note: Some("synthetic restart not acknowledged".into()),
+        post_download_check: PostDownloadCheck::not_checked(),
     }
 }
 

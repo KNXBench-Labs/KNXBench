@@ -11,6 +11,8 @@ use std::sync::{Arc, Mutex};
 use chrono::{SecondsFormat, Utc};
 use serde::{Deserialize, Serialize};
 
+use crate::post_download_check::PostDownloadCheck;
+
 /// Witnessed device-write classification, independent of transport and UI.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -58,6 +60,22 @@ struct DownloadEvidence {
     written: Option<Written>,
     restart: Option<Restart>,
     cleanup: DownloadCleanup,
+    /// The read-only check after a successful transfer. Additive and
+    /// optional: absent (older records, or no check result) is not checked.
+    /// Present, it must be a check: an explicit `null` is refused.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "present_check"
+    )]
+    post_download_check: Option<PostDownloadCheck>,
+}
+
+/// Only reached for a present field (`default` covers absence), so `null` errs.
+fn present_check<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> Result<Option<PostDownloadCheck>, D::Error> {
+    PostDownloadCheck::deserialize(deserializer).map(Some)
 }
 
 /// Describes the adapter return only, not a KNX disconnect acknowledgment.
@@ -139,6 +157,13 @@ impl OneShotActivity {
                             }
                             _ => false,
                         }
+                        && evidence.post_download_check.as_ref().is_none_or(|check| {
+                            // Only a written, finished transfer is checked,
+                            // and absence alone says "not checked".
+                            self.state == "finished"
+                                && evidence.written == Some(Written::Yes)
+                                && check.is_checked()
+                        })
                 }
                 _ => false,
             }
@@ -398,12 +423,14 @@ impl OneShotLog {
                 written: None,
                 restart: None,
                 cleanup: DownloadCleanup::Pending,
+                post_download_check: None,
             }),
         };
         self.persist_download(&entry)?;
         Ok(DownloadGuard {
             log: Arc::clone(self),
             entry,
+            checking: false,
             done: false,
         })
     }
@@ -567,6 +594,8 @@ fn prune(inner: &mut Inner) {
 pub struct DownloadGuard {
     log: Arc<OneShotLog>,
     entry: OneShotActivity,
+    /// A post-download check started and has not been recorded yet.
+    checking: bool,
     done: bool,
 }
 
@@ -612,6 +641,50 @@ impl DownloadGuard {
             .expect("download evidence");
         evidence.written = Some(written);
         evidence.restart = restart;
+        self.log.persist_download(&self.entry)
+    }
+
+    /// Only a recorded `finished`, `written: yes` transfer may be checked;
+    /// the record stays exactly as it is until [`Self::record_check`].
+    fn checkable(&self) -> io::Result<&DownloadEvidence> {
+        let evidence = self
+            .entry
+            .download_evidence
+            .as_ref()
+            .expect("download evidence");
+        if self.entry.state != "finished"
+            || evidence.written != Some(Written::Yes)
+            || evidence.post_download_check.is_some()
+        {
+            return Err(io::Error::other(
+                "only a recorded, written and finished transfer is checked once",
+            ));
+        }
+        Ok(evidence)
+    }
+
+    /// The read-only check after the recorded transfer is about to start.
+    /// Nothing is persisted; a drop before [`Self::record_check`] records it
+    /// as interrupted, never as checked.
+    pub fn begin_check(&mut self) -> io::Result<()> {
+        self.checkable()?;
+        self.checking = true;
+        Ok(())
+    }
+
+    /// Record the check's sanitized result next to the transfer's, which it
+    /// never changes. Kept in memory even if durable recording fails.
+    pub fn record_check(&mut self, check: &PostDownloadCheck) -> io::Result<()> {
+        self.checkable()?;
+        if !check.is_checked() {
+            return Err(io::Error::other("absence already means not checked"));
+        }
+        self.entry
+            .download_evidence
+            .as_mut()
+            .expect("download evidence")
+            .post_download_check = Some(check.clone());
+        self.checking = false;
         self.log.persist_download(&self.entry)
     }
 
@@ -672,11 +745,16 @@ impl Drop for DownloadGuard {
                 self.entry.state = "unknown".into();
                 self.entry.finished_at = Some(now());
             }
-            self.entry
+            let evidence = self
+                .entry
                 .download_evidence
                 .as_mut()
-                .expect("download evidence")
-                .cleanup = DownloadCleanup::Unknown;
+                .expect("download evidence");
+            evidence.cleanup = DownloadCleanup::Unknown;
+            if self.checking {
+                // The transfer's result stays; only the check is unsettled.
+                evidence.post_download_check = Some(PostDownloadCheck::interrupted());
+            }
             let _ = self.log.persist_download(&self.entry);
         }
     }
@@ -1388,5 +1466,254 @@ mod tests {
         assert_eq!(before[0].state, "running");
         live.finish("finished");
         assert_eq!(log.snapshot_with_dropped().0.len(), MAX_COMPLETED);
+    }
+
+    fn finished_download(path: &std::path::Path) -> (Arc<OneShotLog>, DownloadGuard) {
+        let log = Arc::new(OneShotLog::persistent(
+            path.to_path_buf(),
+            "AAAAAAAAAAAAAAAAAAAAAA".into(),
+        ));
+        let mut guard = log.start_download(3, "1.1.67".parse().unwrap()).unwrap();
+        guard.mark_send_possible().unwrap();
+        guard
+            .record_result(&DownloadResult::Finished {
+                written: Written::Yes,
+                restart: Restart::Unconfirmed,
+            })
+            .unwrap();
+        (log, guard)
+    }
+
+    fn checked() -> PostDownloadCheck {
+        serde_json::from_value(serde_json::json!({
+            "observation": { "status": "attempted", "reach": { "result": "notReached" } },
+            "runtime": "unknown"
+        }))
+        .unwrap()
+    }
+
+    fn stored(path: &std::path::Path) -> serde_json::Value {
+        let history = knx_store::activity_history::ActivityHistory::open_existing(path).unwrap();
+        let rows = history.page(0, 10).unwrap().0;
+        serde_json::from_str(&rows.last().unwrap().document).unwrap()
+    }
+
+    #[test]
+    fn a_check_is_recorded_beside_the_transfer_and_survives_a_reopen() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("activity.sqlite");
+        let (_, mut guard) = finished_download(&path);
+        let before = stored(&path);
+        assert!(before["downloadEvidence"]
+            .get("postDownloadCheck")
+            .is_none());
+        guard.begin_check().unwrap();
+        guard.record_check(&checked()).unwrap();
+        assert!(guard.record_check(&checked()).is_err(), "checked once");
+        guard.record_cleanup(true).unwrap();
+        let reopened = OneShotLog::persistent(path, "BBBBBBBBBBBBBBBBBBBBBB".into());
+        let (rows, _) = reopened.history_page(0, 10).unwrap();
+        let row = serde_json::to_value(&rows[0]).unwrap();
+        assert_eq!(row["state"], "finished");
+        assert_eq!(row["downloadEvidence"]["written"], "yes");
+        assert_eq!(row["downloadEvidence"]["restart"], "unconfirmed");
+        assert_eq!(
+            row["downloadEvidence"]["postDownloadCheck"],
+            serde_json::to_value(checked()).unwrap()
+        );
+    }
+
+    #[test]
+    fn a_drop_during_the_check_keeps_the_transfer_and_records_it_interrupted() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("activity.sqlite");
+        let (_, mut guard) = finished_download(&path);
+        guard.begin_check().unwrap();
+        drop(guard);
+        let row = stored(&path);
+        assert_eq!(row["state"], "finished");
+        assert_eq!(row["downloadEvidence"]["written"], "yes");
+        assert_eq!(row["downloadEvidence"]["cleanup"], "unknown");
+        assert_eq!(
+            row["downloadEvidence"]["postDownloadCheck"]["observation"]["status"],
+            "interrupted"
+        );
+    }
+
+    #[test]
+    fn only_a_written_finished_transfer_is_checked() {
+        let dir = tempfile::tempdir().unwrap();
+        let log = Arc::new(OneShotLog::persistent(
+            dir.path().join("activity.sqlite"),
+            "AAAAAAAAAAAAAAAAAAAAAA".into(),
+        ));
+        let mut running = log.start_download(1, "1.1.67".parse().unwrap()).unwrap();
+        assert!(running.begin_check().is_err(), "still running");
+        running.mark_send_possible().unwrap();
+        running
+            .record_result(&DownloadResult::Failed {
+                written: Written::Partially,
+            })
+            .unwrap();
+        assert!(running.begin_check().is_err(), "failed");
+        assert!(running.record_check(&checked()).is_err(), "failed");
+        let (_, mut finished) = finished_download(&dir.path().join("other.sqlite"));
+        assert!(
+            finished
+                .record_check(&PostDownloadCheck::not_checked())
+                .is_err(),
+            "absence alone says not checked"
+        );
+    }
+
+    #[test]
+    fn stored_checks_are_admitted_only_on_a_written_finished_download() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("activity.sqlite");
+        let (_, mut guard) = finished_download(&path);
+        guard.record_check(&checked()).unwrap();
+        guard.record_cleanup(true).unwrap();
+        let valid = stored(&path);
+        let check = valid["downloadEvidence"]["postDownloadCheck"].clone();
+        let compare = {
+            let log = Arc::new(OneShotLog::persistent(
+                dir.path().join("compare.sqlite"),
+                "AAAAAAAAAAAAAAAAAAAAAA".into(),
+            ));
+            log.start("deviceCompare", Some("1.1.67".into()))
+                .finish("finished");
+            serde_json::to_value(&log.snapshot_with_dropped().0[0]).unwrap()
+        };
+        let mut cases = Vec::new();
+        // A legacy record without the field reads as it always did.
+        let mut legacy = valid.clone();
+        legacy["downloadEvidence"]
+            .as_object_mut()
+            .unwrap()
+            .remove("postDownloadCheck");
+        cases.push(("legacy", legacy, true));
+        cases.push(("valid", valid.clone(), true));
+        // Unrelated kinds: as download evidence, and as a field of their own.
+        let mut on_compare = compare.clone();
+        on_compare["downloadEvidence"] = valid["downloadEvidence"].clone();
+        cases.push(("compare evidence", on_compare, false));
+        let mut compare_field = compare.clone();
+        compare_field["postDownloadCheck"] = check.clone();
+        cases.push(("compare field", compare_field, false));
+        // A failed or partial transfer, and an explicit notChecked.
+        let mut failed = valid.clone();
+        failed["state"] = "failed".into();
+        failed["downloadEvidence"]["restart"] = serde_json::Value::Null;
+        cases.push(("failed", failed, false));
+        let mut partial = valid.clone();
+        partial["downloadEvidence"]["written"] = "partially".into();
+        cases.push(("partial", partial, false));
+        let mut explicit = valid.clone();
+        explicit["downloadEvidence"]["postDownloadCheck"] =
+            serde_json::to_value(PostDownloadCheck::not_checked()).unwrap();
+        cases.push(("notChecked", explicit, false));
+        let mut contradictory = valid.clone();
+        contradictory["downloadEvidence"]["postDownloadCheck"]["runtime"] = "running".into();
+        cases.push(("running", contradictory, false));
+        // Present means a check: an explicit null is refused, only absence is legacy.
+        let mut null = valid.clone();
+        null["downloadEvidence"]["postDownloadCheck"] = serde_json::Value::Null;
+        cases.push(("null", null, false));
+        for (name, document, admitted) in cases {
+            let dir = tempfile::tempdir().unwrap();
+            let path = dir.path().join("activity.sqlite");
+            let id = document["id"].as_u64().unwrap();
+            knx_store::activity_history::ActivityHistory::open(&path)
+                .unwrap()
+                .record("AAAAAAAAAAAAAAAAAAAAAA", id, &document.to_string())
+                .unwrap();
+            let log = OneShotLog::persistent(path, "AAAAAAAAAAAAAAAAAAAAAA".into());
+            assert_eq!(log.history_page(0, 10).is_ok(), admitted, "{name}");
+            if name == "legacy" {
+                let (rows, _) = log.history_page(0, 10).unwrap();
+                let row = serde_json::to_value(&rows[0]).unwrap();
+                assert!(row["downloadEvidence"].get("postDownloadCheck").is_none());
+                assert_eq!(row["downloadEvidence"]["written"], "yes");
+            }
+        }
+    }
+    /// The published format-2 reader's download row (`07fe2e67f`, unchanged at
+    /// `415c02dd9`), frozen here: it predates `postDownloadCheck`.
+    #[derive(Deserialize)]
+    #[serde(rename_all = "camelCase", deny_unknown_fields)]
+    #[allow(dead_code)]
+    struct PublishedDownloadEvidence {
+        session_id: u64,
+        written: Option<Written>,
+        restart: Option<Restart>,
+        cleanup: DownloadCleanup,
+    }
+
+    #[derive(Deserialize)]
+    #[serde(rename_all = "camelCase", deny_unknown_fields)]
+    #[allow(dead_code)]
+    struct PublishedActivity {
+        id: u64,
+        kind: String,
+        address: Option<String>,
+        state: String,
+        started_at: String,
+        finished_at: Option<String>,
+        write_evidence: Option<WriteEvidence>,
+        download_evidence: Option<PublishedDownloadEvidence>,
+    }
+
+    /// Downgrade: this reader reads every older row, but the published one refuses
+    /// a row with a check, and a refused row fails the page, latches writes and
+    /// stays on disk unchanged. Safe refusal, not a seamless downgrade.
+    #[test]
+    fn an_older_reader_refuses_a_checked_row_without_losing_it() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("activity.sqlite");
+        let (_, mut guard) = finished_download(&path);
+        let unchecked = stored(&path);
+        assert!(serde_json::from_value::<PublishedActivity>(unchecked.clone()).is_ok());
+        guard.begin_check().unwrap();
+        guard.record_check(&checked()).unwrap();
+        guard.record_cleanup(true).unwrap();
+        let checked_row = stored(&path);
+        assert!(
+            serde_json::from_value::<PublishedActivity>(checked_row.clone()).is_err(),
+            "the published reader refuses the new field"
+        );
+        let mut legacy = checked_row.clone();
+        legacy["downloadEvidence"]
+            .as_object_mut()
+            .unwrap()
+            .remove("postDownloadCheck");
+        assert!(serde_json::from_value::<PublishedActivity>(legacy).is_ok());
+
+        // The refusal path, run here with a field this reader does not know.
+        let open = |document: &serde_json::Value| {
+            let dir = tempfile::tempdir().unwrap();
+            let path = dir.path().join("activity.sqlite");
+            knx_store::activity_history::ActivityHistory::open(&path)
+                .unwrap()
+                .record(
+                    "AAAAAAAAAAAAAAAAAAAAAA",
+                    document["id"].as_u64().unwrap(),
+                    &document.to_string(),
+                )
+                .unwrap();
+            let log = Arc::new(OneShotLog::persistent(
+                path.clone(),
+                "BBBBBBBBBBBBBBBBBBBBBB".into(),
+            ));
+            (dir, path, log)
+        };
+        let (_kept, _, log) = open(&checked_row);
+        assert!(log.history_page(0, 10).is_ok(), "this reader admits it");
+        let mut future = checked_row;
+        future["downloadEvidence"]["futureField"] = serde_json::json!(true);
+        let (_kept, path, log) = open(&future);
+        assert!(log.history_page(0, 10).is_err(), "the whole page fails");
+        assert_eq!(log.history_state(), "unavailable");
+        assert!(log.start_download(4, "1.1.67".parse().unwrap()).is_err());
+        assert_eq!(stored(&path), future, "nothing is rewritten or lost");
     }
 }

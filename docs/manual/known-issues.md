@@ -528,7 +528,14 @@ is the remaining copy defect.
   Programming an individual address is currently refused until durable
   recovery exists. Unloading and secure devices are not supported. A successful
   byte read-back does not confirm the final restart; the verified devices'
-  restart outcome is explicitly unconfirmed.
+  restart outcome is explicitly unconfirmed. The read-only check after a
+  download reports reach, identity and load states only; it does not prove
+  the application runs or that it is the same physical device. A bus
+  activity history that holds such a check cannot be read by an older
+  KNXBench version: its history view reports the history as unavailable and
+  it refuses further bus writes until restarted, and again each time its
+  history view reads a page of that history after a restart. Nothing in the
+  file is lost; open it with this or a newer version.
 - **Consequence:** for most installations, plan for another commissioning
   tool for now.
 - **Workaround:** none beyond the verified scope.

@@ -59,6 +59,14 @@ stages passed; published as `e4f5e7c6f`
 wait/reconnect and three-read memory mechanisms are not replaced by a common
 timeout policy; no hardware acceptance or family promotion follows.
 
+The [memory response pairing guard](contracts/memory-response-service-pairing.md)
+rejects another service's response without confirming or falsely reporting a
+refusal of the requested operation. Reads, active-Verify writes and subsequent
+read-back share the rule. Independent review and all 14 integrated package stages
+passed; published as `53400189e`
+([acceptance](status/2026-10-25-memory-response-pairing.md)). No physical-device
+fault, compatibility expansion, recovery or broader programming completion follows.
+
 ## Alpha 16 published pre-release — public artifacts and website verified (24 October 2026)
 
 The [current source-bound evidence matrix](goals/alpha16-release-plan-2026-10-23.md#current-acceptance-disposition--24-october-2026)

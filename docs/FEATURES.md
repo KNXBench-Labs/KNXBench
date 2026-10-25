@@ -15,7 +15,7 @@ Last updated: 2026-10-19 (Alpha 15 baseline; WP-17 on main)
 
 | Feature | Scope | Availability |
 | --- | --- | --- |
-| Own-run gateway hint and refusal reason | System-2's shared locks are not announced as a foreign holder; current worker/start refusals show a code. Volatile diagnostics only, actual issue #30 failure unresolved. [Workflow](manual/user-guide/05-devices-and-products.md#a-busy-hint-is-not-the-system-2-failure-reason-unreleased-source) | Local-only candidate; review/acceptance pending |
+| Own-run gateway hint and refusal reason | System-2's shared locks are not announced as a foreign holder; current worker/start refusals show a code. Volatile diagnostics only, actual issue #30 failure unresolved. [Workflow](manual/user-guide/05-devices-and-products.md#a-busy-hint-is-not-the-system-2-failure-reason-unreleased-source) | Delivered on main, unreleased |
 
 ## New in Alpha 15
 

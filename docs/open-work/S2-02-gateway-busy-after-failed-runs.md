@@ -39,7 +39,7 @@ The reported short HTTP stall and the actual refused step remain unresolved.
   Transport loss, malformed replies and server errors retain unknown-outcome
   handling. No automatic retry, force-disconnect or clear-state control is added.
 
-Acceptance is pending. See the source/HTTP contract in
+Diagnostic slice delivered in `aa2f39f1b` (main `a15b8f0eb`); reporter re-test pending. See the source/HTTP contract in
 [alpha16-system2-http-mount](../contracts/alpha16-system2-http-mount.md).
 
 ## Remaining investigation and closure

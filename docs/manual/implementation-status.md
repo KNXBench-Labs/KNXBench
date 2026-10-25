@@ -8,8 +8,8 @@ A running System-2 attempt is no longer named as a foreign management holder in
 the download gateway hint. Status and the panel show the current attempt's early
 refusal code; a structured start-request refusal is shown too. This is volatile
 server-lifetime evidence, not a durable historical reason or a new recovery route.
-The original issue #30 start failure remains under investigation; source review
-and integrated acceptance of this slice are pending.
+The original issue #30 start failure remains under investigation; this slice is
+delivered on main (unreleased) and awaits the reporter's refusal code.
 [Practical workflow](user-guide/05-devices-and-products.md#a-busy-hint-is-not-the-system-2-failure-reason-unreleased-source) ·
 [S2-02](../open-work/S2-02-gateway-busy-after-failed-runs.md).
 

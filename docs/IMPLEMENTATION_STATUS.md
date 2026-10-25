@@ -12,6 +12,20 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Backup application identity before restore (25 October 2026 source)
+
+A backed-up regular memory download now records the pre-write application
+identity. Restore derivation refuses mismatching or unrecorded applications;
+legacy partial backups retain their exact pre-mutation identity precondition.
+Backup format 2 is strict and explicitly records unavailable evidence; format 1
+remains readable without rewriting, but complete backups without evidence no
+longer prepare a restore. Old format-1-only builds refuse format 2. The
+[contract](contracts/backup-application-identity.md) defines the bounded guard
+and downgrade limits. Independent persistence review and focused source
+corrections are complete; integrated acceptance and publication remain pending.
+No whole-device recovery, final restored identity or hardware acceptance is
+inferred.
+
 ## Read-only check after a regular download (25 October 2026 source)
 
 After a successful regular memory download (complete or partial, restart

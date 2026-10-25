@@ -45,7 +45,8 @@ use std::fmt;
 
 use knx_core::commissioning::authorisation::{Authorisation, AuthorisationPlan};
 use knx_core::commissioning::device_backup::{
-    download_changes, written_regions, BackupRegion, DeviceBackup, OctetChange, RestoreError,
+    download_changes, written_regions, BackupRegion, DeviceBackup, OctetChange, PriorApplication,
+    RestoreError,
 };
 use knx_core::commissioning::load_control_memory::MemoryLoadStateMachine;
 use knx_core::commissioning::load_state::{LoadEvent, LoadState, MaskVersion};
@@ -54,7 +55,7 @@ use knx_core::commissioning::memory_download::{
     machines, resource_matches, MemoryDownloadPlan, MemoryDownloadStep,
 };
 use knx_core::commissioning::mutation::WriteScope;
-use knx_core::commissioning::properties::ObjectIndex;
+use knx_core::commissioning::properties::{ObjectIndex, PID_PROGRAM_VERSION};
 
 use knx_core::ContactableAddress;
 
@@ -748,7 +749,7 @@ async fn read_after_identity<T: ManagementTransport>(
         .write_limit(None)
         .await
         .map_err(ReadBackError::Session)?;
-    take_backup(session, plan, limit, 0)
+    take_backup(session, plan, limit, 0, false)
         .await
         .map_err(|error| match error {
             MemoryDownloadError::BackupRead { error, .. } => ReadBackError::Session(error),
@@ -877,8 +878,14 @@ async fn take_backup<T: ManagementTransport>(
     plan: &MemoryDownloadPlan,
     limit: WriteLimit,
     index: usize,
+    record_prior: bool,
 ) -> Result<DeviceBackup, MemoryDownloadError> {
     let at = |error| MemoryDownloadError::BackupRead { index, error };
+    let prior_application = if record_prior {
+        read_prior_application(session).await.map_err(at)?
+    } else {
+        PriorApplication::NotRecorded
+    };
     let mut load_states = Vec::new();
     for machine in machines(plan) {
         let state = session.read_memory_load_state(machine).await.map_err(at)?;
@@ -909,7 +916,40 @@ async fn take_backup<T: ManagementTransport>(
         manufacturer: plan.manufacturer,
         load_states,
         regions,
+        prior_application,
     })
+}
+
+/// One read of object index 3, PID 13, before the first change: the
+/// application the old memory belongs to. Only an answer of exactly five
+/// octets is recorded. A refusal (`nr_of_elem = 0`) or another width is
+/// `NotRecorded`, as is silence after an acknowledged request on a live
+/// connection; a complete download over an unknown application stays
+/// possible, its backup just cannot be restored. Every other failure
+/// (transport, lost or released connection, lag) aborts like any backup
+/// read. Never retried.
+async fn read_prior_application<T: ManagementTransport>(
+    session: &mut ManagementSession<'_, T>,
+) -> Result<PriorApplication, SessionError> {
+    let read = session
+        .read_property(ObjectIndex::APPLICATION_PROGRAM, PID_PROGRAM_VERSION, 1, 1)
+        .await;
+    prior_from_read(read, session.connection().is_some())
+}
+
+/// What the PID 13 read means for the backup; `connected` is whether the
+/// session still holds its connection after the read.
+fn prior_from_read(
+    read: Result<Vec<u8>, SessionError>,
+    connected: bool,
+) -> Result<PriorApplication, SessionError> {
+    match read {
+        Ok(octets) => Ok(<[u8; 5]>::try_from(octets.as_slice())
+            .map_or(PriorApplication::NotRecorded, PriorApplication::Recorded)),
+        Err(SessionError::PropertyRefused { .. }) => Ok(PriorApplication::NotRecorded),
+        Err(SessionError::NoAnswer { .. }) if connected => Ok(PriorApplication::NotRecorded),
+        Err(error) => Err(error),
+    }
 }
 
 async fn run<T: ManagementTransport, K: FnMut(&DeviceBackup) -> Result<(), String>>(
@@ -960,7 +1000,7 @@ async fn run_steps<T: ManagementTransport, K: FnMut(&DeviceBackup) -> Result<(),
         if step.changes_device() {
             if let Some(mut keep) = keep.take() {
                 let limit = limit.expect("check_shape puts Connect first");
-                let backup = match take_backup(session, plan, limit, index).await {
+                let backup = match take_backup(session, plan, limit, index, true).await {
                     Ok(backup) => backup,
                     Err(error) => {
                         session.disconnect().await;
@@ -1171,6 +1211,7 @@ mod tests {
 
     const MANUFACTURER: u16 = 0x0083;
     const HARDWARE: [u8; 6] = [0, 0, 0, 0, 0x01, 0x27];
+    const IDENTITY: [u8; 5] = [0x00, 0x83, 0x00, 0x27, 0x15];
 
     fn fast() -> SessionTiming {
         SessionTiming {
@@ -2681,6 +2722,24 @@ mod tests {
         device
     }
 
+    /// `plan` that names the application `A-0027-15`, as a restore needs.
+    fn identified(mut plan: MemoryDownloadPlan) -> MemoryDownloadPlan {
+        let first_change = plan
+            .steps
+            .iter()
+            .position(MemoryDownloadStep::changes_device)
+            .expect("a plan that changes the device");
+        plan.steps.insert(
+            first_change,
+            MemoryDownloadStep::CompareProperty {
+                object_index: 3,
+                property_id: PID_PROGRAM_VERSION,
+                inline_data: IDENTITY.to_vec(),
+            },
+        );
+        plan
+    }
+
     fn memory_reads(device: &SimulatedDevice) -> Vec<(u32, u8)> {
         device
             .seen()
@@ -2769,11 +2828,12 @@ mod tests {
     async fn restoring_the_backup_brings_the_old_octets_back() {
         use knx_core::commissioning::device_backup::restore_plan;
         let device = old_device();
+        device.preset_property(3, PID_PROGRAM_VERSION, &IDENTITY);
         let before: Vec<Option<u8>> = device.memory(0x4000, 30);
         let mut kept = None;
         run_memory_download_with_backup(
             &mut session(&device, WriteScope::Download),
-            &plan(),
+            &identified(plan()),
             |_| {},
             &mut |backup: &DeviceBackup| {
                 kept = Some(backup.clone());
@@ -2784,7 +2844,7 @@ mod tests {
         .expect("the download runs");
         assert_ne!(device.memory(0x4000, 30), before, "the download changed it");
 
-        let restore = restore_plan(&plan(), device.address(), &kept.unwrap()).unwrap();
+        let restore = restore_plan(&identified(plan()), device.address(), &kept.unwrap()).unwrap();
         run_memory_download(&mut session(&device, WriteScope::Download), &restore)
             .await
             .expect("the restore runs");
@@ -2796,11 +2856,12 @@ mod tests {
     async fn a_restore_checks_the_hardware_type_width_too() {
         use knx_core::commissioning::device_backup::restore_plan;
         let device = old_device();
+        device.preset_property(3, PID_PROGRAM_VERSION, &IDENTITY);
         device.preset_property(0, PID_HARDWARE_TYPE, &ZERO_TAIL);
         let mut kept = None;
         run_memory_download_with_backup(
             &mut session(&device, WriteScope::Download),
-            &zero_tail_plan(),
+            &identified(zero_tail_plan()),
             |_| {},
             &mut |backup: &DeviceBackup| {
                 kept = Some(backup.clone());
@@ -2814,7 +2875,12 @@ mod tests {
 
         let truncated = &ZERO_TAIL[..4];
         device.preset_property(0, PID_HARDWARE_TYPE, truncated);
-        let restore = restore_plan(&zero_tail_plan(), device.address(), &kept.unwrap()).unwrap();
+        let restore = restore_plan(
+            &identified(zero_tail_plan()),
+            device.address(),
+            &kept.unwrap(),
+        )
+        .unwrap();
         let error = run_memory_download(&mut session(&device, WriteScope::Download), &restore)
             .await
             .expect_err("a truncated hardware type is refused");
@@ -3362,4 +3428,6 @@ mod tests {
         assert_eq!(writes_of_any_kind(&device), vec![], "read only");
         assert_eq!(device.seen().last(), Some(&Seen::Disconnect));
     }
+
+    mod backup_identity;
 }

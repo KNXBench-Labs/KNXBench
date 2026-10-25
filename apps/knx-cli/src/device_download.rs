@@ -1371,6 +1371,12 @@ mod tests {
     fn the_backup_is_kept_before_the_first_write_and_restores_the_old_memory() {
         let (dir, prepared) = prepared();
         let device = mdt(SimulatorConfig::default());
+        // The application the device holds before the download is the one
+        // the plan names, so the backup may later be written back.
+        let identity =
+            knx_core::commissioning::partial_memory_download::application_identity(&prepared.plan)
+                .expect("the verified program names its application");
+        device.preset_property(3, PID_PROGRAM_VERSION, &identity);
         // An older configuration: other octets than the plan writes.
         for segment in &prepared.image.segments {
             let old: Vec<u8> = (0..segment.octets.len())
@@ -1423,6 +1429,35 @@ mod tests {
                 knx_core::commissioning::device_backup::RestoreError::OtherLoadStates { .. }
             ))
         ));
+        assert_eq!(
+            stored.backup.prior_application,
+            knx_core::commissioning::device_backup::PriorApplication::Recorded(identity),
+            "the durable file holds the pre-write observation"
+        );
+        // Without that observation, or with another application's, the
+        // complete plan's load procedure is not written around these octets.
+        for (evidence, wanted) in [
+            (
+                knx_core::commissioning::device_backup::PriorApplication::NotRecorded,
+                "does not record",
+            ),
+            (
+                knx_core::commissioning::device_backup::PriorApplication::Recorded([
+                    identity[0],
+                    identity[1],
+                    identity[2],
+                    identity[3],
+                    identity[4] ^ 1,
+                ]),
+                "taken from application",
+            ),
+        ] {
+            let mut doubtful = stored.clone();
+            doubtful.backup.prior_application = evidence;
+            let error = knx_app::device_backup::prepare_restore(&products, &doubtful)
+                .expect_err("no restore without the matching application");
+            assert!(error.to_string().contains(wanted), "{error}");
+        }
         let restore = knx_app::device_backup::prepare_restore(&products, &stored).unwrap();
         let authorisation =
             WriteAuthorisation::for_simulator(device.address(), WriteScope::Download).unwrap();

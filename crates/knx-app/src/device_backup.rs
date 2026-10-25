@@ -6,13 +6,14 @@
 //! compared before the executor is allowed to write to the device: a
 //! backup that exists only in memory is no backup.
 //!
-//! Format 1, plain JSON so an operator can read it without KNXBench:
+//! Format 2, plain JSON so an operator can read it without KNXBench:
 //!
 //! ```json
-//! { "format": 1, "kind": "knxbench-device-backup",
+//! { "format": 2, "kind": "knxbench-device-backup",
 //!   "taken": "2026-09-29T14:10:00+02:00",
 //!   "device": "1.1.67", "mask": "0701", "manufacturer": "0083",
 //!   "application": "M-0083_A-0027-15-0BAC", "partial": null,
+//!   "prior_application": "0083002715",
 //!   "load_states": [{"machine": "address-table", "state": "Loaded"}],
 //!   "regions": [{"address": "4000", "octets": "05..."}] }
 //! ```
@@ -21,6 +22,16 @@
 //! rebuilds that plan and swaps the octets in
 //! ([`knx_core::commissioning::device_backup::restore_plan`]), which refuses
 //! any other shape.
+//!
+//! `prior_application` is the five-octet application identity (object 3,
+//! PID 13) the device answered before the first write, or `null` when it
+//! gave no usable answer. Format 2 requires the field. Format 1 files are
+//! still read, never rewritten, and their absent field means "not
+//! recorded"; a format 1 file that carries the field is refused, so no
+//! evidence can be smuggled into an older file. Builds that only know
+//! format 1 refuse format 2 files: there is no downgrade path. A restore
+//! needs recorded evidence or the plan's own identity precondition
+//! ([`knx_core::commissioning::device_backup::restore_plan`]).
 
 use std::fmt;
 use std::fs;
@@ -28,7 +39,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use knx_core::commissioning::device_backup::{
-    restore_plan, BackupRegion, DeviceBackup, RestoreError,
+    restore_plan, BackupRegion, DeviceBackup, PriorApplication, RestoreError,
 };
 use knx_core::commissioning::load_control_memory::MemoryLoadStateMachine;
 use knx_core::commissioning::load_state::{LoadState, MaskVersion};
@@ -38,7 +49,9 @@ use knx_core::commissioning::partial_memory_download::PartialDownloadParts;
 use knx_core::IndividualAddress;
 use serde::{Deserialize, Serialize};
 
-const FORMAT: u32 = 1;
+const FORMAT: u32 = 2;
+/// The last format without `prior_application`; still read.
+const FORMAT_WITHOUT_PRIOR: u32 = 1;
 const KIND: &str = "knxbench-device-backup";
 
 /// A backup with what it was taken for.
@@ -92,6 +105,16 @@ struct BackupFile {
     plan_steps: Vec<String>,
     load_states: Vec<FileLoadState>,
     regions: Vec<FileRegion>,
+    /// Absent (`None`) is not the same as `null` (`Some(None)`).
+    #[serde(default, deserialize_with = "present")]
+    prior_application: Option<Option<String>>,
+}
+
+/// Keeps `null` apart from an absent field.
+fn present<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> Result<Option<Option<String>>, D::Error> {
+    Option::<String>::deserialize(deserializer).map(Some)
 }
 
 /// Why a backup was not written or read.
@@ -175,6 +198,14 @@ fn unhex(text: &str) -> Result<Vec<u8>, BackupFileError> {
         .collect()
 }
 
+fn prior_from(text: &str) -> Result<[u8; 5], BackupFileError> {
+    let malformed = || BackupFileError::Malformed(format!("prior_application {text:?}"));
+    if text.len() != 10 || !text.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        return Err(malformed());
+    }
+    unhex(text)?.try_into().map_err(|_| malformed())
+}
+
 fn hex16(text: &str, what: &str) -> Result<u16, BackupFileError> {
     if text.len() != 4 {
         return Err(BackupFileError::Malformed(format!("{what} {text:?}")));
@@ -215,6 +246,10 @@ pub fn to_json(stored: &StoredBackup) -> String {
                 octets: hex(&region.octets),
             })
             .collect(),
+        prior_application: Some(match backup.prior_application {
+            PriorApplication::Recorded(identity) => Some(hex(&identity)),
+            PriorApplication::NotRecorded => None,
+        }),
     };
     serde_json::to_string_pretty(&file).expect("a backup serialises") + "\n"
 }
@@ -226,12 +261,26 @@ pub fn from_json(text: &str) -> Result<StoredBackup, BackupFileError> {
     if file.kind != KIND {
         return Err(BackupFileError::Malformed(format!("kind {:?}", file.kind)));
     }
-    if file.format != FORMAT {
-        return Err(BackupFileError::Malformed(format!(
-            "format {}; this build reads {FORMAT}",
-            file.format
-        )));
-    }
+    let prior_application = match (file.format, &file.prior_application) {
+        (FORMAT_WITHOUT_PRIOR, None) => PriorApplication::NotRecorded,
+        (FORMAT_WITHOUT_PRIOR, Some(_)) => {
+            return Err(BackupFileError::Malformed(format!(
+                "format {FORMAT_WITHOUT_PRIOR} cannot carry prior_application"
+            )))
+        }
+        (FORMAT, None) => {
+            return Err(BackupFileError::Malformed(format!(
+                "format {FORMAT} requires prior_application (null if not recorded)"
+            )))
+        }
+        (FORMAT, Some(None)) => PriorApplication::NotRecorded,
+        (FORMAT, Some(Some(text))) => PriorApplication::Recorded(prior_from(text)?),
+        (other, _) => {
+            return Err(BackupFileError::Malformed(format!(
+                "format {other}; this build reads {FORMAT_WITHOUT_PRIOR} and {FORMAT}"
+            )))
+        }
+    };
     let target: IndividualAddress = file
         .device
         .parse()
@@ -258,6 +307,7 @@ pub fn from_json(text: &str) -> Result<StoredBackup, BackupFileError> {
             manufacturer: hex16(&file.manufacturer, "manufacturer")?,
             load_states,
             regions,
+            prior_application,
         },
         application: file.application,
         partial: file.partial.map(|p| PartialDownloadParts {
@@ -408,6 +458,7 @@ mod tests {
                         octets: vec![0x00, 0xAB, 0xFF],
                     },
                 ],
+                prior_application: PriorApplication::Recorded([0x00, 0x83, 0x00, 0x27, 0x15]),
             },
             application: "M-0083_A-0027-15-0BAC".into(),
             partial: Some(PartialDownloadParts {
@@ -525,7 +576,8 @@ mod tests {
     fn a_foreign_or_damaged_file_is_refused() {
         let good = to_json(&stored());
         for bad in [
-            good.replace("\"format\": 1", "\"format\": 2"),
+            good.replace("\"format\": 2", "\"format\": 3"),
+            good.replace("\"format\": 2", "\"format\": 0"),
             good.replace(KIND, "something-else"),
             good.replace("\"00ABFF\"", "\"00ABF\""),
             good.replace("\"00ABFF\"", "\"00ABZZ\""),
@@ -542,5 +594,97 @@ mod tests {
                 "{bad}"
             );
         }
+    }
+
+    const PRIOR: &str = "\"prior_application\": \"0083002715\"";
+
+    fn without_prior(text: &str) -> String {
+        let mut value: serde_json::Value = serde_json::from_str(text).unwrap();
+        value.as_object_mut().unwrap().remove("prior_application");
+        serde_json::to_string_pretty(&value).unwrap()
+    }
+
+    #[test]
+    fn format_two_writes_the_prior_application_or_an_explicit_null() {
+        let text = to_json(&stored());
+        assert!(text.contains("\"format\": 2"), "{text}");
+        assert!(text.contains(PRIOR), "{text}");
+        let mut unrecorded = stored();
+        unrecorded.backup.prior_application = PriorApplication::NotRecorded;
+        let text = to_json(&unrecorded);
+        assert!(text.contains("\"prior_application\": null"), "{text}");
+        assert_eq!(from_json(&text).unwrap(), unrecorded);
+    }
+
+    #[test]
+    fn format_one_reads_as_not_recorded_and_is_never_rewritten() {
+        let old = without_prior(&to_json(&stored())).replace("\"format\": 2", "\"format\": 1");
+        assert!(!old.contains("prior_application"), "{old}");
+        let read = from_json(&old).unwrap();
+        assert_eq!(read.backup.prior_application, PriorApplication::NotRecorded);
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("old.backup.json");
+        fs::write(&path, &old).unwrap();
+        read_backup(&path).unwrap();
+        assert_eq!(
+            fs::read_to_string(&path).unwrap(),
+            old,
+            "reading rewrites nothing"
+        );
+    }
+
+    #[test]
+    fn format_one_cannot_carry_the_new_field() {
+        let good = to_json(&stored()).replace("\"format\": 2", "\"format\": 1");
+        for bad in [
+            good.clone(),
+            good.replace(PRIOR, "\"prior_application\": null"),
+        ] {
+            assert!(
+                matches!(from_json(&bad), Err(BackupFileError::Malformed(_))),
+                "{bad}"
+            );
+        }
+    }
+
+    #[test]
+    fn format_two_refuses_a_missing_or_malformed_prior_application() {
+        let good = to_json(&stored());
+        for bad in [
+            without_prior(&good),
+            good.replace(PRIOR, "\"prior_application\": \"00830027\""),
+            good.replace(PRIOR, "\"prior_application\": \"008300271500\""),
+            good.replace(PRIOR, "\"prior_application\": \"00830027ZZ\""),
+            good.replace(PRIOR, "\"prior_application\": \"+083002715\""),
+            good.replace(PRIOR, "\"prior_application\": \"\""),
+            good.replace(PRIOR, "\"prior_application\": 83002715"),
+            good.replace(PRIOR, "\"prior_application\": [0,131,0,39,21]"),
+            good.replace(PRIOR, &format!("{PRIOR}, {PRIOR}")),
+            good.replace(PRIOR, &format!("{PRIOR}, \"prior\": 1")),
+        ] {
+            assert!(
+                matches!(from_json(&bad), Err(BackupFileError::Malformed(_))),
+                "{bad}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_legacy_complete_backup_reads_but_cannot_be_restored() {
+        let dir = tempfile::tempdir().unwrap();
+        let products =
+            knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+        let mut legacy = stored();
+        legacy.backup.load_states[1].1 = LoadState::Loaded;
+        legacy.backup.prior_application = PriorApplication::NotRecorded;
+        // The plan does not derive from an empty product database, so the
+        // identity refusal itself is covered in `knx-core`; here the file
+        // still reads and reaches the plan step.
+        assert!(matches!(
+            prepare_restore(&products, &legacy),
+            Err(RestorePrepareError::Plan(_))
+        ));
+        let text = without_prior(&to_json(&legacy)).replace("\"format\": 2", "\"format\": 1");
+        assert_eq!(from_json(&text).unwrap(), legacy);
     }
 }

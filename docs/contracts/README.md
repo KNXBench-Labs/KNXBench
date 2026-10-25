@@ -7,6 +7,7 @@ Moved here from `docs/` on 2026-10-08 (relative links adjusted by script).
 | Contract | Scope |
 | --- | --- |
 | [communication-object-folders](communication-object-folders.md) | WP-06A saved project-tree retention and device identity versus evaluated Dynamic channels; no folder implementation |
+| [parameter-number-bound-admission](parameter-number-bound-admission.md) | A declared TypeNumber bound the image builder cannot read refuses the value by name; absent bounds unchanged; not ETS schema validation |
 | [parameter-workspace](parameter-workspace.md) | Source-group navigation, compact rows, retained editors, search and metadata; no inferred channel/grid mapping |
 | [post-download-check](post-download-check.md) | Read-only check after a successful regular memory download: shared record for CLI, server status, report and history; absent means not checked |
 | [hardware-identity-comparison](hardware-identity-comparison.md) | Exact hardware-type response width before regular download/restore mutation; padded product comparisons retained |

@@ -3,7 +3,7 @@
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine as _;
 use knx_core::{GroupAddress, IndividualAddress};
-use knx_productdb::image::{build_system1_image, ImageRequest, Link};
+use knx_productdb::image::{build_system1_image, ImageError, ImageRequest, Link};
 
 fn program() -> String {
     let mut data = vec![0; 256];
@@ -386,5 +386,41 @@ fn fixup_presence_is_a_source_view_with_exact_static_ancestry() {
         .unwrap()
         .unwrap();
         assert_eq!(code.has_fixup_list, expected);
+    }
+}
+
+#[test]
+fn an_unreadable_number_bound_refuses_the_system1_image_instead_of_vanishing() {
+    for (bound, replacement, attribute, raw) in [
+        (
+            r#"maxInclusive="255""#,
+            r#"maxInclusive="255.0""#,
+            "maxInclusive",
+            "255.0",
+        ),
+        (
+            r#"minInclusive="0""#,
+            r#"minInclusive="""#,
+            "minInclusive",
+            "",
+        ),
+    ] {
+        let xml = program().replace(bound, replacement);
+        assert_ne!(xml, program(), "fixture must change the bound");
+        let (_dir, conn, request) = fixture(&xml);
+        match build_system1_image(&conn, &request) {
+            Err(ImageError::Value {
+                parameter_ref,
+                cause,
+            }) => {
+                assert_eq!(parameter_ref, "P_R");
+                assert!(
+                    cause.contains(attribute) && cause.contains(&format!("{raw:?}")),
+                    "{cause}"
+                );
+            }
+            Ok(image) => panic!("{replacement} admitted: {:?}", image.parameter_fields.len()),
+            Err(other) => panic!("{replacement}: wrong refusal: {other}"),
+        }
     }
 }

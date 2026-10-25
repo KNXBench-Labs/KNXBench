@@ -81,7 +81,7 @@ async function open(page: Page, requests: string[], language: "en" | "de") {
 
 for (const language of ["en", "de"] as const) {
   for (const width of [400, 1440]) {
-    test(`${language} ${width}px: receipt states, strict admission, no overflow, only intercepted GETs`, async ({ page }) => {
+    test(`${language} ${width}px: receipt states, strict admission, no overflow, only intercepted GETs`, { tag: "@exclusive" }, async ({ page }) => {
       const m = language === "de" ? de : en;
       await page.setViewportSize({ width, height: 900 });
       const requests: string[] = [];

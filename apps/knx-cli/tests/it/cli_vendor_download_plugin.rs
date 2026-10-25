@@ -94,6 +94,12 @@ fn stored_backup(dir: &Path) -> knx_app::device_backup::StoredBackup {
                     octets: vec![0xA5; length],
                 })
                 .collect(),
+            prior_application:
+                knx_core::commissioning::partial_memory_download::application_identity(&plan)
+                    .map_or(
+                        knx_core::commissioning::device_backup::PriorApplication::NotRecorded,
+                        knx_core::commissioning::device_backup::PriorApplication::Recorded,
+                    ),
         },
         application: PROGRAM_ID.into(),
         partial: None,

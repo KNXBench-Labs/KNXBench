@@ -11,6 +11,7 @@ Moved here from `docs/` on 2026-10-08 (relative links adjusted by script).
 | [post-download-check](post-download-check.md) | Read-only check after a successful regular memory download: shared record for CLI, server status, report and history; absent means not checked |
 | [hardware-identity-comparison](hardware-identity-comparison.md) | Exact hardware-type response width before regular download/restore mutation; padded product comparisons retained |
 | [partial-identity-comparison](partial-identity-comparison.md) | Exact five-octet application identity (object 3, PID 13) before partial-download mutation; other objects generic |
+| [backup-application-identity](backup-application-identity.md) | Captured pre-write application identity and restore refusal; strict backup format 2 with read-only format-1 compatibility and explicit downgrade limits |
 | [device-comparison](device-comparison.md) | P4 bound read-only comparison, volatile tags, decoder/raw integrity and staged parameter scope |
 | [IMPORT_BOUNDARY_CONTRACT](IMPORT_BOUNDARY_CONTRACT.md) | AR06 project-import boundary: namespaces, project vs. product-package evidence |
 | [MANUFACTURER_REPORT_CONTRACT](MANUFACTURER_REPORT_CONTRACT.md) | AR05 manufacturer-report omissions: design and evidence |

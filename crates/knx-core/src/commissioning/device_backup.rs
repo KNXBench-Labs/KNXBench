@@ -17,6 +17,16 @@
 //! the octets a download would change, before anything is written. Read
 //! without a download, a backup is that preview.
 //!
+//! A restore also needs the application the bytes belonged to. The plan's
+//! load procedure describes the *new* application, so [`restore_plan`]
+//! refuses unless the backup [`PriorApplication::Recorded`] the same five
+//! octets (`MM MM TT TT VV`, object index 3, PID 13) the plan names. The
+//! one exception is a plan that already carries an exact five-octet
+//! identity precondition: its executor checks the device itself. This is a
+//! necessary guard only; it does not prove that the bytes fit the plan's
+//! allocations, that a physical device is the same exemplar, or that a
+//! restore recovers a device.
+//!
 //! What a backup does not hold, and a restore therefore cannot bring back:
 //! memory outside the regions the plan writes (masked octets are never
 //! written, so they need no backup), properties, and a load state other
@@ -27,7 +37,20 @@ use std::fmt;
 use super::load_control_memory::MemoryLoadStateMachine;
 use super::load_state::{LoadState, MaskVersion};
 use super::memory_download::{machines, MemoryDownloadPlan, MemoryDownloadStep};
+use super::partial_memory_download::application_identity;
+use super::properties::{ObjectIndex, PID_PROGRAM_VERSION, PROGRAM_VERSION_OCTETS};
 use crate::IndividualAddress;
+
+/// The application a device held before the backup, as one exact
+/// observation of object index 3, PID 13.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PriorApplication {
+    /// Exactly five octets, `MM MM TT TT VV`, answered before any write.
+    Recorded([u8; PROGRAM_VERSION_OCTETS]),
+    /// No usable observation: not read (preview, unbacked run, older
+    /// file), refused, unsupported, or not five octets. Never a guess.
+    NotRecorded,
+}
 
 /// One region a plan writes, as the device held it before.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -51,6 +74,8 @@ pub struct DeviceBackup {
     pub load_states: Vec<(MemoryLoadStateMachine, LoadState)>,
     /// Every region the plan writes, in plan order.
     pub regions: Vec<BackupRegion>,
+    /// The application the device held when the backup was taken.
+    pub prior_application: PriorApplication,
 }
 
 impl DeviceBackup {
@@ -108,6 +133,22 @@ pub enum RestoreError {
         /// The machines recorded in the backup (duplicates preserved).
         backup: Vec<MemoryLoadStateMachine>,
     },
+    /// The plan names no single five-octet application identity, so no
+    /// backup can be shown to belong to it.
+    PlanApplicationUnknown,
+    /// The backup holds no exact observation of the application it was
+    /// taken from, and the plan has no identity precondition of its own.
+    PriorApplicationNotRecorded {
+        /// The plan's application identity.
+        plan: [u8; 5],
+    },
+    /// The backup was taken from another application than the plan's.
+    OtherApplication {
+        /// The plan's.
+        plan: [u8; 5],
+        /// The backup's.
+        backup: [u8; 5],
+    },
 }
 
 impl std::error::Error for RestoreError {}
@@ -134,6 +175,21 @@ impl fmt::Display for RestoreError {
             Self::OtherLoadStates { plan, backup } => write!(
                 f,
                 "the backup records load states for {backup:?} but the plan addresses {plan:?}"
+            ),
+            Self::PlanApplicationUnknown => f.write_str(
+                "the plan names no single five-octet application identity; a backup cannot be \
+                 shown to belong to it",
+            ),
+            Self::PriorApplicationNotRecorded { plan } => write!(
+                f,
+                "the backup does not record which application it was taken from (plan: \
+                 {plan:02X?}); restore refused. Backups taken before this was recorded, or \
+                 whose device did not answer it, cannot be restored",
+            ),
+            Self::OtherApplication { plan, backup } => write!(
+                f,
+                "the backup was taken from application {backup:02X?} but the plan loads \
+                 {plan:02X?}; its octets do not fit that load procedure"
             ),
         }
     }
@@ -223,6 +279,46 @@ fn check_same_shape(
     Ok(())
 }
 
+/// Whether the plan itself compares the device's application against its
+/// own identity before any change: object 3, PID 13, exactly five octets,
+/// equal to `identity`, ahead of the first step that changes the device. A
+/// padded or longer compare proves nothing here, and neither does one that
+/// only runs after a write.
+fn has_identity_precondition(plan: &MemoryDownloadPlan, identity: [u8; 5]) -> bool {
+    plan.steps
+        .iter()
+        .take_while(|step| !step.changes_device())
+        .any(|step| {
+            matches!(step, MemoryDownloadStep::CompareProperty {
+                object_index, property_id, inline_data,
+            } if *object_index == ObjectIndex::APPLICATION_PROGRAM.octet()
+                && *property_id == PID_PROGRAM_VERSION
+                && inline_data.as_slice() == identity)
+        })
+}
+
+/// The backed-up octets belong to the application the plan loads. A
+/// recorded identity must always equal the plan's, whatever the plan's
+/// own checks say; an unrecorded one is accepted only behind the plan's
+/// exact identity precondition (a partial plan), never on a flag.
+fn check_prior_application(
+    plan: &MemoryDownloadPlan,
+    backup: &DeviceBackup,
+) -> Result<(), RestoreError> {
+    let identity = application_identity(plan).ok_or(RestoreError::PlanApplicationUnknown)?;
+    match backup.prior_application {
+        PriorApplication::Recorded(prior) if prior == identity => Ok(()),
+        PriorApplication::Recorded(prior) => Err(RestoreError::OtherApplication {
+            plan: identity,
+            backup: prior,
+        }),
+        PriorApplication::NotRecorded if has_identity_precondition(plan, identity) => Ok(()),
+        PriorApplication::NotRecorded => {
+            Err(RestoreError::PriorApplicationNotRecorded { plan: identity })
+        }
+    }
+}
+
 /// `plan` with the backed-up octets in place of its own. The steps, their
 /// order and every check stay exactly the plan's.
 pub fn restore_plan(
@@ -244,6 +340,7 @@ pub fn restore_plan(
             backup: backup_machines,
         });
     }
+    check_prior_application(plan, backup)?;
     let mut regions = backup.regions.iter();
     let steps = plan
         .steps
@@ -270,8 +367,10 @@ pub fn restore_plan(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::commissioning::load_control_memory::event_record;
+    use crate::commissioning::load_control_memory::{abs_task_segment, event_record, TaskSegment};
     use crate::commissioning::load_state::LoadEvent;
+
+    const IDENTITY: [u8; 5] = [0x00, 0x83, 0x00, 0x27, 0x15];
 
     fn address(text: &str) -> IndividualAddress {
         text.parse().unwrap()
@@ -283,6 +382,11 @@ mod tests {
             manufacturer: 0x0083,
             steps: vec![
                 MemoryDownloadStep::Connect,
+                MemoryDownloadStep::CompareProperty {
+                    object_index: 3,
+                    property_id: 13,
+                    inline_data: IDENTITY.to_vec(),
+                },
                 MemoryDownloadStep::LoadRecord(
                     event_record(
                         MemoryLoadStateMachine::AddressTable,
@@ -320,7 +424,38 @@ mod tests {
                     octets: vec![7, 6, 5],
                 },
             ],
+            prior_application: PriorApplication::Recorded(IDENTITY),
         }
+    }
+
+    /// [`plan`] as a complete download: no precondition, the identity only
+    /// in the application's task segment.
+    fn complete_plan(application: u16) -> MemoryDownloadPlan {
+        let mut complete = plan();
+        complete.steps.remove(1);
+        complete.steps.insert(
+            2,
+            MemoryDownloadStep::LoadRecord(abs_task_segment(
+                MemoryLoadStateMachine::ApplicationProgram,
+                TaskSegment {
+                    start: 0x4400,
+                    pei_type: 1,
+                    manufacturer: 0x0083,
+                    application,
+                    version: 0x15,
+                },
+            )),
+        );
+        complete
+    }
+
+    fn complete_backup() -> DeviceBackup {
+        let mut backup = backup();
+        backup.load_states.push((
+            MemoryLoadStateMachine::ApplicationProgram,
+            LoadState::Loaded,
+        ));
+        backup
     }
 
     #[test]
@@ -502,5 +637,123 @@ mod tests {
         none.load_states.clear();
         assert!(!none.was_loaded());
         assert_eq!(written_regions(&plan()), vec![(0x4000, 2), (0x4400, 3)]);
+    }
+
+    #[test]
+    fn a_complete_plan_restores_only_the_application_it_was_read_from() {
+        let target = address("1.1.67");
+        let restored = restore_plan(&complete_plan(0x0027), target, &complete_backup());
+        assert!(restored.is_ok(), "{restored:?}");
+
+        let mut other = complete_backup();
+        other.prior_application = PriorApplication::Recorded([0x00, 0x83, 0x00, 0x27, 0x14]);
+        assert_eq!(
+            restore_plan(&complete_plan(0x0027), target, &other),
+            Err(RestoreError::OtherApplication {
+                plan: IDENTITY,
+                backup: [0x00, 0x83, 0x00, 0x27, 0x14],
+            })
+        );
+
+        let mut unrecorded = complete_backup();
+        unrecorded.prior_application = PriorApplication::NotRecorded;
+        let error = restore_plan(&complete_plan(0x0027), target, &unrecorded).unwrap_err();
+        assert_eq!(
+            error,
+            RestoreError::PriorApplicationNotRecorded { plan: IDENTITY }
+        );
+        assert!(error.to_string().contains("does not record"), "{error}");
+    }
+
+    #[test]
+    fn a_plan_without_a_single_identity_refuses_every_backup() {
+        let target = address("1.1.67");
+        let mut none = plan();
+        none.steps.remove(1);
+        assert_eq!(
+            restore_plan(&none, target, &backup()),
+            Err(RestoreError::PlanApplicationUnknown)
+        );
+        // Two identities that disagree are not guessed between.
+        let mut conflicting = plan();
+        conflicting.steps.insert(
+            2,
+            MemoryDownloadStep::CompareProperty {
+                object_index: 3,
+                property_id: 13,
+                inline_data: vec![0x00, 0x83, 0x00, 0x27, 0x16],
+            },
+        );
+        assert_eq!(
+            restore_plan(&conflicting, target, &backup()),
+            Err(RestoreError::PlanApplicationUnknown)
+        );
+        // A padded compare is not a five-octet identity, and no prefix rule
+        // turns it into one.
+        let mut padded = plan();
+        padded.steps[1] = MemoryDownloadStep::CompareProperty {
+            object_index: 3,
+            property_id: 13,
+            inline_data: [&IDENTITY[..], &[0, 0, 0]].concat(),
+        };
+        assert_eq!(
+            restore_plan(&padded, target, &backup()),
+            Err(RestoreError::PlanApplicationUnknown)
+        );
+    }
+
+    #[test]
+    fn an_identity_precondition_admits_an_unrecorded_backup_but_never_a_conflicting_one() {
+        let target = address("1.1.67");
+        let mut legacy = backup();
+        legacy.prior_application = PriorApplication::NotRecorded;
+        assert!(restore_plan(&plan(), target, &legacy).is_ok());
+        let mut forged = backup();
+        forged.prior_application = PriorApplication::Recorded([0, 0x83, 0, 0x27, 0x14]);
+        assert!(matches!(
+            restore_plan(&plan(), target, &forged),
+            Err(RestoreError::OtherApplication { .. })
+        ));
+    }
+
+    #[test]
+    fn an_identity_compare_after_the_first_change_is_no_precondition() {
+        let target = address("1.1.67");
+        let mut legacy = backup();
+        legacy.prior_application = PriorApplication::NotRecorded;
+        // The same exact compare, moved behind the first write: whatever it
+        // would prove no longer protects the bytes that write replaced.
+        let mut late = plan();
+        let compare = late.steps.remove(1);
+        let first_write = late
+            .steps
+            .iter()
+            .position(MemoryDownloadStep::changes_device)
+            .expect("the plan writes");
+        late.steps.insert(first_write + 1, compare);
+        assert_eq!(
+            restore_plan(&late, target, &legacy),
+            Err(RestoreError::PriorApplicationNotRecorded { plan: IDENTITY })
+        );
+        // Recorded evidence does not depend on the compare's position.
+        assert!(restore_plan(&late, target, &backup()).is_ok());
+    }
+
+    #[test]
+    fn matching_identity_does_not_bypass_the_shape_checks() {
+        let mut moved = complete_backup();
+        moved.regions[0].address = 0x4001;
+        assert!(matches!(
+            restore_plan(&complete_plan(0x0027), address("1.1.67"), &moved),
+            Err(RestoreError::OtherShape { .. })
+        ));
+        assert!(matches!(
+            restore_plan(
+                &complete_plan(0x0027),
+                address("1.1.68"),
+                &complete_backup()
+            ),
+            Err(RestoreError::OtherDevice { .. })
+        ));
     }
 }

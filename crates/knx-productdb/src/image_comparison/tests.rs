@@ -3,7 +3,7 @@
 use super::*;
 use crate::code::{ProgramCode, TablePlacement};
 use crate::image::SegmentImage;
-use knx_core::commissioning::device_backup::BackupRegion;
+use knx_core::commissioning::device_backup::{BackupRegion, PriorApplication};
 use knx_core::commissioning::load_state::MaskVersion;
 use knx_core::commissioning::memory_download::MemoryDownloadStep;
 
@@ -57,6 +57,7 @@ fn fixture() -> (DownloadImage, DeviceBackup, MemoryDownloadPlan) {
                 octets: vec![0xEF, 2, 2, 9, 1, 15],
             },
         ],
+        prior_application: PriorApplication::NotRecorded,
     };
     let plan = MemoryDownloadPlan {
         mask: MaskVersion(0x0701),

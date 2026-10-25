@@ -27,6 +27,13 @@ integrated software acceptance, including HTTP corpus and EN/DE browser tests
 identity and load states, never a running application or a physical-exemplar
 match. Hardware acceptance and the broader programming gaps remain open.
 
+The [backup application guard](contracts/backup-application-identity.md) records
+pre-write evidence and refuses a restore under another application's procedure.
+Strict format-2 backups retain unavailable evidence explicitly; legacy complete
+backups without it remain readable but do not restore. Source review is complete;
+integrated acceptance and publication are pending. This necessary guard does not
+close complete mutation effects or whole-device recovery.
+
 ## Alpha 16 published pre-release — public artifacts and website verified (24 October 2026)
 
 The [current source-bound evidence matrix](goals/alpha16-release-plan-2026-10-23.md#current-acceptance-disposition--24-october-2026)

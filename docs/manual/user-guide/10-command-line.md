@@ -720,7 +720,7 @@ rules (plan first, a device-specific phrase, a backup before any write):
 | `knx device compare` | Read only: reads what a download would write and lists every difference from the project |
 | `knx device diagnostics` | Read only: exports descriptor, manufacturer ID and hardware type of one project device (`--device <area.line.device>`, or the internal `--device-id`) to a new local ZIP; previews unless `--confirm-read`; `--simulate` needs no interface; `--profile system2-declared-segments-v1` adds the memory ranges the application declares (see below; [contract](../../contracts/device-diagnostic-export.md)) |
 | `knx device byte-order-probe` | Read only: for a device ETS programmed, says whether it holds its multi-octet parameter values high or low octet first (see below) |
-| `knx device restore` | Writes a backup file back through the same load procedure, after backing up the current state |
+| `knx device restore` | Plans by default; confirmed execution writes the backed-up regions through the same load procedure, after backing up the current state. Current source requires evidence of the same prior application; older complete backups without it refuse. Legacy partial backups retain their exact identity check ([backup compatibility](../../contracts/backup-application-identity.md)) |
 | `knx device find-serial` | Read only: which address has a serial number, or which serial number a device has |
 | `knx device service-control` | Reads, and after a backup changes, the Individual Address Write Enable bit |
 | `knx device reset-address`, `knx device address-by-serial` | Plan only today: confirmed writes are refused before a tunnel opens, like `program-address` below |

@@ -6,6 +6,7 @@ mod catalog_update_cli;
 mod cli_activity_history;
 mod cli_address_programming_recovery;
 mod cli_address_reset_recovery;
+mod cli_backup_application_identity;
 mod cli_bus_address_style;
 mod cli_bus_dpt;
 mod cli_compare_activity;

@@ -2121,15 +2121,7 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
         let octets = self
             .read_property(object_index, PID_LOAD_STATE_CONTROL, 1, 1)
             .await?;
-        let [octet] = octets[..] else {
-            return Err(SessionError::MalformedProperty {
-                object_index,
-                property_id: PID_LOAD_STATE_CONTROL,
-                expected: 1,
-                got: octets.len(),
-            });
-        };
-        LoadState::from_octet(octet).map_err(SessionError::UnknownLoadState)
+        load_state_from_octets(object_index, &octets)
     }
 
     /// `PID_ERROR_CODE`, decoded through the shared DPT 20.011 codec.
@@ -2676,19 +2668,35 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
         self.authorise_write(scope)?;
         let before = self.read_load_state(object_index).await?;
         let payload = payload.octets().to_vec();
-        self.property_write_octets(
-            object_index,
-            PID_LOAD_STATE_CONTROL,
-            LOAD_CONTROL_NR_OF_ELEM,
-            LOAD_CONTROL_START_INDEX,
-            payload,
-            scope,
-            Comparison::ResultingStateInstead,
-        )
-        .await?;
+        let answer = self
+            .property_write_octets(
+                object_index,
+                PID_LOAD_STATE_CONTROL,
+                LOAD_CONTROL_NR_OF_ELEM,
+                LOAD_CONTROL_START_INDEX,
+                payload,
+                scope,
+                Comparison::ResultingStateInstead,
+            )
+            .await?;
         let outcomes = permitted_outcomes(before, Stimulus::Event(event), self.mask);
+        // `[D]` RES §4.23.2.3.2 and MP §3.31.3: the answer to the write carries
+        // the state, and a device that goes offline in `LoadCompleting` has
+        // said so there. It is an observation like a poll's, and judged
+        // before any poll can hide it. A state that has not moved is no
+        // verdict and grants nothing, so it seeds nothing.
+        let answered = load_state_from_octets(object_index, &answer)?;
+        if !outcomes.accepts(answered) && answered != before {
+            return Err(SessionError::IllegalTransition {
+                object_index,
+                event,
+                from: before,
+                observed: answered,
+            });
+        }
+        let seed = (answered != before).then_some(answered);
         let observed = match self
-            .wait_for_load_state(object_index, event, before, &outcomes)
+            .wait_for_load_state(object_index, event, before, seed, &outcomes)
             .await
         {
             Ok(observed) => observed,
@@ -2744,10 +2752,13 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
         object_index: ObjectIndex,
         event: LoadEvent,
         from: LoadState,
+        answered: Option<LoadState>,
         outcomes: &PermittedOutcomes,
     ) -> Result<LoadState, SessionError> {
         let started = tokio::time::Instant::now();
-        let mut last_state: Option<LoadState> = None;
+        // What the write was answered with, if that was an observed change:
+        // the silence below is only licensed by a state actually seen.
+        let mut last_state: Option<LoadState> = answered;
         // C5, RES §4.23.2.4.1: the deadline below buys exactly one more
         // attempt, not a second polling loop — this flag is what makes
         // "once more" mean once.
@@ -3256,10 +3267,27 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
     }
 }
 
+/// The one-octet load state of a `PID_LOAD_STATE_CONTROL` read or write answer.
+fn load_state_from_octets(
+    object_index: ObjectIndex,
+    octets: &[u8],
+) -> Result<LoadState, SessionError> {
+    let [octet] = octets[..] else {
+        return Err(SessionError::MalformedProperty {
+            object_index,
+            property_id: PID_LOAD_STATE_CONTROL,
+            expected: 1,
+            got: octets.len(),
+        });
+    };
+    LoadState::from_octet(octet).map_err(SessionError::UnknownLoadState)
+}
+
 /// Whether the last state the device reported is one RES Table 94 permits it
 /// to fall silent in.
 ///
-/// `None` — nothing read yet on this wait — is not permission: a device that
+/// `None` — nothing read yet on this wait, and no changed state in the write's
+/// answer — is not permission: a device that
 /// has never answered has not earned the benefit of the doubt.
 fn silence_is_permitted(last_state: Option<LoadState>) -> bool {
     last_state.map(LoadState::may_be_silent).unwrap_or(false)
@@ -4093,6 +4121,7 @@ mod tests {
                     ObjectIndex::APPLICATION_PROGRAM,
                     LoadEvent::LoadCompleted,
                     LoadState::Loading,
+                    None,
                     &outcomes,
                 ),
             )
@@ -4332,6 +4361,7 @@ mod tests {
                 ObjectIndex::APPLICATION_PROGRAM,
                 LoadEvent::LoadCompleted,
                 LoadState::Loading,
+                None,
                 &outcomes,
             )
             .await;
@@ -4370,6 +4400,7 @@ mod tests {
                 ObjectIndex::APPLICATION_PROGRAM,
                 LoadEvent::LoadCompleted,
                 LoadState::Loading,
+                None,
                 &outcomes,
             )
             .await
@@ -4438,6 +4469,7 @@ mod tests {
                 ObjectIndex::APPLICATION_PROGRAM,
                 LoadEvent::LoadCompleted,
                 LoadState::Loading,
+                None,
                 &outcomes,
             ),
         )
@@ -4519,6 +4551,7 @@ mod tests {
                 ObjectIndex::APPLICATION_PROGRAM,
                 LoadEvent::LoadCompleted,
                 LoadState::Loading,
+                None,
                 &outcomes,
             ),
         )
@@ -5560,6 +5593,7 @@ mod tests {
                 ObjectIndex::APPLICATION_PROGRAM,
                 LoadEvent::LoadCompleted,
                 LoadState::Loading,
+                None,
                 &outcomes,
             )
             .await
@@ -5610,6 +5644,7 @@ mod tests {
                 ObjectIndex::APPLICATION_PROGRAM,
                 LoadEvent::LoadCompleted,
                 LoadState::Loading,
+                None,
                 &outcomes,
             ),
         )
@@ -6344,4 +6379,6 @@ mod tests {
             device.address()
         );
     }
+
+    mod load_control_response;
 }

@@ -14,8 +14,10 @@ project's loaded flags (`knx_core::commissioning::scope_advice`). The flags are
 hints, not device evidence: the partial plan's own device checks below still
 decide before the first write, and a refused partial is never widened to the
 complete download. The address and medium configuration are reported as separate
-unmet needs. Tests are synthetic and offline; this adds no hardware evidence for
-any scope.
+unmet needs. Independent review and the maintained integrated package gate
+passed; published as `78fd9d780`
+([acceptance](../status/2026-10-25-programming-scope-and-identity.md)). Tests are
+synthetic and offline; this adds no hardware evidence for any scope.
 
 Remaining limits: the server's start check reads the flags in the snapshot it
 prepares the plan from, so a flag edit after that snapshot is not detected (the

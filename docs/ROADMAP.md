@@ -5,8 +5,12 @@
 The [partial application identity correction](contracts/partial-identity-comparison.md)
 requires the existing object 3/PID 13 precondition to answer exactly five octets
 before backup or mutation. Complete downloads acquire no extra precondition.
-Independent review and focused simulator checks passed; integrated acceptance is
-pending. This closes only that bounded identity-response weakness.
+Independent review, focused simulator checks, integrated acceptance and
+publication as `02c437110` are complete. Advice from project programming marks
+is also published (`78fd9d780`) across core, app, CLI, HTTP and web; explicit
+scopes and partial refusal boundaries remain unchanged
+([acceptance](status/2026-10-25-programming-scope-and-identity.md)). These are
+bounded increments, not completion of all programming gaps.
 
 The [hardware identity width correction](contracts/hardware-identity-comparison.md)
 closes one pre-mutation response-shape gap in the existing download/restore path.

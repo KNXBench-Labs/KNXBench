@@ -85,7 +85,9 @@ unexpected-download-task-end fallback also settles once, using its conservative
 failed status. A weak state reference avoids a session/callback ownership cycle.
 The original project incarnation is captured before preparation. Current
 request content is compared under the project lock, so edits made during a
-write stay pending rather than acquiring the old run's clean claim.
+write stay pending rather than acquiring the old run's clean claim. The
+product source is checked the same way: see the
+[source-freshness contract](../contracts/download-settlement-source-freshness.md).
 
 ### Manual marks and presentation
 

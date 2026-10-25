@@ -71,6 +71,13 @@ record the boundaries separately; these increments do not close PRG-01.
   ([acceptance](../status/2026-10-25-memory-response-pairing.md)). Synthetic
   nonconforming-peer evidence is not hardware acceptance.
 
+- Declared TypeNumber bound admission refuses unreadable limits instead of silently
+  dropping them, without altering stored text or encoding
+  ([contract](../contracts/parameter-number-bound-admission.md)). Independent review,
+  correction re-review and all 14 integrated stages passed; published as `87d71d4aa`
+  ([acceptance](../status/2026-10-25-parameter-number-bounds.md)). Selected corpus
+  regression is not an exhaustive compatibility census; parameter policies remain open.
+
 ## Open
 
 - Broader target/exemplar identity and independently verified runtime-state

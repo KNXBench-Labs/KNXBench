@@ -12,6 +12,15 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+
+Numeric TypeNumber bounds no longer silently vanish when declared but unreadable.
+The shared image builder refuses them before range comparison; source text and
+encoding remain unchanged ([contract](contracts/parameter-number-bound-admission.md)).
+Independent review and correction re-review approved; all 14 integrated stages
+passed, published as `87d71d4aa`
+([acceptance](status/2026-10-25-parameter-number-bounds.md)). Selected corpus
+regression is not an exhaustive bound census or hardware acceptance.
+
 ## Memory response service pairing (25 October 2026 source)
 
 Memory reads and active-Verify writes now require the requested response service

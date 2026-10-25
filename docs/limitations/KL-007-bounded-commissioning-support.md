@@ -11,8 +11,8 @@ updates supersede them; they are not new work assignments.
 Backup, comparison and probe reads retain one service per region; user-memory
 reads respect their 15-octet wire count even under a larger negotiated budget
 ([contract](../contracts/memory-region-read-service.md)). Synthetic real-codec
-regressions and independent review passed; integrated acceptance and publication
-are pending. This changes no family, path-budget or recovery admission and proves
+regressions, independent review and all 14 integrated package stages passed;
+published as `a4a4ebcf1` ([acceptance](../status/2026-10-25-memory-region-reads.md)). This changes no family, path-budget or recovery admission and proves
 no physical address-space relationship. KL-007 remains open.
 
 ## Source freshness at settlement — 25 October 2026 source

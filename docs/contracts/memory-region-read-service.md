@@ -32,4 +32,5 @@ application loading procedure, hardware address-space aliasing or recovery.
 The wrapper is necessary because the in-process simulator normally receives
 application services directly and does not enforce their wire encoding. The
 retained original and corrected binaries execute identical test-source bytes.
-Integrated acceptance and publication remain pending.
+Published as `a4a4ebcf1` after independent review and the maintained integrated
+package gate ([acceptance](../status/2026-10-25-memory-region-reads.md)).

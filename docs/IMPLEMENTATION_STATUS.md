@@ -13,6 +13,16 @@ archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
 
+## Duplicate image-start admission (25 October 2026 source)
+
+The regular memory planner refuses multiple data-bearing segments at an allocated
+start instead of silently choosing the first payload. Raw source and payload-free
+RAM/stack allocations stay unchanged
+([contract](contracts/duplicate-image-segment-start.md)). Independent review and all
+14 integrated stages passed; published as `d73a2413b`
+([acceptance](status/2026-10-25-duplicate-segment-start.md)). Synthetic ambiguity
+coverage and selected corpus regression do not establish hardware compatibility.
+
 Numeric TypeNumber bounds no longer silently vanish when declared but unreadable.
 The shared image builder refuses them before range comparison; source text and
 encoding remain unchanged ([contract](contracts/parameter-number-bound-admission.md)).

@@ -34,6 +34,17 @@ and restore observations are kept separately. The status DTO reports whether a
 failed operation could have written anything. Software and simulator tests only; whether the
 relaxed admission downloads the reporter's device correctly is unverified.
 
+## Duplicate image-start admission — 25 October 2026 source
+
+The regular planner refuses two data-bearing image segments at an allocated start,
+instead of choosing the first payload; legitimate payload-free RAM/stack allocations
+remain valid ([contract](../contracts/duplicate-image-segment-start.md)). Read-only
+preparation sharing this planner inherits the refusal. Independent review and all
+14 integrated stages passed; published as `d73a2413b`
+([acceptance](../status/2026-10-25-duplicate-segment-start.md)). Synthetic source
+ambiguity and selected corpus regression prove no real-product fault, new family
+support, different-start overlap policy or hardware outcome. KL-007 remains open.
+
 ## Parameter number-bound admission — 25 October 2026 source
 
 Declared TypeNumber bounds must be readable by the existing integer parser before

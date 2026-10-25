@@ -78,6 +78,12 @@ record the boundaries separately; these increments do not close PRG-01.
   ([acceptance](../status/2026-10-25-parameter-number-bounds.md)). Selected corpus
   regression is not an exhaustive compatibility census; parameter policies remain open.
 
+- Ambiguous allocated data-bearing image starts are refused rather than silently
+  selecting one payload ([contract](../contracts/duplicate-image-segment-start.md)).
+  Independent review and all 14 integrated stages passed; published as `d73a2413b`
+  ([acceptance](../status/2026-10-25-duplicate-segment-start.md)). Payload-free
+  allocations remain valid; no real-product fault or new family support is claimed.
+
 ## Open
 
 - Broader target/exemplar identity and independently verified runtime-state

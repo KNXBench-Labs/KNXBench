@@ -6,6 +6,18 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Post-download check — 25 October 2026 source
+
+Regular memory downloads now perform one fresh read-only follow-up after the
+existing transfer/restart wait, preserving reach, identity and expected/observed
+load states in CLI, HTTP, web reports and durable history. Software acceptance
+and publication as `8b5edad7f` are complete
+([contract](../contracts/post-download-check.md),
+[acceptance](../status/2026-10-25-post-download-check.md)). Runtime remains unknown,
+physical-exemplar identity is not proved, and restore is unchanged. This does
+not broaden device-family admission or close this limitation. No hardware
+acceptance is inferred.
+
 ## Partial application identity width — 25 October 2026 source
 
 The existing partial-download object 3/PID 13 precondition now requires exactly

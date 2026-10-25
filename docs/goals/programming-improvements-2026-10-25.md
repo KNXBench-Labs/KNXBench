@@ -34,7 +34,13 @@ Three bounded outcomes are admitted for this implementation round:
 
 Each outcome needs a focused commit, independent source review, discriminating
 regressions and maintained integrated package-gate acceptance before publication.
-Current acceptance is **pending**; implementation preparation is not delivery.
+These three bounded software outcomes are accepted and published: hardware
+width `07fe2e67f`, scope advice `78fd9d780`, and post-download check `8b5edad7f`.
+The additional partial-application width correction is published as `02c437110`.
+[Scope/identity acceptance](../status/2026-10-25-programming-scope-and-identity.md)
+and [post-download acceptance](../status/2026-10-25-post-download-check.md) own the
+exact tested selections. This does not close broader PRG-01 or establish hardware
+acceptance.
 
 - Scope tests cover all loaded-flag combinations, a missing address, no-op,
   explicit-scope compatibility, project freshness and refusal without escalation.

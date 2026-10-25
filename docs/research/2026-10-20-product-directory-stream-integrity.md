@@ -3,7 +3,7 @@
 ## Evidence and scope
 
 This follows the product-reader residue of
-[WP-16](../OPEN_WORK.md#wp-16--empty-directory-zip-integrity) and
+[WP-16](../history/OPEN_WORK_2026-10-25.md#wp-16--empty-directory-zip-integrity) and
 [KL-159](../limitations/KL-159-project-archive-budgets-and-duplicate-names.md).
 The independent product parser continues to use the already checked central
 record, exact local payload range and effective decoded name. No ETS-specific

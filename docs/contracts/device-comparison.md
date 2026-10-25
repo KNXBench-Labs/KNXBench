@@ -85,7 +85,7 @@ local Not comparable outcome.
 ## Result display (WP-18, owner amendment 19 October 2026)
 
 The owner decision of 19 October 2026
-([WP-18](../OPEN_WORK.md#wp-18--device-comparison-shows-what-differs))
+([WP-18](../history/OPEN_WORK_2026-10-25.md#wp-18--device-comparison-shows-what-differs))
 supersedes the earlier "no differences-only filter" sentence. Display only:
 the response, the session tags and the Synced claim are unchanged, and the
 filter never edits or reorders the response rows.

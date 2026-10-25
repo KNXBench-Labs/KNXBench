@@ -106,7 +106,7 @@ objects; groups join on the opaque key, the rest falls into one fallback group,
 and each heading shows the full saved path
 ([grouping contract](contracts/communication-object-folders.md#saved-project-folder-grouping-24-october-2026)).
 [Contract](contracts/communication-object-folders.md#saved-project-folder-display-24-october-2026) ·
-[WP-06](OPEN_WORK.md#wp-06--communication-object-organisation).
+[WP-06](open-work/WP-06-communication-object-organisation.md).
 
 ## Declared ETS download plug-ins refuse every download scope — delivered (24 October 2026)
 
@@ -1491,7 +1491,7 @@ Delivered on main-first merge `f9cf7a65`, independent review accepted and
 maintained scoped gate 13/13 green: 322 registered tool tests (one existing
 optional skip), 103 Rust tests; frozen inputs and user-data guards clear.
 The selected xtask corpus stage is empty, not a new corpus run.
-[Build follow-up](OPEN_WORK.md#release-engineering-follow-up--alpha-16).
+[Build follow-up](history/OPEN_WORK_2026-10-25.md#release-engineering-follow-up--alpha-16).
 
 ## System-2 offline image integrity follow-up (20 October 2026)
 
@@ -1578,7 +1578,7 @@ now names the alpha.12 AppImage as the first fixed one (tag ancestry of
 `72d407d1`), generated from the catalogue; FEATURES lists issues #25/#26 as
 `Main-only`; the OPEN_WORK queue and claim list match the deliveries; the
 intermittent SIGTERM tool test is recorded as open. Docs only.
-[OPEN_WORK WP-13](OPEN_WORK.md#wp-13--documentation-drift).
+[OPEN_WORK WP-13](history/OPEN_WORK_2026-10-25.md#wp-13--documentation-drift).
 
 ## Parameter units after the value: `SuffixText` in product DB v26 (19 October 2026)
 
@@ -1706,7 +1706,7 @@ review rounds (Codex) found seven gaps (web `tool-tests` step, symlinks,
 unlistable directories, an unsearchable parent read as absent, mid-scan
 removal, links to `$HOME`, a test tied to the production stage set); all fixed.
 The owner parked the migrated file unchanged. Still open: direct `cargo test`
-runs ([OPEN_WORK](OPEN_WORK.md#test-gates-change-scoped-by-default-19-october-2026)).
+runs ([OPEN_WORK](history/OPEN_WORK_2026-10-25.md#test-gates-change-scoped-by-default-19-october-2026)).
 [Pitfall](DEVELOPER_PITFALLS.md#gates).
 
 ## A product database the build cannot read is named, not hidden (19 October 2026)
@@ -1752,7 +1752,7 @@ test comparing seeded database files and WALs; a private-corpus census found
 ([KL-159](limitations/KL-159-project-archive-budgets-and-duplicate-names.md)).
 Open: bytes behind the end of a deflated *file's* stream, and the product
 reader's equivalent for directories
-([WP-16](OPEN_WORK.md#wp-16--empty-directory-zip-integrity)).
+([WP-16](history/OPEN_WORK_2026-10-25.md#wp-16--empty-directory-zip-integrity)).
 
 ## Pane edges follow the pointer at every zoom level (19 October 2026)
 
@@ -1888,7 +1888,7 @@ other vendor; the last review accepted without findings. Zoom behaviour is
 measured in Chromium only, not in WebKitGTK
 ([KL-130](limitations/KL-130-ZOOM-application-zoom.md)). Open follow-ups: pane
 drags under zoom and a table zoom case through the scale setting
-([open work](OPEN_WORK.md#ui-feedback-packages-18-october-2026)).
+([open work](history/OPEN_WORK_2026-10-25.md#ui-feedback-packages-18-october-2026)).
 
 ## Read-only declared-segment memory evidence, UP258 stage 0 (18 October 2026)
 

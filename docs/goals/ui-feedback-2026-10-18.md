@@ -79,7 +79,7 @@ UI-06 on its first fix round, so no package waited for a gate.
 - **Final:** the last review accepted without findings; the delivery merge onto
   `main` passed the full 16-stage gate (see IMPLEMENTATION_STATUS).
 - **Follow-ups (unowned):** pane drags under zoom and a table zoom case
-  through the scale setting ([open work](../OPEN_WORK.md#ui-feedback-packages-18-october-2026)).
+  through the scale setting ([open work](../history/OPEN_WORK_2026-10-25.md#ui-feedback-packages-18-october-2026)).
 
 ## Checked starting point
 

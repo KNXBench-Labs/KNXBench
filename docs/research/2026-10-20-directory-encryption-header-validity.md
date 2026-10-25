@@ -2,7 +2,7 @@
 
 ## Scope and evidence level
 
-The remaining [WP-16](../OPEN_WORK.md#wp-16--empty-directory-zip-integrity)
+The remaining [WP-16](../history/OPEN_WORK_2026-10-25.md#wp-16--empty-directory-zip-integrity)
 question is directory encryption-header validity, not ordinary-file DEFLATE
 extent consumption. The latter is delivered under the
 [project-file contract](../contracts/project-file-stream-integrity.md).

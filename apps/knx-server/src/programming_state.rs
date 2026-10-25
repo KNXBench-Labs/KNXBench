@@ -13,10 +13,10 @@ use std::sync::Arc;
 use axum::extract::{Path, State};
 use axum::routing::post;
 use axum::{Json, Router};
-use knx_app::device_download::PreparedDownload;
+use knx_app::device_download::{source_still_plans, PreparedDownload};
 use knx_app::programming_state::{
     apply_settlement, attempted_parts, settle_address, settle_download, sole_device_at, AddressEnd,
-    DownloadEnd, Settlement,
+    DownloadEnd, Settlement, SourcePlan,
 };
 use knx_core::commissioning::partial_memory_download::PartialDownloadParts;
 use knx_core::commissioning::pending::{ProgrammingChange, ProgrammingParts};
@@ -221,16 +221,30 @@ fn after_download(
         let instance = project.devices.get(device)?;
         let label = device_label(instance);
         // Read under the project lock, in the same order `prepare` takes them.
-        let now = match state.product_db.as_ref() {
+        // One catalogue lease answers both questions, so the request and the
+        // source it is checked against cannot come from different moments.
+        let (now, source) = match state.product_db.as_ref() {
             Some(owner) => owner
                 .with_read(|conn| {
-                    knx_productdb::image_request::image_request_for_device(conn, project, device)
+                    let now = knx_productdb::image_request::image_request_for_device(
+                        conn, project, device,
+                    )
+                    .ok();
+                    let source = if end == DownloadEnd::Completed
+                        && source_still_plans(conn, written, partial, plan)
+                    {
+                        SourcePlan::Unchanged
+                    } else {
+                        SourcePlan::ChangedOrUnknown
+                    };
+                    Ok::<_, std::convert::Infallible>((now, source))
                 })
                 .ok()
-                .and_then(|inner| inner.ok()),
-            None => None,
+                .and_then(Result::ok)
+                .unwrap_or((None, SourcePlan::ChangedOrUnknown)),
+            None => (None, SourcePlan::ChangedOrUnknown),
         };
-        let settlement = settle_download(partial, end, written, now.as_ref());
+        let settlement = settle_download(partial, end, written, now.as_ref(), source);
         let subject = match end {
             DownloadEnd::Completed => format!("Download to {label} finished"),
             DownloadEnd::Interrupted(_) => {
@@ -313,5 +327,7 @@ fn after_address_programming(
     );
 }
 
+#[cfg(test)]
+mod source_freshness_tests;
 #[cfg(test)]
 mod tests;

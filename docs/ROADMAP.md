@@ -36,6 +36,14 @@ integrated package stages passed; published as `08db292f3`
 ([acceptance](status/2026-10-25-backup-application-identity.md)). This necessary
 guard does not close complete mutation effects or whole-device recovery.
 
+The [source-freshness settlement guard](contracts/download-settlement-source-freshness.md)
+prevents a successful old plan from crediting current memory after product-source
+replacement. It reuses original-request preparation and exact selected-plan
+comparison, preserving project-edit settlement and journal recovery. Independent
+source review and focused tests passed; integrated acceptance and publication
+are pending. This snapshot does not monitor later source changes or validate the
+device's bytes, unselected parts, runtime or complete recovery.
+
 ## Alpha 16 published pre-release — public artifacts and website verified (24 October 2026)
 
 The [current source-bound evidence matrix](goals/alpha16-release-plan-2026-10-23.md#current-acceptance-disposition--24-october-2026)

@@ -6,6 +6,17 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Source freshness at settlement — 25 October 2026 source
+
+A completed regular download credits written memory parts only if the current
+catalogue still plans the original request identically at the selected scope.
+Changed or unprovable plans leave those parts pending, including their undo/redo
+claims ([contract](../contracts/download-settlement-source-freshness.md)).
+The guard observes settlement only: subsequent catalogue changes and flags for
+parts the run did not write are not monitored. It is not device-byte, runtime,
+exemplar or recovery evidence. Independent reviews and focused software tests
+passed; integrated acceptance and publication are pending. KL-007 stays open.
+
 ## Post-download check — 25 October 2026 source
 
 Regular memory downloads now perform one fresh read-only follow-up after the

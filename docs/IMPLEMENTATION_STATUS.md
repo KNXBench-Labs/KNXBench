@@ -12,6 +12,19 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Source-bound programming marks after download (25 October 2026 source)
+
+A completed regular download now checks that the current product catalogue still
+plans the original written request with the same selected scope and executable
+steps before crediting memory parts. A changed selected plan, or a missing,
+refused or unreadable source, leaves written memory parts pending; undo/redo cannot restore their stale
+claims. Unchanged plans retain selective settlement across project edits.
+The check is a settlement snapshot, not a catalogue subscription, device read or
+proof about parts the run never wrote
+([contract](contracts/download-settlement-source-freshness.md)). Independent
+logic and persistence reviews approved the source; strengthened assertions pass.
+Integrated acceptance and publication remain pending. No hardware claim is made.
+
 ## Backup application identity before restore (25 October 2026 source)
 
 A backed-up regular memory download now records the pre-write application

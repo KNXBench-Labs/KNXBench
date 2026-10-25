@@ -172,21 +172,7 @@ fn prepare(
     let device = device_at(project, target)?;
     let request =
         image_request_for_device(conn, project, device.id).map_err(PrepareError::Request)?;
-    // A program no download translates is refused for that reason, not for
-    // whatever its image build would trip over first. Precedence is fixed:
-    // the kind (mask, then procedure style) is the more fundamental refusal
-    // and comes first; a declared plug-in (KL-006) refuses what remains.
-    if let Some(code) = load_program_code(conn, &request.program_id)
-        .map_err(|e| PrepareError::Image(ImageError::Code(e)))?
-    {
-        check_program_kind(&code).map_err(PrepareError::Plan)?;
-        if purpose == Purpose::Download {
-            check_download_plugin(&code).map_err(PrepareError::Plan)?;
-        }
-    }
-    let image = build_download_image(conn, &request).map_err(PrepareError::Image)?;
-    let (plan, inferences) =
-        plan_memory_download_with_inferences(&image).map_err(PrepareError::Plan)?;
+    let (image, plan, inferences) = plan_request(conn, &request, purpose)?;
     let warnings = byte_order_warnings(conn, &request);
     Ok(PreparedDownload {
         device: device.id,
@@ -199,6 +185,55 @@ fn prepare(
         warnings,
         partial: None,
     })
+}
+
+/// The image and plan `request` yields from the catalogue behind `conn`,
+/// with every refusal a download of it meets. The one place that turns a
+/// request into a plan, shared by preparing a download and by checking
+/// later that its source still plans the same bytes.
+fn plan_request(
+    conn: &Connection,
+    request: &ImageRequest,
+    purpose: Purpose,
+) -> Result<(DownloadImage, MemoryDownloadPlan, Vec<Inference>), PrepareError> {
+    // A program no download translates is refused for that reason, not for
+    // whatever its image build would trip over first. Precedence is fixed:
+    // the kind (mask, then procedure style) is the more fundamental refusal
+    // and comes first; a declared plug-in (KL-006) refuses what remains.
+    if let Some(code) = load_program_code(conn, &request.program_id)
+        .map_err(|e| PrepareError::Image(ImageError::Code(e)))?
+    {
+        check_program_kind(&code).map_err(PrepareError::Plan)?;
+        if purpose == Purpose::Download {
+            check_download_plugin(&code).map_err(PrepareError::Plan)?;
+        }
+    }
+    let image = build_download_image(conn, request).map_err(PrepareError::Image)?;
+    let (plan, inferences) =
+        plan_memory_download_with_inferences(&image).map_err(PrepareError::Plan)?;
+    Ok((image, plan, inferences))
+}
+
+/// Whether `written`, planned again from the catalogue behind `conn` now,
+/// still yields exactly `ran` (scope `partial`): same mask and manufacturer,
+/// same ordered load, task, check and write steps with the same addresses and
+/// octets. `false` when the source no longer plans it, plans it differently
+/// or is unreadable or refused: a download that ran an older plan then proves
+/// nothing about the current source. A snapshot of this moment, not a watch
+/// on later catalogue changes.
+pub fn source_still_plans(
+    conn: &Connection,
+    written: &ImageRequest,
+    partial: Option<PartialDownloadParts>,
+    ran: &MemoryDownloadPlan,
+) -> bool {
+    let Ok((_, complete, _)) = plan_request(conn, written, Purpose::Download) else {
+        return false;
+    };
+    match partial {
+        None => complete == *ran,
+        Some(parts) => derive_partial_plan(&complete, parts).is_ok_and(|now| now.plan == *ran),
+    }
 }
 
 /// Something a download plan's user should know before writing that does not

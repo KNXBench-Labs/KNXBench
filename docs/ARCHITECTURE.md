@@ -252,6 +252,18 @@ ProductDB source translation, restart and durable whole-mutation recovery remain
 separate prerequisites. UI, public download routes and persistence schemas are
 unchanged. [Contract](contracts/offline-property-plan-simulation.md).
 
+## Simulator gateway front-end (25 October 2026 source)
+
+`knx_net::commissioning::simulator_gateway` serves one `SimulatedDevice` over UDP
+as a KNXnet/IP gateway (search, description, one tunnel, one device-management
+connection answering `M_PropRead` from configured properties) so an unmodified
+engineering tool can talk to it. It exercises the cEMI codec in both directions,
+which the in-process simulator does not, and reports every datagram and frame to
+an observer. Limits: UDP only, no routing, no secure sessions, standard frames
+only, no model of timing or of a real gateway's limits. A test double: it is not
+bus access, it proves nothing about real devices, and it changes no admission.
+The `simulator_gateway` example wires it to a configurable device identity.
+
 ## Offline System-2 source images (15 October 2026 source)
 
 [ADR-0132](adr/0132-offline-source-images-do-not-grant-download-admission.md)

@@ -12,6 +12,16 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Memory-region read service and count (25 October 2026 source)
+
+Backup, comparison and byte-order-probe reads now keep the selected memory
+service across a whole region and cap user-memory requests at 15 octets even
+when the negotiated APDU budget permits 63. This closes a wire-encoding failure
+and a per-chunk service mismatch without changing writes, device admission or
+backup persistence ([contract](contracts/memory-region-read-service.md)).
+Independent review and focused real-codec/simulator regressions passed;
+integrated acceptance and publication remain pending. No hardware claim is made.
+
 ## Source-bound programming marks after download (25 October 2026 source)
 
 A completed regular download now checks that the current product catalogue still

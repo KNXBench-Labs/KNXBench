@@ -4,8 +4,9 @@
 
 The [hardware identity width correction](contracts/hardware-identity-comparison.md)
 closes one pre-mutation response-shape gap in the existing download/restore path.
-Focused simulator acceptance and independent source review passed; integrated
-package acceptance is pending. Unified target identity, parameter policies and
+Focused simulator acceptance, independent source review and the maintained
+integrated package gate passed; published as `07fe2e67f`
+([delivery](status/2026-10-25-hardware-identity-width.md)). Unified target identity, parameter policies and
 complete effects/recovery remain separate work; no broader hardware support is
 inferred.
 

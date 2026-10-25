@@ -13,6 +13,18 @@ archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
 
+## System-2 own-run hint and refusal reasons (25 October 2026 source)
+
+The issue #30 diagnostic slice names the running System-2 owner in the partial
+activity snapshot and avoids presenting its own shared locks as a foreign
+management operation. Nullable volatile `refusal` keeps an early worker API-error
+kind visible in status; the panel also shows a structured start-request refusal.
+No error message/path/raw exception is retained, no reason is reconstructed after
+restart, and no safety admission or automatic retry changes.
+The [S2-02 record](open-work/S2-02-gateway-busy-after-failed-runs.md) remains P1:
+this is diagnostics, not a reproduced fix for the reporter's actual start failure.
+Independent review and integrated package acceptance are pending.
+
 ## System-2 PID 7 wrong-width diagnostics (25 October 2026 source)
 
 Published as `5f1ad454e` after independent APPROVE and all 14 integrated stages

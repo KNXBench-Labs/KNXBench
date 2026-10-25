@@ -96,7 +96,9 @@ export const messages = {
   "system2.state.restoreFailed": "Recovery failed — physical state is uncertain",
   "system2.state.failedBeforeWrite": "Refused before any write — nothing was written",
   "system2.state.cancelledBeforeWrite": "Cancelled before any write — nothing was written",
-  "system2.nothingWritten": "The server's durable journal shows this operation stopped before its first write, so nothing was written to the device. Fix the reported cause and prepare a new operation.",
+  "system2.refusal": "Reason reported by the server: {reason}.",
+  "system2.startRefused": "The server refused this start request: {reason}.",
+  "system2.nothingWritten": "The server reports that this operation ended before its first write, so nothing was written to the device. Fix the reported cause and prepare a new operation.",
   "system2.observations": "Recorded device observations",
   "system2.observationsNote": "Differences between the project/source model and what the device reported. They are recorded evidence, not refusals and not proof of a fault.",
   "system2.observation.prestate": "Before the download, object {object}: expected pointer {expected}, device reported {observed} (load state {state}).",
@@ -1244,6 +1246,7 @@ export const messages = {
   "activityLive.dropped.one": "{count} older completed record was evicted from this live view.",
   "activityLive.dropped.other": "{count} older completed records were evicted from this live view.",
   "activityLive.busy": "Busy, operation unknown",
+  "activityLive.lock.system2Operation": "System-2 operation",
   "activityLive.lock.deviceDownload": "download",
   "activityLive.lock.managementOperation": "address or management operation",
   "activityLive.lock.busMonitorOrGroupWrite": "bus monitor or group write",
@@ -1259,6 +1262,7 @@ export const messages = {
     "The gateway is busy: the bus monitor lost its connection to {gateway}, but its session is still open. Stop the bus monitor first.",
   "gatewayRefusal.busy.lineScan":
     "The gateway is busy: a line scan is running ({probed}/{total} addresses probed). Wait for it or cancel it first.",
+  "gatewayRefusal.busy.connecting.system2Operation": "The gateway is busy: an experimental System-2 operation is running. Try again when it has ended.",
   "gatewayRefusal.busy.connecting.deviceDownload": "The gateway is busy: a download is just connecting. Try again in a moment.",
   "gatewayRefusal.busy.connecting.managementOperation": "The gateway is busy: an address or management operation is running. Try again in a moment.",
   "gatewayRefusal.busy.connecting.busMonitorOrGroupWrite":

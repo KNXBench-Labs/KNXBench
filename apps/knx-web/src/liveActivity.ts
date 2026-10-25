@@ -1,8 +1,11 @@
 /** UI-04: strict admission of the partial, volatile `GET /api/bus/activity` snapshot. */
 import { admitHistoryPage, HistoryContractError, type HistoryEntry } from "./activityHistory";
 
-export type BusyLock = "deviceDownload" | "managementOperation" | "busMonitorOrGroupWrite" | "lineScan";
-export const BUSY_LOCKS: readonly BusyLock[] = ["deviceDownload", "managementOperation", "busMonitorOrGroupWrite", "lineScan"];
+/** `system2Operation`: an admitted System-2 run, which itself holds the other locks (issue #30). */
+export type BusyLock = "system2Operation" | "deviceDownload" | "managementOperation" | "busMonitorOrGroupWrite" | "lineScan";
+export const BUSY_LOCKS: readonly BusyLock[] = [
+  "system2Operation", "deviceDownload", "managementOperation", "busMonitorOrGroupWrite", "lineScan",
+];
 export type LiveUntracked = "groupWrite" | "serialAddress";
 const LIVE_UNTRACKED: readonly LiveUntracked[] = ["groupWrite", "serialAddress"];
 export type HistoryState = "disabled" | "configured" | "unavailable";

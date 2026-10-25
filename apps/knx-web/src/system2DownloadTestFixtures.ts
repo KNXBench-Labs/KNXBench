@@ -11,7 +11,7 @@ export const preview: System2Preview = {
 };
 export const status: System2Status = {
   schemaVersion: 1, operationId: "d".repeat(32), binding: preview.binding, address: preview.address, deviceName: preview.deviceName,
-  state: "running", completedSteps: 0, totalSteps: null, backupAvailable: false, recoveryPhrase: null, downloadPhrase: null, releasePhrase: null, message: null,
+  state: "running", completedSteps: 0, totalSteps: null, backupAvailable: false, recoveryPhrase: null, downloadPhrase: null, releasePhrase: null, message: null, refusal: null,
   mutationMayHaveStarted: false, prestateDiffers: false, pointerObservations: [], programVersionObservation: null, prestateUnreadableAllocations: [],
 };
 export const recoveryStatus: System2Status = {

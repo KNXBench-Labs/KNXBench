@@ -125,7 +125,7 @@ async fn timeout_keeps_actual_task_and_busy_legacy_locks_cannot_escape_their_dea
         let _programming = copy.address_programming.lock().await;
         let _ = wait.await;
         copy.device_system2
-            .publish_end(&id, LocalOutcome::Cancelled, None);
+            .publish_end(&id, LocalOutcome::Cancelled, None, None);
         drop(_programming);
         drop(_download);
         lease.settle(LocalOutcome::Cancelled).unwrap();
@@ -137,6 +137,7 @@ async fn timeout_keeps_actual_task_and_busy_legacy_locks_cannot_escape_their_dea
         task: Some(task),
         control_id: meta.operation_id,
         message: None,
+        refusal: None,
     });
     // Directly hold an admission lock: the ordinary drain's initial inspection
     // must itself be inside its bounded behavior, not wait before starting it.
@@ -235,6 +236,7 @@ fn settled_status(progress: knx_app::property_validation::OperationProgress) -> 
         task: None,
         control_id: meta.operation_id,
         message: None,
+        refusal: None,
     };
     serde_json::to_value(record.view()).unwrap()
 }
@@ -254,6 +256,46 @@ fn status_reports_whether_mutation_may_have_started_for_failed_operations() {
     let mut progress = super::initial(LocalOutcome::Cancelled);
     progress.mutation_possible = true;
     assert_eq!(settled_status(progress)["mutationMayHaveStarted"], true);
+}
+/// Issue #30: a worker refusal before the journal exists used to end as a
+/// bare "failed". Its stable kind stays visible; a plain end carries none.
+#[test]
+fn a_published_end_keeps_the_refusal_kind_of_the_worker() {
+    use knx_app::property_validation::LocalOutcome;
+    let directory = tempfile::tempdir().unwrap();
+    let state = crate::AppState::new(directory.path().to_path_buf());
+    let meta = metadata();
+    state.device_system2.inner.lock().unwrap().current = Some(super::Record {
+        metadata: meta.clone(),
+        progress: super::initial(LocalOutcome::Running),
+        updates: None,
+        task: None,
+        control_id: meta.operation_id.clone(),
+        message: None,
+        refusal: None,
+    });
+    let error = super::dto::refuse("gatewayBusy");
+    assert_eq!(error.kind(), Some("gatewayBusy"));
+    state
+        .device_system2
+        .publish_end(&meta.operation_id, LocalOutcome::Failed, None, error.kind());
+    let status = serde_json::to_value(state.device_system2.status().unwrap().unwrap()).unwrap();
+    assert_eq!(status["state"], "failed");
+    assert_eq!(status["refusal"], "gatewayBusy");
+    assert_eq!(status["mutationMayHaveStarted"], false);
+    // Another operation's end never overwrites this one's reason.
+    state.device_system2.publish_end(
+        "fedcba9876543210fedcba9876543210",
+        LocalOutcome::Failed,
+        None,
+        Some("system2PreparationStale"),
+    );
+    let status = serde_json::to_value(state.device_system2.status().unwrap().unwrap()).unwrap();
+    assert_eq!(status["refusal"], "gatewayBusy");
+    assert_eq!(
+        settled_status(super::initial(LocalOutcome::Finished))["refusal"],
+        serde_json::Value::Null
+    );
 }
 #[test]
 fn status_carries_prestate_observations_and_offers_no_recovery_after_a_difference() {

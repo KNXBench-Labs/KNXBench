@@ -76,7 +76,9 @@ export const messages: Record<MessageKey, string> = {
   "system2.state.restoreFailed": "Wiederherstellung fehlgeschlagen — physischer Zustand ungewiss",
   "system2.state.failedBeforeWrite": "Vor dem ersten Schreiben abgelehnt — es wurde nichts geschrieben",
   "system2.state.cancelledBeforeWrite": "Vor dem ersten Schreiben abgebrochen — es wurde nichts geschrieben",
-  "system2.nothingWritten": "Laut dauerhaftem Journal des Servers endete dieser Vorgang vor dem ersten Schreibzugriff; auf das Gerät wurde nichts geschrieben. Behebe die gemeldete Ursache und bereite einen neuen Vorgang vor.",
+  "system2.refusal": "Vom Server gemeldeter Grund: {reason}.",
+  "system2.startRefused": "Der Server hat diese Startanfrage abgelehnt: {reason}.",
+  "system2.nothingWritten": "Der Server meldet, dass dieser Vorgang vor dem ersten Schreibzugriff endete; auf das Gerät wurde nichts geschrieben. Behebe die gemeldete Ursache und bereite einen neuen Vorgang vor.",
   "system2.observations": "Aufgezeichnete Gerätebeobachtungen",
   "system2.observationsNote": "Abweichungen zwischen Projekt-/Quellmodell und den Angaben des Geräts. Sie sind aufgezeichnete Belege, keine Ablehnungen und kein Fehlernachweis.",
   "system2.observation.prestate": "Vor dem Download, Objekt {object}: erwarteter Zeiger {expected}, Gerät meldete {observed} (Ladezustand {state}).",
@@ -1223,6 +1225,7 @@ export const messages: Record<MessageKey, string> = {
   "activityLive.dropped.one": "{count} älterer abgeschlossener Eintrag wurde aus dieser Ansicht verdrängt.",
   "activityLive.dropped.other": "{count} ältere abgeschlossene Einträge wurden aus dieser Ansicht verdrängt.",
   "activityLive.busy": "Belegt, Vorgang unbekannt",
+  "activityLive.lock.system2Operation": "System-2-Vorgang",
   "activityLive.lock.deviceDownload": "Download",
   "activityLive.lock.managementOperation": "Adress- oder Verwaltungsvorgang",
   "activityLive.lock.busMonitorOrGroupWrite": "Busmonitor oder Gruppen-Schreiben",
@@ -1238,6 +1241,7 @@ export const messages: Record<MessageKey, string> = {
     "Das Gateway ist belegt: Der Busmonitor hat die Verbindung zu {gateway} verloren, seine Sitzung ist aber noch offen. Beende zuerst den Busmonitor.",
   "gatewayRefusal.busy.lineScan":
     "Das Gateway ist belegt: Ein Linienscan läuft ({probed}/{total} Adressen geprüft). Warte darauf oder brich ihn zuerst ab.",
+  "gatewayRefusal.busy.connecting.system2Operation": "Das Gateway ist belegt: Ein experimenteller System-2-Vorgang läuft. Versuch es erneut, wenn er beendet ist.",
   "gatewayRefusal.busy.connecting.deviceDownload": "Das Gateway ist belegt: Ein Download baut gerade die Verbindung auf. Versuch es gleich noch einmal.",
   "gatewayRefusal.busy.connecting.managementOperation": "Das Gateway ist belegt: Ein Adress- oder Verwaltungsvorgang läuft. Versuch es gleich noch einmal.",
   "gatewayRefusal.busy.connecting.busMonitorOrGroupWrite":

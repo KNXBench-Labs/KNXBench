@@ -82,6 +82,16 @@ it("shows held sessions, one-shot records, eviction, busy locks and exclusions a
   expect(urls(fetcher)).toEqual(["/api/bus/activity"]);
 });
 
+it("admits and names the System-2 owner without inventing a session or idle proof (issue #30)", async () => {
+  const value = snapshot({ sessions: [], oneShot: [], busyLocks: ["system2Operation", "managementOperation"] });
+  expect(admitActivitySnapshot(value).busyLocks).toEqual(["system2Operation", "managementOperation"]);
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response(value)));
+  await open();
+  expect(panel().textContent).toContain(en["activityLive.lock.system2Operation"]);
+  expect(panel().textContent).toContain(en["activityLive.lock.managementOperation"]);
+  expect(panel().querySelectorAll(".activity-live-session")).toHaveLength(0);
+});
+
 it("does not read an empty session list as an idle bus", async () => {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response(snapshot({ sessions: [], oneShot: [], oneShotDropped: 0, busyLocks: [] }))));
   await open();

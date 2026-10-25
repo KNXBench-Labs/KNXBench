@@ -98,3 +98,15 @@ the gateway and offer it as a suggestion (issue #10, ADR-0123). It is the same
 endpoint the starting client sent, visible only while the session exists.
 History entries and one-shot records still carry no gateway (ADR-0064); clients
 admit the field as optional, so a snapshot from an older server stays valid.
+
+## Follow-up: System-2 owns its shared locks (2026-10-25 source)
+
+An admitted coordinator in `Running` adds `system2Operation` first to `busyLocks`,
+including the short interval before its worker acquires shared tunnel guards.
+The worker reserves all four guards itself; existing lock and session entries
+are retained, not relabelled as independent foreign operations. The download
+page's hint recognizes its own System-2 operation and does not announce those
+locks as a foreign management holder (issue #30). The activity view names the
+coordinator marker separately. This is no new device/session history, atomic
+ownership proof, idle guarantee or transport authority. Terminal/uncertain
+coordinator states are not guessed to be running.

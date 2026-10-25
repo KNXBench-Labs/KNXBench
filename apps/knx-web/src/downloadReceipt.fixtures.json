@@ -1,0 +1,1059 @@
+{
+  "legacy": {
+    "id": 1,
+    "kind": "deviceDownload",
+    "address": "1.1.67",
+    "state": "finished",
+    "startedAt": "2026-10-25T07:00:00.000Z",
+    "finishedAt": "2026-10-25T07:08:00.000Z",
+    "writeEvidence": {
+      "backupRecorded": true,
+      "sendPossible": true
+    },
+    "downloadEvidence": {
+      "sessionId": 7,
+      "written": "yes",
+      "restart": "acknowledged",
+      "cleanup": "returnedOk"
+    }
+  },
+  "preparationOnlyRunning": {
+    "id": 1,
+    "kind": "deviceDownload",
+    "address": "1.1.67",
+    "state": "running",
+    "startedAt": "2026-10-25T07:00:00.000Z",
+    "finishedAt": null,
+    "writeEvidence": {
+      "backupRecorded": false,
+      "sendPossible": false
+    },
+    "downloadEvidence": {
+      "sessionId": 7,
+      "written": null,
+      "restart": null,
+      "cleanup": "pending",
+      "preparation": {
+        "state": "available",
+        "format": 1,
+        "scope": "complete",
+        "program": {
+          "state": "identified",
+          "id": "M-0001_A-0001-01-0000",
+          "applicationVersion": "1",
+          "sourceSha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        },
+        "plannedMask": "0701",
+        "plannedManufacturer": "0001",
+        "steps": 12,
+        "dataOctets": 34
+      }
+    }
+  },
+  "preparationOnlyFinished": {
+    "id": 1,
+    "kind": "deviceDownload",
+    "address": "1.1.67",
+    "state": "finished",
+    "startedAt": "2026-10-25T07:00:00.000Z",
+    "finishedAt": "2026-10-25T07:08:00.000Z",
+    "writeEvidence": {
+      "backupRecorded": true,
+      "sendPossible": true
+    },
+    "downloadEvidence": {
+      "sessionId": 7,
+      "written": "yes",
+      "restart": "acknowledged",
+      "cleanup": "returnedOk",
+      "preparation": {
+        "state": "available",
+        "format": 1,
+        "scope": "complete",
+        "program": {
+          "state": "identified",
+          "id": "M-0001_A-0001-01-0000",
+          "applicationVersion": "1",
+          "sourceSha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        },
+        "plannedMask": "0701",
+        "plannedManufacturer": "0001",
+        "steps": 12,
+        "dataOctets": 34
+      }
+    }
+  },
+  "preparationOnlyUnknown": {
+    "id": 1,
+    "kind": "deviceDownload",
+    "address": "1.1.67",
+    "state": "unknown",
+    "startedAt": "2026-10-25T07:00:00.000Z",
+    "finishedAt": "2026-10-25T07:08:00.000Z",
+    "writeEvidence": {
+      "backupRecorded": true,
+      "sendPossible": true
+    },
+    "downloadEvidence": {
+      "sessionId": 7,
+      "written": null,
+      "restart": null,
+      "cleanup": "unknown",
+      "preparation": {
+        "state": "available",
+        "format": 1,
+        "scope": "complete",
+        "program": {
+          "state": "identified",
+          "id": "M-0001_A-0001-01-0000",
+          "applicationVersion": "1",
+          "sourceSha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        },
+        "plannedMask": "0701",
+        "plannedManufacturer": "0001",
+        "steps": 12,
+        "dataOctets": 34
+      }
+    }
+  },
+  "unavailablePreparation": {
+    "id": 1,
+    "kind": "deviceDownload",
+    "address": "1.1.67",
+    "state": "finished",
+    "startedAt": "2026-10-25T07:00:00.000Z",
+    "finishedAt": "2026-10-25T07:08:00.000Z",
+    "writeEvidence": {
+      "backupRecorded": true,
+      "sendPossible": true
+    },
+    "downloadEvidence": {
+      "sessionId": 7,
+      "written": "yes",
+      "restart": "acknowledged",
+      "cleanup": "returnedOk",
+      "preparation": {
+        "state": "unavailable",
+        "format": 1,
+        "scope": "partial-both"
+      },
+      "settlement": {
+        "project": "noProject",
+        "format": 1
+      }
+    }
+  },
+  "noApplicationVersion": {
+    "id": 1,
+    "kind": "deviceDownload",
+    "address": "1.1.67",
+    "state": "finished",
+    "startedAt": "2026-10-25T07:00:00.000Z",
+    "finishedAt": "2026-10-25T07:08:00.000Z",
+    "writeEvidence": {
+      "backupRecorded": true,
+      "sendPossible": true
+    },
+    "downloadEvidence": {
+      "sessionId": 7,
+      "written": "yes",
+      "restart": "acknowledged",
+      "cleanup": "returnedOk",
+      "preparation": {
+        "state": "available",
+        "format": 1,
+        "scope": "complete",
+        "program": {
+          "state": "identified",
+          "id": "P",
+          "applicationVersion": null,
+          "sourceSha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        },
+        "plannedMask": "0701",
+        "plannedManufacturer": "0001",
+        "steps": 12,
+        "dataOctets": 34
+      }
+    }
+  },
+  "programUnavailable": {
+    "id": 1,
+    "kind": "deviceDownload",
+    "address": "1.1.67",
+    "state": "finished",
+    "startedAt": "2026-10-25T07:00:00.000Z",
+    "finishedAt": "2026-10-25T07:08:00.000Z",
+    "writeEvidence": {
+      "backupRecorded": true,
+      "sendPossible": true
+    },
+    "downloadEvidence": {
+      "sessionId": 7,
+      "written": "yes",
+      "restart": "acknowledged",
+      "cleanup": "returnedOk",
+      "preparation": {
+        "state": "available",
+        "format": 1,
+        "scope": "complete",
+        "program": {
+          "state": "unavailable"
+        },
+        "plannedMask": "0701",
+        "plannedManufacturer": "0001",
+        "steps": 12,
+        "dataOctets": 34
+      }
+    }
+  },
+  "completeSessionOnly": {
+    "id": 1,
+    "kind": "deviceDownload",
+    "address": "1.1.67",
+    "state": "finished",
+    "startedAt": "2026-10-25T07:00:00.000Z",
+    "finishedAt": "2026-10-25T07:08:00.000Z",
+    "writeEvidence": {
+      "backupRecorded": true,
+      "sendPossible": true
+    },
+    "downloadEvidence": {
+      "sessionId": 7,
+      "written": "yes",
+      "restart": "acknowledged",
+      "cleanup": "returnedOk",
+      "preparation": {
+        "state": "available",
+        "format": 1,
+        "scope": "complete",
+        "program": {
+          "state": "identified",
+          "id": "M-0001_A-0001-01-0000",
+          "applicationVersion": "1",
+          "sourceSha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        },
+        "plannedMask": "0701",
+        "plannedManufacturer": "0001",
+        "steps": 12,
+        "dataOctets": 34
+      },
+      "settlement": {
+        "project": "sessionOnly",
+        "format": 1,
+        "source": "unchanged",
+        "currentRequest": "readable",
+        "applied": {
+          "programmed": {
+            "address": true,
+            "application": true,
+            "parameters": true,
+            "groupAddresses": true
+          },
+          "pending": {
+            "address": false,
+            "application": false,
+            "parameters": false,
+            "groupAddresses": false
+          },
+          "touched": {
+            "address": true,
+            "application": true,
+            "parameters": true,
+            "groupAddresses": true
+          }
+        },
+        "settledAt": "2026-10-25T07:08:09.123Z"
+      }
+    }
+  },
+  "completePersisted": {
+    "id": 1,
+    "kind": "deviceDownload",
+    "address": "1.1.67",
+    "state": "finished",
+    "startedAt": "2026-10-25T07:00:00.000Z",
+    "finishedAt": "2026-10-25T07:08:00.000Z",
+    "writeEvidence": {
+      "backupRecorded": true,
+      "sendPossible": true
+    },
+    "downloadEvidence": {
+      "sessionId": 7,
+      "written": "yes",
+      "restart": "acknowledged",
+      "cleanup": "returnedOk",
+      "preparation": {
+        "state": "available",
+        "format": 1,
+        "scope": "complete",
+        "program": {
+          "state": "identified",
+          "id": "M-0001_A-0001-01-0000",
+          "applicationVersion": "1",
+          "sourceSha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        },
+        "plannedMask": "0701",
+        "plannedManufacturer": "0001",
+        "steps": 12,
+        "dataOctets": 34
+      },
+      "settlement": {
+        "project": "persisted",
+        "format": 1,
+        "source": "unchanged",
+        "currentRequest": "readable",
+        "applied": {
+          "programmed": {
+            "address": true,
+            "application": true,
+            "parameters": true,
+            "groupAddresses": true
+          },
+          "pending": {
+            "address": false,
+            "application": false,
+            "parameters": false,
+            "groupAddresses": false
+          },
+          "touched": {
+            "address": true,
+            "application": true,
+            "parameters": true,
+            "groupAddresses": true
+          }
+        },
+        "settledAt": "2026-10-25T07:08:09.123Z"
+      }
+    }
+  },
+  "changedSource": {
+    "id": 1,
+    "kind": "deviceDownload",
+    "address": "1.1.67",
+    "state": "finished",
+    "startedAt": "2026-10-25T07:00:00.000Z",
+    "finishedAt": "2026-10-25T07:08:00.000Z",
+    "writeEvidence": {
+      "backupRecorded": true,
+      "sendPossible": true
+    },
+    "downloadEvidence": {
+      "sessionId": 7,
+      "written": "yes",
+      "restart": "acknowledged",
+      "cleanup": "returnedOk",
+      "preparation": {
+        "state": "available",
+        "format": 1,
+        "scope": "complete",
+        "program": {
+          "state": "identified",
+          "id": "M-0001_A-0001-01-0000",
+          "applicationVersion": "1",
+          "sourceSha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        },
+        "plannedMask": "0701",
+        "plannedManufacturer": "0001",
+        "steps": 12,
+        "dataOctets": 34
+      },
+      "settlement": {
+        "project": "persisted",
+        "format": 1,
+        "source": "changedOrUnknown",
+        "currentRequest": "readable",
+        "applied": {
+          "programmed": {
+            "address": true,
+            "application": false,
+            "parameters": false,
+            "groupAddresses": false
+          },
+          "pending": {
+            "address": false,
+            "application": true,
+            "parameters": true,
+            "groupAddresses": true
+          },
+          "touched": {
+            "address": true,
+            "application": true,
+            "parameters": true,
+            "groupAddresses": true
+          }
+        },
+        "settledAt": "2026-10-25T07:08:09.123Z"
+      }
+    }
+  },
+  "requestUnavailable": {
+    "id": 1,
+    "kind": "deviceDownload",
+    "address": "1.1.67",
+    "state": "finished",
+    "startedAt": "2026-10-25T07:00:00.000Z",
+    "finishedAt": "2026-10-25T07:08:00.000Z",
+    "writeEvidence": {
+      "backupRecorded": true,
+      "sendPossible": true
+    },
+    "downloadEvidence": {
+      "sessionId": 7,
+      "written": "yes",
+      "restart": "acknowledged",
+      "cleanup": "returnedOk",
+      "preparation": {
+        "state": "available",
+        "format": 1,
+        "scope": "complete",
+        "program": {
+          "state": "identified",
+          "id": "M-0001_A-0001-01-0000",
+          "applicationVersion": "1",
+          "sourceSha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        },
+        "plannedMask": "0701",
+        "plannedManufacturer": "0001",
+        "steps": 12,
+        "dataOctets": 34
+      },
+      "settlement": {
+        "project": "sessionOnly",
+        "format": 1,
+        "source": "changedOrUnknown",
+        "currentRequest": "unavailable",
+        "applied": {
+          "programmed": {
+            "address": false,
+            "application": false,
+            "parameters": false,
+            "groupAddresses": false
+          },
+          "pending": {
+            "address": true,
+            "application": true,
+            "parameters": true,
+            "groupAddresses": true
+          },
+          "touched": {
+            "address": true,
+            "application": true,
+            "parameters": true,
+            "groupAddresses": true
+          }
+        },
+        "settledAt": "2026-10-25T07:08:09.123Z"
+      }
+    }
+  },
+  "partialParameters": {
+    "id": 1,
+    "kind": "deviceDownload",
+    "address": "1.1.67",
+    "state": "finished",
+    "startedAt": "2026-10-25T07:00:00.000Z",
+    "finishedAt": "2026-10-25T07:08:00.000Z",
+    "writeEvidence": {
+      "backupRecorded": true,
+      "sendPossible": true
+    },
+    "downloadEvidence": {
+      "sessionId": 7,
+      "written": "yes",
+      "restart": "acknowledged",
+      "cleanup": "returnedOk",
+      "preparation": {
+        "state": "available",
+        "format": 1,
+        "scope": "partial-parameters",
+        "program": {
+          "state": "identified",
+          "id": "M-0001_A-0001-01-0000",
+          "applicationVersion": "1",
+          "sourceSha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        },
+        "plannedMask": "0701",
+        "plannedManufacturer": "0001",
+        "steps": 12,
+        "dataOctets": 34
+      },
+      "settlement": {
+        "project": "persisted",
+        "format": 1,
+        "source": "unchanged",
+        "currentRequest": "readable",
+        "applied": {
+          "programmed": {
+            "address": false,
+            "application": false,
+            "parameters": true,
+            "groupAddresses": false
+          },
+          "pending": {
+            "address": false,
+            "application": false,
+            "parameters": false,
+            "groupAddresses": false
+          },
+          "touched": {
+            "address": false,
+            "application": false,
+            "parameters": true,
+            "groupAddresses": false
+          }
+        },
+        "settledAt": "2026-10-25T07:08:09.123Z"
+      }
+    }
+  },
+  "partialPending": {
+    "id": 1,
+    "kind": "deviceDownload",
+    "address": "1.1.67",
+    "state": "finished",
+    "startedAt": "2026-10-25T07:00:00.000Z",
+    "finishedAt": "2026-10-25T07:08:00.000Z",
+    "writeEvidence": {
+      "backupRecorded": true,
+      "sendPossible": true
+    },
+    "downloadEvidence": {
+      "sessionId": 7,
+      "written": "yes",
+      "restart": "acknowledged",
+      "cleanup": "returnedOk",
+      "preparation": {
+        "state": "available",
+        "format": 1,
+        "scope": "partial-both",
+        "program": {
+          "state": "identified",
+          "id": "M-0001_A-0001-01-0000",
+          "applicationVersion": "1",
+          "sourceSha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        },
+        "plannedMask": "0701",
+        "plannedManufacturer": "0001",
+        "steps": 12,
+        "dataOctets": 34
+      },
+      "settlement": {
+        "project": "persisted",
+        "format": 1,
+        "source": "changedOrUnknown",
+        "currentRequest": "readable",
+        "applied": {
+          "programmed": {
+            "address": false,
+            "application": false,
+            "parameters": false,
+            "groupAddresses": false
+          },
+          "pending": {
+            "address": false,
+            "application": false,
+            "parameters": true,
+            "groupAddresses": true
+          },
+          "touched": {
+            "address": false,
+            "application": false,
+            "parameters": true,
+            "groupAddresses": true
+          }
+        },
+        "settledAt": "2026-10-25T07:08:09.123Z"
+      }
+    }
+  },
+  "persistenceFailed": {
+    "id": 1,
+    "kind": "deviceDownload",
+    "address": "1.1.67",
+    "state": "finished",
+    "startedAt": "2026-10-25T07:00:00.000Z",
+    "finishedAt": "2026-10-25T07:08:00.000Z",
+    "writeEvidence": {
+      "backupRecorded": true,
+      "sendPossible": true
+    },
+    "downloadEvidence": {
+      "sessionId": 7,
+      "written": "yes",
+      "restart": "acknowledged",
+      "cleanup": "returnedOk",
+      "preparation": {
+        "state": "available",
+        "format": 1,
+        "scope": "complete",
+        "program": {
+          "state": "identified",
+          "id": "M-0001_A-0001-01-0000",
+          "applicationVersion": "1",
+          "sourceSha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        },
+        "plannedMask": "0701",
+        "plannedManufacturer": "0001",
+        "steps": 12,
+        "dataOctets": 34
+      },
+      "settlement": {
+        "project": "persistenceFailed",
+        "format": 1,
+        "source": "unchanged",
+        "currentRequest": "readable",
+        "computed": {
+          "programmed": {
+            "address": true,
+            "application": true,
+            "parameters": true,
+            "groupAddresses": true
+          },
+          "pending": {
+            "address": false,
+            "application": false,
+            "parameters": false,
+            "groupAddresses": false
+          },
+          "touched": {
+            "address": true,
+            "application": true,
+            "parameters": true,
+            "groupAddresses": true
+          }
+        }
+      }
+    }
+  },
+  "appliedWithInterruptedCheck": {
+    "id": 1,
+    "kind": "deviceDownload",
+    "address": "1.1.67",
+    "state": "finished",
+    "startedAt": "2026-10-25T07:00:00.000Z",
+    "finishedAt": "2026-10-25T07:08:00.000Z",
+    "writeEvidence": {
+      "backupRecorded": true,
+      "sendPossible": true
+    },
+    "downloadEvidence": {
+      "sessionId": 7,
+      "written": "yes",
+      "restart": "acknowledged",
+      "cleanup": "unknown",
+      "postDownloadCheck": {
+        "observation": {
+          "status": "interrupted"
+        },
+        "runtime": "unknown"
+      },
+      "preparation": {
+        "state": "available",
+        "format": 1,
+        "scope": "complete",
+        "program": {
+          "state": "identified",
+          "id": "M-0001_A-0001-01-0000",
+          "applicationVersion": "1",
+          "sourceSha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        },
+        "plannedMask": "0701",
+        "plannedManufacturer": "0001",
+        "steps": 12,
+        "dataOctets": 34
+      },
+      "settlement": {
+        "project": "persisted",
+        "format": 1,
+        "source": "unchanged",
+        "currentRequest": "readable",
+        "applied": {
+          "programmed": {
+            "address": true,
+            "application": true,
+            "parameters": true,
+            "groupAddresses": true
+          },
+          "pending": {
+            "address": false,
+            "application": false,
+            "parameters": false,
+            "groupAddresses": false
+          },
+          "touched": {
+            "address": true,
+            "application": true,
+            "parameters": true,
+            "groupAddresses": true
+          }
+        },
+        "settledAt": "2026-10-25T07:08:09.123Z"
+      }
+    }
+  },
+  "interruptedPartially": {
+    "id": 1,
+    "kind": "deviceDownload",
+    "address": "1.1.67",
+    "state": "failed",
+    "startedAt": "2026-10-25T07:00:00.000Z",
+    "finishedAt": "2026-10-25T07:08:00.000Z",
+    "writeEvidence": {
+      "backupRecorded": true,
+      "sendPossible": true
+    },
+    "downloadEvidence": {
+      "sessionId": 7,
+      "written": "partially",
+      "restart": null,
+      "cleanup": "returnedOk",
+      "preparation": {
+        "state": "available",
+        "format": 1,
+        "scope": "partial-parameters",
+        "program": {
+          "state": "identified",
+          "id": "M-0001_A-0001-01-0000",
+          "applicationVersion": "1",
+          "sourceSha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        },
+        "plannedMask": "0701",
+        "plannedManufacturer": "0001",
+        "steps": 12,
+        "dataOctets": 34
+      },
+      "settlement": {
+        "project": "persisted",
+        "format": 1,
+        "source": "notChecked",
+        "currentRequest": "readable",
+        "applied": {
+          "programmed": {
+            "address": false,
+            "application": false,
+            "parameters": false,
+            "groupAddresses": false
+          },
+          "pending": {
+            "address": false,
+            "application": false,
+            "parameters": true,
+            "groupAddresses": false
+          },
+          "touched": {
+            "address": false,
+            "application": false,
+            "parameters": true,
+            "groupAddresses": false
+          }
+        },
+        "settledAt": "2026-10-25T07:08:09.123Z"
+      }
+    }
+  },
+  "interruptedAfterWrite": {
+    "id": 1,
+    "kind": "deviceDownload",
+    "address": "1.1.67",
+    "state": "failed",
+    "startedAt": "2026-10-25T07:00:00.000Z",
+    "finishedAt": "2026-10-25T07:08:00.000Z",
+    "writeEvidence": {
+      "backupRecorded": true,
+      "sendPossible": true
+    },
+    "downloadEvidence": {
+      "sessionId": 7,
+      "written": "yes",
+      "restart": null,
+      "cleanup": "returnedOk",
+      "preparation": {
+        "state": "available",
+        "format": 1,
+        "scope": "complete",
+        "program": {
+          "state": "identified",
+          "id": "M-0001_A-0001-01-0000",
+          "applicationVersion": "1",
+          "sourceSha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        },
+        "plannedMask": "0701",
+        "plannedManufacturer": "0001",
+        "steps": 12,
+        "dataOctets": 34
+      },
+      "settlement": {
+        "project": "sessionOnly",
+        "format": 1,
+        "source": "notChecked",
+        "currentRequest": "unavailable",
+        "applied": {
+          "programmed": {
+            "address": false,
+            "application": false,
+            "parameters": false,
+            "groupAddresses": false
+          },
+          "pending": {
+            "address": false,
+            "application": true,
+            "parameters": true,
+            "groupAddresses": true
+          },
+          "touched": {
+            "address": false,
+            "application": true,
+            "parameters": true,
+            "groupAddresses": true
+          }
+        },
+        "settledAt": "2026-10-25T07:08:09.123Z"
+      }
+    }
+  },
+  "interruptedNothingTouched": {
+    "id": 1,
+    "kind": "deviceDownload",
+    "address": "1.1.67",
+    "state": "failed",
+    "startedAt": "2026-10-25T07:00:00.000Z",
+    "finishedAt": "2026-10-25T07:08:00.000Z",
+    "writeEvidence": {
+      "backupRecorded": true,
+      "sendPossible": true
+    },
+    "downloadEvidence": {
+      "sessionId": 7,
+      "written": "partially",
+      "restart": null,
+      "cleanup": "returnedOk",
+      "preparation": {
+        "state": "available",
+        "format": 1,
+        "scope": "complete",
+        "program": {
+          "state": "identified",
+          "id": "M-0001_A-0001-01-0000",
+          "applicationVersion": "1",
+          "sourceSha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        },
+        "plannedMask": "0701",
+        "plannedManufacturer": "0001",
+        "steps": 12,
+        "dataOctets": 34
+      },
+      "settlement": {
+        "project": "sessionOnly",
+        "format": 1,
+        "source": "notChecked",
+        "currentRequest": "readable",
+        "applied": {
+          "programmed": {
+            "address": false,
+            "application": false,
+            "parameters": false,
+            "groupAddresses": false
+          },
+          "pending": {
+            "address": false,
+            "application": false,
+            "parameters": false,
+            "groupAddresses": false
+          },
+          "touched": {
+            "address": false,
+            "application": false,
+            "parameters": false,
+            "groupAddresses": false
+          }
+        },
+        "settledAt": "2026-10-25T07:08:09.123Z"
+      }
+    }
+  },
+  "notAttempted": {
+    "id": 1,
+    "kind": "deviceDownload",
+    "address": "1.1.67",
+    "state": "failed",
+    "startedAt": "2026-10-25T07:00:00.000Z",
+    "finishedAt": "2026-10-25T07:08:00.000Z",
+    "writeEvidence": {
+      "backupRecorded": true,
+      "sendPossible": true
+    },
+    "downloadEvidence": {
+      "sessionId": 7,
+      "written": "no",
+      "restart": null,
+      "cleanup": "returnedOk",
+      "preparation": {
+        "state": "available",
+        "format": 1,
+        "scope": "complete",
+        "program": {
+          "state": "identified",
+          "id": "M-0001_A-0001-01-0000",
+          "applicationVersion": "1",
+          "sourceSha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        },
+        "plannedMask": "0701",
+        "plannedManufacturer": "0001",
+        "steps": 12,
+        "dataOctets": 34
+      },
+      "settlement": {
+        "project": "notAttempted",
+        "format": 1
+      }
+    }
+  },
+  "noProject": {
+    "id": 1,
+    "kind": "deviceDownload",
+    "address": "1.1.67",
+    "state": "finished",
+    "startedAt": "2026-10-25T07:00:00.000Z",
+    "finishedAt": "2026-10-25T07:08:00.000Z",
+    "writeEvidence": {
+      "backupRecorded": true,
+      "sendPossible": true
+    },
+    "downloadEvidence": {
+      "sessionId": 7,
+      "written": "yes",
+      "restart": "acknowledged",
+      "cleanup": "returnedOk",
+      "preparation": {
+        "state": "available",
+        "format": 1,
+        "scope": "complete",
+        "program": {
+          "state": "identified",
+          "id": "M-0001_A-0001-01-0000",
+          "applicationVersion": "1",
+          "sourceSha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        },
+        "plannedMask": "0701",
+        "plannedManufacturer": "0001",
+        "steps": 12,
+        "dataOctets": 34
+      },
+      "settlement": {
+        "project": "noProject",
+        "format": 1
+      }
+    }
+  },
+  "otherProject": {
+    "id": 1,
+    "kind": "deviceDownload",
+    "address": "1.1.67",
+    "state": "finished",
+    "startedAt": "2026-10-25T07:00:00.000Z",
+    "finishedAt": "2026-10-25T07:08:00.000Z",
+    "writeEvidence": {
+      "backupRecorded": true,
+      "sendPossible": true
+    },
+    "downloadEvidence": {
+      "sessionId": 7,
+      "written": "yes",
+      "restart": "acknowledged",
+      "cleanup": "returnedOk",
+      "preparation": {
+        "state": "available",
+        "format": 1,
+        "scope": "complete",
+        "program": {
+          "state": "identified",
+          "id": "M-0001_A-0001-01-0000",
+          "applicationVersion": "1",
+          "sourceSha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        },
+        "plannedMask": "0701",
+        "plannedManufacturer": "0001",
+        "steps": 12,
+        "dataOctets": 34
+      },
+      "settlement": {
+        "project": "otherProject",
+        "format": 1
+      }
+    }
+  },
+  "deviceMissing": {
+    "id": 1,
+    "kind": "deviceDownload",
+    "address": "1.1.67",
+    "state": "finished",
+    "startedAt": "2026-10-25T07:00:00.000Z",
+    "finishedAt": "2026-10-25T07:08:00.000Z",
+    "writeEvidence": {
+      "backupRecorded": true,
+      "sendPossible": true
+    },
+    "downloadEvidence": {
+      "sessionId": 7,
+      "written": "yes",
+      "restart": "acknowledged",
+      "cleanup": "returnedOk",
+      "preparation": {
+        "state": "available",
+        "format": 1,
+        "scope": "complete",
+        "program": {
+          "state": "identified",
+          "id": "M-0001_A-0001-01-0000",
+          "applicationVersion": "1",
+          "sourceSha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        },
+        "plannedMask": "0701",
+        "plannedManufacturer": "0001",
+        "steps": 12,
+        "dataOctets": 34
+      },
+      "settlement": {
+        "project": "deviceMissing",
+        "format": 1
+      }
+    }
+  },
+  "settlementUnavailable": {
+    "id": 1,
+    "kind": "deviceDownload",
+    "address": "1.1.67",
+    "state": "finished",
+    "startedAt": "2026-10-25T07:00:00.000Z",
+    "finishedAt": "2026-10-25T07:08:00.000Z",
+    "writeEvidence": {
+      "backupRecorded": true,
+      "sendPossible": true
+    },
+    "downloadEvidence": {
+      "sessionId": 7,
+      "written": "yes",
+      "restart": "acknowledged",
+      "cleanup": "returnedOk",
+      "preparation": {
+        "state": "available",
+        "format": 1,
+        "scope": "complete",
+        "program": {
+          "state": "identified",
+          "id": "M-0001_A-0001-01-0000",
+          "applicationVersion": "1",
+          "sourceSha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        },
+        "plannedMask": "0701",
+        "plannedManufacturer": "0001",
+        "steps": 12,
+        "dataOctets": 34
+      },
+      "settlement": {
+        "project": "unavailable",
+        "format": 1
+      }
+    }
+  }
+}

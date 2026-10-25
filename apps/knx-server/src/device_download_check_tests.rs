@@ -158,6 +158,7 @@ fn prepared(target: IndividualAddress, plan: MemoryDownloadPlan) -> PreparedDown
         inferences: vec![],
         warnings: vec![],
         partial: None,
+        program: None,
     }
 }
 
@@ -299,6 +300,8 @@ struct Started {
     hung: Arc<tokio::sync::Notify>,
     restart_requests: Arc<std::sync::atomic::AtomicUsize>,
     _dir: tempfile::TempDir,
+    /// Keeps the settler's server alive: it holds only a weak reference.
+    _server: crate::SharedState,
 }
 
 fn start(device: &Arc<SimulatedDevice>, plan: MemoryDownloadPlan, mode: AfterRestart) -> Started {
@@ -331,51 +334,128 @@ fn start_registered(
     stop: Arc<DownloadStop>,
     after_keep: impl FnOnce(&DownloadStop) + Send + 'static,
 ) -> Started {
+    start_with(device, plan, mode, gate, stop, after_keep, None)
+}
+
+/// [`start_registered`] as the route starts a run: a preparation receipt on
+/// the first row, and the real settler leaving its receipt for the worker.
+fn start_receipted(
+    device: &Arc<SimulatedDevice>,
+    plan: MemoryDownloadPlan,
+    mode: AfterRestart,
+    gate: Option<Arc<Gate>>,
+    stop: Arc<DownloadStop>,
+    after_keep: impl FnOnce(&DownloadStop) + Send + 'static,
+) -> Started {
+    start_with(device, plan, mode, gate, stop, after_keep, Some(None))
+}
+
+/// `receipted`: `None` is the legacy start; `Some(None)` the route's, with
+/// the real settler; `Some(Some(receipt))` leaves `receipt` in the slot
+/// instead of the settler's, to see a refused recording.
+#[allow(clippy::too_many_arguments)]
+fn start_with(
+    device: &Arc<SimulatedDevice>,
+    plan: MemoryDownloadPlan,
+    mode: AfterRestart,
+    gate: Option<Arc<Gate>>,
+    stop: Arc<DownloadStop>,
+    after_keep: impl FnOnce(&DownloadStop) + Send + 'static,
+    receipted: Option<Option<knx_app::commissioning_activity::DownloadSettlement>>,
+) -> Started {
+    let (receipted, injected) = (receipted.is_some(), receipted.flatten());
     let dir = tempfile::tempdir().unwrap();
     let history = dir.path().join("history.sqlite");
     let log = Arc::new(OneShotLog::for_run(history.clone()).unwrap());
     let target = device.address();
-    let activity = log.start_download(7, target).unwrap();
+    let prepared = prepared(target, plan);
+    let activity = if receipted {
+        let preparation =
+            knx_app::commissioning_activity::DownloadPreparation::from_prepared(&prepared)
+                .expect("a complete plan has a scope");
+        log.start_download_prepared(7, target, preparation).unwrap()
+    } else {
+        log.start_download(7, target).unwrap()
+    };
+    // The real settler, on a server with no project: its receipt is
+    // `noProject` after a write and `notAttempted` after none.
+    let server = Arc::new(crate::AppState::default());
+    let (settler, slot) = crate::programming_state::download_settler_receipted(
+        &server,
+        crate::programming_state::incarnation(&server),
+        &prepared,
+    );
+    let filled = Arc::clone(&slot);
     let settled = Arc::new(Mutex::new(Vec::new()));
     let settled_by_end = Arc::clone(&settled);
     let hung = Arc::new(tokio::sync::Notify::new());
     let restart_requests = Arc::new(std::sync::atomic::AtomicUsize::new(0));
-    let mask = plan.mask;
+    let mask = prepared.plan.mask;
     let token = Arc::clone(&stop);
-    let session = DeviceDownloadSession::start_with_stop(
-        7,
-        Box::new(SimTunnel {
-            device: Arc::clone(device),
-            mode,
-            restarted: Arc::default(),
-            restart_requests: Arc::clone(&restart_requests),
-            check_connected: Default::default(),
-            hung: Arc::clone(&hung),
-            gate,
-        }),
-        // The server's tunnel adapter is hardware-kind, as in the HTTP
-        // tests: a simulator authorisation is refused there by design.
-        WriteAuthorisation::for_hardware(
+    let on_end: OnDownloadEnd = Box::new(move |status| {
+        settled_by_end.lock().unwrap().push(status.clone());
+        if let Some(injected) = &injected {
+            *filled.lock().unwrap() = Some(injected.clone());
+        } else if receipted {
+            settler(status);
+        }
+    });
+    let tunnel = Box::new(SimTunnel {
+        device: Arc::clone(device),
+        mode,
+        restarted: Arc::default(),
+        restart_requests: Arc::clone(&restart_requests),
+        check_connected: Default::default(),
+        hung: Arc::clone(&hung),
+        gate,
+    });
+    // The server's tunnel adapter is hardware-kind, as in the HTTP
+    // tests: a simulator authorisation is refused there by design.
+    let authorisation = WriteAuthorisation::for_hardware(
+        target,
+        WriteScope::Download,
+        &knx_core::commissioning::mutation::required_confirmation_phrase(
             target,
             WriteScope::Download,
-            &knx_core::commissioning::mutation::required_confirmation_phrase(
-                target,
-                WriteScope::Download,
-            ),
+        ),
+    )
+    .unwrap();
+    let keying = download_keying(mask, None, KeySource::None);
+    let backups = BackupDestination {
+        dir: dir.path().join("backups"),
+        taken: "2026-10-25T07:00:00+01:00".into(),
+    };
+    let report = task_tests::synthetic_report();
+    let session = if receipted {
+        DeviceDownloadSession::start_with_stop_receipted(
+            7,
+            tunnel,
+            authorisation,
+            keying,
+            fast(),
+            prepared,
+            backups,
+            activity,
+            report,
+            on_end,
+            slot,
+            stop,
         )
-        .unwrap(),
-        download_keying(mask, None, KeySource::None),
-        fast(),
-        prepared(target, plan),
-        BackupDestination {
-            dir: dir.path().join("backups"),
-            taken: "2026-10-25T07:00:00+01:00".into(),
-        },
-        activity,
-        task_tests::synthetic_report(),
-        Box::new(move |status| settled_by_end.lock().unwrap().push(status.clone())),
-        stop,
-    );
+    } else {
+        DeviceDownloadSession::start_with_stop(
+            7,
+            tunnel,
+            authorisation,
+            keying,
+            fast(),
+            prepared,
+            backups,
+            activity,
+            report,
+            on_end,
+            stop,
+        )
+    };
     *session.shared.after_keep.lock().unwrap() = Some(Box::new(move || after_keep(&token)));
     Started {
         session,
@@ -384,6 +464,7 @@ fn start_registered(
         hung,
         restart_requests,
         _dir: dir,
+        _server: server,
     }
 }
 
@@ -509,6 +590,10 @@ async fn the_worker_checks_after_the_transfer_and_every_reader_keeps_both_facts(
     assert_eq!(row["downloadEvidence"]["written"], "yes");
     assert_eq!(row["downloadEvidence"]["cleanup"], "returnedOk");
     assert_eq!(&row["downloadEvidence"]["postDownloadCheck"], check);
+    // Characterization: the legacy start records no run-scoped receipt.
+    let evidence = row["downloadEvidence"].as_object().unwrap();
+    assert!(!evidence.contains_key("preparation"));
+    assert!(!evidence.contains_key("settlement"));
 }
 
 #[tokio::test]
@@ -1009,4 +1094,168 @@ async fn a_registered_token_is_held_by_the_session_through_its_whole_life() {
         started.session.status(),
         DownloadStatus::Finished { .. }
     ));
+}
+
+// ---- the run-scoped receipts ---------------------------------------------
+
+/// The route's start, with nothing to hold, stop or hook.
+fn receipted(device: &Arc<SimulatedDevice>, mode: AfterRestart) -> Started {
+    start_receipted(
+        device,
+        plan(),
+        mode,
+        None,
+        Arc::new(DownloadStop::new()),
+        |_| {},
+    )
+}
+
+#[tokio::test]
+async fn a_receipted_run_records_its_settlement_before_the_check_and_keeps_both_when_stopped() {
+    let device = device(APPLICATION, SimulatorConfig::default());
+    let mut started = receipted(&device, AfterRestart::Hang);
+    tokio::time::timeout(Duration::from_secs(5), started.hung.notified())
+        .await
+        .expect("the check started after a written transfer");
+    // The check is still running, yet both receipts are already durable.
+    let row = reopened(&started.history);
+    let evidence = &row["downloadEvidence"];
+    assert_eq!(row["state"], "finished");
+    assert!(evidence.get("postDownloadCheck").is_none(), "{row}");
+    assert_eq!(
+        evidence["preparation"],
+        json!({"state": "available", "format": 1, "scope": "complete",
+               "program": {"state": "unavailable"},
+               "plannedMask": "0701", "plannedManufacturer": "0083",
+               "steps": plan().steps.len(), "dataOctets": 12})
+    );
+    assert_eq!(
+        evidence["settlement"],
+        json!({"project": "noProject", "format": 1})
+    );
+    started.session.task.as_ref().unwrap().abort();
+    started.session.join().await;
+    let row = reopened(&started.history);
+    let evidence = &row["downloadEvidence"];
+    assert_eq!(
+        evidence["postDownloadCheck"]["observation"]["status"],
+        "interrupted"
+    );
+    assert_eq!(evidence["settlement"]["project"], "noProject", "kept");
+    assert!(evidence["preparation"].is_object());
+    assert_eq!(evidence["cleanup"], "unknown");
+    assert_eq!(started.settled.lock().unwrap().len(), 1, "settled once");
+}
+
+#[tokio::test]
+async fn a_receipted_run_has_the_status_report_and_settlement_calls_of_a_legacy_one() {
+    let device_a = device(APPLICATION, SimulatorConfig::default());
+    let mut legacy = start(&device_a, plan(), AfterRestart::Pass);
+    legacy.session.join().await;
+    let device_b = device(APPLICATION, SimulatorConfig::default());
+    let mut receipt = receipted(&device_b, AfterRestart::Pass);
+    receipt.session.join().await;
+
+    assert_eq!(
+        serde_json::to_value(legacy.session.status()).unwrap(),
+        serde_json::to_value(receipt.session.status()).unwrap()
+    );
+    assert_eq!(
+        serde_json::to_value(legacy.session.report().unwrap()).unwrap(),
+        serde_json::to_value(receipt.session.report().unwrap()).unwrap()
+    );
+    assert_eq!(
+        *legacy.settled.lock().unwrap(),
+        *receipt.settled.lock().unwrap()
+    );
+    assert_eq!(device_a.seen(), device_b.seen(), "the same frames");
+    let (old, new) = (reopened(&legacy.history), reopened(&receipt.history));
+    let mut without = new["downloadEvidence"].clone();
+    let object = without.as_object_mut().unwrap();
+    assert!(object.remove("preparation").is_some());
+    assert!(object.remove("settlement").is_some());
+    assert_eq!(without, old["downloadEvidence"], "nothing else differs");
+    assert_eq!(new["downloadEvidence"]["cleanup"], "returnedOk");
+}
+
+#[tokio::test]
+async fn a_stop_before_any_change_settles_as_not_attempted_and_a_refused_receipt_changes_nothing() {
+    let device = device(APPLICATION, SimulatorConfig::default());
+    let mut started = start_receipted(
+        &device,
+        plan(),
+        AfterRestart::Pass,
+        None,
+        Arc::new(DownloadStop::new()),
+        |stop| assert_eq!(stop.request(), StopRequest::WillStop),
+    );
+    started.session.join().await;
+    assert_eq!(mutating_frames(&device), 0);
+    assert_stopped_before_any_change(&started.session.status());
+    let row = reopened(&started.history);
+    assert_eq!(row["state"], "failed");
+    assert_eq!(row["downloadEvidence"]["written"], "no");
+    assert_eq!(
+        row["downloadEvidence"]["settlement"],
+        json!({"project": "notAttempted", "format": 1})
+    );
+
+    // A receipt the row contradicts is refused; transfer, check and cleanup stay.
+    let device = device_with_default();
+    let contradiction = knx_app::commissioning_activity::DownloadSettlement::NotAttempted {
+        format: knx_app::commissioning_activity::Format1,
+    };
+    let mut refused = start_with(
+        &device,
+        plan(),
+        AfterRestart::Pass,
+        None,
+        Arc::new(DownloadStop::new()),
+        |_| {},
+        Some(Some(contradiction)),
+    );
+    refused.session.join().await;
+    let row = reopened(&refused.history);
+    let evidence = &row["downloadEvidence"];
+    assert!(evidence.get("settlement").is_none(), "{row}");
+    assert!(evidence["preparation"].is_object());
+    assert_eq!(evidence["written"], "yes");
+    assert_eq!(evidence["cleanup"], "returnedOk");
+    assert_eq!(evidence["postDownloadCheck"]["runtime"], "unknown");
+    assert!(matches!(
+        refused.session.status(),
+        DownloadStatus::Finished {
+            written: Written::Yes,
+            ..
+        }
+    ));
+}
+
+fn device_with_default() -> Arc<SimulatedDevice> {
+    device(APPLICATION, SimulatorConfig::default())
+}
+
+#[tokio::test]
+async fn a_receipted_run_dropped_without_a_result_keeps_its_preparation_and_gains_no_settlement() {
+    let device = device(APPLICATION, SimulatorConfig::default());
+    let gate = Gate::at(GateAt::FirstMemoryWrite);
+    let mut started = start_receipted(
+        &device,
+        plan(),
+        AfterRestart::Pass,
+        Some(gate.clone()),
+        Arc::new(DownloadStop::new()),
+        |_| {},
+    );
+    tokio::time::timeout(Duration::from_secs(5), gate.entered.notified())
+        .await
+        .expect("writing");
+    started.session.task.as_ref().unwrap().abort();
+    started.session.join().await;
+    // The unexpected-end path settles the belief but the guard is gone.
+    let row = reopened(&started.history);
+    let evidence = &row["downloadEvidence"];
+    assert!(evidence["written"].is_null());
+    assert!(evidence["preparation"].is_object());
+    assert!(evidence.get("settlement").is_none(), "{row}");
 }

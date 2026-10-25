@@ -630,10 +630,33 @@ async fn download_terminal_receipt_survives_worker_completion() {
         .keys()
         .all(|key| keys.contains(&key.as_str())));
     assert!(entry["writeEvidence"].as_object().unwrap().len() == 2);
+    // The run-scoped receipt is two more fields next to the check. Absence is
+    // asserted by key before the exact count so a failure names no payload.
+    let evidence = entry["downloadEvidence"].as_object().unwrap();
+    assert!(
+        evidence.contains_key("preparation"),
+        "download preparation receipt absent"
+    );
+    assert!(
+        evidence.contains_key("settlement"),
+        "download settlement receipt absent"
+    );
     // The read-only check after the written transfer is the fifth field.
     // This fixture presets no application identity, so it is whatever the
     // simulator answers; only its presence and its runtime claim are fixed.
-    assert!(entry["downloadEvidence"].as_object().unwrap().len() == 5);
+    assert_eq!(evidence.len(), 7, "download evidence key count");
+    let preparation = &entry["downloadEvidence"]["preparation"];
+    assert!(preparation["format"] == 1, "preparation format");
+    assert!(preparation["state"] == "available", "preparation state");
+    assert!(preparation["scope"] == "complete", "preparation scope");
+    let settlement = &entry["downloadEvidence"]["settlement"];
+    assert!(settlement["format"] == 1, "settlement format");
+    assert!(
+        settlement["project"] == "sessionOnly" || settlement["project"] == "persisted",
+        "settlement project state"
+    );
+    assert!(settlement["source"] == "unchanged", "settlement source");
+    assert!(settlement["settledAt"].is_string(), "settlement time");
     assert!(entry["downloadEvidence"]["postDownloadCheck"]["runtime"] == "unknown");
     let (status, route) = send(&h.app, get("/api/device-download/status?since=0")).await;
     assert_eq!(status, StatusCode::OK, "{route}");
@@ -1246,6 +1269,15 @@ async fn assert_cleanup_failure_preserves_result(panics: bool, expected_cleanup:
     assert!(
         after["interrupted"] == false,
         "cleanup-fault/history-incarnation"
+    );
+    // The run-scoped receipts were recorded before the cleanup and survive it.
+    assert!(
+        before["downloadEvidence"]["preparation"].is_object()
+            && before["downloadEvidence"]["settlement"].is_object()
+            && after["downloadEvidence"]["preparation"]
+                == before["downloadEvidence"]["preparation"]
+            && after["downloadEvidence"]["settlement"] == before["downloadEvidence"]["settlement"],
+        "cleanup-fault/receipts-preserved"
     );
     assert!(
         h.calls.load(Ordering::SeqCst) == 1 && h.device.seen().len() == frames,

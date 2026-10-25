@@ -1642,6 +1642,58 @@ async fn refused_pointer_reads_are_observations_in_every_phase() {
 }
 
 #[tokio::test]
+async fn pid7_answer_of_another_width_is_refused_before_any_write_with_the_raw_bytes() {
+    // Issue #30: a real device answered PID 7 with a width other than four octets.
+    // The refusal before the first write stays; it now carries what was observed.
+    for answer in [
+        vec![0x3C],
+        vec![0x3C, 0x00],
+        vec![0x00, 0x3C, 0x00],
+        vec![0x00, 0x00, 0x3C, 0x00, 0x01],
+    ] {
+        let (device, plan, preconditions) = fixture();
+        establish_shape(&device, &plan).await;
+        let transport = FinalReference {
+            device: &device,
+            armed: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true)),
+            property: 7,
+            replacement: Some(answer.clone()),
+            arm_on: 0xFF,
+        };
+        let before = device.seen().len();
+        let error = run_experimental_property_plan(
+            &transport,
+            &plan,
+            auth(&device),
+            AuthorisationPlan::Skip,
+            timing(),
+            &preconditions,
+            &mut |_| Ok(()),
+            &|| false,
+        )
+        .await
+        .unwrap_err();
+        assert!(!error.mutation_may_have_started, "{answer:?}");
+        let PropertySimulationFailure::Recovery(reason) = &error.failure else {
+            panic!("expected a recovery refusal, got {:?}", error.failure);
+        };
+        let hex: String = answer.iter().map(|o| format!("{o:02x}")).collect();
+        assert!(reason.contains("not four octets"), "{reason}");
+        assert!(reason.contains("object 3"), "{reason}");
+        assert!(reason.contains("1 element"), "{reason}");
+        assert!(
+            reason.contains(&format!("{} octet", answer.len())),
+            "{reason}"
+        );
+        assert!(reason.contains(&hex), "{reason}");
+        assert!(device.seen()[before..]
+            .iter()
+            .all(|seen| !matches!(seen, Seen::MemoryWrite { .. } | Seen::PropertyWrite { .. })));
+        assert!(matches!(device.seen().last(), Some(Seen::Disconnect)));
+    }
+}
+
+#[tokio::test]
 async fn placeholder_serials_download_but_leave_no_recovery() {
     for serial in [[0; 6], [0xFF; 6]] {
         let (device, plan, preconditions) = fixture();

@@ -334,7 +334,11 @@ unavailable: …` naming each object with expected and observed values (or the
 program versions). A zero-element refusal of a PID_TABLE_REFERENCE read during
 acquisition is recorded as observed `refused` (`ResourceRecord.pointer_refused`,
 pointer zero) and counts as such a difference; transport errors, timeouts and
-malformed lengths stay errors. A captured all-zero or all-FF serial also makes
+malformed lengths stay errors. A PID_TABLE_REFERENCE answer with at least one
+element and a width other than four octets is refused before the first write; the
+refusal names the object, the element count, the octet count and the first 16 raw
+octets (issue #30, field-observed on one device; the width is not modelled, never
+padded or truncated and never read as a pointer). A captured all-zero or all-FF serial also makes
 recovery unavailable, because it cannot bind a replay to one physical device.
 The server and UI offer no recovery for such an operation; no backup is
 fabricated. Any other differing serial alone leaves recovery available.

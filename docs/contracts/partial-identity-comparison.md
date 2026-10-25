@@ -43,9 +43,14 @@ In v01.10.01 §4.19 is the Easy Parameter Block Table; the citation in
   answer of 0-4 or 6+ octets is a `PropertyMismatch` that carries the received
   octets, before the backup read, before the backup callback and before any
   memory or property write.
-- A complete plan gains no identity precondition: a fresh complete download
-  reads no object 3, PID 13 unless the product's own `LdCtrlCompareProp`
-  asks for it, and then the five-octet rule applies.
+- A complete plan gains no identity precondition. An unbacked complete
+  download reads no object 3, PID 13 unless the product's own
+  `LdCtrlCompareProp` asks for it, and then the five-octet rule applies; a
+  preview (`read_what_the_plan_overwrites`) and `compare_with_plan` without an
+  explicit compare do not read it either. A backed-up complete run
+  (`run_memory_download_with_backup`) performs exactly one additional
+  PID 13 read before the first change, whether or not the plan has a matching
+  compare; see [backup-application-identity](backup-application-identity.md).
 
 ## Tests
 
@@ -63,8 +68,23 @@ In v01.10.01 §4.19 is the Easy Parameter Block Table; the citation in
 - Executor, complete plan with a product compare against eight padded octets:
   five octets download, four and six are refused (the generic rule alone admits
   both; six is the case unpadded data cannot show).
-- Executor, complete plan without an identity compare: downloads to a device
-  with a truncated or absent PID 13 and never reads it.
+- Executor, unbacked complete plan without an identity compare: downloads to a
+  device with a truncated or absent PID 13 and never reads it. (Historical
+  claim of the original fix, which predates the backed-up identity read; it
+  still holds for unbacked runs only. Backed-up runs are covered by the
+  backup-application-identity contract.)
+
+## Restore follow-up
+
+The same five-octet identity is now also recorded in a backed-up run and required by
+`restore_plan`; see [backup-application-identity](backup-application-identity.md). A legacy
+partial backup (no recorded identity) still restores only through the precondition above, and
+only when that exact compare sits before the plan's first change.
+
+A product whose own `LdCtrlCompareProp` compares PID 13 against a padded identity (more than five
+octets) is conservative on restore: `application_identity` does not accept a padded compare as a
+single five-octet identity, so `restore_plan` refuses with `PlanApplicationUnknown`, even when the
+backup recorded evidence of the application. The download itself is unaffected.
 
 ## Limits
 

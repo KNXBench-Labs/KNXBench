@@ -1994,6 +1994,10 @@ async fn a_partial_plan_with_nothing_selected_is_refused() {
 #[ignore = "requires the gitignored OriginalData/ corpus (product file and the saved K3 project); run with --ignored"]
 async fn a_verified_download_says_so_and_keeps_a_backup_first() {
     let h = harness(SimulatorConfig::default()).await;
+    // What the device answers for its application before the first write
+    // is what the durable backup must record, not what the plan names.
+    h.device
+        .preset_property(3, PID_PROGRAM_VERSION, &[0x00, 0x83, 0x00, 0x27, 0x15]);
     let old: Vec<Option<u8>> = h.device.memory(0x4400, 394);
     let plan = plan(&h).await;
     assert_eq!(plan["support"]["level"], "verified", "{plan}");
@@ -2074,6 +2078,13 @@ async fn a_verified_download_says_so_and_keeps_a_backup_first() {
     assert!(file.starts_with("device-backups/1.1.67_"), "{file}");
     let stored = knx_app::device_backup::read_backup(&h.state.data_dir.join(&file)).unwrap();
     assert_eq!(stored.application, plan["programId"].as_str().unwrap());
+    assert_eq!(
+        stored.backup.prior_application,
+        knx_core::commissioning::device_backup::PriorApplication::Recorded([
+            0x00, 0x83, 0x00, 0x27, 0x15
+        ]),
+        "the durable file holds the pre-write observation"
+    );
     let region = stored
         .backup
         .regions

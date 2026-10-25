@@ -6,6 +6,16 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Partial application identity width — 25 October 2026 source
+
+The existing partial-download object 3/PID 13 precondition now requires exactly
+five response octets, before backup or mutation; product comparison padding does
+not define response width. Complete downloads gain no unsolicited identity check
+([contract](../contracts/partial-identity-comparison.md)). Independent review and
+focused simulator regressions passed; integrated acceptance remains pending.
+Other object indices retain their generic comparison rule; this does not close
+general target identity, family support or hardware acceptance.
+
 ## Hardware identity width follow-up — 25 October 2026 source
 
 The regular memory executor now refuses Device Object PID 78 responses whose

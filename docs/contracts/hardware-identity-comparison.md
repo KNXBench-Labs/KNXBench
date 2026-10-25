@@ -48,6 +48,7 @@ has one six-octet value.
 
 ## Limits
 
-- The partial-download precondition compares `PID_PROGRAM_VERSION` with the
-  generic rule; this fix does not change it.
+- This fix did not change the partial-download precondition on
+  `PID_PROGRAM_VERSION`; [partial-identity-comparison](partial-identity-comparison.md)
+  later made it exactly five octets.
 - Tested only against the simulator. No device, bus or network access.

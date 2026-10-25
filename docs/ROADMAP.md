@@ -2,6 +2,12 @@
 
 ## Regular programming correctness — 25 October 2026 source
 
+The [partial application identity correction](contracts/partial-identity-comparison.md)
+requires the existing object 3/PID 13 precondition to answer exactly five octets
+before backup or mutation. Complete downloads acquire no extra precondition.
+Independent review and focused simulator checks passed; integrated acceptance is
+pending. This closes only that bounded identity-response weakness.
+
 The [hardware identity width correction](contracts/hardware-identity-comparison.md)
 closes one pre-mutation response-shape gap in the existing download/restore path.
 Focused simulator acceptance and independent source review passed; integrated

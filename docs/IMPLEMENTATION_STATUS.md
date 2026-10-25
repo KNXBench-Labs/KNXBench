@@ -12,6 +12,16 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Partial-download application identity width (25 October 2026 source)
+
+The existing partial-download identity precondition now requires exactly five
+response octets for object 3, PID 13. A shortened zero-tailed prefix can no longer
+pass the padded-product comparison, and refusal precedes backup and mutation.
+Complete plans gain no unsolicited application-identity precondition
+([contract](contracts/partial-identity-comparison.md)). Independent review and
+focused simulator regressions passed; integrated acceptance is pending. This
+neither broadens device-family admission nor proves physical exemplar identity.
+
 ## Hardware identity response width (25 October 2026 source)
 
 Regular memory download and restore now require exactly six response octets for

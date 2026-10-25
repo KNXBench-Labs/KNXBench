@@ -22,9 +22,14 @@ address has no established precedence, so neither first-wins, last-wins nor a me
   `NeverWritten` behave as before. A duplicate start the procedure never allocates is still
   `NeverWritten`; the duplicate check runs where an allocation selects its segment, so it follows
   the earlier procedure refusals and precedes `SizeMismatch` of either twin.
+- Read-only comparison and byte-order preparation that build the same plan inherit this refusal;
+  they do not pick one ambiguous segment merely because no write is requested.
 - Overlaps of different starts are not examined here.
 
 ## Evidence boundary
 
 Synthetic source fixtures only, built through import, the public image builder and the planner. No
-real product, device or bus access, and no claim that any manufacturer ships such a source.
+real product, device or bus access in the defect reproduction, and no claim that any manufacturer
+ships such a source. The subsequent selected integrated corpus regression passed 97/97;
+[publication and acceptance](../status/2026-10-25-duplicate-segment-start.md) separate that evidence
+from the synthetic RED, final tests and hardware boundaries.

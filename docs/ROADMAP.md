@@ -7,6 +7,13 @@ correction re-review and all 14 integrated package stages
 ([acceptance](status/2026-10-25-parameter-number-bounds.md)). No wider numeric
 lexicon, Float support or inactive/Union/customer-write policy is established.
 
+The [duplicate image-start guard](contracts/duplicate-image-segment-start.md)
+refuses ambiguous allocated data-bearing starts without dropping a payload or
+inventing merge precedence. Published as `d73a2413b` after independent review and
+all 14 integrated package stages
+([acceptance](status/2026-10-25-duplicate-segment-start.md)). Payload-free
+allocations remain valid; different-start overlaps and broader families are not admitted.
+
 ## Regular programming correctness — 25 October 2026 source
 
 The [partial application identity correction](contracts/partial-identity-comparison.md)

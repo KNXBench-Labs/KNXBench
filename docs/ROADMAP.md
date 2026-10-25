@@ -1,5 +1,12 @@
 # Roadmap
 
+Run-scoped [download receipts](contracts/download-settlement-receipt.md) distinguish
+preparation, applied or computed settlement, and the separate post-download check.
+Independent reviews and the 15-stage integrated gate passed on `3431aabbc`
+([acceptance](status/2026-10-25-download-settlement-receipt.md)); final documentation
+integration preserves runtime bytes. Complete effects, provenance baselines and
+whole-device recovery remain separate open work.
+
 
 TypeNumber declared-bound admission is fail-closed in image construction, with
 unchanged raw source and integer encoding. Published as `87d71d4aa` after review,

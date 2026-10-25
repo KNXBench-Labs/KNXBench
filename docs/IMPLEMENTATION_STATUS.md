@@ -13,6 +13,16 @@ archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
 
+## Run-scoped download receipts (25 October 2026 source)
+
+Regular-download history records bounded preparation and settlement display evidence
+([contract](contracts/download-settlement-receipt.md)), distinguishing applied parts
+from computed, not-applied parts and the separate post-download check. Independent
+reviews and all 15 integrated stages passed on `3431aabbc`
+([acceptance](status/2026-10-25-download-settlement-receipt.md)); final main-first
+integration carries unchanged runtime results with a documentation-delta gate.
+No device baseline, new programming authority, CLI/System-2 receipt or recovery is added.
+
 ## Regular download prewrite stop (25 October 2026 source)
 
 Server graceful shutdown can stop an existing regular download before its first

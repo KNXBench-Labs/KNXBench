@@ -91,6 +91,14 @@ record the boundaries separately; these increments do not close PRG-01.
   ([acceptance](../status/2026-10-25-regular-prewrite-stop.md)). After commitment,
   the run continues unchanged; no mid-procedure stop or full recovery is admitted.
 
+- Run-scoped preparation and settlement receipts in regular-download history
+  ([contract](../contracts/download-settlement-receipt.md)) distinguish applied
+  project parts from computed, not-applied parts and separate read-only checks.
+  Independent reviews and all 15 integrated stages passed on `3431aabbc`
+  ([acceptance](../status/2026-10-25-download-settlement-receipt.md)); final
+  main-first documentation integration preserves runtime bytes. These display
+  receipts are not device baselines and do not close effects/recovery work.
+
 ## Open
 
 - Broader target/exemplar identity and independently verified runtime-state

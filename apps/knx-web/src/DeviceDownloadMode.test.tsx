@@ -21,6 +21,7 @@ import DeviceDownloadPanel from "./DeviceDownloadPanel";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import { resetBusDiscoveryForTests } from "./busDiscovery";
 import { resetSettingsForTests } from "./settingsStore";
+import { messages as en } from "./messages/en";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -50,9 +51,12 @@ async function selectValue(selector: string, value: string) {
   await act(async () => { select.value = value; select.dispatchEvent(new Event("change", { bubbles: true })); });
   await flush();
 }
+const prepareButton = () => [...host.querySelectorAll<HTMLButtonElement>(".device-download-actions button")]
+  .find((b) => b.textContent === en["deviceDownload.preparePlan"])!;
 const chooseDevice = () => selectValue("select[data-download-device]", "10");
 const chooseMode = (mode: "memory" | "system2") => selectValue("[data-download-mode]", mode);
 const deviceOption = () => q<HTMLOptionElement>("select[data-download-device] option[value='10']")!.textContent ?? "";
+const MARK = ` (${en["deviceDownload.readiness.optionMark"]})`;
 const follows = (a: Element, b: Element) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
 
 function readiness(readinessState: string, category: string | null) {
@@ -95,15 +99,14 @@ it("scopes the unsupported mark and notice to ordinary memory mode and restores 
   readiness("unsupported", "not-memory-mapped");
   await render();
   await chooseDevice();
-  expect(deviceOption()).toContain("memory");
+  expect(deviceOption()).toBe(`1.1.67 — Configured button${MARK}`);
   expect(q("[data-support-guidance]")).not.toBeNull();
   await chooseMode("system2");
-  expect(deviceOption()).not.toContain("cannot be programmed");
-  expect(deviceOption()).not.toContain("memory");
+  expect(deviceOption()).toBe("1.1.67 — Configured button");
   expect(q("[data-support-guidance]")).toBeNull();
   expect(q("[data-system2-prepare]")).not.toBeNull();
   await chooseMode("memory");
-  expect(deviceOption()).toContain("memory");
+  expect(deviceOption()).toBe(`1.1.67 — Configured button${MARK}`);
   expect(q("[data-support-guidance]")).not.toBeNull();
 });
 
@@ -120,14 +123,28 @@ it("explains the experimental System-2 route beside the selector only for not-me
   expect(q("[data-system2-hint]")).toBeNull();
 });
 
-it("does not hint System-2 or label support for other unsupported applications", async () => {
+it("keeps the ordinary mark but no System-2 hint for other unsupported applications", async () => {
   readiness("unsupported", "modules");
   await render();
   await chooseDevice();
-  expect(q("[data-system2-hint]")).toBeNull();
-  expect(deviceOption()).toContain("memory");
+  expect(deviceOption()).toBe(`1.1.67 — Configured button${MARK}`);
   expect(q("[data-support-guidance]")).not.toBeNull();
   expect(q("[data-system2-hint]")).toBeNull();
+});
+
+it("drops an ordinary plan refusal when the mode changes, so it never returns stale", async () => {
+  apiMock.planDeviceDownload.mockRejectedValue(Object.assign(new Error("refused"),
+    { status: 422, body: { kind: "downloadPreparationRefused", category: "not-memory-mapped" } }));
+  await render();
+  await chooseDevice();
+  await act(async () => prepareButton().click());
+  await flush();
+  expect(q("[data-support-guidance=unsupported]")).not.toBeNull();
+  await chooseMode("system2");
+  expect(q("[data-support-guidance]")).toBeNull();
+  await chooseMode("memory");
+  expect(q("[data-support-guidance]")).toBeNull();
+  expect(apiMock.planDeviceDownload).toHaveBeenCalledTimes(1);
 });
 
 it("keeps an excluded device marked and noticed in both modes", async () => {
@@ -188,7 +205,6 @@ it("locks the mode selector while an ordinary plan is being prepared", async () 
   apiMock.planDeviceDownload.mockImplementation(() => new Promise(() => {}));
   await render();
   await chooseDevice();
-  const prepare = [...host.querySelectorAll("button")].find((b) => b.classList.length === 0 && b.closest(".device-download-actions"))!;
-  await act(async () => prepare.click());
+  await act(async () => prepareButton().click());
   expect(q<HTMLSelectElement>("[data-download-mode]")!.disabled).toBe(true);
 });

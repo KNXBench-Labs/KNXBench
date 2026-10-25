@@ -19,6 +19,9 @@ manufacturer publishes, not something KNXBench invents. See
 This chapter covers the catalog, adding a device, and the device panel's objects,
 parameters, product data, diagnostics and inspection-only manufacturer fields.
 
+> Alpha 16 has since been published (24 October 2026); the note below records
+> the pre-release snapshot these sections were written against.
+>
 > **24 October 2026: unreleased Alpha-16 snapshot.** Sections marked
 > **unreleased Alpha-16 source** describe frozen runtime/test source
 > `86b4a7fc68b3d3206c00511b14f41e025e33de4d`. Bounded software outcomes and four
@@ -214,7 +217,7 @@ it never submits comparison bytes as a write plan.
 
 <a id="experimental-system2-download-since-alpha-16"></a>
 
-## Experimental configured System-2 download (since Alpha 16)
+## Experimental configured System-2 download (Alpha 16)
 
 **Exact scope:** UP 258D12 application `M-0001_A-9205-04-9270` only.
 **Experimental, software-tested scope only; hardware outcome unverified.**
@@ -232,8 +235,8 @@ connected or started, and KNXBench never switches the mode for you.
 *(cannot be programmed yet)* and says its type is not loaded through memory
 writes. That is only about the ordinary memory route. In Alpha 16 the warning
 stays on screen after switching to System-2 mode, but it does not veto the
-System-2 preview. Later source builds scope the mark and notice to memory mode
-and say so; an *excluded* device stays marked in both modes. The mark is not a
+System-2 preview. Later source builds scope the mark and notice to memory mode and
+label it *(memory download: not supported yet)*; an *excluded* device stays marked in both modes. The mark is not a
 statement that System-2 works for the device, and the server decides.
 
 **What preparation needs.** The exact application above, and the project's

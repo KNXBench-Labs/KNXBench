@@ -3857,7 +3857,7 @@ export const messages = {
   "deviceDownload.help.failed": "Clipboard unavailable. Select and copy the details manually.",
   "deviceDownload.help.checking": "Checking download readiness offline…",
   "deviceDownload.help.untested": "This plan is technically supported but has no matching hardware verification. Starting still requires the extra target-specific acknowledgement and the ordinary confirmation. Required executable-extension behavior is not assessed by this status; this workflow is for applications without unresolved required executable extensions.",
-  "deviceDownload.readiness.optionMark": "not supported by ordinary memory download yet",
+  "deviceDownload.readiness.optionMark": "memory download: not supported yet",
   "deviceDownload.system2Hint": "This device type is not loaded through memory writes. Download mode also offers a separate experimental System-2 preview, admitted only for exactly supported applications; the server checks whether this one qualifies. The preview is prepared offline from the retained actual project sources, offers no package or default fallback and does not establish that this device is supported.",
   "deviceDownload.readiness.optionMarkExcluded": "excluded",
   "deviceDownload.readiness.selected": "The ordinary memory download cannot program this device yet: {reason}. Preparing a download will be refused; nothing is written.",

@@ -29,7 +29,10 @@ use std::fmt;
 
 use super::load_control_memory::{MemoryLoadRecord, MemoryLoadStateMachine};
 use super::load_state::{LoadEvent, MaskVersion};
-use super::properties::{ObjectIndex, HARDWARE_TYPE_OCTETS, PID_HARDWARE_TYPE};
+use super::properties::{
+    ObjectIndex, HARDWARE_TYPE_OCTETS, PID_HARDWARE_TYPE, PID_PROGRAM_VERSION,
+    PROGRAM_VERSION_OCTETS,
+};
 
 /// One step of a memory-mapped download.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -125,12 +128,31 @@ pub fn property_matches(device: &[u8], inline_data: &[u8]) -> bool {
 /// How many octets a property's answer must hold, where the resource is
 /// known to be one value of fixed width; `None` for every other property.
 ///
-/// `[D]` Only `PID_HARDWARE_TYPE` in the Device Object is listed: one
-/// six-octet value ([`HARDWARE_TYPE_OCTETS`]). No width is guessed for any
-/// other resource.
+/// `[D]` Two resources are listed, no width is guessed for any other:
+///
+/// - `PID_HARDWARE_TYPE` in the Device Object (index 0): one six-octet
+///   value ([`HARDWARE_TYPE_OCTETS`]).
+/// - `PID_PROGRAM_VERSION` at index 3: one five-octet identifier
+///   ([`PROGRAM_VERSION_OCTETS`]).
+///
+/// The helper takes no mask. Index 3 is the Application Program Object in
+/// the mask-`070nh` layout these plans address ([`ObjectIndex::APPLICATION_PROGRAM`]
+/// says how far that index holds); it is the object the partial download's
+/// identity precondition reads. The width itself does not depend on the
+/// object: *Resources* §4.2.13 lists PID 13 among the object-type
+/// independent properties. PID 13 at any other index is still left to the
+/// generic rule here: this bounded rule covers only the Application Program
+/// Object index these plans use, not every product-chosen property read.
 pub fn expected_response_octets(object_index: u8, property_id: u8) -> Option<usize> {
-    (object_index == ObjectIndex::DEVICE.octet() && property_id == PID_HARDWARE_TYPE)
-        .then_some(HARDWARE_TYPE_OCTETS)
+    match (object_index, property_id) {
+        (index, PID_HARDWARE_TYPE) if index == ObjectIndex::DEVICE.octet() => {
+            Some(HARDWARE_TYPE_OCTETS)
+        }
+        (index, PID_PROGRAM_VERSION) if index == ObjectIndex::APPLICATION_PROGRAM.octet() => {
+            Some(PROGRAM_VERSION_OCTETS)
+        }
+        _ => None,
+    }
 }
 
 /// Whether the answer to `object_index`/`property_id` matches a product's
@@ -341,12 +363,73 @@ mod tests {
         ));
     }
 
+    /// An application identity whose last octets are zero, so that a
+    /// truncated answer is a prefix of it.
+    const ZERO_TAIL_IDENTITY: [u8; 5] = [0x00, 0x83, 0x27, 0x00, 0x00];
+
+    #[test]
+    fn the_application_program_version_must_answer_exactly_five_octets() {
+        let application = ObjectIndex::APPLICATION_PROGRAM.octet();
+        assert_eq!(
+            expected_response_octets(application, PID_PROGRAM_VERSION),
+            Some(5),
+            "Resources §4.2.13: a five-octet identifier"
+        );
+        let padded = [&ZERO_TAIL_IDENTITY[..], &[0; 3]].concat();
+        for inline in [&ZERO_TAIL_IDENTITY[..], &padded[..]] {
+            assert!(resource_matches(
+                application,
+                PID_PROGRAM_VERSION,
+                &ZERO_TAIL_IDENTITY,
+                inline
+            ));
+            for width in (0..5).chain(6..=padded.len()) {
+                assert!(
+                    !resource_matches(application, PID_PROGRAM_VERSION, &padded[..width], inline),
+                    "{width} octets against {} must not match",
+                    inline.len()
+                );
+            }
+        }
+        // The generic rule alone admits the truncated answers, and the
+        // six-octet one against padded data.
+        for width in [3, 4] {
+            assert!(property_matches(&padded[..width], &ZERO_TAIL_IDENTITY));
+        }
+        assert!(property_matches(&padded[..6], &padded));
+        // A six-octet answer against five octets of data is refused by the
+        // generic rule already; only padded data tells the width check apart.
+        assert!(!property_matches(&padded[..6], &ZERO_TAIL_IDENTITY));
+    }
+
+    #[test]
+    fn another_application_of_the_right_width_still_does_not_match() {
+        let application = ObjectIndex::APPLICATION_PROGRAM.octet();
+        assert!(!resource_matches(
+            application,
+            PID_PROGRAM_VERSION,
+            &[0x00, 0x83, 0x27, 0x00, 0x01],
+            &ZERO_TAIL_IDENTITY
+        ));
+    }
+
     #[test]
     fn other_resources_keep_the_generic_rule() {
         let inline = [0x01, 0x27, 0, 0];
         assert_eq!(expected_response_octets(3, PID_HARDWARE_TYPE), None);
         assert_eq!(expected_response_octets(0, 12), None);
-        for (object, property) in [(3, PID_HARDWARE_TYPE), (0, 12), (3, 13), (0, 0xFF)] {
+        for object in [0, 1, 2, 4, 0xFF] {
+            assert_eq!(expected_response_octets(object, PID_PROGRAM_VERSION), None);
+        }
+        assert_eq!(expected_response_octets(3, 12), None);
+        for (object, property) in [
+            (3, PID_HARDWARE_TYPE),
+            (0, 12),
+            (0, PID_PROGRAM_VERSION),
+            (4, PID_PROGRAM_VERSION),
+            (3, 12),
+            (0, 0xFF),
+        ] {
             for width in 1..=inline.len() {
                 assert_eq!(
                     resource_matches(object, property, &inline[..width], &inline),

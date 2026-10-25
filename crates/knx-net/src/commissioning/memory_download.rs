@@ -2248,6 +2248,12 @@ mod tests {
     }
 
     fn complete_with_application() -> MemoryDownloadPlan {
+        complete_with_application_identity(0x0027, 0x15)
+    }
+
+    /// [`complete_with_application`] whose application task segment names
+    /// `application` and `version`.
+    fn complete_with_application_identity(application_id: u16, version: u8) -> MemoryDownloadPlan {
         let application = MemoryLoadStateMachine::ApplicationProgram;
         let mut plan = plan();
         let tail = plan.steps.split_off(plan.steps.len() - 2);
@@ -2277,8 +2283,8 @@ mod tests {
                     start: 0x4400,
                     pei_type: 1,
                     manufacturer: MANUFACTURER,
-                    application: 0x0027,
-                    version: 0x15,
+                    application: application_id,
+                    version,
                 },
             )),
             record(application, LoadEvent::LoadCompleted),
@@ -2360,6 +2366,226 @@ mod tests {
             "{error}"
         );
         assert!(memory_writes(&device).is_empty());
+    }
+
+    /// An application identity whose last octets are zero: the truncated
+    /// answers `00 83 27` and `00 83 27 00` are prefixes of it, so only the
+    /// width check refuses them.
+    const ZERO_TAIL_IDENTITY: [u8; 5] = [0x00, 0x83, 0x27, 0x00, 0x00];
+
+    fn zero_tail_complete() -> MemoryDownloadPlan {
+        complete_with_application_identity(0x2700, 0x00)
+    }
+
+    fn zero_tail_partial() -> MemoryDownloadPlan {
+        derive_partial_plan(&zero_tail_complete(), PARAMETERS)
+            .expect("a partial plan")
+            .plan
+    }
+
+    fn is_identity_compare(step: &MemoryDownloadStep) -> bool {
+        matches!(
+            step,
+            MemoryDownloadStep::CompareProperty {
+                object_index: 3,
+                property_id: PID_PROGRAM_VERSION,
+                ..
+            }
+        )
+    }
+
+    /// Nothing but connection management and reads.
+    fn reads_only(device: &SimulatedDevice) -> bool {
+        device.seen().iter().all(|seen| {
+            !matches!(
+                seen,
+                Seen::MemoryRead { .. } | Seen::MemoryWrite { .. } | Seen::PropertyWrite { .. }
+            )
+        })
+    }
+
+    #[tokio::test]
+    async fn a_partial_identity_of_the_wrong_width_stops_the_run_before_the_backup() {
+        let plan = zero_tail_partial();
+        let check = plan
+            .steps
+            .iter()
+            .position(is_identity_compare)
+            .expect("the identity precondition");
+        // The plan's own precondition, exactly five octets, and nothing
+        // before it changes the device.
+        assert_eq!(
+            plan.steps[check],
+            MemoryDownloadStep::CompareProperty {
+                object_index: 3,
+                property_id: PID_PROGRAM_VERSION,
+                inline_data: ZERO_TAIL_IDENTITY.to_vec(),
+            }
+        );
+        assert!(plan.steps[..check]
+            .iter()
+            .all(|step| !step.changes_device()));
+        let padded = [&ZERO_TAIL_IDENTITY[..], &[0, 0, 0]].concat();
+        for width in (0..5).chain(6..=padded.len()) {
+            let answer = &padded[..width];
+            let device = loaded_device();
+            device.preset_property(3, PID_PROGRAM_VERSION, answer);
+            let mut session = session(&device, WriteScope::Download);
+            let mut backup_called = false;
+
+            let result = run_memory_download_with_backup(
+                &mut session,
+                &plan,
+                |_| {},
+                |_| {
+                    backup_called = true;
+                    Ok(())
+                },
+            )
+            .await;
+
+            let error = match result {
+                Err(error) => error,
+                Ok(_) => panic!("{width} octets: a partial download ran on {answer:02X?}"),
+            };
+            // `found` is what the executor received, octet for octet.
+            assert!(
+                matches!(
+                    error,
+                    MemoryDownloadError::PropertyMismatch {
+                        index,
+                        object_index: 3,
+                        property_id: PID_PROGRAM_VERSION,
+                        ref found,
+                    } if index == check && found == answer
+                ),
+                "{width} octets: {error}"
+            );
+            assert!(!backup_called, "{width} octets: no backup is kept");
+            assert!(memory_writes(&device).is_empty(), "{width} octets");
+            assert!(!device.memory_was_written(), "{width} octets");
+            assert!(reads_only(&device), "{width} octets: identity reads only");
+        }
+    }
+
+    #[tokio::test]
+    async fn a_partial_identity_of_exactly_five_matching_octets_downloads() {
+        let device = loaded_device();
+        device.preset_property(3, PID_PROGRAM_VERSION, &ZERO_TAIL_IDENTITY);
+        let mut session = session(&device, WriteScope::Download);
+        let mut kept = 0;
+
+        run_memory_download_with_backup(
+            &mut session,
+            &zero_tail_partial(),
+            |_| {},
+            |_| {
+                kept += 1;
+                Ok(())
+            },
+        )
+        .await
+        .expect("the partial download runs");
+
+        assert_eq!(kept, 1);
+        assert_eq!(events_sent(&device), vec![0x31, 0x32]);
+    }
+
+    #[tokio::test]
+    async fn another_application_of_five_octets_is_still_refused() {
+        let found = [0x00, 0x83, 0x27, 0x00, 0x01];
+        let device = loaded_device();
+        device.preset_property(3, PID_PROGRAM_VERSION, &found);
+        let mut session = session(&device, WriteScope::Download);
+        let mut backup_called = false;
+
+        let error = run_memory_download_with_backup(
+            &mut session,
+            &zero_tail_partial(),
+            |_| {},
+            |_| {
+                backup_called = true;
+                Ok(())
+            },
+        )
+        .await
+        .expect_err("another application");
+
+        assert!(
+            matches!(
+                error,
+                MemoryDownloadError::PropertyMismatch { property_id: PID_PROGRAM_VERSION, found: ref got, .. }
+                    if got[..] == found
+            ),
+            "{error}"
+        );
+        assert!(!backup_called);
+        assert!(reads_only(&device));
+    }
+
+    /// Padded product data is still accepted for five octets; only the
+    /// answer's width is fixed. A six-octet answer against five octets of
+    /// data is refused by the generic rule already, so the padded data is
+    /// what tells the width check apart.
+    #[tokio::test]
+    async fn padded_identity_data_needs_exactly_five_octets_from_the_device() {
+        let padded = [&ZERO_TAIL_IDENTITY[..], &[0, 0, 0]].concat();
+        let mut plan = zero_tail_complete();
+        plan.steps.insert(
+            2,
+            MemoryDownloadStep::CompareProperty {
+                object_index: 3,
+                property_id: PID_PROGRAM_VERSION,
+                inline_data: padded.clone(),
+            },
+        );
+        for width in [4, 5, 6] {
+            let answer = &padded[..width];
+            let device = loaded_device();
+            device.preset_property(3, PID_PROGRAM_VERSION, answer);
+            let mut session = session(&device, WriteScope::Download);
+            let result = run_memory_download(&mut session, &plan).await;
+            if width == 5 {
+                result.expect("five octets against padded data download");
+                assert!(device.memory_was_written());
+            } else {
+                assert!(
+                    matches!(
+                        result,
+                        Err(MemoryDownloadError::PropertyMismatch { index: 2, ref found, .. })
+                            if found == answer
+                    ),
+                    "{width} octets: {result:?}"
+                );
+                assert!(reads_only(&device), "{width} octets");
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn a_complete_download_asks_for_no_application_identity_of_its_own() {
+        let plan = zero_tail_complete();
+        assert!(!plan.steps.iter().any(is_identity_compare));
+        // A device whose old identity is truncated, or absent, gets a fresh
+        // complete download all the same.
+        for old in [Some(&ZERO_TAIL_IDENTITY[..4]), None] {
+            let device = device(SimulatorConfig::default());
+            if let Some(old) = old {
+                device.preset_property(3, PID_PROGRAM_VERSION, old);
+            }
+            let mut session = session(&device, WriteScope::Download);
+            run_memory_download(&mut session, &plan)
+                .await
+                .expect("the complete download runs");
+            assert!(device.memory_was_written());
+            assert!(!device.seen().iter().any(|seen| matches!(
+                seen,
+                Seen::PropertyRead {
+                    object_index: 3,
+                    property_id: PID_PROGRAM_VERSION
+                }
+            )));
+        }
     }
 
     #[tokio::test]

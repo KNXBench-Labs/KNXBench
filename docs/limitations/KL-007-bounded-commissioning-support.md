@@ -23,8 +23,11 @@ read-back after each allocation/task record an observation as well, records a
 refused PID 7 read as `refused` in every phase, and stops zero/all-FF serials
 from blocking (recovery is unavailable for them). An allocation record a device
 silently ignores is therefore caught only by the final memory, Loaded and
-program-version verification. The status DTO reports whether a failed operation
-could have written anything. Software and simulator tests only; whether the
+program-version verification. A refused or short prestate memory read is
+recorded and makes recovery unavailable instead of refusing. Final pointer
+observations are journaled before the closing VerifyMode write, and download
+and restore observations are kept separately. The status DTO reports whether a
+failed operation could have written anything. Software and simulator tests only; whether the
 relaxed admission downloads the reporter's device correctly is unverified.
 
 ## Source freshness at settlement — 25 October 2026 source

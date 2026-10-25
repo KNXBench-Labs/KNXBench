@@ -373,14 +373,25 @@ async fn device_type_or_short_memory_refuses_before_any_setup_write() {
     // serial_mismatch_is_recorded_and_the_download_proceeds.
     // Nor is the current program version (owner amendment 2); see
     // different_prior_program_version_is_recorded_and_the_download_proceeds.
-    for cause in [2, 3, 6] {
-        let (device, original, _) = fixture();
+    // A short prestate memory answer is an observation too (review fix 5); see
+    // unreadable_prestate_memory_is_observed_and_leaves_no_recovery.
+    for cause in [2, 3, 4] {
+        let (mut device, original, _) = fixture();
         establish_shape(&device, &original).await;
         let plan = original.clone();
         match cause {
             2 => device.preset_property(0, PID_HARDWARE_TYPE, &[7; 6]),
             3 => device.preset_property(0, 12, &[0xFF; 2]),
-            6 => {}
+            // Mask version (review fix 4): another device class answers.
+            4 => {
+                device = SimulatedDevice::with_config(SimulatorConfig {
+                    mask_version: 0x0705,
+                    serial_number: Some(SERIAL),
+                    ..SimulatorConfig::default()
+                });
+                device.preset_property(0, PID_HARDWARE_TYPE, &[1; 6]);
+                device.preset_property(3, PID_PROGRAM_VERSION, &VERSION);
+            }
             _ => unreachable!(),
         }
         let preconditions = ExperimentalPropertyPreconditions::same_application_reinstallation(
@@ -391,7 +402,7 @@ async fn device_type_or_short_memory_refuses_before_any_setup_write() {
             device: &device,
             kind: TargetKind::Simulator,
             discard_allocation: false,
-            short_read: cause == 6,
+            short_read: false,
         };
         let before = device.seen().len();
         let error = run_experimental_property_plan(
@@ -1655,4 +1666,136 @@ async fn placeholder_serials_download_but_leave_no_recovery() {
             "{reason}"
         );
     }
+}
+
+#[tokio::test]
+async fn final_pointer_observations_are_durable_before_the_verify_mode_restore_write() {
+    // Review fix 1: the journal barrier precedes the PID 14 restore, so a failed
+    // barrier leaves the VerifyMode bit as the procedure set it.
+    let (device, plan, preconditions) = fixture();
+    establish_shape(&device, &plan).await;
+    let transport = FinalReference {
+        device: &device,
+        armed: Default::default(),
+        property: 7,
+        replacement: Some(vec![0, 0, 0x3D, 0]),
+        arm_on: 2,
+    };
+    let before = device.seen().len();
+    let error = run_experimental_property_plan(
+        &transport,
+        &plan,
+        auth(&device),
+        AuthorisationPlan::Skip,
+        timing(),
+        &preconditions,
+        &mut |event| match event {
+            PropertyJournalEvent::OperationStarting {
+                operation_index: 7, ..
+            } => Ok(()),
+            PropertyJournalEvent::OperationStarting { .. } => Ok(()),
+            PropertyJournalEvent::OperationCompleted { .. } => Ok(()),
+            PropertyJournalEvent::RecoveryAcquired(_) => Ok(()),
+            PropertyJournalEvent::InProcedurePointerObservation(_) => Ok(()),
+            PropertyJournalEvent::FinalPointerObservations(_) => {
+                Err("durable store failed".to_string())
+            }
+        },
+        &|| false,
+    )
+    .await
+    .unwrap_err();
+    assert!(matches!(
+        error.failure,
+        PropertySimulationFailure::Persistence(_)
+    ));
+    let controls: Vec<_> = device.seen()[before..]
+        .iter()
+        .filter(|seen| {
+            matches!(
+                seen,
+                Seen::PropertyWrite {
+                    object_index: 0,
+                    property_id: 14,
+                    ..
+                }
+            )
+        })
+        .cloned()
+        .collect();
+    assert_eq!(
+        controls.len(),
+        1,
+        "only the VerifyMode setup write; no restore before the observation is durable"
+    );
+}
+
+// Short-answers memory reads only before the first property write, so the
+// prestate capture is incomplete while final verification reads normally.
+struct PrestateShortRead<'a> {
+    device: &'a SimulatedDevice,
+    written: std::sync::atomic::AtomicBool,
+}
+impl ManagementTransport for PrestateShortRead<'_> {
+    fn assigned_address(&self) -> IndividualAddress {
+        ManagementTransport::assigned_address(self.device)
+    }
+    fn subscribe(&self) -> broadcast::Receiver<TunnelEvent> {
+        ManagementTransport::subscribe(self.device)
+    }
+    fn target_kind(&self) -> TargetKind {
+        TargetKind::Simulator
+    }
+    async fn send_frame(
+        &self,
+        destination: Destination,
+        transport: Tpci,
+        mut service: ApplicationService,
+    ) -> Result<(), BusError> {
+        use std::sync::atomic::Ordering::SeqCst;
+        match &mut service {
+            ApplicationService::PropertyValueWrite { .. } => self.written.store(true, SeqCst),
+            ApplicationService::MemoryRead { number, .. }
+            | ApplicationService::UserMemoryRead { number, .. }
+                if *number > 1 && !self.written.load(SeqCst) =>
+            {
+                *number -= 1
+            }
+            _ => {}
+        }
+        ManagementTransport::send_frame(self.device, destination, transport, service).await
+    }
+}
+
+#[tokio::test]
+async fn unreadable_prestate_memory_is_observed_and_leaves_no_recovery() {
+    let (device, plan, preconditions) = fixture();
+    establish_shape(&device, &plan).await;
+    let transport = PrestateShortRead {
+        device: &device,
+        written: Default::default(),
+    };
+    let report = run_experimental_property_plan(
+        &transport,
+        &plan,
+        auth(&device),
+        AuthorisationPlan::Skip,
+        timing(),
+        &preconditions,
+        &mut |_| Ok(()),
+        &|| false,
+    )
+    .await
+    .expect("an unreadable prestate allocation is an observation");
+    assert_eq!(
+        device.memory(0x3C00, 4),
+        [Some(1), Some(2), Some(3), Some(4)]
+    );
+    let reason = recovery_refusal(&report.recovery, &plan);
+    assert!(reason.contains("prestate memory unreadable"), "{reason}");
+    assert_eq!(report.recovery.unreadable_allocations, [0]);
+    assert_eq!(
+        report.recovery.allocations[0].data, [0; 4],
+        "placeholder, not a backup"
+    );
 }

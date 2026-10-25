@@ -20,7 +20,7 @@ export interface System2Status {
 }
 /** `observed` is eight hex digits or "refused"; `operationIndex` is set only for in-procedure read-backs. */
 export interface System2PointerObservation {
-  phase: "prestate" | "inProcedure" | "final"; object: number; operationIndex: number | null; expected: string; observed: string; loadState: string;
+  run: "download" | "restore"; phase: "prestate" | "inProcedure" | "final"; object: number; operationIndex: number | null; expected: string; observed: string; loadState: string;
 }
 export type RecoveryTrack = "knxbenchBestEffort" | "externalETS";
 export interface System2Start {
@@ -51,7 +51,7 @@ const previewCheck = object({ ...shared, preparationId: id, programId: nonempty,
 const hex8: Check = (v) => typeof v === "string" && /^[0-9a-f]{8}$/.test(v);
 const hexBytes: Check = (v) => typeof v === "string" && /^([0-9a-f]{2}){0,64}$/.test(v);
 const flag: Check = (v) => typeof v === "boolean";
-const observation = object({ phase: (v) => v === "prestate" || v === "inProcedure" || v === "final", object: (v) => count(v) && (v as number) <= 255,
+const observation = object({ run: (v) => v === "download" || v === "restore", phase: (v) => v === "prestate" || v === "inProcedure" || v === "final", object: (v) => count(v) && (v as number) <= 255,
   operationIndex: nullable(count), expected: hex8, observed: (v) => v === "refused" || hex8(v), loadState: nonempty });
 const observations: Check = (v) => Array.isArray(v) && v.length <= 256 && v.every(observation) &&
   v.every((o: { phase: string; operationIndex: number | null }) => (o.phase === "inProcedure") === (o.operationIndex !== null));

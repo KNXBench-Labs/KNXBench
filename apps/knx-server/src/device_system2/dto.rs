@@ -72,6 +72,8 @@ pub(super) struct Status {
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(super) struct PointerObservation {
+    /// "download" or "restore": both runs of one operation are kept.
+    pub run: &'static str,
     pub phase: &'static str,
     pub object: u8,
     /// Plan operation of an in-procedure read-back; null otherwise.

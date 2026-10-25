@@ -236,4 +236,5 @@ it("labels in-procedure and refused pointer observations", async () => {
   const text = host.querySelector("[data-system2-observations]")!.textContent!;
   expect(text).toContain("During the download"); expect(text).toContain("step 4"); expect(text).toContain("00003d00");
   expect(text).toContain("not reported (read refused)");
+  expect(text).toContain("Recovery run:");
 });

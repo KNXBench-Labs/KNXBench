@@ -35,10 +35,10 @@ pub struct PropertyResourcePointer {
 pub struct ExperimentalPropertyPreconditions {
     pub hypothesis: PropertyRecoveryHypothesis,
     pub original_plan: PropertyDownloadPlan,
-    pub serial: [u8; 6],
-    pub program_version: [u8; 5],
     /// Serial from preparation. An expectation, not download admission: acquisition
     /// records a different device serial as an observation (owner ruling 2026-10-25).
+    pub serial: [u8; 6],
+    pub program_version: [u8; 5],
     /// Experimental last absolute/task-segment reference model, four octets
     /// only. This explicit source expectation is not a physical profile proof.
     pub source_pointers: Vec<PropertyResourcePointer>,
@@ -237,6 +237,9 @@ pub struct PropertyRecoverySnapshot {
     pub resources: Vec<PropertyRecoveryResource>,
     /// Full declared absolute allocation intervals, including unwritten/masked bytes.
     pub allocations: Vec<PropertyRecoveryRegion>,
+    /// Indices into `allocations` whose prestate read was refused or short.
+    /// Their data are zero placeholders, never a backup; recovery is unavailable.
+    pub unreadable_allocations: Vec<usize>,
     /// Exact WriteMemory prestate, cross-checked against full allocation slices.
     pub regions: Vec<PropertyRecoveryRegion>,
 }
@@ -291,6 +294,12 @@ impl PropertyRecoverySnapshot {
                 "original-state recovery unavailable: captured prestate belongs to a different application ({observation})"
             )));
         }
+        if !self.unreadable_allocations.is_empty() {
+            return Err(PropertySimulationFailure::Recovery(format!(
+                "original-state recovery unavailable: prestate memory unreadable for allocation(s) {:?}",
+                self.unreadable_allocations
+            )));
+        }
         if self.observed_serial == [0; 6] || self.observed_serial == [0xFF; 6] {
             return Err(PropertySimulationFailure::Recovery(format!(
                 "original-state recovery unavailable: captured serial number {} cannot bind replay to one physical device",
@@ -336,6 +345,17 @@ impl PropertyRecoverySnapshot {
         {
             return Err(invalid(
                 "snapshot resource coverage differs from original source shape",
+            ));
+        }
+        if self.unreadable_allocations.windows(2).any(|w| w[0] >= w[1])
+            || self.unreadable_allocations.iter().any(|&i| {
+                self.allocations
+                    .get(i)
+                    .is_none_or(|a| a.data.iter().any(|&b| b != 0))
+            })
+        {
+            return Err(invalid(
+                "unreadable allocation markers are malformed or carry data",
             ));
         }
         let shapes = allocation_shapes(original);
@@ -389,17 +409,19 @@ impl PropertyRecoverySnapshot {
             .map_err(|_| invalid("old memory payloads change procedure shape"))
     }
 
-    /// Memory, final Loaded state and program version are verification; a final
-    /// PID_TABLE_REFERENCE that differs from the source model is returned as an
-    /// observation, because that model is itself unverified.
+    /// Read-only. Memory, final Loaded state and program version are verification;
+    /// a final PID_TABLE_REFERENCE that differs from the source model is returned
+    /// as an observation, because that model is itself unverified. Allocations whose
+    /// prestate was unreadable are verified on their written bytes only.
     pub(crate) async fn verify_outcome<T: ManagementTransport>(
         &self,
         session: &mut ManagementSession<'_, T>,
         executed_plan: &PropertyDownloadPlan,
     ) -> Result<Vec<PropertyPointerObservation>, PropertySimulationFailure> {
         let limit = session.write_limit(None).await?;
-        for allocation in &self.allocations {
+        for (index, allocation) in self.allocations.iter().enumerate() {
             let mut expected = allocation.data.clone();
+            let mut written = vec![false; expected.len()];
             for step in executed_plan.steps() {
                 if let PropertyOperation::WriteMemory {
                     object,
@@ -411,11 +433,23 @@ impl PropertyRecoverySnapshot {
                         let offset = usize::from(*address - allocation.address);
                         if let Some(bytes) = expected.get_mut(offset..offset + data.len()) {
                             bytes.copy_from_slice(data);
+                            written[offset..offset + data.len()].fill(true);
                         }
                     }
                 }
             }
-            if read_region(session, allocation.address, &expected, limit).await? != expected {
+            let actual = read_region(session, allocation.address, &expected, limit).await?;
+            let differs = if self.unreadable_allocations.contains(&index) {
+                // No captured prestate predicts the unwritten bytes; never guess them.
+                actual
+                    .iter()
+                    .zip(&expected)
+                    .zip(&written)
+                    .any(|((a, e), w)| *w && a != e)
+            } else {
+                actual != expected
+            };
+            if differs {
                 return Err(invalid(
                     "full allocation verification differs, including preserved/unwritten bytes",
                 ));
@@ -448,6 +482,15 @@ impl PropertyRecoverySnapshot {
         {
             return Err(invalid("final application identity differs from captured program version; recovery remains unverified"));
         }
+        Ok(observations)
+    }
+
+    /// The only write after verification. The caller journals the verification's
+    /// observations first, so they are durable before this device write.
+    pub(crate) async fn restore_verify_mode<T: ManagementTransport>(
+        &self,
+        session: &mut ManagementSession<'_, T>,
+    ) -> Result<(), PropertySimulationFailure> {
         // A bounded setup lifecycle, not an automatic recovery of load state or
         // memory on failure. Preserve unrelated *current* PID14 bits.
         let current = session.read_device_control().await?;
@@ -466,7 +509,7 @@ impl PropertyRecoverySnapshot {
         if session.read_device_control().await? != wanted {
             return Err(invalid("prior VerifyMode bit did not restore"));
         }
-        Ok(observations)
+        Ok(())
     }
 }
 
@@ -593,8 +636,16 @@ pub(crate) async fn acquire<T: ManagementTransport>(
     }
     let limit = session.write_limit(None).await?;
     let mut allocations = allocation_shapes(plan);
-    for allocation in &mut allocations {
-        allocation.data = read_region(session, allocation.address, &allocation.data, limit).await?;
+    let mut unreadable_allocations = Vec::new();
+    for (index, allocation) in allocations.iter_mut().enumerate() {
+        // A refused or short prestate answer is an observation (review fix 5):
+        // keep zero placeholders, flag them and make recovery unavailable.
+        match read_region(session, allocation.address, &allocation.data, limit).await {
+            Ok(bytes) => allocation.data = bytes,
+            Err(PropertySimulationFailure::Session(SessionError::MemoryRefused { .. }))
+            | Err(PropertySimulationFailure::Recovery(_)) => unreadable_allocations.push(index),
+            Err(error) => return Err(error),
+        }
     }
     let mut regions = Vec::new();
     for (operation_index, step) in plan.steps().iter().enumerate() {
@@ -636,6 +687,7 @@ pub(crate) async fn acquire<T: ManagementTransport>(
         old_device_control,
         resources,
         allocations,
+        unreadable_allocations,
         regions,
     })
 }

@@ -68,7 +68,7 @@ before any write — nothing was written" for `failed`/`cancelled` only when it 
 when the captured prestate differed from the source allocation shape or
 application; the server then offers no recovery phrases and the panel shows
 "original-state recovery unavailable" instead of the recovery form.
-`pointerObservations` is an array (at most 256) of `{phase:
+`pointerObservations` is an array (at most 256) of `{run: "download"|"restore", phase:
 "prestate"|"inProcedure"|"final", object, operationIndex, expected, observed,
 loadState}` with eight lower-case hex digits per pointer; `observed` may be
 `"refused"`, and `operationIndex` is a number exactly for `inProcedure` entries

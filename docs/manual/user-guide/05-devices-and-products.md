@@ -270,8 +270,12 @@ The source workflow is:
    (hardware type, mask version or manufacturer) refuses before any write.
    A different serial number, a different or absent installed application, a
    non-Loaded resource or a table pointer that differs from the project's
-   allocation shape does **not** refuse (since 2026-10-25): like a full ETS
-   download, the procedure unloads and writes the application itself. KNXBench
+   allocation shape does **not** refuse (since 2026-10-25): the procedure starts
+   with Unload and its task-segment records write the application identity
+   itself (compare the observed ETS session in the
+   [System-2 download research](../../research/2026-10-22-system2-ets-download-procedure.md)).
+   If the device refuses or short-answers the prior memory read, that is
+   recorded too and only makes recovery unavailable. KNXBench
    records each difference (object, expected and reported value) and lists it
    under **Recorded device observations**, before, during and after the
    download. A table pointer the device reports after an allocation step, or a
@@ -302,8 +306,9 @@ phrases from a later preview. At most one recovery command is admitted per
 operation; a failed connection or lost reply does not reset it.
 
 Recovery is **unavailable** when the device's prior state differed from the
-project's allocation shape or application, when it refused a table pointer read,
-or when its serial number was all-zero or all-FF (see step 4): the captured bytes then
+project's allocation shape or application, when it refused a table pointer read
+or the prior memory read, or when its serial number was all-zero or all-FF
+(see step 4): the captured bytes then
 do not describe the device and cannot restore it, so KNXBench offers no recovery
 form and fabricates no backup. Use another route, such as a fresh download.
 Recovery is also bound to the device whose prior state was captured: if a device

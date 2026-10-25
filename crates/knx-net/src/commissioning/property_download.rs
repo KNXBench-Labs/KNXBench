@@ -564,6 +564,8 @@ async fn run_property_plan_inner<T: ManagementTransport>(
                             ))
                             .map_err(PropertySimulationFailure::Persistence)?;
                         }
+                        // Observations are durable before this only remaining write.
+                        snapshot.restore_verify_mode(&mut session).await?;
                     }
                     session.disconnect().await;
                 }

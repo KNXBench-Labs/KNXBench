@@ -350,6 +350,7 @@ fn property_validation_recovery_record_refuses_partial_regions() {
         observed_serial: SERIAL,
         observed_program_version: VERSION.to_vec(),
         old_device_control: 0,
+        unreadable_allocations: Vec::new(),
         resources: vec![
             knx_net::commissioning::property_recovery::PropertyRecoveryResource {
                 object: 3,
@@ -683,39 +684,25 @@ async fn property_validation_refused_pointer_and_in_procedure_observations_persi
         forged.to_snapshot(&bundle).is_err(),
         "refused carries no value"
     );
-    // In-procedure observations are a durable checkpoint bound to the active step.
+    // In-procedure observations are a durable checkpoint bound to the active
+    // allocation step (operation 4 is the 03 00 record of object 3).
     let path = temp.path().join("op2");
-    let mut store = OperationStore::create(&path, bundle.binding.clone()).unwrap();
     let observation = PointerObservationRecord {
         object: 3,
         expected: [0, 0, 0x3c, 0],
         observed: Some([0, 0, 0x3d, 0]),
         state: LoadState::Loading.octet(),
     };
+    let mut store = store_at_step(&path, &bundle, alpha16, 4);
     assert!(store
         .checkpoint(Checkpoint::InProcedurePointerObservation {
-            operation_index: 0,
-            observation: observation.clone(),
-        })
-        .is_err());
-    store
-        .checkpoint(Checkpoint::RecoveryAcquired { recovery: alpha16 })
-        .unwrap();
-    store
-        .checkpoint(Checkpoint::StepStarted {
-            index: 0,
-            mutation: true,
-        })
-        .unwrap();
-    assert!(store
-        .checkpoint(Checkpoint::InProcedurePointerObservation {
-            operation_index: 1,
+            operation_index: 3,
             observation: observation.clone(),
         })
         .is_err());
     store
         .checkpoint(Checkpoint::InProcedurePointerObservation {
-            operation_index: 0,
+            operation_index: 4,
             observation: observation.clone(),
         })
         .unwrap();
@@ -727,8 +714,151 @@ async fn property_validation_refused_pointer_and_in_procedure_observations_persi
         progress.pointer_observations[0].phase,
         PointerObservationPhase::InProcedure
     );
-    assert_eq!(progress.pointer_observations[0].operation_index, Some(0));
+    assert_eq!(progress.pointer_observations[0].operation_index, Some(4));
     assert_eq!(progress.pointer_observations[0].record, observation);
     // An in-procedure difference alone leaves the original prestate usable.
     assert!(!progress.prestate_differs);
+}
+// Drive a fresh store to an active step `index` of the fixture plan.
+fn store_at_step(
+    path: &std::path::Path,
+    bundle: &PreparedBundle,
+    recovery: RecoveryRecord,
+    index: usize,
+) -> OperationStore {
+    let mut store = OperationStore::create(path, bundle.binding.clone()).unwrap();
+    store
+        .checkpoint(Checkpoint::RecoveryAcquired { recovery })
+        .unwrap();
+    for step in 0..=index {
+        store
+            .checkpoint(Checkpoint::StepStarted {
+                index: step,
+                mutation: true,
+            })
+            .unwrap();
+        if step < index {
+            store
+                .checkpoint(Checkpoint::StepFinished { index: step })
+                .unwrap();
+        }
+    }
+    store
+}
+async fn executed_record() -> (PreparedBundle, RecoveryRecord) {
+    let (device, bundle) = fixture();
+    establish(&device, &bundle).await;
+    let temp = tempfile::tempdir().unwrap();
+    let mut store =
+        OperationStore::create(&temp.path().join("op"), bundle.binding.clone()).unwrap();
+    app::execute_simulated(
+        &device,
+        &bundle,
+        &mut store,
+        timing(),
+        &AtomicBool::new(false),
+    )
+    .await
+    .unwrap();
+    let record = store.recovery().unwrap().clone();
+    (bundle, record)
+}
+#[tokio::test]
+async fn property_validation_in_procedure_observation_must_match_an_allocation_step() {
+    use knx_app::property_validation_bundle::PointerObservationRecord;
+    let (bundle, record) = executed_record().await;
+    let observation = |object| PointerObservationRecord {
+        object,
+        expected: [0, 0, 0x3c, 0],
+        observed: Some([0, 0, 0x3d, 0]),
+        state: LoadState::Loading.octet(),
+    };
+    let temp = tempfile::tempdir().unwrap();
+    // Step 0 is Connect, not an allocation record.
+    let mut store = store_at_step(&temp.path().join("a"), &bundle, record.clone(), 0);
+    assert!(store
+        .checkpoint(Checkpoint::InProcedurePointerObservation {
+            operation_index: 0,
+            observation: observation(3),
+        })
+        .is_err());
+    // Step 4 is the 03 00 allocation of object 3: another object refuses.
+    let mut store = store_at_step(&temp.path().join("b"), &bundle, record, 4);
+    assert!(store
+        .checkpoint(Checkpoint::InProcedurePointerObservation {
+            operation_index: 4,
+            observation: observation(1),
+        })
+        .is_err());
+    store
+        .checkpoint(Checkpoint::InProcedurePointerObservation {
+            operation_index: 4,
+            observation: observation(3),
+        })
+        .unwrap();
+}
+#[tokio::test]
+async fn property_validation_download_and_restore_observations_are_both_kept() {
+    use knx_app::property_validation_bundle::PointerObservationRecord;
+    let (bundle, record) = executed_record().await;
+    let observation = |observed| PointerObservationRecord {
+        object: 3,
+        expected: [0, 0, 0x3c, 0],
+        observed: Some(observed),
+        state: LoadState::Loaded.octet(),
+    };
+    let temp = tempfile::tempdir().unwrap();
+    let path = temp.path().join("op");
+    let mut store = store_at_step(&path, &bundle, record, 0);
+    store
+        .checkpoint(Checkpoint::FinalPointerObservations {
+            observations: vec![observation([0, 0, 0x3d, 0])],
+        })
+        .unwrap();
+    store
+        .checkpoint(Checkpoint::StepFinished { index: 0 })
+        .unwrap();
+    store
+        .checkpoint(Checkpoint::Failed {
+            code: app::FailureCode::Executor,
+            local_diagnostic: "synthetic".into(),
+        })
+        .unwrap();
+    drop(store);
+    let mut store = OperationStore::open(&path, &bundle.binding).unwrap();
+    store.checkpoint(Checkpoint::RestoreStarted).unwrap();
+    store
+        .checkpoint(Checkpoint::StepStarted {
+            index: 0,
+            mutation: true,
+        })
+        .unwrap();
+    store
+        .checkpoint(Checkpoint::FinalPointerObservations {
+            observations: vec![observation([0, 0, 0x3e, 0])],
+        })
+        .unwrap();
+    let progress = store.progress();
+    assert_eq!(
+        progress.pointer_observations.len(),
+        2,
+        "{:?}",
+        progress.pointer_observations
+    );
+    use knx_app::property_validation::PointerObservationRun;
+    assert_eq!(
+        progress
+            .pointer_observations
+            .iter()
+            .map(|o| (o.run, o.record.observed))
+            .collect::<Vec<_>>(),
+        [
+            (PointerObservationRun::Download, Some([0, 0, 0x3d, 0])),
+            (PointerObservationRun::Restore, Some([0, 0, 0x3e, 0])),
+        ]
+    );
+    // Reopening replays the journal to the same two entries.
+    drop(store);
+    let reopened = OperationStore::open(&path, &bundle.binding).unwrap();
+    assert_eq!(reopened.progress().pointer_observations.len(), 2);
 }

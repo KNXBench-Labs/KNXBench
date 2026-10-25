@@ -21,14 +21,14 @@ export const recoveryStatus: System2Status = {
 // Issue #30 shape: the device prestate differed, the download went on, recovery is unavailable.
 export const prestateStatus: System2Status = {
   ...status, state: "finished", completedSteps: 8, totalSteps: 8, backupAvailable: true, mutationMayHaveStarted: true, prestateDiffers: true,
-  pointerObservations: [{ phase: "prestate", object: 3, operationIndex: null, expected: "00003c00", observed: "00000000", loadState: "Loaded" }],
+  pointerObservations: [{ run: "download", phase: "prestate", object: 3, operationIndex: null, expected: "00003c00", observed: "00000000", loadState: "Loaded" }],
 };
 // Amendment 3: in-procedure and refused PID 7 reads are observations too.
 export const inProcedureStatus: System2Status = {
   ...status, state: "finished", completedSteps: 8, totalSteps: 8, backupAvailable: true, mutationMayHaveStarted: true, prestateDiffers: true,
   pointerObservations: [
-    { phase: "prestate", object: 3, operationIndex: null, expected: "00003c00", observed: "refused", loadState: "Loaded" },
-    { phase: "inProcedure", object: 3, operationIndex: 4, expected: "00003c00", observed: "00003d00", loadState: "Loading" },
-    { phase: "final", object: 3, operationIndex: null, expected: "00003c00", observed: "refused", loadState: "Loaded" },
+    { run: "download", phase: "prestate", object: 3, operationIndex: null, expected: "00003c00", observed: "refused", loadState: "Loaded" },
+    { run: "download", phase: "inProcedure", object: 3, operationIndex: 4, expected: "00003c00", observed: "00003d00", loadState: "Loading" },
+    { run: "restore", phase: "final", object: 3, operationIndex: null, expected: "00003c00", observed: "refused", loadState: "Loaded" },
   ],
 };

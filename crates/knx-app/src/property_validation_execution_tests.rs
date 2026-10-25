@@ -317,6 +317,7 @@ fn recovery_store(path: &std::path::Path, bundle: &PreparedBundle) -> OperationS
         prestate_observations: Vec::new(),
         observed_serial: None,
         observed_program_version: None,
+        prestate_unreadable_allocations: Vec::new(),
     };
     let mut store = OperationStore::create(path, bundle.binding.clone()).unwrap();
     store

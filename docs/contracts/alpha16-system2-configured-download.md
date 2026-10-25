@@ -347,13 +347,30 @@ before any write. Replaying one device's memory onto another would write
 foreign data. The captured program version must equal the plan's for recovery
 to exist at all.
 
+A refused (`MemoryRefused`) or short answer to the prestate allocation read is
+recorded as well (review fix, 2026-10-25): the allocation index goes into
+`PropertyRecoverySnapshot::unreadable_allocations` and
+`RecoveryRecord.prestate_unreadable_allocations` (absent when empty), its data
+are zero placeholders that are never used as a backup, and recovery is
+unavailable (`prestate memory unreadable`). Final verification of such an
+allocation compares the written bytes only, since nothing predicts the unwritten
+ones. Transport errors and timeouts stay errors.
+
+Observations are kept per run: progress entries carry `run` (`download` or
+`restore`) next to `phase`, so a restore's final or in-procedure observations
+never replace the download's. An `in_procedure_pointer_observation` checkpoint
+is accepted only while its step is active and that step is a `03 00/01/02`
+record of the same object and source address.
+
 Final verification after a download or replay stays hard for complete
 allocation memory, final Loaded state of every touched object and the final
 program version (it must equal the plan's application identity). The final
 PID_TABLE_REFERENCE comparison is an observation everywhere: a difference is
 returned in `ExperimentalPropertyReport::final_pointer_observations` and
-journaled as the `final_pointer_observations` checkpoint before disconnect, but
-does not fail an otherwise verified download, because the source pointer model
+journaled as the `final_pointer_observations` checkpoint after the read-only
+verification and before the VerifyMode (PID 14) restore, the only remaining
+device write; a failed barrier leaves PID 14 untouched. It does not fail an
+otherwise verified download, because the source pointer model
 itself is unverified. Since owner amendment 3 the same holds for the read-back
 right after each `03 00`/`03 01`/`03 02` allocation/task record: a difference or
 refusal becomes `PropertyInProcedurePointerObservation` (operation index, object,

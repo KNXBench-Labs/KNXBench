@@ -101,6 +101,7 @@ export const messages = {
   "system2.observationsNote": "Differences between the project/source model and what the device reported. They are recorded evidence, not refusals and not proof of a fault.",
   "system2.observation.prestate": "Before the download, object {object}: expected pointer {expected}, device reported {observed} (load state {state}).",
   "system2.observation.final": "After the download, object {object}: expected pointer {expected}, device reported {observed}. Memory, load state and program version were verified.",
+  "system2.observation.restoreRun": "Recovery run:",
   "system2.observation.inProcedure": "During the download (step {step}), object {object}: expected pointer {expected} after allocation, device reported {observed} (load state {state}). Memory is verified at the end.",
   "system2.recoveryUnavailablePrestate": "Original-state recovery is unavailable for this operation: the device's prior state differed from the project's allocation shape or application, or its serial number cannot bind a recovery to one physical device. The captured bytes are evidence only and cannot restore it. KNXBench never fabricates a backup. Use another recovery route, such as a fresh download.",
   "system2.observation.programVersion": "Before the download, the device's program version was {observed}; the plan writes {expected}.",

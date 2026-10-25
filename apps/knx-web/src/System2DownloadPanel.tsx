@@ -207,7 +207,7 @@ export default function System2DownloadPanel({ project, deviceId, gateway, enabl
         <h4>{t("system2.observations")}</h4><p>{t("system2.observationsNote")}</p>
         <ul>
           {status.programVersionObservation && <li>{t("system2.observation.programVersion", { expected: status.programVersionObservation.expected, observed: status.programVersionObservation.observed || t("system2.observation.refused") })}</li>}
-          {status.pointerObservations.map((o, i) => <li key={i}>{t(`system2.observation.${o.phase}`, { object: o.object, step: o.operationIndex ?? "", expected: o.expected, observed: o.observed === "refused" ? t("system2.observation.refused") : o.observed, state: o.loadState })}</li>)}
+          {status.pointerObservations.map((o, i) => <li key={i}>{o.run === "restore" && `${t("system2.observation.restoreRun")} `}{t(`system2.observation.${o.phase}`, { object: o.object, step: o.operationIndex ?? "", expected: o.expected, observed: o.observed === "refused" ? t("system2.observation.refused") : o.observed, state: o.loadState })}</li>)}
         </ul>
       </section>}
       {active(status) && <button type="button" data-system2-cancel disabled={pending} onClick={() => void cancel()}>{t("system2.cancel")}</button>}

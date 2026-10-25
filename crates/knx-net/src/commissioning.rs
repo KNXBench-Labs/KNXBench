@@ -2389,16 +2389,8 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
             MemoryService::UserMemory => ApplicationService::UserMemoryRead { number, address },
         };
         let data = self
-            .exchange(request, "A_Memory_Response", |answer| match answer {
-                ApplicationService::MemoryResponse { address: at, data }
-                    if u32::from(*at) == address =>
-                {
-                    Some(data.clone())
-                }
-                ApplicationService::UserMemoryResponse { address: at, data } if *at == address => {
-                    Some(data.clone())
-                }
-                _ => None,
+            .exchange(request, "A_Memory_Response", |answer| {
+                response_for(service, address, answer)
             })
             .await?;
         if data.is_empty() {
@@ -3213,18 +3205,8 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
         match verify {
             VerifyMode::Active => {
                 let read = self
-                    .exchange(request, "A_Memory_Write.res", |answer| match answer {
-                        ApplicationService::MemoryResponse { address: at, data }
-                            if u32::from(*at) == address =>
-                        {
-                            Some(data.clone())
-                        }
-                        ApplicationService::UserMemoryResponse { address: at, data }
-                            if *at == address =>
-                        {
-                            Some(data.clone())
-                        }
-                        _ => None,
+                    .exchange(request, "A_Memory_Write.res", |answer| {
+                        response_for(service, address, answer)
                     })
                     .await?;
                 if read.is_empty() {
@@ -3264,6 +3246,31 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
             }
         }
         Ok(())
+    }
+}
+
+/// The octets of a response of the requested service at the requested address.
+///
+/// `[D]` AL v02.01.01 §3.5.3 (pp. 109-111) and §3.5.6.2 (pp. 117-119) confirm a read with the
+/// response PDU of its own service, §3.5.4 (p. 112) and §3.5.6.3 (p. 120) an active-Verify write
+/// likewise. A response of the other service at the same number is no answer to the request, and
+/// stays unanswered rather than being taken for a refusal of this one.
+fn response_for(
+    service: MemoryService,
+    address: u32,
+    answer: &ApplicationService,
+) -> Option<Vec<u8>> {
+    match (service, answer) {
+        (MemoryService::Memory, ApplicationService::MemoryResponse { address: at, data })
+            if u32::from(*at) == address =>
+        {
+            Some(data.clone())
+        }
+        (
+            MemoryService::UserMemory,
+            ApplicationService::UserMemoryResponse { address: at, data },
+        ) if *at == address => Some(data.clone()),
+        _ => None,
     }
 }
 
@@ -6381,4 +6388,5 @@ mod tests {
     }
 
     mod load_control_response;
+    mod memory_response_pairing;
 }

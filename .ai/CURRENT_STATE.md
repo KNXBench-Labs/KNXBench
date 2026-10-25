@@ -9,16 +9,17 @@ Updated: 2026-10-25 02:22 CEST. Operational snapshot, not an append-only journal
   stages/897 browser cases; on merge docs/xtask/local-info re-run (upstream delta Rust/docs only).
 - Hardware outcome of System-2 stays unverified (#22/WP-12); issue #30 answered, see its thread.
 
-## System-2 pointer-mismatch package: CLAIMED (2026-10-25 12:33 CET, top priority)
+## System-2 prestate observations delivered (2026-10-25 15:10 CET)
 
-- Owner go: a device prestate differing from the source shape (PID 7 pointer / load state) must
-  not refuse a System-2 download. Branch `fix/system2-pointer-mismatch-20261025`.
-- Claimed paths: `crates/knx-net/src/commissioning/property_recovery.rs`, `property_download.rs`,
-  `crates/knx-app/src/property_validation_*`, `apps/knx-server/src/device_system2/`,
-  System2 web panel/API/copy, alpha16 System-2 contracts. Other sessions: do not edit these.
-- Scope: record object + expected/observed pointer/state, mark original-state recovery unavailable,
-  surface `mutationMayHaveStarted` (pre-mutation refusal = nothing written). Serial, program
-  version, memory verification and confirmations stay hard. No bus operation by agents.
+- Merge `a9abdba33` (feature `a78fc86e3`); claim released. Owner rules now in force: pre-write
+  hard checks are hardware type, mask and manufacturer only. Serial, prior program version,
+  load state and PID 7 (prestate, in-procedure, final) are recorded observations, never refusals.
+- Still hard: memory verification, final Loaded, written program version, confirmations. Any
+  prestate difference, unreadable prestate memory or zero/FF serial = no original-state recovery;
+  replay stays bound to the captured serial. Status carries `mutationMayHaveStarted`.
+- Opus review APPROVE + 2 fix rounds (final APPROVE); package gate 15/15 on `a78fc86e3`; merge
+  with load-response/region-read upstream re-ran fmt/clippy/tests (3040 passed)/docs/xtask.
+- Simulator-tested only; reporter's UP 258D12 outcome unverified (#30, #22).
 
 ## Current assignment and authority
 

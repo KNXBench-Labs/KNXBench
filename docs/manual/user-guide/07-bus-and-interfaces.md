@@ -468,6 +468,18 @@ changes, the project does not. Saving or exporting a project file is something e
    device may be partly loaded; download again. If the device did not acknowledge the
    closing restart, the tab says **Restart: NOT confirmed** next to "yes": the data is in
    the device, and some devices restart without answering, so check that it works.
+6. After a download that wrote everything, the tab (and `knx device download`) shows a
+   separate **Read-only check after the download**: a fresh connection without a key
+   that only reads. It says whether the device was reached, whether its identity matches
+   the plan and, for each load state, what the plan expects next to what was read. A
+   failed or unavailable reading stays unavailable; it never turns the download into a
+   failure, and nothing is sent again. A matching identity does not prove it is the same
+   physical device, and whether the application runs is always shown as unknown. Older
+   results without this check read "Not checked". If the command is killed or the server
+   stops during the check, the download's own result stays and the check reads
+   "interrupted" or "Not checked". Once a check is in the bus activity history, an older
+   KNXBench version cannot read that history (it shows it as unavailable); keep using this
+   version or a newer one. Check the installation's functions as before.
 
 There is no stop button: stopping between steps would leave the device in an undefined
 state. The server cannot tell a person from a script; like the command, it only checks

@@ -2,6 +2,7 @@
 import { afterEach, expect, it, vi } from "vitest";
 import * as api from "./api";
 import { subscribeSessionExpired } from "./session";
+import checkFixtures from "./postDownloadCheck.fixtures.json";
 
 export function historyFixture() {
   return {
@@ -208,4 +209,37 @@ it("keeps unavailable history distinct from an empty history and routes 401 thro
     await expect(api.activityHistory()).rejects.toMatchObject({ status: 401 });
     expect(expired).toHaveBeenCalledOnce();
   } finally { unsubscribe(); }
+});
+
+it("admits a stored check only on a written, finished download and refuses it everywhere else", async () => {
+  const valid = historyFixture();
+  Object.assign(valid.entries[0].downloadEvidence, { postDownloadCheck: checkFixtures.matched });
+  respond(valid);
+  expect(await api.activityHistory()).toEqual(valid);
+  const cases: ((page: ReturnType<typeof historyFixture>) => void)[] = [
+    (page) => { Object.assign(page.entries[0].downloadEvidence, { postDownloadCheck: checkFixtures.notChecked }); },
+    (page) => { Object.assign(page.entries[0].downloadEvidence, { written: "partially", postDownloadCheck: checkFixtures.matched }); },
+    (page) => { Object.assign(page.entries[0], { state: "failed" }); Object.assign(page.entries[0].downloadEvidence, { restart: null, postDownloadCheck: checkFixtures.matched }); },
+    (page) => { Object.assign(page.entries[0].downloadEvidence, { postDownloadCheck: { ...checkFixtures.matched, runtime: "running" } }); },
+    (page) => { Object.assign(page.entries[0], { kind: "deviceCompare", postDownloadCheck: checkFixtures.matched }); Reflect.deleteProperty(page.entries[0], "writeEvidence"); Reflect.deleteProperty(page.entries[0], "downloadEvidence"); },
+    (page) => { Object.assign(page.entries[0], { kind: "deviceCompare" }); Reflect.deleteProperty(page.entries[0], "writeEvidence"); Object.assign(page.entries[0].downloadEvidence, { postDownloadCheck: checkFixtures.matched }); },
+    (page) => { Object.assign(page.entries[0].downloadEvidence, { postDownloadCheck: null }); },
+  ];
+  for (const mutate of cases) {
+    const page = historyFixture();
+    mutate(page);
+    respond(page);
+    await expect(api.activityHistory()).rejects.toThrow("activity history malformed");
+  }
+});
+
+it("admits an interrupted check next to an unknown cleanup on the written transfer", async () => {
+  const page = historyFixture();
+  Object.assign(page.entries[0], { interrupted: false });
+  Object.assign(page.entries[0].downloadEvidence, { cleanup: "unknown", postDownloadCheck: checkFixtures.interrupted });
+  respond(page);
+  const entry = (await api.activityHistory()).entries[0];
+  expect(entry.state).toBe("finished");
+  expect(entry.downloadEvidence).toEqual({ sessionId: 7, written: "yes", restart: "acknowledged", cleanup: "unknown",
+    postDownloadCheck: { observation: { status: "interrupted" }, runtime: "unknown" } });
 });

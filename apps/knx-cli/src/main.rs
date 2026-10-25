@@ -2603,7 +2603,7 @@ fn run_device_download(args: &[String]) -> ExitCode {
                 return ExitCode::FAILURE;
             }
         };
-        let result = device_download::execute_with_history(
+        let run = device_download::execute_regular_download(
             &tunnel,
             authorisation,
             keying,
@@ -2619,10 +2619,8 @@ fn run_device_download(args: &[String]) -> ExitCode {
             },
             &mut activity,
             &mut std::io::stdout(),
-        ).await;
-        let recorded = activity.record_result(&result).map_err(|error| {
-            eprintln!("device outcome is witnessed, but activity history could not record it: {error}; do not retry automatically");
-        }).is_ok();
+        )
+        .await;
         let cleanup_ok = match tunnel.disconnect().await {
             Ok(()) => true,
             Err(error) => {
@@ -2630,30 +2628,15 @@ fn run_device_download(args: &[String]) -> ExitCode {
                 false
             }
         };
-        let cleanup_recorded = activity.record_cleanup(cleanup_ok).map_err(|error| {
-            eprintln!("activity history could not record cleanup: {error}; device outcome is unchanged");
-        }).is_ok();
-        let reported = match (&report, device_download::reported_outcome(&result)) {
-            (Some((path, report)), Some(outcome)) => {
-                match device_download::write_report(path, &report.clone().with_outcome(outcome)) {
-                    Ok(text) => {
-                        print!("{text}");
-                        true
-                    }
-                    Err(error) => {
-                        eprintln!("{error}; device outcome is unchanged");
-                        false
-                    }
-                }
-            }
-            _ => true,
-        };
-        if matches!(result, knx_app::commissioning_activity::DownloadResult::Finished { written: device_download::Written::Yes, .. })
-            && recorded && cleanup_ok && cleanup_recorded && reported {
-            ExitCode::SUCCESS
-        } else {
-            ExitCode::FAILURE
-        }
+        device_download::finish_regular_download(
+            &run,
+            cleanup_ok,
+            activity,
+            report
+                .as_ref()
+                .map(|(path, report)| (path.as_path(), report)),
+            &mut std::io::stdout(),
+        )
     })
 }
 

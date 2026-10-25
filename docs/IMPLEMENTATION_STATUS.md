@@ -12,6 +12,21 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Read-only check after a regular download (25 October 2026 source, unpublished)
+
+After a successful regular memory download (complete or partial, restart
+acknowledged, not in plan or unconfirmed) the CLI and the server worker run one
+read-only check on the same tunnel: fresh connection, no key, no write or
+restart, no second attempt. Reach, identity and each load state (expected next to observed) are
+recorded in one payload-free record shared by CLI output, server status, the
+tester's report (additive, format 1) and the activity history; absent means
+not checked, runtime is always unknown ([contract](contracts/post-download-check.md)).
+Simulator parent-path regressions only (CLI runner and exit composition,
+server worker); the HTTP route assertions sit in `#[ignore]`d corpus tests and
+are pending until the corpus gate runs them. An older format-2 reader refuses a
+history holding a check (safe refusal, nothing lost). Re-review of the review
+corrections, package gate and hardware acceptance pending. Restore is unchanged.
+
 ## Hardware identity response width (25 October 2026 source)
 
 Regular memory download and restore now require exactly six response octets for

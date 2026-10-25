@@ -9,6 +9,7 @@ mod channel_name_number;
 mod corpus_compatibility_matrix;
 mod corpus_support;
 mod device_evaluation;
+mod duplicate_segment_start;
 mod dynamic_block_access;
 mod dynamic_channel_owner;
 mod dynamic_control_kind;

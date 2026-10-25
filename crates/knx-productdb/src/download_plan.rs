@@ -101,6 +101,16 @@ pub enum DownloadPlanError {
     NeverWritten(String),
     /// A segment the procedure allocates twice.
     AllocatedTwice(u16),
+    /// Two segments with data start at the allocated address: the image does
+    /// not say whose octets belong there.
+    DuplicateSegmentStart {
+        /// The shared start.
+        address: u16,
+        /// The first segment with data there, in image order.
+        first: String,
+        /// The next one.
+        second: String,
+    },
     /// The program declares an ETS download plug-in (its GUID): the vendor
     /// code writes what the product data does not describe (KL-006).
     VendorDownloadPlugin(String),
@@ -154,6 +164,15 @@ impl fmt::Display for DownloadPlanError {
             DownloadPlanError::AllocatedTwice(address) => {
                 write!(f, "the segment at {address:04X}h is allocated twice")
             }
+            DownloadPlanError::DuplicateSegmentStart {
+                address,
+                first,
+                second,
+            } => write!(
+                f,
+                "segments {first} and {second} both have data at {address:04X}h; \
+                 the plan cannot tell which one the allocation takes"
+            ),
             DownloadPlanError::VendorDownloadPlugin(plugin) => write!(
                 f,
                 "the application program declares the ETS download plug-in {plugin}, which writes \
@@ -405,19 +424,27 @@ fn element_name(step: &LoadStep) -> &'static str {
 }
 
 /// The writes for the segment allocated at `address`, if the image has one
-/// there.
+/// there. Two segments with data at one start are refused: nothing in the
+/// product says which one an allocation takes, equal octets or not.
 fn data_writes(
     image: &DownloadImage,
     address: u16,
     size: u16,
 ) -> Result<Vec<MemoryDownloadStep>, DownloadPlanError> {
-    let Some(segment) = image
+    let mut here = image
         .segments
         .iter()
-        .find(|segment| segment.address == u32::from(address))
-    else {
+        .filter(|segment| segment.address == u32::from(address));
+    let Some(segment) = here.next() else {
         return Ok(Vec::new());
     };
+    if let Some(other) = here.next() {
+        return Err(DownloadPlanError::DuplicateSegmentStart {
+            address,
+            first: segment.id.clone(),
+            second: other.id.clone(),
+        });
+    }
     if segment.octets.len() != usize::from(size) {
         return Err(DownloadPlanError::SizeMismatch {
             address,
@@ -777,6 +804,84 @@ mod tests {
         assert_eq!(
             plan_memory_download(&image),
             Err(DownloadPlanError::NeverWritten("AS-4201".into()))
+        );
+    }
+
+    fn twin(id: &str, octets: Vec<u8>, mask: Option<Vec<u8>>) -> SegmentImage {
+        SegmentImage {
+            id: id.into(),
+            address: 0x4400,
+            octets,
+            mask,
+        }
+    }
+
+    fn duplicate(address: u16, first: &str, second: &str) -> DownloadPlanError {
+        DownloadPlanError::DuplicateSegmentStart {
+            address,
+            first: first.into(),
+            second: second.into(),
+        }
+    }
+
+    /// Exact-address matching has no precedence between two segments with data:
+    /// equal octets, disjoint masks and full protection do not make one win.
+    #[test]
+    fn two_segments_with_data_at_one_allocated_start_are_refused_whatever_they_hold() {
+        let rows = [
+            (vec![0xCC, 0xDD], None),
+            (vec![0xAA, 0xBB], None),
+            (vec![0xCC, 0xDD], Some(vec![0x00, 0xFF])),
+            (vec![0xCC, 0xDD], Some(vec![0x00, 0x00])),
+        ];
+        for (octets, mask) in rows {
+            let mut image = image();
+            image.segments.push(twin("AS-4400-B", octets, mask));
+            image.segments[1].mask = Some(vec![0xFF, 0x00]);
+            let error = plan_memory_download(&image).unwrap_err();
+            assert_eq!(error, duplicate(0x4400, "AS-4400", "AS-4400-B"));
+            let shown = error.to_string();
+            assert!(
+                shown.contains("AS-4400") && shown.contains("AS-4400-B") && shown.contains("4400h"),
+                "{shown}"
+            );
+        }
+    }
+
+    #[test]
+    fn the_duplicate_start_names_the_segments_in_image_order() {
+        let mut image = image();
+        image
+            .segments
+            .insert(1, twin("AS-4400-B", vec![0xCC, 0xDD], None));
+        assert_eq!(
+            plan_memory_download(&image),
+            Err(duplicate(0x4400, "AS-4400-B", "AS-4400"))
+        );
+    }
+
+    #[test]
+    fn a_duplicate_start_that_is_never_allocated_is_still_never_written() {
+        let mut image = image();
+        for id in ["AS-4300-A", "AS-4300-B"] {
+            image.segments.push(SegmentImage {
+                address: 0x4300,
+                ..twin(id, vec![0], None)
+            });
+        }
+        assert_eq!(
+            plan_memory_download(&image),
+            Err(DownloadPlanError::NeverWritten("AS-4300-A".into()))
+        );
+    }
+
+    #[test]
+    fn an_ambiguous_start_is_named_before_a_size_mismatch_of_either_segment() {
+        let mut image = image();
+        image.segments.push(twin("AS-4400-B", vec![0xCC], None));
+        assert_eq!(
+            plan_memory_download(&image),
+            Err(duplicate(0x4400, "AS-4400", "AS-4400-B"))
         );
     }
 

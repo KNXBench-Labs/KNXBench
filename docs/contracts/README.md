@@ -15,6 +15,7 @@ Moved here from `docs/` on 2026-10-08 (relative links adjusted by script).
 | [backup-application-identity](backup-application-identity.md) | Captured pre-write application identity and restore refusal; strict backup format 2 with read-only format-1 compatibility and explicit downgrade limits |
 | [memory-region-read-service](memory-region-read-service.md) | Region-bound memory read service and user-memory count limit for backup, comparison and probes |
 | [memory-response-service-pairing](memory-response-service-pairing.md) | A memory read or active-Verify write is answered only by a response of its own service at its address; other-service response is no answer (synthetic nonconforming peer) |
+| [duplicate-image-segment-start](duplicate-image-segment-start.md) | A download plan refuses an allocation where two segments with Data share the start, naming the address and both ids; no-payload allocations unchanged; not schema invalidity |
 | [load-control-response-state](load-control-response-state.md) | Write answer of a load-control property write is the first state observation; validated before polling, seeds the wait only when changed |
 | [device-comparison](device-comparison.md) | P4 bound read-only comparison, volatile tags, decoder/raw integrity and staged parameter scope |
 | [IMPORT_BOUNDARY_CONTRACT](IMPORT_BOUNDARY_CONTRACT.md) | AR06 project-import boundary: namespaces, project vs. product-package evidence |

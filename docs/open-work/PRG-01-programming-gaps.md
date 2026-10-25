@@ -104,10 +104,9 @@ record the boundaries separately; these increments do not close PRG-01.
 The regular planner conservatively refuses declared `MergeId` fragments rather
 than silently omitting them ([contract](../contracts/regular-merge-fragment-admission.md)).
 Stored source and fragment-free plans remain unchanged; shared read-only
-comparison/source/restore preparation inherits the restriction. The original
-semantic regression, final focused tests and independent code review are
-complete; maintained integrated acceptance and publication remain pending
-([acceptance](../status/2026-10-25-regular-merge-fragment-admission.md)). This is
+comparison/source/restore preparation inherits the restriction. The original semantic regression, final focused tests, independent review and
+all 14 selected maintained integrated stages passed; source is published as
+`be2687796` ([acceptance](../status/2026-10-25-regular-merge-fragment-admission.md)). This is
 not merged-procedure execution or closure of PRG-01.
 
 ## Open

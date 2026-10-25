@@ -13,8 +13,8 @@ its one main procedure ([contract](../contracts/regular-merge-fragment-admission
 The prior positive unit contract is intentionally narrowed; fragment meaning
 under `ProductProcedure` is not invented. Read-only comparison, source-freshness
 and restore preparation sharing the planner inherit the refusal. Exact stored
-source and the fragment-free plan stay unchanged. Focused tests and independent
-code review passed; maintained package acceptance/publication are pending
+source and the fragment-free plan stay unchanged. Focused tests, independent
+review and all 14 selected maintained stages passed; published as `be2687796`
 ([acceptance](../status/2026-10-25-regular-merge-fragment-admission.md)). No family,
 hardware or whole-recovery claim follows; KL-007 and PRG-01 remain open.
 

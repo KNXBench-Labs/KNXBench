@@ -1,6 +1,6 @@
 # Restart snapshot
 
-Updated: 2026-10-25 20:16 CET. Operational snapshot, not an append-only journal.
+Updated: 2026-10-25 23:40 CET. Operational snapshot, not an append-only journal.
 ## Other owners and preservation
 - Root intentionally old/dirty: preserve private/untracked files and other edits.
   Alpha16 belongs to another track. No release/deployment/hardware authority.
@@ -9,41 +9,24 @@ Updated: 2026-10-25 20:16 CET. Operational snapshot, not an append-only journal.
   Owner rule: pre-write hard = hardware type/mask/manufacturer; serial, prior program version,
   load state, PID 7 are observations; memory/Loaded/written version verification stays hard.
 ## Active programming improvements
-- Existing non-Secure gaps authorised, no live bus; PRG-01 open, not owner-deferred.
-  Keep family/recovery admission and partial-to-full refusal. No recovery/exemplar claim.
-- Delivered hardware `07fe2e67f`, partial identity `02c437110`, advice `78fd9d780`,
-  post-download/consumers `8b5edad7f` + docs `efa176bac`; repo records own evidence.
-- Backup guard PUBLISHED `08db292f3`, docs `f73c28d9c`; independent reviews, gate16 green,
-  corpus155/155, docs10/runtime unchanged; [delivery](../docs/status/2026-10-25-backup-application-identity.md).
-- Source-freshness PUBLISHED `fa4c18213`, docs `2a089c5b5`; three APPROVEs, gate14 green,
-  corpus91/91 incl CLI9/HTTP29, docs10/runtime unchanged; [delivery](../docs/status/2026-10-25-download-source-freshness.md).
-- Region-read PUBLISHED `a4a4ebcf1`, docs `d30681c17`; exact remote readbacks, Opus APPROVE.
-  Gate14+docs10 green, corpus91/91; [delivery](../docs/status/2026-10-25-memory-region-reads.md) owns limits.
-- Load-response PUBLISHED `e4f5e7c6f`, docs `5f778c2bb`; exact remote readbacks, Opus APPROVE.
-  Gate14+docs10 green, corpus91/91; [delivery](../docs/status/2026-10-25-load-control-response.md) owns limits.
-- Memory pairing PUBLISHED `53400189e`, docs `ef7589476`; exact remote readbacks.
-  Reviews/gate14/docs10 green; [delivery](../docs/status/2026-10-25-memory-response-pairing.md) owns limits.
-- Integration `<sources>/knxbench-programming-integration-20261025` clean at published `831793de9a87`.
-- Number-bounds PUBLISHED `87d71d4aa`, docs `7553fdcf5`, live+tracking readbacks verified.
-  [Delivery](../docs/status/2026-10-25-parameter-number-bounds.md) owns exact evidence/limits.
-  Scratch `download-improvements-20261025`; vault and private dispositions updated.
-- Duplicate image-start PUBLISHED `d73a2413b`, docs `a8304e9a3`; live+tracking readbacks verified.
-- Prewrite-stop PUBLISHED `6c9ca2d7d`, docs `2fc0d77d3`; live+tracking readbacks verified.
-  Reviews/gate14/docs10 green; delivery record owns exact tests and limits.
-  [Delivery](../docs/status/2026-10-25-regular-prewrite-stop.md); vault/private dispositions current.
-- Receipt PUBLISHED `831793de9a87`; live+tracking+local ref equal; integration clean.
-  Full gate15 on `3431aabbc`: Rust2626/122ignored, corpus91/91, web32/4390unit/890browser.
-  Fresh-main docsdelta10 green/runtimeequal; [delivery](../docs/status/2026-10-25-download-settlement-receipt.md).
-  Feature retired verified458entryarchive+bundle;569evidencefiles archived,9own temporary roots removed.
-- Regular MergeId IMPLEMENTATION HOLD: old-runtime coverage101,122archives/758programs vs105/467pins.
-  Verified1,Untested97 vs98. No runtime/test/doc edits.
-  Tree `<sources>/knxbench-regular-merge-fragment-20261025` clean, base `831793de9a87`.
-  `fix/regular-merge-fragment-admission-20261025`;235sourcehashes unchanged, no semanticREDyet.
-  Probe zero070nhfragments exploratory only (namespace/path/136parser-error limits), not acceptedcensus.
-  Reconciliation complete:105archiveidentities not recovered;9TAR metadata members hashverified.
-  No active worker. NEEDS_EVIDENCE: authentic scope or separate currentcorpus baseline-policy authority.
-- cvexc resolution/default/precedence/use unverified (`comparison-next-slice-controller-disposition.json`);
-  no comparison policy implemented; inactive/Union/customer-write rules unresolved.
+- Existing non-Secure gaps authorised; no live bus, new family or deployment.
+  Keep family/recovery admission and partial-to-full refusal; PRG-01 remains open.
+- Earlier bounded slices are published; [PRG-01](../docs/open-work/PRG-01-programming-gaps.md)
+  and their acceptance records own results and remaining boundaries.
+- Regular MergeId admission PUBLISHED `be2687796`, feature `85fa16e04`.
+  Independent review, original semantic RED, exact source retention and the local
+  same-base differential accepted; temporary observer removed before publication.
+- Maintained gate14 on actual merge: Rust4287/158ignored, selected corpus97/97;
+  Python tools425executed/6skipped. Web/browser suites not selected; bundle built.
+  [Acceptance](../docs/status/2026-10-25-regular-merge-fragment-admission.md).
+- Own tree `<sources>/knxbench-product-corpus-characterization-20261025`, branch
+  `integrate/regular-merge-fragment-b3-20261025`; result-only docs/cleanup in progress.
+- Next: bounded memory-budget TDD after this delivery boundary: conservative
+  unproven hardware-route cap plus service-specific UserMemory header budget.
+  Source-only admission complete; implementation not started; no hardware authority.
+  cEMI/gateway and other sessions' System2 files remain outside this write surface.
+- Inactive/Union/customer-write/comparison-exclusion semantics and complete
+  effects/device-baseline/recovery remain unresolved; no broad completion claim.
 ## S2-01 diagnostic subdelivery
 - PUBLISHED `5f1ad454e`; local/tracking/live refs matched after push; claim released.
 - Independent Opus APPROVE, integrated gate14 green: Rust3279/131ignored, corpus91/91.

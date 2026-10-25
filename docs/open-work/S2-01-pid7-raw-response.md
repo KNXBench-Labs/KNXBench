@@ -1,6 +1,8 @@
 # S2-01 — System-2: keep the raw PID 7 answer and model its width
 
-**Priority:** P1. **Status:** Partially implemented; diagnostic subdelivery under acceptance.
+**Priority:** P1. **Status:** Partially delivered on `main` as `5f1ad454e`; remaining work blocked/open.
+Independent review APPROVE; integrated package gate 14/14 passed.
+[Diagnostic acceptance](../status/2026-10-25-system2-pid7-diagnostic.md) records the exact scope.
 The private failure journal retains object, element count, actual octet count and up to 16 raw
 octets. HTTP status and the shareable report do not expose these details. The width model and
 research record remain blocked on real response evidence; no supported width is inferred.

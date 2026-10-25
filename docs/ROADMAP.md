@@ -41,8 +41,8 @@ existing bounded drain. Per-step effects, mid-procedure stop and recovery remain
 
 The [regular fragment-admission contract](contracts/regular-merge-fragment-admission.md)
 conservatively refuses an untranslated declared shape without inventing merge
-semantics. Focused semantic regressions and independent code review passed;
-maintained integrated acceptance/publication are pending
+semantics. Focused semantic regressions, independent review and all 14 selected
+maintained integrated stages passed; published as `be2687796`
 ([acceptance](status/2026-10-25-regular-merge-fragment-admission.md)). Parameter
 policies, device baselines and complete mutation/recovery contracts remain
 separate; no new family is admitted.

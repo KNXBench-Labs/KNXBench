@@ -39,9 +39,28 @@ barriers are not weakened.
 
 ## Integrated acceptance and publication
 
-Pending: the maintained package gate, its selected corpus scope, final
-all-target Clippy on the corrected test bytes and publication readback.
-Focused owning checks are not relabelled as a full workspace or package gate.
+The source was published as `be2687796` (feature `85fa16e04`) after independent
+review, the complete local same-base comparison and **14/14** selected stages of
+the maintained package gate on that actual main-first merge. Local, tracking and
+live remote main were read back equal immediately after the push.
+
+- Selected Rust suites: **4,287 passed, 0 failed, 158 ignored**. This was the
+  affected-package/dependent selection, not a new full-workspace claim.
+- Selected corpus: **97/97 passed in six targets**. Its frozen source inventory
+  is reconciled against every target's expected/passed count; no per-case raw
+  result lines are invented from the aggregate log.
+- Python tools: 431 reported cases, **425 executed and six skipped**. Those
+  conditional skips remain unexecuted coverage, not fabricated passes.
+- Final all-target Clippy with warnings denied, format, documentation, browser
+  lane guard, all five xtask checks and whitespace passed. Browser/Web suites
+  were not selected; the web bundle was freshly built separately on the merge.
+
+The initial gate's browser-temp fixture setup failure is retained. A corrected
+lexical scratch path passed all 13 affected tests without a source change; a
+later queued run was deliberately interrupted after upstream runtime moved.
+Neither attempt is relabelled as successful. The final merge preserves the
+other track's status text and uses the full maintained selected gate, not only
+the previously green substages. No physical bus/device was accessed.
 
 ## Existing opt-in pin debt
 

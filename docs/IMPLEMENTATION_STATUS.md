@@ -32,8 +32,8 @@ The regular planner refuses declared `MergeId` fragments beside its one main
 procedure instead of omitting them. Both planner entry points preserve identity
 and procedure-count priority; actual offline application preparation reports
 `procedure-shape` ([contract](contracts/regular-merge-fragment-admission.md)).
-Original semantic RED, final focused GREEN and independent code review are
-complete; maintained integrated acceptance and publication remain pending
+Original semantic RED, final focused GREEN, independent review and all 14
+selected integrated stages passed; published as `be2687796`
 ([acceptance](status/2026-10-25-regular-merge-fragment-admission.md)). Raw source
 retention and the fragment-free literal plan are regression-tested. No new
 fragment semantics, family, device operation or recovery authority is added;

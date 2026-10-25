@@ -5,7 +5,9 @@
 //! A fresh opener replays the complete sequence under the same exclusive lock.
 //! Hash chaining and a synced atomic HEAD detect corruption and missing tails,
 //! not malicious rewriting; an unfinished operation is never harmless.
-use crate::property_validation_bundle::{digest, invalid, PreparedBundle, RecoveryRecord};
+use crate::property_validation_bundle::{
+    digest, invalid, OperationRecord, PointerObservationRecord, PreparedBundle, RecoveryRecord,
+};
 #[path = "property_validation_lifecycle.rs"]
 mod lifecycle;
 use knx_core::{ContactableAddress, IndividualAddress};
@@ -96,6 +98,8 @@ pub enum FailureCode {
 }
 /// Private protocol events. Raw diagnostics stay local; the concrete simulator
 /// adapter uses no access key. Never serialize this enum as a shareable report.
+// One short-lived value per durable write; boxing would only churn every caller.
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "event", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Checkpoint {
@@ -111,6 +115,17 @@ pub enum Checkpoint {
     },
     StepFinished {
         index: usize,
+    },
+    /// Final pointer reads that differed from the source model after an otherwise
+    /// verified outcome. Observation only; Alpha 16 journals never contain it.
+    FinalPointerObservations {
+        observations: Vec<PointerObservationRecord>,
+    },
+    /// An allocation/task pointer read-back that differed from its record,
+    /// persisted before the next mutation. Observation only (amendment 3).
+    InProcedurePointerObservation {
+        operation_index: usize,
+        observation: PointerObservationRecord,
     },
     Failed {
         code: FailureCode,
@@ -150,6 +165,8 @@ struct State {
     mutation: bool,
     outcome: LocalOutcome,
     restore_attempted: bool,
+    final_observations: Vec<(PointerObservationRun, PointerObservationRecord)>,
+    in_procedure_observations: Vec<(PointerObservationRun, usize, PointerObservationRecord)>,
 }
 impl State {
     fn new(binding: Binding) -> Self {
@@ -161,7 +178,32 @@ impl State {
             mutation: false,
             outcome: LocalOutcome::Running,
             restore_attempted: false,
+            final_observations: Vec::new(),
+            in_procedure_observations: Vec::new(),
         }
+    }
+    /// The run an observation belongs to: an explicit restore or the download.
+    fn run(&self) -> PointerObservationRun {
+        if self.outcome == LocalOutcome::Restoring {
+            PointerObservationRun::Restore
+        } else {
+            PointerObservationRun::Download
+        }
+    }
+    /// Captured prestate does not describe the source shape or application, or
+    /// carries a placeholder serial that cannot bind a replay to one device:
+    /// evidence only, original-state recovery unavailable.
+    fn prestate_differs(&self) -> bool {
+        self.recovery.as_ref().is_some_and(|r| {
+            let serial = r
+                .observed_serial
+                .unwrap_or(r.original_bundle.binding.serial);
+            !r.prestate_observations.is_empty()
+                || r.observed_program_version.is_some()
+                || !r.prestate_unreadable_allocations.is_empty()
+                || serial == [0; 6]
+                || serial == [0xFF; 6]
+        })
     }
     fn apply(&mut self, event: &Checkpoint) -> io::Result<()> {
         match event {
@@ -208,6 +250,62 @@ impl State {
                 self.active = None;
                 self.completed += 1;
             }
+            Checkpoint::FinalPointerObservations { observations } => {
+                if self.active.is_none()
+                    || self.recovery.is_none()
+                    || observations.is_empty()
+                    || !matches!(
+                        self.outcome,
+                        LocalOutcome::Running | LocalOutcome::Restoring
+                    )
+                {
+                    return Err(invalid("pointer observation outside an active final step"));
+                }
+                for observation in observations {
+                    observation.to_observation()?;
+                }
+                let run = self.run();
+                self.final_observations
+                    .extend(observations.iter().map(|o| (run, o.clone())));
+            }
+            Checkpoint::InProcedurePointerObservation {
+                operation_index,
+                observation,
+            } => {
+                if self.active != Some(*operation_index)
+                    || self.recovery.is_none()
+                    || !matches!(
+                        self.outcome,
+                        LocalOutcome::Running | LocalOutcome::Restoring
+                    )
+                {
+                    return Err(invalid("pointer observation outside its active step"));
+                }
+                // Only an allocation/task record (03 00/01/02) reads a pointer back,
+                // and only for its own object and source address.
+                let step = self.recovery.as_ref().and_then(|r| {
+                    r.original_bundle
+                        .normalized_plan
+                        .steps
+                        .get(*operation_index)
+                });
+                match step.map(|s| &s.operation) {
+                    Some(OperationRecord::LoadControl { object, octets })
+                        if octets[0] == 3
+                            && octets[1] <= 2
+                            && *object == observation.object
+                            && observation.expected == [0, 0, octets[2], octets[3]] => {}
+                    _ => {
+                        return Err(invalid(
+                            "pointer observation does not match the active allocation record",
+                        ))
+                    }
+                }
+                observation.to_observation()?;
+                let run = self.run();
+                self.in_procedure_observations
+                    .push((run, *operation_index, observation.clone()));
+            }
             Checkpoint::Finished => {
                 if self.outcome != LocalOutcome::Running
                     || self.active.is_some()
@@ -233,7 +331,7 @@ impl State {
                 };
             }
             Checkpoint::RestoreStarted => {
-                if self.recovery.is_none() || self.restore_attempted {
+                if self.recovery.is_none() || self.restore_attempted || self.prestate_differs() {
                     return Err(invalid(
                         "missing recovery or restore already attempted; no retry",
                     ));
@@ -287,6 +385,47 @@ pub struct OperationProgress {
     pub restore_available: bool,
     pub mutation_possible: bool,
     pub recovery_phrases: Option<OperationRecoveryPhrases>,
+    /// The captured prestate differed from the source shape: evidence only,
+    /// original-state recovery is unavailable for this operation.
+    pub prestate_differs: bool,
+    pub pointer_observations: Vec<PointerObservationProgress>,
+    /// Plan application versus the device's prior PID_PROGRAM_VERSION (empty:
+    /// refused), when they differed.
+    pub program_version_observation: Option<([u8; 5], Vec<u8>)>,
+    /// Allocations whose prestate read was refused or short. Their captured
+    /// bytes are zero placeholders, never a backup.
+    pub prestate_unreadable_allocations: Vec<UnreadableAllocation>,
+}
+/// One declared allocation whose prior memory could not be read.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct UnreadableAllocation {
+    pub object: u8,
+    pub address: u16,
+    pub length: usize,
+}
+/// Where a pointer observation was made.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PointerObservationPhase {
+    Prestate,
+    InProcedure,
+    Final,
+}
+/// Which run of the durable operation made an observation; both are kept.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PointerObservationRun {
+    Download,
+    Restore,
+}
+/// One recorded source-versus-device pointer difference, for status display.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct PointerObservationProgress {
+    pub run: PointerObservationRun,
+    pub phase: PointerObservationPhase,
+    /// Plan operation of an in-procedure read-back; `None` otherwise.
+    pub operation_index: Option<usize>,
+    pub record: PointerObservationRecord,
 }
 /// Exact acknowledgements from the ORIGINAL retained operation, never current preparation.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -448,6 +587,7 @@ impl OperationStore {
                 .map(|r| r.original_bundle.normalized_plan.steps.len()),
             backup_available: self.state.recovery.is_some(),
             restore_available: self.state.recovery.is_some()
+                && !self.state.prestate_differs()
                 && !self.state.restore_attempted
                 && !matches!(
                     self.outcome(),
@@ -455,12 +595,75 @@ impl OperationStore {
                 ),
             mutation_possible: self.state.mutation,
             recovery_phrases: self.recovery_phrases(),
+            prestate_differs: self.state.prestate_differs(),
+            prestate_unreadable_allocations: self
+                .state
+                .recovery
+                .iter()
+                .flat_map(|r| {
+                    r.prestate_unreadable_allocations
+                        .iter()
+                        .filter_map(|&index| r.allocations.get(index))
+                })
+                .map(|a| UnreadableAllocation {
+                    object: a.object,
+                    address: a.address,
+                    length: a.data.len(),
+                })
+                .collect(),
+            program_version_observation: self.state.recovery.as_ref().and_then(|r| {
+                r.observed_program_version
+                    .clone()
+                    .map(|observed| (r.original_bundle.binding.application, observed))
+            }),
+            pointer_observations: self
+                .state
+                .recovery
+                .iter()
+                .flat_map(|r| &r.prestate_observations)
+                .map(|record| {
+                    (
+                        PointerObservationRun::Download,
+                        PointerObservationPhase::Prestate,
+                        None,
+                        record,
+                    )
+                })
+                .chain(
+                    self.state
+                        .in_procedure_observations
+                        .iter()
+                        .map(|(run, index, record)| {
+                            (
+                                *run,
+                                PointerObservationPhase::InProcedure,
+                                Some(*index),
+                                record,
+                            )
+                        }),
+                )
+                .chain(
+                    self.state
+                        .final_observations
+                        .iter()
+                        .map(|(run, record)| (*run, PointerObservationPhase::Final, None, record)),
+                )
+                .map(
+                    |(run, phase, operation_index, record)| PointerObservationProgress {
+                        run,
+                        phase,
+                        operation_index,
+                        record: record.clone(),
+                    },
+                )
+                .collect(),
         }
     }
     /// Pure in-memory projection suitable for status after navigation/restart.
     /// Null while running/restoring or after the once-only attempt is consumed.
     pub fn recovery_phrases(&self) -> Option<OperationRecoveryPhrases> {
         if self.state.restore_attempted
+            || self.state.prestate_differs()
             || matches!(
                 self.outcome(),
                 LocalOutcome::Running | LocalOutcome::Restoring
@@ -506,6 +709,11 @@ impl OperationStore {
         Ok(())
     }
     pub(crate) fn require_restore_available(&self) -> io::Result<()> {
+        if self.state.prestate_differs() {
+            return Err(invalid(
+                "original-state recovery unavailable: device prestate differed from source allocation shape or application",
+            ));
+        }
         if !self.reopened
             || self.poisoned
             || self.state.recovery.is_none()

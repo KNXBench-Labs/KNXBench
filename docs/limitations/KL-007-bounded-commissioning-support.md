@@ -6,6 +6,34 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## System-2 prestate observations — 25 October 2026 source
+
+After a field report (GitHub issue #30: a UP 258D12 refused with "current
+resource pointer differs from original source allocation shape" before any
+write), the owner ruled that a prestate differing from the project/source
+shape must not refuse the experimental System-2 download. Mask, manufacturer
+and hardware type stay hard pre-write checks. Serial number, current program
+version, non-Loaded resources and a differing PID_TABLE_REFERENCE are now read
+and recorded as observations ([contract](../contracts/alpha16-system2-configured-download.md#actual-state-backup-and-recovery-limits)).
+After any such difference except the serial, original-state recovery is
+unavailable for that operation; recovery replay stays bound to the serial read
+at acquisition. Final memory, Loaded and program-version verification stay hard;
+a final pointer difference is recorded only. The owner also makes the
+read-back after each allocation/task record an observation as well, records a
+refused PID 7 read as `refused` in every phase, and stops zero/all-FF serials
+from blocking (recovery is unavailable for them). An allocation record a device
+silently ignores is therefore caught only by the final memory, Loaded and
+program-version verification. A refused or short prestate memory read is
+recorded and makes recovery unavailable instead of refusing. Accepted
+consequence: a device that refuses every memory read was refused before any
+write; it is now written and then fails final verification with
+mutationMayHaveStarted true and no recovery. The UI lists such allocations and
+never calls their zero placeholders a backup. Final pointer
+observations are journaled before the closing VerifyMode write, and download
+and restore observations are kept separately. The status DTO reports whether a
+failed operation could have written anything. Software and simulator tests only; whether the
+relaxed admission downloads the reporter's device correctly is unverified.
+
 ## Property load-control response — 25 October 2026 source
 
 The state in a property load-control write response is validated before polling;

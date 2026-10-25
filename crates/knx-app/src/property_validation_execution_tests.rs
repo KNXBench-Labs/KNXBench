@@ -35,6 +35,7 @@ fn bundle() -> PreparedBundle {
             manufacturer: bundle.binding.manufacturer,
             hardware: bundle.binding.hardware,
             application: bundle.binding.application,
+            observed_application: None,
         },
         source_preparation_sha256: bundle
             .project_preparation
@@ -267,6 +268,7 @@ fn recovery_store(path: &std::path::Path, bundle: &PreparedBundle) -> OperationS
                 object: p.object,
                 state: knx_core::commissioning::load_state::LoadState::Loaded.octet(),
                 pointer: p.value,
+                pointer_refused: false,
             })
             .collect(),
         allocations: plan
@@ -312,6 +314,10 @@ fn recovery_store(path: &std::path::Path, bundle: &PreparedBundle) -> OperationS
                 })
             })
             .collect(),
+        prestate_observations: Vec::new(),
+        observed_serial: None,
+        observed_program_version: None,
+        prestate_unreadable_allocations: Vec::new(),
     };
     let mut store = OperationStore::create(path, bundle.binding.clone()).unwrap();
     store

@@ -12,8 +12,28 @@ export const preview: System2Preview = {
 export const status: System2Status = {
   schemaVersion: 1, operationId: "d".repeat(32), binding: preview.binding, address: preview.address, deviceName: preview.deviceName,
   state: "running", completedSteps: 0, totalSteps: null, backupAvailable: false, recoveryPhrase: null, downloadPhrase: null, releasePhrase: null, message: null,
+  mutationMayHaveStarted: false, prestateDiffers: false, pointerObservations: [], programVersionObservation: null, prestateUnreadableAllocations: [],
 };
 export const recoveryStatus: System2Status = {
-  ...status, state: "interrupted", backupAvailable: true, recoveryPhrase: "Recover original actual state",
+  ...status, state: "interrupted", backupAvailable: true, mutationMayHaveStarted: true, recoveryPhrase: "Recover original actual state",
   downloadPhrase: preview.downloadPhrase, releasePhrase: preview.releasePhrase,
+};
+// Issue #30 shape: the device prestate differed, the download went on, recovery is unavailable.
+export const prestateStatus: System2Status = {
+  ...status, state: "finished", completedSteps: 8, totalSteps: 8, backupAvailable: true, mutationMayHaveStarted: true, prestateDiffers: true,
+  pointerObservations: [{ run: "download", phase: "prestate", object: 3, operationIndex: null, expected: "00003c00", observed: "00000000", loadState: "Loaded" }],
+};
+// Amendment 3: in-procedure and refused PID 7 reads are observations too.
+export const inProcedureStatus: System2Status = {
+  ...status, state: "finished", completedSteps: 8, totalSteps: 8, backupAvailable: true, mutationMayHaveStarted: true, prestateDiffers: true,
+  pointerObservations: [
+    { run: "download", phase: "prestate", object: 3, operationIndex: null, expected: "00003c00", observed: "refused", loadState: "Loaded" },
+    { run: "download", phase: "inProcedure", object: 3, operationIndex: 4, expected: "00003c00", observed: "00003d00", loadState: "Loading" },
+    { run: "restore", phase: "final", object: 3, operationIndex: null, expected: "00003c00", observed: "refused", loadState: "Loaded" },
+  ],
+};
+// Review: zero placeholders for an unreadable prestate are never a backup.
+export const unreadableStatus: System2Status = {
+  ...status, state: "finished", completedSteps: 8, totalSteps: 8, backupAvailable: true, mutationMayHaveStarted: true, prestateDiffers: true,
+  prestateUnreadableAllocations: [{ object: 3, address: "3c00", length: 4 }],
 };

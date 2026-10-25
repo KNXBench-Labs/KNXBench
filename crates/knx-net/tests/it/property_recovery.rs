@@ -20,7 +20,8 @@ use knx_net::commissioning::property_download::{
     PropertySimulationFailure,
 };
 use knx_net::commissioning::property_recovery::{
-    ExperimentalPropertyPreconditions, PropertyJournalEvent,
+    ExperimentalPropertyPreconditions, PropertyInProcedurePointerObservation, PropertyJournalEvent,
+    PropertyPointerObservation, PropertyProgramVersionObservation, PropertySerialObservation,
 };
 use knx_net::commissioning::simulator::{Seen, SimulatedDevice, SimulatorConfig};
 use knx_net::commissioning::SessionTiming;
@@ -280,7 +281,7 @@ async fn exact_snapshot_shape_corruption_refuses_restore_before_connection() {
             0 => snapshot.version = 2,
             1 => snapshot.resources.clear(),
             2 => snapshot.resources[0].state = LoadState::Loading,
-            3 => snapshot.resources[0].pointer[0] = 1,
+            3 => snapshot.resources[0].pointer = Some([1, 0, 0x3C, 0]),
             4 => snapshot.allocations.clear(),
             5 => snapshot.allocations[0].data.pop().map(|_| ()).unwrap(),
             6 => snapshot.allocations[0].operation_index += 1,
@@ -365,44 +366,32 @@ async fn durable_operation_barriers_fail_with_exact_completed_prefix_and_no_auto
 }
 
 #[tokio::test]
-async fn initial_identity_state_pointer_or_short_memory_refuses_before_any_setup_write() {
-    for cause in 0..7 {
-        let (device, original, _) = fixture();
+async fn device_type_or_short_memory_refuses_before_any_setup_write() {
+    // Load state and pointer differences are observations now (issue #30); see
+    // prestate_pointer_mismatch_is_observed_and_download_completes_without_original_recovery.
+    // Serial is no admission check either (owner amendment 2026-10-25); see
+    // serial_mismatch_is_recorded_and_the_download_proceeds.
+    // Nor is the current program version (owner amendment 2); see
+    // different_prior_program_version_is_recorded_and_the_download_proceeds.
+    // A short prestate memory answer is an observation too (review fix 5); see
+    // unreadable_prestate_memory_is_observed_and_leaves_no_recovery.
+    for cause in [2, 3, 4] {
+        let (mut device, original, _) = fixture();
         establish_shape(&device, &original).await;
-        let mut plan = original.clone();
+        let plan = original.clone();
         match cause {
-            0 => device.preset_property(0, 11, &[7; 6]),
-            1 => device.preset_property(3, PID_PROGRAM_VERSION, &[7; 5]),
             2 => device.preset_property(0, PID_HARDWARE_TYPE, &[7; 6]),
             3 => device.preset_property(0, 12, &[0xFF; 2]),
-            4 => device.preset_load_state(ObjectIndex::new(3), LoadState::Loading),
-            5 => {
-                let mut steps = plan.steps().to_vec();
-                steps[4].operation = Op::LoadControl {
-                    object: 3,
-                    payload: absolute_data(AbsolutePropertySegment {
-                        start: 0x3D00,
-                        length: 4,
-                        access: 0xFF,
-                        memory_type: SegmentMemoryType::Eeprom,
-                        checksum_disabled: true,
-                    })
-                    .unwrap(),
-                };
-                steps[5].operation = Op::WriteMemory {
-                    object: 3,
-                    address: 0x3D00,
-                    data: vec![1, 2, 3, 4],
-                };
-                plan = PropertyDownloadPlan::new(
-                    plan.target(),
-                    plan.mask(),
-                    plan.manufacturer(),
-                    steps,
-                )
-                .unwrap();
+            // Mask version (review fix 4): another device class answers.
+            4 => {
+                device = SimulatedDevice::with_config(SimulatorConfig {
+                    mask_version: 0x0705,
+                    serial_number: Some(SERIAL),
+                    ..SimulatorConfig::default()
+                });
+                device.preset_property(0, PID_HARDWARE_TYPE, &[1; 6]);
+                device.preset_property(3, PID_PROGRAM_VERSION, &VERSION);
             }
-            6 => {}
             _ => unreachable!(),
         }
         let preconditions = ExperimentalPropertyPreconditions::same_application_reinstallation(
@@ -413,7 +402,7 @@ async fn initial_identity_state_pointer_or_short_memory_refuses_before_any_setup
             device: &device,
             kind: TargetKind::Simulator,
             discard_allocation: false,
-            short_read: cause == 6,
+            short_read: false,
         };
         let before = device.seen().len();
         let error = run_experimental_property_plan(
@@ -498,42 +487,45 @@ async fn generic_transport_requires_matching_target_kind_and_download_scope() {
 }
 
 #[tokio::test]
-async fn silent_absolute_allocation_failure_stops_before_any_memory_write() {
+async fn silent_absolute_allocation_failure_is_an_in_procedure_observation() {
+    // Amendment 3: the read-back after an allocation record is an observation.
+    // The writes go to the plan's absolute addresses and the complete allocation
+    // memory is verified at the end; a silently discarded allocation is recorded.
     let (device, plan, preconditions) = fixture();
     establish_shape(&device, &plan).await;
-    let before = device.seen().len();
     let transport = Forward {
         device: &device,
         kind: TargetKind::Simulator,
         discard_allocation: true,
         short_read: false,
     };
-    let error = run_experimental_property_plan(
+    let mut journaled = Vec::new();
+    let report = run_experimental_property_plan(
         &transport,
         &plan,
         auth(&device),
         AuthorisationPlan::Skip,
         timing(),
         &preconditions,
-        &mut |_| Ok(()),
+        &mut |event| {
+            if let PropertyJournalEvent::InProcedurePointerObservation(observation) = event {
+                journaled.push(observation.clone());
+            }
+            Ok(())
+        },
         &|| false,
     )
     .await
-    .unwrap_err();
-    assert_eq!(
-        error.operation_index,
-        Some(4),
-        "allocation pointer must be checked before data"
-    );
-    assert!(!device.seen()[before..]
-        .iter()
-        .any(|seen| matches!(seen, Seen::MemoryWrite { .. })));
-    assert!(error.mutation_may_have_started);
+    .unwrap();
+    assert_eq!(report.in_procedure_pointer_observations, journaled);
+    assert_eq!(journaled.len(), 1);
+    assert_eq!(journaled[0].operation_index, 4);
+    assert_eq!(journaled[0].observation.expected, [0, 0, 0x3C, 0]);
+    assert_ne!(journaled[0].observation.observed, Some([0, 0, 0x3C, 0]));
     assert_eq!(
         device.memory(0x3C00, 4),
-        [Some(9), Some(8), Some(7), Some(6)]
+        [Some(1), Some(2), Some(3), Some(4)]
     );
-    assert!(matches!(device.seen().last(), Some(Seen::Disconnect)));
 }
 
 #[tokio::test]
@@ -917,7 +909,7 @@ async fn three_resource_task_segment_source_pointers_include_explicit_zero_appli
     .await
     .unwrap();
     assert_eq!(report.recovery.resources.len(), 3);
-    assert_eq!(report.recovery.resources[2].pointer, [0; 4]);
+    assert_eq!(report.recovery.resources[2].pointer, Some([0; 4]));
 }
 
 #[tokio::test]
@@ -1040,6 +1032,12 @@ async fn successful_execution_restores_prior_verify_bit_and_journals_every_norma
                 PropertyJournalEvent::OperationCompleted {
                     operation_index, ..
                 } => ends.push(operation_index),
+                PropertyJournalEvent::FinalPointerObservations(observations) => {
+                    panic!("matching shape produced observations {observations:?}")
+                }
+                PropertyJournalEvent::InProcedurePointerObservation(observation) => {
+                    panic!("matching shape produced observation {observation:?}")
+                }
             }
             Ok(())
         },
@@ -1048,6 +1046,10 @@ async fn successful_execution_restores_prior_verify_bit_and_journals_every_norma
     .await
     .unwrap();
     assert_eq!(report.execution.completed.len(), plan.steps().len());
+    // Mismatch-free path is unchanged: no observations, recovery available.
+    assert!(report.recovery.prestate_observations().is_empty());
+    assert!(report.final_pointer_observations.is_empty());
+    assert!(report.recovery.recovery_plan(&plan).is_ok());
     assert_eq!(starts, (0..plan.steps().len()).collect::<Vec<_>>());
     assert_eq!(ends, starts);
     let controls = device.seen()[before..]
@@ -1114,4 +1116,815 @@ async fn durable_snapshot_failure_prevents_first_verify_mode_mutation() {
         .iter()
         .any(|s| matches!(s, Seen::PropertyWrite { .. } | Seen::MemoryWrite { .. })));
     assert!(matches!(seen.last(), Some(Seen::Disconnect)));
+}
+
+// Rewrites only the final PID_TABLE_REFERENCE answers after LoadCompleted, so a
+// fully verified download meets a pointer the source model did not predict.
+struct FinalReference<'a> {
+    device: &'a SimulatedDevice,
+    armed: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    property: u8,
+    /// `None` answers with zero elements, the AL refusal.
+    replacement: Option<Vec<u8>>,
+    /// First PID 5 octet that arms the rewrite (2 LoadCompleted, 3 allocation).
+    arm_on: u8,
+}
+impl ManagementTransport for FinalReference<'_> {
+    fn assigned_address(&self) -> IndividualAddress {
+        ManagementTransport::assigned_address(self.device)
+    }
+    fn subscribe(&self) -> broadcast::Receiver<TunnelEvent> {
+        let mut upstream = ManagementTransport::subscribe(self.device);
+        let (sender, receiver) = broadcast::channel(256);
+        let armed = self.armed.clone();
+        let (property, replacement) = (self.property, self.replacement.clone());
+        tokio::spawn(async move {
+            loop {
+                match upstream.recv().await {
+                    Ok(TunnelEvent::Telegram(mut frame)) => {
+                        if armed.load(std::sync::atomic::Ordering::SeqCst) {
+                            if let ApplicationService::PropertyValueResponse {
+                                object_index: 3,
+                                property_id,
+                                nr_of_elem,
+                                data,
+                                ..
+                            } = &mut frame.service
+                            {
+                                if *property_id == property {
+                                    match &replacement {
+                                        Some(bytes) => *data = bytes.clone(),
+                                        None => {
+                                            *nr_of_elem = 0;
+                                            data.clear();
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        let _ = sender.send(TunnelEvent::Telegram(frame));
+                    }
+                    Ok(TunnelEvent::Closed) => {
+                        let _ = sender.send(TunnelEvent::Closed);
+                        break;
+                    }
+                    Err(broadcast::error::RecvError::Lagged(_)) => continue,
+                    Err(broadcast::error::RecvError::Closed) => break,
+                }
+            }
+        });
+        receiver
+    }
+    fn target_kind(&self) -> TargetKind {
+        TargetKind::Simulator
+    }
+    async fn send_frame(
+        &self,
+        destination: Destination,
+        transport: Tpci,
+        service: ApplicationService,
+    ) -> Result<(), BusError> {
+        if let ApplicationService::PropertyValueWrite {
+            property_id: 5,
+            data,
+            ..
+        } = &service
+        {
+            if data.first() == Some(&self.arm_on) {
+                self.armed.store(true, std::sync::atomic::Ordering::SeqCst);
+            }
+        }
+        ManagementTransport::send_frame(self.device, destination, transport, service).await
+    }
+}
+
+fn recovery_refusal(
+    snapshot: &knx_net::commissioning::property_recovery::PropertyRecoverySnapshot,
+    plan: &PropertyDownloadPlan,
+) -> String {
+    match snapshot.recovery_plan(plan) {
+        Err(PropertySimulationFailure::Recovery(reason)) => reason,
+        other => panic!("original-state recovery must be refused, got {other:?}"),
+    }
+}
+
+#[tokio::test]
+async fn prestate_pointer_mismatch_is_observed_and_download_completes_without_original_recovery() {
+    // Issue #30: the device's PID 7 differs from the source model (fresh
+    // simulator answers 0, the source record says 3C00h). Allowed by owner ruling.
+    let (device, plan, preconditions) = fixture();
+    let mut acquired = None;
+    let report = run_experimental_property_plan(
+        &device,
+        &plan,
+        auth(&device),
+        AuthorisationPlan::Skip,
+        timing(),
+        &preconditions,
+        &mut |event| {
+            if let PropertyJournalEvent::RecoveryAcquired(snapshot) = event {
+                acquired = Some(snapshot.clone());
+            }
+            Ok(())
+        },
+        &|| false,
+    )
+    .await
+    .expect("a differing prestate pointer is an observation, not a refusal");
+    let acquired = acquired.expect("durable snapshot precedes mutation");
+    assert_eq!(acquired, report.recovery);
+    assert_eq!(report.recovery.resources[0].object, 3);
+    assert_eq!(report.recovery.resources[0].pointer, Some([0; 4]));
+    assert_eq!(report.recovery.resources[0].state, LoadState::Loaded);
+    assert_eq!(report.recovery.regions[0].data, [9, 8, 7, 6]);
+    assert_eq!(
+        report.recovery.prestate_observations(),
+        [PropertyPointerObservation {
+            object: 3,
+            expected: [0, 0, 0x3C, 0],
+            observed: Some([0; 4]),
+            state: LoadState::Loaded,
+        }]
+    );
+    assert!(report.final_pointer_observations.is_empty());
+    let reason = recovery_refusal(&report.recovery, &plan);
+    assert!(
+        reason.contains("original-state recovery unavailable"),
+        "{reason}"
+    );
+    assert!(
+        reason.contains("object 3: expected PID_TABLE_REFERENCE 00003c00, observed 00000000"),
+        "{reason}"
+    );
+    assert_eq!(
+        device.memory(0x3C00, 4),
+        [Some(1), Some(2), Some(3), Some(4)]
+    );
+    assert_eq!(device.load_state(ObjectIndex::new(3)), LoadState::Loaded);
+    assert!(matches!(device.seen().last(), Some(Seen::Disconnect)));
+}
+
+#[tokio::test]
+async fn non_loaded_prestate_is_observed_and_download_completes_without_original_recovery() {
+    let (device, plan, preconditions) = fixture();
+    establish_shape(&device, &plan).await;
+    device.preset_load_state(ObjectIndex::new(3), LoadState::Error);
+    let report = run_experimental_property_plan(
+        &device,
+        &plan,
+        auth(&device),
+        AuthorisationPlan::Skip,
+        timing(),
+        &preconditions,
+        &mut |_| Ok(()),
+        &|| false,
+    )
+    .await
+    .expect("a non-Loaded prestate is an observation, not a refusal");
+    assert_eq!(report.recovery.resources[0].state, LoadState::Error);
+    assert_eq!(report.recovery.resources[0].pointer, Some([0, 0, 0x3C, 0]));
+    assert_eq!(
+        report.recovery.prestate_observations()[0].state,
+        LoadState::Error
+    );
+    let reason = recovery_refusal(&report.recovery, &plan);
+    assert!(
+        reason.contains("original-state recovery unavailable"),
+        "{reason}"
+    );
+    assert_eq!(
+        device.memory(0x3C00, 4),
+        [Some(1), Some(2), Some(3), Some(4)]
+    );
+    assert_eq!(device.load_state(ObjectIndex::new(3)), LoadState::Loaded);
+}
+
+#[tokio::test]
+async fn final_pointer_difference_after_verified_download_is_an_observation() {
+    let (device, plan, preconditions) = fixture();
+    establish_shape(&device, &plan).await;
+    let transport = FinalReference {
+        device: &device,
+        armed: Default::default(),
+        property: 7,
+        replacement: Some(vec![0, 0, 0x3D, 0]),
+        arm_on: 2,
+    };
+    let mut journaled = Vec::new();
+    let report = run_experimental_property_plan(
+        &transport,
+        &plan,
+        auth(&device),
+        AuthorisationPlan::Skip,
+        timing(),
+        &preconditions,
+        &mut |event| {
+            if let PropertyJournalEvent::FinalPointerObservations(observations) = event {
+                journaled.extend_from_slice(observations);
+            }
+            Ok(())
+        },
+        &|| false,
+    )
+    .await
+    .expect("memory, Loaded and identity verified; PID 7 alone is no verdict");
+    assert_eq!(report.execution.completed.len(), plan.steps().len());
+    let expected = [PropertyPointerObservation {
+        object: 3,
+        expected: [0, 0, 0x3C, 0],
+        observed: Some([0, 0, 0x3D, 0]),
+        state: LoadState::Loaded,
+    }];
+    assert_eq!(report.final_pointer_observations, expected);
+    assert_eq!(journaled, expected, "observation is journaled durably");
+    assert!(report.recovery.prestate_observations().is_empty());
+    // No prestate mismatch: original-state recovery stays available.
+    assert!(report.recovery.recovery_plan(&plan).is_ok());
+    assert_eq!(
+        device.memory(0x3C00, 4),
+        [Some(1), Some(2), Some(3), Some(4)]
+    );
+}
+
+#[tokio::test]
+async fn final_memory_verification_stays_hard_after_a_prestate_mismatch() {
+    // Memory verification is proof; a pointer observation never softens it.
+    let (device, plan, preconditions) = fixture();
+    let transport = Forward {
+        device: &device,
+        kind: TargetKind::Simulator,
+        discard_allocation: false,
+        short_read: false,
+    };
+    let error = run_experimental_property_plan(
+        &transport,
+        &plan,
+        auth(&device),
+        AuthorisationPlan::Skip,
+        timing(),
+        &preconditions,
+        &mut |event| {
+            if let PropertyJournalEvent::OperationStarting {
+                operation_index: 7, ..
+            } = event
+            {
+                device.preset_memory(0x3C02, &[0xEE]);
+            }
+            Ok(())
+        },
+        &|| false,
+    )
+    .await
+    .unwrap_err();
+    assert!(error.mutation_may_have_started);
+    match error.failure {
+        PropertySimulationFailure::Recovery(reason) => {
+            assert!(reason.contains("full allocation verification"), "{reason}")
+        }
+        other => panic!("unexpected failure {other:?}"),
+    }
+}
+
+#[tokio::test]
+async fn serial_mismatch_is_recorded_and_the_download_proceeds() {
+    // Owner amendment: device type and class admit; the serial is an observation.
+    let (device, plan, preconditions) = fixture();
+    establish_shape(&device, &plan).await;
+    device.preset_property(0, 11, &[0, 2, 9, 9, 9, 9]);
+    let report = run_experimental_property_plan(
+        &device,
+        &plan,
+        auth(&device),
+        AuthorisationPlan::Skip,
+        timing(),
+        &preconditions,
+        &mut |_| Ok(()),
+        &|| false,
+    )
+    .await
+    .expect("a differing serial is recorded, not refused");
+    assert_eq!(report.execution.completed.len(), plan.steps().len());
+    assert_eq!(
+        device.memory(0x3C00, 4),
+        [Some(1), Some(2), Some(3), Some(4)]
+    );
+    assert_eq!(report.recovery.observed_serial, [0, 2, 9, 9, 9, 9]);
+    assert_eq!(
+        report.recovery.serial_observation(),
+        Some(PropertySerialObservation {
+            expected: SERIAL,
+            observed: [0, 2, 9, 9, 9, 9],
+        })
+    );
+    // Recovery stays available, bound to the serial actually read.
+    assert!(report.recovery.recovery_plan(&plan).is_ok());
+}
+
+#[tokio::test]
+async fn recovery_onto_a_different_serial_refuses_before_any_write() {
+    use knx_net::commissioning::property_download::restore_experimental_property_plan;
+    let (device, plan, preconditions) = fixture();
+    establish_shape(&device, &plan).await;
+    let report = run_experimental_property_plan(
+        &device,
+        &plan,
+        auth(&device),
+        AuthorisationPlan::Skip,
+        timing(),
+        &preconditions,
+        &mut |_| Ok(()),
+        &|| false,
+    )
+    .await
+    .unwrap();
+    // Another physical device of the same type now answers at the target.
+    device.preset_property(0, 11, &[0, 2, 9, 9, 9, 9]);
+    let before = device.seen().len();
+    let error = restore_experimental_property_plan(
+        &device,
+        &plan,
+        &report.recovery,
+        auth(&device),
+        AuthorisationPlan::Skip,
+        timing(),
+        &mut |_| Ok(()),
+        &|| false,
+    )
+    .await
+    .unwrap_err();
+    assert!(!error.mutation_may_have_started);
+    match error.failure {
+        PropertySimulationFailure::Recovery(reason) => {
+            assert!(reason.contains("serial number differs"), "{reason}")
+        }
+        other => panic!("unexpected failure {other:?}"),
+    }
+    assert!(!device.seen()[before..]
+        .iter()
+        .any(|seen| matches!(seen, Seen::MemoryWrite { .. } | Seen::PropertyWrite { .. })));
+    assert_eq!(
+        device.memory(0x3C00, 4),
+        [Some(1), Some(2), Some(3), Some(4)]
+    );
+}
+
+#[tokio::test]
+async fn different_prior_program_version_is_recorded_and_the_download_proceeds() {
+    // Owner amendment 2: the procedure unloads and writes the identity itself.
+    let (device, plan, preconditions) = fixture();
+    establish_shape(&device, &plan).await;
+    device.preset_property(3, PID_PROGRAM_VERSION, &[0, 2, 0x12, 0x34, 9]);
+    let report = run_experimental_property_plan(
+        &device,
+        &plan,
+        auth(&device),
+        AuthorisationPlan::Skip,
+        timing(),
+        &preconditions,
+        &mut |event| {
+            // The simulator does not derive PID 13 from a 03 02 task record, so
+            // model the identity the real procedure writes before LoadCompleted.
+            if let PropertyJournalEvent::OperationStarting {
+                operation_index: 6, ..
+            } = event
+            {
+                device.preset_property(3, PID_PROGRAM_VERSION, &VERSION);
+            }
+            Ok(())
+        },
+        &|| false,
+    )
+    .await
+    .expect("a different prior application is recorded, not refused");
+    assert_eq!(report.execution.completed.len(), plan.steps().len());
+    assert_eq!(
+        device.memory(0x3C00, 4),
+        [Some(1), Some(2), Some(3), Some(4)]
+    );
+    let reason = recovery_refusal(&report.recovery, &plan);
+    assert!(
+        reason.contains("original-state recovery unavailable") && reason.contains("application"),
+        "{reason}"
+    );
+    assert_eq!(
+        report.recovery.program_version_observation(),
+        Some(PropertyProgramVersionObservation {
+            expected: VERSION,
+            observed: vec![0, 2, 0x12, 0x34, 9],
+        })
+    );
+    assert!(
+        reason.contains("program version: expected 0002123401, observed 0002123409"),
+        "{reason}"
+    );
+}
+
+#[tokio::test]
+async fn final_program_version_mismatch_still_fails_verification() {
+    let (device, plan, preconditions) = fixture();
+    establish_shape(&device, &plan).await;
+    let transport = FinalReference {
+        device: &device,
+        armed: Default::default(),
+        property: PID_PROGRAM_VERSION,
+        replacement: Some(vec![0, 2, 0x12, 0x34, 9]),
+        arm_on: 2,
+    };
+    let error = run_experimental_property_plan(
+        &transport,
+        &plan,
+        auth(&device),
+        AuthorisationPlan::Skip,
+        timing(),
+        &preconditions,
+        &mut |_| Ok(()),
+        &|| false,
+    )
+    .await
+    .unwrap_err();
+    assert!(error.mutation_may_have_started);
+    match error.failure {
+        PropertySimulationFailure::Recovery(reason) => {
+            assert!(
+                reason.contains("final application identity differs"),
+                "{reason}"
+            )
+        }
+        other => panic!("unexpected failure {other:?}"),
+    }
+}
+
+#[tokio::test]
+async fn in_procedure_pointer_difference_after_allocation_is_an_observation() {
+    // Amendment 3: ETS-programmed devices report a PID 7 the source model does
+    // not predict. Memory writes use the plan's addresses and are verified.
+    let (device, plan, preconditions) = fixture();
+    establish_shape(&device, &plan).await;
+    let transport = FinalReference {
+        device: &device,
+        armed: Default::default(),
+        property: 7,
+        replacement: Some(vec![0, 0, 0x3D, 0]),
+        arm_on: 3,
+    };
+    let report = run_experimental_property_plan(
+        &transport,
+        &plan,
+        auth(&device),
+        AuthorisationPlan::Skip,
+        timing(),
+        &preconditions,
+        &mut |_| Ok(()),
+        &|| false,
+    )
+    .await
+    .expect("in-procedure PID 7 read-back is an observation");
+    assert_eq!(report.execution.completed.len(), plan.steps().len());
+    assert_eq!(
+        device.memory(0x3C00, 4),
+        [Some(1), Some(2), Some(3), Some(4)]
+    );
+    assert!(report.recovery.recovery_plan(&plan).is_ok());
+    assert_eq!(
+        report.in_procedure_pointer_observations,
+        [PropertyInProcedurePointerObservation {
+            operation_index: 4,
+            observation: PropertyPointerObservation {
+                object: 3,
+                expected: [0, 0, 0x3C, 0],
+                observed: Some([0, 0, 0x3D, 0]),
+                state: LoadState::Loading,
+            },
+        }]
+    );
+    assert_eq!(report.final_pointer_observations.len(), 1);
+}
+
+#[tokio::test]
+async fn refused_pointer_reads_are_observations_in_every_phase() {
+    let (device, plan, preconditions) = fixture();
+    establish_shape(&device, &plan).await;
+    let transport = FinalReference {
+        device: &device,
+        armed: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true)),
+        property: 7,
+        replacement: None,
+        arm_on: 0xFF,
+    };
+    let report = run_experimental_property_plan(
+        &transport,
+        &plan,
+        auth(&device),
+        AuthorisationPlan::Skip,
+        timing(),
+        &preconditions,
+        &mut |_| Ok(()),
+        &|| false,
+    )
+    .await
+    .expect("a refused PID 7 read is recorded, not a failure");
+    assert_eq!(
+        device.memory(0x3C00, 4),
+        [Some(1), Some(2), Some(3), Some(4)]
+    );
+    let reason = recovery_refusal(&report.recovery, &plan);
+    assert!(reason.contains("refused"), "{reason}");
+    assert_eq!(report.recovery.resources[0].pointer, None);
+    assert_eq!(report.recovery.prestate_observations()[0].observed, None);
+    assert_eq!(
+        report.in_procedure_pointer_observations[0]
+            .observation
+            .observed,
+        None
+    );
+    assert_eq!(report.final_pointer_observations[0].observed, None);
+    assert!(reason.contains("observed refused"), "{reason}");
+}
+
+#[tokio::test]
+async fn placeholder_serials_download_but_leave_no_recovery() {
+    for serial in [[0; 6], [0xFF; 6]] {
+        let (device, plan, preconditions) = fixture();
+        establish_shape(&device, &plan).await;
+        device.preset_property(0, 11, &serial);
+        let report = run_experimental_property_plan(
+            &device,
+            &plan,
+            auth(&device),
+            AuthorisationPlan::Skip,
+            timing(),
+            &preconditions,
+            &mut |_| Ok(()),
+            &|| false,
+        )
+        .await
+        .expect("a placeholder serial is no admission check");
+        assert_eq!(report.recovery.observed_serial, serial);
+        let reason = recovery_refusal(&report.recovery, &plan);
+        assert!(
+            reason.contains("original-state recovery unavailable") && reason.contains("serial"),
+            "{reason}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn final_pointer_observations_are_durable_before_the_verify_mode_restore_write() {
+    // Review fix 1: the journal barrier precedes the PID 14 restore, so a failed
+    // barrier leaves the VerifyMode bit as the procedure set it.
+    let (device, plan, preconditions) = fixture();
+    establish_shape(&device, &plan).await;
+    let transport = FinalReference {
+        device: &device,
+        armed: Default::default(),
+        property: 7,
+        replacement: Some(vec![0, 0, 0x3D, 0]),
+        arm_on: 2,
+    };
+    let before = device.seen().len();
+    let error = run_experimental_property_plan(
+        &transport,
+        &plan,
+        auth(&device),
+        AuthorisationPlan::Skip,
+        timing(),
+        &preconditions,
+        &mut |event| match event {
+            PropertyJournalEvent::OperationStarting {
+                operation_index: 7, ..
+            } => Ok(()),
+            PropertyJournalEvent::OperationStarting { .. } => Ok(()),
+            PropertyJournalEvent::OperationCompleted { .. } => Ok(()),
+            PropertyJournalEvent::RecoveryAcquired(_) => Ok(()),
+            PropertyJournalEvent::InProcedurePointerObservation(_) => Ok(()),
+            PropertyJournalEvent::FinalPointerObservations(_) => {
+                Err("durable store failed".to_string())
+            }
+        },
+        &|| false,
+    )
+    .await
+    .unwrap_err();
+    assert!(matches!(
+        error.failure,
+        PropertySimulationFailure::Persistence(_)
+    ));
+    let controls: Vec<_> = device.seen()[before..]
+        .iter()
+        .filter(|seen| {
+            matches!(
+                seen,
+                Seen::PropertyWrite {
+                    object_index: 0,
+                    property_id: 14,
+                    ..
+                }
+            )
+        })
+        .cloned()
+        .collect();
+    assert_eq!(
+        controls.len(),
+        1,
+        "only the VerifyMode setup write; no restore before the observation is durable"
+    );
+}
+
+// Short-answers memory reads only before the first property write, so the
+// prestate capture is incomplete while final verification reads normally.
+struct PrestateShortRead<'a> {
+    device: &'a SimulatedDevice,
+    written: std::sync::atomic::AtomicBool,
+}
+impl ManagementTransport for PrestateShortRead<'_> {
+    fn assigned_address(&self) -> IndividualAddress {
+        ManagementTransport::assigned_address(self.device)
+    }
+    fn subscribe(&self) -> broadcast::Receiver<TunnelEvent> {
+        ManagementTransport::subscribe(self.device)
+    }
+    fn target_kind(&self) -> TargetKind {
+        TargetKind::Simulator
+    }
+    async fn send_frame(
+        &self,
+        destination: Destination,
+        transport: Tpci,
+        mut service: ApplicationService,
+    ) -> Result<(), BusError> {
+        use std::sync::atomic::Ordering::SeqCst;
+        match &mut service {
+            ApplicationService::PropertyValueWrite { .. } => self.written.store(true, SeqCst),
+            ApplicationService::MemoryRead { number, .. }
+            | ApplicationService::UserMemoryRead { number, .. }
+                if *number > 1 && !self.written.load(SeqCst) =>
+            {
+                *number -= 1
+            }
+            _ => {}
+        }
+        ManagementTransport::send_frame(self.device, destination, transport, service).await
+    }
+}
+
+#[tokio::test]
+async fn unreadable_prestate_memory_is_observed_and_leaves_no_recovery() {
+    let (device, plan, preconditions) = fixture();
+    establish_shape(&device, &plan).await;
+    let transport = PrestateShortRead {
+        device: &device,
+        written: Default::default(),
+    };
+    let report = run_experimental_property_plan(
+        &transport,
+        &plan,
+        auth(&device),
+        AuthorisationPlan::Skip,
+        timing(),
+        &preconditions,
+        &mut |_| Ok(()),
+        &|| false,
+    )
+    .await
+    .expect("an unreadable prestate allocation is an observation");
+    assert_eq!(
+        device.memory(0x3C00, 4),
+        [Some(1), Some(2), Some(3), Some(4)]
+    );
+    let reason = recovery_refusal(&report.recovery, &plan);
+    assert!(reason.contains("prestate memory unreadable"), "{reason}");
+    assert_eq!(report.recovery.unreadable_allocations, [0]);
+    assert_eq!(
+        report.recovery.allocations[0].data, [0; 4],
+        "placeholder, not a backup"
+    );
+}
+
+// Refuses (empty A_Memory_Response) or drops memory reads before the first
+// property write; final verification afterwards reads normally.
+struct PrestateMemory<'a> {
+    device: &'a SimulatedDevice,
+    drop_reads: bool,
+    written: std::sync::Arc<std::sync::atomic::AtomicBool>,
+}
+impl ManagementTransport for PrestateMemory<'_> {
+    fn assigned_address(&self) -> IndividualAddress {
+        ManagementTransport::assigned_address(self.device)
+    }
+    fn subscribe(&self) -> broadcast::Receiver<TunnelEvent> {
+        let mut upstream = ManagementTransport::subscribe(self.device);
+        let (sender, receiver) = broadcast::channel(256);
+        let written = self.written.clone();
+        tokio::spawn(async move {
+            loop {
+                match upstream.recv().await {
+                    Ok(TunnelEvent::Telegram(mut frame)) => {
+                        if !written.load(std::sync::atomic::Ordering::SeqCst) {
+                            if let ApplicationService::MemoryResponse { data, .. } =
+                                &mut frame.service
+                            {
+                                data.clear();
+                            }
+                        }
+                        let _ = sender.send(TunnelEvent::Telegram(frame));
+                    }
+                    Ok(TunnelEvent::Closed) => {
+                        let _ = sender.send(TunnelEvent::Closed);
+                        break;
+                    }
+                    Err(broadcast::error::RecvError::Lagged(_)) => continue,
+                    Err(broadcast::error::RecvError::Closed) => break,
+                }
+            }
+        });
+        receiver
+    }
+    fn target_kind(&self) -> TargetKind {
+        TargetKind::Simulator
+    }
+    async fn send_frame(
+        &self,
+        destination: Destination,
+        transport: Tpci,
+        service: ApplicationService,
+    ) -> Result<(), BusError> {
+        use std::sync::atomic::Ordering::SeqCst;
+        match &service {
+            ApplicationService::PropertyValueWrite { .. } => self.written.store(true, SeqCst),
+            ApplicationService::MemoryRead { .. }
+                if self.drop_reads && !self.written.load(SeqCst) =>
+            {
+                return Ok(());
+            }
+            _ => {}
+        }
+        ManagementTransport::send_frame(self.device, destination, transport, service).await
+    }
+}
+
+#[tokio::test]
+async fn refused_prestate_memory_read_is_observed_and_the_download_continues() {
+    let (device, plan, preconditions) = fixture();
+    establish_shape(&device, &plan).await;
+    let transport = PrestateMemory {
+        device: &device,
+        drop_reads: false,
+        written: Default::default(),
+    };
+    let report = run_experimental_property_plan(
+        &transport,
+        &plan,
+        auth(&device),
+        AuthorisationPlan::Skip,
+        timing(),
+        &preconditions,
+        &mut |_| Ok(()),
+        &|| false,
+    )
+    .await
+    .expect("a refused prestate memory read is an observation");
+    assert_eq!(report.recovery.unreadable_allocations, [0]);
+    assert_eq!(
+        device.memory(0x3C00, 4),
+        [Some(1), Some(2), Some(3), Some(4)]
+    );
+    let reason = recovery_refusal(&report.recovery, &plan);
+    assert!(reason.contains("prestate memory unreadable"), "{reason}");
+}
+
+#[tokio::test]
+async fn prestate_memory_read_timeout_stays_an_error_before_any_write() {
+    let (device, plan, preconditions) = fixture();
+    establish_shape(&device, &plan).await;
+    let transport = PrestateMemory {
+        device: &device,
+        drop_reads: true,
+        written: Default::default(),
+    };
+    let before = device.seen().len();
+    let error = run_experimental_property_plan(
+        &transport,
+        &plan,
+        auth(&device),
+        AuthorisationPlan::Skip,
+        timing(),
+        &preconditions,
+        &mut |_| Ok(()),
+        &|| false,
+    )
+    .await
+    .unwrap_err();
+    assert!(!error.mutation_may_have_started);
+    assert!(
+        matches!(error.failure, PropertySimulationFailure::Session(_)),
+        "{:?}",
+        error.failure
+    );
+    assert!(!device.seen()[before..]
+        .iter()
+        .any(|seen| matches!(seen, Seen::MemoryWrite { .. } | Seen::PropertyWrite { .. })));
+    assert_eq!(
+        device.memory(0x3C00, 4),
+        [Some(9), Some(8), Some(7), Some(6)]
+    );
 }

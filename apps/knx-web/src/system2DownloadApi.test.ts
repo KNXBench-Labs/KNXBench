@@ -51,3 +51,52 @@ it("uses the existing session-expiry and typed HTTP error handling", async () =>
   try { reply({ error: "Session required" }, 401); await expect(system2.getSystem2Status()).rejects.toMatchObject({ status: 401 }); expect(expired).toHaveBeenCalledOnce(); }
   finally { stop(); }
 });
+it("admits mutation flag, prestate flag and pointer observations strictly", async () => {
+  const { prestateStatus } = await import("./system2DownloadTestFixtures");
+  reply(prestateStatus); expect(await system2.getSystem2Status()).toEqual(prestateStatus);
+  const unloaded = { ...status, state: "failed", prestateDiffers: true, programVersionObservation: { expected: "0001920504", observed: "" } };
+  reply(unloaded); expect(await system2.getSystem2Status()).toEqual(unloaded);
+  const observation = prestateStatus.pointerObservations[0];
+  for (const value of [
+    { ...status, mutationMayHaveStarted: undefined }, { ...status, mutationMayHaveStarted: "no" },
+    { ...status, prestateDiffers: undefined }, { ...status, pointerObservations: undefined },
+    { ...prestateStatus, pointerObservations: [{ ...observation, expected: "3c00" }] },
+    { ...prestateStatus, pointerObservations: [{ ...observation, object: 256 }] },
+    { ...prestateStatus, pointerObservations: [{ ...observation, phase: "later" }] },
+    { ...prestateStatus, pointerObservations: [{ ...observation, extra: 1 }] },
+    // The prestate flag and its observations must agree, and never offer recovery.
+    { ...status, pointerObservations: [observation] },
+    { ...prestateStatus, recoveryPhrase: "r", downloadPhrase: "d", releasePhrase: "x" },
+    { ...status, programVersionObservation: { expected: "0001920504", observed: "" } },
+    { ...status, prestateDiffers: true, programVersionObservation: { expected: "01", observed: "zz" } },
+  ]) { reply(value); await expect(system2.getSystem2Status()).rejects.toThrow("System-2"); }
+});
+it("admits in-procedure and refused pointer observations, strictly", async () => {
+  const { inProcedureStatus } = await import("./system2DownloadTestFixtures");
+  reply(inProcedureStatus); expect(await system2.getSystem2Status()).toEqual(inProcedureStatus);
+  const [, during] = inProcedureStatus.pointerObservations;
+  for (const value of [
+    { ...inProcedureStatus, pointerObservations: [{ ...during, operationIndex: null }] },
+    { ...inProcedureStatus, pointerObservations: [{ ...during, operationIndex: undefined }] },
+    { ...inProcedureStatus, pointerObservations: [{ ...during, observed: "denied" }] },
+    { ...inProcedureStatus, pointerObservations: [{ ...during, expected: "refused" }] },
+    { ...inProcedureStatus, pointerObservations: [{ ...during, run: "retry" }] },
+    { ...inProcedureStatus, pointerObservations: [{ ...during, run: undefined }] },
+  ]) { reply(value); await expect(system2.getSystem2Status()).rejects.toThrow("System-2"); }
+});
+it("admits unreadable prestate allocations only with the prestate flag and without recovery", async () => {
+  const { unreadableStatus } = await import("./system2DownloadTestFixtures");
+  reply(unreadableStatus); expect(await system2.getSystem2Status()).toEqual(unreadableStatus);
+  const [entry] = unreadableStatus.prestateUnreadableAllocations;
+  for (const value of [
+    { ...status, prestateUnreadableAllocations: undefined },
+    { ...unreadableStatus, prestateDiffers: false },
+    { ...unreadableStatus, recoveryPhrase: "r", downloadPhrase: "d", releasePhrase: "x" },
+    { ...unreadableStatus, prestateUnreadableAllocations: [{ ...entry, address: "3C00" }] },
+    { ...unreadableStatus, prestateUnreadableAllocations: [{ ...entry, address: 15360 }] },
+    { ...unreadableStatus, prestateUnreadableAllocations: [{ ...entry, object: 256 }] },
+    { ...unreadableStatus, prestateUnreadableAllocations: [{ ...entry, length: 0 }] },
+    { ...unreadableStatus, prestateUnreadableAllocations: [{ ...entry, extra: 1 }] },
+    { ...unreadableStatus, prestateUnreadableAllocations: Array(257).fill(entry) },
+  ]) { reply(value); await expect(system2.getSystem2Status()).rejects.toThrow("System-2"); }
+});

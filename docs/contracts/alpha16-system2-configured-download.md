@@ -37,8 +37,14 @@ reproduction; they do not certify manufacturer authenticity or archive history.
 Offline source preparation is **not physical admission**. An async, read-only
 identity observation creates a separate format-3 preparation bound to an
 operation id, chosen recovery track, target address and actual observed serial,
-mask, manufacturer, hardware and application. Zero, erased and synthetic `SIM`
-serials refuse. Format-2 project candidates retain their existing simulator-only
+mask, manufacturer and hardware type. Mask, manufacturer and hardware type must
+match the source. Since the 2026-10-25 owner rulings the serial and the device's
+current program version are recorded, not compared: `application` is the plan's
+identity (which the download writes) and `observed_application` carries the
+device's differing prior value (empty when the read was refused). Only the
+synthetic `SIM` serial refuses, because it marks a simulator preparation posing
+as a real observation. Zero and erased (all-FF) serials are recorded like any
+other serial (owner amendment 3, 2026-10-25); recovery is unavailable for them. Format-2 project candidates retain their existing simulator-only
 grammar; changing `simulated`, using `rebind_hardware`, or stripping the retained
 record cannot admit them. There is no public candidate-to-hardware promotion API.
 
@@ -158,8 +164,13 @@ device name and project/server revision/incarnation fields remain separate.
 
 `OperationStore::progress()` and `subscribe_progress(&mut self)` expose
 `OperationProgress`: `outcome`, `completed_steps`, `total_steps: Option<usize>`,
-`backup_available`, `restore_available`, `mutation_possible`, and
-`recovery_phrases: Option<OperationRecoveryPhrases>`. The subscription is
+`backup_available`, `restore_available`, `mutation_possible`,
+`recovery_phrases: Option<OperationRecoveryPhrases>`, `prestate_differs`,
+`pointer_observations` (phase `prestate`/`in_procedure`/`final`, operation
+index for in-procedure entries, object, expected and observed four-octet pointer
+or `None` for a refused read, load state) and `program_version_observation` (plan
+application, device's prior value). `prestate_differs` forces
+`restore_available` false and `recovery_phrases` absent. The subscription is
 a Tokio watch receiver, available before moving the store into its async task.
 Only persisted/read-back checkpoints contribute completed progress; channel
 polling requires no disk, SQL, bus operation or long-running executor lock.
@@ -292,9 +303,19 @@ new hardware/recovery guarantee. No timing budget or protocol policy changes.
 
 ## Actual-state backup and recovery limits
 
-The existing Net executor rechecks observed serial, mask, manufacturer, hardware
-and the same installed application. Every touched resource must be Loaded with
-its source-applicable four-octet pointer. It reads **all declared absolute
+The Net executor rechecks mask, manufacturer and hardware type; these remain hard
+pre-write refusals. Since the 2026-10-25 owner rulings (GitHub issue #30) it no
+longer refuses on the serial number, the current program version, a non-Loaded
+resource or a PID_TABLE_REFERENCE that differs from the source model. It reads
+them and records them: `PropertyRecoverySnapshot` stores the observed serial,
+the observed object 3 program version (empty when refused) and, per touched
+object, the observed load state and four-octet pointer.
+`prestate_observations()`, `serial_observation()` and
+`program_version_observation()` derive the differences; `RecoveryRecord` adds
+readable `prestate_observations`, `observed_serial` and
+`observed_program_version` only when something differed, so mismatch-free
+records keep the Alpha 16 grammar byte for byte and Alpha 16 records still load
+(an Alpha 16 binary refuses the new fields rather than dropping them). It reads **all declared absolute
 allocation intervals**, including masked/unwritten capacity, plus exact direct
 write regions and device control. App persists the immutable recovery checkpoint,
 syncs it and its committed head and reads bytes back **before VerifyMode setup,
@@ -307,10 +328,72 @@ current Loaded states and pointers do not reveal historical allocator/task
 commands or prove the source procedure equals that history. That remains the
 explicit `experimental-same-application-source-shape-not-observed-allocator-history-v1`
 recovery basis. A blank device, absent/different installed application or
-non-Loaded resource is refused; a newly created project does not relax this.
+non-Loaded resource is now downloadable, but its captured bytes do not describe
+the source shape: `recovery_plan()` then refuses with `original-state recovery
+unavailable: …` naming each object with expected and observed values (or the
+program versions). A zero-element refusal of a PID_TABLE_REFERENCE read during
+acquisition is recorded as observed `refused` (`ResourceRecord.pointer_refused`,
+pointer zero) and counts as such a difference; transport errors, timeouts and
+malformed lengths stay errors. A captured all-zero or all-FF serial also makes
+recovery unavailable, because it cannot bind a replay to one physical device.
+The server and UI offer no recovery for such an operation; no backup is
+fabricated. Any other differing serial alone leaves recovery available.
+
+Recovery replay, unlike download admission, stays bound to the device whose
+prestate was captured: it compares the current serial with the **observed**
+serial in the snapshot (not the preparation's) and refuses `recovery refused:
+device serial number differs from the device whose prestate was captured`
+before any write. Replaying one device's memory onto another would write
+foreign data. The captured program version must equal the plan's for recovery
+to exist at all.
+
+A refused (`MemoryRefused`) or short answer to the prestate allocation read is
+recorded as well (review fix, 2026-10-25): the allocation index goes into
+`PropertyRecoverySnapshot::unreadable_allocations` and
+`RecoveryRecord.prestate_unreadable_allocations` (absent when empty), its data
+are zero placeholders that are never used as a backup, and recovery is
+unavailable (`prestate memory unreadable`). Final verification of such an
+allocation compares the written bytes only, since nothing predicts the unwritten
+ones. Transport errors and timeouts stay errors. Accepted consequence of the
+owner decision: a device that refuses every memory read used to be refused
+before any write; it is now written and then fails final verification
+(`mutation_possible`/`mutationMayHaveStarted` true, no original-state recovery).
+Progress lists such allocations as `prestate_unreadable_allocations` (object,
+start address, length), and the UI never calls them a backup.
+
+Observations are kept per run: progress entries carry `run` (`download` or
+`restore`) next to `phase`, so a restore's final or in-procedure observations
+never replace the download's. An `in_procedure_pointer_observation` checkpoint
+is accepted only while its step is active and that step is a `03 00/01/02`
+record of the same object and source address.
+
+Final verification after a download or replay stays hard for complete
+allocation memory, final Loaded state of every touched object and the final
+program version (it must equal the plan's application identity). The final
+PID_TABLE_REFERENCE comparison is an observation everywhere: a difference is
+returned in `ExperimentalPropertyReport::final_pointer_observations` and
+journaled as the `final_pointer_observations` checkpoint after the read-only
+verification and before the VerifyMode (PID 14) restore, the only remaining
+device write; a failed barrier leaves PID 14 untouched. It does not fail an
+otherwise verified download, because the source pointer model
+itself is unverified. Since owner amendment 3 the same holds for the read-back
+right after each `03 00`/`03 01`/`03 02` allocation/task record: a difference or
+refusal becomes `PropertyInProcedurePointerObservation` (operation index, object,
+expected, observed or refused, resulting load state), returned in
+`in_procedure_pointer_observations` and persisted as the
+`in_procedure_pointer_observation` checkpoint while that step is active, before
+the next mutation. The reporter's device, programmed by ETS with this
+application, reports a PID 7 that differs from the source model, so a hard check
+would very likely abort the real download after mutation started. Memory writes
+use the plan's absolute addresses, not the read pointer, and the complete
+allocation intervals are verified at the end. The load-state result of every
+load-control write (`UnexpectedState`) stays hard. Consequence: an allocation
+record a device silently ignores is no longer caught at that step; only the final
+memory, Loaded and program-version verification remain. Refused PID 7 reads in
+final verification are recorded the same way.
 
 Recovery replays the complete source procedure with captured old direct-write
-bytes. It verifies complete affected allocation intervals, pointers/Loaded state,
+bytes. It verifies complete affected allocation intervals, Loaded state,
 application identity and the captured VerifyMode bit before `Restored`. Masked
 and unused-capacity bytes are deliberately not guessed or filled. Their survival
 across Unload/reallocation and other indirect firmware effects remain unresolved.

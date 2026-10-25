@@ -13,6 +13,8 @@ interface Props {
 type Phrases = { confirmation: string; hypothesisConfirmation: string; downloadConfirmation: string; releaseConfirmation: string };
 const EMPTY: Phrases = { confirmation: "", hypothesisConfirmation: "", downloadConfirmation: "", releaseConfirmation: "" };
 const active = (s: api.System2Status | null) => s?.state === "running" || s?.state === "restoring";
+// Only the server's durable "no mutation could have started" earns the nothing-written text.
+const nothingWritten = (s: api.System2Status) => (s.state === "failed" || s.state === "cancelled") && !s.mutationMayHaveStarted;
 function sameTarget(a: { binding: api.System2Binding; address: string }, b: { binding: api.System2Binding; address: string }) {
   return a.address === b.address && a.binding.serverIncarnation === b.binding.serverIncarnation &&
     a.binding.projectIncarnation === b.binding.projectIncarnation && a.binding.projectRevision === b.binding.projectRevision && a.binding.deviceId === b.binding.deviceId;
@@ -134,7 +136,7 @@ export default function System2DownloadPanel({ project, deviceId, gateway, enabl
     { download: status.downloadPhrase, release: status.releasePhrase } : null;
   // A lost start is never resent. A subsequent read-only attachment may offer a
   // separately acknowledged backup recovery; a lost recovery/cancel stays blocked.
-  const canRecover = status !== null && !active(status) && status.backupAvailable && status.recoveryPhrase !== null && originalTerms !== null &&
+  const canRecover = status !== null && !active(status) && status.backupAvailable && !status.prestateDiffers && status.recoveryPhrase !== null && originalTerms !== null &&
     recovery.recoveryConfirmation === status.recoveryPhrase && recovery.downloadConfirmation === originalTerms.download && recovery.releaseConfirmation === originalTerms.release &&
     gateway.trim() !== "" && !pending && !checking && !unavailable && !ordinaryBusy && (unknown === null || unknown === "start");
   async function recover() {
@@ -195,14 +197,25 @@ export default function System2DownloadPanel({ project, deviceId, gateway, enabl
     </section>}
     {status && <section data-system2-status aria-live="polite">
       <h4>{t("system2.operation")}: {status.address} — {status.deviceName}</h4>
-      <p style={{ overflowWrap: "anywhere" }}><code>{status.operationId}</code> · {t(`system2.state.${status.state}`)}</p>
+      <p style={{ overflowWrap: "anywhere" }}><code>{status.operationId}</code> · {t(nothingWritten(status) ? `system2.state.${status.state === "failed" ? "failed" : "cancelled"}BeforeWrite` : `system2.state.${status.state}`)}</p>
+      {nothingWritten(status) && <p data-system2-nothing-written>{t("system2.nothingWritten")}</p>}
       <p>{status.totalSteps === null ? t("system2.checkpointsUnknown", { done: status.completedSteps }) : t("system2.checkpoints", { done: status.completedSteps, total: status.totalSteps })}</p>
       {status.totalSteps !== null && status.totalSteps > 0 && <progress aria-label={t("system2.steps")} value={status.completedSteps} max={status.totalSteps} />}
       {status.message && <p>{status.message}</p>}
-      <p>{t(status.backupAvailable ? "system2.backupAvailable" : "system2.backupUnavailable")}</p>
+      {status.prestateUnreadableAllocations.length > 0 ? <p data-system2-prestate-unreadable className="form-warning">
+        {t("system2.prestateUnreadable", { allocations: status.prestateUnreadableAllocations.map((a) => t("system2.prestateUnreadableAllocation", { object: a.object, address: a.address, length: a.length })).join("; ") })}
+      </p> : <p>{t(status.backupAvailable ? "system2.backupAvailable" : "system2.backupUnavailable")}</p>}
+      {(status.pointerObservations.length > 0 || status.programVersionObservation !== null) && <section data-system2-observations aria-label={t("system2.observations")}>
+        <h4>{t("system2.observations")}</h4><p>{t("system2.observationsNote")}</p>
+        <ul>
+          {status.programVersionObservation && <li>{t("system2.observation.programVersion", { expected: status.programVersionObservation.expected, observed: status.programVersionObservation.observed || t("system2.observation.refused") })}</li>}
+          {status.pointerObservations.map((o, i) => <li key={i}>{o.run === "restore" && `${t("system2.observation.restoreRun")} `}{t(`system2.observation.${o.phase}`, { object: o.object, step: o.operationIndex ?? "", expected: o.expected, observed: o.observed === "refused" ? t("system2.observation.refused") : o.observed, state: o.loadState })}</li>)}
+        </ul>
+      </section>}
       {active(status) && <button type="button" data-system2-cancel disabled={pending} onClick={() => void cancel()}>{t("system2.cancel")}</button>}
       <p>{t("system2.cancelNote")}</p>
-      {!active(status) && status.backupAvailable && <section aria-label={t("system2.recovery")}>
+      {!active(status) && status.prestateDiffers && <p data-system2-recovery-unavailable className="form-warning">{t("system2.recoveryUnavailablePrestate")}</p>}
+      {!active(status) && status.backupAvailable && !status.prestateDiffers && <section aria-label={t("system2.recovery")}>
         <h4>{t("system2.recovery")}</h4><p>{t("system2.recoveryNote")}</p>
         {originalTerms === null ? <p className="form-warning">{t("system2.recoveryTermsUnavailable")}</p> : status.recoveryPhrase !== null && <>
           {Object.entries({ recoveryConfirmation: status.recoveryPhrase, downloadConfirmation: originalTerms.download, releaseConfirmation: originalTerms.release }).map(([key, phrase]) => <label key={key} className="device-download-acknowledgement">

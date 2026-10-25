@@ -9,6 +9,17 @@ Updated: 2026-10-25 02:22 CEST. Operational snapshot, not an append-only journal
   stages/897 browser cases; on merge docs/xtask/local-info re-run (upstream delta Rust/docs only).
 - Hardware outcome of System-2 stays unverified (#22/WP-12); issue #30 answered, see its thread.
 
+## System-2 pointer-mismatch package: CLAIMED (2026-10-25 12:33 CET, top priority)
+
+- Owner go: a device prestate differing from the source shape (PID 7 pointer / load state) must
+  not refuse a System-2 download. Branch `fix/system2-pointer-mismatch-20261025`.
+- Claimed paths: `crates/knx-net/src/commissioning/property_recovery.rs`, `property_download.rs`,
+  `crates/knx-app/src/property_validation_*`, `apps/knx-server/src/device_system2/`,
+  System2 web panel/API/copy, alpha16 System-2 contracts. Other sessions: do not edit these.
+- Scope: record object + expected/observed pointer/state, mark original-state recovery unavailable,
+  surface `mutationMayHaveStarted` (pre-mutation refusal = nothing written). Serial, program
+  version, memory verification and confirmations stay hard. No bus operation by agents.
+
 ## Current assignment and authority
 
 - Owner's six-task batch is delivered in five packages; all claims released. No new feature assignment is started by closeout.

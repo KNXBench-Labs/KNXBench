@@ -30,6 +30,7 @@ pub mod individual_address_reset;
 pub mod individual_address_write;
 pub mod master_reset;
 pub mod memory_download;
+pub mod post_download;
 pub mod programming_button_wait;
 pub mod property_download;
 pub mod property_recovery;

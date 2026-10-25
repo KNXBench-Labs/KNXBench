@@ -37,6 +37,10 @@ async fn start() -> Harness {
 }
 
 async fn start_with(properties: BTreeMap<(u16, u8, u8), Vec<u8>>) -> Harness {
+    start_configured(|config| config.properties = properties).await
+}
+
+async fn start_configured(configure: impl FnOnce(&mut GatewayConfig)) -> Harness {
     let socket = UdpSocket::bind("127.0.0.1:0").await.unwrap();
     let gateway = socket.local_addr().unwrap();
     let SocketAddr::V4(advertised) = gateway else {
@@ -47,7 +51,7 @@ async fn start_with(properties: BTreeMap<(u16, u8, u8), Vec<u8>>) -> Harness {
     let undecodable = Arc::new(Mutex::new(Vec::new()));
     let (counter, bad) = (from_tool.clone(), undecodable.clone());
     let mut config = GatewayConfig::new(advertised, IndividualAddress::new(1, 1, 0).unwrap());
-    config.properties = properties;
+    configure(&mut config);
     config.observer = Some(Arc::new(move |event| match event {
         GatewayEvent::Frame {
             from_tool: true, ..
@@ -222,6 +226,8 @@ async fn search_and_description_describe_a_tunnelling_gateway() {
             IndividualAddress::new(1, 1, 0).unwrap()
         );
         let (families, _) = decode_service_families(rest).unwrap();
+        assert!(families.supports(FAMILY_CORE));
+        assert!(families.supports(FAMILY_DEVICE_MANAGEMENT));
         assert!(families.supports(SERVICE_FAMILY_TUNNELLING));
     }
 }
@@ -467,6 +473,14 @@ async fn a_management_connection_answers_property_reads_and_reports_void_ones() 
         .manage(&[0xF6, 0x00, 0x00, 0x00, 99, 0x10, 0x01, 0xAA])
         .await;
     assert_eq!(answer, vec![0xF5, 0x00, 0x00, 0x00, 99, 0x00, 0x01, 0x05]);
+    // A negative answer keeps the request's start index, all twelve bits of it
+    // (EMI_IMI v01.04.02 AS §4.1.7.3.3 and §4.1.7.3.5: NoE zero, SIx as in the request).
+    let (_, answer) = tool.manage(&[0xFC, 0x00, 0x00, 0x00, 99, 0x11, 0x01]).await;
+    assert_eq!(answer, vec![0xFB, 0x00, 0x00, 0x00, 99, 0x01, 0x01, 0x07]);
+    let (_, answer) = tool
+        .manage(&[0xF6, 0x00, 0x00, 0x00, 99, 0x1A, 0x01, 0xAA])
+        .await;
+    assert_eq!(answer, vec![0xF5, 0x00, 0x00, 0x00, 99, 0x0A, 0x01, 0x05]);
 }
 
 #[tokio::test]
@@ -497,4 +511,222 @@ async fn a_tunnel_and_a_management_connection_coexist_on_separate_channels() {
         decode_connectionstate_response(&body).unwrap().status,
         E_NO_ERROR
     );
+}
+
+#[tokio::test]
+async fn rejected_sequence_numbers_do_not_refresh_the_heartbeat() {
+    let socket = UdpSocket::bind("127.0.0.1:0").await.unwrap();
+    let endpoint = match socket.local_addr().unwrap() {
+        SocketAddr::V4(endpoint) => endpoint,
+        _ => unreachable!("IPv4 fixture"),
+    };
+    let device = SimulatedDevice::new();
+    let config = GatewayConfig::new(endpoint, IndividualAddress::new(1, 1, 0).unwrap());
+    let old = Instant::now() - Duration::from_secs(1);
+    let mut gateway = Gateway {
+        socket: &socket,
+        device: &device,
+        config: &config,
+        tunnel: Some(Connection {
+            channel: 1,
+            control: endpoint,
+            data: endpoint,
+            receive_sequence: 0,
+            send_sequence: 1,
+            last_heard: old,
+            in_flight: Some(InFlight {
+                sequence: 0,
+                datagram: vec![],
+                deadline: Instant::now() + ACK_TIMEOUT,
+                repeated: false,
+            }),
+            queue: VecDeque::new(),
+        }),
+        management: None,
+        last_channel: 1,
+    };
+    gateway
+        .on_request(Kind::Tunnel, &encode_tunnelling_request(1, 5, &[]))
+        .await;
+    assert_eq!(gateway.tunnel.as_ref().unwrap().last_heard, old);
+    gateway
+        .on_ack(Kind::Tunnel, &encode_tunnelling_ack(1, 5, E_NO_ERROR))
+        .await;
+    assert_eq!(gateway.tunnel.as_ref().unwrap().last_heard, old);
+}
+
+/// Waits for a `DISCONNECT_REQUEST` naming `channel`, skipping anything else the gateway sends.
+async fn expect_disconnect(tool: &Tool, channel: u8) {
+    loop {
+        let (service, body) = tool.receive().await.expect("a DISCONNECT_REQUEST");
+        if service == DISCONNECT_REQUEST {
+            assert_eq!(body[0], channel);
+            let (control, _) = Hpai::decode(&body[2..]).unwrap();
+            assert_eq!(
+                SocketAddr::V4(SocketAddrV4::new(control.addr, control.port)),
+                tool.gateway
+            );
+            return;
+        }
+    }
+}
+
+/// Sends a heartbeat for `channel` and returns the status the gateway answers with.
+async fn heartbeat(tool: &Tool, channel: u8) -> u8 {
+    tool.send(
+        CONNECTIONSTATE_REQUEST,
+        &encode_connectionstate_request(channel, ROUTE_BACK),
+    )
+    .await;
+    loop {
+        let (service, body) = tool.receive().await.expect("a CONNECTIONSTATE_RESPONSE");
+        if service == CONNECTIONSTATE_RESPONSE {
+            return decode_connectionstate_response(&body).unwrap().status;
+        }
+    }
+}
+
+fn unconnected_read(harness: &Harness) -> LDataFrame {
+    request(
+        harness,
+        Tpci::UnnumberedData,
+        ApplicationService::DeviceDescriptorRead { descriptor_type: 0 },
+    )
+}
+
+#[tokio::test]
+async fn a_reply_that_cannot_be_sent_does_not_stop_the_gateway() {
+    let harness = start().await;
+    let tool = Tool::new(&harness, "127.0.0.1:0").await;
+    // A loopback socket without SO_BROADCAST cannot send here; the send fails locally.
+    let unreachable = Hpai {
+        addr: Ipv4Addr::BROADCAST,
+        port: 3671,
+    };
+    tool.send(SEARCH_REQUEST, &unreachable.encode()).await;
+    tool.send(SEARCH_REQUEST, &ROUTE_BACK.encode()).await;
+    let (service, _) = tool.receive().await.expect("the gateway still answers");
+    assert_eq!(service, SEARCH_RESPONSE);
+}
+
+#[tokio::test]
+async fn a_silent_tunnel_is_disconnected_by_the_gateway() {
+    let harness = start_configured(|config| {
+        config.heartbeat_timeout = Duration::from_millis(300);
+    })
+    .await;
+    let mut tool = Tool::new(&harness, "127.0.0.1:0").await;
+    assert_eq!(tool.connect().await, E_NO_ERROR);
+    expect_disconnect(&tool, tool.channel).await;
+    assert_eq!(heartbeat(&tool, tool.channel).await, E_CONNECTION_ID);
+}
+
+#[tokio::test]
+async fn an_unacknowledged_frame_is_repeated_once_then_the_tunnel_is_disconnected() {
+    let harness = start().await;
+    let mut tool = Tool::new(&harness, "127.0.0.1:0").await;
+    assert_eq!(tool.connect().await, E_NO_ERROR);
+    assert_eq!(tool.request(&unconnected_read(&harness)).await, E_NO_ERROR);
+    let mut requests = Vec::new();
+    loop {
+        let (service, body) = tool.receive().await.expect("a request or the disconnect");
+        match service {
+            TUNNELLING_REQUEST => requests.push(body),
+            DISCONNECT_REQUEST => {
+                assert_eq!(body[0], tool.channel);
+                break;
+            }
+            _ => {}
+        }
+    }
+    // Only the first frame went out, twice with the same sequence counter.
+    assert_eq!(requests.len(), 2);
+    assert_eq!(requests[0], requests[1]);
+}
+
+#[tokio::test]
+async fn an_ack_with_an_error_status_counts_as_no_ack() {
+    let harness = start().await;
+    let mut tool = Tool::new(&harness, "127.0.0.1:0").await;
+    assert_eq!(tool.connect().await, E_NO_ERROR);
+    assert_eq!(tool.request(&unconnected_read(&harness)).await, E_NO_ERROR);
+    let mut seen = Vec::new();
+    loop {
+        let (service, body) = tool.receive().await.expect("a request or the disconnect");
+        match service {
+            TUNNELLING_REQUEST => {
+                let request = decode_tunnelling_request(&body).unwrap();
+                seen.push(request.sequence_counter);
+                // E_SEQUENCE_NUMBER (Core §7.3.4): any status but E_NO_ERROR is an error.
+                let ack = encode_tunnelling_ack(request.channel_id, request.sequence_counter, 0x04);
+                tool.send(TUNNELLING_ACK, &ack).await;
+            }
+            DISCONNECT_REQUEST => break,
+            _ => {}
+        }
+    }
+    assert_eq!(seen, vec![0, 0]);
+}
+
+#[tokio::test]
+async fn an_ack_of_the_wrong_service_does_not_acknowledge_a_management_frame() {
+    let harness = start().await;
+    let mut tool = Tool::new(&harness, "127.0.0.1:0").await;
+    assert_eq!(tool.connect_management().await.0, E_NO_ERROR);
+    let read = [0xFC, 0x00, 0x00, 0x00, 99, 0x10, 0x01];
+    let body = encode_tunnelling_request(tool.channel, 0, &read);
+    tool.send(DEVICE_CONFIGURATION_REQUEST, &body).await;
+    let mut confirmations = 0;
+    while let Some((service, body)) = tool.receive().await {
+        match service {
+            DEVICE_CONFIGURATION_REQUEST => {
+                confirmations += 1;
+                let request = decode_tunnelling_request(&body).unwrap();
+                let ack = encode_tunnelling_ack(request.channel_id, request.sequence_counter, 0);
+                tool.send(TUNNELLING_ACK, &ack).await;
+            }
+            DISCONNECT_REQUEST => break,
+            _ => {}
+        }
+    }
+    assert_eq!(confirmations, 2, "a TUNNELLING_ACK must not end the repeat");
+}
+
+#[tokio::test]
+async fn a_disconnect_response_nobody_asked_for_closes_nothing() {
+    let harness = start().await;
+    let mut tool = Tool::new(&harness, "127.0.0.1:0").await;
+    assert_eq!(tool.connect().await, E_NO_ERROR);
+    tool.send(DISCONNECT_RESPONSE, &[tool.channel, E_NO_ERROR])
+        .await;
+    assert_eq!(heartbeat(&tool, tool.channel).await, E_NO_ERROR);
+}
+
+#[tokio::test]
+async fn a_channel_still_in_use_is_never_handed_out_again() {
+    let harness = start().await;
+    let mut tunnel = Tool::new(&harness, "127.0.0.1:0").await;
+    let mut management = Tool::new(&harness, "127.0.0.1:0").await;
+    assert_eq!(tunnel.connect().await, E_NO_ERROR);
+    // The same host takes its management connection over until the channel counter wraps.
+    for _ in 0..u8::MAX {
+        assert_eq!(management.connect_management().await.0, E_NO_ERROR);
+        assert_ne!(management.channel, tunnel.channel);
+    }
+    management
+        .send(
+            DISCONNECT_REQUEST,
+            &encode_disconnect_request(management.channel, ROUTE_BACK),
+        )
+        .await;
+    management.receive().await.expect("a DISCONNECT_RESPONSE");
+    assert_eq!(heartbeat(&tunnel, tunnel.channel).await, E_NO_ERROR);
+}
+
+#[tokio::test]
+async fn a_huge_heartbeat_timeout_never_expires_and_never_panics() {
+    let harness = start_configured(|config| config.heartbeat_timeout = Duration::MAX).await;
+    let mut tool = Tool::new(&harness, "127.0.0.1:0").await;
+    assert_eq!(tool.connect().await, E_NO_ERROR);
+    assert_eq!(heartbeat(&tool, tool.channel).await, E_NO_ERROR);
 }

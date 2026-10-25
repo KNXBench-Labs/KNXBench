@@ -42,6 +42,8 @@ the clearing line removed.
   conforming, but `LDataFrame` does not report the original flag.
 - The encoder accepts `L = 255` although DLL §2.2.5 reserves `FFh`. No
   supported service reaches that length (`A_Memory_Write` stops at 63 octets).
-- RF frames are unchanged: on RF, FT is "don't care" (EMI_IMI p. 79).
+- RF frames changed too, harmlessly: `encode_l_data_rf` goes through
+  `encode_l_data`, so an RF frame with `L > 15` now carries FT = 0 where it
+  carried FT = 1. On RF, FT is "don't care" (EMI_IMI p. 79).
 - Not tested against an interface or device. A real interface's handling of
   extended frames from KNXBench is unverified.

@@ -50,7 +50,9 @@ use knx_core::commissioning::device_backup::{
 };
 use knx_core::commissioning::load_control_memory::MemoryLoadStateMachine;
 use knx_core::commissioning::load_state::{LoadEvent, LoadState, MaskVersion};
-use knx_core::commissioning::memory::WriteLimit;
+use knx_core::commissioning::memory::{
+    service_for, MemoryService, WriteLimit, USER_MEMORY_MAX_OCTETS,
+};
 use knx_core::commissioning::memory_download::{
     machines, resource_matches, MemoryDownloadPlan, MemoryDownloadStep,
 };
@@ -801,18 +803,26 @@ async fn check_identity<T: ManagementTransport>(
 /// Reads `length` octets from `address` in reads of at most `limit`, and
 /// refuses a read that answers fewer octets than it asked for. Returns only
 /// [`ReadBackError::Session`] and [`ReadBackError::ShortRead`].
+///
+/// The service is chosen once for the whole region, as the write path does,
+/// and a user-memory read never asks for more than its 15 octets.
 async fn read_region<T: ManagementTransport>(
     session: &mut ManagementSession<'_, T>,
     address: u32,
     length: usize,
     limit: WriteLimit,
 ) -> Result<Vec<u8>, ReadBackError> {
+    let service = service_for(address, u32::try_from(length).unwrap_or(u32::MAX));
+    let step = match service {
+        MemoryService::Memory => limit.max_octets(),
+        MemoryService::UserMemory => limit.max_octets().min(USER_MEMORY_MAX_OCTETS),
+    };
     let mut octets = Vec::with_capacity(length);
     while octets.len() < length {
         let from = address + octets.len() as u32;
-        let asked = usize::from(limit.max_octets()).min(length - octets.len()) as u8;
+        let asked = usize::from(step).min(length - octets.len()) as u8;
         let got = session
-            .read_memory(from, asked)
+            .read_memory_as(service, from, asked)
             .await
             .map_err(ReadBackError::Session)?;
         if got.len() != usize::from(asked) {
@@ -3430,4 +3440,5 @@ mod tests {
     }
 
     mod backup_identity;
+    mod region_reads;
 }

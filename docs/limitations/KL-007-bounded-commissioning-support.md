@@ -6,6 +6,15 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Region-bound memory reads — 25 October 2026 source
+
+Backup, comparison and probe reads retain one service per region; user-memory
+reads respect their 15-octet wire count even under a larger negotiated budget
+([contract](../contracts/memory-region-read-service.md)). Synthetic real-codec
+regressions and independent review passed; integrated acceptance and publication
+are pending. This changes no family, path-budget or recovery admission and proves
+no physical address-space relationship. KL-007 remains open.
+
 ## Source freshness at settlement — 25 October 2026 source
 
 A completed regular download credits written memory parts only if the current

@@ -50,6 +50,12 @@ record the boundaries separately; these increments do not close PRG-01.
   Other parts and later catalogue edits are not
   monitored; this does not close PRG-01.
 
+- Region-bound memory reads use one selected service and respect the user-memory
+  count limit for backup, comparison and byte-order probes
+  ([contract](../contracts/memory-region-read-service.md)). Independent review and
+  focused tests passed; integrated acceptance and publication are pending.
+  This adds no hardware or interface/coupler budget claim.
+
 ## Open
 
 - Broader target/exemplar identity and independently verified runtime-state

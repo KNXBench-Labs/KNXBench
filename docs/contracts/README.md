@@ -12,6 +12,7 @@ Moved here from `docs/` on 2026-10-08 (relative links adjusted by script).
 | [hardware-identity-comparison](hardware-identity-comparison.md) | Exact hardware-type response width before regular download/restore mutation; padded product comparisons retained |
 | [partial-identity-comparison](partial-identity-comparison.md) | Exact five-octet application identity (object 3, PID 13) before partial-download mutation; other objects generic |
 | [backup-application-identity](backup-application-identity.md) | Captured pre-write application identity and restore refusal; strict backup format 2 with read-only format-1 compatibility and explicit downgrade limits |
+| [memory-region-read-service](memory-region-read-service.md) | Region-bound memory read service and user-memory count limit for backup, comparison and probes |
 | [device-comparison](device-comparison.md) | P4 bound read-only comparison, volatile tags, decoder/raw integrity and staged parameter scope |
 | [IMPORT_BOUNDARY_CONTRACT](IMPORT_BOUNDARY_CONTRACT.md) | AR06 project-import boundary: namespaces, project vs. product-package evidence |
 | [MANUFACTURER_REPORT_CONTRACT](MANUFACTURER_REPORT_CONTRACT.md) | AR05 manufacturer-report omissions: design and evidence |

@@ -6,6 +6,18 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Regular MergeId fragment admission — 25 October 2026 source
+
+The regular planner conservatively refuses a declared `MergeId` fragment beside
+its one main procedure ([contract](../contracts/regular-merge-fragment-admission.md)).
+The prior positive unit contract is intentionally narrowed; fragment meaning
+under `ProductProcedure` is not invented. Read-only comparison, source-freshness
+and restore preparation sharing the planner inherit the refusal. Exact stored
+source and the fragment-free plan stay unchanged. Focused tests and independent
+code review passed; maintained package acceptance/publication are pending
+([acceptance](../status/2026-10-25-regular-merge-fragment-admission.md)). No family,
+hardware or whole-recovery claim follows; KL-007 and PRG-01 remain open.
+
 ## System-2 prestate observations — 25 October 2026 source
 
 After a field report (GitHub issue #30: a UP 258D12 refused with "current

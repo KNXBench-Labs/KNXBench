@@ -71,6 +71,16 @@ pub enum DownloadPlanError {
     ProgramId(String),
     /// The program has no single load procedure without a merge id.
     ProcedureCount(usize),
+    /// The program declares a `MergeId` load procedure beside its one regular
+    /// procedure. A conservative refusal of an unsupported shape: what the
+    /// fragment adds is not translated, and no merged meaning is assumed.
+    MergeFragment {
+        /// The fragment's 1-based position among all of the program's load
+        /// procedures, in source order.
+        position: usize,
+        /// Its `MergeId`, verbatim.
+        merge_id: String,
+    },
     /// The procedure does not begin with `LdCtrlConnect`.
     DoesNotConnectFirst,
     /// A step this module does not translate.
@@ -135,6 +145,11 @@ impl fmt::Display for DownloadPlanError {
             DownloadPlanError::ProcedureCount(count) => write!(
                 f,
                 "{count} load procedures without a merge id; exactly one is translated"
+            ),
+            DownloadPlanError::MergeFragment { position, merge_id } => write!(
+                f,
+                "load procedure {position} declares MergeId {merge_id:?}; a MergeId fragment is not \
+                 translated, so the program is not planned"
             ),
             DownloadPlanError::DoesNotConnectFirst => {
                 f.write_str("the load procedure does not begin with LdCtrlConnect")
@@ -273,6 +288,17 @@ pub fn plan_memory_download_with_inferences(
     let [procedure] = procedures[..] else {
         return Err(DownloadPlanError::ProcedureCount(procedures.len()));
     };
+    if let Some((index, merge_id)) = code
+        .load_procedures
+        .iter()
+        .enumerate()
+        .find_map(|(index, procedure)| procedure.merge_id.as_ref().map(|id| (index, id)))
+    {
+        return Err(DownloadPlanError::MergeFragment {
+            position: index + 1,
+            merge_id: merge_id.clone(),
+        });
+    }
     if procedure.steps.first() != Some(&LoadStep::Connect) {
         return Err(DownloadPlanError::DoesNotConnectFirst);
     }
@@ -1077,9 +1103,13 @@ mod tests {
             Err(DownloadPlanError::ProcedureCount(2))
         );
         image.code.load_procedures[1].merge_id = Some("1".into());
-        assert!(
-            plan_memory_download(&image).is_ok(),
-            "a merge fragment is not a second procedure"
+        assert_eq!(
+            plan_memory_download(&image),
+            Err(DownloadPlanError::MergeFragment {
+                position: 2,
+                merge_id: "1".into()
+            }),
+            "a merge fragment is an untranslated shape, not a second procedure"
         );
     }
 

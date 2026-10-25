@@ -2,7 +2,7 @@
 
 **Status:** In progress. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
 
-**Owner:** another session; see the restart snapshot
+**Owner:** programming-correctness track; see the restart snapshot
 [`.ai/CURRENT_STATE.md`](../../.ai/CURRENT_STATE.md) before touching shared
 commissioning code.
 
@@ -99,6 +99,17 @@ record the boundaries separately; these increments do not close PRG-01.
   main-first documentation integration preserves runtime bytes. These display
   receipts are not device baselines and do not close effects/recovery work.
 
+## Current bounded increment
+
+The regular planner conservatively refuses declared `MergeId` fragments rather
+than silently omitting them ([contract](../contracts/regular-merge-fragment-admission.md)).
+Stored source and fragment-free plans remain unchanged; shared read-only
+comparison/source/restore preparation inherits the restriction. The original
+semantic regression, final focused tests and independent code review are
+complete; maintained integrated acceptance and publication remain pending
+([acceptance](../status/2026-10-25-regular-merge-fragment-admission.md)). This is
+not merged-procedure execution or closure of PRG-01.
+
 ## Open
 
 - Broader target/exemplar identity and independently verified runtime-state
@@ -106,6 +117,12 @@ record the boundaries separately; these increments do not close PRG-01.
 - Parameter policies: the defining inactive, `Union` and customer-write rules
   are unresolved.
 - Complete mutation effects and whole-mutation recovery contracts.
+- Existing full-product opt-in coverage pin debt (see
+  [KL-006](../limitations/KL-006-devices-dependent-on-vendor-plug-ins.md)):
+  owner **programming-correctness track**, attribution review checkpoint
+  **26 October 2026**. Explain input-scope, category and evidence changes before
+  any separately reviewed pin maintenance; no dynamic expectation derived from
+  the actual output, no silent repin in the fragment-admission package.
 
 ## Boundaries
 

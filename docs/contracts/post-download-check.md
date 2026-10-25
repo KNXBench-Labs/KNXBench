@@ -1,9 +1,9 @@
 # Read-only check after a regular memory download
 
 Outcome 3 of the [programming improvements goal](../goals/programming-improvements-2026-10-25.md),
-branch `feat/post-download-observation-20261025`. Simulator-tested source; no
-hardware acceptance. Source APPROVED after re-review of the corrections; not
-delivered: integration acceptance (corpus, package gate, browser EN/DE) is pending.
+published as `8b5edad7f` after independent source reviews and maintained integrated
+software acceptance, including HTTP corpus and EN/DE browser tests
+([delivery](../status/2026-10-25-post-download-check.md)). No hardware acceptance.
 
 ## When it runs
 

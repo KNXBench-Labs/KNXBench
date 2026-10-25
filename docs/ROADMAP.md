@@ -21,9 +21,11 @@ complete effects/recovery remain separate work; no broader hardware support is
 inferred.
 
 The [read-only check after a regular download](contracts/post-download-check.md)
-is implemented on its branch with simulator regressions; review, integrated gate
-and publication are pending. It reports reach, identity and load states, never
-a running application or a physical-exemplar match.
+is published as `8b5edad7f` after independent source reviews and maintained
+integrated software acceptance, including HTTP corpus and EN/DE browser tests
+([acceptance](status/2026-10-25-post-download-check.md)). It reports reach,
+identity and load states, never a running application or a physical-exemplar
+match. Hardware acceptance and the broader programming gaps remain open.
 
 ## Alpha 16 published pre-release — public artifacts and website verified (24 October 2026)
 

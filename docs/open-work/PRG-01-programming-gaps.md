@@ -28,9 +28,16 @@ bus or device operations.
 [Integrated acceptance and publication](../status/2026-10-25-programming-scope-and-identity.md)
 record the boundaries separately; these increments do not close PRG-01.
 
+- Post-download read-only observation and its CLI, server, web, report and
+  history consumers, published as `8b5edad7f`
+  ([acceptance](../status/2026-10-25-post-download-check.md),
+  [contract](../contracts/post-download-check.md)). Runtime state remains unknown
+  and physical-exemplar identity is not verified.
+
 ## Open
 
-- Post-download observation, including its CLI, server, web and history consumers.
+- Broader target/exemplar identity and independently verified runtime-state
+  observation; the delivered identity/load check does not prove either.
 - Parameter policies: the defining inactive, `Union` and customer-write rules
   are unresolved.
 - Complete mutation effects and whole-mutation recovery contracts.

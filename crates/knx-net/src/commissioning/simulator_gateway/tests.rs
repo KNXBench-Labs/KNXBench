@@ -1,0 +1,438 @@
+//! Loopback tests of the KNXnet/IP front-end against real UDP sockets and the simulated device.
+
+use std::collections::BTreeMap;
+use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
+
+use knx_core::IndividualAddress;
+use tokio::net::UdpSocket;
+use tokio::time::timeout;
+
+use super::*;
+use crate::cemi::{ApplicationService, Destination};
+use crate::commissioning::simulator::Seen;
+use crate::core::dib::{decode_device_info, decode_service_families, SERVICE_FAMILY_TUNNELLING};
+use crate::core::services::{
+    decode_connect_response, decode_connectionstate_response, decode_disconnect_response,
+    encode_connect_request, encode_connectionstate_request, encode_disconnect_request,
+};
+
+const WAIT: Duration = Duration::from_secs(2);
+const ROUTE_BACK: Hpai = Hpai {
+    addr: Ipv4Addr::UNSPECIFIED,
+    port: 0,
+};
+
+struct Harness {
+    device: Arc<SimulatedDevice>,
+    gateway: SocketAddr,
+    from_tool: Arc<AtomicUsize>,
+    undecodable: Arc<Mutex<Vec<String>>>,
+}
+
+async fn start() -> Harness {
+    start_with(BTreeMap::new()).await
+}
+
+async fn start_with(properties: BTreeMap<(u16, u8, u8), Vec<u8>>) -> Harness {
+    let socket = UdpSocket::bind("127.0.0.1:0").await.unwrap();
+    let gateway = socket.local_addr().unwrap();
+    let SocketAddr::V4(advertised) = gateway else {
+        unreachable!("bound to an IPv4 address")
+    };
+    let device = Arc::new(SimulatedDevice::new());
+    let from_tool = Arc::new(AtomicUsize::new(0));
+    let undecodable = Arc::new(Mutex::new(Vec::new()));
+    let (counter, bad) = (from_tool.clone(), undecodable.clone());
+    let mut config = GatewayConfig::new(advertised, IndividualAddress::new(1, 1, 0).unwrap());
+    config.properties = properties;
+    config.observer = Some(Arc::new(move |event| match event {
+        GatewayEvent::Frame {
+            from_tool: true, ..
+        } => {
+            counter.fetch_add(1, Ordering::SeqCst);
+        }
+        GatewayEvent::Undecodable { reason, .. } => bad.lock().unwrap().push(reason),
+        _ => {}
+    }));
+    tokio::spawn(serve(device.clone(), socket, config));
+    Harness {
+        device,
+        gateway,
+        from_tool,
+        undecodable,
+    }
+}
+
+struct Tool {
+    socket: UdpSocket,
+    gateway: SocketAddr,
+    channel: u8,
+    sequence: u8,
+}
+
+impl Tool {
+    async fn new(harness: &Harness, bind: &str) -> Self {
+        Self {
+            socket: UdpSocket::bind(bind).await.unwrap(),
+            gateway: harness.gateway,
+            channel: 0,
+            sequence: 0,
+        }
+    }
+
+    async fn send(&self, service: u16, body: &[u8]) {
+        let datagram = encode_frame(service, body);
+        self.socket.send_to(&datagram, self.gateway).await.unwrap();
+    }
+
+    async fn receive(&self) -> Option<(u16, Vec<u8>)> {
+        let mut buffer = vec![0u8; 2048];
+        let (length, _) = timeout(WAIT, self.socket.recv_from(&mut buffer))
+            .await
+            .ok()?
+            .unwrap();
+        let (header, body) = decode_frame(&buffer[..length]).unwrap();
+        Some((header.service_type, body.to_vec()))
+    }
+
+    async fn connect(&mut self) -> u8 {
+        let cri = [0x04, TUNNEL_CONNECTION, TUNNEL_LINKLAYER, 0x00];
+        self.send(
+            CONNECT_REQUEST,
+            &encode_connect_request(ROUTE_BACK, ROUTE_BACK, &cri),
+        )
+        .await;
+        let (service, body) = self.receive().await.expect("a CONNECT_RESPONSE");
+        assert_eq!(service, CONNECT_RESPONSE);
+        let response = decode_connect_response(&body).unwrap();
+        self.channel = response.channel_id;
+        response.status
+    }
+
+    async fn connect_management(&mut self) -> (u8, Vec<u8>) {
+        let cri = [0x02, DEVICE_MGMT_CONNECTION];
+        self.send(
+            CONNECT_REQUEST,
+            &encode_connect_request(ROUTE_BACK, ROUTE_BACK, &cri),
+        )
+        .await;
+        let (service, body) = self.receive().await.expect("a CONNECT_RESPONSE");
+        assert_eq!(service, CONNECT_RESPONSE);
+        let response = decode_connect_response(&body).unwrap();
+        self.channel = response.channel_id;
+        (response.status, response.crd)
+    }
+
+    /// Sends one management cEMI and returns the ACK status plus the `.con` that follows.
+    async fn manage(&mut self, cemi: &[u8]) -> (u8, Vec<u8>) {
+        let body = encode_tunnelling_request(self.channel, self.sequence, cemi);
+        self.send(DEVICE_CONFIGURATION_REQUEST, &body).await;
+        let (service, body) = self.receive().await.expect("a DEVICE_CONFIGURATION_ACK");
+        assert_eq!(service, DEVICE_CONFIGURATION_ACK);
+        let ack = decode_tunnelling_ack(&body).unwrap();
+        assert_eq!(ack.sequence_counter, self.sequence);
+        self.sequence = self.sequence.wrapping_add(1);
+        let (service, body) = self
+            .receive()
+            .await
+            .expect("a DEVICE_CONFIGURATION_REQUEST");
+        assert_eq!(service, DEVICE_CONFIGURATION_REQUEST);
+        let request = decode_tunnelling_request(&body).unwrap();
+        let ack = encode_tunnelling_ack(request.channel_id, request.sequence_counter, 0);
+        self.send(DEVICE_CONFIGURATION_ACK, &ack).await;
+        (ack_status(&ack), request.cemi.to_vec())
+    }
+
+    async fn send_cemi(&mut self, cemi: &[u8]) {
+        let body = encode_tunnelling_request(self.channel, self.sequence, cemi);
+        self.send(TUNNELLING_REQUEST, &body).await;
+    }
+
+    /// Sends one request and returns its ACK status.
+    async fn request(&mut self, frame: &LDataFrame) -> u8 {
+        self.send_cemi(&encode_l_data(frame).unwrap()).await;
+        let (service, body) = self.receive().await.expect("a TUNNELLING_ACK");
+        assert_eq!(service, TUNNELLING_ACK);
+        let ack = decode_tunnelling_ack(&body).unwrap();
+        assert_eq!(ack.sequence_counter, self.sequence);
+        self.sequence = self.sequence.wrapping_add(1);
+        ack.status
+    }
+
+    /// The next frame the gateway tunnels to the tool, acknowledged like a real client would.
+    async fn next_frame(&self) -> Option<LDataFrame> {
+        loop {
+            let (service, body) = self.receive().await?;
+            if service != TUNNELLING_REQUEST {
+                continue;
+            }
+            let request = decode_tunnelling_request(&body).unwrap();
+            let ack = encode_tunnelling_ack(request.channel_id, request.sequence_counter, 0);
+            self.send(TUNNELLING_ACK, &ack).await;
+            return Some(decode_l_data(request.cemi).unwrap());
+        }
+    }
+}
+
+fn request(harness: &Harness, transport: Tpci, service: ApplicationService) -> LDataFrame {
+    LDataFrame {
+        kind: LDataMessageKind::Request,
+        source: IndividualAddress::from_raw(0),
+        destination: Destination::Individual(harness.device.address()),
+        transport,
+        service,
+        control: None,
+    }
+}
+
+#[tokio::test]
+async fn search_and_description_describe_a_tunnelling_gateway() {
+    let harness = start().await;
+    let tool = Tool::new(&harness, "127.0.0.1:0").await;
+    for (request, response) in [
+        (SEARCH_REQUEST, SEARCH_RESPONSE),
+        (DESCRIPTION_REQUEST, DESCRIPTION_RESPONSE),
+    ] {
+        tool.send(request, &ROUTE_BACK.encode()).await;
+        let (service, body) = tool.receive().await.expect("an answer");
+        assert_eq!(service, response);
+        // A search answer opens with the control endpoint; a description does not.
+        let dibs = if service == SEARCH_RESPONSE {
+            let (endpoint, rest) = Hpai::decode(&body).unwrap();
+            assert_eq!(
+                SocketAddr::V4(SocketAddrV4::new(endpoint.addr, endpoint.port)),
+                harness.gateway
+            );
+            rest
+        } else {
+            &body[..]
+        };
+        let (info, rest) = decode_device_info(dibs).unwrap();
+        assert_eq!(info.friendly_name, "KNXBench simulator");
+        assert_eq!(
+            info.individual_address,
+            IndividualAddress::new(1, 1, 0).unwrap()
+        );
+        let (families, _) = decode_service_families(rest).unwrap();
+        assert!(families.supports(SERVICE_FAMILY_TUNNELLING));
+    }
+}
+
+#[tokio::test]
+async fn connect_assigns_the_address_the_device_answers_to() {
+    let harness = start().await;
+    let mut tool = Tool::new(&harness, "127.0.0.1:0").await;
+    assert_eq!(tool.connect().await, E_NO_ERROR);
+    tool.send(
+        CONNECTIONSTATE_REQUEST,
+        &encode_connectionstate_request(tool.channel, ROUTE_BACK),
+    )
+    .await;
+    let (service, body) = tool.receive().await.unwrap();
+    assert_eq!(service, CONNECTIONSTATE_RESPONSE);
+    assert_eq!(
+        decode_connectionstate_response(&body).unwrap().status,
+        E_NO_ERROR
+    );
+    tool.send(
+        CONNECTIONSTATE_REQUEST,
+        &encode_connectionstate_request(tool.channel + 1, ROUTE_BACK),
+    )
+    .await;
+    let (_, body) = tool.receive().await.unwrap();
+    assert_eq!(
+        decode_connectionstate_response(&body).unwrap().status,
+        E_CONNECTION_ID
+    );
+}
+
+#[tokio::test]
+async fn a_management_exchange_crosses_the_socket_in_both_directions() {
+    let harness = start().await;
+    let mut tool = Tool::new(&harness, "127.0.0.1:0").await;
+    assert_eq!(tool.connect().await, E_NO_ERROR);
+
+    let connect = request(
+        &harness,
+        Tpci::Connect,
+        ApplicationService::NoApplicationPdu,
+    );
+    assert_eq!(tool.request(&connect).await, E_NO_ERROR);
+    let confirmation = tool.next_frame().await.expect("the T_Connect confirmation");
+    assert_eq!(
+        confirmation.kind,
+        LDataMessageKind::Confirmation { error: false }
+    );
+    assert_eq!(confirmation.transport, Tpci::Connect);
+
+    let read = request(
+        &harness,
+        Tpci::NumberedData { seq: 0 },
+        ApplicationService::DeviceDescriptorRead { descriptor_type: 0 },
+    );
+    assert_eq!(tool.request(&read).await, E_NO_ERROR);
+    let confirmation = tool.next_frame().await.expect("the request confirmation");
+    assert_eq!(
+        confirmation.kind,
+        LDataMessageKind::Confirmation { error: false }
+    );
+    // A numbered request is first acknowledged by the device's Transport Layer.
+    let transport_ack = tool.next_frame().await.expect("the device's T_ACK");
+    assert_eq!(transport_ack.transport, Tpci::Ack { seq: 0 });
+    let answer = tool.next_frame().await.expect("the device answer");
+    assert_eq!(answer.kind, LDataMessageKind::Indication);
+    assert_eq!(answer.source, harness.device.address());
+    assert_eq!(
+        answer.service,
+        ApplicationService::DeviceDescriptorResponse {
+            descriptor_type: 0,
+            data: vec![0x07, 0xB0],
+        }
+    );
+    assert_eq!(harness.device.seen()[0], Seen::Connect);
+}
+
+#[tokio::test]
+async fn a_repeated_sequence_is_acknowledged_but_reaches_the_device_once() {
+    let harness = start().await;
+    let mut tool = Tool::new(&harness, "127.0.0.1:0").await;
+    assert_eq!(tool.connect().await, E_NO_ERROR);
+    let connect = request(
+        &harness,
+        Tpci::Connect,
+        ApplicationService::NoApplicationPdu,
+    );
+    let cemi = encode_l_data(&connect).unwrap();
+    tool.send_cemi(&cemi).await;
+    tool.send_cemi(&cemi).await;
+    for _ in 0..2 {
+        let (service, body) = tool.receive().await.unwrap();
+        assert_eq!(service, TUNNELLING_ACK);
+        assert_eq!(decode_tunnelling_ack(&body).unwrap().status, E_NO_ERROR);
+    }
+    while tool.next_frame().await.is_some() {}
+    assert_eq!(harness.from_tool.load(Ordering::SeqCst), 1);
+    assert_eq!(harness.device.seen(), vec![Seen::Connect]);
+}
+
+#[tokio::test]
+async fn a_second_host_is_refused_until_the_first_disconnects() {
+    let harness = start().await;
+    let mut first = Tool::new(&harness, "127.0.0.1:0").await;
+    let mut second = Tool::new(&harness, "127.0.0.2:0").await;
+    assert_eq!(first.connect().await, E_NO_ERROR);
+    assert_eq!(second.connect().await, E_NO_MORE_CONNECTIONS);
+
+    first
+        .send(
+            DISCONNECT_REQUEST,
+            &encode_disconnect_request(first.channel, ROUTE_BACK),
+        )
+        .await;
+    let (service, body) = first.receive().await.unwrap();
+    assert_eq!(service, DISCONNECT_RESPONSE);
+    assert_eq!(
+        decode_disconnect_response(&body).unwrap().status,
+        E_NO_ERROR
+    );
+    assert_eq!(second.connect().await, E_NO_ERROR);
+}
+
+#[tokio::test]
+async fn unsupported_tunnel_layers_and_connection_types_are_refused() {
+    let harness = start().await;
+    let tool = Tool::new(&harness, "127.0.0.1:0").await;
+    for (cri, expected) in [
+        ([0x04, TUNNEL_CONNECTION, 0x80, 0x00], E_TUNNELLING_LAYER),
+        ([0x02, 0x07, 0x00, 0x00], E_CONNECTION_TYPE),
+    ] {
+        tool.send(
+            CONNECT_REQUEST,
+            &encode_connect_request(ROUTE_BACK, ROUTE_BACK, &cri),
+        )
+        .await;
+        let (_, body) = tool.receive().await.unwrap();
+        assert_eq!(decode_connect_response(&body).unwrap().status, expected);
+    }
+}
+
+#[tokio::test]
+async fn undecodable_cemi_is_reported_and_neither_confirmed_nor_forwarded() {
+    let harness = start().await;
+    let mut tool = Tool::new(&harness, "127.0.0.1:0").await;
+    assert_eq!(tool.connect().await, E_NO_ERROR);
+    tool.send_cemi(&[0x99, 0x00, 0xBC, 0xE0, 0x00]).await;
+    let (service, _) = tool.receive().await.unwrap();
+    assert_eq!(service, TUNNELLING_ACK);
+    assert!(
+        tool.next_frame().await.is_none(),
+        "nothing may be confirmed"
+    );
+    assert_eq!(harness.undecodable.lock().unwrap().len(), 1);
+    assert!(harness.device.seen().is_empty());
+}
+
+fn ack_status(ack: &[u8; 4]) -> u8 {
+    ack[3]
+}
+
+#[tokio::test]
+async fn a_management_connection_answers_property_reads_and_reports_void_ones() {
+    let mut properties = BTreeMap::new();
+    properties.insert((0x000B, 0, 52u8), vec![0x12, 0x34]);
+    let harness = start_with(properties).await;
+    let mut tool = Tool::new(&harness, "127.0.0.1:0").await;
+    let (status, crd) = tool.connect_management().await;
+    assert_eq!(
+        (status, crd),
+        (E_NO_ERROR, vec![0x02, DEVICE_MGMT_CONNECTION])
+    );
+
+    // A configured property comes back with its data and the requested element count.
+    let (_, answer) = tool.manage(&[0xFC, 0x00, 0x0B, 0x00, 52, 0x10, 0x01]).await;
+    assert_eq!(
+        answer,
+        vec![0xFB, 0x00, 0x0B, 0x00, 52, 0x10, 0x01, 0x12, 0x34]
+    );
+    // Any other property is void: zero elements and the error code.
+    let (_, answer) = tool.manage(&[0xFC, 0x00, 0x00, 0x00, 99, 0x10, 0x01]).await;
+    assert_eq!(answer, vec![0xFB, 0x00, 0x00, 0x00, 99, 0x00, 0x01, 0x07]);
+    // Writes are refused as read-only.
+    let (_, answer) = tool
+        .manage(&[0xF6, 0x00, 0x00, 0x00, 99, 0x10, 0x01, 0xAA])
+        .await;
+    assert_eq!(answer, vec![0xF5, 0x00, 0x00, 0x00, 99, 0x00, 0x01, 0x05]);
+}
+
+#[tokio::test]
+async fn a_tunnel_and_a_management_connection_coexist_on_separate_channels() {
+    let harness = start().await;
+    let mut tunnel = Tool::new(&harness, "127.0.0.1:0").await;
+    let mut management = Tool::new(&harness, "127.0.0.1:0").await;
+    assert_eq!(tunnel.connect().await, E_NO_ERROR);
+    assert_eq!(management.connect_management().await.0, E_NO_ERROR);
+    assert_ne!(tunnel.channel, management.channel);
+    // Closing one leaves the other open: the heartbeat of the survivor still answers.
+    management
+        .send(
+            DISCONNECT_REQUEST,
+            &encode_disconnect_request(management.channel, ROUTE_BACK),
+        )
+        .await;
+    let (service, _) = management.receive().await.unwrap();
+    assert_eq!(service, DISCONNECT_RESPONSE);
+    tunnel
+        .send(
+            CONNECTIONSTATE_REQUEST,
+            &encode_connectionstate_request(tunnel.channel, ROUTE_BACK),
+        )
+        .await;
+    let (_, body) = tunnel.receive().await.unwrap();
+    assert_eq!(
+        decode_connectionstate_response(&body).unwrap().status,
+        E_NO_ERROR
+    );
+}

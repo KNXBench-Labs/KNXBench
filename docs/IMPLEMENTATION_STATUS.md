@@ -23,7 +23,8 @@ The check is a settlement snapshot, not a catalogue subscription, device read or
 proof about parts the run never wrote
 ([contract](contracts/download-settlement-source-freshness.md)). Independent
 logic and persistence reviews approved the source; strengthened assertions pass.
-Integrated acceptance and publication remain pending. No hardware claim is made.
+Published as `fa4c18213` after all 14 maintained integrated package stages passed
+([acceptance](status/2026-10-25-download-source-freshness.md)). No hardware claim is made.
 
 ## Backup application identity before restore (25 October 2026 source)
 

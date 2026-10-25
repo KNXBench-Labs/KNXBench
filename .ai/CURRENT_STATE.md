@@ -4,7 +4,7 @@ Updated: 2026-10-25 02:22 CEST. Operational snapshot, not an append-only journal
 
 ## Issue #30: taken by the issue30 UI track
 
-- Observed 2026-10-25 11:29 CET; branch `fix/issue-30-system2-guidance-20261025`.
+- Observed 2026-10-25 11:24 CET; branch `fix/issue-30-system2-guidance-20261025`.
 - Own mode selection, ordinary-readiness presentation, EN/DE copy, tests and the device guide.
 - No backend/protocol/profile changes, bus operations, release or deployment authority.
 - Separate backup-identity acceptance owns its frozen programming integration; preserve it.

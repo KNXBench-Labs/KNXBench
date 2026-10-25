@@ -1799,3 +1799,132 @@ async fn unreadable_prestate_memory_is_observed_and_leaves_no_recovery() {
         "placeholder, not a backup"
     );
 }
+
+// Refuses (empty A_Memory_Response) or drops memory reads before the first
+// property write; final verification afterwards reads normally.
+struct PrestateMemory<'a> {
+    device: &'a SimulatedDevice,
+    drop_reads: bool,
+    written: std::sync::Arc<std::sync::atomic::AtomicBool>,
+}
+impl ManagementTransport for PrestateMemory<'_> {
+    fn assigned_address(&self) -> IndividualAddress {
+        ManagementTransport::assigned_address(self.device)
+    }
+    fn subscribe(&self) -> broadcast::Receiver<TunnelEvent> {
+        let mut upstream = ManagementTransport::subscribe(self.device);
+        let (sender, receiver) = broadcast::channel(256);
+        let written = self.written.clone();
+        tokio::spawn(async move {
+            loop {
+                match upstream.recv().await {
+                    Ok(TunnelEvent::Telegram(mut frame)) => {
+                        if !written.load(std::sync::atomic::Ordering::SeqCst) {
+                            if let ApplicationService::MemoryResponse { data, .. } =
+                                &mut frame.service
+                            {
+                                data.clear();
+                            }
+                        }
+                        let _ = sender.send(TunnelEvent::Telegram(frame));
+                    }
+                    Ok(TunnelEvent::Closed) => {
+                        let _ = sender.send(TunnelEvent::Closed);
+                        break;
+                    }
+                    Err(broadcast::error::RecvError::Lagged(_)) => continue,
+                    Err(broadcast::error::RecvError::Closed) => break,
+                }
+            }
+        });
+        receiver
+    }
+    fn target_kind(&self) -> TargetKind {
+        TargetKind::Simulator
+    }
+    async fn send_frame(
+        &self,
+        destination: Destination,
+        transport: Tpci,
+        service: ApplicationService,
+    ) -> Result<(), BusError> {
+        use std::sync::atomic::Ordering::SeqCst;
+        match &service {
+            ApplicationService::PropertyValueWrite { .. } => self.written.store(true, SeqCst),
+            ApplicationService::MemoryRead { .. }
+                if self.drop_reads && !self.written.load(SeqCst) =>
+            {
+                return Ok(());
+            }
+            _ => {}
+        }
+        ManagementTransport::send_frame(self.device, destination, transport, service).await
+    }
+}
+
+#[tokio::test]
+async fn refused_prestate_memory_read_is_observed_and_the_download_continues() {
+    let (device, plan, preconditions) = fixture();
+    establish_shape(&device, &plan).await;
+    let transport = PrestateMemory {
+        device: &device,
+        drop_reads: false,
+        written: Default::default(),
+    };
+    let report = run_experimental_property_plan(
+        &transport,
+        &plan,
+        auth(&device),
+        AuthorisationPlan::Skip,
+        timing(),
+        &preconditions,
+        &mut |_| Ok(()),
+        &|| false,
+    )
+    .await
+    .expect("a refused prestate memory read is an observation");
+    assert_eq!(report.recovery.unreadable_allocations, [0]);
+    assert_eq!(
+        device.memory(0x3C00, 4),
+        [Some(1), Some(2), Some(3), Some(4)]
+    );
+    let reason = recovery_refusal(&report.recovery, &plan);
+    assert!(reason.contains("prestate memory unreadable"), "{reason}");
+}
+
+#[tokio::test]
+async fn prestate_memory_read_timeout_stays_an_error_before_any_write() {
+    let (device, plan, preconditions) = fixture();
+    establish_shape(&device, &plan).await;
+    let transport = PrestateMemory {
+        device: &device,
+        drop_reads: true,
+        written: Default::default(),
+    };
+    let before = device.seen().len();
+    let error = run_experimental_property_plan(
+        &transport,
+        &plan,
+        auth(&device),
+        AuthorisationPlan::Skip,
+        timing(),
+        &preconditions,
+        &mut |_| Ok(()),
+        &|| false,
+    )
+    .await
+    .unwrap_err();
+    assert!(!error.mutation_may_have_started);
+    assert!(
+        matches!(error.failure, PropertySimulationFailure::Session(_)),
+        "{:?}",
+        error.failure
+    );
+    assert!(!device.seen()[before..]
+        .iter()
+        .any(|seen| matches!(seen, Seen::MemoryWrite { .. } | Seen::PropertyWrite { .. })));
+    assert_eq!(
+        device.memory(0x3C00, 4),
+        [Some(9), Some(8), Some(7), Some(6)]
+    );
+}

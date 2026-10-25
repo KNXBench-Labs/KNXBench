@@ -354,7 +354,12 @@ recorded as well (review fix, 2026-10-25): the allocation index goes into
 are zero placeholders that are never used as a backup, and recovery is
 unavailable (`prestate memory unreadable`). Final verification of such an
 allocation compares the written bytes only, since nothing predicts the unwritten
-ones. Transport errors and timeouts stay errors.
+ones. Transport errors and timeouts stay errors. Accepted consequence of the
+owner decision: a device that refuses every memory read used to be refused
+before any write; it is now written and then fails final verification
+(`mutation_possible`/`mutationMayHaveStarted` true, no original-state recovery).
+Progress lists such allocations as `prestate_unreadable_allocations` (object,
+start address, length), and the UI never calls them a backup.
 
 Observations are kept per run: progress entries carry `run` (`download` or
 `restore`) next to `phase`, so a restore's final or in-procedure observations

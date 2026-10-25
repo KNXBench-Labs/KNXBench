@@ -202,7 +202,9 @@ export default function System2DownloadPanel({ project, deviceId, gateway, enabl
       <p>{status.totalSteps === null ? t("system2.checkpointsUnknown", { done: status.completedSteps }) : t("system2.checkpoints", { done: status.completedSteps, total: status.totalSteps })}</p>
       {status.totalSteps !== null && status.totalSteps > 0 && <progress aria-label={t("system2.steps")} value={status.completedSteps} max={status.totalSteps} />}
       {status.message && <p>{status.message}</p>}
-      <p>{t(status.backupAvailable ? "system2.backupAvailable" : "system2.backupUnavailable")}</p>
+      {status.prestateUnreadableAllocations.length > 0 ? <p data-system2-prestate-unreadable className="form-warning">
+        {t("system2.prestateUnreadable", { allocations: status.prestateUnreadableAllocations.map((a) => t("system2.prestateUnreadableAllocation", { object: a.object, address: a.address, length: a.length })).join("; ") })}
+      </p> : <p>{t(status.backupAvailable ? "system2.backupAvailable" : "system2.backupUnavailable")}</p>}
       {(status.pointerObservations.length > 0 || status.programVersionObservation !== null) && <section data-system2-observations aria-label={t("system2.observations")}>
         <h4>{t("system2.observations")}</h4><p>{t("system2.observationsNote")}</p>
         <ul>

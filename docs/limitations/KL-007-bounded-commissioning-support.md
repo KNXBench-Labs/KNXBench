@@ -24,7 +24,11 @@ refused PID 7 read as `refused` in every phase, and stops zero/all-FF serials
 from blocking (recovery is unavailable for them). An allocation record a device
 silently ignores is therefore caught only by the final memory, Loaded and
 program-version verification. A refused or short prestate memory read is
-recorded and makes recovery unavailable instead of refusing. Final pointer
+recorded and makes recovery unavailable instead of refusing. Accepted
+consequence: a device that refuses every memory read was refused before any
+write; it is now written and then fails final verification with
+mutationMayHaveStarted true and no recovery. The UI lists such allocations and
+never calls their zero placeholders a backup. Final pointer
 observations are journaled before the closing VerifyMode write, and download
 and restore observations are kept separately. The status DTO reports whether a
 failed operation could have written anything. Software and simulator tests only; whether the

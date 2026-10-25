@@ -84,3 +84,19 @@ it("admits in-procedure and refused pointer observations, strictly", async () =>
     { ...inProcedureStatus, pointerObservations: [{ ...during, run: undefined }] },
   ]) { reply(value); await expect(system2.getSystem2Status()).rejects.toThrow("System-2"); }
 });
+it("admits unreadable prestate allocations only with the prestate flag and without recovery", async () => {
+  const { unreadableStatus } = await import("./system2DownloadTestFixtures");
+  reply(unreadableStatus); expect(await system2.getSystem2Status()).toEqual(unreadableStatus);
+  const [entry] = unreadableStatus.prestateUnreadableAllocations;
+  for (const value of [
+    { ...status, prestateUnreadableAllocations: undefined },
+    { ...unreadableStatus, prestateDiffers: false },
+    { ...unreadableStatus, recoveryPhrase: "r", downloadPhrase: "d", releasePhrase: "x" },
+    { ...unreadableStatus, prestateUnreadableAllocations: [{ ...entry, address: "3C00" }] },
+    { ...unreadableStatus, prestateUnreadableAllocations: [{ ...entry, address: 15360 }] },
+    { ...unreadableStatus, prestateUnreadableAllocations: [{ ...entry, object: 256 }] },
+    { ...unreadableStatus, prestateUnreadableAllocations: [{ ...entry, length: 0 }] },
+    { ...unreadableStatus, prestateUnreadableAllocations: [{ ...entry, extra: 1 }] },
+    { ...unreadableStatus, prestateUnreadableAllocations: Array(257).fill(entry) },
+  ]) { reply(value); await expect(system2.getSystem2Status()).rejects.toThrow("System-2"); }
+});

@@ -52,6 +52,7 @@ fn initial(outcome: LocalOutcome) -> OperationProgress {
         mutation_possible: false,
         recovery_phrases: None,
         prestate_differs: false,
+        prestate_unreadable_allocations: Vec::new(),
         pointer_observations: Vec::new(),
         program_version_observation: None,
     }
@@ -117,6 +118,15 @@ impl Record {
             message: self.message,
             mutation_may_have_started: p.mutation_possible,
             prestate_differs: p.prestate_differs,
+            prestate_unreadable_allocations: p
+                .prestate_unreadable_allocations
+                .iter()
+                .map(|a| dto::UnreadableAllocation {
+                    object: a.object,
+                    address: format!("{:04x}", a.address),
+                    length: a.length,
+                })
+                .collect(),
             pointer_observations: p
                 .pointer_observations
                 .iter()

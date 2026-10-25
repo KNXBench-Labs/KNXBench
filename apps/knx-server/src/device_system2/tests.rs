@@ -307,3 +307,25 @@ fn status_carries_prestate_observations_and_offers_no_recovery_after_a_differenc
     );
     assert!(status["recoveryPhrase"].is_null());
 }
+#[test]
+fn status_names_unreadable_prestate_allocations() {
+    use knx_app::property_validation::{LocalOutcome, UnreadableAllocation};
+    let mut progress = super::initial(LocalOutcome::Finished);
+    progress.backup_available = true;
+    progress.mutation_possible = true;
+    progress.prestate_differs = true;
+    progress.prestate_unreadable_allocations = vec![UnreadableAllocation {
+        object: 3,
+        address: 0x3c00,
+        length: 4,
+    }];
+    let status = settled_status(progress);
+    assert_eq!(
+        status["prestateUnreadableAllocations"],
+        serde_json::json!([{"object": 3, "address": "3c00", "length": 4}])
+    );
+    assert_eq!(status["prestateDiffers"], true);
+    assert!(status["recoveryPhrase"].is_null());
+    let none = settled_status(super::initial(LocalOutcome::Failed));
+    assert_eq!(none["prestateUnreadableAllocations"], serde_json::json!([]));
+}

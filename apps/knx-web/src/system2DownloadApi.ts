@@ -17,6 +17,8 @@ export interface System2Status {
   /** The device prestate differed from the source shape or application; recovery is unavailable. */
   prestateDiffers: boolean; pointerObservations: System2PointerObservation[];
   programVersionObservation: { expected: string; observed: string } | null;
+  /** Allocations whose prior memory could not be read: no backup exists for them. */
+  prestateUnreadableAllocations: { object: number; address: string; length: number }[];
 }
 /** `observed` is eight hex digits or "refused"; `operationIndex` is set only for in-procedure read-backs. */
 export interface System2PointerObservation {
@@ -55,11 +57,15 @@ const observation = object({ run: (v) => v === "download" || v === "restore", ph
   operationIndex: nullable(count), expected: hex8, observed: (v) => v === "refused" || hex8(v), loadState: nonempty });
 const observations: Check = (v) => Array.isArray(v) && v.length <= 256 && v.every(observation) &&
   v.every((o: { phase: string; operationIndex: number | null }) => (o.phase === "inProcedure") === (o.operationIndex !== null));
+const unreadable = object({ object: (v) => count(v) && (v as number) <= 255, address: (v) => typeof v === "string" && /^[0-9a-f]{4}$/.test(v),
+  length: (v) => count(v) && (v as number) > 0 && (v as number) <= 65535 });
+const unreadables: Check = (v) => Array.isArray(v) && v.length <= 256 && v.every(unreadable);
 const statusCheck = object({ ...shared, operationId: id, state: (v) => SYSTEM2_STATES.some((state) => state === v),
   completedSteps: count, totalSteps: nullable(count), backupAvailable: (v) => typeof v === "boolean", recoveryPhrase: nullable(nonempty),
   downloadPhrase: nullable(nonempty), releasePhrase: nullable(nonempty), message: nullable(text),
   mutationMayHaveStarted: flag, prestateDiffers: flag, pointerObservations: observations,
-  programVersionObservation: nullable(object({ expected: hexBytes, observed: hexBytes })) });
+  programVersionObservation: nullable(object({ expected: hexBytes, observed: hexBytes })),
+  prestateUnreadableAllocations: unreadables });
 function checked<T>(value: unknown, check: Check): T {
   if (!check(value)) throw new Error("Invalid System-2 response; operation outcome is not confirmed.");
   return value as T;
@@ -72,7 +78,8 @@ function checkedStatus(value: unknown): System2Status {
   }
   // A differing prestate is never a recovery source. Evidence implies the flag; the
   // flag alone may also stand for a placeholder serial, which the DTO never carries.
-  const differs = row.pointerObservations.some((o) => o.phase === "prestate") || row.programVersionObservation !== null;
+  const differs = row.pointerObservations.some((o) => o.phase === "prestate") || row.programVersionObservation !== null ||
+    row.prestateUnreadableAllocations.length > 0;
   if ((differs && !row.prestateDiffers) || (row.prestateDiffers && row.recoveryPhrase !== null)) {
     throw new Error("Invalid System-2 prestate observations.");
   }

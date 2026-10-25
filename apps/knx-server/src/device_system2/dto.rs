@@ -65,6 +65,9 @@ pub(super) struct Status {
     /// Captured prestate differed from the source shape or application:
     /// original-state recovery is unavailable for this operation.
     pub prestate_differs: bool,
+    /// Declared allocations whose prior memory read was refused or short: no
+    /// backup exists for them (their stored bytes are zero placeholders).
+    pub prestate_unreadable_allocations: Vec<UnreadableAllocation>,
     pub pointer_observations: Vec<PointerObservation>,
     pub program_version_observation: Option<ProgramVersionObservation>,
 }
@@ -81,6 +84,14 @@ pub(super) struct PointerObservation {
     pub expected: String,
     pub observed: String,
     pub load_state: String,
+}
+/// Object, four lower-case hex digit start address and length of one allocation.
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct UnreadableAllocation {
+    pub object: u8,
+    pub address: String,
+    pub length: usize,
 }
 /// Plan application versus the device's prior program version (empty: refused).
 #[derive(Clone, Serialize)]

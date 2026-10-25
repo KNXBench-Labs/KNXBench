@@ -430,6 +430,17 @@ async fn memory_evidence_is_refused_unless_the_recorded_identity_admits_it() {
         ("recorded inlineData does not match PID78", |_, m| {
             m["hardwareTypeComparison"]["inlineData"] = "00010000005c00000000".into();
         }),
+        (
+            "PID78 holds seven octets and claims to expect them",
+            |r, _| {
+                // A zero after the six octets is still a prefix of the padded
+                // inlineData; only the hardware type's fixed width refuses it.
+                let item = &mut r["items"][2];
+                item["bytes"] = serde_json::json!([0, 1, 0, 0, 0, 0x5B, 0]);
+                item["expectedBytes"] = 7.into();
+                item["receivedBytes"] = 7.into();
+            },
+        ),
         ("PID12 returned two elements", |r, _| {
             r["items"][1]["returnedElements"] = 2.into();
         }),

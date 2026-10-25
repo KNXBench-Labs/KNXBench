@@ -77,10 +77,19 @@ pub const PID_SERIAL_NUMBER: u8 = 11;
 /// `PID_PROGRAM_VERSION`, written by design spec §7.2 step 5.
 ///
 /// `[D]` `03_07_03 Standardized Identifier Tables` row
-/// `| 13: | PID_PROGRAM_VERSION | Application Version |`, confirmed by RES
-/// §4.19's Application Program Object table *"Application Version | 13 =
-/// PID_PROGRAM_VERSION | PDT_GENERIC_05"*.
+/// `| 13: | PID_PROGRAM_VERSION | Application Version |`, confirmed by
+/// *Resources* (`03_05_01` v01.10.01) §4.20's Application Program Object
+/// tables (Table 89, printed p. 287; Table 90, p. 288): Application Version,
+/// PID 13, `PDT_GENERIC_05`. In that version §4.19 is the Easy Parameter
+/// Block Table, not this object.
 pub const PID_PROGRAM_VERSION: u8 = 13;
+
+/// The octets of one `PID_PROGRAM_VERSION` value.
+///
+/// `[D]` *Resources* (`03_05_01` v01.10.01) §4.2.13, printed pp. 33-34:
+/// `PDT_GENERIC_05`, one five-octet identifier: manufacturer ID (two
+/// octets), device type (two), application program version (one).
+pub const PROGRAM_VERSION_OCTETS: usize = 5;
 
 /// `PID_DEVICE_CONTROL`, whose bit 2 is Verify Mode (design spec §6.3).
 ///

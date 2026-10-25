@@ -955,6 +955,13 @@ Admission/lifecycle records are bounded, not full audit/traffic/recovery history
 A plannable default image is not hardware verification. Readiness is application/download-type scoped; backups cover only declared pre-write recovery boundaries.
 [Details and history](limitations/download-readiness-and-pre-write-backup.md)
 
+<a id="catalogue-extended-frame-transmission"></a>
+### Extended-frame transmission
+
+**Ledger status:** Not separately tracked.
+Frames with `L` above 15 are now encoded as extended frames. No interface or device has received one from KNXBench yet; received FT is not kept.
+[Details and history](limitations/extended-frame-transmission.md)
+
 <a id="catalogue-offline-ap1-sequence-inspection"></a>
 <a id="offline-ap1-sequence-inspection-is-not-new-download-support-2026-10-09"></a>
 ### Offline AP1 sequence inspection

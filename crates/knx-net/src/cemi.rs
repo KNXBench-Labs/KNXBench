@@ -172,6 +172,9 @@ pub const SYSTEM_BROADCAST_DESTINATION: Destination = Destination::SystemBroadca
 const CTRL1_SB_BROADCAST: u8 = 0x10;
 /// cEMI Ctrl1 bit 7, Frame Type: set means standard frame (same clause).
 const CTRL1_STANDARD_FRAME: u8 = 0x80;
+/// The largest `L` a standard frame's 4-bit length field holds (Data Link
+/// Layer General v01.03.02 AS §2.2.5); anything longer is an extended frame.
+const STANDARD_FRAME_MAX_LENGTH: u8 = 15;
 
 /// cEMI Ctrl1 bit 5, Repeat (EMI_IMI v01.04.02 AS §4.1.5.3.2): set means
 /// *not* repeated / do not repeat.
@@ -1320,11 +1323,11 @@ pub fn encode_l_data(frame: &LDataFrame) -> Result<Vec<u8>, CemiError> {
     if control.hop_count > MAX_HOP_COUNT {
         return Err(CemiError::InvalidHopCount(control.hop_count));
     }
-    // Standard frame (FT = 1) and SB = 1 always, then the fields of
-    // `control`; C is the negative confirmation's error bit. Without
-    // `control` this is `0xBC` for data, `0xB2`/`0xB0` for the Transport
-    // Layer control requests (`FrameControl::default_for`) and `0xBD` for
-    // a negative confirmation.
+    // Standard frame (FT = 1; `finish_l_data` clears it for an extended
+    // frame) and SB = 1, then the fields of `control`; C is the negative
+    // confirmation's error bit. Without `control` this is `0xBC` for data,
+    // `0xB2`/`0xB0` for the Transport Layer control requests
+    // (`FrameControl::default_for`) and `0xBD` for a negative confirmation.
     let confirm_error = matches!(frame.kind, LDataMessageKind::Confirmation { error: true });
     let ctrl1 = CTRL1_STANDARD_FRAME
         | CTRL1_SB_BROADCAST
@@ -1350,7 +1353,7 @@ pub fn encode_l_data(frame: &LDataFrame) -> Result<Vec<u8>, CemiError> {
     } else {
         ctrl1
     };
-    // Address type, hop count, and extended frame format 0000 (standard).
+    // Address type, hop count, and extended frame format 0000 (standard or long frame).
     let ctrl2 = address_type_bit | (control.hop_count << 4) & CTRL2_HOP_COUNT;
     let source_raw = frame.source.raw();
 
@@ -2049,6 +2052,15 @@ fn finish_l_data(
 ) -> Result<Vec<u8>, CemiError> {
     let l_octet =
         u8::try_from(npdu.len() - 1).map_err(|_| CemiError::NpduTooLong { got: npdu.len() })?;
+    // A standard frame's length field is 4 bits wide (Data Link Layer General
+    // v01.03.02 AS §2.2.5), so a longer one is an extended frame, and FT says
+    // so (EMI_IMI v01.04.02 AS §4.1.5.3.3-§4.1.5.3.5). EFF `0000b` already
+    // names a long frame (§4.1.5.3.2).
+    let ctrl1 = if l_octet > STANDARD_FRAME_MAX_LENGTH {
+        ctrl1 & !CTRL1_STANDARD_FRAME
+    } else {
+        ctrl1
+    };
     let mut buf = Vec::with_capacity(9 + npdu.len());
     buf.push(message_code);
     buf.push(0x00); // additional info length
@@ -3625,6 +3637,59 @@ mod tests {
         let mut ind = broadcast(ApplicationService::IndividualAddressRead);
         ind.kind = LDataMessageKind::Indication;
         assert_eq!(ctrl1(ind), 0xBC);
+    }
+
+    /// A standard frame's length field holds 4 bits, so an `L` above 15 needs
+    /// the extended frame (Data Link Layer General v01.03.02 AS §2.2.5, p. 11);
+    /// FT names the frame type actually used (EMI_IMI v01.04.02 AS §4.1.5.3.3,
+    /// p. 79, and for `.con`/`.ind` §4.1.5.3.4/§4.1.5.3.5, pp. 80-81). EFF
+    /// stays `0000b`, the code for a long frame (§4.1.5.3.2, p. 77).
+    #[test]
+    fn a_frame_longer_than_fifteen_octets_is_an_extended_frame() {
+        let write = |kind, octets: usize| LDataFrame {
+            kind,
+            source: IndividualAddress::from_raw(0x0000),
+            destination: Destination::Individual(IndividualAddress::from_raw(0x1101)),
+            transport: Tpci::NumberedData { seq: 3 },
+            service: ApplicationService::MemoryWrite {
+                address: 0x0260,
+                data: (1..=octets as u8).collect(),
+            },
+            control: None,
+        };
+        let request = LDataMessageKind::Request;
+        // 12 data octets: L = 15, the longest standard frame.
+        let bytes = encode_l_data(&write(request, 12)).unwrap();
+        assert_eq!((bytes[2], bytes[3] & 0x0F, bytes[8]), (0xBC, 0x00, 15));
+        // 13 data octets: L = 16, FT = 0 and nothing else in Ctrl1 changes.
+        let bytes = encode_l_data(&write(request, 13)).unwrap();
+        assert_eq!((bytes[2], bytes[3] & 0x0F, bytes[8]), (0x3C, 0x00, 16));
+        // Maximum APDU 55 leaves 52 octets per write: L = 55.
+        let long = write(request, 52);
+        let bytes = encode_l_data(&long).unwrap();
+        assert_eq!((bytes[2], bytes[3] & 0x0F, bytes[8]), (0x3C, 0x00, 55));
+        assert_eq!(decode_l_data(&bytes).unwrap(), long);
+        // A confirmation reports the frame type that went onto the bus.
+        let confirmed = encode_l_data(&write(LDataMessageKind::Confirmation { error: true }, 52));
+        assert_eq!(confirmed.unwrap()[2], 0x3D);
+        let indicated = encode_l_data(&write(LDataMessageKind::Indication, 52));
+        assert_eq!(indicated.unwrap()[2], 0x3C);
+    }
+
+    /// A tool's extended request at system priority (Ctrl1 `30h`) survives a
+    /// decode/encode round trip octet for octet.
+    #[test]
+    fn an_extended_request_round_trips_unchanged() {
+        let mut bytes = vec![
+            0x11, 0x00, 0x30, 0x60, 0x00, 0x00, 0x11, 0x01, 0x37, 0x4E, 0xB4,
+        ];
+        bytes.extend([0x02, 0x60]);
+        bytes.extend((0..52).map(|i| i as u8 ^ 0xA5));
+        let frame = decode_l_data(&bytes).unwrap();
+        assert!(
+            matches!(&frame.service, ApplicationService::MemoryWrite { data, .. } if data.len() == 52)
+        );
+        assert_eq!(encode_l_data(&frame).unwrap(), bytes);
     }
 }
 

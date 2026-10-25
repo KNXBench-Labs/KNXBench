@@ -18,7 +18,7 @@ use tokio::net::UdpSocket;
 
 const USAGE: &str = "usage: simulator_gateway --advertise IP[:PORT] --device A.L.D [--mask HEX] \
 [--serial 12HEX] [--manufacturer HEX] [--hardware-type 12HEX] [--program-version 10HEX] \
-[--gateway-property OBJTYPE:INSTANCE:PID=HEX]... [--capture FILE] [--datagrams]";
+[--max-apdu N] [--gateway-property OBJTYPE:INSTANCE:PID=HEX]... [--capture FILE] [--datagrams]";
 const MULTICAST: Ipv4Addr = Ipv4Addr::new(224, 0, 23, 12);
 
 fn hex(text: &str, octets: usize) -> Result<Vec<u8>, String> {
@@ -40,6 +40,7 @@ fn run() -> Result<(), String> {
     let (mut mask, mut serial, mut manufacturer) = (0x07B0u16, None, None);
     let (mut hardware, mut program, mut datagrams) = (None, None, false);
     let mut gateway_properties = Vec::new();
+    let mut max_apdu = SimulatorConfig::default().max_apdu_length;
     while let Some(flag) = args.next() {
         if flag == "--datagrams" {
             datagrams = true;
@@ -60,6 +61,7 @@ fn run() -> Result<(), String> {
             "--hardware-type" => hardware = Some(hex(&value, 6)?),
             "--gateway-property" => gateway_properties.push(value),
             "--program-version" => program = Some(hex(&value, 5)?),
+            "--max-apdu" => max_apdu = Some(value.parse().map_err(|_| USAGE)?),
             _ => return Err(USAGE.into()),
         }
     }
@@ -79,6 +81,7 @@ fn run() -> Result<(), String> {
         SimulatorConfig {
             mask_version: mask,
             serial_number: serial.map(|s| s.try_into().expect("six octets")),
+            max_apdu_length: max_apdu,
             ..Default::default()
         },
     );
@@ -166,7 +169,7 @@ fn run() -> Result<(), String> {
             );
         }
         config.observer = Some(observer);
-        eprintln!("serving {address} on {advertised}; mask {mask:04x}");
+        eprintln!("serving {address} on {advertised}; mask {mask:04x}; max APDU {max_apdu:?}");
         serve(device, socket, config)
             .await
             .map_err(|e| e.to_string())

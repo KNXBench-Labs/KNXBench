@@ -2,6 +2,15 @@
 
 Updated: 2026-10-25 02:22 CEST. Operational snapshot, not an append-only journal.
 
+## Issue #30: taken by the issue30 UI track
+
+- Observed 2026-10-25 11:29 CET; branch `fix/issue-30-system2-guidance-20261025`.
+- Own mode selection, ordinary-readiness presentation, EN/DE copy, tests and the device guide.
+- No backend/protocol/profile changes, bus operations, release or deployment authority.
+- Separate backup-identity acceptance owns its frozen programming integration; preserve it.
+- Claim is published on this feature branch and acknowledged in issue #30; main is unchanged
+  until that acceptance/publication boundary is reconciled. Implementation/tests pending.
+
 ## Current assignment and authority
 
 - Owner's six-task batch is delivered in five packages; all claims released. No new feature assignment is started by closeout.

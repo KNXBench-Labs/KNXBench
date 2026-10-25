@@ -57,7 +57,33 @@ public response; it never truncates required plan/risk information.
 `Status`:
 `{schemaVersion, operationId, binding, address, deviceName, state,
 completedSteps, totalSteps, backupAvailable, recoveryPhrase, downloadPhrase,
-releasePhrase, message}`.
+releasePhrase, message, mutationMayHaveStarted, prestateDiffers,
+pointerObservations, programVersionObservation}`.
+
+Additive fields, 2026-10-25 (GitHub issue #30). `mutationMayHaveStarted` is the
+durable journal's conservative flag: `false` only when no write could have been
+sent (no recovery checkpoint and no mutating step). The panel shows "Refused
+before any write — nothing was written" for `failed`/`cancelled` only when it is
+`false`; otherwise the conservative state text stays. `prestateDiffers` is true
+when the captured prestate differed from the source allocation shape or
+application; the server then offers no recovery phrases and the panel shows
+"original-state recovery unavailable" instead of the recovery form.
+`pointerObservations` is an array (at most 256) of `{run: "download"|"restore", phase:
+"prestate"|"inProcedure"|"final", object, operationIndex, expected, observed,
+loadState}` with eight lower-case hex digits per pointer; `observed` may be
+`"refused"`, and `operationIndex` is a number exactly for `inProcedure` entries
+and null otherwise. `programVersionObservation` is `{expected, observed}` (hex, `observed`
+empty when the read was refused) or null. `prestateUnreadableAllocations` is an
+array (at most 256) of `{object, address, length}` with a four lower-case hex
+digit start address, naming declared allocations whose prior memory read was
+refused or short. Their stored bytes are zero placeholders: the panel then
+replaces the "backup evidence is retained" line with "Prior memory could not be
+read — no backup" and lists them. A non-empty array implies `prestateDiffers`
+and no recovery phrases; the client refuses anything else. The client refuses a status that has
+prestate evidence without `prestateDiffers`, or that offers recovery phrases
+together with `prestateDiffers`. `prestateDiffers` may be true without evidence
+in the DTO: a captured all-zero/all-FF serial, which the DTO never carries, also
+makes recovery unavailable. Serial numbers stay out of the DTO.
 
 `downloadPhrase` and `releasePhrase` are required nullable strings retained from
 this exact original operation, not reconstructed from the current project's or

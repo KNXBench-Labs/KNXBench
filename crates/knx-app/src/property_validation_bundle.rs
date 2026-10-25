@@ -10,8 +10,8 @@ use knx_core::commissioning::{
 };
 use knx_core::{ContactableAddress, IndividualAddress};
 use knx_net::commissioning::property_recovery::{
-    ExperimentalPropertyPreconditions, PropertyRecoveryRegion, PropertyRecoveryResource,
-    PropertyRecoverySnapshot,
+    ExperimentalPropertyPreconditions, PropertyPointerObservation, PropertyRecoveryRegion,
+    PropertyRecoveryResource, PropertyRecoverySnapshot,
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -336,6 +336,39 @@ pub struct ResourceRecord {
     pub object: u8,
     pub state: u8,
     pub pointer: [u8; 4],
+    /// The device refused the PID_TABLE_REFERENCE read; `pointer` is then zero.
+    /// Absent (Alpha 16 grammar) when a pointer was read.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub pointer_refused: bool,
+}
+/// Readable per-object pointer observation: source expectation versus device read.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PointerObservationRecord {
+    pub object: u8,
+    pub expected: [u8; 4],
+    /// `None` when the device refused the read.
+    pub observed: Option<[u8; 4]>,
+    pub state: u8,
+}
+impl PointerObservationRecord {
+    pub fn from_observation(observation: &PropertyPointerObservation) -> Self {
+        Self {
+            object: observation.object,
+            expected: observation.expected,
+            observed: observation.observed,
+            state: observation.state.octet(),
+        }
+    }
+    pub fn to_observation(&self) -> io::Result<PropertyPointerObservation> {
+        Ok(PropertyPointerObservation {
+            object: self.object,
+            expected: self.expected,
+            observed: self.observed,
+            state: LoadState::from_octet(self.state)
+                .map_err(|_| invalid("pointer observation load state is unknown"))?,
+        })
+    }
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -354,9 +387,26 @@ pub struct RecoveryRecord {
     pub version: u16,
     pub original_bundle: PreparedBundle,
     pub old_device_control: u8,
+    /// Observed prestate per touched object (equal to the source unless it differed).
     pub resources: Vec<ResourceRecord>,
     pub allocations: Vec<RegionRecord>,
     pub regions: Vec<RegionRecord>,
+    /// Redundant readable copy of every resource that differed from the source
+    /// shape; absent (Alpha 16 grammar) when none did. Revalidated on load.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub prestate_observations: Vec<PointerObservationRecord>,
+    /// Device serial read at acquisition when it differed from the binding's;
+    /// absent (Alpha 16 grammar) when equal. Recovery replay is bound to it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub observed_serial: Option<[u8; 6]>,
+    /// Object 3 PID_PROGRAM_VERSION read at acquisition when it differed from
+    /// the plan's application (empty: refused); absent when equal (Alpha 16 grammar).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub observed_program_version: Option<Vec<u8>>,
+    /// Allocation indices whose prestate read was refused or short; their data
+    /// are zero placeholders. Absent (Alpha 16 grammar) when every read succeeded.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub prestate_unreadable_allocations: Vec<usize>,
 }
 impl RecoveryRecord {
     pub fn from_snapshot(
@@ -380,7 +430,8 @@ impl RecoveryRecord {
                 .map(|r| ResourceRecord {
                     object: r.object,
                     state: r.state.octet(),
-                    pointer: r.pointer,
+                    pointer: r.pointer.unwrap_or([0; 4]),
+                    pointer_refused: r.pointer.is_none(),
                 })
                 .collect(),
             allocations: snapshot
@@ -405,6 +456,14 @@ impl RecoveryRecord {
                     data: r.data.clone(),
                 })
                 .collect(),
+            prestate_observations: snapshot
+                .prestate_observations()
+                .iter()
+                .map(PointerObservationRecord::from_observation)
+                .collect(),
+            observed_serial: snapshot.serial_observation().map(|o| o.observed),
+            observed_program_version: snapshot.program_version_observation().map(|o| o.observed),
+            prestate_unreadable_allocations: snapshot.unreadable_allocations.clone(),
         };
         record.to_snapshot(bundle)?;
         Ok(record)
@@ -424,8 +483,8 @@ impl RecoveryRecord {
                 .zip(&preconditions.source_pointers)
                 .any(|(a, b)| {
                     a.object != b.object
-                        || a.pointer != b.value
-                        || a.state != LoadState::Loaded.octet()
+                        || LoadState::from_octet(a.state).is_err()
+                        || (a.pointer_refused && a.pointer != [0; 4])
                 })
         {
             return Err(invalid(
@@ -460,18 +519,34 @@ impl RecoveryRecord {
                 "recovery memory coverage is incomplete or reordered",
             ));
         }
+        if self.observed_serial == Some(preconditions.serial)
+            || self
+                .observed_program_version
+                .as_ref()
+                .is_some_and(|v| v.as_slice() == preconditions.program_version || v.len() > 64)
+        {
+            return Err(invalid(
+                "observed serial/program version is recorded only when it differs from the binding",
+            ));
+        }
         let snapshot = PropertyRecoverySnapshot {
             version: self.version,
             original_plan: plan.clone(),
+            observed_serial: self.observed_serial.unwrap_or(preconditions.serial),
+            observed_program_version: self
+                .observed_program_version
+                .clone()
+                .unwrap_or_else(|| preconditions.program_version.to_vec()),
             preconditions,
             old_device_control: self.old_device_control,
+            unreadable_allocations: self.prestate_unreadable_allocations.clone(),
             resources: self
                 .resources
                 .iter()
                 .map(|r| PropertyRecoveryResource {
                     object: r.object,
-                    state: LoadState::Loaded,
-                    pointer: r.pointer,
+                    state: LoadState::from_octet(r.state).expect("load state octet checked above"),
+                    pointer: (!r.pointer_refused).then_some(r.pointer),
                 })
                 .collect(),
             allocations: self
@@ -497,9 +572,20 @@ impl RecoveryRecord {
                 })
                 .collect(),
         };
+        // Evidence of a differing prestate loads; recovery_plan() refuses it later.
         snapshot
-            .recovery_plan(&plan)
+            .validate_evidence(&plan)
             .map_err(|_| invalid("recovery allocation coverage or original bytes differ"))?;
+        let observations = self
+            .prestate_observations
+            .iter()
+            .map(PointerObservationRecord::to_observation)
+            .collect::<io::Result<Vec<_>>>()?;
+        if observations != snapshot.prestate_observations() {
+            return Err(invalid(
+                "recorded prestate observations differ from captured resources",
+            ));
+        }
         Ok(snapshot)
     }
 }

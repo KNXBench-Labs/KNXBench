@@ -266,12 +266,33 @@ The source workflow is:
 4. The server performs fresh target/application admission. Before **any setup,
    load control or data mutation**, it must capture, persist and read back fresh
    actual affected prestate in private recovery storage. A product-default image
-   or earlier identity read is not this backup. A different/absent installed
-   application, non-Loaded resource or unsupported target refuses.
+   or earlier identity read is not this backup. A device of a different type
+   (hardware type, mask version or manufacturer) refuses before any write.
+   A different serial number, a different or absent installed application, a
+   non-Loaded resource or a table pointer that differs from the project's
+   allocation shape does **not** refuse (since 2026-10-25): the procedure starts
+   with Unload and its task-segment records write the application identity
+   itself (compare the observed ETS session in the
+   [System-2 download research](../../research/2026-10-22-system2-ets-download-procedure.md)).
+   If the device refuses or short-answers the prior memory read, that is
+   recorded too and only makes recovery unavailable. KNXBench
+   records each difference (object, expected and reported value) and lists it
+   under **Recorded device observations**, before, during and after the
+   download. A table pointer the device reports after an allocation step, or a
+   pointer read the device refuses, is recorded too and does not stop the
+   download; an all-zero or all-FF serial number does not block it either.
+   After the download, memory, load state and the written program version are
+   still verified; a final table pointer that differs from the project model is
+   only recorded. These relaxed
+   rules are software-tested only; the outcome on real hardware is unverified.
 5. Inspect durable checkpoint progress and the result. **Request cooperative
    cancellation** asks the server to stop safely; it does not undo earlier writes.
    Navigation/reload does not cancel the task. A lost start/recovery reply means
    unknown-to-client: refresh status, do not resend automatically.
+   When the server's durable journal shows that the operation stopped before its
+   first write, the status reads **Refused before any write — nothing was
+   written**. Only then; every other failure keeps the cautious "device state may
+   have changed" wording.
 
 ### Original-state recovery, not a second download
 
@@ -283,6 +304,17 @@ original recovery, ordinary-download and risk acknowledgements, then pass the
 normal programming consent. Missing terms/evidence refuse rather than borrowing
 phrases from a later preview. At most one recovery command is admitted per
 operation; a failed connection or lost reply does not reset it.
+
+Recovery is **unavailable** when the device's prior state differed from the
+project's allocation shape or application, when it refused a table pointer read
+or the prior memory read, or when its serial number was all-zero or all-FF
+(see step 4): the captured bytes then
+do not describe the device and cannot restore it, so KNXBench offers no recovery
+form and fabricates no backup. Use another route, such as a fresh download.
+Recovery is also bound to the device whose prior state was captured: if a device
+with a different serial number now answers at the address, recovery refuses
+before writing, because it would overwrite that device with foreign data. This
+serial binding applies to recovery only, not to the download.
 
 Historical operations can be inventoried/selected through authenticated HTTP;
 there is **no historical-operation dropdown** in the current UI. Selected-original

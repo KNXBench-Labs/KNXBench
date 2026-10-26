@@ -31,6 +31,7 @@ mod name_recipe;
 mod plugin_data;
 mod scan;
 mod selective_import;
+mod tunnel_runtime;
 
 const USAGE: &str = "usage: knx import <file.knxproj> [--store <path.knxdb> [--replace]] [--report-json <path.json>]\n\
      \x20                  [--product-db <path>] [--no-product-db] [--password-stdin]\n\

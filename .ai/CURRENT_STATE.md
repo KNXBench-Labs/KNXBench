@@ -1,6 +1,13 @@
 # Restart snapshot
 
-Updated: 2026-10-26 14:40 CET. Operational snapshot, not an append-only journal.
+Updated: 2026-10-26 16:13 CET. Operational snapshot, not an append-only journal.
+## GATE-01 spawn/signal slice (runtime DELIVERED, result documentation pending)
+- PUBLISHED main-first merge `ed156ef9b`; local/tracking/live readbacks equal.
+- Review/re-review APPROVE. Merge11/web65 green: Vitest4539, browser1478 incl all16 production suites;
+  no Rust/corpus/bindings selected, frozen inputs and no user-data changes.
+- Own browser-tmp-spawn/integrate worktrees remain for docs gate/publication then verified cleanup.
+- Evidence `<profile>/evidence/gate01-spawn-signals-20261026/`; no runtime runner.
+- Old parked branch retained; no proven field-timeout cause, lane-policy change or hardware claim.
 ## DIAG-02 CLI follow-up (DELIVERED runtime; result documentation pending)
 - PUBLISHED main-first merge `23e1ff3ec` on `62089b033`, fixes `e5cfa1e7b`; readbacks equal.
 - Review and focused re-review APPROVE. Merge14 green: Rust2702/127ignored, corpus91/91;

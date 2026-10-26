@@ -1,6 +1,12 @@
 # Restart snapshot
 
-Updated: 2026-10-26 22:53 CET. Operational snapshot, not an append-only journal.
+Updated: 2026-10-27 00:45 CET. Operational snapshot, not an append-only journal.
+## GATE-01 production browser lanes (DELIVERED, observed 2026-10-27 00:45 CET)
+- PUBLISHED main-first merge `745932994` (feature `1baff6c3a`, fixes `a91ba795f`); readbacks equal.
+- Review + re-review APPROVE; merged gate 11/11 green, Vitest4553, browser925+production557.
+- Production stages 850.3 s -> 681.7 s (ADR-0154). Case-level/cross-suite parallelism stays open.
+- Evidence `<profile>/evidence/gate01-prod-lanes-20261026/`; own trees retired after result docs.
+- Next: OPEN_WORK has no other plain-Open row; remaining rows evidence/owner/consent blocked.
 ## Alpha 17 release (PUBLISHED, observed 2026-10-26 22:53 CET)
 - Release freeze: released by claude-release-alpha17
 - Tag `v0.1.0-alpha.17` (object `0fd5fabda`) → commit `a9ea32d72`, cutoff `20ab2f7ea`; GitHub pre-release.

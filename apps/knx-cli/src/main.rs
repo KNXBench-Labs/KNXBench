@@ -2628,10 +2628,7 @@ fn run_device_download(args: &[String]) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    let runtime = match tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-    {
+    let runtime = match tunnel_runtime::tunnel_runtime() {
         Ok(rt) => rt,
         Err(e) => {
             eprintln!("could not start async runtime: {e}");
@@ -3252,10 +3249,7 @@ fn run_device_restore(args: &[String]) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    let runtime = match tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-    {
+    let runtime = match tunnel_runtime::tunnel_runtime() {
         Ok(rt) => rt,
         Err(e) => {
             eprintln!("could not start async runtime: {e}");
@@ -3757,10 +3751,7 @@ fn run_device_service_control(args: &[String]) -> ExitCode {
         eprintln!("activity history unavailable; read not started");
         return ExitCode::FAILURE;
     }
-    let runtime = match tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-    {
+    let runtime = match tunnel_runtime::tunnel_runtime() {
         Ok(rt) => rt,
         Err(e) => {
             if let Some(guard) = write_activity.take() {
@@ -5337,5 +5328,43 @@ mod tests {
         assert_eq!(parsed.multicast_group, Some("239.0.2.1".to_string()));
         assert_eq!(parsed.group_address, "1/2/3");
         assert_eq!(parsed.value, "1");
+    }
+}
+
+/// Source-contract proof, not CLI end-to-end: the three commands that persist
+/// between tunnel frames must take their runtime from `tunnel_runtime()`.
+#[cfg(test)]
+mod tunnel_runtime_callsites {
+    const SOURCE: &str = include_str!("main.rs");
+
+    /// The text of `fn <name>(` up to the next top-level `fn`.
+    fn body(name: &str) -> &'static str {
+        let head = format!("\nfn {name}(");
+        let start = SOURCE
+            .find(&head)
+            .unwrap_or_else(|| panic!("{name} not found"));
+        let rest = &SOURCE[start + 1..];
+        let end = rest.find("\nfn ").unwrap_or(rest.len());
+        &rest[..end]
+    }
+
+    #[test]
+    fn durable_tunnel_commands_use_the_tunnel_runtime() {
+        for name in [
+            "run_device_download",
+            "run_device_restore",
+            "run_device_service_control",
+        ] {
+            let text = body(name);
+            assert_eq!(
+                text.matches("tunnel_runtime::tunnel_runtime()").count(),
+                1,
+                "{name} must build its runtime with tunnel_runtime()"
+            );
+            assert!(
+                !text.contains("new_current_thread"),
+                "{name} must not fall back to a current-thread runtime"
+            );
+        }
     }
 }

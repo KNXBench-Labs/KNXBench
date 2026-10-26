@@ -73,11 +73,16 @@ and is held by `tools/tests/test_rust_gate_order.py`.
   one successful result, retry zero and no skips. Lane union preserves all cases.
   A lane without cases is recorded as `empty` with the inventory as its reason;
   it is never asked to run nothing.
-- Dedicated production modes remain separate and serial: catalogue,
-  communication, device-download-support, devices, dialogs, ga-members-download,
-  group-addresses, instructions, notes, parameters, reload-guard, structure,
-  table-columns, task-status, updates and ux-feedback. Each runs once with one
-  worker, as its config pins. No dev-versus-production deduplication.
+- Dedicated production modes remain separate and run one after another:
+  catalogue, communication, device-download-support, devices, dialogs,
+  ga-members-download, group-addresses, instructions, notes, parameters,
+  reload-guard, structure, table-columns, task-status, updates and ux-feedback.
+  Since 26 October 2026 each suite compiles its own inventory and runs it in the
+  same tag lanes (`production-<suite>-functional` with the gate's workers,
+  `-exclusive` on one worker, empty lanes recorded), per
+  [ADR-0154](../adr/0154-production-browser-suites-use-tag-lanes.md). The
+  configs keep `workers: 1` for standalone runs. No dev-versus-production
+  deduplication.
 - Existing common-directory workspace/alpha/browser leases are respected in fixed
   order and retained for the whole package in this first version. Shorter locks,
   cross-suite parallelism, Rust/nextest/corpus work and GPU work are deferred.

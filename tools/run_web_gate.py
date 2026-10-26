@@ -102,7 +102,8 @@ def stage_plan(profile: str, configs: list[str], production: tuple[str, ...] = P
             plan.extend(('browser-functional', 'browser-exclusive'))
     if profile in ('web', 'targeted'):
         for config in (PRODUCTION_CONFIGS if profile == 'web' else production):
-            plan.extend((f'production-{config}-inventory', f'production-{config}'))
+            plan.extend(f'production-{config}-{stage}'
+                        for stage in ('inventory', 'functional', 'exclusive'))
     if profile == 'web':
         plan.extend(('check-layering', 'check-headers', 'check-anchors', 'check-ledger',
                      'check-corpus-gates', 'diff-check'))
@@ -246,6 +247,25 @@ def run_browser(run: MeasuredRun, app: Path, env: dict[str, str], workers: int,
                       exclusive, files=files)
 
 
+def run_production(run: MeasuredRun, app: Path, env: dict[str, str], config: str,
+                   workers: int) -> None:
+    """Run one production suite in the default suite's tag lanes (ADR-0154).
+
+    The lane review of 26 October 2026 found every production spec file in the
+    default inventory, a static preview server per suite and no shared state;
+    the config's own `workers: 1` stays for standalone runs.
+    """
+    name, file = f'production-{config}', f'playwright.{config}.config.ts'
+    browser_stage(run, app, env, name + '-inventory', file, None, 1)
+    cases = read_cases(run.output / f'{name}-inventory.json')
+    functional, exclusive = split_lanes(cases)
+    run.receipt.setdefault('production', {})[config] = {
+        'total': len(cases), 'functional': len(functional), 'exclusive': len(exclusive)}
+    run.save()
+    browser_stage(run, app, env, name + '-functional', file, 'functional', workers, functional)
+    browser_stage(run, app, env, name + '-exclusive', file, 'exclusive', 1, exclusive)
+
+
 # Steps that run the branch's tests get scratch knx homes (tools/user_data_guard.py);
 # the browser and build steps keep the real ones (fontconfig, pinned widths).
 ISOLATED_STEPS = frozenset({'tool-tests'})
@@ -363,13 +383,7 @@ def main(argv: list[str] | None = None) -> int:
                     run_browser(run, app, env, args.workers, args.profile == 'benchmark', specs)
                 if args.profile in ('web', 'targeted'):
                     for config in (PRODUCTION_CONFIGS if args.profile == 'web' else production):
-                        name = f'production-{config}'
-                        file = f'playwright.{config}.config.ts'
-                        # One worker, as every production config pins: these suites
-                        # start their own preview server and are not lane-reviewed.
-                        browser_stage(run, app, env, name + '-inventory', file, None, 1)
-                        expected = read_cases(run.output / f'{name}-inventory.json')
-                        browser_stage(run, app, env, name, file, None, 1, expected)
+                        run_production(run, app, env, config, args.workers)
                 if args.profile == 'web':
                     # Never reuse/move a foreign Cargo target; only xtask is compiled here.
                     env['CARGO_TARGET_DIR'] = str(output / 'cargo-target')

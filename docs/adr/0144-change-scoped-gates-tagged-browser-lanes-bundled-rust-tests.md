@@ -5,6 +5,8 @@ Status: Accepted
 Session: test-suite speed package
 Supersedes in part: the per-file hash admission of the
 [web test gate contract](../contracts/web-test-gate.md) (14 and 17 October 2026).
+Amended by: [ADR-0154](0154-production-browser-suites-use-tag-lanes.md) (since
+26 October 2026 the production suites run in the tag lanes, not on one worker).
 
 ## Context
 

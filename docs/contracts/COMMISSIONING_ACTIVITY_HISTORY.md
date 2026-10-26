@@ -424,6 +424,13 @@ bounded download candidate above does not close this wider coverage residue.
 Existing long-session snapshots remain volatile. Empty history means no recorded rows in this
 particular database, not that no KNX action happened.
 
+The gated `knx device system2-validation` command records kind
+`system2Validation` (target address required). It is a property-write kind:
+same states and `writeEvidence` rules as `serviceControlWrite`, no
+`downloadEvidence`. A refusal before its recorded send boundary is `notSent`; a
+failure after it is `effectUnverified`. It is a bounded CLI row, not a claim of
+complete download coverage.
+
 Read observations use `running`, `finished`, `failed`, `unknown`. Property
 writes use `running`, `verified`, `noChange`, `notSent`, `effectUnverified`,
 `unknown`. A write is `verified` only when its existing route witnesses its

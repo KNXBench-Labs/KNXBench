@@ -149,13 +149,19 @@ pub struct HistoryActivity {
 
 impl OneShotActivity {
     fn validate(&self, operation_id: u64) -> io::Result<()> {
-        let write = self.kind == "serviceControlWrite";
+        // The gated System-2 validation download records through the same
+        // write guard, so it keeps the same write states and evidence rules.
+        let write = matches!(
+            self.kind.as_str(),
+            "serviceControlWrite" | "system2Validation"
+        );
         let download = self.kind == "deviceDownload";
         let valid_kind = matches!(
             self.kind.as_str(),
             "deviceCompare"
                 | "serviceControlRead"
                 | "serviceControlWrite"
+                | "system2Validation"
                 | "serialLookup"
                 | "deviceDownload"
                 | "deviceDiagnostics"

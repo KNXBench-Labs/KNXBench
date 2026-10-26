@@ -6,7 +6,7 @@ the former dated sections are in the [archive](history/OPEN_WORK_2026-10-25.md).
 
 | ID | Task | Status | Details |
 | --- | --- | --- | --- |
-| WP-21 | Selective live-typing headlines on the website | Planned: awaiting implementation Go | [WP-21](open-work/WP-21-website-headline-typing.md) |
+| WP-21 | Selective live-typing headlines on the website | In progress: review corrections and final acceptance | [WP-21](open-work/WP-21-website-headline-typing.md) |
 | WP-22 | Project change timeline inspired by Fusion 360 | Planned: awaiting implementation Go | [WP-22](open-work/WP-22-project-change-timeline.md) |
 | WP-23 | Show group-address names in Flow | Planned: awaiting implementation Go | [WP-23](open-work/WP-23-flow-group-address-names.md) |
 | WP-24 | Product catalogue as a table with sortable headers | Planned: awaiting implementation Go | [WP-24](open-work/WP-24-product-catalogue-sortable-table.md) |

@@ -1,10 +1,22 @@
 # WP-21 — Selective live-typing headlines on the website
 
-Owner request: 25 October 2026. **Planning only; no implementation authorised.**
-No release assignment or delivery date has been set. Start only after an explicit owner Go for this task.
+Owner request: 25 October 2026. Implementation authorised on 26 October 2026
+with the next-open-tasks assignment; publication through Pages explicitly approved.
+Status: implemented locally; review corrections, package gates and publication pending.
+No application release is assigned.
 
 ## Requested outcome
 
 Selected website headlines should appear as though someone is typing them live. Place a blinking cursor immediately after the text on the headline's last line, including when the headline wraps. Do not apply the effect to every headline.
 
 Before implementation, choose the affected headlines and the animation/replay behaviour. Preserve readable static text and account for reduced-motion preferences. This is website presentation, not a change to application headings by default.
+
+## Implementation and verification
+
+Chosen: only `hero-title` and `features-title` (template marker `data-headline-typing`) type live,
+once per page load on first visibility, no replay. Cursor is a zero-width inline element after
+the last revealed glyph (wraps with the text), four finite blinks, then removed. Layout is
+reserved (`visibility: hidden` glyphs). Reduced motion (initial and live), Pause, hidden document
+and pagehide show all text and drop the cursor; no JS leaves static text. Acceptance recipe:
+`website/tests/verify-headline-typing.js`; reveal, ambient and direction recipes now target the
+unselected `#release-title` because the hero no longer fades or rolls.

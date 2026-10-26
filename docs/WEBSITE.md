@@ -71,9 +71,29 @@ acceptance remains historical, not acceptance of this replacement. No
 Firefox/WebKit/Orca/native-screen-reader, hardware or electrical-plan certification.
 Self-review is not independent approval. Preview/public-variant builds do not deploy.
 
+## Selective live typing (26 October 2026)
+
+WP-21 selects only the main hero and Features headings with explicit template
+markers. They type once, on first visibility in each page load, at 50ms per glyph;
+they do not use the other headings' reversible entrance or ambient rolls. An
+inline, decorative cursor follows the last revealed glyph across line breaks,
+blinks four times after completion and disappears. Hidden glyphs reserve their
+final layout space. Complete accessible names retain word boundaries.
+
+Pause, live reduced motion, document hiding and pagehide immediately reveal all
+text and remove the cursor, including headings not yet seen; those headings do
+not start typing later either. Resuming never replays cancelled or completed typing.
+Without JavaScript or required APIs, text stays static and readable. The setting
+is page-local; there is no new storage, dependency or network action. Other
+headings retain the treatment below. The real-Chromium recipe is
+`website/tests/verify-headline-typing.js`; native screen-reader acceptance is not
+claimed. Source implementation and preview tests do not establish deployment;
+publication evidence is recorded separately after the Pages workflow and readback.
+
 ## Reversible headline entrances (18 October 2026)
 
-All marketing `main h1/h2/h3` headings now enter with the SessionRadar-inspired
+Marketing `main h1/h2/h3` headings (except the two WP-21 typing headings below)
+enter with the SessionRadar-inspired
 character treatment: `translateY(.3em) rotateX(-45deg)` and opacity 0 → the normal
 reading position and opacity 1, 650ms per character with an up-to-24ms stagger
 (capped at 600ms total stagger for long headings). The existing 720ms,

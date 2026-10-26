@@ -52,6 +52,16 @@ ambient roll still randomly chooses right, left, up or down with an oppositely
 offset twin and 720ms timing. Rare single-glyph 180ms glitches remain. Entrance and
 ambient motion use separate character layers, preserving layout and readable text.
 
+**Live typing (WP-21).** Only the hero `h1` and the features `h2` carry the template
+marker `data-headline-typing`. Each types its glyphs one by one (50ms apiece) the first
+time it becomes visible in a page load, with a zero-width cursor inline after the last
+revealed glyph, on whatever line that is. Untyped glyphs only turn `visibility: hidden`,
+so the heading keeps its final layout and wrapping. The cursor blinks four times after
+the last glyph, then is removed. The two headings skip the fade reveal and ambient swaps;
+all others behave as before. Pause, live reduced motion, hidden document and pagehide show
+all text at once and remove the cursor; typing never replays, not on scroll, not on resume.
+Without JS the headline is plain static text. Recipe: `tests/verify-headline-typing.js`.
+
 Only visible headings run ambient effects; a finite reverse entrance may finish
 offscreen and then releases its animations. Header Pause/Resume, live OS reduced
 motion, hidden-document and pagehide cleanup cancel both layers and restore all
@@ -59,7 +69,7 @@ text. The setting is page-local, never persisted. No-JS/missing APIs/animation
 failure leave static text; legal/privacy pages stay static. No animation is
 needed to read or navigate.
 
-Actual-browser recipes: `tests/verify-headline-reveal.js`,
+Actual-browser recipes: `tests/verify-headline-typing.js`, `tests/verify-headline-reveal.js`,
 `tests/verify-headlines.js`, `tests/verify-phosphor.js`,
 `tests/verify-roll-directions.js`. The direction recipe uses controlled RNG values
 against real WAAPI animations, not guessed randomness or a fake animation clock.

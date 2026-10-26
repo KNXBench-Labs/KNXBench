@@ -11,6 +11,9 @@ use knx_core::commissioning::{
     property_download::{PropertyDownloadPlan, PropertyDownloadStep, PropertyOperation as Op},
 };
 use std::{fs, net::UdpSocket, process::Command, time::Duration};
+
+mod journal;
+
 fn bundle(dir: &std::path::Path) -> (std::path::PathBuf, PreparedBundle) {
     let step = |source_index, operation| PropertyDownloadStep {
         source_index,

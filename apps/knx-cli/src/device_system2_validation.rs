@@ -573,9 +573,12 @@ fn run_hardware(
         );
         result
     });
-    guard.finish(match &executed {
+    // A refusal before the recorded send boundary witnessed no device write.
+    let outcome = match &executed {
         Ok(()) => WriteOutcome::Verified,
-        Err(_) => WriteOutcome::EffectUnverified,
-    });
+        Err(_) if guard.send_possible() => WriteOutcome::EffectUnverified,
+        Err(_) => WriteOutcome::NotSent,
+    };
+    guard.finish(outcome);
     executed
 }

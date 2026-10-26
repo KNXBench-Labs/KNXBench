@@ -6,6 +6,8 @@ Origin: the 26 October 2026 image differential
 
 ## Delivered with this item's origin
 
+Published as `678082047` ([delivery](../status/2026-10-26-up258-image-differential-delivery.md)).
+
 - Defaults profile v2 writes the 15 independent source octets beyond the declared
   association-table capacity; new physical execution with a v1 bundle refuses
   ([contract](../contracts/up258-system2-validation.md)).

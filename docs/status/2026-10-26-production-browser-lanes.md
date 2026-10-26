@@ -1,7 +1,8 @@
 # Production browser suites in the tag lanes (GATE-01)
 
-Status: implemented on branch `perf/gate01-prod-lanes-20261026`; review, package
-gate and publication pending.
+Status: delivered on 27 October 2026 as main-first merge `745932994` on
+`8d5a19603` (feature `1baff6c3a`, review fixes `a91ba795f`). Independent review
+and focused re-review APPROVE; local, tracking and live `main` read back equal.
 Decision: [ADR-0154](../adr/0154-production-browser-suites-use-tag-lanes.md).
 Task: [GATE-01](../open-work/GATE-01-test-gate-follow-ups.md), first bullet.
 
@@ -50,7 +51,14 @@ gate.
   `group-addresses` measured 79.5 → 98.5 s with every case about 0.8 s slower,
   serial ones included, so that is host variance, not the split.
 
-One run per side on one host; not a speed claim for other machines.
+- Integrated package gate on the merge, change-scoped, 11 of 11 stages green
+  (fmt, documentation, browser lanes, five xtask checks, tool tests, web gate,
+  diff check); inputs frozen, no touched or unchecked user data. Web gate:
+  4,553 Vitest tests, 925 default browser cases (856 functional, 69 exclusive),
+  557 production cases (528 functional, 29 exclusive). Production stages
+  681.7 s this time after the full default suite, `table-columns` 152.0 s.
+
+Single runs on one host; not a speed claim for other machines.
 
 ## Not covered
 

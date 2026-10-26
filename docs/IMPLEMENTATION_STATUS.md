@@ -12,6 +12,18 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Production browser suites in the tag lanes, GATE-01 slice (27 October 2026)
+
+Published main-first merge `745932994`; independent review and re-review APPROVE.
+Each of the 16 production suites now runs its functional cases with the gate's
+workers and its `@exclusive` cases alone, like the default suite
+([ADR-0154](adr/0154-production-browser-suites-use-tag-lanes.md)). Integrated
+change-scoped gate 11/11 green: 4,553 Vitest tests, 925 default and 557
+production browser cases; production stages 681.7 s against 850.3 s before
+(`table-columns` 254.3 → 152.0 s), single runs on one host. Case-level and
+cross-suite parallelism stay open.
+[Record](status/2026-10-26-production-browser-lanes.md).
+
 ## Alpha 17 published pre-release (26 October 2026)
 
 `v0.1.0-alpha.17` is the current published pre-release, cut from main at

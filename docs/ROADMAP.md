@@ -2,9 +2,11 @@
 
 Website task WP-21 is delivered and deployed (`b517930e7`), with reviewed
 selective typing, static/reduced-motion fallback and exact live artifact/browser
-readback ([acceptance](status/2026-10-26-website-headline-typing.md)). WP-22,
-WP-23 and WP-24 remain separate application tasks; website delivery closes none
-of their history, Flow or catalogue requirements.
+readback ([acceptance](status/2026-10-26-website-headline-typing.md)). Flow task
+WP-23 is separately delivered as `903d5d0c1`, with generation-bound unique group
+names and unchanged raw identities ([acceptance](status/2026-10-26-flow-group-names.md)).
+WP-22 and WP-24 remain separate reviewed application tasks awaiting integrated
+acceptance; these deliveries close none of their history or catalogue requirements.
 
 System-2 [S2-01](open-work/S2-01-pid7-raw-response.md) is P1: the private diagnostic prefix is
 published as `5f1ad454e` after review and integrated acceptance

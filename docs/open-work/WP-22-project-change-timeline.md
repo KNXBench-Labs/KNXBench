@@ -1,8 +1,9 @@
 # WP-22 — Project change timeline inspired by Fusion 360
 
 Owner request: 25 October 2026. Implementation authorised on 26 October 2026
-through the next-open-tasks assignment. Implementation and correction re-review
-are approved; final integrated acceptance and publication are pending.
+through the next-open-tasks assignment. Delivered as `132070176` after independent
+reviews and integrated acceptance; see the
+[acceptance record](../status/2026-10-26-project-version-timeline.md).
 No application release is assigned.
 
 ## Requested outcome
@@ -25,5 +26,5 @@ No persistence schema, backend, command stack, recovery or bus semantics change.
 
 The [practical guide](../manual/user-guide/02-projects.md#project-history-restart-safe-undo-and-versions)
 and [history contract](../PROJECT_HISTORY.md#version-timeline-presentation-26-october-2026-source)
-describe this bounded scope. Final integrated acceptance is still pending; local
-proofs and review corrections do not close the whole package on their own.
+describe this bounded scope. Final integrated acceptance passed all 11 package
+and 32 nested web stages; the first failed tooling attempt remains recorded.

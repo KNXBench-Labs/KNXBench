@@ -209,7 +209,11 @@ interface.
   profile instead.
 - **No ZIP for a run that never reached the device.** If the run stops before
   the interface connection (for example the interface is busy), the dialog
-  says so and offers no ZIP; preview again to retry.
+  says so and offers no ZIP; preview again to retry. Pressing **Stop reading**
+  that early is the exception: the ZIP can still be saved and records that
+  nothing was read.
+- **Keep the memory ZIP private.** Raw memory can contain texts and parameters
+  configured into the device, such as names or settings.
 
 **Keep this ZIP private.** The memory contains device configuration. The ranges
 are where the product data says the application lives, not proven runtime

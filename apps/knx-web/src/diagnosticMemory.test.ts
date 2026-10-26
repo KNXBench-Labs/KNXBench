@@ -1,6 +1,6 @@
 /** Tests the diagnostic dialog's pure helpers: plan summary, progress and refusal copy. */
 import {describe, expect, it} from "vitest";
-import {diagnosticProgress, hexWord, memoryPlan, refusalMessage} from "./diagnosticMemory";
+import {diagnosticProgress, hexWord, memoryPlan, refusalMessage, stopReasonMessage} from "./diagnosticMemory";
 import type {DiagnosticView, MemoryEvidence} from "./diagnosticApi";
 import {messages as en} from "./messages/en";
 import {messages as de} from "./messages/de";
@@ -43,5 +43,19 @@ describe("diagnostic dialog helpers", () => {
       expect(de[key!].length).toBeGreaterThan(0);
     }
     for (const code of [null, "diagnostics-something-new", "constructor", "toString"]) expect(refusalMessage(code)).toBeNull();
+  });
+  it("labels every stop reason the server records and falls back for unknown tokens", () => {
+    const reasons = ["cancelled", "gateway-busy", "gateway-connect-failed", "gateway-timeout", "context-changed-before-connect", "server-stopping",
+      "deadline", "timeout", "connect-rejected", "connection-lost", "connection-released", "self-addressed", "event-loss", "transport-error",
+      "descriptor-unverified", "identity-mismatch", "identity-unverified", "identity-assertion-missing", "response-size-limit-raw-not-retained",
+      "tunnel-disconnect-unconfirmed"];
+    const keys = reasons.map(stopReasonMessage);
+    expect(new Set(keys).size).toBe(reasons.length);
+    for (const key of keys) {
+      expect(key).not.toBe("diagnostics.stopReason.other");
+      expect(en[key].length).toBeGreaterThan(0);
+      expect(de[key].length).toBeGreaterThan(0);
+    }
+    for (const code of ["something-new", "constructor", "toString"]) expect(stopReasonMessage(code)).toBe("diagnostics.stopReason.other");
   });
 });

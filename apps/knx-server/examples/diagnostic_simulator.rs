@@ -128,8 +128,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     system2_fixture::preset_identity(&system2);
     system2_fixture::preset_memory(&system2);
     std::fs::create_dir_all(&data)?;
-    // A fresh synthetic catalogue per run; never the user's product database.
-    let products = data.join(format!("synthetic-products-{}.sqlite", std::process::id()));
+    // A fresh synthetic catalogue per run under one fixed name, replacing the
+    // previous run's (and its SQLite sidecars); never the user's product database.
+    let products = data.join("synthetic-products.sqlite");
+    for suffix in ["", "-wal", "-shm", "-journal"] {
+        let mut path = products.clone().into_os_string();
+        path.push(suffix);
+        match std::fs::remove_file(&path) {
+            Ok(()) => {}
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+            Err(e) => return Err(e.into()),
+        }
+    }
     let catalogue = knx_server::CatalogueOwner::adopt_opened(
         system2_fixture::products_at(&products, system2_fixture::PROGRAM),
         products,

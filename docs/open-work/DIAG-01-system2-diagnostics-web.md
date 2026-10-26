@@ -34,7 +34,14 @@ web UI. Until this change it was CLI-only (`knx device diagnostics --device
 - **Not exportable case:** format 2 admits no caller setup stop reason, so a
   memory run stopped before its tunnel (gateway busy, connect failure/timeout,
   context change, server stopping) is shown without a save action; the CLI
-  writes no archive in the same case.
+  writes no archive in the same case. A Stop before the tunnel ends as
+  `cancelled` and stays exportable.
+- **Review corrections (26 October 2026):** route tests now hold memory reads
+  on a gated simulator to prove live chunk progress, `exportable: false` while
+  running and Stop with a partial format-2 ZIP; each was shown to fail against
+  a mutated route (cancel flag, progress callback, exportable guard). The
+  client admits only the exact Rust `notice`/`memoryReason` strings; stop
+  reasons and refusals lead with translated text, raw tokens secondary.
 
 No new collector request, recorded reply or archive format change; no device
 was contacted. Evidence: [contract](../contracts/device-diagnostic-export.md),

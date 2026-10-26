@@ -20,11 +20,18 @@ The device diagnostic dialog (File menu and a device's *Analyse device*) offers
 `system2-declared-segments-v1` beside the generic identity profile, through the
 CLI's own `prepare_memory`/`acquire_memory`/`bundle_export` service: required
 `profile` field, product database required, same consents, format-2 ZIP. A memory
-run stopped before its tunnel is shown but not exportable. Focused evidence:
+run stopped before its tunnel for a setup reason is shown but not exportable; a
+Stop before the tunnel ends `cancelled` and stays exportable. Focused evidence:
 `knx-server` 1,380, `knx-app` 728 and `knx-cli` 398 tests passed (9 diagnostic
 route tests, all red against the unchanged route first); 4,487 Vitest tests; 7/7
 real-server simulator browser cases (EN/DE, 1440/400 px), downloaded ZIPs
-re-verified. Simulator only, no hardware run, no package gate.
+re-verified. Review corrections: 3 more route tests on a gated simulator (live
+chunk progress, `exportable: false` while running, Stop with a partial format-2
+ZIP, Stop before the tunnel), each failing against a mutated route (cancel flag,
+progress callback, combined exportable guard); exact Rust `notice`/`memoryReason`
+admission and plan-bound tests; translated stop reasons. `knx-server` 1,383 and
+4,491 Vitest tests passed, 8/8 browser cases including a memory Stop. Simulator
+only, no hardware run, no package gate.
 [Details](open-work/DIAG-01-system2-diagnostics-web.md),
 [contract](contracts/device-diagnostic-export.md).
 

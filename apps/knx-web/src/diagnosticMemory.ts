@@ -1,4 +1,4 @@
-/** Pure view helpers for the diagnostic dialog: memory plan, progress and refusal copy. */
+/** Pure view helpers for the diagnostic dialog: memory plan, progress, refusal and stop copy. */
 import type {MessageKey} from "./messages/en";
 import type {DiagnosticView, MemoryEvidence} from "./diagnosticApi";
 
@@ -52,4 +52,33 @@ const REFUSALS: Record<string, MessageKey> = {
 /** The translated explanation of a known preview refusal code, else `null`. */
 export function refusalMessage(code: string | null): MessageKey | null {
   return code !== null && Object.hasOwn(REFUSALS, code) ? REFUSALS[code] : null;
+}
+
+/** The stop reasons the collector and the route record (both formats). */
+const STOP_REASONS: Record<string, MessageKey> = {
+  "cancelled": "diagnostics.stopReason.cancelled",
+  "gateway-busy": "diagnostics.stopReason.gatewayBusy",
+  "gateway-connect-failed": "diagnostics.stopReason.gatewayConnectFailed",
+  "gateway-timeout": "diagnostics.stopReason.gatewayTimeout",
+  "context-changed-before-connect": "diagnostics.stopReason.contextChanged",
+  "server-stopping": "diagnostics.stopReason.serverStopping",
+  "deadline": "diagnostics.stopReason.deadline",
+  "timeout": "diagnostics.stopReason.timeout",
+  "connect-rejected": "diagnostics.stopReason.connectRejected",
+  "connection-lost": "diagnostics.stopReason.connectionLost",
+  "connection-released": "diagnostics.stopReason.connectionReleased",
+  "self-addressed": "diagnostics.stopReason.selfAddressed",
+  "event-loss": "diagnostics.stopReason.eventLoss",
+  "transport-error": "diagnostics.stopReason.transportError",
+  "descriptor-unverified": "diagnostics.stopReason.descriptorUnverified",
+  "identity-mismatch": "diagnostics.stopReason.identityMismatch",
+  "identity-unverified": "diagnostics.stopReason.identityUnverified",
+  "identity-assertion-missing": "diagnostics.stopReason.identityAssertionMissing",
+  "response-size-limit-raw-not-retained": "diagnostics.stopReason.responseSizeLimit",
+  "tunnel-disconnect-unconfirmed": "diagnostics.stopReason.disconnectUnconfirmed",
+};
+
+/** The translated label of a known stop reason; unknown tokens get a generic label. */
+export function stopReasonMessage(reason: string): MessageKey {
+  return Object.hasOwn(STOP_REASONS, reason) ? STOP_REASONS[reason] : "diagnostics.stopReason.other";
 }

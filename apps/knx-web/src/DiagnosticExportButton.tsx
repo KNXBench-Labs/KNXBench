@@ -8,7 +8,7 @@ import {loadPreferredGateway} from "./gatewayPreference";
 import {splitGatewayEndpoint,validateGatewayFields} from "./gatewayEndpoint";
 import type {ProjectTree} from "./bindings/ProjectTree";
 import * as api from "./diagnosticApi";
-import {diagnosticProgress,hexWord,memoryPlan,refusalMessage} from "./diagnosticMemory";
+import {diagnosticProgress,hexWord,memoryPlan,refusalMessage,stopReasonMessage} from "./diagnosticMemory";
 import type {MessageKey} from "./messages/en";
 import {useFileMenuItemProps} from "./FileMenu";
 import "./universalSupport.css";
@@ -61,6 +61,7 @@ export function DiagnosticExportDialog({project,initialDevice,close}:{project:Pr
    }
   }catch(e){
    // Only a preview refusal names why: its code is the server's fixed token (product data, identity, target).
+   // The translated text leads; the server's raw detail follows as secondary evidence.
    if(mounted.current&&epoch.current===version)setError(kind==="preview"&&e instanceof api.DiagnosticRefusal?{key:refusalMessage(e.code),detail:e.detail}:{key:null,detail:null});
   }finally{if(mounted.current&&epoch.current===version)setBusy(false);}
  }
@@ -76,7 +77,7 @@ export function DiagnosticExportDialog({project,initialDevice,close}:{project:Pr
     <p data-diagnostics-profile-hint className={profile===api.MEMORY_PROFILE?"form-warning":undefined}>{t(profile===api.MEMORY_PROFILE?"diagnostics.profileHint.memory":"diagnostics.profileHint.identity")}</p>
     <button type="button" data-diagnostics-preview disabled={device===null||!gateway} onClick={()=>void perform("preview")}>{t("diagnostics.preview")}</button>
    </fieldset>
-   {error&&<div role="alert" data-diagnostics-error><p>{t(error.key??"diagnostics.failed")}</p>{error.key&&error.detail&&<p><code>{error.detail}</code></p>}</div>}
+   {error&&<div role="alert" data-diagnostics-error><p>{t(error.key??"diagnostics.failed")}</p>{error.detail&&<p data-diagnostics-error-detail>{t("diagnostics.serverDetail")} <code>{error.detail}</code></p>}</div>}
    {view&&<>
     <section data-diagnostics-review><h3>{t("diagnostics.preview")}</h3><p><strong>{view.target}</strong> · {view.gateway}</p>
      <p>{t("diagnostics.readOnly")}</p>{memory?<MemoryPreview view={view} memory={memory}/>:<><p>{t("diagnostics.limits")}</p><p>{t("diagnostics.memory")}</p></>}
@@ -89,7 +90,7 @@ export function DiagnosticExportDialog({project,initialDevice,close}:{project:Pr
      <button type="button" data-diagnostics-start disabled={busy||!readConsent||stale} onClick={()=>void perform("start")}>{t("diagnostics.read")}</button></>}
     {acquiring&&<><p role="status">{progress?.memory?t("diagnostics.progressMemory",{identity:progress.identity,...progress.memory}):t("diagnostics.progress",{count:progress?.identity??0})}</p><button type="button" data-diagnostics-cancel disabled={busy||view.cancelRequested} onClick={()=>void perform("cancel")}>{t(view.cancelRequested?"diagnostics.stopping":"diagnostics.cancel")}</button></>}
     {view.phase==="complete"&&<section data-diagnostics-result>
-     <h3>{t("diagnostics.result")}</h3>{view.report.stopReason&&<p role="status">{view.report.stopReason}</p>}
+     <h3>{t("diagnostics.result")}</h3>{view.report.stopReason&&<p role="status" data-diagnostics-stop-reason>{t("diagnostics.stopReason",{label:t(stopReasonMessage(view.report.stopReason))})} <code>{view.report.stopReason}</code></p>}
      <ul>{view.report.items.map(i=><li key={i.query}>{i.query}: {t(`diagnostics.status.${i.status}`)} · {i.receivedBytes}/{i.expectedBytes} bytes</li>)}</ul>
      {memory&&<><h4>{t("diagnostics.coverageHeading")}</h4><ul data-diagnostics-coverage>{memory.ranges.map(r=><li key={r.order}>{t("diagnostics.coverage",{address:hexWord(r.address),length:r.length,read:r.coverage.read,refused:r.coverage.refusedAmbiguous,partial:r.coverage.partial,error:r.coverage.error,notRead:r.coverage.notRead})}</li>)}</ul></>}
      {view.exportable?<>
@@ -97,7 +98,7 @@ export function DiagnosticExportDialog({project,initialDevice,close}:{project:Pr
       <label className="support-check"><input type="checkbox" data-diagnostics-share-consent checked={shareConsent} disabled={busy} onChange={e=>setShareConsent(e.target.checked)}/>{t("diagnostics.shareConsent")}</label>
       <button type="button" data-diagnostics-save disabled={busy||!shareConsent} onClick={()=>void perform("save")}>{t("diagnostics.save")}</button>
       {saved&&<p role="status">{t("support.saved")}</p>}<p>{t("diagnostics.handoff")}</p>
-     </>:<p data-diagnostics-not-exportable>{t("diagnostics.notExportable",{reason:view.report.stopReason??"—"})}</p>}
+     </>:<p data-diagnostics-not-exportable>{t("diagnostics.notExportable")}</p>}
     </section>}
    </>}
   </div>

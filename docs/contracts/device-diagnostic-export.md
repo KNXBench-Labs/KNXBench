@@ -165,11 +165,16 @@ ETS-programmed state offline with KNXBench's source interpretation.
   lists application, required identity, each declared range (address,
   length, procedure position) and the total; progress counts identity reads
   and memory chunks; the result shows coverage per range. The same read and
-  share consents apply. A memory run that stops before its tunnel (gateway
-  busy, connect failure or timeout, context change, server stopping) has no
-  admitted format-2 archive (the caller setup reasons are format 1 only), so
-  the web shows the result without a save action, as the CLI writes no
-  archive then. Simulator-only evidence; no hardware run.
+  share consents apply. A memory run that stops before its tunnel for a
+  setup reason (gateway busy, connect failure or timeout, context change,
+  server stopping) has no admitted format-2 archive (the caller setup reasons
+  are format 1 only), so the web shows the result without a save action, as
+  the CLI writes no archive then. A Stop that lands before the tunnel opens is
+  different: the run ends with `cancelled`, a collector reason format 2
+  admits with every identity item and chunk untouched, so that result is
+  exportable (route test
+  `a_memory_run_cancelled_before_connecting_is_exportable_without_any_request`).
+  Simulator-only evidence; no hardware run.
 
 ## Result per item
 
@@ -233,7 +238,9 @@ is claimed.
   2, `null` for `generic-identity-v1`) and `exportable` (the finished result
   passed the archive writer's own validation and readback; `false` before
   completion). Running views are observer snapshots: at most one identity item
-  or memory chunk in flight. Export uses `bundle_export` for both formats, so a
+  or memory chunk in flight. The result shows the stop reason as a translated
+  label with the raw token beside it; a preview refusal leads with translated
+  text and keeps the server's detail as secondary evidence. Export uses `bundle_export` for both formats, so a
   format-1 ZIP stays byte-for-byte what `bundle` writes. The browser client
   admits both formats strictly (closed field sets, profile/format/memory
   coupling, recomputed chunk plan and coverage, lowercase hex, chunk outcome
@@ -288,13 +295,17 @@ deadline unit test; `knx-app` `device_diagnostics` (9: export/reread/0600/no
 overwrite/privacy, exclusion before adapter, lease, cancelled partial, corrupt
 archives, durable activity kind, free-text error refusal, every observer
 snapshot exportable, in-flight item shape);
-`knx-server` `http_device_diagnostics` (9, including durable history and token
+`knx-server` `http_device_diagnostics` (12, including durable history and token
 separation; since DIAG-01 also the web memory profile: preview without bus
 traffic, consented reads checked chunk by chunk against the simulator's memory,
 exhaustive outgoing services, format-2 ZIP reread with `read_export`; unknown or
 missing profile, missing product database, missing or inconsistent identity
 assertion and excluded targets refused before any tunnel; PID 78 mismatch with
-no `A_Memory_Read`; a pre-tunnel stop shown but not exportable); `knx-cli`
+no `A_Memory_Read`; a pre-tunnel setup stop shown but not exportable; with a
+gated simulator, running polls showing exactly one chunk in flight and
+`exportable: false`, Stop after the first chunk ending `cancelled` with partial
+coverage and a format-2 ZIP reread with those chunks, and a Stop before the
+tunnel exportable with no request); `knx-cli`
 `device_diagnostics` (2, real binary; plus 3 for the memory profile: preview
 with a silent loopback gateway, `--simulate` end to end, refusals); memory
 profile also `knx-core` `declared_memory` (5), `knx-productdb`
@@ -315,7 +326,9 @@ and the raw central-directory unit tests (4); web
 component/client tests; built shell in
 Chromium against the real HTTP handlers and the regular simulator (EN/DE,
 1440/400 px, stop-with-partial; memory profile EN 1440 px and DE 400 px with a
-real program-missing refusal, declared ranges, coverage and a format-2 ZIP),
+real program-missing refusal, declared ranges, coverage and a format-2 ZIP, and
+a memory Stop after the first chunk with its translated reason and a format-2
+partial ZIP),
 every downloaded ZIP independently re-verified.
 The browser proof also asserts that a clean run shows no failure banner: the
 client once refused the in-flight progress snapshot ("attempted, not completed")

@@ -1952,6 +1952,7 @@ mod tests {
             },
             outcome: None,
             post_download_check: None,
+            failure: None,
             parameter_values: [("P-1_R-1".to_string(), "5".to_string())].into(),
         };
         let dir = tempfile::tempdir().unwrap();

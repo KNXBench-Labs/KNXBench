@@ -23,6 +23,8 @@ fn session(
             events: Mutex::new(Vec::new()),
             first_mutation_step: Some(2),
             last_started: Mutex::new(last),
+            read_back: Mutex::new(0),
+            plan: super::synthetic_plan(),
             granted: Mutex::new(None),
             backup_file: Mutex::new(None),
             on_end: Mutex::new(None),
@@ -57,6 +59,7 @@ pub(super) fn synthetic_report() -> DownloadReport {
         },
         outcome: None,
         post_download_check: None,
+        failure: None,
         parameter_values: Default::default(),
     }
 }

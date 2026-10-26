@@ -15,11 +15,12 @@ use std::sync::{Arc, Mutex};
 use knx_app::access_key::DownloadKeying;
 use knx_app::device_backup::{write_backup, StoredBackup};
 use knx_app::device_download::PreparedDownload;
+use knx_app::download_failure::DownloadFailure;
 use knx_app::download_report::{DownloadReport, ReportedOutcome};
 use knx_app::post_download_check::PostDownloadCheck;
 use knx_core::commissioning::authorisation::Authorisation;
 use knx_core::commissioning::device_backup::DeviceBackup;
-use knx_core::commissioning::memory_download::MemoryDownloadStep;
+use knx_core::commissioning::memory_download::{MemoryDownloadPlan, MemoryDownloadStep};
 use knx_core::commissioning::mutation::WriteAuthorisation;
 use knx_core::IndividualAddress;
 use knx_net::commissioning::memory_download::{
@@ -121,6 +122,9 @@ pub enum DownloadStatus {
         /// When the failure is one a locked device also produces: what to
         /// check. Never a key, never a suggestion to try another.
         hint: Option<String>,
+        /// The payload-free terminal diagnostic (DIAG-02), the same value the
+        /// log, the history and the report carry.
+        failure: DownloadFailure,
     },
 }
 
@@ -139,6 +143,10 @@ struct Shared {
     first_mutation_step: Option<usize>,
     /// The last step that started, 0-based.
     last_started: Mutex<Option<usize>>,
+    /// Data octets written and read back unchanged so far.
+    read_back: Mutex<usize>,
+    /// The plan, for a failure diagnostic after an unwitnessed end.
+    plan: MemoryDownloadPlan,
     /// What authorisation obtained, once connected.
     granted: Mutex<Option<(Authorisation, bool)>>,
     /// The backup file, once written.
@@ -257,6 +265,8 @@ impl DeviceDownloadSession {
                 .iter()
                 .position(MemoryDownloadStep::changes_device),
             last_started: Mutex::new(None),
+            read_back: Mutex::new(0),
+            plan: prepared.plan.clone(),
             granted: Mutex::new(None),
             backup_file: Mutex::new(None),
             on_end: Mutex::new(Some(on_end)),
@@ -322,7 +332,7 @@ impl DeviceDownloadSession {
         if self.is_running() {
             return None;
         }
-        let (outcome, check) = match self.status() {
+        let (outcome, check, failure) = match self.status() {
             DownloadStatus::Running => return None,
             DownloadStatus::Finished {
                 written,
@@ -332,17 +342,26 @@ impl DeviceDownloadSession {
             } => (
                 ReportedOutcome::completed(written, restart),
                 post_download_check,
+                None,
             ),
             DownloadStatus::Failed {
                 written,
                 stopped_in_step,
+                failure,
                 ..
             } => (
                 ReportedOutcome::stopped(written, stopped_in_step),
                 PostDownloadCheck::not_checked(),
+                Some(failure),
             ),
         };
-        Some(self.report.clone().with_outcome(outcome).with_check(check))
+        Some(
+            self.report
+                .clone()
+                .with_outcome(outcome)
+                .with_check(check)
+                .with_failure(failure),
+        )
     }
 
     /// Asks the run to stop before its first change; see [`StopRequest`].
@@ -393,11 +412,18 @@ impl DeviceDownloadSession {
                 .last_started
                 .lock()
                 .expect("download progress poisoned");
+            let stopped_in_step = stopped.map(|index| index + 1);
+            let read_back = *self
+                .shared
+                .read_back
+                .lock()
+                .expect("download progress poisoned");
             let failed = DownloadStatus::Failed {
                 written,
-                stopped_in_step: stopped.map(|index| index + 1),
+                stopped_in_step,
                 error: "the download task ended without a terminal result; any attempted write has an unknown outcome; connection cleanup is unconfirmed".into(),
                 hint: None,
+                failure: DownloadFailure::task_ended(&self.shared.plan, stopped_in_step, read_back),
             };
             if let Some(on_end) = self
                 .shared
@@ -486,6 +512,7 @@ async fn run(
                 stopped_in_step: None,
                 error: e.to_string(),
                 hint: None,
+                failure: DownloadFailure::from_session_refusal(&e, &prepared.plan),
             },
             Ok(session) => {
                 let session = session.with_level_count(keying.level_count);
@@ -555,14 +582,23 @@ async fn run(
                         } else {
                             written_so_far(&shared)
                         };
+                        let stopped_in_step = stopped.map(|index| index + 1);
+                        let read_back =
+                            *shared.read_back.lock().expect("download progress poisoned");
                         DownloadStatus::Failed {
                             written,
-                            stopped_in_step: stopped.map(|index| index + 1),
+                            stopped_in_step,
                             error: e.to_string(),
                             hint: locked_device_hint(
                                 &e,
                                 granted.map(|(authorisation, _)| authorisation),
                                 granted.is_some_and(|(_, suspicious)| suspicious),
+                            ),
+                            failure: DownloadFailure::from_error(
+                                &e,
+                                &prepared.plan,
+                                stopped_in_step,
+                                read_back,
                             ),
                         }
                     }
@@ -583,7 +619,12 @@ async fn run(
             knx_app::commissioning_activity::DownloadResult::Failed { written: *written }
         }
     };
-    let _ = activity.record_result(&witnessed);
+    let _ = match &status {
+        DownloadStatus::Failed {
+            written, failure, ..
+        } => activity.record_failure(*written, failure),
+        _ => activity.record_result(&witnessed),
+    };
     if let Some(on_end) = shared
         .on_end
         .lock()
@@ -676,13 +717,17 @@ fn record(shared: &Shared, progress: Progress) {
             octets,
             written,
             of,
-        } => ProgressEvent::DataWritten {
-            number: index + 1,
-            address,
-            octets,
-            written,
-            of,
-        },
+        } => {
+            // `written` counts the plan's data octets written and read back.
+            *shared.read_back.lock().expect("download progress poisoned") = written;
+            ProgressEvent::DataWritten {
+                number: index + 1,
+                address,
+                octets,
+                written,
+                of,
+            }
+        }
         Progress::StepDone(done) => ProgressEvent::StepDone {
             number: done.index + 1,
             observed: done.observed,
@@ -707,6 +752,33 @@ fn record(shared: &Shared, progress: Progress) {
         .push(event);
 }
 
+/// A three-step plan whose third step writes one octet, for synthetic runs.
+#[cfg(test)]
+pub(crate) fn synthetic_plan() -> MemoryDownloadPlan {
+    MemoryDownloadPlan {
+        mask: knx_core::commissioning::load_state::MaskVersion(0x0701),
+        manufacturer: 0x0083,
+        steps: vec![
+            MemoryDownloadStep::Connect,
+            MemoryDownloadStep::CompareProperty {
+                object_index: 0,
+                property_id: 78,
+                inline_data: vec![0],
+            },
+            MemoryDownloadStep::WriteMemory {
+                address: 0x4000,
+                octets: vec![1],
+            },
+        ],
+    }
+}
+
+/// A synthetic failure diagnostic for tests that only need a failed status.
+#[cfg(test)]
+pub(crate) fn synthetic_failure(stopped_in_step: Option<usize>) -> DownloadFailure {
+    DownloadFailure::task_ended(&synthetic_plan(), stopped_in_step, 0)
+}
+
 #[cfg(test)]
 impl DeviceDownloadSession {
     /// A download that runs exactly as long as `task`, for stop tests.
@@ -727,6 +799,8 @@ impl DeviceDownloadSession {
                 events: Mutex::new(Vec::new()),
                 first_mutation_step: Some(2),
                 last_started: Mutex::new(None),
+                read_back: Mutex::new(0),
+                plan: synthetic_plan(),
                 granted: Mutex::new(None),
                 backup_file: Mutex::new(None),
                 on_end: Mutex::new(None),

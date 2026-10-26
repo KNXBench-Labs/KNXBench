@@ -975,7 +975,7 @@ Only explicit, uniquely associated MV-07B0 Load/ap1 declarations are reconstruct
 ### 184. Diagnostic export profiles and evidence
 
 **Ledger status:** `ACCEPTED_BOUNDARY` ([KL-184](status/LEDGER.md#post-snapshot-ids)).
-Generic/Web/HTTP diagnostics read identity only (descriptor, PID12, PID78). CLI additionally offers the identity-gated system2-declared-segments-v1 memory profile and format-2 export: candidate source locations, not a backup or restore basis, with no recorded hardware run of this profile. The generic identity profile has evidence from 46 physical devices/eight manufacturers, including refusals and ended/rejected connections; house normal-operation feedback is an operator observation, and a fully silent device remains unobserved.
+Generic diagnostics read identity only (descriptor, PID12, PID78). CLI and, since 26 October 2026 (source, DIAG-01), the web dialog additionally offer the identity-gated system2-declared-segments-v1 memory profile and format-2 export: candidate source locations, not a backup or restore basis, with no recorded hardware run of this profile. The generic identity profile has evidence from 46 physical devices/eight manufacturers, including refusals and ended/rejected connections; house normal-operation feedback is an operator observation, and a fully silent device remains unobserved.
 [Details and history](limitations/KL-184-device-diagnostic-export.md)
 
 ## Bus diagnostics and DPT

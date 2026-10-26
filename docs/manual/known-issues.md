@@ -197,7 +197,9 @@ evidence-retirement residues; v26 corrects these patterns for its own suffix
 promotion, not earlier columns. Legacy EX-IM has no suffix mapping; stored
 `Suffix` remains undisplayed. The System-2 declared-memory diagnostic profile is
 CLI-only with offline/simulator evidence, not a hardware-verified backup, restore
-basis or programming path. The web diagnostic profile stays identity-only.
+basis or programming path. The web diagnostic profile stays identity-only in
+Alpha 15 and 16; source builds from 26 October 2026 offer the memory profile in
+the web dialog too, simulator-verified only.
 [Exact limits](../releases/alpha15.md#still-alpha-explicit-boundaries).
 
 > A long list of known issues is what happens when a project writes its

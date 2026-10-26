@@ -13,6 +13,21 @@ archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
 
+## System-2 memory diagnostics in the web dialog (26 October 2026 source)
+
+DIAG-01 is implemented on its feature branch, not yet reviewed or integrated.
+The device diagnostic dialog (File menu and a device's *Analyse device*) offers
+`system2-declared-segments-v1` beside the generic identity profile, through the
+CLI's own `prepare_memory`/`acquire_memory`/`bundle_export` service: required
+`profile` field, product database required, same consents, format-2 ZIP. A memory
+run stopped before its tunnel is shown but not exportable. Focused evidence:
+`knx-server` 1,380, `knx-app` 728 and `knx-cli` 398 tests passed (9 diagnostic
+route tests, all red against the unchanged route first); 4,487 Vitest tests; 7/7
+real-server simulator browser cases (EN/DE, 1440/400 px), downloaded ZIPs
+re-verified. Simulator only, no hardware run, no package gate.
+[Details](open-work/DIAG-01-system2-diagnostics-web.md),
+[contract](contracts/device-diagnostic-export.md).
+
 ## Sortable catalogue table (26 October 2026 source)
 
 WP-24 is published as `8dd6cf72d` after independent implementation/correction

@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "noEmit": true },
+  "include": ["src", "e2e/device-diagnostics.integration.ts", "e2e/file-menu.ts", "playwright.device-diagnostics.config.ts", "browserTmp.ts"]
+}

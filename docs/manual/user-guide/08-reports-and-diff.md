@@ -97,8 +97,11 @@ with that device already chosen
 
 Pick the device in the list. Each entry shows its individual address and name.
 Enter the interface as `IPv4:port`, for example `192.168.1.20:3671`; a saved
-preferred interface is filled in for you. Then press **Preview diagnostic reads**
-(*Diagnoselesungen prüfen*). Nothing is sent to the bus yet.
+preferred interface is filled in for you. In source builds from 26 October 2026
+the dialog also asks for a **Diagnostic profile** (*Diagnoseprofil*): keep
+**Generic identity** unless a maintainer asks for the memory ranges
+([see below](#reading-declared-memory-ranges-system-2)). Then press **Preview
+diagnostic reads** (*Diagnoselesungen prüfen*). Nothing is sent to the bus yet.
 
 ![The dialog with one device selected, the interface entered and the preview button](../../assets/screenshots/porcelain-diagnostic-export-2-device-and-interface.png)
 
@@ -172,6 +175,47 @@ with 46 real devices from eight manufacturers; every further report from a
 real device helps confirm it on hardware. If a device behaves differently
 afterwards (not expected, since the export only reads), please say so in the
 issue.
+
+<a id="reading-declared-memory-ranges-system-2"></a>
+### Reading declared memory ranges (System-2)
+
+> **Which build has it?** Source builds from 26 October 2026. Alpha 16 and older
+> offer this profile on the command line only.
+
+For a System-2 device whose application is in KNXBench's product database, a
+maintainer may ask for the second profile, **System-2 declared memory ranges
+(needs product data)** (*System-2: deklarierte Speicherbereiche*). Choose it in
+step 2 before **Preview diagnostic reads**; changing the profile afterwards
+discards the preview and its confirmation, like changing the device or the
+interface.
+
+- **What it reads.** First the same three identity values. Only if the device
+  shows exactly the mask, manufacturer and hardware type its product data
+  asserts does KNXBench read the memory ranges that the application's load
+  procedure declares, 12 octets per request. Otherwise it stops without any
+  memory read.
+- **The preview** names the application, the identity values required before
+  any memory read, every declared range (address and length) and the total
+  number of octets and requests. Nothing is sent yet.
+- **Progress** counts identity reads and memory reads separately. **Stop
+  reading** keeps what was already read, as for the generic profile.
+- **The result** lists, per declared range, how many octets were read, refused,
+  partially read, failed or not read. The ZIP gets a fifth file,
+  `memory.json`.
+- **Refusals before anything is sent.** Without a product database, without
+  the device's application in it, for an application of another shape, or when
+  the product data does not state both mask and manufacturer, the preview is
+  refused with an explanation and nothing is read. Use the generic identity
+  profile instead.
+- **No ZIP for a run that never reached the device.** If the run stops before
+  the interface connection (for example the interface is busy), the dialog
+  says so and offers no ZIP; preview again to retry.
+
+**Keep this ZIP private.** The memory contains device configuration. The ranges
+are where the product data says the application lives, not proven runtime
+addresses, and the file is **not a backup** and cannot restore a device.
+Nothing is written to the device. This profile has been tested with
+KNXBench's simulator only, not yet on a real device.
 
 The same export is available on the command line as `knx device diagnostics`;
 see [the command-line chapter](10-command-line.md). The exact behaviour and

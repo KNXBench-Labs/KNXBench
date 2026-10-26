@@ -22,6 +22,12 @@ belongs to the generic identity profile only; neither those runs nor the
 owner's normal-operation observation validate the memory profile. A fully
 silent identity-profile target remains unobserved.
 
+**26 October 2026 (DIAG-01, source):** the web dialog and HTTP preview now
+offer the same profile through the same service, with the product database
+required as for the CLI. A memory run stopped before its tunnel is shown but
+not exportable (format 2 admits no caller setup stop reason). Simulator-only
+route and browser evidence; still no hardware run of the memory profile.
+
 Evidence: [CLI profile dispatch](../../apps/knx-cli/src/device_diagnostics.rs),
 [application preparation](../../crates/knx-app/src/device_diagnostics/memory_evidence.rs),
 [identity-gated collector](../../crates/knx-net/src/commissioning/diagnostic_export.rs),

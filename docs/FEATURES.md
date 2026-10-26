@@ -33,7 +33,7 @@ builds refuse product26; opening new project saves in Alpha 14 is unverified.
 | [Product v25/v26](adr/0146-unknown-evidence-rows-have-an-identity.md) | Placement/enumeration columns; idempotent unknown evidence with repair; `SuffixText`; earlier v23–v25 promotion residues remain open | alpha.15 |
 | [Larger measured bounds](adr/0142-file-size-limits-follow-the-storage-ceiling.md) | 1,000,000,000 bytes per retained file/member; 4 GiB standard expansion, 16 GiB CLI large profile; distinct 1024 MiB project upload | alpha.15 |
 | [System-2 source preview](contracts/system2-source-probe-preview.md) | Explicit selected fields, offline candidate locations/byte order; cannot override live refusal | alpha.15 |
-| [Declared-memory diagnostics](adr/0143-declared-segment-memory-evidence-profile.md) | CLI-only ProductDB-derived profile, preview and separately confirmed identity-gated reads; offline/simulator evidence, no hardware/profile write claim; web remains generic identity-only | alpha.15 |
+| [Declared-memory diagnostics](adr/0143-declared-segment-memory-evidence-profile.md) | ProductDB-derived profile, preview and separately confirmed identity-gated reads; offline/simulator evidence, no hardware/profile write claim; CLI since alpha.15, web dialog Main-only (26 October 2026, DIAG-01) | alpha.15 |
 | Catalogue availability errors | Preserve future-schema/open failure reasons; read-only CLI catalogue/documentation readers do not create or migrate the database | alpha.15 |
 | Import hardening | Evidenced uppercase legacy table names; project ZIP empty-directory CRC/stream checks before persistence | alpha.15 |
 
@@ -65,7 +65,7 @@ builds refuse product26; opening new project saves in Alpha 14 is unverified.
 | Feature | Scope | Availability |
 | --- | --- | --- |
 | [Master identity provenance](adr/0147-master-identity-provenance.md) | Product DB v27: retained-source positions for all four master families and both DPT forms, same/cross-file collisions and malformed declarations; historical winner/encounter facts remain unavailable, normalized values unchanged; readable EN/DE catalogue diagnostics | Main-only; `d18ce65e` |
-| [Device diagnostics entry](manual/user-guide/05-devices-and-products.md#device-analysis-and-support) | *Analyse device* and *Send report* on a device's Diagnostics tab open the existing export and support dialogs with that device preselected; same consents and routes, generic identity profile only, no memory profile in the web | Main-only (24 October 2026) |
+| [Device diagnostics entry](manual/user-guide/05-devices-and-products.md#device-analysis-and-support) | *Analyse device* and *Send report* on a device's Diagnostics tab open the existing export and support dialogs with that device preselected; same consents and routes; since 26 October 2026 also the System-2 memory profile (DIAG-01) | Main-only (24 October 2026) |
 
 ## Data-table columns
 

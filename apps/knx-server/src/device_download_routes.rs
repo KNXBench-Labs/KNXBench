@@ -759,7 +759,7 @@ async fn start(
         taken: chrono::Local::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, false),
     };
     let (settler, settlement) =
-        crate::programming_state::download_settler_receipted(&state, incarnation, &prepared);
+        crate::programming_state::download_settler_receipted(&state, incarnation, id, &prepared);
     *download = Some(DeviceDownloadSession::start_with_stop_receipted(
         id,
         tunnel,

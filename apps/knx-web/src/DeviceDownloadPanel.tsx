@@ -23,6 +23,8 @@ import {
 } from "./downloadGateway";
 import { resolveHandoff, type DownloadActivity, type DownloadHandoff, type HandoffOutcome } from "./downloadHandoff";
 import DownloadVerification from "./DownloadVerification";
+import DownloadFailureView from "./DownloadFailureView";
+import { admitDownloadFailure } from "./downloadFailure";
 import PostDownloadCheckView from "./PostDownloadCheckView";
 import DownloadSupportNotice from "./DownloadSupportNotice";
 import DownloadScopeAdvice from "./DownloadScopeAdvice";
@@ -36,6 +38,13 @@ import { collectDevices, projectContextKey } from "./treeUtils";
 import UniversalSupportButton from "./UniversalSupportButton";
 import { useProgrammingConsent } from "./useProgrammingConsent";
 import type { ProjectTree } from "./bindings/ProjectTree";
+
+/** The step a stop the user asked for landed before (DIAG-02); `null` for any other end. */
+function stoppedBefore(status: api.DeviceDownloadStatus): number | null {
+  if (status.state !== "failed") return null;
+  const failure = admitDownloadFailure(status.failure);
+  return failure?.category === "stopped" ? failure.step?.number ?? null : null;
+}
 
 const DOWNLOAD_UNWRITTEN_COLUMNS = [
   { id: "address", width: 160, min: 100 },
@@ -713,7 +722,9 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
                 : t("deviceDownload.running", { step: stepsStarted, of: status.steps, name: stepNames.get(stepsStarted) ?? "" })
               : status.status.state === "finished"
                 ? t("deviceDownload.finished")
-                : t("deviceDownload.failed", { step: status.status.stoppedInStep ?? "—" })}</span>
+                : stoppedBefore(status.status) !== null
+                  ? t("deviceDownload.stoppedOnRequest", { step: stoppedBefore(status.status) ?? "—" })
+                  : t("deviceDownload.failed", { step: status.status.stoppedInStep ?? "—" })}</span>
           </p>
           <label>
             {t("deviceDownload.stepsProgress", { done: stepsStarted, of: status.steps })}
@@ -737,7 +748,7 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
             <p>{t("deviceDownload.restartAcknowledged")}</p>
           )}
           {status.status.state === "finished" && <PostDownloadCheckView value={status.status.postDownloadCheck} />}
-          {status.status.state === "failed" && <p className="form-error">{status.status.error}</p>}
+          {status.status.state === "failed" && <DownloadFailureView value={status.status.failure} error={status.status.error} />}
           {status.backupFile && (
             <p>{t("deviceDownload.backupKept", { file: status.backupFile })}</p>
           )}

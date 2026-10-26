@@ -452,18 +452,87 @@ it("says the device is being checked read-only while the check still runs", asyn
   expect(host!.querySelector(".post-download-check")).toBeNull();
 });
 
+const LOST_IN_STEP_12 = {
+  category: "connectionLost", code: "connectionLost", phase: "inStep",
+  step: { number: 12, of: 16, kind: "writeMemory", summary: "write memory 4400h..4407h, 8 octets" },
+  restart: "notSent", readBackOctets: 4,
+};
+
 it("says partially and where it stopped when a download fails midway", async () => {
   apiMock.pollDeviceDownload.mockReset().mockResolvedValue(
     response(
-      { state: "failed", written: "partially", stoppedInStep: 12, error: "connection lost" },
+      { state: "failed", written: "partially", stoppedInStep: 12, error: "connection lost", failure: LOST_IN_STEP_12 },
       [],
       0,
     ),
   );
   await render();
-  expect(host!.textContent).toContain("Download stopped in step 12.");
+  expect(host!.textContent).toContain("Download failed in step 12.");
   expect(host!.textContent).toContain("Written to the device: partially");
   expect(host!.textContent).toContain("connection lost");
+});
+
+it("shows a failed download's cause, place, restart and read-back as an alert (DIAG-02)", async () => {
+  apiMock.pollDeviceDownload.mockReset().mockResolvedValue(
+    response(
+      { state: "failed", written: "partially", stoppedInStep: 12, error: "connection lost during A_Memory_Write", failure: LOST_IN_STEP_12 },
+      [],
+      0,
+    ),
+  );
+  await render();
+  const section = host!.querySelector<HTMLElement>(".download-failure")!;
+  expect(section.getAttribute("role")).toBe("alert");
+  expect(section.dataset.failure).toBe("connectionLost");
+  expect(section.dataset.failureCode).toBe("connectionLost");
+  expect(section.querySelector("h4")!.textContent).toBe(en["downloadFailure.title.failed"]);
+  const text = section.textContent!;
+  expect(text).toContain(en["downloadFailure.category.connectionLost"]);
+  expect(text).toContain("Where: in step 12 of 16 (write memory 4400h..4407h, 8 octets).");
+  expect(text).toContain(en["downloadFailure.restart.notSent"]);
+  expect(text).toContain("read back unchanged before the end: 4.");
+  // The raw text stays a local, collapsed detail, never the headline.
+  expect(section.querySelector("details")!.textContent).toContain("connection lost during A_Memory_Write");
+  expect(host!.querySelectorAll(".download-failure")).toHaveLength(1);
+});
+
+it("shows a stop the user asked for as a status, not an alert", async () => {
+  apiMock.pollDeviceDownload.mockReset().mockResolvedValue(
+    response(
+      { state: "failed", written: "no", stoppedInStep: 2, error: "stopped on request", failure: {
+        category: "stopped", code: "stopped", phase: "stoppedBeforeStep",
+        step: { number: 3, of: 16, kind: "loadRecord", summary: "load control: unload (address table)" },
+        restart: "notSent", readBackOctets: 0,
+      } },
+      [],
+      0,
+    ),
+  );
+  await render();
+  expect(host!.querySelector("[data-download-state]")!.textContent).toBe("Download stopped on request before step 3.");
+  const section = host!.querySelector<HTMLElement>(".download-failure")!;
+  expect(section.getAttribute("role")).toBe("status");
+  expect(section.classList.contains("download-failure--stopped")).toBe(true);
+  expect(section.querySelector("h4")!.textContent).toBe(en["downloadFailure.title.stopped"]);
+  expect(section.textContent).toContain("before step 3 of 16 (load control: unload (address table)); that step did not start.");
+  expect(host!.querySelector("[role=alert].download-failure")).toBeNull();
+});
+
+it("says a malformed diagnostic is unreadable instead of inventing a cause", async () => {
+  apiMock.pollDeviceDownload.mockReset().mockResolvedValue(
+    response(
+      { state: "failed", written: "partially", stoppedInStep: 12, error: "lost", failure: { ...LOST_IN_STEP_12, category: "timeout" } },
+      [],
+      0,
+    ),
+  );
+  await render();
+  const section = host!.querySelector<HTMLElement>(".download-failure")!;
+  expect(section.dataset.failure).toBe("unreadable");
+  expect(section.getAttribute("role")).toBe("alert");
+  expect(section.textContent).toContain(en["downloadFailure.unreadable"]);
+  expect(section.textContent).not.toContain(en["downloadFailure.category.timeout"]);
+  expect(host!.textContent).toContain("Download failed in step 12.");
 });
 
 it("drops a shown plan when the project changes", async () => {
@@ -551,7 +620,7 @@ it("warns on an untested plan and requires a separate exact acknowledgement", as
 
 it("shows the backup path during a run and on failure", async () => {
   apiMock.pollDeviceDownload.mockReset().mockResolvedValue({
-    ...response({ state: "failed", written: "partially", stoppedInStep: 7, error: "read-back failed" },
+    ...response({ state: "failed", written: "partially", stoppedInStep: 7, error: "read-back failed", failure: null },
       [{ kind: "backupTaken", regions: 2, octets: 32 }], 1),
     backupFile: "device-backups/1.1.67_backup.json",
   });
@@ -700,7 +769,7 @@ it("does not report a download whose restart was not confirmed, or one that fail
   expect(await achievementEventsFor({ state: "finished", written: "yes", restart: "unconfirmed", restartNote: "no T_ACK" })).toEqual([]);
   if (root) await act(async () => root!.unmount());
   host?.remove();
-  expect(await achievementEventsFor({ state: "failed", written: "partially", stoppedInStep: 2, error: "timeout" })).toEqual([]);
+  expect(await achievementEventsFor({ state: "failed", written: "partially", stoppedInStep: 2, error: "timeout", failure: null })).toEqual([]);
   if (root) await act(async () => root!.unmount());
   host?.remove();
   expect(await achievementEventsFor({ state: "running" })).toEqual([]);
@@ -791,7 +860,7 @@ it("after a download, explains the steps and creates the report only on request,
 
 it("asks to try again while the run is still finishing, and asks to report a failed run too", async () => {
   apiMock.pollDeviceDownload.mockReset().mockResolvedValue(
-    response({ state: "failed", written: "partially", stoppedInStep: 12, error: "connection lost" }, [], 0),
+    response({ state: "failed", written: "partially", stoppedInStep: 12, error: "connection lost", failure: null }, [], 0),
   );
   apiMock.getDeviceDownloadReport.mockReset().mockRejectedValueOnce(conflict()).mockResolvedValueOnce({
     ...REPORT,
@@ -844,7 +913,7 @@ it("reloads the project once after a download that wrote, and not after one that
   apiMock.currentProject.mockReset().mockResolvedValue(reloaded);
   const changed = vi.fn();
   apiMock.pollDeviceDownload.mockReset().mockResolvedValue(
-    response({ state: "failed", written: "partially", stoppedInStep: 2, error: "lost" }, [], 1));
+    response({ state: "failed", written: "partially", stoppedInStep: 2, error: "lost", failure: null }, [], 1));
   await render(project(), changed);
   expect(apiMock.currentProject).toHaveBeenCalledTimes(1);
   expect(changed).toHaveBeenCalledExactlyOnceWith(reloaded);
@@ -853,7 +922,7 @@ it("reloads the project once after a download that wrote, and not after one that
 
   apiMock.currentProject.mockClear(); changed.mockClear();
   apiMock.pollDeviceDownload.mockReset().mockResolvedValue(
-    response({ state: "failed", written: "no", stoppedInStep: null, error: "refused" }, [], 1));
+    response({ state: "failed", written: "no", stoppedInStep: null, error: "refused", failure: null }, [], 1));
   await render(project(), changed);
   expect(apiMock.currentProject).not.toHaveBeenCalled();
   expect(changed).not.toHaveBeenCalled();

@@ -22,6 +22,7 @@ fn failed(written: Written) -> DownloadStatus {
         stopped_in_step: Some(3),
         error: "lost".into(),
         hint: None,
+        failure: crate::device_download::synthetic_failure(Some(3)),
     }
 }
 

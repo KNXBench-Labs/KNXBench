@@ -275,8 +275,9 @@ fn log_download_failure(
             timestamp: session_log::now(),
             severity,
             source: "DeviceDownload".into(),
+            // The settlement entry's label shape, from the name the run was planned with.
             message: format!(
-                "Download to {target} ({device_name}) {}; written {written}",
+                "Download to {target} (“{device_name}”) {}; written {written}",
                 failure.line()
             ),
             location: None,

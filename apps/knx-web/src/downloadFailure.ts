@@ -59,6 +59,8 @@ export const FAILURE_RESTARTS = ["notInPlan", "notSent", "unknown"] as const;
 export type FailureRestart = typeof FAILURE_RESTARTS[number];
 /** Longest step summary a reader accepts, as `MAX_STEP_SUMMARY` in `knx-app`. */
 export const MAX_STEP_SUMMARY = 160;
+/** Largest count accepted, as `MAX_COUNT` in `knx-app` (the safe-integer bound). */
+export const MAX_COUNT = Number.MAX_SAFE_INTEGER;
 
 export interface FailedStep {
   number: number;
@@ -89,7 +91,7 @@ function only(value: Record<string, unknown>, required: readonly string[], optio
 }
 
 function count(value: unknown, min: number): value is number {
-  return typeof value === "number" && Number.isSafeInteger(value) && value >= min;
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= min && value <= MAX_COUNT;
 }
 
 function admitStep(value: unknown): FailedStep | null | undefined {
@@ -98,8 +100,8 @@ function admitStep(value: unknown): FailedStep | null | undefined {
   const { number, of, kind, summary } = value;
   if (!count(number, 1) || !count(of, 1) || number > of) return undefined;
   if (!STEP_KINDS.includes(kind as StepKind)) return undefined;
-  // `knx-app` bounds the summary in UTF-8 octets; it is ASCII by construction.
-  if (typeof summary !== "string" || summary.length === 0 || new TextEncoder().encode(summary).length > MAX_STEP_SUMMARY) return undefined;
+  // Printable ASCII by construction, so characters and `knx-app`'s octets agree.
+  if (typeof summary !== "string" || summary.length === 0 || summary.length > MAX_STEP_SUMMARY || !/^[\x20-\x7e]+$/.test(summary)) return undefined;
   return { number, of, kind: kind as StepKind, summary };
 }
 
@@ -115,6 +117,12 @@ export function admitDownloadFailure(value: unknown): DownloadFailure | null {
   if (step === undefined) return null;
   if (phase === "beforeSteps" && step !== null) return null;
   if (code === "stopped" && readBackOctets !== 0) return null;
+  // Each category's phases, as `DownloadFailure::is_consistent` in `knx-app`.
+  const expectedPhase = category === "stopped" ? ["stoppedBeforeStep"]
+    : category === "backupFailed" ? ["backupBeforeStep"] : ["beforeSteps", "inStep"];
+  if (!expectedPhase.includes(phase as string)) return null;
+  // In or after the restart step the restart is never known to be unsent.
+  if (restart === "notSent" && phase === "inStep" && step?.kind === "restart") return null;
   return {
     category: category as FailureCategory,
     code: code as FailureCode,

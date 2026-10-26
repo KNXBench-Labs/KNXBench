@@ -221,3 +221,24 @@ fn the_web_reader_maps_every_code_to_the_same_category() {
         assert!(WEB_READER.contains(&token.to_string()), "{token}");
     }
 }
+
+/// The worker's fallback: a refused diagnostic still lets the row end failed.
+#[test]
+fn a_refused_failure_leaves_the_row_open_for_a_plain_failed_result() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("history.sqlite");
+    let log = log(&path);
+    let mut guard = log.start_download(7, "1.1.67".parse().unwrap()).unwrap();
+    guard.mark_send_possible().unwrap();
+    let mut wrong = base_failure();
+    wrong.read_back_octets = usize::MAX;
+    assert!(guard.record_failure(Written::Partially, &wrong).is_err());
+    guard
+        .record_result(&DownloadResult::Failed {
+            written: Written::Partially,
+        })
+        .unwrap();
+    let document = stored(&path);
+    assert_eq!(document["state"], "failed");
+    assert!(document["downloadEvidence"].get("failure").is_none());
+}

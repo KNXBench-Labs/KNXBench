@@ -106,7 +106,7 @@ fn assert_failure(readers: &Readers, expected: &Expected<'_>) -> Value {
     assert_eq!(log.len(), 1, "{log:?}");
     let entry = &log[0];
     assert_eq!(entry.severity, expected.severity, "{entry:?}");
-    assert_eq!(entry.detail.as_deref(), Some("download 1"));
+    assert_eq!(entry.detail.as_deref(), Some("download 7"));
     assert!(
         entry.message.contains(&format!("[{}]", expected.code))
             && entry

@@ -225,6 +225,9 @@ impl OneShotActivity {
                                 && failure.is_consistent()
                                 && (failure.code != crate::download_failure::FailureCode::Stopped
                                     || evidence.written == Some(Written::No))
+                                // Read-back octets were written.
+                                && (failure.read_back_octets == 0
+                                    || evidence.written != Some(Written::No))
                         })
                         && evidence.post_download_check.as_ref().is_none_or(|check| {
                             // Only a written, finished transfer is checked,

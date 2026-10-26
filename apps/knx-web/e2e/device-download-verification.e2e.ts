@@ -368,7 +368,8 @@ for (const language of ["en", "de"] as const) {
     await expect(panel).toHaveCount(0);
     const history = page.locator(".activity-history-entry .download-failure");
     await expect(history).toHaveAttribute("data-failure", "connectionLost");
-    await expect(history).toHaveAttribute("role", "alert");
+    await expect(history).not.toHaveAttribute("role", /.*/);
+    await expect(history).toContainText(m["downloadFailure.partialCaveat"]);
     await expect(history).toContainText(m["downloadFailure.category.connectionLost"]);
 
     // Reopening reads the server-held run again, without a new download.

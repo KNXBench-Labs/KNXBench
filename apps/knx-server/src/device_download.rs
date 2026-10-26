@@ -622,7 +622,10 @@ async fn run(
     let _ = match &status {
         DownloadStatus::Failed {
             written, failure, ..
-        } => activity.record_failure(*written, failure),
+        } => activity
+            .record_failure(*written, failure)
+            // A refused diagnostic still leaves the row failed, cause not recorded.
+            .or_else(|_| activity.record_result(&witnessed)),
         _ => activity.record_result(&witnessed),
     };
     if let Some(on_end) = shared

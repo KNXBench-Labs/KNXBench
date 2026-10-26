@@ -112,7 +112,8 @@ export default function BusActivityHistory() {
               <DownloadReceiptView preparation={entry.downloadEvidence.preparation} settlement={entry.downloadEvidence.settlement} language={language} />
             )}
             {entry.kind === "deviceDownload" && entry.state === "failed" && entry.downloadEvidence && (
-              <DownloadFailureView value={entry.downloadEvidence.failure} absent={entry.downloadEvidence.failure === undefined} />
+              <DownloadFailureView value={entry.downloadEvidence.failure} absent={entry.downloadEvidence.failure === undefined}
+                written={entry.downloadEvidence.written} live={false} />
             )}
             {entry.kind === "deviceDownload" && entry.state === "finished" && entry.downloadEvidence?.written === "yes" && (
               <PostDownloadCheckView value={entry.downloadEvidence.postDownloadCheck} />

@@ -121,6 +121,16 @@ integrated stages passed, published as `1e6229cea3`
 ([record](../status/2026-10-26-memory-transfer-budget.md)). No new family,
 authorisation, recovery behavior or physical outcome is claimed.
 
+## Delivered durable tunnel runtime for regular CLI operations
+
+`device download`, `device restore` and `device service-control` use the existing
+multi-thread tunnel runtime so receive/heartbeat tasks can continue during
+synchronous persistence. Published as `a8004cb2e`, independently reviewed APPROVE,
+13/13 merged package stages green (521 Rust tests, selected corpus 17/17).
+[Acceptance and test limits](../status/2026-10-26-cli-durable-tunnel-runtime.md)
+separate native loopback ACK characterization from lexical call-site checks;
+there is no CLI end-to-end, new shutdown, recovery or hardware guarantee.
+
 ## Open
 
 - Broader target/exemplar identity and independently verified runtime-state

@@ -12,6 +12,18 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Regular CLI durable-tunnel runtime, PRG-01/S2-03 slice (26 October 2026)
+
+Published main-first merge `a8004cb2e` (feature `46c38df26`), independent review
+APPROVE. Download, restore and service-control reuse the existing two-worker
+tunnel runtime; synchronous backup/history barriers stay on the operation caller
+while spawned tunnel tasks can service ACKs. Maintained merge gate 13/13 green:
+521 Rust tests, 21 ignored, selected corpus 17/17, frozen inputs, no touched or
+unchecked user data; local/tracking/live readback equal. Web/browser and bindings
+not selected. Loopback ACK and lexical call-site checks are separate evidence;
+no complete CLI invocation, hardware, heartbeat-longevity or joined-task shutdown
+claim. [Acceptance and boundaries](status/2026-10-26-cli-durable-tunnel-runtime.md).
+
 ## Browser temp-wrapper spawn/signal protection, GATE-01 slice (26 October 2026)
 
 Published main-first merge `ed156ef9b`; independent review and correction re-review

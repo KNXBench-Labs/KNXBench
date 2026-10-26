@@ -193,39 +193,43 @@ class BuildTests(unittest.TestCase):
             self.assertIn("noindex", html)
             self.assertIn('class="preview-note"', html)
 
-    def test_alpha16_release_copy_links_history_and_upgrade_boundaries(self):
+    def test_alpha17_release_copy_links_history_and_upgrade_boundaries(self):
         self.require_build()
         release = "https://github.com/KNXBench-Labs/KNXBench/releases/"
-        evidence_path = "docs/evidence/release-alpha16-2026-10-24.json"
+        evidence_path = "docs/evidence/release-alpha17-2026-10-26.json"
         evidence = json.loads((WEBSITE.parent / evidence_path).read_text())
-        self.assertEqual(evidence["tag"], "v0.1.0-alpha.16")
-        self.assertEqual(evidence["candidate"], "f2e3ec6e4b227b49dc74fdba4cdadc3ab91e7c3d")
+        self.assertEqual(evidence["tag"], "v0.1.0-alpha.17")
+        self.assertEqual(evidence["candidate"], "a9ea32d72364478b25e158d0b95465af7a4702df")
         self.assertTrue(evidence["prerelease"])
         self.assertFalse(evidence["draft"])
         self.assertEqual(evidence["public_artifact_verification"], "PASS")
+        # The site is deployed after this record; accept the later PASS readback too.
         website = evidence["website"]
-        self.assertEqual(website["status"], "PASS")
-        self.assertEqual(website["excluded_files"], [])
-        self.assertGreater(website["artifact_files_http_200_and_hash_match"], 0)
-        self.assertRegex(website["artifact_sha256"], r"^[0-9a-f]{64}$")
-        self.assertEqual({w["run_id"] for w in evidence["workflows"]}, {40084841192, 40084841249})
+        self.assertIn(website["status"], {"not executed", "PASS"})
+        if website["status"] == "PASS":
+            self.assertEqual(website["excluded_files"], [])
+            self.assertGreater(website["artifact_files_http_200_and_hash_match"], 0)
+            self.assertRegex(website["artifact_sha256"], r"^[0-9a-f]{64}$")
+        self.assertEqual({w["run_id"] for w in evidence["workflows"]}, {40406000191, 40406000758})
         for workflow in evidence["workflows"]:
             self.assertEqual(workflow["head_sha"], evidence["candidate"])
             self.assertEqual(workflow["conclusion"], "success")
             self.assertTrue(workflow["publication_success"])
+        for dry_run in evidence["dry_runs"]:
+            self.assertEqual(dry_run["head_sha"], evidence["candidate"])
+            self.assertEqual(dry_run["publish_jobs"], "skipped")
         self.assertEqual({a["name"] for a in evidence["assets"]},
-                         {"KNXBench_0.1.0-alpha.16_amd64.AppImage", "knx-mcp-x86_64-linux", "SHA256SUMS"})
+                         {"KNXBench_0.1.0-alpha.17_amd64.AppImage", "knx-mcp-x86_64-linux", "SHA256SUMS"})
         for asset in evidence["assets"]:
             self.assertGreater(asset["bytes"], 0)
             self.assertRegex(asset["sha256"], r"^[0-9a-f]{64}$")
             self.assertEqual(asset["provider_digest"], "sha256:" + asset["sha256"])
-        self.assertTrue(evidence["docker"]["latest_index_digest_equal"])
-        self.assertEqual({c["platform"] for c in evidence["docker"]["native_images"]},
-                         {"linux/amd64", "linux/arm64"})
-        for config in evidence["docker"]["native_images"]:
-            self.assertEqual(config["revision"], evidence["candidate"])
-            self.assertEqual(config["version"], evidence["tag"])
-            self.assertTrue(config["config_hash_verified"])
+        docker = evidence["docker"]
+        self.assertTrue(docker["latest_index_digest_equal"])
+        self.assertRegex(docker["index_digest"], r"^sha256:[0-9a-f]{64}$")
+        self.assertEqual(set(docker["platforms"]), {"linux/amd64", "linux/arm64"})
+        self.assertEqual(docker["oci_labels"], {"revision": evidence["candidate"], "version": evidence["tag"]})
+        self.assertTrue(evidence["candidate"].startswith(evidence["mcp_version"].rsplit("+g", 1)[1]))
         for lang in ("de", "en"):
             page = (self.out / lang / "index.html").read_text()
             doc = Document(page)
@@ -237,16 +241,18 @@ class BuildTests(unittest.TestCase):
                                     and attrs.get("alt") for tag, attrs in doc.elements), (lang, asset))
             self.assertNotIn("alpha12-", page)
             text = json.loads((WEBSITE / "content" / f"{lang}.json").read_text())
-            for key in ("alpha_tag", "release_title", "release_intro", "release_catalogue_body", "release_adoption_body",
-                        "release_portability_body", "release_system2_body", "release_layout_note",
+            for key in ("alpha_tag", "release_title", "release_intro", "release_download_body", "release_adoption_body",
+                        "release_workbench_body", "release_system2_body", "release_more_note",
                         "history_title", "history_intro", "release_parameters_body", "release_vendor_body",
                         "release_notes_body", "release_diagnostics_body", "upgrade_note", "release_scope_note"):
                 self.assertIn(text[key], page)
-            self.assertIn("Alpha 16", text["release_title"])
+            self.assertIn("Alpha 17", text["release_title"])
             self.assertIn("veröffentlicht" if lang == "de" else "published", text["release_intro"])
             for key in ("alpha_tag", "release_intro", "release_scope_note", "release_cta",
                         "release_appimage_cta", "release_mcp_cta", "release_checksums_cta", "docker_note", "native_body"):
                 self.assertNotRegex(text[key], r"(?i)candidate|pending|intended|prepared|Kandidat|vorgesehen|steht aus|nach Veröffentlichung")
+            release_copy = " ".join(v for k, v in text.items() if k.startswith("release_"))
+            self.assertNotRegex(release_copy, r"(?i)\bcertified\b|zertifiziert")
             evidence_url = "https://github.com/KNXBench-Labs/KNXBench/blob/main/" + evidence_path
             self.assertEqual(sum(tag == "a" and attrs.get("href") == evidence_url
                                  for tag, attrs in doc.elements), 1, lang)
@@ -254,20 +260,24 @@ class BuildTests(unittest.TestCase):
             self.assertIn("Alpha 14", text["history_title"])
             self.assertIn("Alpha 14", text["release_caption"])
             self.assertIn("16", text["upgrade_note"])
+            self.assertIn("28", text["upgrade_note"])
             self.assertIn("26 → 27 → 28", text["upgrade_note"])
             self.assertIn("Alpha 15", text["upgrade_note"])
+            self.assertIn("Alpha 16", text["upgrade_note"])
             self.assertIn("M-0001_A-9205-04-9270", text["release_system2_body"])
-            self.assertIn("TestHardware", text["release_system2_body"])
-            self.assertIn("105", text["release_system2_body"])
+            self.assertIn("UP 258D12", text["release_system2_body"])
+            self.assertIn("#30", text["release_system2_title"])
+            self.assertIn("0.1.0-alpha.17", text["docker_note"])
             for arch in ("amd64", "arm64"):
                 self.assertIn(arch, text["release_scope_note"])
-            for tag in ("v0.1.0-alpha.14", "v0.1.0-alpha.15", "v0.1.0-alpha.16"):
+            for tag in ("v0.1.0-alpha.14", "v0.1.0-alpha.15", "v0.1.0-alpha.16", "v0.1.0-alpha.17"):
                 self.assertEqual(sum(tag_name == "a" and attrs.get("href") == release + "tag/" + tag
                                      for tag_name, attrs in doc.elements), 1, (lang, tag))
-            for asset in ("KNXBench_0.1.0-alpha.16_amd64.AppImage", "knx-mcp-x86_64-linux", "SHA256SUMS"):
+            for asset in ("KNXBench_0.1.0-alpha.17_amd64.AppImage", "knx-mcp-x86_64-linux", "SHA256SUMS"):
                 self.assertEqual(sum(tag_name == "a" and attrs.get("href") ==
-                                     release + "download/v0.1.0-alpha.16/" + asset
+                                     release + "download/v0.1.0-alpha.17/" + asset
                                      for tag_name, attrs in doc.elements), 1, (lang, asset))
+            self.assertNotIn("download/v0.1.0-alpha.16/", page)
             for key in ("real_app", "project_caption", "flow_caption", "details_caption"):
                 self.assertIn("Alpha 14", text[key], (lang, key))
             self.assertNotIn("v0.1.0-alpha.12", page)

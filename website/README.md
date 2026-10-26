@@ -104,42 +104,40 @@ documented IP logging; the preview keeps the pending note. This is **not** a leg
 identity, phone, tax number or retention policy was invented.
 Imprint acceptance recipe: `tests/verify-imprint.js`.
 
-## Alpha 16 release content
+## Alpha 17 release content
 
 `content/de.json` and `content/en.json` hold the release copy; `page.html` holds
-the published `v0.1.0-alpha.16` release and download targets. There is no separate
+the published `v0.1.0-alpha.17` release and download targets. There is no separate
 release-data updater in the maintained site sources: update both locales and
 the template together, without changing the normal release workflows.
 
-**Alpha 16 is a published pre-release**, not a stable release. The
-[public verification record](../docs/evidence/release-alpha16-2026-10-24.json)
-records both successful publication workflows, downloaded GitHub asset sizes and
-SHA-256/provider digests, and exact Docker amd64/arm64 revision identities.
-The GitHub assets follow the Alpha 15 channel: x86-64 AppImage,
+**Alpha 17 is a published pre-release**, not a stable release. The
+[public verification record](../docs/evidence/release-alpha17-2026-10-26.json)
+records both successful publication workflows, the downloaded GitHub asset sizes
+and SHA-256/provider digests, the Docker index digest and its OCI revision label.
+The GitHub assets follow the Alpha 15/16 channel: x86-64 AppImage,
 `knx-mcp-x86_64-linux` and `SHA256SUMS`. The version and `latest` Docker tags had
-the same verified multiarch index at readback; `latest` includes alphas and does
-not mean stable. Local preacceptance remains amd64; remote arm64 publication is
-not an extra local ARM64 runtime test. No standalone-server or local container-archive
-download is promised. Final Pages deployment and live website verification of
-this successor remain **pending**; public artifact acceptance is not site acceptance.
+the same multiarch index at readback; `latest` includes alphas and does not mean
+stable. The arm64 image was built and published by CI, not run locally. The four
+release cards describe the Alpha 17 scope (System-2 issue #30, regular download,
+association link adoption, workbench); the record does not cover the Pages
+deployment of this site.
 
 The smallest offline release-content check is:
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s website/tests -p test_build.py -k test_alpha16_release_copy_links_history_and_upgrade_boundaries -v
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s website/tests -p test_build.py -k test_alpha17_release_copy_links_history_and_upgrade_boundaries -v
 ```
 
 It builds a private static preview and checks localized published copy, release links,
 public verification identities, upgrade bounds and retained media labels. It does not fetch GitHub/Docker Hub,
 verify public assets/manifests or run a browser. The separate browser recipe
 `tests/verify-release-features.js` is updated for this content, not newly run.
-Public asset/checksum and Docker platform manifest/digest readback is complete.
-The parent must review and publish this documentation/site successor, then verify
-its exact Pages deployment and live generated content separately. Neither this
-offline check nor the publication record claims that final website verification.
+The record's `website` status is `not executed` until the Pages deployment of this
+content is read back; the test also accepts a later `PASS` with its readback fields.
 
-Alpha 15 remains linked as release history. Alpha 14 media retains its original
-release labels and has its own historical section; none is relabelled Alpha 16.
+Alpha 14, 15 and 16 remain linked as release history. Alpha 14 media retains its
+original release labels and has its own historical section; none is relabelled Alpha 17.
 
 ## Media
 

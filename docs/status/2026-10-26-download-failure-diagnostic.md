@@ -9,7 +9,9 @@ Published main-first merge `4209645b4` on base `2bf48de53` (feature commits
 regular memory download keeps one payload-free `DownloadFailure` in the server status,
 one session-log entry, the durable activity history and the tester's report
 ([contract](../contracts/download-failure-diagnostic.md)). The CLI and the System-2
-worker are unchanged and record failed rows without a cause.
+worker were unchanged at this delivery and recorded failed rows without a cause.
+The [CLI follow-up](2026-10-26-cli-download-failure-diagnostic.md) subsequently
+extended the same diagnostic to download and restore; System-2 remains unchanged.
 
 ## Acceptance
 

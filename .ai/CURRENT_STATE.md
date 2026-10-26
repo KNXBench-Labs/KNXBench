@@ -1,45 +1,33 @@
 # Restart snapshot
 
-Updated: 2026-10-26 21:31 CET. Operational snapshot, not an append-only journal.
-## Release freeze: taken by claude-release-alpha17 (observed 2026-10-26 21:31 CET)
-- Alpha 17 cutoff = `20ab2f7ea` (S2-01 safe projection delivered `536e492bc`, docs `20ab2f7ea`).
-- Candidate branch `release/alpha17-draft-20261026` (version bump, notes, reader docs); gate,
-  packaging dry runs and publication follow. `main` stays release-frozen for code until the tag
-  `v0.1.0-alpha.17` is published and this owner posts the released line below.
-- Other sessions: keep packages local (no push to `main`, no branch push); local gates are fine.
-  Anything not in `20ab2f7ea` ships in Alpha 18. Resume when the line
-  → `Release freeze: released by claude-release-alpha17` appears (also posted on abort, with reason).
-## Alpha 17 release plan (CUT at `20ab2f7ea`; PLANNED by claude-release-alpha17, observed 2026-10-26 20:03 CET)
-- Owner go: once the S2-01 safe diagnostic projection is delivered, cut, gate and publish Alpha 17.
-- Prerequisite: S2-01 safe projection only. Its session finishes as usual; delivery is read
-  from its usual delivered heading, or it adds the line → `Alpha 17 prerequisite delivered: S2-01`.
-- No freeze yet. Other packages continue; anything merged after the cutoff ships in Alpha 18.
-- At cutoff a separate `Release freeze: taken by claude-release-alpha17` entry appears here;
-  then hold pushes to `main` until `Release freeze: released by claude-release-alpha17`.
-- Not in scope: S2-02 closure (needs reporter re-test on Alpha 17), S2-03 (evidence), PRG-01
-  (programming track), GATE-01 (gate tooling). No hardware/bus/deployment work.
-## S2-01 safe diagnostic projection (DELIVERED runtime; result-doc gate pending, observed 21:24 CET)
+Updated: 2026-10-26 22:53 CET. Operational snapshot, not an append-only journal.
+## Alpha 17 release (PUBLISHED, observed 2026-10-26 22:53 CET)
+- Release freeze: released by claude-release-alpha17
+- Tag `v0.1.0-alpha.17` (object `0fd5fabda`) → commit `a9ea32d72`, cutoff `20ab2f7ea`; GitHub pre-release.
+- Verified: full gate + extras green (pinned matrix first attempt RED harness, rerun green); dry runs
+  and publish runs green; assets/SHA256SUMS/digests, Docker index+revision, isolated smokes PASS.
+  [Record](../docs/evidence/release-alpha17-2026-10-26.json); Pages readback of the site successor
+  open. Evidence `<profile>/release-evidence/alpha17-20261026/`.
+- Other sessions resume from their own last entry on fresh origin/main; anything after cutoff
+  20ab2f7ea ships in Alpha 18.
+## S2-01 safe diagnostic projection (DELIVERED; result docs published `20ab2f7ea`; shipped in Alpha 17, observed 21:24 CET)
 - PUBLISHED main-first merge `536e492bc` (production `5c469a5ec`, test correction `eeba38bf`);
   local/tracking/live readback equal. Whole-feature and correction reviews APPROVE.
 - Branch15/integrated15 fully green: Rust2731/129ignored, corpus91/91,
   Vitest4553/306files, browser914 (847functional/67exclusive); frozen/no touched or unchecked data.
 - Real simulator→private journal→reopen→HTTP/report→production EN/DE browser4 proof retained.
-- Gate1 skipped-private-input refusal preserved, fixed test registration; no gate weakened.
-- Legacy absence unknown; raw prefix private; new typed counts are not hardware/support authority.
-- Result docs awaiting their own gate/conditional publication; source trees retained for verified cleanup.
+- Gate1 refusal preserved, test registration fixed, no gate weakened; typed counts not hw authority.
 - Alpha 17 prerequisite delivered: S2-01
 - Evidence `<profile>/evidence/system2-safe-failure-20261026/`; no bus/hardware/release/deployment.
 ## Issue #30 / S2-01 pointer width (DELIVERED, observed 2026-10-26 19:03 CET)
 - PUBLISHED main-first merge `54b052885`, feature `6b8b27936`; local/tracking/live equal.
 - Independent whole-feature review and correction re-review APPROVE; branch15/integrated15 green.
 - Integrated Rust5063/169ignored, corpus97/97, Vitest4540/browser728; public-package witness4 green.
-- Initial push alone failed auth; unchanged accepted source published with one-shot gh helper.
 - Raw Two/Four capture/reopen/recovery and exact-profile rev2 policy delivered; Legacy retained.
 - Object1 two-octet field observation only;2/3 source-declared hypotheses, no hardware support claim.
 - Net typed non-raw refusal seam available; safe failure/report projection remains separate.
 - Shared width/recovery/journal ownership RELEASED to safe-projection track after this docs publication.
-- Own trees retained only for docs/verified evidence retirement; no further runtime edits or own gate.
-- Evidence `<profile>/evidence/issue30-width-20261026/`; no bus/release/deployment/vendor work.
+- Own trees kept for docs/evidence retirement only. Evidence `<profile>/evidence/issue30-width-20261026/`.
 ## PRG-01/S2-03 CLI durable-tunnel slice (runtime DELIVERED; result docs pending)
 - PUBLISHED main-first merge `a8004cb2e` on `8459b5fe8`, feature `46c38df26`; readbacks equal.
 - Independent review APPROVE; merge13 Rust521/21ignored, corpus17/17; tools440/6skipped.

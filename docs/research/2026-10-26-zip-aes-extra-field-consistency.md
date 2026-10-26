@@ -92,7 +92,16 @@ method-99 refusal and is not widened.
 
 This is stricter than the previous runtime for the shapes marked accepted
 above. No real project or product file in the private corpus is expected to
-carry such a shape; the corpus gate checks that expectation.
+carry such a shape; the package gate's corpus stage is the check of that
+expectation, not this note.
+
+The validated product directory records a conflict but only
+`open_checked_archive` refuses it; the legacy EX-IM reader (raw method, its own
+method-99 refusal) and the metadata-only baggage census do not consume
+member bytes under a field-rewritten method. A pre-existing System-2
+preparation path decodes a package member with plain `zip` before installation
+admits it; installation still refuses afterwards and nothing is persisted.
+That read-before-admission is outside this package.
 
 ## Exclusions
 

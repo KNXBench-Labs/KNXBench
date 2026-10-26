@@ -859,6 +859,8 @@ struct CheckedZipEntry {
     local_offset: u64,
     flags: u16,
     /// Why the record's WinZip AES metadata contradicts itself, if it does.
+    /// Recorded here but refused only by `open_checked_archive`: other users
+    /// of the validated directory (legacy, baggage) must check it themselves.
     aes_conflict: Option<&'static str>,
     crc32: u32,
     compressed_size: u64,

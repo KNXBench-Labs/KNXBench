@@ -42,7 +42,10 @@ read-back mismatch, timeout, released and lost connection, load-state error, sto
 request, unwitnessed end, polling, success and unconfirmed-restart controls), 33 history
 cases shared by the Rust and web readers, 4,537 Vitest tests. Independent review BLOCK
 (status line named the last started step after a backup failure) fixed with the minor
-findings; focused re-review APPROVE. CLI and System-2 rows are unchanged. Simulator only, no hardware run.
+findings; focused re-review APPROVE. Simulator only, no hardware run. The CLI follow-up
+(26 October 2026 source) gives `knx device download` and `knx device restore` the same value:
+history row, `--report` failure with `stoppedInStep`, one `diagnostic:` terminal line;
+10 CLI simulator tests, six targeted mutants all detected. System-2 rows are unchanged.
 [Contract](contracts/download-failure-diagnostic.md),
 [details](open-work/DIAG-02-download-failure-evidence.md).
 

@@ -66,8 +66,9 @@ private attachment into public fixtures or documentation.
 ## Coordination and exclusions
 
 Implementation boundary (26 October 2026): the server/web worker produces the
-diagnostic; the CLI and the System-2 worker still record failed rows without it
-(read as *cause not recorded*). Coordinate shared commissioning/log/report surfaces with
+diagnostic; the CLI (`knx device download`, `knx device restore`) follows in a
+separate CLI package with the same value. The System-2 worker still records failed
+rows without it (read as *cause not recorded*). Coordinate shared commissioning/log/report surfaces with
 [PRG-01](PRG-01-programming-gaps.md). This is the regular-download diagnostic
 path, not a duplicate of [S2-02](S2-02-gateway-busy-after-failed-runs.md)'s
 System-2 early-start refusal work. Reuse its conventions where appropriate,

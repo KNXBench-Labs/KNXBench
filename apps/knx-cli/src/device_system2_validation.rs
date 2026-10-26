@@ -176,6 +176,10 @@ fn execute(args: &[String]) -> Result<(), String> {
         if bundle.format == 2 {
             return Err("project-v2 bundles are intrinsically simulator-only; prepare a separate configured hardware operation with system2-project".into());
         }
+        if !recover {
+            // Also enforced by the executor; checked here before any socket or journal.
+            service::refuse_superseded_defaults_profile(&bundle).map_err(|e| e.to_string())?;
+        }
         let gateway: SocketAddrV4 = values
             .get("--gateway")
             .ok_or("--gateway <ip:port> required for a real write")?

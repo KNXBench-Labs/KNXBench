@@ -64,7 +64,7 @@ fn execute(args: &[String]) -> Result<(), String> {
     if fs::read(output).map_err(|e| e.to_string())? != bytes {
         return Err("prepared output readback differs".into());
     }
-    println!("STRONG HYPOTHESIS — simulator validation candidate; no bus contact.\nConfiguration: complete product defaults, NO group links or project overrides.\nAll {} source positions; {} allocated octets, {} written, {} protected.\nPlan {}", candidate.source_positions,candidate.allocation_octets,candidate.written_octets,candidate.preserved_octets,candidate.bundle.binding.plan_sha256);
+    println!("STRONG HYPOTHESIS — simulator validation candidate; no bus contact.\nConfiguration: complete product defaults, NO group links or project overrides.\nAll {} source positions; {} allocated octets, {} written, {} NOT written (masked or unused table capacity).\nPlan {}", candidate.source_positions,candidate.allocation_octets,candidate.written_octets,candidate.preserved_octets,candidate.bundle.binding.plan_sha256);
     for inference in &candidate.inferences {
         println!("{inference}");
     }

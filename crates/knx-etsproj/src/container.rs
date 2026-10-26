@@ -973,6 +973,7 @@ fn check_decoded_names<R: Read + std::io::Seek>(
                 "strong-encryption flag (bit 6) requires encryption flag (bit 0)",
             ));
         }
+        local_record::check_aes(&central).map_err(|reason| inconsistent(&name, reason))?;
         extents.push((local.record, name.clone()));
         if entry.is_dir() {
             directories.push((name, central, local.data));

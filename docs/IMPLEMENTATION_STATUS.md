@@ -12,6 +12,18 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## ZIP WinZip AES metadata consistency, WP-16 (26 October 2026)
+
+Project and product ZIP admission now refuses contradictory WinZip AES (AE-x)
+metadata by validated member name before any member codec opens: differing local
+and central 0x9901 fields, a 0x9901 field without method 99, method 99 without
+exactly one field, and method 99 without bit 0. This covers outer and nested
+project layers and direct, wrapper and inner product packages. Before, a nested
+protected payload accepted several such shapes and could inflate bytes that the
+raw method declares stored; the outer layer refused most with a misleading
+password error. Consistent AES stays unsupported encryption; no AES decryption
+or new compatibility claim. [Sources, measured behaviour and decision](research/2026-10-26-zip-aes-extra-field-consistency.md).
+
 
 ## Sortable catalogue table (26 October 2026 source)
 

@@ -27,6 +27,16 @@ pub(super) const DESCRIPTOR: &str =
     "its data descriptor disagrees with the central record (sizes/CRC)";
 /// The Unicode Path fields (0x7075) of the two headers differ.
 pub(super) const UNICODE: &str = "its local and central Unicode Path fields differ";
+/// The WinZip AES fields (0x9901) of the two headers differ.
+pub(super) const AES_FIELDS: &str = "its local and central WinZip AES fields (0x9901) differ";
+/// A WinZip AES field sits on a record whose method is not 99.
+pub(super) const AES_METHOD: &str = "a WinZip AES field (0x9901) requires compression method 99";
+/// Method 99 without exactly one WinZip AES field.
+pub(super) const AES_COUNT: &str =
+    "compression method 99 (WinZip AES) requires exactly one WinZip AES field (0x9901)";
+/// Method 99 without the encryption flag.
+pub(super) const AES_BIT0: &str =
+    "compression method 99 (WinZip AES) requires encryption flag (bit 0)";
 /// The record leaves bytes between itself and the next record (or the
 /// central directory), or overlaps it.
 pub(super) const LAYOUT: &str = "its local record does not end where the next record begins";
@@ -52,6 +62,11 @@ const DEFLATED: u16 = 8;
 const EMPTY_CRC: u32 = 0;
 const ZIP64_FIELD: u16 = 0x0001;
 const UNICODE_PATH_FIELD: u16 = 0x7075;
+/// APPNOTE 4.6.1 / Appendix E: the AE-x encryption structure.
+const AES_FIELD: u16 = 0x9901;
+/// APPNOTE 4.4.5 / Appendix E.4: the AE-x encryption marker method.
+const AES_MARKER_METHOD: u16 = 99;
+const ENCRYPTED_FLAG: u16 = 1;
 /// The 32-bit size value that defers to a zip64 extra field.
 const ZIP64_PLACEHOLDER: u32 = u32::MAX;
 
@@ -80,8 +95,8 @@ pub(super) struct Local {
 /// name, flags, method, CRC and both sizes (zip64-resolved); with bit 3,
 /// zeros or the central values in the local header and a descriptor
 /// (signature optional) right after the data that carries the central
-/// values; and equal Unicode Path fields, or none in either header.
-/// Returns the record's extent.
+/// values; and equal Unicode Path and WinZip AES fields, or none in either
+/// header. Returns the record's extent.
 pub(super) fn check(bytes: &[u8], start: usize, central: &Central) -> Result<Local, &'static str> {
     let header = bytes
         .get(start..start.saturating_add(LOCAL_HEADER_LEN))
@@ -129,13 +144,38 @@ pub(super) fn check(bytes: &[u8], start: usize, central: &Central) -> Result<Loc
         data_end
     };
     let central_fields = extra_fields(central.extra).ok_or(TRUNCATED)?;
-    if unicode_paths(&local_fields) != unicode_paths(&central_fields) {
+    if bodies(&local_fields, UNICODE_PATH_FIELD) != bodies(&central_fields, UNICODE_PATH_FIELD) {
         return Err(UNICODE);
+    }
+    // `zip` reads only the central field; a local-header reader the other.
+    if bodies(&local_fields, AES_FIELD) != bodies(&central_fields, AES_FIELD) {
+        return Err(AES_FIELDS);
     }
     Ok(Local {
         data: data_start..data_end,
         record: start..end,
     })
+}
+
+/// Checks that WinZip AE-x metadata is all or nothing (APPNOTE Appendix E,
+/// WP-16): method 99, bit 0 and exactly one 0x9901 field go together. `zip`
+/// otherwise takes the field's method for any record, so a plaintext record
+/// could inflate stored bytes that other readers return as they are. A
+/// consistent record is still unsupported encryption; field contents are
+/// `zip`'s to refuse. Run after [`check`], which equalises both headers.
+pub(super) fn check_aes(central: &Central) -> Result<(), &'static str> {
+    let fields = extra_fields(central.extra).ok_or(TRUNCATED)?;
+    let count = bodies(&fields, AES_FIELD).len();
+    if central.method != AES_MARKER_METHOD {
+        return if count == 0 { Ok(()) } else { Err(AES_METHOD) };
+    }
+    if count != 1 {
+        return Err(AES_COUNT);
+    }
+    if central.flags & ENCRYPTED_FLAG == 0 {
+        return Err(AES_BIT0);
+    }
+    Ok(())
 }
 
 /// Checks that a plaintext directory record holds an empty payload (round 3, N12;
@@ -249,10 +289,11 @@ fn extra_fields(block: &[u8]) -> Option<Vec<(u16, &[u8])>> {
     Some(fields)
 }
 
-fn unicode_paths<'a>(fields: &[(u16, &'a [u8])]) -> Vec<&'a [u8]> {
+/// The bodies of every field with header `id`, in block order.
+fn bodies<'a>(fields: &[(u16, &'a [u8])], id: u16) -> Vec<&'a [u8]> {
     fields
         .iter()
-        .filter(|(id, _)| *id == UNICODE_PATH_FIELD)
+        .filter(|(field, _)| *field == id)
         .map(|(_, body)| *body)
         .collect()
 }

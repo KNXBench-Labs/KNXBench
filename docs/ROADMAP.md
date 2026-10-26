@@ -11,6 +11,8 @@ folders, Flow group names, the version timeline and sortable catalogue columns.
 Native/model 16 and product database 28 are unchanged. No hardware support,
 recovery guarantee or ETS equivalence follows; issue #30, S2-02 and S2-03 stay
 open. [Release scope and boundaries](releases/alpha17.md).
+Publication is verified at immutable `a9ea32d72364478b25e158d0b95465af7a4702df`
+([public verification record](evidence/release-alpha17-2026-10-26.json)).
 Work merged on main after `20ab2f7ea` belongs to the next alpha.
 
 ## Deliveries up to the Alpha 17 cutoff

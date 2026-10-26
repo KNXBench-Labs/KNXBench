@@ -1,0 +1,252 @@
+{
+  "schema": "knxbench-release-publication/1",
+  "tag": "v0.1.0-alpha.17",
+  "tag_object": "0fd5fabda16d61d9cac8ac27d1e91715e7a489b7",
+  "candidate": "a9ea32d72364478b25e158d0b95465af7a4702df",
+  "source_cutoff": "20ab2f7ea",
+  "published_date": "2026-10-26",
+  "release_url": "https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.17",
+  "prerelease": true,
+  "draft": false,
+  "source_acceptance": "../releases/alpha17.md#acceptance-and-verification",
+  "acceptance_boundary": {
+    "runtime_revision": "a9ea32d72364478b25e158d0b95465af7a4702df",
+    "method": "One tools/run_package_gate.py --full on the frozen candidate plus release extras; frozen inputs, no user data touched.",
+    "package_gate": {
+      "result": "success",
+      "web_gate_stages": 73,
+      "vitest": 4553,
+      "browser": {
+        "total": 925,
+        "functional": 856,
+        "exclusive": 69,
+        "includes_production_suites": true
+      },
+      "rust": {
+        "passed": 7003,
+        "failed": 0,
+        "ignored": 233,
+        "binaries": 56
+      },
+      "bindings": 62,
+      "corpus": {
+        "passed": 155,
+        "total": 155,
+        "targets": 9
+      },
+      "other_stages": [
+        "fmt",
+        "clean-desktop",
+        "clippy",
+        "website tests",
+        "story tests"
+      ]
+    },
+    "release_extras": {
+      "playwright_configs": {
+        "issue09": 14,
+        "monitor-control": 7,
+        "address-unavailable": 4,
+        "device-checks": 4,
+        "service-control": 4,
+        "site": 4,
+        "support": 4
+      },
+      "device_diagnostics": {
+        "passed": 8,
+        "transport": "loopback simulator"
+      },
+      "native_evidence": 12,
+      "native_edit_specs": [
+        "rename",
+        "functions",
+        "name-recipe"
+      ],
+      "product_opt_ins": {
+        "parameter_views_corpus": 1,
+        "program_code": 5,
+        "standalone_packages": 3
+      },
+      "pinned": {
+        "legacy_member_names_corpus": {
+          "passed": 1,
+          "input": "Owner-authorized exact restoration of the same 111-file archived selection as Alpha 16."
+        },
+        "corpus_compatibility_matrix": {
+          "first_attempt": {
+            "result": "red",
+            "classification": "harness error, not product",
+            "cause": "Gate harness placed the matrix output on the same filesystem as the restored corpus; the test's guard refused before measuring."
+          },
+          "rerun": {
+            "result": "passed",
+            "tests": 1,
+            "seconds": 91.5,
+            "change": "Output moved to a different filesystem; same candidate, same compiled build, frozen inputs."
+          }
+        }
+      },
+      "result": "green"
+    },
+    "gate_attempts": {
+      "full_gate_attempts": 1,
+      "stages": 30,
+      "red_stages": 2,
+      "red_cause": "pinned-matrix harness output placement",
+      "targeted_reruns": 1,
+      "targeted_rerun_result": "green",
+      "product_findings": 0
+    }
+  },
+  "dry_runs": [
+    {
+      "workflow": "Linux AppImage",
+      "run_id": 40398087813,
+      "head_sha": "a9ea32d72364478b25e158d0b95465af7a4702df",
+      "conclusion": "success",
+      "publish_jobs": "skipped"
+    },
+    {
+      "workflow": "Docker release",
+      "run_id": 40398091407,
+      "head_sha": "a9ea32d72364478b25e158d0b95465af7a4702df",
+      "conclusion": "success",
+      "publish_jobs": "skipped"
+    }
+  ],
+  "workflows": [
+    {
+      "workflow": "Linux AppImage",
+      "run_id": 40406000191,
+      "head_sha": "a9ea32d72364478b25e158d0b95465af7a4702df",
+      "event": "tag push",
+      "conclusion": "success",
+      "publication_success": true,
+      "jobs": [
+        {
+          "name": "Build AppImage",
+          "conclusion": "success"
+        },
+        {
+          "name": "Publish tag release",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "workflow": "Docker release",
+      "run_id": 40406000758,
+      "head_sha": "a9ea32d72364478b25e158d0b95465af7a4702df",
+      "event": "tag push",
+      "conclusion": "success",
+      "publication_success": true,
+      "jobs": [
+        {
+          "name": "Build linux/amd64",
+          "conclusion": "success"
+        },
+        {
+          "name": "Build linux/arm64",
+          "conclusion": "success"
+        },
+        {
+          "name": "Publish multi-arch image",
+          "conclusion": "success"
+        }
+      ]
+    }
+  ],
+  "assets": [
+    {
+      "name": "KNXBench_0.1.0-alpha.17_amd64.AppImage",
+      "bytes": 92047864,
+      "sha256": "cd1f0cdf129bfad9e143062e4395c52f9376fa49a51c35145a5c0046a49e1d8a",
+      "provider_digest": "sha256:cd1f0cdf129bfad9e143062e4395c52f9376fa49a51c35145a5c0046a49e1d8a",
+      "download_url": "https://github.com/KNXBench-Labs/KNXBench/releases/download/v0.1.0-alpha.17/KNXBench_0.1.0-alpha.17_amd64.AppImage"
+    },
+    {
+      "name": "SHA256SUMS",
+      "bytes": 194,
+      "sha256": "45771297d899b32c10cd0a17d6db2602fd4a2c25fe5a23a330a05b581bda4c1b",
+      "provider_digest": "sha256:45771297d899b32c10cd0a17d6db2602fd4a2c25fe5a23a330a05b581bda4c1b",
+      "download_url": "https://github.com/KNXBench-Labs/KNXBench/releases/download/v0.1.0-alpha.17/SHA256SUMS"
+    },
+    {
+      "name": "knx-mcp-x86_64-linux",
+      "bytes": 13387624,
+      "sha256": "2f0ec025bb9e714766e35f9d02fc83b7c0926b9701ce3319fec86a509a31345f",
+      "provider_digest": "sha256:2f0ec025bb9e714766e35f9d02fc83b7c0926b9701ce3319fec86a509a31345f",
+      "download_url": "https://github.com/KNXBench-Labs/KNXBench/releases/download/v0.1.0-alpha.17/knx-mcp-x86_64-linux"
+    }
+  ],
+  "sha256sums_check": "All three public assets downloaded; sha256sum -c SHA256SUMS OK; provider digests equal the local hashes.",
+  "mcp_version": "0.1.0-alpha.17+ga9ea32d",
+  "server_version_in_image": "0.1.0-alpha.17+ga9ea32d",
+  "build_suffix_is_tag_prefix": true,
+  "docker": {
+    "image": "docker.io/knxbench/knxbench-server:0.1.0-alpha.17",
+    "index_digest": "sha256:cd57fd5c035cc21ab3f5755a57f43e04bbba88d8676674f5bd8fe0b0b27304e0",
+    "latest_index_digest_equal": true,
+    "platforms": [
+      "linux/amd64",
+      "linux/arm64"
+    ],
+    "attestation_entries": 2,
+    "oci_labels": {
+      "revision": "a9ea32d72364478b25e158d0b95465af7a4702df",
+      "version": "v0.1.0-alpha.17"
+    },
+    "anonymous_version_pull": "ok",
+    "native_manifest_digests": "not recorded in this file",
+    "arm64_runtime": "not executed locally; built and published by CI only"
+  },
+  "smokes": {
+    "isolation": "Network-isolated server, loopback-only client.",
+    "authenticated_https": {
+      "result": "PASS",
+      "steps": [
+        "healthz",
+        "401 unauthenticated",
+        "login",
+        "version",
+        "new project 0 errors",
+        "save-as",
+        "replacement",
+        "reopen"
+      ]
+    },
+    "docker_migration": {
+      "result": "PASS",
+      "fixture": "crates/knx-store/tests/fixtures/native13-before-notes-saved.sqlite",
+      "open_errors": 0,
+      "reopen_errors": 0,
+      "projected_names_identical": "2/2",
+      "saved_schema": 16,
+      "original_fixture_unchanged": true
+    },
+    "appimage": {
+      "result": "PASS",
+      "libwayland_client_bundled": false,
+      "start": "Headless Broadway in a network namespace (extracted image)",
+      "api_version": "0.1.0-alpha.17+ga9ea32d",
+      "frontend_http": 200,
+      "egl_abort": false
+    }
+  },
+  "public_artifact_verification": "PASS",
+  "not_executed": [
+    "FUSE launch",
+    "interactive GUI",
+    "physical KNX hardware check",
+    "ARM64 image runtime (local)"
+  ],
+  "website": {
+    "status": "not executed",
+    "scope": "Pages deployment and live verification of the Alpha 17 docs/site successor are not part of this record."
+  },
+  "boundaries": [
+    "Experimental System-2 scope remains UP 258D12 application M-0001_A-9205-04-9270 only; simulated/loopback evidence is not physical-device or recovery certification, general System-2 support or ETS parity.",
+    "Native/store and model schema 16; product database 28, unchanged from Alpha 16. Device backup format 2 and new activity-history/System-2 records are refused by Alpha 16; opening Alpha 17 saves in Alpha 16 is not tested.",
+    "KNX-compatible, not KNX-certified."
+  ]
+}

@@ -11,6 +11,12 @@ and claims, keeps the cause of failed downloads and adds association links to
 comparison adoption. None of this is new hardware support; new download, System-2
 and diagnostic behaviour is tested with simulated or loopback transports only.
 [Release scope, upgrade notes and boundaries](../releases/alpha17.md).
+Publication is verified at immutable `a9ea32d72364478b25e158d0b95465af7a4702df`:
+both release workflows succeeded, public asset checksums/digests and the Docker
+amd64/arm64 index and revision match the tag, and isolated smokes on the public
+artifacts passed. No FUSE launch, interactive GUI, hardware or local ARM64 run.
+[Public verification record](../evidence/release-alpha17-2026-10-26.json) ·
+[acceptance](../releases/alpha17.md#acceptance-and-verification).
 
 | Capability | Boundary |
 | --- | --- |

@@ -1,4 +1,13 @@
-# Alpha 17 — pre-release
+# Alpha 17 — published pre-release
+
+> **Published 26 October 2026** as `v0.1.0-alpha.17` (annotated tag object
+> `0fd5fabda16d61d9cac8ac27d1e91715e7a489b7`) at immutable commit
+> `a9ea32d72364478b25e158d0b95465af7a4702df`. The normal AppImage/MCP/checksum
+> and amd64+arm64 Docker publication workflows succeeded. Downloaded public
+> asset sizes/SHA-256/provider digests, the Docker index digest and the OCI
+> revision label are verified against this tag; version and `latest` shared the
+> index at readback. [Public verification record](../evidence/release-alpha17-2026-10-26.json).
+> This is a pre-release, not a stability or physical-device certification.
 
 Alpha 17 covers source changes since `v0.1.0-alpha.16`. It answers issue #30 for
 the experimental UP 258D12 System-2 download, makes the regular memory download
@@ -205,6 +214,78 @@ Before upgrading, close KNXBench and keep independent copies of native projects,
 the closed product catalogue and all Docker/server data directories, plus the
 original `.knxproj`/`.knxprod` files. In-file history and backups do not replace
 those copies; going back means restoring them. Update `knx-mcp` with the app.
+
+## Acceptance and verification
+
+**Source gate** on candidate `a9ea32d72` with frozen inputs and no user data
+touched: `tools/run_package_gate.py --full` passed: format, web gate with 73
+stages (Vitest 4553; browser 925 = 856 functional + 69 exclusive, including the
+production suites), clean desktop, clippy, Rust 7003 passed / 0 failed / 233
+ignored in 56 binaries, bindings 62, corpus 155/155 in 9 targets, website and
+story tests.
+
+**Release extras**, all green: seven extra Playwright configs (issue09 14,
+monitor-control 7, address-unavailable 4, device-checks 4, service-control 4,
+site 4, support 4), device-diagnostics 8 against the loopback simulator, native
+evidence 12, the three native edit specs (rename, functions, name recipe), the
+product opt-ins `parameter_views_corpus` 1, `program_code` 5 and
+`standalone_packages` 3, and the pinned `legacy_member_names_corpus` 1 on the
+owner-authorized exact restoration of the same 111-file archived selection as
+Alpha 16. The pinned `corpus_compatibility_matrix` was **red on the first
+attempt**: the gate harness put the matrix output on the same filesystem as the
+restored corpus, and the test's guard refused before measuring anything. That is
+a harness error, not a product finding, and it stays recorded as red. A rerun
+with the output on a different filesystem, same candidate, same compiled build
+and frozen inputs passed (1 test, 91.5 s).
+
+**Packaging dry runs** on the same commit before the tag: AppImage run
+`40398087813` and Docker run `40398091407`, both successful with their publish
+jobs skipped.
+
+**Public verification** after publication: tag-push workflows AppImage
+`40406000191` (Build AppImage, Publish tag release) and Docker `40406000758`
+(Build linux/amd64, Build linux/arm64, Publish multi-arch image) succeeded.
+The three public assets were downloaded and `sha256sum -c SHA256SUMS` passed;
+provider digests equal the local hashes.
+
+| Public asset | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `KNXBench_0.1.0-alpha.17_amd64.AppImage` | 92047864 | `cd1f0cdf129bfad9e143062e4395c52f9376fa49a51c35145a5c0046a49e1d8a` |
+| `knx-mcp-x86_64-linux` | 13387624 | `2f0ec025bb9e714766e35f9d02fc83b7c0926b9701ce3319fec86a509a31345f` |
+| `SHA256SUMS` | 194 | `45771297d899b32c10cd0a17d6db2602fd4a2c25fe5a23a330a05b581bda4c1b` |
+
+Docker `knxbench/knxbench-server:0.1.0-alpha.17` is OCI index
+`sha256:cd57fd5c035cc21ab3f5755a57f43e04bbba88d8676674f5bd8fe0b0b27304e0`
+for linux/amd64 and linux/arm64 (plus two attestation entries); `latest` had the
+same index digest at readback. OCI labels carry revision
+`a9ea32d72364478b25e158d0b95465af7a4702df` and version `v0.1.0-alpha.17`, and an
+anonymous pull of the version tag worked. `knx-mcp --version` and the image's
+`knx-server --version` both print `0.1.0-alpha.17+ga9ea32d`.
+
+Isolated smokes on the public artifacts (network-isolated server, loopback-only
+client): the authenticated HTTPS smoke passed (health, 401 without login, login,
+version, new project with 0 errors, save as, replacement, reopen). The Docker
+migration probe opened the committed synthetic native-13 fixture
+`crates/knx-store/tests/fixtures/native13-before-notes-saved.sqlite` with 0
+errors, saved it, switched away and reopened it with 0 errors; the projected
+names matched 2/2, the saved schema is 16 and the original fixture is unchanged.
+The extracted AppImage bundles no `libwayland-client`; a headless Broadway start
+in a network namespace answered `/api/version` with `0.1.0-alpha.17+ga9ea32d`,
+served the frontend (200) and showed no EGL abort.
+
+**Not verified:** no FUSE launch, interactive GUI or physical KNX hardware check;
+the ARM64 image was built and published by CI but not run locally.
+
+### By the numbers
+
+- **1** candidate. It is the one you are downloading.
+- **1** full gate attempt with **30** stages. **2** of them went red, both in the
+  pinned-matrix harness, which parked its output on the wrong filesystem. **1**
+  targeted rerun with the output moved: green. Product findings: **0**.
+- **7003** Rust tests passed, **4553** Vitest tests, **925** browser tests in the
+  package gate plus **73** in the release extras (eight extra browser configs,
+  native evidence and three native edit specs).
+- **2** dry runs, **2** publish runs, **0** accidental publications.
 
 ## Boundaries
 

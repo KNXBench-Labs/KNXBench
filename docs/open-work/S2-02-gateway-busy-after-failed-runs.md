@@ -1,7 +1,8 @@
 # S2-02 — System-2: misleading busy hint and missing refusal reason
 
-**Priority:** P1. **Status:** In progress: own-run hint/refusal diagnostic slice;
-actual reporter-side start failure remains unresolved.
+**Priority:** P1. **Status:** In progress: the own-run hint/refusal diagnostic
+slice ships in the published Alpha 17 (`v0.1.0-alpha.17`), so a reporter re-test
+can be requested; the actual reporter-side start failure remains unresolved.
 Listed in [OPEN_WORK](../OPEN_WORK.md). Origin: GitHub issue #30.
 
 ## Facts and unknowns (25 October 2026)
@@ -39,16 +40,17 @@ The reported short HTTP stall and the actual refused step remain unresolved.
   Transport loss, malformed replies and server errors retain unknown-outcome
   handling. No automatic retry, force-disconnect or clear-state control is added.
 
-Diagnostic slice delivered in `aa2f39f1b` (main `a15b8f0eb`); reporter re-test pending. See the source/HTTP contract in
+Diagnostic slice delivered in `aa2f39f1b` (main `a15b8f0eb`) and published in Alpha 17
+(tag commit `a9ea32d72`); no reporter re-test has been requested or run yet. See the source/HTTP contract in
 [alpha16-system2-http-mount](../contracts/alpha16-system2-http-mount.md).
 
 ## Remaining investigation and closure
 
 1. Review and exercise this diagnostic slice with synthetic software/loopback
    fixtures, including zero device access for pre-connect refusals.
-2. Publish the accepted source revision before requesting a new reporter attempt.
-   A prior build cannot expose the newly retained reason. Preserve the original
-   private journals; do not post them publicly.
+2. Published in Alpha 17: a new reporter attempt on `v0.1.0-alpha.17` can now be
+   requested. A prior build cannot expose the newly retained reason. Preserve the
+   original private journals; do not post them publicly.
 3. Use the new reason to investigate the actual start failure. Shared-lock
    conflicts and failure to acquire the process lease currently share
    `gatewayBusy`, including lease-file/runtime I/O errors; the token alone does

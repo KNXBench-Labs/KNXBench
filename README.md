@@ -107,6 +107,9 @@ Retained bytes are not a promise of complete ETS semantics.
 > hardware support. [Release scope](docs/releases/alpha17.md) lists the scope, upgrade
 > notes and boundaries. Native/model **16** and product database **28** are unchanged
 > from Alpha 16; no migration is needed.
+> [Public verification](docs/evidence/release-alpha17-2026-10-26.json) confirms the
+> GitHub downloads/checksums and the Docker amd64/arm64 index and revision at the
+> immutable tag. This remains a pre-release.
 
 ## See it in action
 
@@ -173,7 +176,8 @@ Open <https://127.0.0.1:8484>, sign in with that password, and choose **New proj
 import a `.knxproj`. Your projects live in `data/` and survive restarts.
 
 The Alpha 17 image is published for **x86-64 (`amd64`) and 64-bit Arm
-(`arm64`)**. `latest` follows published releases, including
+(`arm64`)**; its index and revision label were verified against the immutable
+release tag (the arm64 image is CI-built and was not run locally). `latest` follows published releases, including
 alphas, not the newest source or a promise of stability. To stay on a specific
 release, use a version tag in both commands (`0.1.0-alpha.17`)
 ([tags and details](docs/manual/user-guide/11-web-and-docker.md#ready-made-image-from-docker-hub)).
@@ -209,7 +213,8 @@ chmod +x KNXBench_0.1.0-alpha.17_amd64.AppImage
 ./KNXBench_0.1.0-alpha.17_amd64.AppImage
 ```
 
-The `v0.1.0-alpha.17` AppImage is x86-64 only.
+The `v0.1.0-alpha.17` AppImage is x86-64 only. Its public download size, SHA-256
+and provider digest match the [release verification record](docs/evidence/release-alpha17-2026-10-26.json).
 `--ignore-missing` skips the `knx-mcp` binary listed in the same checksum file.
 Source changes after this tag still need a
 [source build](docs/manual/getting-started/04-installation.md#c-from-source). The

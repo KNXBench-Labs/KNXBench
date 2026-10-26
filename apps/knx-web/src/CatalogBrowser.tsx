@@ -1,5 +1,5 @@
 /** Workbench view for browsing the product catalogue, installing packages, and creating devices. */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import * as api from "./api";
 import type {
@@ -11,22 +11,24 @@ import type {
 import type { ProjectTree } from "./bindings/ProjectTree";
 
 import { useProductLanguage } from "./productLanguage";
-import { LanguageFallbackBadge, fellBack } from "./languageFallback";
 import { useTranslate } from "./i18n";
-import { useActiveOptionScroll } from "./useActiveOptionScroll";
+import { useUiLanguage } from "./uiLanguage";
 import { describeCreationDiagnostic, newRequestId } from "./CatalogInstallReport";
 import CatalogUpdatePanel from "./CatalogUpdatePanel";
 import ProductInstallControl from "./ProductInstallControl";
-import CatalogItemIdentity from "./CatalogItemIdentity";
+import CatalogResultsTable from "./CatalogResultsTable";
+import { DEFAULT_CATALOG_SORT, displayText, productLabel, sortCatalogItems } from "./catalogTableSort";
 import { useOptionalCatalogueJobs } from "./CatalogueJobsContext";
 import CatalogCleanupDialog, { type CatalogCleanupResult } from "./CatalogCleanupDialog";
 
 // T2 (GAP_ANALYSIS_ETS.md) — the device-from-catalog workspace. Feeds T1's
-// `Command::CreateDevice` (backend-only since 2026-09-08). The search input is a combobox
-// over the results list: ArrowUp/ArrowDown move a highlight and Enter
-// picks the highlighted item, pre-filling the name field exactly as
-// clicking the row does — it does not create the device, since creation
-// stays behind the name field's own Enter/Create.
+// `Command::CreateDevice` (backend-only since 2026-09-08). The search field's arrow keys
+// move a highlight through the results table's rows
+// in their visible (sorted) order and Enter picks the highlighted item,
+// pre-filling the name field exactly as selecting the row does — it does not
+// create the device, since creation stays behind the name field's own Enter/Create.
+// The table keeps native table semantics, so the highlight is announced through a polite
+// status region instead of an aria-activedescendant that would point outside the input.
 type CreateArgs = [
   lineId: number | null, catalogItemId: string, name: string, quantity: number, requestId: string,
   options: api.CatalogCreateOptions,
@@ -56,7 +58,12 @@ export default function CatalogBrowser(props: {
   const [cleanupOpen, setCleanupOpen] = useState(false);
   // Kept here, not in the dialog: the result outlives a dialog that closes.
   const [cleanupResult, setCleanupResult] = useState<CatalogCleanupResult | null>(null);
-  const [highlight, setHighlight] = useState(0);
+  const [uiLanguage] = useUiLanguage();
+  const [sort, setSort] = useState(DEFAULT_CATALOG_SORT);
+  // The highlight is a catalogue id, so re-sorting keeps it on the same product.
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+  // Spoken text for the last keyboard move only; re-sorts and clicks leave it alone.
+  const [announcement, setAnnouncement] = useState("");
   const [selected, setSelected] = useState<CatalogItem | null>(null);
   const [name, setName] = useState("");
   const [quantity, setQuantity] = useState("1");
@@ -82,7 +89,12 @@ export default function CatalogBrowser(props: {
   const filtersRef = useRef({ manufacturer: "", search: "" });
   const createInFlightRef = useRef(false);
   const searchRef = useRef<HTMLInputElement>(null);
-  const activeOptionRef = useActiveOptionScroll(highlight, items, active);
+  const manufacturerNames = useMemo(() => new Map(manufacturers.map((m) => [m.id, displayText(m.name) || m.id])), [manufacturers]);
+  // The returned rows are everything the filters matched (the server applies no cap or
+  // paging); sorting orders that set in place on a copy and never re-queries.
+  const visibleItems = useMemo(() => sortCatalogItems(items, sort, uiLanguage, manufacturerNames),
+    [items, sort, uiLanguage, manufacturerNames]);
+  const highlight = Math.max(0, visibleItems.findIndex((row) => row.id === highlightId));
   const quantityNumber = Number(quantity);
   const validQuantity = /^\d+$/.test(quantity) && quantityNumber >= 1 && quantityNumber <= 32;
 
@@ -96,8 +108,9 @@ export default function CatalogBrowser(props: {
     return () => { current = false; };
   }, [catalogueRevision]);
 
+  // The highlight survives a refresh or filter while its item is still listed.
   useEffect(() => {
-    setHighlight(0);
+    setHighlightId((id) => (id !== null && items.some((row) => row.id === id) ? id : null));
   }, [items]);
 
   // Debounced so a fast typist doesn't fire one request per keystroke —
@@ -133,14 +146,14 @@ export default function CatalogBrowser(props: {
   }
 
   function handleSearchKeyDown(e: KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "ArrowDown") {
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault();
-      setHighlight((h) => Math.min(h + 1, items.length - 1));
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setHighlight((h) => Math.max(h - 1, 0));
+      const index = e.key === "ArrowDown" ? Math.min(highlight + 1, visibleItems.length - 1) : Math.max(highlight - 1, 0);
+      const row = visibleItems[index];
+      setHighlightId(row?.id ?? null);
+      if (row) setAnnouncement(t("catalogTable.highlighted", { name: productLabel(row), index: index + 1, count: visibleItems.length }));
     } else if (e.key === "Enter") {
-      const item = items[highlight];
+      const item = visibleItems[highlight];
       if (item) pick(item);
     }
   }
@@ -291,48 +304,24 @@ export default function CatalogBrowser(props: {
         <option value="">{t("catalog.allManufacturers")}</option>
         {manufacturers.map((m) => (
           <option key={m.id} value={m.id}>
-            {m.name ?? m.id}
+            {displayText(m.name) || m.id}
           </option>
         ))}
       </select>
       <input
         ref={searchRef}
+        type="search"
         value={search}
         onChange={(e) => changeSearch(e.target.value)}
         onKeyDown={handleSearchKeyDown}
         placeholder={t("catalog.searchPlaceholder")}
-        role="combobox"
-        aria-haspopup="listbox"
-        aria-expanded={items.length > 0}
-        aria-controls="catalog-results"
-        aria-activedescendant={items[highlight] ? `catalog-option-${highlight}` : undefined}
+        aria-label={t("catalog.searchPlaceholder")}
       />
+      <div className="catalog-highlight-status" role="status" aria-live="polite" aria-atomic="true">{active ? announcement : ""}</div>
       {itemsLoaded && items.length === 0 && <p className="search-empty">{t("catalog.noMatches")}</p>}
-      <ul className="search-results" id="catalog-results" role="listbox">
-        {items.map((item, i) => (
-          <li
-            key={item.id}
-            id={`catalog-option-${i}`}
-            ref={i === highlight ? activeOptionRef : undefined}
-            role="option"
-            aria-selected={selected?.id === item.id}
-            aria-disabled={batchOutcomeUnconfirmed}
-            className={`${selected?.id === item.id ? "search-result selected" : "search-result"}${i === highlight ? " active" : ""}${batchOutcomeUnconfirmed ? " disabled" : ""}`}
-            onClick={() => pick(item)}
-          >
-            {item.name ?? item.id}
-            {language !== null && fellBack(item.name, item.nameLanguage) && (
-              <LanguageFallbackBadge selected={language} source={item.sourceLanguage} />
-            )}
-            {item.number ? ` (${item.number})` : ""}
-            {item.visibleDescription ? ` — ${item.visibleDescription}` : ""}
-            {language !== null && fellBack(item.visibleDescription, item.visibleDescriptionLanguage) && (
-              <LanguageFallbackBadge selected={language} source={item.sourceLanguage} />
-            )}
-            <CatalogItemIdentity item={item} />
-          </li>
-        ))}
-      </ul>
+      <CatalogResultsTable rows={visibleItems} sort={sort} onSort={setSort} manufacturerNames={manufacturerNames}
+        language={language} highlightIndex={highlight} selectedId={selected?.id ?? null}
+        disabled={batchOutcomeUnconfirmed} active={active} onPick={pick} />
       {selected && !createdWithDiagnostics && (
         <>
           <div className="catalog-create-row">

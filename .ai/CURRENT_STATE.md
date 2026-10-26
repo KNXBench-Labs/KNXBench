@@ -1,10 +1,11 @@
 # Restart snapshot
 
-Updated: 2026-10-26 02:58 CET. Operational snapshot, not an append-only journal.
-## WP-24 (2026-10-26, taken by next-open-tasks WebUI session)
-- Branch `feat/wp24-catalogue-table-20261026`; catalogue table/sorting UI/tests only.
-- Stable product identities, selection/actions and filters preserved; no DB change.
-- WP-21/22/23 parallel; no bus/deployment; preserve System2 activity messages.
+Updated: 2026-10-26 06:17 CET. Operational snapshot, not an append-only journal.
+## WP-24 (26 October 2026, this WebUI session)
+- `feat/wp24-catalogue-table-20261026`: implementation/corrections independently APPROVE.
+- Native table, stable identities and polite keyboard status; no DB/bus/deployment change.
+- Next: main-first integration after WP-22, complete scoped gate and publication.
+- WP-21 delivered/retired; WP-23 gate active; WP-22 reviewed and queued; root preserved.
 ## Other owners and preservation
 - Root intentionally old/dirty: preserve private/untracked files and other edits.
   Alpha16 belongs to another track. No release/deployment/hardware authority.

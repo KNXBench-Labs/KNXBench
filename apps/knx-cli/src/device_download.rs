@@ -642,12 +642,24 @@ pub struct Witnessed {
 
 impl Witnessed {
     /// Records the result once: a failed run with its diagnostic. A history
-    /// that refuses the diagnostic still gets the failed row, cause not recorded.
-    pub fn record(&self, activity: &mut DownloadGuard) -> std::io::Result<()> {
+    /// that refuses the diagnostic still gets the failed row, cause not recorded,
+    /// with an operator warning. If neither record succeeds, keep the first error.
+    pub fn record(
+        &self,
+        activity: &mut DownloadGuard,
+        warnings: &mut impl Write,
+    ) -> std::io::Result<()> {
         match (&self.result, &self.failure) {
             (DownloadResult::Failed { written }, Some(failure)) => activity
                 .record_failure(*written, failure)
-                .or_else(|_| activity.record_result(&self.result)),
+                .or_else(|original| {
+                    activity.record_result(&self.result).map_err(|_| original)?;
+                    let _ = writeln!(
+                        warnings,
+                        "WARNING: history kept the failure without its cause"
+                    );
+                    Ok(())
+                }),
             _ => activity.record_result(&self.result),
         }
     }
@@ -713,6 +725,25 @@ pub async fn execute_with_history<T: ManagementTransport>(
     .await
 }
 
+/// Execute and record one transfer, as used by restore and regular download.
+/// Recording never changes the device outcome; warnings go to the caller's output.
+pub async fn execute_and_record_download<T: ManagementTransport>(
+    transport: &T,
+    authorisation: WriteAuthorisation,
+    keying: DownloadKeying,
+    timing: SessionTiming,
+    run: DownloadRun<'_>,
+    activity: &mut DownloadGuard,
+    out: &mut impl Write,
+) -> (Witnessed, bool) {
+    let witnessed =
+        execute_with_history(transport, authorisation, keying, timing, run, activity, out).await;
+    let recorded = witnessed.record(activity, out).map_err(|error| {
+        eprintln!("device outcome is witnessed, but activity history could not record it: {error}; do not retry automatically");
+    }).is_ok();
+    (witnessed, recorded)
+}
+
 /// A regular download's witnessed transfer and the read-only check after it.
 pub struct RegularDownload {
     /// The transfer's own result, never changed by the check.
@@ -747,11 +778,9 @@ pub async fn execute_regular_download<T: ManagementTransport>(
 ) -> RegularDownload {
     let target = authorisation.target();
     let plan = run.plan;
-    let witnessed =
-        execute_with_history(transport, authorisation, keying, timing, run, activity, out).await;
-    let recorded = witnessed.record(activity).map_err(|error| {
-        eprintln!("device outcome is witnessed, but activity history could not record it: {error}; do not retry automatically");
-    }).is_ok();
+    let (witnessed, recorded) =
+        execute_and_record_download(transport, authorisation, keying, timing, run, activity, out)
+            .await;
     let Witnessed {
         result,
         stopped_in_step,

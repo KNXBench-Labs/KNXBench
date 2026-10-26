@@ -3276,7 +3276,7 @@ fn run_device_restore(args: &[String]) -> ExitCode {
                 return ExitCode::FAILURE;
             }
         };
-        let result = device_download::execute_with_history(
+        let (result, recorded) = device_download::execute_and_record_download(
             &tunnel,
             authorisation,
             keying,
@@ -3293,9 +3293,6 @@ fn run_device_restore(args: &[String]) -> ExitCode {
             &mut activity,
             &mut std::io::stdout(),
         ).await;
-        let recorded = result.record(&mut activity).map_err(|error| {
-            eprintln!("device outcome is witnessed, but activity history could not record it: {error}; do not retry automatically");
-        }).is_ok();
         let cleanup_ok = match tunnel.disconnect().await {
             Ok(()) => true,
             Err(error) => {

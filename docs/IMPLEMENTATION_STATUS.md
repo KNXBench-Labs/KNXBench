@@ -184,16 +184,17 @@ Published as `5f1ad454e` after independent APPROVE and all 14 integrated stages
 A wrong-width resource-pointer answer stops the legacy path before the first write.
 Its refusal names object, element count, actual byte count and a bounded hex prefix
 in the private journal and CLI error result. Raw text, bytes and the prefix stay
-redacted from HTTP status and the shareable report on every build. The 26 October field reply now establishes two octets on object 1
+kept out of the HTTP status and the shareable report. The 26 October field reply now establishes two octets on object 1
 only; an independently retrieved public package declares two/four-octet metadata.
 The exact-profile width-aware correction is published as `54b052885`; independent
 whole-feature and correction reviews APPROVE, all 15 integrated stages passed
 ([record](status/2026-10-26-up258-pid7-width.md),
 [research](research/2026-10-26-up258-pid7-width.md)).
-[S2-01](open-work/S2-01-pid7-raw-response.md) remains P1: a closed-allowlist typed
-projection (reason, object, property, element/octet counts) is **implemented as an
-reviewed candidate pending full package gates and acceptance, not
-delivered** ([dossier](status/2026-10-26-system2-safe-diagnostic-projection.md)).
+[S2-01](open-work/S2-01-pid7-raw-response.md) is **delivered** as `536e492bc`
+for its projection scope: a closed-allowlist typed diagnostic (run, reason, object,
+property, element/octet counts) reaches safe status, report, reopen and the EN/DE UI
+with the same privacy, no raw text or bytes
+([dossier](status/2026-10-26-system2-safe-diagnostic-projection.md)).
 Physical outcome and recovery remain unverified;
 [S2-02](open-work/S2-02-gateway-busy-after-failed-runs.md) remains a separate investigation.
 

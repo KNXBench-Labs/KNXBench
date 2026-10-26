@@ -8,7 +8,7 @@ import ResizableTable, { TableColumnReset } from "./ResizableTable";
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import { FlowAnimator, type AnimatorScheduler, type AnimatorSink, type DrawnPulse } from "./flowAnimator";
 import { type DynamicNode } from "./flowDynamics";
-import { readableLayout, fitFlowCamera, flowFootprint, displayFlowLabel, routeFlowEdge, DETAILED_ROUTING_NODES, DETAILED_ROUTING_EDGES } from "./flowPresentation";
+import { readableLayout, fitFlowCamera, flowFootprint, displayFlowLabel, displayBadgeLabel, routeFlowEdge, DETAILED_ROUTING_NODES, DETAILED_ROUTING_EDGES } from "./flowPresentation";
 import { nodeFlowTarget, type FlowNavigation, type FlowTarget } from "./flowNavigation";
 import FlowImageExportDialog from "./FlowImageExportDialog";
 import { selectSvgViewport, type ViewSelection } from "./flowImageExport";
@@ -262,8 +262,17 @@ function Diagnostics({ model }: { model: FlowModel }) {
 
 function edgeLabel(edge: FlowEdge): string {
   const labels = [...edge.groups.values()].map((group) => group.label);
-  const shown = labels.slice(0, EDGE_LABELS).join(", ");
+  const shown = labels.slice(0, EDGE_LABELS).map(displayFlowLabel).join(", ");
   return labels.length > EDGE_LABELS ? `${shown} +${labels.length - EDGE_LABELS}` : shown;
+}
+
+function edgeTitle(edge: FlowEdge): string {
+  return [...edge.groups.values()].map((group) => group.label).join(", ");
+}
+
+/** Full text as an SVG tooltip, only where the drawn text was shortened. */
+function FullText({ shown, full }: { shown: string; full: string }) {
+  return shown === full ? null : <title>{full}</title>;
 }
 
 const BOX = { width: VIEW_WIDTH, height: VIEW_HEIGHT };
@@ -663,7 +672,7 @@ export default function TelegramFlowView({ feed, navigation, onOpenWindow, captu
                       data-edge-id={edge.id}
                     >
                       <path d={geometry.path} markerEnd={`url(#${markerId})`} />
-                      <text x={geometry.label.x} y={geometry.label.y} className="flow-edge-label">{edgeLabel(edge)}</text>
+                      <text x={geometry.label.x} y={geometry.label.y} className="flow-edge-label">{edgeLabel(edge)}<FullText shown={edgeLabel(edge)} full={edgeTitle(edge)} /></text>
                     </g>
                   );
                 })}
@@ -695,7 +704,7 @@ export default function TelegramFlowView({ feed, navigation, onOpenWindow, captu
                     ) : (
                       <circle r={NODE_RADIUS} />
                     )}
-                    <text className="flow-node-label" y={-NODE_RADIUS - TEXT_CLEARANCE} aria-hidden="true">{displayFlowLabel(node.label)}</text>
+                    <text className="flow-node-label" y={-NODE_RADIUS - TEXT_CLEARANCE} aria-hidden="true">{displayFlowLabel(node.label)}<FullText shown={displayFlowLabel(node.label)} full={node.label} /></text>
                     <g className="flow-badges" aria-hidden="true">
                       {badges.current.map((slot, index) => (
                         <text
@@ -703,8 +712,11 @@ export default function TelegramFlowView({ feed, navigation, onOpenWindow, captu
                           className={`flow-badge${slot.origin === "configuredTarget" ? " flow-badge-inferred" : ""}`}
                           y={NODE_RADIUS + TEXT_CLEARANCE + 10 + index * BADGE_LINE}
                         >
-                          {displayFlowLabel(`${slot.origin === "configuredTarget" ? "◇ " : ""}${slot.gaLabel} ${slot.value}`)}
-
+                          {displayBadgeLabel(slot.origin === "configuredTarget" ? "◇ " : "", slot.gaLabel, slot.value)}
+                          <FullText
+                            shown={displayBadgeLabel(slot.origin === "configuredTarget" ? "◇ " : "", slot.gaLabel, slot.value)}
+                            full={`${slot.origin === "configuredTarget" ? "◇ " : ""}${slot.gaLabel} ${slot.value}`}
+                          />
                         </text>
                       ))}
                       {badges.overflow > 0 && (

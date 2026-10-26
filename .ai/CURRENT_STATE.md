@@ -3,8 +3,10 @@
 Updated: 2026-10-26 02:58 CET. Operational snapshot, not an append-only journal.
 ## Flow WP-23 (2026-10-26, taken by next-open-tasks WebUI session)
 - Branch `feat/wp23-flow-group-names-20261026`; flow labels/model/tests only.
-- Project-scoped names beside addresses, no bus access or project mutation.
-- WP-21 independently reserved on `feat/wp21-headline-typing-20261026`.
+- Reviewed source and Unicode correction APPROVE; final three-suite regression green.
+- Generation-bound labels retained; no bus access or project mutation.
+- Next: main-first integration after WP-21, complete scoped web gate and publication.
+- WP-21 final checks; WP-22/24 implementations isolated on their own branches.
 ## Other owners and preservation
 - Root intentionally old/dirty: preserve private/untracked files and other edits.
   Alpha16 belongs to another track. No release/deployment/hardware authority.

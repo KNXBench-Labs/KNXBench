@@ -72,7 +72,7 @@ test("device and GA links select the exact entity in the main editor and retain 
   await page.getByRole("navigation", { name: "Bus monitor", exact: true }).getByRole("button", { name: "Bus monitor", exact: true }).first().click();
   await expect(page.locator("g[data-zoom]")).toHaveAttribute("transform", camera!);
   await expect(page.locator(".flow-inspector h3")).toHaveText("Dimmer");
-  await page.locator(".flow-values").getByRole("button", { name: "1/0/1", exact: true }).click();
+  await page.locator(".flow-values").getByRole("button", { name: "1/0/1 (Light)", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Light", exact: true })).toBeVisible();
   expect(state.unexpected).toEqual([]);
 });
@@ -91,7 +91,7 @@ test("a Flow-window link changes selection only in the main editor", async ({ pa
   await expect(page.locator(".device-workspace h2")).toHaveText("Dimmer");
   await expect(popup.locator(".device-workspace, .project-explorer")).toHaveCount(0);
   await expect(node(popup, "Dimmer")).toBeVisible();
-  await popup.locator(".flow-values").getByRole("button", { name: "1/0/1", exact: true }).click();
+  await popup.locator(".flow-values").getByRole("button", { name: "1/0/1 (Light)", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Light", exact: true })).toBeVisible();
   expect(state.unexpected).toEqual([]); await popup.close();
 });

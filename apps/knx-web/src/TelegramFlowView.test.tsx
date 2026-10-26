@@ -126,9 +126,9 @@ describe("TelegramFlowView", () => {
     await render(model());
     expect(node("Switch").getAttribute("aria-label")).toBe("Switch. Project device.");
     expect(host!.querySelectorAll(".flow-edge-configured")).toHaveLength(2);
-    expect([...host!.querySelectorAll(".flow-edge-label")].map((label) => label.textContent)).toEqual(["1/0/1", "1/0/1"]);
-    expect(node("Switch").querySelector(".flow-badge")!.textContent).toBe("1/0/1 v1");
-    expect(node("Dimmer").querySelector(".flow-badge-inferred")!.textContent).toBe("◇ 1/0/1 v1");
+    expect([...host!.querySelectorAll(".flow-edge-label")].map((label) => label.textContent)).toEqual(["1/0/1 (Light)", "1/0/1 (Light)"]);
+    expect(node("Switch").querySelector(".flow-badge")!.textContent).toBe("1/0/1 (Light) v1");
+    expect(node("Dimmer").querySelector(".flow-badge-inferred")!.textContent).toBe("◇ 1/0/1 (Light) v1");
     expect(host!.querySelector(".flow-badges")!.getAttribute("aria-hidden")).toBe("true");
     expect(host!.querySelector(".flow-edge")!.closest("[aria-hidden]")).not.toBeNull();
     expect(host!.querySelector("[aria-live]")).toBeNull();
@@ -149,7 +149,7 @@ describe("TelegramFlowView", () => {
       "v1", "configured member (inferred from the project)", "Switch (1.1.1)", "1",
     ]);
     expect(inspector.textContent).toContain("From Switch · configured in the project");
-    expect(inspector.textContent).toContain("1/0/1: observed 1× (project evidence from interpretation 1)");
+    expect(inspector.textContent).toContain("1/0/1 (Light): observed 1× (project evidence from interpretation 1)");
     expect(inspector.querySelector(".flow-flags caption")!.textContent).toBe("Object #200 · Receive · active");
     expect([...inspector.querySelectorAll(".flow-flags tbody tr")].map((r) => r.textContent)).toEqual([
       "Communicationyes", "Readunknown", "Writeyes", "Transmitno", "Updateunknown", "Read on initunknown",
@@ -279,6 +279,53 @@ it.each(["en", "de"] as const)("%s inspector owns one reset across multiple conn
   await act(async () => resets[0].click());
   expect(first.getAttribute("aria-valuenow")).toBe(initial);
   expect(handles.every(handle => handle.getAttribute("aria-valuenow") === initial)).toBe(true);
+});
+
+describe("TelegramFlowView — group-address names", () => {
+  const LONG = "Wohnzimmer Deckenleuchte über dem Esstisch 照明 💡";
+  function namedModel(name: string): FlowModel {
+    const m = createFlowModel({ serverIncarnation: "inc-1", sessionId: 7 });
+    provideContext(m, "1", parseFlowSnapshot(snapshotJson({
+      devices: [{ deviceId: 1, installationId: 1, name: "Switch", individualAddressRaw: 0x1101 }],
+      groups: [{ gaRaw: LIGHT, gaId: 10, installationId: 1, name, dpt: "1.001", members: [member(1, "Send")] }],
+    })), flowNow());
+    admitRows(m, [row(1)], flowNow());
+    return m;
+  }
+
+  it("shows address and name on the node, edge, badge and Inspector, and names the node for assistive technology", async () => {
+    await render(namedModel("Living room light"));
+    const group = node("1/0/1 (Living room light)");
+    expect(group.getAttribute("aria-label")).toBe("1/0/1 (Living room light). Group address without a resolved configured member.");
+    expect(group.querySelector(".flow-node-label")!.textContent).toBe("1/0/1 (Living room light)");
+    expect([...host!.querySelectorAll(".flow-edge-label")].map((l) => l.textContent)).toEqual(["1/0/1 (Living room light)"]);
+    expect(group.querySelector(".flow-badge")!.textContent).toBe("1/0/1 (Living room light) v1");
+    await act(async () => group.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    expect(host!.querySelector("#flow-inspector-title")!.textContent).toBe("1/0/1 (Living room light)");
+    expect(host!.querySelector(".flow-values tbody th")!.textContent).toContain("1/0/1 (Living room light)");
+  });
+
+  it("shows only the address for an unnamed group, without parentheses", async () => {
+    await render(namedModel("  "));
+    expect(node("1/0/1").querySelector(".flow-node-label")!.textContent).toBe("1/0/1");
+    expect(host!.querySelector("svg")!.textContent).not.toContain("(");
+  });
+
+  it("keeps the address in a truncated label and offers the full name as a tooltip", async () => {
+    await render(namedModel(LONG));
+    const full = `1/0/1 (${LONG})`;
+    const label = node(full).querySelector(".flow-node-label")!;
+    expect(label.firstChild!.textContent!.startsWith("1/0/1 (")).toBe(true);
+    expect(label.firstChild!.textContent!.length).toBeLessThan(full.length);
+    expect(label.querySelector("title")!.textContent).toBe(full);
+    const edge = host!.querySelector(".flow-edge-label")!;
+    expect(edge.firstChild!.textContent!.startsWith("1/0/1 (")).toBe(true);
+    expect(edge.querySelector("title")!.textContent).toBe(full);
+    const badge = node(full).querySelector(".flow-badge")!;
+    expect(badge.firstChild!.textContent!.startsWith("1/0/1 (")).toBe(true);
+    expect(badge.firstChild!.textContent!.endsWith(" v1")).toBe(true);
+    expect(badge.querySelector("title")!.textContent).toBe(`${full} v1`);
+  });
 });
 
 tableColumnSmoke([["flow-flags", 2], ["flow-values", 5]], async () => {

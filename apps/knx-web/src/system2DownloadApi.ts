@@ -22,7 +22,7 @@ export interface System2Status {
   /** Allocations whose prior memory could not be read: no backup exists for them. */
   prestateUnreadableAllocations: { object: number; address: string; length: number }[];
 }
-/** `observed` is eight hex digits or "refused"; `operationIndex` is set only for in-procedure read-backs. */
+/** `observed` is eight hex digits, four for a two-octet reply, or "refused"; `operationIndex` is set only for in-procedure read-backs. */
 export interface System2PointerObservation {
   run: "download" | "restore"; phase: "prestate" | "inProcedure" | "final"; object: number; operationIndex: number | null; expected: string; observed: string; loadState: string;
 }
@@ -53,11 +53,12 @@ const previewCheck = object({ ...shared, preparationId: id, programId: nonempty,
   steps: strings, dataOctets: count, allocationOctets: count, notWrittenOctets: count, warnings: strings,
   confirmationPhrase: nonempty, hypothesisPhrase: nonempty, downloadPhrase: nonempty, releasePhrase: nonempty });
 const hex8: Check = (v) => typeof v === "string" && /^[0-9a-f]{8}$/.test(v);
+const hex4: Check = (v) => typeof v === "string" && /^[0-9a-f]{4}$/.test(v);
 const hexBytes: Check = (v) => typeof v === "string" && /^([0-9a-f]{2}){0,64}$/.test(v);
 const flag: Check = (v) => typeof v === "boolean";
 const token: Check = (v) => typeof v === "string" && /^[A-Za-z0-9]{1,64}$/.test(v);
 const observation = object({ run: (v) => v === "download" || v === "restore", phase: (v) => v === "prestate" || v === "inProcedure" || v === "final", object: (v) => count(v) && (v as number) <= 255,
-  operationIndex: nullable(count), expected: hex8, observed: (v) => v === "refused" || hex8(v), loadState: nonempty });
+  operationIndex: nullable(count), expected: hex8, observed: (v) => v === "refused" || hex8(v) || hex4(v), loadState: nonempty });
 const observations: Check = (v) => Array.isArray(v) && v.length <= 256 && v.every(observation) &&
   v.every((o: { phase: string; operationIndex: number | null }) => (o.phase === "inProcedure") === (o.operationIndex !== null));
 const unreadable = object({ object: (v) => count(v) && (v as number) <= 255, address: (v) => typeof v === "string" && /^[0-9a-f]{4}$/.test(v),

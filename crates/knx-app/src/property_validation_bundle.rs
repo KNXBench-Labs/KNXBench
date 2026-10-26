@@ -9,6 +9,7 @@ use knx_core::commissioning::{
     property_download::{PropertyDownloadPlan, PropertyDownloadStep, PropertyOperation},
 };
 use knx_core::{ContactableAddress, IndividualAddress};
+use knx_net::commissioning::pointer_width::{PointerWidthAdmission, PropertyPointerValue};
 use knx_net::commissioning::property_recovery::{
     ExperimentalPropertyPreconditions, PropertyPointerObservation, PropertyRecoveryRegion,
     PropertyRecoveryResource, PropertyRecoverySnapshot,
@@ -272,13 +273,41 @@ impl PreparedBundle {
         }
         Ok(plan)
     }
+    /// The bound recovery premise, including the PID 7 width rule this bundle's hardware
+    /// record admits. Format 1/2 and revision-1 hardware records stay four-octet only.
     pub fn preconditions(&self) -> io::Result<ExperimentalPropertyPreconditions> {
-        ExperimentalPropertyPreconditions::same_application_reinstallation(
-            &self.plan()?,
+        self.preconditions_for(&self.plan()?)
+    }
+    /// Same as `preconditions` for a plan the caller already reconstructed and validated,
+    /// so a fresh execution context still pays for one retained-source reconstruction.
+    pub(crate) fn preconditions_for(
+        &self,
+        plan: &PropertyDownloadPlan,
+    ) -> io::Result<ExperimentalPropertyPreconditions> {
+        let premise = ExperimentalPropertyPreconditions::same_application_reinstallation(
+            plan,
             self.binding.serial,
             self.binding.application,
         )
-        .map_err(|_| invalid("same-application recovery premise cannot represent this plan"))
+        .map_err(|_| invalid("same-application recovery premise cannot represent this plan"))?;
+        let Some(policy_objects) = self
+            .hardware_preparation
+            .as_ref()
+            .and_then(|h| h.pointer_width_objects())
+        else {
+            return Ok(premise);
+        };
+        let touched = premise
+            .source_pointers
+            .iter()
+            .map(|p| p.object)
+            .filter(|object| policy_objects.contains(object))
+            .collect();
+        let admission = PointerWidthAdmission::one_element_two_or_four(touched)
+            .map_err(|_| invalid("pointer width policy covers no object of this plan"))?;
+        premise
+            .with_pointer_width_admission(admission)
+            .map_err(|_| invalid("pointer width policy does not bind this plan"))
     }
     /// Rebind a simulated-prepared candidate to a physical device identity.
     ///
@@ -344,12 +373,60 @@ impl PreparedBundle {
 pub struct ResourceRecord {
     pub object: u8,
     pub state: u8,
-    pub pointer: [u8; 4],
+    pub pointer: PointerRecord,
     /// The device refused the PID_TABLE_REFERENCE read; `pointer` is then zero.
     /// Absent (Alpha 16 grammar) when a pointer was read.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub pointer_refused: bool,
 }
+/// A raw PID 7 reply as stored: a four-element array is today's grammar, a two-element
+/// array is a two-octet reply that only a width-admitting hardware record may carry.
+/// Any other length matches neither variant and is refused.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum PointerRecord {
+    Four([u8; 4]),
+    Two([u8; 2]),
+}
+impl From<[u8; 4]> for PointerRecord {
+    fn from(octets: [u8; 4]) -> Self {
+        Self::Four(octets)
+    }
+}
+impl From<PropertyPointerValue> for PointerRecord {
+    fn from(value: PropertyPointerValue) -> Self {
+        match value {
+            PropertyPointerValue::Four(octets) => Self::Four(octets),
+            PropertyPointerValue::Two(octets) => Self::Two(octets),
+        }
+    }
+}
+impl From<PointerRecord> for PropertyPointerValue {
+    fn from(record: PointerRecord) -> Self {
+        match record {
+            PointerRecord::Four(octets) => Self::Four(octets),
+            PointerRecord::Two(octets) => Self::Two(octets),
+        }
+    }
+}
+impl PointerRecord {
+    pub fn octets(&self) -> &[u8] {
+        match self {
+            Self::Four(octets) => octets,
+            Self::Two(octets) => octets,
+        }
+    }
+    /// Refuse a two-octet reply on an object the admission does not cover.
+    fn check_admitted(&self, object: u8, admission: &PointerWidthAdmission) -> io::Result<()> {
+        if matches!(self, Self::Two(_)) && !admission.applies_to(object) {
+            return Err(invalid(
+                "two-octet pointer is not admitted by this bundle's width policy",
+            ));
+        }
+        Ok(())
+    }
+}
+
 /// Readable per-object pointer observation: source expectation versus device read.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -357,7 +434,7 @@ pub struct PointerObservationRecord {
     pub object: u8,
     pub expected: [u8; 4],
     /// `None` when the device refused the read.
-    pub observed: Option<[u8; 4]>,
+    pub observed: Option<PointerRecord>,
     pub state: u8,
 }
 impl PointerObservationRecord {
@@ -365,15 +442,22 @@ impl PointerObservationRecord {
         Self {
             object: observation.object,
             expected: observation.expected,
-            observed: observation.observed,
+            observed: observation.observed.map(PointerRecord::from),
             state: observation.state.octet(),
         }
     }
-    pub fn to_observation(&self) -> io::Result<PropertyPointerObservation> {
+    /// Refuses a two-octet read the bundle's width admission does not cover.
+    pub fn to_observation(
+        &self,
+        admission: &PointerWidthAdmission,
+    ) -> io::Result<PropertyPointerObservation> {
+        if let Some(observed) = &self.observed {
+            observed.check_admitted(self.object, admission)?;
+        }
         Ok(PropertyPointerObservation {
             object: self.object,
             expected: self.expected,
-            observed: self.observed,
+            observed: self.observed.map(PropertyPointerValue::from),
             state: LoadState::from_octet(self.state)
                 .map_err(|_| invalid("pointer observation load state is unknown"))?,
         })
@@ -439,7 +523,7 @@ impl RecoveryRecord {
                 .map(|r| ResourceRecord {
                     object: r.object,
                     state: r.state.octet(),
-                    pointer: r.pointer.unwrap_or([0; 4]),
+                    pointer: r.pointer.map_or(PointerRecord::Four([0; 4]), Into::into),
                     pointer_refused: r.pointer.is_none(),
                 })
                 .collect(),
@@ -493,7 +577,7 @@ impl RecoveryRecord {
                 .any(|(a, b)| {
                     a.object != b.object
                         || LoadState::from_octet(a.state).is_err()
-                        || (a.pointer_refused && a.pointer != [0; 4])
+                        || (a.pointer_refused && a.pointer != PointerRecord::Four([0; 4]))
                 })
         {
             return Err(invalid(
@@ -528,6 +612,11 @@ impl RecoveryRecord {
                 "recovery memory coverage is incomplete or reordered",
             ));
         }
+        for resource in &self.resources {
+            resource
+                .pointer
+                .check_admitted(resource.object, &preconditions.pointer_widths)?;
+        }
         if self.observed_serial == Some(preconditions.serial)
             || self
                 .observed_program_version
@@ -555,7 +644,7 @@ impl RecoveryRecord {
                 .map(|r| PropertyRecoveryResource {
                     object: r.object,
                     state: LoadState::from_octet(r.state).expect("load state octet checked above"),
-                    pointer: (!r.pointer_refused).then_some(r.pointer),
+                    pointer: (!r.pointer_refused).then_some(r.pointer.into()),
                 })
                 .collect(),
             allocations: self
@@ -588,7 +677,7 @@ impl RecoveryRecord {
         let observations = self
             .prestate_observations
             .iter()
-            .map(PointerObservationRecord::to_observation)
+            .map(|record| record.to_observation(&snapshot.preconditions.pointer_widths))
             .collect::<io::Result<Vec<_>>>()?;
         if observations != snapshot.prestate_observations() {
             return Err(invalid(

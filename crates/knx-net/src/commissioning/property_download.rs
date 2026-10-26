@@ -16,6 +16,7 @@ use knx_core::commissioning::property_download::{PropertyDownloadPlan, PropertyO
 use knx_core::IndividualAddress;
 
 use super::hardware_release::HardwareRelease;
+use super::pointer_width::{PointerWidthAdmission, PointerWidthRefusal};
 use super::property_recovery::{
     self, ExperimentalPropertyPreconditions, PropertyInProcedurePointerObservation,
     PropertyJournalEvent, PropertyPointerObservation, PropertyRecoverySnapshot,
@@ -71,6 +72,9 @@ pub enum PropertySimulationFailure {
     Persistence(String),
     /// Operation-specific recovery acquisition or binding refused.
     Recovery(String),
+    /// A PID 7 answer broke the one-element two-or-four-octet rule. The typed facts are
+    /// non-raw; the raw octets sit only in the refusal's private diagnostic.
+    PointerWidth(PointerWidthRefusal),
     /// The existing session refused or failed an operation.
     Session(SessionError),
 }
@@ -173,9 +177,13 @@ pub async fn run_simulated_property_plan(
 /// The shared mutation dispatcher for simulator, experimental execute and restore.
 /// Returns written data octets and, for an allocation/task record whose pointer
 /// read-back differs, that observation. The load-state result stays hard.
+///
+/// `snapshot` is the original prestate: the width rule and width reference of an
+/// experimental run; the simulator entry passes `None` and keeps four octets only.
 async fn execute_property_mutation<T: ManagementTransport>(
     session: &mut ManagementSession<'_, T>,
     operation: &PropertyOperation,
+    snapshot: Option<&PropertyRecoverySnapshot>,
 ) -> Result<(usize, Option<PropertyPointerObservation>), PropertySimulationFailure> {
     match operation {
         PropertyOperation::LoadControl { object, payload } => {
@@ -214,9 +222,16 @@ async fn execute_property_mutation<T: ManagementTransport>(
                 // pointers the source model does not predict. Writes use the plan's
                 // absolute addresses and the complete allocations are verified at the end.
                 let expected = u32::from(u16::from_be_bytes([bytes[2], bytes[3]])).to_be_bytes();
+                let legacy = PointerWidthAdmission::Legacy;
+                let admission = snapshot.map_or(&legacy, |s| &s.preconditions.pointer_widths);
                 let observed =
-                    property_recovery::read_pointer(session, ObjectIndex::new(*object)).await?;
-                if observed != Some(expected) {
+                    property_recovery::read_pointer(session, ObjectIndex::new(*object), admission)
+                        .await?;
+                let differs = snapshot.map_or(
+                    !observed.is_some_and(|o| o.matches_source(&expected)),
+                    |s| s.pointer_needs_observation(*object, &expected, observed),
+                );
+                if differs {
                     return Ok((
                         0,
                         Some(PropertyPointerObservation {
@@ -539,7 +554,8 @@ async fn run_property_plan_inner<T: ManagementTransport>(
                 PropertyOperation::LoadControl { .. } | PropertyOperation::WriteMemory { .. } => {
                     mutation_may_have_started = true;
                     let (octets, observation) =
-                        execute_property_mutation(&mut session, &step.operation).await?;
+                        execute_property_mutation(&mut session, &step.operation, recovery.as_ref())
+                            .await?;
                     data_octets += octets;
                     if let Some(observation) = observation {
                         let observation = PropertyInProcedurePointerObservation {

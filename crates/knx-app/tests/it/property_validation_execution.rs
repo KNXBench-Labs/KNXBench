@@ -359,7 +359,7 @@ fn property_validation_recovery_record_refuses_partial_regions() {
             knx_net::commissioning::property_recovery::PropertyRecoveryResource {
                 object: 3,
                 state: LoadState::Loaded,
-                pointer: Some([0, 0, 0x3c, 0]),
+                pointer: Some([0, 0, 0x3c, 0].into()),
             },
         ],
         regions: vec![],
@@ -479,7 +479,7 @@ async fn property_validation_prestate_pointer_mismatch_finishes_and_blocks_origi
         [Some(1), Some(2), Some(3), Some(4)]
     );
     let recovery = store.recovery().unwrap();
-    assert_eq!(recovery.resources[0].pointer, [0; 4]);
+    assert_eq!(recovery.resources[0].pointer, [0; 4].into());
     let journal = checkpoint_text(&path);
     assert!(journal.contains("prestate_observations"), "{journal}");
     drop(store);
@@ -687,7 +687,7 @@ async fn property_validation_refused_pointer_and_in_procedure_observations_persi
     let reason = format!("{:?}", snapshot.recovery_plan(&bundle.plan().unwrap()));
     assert!(reason.contains("observed refused"), "{reason}");
     let mut forged = record.clone();
-    forged.resources[0].pointer = [0, 0, 0x3c, 0];
+    forged.resources[0].pointer = [0, 0, 0x3c, 0].into();
     assert!(
         forged.to_snapshot(&bundle).is_err(),
         "refused carries no value"
@@ -698,7 +698,7 @@ async fn property_validation_refused_pointer_and_in_procedure_observations_persi
     let observation = PointerObservationRecord {
         object: 3,
         expected: [0, 0, 0x3c, 0],
-        observed: Some([0, 0, 0x3d, 0]),
+        observed: Some([0, 0, 0x3d, 0].into()),
         state: LoadState::Loading.octet(),
     };
     let mut store = store_at_step(&path, &bundle, alpha16, 4);
@@ -778,7 +778,7 @@ async fn property_validation_in_procedure_observation_must_match_an_allocation_s
     let observation = |object| PointerObservationRecord {
         object,
         expected: [0, 0, 0x3c, 0],
-        observed: Some([0, 0, 0x3d, 0]),
+        observed: Some([0, 0, 0x3d, 0].into()),
         state: LoadState::Loading.octet(),
     };
     let temp = tempfile::tempdir().unwrap();
@@ -820,7 +820,7 @@ async fn property_validation_download_and_restore_observations_are_both_kept() {
     let mut store = store_at_step(&path, &bundle, record, 0);
     store
         .checkpoint(Checkpoint::FinalPointerObservations {
-            observations: vec![observation([0, 0, 0x3d, 0])],
+            observations: vec![observation([0, 0, 0x3d, 0].into())],
         })
         .unwrap();
     store
@@ -843,7 +843,7 @@ async fn property_validation_download_and_restore_observations_are_both_kept() {
         .unwrap();
     store
         .checkpoint(Checkpoint::FinalPointerObservations {
-            observations: vec![observation([0, 0, 0x3e, 0])],
+            observations: vec![observation([0, 0, 0x3e, 0].into())],
         })
         .unwrap();
     let progress = store.progress();
@@ -861,8 +861,11 @@ async fn property_validation_download_and_restore_observations_are_both_kept() {
             .map(|o| (o.run, o.record.observed))
             .collect::<Vec<_>>(),
         [
-            (PointerObservationRun::Download, Some([0, 0, 0x3d, 0])),
-            (PointerObservationRun::Restore, Some([0, 0, 0x3e, 0])),
+            (
+                PointerObservationRun::Download,
+                Some([0, 0, 0x3d, 0].into())
+            ),
+            (PointerObservationRun::Restore, Some([0, 0, 0x3e, 0].into())),
         ]
     );
     // Reopening replays the journal to the same two entries.

@@ -6,6 +6,9 @@
 
 use std::collections::BTreeMap;
 
+use super::pointer_width::{
+    PointerWidthAdmission, PointerWidthRefusal, PointerWidthRefusalReason, PropertyPointerValue,
+};
 use super::property_download::PropertySimulationFailure;
 use super::{ManagementSession, SessionError};
 use crate::management::ManagementTransport;
@@ -42,6 +45,9 @@ pub struct ExperimentalPropertyPreconditions {
     /// Experimental last absolute/task-segment reference model, four octets
     /// only. This explicit source expectation is not a physical profile proof.
     pub source_pointers: Vec<PropertyResourcePointer>,
+    /// Which PID 7 answer widths the reads accept. `same_application_reinstallation`
+    /// is always `Legacy`; a wider rule is an explicit, validated opt-in.
+    pub pointer_widths: PointerWidthAdmission,
 }
 impl ExperimentalPropertyPreconditions {
     /// Acknowledge strong-hypothesis same-shape reinstallation, not compatibility.
@@ -57,7 +63,17 @@ impl ExperimentalPropertyPreconditions {
             serial,
             program_version,
             source_pointers: source_pointers(plan)?,
+            pointer_widths: PointerWidthAdmission::Legacy,
         })
+    }
+    /// Replace the width rule with a checked one bound to this plan's touched objects.
+    pub fn with_pointer_width_admission(
+        mut self,
+        admission: PointerWidthAdmission,
+    ) -> Result<Self, PropertySimulationFailure> {
+        admission.validate(&self.source_pointers)?;
+        self.pointer_widths = admission;
+        Ok(self)
     }
     pub(crate) fn require_full_hardware_write_coverage(
         &self,
@@ -99,7 +115,7 @@ impl ExperimentalPropertyPreconditions {
                 "experimental preconditions do not bind this exact source plan",
             ));
         }
-        Ok(())
+        self.pointer_widths.validate(&self.source_pointers)
     }
 }
 
@@ -141,14 +157,14 @@ pub struct PropertyRecoveryRegion {
     pub address: u16,
     pub data: Vec<u8>,
 }
-/// The stable load state and four-octet PID_TABLE_REFERENCE actually read before
-/// any write (`None`: the device refused the read). Equal to the source
-/// expectation unless a prestate difference was observed.
+/// The stable load state and raw PID_TABLE_REFERENCE actually read before any write
+/// (`None`: the device refused the read). Equal to the source expectation unless a
+/// prestate difference was observed. The reply width is kept as read.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PropertyRecoveryResource {
     pub object: u8,
     pub state: LoadState,
-    pub pointer: Option<[u8; 4]>,
+    pub pointer: Option<PropertyPointerValue>,
 }
 /// Device serial read before any write that differs from the prepared one.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -196,15 +212,14 @@ pub struct PropertyPointerObservation {
     pub object: u8,
     pub expected: [u8; 4],
     /// `None` when the device refused the read with zero elements.
-    pub observed: Option<[u8; 4]>,
+    pub observed: Option<PropertyPointerValue>,
     pub state: LoadState,
 }
 impl std::fmt::Display for PropertyPointerObservation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let observed = self.observed.map_or_else(
-            || "refused".to_string(),
-            |o| format!("{:08x}", u32::from_be_bytes(o)),
-        );
+        let observed = self
+            .observed
+            .map_or_else(|| "refused".to_string(), |o| o.to_string());
         write!(
             f,
             "object {}: expected PID_TABLE_REFERENCE {:08x}, observed {observed}, load state {}",
@@ -269,7 +284,10 @@ impl PropertyRecoverySnapshot {
             .iter()
             .zip(&self.preconditions.source_pointers)
             .filter(|(resource, expected)| {
-                resource.state != LoadState::Loaded || resource.pointer != Some(expected.value)
+                resource.state != LoadState::Loaded
+                    || !resource
+                        .pointer
+                        .is_some_and(|pointer| pointer.matches_source(&expected.value))
             })
             .map(|(resource, expected)| PropertyPointerObservation {
                 object: resource.object,
@@ -326,6 +344,28 @@ impl PropertyRecoverySnapshot {
         self.checked_plan(original).map(|_| ())
     }
 
+    /// A pointer read is an observation when it misses the source model or when its
+    /// width differs from the original prestate's, even if the value is equal.
+    /// The prestate is the width reference for the download and, durably, for restore.
+    pub fn pointer_needs_observation(
+        &self,
+        object: u8,
+        expected: &[u8; 4],
+        observed: Option<PropertyPointerValue>,
+    ) -> bool {
+        let Some(observed) = observed else {
+            return true;
+        };
+        if !observed.matches_source(expected) {
+            return true;
+        }
+        self.resources
+            .iter()
+            .find(|resource| resource.object == object)
+            .and_then(|resource| resource.pointer)
+            .is_some_and(|prestate| !prestate.same_width(&observed))
+    }
+
     fn checked_plan(
         &self,
         original: &PropertyDownloadPlan,
@@ -345,6 +385,17 @@ impl PropertyRecoverySnapshot {
         {
             return Err(invalid(
                 "snapshot resource coverage differs from original source shape",
+            ));
+        }
+        if self.resources.iter().any(|resource| {
+            matches!(resource.pointer, Some(PropertyPointerValue::Two(_)))
+                && !self
+                    .preconditions
+                    .pointer_widths
+                    .applies_to(resource.object)
+        }) {
+            return Err(invalid(
+                "snapshot holds a two-octet pointer the width admission does not cover",
             ));
         }
         if self.unreadable_allocations.windows(2).any(|w| w[0] >= w[1])
@@ -461,8 +512,9 @@ impl PropertyRecoverySnapshot {
             if session.read_load_state(object).await? != LoadState::Loaded {
                 return Err(invalid("final resource state is not Loaded"));
             }
-            let observed = read_pointer(session, object).await?;
-            if observed != Some(expected.value) {
+            let observed =
+                read_pointer(session, object, &self.preconditions.pointer_widths).await?;
+            if self.pointer_needs_observation(expected.object, &expected.value, observed) {
                 observations.push(PropertyPointerObservation {
                     object: expected.object,
                     expected: expected.value,
@@ -601,6 +653,15 @@ const WIDTH_REFUSAL_SHOWN_OCTETS: usize = 16;
 /// The refusal for a PID 7 answer that is not four octets: the observed object, element
 /// count and raw bytes, so the field fact (issue #30) survives into the journal.
 fn pointer_width_refusal(object: ObjectIndex, elements: u8, data: &[u8]) -> String {
+    pointer_width_text(
+        "resource pointer response is not four octets",
+        object,
+        elements,
+        data,
+    )
+}
+
+fn pointer_width_text(prefix: &str, object: ObjectIndex, elements: u8, data: &[u8]) -> String {
     let shown = if data.is_empty() {
         "(none)".into()
     } else {
@@ -615,7 +676,7 @@ fn pointer_width_refusal(object: ObjectIndex, elements: u8, data: &[u8]) -> Stri
         ""
     };
     format!(
-        "resource pointer response is not four octets: object {}, {elements} element{}, {} octet{}, {shown}{more}",
+        "{prefix}: object {}, {elements} element{}, {} octet{}, {shown}{more}",
         object.octet(),
         if elements == 1 { "" } else { "s" },
         data.len(),
@@ -626,19 +687,49 @@ fn pointer_width_refusal(object: ObjectIndex, elements: u8, data: &[u8]) -> Stri
 /// `Ok(None)` for a zero-element refusal, an observation; transport errors,
 /// timeouts and malformed lengths stay errors. A malformed length keeps its element
 /// count and bytes in the refusal; it is never padded, truncated or read as a pointer.
+///
+/// `Legacy` keeps the historical leniency byte for byte (any element count with four
+/// octets; zero elements discard their data). On an object the admission names, only
+/// exactly one element of two or four octets is a pointer and everything else is a typed
+/// refusal.
 pub(crate) async fn read_pointer<T: ManagementTransport>(
     session: &mut ManagementSession<'_, T>,
     object: ObjectIndex,
-) -> Result<Option<[u8; 4]>, PropertySimulationFailure> {
-    match session
+    admission: &PointerWidthAdmission,
+) -> Result<Option<PropertyPointerValue>, PropertySimulationFailure> {
+    let (elements, bytes) = session
         .read_property_counted(object, PID_TABLE_REFERENCE, 1, 1)
-        .await
-    {
-        Ok((0, _)) => Ok(None),
-        Ok((elements, bytes)) => <[u8; 4]>::try_from(bytes.as_slice())
-            .map(Some)
-            .map_err(|_| invalid(&pointer_width_refusal(object, elements, &bytes))),
-        Err(error) => Err(error.into()),
+        .await?;
+    if !admission.applies_to(object.octet()) {
+        return match (elements, bytes.as_slice()) {
+            (0, _) => Ok(None),
+            _ => <[u8; 4]>::try_from(bytes.as_slice())
+                .map(|octets| Some(PropertyPointerValue::Four(octets)))
+                .map_err(|_| invalid(&pointer_width_refusal(object, elements, &bytes))),
+        };
+    }
+    let refuse = |reason| {
+        PropertySimulationFailure::PointerWidth(PointerWidthRefusal {
+            reason,
+            object: object.octet(),
+            property_id: PID_TABLE_REFERENCE,
+            elements,
+            octets: bytes.len(),
+            diagnostic: pointer_width_text(
+                "resource pointer response is not one element of two or four octets",
+                object,
+                elements,
+                &bytes,
+            ),
+        })
+    };
+    match (elements, bytes.as_slice()) {
+        (0, []) => Ok(None),
+        (0, _) => Err(refuse(PointerWidthRefusalReason::ZeroElementsWithData)),
+        (1, [a, b, c, d]) => Ok(Some(PropertyPointerValue::Four([*a, *b, *c, *d]))),
+        (1, [a, b]) => Ok(Some(PropertyPointerValue::Two([*a, *b]))),
+        (1, _) => Err(refuse(PointerWidthRefusalReason::UnsupportedWidth)),
+        _ => Err(refuse(PointerWidthRefusalReason::ElementCount)),
     }
 }
 
@@ -654,7 +745,7 @@ pub(crate) async fn acquire<T: ManagementTransport>(
     for expected in &preconditions.source_pointers {
         let object = ObjectIndex::new(expected.object);
         let state = session.read_load_state(object).await?;
-        let pointer = read_pointer(session, object).await?;
+        let pointer = read_pointer(session, object, &preconditions.pointer_widths).await?;
         resources.push(PropertyRecoveryResource {
             object: expected.object,
             state,

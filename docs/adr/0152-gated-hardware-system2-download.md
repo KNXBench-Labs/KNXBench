@@ -69,6 +69,29 @@ Release the System-2 hardware download as a consent-gated, best-effort path.
 The physical-admission wording in ADR-0149 and the validation contract is
 amended to describe this gated path, not a blanket refusal.
 
+## 26 October 2026 amendment: explicit configured pointer-width policy
+
+The candidate correction for issue #30 adds a versioned policy only to newly
+observed, exact-UP258 configured hardware records. It does not reinterpret old
+operations or edit shipped profile bytes. The policy accepts one two- or four-
+octet PID 7 element on objects 1/2/3, preserving the raw representation through
+private capture, durable reopening, observations and explicit recovery.
+
+The [independently retrieved public package](../research/2026-10-26-up258-pid7-width.md)
+declares both property datatypes and the three two-octet resources; the reporter
+measured two octets on object 1 only. Objects 2/3 remain source-bound experimental
+hypotheses and must be labelled as such in the offline preview. Numeric equality
+with a source pointer is not evidence of allocator history or whole-device
+rollback. The ordinary hardware gates, best-effort consent and hard final checks
+remain unchanged; masked/unwritten-byte survival is still unresolved.
+
+A new hardware-record revision binds the append-only policy identifier into the
+journal digest. Old records retain their exact grammar, digests and four-octet
+behaviour; new readers validate policy/representation consistency, and older
+readers reject new fields/widths rather than drop them. Review and acceptance of
+the candidate implementation are recorded separately, not inferred from this
+architectural decision.
+
 ## Alternatives considered
 
 - **Remove the refusal outright (route MV-0025 through the ordinary planner).**

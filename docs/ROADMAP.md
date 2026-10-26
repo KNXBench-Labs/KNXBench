@@ -240,7 +240,7 @@ independent review accepts with zero Critical/Important findings; package accept
 is delivered on `main` as `daef61b74` with the verified integrated 14-stage gate
 and exact live publication readback. The claim is released. The
 [26 October AES metadata amendment](research/2026-10-26-zip-aes-extra-field-consistency.md)
-(implemented and independently reviewed; package acceptance pending) refuses contradictory WinZip AES metadata by name in every project and product
+(delivered as `161e3b14b`, reviewed, integrated 14/14 gate green) refuses contradictory WinZip AES metadata by name in every project and product
 layer; consistent AES stays unsupported, so this is no new encryption support.
 
 ## After Alpha 15 — master provenance delivered (19 October 2026)

@@ -93,7 +93,8 @@ method-99 refusal and is not widened.
 This is stricter than the previous runtime for the shapes marked accepted
 above. No real project or product file in the private corpus is expected to
 carry such a shape; the package gate's corpus stage is the check of that
-expectation, not this note.
+expectation, not this note. It passed: 155/155 selected corpus cases in the
+integrated gate of `161e3b14b`.
 
 The validated product directory records a conflict but only
 `open_checked_archive` refuses it; the legacy EX-IM reader (raw method, its own

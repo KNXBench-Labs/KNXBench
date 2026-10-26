@@ -15,7 +15,7 @@ The empty-directory CRC/complete-stream, ordinary-file exact-stream and bit-0
 encrypted-directory repairs described below are delivered. The 24 October
 bit-6-only consistency amendment is delivered as `daef61b74`, independently reviewed
 and accepted by the integrated package gate. The 26 October AES metadata amendment
-(implemented, reviewed, package acceptance pending) refuses contradictory WinZip AES metadata by name; other cipher metadata remains bounded.
+(delivered as `161e3b14b`, reviewed, integrated gate green) refuses contradictory WinZip AES metadata by name; other cipher metadata remains bounded.
 The product-reader follow-up is delivered on `main` (`9c79634b`), with
 its bounded acceptance recorded below.
 

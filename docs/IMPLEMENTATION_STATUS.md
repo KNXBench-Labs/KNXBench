@@ -14,8 +14,7 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## ZIP WinZip AES metadata consistency, WP-16 (26 October 2026)
 
-Implemented and independently reviewed (APPROVE, no Critical/Important findings);
-package acceptance pending. Project and product ZIP admission refuses contradictory WinZip AES (AE-x)
+Independently reviewed (APPROVE, no Critical/Important findings) and delivered on `main` as `161e3b14b` (feature `305609215`, review fix `bdaf3bfc9`); maintained change-scoped 14/14 gate green: 5,033 Rust tests in 33 binaries (220 ignored), 155/155 selected corpus cases, frozen inputs, no touched or unchecked user data; local/tracking/live readback equal. Project and product ZIP admission refuses contradictory WinZip AES (AE-x)
 metadata by validated member name before any member codec opens: differing local
 and central 0x9901 fields, a 0x9901 field without method 99, method 99 without
 exactly one field, and method 99 without bit 0. This covers outer and nested

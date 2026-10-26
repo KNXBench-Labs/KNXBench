@@ -1,15 +1,23 @@
 # Restart snapshot
 
-Updated: 2026-10-26 07:24 CET. Operational snapshot, not an append-only journal.
+Updated: 2026-10-26 14:40 CET. Operational snapshot, not an append-only journal.
+## DIAG-02 CLI follow-up (DELIVERED runtime; result documentation pending)
+- PUBLISHED main-first merge `23e1ff3ec` on `62089b033`, fixes `e5cfa1e7b`; readbacks equal.
+- Review and focused re-review APPROVE. Merge14 green: Rust2702/127ignored, corpus91/91;
+  tools431 registered/6skipped. Browser/bindings not selected; web bundle prerequisite built.
+- Own `<sources>/knxbench-diag03-integrate-20261026` stays for result-doc gate/publication,
+  then own trees/cache cleanup. Evidence `<profile>/evidence/diag03-cli-20261026/`.
+- No bus/hardware. System-2/never-connected/legacy cause gaps remain; root not synchronized.
 ## Next open tasks (26 October 2026, this WebUI session)
 - WP-21/23/22 published, own trees/claims retired after evidence verification.
 - WP-24 PUBLISHED `8dd6cf72d`, APPROVE, gate11/web34; Vitest4475/browser908 +catalogue22.
   Next: result-doc gate/publish, verified private evidence retirement, own tree cleanup.
 - WP-21–24 runtime scopes delivered; remaining queue retains evidence/owner boundaries.
 - Root preserved; no bus/deployment/release. Evidence `<profile>/evidence/next-open-tasks-20261026/`.
-## Download diagnostic planning (26 October 2026)
-- DIAG-02 added to OPEN_WORK: retain regular-download cause/step/write evidence in log, UI and report.
-- Planning only at explicit owner request; implementation STOP, no bus/deployment authority.
+## DIAG-02 server/web diagnostic (DELIVERED)
+- Published `4209645b4`, result docs `62089b033`; original planning STOP superseded by owner's Go.
+- Status/log/history/report keep cause; initial server/web and later CLI acceptance are in docs/status/.
+- System-2 remains outside this diagnostic contract; no bus/deployment authority.
 ## WP-16 AES metadata consistency (26 October 2026, this WebUI, DELIVERED)
 - PUBLISHED `161e3b14b`; review APPROVE, gate 14/14 (Rust 5,033, corpus 155/155); readback equal.
 - Evidence `<profile>/evidence/wp16-aes-20261026/`. Own trees retired after result docs.

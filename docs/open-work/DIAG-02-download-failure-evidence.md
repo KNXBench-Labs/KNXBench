@@ -1,8 +1,9 @@
 # DIAG-02 — Retain download failure evidence in the log and report
 
 **Priority:** P1. **Status:** Delivered on `main` as `4209645b4` (26 October 2026, owner's
-Go); [delivery record](../status/2026-10-26-download-failure-diagnostic.md).
-Listed in [OPEN_WORK](../OPEN_WORK.md). Owner request: 26 October 2026.
+Go); [server/web delivery](../status/2026-10-26-download-failure-diagnostic.md),
+[CLI follow-up `23e1ff3ec`](../status/2026-10-26-cli-download-failure-diagnostic.md).
+Removed from [OPEN_WORK](../OPEN_WORK.md) after delivery. Owner request: 26 October 2026.
 Contract: [download failure diagnostic](../contracts/download-failure-diagnostic.md).
 
 ## Observed gap
@@ -66,8 +67,8 @@ private attachment into public fixtures or documentation.
 ## Coordination and exclusions
 
 Implementation boundary (26 October 2026): the server/web worker produces the
-diagnostic; the CLI (`knx device download`, `knx device restore`) follows in a
-separate CLI package with the same value. The System-2 worker still records failed
+diagnostic; the CLI (`knx device download`, `knx device restore`) records the same
+value since `23e1ff3ec`. The System-2 worker still records failed
 rows without it (read as *cause not recorded*). Coordinate shared commissioning/log/report surfaces with
 [PRG-01](PRG-01-programming-gaps.md). This is the regular-download diagnostic
 path, not a duplicate of [S2-02](S2-02-gateway-busy-after-failed-runs.md)'s

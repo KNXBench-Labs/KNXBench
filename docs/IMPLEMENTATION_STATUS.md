@@ -45,7 +45,10 @@ cases shared by the Rust and web readers, 4,537 Vitest tests. Independent review
 findings; focused re-review APPROVE. Simulator only, no hardware run. The CLI follow-up
 (26 October 2026 source) gives `knx device download` and `knx device restore` the same value:
 history row, `--report` failure with `stoppedInStep`, one `diagnostic:` terminal line;
-15 CLI simulator tests, six targeted mutants all detected. System-2 rows are unchanged.
+15 CLI failure cases (simulator/composition and recording regressions). Published CLI follow-up
+`23e1ff3ec`: independent re-review APPROVE, merge gate 14/14 (2,702 Rust tests,
+91/91 selected corpus cases); local/tracking/live readback equal. System-2 rows are unchanged.
+[CLI acceptance and remaining boundaries](status/2026-10-26-cli-download-failure-diagnostic.md).
 [Contract](contracts/download-failure-diagnostic.md),
 [details](open-work/DIAG-02-download-failure-evidence.md).
 

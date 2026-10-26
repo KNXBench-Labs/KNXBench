@@ -513,7 +513,9 @@ fn run_hardware(
                 flag.store(true, Ordering::SeqCst);
             }
         });
-        guard.mark_send_possible().map_err(|e| e.to_string())?;
+        // The executor marks the journal at its durable recovery barrier,
+        // immediately before the first possible mutation, not here.
+        store.on_send_boundary(Box::new(guard.send_marker()));
         let result = if rebound.format == 3 {
             use knx_app::system2_validation_preparation as configured;
             if recover {
@@ -562,20 +564,27 @@ fn run_hardware(
         };
         signal.abort();
         let result = result.map_err(|e| e.to_string());
-        if let Some(path) = report.as_ref() {
-            store.write_shareable_report(path).map_err(|e| e.to_string())?;
-        }
+        // A report failure is reported, but never replaces the device result.
+        let reported = report.as_ref().map_or(Ok(()), |path| {
+            store.write_shareable_report(path).map_err(|e| e.to_string())
+        });
         let _ = tokio::time::timeout(Duration::from_secs(3), tunnel.disconnect()).await;
         println!(
             "HARDWARE outcome: {:?}; mutation possible: {}. Private recovery and local protocol retained; no upload occurred.",
             store.outcome(),
             store.mutation_possible()
         );
-        result
+        if let (Err(_), Err(report)) = (&result, &reported) {
+            eprintln!("shareable report not written: {report}");
+        }
+        result.map(|()| reported)
     });
-    guard.finish(match &executed {
-        Ok(()) => WriteOutcome::Verified,
-        Err(_) => WriteOutcome::EffectUnverified,
-    });
-    executed
+    // A refusal before the recorded send boundary witnessed no device write.
+    let outcome = match &executed {
+        Ok(_) => WriteOutcome::Verified,
+        Err(_) if guard.send_possible() => WriteOutcome::EffectUnverified,
+        Err(_) => WriteOutcome::NotSent,
+    };
+    guard.finish(outcome);
+    executed.and_then(|reported| reported)
 }

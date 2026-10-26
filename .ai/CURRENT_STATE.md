@@ -1,6 +1,11 @@
 # Restart snapshot
 
-Updated: 2026-10-26 02:58 CET. Operational snapshot, not an append-only journal.
+Updated: 2026-10-26 05:26 CET. Operational snapshot, not an append-only journal.
+## Website WP-21 (2026-10-26, taken by this WebUI task session)
+- Owner Go: next open tasks; WP-21 Pages publication explicitly approved after tests.
+- Branch `feat/wp21-headline-typing-20261026`; website/tests only; WP-23 parallel.
+- Typing implemented; blink defect reproduced and corrected; independent re-review pending.
+- Next: frozen integrated gate, full website browser acceptance, Pages/live readback.
 ## Other owners and preservation
 - Root intentionally old/dirty: preserve private/untracked files and other edits.
   Alpha16 belongs to another track. No release/deployment/hardware authority.

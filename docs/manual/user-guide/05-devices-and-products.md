@@ -1235,8 +1235,10 @@ nothing to the bus and uploads nothing, and **Send report** saves a file for you
 to send yourself. The buttons are disabled without an open project. Selecting
 another device closes an open dialog; a new project revision closes the support
 report as before, while the diagnostic export keeps its own outdated-review
-warning. The analysis offers the generic identity reads only; the System-2
-memory profile stays command-line only.
+warning. Up to Alpha 16 the analysis offers the generic identity reads only;
+source builds from 26 October 2026 also offer the System-2 declared-memory
+profile in the same dialog
+([guide](08-reports-and-diff.md#reading-declared-memory-ranges-system-2)).
 
 ### Manufacturer fields
 

@@ -10,7 +10,7 @@ import { messages as en } from "./messages/en";
 const api = vi.hoisted(() => ({ deviceParameters: vi.fn().mockResolvedValue({ programId: null, sections: [], stale: [], diagnostics: [] }) }));
 vi.mock("./api", () => ({ ...api, errorMessage: String }));
 const diagnostics = vi.hoisted(() => ({ previewDiagnostics: vi.fn(), startDiagnostics: vi.fn(), pollDiagnostics: vi.fn(), cancelDiagnostics: vi.fn(), saveDiagnostics: vi.fn() }));
-vi.mock("./diagnosticApi", () => diagnostics);
+vi.mock("./diagnosticApi", () => ({ IDENTITY_PROFILE: "generic-identity-v1", MEMORY_PROFILE: "system2-declared-segments-v1", DiagnosticRefusal: class extends Error {}, ...diagnostics }));
 const support = vi.hoisted(() => ({ previewSupport: vi.fn(), diagnoseSupport: vi.fn(), saveSupport: vi.fn() }));
 vi.mock("./supportApi", () => support);
 vi.mock("./features/rtf/client", async (importOriginal) => ({
@@ -125,6 +125,7 @@ const preview: DiagnosticView = {
       status: "not-read", receivedBytes: 0, returnedElements: null, bytes: [], attemptedAt: null, completedAt: null, error: null,
     })),
   },
+  memory: null, exportable: false,
 };
 const running: DiagnosticView = { ...preview, phase: "running" };
 function deferred<T>() {
@@ -314,7 +315,7 @@ it.each(["pending", "running"] as const)("a revision keeps the %s start and pres
   vi.useFakeTimers();
   const pending = deferred<DiagnosticView>();
   const partial: DiagnosticView = {
-    ...running, phase: "complete", cancelRequested: true,
+    ...running, phase: "complete", cancelRequested: true, exportable: true,
     report: { ...running.report, complete: true, stopReason: "cancelled", disconnectAttemptCompleted: true,
       items: running.report.items.map((item, index) => index === 0 ? {
         ...item, status: "read", bytes: [7, 1], receivedBytes: 2,

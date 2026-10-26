@@ -1,15 +1,17 @@
 # Restart snapshot
 
-Updated: 2026-10-26 16:48 CET. Operational snapshot, not an append-only journal.
-## Issue #30 / S2-01 pointer width (ACTIVE, observed 2026-10-26 16:48 CET)
-- Taken by this issue30-width WebUI track; owner authorised implementation 26 October.
-- Own `<sources>/knxbench-issue30-pointer-width-20261026`, branch `fix/issue30-pointer-width-20261026`.
-- Reserve Net property_recovery/property_download, App property_validation_bundle and matching tests/docs.
-- Public field reply supplies object1/PID7: 1 element, 2 octets, 0116; other objects unmeasured.
-- Read-only architecture worker `proc_c6390c80235a`; no code/gate/hardware run yet.
-- Evidence `<profile>/evidence/issue30-width-20261026/`; next width-aware durable/recovery design,
-  original RED, implementation, independent review and package acceptance. No bus/release/deployment.
-- Safe-failure/report projection is separate; preserve all foreign tracks below.
+Updated: 2026-10-26 19:03 CET. Operational snapshot, not an append-only journal.
+## Issue #30 / S2-01 pointer width (DELIVERED, observed 2026-10-26 19:03 CET)
+- PUBLISHED main-first merge `54b052885`, feature `6b8b27936`; local/tracking/live equal.
+- Independent whole-feature review and correction re-review APPROVE; branch15/integrated15 green.
+- Integrated Rust5063/169ignored, corpus97/97, Vitest4540/browser728; public-package witness4 green.
+- Initial push alone failed auth; unchanged accepted source published with one-shot gh helper.
+- Raw Two/Four capture/reopen/recovery and exact-profile rev2 policy delivered; Legacy retained.
+- Object1 two-octet field observation only;2/3 source-declared hypotheses, no hardware support claim.
+- Net typed non-raw refusal seam available; safe failure/report projection remains separate.
+- Shared width/recovery/journal ownership RELEASED to safe-projection track after this docs publication.
+- Own trees retained only for docs/verified evidence retirement; no further runtime edits or own gate.
+- Evidence `<profile>/evidence/issue30-width-20261026/`; no bus/release/deployment/vendor work.
 ## PRG-01/S2-03 CLI durable-tunnel slice (runtime DELIVERED; result docs pending)
 - PUBLISHED main-first merge `a8004cb2e` on `8459b5fe8`, feature `46c38df26`; readbacks equal.
 - Independent review APPROVE; merge13 Rust521/21ignored, corpus17/17; tools440/6skipped.

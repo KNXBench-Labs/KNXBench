@@ -71,7 +71,7 @@ amended to describe this gated path, not a blanket refusal.
 
 ## 26 October 2026 amendment: explicit configured pointer-width policy
 
-The candidate correction for issue #30 adds a versioned policy only to newly
+The published correction for issue #30 (`54b052885`) adds a versioned policy only to newly
 observed, exact-UP258 configured hardware records. It does not reinterpret old
 operations or edit shipped profile bytes. The policy accepts one two- or four-
 octet PID 7 element on objects 1/2/3, preserving the raw representation through
@@ -88,9 +88,9 @@ remain unchanged; masked/unwritten-byte survival is still unresolved.
 A new hardware-record revision binds the append-only policy identifier into the
 journal digest. Old records retain their exact grammar, digests and four-octet
 behaviour; new readers validate policy/representation consistency, and older
-readers reject new fields/widths rather than drop them. Review and acceptance of
-the candidate implementation are recorded separately, not inferred from this
-architectural decision.
+readers reject new fields/widths rather than drop them. Review/re-review and integrated acceptance of
+the implementation are [recorded separately](../status/2026-10-26-up258-pid7-width.md),
+not inferred from this architectural decision.
 
 ## Alternatives considered
 

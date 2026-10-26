@@ -6,14 +6,15 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
-## Configured PID 7 width model — 26 October 2026 candidate
+## Configured PID 7 width model — 26 October 2026 source
 
 A field reply supplies object 1, one element, raw two-octet `0116`; the full
 private journal and device were not examined here. Independently retrieved,
 digest-pinned public package metadata declares two/four-octet property types and
 three two-octet table-pointer resources
 ([research](../research/2026-10-26-up258-pid7-width.md)). The width-aware candidate
-is under implementation/review, not yet accepted or published.
+is published as `54b052885` after review/re-review and all 15 integrated stages
+([acceptance](../status/2026-10-26-up258-pid7-width.md)).
 
 New exact-profile configured hardware records bind a separate policy revision;
 old operations must retain their four-octet behaviour and digests. Two/four raw

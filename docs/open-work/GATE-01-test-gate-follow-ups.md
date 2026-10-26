@@ -6,9 +6,10 @@ Small and optional; none blocks a delivery.
 
 ## Open
 
-- Production browser suites run one after another with one worker each
-  (771.7 s in the last complete gate; `table-columns` alone 231.3 s). A lane
-  review per suite could let safe suites run in parallel again.
+- Production browser suites now run in the tag lanes
+  ([ADR-0154](../adr/0154-production-browser-suites-use-tag-lanes.md),
+  [record](../status/2026-10-26-production-browser-lanes.md)); case-level
+  parallelism inside a file and concurrent suites remain unreviewed.
 - Three `file-menu-submenus` cases timed out at eight workers while a cold
   Vite development server started (they pass at the gate's four workers).
 - The cause of the earlier observed SIGTERM-test timeouts remains unproven;

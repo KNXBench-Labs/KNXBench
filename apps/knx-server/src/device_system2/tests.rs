@@ -315,7 +315,7 @@ fn status_carries_prestate_observations_and_offers_no_recovery_after_a_differenc
             record: PointerObservationRecord {
                 object: 3,
                 expected: [0, 0, 0x3c, 0],
-                observed: Some([0; 4]),
+                observed: Some([0; 4].into()),
                 state: 1,
             },
         },
@@ -331,6 +331,21 @@ fn status_carries_prestate_observations_and_offers_no_recovery_after_a_differenc
             },
         },
     ];
+    progress
+        .pointer_observations
+        .push(PointerObservationProgress {
+            run: PointerObservationRun::Download,
+            phase: PointerObservationPhase::Final,
+            operation_index: None,
+            record: PointerObservationRecord {
+                object: 1,
+                expected: [0, 0, 1, 0x16],
+                observed: Some(knx_app::property_validation_bundle::PointerRecord::Two([
+                    1, 0x16,
+                ])),
+                state: 1,
+            },
+        });
     progress.program_version_observation = Some(([0, 1, 0x92, 5, 4], Vec::new()));
     let status = settled_status(progress);
     assert_eq!(status["prestateDiffers"], true);
@@ -340,7 +355,9 @@ fn status_carries_prestate_observations_and_offers_no_recovery_after_a_differenc
             {"run": "download", "phase": "prestate", "object": 3, "operationIndex": null, "expected": "00003c00",
                 "observed": "00000000", "loadState": "Loaded"},
             {"run": "restore", "phase": "inProcedure", "object": 3, "operationIndex": 4, "expected": "00003c00",
-                "observed": "refused", "loadState": "Loading"}
+                "observed": "refused", "loadState": "Loading"},
+            {"run": "download", "phase": "final", "object": 1, "operationIndex": null, "expected": "00000116",
+                "observed": "0116", "loadState": "Loaded"}
         ])
     );
     assert_eq!(

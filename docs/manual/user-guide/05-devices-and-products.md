@@ -248,6 +248,18 @@ nothing. See [Service/recovery limits](../../contracts/alpha16-system2-configure
 Recovery is not a separate way into a new download: it only reattaches an
 earlier operation (below).
 
+**Pointer-width correction in newer source builds.** The pending exact-profile
+correction preserves two- and four-byte table-reference replies as distinct raw
+values in the private recovery record, rather than padding short answers. New
+preparations use a separately versioned policy; already recorded operations keep
+their original interpretation. The preview distinguishes the reported two-byte
+answer on object 1 from the still-unverified source-declared interpretation for
+objects 2/3. This does not establish hardware support or guaranteed recovery;
+malformed replies still stop the run. The implementation is under review and is
+not yet a released build. Do not retry a device download solely to test this
+paragraph; use the eventual verified source revision and a separately planned,
+explicitly consented hardware test.
+
 The source workflow is:
 
 1. Use **Prepare configured System-2 preview** for the selected device. It uses

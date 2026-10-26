@@ -12,15 +12,19 @@ as `8dd6cf72d`: native sortable catalogue columns, stable product identities and
 polite keyboard-highlight announcements, without catalogue-data changes
 ([acceptance](status/2026-10-26-catalogue-table.md)).
 
-System-2 [S2-01](open-work/S2-01-pid7-raw-response.md) is P1: the private diagnostic prefix is
-published as `5f1ad454e` after review and integrated acceptance
-([record](status/2026-10-25-system2-pid7-diagnostic.md)), but the width model and safe recovery
-admission need real response evidence.
-The wrong-width refusal is retained, not replaced by an observation. Structured status/report
-projection remains open. [S2-02](open-work/S2-02-gateway-busy-after-failed-runs.md) now
-has a delivered own-run gateway-hint/refusal-reason diagnostic slice (`aa2f39f1b`). The actual
-reporter-side start failure remains a separate P1 investigation; neither package
-establishes hardware support.
+System-2 [S2-01](open-work/S2-01-pid7-raw-response.md) is P1: the private diagnostic
+prefix is published as `5f1ad454e` after review and integrated acceptance
+([record](status/2026-10-25-system2-pid7-diagnostic.md)). A 26 October field reply
+supplies a two-octet value on object 1; independently retrieved public package
+metadata declares two/four-octet types. An exact-profile, versioned width model
+is implemented locally, with final acceptance/publication still pending
+([record](status/2026-10-26-up258-pid7-width.md),
+[research](research/2026-10-26-up258-pid7-width.md)). Objects 2/3 remain
+source-declared hypotheses. Structured status/report projection and physical
+recovery evidence remain open. [S2-02](open-work/S2-02-gateway-busy-after-failed-runs.md)
+has a delivered own-run gateway-hint/refusal-reason diagnostic slice (`aa2f39f1b`).
+The reporter's newer run starts without that banner, but the earlier actual
+start failure remains unexplained. Neither package establishes hardware support.
 
 Run-scoped [download receipts](contracts/download-settlement-receipt.md) distinguish
 preparation, applied or computed settlement, and the separate post-download check.

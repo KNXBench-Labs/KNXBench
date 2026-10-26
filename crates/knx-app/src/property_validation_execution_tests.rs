@@ -23,6 +23,7 @@ fn bundle() -> PreparedBundle {
     bundle.binding.simulated = false;
     bundle.binding.serial = [0, 1, 2, 3, 4, 5];
     bundle.hardware_preparation = Some(Box::new(ProjectHardwareRecord {
+        pointer_width_policy: None,
         revision: 1,
         operation: "reuse-operation".into(),
         recovery_track: RecoveryTrack::KnxBenchBestEffort,
@@ -267,7 +268,7 @@ fn recovery_store(path: &std::path::Path, bundle: &PreparedBundle) -> OperationS
             .map(|p| ResourceRecord {
                 object: p.object,
                 state: knx_core::commissioning::load_state::LoadState::Loaded.octet(),
-                pointer: p.value,
+                pointer: p.value.into(),
                 pointer_refused: false,
             })
             .collect(),
@@ -549,4 +550,57 @@ fn hardware_recovery_reuse_keeps_independent_original_store_binding_admission() 
     assert_eq!(journal_bytes(&path), before);
     assert_eq!(store.progress(), progress);
     store.require_restore_available().unwrap();
+}
+
+#[test]
+fn genuine_pointer_observations_reuse_the_validated_original_snapshot() {
+    use crate::property_validation_bundle::{PointerObservationRecord, PointerRecord};
+    let bundle = bundle();
+    let dir = tempfile::tempdir().unwrap();
+    let recovery = recovery_store(&dir.path().join("seed"), &bundle)
+        .recovery()
+        .unwrap()
+        .clone();
+    let (object, expected) = {
+        let source = &bundle.preconditions().unwrap().source_pointers[0];
+        (source.object, source.value)
+    };
+    let difference = || Checkpoint::FinalPointerObservations {
+        observations: vec![PointerObservationRecord {
+            object,
+            expected,
+            observed: Some(PointerRecord::Four([9, 9, 9, 9])),
+            state: knx_core::commissioning::load_state::LoadState::Loaded.octet(),
+        }],
+    };
+    let path = dir.path().join("live");
+    let mut store = OperationStore::create(&path, bundle.binding.clone()).unwrap();
+    let (acquired, initial) =
+        count_reconstructions(|| store.checkpoint(Checkpoint::RecoveryAcquired { recovery }));
+    acquired.unwrap();
+    assert!(initial >= 1, "the one validation of the original recovery");
+    store
+        .checkpoint(Checkpoint::StepStarted {
+            index: 0,
+            mutation: true,
+        })
+        .unwrap();
+    let (_, repeated) = count_reconstructions(|| {
+        for _ in 0..3 {
+            store.checkpoint(difference()).unwrap();
+        }
+    });
+    assert_eq!(repeated, 0, "observations reuse the validated snapshot");
+    drop(store);
+    // Reopen validates the recovery once, like the live acquisition, then reuses it.
+    let (reopened, on_open) =
+        count_reconstructions(|| OperationStore::open(&path, &bundle.binding));
+    let mut reopened = reopened.unwrap();
+    assert_eq!(
+        on_open, initial,
+        "replay of three observations adds no reconstruction"
+    );
+    let (_, after) = count_reconstructions(|| reopened.checkpoint(difference()).unwrap());
+    assert_eq!(after, 0);
+    assert_eq!(reopened.progress().pointer_observations.len(), 4);
 }

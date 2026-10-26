@@ -50,12 +50,10 @@ impl<'a> ValidatedHardwareExecution<'a> {
         // This remains the full retained-source reconstruction/equivalence
         // validator, not a hash-only or normalized-plan-only admission.
         let plan = bundle.plan()?;
-        let preconditions = ExperimentalPropertyPreconditions::same_application_reinstallation(
-            &plan,
-            bundle.binding.serial,
-            bundle.binding.application,
-        )
-        .map_err(|_| invalid("same-application recovery premise cannot represent this plan"))?;
+        // The bundle derives the PID 7 width rule from its hashed hardware record; a
+        // direct legacy constructor here would run four-octet only and then fail the
+        // recovery-record equality check.
+        let preconditions = bundle.preconditions_for(&plan)?;
         if bundle.binding.simulated || store.binding() != &bundle.binding {
             return Err(invalid("operation-store binding differs from bundle kind"));
         }
@@ -510,7 +508,9 @@ fn failure_code(error: &PropertySimulationFailure) -> FailureCode {
     match error {
         PropertySimulationFailure::Cancelled => FailureCode::Cancelled,
         PropertySimulationFailure::Persistence(_) => FailureCode::Persistence,
-        PropertySimulationFailure::Recovery(_) => FailureCode::IdentityOrRecovery,
+        PropertySimulationFailure::Recovery(_) | PropertySimulationFailure::PointerWidth(_) => {
+            FailureCode::IdentityOrRecovery
+        }
         _ => FailureCode::Executor,
     }
 }

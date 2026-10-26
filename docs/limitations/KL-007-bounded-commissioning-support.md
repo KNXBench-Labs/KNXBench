@@ -6,6 +6,31 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Configured PID 7 width model — 26 October 2026 candidate
+
+A field reply supplies object 1, one element, raw two-octet `0116`; the full
+private journal and device were not examined here. Independently retrieved,
+digest-pinned public package metadata declares two/four-octet property types and
+three two-octet table-pointer resources
+([research](../research/2026-10-26-up258-pid7-width.md)). The width-aware candidate
+is under implementation/review, not yet accepted or published.
+
+New exact-profile configured hardware records bind a separate policy revision;
+old operations must retain their four-octet behaviour and digests. Two/four raw
+representations remain distinct through acquisition, durable reopening and
+explicit recovery. Object 1 is field-observed on one device; objects 2/3 and
+byte-order interpretation remain source-bound experimental hypotheses. Invalid
+new-policy counts, unknown widths and malformed/unbound records still refuse.
+Legacy four-octet element-count leniency and zero-element-with-data handling are
+unchanged limitations, not newly approved semantics.
+
+No hardware, firmware-wide, masked-byte-survival or whole-recovery claim follows.
+Final memory/Loaded/written-program checks remain hard, and an incompatible
+prestate can still make recovery unavailable. A malformed response discovered
+after mutation is still a failed/uncertain run, not a safe automatic retry.
+Structured non-raw failure projection remains separate open work; raw failure
+text remains private. KL-007 stays open.
+
 ## Service-specific memory budgets — 26 October 2026 source
 
 Ordinary memory and user memory share a service-aware data-budget helper;

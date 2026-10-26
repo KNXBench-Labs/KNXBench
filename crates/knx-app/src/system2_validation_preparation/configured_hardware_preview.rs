@@ -29,6 +29,8 @@ pub struct ConfiguredHardwarePreview {
     pub download_phrase: String,
     pub release_phrase: String,
 }
+/// Shown for every source preview and every revision-2 observed record.
+pub(crate) const PID7_WIDTH_WARNING: &str = "PID 7 width, experimental and limited to this exact UP258 profile: one element of two or four octets is accepted on objects 1, 2 and 3. A two-octet object 1 reply was observed on one device; objects 2 and 3 rely on the public package declaration only and are unverified. The standard defines four octets. This makes no claim about masks or firmware.";
 /// Project-source preview is offline. Observed hardware records use the same source-bound
 /// confirmation; observation and chosen recovery track gain their own journal binding.
 pub(crate) fn project_hardware_preview(
@@ -65,6 +67,12 @@ pub(crate) fn project_hardware_preview(
         steps.push(format!("{index}: source {}: {detail}", step.source_index));
     }
     let configuration_sha256 = source.sha256()?;
+    // Source previews precede any hardware record and must say what a fresh observation
+    // will admit; an observed record carries the policy only from revision 2.
+    let width_policy = bundle
+        .hardware_preparation
+        .as_ref()
+        .is_none_or(|h| h.pointer_width_objects().is_some());
     let preview = ConfiguredHardwarePreview {
         address: bundle.binding.target.clone(), program_id: profile.program_id,
         profile_id: bundle.binding.profile_id.clone(),
@@ -73,14 +81,14 @@ pub(crate) fn project_hardware_preview(
         parameter_values: source.request.values.len(), group_links: source.request.links.len(), flag_overrides: source.request.flag_overrides.len(),
         steps, data_octets, allocation_octets,
         not_written_octets: allocation_octets.checked_sub(data_octets).ok_or_else(|| invalid("configured preview coverage overflow"))?,
-        warnings: vec![
+        warnings: width_policy.then(|| PID7_WIDTH_WARNING.to_string()).into_iter().chain([
             "EXPERIMENTAL: software-tested, hardware compatibility and functional outcome unverified; not ETS equivalence.".into(),
             "Masked bytes and unused table capacity are NOT written. Unload/reallocation byte survival and indirect firmware effects are unresolved; recovery is best-effort, never guaranteed.".into(),
             "Requires the same installed application, Loaded resources and matching source-applicable pointers. Historical allocator/task shape is NOT observable or certified by those reads; it remains an explicit experimental premise.".into(),
             "The full affected actual prestate is acquired fresh and durably read back before setup or load/data writes. This is operation-specific evidence, NOT a whole-device backup.".into(),
             "Any failure, cancellation or lost response retains uncertainty and the original backup. No automatic retry, resume or restore. External ETS recovery is advisory, not certified; KNXBench restore is one explicit best-effort attempt.".into(),
             "Task starts and object mapping follow the retained source exactly. The historical observation does not define a general source-to-machine remapping rule.".into(),
-        ],
+        ]).collect(),
         hypothesis_phrase: bundle.acceptance_phrase(), download_phrase: required_confirmation_phrase(plan.target(), WriteScope::Download), release_phrase: required_release_phrase(plan.target()),
     };
     if serde_json::to_vec(&preview)

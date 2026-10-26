@@ -308,6 +308,7 @@ fn failed(written: Written) -> DownloadStatus {
         stopped_in_step: None,
         error: "lost".into(),
         hint: None,
+        failure: crate::device_download::synthetic_failure(None),
     }
 }
 
@@ -497,4 +498,32 @@ mod receipt;
 #[test]
 fn the_memory_constant_matches_the_parts_a_full_run_writes() {
     assert_eq!(knx_app::programming_state::written_parts(None), MEMORY);
+}
+
+/// DIAG-02: a failed run's cause comes first and the settlement after it,
+/// both linked to the run; the settlement stays information, never the cause.
+#[test]
+fn a_failed_run_logs_its_cause_before_and_linked_to_the_settlement() {
+    let f = fixture(&OLD, &new_base());
+    mark(&f.state, ProgrammingParts::ALL, true);
+    let before = f.state.session_log.lock().unwrap().entries().len();
+    run(&f, None, false, failed(Written::Partially));
+    let log = f.state.session_log.lock().unwrap();
+    let entries: Vec<_> = log.entries()[before..]
+        .iter()
+        .filter(|entry| entry.source == "DeviceDownload")
+        .collect();
+    assert_eq!(entries.len(), 2, "{entries:?}");
+    let (cause, settlement) = (entries[0], entries[1]);
+    assert_eq!(cause.severity, crate::session_log::Severity::Error);
+    assert!(cause.message.contains("[taskEnded]"), "{cause:?}");
+    assert!(cause.message.ends_with("written partially"), "{cause:?}");
+    assert_eq!(settlement.severity, crate::session_log::Severity::Info);
+    assert!(
+        settlement.message.contains("stopped partway"),
+        "{settlement:?}"
+    );
+    assert!(!settlement.message.contains("taskEnded"), "not the cause");
+    assert_eq!(cause.detail.as_deref(), Some("download 1"));
+    assert_eq!(settlement.detail, cause.detail, "linked to the same run");
 }

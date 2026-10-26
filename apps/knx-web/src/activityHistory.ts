@@ -1,5 +1,6 @@
 /** Strict, payload-free format-2 history admission; this module never contacts the bus. */
 import { admitReceipts, type DownloadPreparation, type DownloadSettlement } from "./downloadReceipt";
+import { admitDownloadFailure, type DownloadFailure } from "./downloadFailure";
 import { admitPostDownloadCheck, type PostDownloadCheck } from "./postDownloadCheck";
 
 export const HISTORY_KINDS = ["deviceCompare", "serviceControlRead", "serviceControlWrite", "system2Validation", "serialLookup", "deviceDownload", "deviceDiagnostics"] as const;
@@ -29,6 +30,8 @@ export interface HistoryEntry {
     preparation?: DownloadPreparation;
     /** Absent: not recorded, never "no change". Needs its preparation. */
     settlement?: DownloadSettlement;
+    /** DIAG-02, failed rows only. Absent: cause not recorded, never success. */
+    failure?: DownloadFailure;
   };
 }
 export interface HistoryPage {
@@ -117,7 +120,7 @@ export function admitHistoryPage(value: unknown, after = 0, limit = 50): History
       if (entry.state === "noChange" || entry.state === "notSent") requireHistory(!evidence.sendPossible);
       continue;
     }
-    const download = record(entry.downloadEvidence, ["sessionId", "written", "restart", "cleanup"], ["postDownloadCheck", "preparation", "settlement"]);
+    const download = record(entry.downloadEvidence, ["sessionId", "written", "restart", "cleanup"], ["postDownloadCheck", "preparation", "settlement", "failure"]);
     requireHistory(admitReceipts(
       entry.state as string, download.written as "yes" | "no" | "partially" | null,
       download.preparation, download.settlement, Object.hasOwn(download, "preparation"), Object.hasOwn(download, "settlement"),
@@ -127,6 +130,13 @@ export function admitHistoryPage(value: unknown, after = 0, limit = 50): History
       const check = admitPostDownloadCheck(download.postDownloadCheck);
       requireHistory(check !== null && check.observation.status !== "notChecked");
       requireHistory(entry.state === "finished" && download.written === "yes");
+    }
+    if (Object.hasOwn(download, "failure")) {
+      // Only a failed row has a cause, and a stop lands before the first change.
+      const failure = admitDownloadFailure(download.failure);
+      requireHistory(failure !== null && entry.state === "failed");
+      requireHistory(failure.code !== "stopped" || download.written === "no");
+      requireHistory(failure.readBackOctets === 0 || download.written !== "no");
     }
     requireHistory(integer(download.sessionId, 1));
     requireHistory([null, "yes", "no", "partially"].includes(download.written as string | null));

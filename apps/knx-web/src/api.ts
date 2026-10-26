@@ -2105,8 +2105,13 @@ export type DeviceDownloadStatus =
   | {
       state: "failed";
       written: DeviceDownloadWritten;
+      /** The last step that started (1-based), as the report's outcome says. */
       stoppedInStep: number | null;
+      /** The server's own text: local to this computer, never in a report. */
       error: string;
+      hint?: string | null;
+      /** DIAG-02's payload-free diagnostic; admitted by `downloadFailure.ts`. */
+      failure: unknown;
     };
 
 export interface DeviceDownloadStatusResponse {
@@ -2254,6 +2259,8 @@ export interface DeviceDownloadReport {
   } | null;
   /** Additive in format 1; absent in an older report: not checked. */
   postDownloadCheck?: unknown;
+  /** Additive in format 1 (DIAG-02): a stopped run's cause; absent before. */
+  failure?: unknown;
   parameterValues: Record<string, string>;
 }
 

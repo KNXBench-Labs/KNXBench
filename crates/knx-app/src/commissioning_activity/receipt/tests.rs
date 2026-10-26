@@ -340,6 +340,7 @@ fn row(
             post_download_check: check,
             preparation: None,
             settlement: None,
+            failure: None,
         }),
     }
 }

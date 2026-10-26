@@ -383,6 +383,7 @@ fn start_with(
     let (settler, slot) = crate::programming_state::download_settler_receipted(
         &server,
         crate::programming_state::incarnation(&server),
+        7,
         &prepared,
     );
     let filled = Arc::clone(&slot);
@@ -1259,3 +1260,6 @@ async fn a_receipted_run_dropped_without_a_result_keeps_its_preparation_and_gain
     assert!(evidence["preparation"].is_object());
     assert!(evidence.get("settlement").is_none(), "{row}");
 }
+
+#[path = "device_download_failure_tests.rs"]
+mod failure_tests;

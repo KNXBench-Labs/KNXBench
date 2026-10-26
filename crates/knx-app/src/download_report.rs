@@ -8,8 +8,9 @@
 //!
 //! It carries no project name, device name, individual address, gateway,
 //! key, backup path or free-text error: those identify an installation, or
-//! may. Parameter values are included (owner decision 2026-10-13) because
-//! they answer byte-order questions; texts among them may be personal, which
+//! may. A failed run's cause travels as the closed, payload-free
+//! [`DownloadFailure`] (DIAG-02) instead. Parameter values are included
+//! (owner decision 2026-10-13) because they answer byte-order questions; texts among them may be personal, which
 //! the guidance in [`DownloadReport::summary`] says.
 
 use std::collections::BTreeMap;
@@ -21,14 +22,17 @@ use serde::Serialize;
 
 use crate::commissioning_activity::{Restart, Written};
 use crate::device_download::PreparedDownload;
+use crate::download_failure::DownloadFailure;
 use crate::download_support::{scope_code, SupportLevel};
 use crate::post_download_check::{IdentityCheck, PostDownloadCheck};
 
 /// What a report file says it is.
 pub const REPORT_KIND: &str = "knxbench-download-report";
-/// The report format; raised when a field changes meaning. An added,
-/// optional field (`postDownloadCheck`) changes no existing meaning, so a
-/// reader of format 1 that lacks it reads the run as not checked.
+/// The report format; raised when a field changes meaning. Added, optional
+/// fields change no existing meaning: a reader of format 1 that lacks
+/// `postDownloadCheck` reads the run as not checked, and one that lacks
+/// `failure` (reports before DIAG-02) reads a stopped run's cause as not
+/// recorded, never as a success.
 pub const REPORT_FORMAT: u32 = 1;
 /// Where reports may be mailed instead of posted publicly.
 pub const REPORT_MAILBOX: &str = "issue@knxbench.com";
@@ -66,6 +70,10 @@ pub struct DownloadReport {
     /// omitted while it runs. Absent in an older report: not checked.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub post_download_check: Option<PostDownloadCheck>,
+    /// A stopped run's payload-free cause, step and restart evidence;
+    /// omitted for a completed run and in reports older than DIAG-02.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub failure: Option<DownloadFailure>,
     /// The project's values by `ParameterRef` id; absent ones took their
     /// product default.
     pub parameter_values: BTreeMap<String, String>,
@@ -200,6 +208,7 @@ pub fn prepare_report(
         },
         outcome: None,
         post_download_check: None,
+        failure: None,
         parameter_values: prepared.request.values.clone(),
     })
 }
@@ -215,6 +224,12 @@ impl DownloadReport {
     /// that failed or was never checked carries `notChecked`.
     pub fn with_check(mut self, check: PostDownloadCheck) -> Self {
         self.post_download_check = Some(check);
+        self
+    }
+
+    /// The report with a stopped run's diagnostic; `None` for a completed run.
+    pub fn with_failure(mut self, failure: Option<DownloadFailure>) -> Self {
+        self.failure = failure;
         self
     }
 
@@ -276,6 +291,15 @@ impl DownloadReport {
             self.program.mask, self.program.manufacturer, self.scope, self.support
         );
         let _ = writeln!(out, "Outcome: {}", self.outcome_line());
+        match (&self.failure, self.outcome) {
+            (Some(failure), _) => {
+                let _ = writeln!(out, "Cause: {}", failure.line());
+            }
+            (None, Some(outcome)) if !outcome.completed => {
+                let _ = writeln!(out, "Cause: not recorded in this report");
+            }
+            _ => {}
+        }
         if let Some(check) = &self.post_download_check {
             let exemplar = match check.identity() {
                 Some(IdentityCheck::Match(_)) => "; not proven the same physical device",
@@ -375,6 +399,7 @@ mod tests {
             },
             outcome: None,
             post_download_check: None,
+            failure: None,
             parameter_values: [("P-1_R-1".to_string(), "300".to_string())].into(),
         }
     }
@@ -456,6 +481,29 @@ mod tests {
             line(ReportedOutcome::stopped(Written::No, None)),
             "stopped, written no"
         );
+    }
+
+    #[test]
+    fn a_stopped_run_names_its_cause_or_says_it_was_not_recorded() {
+        let stopped = report().with_outcome(ReportedOutcome::stopped(Written::Partially, Some(4)));
+        assert!(stopped
+            .summary()
+            .contains("Cause: not recorded in this report\n"));
+        let plan = knx_core::commissioning::memory_download::MemoryDownloadPlan {
+            mask: knx_core::commissioning::load_state::MaskVersion(0x0701),
+            manufacturer: 0x0083,
+            steps: vec![knx_core::commissioning::memory_download::MemoryDownloadStep::Connect],
+        };
+        let failure = DownloadFailure::task_ended(&plan, Some(1), 0);
+        let line = failure.line();
+        let recorded = stopped.with_failure(Some(failure));
+        assert!(recorded.summary().contains(&format!("Cause: {line}\n")));
+        assert!(!recorded.summary().contains("not recorded"));
+        let completed = report().with_outcome(ReportedOutcome::completed(
+            Written::Yes,
+            Restart::Acknowledged,
+        ));
+        assert!(!completed.summary().contains("Cause:"));
     }
 
     #[test]

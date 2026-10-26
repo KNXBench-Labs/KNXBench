@@ -11,6 +11,7 @@ use std::sync::{Arc, Mutex};
 use chrono::{SecondsFormat, Utc};
 use serde::{Deserialize, Serialize};
 
+use crate::download_failure::DownloadFailure;
 use crate::post_download_check::PostDownloadCheck;
 
 mod receipt;
@@ -90,6 +91,21 @@ struct DownloadEvidence {
         deserialize_with = "present_settlement"
     )]
     settlement: Option<DownloadSettlement>,
+    /// A failed run's payload-free cause (DIAG-02). Additive and optional:
+    /// absent on a failed row is "cause not recorded" (older records, other
+    /// writers), never a success; an explicit `null` is refused.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "present_failure"
+    )]
+    failure: Option<DownloadFailure>,
+}
+
+fn present_failure<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> Result<Option<DownloadFailure>, D::Error> {
+    DownloadFailure::deserialize(deserializer).map(Some)
 }
 
 fn present_preparation<'de, D: serde::Deserializer<'de>>(
@@ -202,6 +218,17 @@ impl OneShotActivity {
                             evidence.preparation.as_ref(),
                             evidence.settlement.as_ref(),
                         )
+                        && evidence.failure.as_ref().is_none_or(|failure| {
+                            // Only a failed row has a cause, and a stop lands
+                            // before the first change.
+                            self.state == "failed"
+                                && failure.is_consistent()
+                                && (failure.code != crate::download_failure::FailureCode::Stopped
+                                    || evidence.written == Some(Written::No))
+                                // Read-back octets were written.
+                                && (failure.read_back_octets == 0
+                                    || evidence.written != Some(Written::No))
+                        })
                         && evidence.post_download_check.as_ref().is_none_or(|check| {
                             // Only a written, finished transfer is checked,
                             // and absence alone says "not checked".
@@ -491,6 +518,7 @@ impl OneShotLog {
                 post_download_check: None,
                 preparation,
                 settlement: None,
+                failure: None,
             }),
         };
         self.persist_download(&entry)?;
@@ -708,6 +736,32 @@ impl DownloadGuard {
             .expect("download evidence");
         evidence.written = Some(written);
         evidence.restart = restart;
+        self.log.persist_download(&self.entry)
+    }
+
+    /// Record a failed run with its payload-free diagnostic (DIAG-02), never
+    /// the error string. Refused like [`Self::record_result`] when the row
+    /// is not running; an inconsistent diagnostic leaves the row unchanged.
+    pub fn record_failure(
+        &mut self,
+        written: Written,
+        failure: &DownloadFailure,
+    ) -> io::Result<()> {
+        if self.entry.state != "running" {
+            return Err(io::Error::other("download result was already recorded"));
+        }
+        let mut candidate = self.entry.clone();
+        candidate.state = "failed".into();
+        candidate.finished_at = Some(now());
+        let evidence = candidate
+            .download_evidence
+            .as_mut()
+            .expect("download evidence");
+        evidence.written = Some(written);
+        evidence.restart = None;
+        evidence.failure = Some(failure.clone());
+        candidate.validate(candidate.id)?;
+        self.entry = candidate;
         self.log.persist_download(&self.entry)
     }
 

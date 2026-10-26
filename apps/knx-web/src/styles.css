@@ -2464,6 +2464,19 @@ main {
   font-weight: 600;
 }
 
+/* DIAG-02: a failure reads as failed by its heading and role; colour only supports it. */
+.download-failure {
+  border-inline-start: 4px solid var(--knx-error-color);
+  padding: 4px 0 4px 12px;
+  margin-block: 8px;
+  overflow-wrap: anywhere;
+}
+.download-failure--stopped { border-inline-start-color: var(--knx-warning-color); }
+.download-failure h4 { margin: 0 0 4px; color: var(--knx-error-color); }
+.download-failure--stopped h4 { color: var(--knx-warning-color); }
+.download-failure p { margin: 2px 0; }
+.download-failure-technical { color: var(--knx-muted); font-family: var(--knx-font-mono); }
+
 .device-download-blocks-scroll {
   max-height: 320px;
   overflow: auto;

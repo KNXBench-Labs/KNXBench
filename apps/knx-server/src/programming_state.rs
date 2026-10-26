@@ -17,6 +17,7 @@ use knx_app::commissioning_activity::{
     CurrentRequest, DownloadSettlement, Format1, ProjectOutcome, SourceVerdict,
 };
 use knx_app::device_download::{source_still_plans, PreparedDownload};
+use knx_app::download_failure::{DownloadFailure, FailureCategory};
 use knx_app::programming_state::{
     apply_settlement, attempted_parts, settle_address, settle_download, sole_device_at, AddressEnd,
     DownloadEnd, Settlement, SourcePlan,
@@ -33,6 +34,7 @@ use crate::device_download::{DownloadStatus, OnDownloadEnd, Written};
 use crate::domain::{self, BoundCommandError, SettleOutcome, Settled, SnapshotBinding};
 use crate::errors::ApiError;
 use crate::log_text::{device_label, parts_text};
+use crate::session_log::{self, LogEntry, Severity};
 use crate::{AppState, SharedState};
 
 #[derive(Deserialize)]
@@ -179,7 +181,7 @@ pub(crate) fn download_settler(
     incarnation: u64,
     prepared: &PreparedDownload,
 ) -> OnDownloadEnd {
-    download_settler_receipted(state, incarnation, prepared).0
+    download_settler_receipted(state, incarnation, 1, prepared).0
 }
 
 /// [`download_settler`] and the slot it fills, on every path that settles,
@@ -187,10 +189,12 @@ pub(crate) fn download_settler(
 pub(crate) fn download_settler_receipted(
     state: &SharedState,
     incarnation: u64,
+    id: u64,
     prepared: &PreparedDownload,
 ) -> (OnDownloadEnd, SettlementSlot) {
     let state = Arc::downgrade(state);
     let device = prepared.device;
+    let device_name = prepared.device_name.clone();
     let target = prepared.target;
     let partial = prepared.partial.as_ref().map(|(parts, _)| *parts);
     let written = prepared.request.clone();
@@ -198,6 +202,17 @@ pub(crate) fn download_settler_receipted(
     let slot = SettlementSlot::default();
     let filled = Arc::clone(&slot);
     let settler: OnDownloadEnd = Box::new(move |status| {
+        // The cause first, then the settlement that follows it: one entry per
+        // run, because the worker calls this once (DIAG-02).
+        if let (
+            DownloadStatus::Failed {
+                written, failure, ..
+            },
+            Some(state),
+        ) = (status, state.upgrade())
+        {
+            log_download_failure(&state, id, (target, &device_name), *written, failure);
+        }
         let through = match status {
             DownloadStatus::Failed {
                 stopped_in_step, ..
@@ -213,7 +228,7 @@ pub(crate) fn download_settler_receipted(
         } else if let Some(state) = state.upgrade() {
             after_download(
                 &state,
-                incarnation,
+                (incarnation, id),
                 (device, target),
                 partial,
                 (&written, &plan),
@@ -229,10 +244,52 @@ pub(crate) fn download_settler_receipted(
     (settler, slot)
 }
 
+/// The session-log correlation of download `id`, shared by its entries.
+fn download_correlation(id: u64) -> String {
+    format!("download {id}")
+}
+
+/// Logs a failed run's cause once: an error, or a warning for a stop the
+/// user asked for, which lands before the first change (DIAG-02).
+fn log_download_failure(
+    state: &AppState,
+    id: u64,
+    (target, device_name): (IndividualAddress, &str),
+    written: Written,
+    failure: &DownloadFailure,
+) {
+    let severity = match failure.category {
+        FailureCategory::Stopped => Severity::Warning,
+        _ => Severity::Error,
+    };
+    let written = match written {
+        Written::Yes => "yes",
+        Written::No => "no",
+        Written::Partially => "partially",
+    };
+    state
+        .session_log
+        .lock()
+        .expect("state mutex poisoned")
+        .push(LogEntry {
+            timestamp: session_log::now(),
+            severity,
+            source: "DeviceDownload".into(),
+            // The settlement entry's label shape, from the name the run was planned with.
+            message: format!(
+                "Download to {target} (“{device_name}”) {}; written {written}",
+                failure.line()
+            ),
+            location: None,
+            detail: Some(download_correlation(id)),
+            diagnostic: None,
+        });
+}
+
 /// Settles a run that may have written, and says what happened.
 fn after_download(
     state: &AppState,
-    incarnation: u64,
+    (incarnation, id): (u64, u64),
     (device, target): (DeviceId, IndividualAddress),
     partial: Option<PartialDownloadParts>,
     (written, plan): (
@@ -297,6 +354,8 @@ fn after_download(
             computed = Some((settlement, verdict, request, at));
             Some(Settled {
                 message: sentence(&subject, &settlement),
+                // Links this settlement to its run's failure entry, if any.
+                detail: Some(download_correlation(id)),
                 // The history changed even where the flags did not.
                 changed: true,
             })
@@ -367,6 +426,7 @@ fn after_address_programming(
                     message: format!(
                         "Individual address {address}: no unchanged, uniquely identified project device, so its programming state was left as it was"
                     ),
+                    detail: None,
                     changed: false,
                 });
             };
@@ -384,6 +444,7 @@ fn after_address_programming(
             };
             Some(Settled {
                 message: sentence(&subject, &settlement),
+                detail: None,
                 changed: true,
             })
         },

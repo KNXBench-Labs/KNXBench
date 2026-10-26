@@ -18,7 +18,7 @@ fn receipt_of(
     status: &DownloadStatus,
 ) -> DownloadSettlement {
     let (settler, slot) =
-        download_settler_receipted(&f.state, super::super::incarnation(&f.state), prepared);
+        download_settler_receipted(&f.state, super::super::incarnation(&f.state), 1, prepared);
     before(f);
     settler(status);
     let receipt = slot.lock().unwrap().take();
@@ -321,6 +321,7 @@ fn an_interrupted_run_is_not_source_checked_and_credits_nothing() {
         stopped_in_step: Some(6),
         error: "lost".into(),
         hint: None,
+        failure: crate::device_download::synthetic_failure(Some(6)),
     };
     let (receipt, believed) = run_receipt(&f, None, true, status);
     let (_, source, _, settled) = applied(&receipt);
@@ -359,7 +360,7 @@ fn a_run_that_wrote_nothing_is_not_attempted_and_touches_no_flag_and_no_source()
 fn a_settler_whose_server_is_gone_leaves_an_unavailable_receipt_for_a_run_that_wrote() {
     let f = fixture(&OLD, &OLD);
     let prepared = prepare(&f.state);
-    let (settler, slot) = download_settler_receipted(&f.state, 0, &prepared);
+    let (settler, slot) = download_settler_receipted(&f.state, 0, 1, &prepared);
     drop(f);
     settler(&finished());
     assert_eq!(
@@ -372,10 +373,10 @@ fn a_settler_whose_server_is_gone_leaves_an_unavailable_receipt_for_a_run_that_w
 fn a_settler_that_is_never_called_or_sees_a_running_status_leaves_no_receipt() {
     let f = fixture(&OLD, &OLD);
     let prepared = prepare(&f.state);
-    let (settler, slot) = download_settler_receipted(&f.state, 0, &prepared);
+    let (settler, slot) = download_settler_receipted(&f.state, 0, 1, &prepared);
     settler(&DownloadStatus::Running);
     assert!(slot.lock().unwrap().is_none());
-    let (_unused, untouched) = download_settler_receipted(&f.state, 0, &prepared);
+    let (_unused, untouched) = download_settler_receipted(&f.state, 0, 1, &prepared);
     assert!(untouched.lock().unwrap().is_none());
 }
 

@@ -275,10 +275,11 @@ already found lying in the grass.
   `tunnel_runtime()` (`apps/knx-cli/src/tunnel_runtime.rs`); its loopback test
   fails when the helper falls back to a current-thread runtime. `device
   system2-validation` (hardware execute and recovery) and `device
-  system2-project` use it. Other tunnel commands still build current-thread
-  runtimes; `device download`, `device restore` and `device service-control`
-  persist a pre-write backup and a send-possible marker between frames and are
-  not converted yet.
+  system2-project`, `device download`, `device restore` and `device
+  service-control` use it; the last three persist a pre-write backup and a
+  send-possible marker between frames. A source-contract test in `main.rs`
+  pins those three call sites (not a CLI end-to-end proof); other tunnel
+  commands still build current-thread runtimes.
 
 ## Docker image
 

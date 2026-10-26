@@ -117,8 +117,9 @@ mod tests {
         }
     }
 
-    #[test]
-    fn tunnel_acks_while_the_operation_future_blocks_in_synchronous_persistence() {
+    /// Runs the fake-gateway scenario on `runtime`: connect, block
+    /// synchronously, report whether the ACK made the window.
+    fn ack_while_blocked_on(runtime: tokio::runtime::Runtime) -> Option<Duration> {
         assert!(knx_net::cemi::decode_l_data(&L_DATA_IND).is_ok());
         let server = UdpSocket::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();
         server
@@ -130,7 +131,6 @@ mod tests {
         let (blocking, blocked) = mpsc::channel();
         let fake = thread::spawn(move || fake_gateway(server, blocked));
 
-        let runtime = tunnel_runtime().expect("a runtime");
         runtime.block_on(async {
             let tunnel = KnxNetIpClient::new()
                 .connect_tunnel(gateway)
@@ -142,10 +142,26 @@ mod tests {
             drop(tunnel);
         });
 
-        let acked = fake.join().expect("the fake gateway finished");
+        fake.join().expect("the fake gateway finished")
+    }
+
+    #[test]
+    fn tunnel_acks_while_the_operation_future_blocks_in_synchronous_persistence() {
+        let acked = ack_while_blocked_on(tunnel_runtime().expect("a runtime"));
         assert!(
             acked.is_some(),
             "no TUNNELLING_ACK within {ACK_WINDOW:?} while the operation future blocked"
         );
+    }
+
+    /// Calibration of the wrong choice: the old current-thread runtime misses
+    /// the window, so the test above can tell the two runtimes apart.
+    #[test]
+    fn a_current_thread_runtime_misses_the_ack_window() {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("a runtime");
+        assert!(ack_while_blocked_on(runtime).is_none());
     }
 }

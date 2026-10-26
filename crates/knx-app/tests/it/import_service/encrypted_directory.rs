@@ -15,6 +15,9 @@ const REASON: &str = "encrypted directory records are unsupported";
 const WITNESS_PATH: &str = "directory-policy-witness.bin";
 const NESTED_WITNESS_PATH: &str = "P-0001/directory-policy-witness.bin";
 const WITNESS: &[u8] = b"synthetic directory admission persistence witness";
+/// A well-formed WinZip AES field (AE-2, vendor `AE`, strength 3, Stored).
+const AES_FIELD: [u8; 11] = [1, 0x99, 7, 0, 2, 0, b'A', b'E', 3, 0, 0];
+const AES_REASON: &str = "a WinZip AES field (0x9901) requires compression method 99";
 
 #[derive(Clone, Copy)]
 enum Layer {
@@ -32,7 +35,12 @@ fn new_manufacturer() -> Vec<u8> {
     stream::manufacturer("directory-policy-new")
 }
 
-fn with_directory(members: &[stream::Member], shape: Shape, added_flags: u16) -> Vec<u8> {
+fn with_directory(
+    members: &[stream::Member],
+    shape: Shape,
+    added_flags: u16,
+    aes: bool,
+) -> Vec<u8> {
     let payload: &[u8] = match shape {
         Shape::StoredAbsentHeader => b"",
         Shape::Raw0300ShortHeader => &[0x03, 0x00],
@@ -69,10 +77,39 @@ fn with_directory(members: &[stream::Member], shape: Shape, added_flags: u16) ->
         bytes[offset + crc_at..offset + crc_at + 4].copy_from_slice(&0u32.to_le_bytes());
         bytes[offset + size_at..offset + size_at + 4].copy_from_slice(&0u32.to_le_bytes());
     }
+    if aes {
+        insert_aes_field(&mut bytes, local, central);
+    }
     bytes
 }
 
-fn project(layer: Layer, shape: Shape, flags: u16) -> Vec<u8> {
+/// Gives the last record (local and central) a WinZip AES field: shifts only
+/// the central directory, then its size, in the end record without comment.
+fn insert_aes_field(bytes: &mut Vec<u8>, local: usize, central: usize) {
+    let field = AES_FIELD.len();
+    for (header, name_len_at, extra_len_at, fixed) in
+        [(local, 26, 28, 30), (central + field, 28, 30, 46)]
+    {
+        let u16_at = |at: usize| u16::from_le_bytes([bytes[header + at], bytes[header + at + 1]]);
+        assert_eq!(
+            u16_at(extra_len_at),
+            0,
+            "fixture record carries no extra field"
+        );
+        let name_end = header + fixed + usize::from(u16_at(name_len_at));
+        bytes[header + extra_len_at..header + extra_len_at + 2]
+            .copy_from_slice(&(field as u16).to_le_bytes());
+        bytes.splice(name_end..name_end, AES_FIELD);
+    }
+    let end = bytes.len() - 22;
+    assert_eq!(&bytes[end..end + 4], b"PK\x05\x06");
+    for (at, delta) in [(end + 12, field), (end + 16, field)] {
+        let value = u32::from_le_bytes(bytes[at..at + 4].try_into().unwrap()) + delta as u32;
+        bytes[at..at + 4].copy_from_slice(&value.to_le_bytes());
+    }
+}
+
+fn project(layer: Layer, shape: Shape, flags: u16, aes: bool) -> Vec<u8> {
     let mut template =
         zip::ZipArchive::new(Cursor::new(knx_testsupport::minimal_knxproj_bytes())).unwrap();
     let mut outer = Vec::new();
@@ -101,14 +138,14 @@ fn project(layer: Layer, shape: Shape, flags: u16) -> Vec<u8> {
         Layer::Outer => {
             outer.push(stream::stored(WITNESS_PATH, WITNESS));
             outer.push(stream::stored(DIRECTORY, payload));
-            with_directory(&outer, shape, flags)
+            with_directory(&outer, shape, flags, aes)
         }
         Layer::DirectInner => {
             inner.push(stream::stored(WITNESS_PATH, WITNESS));
             inner.push(stream::stored(DIRECTORY, payload));
             outer.push(stream::stored(
                 "P-0001.zip",
-                &with_directory(&inner, shape, flags),
+                &with_directory(&inner, shape, flags, aes),
             ));
             stream::archive(&outer)
         }
@@ -120,7 +157,12 @@ fn application_case(layer: Layer, shape: Shape, populated: bool, encrypted: bool
 }
 
 fn application_case_flags(layer: Layer, shape: Shape, populated: bool, flags: u16) {
-    let encrypted = flags != 0;
+    application_case_full(layer, shape, populated, flags, false);
+}
+
+fn application_case_full(layer: Layer, shape: Shape, populated: bool, flags: u16, aes: bool) {
+    // `encrypted` names every refused case, including the plaintext AES-field one.
+    let encrypted = flags != 0 || aes;
     let dir = tempfile::tempdir().unwrap();
     let native_path = dir.path().join("project.knxdb");
     let products_path = dir.path().join("products.sqlite");
@@ -172,7 +214,7 @@ fn application_case_flags(layer: Layer, shape: Shape, populated: bool, flags: u1
         .unwrap()
         .iter()
         .any(|entry| entry.source_path.ends_with(WITNESS_PATH)));
-    let source = project(layer, shape, flags);
+    let source = project(layer, shape, flags, aes);
     let source_path = dir.path().join("directory-policy.knxproj");
     std::fs::write(&source_path, &source).unwrap();
     drop(store);
@@ -203,7 +245,9 @@ fn application_case_flags(layer: Layer, shape: Shape, populated: bool, flags: u1
                 knx_etsproj::ContainerError::InconsistentRecord { path, reason },
             ))) => {
                 assert_eq!(path, DIRECTORY, "refusal must name the decoded directory");
-                let expected = if flags == 64 {
+                let expected = if aes {
+                    AES_REASON
+                } else if flags == 64 {
                     "strong-encryption flag (bit 6) requires encryption flag (bit 0)"
                 } else {
                     REASON
@@ -329,6 +373,27 @@ fn bit6_only_outer_deflated_preserves_populated_stores() {
 #[test]
 fn bit6_only_nested_stored_preserves_populated_stores() {
     application_case_flags(Layer::DirectInner, Shape::StoredAbsentHeader, true, 64);
+}
+
+#[test]
+fn plaintext_aes_field_outer_preserves_populated_stores() {
+    application_case_full(Layer::Outer, Shape::StoredAbsentHeader, true, 0, true);
+}
+
+#[test]
+fn plaintext_aes_field_nested_preserves_populated_stores() {
+    application_case_full(Layer::DirectInner, Shape::StoredAbsentHeader, true, 0, true);
+}
+
+#[test]
+fn plaintext_aes_field_nested_refuses_fresh_destinations() {
+    application_case_full(
+        Layer::DirectInner,
+        Shape::StoredAbsentHeader,
+        false,
+        0,
+        true,
+    );
 }
 
 #[test]

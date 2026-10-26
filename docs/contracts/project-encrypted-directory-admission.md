@@ -35,8 +35,11 @@ minimum-length heuristic that cannot establish header/password validity.
 - The original bit-6-only directory positives below are historical and do not
   endorse valid strong encryption. The [24 October consistency amendment](../research/2026-10-24-zip-bit6-flag-consistency.md)
   deliberately supersedes four such positives with early named refusals for
-  bit 6 without bit 0, on both files and directories. AES extra-field semantic
-  equality and other encryption metadata on ordinary files stay separate scope.
+  bit 6 without bit 0, on both files and directories. The
+  [26 October AES amendment](../research/2026-10-26-zip-aes-extra-field-consistency.md)
+  refuses contradictory WinZip AES metadata (fields, method 99, bit 0) on files
+  and directories with a named `InconsistentRecord`; a consistent AES directory
+  keeps the unsupported-directory refusal above.
 - No private encrypted-corpus census or real encrypted-directory compatibility
   claim. Source-bound synthetic refusal proves the declared boundary only.
 

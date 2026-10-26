@@ -1,6 +1,6 @@
 # WP-16 — ZIP encryption metadata consistency (AES extra field)
 
-**Status:** Open. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
+**Status:** Implemented on its branch (26 October 2026); package acceptance pending. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
 
 ## Task
 
@@ -17,7 +17,9 @@ consistency (`daef61b74`).
 ## First deliverable
 
 Source research on the AES extra-field consistency rules, recorded in
-`docs/research/`, before any code change.
+`docs/research/`, before any code change: delivered as
+[the AES consistency note](../research/2026-10-26-zip-aes-extra-field-consistency.md),
+which also records the decision and the measured pre-change behaviour.
 
 ## Done when (proposed, no contract yet)
 

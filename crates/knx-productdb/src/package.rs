@@ -858,6 +858,10 @@ struct CheckedZipEntry {
     central_offset: u64,
     local_offset: u64,
     flags: u16,
+    /// Why the record's WinZip AES metadata contradicts itself, if it does.
+    /// Recorded here but refused only by `open_checked_archive`: other users
+    /// of the validated directory (legacy, baggage) must check it themselves.
+    aes_conflict: Option<&'static str>,
     crc32: u32,
     compressed_size: u64,
     uncompressed_size: u64,
@@ -1124,6 +1128,50 @@ fn unicode_path(
     Ok(decoded)
 }
 
+/// The bodies of the WinZip AES (0x9901, APPNOTE Appendix E) fields in one
+/// extra block, which [`unicode_path`] has already walked and bounded.
+fn aes_fields(archive: &[u8], range: std::ops::Range<usize>) -> Vec<&[u8]> {
+    let mut fields = Vec::new();
+    let mut offset = range.start;
+    while let Some(header) = archive
+        .get(offset..offset + 4)
+        .filter(|_| offset < range.end)
+    {
+        let len = usize::from(u16::from_le_bytes([header[2], header[3]]));
+        let body = archive.get(offset + 4..(offset + 4 + len).min(range.end));
+        if u16::from_le_bytes([header[0], header[1]]) == 0x9901 {
+            fields.extend(body);
+        }
+        offset += 4 + len;
+    }
+    fields
+}
+
+/// Why WinZip AE-x metadata contradicts itself (WP-16): method 99, bit 0 and
+/// exactly one equal 0x9901 field in both headers go together. `zip` takes a
+/// field's method for any record, so a plaintext record could be decoded
+/// differently from its raw method. A consistent record stays unsupported
+/// encryption; malformed field contents are `zip`'s to refuse.
+fn aes_conflict(
+    flags: u16,
+    method: u16,
+    local: &[&[u8]],
+    central: &[&[u8]],
+) -> Option<&'static str> {
+    if local != central {
+        Some("its local and central WinZip AES fields (0x9901) differ")
+    } else if method != 99 {
+        (!central.is_empty())
+            .then_some("a WinZip AES field (0x9901) requires compression method 99")
+    } else if central.len() != 1 {
+        Some("compression method 99 (WinZip AES) requires exactly one WinZip AES field (0x9901)")
+    } else if flags & 1 == 0 {
+        Some("compression method 99 (WinZip AES) requires encryption flag (bit 0)")
+    } else {
+        None
+    }
+}
+
 fn data_descriptor_end(
     archive: &[u8],
     start: usize,
@@ -1315,10 +1363,17 @@ fn validate_central_directory(
         {
             return Err(zip_error("flagged UTF-8 and Unicode path field differ"));
         }
+        let aes_conflict = aes_conflict(
+            flags,
+            method,
+            &aes_fields(archive, local_name_end..local_extra_end),
+            &aes_fields(archive, name_end..extra_end),
+        );
         checked_entries.push(CheckedZipEntry {
             central_offset: usize_to_u64(offset, "central-directory offset")?,
             local_offset: usize_to_u64(local_offset, "local-header offset")?,
             flags,
+            aes_conflict,
             crc32,
             compressed_size: u64::from(compressed_size),
             uncompressed_size: u64::from(uncompressed_size),
@@ -2780,6 +2835,9 @@ pub(crate) fn open_checked_archive<'a>(
             return Err(zip_error(format!(
                 "{path}: strong-encryption flag (bit 6) requires encryption flag (bit 0)"
             )));
+        }
+        if let Some(reason) = checked.aes_conflict {
+            return Err(zip_error(format!("{path}: {reason}")));
         }
         has_master |= normalized == "knx_master.xml";
         if !is_directory && is_inner_package_path(normalized) {

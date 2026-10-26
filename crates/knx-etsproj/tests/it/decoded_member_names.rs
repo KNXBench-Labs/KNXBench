@@ -10,6 +10,7 @@
 // The archives are written by hand below, so names, flags, extra fields and
 // declared sizes can be set independently of each other.
 
+mod aes_fields;
 mod bit6_flags;
 mod encrypted_directories;
 

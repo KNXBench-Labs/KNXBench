@@ -1,6 +1,6 @@
 # Restart snapshot
 
-Updated: 2026-10-26 02:42 CET. Operational snapshot, not an append-only journal.
+Updated: 2026-10-26 02:58 CET. Operational snapshot, not an append-only journal.
 ## Other owners and preservation
 - Root intentionally old/dirty: preserve private/untracked files and other edits.
   Alpha16 belongs to another track. No release/deployment/hardware authority.
@@ -9,21 +9,20 @@ Updated: 2026-10-26 02:42 CET. Operational snapshot, not an append-only journal.
   Owner rule: pre-write hard = hardware type/mask/manufacturer; serial, prior program version,
   load state, PID 7 are observations; memory/Loaded/written version verification stays hard.
 ## Active programming improvements
-- Existing non-Secure gaps GO; no bus/new family/Secure/deployment; PRG-01 open.
-- MergeId published `be2687796`/`5bb8d076`; evidence verified, own old tree retired.
-- Budget feature `22d14c863` reviewed; original6 semantic RED independently replayed.
-  Branch16 accepted: Rust6796/229ignored, corpus155/155; no hardware/path-capacity claim.
+- Bounded memory-budget source PUBLISHED `1e6229cea3`; local/tracking/live equal.
+  Feature `22d14c863`, original6 semantic RED, independent reviews accepted.
+- Integrated16 green: Rust6818/229ignored, corpus155/155 in9targets, bindings same;
+  tools425executed/6skipped; web/browser not selected, bundle separately built.
+- First integrated Rust101 stays failed; exact original log/binary retained.
+  Separate reviewed test-only workspace fixture fix `172bf53b`; no production change.
+- MergeId PUBLISHED `be2687796`/`5bb8d076`; B2timeout remains failed/unrepinned.
+- All24 non-Secure dispositions reconciled;23 retain exact remaining evidence blockers.
+  PRG-01 stays OPEN; no broad capability, family, device baseline or recovery closure.
 - Own `<sources>/knxbench-regular-memory-budget-20261025`, branch
-  `integrate/regular-memory-budget-20261026`, base `bb592d154`; test fix `172bf53b`.
-- First integrated gate FAILED Rust101 (catalogue Ready/details JobBusy); no push.
-  Original failed log/binary retained; exact historical timing not proved.
-- Test-only workspace synchronization independently APPROVED; old assertions preserved,
-  server623/8ignored and net commissioning421 passed; no production/lifecycle change.
-  Initial unflushed green stdout lost/uncredited; current raw run and worker trace retained.
-- NEW integrated16 `regular-memory-budget-merged2-gate/receipt.json` next;
-  accept before conditional push/readback. Original failed namespace stays immutable.
-- cEMI/client/gateway/System2 foreign-owned; no duplicate full product census.
-  Path/parameter/customer-write/exclusion/runtime/exemplar/effect/recovery blockers retained.
+  `integrate/regular-memory-budget-20261026`; next result-doc gate/publication,
+  verified private evidence archive and own clean-worktree/build-cache retirement.
+- cEMI/client/gateway/System2 foreign-owned. No bus/Secure/deployment/vendor work.
+  Path/parameter/customer-write/exclusion/runtime/exemplar/effect/recovery boundaries retained.
 ## S2-01 diagnostic subdelivery
 - PUBLISHED `5f1ad454e`; local/tracking/live refs matched after push; claim released.
 - Independent Opus APPROVE, integrated gate14 green: Rust3279/131ignored, corpus91/91.

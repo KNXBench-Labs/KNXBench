@@ -109,15 +109,15 @@ all 14 selected maintained integrated stages passed; source is published as
 `be2687796` ([acceptance](../status/2026-10-25-regular-merge-fragment-admission.md)). This is
 not merged-procedure execution or closure of PRG-01.
 
-## Current bounded increment
+## Delivered service-aware memory budgets
 
 The [service-aware memory budget](../contracts/memory-transfer-budget.md)
 reserves the extra user-memory header octet and applies a conservative standard
 cap to unproved hardware-kind/default routes. Standard data budgets are 12
 ordinary or 11 user-memory octets; actual interface/coupler and extended-path
-capacity acquisition is not implemented. Original semantic regressions and the
-initial review passed; correction re-review, maintained merged acceptance and
-publication remain pending
+capacity acquisition is not implemented. Original semantic regressions and
+independent initial/correction reviews passed; all 16 selected maintained
+integrated stages passed, published as `1e6229cea3`
 ([record](../status/2026-10-26-memory-transfer-budget.md)). No new family,
 authorisation, recovery behavior or physical outcome is claimed.
 

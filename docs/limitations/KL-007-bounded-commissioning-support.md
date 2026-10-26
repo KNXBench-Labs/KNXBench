@@ -15,8 +15,8 @@ are held conservatively to that frame after existing property handling;
 simulator modeled capacity remains unchanged
 ([contract](../contracts/memory-transfer-budget.md)). Actual interface/coupler
 capacity, extended-path authority and physical throughput remain unmeasured.
-Original semantic RED and initial review passed; correction re-review,
-maintained integrated acceptance and publication are still pending
+Original semantic RED and independent initial/correction reviews passed;
+all 16 selected maintained integrated stages passed, published as `1e6229cea3`
 ([record](../status/2026-10-26-memory-transfer-budget.md)). KL-007 remains open;
 no new family, write authority or whole-recovery capability follows.
 

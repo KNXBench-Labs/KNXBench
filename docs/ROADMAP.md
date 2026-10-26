@@ -43,8 +43,8 @@ The [memory transfer budget](contracts/memory-transfer-budget.md) composes a
 conservative default hardware-route cap with service-specific header arithmetic.
 At a standard frame it sends 12 ordinary or 11 user-memory data octets; real
 interface/coupler capacity acquisition and extended-path authority remain open.
-Original semantic regression and initial review passed; correction re-review,
-maintained integrated gate and publication are pending
+Original semantic regression and independent initial/correction reviews passed;
+all 16 selected maintained integrated stages passed, published as `1e6229cea3`
 ([record](status/2026-10-26-memory-transfer-budget.md)). No family is admitted.
 
 The [regular fragment-admission contract](contracts/regular-merge-fragment-admission.md)

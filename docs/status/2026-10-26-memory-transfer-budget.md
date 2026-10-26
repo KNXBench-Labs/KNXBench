@@ -43,14 +43,31 @@ The initial independent review found no blockers. Its four cheap
 characterization additions and the diagnostic-label correction are implemented;
 the latter has its own independently replayed review-candidate RED, not an
 additional original-upstream failure. A moved assertion retains its exact body.
-Focused correction re-review is pending; owning checks are not a maintained
-package or merged-result gate.
+Focused correction re-review also approved the final source. Owning checks
+remain distinct from the maintained integrated acceptance below.
 
 ## Integrated acceptance
 
-Pending: correction re-review, the maintained integrated package gate, selected
-corpus, generated-binding equality, final warning-denied all-target Clippy and
-publication readback. No completed merged-result or publication claim yet.
+Published as `1e6229cea3` after independent reviews and all **16 selected
+maintained integrated stages** passed on that exact source:
+
+- Rust: 6,818 passed, zero failed, 229 ignored across 49 result blocks.
+- Selected corpus: 155/155 in nine targets, reconciled to the exact inventory.
+- Python tools: 425 executed, six skipped (431 reported); skips are not execution.
+- Warning-denied workspace/all-target Clippy, fmt, documentation, browser-lane
+  guard, layering/headers/anchors/ledger/corpus gates, clean-desktop, generated
+  bindings, binding equality and whitespace all passed.
+- Inputs remained frozen; tracked user-data access was unchanged. Web/browser
+  suites were not selected; the local web bundle was built separately.
+- Local, tracking and live remote refs matched after publication.
+
+The preceding integrated attempt remains failed: an existing catalogue fixture
+read details at Ready before the workspace guard necessarily released. Separate
+test-only commit `172bf53b` synchronizes that resource, characterizes exact Busy
+refusal without status mutation, and asserts terminal-after-cleanup availability.
+All previous artifact/backup assertions and production behavior remain unchanged.
+The independent correction review approved it. The scheduling window is proven
+in source, not a traced historical timing or a budget-caused production defect.
 
 ## Retained boundaries
 

@@ -14,7 +14,8 @@ Duplicate/case-colliding names and inconsistent ZIP records remain refused.
 The empty-directory CRC/complete-stream, ordinary-file exact-stream and bit-0
 encrypted-directory repairs described below are delivered. The 24 October
 bit-6-only consistency amendment is delivered as `daef61b74`, independently reviewed
-and accepted by the integrated package gate. Other cipher metadata remains bounded.
+and accepted by the integrated package gate. The 26 October AES metadata amendment
+refuses contradictory WinZip AES metadata by name; other cipher metadata remains bounded.
 The product-reader follow-up is delivered on `main` (`9c79634b`), with
 its bounded acceptance recorded below.
 
@@ -206,6 +207,15 @@ released; overlapping focused suites are not added to integrated totals.
 Existing bit-0-plus-6 unsupported behavior
 is unchanged; AES equality, extraction-version checks and new cipher support are
 not included. Earlier dated open statements remain historical, not duplicate jobs.
+
+## WinZip AES metadata amendment (26 October 2026)
+
+The [AES amendment](../research/2026-10-26-zip-aes-extra-field-consistency.md)
+refuses, at the same project/product admission boundaries, local/central 0x9901
+field disagreement, a 0x9901 field without method 99, method 99 without exactly
+one field and method 99 without bit 0. Several of these shapes were accepted
+inside nested protected payloads before. Consistent AES stays unsupported; field
+contents, extraction versions and AES decryption are not validated or added.
 
 <!-- BEGIN retained catalogue record -->
 

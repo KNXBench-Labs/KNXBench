@@ -238,9 +238,10 @@ release artifact. The bit-0 claim is released. The
 is implemented with original-source regressions and focused corrected tests;
 independent review accepts with zero Critical/Important findings; package acceptance
 is delivered on `main` as `daef61b74` with the verified integrated 14-stage gate
-and exact live publication readback. The claim is released. AES extra-field semantic
-equality and other unsupported cipher metadata remain separate questions, not new
-encryption support.
+and exact live publication readback. The claim is released. The
+[26 October AES metadata amendment](research/2026-10-26-zip-aes-extra-field-consistency.md)
+refuses contradictory WinZip AES metadata by name in every project and product
+layer; consistent AES stays unsupported, so this is no new encryption support.
 
 ## After Alpha 15 — master provenance delivered (19 October 2026)
 

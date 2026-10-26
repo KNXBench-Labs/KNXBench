@@ -1,5 +1,6 @@
 //! Vendor wrapper ZIPs install every inner package together or none (census G3, ADR-0140).
 
+mod aes_fields;
 mod bit6_flags;
 
 use std::io::{Cursor, Write};

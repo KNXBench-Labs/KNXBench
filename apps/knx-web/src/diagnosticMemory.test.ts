@@ -47,6 +47,7 @@ describe("diagnostic dialog helpers", () => {
   it("labels every stop reason the server records and falls back for unknown tokens", () => {
     const reasons = ["cancelled", "gateway-busy", "gateway-connect-failed", "gateway-timeout", "context-changed-before-connect", "server-stopping",
       "deadline", "timeout", "connect-rejected", "connection-lost", "connection-released", "self-addressed", "event-loss", "transport-error",
+      "excluded", "not-connected", "memory-refused", "management-error",
       "descriptor-unverified", "identity-mismatch", "identity-unverified", "identity-assertion-missing", "response-size-limit-raw-not-retained",
       "tunnel-disconnect-unconfirmed"];
     const keys = reasons.map(stopReasonMessage);

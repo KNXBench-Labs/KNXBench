@@ -29,10 +29,11 @@ Published as `678082047` ([delivery](../status/2026-10-26-up258-image-differenti
    inert under Resources v01.10.01 §4.18.3.1.2.1. Missing evidence: a clause or
    owner decision choosing one policy.
 3. **Other tunnel commands that persist between frames.** `device download`,
-   `device restore` and `device service-control` still build current-thread
-   runtimes while writing a pre-write backup and send marker between frames. They
-   belong to the [PRG-01](PRG-01-programming-gaps.md) track; convert them there
-   with the same helper and a regression test.
+   `device restore` and `device service-control` now take their runtime from the
+   same `tunnel_runtime()` helper; delivery is pending review, gate and
+   publication. Proof is the helper's loopback ACK test plus a source-contract
+   test pinning the three call sites, not a CLI end-to-end run. Ordering of
+   backup, consent, admission, send-possible marker and recovery is unchanged.
 
 Unchanged boundaries: TaskSegment identity, the omitted program-version octets,
 `FEh` handling, the [PID 7 width blocker](S2-01-pid7-raw-response.md), gateway

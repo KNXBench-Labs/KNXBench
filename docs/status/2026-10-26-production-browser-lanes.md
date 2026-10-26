@@ -19,11 +19,13 @@ exactly as for the default suite. Playwright configs are unchanged.
 ## Lane review
 
 Mechanical, per production config (details in ADR-0154): every selected spec
-file is also in the default inventory; one static preview server per suite on
-its own port, suites run sequentially; no global setup, environment switch or
-shared server state; capture switches are `KNX_*` variables the gate removes;
-no serial or `beforeAll` constructs. Only `reload-guard` sets a config `grep`,
-and its inventory holds no exclusive case.
+file is also in the default inventory; one static preview server per suite,
+suites run sequentially, each stage in its own network namespace; no global
+setup, environment switch or shared server state; every capture switch the
+specs read is removed by the gate environment; no serial or `beforeAll`
+constructs. `reload-guard`'s config `grep` stays in force beside the lane filter.
+A suite whose specs hold tagged scopes but compile no exclusive case stops the
+gate.
 
 ## Evidence
 
@@ -31,12 +33,17 @@ and its inventory holds no exclusive case.
   failed on the old runner (two plan assertions, the missing `run_production`,
   the call-site check) and pass on the change; the module passes 40/40 and all
   gate-tool modules (`test_*gate*.py`) 93/93.
+- Independent review: APPROVE, minor findings only. Fixed afterwards: the
+  tagged-scope stop, a second suite and an empty exclusive lane in the test,
+  documentation wording. Four mutants (receipt overwrite, dropped save, skipped
+  empty lane, dropped tagged-scope stop) are each rejected by the module.
 - Measured run on the candidate: `run_web_gate.py --profile targeted --specs ''`
   with all 16 suites, receipt success, plan completed, inputs frozen, no failed
   stage. 557 production cases: 528 functional, 29 exclusive (`ux-feedback` 22,
   `table-columns` 4, `communication`, `devices`, `group-addresses` one each).
 - Production stages (inventories included): 682.6 s against 850.3 s in the
-  integrated gate of `ed156ef9b` (load at start 3.2 against 3.5).
+  integrated gate of `ed156ef9b` (load at start 3.2 against 3.5). The old run
+  followed the whole default suite, the measured one ran without it.
   `table-columns` 254.3 → 152.0 s, `communication` 76.7 → 54.6 s,
   `device-download-support` 51.0 → 30.1 s, `devices` 96.8 → 82.6 s,
   `ux-feedback` 99.4 → 86.8 s. Single-file suites stay level;

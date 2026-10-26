@@ -436,8 +436,14 @@ class GatePlan(unittest.TestCase):
             return {}
 
         with TemporaryDirectory() as tmp, mock.patch.object(runner, 'browser_stage', stage):
+            app = Path(tmp)
+            (app / 'e2e').mkdir()
+            for spec in ('plain', 'other'):
+                (app / 'e2e' / f'{spec}.e2e.ts').write_text('test("p", async () => {});\n')
+            (app / 'e2e' / 'timed.e2e.ts').write_text(
+                'test("t", { tag: "@exclusive" }, async () => {});\n')
             run = support.MeasuredRun(Path(tmp) / 'attempt', [])
-            runner.run_production(run, Path(tmp), {}, 'devices', 4)
+            runner.run_production(run, app, {}, 'devices', 4)
             cases = support.browser_cases(inventory)
             functional, exclusive = support.split_lanes(cases)
             self.assertEqual(calls, [
@@ -449,6 +455,19 @@ class GatePlan(unittest.TestCase):
             ])
             self.assertEqual(run.receipt['production']['devices'],
                              {'total': 3, 'functional': 2, 'exclusive': 1})
+            # A second suite adds its counts; the saved receipt carries both.
+            inventory = report('plain')
+            runner.run_production(run, app, {}, 'notes', 4)
+            self.assertEqual(calls[-1], ('production-notes-exclusive', 'playwright.notes.config.ts',
+                                         'exclusive', 1, []))
+            saved = json.loads((run.output / 'receipt.json').read_text())['production']
+            self.assertEqual(saved, {'devices': {'total': 3, 'functional': 2, 'exclusive': 1},
+                                     'notes': {'total': 1, 'functional': 1, 'exclusive': 0}})
+            # Tagged scopes that compile to no exclusive case fail closed.
+            inventory = report('timed')
+            inventory['suites'][0]['specs'][0]['tags'] = []
+            with self.assertRaisesRegex(ValueError, 'compiled to no exclusive case'):
+                runner.run_production(run, app, {}, 'dialogs', 4)
 
     def test_production_configs_still_pin_one_worker_for_standalone_runs(self) -> None:
         import inspect
@@ -458,10 +477,6 @@ class GatePlan(unittest.TestCase):
         for config in runner.PRODUCTION_CONFIGS:
             text = (app / f'playwright.{config}.config.ts').read_text()
             self.assertNotRegex(text, r'workers:\s*[2-9]', config)
-            # A config-level grep would be replaced by the exclusive lane's --grep;
-            # only reload-guard has one, and its inventory holds no exclusive case.
-            if config != 'reload-guard':
-                self.assertNotRegex(text, r'\bgrep\s*:', config)
 
     def test_lease_timeout_and_release_are_real(self) -> None:
         import fcntl

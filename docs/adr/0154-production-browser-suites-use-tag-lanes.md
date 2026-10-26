@@ -23,14 +23,17 @@ hash admission in ADR-0144 for every production config and its spec files:
 - All 35 spec files that the 16 production configs select are also in the
   default inventory, so they already run file-parallel on four workers and are
   covered by the `tools/browser_lanes.py` tag guard.
-- Each config starts one static `vite preview` server on its own port; the gate
-  runs the suites one after another, so no port is shared between suites.
-  Two suites (`table-columns`, `ux-feedback`) build into their own `target/`
-  directory first; a second invocation rebuilds the same output.
+- Each config starts one static `vite preview` server that all of its workers
+  share; the gate runs the suites one after another, each stage in its own
+  network namespace. Two suites (`table-columns`, `ux-feedback`) build into
+  their own `target/` directory first.
 - No production config sets a `globalSetup`, environment switch or shared server
-  state. The specs' capture directories are `KNX_*` variables, which the gate
-  environment already removes. No spec uses `describe.serial`, `describe.configure`
-  or `beforeAll`.
+  state. The specs write only to Playwright's output path or to capture
+  locations behind opt-in variables (`KNX_*`, `UX_FEEDBACK_SHOTS`,
+  `ARCHIVE_TOAST_SCREENSHOTS`, `IMPORT_STATUS_SCREENSHOTS`, `UPDATE_SCREENSHOTS`,
+  `FLOW_EXPORT_OUTPUT`, `FLOW_CAMERA_OUT`, `FLOW_CAMERA_NEGATIVE`), all of which
+  the gate environment removes. No spec uses `describe.serial`,
+  `describe.configure` or `beforeAll`.
 - 29 of 557 production cases carry `@exclusive` (`ux-feedback` 22,
   `table-columns` 4, `communication`, `devices` and `group-addresses` one each).
 
@@ -45,10 +48,11 @@ retries and no skips apply unchanged. Parallelism stays per file, as in the
 default suite (`fullyParallel: false`); suites still run one after another.
 
 The configs keep `workers: 1` for standalone runs; the gate passes `--workers`.
-A config-level `grep` would be replaced by the exclusive lane's `--grep`; only
-`reload-guard` has one, its inventory has no exclusive case, and any mismatch
-would fail the case-identity check rather than pass silently. A unit test
-refuses a `grep` in any other production config.
+A config-level `grep` (only `reload-guard` has one) stays in force: Playwright
+applies the lane's `--grep`/`--grep-invert` in addition to it, and any mismatch
+would fail the case-identity check rather than pass silently. When a suite's
+spec files hold tagged `@exclusive` scopes but its inventory compiles no
+exclusive case, the gate stops, as it does for the default suite.
 
 ## Alternatives considered
 
@@ -56,9 +60,9 @@ refuses a `grep` in any other production config.
   instead of about 610 s from per-case durations, but it would make every test
   within one file independent of its neighbours, which no review has checked.
   Left open.
-- **Several suites at once.** Several configs share port 4173 (and 4831–4833),
-  and two of them build into their own directories; running suites concurrently
-  needs a port and build review first. Left open.
+- **Several suites at once.** Each stage has its own network namespace, so the
+  shared port numbers (4173, 4831–4833) would not collide, but the leases,
+  build directories and CPU budget would need their own review. Left open.
 - **Keep one worker.** Leaves about 170 s per web gate on the table for no
   identified risk.
 
@@ -68,6 +72,8 @@ One measured run of all 16 suites on the candidate (targeted profile, no
 default specs) took 682.6 s of production stages against 850.3 s in the last
 complete integrated gate, with inputs frozen and every lane's case identities
 equal to its inventory ([status record](../status/2026-10-26-production-browser-lanes.md)).
+The old figure ran after the whole default suite, the new one without it, so
+cache and load conditions differ.
 Single-file suites (`catalogue`, `group-addresses`, ...) gain nothing and pay
 one extra preview-server start when they have exclusive cases. Numbers come
 from one host; they are not a speed promise for other machines.

@@ -134,6 +134,51 @@ async fn production_mount_installs_with_complete_artifacts_and_a_real_retained_b
     assert!(ready.result.is_none());
     let preview = ready.preview.unwrap();
     assert_eq!(preview.programs, U64(1));
+    // Ready is published while the worker still holds the workspace guard, so
+    // Ready does not imply a free workspace. Wait on the exact resource details
+    // try-acquires: one acquire/drop, no sleep, no retry.
+    let workspace = runtime
+        .lookup(handle, &capability)
+        .unwrap()
+        .workspace()
+        .unwrap();
+    let settled = Arc::clone(&workspace);
+    tokio::task::spawn_blocking(move || drop(settled.lock().unwrap()))
+        .await
+        .unwrap();
+    // Characterization on the real preview: a held workspace refuses details
+    // with exactly JobBusy and leaves the job untouched.
+    let before = runtime.status(handle, &capability).unwrap();
+    assert_eq!(before.phase, Some(Phase::Ready));
+    assert_eq!(before.lease.kind, LeaseKind::Ready);
+    assert_eq!(before.preview.as_ref(), Some(&preview));
+    let (held_tx, held_rx) = tokio::sync::oneshot::channel();
+    let (release_tx, release_rx) = sync::channel::<()>();
+    let held = Arc::clone(&workspace);
+    let holder = tokio::task::spawn_blocking(move || {
+        let guard = held.lock().unwrap();
+        held_tx.send(()).unwrap();
+        let _ = release_rx.recv();
+        drop(guard);
+    });
+    held_rx.await.unwrap();
+    let busy = tokio::time::timeout(
+        Duration::from_secs(20),
+        runtime.details(
+            handle,
+            &capability,
+            preview.artifact.artifact_id,
+            preview.artifact.public_sha256,
+            U64(0),
+            200,
+        ),
+    )
+    .await;
+    // Release and join before judging, so a failure cannot strand the holder.
+    let _ = release_tx.send(());
+    holder.await.unwrap();
+    assert_eq!(busy.unwrap(), Err(FailureKind::JobBusy));
+    assert_eq!(runtime.status(handle, &capability).unwrap(), before);
     let page = runtime
         .details(
             handle,
@@ -214,6 +259,12 @@ async fn production_mount_installs_with_complete_artifacts_and_a_real_retained_b
     })
     .await
     .unwrap();
+    // A visible terminal means the worker is joined and cleanup awaited, so the
+    // workspace is free again; no barrier needed, only this proof.
+    assert!(
+        workspace.try_lock().is_ok(),
+        "terminal status must imply a released workspace"
+    );
     assert_eq!(
         done.state,
         JobState::Succeeded,

@@ -52,7 +52,7 @@ test("a late Flow window adopts old graph history without reviving a value or po
   expect(context.pages()).toHaveLength(2);
   await expect(popup.locator("g[data-zoom]")).toHaveAttribute("transform", camera!);
   server.generation = "2"; server.rows.push(telegram(2, "2", "Off"));
-  await expect(node(popup, "Blind").locator(".flow-badge")).toHaveText("◇ 1/0/1 Off");
+  await expect(node(popup, "Blind").locator(".flow-badge")).toHaveText("◇ 1/0/1 (Light) Off");
   await expect(node(popup, "Dimmer")).toBeVisible();
   await page.getByRole("button", { name: "Pause", exact: true }).click();
   await expect(popup.getByText("The source monitor is paused. New telegrams are not being added.")).toBeVisible();

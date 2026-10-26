@@ -211,6 +211,15 @@ send anything.
   sender with no project device, and every sender the project could not
   interpret (no project open, an older project state), is drawn by its
   address only, and the Inspector says why.
+- **Group names (26 October 2026 source).** Group nodes, connection labels and
+  current-value labels show `1/2/3 (Living room light)` when the interpreting
+  project snapshot identifies exactly one named group. Empty names, ambiguous
+  addresses across installations, truncated group lists and historical or
+  unavailable context keep the bare address. Long labels have a full-text tooltip
+  and remain available in the Inspector; the numeric address stays first. A
+  later rename does not rewrite earlier observations: an existing node or
+  connection updates when another telegram for that address is interpreted in
+  the new generation. Opening Flow still sends nothing.
 - Under each node, up to three **current values** appear with their group
   addresses, newest first. A value at a configured member is marked **◇**: it
   was seen on the group address, not read back from that device. A value stays

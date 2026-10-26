@@ -305,3 +305,99 @@ fn every_code_token_round_trips_and_has_an_explanation() {
     }
     assert_eq!(tokens.len(), 45);
 }
+
+#[test]
+fn a_short_backup_read_and_a_backup_before_the_restart_say_not_sent() {
+    let short = MemoryDownloadError::BackupShortRead {
+        address: 0x4000,
+        asked: 4,
+        got: 2,
+    };
+    let short = DownloadFailure::from_error(&short, &plan(true), Some(2), 0);
+    assert_eq!(short.code, FailureCode::BackupShortRead);
+    assert_eq!(short.phase, FailurePhase::BackupBeforeStep);
+    assert_eq!(
+        short.step.as_ref().unwrap().number,
+        3,
+        "the first changing step"
+    );
+    // A backup or stop before the restart step itself: the restart never went.
+    let restart_plan = MemoryDownloadPlan {
+        steps: vec![
+            MemoryDownloadStep::Connect,
+            MemoryDownloadStep::Restart,
+            MemoryDownloadStep::Disconnect,
+        ],
+        ..plan(true)
+    };
+    let before = MemoryDownloadError::BackupRead {
+        index: 1,
+        error: SessionError::NotConnected,
+    };
+    let before = DownloadFailure::from_error(&before, &restart_plan, Some(1), 0);
+    assert_eq!(before.step.as_ref().unwrap().kind, StepKind::Restart);
+    assert_eq!(before.restart, FailureRestart::NotSent);
+    let stop = MemoryDownloadError::Stopped {
+        before_step: 1,
+        intent_recorded: true,
+    };
+    let stop = DownloadFailure::from_error(&stop, &restart_plan, Some(1), 0);
+    assert_eq!(stop.restart, FailureRestart::NotSent);
+    let mask = MemoryDownloadError::MaskMismatch {
+        expected: MaskVersion(0x0701),
+        found: MaskVersion(0x0705),
+    };
+    let mask = DownloadFailure::from_error(&mask, &plan(true), Some(1), 0);
+    assert_eq!(mask.restart, FailureRestart::NotSent);
+    for failure in [short, before, stop, mask] {
+        assert!(failure.is_consistent(), "{failure:?}");
+    }
+}
+
+#[test]
+fn contradictory_stored_values_are_inconsistent() {
+    let good = DownloadFailure::task_ended(&plan(true), Some(4), 1);
+    assert!(good.is_consistent());
+    let mut stop_in_step = DownloadFailure::from_error(
+        &MemoryDownloadError::Stopped {
+            before_step: 1,
+            intent_recorded: false,
+        },
+        &plan(true),
+        None,
+        0,
+    );
+    stop_in_step.phase = FailurePhase::InStep;
+    assert!(
+        !stop_in_step.is_consistent(),
+        "a stop is always before a step"
+    );
+    let mut backup_in_step = DownloadFailure::from_error(
+        &MemoryDownloadError::BackupNotKept("full".into()),
+        &plan(true),
+        Some(2),
+        0,
+    );
+    backup_in_step.phase = FailurePhase::InStep;
+    assert!(
+        !backup_in_step.is_consistent(),
+        "a backup precedes its step"
+    );
+    let lost = MemoryDownloadError::Session {
+        index: Some(5),
+        error: SessionError::ConnectionLost { during: "restart" },
+    };
+    let mut optimistic = DownloadFailure::from_error(&lost, &plan(true), Some(6), 3);
+    assert_eq!(optimistic.restart, FailureRestart::Unknown);
+    optimistic.restart = FailureRestart::NotSent;
+    assert!(
+        !optimistic.is_consistent(),
+        "in the restart step it is unknown"
+    );
+    let mut huge = good.clone();
+    huge.read_back_octets = MAX_COUNT + 1;
+    assert!(!huge.is_consistent());
+    let mut accented = good.clone();
+    accented.step.as_mut().unwrap().summary = "write mémoire".into();
+    assert!(!accented.is_consistent(), "summaries are printable ASCII");
+}

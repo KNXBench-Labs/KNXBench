@@ -491,6 +491,7 @@ it("shows a failed download's cause, place, restart and read-back as an alert (D
   expect(text).toContain("Where: in step 12 of 16 (write memory 4400h..4407h, 8 octets).");
   expect(text).toContain(en["downloadFailure.restart.notSent"]);
   expect(text).toContain("read back unchanged before the end: 4.");
+  expect(text).toContain(en["downloadFailure.partialCaveat"]);
   // The raw text stays a local, collapsed detail, never the headline.
   expect(section.querySelector("details")!.textContent).toContain("connection lost during A_Memory_Write");
   expect(host!.querySelectorAll(".download-failure")).toHaveLength(1);
@@ -515,7 +516,41 @@ it("shows a stop the user asked for as a status, not an alert", async () => {
   expect(section.classList.contains("download-failure--stopped")).toBe(true);
   expect(section.querySelector("h4")!.textContent).toBe(en["downloadFailure.title.stopped"]);
   expect(section.textContent).toContain("before step 3 of 16 (load control: unload (address table)); that step did not start.");
+  expect(section.textContent, "nothing was written, so no partial-write caveat").not.toContain(en["downloadFailure.partialCaveat"]);
   expect(host!.querySelector("[role=alert].download-failure")).toBeNull();
+});
+
+it("names the step that did not start after a backup failure, not the last step that ran", async () => {
+  apiMock.pollDeviceDownload.mockReset().mockResolvedValue(
+    response(
+      { state: "failed", written: "no", stoppedInStep: 2, error: "backup", failure: {
+        category: "backupFailed", code: "backupRead", phase: "backupBeforeStep",
+        step: { number: 3, of: 16, kind: "loadRecord", summary: "load control: unload (address table)" },
+        restart: "notSent", readBackOctets: 0,
+      } },
+      [],
+      0,
+    ),
+  );
+  await render();
+  expect(host!.querySelector("[data-download-state]")!.textContent).toBe("Download failed in the backup before step 3.");
+  expect(host!.textContent).not.toContain("Download failed in step 2.");
+});
+
+it("says a refusal before the first step without inventing a step", async () => {
+  apiMock.pollDeviceDownload.mockReset().mockResolvedValue(
+    response(
+      { state: "failed", written: "no", stoppedInStep: null, error: "refused", failure: {
+        category: "connectionLost", code: "notConnected", phase: "beforeSteps", step: null, restart: "notSent", readBackOctets: 0,
+      } },
+      [],
+      0,
+    ),
+  );
+  await render();
+  expect(host!.querySelector("[data-download-state]")!.textContent).toBe(en["deviceDownload.failedBeforeSteps"]);
+  expect(host!.querySelector("[data-failure-phase]")!.textContent).toBe(en["downloadFailure.phase.beforeSteps"]);
+  expect(host!.querySelector("[data-download-state]")!.textContent).not.toContain("—");
 });
 
 it("says a malformed diagnostic is unreadable instead of inventing a cause", async () => {

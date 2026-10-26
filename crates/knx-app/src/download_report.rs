@@ -484,6 +484,29 @@ mod tests {
     }
 
     #[test]
+    fn a_stopped_run_names_its_cause_or_says_it_was_not_recorded() {
+        let stopped = report().with_outcome(ReportedOutcome::stopped(Written::Partially, Some(4)));
+        assert!(stopped
+            .summary()
+            .contains("Cause: not recorded in this report\n"));
+        let plan = knx_core::commissioning::memory_download::MemoryDownloadPlan {
+            mask: knx_core::commissioning::load_state::MaskVersion(0x0701),
+            manufacturer: 0x0083,
+            steps: vec![knx_core::commissioning::memory_download::MemoryDownloadStep::Connect],
+        };
+        let failure = DownloadFailure::task_ended(&plan, Some(1), 0);
+        let line = failure.line();
+        let recorded = stopped.with_failure(Some(failure));
+        assert!(recorded.summary().contains(&format!("Cause: {line}\n")));
+        assert!(!recorded.summary().contains("not recorded"));
+        let completed = report().with_outcome(ReportedOutcome::completed(
+            Written::Yes,
+            Restart::Acknowledged,
+        ));
+        assert!(!completed.summary().contains("Cause:"));
+    }
+
+    #[test]
     fn the_summary_names_the_file_and_withholds_the_values() {
         let summary = report().summary();
         assert!(summary.contains("Program: M-0083_A-0027-15-0BAC — Taster Plus (version 15)"));

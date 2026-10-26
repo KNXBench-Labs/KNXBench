@@ -18,6 +18,9 @@ use serde::{Deserialize, Serialize};
 
 /// Longest step summary accepted back from a persisted record.
 pub const MAX_STEP_SUMMARY: usize = 160;
+/// Largest count a reader accepts: JavaScript's safe-integer bound, so the
+/// Rust and web readers admit the same stored values.
+pub const MAX_COUNT: usize = (1 << 53) - 1;
 
 /// Coarse class of a failure: what a user can act on.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -381,15 +384,35 @@ impl DownloadFailure {
         }
     }
 
-    /// Whether a value read back from storage is internally consistent.
+    /// Whether a value read back from storage is internally consistent:
+    /// every combination a worker can produce, and nothing else.
     pub fn is_consistent(&self) -> bool {
+        use FailureCategory as C;
+        let phase_fits = match self.category {
+            C::Stopped => self.phase == FailurePhase::StoppedBeforeStep,
+            C::BackupFailed => self.phase == FailurePhase::BackupBeforeStep,
+            _ => matches!(self.phase, FailurePhase::BeforeSteps | FailurePhase::InStep),
+        };
+        // A run that ended in or after its restart step never knows the restart was not sent.
+        let restart_fits = !(self.restart == FailureRestart::NotSent
+            && self.phase == FailurePhase::InStep
+            && self
+                .step
+                .as_ref()
+                .is_some_and(|step| step.kind == StepKind::Restart));
         self.category == self.code.category()
+            && phase_fits
+            && restart_fits
             && (self.phase != FailurePhase::BeforeSteps || self.step.is_none())
+            && self.read_back_octets <= MAX_COUNT
             && self.step.as_ref().is_none_or(|step| {
                 step.number >= 1
                     && step.number <= step.of
+                    && step.of <= MAX_COUNT
                     && !step.summary.is_empty()
                     && step.summary.len() <= MAX_STEP_SUMMARY
+                    // Built from addresses and counts: printable ASCII only.
+                    && step.summary.bytes().all(|b| (0x20..0x7f).contains(&b))
             })
             && (self.code != FailureCode::Stopped || self.read_back_octets == 0)
     }

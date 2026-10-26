@@ -136,6 +136,7 @@ export function admitHistoryPage(value: unknown, after = 0, limit = 50): History
       const failure = admitDownloadFailure(download.failure);
       requireHistory(failure !== null && entry.state === "failed");
       requireHistory(failure.code !== "stopped" || download.written === "no");
+      requireHistory(failure.readBackOctets === 0 || download.written !== "no");
     }
     requireHistory(integer(download.sessionId, 1));
     requireHistory([null, "yes", "no", "partially"].includes(download.written as string | null));

@@ -53,7 +53,7 @@ for (const [language, m] of [["en", en], ["de", de]] as const) {
       await show(language, pageOf(cases.base, legacy()));
       const [recorded, older] = [...host.querySelectorAll<HTMLElement>(".activity-history-entry .download-failure")];
       expect(recorded.dataset.failure).toBe("timeout");
-      expect(recorded.getAttribute("role")).toBe("alert");
+      expect(recorded.getAttribute("role"), "a stored row is not a live announcement").toBeNull();
       expect(recorded.querySelector("h4")!.textContent).toBe(m["downloadFailure.title.failed"]);
       const text = recorded.textContent!;
       expect(text).toContain(m["downloadFailure.category.timeout"]);
@@ -61,9 +61,28 @@ for (const [language, m] of [["en", en], ["de", de]] as const) {
         .replace("{summary}", "write memory 4000h..4003h, 4 octets"));
       expect(text).toContain(m["downloadFailure.restart.notSent"]);
       expect(recorded.querySelector("details"), "a stored row has no raw text").toBeNull();
+      expect(text).toContain(m["downloadFailure.partialCaveat"]);
+
       expect(older.dataset.failure).toBe("notRecorded");
       expect(older.textContent).toContain(m["downloadFailure.notRecorded"]);
       expect(older.textContent).not.toContain(m["downloadFailure.category.timeout"]);
+    });
+
+    it("shows a backup failure before an unstarted step with an unknown restart in this language", async () => {
+      const backup = structuredClone(cases.base);
+      backup.downloadEvidence.written = "no";
+      backup.writeEvidence.sendPossible = false;
+      Object.assign(backup.downloadEvidence.failure, {
+        category: "backupFailed", code: "backupNotKept", phase: "backupBeforeStep", restart: "unknown",
+      });
+      await show(language, pageOf(backup));
+      const row = host.querySelector<HTMLElement>(".activity-history-entry .download-failure")!;
+      expect(row.dataset.failure).toBe("backupFailed");
+      expect(row.textContent).toContain(m["downloadFailure.category.backupFailed"]);
+      expect(row.querySelector("[data-failure-phase]")!.textContent).toBe(m["downloadFailure.phase.backupBeforeStep"]
+        .replace("{number}", "8").replace("{of}", "16").replace("{summary}", "write memory 4000h..4003h, 4 octets"));
+      expect(row.querySelector("[data-failure-restart]")!.textContent).toBe(m["downloadFailure.restart.unknown"]);
+      expect(row.textContent, "nothing written, no caveat").not.toContain(m["downloadFailure.partialCaveat"]);
     });
 
     it("refuses the whole page when a stored cause is malformed", async () => {

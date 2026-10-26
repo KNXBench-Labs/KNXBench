@@ -39,11 +39,15 @@ import UniversalSupportButton from "./UniversalSupportButton";
 import { useProgrammingConsent } from "./useProgrammingConsent";
 import type { ProjectTree } from "./bindings/ProjectTree";
 
-/** The step a stop the user asked for landed before (DIAG-02); `null` for any other end. */
-function stoppedBefore(status: api.DeviceDownloadStatus): number | null {
-  if (status.state !== "failed") return null;
+/** A failed run's status line from its diagnostic (DIAG-02), else from the last started step. */
+function failedLine(t: ReturnType<typeof useTranslate>, status: Extract<api.DeviceDownloadStatus, { state: "failed" }>): string {
   const failure = admitDownloadFailure(status.failure);
-  return failure?.category === "stopped" ? failure.step?.number ?? null : null;
+  const step = failure?.step?.number;
+  if (failure?.phase === "beforeSteps") return t("deviceDownload.failedBeforeSteps");
+  if (failure?.phase === "stoppedBeforeStep" && step !== undefined) return t("deviceDownload.stoppedOnRequest", { step });
+  if (failure?.phase === "backupBeforeStep" && step !== undefined) return t("deviceDownload.failedBackupBefore", { step });
+  if (failure?.phase === "inStep" && step !== undefined) return t("deviceDownload.failed", { step });
+  return t("deviceDownload.failed", { step: status.stoppedInStep ?? "—" });
 }
 
 const DOWNLOAD_UNWRITTEN_COLUMNS = [
@@ -722,9 +726,7 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
                 : t("deviceDownload.running", { step: stepsStarted, of: status.steps, name: stepNames.get(stepsStarted) ?? "" })
               : status.status.state === "finished"
                 ? t("deviceDownload.finished")
-                : stoppedBefore(status.status) !== null
-                  ? t("deviceDownload.stoppedOnRequest", { step: stoppedBefore(status.status) ?? "—" })
-                  : t("deviceDownload.failed", { step: status.status.stoppedInStep ?? "—" })}</span>
+                : failedLine(t, status.status)}</span>
           </p>
           <label>
             {t("deviceDownload.stepsProgress", { done: stepsStarted, of: status.steps })}
@@ -748,7 +750,7 @@ export default function DeviceDownloadPanel({ project, handoff = null, onHandoff
             <p>{t("deviceDownload.restartAcknowledged")}</p>
           )}
           {status.status.state === "finished" && <PostDownloadCheckView value={status.status.postDownloadCheck} />}
-          {status.status.state === "failed" && <DownloadFailureView value={status.status.failure} error={status.status.error} />}
+          {status.status.state === "failed" && <DownloadFailureView value={status.status.failure} error={status.status.error} written={status.status.written} />}
           {status.backupFile && (
             <p>{t("deviceDownload.backupKept", { file: status.backupFile })}</p>
           )}

@@ -1,5 +1,5 @@
 {
-  "about": "DIAG-02 history admission cases shared by knx-app (tests/it/commissioning_activity/failure.rs) and the web reader (activityHistory.test.ts). `base` is a stored download row; each case applies `set` [pointer, value] and `remove` pointers, then both strict readers must agree on `admitted`.",
+  "about": "DIAG-02 history admission cases shared by knx-app (tests/it/commissioning_activity/failure.rs) and the web reader (downloadFailure.test.ts). `base` is a stored download row; each case applies `set` [pointer, value] and `remove` pointers, then both strict readers must agree on `admitted`.",
   "base": {
     "id": 1,
     "kind": "deviceDownload",
@@ -7,7 +7,10 @@
     "state": "failed",
     "startedAt": "2026-10-26T09:00:00.000Z",
     "finishedAt": "2026-10-26T09:00:05.000Z",
-    "writeEvidence": { "backupRecorded": true, "sendPossible": true },
+    "writeEvidence": {
+      "backupRecorded": true,
+      "sendPossible": true
+    },
     "downloadEvidence": {
       "sessionId": 7,
       "written": "partially",
@@ -17,34 +20,432 @@
         "category": "timeout",
         "code": "noAnswer",
         "phase": "inStep",
-        "step": { "number": 8, "of": 16, "kind": "writeMemory", "summary": "write memory 4000h..4003h, 4 octets" },
+        "step": {
+          "number": 8,
+          "of": 16,
+          "kind": "writeMemory",
+          "summary": "write memory 4000h..4003h, 4 octets"
+        },
         "restart": "notSent",
         "readBackOctets": 0
       }
     }
   },
   "cases": [
-    { "name": "valid", "set": [], "remove": [], "admitted": true },
-    { "name": "legacy failed row without a cause", "set": [], "remove": ["/downloadEvidence/failure"], "admitted": true },
-    { "name": "explicit null", "set": [["/downloadEvidence/failure", null]], "remove": [], "admitted": false },
-    { "name": "a cause on a finished row", "set": [["/state", "finished"], ["/downloadEvidence/written", "yes"], ["/downloadEvidence/restart", "acknowledged"]], "remove": [], "admitted": false },
-    { "name": "unknown field", "set": [["/downloadEvidence/failure/error", "raw text"]], "remove": [], "admitted": false },
-    { "name": "category disagrees with code", "set": [["/downloadEvidence/failure/category", "connectionLost"]], "remove": [], "admitted": false },
-    { "name": "unknown code", "set": [["/downloadEvidence/failure/code", "somethingNew"], ["/downloadEvidence/failure/category", "internal"]], "remove": [], "admitted": false },
-    { "name": "unknown phase", "set": [["/downloadEvidence/failure/phase", "during"]], "remove": [], "admitted": false },
-    { "name": "unknown restart", "set": [["/downloadEvidence/failure/restart", "sent"]], "remove": [], "admitted": false },
-    { "name": "unknown step kind", "set": [["/downloadEvidence/failure/step/kind", "erase"]], "remove": [], "admitted": false },
-    { "name": "a step before the first step", "set": [["/downloadEvidence/failure/phase", "beforeSteps"]], "remove": [], "admitted": false },
-    { "name": "before the first step without a step", "set": [["/downloadEvidence/failure/phase", "beforeSteps"], ["/downloadEvidence/failure/step", null]], "remove": [], "admitted": true },
-    { "name": "step zero", "set": [["/downloadEvidence/failure/step/number", 0]], "remove": [], "admitted": false },
-    { "name": "step beyond the plan", "set": [["/downloadEvidence/failure/step/number", 17]], "remove": [], "admitted": false },
-    { "name": "empty summary", "set": [["/downloadEvidence/failure/step/summary", ""]], "remove": [], "admitted": false },
-    { "name": "summary at its bound", "set": [["/downloadEvidence/failure/step/summary", "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"]], "remove": [], "admitted": true },
-    { "name": "summary over its bound", "set": [["/downloadEvidence/failure/step/summary", "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"]], "remove": [], "admitted": false },
-    { "name": "negative octets", "set": [["/downloadEvidence/failure/readBackOctets", -1]], "remove": [], "admitted": false },
-    { "name": "fractional octets", "set": [["/downloadEvidence/failure/readBackOctets", 1.5]], "remove": [], "admitted": false },
-    { "name": "a stop after a write", "set": [["/downloadEvidence/failure/code", "stopped"], ["/downloadEvidence/failure/category", "stopped"], ["/downloadEvidence/failure/phase", "stoppedBeforeStep"]], "remove": [], "admitted": false },
-    { "name": "a stop before any change", "set": [["/downloadEvidence/failure/code", "stopped"], ["/downloadEvidence/failure/category", "stopped"], ["/downloadEvidence/failure/phase", "stoppedBeforeStep"], ["/downloadEvidence/written", "no"]], "remove": [], "admitted": true },
-    { "name": "a stop with read-back octets", "set": [["/downloadEvidence/failure/code", "stopped"], ["/downloadEvidence/failure/category", "stopped"], ["/downloadEvidence/failure/phase", "stoppedBeforeStep"], ["/downloadEvidence/written", "no"], ["/downloadEvidence/failure/readBackOctets", 4]], "remove": [], "admitted": false }
+    {
+      "name": "valid",
+      "set": [],
+      "remove": [],
+      "admitted": true
+    },
+    {
+      "name": "legacy failed row without a cause",
+      "set": [],
+      "remove": [
+        "/downloadEvidence/failure"
+      ],
+      "admitted": true
+    },
+    {
+      "name": "explicit null",
+      "set": [
+        [
+          "/downloadEvidence/failure",
+          null
+        ]
+      ],
+      "remove": [],
+      "admitted": false
+    },
+    {
+      "name": "a cause on a finished row",
+      "set": [
+        [
+          "/state",
+          "finished"
+        ],
+        [
+          "/downloadEvidence/written",
+          "yes"
+        ],
+        [
+          "/downloadEvidence/restart",
+          "acknowledged"
+        ]
+      ],
+      "remove": [],
+      "admitted": false
+    },
+    {
+      "name": "unknown field",
+      "set": [
+        [
+          "/downloadEvidence/failure/error",
+          "raw text"
+        ]
+      ],
+      "remove": [],
+      "admitted": false
+    },
+    {
+      "name": "category disagrees with code",
+      "set": [
+        [
+          "/downloadEvidence/failure/category",
+          "connectionLost"
+        ]
+      ],
+      "remove": [],
+      "admitted": false
+    },
+    {
+      "name": "unknown code",
+      "set": [
+        [
+          "/downloadEvidence/failure/code",
+          "somethingNew"
+        ],
+        [
+          "/downloadEvidence/failure/category",
+          "internal"
+        ]
+      ],
+      "remove": [],
+      "admitted": false
+    },
+    {
+      "name": "unknown phase",
+      "set": [
+        [
+          "/downloadEvidence/failure/phase",
+          "during"
+        ]
+      ],
+      "remove": [],
+      "admitted": false
+    },
+    {
+      "name": "unknown restart",
+      "set": [
+        [
+          "/downloadEvidence/failure/restart",
+          "sent"
+        ]
+      ],
+      "remove": [],
+      "admitted": false
+    },
+    {
+      "name": "unknown step kind",
+      "set": [
+        [
+          "/downloadEvidence/failure/step/kind",
+          "erase"
+        ]
+      ],
+      "remove": [],
+      "admitted": false
+    },
+    {
+      "name": "a step before the first step",
+      "set": [
+        [
+          "/downloadEvidence/failure/phase",
+          "beforeSteps"
+        ]
+      ],
+      "remove": [],
+      "admitted": false
+    },
+    {
+      "name": "before the first step without a step",
+      "set": [
+        [
+          "/downloadEvidence/failure/phase",
+          "beforeSteps"
+        ],
+        [
+          "/downloadEvidence/failure/step",
+          null
+        ]
+      ],
+      "remove": [],
+      "admitted": true
+    },
+    {
+      "name": "step zero",
+      "set": [
+        [
+          "/downloadEvidence/failure/step/number",
+          0
+        ]
+      ],
+      "remove": [],
+      "admitted": false
+    },
+    {
+      "name": "step beyond the plan",
+      "set": [
+        [
+          "/downloadEvidence/failure/step/number",
+          17
+        ]
+      ],
+      "remove": [],
+      "admitted": false
+    },
+    {
+      "name": "empty summary",
+      "set": [
+        [
+          "/downloadEvidence/failure/step/summary",
+          ""
+        ]
+      ],
+      "remove": [],
+      "admitted": false
+    },
+    {
+      "name": "summary at its bound",
+      "set": [
+        [
+          "/downloadEvidence/failure/step/summary",
+          "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        ]
+      ],
+      "remove": [],
+      "admitted": true
+    },
+    {
+      "name": "summary over its bound",
+      "set": [
+        [
+          "/downloadEvidence/failure/step/summary",
+          "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        ]
+      ],
+      "remove": [],
+      "admitted": false
+    },
+    {
+      "name": "negative octets",
+      "set": [
+        [
+          "/downloadEvidence/failure/readBackOctets",
+          -1
+        ]
+      ],
+      "remove": [],
+      "admitted": false
+    },
+    {
+      "name": "fractional octets",
+      "set": [
+        [
+          "/downloadEvidence/failure/readBackOctets",
+          1.5
+        ]
+      ],
+      "remove": [],
+      "admitted": false
+    },
+    {
+      "name": "a stop after a write",
+      "set": [
+        [
+          "/downloadEvidence/failure/code",
+          "stopped"
+        ],
+        [
+          "/downloadEvidence/failure/category",
+          "stopped"
+        ],
+        [
+          "/downloadEvidence/failure/phase",
+          "stoppedBeforeStep"
+        ]
+      ],
+      "remove": [],
+      "admitted": false
+    },
+    {
+      "name": "a stop before any change",
+      "set": [
+        [
+          "/downloadEvidence/failure/code",
+          "stopped"
+        ],
+        [
+          "/downloadEvidence/failure/category",
+          "stopped"
+        ],
+        [
+          "/downloadEvidence/failure/phase",
+          "stoppedBeforeStep"
+        ],
+        [
+          "/downloadEvidence/written",
+          "no"
+        ]
+      ],
+      "remove": [],
+      "admitted": true
+    },
+    {
+      "name": "a stop with read-back octets",
+      "set": [
+        [
+          "/downloadEvidence/failure/code",
+          "stopped"
+        ],
+        [
+          "/downloadEvidence/failure/category",
+          "stopped"
+        ],
+        [
+          "/downloadEvidence/failure/phase",
+          "stoppedBeforeStep"
+        ],
+        [
+          "/downloadEvidence/written",
+          "no"
+        ],
+        [
+          "/downloadEvidence/failure/readBackOctets",
+          4
+        ]
+      ],
+      "remove": [],
+      "admitted": false
+    },
+    {
+      "name": "before the first step without a step key",
+      "set": [
+        [
+          "/downloadEvidence/failure/phase",
+          "beforeSteps"
+        ]
+      ],
+      "remove": [
+        "/downloadEvidence/failure/step"
+      ],
+      "admitted": true
+    },
+    {
+      "name": "read-back octets on a row that wrote nothing",
+      "set": [
+        [
+          "/downloadEvidence/written",
+          "no"
+        ],
+        [
+          "/downloadEvidence/failure/readBackOctets",
+          4
+        ]
+      ],
+      "remove": [],
+      "admitted": false
+    },
+    {
+      "name": "a stop inside a step",
+      "set": [
+        [
+          "/downloadEvidence/failure/code",
+          "stopped"
+        ],
+        [
+          "/downloadEvidence/failure/category",
+          "stopped"
+        ],
+        [
+          "/downloadEvidence/written",
+          "no"
+        ]
+      ],
+      "remove": [],
+      "admitted": false
+    },
+    {
+      "name": "a backup failure inside a step",
+      "set": [
+        [
+          "/downloadEvidence/failure/code",
+          "backupRead"
+        ],
+        [
+          "/downloadEvidence/failure/category",
+          "backupFailed"
+        ]
+      ],
+      "remove": [],
+      "admitted": false
+    },
+    {
+      "name": "restart not sent although the restart step ran",
+      "set": [
+        [
+          "/downloadEvidence/failure/step/kind",
+          "restart"
+        ],
+        [
+          "/downloadEvidence/failure/step/summary",
+          "restart"
+        ]
+      ],
+      "remove": [],
+      "admitted": false
+    },
+    {
+      "name": "restart unknown in the restart step",
+      "set": [
+        [
+          "/downloadEvidence/failure/step/kind",
+          "restart"
+        ],
+        [
+          "/downloadEvidence/failure/step/summary",
+          "restart"
+        ],
+        [
+          "/downloadEvidence/failure/restart",
+          "unknown"
+        ]
+      ],
+      "remove": [],
+      "admitted": true
+    },
+    {
+      "name": "octets beyond the safe-integer bound",
+      "set": [
+        [
+          "/downloadEvidence/failure/readBackOctets",
+          9007199254740992
+        ]
+      ],
+      "remove": [],
+      "admitted": false
+    },
+    {
+      "name": "octets at the safe-integer bound",
+      "set": [
+        [
+          "/downloadEvidence/failure/readBackOctets",
+          9007199254740991
+        ]
+      ],
+      "remove": [],
+      "admitted": true
+    },
+    {
+      "name": "a non-ASCII summary",
+      "set": [
+        [
+          "/downloadEvidence/failure/step/summary",
+          "write mémoire"
+        ]
+      ],
+      "remove": [],
+      "admitted": false
+    }
   ]
 }

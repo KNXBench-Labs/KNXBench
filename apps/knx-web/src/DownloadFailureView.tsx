@@ -17,20 +17,29 @@ function placeLine(t: ReturnType<typeof useTranslate>, failure: DownloadFailure)
   }
 }
 
-/**
- * `value` is the raw server field. `absent` is an older record or server
- * that kept no cause: shown as not recorded, never as success. `error` is
- * the server's own text, local to this computer and never in a report.
- */
-export default function DownloadFailureView({ value, absent = false, error = null }: { value?: unknown; absent?: boolean; error?: string | null }) {
+interface Props {
+  /** The raw server field. */
+  value?: unknown;
+  /** An older record or server that kept no cause: not recorded, never success. */
+  absent?: boolean;
+  /** The server's own text: local to this computer, never in a report. */
+  error?: string | null;
+  /** The run's write classification; the partial-write caveat needs "partially". */
+  written: "yes" | "no" | "partially" | null;
+  /** `true` for the live result; a stored history row is not announced. */
+  live?: boolean;
+}
+
+export default function DownloadFailureView({ value, absent = false, error = null, written, live = true }: Props) {
   const t = useTranslate();
   const failure = absent ? null : admitDownloadFailure(value);
+  const role = (kind: "alert" | "status") => (live ? kind : undefined);
   const technical = error && <details className="download-failure-technical">
     <summary>{t("downloadFailure.technical")}</summary>
     <p>{error}</p>
   </details>;
   if (failure === null) {
-    return <section className="download-failure" data-failure={absent ? "notRecorded" : "unreadable"} role="alert">
+    return <section className="download-failure" data-failure={absent ? "notRecorded" : "unreadable"} role={role("alert")}>
       <h4>{t("downloadFailure.title.failed")}</h4>
       <p>{t(absent ? "downloadFailure.notRecorded" : "downloadFailure.unreadable")}</p>
       {technical}
@@ -39,7 +48,7 @@ export default function DownloadFailureView({ value, absent = false, error = nul
   const stopped = failure.category === "stopped";
   return (
     <section className={`download-failure${stopped ? " download-failure--stopped" : ""}`}
-      data-failure={failure.category} data-failure-code={failure.code} role={stopped ? "status" : "alert"}>
+      data-failure={failure.category} data-failure-code={failure.code} role={role(stopped ? "status" : "alert")}>
       <h4>{t(stopped ? "downloadFailure.title.stopped" : "downloadFailure.title.failed")}</h4>
       <p>
         {t("downloadFailure.cause", { cause: t(`downloadFailure.category.${failure.category}`) })}{" "}
@@ -47,7 +56,8 @@ export default function DownloadFailureView({ value, absent = false, error = nul
       </p>
       <p data-failure-phase={failure.phase}>{placeLine(t, failure)}</p>
       <p data-failure-restart={failure.restart}>{t(`downloadFailure.restart.${failure.restart}`)}</p>
-      <p>{t("downloadFailure.readBack", { count: failure.readBackOctets })}</p>
+      <p>{t("downloadFailure.readBack", { count: failure.readBackOctets })}
+        {written === "partially" && <>{" "}{t("downloadFailure.partialCaveat")}</>}</p>
       {technical}
     </section>
   );

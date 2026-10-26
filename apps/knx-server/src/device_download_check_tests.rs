@@ -383,7 +383,7 @@ fn start_with(
     let (settler, slot) = crate::programming_state::download_settler_receipted(
         &server,
         crate::programming_state::incarnation(&server),
-        1,
+        7,
         &prepared,
     );
     let filled = Arc::clone(&slot);

@@ -47,11 +47,35 @@ pub(super) struct Preview {
     #[serde(flatten)]
     pub summary: knx_app::system2_validation_preparation::ConfiguredHardwarePreview,
 }
+/// Status output version; the private `Metadata` file and `Preview` stay at version 1.
+/// Version 2 added `failureDiagnostics`; old exact-version-1 clients refuse it.
+pub(super) const STATUS_SCHEMA_VERSION: u8 = 2;
+/// The operation identity the status shows, without the private file's schema version, so
+/// the flattened status carries exactly one `schemaVersion` key.
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct StatusIdentity {
+    pub operation_id: String,
+    pub binding: Binding,
+    pub address: String,
+    pub device_name: String,
+}
+impl From<&Metadata> for StatusIdentity {
+    fn from(metadata: &Metadata) -> Self {
+        Self {
+            operation_id: metadata.operation_id.clone(),
+            binding: metadata.binding.clone(),
+            address: metadata.address.clone(),
+            device_name: metadata.device_name.clone(),
+        }
+    }
+}
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(super) struct Status {
+    pub schema_version: u8,
     #[serde(flatten)]
-    pub metadata: Metadata,
+    pub metadata: StatusIdentity,
     pub state: &'static str,
     pub completed_steps: usize,
     pub total_steps: Option<usize>,
@@ -74,6 +98,9 @@ pub(super) struct Status {
     pub prestate_unreadable_allocations: Vec<UnreadableAllocation>,
     pub pointer_observations: Vec<PointerObservation>,
     pub program_version_observation: Option<ProgramVersionObservation>,
+    /// Typed, non-raw failure facts: at most one per run, download before restore.
+    /// Never the private journal text; empty when none was recorded or it is unknown.
+    pub failure_diagnostics: Vec<knx_app::property_validation::FailureDiagnostic>,
 }
 /// Source-model pointer versus device read: lower-case hex (eight digits, or four for a
 /// two-octet reply, never padded) or "refused".

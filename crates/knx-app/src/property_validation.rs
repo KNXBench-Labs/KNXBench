@@ -8,8 +8,13 @@
 use crate::property_validation_bundle::{
     digest, invalid, OperationRecord, PointerObservationRecord, PreparedBundle, RecoveryRecord,
 };
+#[path = "property_validation_diagnostic.rs"]
+mod diagnostic;
 #[path = "property_validation_lifecycle.rs"]
 mod lifecycle;
+pub use diagnostic::{
+    FailureDiagnostic, FailureDiagnosticRun, PointerFailureReason, PointerFailureRecord,
+};
 use knx_core::{ContactableAddress, IndividualAddress};
 use knx_net::commissioning::property_recovery::PropertyRecoverySnapshot;
 pub use lifecycle::{
@@ -154,6 +159,14 @@ pub enum Checkpoint {
     Failed {
         code: FailureCode,
         local_diagnostic: String,
+        /// Typed, non-raw facts of a PID 7 width refusal. Absent in every older journal and
+        /// for every other failure; never backfilled from `local_diagnostic`.
+        #[serde(
+            default,
+            deserialize_with = "diagnostic::present_record",
+            skip_serializing_if = "Option::is_none"
+        )]
+        pointer_failure: Option<PointerFailureRecord>,
     },
     Cancelled,
     Finished,
@@ -161,8 +174,31 @@ pub enum Checkpoint {
     RestoreFailed {
         code: FailureCode,
         local_diagnostic: String,
+        #[serde(
+            default,
+            deserialize_with = "diagnostic::present_record",
+            skip_serializing_if = "Option::is_none"
+        )]
+        pointer_failure: Option<PointerFailureRecord>,
     },
     Restored,
+}
+impl Checkpoint {
+    /// Envelope version 2 marks exactly a populated typed failure record, so an older strict
+    /// reader (version 1 only) refuses it instead of dropping the field; all else stays 1.
+    fn envelope_format(&self) -> u16 {
+        match self {
+            Self::Failed {
+                pointer_failure: Some(_),
+                ..
+            }
+            | Self::RestoreFailed {
+                pointer_failure: Some(_),
+                ..
+            } => 2,
+            _ => 1,
+        }
+    }
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -194,6 +230,8 @@ struct State {
     restore_attempted: bool,
     final_observations: Vec<(PointerObservationRun, PointerObservationRecord)>,
     in_procedure_observations: Vec<(PointerObservationRun, usize, PointerObservationRecord)>,
+    /// One typed failure per run at most: `Failed` and `RestoreFailed` each end their run.
+    failure_diagnostics: Vec<FailureDiagnostic>,
 }
 impl State {
     fn new(binding: Binding) -> Self {
@@ -208,6 +246,7 @@ impl State {
             restore_attempted: false,
             final_observations: Vec::new(),
             in_procedure_observations: Vec::new(),
+            failure_diagnostics: Vec::new(),
         }
     }
     /// The run an observation belongs to: an explicit restore or the download.
@@ -369,6 +408,14 @@ impl State {
                 if self.outcome != LocalOutcome::Running {
                     return Err(invalid("operation already ended"));
                 }
+                if let Checkpoint::Failed {
+                    code,
+                    pointer_failure: Some(record),
+                    ..
+                } = event
+                {
+                    self.record_failure(*code, record, FailureDiagnosticRun::Download)?;
+                }
                 self.outcome = if matches!(event, Checkpoint::Cancelled) {
                     LocalOutcome::Cancelled
                 } else {
@@ -386,9 +433,16 @@ impl State {
                 self.active = None;
                 self.completed = 0;
             }
-            Checkpoint::RestoreFailed { .. } => {
+            Checkpoint::RestoreFailed {
+                code,
+                pointer_failure,
+                ..
+            } => {
                 if self.outcome != LocalOutcome::Restoring {
                     return Err(invalid("no restore in progress"));
+                }
+                if let Some(record) = pointer_failure {
+                    self.record_failure(*code, record, FailureDiagnosticRun::Restore)?;
                 }
                 self.outcome = LocalOutcome::RestoreFailed;
             }
@@ -406,6 +460,22 @@ impl State {
                 self.outcome = LocalOutcome::Restored;
             }
         }
+        Ok(())
+    }
+    /// A typed record is valid only under the code Net's width refusal maps to.
+    fn record_failure(
+        &mut self,
+        code: FailureCode,
+        record: &PointerFailureRecord,
+        run: FailureDiagnosticRun,
+    ) -> io::Result<()> {
+        record.validate()?;
+        if code != FailureCode::IdentityOrRecovery
+            || self.failure_diagnostics.iter().any(|d| d.run == run)
+        {
+            return Err(invalid("typed pointer failure contradicts its checkpoint"));
+        }
+        self.failure_diagnostics.push(record.diagnostic(run));
         Ok(())
     }
 }
@@ -444,6 +514,8 @@ pub struct OperationProgress {
     /// Allocations whose prestate read was refused or short. Their captured
     /// bytes are zero placeholders, never a backup.
     pub prestate_unreadable_allocations: Vec<UnreadableAllocation>,
+    /// Typed, non-raw failure facts: at most one per run, download before restore.
+    pub failure_diagnostics: Vec<FailureDiagnostic>,
 }
 /// One declared allocation whose prior memory could not be read.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -550,7 +622,7 @@ impl OperationStore {
             let bytes = bounded_read(&path)?;
             let record: Envelope = serde_json::from_slice(&bytes)
                 .map_err(|_| invalid("corrupt protocol checkpoint"))?;
-            if record.format != 1
+            if record.format != record.checkpoint.envelope_format()
                 || record.kind != "knxbench-property-validation-protocol"
                 || record.sequence != sequence
                 || record.previous_sha256 != previous
@@ -606,7 +678,7 @@ impl OperationStore {
         let mut next_state = self.state.clone();
         next_state.apply(&checkpoint)?;
         let bytes = encode(&Envelope {
-            format: 1,
+            format: checkpoint.envelope_format(),
             kind: "knxbench-property-validation-protocol".into(),
             sequence: self.next,
             previous_sha256: self.previous.clone(),
@@ -708,6 +780,7 @@ impl OperationStore {
                     },
                 )
                 .collect(),
+            failure_diagnostics: self.state.failure_diagnostics.clone(),
         }
     }
     /// Pure in-memory projection suitable for status after navigation/restart.
@@ -810,7 +883,7 @@ impl OperationStore {
     }
     pub fn shareable_report(&self) -> ShareableReport {
         ShareableReport {
-            format: 1,
+            format: 2,
             kind: "knxbench-property-validation-summary",
             support: if self.state.binding.simulated {
                 "STRONG HYPOTHESIS SIMULATOR TESTED"
@@ -821,6 +894,7 @@ impl OperationStore {
             outcome: self.outcome(),
             mutation_possible: self.state.mutation,
             completed_operations: self.state.completed,
+            failure_diagnostics: self.state.failure_diagnostics.clone(),
         }
     }
     pub fn write_shareable_report(&self, path: &Path) -> io::Result<()> {
@@ -836,6 +910,8 @@ pub struct ShareableReport {
     outcome: LocalOutcome,
     mutation_possible: bool,
     completed_operations: usize,
+    /// Format 2: typed failure facts only; empty when none was recorded or it is unknown.
+    failure_diagnostics: Vec<FailureDiagnostic>,
 }
 fn encode(value: &impl Serialize) -> io::Result<Vec<u8>> {
     serde_json::to_vec_pretty(value).map_err(io::Error::other)

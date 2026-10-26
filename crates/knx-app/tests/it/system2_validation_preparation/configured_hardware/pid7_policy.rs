@@ -1268,3 +1268,5 @@ async fn refusals_after_mutation_in_both_phases_stop_hard_with_the_original_back
         }
     }
 }
+
+mod pid7_failure_diagnostic;

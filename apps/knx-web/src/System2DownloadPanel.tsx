@@ -15,6 +15,9 @@ const EMPTY: Phrases = { confirmation: "", hypothesisConfirmation: "", downloadC
 const active = (s: api.System2Status | null) => s?.state === "running" || s?.state === "restoring";
 // Only the server's confirmed "no mutation could have started" earns the nothing-written text.
 const nothingWritten = (s: api.System2Status) => (s.state === "failed" || s.state === "cancelled") && !s.mutationMayHaveStarted;
+// Only a failed run without typed metadata earns "not available"; nothing is inferred from message or refusal.
+const unavailableRun = (s: api.System2Status): "download" | "restore" | null =>
+  s.state === "failed" ? "download" : s.state === "restoreFailed" ? "restore" : null;
 function sameTarget(a: { binding: api.System2Binding; address: string }, b: { binding: api.System2Binding; address: string }) {
   return a.address === b.address && a.binding.serverIncarnation === b.binding.serverIncarnation &&
     a.binding.projectIncarnation === b.binding.projectIncarnation && a.binding.projectRevision === b.binding.projectRevision && a.binding.deviceId === b.binding.deviceId;
@@ -216,6 +219,16 @@ export default function System2DownloadPanel({ project, deviceId, gateway, enabl
         <ul>
           {status.programVersionObservation && <li>{t("system2.observation.programVersion", { expected: status.programVersionObservation.expected, observed: status.programVersionObservation.observed || t("system2.observation.refused") })}</li>}
           {status.pointerObservations.map((o, i) => <li key={i}>{o.run === "restore" && `${t("system2.observation.restoreRun")} `}{t(`system2.observation.${o.phase}`, { object: o.object, step: o.operationIndex ?? "", expected: o.expected, observed: o.observed === "refused" ? t("system2.observation.refused") : o.observed, state: o.loadState })}</li>)}
+        </ul>
+      </section>}
+      {(status.failureDiagnostics.length > 0 || unavailableRun(status) !== null) && <section data-system2-diagnostics aria-label={t("system2.diagnostics")}>
+        <h4>{t("system2.diagnostics")}</h4><p>{t("system2.diagnosticsNote")}</p>
+        <ul>
+          {(["download", "restore"] as const).map((run) => {
+            const d = status.failureDiagnostics.find((row) => row.run === run);
+            if (d) return <li key={run} data-system2-diagnostic={run}>{t("system2.diagnostic.entry", { run: t(`system2.diagnostic.run.${run}`), reason: t(`system2.diagnostic.reason.${d.reason}`), object: d.object, property: d.propertyId, elements: d.elements, octets: d.octets })}</li>;
+            return unavailableRun(status) === run ? <li key={run} data-system2-diagnostic-unavailable={run}>{t("system2.diagnostic.unavailable", { run: t(`system2.diagnostic.run.${run}`) })}</li> : null;
+          })}
         </ul>
       </section>}
       {active(status) && <button type="button" data-system2-cancel disabled={pending} onClick={() => void cancel()}>{t("system2.cancel")}</button>}

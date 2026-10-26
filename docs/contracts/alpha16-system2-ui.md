@@ -29,7 +29,10 @@ separate supported input, not a silent UI fallback.
 
 ## DTO vocabulary
 
-All responses use `schemaVersion: 1`; JSON object properties below are required
+`Preview` and the private metadata record use `schemaVersion: 1`. `Status` is
+`schemaVersion: 2` in the candidate source described under *Status v2* below (pending
+review, gates and acceptance); the earlier exact version 1 shape remains the
+historical wire form that the web client still reads. JSON object properties below are required
 and unknown properties/closed-enum tokens are refused by this new client. Small
 IDs/counts are safe nonnegative integers; opaque preparation/operation IDs are
 32 lowercase hex, revisions are canonical decimal u64 strings. No server paths,
@@ -54,11 +57,24 @@ individual-address text from the shared backend. Digests are 64 lowercase hex.
 The projection may refuse before retaining a preview if it cannot fit a bounded
 public response; it never truncates required plan/risk information.
 
-`Status`:
+`Status` (version 1 keys; candidate-source version 2 appends `failureDiagnostics`):
 `{schemaVersion, operationId, binding, address, deviceName, state,
 completedSteps, totalSteps, backupAvailable, recoveryPhrase, downloadPhrase,
 releasePhrase, message, refusal, mutationMayHaveStarted, prestateDiffers,
-pointerObservations, programVersionObservation}`.
+pointerObservations, prestateUnreadableAllocations, programVersionObservation}`
+(`prestateUnreadableAllocations` is described under the additive fields below; this
+list previously omitted it).
+
+*Status v2 (candidate source, pending acceptance).* Status adds a required
+`failureDiagnostics` array of at most two typed objects `{run, reason, object,
+propertyId, elements, octets}` (`run` `download`|`restore`, closed `reason`,
+`octets` u32, other numbers u8) and no longer flattens the private metadata, so
+exactly one `schemaVersion` key is present. The web client routes strictly by
+version: exact v1 keys are normalized to an empty list, exact v2 requires the
+list, and v1 carrying the key is refused. Legacy or untyped failures carry an empty
+list and the panel says *unavailable*; it never infers a reason from `message` or
+`refusal`. Exact semantics:
+[safe failure diagnostic](system2-safe-failure-diagnostic.md).
 
 Issue #30 own-run diagnostic follow-up (unreleased source): `refusal` is a
 required nullable stable error-kind token, ASCII alphanumeric with 1–64 characters
@@ -83,7 +99,9 @@ application; the server then offers no recovery phrases and the panel shows
 "original-state recovery unavailable" instead of the recovery form.
 `pointerObservations` is an array (at most 256) of `{run: "download"|"restore", phase:
 "prestate"|"inProcedure"|"final", object, operationIndex, expected, observed,
-loadState}` with eight lower-case hex digits per pointer; `observed` may be
+loadState}` with four or eight lower-case hex digits per pointer (the observed
+raw width of the exact-profile width correction, `54b052885`; this is not a new
+raw diagnostic allowance); `observed` may be
 `"refused"`, and `operationIndex` is a number exactly for `inProcedure` entries
 and null otherwise. `programVersionObservation` is `{expected, observed}` (hex, `observed`
 empty when the read was refused) or null. `prestateUnreadableAllocations` is an

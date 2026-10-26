@@ -95,6 +95,23 @@ backup/readback and recovery-integrity barriers; no general speedup is establish
 [Exact service and recovery limits](../contracts/alpha16-system2-configured-download.md),
 [restart selection](../contracts/alpha16-system2-http-mount.md).
 
+### System-2 safe failure diagnostic: unavailable for older and untyped failures (candidate source)
+
+- **Affected:** the typed *Failure diagnostic* of a refused System-2 table-pointer
+  (PID 7) answer, in a source build carrying the S2-01 candidate that is still pending
+  review, gates and acceptance.
+- **Limitation:** only a refusal typed at the read carries it. Older journals,
+  legacy-policy refusals and every other failure show *unavailable*; nothing is
+  reconstructed from the private text. The diagnostic lists observed counts, which
+  can be 0, never the raw answer, and a count does not say which firmware or
+  interpretation is right. A client that requires the old exact status version
+  refuses the new status.
+- **Consequence:** an observation is not support: it grants no retry, hardware
+  claim or recovery. Objects 2/3 stay source-declared hypotheses. Physical outcome
+  and recovery remain unverified; the private journal keeps the raw evidence.
+- **Details:** [safe failure diagnostic](../contracts/system2-safe-failure-diagnostic.md),
+  [S2-01](../open-work/S2-01-pid7-raw-response.md).
+
 ### Catalogue jobs: finite resources and uncertain outcomes
 
 The integrated picker/wizard uses the process-owned job service and App-root

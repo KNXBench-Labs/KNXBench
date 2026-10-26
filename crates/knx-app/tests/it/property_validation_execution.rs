@@ -640,6 +640,7 @@ async fn property_validation_different_prior_program_version_record_blocks_origi
         .checkpoint(Checkpoint::Failed {
             code: app::FailureCode::Executor,
             local_diagnostic: "synthetic".into(),
+            pointer_failure: None,
         })
         .unwrap();
     drop(store);
@@ -830,6 +831,7 @@ async fn property_validation_download_and_restore_observations_are_both_kept() {
         .checkpoint(Checkpoint::Failed {
             code: app::FailureCode::Executor,
             local_diagnostic: "synthetic".into(),
+            pointer_failure: None,
         })
         .unwrap();
     drop(store);

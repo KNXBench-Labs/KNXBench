@@ -149,7 +149,7 @@ impl Record {
                     observed: o
                         .record
                         .observed
-                        .map_or_else(|| "refused".into(), |p| dto::hex(&p)),
+                        .map_or_else(|| "refused".into(), |p| dto::hex(p.octets())),
                     load_state: LoadState::from_octet(o.record.state)
                         .map(|s| s.to_string())
                         .unwrap_or_else(|_| "Unknown".into()),

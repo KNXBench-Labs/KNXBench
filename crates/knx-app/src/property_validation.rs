@@ -11,6 +11,7 @@ use crate::property_validation_bundle::{
 #[path = "property_validation_lifecycle.rs"]
 mod lifecycle;
 use knx_core::{ContactableAddress, IndividualAddress};
+use knx_net::commissioning::property_recovery::PropertyRecoverySnapshot;
 pub use lifecycle::{
     System2ControlError, System2ControlSnapshot, System2DrainOutcome, System2OperationControl,
     System2OperationLease, System2Settlement,
@@ -20,7 +21,30 @@ use std::{
     fs::{self, File, OpenOptions},
     io::{self, Read, Write},
     path::{Path, PathBuf},
+    sync::Arc,
 };
+
+/// A journaled pointer observation must be admitted by the bundle's width rule and be a
+/// real difference: a miss of the source model or a width change from the original prestate.
+fn check_genuine_observation(
+    snapshot: &PropertyRecoverySnapshot,
+    record: &PointerObservationRecord,
+    source: Option<&[u8; 4]>,
+) -> io::Result<()> {
+    let observation = record.to_observation(&snapshot.preconditions.pointer_widths)?;
+    if source.is_some_and(|expected| *expected != record.expected)
+        || !snapshot.pointer_needs_observation(
+            record.object,
+            &record.expected,
+            observation.observed,
+        )
+    {
+        return Err(invalid(
+            "pointer observation is not a difference from the source or prestate",
+        ));
+    }
+    Ok(())
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -160,6 +184,9 @@ struct Head {
 struct State {
     binding: Binding,
     recovery: Option<RecoveryRecord>,
+    /// The original recovery, validated once when `RecoveryAcquired` is applied (live or on
+    /// replay). Later observation checks borrow it; never serialized, never replaced.
+    snapshot: Option<Arc<PropertyRecoverySnapshot>>,
     active: Option<usize>,
     completed: usize,
     mutation: bool,
@@ -173,6 +200,7 @@ impl State {
         Self {
             binding,
             recovery: None,
+            snapshot: None,
             active: None,
             completed: 0,
             mutation: false,
@@ -205,6 +233,12 @@ impl State {
                 || serial == [0xFF; 6]
         })
     }
+    /// The durable original prestate, the width reference of every later observation.
+    fn recovery_snapshot(&self) -> io::Result<Arc<PropertyRecoverySnapshot>> {
+        self.snapshot
+            .clone()
+            .ok_or_else(|| invalid("pointer observation without durable recovery"))
+    }
     fn apply(&mut self, event: &Checkpoint) -> io::Result<()> {
         match event {
             Checkpoint::Created { .. } => return Err(invalid("duplicate operation header")),
@@ -215,7 +249,8 @@ impl State {
                 {
                     return Err(invalid("unexpected recovery or binding mismatch"));
                 }
-                recovery.to_snapshot(&recovery.original_bundle)?;
+                let snapshot = recovery.to_snapshot(&recovery.original_bundle)?;
+                self.snapshot = Some(Arc::new(snapshot));
                 self.recovery = Some(recovery.clone());
                 // Persisted before VerifyMode: interruption after this barrier
                 // cannot prove whether that first mutation was actually sent.
@@ -261,8 +296,17 @@ impl State {
                 {
                     return Err(invalid("pointer observation outside an active final step"));
                 }
-                for observation in observations {
-                    observation.to_observation()?;
+                let snapshot = self.recovery_snapshot()?;
+                for record in observations {
+                    let source = snapshot
+                        .preconditions
+                        .source_pointers
+                        .iter()
+                        .find(|p| p.object == record.object)
+                        .ok_or_else(|| {
+                            invalid("final pointer observation names an untouched object")
+                        })?;
+                    check_genuine_observation(&snapshot, record, Some(&source.value))?;
                 }
                 let run = self.run();
                 self.final_observations
@@ -301,7 +345,8 @@ impl State {
                         ))
                     }
                 }
-                observation.to_observation()?;
+                let snapshot = self.recovery_snapshot()?;
+                check_genuine_observation(&snapshot, observation, None)?;
                 let run = self.run();
                 self.in_procedure_observations
                     .push((run, *operation_index, observation.clone()));

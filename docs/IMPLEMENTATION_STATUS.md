@@ -181,12 +181,19 @@ fragment semantics, family, device operation or recovery authority is added;
 
 Published as `5f1ad454e` after independent APPROVE and all 14 integrated stages
 ([acceptance](status/2026-10-25-system2-pid7-diagnostic.md)).
-A wrong-width resource-pointer answer still stops before the first write. Its refusal now names
-object, element count, actual byte count and a bounded hex prefix in the private journal and CLI
-error result. HTTP status and the shareable report remain redacted. Simulator tests cover empty
-and short replies, count retention, no mutation and journal reopening; hardware width and recovery
-remain unverified. [S2-01](open-work/S2-01-pid7-raw-response.md) remains P1 and partially implemented;
-[S2-02](open-work/S2-02-gateway-busy-after-failed-runs.md) is a separate planned investigation.
+A wrong-width resource-pointer answer stops the legacy path before the first write.
+Its refusal names object, element count, actual byte count and a bounded hex prefix
+in the private journal and CLI error result. HTTP status and the shareable report
+remain redacted. The 26 October field reply now establishes two octets on object 1
+only; an independently retrieved public package declares two/four-octet metadata.
+The exact-profile width-aware correction is implemented locally; independent
+whole-feature review approved it with three minor follow-ups and final package
+acceptance/publication remain pending
+([record](status/2026-10-26-up258-pid7-width.md),
+[research](research/2026-10-26-up258-pid7-width.md)).
+[S2-01](open-work/S2-01-pid7-raw-response.md) remains P1 for that correction and safe
+structured projection. Physical outcome and recovery remain unverified;
+[S2-02](open-work/S2-02-gateway-busy-after-failed-runs.md) remains a separate investigation.
 
 ## Run-scoped download receipts (25 October 2026 source)
 

@@ -167,7 +167,7 @@ device name and project/server revision/incarnation fields remain separate.
 `backup_available`, `restore_available`, `mutation_possible`,
 `recovery_phrases: Option<OperationRecoveryPhrases>`, `prestate_differs`,
 `pointer_observations` (phase `prestate`/`in_procedure`/`final`, operation
-index for in-procedure entries, object, expected and observed four-octet pointer
+index for in-procedure entries, object, source-expected four-octet address and raw observed pointer
 or `None` for a refused read, load state) and `program_version_observation` (plan
 application, device's prior value). `prestate_differs` forces
 `restore_available` false and `recovery_phrases` absent. The subscription is
@@ -301,6 +301,48 @@ the intentionally independent recovery validators. This is duplicate-work
 reduction, not a measured speedup, established timeout cause, acceptance result or
 new hardware/recovery guarantee. No timing budget or protocol policy changes.
 
+## Pointer-width policy for new configured hardware records
+
+The 26 October 2026 candidate uses a new revision 2 of the exact-UP258
+format-3 hardware record. Review and package acceptance are still pending.
+The append-only policy identifier is
+`up258-mv0025-pid7-objects123-one-element-two-or-four-octet-source-declared-v1`.
+Its policy is part of the hardware-record digest and the journal binding; it is
+not a global change to mask `0025h` or the ordinary download path.
+
+The [independently retrieved public package and field reply](../research/2026-10-26-up258-pid7-width.md)
+provide different levels of evidence: object 1 returned one two-octet element
+on one device, while objects 2/3 remain source-declared, unverified hypotheses.
+Source-only and observed-hardware previews must disclose that difference before
+execution. The standard's general definition remains four octets.
+
+The new policy permits exactly one two- or four-octet element on objects 1/2/3.
+A zero-element empty response remains a refused-read observation. Zero elements
+with data, another element count or another byte width is an error, carrying a
+bounded raw prefix privately. Raw two/four-octet values are distinct typed values
+in the snapshot and journal; two octets are never padded or truncated. Numeric
+source-address equality compares a two-octet answer only against a source value
+whose upper two octets are zero. Equality remains the experimental source-shape
+premise, not proof of allocator history or physical recovery.
+
+Acquisition, per-allocation/task reads, final verification and recovery all use
+the bound policy. A change from the captured raw width is durably recorded even
+when its numeric value agrees. Download/restore observations remain separate;
+recovery uses the original capture's representation and policy.
+
+Format-1/2 bundles and format-3 revision-1 hardware records retain their original
+four-octet interpretation, including historical four-octet count leniency and
+zero-element handling. Their unchanged records and digests must remain exact.
+A two-octet record is inadmissible under that old policy. The new policy identifier
+and typed array length make unsupported old readers refuse rather than silently
+drop evidence. Policy/version/field-presence and observation binding are checked
+on both initial load and journal reopening.
+
+The typed, non-raw Net failure seam is preparation for the separate safe
+status/report projection; arbitrary private failure text is not public output.
+Neither that seam nor width-aware persistence establishes hardware compatibility,
+masked-byte retention or complete original-state recovery.
+
 ## Actual-state backup and recovery limits
 
 The Net executor rechecks mask, manufacturer and hardware type; these remain hard
@@ -309,7 +351,8 @@ longer refuses on the serial number, the current program version, a non-Loaded
 resource or a PID_TABLE_REFERENCE that differs from the source model. It reads
 them and records them: `PropertyRecoverySnapshot` stores the observed serial,
 the observed object 3 program version (empty when refused) and, per touched
-object, the observed load state and four-octet pointer.
+object, the observed load state and raw pointer representation (four octets for
+legacy operations, or the explicitly admitted two/four-octet representation above).
 `prestate_observations()`, `serial_observation()` and
 `program_version_observation()` derive the differences; `RecoveryRecord` adds
 readable `prestate_observations`, `observed_serial` and
@@ -334,11 +377,12 @@ unavailable: …` naming each object with expected and observed values (or the
 program versions). A zero-element refusal of a PID_TABLE_REFERENCE read during
 acquisition is recorded as observed `refused` (`ResourceRecord.pointer_refused`,
 pointer zero) and counts as such a difference; transport errors, timeouts and
-malformed lengths stay errors. A PID_TABLE_REFERENCE answer with at least one
-element and a width other than four octets is refused before the first write; the
-refusal names the object, the element count, the octet count and the first 16 raw
-octets (issue #30, field-observed on one device; the width is not modelled, never
-padded or truncated and never read as a pointer). A captured all-zero or all-FF serial also makes
+malformed lengths stay errors. For legacy operations, a positive-element
+PID_TABLE_REFERENCE answer whose width is not four octets is refused before the
+first write. The revision-2 policy above admits only its explicit two/four-octet
+single-element forms. A refusal names the object, the element count, the octet
+count and the first 16 raw octets privately. Unsupported replies are never padded,
+truncated or decoded. A captured all-zero or all-FF serial also makes
 recovery unavailable, because it cannot bind a replay to one physical device.
 The server and UI offer no recovery for such an operation; no backup is
 fabricated. Any other differing serial alone leaves recovery available.
@@ -386,9 +430,11 @@ refusal becomes `PropertyInProcedurePointerObservation` (operation index, object
 expected, observed or refused, resulting load state), returned in
 `in_procedure_pointer_observations` and persisted as the
 `in_procedure_pointer_observation` checkpoint while that step is active, before
-the next mutation. The reporter's device, programmed by ETS with this
-application, reports a PID 7 that differs from the source model, so a hard check
-would very likely abort the real download after mutation started. Memory writes
+the next mutation. The reporter's original byte-comparison failure did not
+establish a numerically different pointer: the later object-1 raw reply `0116`
+matches that source address when interpreted as the admitted two-octet form.
+Other pointer mismatches remain possible and are observations, not a reason to
+abort after mutation. Memory writes
 use the plan's absolute addresses, not the read pointer, and the complete
 allocation intervals are verified at the end. The load-state result of every
 load-control write (`UnexpectedState`) stays hard. Consequence: an allocation

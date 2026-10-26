@@ -281,7 +281,7 @@ async fn exact_snapshot_shape_corruption_refuses_restore_before_connection() {
             0 => snapshot.version = 2,
             1 => snapshot.resources.clear(),
             2 => snapshot.resources[0].state = LoadState::Loading,
-            3 => snapshot.resources[0].pointer = Some([1, 0, 0x3C, 0]),
+            3 => snapshot.resources[0].pointer = Some([1, 0, 0x3C, 0].into()),
             4 => snapshot.allocations.clear(),
             5 => snapshot.allocations[0].data.pop().map(|_| ()).unwrap(),
             6 => snapshot.allocations[0].operation_index += 1,
@@ -521,7 +521,10 @@ async fn silent_absolute_allocation_failure_is_an_in_procedure_observation() {
     assert_eq!(journaled.len(), 1);
     assert_eq!(journaled[0].operation_index, 4);
     assert_eq!(journaled[0].observation.expected, [0, 0, 0x3C, 0]);
-    assert_ne!(journaled[0].observation.observed, Some([0, 0, 0x3C, 0]));
+    assert_ne!(
+        journaled[0].observation.observed,
+        Some([0, 0, 0x3C, 0].into())
+    );
     assert_eq!(
         device.memory(0x3C00, 4),
         [Some(1), Some(2), Some(3), Some(4)]
@@ -909,7 +912,7 @@ async fn three_resource_task_segment_source_pointers_include_explicit_zero_appli
     .await
     .unwrap();
     assert_eq!(report.recovery.resources.len(), 3);
-    assert_eq!(report.recovery.resources[2].pointer, Some([0; 4]));
+    assert_eq!(report.recovery.resources[2].pointer, Some([0; 4].into()));
 }
 
 #[tokio::test]
@@ -1239,7 +1242,7 @@ async fn prestate_pointer_mismatch_is_observed_and_download_completes_without_or
     let acquired = acquired.expect("durable snapshot precedes mutation");
     assert_eq!(acquired, report.recovery);
     assert_eq!(report.recovery.resources[0].object, 3);
-    assert_eq!(report.recovery.resources[0].pointer, Some([0; 4]));
+    assert_eq!(report.recovery.resources[0].pointer, Some([0; 4].into()));
     assert_eq!(report.recovery.resources[0].state, LoadState::Loaded);
     assert_eq!(report.recovery.regions[0].data, [9, 8, 7, 6]);
     assert_eq!(
@@ -1247,7 +1250,7 @@ async fn prestate_pointer_mismatch_is_observed_and_download_completes_without_or
         [PropertyPointerObservation {
             object: 3,
             expected: [0, 0, 0x3C, 0],
-            observed: Some([0; 4]),
+            observed: Some([0; 4].into()),
             state: LoadState::Loaded,
         }]
     );
@@ -1287,7 +1290,10 @@ async fn non_loaded_prestate_is_observed_and_download_completes_without_original
     .await
     .expect("a non-Loaded prestate is an observation, not a refusal");
     assert_eq!(report.recovery.resources[0].state, LoadState::Error);
-    assert_eq!(report.recovery.resources[0].pointer, Some([0, 0, 0x3C, 0]));
+    assert_eq!(
+        report.recovery.resources[0].pointer,
+        Some([0, 0, 0x3C, 0].into())
+    );
     assert_eq!(
         report.recovery.prestate_observations()[0].state,
         LoadState::Error
@@ -1338,7 +1344,7 @@ async fn final_pointer_difference_after_verified_download_is_an_observation() {
     let expected = [PropertyPointerObservation {
         object: 3,
         expected: [0, 0, 0x3C, 0],
-        observed: Some([0, 0, 0x3D, 0]),
+        observed: Some([0, 0, 0x3D, 0].into()),
         state: LoadState::Loaded,
     }];
     assert_eq!(report.final_pointer_observations, expected);
@@ -1600,7 +1606,7 @@ async fn in_procedure_pointer_difference_after_allocation_is_an_observation() {
             observation: PropertyPointerObservation {
                 object: 3,
                 expected: [0, 0, 0x3C, 0],
-                observed: Some([0, 0, 0x3D, 0]),
+                observed: Some([0, 0, 0x3D, 0].into()),
                 state: LoadState::Loading,
             },
         }]
@@ -1996,4 +2002,306 @@ async fn prestate_memory_read_timeout_stays_an_error_before_any_write() {
         device.memory(0x3C00, 4),
         [Some(9), Some(8), Some(7), Some(6)]
     );
+}
+
+// Revision-2 PID 7 width rule (issue #30): the explicit admission, never a default.
+mod pointer_width_rule {
+    use super::*;
+    use knx_net::commissioning::pointer_width::{
+        PointerWidthAdmission, PointerWidthRefusalReason as Reason, PropertyPointerValue as Value,
+    };
+
+    fn admitted(
+        preconditions: ExperimentalPropertyPreconditions,
+        objects: Vec<u8>,
+    ) -> ExperimentalPropertyPreconditions {
+        let admission = PointerWidthAdmission::one_element_two_or_four(objects).unwrap();
+        preconditions
+            .with_pointer_width_admission(admission)
+            .unwrap()
+    }
+
+    #[test]
+    fn matching_never_pads_and_reads_two_octets_as_the_low_half() {
+        let expected = [0, 0, 0x3C, 0];
+        assert!(Value::Four(expected).matches_source(&expected));
+        assert!(Value::Two([0x3C, 0]).matches_source(&expected));
+        assert!(
+            !Value::Two([0, 0x3C]).matches_source(&expected),
+            "byte order"
+        );
+        assert!(
+            !Value::Two([0x3C, 0]).matches_source(&[1, 0, 0x3C, 0]),
+            "high half"
+        );
+        assert!(!Value::Four([0, 0, 0x3D, 0]).matches_source(&expected));
+        assert_eq!(Value::Two([0x01, 0x16]).to_string(), "0116");
+        assert_eq!(Value::Four([0, 0, 1, 0x16]).to_string(), "00000116");
+    }
+
+    #[test]
+    fn admission_is_checked_against_shape_and_plan() {
+        for objects in [vec![], vec![3, 1], vec![3, 3]] {
+            assert!(PointerWidthAdmission::one_element_two_or_four(objects).is_err());
+        }
+        let (_, _, preconditions) = fixture();
+        let untouched = PointerWidthAdmission::one_element_two_or_four(vec![1, 3]).unwrap();
+        assert!(preconditions
+            .clone()
+            .with_pointer_width_admission(untouched.clone())
+            .is_err());
+        assert!(untouched.applies_to(1) && !preconditions.pointer_widths.applies_to(3));
+    }
+
+    #[tokio::test]
+    async fn a_forged_admission_is_refused_by_every_entry_point_before_traffic() {
+        let (device, plan, preconditions) = fixture();
+        establish_shape(&device, &plan).await;
+        let mut forged = preconditions;
+        forged.pointer_widths = PointerWidthAdmission::OneElementTwoOrFour { objects: vec![1] };
+        let before = device.seen().len();
+        let error = run_experimental_property_plan(
+            &device,
+            &plan,
+            auth(&device),
+            AuthorisationPlan::Skip,
+            timing(),
+            &forged,
+            &mut |_| Ok(()),
+            &|| false,
+        )
+        .await
+        .unwrap_err();
+        assert!(matches!(
+            error.failure,
+            PropertySimulationFailure::Recovery(_)
+        ));
+        assert_eq!(device.seen().len(), before);
+    }
+
+    async fn read_with(
+        preconditions: &ExperimentalPropertyPreconditions,
+        elements: u8,
+        answer: Vec<u8>,
+    ) -> Result<
+        knx_net::commissioning::property_download::ExperimentalPropertyReport,
+        knx_net::commissioning::property_download::PropertySimulationError,
+    > {
+        let (device, plan, _) = fixture();
+        establish_shape(&device, &plan).await;
+        let transport = FinalReference {
+            device: &device,
+            armed: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true)),
+            property: 7,
+            elements,
+            replacement: Some(answer),
+            arm_on: 0xFF,
+        };
+        run_experimental_property_plan(
+            &transport,
+            &plan,
+            auth(&device),
+            AuthorisationPlan::Skip,
+            timing(),
+            preconditions,
+            &mut |_| Ok(()),
+            &|| false,
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn one_element_of_two_or_four_octets_is_read_raw_and_everything_else_is_typed() {
+        let (_, _, base) = fixture();
+        let preconditions = admitted(base, vec![3]);
+        let report = read_with(&preconditions, 1, vec![0x3C, 0x00])
+            .await
+            .unwrap();
+        assert_eq!(
+            report.recovery.resources[0].pointer,
+            Some(Value::Two([0x3C, 0]))
+        );
+        assert!(report.recovery.prestate_observations().is_empty());
+        assert!(report.final_pointer_observations.is_empty());
+        let report = read_with(&preconditions, 1, vec![0, 0, 0x3C, 0])
+            .await
+            .unwrap();
+        assert_eq!(
+            report.recovery.resources[0].pointer,
+            Some(Value::Four([0, 0, 0x3C, 0]))
+        );
+        // Zero elements without data stays a refused observation.
+        let report = read_with(&preconditions, 0, vec![]).await.unwrap();
+        assert_eq!(report.recovery.resources[0].pointer, None);
+        for (elements, answer, reason) in [
+            (0, vec![0xAB], Reason::ZeroElementsWithData),
+            (2, vec![0, 0, 0x3C, 0], Reason::ElementCount),
+            (2, vec![0x3C, 0], Reason::ElementCount),
+            (1, vec![], Reason::UnsupportedWidth),
+            (1, vec![0x3C], Reason::UnsupportedWidth),
+            (1, vec![0, 0x3C, 0], Reason::UnsupportedWidth),
+            (1, vec![0, 0, 0x3C, 0, 1], Reason::UnsupportedWidth),
+        ] {
+            let error = read_with(&preconditions, elements, answer.clone())
+                .await
+                .unwrap_err();
+            assert!(!error.mutation_may_have_started, "{answer:?}");
+            let PropertySimulationFailure::PointerWidth(refusal) = &error.failure else {
+                panic!("expected the typed refusal, got {:?}", error.failure);
+            };
+            assert_eq!(
+                (
+                    refusal.reason,
+                    refusal.object,
+                    refusal.property_id,
+                    refusal.elements,
+                    refusal.octets
+                ),
+                (reason, 3, 7, elements, answer.len())
+            );
+            let hex: String = answer.iter().map(|o| format!("{o:02x}")).collect();
+            let text = refusal.private_diagnostic();
+            assert!(
+                text.starts_with(
+                    "resource pointer response is not one element of two or four octets: object 3"
+                ),
+                "{text}"
+            );
+            assert!(answer.is_empty() || text.contains(&hex), "{text}");
+        }
+    }
+
+    #[tokio::test]
+    async fn legacy_admission_keeps_its_text_leniency_and_zero_element_discard() {
+        let (_, _, legacy) = fixture();
+        assert_eq!(legacy.pointer_widths, PointerWidthAdmission::Legacy);
+        let error = read_with(&legacy, 1, vec![0x3C, 0x00]).await.unwrap_err();
+        let PropertySimulationFailure::Recovery(reason) = &error.failure else {
+            panic!("legacy keeps the string refusal: {:?}", error.failure);
+        };
+        assert_eq!(
+            reason,
+            "resource pointer response is not four octets: object 3, 1 element, 2 octets, 3c00"
+        );
+        let report = read_with(&legacy, 2, vec![0, 0, 0x3C, 0]).await.unwrap();
+        assert_eq!(
+            report.recovery.resources[0].pointer,
+            Some(Value::Four([0, 0, 0x3C, 0]))
+        );
+        let report = read_with(&legacy, 0, vec![0xAB]).await.unwrap();
+        assert_eq!(report.recovery.resources[0].pointer, None);
+    }
+
+    /// Like `read_with`, but the answer replaces PID 7 only after a PID 5 write whose first
+    /// octet is `arm_on`: 3 arms the allocation read-back (in procedure), 2 the final reads.
+    async fn read_after_mutation(
+        preconditions: &ExperimentalPropertyPreconditions,
+        arm_on: u8,
+        elements: u8,
+        answer: Vec<u8>,
+    ) -> (
+        SimulatedDevice,
+        usize,
+        Result<
+            knx_net::commissioning::property_download::ExperimentalPropertyReport,
+            knx_net::commissioning::property_download::PropertySimulationError,
+        >,
+    ) {
+        let (device, plan, _) = fixture();
+        establish_shape(&device, &plan).await;
+        let before = device.seen().len();
+        let result = {
+            let transport = FinalReference {
+                device: &device,
+                armed: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
+                property: 7,
+                elements,
+                replacement: Some(answer),
+                arm_on,
+            };
+            run_experimental_property_plan(
+                &transport,
+                &plan,
+                auth(&device),
+                AuthorisationPlan::Skip,
+                timing(),
+                preconditions,
+                &mut |_| Ok(()),
+                &|| false,
+            )
+            .await
+        };
+        (device, before, result)
+    }
+
+    #[tokio::test]
+    async fn refusals_after_mutation_are_typed_hard_stops_without_a_pid14_restore() {
+        let (_, _, base) = fixture();
+        let preconditions = admitted(base, vec![3]);
+        let pid14 = |device: &SimulatedDevice, before: usize| {
+            device.seen()[before..]
+                .iter()
+                .filter(|s| {
+                    matches!(
+                        s,
+                        Seen::PropertyWrite {
+                            property_id: 14,
+                            ..
+                        }
+                    )
+                })
+                .count()
+        };
+        for (phase, arm_on) in [("in procedure", 3u8), ("final", 2u8)] {
+            // Controls: a matching Two completes in both phases and restores PID 14 once.
+            let (device, before, result) =
+                read_after_mutation(&preconditions, arm_on, 1, vec![0x3C, 0x00]).await;
+            let report = result.unwrap_or_else(|e| panic!("{phase}: {e}"));
+            assert_eq!(
+                report.recovery.resources[0].pointer,
+                Some(Value::Four([0, 0, 0x3C, 0]))
+            );
+            assert_eq!(pid14(&device, before), 2, "{phase}: setup and restoration");
+            for (elements, answer, reason) in [
+                // right width, wrong count
+                (2, vec![0, 0, 0x3C, 0], Reason::ElementCount),
+                (2, vec![0x3C, 0], Reason::ElementCount),
+                // right count, wrong width
+                (1, vec![0, 0x3C, 0], Reason::UnsupportedWidth),
+                (1, vec![0, 0, 0x3C, 0, 1], Reason::UnsupportedWidth),
+                (0, vec![0xAB], Reason::ZeroElementsWithData),
+            ] {
+                let (device, before, result) =
+                    read_after_mutation(&preconditions, arm_on, elements, answer.clone()).await;
+                let error = result.unwrap_err();
+                assert!(error.mutation_may_have_started, "{phase} {answer:?}");
+                let PropertySimulationFailure::PointerWidth(refusal) = &error.failure else {
+                    panic!(
+                        "{phase}: expected the typed refusal, got {:?}",
+                        error.failure
+                    );
+                };
+                assert_eq!(
+                    (
+                        refusal.reason,
+                        refusal.object,
+                        refusal.property_id,
+                        refusal.elements,
+                        refusal.octets
+                    ),
+                    (reason, 3, 7, elements, answer.len()),
+                    "{phase}"
+                );
+                assert_eq!(
+                    pid14(&device, before),
+                    1,
+                    "{phase}: no PID 14 restoration after the refusal"
+                );
+                assert!(
+                    matches!(device.seen().last(), Some(Seen::Disconnect)),
+                    "{phase}"
+                );
+            }
+        }
+    }
 }

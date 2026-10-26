@@ -10,19 +10,22 @@ async (page) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto(`${origin}/en/`);
-  const hero = page.locator('h1');
+  // The hero types (WP-21); the reveal timeline is exercised on an unselected heading.
+  const hero = page.locator('#release-title');
+  const center = () => hero.evaluate(h => window.scrollTo(0, h.getBoundingClientRect().top + scrollY - innerHeight / 2));
+  await center();
   const revealing = () => hero.evaluate(h => h.getAnimations({ subtree: true }).filter(a => a.id === 'headline-reveal'));
-  await page.waitForFunction(() => document.querySelector('h1').getAnimations({ subtree: true }).some(a => a.id === 'headline-reveal'), null, { timeout: 3000 });
+  await page.waitForFunction(() => document.querySelector('#release-title').getAnimations({ subtree: true }).some(a => a.id === 'headline-reveal'), null, { timeout: 3000 });
   assert('page-load hero has real character entrance animations', (await revealing()).length > 0);
   const proof = await hero.evaluate(h => h.getAnimations({ subtree: true }).filter(a => a.id === 'headline-reveal').map(a => ({ frames: a.effect.getKeyframes().map(f => ({ transform: f.transform, opacity: f.opacity, offset: f.offset })), duration: a.effect.getTiming().duration })));
   assert('entrance retains SessionRadar translation, rotation and fade', proof.every(a => a.frames.some(f => f.transform === 'translateY(0.3em) rotateX(-45deg)' && f.opacity === '0')));
   assert('characters arrive in a stagger', new Set(proof.map(a => a.frames[1].offset)).size > 1);
-  await page.waitForFunction(() => !document.querySelector('h1').getAnimations({ subtree: true }).some(a => a.id === 'headline-reveal'));
+  await page.waitForFunction(() => !document.querySelector('#release-title').getAnimations({ subtree: true }).some(a => a.id === 'headline-reveal'));
   const bounds = await hero.boundingBox();
   assert('settled hero is completely readable', await hero.evaluate(h => [...h.querySelectorAll('.char')].every(c => getComputedStyle(c).opacity === '1')));
   // Put most of the hero just outside the top inset, then interrupt its exit.
   await hero.evaluate(h => window.scrollTo(0, h.getBoundingClientRect().bottom + scrollY - innerHeight * .05 - 1));
-  await page.waitForFunction(() => document.querySelector('h1').getAnimations({ subtree: true }).some(a => a.id === 'headline-reveal' && a.playbackRate < 0), null, { timeout: 3000 });
+  await page.waitForFunction(() => document.querySelector('#release-title').getAnimations({ subtree: true }).some(a => a.id === 'headline-reveal' && a.playbackRate < 0), null, { timeout: 3000 });
   assert('leaving viewport plays the entrance timeline backwards', await hero.evaluate(h => h.getAnimations({ subtree: true }).filter(a => a.id === 'headline-reveal').every(a => a.playbackRate < 0)));
   // Freeze a real native timeline mid-flight, then let viewport re-entry reverse it.
   await hero.evaluate(async h => {
@@ -30,20 +33,20 @@ async (page) => {
     animations.forEach(a => a.pause()); await Promise.all(animations.map(a => a.ready));
     animations.forEach(a => { a.currentTime = a.effect.getTiming().duration / 2; });
     window.__headlineExitAnimations = animations;
-    window.scrollTo(0, 0);
+    window.scrollTo(0, h.getBoundingClientRect().top + scrollY - innerHeight / 2);
   });
   await page.waitForFunction(() => window.__headlineExitAnimations.every(a => a.playbackRate > 0 && a.playState === 'running'));
   assert('rapid re-entry reverses the same animations, without replacing them', await hero.evaluate(h => window.__headlineExitAnimations.every(a => h.getAnimations({ subtree: true }).includes(a))));
   await page.screenshot({ path: 'website/output/playwright/headline-reveal-en.png' });
-  await page.waitForFunction(() => !document.querySelector('h1').getAnimations({ subtree: true }).some(a => a.id === 'headline-reveal'));
+  await page.waitForFunction(() => !document.querySelector('#release-title').getAnimations({ subtree: true }).some(a => a.id === 'headline-reveal'));
   assert('entrance preserves layout bounds', JSON.stringify(bounds) === JSON.stringify(await hero.boundingBox()));
   await hero.evaluate(h => window.scrollTo(0, h.getBoundingClientRect().bottom + scrollY - innerHeight * .05 - 1));
-  await page.waitForFunction(() => document.querySelector('h1').getAnimations({ subtree: true }).some(a => a.id === 'headline-reveal' && a.playbackRate < 0));
+  await page.waitForFunction(() => document.querySelector('#release-title').getAnimations({ subtree: true }).some(a => a.id === 'headline-reveal' && a.playbackRate < 0));
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.waitForFunction(() => !document.getAnimations().length);
   assert('live reduced motion cancels exit and restores readable letters', await hero.evaluate(h => [...h.querySelectorAll('.char')].every(c => getComputedStyle(c).opacity === '1')));
   await page.emulateMedia({ reducedMotion: 'no-preference' });
-  await page.evaluate(() => window.scrollTo(0, 0));
+  await center();
   await page.locator('[data-motion-toggle]').click();
   assert('manual pause leaves every headline readable', await page.locator('main .char').evaluateAll(chars => chars.every(c => getComputedStyle(c).opacity === '1')));
   assert('manual pause cancels both animation layers', await page.evaluate(() => document.getAnimations().length === 0));
@@ -61,7 +64,7 @@ async (page) => {
     }
   }
   // The lower viewport edge must reverse too, not only the hero's upper exit.
-  const section = page.locator('main h2').first();
+  const section = hero; // first h2 is the typed features heading
   await section.evaluate(h => {
     window.__headlineBoundary = h;
     window.scrollTo(0, h.getBoundingClientRect().top + scrollY - innerHeight / 2);
@@ -90,6 +93,8 @@ async (page) => {
     await fallback.route('**/*', route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
     const basic = await fallback.newPage();
     await basic.goto(`${origin}/en/`);
+    // The typed hero needs no WAAPI; the failure surfaces at the first rolling heading.
+    await basic.locator('#release-title').scrollIntoViewIfNeeded();
     await basic.waitForFunction(() => document.documentElement.dataset.motion === 'off');
     assert('animation failure restores all text and hides the nonfunctional control', await basic.locator('main .char').evaluateAll(chars => chars.length > 0 && chars.every(c => getComputedStyle(c).opacity === '1')) && await basic.locator('[data-motion-toggle]').isHidden());
   } finally { await fallback.close(); }

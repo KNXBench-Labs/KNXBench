@@ -8,6 +8,9 @@
   if (!headings.length || !toggle) return;
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
   const boxes = new Map(), reveals = new Map(), visible = new Set(), active = new Set();
+  // Selected headings (data-headline-typing) type once per page load instead of the fade reveal.
+  const typings = new Map();
+  const TYPE_MS = 50, BLINKS = 4, BLINK_MS = 1000;
   const SWAP = { duration: 720, easing: 'cubic-bezier(.65,0,.35,1)', id: 'ambient-char-swap' };
   const CLIP = 'inset(-0.4em -0.06em)';
   let paused = false, unsupported = false, pageHidden = false, timer = 0, ticks = 0;
@@ -102,6 +105,56 @@
       sync();
     }
   }
+  function placeCursor(typing, index) {
+    const { cursor, chars } = typing;
+    // Zero-width and inside the nowrap word: layout and wrapping stay those of the full text.
+    if (index < 0) chars[0].parentNode.insertBefore(cursor, chars[0]);
+    else chars[index].parentNode.insertBefore(cursor, chars[index].nextSibling);
+  }
+  function finishTyping(heading, blink) {
+    const typing = typings.get(heading);
+    if (typing.status === 'done') return;
+    window.clearTimeout(typing.timer);
+    typing.status = 'done';
+    typing.chars.forEach(box => box.removeAttribute('data-untyped'));
+    heading.dataset.typingState = 'done';
+    const { cursor } = typing;
+    if (blink && cursor.isConnected) {
+      try {
+        // step-end per keyframe interval: on for the first half of a cycle, off for the second.
+        const animation = cursor.animate([
+          { opacity: 1, offset: 0, easing: 'step-end' },
+          { opacity: 0, offset: .5, easing: 'step-end' },
+          { opacity: 1, offset: 1 }
+        ], { duration: BLINK_MS, iterations: BLINKS, id: 'headline-typing-cursor' });
+        const remove = () => cursor.remove();
+        animation.finished.then(remove, () => {});
+        typing.blink = animation;
+        return;
+      } catch (_) { /* Falls through to removing the cursor. */ }
+    }
+    cursor.remove();
+  }
+  function stopTyping(heading) {
+    const typing = typings.get(heading);
+    if (typing.blink) typing.blink.cancel();
+    typing.cursor.remove();
+    finishTyping(heading, false);
+  }
+  function startTyping(heading) {
+    const typing = typings.get(heading);
+    typing.status = 'running';
+    heading.dataset.typingState = 'typing';
+    placeCursor(typing, -1);
+    const step = () => {
+      typing.index += 1;
+      typing.chars[typing.index].removeAttribute('data-untyped');
+      placeCursor(typing, typing.index);
+      if (typing.index >= typing.chars.length - 1) finishTyping(heading, true);
+      else typing.timer = window.setTimeout(step, TYPE_MS);
+    };
+    typing.timer = window.setTimeout(step, TYPE_MS);
+  }
   function cancelWhere(predicate) {
     for (const animation of active) if (predicate(animation)) animation.cancel();
   }
@@ -131,6 +184,7 @@
     if (!allowed() || !visible.size) return;
     const pool = [];
     for (const heading of visible) {
+      if (typings.has(heading)) continue;
       const state = reveals.get(heading);
       if (!state.shown || state.animations.length) continue;
       for (const box of boxes.get(heading)) if (!box.getAnimations({ subtree: true }).length) pool.push(box);
@@ -156,6 +210,12 @@
   function sync() {
     document.documentElement.dataset.motion = allowed() ? 'on' : 'off';
     for (const heading of headings) {
+      const typing = typings.get(heading);
+      if (typing) {
+        if (!allowed()) stopTyping(heading);
+        else if (typing.status === 'idle' && visible.has(heading)) startTyping(heading);
+        continue;
+      }
       if (allowed()) reveal(heading, visible.has(heading));
       else settleReveal(heading, true);
     }
@@ -166,7 +226,19 @@
     } else if (!timer) timer = window.setTimeout(tick, 1200);
   }
   headings.forEach(heading => {
-    boxes.set(heading, split(heading));
+    const found = split(heading);
+    boxes.set(heading, found);
+    if (heading.hasAttribute('data-headline-typing') && found.length) {
+      const cursor = document.createElement('span');
+      cursor.className = 'typing-cursor';
+      cursor.setAttribute('aria-hidden', 'true');
+      found.forEach(box => box.setAttribute('data-untyped', ''));
+      typings.set(heading, { chars: found, cursor, index: -1, status: 'idle', timer: 0, blink: null });
+      heading.dataset.typingState = 'pending';
+      reveals.set(heading, { shown: true, target: true, animations: [] });
+      heading.dataset.headlineState = 'shown';
+      return;
+    }
     reveals.set(heading, { shown: false, target: false, animations: [] });
     heading.dataset.headlineState = 'hidden';
   });

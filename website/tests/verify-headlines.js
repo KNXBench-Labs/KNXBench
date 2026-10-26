@@ -19,7 +19,10 @@ async (page) => {
   assert('hero keeps its explicit line break', await page.locator('h1 br').count() === 1);
   assert('hero accessible name retains the word boundary across its line break', await page.locator('h1').getAttribute('aria-label') === 'Dein KNX-Projekt. Deine Werkbank.');
   assert('decorative words are hidden from assistive technology', await page.locator('main .char-word').evaluateAll(words => words.every(word => word.getAttribute('aria-hidden') === 'true')));
-  const before = await page.locator('h1').boundingBox();
+  // The hero types (WP-21) instead of rolling: ambient glyph swaps are exercised on an unselected heading.
+  const sample = page.locator('#release-title');
+  await sample.scrollIntoViewIfNeeded();
+  const before = await sample.boundingBox();
   await waitForRoll();
   const proof = await page.evaluate(() => {
     const animations = document.getAnimations().filter(a => a.id === 'ambient-char-swap' && a.playState === 'running');
@@ -27,7 +30,7 @@ async (page) => {
   });
   assert('actual Story swaps use 720ms easing', proof.length > 0 && proof.every(a => a.duration === 720 && a.easing === 'cubic-bezier(0.65, 0, 0.35, 1)'));
   assert('actual glyph slides out and its pseudo-element twin slides in', proof.some(a => a.frames.some(f => /^translate[XY]\(-?105%\)$/.test(f.transform))) && proof.some(a => a.pseudo === '::after'));
-  assert('ambient rolls preserve the heading box', JSON.stringify(await page.locator('h1').boundingBox()) === JSON.stringify(before));
+  assert('ambient rolls preserve the heading box', JSON.stringify(await sample.boundingBox()) === JSON.stringify(before));
   await waitForRoll();
   await page.evaluate(async () => {
     const animations = document.getAnimations().filter(a => a.id === 'ambient-char-swap' && a.playState === 'running');
@@ -49,7 +52,7 @@ async (page) => {
   const toggle = page.locator('[data-motion-toggle]');
   assert('manual pause control remains reachable under OS reduction', await toggle.isVisible());
   await page.emulateMedia({ reducedMotion: 'no-preference' });
-  await page.locator('h1').scrollIntoViewIfNeeded();
+  await sample.scrollIntoViewIfNeeded();
   await waitForRoll();
   assert('clearing OS reduction resumes ambient rolls', await active() > 0);
   await toggle.focus();
@@ -60,7 +63,7 @@ async (page) => {
   assert('manual pause prevents new swaps', await active() === 0);
   await page.keyboard.press('Enter');
   assert('keyboard resume clears the pressed state', await toggle.getAttribute('aria-pressed') === 'false');
-  await page.locator('h1').scrollIntoViewIfNeeded();
+  await sample.scrollIntoViewIfNeeded();
   await waitForRoll();
   assert('manual resume restarts ambient rolls', await active() > 0);
   // Explicitly synthetic visibility state: exercise cleanup, never claim a real tab suspension.
@@ -75,8 +78,8 @@ async (page) => {
   await waitForRoll();
   assert('visible-document lifecycle resumes ambient rolls', await active() > 0);
   await page.locator('#start').scrollIntoViewIfNeeded();
-  await page.waitForFunction(() => document.querySelector('h1').getAnimations({ subtree: true }).length === 0, null, { timeout: 3000 });
-  assert('offscreen hero stops animating after its finite reverse entrance', await page.locator('h1').evaluate(h => h.getAnimations({ subtree: true }).length === 0));
+  await page.waitForFunction(() => document.querySelector('#release-title').getAnimations({ subtree: true }).length === 0, null, { timeout: 3000 });
+  assert('offscreen heading stops animating after its finite reverse entrance', await sample.evaluate(h => h.getAnimations({ subtree: true }).length === 0));
   for (const lang of ['de', 'en']) {
     for (const width of [320, 390, 768, 1440]) {
       await page.emulateMedia({ reducedMotion: 'reduce' });

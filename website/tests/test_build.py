@@ -50,6 +50,14 @@ class BuildTests(unittest.TestCase):
             self.assertEqual(sum(tag == "h1" for tag, _ in doc.elements), 1)
             self.assertNotIn("${", page)
 
+    def test_only_hero_and_features_headings_are_marked_for_live_typing(self):
+        self.require_build()
+        for path in ("index.html", "de/index.html", "en/index.html"):
+            doc = Document((self.out / path).read_text())
+            typed = [attrs.get("id") for tag, attrs in doc.elements
+                     if tag in ("h1", "h2", "h3") and "data-headline-typing" in attrs]
+            self.assertEqual(typed, ["hero-title", "features-title"], path)
+
     def test_root_defaults_to_english_with_explicit_language_links(self):
         self.require_build()
         page = (self.out / "index.html").read_text()

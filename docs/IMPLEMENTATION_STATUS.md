@@ -20,9 +20,9 @@ unproved hardware-kind routes with the extra user-memory header octet:
 ordinary data budget 12, user-memory 11 at the default frame. Chunking and real
 session reads share the helper; simulator modeled capacities and all write
 admission gates stay unchanged ([contract](contracts/memory-transfer-budget.md)).
-Original semantic RED was independently replayed; owning checks and initial
-review passed. Correction re-review, maintained integrated acceptance and
-publication remain pending
+Original semantic RED was independently replayed; initial and correction
+reviews approved. All 16 selected maintained integrated stages passed;
+published as `1e6229cea3` with local/tracking/live readback equality
 ([record](status/2026-10-26-memory-transfer-budget.md)). No measured extended
 path, new family, hardware outcome or complete recovery is claimed.
 

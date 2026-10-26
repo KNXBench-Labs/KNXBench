@@ -1,6 +1,6 @@
 # Restart snapshot
 
-Updated: 2026-10-25 23:40 CET. Operational snapshot, not an append-only journal.
+Updated: 2026-10-26 01:50 CET. Operational snapshot, not an append-only journal.
 ## Other owners and preservation
 - Root intentionally old/dirty: preserve private/untracked files and other edits.
   Alpha16 belongs to another track. No release/deployment/hardware authority.
@@ -9,24 +9,21 @@ Updated: 2026-10-25 23:40 CET. Operational snapshot, not an append-only journal.
   Owner rule: pre-write hard = hardware type/mask/manufacturer; serial, prior program version,
   load state, PID 7 are observations; memory/Loaded/written version verification stays hard.
 ## Active programming improvements
-- Existing non-Secure gaps authorised; no live bus, new family or deployment.
-  Keep family/recovery admission and partial-to-full refusal; PRG-01 remains open.
-- Earlier bounded slices are published; [PRG-01](../docs/open-work/PRG-01-programming-gaps.md)
-  and their acceptance records own results and remaining boundaries.
-- Regular MergeId admission PUBLISHED `be2687796`, feature `85fa16e04`.
-  Independent review, original semantic RED, exact source retention and the local
-  same-base differential accepted; temporary observer removed before publication.
-- Maintained gate14 on actual merge: Rust4287/158ignored, selected corpus97/97;
-  Python tools425executed/6skipped. Web/browser suites not selected; bundle built.
-  [Acceptance](../docs/status/2026-10-25-regular-merge-fragment-admission.md).
-- Own tree `<sources>/knxbench-product-corpus-characterization-20261025`, branch
-  `integrate/regular-merge-fragment-b3-20261025`; result-only docs/cleanup in progress.
-- Next: bounded memory-budget TDD after this delivery boundary: conservative
-  unproven hardware-route cap plus service-specific UserMemory header budget.
-  Source-only admission complete; implementation not started; no hardware authority.
-  cEMI/gateway and other sessions' System2 files remain outside this write surface.
-- Inactive/Union/customer-write/comparison-exclusion semantics and complete
-  effects/device-baseline/recovery remain unresolved; no broad completion claim.
+- Existing non-Secure gaps GO; no bus/new family/Secure/deployment; PRG-01 open.
+- MergeId published `be2687796`/`5bb8d076`; evidence verified, old own tree retired.
+  Old full-product pin debt stays red; no silent repin or broad recovery claim.
+- Memory-budget feature `22d14c863`, independent initial/correction APPROVE.
+  Original6 semantic REDs and corrected pre-runtime control independently replayed.
+- Branch16 accepted: Rust6796/229ignored, corpus155/155 in9targets, bindings same;
+  tools425executed/6skipped; web/browser suites not selected, bundle built.
+- Own tree `<sources>/knxbench-regular-memory-budget-20261025`, current branch
+  `integrate/regular-memory-budget-20261026`, fresh main-first base `bb592d154`.
+  Foreign module/coordination preserved; own behavior unchanged.
+- Pending integrated16 on merge+checkpoint, conditional push/readback and cleanup;
+  no merged acceptance yet. Evidence `regular-memory-budget-merged-gate/receipt.json`.
+- cEMI/client/gateway/System2 foreign-owned; no duplicate full product census.
+- Path capacity, parameter/customer-write/exclusion, runtime/exemplar and complete
+  effects/device-baseline/recovery stay named evidence boundaries.
 ## S2-01 diagnostic subdelivery
 - PUBLISHED `5f1ad454e`; local/tracking/live refs matched after push; claim released.
 - Independent Opus APPROVE, integrated gate14 green: Rust3279/131ignored, corpus91/91.

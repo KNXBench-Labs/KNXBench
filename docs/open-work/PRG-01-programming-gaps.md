@@ -99,7 +99,7 @@ record the boundaries separately; these increments do not close PRG-01.
   main-first documentation integration preserves runtime bytes. These display
   receipts are not device baselines and do not close effects/recovery work.
 
-## Current bounded increment
+## Delivered bounded source admission
 
 The regular planner conservatively refuses declared `MergeId` fragments rather
 than silently omitting them ([contract](../contracts/regular-merge-fragment-admission.md)).
@@ -108,6 +108,18 @@ comparison/source/restore preparation inherits the restriction. The original sem
 all 14 selected maintained integrated stages passed; source is published as
 `be2687796` ([acceptance](../status/2026-10-25-regular-merge-fragment-admission.md)). This is
 not merged-procedure execution or closure of PRG-01.
+
+## Current bounded increment
+
+The [service-aware memory budget](../contracts/memory-transfer-budget.md)
+reserves the extra user-memory header octet and applies a conservative standard
+cap to unproved hardware-kind/default routes. Standard data budgets are 12
+ordinary or 11 user-memory octets; actual interface/coupler and extended-path
+capacity acquisition is not implemented. Original semantic regressions and the
+initial review passed; correction re-review, maintained merged acceptance and
+publication remain pending
+([record](../status/2026-10-26-memory-transfer-budget.md)). No new family,
+authorisation, recovery behavior or physical outcome is claimed.
 
 ## Open
 
@@ -119,9 +131,10 @@ not merged-procedure execution or closure of PRG-01.
 - Existing full-product opt-in coverage pin debt (see
   [KL-006](../limitations/KL-006-devices-dependent-on-vendor-plug-ins.md)):
   owner **programming-correctness track**, attribution review checkpoint
-  **26 October 2026**. Explain input-scope, category and evidence changes before
-  any separately reviewed pin maintenance; no dynamic expectation derived from
-  the actual output, no silent repin in the fragment-admission package.
+  **26 October 2026**: authentic fixture-scope and category provenance remain
+  unresolved, so pin maintenance is still blocked. Explain those inputs and
+  evidence changes before any separately reviewed adjustment; no dynamic
+  expectation derived from actual output, no silent repin in these increments.
 
 ## Boundaries
 

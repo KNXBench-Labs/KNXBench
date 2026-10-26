@@ -13,6 +13,19 @@ archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
 
+## Service-aware memory transfer budgets (26 October 2026 source)
+
+The existing memory path now composes a conservative standard-frame policy for
+unproved hardware-kind routes with the extra user-memory header octet:
+ordinary data budget 12, user-memory 11 at the default frame. Chunking and real
+session reads share the helper; simulator modeled capacities and all write
+admission gates stay unchanged ([contract](contracts/memory-transfer-budget.md)).
+Original semantic RED was independently replayed; owning checks and initial
+review passed. Correction re-review, maintained integrated acceptance and
+publication remain pending
+([record](status/2026-10-26-memory-transfer-budget.md)). No measured extended
+path, new family, hardware outcome or complete recovery is claimed.
+
 ## System-2 own-run hint and refusal reasons (25 October 2026 source)
 
 The issue #30 diagnostic slice names the running System-2 owner in the partial

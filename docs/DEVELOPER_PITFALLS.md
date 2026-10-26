@@ -260,6 +260,26 @@ already found lying in the grass.
   count.** Convert such statements to named columns when a migration adds
   columns.
 
+## KNXnet/IP tunnel
+
+- **Blocking durable IO on a current-thread runtime starves the tunnel.**
+  `connect_tunnel` spawns the receive and heartbeat tasks, and the receive
+  task answers every TUNNELLING_REQUEST with a TUNNELLING_ACK. On a
+  `new_current_thread()` runtime those tasks run only while the operation
+  future awaits, so a synchronous checkpoint inside it (fsync, readback,
+  validation) leaves the gateway's request unacknowledged. The gateway repeats
+  it once after one second and then drops the connection (Tunnelling
+  v01.07.01 AS §2.6.1); the next request then times out on a dead channel.
+  Seen 2026-10-26 in a System-2 validation run that stopped at its recovery
+  barrier without sending a write. Build the runtime for such a command with
+  `tunnel_runtime()` (`apps/knx-cli/src/tunnel_runtime.rs`); its loopback test
+  fails when the helper falls back to a current-thread runtime. `device
+  system2-validation` (hardware execute and recovery) and `device
+  system2-project` use it. Other tunnel commands still build current-thread
+  runtimes; `device download`, `device restore` and `device service-control`
+  persist a pre-write backup and a send-possible marker between frames and are
+  not converted yet.
+
 ## Docker image
 
 - **The image's frontend stage sees only the files it copies.** `npm run build`

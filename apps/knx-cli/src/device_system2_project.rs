@@ -152,10 +152,7 @@ fn execute(args: &[String]) -> Result<(), String> {
         .check_current(&products.conn, &project, device)
         .map_err(|e| e.to_string())?;
     let _lease = knx_app::device_diagnostics::gateway_lease().map_err(|e| e.to_string())?;
-    let runtime = tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .map_err(|e| e.to_string())?;
+    let runtime = crate::tunnel_runtime::tunnel_runtime().map_err(|e| e.to_string())?;
     let result = runtime.block_on(async {
         let tunnel = tokio::time::timeout(
             Duration::from_secs(10),

@@ -465,10 +465,8 @@ fn run_hardware(
     let guard = log
         .start_write("system2Validation", Some(target.to_string()))
         .map_err(|e| e.to_string())?;
-    let runtime = tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .map_err(|e| e.to_string())?;
+    // Durable checkpoints run between frames; keep the tunnel serviced.
+    let runtime = crate::tunnel_runtime::tunnel_runtime().map_err(|e| e.to_string())?;
     let executed = runtime.block_on(async {
         let tunnel = tokio::time::timeout(
             Duration::from_secs(10),

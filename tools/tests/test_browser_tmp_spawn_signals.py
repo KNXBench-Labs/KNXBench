@@ -86,7 +86,7 @@ class FakeChild:
     def wait(self) -> int:
         return 0
 
-    def poll(self) -> int:
+    def poll(self) -> int | None:
         return 0
 
 
@@ -158,16 +158,75 @@ class SpawnSignalContract(unittest.TestCase):
         killpg.assert_not_called()
         self.assertEqual({number: signal.getsignal(number) for number in FORWARDED}, installed)
 
-    def test_a_child_that_outlives_its_wait_is_still_killed(self) -> None:
+    def test_a_child_that_outlives_its_wait_is_killed_then_reaped(self) -> None:
+        events = []
+
         class Stubborn(FakeChild):
+            def wait(self) -> int:
+                events.append('wait')
+                return 0
+
             def poll(self) -> None:
+                events.append('poll')
                 return None
 
-        killed: list[tuple[int, int]] = []
         with mock.patch.object(browser_tmp.subprocess, 'Popen', lambda *a, **k: Stubborn()), \
-                mock.patch.object(browser_tmp.os, 'killpg', lambda group, number: killed.append((group, number))):
+                mock.patch.object(browser_tmp.os, 'killpg',
+                                  lambda group, number: events.append((group, number))):
             browser_tmp.run_command(['unused'], Path('.'))
-        self.assertEqual(killed, [(FAKE_GROUP, signal.SIGKILL)])
+        self.assertEqual(events, ['wait', 'poll', (FAKE_GROUP, signal.SIGKILL), 'wait'])
+
+    def test_a_failed_wait_preserves_the_exception_after_kill_and_reap(self) -> None:
+        original = RuntimeError('first wait refused')
+        events = []
+
+        class Interrupted(FakeChild):
+            def wait(self) -> int:
+                events.append('wait')
+                if events == ['wait']:
+                    raise original
+                return 0
+
+            def poll(self) -> None:
+                events.append('poll')
+                return None
+
+        installed = self.recorders()
+        with mock.patch.object(browser_tmp.subprocess, 'Popen', lambda *a, **k: Interrupted()), \
+                mock.patch.object(browser_tmp.os, 'killpg',
+                                  lambda group, number: events.append((group, number))):
+            with self.assertRaises(RuntimeError) as raised:
+                browser_tmp.run_command(['unused'], Path('.'))
+        self.assertIs(raised.exception, original)
+        self.assertEqual(events, ['wait', 'poll', (FAKE_GROUP, signal.SIGKILL), 'wait'])
+        self.assertEqual({number: signal.getsignal(number) for number in FORWARDED}, installed)
+
+    def test_distinct_pending_signals_are_replayed_in_observed_order(self) -> None:
+        installed = self.recorders()
+        killed = []
+
+        def spawn(*args, **kwargs):
+            for number in FORWARDED:
+                os.kill(os.getpid(), number)
+            self.assertEqual(killed, [], 'no group identity exists yet')
+            return FakeChild()
+
+        with mock.patch.object(browser_tmp.subprocess, 'Popen', spawn), \
+                mock.patch.object(browser_tmp.os, 'killpg',
+                                  lambda group, number: killed.append((group, number))):
+            browser_tmp.run_command(['unused'], Path('.'))
+        self.assertEqual(killed, [(FAKE_GROUP, number) for number in FORWARDED])
+        self.assertEqual({number: signal.getsignal(number) for number in FORWARDED}, installed)
+
+    def test_default_and_ignored_dispositions_are_restored(self) -> None:
+        self.recorders()
+        for disposition in (signal.SIG_DFL, signal.SIG_IGN):
+            with self.subTest(disposition=disposition):
+                for number in FORWARDED:
+                    signal.signal(number, disposition)
+                with mock.patch.object(browser_tmp.subprocess, 'Popen', lambda *a, **k: FakeChild()):
+                    browser_tmp.run_command(['unused'], Path('.'))
+                self.assertEqual({signal.getsignal(number) for number in FORWARDED}, {disposition})
 
 
 class SpawnSignalRealChild(unittest.TestCase):

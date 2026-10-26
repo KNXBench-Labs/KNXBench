@@ -75,7 +75,8 @@ pub(super) struct Status {
     pub pointer_observations: Vec<PointerObservation>,
     pub program_version_observation: Option<ProgramVersionObservation>,
 }
-/// Source-model pointer versus device read, as lower-case hex or "refused".
+/// Source-model pointer versus device read: lower-case hex (eight digits, or four for a
+/// two-octet reply, never padded) or "refused".
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(super) struct PointerObservation {

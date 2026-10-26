@@ -23,6 +23,13 @@ fn supported_profile() -> io::Result<super::ValidationProfile> {
         "../../../../data/system2-validation/up258d12-920504-v1.json"
     ))
 }
+/// Append-only id of the PID 7 width rule of revision-2 records; never reinterpreted.
+/// A source-bound experimental policy: object 1 two-octet width was seen on one device,
+/// objects 2 and 3 rely on the public package declaration only (unverified).
+pub(crate) const POINTER_WIDTH_POLICY_V1: &str =
+    "up258-mv0025-pid7-objects123-one-element-two-or-four-octet-source-declared-v1";
+/// Objects the policy names; a bundle admits the subset its plan touches.
+const POINTER_WIDTH_POLICY_OBJECTS: [u8; 3] = [1, 2, 3];
 const BASIS: &str = "experimental-same-application-source-shape-not-observed-allocator-history-v1";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -70,8 +77,25 @@ pub struct ProjectHardwareRecord {
     pub recovery_basis: String,
     pub observation: HardwareObservation,
     pub source_preparation_sha256: String,
+    /// Revision 2 only: the exact policy id. Absent on revision 1, whose bytes and
+    /// digest stay as they were; `null` is refused rather than read as absent.
+    #[serde(
+        default,
+        deserialize_with = "some_policy",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub pointer_width_policy: Option<String>,
+}
+fn some_policy<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Option<String>, D::Error> {
+    String::deserialize(d).map(Some)
 }
 impl ProjectHardwareRecord {
+    /// Objects whose PID 7 answers may be one element of two or four octets; `None` for
+    /// the historical four-octet-only revision 1.
+    pub(crate) fn pointer_width_objects(&self) -> Option<&'static [u8]> {
+        (self.pointer_width_policy.as_deref() == Some(POINTER_WIDTH_POLICY_V1))
+            .then_some(&POINTER_WIDTH_POLICY_OBJECTS[..])
+    }
     pub fn sha256(&self) -> io::Result<String> {
         Ok(digest(
             &serde_json::to_vec(&("knxbench-configured-system2-hardware-v1", self))
@@ -86,7 +110,12 @@ impl ProjectHardwareRecord {
     ) -> io::Result<()> {
         valid_operation(&self.operation)?;
         exact_profile(&source.profile_bytes)?;
-        if self.revision != 1
+        let policy_grammar = match self.revision {
+            1 => self.pointer_width_policy.is_none(),
+            2 => self.pointer_width_policy.as_deref() == Some(POINTER_WIDTH_POLICY_V1),
+            _ => false,
+        };
+        if !policy_grammar
             || self.recovery_basis != BASIS
             || binding.simulated
             || self.source_preparation_sha256 != source.sha256()?
@@ -378,7 +407,7 @@ pub async fn observe_project_hardware<T: ManagementTransport>(
         (application.as_slice() != bundle.binding.application).then_some(application);
     bundle.binding.simulated = false;
     let record = ProjectHardwareRecord {
-        revision: 1,
+        revision: 2,
         operation: source.operation,
         recovery_track: source.recovery,
         recovery_basis: BASIS.into(),
@@ -388,6 +417,7 @@ pub async fn observe_project_hardware<T: ManagementTransport>(
             .as_ref()
             .ok_or_else(|| invalid("missing project source"))?
             .sha256()?,
+        pointer_width_policy: Some(POINTER_WIDTH_POLICY_V1.into()),
     };
     bundle.binding.project_preparation_sha256 = Some(record.sha256()?);
     bundle.hardware_preparation = Some(Box::new(record));

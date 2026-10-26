@@ -1,5 +1,14 @@
-//! Wrong-width PID 7 replies stay prewrite refusals with private, durable diagnostics.
+//! On a legacy revision-1 record, wrong-width PID 7 replies stay prewrite refusals, byte for byte.
 use super::*;
+
+/// The historical record grammar: revision 1, no width policy, re-hashed into the binding.
+pub(super) fn revision1(mut bundle: PreparedBundle) -> PreparedBundle {
+    let record = bundle.hardware_preparation.as_mut().unwrap();
+    record.revision = 1;
+    record.pointer_width_policy = None;
+    bundle.binding.project_preparation_sha256 = Some(record.sha256().unwrap());
+    bundle
+}
 
 struct ShortPointer<'a>(&'a SimulatedDevice);
 impl ManagementTransport for ShortPointer<'_> {
@@ -67,9 +76,11 @@ async fn wrong_width_pointer_is_retained_in_private_journal_not_shareable_report
     )
     .unwrap();
     let cancel = AtomicBool::new(false);
-    let bundle = observe_project_hardware(&Hardware(&device), source, integrated_timing(), &cancel)
-        .await
-        .unwrap();
+    let bundle = revision1(
+        observe_project_hardware(&Hardware(&device), source, integrated_timing(), &cancel)
+            .await
+            .unwrap(),
+    );
     let admission =
         admit_current_project_hardware(&conn, &project, knx_core::DeviceId(1), &bundle).unwrap();
     let operation = dir.path().join("pid7-width-operation");

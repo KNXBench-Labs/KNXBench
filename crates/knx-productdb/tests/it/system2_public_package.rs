@@ -356,3 +356,99 @@ fn public_up258_declares_four_read_only_evidence_ranges_and_its_hardware_type() 
     assert_eq!(profile.hardware_type(), [0, 1, 0, 0, 0, 0x5B, 0, 0, 0, 0]);
     assert_eq!(profile.ranges().chunks().len(), 128);
 }
+
+/// SHA-256 and size of the package's own `knx_master.xml`, as verified from the public source.
+const MASTER_SHA256: &str = "3e865555c66a3eff61050ce461958670834e851b8a4ad1e52b5fdecf5bb060ab";
+const MASTER_BYTES: usize = 991_356;
+
+/// Public source declarations behind the revision-2 PID 7 width policy. They are source
+/// metadata, not wire proof: the standard defines four octets and only object 1 has a
+/// recorded two-octet reply. This test re-derives the declared object set and sizes.
+#[test]
+#[ignore = "requires the public Siemens UP258 package; set KNXBENCH_PUBLIC_UP258"]
+fn public_up258_master_declares_pid7_widths_for_objects_one_two_and_three() {
+    use quick_xml::events::Event;
+    use std::io::Read;
+    let path = std::env::var_os("KNXBENCH_PUBLIC_UP258")
+        .map(PathBuf::from)
+        .expect("set KNXBENCH_PUBLIC_UP258 to the downloaded UP258_DB12__920504d_ETS5.knxprod");
+    let bytes = std::fs::read(&path).expect("readable public package");
+    assert_eq!(knx_productdb::sha256_hex(&bytes), PACKAGE_SHA256);
+    let mut archive = zip::ZipArchive::new(std::io::Cursor::new(bytes)).expect("zip package");
+    let mut master = Vec::new();
+    archive
+        .by_name("knx_master.xml")
+        .expect("package master")
+        .read_to_end(&mut master)
+        .unwrap();
+    assert_eq!(master.len(), MASTER_BYTES);
+    assert_eq!(knx_productdb::sha256_hex(&master), MASTER_SHA256);
+
+    let text = String::from_utf8(master).expect("utf-8 master");
+    let mut reader = quick_xml::Reader::from_str(&text);
+    let attr = |e: &quick_xml::events::BytesStart<'_>, name: &str| -> Option<String> {
+        e.attributes().flatten().find_map(|a| {
+            (a.key.as_ref() == name).then(|| {
+                a.normalized_value(quick_xml::XmlVersion::Implicit1_0)
+                    .unwrap()
+                    .into_owned()
+            })
+        })
+    };
+    let (mut property, mut sizes) = (None, BTreeMap::new());
+    let (mut in_mask, mut in_resource) = (false, false);
+    let mut pending: Option<u8> = None;
+    let mut declared = Vec::new();
+    loop {
+        match reader.read_event().expect("well-formed master") {
+            Event::Start(e) | Event::Empty(e) => match e.name().as_ref() {
+                "InterfaceObjectProperty" if attr(&e, "Id").as_deref() == Some("PID-G-7") => {
+                    property = Some((attr(&e, "Name").unwrap(), attr(&e, "PDT").unwrap()));
+                }
+                "PropertyDataType" => {
+                    sizes.insert(attr(&e, "Id").unwrap(), attr(&e, "Size"));
+                }
+                "MaskVersion" => in_mask = attr(&e, "Id").as_deref() == Some("MV-0025"),
+                "Resource" if in_mask => {
+                    in_resource = true;
+                    pending = None;
+                }
+                "Location" if in_resource => {
+                    if attr(&e, "AddressSpace").as_deref() == Some("SystemProperty")
+                        && attr(&e, "PropertyID").as_deref() == Some("7")
+                    {
+                        pending = attr(&e, "InterfaceObjectRef").unwrap().parse().ok();
+                    }
+                }
+                "ResourceType" if in_resource => {
+                    if let Some(object) = pending.take() {
+                        declared.push((
+                            object,
+                            attr(&e, "Length").unwrap(),
+                            attr(&e, "Flavour").unwrap(),
+                        ));
+                    }
+                }
+                _ => {}
+            },
+            Event::End(e) => match e.name().as_ref() {
+                "Resource" => in_resource = false,
+                "MaskVersion" => in_mask = false,
+                _ => {}
+            },
+            Event::Eof => break,
+            _ => {}
+        }
+    }
+    assert_eq!(
+        property,
+        Some(("PID_TABLE_REFERENCE".into(), "PDT-4 PDT-9".into()))
+    );
+    assert_eq!(sizes["PDT-4"].as_deref(), Some("2"));
+    assert_eq!(sizes["PDT-9"].as_deref(), Some("4"));
+    declared.sort();
+    assert_eq!(
+        declared,
+        [1u8, 2, 3].map(|object| (object, "2".to_string(), "Ptr_StandardMemory".to_string()))
+    );
+}

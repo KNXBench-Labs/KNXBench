@@ -102,6 +102,19 @@ it("admits in-procedure and refused pointer observations, strictly", async () =>
     { ...inProcedureStatus, pointerObservations: [{ ...during, run: undefined }] },
   ]) { reply(value); await expect(system2.getSystem2Status()).rejects.toThrow("System-2"); }
 });
+it("admits a four-digit observed pointer for a two-octet reply, never another width", async () => {
+  const { inProcedureStatus } = await import("./system2DownloadTestFixtures");
+  const [, during] = inProcedureStatus.pointerObservations;
+  const two = { ...inProcedureStatus, pointerObservations: [{ ...during, observed: "0116" }] };
+  reply(two); expect(await system2.getSystem2Status()).toEqual(two);
+  for (const observed of ["01", "011600", "0116aa", "0A16", "0x16", "", "REFUSED"]) {
+    reply({ ...inProcedureStatus, pointerObservations: [{ ...during, observed }] });
+    await expect(system2.getSystem2Status()).rejects.toThrow("System-2");
+  }
+  // The expectation is the four-octet source model and stays eight digits.
+  reply({ ...inProcedureStatus, pointerObservations: [{ ...during, expected: "0116" }] });
+  await expect(system2.getSystem2Status()).rejects.toThrow("System-2");
+});
 it("admits unreadable prestate allocations only with the prestate flag and without recovery", async () => {
   const { unreadableStatus } = await import("./system2DownloadTestFixtures");
   reply(unreadableStatus); expect(await system2.getSystem2Status()).toEqual(unreadableStatus);

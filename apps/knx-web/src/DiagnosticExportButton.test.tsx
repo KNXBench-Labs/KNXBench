@@ -37,6 +37,7 @@ it("sends cooperative cancellation and retains partial data for download",async(
  await click("[data-diagnostics-read-consent]");await click("[data-diagnostics-start]");await click("[data-diagnostics-cancel]");expect(calls.cancel).toHaveBeenCalledExactlyOnceWith(preview.token);
  calls.poll.mockResolvedValue({...preview,phase:"complete",exportable:true,report:{...report,complete:true,stopReason:"cancelled",items:[{...report.items[0],status:"read",bytes:[7,1],receivedBytes:2,completedAt:"2026-10-17T06:00:00Z"}]}});
  await act(async()=>{await new Promise(resolve=>setTimeout(resolve,350));});expect(document.querySelector("[data-diagnostics-result]")!.textContent).toContain("cancelled");
+ expect(document.querySelector("[data-diagnostics-stop-reason]")!.textContent).toBe('diagnostics.stopReason {"label":"diagnostics.stopReason.cancelled"} cancelled');
  await click("[data-diagnostics-share-consent]");await click("[data-diagnostics-save]");expect(calls.save).toHaveBeenCalledExactlyOnceWith(preview.token);
 });
 const range=(order:number,address:number,length:number,read:number)=>({order,address,length,procedurePosition:order+1,coverage:{read,refusedAmbiguous:0,partial:0,error:0,notRead:length-read}});
@@ -100,7 +101,10 @@ it("offers no save when the server says the finished run has no archive",async()
  calls.poll.mockResolvedValue({...memoryPreview,phase:"complete",exportable:false,report:{...memoryReport,complete:true,stopReason:"gateway-busy"}});
  await click("[data-diagnostics-read-consent]");await click("[data-diagnostics-start]");
  await act(async()=>{await new Promise(resolve=>setTimeout(resolve,350));});
- expect(document.querySelector("[data-diagnostics-not-exportable]")!.textContent).toBe('diagnostics.notExportable {"reason":"gateway-busy"}');
+ // Copy for any refused archive; the reason is a translated label first, the raw token second.
+ expect(document.querySelector("[data-diagnostics-not-exportable]")!.textContent).toBe("diagnostics.notExportable");
+ expect(document.querySelector("[data-diagnostics-stop-reason]")!.textContent).toBe('diagnostics.stopReason {"label":"diagnostics.stopReason.gatewayBusy"} gateway-busy');
+ expect(document.querySelector("[data-diagnostics-stop-reason] code")!.textContent).toBe("gateway-busy");
  expect(document.querySelector("[data-diagnostics-save]")).toBeNull();
  expect(document.querySelector("[data-diagnostics-share-consent]")).toBeNull();
 });
@@ -108,8 +112,12 @@ it("explains a known preview refusal and keeps the server's detail",async()=>{
  await open();await select("[data-diagnostics-profile]","system2-declared-segments-v1");
  calls.preview.mockRejectedValue(new Refusal(400,"diagnostics-product-db-required","diagnostics-product-db-required"));
  await click("[data-diagnostics-preview]");
- expect(document.querySelector("[data-diagnostics-error]")!.textContent).toBe("diagnostics.refusal.productDbRequireddiagnostics-product-db-required");
+ const paragraphs=()=>[...document.querySelectorAll("[data-diagnostics-error] p")].map(p=>p.textContent);
+ expect(paragraphs()).toEqual(["diagnostics.refusal.productDbRequired","diagnostics.serverDetail diagnostics-product-db-required"]);
+ // An unknown code still leads with translated text; the raw detail stays secondary.
+ calls.preview.mockRejectedValue(new Refusal(400,null,"diagnostics-something-new: detail"));await click("[data-diagnostics-preview]");
+ expect(paragraphs()).toEqual(["diagnostics.failed","diagnostics.serverDetail diagnostics-something-new: detail"]);
  calls.preview.mockRejectedValue(new Refusal(409,null,null));await click("[data-diagnostics-preview]");
- expect(document.querySelector("[data-diagnostics-error]")!.textContent).toBe("diagnostics.failed");
+ expect(paragraphs()).toEqual(["diagnostics.failed"]);
  expect(document.querySelector("[data-diagnostics-review]")).toBeNull();expect(calls.start).not.toHaveBeenCalled();
 });

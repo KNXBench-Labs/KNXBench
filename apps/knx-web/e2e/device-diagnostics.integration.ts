@@ -87,3 +87,23 @@ for(const [language,width] of [["en",1440],["de",400]] as const){
   expect(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth)).toBeLessThanOrEqual(1);
  });
 }
+test("memory profile stop after the first chunk keeps a translated reason and a format-2 partial",async({page})=>{
+ await page.goto("/");await page.locator(".file-menu > summary").click();await openFileSubmenu(page,"help");await page.locator(".file-menu [data-diagnostics-open]").click();
+ const dialog=page.locator(".diagnostic-export");await dialog.locator("[data-diagnostics-device]").selectOption("2");await dialog.locator("[data-diagnostics-gateway]").fill("192.0.2.11:3671");
+ await dialog.locator("[data-diagnostics-profile]").selectOption("system2-declared-segments-v1");
+ const previewResponse=page.waitForResponse(r=>r.url().endsWith("/api/device-diagnostics/preview"));await dialog.locator("[data-diagnostics-preview]").click();const preview=await(await previewResponse).json();
+ await dialog.locator("[data-diagnostics-read-consent]").check();await dialog.locator("[data-diagnostics-start]").click();
+ // The example answers each frame after 250 ms: Stop lands while a later chunk is still pending.
+ await expect.poll(async()=>{const r=await page.request.get(`/api/device-diagnostics/${preview.token}`);return(await r.json()).memory.chunks[0].status;},{intervals:[50],timeout:15000}).toBe("read");
+ await dialog.locator("[data-diagnostics-cancel]").click();
+ const reason=dialog.locator("[data-diagnostics-stop-reason]");await expect(reason).toContainText(en["diagnostics.stopReason.cancelled"],{timeout:15000});
+ await expect(reason.locator("code")).toHaveText("cancelled");
+ const final=await(await page.request.get(`/api/device-diagnostics/${preview.token}`)).json();
+ expect(final.report.stopReason).toBe("cancelled");expect(final.exportable).toBe(true);
+ expect(final.memory.chunks[0].bytes).toBe("0102030405060708090a0b0c");
+ expect(final.memory.chunks.some((c:{status:string})=>c.status!=="read")).toBe(true);
+ await expect(dialog.locator("[data-diagnostics-not-exportable]")).toHaveCount(0);
+ await dialog.locator("[data-diagnostics-share-consent]").check();const promise=page.waitForEvent("download");await dialog.locator("[data-diagnostics-save]").click();const zip=await promise;
+ const bytes=readFileSync(await zip.path());expect(bytes.includes(Buffer.from("memory.json"))).toBe(true);
+ if(evidence){mkdirSync(join(evidence,"exports"),{recursive:true});await zip.saveAs(join(evidence,"exports","memory-cancelled-partial.zip"));await page.screenshot({path:join(evidence,"memory-cancelled-partial.png"),fullPage:true});}
+});

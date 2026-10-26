@@ -22,9 +22,11 @@ use std::{
         Arc,
     },
 };
-use tokio::sync::broadcast;
+use tokio::sync::{broadcast, Semaphore};
 use tower::ServiceExt;
-struct Tunnel(Arc<SimulatedDevice>);
+/// The simulator's tunnel; with a gate, each `A_Memory_Read` first takes one
+/// permit, so a test holds the run with exactly one chunk in flight.
+struct Tunnel(Arc<SimulatedDevice>, Option<Arc<Semaphore>>);
 impl BusTunnel for Tunnel {
     fn diagnostics_are_simulated(&self) -> bool {
         true
@@ -48,7 +50,14 @@ impl BusTunnel for Tunnel {
         t: Tpci,
         s: ApplicationService,
     ) -> Pin<Box<dyn Future<Output = Result<(), BusError>> + Send + '_>> {
-        Box::pin(async move { self.0.send_frame(d, t, s).await })
+        Box::pin(async move {
+            if let Some(gate) = &self.1 {
+                if matches!(s, ApplicationService::MemoryRead { .. }) {
+                    gate.acquire().await.expect("gate open").forget();
+                }
+            }
+            self.0.send_frame(d, t, s).await
+        })
     }
     fn disconnect(
         self: Box<Self>,
@@ -60,6 +69,7 @@ struct Connector {
     device: Arc<SimulatedDevice>,
     calls: Arc<AtomicUsize>,
     refuse: Arc<AtomicBool>,
+    gate: Option<Arc<Semaphore>>,
 }
 impl GatewayConnector for Connector {
     fn connect_tunnel(
@@ -71,7 +81,7 @@ impl GatewayConnector for Connector {
         if self.refuse.load(Ordering::SeqCst) {
             return Box::pin(async { Err(BusSessionError::Transport(BusError::Timeout)) });
         }
-        let t: Box<dyn BusTunnel> = Box::new(Tunnel(self.device.clone()));
+        let t: Box<dyn BusTunnel> = Box::new(Tunnel(self.device.clone(), self.gate.clone()));
         Box::pin(async move { Ok(t) })
     }
     fn discover(
@@ -105,14 +115,23 @@ struct Harness {
     device: Arc<SimulatedDevice>,
     calls: Arc<AtomicUsize>,
     refuse: Arc<AtomicBool>,
+    /// Permits for memory reads; `None` reads ungated.
+    gate: Option<Arc<Semaphore>>,
 }
 fn harness(address: &str) -> Harness {
     harness_with(address, None)
 }
+fn harness_with(address: &str, products: Option<fn(&knx_productdb::Connection)>) -> Harness {
+    harness_gated(address, products, None)
+}
 /// With `Some(edit)`, the device maps to the synthetic System-2 program in a
 /// real product database (`edit` may then alter its catalogue rows) and the
 /// simulator holds that program's declared memory.
-fn harness_with(address: &str, products: Option<fn(&knx_productdb::Connection)>) -> Harness {
+fn harness_gated(
+    address: &str,
+    products: Option<fn(&knx_productdb::Connection)>,
+    gate: Option<Arc<Semaphore>>,
+) -> Harness {
     let dir = tempfile::tempdir().unwrap();
     let d = Arc::new(SimulatedDevice::with_config_at(
         address.parse().unwrap(),
@@ -139,6 +158,7 @@ fn harness_with(address: &str, products: Option<fn(&knx_productdb::Connection)>)
             device: d.clone(),
             calls: calls.clone(),
             refuse: refuse.clone(),
+            gate: gate.clone(),
         }),
         // Test-owned lease: never the user's real per-user runtime lease.
         diagnostic_lease_dir: Some(dir.path().join("lease")),
@@ -178,6 +198,7 @@ fn harness_with(address: &str, products: Option<fn(&knx_productdb::Connection)>)
         device: d,
         calls,
         refuse,
+        gate,
     }
 }
 fn context(s: &knx_server::AppState) -> Value {
@@ -701,4 +722,224 @@ async fn a_memory_run_stopped_before_its_tunnel_is_shown_but_not_exportable() {
     assert_eq!(status, StatusCode::BAD_REQUEST);
     let body: Value = serde_json::from_slice(&body).unwrap();
     assert_eq!(body["error"], "diagnostics-invalid-memory");
+}
+
+/// The System-2 harness with memory reads held until the test adds permits.
+fn gated_system2(permits: usize) -> Harness {
+    harness_gated(
+        "1.1.25",
+        Some(|_| {}),
+        Some(Arc::new(Semaphore::new(permits))),
+    )
+}
+async fn view_of(h: &Harness, token: &str) -> Value {
+    let r = h
+        .app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri(format!("/api/device-diagnostics/{token}"))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(r.status(), StatusCode::OK);
+    serde_json::from_slice(&to_bytes(r.into_body(), 1024 * 1024).await.unwrap()).unwrap()
+}
+/// Polls the running job until `ready` holds; a bounded wait, never a hang.
+async fn poll_until(h: &Harness, token: &str, what: &str, ready: impl Fn(&Value) -> bool) -> Value {
+    for _ in 0..400 {
+        let v = view_of(h, token).await;
+        if ready(&v) {
+            return v;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+    }
+    panic!("no progress snapshot with {what}");
+}
+fn chunks(v: &Value) -> &Vec<Value> {
+    v["memory"]["chunks"].as_array().unwrap()
+}
+/// Attempted, not completed: the collector's one request on the bus.
+fn in_flight(chunk: &Value) -> bool {
+    chunk["status"] == "not-read"
+        && !chunk["attemptedAt"].is_null()
+        && chunk["completedAt"].is_null()
+}
+/// The running-view contract: not exportable, no stop reason, and exactly
+/// the chunk at `index` in flight with nothing after it attempted.
+fn assert_running_with_one_chunk_in_flight(v: &Value, index: usize) {
+    assert_eq!(v["phase"], "running", "{v}");
+    assert_eq!(
+        v["exportable"], false,
+        "a running view is never exportable: {v}"
+    );
+    assert_eq!(v["report"]["complete"], false);
+    assert_eq!(v["report"]["stopReason"], Value::Null);
+    let all = chunks(v);
+    let flying: Vec<usize> = (0..all.len()).filter(|&i| in_flight(&all[i])).collect();
+    assert_eq!(flying, [index], "exactly one chunk in flight: {v}");
+    assert!(all[..index].iter().all(|c| c["status"] == "read"));
+    assert!(all[index + 1..].iter().all(|c| c["attemptedAt"].is_null()));
+}
+
+/// Live progress reaches the browser chunk by chunk: each poll during a held
+/// read shows one chunk in flight, and nothing is exportable before the end.
+#[tokio::test]
+async fn memory_progress_is_published_while_running_and_never_exportable_mid_run() {
+    let h = gated_system2(0);
+    let gate = h.gate.clone().unwrap();
+    let p = profile_preview(&h, MEMORY).await;
+    let token = p["token"].as_str().unwrap();
+    let (status, _) = send(
+        &h.app,
+        "/api/device-diagnostics/start",
+        json!({"token":token,"consent":true}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::ACCEPTED);
+    let first = poll_until(&h, token, "chunk 1 in flight", |v| {
+        chunks(v).first().is_some_and(in_flight)
+    })
+    .await;
+    assert_running_with_one_chunk_in_flight(&first, 0);
+    // The identity phase finished before any memory request.
+    assert!(first["report"]["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|i| i["status"] == "read"));
+    gate.add_permits(1);
+    let second = poll_until(&h, token, "chunk 2 in flight", |v| {
+        chunks(v).get(1).is_some_and(in_flight)
+    })
+    .await;
+    assert_running_with_one_chunk_in_flight(&second, 1);
+    let read: Vec<u8> = (1..=12).collect();
+    assert_eq!(chunks(&second)[0]["bytes"], hex(&read));
+    assert_eq!(second["memory"]["ranges"][0]["coverage"]["read"], 12);
+    assert_eq!(second["memory"]["ranges"][0]["coverage"]["notRead"], 18);
+    gate.add_permits(16);
+    let done = finished(&h, token).await;
+    assert_eq!(done["exportable"], true, "{done}");
+    assert_eq!(done["report"]["stopReason"], Value::Null);
+    assert!(chunks(&done).iter().all(|c| c["status"] == "read"));
+}
+
+/// Stop during the second chunk keeps the first: `cancelled`, partial
+/// coverage, and a format-2 ZIP that reads back with exactly those chunks.
+#[tokio::test]
+async fn stopping_a_memory_run_keeps_the_chunks_read_so_far_and_exports_them() {
+    let h = gated_system2(1);
+    let p = profile_preview(&h, MEMORY).await;
+    let token = p["token"].as_str().unwrap();
+    let (status, _) = send(
+        &h.app,
+        "/api/device-diagnostics/start",
+        json!({"token":token,"consent":true}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::ACCEPTED);
+    let held = poll_until(&h, token, "chunk 1 read, chunk 2 in flight", |v| {
+        chunks(v).get(1).is_some_and(in_flight)
+    })
+    .await;
+    assert_running_with_one_chunk_in_flight(&held, 1);
+    let (status, stopping) = send(
+        &h.app,
+        &format!("/api/device-diagnostics/{token}/cancel"),
+        json!({}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{stopping}");
+    assert_eq!(stopping["cancelRequested"], true);
+    // No permit is added: only the cancel can end the held read.
+    let result = finished(&h, token).await;
+    assert_eq!(result["report"]["stopReason"], "cancelled", "{result}");
+    assert_eq!(result["exportable"], true, "{result}");
+    let all = chunks(&result);
+    let read: Vec<u8> = (1..=12).collect();
+    assert_eq!(all[0]["status"], "read");
+    assert_eq!(all[0]["bytes"], hex(&read));
+    assert_eq!(all[1]["status"], "error");
+    assert_eq!(all[1]["error"], "cancelled");
+    assert!(all[2..]
+        .iter()
+        .all(|c| c["status"] == "not-read" && c["attemptedAt"].is_null()));
+    assert_eq!(
+        result["memory"]["ranges"][0]["coverage"],
+        json!({"read":12,"refusedAmbiguous":0,"partial":0,"error":12,"notRead":6})
+    );
+    assert_eq!(
+        result["memory"]["ranges"][1]["coverage"],
+        json!({"read":0,"refusedAmbiguous":0,"partial":0,"error":0,"notRead":12})
+    );
+    let reads: Vec<(u32, u8)> = h
+        .device
+        .seen()
+        .into_iter()
+        .filter_map(|s| match s {
+            Seen::MemoryRead {
+                address, number, ..
+            } => Some((address, number)),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        reads,
+        [(0x0116, 12)],
+        "only the first chunk reached the device"
+    );
+
+    let (status, bytes) = export_bytes(&h, &p["token"]).await;
+    assert_eq!(status, StatusCode::OK);
+    let export = knx_app::device_diagnostics::read_export(&bytes).unwrap();
+    assert_eq!(export.report.format, 2);
+    assert_eq!(export.report.stop_reason.as_deref(), Some("cancelled"));
+    assert_eq!(
+        serde_json::to_value(&export.memory).unwrap(),
+        result["memory"]
+    );
+}
+
+/// A Stop that lands before the tunnel opens still ends as `cancelled` with
+/// an exportable format-2 archive: nothing was requested from the device.
+#[tokio::test]
+async fn a_memory_run_cancelled_before_connecting_is_exportable_without_any_request() {
+    let h = system2();
+    let p = profile_preview(&h, MEMORY).await;
+    let token = p["token"].as_str().unwrap();
+    // On the test's single-threaded runtime the spawned run cannot start
+    // before this task yields, so the cancel is recorded first.
+    let (status, _) = send(
+        &h.app,
+        "/api/device-diagnostics/start",
+        json!({"token":token,"consent":true}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::ACCEPTED);
+    let (status, _) = send(
+        &h.app,
+        &format!("/api/device-diagnostics/{token}/cancel"),
+        json!({}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let result = finished(&h, token).await;
+    assert_eq!(h.calls.load(Ordering::SeqCst), 0, "no tunnel was opened");
+    assert!(h.device.seen().is_empty());
+    assert_eq!(result["report"]["stopReason"], "cancelled");
+    assert_eq!(result["exportable"], true, "{result}");
+    let (status, bytes) = export_bytes(&h, &p["token"]).await;
+    assert_eq!(status, StatusCode::OK);
+    let export = knx_app::device_diagnostics::read_export(&bytes).unwrap();
+    assert_eq!(export.report.format, 2);
+    assert_eq!(export.report.stop_reason.as_deref(), Some("cancelled"));
+    assert!(export
+        .memory
+        .unwrap()
+        .chunks
+        .iter()
+        .all(|c| c.status == "not-read" && c.attempted_at.is_none()));
 }

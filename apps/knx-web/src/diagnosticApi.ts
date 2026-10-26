@@ -10,6 +10,11 @@ export interface DiagnosticReading {
 export const IDENTITY_PROFILE="generic-identity-v1";
 export const MEMORY_PROFILE="system2-declared-segments-v1";
 export type DiagnosticProfile=typeof IDENTITY_PROFILE|typeof MEMORY_PROFILE;
+/** `report.json`'s `memoryReason` as the server writes it: `pending` (format 1), `MEMORY_REASON` (format 2). */
+export const IDENTITY_MEMORY_REASON="No independently admitted safe memory profile; source offsets are not runtime addresses.";
+export const MEMORY_REASON="Source-declared candidate ranges of the device's application, read only after the device showed the asserted identity; see memory.json.";
+/** `memory_evidence::NOTICE`, the exact statement `memory.json` carries. */
+export const MEMORY_NOTICE="Source-declared candidate locations, not proven runtime addresses. This is not a backup and not a restore basis. It contains device configuration: keep private.";
 export interface DiagnosticReport {
  kind:string;format:1|2;build:string;collectedAt:string;device:string;projectReference:string;profile:DiagnosticProfile;assertedMask:number|null;assertedManufacturer:number|null;
  simulated:boolean;written:false;complete:boolean;items:DiagnosticReading[];stopReason:string|null;memoryStatus:"not-requested"|"requested";memoryReason:string;disconnectAttemptCompleted:boolean;
@@ -70,7 +75,7 @@ const memoryErrors=["cancelled","deadline","timeout","connection-released","conn
 /** Mirrors `memory_evidence::validate`'s shape rules: plan, chunk outcomes, times and coverage. */
 function validMemory(m:MemoryEvidence,complete:boolean):boolean {
  const c=m.hardwareTypeComparison;
- if(!onlyFields(m,["profile","notice","programId","hardwareTypeComparison","chunkOctets","ranges","chunks"])||m.profile!==MEMORY_PROFILE||typeof m.notice!=="string"||m.notice.length<1||m.notice.length>512||
+ if(!onlyFields(m,["profile","notice","programId","hardwareTypeComparison","chunkOctets","ranges","chunks"])||m.profile!==MEMORY_PROFILE||m.notice!==MEMORY_NOTICE||
   typeof m.programId!=="string"||!/^[A-Za-z0-9._-]{1,128}$/.test(m.programId)||!c||typeof c!=="object"||!onlyFields(c,["objectIndex","propertyId","procedurePosition","inlineData"])||
   c.objectIndex!==0||c.propertyId!==78||!int(c.procedurePosition,0,1e6)||!lowerHex(c.inlineData,64)||c.inlineData.length===0||m.chunkOctets!==12||
   !Array.isArray(m.ranges)||m.ranges.length<1||m.ranges.length>8||!Array.isArray(m.chunks))return false;
@@ -110,7 +115,7 @@ export function admitDiagnostics(value:unknown):DiagnosticView {
  const v=value as Partial<DiagnosticView>;const r=v.report;
  if(!onlyFields(v,["token","target","gateway","phase","cancelRequested","report","memory","exportable"])||typeof v.exportable!=="boolean"||(v.exportable&&v.phase!=="complete")||v.memory===undefined||typeof v.token!=="string"||!/^[a-f0-9]{64}$/.test(v.token)||typeof v.target!=="string"||typeof v.gateway!=="string"||!(["preview","running","complete"] as unknown[]).includes(v.phase)||typeof v.cancelRequested!=="boolean"||!r||
   !onlyFields(r,["kind","format","build","collectedAt","device","projectReference","profile","assertedMask","assertedManufacturer","simulated","written","complete","items","stopReason","memoryStatus","memoryReason","disconnectAttemptCompleted"])||
-  r.written!==false||r.kind!=="knxbench-device-diagnostics"||!(r.format===1?r.profile===IDENTITY_PROFILE&&r.memoryStatus==="not-requested"&&v.memory===null:r.format===2&&r.profile===MEMORY_PROFILE&&r.memoryStatus==="requested"&&v.memory!==null&&typeof v.memory==="object"&&validMemory(v.memory,r.complete===true))||r.device!=="device-1"||typeof r.projectReference!=="string"||!/^[a-f0-9]{64}$/.test(r.projectReference)||typeof r.build!=="string"||!nullableTime(r.collectedAt)||r.collectedAt===null||
+  r.written!==false||r.kind!=="knxbench-device-diagnostics"||!(r.format===1?r.profile===IDENTITY_PROFILE&&r.memoryStatus==="not-requested"&&r.memoryReason===IDENTITY_MEMORY_REASON&&v.memory===null:r.format===2&&r.profile===MEMORY_PROFILE&&r.memoryStatus==="requested"&&r.memoryReason===MEMORY_REASON&&v.memory!==null&&typeof v.memory==="object"&&validMemory(v.memory,r.complete===true))||r.device!=="device-1"||typeof r.projectReference!=="string"||!/^[a-f0-9]{64}$/.test(r.projectReference)||typeof r.build!=="string"||!nullableTime(r.collectedAt)||r.collectedAt===null||
   typeof r.simulated!=="boolean"||typeof r.complete!=="boolean"||typeof r.disconnectAttemptCompleted!=="boolean"||typeof r.memoryReason!=="string"||
   !(r.stopReason===null||(typeof r.stopReason==="string"&&/^[a-z-]{1,64}$/.test(r.stopReason)))||
   ![r.assertedMask,r.assertedManufacturer].every(n=>n===null||(Number.isInteger(n)&&n>=0&&n<=65535))||!Array.isArray(r.items)||r.items.length!==3||!r.items.every((item,index)=>validReading(item,index,r.complete as boolean)))throw new Error("diagnostics-invalid-response");

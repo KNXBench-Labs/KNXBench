@@ -1,7 +1,7 @@
 # S2-01 — System-2: width-aware PID 7 evidence and safe diagnostic projection
 
 **Priority:** P1. **Status:** Private diagnostic delivered (`5f1ad454e`);
-exact-profile width correction implemented locally; final acceptance/publication pending
+exact-profile width correction published as `54b052885`, reviewed and integrated-gate accepted
 ([record](../status/2026-10-26-up258-pid7-width.md)). Safe structured
 status/report projection remains a separate open slice.
 Listed in [OPEN_WORK](../OPEN_WORK.md). Origin: GitHub issue #30.
@@ -25,7 +25,7 @@ its original numeric-mismatch explanation was never a measured finding.
 
 ## Width correction acceptance boundary
 
-The candidate is limited to a new revision of the already exact-UP258 configured
+The published correction is limited to a new revision of the already exact-UP258 configured
 hardware record. Its explicit, hash-bound policy admits exactly one element of
 two or four octets on objects 1/2/3. Object 1 has one field observation; objects
 2/3 remain source-declared experimental hypotheses, not verified firmware support.
@@ -43,7 +43,7 @@ reader must reject new policy/representation data rather than discard it.
 A usable software path requires original semantic RED, complete simulated
 execution, disk reopening and explicit recovery, legacy byte/digest preservation,
 malformed/tamper cases and the existing hard final checks. Those focused software
-paths are exercised in the local candidate; final maintained acceptance is pending.
+paths passed on the published source, including the complete 15-stage integrated gate.
 The small typed, non-raw Net refusal seam is implemented for the next slice;
 it is not by itself durable status/report projection.
 

@@ -303,8 +303,9 @@ new hardware/recovery guarantee. No timing budget or protocol policy changes.
 
 ## Pointer-width policy for new configured hardware records
 
-The 26 October 2026 candidate uses a new revision 2 of the exact-UP258
-format-3 hardware record. Review and package acceptance are still pending.
+The 26 October 2026 correction (`54b052885`) uses a new revision 2 of the exact-UP258
+format-3 hardware record. Independent review/re-review and the integrated package
+gate passed ([acceptance](../status/2026-10-26-up258-pid7-width.md)).
 The append-only policy identifier is
 `up258-mv0025-pid7-objects123-one-element-two-or-four-octet-source-declared-v1`.
 Its policy is part of the hardware-record digest and the journal binding; it is

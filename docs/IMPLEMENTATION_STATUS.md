@@ -186,12 +186,11 @@ Its refusal names object, element count, actual byte count and a bounded hex pre
 in the private journal and CLI error result. HTTP status and the shareable report
 remain redacted. The 26 October field reply now establishes two octets on object 1
 only; an independently retrieved public package declares two/four-octet metadata.
-The exact-profile width-aware correction is implemented locally; independent
-whole-feature review approved it with three minor follow-ups and final package
-acceptance/publication remain pending
+The exact-profile width-aware correction is published as `54b052885`; independent
+whole-feature and correction reviews APPROVE, all 15 integrated stages passed
 ([record](status/2026-10-26-up258-pid7-width.md),
 [research](research/2026-10-26-up258-pid7-width.md)).
-[S2-01](open-work/S2-01-pid7-raw-response.md) remains P1 for that correction and safe
+[S2-01](open-work/S2-01-pid7-raw-response.md) remains P1 for the separate safe
 structured projection. Physical outcome and recovery remain unverified;
 [S2-02](open-work/S2-02-gateway-busy-after-failed-runs.md) remains a separate investigation.
 

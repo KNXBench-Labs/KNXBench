@@ -6,7 +6,7 @@ the former dated sections are in the [archive](history/OPEN_WORK_2026-10-25.md).
 
 | ID | Task | Status | Details |
 | --- | --- | --- | --- |
-| S2-01 | System-2: width-aware PID 7 evidence and safe diagnostic projection (#30) | P1: exact-profile width correction in progress; safe projection open | [S2-01](open-work/S2-01-pid7-raw-response.md) |
+| S2-01 | System-2: width-aware PID 7 evidence and safe diagnostic projection (#30) | P1: width correction delivered; safe projection open | [S2-01](open-work/S2-01-pid7-raw-response.md) |
 | S2-02 | System-2: own-run busy hint and missing refusal reason (#30) | P1: diagnostic delivered; actual failure unresolved | [S2-02](open-work/S2-02-gateway-busy-after-failed-runs.md) |
 | S2-03 | System-2 UP258 image: invisible-parameter precedence, communication-enable policy, remaining tunnel runtimes | P2: defaults v2 and System-2 tunnel runtime delivered; interpretation open | [S2-03](open-work/S2-03-up258-image-interpretation.md) |
 | PRG-01 | Close non-Secure programming gaps | In progress | [PRG-01](open-work/PRG-01-programming-gaps.md) |

@@ -1,12 +1,13 @@
 # Restart snapshot
 
-Updated: 2026-10-26 05:40 CET. Operational snapshot, not an append-only journal.
+Updated: 2026-10-26 05:48 CET. Operational snapshot, not an append-only journal.
 ## Next open tasks (26 October 2026, this WebUI session)
-- WP-21 PUBLISHED `b517930e7`, APPROVE, gate11, preview737/public81/live41 checks.
-  Pages `40270028993` succeeded; seven live files byte-equal. Claim released.
-- WP-23 source reviewed; own main-first integration pending complete scoped web gate.
-- WP-22/24 implement on their named isolated branches; no release/bus authority.
-- Root preserved. Next: WP-21 result-doc gate/publication, then WP-23 gate/delivery.
+- WP-21 PUBLISHED `b517930e7`/`82eca9e21`, APPROVE, gate11/docs10, live verified.
+  Own worktree/claim retired after full private evidence verification.
+- WP-23 source reviewed including Unicode correction; main-first integration ready.
+  Next: full scoped web gate on `integrate/wp23-flow-group-names-20261026`, then publish.
+- WP-22/24 worker handoffs arrived; independent review/corrections pending; no bus/release.
+- Root preserved. Evidence `<profile>/evidence/next-open-tasks-20261026/`.
 ## Other owners and preservation
 - Root intentionally old/dirty: preserve private/untracked files and other edits.
   Alpha16 belongs to another track. No release/deployment/hardware authority.

@@ -7,7 +7,7 @@ test("draws senders and configured members, opens the Inspector from the keyboar
   server.rows.push(telegram(1, "1", "On"));
   await openFlow(page);
   await expect(node(page, "Switch")).toBeVisible();
-  await expect(node(page, "Dimmer").locator(".flow-badge-inferred")).toHaveText("◇ 1/0/1 On");
+  await expect(node(page, "Dimmer").locator(".flow-badge-inferred")).toHaveText("◇ 1/0/1 (Light) On");
   await expect(node(page, "Blind")).toHaveCount(0);
   await node(page, "Dimmer").focus();
   await page.keyboard.press("Enter");
@@ -31,7 +31,7 @@ test("expires a value seven seconds after it was observed and keeps the map", as
   server.rows.push(telegram(1, "1", "On"));
   await openFlow(page);
   const badge = node(page, "Dimmer").locator(".flow-badge");
-  await expect(badge).toHaveText("◇ 1/0/1 On");
+  await expect(badge).toHaveText("◇ 1/0/1 (Light) On");
   await page.clock.runFor(6_000);
   await expect(badge).toHaveCount(1);
   await page.clock.runFor(1_500);
@@ -45,7 +45,7 @@ test("a read neither sets nor renews a value", async ({ page }) => {
   server.rows.push(telegram(1, "1", "On"));
   await openFlow(page);
   const badge = node(page, "Dimmer").locator(".flow-badge");
-  await expect(badge).toHaveText("◇ 1/0/1 On");
+  await expect(badge).toHaveText("◇ 1/0/1 (Light) On");
   await page.clock.runFor(5_000);
   server.rows.push(telegram(2, "1", "", "GroupValueRead"));
   await page.clock.runFor(1_000);
@@ -60,10 +60,10 @@ test("resolves each telegram with its own generation after a project change", as
   await expect(node(page, "Dimmer")).toBeVisible();
   server.generation = "2";
   server.rows.push(telegram(2, "2", "Off"));
-  await expect(node(page, "Blind").locator(".flow-badge-inferred")).toHaveText("◇ 1/0/1 Off");
+  await expect(node(page, "Blind").locator(".flow-badge-inferred")).toHaveText("◇ 1/0/1 (Light) Off");
   await expect(node(page, "Dimmer")).toBeVisible();
   await node(page, "Dimmer").click();
-  await expect(page.locator(".flow-inspector")).toContainText("1/0/1: observed 1× (project evidence from interpretation 1)");
+  await expect(page.locator(".flow-inspector")).toContainText("1/0/1 (Light): observed 1× (project evidence from interpretation 1)");
   expect(server.snapshots).toEqual(["1:1", "1:2"]);
 });
 
@@ -83,7 +83,7 @@ test("fits a narrow window in German", async ({ page }) => {
   const server = await fakeServer(page);
   server.rows.push(telegram(1, "1", "Ein"));
   await openFlow(page, "de");
-  await expect(node(page, "Dimmer").locator(".flow-badge-inferred")).toHaveText("◇ 1/0/1 Ein");
+  await expect(node(page, "Dimmer").locator(".flow-badge-inferred")).toHaveText("◇ 1/0/1 (Light) Ein");
   await expect(page.getByRole("button", { name: "Vergrößern" })).toBeVisible();
   const layout = await page.evaluate(() => ({ viewport: innerWidth, document: document.documentElement.scrollWidth }));
   expect(layout.document, JSON.stringify(layout)).toBeLessThanOrEqual(layout.viewport);
@@ -112,4 +112,23 @@ test("draws lines and text in the theme's colours, and follows a theme change", 
   const dark = await read();
   expect(dark.stroke).toBe(dark.expected);
   expect(dark.stroke).not.toBe(light.stroke);
+});
+
+test("shows the owning project's group name beside the address and follows a rename or a removed name", async ({ page }) => {
+  const server = await fakeServer(page);
+  server.members = { "1": [], "2": [], "3": [] };
+  const longName = "Wohnzimmer Deckenleuchte über dem Esstisch 照明 💡";
+  server.groupNames = { "1": longName, "2": "  ", "3": "Hall light" };
+  server.rows.push(telegram(1, "1", "On"));
+  await openFlow(page);
+  const group = page.locator("g.flow-node-group");
+  await expect(group).toHaveAttribute("aria-label", new RegExp(`^1/0/1 \\(${longName}\\)\\.`));
+  const label = group.locator(".flow-node-label");
+  expect(((await label.evaluate((e) => e.firstChild!.textContent)) ?? "").startsWith("1/0/1 (")).toBe(true);
+  await expect(label.locator("title")).toHaveText(`1/0/1 (${longName})`);
+  server.rows.push(telegram(2, "2", "Off"));
+  await expect(page.locator("g.flow-node-group .flow-node-label")).toHaveText("1/0/1");
+  server.rows.push(telegram(3, "3", "On"));
+  await expect(page.locator("g.flow-node-group .flow-node-label")).toHaveText("1/0/1 (Hall light)");
+  expect(server.unexpected).toEqual([]);
 });

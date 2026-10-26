@@ -121,6 +121,10 @@ interface ParticipantContext {
   devicesById: Map<number, FlowDevice>;
   devicesByAddress: Map<number, number[]>;
   groupsByAddress: Map<number, FlowGroup[]>;
+  /** The snapshot lists every project group; a cut-off list could hide a twin. */
+  groupsComplete: boolean;
+  /** Raw addresses the server itself reported as shared by several groups. */
+  ambiguousGroups: Set<number>;
 }
 
 export type FlowContext = { kind: "pending" } | ParticipantContext | { kind: "raw"; reason: RawReason };
@@ -233,7 +237,11 @@ function participants(snapshot: FlowSnapshot, projectScope?: string): FlowContex
     groupsByAddress.set(group.gaRaw, same);
   }
   const { devices, groups, members } = snapshot.truncated;
-  return { kind: "participants", complete: devices + groups + members === 0, projectScope, groupAddressStyle: snapshot.groupAddressStyle, devicesById, devicesByAddress, groupsByAddress };
+  const ambiguousGroups = new Set(snapshot.diagnostics.ambiguousGroupAddresses.map((entry) => entry.gaRaw));
+  return {
+    kind: "participants", complete: devices + groups + members === 0, projectScope, groupAddressStyle: snapshot.groupAddressStyle,
+    devicesById, devicesByAddress, groupsByAddress, groupsComplete: groups === 0, ambiguousGroups,
+  };
 }
 
 /**
@@ -328,23 +336,40 @@ function deviceNode(context: ParticipantContext, deviceId: number): FlowNode {
     : { id: `d:${deviceId}`, kind: "unknownDevice", label: `#${deviceId}`, deviceId };
 }
 
+/** `address (name)`; the bare address when there is no usable name. */
+export function groupAddressLabel(address: string, name: string | null): string {
+  const text = name?.replace(/\s+/gu, " ").trim();
+  return text ? `${address} (${text})` : address;
+}
+
+/** The name only when this context's project states exactly one group for the address. */
+function groupLabel(context: ParticipantContext | { kind: "raw"; reason: RawReason }, raw: number, address: string): string {
+  if (context.kind === "raw" || !context.groupsComplete || context.ambiguousGroups.has(raw)) return address;
+  const groups = context.groupsByAddress.get(raw);
+  return groups?.length === 1 ? groupAddressLabel(address, groups[0].name) : address;
+}
+
 interface Resolution {
   source: FlowNode;
   sourceLabel: string;
   targets: FlowNode[];
   /** The one project group with this address, when there is exactly one. */
   group: FlowGroup | null;
+  /** The destination as shown: its address, plus the owning project's name when unambiguous. */
+  gaLabel: string;
 }
 
 function resolve(entry: QueuedRow, context: ParticipantContext | { kind: "raw"; reason: RawReason }): Resolution {
   const { row, sourceRaw, destinationRaw } = entry;
-  const groupNode: FlowNode = { id: `g:${destinationRaw}`, kind: "group", label: row.destination, gaRaw: destinationRaw, ambiguous: false };
+  const gaLabel = groupLabel(context, destinationRaw, row.destination);
+  const groupNode: FlowNode = { id: `g:${destinationRaw}`, kind: "group", label: gaLabel, gaRaw: destinationRaw, ambiguous: false };
   if (context.kind === "raw") {
     return {
       source: { id: `ia:${sourceRaw}`, kind: "rawSource", label: row.source, address: row.source, context: context.reason },
       sourceLabel: row.source,
       targets: [groupNode],
       group: null,
+      gaLabel,
     };
   }
   const holders = context.devicesByAddress.get(sourceRaw) ?? [];
@@ -361,12 +386,12 @@ function resolve(entry: QueuedRow, context: ParticipantContext | { kind: "raw"; 
   // Configured endpoints: every active member of the one group with this
   // address (Send or Receive), except whatever may have sent the telegram.
   const groups = context.groupsByAddress.get(destinationRaw) ?? [];
-  if (groups.length !== 1) return { source, sourceLabel, targets: [{ ...groupNode, ambiguous: groups.length > 1 }], group: null };
+  if (groups.length !== 1) return { source, sourceLabel, targets: [{ ...groupNode, ambiguous: groups.length > 1 }], group: null, gaLabel };
   const excluded = new Set(holders);
   const ids = [...new Set(groups[0].members.filter((m) => m.active && !excluded.has(m.deviceId)).map((m) => m.deviceId))];
   ids.sort((a, b) => a - b);
   const targets = ids.map((id) => deviceNode(context, id));
-  return { source, sourceLabel, targets: targets.length > 0 ? targets : [{ ...groupNode, ambiguous: false }], group: groups[0] };
+  return { source, sourceLabel, targets: targets.length > 0 ? targets : [{ ...groupNode, ambiguous: false }], group: groups[0], gaLabel };
 }
 
 function objectsOf(group: FlowGroup | null, node: FlowNode): FlowObjectEvidence[] {
@@ -376,7 +401,7 @@ function objectsOf(group: FlowGroup | null, node: FlowNode): FlowObjectEvidence[
     .map(({ comObjectId, direction, active, flags }) => ({ comObjectId, direction, active, flags }));
 }
 
-function touchEdge(model: FlowModel, source: FlowNode, to: FlowNode, entry: QueuedRow, group: FlowGroup | null): void {
+function touchEdge(model: FlowModel, source: FlowNode, to: FlowNode, entry: QueuedRow, group: FlowGroup | null, gaLabel: string): void {
   const from = source.id;
   const id = `${from}→${to.id}`;
   let edge = model.edges.get(id);
@@ -400,7 +425,7 @@ function touchEdge(model: FlowModel, source: FlowNode, to: FlowNode, entry: Queu
   }
   const previous = edge.groups.get(entry.destinationRaw);
   edge.groups.set(entry.destinationRaw, {
-    label: entry.row.destination,
+    label: gaLabel,
     count: (previous?.count ?? 0) + 1,
     generation: entry.generation,
     sourceObjects: objectsOf(group, source),
@@ -413,24 +438,24 @@ function pushBounded(times: number[], at: number, limit: number): void {
   if (times.length > limit) times.splice(0, times.length - limit);
 }
 
-function recordActivity(model: FlowModel, entry: QueuedRow, source: FlowNode, targets: FlowNode[], nowMs: number, complete: boolean): void {
+function recordActivity(model: FlowModel, entry: QueuedRow, gaLabel: string, source: FlowNode, targets: FlowNode[], nowMs: number, complete: boolean): void {
   const at = entry.observedAtMs;
   // Without an observation time a row cannot be placed in the window.
   if (at === null) return;
   const times = model.sendTimes.get(source.id) ?? [];
   pushBounded(times, at, MAX_TIMES_PER_SOURCE);
   model.sendTimes.set(source.id, times);
-  recordEvent(model, entry, source, targets, nowMs, complete);
+  recordEvent(model, entry, gaLabel, source, targets, nowMs, complete);
 }
 
 /** A fresh row becomes a pulse event; a refused sender's row becomes a
  * lineless one, so the renderer can count it as not drawn (AR21 finding 6). */
-function recordEvent(model: FlowModel, entry: QueuedRow, source: FlowNode, targets: FlowNode[], nowMs: number, complete: boolean): void {
+function recordEvent(model: FlowModel, entry: QueuedRow, gaLabel: string, source: FlowNode, targets: FlowNode[], nowMs: number, complete: boolean): void {
   const at = entry.observedAtMs;
   if (at === null || at < nowMs - FRESH_EVENT_MS) return;
   model.events.push({
     seq: entry.row.seq, from: source.id, to: targets.map((target) => target.id), gaRaw: entry.destinationRaw,
-    gaLabel: entry.row.destination, service: entry.row.service, observedAtMs: at, complete,
+    gaLabel, service: entry.row.service, observedAtMs: at, complete,
   });
   model.counters.eventsRecorded += 1;
   const limit = model.limits.maxEvents ?? DEFAULT_MAX_EVENTS;
@@ -463,17 +488,17 @@ const VALUE_SERVICES = new Set(["GroupValueWrite", "GroupValueResponse"]);
 function apply(model: FlowModel, entry: QueuedRow, context: FlowContext, nowMs: number): void {
   if (context.kind === "pending") throw new Error("flow: a queued row was applied before its context was known");
   model.counters.admitted += 1;
-  const { source, sourceLabel, targets, group } = resolve(entry, context);
+  const { source, sourceLabel, targets, group, gaLabel } = resolve(entry, context);
   const sourceKept = ensureNode(model, { ...source, generation: entry.generation });
   const keptTargets = targets.filter((target) => ensureNode(model, { ...target, generation: entry.generation }));
   if (sourceKept) {
-    for (const target of keptTargets) touchEdge(model, source, target, entry, group);
-    recordActivity(model, entry, source, keptTargets, nowMs, keptTargets.length === targets.length);
+    for (const target of keptTargets) touchEdge(model, source, target, entry, group, gaLabel);
+    recordActivity(model, entry, gaLabel, source, keptTargets, nowMs, keptTargets.length === targets.length);
   } else {
     if (keptTargets.length > 0) model.counters.refusedEdges += keptTargets.length;
     // The sender has no node, so it gets no send times; the telegram still
     // happened and is accounted for as not drawn.
-    recordEvent(model, entry, source, [], nowMs, false);
+    recordEvent(model, entry, gaLabel, source, [], nowMs, false);
   }
 
   const { row } = entry;
@@ -493,7 +518,7 @@ function apply(model: FlowModel, entry: QueuedRow, context: FlowContext, nowMs: 
   // A value that was already past its lifetime when it arrived is history.
   if (deadlineMs <= nowMs) return;
   const base = {
-    gaRaw: entry.destinationRaw, gaLabel: row.destination, value: row.decoded.text, seq: row.seq,
+    gaRaw: entry.destinationRaw, gaLabel, value: row.decoded.text, seq: row.seq,
     observedAtMs: entry.observedAtMs, deadlineMs, generation: entry.generation, sourceNode: source.id, sourceLabel,
   };
   setSlot(model, source.id, { ...base, origin: "source" });

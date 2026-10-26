@@ -6,6 +6,17 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Flow display names (26 October 2026 source)
+
+WP-23 adds the interpreting project's unambiguous group name to Flow addresses.
+It does not add a project-change push channel or retroactively rewrite earlier
+observations. Existing nodes and connections retain their interpretation's name
+until another telegram for the address arrives with a new generation, including
+when a rename creates an ambiguity. Current value slots still expire after seven
+seconds. Raw, historical, unavailable and truncated group contexts acquire no
+new project name. This is the existing generation-bound Flow lifecycle, not a
+live-name synchronization guarantee; navigation continues to use raw identities.
+
 <!-- BEGIN retained catalogue record -->
 
 ## 82. The diagnostics companion's stale lock sees one browser profile's own windows, and nothing else

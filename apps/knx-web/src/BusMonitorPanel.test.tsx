@@ -1573,7 +1573,7 @@ describe("BusMonitorPanel telegram flow", () => {
     await act(async () => tab("Flow").click());
     expect(tab("Flow").getAttribute("aria-selected")).toBe("true");
     expect(flowNode("Switch")).not.toBeNull();
-    expect(flowNode("Dimmer")!.querySelector(".flow-badge-inferred")!.textContent).toBe("◇ 1/0/1 On");
+    expect(flowNode("Dimmer")!.querySelector(".flow-badge-inferred")!.textContent).toBe("◇ 1/0/1 (Light) On");
     start = polls();
     await tick();
     await tick();

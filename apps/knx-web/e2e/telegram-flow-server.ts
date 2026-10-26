@@ -6,7 +6,7 @@ const SWITCH = 0x1101;
 const LIGHT = 0x0801;
 const flags = { communication: true, read: null, write: true, transmit: null, update: null, readOnInit: null };
 
-export function snapshot(sessionId: number, generation: string, members: number[]) {
+export function snapshot(sessionId: number, generation: string, members: number[], groupName = "Light") {
   return {
     serverIncarnation: "fixture", sessionId, generation, status: "current", groupAddressStyle: "ThreeLevel",
     devices: [
@@ -15,7 +15,7 @@ export function snapshot(sessionId: number, generation: string, members: number[
       { deviceId: 3, installationId: 1, name: "Blind", individualAddressRaw: 0x1103 },
     ],
     groups: [{
-      gaRaw: LIGHT, gaId: 10, installationId: 1, name: "Light", dpt: "1.001",
+      gaRaw: LIGHT, gaId: 10, installationId: 1, name: groupName, dpt: "1.001",
       members: [1, ...members].map((deviceId) => ({
         deviceId, comObjectId: deviceId * 100, direction: deviceId === 1 ? "Send" : "Receive", active: true, flags,
       })),
@@ -47,6 +47,7 @@ export async function fakeServer(page: Page) {
     snapshots: [] as string[],
     unexpected: [] as string[],
     members: { "1": [2], "2": [3] } as Record<string, number[]>,
+    groupNames: {} as Record<string, string>,
   };
   const json = (route: Route, body: unknown, status = 200) =>
     route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
@@ -65,7 +66,7 @@ export async function fakeServer(page: Page) {
     if (method === "GET" && url.pathname === "/api/bus/monitor/flow-snapshot") {
       const generation = url.searchParams.get("generation")!;
       state.snapshots.push(`${url.searchParams.get("sessionId")}:${generation}`);
-      return json(route, snapshot(Number(url.searchParams.get("sessionId")), generation, state.members[generation] ?? []));
+      return json(route, snapshot(Number(url.searchParams.get("sessionId")), generation, state.members[generation] ?? [], state.groupNames[generation]));
     }
     if (method === "POST" && url.pathname === "/api/bus/discover") return json(route, { interfaces: [] });
     if (method === "GET" && url.pathname === "/api/project/status-metrics") return json(route, statusMetricsFixtureBody(null));

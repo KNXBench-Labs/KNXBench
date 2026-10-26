@@ -128,6 +128,7 @@ async fn v1_defaults_hardware_recovery_of_an_existing_operation_is_still_admitte
         .checkpoint(Checkpoint::Failed {
             code: app::FailureCode::Executor,
             local_diagnostic: "synthetic existing v1 operation".into(),
+            pointer_failure: None,
         })
         .unwrap();
     drop(store);

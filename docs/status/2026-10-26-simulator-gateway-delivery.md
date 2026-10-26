@@ -33,12 +33,31 @@ and the absence of an established mask-0025 requirement ordering Verify Mode
 relative to TaskSegment. No fixed-address identity mapping or hardware support
 is inferred. The earlier source-mask/wire-data conflation is corrected.
 
-## Open execution blocker
+## Execution blocker (resolved 26 October 2026)
 
-The existing `system2-validation` CLI asks its durable activity log to start kind
-`system2Validation`, but the activity validator does not admit that kind. The
-operation therefore refuses before sending. No activity guard was bypassed or
-changed in this package. A complete application-download differential is not
-established and requires a separately authorized journal-contract correction.
-No real bus or hardware access was performed. This delivery grants no additional
-family, recovery or compatibility admission.
+At delivery, the existing `system2-validation` CLI asked its durable activity log
+to start kind `system2Validation`, but the activity validator did not admit that
+kind, so the operation refused before sending. A separately authorized,
+test-first correction now admits that kind with the unchanged property-write
+states and `writeEvidence` rules; the format-2 storage, strict reader, reopen
+projection and Web admission treat it exactly like `serviceControlWrite`
+([contract](../contracts/COMMISSIONING_ACTIVITY_HISTORY.md#coverage-and-outcomes)).
+Inconsistent rows of the new kind stay refused and latch `unavailable`.
+
+The correction exposed two lifecycle defects. A failure before any send
+evidence (for example an unreachable gateway) claimed `effectUnverified`, so the
+write guard panicked and left `unknown`; the CLI now records `notSent` there.
+Independent review then found the CLI marked backup and send evidence before
+connecting, so a refusal before any recovery or mutation would have been stored
+as `effectUnverified` with a recorded backup. The operation store now runs that
+journal hook at the executor's recovery barrier, immediately before Verify Mode;
+download and recovery replay are covered through the simulator gateway.
+
+With both corrections the built CLI completed its simulated application download
+through the simulator gateway, isolated with the client in a loopback-only
+network namespace, at device `MAX_APDU_LENGTH` 55 and 15: outcome `finished`,
+journal `verified` with backup and send evidence, reopened by a fresh strict
+reader. The tunnelled path caps memory writes to standard frames (12 octets) at
+both lengths. This is simulator evidence only: no real bus or hardware access
+was performed, gateway PID 56/83 values remain assumptions, and this grants no
+additional family, recovery or compatibility admission.

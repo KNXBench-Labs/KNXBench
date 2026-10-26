@@ -138,3 +138,4 @@ fn download_result_restart_and_cleanup_remain_distinct() {
 }
 
 mod receipt;
+mod system2_validation;

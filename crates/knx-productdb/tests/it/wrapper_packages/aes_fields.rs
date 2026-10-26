@@ -231,6 +231,25 @@ fn central_only() -> Record<'static> {
     }
 }
 
+fn local_field_differs() -> Record<'static> {
+    Record {
+        flags: 1,
+        method: 99,
+        central_extra: &AE_STORED,
+        local_extra: &AE_DEFLATED,
+        ..plain(FILE, &[0x5a; 40])
+    }
+}
+
+fn encrypted_field_without_method99() -> Record<'static> {
+    Record {
+        flags: 1,
+        central_extra: &AE_STORED,
+        local_extra: &AE_STORED,
+        ..plain(FILE, &[0x5a; 40])
+    }
+}
+
 fn directory_field() -> Record<'static> {
     Record {
         central_extra: &AE_STORED,
@@ -264,6 +283,12 @@ refusals! {
     direct_central_only: Direct, central_only, FIELDS;
     wrapper_central_only: Wrapper, central_only, FIELDS;
     inner_central_only: Inner, central_only, FIELDS;
+    direct_local_field_differs: Direct, local_field_differs, FIELDS;
+    wrapper_local_field_differs: Wrapper, local_field_differs, FIELDS;
+    inner_local_field_differs: Inner, local_field_differs, FIELDS;
+    direct_encrypted_field_without_method99: Direct, encrypted_field_without_method99, METHOD;
+    wrapper_encrypted_field_without_method99: Wrapper, encrypted_field_without_method99, METHOD;
+    inner_encrypted_field_without_method99: Inner, encrypted_field_without_method99, METHOD;
     direct_directory_field: Direct, directory_field, METHOD;
     wrapper_directory_field: Wrapper, directory_field, METHOD;
     inner_directory_field: Inner, directory_field, METHOD;

@@ -90,13 +90,15 @@ it("admits read and service-control lifecycles without inventing evidence or fin
       respond(page); expect(await api.activityHistory()).toEqual(page);
     }
   }
-  for (const state of ["running", "verified", "noChange", "notSent", "effectUnverified", "unknown"]) {
-    const page = historyFixture(); const entry = page.entries[0];
-    Reflect.deleteProperty(entry, "downloadEvidence");
-    Object.assign(entry, { kind: "serviceControlWrite", state, interrupted: state === "unknown",
-      finishedAt: state === "running" || state === "unknown" ? null : entry.finishedAt,
-      writeEvidence: { backupRecorded: true, sendPossible: state === "verified" || state === "effectUnverified" } });
-    respond(page); expect(await api.activityHistory()).toEqual(page);
+  for (const kind of ["serviceControlWrite", "system2Validation"]) {
+    for (const state of ["running", "verified", "noChange", "notSent", "effectUnverified", "unknown"]) {
+      const page = historyFixture(); const entry = page.entries[0];
+      Reflect.deleteProperty(entry, "downloadEvidence");
+      Object.assign(entry, { kind, state, interrupted: state === "unknown",
+        finishedAt: state === "running" || state === "unknown" ? null : entry.finishedAt,
+        writeEvidence: { backupRecorded: true, sendPossible: state === "verified" || state === "effectUnverified" } });
+      respond(page); expect(await api.activityHistory()).toEqual(page);
+    }
   }
 });
 
@@ -120,6 +122,11 @@ it("rejects invalid metadata across every recorded kind without returning a vali
     (page: ReturnType<typeof historyFixture>) => { Object.assign(page.entries[0], { kind: "serviceControlWrite", state: "verified", writeEvidence: { backupRecorded: false, sendPossible: false } }); Reflect.deleteProperty(page.entries[0], "downloadEvidence"); },
     (page: ReturnType<typeof historyFixture>) => { Object.assign(page.entries[0], { kind: "serviceControlWrite", state: "noChange" }); Reflect.deleteProperty(page.entries[0], "downloadEvidence"); },
     (page: ReturnType<typeof historyFixture>) => { Object.assign(page.entries[0], { kind: "serviceControlWrite", state: "notSent" }); Reflect.deleteProperty(page.entries[0], "downloadEvidence"); },
+    (page: ReturnType<typeof historyFixture>) => { Object.assign(page.entries[0], { kind: "system2Validation", state: "finished" }); Reflect.deleteProperty(page.entries[0], "downloadEvidence"); },
+    (page: ReturnType<typeof historyFixture>) => { Object.assign(page.entries[0], { kind: "system2Validation", state: "verified", writeEvidence: { backupRecorded: false, sendPossible: false } }); Reflect.deleteProperty(page.entries[0], "downloadEvidence"); },
+    (page: ReturnType<typeof historyFixture>) => { Object.assign(page.entries[0], { kind: "system2Validation", state: "notSent" }); Reflect.deleteProperty(page.entries[0], "downloadEvidence"); },
+    (page: ReturnType<typeof historyFixture>) => { Object.assign(page.entries[0], { kind: "system2Validation", state: "verified" }); },
+    (page: ReturnType<typeof historyFixture>) => { Object.assign(page.entries[0], { kind: "system2Validation", address: null, state: "verified" }); Reflect.deleteProperty(page.entries[0], "downloadEvidence"); },
   ];
   for (const change of variants) {
     const page = historyFixture(); change(page); respond(page);

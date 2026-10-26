@@ -154,13 +154,17 @@ fn event(
         PropertyJournalEvent::RecoveryAcquired(snapshot) => {
             let recovery =
                 RecoveryRecord::from_snapshot(snapshot, bundle).map_err(|e| e.to_string())?;
+            // VerifyMode, the first possible mutation, follows this barrier;
+            // every hardware path supplies preconditions, so it always occurs.
             if restoring {
                 if store.recovery() != Some(&recovery) {
                     return Err("restore snapshot differs from durable original".into());
                 }
-                Ok(())
+                store.reach_send_boundary()
             } else {
-                store.checkpoint(Checkpoint::RecoveryAcquired { recovery })
+                store
+                    .checkpoint(Checkpoint::RecoveryAcquired { recovery })
+                    .and_then(|()| store.reach_send_boundary())
             }
         }
         PropertyJournalEvent::OperationStarting {

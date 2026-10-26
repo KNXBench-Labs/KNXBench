@@ -13,6 +13,16 @@ archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
 
+## Flow group-address names (26 October 2026 source)
+
+WP-23 is published as `903d5d0c1`: Flow adds the interpreting project's unique
+group name after its address, preserving ambiguity, raw identities and the
+existing generation lifecycle. Independent implementation and Unicode-fix reviews
+approve; all 11 package/36 nested web stages passed, including 4,419 Vitest tests,
+773 default browser cases and separate production configurations (152 and 56).
+[Acceptance and boundaries](status/2026-10-26-flow-group-names.md). No live bus,
+application deployment or new synchronization guarantee is claimed.
+
 ## Selective website typing (26 October 2026)
 
 WP-21 is published as `b517930e7`: only the hero and Features headings type,

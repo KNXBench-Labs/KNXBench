@@ -1,7 +1,8 @@
 # WP-24 — Product catalogue as a table with sortable headers
 
-Owner request: 25 October 2026. **Planning only; no implementation authorised.**
-No release assignment or delivery date has been set. Start only after an explicit owner Go for this task.
+Owner request: 25 October 2026. Implementation authorised on 26 October 2026
+through the next-open-tasks assignment. The separate implementation track is
+reviewed; integrated acceptance and publication remain pending. No release assigned.
 
 ## Requested outcome
 

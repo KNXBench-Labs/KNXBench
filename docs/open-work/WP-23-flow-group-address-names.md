@@ -1,8 +1,8 @@
 # WP-23 — Show group-address names in Flow
 
-Owner request: 25 October 2026. Implementation authorised by the next-open-tasks
-assignment on 26 October 2026. Status: implemented and independently reviewed;
-final integrated package acceptance and publication pending. No release assigned.
+Status: delivered on 26 October 2026 as `903d5d0c1`, after independent review,
+correction re-review and complete integrated scoped acceptance. No release or
+hardware acceptance is assigned. [Acceptance](../status/2026-10-26-flow-group-names.md).
 
 ## Requested outcome
 
@@ -31,6 +31,7 @@ new generation; value slots retain their existing expiry. See the
 
 Independent code review and Unicode-fix re-review approve the implementation.
 Original missing-name and Unicode-cut failures are retained separately from
-failed development/harness attempts. Final integrated package gate remains
-pending; pre-final focused or mixed-failure runs are not whole-feature acceptance.
-Tests use fictional loopback APIs, not a live KNX bus.
+failed development/harness attempts. Final integrated acceptance passed all
+11 package and 36 nested web stages on the actual merge; see the
+[acceptance record](../status/2026-10-26-flow-group-names.md). Pre-final mixed-failure
+runs remain failed. Tests use fictional loopback APIs, not a live KNX bus.

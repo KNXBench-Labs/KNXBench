@@ -1,12 +1,12 @@
 # Restart snapshot
 
-Updated: 2026-10-26 05:48 CET. Operational snapshot, not an append-only journal.
+Updated: 2026-10-26 06:23 CET. Operational snapshot, not an append-only journal.
 ## Next open tasks (26 October 2026, this WebUI session)
-- WP-21 PUBLISHED `b517930e7`/`82eca9e21`, APPROVE, gate11/docs10, live verified.
-  Own worktree/claim retired after full private evidence verification.
-- WP-23 source reviewed including Unicode correction; main-first integration ready.
-  Next: full scoped web gate on `integrate/wp23-flow-group-names-20261026`, then publish.
-- WP-22/24 worker handoffs arrived; independent review/corrections pending; no bus/release.
+- WP-21 PUBLISHED `b517930e7`/`82eca9e21`, live verified; own tree/claim retired.
+- WP-23 PUBLISHED `903d5d0c1`, APPROVE, gate11/web36; Vitest4419, browser773 +152/56.
+  Next: result-doc gate/publication, verified evidence retirement; no bus/deployment.
+- WP-22 `a56fb360` and WP-24 `c8fd79532` reviewed; own feature branches queued.
+  Next order: main-first WP-22 gate/delivery, then WP-24; no new release authority.
 - Root preserved. Evidence `<profile>/evidence/next-open-tasks-20261026/`.
 ## Other owners and preservation
 - Root intentionally old/dirty: preserve private/untracked files and other edits.

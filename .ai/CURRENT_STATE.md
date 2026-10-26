@@ -1,6 +1,15 @@
 # Restart snapshot
 
-Updated: 2026-10-26 16:42 CET. Operational snapshot, not an append-only journal.
+Updated: 2026-10-26 16:48 CET. Operational snapshot, not an append-only journal.
+## Issue #30 / S2-01 pointer width (ACTIVE, observed 2026-10-26 16:48 CET)
+- Taken by this issue30-width WebUI track; owner authorised implementation 26 October.
+- Own `<sources>/knxbench-issue30-pointer-width-20261026`, branch `fix/issue30-pointer-width-20261026`.
+- Reserve Net property_recovery/property_download, App property_validation_bundle and matching tests/docs.
+- Public field reply supplies object1/PID7: 1 element, 2 octets, 0116; other objects unmeasured.
+- Read-only architecture worker `proc_c6390c80235a`; no code/gate/hardware run yet.
+- Evidence `<profile>/evidence/issue30-width-20261026/`; next width-aware durable/recovery design,
+  original RED, implementation, independent review and package acceptance. No bus/release/deployment.
+- Safe-failure/report projection is separate; preserve all foreign tracks below.
 ## PRG-01/S2-03 CLI durable-tunnel slice (runtime DELIVERED; result docs pending)
 - PUBLISHED main-first merge `a8004cb2e` on `8459b5fe8`, feature `46c38df26`; readbacks equal.
 - Independent review APPROVE; merge13 Rust521/21ignored, corpus17/17; tools440/6skipped.

@@ -1354,6 +1354,7 @@ export const messages = {
   "activityHistory.kind.deviceCompare": "Device comparison",
   "activityHistory.kind.serviceControlRead": "Service-control read",
   "activityHistory.kind.serviceControlWrite": "Service-control write",
+  "activityHistory.kind.system2Validation": "System-2 validation download",
   "activityHistory.kind.serialLookup": "Serial lookup",
   "activityHistory.kind.deviceDiagnostics": "Diagnostic export (read only)",
   "activityHistory.kind.deviceDownload": "Device download",

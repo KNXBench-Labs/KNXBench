@@ -1333,6 +1333,7 @@ export const messages: Record<MessageKey, string> = {
   "activityHistory.kind.deviceCompare": "Gerätevergleich",
   "activityHistory.kind.serviceControlRead": "Service-Control lesen",
   "activityHistory.kind.serviceControlWrite": "Service-Control schreiben",
+  "activityHistory.kind.system2Validation": "System-2-Validierungsdownload",
   "activityHistory.kind.serialLookup": "Seriennummer suchen",
   "activityHistory.kind.deviceDiagnostics": "Diagnose-Export (nur lesend)",
   "activityHistory.kind.deviceDownload": "Geräte-Download",

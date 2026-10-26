@@ -149,13 +149,19 @@ pub struct HistoryActivity {
 
 impl OneShotActivity {
     fn validate(&self, operation_id: u64) -> io::Result<()> {
-        let write = self.kind == "serviceControlWrite";
+        // The gated System-2 validation download records through the same
+        // write guard, so it keeps the same write states and evidence rules.
+        let write = matches!(
+            self.kind.as_str(),
+            "serviceControlWrite" | "system2Validation"
+        );
         let download = self.kind == "deviceDownload";
         let valid_kind = matches!(
             self.kind.as_str(),
             "deviceCompare"
                 | "serviceControlRead"
                 | "serviceControlWrite"
+                | "system2Validation"
                 | "serialLookup"
                 | "deviceDownload"
                 | "deviceDiagnostics"
@@ -896,6 +902,13 @@ impl WriteGuard {
 
     pub fn send_possible(&self) -> bool {
         self.log.write_possible(self.id)
+    }
+
+    /// The same marking as a detached callback, for an executor that reaches
+    /// its durable pre-write backup boundary deep inside a running operation.
+    pub fn send_marker(&self) -> impl FnMut() -> io::Result<()> + Send + 'static {
+        let (log, id) = (Arc::clone(&self.log), self.id);
+        move || log.mark_write_possible(id)
     }
 
     pub fn finish(mut self, outcome: WriteOutcome) {

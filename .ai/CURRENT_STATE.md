@@ -13,8 +13,9 @@ Updated: 2026-10-26 07:24 CET. Operational snapshot, not an append-only journal.
 ## WP-16 AES metadata consistency (26 October 2026, this WebUI, DELIVERED)
 - PUBLISHED `161e3b14b`; review APPROVE, gate 14/14 (Rust 5,033, corpus 155/155); readback equal.
 - Evidence `<profile>/evidence/wp16-aes-20261026/`. Own trees retired after result docs.
-## DIAG-01 web profile (26 October 2026, this WebUI, IN PROGRESS)
-- Own branch `feat/diag01-system2-web-20261026` (worktree off `718daf945`); simulator only, no push yet.
+## DIAG-01 web profile (26 October 2026, this WebUI, DELIVERED)
+- PUBLISHED `a4bb0aa4e`; review + re-review APPROVE, gate 15/15 (919 browser); readback equal.
+- Evidence `<profile>/evidence/diag01-web-20261026/`. Own tree retired after result docs.
 ## Other owners and preservation
 - Root intentionally old/dirty: preserve private/untracked files and other edits.
   Alpha16 belongs to another track. No release/deployment/hardware authority.

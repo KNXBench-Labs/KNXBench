@@ -24,10 +24,9 @@ raw method declares stored; the outer layer refused most with a misleading
 password error. Consistent AES stays unsupported encryption; no AES decryption
 or new compatibility claim. [Sources, measured behaviour and decision](research/2026-10-26-zip-aes-extra-field-consistency.md).
 
-
 ## System-2 memory diagnostics in the web dialog (26 October 2026 source)
 
-DIAG-01 is implemented on its feature branch, not yet reviewed or integrated.
+DIAG-01 is delivered on `main` as `a4bb0aa4e`; independent review and fix re-review APPROVE; maintained change-scoped 15/15 gate green (919 browser tests, 1,522 Rust tests in 9 binaries, 51/51 selected corpus cases, frozen inputs, no touched user data); local/tracking/live readback equal.
 The device diagnostic dialog (File menu and a device's *Analyse device*) offers
 `system2-declared-segments-v1` beside the generic identity profile, through the
 CLI's own `prepare_memory`/`acquire_memory`/`bundle_export` service: required

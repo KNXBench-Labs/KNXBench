@@ -10,16 +10,16 @@ Updated: 2026-10-26 20:03 CET. Operational snapshot, not an append-only journal.
   then hold pushes to `main` until `Release freeze: released by claude-release-alpha17`.
 - Not in scope: S2-02 closure (needs reporter re-test on Alpha 17), S2-03 (evidence), PRG-01
   (programming track), GATE-01 (gate tooling). No hardware/bus/deployment work.
-## S2-01 safe diagnostic projection (REVIEWED; gate2 running, observed 20:33 CET)
-- User go through main publication remains; candidate `5c469a5ec` plus test-only `eeba38bf` local.
-- Own `<sources>/knxbench-system2-safe-failure-20261026`, branch
-  `feat/system2-safe-failure-projection-20261026`; integration tree suffix `-integrate-20261026`.
-- Whole-feature/correction reviews APPROVE; original semantic RED retained; no production change in fix.
-- Gate1 red:847 browser pass/4 opt-in skips refused by validator; later Rust/corpus not run.
-- Test-registration fix independently APPROVE; final production default9+capture4 pass, no skips.
-- Branch15 gate2 `proc_8dbdb3708730` PID3048799; source frozen; main-first integrated gate next.
-- Main snapshot/release-plan preserved; conditional push only after both gates/readback.
-- Result docs/retirement pending; inherited English retained-status paragraph disclosed, new entries EN/DE.
+## S2-01 safe diagnostic projection (DELIVERED runtime; result-doc gate pending, observed 21:24 CET)
+- PUBLISHED main-first merge `536e492bc` (production `5c469a5ec`, test correction `eeba38bf`);
+  local/tracking/live readback equal. Whole-feature and correction reviews APPROVE.
+- Branch15/integrated15 fully green: Rust2731/129ignored, corpus91/91,
+  Vitest4553/306files, browser914 (847functional/67exclusive); frozen/no touched or unchecked data.
+- Real simulator→private journal→reopen→HTTP/report→production EN/DE browser4 proof retained.
+- Gate1 skipped-private-input refusal preserved, fixed test registration; no gate weakened.
+- Legacy absence unknown; raw prefix private; new typed counts are not hardware/support authority.
+- Result docs awaiting their own gate/conditional publication; source trees retained for verified cleanup.
+- Alpha 17 prerequisite delivered: S2-01
 - Evidence `<profile>/evidence/system2-safe-failure-20261026/`; no bus/hardware/release/deployment.
 ## Issue #30 / S2-01 pointer width (DELIVERED, observed 2026-10-26 19:03 CET)
 - PUBLISHED main-first merge `54b052885`, feature `6b8b27936`; local/tracking/live equal.

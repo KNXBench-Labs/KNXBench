@@ -95,11 +95,11 @@ backup/readback and recovery-integrity barriers; no general speedup is establish
 [Exact service and recovery limits](../contracts/alpha16-system2-configured-download.md),
 [restart selection](../contracts/alpha16-system2-http-mount.md).
 
-### System-2 safe failure diagnostic: unavailable for older and untyped failures (candidate source)
+### System-2 safe failure diagnostic: unavailable for older and untyped failures (26 October 2026 source)
 
 - **Affected:** the typed *Failure diagnostic* of a refused System-2 table-pointer
-  (PID 7) answer, in a source build carrying the S2-01 candidate that is still pending
-  review, gates and acceptance.
+  (PID 7) answer, in source builds from the delivered S2-01 projection
+  (`536e492bc`); this is not a release announcement.
 - **Limitation:** only a refusal typed at the read carries it. Older journals,
   legacy-policy refusals and every other failure show *unavailable*; nothing is
   reconstructed from the private text. The diagnostic lists observed counts, which
@@ -109,6 +109,10 @@ backup/readback and recovery-integrity barriers; no general speedup is establish
 - **Consequence:** an observation is not support: it grants no retry, hardware
   claim or recovery. Objects 2/3 stay source-declared hypotheses. Physical outcome
   and recovery remain unverified; the private journal keeps the raw evidence.
+- **Surrounding copy:** the new diagnostic entries are translated EN/DE, but the
+  existing static retained-operation status paragraph ("Original retained operation; no
+  automatic resume or retry. ...") is inherited English text and still shows in English
+  in the German panel alongside the diagnostic section. The panel is not fully translated.
 - **Details:** [safe failure diagnostic](../contracts/system2-safe-failure-diagnostic.md),
   [S2-01](../open-work/S2-01-pid7-raw-response.md).
 

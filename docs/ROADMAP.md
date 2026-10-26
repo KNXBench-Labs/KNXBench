@@ -12,7 +12,7 @@ as `8dd6cf72d`: native sortable catalogue columns, stable product identities and
 polite keyboard-highlight announcements, without catalogue-data changes
 ([acceptance](status/2026-10-26-catalogue-table.md)).
 
-System-2 [S2-01](open-work/S2-01-pid7-raw-response.md) is P1: the private diagnostic
+System-2 [S2-01](open-work/S2-01-pid7-raw-response.md) is a delivered engineering slice with hardware evidence pending: the private diagnostic
 prefix is published as `5f1ad454e` after review and integrated acceptance
 ([record](status/2026-10-25-system2-pid7-diagnostic.md)). A 26 October field reply
 supplies a two-octet value on object 1; independently retrieved public package
@@ -22,9 +22,9 @@ is published as `54b052885` after review, correction re-review and the complete
 ([record](status/2026-10-26-up258-pid7-width.md),
 [research](research/2026-10-26-up258-pid7-width.md)). Objects 2/3 remain
 source-declared hypotheses. A typed, closed-allowlist status/report/UI
-projection of the refusal (no raw text) is implemented as a reviewed candidate pending
-full gates and acceptance; it is not delivered. Physical
-recovery evidence remains open. [S2-02](open-work/S2-02-gateway-busy-after-failed-runs.md)
+projection of the refusal (no raw text) is delivered as `536e492bc`; hardware
+evidence is still pending. Physical recovery evidence and issue #30 remain open
+(S2-02/S2-03). [S2-02](open-work/S2-02-gateway-busy-after-failed-runs.md)
 has a delivered own-run gateway-hint/refusal-reason diagnostic slice (`aa2f39f1b`).
 The reporter's newer run starts without that banner, but the earlier actual
 start failure remains unexplained. Neither package establishes hardware support.

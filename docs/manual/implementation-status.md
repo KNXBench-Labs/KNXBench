@@ -116,7 +116,9 @@ all Docker data before upgrade.
 
 The System-2 source preview is offline; the separate declared-memory diagnostic
 profile is CLI-only, ProductDB-derived and identity-gated, with offline/simulator
-evidence but no hardware run. Web diagnostics remain generic identity-only.
+evidence but no hardware run. Web diagnostics remain generic identity-only in
+this release; source builds from 26 October 2026 also offer the memory profile
+in the web dialog (simulator-verified only).
 Neither enables System-2 programming, new write admission or complete recovery.
 [Release scope and explicit boundaries](../releases/alpha15.md).
 
@@ -498,6 +500,9 @@ memory reads and no hardware compatibility claim yet
 the support report with that device preselected; the dialogs are unchanged.
 The 25 October 2026 lifecycle correction owns a running Start response before its
 progress view commits, so project close or entry removal cannot strand that job.
+Since 26 October 2026 (source) the dialog also offers the System-2
+declared-memory profile (needs the product database; same consents; simulator
+only, no hardware run).
 Revision-only refreshes still retain analysis and separately consented partial
 export; stale replies and cleanup failures cannot affect a replacement job.
 

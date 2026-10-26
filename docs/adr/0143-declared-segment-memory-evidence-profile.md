@@ -71,7 +71,13 @@ ranges without side effects. No hardware has exercised this profile.
    build the acquisition plan.
 6. Entry point: the CLI only (`--profile`, `--product-db` required, preview
    without `--confirm-read`). The web/HTTP entry still offers only the
-   identity profile.
+   identity profile. **Amended 26 October 2026 (DIAG-01, source):** the web
+   dialog and its HTTP preview now offer the profile too, through the same
+   `prepare_memory`/`acquire_memory`/`bundle_export` service, with a required
+   `profile` field, the product database required like `--product-db`, and
+   the same read and share consents
+   ([contract](../contracts/device-diagnostic-export.md#profile-system2-declared-segments-v1-format-2)).
+   Simulator evidence only.
 
 ## Alternatives considered
 
@@ -84,6 +90,7 @@ ranges without side effects. No hardware has exercised this profile.
   standard frame the result is always 12, so the read adds a bus exchange
   without changing anything.
 - **Admit the profile to the web UI now.** Deferred: UI work has another owner.
+  Done later as DIAG-01 (26 October 2026 source), see decision 6.
 
 ## Consequences
 

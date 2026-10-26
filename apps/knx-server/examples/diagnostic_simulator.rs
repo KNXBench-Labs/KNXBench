@@ -2,6 +2,11 @@
 //!
 //! Explicit software-only acceptance fixture. No real connector is constructed.
 //! Run only on loopback, preferably inside an isolated network namespace.
+//! Device 1 (`1.1.25`) answers the identity recipe through any gateway entry;
+//! device 2 (`1.1.26`) is mapped to a synthetic System-2 program in a fresh
+//! product database and answers through [`MEMORY_GATEWAY`] only.
+#[path = "../tests/common/system2_diagnostic_fixture.rs"]
+mod system2_fixture;
 use knx_core::{
     DeviceId, DeviceInstance, IndividualAddress, Installation, InstallationId, Language, Project,
     SourceRef, Topology,
@@ -14,6 +19,16 @@ use knx_net::{
 use knx_server::{BusSessionError, BusTunnel, GatewayConnector};
 use std::{future::Future, net::SocketAddrV4, path::PathBuf, pin::Pin, sync::Arc, time::Duration};
 use tokio::sync::broadcast;
+/// The gateway entry whose tunnel reaches the System-2 simulator.
+const MEMORY_GATEWAY: [u8; 4] = [192, 0, 2, 11];
+/// `A_Memory_Read` inside one declared range of the synthetic program only.
+fn declared(number: u8, address: u16) -> bool {
+    number <= 12
+        && system2_fixture::RANGES.iter().any(|&(start, length)| {
+            address >= start
+                && u32::from(address) + u32::from(number) <= u32::from(start) + u32::from(length)
+        })
+}
 struct SyntheticTunnel(Arc<SimulatedDevice>);
 impl BusTunnel for SyntheticTunnel {
     fn diagnostics_are_simulated(&self) -> bool {
@@ -50,7 +65,7 @@ impl BusTunnel for SyntheticTunnel {
                             nr_of_elem: 1,
                             start_index: 1
                         }
-                ),
+                ) || matches!(s, ApplicationService::MemoryRead { number, address } if declared(number, address)),
                 "forbidden simulated service"
             );
             tokio::time::sleep(Duration::from_millis(250)).await;
@@ -63,14 +78,22 @@ impl BusTunnel for SyntheticTunnel {
         Box::pin(async { Ok(()) })
     }
 }
-struct SyntheticConnector(Arc<SimulatedDevice>);
+struct SyntheticConnector {
+    identity: Arc<SimulatedDevice>,
+    system2: Arc<SimulatedDevice>,
+}
 impl GatewayConnector for SyntheticConnector {
     fn connect_tunnel(
         &self,
-        _: SocketAddrV4,
+        gateway: SocketAddrV4,
     ) -> Pin<Box<dyn Future<Output = Result<Box<dyn BusTunnel>, BusSessionError>> + Send + '_>>
     {
-        Box::pin(async { Ok(Box::new(SyntheticTunnel(self.0.clone())) as Box<dyn BusTunnel>) })
+        let device = if gateway.ip().octets() == MEMORY_GATEWAY {
+            self.system2.clone()
+        } else {
+            self.identity.clone()
+        };
+        Box::pin(async { Ok(Box::new(SyntheticTunnel(device)) as Box<dyn BusTunnel>) })
     }
     fn discover(
         &self,
@@ -95,8 +118,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }));
     d.preset_property(0, 12, &[0x12, 0x34]);
     d.preset_property(0, 78, &[1, 2, 3, 4, 5, 6]);
+    let system2 = Arc::new(SimulatedDevice::with_config_at(
+        IndividualAddress::new(1, 1, 26)?,
+        SimulatorConfig {
+            mask_version: system2_fixture::MASK,
+            ..Default::default()
+        },
+    ));
+    system2_fixture::preset_identity(&system2);
+    system2_fixture::preset_memory(&system2);
+    std::fs::create_dir_all(&data)?;
+    // A fresh synthetic catalogue per run; never the user's product database.
+    let products = data.join(format!("synthetic-products-{}.sqlite", std::process::id()));
+    let catalogue = knx_server::CatalogueOwner::adopt_opened(
+        system2_fixture::products_at(&products, system2_fixture::PROGRAM),
+        products,
+    )?;
     let state = Arc::new(knx_server::AppState {
-        connector: Box::new(SyntheticConnector(d)),
+        connector: Box::new(SyntheticConnector {
+            identity: d,
+            system2,
+        }),
+        product_db: Some(catalogue),
         ..knx_server::AppState::new(data)
     });
     let mut p = Project::new(Language("en".into()));
@@ -116,6 +159,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         com_objects: vec![],
         binary_data: vec![],
     });
+    p.devices.insert(DeviceInstance {
+        id: DeviceId(2),
+        source: SourceRef {
+            path: String::new(),
+            ets_id: String::new(),
+        },
+        name: "Synthetic System-2 device".into(),
+        description: None,
+        address: Some(IndividualAddress::new(1, 1, 26)?),
+        product_ref: system2_fixture::PRODUCT_REF.into(),
+        program_ref: system2_fixture::PROGRAM_REF.into(),
+        commissioning: Default::default(),
+        visibility_calculated: true,
+        com_objects: vec![],
+        binary_data: vec![],
+    });
     p.installations.push(Installation {
         id: InstallationId(0),
         name: "Synthetic fixture".into(),
@@ -125,7 +184,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         topology: Topology {
             areas: vec![],
             lines: vec![],
-            unassigned: vec![DeviceId(1)],
+            unassigned: vec![DeviceId(1), DeviceId(2)],
         },
         buildings: vec![],
         group_ranges: vec![],

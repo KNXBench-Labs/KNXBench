@@ -1,7 +1,8 @@
 //! HTTP routes for the read-only device diagnostic export.
 //!
-//! Single-device, snapshot-bound read-only diagnosis. Background ownership keeps
-//! partial bytes and teardown alive when a browser disconnects or requests cancel.
+//! Single-device, snapshot-bound read-only diagnosis with the generic identity
+//! recipe or the ProductDB-declared memory profile (ADR-0143). Background ownership
+//! keeps partial bytes and teardown alive when a browser disconnects or cancels.
 use crate::{errors::ApiError, SharedState};
 use axum::{
     extract::{DefaultBodyLimit, Extension, Path, State},
@@ -10,7 +11,9 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
-use knx_app::device_diagnostics::{self as service, Prepared, Report};
+use knx_app::device_diagnostics::{
+    self as service, Export, MemoryEvidence, MemoryPrepared, Prepared, Report,
+};
 use knx_core::DeviceId;
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddrV4;
@@ -54,15 +57,42 @@ struct Binding {
     project_incarnation: u64,
     revision: u64,
 }
+/// The opaque plan of exactly one profile; only the service's `prepare*` builds it.
+#[derive(Clone)]
+enum Plan {
+    Identity(Prepared),
+    Memory(MemoryPrepared),
+}
+impl Plan {
+    fn base(&self) -> &Prepared {
+        match self {
+            Plan::Identity(plan) => plan,
+            Plan::Memory(plan) => plan.base(),
+        }
+    }
+    fn pending(&self, build: &str) -> Export {
+        match self {
+            Plan::Identity(plan) => Export {
+                report: service::pending(plan, build, false),
+                memory: None,
+            },
+            Plan::Memory(plan) => service::pending_memory(plan, build, false),
+        }
+    }
+}
 #[derive(Clone)]
 struct Job {
     token: String,
     created: Instant,
-    plan: Prepared,
+    plan: Plan,
     gateway: SocketAddrV4,
     binding: Binding,
     phase: &'static str,
-    report: Report,
+    export: Export,
+    /// Whether the finished export passed the archive writer's own check.
+    /// A format-2 run stopped before its tunnel (gateway busy, connect
+    /// failure, ...) has no admitted archive shape, like the CLI's refusal.
+    exportable: bool,
     cancel: Arc<AtomicBool>,
 }
 type Slot = Arc<Mutex<Option<Job>>>;
@@ -75,15 +105,20 @@ struct View {
     phase: &'static str,
     cancel_requested: bool,
     report: Report,
+    /// `memory.json` of format 2; `null` for `generic-identity-v1`.
+    memory: Option<MemoryEvidence>,
+    exportable: bool,
 }
 fn view(job: &Job) -> View {
     View {
         token: job.token.clone(),
-        target: job.plan.target.address().to_string(),
+        target: job.plan.base().target.address().to_string(),
         gateway: job.gateway.to_string(),
         phase: job.phase,
         cancel_requested: job.cancel.load(Ordering::SeqCst),
-        report: job.report.clone(),
+        report: job.export.report.clone(),
+        memory: job.export.memory.clone(),
+        exportable: job.exportable,
     }
 }
 fn error(code: &str) -> ApiError {
@@ -131,6 +166,8 @@ pub fn routes() -> Router<SharedState> {
 struct PreviewRequest {
     device_id: u32,
     gateway: String,
+    /// Required: `generic-identity-v1` or `system2-declared-segments-v1`.
+    profile: String,
     context: Binding,
 }
 async fn preview(
@@ -149,6 +186,15 @@ async fn preview(
     {
         return Err(ApiError::bad_request("diagnostics-invalid-gateway"));
     }
+    let memory = match body.profile.as_str() {
+        service::PROFILE => false,
+        service::MEMORY_PROFILE => true,
+        _ => return Err(ApiError::bad_request("diagnostics-unknown-profile")),
+    };
+    // Like the CLI's `--product-db`: the ranges come only from product data.
+    if memory && state.product_db.is_none() {
+        return Err(ApiError::bad_request("diagnostics-product-db-required"));
+    }
     let project = state
         .project
         .lock()
@@ -156,10 +202,17 @@ async fn preview(
     let p = project
         .as_ref()
         .ok_or_else(|| ApiError::bad_request("diagnostics-project-required"))?;
+    let device = DeviceId(body.device_id);
     let plan = match state.product_db.as_ref() {
-        None => service::prepare(p, DeviceId(body.device_id), None),
+        None => service::prepare(p, device, None).map(Plan::Identity),
         Some(owner) => owner
-            .with_read(|conn| service::prepare(p, DeviceId(body.device_id), Some(conn)))
+            .with_read(|conn| {
+                if memory {
+                    service::prepare_memory(p, device, conn).map(Plan::Memory)
+                } else {
+                    service::prepare(p, device, Some(conn)).map(Plan::Identity)
+                }
+            })
             .map_err(|_| error("diagnostics-catalogue-unavailable"))?,
     }
     .map_err(ApiError::bad_request)?;
@@ -169,7 +222,8 @@ async fn preview(
     let job = Job {
         token: token.iter().map(|b| format!("{b:02x}")).collect(),
         created: Instant::now(),
-        report: service::pending(&plan, &crate::version_string(), false),
+        export: plan.pending(&crate::version_string()),
+        exportable: false,
         plan,
         gateway,
         binding: body.context,
@@ -222,24 +276,27 @@ async fn start(
     });
     Ok((StatusCode::ACCEPTED, Json(result)))
 }
-fn publish(slot: &Slot, token: &str, report: Report, complete: bool) {
+fn publish(slot: &Slot, token: &str, export: Export, complete: bool) {
+    // Checked outside the lock: the same validation and readback as the export.
+    let exportable = complete && service::bundle_export(&export).is_ok();
     if let Ok(mut held) = slot.lock() {
         if let Some(job) = held.as_mut().filter(|j| j.token == token) {
-            job.report = report;
+            job.export = export;
             if complete {
                 job.phase = "complete";
+                job.exportable = exportable;
             }
         }
     }
 }
 async fn run(state: SharedState, slot: Slot, job: Job) {
     if let Err(reason) = run_inner(&state, &slot, &job).await {
-        let mut report = snapshot(&slot, &job.token)
-            .map(|j| j.report)
-            .unwrap_or(job.report);
-        report.complete = true;
-        report.stop_reason = Some(reason.into());
-        publish(&slot, &job.token, report, true);
+        let mut export = snapshot(&slot, &job.token)
+            .map(|j| j.export)
+            .unwrap_or(job.export);
+        export.report.complete = true;
+        export.report.stop_reason = Some(reason.into());
+        publish(&slot, &job.token, export, true);
     }
 }
 async fn run_inner(state: &SharedState, slot: &Slot, job: &Job) -> Result<(), &'static str> {
@@ -287,7 +344,7 @@ async fn run_inner(state: &SharedState, slot: &Slot, job: &Job) -> Result<(), &'
     .map_err(|_| "gateway-busy")?;
     let activity = state.one_shot_activity.start(
         "deviceDiagnostics",
-        Some(job.plan.target.address().to_string()),
+        Some(job.plan.base().target.address().to_string()),
     );
     // A known connect failure is "failed"; only a dropped future is "unknown".
     let tunnel = match tokio::time::timeout(
@@ -306,30 +363,47 @@ async fn run_inner(state: &SharedState, slot: &Slot, job: &Job) -> Result<(), &'
             return Err("gateway-timeout");
         }
     };
-    let mut report = service::acquire(
-        &DiagnosticTransport(tunnel.as_ref()),
-        &job.plan,
-        state.device_download_timing,
-        &crate::version_string(),
-        &job.cancel,
-        |r| publish(slot, &job.token, r.clone(), false),
-    )
-    .await;
+    let transport = DiagnosticTransport(tunnel.as_ref());
+    let build = crate::version_string();
+    let timing = state.device_download_timing;
+    let mut export = match &job.plan {
+        Plan::Identity(plan) => {
+            let report = service::acquire(&transport, plan, timing, &build, &job.cancel, |r| {
+                let export = Export {
+                    report: r.clone(),
+                    memory: None,
+                };
+                publish(slot, &job.token, export, false)
+            })
+            .await;
+            Export {
+                report,
+                memory: None,
+            }
+        }
+        Plan::Memory(plan) => {
+            service::acquire_memory(&transport, plan, timing, &build, &job.cancel, |e| {
+                publish(slot, &job.token, e.clone(), false)
+            })
+            .await
+        }
+    };
     // The report survives failed tunnel teardown; no "successful disconnect" claim.
     match tokio::time::timeout(Duration::from_secs(3), tunnel.disconnect()).await {
         Ok(Ok(())) => {}
         _ => {
-            report
+            export
+                .report
                 .stop_reason
-                .get_or_insert("tunnel-disconnect-unconfirmed".into());
+                .get_or_insert(service::TUNNEL_DISCONNECT_UNCONFIRMED.into());
         }
     }
-    activity.finish(if report.stop_reason.is_some() {
+    activity.finish(if export.report.stop_reason.is_some() {
         "failed"
     } else {
         "finished"
     });
-    publish(slot, &job.token, report, true);
+    publish(slot, &job.token, export, true);
     drop(scan);
     drop(monitor);
     drop(programming);
@@ -365,7 +439,8 @@ async fn export(
     }
     // Deliberately no fresh-project requirement here: old/partial observations
     // belong to their opaque reviewed reference and must remain saveable.
-    let bytes = service::bundle(&job.report).map_err(ApiError::bad_request)?;
+    // Format 1 bytes are exactly `bundle`'s; format 2 adds `memory.json`.
+    let bytes = service::bundle_export(&job.export).map_err(ApiError::bad_request)?;
     Ok((
         [
             (header::CONTENT_TYPE, "application/zip"),

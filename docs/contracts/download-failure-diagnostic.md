@@ -28,8 +28,16 @@ value:
 
 Closing and reopening the download panel reads the server-held session again
 (no new download); the bus activity history shows the durable copy. The
-settlement entry that follows a failure keeps `info` and carries the same
-`detail` correlation; it reports the programming flags, never the cause.
+settlement entry that follows a failure reports the programming flags, never the
+cause, and carries the same `detail` correlation. Exceptions: a run that wrote
+nothing gets no settlement entry; when another project has been opened since,
+the existing *Programming state not updated* entry has no correlation; when
+saving the settled project fails, that entry is an `error` with the save error.
+The cause entry names the device (quoted) and its address, like the other
+download entries in this local log; the report and the history do not.
+
+If the history refuses to store a diagnostic, the worker still records the row
+as `failed` without a cause, so a witnessed failure never degrades to `unknown`.
 
 ## Fields
 
@@ -66,12 +74,15 @@ settlement entry that follows a failure keeps `info` and carries the same
 
 ## Severity and presentation
 
-A failed run is an `error` log entry and a `role="alert"` block headed
-*Download failed*; a stop the user asked for is a `warning` entry and a
-`role="status"` block headed *Download stopped on request*; success and an
-unconfirmed restart carry no failure. The status line reads *Download failed in
-step N* or *stopped on request before step N*. Colour (red/amber border) only
-supports the heading and role.
+A failed run is an `error` log entry and, in the live panel, a `role="alert"`
+block headed *Download failed*; a stop on request (a server shutdown before the
+first change) is a `warning` entry and a `role="status"` block headed *Download
+stopped on request*; success and an unconfirmed restart carry no failure. Stored
+history rows use the same heading without a live role, so opening the history
+does not announce old failures. The status line follows the phase: *failed in
+step N*, *failed in the backup before step N*, *failed before the first step*,
+*stopped on request before step N*. The partial-write caveat appears only when
+`written` is `partially`. Colour (red/amber border) only supports the heading.
 
 ## Privacy
 
@@ -85,10 +96,13 @@ not part of the report, the history or the log entry.
 - Reports: format stays 1; `failure` is optional like `postDownloadCheck`. A
   stopped run without it (an older report, the CLI) reads as *cause not
   recorded*, never as success.
-- History: `failure` is optional; an explicit `null`, a cause on a non-failed
-  row, a stop with written octets, or any inconsistent value refuses the whole
-  page in both strict readers (Rust and web, shared cases in
-  `apps/knx-web/src/downloadFailure.cases.json`). As with `postDownloadCheck`,
+- History: `failure` is optional; both strict readers refuse the whole page for
+  an explicit `null`, a cause on a non-failed row, a stop on a row that wrote,
+  read-back octets on a row that wrote nothing, a category in a phase it cannot
+  have (a stop or backup failure inside a step), `notSent` for a failure inside
+  the restart step, counts above 2^53−1, a non-ASCII or overlong summary, or a
+  code/category, step or bound mismatch (31 cases shared by the Rust and web
+  readers in `apps/knx-web/src/downloadFailure.cases.json`). As with `postDownloadCheck`,
   an older KNXBench that reads a history containing a recorded cause refuses
   that page (safe refusal, not a seamless downgrade).
 - A task that ends without a terminal result keeps its history row `unknown`

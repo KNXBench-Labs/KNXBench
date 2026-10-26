@@ -5,6 +5,7 @@ import * as api from "./api";
 import { useTranslate } from "./i18n";
 import { useUiLanguage } from "./uiLanguage";
 import Overlay from "./Overlay";
+import ProjectHistoryTimeline from "./ProjectHistoryTimeline";
 import "./projectHistory.css";
 import { filterProjectVersions, validVersionLabel, type ProjectHistory, type ProjectVersion } from "./projectHistory";
 
@@ -107,6 +108,8 @@ export default function ProjectHistoryDialog(props: {
   const disabled = loading || busy || error !== null;
   const displayLabel = (version: ProjectVersion) => version.reason === "named" ? version.label : t(`projectHistory.reason.${version.reason}`);
   const filtered = view ? filterProjectVersions(view.versions.map((v) => ({ ...v, label: displayLabel(v) })), query) : [];
+  // The selection stays by id while filtering; a hidden one must not be restorable or deletable.
+  const selectionHidden = selected !== undefined && !filtered.some((v) => v.id === selected.id);
   const nearingLimit = view && (view.totalBytes >= view.limits.maxHistoryBytes * 0.9
     || view.versions.length >= view.limits.maxVersions * 0.9 || view.undoSteps + view.redoSteps >= view.limits.maxStackStates * 0.9);
 
@@ -138,17 +141,22 @@ export default function ProjectHistoryDialog(props: {
           <button type="submit" disabled={disabled || view.persistence !== "native" || !validVersionLabel(label) || view.versions.length >= view.limits.maxVersions}>{t("projectHistory.create")}</button></div>
         <small id="project-version-label-hint">{t("projectHistory.labelHint")}</small>
       </form>
-      <label className="project-history-search">{t("projectHistory.search")}<input type="search" value={query} disabled={disabled} onInput={(event) => { setQuery(event.currentTarget.value); setSelectedId(null); }} /></label>
+      <ProjectHistoryTimeline versions={filtered} selectedId={selectedId} disabled={disabled} language={language}
+        undoSteps={view.undoSteps} redoSteps={view.redoSteps} onSelect={setSelectedId} />
+      {selectionHidden && selected && <p className="project-history-notice" role="status" data-timeline-hidden-selection>{t("projectHistory.timelineHidden", { name: displayLabel(selected) })}</p>}
+      <label className="project-history-search">{t("projectHistory.search")}<input type="search" value={query} disabled={disabled} onInput={(event) => setQuery(event.currentTarget.value)} /></label>
+      <details className="project-history-alternate"><summary>{t("projectHistory.versions")}</summary>
       <ul className="project-history-versions" aria-label={t("projectHistory.versions")}>{filtered.map((version) => <li key={version.id}>
         <button type="button" aria-pressed={selectedId === version.id} disabled={disabled} onClick={() => setSelectedId(version.id)}>
           <strong>{version.label}</strong><span>{t(`projectHistory.reason.${version.reason}`)}</span>
           <time dateTime={version.createdAt} title={version.createdAt}>{new Intl.DateTimeFormat(language === "de" ? "de" : "en", { dateStyle: "medium", timeStyle: "short" }).format(new Date(version.createdAt))}</time>
           <small>{mib(version.bytes)} MiB · #{version.id}</small></button></li>)}</ul>
+      </details>
       {!filtered.length && !error && <p className="project-history-empty">{t(view.versions.length ? "projectHistory.noMatches" : "projectHistory.empty")}</p>}
       {selected && <p className="project-history-selection">{t("projectHistory.selected", { name: displayLabel(selected) })}</p>}
       <div className="project-history-actions">
-        <button type="button" disabled={disabled || !selected || view.persistence !== "native"} onClick={() => setConfirmation({ kind: "restore", view, version: selected })}>{t("projectHistory.restore")}</button>
-        <button type="button" disabled={disabled || !selected || view.persistence !== "native"} onClick={() => setConfirmation({ kind: "delete", view, version: selected })}>{t("projectHistory.delete")}</button>
+        <button type="button" disabled={disabled || !selected || selectionHidden || view.persistence !== "native"} onClick={() => setConfirmation({ kind: "restore", view, version: selected })}>{t("projectHistory.restore")}</button>
+        <button type="button" disabled={disabled || !selected || selectionHidden || view.persistence !== "native"} onClick={() => setConfirmation({ kind: "delete", view, version: selected })}>{t("projectHistory.delete")}</button>
         <button type="button" disabled={disabled || !view.undoSteps && !view.redoSteps} onClick={() => setConfirmation({ kind: "clear", view })}>{t("projectHistory.clearUndo")}</button>
       </div>
       {nearingLimit && <p className="project-history-notice" role="status">{t("projectHistory.nearLimit")}</p>}

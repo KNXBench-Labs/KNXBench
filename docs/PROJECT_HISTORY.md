@@ -7,6 +7,23 @@ Owner request 2026-10-09: HISTORY-01 (undo through restarts) and HISTORY-02
 worktree. This is native engineering-project history, not ETS restore points,
 manufacturer database history, credentials, live telegrams or hardware recovery.
 
+## Version timeline presentation (26 October 2026 source)
+
+WP-22 presents the existing retained project versions as a chronological horizontal
+timeline, oldest to newest with version-id tie-breaking. Named, saved, pre-restore
+and recovered-work versions keep their actual labels, reasons and timestamps.
+The separate current working-state marker has no stored-version id or restore
+action; it discloses the real undo/redo counts, not invented per-command metadata.
+This is a view of the existing native history, not a second store or replay engine.
+
+Selecting a checkpoint never writes. Restore and Delete still use the existing
+separate confirmations and history binding. Filtering retains selection by id but
+disables those actions while the selected checkpoint is hidden. The alternate
+list is collapsed by default; cancelling a confirmation reveals the selected
+checkpoint again. Loading, refresh errors and active mutations disable timeline
+selection. All persistence, recovery, size, refusal and hardware boundaries below
+remain unchanged.
+
 ## Large retained contexts (local implementation, 2026-10-11)
 
 [Bounded large-image contract](contracts/large-history-images.md) and

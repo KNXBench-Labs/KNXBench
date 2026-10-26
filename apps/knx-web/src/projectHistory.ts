@@ -82,3 +82,7 @@ export function filterProjectVersions(versions: readonly ProjectVersion[], query
   const normalized = query.trim().toLowerCase();
   return versions.filter((version) => version.label.toLowerCase().includes(normalized) || version.reason.includes(normalized));
 }
+/** Oldest first by instant; equal instants fall back to the stored id so the order is stable. */
+export function chronologicalVersions<T extends Pick<ProjectVersion, "id" | "createdAt">>(versions: readonly T[]): T[] {
+  return [...versions].sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt) || a.id - b.id);
+}

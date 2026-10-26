@@ -27,6 +27,9 @@
 .project-history-panel input { min-width: 0; width: 100%; box-sizing: border-box; }
 .project-history-create small { color: var(--knx-muted); line-height: 1.4; }
 .project-history-search { display: grid; gap: 7px; margin: 18px 0 10px; }
+.project-history-alternate { margin: 10px 0; min-width: 0; }
+.project-history-alternate > summary { cursor: pointer; padding: 6px 0; color: var(--knx-muted); font-size: .85rem; }
+.project-history-alternate[open] > summary { margin-bottom: 8px; }
 .project-history-versions { list-style: none; padding: 0; margin: 0; max-height: min(34vh, 320px); overflow: auto; display: grid; gap: 8px; }
 .project-history-versions button { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; width: 100%; text-align: start; color: var(--knx-foreground); background-color: var(--knx-surface); padding: 12px 14px; border: 1px solid var(--knx-border); border-radius: var(--knx-radius-card); }
 .project-history-versions button strong { grid-column: 1 / -1; min-width: 0; overflow-wrap: anywhere; font-size: .95rem; }
@@ -36,6 +39,30 @@
 .project-history-versions button small { grid-column: 1 / -1; }
 .project-history-versions button[aria-pressed="true"] { border-color: var(--knx-accent); outline: 1px solid var(--knx-accent); outline-offset: -1px; }
 .project-history-versions button:hover { border-color: var(--knx-border-hover); }
+/* Version timeline: rail and markers are decoration; the list and buttons carry the semantics. */
+.project-history-timeline-section { margin: 18px 0 6px; min-width: 0; }
+.project-history-timeline-section h3 { margin: 0 0 6px; font-size: 1rem; }
+.project-history-timeline-note { margin: 0 0 10px; color: var(--knx-muted); font-size: .78rem; line-height: 1.5; }
+.project-history-timeline-scroll { overflow-x: auto; overflow-y: hidden; max-width: 100%; padding-bottom: 8px; overscroll-behavior-x: contain; }
+.project-history-timeline { list-style: none; margin: 0; padding: 0; display: flex; width: max-content; min-width: 100%; }
+.project-history-timeline > li { position: relative; flex: 0 0 168px; box-sizing: border-box; padding: 24px 6px 0; min-width: 0; }
+.project-history-timeline > li::before { content: ""; position: absolute; top: 8px; inset-inline: 0; height: 2px; background: var(--knx-border); }
+.project-history-timeline > li:first-child::before { inset-inline-start: 50%; }
+.project-history-timeline > li:last-child::before { inset-inline-end: 50%; }
+.project-history-timeline > li:only-child::before { display: none; }
+.project-history-timeline > li::after { content: ""; position: absolute; top: 1px; inset-inline-start: calc(50% - 8px); width: 12px; height: 12px; box-sizing: content-box; border: 2px solid var(--knx-border-hover, var(--knx-border)); border-radius: 50%; background: var(--knx-surface); }
+.project-history-timeline > li:has(button[aria-pressed="true"])::after { background: var(--knx-accent); border-color: var(--knx-accent); }
+.project-history-timeline > li.project-history-timeline-current::after { border-radius: 2px; transform: rotate(45deg); border-style: dashed; border-color: var(--knx-warning-color); }
+.project-history-timeline button,
+.project-history-timeline-current > div { display: grid; gap: 4px; width: 100%; box-sizing: border-box; min-height: 92px; align-content: start; text-align: start; padding: 10px 12px; border: 1px solid var(--knx-border); border-radius: var(--knx-radius-card); }
+.project-history-timeline button { color: var(--knx-foreground); background-color: var(--knx-surface); }
+.project-history-timeline button:hover:not(:disabled) { border-color: var(--knx-border-hover); }
+.project-history-timeline button[aria-pressed="true"] { border-color: var(--knx-accent); outline: 1px solid var(--knx-accent); outline-offset: -1px; }
+.project-history-timeline-current > div { border-style: dashed; border-color: var(--knx-warning-color); color: var(--knx-foreground); }
+.project-history-timeline strong { font-size: .86rem; overflow-wrap: anywhere; hyphens: auto; }
+.project-history-timeline span,
+.project-history-timeline small,
+.project-history-timeline time { color: var(--knx-muted); font-size: .72rem; line-height: 1.35; overflow-wrap: anywhere; }
 .project-history-selection { font-size: .82rem; overflow-wrap: anywhere; margin: 14px 0 8px; }
 .project-history-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 .project-history-actions button { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
@@ -59,6 +86,7 @@
   .project-history-create > div { grid-template-columns: minmax(0, 1fr); }
   .project-history-actions { justify-content: stretch; }
   .project-history-actions button { flex: 1 1 140px; }
+  .project-history-timeline > li { flex-basis: 148px; }
   .project-history-versions button { grid-template-columns: minmax(0, 1fr); }
   .project-history-versions button strong,
   .project-history-versions button small { grid-column: 1; }

@@ -421,8 +421,15 @@ differs. The `+ Add device` rows in the project explorer open the
 a closed Catalogue backups section, manufacturer filter and search, and four fictional
 products. The first list row is highlighted, but no creation form or address preview is open](../../assets/screenshots/porcelain-product-catalog.png)
 
-A row shows `name (number) — description`, as in the screenshot, and the same
-product can appear more
+**Sortable table (26 October 2026 source).** Results use Product, Manufacturer,
+Order number and Application columns. Product starts ascending; click a heading
+to sort by it, then again to reverse the direction. The arrow and accessible
+heading state show the active sort. Numeric text uses natural ordering, so 2
+comes before 10. Empty fields stay last; product/manufacturer ids or a dash make
+missing display values explicit. Sorting is local over the filtered response and
+does not send a new query or alter catalogue data.
+
+The same product can still appear more
 than once — one row per catalog item in the database, including
 several entries that differ only in a number. KNXBench shows what the database
 contains; it does not deduplicate on your behalf.
@@ -437,7 +444,11 @@ old one on purpose, so projects built with the old one keep working.
 The manufacturer select and the search field combine: the search runs on the server
 over the filtered set, a moment after you stop typing. Arrow keys move through the
 results and Enter picks the highlighted one, which fills the name field below — picking
-is not creating.
+is not creating. After reordering, the highlighted and selected products stay
+bound to their catalogue ids, never to a row number. Search-arrow movement has
+a polite status announcement of the highlighted product and its current position.
+The native table scrolls locally on narrow screens; there is no column resizing.
+The Alpha 14 screenshot above predates this table presentation.
 
 ### Installing a product database
 

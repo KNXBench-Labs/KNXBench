@@ -1,12 +1,11 @@
 # Restart snapshot
 
-Updated: 2026-10-26 06:26 CET. Operational snapshot, not an append-only journal.
+Updated: 2026-10-26 07:03 CET. Operational snapshot, not an append-only journal.
 ## Next open tasks (26 October 2026, this WebUI session)
-- WP-21 published/live verified; own tree/claim retired.
-- WP-23 PUBLISHED `903d5d0c1`/`868e91346`, own tree/claim retired after evidence verification.
-- WP-22 PUBLISHED `132070176`, gate11/web32; Vitest4438/browser904, first failure retained.
-  Next: result-doc gate/publish, evidence retirement; selection-only versions, no store change.
-- WP-24 `c8fd79532` APPROVE, isolated feature branch queued after WP-22.
+- WP-21 and WP-23 published; own trees/claims retired after evidence verification.
+- WP-22 PUBLISHED `132070176`, gate11/web32; result docs `d333de5e` gate pending.
+- WP-24 `c8fd79532` independently APPROVE; main-first integration prepared.
+  Next: complete scoped gate, publish/readback, result docs and evidence retirement.
 - Root preserved; no bus/deployment/release. Evidence `<profile>/evidence/next-open-tasks-20261026/`.
 ## Other owners and preservation
 - Root intentionally old/dirty: preserve private/untracked files and other edits.

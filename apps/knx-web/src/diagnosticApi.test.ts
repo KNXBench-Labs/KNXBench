@@ -129,7 +129,9 @@ describe("format 2 admission follows the Rust writer exactly",()=>{
   const evidence=rustSource("device_diagnostics/memory_evidence.rs");
   expect(evidence).toContain(`const MEMORY_REASON: &str = ${JSON.stringify(MEMORY_REASON)};`);
   expect(evidence).toContain(`const NOTICE: &str = ${JSON.stringify(MEMORY_NOTICE)};`);
-  expect(rustSource("device_diagnostics.rs")).toContain(`memory_reason:${JSON.stringify(IDENTITY_MEMORY_REASON)}.into()`);
+  // Whitespace-tolerant: a rustfmt line break must not fail an unchanged string.
+  const escaped=JSON.stringify(IDENTITY_MEMORY_REASON).replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+  expect(rustSource("device_diagnostics.rs")).toMatch(new RegExp(`memory_reason\\s*:\\s*${escaped}\\s*\\.into\\(\\)`));
   for(const change of [
    (v:DiagnosticView)=>{v.memory!.notice="Source-declared candidate locations, not proven runtime addresses.";},
    (v:DiagnosticView)=>{v.memory!.notice=MEMORY_NOTICE+" ";},

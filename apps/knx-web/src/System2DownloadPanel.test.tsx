@@ -273,3 +273,69 @@ it("never calls zero placeholders a backup when prior memory was unreadable", as
   expect(host.querySelector("[data-system2-recovery-unavailable]")!.textContent).toContain("memory");
   expect(host.querySelector("[data-system2-recover]")).toBeNull();
 });
+const text = (selector: string) => host.querySelector(selector)?.textContent ?? "";
+it("renders a typed download diagnosis as a translated observation, not a support claim", async () => {
+  const { downloadFailedStatus } = await import("./system2DownloadTestFixtures");
+  mock.getSystem2Status.mockResolvedValue(downloadFailedStatus); await render();
+  const section = text("[data-system2-diagnostics]");
+  expect(section).toContain("Recorded pointer-read observations"); expect(section).toContain("observations, not a statement about hardware support");
+  expect(section).toContain("Download run"); expect(section).toContain("neither two nor four octets");
+  expect(section).toContain("object 3"); expect(section).toContain("property 7"); expect(section).toContain("elements 1"); expect(section).toContain("octets 3");
+  expect(host.querySelector("[data-system2-diagnostic='download']")).not.toBeNull(); expect(host.querySelector("[data-system2-diagnostic='restore']")).toBeNull();
+  expect(host.querySelector("[data-system2-diagnostic-unavailable]")).toBeNull();
+  expect(host.textContent).not.toContain("unsupportedWidth");
+});
+it("keeps the historical download diagnosis distinct from the current restore reason", async () => {
+  const { restoreFailedStatus } = await import("./system2DownloadTestFixtures");
+  mock.getSystem2Status.mockResolvedValue(restoreFailedStatus); await render();
+  expect(text("[data-system2-diagnostic='download']")).toContain("neither two nor four octets");
+  expect(text("[data-system2-diagnostic='restore']")).toContain("Restore run"); expect(text("[data-system2-diagnostic='restore']")).toContain("element count other than one");
+  expect(text("[data-system2-diagnostic='restore']")).toContain("elements 2"); expect(text("[data-system2-diagnostic='restore']")).toContain("octets 8");
+  expect(text("[data-system2-diagnostic='download']")).not.toContain("element count other than one");
+});
+it("shows 'not available' for a restore failure whose only diagnosis is the prior download", async () => {
+  const { restoreFailedStatus, downloadDiagnostic } = await import("./system2DownloadTestFixtures");
+  mock.getSystem2Status.mockResolvedValue({ ...restoreFailedStatus, failureDiagnostics: [downloadDiagnostic] }); await render();
+  expect(text("[data-system2-diagnostic='download']")).toContain("neither two nor four octets");
+  expect(host.querySelector("[data-system2-diagnostic='restore']")).toBeNull();
+  expect(text("[data-system2-diagnostic-unavailable='restore']")).toContain("no typed pointer-read observation is available");
+});
+it.each([["failed", "download"], ["restoreFailed", "restore"]] as const)("shows 'not available' for %s without typed metadata and never infers it from message or refusal", async (state, run) => {
+  mock.getSystem2Status.mockResolvedValue({ ...status, state, mutationMayHaveStarted: true, refusal: "recoveryRefused", message: "unsupported width: 3 octets, elements 1, object 3" });
+  await render();
+  expect(text(`[data-system2-diagnostic-unavailable='${run}']`)).toContain("no typed pointer-read observation is available");
+  expect(host.querySelector("[data-system2-diagnostic]")).toBeNull();
+});
+it("shows no diagnostics block for an old-wire status or a healthy run", async () => {
+  const { wireV1 } = await import("./system2DownloadTestFixtures");
+  mock.getSystem2Status.mockResolvedValue({ ...wireV1(status), failureDiagnostics: [], state: "finished" }); await render();
+  expect(host.querySelector("[data-system2-diagnostics]")).toBeNull();
+});
+it("renders the diagnosis fully in German", async () => {
+  const { setSetting } = await import("./settingsStore"); const { restoreFailedStatus } = await import("./system2DownloadTestFixtures");
+  await act(async () => setSetting("uiLanguage", "de"));
+  mock.getSystem2Status.mockResolvedValue(restoreFailedStatus); await render();
+  const section = text("[data-system2-diagnostics]");
+  expect(section).toContain("Aufgezeichnete Zeiger-Lesebeobachtungen"); expect(section).toContain("Download-Lauf"); expect(section).toContain("Wiederherstellungslauf");
+  expect(section).toContain("weder zwei noch vier Oktette"); expect(section).toContain("andere Elementanzahl als eins"); expect(section).toContain("Objekt 3"); expect(section).toContain("Oktette 8");
+  expect(section).not.toContain("Download run"); expect(section).not.toContain("octets");
+  await act(async () => setSetting("uiLanguage", "en"));
+});
+it("drops a prior diagnosis when a new operation starts", async () => {
+  const { downloadFailedStatus } = await import("./system2DownloadTestFixtures");
+  mock.getSystem2Status.mockResolvedValue(downloadFailedStatus); await render();
+  expect(host.querySelector("[data-system2-diagnostics]")).not.toBeNull();
+  const fresh = { ...status, operationId: "e".repeat(32) };
+  mock.getSystem2Status.mockResolvedValue(fresh); mock.startSystem2.mockResolvedValue(fresh);
+  await prepare(); await confirmations(); await click("[data-system2-start]");
+  expect(text("[data-system2-status]")).toContain(fresh.operationId);
+  expect(host.querySelector("[data-system2-diagnostics]")).toBeNull(); expect(host.querySelector("[data-system2-diagnostic-unavailable]")).toBeNull();
+});
+it("renders diagnostics without enabling retry or changing recovery", async () => {
+  const { downloadFailedStatus, restoreFailedStatus } = await import("./system2DownloadTestFixtures");
+  mock.getSystem2Status.mockResolvedValue(downloadFailedStatus); await render();
+  expect(mock.startSystem2).not.toHaveBeenCalled(); expect(mock.recoverSystem2).not.toHaveBeenCalled(); expect(consent.request).not.toHaveBeenCalled();
+  expect(host.querySelector("[data-system2-recover]")).toBeNull();
+  mock.getSystem2Status.mockResolvedValue(restoreFailedStatus); await click("[data-system2-refresh]");
+  expect(host.querySelectorAll("[data-system2-recovery]")).toHaveLength(3); expect(host.querySelector<HTMLButtonElement>("[data-system2-recover]")!.disabled).toBe(true);
+});

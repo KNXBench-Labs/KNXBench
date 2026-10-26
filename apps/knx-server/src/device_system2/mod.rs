@@ -57,6 +57,7 @@ fn initial(outcome: LocalOutcome) -> OperationProgress {
         prestate_unreadable_allocations: Vec::new(),
         pointer_observations: Vec::new(),
         program_version_observation: None,
+        failure_diagnostics: Vec::new(),
     }
 }
 impl Record {
@@ -90,7 +91,8 @@ impl Record {
         }
         let phrases = p.recovery_phrases;
         Status {
-            metadata: self.metadata.clone(),
+            schema_version: dto::STATUS_SCHEMA_VERSION,
+            metadata: (&self.metadata).into(),
             state: if running
                 && !matches!(p.outcome, LocalOutcome::Running | LocalOutcome::Restoring)
             {
@@ -161,6 +163,7 @@ impl Record {
                     observed: dto::hex(observed),
                 },
             ),
+            failure_diagnostics: p.failure_diagnostics,
         }
     }
 }

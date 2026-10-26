@@ -131,3 +131,40 @@ it("admits unreadable prestate allocations only with the prestate flag and witho
     { ...unreadableStatus, prestateUnreadableAllocations: Array(257).fill(entry) },
   ]) { reply(value); await expect(system2.getSystem2Status()).rejects.toThrow("System-2"); }
 });
+it("admits the exact legacy v1 status keyset and normalizes it to no diagnostics", async () => {
+  const { wireV1, recoveryStatus: recovery } = await import("./system2DownloadTestFixtures");
+  expect(Object.keys(wireV1(status))).not.toContain("failureDiagnostics");
+  reply(wireV1(status)); expect(await system2.getSystem2Status()).toEqual({ ...status, schemaVersion: 1, failureDiagnostics: [] });
+  reply(wireV1(recovery)); expect(await system2.getSystem2Status()).toEqual({ ...recovery, schemaVersion: 1, failureDiagnostics: [] });
+});
+it("rejects a diagnosis key on v1 and a missing or non-list diagnosis on v2", async () => {
+  const { wireV1, downloadDiagnostic } = await import("./system2DownloadTestFixtures");
+  const { failureDiagnostics: _omitted, ...missing } = status;
+  for (const value of [
+    { ...wireV1(status), failureDiagnostics: [] }, { ...wireV1(status), failureDiagnostics: [downloadDiagnostic] },
+    missing, { ...status, failureDiagnostics: null }, { ...status, failureDiagnostics: {} }, { ...status, schemaVersion: 3 }, { ...status, schemaVersion: 0 },
+  ]) { reply(value); await expect(system2.getSystem2Status()).rejects.toThrow("System-2"); }
+});
+it("admits closed, count-consistent failure diagnostics in order, once per run", async () => {
+  const { downloadDiagnostic, restoreDiagnostic, zeroDiagnostic } = await import("./system2DownloadTestFixtures");
+  for (const failureDiagnostics of [
+    [downloadDiagnostic], [downloadDiagnostic, restoreDiagnostic], [restoreDiagnostic], [zeroDiagnostic],
+    [{ ...downloadDiagnostic, elements: 1, octets: 0 }],
+    [{ ...restoreDiagnostic, octets: 4294967295, elements: 255 }],
+  ]) { const row = { ...status, state: "failed", failureDiagnostics }; reply(row); expect(await system2.getSystem2Status()).toEqual(row); }
+});
+it("rejects malformed, extended, inconsistent, duplicate or misordered failure diagnostics", async () => {
+  const { downloadDiagnostic: d, restoreDiagnostic: r, zeroDiagnostic: z } = await import("./system2DownloadTestFixtures");
+  for (const failureDiagnostics of [
+    [{ ...d, extra: "/private/path" }], [{ ...d, message: "raw" }], [{ ...d, run: "retry" }], [{ ...d, reason: "recovery" }],
+    [{ ...d, reason: "UnsupportedWidth" }], [{ ...d, propertyId: 6 }], [{ ...d, object: 256 }], [{ ...d, object: -1 }], [{ ...d, elements: 256 }],
+    [{ ...d, octets: 4294967296 }], [{ ...d, octets: 1.5 }], [{ ...d, octets: "3" }], [{ ...d, octets: undefined }],
+    [{ run: d.run, reason: d.reason, object: d.object, propertyId: 7, elements: d.elements }],
+    // Count/reason consistency: the Net seam fixes these relations.
+    [{ ...z, elements: 1 }], [{ ...z, octets: 0 }], [{ ...d, elements: 2 }], [{ ...d, octets: 2 }], [{ ...d, octets: 4 }],
+    [{ ...r, elements: 1 }], [{ ...r, elements: 0, octets: 0 }], [{ ...r, elements: 0, octets: 8 }],
+    // One per run, download first.
+    [d, d], [r, r], [r, d], [d, r, d], [d, r, r],
+    42, "download", [null], [[]],
+  ]) { reply({ ...status, state: "failed", failureDiagnostics }); await expect(system2.getSystem2Status()).rejects.toThrow("System-2"); }
+});

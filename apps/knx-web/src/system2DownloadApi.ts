@@ -8,8 +8,14 @@ export interface System2Preview {
   confirmationPhrase: string; hypothesisPhrase: string; downloadPhrase: string; releasePhrase: string;
 }
 export const SYSTEM2_STATES = ["running", "finished", "cancelled", "failed", "interrupted", "restoring", "restored", "restoreFailed"] as const;
+/** Closed, typed observation of a refused PID 7 answer; counts only, never raw bytes or text. */
+export interface System2FailureDiagnostic {
+  run: "download" | "restore"; reason: "zeroElementsWithData" | "elementCount" | "unsupportedWidth";
+  object: number; propertyId: 7; elements: number; octets: number;
+}
+/** Status as the client uses it: wire v1 is normalized to `failureDiagnostics: []`. */
 export interface System2Status {
-  schemaVersion: 1; operationId: string; binding: System2Binding; address: string; deviceName: string; state: typeof SYSTEM2_STATES[number];
+  schemaVersion: 1 | 2; failureDiagnostics: System2FailureDiagnostic[]; operationId: string; binding: System2Binding; address: string; deviceName: string; state: typeof SYSTEM2_STATES[number];
   completedSteps: number; totalSteps: number | null; backupAvailable: boolean; recoveryPhrase: string | null;
   downloadPhrase: string | null; releasePhrase: string | null; message: string | null;
   /** Stable kind of the server refusal that ended this run, if any (issue #30); not persisted. */
@@ -26,6 +32,8 @@ export interface System2Status {
 export interface System2PointerObservation {
   run: "download" | "restore"; phase: "prestate" | "inProcedure" | "final"; object: number; operationIndex: number | null; expected: string; observed: string; loadState: string;
 }
+/** The exact pre-diagnostic status wire: no `failureDiagnostics` key. */
+export type System2StatusWireV1 = Omit<System2Status, "schemaVersion" | "failureDiagnostics"> & { schemaVersion: 1 };
 export type RecoveryTrack = "knxbenchBestEffort" | "externalETS";
 export interface System2Start {
   preparationId: string; gateway: string; confirmation: string; hypothesisConfirmation: string; downloadConfirmation: string; releaseConfirmation: string; recoveryTrack: RecoveryTrack;
@@ -64,18 +72,36 @@ const observations: Check = (v) => Array.isArray(v) && v.length <= 256 && v.ever
 const unreadable = object({ object: (v) => count(v) && (v as number) <= 255, address: (v) => typeof v === "string" && /^[0-9a-f]{4}$/.test(v),
   length: (v) => count(v) && (v as number) > 0 && (v as number) <= 65535 });
 const unreadables: Check = (v) => Array.isArray(v) && v.length <= 256 && v.every(unreadable);
-const statusCheck = object({ ...shared, operationId: id, state: (v) => SYSTEM2_STATES.some((state) => state === v),
+const u8: Check = (v) => count(v) && (v as number) <= 255;
+const diagnostic = object({ run: (v) => v === "download" || v === "restore",
+  reason: (v) => v === "zeroElementsWithData" || v === "elementCount" || v === "unsupportedWidth",
+  object: u8, propertyId: (v) => v === 7, elements: u8, octets: (v) => count(v) && (v as number) <= 4294967295 });
+// The Net seam fixes these relations: (0, data) -> zero; (0, empty) succeeds; (1, 2|4) succeeds; other counts -> elementCount.
+const consistent = (d: System2FailureDiagnostic) => d.reason === "zeroElementsWithData" ? d.elements === 0 && d.octets > 0 :
+  d.reason === "elementCount" ? d.elements >= 2 : d.elements === 1 && d.octets !== 2 && d.octets !== 4;
+// At most one per run, download before restore.
+const diagnostics: Check = (v) => Array.isArray(v) && v.length <= 2 && v.every((d) => diagnostic(d) && consistent(d)) &&
+  (v.length < 2 || (v[0].run === "download" && v[1].run === "restore"));
+const statusFields: Record<string, Check> = { ...shared, operationId: id, state: (v) => SYSTEM2_STATES.some((state) => state === v),
   completedSteps: count, totalSteps: nullable(count), backupAvailable: (v) => typeof v === "boolean", recoveryPhrase: nullable(nonempty),
   downloadPhrase: nullable(nonempty), releasePhrase: nullable(nonempty), message: nullable(text), refusal: nullable(token),
   mutationMayHaveStarted: flag, prestateDiffers: flag, pointerObservations: observations,
   programVersionObservation: nullable(object({ expected: hexBytes, observed: hexBytes })),
-  prestateUnreadableAllocations: unreadables });
+  prestateUnreadableAllocations: unreadables };
+// Strict version route: v1 is the old keyset, v2 requires the diagnosis list; neither may borrow the other's keys.
+const statusV1 = object({ ...statusFields, schemaVersion: (v: unknown) => v === 1 });
+const statusV2 = object({ ...statusFields, schemaVersion: (v: unknown) => v === 2, failureDiagnostics: diagnostics });
+const statusCheck: Check = (v) => (v as { schemaVersion?: unknown } | null)?.schemaVersion === 2 ? statusV2(v) : statusV1(v);
 function checked<T>(value: unknown, check: Check): T {
   if (!check(value)) throw new Error("Invalid System-2 response; operation outcome is not confirmed.");
   return value as T;
 }
 function checkedStatus(value: unknown): System2Status {
   const row = checked<System2Status>(value, statusCheck);
+  if (row.schemaVersion === 1) return checkedStatusBody({ ...row, failureDiagnostics: [] });
+  return checkedStatusBody(row);
+}
+function checkedStatusBody(row: System2Status): System2Status {
   if (row.totalSteps !== null && row.completedSteps > row.totalSteps) throw new Error("Invalid System-2 checkpoint counts.");
   if (row.recoveryPhrase === null ? row.downloadPhrase !== null || row.releasePhrase !== null : row.downloadPhrase === null || row.releasePhrase === null) {
     throw new Error("Invalid System-2 original-operation recovery acknowledgements.");

@@ -1,11 +1,13 @@
 /** Intercepted real-app wiring evidence, not backend or hardware acceptance. */
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 import { messages as de } from "../src/messages/de";
 import { dismissToasts, openProject } from "./communication-fixture";
 import { openNavigationSections } from "./disclosure-fixture";
-import { preview, status, recoveryStatus } from "../src/system2DownloadTestFixtures";
+import { preview, status, recoveryStatus, restoreFailedStatus, downloadFailedStatus, wireV1 } from "../src/system2DownloadTestFixtures";
 import type { ProjectTree } from "../src/bindings/ProjectTree";
-import type { System2Status } from "../src/system2DownloadApi";
+import type { System2Status, System2StatusWireV1 } from "../src/system2DownloadApi";
 import { messages as en } from "../src/messages/en";
 const tree: ProjectTree = { schema_version: 1, errors: 0, warnings: 0, can_undo: false, can_redo: false, is_modified: false,
   group_address_style: "ThreeLevel", server_incarnation: "server", project_incarnation: 1, snapshot_revision: 1,
@@ -13,7 +15,7 @@ const tree: ProjectTree = { schema_version: 1, errors: 0, warnings: 0, can_undo:
 
 async function interceptSystem2(page: Page, language: "en" | "de" = "en") {
   const unexpected: string[] = []; const commands: { path: string; body: unknown }[] = [];
-  const state = { projectOpen: false, operation: null as System2Status | null, busyLocks: [] as string[] };
+  const state = { projectOpen: false, operation: null as System2Status | System2StatusWireV1 | null, raw: null as string | null, busyLocks: [] as string[] };
   await page.route("**/api/**", (route) => {
     const request = route.request(); const path = new URL(request.url()).pathname; const method = request.method();
     const json = (body: unknown, code = 200) => route.fulfill({ status: code, contentType: "application/json", body: JSON.stringify(body) });
@@ -30,7 +32,11 @@ async function interceptSystem2(page: Page, language: "en" | "de" = "en") {
     if (path === "/api/product-languages" && method === "GET") return json([]);
     if (method === "GET" && ["/api/achievements", "/api/project/status-metrics", "/api/bus/monitor/telegrams"].includes(path)) return json({ error: "Not available in this isolated fixture" }, 404);
     if (path === "/api/version") return json({ version: "0.1.0-alpha.16" });
-    if (path === "/api/device-system2/status" && method === "GET") return json(state.operation);
+    if (path === "/api/device-system2/status" && method === "GET") {
+      // A captured body is served byte for byte; it is never parsed or patched here.
+      if (state.raw !== null) return route.fulfill({ status: 200, contentType: "application/json", body: state.raw });
+      return json(state.operation);
+    }
     if (path.startsWith("/api/device-system2/") && method === "POST") {
       commands.push({ path, body: request.postDataJSON() });
       if (path.endsWith("/prepare")) return json(preview);
@@ -119,5 +125,102 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
       path: `${process.env.SYSTEM2_UI_CAPTURE}/refusal-${language}-${width}.png`,
     });
     expect(commands).toEqual([]); expect(unexpected).toEqual([]); expect(foreign).toEqual([]);
+  });
+}
+
+for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
+  test(`${language} safe pointer-failure diagnosis reaches the mounted panel at ${width}px`, async ({ page }) => {
+    const m = language === "en" ? en : de;
+    const { state, commands, unexpected } = await interceptSystem2(page, language);
+    await page.setViewportSize({ width, height: 1000 });
+    await openProject(page, language); await dismissToasts(page, language);
+    await page.keyboard.press("Control+Shift+P");
+    await page.getByRole("combobox").fill(m["toolbar.busMonitor"]);
+    await page.getByRole("combobox").press("Enter");
+    await page.getByRole("button", { name: m["deviceDownload.title"], exact: true }).click();
+    await page.locator("[data-download-mode]").selectOption("system2");
+    const refresh = async (operation: System2Status | System2StatusWireV1 | null) => { state.operation = operation; await page.locator("[data-system2-refresh]").click(); };
+    const observed = page.locator("[data-system2-diagnostics]");
+    // Both runs: the historical download stays distinct from the current restore reason.
+    await refresh(restoreFailedStatus);
+    await expect(observed).toContainText(m["system2.diagnostics"]);
+    await expect(page.locator("[data-system2-diagnostic='download']")).toContainText(m["system2.diagnostic.reason.unsupportedWidth"]);
+    await expect(page.locator("[data-system2-diagnostic='restore']")).toContainText(m["system2.diagnostic.reason.elementCount"]);
+    await expect(page.locator("[data-system2-diagnostic='restore']")).toContainText(m["system2.diagnostic.run.restore"]);
+    const shown = (await observed.innerText());
+    for (const raw of ["unsupportedWidth", "elementCount", "zeroElementsWithData", "propertyId", "/private", "recovery-key"]) expect(shown).not.toContain(raw);
+    const box = await observed.boundingBox(); expect(box).not.toBeNull();
+    expect(box!.x + box!.width).toBeLessThanOrEqual(width + 1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+    if (process.env.SYSTEM2_UI_CAPTURE) await observed.screenshot({ path: `${process.env.SYSTEM2_UI_CAPTURE}/diagnosis-${language}-${width}.png` });
+    // Only the prior download is known: the restore reason is shown as unavailable.
+    await refresh({ ...restoreFailedStatus, failureDiagnostics: restoreFailedStatus.failureDiagnostics.slice(0, 1) });
+    await expect(page.locator("[data-system2-diagnostic='download']")).toBeVisible();
+    await expect(page.locator("[data-system2-diagnostic='restore']")).toHaveCount(0);
+    await expect(page.locator("[data-system2-diagnostic-unavailable='restore']")).toBeVisible();
+    // An old v1 status carries no diagnosis: unavailable, and never inferred from the message.
+    await refresh({ ...wireV1(downloadFailedStatus), refusal: "recoveryRefused", message: "unsupported width: 3 octets" });
+    await expect(page.locator("[data-system2-diagnostic-unavailable='download']")).toBeVisible();
+    await expect(page.locator("[data-system2-diagnostic]")).toHaveCount(0);
+    // A new operation never keeps a stale diagnosis.
+    await refresh(downloadFailedStatus);
+    await expect(page.locator("[data-system2-diagnostic='download']")).toBeVisible();
+    await refresh({ ...status, operationId: "f".repeat(32) });
+    await expect(page.locator("[data-system2-status]")).toContainText("f".repeat(32));
+    await expect(observed).toHaveCount(0);
+    expect(commands).toEqual([]); expect(unexpected).toEqual([]);
+  });
+}
+
+// Opt-in join against the backend's own emitted status bodies (private capture directory, never committed).
+// Source statuses: download object 1 elementCount (2 elements, 2 octets); restore object 2 unsupportedWidth (1 element, 3 octets).
+const capture = process.env.KNXBENCH_S2_DIAGNOSTIC_CAPTURE;
+const download = { run: "download", reason: "elementCount", object: 1, elements: 2, octets: 2 } as const;
+const restore = { run: "restore", reason: "unsupportedWidth", object: 2, elements: 1, octets: 3 } as const;
+const CAPTURED = [
+  ["download-failed.json", [download]], ["reopened-download.json", [download]], ["restoring.json", [download]],
+  ["restore-failed.json", [download, restore]], ["reopened-restore.json", [download, restore]],
+] as const;
+// Register private-capture witnesses only for the explicit opt-in invocation. The default
+// gate must contain only executable cases, never skipped placeholders for absent private input.
+if (capture) for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
+  test(`${language} backend-emitted status bodies render their two labeled reasons at ${width}px`, async ({ page }, testInfo) => {
+    const m = language === "en" ? en : de;
+    const { state, commands, unexpected } = await interceptSystem2(page, language);
+    await page.setViewportSize({ width, height: 1000 });
+    await openProject(page, language); await dismissToasts(page, language);
+    await page.keyboard.press("Control+Shift+P");
+    await page.getByRole("combobox").fill(m["toolbar.busMonitor"]);
+    await page.getByRole("combobox").press("Enter");
+    await page.getByRole("button", { name: m["deviceDownload.title"], exact: true }).click();
+    await page.locator("[data-download-mode]").selectOption("system2");
+    for (const [file, expected] of CAPTURED) {
+      const body = readFileSync(join(capture!, file), "utf8");
+      await testInfo.attach(file, { body, contentType: "application/json" });
+      state.raw = body;
+      // Two refreshes: the retained status must read back identically.
+      for (let read = 0; read < 2; read++) {
+        await page.locator("[data-system2-refresh]").click();
+        const block = page.locator("[data-system2-diagnostics]");
+        await expect(block).toBeVisible();
+        await expect(block.locator("[data-system2-diagnostic]")).toHaveCount(expected.length);
+        for (const d of expected) {
+          const entry = m["system2.diagnostic.entry"]
+            .replace("{run}", m[`system2.diagnostic.run.${d.run}`]).replace("{reason}", m[`system2.diagnostic.reason.${d.reason}`])
+            .replace("{object}", String(d.object)).replace("{property}", "7").replace("{elements}", String(d.elements)).replace("{octets}", String(d.octets));
+          await expect(block.locator(`[data-system2-diagnostic='${d.run}']`)).toHaveText(entry);
+        }
+        await expect(block.locator("[data-system2-diagnostic-unavailable]")).toHaveCount(0);
+        const shown = await block.innerText();
+        for (const raw of ["b7e5", "919293", "/home/", "/tmp/", "/mnt/", "elementCount", "unsupportedWidth"]) expect(shown).not.toContain(raw);
+      }
+      if (process.env.SYSTEM2_UI_CAPTURE) await page.locator("[data-system2-status]").screenshot({
+        path: `${process.env.SYSTEM2_UI_CAPTURE}/emitted-${file.replace(".json", "")}-${language}-${width}.png`,
+      });
+    }
+    const box = await page.locator("[data-system2-diagnostics]").boundingBox(); expect(box).not.toBeNull();
+    expect(box!.x + box!.width).toBeLessThanOrEqual(width + 1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+    expect(commands).toEqual([]); expect(unexpected).toEqual([]);
   });
 }

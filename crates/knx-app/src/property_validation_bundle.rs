@@ -236,7 +236,16 @@ impl PreparedBundle {
             &self.hardware_preparation,
         ) {
             (1, None, None, None) => {
-                if self.binding.profile_version != 1 {
+                // Defaults profile v1 (superseded) or v2; ValidationProfile binds each policy.
+                let defaults = match self.binding.profile_version {
+                    1 => true,
+                    2 => self
+                        .binding
+                        .profile_id
+                        .ends_with(crate::system2_validation_preparation::DEFAULTS_V2_ID_SUFFIX),
+                    _ => false,
+                };
+                if !defaults {
                     return Err(invalid("unsupported legacy validation profile version"));
                 }
             }

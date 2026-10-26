@@ -22,6 +22,7 @@ use knx_net::commissioning::{
 use std::{sync::atomic::AtomicBool, time::Duration};
 
 mod send_boundary;
+mod superseded_defaults_profile;
 
 const SERIAL: [u8; 6] = [0, 2, 1, 2, 3, 4];
 const VERSION: [u8; 5] = [0, 2, 0x12, 0x34, 1];
@@ -394,7 +395,11 @@ fn property_validation_rebind_hardware_swaps_serial_and_marks_physical() {
 }
 #[tokio::test]
 async fn property_validation_execute_hardware_refuses_wrong_phrases_before_any_frame() {
-    let (device, bundle) = fixture();
+    let (device, mut bundle) = fixture();
+    // Profile v2: the superseded v1 refusal must not mask the phrase checks.
+    bundle.binding.profile_version = 2;
+    bundle.binding.profile_id = "synthetic-defaults-v2".into();
+    let bundle = PreparedBundle::new(bundle.binding, bundle.normalized_plan).unwrap();
     let rebound = bundle.rebind_hardware([0, 7, 0, 1, 2, 3]).unwrap();
     let target = rebound.plan().unwrap().target();
     let download = knx_core::commissioning::mutation::required_confirmation_phrase(

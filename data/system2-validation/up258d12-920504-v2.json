@@ -1,0 +1,22 @@
+{
+  "format": 1,
+  "id": "up258d12-920504-defaults-v2",
+  "version": 2,
+  "classification": "strong-hypothesis-simulator-validation-only",
+  "configuration": "complete-defaults-no-links-v1",
+  "program_id": "M-0001_A-9205-04-9270",
+  "schema_namespace": "http://knx.org/xml/project/20",
+  "source_sha256": "d06a04eb4434684762f276e6fce61fbae6056f94f9076f5fcf5b7a314bb0a746",
+  "package_sha256": "520d3fcee5b63d079ac7d0bd5e7ce9467ff84cb5cde06ac341b77aba47e3ee0f",
+  "mask": 37,
+  "manufacturer": 1,
+  "hardware": [0, 1, 0, 0, 0, 91],
+  "application": [0, 1, 146, 5, 4],
+  "numeric_order": "high-octet-first-explicit-or-schema-default-v1",
+  "bit_union_offsets": "msb0-byte-aligned-union-relative-v1",
+  "legacy_patch_always": "inactive-default-ref-consensus-active-wins-v1",
+  "invisible_parameters": "background-parameter-default-union-base-active-overlay-v1",
+  "binary_restrictions": "single-octet-enumeration-binary-payload-v1",
+  "reference_activation": "schema10-no-dynamic-reference-is-active-v1",
+  "procedure_policy": "source-capacity-preserving-independent-data-v1"
+}

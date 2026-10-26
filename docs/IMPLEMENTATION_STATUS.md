@@ -13,6 +13,16 @@ archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
 
+## Selective website typing (26 October 2026)
+
+WP-21 is published as `b517930e7`: only the hero and Features headings type,
+with an inline finite blinking cursor and static/reduced-motion fallback.
+Independent review and correction re-review approve; the 11-stage scoped gate,
+737 preview checks and 81 public-build checks passed. Pages deployment succeeded;
+seven live responses match the accepted artifact and 41 deployed-host typing
+checks pass ([acceptance](status/2026-10-26-website-headline-typing.md)). No
+application release, native-assistive-technology or bus claim is added.
+
 ## Service-aware memory transfer budgets (26 October 2026 source)
 
 The existing memory path now composes a conservative standard-frame policy for

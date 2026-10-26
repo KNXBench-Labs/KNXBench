@@ -1,11 +1,12 @@
 # Restart snapshot
 
-Updated: 2026-10-26 05:26 CET. Operational snapshot, not an append-only journal.
-## Website WP-21 (2026-10-26, taken by this WebUI task session)
-- Owner Go: next open tasks; WP-21 Pages publication explicitly approved after tests.
-- Branch `feat/wp21-headline-typing-20261026`; website/tests only; WP-23 parallel.
-- Typing implemented; blink defect reproduced and corrected; independent re-review pending.
-- Next: frozen integrated gate, full website browser acceptance, Pages/live readback.
+Updated: 2026-10-26 05:40 CET. Operational snapshot, not an append-only journal.
+## Next open tasks (26 October 2026, this WebUI session)
+- WP-21 PUBLISHED `b517930e7`, APPROVE, gate11, preview737/public81/live41 checks.
+  Pages `40270028993` succeeded; seven live files byte-equal. Claim released.
+- WP-23 source reviewed; own main-first integration pending complete scoped web gate.
+- WP-22/24 implement on their named isolated branches; no release/bus authority.
+- Root preserved. Next: WP-21 result-doc gate/publication, then WP-23 gate/delivery.
 ## Other owners and preservation
 - Root intentionally old/dirty: preserve private/untracked files and other edits.
   Alpha16 belongs to another track. No release/deployment/hardware authority.

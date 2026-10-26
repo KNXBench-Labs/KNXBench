@@ -1,7 +1,7 @@
 # Regular-download failure diagnostic (DIAG-02)
 
-Status: implemented on a feature branch (26 October 2026); software-tested
-only, no hardware run. Origin and acceptance: [DIAG-02](../open-work/DIAG-02-download-failure-evidence.md).
+Status: delivered on `main` as `4209645b4` (26 October 2026); software-tested
+only, no hardware run ([delivery](../status/2026-10-26-download-failure-diagnostic.md)). Origin and acceptance: [DIAG-02](../open-work/DIAG-02-download-failure-evidence.md).
 
 ## Problem
 

@@ -26,8 +26,9 @@ or new compatibility claim. [Sources, measured behaviour and decision](research/
 
 ## Regular-download failure diagnostic, DIAG-02 (26 October 2026 source)
 
-Implemented on a branch after the owner's Go; independent review, package gate and
-publication pending. A failed server/web memory download now keeps one payload-free
+Delivered on `main` as `4209645b4` after the owner's Go; change-scoped 15/15 package gate
+green (2,686 Rust tests in 14 binaries, 91/91 corpus cases, 968 browser tests, frozen inputs,
+no touched user data); local/tracking/live readback equal. A failed server/web memory download now keeps one payload-free
 diagnostic (`knx_app::download_failure::DownloadFailure`: closed cause code and
 category, phase and plan step without octets, restart `notInPlan`/`notSent`/`unknown`,
 octets read back unchanged) in the server status, one `error` session-log entry

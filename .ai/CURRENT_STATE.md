@@ -1,13 +1,13 @@
 # Restart snapshot
 
-Updated: 2026-10-26 06:23 CET. Operational snapshot, not an append-only journal.
+Updated: 2026-10-26 06:26 CET. Operational snapshot, not an append-only journal.
 ## Next open tasks (26 October 2026, this WebUI session)
-- WP-21 PUBLISHED `b517930e7`/`82eca9e21`, live verified; own tree/claim retired.
-- WP-23 PUBLISHED `903d5d0c1`, APPROVE, gate11/web36; Vitest4419, browser773 +152/56.
-  Next: result-doc gate/publication, verified evidence retirement; no bus/deployment.
-- WP-22 `a56fb360` and WP-24 `c8fd79532` reviewed; own feature branches queued.
-  Next order: main-first WP-22 gate/delivery, then WP-24; no new release authority.
-- Root preserved. Evidence `<profile>/evidence/next-open-tasks-20261026/`.
+- WP-21 published/live verified; own tree/claim retired.
+- WP-23 PUBLISHED `903d5d0c1`/`868e91346`, gate11/web36/docs10; retirement next.
+- WP-22 `a56fb360` APPROVE; `integrate/wp22-project-timeline-20261026` ready for gate.
+  Selection-only native versions; no backend/store/replay change. Next: gate/publish/retire.
+- WP-24 `c8fd79532` APPROVE, isolated feature branch queued after WP-22.
+- Root preserved; no bus/deployment/release. Evidence `<profile>/evidence/next-open-tasks-20261026/`.
 ## Other owners and preservation
 - Root intentionally old/dirty: preserve private/untracked files and other edits.
   Alpha16 belongs to another track. No release/deployment/hardware authority.

@@ -23,7 +23,7 @@ belongs to the generic identity profile only; neither those runs nor the
 owner's normal-operation observation validate the memory profile. A fully
 silent identity-profile target remains unobserved.
 
-**26 October 2026 (DIAG-01, unmerged branch):** the web dialog and HTTP
+**26 October 2026 (DIAG-01, delivered as `a4bb0aa4e`):** the web dialog and HTTP
 preview offer the same profile through the same service, with the product
 database required as for the CLI. A memory run stopped before its tunnel for a
 setup reason (busy interface, failed connection, context change, server

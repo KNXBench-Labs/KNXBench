@@ -1,9 +1,9 @@
 # WP-21 — Selective live-typing headlines on the website
 
-Owner request: 25 October 2026. Implementation authorised on 26 October 2026
-with the next-open-tasks assignment; publication through Pages explicitly approved.
-Status: implemented locally; review corrections, package gates and publication pending.
-No application release is assigned.
+Status: delivered and published on 26 October 2026 as `b517930e7`.
+Owner authorised implementation through the next-open-tasks assignment and
+explicitly approved Pages publication after green tests. No application release
+is assigned. [Acceptance](../status/2026-10-26-website-headline-typing.md).
 
 ## Requested outcome
 

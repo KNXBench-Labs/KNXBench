@@ -1,5 +1,11 @@
 # Roadmap
 
+Website task WP-21 is delivered and deployed (`b517930e7`), with reviewed
+selective typing, static/reduced-motion fallback and exact live artifact/browser
+readback ([acceptance](status/2026-10-26-website-headline-typing.md)). WP-22,
+WP-23 and WP-24 remain separate application tasks; website delivery closes none
+of their history, Flow or catalogue requirements.
+
 System-2 [S2-01](open-work/S2-01-pid7-raw-response.md) is P1: the private diagnostic prefix is
 published as `5f1ad454e` after review and integrated acceptance
 ([record](status/2026-10-25-system2-pid7-diagnostic.md)), but the width model and safe recovery

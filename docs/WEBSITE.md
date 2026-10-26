@@ -90,6 +90,12 @@ headings retain the treatment below. The real-Chromium recipe is
 claimed. Source implementation and preview tests do not establish deployment;
 publication evidence is recorded separately after the Pages workflow and readback.
 
+Published as `b517930e7` after independent review, correction re-review, the
+11-stage scoped gate and Chromium acceptance (737 preview checks, 81 public-build
+checks). Pages workflow `40270028993` succeeded; seven live responses match the
+accepted artifact byte-for-byte and the deployed host passed the 41-check typing
+recipe. [Acceptance](status/2026-10-26-website-headline-typing.md).
+
 ## Reversible headline entrances (18 October 2026)
 
 Marketing `main h1/h2/h3` headings (except the two WP-21 typing headings below)

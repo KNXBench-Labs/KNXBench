@@ -2,8 +2,11 @@
 
 **Priority:** P1. **Status:** Private diagnostic delivered (`5f1ad454e`);
 exact-profile width correction published as `54b052885`, reviewed and integrated-gate accepted
-([record](../status/2026-10-26-up258-pid7-width.md)). Safe structured
-status/report projection remains a separate open slice.
+([record](../status/2026-10-26-up258-pid7-width.md)). The safe structured
+status/report projection is implemented as a candidate in the working tree,
+**pending independent review, full gates and parent acceptance**; it is neither
+published nor accepted, so this item stays open
+([dossier](../status/2026-10-26-system2-safe-diagnostic-projection.md)).
 Listed in [OPEN_WORK](../OPEN_WORK.md). Origin: GitHub issue #30.
 
 ## Current evidence
@@ -47,15 +50,24 @@ paths passed on the published source, including the complete 15-stage integrated
 The small typed, non-raw Net refusal seam is implemented for the next slice;
 it is not by itself durable status/report projection.
 
-## Remaining safe projection
+## Remaining safe projection (implementation pending acceptance)
 
-The private failure journal retains the bounded raw diagnostic. Do not expose
-that diagnostic, arbitrary exception text or raw bytes to HTTP/shareable output.
-A follow-up must carry a typed allowlist (closed reason, object, property and
-counts) from the read through a strictly versioned checkpoint/reopen contract,
-DTO, report and EN/DE UI. Legacy absence must remain unknown; never parse old
-free text to manufacture structured evidence. Coordinate its shared journal/error
-surfaces with the width owner before editing.
+The private failure journal retains the bounded raw diagnostic. Raw text, arbitrary
+exception text and raw bytes stay out of HTTP/shareable output. A candidate
+implementation now carries a closed six-key typed diagnostic `{run, reason, object,
+propertyId, elements, octets}` from the read through a strictly versioned
+checkpoint/reopen contract, DTO, shareable report and EN/DE panel
+([contract](../contracts/system2-safe-failure-diagnostic.md)). Reasons are closed
+(`zeroElementsWithData`, `elementCount`, `unsupportedWidth`); `object`,
+`propertyId` and `elements` are u8, `octets` is u32, and counts may be 0. Conversion
+is typed only: legacy and untyped failures (including legacy-policy refusals) and old
+journals stay without a diagnostic and are never backfilled from free text.
+
+Open until accepted: independent review, the maintained full gates and the parent's
+acceptance decision. Until then no count, revision or delivery is claimed. A
+diagnostic is a bounded observation, not a hardware-support grant, a retry or a
+recovery route. The shared journal/error surfaces were coordinated with the width
+owner (already published as `54b052885`).
 
 ## Retained boundaries
 

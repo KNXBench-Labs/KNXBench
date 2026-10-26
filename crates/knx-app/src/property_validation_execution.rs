@@ -4,7 +4,7 @@
 //! `restore_hardware`, which require a device- and operation-specific
 //! [`HardwareRelease`] consent (ADR-0152); the simulator entry is unchanged.
 use crate::{
-    property_validation::{Checkpoint, FailureCode, OperationStore},
+    property_validation::{Checkpoint, FailureCode, OperationStore, PointerFailureRecord},
     property_validation_bundle::{
         invalid, PointerObservationRecord, PreparedBundle, RecoveryRecord,
     },
@@ -268,6 +268,7 @@ pub async fn execute_simulated(
                 Checkpoint::Failed {
                     code: failure_code(&error.failure),
                     local_diagnostic: format!("{error:?}"),
+                    pointer_failure: PointerFailureRecord::from_failure(&error.failure),
                 }
             };
             store.checkpoint(checkpoint)?;
@@ -316,6 +317,7 @@ pub async fn restore_simulated(
             store.checkpoint(Checkpoint::RestoreFailed {
                 code: failure_code(&error.failure),
                 local_diagnostic: format!("{error:?}"),
+                pointer_failure: PointerFailureRecord::from_failure(&error.failure),
             })?;
             Err(invalid(
                 "explicit restore failed; original recovery retained, no automatic retry",
@@ -402,6 +404,7 @@ pub(crate) async fn execute_hardware_inner<T: ManagementTransport>(
                 Checkpoint::Failed {
                     code: failure_code(&error.failure),
                     local_diagnostic: format!("{error:?}"),
+                    pointer_failure: PointerFailureRecord::from_failure(&error.failure),
                 }
             };
             store.checkpoint(checkpoint)?;
@@ -497,6 +500,7 @@ pub(crate) async fn restore_hardware_inner<T: ManagementTransport>(
             store.checkpoint(Checkpoint::RestoreFailed {
                 code: failure_code(&error.failure),
                 local_diagnostic: format!("{error:?}"),
+                pointer_failure: PointerFailureRecord::from_failure(&error.failure),
             })?;
             Err(invalid(
                 "explicit restore failed; original recovery retained, no automatic retry",

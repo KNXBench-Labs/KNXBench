@@ -327,6 +327,20 @@ do not automatically repeat a start. No safety check or recovery admission is
 relaxed. These changes require an unreleased source build, not an older binary.
 The actual reporter-side failure in issue #30 remains under investigation.
 
+### A refused table-pointer answer: typed observation (candidate source, pending acceptance)
+
+In a source build that carries the S2-01 candidate (not yet reviewed, gated or
+published; not in any release), a download or explicit recovery that stops on a
+malformed table-pointer (PID 7) answer shows a **Failure diagnostic** per run
+(download, restore): the closed reason, object, property and the element and octet
+counts the device reported. Counts can be 0. It never shows the device's raw bytes,
+exception text, paths or keys. Where the failure has no typed record, the panel says
+the diagnostic is **unavailable**. It does not guess from the message. This is what
+KNXBench saw, not a cause, a hardware-support statement or permission to retry; the
+same operation is not retried, and a new operation starts with no diagnostic.
+Keep the private journal, which still holds the raw prefix, and do not post it.
+[Contract](../../contracts/system2-safe-failure-diagnostic.md).
+
 ### Original-state recovery, not a second download
 
 Status reattaches the durable **selected original operation**, including after a

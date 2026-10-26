@@ -156,6 +156,8 @@ fn old_device() -> Arc<SimulatedDevice> {
     Arc::new(device)
 }
 
+/// Armed PID 7 answer replacement: (object, read index of that object, elements, data).
+type Pid7Fault = (u8, usize, u8, Vec<u8>);
 struct TestHardware {
     observation: Arc<super::super::test_observation::Observation>,
     transport_observation: Mutex<TransportObservation>,
@@ -171,6 +173,8 @@ struct TestHardware {
     pause_data_write: AtomicBool,
     data_written: Notify,
     release_write: Notify,
+    pid7_fault: Mutex<Option<Pid7Fault>>,
+    pid7_reads: Mutex<std::collections::BTreeMap<u8, usize>>,
 }
 impl TestHardware {
     fn new(data: &Path) -> Arc<Self> {
@@ -190,7 +194,36 @@ impl TestHardware {
             pause_data_write: AtomicBool::new(true),
             data_written: Notify::new(),
             release_write: Notify::new(),
+            pid7_fault: Mutex::new(None),
+            pid7_reads: Mutex::default(),
         })
+    }
+    /// Replace exactly one later PID 7 answer; read indices count from this call.
+    fn arm_pid7(&self, object: u8, index: usize, elements: u8, data: &[u8]) {
+        *self.pid7_fault.lock().unwrap() = Some((object, index, elements, data.to_vec()));
+        self.pid7_reads.lock().unwrap().clear();
+    }
+    fn disarm_pid7(&self) {
+        *self.pid7_fault.lock().unwrap() = None;
+    }
+    fn rewrite_pid7(&self, service: &mut ApplicationService) {
+        if let ApplicationService::PropertyValueResponse {
+            object_index,
+            property_id: 7,
+            nr_of_elem,
+            data,
+            ..
+        } = service
+        {
+            let mut reads = self.pid7_reads.lock().unwrap();
+            let index = reads.entry(*object_index).or_default();
+            if let Some((object, at, elements, bytes)) = &*self.pid7_fault.lock().unwrap() {
+                if object == object_index && at == index {
+                    (*nr_of_elem, *data) = (*elements, bytes.clone());
+                }
+            }
+            *index += 1;
+        }
     }
     // Observe bytes from the real worker's committed journal while it owns its
     // exclusive OperationStore lock. No second opener, checkpoint injection or
@@ -275,7 +308,9 @@ impl TestHardware {
         for index in 0..=sequence {
             let bytes = std::fs::read(journal.join(format!("checkpoint-{index:08}.json"))).unwrap();
             let envelope: Value = serde_json::from_slice(&bytes).unwrap();
-            assert_eq!(envelope["format"], 1);
+            // Version 2 marks exactly a populated typed failure record.
+            let typed = envelope["checkpoint"].get("pointer_failure").is_some();
+            assert_eq!(envelope["format"], if typed { 2 } else { 1 });
             assert_eq!(envelope["kind"], "knxbench-property-validation-protocol");
             assert_eq!(envelope["sequence"], index);
             assert_eq!(envelope["previous_sha256"], previous);
@@ -447,7 +482,31 @@ impl crate::BusTunnel for TestHardwareTunnel {
         ManagementTransport::assigned_address(self.0.device.as_ref())
     }
     fn subscribe(&self) -> broadcast::Receiver<TunnelEvent> {
-        ManagementTransport::subscribe(self.0.device.as_ref())
+        let mut upstream = ManagementTransport::subscribe(self.0.device.as_ref());
+        if self.0.pid7_fault.lock().unwrap().is_none() {
+            return upstream;
+        }
+        let (sender, receiver) = broadcast::channel(256);
+        let hardware = self.0.clone();
+        tokio::spawn(async move {
+            loop {
+                match upstream.recv().await {
+                    Ok(TunnelEvent::Telegram(mut frame)) => {
+                        hardware.rewrite_pid7(&mut frame.service);
+                        if sender.send(TunnelEvent::Telegram(frame)).is_err() {
+                            break;
+                        }
+                    }
+                    Ok(TunnelEvent::Closed) => {
+                        let _ = sender.send(TunnelEvent::Closed);
+                        break;
+                    }
+                    Err(broadcast::error::RecvError::Lagged(_)) => continue,
+                    Err(broadcast::error::RecvError::Closed) => break,
+                }
+            }
+        });
+        receiver
     }
     fn send(
         &self,
@@ -1240,3 +1299,6 @@ async fn worker_activity_refusal_reaches_status_without_touching_the_bus() {
         .refused_without_effect("system2ActivityUnavailable")
         .await;
 }
+
+#[path = "mounted_failure_diagnostic.rs"]
+mod failure_diagnostic;

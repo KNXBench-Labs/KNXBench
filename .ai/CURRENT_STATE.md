@@ -1,17 +1,20 @@
 # Restart snapshot
 
 Updated: 2026-10-26 19:17 CET. Operational snapshot, not an append-only journal.
-## S2-01 safe diagnostic projection (ACTIVE; dependency RELEASED, observed 19:17 CET)
-- User go: continue through reviewed/gated publication after width dependency release.
+## S2-01 safe diagnostic projection (REVIEWED; package gates pending, observed 20:14 CET)
+- User go through reviewed/gated publication remains; width dependency RELEASED on `3ec5258f7`.
 - Own `<sources>/knxbench-system2-safe-failure-20261026`, branch
-  `feat/system2-safe-failure-projection-20261026`, rebased by fast-forward to `3ec5258f7`.
-- Own App failure/checkpoint/progress/report grammar, Server System2 DTO/status/tests,
-  Web strict decoder/mounted EN/DE diagnostics/tests; Net typed refusal seam consumed unchanged.
-- Scope: closed reason/object/property/count allowlist, durable replay, explicit version route;
-  preserve private diagnostic; legacy absence unknown; no text parsing/backfill or admission change.
-- Next TDD simulator producer-to-journal/reopen/HTTP/report/UI, independent review and full relevant gates.
-- No own worker/gate yet; evidence `<profile>/evidence/system2-safe-failure-20261026/`.
-- No bus/hardware/vendor/release/deployment; preserve foreign dirty root and other tracks.
+  `feat/system2-safe-failure-projection-20261026`; App/Server/Web diagnostic grammar and tests.
+- Independent whole-feature and focused correction reviews APPROVE; runtime unchanged in correction.
+- Original App/Web semantic RED retained; simulator/reopen/writer/HTTP proofs green;
+  unchanged real HTTP bytes→production-bundle EN/DE×wide/narrow4 green, capture hashes verified.
+- Full Vitest4553/306files earlier green; corrected App6/layout4/docs green. Package gates pending.
+- M2 redundant guard not individually tested; M3/M4 deliberate client/UI boundaries documented.
+- Old ignored pinned cancellation timeout also fails base, remains red; no physical support claim.
+- No implementation publication yet. Next candidate commit→maintained branch15→main-first integrated gate.
+- Alpha17 plan on upstream `03a9d6693`: explicitly no freeze yet; recheck before every push.
+- Evidence `<profile>/evidence/system2-safe-failure-20261026/`; controller-continuation.md owns details.
+- No bus/hardware/vendor/release/deployment; preserve foreign root and all other tracks.
 ## Issue #30 / S2-01 pointer width (DELIVERED, observed 2026-10-26 19:03 CET)
 - PUBLISHED main-first merge `54b052885`, feature `6b8b27936`; local/tracking/live equal.
 - Independent whole-feature review and correction re-review APPROVE; branch15/integrated15 green.

@@ -1,5 +1,5 @@
 /** Public, synthetic System-2 transport witnesses. */
-import type { System2Preview, System2Status } from "./system2DownloadApi";
+import type { System2FailureDiagnostic, System2Preview, System2Status, System2StatusWireV1 } from "./system2DownloadApi";
 export const preview: System2Preview = {
   schemaVersion: 1, preparationId: "a".repeat(32),
   binding: { serverIncarnation: "server", projectIncarnation: "1", projectRevision: "2", deviceId: 10 },
@@ -10,7 +10,7 @@ export const preview: System2Preview = {
   hypothesisPhrase: "Accept experimental hypothesis", downloadPhrase: "Download configured plan", releasePhrase: "Accept best effort",
 };
 export const status: System2Status = {
-  schemaVersion: 1, operationId: "d".repeat(32), binding: preview.binding, address: preview.address, deviceName: preview.deviceName,
+  schemaVersion: 2, failureDiagnostics: [], operationId: "d".repeat(32), binding: preview.binding, address: preview.address, deviceName: preview.deviceName,
   state: "running", completedSteps: 0, totalSteps: null, backupAvailable: false, recoveryPhrase: null, downloadPhrase: null, releasePhrase: null, message: null, refusal: null,
   mutationMayHaveStarted: false, prestateDiffers: false, pointerObservations: [], programVersionObservation: null, prestateUnreadableAllocations: [],
 };
@@ -36,4 +36,19 @@ export const inProcedureStatus: System2Status = {
 export const unreadableStatus: System2Status = {
   ...status, state: "finished", completedSteps: 8, totalSteps: 8, backupAvailable: true, mutationMayHaveStarted: true, prestateDiffers: true,
   prestateUnreadableAllocations: [{ object: 3, address: "3c00", length: 4 }],
+};
+/** The exact pre-diagnostic wire keyset: no `failureDiagnostics`, schema version 1. */
+export function wireV1(row: System2Status): System2StatusWireV1 {
+  const { failureDiagnostics: _omitted, ...rest } = row;
+  return { ...rest, schemaVersion: 1 };
+}
+// Closed-reason, typed pointer-width observations (S2-01); one per run at most.
+export const downloadDiagnostic: System2FailureDiagnostic = { run: "download", reason: "unsupportedWidth", object: 3, propertyId: 7, elements: 1, octets: 3 };
+export const restoreDiagnostic: System2FailureDiagnostic = { run: "restore", reason: "elementCount", object: 3, propertyId: 7, elements: 2, octets: 8 };
+export const zeroDiagnostic: System2FailureDiagnostic = { run: "download", reason: "zeroElementsWithData", object: 4, propertyId: 7, elements: 0, octets: 5 };
+export const downloadFailedStatus: System2Status = {
+  ...status, state: "failed", mutationMayHaveStarted: true, failureDiagnostics: [downloadDiagnostic],
+};
+export const restoreFailedStatus: System2Status = {
+  ...recoveryStatus, state: "restoreFailed", failureDiagnostics: [downloadDiagnostic, restoreDiagnostic],
 };

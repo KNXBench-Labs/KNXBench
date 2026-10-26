@@ -21,8 +21,10 @@ is published as `54b052885` after review, correction re-review and the complete
 15-stage integrated package gate
 ([record](status/2026-10-26-up258-pid7-width.md),
 [research](research/2026-10-26-up258-pid7-width.md)). Objects 2/3 remain
-source-declared hypotheses. Structured status/report projection and physical
-recovery evidence remain open. [S2-02](open-work/S2-02-gateway-busy-after-failed-runs.md)
+source-declared hypotheses. A typed, closed-allowlist status/report/UI
+projection of the refusal (no raw text) is implemented as a reviewed candidate pending
+full gates and acceptance; it is not delivered. Physical
+recovery evidence remains open. [S2-02](open-work/S2-02-gateway-busy-after-failed-runs.md)
 has a delivered own-run gateway-hint/refusal-reason diagnostic slice (`aa2f39f1b`).
 The reporter's newer run starts without that banner, but the earlier actual
 start failure remains unexplained. Neither package establishes hardware support.

@@ -346,6 +346,7 @@ fn v1_defaults_recovery_of_an_existing_operation_is_admitted_and_restores() {
         .checkpoint(Checkpoint::Failed {
             code: FailureCode::Executor,
             local_diagnostic: "synthetic existing v1 operation".into(),
+            pointer_failure: None,
         })
         .unwrap();
     drop(existing);

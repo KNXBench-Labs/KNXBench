@@ -1,7 +1,15 @@
 # Restart snapshot
 
-Updated: 2026-10-26 20:03 CET. Operational snapshot, not an append-only journal.
-## Alpha 17 release plan (PLANNED by claude-release-alpha17, observed 2026-10-26 20:03 CET)
+Updated: 2026-10-26 21:31 CET. Operational snapshot, not an append-only journal.
+## Release freeze: taken by claude-release-alpha17 (observed 2026-10-26 21:31 CET)
+- Alpha 17 cutoff = `20ab2f7ea` (S2-01 safe projection delivered `536e492bc`, docs `20ab2f7ea`).
+- Candidate branch `release/alpha17-draft-20261026` (version bump, notes, reader docs); gate,
+  packaging dry runs and publication follow. `main` stays release-frozen for code until the tag
+  `v0.1.0-alpha.17` is published and this owner posts the released line below.
+- Other sessions: keep packages local (no push to `main`, no branch push); local gates are fine.
+  Anything not in `20ab2f7ea` ships in Alpha 18. Resume when the line
+  → `Release freeze: released by claude-release-alpha17` appears (also posted on abort, with reason).
+## Alpha 17 release plan (CUT at `20ab2f7ea`; PLANNED by claude-release-alpha17, observed 2026-10-26 20:03 CET)
 - Owner go: once the S2-01 safe diagnostic projection is delivered, cut, gate and publish Alpha 17.
 - Prerequisite: S2-01 safe projection only. Its session finishes as usual; delivery is read
   from its usual delivered heading, or it adds the line → `Alpha 17 prerequisite delivered: S2-01`.

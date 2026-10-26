@@ -68,7 +68,27 @@ pub struct ValidationProfile {
     pub procedure_policy: String,
 }
 
+/// Superseded v1 table policy: only the computed table span of a table segment.
+const DECLARED_COUNTS: &str = "declared-counts-zero-flags-full-table-identity-v1";
+/// Current v2 table policy: also the independent source data outside the reservation.
+const INDEPENDENT_DATA: &str = "source-capacity-preserving-independent-data-v1";
+/// Project profiles are version 2 as well; this id suffix keeps an unchanged
+/// project profile and plan out of the format-1 defaults bundle.
+pub(crate) const DEFAULTS_V2_ID_SUFFIX: &str = "-defaults-v2";
+
 impl ValidationProfile {
+    /// The procedure policy bound to this profile version; no other pairing exists.
+    fn procedure(&self) -> Option<System2ProcedurePolicy> {
+        match (self.version, self.procedure_policy.as_str()) {
+            (1, DECLARED_COUNTS) => {
+                Some(System2ProcedurePolicy::declared_counts_zero_flags_full_table_identity())
+            }
+            (2, INDEPENDENT_DATA) if self.id.ends_with(DEFAULTS_V2_ID_SUFFIX) => {
+                Some(System2ProcedurePolicy::source_capacity_preserving_independent_data())
+            }
+            _ => None,
+        }
+    }
     /// Parse only the named complete-defaults experimental profile grammar.
     pub fn from_json(bytes: &[u8]) -> io::Result<Self> {
         if bytes.len() > 16 * 1024 {
@@ -82,12 +102,11 @@ impl ValidationProfile {
                     .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
         };
         if result.format != 1
-            || result.version != 1
+            || result.procedure().is_none()
             || result.id.is_empty()
             || result.id.len() > 128
             || result.classification != "strong-hypothesis-simulator-validation-only"
             || result.configuration != "complete-defaults-no-links-v1"
-            || result.procedure_policy != "declared-counts-zero-flags-full-table-identity-v1"
             || result.mask != 0x0025
             || !hash(&result.source_sha256)
             || !hash(&result.package_sha256)
@@ -147,6 +166,9 @@ pub fn prepare_simulated_candidate(
 ) -> io::Result<PreparedCandidate> {
     ContactableAddress::new(target).map_err(|_| invalid("excluded candidate target"))?;
     let profile = ValidationProfile::from_json(profile_bytes)?;
+    let procedure = profile
+        .procedure()
+        .ok_or_else(|| invalid("unrecognized candidate procedure policy"))?;
     let request = ImageRequest {
         program_id: profile.program_id.clone(),
         individual_address: target,
@@ -172,12 +194,8 @@ pub fn prepare_simulated_candidate(
     let image = build_experimental_system2_image(conn, &request, &policy)
         .map_err(|e| invalid(e.to_string()))?
         .image;
-    let plan = plan_system2_candidate(
-        &image,
-        target,
-        &System2ProcedurePolicy::declared_counts_zero_flags_full_table_identity(),
-    )
-    .map_err(|e| invalid(e.to_string()))?;
+    let plan =
+        plan_system2_candidate(&image, target, &procedure).map_err(|e| invalid(e.to_string()))?;
     check_identity(&plan, &profile)?;
     let normalized = PlanRecord::from_plan(&plan);
     let binding = Binding {
@@ -210,7 +228,12 @@ pub fn prepare_simulated_candidate(
         .iter()
         .map(|i| format!("{}: {}", i.rule, i.detail))
         .collect();
-    inferences.push("STRONG HYPOTHESIS: declared allocation counts; zero flags map to disabled checksum; every task segment carries the full application identity; exact tool metadata retained without wire write. Same-application reconstruction and masked-byte survival are simulator assumptions, not physical recovery evidence.".into());
+    let tables = if profile.version == 1 {
+        "table segments carry only their computed table span, so independent source data outside the declared table reservation is NOT written (superseded profile v1, simulator reproduction only)"
+    } else {
+        "table segments carry their computed table span, and independent source data outside the declared table reservation is written; unused declared table capacity is not"
+    };
+    inferences.push(format!("STRONG HYPOTHESIS ({}): declared allocation counts; zero flags map to disabled checksum; every task segment carries the full application identity; {tables}; exact tool metadata retained without wire write. Same-application reconstruction and masked-byte survival are simulator assumptions, not physical recovery evidence.", profile.procedure_policy));
     Ok(PreparedCandidate {
         bundle: PreparedBundle::new(binding, normalized)?,
         source_positions,

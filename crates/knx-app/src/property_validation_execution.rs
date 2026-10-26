@@ -46,6 +46,7 @@ impl<'a> ValidatedHardwareExecution<'a> {
         bundle: &'a PreparedBundle,
         store: &'a mut OperationStore,
     ) -> io::Result<Self> {
+        refuse_superseded_defaults_profile(bundle)?;
         // This remains the full retained-source reconstruction/equivalence
         // validator, not a hash-only or normalized-plan-only admission.
         let plan = bundle.plan()?;
@@ -119,6 +120,18 @@ fn hardware_event(
     }
 }
 
+/// New physical execution refuses defaults profile v1, which omits independent source data.
+///
+/// Fresh execution only: recovery of an existing v1 operation and every
+/// simulator path stay available, so historical evidence remains reproducible.
+pub fn refuse_superseded_defaults_profile(bundle: &PreparedBundle) -> io::Result<()> {
+    if bundle.format == 1 && bundle.binding.profile_version == 1 {
+        return Err(invalid(
+            "defaults profile v1 omits independent source data outside the declared table reservation; prepare the bundle again with defaults profile v2 before a physical execution (recovery of an existing v1 operation stays available)",
+        ));
+    }
+    Ok(())
+}
 /// Refuse before RestoreStarted, so an unavailable recovery appends nothing.
 pub(crate) fn refuse_unavailable_recovery(
     snapshot: &knx_net::commissioning::property_recovery::PropertyRecoverySnapshot,

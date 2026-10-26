@@ -49,6 +49,11 @@ All candidate interpretations remain **STRONG HYPOTHESIS / SIMULATOR TESTED**.
 The exact source reserves 1,514 bytes and writes 760, leaving 754 bytes
 unwritten: 338 masked (no source write) plus 416 octets of declared
 address/association-table capacity beyond the computed tables.
+**Correction (26 October 2026):** 15 of those 416 octets (`03F1h`–`03FFh` in
+`AS-0260`) are independent source data beyond the 401-octet declared table
+capacity, which profile v1 omits. The current defaults profile v2 writes them
+(775 written, 739 unwritten = 338 + 401); see the
+[contract](../contracts/up258-system2-validation.md).
 Their survival through real Unload/reallocation is unresolved. The CLI has no
 physical transport; even explicit consent plus `--gateway` refuses before a
 socket, activity lease or operation receipt. The generic experimental Net entry

@@ -26,7 +26,7 @@ use knx_net::commissioning::{
 };
 use serde_json::{json, Value};
 
-use super::{bundle, cli};
+use super::{bundle, bundle_version, cli};
 
 /// The synthetic bundle's device: 3C00h..3C03h allocated on the application object.
 fn device(bundle: &PreparedBundle, hardware: [u8; 6], config: SimulatorConfig) -> SimulatedDevice {
@@ -309,6 +309,54 @@ fn a_failed_report_write_keeps_the_witnessed_device_result() {
     assert_eq!(out.status.code(), Some(1), "{stderr}");
     assert!(!report.exists());
     assert_eq!(store(dir.path(), &bundle).outcome(), LocalOutcome::Finished);
+    let row = journal(dir.path());
+    assert_eq!(row["state"], "verified", "{row}");
+}
+
+#[test]
+fn v1_defaults_recovery_of_an_existing_operation_is_admitted_and_restores() {
+    use knx_app::property_validation::{execute_simulated, Checkpoint, FailureCode};
+    let dir = tempfile::tempdir().unwrap();
+    let (path, bundle) = bundle_version(dir.path(), 1);
+    let device = device(&bundle, [1; 6], SimulatorConfig::default());
+    // An existing v1 hardware operation: durable original recovery, then a failed download.
+    let mut simulated =
+        OperationStore::create(&dir.path().join("simulated"), bundle.binding.clone()).unwrap();
+    tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap()
+        .block_on(execute_simulated(
+            &device,
+            &bundle,
+            &mut simulated,
+            knx_net::commissioning::SessionTiming::default(),
+            &std::sync::atomic::AtomicBool::new(false),
+        ))
+        .unwrap();
+    let rebound = bundle.rebind_hardware(bundle.binding.serial).unwrap();
+    let mut recovery = simulated.recovery().unwrap().clone();
+    recovery.original_bundle = rebound.clone();
+    let mut existing =
+        OperationStore::create(&dir.path().join("operation"), rebound.binding.clone()).unwrap();
+    existing
+        .checkpoint(Checkpoint::RecoveryAcquired { recovery })
+        .unwrap();
+    existing
+        .checkpoint(Checkpoint::Failed {
+            code: FailureCode::Executor,
+            local_diagnostic: "synthetic existing v1 operation".into(),
+        })
+        .unwrap();
+    drop(existing);
+    let gateway = gateway(device);
+    let out = recover(dir.path(), &path, &bundle, &gateway);
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert_eq!(store(dir.path(), &bundle).outcome(), LocalOutcome::Restored);
     let row = journal(dir.path());
     assert_eq!(row["state"], "verified", "{row}");
 }

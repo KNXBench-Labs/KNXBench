@@ -15,7 +15,14 @@ use std::{fs, net::UdpSocket, process::Command, time::Duration};
 mod gateway;
 mod journal;
 
+/// The current defaults profile version; v1 stays simulator and recovery only.
 fn bundle(dir: &std::path::Path) -> (std::path::PathBuf, PreparedBundle) {
+    bundle_version(dir, 2)
+}
+fn bundle_version(
+    dir: &std::path::Path,
+    profile_version: u32,
+) -> (std::path::PathBuf, PreparedBundle) {
     let step = |source_index, operation| PropertyDownloadStep {
         source_index,
         operation,
@@ -62,8 +69,8 @@ fn bundle(dir: &std::path::Path) -> (std::path::PathBuf, PreparedBundle) {
         serial: [0, 2, 1, 2, 3, 4],
         hardware: [1; 6],
         application: [0, 2, 0x12, 0x34, 1],
-        profile_id: "synthetic-v1".into(),
-        profile_version: 1,
+        profile_id: format!("synthetic-defaults-v{profile_version}"),
+        profile_version,
         profile_sha256: "a".repeat(64),
         source_sha256: "b".repeat(64),
         plan_sha256: record.sha256().unwrap(),
@@ -169,6 +176,52 @@ fn system2_validation_cli_gateway_requires_exact_download_and_release_confirmati
     assert!(socket.recv(&mut [0; 1024]).is_err());
 }
 #[test]
+fn system2_validation_cli_refuses_new_v1_defaults_hardware_execution_before_any_socket() {
+    let dir = tempfile::tempdir().unwrap();
+    let (path, b) = bundle_version(dir.path(), 1);
+    let socket = UdpSocket::bind("127.0.0.1:0").unwrap();
+    socket
+        .set_read_timeout(Some(Duration::from_millis(100)))
+        .unwrap();
+    let gateway = socket.local_addr().unwrap().to_string();
+    let target: knx_core::IndividualAddress = "1.1.25".parse().unwrap();
+    let operation = dir.path().join("operation");
+    let history = dir.path().join("activity.sqlite");
+    let out = cli()
+        .env("XDG_RUNTIME_DIR", dir.path().join("runtime"))
+        .env("XDG_DATA_HOME", dir.path().join("data"))
+        .env("XDG_CONFIG_HOME", dir.path().join("config"))
+        .args([
+            "--bundle",
+            path.to_str().unwrap(),
+            "--gateway",
+            &gateway,
+            "--operation",
+            operation.to_str().unwrap(),
+            "--confirm",
+            &b.consent_phrase(),
+            "--accept-hypothesis",
+            &b.acceptance_phrase(),
+            "--download-confirm",
+            &knx_core::commissioning::mutation::required_confirmation_phrase(
+                target,
+                knx_core::commissioning::mutation::WriteScope::Download,
+            ),
+            "--release-confirm",
+            &knx_net::commissioning::hardware_release::required_release_phrase(target),
+            "--activity-history",
+            history.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert_eq!(out.status.code(), Some(1), "{stderr}");
+    assert!(stderr.contains("profile v1"), "{stderr}");
+    assert!(!operation.exists(), "no operation store");
+    assert!(!history.exists(), "no activity journal");
+    assert!(socket.recv(&mut [0; 1024]).is_err(), "no frame sent");
+}
+#[test]
 fn system2_validation_cli_simulator_cannot_take_gateway_or_skip_hypothesis() {
     let dir = tempfile::tempdir().unwrap();
     let (path, b) = bundle(dir.path());
@@ -187,8 +240,14 @@ fn system2_validation_cli_simulator_cannot_take_gateway_or_skip_hypothesis() {
 }
 #[test]
 fn system2_validation_cli_simulator_writes_private_protocol_then_fresh_process_restore() {
+    // Superseded defaults v1 stays reproducible in the simulator.
+    for version in [1, 2] {
+        simulator_writes_then_fresh_process_restore(version);
+    }
+}
+fn simulator_writes_then_fresh_process_restore(profile_version: u32) {
     let dir = tempfile::tempdir().unwrap();
-    let (path, b) = bundle(dir.path());
+    let (path, b) = bundle_version(dir.path(), profile_version);
     let operation = dir.path().join("operation");
     let report = dir.path().join("shareable.json");
     let out = cli()

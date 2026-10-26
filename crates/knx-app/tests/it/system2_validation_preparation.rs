@@ -1,6 +1,7 @@
 //! Source-bound preparation keeps experimental defaults distinct from physical admission.
 
 mod configured_hardware;
+mod defaults_profile_v2;
 mod source_closure;
 
 use knx_app::system2_validation_preparation::{prepare_simulated_candidate, ValidationProfile};

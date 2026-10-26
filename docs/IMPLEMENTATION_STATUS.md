@@ -33,12 +33,15 @@ category, phase and plan step without octets, restart `notInPlan`/`notSent`/`unk
 octets read back unchanged) in the server status, one `error` session-log entry
 (`warning` for a stop on request) linked to the settlement entry, the durable activity
 history row and the tester's report (format 1, additive). The panel shows it as an
-alert headed *Download failed*; the history shows the durable copy; older rows and
-reports read *cause not recorded*. Focused evidence: 12 worker tests on the simulator
-(identity/property refusal, backup refusal, read-back mismatch, timeout, released and
-lost connection, load-state error, stop on request, unwitnessed end, polling, success
-and unconfirmed-restart controls), 22 history cases shared by the Rust and web readers,
-4,524 Vitest tests. CLI and System-2 rows are unchanged. Simulator only, no hardware run.
+alert headed *Download failed*, its status line follows the failure's phase; the history
+shows the durable copy without a live announcement; older rows and reports read *cause not
+recorded*. Exceptions to the cause/settlement link are listed in the contract. Focused
+evidence: 12 worker tests on the simulator (identity/property refusal, backup refusal,
+read-back mismatch, timeout, released and lost connection, load-state error, stop on
+request, unwitnessed end, polling, success and unconfirmed-restart controls), 31 history
+cases shared by the Rust and web readers, 4,537 Vitest tests. Independent review BLOCK
+(status line named the last started step after a backup failure) fixed with the minor
+findings. CLI and System-2 rows are unchanged. Simulator only, no hardware run.
 [Contract](contracts/download-failure-diagnostic.md),
 [details](open-work/DIAG-02-download-failure-evidence.md).
 

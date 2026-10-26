@@ -5,8 +5,10 @@ selective typing, static/reduced-motion fallback and exact live artifact/browser
 readback ([acceptance](status/2026-10-26-website-headline-typing.md)). Flow task
 WP-23 is separately delivered as `903d5d0c1`, with generation-bound unique group
 names and unchanged raw identities ([acceptance](status/2026-10-26-flow-group-names.md)).
-WP-22 and WP-24 remain separate reviewed application tasks awaiting integrated
-acceptance; these deliveries close none of their history or catalogue requirements.
+WP-22 is delivered as `132070176`: the existing native versions now have a
+selection-only timeline with unchanged guarded restore semantics
+([acceptance](status/2026-10-26-project-version-timeline.md)). WP-24 remains a
+separate reviewed catalogue task awaiting integrated acceptance.
 
 System-2 [S2-01](open-work/S2-01-pid7-raw-response.md) is P1: the private diagnostic prefix is
 published as `5f1ad454e` after review and integrated acceptance

@@ -13,6 +13,16 @@ archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
 
+## Native project version timeline (26 October 2026 source)
+
+WP-22 is published as `132070176` after independent implementation/correction
+reviews and all 11 package/32 nested web stages: 4,438 Vitest tests and 904 browser
+cases passed. Stored versions form a selection-only timeline; existing guarded
+restore and native storage remain unchanged. The first tooling-fixture refusal
+is retained separately, with its cause unresolved
+([acceptance](status/2026-10-26-project-version-timeline.md)). No per-command replay,
+hardware recovery or application deployment is claimed.
+
 ## Flow group-address names (26 October 2026 source)
 
 WP-23 is published as `903d5d0c1`: Flow adds the interpreting project's unique

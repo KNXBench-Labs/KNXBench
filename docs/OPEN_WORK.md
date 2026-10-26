@@ -6,7 +6,6 @@ the former dated sections are in the [archive](history/OPEN_WORK_2026-10-25.md).
 
 | ID | Task | Status | Details |
 | --- | --- | --- | --- |
-| WP-22 | Project change timeline inspired by Fusion 360 | In progress: reviewed; integrated acceptance queued | [WP-22](open-work/WP-22-project-change-timeline.md) |
 | WP-24 | Product catalogue as a table with sortable headers | In progress: reviewed; integrated acceptance queued | [WP-24](open-work/WP-24-product-catalogue-sortable-table.md) |
 | S2-01 | System-2: keep the raw PID 7 answer, model its width before relaxing the refusal (#30) | P1: diagnostic delivered; width model blocked, projection open | [S2-01](open-work/S2-01-pid7-raw-response.md) |
 | S2-02 | System-2: own-run busy hint and missing refusal reason (#30) | P1: diagnostic delivered; actual failure unresolved | [S2-02](open-work/S2-02-gateway-busy-after-failed-runs.md) |

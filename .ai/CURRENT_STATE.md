@@ -1,6 +1,12 @@
 # Restart snapshot
 
-Updated: 2026-10-26 16:13 CET. Operational snapshot, not an append-only journal.
+Updated: 2026-10-26 16:42 CET. Operational snapshot, not an append-only journal.
+## PRG-01/S2-03 CLI durable-tunnel slice (runtime DELIVERED; result docs pending)
+- PUBLISHED main-first merge `a8004cb2e` on `8459b5fe8`, feature `46c38df26`; readbacks equal.
+- Independent review APPROVE; merge13 Rust521/21ignored, corpus17/17; tools440/6skipped.
+- No web/bindings selected. Native ACK characterization and lexical call-site proof are distinct.
+- Own cli-durable-tunnel/integrate trees remain for result-doc gate/push and verified cleanup.
+- Evidence `<profile>/evidence/cli-durable-tunnel-20261026/`; no hardware or policy change.
 ## GATE-01 spawn/signal slice (runtime DELIVERED, result documentation pending)
 - PUBLISHED main-first merge `ed156ef9b`; local/tracking/live readbacks equal.
 - Review/re-review APPROVE. Merge11/web65 green: Vitest4539, browser1478 incl all16 production suites;

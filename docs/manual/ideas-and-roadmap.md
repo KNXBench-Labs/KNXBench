@@ -10,8 +10,7 @@ than anything inside them:
 3. **Ideas and experiments** — things someone wrote down. Not commitments.
 
 No future release schedule is promised here. KNXBench is in its `0.1.0-alpha`
-series; [Alpha 15](../releases/alpha15.md) is the prepared source scope, not a
-publication claim. The original source audit below was checked on **8 October
+series; [Alpha 17](../releases/alpha17.md) is the current published pre-release. The original source audit below was checked on **8 October
 2026**, at `608a204b`; dated release updates supersede its delivery status, not
 its historical evidence. An item's position in part 2 does not schedule it or
 reopen a recorded alpha boundary. Released artifacts are separate snapshots.
@@ -24,6 +23,16 @@ reopen a recorded alpha boundary. Released artifacts are separate snapshots.
 ---
 
 ## What is already built
+
+**Since Alpha 17:** the experimental UP 258D12 System-2 download records differing
+device observations and typed table-reference refusals; the regular memory download
+gets stricter identity, backup and settlement checks, a read-only check afterwards
+and a payload-free failure cause; comparison adoption takes over association links.
+No new hardware support. [Release scope](../releases/alpha17.md#boundaries).
+
+**Since Alpha 16:** cancellable catalogue jobs, confirmed comparison-to-project
+adoption and original product packages carried with catalogue-authored saves
+([Alpha 16](../releases/alpha16.md)).
 
 **Since Alpha 15:** readable parameter captions, `SuffixText` units, separate nested
 module areas, previewed catalogue placement cleanup, resizable/zoom-aware tables,

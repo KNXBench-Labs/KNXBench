@@ -421,7 +421,7 @@ the edit stack; to go back, restore the preserved version. Cancel is initially
 focused and does not send a mutation. Changed revisions or server lifetimes
 invalidate old confirmations; reopen/refresh rather than forcing stale consent.
 
-**Version timeline (26 October 2026 source).** Stored versions appear from oldest
+**Version timeline (since Alpha 17).** Stored versions appear from oldest
 to newest on a horizontal rail; select a checkpoint to inspect its label, reason
 and timestamp. The distinct current working-state marker is not a stored version
 and cannot be restored. It shows undo/redo counts; individual edit contents and

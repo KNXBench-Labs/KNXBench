@@ -316,7 +316,7 @@ Signature members are retained/classified, not verified. Storage does not establ
 ### 86. Duplicate product identifiers
 
 **Ledger status:** `DONE` ([KL-86](status/LEDGER.md#snapshot-ids)).
-Normalized duplicates are reported. Source builds after Alpha 15 add four-family master provenance; historical winner/encounter facts and unsupported identifier families retain separate boundaries.
+Normalized duplicates are reported. Since Alpha 16, four-family master provenance is recorded; historical winner/encounter facts and unsupported identifier families retain separate boundaries.
 [Details and history](limitations/KL-086-duplicate-product-identifiers.md)
 
 <a id="catalogue-kl-087"></a>
@@ -975,7 +975,7 @@ Only explicit, uniquely associated MV-07B0 Load/ap1 declarations are reconstruct
 ### 184. Diagnostic export profiles and evidence
 
 **Ledger status:** `ACCEPTED_BOUNDARY` ([KL-184](status/LEDGER.md#post-snapshot-ids)).
-Generic diagnostics read identity only (descriptor, PID12, PID78). CLI and, since 26 October 2026 (source, DIAG-01), the web dialog additionally offer the identity-gated system2-declared-segments-v1 memory profile and format-2 export: candidate source locations, not a backup or restore basis, with no recorded hardware run of this profile. The generic identity profile has evidence from 46 physical devices/eight manufacturers, including refusals and ended/rejected connections; house normal-operation feedback is an operator observation, and a fully silent device remains unobserved.
+Generic diagnostics read identity only (descriptor, PID12, PID78). CLI and, since Alpha 17 (DIAG-01), the web dialog additionally offer the identity-gated system2-declared-segments-v1 memory profile and format-2 export: candidate source locations, not a backup or restore basis, with no recorded hardware run of this profile. The generic identity profile has evidence from 46 physical devices/eight manufacturers, including refusals and ended/rejected connections; house normal-operation feedback is an operator observation, and a fully silent device remains unobserved.
 [Details and history](limitations/KL-184-device-diagnostic-export.md)
 
 ## Bus diagnostics and DPT

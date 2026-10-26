@@ -99,8 +99,8 @@ warning. The quick-start plaintext password is visible in the container environm
 and may enter shell history; use [Setting a password](#setting-a-password) for a
 hashed credential in a lasting setup.
 
-- **Tags:** the release version without its `v` (`0.1.0-alpha.15` for the tag
-  `v0.1.0-alpha.15`) and `latest`. While KNXBench is in alpha, `latest` moves
+- **Tags:** the release version without its `v` (`0.1.0-alpha.17` for the tag
+  `v0.1.0-alpha.17`) and `latest`. While KNXBench is in alpha, `latest` moves
   with every pre-release; pin a version tag if an update should be your own
   decision.
 - **Availability:** from `v0.1.0-alpha.6` (9 October 2026) on; `v0.1.0-alpha.5`
@@ -165,7 +165,20 @@ those devices' **Parameters** tab and choose **Restore from original .knxproj…
 project byte for byte are installed; save the project afterwards so its file carries
 them from then on.
 
-### Alpha 15 upgrade boundary
+### Alpha 17 upgrade boundary
+
+Close KNXBench and independently back up the entire mounted data directory,
+including `device-backups/` and `activity-history.sqlite`, before replacing the
+container. Native/store and model 16 and product database 28 are unchanged from
+Alpha 16; no migration is needed. Opening Alpha 17 saves in Alpha 16 is not
+tested. Alpha 17 writes device backups as format 2 and new activity-history and
+System-2 record versions; an Alpha 16 image refuses them rather than dropping
+data, so going back means restoring the pre-upgrade copies. Port 8484 and
+host-network exposure are unchanged. [Release scope](../../releases/alpha17.md#upgrade).
+
+<a id="alpha-15-upgrade-boundary"></a>
+
+### Alpha 15 upgrade boundary (historical)
 
 Close KNXBench and independently back up the entire mounted data directory before
 replacing the container. Native/model16 stays; the product database migrates
@@ -359,7 +372,7 @@ stopping fails, the service remains stopped until you correct it; this is not an
 automatic rollback.
 
 To choose a fixed release, replace `latest` in **both** image references with a
-published version such as `0.1.0-alpha.15`. The Linux default keeps
+published version such as `0.1.0-alpha.17`. The Linux default keeps
 `--network host` and `-e KNX_PORT=8484` (or your chosen port), as explained in
 [Networking](#networking). If migrating an older bridge deployment to host mode,
 review the firewall first: the authenticated listener becomes reachable on all

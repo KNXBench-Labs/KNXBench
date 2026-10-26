@@ -1,5 +1,20 @@
 # Roadmap
 
+## Alpha 17 published pre-release (26 October 2026)
+
+`v0.1.0-alpha.17` is the current published pre-release, cut from main at
+`20ab2f7ea`. It ships every delivery below up to that cutoff: the issue #30
+System-2 changes (prestate observations, own-run gateway hint, PID 7 widths and
+typed refusal diagnostic), the regular-download correctness and failure-cause
+work, Diagnostics-tab entry points, association link adoption, saved object
+folders, Flow group names, the version timeline and sortable catalogue columns.
+Native/model 16 and product database 28 are unchanged. No hardware support,
+recovery guarantee or ETS equivalence follows; issue #30, S2-02 and S2-03 stay
+open. [Release scope and boundaries](releases/alpha17.md).
+Work merged on main after `20ab2f7ea` belongs to the next alpha.
+
+## Deliveries up to the Alpha 17 cutoff
+
 Website task WP-21 is delivered and deployed (`b517930e7`), with reviewed
 selective typing, static/reduced-motion fallback and exact live artifact/browser
 readback ([acceptance](status/2026-10-26-website-headline-typing.md)). Flow task
@@ -12,7 +27,7 @@ as `8dd6cf72d`: native sortable catalogue columns, stable product identities and
 polite keyboard-highlight announcements, without catalogue-data changes
 ([acceptance](status/2026-10-26-catalogue-table.md)).
 
-System-2 [S2-01](open-work/S2-01-pid7-raw-response.md) is a delivered engineering slice with hardware evidence pending: the private diagnostic
+System-2 [S2-01](open-work/S2-01-pid7-raw-response.md) is a delivered engineering slice without hardware evidence yet: the private diagnostic
 prefix is published as `5f1ad454e` after review and integrated acceptance
 ([record](status/2026-10-25-system2-pid7-diagnostic.md)). A 26 October field reply
 supplies a two-octet value on object 1; independently retrieved public package
@@ -23,7 +38,7 @@ is published as `54b052885` after review, correction re-review and the complete
 [research](research/2026-10-26-up258-pid7-width.md)). Objects 2/3 remain
 source-declared hypotheses. A typed, closed-allowlist status/report/UI
 projection of the refusal (no raw text) is delivered as `536e492bc`; hardware
-evidence is still pending. Physical recovery evidence and issue #30 remain open
+evidence remains open. Physical recovery evidence and issue #30 remain open
 (S2-02/S2-03). [S2-02](open-work/S2-02-gateway-busy-after-failed-runs.md)
 has a delivered own-run gateway-hint/refusal-reason diagnostic slice (`aa2f39f1b`).
 The reporter's newer run starts without that banner, but the earlier actual

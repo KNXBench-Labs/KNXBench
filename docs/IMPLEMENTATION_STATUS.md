@@ -12,6 +12,16 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Alpha 17 published pre-release (26 October 2026)
+
+`v0.1.0-alpha.17` is the current published pre-release, cut from main at
+`20ab2f7ea`. Application versions are aligned at `0.1.0-alpha.17`; native/store
+and core model stay at 16 and the product database at 28, so no migration is
+needed. Every dated delivery entry from 24–26 October 2026 below that is an
+ancestor of the cutoff ships in Alpha 17; their "source" labels record the
+delivery date, not a missing release. Scope, upgrade notes and boundaries:
+[Alpha 17 release notes](releases/alpha17.md).
+
 ## Regular CLI durable-tunnel runtime, PRG-01/S2-03 slice (26 October 2026)
 
 Published main-first merge `a8004cb2e` (feature `46c38df26`), independent review
@@ -162,7 +172,7 @@ restart, and no safety admission or automatic retry changes.
 The [S2-02 record](open-work/S2-02-gateway-busy-after-failed-runs.md) remains P1:
 this is diagnostics, not a reproduced fix for the reporter's actual start failure.
 Delivered in `aa2f39f1b` (main `a15b8f0eb`): independent review APPROVE, change-scoped
-package gate 15/15 green. Unreleased; reporter re-test pending.
+package gate 15/15 green. Ships in Alpha 17; reporter re-test is open.
 
 ## Conservative regular procedure admission (25 October 2026 source)
 

@@ -22,6 +22,22 @@ sidecars to bypass the refusal; see [CLI input handling](user-guide/10-command-l
 Source delivery and internal runtime checks are complete on `4eee65d8`; a new
 release is not implied. No receiver/bus compatibility is claimed.
 
+## Alpha 17 — published pre-release scope and evidence limits
+
+Alpha 17 (`v0.1.0-alpha.17`, source cutoff `20ab2f7ea`) is published as a
+pre-release on 26 October 2026. Its new download, System-2 and diagnostic
+behaviour is tested with simulated or loopback transports only: no
+physical-hardware certification, recovery guarantee or ETS equivalence follows.
+System-2 stays experimental and limited to UP 258D12 application
+`M-0001_A-9205-04-9270`; masked-byte survival, allocator state and complete
+physical recovery remain open, and `gatewayBusy` does not identify its mechanism.
+Issue #30 and issue #22 stay open; S2-02 (the original start failure) and S2-03
+(two image-interpretation differences) remain open work. An unproved hardware
+route is capped at 12 data octets per request, which can slow transfers.
+Device backups (format 2), new activity-history rows and new System-2 operation
+records are refused by Alpha 16; opening Alpha 17 saves in Alpha 16 is not tested.
+[Release scope and boundaries](../releases/alpha17.md#boundaries).
+
 <a id="up258-system-2-candidate-source-20-october-2026"></a>
 
 ## Alpha 16 — published software scope and remaining evidence limits
@@ -95,11 +111,12 @@ backup/readback and recovery-integrity barriers; no general speedup is establish
 [Exact service and recovery limits](../contracts/alpha16-system2-configured-download.md),
 [restart selection](../contracts/alpha16-system2-http-mount.md).
 
-### System-2 safe failure diagnostic: unavailable for older and untyped failures (26 October 2026 source)
+<a id="system-2-safe-failure-diagnostic-unavailable-for-older-and-untyped-failures-26-october-2026-source"></a>
+
+### System-2 safe failure diagnostic: unavailable for older and untyped failures (since Alpha 17)
 
 - **Affected:** the typed *Failure diagnostic* of a refused System-2 table-pointer
-  (PID 7) answer, in source builds from the delivered S2-01 projection
-  (`536e492bc`); this is not a release announcement.
+  (PID 7) answer, since Alpha 17 (S2-01 projection, `536e492bc`).
 - **Limitation:** only a refusal typed at the read carries it. Older journals,
   legacy-policy refusals and every other failure show *unavailable*; nothing is
   reconstructed from the private text. The diagnostic lists observed counts, which
@@ -184,7 +201,7 @@ Inline sections and object folders are not shown yet. Alpha 13 and older binarie
 | --- | --- | --- |
 | Import is one-way | Keep the original ETS archive; your edited working copy is `.knxdb`, not an ETS export | [Projects](user-guide/02-projects.md#there-is-no-knxproj-export) |
 | Native history is not an independent disaster backup | Current releases keep versions inside the same file; alpha.6 had no persistent history. Keep independent copies | [Project history](user-guide/02-projects.md#project-history-restart-safe-undo-and-versions) |
-| A new save is not automatically self-contained | Unreleased Alpha-16 Save/Save As acquires complete exact original packages only for uniquely measured catalogue dependencies. Missing/corrupt/ambiguous new ownership refuses; historical missing bytes are not invented. Older readers remain untested despite schema16; keep originals and independent backups | [Current source ownership](../contracts/alpha16-catalogue-portability.md) |
+| A new save is not automatically self-contained | Since Alpha 16, Save/Save As acquires complete exact original packages only for uniquely measured catalogue dependencies. Missing/corrupt/ambiguous new ownership refuses; historical missing bytes are not invented. Older readers remain untested despite schema16; keep originals and independent backups | [Current source ownership](../contracts/alpha16-catalogue-portability.md) |
 | Browser files live on the server | Save is not a download; Export project gives you a local copy | [Web and desktop differences](user-guide/11-web-and-docker.md#web-build-versus-desktop-build) |
 | Shared server, shared project | One password and one undo stack are not collaborative editing | [Deployment](user-guide/11-web-and-docker.md#authentication) |
 | Programming marks are project belief (P3, Alpha 12) | Adr/App/Par/GA track edits and server writes, not a live comparison. Recovered snapshot undo after a later write can conservatively show additional pending parts. Reconcile external/CLI programming manually; resolve refresh/storage warnings before trusting flags | [Programming marks](user-guide/05-devices-and-products.md#programming-marks-p3-since-alpha-12) |
@@ -202,8 +219,8 @@ only a maintainer would care about, and ones about the reasoning behind a
 design decision rather than about a defect. Where an entry below has a
 counterpart there, the **Details** line links straight to it.
 
-The following is the **Alpha-15 historical baseline**, not the current Alpha-16
-source boundary described above. [Alpha 15](../releases/alpha15.md) fixes captions and empty
+The following is the **Alpha-15 historical baseline**, not the current Alpha 16/17
+boundary described above. [Alpha 15](../releases/alpha15.md) fixes captions and empty
 topology cards, explains unavailable catalogues and adds previewed placement
 cleanup, byte-level comparison marks and product-declared System labels, without
 expanding programming admission. Historical measurements below retain their
@@ -219,8 +236,8 @@ promotion, not earlier columns. Legacy EX-IM has no suffix mapping; stored
 `Suffix` remains undisplayed. The System-2 declared-memory diagnostic profile is
 CLI-only with offline/simulator evidence, not a hardware-verified backup, restore
 basis or programming path. The web diagnostic profile stays identity-only in
-Alpha 15 and 16; source builds from 26 October 2026 offer the memory profile in
-the web dialog too, simulator-verified only.
+Alpha 15 and 16; since Alpha 17 the web dialog offers the memory profile too,
+simulator-verified only.
 [Exact limits](../releases/alpha15.md#still-alpha-explicit-boundaries).
 
 > A long list of known issues is what happens when a project writes its
@@ -528,7 +545,7 @@ is the remaining copy defect.
 - **Details:** [Commissioning history contract](../contracts/COMMISSIONING_ACTIVITY_HISTORY.md),
   [commissioning goal](https://github.com/KNXBench-Labs/KNXBench/blob/6222e17754f3/docs/archive/alpha-0.1/goal-commission.md).
 
-### A failed System-2 download's cause is not recorded (unreleased source)
+### A failed System-2 download's cause is not recorded (Alpha 17)
 
 - **Affected:** the cause, step and restart evidence of a failed regular download
   (DIAG-02).
@@ -1132,7 +1149,7 @@ is not the same as what exists.
 ## Table column-width coverage (18 October 2026 source, local-only)
 
 The address/object matrix's per-object columns share one resizable width
-(default 180 px, 25 October 2026 source); individual object columns cannot get
+(default 180 px, since Alpha 17); individual object columns cannot get
 their own widths because project-object identifiers cannot enter browser
 preferences. Its select/address/name columns resize and persist by presentation ID. All 18 native table surfaces use the adapter. Widths are
 browser-local and are lost when browser storage is cleared; blocked storage

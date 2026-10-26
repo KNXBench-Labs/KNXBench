@@ -86,7 +86,7 @@ data**. In the German interface this is **Datei → Hilfe & Diagnose →
 Diagnosedaten exportieren**. (The screenshot below predates the submenus and shows
 the entry in the older grouped list; the entry is the same.)
 
-In source builds after Alpha 16 (24 October 2026) you can also select the device
+Since Alpha 17 you can also select the device
 and press **Analyse device** on its **Diagnostics** tab: the same dialog opens
 with that device already chosen
 ([device panel](05-devices-and-products.md#device-analysis-and-support)).
@@ -97,7 +97,7 @@ with that device already chosen
 
 Pick the device in the list. Each entry shows its individual address and name.
 Enter the interface as `IPv4:port`, for example `192.168.1.20:3671`; a saved
-preferred interface is filled in for you. In source builds from 26 October 2026
+preferred interface is filled in for you. Since Alpha 17
 the dialog also asks for a **Diagnostic profile** (*Diagnoseprofil*): keep
 **Generic identity** unless a maintainer asks for the memory ranges
 ([see below](#reading-declared-memory-ranges-system-2)). Then press **Preview
@@ -179,7 +179,7 @@ issue.
 <a id="reading-declared-memory-ranges-system-2"></a>
 ### Reading declared memory ranges (System-2)
 
-> **Which build has it?** Source builds from 26 October 2026. Alpha 16 and older
+> **Which build has it?** Alpha 17 and later. Alpha 16 and older
 > offer this profile on the command line only.
 
 For a System-2 device whose application is in KNXBench's product database, a
@@ -230,7 +230,7 @@ limits are in the [contract](../../contracts/device-diagnostic-export.md).
 ## Universal device-support reporting
 
 This separate workflow needs **no open project**. Open **File → Device support report**, or use the same action in a device's download panel. Available since
-Alpha 12. In source builds after Alpha 16, **Send report** on a device's
+Alpha 12. Since Alpha 17, **Send report** on a device's
 **Diagnostics** tab opens the same dialog with that device selected.
 
 1. Select a project device, or keep manual identity and optionally enter its local

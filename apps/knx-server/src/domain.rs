@@ -2944,6 +2944,8 @@ fn durable_mutation<T>(
 /// What a bus write did to the programming belief, for the session log.
 pub(crate) struct Settled {
     pub message: String,
+    /// Correlation shown with the entry (e.g. `download 7`); never a cause.
+    pub detail: Option<String>,
     /// Whether the project or its history changed; a message alone is only
     /// logged.
     pub changed: bool,
@@ -3017,7 +3019,7 @@ pub(crate) fn settle_programming(
     } else {
         (SettleOutcome::LoggedOnly, Ok(()))
     };
-    log_outcome(state, source, settled.message, None, &result);
+    log_outcome(state, source, settled.message, settled.detail, &result);
     outcome
 }
 

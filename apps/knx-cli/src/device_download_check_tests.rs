@@ -308,6 +308,7 @@ fn report_template() -> DownloadReport {
         },
         outcome: None,
         post_download_check: None,
+        failure: None,
         parameter_values: Default::default(),
     }
 }

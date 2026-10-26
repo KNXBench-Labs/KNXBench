@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import * as api from "./api";
 import { appendHistoryPage, HistoryContractError, type HistoryEntry, type UntrackedKind } from "./activityHistory";
 import { useTranslate } from "./i18n";
+import DownloadFailureView from "./DownloadFailureView";
 import DownloadReceiptView from "./DownloadReceiptView";
 import PostDownloadCheckView from "./PostDownloadCheckView";
 import { useUiLanguage } from "./uiLanguage";
@@ -109,6 +110,10 @@ export default function BusActivityHistory() {
             </dl>
             {entry.downloadEvidence && (
               <DownloadReceiptView preparation={entry.downloadEvidence.preparation} settlement={entry.downloadEvidence.settlement} language={language} />
+            )}
+            {entry.kind === "deviceDownload" && entry.state === "failed" && entry.downloadEvidence && (
+              <DownloadFailureView value={entry.downloadEvidence.failure} absent={entry.downloadEvidence.failure === undefined}
+                written={entry.downloadEvidence.written} live={false} />
             )}
             {entry.kind === "deviceDownload" && entry.state === "finished" && entry.downloadEvidence?.written === "yes" && (
               <PostDownloadCheckView value={entry.downloadEvidence.postDownloadCheck} />

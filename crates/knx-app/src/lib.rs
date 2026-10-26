@@ -23,6 +23,7 @@ pub mod device_backup;
 pub mod device_diagnostics;
 pub mod device_download;
 pub mod documentation;
+pub mod download_failure;
 pub mod download_report;
 pub mod download_scope;
 pub mod download_support;

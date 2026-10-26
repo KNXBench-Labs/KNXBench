@@ -34,8 +34,8 @@ describe("which bus-write ends change the project", () => {
     expect(downloadEndChangesProject({ state: "running" })).toBe(false);
     expect(downloadEndChangesProject({ state: "finished", written: "yes", restart: "acknowledged", restartNote: null })).toBe(true);
     expect(downloadEndChangesProject({ state: "finished", written: "yes", restart: "unconfirmed", restartNote: "x" })).toBe(true);
-    expect(downloadEndChangesProject({ state: "failed", written: "partially", stoppedInStep: 4, error: "lost" })).toBe(true);
-    expect(downloadEndChangesProject({ state: "failed", written: "no", stoppedInStep: null, error: "refused" })).toBe(false);
+    expect(downloadEndChangesProject({ state: "failed", written: "partially", stoppedInStep: 4, error: "lost", failure: null })).toBe(true);
+    expect(downloadEndChangesProject({ state: "failed", written: "no", stoppedInStep: null, error: "refused", failure: null })).toBe(false);
   });
   it("is every address programming end that may have written", () => {
     expect(addressEndChangesProject({ state: "waiting", rounds: 1, inProgrammingMode: [] })).toBe(false);

@@ -53,7 +53,7 @@ const report = {
 };
 
 /** What the intercepted server answers once the download ran; the default is an older server's. */
-interface Served { status: unknown; report: unknown }
+interface Served { status: unknown; report: unknown; history?: unknown }
 
 async function open(page: Page, language: "en" | "de", served: Served = { status: finished, report }) {
   const m = language === "en" ? en : de;
@@ -87,6 +87,7 @@ async function open(page: Page, language: "en" | "de", served: Served = { status
       state.reportReads += 1;
       return json(served.report);
     }
+    if (path === "/api/bus/history" && method === "GET" && served.history !== undefined) return json(served.history);
     if (method === "GET") return json([]);
     state.writes.push(`${method} ${path}`);
     return json({ error: "not in this fixture" }, 404);
@@ -305,4 +306,83 @@ for (const { fixture, restart, lines } of CHECKS) {
       });
     }
   }
+}
+
+// ---- DIAG-02: a failed run keeps its cause in the panel, the history and the report ----
+
+const LOST = {
+  category: "connectionLost", code: "connectionLost", phase: "inStep",
+  step: { number: 3, of: 3, kind: "writeMemory", summary: "write memory 4400h..441Fh, 32 octets" },
+  restart: "notInPlan", readBackOctets: 16,
+};
+const failedStatus = {
+  ...finished,
+  status: { state: "failed", written: "partially", stoppedInStep: 3, error: "step 2: the connection to 1.1.67 was lost during A_Memory_Write", hint: null, failure: LOST },
+  events: finished.events.slice(0, 16), nextSince: 16,
+};
+const failedReport = (() => {
+  const { parameterValues, ...head } = report.report;
+  return { ...report, report: { ...head, outcome: { completed: false, written: "partially", restart: null, stoppedInStep: 3 },
+    postDownloadCheck: { observation: { status: "notChecked" }, runtime: "unknown" }, failure: LOST, parameterValues } };
+})();
+const failedHistory = {
+  format: 2, coverage: "partial", durability: "persistent", hasMore: false, nextCursor: 1,
+  untracked: ["deviceIdentify", "groupWrite", "serialAddress", "deviceDownload", "addressProgramming", "busMonitor", "lineScan"],
+  entries: [{
+    sequence: 1, serverIncarnation: "fixture", interrupted: false, id: 1, kind: "deviceDownload", address: "1.1.67",
+    state: "failed", startedAt: "2026-10-26T09:00:00.000Z", finishedAt: "2026-10-26T09:00:05.000Z",
+    writeEvidence: { backupRecorded: true, sendPossible: true },
+    downloadEvidence: { sessionId: 7, written: "partially", restart: null, cleanup: "returnedOk", failure: LOST },
+  }],
+};
+
+for (const language of ["en", "de"] as const) {
+  test(`${language}: a failed download stays failed, with its cause, after the panel is closed and reopened`, async ({ page }) => {
+    const m = language === "en" ? en : de;
+    const fill = (key: keyof typeof en, values: Record<string, string | number>) =>
+      Object.entries(values).reduce((text, [name, value]) => text.replace(`{${name}}`, String(value)), m[key]);
+    const state = await open(page, language, { status: failedStatus, report: failedReport, history: failedHistory });
+    const panel = page.locator(".device-download-panel");
+    await panel.locator("select[data-download-device]").selectOption({ label: "1.1.67 — Fictional actuator" });
+    await panel.locator("input[data-download-gateway]").fill("192.0.2.10:3671");
+    await panel.getByRole("button", { name: m["deviceDownload.preparePlan"], exact: true }).click();
+    const shown = panel.getByRole("region", { name: m["deviceDownload.planTitle"] });
+    await shown.locator("input[data-untested-acknowledgement]").fill(plan.untestedAcknowledgement);
+    await shown.getByRole("button", { name: m["deviceDownload.start"].replace("{address}", "1.1.67"), exact: true }).click();
+    await page.locator(".programming-consent-dialog").getByRole("button", { name: m["programmingConsent.confirm"], exact: true }).click();
+
+    const expectFailure = async () => {
+      const alert = panel.getByRole("alert").filter({ has: page.getByRole("heading", { name: m["downloadFailure.title.failed"], exact: true }) });
+      await expect(alert).toHaveCount(1);
+      await expect(alert).toHaveAttribute("data-failure", "connectionLost");
+      await expect(alert).toContainText(m["downloadFailure.category.connectionLost"]);
+      await expect(alert).toContainText(fill("downloadFailure.phase.inStep", { number: 3, of: 3, summary: LOST.step.summary }));
+      await expect(alert).toContainText(m["downloadFailure.restart.notInPlan"]);
+      await expect(alert).toContainText(fill("downloadFailure.readBack", { count: 16 }));
+      await expect(panel.locator("[data-download-state=failed]")).toHaveText(fill("deviceDownload.failed", { step: 3 }));
+    };
+    await expectFailure();
+
+    // Closing the panel: the history keeps the same cause from the durable record.
+    await page.getByRole("button", { name: m["activityHistory.title"], exact: true }).click();
+    await expect(panel).toHaveCount(0);
+    const history = page.locator(".activity-history-entry .download-failure");
+    await expect(history).toHaveAttribute("data-failure", "connectionLost");
+    await expect(history).not.toHaveAttribute("role", /.*/);
+    await expect(history).toContainText(m["downloadFailure.partialCaveat"]);
+    await expect(history).toContainText(m["downloadFailure.category.connectionLost"]);
+
+    // Reopening reads the server-held run again, without a new download.
+    await page.getByRole("button", { name: m["deviceDownload.title"], exact: true }).click();
+    await expectFailure();
+    const verify = panel.getByRole("region", { name: m["deviceDownload.verify.title"] });
+    await verify.getByRole("button", { name: m["deviceDownload.verify.create"], exact: true }).click();
+    const download = page.waitForEvent("download");
+    await verify.getByRole("button", { name: m["deviceDownload.verify.save"], exact: true }).click();
+    const saved = JSON.parse(await readFile(await (await download).path(), "utf8"));
+    expect(saved.failure).toEqual(LOST);
+    expect(JSON.stringify(saved)).not.toContain("A_Memory_Write");
+    expect(state.starts, "one start, no second download").toBe(1);
+    expect(state.writes, "only the start was sent").toEqual([]);
+  });
 }

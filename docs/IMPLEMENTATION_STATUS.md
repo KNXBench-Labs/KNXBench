@@ -24,6 +24,27 @@ raw method declares stored; the outer layer refused most with a misleading
 password error. Consistent AES stays unsupported encryption; no AES decryption
 or new compatibility claim. [Sources, measured behaviour and decision](research/2026-10-26-zip-aes-extra-field-consistency.md).
 
+## Regular-download failure diagnostic, DIAG-02 (26 October 2026 source)
+
+Implemented on a branch after the owner's Go; independent review, package gate and
+publication pending. A failed server/web memory download now keeps one payload-free
+diagnostic (`knx_app::download_failure::DownloadFailure`: closed cause code and
+category, phase and plan step without octets, restart `notInPlan`/`notSent`/`unknown`,
+octets read back unchanged) in the server status, one `error` session-log entry
+(`warning` for a stop on request) linked to the settlement entry, the durable activity
+history row and the tester's report (format 1, additive). The panel shows it as an
+alert headed *Download failed*, its status line follows the failure's phase; the history
+shows the durable copy without a live announcement; older rows and reports read *cause not
+recorded*. Exceptions to the cause/settlement link are listed in the contract. Focused
+evidence: 12 worker tests on the simulator (identity/property refusal, backup refusal,
+read-back mismatch, timeout, released and lost connection, load-state error, stop on
+request, unwitnessed end, polling, success and unconfirmed-restart controls), 33 history
+cases shared by the Rust and web readers, 4,537 Vitest tests. Independent review BLOCK
+(status line named the last started step after a backup failure) fixed with the minor
+findings; focused re-review APPROVE. CLI and System-2 rows are unchanged. Simulator only, no hardware run.
+[Contract](contracts/download-failure-diagnostic.md),
+[details](open-work/DIAG-02-download-failure-evidence.md).
+
 ## System-2 memory diagnostics in the web dialog (26 October 2026 source)
 
 DIAG-01 is delivered on `main` as `a4bb0aa4e`; independent review and fix re-review APPROVE; maintained change-scoped 15/15 gate green (919 browser tests, 1,522 Rust tests in 9 binaries, 51/51 selected corpus cases, frozen inputs, no touched user data); local/tracking/live readback equal.

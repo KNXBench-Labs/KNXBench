@@ -137,5 +137,6 @@ fn download_result_restart_and_cleanup_remain_distinct() {
     assert_eq!(value["downloadEvidence"]["sessionId"], 7);
 }
 
+mod failure;
 mod receipt;
 mod system2_validation;

@@ -36,6 +36,9 @@ Issue #30 and issue #22 stay open; S2-02 (the original start failure) and S2-03
 route is capped at 12 data octets per request, which can slow transfers.
 Device backups (format 2), new activity-history rows and new System-2 operation
 records are refused by Alpha 16; opening Alpha 17 saves in Alpha 16 is not tested.
+Public artifacts are verified against the immutable tag; that verification is not a
+FUSE launch, interactive GUI, hardware or local ARM64 run
+([public verification record](../evidence/release-alpha17-2026-10-26.json)).
 [Release scope and boundaries](../releases/alpha17.md#boundaries).
 
 <a id="up258-system-2-candidate-source-20-october-2026"></a>

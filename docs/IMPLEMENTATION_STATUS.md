@@ -20,7 +20,12 @@ and core model stay at 16 and the product database at 28, so no migration is
 needed. Every dated delivery entry from 24–26 October 2026 below that is an
 ancestor of the cutoff ships in Alpha 17; their "source" labels record the
 delivery date, not a missing release. Scope, upgrade notes and boundaries:
-[Alpha 17 release notes](releases/alpha17.md).
+[Alpha 17 release notes](releases/alpha17.md). Tag commit
+`a9ea32d72364478b25e158d0b95465af7a4702df` passed one full package gate plus
+release extras (the pinned matrix's first, harness-misplaced attempt stays red;
+its rerun passed); both dry runs and both publication workflows succeeded, and
+public assets, Docker index/revision and isolated artifact smokes are verified:
+[public verification record](evidence/release-alpha17-2026-10-26.json).
 
 ## Regular CLI durable-tunnel runtime, PRG-01/S2-03 slice (26 October 2026)
 

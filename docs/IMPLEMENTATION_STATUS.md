@@ -13,6 +13,16 @@ archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
 
+## Sortable catalogue table (26 October 2026 source)
+
+WP-24 is published as `8dd6cf72d` after independent implementation/correction
+reviews and all 11 package/34 nested web stages: 4,475 Vitest tests, 908 default
+browser cases and 22 separate production catalogue cases passed. Native columns
+sort without changing catalogue data, selected product identity or authoring
+payloads. Search arrows announce the actual highlighted row; Enter selects only.
+[Acceptance and boundaries](status/2026-10-26-catalogue-table.md). No native
+screen-reader, large-catalogue performance or application deployment claim.
+
 ## Native project version timeline (26 October 2026 source)
 
 WP-22 is published as `132070176` after independent implementation/correction

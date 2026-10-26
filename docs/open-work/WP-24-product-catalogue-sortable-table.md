@@ -1,8 +1,9 @@
 # WP-24 — Product catalogue as a table with sortable headers
 
 Owner request: 25 October 2026. Implementation authorised on 26 October 2026
-through the next-open-tasks assignment. Implementation and correction re-review
-are approved; final integrated gate and publication are pending.
+through the next-open-tasks assignment. Delivered as `8dd6cf72d` after independent
+implementation/correction reviews and complete integrated acceptance.
+[Acceptance](../status/2026-10-26-catalogue-table.md).
 No application release is assigned.
 
 ## Requested outcome
@@ -34,6 +35,6 @@ See the [contract](../contracts/catalogue-table.md) and
 The implementer's deliberate-wrong-stub run is calibration, not an original
 product failure. A separately retained immutable original-source render fails
 because no native table exists, while the same test passes on the candidate.
-Review-correction refusals and final results stay separately bound. Final
-integrated acceptance/publication remain pending; no native screen-reader,
+Review-correction failures and final results stay separately bound. Final
+acceptance passed all 11 package/34 nested web stages; no native screen-reader,
 hardware, catalogue migration or application deployment claim is made.

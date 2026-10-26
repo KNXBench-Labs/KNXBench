@@ -7,8 +7,10 @@ WP-23 is separately delivered as `903d5d0c1`, with generation-bound unique group
 names and unchanged raw identities ([acceptance](status/2026-10-26-flow-group-names.md)).
 WP-22 is delivered as `132070176`: the existing native versions now have a
 selection-only timeline with unchanged guarded restore semantics
-([acceptance](status/2026-10-26-project-version-timeline.md)). WP-24 remains a
-separate reviewed catalogue task awaiting integrated acceptance.
+([acceptance](status/2026-10-26-project-version-timeline.md)). WP-24 is delivered
+as `8dd6cf72d`: native sortable catalogue columns, stable product identities and
+polite keyboard-highlight announcements, without catalogue-data changes
+([acceptance](status/2026-10-26-catalogue-table.md)).
 
 System-2 [S2-01](open-work/S2-01-pid7-raw-response.md) is P1: the private diagnostic prefix is
 published as `5f1ad454e` after review and integrated acceptance

@@ -427,9 +427,14 @@ particular database, not that no KNX action happened.
 The gated `knx device system2-validation` command records kind
 `system2Validation` (target address required). It is a property-write kind:
 same states and `writeEvidence` rules as `serviceControlWrite`, no
-`downloadEvidence`. A refusal before its recorded send boundary is `notSent`; a
-failure after it is `effectUnverified`. It is a bounded CLI row, not a claim of
-complete download coverage.
+`downloadEvidence`. Its send boundary is the executor's recovery barrier: the
+original-state recovery checkpoint is durable (or, on recovery replay, the
+retained one is revalidated) and Verify Mode, the first possible mutation, is
+next. Only then are `backupRecorded`/`sendPossible` recorded; a recording error
+stops the operation unsent. A refusal before that boundary (gateway, connect,
+identity, hardware or recovery read, cancellation) is `notSent`; a failure after
+it is `effectUnverified`. It is a bounded CLI row, not a claim of complete
+download coverage: server/Web System-2 operations write no activity rows.
 
 Read observations use `running`, `finished`, `failed`, `unknown`. Property
 writes use `running`, `verified`, `noChange`, `notSent`, `effectUnverified`,

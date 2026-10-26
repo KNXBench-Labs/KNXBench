@@ -506,6 +506,24 @@ There is no stop button: stopping between steps would leave the device in an und
 state. The server cannot tell a person from a script; like the command, it only checks
 that the request names the device it was shown.
 
+### When a download fails (unreleased source)
+
+A download that ends early shows **Download failed** as an alert with its own facts:
+the **cause** (a plain sentence and a short stable code such as `noAnswer`), **where**
+(the step that ran, or the backup before a step that never started, or "before the first
+plan step"), the **restart** (not part of the plan, not sent, or unknown) and how many
+data octets were written and read back unchanged. A stop you asked for before the first
+change reads **Download stopped on request** instead. The server's own error text stays
+under **Technical detail** on this computer.
+
+The same cause is kept in three more places: one red entry in the **Log** (the
+programming-flag entry after it is linked to it but is not the cause), the **bus activity
+history**, which keeps it after a server restart, and the saved **report**. Closing and
+reopening the download tab shows the last run again without downloading. Older history
+rows and reports, and runs from `knx device download`, say the cause was not recorded.
+The cause never contains memory contents, keys, the gateway or project data. This is
+software-tested only; it explains what KNXBench saw, not why a device failed.
+
 ### When preparation or starting is refused
 
 *Since Alpha 12:* the selected device or failed request shows

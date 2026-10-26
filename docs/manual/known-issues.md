@@ -507,6 +507,20 @@ is the remaining copy defect.
 - **Details:** [Commissioning history contract](../contracts/COMMISSIONING_ACTIVITY_HISTORY.md),
   [commissioning goal](https://github.com/KNXBench-Labs/KNXBench/blob/6222e17754f3/docs/archive/alpha-0.1/goal-commission.md).
 
+### A failed download's cause is recorded only by the app's download (unreleased source)
+
+- **Affected:** the cause, step and restart evidence of a failed regular download
+  (DIAG-02).
+- **Limitation:** only the server/web download worker records it. Failed runs
+  from `knx device download` and the System-2 download, older history rows and
+  older reports say *cause not recorded*. An older KNXBench version refuses a
+  bus activity history page that contains a recorded cause (it shows the history
+  as unavailable), as it already does for a read-only check.
+- **Consequence:** the diagnostic says what KNXBench saw (a timeout, a refused
+  write, a lost connection) and where; it does not prove why a device failed, and
+  nothing is retried or restored automatically.
+- **Details:** [Download failure diagnostic](../contracts/download-failure-diagnostic.md).
+
 ### There is no address reset in the app
 
 - **Affected:** resetting a device's individual address to `15.15.255`.

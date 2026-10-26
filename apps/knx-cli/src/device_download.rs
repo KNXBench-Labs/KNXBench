@@ -529,10 +529,11 @@ pub fn format_plan(prepared: &PreparedDownload, keying: &DownloadKeying) -> Stri
     out
 }
 
-/// The outcome a tester's report records for `result` (ADR-0121); `None`
-/// for a run that has not ended.
+/// The outcome a tester's report records for `result` (ADR-0121), with the
+/// 1-based step a stopped run last started; `None` for a run that has not ended.
 pub fn reported_outcome(
     result: &knx_app::commissioning_activity::DownloadResult,
+    stopped_in_step: Option<usize>,
 ) -> Option<knx_app::download_report::ReportedOutcome> {
     use knx_app::commissioning_activity::DownloadResult;
     use knx_app::download_report::ReportedOutcome;
@@ -541,7 +542,9 @@ pub fn reported_outcome(
         DownloadResult::Finished { written, restart } => {
             Some(ReportedOutcome::completed(written, restart))
         }
-        DownloadResult::Failed { written } => Some(ReportedOutcome::stopped(written, None)),
+        DownloadResult::Failed { written } => {
+            Some(ReportedOutcome::stopped(written, stopped_in_step))
+        }
     }
 }
 
@@ -624,6 +627,43 @@ pub fn format_progress(progress: &Progress) -> Option<String> {
 /// Shared payload-free device-write classification.
 pub use knx_app::commissioning_activity::Written;
 use knx_app::commissioning_activity::{DownloadGuard, DownloadResult, Restart};
+use knx_app::download_failure::DownloadFailure;
+
+/// A transfer's terminal result and what a failed run keeps (DIAG-02).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Witnessed {
+    pub result: DownloadResult,
+    /// The 1-based step that last started; `None` before the first.
+    pub stopped_in_step: Option<usize>,
+    /// A failed run's payload-free diagnostic, built once from its own error;
+    /// `None` for every other result.
+    pub failure: Option<DownloadFailure>,
+}
+
+impl Witnessed {
+    /// Records the result once: a failed run with its diagnostic. A history
+    /// that refuses the diagnostic still gets the failed row, cause not recorded,
+    /// with an operator warning. If neither record succeeds, keep the first error.
+    pub fn record(
+        &self,
+        activity: &mut DownloadGuard,
+        warnings: &mut impl Write,
+    ) -> std::io::Result<()> {
+        match (&self.result, &self.failure) {
+            (DownloadResult::Failed { written }, Some(failure)) => activity
+                .record_failure(*written, failure)
+                .or_else(|original| {
+                    activity.record_result(&self.result).map_err(|_| original)?;
+                    let _ = writeln!(
+                        warnings,
+                        "WARNING: history kept the failure without its cause"
+                    );
+                    Ok(())
+                }),
+            _ => activity.record_result(&self.result),
+        }
+    }
+}
 
 /// The plan and immutable recovery destination used by the same execution.
 pub struct DownloadRun<'a> {
@@ -652,6 +692,7 @@ pub async fn execute<T: ManagementTransport>(
         out,
     )
     .await
+    .result
     {
         DownloadResult::Finished { written, .. } | DownloadResult::Failed { written } => written,
         DownloadResult::Running => unreachable!("executor returns a terminal result"),
@@ -667,7 +708,7 @@ pub async fn execute_with_history<T: ManagementTransport>(
     run: DownloadRun<'_>,
     activity: &mut DownloadGuard,
     out: &mut impl Write,
-) -> DownloadResult {
+) -> Witnessed {
     execute_inner(
         transport,
         authorisation,
@@ -684,10 +725,33 @@ pub async fn execute_with_history<T: ManagementTransport>(
     .await
 }
 
+/// Execute and record one transfer, as used by restore and regular download.
+/// Recording never changes the device outcome; warnings go to the caller's output.
+pub async fn execute_and_record_download<T: ManagementTransport>(
+    transport: &T,
+    authorisation: WriteAuthorisation,
+    keying: DownloadKeying,
+    timing: SessionTiming,
+    run: DownloadRun<'_>,
+    activity: &mut DownloadGuard,
+    out: &mut impl Write,
+) -> (Witnessed, bool) {
+    let witnessed =
+        execute_with_history(transport, authorisation, keying, timing, run, activity, out).await;
+    let recorded = witnessed.record(activity, out).map_err(|error| {
+        eprintln!("device outcome is witnessed, but activity history could not record it: {error}; do not retry automatically");
+    }).is_ok();
+    (witnessed, recorded)
+}
+
 /// A regular download's witnessed transfer and the read-only check after it.
 pub struct RegularDownload {
     /// The transfer's own result, never changed by the check.
     pub result: DownloadResult,
+    /// The 1-based step that last started, for the report.
+    pub stopped_in_step: Option<usize>,
+    /// A failed transfer's diagnostic, as the history and report keep it.
+    pub failure: Option<DownloadFailure>,
     /// Whether the history recorded that result.
     pub recorded: bool,
     /// The check; `notChecked` unless the transfer finished written.
@@ -714,11 +778,14 @@ pub async fn execute_regular_download<T: ManagementTransport>(
 ) -> RegularDownload {
     let target = authorisation.target();
     let plan = run.plan;
-    let result =
-        execute_with_history(transport, authorisation, keying, timing, run, activity, out).await;
-    let recorded = activity.record_result(&result).map_err(|error| {
-        eprintln!("device outcome is witnessed, but activity history could not record it: {error}; do not retry automatically");
-    }).is_ok();
+    let (witnessed, recorded) =
+        execute_and_record_download(transport, authorisation, keying, timing, run, activity, out)
+            .await;
+    let Witnessed {
+        result,
+        stopped_in_step,
+        failure,
+    } = witnessed;
     let DownloadResult::Finished {
         written: Written::Yes,
         ..
@@ -726,6 +793,8 @@ pub async fn execute_regular_download<T: ManagementTransport>(
     else {
         return RegularDownload {
             result,
+            stopped_in_step,
+            failure,
             recorded,
             check: PostDownloadCheck::not_checked(),
             check_recorded: true,
@@ -750,6 +819,8 @@ pub async fn execute_regular_download<T: ManagementTransport>(
     }).is_ok();
     RegularDownload {
         result,
+        stopped_in_step,
+        failure,
         recorded,
         check,
         check_recorded,
@@ -775,12 +846,13 @@ pub fn finish_regular_download(
             );
         })
         .is_ok();
-    let reported = match (report, reported_outcome(&run.result)) {
+    let reported = match (report, reported_outcome(&run.result, run.stopped_in_step)) {
         (Some((path, report)), Some(outcome)) => {
             let report = report
                 .clone()
                 .with_outcome(outcome)
-                .with_check(run.check.clone());
+                .with_check(run.check.clone())
+                .with_failure(run.failure.clone());
             match write_report(path, &report) {
                 // Unprinted, the file's location is unknown to the operator.
                 Ok(text) => out.write_all(text.as_bytes()).is_ok(),
@@ -818,7 +890,7 @@ async fn execute_inner<T: ManagementTransport>(
     run: DownloadRun<'_>,
     mut before_write: impl FnMut() -> Result<(), String>,
     out: &mut impl Write,
-) -> DownloadResult {
+) -> Witnessed {
     let DownloadRun { plan, backup } = run;
     let target = authorisation.target().address();
     let mut session =
@@ -832,14 +904,22 @@ async fn execute_inner<T: ManagementTransport>(
                 }
             }
             Err(e) => {
+                let failure = DownloadFailure::from_session_refusal(&e, plan);
                 let _ = writeln!(out, "== download to device {target}: refused: {e} ==");
+                let _ = writeln!(out, "diagnostic: {}", failure.line());
                 let _ = writeln!(out, "written to the device: no");
-                return DownloadResult::Failed {
-                    written: Written::No,
+                return Witnessed {
+                    result: DownloadResult::Failed {
+                        written: Written::No,
+                    },
+                    stopped_in_step: None,
+                    failure: Some(failure),
                 };
             }
         };
     let mut last_started = None;
+    // Data octets written and read back unchanged, as the executor counts them.
+    let mut read_back = 0;
     let mut granted = None;
     // Shared by the backup closure (which sets it) and the observer (which
     // prints it when the backup's progress arrives, right after).
@@ -863,6 +943,9 @@ async fn execute_inner<T: ManagementTransport>(
         |progress| {
             if let Progress::StepStarted { index, .. } = &progress {
                 last_started = Some(*index);
+            }
+            if let Progress::DataWritten { written, .. } = &progress {
+                read_back = *written;
             }
             if let Progress::Authorised {
                 authorisation,
@@ -888,20 +971,27 @@ async fn execute_inner<T: ManagementTransport>(
             .iter()
             .any(MemoryDownloadStep::changes_device)
     });
+    let stopped_in_step = last_started.map(|index| index + 1);
     match result {
         Ok(report) => {
             summarise(out, target, &report);
-            DownloadResult::Finished {
-                written: Written::Yes,
-                restart: match report.restart {
-                    RestartOutcome::Acknowledged { .. } => Restart::Acknowledged,
-                    RestartOutcome::Unconfirmed { .. } => Restart::Unconfirmed,
-                    RestartOutcome::NotInPlan => Restart::NotInPlan,
+            Witnessed {
+                result: DownloadResult::Finished {
+                    written: Written::Yes,
+                    restart: match report.restart {
+                        RestartOutcome::Acknowledged { .. } => Restart::Acknowledged,
+                        RestartOutcome::Unconfirmed { .. } => Restart::Unconfirmed,
+                        RestartOutcome::NotInPlan => Restart::NotInPlan,
+                    },
                 },
+                stopped_in_step,
+                failure: None,
             }
         }
         Err(e) => {
+            let failure = DownloadFailure::from_error(&e, plan, stopped_in_step, read_back);
             let _ = writeln!(out, "== download to device {target}: FAILED: {e} ==");
+            let _ = writeln!(out, "diagnostic: {}", failure.line());
             if let Some(hint) = locked_device_hint(
                 &e,
                 granted.map(|(authorisation, _)| authorisation),
@@ -923,13 +1013,21 @@ async fn execute_inner<T: ManagementTransport>(
                         path.display()
                     );
                 }
-                DownloadResult::Failed {
-                    written: Written::Partially,
+                Witnessed {
+                    result: DownloadResult::Failed {
+                        written: Written::Partially,
+                    },
+                    stopped_in_step,
+                    failure: Some(failure),
                 }
             } else {
                 let _ = writeln!(out, "written to the device: no");
-                DownloadResult::Failed {
-                    written: Written::No,
+                Witnessed {
+                    result: DownloadResult::Failed {
+                        written: Written::No,
+                    },
+                    stopped_in_step,
+                    failure: Some(failure),
                 }
             }
         }
@@ -1206,7 +1304,8 @@ mod tests {
                 },
                 &mut activity,
                 &mut Vec::new(),
-            ));
+            ))
+            .result;
         assert_eq!(
             result,
             DownloadResult::Finished {
@@ -1272,7 +1371,8 @@ mod tests {
                 },
                 &mut activity,
                 &mut out,
-            ));
+            ))
+            .result;
         assert_eq!(
             result,
             DownloadResult::Failed {
@@ -1907,22 +2007,28 @@ mod tests {
     fn a_run_is_reported_by_how_it_ended() {
         use knx_app::commissioning_activity::{DownloadResult, Restart, Written};
         use knx_app::download_report::ReportedOutcome;
-        assert_eq!(reported_outcome(&DownloadResult::Running), None);
+        assert_eq!(reported_outcome(&DownloadResult::Running, None), None);
         assert_eq!(
-            reported_outcome(&DownloadResult::Finished {
-                written: Written::Yes,
-                restart: Restart::Acknowledged
-            }),
+            reported_outcome(
+                &DownloadResult::Finished {
+                    written: Written::Yes,
+                    restart: Restart::Acknowledged
+                },
+                Some(3)
+            ),
             Some(ReportedOutcome::completed(
                 Written::Yes,
                 Restart::Acknowledged
             ))
         );
         assert_eq!(
-            reported_outcome(&DownloadResult::Failed {
-                written: Written::Partially
-            }),
-            Some(ReportedOutcome::stopped(Written::Partially, None))
+            reported_outcome(
+                &DownloadResult::Failed {
+                    written: Written::Partially
+                },
+                Some(3)
+            ),
+            Some(ReportedOutcome::stopped(Written::Partially, Some(3)))
         );
     }
 

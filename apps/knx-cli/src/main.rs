@@ -3276,7 +3276,7 @@ fn run_device_restore(args: &[String]) -> ExitCode {
                 return ExitCode::FAILURE;
             }
         };
-        let result = device_download::execute_with_history(
+        let (result, recorded) = device_download::execute_and_record_download(
             &tunnel,
             authorisation,
             keying,
@@ -3293,9 +3293,6 @@ fn run_device_restore(args: &[String]) -> ExitCode {
             &mut activity,
             &mut std::io::stdout(),
         ).await;
-        let recorded = activity.record_result(&result).map_err(|error| {
-            eprintln!("device outcome is witnessed, but activity history could not record it: {error}; do not retry automatically");
-        }).is_ok();
         let cleanup_ok = match tunnel.disconnect().await {
             Ok(()) => true,
             Err(error) => {
@@ -3306,7 +3303,7 @@ fn run_device_restore(args: &[String]) -> ExitCode {
         let cleanup_recorded = activity.record_cleanup(cleanup_ok).map_err(|error| {
             eprintln!("activity history could not record cleanup: {error}; device outcome is unchanged");
         }).is_ok();
-        if matches!(result, knx_app::commissioning_activity::DownloadResult::Finished { written: device_download::Written::Yes, .. })
+        if matches!(result.result, knx_app::commissioning_activity::DownloadResult::Finished { written: device_download::Written::Yes, .. })
             && recorded && cleanup_ok && cleanup_recorded {
             ExitCode::SUCCESS
         } else {

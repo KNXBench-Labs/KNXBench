@@ -400,9 +400,10 @@ class GatePlan(unittest.TestCase):
         self.assertIn('browser-exclusive', plan)
         self.assertLess(plan.index('browser-lanes'), plan.index('build'))
         for config in runner.PRODUCTION_CONFIGS:
-            # One serial stage per suite: the configs pin `workers: 1` (ADR-0144 keeps that).
-            self.assertIn(f'production-{config}', plan)
-        self.assertFalse([s for s in plan if s.startswith('production-') and s.endswith('-exclusive')])
+            # Each suite lists its inventory, then runs the tag lanes (ADR-0154).
+            stages = [f'production-{config}-{lane}' for lane in ('inventory', 'functional', 'exclusive')]
+            self.assertEqual([plan.index(s) for s in stages], sorted(plan.index(s) for s in stages))
+            self.assertNotIn(f'production-{config}', plan)
         self.assertEqual(plan[-1], 'diff-check')
         benchmark = runner.stage_plan('benchmark', [])
         self.assertEqual(benchmark[0], 'browser-lanes')
@@ -413,20 +414,65 @@ class GatePlan(unittest.TestCase):
         from tools import run_web_gate as runner
         plan = runner.stage_plan('targeted', ['tsconfig.extra.json'], ('devices',), True)
         for stage in ('browser-lanes', 'build', 'tsconfig.extra', 'vitest', 'browser-inventory',
-                      'browser-functional', 'browser-exclusive', 'production-devices'):
+                      'browser-functional', 'browser-exclusive', 'production-devices-inventory',
+                      'production-devices-functional', 'production-devices-exclusive'):
             self.assertIn(stage, plan)
-        self.assertNotIn('production-devices-exclusive', plan)
         self.assertFalse([s for s in plan if s.startswith('production-') and 'devices' not in s])
         for stage in ('documentation', 'tool-tests', 'check-layering', 'diff-check'):
             self.assertNotIn(stage, plan)
         quiet = runner.stage_plan('targeted', [], (), False)
         self.assertEqual(quiet, ['browser-lanes', 'build', 'vitest'])
 
-    def test_production_suites_run_with_the_one_worker_their_configs_pin(self) -> None:
+    def test_production_suites_split_by_tag_like_the_default_lane(self) -> None:
+        from unittest import mock
+        from tools import run_web_gate as runner
+        inventory = report('plain', 'other', 'timed', tags={'timed': ['exclusive']})
+        calls = []
+
+        def stage(run, app, env, name, config, lane, workers, expected=None, files=None):
+            calls.append((name, config, lane, workers, None if expected is None else sorted(expected)))
+            if expected is None:
+                (run.output / f'{name}.json').write_text(json.dumps(inventory))
+            return {}
+
+        with TemporaryDirectory() as tmp, mock.patch.object(runner, 'browser_stage', stage):
+            app = Path(tmp)
+            (app / 'e2e').mkdir()
+            for spec in ('plain', 'other'):
+                (app / 'e2e' / f'{spec}.e2e.ts').write_text('test("p", async () => {});\n')
+            (app / 'e2e' / 'timed.e2e.ts').write_text(
+                'test("t", { tag: "@exclusive" }, async () => {});\n')
+            run = support.MeasuredRun(Path(tmp) / 'attempt', [])
+            runner.run_production(run, app, {}, 'devices', 4)
+            cases = support.browser_cases(inventory)
+            functional, exclusive = support.split_lanes(cases)
+            self.assertEqual(calls, [
+                ('production-devices-inventory', 'playwright.devices.config.ts', None, 1, None),
+                ('production-devices-functional', 'playwright.devices.config.ts', 'functional', 4,
+                 sorted(functional)),
+                ('production-devices-exclusive', 'playwright.devices.config.ts', 'exclusive', 1,
+                 sorted(exclusive)),
+            ])
+            self.assertEqual(run.receipt['production']['devices'],
+                             {'total': 3, 'functional': 2, 'exclusive': 1})
+            # A second suite adds its counts; the saved receipt carries both.
+            inventory = report('plain')
+            runner.run_production(run, app, {}, 'notes', 4)
+            self.assertEqual(calls[-1], ('production-notes-exclusive', 'playwright.notes.config.ts',
+                                         'exclusive', 1, []))
+            saved = json.loads((run.output / 'receipt.json').read_text())['production']
+            self.assertEqual(saved, {'devices': {'total': 3, 'functional': 2, 'exclusive': 1},
+                                     'notes': {'total': 1, 'functional': 1, 'exclusive': 0}})
+            # Tagged scopes that compile to no exclusive case fail closed.
+            inventory = report('timed')
+            inventory['suites'][0]['specs'][0]['tags'] = []
+            with self.assertRaisesRegex(ValueError, 'compiled to no exclusive case'):
+                runner.run_production(run, app, {}, 'dialogs', 4)
+
+    def test_production_configs_still_pin_one_worker_for_standalone_runs(self) -> None:
         import inspect
         from tools import run_web_gate as runner
-        source = inspect.getsource(runner.main)
-        self.assertIn("browser_stage(run, app, env, name, file, None, 1, expected)", source)
+        self.assertIn('run_production(run, app, env, config, args.workers)', inspect.getsource(runner.main))
         app = Path(__file__).resolve().parents[2] / 'apps/knx-web'
         for config in runner.PRODUCTION_CONFIGS:
             text = (app / f'playwright.{config}.config.ts').read_text()

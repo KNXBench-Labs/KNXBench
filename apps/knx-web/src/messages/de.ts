@@ -3985,7 +3985,7 @@ export const messages: Record<MessageKey, string> = {
   "downloadFailure.title.stopped": "Laden ins Gerät auf Wunsch angehalten",
   "downloadFailure.cause": "Ursache: {cause}",
   "downloadFailure.code": "Stabiler Fehlercode, für Berichte und Support",
-  "downloadFailure.category.planRefused": "Der Plan oder seine Freigabe wurde abgelehnt, bevor etwas geschrieben wurde.",
+  "downloadFailure.category.planRefused": "Der Plan oder seine Freigabe wurde abgelehnt.",
   "downloadFailure.category.identityMismatch": "Das Gerät ist nicht das, für das der Plan erstellt wurde.",
   "downloadFailure.category.backupFailed": "Die Sicherung vor dem ersten Schreiben konnte nicht gelesen oder gespeichert werden.",
   "downloadFailure.category.timeout": "Das Gerät hat nicht rechtzeitig geantwortet.",

@@ -101,7 +101,7 @@ not part of the report, the history or the log entry.
   read-back octets on a row that wrote nothing, a category in a phase it cannot
   have (a stop or backup failure inside a step), `notSent` for a failure inside
   the restart step, counts above 2^53−1, a non-ASCII or overlong summary, or a
-  code/category, step or bound mismatch (31 cases shared by the Rust and web
+  code/category, step or bound mismatch (33 cases shared by the Rust and web
   readers in `apps/knx-web/src/downloadFailure.cases.json`). As with `postDownloadCheck`,
   an older KNXBench that reads a history containing a recorded cause refuses
   that page (safe refusal, not a seamless downgrade).

@@ -446,6 +446,28 @@
       ],
       "remove": [],
       "admitted": false
+    },
+    {
+      "name": "a timeout in a backup phase",
+      "set": [
+        [
+          "/downloadEvidence/failure/phase",
+          "backupBeforeStep"
+        ]
+      ],
+      "remove": [],
+      "admitted": false
+    },
+    {
+      "name": "a timeout in a stop phase",
+      "set": [
+        [
+          "/downloadEvidence/failure/phase",
+          "stoppedBeforeStep"
+        ]
+      ],
+      "remove": [],
+      "admitted": false
     }
   ]
 }

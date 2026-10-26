@@ -728,7 +728,7 @@ fn the_report_main_writes_carries_the_check_and_an_older_report_shape_has_none()
     assert!(run.out.contains("report: "), "{}", run.out);
     let text = json.to_string();
     assert!(!text.contains(&device.address().to_string()), "no address");
-    let outcome = reported_outcome(&run.outcome.result).unwrap();
+    let outcome = reported_outcome(&run.outcome.result, run.outcome.stopped_in_step).unwrap();
     let summary = report_template()
         .with_outcome(outcome)
         .with_check(run.outcome.check.clone())
@@ -780,6 +780,8 @@ fn every_unrecorded_fact_makes_the_exit_nonzero_and_the_check_verdict_does_not()
     let with = |edit: fn(&mut RegularDownload)| {
         let mut outcome = RegularDownload {
             result: run.outcome.result,
+            stopped_in_step: run.outcome.stopped_in_step,
+            failure: run.outcome.failure.clone(),
             recorded: run.outcome.recorded,
             check: run.outcome.check.clone(),
             check_recorded: run.outcome.check_recorded,
@@ -989,3 +991,6 @@ fn the_read_only_allowlist_refuses_every_other_service() {
         assert!(!read_only_frame(&seen), "{seen:?}");
     }
 }
+
+#[path = "device_download_failure_tests.rs"]
+mod failure_tests;

@@ -502,7 +502,7 @@ pub fn explanation(code: FailureCode) -> &'static str {
         | F::MalformedRestartResponse
         | F::MalformedMemoryLoadState => "the device answered something undefined",
         F::Encode | F::Chunk => "KNXBench could not build a frame (internal)",
-        F::Lagged => "the server missed bus frames; the answer may have been among them",
+        F::Lagged => "KNXBench missed bus frames; the answer may have been among them",
         F::Stopped => "stopped on request before the first change",
         F::TaskEnded => "the download task ended without a result",
     }

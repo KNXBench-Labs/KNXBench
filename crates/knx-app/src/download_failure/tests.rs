@@ -246,6 +246,14 @@ fn persisted_values_are_admitted_only_when_consistent() {
 }
 
 #[test]
+fn lagged_frames_explanation_names_knxbench_not_a_specific_frontend() {
+    assert_eq!(
+        explanation(FailureCode::Lagged),
+        "KNXBench missed bus frames; the answer may have been among them"
+    );
+}
+
+#[test]
 fn every_code_token_round_trips_and_has_an_explanation() {
     use FailureCode as F;
     let all = [

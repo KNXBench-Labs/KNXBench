@@ -670,6 +670,13 @@ unchanged. The command ends with one of three lines, and exits `0` only for the 
 - `written to the device: partially (stopped in step …)` — the device may not run until
   a complete download
 
+A failed run first prints a `diagnostic:` line: what KNXBench saw (a timeout, a refused
+write, a lost connection, an identity mismatch), the step it relates to, the octets read
+back unchanged and whether the restart was sent. The bus activity history and the
+`--report` file keep the same payload-free diagnostic; `knx device restore` records it
+in the history too. It says where the run ended, not why a device failed
+([contract](../../contracts/download-failure-diagnostic.md)).
+
 A download that wrote everything but whose closing restart the device did not
 acknowledge still ends `yes`, followed by `restart: NOT confirmed` and what to do about
 it. Some devices never acknowledge that restart

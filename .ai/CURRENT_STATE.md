@@ -1,6 +1,17 @@
 # Restart snapshot
 
-Updated: 2026-10-26 19:03 CET. Operational snapshot, not an append-only journal.
+Updated: 2026-10-26 19:17 CET. Operational snapshot, not an append-only journal.
+## S2-01 safe diagnostic projection (ACTIVE; dependency RELEASED, observed 19:17 CET)
+- User go: continue through reviewed/gated publication after width dependency release.
+- Own `<sources>/knxbench-system2-safe-failure-20261026`, branch
+  `feat/system2-safe-failure-projection-20261026`, rebased by fast-forward to `3ec5258f7`.
+- Own App failure/checkpoint/progress/report grammar, Server System2 DTO/status/tests,
+  Web strict decoder/mounted EN/DE diagnostics/tests; Net typed refusal seam consumed unchanged.
+- Scope: closed reason/object/property/count allowlist, durable replay, explicit version route;
+  preserve private diagnostic; legacy absence unknown; no text parsing/backfill or admission change.
+- Next TDD simulator producer-to-journal/reopen/HTTP/report/UI, independent review and full relevant gates.
+- No own worker/gate yet; evidence `<profile>/evidence/system2-safe-failure-20261026/`.
+- No bus/hardware/vendor/release/deployment; preserve foreign dirty root and other tracks.
 ## Issue #30 / S2-01 pointer width (DELIVERED, observed 2026-10-26 19:03 CET)
 - PUBLISHED main-first merge `54b052885`, feature `6b8b27936`; local/tracking/live equal.
 - Independent whole-feature review and correction re-review APPROVE; branch15/integrated15 green.

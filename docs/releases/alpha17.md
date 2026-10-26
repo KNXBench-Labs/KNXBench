@@ -80,9 +80,10 @@ no device family or hardware claim is added ([KL-007](../limitations/KL-007-boun
   marks pending**, and the CLI gets `knx device download --changes` (plans only).
   The programming flags resolve to a concrete scope or to nothing; they are not
   read from the device. [Contract](../contracts/device-programming-support-guidance.md).
-- **Read-only check after the download.** A separate read-only connection observes
-  reach, identity and load states, kept apart from transfer and restart in CLI,
-  status, report, history and EN/DE views. Runtime stays unknown; flags do not
+- **Read-only check after the download.** A read-only session on the same tunnel,
+  while the download still holds the gateway, observes reach, identity and load
+  states, kept apart from transfer and restart in CLI, status, report, history and
+  EN/DE views. Runtime stays unknown; flags do not
   change; restore does not run it. [Contract](../contracts/post-download-check.md).
 - **Backups record the prior application.** Backed-up executions store the actual
   pre-write application identity in **backup format 2**; restore refuses a backup

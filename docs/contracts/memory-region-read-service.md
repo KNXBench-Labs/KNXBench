@@ -5,10 +5,11 @@
 Backup, comparison and byte-order-probe region reads select the memory service
 once from the complete requested region, using the existing
 `knx_core::commissioning::memory::service_for` policy. Every chunk uses that
-service, as the corresponding region write does. User-memory reads are bounded
-by both the negotiated count and `USER_MEMORY_MAX_OCTETS` (15); standard-memory
-reads retain the existing negotiated count. No smaller-service fallback or
-mutation retry is introduced.
+service, as the corresponding region write does. Both use the
+[service-specific data budget](memory-transfer-budget.md): ordinary memory
+retains `max_octets()`, while user memory uses `min(15, max_octets() - 1)` for
+its extra header octet. At a standard-frame budget this is 12 or 11 data
+octets respectively. No smaller-service fallback or mutation retry is introduced.
 
 The existing service boundary uses the exclusive `base + length` value: a
 region at `0xFFC0` of 63 octets selects user memory, while 62 octets select

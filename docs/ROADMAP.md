@@ -39,6 +39,14 @@ existing bounded drain. Per-step effects, mid-procedure stop and recovery remain
 
 ## Regular programming correctness — 25 October 2026 source
 
+The [memory transfer budget](contracts/memory-transfer-budget.md) composes a
+conservative default hardware-route cap with service-specific header arithmetic.
+At a standard frame it sends 12 ordinary or 11 user-memory data octets; real
+interface/coupler capacity acquisition and extended-path authority remain open.
+Original semantic regression and initial review passed; correction re-review,
+maintained integrated gate and publication are pending
+([record](status/2026-10-26-memory-transfer-budget.md)). No family is admitted.
+
 The [regular fragment-admission contract](contracts/regular-merge-fragment-admission.md)
 conservatively refuses an untranslated declared shape without inventing merge
 semantics. Focused semantic regressions, independent review and all 14 selected

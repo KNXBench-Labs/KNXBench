@@ -76,6 +76,10 @@ pub enum ApduLengthSource {
 }
 
 /// The negotiated write length for one device, and why it is that value.
+///
+/// The fields are private and every constructor in this module yields 12 to
+/// 63 octets, so the `max_octets - 1` the user-memory budget takes cannot
+/// underflow and no budget is ever zero.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct WriteLimit {
     max_octets: u8,
@@ -103,6 +107,9 @@ pub enum WriteLimitReason {
     /// Derived from the value read, then capped at the 63 the service
     /// itself allows.
     CappedByServiceLimit,
+    /// Lowered to the standard frame's 12 because the route to the device
+    /// is unproved: a policy of this tool, not something the device said.
+    CappedToStandardFrame,
 }
 
 impl WriteLimit {
@@ -115,7 +122,40 @@ impl WriteLimit {
     pub fn reason(self) -> WriteLimitReason {
         self.reason
     }
+
+    /// Data octets one PDU of `service` carries under this limit.
+    ///
+    /// `[D]` AL v02.01.01 §3.5.6.2/§3.5.6.3: the `A_UserMemory_*` header is
+    /// three octets against `A_Memory_*`'s two (the `number` is not inline),
+    /// so the same APDU length leaves one data octet less, capped at the
+    /// service's own 15. Ordinary memory keeps [`WriteLimit::max_octets`].
+    pub fn max_octets_for(self, service: MemoryService) -> u8 {
+        match service {
+            MemoryService::Memory => self.max_octets,
+            MemoryService::UserMemory => (self.max_octets - 1).min(USER_MEMORY_MAX_OCTETS),
+        }
+    }
+
+    /// This limit held to the standard frame's 12 data octets.
+    ///
+    /// `[A]` conservative policy for a route whose frame capacity is not
+    /// proved, not a measured capacity and not a mandate against extended
+    /// frames. Lowers a larger limit and says so in the reason; a limit
+    /// already at 12 is returned as it is, reason included.
+    pub fn capped_to_standard_frame(self) -> WriteLimit {
+        if self.max_octets > STANDARD_FRAME_OCTETS {
+            WriteLimit {
+                max_octets: STANDARD_FRAME_OCTETS,
+                reason: WriteLimitReason::CappedToStandardFrame,
+            }
+        } else {
+            self
+        }
+    }
 }
+
+/// `DEFAULT_APDU_LENGTH` less the three overhead octets: 12 data octets.
+const STANDARD_FRAME_OCTETS: u8 = (DEFAULT_APDU_LENGTH - APDU_OVERHEAD_OCTETS) as u8;
 
 impl fmt::Display for WriteLimit {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -276,14 +316,10 @@ pub fn chunks(base: u32, data: &[u8], limit: WriteLimit) -> Result<Vec<Chunk>, C
     // straddles FFFFh does not change service half way through.
     let service = service_for(base, length);
     // The negotiated limit is an upper bound, not the only one: the chosen
-    // service has a hard limit of its own, and `A_UserMemory_Write`'s is
-    // 15 octets (see `USER_MEMORY_MAX_OCTETS`). Taking the minimum here is
-    // the difference between a chunk plan that can be sent and one that
-    // cannot be encoded at all.
-    let step = match service {
-        MemoryService::Memory => limit.max_octets() as usize,
-        MemoryService::UserMemory => (limit.max_octets().min(USER_MEMORY_MAX_OCTETS)) as usize,
-    };
+    // service has a header and a hard limit of its own (see
+    // `WriteLimit::max_octets_for`). Using its budget is the difference
+    // between a chunk plan that can be sent and one that cannot.
+    let step = limit.max_octets_for(service) as usize;
     let mut out = Vec::with_capacity(data.len().div_ceil(step));
     let mut offset = 0usize;
     while offset < data.len() {
@@ -303,7 +339,9 @@ pub fn chunks(base: u32, data: &[u8], limit: WriteLimit) -> Result<Vec<Chunk>, C
 mod tests {
     use super::*;
 
+    /// Only what a production constructor can yield: 12 to 63 octets.
     fn limit_of(n: u8) -> WriteLimit {
+        assert!((12..=63).contains(&n), "not a production limit: {n}");
         WriteLimit {
             max_octets: n,
             reason: WriteLimitReason::FromDeviceObject,
@@ -423,9 +461,8 @@ mod tests {
                 .all(|c| c.service == MemoryService::UserMemory),
             "a region must not change service half way through"
         );
-        // A 12-octet negotiated limit is already below the user-memory
-        // service's own 15, so this region is chunked by the APDU limit.
-        assert!(chunks.iter().all(|c| c.length <= 12));
+        // A 12-octet negotiated limit leaves the user-memory service 11.
+        assert!(chunks.iter().all(|c| c.length <= 11));
         // And the naive rule — switching on the base alone — would have
         // said otherwise, which is the bug this test exists for.
         assert_eq!(service_for(base, 1), MemoryService::Memory);
@@ -454,11 +491,11 @@ mod tests {
     }
 
     /// The cap narrows, never widens: a device that negotiated 12 octets
-    /// still gets 12-octet chunks above `FFFFh`, not 15.
+    /// gets 11-octet chunks above `FFFFh` (one header octet more), not 15.
     #[test]
     fn the_user_memory_cap_never_raises_a_smaller_negotiated_limit() {
         let above = chunks(0x8_0000, &[0u8; 100], limit_of(12)).unwrap();
-        assert_eq!(above.iter().map(|c| c.length).max(), Some(12));
+        assert_eq!(above.iter().map(|c| c.length).max(), Some(11));
     }
 
     #[test]
@@ -526,5 +563,168 @@ mod tests {
         assert_eq!(chunks.len(), 1);
         assert_eq!(chunks[0].length, 3);
         assert_eq!(chunks[0].offset, 0);
+    }
+
+    // Service budgets: UserMemory's header is one octet longer than Memory's.
+
+    fn sources() -> Vec<ApduLengthSource> {
+        let mut all = vec![ApduLengthSource::Absent];
+        for v in 0..=u16::MAX {
+            all.push(ApduLengthSource::DeviceObject(v));
+            all.push(ApduLengthSource::RouterObjectOnly(v));
+        }
+        all
+    }
+
+    fn plan(base: u32, len: usize, apdu: u16) -> Vec<(u32, u8, MemoryService)> {
+        let data = vec![0x5A; len];
+        chunks(
+            base,
+            &data,
+            write_limit(ApduLengthSource::DeviceObject(apdu)),
+        )
+        .expect("chunks")
+        .into_iter()
+        .map(|c| (c.address, c.length, c.service))
+        .collect()
+    }
+
+    #[test]
+    fn a_sixteen_octet_boundary_region_at_the_standard_frame_is_eleven_plus_five() {
+        assert_eq!(
+            plan(0xFFF0, 16, 15),
+            vec![
+                (0xFFF0, 11, MemoryService::UserMemory),
+                (0xFFFB, 5, MemoryService::UserMemory)
+            ]
+        );
+    }
+
+    #[test]
+    fn the_user_memory_budget_follows_the_apdu_length_by_the_extra_header_octet() {
+        let user = |apdu| {
+            write_limit(ApduLengthSource::DeviceObject(apdu))
+                .max_octets_for(MemoryService::UserMemory)
+        };
+        assert_eq!(user(15), 11);
+        assert_eq!(user(16), 12);
+        assert_eq!(user(18), 14);
+        assert_eq!(user(19), 15);
+        assert_eq!(user(20), 15);
+        assert_eq!(user(254), 15);
+    }
+
+    #[test]
+    fn every_reported_value_yields_a_nonzero_budget_without_underflow() {
+        for source in sources() {
+            let limit = write_limit(source);
+            let m = limit.max_octets();
+            assert!((12..=63).contains(&m), "{source:?}: {m}");
+            assert_eq!(limit.max_octets_for(MemoryService::Memory), m);
+            let user = limit.max_octets_for(MemoryService::UserMemory);
+            assert_eq!(user, (m - 1).min(15), "{source:?}");
+            assert!(user >= 11);
+            let capped = limit.capped_to_standard_frame();
+            assert_eq!(capped.max_octets_for(MemoryService::UserMemory), 11);
+            assert_eq!(capped.max_octets_for(MemoryService::Memory), 12);
+        }
+    }
+
+    #[test]
+    fn the_standard_frame_cap_names_itself_only_when_it_lowers_something() {
+        for source in sources() {
+            let limit = write_limit(source);
+            let capped = limit.capped_to_standard_frame();
+            if limit.max_octets() > 12 {
+                assert_eq!(capped.max_octets(), 12, "{source:?}");
+                assert_eq!(capped.reason(), WriteLimitReason::CappedToStandardFrame);
+            } else {
+                assert_eq!(capped, limit, "{source:?}: value and reason stay");
+            }
+            assert_eq!(capped.capped_to_standard_frame(), capped, "idempotent");
+        }
+        // The twelve that was already 12 keeps the reason that explains it.
+        for (source, reason) in [
+            (ApduLengthSource::Absent, WriteLimitReason::PropertyAbsent),
+            (
+                ApduLengthSource::RouterObjectOnly(254),
+                WriteLimitReason::RouterObjectOnly,
+            ),
+            (
+                ApduLengthSource::DeviceObject(255),
+                WriteLimitReason::EscapeCode,
+            ),
+            (
+                ApduLengthSource::DeviceObject(3),
+                WriteLimitReason::BelowStandardRange,
+            ),
+            (
+                ApduLengthSource::DeviceObject(15),
+                WriteLimitReason::FromDeviceObject,
+            ),
+        ] {
+            assert_eq!(
+                write_limit(source).capped_to_standard_frame().reason(),
+                reason
+            );
+        }
+        assert_eq!(
+            write_limit(ApduLengthSource::DeviceObject(254)).reason(),
+            WriteLimitReason::CappedByServiceLimit,
+            "write_limit itself is not changed"
+        );
+    }
+
+    #[test]
+    fn chunk_plans_tile_the_region_exactly_for_every_source_and_both_services() {
+        let patterns = [
+            (0x4000u32, 200usize),
+            (0xFFF0, 90),
+            (0xFF80, 0x7F),
+            (0x1_0000, 70),
+        ];
+        for apdu in 0..=300u16 {
+            let limit = write_limit(ApduLengthSource::DeviceObject(apdu));
+            for (base, len) in patterns {
+                let data: Vec<u8> = (0..len).map(|i| (i % 251) as u8 | 1).collect();
+                let plan = chunks(base, &data, limit).expect("chunks");
+                let service = service_for(base, len as u32);
+                let mut expected = 0usize;
+                for c in &plan {
+                    assert_eq!(c.service, service, "one service for the whole region");
+                    assert!(c.length >= 1 && c.length <= limit.max_octets_for(service));
+                    assert_eq!(c.offset, expected);
+                    assert_eq!(c.address, base + expected as u32);
+                    expected += c.length as usize;
+                }
+                assert_eq!(expected, len, "no gap, no duplicate");
+            }
+        }
+    }
+
+    #[test]
+    fn a_region_crossing_ffff_is_held_in_one_service_at_the_user_memory_budget() {
+        assert_eq!(
+            plan(0xFFF0, 16, 254),
+            vec![
+                (0xFFF0, 15, MemoryService::UserMemory),
+                (0xFFFF, 1, MemoryService::UserMemory)
+            ]
+        );
+        assert_eq!(
+            plan(0xFFF0, 16, 18),
+            vec![
+                (0xFFF0, 14, MemoryService::UserMemory),
+                (0xFFFE, 2, MemoryService::UserMemory)
+            ]
+        );
+    }
+
+    #[test]
+    fn ordinary_memory_keeps_its_data_budget() {
+        let low: Vec<_> = plan(0x4000, 30, 15).iter().map(|c| c.1).collect();
+        assert_eq!(low, vec![12, 12, 6]);
+        let wide: Vec<_> = plan(0x4000, 130, 254).iter().map(|c| c.1).collect();
+        assert_eq!(wide, vec![63, 63, 4]);
     }
 }

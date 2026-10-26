@@ -2363,11 +2363,20 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
     }
 
     /// The negotiated write length for this device, per spec §6.4.
+    ///
+    /// Read after the device answered, so property errors keep their
+    /// priority. A transport that is not a simulator (also the default for
+    /// an unknown route) is held to the standard frame: a conservative
+    /// policy for an unproved route, not a measured capacity.
     pub async fn write_limit(
         &mut self,
         router_object: Option<ObjectIndex>,
     ) -> Result<WriteLimit, SessionError> {
-        Ok(write_limit(self.read_apdu_length(router_object).await?))
+        let limit = write_limit(self.read_apdu_length(router_object).await?);
+        Ok(match self.transport.target_kind() {
+            TargetKind::Hardware => limit.capped_to_standard_frame(),
+            TargetKind::Simulator => limit,
+        })
     }
 
     /// `A_Memory_Read` or `A_UserMemory_Read`, chosen by address, with the

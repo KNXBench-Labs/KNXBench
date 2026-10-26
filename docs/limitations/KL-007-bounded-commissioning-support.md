@@ -6,6 +6,20 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Service-specific memory budgets — 26 October 2026 source
+
+Ordinary memory and user memory share a service-aware data-budget helper;
+user memory reserves its extra header octet. A standard frame therefore carries
+12 ordinary or 11 user-memory data octets. Hardware-kind/default-unknown routes
+are held conservatively to that frame after existing property handling;
+simulator modeled capacity remains unchanged
+([contract](../contracts/memory-transfer-budget.md)). Actual interface/coupler
+capacity, extended-path authority and physical throughput remain unmeasured.
+Original semantic RED and initial review passed; correction re-review,
+maintained integrated acceptance and publication are still pending
+([record](../status/2026-10-26-memory-transfer-budget.md)). KL-007 remains open;
+no new family, write authority or whole-recovery capability follows.
+
 ## Regular MergeId fragment admission — 25 October 2026 source
 
 The regular planner conservatively refuses a declared `MergeId` fragment beside

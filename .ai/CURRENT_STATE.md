@@ -43,13 +43,13 @@ Updated: 2026-10-26 07:24 CET. Operational snapshot, not an append-only journal.
 - Issue #30 updated (comment 6404087010); open, waiting for reporter's refusal code.
 - Old opt-in recovery timeout also fails on base `866cb5ca6`; cause unresolved, untracked here.
 - Next: on reporter reply, trace the reported refusal kind. No live bus access.
-## Simulator gateway (observed 2026-10-26 00:08 CET)
-- PUBLISHED `f75820cad`, feature `03b6affcf`; independent reviews APPROVE.
-- Branch/actual merge gate14 each green; merge Rust3305/135ignored, corpus91/91.
-  Frozen inputs, user data unchanged, local/tracking/live refs matched after push.
-- [Acceptance](../docs/status/2026-10-26-simulator-gateway-delivery.md); no hardware claim.
-- Differential BLOCKED: existing CLI activity kind refused before send; no guard bypass.
-  Journal repair requires separate permission. FEh/VerifyMode specification audit complete.
+## Simulator gateway / System2 CLI differential (26 October 2026, delivered)
+- PUBLISHED CLI merge `44efafa9c`, feature `ff2e45148`; corrected review APPROVE.
+- Branch/merge gate15 accepted; Rust2641/126ignored, corpus91/91. Final delta11/Web34,
+  browser908 accepted; Rust/Cargo/tools equal earlier gate (results carried with proof).
+- APDU55/15 isolated CLI runs finished; journal verified, simulator teardown verified.
+- Private evidence `<profile>/evidence/simulator-differential-20261026/`; no hardware claim.
+- Next: result-doc publication and own-tree retirement; root remains unsynchronized.
 ## Retained boundaries
 - Family/format prerequisites retained; System2 diagnostics CLI-only, SIGKILL cleanup limited.
 - No vendor contact/Ollama/downloads/excluded models; excluded device off-limits.

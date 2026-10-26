@@ -61,3 +61,27 @@ reader. The tunnelled path caps memory writes to standard frames (12 octets) at
 both lengths. This is simulator evidence only: no real bus or hardware access
 was performed, gateway PID 56/83 values remain assumptions, and this grants no
 additional family, recovery or compatibility admission.
+
+## CLI continuation acceptance
+
+Published main-first merge `44efafa9c` contains the separately authorized journal
+and CLI corrections (feature `ff2e45148`). The initial independent review required
+changes; the recovery-barrier correction and its download/replay tests received
+APPROVE. Regression tests were written before the journal and pre-send fixes;
+compiled boundary and outcome mutants were rejected.
+
+Branch and integrated package acceptance each completed all 15 selected stages.
+The selected Rust scope passed 2,641 tests, failed none and ignored 126; private
+corpus passed 91/91. While main moved, the final integration re-executed all 11
+Web/documentation-selected stages, including 34 nested Web stages and 908 browser
+cases. Rust, Cargo, gate tooling and dependencies remained byte-identical to the
+accepted integration: those Rust/Clippy/corpus results were carried with an exact
+temporary-index composition proof, not described as newly executed. Both
+receipts were complete with frozen inputs and empty protected user-data
+`touched`/`unchecked` lists. Local integration, tracking and live main readback
+matched after publication. The intentionally stale shared root was not synced.
+
+The differential is now executable, not blocked by the CLI journal. Its retained
+raw captures and detailed comparison remain private. Successful simulated
+execution is not an assertion of image equality, hardware compatibility or
+recovery admission; the existing source-interpretation limitations remain.

@@ -8,6 +8,7 @@ struct Expected {
     code: &'static str,
     phase: &'static str,
     step: Option<u64>,
+    of: usize,
     written: &'static str,
     restart: &'static str,
 }
@@ -23,6 +24,7 @@ fn expected(
         code,
         phase: "inStep",
         step: Some(step),
+        of: plan().steps.len(),
         written,
         restart: "notSent",
     }
@@ -45,7 +47,7 @@ fn assert_failure(run: &Run, expected: &Expected) -> Value {
     match expected.step {
         Some(number) => {
             assert_eq!(value["step"]["number"], number, "{value}");
-            assert_eq!(value["step"]["of"], plan().steps.len());
+            assert_eq!(value["step"]["of"], expected.of);
         }
         None => assert!(value["step"].is_null(), "no invented step: {value}"),
     }
@@ -56,11 +58,7 @@ fn assert_failure(run: &Run, expected: &Expected) -> Value {
     let report = run.report.as_ref().expect("a stopped run is reported");
     assert_eq!(report["failure"], value, "{report}");
     assert_eq!(report["outcome"]["written"], expected.written);
-    assert!(
-        run.out.contains(&format!("diagnostic: {}", failure.line())),
-        "{}",
-        run.out
-    );
+    assert_diagnostic_before_written(&run.out, failure);
     // The executor's own text stays on the terminal, out of every shared record.
     if let Some(error) = run.out.lines().find_map(|line| {
         line.split_once(": FAILED: ")
@@ -71,6 +69,24 @@ fn assert_failure(run: &Run, expected: &Expected) -> Value {
         }
     }
     value
+}
+
+fn assert_diagnostic_before_written(
+    out: &str,
+    failure: &knx_app::download_failure::DownloadFailure,
+) {
+    let diagnostic = out
+        .lines()
+        .position(|line| line == format!("diagnostic: {}", failure.line()))
+        .expect("the output includes the exact diagnostic line");
+    let written = out
+        .lines()
+        .position(|line| line.starts_with("written to the device: "))
+        .expect("the output includes the written classification");
+    assert!(
+        diagnostic < written,
+        "the diagnostic must precede the written classification: {out}"
+    );
 }
 
 fn simulated(config: SimulatorConfig) -> SimulatedDevice {
@@ -147,6 +163,41 @@ fn a_read_back_mismatch_after_the_first_write_is_partial_and_names_its_step() {
         "write memory 4000h..4003h, 4 octets"
     );
     assert_eq!(failure["readBackOctets"], 0, "nothing read back unchanged");
+}
+
+#[test]
+fn the_first_load_record_failure_is_partial_even_before_any_data_write() {
+    let device = simulated(SimulatorConfig {
+        fail_on_event: Some(LoadEvent::Unload),
+        error_code: 1,
+        ..SimulatorConfig::default()
+    });
+    let run = run_regular(&device, device.address(), &plan());
+    let failure = assert_failure(
+        &run,
+        &expected("loadState", "memoryLoadIllegalTransition", 3, "partially"),
+    );
+    assert_eq!(failure["step"]["kind"], "loadRecord");
+    assert_eq!(failure["readBackOctets"], 0);
+}
+
+#[test]
+fn a_failure_without_a_restart_step_records_not_in_plan() {
+    let device = simulated(SimulatorConfig::default());
+    let mut wrong = plan();
+    wrong.manufacturer = 0x0084;
+    wrong
+        .steps
+        .retain(|step| !matches!(step, MemoryDownloadStep::Restart));
+    let run = run_regular(&device, device.address(), &wrong);
+    assert_failure(
+        &run,
+        &Expected {
+            restart: "notInPlan",
+            of: wrong.steps.len(),
+            ..expected("identityMismatch", "manufacturerMismatch", 1, "no")
+        },
+    );
 }
 
 #[test]
@@ -231,6 +282,88 @@ fn successful_and_restart_unconfirmed_runs_carry_no_failure() {
     }
 }
 
+/// Simulator coverage of the exact execution/record helper used by restore,
+/// not a full CLI invocation or restore-input/admission test.
+#[test]
+fn restore_execution_composition_keeps_a_partial_failure_in_reopened_history() {
+    let dir = tempfile::tempdir().unwrap();
+    let device = simulated(SimulatorConfig {
+        corrupt_memory_writes: true,
+        ..SimulatorConfig::default()
+    });
+    let plan = plan();
+    let mut activity = start(&dir, device.address());
+    let backups = dir.path().join("backups");
+    let mut out = Vec::new();
+    let (witnessed, recorded) = runtime().block_on(execute_and_record_download(
+        &device,
+        WriteAuthorisation::for_simulator(device.address(), WriteScope::Download).unwrap(),
+        download_keying(plan.mask, None, KeySource::None),
+        fast(),
+        DownloadRun {
+            plan: &plan,
+            backup: &backup(&backups),
+        },
+        &mut activity,
+        &mut out,
+    ));
+    assert!(recorded);
+    assert_eq!(
+        witnessed.result,
+        DownloadResult::Failed {
+            written: Written::Partially
+        }
+    );
+    let failure = witnessed.failure.as_ref().expect("restore keeps its cause");
+    assert_eq!(
+        failure.code,
+        knx_app::download_failure::FailureCode::ReadBackMismatch
+    );
+    assert_eq!(failure.step.as_ref().unwrap().number, 8);
+    assert_eq!(witnessed.stopped_in_step, Some(8));
+    assert_diagnostic_before_written(&String::from_utf8(out).unwrap(), failure);
+    let row = reopened_at(&dir.path().join("history.sqlite"));
+    assert_eq!(row["state"], "failed");
+    assert_eq!(row["downloadEvidence"]["written"], "partially");
+    assert_eq!(
+        row["downloadEvidence"]["failure"],
+        serde_json::to_value(failure).unwrap()
+    );
+    activity.record_cleanup(true).unwrap();
+}
+
+#[test]
+fn a_latched_history_failure_keeps_the_original_recording_error() {
+    let dir = tempfile::tempdir().unwrap();
+    let history = dir.path().join("history.sqlite");
+    let log = Arc::new(OneShotLog::for_run(history.clone()).unwrap());
+    let device = simulated(SimulatorConfig::default());
+    let mut activity = log.start_download(1, device.address()).unwrap();
+    // A real storage failure latches history unavailable before recording.
+    std::fs::rename(&history, dir.path().join("history-away.sqlite")).unwrap();
+    std::fs::create_dir(&history).unwrap();
+    assert!(log.ensure_write_available().is_err());
+    assert_eq!(log.history_state(), "unavailable");
+    let witnessed = Witnessed {
+        result: DownloadResult::Failed {
+            written: Written::No,
+        },
+        stopped_in_step: Some(1),
+        failure: Some(knx_app::download_failure::DownloadFailure::task_ended(
+            &plan(),
+            Some(1),
+            0,
+        )),
+    };
+    let mut warnings = Vec::new();
+    let error = witnessed.record(&mut activity, &mut warnings).unwrap_err();
+    assert!(
+        warnings.is_empty(),
+        "no claim that unavailable history kept the failure"
+    );
+    assert_eq!(error.to_string(), "activity history is unavailable");
+}
+
 /// A diagnostic the history refuses still leaves the row failed, cause not
 /// recorded; it never degrades to `unknown` or blocks the result.
 #[test]
@@ -248,9 +381,42 @@ fn a_refused_diagnostic_still_records_the_failed_row() {
         stopped_in_step: Some(8),
         failure: Some(failure),
     };
-    witnessed.record(&mut activity).unwrap();
+    let mut warnings = Vec::new();
+    witnessed.record(&mut activity, &mut warnings).unwrap();
     let row = reopened_at(&dir.path().join("history.sqlite"));
     assert_eq!(row["state"], "failed", "{row}");
     assert_eq!(row["downloadEvidence"]["written"], "no");
     assert!(row["downloadEvidence"].get("failure").is_none(), "{row}");
+    assert_eq!(
+        String::from_utf8(warnings).unwrap(),
+        "WARNING: history kept the failure without its cause\n"
+    );
+}
+
+#[test]
+fn a_refused_diagnostic_warns_and_keeps_the_partial_write_classification() {
+    let dir = tempfile::tempdir().unwrap();
+    let device = simulated(SimulatorConfig::default());
+    let mut activity = start(&dir, device.address());
+    activity.mark_send_possible().unwrap();
+    let mut failure = knx_app::download_failure::DownloadFailure::task_ended(&plan(), Some(8), 4);
+    // A category/code mismatch is refused independently of the write witness.
+    failure.category = knx_app::download_failure::FailureCategory::Timeout;
+    let witnessed = Witnessed {
+        result: DownloadResult::Failed {
+            written: Written::Partially,
+        },
+        stopped_in_step: Some(8),
+        failure: Some(failure),
+    };
+    let mut warnings = Vec::new();
+    witnessed.record(&mut activity, &mut warnings).unwrap();
+    let row = reopened_at(&dir.path().join("history.sqlite"));
+    assert_eq!(row["state"], "failed", "{row}");
+    assert_eq!(row["downloadEvidence"]["written"], "partially");
+    assert!(row["downloadEvidence"].get("failure").is_none(), "{row}");
+    assert_eq!(
+        String::from_utf8(warnings).unwrap(),
+        "WARNING: history kept the failure without its cause\n"
+    );
 }

@@ -1,6 +1,10 @@
 # Restart snapshot
 
 Updated: 2026-10-26 02:58 CET. Operational snapshot, not an append-only journal.
+## Website WP-21 (2026-10-26, taken by this WebUI task session)
+- Owner Go: work through next open tasks; WP-21 first, WP-22–24 queued, not reserved.
+- Branch `feat/wp21-headline-typing-20261026`; website and its tests only.
+- Implement selected headline typing; static/reduced-motion fallback; no deployment.
 ## Other owners and preservation
 - Root intentionally old/dirty: preserve private/untracked files and other edits.
   Alpha16 belongs to another track. No release/deployment/hardware authority.

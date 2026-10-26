@@ -1,7 +1,7 @@
 # DIAG-02 — Retain download failure evidence in the log and report
 
-**Priority:** P1. **Status:** Implemented on a branch after the owner's Go (26 October
-2026); independent review, package gate and publication pending.
+**Priority:** P1. **Status:** Delivered on `main` as `4209645b4` (26 October 2026, owner's
+Go); [delivery record](../status/2026-10-26-download-failure-diagnostic.md).
 Listed in [OPEN_WORK](../OPEN_WORK.md). Owner request: 26 October 2026.
 Contract: [download failure diagnostic](../contracts/download-failure-diagnostic.md).
 

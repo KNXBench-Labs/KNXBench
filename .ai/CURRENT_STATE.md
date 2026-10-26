@@ -1,6 +1,10 @@
 # Restart snapshot
 
 Updated: 2026-10-26 02:58 CET. Operational snapshot, not an append-only journal.
+## WP-22 (2026-10-26, taken by next-open-tasks WebUI session)
+- Branch `feat/wp22-project-timeline-20261026`; history timeline UI/tests only.
+- Existing saved/named/pre-restore checkpoints, chronological selection; restore unchanged.
+- No second store, arbitrary replay, bus access or deployment; WP-21/23 parallel.
 ## Other owners and preservation
 - Root intentionally old/dirty: preserve private/untracked files and other edits.
   Alpha16 belongs to another track. No release/deployment/hardware authority.

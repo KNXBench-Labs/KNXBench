@@ -12,6 +12,18 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Browser temp-wrapper spawn/signal protection, GATE-01 slice (26 October 2026)
+
+Published main-first merge `ed156ef9b`; independent review and correction re-review
+APPROVE. Signal forwarders precede process spawn and replay observed pending
+TERM/INT/HUP after the group identity is known. Nine focused regressions plus the
+12 existing launch cases pass. Merge package11/web65 accepted: 4,539 Vitest and
+1,478 browser cases across default lanes and all 16 production configurations;
+frozen inputs, no touched or unchecked user data, remote readback equal.
+No Rust/corpus/bindings lane selected, no field-timeout causation or speedup claim;
+SIGKILL and remaining GATE-01 performance work stay open.
+[Acceptance and boundaries](status/2026-10-26-browser-tmp-spawn-signals.md).
+
 ## ZIP WinZip AES metadata consistency, WP-16 (26 October 2026)
 
 Independently reviewed (APPROVE, no Critical/Important findings) and delivered on `main` as `161e3b14b` (feature `305609215`, review fix `bdaf3bfc9`); maintained change-scoped 14/14 gate green: 5,033 Rust tests in 33 binaries (220 ignored), 155/155 selected corpus cases, frozen inputs, no touched or unchecked user data; local/tracking/live readback equal. Project and product ZIP admission refuses contradictory WinZip AES (AE-x)

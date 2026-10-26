@@ -1,7 +1,9 @@
-# browser_tmp spawn/signal window (pending full acceptance)
+# browser_tmp spawn/signal window
 
-Date: 26 October 2026. Not delivered: whole-feature review APPROVE;
-focused review corrections and package acceptance remain pending.
+Delivered on 26 October 2026 as main-first merge `ed156ef9b` on `fb26c47c3`
+(feature `2adbf63f5`, test/documentation correction `b12d93bc5`). Independent
+whole-feature review and focused correction review: APPROVE. Local, tracking and
+live `main` read back equal to `ed156ef9b`.
 
 ## Change
 
@@ -30,6 +32,18 @@ environment marker before cleanup.
   unchanged/restored production passes. These are test calibrations, not new
   original defects or executions against exact final test bytes on the old base.
 - `test_browser_tmp_launch`: 12 of 12 pass, none skipped; final combined run 21/21.
+
+## Package acceptance
+
+Branch and merge each passed the maintained change-scoped package gate: 11/11
+outer stages and 65/65 nested web stages, frozen source/build/tool identities,
+no touched or unchecked user data. The merged run passed 4,539 Vitest tests,
+852 functional and 69 exclusive default browser cases, and 557 cases across
+all 16 production configurations (1,478 browser executions total).
+Rust runtime, private corpus and bindings were not selected; this is software
+and browser-tooling acceptance, not a hardware or release claim. The earlier
+RED used the original five-test fixture revision; it is historical semantic
+RED, not an exact-final-test-byte run against the old implementation.
 
 ## Boundaries
 

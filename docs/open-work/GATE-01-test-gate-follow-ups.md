@@ -11,11 +11,13 @@ Small and optional; none blocks a delivery.
   review per suite could let safe suites run in parallel again.
 - Three `file-menu-submenus` cases timed out at eight workers while a cold
   Vite development server started (they pass at the gate's four workers).
-- The spawn/signal window of `browser_tmp.run_command` (forwarders installed
-  after the spawn) has a fix and regression tests pending full acceptance, see
-  [the status note](../status/2026-10-26-browser-tmp-spawn-signals.md). No
-  field timeout is attributed to it; the cause of the observed
-  `file-menu-submenus` and earlier SIGTERM-test timeouts remains open.
+- The cause of the earlier observed SIGTERM-test timeouts remains unproven;
+  no field timeout is attributed to the separately repaired spawn/signal window.
+
+The spawn/signal correction was delivered as `ed156ef9b`; its
+[acceptance record](../status/2026-10-26-browser-tmp-spawn-signals.md) owns the
+bounded result. It is no longer pending work; the two performance bullets and
+unresolved historical timeout causes above remain open.
 
 ## Known boundary
 

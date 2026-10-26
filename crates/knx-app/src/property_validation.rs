@@ -374,7 +374,11 @@ pub struct OperationStore {
     reopened: bool,
     poisoned: bool,
     progress: Option<tokio::sync::watch::Sender<OperationProgress>>,
+    /// Caller journal hook, run once when the first possible send is next.
+    send_boundary: Option<SendBoundary>,
 }
+/// Records a caller's durable send intent; an error stops the operation unsent.
+pub type SendBoundary = Box<dyn FnMut() -> io::Result<()> + Send>;
 /// Local status derived only from durable checkpoints, never synthetic progress.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct OperationProgress {
@@ -466,6 +470,7 @@ impl OperationStore {
             reopened: false,
             poisoned: false,
             progress: None,
+            send_boundary: None,
         })
     }
     pub fn open(directory: &Path, expected: &Binding) -> io::Result<Self> {
@@ -535,6 +540,7 @@ impl OperationStore {
             reopened: true,
             poisoned: false,
             progress: None,
+            send_boundary: None,
         })
     }
     pub fn checkpoint(&mut self, checkpoint: Checkpoint) -> io::Result<()> {
@@ -686,6 +692,22 @@ impl OperationStore {
                 target,
             ),
         })
+    }
+    /// Install the hook an outer activity journal needs at the send boundary:
+    /// after the durable recovery barrier, immediately before the first
+    /// possible mutation. It runs at most once; an error refuses that send.
+    pub fn on_send_boundary(&mut self, hook: SendBoundary) {
+        self.send_boundary = Some(hook);
+    }
+    pub(crate) fn reach_send_boundary(&mut self) -> io::Result<()> {
+        match self.send_boundary.as_mut() {
+            Some(hook) => {
+                hook()?;
+                self.send_boundary = None;
+                Ok(())
+            }
+            None => Ok(()),
+        }
     }
     /// Subscribe before moving the store into the executor. Channel polling does
     /// no filesystem, SQL or bus work and needs no long-running operation lock.

@@ -20,6 +20,9 @@ use knx_net::commissioning::{
     SessionTiming,
 };
 use std::{sync::atomic::AtomicBool, time::Duration};
+
+mod send_boundary;
+
 const SERIAL: [u8; 6] = [0, 2, 1, 2, 3, 4];
 const VERSION: [u8; 5] = [0, 2, 0x12, 0x34, 1];
 fn fixture() -> (SimulatedDevice, PreparedBundle) {

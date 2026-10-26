@@ -12,6 +12,7 @@ use knx_core::commissioning::{
 };
 use std::{fs, net::UdpSocket, process::Command, time::Duration};
 
+mod gateway;
 mod journal;
 
 fn bundle(dir: &std::path::Path) -> (std::path::PathBuf, PreparedBundle) {

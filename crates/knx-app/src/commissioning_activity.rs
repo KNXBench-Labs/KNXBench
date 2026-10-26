@@ -904,6 +904,13 @@ impl WriteGuard {
         self.log.write_possible(self.id)
     }
 
+    /// The same marking as a detached callback, for an executor that reaches
+    /// its durable pre-write backup boundary deep inside a running operation.
+    pub fn send_marker(&self) -> impl FnMut() -> io::Result<()> + Send + 'static {
+        let (log, id) = (Arc::clone(&self.log), self.id);
+        move || log.mark_write_possible(id)
+    }
+
     pub fn finish(mut self, outcome: WriteOutcome) {
         let possible = self.send_possible();
         let state = match outcome {

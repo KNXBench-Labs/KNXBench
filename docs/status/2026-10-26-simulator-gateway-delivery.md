@@ -44,11 +44,14 @@ projection and Web admission treat it exactly like `serviceControlWrite`
 ([contract](../contracts/COMMISSIONING_ACTIVITY_HISTORY.md#coverage-and-outcomes)).
 Inconsistent rows of the new kind stay refused and latch `unavailable`.
 
-The correction exposed a second lifecycle defect: a failure before the recorded
-send boundary (for example an unreachable gateway) claimed `effectUnverified`
-without send evidence, so the write guard panicked and left `unknown`. The CLI
-now records `notSent` there and keeps `effectUnverified` for failures after the
-boundary, as the existing service-control routes already do.
+The correction exposed two lifecycle defects. A failure before any send
+evidence (for example an unreachable gateway) claimed `effectUnverified`, so the
+write guard panicked and left `unknown`; the CLI now records `notSent` there.
+Independent review then found the CLI marked backup and send evidence before
+connecting, so a refusal before any recovery or mutation would have been stored
+as `effectUnverified` with a recorded backup. The operation store now runs that
+journal hook at the executor's recovery barrier, immediately before Verify Mode;
+download and recovery replay are covered through the simulator gateway.
 
 With both corrections the built CLI completed its simulated application download
 through the simulator gateway, isolated with the client in a loopback-only

@@ -49,9 +49,15 @@ outcome unverified.** Issue #30 stays open until its actual outcome is establish
   its own activity kind, journals refusals before the send boundary as `notSent`
   and keeps acknowledging tunnel frames while checkpoints are written.
 
-PART-B-PENDING: the S2-01 safe diagnostic projection (structured, privacy-bounded
-failure reason in status, report and EN/DE UI) is summarized here from its own
-delivered commits and contract once it lands.
+- **Why the table-reference read was refused.** When a refused PID 7 answer ends a
+  System-2 download or explicit restore, the status, shareable report and EN/DE
+  panel now show a closed, typed reason (`zeroElementsWithData`, `elementCount` or
+  `unsupportedWidth`) with object, property, element and octet counts, per download
+  or restore run. A failed run without such a record shows *unavailable*. Raw bytes,
+  exception text, paths and keys stay in the private journal; older journals get no
+  backfill. Report format 2 and HTTP status schema 2 carry the new field; the web
+  client still accepts status v1. [Contract](../contracts/system2-safe-failure-diagnostic.md) ·
+  [delivery](../status/2026-10-26-system2-safe-diagnostic-projection.md).
 
 Do not post private journals, memory or bundles in a public issue. S2-02 (the
 original start failure) and S2-03 (two image-interpretation differences) remain open.
@@ -192,7 +198,8 @@ them rather than dropping data:
   as unavailable. Nothing is rewritten. [Contract](../contracts/COMMISSIONING_ACTIVITY_HISTORY.md).
 - **System-2 operation records** of the new width revision or with recorded
   observations are refused by an Alpha 16 binary. Operations recorded by Alpha 16
-  still load and keep their original interpretation.
+  still load and keep their original interpretation. A failure journal holding a
+  typed PID 7 record is written as envelope 2, which Alpha 16 refuses too.
 
 Before upgrading, close KNXBench and keep independent copies of native projects,
 the closed product catalogue and all Docker/server data directories, plus the

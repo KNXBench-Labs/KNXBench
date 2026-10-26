@@ -134,6 +134,13 @@ summary { cursor: pointer; width: fit-content; }
 .char { display: inline-block; position: relative; }
 .char::after { content: attr(data-char); position: absolute; left: 0; top: 0; opacity: 0; transform: translateX(-100%); }
 .char-glyph { display: inline-block; }
+/* Live-typed headings: untyped glyphs keep their space; the zero-width cursor trails the last one. */
+:root[data-motion="on"] .char[data-untyped] .char-glyph { visibility: hidden; }
+.typing-cursor { display: inline-block; position: relative; width: 0; height: 0; vertical-align: baseline; }
+.typing-cursor::after { content: ""; position: absolute; left: .06em; bottom: -.18em; width: .09em; height: .95em; background: var(--accent); }
+@media (forced-colors: active) {
+  .typing-cursor::after { background: CanvasText; forced-color-adjust: none; }
+}
 /* Only progressive enhancement may hide glyphs; motion-off is always readable. */
 :root[data-motion="on"] [data-headline-state="hidden"] .char {
   opacity: 0;

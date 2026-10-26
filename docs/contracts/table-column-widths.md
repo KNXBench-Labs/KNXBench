@@ -333,7 +333,7 @@ Run the focused production browser selection with
 fresh app and fixture pages before serving them. This includes token-driven
 compact/comfortable/custom padding, constant sort footprints and the EN/DE
 1440/1920 word-safe fit-budget checks above. The repository web gate runs it as
-the `production-table-columns` stage, and `tsconfig.table-columns-fixtures.json`
+the `production-table-columns-functional` and `-exclusive` stages, and `tsconfig.table-columns-fixtures.json`
 typechecks its spec, fixtures, oracle and Vite config. The same spec also runs
 in the default fixture lane. Device editor layout continues to use the unchanged
 `playwright.issue09.config.ts` regression, which is outside the web gate.

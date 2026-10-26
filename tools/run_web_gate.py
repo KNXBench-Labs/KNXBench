@@ -259,6 +259,11 @@ def run_production(run: MeasuredRun, app: Path, env: dict[str, str], config: str
     browser_stage(run, app, env, name + '-inventory', file, None, 1)
     cases = read_cases(run.output / f'{name}-inventory.json')
     functional, exclusive = split_lanes(cases)
+    tagged = sorted({case['file'] for case in cases.values()
+                     if any(scope.exclusive for scope in parse_spec(
+                         (app / 'e2e' / case['file']).read_text(encoding='utf-8')).scopes)})
+    if tagged and not exclusive:
+        raise ValueError(f'{name}: tagged @exclusive scopes in {tagged} compiled to no exclusive case')
     run.receipt.setdefault('production', {})[config] = {
         'total': len(cases), 'functional': len(functional), 'exclusive': len(exclusive)}
     run.save()

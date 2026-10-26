@@ -1,7 +1,9 @@
 # DIAG-02 — Retain download failure evidence in the log and report
 
-**Priority:** P1. **Status:** Planned only; implementation explicitly not authorised.
+**Priority:** P1. **Status:** Implemented on a branch after the owner's Go (26 October
+2026); independent review, package gate and publication pending.
 Listed in [OPEN_WORK](../OPEN_WORK.md). Owner request: 26 October 2026.
+Contract: [download failure diagnostic](../contracts/download-failure-diagnostic.md).
 
 ## Observed gap
 
@@ -63,7 +65,9 @@ private attachment into public fixtures or documentation.
 
 ## Coordination and exclusions
 
-Coordinate shared commissioning/log/report surfaces with
+Implementation boundary (26 October 2026): the server/web worker produces the
+diagnostic; the CLI and the System-2 worker still record failed rows without it
+(read as *cause not recorded*). Coordinate shared commissioning/log/report surfaces with
 [PRG-01](PRG-01-programming-gaps.md). This is the regular-download diagnostic
 path, not a duplicate of [S2-02](S2-02-gateway-busy-after-failed-runs.md)'s
 System-2 early-start refusal work. Reuse its conventions where appropriate,
@@ -71,5 +75,5 @@ without claiming it already covers this failure.
 
 No repair of the original hardware failure, compatibility promotion, automatic
 retry/restart/restore, release assignment, deployment or vendor contact is
-included. Next step is a separately authorised implementation package with a
-fresh source/ownership check. This planning entry grants no implementation Go.
+included. The owner's Go of 26 October 2026 authorised this implementation
+package only; it grants no bus, device, release or deployment permission.

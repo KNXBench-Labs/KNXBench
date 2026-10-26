@@ -574,6 +574,9 @@ fn run_hardware(
             store.outcome(),
             store.mutation_possible()
         );
+        if let (Err(_), Err(report)) = (&result, &reported) {
+            eprintln!("shareable report not written: {report}");
+        }
         result.map(|()| reported)
     });
     // A refusal before the recorded send boundary witnessed no device write.

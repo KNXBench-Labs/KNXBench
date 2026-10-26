@@ -429,12 +429,18 @@ The gated `knx device system2-validation` command records kind
 same states and `writeEvidence` rules as `serviceControlWrite`, no
 `downloadEvidence`. Its send boundary is the executor's recovery barrier: the
 original-state recovery checkpoint is durable (or, on recovery replay, the
-retained one is revalidated) and Verify Mode, the first possible mutation, is
-next. Only then are `backupRecorded`/`sendPossible` recorded; a recording error
-stops the operation unsent. A refusal before that boundary (gateway, connect,
-identity, hardware or recovery read, cancellation) is `notSent`; a failure after
-it is `effectUnverified`. It is a bounded CLI row, not a claim of complete
-download coverage: server/Web System-2 operations write no activity rows.
+retained one is revalidated), immediately before the Verify Mode setup. Only
+then are `backupRecorded`/`sendPossible` recorded. A refusal before that
+boundary (gateway, connect, identity, hardware or recovery read, cancellation)
+is `notSent`; a failure after it is `effectUnverified`, including a cancellation
+check or, on replay, a device-control read that can still intervene before the
+first frame (conservative, never an under-claim). A recording error at the
+boundary stops the operation before Verify Mode; the durable row then stays
+`running` (read later as `unknown`, interrupted) and the private operation store
+conservatively keeps mutation possible. It is a bounded CLI row, not a claim of
+complete download coverage. Server/Web System-2 operations do not write
+`system2Validation` rows; they record bounded `deviceDownload` rows through the
+download guard.
 
 Read observations use `running`, `finished`, `failed`, `unknown`. Property
 writes use `running`, `verified`, `noChange`, `notSent`, `effectUnverified`,

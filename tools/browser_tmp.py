@@ -119,24 +119,36 @@ def browser_directory(base: Path, explicit: Path | None = None,
 def run_command(command: list[str], directory: Path) -> int:
     """Wait for an owned child group before releasing its temporary directory."""
     env = {**os.environ, 'TMPDIR': str(directory), 'KNXBENCH_BROWSER_TMP_DIR': str(directory)}
-    child = subprocess.Popen(command, env=env, start_new_session=True)
+    # Forwarders go in before the spawn: a signal landing between the child's creation and a
+    # later installation would reach the caller's disposition and never the child group. One
+    # that arrives before the group is known is kept and forwarded once it is.
+    group: list[int] = []
+    pending: list[int] = []
     previous = {}
 
     def forward(signum: int, frame: object) -> None:
+        if not group:
+            pending.append(signum)
+            return
         try:
-            os.killpg(child.pid, signum)
+            os.killpg(group[0], signum)
         except ProcessLookupError:
             pass
 
+    child = None
     try:
         for signum in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
             previous[signum] = signal.signal(signum, forward)
+        child = subprocess.Popen(command, env=env, start_new_session=True)
+        group.append(child.pid)
+        for signum in pending:
+            forward(signum, None)
         status = child.wait()
         return status if status >= 0 else 128 - status
     finally:
         for signum, handler in previous.items():
             signal.signal(signum, handler)
-        if child.poll() is None:
+        if child is not None and child.poll() is None:
             os.killpg(child.pid, signal.SIGKILL)
             child.wait()
 

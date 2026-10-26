@@ -394,6 +394,14 @@ already found lying in the grass.
   and `apps/knx-web/src/diagnosticShell.test.ts` scans literal hyphenated ids as
   class names. A new module on a shared import path can turn them red, so run
   the whole Vitest suite once, not only the package's own tests.
+- **Install a signal forwarder before the child it protects.** `tools/browser_tmp.py`
+  used to spawn its child group and install the SIGTERM/SIGINT/SIGHUP forwarders
+  afterwards. A signal landing in that window met the caller's disposition: a
+  default or ignoring wrapper dies or drops it without forwarding, and a caller
+  handler never sees the child. The forwarders now go in first; a signal that
+  arrives before the group exists is kept and replayed once it does
+  (`tools/tests/test_browser_tmp_spawn_signals.py`). No field timeout is
+  attributed to this window. SIGKILL cannot be forwarded and stays a boundary.
 - **Large-data unit tests carry their own timeout.** A Vitest case that renders
   thousands of rows and asserts no elapsed time takes 1–3 s alone, but 5–6.5 s
   in the full suite while other worktrees build (load average about 20 on 16

@@ -1,21 +1,61 @@
-Last updated: 2026-10-19 (Alpha 15 baseline; WP-17 on main)
+Last updated: 2026-10-26 (Alpha 17 published pre-release)
 
 # KNXBench Features
 
 | Reference | Value |
 | --- | --- |
-| Source snapshot | `d18ce65e` (WP-17 after Alpha 15) |
-| Released baseline | `v0.1.0-alpha.15` |
+| Source snapshot | `v0.1.0-alpha.17` (cutoff `20ab2f7ea`) |
+| Released baseline | `v0.1.0-alpha.17` |
 | Main-only | Newer than released baseline |
 | Local-only | Unpublished; not accepted on main |
 | Scope | Listed boundaries; not universal compatibility |
 | Later scope | No delivery dates promised |
 
-## Source candidate: System-2 refusal diagnostics
+## New in Alpha 17
+
+The [release scope](releases/alpha17.md) covers changes after Alpha 16 up to
+cutoff `20ab2f7ea`. Native/store and model 16 and product database 28 are
+unchanged; no migration. Device backups move to format 2, and new activity-history
+and System-2 record versions are refused by Alpha 16. Opening Alpha 17 saves in
+Alpha 16 is not tested. Nothing below adds hardware support; download, System-2
+and diagnostic behaviour is tested with simulated or loopback transports only.
 
 | Feature | Scope | Availability |
 | --- | --- | --- |
-| Own-run gateway hint and refusal reason | System-2's shared locks are not announced as a foreign holder; current worker/start refusals show a code. Volatile diagnostics only, actual issue #30 failure unresolved. [Workflow](manual/user-guide/05-devices-and-products.md#a-busy-hint-is-not-the-system-2-failure-reason-unreleased-source) | Delivered on main, unreleased |
+| [System-2 prestate observations](contracts/alpha16-system2-configured-download.md) | UP 258D12 `M-0001_A-9205-04-9270` only, experimental: only hardware type, mask version and manufacturer stay hard; other differences are listed under *Recorded device observations*; no placeholder backup, recovery unavailable when the prestate does not describe the device | alpha.17 |
+| Own-run gateway hint and refusal reason | System-2's shared locks are not announced as a foreign holder; current-run early refusals show the server's reason code. Volatile diagnostics only, actual issue #30 failure unresolved. [Workflow](manual/user-guide/05-devices-and-products.md#a-busy-hint-is-not-the-system-2-failure-reason-since-alpha-17) | alpha.17 |
+| [PID 7 pointer width](status/2026-10-26-up258-pid7-width.md) | Exact-UP258 record admits one two- or four-octet element on objects 1/2/3 and keeps the raw width; Alpha 16 operations keep their four-octet interpretation | alpha.17 |
+| [Typed PID 7 refusal diagnostic](contracts/system2-safe-failure-diagnostic.md) | Closed reason with object, property, element and octet counts per download/restore run; raw bytes stay in the private journal; report format 2, HTTP status schema 2 | alpha.17 |
+| [UP258 validation workflow](contracts/up258-system2-validation.md) | Defaults profile v2, own activity kind, `notSent` refusals before the send boundary, tunnel acknowledgements during checkpoints | alpha.17 |
+| [Identity widths](contracts/hardware-identity-comparison.md) | PID 78 hardware type exactly six octets, partial-download application identity exactly five, before backup or mutation | alpha.17 |
+| [Scope advice](contracts/device-programming-support-guidance.md) | *Only what the project marks pending* download choice; `knx device download --changes` plans only | alpha.17 |
+| [Read-only check after download](contracts/post-download-check.md) | Reach, identity and load states on the same tunnel, kept apart from transfer and restart; runtime stays unknown | alpha.17 |
+| [Backup application identity](contracts/backup-application-identity.md) | Backup format 2 records the pre-write application; restore refuses a mismatched or unrecorded application unless the partial plan checks identity itself | alpha.17 |
+| [Source-checked settlement](contracts/download-settlement-source-freshness.md) | Programmed parts credited only for an identical current plan; run-scoped receipts in history | alpha.17 |
+| [Stop before first change](adr/0153-regular-download-stop-ends-at-first-change.md) | Server shutdown stops a regular download only before its first mutation | alpha.17 |
+| [Vendor download plug-ins](limitations/KL-006-devices-dependent-on-vendor-plug-ins.md) | Programs with their own ETS download plug-in refused for every scope and restore; read-only compare and diagnostics remain | alpha.17 |
+| [Download failure cause](contracts/download-failure-diagnostic.md) | One payload-free cause (category, code, phase, step, restart uncertainty) in status, session log, history, report and CLI `diagnostic:` line; System-2 runs outside this contract | alpha.17 |
+| [Device diagnostics entry](manual/user-guide/05-devices-and-products.md#device-analysis-and-support) | *Analyse device* and *Send report* on a device's Diagnostics tab open the existing export and support dialogs with that device preselected; same consents and routes; CLI `--device <area.line.device>` selector | alpha.17 |
+| [Association link adoption](contracts/alpha16-comparison-adoption.md#association-link-adoption-wp-19-amendment-24-october-2026) | Complete decoded mask-`0701h` association rows adopted as object ↔ group-address links per whole object, with an EN/DE link preview; nothing created, nothing written to a device | alpha.17 |
+| [Saved object folders](contracts/communication-object-folders.md) | Object table names each object's saved project folder by its declared `RefId` chain; *By saved project folder* view; no guessed names | alpha.17 |
+| [Catalogue table sorting](contracts/catalogue-table.md) | Product, Manufacturer, Order number and Application columns sort on click | alpha.17 |
+| Flow names and version timeline | Flow map shows the single unambiguous group name ([record](status/2026-10-26-flow-group-names.md)); project history shows native versions on a timeline, selection alone never writes ([record](status/2026-10-26-project-version-timeline.md)) | alpha.17 |
+| [WinZip AES metadata](contracts/project-encrypted-directory-admission.md) | Contradictory AES metadata and strong-encryption flags without the encryption flag refused; consistent AES remains unsupported | alpha.17 |
+
+## New in Alpha 16
+
+The [release scope](releases/alpha16.md) covers changes after Alpha 15.
+Native/model16 is unchanged; product26 migrates through v27 to v28 on writable
+open, and Alpha 15 refuses product28.
+
+| Feature | Scope | Availability |
+| --- | --- | --- |
+| [Configured System-2 download](contracts/alpha16-system2-configured-download.md) | Experimental, exact UP 258D12 application `M-0001_A-9205-04-9270` only; four typed phrases, persisted prestate before any write, best-effort explicit recovery; hardware outcome unverified | alpha.16 |
+| [Cancellable catalogue jobs](contracts/catalogue-jobs/alpha16-runtime.md) | Process-owned upload/preview/apply with paged reports and cooperative cancellation; Standard 4 GiB / Large 16 GiB expanded profiles | alpha.16 |
+| [Comparison adoption](contracts/alpha16-comparison-adoption.md) | Previewed, confirmed named parameters from a full comparison as one undoable project edit; nothing written to a device | alpha.16 |
+| [Carried original packages](contracts/alpha16-catalogue-portability.md) | Save/Save As carry the complete original `CataloguePackage` for catalogue-authored devices; reopen installs it through the normal installer | alpha.16 |
+| [Caption language](contracts/alpha16-parameter-layout.md) | Block/separator `Text` translations follow the selected product language | alpha.16 |
+| [Master identity provenance](adr/0147-master-identity-provenance.md) | Product DB v27: retained-source positions for all four master families and both DPT forms, same/cross-file collisions and malformed declarations; historical winner/encounter facts remain unavailable, normalized values unchanged; readable EN/DE catalogue diagnostics | alpha.16 |
 
 ## New in Alpha 15
 
@@ -33,7 +73,7 @@ builds refuse product26; opening new project saves in Alpha 14 is unverified.
 | [Product v25/v26](adr/0146-unknown-evidence-rows-have-an-identity.md) | Placement/enumeration columns; idempotent unknown evidence with repair; `SuffixText`; earlier v23–v25 promotion residues remain open | alpha.15 |
 | [Larger measured bounds](adr/0142-file-size-limits-follow-the-storage-ceiling.md) | 1,000,000,000 bytes per retained file/member; 4 GiB standard expansion, 16 GiB CLI large profile; distinct 1024 MiB project upload | alpha.15 |
 | [System-2 source preview](contracts/system2-source-probe-preview.md) | Explicit selected fields, offline candidate locations/byte order; cannot override live refusal | alpha.15 |
-| [Declared-memory diagnostics](adr/0143-declared-segment-memory-evidence-profile.md) | ProductDB-derived profile, preview and separately confirmed identity-gated reads; offline/simulator evidence, no hardware/profile write claim; CLI since alpha.15; web dialog Main-only since `a4bb0aa4e` (DIAG-01, 26 October 2026) | alpha.15 |
+| [Declared-memory diagnostics](adr/0143-declared-segment-memory-evidence-profile.md) | ProductDB-derived profile, preview and separately confirmed identity-gated reads; offline/simulator evidence, no hardware/profile write claim; CLI since alpha.15; web dialog since alpha.17 (`a4bb0aa4e`, DIAG-01) | alpha.15 |
 | Catalogue availability errors | Preserve future-schema/open failure reasons; read-only CLI catalogue/documentation readers do not create or migrate the database | alpha.15 |
 | Import hardening | Evidenced uppercase legacy table names; project ZIP empty-directory CRC/stream checks before persistence | alpha.15 |
 
@@ -58,20 +98,11 @@ builds refuse product26; opening new project saves in Alpha 14 is unverified.
 | --- | --- | --- |
 | [Project status storage metrics](contracts/project-status-metrics.md) | Current on-disk size of the open project's native file (may include unsaved recovery-journal growth), separate unsaved flag, active product database footprint including SQLite side files, and catalogue counts for manufacturers with products or programs; explicit missing/loading/error states | alpha.15 |
 
-<a id="local-source-changes"></a>
-
-## After Alpha 15 — source changes
-
-| Feature | Scope | Availability |
-| --- | --- | --- |
-| [Master identity provenance](adr/0147-master-identity-provenance.md) | Product DB v27: retained-source positions for all four master families and both DPT forms, same/cross-file collisions and malformed declarations; historical winner/encounter facts remain unavailable, normalized values unchanged; readable EN/DE catalogue diagnostics | Main-only; `d18ce65e` |
-| [Device diagnostics entry](manual/user-guide/05-devices-and-products.md#device-analysis-and-support) | *Analyse device* and *Send report* on a device's Diagnostics tab open the existing export and support dialogs with that device preselected; same consents and routes; the System-2 memory profile in this dialog since `a4bb0aa4e` (DIAG-01) | Main-only (24 October 2026) |
-
 ## Data-table columns
 
 | Feature | Scope | Availability |
 | --- | --- | --- |
-| Resizable data-table columns | Pointer/keyboard resizing below defaults, density/theme-aware cached header/cell word floors capped at 320 px, stable mounted maxima and local scrolling, measured-width announcements, per-column/table reset, validated browser-local preferences; narrow object/address/monitor and EN/DE 1440/1920 fit budgets verified (local scroll where floors exceed the pane); 18 HTML table surfaces, matrix select/address/name included; per-object columns share one resizable width (Main-only, 25 October 2026) — [coverage and limits](contracts/table-column-widths.md) | alpha.15 |
+| Resizable data-table columns | Pointer/keyboard resizing below defaults, density/theme-aware cached header/cell word floors capped at 320 px, stable mounted maxima and local scrolling, measured-width announcements, per-column/table reset, validated browser-local preferences; narrow object/address/monitor and EN/DE 1440/1920 fit budgets verified (local scroll where floors exceed the pane); 18 HTML table surfaces, matrix select/address/name included; per-object columns share one resizable width since alpha.17 (`4fda6c7cd`) — [coverage and limits](contracts/table-column-widths.md) | alpha.15 |
 
 ## Topology range visibility
 

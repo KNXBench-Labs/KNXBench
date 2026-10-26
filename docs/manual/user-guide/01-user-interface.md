@@ -448,7 +448,7 @@ Labels and meaningful fields remain available.
 The address/object matrix's select, address and name columns resize. Its
 per-object columns share one width: drag or use the arrow keys on any object
 heading's edge and every object column follows; Reset restores 180 pixels
-(source builds from 25 October 2026). The
+(since Alpha 17). The
 [coverage checklist](../../contracts/table-column-widths.md) lists all 18
 surfaces and this remaining boundary. Manufacturer parameter grids,
 explorer trees and catalogue/history lists retain their own layouts.

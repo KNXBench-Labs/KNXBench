@@ -40,7 +40,7 @@ before any plan or report exists. See
 
 **A maintainer asked me for diagnostic data from a device. How do I send it?**
 
-Use **File → Export diagnostic data** (source builds after Alpha 16 also offer
+Use **File → Export diagnostic data** (since Alpha 17 also
 **Analyse device** on the device's *Diagnostics* tab): pick the device and the
 interface, preview, read, save the ZIP and email it to `issue@knxbench.com`. The
 export only reads.
@@ -50,7 +50,7 @@ has screenshots and says which builds contain it.
 **How can I report an unknown device before a download plan exists?**
 
 Since Alpha 12, use **File → Device support report**, or the same
-action in the device download panel (source builds after Alpha 16: **Send report**
+action in the device download panel (since Alpha 17: **Send report**
 on the device's *Diagnostics* tab). An offline report needs no project, installed
 product package or gateway. Optional live diagnostics show a fixed read list and
 require separate consent; they never write, restart or enable programming.
@@ -61,9 +61,18 @@ ZIP excludes parameter values; the older ended-download verification report is
 separate and can contain them. See the
 [reporting guide](../user-guide/08-reports-and-diff.md#universal-device-support-reporting).
 
-**What changes when I upgrade to Alpha 15?**
+**What changes when I upgrade to Alpha 17?**
 
-Native/model16 stays, but the product database migrates 24 → 26 on writable
+Native/store and model 16 and product database 28 are unchanged from Alpha 16;
+no migration is needed. Opening Alpha 17 saves in Alpha 16 is not tested. Device
+backups are written as format 2, and new activity-history rows and System-2
+operation records use versions that Alpha 16 refuses rather than drops. Close
+KNXBench and keep independent project/catalogue/Docker-data backups first.
+[Release scope](../../releases/alpha17.md#upgrade).
+
+**What changed when upgrading to Alpha 15?**
+
+Native/model16 stayed, but the product database migrated 24 → 26 on writable
 application open. Older builds refuse product26 by their source version check;
 opening new project saves in Alpha 14 is not verified. Close KNXBench and keep
 independent project/catalogue/Docker-data backups first. V23–v25 promotion
@@ -72,13 +81,13 @@ not enable new programming. The new System-2 memory diagnostic profile is
 CLI-only, identity-gated and not hardware-verified; the web export remains
 generic identity-only. [Release scope](../../releases/alpha15.md).
 
-**Why does Alpha 15 refuse a catalogue used by a newer source build?**
+**Why does Alpha 15 refuse a catalogue used by a newer release?**
 
-Source builds after Alpha 15 use product DB **27** for master-declaration
-provenance; Alpha 15 supports product26. The refusal protects data rather than
+Since Alpha 16, the product database is **28** (v27 added master-declaration
+provenance); Alpha 15 supports product26. The refusal protects data rather than
 attempting an unverified downgrade. Restore an independent pre-upgrade catalogue
-copy to go back. Native/model16 does not change in this package. See
-[master-data diagnostics](../user-guide/05-devices-and-products.md#master-data-diagnostics-source-builds-after-alpha-15).
+copy to go back. Native/model16 does not change. See
+[master-data diagnostics](../user-guide/05-devices-and-products.md#master-data-diagnostics-since-alpha-16).
 
 **Why does enabling a button not produce new communication objects?**
 
@@ -144,7 +153,7 @@ exists," not certification by the KNX Association.
 
 **What does "alpha" mean for this project specifically?**
 
-The `0.1.0-alpha` series is at `v0.1.0-alpha.15`. Concretely: `docs/KNOWN_LIMITATIONS.md` lists
+The `0.1.0-alpha` series is at `v0.1.0-alpha.17`. Concretely: `docs/KNOWN_LIMITATIONS.md` lists
 known limitations, several classified critical, and writing to a real device is verified
 only for narrowly recorded device/application cases. See
 [Project status](../getting-started/03-project-status.md) for the evidence boundaries and what

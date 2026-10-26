@@ -99,15 +99,14 @@ Retained bytes are not a promise of complete ETS semantics.
   command line for the scriptable bits.
 
 > [!NOTE]
-> **Alpha 16 is published:** cancellable catalogue updates, confirmed comparison-to-project
-> edits with native persistence and undo, and original product packages carried with
-> catalogue-authored project saves. Supported block/separator captions use the selected
-> product language; this is not complete ETS layout support.
-> [Release scope](docs/releases/alpha16.md) also documents the experimental, exact-application
-> System-2 path: software-tested on TestHardware, not physically certified.
-> [Public verification](docs/evidence/release-alpha16-2026-10-24.json) confirms the
-> GitHub downloads/checksums and Docker amd64/arm64 revision identities at the immutable
-> tag. This remains a pre-release. Native/model **16** stays; the product database moves **26 → 28**.
+> **Alpha 17 is published as a pre-release (26 October 2026):** issue #30's experimental
+> UP 258D12 System-2 download records differing device observations instead of refusing
+> and explains a refused table-reference read; the regular memory download checks
+> identities, backups and settlement more strictly and keeps one payload-free cause when
+> it fails; comparison adoption can take over association links. None of this is new
+> hardware support. [Release scope](docs/releases/alpha17.md) lists the scope, upgrade
+> notes and boundaries. Native/model **16** and product database **28** are unchanged
+> from Alpha 16; no migration is needed.
 
 ## See it in action
 
@@ -173,12 +172,10 @@ docker run -d --name knxbench --network host \
 Open <https://127.0.0.1:8484>, sign in with that password, and choose **New project…** or
 import a `.knxproj`. Your projects live in `data/` and survive restarts.
 
-The published Alpha 16 image supports **x86-64 (`amd64`) and 64-bit Arm
-(`arm64`)**; both platform revisions and the version/`latest` index were verified
-against the immutable release tag. This is registry identity evidence, not an
-extra local ARM64 runtime test. `latest` follows published releases, including
+The Alpha 17 image is published for **x86-64 (`amd64`) and 64-bit Arm
+(`arm64`)**. `latest` follows published releases, including
 alphas, not the newest source or a promise of stability. To stay on a specific
-release, use a version tag in both commands (`0.1.0-alpha.16`)
+release, use a version tag in both commands (`0.1.0-alpha.17`)
 ([tags and details](docs/manual/user-guide/11-web-and-docker.md#ready-made-image-from-docker-hub)).
 
 Want changes newer than the release? [Build the container from source](docs/manual/getting-started/04-installation.md#build-the-container-from-source).
@@ -200,21 +197,19 @@ and may enter shell history.
 
 ### Linux desktop, via AppImage
 
-Download the published **Alpha 16 pre-release** AppImage and verify its checksum
-from the [release page](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.16):
+Download the published **Alpha 17 pre-release** AppImage and verify its checksum
+from the [release page](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.17):
 
 ```bash
-REL=https://github.com/KNXBench-Labs/KNXBench/releases/download/v0.1.0-alpha.16
-curl -LO "$REL/KNXBench_0.1.0-alpha.16_amd64.AppImage"
+REL=https://github.com/KNXBench-Labs/KNXBench/releases/download/v0.1.0-alpha.17
+curl -LO "$REL/KNXBench_0.1.0-alpha.17_amd64.AppImage"
 curl -LO "$REL/SHA256SUMS"
 sha256sum -c --ignore-missing SHA256SUMS
-chmod +x KNXBench_0.1.0-alpha.16_amd64.AppImage
-./KNXBench_0.1.0-alpha.16_amd64.AppImage
+chmod +x KNXBench_0.1.0-alpha.17_amd64.AppImage
+./KNXBench_0.1.0-alpha.17_amd64.AppImage
 ```
 
-The published `v0.1.0-alpha.16` AppImage is x86-64 only. Its public download size,
-SHA-256 and provider digest match the release verification record; these CI-built
-assets are distinct from the earlier local acceptance packages.
+The `v0.1.0-alpha.17` AppImage is x86-64 only.
 `--ignore-missing` skips the `knx-mcp` binary listed in the same checksum file.
 Source changes after this tag still need a
 [source build](docs/manual/getting-started/04-installation.md#c-from-source). The
@@ -223,20 +218,22 @@ packages it needs and what has been tested.
 
 > [!IMPORTANT]
 > Before upgrading, close KNXBench and back up native project files and Docker
-> data, including the closed product database. Alpha 16 keeps native/model schema 16
-> and migrates Alpha 15's product database 26 → 27 → 28 on writable open.
-> Alpha 15 refuses product28; there is no catalogue downgrade path. Older readers'
-> handling of newly carried original packages in Alpha 16 project saves is unverified,
-> despite the unchanged native schema. Keep matching original `.knxproj`/`.knxprod` files.
-> Alpha 11 and earlier refuse native schema 16 files.
+> data, including the closed product database. Alpha 17 keeps native/model schema 16
+> and product database 28 from Alpha 16; no migration is needed. Opening Alpha 17
+> saves in Alpha 16 is not tested. Alpha 17 writes device backups as format 2 and new
+> activity-history and System-2 record versions, which Alpha 16 refuses rather than
+> drops ([upgrade notes](docs/releases/alpha17.md#upgrade)). Coming from Alpha 15:
+> Alpha 16 and later migrate its product database 26 → 28, and Alpha 15 refuses
+> product28; there is no catalogue downgrade path. Keep matching original
+> `.knxproj`/`.knxprod` files. Alpha 11 and earlier refuse native schema 16 files.
 > To go back, restore the pre-upgrade backup. Internal versions are not external backups.
 
 ### Where it runs
 
 | Platform | Status |
 | --- | --- |
-| Linux, Docker + browser | Standard pipeline targets amd64 and arm64; Alpha 16 local acceptance is amd64, public image/platform readback pending; the bus needs host networking |
-| Linux x86-64, AppImage | Alpha 16 local extracted-package startup/API/frontend smoke passed; public CI artifact readback pending; FUSE and native display behaviour remain host-dependent |
+| Linux, Docker + browser | Alpha 17 image published for amd64 and arm64; the bus needs host networking |
+| Linux x86-64, AppImage | Alpha 17 AppImage published for x86-64; FUSE and native display behaviour remain host-dependent |
 | Linux, from source | Rust 1.98 and Node.js 22.12+ ([building from source](docs/manual/development/02-building-from-source.md)) |
 | Windows, macOS | No native build. Docker Desktop is plausible, but untested |
 
@@ -255,10 +252,10 @@ Alpha.10 is the first release with it; Alpha.9 and older packages do not check.
 
 ## Project status
 
-**Alpha — and we mean it.** [Alpha 16](docs/releases/alpha16.md) is the prepared
-pre-release candidate; publication and public artifact verification are separate.
-The [release page](https://github.com/KNXBench-Labs/KNXBench/releases) is the authority
-for available downloads. [Alpha 15](docs/releases/alpha15.md) remains in the release history.
+**Alpha — and we mean it.** [Alpha 17](docs/releases/alpha17.md) is the current
+published pre-release. The [release page](https://github.com/KNXBench-Labs/KNXBench/releases)
+is the authority for available downloads. [Alpha 16](docs/releases/alpha16.md) and
+earlier remain in the release history.
 The test suite is large, the documentation is honest, and things still move.
 
 - **Solid:** importing real ETS projects with a full report, editing with undo, the
@@ -281,7 +278,7 @@ that converts it all into *Lord of the Rings* re-reads and ant colonies. It is a
 generated snapshot (last run 7 October 2026), so read its numbers as "as of".
 
 The [test catalogue](docs/TEST_CATALOGUE.md) explains what gets exercised; each
-[release note](docs/releases/alpha16.md) names its own scope. Test results belong to
+[release note](docs/releases/alpha17.md) names its own scope. Test results belong to
 an exact source snapshot, not a perpetually growing badge. The
 [architecture decisions](docs/adr/README.md) explain the engineering behind it.
 

@@ -480,7 +480,7 @@
       "number": 86,
       "title": "Duplicate product identifiers",
       "topic": "Manufacturer data and parameters",
-      "summary": "Normalized duplicates are reported. Source builds after Alpha 15 add four-family master provenance; historical winner/encounter facts and unsupported identifier families retain separate boundaries.",
+      "summary": "Normalized duplicates are reported. Since Alpha 16, four-family master provenance is recorded; historical winner/encounter facts and unsupported identifier families retain separate boundaries.",
       "file": "KL-086-duplicate-product-identifiers.md",
       "ledger_ids": [
         "KL-86"
@@ -2708,7 +2708,7 @@
       "number": 184,
       "title": "Diagnostic export profiles and evidence",
       "topic": "Commissioning and recovery",
-      "summary": "Generic diagnostics read identity only (descriptor, PID12, PID78). CLI and, since 26 October 2026 (source, DIAG-01), the web dialog additionally offer the identity-gated system2-declared-segments-v1 memory profile and format-2 export: candidate source locations, not a backup or restore basis, with no recorded hardware run of this profile. The generic identity profile has evidence from 46 physical devices/eight manufacturers, including refusals and ended/rejected connections; house normal-operation feedback is an operator observation, and a fully silent device remains unobserved.",
+      "summary": "Generic diagnostics read identity only (descriptor, PID12, PID78). CLI and, since Alpha 17 (DIAG-01), the web dialog additionally offer the identity-gated system2-declared-segments-v1 memory profile and format-2 export: candidate source locations, not a backup or restore basis, with no recorded hardware run of this profile. The generic identity profile has evidence from 46 physical devices/eight manufacturers, including refusals and ended/rejected connections; house normal-operation feedback is an operator observation, and a fully silent device remains unobserved.",
       "file": "KL-184-device-diagnostic-export.md",
       "ledger_ids": [
         "KL-184"

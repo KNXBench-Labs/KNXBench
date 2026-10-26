@@ -61,7 +61,7 @@ retain original affected values/evidence and explicitly downgrade affected
 measured reports rather than invent history. Native/model16 and master
 provenance semantics are unchanged. [Accepted source delivery](IMPLEMENTATION_STATUS.md#product-column-promotion-repair--source-delivery)
 is published as `8fa0d76b9fd41f81c4e135c29e54f2a98d516b38`; this is not an Alpha 15 artifact
-upgrade or new release. Current source uses product28/native-model16.
+upgrade or new release. Alpha 16 and Alpha 17 use product28/native-model16.
 Alpha 15 supports product26, and the preceding master-provenance source
 supports product27; builds with either older maximum refuse product28 by
 their version check. This is source-established refusal, not an executed
@@ -104,7 +104,9 @@ duplicate active-reference refusal and reference/project bitfield values.
 [Evidence and remaining contracts](research/2026-10-20-system2-download-integrity.md).
 No ETS byte-equivalence, complete System-2 product support or hardware claim.
 
-## Master provenance (source builds after Alpha 15)
+<a id="master-provenance-source-builds-after-alpha-15"></a>
+
+## Master provenance (since Alpha 16)
 
 WP-17 adds source evidence, not new ETS/master grammar compatibility. Product
 DB v27 preserves normalized master winners; old winner/encounter history is

@@ -2,18 +2,34 @@
 
 # Implementation status
 
-## Unreleased source: System-2 refusal diagnostics
+## Alpha 17 — current published pre-release
 
-A running System-2 attempt is no longer named as a foreign management holder in
-the download gateway hint. Status and the panel show the current attempt's early
-refusal code; a structured start-request refusal is shown too. This is volatile
-server-lifetime evidence, not a durable historical reason or a new recovery route.
-The original issue #30 start failure remains under investigation; this slice is
-delivered on main (unreleased) and awaits the reporter's refusal code.
-[Practical workflow](user-guide/05-devices-and-products.md#a-busy-hint-is-not-the-system-2-failure-reason-unreleased-source) ·
-[S2-02](../open-work/S2-02-gateway-busy-after-failed-runs.md).
+Alpha 17 (`v0.1.0-alpha.17`, source cutoff `20ab2f7ea`) is published as a
+pre-release on 26 October 2026. It answers issue #30 for the experimental UP 258D12
+System-2 download, makes the regular memory download stricter about what it writes
+and claims, keeps the cause of failed downloads and adds association links to
+comparison adoption. None of this is new hardware support; new download, System-2
+and diagnostic behaviour is tested with simulated or loopback transports only.
+[Release scope, upgrade notes and boundaries](../releases/alpha17.md).
 
-## Alpha 16 — published pre-release, public artifacts verified
+| Capability | Boundary |
+| --- | --- |
+| System-2 prestate observations and safe recovery offer | Exact UP 258D12 application `M-0001_A-9205-04-9270` only. Hardware type, mask version and manufacturer stay hard; other prestate differences are recorded, not refused. No placeholder backup; recovery unavailable when the prestate does not describe the device. Hardware outcome unverified; issue #30 stays open. |
+| System-2 refusal diagnostics | Own locks are no longer shown as a foreign holder; an early refusal shows the server's reason code for the current server run only. `gatewayBusy` still does not identify its mechanism. [Workflow](user-guide/05-devices-and-products.md#a-busy-hint-is-not-the-system-2-failure-reason-since-alpha-17) · [S2-02](../open-work/S2-02-gateway-busy-after-failed-runs.md). |
+| PID 7 width and typed refusal | Two- or four-octet pointer element kept raw; a refused PID 7 answer shows a closed typed reason with counts, raw bytes stay private. [Contract](../contracts/system2-safe-failure-diagnostic.md). |
+| Regular download checks | Identity widths, scope advice, read-only check after download, backup format 2 with the prior application, source-checked settlement, stop only before the first change, vendor-plug-in programs refused. No device family or hardware claim added. |
+| Download failure cause | One payload-free cause in status, log, history, report and CLI; System-2 runs outside this contract. [Contract](../contracts/download-failure-diagnostic.md). |
+| Workbench | Association link adoption, saved object folders, Flow group names, version timeline, sortable catalogue table, shared matrix object width. |
+
+Native/store and model **16** and product database **28** are unchanged from
+Alpha 16; no migration. Device backups (format 2), new activity-history rows and
+new System-2 operation records are refused by Alpha 16 rather than dropped.
+Opening Alpha 17 saves in Alpha 16 is not tested. Keep independent backups before
+upgrading.
+
+<a id="alpha-16--published-pre-release-public-artifacts-verified"></a>
+
+## Alpha 16 — published pre-release, public artifacts verified (history)
 
 **Snapshot: 24 October 2026**, frozen runtime/test source
 `86b4a7fc68b3d3206c00511b14f41e025e33de4d`. Bounded software outcomes and all four
@@ -87,7 +103,7 @@ separate public record does not add public-container runtime or AppImage GUI
 acceptance. No ledger/limitation closure follows.
 
 The dated Alpha-15 and older sections below retain their historical evidence;
-this current-source section supersedes their old System-2, migration and
+the Alpha 16 and Alpha 17 sections above supersede their old System-2, migration and
 catalogue-authored portability boundaries, not their release availability.
 
 ## Alpha 15 workbench and data boundary
@@ -117,8 +133,8 @@ all Docker data before upgrade.
 The System-2 source preview is offline; the separate declared-memory diagnostic
 profile is CLI-only, ProductDB-derived and identity-gated, with offline/simulator
 evidence but no hardware run. Web diagnostics remain generic identity-only in
-this release; source builds from 26 October 2026 also offer the memory profile
-in the web dialog (simulator-verified only).
+this release; since Alpha 17 the web dialog also offers the memory profile
+(simulator-verified only).
 Neither enables System-2 programming, new write admission or complete recovery.
 [Release scope and explicit boundaries](../releases/alpha15.md).
 
@@ -321,7 +337,7 @@ P4 live-device comparison; CLI/external work needs manual reconciliation.
 [Use and limits](user-guide/05-devices-and-products.md#programming-marks-p3-since-alpha-12),
 [ADR-0129](../adr/0129-per-part-pending-programming.md).
 
-A download can use these marks to choose its scope (source after Alpha 16):
+A download can use these marks to choose its scope (since Alpha 17):
 *Only what the project marks pending* in the Download to device tab and
 `knx device download --changes` plan the complete, partial or no download the
 marks advise, show the resolved scope, and list a pending address or medium
@@ -496,11 +512,11 @@ and rate-limited checks leave editing usable. Included in Alpha.10; Alpha.9 does
 One-device identity export in the web UI and CLI, simulator-verified only; no
 memory reads and no hardware compatibility claim yet
 ([contract](../contracts/device-diagnostic-export.md)). Since 24 October 2026
-(source builds after Alpha 16) a device's Diagnostics tab opens this dialog and
+(since Alpha 17) a device's Diagnostics tab opens this dialog and
 the support report with that device preselected; the dialogs are unchanged.
 The 25 October 2026 lifecycle correction owns a running Start response before its
 progress view commits, so project close or entry removal cannot strand that job.
-Since 26 October 2026 (source) the dialog also offers the System-2
+Since Alpha 17 the dialog also offers the System-2
 declared-memory profile (needs the product database; same consents; simulator
 only, no hardware run).
 Revision-only refreshes still retain analysis and separately consented partial
@@ -796,7 +812,7 @@ Main source delivery is [verified](../status/2026-10-09-offline-ap1-verification
 | Capability | Status | Notes |
 | --- | --- | --- |
 | Product data ingested from inside a `.knxproj` | ✅ Implemented | The reference project's 4 manufacturers and 12 application programs ingest completely |
-| A `.knxdb` carries available manifest manufacturer files (store schema 16) | ✅ Included in Alpha 12; bounded unreleased extension | Existing manifest-backed files remain carried. Unreleased Alpha-16 Save/Save As also acquires complete exact `CataloguePackage` originals for uniquely measured catalogue dependencies; absent/corrupt/ambiguous new ownership refuses. Missing historical sources remain explicit, and older-reader compatibility is untested despite schema16 — [current contract](../contracts/alpha16-catalogue-portability.md), [ADR-0128](../adr/0128-native-project-files-carry-their-manufacturer-files.md) |
+| A `.knxdb` carries available manifest manufacturer files (store schema 16) | ✅ Included in Alpha 12; bounded extension since Alpha 16 | Existing manifest-backed files remain carried. Since Alpha 16, Save/Save As also acquires complete exact `CataloguePackage` originals for uniquely measured catalogue dependencies; absent/corrupt/ambiguous new ownership refuses. Missing historical sources remain explicit, and older-reader compatibility is untested despite schema16 — [current contract](../contracts/alpha16-catalogue-portability.md), [ADR-0128](../adr/0128-native-project-files-carry-their-manufacturer-files.md) |
 | Standalone `.knxprod` at master data scheme 11 or 20 | ✅ Implemented | Four real files, content-addressed, idempotent re-install — [Devices and products](user-guide/05-devices-and-products.md) |
 | Legacy ETS3 `.vd3`/`.vd4`/`.vd5` product databases, offline use (web, CLI) | 🟡 Partial or experimental | The real `.vd3` and `.vd4` import completely; the real Siemens `.vd5` (88 programs) imports except its `string`/`long enum` parameters; password dialog and one remembered password; download plans from the file's own load procedure (untested: never run on a device); no DPTs yet — [Devices and products](user-guide/05-devices-and-products.md#old-ets3-product-databases-vd3-vd4-vd5), [ADR-0094](../adr/0094-legacy-exim-product-files.md) |
 | Standalone `.knxprod` at schemes 12, 13, 14 and exact-namespace 21 | 🟡 Partial or experimental | Synthetic tests and the passing read-only corpus matrix verify parser/persistence behavior, not full manufacturer semantics |
@@ -922,12 +938,12 @@ source-bound browser/unit/build evidence; this does not expand KNX compatibility
 
 ## Commissioning and device download
 
-The historical hardware results below do not verify the unreleased configured
-System-2 path. That separate UI/HTTP/App/CLI implementation is restricted to
-UP 258D12 `M-0001_A-9205-04-9270`, with actual-project preparation, normal consent
-plus four phrases and backup-before-setup. Blocking corrections/combined acceptance
-are pending; hardware outcome and physical best-effort recovery remain unverified.
-[Current source scope](../contracts/alpha16-system2-http-mount.md).
+The historical hardware results below do not verify the configured System-2 path
+(since Alpha 16, revised in Alpha 17). That separate UI/HTTP/App/CLI implementation
+is restricted to UP 258D12 `M-0001_A-9205-04-9270`, with actual-project preparation,
+normal consent plus four phrases and backup-before-setup. It is software-tested
+only; hardware outcome and physical best-effort recovery remain unverified.
+[Current scope](../contracts/alpha16-system2-http-mount.md).
 
 | Capability | Status | Notes |
 | --- | --- | --- |

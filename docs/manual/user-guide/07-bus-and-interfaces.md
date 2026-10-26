@@ -211,7 +211,7 @@ send anything.
   sender with no project device, and every sender the project could not
   interpret (no project open, an older project state), is drawn by its
   address only, and the Inspector says why.
-- **Group names (26 October 2026 source).** Group nodes, connection labels and
+- **Group names (since Alpha 17).** Group nodes, connection labels and
   current-value labels show `1/2/3 (Living room light)` when the interpreting
   project snapshot identifies exactly one named group. Empty names, ambiguous
   addresses across installations, truncated group lists and historical or
@@ -506,7 +506,7 @@ There is no stop button: stopping between steps would leave the device in an und
 state. The server cannot tell a person from a script; like the command, it only checks
 that the request names the device it was shown.
 
-### When a download fails (unreleased source)
+### When a download fails (since Alpha 17)
 
 A download that ends early shows **Download failed** as an alert with its own facts:
 the **cause** (a plain sentence and a short stable code such as `noAnswer`), **where**

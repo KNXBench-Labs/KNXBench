@@ -19,28 +19,11 @@ manufacturer publishes, not something KNXBench invents. See
 This chapter covers the catalog, adding a device, and the device panel's objects,
 parameters, product data, diagnostics and inspection-only manufacturer fields.
 
-> Alpha 16 has since been published (24 October 2026); the note below records
-> the pre-release snapshot these sections were written against.
->
-> **24 October 2026: unreleased Alpha-16 snapshot.** Sections marked
-> **unreleased Alpha-16 source** describe frozen runtime/test source
-> `86b4a7fc68b3d3206c00511b14f41e025e33de4d`. Bounded software outcomes and four
-> final local amd64 artifacts have parent acceptance; local amd64 software/package
-> acceptance is complete, not publication approval or public availability. Both
-> formerly blocked pinned-input criteria separately passed at documentation HEAD
-> `a9295a52` using the owning release-mode integration build after owner-authorized
-> exact historical restoration: 111 files (one non-package), 115 instances /
-> 113 unique payloads. Parent verified mapping and preservation guards; originals
-> remain untouched, and no further materialization or repinning is authorized.
-> The owner explicitly limits local preacceptance to amd64; extra local ARM64
-> preacceptance is deferred and unverified, not a blocker. Normal release channels
-> and the standard amd64+arm64 container workflow remain unchanged; remote results
-> need separate verification. Publication Go is granted conditional on readiness.
-> Parent final documentation review, actual publication and public readback remain
-> open; original full-gate/remote-workflow/artifact
-> import-upgrade-smoke evidence limits are explicit in the plan.
-> [Scope and artifact limits](../../releases/alpha16.md),
-> [source-bound evidence matrix](../../goals/alpha16-release-plan-2026-10-23.md#current-acceptance-disposition--24-october-2026).
+> Section labels such as *since Alpha 16* or *since Alpha 17* name the first
+> published pre-release that carries the behaviour. Alpha 17 (26 October 2026) is the
+> current published pre-release; its [release scope](../../releases/alpha17.md)
+> keeps the exact boundaries together. [Alpha 16](../../releases/alpha16.md) was
+> published on 24 October 2026.
 
 ## The Devices view
 
@@ -191,7 +174,9 @@ changes only what is shown, not the comparison result, its tag or Synced.
 [Exact scope and limits](../../contracts/device-comparison.md),
 [device checks](07-bus-and-interfaces.md#device-checks-offline-readiness-then-an-optional-read-only-comparison).
 
-### Adopt device values into the project (unreleased Alpha-16 source)
+<a id="adopt-device-values-into-the-project-unreleased-alpha-16-source"></a>
+
+### Adopt device values into the project (since Alpha 16)
 
 A successful **full** comparison can offer selection controls on supported named
 parameter rows. Select the values to adopt, request a preview, review its exact
@@ -204,8 +189,15 @@ prior user state, and Redo reapplies it. For a saved native project, the working
 state is persisted before the edit is published. Stale project/source/history,
 wrong application or ambiguous decoding refuses the entire selection. Unknown,
 masked, unread and raw rows stay visible but are not adoptable; address tables,
-individual addresses, GA and associations are unsupported for adoption. Partial
+individual addresses and GA rows are unsupported for adoption. Partial
 comparisons and System-2 raw-only rows do not offer adoption authority.
+
+**Association links (since Alpha 17).** Association rows from a complete, decoded
+mask-`0701h` association table can be adopted as object ↔ group-address links,
+per whole object, with a preview of the link changes in EN/DE. No group address
+or object is created and nothing is written to a device. Alpha 16 did not
+offer association rows for adoption.
+[Amendment](../../contracts/alpha16-comparison-adoption.md#association-link-adoption-wp-19-amendment-24-october-2026).
 
 The observation/preview is temporary and may expire or be evicted; preview again
 from a fresh comparison when required. A lost apply reply is not proof of rollback:
@@ -235,8 +227,8 @@ connected or started, and KNXBench never switches the mode for you.
 *(cannot be programmed yet)* and says its type is not loaded through memory
 writes. That is only about the ordinary memory route. In Alpha 16 the warning
 stays on screen after switching to System-2 mode, but it does not veto the
-System-2 preview. Later source builds scope the mark and notice to memory mode and
-label it *(memory download: not supported yet)*; an *excluded* device stays marked in both modes. The mark is not a
+System-2 preview. Since Alpha 17 the mark and notice apply to memory mode only and
+read *(memory download: not supported yet)*; an *excluded* device stays marked in both modes. The mark is not a
 statement that System-2 works for the device, and the server decides.
 
 **What preparation needs.** The exact application above, and the project's
@@ -248,19 +240,19 @@ nothing. See [Service/recovery limits](../../contracts/alpha16-system2-configure
 Recovery is not a separate way into a new download: it only reattaches an
 earlier operation (below).
 
-**Pointer-width correction in newer source builds (`54b052885` or later).** The exact-profile
+**Pointer-width correction (since Alpha 17).** The exact-profile
 correction preserves two- and four-byte table-reference replies as distinct raw
 values in the private recovery record, rather than padding short answers. New
 preparations use a separately versioned policy; already recorded operations keep
 their original interpretation. The preview distinguishes the reported two-byte
 answer on object 1 from the still-unverified source-declared interpretation for
 objects 2/3. This does not establish hardware support or guaranteed recovery;
-malformed replies still stop the run. The implementation is reviewed and software-tested on the published source;
-it is not included in the original Alpha 16 release. Do not retry a device download solely to test this
-paragraph; use the verified source revision and a separately planned,
-explicitly consented hardware test.
+malformed replies still stop the run. The correction is software-tested only;
+Alpha 16 does not contain it. Do not retry a device download solely to test this
+paragraph; use a separately planned, explicitly consented hardware test.
+[Width record](../../status/2026-10-26-up258-pid7-width.md).
 
-The source workflow is:
+The workflow is:
 
 1. Use **Prepare configured System-2 preview** for the selected device. It uses
    the actual open project's parameters, group links and flag overrides, including
@@ -282,7 +274,8 @@ The source workflow is:
    (hardware type, mask version or manufacturer) refuses before any write.
    A different serial number, a different or absent installed application, a
    non-Loaded resource or a table pointer that differs from the project's
-   allocation shape does **not** refuse (since 2026-10-25): the procedure starts
+   allocation shape does **not** refuse (since Alpha 17; Alpha 16 refused a different application or a non-Loaded
+   resource): the procedure starts
    with Unload and its task-segment records write the application identity
    itself (compare the observed ETS session in the
    [System-2 download research](../../research/2026-10-22-system2-ets-download-procedure.md)).
@@ -306,7 +299,9 @@ The source workflow is:
    written**. Only then; every other failure keeps the cautious "device state may
    have changed" wording.
 
-### A busy hint is not the System-2 failure reason (unreleased source)
+<a id="a-busy-hint-is-not-the-system-2-failure-reason-unreleased-source"></a>
+
+### A busy hint is not the System-2 failure reason (since Alpha 17)
 
 The gateway hint no longer labels a running System-2 attempt's own locks as a
 foreign address/management operation. Without that marker, an observed competing
@@ -324,13 +319,12 @@ covers shared-holder conflicts and failure to acquire the process-wide lease,
 including lease-file/runtime I/O failures; it alone does
 not identify which mechanism refused. Lost replies remain unknown: refresh status,
 do not automatically repeat a start. No safety check or recovery admission is
-relaxed. These changes require an unreleased source build, not an older binary.
+relaxed. Alpha 16 and older binaries do not contain these changes.
 The actual reporter-side failure in issue #30 remains under investigation.
 
-### A refused table-pointer answer: typed observation (candidate source, pending acceptance)
+### A refused table-pointer answer: typed observation (since Alpha 17)
 
-In a source build that carries the S2-01 candidate (not yet reviewed, gated or
-published; not in any release), a download or explicit recovery that stops on a
+Since Alpha 17, a download or explicit recovery that stops on a
 malformed table-pointer (PID 7) answer shows a **Failure diagnostic** per run
 (download, restore): the closed reason, object, property and the element and octet
 counts the device reported. Counts can be 0. It never shows the device's raw bytes,
@@ -447,7 +441,7 @@ differs. The `+ Add device` rows in the project explorer open the
 a closed Catalogue backups section, manufacturer filter and search, and four fictional
 products. The first list row is highlighted, but no creation form or address preview is open](../../assets/screenshots/porcelain-product-catalog.png)
 
-**Sortable table (26 October 2026 source).** Results use Product, Manufacturer,
+**Sortable table (since Alpha 17).** Results use Product, Manufacturer,
 Order number and Application columns. Product starts ascending; click a heading
 to sort by it, then again to reverse the direction. The arrow and accessible
 heading state show the active sort. Numeric text uses natural ordering, so 2
@@ -497,7 +491,7 @@ instead of treating it as absent. Native/model16 stays; Alpha 15 migrated produc
 24 → 26 and still had v23–v25 promotion residues. Typed property placements and
 `BinaryValue` columns do not enable their execution.
 
-**Unreleased Alpha-16 source:** the separate product database is **28**, with
+**Since Alpha 16:** the separate product database is **28**, with
 writable migration product26 → 27 → 28 for master provenance and promotion repair.
 Native/store and model remain **16**. Alpha 15 refuses product28; older-reader
 handling of newly saved native files is untested. Close all catalogue users and
@@ -540,7 +534,9 @@ the list is read again. It never deletes backups on its own. (Alpha 10 and 11 ca
 delete backups, and their plain **Install product database** picker installs
 directly, without a preview or backup.)
 
-### Cancellable catalogue jobs (unreleased Alpha-16 source)
+<a id="cancellable-catalogue-jobs-unreleased-alpha-16-source"></a>
+
+### Cancellable catalogue jobs (since Alpha 16)
 
 The production catalogue and device-wizard picker now use one App-root tracker
 and the process-owned managed catalogue job service. Choose **Standard · 4 GiB
@@ -581,7 +577,9 @@ rollback or recovery proof.
 [Runtime](../../contracts/catalogue-jobs/alpha16-runtime.md),
 [root-owned UI](../../contracts/catalogue-jobs/alpha16-web-controller.md).
 
-### Master-data diagnostics (source builds after Alpha 15)
+<a id="master-data-diagnostics-source-builds-after-alpha-15"></a>
+
+### Master-data diagnostics (since Alpha 16)
 
 A product file can restate standard DPT, function or space definitions already
 in the catalogue. **Master identity collision** means the existing normalized
@@ -591,8 +589,8 @@ parent. Original source bytes remain retained in either case.
 
 Expand **Technical source details** for the source hash, declaration position
 and reason. These technical details are source evidence, not translated product
-text. Product DB **27** introduced byte-derived declarations on upgrade; current
-unreleased source migrates through **28** for promotion repair. Previously
+text. Product DB **27** introduced byte-derived declarations on upgrade; Alpha 16
+and later migrate through **28** for promotion repair. Previously
 unrecorded winning-source and installation history stays explicitly unavailable;
 existing historical install reports are not rewritten to appear newly measured.
 Alpha 15 supports product26 and cannot open product28: keep an independent
@@ -816,7 +814,7 @@ The **Parameters** tab says why it cannot show anything:
 Since store schema 16, Save embeds available, hash-matched manufacturer files
 from the saved manifest, and the server/desktop reinstalls carried files on open.
 
-**Unreleased Alpha-16 source:** Save and Save As also acquire newly required
+**Since Alpha 16:** Save and Save As also acquire newly required
 catalogue-authored dependencies when measured winning source hashes and one
 recorded owning package establish their identity. The file carries the **complete
 exact original `CataloguePackage`**, plus required direct/master/catalogue members.
@@ -1113,7 +1111,7 @@ template remain searchable; separator text is hidden during search and is not
 part of the search index.
 This changes display only, not your settings or the product data.
 
-**Unreleased Alpha-16 source:** supported parameter-block and separator `Text`
+**Since Alpha 16:** supported parameter-block and separator `Text`
 translations follow the selected product language **before** existing module and
 positional-placeholder filling. An explicit empty translation stays empty rather
 than reviving the source caption. Row/column `TextParameterRefId` is still an
@@ -1143,7 +1141,7 @@ works exactly as in the row view, and switching areas keeps your drafts. Areas
 without a declared grid stay in rows with a short note saying so; an unknown or
 unreadable layout description also falls back to rows and names the reason.
 Search results are always rows. Wide grids scroll sideways inside the area on
-narrow windows. Row/column captions retain their declared text; the unreleased
+narrow windows. Row/column captions retain their declared text; the
 block/separator language overlay above does not add row/column text-parameter
 resolution.
 See the [workspace contract](../../contracts/parameter-workspace.md).
@@ -1245,8 +1243,7 @@ program) also live here. Those values are preserved, never silently dropped.
 
 <a id="device-analysis-and-support"></a>
 
-**Device analysis and support (amendment of 24 October 2026, source builds after
-Alpha 16).** Above the parameter diagnostics, the tab offers two buttons for the
+**Device analysis and support (since Alpha 17).** Above the parameter diagnostics, the tab offers two buttons for the
 shown device:
 
 - **Analyse device** (*Gerät analysieren*) opens the existing **Export diagnostic
@@ -1262,8 +1259,8 @@ to send yourself. The buttons are disabled without an open project. Selecting
 another device closes an open dialog; a new project revision closes the support
 report as before, while the diagnostic export keeps its own outdated-review
 warning. Up to Alpha 16 the analysis offers the generic identity reads only;
-source builds from 26 October 2026 also offer the System-2 declared-memory
-profile in the same dialog
+since Alpha 17 the same dialog also offers the System-2 declared-memory
+profile
 ([guide](08-reports-and-diff.md#reading-declared-memory-ranges-system-2)).
 
 ### Manufacturer fields

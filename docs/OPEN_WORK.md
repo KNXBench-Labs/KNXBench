@@ -20,6 +20,7 @@ the former dated sections are in the [archive](history/OPEN_WORK_2026-10-25.md).
 | WP-12 | Field evidence and owner acceptance (incl. issue #22) | Blocked: consent | [WP-12](open-work/WP-12-field-evidence-and-owner-acceptance.md) |
 | WP-14 | Complete offline family outcomes (System 1/B/300) | Blocked: evidence | [WP-14](open-work/WP-14-offline-family-outcomes.md) |
 | WP-16 | ZIP encryption metadata consistency (AES extra field) | Open | [WP-16](open-work/WP-16-zip-encryption-metadata.md) |
+| DIAG-02 | Retain regular-download failure causes in log, UI and exported report | P1: planned only; implementation not authorised | [DIAG-02](open-work/DIAG-02-download-failure-evidence.md) |
 | DIAG-01 | System-2 memory diagnostic profile in the web UI | Open | [DIAG-01](open-work/DIAG-01-system2-diagnostics-web.md) |
 | GATE-01 | Test-gate speed and stability follow-ups | Open | [GATE-01](open-work/GATE-01-test-gate-follow-ups.md) |
 | OWN-01 | Owner decisions and deferred items | Owner decision | [OWN-01](open-work/OWN-01-owner-decisions.md) |

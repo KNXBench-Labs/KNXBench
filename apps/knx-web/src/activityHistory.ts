@@ -2,7 +2,7 @@
 import { admitReceipts, type DownloadPreparation, type DownloadSettlement } from "./downloadReceipt";
 import { admitPostDownloadCheck, type PostDownloadCheck } from "./postDownloadCheck";
 
-export const HISTORY_KINDS = ["deviceCompare", "serviceControlRead", "serviceControlWrite", "serialLookup", "deviceDownload", "deviceDiagnostics"] as const;
+export const HISTORY_KINDS = ["deviceCompare", "serviceControlRead", "serviceControlWrite", "system2Validation", "serialLookup", "deviceDownload", "deviceDiagnostics"] as const;
 export const UNTRACKED_KINDS = ["deviceIdentify", "groupWrite", "serialAddress", "deviceDownload", "addressProgramming", "busMonitor", "lineScan"] as const;
 export type HistoryKind = typeof HISTORY_KINDS[number];
 export type UntrackedKind = typeof UNTRACKED_KINDS[number];
@@ -100,7 +100,8 @@ export function admitHistoryPage(value: unknown, after = 0, limit = 50): History
     requireHistory(entry.state === "running" ? entry.finishedAt === null && !entry.interrupted
       : entry.finishedAt !== null || (entry.state === "unknown" && entry.interrupted));
     requireHistory(entry.kind === "serialLookup" ? entry.address === null : address(entry.address));
-    const write = entry.kind === "serviceControlWrite" || entry.kind === "deviceDownload";
+    const propertyWrite = entry.kind === "serviceControlWrite" || entry.kind === "system2Validation";
+    const write = propertyWrite || entry.kind === "deviceDownload";
     if (!write) {
       requireHistory(!Object.hasOwn(entry, "writeEvidence") && !Object.hasOwn(entry, "downloadEvidence"));
       requireHistory(["running", "finished", "failed", "unknown"].includes(entry.state as string));
@@ -109,7 +110,7 @@ export function admitHistoryPage(value: unknown, after = 0, limit = 50): History
     const evidence = record(entry.writeEvidence, ["backupRecorded", "sendPossible"]);
     requireHistory(typeof evidence.backupRecorded === "boolean" && typeof evidence.sendPossible === "boolean");
     requireHistory(!evidence.sendPossible || evidence.backupRecorded);
-    if (entry.kind === "serviceControlWrite") {
+    if (propertyWrite) {
       requireHistory(!Object.hasOwn(entry, "downloadEvidence"));
       requireHistory(["running", "verified", "noChange", "notSent", "effectUnverified", "unknown"].includes(entry.state as string));
       if (entry.state === "verified" || entry.state === "effectUnverified") requireHistory(evidence.backupRecorded && evidence.sendPossible);

@@ -38,10 +38,10 @@ shows the durable copy without a live announcement; older rows and reports read 
 recorded*. Exceptions to the cause/settlement link are listed in the contract. Focused
 evidence: 12 worker tests on the simulator (identity/property refusal, backup refusal,
 read-back mismatch, timeout, released and lost connection, load-state error, stop on
-request, unwitnessed end, polling, success and unconfirmed-restart controls), 31 history
+request, unwitnessed end, polling, success and unconfirmed-restart controls), 33 history
 cases shared by the Rust and web readers, 4,537 Vitest tests. Independent review BLOCK
 (status line named the last started step after a backup failure) fixed with the minor
-findings. CLI and System-2 rows are unchanged. Simulator only, no hardware run.
+findings; focused re-review APPROVE. CLI and System-2 rows are unchanged. Simulator only, no hardware run.
 [Contract](contracts/download-failure-diagnostic.md),
 [details](open-work/DIAG-02-download-failure-evidence.md).
 

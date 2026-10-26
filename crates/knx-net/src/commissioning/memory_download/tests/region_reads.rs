@@ -12,6 +12,8 @@ use crate::client::{BusError, TunnelEvent};
 
 use MemoryService::{Memory, UserMemory};
 
+mod budget;
+
 /// Forwards to the simulator, but first runs the real cEMI encoder over every
 /// request, as `TunnelClient::send_frame` does; the simulator alone never encodes.
 struct Encoding<'a>(&'a SimulatedDevice);
@@ -170,7 +172,7 @@ async fn compare_at_the_default_read_size_keeps_the_region_in_user_memory() {
     assert_eq!(compared.held.regions[0].octets, held);
     assert_eq!(
         read_schedule(&device),
-        vec![user(0xFFF0, 12), user(0xFFFC, 4)]
+        vec![user(0xFFF0, 11), user(0xFFFB, 5)]
     );
     assert_eq!(writes_of_any_kind(&device), vec![], "read only");
 }
@@ -201,12 +203,12 @@ async fn a_region_ending_exactly_at_ffff_is_user_memory_all_the_way() {
     assert_eq!(
         read_schedule(&narrow),
         vec![
-            user(0xFFC0, 12),
-            user(0xFFCC, 12),
-            user(0xFFD8, 12),
-            user(0xFFE4, 12),
-            user(0xFFF0, 12),
-            user(0xFFFC, 3)
+            user(0xFFC0, 11),
+            user(0xFFCB, 11),
+            user(0xFFD6, 11),
+            user(0xFFE1, 11),
+            user(0xFFEC, 11),
+            user(0xFFF7, 8)
         ]
     );
 }
@@ -299,7 +301,7 @@ async fn a_region_past_ffff_reads_in_user_memory_and_a_single_octet_at_ffff_too(
     assert_eq!(read, vec![(0xFFF8, held)]);
     assert_eq!(
         read_schedule(&narrow),
-        vec![user(0xFFF8, 12), user(0x10004, 4)]
+        vec![user(0xFFF8, 11), user(0x10003, 5)]
     );
 }
 

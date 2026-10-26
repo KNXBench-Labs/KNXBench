@@ -50,9 +50,7 @@ use knx_core::commissioning::device_backup::{
 };
 use knx_core::commissioning::load_control_memory::{loads_through_memory, MemoryLoadStateMachine};
 use knx_core::commissioning::load_state::{LoadEvent, LoadState, MaskVersion};
-use knx_core::commissioning::memory::{
-    service_for, MemoryService, WriteLimit, USER_MEMORY_MAX_OCTETS,
-};
+use knx_core::commissioning::memory::{service_for, WriteLimit};
 use knx_core::commissioning::memory_download::{
     machines, resource_matches, MemoryDownloadPlan, MemoryDownloadStep,
 };
@@ -940,10 +938,7 @@ async fn read_region_until<T: ManagementTransport>(
     halt: impl Fn() -> bool,
 ) -> Result<Option<Vec<u8>>, ReadBackError> {
     let service = service_for(address, u32::try_from(length).unwrap_or(u32::MAX));
-    let step = match service {
-        MemoryService::Memory => limit.max_octets(),
-        MemoryService::UserMemory => limit.max_octets().min(USER_MEMORY_MAX_OCTETS),
-    };
+    let step = limit.max_octets_for(service);
     let mut octets = Vec::with_capacity(length);
     while octets.len() < length {
         if halt() {
@@ -1237,7 +1232,7 @@ async fn run_steps<T: ManagementTransport, K: FnMut(&DeviceBackup) -> Result<(),
                     });
                 }
                 Some(format!(
-                    "mask {:04X}h, manufacturer {manufacturer:04X}h, {} octets per write",
+                    "mask {:04X}h, manufacturer {manufacturer:04X}h, {} ordinary-memory data octets per PDU",
                     found.0,
                     negotiated.max_octets()
                 ))

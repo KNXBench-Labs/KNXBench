@@ -108,9 +108,22 @@ not part of the report, the history or the log entry.
 - A task that ends without a terminal result keeps its history row `unknown`
   without a cause; status, log and report say `taskEnded`.
 
+## Command line
+
+`knx device download` and `knx device restore` build the same value once from
+their own executor result (`device_download::Witnessed`), with the same
+constructors and read-back count. It goes into the durable history row (a refused
+diagnostic still leaves the row `failed`, cause not recorded) and, for
+`knx device download --report`, into `report.failure` next to
+`outcome.stoppedInStep`. The terminal prints it as one `diagnostic:` line before
+the written classification; the executor's own error text stays on the terminal
+only. The CLI has no session log, no stop on request and no unwitnessed task end,
+so `stopped` and `taskEnded` do not occur there. A connection that never opened
+keeps the existing `record_never_connected` row without a cause.
+
 ## Not covered
 
-- The CLI (`knx device download`) and the System-2 worker still record failed
-  rows without `failure`; their rows read as *cause not recorded*.
+- The System-2 worker still records failed rows without `failure`; its rows
+  read as *cause not recorded*.
 - No retry, restart, restore, timeout change or protocol change. The original
   hardware failure is not reproduced or explained.

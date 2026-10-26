@@ -7,6 +7,9 @@ Updated: 2026-10-26 07:24 CET. Operational snapshot, not an append-only journal.
   Next: result-doc gate/publish, verified private evidence retirement, own tree cleanup.
 - WP-21–24 runtime scopes delivered; remaining queue retains evidence/owner boundaries.
 - Root preserved; no bus/deployment/release. Evidence `<profile>/evidence/next-open-tasks-20261026/`.
+## Download diagnostic planning (26 October 2026)
+- DIAG-02 added to OPEN_WORK: retain regular-download cause/step/write evidence in log, UI and report.
+- Planning only at explicit owner request; implementation STOP, no bus/deployment authority.
 ## Other owners and preservation
 - Root intentionally old/dirty: preserve private/untracked files and other edits.
   Alpha16 belongs to another track. No release/deployment/hardware authority.

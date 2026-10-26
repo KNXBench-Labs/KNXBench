@@ -1,6 +1,15 @@
 # Restart snapshot
 
-Updated: 2026-10-26 19:17 CET. Operational snapshot, not an append-only journal.
+Updated: 2026-10-26 20:03 CET. Operational snapshot, not an append-only journal.
+## Alpha 17 release plan (PLANNED by claude-release-alpha17, observed 2026-10-26 20:03 CET)
+- Owner go: once the S2-01 safe diagnostic projection is delivered, cut, gate and publish Alpha 17.
+- Prerequisite: S2-01 safe projection only. Its session finishes as usual; delivery is read
+  from its usual delivered heading, or it adds the line → `Alpha 17 prerequisite delivered: S2-01`.
+- No freeze yet. Other packages continue; anything merged after the cutoff ships in Alpha 18.
+- At cutoff a separate `Release freeze: taken by claude-release-alpha17` entry appears here;
+  then hold pushes to `main` until `Release freeze: released by claude-release-alpha17`.
+- Not in scope: S2-02 closure (needs reporter re-test on Alpha 17), S2-03 (evidence), PRG-01
+  (programming track), GATE-01 (gate tooling). No hardware/bus/deployment work.
 ## S2-01 safe diagnostic projection (ACTIVE; dependency RELEASED, observed 19:17 CET)
 - User go: continue through reviewed/gated publication after width dependency release.
 - Own `<sources>/knxbench-system2-safe-failure-20261026`, branch

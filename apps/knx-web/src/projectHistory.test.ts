@@ -1,6 +1,6 @@
 /** Tests strict project-history admission, stale bindings and label/filter helpers. */
 import { describe, expect, it } from "vitest";
-import { admitProjectHistory, historyBinding, filterProjectVersions, validVersionLabel } from "./projectHistory";
+import { admitProjectHistory, chronologicalVersions, historyBinding, filterProjectVersions, validVersionLabel } from "./projectHistory";
 
 import { HISTORY_FIXTURE } from "./projectHistory.fixture";
 
@@ -76,5 +76,22 @@ describe("native history contract", () => {
     expect(validVersionLabel(" ")).toBe(false);
     expect(validVersionLabel("🕰".repeat(120))).toBe(true);
     expect(validVersionLabel("🕰".repeat(121))).toBe(false);
+  });
+});
+
+describe("chronological version projection", () => {
+  const v = (id: number, createdAt: string) => ({ ...HISTORY_FIXTURE.versions[0], id, createdAt, reason: "save" as const, label: `v${id}` });
+  it("orders oldest first by instant, not by text, with id as deterministic tie-break", () => {
+    const input = [v(9, "2026-10-09T08:00:00.000Z"), v(4, "2026-10-09T08:00:00.000Z"),
+      v(1, "2026-10-09T09:30:00+02:00"), v(6, "2026-10-09T06:00:00.000Z")];
+    expect(chronologicalVersions(input).map((x) => x.id)).toEqual([6, 1, 4, 9]);
+  });
+  it("is deterministic for any input order and never mutates its input", () => {
+    const input = [v(3, "2026-10-09T08:00:00.000Z"), v(2, "2026-10-09T08:00:00.000Z"), v(1, "2026-10-09T07:00:00.000Z")];
+    const before = structuredClone(input);
+    const forward = chronologicalVersions(input).map((x) => x.id);
+    expect(input).toEqual(before);
+    expect(chronologicalVersions([...input].reverse()).map((x) => x.id)).toEqual(forward);
+    expect(chronologicalVersions([])).toEqual([]);
   });
 });

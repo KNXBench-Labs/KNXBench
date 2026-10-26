@@ -413,13 +413,24 @@ the clean baseline. Closing without saving does not erase the recovery journal.
 a way back from an edit, not a second copy of that file.*
 
 The panel shows undo/redo counts, image-payload usage and admission limits. Create
-a **named version** before a redesign, independently of autosave; search the list
+a **named version** before a redesign, independently of autosave; search versions
 and select a version to restore. Save/autosave also keeps the preceding distinct
 saved state. Restore asks explicitly, preserves the complete current working state
 as a **Before restore** version and then atomically replaces the project. It clears
 the edit stack; to go back, restore the preserved version. Cancel is initially
 focused and does not send a mutation. Changed revisions or server lifetimes
 invalidate old confirmations; reopen/refresh rather than forcing stale consent.
+
+**Version timeline (26 October 2026 source).** Stored versions appear from oldest
+to newest on a horizontal rail; select a checkpoint to inspect its label, reason
+and timestamp. The distinct current working-state marker is not a stored version
+and cannot be restored. It shows undo/redo counts; individual edit contents and
+times are not recorded by this view. Clicking a point only selects it. Use the
+separate **Restore version…** action and confirmation to change the project.
+The plain **Project versions** list remains available as a collapsed alternative.
+Filtering keeps the selected version, but Restore/Delete are disabled while it is
+hidden; clear the filter to review it first. Cancelling a confirmation returns to
+the selected checkpoint. The Alpha 14 screenshot above predates this presentation.
 
 Deleting a version or clearing undo/redo requires confirmation. Nothing is
 silently trimmed when a limit is reached; a failure is reported and the project

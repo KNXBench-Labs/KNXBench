@@ -1,6 +1,6 @@
 /** Checks readable layout, camera bounds and cross-document value age without hardware. */
 import { describe, expect, it } from "vitest";
-import { readableLayout, fitFlowCamera, cloneFlowAtOrigin, routeFlowEdge } from "./flowPresentation";
+import { readableLayout, fitFlowCamera, cloneFlowAtOrigin, routeFlowEdge, displayFlowLabel, displayBadgeLabel, DISPLAY_LABEL_LIMIT } from "./flowPresentation";
 import { createFlowModel, currentBadges } from "./flowModel";
 import { pointOnEdge, edgeGeometry, placeNodes, type Point } from "./flowLayout";
 
@@ -80,5 +80,30 @@ describe("flow presentation contracts", () => {
     expect(copy.slots.get("d:1")!.get(1)!.deadlineMs).toBe(-1000);
     expect(currentBadges(copy, "d:1", 0).current).toHaveLength(0);
     expect(model.slots.get("d:1")!.get(1)!.deadlineMs).toBe(8000);
+  });
+});
+
+describe("group-address badge text", () => {
+  it("never splits an astral character at the graph-label truncation boundary", () => {
+    const prefix = "x".repeat(34);
+    expect(displayFlowLabel(`${prefix}💡extra`)).toBe(`${prefix}💡…`);
+  });
+  it("never splits an astral group name while reserving badge value space", () => {
+    const prefix = `1/0/1 (${"x".repeat(24)}`;
+    expect(displayBadgeLabel("", `${prefix}💡extra)`, "On")).toBe(`${prefix}💡… On`);
+  });
+  it("leaves a badge that fits untouched", () => {
+    expect(displayBadgeLabel("", "1/0/1 (Light)", "On")).toBe("1/0/1 (Light) On");
+    expect(displayBadgeLabel("◇ ", "1/0/1", "On")).toBe("◇ 1/0/1 On");
+  });
+  it("shortens the name, never the address or the value", () => {
+    const text = displayBadgeLabel("◇ ", "31/7/255 (Wohnzimmer Deckenleuchte über dem Esstisch 照明)", "100 %");
+    expect(text.startsWith("◇ 31/7/255 (")).toBe(true);
+    expect(text.endsWith("… 100 %")).toBe(true);
+    expect(text.length).toBeLessThanOrEqual(DISPLAY_LABEL_LIMIT);
+  });
+  it("keeps the whole address even when the value leaves no room", () => {
+    const text = displayBadgeLabel("", "31/7/255 (Name)", "x".repeat(40));
+    expect(text.startsWith("31/7/255")).toBe(true);
   });
 });

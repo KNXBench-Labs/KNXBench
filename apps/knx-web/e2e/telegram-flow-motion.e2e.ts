@@ -58,7 +58,7 @@ test("draws pulses for live traffic and stops every frame when Motion is switche
   expect(await framesStopped(page)).toBe(0);
   await expect(page.locator(".flow-pulse")).toHaveCount(0);
   const latest = traffic.last();
-  await expect(node(page, "Dimmer").locator(".flow-badge")).not.toHaveText(`◇ 1/0/1 v${latest - 20}`);
+  await expect(node(page, "Dimmer").locator(".flow-badge")).not.toHaveText(`◇ 1/0/1 (Light) v${latest - 20}`);
   await expect(page.getByText("Motion is off: layout changes are instantaneous")).toBeVisible();
   traffic.stop();
 });
@@ -134,7 +134,7 @@ test("with motion off, values still expire on time", async ({ page }) => {
   await openFlow(page, "en", "porcelain", "off");
   expect(await page.evaluate(() => document.documentElement.getAttribute("data-motion-level"))).toBe("off");
   const badge = node(page, "Dimmer").locator(".flow-badge");
-  await expect(badge).toHaveText("◇ 1/0/1 On");
+  await expect(badge).toHaveText("◇ 1/0/1 (Light) On");
   await page.clock.runFor(7_500);
   await expect(badge).toHaveCount(0);
 });

@@ -8,7 +8,18 @@ export const DISPLAY_LABEL_LIMIT = 36;
 export const DETAILED_ROUTING_NODES = 80;
 export const DETAILED_ROUTING_EDGES = 250;
 export function displayFlowLabel(label: string): string {
-  return label.length > DISPLAY_LABEL_LIMIT ? `${label.slice(0, DISPLAY_LABEL_LIMIT - 1)}…` : label;
+  const characters = Array.from(label);
+  return characters.length > DISPLAY_LABEL_LIMIT ? `${characters.slice(0, DISPLAY_LABEL_LIMIT - 1).join("")}…` : label;
+}
+/** A value badge that shortens the name before the leading address or value. */
+export function displayBadgeLabel(prefix: string, gaLabel: string, value: string): string {
+  const full = `${prefix}${gaLabel} ${value}`;
+  if (Array.from(full).length <= DISPLAY_LABEL_LIMIT) return full;
+  const address = /^\S*/u.exec(gaLabel)![0];
+  const keep = Math.max(address.length + 1, DISPLAY_LABEL_LIMIT - Array.from(prefix).length - Array.from(value).length - 1);
+  const characters = Array.from(gaLabel);
+  const label = characters.length > keep ? `${characters.slice(0, keep - 1).join("")}…` : gaLabel;
+  return displayFlowLabel(`${prefix}${label} ${value}`);
 }
 export function labelHalfWidth(label: string): number {
   return Math.max(50, displayFlowLabel(label).length * 3.5);

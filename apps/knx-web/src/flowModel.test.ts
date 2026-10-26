@@ -252,7 +252,7 @@ describe("flow reducer — values", () => {
   it("updates source and configured targets immediately and marks the targets inferred", () => {
     const model = ready();
     admitRows(model, [row(1)], 1000);
-    expect(currentBadges(model, "d:1", 1000).current[0]).toMatchObject({ value: "v1", origin: "source", gaLabel: "1/0/1" });
+    expect(currentBadges(model, "d:1", 1000).current[0]).toMatchObject({ value: "v1", origin: "source", gaLabel: "1/0/1 (Group 2049)" });
     expect(currentBadges(model, "d:2", 1000).current[0]).toMatchObject({ value: "v1", origin: "configuredTarget", sourceNode: "d:1" });
   });
 
@@ -302,7 +302,7 @@ describe("flow reducer — values", () => {
     const model = ready();
     admitRows(model, [row(1), row(2, { destinationRaw: BLIND, destination: "1/0/2" })], 1000);
     admitRows(model, [row(3)], 2000);
-    expect(currentBadges(model, "d:2", 2000).current.map((slot) => [slot.gaLabel, slot.value])).toEqual([["1/0/1", "v3"], ["1/0/2", "v2"]]);
+    expect(currentBadges(model, "d:2", 2000).current.map((slot) => [slot.gaLabel, slot.value])).toEqual([["1/0/1 (Group 2049)", "v3"], ["1/0/2 (Group 2050)", "v2"]]);
   });
 
   it("lets the newest sender win a shared target slot and keeps who sent it", () => {
@@ -316,7 +316,7 @@ describe("flow reducer — values", () => {
     const model = ready("1", DEVICES, groups);
     admitRows(model, [0, 1, 2, 3, 4].map((sub) => row(sub + 1, { destinationRaw: GA(2, 0, sub), destination: `2/0/${sub}` })), 1000);
     const badges = currentBadges(model, "d:2", 1000);
-    expect(badges.current.map((slot) => slot.gaLabel)).toEqual(["2/0/4", "2/0/3", "2/0/2"]);
+    expect(badges.current.map((slot) => slot.gaLabel)).toEqual(["2/0/4 (Group 4100)", "2/0/3 (Group 4099)", "2/0/2 (Group 4098)"]);
     expect(badges.overflow).toBe(2);
   });
 });
@@ -369,7 +369,7 @@ describe("flow reducer — activity window", () => {
     const model = ready();
     admitRows(model, [row(1, { observedAgeMs: FRESH_EVENT_MS + 1 }), row(2)], 10_000);
     expect(model.events.map((event) => [event.seq, event.from, event.to])).toEqual([[2, "d:1", ["d:2", "d:3"]]]);
-    expect(model.events[0]).toMatchObject({ gaRaw: LIGHT, gaLabel: "1/0/1", service: "GroupValueWrite" });
+    expect(model.events[0]).toMatchObject({ gaRaw: LIGHT, gaLabel: "1/0/1 (Group 2049)", service: "GroupValueWrite" });
   });
 
   it("bounds the event ring and counts what it dropped", () => {
@@ -398,5 +398,150 @@ describe("flow reducer — activity window", () => {
     const model = ready();
     admitRows(model, [row(1)], 1000);
     expect(model.events[0]).toMatchObject({ to: ["d:2", "d:3"], complete: true });
+  });
+});
+
+// WP-23: a group address is shown as `address (name)` only when the context's
+// own project states exactly one name for it; otherwise the bare address stays.
+describe("flow reducer — group-address names", () => {
+  const LONELY = [group(LIGHT, [member(1, { direction: "Send" })], { name: "Living room light" })];
+  const named = (groups: object[], overrides: Record<string, unknown> = {}) => {
+    const model = createFlowModel(IDENTITY);
+    provideContext(model, "1", snapshot("1", DEVICES, groups, overrides), 0);
+    return model;
+  };
+
+  it("labels the group node, edge, badge and pulse with address and name", () => {
+    const model = named(LONELY);
+    admitRows(model, [row(1)], 1000);
+    expect(model.nodes.get("g:2049")).toMatchObject({ kind: "group", label: "1/0/1 (Living room light)", gaRaw: LIGHT });
+    expect(model.edges.get("d:1→g:2049")!.groups.get(LIGHT)).toMatchObject({ label: "1/0/1 (Living room light)" });
+    expect(currentBadges(model, "g:2049", 1000).current[0]).toMatchObject({ gaLabel: "1/0/1 (Living room light)" });
+    expect(model.events[0]).toMatchObject({ gaRaw: LIGHT, gaLabel: "1/0/1 (Living room light)" });
+  });
+
+  it("names the group on edges to configured members as well", () => {
+    const model = ready();
+    admitRows(model, [row(1)], 1000);
+    expect(model.edges.get("d:1→d:2")!.groups.get(LIGHT)!.label).toBe(`1/0/1 (Group ${LIGHT})`);
+    expect(currentBadges(model, "d:1", 1000).current[0].gaLabel).toBe(`1/0/1 (Group ${LIGHT})`);
+    expect(model.nodes.get("d:1")!.label).toBe("Switch");
+  });
+
+  it("keeps the notation the monitor printed: two-level and free addresses too", () => {
+    const two = GA(3, 0, 100);
+    const model = named([group(two, [member(1, { direction: "Send" })], { name: "Pump" })], { groupAddressStyle: "TwoLevel" });
+    admitRows(model, [row(1, { destinationRaw: two, destination: "3/100" })], 1000);
+    expect(model.nodes.get(`g:${two}`)!.label).toBe("3/100 (Pump)");
+    const free = createFlowModel(IDENTITY);
+    provideContext(free, "1", snapshot("1", DEVICES, [group(2049, [member(1, { direction: "Send" })], { name: "Free one" })], { groupAddressStyle: "Free" }), 0);
+    admitRows(free, [row(1, { destination: "2049" })], 1000);
+    expect(free.nodes.get("g:2049")!.label).toBe("2049 (Free one)");
+  });
+
+  it("draws no empty parentheses for an empty or whitespace-only name", () => {
+    for (const name of ["", " ", " \n\t "]) {
+      const model = named([group(LIGHT, [member(1, { direction: "Send" })], { name })]);
+      admitRows(model, [row(1)], 1000);
+      expect(model.nodes.get("g:2049")!.label).toBe("1/0/1");
+      expect(model.edges.get("d:1→g:2049")!.groups.get(LIGHT)!.label).toBe("1/0/1");
+      expect(currentBadges(model, "g:2049", 1000).current[0].gaLabel).toBe("1/0/1");
+    }
+  });
+
+  it("folds line breaks and runs of blanks in a name onto one line", () => {
+    const model = named([group(LIGHT, [member(1, { direction: "Send" })], { name: "  Living\n  room\tlight " })]);
+    admitRows(model, [row(1)], 1000);
+    expect(model.nodes.get("g:2049")!.label).toBe("1/0/1 (Living room light)");
+  });
+
+  it("keeps long and Unicode names whole in the model", () => {
+    const name = "Küche Ünterschrank 照明 💡 ".repeat(6).trim();
+    const model = named([group(LIGHT, [member(1, { direction: "Send" })], { name })]);
+    admitRows(model, [row(1)], 1000);
+    expect(model.nodes.get("g:2049")!.label).toBe(`1/0/1 (${name})`);
+  });
+
+  it("leaves an address unnamed when several groups share it, same name or not", () => {
+    for (const [first, second] of [["Light", "Light"], ["Light", "Lamp"]]) {
+      const model = named([
+        group(LIGHT, [member(1, { direction: "Send" })], { name: first }),
+        group(LIGHT, [member(1, { direction: "Send" })], { name: second, gaId: 99, installationId: 2 }),
+      ]);
+      admitRows(model, [row(1)], 1000);
+      expect(model.nodes.get("g:2049")).toMatchObject({ kind: "group", label: "1/0/1", ambiguous: true });
+      expect(model.edges.get("d:1→g:2049")!.groups.get(LIGHT)!.label).toBe("1/0/1");
+      expect(currentBadges(model, "g:2049", 1000).current[0].gaLabel).toBe("1/0/1");
+    }
+  });
+
+  it("never takes the name of the first of several installations", () => {
+    const model = named([
+      group(LIGHT, [member(2)], { name: "Foreign hall", gaId: 5, installationId: 2 }),
+      group(LIGHT, [member(2)], { name: "Own hall", gaId: 6, installationId: 1 }),
+    ]);
+    admitRows(model, [row(1)], 1000);
+    for (const edge of model.edges.values()) expect(edge.groups.get(LIGHT)!.label).toBe("1/0/1");
+    expect(currentBadges(model, "d:1", 1000).current[0].gaLabel).toBe("1/0/1");
+  });
+
+  it("does not name an address the snapshot itself reports as ambiguous or cut off", () => {
+    const diagnostics = {
+      duplicateIndividualAddresses: [], ambiguousGroupAddresses: [{ gaRaw: LIGHT, gaIds: [10_000 + LIGHT, 77] }], ambiguousDevices: [],
+      danglingLinks: [], unknownDevices: [], objectsWithoutFlags: [],
+    };
+    const reported = named(LONELY, { diagnostics });
+    admitRows(reported, [row(1)], 1000);
+    expect(reported.nodes.get("g:2049")!.label).toBe("1/0/1");
+    const cut = named(LONELY, { truncated: { devices: 0, groups: 3, members: 0, diagnostics: 0 } });
+    admitRows(cut, [row(1)], 1000);
+    expect(cut.nodes.get("g:2049")!.label).toBe("1/0/1");
+  });
+
+  it("names nothing from a group that is not the destination", () => {
+    const model = named(LONELY);
+    admitRows(model, [row(1, { destinationRaw: BLIND, destination: "1/0/2" })], 1000);
+    expect(model.nodes.get(`g:${BLIND}`)!.label).toBe("1/0/2");
+  });
+
+  it("gives raw, pending and unknown contexts no project names", () => {
+    for (const status of ["historical", "unavailable"]) {
+      const model = createFlowModel(IDENTITY);
+      provideContext(model, "1", snapshot("1", [], LONELY, { status, groupAddressStyle: null }), 0);
+      admitRows(model, [row(1)], 1000);
+      expect(model.nodes.get("g:2049")!.label).toBe("1/0/1");
+      expect(currentBadges(model, "g:2049", 1000).current[0].gaLabel).toBe("1/0/1");
+    }
+    const failed = createFlowModel(IDENTITY);
+    provideContext(failed, "1", null, 0);
+    admitRows(failed, [row(1)], 1000);
+    expect(failed.nodes.get("g:2049")!.label).toBe("1/0/1");
+    const waiting = createFlowModel(IDENTITY);
+    admitRows(waiting, [row(1)], 1000);
+    expect(waiting.nodes.size).toBe(0);
+    expect(waiting.pending).toHaveLength(1);
+  });
+
+  it("follows the generation: a rename updates, a historical context drops the name", () => {
+    const model = named(LONELY);
+    admitRows(model, [row(1)], 1000);
+    provideContext(model, "2", snapshot("2", DEVICES, [group(LIGHT, [member(1, { direction: "Send" })], { name: "Hall light" })]), 1000);
+    admitRows(model, [row(2, { flowGeneration: "2" })], 1100);
+    expect(model.nodes.get("g:2049")!.label).toBe("1/0/1 (Hall light)");
+    expect(model.edges.get("d:1→g:2049")!.groups.get(LIGHT)).toMatchObject({ label: "1/0/1 (Hall light)", generation: "2" });
+    provideContext(model, "3", snapshot("3", [], [], { status: "historical", groupAddressStyle: null }), 1200);
+    admitRows(model, [row(3, { flowGeneration: "3" })], 1300);
+    expect(model.nodes.get("g:2049")!.label).toBe("1/0/1");
+    expect(model.edges.get("ia:4353→g:2049")!.groups.get(LIGHT)!.label).toBe("1/0/1");
+  });
+
+  it("keeps identities, grouping and admission independent of the name", () => {
+    const withName = named(LONELY);
+    const bare = named([group(LIGHT, [member(1, { direction: "Send" })], { name: "" })]);
+    for (const model of [withName, bare]) admitRows(model, [row(1), row(2)], 1000);
+    expect([...withName.nodes.keys()]).toEqual([...bare.nodes.keys()]);
+    expect([...withName.edges.keys()]).toEqual([...bare.edges.keys()]);
+    expect(withName.counters).toEqual(bare.counters);
+    expect(currentBadges(withName, "g:2049", 1000).current.map((s) => [s.gaRaw, s.value])).toEqual(currentBadges(bare, "g:2049", 1000).current.map((s) => [s.gaRaw, s.value]));
   });
 });

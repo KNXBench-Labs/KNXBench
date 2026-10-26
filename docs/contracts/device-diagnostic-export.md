@@ -149,14 +149,32 @@ ETS-programmed state offline with KNXBench's source interpretation.
   `prepare_memory` (ProductDB derivation) builds it, `acquire_memory` takes
   nothing else, and `compile_fail` doc-tests show outside code cannot forge
   or edit its ranges; `collect_declared_memory` stays a lower-layer primitive.
-- **Entry point: CLI only.** `--profile system2-declared-segments-v1` needs
-  `--product-db`; the device's application comes from the project's
+- **Entry points: CLI and web.** CLI: `--profile system2-declared-segments-v1`
+  needs `--product-db`; the device's application comes from the project's
   hardware-to-program mapping. The preview lists profile, application, the
   ranges and total, required identity values and that nothing will be
   written, and builds no network client. `--simulate` takes the project and
   product database too (the simulator shows the asserted identity; its memory
-  is the simulator's). The web/HTTP entry still offers only
-  `generic-identity-v1`.
+  is the simulator's). **Web (26 October 2026 source, DIAG-01):** the same
+  dialog offers a *Diagnostic profile* choice before Preview (default generic
+  identity). The memory profile needs the server's product database and
+  refuses without one (`diagnostics-product-db-required`), exactly like the
+  CLI without `--product-db`; every other admission, device-selection and
+  identity rule is the same `prepare_memory` call. Changing the profile drops
+  the preview and its consent like a device or gateway change. The preview
+  lists application, required identity, each declared range (address,
+  length, procedure position) and the total; progress counts identity reads
+  and memory chunks; the result shows coverage per range. The same read and
+  share consents apply. A memory run that stops before its tunnel for a
+  setup reason (gateway busy, connect failure or timeout, context change,
+  server stopping) has no admitted format-2 archive (the caller setup reasons
+  are format 1 only), so the web shows the result without a save action, as
+  the CLI writes no archive then. A Stop that lands before the tunnel opens is
+  different: the run ends with `cancelled`, a collector reason format 2
+  admits with every identity item and chunk untouched, so that result is
+  exportable (route test
+  `a_memory_run_cancelled_before_connecting_is_exportable_without_any_request`).
+  Simulator-only evidence; no hardware run.
 
 ## Result per item
 
@@ -206,13 +224,27 @@ is claimed.
   rejection is best effort and cannot update the replacement dialog. A revision-
   only refresh keeps the analysis, its stale review and any running acquisition;
   Stop still retains partial results for separately consented export.
-- HTTP: `POST /api/device-diagnostics/preview {deviceId,gateway,context}`,
+- HTTP: `POST /api/device-diagnostics/preview {deviceId,gateway,profile,context}`
+  (`profile` required: `generic-identity-v1` or `system2-declared-segments-v1`;
+  another value is `400 diagnostics-unknown-profile`, a missing one is refused
+  by the strict body parser; `prepare_memory` refusals are `400` with their
+  leading token, e.g. `diagnostics-identity-assertion-missing`),
   `POST …/start {token,consent:true}` (202), `GET …/{token}`,
   `POST …/{token}/cancel`, `POST …/export {token,consent:true}`. Stale
   project revision, unknown token, false consent, excluded/ambiguous/missing
   target, non-IPv4 endpoint and unknown fields refuse before any tunnel.
   The acquisition runs as a server-owned task, so a closed browser cannot cut
-  cleanup short.
+  cleanup short. Every view carries `report`, `memory` (`memory.json` of format
+  2, `null` for `generic-identity-v1`) and `exportable` (the finished result
+  passed the archive writer's own validation and readback; `false` before
+  completion). Running views are observer snapshots: at most one identity item
+  or memory chunk in flight. The result shows the stop reason as a translated
+  label with the raw token beside it; a preview refusal leads with translated
+  text and keeps the server's detail as secondary evidence. Export uses `bundle_export` for both formats, so a
+  format-1 ZIP stays byte-for-byte what `bundle` writes. The browser client
+  admits both formats strictly (closed field sets, profile/format/memory
+  coupling, recomputed chunk plan and coverage, lowercase hex, chunk outcome
+  shapes, one in-flight chunk only while running).
 - CLI: `knx device diagnostics --project p.knxdb (--device 1.1.5 | --device-id
   N) --gateway host:port --output new.zip [--product-db db] [--confirm-read]`;
   without `--confirm-read` it only previews. Exactly one selector is required.
@@ -263,8 +295,17 @@ deadline unit test; `knx-app` `device_diagnostics` (9: export/reread/0600/no
 overwrite/privacy, exclusion before adapter, lease, cancelled partial, corrupt
 archives, durable activity kind, free-text error refusal, every observer
 snapshot exportable, in-flight item shape);
-`knx-server` `http_device_diagnostics` (5, including durable history and token
-separation); `knx-cli`
+`knx-server` `http_device_diagnostics` (12, including durable history and token
+separation; since DIAG-01 also the web memory profile: preview without bus
+traffic, consented reads checked chunk by chunk against the simulator's memory,
+exhaustive outgoing services, format-2 ZIP reread with `read_export`; unknown or
+missing profile, missing product database, missing or inconsistent identity
+assertion and excluded targets refused before any tunnel; PID 78 mismatch with
+no `A_Memory_Read`; a pre-tunnel setup stop shown but not exportable; with a
+gated simulator, running polls showing exactly one chunk in flight and
+`exportable: false`, Stop after the first chunk ending `cancelled` with partial
+coverage and a format-2 ZIP reread with those chunks, and a Stop before the
+tunnel exportable with no request); `knx-cli`
 `device_diagnostics` (2, real binary; plus 3 for the memory profile: preview
 with a silent loopback gateway, `--simulate` end to end, refusals); memory
 profile also `knx-core` `declared_memory` (5), `knx-productdb`
@@ -284,7 +325,11 @@ and during a chunk, and unfinished device teardown)
 and the raw central-directory unit tests (4); web
 component/client tests; built shell in
 Chromium against the real HTTP handlers and the regular simulator (EN/DE,
-1440/400 px, stop-with-partial), every downloaded ZIP independently re-verified.
+1440/400 px, stop-with-partial; memory profile EN 1440 px and DE 400 px with a
+real program-missing refusal, declared ranges, coverage and a format-2 ZIP, and
+a memory Stop after the first chunk with its translated reason and a format-2
+partial ZIP),
+every downloaded ZIP independently re-verified.
 The browser proof also asserts that a clean run shows no failure banner: the
 client once refused the in-flight progress snapshot ("attempted, not completed")
 and showed a false "request failed" after a successful read. That snapshot is

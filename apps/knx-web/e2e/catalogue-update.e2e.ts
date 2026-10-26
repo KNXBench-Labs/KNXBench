@@ -48,6 +48,7 @@ interface Fixture {
   report: CatalogInstallReport;
   unexpected: string[];
   items: CatalogItem[];
+  manufacturers: { id: string; name: string | null }[];
   cleanupPreviews: string[][];
   cleanupApplies: { itemIds: string[]; token: string; confirmed: boolean }[];
   jobs: ReturnType<typeof catalogueJobsFixture>;
@@ -112,7 +113,7 @@ async function fixture(page: Page, language: Language, theme: string, width: num
   const jobs = catalogueJobsFixture({ records: kind => reportRecords(f.report, kind), backup: BACKUP,
     stale: () => f.applyMode === "stale",
     onApplied: () => f.backups.unshift({ name: BACKUP, bytes: 3 * 1024 * 1024, modifiedUnixSeconds: 1760270400, identity: "id-newest" }) });
-  const f: Fixture = { report: { ...report }, jobs, unexpected: [], items: [], cleanupPreviews: [], cleanupApplies: [], restores: [], deletes: [], directInstalls: 0, applyMode: "ok", restoreMode: "ok",
+  const f: Fixture = { report: { ...report }, jobs, unexpected: [], items: [], manufacturers: [], cleanupPreviews: [], cleanupApplies: [], restores: [], deletes: [], directInstalls: 0, applyMode: "ok", restoreMode: "ok",
     backups: [{ name: "products.sqlite.backup-1750000000-cd34cd34cd34.sqlite", bytes: 3 * 1024 * 1024, modifiedUnixSeconds: 1750000000, identity: "id-older" }] };
   await page.setViewportSize({ width, height: 900 });
   await page.route("https://api.github.com/**", (route) => { f.unexpected.push(route.request().url()); return route.abort(); });
@@ -136,7 +137,8 @@ async function fixture(page: Page, language: Language, theme: string, width: num
     if (path === "/api/project/status-metrics" && method === "GET") return ok(statusMetricsFixtureBody(tree));
     if (path === "/api/log") return ok([]);
     if (path === "/api/bus/discover" && method === "POST") return ok({ interfaces: [] });
-    if (["/api/product-languages", "/api/catalog/manufacturers"].includes(path)) return ok([]);
+    if (path === "/api/catalog/manufacturers") return ok(f.manufacturers);
+    if (path === "/api/product-languages") return ok([]);
     if (path === "/api/catalog/items" && method === "GET") return ok(f.items);
     if (path === "/api/catalog/cleanup/preview" && method === "POST") {
       const ids = (route.request().postDataJSON() as { itemIds: string[] }).itemIds;
@@ -371,8 +373,8 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     f.items = [...ITEMS];
     const catalogue = await openCatalogue(page, m);
     // Equal labels, told apart by application version and source.
-    // The results listbox, not the manufacturer filter's own options.
-    const rows = catalogue.getByRole("listbox").getByRole("option");
+    // The results table's body rows.
+    const rows = catalogue.getByRole("table").locator("tbody tr");
     await expect(rows).toHaveCount(3);
     await expect(rows.nth(2)).toContainText("fictional-dimmer-v2.knxprod");
     await expect(rows.nth(2)).toContainText("M-00FA_A-0001-20-0001");
@@ -460,3 +462,96 @@ test("de 400: a refused restore says why and keeps the list", async ({ page }) =
   expect(f.restores).toEqual([]);
   expect(f.unexpected).toEqual([]);
 });
+
+/** Out-of-order, tie-bearing, partly empty rows: the table must order them, never the fixture. */
+function tableItem(id: string, name: string | null, manufacturerId: string, number: string | null, application: string | null): CatalogItem {
+  return { id, manufacturerId, name, number, visibleDescription: null, productRefId: `${id}_P`, hardware2programRefId: `${id}_HP`,
+    nameLanguage: null, visibleDescriptionLanguage: null, sourceLanguage: null,
+    details: { applicationProgramId: application ? `${id}_A` : null, applicationName: application, applicationVersion: application ? "1.0" : null,
+      catalogSectionId: `${id}_CS`, sourceNames: [`${id}.knxprod`] } };
+}
+const TABLE_ITEMS: CatalogItem[] = [
+  tableItem("T-10", "Fictional dimmer 10", "M-B", "ORD-10", "Dim program"),
+  tableItem("T-02", "Fictional dimmer 2", "M-A", "ORD-2", "Dim program"),
+  tableItem("T-aa", "Fictional actuator", "M-B", null, null),
+  tableItem("T-zz", null, "M-A", "ORD-5", "Switch program"),
+];
+const TABLE_MANUFACTURERS = [{ id: "M-A", name: "Zeta Fictional" }, { id: "M-B", name: "Alpha Fictional" }];
+
+for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
+  test(`${language} ${width}: the catalogue is a sortable table, selection and keyboard follow the visible order`, async ({ page }) => {
+    const m: Catalogue = language === "de" ? de : en;
+    const tag = `table-${language}-${width}`;
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    const f = await fixture(page, language, width === 400 ? "porcelain" : "graphite", width);
+    f.items = TABLE_ITEMS.map((item) => ({ ...item }));
+    f.manufacturers = TABLE_MANUFACTURERS;
+    let itemRequests = 0;
+    page.on("request", (request) => { if (new URL(request.url()).pathname === "/api/catalog/items") itemRequests += 1; });
+    const catalogue = await openCatalogue(page, m);
+    const table = catalogue.getByRole("table");
+    const body = table.locator("tbody tr");
+    await expect(body).toHaveCount(4);
+    const requestsBefore = itemRequests;
+    const order = () => body.evaluateAll((rows) => rows.map((row) => (row as HTMLElement).dataset.itemId));
+    const heading = (key: "product" | "manufacturer" | "number" | "application") =>
+      table.getByRole("columnheader", { name: m[`catalogTable.${key}`] });
+    // Initial: Product ascending, natural text ("2" before "10"), nameless row under its id.
+    await expect(heading("product")).toHaveAttribute("aria-sort", "ascending");
+    for (const other of ["manufacturer", "number", "application"] as const) await expect(heading(other)).toHaveAttribute("aria-sort", "none");
+    expect(await order()).toEqual(["T-aa", "T-02", "T-10", "T-zz"]);
+    await expect(body.nth(0).locator("td").nth(1)).toHaveText("Alpha Fictional");
+    await capture(page, `${tag}-1-initial`);
+
+    await heading("product").getByRole("button").click();
+    await expect(heading("product")).toHaveAttribute("aria-sort", "descending");
+    expect(await order()).toEqual(["T-zz", "T-10", "T-02", "T-aa"]);
+    await heading("number").getByRole("button").click();
+    await expect(heading("number")).toHaveAttribute("aria-sort", "ascending");
+    await expect(heading("product")).toHaveAttribute("aria-sort", "none");
+    expect(await order()).toEqual(["T-02", "T-zz", "T-10", "T-aa"]); // empty order number stays last
+    await heading("manufacturer").getByRole("button").click();
+    expect(await order()).toEqual(["T-10", "T-aa", "T-02", "T-zz"]); // ties by catalogue id
+    await heading("application").getByRole("button").click();
+    expect(await order()).toEqual(["T-02", "T-10", "T-zz", "T-aa"]);
+    expect(itemRequests, "sorting never re-queries the catalogue").toBe(requestsBefore);
+    await capture(page, `${tag}-2-sorted`);
+
+    // Selection is a native button; keyboard moves through the visible order and Enter only selects.
+    await heading("product").getByRole("button").click(); // ascending again: T-aa, T-02, T-10, T-zz
+    const search = catalogue.getByRole("searchbox");
+    await search.focus();
+    await search.press("ArrowDown");
+    await expect(search).not.toHaveAttribute("aria-activedescendant", /.*/);
+    await expect(catalogue.locator(".catalog-highlight-status")).toHaveText(`${m["catalogTable.highlighted"].replace("{name}", "Fictional dimmer 2").replace("{index}", "2").replace("{count}", "4")}`);
+    await expect(catalogue.locator("tr.active")).toHaveAttribute("data-item-id", "T-02");
+    await search.press("Enter");
+    const nameField = catalogue.getByRole("textbox", { name: m["catalog.deviceNamePlaceholder"] });
+    await expect(nameField).toHaveValue("Fictional dimmer 2");
+    await heading("manufacturer").getByRole("button").click();
+    await heading("manufacturer").getByRole("button").click();
+    const pressed = table.getByRole("button", { pressed: true });
+    await expect(pressed).toHaveCount(1);
+    await expect(pressed.locator("xpath=ancestor::tr")).toHaveAttribute("data-item-id", "T-02");
+    await expect(nameField).toHaveValue("Fictional dimmer 2");
+    // Identity and provenance stay inspectable.
+    await expect(page.locator('tr[data-item-id="T-10"]')).toContainText("T-10.knxprod");
+    await expect(page.locator('tr[data-item-id="T-10"]')).toContainText("T-10_CS");
+
+    // Contained scroller: the page never scrolls sideways; at 400 px the table scrolls inside its region.
+    await noHorizontalOverflow(page);
+    const scroller = catalogue.getByRole("region", { name: m["catalogTable.label"] });
+    const overflow = await scroller.evaluate((el) => ({ scroll: el.scrollWidth, client: el.clientWidth, width: el.getBoundingClientRect().width }));
+    if (width === 400) expect(overflow.scroll).toBeGreaterThan(overflow.client);
+    else expect(overflow.scroll).toBeLessThanOrEqual(overflow.client);
+    expect(overflow.width).toBeLessThanOrEqual(width);
+    // Sort buttons are real targets.
+    const box = (await heading("product").getByRole("button").boundingBox())!;
+    expect(box.height).toBeGreaterThanOrEqual(24);
+    expect(box.width).toBeGreaterThanOrEqual(24);
+    await capture(page, `${tag}-3-selected`);
+    expect(f.unexpected).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+}

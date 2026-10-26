@@ -924,7 +924,7 @@ describe("App — catalog is a persistent centre workspace (ISSUE-07)", () => {
     const workspace = host!.querySelector<HTMLElement>(".workbench-center .catalog-workspace");
     expect(workspace).not.toBeNull();
     expect(workspace!.closest('[role="dialog"]')).toBeNull();
-    const search = workspace!.querySelector<HTMLInputElement>('input[role="combobox"]')!;
+    const search = workspace!.querySelector<HTMLInputElement>('input[type="search"]')!;
     const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")!.set!;
     await act(async () => {
       setter.call(search, "Act");
@@ -937,7 +937,7 @@ describe("App — catalog is a persistent centre workspace (ISSUE-07)", () => {
     expect(workspace!.hidden).toBe(true);
     await act(async () => findButton(enMessages["workbench.catalog"]).click());
     expect(workspace!.hidden).toBe(false);
-    expect(workspace!.querySelector<HTMLInputElement>('input[role="combobox"]')?.value).toBe("Act");
+    expect(workspace!.querySelector<HTMLInputElement>('input[type="search"]')?.value).toBe("Act");
     expect(workspace!.querySelector<HTMLInputElement>(".catalog-create-row input")?.value).toBe("Actuator");
     await act(async () => root.unmount());
   });
@@ -957,7 +957,7 @@ describe("App — catalog is a persistent centre workspace (ISSUE-07)", () => {
     await act(async () => findButton("Open project…").click());
     await act(async () => findButton(enMessages["workbench.catalog"]).click());
     expect(host!.querySelector(".catalog-create-row")).toBeNull();
-    expect(host!.querySelector<HTMLInputElement>('.catalog-workspace input[role="combobox"]')?.value).toBe("");
+    expect(host!.querySelector<HTMLInputElement>('.catalog-workspace input[type="search"]')?.value).toBe("");
     await act(async () => root.unmount());
   });
 

@@ -21,17 +21,18 @@ async function fixture(page: Page, lang = "en", scale = 1) {
 }
 
 for (const kind of ["search", "palette", "catalog"]) {
-  test(`${kind} keeps the active keyboard option visible and leaves focus on the combobox`, async ({ page }) => {
+  test(`${kind} keeps the active keyboard option visible and leaves focus on the search input`, async ({ page }) => {
     await page.setViewportSize({ width: 640, height: 480 });
     const check = await fixture(page);
     await page.getByRole("button", { name: kind, exact: true }).click();
-    const input = page.locator('input[role="combobox"]');
+    const input = page.locator(kind === "catalog" ? 'input[type="search"]' : 'input[role="combobox"]');
     if (kind === "search") await input.fill("fixture device");
-    if (kind === "catalog") await expect(page.getByRole("listbox").getByRole("option")).toHaveCount(40);
+    if (kind === "catalog") await expect(page.getByRole("table").locator("tbody tr")).toHaveCount(40);
     for (let i = 0; i < 30; i++) await input.press("ArrowDown");
     await expect(input).toBeFocused();
     const geometry = await input.evaluate((element) => {
-      const option = document.getElementById(element.getAttribute("aria-activedescendant")!)!;
+      const option = (element.getAttribute("aria-activedescendant")
+        ? document.getElementById(element.getAttribute("aria-activedescendant")!) : document.querySelector(".catalog-workspace tr.active"))!;
       const box = option.getBoundingClientRect();
       const panel = option.closest(".search-panel, .catalog-workspace")!.getBoundingClientRect();
       return { top: box.top, bottom: box.bottom, panelTop: panel.top, panelBottom: panel.bottom, viewport: innerHeight };

@@ -148,7 +148,7 @@ describe("CatalogBrowser", () => {
     const { root } = await renderBrowser();
     try {
       await act(async () => { await new Promise((resolve) => setTimeout(resolve, 250)); });
-      const rows = host!.querySelectorAll('[role="option"]');
+      const rows = host!.querySelectorAll("table tbody tr");
       expect(rows).toHaveLength(2);
       expect(rows[0].textContent).toContain("APP-1");
       expect(rows[0].textContent).toContain("16");
@@ -167,7 +167,7 @@ describe("CatalogBrowser", () => {
     const { root } = await renderBrowser();
     try {
       await act(async () => { await new Promise((resolve) => setTimeout(resolve, 250)); });
-      expect(host!.querySelector('[role="option"]')!.textContent).toContain("The application linked by HP-1 is not installed.");
+      expect(host!.querySelector("table tbody tr")!.textContent).toContain("The application linked by HP-1 is not installed.");
     } finally { await act(async () => root.unmount()); }
   });
 
@@ -179,7 +179,7 @@ describe("CatalogBrowser", () => {
     const { root } = await renderBrowser();
     try {
       await act(async () => { await new Promise((resolve) => setTimeout(resolve, 250)); });
-      await act(async () => (host!.querySelector("#catalog-option-0") as HTMLElement).click());
+      await act(async () => (host!.querySelector("#catalog-row-0") as HTMLElement).click());
       const nameField = () => host!.querySelector<HTMLInputElement>('input[aria-label="Device name"]');
       expect(nameField()?.value).toBe("Actuator");
       const button = (text: string) => Array.from(host!.querySelectorAll("button")).find((b) => b.textContent === text)!;
@@ -205,14 +205,14 @@ describe("CatalogBrowser", () => {
     const { root } = await renderBrowser();
     try {
       await act(async () => { await new Promise((resolve) => setTimeout(resolve, 250)); });
-      const input = host!.querySelector<HTMLInputElement>('[role="combobox"]')!;
+      const input = host!.querySelector<HTMLInputElement>('input[type="search"]')!;
       scroll.mockClear();
       await act(async () => input.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })));
-      const row = host!.querySelector("#catalog-option-1")!;
+      const row = host!.querySelector("#catalog-row-1")!;
       expect(scroll).toHaveBeenCalledOnce();
       expect(scroll.mock.contexts[0]).toBe(row);
       expect(row.classList.contains("active")).toBe(true);
-      expect(row.getAttribute("aria-selected")).toBe("false");
+      expect(row.querySelector("button")!.getAttribute("aria-pressed")).toBe("false");
       expect(document.activeElement).toBe(input);
       expect(host!.querySelector(".catalog-create-row")).toBeNull();
       expect(apiMock.createDevice).not.toHaveBeenCalled();
@@ -864,7 +864,9 @@ describe("CatalogBrowser", () => {
       input.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true }));
     });
 
-    expect(input.getAttribute("aria-activedescendant")).toBe("catalog-option-0");
+    expect(input.hasAttribute("aria-activedescendant")).toBe(false);
+    expect(host!.querySelector(".catalog-highlight-status")!.textContent).toMatch(/^Highlighted: .*, row 1 of 2$/);
+    expect(host!.querySelector("tr.active")!.id).toBe("catalog-row-0");
     root.unmount();
   });
 
@@ -932,7 +934,7 @@ describe("CatalogBrowser", () => {
     root.unmount();
   });
 
-  it("names the highlighted row via the input's aria-activedescendant", async () => {
+  it("announces the highlighted row in the status region, not via aria-activedescendant", async () => {
     apiMock.catalogItems.mockResolvedValue([item, item2]);
     const { root } = await renderBrowser();
 
@@ -940,15 +942,17 @@ describe("CatalogBrowser", () => {
       await new Promise((resolve) => setTimeout(resolve, 250));
     });
     const input = host!.querySelector<HTMLInputElement>('input[placeholder="Search catalog items…"]')!;
-    expect(input.getAttribute("role")).toBe("combobox");
-    expect(input.getAttribute("aria-haspopup")).toBe("listbox");
+    expect(input.getAttribute("type")).toBe("search");
+    expect(input.hasAttribute("role")).toBe(false);
     await act(async () => {
       input.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
     });
 
-    expect(input.getAttribute("aria-activedescendant")).toBe("catalog-option-1");
-    const highlighted = host!.querySelector("#catalog-option-1")!;
+    expect(input.hasAttribute("aria-activedescendant")).toBe(false);
+    const highlighted = host!.querySelector("#catalog-row-1")!;
     expect(highlighted.textContent).toContain("Dimmer");
+    expect(highlighted.classList.contains("active")).toBe(true);
+    expect(host!.querySelector(".catalog-highlight-status")!.textContent).toBe(`Highlighted: ${highlighted.querySelector("button")!.textContent}, row 2 of 2`);
     root.unmount();
   });
 
@@ -963,7 +967,7 @@ describe("CatalogBrowser", () => {
     ]);
     const { root } = await renderBrowser();
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 250)); });
-    const badges = (i: number) => [...host!.querySelectorAll(`#catalog-option-${i} .language-fallback-badge`)]
+    const badges = (i: number) => [...host!.querySelectorAll(`#catalog-row-${i} .language-fallback-badge`)]
       .map((badge) => badge.textContent);
     expect(badges(0)).toEqual([]);
     expect(badges(1)).toEqual(["Untranslated (en-US)", "Untranslated (en-US)"]);

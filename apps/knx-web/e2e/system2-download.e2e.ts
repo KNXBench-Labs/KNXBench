@@ -181,9 +181,10 @@ const CAPTURED = [
   ["download-failed.json", [download]], ["reopened-download.json", [download]], ["restoring.json", [download]],
   ["restore-failed.json", [download, restore]], ["reopened-restore.json", [download, restore]],
 ] as const;
-for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
+// Register private-capture witnesses only for the explicit opt-in invocation. The default
+// gate must contain only executable cases, never skipped placeholders for absent private input.
+if (capture) for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
   test(`${language} backend-emitted status bodies render their two labeled reasons at ${width}px`, async ({ page }, testInfo) => {
-    test.skip(!capture, "KNXBENCH_S2_DIAGNOSTIC_CAPTURE not set");
     const m = language === "en" ? en : de;
     const { state, commands, unexpected } = await interceptSystem2(page, language);
     await page.setViewportSize({ width, height: 1000 });

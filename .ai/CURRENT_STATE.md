@@ -1,23 +1,12 @@
 # Restart snapshot
 
-Updated: 2026-10-27 21:07 CET. Operational snapshot, not an append-only journal.
-## GATE-01 signal fixture (DELIVERED/RETIRED, observed 2026-10-27 21:03 CET; session ddbf32f04371)
-- Main-first `bc1b47a9a`, result `939c1b384`; independent APPROVE, branch/integrated/result10 accepted/frozen, exact readbacks.
-- Tool466 registered/460passed/6optional skips; owning module14/0skips; five synthetic controls are not app tests.
-- Archive198 exact payloads/modes/gzip verified; own tree/refs/cache retired; root untouched.
-- `<profile>/evidence/gate01-spawn-record-20261027/retirement.json`; production wrapper unchanged, older causes still open.
-## GATE-01 cold-start follow-up (PUBLISHED, observed 2026-10-27 21:07 CET; session ddbf32f04371)
-- Main-first `2890ad2d0` (feature `763d7fbe6`); independent review/correction APPROVE; branch10/integrated2-10 green/frozen.
-- Integrated tooling 466 registered/460passed/6optional skips; exact refs/owned bytes read back.
-- Original `83871cd88` stays failed; separate signal-fixture correction published/retired above.
-- Current repeat3: focused27/whole327 lists in three groups, cap4/8 same source-model ceiling3; no browser/speedup claim.
-- Historical exact IDs/log/source/cause missing. GATE-01 OPEN; no browser/benchmark/policy/code fix admitted.
-- Evidence `<profile>/evidence/gate01-cold-start-20261027/`; next result-doc gate/publication and verified own retirement.
-## WP-11 native capture (DELIVERED/RETIRED, observed 2026-10-27 19:22 CET; session ddbf32f04371)
-- Main-first `8227419a5`, result `7ccb53f8a`; reviews APPROVE, branch/integrated/result gates10 green/frozen.
-- Actual Alpha17 one-frame native capture Cancel/Save/overwrite Cancel/Replace, heartbeat11 and close0.
-- Archive1694 resolved payloads/modes/gzip verified; own two trees/refs/caches RETIRED, root untouched.
-- `<profile>/evidence/wp11-native-capture-20261027/retirement.json` owns closure; WP-11 remaining cells OPEN.
+Updated: 2026-10-27 21:13 CET. Operational snapshot, not an append-only journal.
+## GATE-01 residual evidence boundary (observed 2026-10-27 21:13 CET; session ddbf32f04371)
+- Bounded study `2890ad2d0`/result `96829b97e` and fixture `bc1b47a9a`/result `939c1b384` published with exact readbacks.
+- Independent reviews APPROVE; maintained accepted gates10 frozen; original failed `83871cd88` remains failed/retained.
+- Own implementation/acceptance trees, refs and caches RETIRED; archives299+198 exact payloads/modes/gzip verified, failed-merge bundle kept.
+- No active runtime claim. Root untouched; GATE-01 OPEN: historical exact IDs/log/source/cause missing, no benchmark or scheduler change admitted.
+- Next needs actual historical evidence or a separately bounded new witness; no bus/release/foreign cleanup authority.
 ## Issue #30 tunnel timeout (PUBLISHED, observed 2026-10-27 14:38 CET)
 - Source merge `1ab4ad6a5` published; local/tracking/live exact readback. Both reviews APPROVE.
 - Branch14 + integrated2 gate14 accepted: each Rust3447/140ignored, corpus91/91, inputs frozen.

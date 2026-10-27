@@ -2,6 +2,8 @@
 
 Date: 2026-10-26
 Status: Accepted
+Amended by: [ADR-0155](0155-production-functional-case-parallelism.md), which
+allows case-level parallelism in the production functional lane from 27 October 2026.
 Session: GATE-01 production-lane follow-up
 Amends: [ADR-0144](0144-change-scoped-gates-tagged-browser-lanes-bundled-rust-tests.md),
 point 2, last sentence ("Production suites keep the one worker their configs pin").

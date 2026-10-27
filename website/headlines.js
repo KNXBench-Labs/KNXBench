@@ -52,6 +52,8 @@
   }
 
   const allowed = () => !paused && !unsupported && !pageHidden && !reduce.matches && !document.hidden;
+  // Only a hidden page blocks motion: unseen headings may still type once the page is back.
+  const onlyHidden = () => !paused && !unsupported && !reduce.matches;
   function placeCursor(typing, index) {
     const { cursor, chars } = typing;
     // Zero-width and inside the nowrap word: layout and wrapping stay those of the full text.
@@ -159,8 +161,9 @@
   function sync() {
     document.documentElement.dataset.motion = allowed() ? 'on' : 'off';
     for (const typing of typings.values()) {
-      if (!allowed()) stopTyping(typing.heading);
-      else if (typing.status === 'idle' && visible.has(typing.heading)) startTyping(typing.heading);
+      if (!allowed()) {
+        if (typing.status !== 'idle' || !onlyHidden()) stopTyping(typing.heading);
+      } else if (typing.status === 'idle' && visible.has(typing.heading)) startTyping(typing.heading);
     }
     if (!allowed() || !visible.size) {
       window.clearTimeout(timer);

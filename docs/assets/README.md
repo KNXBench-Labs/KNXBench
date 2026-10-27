@@ -11,7 +11,26 @@ All device names, rooms and products come from the generated **Sample house**
 or the first-project **Practice house** exercise. No customer project or live
 bus capture belongs in this directory.
 
+## Website highlight media (27 October 2026)
+
+Nine PNGs and the [capture manifest](releases/alpha17/website/media-manifest.json) are in
+`releases/alpha17/website/`. They show the `v0.1.0-alpha.17` tag (`a9ea32d7`): production
+frontend, actual `knx-server` and the fictional Sample house, captured in an isolated
+loopback-only namespace with no application response replaced. Scenes: group addresses
+(Graphite, LCARS, green CRT), the imported project's status page, a named version in
+project history, the add-device wizard review (cancelled, nothing created), the parameter
+workspace, a vendor-ZIP catalogue job stopped at its bound preview (nothing installed) and
+the Ctrl+K search. The re-recorded group-details clip comes from the same run; the
+project-work and bus-flow clips remain the Alpha 14 recordings below.
+
+Reproduction: `apps/knx-web/e2e/release-media.shots.ts` and its config; see
+[website media instructions](../../website/README.md#media).
+
 ## Alpha 14 website media (18 October 2026)
+
+*Historical: `release-media.shots.ts` now captures the scenes above; the Alpha 14
+manifest binds the earlier version of the spec by hash.*
+
 
 Seven PNGs and the [capture manifest](releases/alpha14/media-manifest.json) are in
 `releases/alpha14/`. They show the tagged Alpha 14 source (`8d104e2f`): production

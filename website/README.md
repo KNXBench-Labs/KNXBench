@@ -44,13 +44,9 @@ canvas, typography and phosphor-green headings. The added installation diagram
 and all its code/labels are removed following owner review. Story source is
 unchanged; shared visual principles do not mean loading its application runtime.
 
-Marketing h1/h2/h3 now enter with SessionRadar-style staggered character fades,
-vertical movement and a slight 3D turn (650ms per character, up to 24ms stagger,
-600ms maximum total stagger). Leaving the inset viewport plays the same timeline
-backwards; quick re-entry reverses in place without jumping. Once settled, each
-ambient roll still randomly chooses right, left, up or down with an oppositely
-offset twin and 720ms timing. Rare single-glyph 180ms glitches remain. Entrance and
-ambient motion use separate character layers, preserving layout and readable text.
+Once a heading has typed, each ambient roll randomly chooses right, left, up or down
+with an oppositely offset twin and 720ms timing; rare single-glyph 180ms glitches
+remain. The earlier SessionRadar-style fade/3D entrance was removed on 27 October 2026.
 
 **Live typing for every heading (27 October 2026).** Every marketing `h1/h2/h3` types its
 glyphs one by one (50ms apiece) the first time it becomes visible in a page load, with a
@@ -60,8 +56,10 @@ The cursor blinks four times after the last glyph, then is removed; from then on
 heading takes part in the ambient random-direction rolls and rare glitches again. The
 earlier fade/3D entrance and the selective `data-headline-typing` marker are gone. Pause,
 live reduced motion, hidden document and pagehide show all text at once and remove the
-cursor; typing never replays, not on scroll, not on resume. Without JS a headline is plain
-static text.
+cursor. Pause and reduced motion settle every heading for the page load, unseen ones
+included; a hidden document or pagehide finishes only headings already typing, and unseen
+ones still type once the page is visible again. Typing never replays, not on scroll, not
+on resume. Without JS a headline is plain static text.
 
 Only visible, settled headings run ambient rolls. Header Pause/Resume, live OS reduced
 motion, hidden-document and pagehide cleanup cancel typing and rolls and restore all

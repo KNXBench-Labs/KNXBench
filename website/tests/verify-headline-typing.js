@@ -176,6 +176,86 @@ async (page) => {
     } finally { await c.close(); }
   }
 
+  // Pause during the finite blink removes the cursor at once; pause also settles unseen headings for good.
+  {
+    const [c, p] = await context({});
+    try {
+      await p.goto(`${origin}/en/`);
+      await p.waitForFunction(() => { const h = document.getElementById('hero-title'); return h.dataset.typingState === 'done' && h.querySelector('.typing-cursor'); }, null, { timeout: 6000, polling: 15 });
+      await p.locator('[data-motion-toggle]').click();
+      assert('pause during the blink removes the cursor at once', await p.evaluate(() => !document.querySelector('.typing-cursor')));
+      assert('pause settles unseen headings as typed, readable text', await p.evaluate(() => [...document.querySelectorAll('main h1, main h2, main h3')].every(h => h.dataset.typingState === 'done' && !h.querySelector('[data-untyped]'))));
+      await p.locator('[data-motion-toggle]').click();
+      await p.evaluate(() => document.getElementById('features-title').scrollIntoView({ block: 'center' }));
+      await p.waitForTimeout(400);
+      assert('resume after pause never types a settled heading', await p.evaluate(() => !document.querySelector('.typing-cursor')));
+    } finally { await c.close(); }
+  }
+
+  // A background tab or pagehide finishes only running typing; unseen headings still type later.
+  for (const mode of ['hidden-document', 'pagehide']) {
+    const [c, p] = await context({});
+    try {
+      await p.goto(`${origin}/en/`);
+      await p.waitForFunction(() => document.querySelector('#hero-title .typing-cursor') && document.querySelector('#hero-title [data-untyped]'), null, { timeout: 4000, polling: 15 });
+      // Explicitly synthetic lifecycle: exercise the handler, not a real tab suspension or bfcache.
+      await p.evaluate(m => {
+        if (m === 'pagehide') window.dispatchEvent(new Event('pagehide'));
+        else { Object.defineProperty(document, 'hidden', { configurable: true, get: () => true }); document.dispatchEvent(new Event('visibilitychange')); }
+      }, mode);
+      const cut = await p.evaluate(() => {
+        const hero = document.getElementById('hero-title'), features = document.getElementById('features-title');
+        return { hero: hero.dataset.typingState, heroUntyped: !!hero.querySelector('[data-untyped]'), cursors: document.querySelectorAll('.typing-cursor').length,
+          features: features.dataset.typingState, featuresHidden: [...features.querySelectorAll('.char')].some(ch => getComputedStyle(ch.firstChild).visibility !== 'visible') };
+      });
+      assert(`${mode}: the running hero finishes at once without a cursor`, cut.hero === 'done' && !cut.heroUntyped && cut.cursors === 0);
+      assert(`${mode}: an unseen heading stays pending but readable`, cut.features === 'pending' && !cut.featuresHidden);
+      await p.evaluate(m => {
+        if (m === 'pagehide') window.dispatchEvent(new Event('pageshow'));
+        else { delete document.hidden; document.dispatchEvent(new Event('visibilitychange')); }
+      }, mode);
+      await p.evaluate(() => document.getElementById('features-title').scrollIntoView({ block: 'center' }));
+      const typed = await sample(p, 'features-title', finished);
+      assert(`${mode}: the unseen heading types once the page is back`, typed.some(s => s.shown > 0 && s.shown < s.total && s.cursors === 1) && finished(typed[typed.length - 1]));
+    } finally { await c.close(); }
+  }
+
+  // Typed h3 headings join the ambient rolls too.
+  {
+    const [c, p] = await context({});
+    try {
+      await p.goto(`${origin}/en/`);
+      await p.evaluate(() => document.querySelector('.highlight-more h3').scrollIntoView({ block: 'center' }));
+      await p.waitForFunction(() => document.getAnimations().some(a => a.id === 'ambient-char-swap' && a.effect.target.closest('h3') && a.effect.target.closest('h3').dataset.typingState === 'done'), null, { timeout: 25000, polling: 30 });
+      assert('a typed h3 rolls again after its cursor is gone', true);
+    } finally { await c.close(); }
+  }
+
+  // A failing animation API leaves readable text: the cursor goes and motion switches itself off.
+  for (const failing of ['headline-typing-cursor', 'ambient-char-swap']) {
+    const [c, p] = await context({});
+    try {
+      await c.addInitScript(id => {
+        const animate = Element.prototype.animate;
+        Element.prototype.animate = function (frames, options) {
+          if (options && options.id === id) throw new Error('synthetic animation failure');
+          return animate.call(this, frames, options);
+        };
+      }, failing);
+      await p.goto(`${origin}/en/`);
+      if (failing === 'headline-typing-cursor') {
+        const s = await sample(p, 'hero-title', x => x.shown === x.total);
+        assert('failing cursor blink: hero types, then the cursor is removed at once without blinking',
+          s.some(x => x.shown > 0 && x.shown < x.total) && finished(s[s.length - 1]) && !s.some(x => x.shown === x.total && x.cursors));
+      } else {
+        await p.waitForFunction(() => document.querySelector('[data-motion-toggle]').hidden, null, { timeout: 15000, polling: 30 });
+        assert('failing glyph roll: motion turns off, the toggle hides and all text is readable', await p.evaluate(() =>
+          document.documentElement.dataset.motion === 'off' && !document.querySelector('.typing-cursor') &&
+          [...document.querySelectorAll('main .char')].every(ch => getComputedStyle(ch.firstChild).visibility === 'visible')));
+      }
+    } finally { await c.close(); }
+  }
+
   // JavaScript disabled: plain readable static heading.
   const [c4, p4] = await context({ javaScriptEnabled: false });
   try {

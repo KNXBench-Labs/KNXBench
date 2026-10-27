@@ -281,7 +281,9 @@ impl DeviceDownloadSession {
             task: None,
             report,
         };
-        let task = tokio::spawn(run(
+        // The backup keeper, the journal rows and the settler persist
+        // synchronously while the tunnel is open (S2-04, issue #30).
+        let task = tokio::spawn(crate::tunnel_workers::off_tunnel_workers(run(
             tunnel,
             authorisation,
             keying,
@@ -291,7 +293,7 @@ impl DeviceDownloadSession {
             shared,
             activity,
             settlement,
-        ));
+        )));
         Self {
             task: Some(task),
             ..session

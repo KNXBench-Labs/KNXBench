@@ -10,6 +10,8 @@ use knx_app::{
 use knx_net::{ApplicationService, BusError, Destination, ManagementTransport, Tpci};
 use std::{net::SocketAddrV4, sync::atomic::Ordering};
 
+use crate::tunnel_workers::off_tunnel_workers;
+
 // Only the owning mounted fixture installs this observer. No global state,
 // production observer, error text, changed error propagation or extra timeout.
 macro_rules! observe {
@@ -266,25 +268,6 @@ fn finish_activity(activity: Activity, result: bool, clean: bool) {
         let _ = guard.record_cleanup(clean);
     }
 }
-/// Runs a durable executor where its synchronous checkpoints cannot stall tunnel tasks.
-///
-/// The App executor persists checkpoints (fsync, readback) between bus frames.
-/// On a runtime worker that also blocks the tunnel's receive task, which has to
-/// acknowledge every TUNNELLING_REQUEST within one second, or the gateway drops
-/// the connection (Tunnelling v01.07.01 AS §2.6.1; issue #30). The CLI solves
-/// the same problem with `tunnel_runtime()`. `block_in_place` hands this
-/// worker's other tasks to a fresh worker while the executor runs here in
-/// order. A current-thread runtime has no second thread and keeps the inline path.
-async fn off_tunnel_workers<F: std::future::Future>(operation: F) -> F::Output {
-    let handle = tokio::runtime::Handle::current();
-    match handle.runtime_flavor() {
-        tokio::runtime::RuntimeFlavor::MultiThread => {
-            tokio::task::block_in_place(move || handle.block_on(operation))
-        }
-        _ => operation.await,
-    }
-}
-
 fn terminal(store: &OperationStore) -> LocalOutcome {
     match store.outcome() {
         LocalOutcome::Running | LocalOutcome::Restoring => LocalOutcome::Interrupted,
@@ -682,79 +665,4 @@ pub(super) async fn recover(
         });
     }
     observe!(state, terminal(outcome, matches!(result, Ok(true))));
-}
-
-#[cfg(test)]
-mod off_tunnel_worker_tests {
-    use super::off_tunnel_workers;
-    use std::sync::{
-        atomic::{AtomicUsize, Ordering},
-        Arc,
-    };
-    use std::time::Duration;
-
-    /// Stands in for a multi-second durable checkpoint inside the executor.
-    const STALL: Duration = Duration::from_millis(300);
-
-    /// Ticks of a concurrently spawned task while one task blocks its thread
-    /// for `STALL`, run inside `off_tunnel_workers` or inline.
-    async fn ticks_during_stall(off_worker: bool) -> usize {
-        let ticks = Arc::new(AtomicUsize::new(0));
-        let ticker = tokio::spawn({
-            let ticks = ticks.clone();
-            async move {
-                loop {
-                    tokio::time::sleep(Duration::from_millis(5)).await;
-                    ticks.fetch_add(1, Ordering::SeqCst);
-                }
-            }
-        });
-        while ticks.load(Ordering::SeqCst) == 0 {
-            tokio::time::sleep(Duration::from_millis(1)).await;
-        }
-        // Spawned, so it runs on the single worker like the server's worker task.
-        let stalled = tokio::spawn({
-            let ticks = ticks.clone();
-            async move {
-                let operation = async {
-                    let before = ticks.load(Ordering::SeqCst);
-                    std::thread::sleep(STALL);
-                    let after = ticks.load(Ordering::SeqCst);
-                    tokio::task::yield_now().await;
-                    after - before
-                };
-                if off_worker {
-                    off_tunnel_workers(operation).await
-                } else {
-                    operation.await
-                }
-            }
-        });
-        let ticked = stalled.await.expect("stalled task");
-        ticker.abort();
-        ticked
-    }
-
-    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
-    async fn a_blocking_executor_leaves_runtime_tasks_running() {
-        let ticked = ticks_during_stall(true).await;
-        // About 60 nominal; a loaded host still delivers far more than five.
-        assert!(ticked >= 5, "only {ticked} ticks during the stall");
-    }
-
-    /// Calibration: the same stall inline starves the only worker.
-    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
-    async fn the_same_stall_inline_starves_the_single_worker() {
-        let ticked = ticks_during_stall(false).await;
-        assert!(
-            ticked <= 1,
-            "{ticked} ticks although the worker was blocked"
-        );
-    }
-
-    /// Unit tests run on a current-thread runtime: the inline path, no panic.
-    #[tokio::test]
-    async fn a_current_thread_runtime_keeps_the_inline_path() {
-        assert_eq!(off_tunnel_workers(async { 7 }).await, 7);
-    }
 }

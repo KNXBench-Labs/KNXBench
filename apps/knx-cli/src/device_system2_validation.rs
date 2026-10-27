@@ -19,7 +19,7 @@ use knx_net::commissioning::{
     simulator::{SimulatedDevice, SimulatorConfig},
     SessionTiming,
 };
-use knx_net::{BusConnection, KnxNetIpClient, ManagementSession};
+use knx_net::{BusConnection, KnxNetIpClient, ManagementSession, TunnelAckWait};
 use std::{
     collections::BTreeMap,
     net::SocketAddrV4,
@@ -474,7 +474,9 @@ fn run_hardware(
     let executed = runtime.block_on(async {
         let tunnel = tokio::time::timeout(
             Duration::from_secs(10),
-            KnxNetIpClient::new().connect_tunnel(gateway),
+            KnxNetIpClient::new()
+                .with_tunnel_ack_wait(TunnelAckWait::Patient)
+                .connect_tunnel(gateway),
         )
         .await
         .map_err(|_| "gateway timeout".to_string())?
@@ -489,7 +491,7 @@ fn run_hardware(
                     &tunnel,
                     target,
                     AuthorisationPlan::Skip,
-                    SessionTiming::default(),
+                    SessionTiming::patient_system2(),
                 )
                 .map_err(|e| format!("read-only session refused: {e}"))?;
                 session.connect().await.map_err(|e| format!("connect refused: {e}"))?;
@@ -522,7 +524,7 @@ fn run_hardware(
             use knx_app::system2_validation_preparation as configured;
             if recover {
                 configured::restore_project_hardware(
-                    &tunnel, &rebound, &mut store, SessionTiming::default(),
+                    &tunnel, &rebound, &mut store, SessionTiming::patient_system2(),
                     &configured::HardwareRecoveryConfirmations {
                         recovery, download, risk: release,
                     },
@@ -532,7 +534,7 @@ fn run_hardware(
                 configured::execute_project_hardware(
                     &tunnel,
                     current.as_ref().ok_or("fresh configured admission missing")?,
-                    &mut store, SessionTiming::default(),
+                    &mut store, SessionTiming::patient_system2(),
                     &configured::HardwareConfirmations {
                         operation: recovery, hypothesis: &rebound.acceptance_phrase(),
                         download, risk: release,
@@ -545,7 +547,7 @@ fn run_hardware(
                 &tunnel,
                 &rebound,
                 &mut store,
-                SessionTiming::default(),
+                SessionTiming::patient_system2(),
                 recovery,
                 download,
                 release,
@@ -557,7 +559,7 @@ fn run_hardware(
                 &tunnel,
                 &rebound,
                 &mut store,
-                SessionTiming::default(),
+                SessionTiming::patient_system2(),
                 download,
                 release,
                 &cancel,
@@ -589,4 +591,36 @@ fn run_hardware(
     };
     guard.finish(outcome);
     executed.and_then(|reported| reported)
+}
+
+#[cfg(test)]
+mod patient_wiring_tests {
+    /// Source-bound: the real-write path (`run_hardware`, serial read, execute and restore) opens
+    /// its tunnel with the patient ACK wait and runs every session on the patient timing, while
+    /// the simulator runs above it keep the default timing. The simulated gateway suites in
+    /// `tests/it/device_system2_validation` cover the behaviour of the unchanged protocol path.
+    #[test]
+    fn the_hardware_path_uses_the_patient_client_and_timing() {
+        let source = include_str!("device_system2_validation.rs");
+        let hardware = &source[source.find("fn run_hardware(").unwrap()..];
+        let hardware = hardware.split("\n#[cfg(test)]\n").next().unwrap();
+        let hardware: String = hardware.split_whitespace().collect();
+        let count = |needle: &str| hardware.matches(needle).count();
+        assert_eq!(
+            count("KnxNetIpClient::new().with_tunnel_ack_wait(TunnelAckWait::Patient)"),
+            1
+        );
+        assert_eq!(count("KnxNetIpClient::new()"), 1, "no other client");
+        assert_eq!(count("SessionTiming::patient_system2()"), 5);
+        assert_eq!(count("SessionTiming::default()"), 0);
+        let above: String = source[..source.find("fn run_hardware(").unwrap()]
+            .split_whitespace()
+            .collect();
+        assert_eq!(
+            above.matches("SessionTiming::default()").count(),
+            2,
+            "simulator paths"
+        );
+        assert_eq!(above.matches("patient_system2").count(), 0);
+    }
 }

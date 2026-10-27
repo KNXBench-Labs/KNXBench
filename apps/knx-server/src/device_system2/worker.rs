@@ -7,7 +7,9 @@ use knx_app::{
     property_validation_bundle::PreparedBundle,
     system2_validation_preparation::{self as app, CurrentProjectHardware},
 };
-use knx_net::{ApplicationService, BusError, Destination, ManagementTransport, Tpci};
+use knx_net::{
+    ApplicationService, BusError, Destination, ManagementTransport, Tpci, TunnelAckWait,
+};
 use std::{net::SocketAddrV4, sync::atomic::Ordering};
 
 // Only the owning mounted fixture installs this observer. No global state,
@@ -393,7 +395,11 @@ async fn download_inner(
         return Err(refuse("system2Cancelled"));
     }
     observe!(state, phase("connector"));
-    let tunnel = match state.connector.connect_tunnel(gateway).await {
+    let tunnel = match state
+        .connector
+        .connect_tunnel_with_ack_wait(gateway, TunnelAckWait::Patient)
+        .await
+    {
         Ok(t) => t,
         Err(_error) => {
             observe!(state, session_failure("connector", &_error));
@@ -413,7 +419,7 @@ async fn download_inner(
                 observation: observation.as_deref(),
             },
             preparation.source,
-            state.device_download_timing,
+            state.system2_timing,
             cancel,
         )
         .await
@@ -495,7 +501,7 @@ async fn download_inner(
             },
             admission,
             store,
-            state.device_download_timing,
+            state.system2_timing,
             &body.confirmations(),
             cancel,
         ))
@@ -603,7 +609,11 @@ pub(super) async fn recover(
             return Err(refuse("system2Cancelled"));
         }
         observe!(state, phase("connector"));
-        let tunnel = match state.connector.connect_tunnel(gateway).await {
+        let tunnel = match state
+            .connector
+            .connect_tunnel_with_ack_wait(gateway, TunnelAckWait::Patient)
+            .await
+        {
             Ok(t) => t,
             Err(_error) => {
                 observe!(state, session_failure("connector", &_error));
@@ -634,7 +644,7 @@ pub(super) async fn recover(
                 },
                 &bundle,
                 &mut store,
-                state.device_download_timing,
+                state.system2_timing,
                 &body.confirmations(),
                 &cancel,
             ))

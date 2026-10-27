@@ -6,6 +6,19 @@ This dossier preserves the technical detail and dated history. Earlier
 headings, failures and lifting conditions are historical where later
 updates supersede them; they are not new work assignments.
 
+## Experimental System-2 patient waits — source after Alpha 17
+
+The [patient wait profile](../contracts/system2-patient-waits.md) increases only
+experimental hardware download/recovery waits: gateway ACK 1 → 10 seconds per
+attempt, post-ACK management answer slice 3 → 15 seconds, load-state transition
+30 → 120 seconds. Device transport ACK/repetition remains at three seconds. Retry counts, exact response matching, backup and final
+verification remain unchanged. Explicit peer closure still ends a wait early.
+These are deliberate experimental client values, not revised standard defaults.
+They do not establish issue #30's original cause, hardware programming success
+or recovery capability; KL-007 remains open. Existing Alpha 17 artifacts are
+unchanged. The [operator guide](../manual/user-guide/05-devices-and-products.md#more-patient-experimental-waits-source-builds-after-alpha-17)
+explains longer checkpoint waits and the no-automatic-retry boundary.
+
 ## Configured PID 7 width model — 26 October 2026 source
 
 A field reply supplies object 1, one element, raw two-octet `0116`; the full

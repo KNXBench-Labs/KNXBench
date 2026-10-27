@@ -469,6 +469,22 @@ impl crate::GatewayConnector for TestHardwareConnector {
         })
     }
     #[allow(clippy::type_complexity)]
+    fn connect_tunnel_with_ack_wait(
+        &self,
+        gateway: SocketAddrV4,
+        wait: knx_net::TunnelAckWait,
+    ) -> Pin<
+        Box<
+            dyn Future<Output = Result<Box<dyn crate::BusTunnel>, crate::BusSessionError>>
+                + Send
+                + '_,
+        >,
+    > {
+        // The System2 worker must ask for the patient ACK wait, never the plain one.
+        assert_eq!(wait, knx_net::TunnelAckWait::Patient);
+        self.connect_tunnel(gateway)
+    }
+    #[allow(clippy::type_complexity)]
     fn discover(
         &self,
     ) -> Pin<
@@ -689,7 +705,7 @@ fn state(
     let leases = data.join("gateway-leases");
     std::fs::create_dir_all(&leases).unwrap();
     state.diagnostic_lease_dir = Some(leases);
-    state.device_download_timing = SessionTiming {
+    state.system2_timing = SessionTiming {
         connection_timeout: Duration::from_millis(30),
         response_timeout: Duration::from_millis(5),
         poll_interval: Duration::from_millis(1),

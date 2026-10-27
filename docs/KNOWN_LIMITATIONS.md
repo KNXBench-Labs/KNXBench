@@ -1187,7 +1187,7 @@ Flow is implemented; approval-only wording is historical. Configured participant
 ### 20. Overlay accessibility evidence
 
 **Ledger status:** `ACCEPTED_BOUNDARY` ([KL-20](status/LEDGER.md#snapshot-ids)).
-Shared modal/keyboard behavior is implemented. Scoped fixes do not certify complete accessibility, screen-reader or native WebKitGTK conformance.
+Shared modal/keyboard behavior and bounded Alpha 17 native Wayland focus/save/note evidence exist. Whole-application accessibility and actual screen-reader/native conformance remain unverified.
 [Details and history](limitations/KL-020-overlay-accessibility-evidence.md)
 
 <a id="catalogue-kl-024"></a>
@@ -1267,7 +1267,7 @@ Visible windows refresh periodically/on focus. Bounded synchronization is not us
 ### 130. Application zoom
 
 **Ledger status:** `ACCEPTED_BOUNDARY` ([KL-130-ZOOM](status/LEDGER.md#snapshot-ids)).
-Zoom is bounded to 80–150% in 10% steps. Browser evidence does not prove native focus/resize/accessibility parity.
+Zoom is bounded to 80–150% in 10% steps. Alpha 17 has bounded native Wayland keyboard, preference and menu evidence; pointer geometry, full layout and screen-reader parity remain open.
 [Details and history](limitations/KL-130-ZOOM-application-zoom.md)
 
 <a id="catalogue-kl-160"></a>

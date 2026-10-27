@@ -1940,7 +1940,7 @@
       "number": 20,
       "title": "Overlay accessibility evidence",
       "topic": "UI and accessibility",
-      "summary": "Shared modal/keyboard behavior is implemented. Scoped fixes do not certify complete accessibility, screen-reader or native WebKitGTK conformance.",
+      "summary": "Shared modal/keyboard behavior and bounded Alpha 17 native Wayland focus/save/note evidence exist. Whole-application accessibility and actual screen-reader/native conformance remain unverified.",
       "file": "KL-020-overlay-accessibility-evidence.md",
       "ledger_ids": [
         "KL-20"
@@ -2082,7 +2082,7 @@
       "number": 130,
       "title": "Application zoom",
       "topic": "UI and accessibility",
-      "summary": "Zoom is bounded to 80–150% in 10% steps. Browser evidence does not prove native focus/resize/accessibility parity.",
+      "summary": "Zoom is bounded to 80–150% in 10% steps. Alpha 17 has bounded native Wayland keyboard, preference and menu evidence; pointer geometry, full layout and screen-reader parity remain open.",
       "file": "KL-130-ZOOM-application-zoom.md",
       "ledger_ids": [
         "KL-130-ZOOM"

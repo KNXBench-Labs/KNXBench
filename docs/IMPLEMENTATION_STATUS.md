@@ -12,6 +12,20 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## WP-11 bounded native Alpha 17 acceptance (27 October 2026)
+
+The owner authorised isolated desktop tests; the actual published Alpha 17
+AppImage was exercised under native Wayland/WebKitGTK, with loopback-only
+networking and masked real home/project paths. Save/Cancel/Replace, exact note
+save/reopen before and after restart, settings focus wrap/return, 80/150% zoom
+shortcuts and bounded keyboard/menu controls have retained native evidence.
+The retained verifier assertions passed; its 19 thematic labels organise
+130 logged operations, not independently counted tests or the whole WP-11
+matrix. Orca/Firefox were absent; positive
+checked-source/instruction editing, capture export, pointer/hover/full-layout
+and vendor-specific GPU acceptance remain open. No runtime, bus, real-project,
+release or deployment change. [Record](status/2026-10-27-wp11-native-acceptance.md).
+
 ## Production browser suites in the tag lanes, GATE-01 slice (27 October 2026)
 
 Published main-first merge `745932994`; independent review and re-review APPROVE.
